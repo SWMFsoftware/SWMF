@@ -467,7 +467,7 @@ contains
 
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN
-    ! Check if UA is ON but IE is OFF
+    ! Check if UA is used but IE is not
     if(use_comp(UA_) .and. .not. use_comp(IE_)) then
        write(*,*) NameSub//' SWMF_ERROR: '//&
             'UA is used without IE. This combination is not allowed!'
