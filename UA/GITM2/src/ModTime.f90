@@ -1,11 +1,14 @@
 
 module ModTime
 
+  use ModKind, ONLY: Real8_
+  implicit none
+
   ! Time variables
 
-  real*8                :: tSimulation = 0.0
+  real                  :: tSimulation = 0.0
   integer, dimension(7) :: iTimeArray
-  real*8                :: CurrentTime, EndTime, StartTime, VernalTime
+  real(Real8_)          :: CurrentTime, EndTime, StartTime, VernalTime
   real                  :: utime
   integer               :: iJulianDay, iDay
   integer               :: iStep = 1
