@@ -646,7 +646,7 @@ contains
 
     real, intent(in) :: Matrix_DD(3,3)
 
-    write(*,'(3(3f14.10,/))') Matrix_DD
+    write(*,'(3(3f14.10,/))') transpose(Matrix_DD)
 
   end subroutine show_rot_matrix
   !BOP =======================================================================
