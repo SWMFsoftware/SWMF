@@ -1042,8 +1042,8 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   ! After the solve this input can be considered old
   IsNewInput = .false.
 
-  ! No need to solve for the 1st time step (input cannot be reasonable)
-  if(nStep <= 1) RETURN
+!  ! No need to solve for the 1st time step (input cannot be reasonable)
+!  if(nStep <= 1) RETURN
 
   ! Obtain the position of the magnetix axis
   call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)

@@ -4,10 +4,11 @@ subroutine IE_solve
   use IE_ModIO, ONLY: write_prefix
   use ModProcIE
   use ModIonosphere
+  use ModNumConst
 
   implicit none
   character(len=*), parameter :: NameSub = 'IE_solve'
-
+  real::CurrentMax
   real    :: Radius
   integer :: iBlock
 
@@ -35,10 +36,10 @@ subroutine IE_solve
      case(1) ! Northern hemisphere
         if(iProc /= 0) CYCLE
         if (IONO_NORTH_nMagBndPts < 8) CYCLE
-
+        CurrentMax=sum(abs(IONO_NORTH_JR))
+        if(CurrentMax<cTolerance)CYCLE
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=',&
-             sum(abs(IONO_NORTH_JR))
-
+             CurrentMax
         if (UseFakeRegion2) then
            call Create_Region2_Currents(1)
            IONO_NORTH_JR = IONO_NORTH_JR + IONO_NORTH_Fake_JR
@@ -108,9 +109,10 @@ subroutine IE_solve
         if(iProc /= nProc-1) CYCLE
 
         if (IONO_SOUTH_nMagBndPts < 8) CYCLE
-
+        CurrentMax=sum(abs(IONO_SOUTH_JR))
+        if(CurrentMax<cTolerance)CYCLE
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=',&
-             sum(abs(IONO_SOUTH_JR))
+             CurrentMax
 
         if (UseFakeRegion2) then
            call Create_Region2_Currents(iBlock)
