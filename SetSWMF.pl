@@ -9,10 +9,9 @@ my $ValidComp = 'IH|GM|IE|IM|UA';
 # Directories and files used
 my $MakefileConf     = 'Makefile.conf';
 my $MakefileConfOrig = 'share/build/Makefile.';
-my $MakefileConfLocal= 'Makefile.conf';
 my $MakefileComp     = 'Makefile.def';
 my $MakefileCompOrig = 'CON/Makefile.def';
-my $MakefileCompLocal= 'Makefile.def';
+my $MakefileCompCvs  = 'Makefile.def.orig';
 my $GridSizeScript   = 'GridSize.pl';
 
 # Default precision for installation
@@ -44,6 +43,8 @@ my @NewVersion;
 my $GridSize;
 my $Uninstall;
 my $IsCompilerSet;
+my $Quiet;
+my $Debug;
 
 # Set actions based on the switches
 my @switch = @ARGV;
@@ -54,6 +55,8 @@ foreach (@switch){
     if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
     if(/^-i(nstall)?$/)       {$Install=1;                      next};
     if(/^-s(how)?$/)          {$Show=1;                         next};
+    if(/^-q(uiet)?$/)         {$Quiet=1;                        next};
+    if(/^-D(ebug)?$/)         {$Debug=1;                        next};
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
     if(/^-uninstall$/)        {$Uninstall=1;                    next};
     if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
@@ -371,13 +374,17 @@ sub set_version_makefile_comp{
     # of the selected versions to include the global SWMF Makefile.COMP. 
 
     my $Version;
+    my $QuietOrig = $Quiet; $Quiet = not $Debug;
     foreach $Version (sort @Version){
-	my $file = "$Version/$MakefileCompLocal";
+	my $file = "$Version/$MakefileComp";
 	next unless -f $file;
+	&shell_command("mv $Version/$MakefileComp $Version/$MakefileCompCvs")
+	    unless -f "$Version/$MakefileCompCvs";
 	&shell_command("echo include $DIR/$MakefileComp > $file");
-	$file    = "$Version/$MakefileConfLocal";
+	$file    = "$Version/$MakefileConf";
 	&shell_command("echo include $DIR/$MakefileConf > $file");
     }
+    $Quiet = $QuietOrig;
 }
 
 ##############################################################################
@@ -385,7 +392,7 @@ sub set_version_makefile_comp{
 sub shell_command{
 
     my $command = join(' ',@_);
-    print "$command\n";
+    print "$command\n" unless $Quiet;
 
     return if $DryRun;
 
@@ -403,7 +410,7 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 This script will also be used by the GUI to interact with SWMF.
 
-Usage: SetSWMF.pl [-h] [-d] [-i [-c=COMPILER]] [-p=PRECISION] [-s]
+Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-i [-c=COMPILER]] [-p=PRECISION] [-s]
                   [-v=VERSION[,VERSION2,...] [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
                   [-uninstall]
 
@@ -413,6 +420,12 @@ Options:
 
 -d  -dry       dry run (do not modify anything, just show actions)
 
+-D  -Debug     debug information shown
+
+-g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
+               identified with ID. This flag can occur multiple times and/or 
+               multiple grid sizes can be given in a comma separated list.
+
 -h  -help      show this help message
 
 -i  -install   install SWMF (create Makefile.conf, Makefile.COMP, make install)
@@ -420,19 +433,17 @@ Options:
 -p=PRECISION   set precision (in Makefile.conf, copy mpif90.h and make clean)
                Possible values are 'single' and 'double'.
 
+-q  -quiet     quiet execution
+
 -s  -show      show current settings
+
+-uninstall     uninstall SWMF (make distclean)
 
 -v=VERSION     select component verion VERSION. This flag can occur 
                multiple times and/or multiple versions can be given
                in a comma separated list.
                If IH/BATSRUS is selected for the first time, 
                make IHBATSRUS is done.
-
--g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
-               identified with ID. This flag can occur multiple times and/or 
-               multiple grid sizes can be given in a comma separated list.
-
--uninstall     uninstall SWMF (make distclean)
 
 Examples of use:
 
