@@ -27,6 +27,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   logical :: SkippedAnyBlock
 
   logical :: DoTest, DoTestMe
+
+  logical :: DoFixVar_B(MaxBlock)
+
   !---------------------------------------------------------------------------
   call set_oktest('load_balance',DoTest,DoTestMe)
 
@@ -78,6 +81,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
 
   call timing_start('load_balance')
 
+  if(DoMoveData) DoFixVar_B = .false. ! initialize variable fixing flags
+
   TRY: do iTry=1,MaxTry
 
      skippedAnyBlock=.false.
@@ -122,6 +127,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
 
         nBlockMoved=nBlocKMoved+1
 
+        if(DoMoveData .and. iProc==iProcTo) DoFixVar_B(iBlockTo)=.true.
+
         iBlock_A(iBlockALL) = iBlockTo
         iProc_A(iBlockALL)  = iProcTo
 
@@ -133,7 +140,21 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
        iComm, iError)
 
   ! Change decomposition ID if any blocks were moved
-  if(nBlockMoved > 0) iNewDecomposition = mod(iNewDecomposition+1,10000)
+  if(nBlockMoved > 0)iNewDecomposition = mod(iNewDecomposition+1,10000)
+
+  ! Fix variables if any data was moved
+  if(DoMoveData .and. nBlockMoved > 0)then
+     !call timing_start('load_fix_var')
+     do iBlock = 1,nBlock
+        if(DoFixVar_B(iBlock)) then
+           globalBLK = iBlock
+           if(useConstrainB) call Bface2Bcenter       !^CFG IF CONSTRAINB
+           call correctE
+           call calc_other_soln_vars(iBlock)
+        end if
+     end do
+     !call timing_stop('load_fix_var')
+  end if
 
   call timing_stop('load_balance')
 
@@ -374,11 +395,6 @@ contains
           ray(i1,i2,i,j,k,iBlockTo) = blockData_L(iData)
        end do; end do; end do; end do; end do
     end if                                      !^CFG END RCM
-
-    ! Fix variables
-    if(useConstrainB) call Bface2Bcenter        !^CFG IF CONSTRAINB
-    call correctE
-    call calc_other_soln_vars(iBlockTo)
 
   end subroutine recv_block_data
   !============================================================================
