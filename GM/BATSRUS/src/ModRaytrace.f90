@@ -7,6 +7,9 @@ module ModRaytrace
   implicit none
   save
 
+  ! Select between fast less accurate and slower but more accurate algorithms
+  logical :: UseAccurateTrace = .false. 
+
   ! Named parameters for ray status (must be less than east_=1)
   integer, parameter :: &
        ray_iono_ = 0, &
