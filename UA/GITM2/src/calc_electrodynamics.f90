@@ -304,10 +304,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
            enddo
 
-           if (iLon == 2) write(*,*) "Divjuline : ",&
-                divjuFieldLine(iLon,iLat), divjualt(iLon,iLat), &
-                HallFieldLine(iLon,iLat), HallConductance(iLon,iLat,iBlock), &
-                LengthFieldLine(iLon,iLat), Altitude(nAlts) - Altitude(1)
+!           if (iLon == 2) write(*,*) "Divjuline : ",&
+!                divjuFieldLine(iLon,iLat), divjualt(iLon,iLat), &
+!                HallFieldLine(iLon,iLat), HallConductance(iLon,iLat,iBlock), &
+!                LengthFieldLine(iLon,iLat), Altitude(nAlts) - Altitude(1)
 
 
         enddo
@@ -397,9 +397,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      if (LengthMC(10,iLat) < 1.0) then
         write(*,*) iLat, &
              LengthMC(10,iLat),MagLatMC(10,iLat)
-        do i = 0, nLats+1
-           write(*,*) i,Mlatitude(1,i,1,1),Mlongitude(1,i,1,1)
-        enddo
+!        do i = 0, nLats+1
+!           write(*,*) i,Mlatitude(1,i,1,1),Mlongitude(1,i,1,1)
+!        enddo
         write(*,*) "Problem with electrodynamics. A field-line length"
         write(*,*) "is less than 0.0"
         call stop_gitm("Can't continue")
