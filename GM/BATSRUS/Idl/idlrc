@@ -17,6 +17,7 @@
 spawn,'uname',uname
 if strpos(uname[0],'IRIX')  ge 0 then device,retain=2,pseudo_color=8
 if strpos(uname[0],'Linux') ge 0 then device,decompose=0,true=24,retain=2
+if strpos(uname[0],'Darwin') ge 0 then device,decompose=0,true=24,retain=2
 ; Use DIRECT color if saving a movie in color (PNG, TIFF etc)
 ;if strpos(uname[0],'Linux') ge 0 then device,decompose=0,direct=24,retain=2
 
