@@ -4,6 +4,7 @@ SHELL =/bin/sh
 include ../Makefile.def
 include ../Makefile.conf
 include Makefile.DEPEND
+include Makefile.RULES
 
 #			
 #	Menu of make options
@@ -109,6 +110,6 @@ backup:
 	tar -cf IONO.`date +%m_%d_%y_%H%M.tar` Make* *.f90 *.h *.sub *.script *.llscript.* *.in mpi* perf_mjp.a BATio BATioPP* IOcat*
 
 distclean: clean
-	rm -f Makefile.DEPEND
+	rm -f Makefile.DEPEND Makefile.RULES
 
 # keep this line

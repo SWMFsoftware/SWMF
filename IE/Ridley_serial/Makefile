@@ -21,6 +21,11 @@ install_cont:
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
+	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
+		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
+	else \
+		touch src/Makefile.RULES; \
+	fi);
 	touch src/Makefile.DEPEND
 
 LIB:
