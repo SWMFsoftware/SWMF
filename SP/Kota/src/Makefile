@@ -16,12 +16,6 @@ ${SEPEXE}:	${OBJECTS} sp_stand_alone.o
 	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS} sp_stand_alone.o\
 	${SHAREDIR}/io_unit_for77.o ${SHAREDIR}/ModIoUnit.o 
 
-io_unit_for77.f: 
-	cp  ${SHAREDIR}/io_unit_for77.f .
-
-stdout.h:
-	cp  ${SHAREDIR}/stdout.h .
-
 SEP77:	io_unit_for77.f stdout.h
 	f77 read_ihdata.f sp_stand_alone.f io_unit_for77.f main.f sep19.f
 
