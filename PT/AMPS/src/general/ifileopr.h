@@ -26,7 +26,7 @@ public:
     sprintf(fname,"%s",InputFile);
   };
 
-  long int CurrentLine() {
+  long int& CurrentLine() {
     return line;
   }; 
 
