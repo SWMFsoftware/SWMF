@@ -35,7 +35,7 @@ subroutine UA_set_param(CompInfo, TypeAction)
 
      call put(CompInfo,&
           Use=.true.,                                      &
-          NameVersion='Global Iono-Thermo Model (Ridley)', &
+          NameVersion='Global Iono-Thermo Model (Ridley, Toth)', &
           Version=2.0)
 
   case('MPI')
