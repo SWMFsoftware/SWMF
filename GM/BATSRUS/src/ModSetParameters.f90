@@ -1584,7 +1584,7 @@ contains
 
     nOrder = 2
     FluxType = 'Rusanov'               !^CFG IF RUSANOVFLUX
-    !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF RUSANOVFLUX
+    !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
 
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.              !^CFG IF POINTIMPLICIT
@@ -1595,7 +1595,7 @@ contains
 
     nOrder_impl   = 1
     FluxTypeImpl  = 'Rusanov'               !^CFG IF RUSANOVFLUX
-    !FluxTypeImpl  = FluxType               !^CFG UNCOMMENT IF RUSANOVFLUX
+    !FluxTypeImpl  = FluxType               !^CFG UNCOMMENT IF NOT RUSANOVFLUX
 
     ImplCoeff0    = 1.0
     UseBDF2       = .false.
