@@ -1,0 +1,273 @@
+#ECHO
+T
+
+#DESCRIPTION
+Use restart data for SC
+Create restart files for GM and IH. IH-GM-IE coupling. Needs user_routines.f\90.heliosphere!
+
+#INCLUDE
+RESTART.in
+
+#IDEALAXES
+! align both the rotational and the magnetic axes of Earth with ecliptic North
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#BEGIN_COMP SC
+
+#INCLUDE
+SC/restartIN/restart.H
+
+#USER_FLAGS
+F			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+F			UseUserSetPhysConst
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN
+
+#USEUSERHEATING
+F			UseUserHeating
+
+#PFSSM
+T			UseUserB0
+1.00E+00		Ro_PFSSM
+2.50E+00		Rs_PFSSM
+SC/CR1935_WSO.dat       File_PFSSM
+12			iHead_PFSSM
+-1.00E+00		dt_UpdateB0
+
+#AWHEAT
+1.50E+00		Bnot	[G]
+1.6304543E+00		Tnot
+9			DegFrm1
+2.10E+00		TemRatio
+F     			UseStaticICs
+F                       UseZeroOmega
+
+#USERINPUTEND
+
+#HELIOSPHERE
+1.80E+06		Tsun    [K]      1.0E6 
+5.00E+13		NDsun [n/m-3]
+10.00			Qsun
+1.76			Theat
+1.00			Rheat
+4.50			SIGMAheat
+F			UseFluxRope
+
+#INERTIAL
+T			UseInertial, if false then corotating frame
+F			UseCorotation
+
+#GAMMA
+1.50000E+00		g
+
+#OUTERBOUNDARY
+coupled 		TypeBcOuter_E(East_)
+coupled 		TypeBcOuter_E(West_)
+coupled 		TypeBcOuter_E(South_)
+coupled 		TypeBcOuter_E(North_)
+coupled 		TypeBcOuter_E(Bot_)
+coupled 		TypeBcOuter_E(Top_)
+
+#SCHEME
+2			nORDER (1 or 2)
+4			fluxfcn_type: 1=Roe 2=Rusanov 3=Linde 4=Sokolov
+minmod			limiter_type mc or minmod
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+#DIVB
+T			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#SAVERESTART
+T			save_restartfile
+2000			dn_output(restart_)
+-1.0			dt_output(restart_)
+
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+VAR                     StringLog
+10                      dn_output(logfile_)
+-1.0			dt_output(logfile_)
+em_r ek_r et_r
+4.0  10.0               rLog
+
+#SAVEPLOT
+3			nplotfiles
+x=0 MHD tec             plot_string
+10000                   dn
+-1.0			dt
+y=0 MHD tec		plot_string
+10000			dn
+-1.0			dt
+z=0 MHD tec		plot_string
+10000			dn
+-1.0			dt
+
+#END_COMP SC
+
+! Do not run IE until GM gets some reasonable solution
+
+#COUPLE2
+SC			NameSource
+IH			NameTarget
+1			DnCouple
+10.			DtCouple
+
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+
+#PROBLEMTYPE
+3			problem_type: 3=Solar Wind and Inner Heliosphere
+
+#BODY
+T
+20.0
+
+#INNERBOUNDARY
+coronatoih
+
+
+
+#HELIOSPHERE
+2.85E+06		Tsun    [K]      1.0E6 
+1.50E+14		NDsun [n/m-3]
+25.00			Qsun
+1.75			Theat
+1.00			Rheat
+4.50			SIGMAheat
+F                       UseUserPerturbation
+
+! We use the extra source terms defined
+! in user_routines.f90.heliosphere
+
+#USER_FLAGS
+F                       UseUserInnerBcs
+T                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserSetPhysConst
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN
+
+#USEUSERHEATING
+F
+
+#USERINPUTEND
+
+
+#HELIODIPOLE
+-3.0			HelioDipoleStrength(equatorial field strength in Gauss)
+ 0.0			HelioDipoleTilt
+
+
+#GRID
+1			proc_dims(1)
+1			proc_dims(2)
+1			proc_dims(3),
+-240.0			x1  
+ 240.0			x2  
+-240.0			y1 
+ 240.0			y2 
+-240.0			z1 
+ 240.0			z2 
+
+#OUTERBOUNDARY
+float			TypeOuterBC(east_)
+float			TypeOuterBC(west_)
+float			TypeOuterBC(south_) 
+float			TypeOuterBC(north_) 
+float			TypeOuterBC(bot_)  
+float			TypeOuterBC(top_) 
+
+#AMRINIT
+coupledhelio    	InitialRefineType
+6			nLevelInitialRefine
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#UPSTREAM_INPUT_FILE
+T                       UseUpstreamInputFile
+IMF9805.dat             UpstreamFileName
+0.0                     SatelliteYPos
+0.0                     SatelliteZPos
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+2                       nPlotFiles
+x=0 MHD tec             StringPlot
+1000                    DnOutput(plot_+3)
+-1.			DtOutput
+y=0 MHD idl             StringPlot
+1000                    DnOutput(plot_+3)
+-1.			DtOutput
+-1.			DxOutput
+
+
+#SAVERESTART
+T			save_restartfile
+2000			dn_output(restart_)
+-1.0			dt_output(restart_)
+
+#END_COMP IH -----------------------------------------------------------------
+
+
+
+#STOP
+500                     MaxIter
+-1.			TimeMax
+
+#RUN	######################################################################
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+! Switch to a more accurate solver
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+minmod                  TypeLimiter
+
+#END_COMP IH -----------------------------------------------------------------
+
+
+
+#STOP
+20000                    MaxIter
+-1.			TimeMax
+
+#END
