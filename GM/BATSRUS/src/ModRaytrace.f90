@@ -11,6 +11,12 @@ module ModRaytrace
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.
 
+  ! Task selection: trace/integrate/extract/extractfile/extractfiles
+  character(len=20) :: NameTask = 'trace'
+
+  ! The vector field to trace: B/U/J
+  character         :: NameVectorField = 'B'
+
   ! How often shall we synchronize PE-s for the accurate algorithms
   real         :: DtExchangeRay = 0.1
 
@@ -54,9 +60,13 @@ module ModRaytrace
   ! Prefer open and closed field lines in interpolation ?!
   logical :: UsePreferredInterpolation
 
+  ! Maximum length of ray
+  real :: RayLengthMax
+
   ! Testing
   logical :: oktest_ray=.false.
 
+  ! Constants to distinguish various ray types
   real, parameter :: rIonosphere = 1.0, rIonosphere2 = rIonosphere**2
   real, parameter :: &
        CLOSEDRAY= -(rIonosphere + 0.05), &
@@ -66,21 +76,20 @@ module ModRaytrace
        NORAY    = -(rIonosphere + 100.0), &
        OUTRAY   = -(rIonosphere + 200.0)
 
+  ! Base time for timed exchanges between rays
   real(Real8_) :: CpuTimeStartRay
 
+  ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
 
   ! ----------- Variables for integrals along the ray -------------------
-  ! True if the ray integrals are done
-  logical :: DoIntegrate = .false.  
-
-  ! Name indexes
+  ! Named indexes
   integer, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, &
-       xEnd_=7, yEnd_=8, zEnd_=9
+       xEnd_=7, yEnd_=8, zEnd_=9, Length_=10
 
   ! Number of integrals
-  integer, parameter :: nRayIntegral = 9
+  integer, parameter :: nRayIntegral = 10
 
   ! Flow variables to be integrated (rho and P) other than the magnetic field
   real, dimension(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Extra_VGB
