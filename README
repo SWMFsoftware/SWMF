@@ -11,12 +11,13 @@ cd SWMF_NEW
 # !!! Opening the tar ball !!!
 mkdir SWMF_NEW
 cd SWMF_NEW
-tar -xzf ../SWMF_v2.tgz
+tar -xzf {path_to_file}/SWMF_v2.tgz
 
-# From withing this directory, open the test tar ball
-# It will create a test/ subdirectory with several files
+# From withing the SWMF_NEW directory, open the test tar ball
+# It will create a test/ subdirectory with several files.
 # Warning, this directory will be approximately 1GB in size!
-tar -xf {path_to_file}/SWMF_TEST.tar
+tar -xf {path_to_file}/SWMF_TEST_part1.tar
+tar -xf {path_to_file}/SWMF_TEST_part2.tar
 
 ################
 # install SWMF #
