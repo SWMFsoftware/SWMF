@@ -50,16 +50,18 @@ test_empty: timing_empty.exe
 test_empty_mpi: timing_empty_mpi.exe
 	mpirun -np 2 timing_empty_mpi.exe
 
-
-EMPTY: timing_empty.o
-
 EXE: timing_test.exe
 
 timing.o: ModTiming.o
 
+LIBNOMPI = ${LIBDIR}/libNOMPI.a
+
+${LIBNOMPI}:
+	cd ../../NOMPI/src; make LIB
+
 OBJ_TEST = timing_test.o
 
-timing_test.exe: $(OBJ_TEST) ${MY_LIB}
+timing_test.exe: $(OBJ_TEST) ${MY_LIB} ${LIBNOMPI}
 	$(LINK.f90) $(Lflag2) -o timing_test.exe $(OBJ_TEST) \
 	-L${LIBDIR} -lTIMING -lNOMPI
 
@@ -67,9 +69,12 @@ timing_test_mpi.exe: $(OBJ_TEST) ${MY_LIB}
 	$(LINK.f90) $(Lflag1) -o timing_test_mpi.exe $(OBJ_TEST) \
 	-L${LIBDIR} -lTIMING $(MPILIB)
 
-OBJ_EMPTY= timing_empty.o timing_test.o
+OBJ_EMPTY= ../srcEmpty/timing_empty.o timing_test.o
 
-timing_empty.exe: $(OBJ_EMPTY)
+../srcEmpty/timing_empty.o: ../srcEmpty/timing_empty.f90
+	cd ../srcEmpty; make timing_empty.o
+
+timing_empty.exe: $(OBJ_EMPTY) ${LIBNOMPI}
 	$(LINK.f90) ${Lflag1} -o timing_empty.exe $(OBJ_EMPTY) \
 	 -L${LIBDIR} -lNOMPI
 
