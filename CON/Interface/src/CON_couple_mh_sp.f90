@@ -163,6 +163,7 @@ contains
     end if                !^CMP END IH
   contains
     subroutine trace_line(CompID_,GD,Router,R2,MH_get_a_line_point)
+      use CON_global_message_pass
       interface
          subroutine MH_get_a_line_point(nPartial,&
               iGetStart,&
@@ -300,6 +301,7 @@ contains
   end subroutine SP_put_a_line_point
  !==================================================================
   subroutine couple_ih_sp(DataInputTime)
+    use CON_global_message_pass
     interface
        subroutine IH_get_for_sp(nPartial,&
             iGetStart,&
@@ -354,6 +356,7 @@ contains
   end subroutine couple_ih_sp
   !=========================================================================
   subroutine couple_sc_sp(DataInputTime)
+    use CON_global_message_pass
     interface
        subroutine SC_get_for_sp(nPartial,&
             iGetStart,&
