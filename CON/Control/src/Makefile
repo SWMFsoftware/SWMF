@@ -92,7 +92,7 @@ SWMFEXE: DEPEND
 	@cd ${TIMINGDIR};    make LIB
 	@cd ${LIBRARYDIR};   make LIB
 	@cd ${COUPLERDIR};   make LIB
-	@cd ${RBDIR};        make LIBCOMP	#^CMP IF RB
+	@cd ${RBDIR};        make LIB	#^CMP IF RB
 	@cd ${GMDIR};        make LIB	#^CMP IF GM
 	@cd ${IEDIR};        make LIB	#^CMP IF IE
 	@cd ${IHDIR};        make LIB	#^CMP IF IH
