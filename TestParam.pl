@@ -21,7 +21,7 @@ my $ParamFileDefault  = 'run/PARAM.in';
 my $LayoutFileDefault = 'run/LAYOUT.in';
 
 # The script and the XML file names to check the parameters
-my $CheckParamScript  = 'Common/CheckParam.pl';
+my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XMLFile           = 'PARAM.XML';
 
 my $SetSWMF = 'SetSWMF.pl';
