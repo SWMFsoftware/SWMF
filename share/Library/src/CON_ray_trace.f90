@@ -66,7 +66,7 @@ module CON_ray_trace
   integer, pointer      :: nRayRecv_P(:) ! Number of rays recv from other PE-s
 
   ! MPI variables
-  integer               :: iComm, nProc, iProc ! MPI group info
+  integer               :: iComm=MPI_COMM_NULL, nProc, iProc ! MPI group info
   integer               :: nRequest
   integer, allocatable  :: iRequest_I(:), iStatus_II(:,:)
 
@@ -85,6 +85,10 @@ contains
     character (len=*), parameter :: NameSub = NameMod//'::ray_init'
     integer :: jProc
     !------------------------------------------------------------------------
+
+    if(iComm == iCommIn) RETURN               ! nothing to do if the same comm
+
+    if(iComm /= MPI_COMM_NULL) call ray_clean ! clean up previous allocation
 
     ! Store MPI information
     iComm = iCommIn
@@ -136,6 +140,8 @@ contains
     if(associated(Recv % Ray_VI))deallocate(Recv % Ray_VI)
     Recv % nRay   = 0
     Recv % MaxRay = 0
+
+    iComm = MPI_COMM_NULL
 
   end subroutine ray_clean
 
