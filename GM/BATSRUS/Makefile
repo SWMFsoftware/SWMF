@@ -91,7 +91,11 @@ install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90
 	cd src; make STATIC
 
 src/Makefile.RULES:
-	cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES
+	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
+		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
+	else \
+		cp -f src/Makefile.RULES.empty src/Makefile.RULES; \
+	fi);
 
 src/Makefile.OPTIONS:
 	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
