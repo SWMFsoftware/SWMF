@@ -35,7 +35,7 @@
       integer iShock,iShockOld
       common/ishock/iShock,iShockOld
       real Smooth_VII
-      common/smooth/Smooth_VII(11,nMax,Old_:New_)
+      common/SP_smooth/Smooth_VII(11,nMax,Old_:New_)
       integer nResolution
       PARAMETER(nResolution=10)
       real rTransient

@@ -88,11 +88,11 @@ c**************************************************************
       
       subroutine sp_init
       implicit none
-      
+      include 'param.h'
       integer::nr,nmu,nw,kfriss,kacc,nn
       real:: wghtl,wghtmu,wghtw,time,tmax,dlnt0,dt1,dta
       real:: slamb,tblast,tblst1,rshck1,dlnt, dim1
-      real:: rmin,rshock,rmax,r(0:1000),wind,omega,xscatt1
+      real:: rmin,rshock,rmax,r(0:nRMax),wind,omega,xscatt1
       real::  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       common /size  / nr,nmu,nw, dim1        
@@ -124,7 +124,7 @@ c     initial conditions
       if(DoWriteAll)write(iStdout,*)prefix,
      1 'Particles be calculated from j-sep : ',jsep
       call initial
-      call peeloff      
+      call peeloff    
       call opentime
 c ----------------------------------------------------------
       end subroutine sp_init
@@ -216,11 +216,11 @@ c ----------------------------------------------------------
 
       real tSimulationStart
       real tSimilarityStart
-
+      include 'param.h'
       integer nr,nmu,nw,kfriss,kacc,nn
       real  wghtl,wghtmu,wghtw,time,tmax,dlnt0,dt1,dta
       real  slamb,tblast,tblst1,rshck1,dlnt, dim1
-      real  rmin,rshock,rmax,r(0:1000),wind,omega,xscatt1
+      real  rmin,rshock,rmax,r(0:nRMax),wind,omega,xscatt1
       real   ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       common /size  / nr,nmu,nw, dim1        
@@ -527,18 +527,17 @@ c??   read(*,*)  jnext
 c ********************* end routine MASTER  *********************
 
       subroutine refresh
-
+      include 'coupler.h'
       common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /times/  time,tmax,dt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
       common /scphys/ omega,xscatt1
-      common /elem /  zr(0:1000),zv(0:1000),zp(0:1000),zn(0:1000)
-      common /magia/  qb(0:1000),zb(0:1000),zt(0:1000) 
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vr(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /elem /  zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
+      common /magia/  qb(0:nRMax),zb(0:nRMax),zt(0:nRMax) 
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /smile/  mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
@@ -602,9 +601,9 @@ c ============================ real calculation cycle starts here ==
 
 
       subroutine simile(mm)                 !!!  REWORK !!!
-      
+      include 'coupler.h'
       common /size /  nr,nmu,nw, dim1
-      common /radio/  nn,rmin,rshock,rmax,r(0:1000)
+      common /radio/  nn,rmin,rshock,rmax,r(0:nRMax)
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /smile/  mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
@@ -614,7 +613,6 @@ c ============================ real calculation cycle starts here ==
      5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
      6       ,dbmds(0:6000),dbfids(0:6000)
 
-      include 'coupler.h'
       dimension axx(2500),ayy(2500),azz(2500)
       dimension tint(2500)
 
