@@ -37,4 +37,4 @@ clean:
 distclean:
 	touch src/Makefile.DEPEND
 	cd src; make distclean
-	rm -f *~
+	rm -f Makefile.conf *~
