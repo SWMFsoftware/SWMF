@@ -9,3 +9,4 @@ clean:
 
 distclean: clean
 	rm -f Makefile.conf *~
+	echo 'STANDALONE = sp' > Makefile.def
