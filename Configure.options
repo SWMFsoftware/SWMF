@@ -44,7 +44,7 @@ DEBUGGING		OFF		^CMP END DEBUGGING
 #
 # Physics components
 #
-IH			ON			#^CMP IF IH
+IH			ON NEEDS GM		#^CMP IF IH
 GM			ON			#^CMP IF GM
 IM			ON			#^CMP IF IM
 IE			ON			#^CMP IF IE
