@@ -1,5 +1,5 @@
 Module ModUpstreamData
-  integer, parameter :: Max_Upstream_Npts = 5000
+  integer, parameter :: Max_Upstream_Npts = 50000
   integer :: Upstream_Npts
 
   real, dimension(Max_Upstream_Npts, 8)   :: Upstream_Data
@@ -37,6 +37,7 @@ subroutine read_upstream_input_file(upstreamfilename)
 
   real :: timedelay
   real :: dt_min
+  real(Real8_) :: dtData1, dtData2
   real,save::HgiGsm_DD(3,3)
   logical,save::DoSetMatrix=.true.
 
@@ -290,27 +291,28 @@ subroutine read_upstream_input_file(upstreamfilename)
 
         else
 
-           dt = 1.0 - (Upstream_Time(i) - StartTime) / &
+           DtData2 = (Upstream_Time(i) - StartTime) / &
                 (Upstream_Time(i) - Upstream_Time(i-1) + 1.0e-6)
+           DtData1 = 1.0 - DtData2
 
-           SW_Bx_dim  =       dt  * Upstream_Data(i,1) + &
-                (1.0 - dt) * Upstream_Data(i-1,1)
-           SW_By_dim  =       dt  * Upstream_Data(i,2) + &
-                (1.0 - dt) * Upstream_Data(i-1,2)
-           SW_Bz_dim  =       dt  * Upstream_Data(i,3) + &
-                (1.0 - dt) * Upstream_Data(i-1,3)
+           SW_Bx_dim  =       DtData1  * Upstream_Data(i,1) + &
+                DtData2 * Upstream_Data(i-1,1)
+           SW_By_dim  =       DtData1  * Upstream_Data(i,2) + &
+                DtData2 * Upstream_Data(i-1,2)
+           SW_Bz_dim  =       DtData1  * Upstream_Data(i,3) + &
+                DtData2 * Upstream_Data(i-1,3)
 
-           SW_Ux_dim  =       dt  * Upstream_Data(i,4) + &
-                (1.0 - dt) * Upstream_Data(i-1,4)
-           SW_Uy_dim  =       dt  * Upstream_Data(i,5) + &
-                (1.0 - dt) * Upstream_Data(i-1,5)
-           SW_Uz_dim  =       dt  * Upstream_Data(i,6) + &
-                (1.0 - dt) * Upstream_Data(i-1,6)
+           SW_Ux_dim  =       DtData1  * Upstream_Data(i,4) + &
+                DtData2 * Upstream_Data(i-1,4)
+           SW_Uy_dim  =       DtData1  * Upstream_Data(i,5) + &
+                DtData2 * Upstream_Data(i-1,5)
+           SW_Uz_dim  =       DtData1  * Upstream_Data(i,6) + &
+                DtData2 * Upstream_Data(i-1,6)
 
-           SW_rho_dim =       dt  * Upstream_Data(i,7) + &
-                (1.0 - dt) * Upstream_Data(i-1,7)
-           SW_T_dim   =       dt  * Upstream_Data(i,8) + &
-                (1.0 - dt) * Upstream_Data(i-1,8)
+           SW_rho_dim =       DtData1  * Upstream_Data(i,7) + &
+                DtData2 * Upstream_Data(i-1,7)
+           SW_T_dim   =       DtData1  * Upstream_Data(i,8) + &
+                DtData2 * Upstream_Data(i-1,8)
         endif
      endif
   endif
