@@ -1,12 +1,18 @@
 #^CFG COPYRIGHT UM
 include ../../Makefile.def
 
+#^CMP IF GM BEGIN
 BATSRUS_SCRIPTS = \
 	${DIR}/GM/BATSRUS/TestBatsrus.protex \
 	${DIR}/GM/BATSRUS/TestSuite.protex \
-	${DIR}/GM/BATSRUS/TestCompare.protex
+	${DIR}/GM/BATSRUS/TestCompare.protex \
+	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
+#^CMP END GM
+
+SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 
 SWMFREF = \
+	${DIR}/SetSWMF.protex \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
@@ -42,10 +48,25 @@ SWMFREF = \
 	${SHAREDIR}/CON_planet.protex \
 	${SHAREDIR}/CON_planet_field.protex \
 	${SHAREDIR}/CON_ray_trace.protex \
+	${SCRIPTDIR}/CheckParam.protex \
+	${SCRIPTDIR}/ExpandParam.protex ${SCRIPT_CONF} \
 	${SCRIPTDIR}/depend.protex \
+	${SCRIPTDIR}/FixMakefileDef.protex \
+	${SCRIPTDIR}/FixMpi.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
+	${SCRIPTDIR}/StaticToDynamic.protex \
+	${SCRIPTDIR}/ChangeIndexOrder.protex \
+	${SCRIPTDIR}/CompareDirs.protex \
+	${SCRIPTDIR}/Fix4Endian.protex \
+	${SCRIPTDIR}/Fix8Endian.protex \
+	${SCRIPTDIR}/FixI4toI8.protex \
+	${SCRIPTDIR}/FixI8toI4.protex \
+	${SCRIPTDIR}/XmlToTex.protex \
+	${SCRIPTDIR}/protex.protex \
 	${UTILDIR}/NOMPI/src/NOMPI.protex \
+	${UTILDIR}/TIMING/src/ModTiming.protex \
+	${UTILDIR}/TIMING/src/timing.protex \
 	${BATSRUS_SCRIPTS}
 
 .SUFFIXES:
@@ -55,13 +76,18 @@ SWMFREF = \
 	${SCRIPTDIR}/XmlToTex.pl $*.XML > $*.xmltex
 
 .f90.protex:
-	${SCRIPTDIR}/protex -b -n -f $*.f90 > $*.protex
+	${SCRIPTDIR}/protex.pl -b -n -f $*.f90 > $*.protex
 
 .F90.protex:
-	${SCRIPTDIR}/protex -b -n -f $*.F90 > $*.protex
+	${SCRIPTDIR}/protex.pl -b -n -f $*.F90 > $*.protex
+
+
+${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${SCRIPTDIR}/CompareDirs > ${SCRIPTDIR}/CompareDirs.protex
 
 .pl.protex:
-	${SCRIPTDIR}/protex -b -n -f -S $*.pl > $*.protex
+	${SCRIPTDIR}/protex.pl -b -n -f -S $*.pl > $*.protex
 
 .tex.dvi:
 	latex $<
