@@ -1,6 +1,6 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,x,w,func,physics,eqpar,wnames
+function funcdef,x,w,func,physics,eqpar,variables
 ;
 ; Written by G. Toth for the Versatile Advection Code
 ;
@@ -11,7 +11,8 @@ function funcdef,x,w,func,physics,eqpar,wnames
 ; "func" string describes the function to be returned.
 ; "physics" string defines the meaning of the variables in "w".
 ; "eqpar" array contains the equation parameters.
-; "wnames" string array contains the names for the conservative variables.
+; "variables" string array contains the names of the coordinates in xx
+;             the variables in w and the equation parameters in eqpar
 ;
 ; The "func" string is interpreted by the following rules:
 ;
@@ -21,7 +22,7 @@ function funcdef,x,w,func,physics,eqpar,wnames
 ;   A single number between 0 and nw-1 returns the variable indexed by
 ;       that number, e.g. '2' in 3D returns w(*,*,*,2). 
 ;
-;   Variable names in the "wnames" array mean the appropriate variable.
+;   Variable names in the "variables" array mean the appropriate variable.
 ;
 ;   Function names listed below are calculated and returned.
 ;
@@ -38,7 +39,7 @@ function funcdef,x,w,func,physics,eqpar,wnames
 ; pneg=funcdef(x,w,'-pth','mhd22',eqpar)
 ;
 ; Note that "eqpar" is needed for the pressure but not for the kinetic energy, 
-; while "wnames" is not needed in either case.
+; while "variables" is not needed in either case.
 ;===========================================================================
 
 ; In 1D x(n1), in 2D x(n1,n2,2), in 3D x(n1,n2,n3,3)
@@ -53,7 +54,9 @@ if ndim gt 2 then n3=siz(3)
 siz=size(w)
 if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 
-if n_elements(wnames) eq 0 then wnames=strarr(nw)
+; Variable names
+if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
+wnames = strlowcase(variables(ndim:ndim+nw-1))
 
 ; Check for a negative sign in func
 if strmid(func,0,1) eq '-' then begin 
