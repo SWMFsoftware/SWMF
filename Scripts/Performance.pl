@@ -39,10 +39,12 @@ my %WallStep_C;     # Wall clock time / time step (on nProc_C PE-s)
 
 # These variables are set by read_param in each session
 
+my $TimeAccurate=1; # True for time accurate session (initially true)
+my %DnRun_C;        # Frequency of calling components in non-time accurate run 
 my %Couple_CC;      # Coupling info for component pairs (dt, dn, tnext ...)
+my %CoupleOnTime_C; # Logical array for letting components pass coupling time
 my $MaxIter;        # Final iteration number for the session
 my $TimeMax;        # Final physical time for the session
-my $TimeAccurate=1; # True for time accurate session (initially true)
 
 my @ActiveComp = @RegisteredComp; # List of components active in a session
 my @CoupleOrder = ("SC IH",       # Order of pairwise couplings
@@ -63,7 +65,6 @@ my @CoupleOrder = ("SC IH",       # Order of pairwise couplings
 
 my $iSession;      # session number
 my %Time_C;        # physical time of the components
-my @Time_P;        # physical time for the processors
 my @WallTime_P;    # walltime for the processors
 my @WallHist_P;    # history of wall time costs for the processors
 my @CompList_P;    # list of local components for each processor
@@ -271,19 +272,45 @@ sub read_param{
 	    my $DnCouple = read_var("integer","DnCouple");
 	    my $DtCouple = read_var("real",   "DtCouple");
 
-	    $Couple_CC{$Comp1}{$Comp2}{do}    = 1;
+	    my $DoCouple = ($DnCouple >=0 or $DtCouple >= 0);
+
+	    $Couple_CC{$Comp1}{$Comp2}{do}    = $DoCouple;
 	    $Couple_CC{$Comp1}{$Comp2}{dn}    = $DnCouple;
 	    $Couple_CC{$Comp1}{$Comp2}{dt}    = $DtCouple;
 	    $Couple_CC{$Comp1}{$Comp2}{tNext} = $DtCouple;
+	    $Couple_CC{$Comp1}{$Comp2}{nNext} = $DnCouple;
 	    if($nWay == 2){
-		$Couple_CC{$Comp2}{$Comp1}{do}    = 1;
+		$Couple_CC{$Comp2}{$Comp1}{do}    = $DoCouple;
 		$Couple_CC{$Comp2}{$Comp1}{dn}    = $DnCouple;
 		$Couple_CC{$Comp2}{$Comp1}{dt}    = $DtCouple;
 		$Couple_CC{$Comp2}{$Comp1}{tNext} = $DtCouple;
+		$Couple_CC{$Comp2}{$Comp1}{nNext} = $DnCouple;
+	    }
+	    if($Shift){
+		$Couple_CC{$Comp1}{$Comp2}{nNext} = 
+		    read_var("integer","nNext12");
+		$Couple_CC{$Comp1}{$Comp2}{tNext} = 
+		    read_var("real",   "tNext12");
+		if($nWay == 2){
+		    $Couple_CC{$Comp2}{$Comp1}{nNext} = 
+			read_var("integer","nNext21");
+		    $Couple_CC{$Comp2}{$Comp1}{tNext} = 
+			read_var("real",   "tNext21");
+		}
 	    }
 	}
 
-	if(/^\#STOP/){
+	if(/^\#COUPLETIME\b/){
+	    my $Comp = &read_var("id", "NameComp");
+	    $CoupleOnTime_C{$Comp} = &read_var("logical","DoCoupleOnTime");
+	}
+
+	if(/^\#CYCLE\b/){
+	    my $Comp = &read_var("id", "NameComp");
+	    $DnRun_C{$Comp} = &read_var("integer","DnRun");
+	}
+
+	if(/^\#STOP\b/){
 	    $MaxIter = &read_var("integer", "MaxIter");
 	    $TimeMax = &read_var("real", "TimeMax");
 	}
@@ -578,8 +605,15 @@ sub do_session{
 		    $Time_C{$Comp} += $TimeStep_C{$Comp};
 
 		    # Limit component time
-		    $Time_C{$Comp} = $tNext_C{$Comp} if 
-			$Time_C{$Comp} > $tNext_C{$Comp};
+		    if($CoupleOnTime_C{$Comp} eq "0"){
+			# Limit by TimeMax only
+			$Time_C{$Comp} = $TimeMax if 
+			    $Time_C{$Comp} > $TimeMax;
+		    }else{
+			# Limit by next coupling time
+			$Time_C{$Comp} = $tNext_C{$Comp} if 
+			    $Time_C{$Comp} > $tNext_C{$Comp};
+		    }
 
 		    # Doing a step with $Comp will cost some wall time
 		    $WallStep = $WallStep_C{$Comp};
