@@ -51,14 +51,15 @@ subroutine ionosphere(iter, iAction)
      call ionosphere_fine_grid
      call ionosphere_init
      
-  case(2)
-     if (IONO_NORTH_nMagBndPts >= 8 .and. &
-          IONO_SOUTH_nMagBndPts >= 8) then
-        call ionosphere_fac
-     else
-        write(6,*) "nMagBndPts = ",IONO_NORTH_nMagBndPts,IONO_SOUTH_nMagBndPts
-        write(6,*) "Skipping ionosphere"
-     endif
+!OBSOLETE:  case(2)
+!OBSOLETE:     if (IONO_NORTH_nMagBndPts >= 8 .and. &
+!OBSOLETE:          IONO_SOUTH_nMagBndPts >= 8) then
+!OBSOLETE:        call ionosphere_fac
+!OBSOLETE:     else
+!OBSOLETE:        write(6,*) "nMagBndPts = ",&
+!OBSOLETE:            IONO_NORTH_nMagBndPts,IONO_SOUTH_nMagBndPts
+!OBSOLETE:        write(6,*) "Skipping ionosphere"
+!OBSOLETE:     endif
      
   case(3)
      call ionosphere_read_restart_file(iter)
@@ -69,6 +70,10 @@ subroutine ionosphere(iter, iAction)
      ! FAC driving the ionospheric solution.
      !/
      call ionosphere_write_restart_file(iter)
+
+  case default
+     write(*,*)'IE ionosphere: ERROR, iAction = ',iAction
+     call CON_stop('IE ionosphere: ERROR invalid iAction')
      
   end select
   
@@ -275,19 +280,19 @@ subroutine ionosphere_init
   IONO_SOUTH_Uy = 0.00
   IONO_SOUTH_Uz = 0.00  
 
-  IONO_NORTH_PHI_BC = 0.00
-  IONO_NORTH_ETh_BC = 0.00
-  IONO_NORTH_EPs_BC = 0.00
-  IONO_NORTH_UR_BC = 0.00 
-  IONO_NORTH_UTh_BC = 0.00 
-  IONO_NORTH_UPs_BC = 0.00
-
-  IONO_SOUTH_PHI_BC = 0.00
-  IONO_SOUTH_ETh_BC = 0.00
-  IONO_SOUTH_EPs_BC = 0.00
-  IONO_SOUTH_UR_BC = 0.00
-  IONO_SOUTH_UTh_BC = 0.00 
-  IONO_SOUTH_UPs_BC = 0.00
+  !OBSOLETE: IONO_NORTH_PHI_BC = 0.00
+  !OBSOLETE: IONO_NORTH_ETh_BC = 0.00
+  !OBSOLETE: IONO_NORTH_EPs_BC = 0.00
+  !OBSOLETE: IONO_NORTH_UR_BC = 0.00 
+  !OBSOLETE: IONO_NORTH_UTh_BC = 0.00 
+  !OBSOLETE: IONO_NORTH_UPs_BC = 0.00
+  !OBSOLETE: 
+  !OBSOLETE: IONO_SOUTH_PHI_BC = 0.00
+  !OBSOLETE: IONO_SOUTH_ETh_BC = 0.00
+  !OBSOLETE: IONO_SOUTH_EPs_BC = 0.00
+  !OBSOLETE: IONO_SOUTH_UR_BC = 0.00
+  !OBSOLETE: IONO_SOUTH_UTh_BC = 0.00 
+  !OBSOLETE: IONO_SOUTH_UPs_BC = 0.00
 
   IONO_NORTH_TGCM_JR = 0.00                                            !^CFG  IF TIEGCM
   IONO_SOUTH_TGCM_JR = 0.00                                            !^CFG  IF TIEGCM
