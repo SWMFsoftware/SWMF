@@ -49,6 +49,7 @@ GM			ON			#^CMP IF GM
 IM			ON			#^CMP IF IM
 IE			ON			#^CMP IF IE
 UA			ON NEEDS IE		#^CMP IF UA
+RB                      ON                      #^CMP IF RB
 
 # For more than one physics components:         #^CMP IF MULTI
 MULTI                   ON                      #^CMP IF MULTI
