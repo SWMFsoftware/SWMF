@@ -292,7 +292,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 
   use ModProcIE
   use ModIonosphere
-  use IE_ModMain, ONLY: IsNewInput
 
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_gm'
@@ -1039,10 +1038,11 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   if(DoTest)write(*,*)NameSub,': iProc,nStep = ',iProc,nStep
 
-  if(nStep <= 1) RETURN
-
   ! After the solve this input can be considered old
   IsNewInput = .false.
+
+  ! No need to solve for the 1st time step (input cannot be reasonable)
+  if(nStep <= 1) RETURN
 
   ! Obtain the position of the magnetix axis
   call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)
