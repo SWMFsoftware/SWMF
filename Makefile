@@ -72,7 +72,7 @@ ENV_CHECK:
 	  echo; \
 	  echo "SWMF_ROOT='${SWMF_ROOT}' and/or OS='${OS}' are incorrect!";\
 	  echo "Correcting Makefile.def";\
-	  perl -pi ${SCRIPTDIR}/FixMakefileDef.pl Makefile.def; \
+	  perl -pi share/Scripts/FixMakefileDef.pl Makefile.def; \
 	  echo "You may now try the previous make command again ..."; \
 	  exit 1; \
 	fi);
