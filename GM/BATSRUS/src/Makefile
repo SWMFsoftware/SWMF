@@ -216,11 +216,11 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 # Libraries should be compiled first, because modules are used in main.
-${OBJECTS_EXE}: ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING}
 
-BATSRUS.exe: ${OBJECTS_EXE}
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
-		-L. -lBATSRUS -L${LIBDIR} -lSHARE -lTIMING \
+BATSRUS.exe: ${OBJECTS_EXE} ${OBJECTS} ${MODULES}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+		-L${LIBDIR} -lTIMING -lSHARE \
 		${Lflag1}
 
 #
