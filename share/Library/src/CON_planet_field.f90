@@ -29,6 +29,8 @@ module CON_planet_field
 
   !REVISION HISTORY:
   ! 11Aug03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
+  ! 28Nov04 - Gabor Toth - added optional arguments DoNotConvertBack and
+  !                        Jacobian matrix to the map_planet_field
   !EOP -------------------------------------------------------------------
 
   interface get_planet_field
@@ -232,26 +234,44 @@ contains
   !IROUTINE: map_planet_field - map planet field from a position to some radius
   !INTERFACE:
   subroutine map_planet_field11(TimeSim, XyzIn_D, TypeCoord, &
-       rMapIn, XyzMap_D, iHemisphere)
+       rMapIn, XyzMap_D, iHemisphere, DoNotConvertBack, DdirDxyz_DD)
 
     !INPUT ARGUMENTS:
     real,              intent(in) :: TimeSim      ! simulation time
     real,              intent(in) :: XyzIn_D(3)   ! spatial position
     character(len=*),  intent(in) :: TypeCoord    ! type of coordinates
     real,              intent(in) :: rMapIn       ! radial distance to map to
+    logical, optional, intent(in) :: DoNotConvertBack ! Leave XyzMap in SMG/MAG
 
     !OUTPUT ARGUMENTS:
-    real,              intent(out):: XyzMap_D(3)  ! mapped position
-    integer,           intent(out):: iHemisphere  ! which hemisphere
+    real,              intent(out):: XyzMap_D(3)      ! mapped position
+    integer,           intent(out):: iHemisphere      ! which hemisphere
+    real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
 
     !DESCRIPTION:
     ! Map the planet field from the input position to the mapping radius.
-    ! The coordinate system and normalization used for the input position
-    ! will also be used for the output position. The routine also returns
-    ! which hemisphere the point is mapping to: +1 for north, -1 for south.
+    ! The coordinate system of the input coordinates is given by the first 3
+    ! characters of the TypeCoord string. If the input coordinates are
+    ! already normalized (given in units of planet radius), TypeCoord should
+    ! contain the NORM string. Otherwise the coordinates are assumed to be
+    ! in SI units (meters). 
+    !
+    ! If the DoNotConvertBack argument is present, the mapped point will remain
+    ! in the SMG (when the input coordinate system is not corotating)
+    ! or MAG coordinates (when the input coordinate system rotates), 
+    ! otherwise it is converted back to the coordinate system of the 
+    ! input coordinates. The units for the output
+    ! position are always the same as for the input coordinates.
+    !
+    ! The routine also returns which hemisphere the point maps to: 
+    ! +1 for north and -1 for south.
     ! If the point does not map to the defined radius at all, 0 is returned,
     ! and the output position is set to a radial projection of the input
     ! position to the magnetic equator.
+    !
+    ! If the DdirDxyz_DD argument is present, the 2 x 3 Jacobian matrix 
+    ! dTheta/dx, dTheta/dy, dTheta/dz, dPhi/dx, dPhi/dy, dPhi/dz
+    ! is returned.
 
     !PARAMETERS:
 
@@ -270,7 +290,7 @@ contains
     character(len=3) :: NameCoordSystem ! Input/Output coordinate system
 
     ! Temporary variables for the analytic mapping
-    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2
+    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Tmp
 
 !!! logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
@@ -378,6 +398,31 @@ contains
           ! Select the same hemisphere as for the input position
           XyzMap_D(3) = iHemisphere*sqrt(rMap2 - XyMap2)
        end if
+
+       if(present(DdirDxyz_DD))then
+          ! dTheta/dx = xMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
+          ! dTheta/dy = yMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
+
+          XyMap = sqrt(XyMap2)
+
+          Tmp = ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
+               ( XyzMap_D(3) * XyMap / XyRatio )
+
+          DdirDxyz_DD(1,1:2) = XyzMap_D(1:2) * Tmp
+
+          ! dTheta/dz = sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
+          DdirDxyz_DD(1,3) = XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
+
+          ! dPhi/dx = -y/(x^2+y^2)
+          DdirDxyz_DD(2,1) = - XyzMap_D(2) / XyMap2
+
+          ! dPhi/dy = x/(x^2+y^2)
+          DdirDxyz_DD(2,2) =   XyzMap_D(1) / XyMap2
+
+          ! dPhi/dz = 0.0
+          DdirDxyz_DD(2,3) = 0.0
+       endif
+
     case default
        call CON_stop(NameSub//' unimplemented TypeBField='//TypeBField)
     end select
@@ -387,17 +432,22 @@ contains
     case('GEO')
        ! Convert back from MAG
        XyzMap_D = matmul(XyzMap_D,MagGeo_DD)
+       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, MagGeo_DD)
     case('GSM')
        ! Convert back from SMG
        XyzMap_D = matmul(XyzMap_D,SmgGsm_DD)
+       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
     case('GSE')
        ! Convert back from SMG
        XyzMap_D = matmul(XyzMap_D,SmgGse_DD)
+       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGse_DD)
     end select
 
     ! Undo the normalization
-    if( index(TypeCoord,"NORM")<=0 ) &
-         Xyzmap_D = Xyzmap_D*RadiusPlanet
+    if( index(TypeCoord,"NORM")<=0 ) then
+       Xyzmap_D = Xyzmap_D * RadiusPlanet
+       if(present(DdirDxyz_DD)) DdirDxyz_DD = DdirDxyz_DD / RadiusPlanet
+    end if
 
   end subroutine map_planet_field11
 
@@ -405,17 +455,19 @@ contains
   !IROUTINE: map_planet_field33 - map planet field from a position to some radius
   !INTERFACE:
   subroutine map_planet_field33(TimeSim, xIn, yIn, zIn, TypeCoord, &
-       rMap, xMap, yMap, zMap, iHemisphere)
+       rMap, xMap, yMap, zMap, iHemisphere, DoNotConvertBack, DdirDxyz_DD)
 
     !INPUT ARGUMENTS:
-    real,             intent(in) :: TimeSim       ! simulation time
-    real,             intent(in) :: xIn, yIn, zIn ! spatial position
-    character(len=*), intent(in) :: TypeCoord     ! type of coordinates
-    real,             intent(in) :: rMap          ! radial distance to map to
+    real,              intent(in) :: TimeSim       ! simulation time
+    real,              intent(in) :: xIn, yIn, zIn ! spatial position
+    character(len=*),  intent(in) :: TypeCoord     ! type of coordinates
+    real,              intent(in) :: rMap          ! radial distance to map to
+    logical, optional, intent(in) :: DoNotConvertBack
 
     !OUTPUT ARGUMENTS:
-    real,              intent(out):: xMap, yMap, zMap  ! mapped position
-    integer,           intent(out):: iHemisphere       ! mapped hemisphere
+    real,              intent(out):: xMap, yMap, zMap ! mapped position
+    integer,           intent(out):: iHemisphere      ! mapped hemisphere
+    real, optional,    intent(out):: DdirDxyz_DD(2,3) ! Jacobian matrix
 
     !DESCRIPTION:
     ! Interface to the map\_planet\_field11 routine with 3 scalars for both
@@ -429,7 +481,7 @@ contains
     XyzIn_D(1)=xIn; XyzIn_D(2)=yIn; XyzIn_D(3)=zIn
 
     call map_planet_field(TimeSim, XyzIn_D, TypeCoord, rMap, &
-         XyzMap_D, iHemisphere)
+         XyzMap_D, iHemisphere, DoNotConvertBack, DdirDxyz_DD)
 
     xMap=XyzMap_D(1); yMap=XyzMap_D(2); zMap=XyzMap_D(3)
     !EOC
