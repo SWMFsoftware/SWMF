@@ -62,6 +62,13 @@ SWMF:
            FIX (Aug27,2004): Set 'parent timing' to be at least 'child timing'
            MODIFIED:         til/TIMING/src/timing.f90
 
+        5. SC-IH-SP coupled run hangs if SC and IH are not on the same set
+           of processors. This was observed on the SGI.
+
+        6. GM-IE coupling results (especially the ionosphere potentail)
+           somewhat depend on the number of PE-s on the SGI.
+           (but not on the Altix). 
+
 RB:
         1. The Radiation Belt (RB) module included with this release
            does not conform to several SWMF requirements for physics
