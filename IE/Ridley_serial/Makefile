@@ -24,7 +24,7 @@ install_cont:
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
-		touch src/Makefile.RULES; \
+		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
 	touch src/Makefile.DEPEND
 

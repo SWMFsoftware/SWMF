@@ -79,7 +79,7 @@ MAKEFILE_DEF:
 		cat src/Makefile.def                    >> Makefile.def; \
 	fi);
 
-install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90
+install_cont: src/Makefile.OPTIONS src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
@@ -87,16 +87,14 @@ install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
-	cd src; make user_routines.f90 #^CFG IF USERFILES
-	cd src; make STATIC
-
-src/Makefile.RULES:
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
-		touch src/Makefile.RULES; \
+		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
+	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+	cd src; make user_routines.f90 #^CFG IF USERFILES
+	cd src; make STATIC
 
 src/Makefile.OPTIONS:
 	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
