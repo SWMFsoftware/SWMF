@@ -81,9 +81,9 @@ Options:
 
 Examples of use:
 
-In a makefile:  depend.pl -s="MODDIR:${MODDIR},../Lib" ${OBJECTS}
+In a makefile:  depend.pl -s="SEARCHDIR:${SEARCHDIR},../src" ${OBJECTS}
 
-                SEARCH_EXTRA = -I${MODDIR} -I../src
+                SEARCH_EXTRA = -I${LIBRARYDIR} -I../src
                 depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
 
 Interactively:  depend.pl -o=Makefile.test main.o ModMain.o'
@@ -120,9 +120,14 @@ foreach $dir (@search){
 		$module = uc($1); # capitalize module name (ignore case)
 		$object = $module.'.O'; 
 
+		
                 # Check if the file with the same name as the module
 		# has been found already
-		if($modulefile{$object} !~ /\/$module\.o$/i){
+
+		# Remove IH_ from the name of the module for matching
+		$modmatch = $module; $modmatch =~ s/^IH_//;
+
+		if($modulefile{$object} !~ /\/$modmatch\.o$/i){
 		    # If not, store the filename into %modulefile
 		    $file =~ s/\.f90$/.o/i;
 		    if($env{$dir}){
