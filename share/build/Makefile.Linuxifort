@@ -35,7 +35,7 @@ Cflag3  = ${SEARCH} -c -O3 ${PRECISION} ${DEBUG}
 Cflag4  = ${SEARCH} -c -O3 ${PRECISION} ${DEBUG}
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  -c -save ${DEBUG}
+CFLAGS = ${SEARCH}  -c -save -O2 ${DEBUG}
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 
