@@ -21,7 +21,7 @@ OBJECTS = \
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 #
 #	Making executables and libraries
@@ -41,6 +41,7 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
+	rm -f IH_*.f90 ModGridDescriptor.f90 update_lagrangian_grid.f90
 	rm -f Makefile.DEPEND
 
 # keep this line
