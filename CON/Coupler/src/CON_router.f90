@@ -698,7 +698,7 @@ contains
                    end if
                 end if
              end if
-             call timing_start('set_router_interp')
+             ! call timing_start('set_router_interp')
              if(DoTestMe)then
                 XyzStored_D=XyzSource_D
                 write(iFile,*)iGlobalGridPoint,XyzSource_D
@@ -753,7 +753,7 @@ contains
                 end if
                 write(iFile,*)
              end if
-             call timing_stop('set_router_interp')
+             ! call timing_stop('set_router_interp')
 !--------------------------------------------------------------!
 !Lookup
              nImagesPart=0     !At all CPUs
