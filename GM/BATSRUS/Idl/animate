@@ -21,7 +21,7 @@
 
    print,'======= CURRENT ANIMATION PARAMETERS ================'
    print,'firstpict=',firstpict,', dpict=',dpict,$
-        ', npictmax=',npictmax,', savemovie (y/n)=',savemovie,$
+        ', npictmax=',npictmax,', savemovie (n/png/tiff/bmp/jpeg)=',savemovie,$
         FORMAT='(a,i4,a,i4,a,i4,a,a)'
    print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
          ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
@@ -173,7 +173,7 @@
 
    if printmovie eq 'y' then set_plot,'PS',/INTERPOLATE
 
-   if (printmovie eq 'y' or savemovie eq 'y') and $
+   if (printmovie eq 'y') and $
       (npict-1)/npict1+1 gt nplotmax then begin
       print,'For printing npict is too much :',npict
       print,'Reducing npict back to nplotmax:',nplotmax
@@ -194,7 +194,7 @@
          if not keyword_set(noerase) then erase
          !p.multi=[0,multix,multiy,0,multidir]
          if printmovie eq 'y' then $
-            device,filename='Movie/'+strtrim(string(iplot+1),2)+'.ps',$
+            device,filename='Movie/'+string(FORMAT='(i4.4)',iplot+1)+'.ps',$
 		   XSIZE=24,YSIZE=18,/LANDSCAPE,/COLOR,BITS=8
       endif
 
@@ -259,18 +259,21 @@
                   putheader,nfile,1,ifile,0,headerline,headline,nx
             endelse
          endif
+
       endfor
 
       if ipict1 eq npict1-1 or ipict eq npict-1 then begin
          if doanimate then $
             xinteranimate,frame=iplot,window=!d.window
          if printmovie eq 'y' then begin
-            print,FORMAT='(" (Movie/",i2,".ps)",$)',iplot+1
+            print,FORMAT='(" (Movie/",i4.4,".ps)",$)',iplot+1
             device,/close
-         endif
-         if savemovie eq 'y' then begin
-            print,FORMAT='(" (Movie/",i2,".gif)",$)',iplot+1
-            write_gif,'Movie/'+strtrim(string(iplot+1),2)+'.gif',tvrd()
+         endif 
+         if savemovie ne 'n' and !d.name eq 'X' then begin
+            imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
+            print,FORMAT='("(",a,")",$)',imagefile
+            common colors,  r_curr, g_curr, b_curr
+	    write_image,imagefile,savemovie,tvrd(),r_curr, g_curr, b_curr
          endif
       endif
 
