@@ -24,7 +24,17 @@ subroutine SP_set_param(CompInfo,TypeAction)
   implicit none
   type(CompInfoType),intent(inout)       :: CompInfo
   character(len=*), intent(in)           :: TypeAction
-  call CON_stop('Can not call SP_set_param for '//trim(TypeAction))
+  !-------------------------------------------------------------------------
+  select case(TypeAction)
+  case('VERSION')
+     call put(CompInfo,&
+          Use        =.false., &
+          NameVersion='Empty', &
+          Version    =0.0)
+
+  case default
+     call CON_stop('Can not call SP_set_param for '//trim(TypeAction))
+  end select
 end subroutine SP_set_param
 !=========================================================
 subroutine SP_save_restart(TimeSimulation) 
