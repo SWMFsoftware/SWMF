@@ -973,7 +973,21 @@ subroutine stop_mpi(str)
 
 end subroutine stop_mpi
 
+!============================================================================
 
+subroutine alloc_check(iError,String)
+
+  implicit none
+
+  integer, intent(in) :: iError
+  character (len=*), intent(in) :: String
+  !----------------------------------------------------------------------------
+
+  if (iError>0) call stop_mpi("Allocation error for "//String)
+
+end subroutine alloc_check
+
+!==========================================================================
 
 subroutine error_report(str,value,iErrorIn,show_first)
 
