@@ -1,0 +1,12 @@
+# Local Makefile.def
+
+localdefault: help # default target
+
+DIR     = ${UADIR}
+
+SCRIPTDIR = ${UADIR}/share/Scripts
+LIBDIR    = ${UADIR}/src
+RUNDIR    = ${UADIR}/run
+BINDIR    = ${UADIR}/src
+SHAREDIR  = ${UADIR}/share/Library/src
+

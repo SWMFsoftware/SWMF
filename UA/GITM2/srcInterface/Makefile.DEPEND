@@ -1,0 +1,26 @@
+UA_run.o:\
+	../src/ModGITM.o \
+	../src/ModTime.o \
+	../src/ModInputs.o \
+	${SHAREDIR}/ModTimeConvert.o
+
+UA_save_restart.o:\
+	../src/ModInputs.o
+
+UA_set_param.o:\
+	../src/ModInputs.o \
+	${SHAREDIR}/ModReadParam.o \
+	../src/ModTime.o \
+	${SHAREDIR}/ModTimeConvert.o \
+	${LIBRARYDIR}/CON_physics.o \
+	${SHAREDIR}/ModIoUnit.o \
+	ModProcUA.o \
+	../src/ModGITM.o \
+	../src/ModPlanet.o \
+	${LIBRARYDIR}/CON_comp_info.o \
+	${SHAREDIR}/ModUtilities.o \
+	${COUPLERDIR}/CON_coupler.o \
+	${SHAREDIR}/ModNumConst.o \
+	../src/ModSize.o \
+	../src/ModSphereInterface.o
+
