@@ -8,8 +8,8 @@ my $Help;                       # No help unless needed
 my @search;                     # Array of search
 
 # Error and warning messages
-my $ERROR   = "depend.pl ERROR:";
-my $WARNING = "depend.pl WARNING:";
+my $ERROR   = "ERROR in depend.pl:";
+my $WARNING = "WARNING in depend.pl:";
 
 # Translation between directory names and Makefile definitions
 my %defdir = ('/share/Library/src' => 'SHAREDIR',
