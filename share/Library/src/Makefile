@@ -10,7 +10,8 @@ include Makefile.DEPEND
 
 MODULES = \
 	ModKind.o\
-	ModTimeType.o\
+	ModTimeConvert.o\
+	ModFreq.o\
 	ModCoordTransform.o\
 	ModSort.o\
         ModNumConst.o\
@@ -21,11 +22,9 @@ MODULES = \
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
-	CON_physics.o\
 	CON_planet.o\
 	CON_planet_field.o\
-	CON_ray_trace.o\
-	CON_time.o
+	CON_ray_trace.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${MODULES}
