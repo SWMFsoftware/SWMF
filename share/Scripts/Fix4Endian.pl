@@ -18,6 +18,10 @@
 # Usage:  
 #         Fix4Endian.pl [-only=A:B] [-except=C:D] < InFile > Outfile
 #         Fix4Endian.pl -i [-only=A:B] [-except=C:D] File1 [File2 ...]
+#
+# Example: fix endianness of the RCM restart files
+#
+#    share/Scripts/Fix4Endian.pl -i -except=161:240 run/IM/RCM/restartIN/*
 #\end{verbatim}
 #!REVISION HISTORY:
 # 07/13/2001 G. Toth - initial version
@@ -34,7 +38,7 @@ if($only){
     $_ = $only;
     ($Start,$Finish) = /(\d+).(\d+)/;
     die "Incorrect format for -only=$only\n"
-        unless 0 < $start and $start < $Finish;
+        unless 0 < $Start and $Start < $Finish;
 }else{
     $Start  =  1; 
     $Finish = -1;
@@ -51,13 +55,19 @@ if($except){
     $Max = -1;
 }
 
+@ARGV = ("_STDIN_") if not @ARGV;
 
  FILE: foreach $file (@ARGV){
 
      # Read the whole file into $_
-     open(FILE,$file) or (warn "Could not open file=$file\n" and next FILE);
-     $_=<FILE>;
-     close(FILE);
+     if($file eq "_STDIN_"){
+	 $_=<STDIN>;
+     }else{
+	 open(FILE,$file) 
+	     or (warn "Could not open file=$file\n" and next FILE);
+	 $_=<FILE>;
+	 close(FILE);
+     }
      $length = length();
 
      # Initialize variables for this file
@@ -68,7 +78,7 @@ if($except){
 
      # Check variables
      if($start > $length){
-	 warn "Starting byte number in -only=$only exceeds file length\n";
+	 warn "Starting byte number in -only=$only exceeds length of $file\n";
 	 next FILE;
      }
 
@@ -76,16 +86,18 @@ if($except){
 	$finish = $length;
     }elsif($finish > $length){
 	$finish = $length;
-	warn "Final byte number in -only=$only exceeds file length\n";
+	warn "Final byte number in -only=$only exceeds length of $file\n";
     }
     
     if($min > $length){
-	warn "Minimum byte number in -except=$except exceeds file length\n";
+	warn "Minimum byte number in -except=$except ".
+	    "exceeds length of $file\n";
     }
     
     if($max > $length){
 	$max = $length;
-	warn "Maximum byte number in -except=$except exceeds file length\n";
+	warn "Maximum byte number in -except=$except ".
+	    "exceeds length of $file\n";
     }
     
     # Reverse every 4 bytes
