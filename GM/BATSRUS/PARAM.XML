@@ -2025,7 +2025,7 @@ T			IsParallel
 ! cut in tec.  The following would work for the plot range:
 !\begin{verbatim}
 ! -5.01			xMinCut
-!  5.01			xMaxCut
+! -4.99			xMaxCut
 ! -10.			yMinCut
 !  10.			yMaxCut
 ! -10.			zMinCut
