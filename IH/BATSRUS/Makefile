@@ -32,17 +32,10 @@ clean:
 	fi)
 
 distclean: clean
-	@(if([ -f src/Makefile ]); then \
-	  cd src; make distclean; cd ..; \
-	  cd srcInterface; make distclean; \
+	@(if([ -f Makefile.def ]); then \
+		touch srcInterface/Makefile.DEPEND; \
+		cd srcInterface; make distclean; \
 	fi)
+	rm -rf  src Makefile.* PARAM.XML PARAM.pl GridSize.pl *~
 
-veryclean:
-	touch srcInterface/Makefile.DEPEND; cd srcInterface; make distclean
-	rm -rf  src \
-		srcInterface/IH_*.f90 \
-		srcInterface/ModGridDescriptor.f90 \
-		srcInterface/update_lagrangian_grid.f90 \
-		srcInterface/Makefile.DEPEND \
-		Makefile.conf Makefile.def* \
-		PARAM.XML PARAM.pl GridSize.pl *~
+veryclean: distclean
