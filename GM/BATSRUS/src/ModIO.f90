@@ -53,6 +53,9 @@ Module ModIO
   real, dimension(3,maxfile) :: los_vector
   real, dimension(3,maxfile) :: los_corner 
 
+  ! Maximum number of plot variables
+  integer, parameter :: nPlotvarMax=20
+
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
   integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
