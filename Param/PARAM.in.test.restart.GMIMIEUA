@@ -2,7 +2,7 @@
 T			DoEcho
 
 #INCLUDE
-RESTART.in
+RESTART.GM
 
 #DESCRIPTION
 Create startup for GM-IM-IE-UA from GM stady state.
