@@ -134,6 +134,7 @@ contains
     IsProc_C = .false.
     do lComp = 1,nComp
        iComp = i_comp(lComp)
+       if(.not.use_comp(iComp)) CYCLE
        IsProc_C(iComp) = is_proc(iComp)
     end do
 
