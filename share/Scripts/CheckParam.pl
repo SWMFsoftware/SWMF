@@ -32,6 +32,9 @@ my $ValidComp = 'SC|IH|SP|GM|IM|RB|IE|UA';
 # Error string
 my $ERROR = 'CheckParam_ERROR:';
 
+# Error status
+my $IsError;
+
 # Set default values (needed in the help message too)
 my $XmlFileDefault   = 'Param/PARAM.XML';
 my $InputFileDefault = 'run/PARAM.in';
@@ -168,7 +171,7 @@ while($_=&read_line){
 # if the parameters are correct
 &check_session;
 
-exit 0;
+exit $IsError;
 
 ##############################################################################
 sub check_arguments{
@@ -397,7 +400,7 @@ sub read_line{
 
 	if(/INCLUDE/){
 	    # Read the parameter of the INCLUDE command
-	    $commandName=$1;
+	    $commandName="INCLUDE";
 	    $realName=$realName{$commandName};
 	    no strict;
 	    if($paramValue = <$FileHandle>){
@@ -412,8 +415,8 @@ sub read_line{
 		print "read script parameter = $paramValue\n" if $Debug;
 	    }else{
 		use strict;
-		print "Error at line $nLine in file $InputFile:\n".
-		    "\tend of file after script command \#$commandName\n";
+		&print_error(" for command \#$commandName\n".
+			     "\tend of file after command");
 		return 0 unless &previous_file;
 	    }
 	    use strict;
@@ -445,9 +448,8 @@ sub read_line{
 		$nLine                    = 0;
 	    }else{
 		use strict;
-		print "Error at line $nLine in file $InputFile for ".
-		    "command $_".
-			"\tCould not open include file $file\n";
+		&print_error(" for command $_".
+			     "\tCould not open include file $file");
 		$FileHandle=$FileHandleOld;
 		return 1;
 	    }
@@ -460,36 +462,32 @@ sub read_line{
     use strict;
 
     if($UserInput and /^\#(BEGIN_COMP|END_COMP|RUN|USERINPUTBEGIN)\b/){
-	print "Error at line $nLine in file $InputFile for ".
-	    "command $_".
-	    "\tthis command cannot occur after #USERINPUTBEGIN at line $UserInput\n";
-	    $UserInput = 0;
+	&print_error( " for command $_".
+		      "\tthis command cannot occur after ".
+		      "#USERINPUTBEGIN at line $UserInput");
+	$UserInput = 0;
     }
 
     # Check for BEGIN_COMP and END_COMP commands
     if(/^\#BEGIN_COMP\b/ and not $StandAlone){
 	if($InsideComp){
-	    print "Error at line $nLine in file $InputFile for ".
-		"command $_".
-		"\tAlready had BEGIN_COMP $InsideComp\n";
+	    &print_error(" for command $_".
+			 "\talready had BEGIN_COMP $InsideComp");
 	}else{
 	    # Figure out which component is beginning here
 	    ($InsideComp) = /BEGIN_COMP ([A-Z][A-Z])/ or
-		print "Error at line $nLine in file $InputFile for ".
-		"command $_".
-		"\tIncorrectly formatted BEGIN_COMP command\n";
+		&print_error(" for command $_".
+			     "\tincorrectly formatted BEGIN_COMP command");
 
 	    # Check if the component is registered and ON
 	    if($Components){
 		if(not $COMP::_Registered{$InsideComp}){
-		    print "Error at line $nLine in file $InputFile for ".
-			"command $_".
-			"\tComponent $InsideComp is not registered\n";
+		    &print_error(" for command $_".
+				 "\tcomponent $InsideComp is not registered");
 		}
 		if(not $COMP::_UsedComp{$InsideComp}){
-		    print "Error at line $nLine in file $InputFile for ".
-			"command $_".
-			"\tRegistered component $InsideComp is OFF.\n";
+		    &print_error(" for command $_".
+				 "\tregistered component $InsideComp is OFF.");
 		}
 	    }
 
@@ -500,15 +498,13 @@ sub read_line{
 	# Extract name of the component from #END_COMP ID
 	my $Comp;
 	($Comp) = /END_COMP ([A-Z][A-Z])/ or
-	    print "Error at line $nLine in file $InputFile for ".
-	    "command $_".
-	    "\tIncorrectly formatted END_COMP command\n";
+	    &print_error(" for command $_".
+			 "\tincorrectly formatted END_COMP command");
 
 	# Check if the component name matches
 	if($Comp ne $InsideComp){
-	    print "Error at line $nLine in file $InputFile for ".
-		"command $_".
-		"\tComponent does not match BEGIN_COMP $InsideComp\n";
+	    &print_error(" for command $_".
+			 "\tcomponent does not match BEGIN_COMP $InsideComp");
 	}else{
 	    # END_COMP matches BEGIN_COMP, so we are back to CON params
 	    $InsideComp = '';
@@ -529,9 +525,8 @@ sub read_line{
 	$UserInput = $nLine+1;
     }elsif(/^\#USERINPUTEND/){
 	if(not $UserInput){
-	    print "Error at line $nLine in file $InputFile for ".
-		"command $_".
-		"\tthere is no matching #USERINPUTBEGIN command\n";
+	    &print_error(" for command $_".
+			 "\tthere is no matching #USERINPUTBEGIN command");
 	}
 	$UserInput = 0;
     }
@@ -583,6 +578,7 @@ sub check_if{
 	{
 	    print "ERROR: attribute expr= is missing from tag $node->{name}".
 		"in the XML description of $commandName\n";
+	    $IsError = 1;
 	    return 1;
 	}
     }
@@ -638,10 +634,12 @@ sub process_elements{
 	}
 	elsif($name eq 'rule')
 	{
-	    print "Error at line $nLine in file $InputFile:\n".
-		"\t$element->{attrib}->{expr}\n",
-		"\tis false! Rule description:\n",
-		"$element->{content}->[0]->{content}\n";
+	    my $content = $element->{content}->[0]->{content};
+	    $content =~ s/^\s+//; $content =~ s/\s+$//;
+	    $content =~ s/\$(\w+)/'$COMP::'.$1/gee;
+	    &print_error(":\n".
+			 "\t$element->{attrib}->{expr}\n".
+			 "\tis false! Rule description:\n".$content);
 	    print "Command description\n$commandText{$realName}\n"
 		if $Verbose;
 	}
@@ -944,16 +942,15 @@ sub check_command{
 
     # Check if the command is descibed in the XML file or not
     if( not $command ){
-	print "Error at line $nLine in file $InputFile:\n".
-	    "\tcommand \#$commandName is unknown\n";
+	&print_error(" for command \#$commandName\n\tcommand is unknown");
 	return 0;
     }
 
     # Check if the command is currently available
     if( not &check_if($command) ){
-	print "Error at line $nLine in file $InputFile:\n".
-	    "\tcommand \#$commandName is not available\n",
-	    "\tbecause condition $command->{attrib}->{if} is false\n";
+	&print_error(" for command \#$commandName\n".
+		     "\tcommand is not available because\n".
+		     "\tcondition $command->{attrib}->{if} is false");
 	return 0;
     }
 
@@ -985,6 +982,7 @@ sub check_session{
 	print "Error in session $nSession ending at line $nLine ".
                 "in file $InputFile:\n".
                 "\tBEGIN_COMP $InsideComp does not have matching END_COMP\n";
+	$IsError = 1;
     }
 
 
@@ -995,6 +993,7 @@ sub check_session{
 	    print "Error in session $nSession ending at line $nLine ".
 		"in file $InputFile:\n".
 		"\trequired command \#$realName was not defined\n";
+	    $IsError = 1;
 	}
     }
 
@@ -1008,11 +1007,10 @@ sub check_session{
 
 	    next unless check_if($node);
 
-	    print "Error at line $nLine in file $InputFile in ".
-		"session $nSession:\n",
-		"\t$node->{attrib}->{expr}\n",
-		"\tis false! Rule description:\n",
-		"$node->{content}->[0]->{content}\n";
+	    &print_error(" in session $nSession:\n".
+			 "\t$node->{attrib}->{expr}\n".
+			 "\tis false! Rule description:\n".
+			 "$node->{content}->[0]->{content}");
 	}
     }
 }
@@ -1026,10 +1024,9 @@ sub store{
     my $value=$_[1];
     &eval_comp("\$$name='$value'");
     print "eval_comp(\$$name='$value')\n" if $Debug;
-    print "ERROR at line $nLine in file $InputFile:\n".
-	"\tfor command $commandName\n",
-	"\tcould not evaluate \$$name='$value':\n\t$@\n"
-	    if $@;
+    &print_error(" for command $commandName\n".
+		 "\tcould not evaluate \$$name='$value':\n\t$@")
+	if $@;
 }
 ##############################################################################
 sub extract{
@@ -1065,10 +1062,10 @@ sub extract{
 	&eval_comp("\$_value_=$value;");
 	$value_ = $COMP::_value_;
 
-        print "ERROR at line $nLine in file $InputFile:\n".
-		"\tcommand \#$commandName could not evaluate\n",
-		"\tsetting \$value_=$value:\n\t$@\n"
-		    if $@;
+        &print_error(" for command \#$commandName\n".
+		     "\tcould not evaluate\n".
+		     "\tsetting \$value_=$value:\n\t$@")
+	    if $@;
     }
 
     if($type eq "logical"){
@@ -1078,9 +1075,9 @@ sub extract{
 	# Convert possible empty string (=false) into a more readable 0
 	$value_ = $value_+0;
 	if($value_ !~ /^[01]$/){
-	    print "ERROR at line $nLine in file $InputFile:\n".
-		"\tcommand \#$commandName contains incorrect logical\n",
-		"\t$value = $value_\n";
+	    &print_error(" for command \#$commandName\n".
+			 "\tcontains incorrect logical\n".
+			 "\t$value = $value_");
 	    $value_=0;
 	}
     }
@@ -1089,12 +1086,18 @@ sub extract{
 
 }
 ##############################################################################
+sub print_error{
+    $IsError = 1;
+    print "Error at line $nLine in file $InputFile",@_,"\n";
+}
+
+##############################################################################
 sub param_error{
+    $IsError = 1;
     return if $DontShowParamError;
-    print "Error at line $nLine in file $InputFile:\n".
-	"\tParameter $paramName of type $paramType in ",
-	"command \#$commandName\n",
-	"\t@_\n";
+    &print_error(" for command \#$commandName:\n".
+		 "\tParameter $paramName of type $paramType\n".
+		 "\t@_");
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
