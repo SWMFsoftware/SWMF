@@ -117,53 +117,95 @@ DEPEND:
 # - general software libraries come last in the order of their interdependecies
 
 #^CMP IF IH BEGIN
- LIB1  = ${LIBIH}
- lib1  = -lIH
- doto1 = ${IHDIR}/src/*.o
+LIB1  = ${LIBIH}
+lib1  = -lIH
+doto1 = ${LIBDIR}/IH.o
+
+${doto1}:	${LIBIH}
+	ld -o ${doto1} ${LIBIH} -all_load -r
+
 #^CMP END IH
-
 #^CMP IF GM BEGIN
- LIB2 = ${LIBGM}
- lib2 = -lGM
- doto2 = ${GMDIR}/src/*.o ${GMDIR}/srcInterface/*.o
+LIB2 = ${LIBGM}
+lib2 = -lGM
+doto2 = ${LIBDIR}/GM.o
+
+${doto2}:	${LIBGM}
+	ld -o ${doto2} ${LIBGM} -all_load -r
+
 #^CMP END GM
-
 #^CMP IF IM BEGIN
- LIB3 = ${LIBIM}
- lib3 = -lIM
- doto3 = ${IMDIR}/src/*.o ${IMDIR}/src/claw/*.o
+LIB3 = ${LIBIM}
+lib3 = -lIM
+doto3 = ${LIBDIR}/IM.o
+
+${doto3}:	${LIBIM}
+	ld -o ${doto3} ${LIBIM} -all_load -r
+
 #^CMP END IM
-
 #^CMP IF IE BEGIN
- LIB4 = ${LIBIE}
- lib4 = -lIE
- doto4 = ${IEDIR}/src/*.o
-#^CMP END IE
+LIB4 = ${LIBIE}
+lib4 = -lIE
+doto4 = ${LIBDIR}/IE.o
 
+${doto4}:	${LIBIE}
+	ld -o ${doto4} ${LIBIE} -all_load -r
+
+#^CMP END IE
 #^CMP IF UA BEGIN
- LIB5 = ${LIBUA}
- lib5 = -lUA
- doto5 = ${UADIR}/src*/*.o
+LIB5 = ${LIBUA}
+lib5 = -lUA
+doto5 = ${LIBDIR}/UA.o
+
+${doto5}:	${LIBUA}
+	ld -o ${doto5} ${LIBUA} -all_load -r
+
 #^CMP END UA
+
+dotoINTERFACE = ${LIBDIR}/INTERFACE.o
+dotoTIMING = ${LIBDIR}/TIMING.o
+dotoCOUPLER = ${LIBDIR}/COUPLER.o
+dotoLIBRARY = ${LIBDIR}/LIBRARY.o
+dotoSHARE = ${LIBDIR}/SHARE.o
+
+${dotoINTERFACE}:	${LIBINTERFACE}
+	ld -o ${dotoINTERFACE} ${LIBINTERFACE} -all_load -r
+
+${dotoTIMING}:	${LIBTIMING}
+	ld -o ${dotoTIMING} ${LIBTIMING} -all_load -r
+
+${dotoCOUPLER}:	${LIBCOUPLER}
+	ld -o ${dotoCOUPLER} ${LIBCOUPLER} -all_load -r
+
+${dotoLIBRARY}:	${LIBLIBRARY}
+	ld -o ${dotoLIBRARY} ${LIBLIBRARY} -all_load -r
+
+${dotoSHARE}:	${LIBSHARE}
+	ld -o ${dotoSHARE} ${LIBSHARE} -all_load -r
+
+DotOs:	  ${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
+	  ${dotoINTERFACE} ${dotoTIMING} \
+	  ${dotoCOUPLER} ${dotoLIBRARY} ${dotoSHARE}
 
 ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${MAKEFILE_COMP_SELECT}
+	make DotOs
 	@echo ' '
 	@(if [ ${OS} == "Darwin" ]; then \
 	    echo \
 	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
 		${MODULES} ${OBJECTS} \
 		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
-		${INTERFACEDIR}/*.o ${COUPLERDIR}/*.o ${LIBRARYDIR}/*.o \
-		${TIMINGDIR}/*.o ${SHAREDIR}/*.o ${LBLAS} \
+		${dotoINTERFACE} ${dotoCOUPLER} ${dotoLIBRARY} \
+		${dotoTIMING} ${dotoSHARE} ${LBLAS} \
 		${Lflag1}; \
 	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
 		${MODULES} ${OBJECTS} \
 		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
-		${INTERFACEDIR}/*.o ${COUPLERDIR}/*.o ${LIBRARYDIR}/*.o \
-		${TIMINGDIR}/*.o ${SHAREDIR}/*.o ${LBLAS} \
+		${dotoINTERFACE} ${dotoCOUPLER} ${dotoLIBRARY} \
+		${dotoTIMING} ${dotoSHARE} ${LBLAS} \
 		${Lflag1}; \
 	else \
 	    echo \
@@ -217,5 +259,3 @@ distclean: clean
 	rm -f Makefile.DEPEND
 
 # keep this line
-
-
