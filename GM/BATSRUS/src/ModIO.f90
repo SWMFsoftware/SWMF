@@ -107,7 +107,7 @@ Module ModIO
   logical, dimension(maxsatellitefile)                        :: DoTrackSatellite_I = .false.
   logical, dimension(maxsatellitefile)                        :: UseSatelliteFile = .true.
   logical, dimension(maxsatellitefile)                        :: Satellite_first_write = .true.
-  integer, parameter                                          :: Max_Satellite_Npts = 5000
+  integer, parameter                                          :: Max_Satellite_Npts = 50000
   integer, dimension(maxsatellitefile)                        :: Satellite_Npts, icurrent_satellite_position=1
   integer, dimension(maxsatellitefile)                        :: iPEsatellite, iBLKsatellite
   real,    dimension(maxsatellitefile, Max_Satellite_Npts, 3) :: XSatellite_traj
