@@ -56,7 +56,9 @@ program PostIDL
   read(*,'(a)')filenamehead
 
   ! Get rid of the component name
-  if(filenamehead(1:3)=='GM/' .or. filenamehead(1:3)=='IH/') &
+  if(  filenamehead(1:3)=='GM/' .or. &
+       filenamehead(1:3)=='IH/' .or. &
+       filenamehead(1:3)=='SC/')     &
        filenamehead=filenamehead(4:len(filenamehead))
 
   read(*,*)numprocs
