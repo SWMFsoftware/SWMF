@@ -14,6 +14,7 @@ LIB:
 
 rundir: 
 	mkdir -p ${RUNDIR}/SP
+	cd ${RUNDIR};ln -s ../bin/SEP.exe .;ln -s ../SP/Kota/src/a.out .
 
 clean: install
 	cd src; make clean
