@@ -12,7 +12,8 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   use ModGmImCoupling, ONLY: &
        allocate_gm_im, MHD_compute_from_raytrace, &
-       process_integrated_data, write_integrated_data, write_integrated_data_idl, &
+       process_integrated_data, &
+       write_integrated_data, write_integrated_data_idl, &
        nCalls, RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
 
@@ -27,6 +28,8 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   real, intent(out), dimension(iSizeIn,jSizeIn,nVar) :: Buffer_IIV
   character (len=*), intent(in)                      :: NameVar
 
+  real :: Radius
+
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
@@ -40,7 +43,9 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   call allocate_gm_im(iSizeIn, jSizeIn)
 
   if(UseAccurateIntegral)then
-     call integrate_ray_accurate(iSizeIn, jSizeIn,  RCM_lat, RCM_lon)
+     ! The RCM ionosphere radius in normalized units
+     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius)
 
      if(iProc==0)then
         ! Copy RayResult into small arrays used in old algorithm
@@ -50,7 +55,9 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
         MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
         MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
-        where(MHD_Beq==0.0)
+
+        ! Put impossible values if ray was not found for a lat-lon grid cell
+        where(MHD_Beq <= 0.0)
            MHD_Xeq     = -99999.0
            MHD_Yeq     = -99999.0
            MHD_SUM_vol = 0.0
@@ -58,6 +65,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
            MHD_SUM_p   = 0.0
            MHD_Beq     = -99999.0
         end where
+
      end if
 
      deallocate(RayIntegral_VII, RayResult_VII)
@@ -71,10 +79,10 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
 
   if (iProc == 0) then
-     if(DoTest)call write_integrated_data_idl
+     if(DoTest)call write_integrated_data_idl  ! IDL output before processing
      call process_integrated_data
-     if(DoTest)call write_integrated_data !!! TecPlot output
-     if(DoTest)call write_integrated_data_idl
+     if(DoTest)call write_integrated_data      ! TecPlot output
+     if(DoTest)call write_integrated_data_idl  ! IDL     output
 
      ! Put results into output buffer
      Buffer_IIV(:,:,InvB_)    = MHD_SUM_vol
