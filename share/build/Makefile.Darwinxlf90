@@ -13,7 +13,7 @@ COMPILE.f90     = xlf90
 LINK.f90        = mpif90xlf
 AR = ar -rs
 
-PRECISION = -r8
+PRECISION = -qautodbl=dbl4
 #PRECISION =
 
 MPILIB = 
