@@ -305,10 +305,10 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   call set_oktest(String,DoTest,DoTestMe)
 end subroutine CON_set_do_test
 !============================================================================
-subroutine calc_inner_BC_velocities
+subroutine calc_inner_bc_velocity
   call stop_mpi( &
-       'ERROR: calc_inner_BC_velocities should be called in SWMF only');
-end subroutine calc_inner_BC_velocities
+       'ERROR: calc_inner_bc_velocity should be called in SWMF only');
+end subroutine calc_inner_bc_velocity
 !============================================================================
 real function logvar_ionosphere(NameLogvar)
 
