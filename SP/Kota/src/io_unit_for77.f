@@ -4,7 +4,7 @@
 !
 ! DESCRIPTION:
 !
-! This routine assigns new file name *iFile* in SWMF and is compatible with
+! This routine assigns new file units *iFile* in SWMF and is compatible with
 ! a program written in f77.
 !
 ! In order to comply with SWMF requirements, you must do the following:
@@ -45,14 +45,19 @@
 ! where SP is two-symbol identifier,in order to assign the value of variable 
 ! *prefix* to be equal to 'SP: ', for this particular example
 !
-! Step 3: If anywhere in your f77 program there is a handling of file
-! unit, before you open the unit make the call:
+! Step 3: If anywhere in your f77 program there is a handling of file unit, 
+! declare the integer variable iFile:
+!
+!           integer iFile
+!
+! If the file is not closed before returning from the subprogram,
+! the value of iFile must be saved:
+!
+!           save iFile
+!
+! Before you open the unit make the call:
 !
 !           call CON_io_unit_new(iFile)
-!
-! Remembder to declare the integer variable iFile before that:
-!
-!           integer::iFile
 !
 ! Then, instead of opening or closing the file unit (assumed to be 11
 ! here) by:
@@ -60,7 +65,7 @@
 !           open(11,file='SP_dist.dat',status='unknown',form='formatted')
 !           close(11)
 !
-! USE the following way:
+! do it the following way:
 !
 !           open(iFile,file='SP_dist.dat',status='unknown',form='formatted')
 !           close(iFile)
@@ -70,12 +75,12 @@
 !           read(11,*) B_I(j)
 !           write(11,*) 'B_I(j) =',B_I(j)
 !
-! USE the following:
+! do the following:
 !
 !           read(iFile,*) B_I(j)
 !           write(iFile,*) 'B_I(j) =',B_I(j)
 !
-! That is it you have to do. Good luck with SWMF!
+! That is all you have to do. Good luck with SWMF!
 ! 
 !INTERFACE:
       subroutine CON_io_unit_new(iFileNew)
@@ -119,13 +124,13 @@
       DoWriteAll=.false.
       end subroutine set_stdout
 !Use CON_stop in f77 files only as follows
-!     call CON_stop(' ')    !ONE space between TWO quotes, or ONE symbol
+!     call CON_stop('error message string') 
 !============================================================================! 
-      subroutine CON_stop(Name1)
+      subroutine CON_stop(Name)
       implicit none
-      character*1 Name1
+      character(*) Name
       include 'stdout.h'
-      write(iStdOut,*)prefix,' stop ',Name1
+      write(iStdOut,*)prefix,' stop ',Name
       stop
       end subroutine CON_stop
 !=============================================================================!
