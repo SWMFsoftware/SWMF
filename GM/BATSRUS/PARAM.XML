@@ -27,13 +27,13 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 	<parameter name="UseNewParam"    type="logical" default="T"/>
 	<parameter name="UseNewAxes"     type="logical" default="T"/>
 	<parameter name="DoTimeAccurate" type="logical" default="T"/>
-	<parameter name="UseCorotation"  type="logical" default="T"/>
+	<parameter name="UseRotatingBc"  type="logical" default="T"/>
 
 #NEWPARAM
 T			UseNewParam
 T			UseNewAxes
 T			DoTimeAccurate
-T			UseCorotation
+T			UseRotatingBc
 
 This command can be used to make the standalone code backwards compatible.
 
@@ -41,31 +41,38 @@ If UseNewParam is true, the time frequencies of various commands
 (SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
 of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
 
-If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
-and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+If UseNewParam is false, the time frequencies are only read when 
+DoTimeAccurate is true, and DoTimeAccurate can be set as the first 
+parameter of the TIMESTEPPING command.
 
-If UseNewAxes is true, the planet's rotational and magnetic axes are set by the new
-algorithms found in
+If UseNewAxes is true, the planet's rotational and magnetic axes 
+are set by the new algorithms found in
 share/Library/src/CON\_axes, the planet data is set and
 stored by share/Library/src/CON\_planet, and magnetic field information and
-mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
+mapping is provided by share/Library/src/CON\_planet_field, 
+and the rotational speed
 of the planet is calculated using $v_{\phi}=\Omega \times r$.
 
-If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
-are used. Some of these algorithms are inaccurate, some of them contain bugs and
-some of them are inefficient. The algorithms were kept for the sake of backwards
-compatibility.
+If UseNewAxes is false, the original algorithms in 
+GM/BATSRUS/src/ModCompatibility are used. 
+Some of these algorithms are inaccurate, some of them contain bugs and
+some of them are inefficient. The algorithms were kept for the sake 
+of backwards compatibility.
 
-The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
-default values can be set here. This is again useful for backwards compatibility,
-since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
-default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
-(consistent with the assumption that the default behavior is as realistic as possible).
+The DoTimeAccurate and UseRotatingBc parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards 
+compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseRotatingBc=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseRotatingBc=T
+(consistent with the assumption that the default behavior is as realistic as 
+possible).
 
 The default values depend on how the standalone code was installed
 (make install STANDALONE=???). For STANDALONE=gm and STANDALONE=ih
-all the logicals have true default values (consistent with SWMF), 
-for STANDALONE=old and STANDALONE=oldtest the default values are false 
+all the logicals have true default values, while for 
+STANDALONE=sc all logicals are true except for UseRotatingBc 
+(consistent with the SWMF).
+For STANDALONE=old and STANDALONE=oldtest the default values are false 
 (consistent with BATSRUS v7.72 and earlier).
 </command>
 
