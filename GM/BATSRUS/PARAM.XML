@@ -15,6 +15,9 @@ List of MH (GM, IH and SC) commands used in the PARAM.in file
 <set name="MaxBlockALL" type="integer" 
 	value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
 
+<set name="NameRestartOutDir" type="string" value="$_NameComp/restartOUT"/>
+<set name="NamePlotDir"       type="string" value="$_NameComp/IO2"/>
+
 <commandgroup name="STAND ALONE MODE">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -792,7 +795,7 @@ GSM			TypeCoordSystem
 	<parameter name="NameRestartInDir" type="string" length="100"
 				default="GM/restartIN" />
 	<rule expr="-d $NameRestartInDir">
-		Restart input directory $NameRestartInDir must exist
+		Restart input directory $NameRestartInDir must exist!
 	</rule>
 
 #RESTARTINDIR
@@ -3591,6 +3594,14 @@ Param/SSS_3000		NameIncludeFile
 <rule expr="$MaxImplBlock==$MaxBlock or not $UseFullImplicit">
 	Full implicit scheme should be used with equal number of 
 	explicit and implicit blocks!
+</rule>
+
+<rule expr="-d $NameRestartOutDir or not $_IsFirstSession">
+	Output restart directory $NameRestartOutDir should exist!
+</rule>
+
+<rule expr="-d $NamePlotDir or not $_IsFirstSession">
+	Plot directory $NamePlotDir should exist!
 </rule>
 
 </commandList>
