@@ -8,10 +8,9 @@ include ../../../Makefile.conf
 # OBJECT FILES FOR THE EMPTY TIMING LIBRARY
 
 OBJECTS = \
-	ModKind.o \
 	timing_empty.o
 
-timing_empty.o: ModKind.o
+timing_empty.o: ${SHAREDIR}/ModKind.o
 
 #
 #	Making library
