@@ -35,7 +35,7 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
-  if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
+  if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:imf') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
@@ -90,6 +90,15 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      Buffer_IIV(:,:,Z0b_)     = MHD_Beq
      Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
      Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
+     Buffer_IIV(:,:,pInvB_+1) = 0.
+     Buffer_IIV(1,:,pInvB_+1) = 0.  ! SW rho
+     Buffer_IIV(2,:,pInvB_+1) = 0.  ! SW Ux
+     Buffer_IIV(3,:,pInvB_+1) = 0.  ! SW Uy
+     Buffer_IIV(4,:,pInvB_+1) = 0.  ! SW Uz
+     Buffer_IIV(5,:,pInvB_+1) = 0.  ! SW Bx
+     Buffer_IIV(6,:,pInvB_+1) = 0.  ! SW By
+     Buffer_IIV(7,:,pInvB_+1) = 0.  ! SW Bz
+     Buffer_IIV(8,:,pInvB_+1) = 0.  ! SW p
   end if
 
   !^CFG END RAYTRACE
