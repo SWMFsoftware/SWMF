@@ -17,7 +17,7 @@ List of MH (GM and IH) commands used in the PARAM.in file
 
 <commandgroup name="STAND ALONE MODE">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!  STAND ALONE PARAMETER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="NEWPARAM" if="$_IsStandAlone">
@@ -143,6 +143,31 @@ test suite, which contains these commands when the framework is tested.
 
 This command is allowed in stand alone mode only for sake of the 
 test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="RUN" if="$_IsStandAlone">
+
+#RUN
+
+This command is only used in stand alone mode.
+
+The #RUN command does not have any parameters. It signals the end
+of the current session, and makes BATSRUS execute the session with
+the current set of parameters. The parameters for the next session
+start after the #RUN command. For the last session there is no
+need to use the #RUN command, since the #END command or simply
+the end of the PARAM.in file makes BATSRUS execute the last session.
+</command>
+
+<command name="END">
+
+#END
+
+The #END command signals the end of the included file or the
+end of the PARAM.in file. Lines following the #END command are
+ignored. It is not required to use the #END command. The end
+of the included file or PARAM.in file is equivalent with an 
+#END command in the last line.
 </command>
 
 </commandgroup>
@@ -670,15 +695,6 @@ cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
 ! 'tree' - tree based on calling sequence
 </command>
 
-<command name="SPEEDFILES">
-	<parameter name="DoWriteSpeedFile" type="logical" default="F" />
-#SPEEDFILES
-F                       DoWriteSpeedFile
-
-! controls the writing of speed_ files.  These have been used mostly on the
-! cray to do timing tests.  The default is .false.
-</command>
-
 </commandgroup>
 <commandgroup name="INITIAL AND BOUNDARY CONDITIONS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -761,21 +777,6 @@ GM/restart_n5000	NameRestartInDir
 ! of the component.
 !
 ! Default value is "GM/restartIN".
-</command>
-
-<command name="RESTARTOUTDIR" if="$_IsFirstSession">
-	<parameter name="NameRestartOutDir" type="string" length="100"
-				default="GM/restartOUT" />
-
-#RESTARTOUTDIR
-GM/restart_n5000	NameRestartOutDir
-
-! The NameRestartOutDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartOUT".
 </command>
 
 <!-- ^CFG IF CONSTRAINB BEGIN -->
@@ -1337,6 +1338,64 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="RESTARTOUTDIR">
+	<parameter name="NameRestartOutDir" type="string" length="100"
+				default="GM/restartOUT" />
+
+#RESTARTOUTDIR
+GM/restart_n5000	NameRestartOutDir
+
+! The NameRestartOutDir variable contains the name of the directory
+! where restart files are saved relative to the run directory.
+! The directory should be inside the subdirectory with the name 
+! of the component.
+!
+! Default value is "GM/restartOUT".
+</command>
+
+<command name="SAVERESTART">
+	<parameter name="SaveRestart" type="logical" default="T" />
+	<if expr="$SaveRestart">
+		<parameter name="DnRestart" type="integer" min="-1" 
+							default="-1" />
+		<parameter name="DtRestart" type="real"    min="-1" 
+							default="-1" />
+	</if>
+#SAVERESTART
+T			saveRestartFile  Rest of parameters read if true
+100			DnOutput_i(restart_)
+-1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
+
+! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
+! DtOutput(restart_)=-1. This results in the restart file being 
+! saved only at the end.  A binary restart file is produced for every 
+! block and named as
+!
+! restartOUT/blkGLOBALBLKNUMBER.rst
+!
+! In addition the grid is described by
+!
+! restartOUT/octree.rst
+!
+! and an ASCII header file is produced with timestep and time info:
+!
+! restartOUT/restart.H
+!
+! The restart files are overwritten every time a new restart is done.
+</command>
+
+<command name="PLOTDIR">
+	<parameter name="NamePlotDir" type="string" length="100"
+				default="GM/IO2" />
+
+The NamePlotDir variable contains the name of the directory
+where plot files and logfiles are saved relative to the run directory.
+The directory should be inside the subdirectory with the name
+of the component.
+
+Default value is "GM/IO2".
+</command>
+
 <command name="SAVELOGFILE">
 	<parameter name="DoSaveLogfile" type="logical" default="F" />
 	<if expr="$DoSaveLogfile">
@@ -1836,37 +1895,6 @@ T			DoSaveBinary   used only for 'idl' plot file
 ! compiled in double precision, to make results more accurate.
 </command>
 
-<command name="SAVERESTART">
-	<parameter name="SaveRestart" type="logical" default="T" />
-	<if expr="$SaveRestart">
-		<parameter name="DnRestart" type="integer" min="-1" 
-							default="-1" />
-		<parameter name="DtRestart" type="real"    min="-1" 
-							default="-1" />
-	</if>
-#SAVERESTART
-T			saveRestartFile  Rest of parameters read if true
-100			DnOutput_i(restart_)
--1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
-
-! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
-! DtOutput(restart_)=-1. This results in the restart file being 
-! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! restartOUT/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! restartOUT/octree.rst
-!
-! and an ASCII header file is produced with timestep and time info:
-!
-! restartOUT/restart.H
-!
-! The restart files are overwritten every time a new restart is done.
-</command>
-
 <command name="SAVEPLOTSAMR">
 	<parameter name="SavePlotsAmr" type="logical" default="F" />
 #SAVEPLOTSAMR
@@ -2288,8 +2316,6 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 		<option value="dir"    name="m_p_dir group by directions"    />
 		<option value="face"   name="m_p_dir group by faces     "    />
 		<option value="min"    name="m_p_dir group by kind and face" />
-		<option value="allold" name="m_p_all"			     />
-		<option value="oldopt" name="m_p_old FACES ONLY"	     />
 	</parameter>
 #MESSAGEPASS
 allopt			TypeMessagePass
@@ -2308,12 +2334,6 @@ allopt			TypeMessagePass
 ! 'all'		- message_pass_cell: corners, edges and faces in single message
 !
 ! 'allopt'      - message_pass_cell:  faces only in a single message
-!
-! 'allold'      - messagepass_all: corners, edges and faces in many messages
-!
-! 'oldopt'	- message_pass_equal_opt:     equal
-!		  message_pass_reschange_opt: restricted and prolonged
-!					  no corners, all variables together
 !
 ! Constrained transport requires corners, default is 'all'! <!--^CFG IF CONSTRAINB-->
 ! Diffusive control requires corners, default is 'all'!<!--^CFG IF DIVBDIFFUSE-->

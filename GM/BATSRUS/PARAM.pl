@@ -8,7 +8,7 @@ List of MH (GM and IH) commands used in the PARAM.in file
 
 ','type' => 't'},{'attrib' => {'value' => '$_GridSize[0]','type' => 'integer','name' => 'nI'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[1]','type' => 'integer','name' => 'nJ'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[2]','type' => 'integer','name' => 'nK'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[3]','type' => 'integer','name' => 'MaxBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[4]','type' => 'integer','name' => 'MaxImplBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','type' => 'integer','name' => 'MaxBlockALL'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'name' => 'STAND ALONE MODE'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!  STAND ALONE PARAMETER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ','type' => 't'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'NEWPARAM'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewParam'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewAxes'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseCorotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
@@ -111,6 +111,27 @@ test suite, which contains these commands when the framework is tested.
 
 This command is allowed in stand alone mode only for sake of the 
 test suite, which contains these commands when the framework is tested.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'RUN'},'content' => [{'content' => '
+
+#RUN
+
+This command is only used in stand alone mode.
+
+The #RUN command does not have any parameters. It signals the end
+of the current session, and makes BATSRUS execute the session with
+the current set of parameters. The parameters for the next session
+start after the #RUN command. For the last session there is no
+need to use the #RUN command, since the #END command or simply
+the end of the PARAM.in file makes BATSRUS execute the last session.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'END'},'content' => [{'content' => '
+
+#END
+
+The #END command signals the end of the included file or the
+end of the PARAM.in file. Lines following the #END command are
+ignored. It is not required to use the #END command. The end
+of the included file or PARAM.in file is equivalent with an 
+#END command in the last line.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'PLANET COMMANDS'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -443,12 +464,6 @@ cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
 ! \'cumm\' - cummulative list sorted by timings
 ! \'list\' - list based on caller and sorted by timings
 ! \'tree\' - tree based on calling sequence
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SPEEDFILES'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoWriteSpeedFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-#SPEEDFILES
-F                       DoWriteSpeedFile
-
-! controls the writing of speed_ files.  These have been used mostly on the
-! cray to do timing tests.  The default is .false.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'INITIAL AND BOUNDARY CONDITIONS'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
@@ -499,17 +514,6 @@ GM/restart_n5000	NameRestartInDir
 ! of the component.
 !
 ! Default value is "GM/restartIN".
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'RESTARTOUTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/restartOUT','type' => 'string','name' => 'NameRestartOutDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#RESTARTOUTDIR
-GM/restart_n5000	NameRestartOutDir
-
-! The NameRestartOutDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartOUT".
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'NEWRESTART'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'IsRestartBFace'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 ! The restartIN/restart.H file always contains the #NEWRESTART command.
 ! This command is really used only in the restart headerfile.  Generally
@@ -859,7 +863,48 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'attrib' => {'name' => 'SAVELOGFILE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoSaveLogfile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$DoSaveLogfile'},'content' => [{'attrib' => {'min' => '1','max' => '4','type' => 'strings','name' => 'StringLog'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypeLogVar'},'content' => [{'attrib' => {'value' => 'MHD','default' => 'T','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','default' => 'T','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Set vars. scaled'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'multiple' => 'T','input' => 'select','required' => 'F','type' => 'string','name' => 'TypeTime'},'content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'step'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'date'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'time'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','if' => '$TypeLogVar =~ /var/i','type' => 'string','name' => 'NameLogVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','length' => '100','max' => '10','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','type' => 'strings','name' => 'StringLogRadii'},'content' => [{'attrib' => {'min' => '$rBody','multiple' => 'T','type' => 'real','name' => 'LogRadii'},'content' => [],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+','type' => 't'},{'attrib' => {'name' => 'RESTARTOUTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/restartOUT','type' => 'string','name' => 'NameRestartOutDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#RESTARTOUTDIR
+GM/restart_n5000	NameRestartOutDir
+
+! The NameRestartOutDir variable contains the name of the directory
+! where restart files are saved relative to the run directory.
+! The directory should be inside the subdirectory with the name 
+! of the component.
+!
+! Default value is "GM/restartOUT".
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVERESTART'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'SaveRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$SaveRestart'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'DnRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtRestart'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+#SAVERESTART
+T			saveRestartFile  Rest of parameters read if true
+100			DnOutput_i(restart_)
+-1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
+
+! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
+! DtOutput(restart_)=-1. This results in the restart file being 
+! saved only at the end.  A binary restart file is produced for every 
+! block and named as
+!
+! restartOUT/blkGLOBALBLKNUMBER.rst
+!
+! In addition the grid is described by
+!
+! restartOUT/octree.rst
+!
+! and an ASCII header file is produced with timestep and time info:
+!
+! restartOUT/restart.H
+!
+! The restart files are overwritten every time a new restart is done.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'PLOTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/IO2','type' => 'string','name' => 'NamePlotDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+The NamePlotDir variable contains the name of the directory
+where plot files and logfiles are saved relative to the run directory.
+The directory should be inside the subdirectory with the name
+of the component.
+
+Default value is "GM/IO2".
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVELOGFILE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoSaveLogfile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$DoSaveLogfile'},'content' => [{'attrib' => {'min' => '1','max' => '4','type' => 'strings','name' => 'StringLog'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypeLogVar'},'content' => [{'attrib' => {'value' => 'MHD','default' => 'T','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','default' => 'T','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Set vars. scaled'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'multiple' => 'T','input' => 'select','required' => 'F','type' => 'string','name' => 'TypeTime'},'content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'step'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'date'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'time'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','if' => '$TypeLogVar =~ /var/i','type' => 'string','name' => 'NameLogVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','length' => '100','max' => '10','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','type' => 'strings','name' => 'StringLogRadii'},'content' => [{'attrib' => {'min' => '$rBody','multiple' => 'T','type' => 'real','name' => 'LogRadii'},'content' => [],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date           StringLog
@@ -1170,28 +1215,6 @@ T			DoSaveBinary   used only for \'idl\' plot file
 ! (lower) precision. For example PostIDL.exe may be compiled with 
 ! single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
 ! compiled in double precision, to make results more accurate.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVERESTART'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'SaveRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$SaveRestart'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'DnRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtRestart'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
-#SAVERESTART
-T			saveRestartFile  Rest of parameters read if true
-100			DnOutput_i(restart_)
--1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
-
-! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
-! DtOutput(restart_)=-1. This results in the restart file being 
-! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! restartOUT/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! restartOUT/octree.rst
-!
-! and an ASCII header file is produced with timestep and time info:
-!
-! restartOUT/restart.H
-!
-! The restart files are overwritten every time a new restart is done.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVEPLOTSAMR'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'SavePlotsAmr'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #SAVEPLOTSAMR
 F			savePlotsAMR to save plots before each AMR
@@ -1423,7 +1446,7 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 ! \'lr\',\'lr2\'		- left and right slopes (all interpolation)
 ! \'central\',\'central2\'	- central differences (all interpolation)
 ! \'minmod\',\'minmod2\'	- to be implemented
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeMessagePass'},'content' => [{'attrib' => {'value' => 'allopt','default' => 'T','name' => 'm_p_cell FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'all','name' => 'm_p_cell'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'opt','name' => 'm_p_dir FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'dir','name' => 'm_p_dir group by directions'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'face','name' => 'm_p_dir group by faces     '},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'min','name' => 'm_p_dir group by kind and face'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'allold','name' => 'm_p_all'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'oldopt','name' => 'm_p_old FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeMessagePass'},'content' => [{'attrib' => {'value' => 'allopt','default' => 'T','name' => 'm_p_cell FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'all','name' => 'm_p_cell'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'opt','name' => 'm_p_dir FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'dir','name' => 'm_p_dir group by directions'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'face','name' => 'm_p_dir group by faces     '},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'min','name' => 'm_p_dir group by kind and face'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
 #MESSAGEPASS
 allopt			TypeMessagePass
 
@@ -1441,12 +1464,6 @@ allopt			TypeMessagePass
 ! \'all\'		- message_pass_cell: corners, edges and faces in single message
 !
 ! \'allopt\'      - message_pass_cell:  faces only in a single message
-!
-! \'allold\'      - messagepass_all: corners, edges and faces in many messages
-!
-! \'oldopt\'	- message_pass_equal_opt:     equal
-!		  message_pass_reschange_opt: restricted and prolonged
-!					  no corners, all variables together
 !
 ! Constrained transport requires corners, default is \'all\'! 
 ! Diffusive control requires corners, default is \'all\'!
