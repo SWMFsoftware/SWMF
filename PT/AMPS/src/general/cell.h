@@ -9,8 +9,9 @@
 #include "dsmc.dfn"
 
 class Ccell{
-private:
+protected:
   static double measure_dim_0;
+  double measure_value;
 
 public:
   long int nodeno[4],faceno[4],neighbour_cellno[4];
@@ -22,8 +23,11 @@ public:
   double Measure();
   void RandomPosition(float*); 
   friend bool CellsIntersection(Ccell&,Ccell&);
+ 
+  double CharacteristicSize();
 
   Ccell() {
+    measure_value=-1.0;
     for (int i=0;i<4;i++) nodeno[i]=-1,faceno[i]=-1,neighbour_cellno[i]=-1,node[i]=NULL,face[i]=NULL;
   }; 
 };

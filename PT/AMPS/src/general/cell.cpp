@@ -2,13 +2,15 @@
 //$Id$
 //===================================================
 
-#include <iostream.h>
+#include <math.h>
 #include "cell.h"
 #include "specfunc.h"
 #include "array_1d.h"
 #include "data.h"
 
 #include "const.dfn"
+
+using namespace std;
 
 extern int DIM;
 
@@ -58,9 +60,9 @@ void Ccell::InitCellNormal() {
       n.normalize();
       face[nface]->SetNormal(n);
       break;
-    dafault :
-      cout << "proc. Ccell::InitCellNormal()" << endl;
-      cout << "wrong DIM value: DIM=" << DIM << endl;
+    default :
+      printf("proc. Ccell::InitCellNormal()\n");
+      printf("wrong DIM value: DIM=%i\n",DIM);
       exit(0);
     } 
   } 
@@ -68,38 +70,82 @@ void Ccell::InitCellNormal() {
 
 //===================================================
 double Ccell::Measure() {
-  static double measure;
   static array_1d<float> x_1d(1);
   static array_1d<float> x1_2d(2),x2_2d(2);
   static array_1d<float> x1_3d(3),x2_3d(3),x3_3d(3);
 
+  if (measure_value>0.0) return measure_value;
+
   switch (DIM) {
   case 0 :
-    measure=measure_dim_0;
+    measure_value=measure_dim_0;
     break;
   case 1 :
-    x_1d=node[1]->X()-node[0]->X();
-    measure=x_1d.abs();
+    if (SymmetryMode==no_symmetry) {
+      x_1d=node[1]->X()-node[0]->X();
+      measure_value=x_1d.abs();
+    }
+    else {
+      double nd0[3],nd1[3];
+      node[0]->GetX(nd0);node[1]->GetX(nd1);
+      measure_value=4.0/3.0*Pi*fabs(pow(nd0[0],3)-pow(nd1[0],3));
+    } 
+
     break;
   case 2 :
     x1_2d=node[1]->X()-node[0]->X();
     x2_2d=node[2]->X()-node[0]->X();
-    measure=0.5*fabsf(x1_2d(0)*x2_2d(1)-x1_2d(1)*x2_2d(0));
+    measure_value=0.5*fabs(x1_2d(0)*x2_2d(1)-x1_2d(1)*x2_2d(0));
 
     if (SymmetryMode==cylindrical_symmetry) {
       double r=(node[0]->X()(1)+node[1]->X()(1)+node[2]->X()(1))/3.0;  
-      measure*=2.0*Pi*r;
+      measure_value*=2.0*Pi*r;
     } 
     break;
   case 3 :
     x1_3d=node[1]->X()-node[0]->X();
     x2_3d=node[2]->X()-node[0]->X();
     x3_3d=node[3]->X()-node[0]->X();
-    measure=fabs(mix_product(x1_3d,x2_3d,x3_3d))/6.0;
+    measure_value=fabs(mix_product(x1_3d,x2_3d,x3_3d))/6.0;
     break;
   }
 
-  return measure;
+  return measure_value;
+}
+
+//===================================================
+double Ccell::CharacteristicSize() {
+  double res;
+  static array_1d<float> x_1d(1);
+  static array_1d<float> x1_2d(2),x2_2d(2);
+  static array_1d<float> x1_3d(3),x2_3d(3),x3_3d(3);
+
+
+  switch (DIM) {
+  case 0 :
+    res=1.0;
+    break;
+  case 1 :
+    x_1d=node[1]->X()-node[0]->X();
+    res=x_1d.abs();  
+
+    break;
+  case 2 :
+    x1_2d=node[1]->X()-node[0]->X();
+    x2_2d=node[2]->X()-node[0]->X();
+    res=sqrt(0.5*fabs(x1_2d(0)*x2_2d(1)-x1_2d(1)*x2_2d(0))/Pi);
+
+    break;
+  case 3 :
+    x1_3d=node[1]->X()-node[0]->X();
+    x2_3d=node[2]->X()-node[0]->X();
+    x3_3d=node[3]->X()-node[0]->X();
+    res=pow(fabs(mix_product(x1_3d,x2_3d,x3_3d))/8.0/Pi,0.3333333);
+
+    break;
+  }
+
+  return res;
 }
 
 //===================================================
@@ -108,28 +154,28 @@ void Ccell::RandomPosition(float* x) {
 
   switch (DIM) {
   case 3 :
-    f1=rnd(); if (f1<0.001) f1=0.001; if (f1>0.999) f1=0.999; f1=pow(f1,0.3333333333);
-    f2=rnd(); if (f2<0.001) f2=0.001; if (f2>0.999) f2=0.999; f2=sqrt(f2);
-    f3=rnd(); if (f3<0.001) f3=0.001; if (f3>0.999) f3=0.999;
+    f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999; f1=pow(f1,(float)0.3333333333);
+    f2=rnd(); if (f2<0.00001) f2=0.00001; if (f2>0.99999) f2=0.99999; f2=sqrt(f2);
+    f3=rnd(); if (f3<0.00001) f3=0.00001; if (f3>0.99999) f3=0.99999;
     x[0]=f1*(1.0-f2);
     x[1]=f1*f2*(1.0-f3);
     x[2]=f1*f2*f3;
     return;
   case 2 :
-    f1=rnd(); if (f1<0.001) f1=0.001; if (f1>0.999) f1=0.999; f1=sqrt(f1);
-    f2=rnd(); if (f2<0.001) f2=0.001; if (f2>0.999) f2=0.999;
+    f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999; f1=sqrt(f1);
+    f2=rnd(); if (f2<0.00001) f2=0.00001; if (f2>0.99999) f2=0.99999;
     x[0]=f1*(1.0-f2);
     x[1]=f1*f2;
     return;
   case 1 : 
-    f1=rnd(); if (f1<0.001) f1=0.001; if (f1>0.999) f1=0.999;
+    f1=rnd(); if (f1<0.00001) f1=0.00001; if (f1>0.99999) f1=0.99999;
     x[0]=f1;
     return;
   case 0 :
     return;
   default :
-    cout << "proc. Cface::RandomPosition()" << endl;
-    cout << "wrong DIM value: DIM=" << DIM << endl;
+    printf("proc. Cface::RandomPosition()\n");
+    printf("wrong DIM value: DIM=%i\n",DIM);
     exit(0);
   }
 }

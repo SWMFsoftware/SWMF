@@ -492,7 +492,7 @@ void Cgrid::ChangeLocalVector2D(float* a,char nb1,char nb2) {
     b[1]=a[0];
     break;
   default :
-    printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
+    printf("Error: proc. grid.cpp::Cdsmc::ChangeLocalVector2D\n");
     exit(0);
   }
 
@@ -517,7 +517,7 @@ void Cgrid::ChangeLocalPositionVector2D(float* a,char nb1, char nb2) {
     b[1]=a[0];
     break;
   default :
-    printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
+    printf("Error: proc. grid.cpp::Cdsmc::ChangeLocalPositionVector2D\n");
     exit(0);
   }  
 
@@ -663,7 +663,7 @@ void Cgrid::ChangeLocalVector3D(float* a,char nb1,char nb2) {
     b[2]=a[1];
     break;
   default :
-    printf("Error: proc. Cdsmc::ChangeLocalVector3D\n");
+    printf("Error: proc. grid.cpp,Cdsmc::ChangeLocalVector3D\n");
     printf("dn=%i\n",dn);
     exit(0);
   }
@@ -697,7 +697,7 @@ void Cgrid::ChangeLocalPositionVector3D(float* a,char nb1,char nb2) {
     b[2]=a[1];
     break;
   default :
-    printf("Error: proc. Cdsmc::ChangeLocalVector3D\n");
+    printf("Error: proc. grid.cpp,Cdsmc::ChangeLocalPositionVector3D\n");
     printf("dn=%i\n",dn);
     exit(0);
   }

@@ -2,7 +2,6 @@
 #define FACE
 
 #include "node.h"
-#include <iostream.h>
 #include "array_1d.h"
 #include "specfunc.h"
 
@@ -11,11 +10,13 @@
 
 extern int SymmetryMode;
 
+using namespace std;
+
 class Cface{
   float nrml[3];
 public:
   unsigned char faceat,surface_group;
-  long int nodeno[3];
+  long int faceno,nodeno[3];
   Cnode* node[3];
 
 //===================================================
@@ -45,7 +46,13 @@ public:
 
     switch(DIM) {
     case 1:  
-      measure=1.0;
+      if (SymmetryMode==no_symmetry) measure=1.0;
+      else {
+        double x[3];
+        node[0]->GetX(x);
+        measure=4.0*Pi*pow(x[0],2);
+      }
+
       break;
     case 2:
       if (SymmetryMode==no_symmetry) {
@@ -56,12 +63,13 @@ public:
         double l,alfa,e[2],nd0[2];
   
         node[0]->GetX(nd0);node[1]->GetX(e);
-        e[0]-=nd0[0],e[1]-=nd0[1],l=sqrt(e[0]*e[0]+e[1]*e[1]); 
+        e[0]-=nd0[0],e[1]-=nd0[1];
+        l=sqrt(e[0]*e[0]+e[1]*e[1]); 
 
         if (fabs(e[0]/l)<1.0E-8) measure=Pi*fabs((2.0*nd0[1]+e[1])*e[1]);
         else {
           alfa=e[1]/e[0];
-          measure=2.0*Pi*fabs(e[0]*(nd0[1]+alfa*e[0]/2.0));
+          measure=2.0*Pi*fabs(e[0]*(nd0[1]+alfa*e[0]/2.0))*sqrt(1.0+alfa*alfa);
         } 
       }
 
@@ -72,8 +80,8 @@ public:
       measure=0.5*fabs(cross_product(x1_3d,x2_3d).abs());
       break;
     default : 
-      cout << "proc. Cface::Measure()" << endl; 
-      cout << "wrong DIM value: DIM=" << DIM << endl;
+      printf("proc. Cface::Measure()\n"); 
+      printf("wrong DIM value: DIM=%i\n",DIM);
       exit(0);
     }
 
@@ -95,8 +103,8 @@ public:
       x[0]=f1;
       return;
     default :
-      cout << "proc. Cface::RandomPosition()" << endl;
-      cout << "wrong DIM value: DIM=" << DIM << endl;
+      printf("proc. Cface::RandomPosition()\n");
+      printf("wrong DIM value: DIM=%i\n",DIM);
       exit(0);
     }
 

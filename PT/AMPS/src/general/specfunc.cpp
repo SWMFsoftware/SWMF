@@ -2,6 +2,10 @@
 #include <math.h>
 #include <stdlib.h>
 
+#ifdef MPI_ON
+  #include "mpi.h"
+#endif
+
 long int nint(double a)
 {
    long int n;
@@ -12,7 +16,14 @@ long int nint(double a)
 
 void rnd_seed() {
   static char random_state_buffer[256];
+
+#ifdef MPI_ON
+  int thread;
+  MPI_Comm_rank(MPI_COMM_WORLD,&thread);
+  initstate((unsigned) (thread+time(NULL)),random_state_buffer,256);
+#else  
   initstate((unsigned) time(NULL),random_state_buffer,256);
+#endif
 }
 
 //===================================================

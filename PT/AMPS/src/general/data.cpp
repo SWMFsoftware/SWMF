@@ -13,6 +13,9 @@ bool idf_flag=false;
 
 int SymmetryMode=no_symmetry;
 
+//External species
+bool ExternalSpeciesUsingFlag=false;
+
 //===================================================
 //global objects
 #include "dsmc.h"

@@ -10,6 +10,7 @@ class Cnode{
 public:
   float* InterpolationWeight;
   long int* InterpolationMask;
+  long int nodeno;
 
   Cnode() {
     InterpolationWeight=NULL;
@@ -17,7 +18,6 @@ public:
   };
 
   ~Cnode () {
-    delete [] node_coordinate;
     if (InterpolationWeight!=NULL) delete [] InterpolationWeight;
     if (InterpolationMask!=NULL) delete [] InterpolationMask;
   };

@@ -39,7 +39,14 @@ public:
       exit(0);
     } 
 
-   data=new T[n0*n1*n2];
+   try {
+     data=new T[n0*n1*n2];
+   }
+   catch (bad_alloc) {
+     printf("Memory Error: array_3d() cannot allocate %i bytes\n", n0*n1*n2*sizeof(T));
+     exit(0);
+   }
+
    size_dim0=n0;
    size_dim1=n1;
    size_dim2=n2;
@@ -69,7 +76,7 @@ public:
   }
 
 //===================================================
-  void init(long int n0,long int n1,long int n2) {
+  int init(long int n0,long int n1,long int n2) {
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
       printf("Error: allocation of array_3d object\n");
       printf("with negative number of elemens\n");
@@ -81,33 +88,55 @@ public:
       exit(0);
     }
 
-   data=new T[n0*n1*n2];
+   try {
+     data=new T[n0*n1*n2];
+   }
+   catch (bad_alloc) {
+     printf("Memory Error: array_3d().init cannot allocate %i bytes\n", n0*n1*n2*sizeof(T));
+     return 0;
+   } 
+
    size_dim0=n0;
    size_dim1=n1;
    size_dim2=n2;
 
    ndim0_ndim1=n0*n1;
+   return 1;
   };
 
 //===================================================
-  void reinit(long int n0,long int n1,long int n2) {
+  int reinit(long int n0,long int n1,long int n2) {
    if (data!=NULL) delete [] data;
 
-   data=new T[n0*n1*n2];
+    if ((n0<=0)||(n1<=0)||(n2<=0)) {
+      printf("Error: reallocation of array_3d object\n");
+      printf("with negative number of elemens\n");
+      exit(0);
+    }
+
+   try {
+     data=new T[n0*n1*n2];
+   }
+   catch (bad_alloc) {
+     printf("Memory Error: array_3d().reinit cannot allocate %i bytes\n", n0*n1*n2*sizeof(T));
+     return 0; 
+   }
+
    size_dim0=n0;
    size_dim1=n1;
    size_dim2=n2;
 
    ndim0_ndim1=n0*n1;
+   return 1;
   };
   
 //===================================================
-  T   operator () (long int i0,long int i1,long int i2) const { 
+  inline T operator () (long int i0,long int i1,long int i2) const { 
     return data[i0+size_dim0*i1+ndim0_ndim1*i2]; 
   };
 
 //===================================================
-  T & operator () (long int i0,long int i1,long int i2) { 
+  inline T & operator () (long int i0,long int i1,long int i2) { 
     return data[i0+size_dim0*i1+ndim0_ndim1*i2]; 
   };
 

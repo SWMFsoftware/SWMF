@@ -15,6 +15,8 @@ extern bool idf_flag;
 
 extern int SymmetryMode;
 
+extern bool ExternalSpeciesUsingFlag;
+
 //=================
 
 

@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream.h>
-#include <fstream.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -24,6 +22,8 @@
 #include "array_4d.h"
 
 extern int DIM;
+
+using namespace std;
 
 struct cells_connection_data_type {
   int ne[4][4];
@@ -102,80 +102,74 @@ public:
 
 //==================================================
   void error(long int line) {
-    cout << "Error in reading of grid's file (line=" << line << ")" << endl;
+    printf("Error in reading of grid's file (line=%i)\n",line);
     exit(0);
   };
 
 //==================================================
   void OutputInFile(char *fname) {
-    ofstream fout;
+    FILE* fout;
     int idim;
     long int n,f,c;
 
-    fout.open(fname);
-    fout.precision(5);
-    fout.setf(ios::scientific, ios::floatfield);
+    fout=fopen(fname,"w");
 
-    fout << " < Nnodes >< Nfaces >< Ncells >"<<endl;
-    fout << nnodes<<"  "<<nfaces<<"  "<<ncells<<endl;
+    fprintf(fout," < Nnodes >< Nfaces >< Ncells >\n");
+    fprintf(fout,"  %i   %i   %i\n",nnodes,nfaces,ncells);
 
-    fout << "node's coordinates"<<endl;
-    for (n=0;n<nnodes;n++) fout<<(node[n]).X();
+    fprintf(fout,"node's coordinates\n");
+    for (n=0;n<nnodes;n++) fprintf(fout,(node[n]).X()); 
 
-    fout << "faces: nodes, faceat"<<endl;
+    printf(fout,"faces: nodes, faceat\n");
     for (f=0;f<nfaces;f++) {
-      fout <<"face="<<f<<"  nodes:"<<"  ";
+      fprintf(fout,"face=%i nodes:  ",f);
       for (idim=0;idim<DIM+1;idim++) {
         for (n=0;n<nnodes;n++)  
-          if (&(node[n])==face[f].node[idim]) fout <<n<<"  "; 
+          if (&(node[n])==face[f].node[idim]) fprintf(fout,"%i  ",n); 
       } 
-      fout <<"faceat="<<(int)face[f].faceat<<endl;
+      fprintf(fout,"faceat=%i\n",(int)face[f].faceat);
     }
 
-    fout << "cells: nodes,faces,neighbours"<<endl;
+    fprintf(fout,"cells: nodes,faces,neighbours\n");
     for (c=0;c<ncells;c++) {
-      fout << "cell="<<c<<"  nodes:  ";
+      fprintf(fout,"cell=%i nodes:  ",c);
       for (idim=0;idim<DIM+1;idim++) 
         for (n=0;n<nnodes;n++)
-          if (&(node[n])==cell[c].node[idim]) fout <<n<<"  ";
+          if (&(node[n])==cell[c].node[idim]) fprintf(fout,"%i  ",n);
  
-      fout << "faces:  ";
+      fprintf(fout,"faces:  ");
       for (idim=0;idim<DIM+1;idim++) 
         for (f=0;f<nfaces;f++)
-          if (&(face[f])==cell[c].face[idim]) fout <<f<<"  ";
+          if (&(face[f])==cell[c].face[idim]) fprintf(fout,"%i  ",f);
   
-      fout << "neighbours:  ";
+      fprintf(fout,"neighbours:  ");
       for (idim=0;idim<DIM+1;idim++) 
-        fout << cell[c].neighbour_cellno[idim]<<"  ";
+        fprintf(fout,"%i  ",cell[c].neighbour_cellno[idim]);
 
-      fout <<endl; 
+      fprintf(fout,"\n"); 
     } 
 
 
     long int b; 
     int e1,e2;
-    fout <<endl;
-    fout <<"============ connection data ==========="<<endl;
+    fprintf(fout,"\n============ connection data ===========\n");
     for (c=0;c<ncells;c++)   
       for (f=0;f<DIM+1;f++) {
-        fout <<endl;
-        fout <<"cell="<<c<<", face="<<f<<endl;
+        fprintf(fout,"\ncell=%i, face=%i\n",c,f);
  
         for (b=0;b<DIM+1;b++) { 
           if (b==f) continue;
-          fout << "basis="<<b<<"  => basis=";
-          fout <<cells_connection_data[c].nbasis[b][f]<<endl; 
-
-          fout <<"ne="<<cells_connection_data[c].ne[b][f]<<endl; 
+          fprintf(fout,"basis=%i =>basis=%i\n",b,cells_connection_data[c].nbasis[b][f]); 
+          fprintf(fout,"ne=%i\n",cells_connection_data[c].ne[b][f]); 
       
           for (idim=0;idim<DIM-1;idim++) {
             e1=cells_connection_data[c].ne1[idim][b][f]; 
             e2=cells_connection_data[c].ne2[idim][b][f];
-            fout <<"e1="<<e1<<"  =>  e2="<<e2<<endl;
+            fprintf(fout,"e1=%i => e2=%i\n",e1,e2);
           }
         }
       }
-    fout.close();
+    close(fout);
   };
 
 //==================================================
@@ -188,10 +182,17 @@ public:
     float x[3];
     long int line;
 
+    errno=0;
+
     if (DIM==0) {
       cell=new CellType[1];
       ncells=1; 
       return;
+    }
+
+    if (access(file_name,R_OK)!=0) {
+      printf("Cannnot find the grid file: %s\n",file_name);
+      exit(0);
     }
 
     fd=fopen(file_name,"r");
@@ -254,6 +255,8 @@ public:
       for (idim=0;idim<DIM+1;idim++) {
         cutstr(str1,str);
         cell[i].neighbour_cellno[idim]=atoi(str1)-1;
+
+        if (cell[i].neighbour_cellno[idim]<0) cell[i].neighbour_cellno[idim]=-1;
       }
       line++;if (errno!=0) error(line);
     }
@@ -288,8 +291,8 @@ public:
       GetTMatrix1D();
       break;
     default :
-      cout << "Error: Cgrid::InitGridData()"<<endl;
-      cout << "value of variable DIM is out range (DIM="<<DIM<<")"<<endl;
+      printf("Error: Cgrid::InitGridData()\n");
+      printf("value of variable DIM is out range (DIM=%i)\n",DIM);
       exit(0);
     }  
 
@@ -335,8 +338,9 @@ public:
       }
     }
 
-    for (nnode=0;nnode<nnodes;nnode++) 
-      node[nnode].InterpolationMask[nnn[nnode]]=-1;
+    for (nnode=0;nnode<nnodes;nnode++) node[nnode].InterpolationMask[nnn[nnode]]=-1; 
+
+    delete [] nnn,sum;
   }; 
        
 //==================================================
@@ -388,10 +392,10 @@ public:
     }
 
     if (flag==false) {
-      cout << "Error: proc. Cgrid::GetNCell" << endl;
-      cout << "Cannot find cell which contain point x=";
-      for (idim=0;idim<DIM;idim++) cout << "  " << x[idim];
-      cout << endl;
+      printf("Error: proc. Cgrid::GetNCell\n");
+      printf("Cannot find cell which contain point x=");
+      for (idim=0;idim<DIM;idim++) printf("   %d",x[idim]);
+      printf("\n");
       exit(0);
     }  
 
@@ -541,7 +545,7 @@ public:
       b[1]=a[0];
       break;
     default :
-      cout << "Error: proc. Cdsmc::ChangeLocalVector2D"<<endl;
+      printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
       exit(0);
     }
 
@@ -566,7 +570,7 @@ public:
       b[1]=a[0];
       break;
     default :
-      cout << "Error: proc. Cdsmc::ChangeLocalVector2D"<<endl;
+      printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
       exit(0);
     }  
 
@@ -597,8 +601,8 @@ public:
 
     dn=nb2-nb1;
     if ((dn!=1)&&(dn!=-1)) {
-      cout << "Error: proc. Cgrid::ChangeLocalVector1D"<<endl;
-      cout << "dn="<<dn<<endl;
+      printf("Error: proc. Cgrid::ChangeLocalVector1D\n");
+      printf("dn=%i\n",dn);
       exit(0);
     }
 
@@ -611,8 +615,8 @@ public:
 
     dn=nb2-nb1;
     if ((dn!=1)&&(dn!=-1)) {
-      cout << "Error: proc. Cgrid::ChangeLocalPositionVector1D"<<endl;
-      cout << "dn="<<dn<<endl;
+      printf("Error: proc. Cgrid::ChangeLocalPositionVector1D\n");
+      printf("dn=%i\n",dn);
       exit(0);
     }
 
@@ -690,8 +694,8 @@ public:
       b[2]=a[1];
       break;
     default :
-      cout << "Error: proc. Cdsmc::ChangeLocalVector3D"<<endl;
-      cout << "dn="<<dn<<endl;
+      printf("Error: proc. Cdsmc::grid.h,ChangeLocalVector3D\n");
+      printf("dn=%i\n",dn);
       exit(0);
     }
 
@@ -724,9 +728,13 @@ public:
       b[2]=a[1];
       break;
     default :
-      cout << "Error: proc. Cdsmc::ChangeLocalVector3D"<<endl;
-      cout << "dn="<<dn<<endl;
-      exit(0);
+
+   do {
+      printf("Error: proc. grid.h,Cdsmc::ChangeLocalPositionVector3D\n"); 
+      printf("dn=%i\n",dn);
+    } while (true); 
+
+      //exit(0);
     }
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -754,8 +762,7 @@ public:
     
       for (nface=0;nface<nfaces;nface++) {
         faceat=face[nface].faceat;
-        n=0;
-        count(SurfaceSDataGroups[ngroup].begin(),SurfaceSDataGroups[ngroup].end(),faceat,n);
+        n=count(SurfaceSDataGroups[ngroup].begin(),SurfaceSDataGroups[ngroup].end(),faceat);
         if (n!=0) {
           faces_in_the_group++;
           measure=face[nface].Measure();
@@ -778,8 +785,7 @@ public:
 
         for (nface=0;nface<nfaces;nface++) {
           faceat=face[nface].faceat;
-          n=0;
-          count(SurfaceSDataGroups[ngroup].begin(),SurfaceSDataGroups[ngroup].end(),faceat,n);
+          n=count(SurfaceSDataGroups[ngroup].begin(),SurfaceSDataGroups[ngroup].end(),faceat);
         
           if (n!=0) for (idim=0;idim<DIM;idim++) if (face[nface].nodeno[idim]==nnode) { 
             surface_interpolation_data[ngroup].node[current_node].face.push_back(nface);

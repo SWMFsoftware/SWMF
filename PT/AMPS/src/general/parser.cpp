@@ -14,16 +14,16 @@ FILE* fd;
 char init_str[100];
 long int line=0;
 //===================================================
-//Separators:' ', ',', '=', ';'
+//Separators:' ', ',', '=', ';', ':' 
 void CutInputStr(char* dest, char* src) {
   int i,j;
 
   for (i=0;(src[i]!='\0')&&(src[i]!=' ')&&
-    (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';');i++) dest[i]=src[i];
+    (src[i]!=',')&&(src[i]!='=')&&(src[i]!=';')&&(src[i]!=':');i++) dest[i]=src[i];
     dest[i]='\0';
 
   for (;(src[i]!='\0')&&((src[i]==' ')||
-    (src[i]==',')||(src[i]=='=')||(src[i]==';'));i++);
+    (src[i]==',')||(src[i]=='=')||(src[i]==';')||(src[i]==':'));i++);
 
   if (src[i]=='\0')
     src[0]='\0';
@@ -88,6 +88,11 @@ void GeneralBlock() {
       if (strcmp("ON",str1)==0) dsmc_flag=true;
       else if (strcmp("OFF",str1)==0) dsmc_flag=false;
       else error();}
+    else if (strcmp("EXTERNALSPECIES",str1)==0) {
+      CutInputStr(str1,str);
+      if (strcmp("ON",str1)==0) ExternalSpeciesUsingFlag=true;
+      else if (strcmp("OFF",str1)==0) ExternalSpeciesUsingFlag=false;
+      else error();} 
     else if (strcmp("CHEMISTRY",str1)==0) {
       CutInputStr(str1,str);
       if (strcmp("ON",str1)==0) chem_flag=true;
@@ -109,10 +114,12 @@ void GeneralBlock() {
       if ((DIM<0)||(DIM>3)) error();}
     else if (strcmp("SYMMETRY",str1)==0) {
       CutInputStr(str1,str);
-      if (strcmp("NO",str1)==0)
+      if (strcmp("NONE",str1)==0)
         SymmetryMode=no_symmetry;
       else if (strcmp("CYLINDRICAL",str1)==0)
         SymmetryMode=cylindrical_symmetry;
+      else if (strcmp("SPHERICAL",str1)==0)
+        SymmetryMode=spherical_symmetry;
       else error();}
     else if (strcmp("#ENDGENERAL",str1)==0) {
       mol.init(NS);
@@ -142,3 +149,11 @@ void parser(char* InputFile) {
     else error();
   }
 }  
+
+void parser_readGeneralBlock(FILE* fin,long int& line_in) {
+  fd=fin;
+  line=line_in;
+
+  GeneralBlock();
+  line_in=line;
+}
