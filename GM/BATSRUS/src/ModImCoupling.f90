@@ -83,7 +83,8 @@ end subroutine get_im_pressure
 subroutine apply_im_pressure
 
   use ModProcMH,  ONLY: iProc
-  use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, unusedBLK
+  use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, unusedBLK, &
+       time_accurate, Dt
   use ModAdvance, ONLY: time_BLK, &
        State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, E_BLK
   use ModPhysics, ONLY: unitSI_t, inv_gm1
@@ -143,8 +144,14 @@ subroutine apply_im_pressure
 
      if(TauCoupleIm < 1.0)then
         where(pIm_C > 0.0) &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = (1.0/(1.0+TauCoupleIM))* &
+             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
              (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*pIm_C)
+     elseif(time_accurate)then
+        where(pIm_C > 0.0) &
+             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
+             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
+             + min(1.0, Factor * Dt) &
+             * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
      else
         where(pIm_C > 0.0) &
              State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
