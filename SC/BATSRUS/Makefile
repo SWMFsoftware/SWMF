@@ -28,6 +28,7 @@ rundir: check_src
 	mkdir ${RUNDIR}/SC
 	cd ${RUNDIR}/SC; mkdir restartIN restartOUT IO2
 	cd ${RUNDIR}/SC; ln -s ${SCDIR}/Scripts/Run/pp_${PLOT}/[Pp]* .
+	cp ../../Param/CR1935_WSO.dat ${RUNDIR}/SC/
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
