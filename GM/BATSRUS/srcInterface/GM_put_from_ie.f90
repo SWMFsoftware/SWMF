@@ -1,31 +1,31 @@
 !^CFG COPYRIGHT UM
 !^CMP FILE IE
-!==========================================================================
-module ModIonoPotential
+module ModIeGrid
 
   implicit none
   save
 
-  integer :: nThetaIono, nPhiIono
+  integer :: nThetaIono=-1, nPhiIono
   real    :: dThetaIono, dPhiIono
   real    :: rIonosphere
-  real, allocatable :: IonoPotential_II(:,:)
-  real, allocatable :: dIonoPotential_DII(:,:,:)
 
 contains
 
-  subroutine init_mod_iono_potential(iSize, jSize)
+  subroutine init_mod_ie_grid(iSize, jSize)
+    ! The ionosphere works on two hemispheres with a node based grid
+    ! iSize is the number of latitude nodes from the pole to the equator.
+    ! jSize is the number of longitude nodes (including a periodic overlap)
 
-    use ModConst, ONLY: cPi, cTwoPi
-    use ModPhysics, ONLY: UnitSi_X
-    use CON_planet, ONLY: get_planet
+    use ModNumConst, ONLY: cPi, cTwoPi
+    use ModPhysics,  ONLY: UnitSi_X
+    use CON_planet,  ONLY: get_planet
 
     integer, intent(in) :: iSize, jSize
     real :: rPlanet, IonoHeight
-    character(len=*), parameter :: NameSub='init_mod_iono_potential'
+    character(len=*), parameter :: NameSub='init_mod_ie_grid'
     !-------------------------------------------------------------------------
 
-    if(allocated(IonoPotential_II)) RETURN
+    if(nThetaIono > 0) RETURN
 
     nThetaIono = 2*iSize - 1
     nPhiIono   = jSize
@@ -36,10 +36,38 @@ contains
     call get_planet(RadiusPlanetOut=rPlanet, IonosphereHeightOut=IonoHeight)
     rIonosphere = (rPlanet + IonoHeight) / UnitSi_X
 
+  end subroutine init_mod_ie_grid
+
+end module ModIeGrid
+
+!==========================================================================
+module ModIonoPotential
+
+  use ModIeGrid
+  implicit none
+  save
+
+  real, allocatable :: IonoPotential_II(:,:)
+  real, allocatable :: dIonoPotential_DII(:,:,:)
+
+contains
+
+  subroutine init_mod_iono_potential(iSize, jSize)
+
+    integer, intent(in) :: iSize, jSize
+    character(len=*), parameter :: NameSub='init_mod_iono_potential'
+    !-------------------------------------------------------------------------
+
+    if(allocated(IonoPotential_II)) RETURN
+
+    call init_mod_ie_grid(iSize, jSize)
+
     allocate( IonoPotential_II(nThetaIono, nPhiIono), &
          dIonoPotential_DII(2, nThetaIono, nPhiIono) )
 
   end subroutine init_mod_iono_potential
+
+  !============================================================================
 
   subroutine calc_grad_iono_potential
 
