@@ -233,18 +233,6 @@ SPS
 150.0			f107
 150.0			f107a
 
-#HPI
-20.0			HPI
-
-#KP
-2.0			kp
-
-#SOLARWIND
-0.0			Bx
-0.1			By
--3.0			Bz
-400.0			Ux
-
 #DT
 10.0			Dt
 

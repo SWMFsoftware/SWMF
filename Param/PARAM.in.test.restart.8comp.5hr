@@ -46,7 +46,7 @@ SC/restartIN/restart.H
 #USER_FLAGS
 T			UseUserInnerBCs
 F			UseUserSource
-F			UseUserPerturbation
+T			UseUserPerturbation
 F			UseUserOuterBcs
 F			UseUserICs
 F			UseUserSpecifyRefinement
@@ -339,23 +339,6 @@ z=0 MHD idl             StringPlot
 Rusanov			TypeFlux
 minmod			TypeLimiter
 
-#AMRRESOLUTION
-0.25			DxCellMin
-8.0			DxCellMax
-T			DoFixBodyLevel
-
-#AMR
-150			DnRefine
-T			DoAutoRefine
-15.			PercentCoarsen
-15.			PercentRefine
-2500			MaxTotalBlocks
-
-#AMRCRITERIA
-2			nRefineCrit
-gradlogP		TypeRefine
-curlB			TypeRefine
-
 #MESSAGEPASS
 opt			TypeMessagePass
 
@@ -370,11 +353,6 @@ F			UseFullImplicit
 100.0			CflImpl
 
 #END_COMP GM -------------------------------------------------------------
-
-!For sake of efficiency do not synchronize GM time
-COUPLETIME
-GM			NameComp
-F			DoCoupleOnTime
 
 ! Since GM does 4s time steps, it is good to use multiples of that
 
@@ -470,20 +448,8 @@ SPS
 SPS
 
 #F107
-150.0
-150.0
-
-#HPI
-20.0
-
-#KP
-2.0
-
-#SOLARWIND
- 1.224			SwBxDim  [nT]
--0.2			SwByDim  [nT]
-+0.744			SwBzDim  [nT]
-461.0			abs(SwUxDim) [km/s]
+150.0			f107
+150.0			f107a
 
 #DT
 10.0			dT [s]
