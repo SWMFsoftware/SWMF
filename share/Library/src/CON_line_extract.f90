@@ -34,7 +34,6 @@ module CON_line_extract
   ! Private constants
   character(len=*),  parameter :: NameMod='CON_line_extract'
 
-  integer       :: iProc=0       ! Processor rank in MPI_COMM_WORLD
   integer       :: nVar=0        ! Number of variables for each point
   integer       :: nPoint=0      ! Actual number of points
   integer       :: MaxPoint=0    ! Allocated number of points
@@ -54,7 +53,6 @@ contains
     ! Initialize the ray line storage.
     !EOP
 
-    integer :: iError
     character (len=*), parameter :: NameSub = NameMod//'::line_init'
     !-------------------------------------------------------------------------
     
@@ -63,8 +61,6 @@ contains
 
     ! Set number of variables for each point
     nVar = nVarIn
-    ! Set processor rank
-    call MPI_COMM_RANK(MPI_COMM_WORLD, iProc,  iError)
     ! Initialize storaga
     nullify(State_VI)
 
@@ -146,18 +142,16 @@ contains
   !BOP ========================================================================
   !IROUTINE: line_collect - collect ray line data onto 1 processor
   !INTERFACE:
-  subroutine line_collect(iProc0From, nProcFrom, DiProcFrom, iProcTo)
+  subroutine line_collect(iComm, iProcTo)
 
     !INPUT ARGUMENTS:
-    integer, intent(in) :: iProc0From ! Root PE of sending group
-    integer, intent(in) :: nProcFrom  ! Number of sending PE-s
-    integer, intent(in) :: DiProcFrom ! Stride of sending PE-s
-    integer, intent(in) :: iProcTo    ! Receiving PE rank
+    integer, intent(in) :: iComm      ! MPI communicator for the involved PE-s
+    integer, intent(in) :: iProcTo    ! Rank of the receiving PE
 
     !DESCRIPTION:
-    ! Collect Line from the sending processors to the receiving processor.
+    ! Collect line data from the sending processors to the receiving processor.
     ! The sending arrays are emptied, the receiving array is extended.
-    ! The receiving PE can be part of the sending group.
+    ! The receiving PE may or may not contain data prior to the collect.
     !EOP
 
     integer, allocatable :: nPoint_P(:)
@@ -165,50 +159,52 @@ contains
     integer, parameter :: iTag = 1
     character(len=*), parameter :: NameSub = NameMod//'line_collect'
 
-    integer :: i, iProcFrom, iPoint, Status_I(MPI_STATUS_SIZE), iError
+    integer :: iProc, nProc, iProcFrom, Status_I(MPI_STATUS_SIZE), iError
     !-------------------------------------------------------------------------
+
+    ! Set processor rank
+    call MPI_COMM_RANK(iComm, iProc, iError)
+    call MPI_COMM_SIZE(iComm, nProc, iError)
 
     ! Collect number of points onto the receiving processors
     
-    allocate(nPoint_P(nProcFrom))
-    do i = 1, nProcFrom
-       iProcFrom = iProc0From + (i-1)*DiProcFrom
+    allocate(nPoint_P(0:nProc-1))
+    do iProcFrom = 0, nProc-1
 
        if(iProc == iProcFrom .and. iProc == iProcTo)then
-          nPoint_P(i) = nPoint
+          nPoint_P(iProcFrom) = nPoint
           CYCLE
        end if
 
        if(iProc == iProcFrom) call MPI_SEND(nPoint, &
-            1, MPI_INTEGER, iProcTo, iTag, MPI_COMM_WORLD, iError)
+            1, MPI_INTEGER, iProcTo, iTag, iComm, iError)
 
-       if(iProc == iProcTo) call MPI_RECV(nPoint_P(i), &
-            1, MPI_INTEGER, iProcFrom, iTag, MPI_COMM_WORLD, Status_I, iError)
+       if(iProc == iProcTo) call MPI_RECV(nPoint_P(iProcFrom), &
+            1, MPI_INTEGER, iProcFrom, iTag, iComm, Status_I, iError)
     end do
 
     ! Extend buffer on receiving processor
     if(iProc == iProcTo) call line_extend(sum(nPoint_P) + 100)
 
     ! Receive ray line data
-    do i = 1, nProcFrom
-       iProcFrom = iProc0From + (i-1)*DiProcFrom
+    do iProcFrom = 0, nProc-1
        if(iProc == iProcFrom .and. iProc == iProcTo) CYCLE
 
        ! Send ray line data
        if(iProc == iProcFrom .and. nPoint>0) then
           call MPI_SEND(State_VI(:,1:nPoint), &
                nPoint * (nVar+1), MPI_REAL, &
-               iProcTo, iTag, MPI_COMM_WORLD, iError)
+               iProcTo, iTag, iComm, iError)
           deallocate(State_VI)
           nPoint = 0
        end if
 
        ! Receive ray line data
-       if(iProc == iProcTo .and. nPoint_P(i)>0) then
-          call MPI_RECV(State_VI(:,nPoint+1:nPoint + nPoint_P(i)), &
-               nPoint_P(i) * (nVar+1), MPI_REAL, &
-               iProcFrom, iTag, MPI_COMM_WORLD, Status_I, iError)
-          nPoint = nPoint + nPoint_P(i)
+       if(iProc == iProcTo .and. nPoint_P(iProcFrom)>0) then
+          call MPI_RECV(State_VI(:,nPoint+1:nPoint + nPoint_P(iProcFrom)), &
+               nPoint_P(iProcFrom) * (nVar+1), MPI_REAL, &
+               iProcFrom, iTag, iComm, Status_I, iError)
+          nPoint = nPoint + nPoint_P(iProcFrom)
        end if
 
     end do
@@ -299,7 +295,7 @@ contains
     !EOP
 
     integer, parameter :: nVarTest = 4
-    integer :: nProc, iError
+    integer :: iProc, nProc, iError
     integer :: nVarOut, nPointOut, iPoint, iProcFrom
     real    :: Length, Index, State_V(2:nVarTest)
     real, allocatable :: Result_VI(:,:)
@@ -308,9 +304,10 @@ contains
     !------------------------------------------------------------------------
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, nProc, iError)
+    call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
 
-    call line_init(nVarTest)
     if(iProc==0)write(*,'(a)')'Testing line_init'
+    call line_init(nVarTest)
 
     if(nVar/=4)write(*,*)NameSub,' line_init failed, iProc=',iProc, &
          ' nVar =',nVar,' should be 4 !'
@@ -338,7 +335,7 @@ contains
     end do
 
     if(iProc==0)write(*,'(a)')'Testing line_collect'
-    call line_collect(0,nProc,1,0)
+    call line_collect(MPI_COMM_WORLD,0)
 
     if(iProc == 0)then
        if(nPoint /= nProc*3) &
