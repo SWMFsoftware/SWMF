@@ -1,9 +1,4 @@
-!=============================================================!
-subroutine SP_get_io_unit_new(iNewUnit)
-  use ModIoUnit,ONLY:io_unit_new
-  integer,intent(out)::iNewUnit
-  iNewUnit=io_unit_new()
-end subroutine SP_get_io_unit_new
+!^CFG COPYRIGHT UM
 !=============================================================!
 module SP_Mod
   use ModConst
