@@ -10,23 +10,23 @@ subroutine PM_set_param(CompInfo, TypeAction)
   use ModConst,      ONLY: cPi                      ! Pi = 3.1415...
   use ModIoUnit,     ONLY: STDOUT_                  ! unit for STDOUT
 
-  use PM_ModIo,      ONLY: PM_iUnit, PM_Prefix ! I/O unit and prefix for output
-  use PM_ModProc,    ONLY: PM_iComm, PM_iProc, PM_nProc ! MPI parameters
-  use PM_ModMain,    ONLY: PM_Dt, PM_TimeAccurate   ! Some variables to set
+  use PM_ModProc, ONLY: PM_iComm, PM_iProc, PM_nProc ! MPI parameters
+  use PM_ModMain, ONLY: PM_Dt, PM_TimeAccurate       ! Some variables to set
+  use PM_ModSize, ONLY: PM_n, PM_m                   ! Grid size
+  use PM_ModIo,   ONLY: PM_iUnit, PM_Prefix  ! I/O unit and prefix for output
 
   implicit none
 
   !INPUT/OUTPUT ARGUMENTS:
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp
 
   !INPUT ARGUMENTS:
   character (len=*), intent(in)     :: TypeAction ! What to do
 
   !LOCAL VARIABLES:
-  ! Name of this subroutine
-  character (len=*), parameter :: NameSub='PM_set_param'
+  character (len=*), parameter :: NameSub = 'PM_set_param'
 
-  logical :: DoTest,DoTestMe
+  logical :: DoTest, DoTestMe
 
   !DESCRIPTION:
   ! This subroutine serves multiple purposes. It is called multiple times
@@ -50,9 +50,9 @@ subroutine PM_set_param(CompInfo, TypeAction)
   !EOP
   !---------------------------------------------------------------------------
   !BOC
-  ! Set DoTest and DoTesMe logicals to true if the name of this subroutine
-  ! occurs in the StringTest parameter of the #TEST command in PARAM.in.
-  call CON_set_do_test(NameSub,DoTest,DoTestMe)
+  ! Set DoTest and DoTesMe logicals. Check for the name of this subroutine
+  ! in the StringTest parameter of the #TEST command in PARAM.in.
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   if(DoTest)write(*,*)NameSub,' called with TypeAction, iProc=',&
        TypeAction, PM_iProc
@@ -93,7 +93,7 @@ subroutine PM_set_param(CompInfo, TypeAction)
      ! Provide grid description for the coupling toolkit.
      ! The grid is a uniform spherical grid divided into two blocks
      ! along the Theta coordinate: northern and southern hemispheres.
-     ! Both hemispheres have an nTheta by nPhi grid.
+     ! Both hemispheres have a PM_n by PM_m grid.
      ! The module can run on 1 or 2 PE-s,
      ! so the processor array is (/0,0/) or (/0,1/)
 
@@ -101,14 +101,14 @@ subroutine PM_set_param(CompInfo, TypeAction)
           PM_,                          &! component index
           nDim        =2,               &! dimensionality of the grid
           nRootBlock_D=(/2,1/),         &! block array for the 2 hemispheres
-          nCell_D     =(/nTheta ,nPhi/),&! grid size for each block
+          nCell_D     =(/PM_n, PM_m/),  &! grid size for each block
           XyzMin_D    =(/0., 0./),      &! min colatitude and longitude indexes
-          XyzMax_D    =(/cPi, 2*cPi/),& &! max colatitude and longitude indexes
+          XyzMax_D    =(/cPi, 2*cPi/),  &! max colatitude and longitude indexes
           TypeCoord   ='SMG',           &! solar magnetic coordinate system
           iProc_A     =(/0,PM_nProc-1/)) ! processor assigment for the blocks
 
   case default
-     call CON_stop(NameSub//' SWMF_ERROR: invalid TypeAction='//TypeAction)
+     call CON_stop(NameSub//': invalid TypeAction='//TypeAction)
   end select
 
 contains
@@ -131,7 +131,7 @@ contains
        ! Read other component parameters
        case default
           if(PM_iProc==0) then
-             write(*,'(a,i4,a)')NameSub//' PM_ERROR at line ',i_line_read(),&
+             write(*,'(a,i4,a)')NameSub//': ERROR at line ',i_line_read(),&
                   ' invalid command '//trim(NameCommand)
              if(UseStrict)call CON_stop('Correct PARAM.in!')
           end if
@@ -156,16 +156,12 @@ subroutine PM_init_session(iSession, TimeSimulation)
   real,     intent(in) :: TimeSimulation ! seconds from start time
 
   !LOCAL VARIABLES:
-  character(len=*), parameter :: NameSub='PM_init_session'
+  character(len=*), parameter :: NameSub = 'PM_init_session'
 
   logical :: DoInitialize = .true.
-  logical :: DoTest, DoTestMe
   !EOP
   !---------------------------------------------------------------------------
   !BOC
-  ! Set DoTest and DoTesMe logicals to true if the name of this subroutine
-  ! occurs in the StringTest parameter of the #TEST command in PARAM.in.
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! Initialize module for the first time
   if(DoInitialize)then
@@ -176,8 +172,7 @@ subroutine PM_init_session(iSession, TimeSimulation)
   ! Initialization for all sessions comes here
 
   ! Here is an example of using PM_iUnit and PM_Prefix
-  if(DoTest) &
-       write(PM_iUnit,*) PM_Prefix, NameSub,' finished for session ',iSession
+  write(PM_iUnit,*) PM_Prefix, NameSub, ' finished for session ', iSession
 
   !EOC
 end subroutine PM_init_session
@@ -185,7 +180,7 @@ end subroutine PM_init_session
 !BOP ==========================================================================
 !ROUTINE: PM_run - do one time step with PM
 !INTERFACE:
-subroutine PM_run(TimeSimulation,TimeSimulationLimit)
+subroutine PM_run(TimeSimulation, TimeSimulationLimit)
 
   !USES:
   use PM_ModMain, ONLY: PM_Time ! Simulation time of PM
@@ -199,20 +194,24 @@ subroutine PM_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   !LOCAL VARIABLES:
-  character(len=*), parameter :: NameSub='PM_run'
+  character(len=*), parameter :: NameSub = 'PM_run'
+  real                        :: Dt                 ! Time step
   !EOP
   !---------------------------------------------------------------------------
   !BOC
   ! Check if simulation times agree (e.g. for restart)
   if(abs(PM_Time-TimeSimulation)>0.0001) then
      write(*,*)NameSub,' PM time=',PM_Time,' SWMF time=',TimeSimulation
-     call CON_stop(NameSub//' SWMF_ERROR: PM and SWMF simulation times differ')
+     call CON_stop(NameSub//' ERROR: PM and SWMF simulation times differ')
   end if
 
-  ! Call the appropriate subroutine of the physics module
-  call PM_advance(TimeSimulationLimit)
+  ! Limit time step
+  Dt = min(PM_Dt, TimeSimulationLimit - TimeSimulation)
 
-  ! Return new simulation time after the time step
+  ! Call the appropriate subroutine of the physics module to advance by Dt
+  call PM_advance(Dt)
+
+  ! Return the new simulation time after the time step
   TimeSimulation = PM_Time
 
   !EOC

@@ -25,7 +25,7 @@ subroutine XY_get_for_pm(Buffer_II, iSize, jSize, NameVar)
   ! couple\_xy\_pm method of the CON\_couple\_pm\_xy module in 
   ! CON/Interface/src.
   !
-  ! Calculate field for the positions needed by the PM component
+  ! Calculate field for the positions needed by the PM component.
   ! We assume here that the name of the variable, its dimension,
   ! and the grid descriptor of the PM component are 
   ! sufficient for extracting the data.
@@ -75,7 +75,7 @@ subroutine PM_put_from_xy(Buffer_II, iSize, jSize, NameVar)
   ! 
   ! The data is assumed to be on a spherical grid of size iSize by jSize.
   ! Based on the NameVar argument the data corresponds either to the 
-  ! northern or to the southern hemisphere. The norther hemisphere is
+  ! northern or to the southern hemisphere. The northern hemisphere is
   ! always solved with processor 0, while the southern hemisphere with 
   ! processor PM\_nProc-1 where PM\_nProc is the number of processors (1 or 2)
   ! used by component PM.
@@ -136,8 +136,8 @@ contains
   subroutine couple_pm_xy_init
 
     !LOCAL VARIABLES:
-    logical :: IsInitialized = .false.  ! Logical to store initialization
-    integer :: nCells_D(2)              ! Temporary array for grid size
+    logical :: IsInitialized = .false.  ! logical to store initialization
+    integer :: nCells_D(2)              ! temporary array for grid size
 
     !DESCRIPTION:
     ! This subroutine initializes the data exchange between the XY and PM
@@ -171,30 +171,24 @@ contains
     real, intent(in) :: tSimulation  ! simulation time
 
     !LOCAL VARIABLES:
-    ! Name of this subroutine
     character (len=*), parameter :: NameSub='couple_xy_pm'
 
-    ! Names of variables for both blocks
-    character (len=*), parameter, dimension(2) :: &
-         NameVar_B = (/ 'FieldNorth', 'FieldSouth' /)
+    character (len=*), parameter, dimension(2) :: &   ! names of variables
+         NameVar_B = (/ 'FieldNorth', 'FieldSouth' /) ! for both blocks
 
-    ! Buffer for the Field variable on the 2D PM grid
-    real, dimension(:,:), allocatable :: Buffer_II
+    real, dimension(:,:), allocatable :: Buffer_II    ! buffer for 2D field
 
-    ! Message size, MPI status variable and error code
-    integer :: nSize, iStatus_I(MPI_STATUS_SIZE), iError
+    integer :: nSize                      ! MPI message size
+    integer :: iStatus_I(MPI_STATUS_SIZE) ! MPI status variable
+    integer :: iError                     ! MPI error code
 
-    ! Block index and the rank of the receiving processor
-    integer :: iBlock, iProcTo
+    integer :: iBlock                     ! block index
+    integer :: iProcTo                    ! rank of the receiving processor
 
     !DESCRIPTION:
-    ! This subroutine must be called by the couple\_two\_comp method
+    ! This subroutine is called by the couple\_two\_comp method
     ! of the CON\_couple\_all module.
-    ! This particular coupler couples between two components:\\
-    !    XY source\\
-    !    PM target
-    !
-    ! Send Field from XY to PM. 
+    ! This particular coupler send data Field from XY to PM.
     !EOP
     !-------------------------------------------------------------------------
     !BOC
@@ -209,8 +203,8 @@ contains
        iProcTo = pe_decomposition(PM_, iBlock)
 
        ! Allocate buffers for the variables both in XY and PM
-       allocate(Buffer_II(iSize, jSize), stat=pmrror)
-       call check_allocate(pmrror,NameSub//": "//NameVar_B(iBlock))
+       allocate(Buffer_II(iSize, jSize), stat=iError)
+       call check_allocate(iError, NameSub//": "//NameVar_B(iBlock))
 
        ! Calculate Field on XY.
        ! The result will be on the root processor of XY.
@@ -224,10 +218,10 @@ contains
           nSize = iSize*jSize
           if(is_proc0(XY_)) &
                call MPI_send(Buffer_II, nSize, MPI_REAL, iProcTo,&
-               1, i_comm(), pmrror)
+               1, i_comm(), iError)
           if(i_proc() == iProcTo) &
                call MPI_recv(Buffer_II, nSize, MPI_REAL, i_proc0(XY_),&
-               1,i_comm(), iStatus_I, pmrror)
+               1,i_comm(), iStatus_I, iError)
        end if
 
        ! Put variables into PM
