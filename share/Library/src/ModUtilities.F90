@@ -49,7 +49,7 @@ contains
     character(len=*), parameter :: NameSub='check_dir'
     integer, parameter :: MaxDir=100, lNameDir=100
     integer, save :: nDir=0
-
+    character(len=100) :: str, str1
     character(len=lNameDir), save :: NameDir_I(MaxDir)
     integer :: iDir, iError
     !--------------------------------------------------------------------------
@@ -67,20 +67,22 @@ contains
        if(nDir <= MaxDir) NameDir_I(nDir)=NameDir
 
        ! If not, warn once, and keep checking...
-       if(nDir == MaxDir+1) write(*,'(a)')NameSub // &
-            ' SWMF_WARNING: too many different directories!'
+	if(nDir == MaxDir+1) write(*,'(a)') NameSub // ' SWMF_WARNING: too many different directories!'
     end if
 
     ! Try to open a file in this directory
-    open(UNITTMP_, file=trim(NameDir)//'.test', status='unknown', &
-         iostat = iError)
-
+	str = trim(NameDir)
+	str = str // '.test'
+    open(UNITTMP_, file=str, status='unknown', iostat = iError)
     if (iError /= 0) then
-       write(*,'(a,i4)')NameSub//&
-            ' SWMF_ERROR: could not open file in directory '//trim(NameDir)//&
-            ', iError=',iError
-       call CON_stop(NameSub//' ERROR: Cannot find/write into directory '&
-            //trim(NameDir))
+	str = NameSub // ' SWMF_ERROR: could not open file in directory '
+	str = str // trim(NameDir)
+	str = str // ', iError='
+	str1 = trim(str)
+       write(*,'(a,i4)') str1, iError
+	str=NameSub // ' ERROR: Cannot find/write into directory '
+	str = str // trim(NameDir) 
+       call CON_stop(str)
     else
        close(UNITTMP_, status = 'DELETE')
     endif
@@ -105,12 +107,17 @@ contains
     !EOP
 
     character(len=*), parameter :: NameSub='fix_dir_name'
+ 	character(len=100) :: str, str1
     integer :: i
     !--------------------------------------------------------------------------
     i = len_trim(NameDir)
     if(i>0 .and. NameDir(i:i) /= '/')then
-       if(i >= len(NameDir)) call CON_stop(NameSub// &
-            "ERROR cannot append / for directory name "//NameDir)
+       if(i >= len(NameDir)) then
+	str = NameSub // "ERROR cannot append / for directory name "
+	str = str // NameDir
+	str1 = trim(str)
+	call CON_stop(str1)
+	end if
        NameDir(i+1:i+1) = '/'
     end if
 
@@ -286,11 +293,17 @@ contains
 
     !INPUT ARGUMENTS:
     integer,intent(in)::iError
-    character(LEN=*),intent(in)::NameArray
+    character(LEN=*),intent(in):: NameArray
     !EOP
     !BOC
-    if (iError > 0) call CON_stop('check_allocate F90_ERROR '// &
-         'Could not allocate array '//NameArray)
+    character(LEN=100) :: str, str1
+
+    if (iError > 0) then 
+	str1 = 'check_allocate F90_ERROR ' // 'Could not allocate array ' 
+	str1 = str // NameArray
+	str = trim(str1)
+	call CON_stop(str)
+   endif
     !EOC
   end subroutine check_allocate
 

@@ -1,1 +1,1 @@
-STANDALONE=NO
+include /home/volov/TEMP/SWMF_NEW/Makefile.def

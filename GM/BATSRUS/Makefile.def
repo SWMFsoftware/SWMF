@@ -1,2 +1,1 @@
-# Default setting
-STANDALONE=gm
+include /home/volov/TEMP/SWMF_NEW/Makefile.def

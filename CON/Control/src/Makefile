@@ -135,9 +135,9 @@ ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${MAKEFILE_COMP_SELECT}
-	@(if [ "${COMPILE.f90}" == "xlf90" ]; then make SWMF_for_xlf; \
-	elif [ "${OS}" == "Darwin" ];         then make SWMF_for_Darwin; \
-	else                                       make SWMF_general; fi)
+		@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
+		elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin; \
+		else                                       make SWMF_general; fi)
 
 SWMF_general:
 	${LINK.f90} -o ${SWMFEXE} \
