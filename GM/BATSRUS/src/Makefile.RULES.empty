@@ -1,0 +1,6 @@
+#^CFG COPYRIGHT UM
+#
+#	This is the default for all compilers.
+#       There are no exceptional rules, 
+#       simply use the compilert flags set in Makefile.conf
+#
