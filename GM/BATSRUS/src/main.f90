@@ -18,15 +18,13 @@ program BATSRUS
        dn_timing, UseTiming
   use ModIO, ONLY: NameRestartInDir
 
-  use CON_time, ONLY : init_time, &  !!! For now
-       iSession                      !!! For now, will be in ModMain
-
   use ModReadParam
 
   use ModMpi
 
   implicit none
 
+  integer :: iSession=1
   integer :: iError
   logical :: IsFound
   real(Real8_) :: CpuTimeStart
@@ -79,11 +77,6 @@ program BATSRUS
      endif
 
   end if
-
-  !\
-  ! Initialize CON_time
-  !/
-  call init_time
 
   !\
   ! Read input parameter file. Provide the default restart file for #RESTART
