@@ -265,10 +265,10 @@ contains
 
           if(DoTimeAccurate)then
              !\
-             ! In time accurate mode advance component 
-             ! if it has not reached the 'wait time'
+             ! In time accurate mode advance the component(s) which
+             ! has/have the smallest physical time == tSimulation
              !/
-             if(tSimulation_C(iComp) < tSimulationWait_C(iComp)) then
+             if(tSimulation_C(iComp) <= tSimulation) then
 
                 call run_comp(iComp,tSimulation_C(iComp),&
                      tSimulationLimit_C(iComp))
