@@ -338,8 +338,8 @@ subroutine SP_save_mh_data
   if(iProc==0)write(iStdOut,*)prefix,'Save file '//NameFile
   iFile=io_unit_new()
   open(iFile,file=NameFile,status='replace')
-  write(iFile,'(1es13.5,a,i8,a)') &
-       DataInputTime,' = DataInputTime',iMax,' = iMax'
+  write(iFile,'(1es13.5,a)') DataInputTime,' = DataInputTime'
+  write(iFile,'(i8,a)') iMax,' = iMax'
   write(iFile,'(a)')&
        'x[AU] y[AU] z[AU] rho[cm-3] ux[AU/hour] uy[AU/hour] '//&
        'uz[AU/hour] Bx[nT] By[nT] Bz[nT] p[erg/cm3]'
