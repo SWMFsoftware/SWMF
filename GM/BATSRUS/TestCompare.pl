@@ -39,8 +39,8 @@ my $dir2=$ARGV[1];
 opendir(DIR1, $dir1) or die "ERROR: cannot open directory $dir1 !\n";
 opendir(DIR2, $dir2) or die "ERROR: cannot open directory $dir2 !\n";
 
-my @test1 = grep /test\.\d\d\d/, readdir DIR1;
-my @test2 = grep /test\.\d\d\d/, readdir DIR2;
+my @test1 = grep /^test\.\d\d\d$/, readdir DIR1;
+my @test2 = grep /^test\.\d\d\d$/, readdir DIR2;
 
 die "ERROR no test.xxx directories in $dir1 !\n" unless @test1;
 die "ERROR no test.xxx directories in $dir2 !\n" unless @test2;
