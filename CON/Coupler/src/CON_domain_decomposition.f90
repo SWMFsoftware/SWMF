@@ -1231,16 +1231,21 @@ contains
          intent(in)::iCells_D
     !EOP
     real,dimension(DomainDecomposition%nDim)::xyz_cell_dd
+    integer::iDim
     xyz_cell_dd= DomainDecomposition%XyzBlock_DI(&
          :,lGlobalTreeNumber)+&
          DomainDecomposition%DXyzCell_DI(&
          :,lGlobalTreeNumber)*&
          (real(iCells_D)-cHalf)
-    where(DomainDecomposition%IsPeriodic_D)&
-         xyz_cell_dd=DomainDecomposition%XyzMin_D+&
-         mod(xyz_cell_dd-DomainDecomposition%XyzMin_D,&
-         DomainDecomposition%XyzMax_D-&
-         DomainDecomposition%XyzMin_D)
+    !Put the point inside the domain
+    do iDim=1,DomainDecomposition%nDim
+       if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
+       xyz_cell_dd(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
+            our_mod(xyz_cell_dd(iDim)-&
+            DomainDecomposition%XyzMin_D(iDim),&
+            DomainDecomposition%XyzMax_D(iDim)-&
+            DomainDecomposition%XyzMin_D(iDim))
+    end do
   end function xyz_cell_dd
   !===============================================================!
   !BOP
@@ -1368,11 +1373,13 @@ contains
     lFound=DomainDecomposition%lSearch
 
     !Put the point inside the domain
-    where(DomainDecomposition%IsPeriodic_D)&
-         Xyz_D=DomainDecomposition%XyzMin_D+&
-         mod(Xyz_D-DomainDecomposition%XyzMin_D,&
-         DomainDecomposition%XyzMax_D-&
-         DomainDecomposition%XyzMin_D)
+    do iDim=1,DomainDecomposition%nDim
+       if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
+       Xyz_D(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
+            our_mod(Xyz_D(iDim)-DomainDecomposition%XyzMin_D(iDim),&
+         DomainDecomposition%XyzMax_D(iDim)-&
+         DomainDecomposition%XyzMin_D(iDim))
+    end do
     XyzTrunc_D=DomainDecomposition%XyzMin_D+&
          max(cZero,min(Xyz_D-DomainDecomposition%XyzMin_D,&
          cAlmostOne*(DomainDecomposition%XyzMax_D-&

@@ -49,5 +49,17 @@ Module ModNumConst
   real, parameter, dimension(3,3) :: cUnit_DD = reshape( &
        (/cOne,cZero,cZero, cZero,cOne,cZero, cZero,cZero,cOne/),&
        (/3,3/))
-
+  interface our_mod
+     module procedure our_mod_i
+     module procedure our_mod_r
+  end interface
+contains
+  integer function our_mod_i(arg,period)
+    integer,intent(in)::arg,period
+    our_mod_i=arg-period*floor(real(arg)/real(period))
+  end function our_mod_i
+  real function our_mod_r(arg,period)
+    real,intent(in)::arg,period
+    our_mod_r=arg-period*floor(arg/period)
+  end function our_mod_r
 end module ModNumConst
