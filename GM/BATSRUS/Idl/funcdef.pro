@@ -23,7 +23,7 @@ function funcdef,xx,w,func,physics,eqpar,variables
 ;   A single number between 0 and nw-1 returns the variable indexed by
 ;       that number, e.g. '2' in 3D returns w(*,*,*,2). 
 ;
-;   Variable names in the "wnames" array mean the appropriate variable.
+;   Variable names in the "variables" array mean the appropriate variable.
 ;
 ;   Function names listed below are calculated and returned.
 ;
@@ -43,11 +43,9 @@ function funcdef,xx,w,func,physics,eqpar,variables
 ;
 ; One can use "funcdef" interactively too, e.g.
 ; 
-; ekin =funcdef(x,w,'(ux^2+uy^2)*rho','mhd23')
-; cfast=funcdef(x,w,'cfast','mhd33',eqpar)
+; ekin =funcdef(x,w,'(ux^2+uy^2)*rho','mhd23',eqpar,variables)
+; cfast=funcdef(x,w,'cfast','mhd33',eqpar,variables)
 ;
-; Note that "eqpar" is needed for the pressure but not for the kinetic energy, 
-; while "wnames" is not needed in either case.
 ;===========================================================================
 
 ; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
