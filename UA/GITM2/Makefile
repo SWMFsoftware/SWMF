@@ -69,6 +69,7 @@ clean:
 
 distclean: clean
 	@(if [ -d share ]; then cd share; make distclean; fi);
+	cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
 
