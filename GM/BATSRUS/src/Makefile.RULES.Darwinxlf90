@@ -9,5 +9,5 @@ calc_flux_Roe.o:ModProcMH.o ModMain.o ModGeometry.o \
 	${COMPILE.f90} ${Cflag0} ${SuffixMapf90} calc_flux_Roe.f90
 
 ModPrecond.o:	ModPrecond.f90
-	${COMPILE.f90} ${CflagNoP} ${SuffixMapf90} ModPrecond.f90
+	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModPrecond.f90
 
