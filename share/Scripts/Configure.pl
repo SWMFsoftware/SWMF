@@ -646,10 +646,7 @@ sub output{
     }
 }
 ############################################################################
-#!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Creating a configured software package}
-#
 #!ROUTINE: Configure.pl - create a configured software package based on directives
 #!DESCRIPTION:
 # This script together with the directives inserted into the source files
