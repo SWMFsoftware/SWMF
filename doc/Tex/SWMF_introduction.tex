@@ -511,27 +511,30 @@ command is issued in the appropriate directory.
 \subsection{The 8 Component Test}
 
 This test demonstrates faster than real time execution of the
-SWMF with all 8 components. The test consists of five stages:
+SWMF with all 8 components. The test was built up in six stages,
+the last stage constitutes the actual performance test.
 \begin{enumerate}
 \item Create a steady state SC solution.
 \item Create a steady state IH solution coupled to the SC.
+\item Run SC, IH and SP for 4 hours real time with 
+      a CME initiated in SC using an Eruptive Event generator.
 \item Create a start up GM solution based on the IH solution.
 \item Create a start up GM+IM+IE+UA solution.
 \item Run all 8 components in time accurate mode restarting from the
-      SC+IH and GM+IM+IE+UA solutions. A CME is initiated in SC
-      using an Eruptive Event generator, and 
-      the SP and RB components start from scratch.
+      SC+IH and GM+IM+IE+UA solutions. 
+      The SP and RB components start from scratch.
 \end{enumerate}
-We provide the parameter and layout files for all five stages,
-but we only describe how the final stage can be run using
+We provide the parameter and layout files for all six stages,
+but here we only describe how the final stage can be run using
 the restart files saved from the previous stages.
 This takes much less time than running all stages, 
-and it tests the whole SWMF.
+and it tests the whole SWMF. The README file in the SWMF\_TEST
+tar ball contains a detailed description of all stages.
 
 \subsubsection{Configuration and Compilation}
 
 For sake of simplicity one can configure SWMF with all 8 components
-(no Empty versions) so that all 5 stages can be done with the same
+(no Empty versions) so that all 6 stages can be done with the same
 executable. 
 \begin{verbatim}
   SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS_share,GM/BATSRUS,SP/Kota,IM/RCM
@@ -586,21 +589,33 @@ and the run directory with the following commands
 \subsubsection{Parameter, Layout and Restart Files}
 
 Open the prepacked SC+IH and the GM+IM+IE+UA restart files in
-the run directory
+the run directory.
+On a ``little endian'' platform (Linux clusters, SGI Altix and Compaq)
 \begin{verbatim}
   cd run
-  tar xzf scih_restart.tgz
-  tar xzf gmimieua_restart.tgz
+  tar xzf ../test/scih_4hr_restart.tgz
+  tar xzf ../test/gmimieua_restart.tgz
 \end{verbatim}
+while on a ``big endian platform'' (SGI Origin, MAC) use
+\begin{verbatim}
+  cd run
+  gunzip ../test/scih_4hr_restart_sgi.tgz
+  gunzip ../test/gmimieua_restart_sgi.tgz
+  tar xf ../test/scih_4hr_restart_sgi.tar
+  tar xf ../test/gmimieua_restart_sgi.tar
+\end{verbatim}
+Note that the {\tt tar} program on the SGI does not recognize the 
+{\tt -z flag}, so we have to decompress the files with {\tt gunzip} 
+first.
+
 Copy the PARAM and LAYOUT files into the run directory
 \begin{verbatim}
-  cd run
-  cp Param/PARAM.in.test.restart.8comp  PARAM.in
-  cp Param/LAYOUT.in.test.restart.8comp LAYOUT.in
+  cp ../test/PARAM.in.8comp PARAM.in
+  cp ../test/LAYOUT.in.8comp LAYOUT.in
 \end{verbatim}
 Edit the LAYOUT.in file according to the number of processors
 available. The file in its original form is best suited for 
-running on 128 processors.
+running on around 128 processors or more.
 Note that for the above suggested grid sizes and the
 selected component versions the following restrictions apply:
 \begin{itemize}
