@@ -82,6 +82,9 @@ module ModRaytrace
   ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
 
+  ! ----------- Variables for extracting variables along the ray --------
+  logical :: DoExtractState = .false., DoExtractUnitSi = .false.
+
   ! ----------- Variables for integrals along the ray -------------------
   ! Named indexes
   integer, parameter :: &
