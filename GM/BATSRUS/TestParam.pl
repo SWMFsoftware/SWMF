@@ -2,6 +2,7 @@
 
 my $Verbose = $v; undef $v;
 my $Help    = ($h or $help or $H); undef $h; undef $help; undef $H;
+my $Save    = $s; undef $s;
 
 use strict;
 
@@ -16,13 +17,30 @@ Purpose:
 
 Usage:
 
-    TestParam.pl [-h] [-v] [PARAMFILE]
+    TestParam.pl [-h] [-v] [-s] [PARAMFILE]
 
   -h            print help message and stop
+
+  -s            save PARAM.pl based on PARAM.XML 
+                (requires XML-PARSER::EasyTree package)
 
   -v            print verbose information
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
+
+Examples:
+
+  Check the default parameter file run/PARAM.in:
+
+      TestParam.pl
+
+  Check another paameter file:
+
+      TestParam.pl run/test.000/PARAM.expand
+
+  Convert XML file into Perl tree file:
+
+      TestParam.pl -s
 
 ";
     exit 0;
@@ -34,6 +52,11 @@ my $GridSizeScript    = 'GridSize.pl';
 my $MakefileConf      = 'Makefile.conf';
 my $GridSize;
 my $Precision;
+
+if($Save){
+    system($CheckParamScript,"-s","-x=$XmlFile");
+    exit 0;
+}
 
 if(open(MAKEFILE,$MakefileConf)){
     $Precision = 'unknown';
