@@ -194,4 +194,8 @@ The UseSPS parameter indicates if the serial potential solver is used.
 
 </commandgroup>
 
+<rule expr="-d 'IE/ionosphere' or not $_IsFirstSession">
+	Output directory IE/ionosphere should exist!
+</rule>
+
 </commandList>
