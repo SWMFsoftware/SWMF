@@ -63,7 +63,7 @@ BLAS  = lapack.o blas.o
 #
 
 .SUFFIXES:
-.SUFFIXES:	.f90 .F90 .f .for .ftn .o
+.SUFFIXES:	.f90 .F90 .f .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag2} $<
@@ -75,13 +75,6 @@ BLAS  = lapack.o blas.o
 # UA component. Do not change this unless you know what you are doing...
 .f.o:
 	${COMPILE.f90} ${Cflag2} -extend_source $<
-
-.for.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
-
-.ftn.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
-
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
