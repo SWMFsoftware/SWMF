@@ -15,8 +15,7 @@ module CON_ray_trace
   ! the direction of the ray relative to the vector field (parallel or
   ! antiparallel), the status of the ray tracing (done or in progress).
   ! 
-  ! If some variables are integrated along the rays, it is also be passed.
-  ! This is not implemented yet.
+  ! If some variables are integrated along the rays, they are also passed.
 
   !USES:
   use ModMpi
@@ -37,6 +36,7 @@ module CON_ray_trace
 
   !REVISION HISTORY:
   ! 31Jan04 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
+  ! 26Mar04 - Gabor Toth added the passing of nValue real values
   !EOP
 
   ! Private constants
@@ -45,10 +45,13 @@ module CON_ray_trace
   ! Named indexes for ray position
   integer, parameter :: &
        RayStartX_=1, RayStartY_=2, RayStartZ_=3, RayStartProc_=4, &
-       RayEndX_  =5, RayEndY_  =6, RayEndZ_  =7, RayDir_=8, RayDone_  =9
+       RayEndX_  =5, RayEndY_  =6, RayEndZ_  =7, RayDir_=8, RayDone_  =9, &
+       RayValue_ =10
 
-  ! Dimensionality of ray info
-  integer, parameter :: nRayInfo=9
+  ! Minimum dimensionality of ray info
+  integer, parameter :: MinRayInfo = 9
+  integer :: nRayInfo = MinRayInfo
+  integer :: nValue   = 0
 
   ! Private type
   ! Contains nRay rays with full information
@@ -75,11 +78,12 @@ contains
 
   !===========================================================================
 
-  subroutine ray_init(iCommIn)
+  subroutine ray_init(iCommIn, nValueIn)
 
     ! Initialize the ray tracing form the MPI communicator iCommIn
 
     integer, intent(in) :: iCommIn
+    integer, intent(in), optional :: nValueIn
 
     character (len=*), parameter :: NameSub = NameMod//'::ray_init'
     integer :: jProc
@@ -89,6 +93,12 @@ contains
     iComm = iCommIn
     call MPI_COMM_SIZE (iComm, nProc,  iError)
     call MPI_COMM_RANK (iComm, iProc,  iError)
+
+    ! Store the number of values to pass around with basic ray information
+    if(present(nValueIn))then
+       nValue   = nValueIn
+       nRayInfo = MinRayInfo + nValue
+    end if
 
     ! Allocate MPI variables for non-blocking exchange
     ! At most nProc messages are sent
@@ -141,11 +151,13 @@ contains
   !===========================================================================
 
   subroutine ray_put(&
-       iProcStart,XyzStart_D,iProcEnd,XyzEnd_D,IsParallel,DoneRay)
+       iProcStart,XyzStart_D,iProcEnd,XyzEnd_D,IsParallel,DoneRay,RayValue_V)
 
     integer, intent(in) :: iProcStart,iProcEnd ! PE-s for start and end pos.
     real,    intent(in) :: XyzStart_D(3), XyzEnd_D(3) ! Start and end pos.
     logical, intent(in) :: IsParallel,DoneRay  ! Direction and status of trace
+
+    real,    intent(in), optional :: RayValue_V(nValue) ! nValue reals to be passed
 
     character (len=*), parameter :: NameSub = NameMod//'::ray_put'
 
@@ -192,6 +204,9 @@ contains
          Send % Ray_VI(RayDone_,iRay)            = 0
       end if
 
+      if(present(RayValue_V)) &
+           Send % Ray_VI(RayValue_:RayValue_+nValue-1,iRay) = RayValue_V
+
       Send % nRay = iRay
 
     end subroutine append_ray
@@ -199,7 +214,9 @@ contains
   end subroutine ray_put
 
   !===========================================================================
-  subroutine ray_get(IsFound,iProcStart,XyzStart_D,XyzEnd_D,IsParallel,DoneRay)
+
+  subroutine ray_get(&
+       IsFound,iProcStart,XyzStart_D,XyzEnd_D,IsParallel,DoneRay,RayValue_V)
 
     ! Provide the last ray for the component to store or to work on
 
@@ -207,6 +224,8 @@ contains
     integer, intent(out) :: iProcStart          ! PE-s for start and end pos.
     real,    intent(out) :: XyzStart_D(3), XyzEnd_D(3) ! Start and end pos.
     logical, intent(out) :: IsParallel,DoneRay  ! Direction and status of trace
+
+    real,    intent(out), optional :: RayValue_V(nValue)
 
     character (len=*), parameter :: NameSub = NameMod//'::ray_get'
 
@@ -224,6 +243,9 @@ contains
     XyzEnd_D   = Recv % Ray_VI(RayEndX_  :RayEndZ_,iRay)
     IsParallel = Recv % Ray_VI(RayDir_,iRay)  > 0.0
     DoneRay    = Recv % Ray_VI(RayDone_,iRay) > 0.5
+
+    if(present(RayValue_V)) &
+         RayValue_V = Recv % Ray_VI(RayValue_:RayValue_+nValue-1,iRay) 
 
     ! Remove ray from buffer
     Recv % nRay = iRay - 1
@@ -360,8 +382,9 @@ contains
        Buffer % Ray_VI(:,1:Buffer % nRay) = &
             OldRay_VI(:,1:Buffer % nRay)              ! copy old values
        deallocate(OldRay_VI)                          ! free old storage
-       Buffer % MaxRay= nRayNew                       ! change buffer size
+       Buffer % MaxRay = nRayNew                      ! change buffer size
     end if
+
   end subroutine extend_buffer
 
   !===========================================================================
@@ -375,24 +398,43 @@ contains
     real    :: XyzStart_D(3),XyzEnd_D(3)
     logical :: IsParallel,DoneRay, DoneAll
     integer :: jProc
+    integer, parameter :: nValueTest=3
+    real :: ValueTest_V(nValueTest)
     !------------------------------------------------------------------------
 
-    call ray_init(MPI_COMM_WORLD)
+    call ray_init(MPI_COMM_WORLD,nValueTest)
 
-    write(*,*)'ray_init done, iProc,nProc=',iProc,nProc
+    write(*,*)'ray_init done, iProc,nProc,nValue=',iProc,nProc,nValue
+
+    write(*,"(a,i2,a,3f5.0,a,i2,a,3f5.0,a,2l2,a,3f5.1)") &
+         " Sending from iProc=",iProc,&
+         " XyzStart=",(/110.+iProc,120.+iProc,130.+iProc/),&
+         " to jProc=",mod(iProc+1,nProc),&
+         " XyzEnd=",(/210.+iProc,220.+iProc,230.+iProc/), &
+         " IsParallel, DoneRay=",.true.,.false., &
+         " RayValue_V=",(/1.,2.,3./)
 
     call ray_put(iProc, (/110.+iProc,120.+iProc,130.+iProc/), &
          mod(iProc+1,nProc), (/210.+iProc,220.+iProc,230.+iProc/), &
-         .true.,.false.)
+         .true.,.false.,(/1.,2.,3./))
+
+    write(*,"(a,i2,a,3f5.0,a,i2,a,3f5.0,a,2l2,a,3f5.1)") &
+         " Sending from iProc=",iProc,&
+         " XyzStart=",(/110.+iProc,120.+iProc,130.+iProc/),&
+         " to jProc=",mod(iProc-1,nProc),&
+         " XyzEnd=",(/210.+iProc,220.+iProc,230.+iProc/), &
+         " IsParallel, DoneRay=",.false.,.false., &
+         " RayValue_V=",(/-1.,-2.,-3./)
 
     call ray_put(iProc, (/110.+iProc,120.+iProc,130.+iProc/), &
          mod(nProc+iProc-1,nProc), (/210.+iProc,220.+iProc,230.+iProc/), &
-         .false.,.false.)
+         .false.,.false.,(/-1.,-2.,-3./))
 
     do jProc = 0, nProc-1
        write(*,"(a,i2,i2,i4,i4,100f5.0)")'iProc,jProc,Send_P(jProc)=',&
             iProc,jProc,Send_P(jProc) % MaxRay,&
-            Send_P(jProc) % nRay, Send_P(jProc) % Ray_VI
+            Send_P(jProc) % nRay, &
+            Send_P(jProc) % Ray_VI(:,1:Send_P(jProc) % nRay)
     end do
 
     write(*,*)'ray_put done'
@@ -402,12 +444,14 @@ contains
     write(*,*)'ray_exchange done, DoneAll=',DoneAll
 
     do
-       call ray_get(IsFound,iProcStart,XyzStart_D,XyzEnd_D,IsParallel,DoneRay)
+       call ray_get(IsFound,iProcStart,XyzStart_D,XyzEnd_D,IsParallel,DoneRay,&
+            ValueTest_V)
        if(.not.IsFound) EXIT
-       write(*,"(a,i2,a,3f5.0,a,i2,a,3f5.0,a,2l2)")&
+       write(*,"(a,i2,a,3f5.0,a,i2,a,3f5.0,a,2l2,a,3f5.1)")&
             'iProc ',iProc,' received XyzStart=',XyzStart_D,&
             ' iProcStart=',iProcStart,' XyzEnd=',XyzEnd_D,&
-            ' Isparallel,DoneRay=',IsParallel,DoneRay
+            ' Isparallel,DoneRay=',IsParallel,DoneRay,&
+            ' ValueTest_V=',ValueTest_V
     end do
 
     write(*,*)'ray_get done'
