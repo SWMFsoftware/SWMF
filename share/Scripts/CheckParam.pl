@@ -252,6 +252,9 @@ sub init_comp{
     # Set COMP::_nByteReal for easy check on precision
     $COMP::_nByteReal = $Precision eq 'single' ? 4 : 8;
 
+    # Set the name of the component for checking
+    $COMP::_NameComp = $NameComp;
+
     if($Components){
 	# Set COMP::_Components for the XML rules to check components
 	$COMP::_Components = $Components;
