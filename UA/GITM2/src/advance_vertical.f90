@@ -21,7 +21,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   integer, intent(in) :: iLon, iLat, iBlock
 
-  integer :: iIon, iSpecies, iAlt
+  integer :: iIon, iSpecies, iAlt, iVar, iDim
 
 !  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
   
@@ -30,17 +30,25 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't Continue")
   endif
 
-  Heating     = EuvHeating(iLon,iLat,:,iBlock)
   Centrifugal = (cos(Latitude(iLat,iBlock)) * OmegaBody)**2
   Coriolis    = 2 * cos(Latitude(iLat,iBlock)) * OmegaBody
-  LogRho  = log(Rho(iLon,iLat,:,iBlock))
-  Vel_GD  = Velocity(iLon,iLat,:,:,iBlock)
-  Temp    = Temperature(iLon,iLat,:,iBlock)
-  LogNS1  = log(NDensityS(iLon,iLat,:,1:nSpecies,iBlock))
-  VertVel = VerticalVelocity(iLon,iLat,:,1:nSpecies,iBlock)
-  cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
-  IVel    = IVelocity(iLon,iLat,:,:,iBlock)
-  LogINS  = log(IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock))
+  do iAlt = -1, nAlts+2
+     Heating(iAlt) = EuvHeating(iLon,iLat,iAlt,iBlock)
+     LogRho(iAlt)  = log(Rho(iLon,iLat,iAlt,iBlock))
+     Temp(iAlt)    = Temperature(iLon,iLat,iAlt,iBlock)
+     cMax1(iAlt)   = cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock)
+     do iVar = 1, nSpecies
+        LogNS1(iAlt,iVar)  = log(NDensityS(iLon,iLat,iAlt,iVar,iBlock))
+        VertVel(iAlt,iVar) = VerticalVelocity(iLon,iLat,iAlt,iVar,iBlock)
+     end do
+     do iVar = 1, nIonsAdvect
+        LogINS(iAlt,iVar) = log(IDensityS(iLon,iLat,iAlt,iVar,iBlock))
+     end do
+     do iDim = 1, 3
+        IVel(iAlt,iDim)    = IVelocity(iLon,iLat,iAlt,iDim,iBlock)
+        Vel_GD(iAlt,iDim)  = Velocity(iLon,iLat,iAlt,iDim,iBlock)
+     end do
+  end do
 !!!!  LogINS  = IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock)
 
   Lat = Latitude(iLat, iBlock) * 180.0/pi
@@ -50,12 +58,17 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   call advance_vertical_1d
 
-  Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
-  Velocity(iLon,iLat,:,:,iBlock)           = Vel_GD
-  Temperature(iLon,iLat,:,iBlock)          = Temp
-  LogNS(iLon,iLat,:,:,iBlock)              = LogNS1
-
-  VerticalVelocity(iLon,iLat,:,1:nSpecies,iBlock) = VertVel
+  do iAlt = -1, nAlts+2
+     Rho(iLon,iLat,iAlt,iBlock)         = exp(LogRho(iAlt))
+     Temperature(iLon,iLat,iAlt,iBlock) = Temp(iAlt)
+     do iDim = 1, 3
+        Velocity(iLon,iLat,iAlt,iDim,iBlock) = Vel_GD(iAlt,iDim)
+     end do
+     do iVar = 1, nSpecies
+        VerticalVelocity(iLon,iLat,iAlt,iVar,iBlock) = VertVel(iAlt, iVar)
+        LogNS(iLon,iLat,iAlt,iVar,iBlock)            = LogNS1(iAlt, iVar)
+     end do
+  end do
 
   if (minval(Temp) < 0.0) then
      write(*,*) "Temperature is negative!!!"
@@ -83,8 +96,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't continue")
   endif
 
-  nDensityS(iLon,iLat,:,1:nSpecies,iBlock) = exp(LogNS1)
-
+  do iVar = 1, nSpecies; do iAlt = -1, nAlts+2
+     nDensityS(iLon,iLat,iAlt,iVar,iBlock) = exp(LogNS1(iAlt, iVar))
+  end do; end do
   if (UseIonAdvection) then
 
 !     if (Maxval(LogINS) > 75.0) then
@@ -103,8 +117,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 !        call stop_gitm("Can't continue")
 !     endif
 !
-     IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock) = exp(LogINS)
+
+     do iVar = 1, nIonsAdvect; do iAlt = -1, nAlts+2
+        IDensityS(iLon,iLat,iAlt, iVar, iBlock) = exp(LogINS(iAlt, iVar))
 !!!!!     IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock) = LogINS
+     end do; end do
      !\
      ! New Electron Density
      !/
