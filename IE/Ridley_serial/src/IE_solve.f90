@@ -9,7 +9,7 @@ subroutine IE_solve
 
   implicit none
   character(len=*), parameter :: NameSub = 'IE_solve'
-  real::CurrentMax
+  real    :: CurrentSum
   real    :: Radius
   integer :: iBlock
   integer :: nSize, iError
@@ -32,10 +32,9 @@ subroutine IE_solve
      case(1) ! Northern hemisphere
         if(iProc /= 0) CYCLE
         if (IONO_NORTH_nMagBndPts < 8) CYCLE
-        CurrentMax=sum(abs(IONO_NORTH_JR))
-        if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=',&
-             CurrentMax
-        if(CurrentMax<cTolerance)CYCLE
+        CurrentSum = sum(abs(IONO_NORTH_JR))
+        if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=', CurrentSum
+        if(CurrentSum < 1e-6)CYCLE
         if (UseFakeRegion2) then
            call Create_Region2_Currents(1)
            IONO_NORTH_JR = IONO_NORTH_JR + IONO_NORTH_Fake_JR
@@ -105,10 +104,9 @@ subroutine IE_solve
         if(iProc /= nProc-1) CYCLE
 
         if (IONO_SOUTH_nMagBndPts < 8) CYCLE
-        CurrentMax=sum(abs(IONO_SOUTH_JR))
-        if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=',&
-             CurrentMax
-        if(CurrentMax<cTolerance)CYCLE
+        CurrentSum = sum(abs(IONO_SOUTH_JR))
+        if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=', CurrentSum
+        if(CurrentSum < 1e-6)CYCLE
 
         if (UseFakeRegion2) then
            call Create_Region2_Currents(iBlock)
