@@ -45,14 +45,13 @@ DEBUGGING		OFF		^CMP END DEBUGGING
 # Physics components
 #
 IH			ON NEEDS GM		#^CMP IF IH
+SC			ON NEEDS GM		#^CMP IF SC
 GM			ON			#^CMP IF GM
 IM			ON			#^CMP IF IM
 IE			ON			#^CMP IF IE
 UA			ON NEEDS IE		#^CMP IF UA
 RB                      ON                      #^CMP IF RB
-
-# For more than one physics components:         #^CMP IF MULTI
-MULTI                   ON                      #^CMP IF MULTI
+SP			ON			#^CMP IF SP
 
 #						#^CMP IF _FALSE_ BEGIN
 # This is always OFF and 
