@@ -451,7 +451,7 @@ end subroutine IE_put_from_gm
 
 subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
-  use IE_ModMain, ONLY: IsNewInput, DoCoupleUaCurrent
+  use IE_ModMain, ONLY: IsNewInput, DoCoupleUaCurrent, StarLightPedConductance
   use ModIonosphere
   use ModConst
   use ModUtilities, ONLY: check_allocate
@@ -508,37 +508,34 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
      !/
 
      do i = 1, IONO_nTheta
-        if (iBlock == 1) t = 90.0 - Iono_North_Theta(i,1)*180.0/cPi
-        if (iBlock == 2) t = 90.0 - Iono_South_Theta(i,1)*180.0/cPi
+        if (iBlock == 1) t = 90.0 - Iono_North_Theta(i,1)*cRadToDeg
+        if (iBlock == 2) t = 90.0 - Iono_South_Theta(i,1)*cRadToDeg
 
         if (t > maxval(UA_Lats(1,:,iBlock))) then
            ii = nLats-1
            iLat(i,iBlock) = ii
            rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
                 (UA_Lats(1,ii+1,iBlock) - UA_Lats(1,ii,iBlock))
+        else if (t < minval(UA_Lats(1,:,iBlock))) then
+           ii = 1
+           iLat(i,iBlock) = ii
+           rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
+                (UA_Lats(1,ii+1,iBlock) - UA_Lats(1,ii,iBlock))
         else
-           if (t < minval(UA_Lats(1,:,iBlock))) then
-              ii = 1
-              iLat(i,iBlock) = ii
-              rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
-                   (UA_Lats(1,ii+1,iBlock) - UA_Lats(1,ii,iBlock))
-           else
+           ii = 1
+           do while (ii < nLats)
+              if ((t >= UA_Lats(1,ii,iBlock) .and. &
+                   t <  UA_Lats(1,ii+1,iBlock)) .or.  &
+                   (t <= UA_Lats(1,ii,iBlock) .and. &
+                   t >  UA_Lats(1,ii+1,iBlock))) then
+                 iLat(i,iBlock) = ii
+                 rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
+                      (UA_Lats(1,ii+1,iBlock) - UA_Lats(1,ii,iBlock))
+                 ii = nLats
+              endif
+              ii = ii+1
+           enddo
 
-              ii = 1
-              do while (ii < nLats)
-                 if ((t >= UA_Lats(1,ii,iBlock) .and. &
-                      t <  UA_Lats(1,ii+1,iBlock)) .or.  &
-                      (t <= UA_Lats(1,ii,iBlock) .and. &
-                      t >  UA_Lats(1,ii+1,iBlock))) then
-                    iLat(i,iBlock) = ii
-                    rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
-                         (UA_Lats(1,ii+1,iBlock) - UA_Lats(1,ii,iBlock))
-                    ii = nLats
-                 endif
-                 ii = ii+1
-              enddo
-
-           endif
         endif
 
      enddo
@@ -569,7 +566,7 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
   end if
 
-  if (iBlock == 1) then
+  if (iBlock == 1) then ! iBlock == 1: Northern Hemisphere
 
      do i = 1, Iono_nTheta
 
@@ -613,8 +610,11 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
         enddo
      enddo
+     ! Limit the conductance with the StarLightConductance
+     IONO_NORTH_SigmaP = max(IONO_NORTH_SigmaP,   StarLightPedConductance)
+     IONO_NORTH_SigmaH = max(IONO_NORTH_SigmaH, 2*StarLightPedConductance)
 
-  else
+  else ! iBlock == 2: Southern Hemisphere
 
      do i = 1, Iono_nTheta
 
@@ -657,7 +657,9 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
            end if
         enddo
      enddo
-
+     ! Limit the conductance with the StarLightConductance
+     IONO_SOUTH_SigmaP = max(IONO_SOUTH_SigmaP,   StarLightPedConductance)
+     IONO_SOUTH_SigmaH = max(IONO_SOUTH_SigmaH, 2*StarLightPedConductance)
   end if
 
 end subroutine IE_put_from_ua
