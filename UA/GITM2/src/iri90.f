@@ -1,5 +1,5 @@
       SUBROUTINE IRI90 (JF,JMAG,ALATI,ALONG,RZ12,MMDD,DHOUR,
-     +                  ZKM,NZ,CCIRNM,URSINM,OUTF,OARR)
+     +                  ZKM,NZ,CCIRNM,URSINM,OUTF,OARR,iProc)
 C Mod Apr 94: -Change coefficients input to 1 character file for each
 C              (CCIR and URSI) instead of 12 monthly files:  Replaced Stan's
 C              argument (DIRECT) with two: CCIRNM and URSINM.  Replaced the
@@ -82,6 +82,8 @@ C          JF(9)=T[F]    HMF2 PEAK MODEL [INPUT VALUES]
 C          JF(10)=T[F]   TE MODEL [TE-NE MODEL WITH NE INPUT]
 C          JF(11)=T[F]   NE STANDARD [LAY-FUNCTIONS VERSION]
 C          JF(12)=T[F]   MESSAGE ARE WRITTEN TO UNIT=12 [=6]
+C
+C          iProc         processor rank for parallel execution
 C
 C  JF(1:11)=.TRUE. GENERATES THE STANDARD IRI-90 PARAMETERS.
 C  IF YOU SET JF(8)=.FALSE., THAN YOU HAVE TO PROVIDE THE F2 PEAK
@@ -218,6 +220,8 @@ C
 
       data IsOpenKonsol /.false./
 
+      character*80 NameFile
+      integer iProc
       integer konsol
       save konsol
 
@@ -270,7 +274,8 @@ C       stand-alone, this routine doesn't have to do anything.
         if (.not. IsOpenKonsol) then
            KONSOL=12
            call CON_io_unit_new(KONSOL)
-           open(unit = konsol,file='UA/data/iriOut.dat')
+           write(NameFile,"(a,i4.4,a)") 'UA/data/iriOut_',iProc,'.dat'
+           open(unit = konsol,file=NameFile)
            IsOpenKonsol = .true.
         endif
       else
