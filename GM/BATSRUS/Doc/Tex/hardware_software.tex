@@ -11,35 +11,34 @@ F90, although there are very few free F90 compilers.  Most parallel
 machines have MPI libraries in residence, although most Linux
 distributions do not include F90 versions of the MPI libraries.  The
 code has been run with the free distribution of the MPI-CH libraries
-under Linux with only minor difficulties.
-\BATSRUS\ has been run successfully on the following platforms:
-Cray T3E, IBM SP, SGI Origin, and several
+under Linux. \BATSRUS\ has been run successfully on the following platforms:
+Cray T3E, IBM SP, SGI Origin, Altix, Darwin (Mac OS) and several
 different Beowulf clusters.
 
 If the user wishes to run \BATSRUS\ on a single node, no MPI libraries
 are required to be in residence.  The user must make the {\tt NOMPI}
-library which is included with the code (see section~\ref{section:main_make})
-
+library which is included in the util/NOMPI utility
+(see section~\ref{section:main_make})
 
 \subsection{Parallelism, Speed Up and Scaling \label{scaling}}
 
 While it is designed to run on massively parallel platforms, the
 code will run on any number of nodes from a single processor to as
-many as the user has access to. We have currently run \BATSRUS\ on up
+many as the user has access to. We have run \BATSRUS\ on up
 to 1400 nodes.  As described in section~\ref{section:blocks},
- blocks are distributed on different
+blocks are distributed on different
 processors and must communicate with each other through message passing.
 The communication time between processors, or latency, will have an 
-effect on the efficiency of the code.  Platforms like the Cray T3E and 
-the SGI Origin,
+effect on the efficiency of the code.  Platforms like the Cray T3E, 
+the SGI Origin, and the Altix systems,
 where message passing is very well optimized, have very low latency and
 \BATSRUS\ spends very little time sending messages.  On a Beowulf cluster,
-using Ethernet, communication times are longer and the there is a noticeable
-affect on speed.  That said, the code still performs exceptionally on
+using Ethernet, communication times are longer and there is a noticeable
+effect on speed.  That said, the code still performs exceptionally on
 all tested platforms.
 
-Two ways to measure a code's performance are to look at `` speed up'' and 
-``scaling'.  Speed up is measured by taking a fixed size problem and running
+Two ways to measure a code's performance are to look at ``speed up'' and 
+``scaling''.  Speed up is measured by taking a fixed size problem and running
 it on more processors.  If the code runs twice as fast when run on twice as 
 many processors then the code has perfect speed up.  Communication time is 
 likely a major part of the work load if more processors does not mean
