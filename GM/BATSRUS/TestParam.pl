@@ -39,7 +39,7 @@ if(open(MAKEFILE,$MakefileConf)){
     $Precision = 'unknown';
     while(<MAKEFILE>){
 	$Precision = 'double' if /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64)/;
-	$Precision = 'single' if /^\s*PRECISION\s*=\s*(\-r4|\-real_size\s*32)/;
+	$Precision = 'single' if /^\s*PRECISION\s*=\s*(\-r4|\-real_size\s*32)?\s*$/;
     }
     if($Precision eq 'unknown'){
 	warn "WARNING Could not find PRECISION setting in $MakefileConf,".
