@@ -234,9 +234,9 @@ subroutine write_plot_los(ifile)
      end select
 
      if (ifile-plot_ > 9) then
-        file_format='("' // trim(NamePlotDir) // '"a,i2,a,i7.7,a)'
+        file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
      else
-        file_format='("' // trim(NamePlotDir) // '"a,i1,a,i7.7,a)'
+        file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
      end if
 
      if(time_accurate)then
