@@ -5,19 +5,21 @@
 ; Procedures for
 ;
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
-;    openfile,gettype,gethead,get_pict,get_pict_asc,get_pict_bin
+;    openfile, gettype, gethead, get_pict, 
+;    get_pict_asc, get_pict_bin, get_pict_log, get_log
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, readplotpar, readlimits
 ; transforming initial data:
 ;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
+;    interpol_logfiles, interpol_log
 ; calculating functions of the data
 ;    getfunc, getlimits
 ; plotting
-;    plot_func, plotgrid
+;    plot_func, plotgrid, plot_log
 ; calculating cell corners and cell volumes for general 2D grids
 ;    gengrid
-; comparing two w or x arrays for relative differences
-;    compare
+; comparing two w,x or wlog arrays for relative differences
+;    compare, rms_logfiles
 ; checking index ranges for functions quadruplet and triplet
 ;    checkdim
 ; procedure "quit" as an alias for "exit"
@@ -37,15 +39,69 @@
 ;    triplet, quadruplet, coarse
 ; eliminating degenerate dimensions from an array
 ;    reform2
-; converting IMF date+time into hours relative to the start of the month
-;    imf_hour
-;==========================================
+; converting logfile time or date+time into hours
+;    log_time
+
+
+;=============================================================================
+function reform2,x
+
+;Remove all degenerate dimensions from x
+
+if n_elements(x) lt 2 then return,x
+
+siz=size(x)
+siz=siz(1:siz(0))
+return,reform(x,siz(where(siz gt 1)))
+
+end
+
+;=============================================================================
+function log_time,wlog,wlognames
+
+; Obtain time in hours from wlog and wlognames
+; If the log file contains 't' or 'time', simply convert seconds to hours
+; If the log file contains date and time, calculate time relative to
+; the beginning of the first day. 
+; This algorithm works only if the whole file is in the same month.
+
+nwlog = n_elements(wlognames)
+if nwlog gt 0 then begin
+    iyear = -1
+    itime = -1
+    for i = 0, nwlog-1 do begin
+        if wlognames(i) eq 'year' or wlognames(i) eq 'yr' then iyear=i
+        if wlognames(i) eq 'time' or wlognames(i) eq 't'  then itime=i
+    end
+    if iyear eq -1 and itime eq -1 then begin
+        print,'Could not find year or time in wlognames=',wlognames
+        retall
+    end
+    if itime gt -1 then return,wlog(*,itime)/3600.0
+endif else begin
+    iyear = 0
+endelse
+
+iday  = iyear+2
+ihour = iday+1
+imin  = iday+2
+isec  = iday+3
+imsc  = iday+4
+
+return,(wlog(*,iday)-wlog(0,iday))*24.0 + $
+  wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
+  wlog(*,imsc)/3.6e6
+
+end
+
+;=============================================================================
 pro openfile,unit,filename,filetype
-;==========================================
+
    on_error,2
 
    close,unit
    case filetype of
+       'log'   :openr,unit,filename
        'ascii' :openr,unit,filename
        'binary':openr,unit,filename,/f77_unf
        'real4' :openr,unit,filename,/f77_unf
@@ -53,150 +109,173 @@ pro openfile,unit,filename,filetype
    endcase
 end
 
-;==========================================
+;=============================================================================
 pro gettype,filenames,filetypes,npictinfiles
-;==========================================
-   on_error,2
 
-   filetypes=filenames
-   npictinfiles=intarr(n_elements(filenames))
-   for ifile=0,n_elements(filenames)-1 do begin
-      ; Obtain filetype based on the length info in the first 4 bytes
-      close,10
-      openr,10,filenames(ifile)
-      len=long(1)
-      readu,10,len
-      if len ne 79 then ftype='ascii' else begin
-         ; The length of the 2nd line decides between real4 and binary
-         ; since it contains the time, which is real*8 or real*4
-         head=bytarr(79+4)
-         readu,10,head,len
-         case len of
-            20: ftype='real4'
-            24: ftype='binary'
-            else: begin
-               print,'Error in GetType: strange unformatted file:',$
-                     filenames(ifile)
-               retall
-            end
-         endcase
-      endelse
-      close,10
+on_error,2
 
-      ; Obtain file size and number of snapshots
-      openfile,1,filenames(ifile),ftype
-      status=fstat(1)
-      fsize=status.size
+filetypes=filenames
+npictinfiles=intarr(n_elements(filenames))
+for ifile=0,n_elements(filenames)-1 do begin
+    if   strpos(filenames(ifile),'.log') gt 0 $
+      or strpos(filenames(ifile),'.sat') gt 0 then begin
+        filetypes(ifile)    = 'log'
+        npictinfiles(ifile) = 1
+    endif else begin
+        ; Obtain filetype based on the length info in the first 4 bytes
+        close,10
+        openr,10,filenames(ifile)
+        len=long(1)
+        readu,10,len
+        if len ne 79 then ftype='ascii' else begin
+            ; The length of the 2nd line decides between real4 and binary
+            ; since it contains the time, which is real*8 or real*4
+            head=bytarr(79+4)
+            readu,10,head,len
+            case len of
+                20: ftype='real4'
+                24: ftype='binary'
+                else: begin
+                    print,'Error in GetType: strange unformatted file:',$
+                      filenames(ifile)
+                    retall
+                end
+            endcase
+        endelse
+        close,10
+        
+        ; Obtain file size and number of snapshots
+        openfile,1,filenames(ifile),ftype
+        status=fstat(1)
+        fsize=status.size
 
-      pointer=0
-      pictsize=1
-      npict=0
-      while pointer lt fsize do begin
-          ; Obtain size of a single snapshot
-          point_lun,1,pointer
-          gethead,1,ftype,pictsize=pictsize
-          npict=npict+1
-          pointer=pointer+pictsize
-      endwhile
-      close,1
+        pointer=0
+        pictsize=1
+        npict=0
+        while pointer lt fsize do begin
+            ; Obtain size of a single snapshot
+            point_lun,1,pointer
+            gethead,1,ftype,pictsize=pictsize
+            npict=npict+1
+            pointer=pointer+pictsize
+        endwhile
+        close,1
 
-      npictinfiles(ifile)=npict
-      filetypes(ifile)   =ftype
-   endfor
+        npictinfiles(ifile)=npict
+        filetypes(ifile)   =ftype
+    endelse
+  endfor
 end
 
-;=============================================================
+;=============================================================================
 pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
             ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
-;=============================================================
-   on_error,2
+
+on_error,2
 
 ;Type definitions
-   headline='                                                                               '
-   it=long(1)
-   ndim=long(1)
-   neqpar=long(1)
-   nw=long(1)
-   varname='                                                                               '
+headline='                                                                               '
+it=long(1)
+ndim=long(1)
+neqpar=long(1)
+nw=long(1)
+varname='                                                                               '
 ;Remember pointer position at beginning of header
-   point_lun,-unit,pointer0
+point_lun,-unit,pointer0
 ;Read header
-   case filetype of
-      'ascii': begin
-                  time=double(1)
-                  readf,unit,headline
-                  readf,unit,it,time,ndim,neqpar,nw
-                  gencoord=(ndim lt 0)
-                  ndim=abs(ndim)
-                  nx=lonarr(ndim)
-                  readf,unit,nx
-                  eqpar=dblarr(neqpar)
-                  readf,unit,eqpar
-                  readf,unit,varname
-               end
-      'binary':begin
-                  time=double(1)
-                  readu,unit,headline
-                  readu,unit,it,time,ndim,neqpar,nw
-                  gencoord=(ndim lt 0)
-                  ndim=abs(ndim)
-                  nx=lonarr(ndim)
-                  readu,unit,nx
-                  eqpar=dblarr(neqpar)
-                  readu,unit,eqpar
-                  readu,unit,varname
-               end
-      'real4': begin
-                  time=float(1)
-                  readu,unit,headline
-                  readu,unit,it,time,ndim,neqpar,nw
-                  gencoord=(ndim lt 0)
-                  ndim=abs(ndim)
-                  nx=lonarr(ndim)
-                  readu,unit,nx
-                  eqpar=fltarr(neqpar)
-                  readu,unit,eqpar
-                  readu,unit,varname
-               end
-      else: begin
-                  print,'Gethead: unknown filetype',filetype
-                  retall
-            end
-   endcase
+case filetype of
+    'log': begin
+        readf,unit,headline
+        headline=headline+'_mhd13'
+        readf,unit,varname
+        nw=n_elements(str_sep(varname,' '))-2
+        varname ='hour '+varname
+        ; reset pointer
+        point_lun,unit,pointer0
+        it=0
+        time=0.0
+        gencoord=0
+        neqpar=0
+        eqpar=0.0
+        ndim=1
+        nx=lonarr(1)
+        nx(0)=1
+    end
+    'ascii': begin
+        time=double(1)
+        readf,unit,headline
+        readf,unit,it,time,ndim,neqpar,nw
+        gencoord=(ndim lt 0)
+        ndim=abs(ndim)
+        nx=lonarr(ndim)
+        readf,unit,nx
+        eqpar=dblarr(neqpar)
+        readf,unit,eqpar
+        readf,unit,varname
+    end
+    'binary':begin
+        time=double(1)
+        readu,unit,headline
+        readu,unit,it,time,ndim,neqpar,nw
+        gencoord=(ndim lt 0)
+        ndim=abs(ndim)
+        nx=lonarr(ndim)
+        readu,unit,nx
+        eqpar=dblarr(neqpar)
+        readu,unit,eqpar
+        readu,unit,varname
+    end
+    'real4': begin
+        time=float(1)
+        readu,unit,headline
+        readu,unit,it,time,ndim,neqpar,nw
+        gencoord=(ndim lt 0)
+        ndim=abs(ndim)
+        nx=lonarr(ndim)
+        readu,unit,nx
+        eqpar=fltarr(neqpar)
+        readu,unit,eqpar
+        readu,unit,varname
+    end
+    else: begin
+        print,'Gethead: unknown filetype',filetype
+        retall
+    end
+endcase
 
-   if keyword_set(pictsize) then begin
-      ; Calculate the picture size
-      ; Header length
-      point_lun,-unit,pointer1
-      headlen=pointer1-pointer0
-      ; Number of cells
-      nxs=1
-      for idim=1,ndim do nxs=nxs*nx(idim-1)
-      ; Snapshot size = header + data + recordmarks
-      case filetype of
-         'ascii' :pictsize = headlen + (18*(ndim+nw)+1)*nxs
-         'binary':pictsize = headlen + 8*(1+nw)+8*(ndim+nw)*nxs
-         'real4' :pictsize = headlen + 8*(1+nw)+4*(ndim+nw)*nxs
-      endcase
-   endif else begin
-      ; Get variables and physics
-      variables=str_sep(strtrim(strcompress(varname),2),' ')
-      tmp=str_sep(strtrim(headline,2),'_')
-      if n_elements(tmp) eq 2 then begin
-         headline=tmp(0)
-         physics=tmp(1)
-         ; work around for a bug
-         if physics eq '123' or physics eq '223' then physics='mhd23'
-      endif
-  endelse
+if keyword_set(pictsize) then begin
+                                ; Calculate the picture size
+                                ; Header length
+    point_lun,-unit,pointer1
+    headlen=pointer1-pointer0
+                                ; Number of cells
+    nxs=1
+    for idim=1,ndim do nxs=nxs*nx(idim-1)
+                                ; Snapshot size = header + data + recordmarks
+    case filetype of
+        'log'   :pictsize = 1
+        'ascii' :pictsize = headlen + (18*(ndim+nw)+1)*nxs
+        'binary':pictsize = headlen + 8*(1+nw)+8*(ndim+nw)*nxs
+        'real4' :pictsize = headlen + 8*(1+nw)+4*(ndim+nw)*nxs
+    endcase
+endif else begin
+                                ; Get variables and physics
+    variables=str_sep(strtrim(strcompress(varname),2),' ')
+    tmp=str_sep(strtrim(headline,2),'_')
+    if n_elements(tmp) eq 2 then begin
+        headline=tmp(0)
+        physics=tmp(1)
+                                ; work around for a bug
+        if physics eq '123' or physics eq '223' then physics='mhd23'
+    endif
+endelse
 
 end
 
-;==========================================
+;=============================================================================
 pro get_pict,unit,filetype,npict,x,w,$
     headline,physics,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
     rBody,error
-;==========================================
 
    on_error,2
 
@@ -239,6 +318,7 @@ pro get_pict,unit,filetype,npict,x,w,$
 
    ; Read data
    case filetype of
+       'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
        'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
        'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
        'real4':  get_pict_real,unit, npict, ndim, nw, nx, x, w
@@ -249,7 +329,7 @@ pro get_pict,unit,filetype,npict,x,w,$
        end
    endcase
 
-   if ndim eq 2 and nx(1) eq 1 then begin
+   if ndim eq 2 and nx(ndim-1) eq 1 then begin
        ; sort x and w according to the x + factor * y function
        ; where factor is a transcendent number to avoid coincidences
        factor = exp(1.0d0)
@@ -260,9 +340,19 @@ pro get_pict,unit,filetype,npict,x,w,$
 
 end
 
-;==========================================
+;=============================================================================
+pro get_pict_log,unit,npict,ndim,nw,nx,x,w
+
+get_log, unit, w, wlognames, x
+ndim = 1
+nx(0)= n_elements(x)
+nw   = n_elements(wlognames)
+
+end
+
+;=============================================================================
 pro get_pict_asc,unit,npict,ndim,nw,nx,x,w
-;==========================================
+
   on_error,2
   ;----------------------------------------
   ; Read coordinates and values row by row
@@ -309,9 +399,9 @@ pro get_pict_asc,unit,npict,ndim,nw,nx,x,w
   endcase
 end
 
-;==========================================
+;=============================================================================
 pro get_pict_bin,unit,npict,ndim,nw,nx,x,w
-;==========================================
+
   on_error,2
   ;----------------------------------------
   ; Read coordinates and values
@@ -359,9 +449,9 @@ pro get_pict_bin,unit,npict,ndim,nw,nx,x,w
   endcase
 end
 
-;==========================================
+;=============================================================================
 pro get_pict_real,unit,npict,ndim,nw,nx,x,w
-;==========================================
+
   on_error,2
   ;----------------------------------------
   ; Read coordinates and values
@@ -409,9 +499,9 @@ pro get_pict_real,unit,npict,ndim,nw,nx,x,w
   endcase
 end
 
-;==========================================
+;=============================================================================
 pro asknum,prompt,var,doask
-;==========================================
+
    on_error,2
 
    if var eq 0 then read,PROMPT=prompt+'? ',var $
@@ -424,9 +514,9 @@ pro asknum,prompt,var,doask
    endelse
 end
 
-;==========================================
+;=============================================================================
 pro askstr,prompt,var,doask
-;==========================================
+
    on_error,2
 
    if var eq '' then read,PROMPT=prompt+'? ',var $
@@ -439,19 +529,23 @@ pro askstr,prompt,var,doask
    endelse
 end
 
-;==========================================
+;=============================================================================
 pro str2arr,s,a,n,sep
-;==========================================
-; Split string s at the sep characters (default is space) into array a
+
+; If s is an array copy it to a.
+; If s is a string then split string s at the sep characters 
+; (default is space) into array a.
 ; If n is 0, it will be the size of the array on output
 ; If n is defined, fill up the rest of the array with the last defined element
 ; If n is defined but smaller than the number of elements in s, print a warning
 
 on_error,2
 
-if keyword_set(sep) then $
-   a0=str_sep(s,sep)     $
-else                     $
+if n_elements(s) gt 1 then    $
+    a0 = s                    $
+else if keyword_set(sep) then $
+   a0=str_sep(s,sep)          $
+else                          $
    a0=str_sep(strtrim(strcompress(s),2),' ')
 
 n0=n_elements(a0)
@@ -471,35 +565,10 @@ endif else begin
 endelse
 
 end
-;==========================================
-function imf_hour,wlog,iday=iday
-   if not keyword_set(iday) then iday = 2
-   ihour = iday+1
-   imin  = iday+2
-   isec  = iday+3
-   imsc  = iday+4
-   return,(wlog(*,iday)-wlog(0,iday))*24.0 + $
-     wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
-     wlog(*,imsc)/3.6e6
-
-end
-;==========================================
-function reform2,x
-;==========================================
-  ;Remove all degenerate dimensions from x
-
-  if n_elements(x) lt 2 then return,x
-
-  siz=size(x)
-  siz=siz(1:siz(0))
-  return,reform(x,siz(where(siz gt 1)))
-
-end
-
 ;===========================================================================
 pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
-;===========================================================================
+
    on_error,2
 
    ; Determine dimension of plots based on cut or ndim,
@@ -546,7 +615,7 @@ end
 ;===========================================================================
 pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
     physics,nvector,vectors,grid,doask
-;===========================================================================
+
    on_error,2
 
    if (gencoord or transform eq 'unpolar') and ndim eq 2 then begin
@@ -638,7 +707,7 @@ end
 
 ;===========================================================================
 pro getvectors,physics,nvector,vectors
-;===========================================================================
+
    physic=strtrim(physics)
    phys=strmid(physic,0,strlen(physic)-2)
    ndir=0
@@ -678,7 +747,7 @@ end
 
 ;===========================================================================
 pro readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
-;===========================================================================
+
    on_error,2
 
    if n_elements(fmax) ne nfunc then fmax=dblarr(nfunc) else fmax=double(fmax)
@@ -703,7 +772,7 @@ end
 ;===========================================================================
 pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
                 x,w,xreg,wreg,usereg,physics,eqpar,wnames,cut
-;===========================================================================
+
    on_error,2
 
    for ifunc=0,nfunc-1 do begin
@@ -770,8 +839,7 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
 ;    "q" can be interpolated from the irregular grid to the regular one by:
 ;
 ;    qreg(*,*)=trigrid(x(*,*,0),x(*,*,1),q,triangles,[0,0],xreglimits)
-;
-;===========================================================================
+
    on_error,2
 
    ;Floating underflow is not a real error, the message is suppressed
@@ -1048,7 +1116,7 @@ pro polargrid,nvector,vectors,x,w,xreg,wreg
 ;
 ;  Transform 2D or 3D grid and vector variables 
 ;  from Cartesian to cylindrical components
-;
+
   on_error,2
 
   siz = size(x)
@@ -1067,8 +1135,7 @@ pro polargrid2,nvector,vectors,x,w,xreg,wreg
 ;
 ;  Transform 2D grid and vector variables 
 ;  from x and y to radial and phi components
-;
-;===========================================================================
+
   on_error,2
 
   xreg=x
@@ -1095,8 +1162,7 @@ end
 pro polargrid3,nvector,vectors,x,w,xreg,wreg
 ;
 ;    Transform 3D vector variables from x,y,z to radial,phi,z components
-;
-;===========================================================================
+
   on_error,2
 
   xreg=x
@@ -1123,8 +1189,7 @@ end
 pro spheregrid,nvector,vectors,x,w,xreg,wreg
 ;
 ;    Transform vector variables from x,y,z to radial,phi,z components
-;
-;===========================================================================
+
   on_error,2
 
   xreg=x
@@ -1171,8 +1236,7 @@ end
 pro unpolargrid,nvector,vectors,x,w,xreg,wreg
 ;
 ; Transform 2D and 3D vector variables cylindrical to Cartesian components
-;
-;===========================================================================
+
   on_error,2
 
   siz = size(x)
@@ -1192,8 +1256,6 @@ pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
 ;
 ;    Transform 2D grid (and vector variables)
 ;    from radial and phi to x and y components
-;
-;===========================================================================
 
   xreg=x
   phi=x(*,*,1)
@@ -1218,8 +1280,7 @@ pro unpolargrid3,nvector,vectors,x,w,xreg,wreg
 ;
 ;  Transform 3D grid (and vector variables)
 ;  from radial, phi,z to x, y, z components
-;
-;===========================================================================
+
   on_error,2
 
   xreg=x
@@ -2557,15 +2618,368 @@ for iw=0,nw-1 do begin
 endfor
 end
 
+;=============================================================================
+pro get_log, source, wlog, wlognames, logtime, verbose=verbose
+
+; Read the log data from source. If source is an integer, it is 
+; interpreted as a unit number. If it is a string, it is taken as the
+; filename. Read the content of the file into wlog and the variable 
+; names into wlognames. 
+; The optional logtime argument is set to the time in hours.
+; If verbose is present set show verbose information.
+; If versbose is a string, attach it to 'wlog' in the verbose info.
+
+on_error,2
+
+if not keyword_set(source) then begin
+   print, $
+     'Usage: get_log, source, wlog, wlognames [,logtime] [,verbose=verbose]'
+   help,source,wlog,wlognames
+   retall
+endif
+
+itype = size(source,/type)
+if itype eq 2 or itype eq 3 then begin
+    filesource=0
+    unit = source
+    file = 'unit '+strtrim(string(unit),2)
+    stat = fstat(unit)
+    if not stat.open then begin
+        print,'get_log error: unit is not open'
+        retall
+    endif
+endif else if itype eq 7 then begin
+    filesource=1
+    file = source
+    unit = 0
+    found = 0
+    while not found do begin
+        unit = unit + 1
+        stat = fstat(unit)
+        if not stat.open then found = 1
+    endwhile
+    openr,unit,file
+endif else begin
+    print,'get_log error: source =',source,$
+      ' should be a unit number or a filename.'
+    retall
+end
+
+if not keyword_set(verbose) then verbose = 0
+; If verbose is a string set the index string to it
+if size(verbose,/type) eq 7 then index=verbose else index=''
+
+headline=''
+readf,unit,headline
+wlogname=''
+readf,unit,wlogname
+str2arr,wlogname,wlognames,nwlog
+
+if verbose then begin
+  if filesource then print,'logfile',index,'  =',file
+  print,'headline',index,' =',strtrim(headline,2)
+  for i=0,nwlog-1 do $
+    print,FORMAT='("  wlog",A,"(*,",I2,")= ",A)',index,i,wlognames(i)
+endif
+
+; Use buffers for efficient reading
+buf   = long(10000)
+dbuf  = long(10000)
+wlog  = dblarr(nwlog,buf)
+wlog_ = dblarr(nwlog)
+nt    = long(0)
+while not eof(unit) do begin
+    on_ioerror,close_file
+    readf,unit,wlog_
+    wlog(*,nt)=wlog_
+    nt=nt+1
+    if nt ge buf then begin
+        buf=buf+dbuf
+        wlog=[[wlog],[dblarr(nwlog,buf)]]
+    endif
+endwhile
+close_file: if filesource then close,unit
+
+if verbose then print,'Number of recorded timesteps: nt=',nt
+
+wlog = transpose(wlog(*,0:nt-1))
+
+logtime = log_time(wlog,wlognames)
+if verbose then print,'Setting logtime',index
+
+end
+
+;=============================================================================
+
+pro plot_log, logfilename, func, $
+              wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2,$
+              xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
+              colors=colors, linestyles=linestyles, symbols=symbols
+
+; Plot variables listed in the space separated func string from the
+; files listed in the space separated list of filenames in logfilename.
+; Use wlog0...wlognames2 if all the needed arguments are present 
+; otherwise read the arrays from the files.
+; Use xrange to set the time range, shift times by timeshifts(nlog), 
+; set the function ranges with the optional yranges(2,nfunc) array,
+; set the colors, the linestyles and the symbols with the 
+; colors(nlog), linestyles(nlog) and symbols(nlog) arrays respectively.
+
+str2arr,logfilename,logfilenames,nlog
+str2arr,func,funcs,nfunc
+
+; read in arrays if not present
+if   (nlog eq 1 and n_elements(wlognames0) eq 0) $
+  or (nlog eq 2 and n_elements(wlognames1) eq 0) $
+  or (nlog eq 3 and n_elements(wlognames2) eq 0) then begin
+
+    if nlog ge 1 then get_log,logfilenames(0),wlog0,wlognames0,/verbose
+    if nlog ge 2 then get_log,logfilenames(1),wlog1,wlognames1,verbose='1'
+    if nlog ge 3 then get_log,logfilenames(2),wlog2,wlognames2,verbose='2'
+
+endif
+
+; Shift times by 0 unless defined
+if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
+
+; Calculat the xrange from the data unless defined
+if n_elements(xrange) ne 2 then begin
+    DoXrange = 1
+    xrange   = [1e30, -1e30]
+endif else $
+  DoXrange = 0
+
+; Calculate yranges from the data unless defined
+if n_elements(yranges) ne 2*nfunc then begin
+    DoYrange = 1
+    yranges = fltarr(2,nfunc)
+    yranges(0,*) =  1e30
+    yranges(1,*) = -1e30
+endif else $
+  DoYrange = 0
+
+; If line styles are not defined use normal lines (0)
+if n_elements(linestyles) lt nlog then linestyles = intarr(nlog)
+
+; If symbols are not defined do not use symbols (0)
+if n_elements(symbols) lt nlog then symbols = intarr(nlog)
+
+; If colors are not defined, make 3 colors with the last one white/black
+if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
+
+; If none of colors, linestyles or symbols are defined, make colors different
+if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then begin
+    colors = [150,250,255]
+    colors[nlog-1] = 255
+endif
+
+if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
+if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
+
+; Set size of plot windows
+ppp   = nfunc
+space = 0.05
+set_space, ppp, space, sizes, ny = ppp
+
+erase
+
+; The first iteration is used to get the X and Y ranges from the
+; data. This can be skipped if both ranges are given explicitly.
+if DoXrange or DoYrange then iter0 = 1 else iter0 = 2
+
+for iter = iter0, 2 do begin
+    for ilog = 0, nlog-1 do begin
+        case ilog of 
+            0: begin
+                wlog=wlog0
+                wlognames = wlognames0
+            end
+            1: begin
+                wlog=wlog1
+                wlognames = wlognames1
+            end
+            2: begin
+                wlog=wlog2
+                wlognames = wlognames2
+            end
+        endcase
+        
+        hour = log_time(wlog,wlognames) + timeshifts(ilog)
+
+        for ifunc = 0, nfunc-1 do begin
+
+            ivar = where( wlognames eq funcs(ifunc))
+            if ivar lt 0 then begin
+                if iter eq 1 then print,"function ",funcs(ifunc), $
+                  " was not found in wlog",strtrim(string(ilog),2)
+            endif else begin
+                ivar = ivar(0)
+                field = wlog(*,ivar)
+
+                if iter eq 1 then begin
+                    if DoXrange then begin
+                        xrange[0]   = min( [ xrange[0], hour ] )
+                        xrange[1]   = max( [ xrange[1], hour ] )
+                    endif
+                    if DoYrange then begin
+                        yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
+                        yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
+                    endif
+                endif else begin
+                    set_position, sizes, 0, ifunc, posm, /rect
+                    posm(0) = posm(0) + 0.05
+                    xtitle = ''
+                    ytitle = ''
+                    title  = ''
+                    if ilog eq nlog-1 then begin
+                        if ifunc eq 0      then title = logfilename
+                        if ifunc eq nfunc-1 then xtitle = 'hours'
+                        ytitle = funcs(ifunc)
+                    endif
+                    plot, hour, field, pos = posm, $
+                      xrange = xrange, $
+                      yrange = yranges(*,ifunc), $
+                      xstyle = 1, $
+                      title  = title, $
+                      xtitle = xtitle, $
+                      ytitle = ytitle, $
+                      color = colors(ilog), $
+                      psym  = symbols(ilog), $
+                      linestyle = linestyles(ilog), $
+                      thick = thick, $
+                      ystyle=1, $
+                      /noerase
+
+                    if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
+                
+                endelse
+            endelse
+        endfor
+    endfor
+endfor 
+
+if DoYrange then yranges=0
+
+end
+;=============================================================================
+pro rms_logfiles,logfilename,varname,tmin=tmin,tmax=tmax,verbose=verbose
+
+; Print the rms deviation between two logfiles for variables in varname.
+; If varname is not present, show rms for all variables.
+
+on_error,2
+
+interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
+  verbose=verbose
+str2arr,varname,varnames,nvar
+ntime = n_elements(time)
+
+print,'var rms(A-B) rsm(A) rms(B)'
+for ivar=0,nvar-1 do $
+  print,varnames(ivar),sqrt(total((var0(*,ivar)-var1(*,ivar))^2)/ntime), $
+  sqrt(total(var0(*,ivar)^2)/ntime), sqrt(total(var1(*,ivar)^2)/ntime)
+
+end
+;============================================================================
+pro interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
+                      verbose=verbose
+
+; Interpolate variables between two logfiles for variables in varname.
+; If varname is not present, interpolate all variables.
+
+on_error,2
+
+str2arr,logfilename,logfilenames,nfile
+
+get_log, logfilenames(0), wlog0, varnames0, verbose=verbose
+get_log, logfilenames(1), wlog1, varnames1, verbose=verbose
+if not keyword_set(varname) then varname = varnames0
+interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,$
+  time,tmin=tmin,tmax=tmax
+
+end
+;============================================================================
+pro interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,time,$
+             tmin=tmin,tmax=tmax
+
+; Interpolate the variables listed in varname to the time of wlog0
+; between tmin and tmax. 
+
+on_error,2
+
+str2arr,varname,varnames,nvar
+
+if nvar eq 0 then begin
+    print,'Usage: interpol_log, wlog0, wlog1, var0, var1, varnames ', $
+      '[,varnames0] [,varnames1] [,time] [,tmin=tmin] [,tmax=tmax]'
+    retall
+endif
+
+if n_elements(varnames0) eq 0 then varnames0 = varnames
+if n_elements(varnames1) eq 0 then varnames1 = varnames0
+
+nvar0 = n_elements(varnames0)
+nvar1 = n_elements(varnames1)
+
+sizewlog0=size(wlog0)
+sizewlog1=size(wlog1)
+
+if sizewlog0(0) ne 2 or sizewlog1(0) ne 2 then begin
+   print,'wlog0 and wlog1 must be 2D arrays'
+   retall
+endif
+
+if sizewlog0(2) ne nvar0 then begin
+   print,'Second dimension of wlog0 should be nvar0=',nvar0
+   retall
+endif
+
+if sizewlog1(2) ne nvar1 then begin
+   print,'Second dimension of wlog1 should be nvar1=',nvar1
+   retall
+endif
+
+time0 = log_time(wlog0,varnames0)
+time1 = log_time(wlog1,varnames1)
+
+if not keyword_set(tmin) then tmin = max([ min(time0), min(time1) ])
+if not keyword_set(tmax) then tmax = min([ max(time0), max(time1) ])
+
+index0 = where(time0 ge tmin and time0 le tmax)
+time   = time0(index0)
+ntime  = n_elements(time)
+
+var0   = fltarr(ntime, nvar)
+var1   = fltarr(ntime, nvar)
+
+for ivar = 0, nvar-1 do begin
+
+    name = varnames(ivar)
+
+    ivar0 = where(varnames0 eq name) & ivar0 = ivar0(0)
+    ivar1 = where(varnames1 eq name) & ivar1 = ivar1(0)
+    
+    if ivar0 eq -1 then print,'Could not find variable ',name,' in wlog0'
+    if ivar1 eq -1 then print,'Could not find variable ',name,' in wlog1'
+
+    if ivar0 gt -1 and ivar1 gt -1 then begin
+
+        var0(*,ivar) = wlog0(index0,ivar0)
+        var1(*,ivar) = interpol(wlog1(*,ivar1),time1,time)
+
+    endif
+endfor
+
+end
+
 ;==========================================
 pro quit
    exit
 end
 ;==========================================
 
-;
-; set_space
-;
+pro set_space, nb, space, sizes, nx = nx, ny = ny
+
 ; Determines the size and multiplication factors for plotting perfect circles
 ; or squares. This routine is used to simply find the parameters, another
 ; procedure, set_position, is used to actually find the position of the
@@ -2586,8 +3000,6 @@ end
 ;
 ; This has been adapted to allow the user to define how many objects
 ;   are in the x and y direction on Jan 2, 1998
-
-pro set_space, nb, space, sizes, nx = nx, ny = ny
 
   sizes = {bs:0.0, nbx:0, nby:0, xoff:0.0, yoff:0.0, xf:0.0, yf:0.0, $
            ppp: nb, space:space}
@@ -2683,14 +3095,13 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
   sizes.xoff = (1.0 - sizes.xf*(sizes.bs*sizes.nbx + space*(sizes.nbx-1)))/2.0
   sizes.yoff = (1.0 - sizes.yf*(sizes.bs*sizes.nby + space*(sizes.nby-1)))/2.0
 
-  RETURN
-
-END
+end
 
 ;============================================================================
-;
-; set_position
-;
+
+pro set_position, sizes, xipos, yipos, pos, rect = rect, $
+                  xmargin = xmargin, ymargin = ymargin
+
 ; used in conjunction with set_space. Determines the position of the current
 ; plotting region, given the output parameters from set_space.
 ;
@@ -2703,9 +3114,6 @@ END
 ; pos - the position of the plot, used in the plot command
 ;
 ; modified to make rectangles on Jan 2, 1998
-
-pro set_position, sizes, xipos, yipos, pos, rect = rect,		$
-		  xmargin = xmargin, ymargin = ymargin
 
   nb = sizes.ppp
   space = sizes.space
@@ -2755,53 +3163,53 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect,		$
 
   pos= [xpos0,ypos0,xpos1,ypos1]
 
-  RETURN
-
-END
+end
 
 ;============================================================================
 pro plotct, pos, maxmin
 
-    xrange=!x.range & yrange=!y.range & !x.range=0 & !y.range=0
+; plot color bar based on the current color table
 
-    maxi = max(maxmin)
-    mini = min(maxmin)
+xrange=!x.range & yrange=!y.range & !x.range=0 & !y.range=0
 
-    array = findgen(10,256)
-    for i=0,9 do array(i,*) = findgen(256)/(256-1)*(maxi-mini) + mini
+maxi = max(maxmin)
+mini = min(maxmin)
 
-    levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
+array = findgen(10,256)
+for i=0,9 do array(i,*) = findgen(256)/(256-1)*(maxi-mini) + mini
 
-    contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
-        levels = levels, pos=pos, title=' '
+levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
 
-    plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
-          xtickname = [' ',' '], xticks = 1, xminor=1  , $
-          ytickname = strarr(60) + ' ', yticklen = 0.25, $
-          title=' ', xtitle=' ',ytitle=' '
-    axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.), $
-          ytitle=' ', ytickname = strarr(60)
+contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
+  levels = levels, pos=pos, title=' '
 
-    !x.range=xrange & !y.range=yrange
+plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
+  xtickname = [' ',' '], xticks = 1, xminor=1  , $
+  ytickname = strarr(60) + ' ', yticklen = 0.25, $
+  title=' ', xtitle=' ',ytitle=' '
+axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.), $
+  ytitle=' ', ytickname = strarr(60)
 
-  return
+!x.range=xrange & !y.range=yrange
 
 end
 
 ;============================================================================
 pro makect, color
 
-  common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
+; Create color table corresponding to color='mid','blue','red','rwb','bwr'
 
-  ; Get number of colors
-  n=!d.table_size
-  if n lt 10 or n gt 256 then n=256
+common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
 
-  r = fltarr(n)
-  g = fltarr(n)
-  b = fltarr(n)
+; Get number of colors
+n=!d.table_size
+if n lt 10 or n gt 256 then n=256
 
-  if not keyword_set(color) then begin
+r = fltarr(n)
+g = fltarr(n)
+b = fltarr(n)
+
+if not keyword_set(color) then begin
 
     print,'red   - white to red'
     print,'blue  - white to blue'
@@ -2812,89 +3220,89 @@ pro makect, color
     color = ''
     read,'Enter color table from list above : ', color
 
-  endif
+endif
 
-  color = strlowcase(color)
+color = strlowcase(color)
 
-  ; Set read, green, blue to values normalized to the 0.0 -- 1.0 range.
+; Set read, green, blue to values normalized to the 0.0 -- 1.0 range.
 
-  case color of
+case color of
     'red' : begin
-              r(*) = 1.
-              g(*) = 1. - findgen(n)/(n-1)
-              b(*) = 1. - findgen(n)/(n-1)
-            end
+        r(*) = 1.
+        g(*) = 1. - findgen(n)/(n-1)
+        b(*) = 1. - findgen(n)/(n-1)
+    end
 
     'blue' : begin
-               r(*) = 1. - findgen(n)/(n-1)
-               b(*) = 1.
-               g(*) = 1. - findgen(n)/(n-1)
-             end
+        r(*) = 1. - findgen(n)/(n-1)
+        b(*) = 1.
+        g(*) = 1. - findgen(n)/(n-1)
+    end
 
     'rwb' : begin
-              half=n/2
-              r(0:half-1) = 1.
-              g(0:half-1) = findgen(half)/(half-1)
-              b(0:half-1) = findgen(half)/(half-1)
+        half=n/2
+        r(0:half-1) = 1.
+        g(0:half-1) = findgen(half)/(half-1)
+        b(0:half-1) = findgen(half)/(half-1)
 
-              r(half:n-1) = 1. - findgen(n-half)/(n-half-1)
-              g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
-              b(half:n-1) = 1.
-            end
+        r(half:n-1) = 1. - findgen(n-half)/(n-half-1)
+        g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
+        b(half:n-1) = 1.
+    end
 
     'bwr' : begin
-              half=n/2
-              b(0:half-1) = 1.
-              g(0:half-1) = findgen(half)/(half-1)
-              r(0:half-1) = findgen(half)/(half-1)
-
-              b(half:n-1) = 1. - findgen(n-half)/(n-half-1)
-              g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
-              r(half:n-1) = 1.
-            end
+        half=n/2
+        b(0:half-1) = 1.
+        g(0:half-1) = findgen(half)/(half-1)
+        r(0:half-1) = findgen(half)/(half-1)
+        
+        b(half:n-1) = 1. - findgen(n-half)/(n-half-1)
+        g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
+        r(half:n-1) = 1.
+    end
 
     'mid' : begin
-              r(0:n/3-1)     = 0.0
-              r(n/3:n/2-1)   = findgen(n/2-n/3)/(n/2-n/3-1)
-              r(n/2:n-1)     = 1.0
-
-              b(0:n/2-1)      = 1.
-              b(n/2:2*n/3-1)  = 1. - findgen(2*n/3-n/2)/(2*n/3-n/2-1)
-              b(2*n/3-1:n-1)  = 0.
-
-              g(0:n/3-1)      = findgen(n/3)/(n/3-1)
-              g(n/3:2*n/3-1)  = 1.
-              g(2*n/3:n-1)    = 1. - findgen(n-2*n/3)/(n-2*n/3-1)
-
-            end
+        r(0:n/3-1)     = 0.0
+        r(n/3:n/2-1)   = findgen(n/2-n/3)/(n/2-n/3-1)
+        r(n/2:n-1)     = 1.0
+        
+        b(0:n/2-1)      = 1.
+        b(n/2:2*n/3-1)  = 1. - findgen(2*n/3-n/2)/(2*n/3-n/2-1)
+        b(2*n/3-1:n-1)  = 0.
+        
+        g(0:n/3-1)      = findgen(n/3)/(n/3-1)
+        g(n/3:2*n/3-1)  = 1.
+        g(2*n/3:n-1)    = 1. - findgen(n-2*n/3)/(n-2*n/3-1)
+        
+    end
 
     else : begin
-             print, "Unknown value for color=",color
-             r(*) = findgen(n)
-             g(*) = findgen(n)
-             b(*) = findgen(n)
-           end
+        print, "Unknown value for color=",color
+        r(*) = findgen(n)
+        g(*) = findgen(n)
+        b(*) = findgen(n)
+    end
 
-  endcase
+endcase
 
-  r(0) = 0.0
-  g(0) = 0.0
-  b(0) = 0.0
+r(0) = 0.0
+g(0) = 0.0
+b(0) = 0.0
 
-  r(n-1) = 1.0
-  g(n-1) = 1.0
-  b(n-1) = 1.0
+r(n-1) = 1.0
+g(n-1) = 1.0
+b(n-1) = 1.0
 
-  r=255*r
-  g=255*g
-  b=255*b
+r=255*r
+g=255*g
+b=255*b
 
-  r_orig = r
-  g_orig = g
-  b_orig = b
-  r_curr = r_orig
-  g_curr = g_orig
-  b_curr = b_orig
-  tvlct,r,g,b
+r_orig = r
+g_orig = g
+b_orig = b
+r_curr = r_orig
+g_curr = g_orig
+b_curr = b_orig
+tvlct,r,g,b
 
 end
