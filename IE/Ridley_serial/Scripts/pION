@@ -1,10 +1,15 @@
 #!/usr/bin/perl -s
 
-my $Remove = $r;
+my $Help = ($h or $help or $H or $HELP);
+
+&print_help if $Help;
+
+my $Keep = ($k or $keep or $K or $KEEP);
 
 use strict;
 
-chdir 'ionosphere' or die "Could not cd into ionosphere/\n";
+my $dir = ($ARGV[0] or 'ionosphere');
+chdir $dir or die "Could not cd into $dir/\n";
 my @files = glob('*_b1.*');
 
 my $file1;   # _b1 file
@@ -20,5 +25,37 @@ foreach $file1 (sort @files){
     print "cat $file1 $file2 > $fileout\n";
     $err = `cat $file1 $file2 > $fileout`;
     die "Error occured: $err\n" if $err;
-    unlink($file1, $file2) if $Remove;
+    unlink($file1, $file2) unless $Keep;
+}
+
+exit 0;
+
+##############################################################################
+
+sub print_help{
+
+    print "
+Purpose:
+   Concatanate north and south blocks into a single idl file.
+
+Usage:
+   pION [-h] [-k] [DIR]
+
+   -h -help    - print this help message
+   -k -keep    - keep original files
+                 Default is to delete the two hemisphere files.
+   DIR         - name of the directory to process
+                 Default is DIR = 'ionosphere'
+
+Examples:
+
+   Process files in the ionosphere/ directory:
+pION
+
+   Process files in the iono_new/ directory and keep originals:
+pION -k iono_new
+  
+";
+    exit 1;
+
 }
