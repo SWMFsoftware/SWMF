@@ -37,7 +37,16 @@ BATSRUS_SCRIPTS = \
 	${DIR}/GM/BATSRUS/TestSuite.protex \
 	${DIR}/GM/BATSRUS/TestCompare.protex \
 	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
+
+COUPLE_IHGM = ${CONDIR}/Interface/src/CON_couple_ih_gm.protex #     ^CMP IF IH
+COUPLE_GMIE = ${CONDIR}/Interface/src/CON_couple_gm_ie_swmf.protex #^CMP IF IE
+COUPLE_GMIM = ${CONDIR}/Interface/src/CON_couple_gm_im.protex #     ^CMP IF IM
 #^CMP END GM
+
+#^CMP IF IE BEGIN
+COUPLE_IEIM = ${CONDIR}/Interface/src/CON_couple_ie_im.protex #     ^CMP IF IM
+COUPLE_IEUA = ${CONDIR}/Interface/src/CON_couple_ie_ua.protex #     ^CMP IF UA
+#^CMP END IE
 
 SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 
@@ -62,11 +71,8 @@ SWMFREF = \
 	${LIBRARYDIR}/CON_comp_info.protex \
 	${CONDIR}/Interface/src/CON_wrapper.protex \
 	${CONDIR}/Interface/src/CON_couple_all.protex \
-	${CONDIR}/Interface/src/CON_couple_ih_gm.protex \
-	${CONDIR}/Interface/src/CON_couple_gm_ie_swmf.protex \
-	${CONDIR}/Interface/src/CON_couple_gm_im.protex \
-	${CONDIR}/Interface/src/CON_couple_ie_im.protex \
-	${CONDIR}/Interface/src/CON_couple_ie_ua.protex \
+        ${COUPLE_IHGM} ${COUPLE_GMIE} ${COUPLE_GMIM} \
+	${COUPLE_IEIM} ${COUPLE_IEUA} \
 	${CONDIR}/Stubs/src/CON_wrapper.protex \
 	${CONDIR}/Stubs/src/CON_couple_all.protex \
 	${COUPLERDIR}/CON_domain_decomposition.protex \
