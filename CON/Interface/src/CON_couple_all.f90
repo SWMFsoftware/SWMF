@@ -18,7 +18,7 @@ module CON_couple_all
   !^CMP IF GM BEGIN
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
-  use CON_couple_gm_ie_swmf   !^CMP IF IE
+  ! OBSOLETE CODE: use CON_couple_gm_ie_swmf   !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
   use CON_couple_gm_rb        !^CMP IF RB
   !^CMP END GM
@@ -42,8 +42,8 @@ module CON_couple_all
 
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
+  ! 14Jan05 - G. Toth commented out _swmf version of GM-IE couplers.
   !EOP
-  logical:: UseMpi=.true.  
   character(len=*), parameter :: NameMod='CON_couple_all'
 
 contains
@@ -57,7 +57,7 @@ contains
     !                                                     ^CMP IF GM BEGIN
     if(use_comp(GM_).and.use_comp(IE_))then                    !^CMP IF IE
        call couple_gm_ie_init                                  !^CMP IF IE
-       call init_couple_gm_ie_swmf                             !^CMP IF IE
+       !OBSOLETE CODE: call init_couple_gm_ie_swmf             !^CMP IF IE
     end if                                                     !^CMP IF IE
     if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
@@ -141,12 +141,9 @@ contains
        end select                             !^CMP END IH
     case(GM_)                                 !^CMP IF GM BEGIN
        select case(iCompTarget)
-       case(IE_)                                   !^CMP IF IE BEGIN
-          if(UseMpi)then
-             call couple_gm_ie(TimeSimulation)
-          else
-             call couple_gm_ie_swmf(TimeSimulation)
-          end if                                   !^CMP END IE
+       case(IE_)                                   !^CMP IF IE
+          call couple_gm_ie(TimeSimulation)        !^CMP IF IE
+          !OBSOLETE CODE: call couple_gm_ie_swmf(TimeSimulation)
        case(IM_)                                   !^CMP IF IM
           call couple_gm_im(TimeSimulation)        !^CMP IF IM
        case(RB_)                                   !^CMP IF RB
@@ -163,12 +160,9 @@ contains
        end select                             !^CMP END UA 
     case(IE_)                                 !^CMP IF IE BEGIN
        select case(iCompTarget)
-       case(GM_)                                   !^CMP IF GM BEGIN
-          if(UseMpi)then
-             call couple_ie_gm(TimeSimulation)
-          else
-             call couple_ie_gm_swmf(TimeSimulation)
-          end if                                   !^CMP END GM
+       case(GM_)                                   !^CMP IF GM
+          call couple_ie_gm(TimeSimulation)        !^CMP IF GM
+          !OBSOLETE CODE: call couple_ie_gm_swmf(TimeSimulation)
        case(UA_)                                   !^CMP IF UA
           call couple_ie_ua(TimeSimulation)        !^CMP IF UA
        case(IM_)                                   !^CMP IF IM
