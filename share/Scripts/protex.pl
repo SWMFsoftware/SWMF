@@ -10,8 +10,8 @@
 #         protex [-hbACFS] ] [+-nlsxf] [srcfile(s)]
 #
 #!DESCRIPTION:
-#         Perl filter to produce a \LaTeX compatible document 
-#         from a DAO Fortran source code with standard Pro\TeX 
+#         Perl script to produce a \LaTeX compatible document 
+#         from a Fortran and other source code with standard Pro\TeX 
 #         prologues. If source files are not specified it
 #         reads from stdin; output is always to stdout.
 # 
@@ -93,6 +93,7 @@
 #  08/07/2004 G. Toth   Corrected the self-description.
 #                       Changed the version number to 2.10
 #                       Renamed the script from protex to protex.pl
+#  08/08/2004 G. Toth   Some clean up of source code quoted from Makefiles.
 #                       
 #EOP
 #----------------------------------------------------------------------------
@@ -621,6 +622,12 @@ LINE:
 #   Source code: print the full line
 #   --------------------------------
     if ($source) {
+        # Do not print config lines from Makefiles
+        next LINE if /^\s*\@\#\^CMP/;
+        # replace @echo '...' and @echo "..." with ...
+	s/\@echo\s+\'([^\']*)\'/$1/; 
+	s/\@echo\s+\"([^\"]*)\"/$1/; 
+        # print the line
         print  $_;
         next LINE;
     }
