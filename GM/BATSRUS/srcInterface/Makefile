@@ -13,8 +13,14 @@ OBJ_IH = GM_put_from_ih.o
 #^CMP END IH
 #^CMP IF IM BEGIN
 OBJ1   = ModGmImCoupling.o #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o
 OBJ_IM = $(OBJ1) GM_get_for_im.o GM_put_from_im.o
 #^CMP END IM
+#^CMP IF RB BEGIN
+OBJ2   = ModGmRbCoupling.o #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o
+OBJ_RB = $(OBJ2) GM_get_for_rb.o
+#^CMP END RB
 #^CMP IF IE BEGIN
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
         GM_get_for_ie_swmf.o GM_put_from_ie_swmf.o \
@@ -27,7 +33,7 @@ OBJECTS = \
 	ModBuffer.o\
 	GM_wrapper.o\
 	update_lagrangian_grid.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_IE)
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_RFUTIL)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
