@@ -1,0 +1,7 @@
+#^CFG COPYRIGHT UM
+#
+#	Specific Rules for Darwin fortran compiler
+#
+
+ModPrecond.o:	ModPrecond.f90
+	${COMPILE.f90} ${Cflag4NoP} ModPrecond.f90

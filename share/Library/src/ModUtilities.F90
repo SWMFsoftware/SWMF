@@ -164,6 +164,10 @@ contains
     call flush(iUnit) 
 #endif
 
+#ifdef syslf95
+    call flush(iUnit) 
+#endif
+
   end subroutine flush_unit
 
   !BOP ========================================================================
