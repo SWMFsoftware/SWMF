@@ -67,6 +67,7 @@ clean:
 	@cd $(EDDIR);    make clean
 	@cd $(IODIR);    make clean
 	@cd $(MAINDIR);  make clean
+	@cd srcInterface;make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean: clean
