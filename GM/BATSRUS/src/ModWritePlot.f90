@@ -27,7 +27,6 @@ subroutine write_plot_common(ifile)
   integer :: iError
 
   ! Plot variables
-  integer, parameter :: nplotvarmax=20
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
   real :: PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax)
@@ -275,7 +274,7 @@ subroutine write_plot_common(ifile)
         call pass_and_average_nodes(.true.,NodeValue_IIIB)
         plotvarnodes(:,:,:,:,i)=NodeValue_IIIB
      end do
-     call write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC, &
+     call write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC, &
           xmin,xmax,ymin,ymax,zmin,zmax)
   end if
 
