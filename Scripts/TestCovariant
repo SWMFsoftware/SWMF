@@ -12,11 +12,16 @@ if($1 == 'help' || $1 == '-h' || $1 == '-help')then
    echo "The default test is running TestBatsrus.pl -x=SWMF.exe"
    echo "Examples:"
    echo ""
-   echo "Scripts/TestCovariant                                                # do default test"
-   echo "Scripts/TestCovariant GM/BATSRUS_conf/TestBatsrus.pl -x=SWMF.exe -ta # do another test"
-   echo "Scripts/TestCovariant GM/BATSRUS_conf/TestSuite.pl -x=SWMF.exe func  # do test suite"
-   echo "Scripts/TestCovariant make                                           # just compile"
-   echo "Scripts/TestCovariant echo Configuration done                        # just configure"
+   echo "Do default test:"
+   echo "  Scripts/TestCovariant"
+   echo "Do another test:"
+   echo "  Scripts/TestCovariant GM/BATSRUS_conf/TestBatsrus.pl -x=SWMF.exe -ta" 
+   echo "Do functionality test suite:"
+   echo "  Scripts/TestCovariant GM/BATSRUS_conf/TestSuite.pl -x=SWMF.exe func"
+   echo "Just compile:"
+   echo "  Scripts/TestCovariant make"
+   echo "Just configure:"
+   echo "  Scripts/TestCovariant echo Configuration done"
    exit
 endif
 
