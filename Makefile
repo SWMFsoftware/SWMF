@@ -317,7 +317,7 @@ rundir: ENV_CHECK
 	cp Param/IMF.DEFAULT run/IMF.dat
 	touch run/core
 	chmod 444 run/core
-	cd run; ln -s  ../bin/SWMF.exe . ; ln -s  ../Param .
+	cd run; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
 	cd ${GMDIR}; make rundir PLOT=${PLOT}    #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir PLOT=${PLOT}    #^CMP IF IH
