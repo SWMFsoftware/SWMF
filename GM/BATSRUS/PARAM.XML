@@ -2092,24 +2092,25 @@ default			TypeRefineInit
 </command>
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
-	<parameter name="Resolution" type="string" length="100"
+	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0"
 		if="$_command =~ /LEVEL/" /> 
 	<parameter name="NameArea" type="string" input="select">
-		<option name="all" default="T"	/>
-		<option name="box"		/>
-		<option name="brick"		/>
-		<option name="sphere"		/>
-		<option name="sphere0"		/>
-		<option name="shell"		/>
-		<option name="shell0"		/>
-		<option name="cylinderx"	/>
-		<option name="cylinderx0"	/>
-		<option name="cylindery"	/>
-		<option name="cylindery0"	/>
-		<option name="cylinderz"	/>
-		<option name="cylinderz0"	/>
+		<option name="initial" value="init/initial" default="T" />
+		<option name="all"					/>
+		<option name="box"					/>
+		<option name="brick"					/>
+		<option name="sphere"					/>
+		<option name="sphere0"					/>
+		<option name="shell"					/>
+		<option name="shell0"					/>
+		<option name="cylinderx"				/>
+		<option name="cylinderx0"				/>
+		<option name="cylindery"				/>
+		<option name="cylindery0"				/>
+		<option name="cylinderz"				/>
+		<option name="cylinderz0"				/>
 	</parameter>
 	<if expr="$NameArea =~ /box/">
 		<parameter name="xMinBox" type="real" />
@@ -2165,6 +2166,10 @@ default			TypeRefineInit
 		<parameter name="z2Cylinder" type="real"                     />
 		<parameter name="rCylinder"  type="real" min="0"             />
 	</if>
+#GRIDRESOLUTION
+2.0			Resolution
+initial			NameArea
+
 #GRIDLEVEL
 3			nLevel
 all			NameArea
@@ -2221,12 +2226,14 @@ cylindery		NameArea
 
 The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
 or refinement level, respectively, in a given area. The Resolution parameter
-refers to the size of the cell in the X direction (Dx) and it can be given
-as a real number (e.g. 0.125) as the inverse of the real number (e.g. 1/8).
+refers to the size of the cell in the X direction (Dx).
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
 The next parameter NameArea defines the shape of the area. 
+If NameArea is set to 'initial' or 'init', the highest initial resolution
+or level is set by the command. This is similar to the #AMRINIT command.
+For other values of NameArea, the command specifies the blocks to be refined.
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
 There are the following basic shapes: 
@@ -2251,8 +2258,6 @@ except that their center is in the origin, so only the radii need to be
 given. The areas 'cylinderx0', 'cylindery0' and 'cylinderz0' are 
 cylinders with their axes lying on the X, Y and Z axes respectively,
 so only two coordinates and a radius are required.
-
-
 </command>
 
 <command name="AMRLEVELS">
