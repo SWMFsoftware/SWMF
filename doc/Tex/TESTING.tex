@@ -45,7 +45,7 @@ works as expected for a more or less typical space weather simulation
 run. This test can be run on different platforms, and it serves as
 the portability testing for the SWMF.
 
-In summary our testing philosphy follows a layered approach:
+In summary our testing philosophy follows a layered approach:
 \begin{itemize}
 \item The SWMF core: individual unit testing
 \item Key components: extensive functionality test suite
@@ -191,7 +191,7 @@ test run to test run.
 The functionality test aims at testing the functionality of 
 a complex software as a whole. It should be comprehensive enough
 to cover most of the functionality of the software. On the
-other hand it should run fast on limited comuter resources,
+other hand it should run fast on limited computer resources,
 since the main use of the functionality test is during development.
 
 Ideally each component and the whole SWMF should have an extensive
@@ -217,15 +217,15 @@ the execution speed on different platforms.
 The most complex and crucial component in the SWMF is the 
 Block Adaptive Tree Solarwind Roe Upwind Scheme (BATS-R-US) code
 which is a parallel magnetohydrodynamics (MHD) code which uses a
-block adaptive grid and sophisticated spatial and temporal discretizations.
-The BATSRUS code is used as the Solar Corona (SC), the Inner Heliosphere (IH)
+block adaptive grid and sophisticated spatial and temporal discretization.
+The BATS-R-US code is used as the Solar Corona (SC), the Inner Heliosphere (IH)
 and the Global Magnetosphere (GM) components in the SWMF.
 
-The BATSRUS code has hundreds of adjustable parameters, which interact
+The BATS-R-US code has hundreds of adjustable parameters, which interact
 in non-trivial ways. We have developed a test suite
-which tests the BATSRUS code and its interaction with the IE/Ridley\_serial
+which tests the BATS-R-US code and its interaction with the IE/Ridley\_serial
 ionosphere electrodynamics model. This test suite can be run in
-the stand alone BATSRUS code (except for the tests involving the
+the stand alone BATS-R-US code (except for the tests involving the
 IE component) as well as in the SWMF. Here we describe how the
 test suite can be run in the SWMF.
 
@@ -268,7 +268,7 @@ consistency and performance:
   Scripts/TestCompare run1 run2
   Scripts/TestCompare -speed run1 run2
 \end{verbatim}
-The configuration of BATSRUS to a 'covariant' (generalized coordinate) version
+The configuration of BATS-R-US to a 'covariant' (generalized coordinate) version
 can be tested with
 \begin{verbatim}
   Scripts/TestCovariant
@@ -438,7 +438,7 @@ second session would persist.
 
 \subsection{The 5 Component Test}
 
-This test was developped for Milestone 7I. 
+This test was developed for Milestone 7I. 
 It can be done in the current version as well with minor
 modifications. 
 The tests are in the Tests directory for the released code, otherwise
