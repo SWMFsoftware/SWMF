@@ -15,6 +15,8 @@ help:
 
 MAN:	MAN_TIMING.ps.gz
 
+MAN_TIMING.tex: TIMING.tex
+
 MAN_TIMING.dvi : MAN_TIMING.tex
 	latex MAN_TIMING.tex
 	latex MAN_TIMING.tex
