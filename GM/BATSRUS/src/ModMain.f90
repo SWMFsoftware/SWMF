@@ -257,7 +257,7 @@ Module ModMain
   character (LEN=8) :: StringTimeH4M2S2
 
   logical :: DoSetLevels = .false.
-  logical :: DoSendMHD   = .false.
+  logical :: DoSendMHD   = .true.
 
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.
