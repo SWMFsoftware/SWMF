@@ -20,7 +20,7 @@ PRECISION = -r8
 #PRECISION = 
 
 MPILIB = -lmpi
-#MPILIB = -L. -lNOMPI
+#MPILIB = -L${LIBDIR} -lNOMPI
 
 # This is the search path for used modules
 # SEARCH_EXTRA should be given in the individual Makefiles

@@ -34,7 +34,7 @@ SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 LOCAL_LIBS = /usr/local/lib
 
 MPILIB = -L$(LOCAL_LIBS) -lmpi -lelan	#For 64 bit compilation
-#MPILIB = -L. -lNOMPI
+#MPILIB = -L${LIBDIR} -lNOMPI
 
 #DEBUG = -g -C
 DEBUG =
