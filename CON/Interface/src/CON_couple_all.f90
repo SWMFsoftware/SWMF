@@ -116,6 +116,9 @@ contains
     if(DoTest)write(*,*)NameSub,': coupling iProc=',i_proc(),' ',&
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
+
+    call timing_start(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
+
     select case(iCompSource)
     case(SC_)                                 !^CMP IF SC BEGIN
        select case(iCompTarget)
@@ -186,6 +189,7 @@ contains
             ' SWMF_ERROR: no coupling implemented from source '// &
             NameComp_I(iCompSource))
     end select
+    call timing_stop(NameComp_I(iCompSource)//'_'//NameComp_I(iCompTarget)//'_couple')
 
   contains
 
