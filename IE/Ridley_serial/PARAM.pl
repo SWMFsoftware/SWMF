@@ -1,5 +1,5 @@
 #^CFG FILE _FALSE_
-$tree = [{'attrib' => {'name' => 'Inner Electrodynamics'},'content' => [{'attrib' => {'name' => 'Testing'},'content' => [{'attrib' => {'name' => 'STRICT'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+$tree = [{'attrib' => {'name' => 'Ridley Ionosphere Model: IE Component'},'content' => [{'attrib' => {'name' => 'Testing'},'content' => [{'attrib' => {'name' => 'STRICT'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #STRICT
 T                       UseStrict

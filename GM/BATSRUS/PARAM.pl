@@ -1,5 +1,5 @@
 #^CFG FILE _FALSE_
-$tree = [{'attrib' => {'name' => 'Global Magnetosphere and Inner Heliosphere'},'content' => [{'content' => '
+$tree = [{'attrib' => {'name' => 'BATSRUS: GM, SC and IH Components'},'content' => [{'content' => '
 
 List of MH (GM, IH and SC) commands used in the PARAM.in file
 
