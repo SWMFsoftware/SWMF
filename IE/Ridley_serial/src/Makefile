@@ -53,7 +53,6 @@ MODULES = \
 
 OBJECTS = \
 	IE_solve.o\
-	IE_interpolate.o\
 	IE_wrapper.o\
 	IE_End.o\
 	IE_Initialize.o\
@@ -62,8 +61,8 @@ OBJECTS = \
 	AMIE_Library.o\
 	readAMIEoutput.o\
         iono_conductances.o\
+	iono_currents.o\
         iono_solver.o\
-        iono_coupling.o\
 	Create_Region2_Currents.o\
         ionosphere.o\
 	wei01.o\
