@@ -56,8 +56,7 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   ! Convert data structure w of the implicit code to the explicit code
 
   use ModMain
-  use ModAdvance, ONLY : &
-       State_VGB, E_BLK,nVar
+  use ModAdvance, ONLY : State_VGB, E_BLK,nVar
   use ModImplicit
   implicit none
 
@@ -78,12 +77,12 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
      iBLK = impl2iBLK(implBLK)
      do iVar=1, nVar
         if(iVar==E_)then
-           w(:,:,:,E_    ,implBLK) = E_BLK(    imin:imax,jmin:jmax,kmin:kmax,iBLK)
+           w(:,:,:,E_,implBLK) = E_BLK(imin:imax,jmin:jmax,kmin:kmax,iBLK)
         else
-        w(:,:,:,iVar ,implBLK) = &
-             State_VGB(iVar,  imin:imax,jmin:jmax,kmin:kmax,iBLK)
-     end if
-  end do
+           w(:,:,:,iVar,implBLK) = &
+                State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
+        end if
+     end do
   end do
 
   call timing_stop('expl2impl')
@@ -116,20 +115,20 @@ subroutine impl2expl(w,iBLK)
 
   do iVar=1,nVar
      if(iVar==E_)then
-        E_BLK(    1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,E_    )
+        E_BLK(1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,E_)
      else
-        State_VGB(iVar,  1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar  )
+        State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
      end if
   end do
 
   State_VGB(P_, 1:nI,1:nJ,1:nK,iBLK) = gm1*(E_BLK(1:nI,1:nJ,1:nK,iBLK)-0.5*( &
-       (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2)/&
-       State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-       +State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2                                   &
-       +State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2                                   &
-       +State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)                                 )
+       (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       +State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       +State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2                             &
+       )/State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)                                 &
+       +State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2                                &
+       +State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2                                &
+       +State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)                             )
 
   call timing_stop('impl2expl')
 
@@ -529,28 +528,30 @@ subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
      call getptotal(w,qnI,qnJ,qnK,f)
      f = (w(:,:,:,rhoU_+idim)                 & ! (m_i
           *(f + w( :,:,:,E_)                  & ! *(ptotal + e
-          +B0(:,:,:,x_)*w(:,:,:,Bx_)         & !   +B0.b)
-          +B0(:,:,:,y_)*w(:,:,:,By_)         &
-          +B0(:,:,:,z_)*w(:,:,:,Bz_))        & 
+          +B0(:,:,:,x_)*w(:,:,:,Bx_)          & !   +B0.b)
+          +B0(:,:,:,y_)*w(:,:,:,By_)          &
+          +B0(:,:,:,z_)*w(:,:,:,Bz_))         & 
           -(w(:,:,:,B_+idim)+B0(:,:,:,idim))  & ! -(b_i+B0_i)
           *(w(:,:,:,Bx_)*w(:,:,:,rhoUx_)      & !  *(b.m)
-          +w(:,:,:,By_)*w(:,:,:,rhoUy_)      &
-          +w(:,:,:,Bz_)*w(:,:,:,rhoUz_))     & ! 
+          +w(:,:,:,By_)*w(:,:,:,rhoUy_)       &
+          +w(:,:,:,Bz_)*w(:,:,:,rhoUz_))      & ! 
           )/w(:,:,:,rho_)                       ! )/rho
 
-     ! f_i[b_k]=(m_i*(b_k+B0_k)-m_k*(b_i + B0_i))/rho
   case(Bx_,By_,Bz_)
      kdim = iw-B_
      if(idim==kdim) then
         ! f_i[b_i] should be exactly 0
         f = 0.0
      else
-        f = (w(:,:,:,rhoU_+idim)*(w( :,:,:,iw)     + B0(:,:,:,kdim)) &
+        ! f_i[b_k]=(m_i*(b_k+B0_k) - m_k*(b_i+B0_i))/rho
+        f =  (w(:,:,:,rhoU_+idim)*(w(:,:,:,iw)      + B0(:,:,:,kdim)) &
              -w(:,:,:,rhoU_+kdim)*(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
              )/w(:,:,:,rho_)
      endif
   case default
-     call stop_mpi('Error in getflux: unknown flow variable!')
+     ! We assume that all other variables behave like advected scalars !!!
+     ! f_i[scalar]=m_i/rho*scalar
+     f = w(:,:,:,rhoU_+idim)/w(:,:,:,rho_)*w(:,:,:,iw)
   end select
 
   if(oktest_me)write(*,*)'getflux final f=',f(Itest,Jtest,Ktest)
