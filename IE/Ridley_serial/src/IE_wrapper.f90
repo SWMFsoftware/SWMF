@@ -150,6 +150,9 @@ contains
           call read_var('StarLightPedConductance',StarLightPedConductance)
           call read_var('PolarCapPedConductance',PolarCapPedConductance)
 
+       case("#IM")
+          call read_var('TypeImCouple',TypeImCouple)
+          call lower_case(TypeImCouple)
        case("#SPS")
           call read_var('UseSPS',UseSPS)
           IE_NameOfEFieldModel = "SPS"
@@ -275,16 +278,17 @@ subroutine IE_set_grid
        nDim=2,                       &! dimensionality
        nRootBlock_D=(/2,1/),         &! north+south hemispheres
        nCell_D =(/IONO_nTheta - 1,IONO_nPsi - 1/), &! size of node based grid
-       XyzMin_D=(/cOne,cOne/),       &! min colat and longitude indexes
-       XyzMax_D=(/cTwo*IONO_nTheta-cOne,&
-       real(IONO_nPsi)/), &! max colat and longitude indexes
+       XyzMin_D=(/cOne, cOne/),      &! min colat and longitude indexes
+       XyzMax_D=(/real(2*IONO_nTheta-1),&
+       real(IONO_nPsi)/),            &! max colat and longitude indexes
        TypeCoord='SMG',                            &! solar magnetic coord.
        Coord1_I=Colat_I,                           &! colatitudes
        Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
        Coord3_I=(/IONO_Radius + IONO_Height/),     &! radial size in meters
-       iProc_A = iProc_A)            ! processor assigment
-  !In the model Ridley_serial the grid is not exactly uniform and not
-  !exactly periodic.
+       iProc_A = iProc_A)                           ! processor assigment
+
+  ! In the model Ridley_serial the grid is not exactly uniform and not
+  ! exactly periodic.
 
 end subroutine IE_set_grid
 
@@ -834,7 +838,11 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   ! The variables should be put into Buff_V
 
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
-  use ModIonosphere, ONLY: IONO_NORTH_PHI, IONO_NORTH_JR
+  use ModIonosphere, ONLY: IONO_nTheta, IONO_nPsi, &
+       IONO_NORTH_PHI, IONO_NORTH_JR, IONO_SOUTH_PHI, IONO_SOUTH_JR, &
+       cpcp_north, cpcp_south
+  use IE_ModMain,    ONLY: TypeImCouple
+
   implicit none
   character(len=*), parameter :: NameSub='IE_get_for_im'
 
@@ -843,59 +851,66 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   type(IndexPtrType),intent(in) :: Index
   type(WeightPtrType),intent(in):: Weight
 
-  integer :: iBlock,i,j,iPoint
+  integer :: iBlock, i, j, iSouth, iPoint
   real    :: w
   !---------------------------------------------------------------------------
 
-  if(nPoint == 1)then
-     iBlock=Index%iCB_II(3,iPointStart)
-     if(iBlock/=1)then
-        write(*,*)NameSub,': Index % iCB_II=',Index % iCB_II(:,iPointStart)
-        call CON_stop(NameSub//&
-             ' SWMF_ERROR iBlock should be 1=North in IE-IM coupling')
-     end if
-     i = Index%iCB_II(1,iPointStart)
-     j = Index%iCB_II(2,iPointStart)
+  Buff_V = 0.0
 
-     call check_i_j
+  do iPoint = iPointStart, iPointStart + nPoint - 1
 
-     Buff_V(1) = IONO_NORTH_PHI(i,j)
-     Buff_V(2) = IONO_NORTH_JR(i,j)
+     i      = Index % iCB_II(1,iPoint)
+     j      = Index % iCB_II(2,iPoint)
+     iBlock = Index % iCB_II(3,iPoint)
+     w      = Weight % Weight_I(iPoint)
 
-
-     RETURN
-  end if
-
-  Buff_V = 0.
-
-  do iPoint=iPointStart, iPointStart + nPoint - 1
-
-     iBlock=Index%iCB_II(3,iPoint)
      if(iBlock/=1)then
         write(*,*)NameSub,': iPoint,Index % iCB_II=',&
              iPoint,Index%iCB_II(:,iPoint)
         call CON_stop(NameSub//&
              ' SWMF_ERROR iBlock should be 1=North in IE-IM coupling')
      end if
-     i = Index%iCB_II(1,iPoint)
-     j = Index%iCB_II(2,iPoint)
-     w = Weight % Weight_I(iPoint)
 
-     Buff_V(1) = Buff_V(1) + w * IONO_NORTH_PHI(i,j)
-     Buff_V(2) = Buff_V(2) + w * IONO_NORTH_JR(i,j)
+     if(i<1 .or. i>IONO_nTheta .or. j<1 .or. j>IONO_nPsi)then
+        write(*,*)'i,j=',i,j
+        call CON_stop(NameSub//' SWMF_ERROR index out of range')
+     end if
+
+     ! Index for the same latitude on the southern hemisphere
+     iSouth = IONO_nTheta + 1 - i
+
+     select case(TypeImCouple)
+     case('north')
+        Buff_V(1) = Buff_V(1) + w * IONO_NORTH_PHI(i,j)
+        Buff_V(2) = Buff_V(2) + w * IONO_NORTH_JR(i,j)
+     case('south')
+        Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_PHI(iSouth,j)
+        Buff_V(2) = Buff_V(2) + w * IONO_SOUTH_JR(iSouth,j)
+     case('cpcpmin')
+        if(cpcp_north < cpcp_south)then
+           Buff_V(1) = Buff_V(1) + w * IONO_NORTH_PHI(i,j)
+           Buff_V(2) = Buff_V(2) + w * IONO_NORTH_JR(i,j)
+        else
+           Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_PHI(iSouth,j)
+           Buff_V(2) = Buff_V(2) + w * IONO_SOUTH_JR(iSouth,j)
+        end if
+     case('average')
+        Buff_V(1) = Buff_V(1) + w * &
+             0.5*(IONO_NORTH_PHI(i,j) + IONO_SOUTH_PHI(iSouth,j))
+        Buff_V(2) = Buff_V(2) + w * &
+             0.5*(IONO_NORTH_JR(i,j)  + IONO_SOUTH_JR(iSouth,j))
+     case default
+        call CON_stop(NameSub//' ERROR: Unknown value for TypeImCouple='// &
+             TypeImCouple)
+     end select
   end do
 
 contains
-  !===========================================================================
-  subroutine check_i_j
 
-    use ModIonosphere, ONLY: IONO_nTheta, IONO_nPsi
-
-    if(i<1 .or. i>IONO_nTheta .or. j<1 .or. j>IONO_nPsi)then
-       write(*,*)'i,j=',i,j
-       call CON_stop(NameSub//' SWMF_ERROR index out of range')
-    end if
-  end subroutine check_i_j
+  real function minmod(a,b)
+    real, intent(in) :: a,b
+    minmod = (sign(0.5, a) + sign(0.5, b)) * min(abs(a), abs(b))
+  end function minmod
 
 end subroutine IE_get_for_im
 
@@ -1043,9 +1058,6 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   ! After the solve this input can be considered old
   IsNewInput = .false.
-
-!  ! No need to solve for the 1st time step (input cannot be reasonable)
-!  if(nStep <= 1) RETURN
 
   ! Obtain the position of the magnetix axis
   call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)

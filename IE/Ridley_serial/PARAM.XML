@@ -136,6 +136,28 @@ The ConductanceModel variable determines which ionosphere model is used:
   5 - more realistic oval, uses same variables as 3.
 </command>
 
+<command name="IM">
+	<parameter name="TypeImCouple" type="string" input="select">
+		<option name="north"    default="T"/>
+		<option name="south"               />
+		<option name="cpcpmin"             />
+		<option name="average"             />
+	</parameter>
+
+#IM
+average				TypeImCouple
+
+The TypeImCouple parameter determines which hemisphere the IM component 
+is coupled to. If the value is 'north' or 'south', the potential and radial
+current are sent from the corresponding magnetic hemisphere. For 'cpcpmin'
+the hemisphere with the lower cross polar cap potential is selected.
+For TypeImCouple='average' the potential and radial current are averaged
+for the north and south hemispheres.
+
+The default value is 'north', which is backward compatible,
+and it requires no communication between the IE processors.
+</command>
+
 <command name="AMIEFILES">
 	<parameter name="AMIEFileNorth" type="string" length="100" />
 	<parameter name="AMIEFileSouth" type="string" length="100" />
