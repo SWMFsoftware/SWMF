@@ -20,6 +20,7 @@ my $Components  = $C; undef $C;
 my $Precision   = $p; undef $p;
 my $GridSize    = $g; undef $g;
 my $nProc       = $n; undef $n;
+my $StandAlone  = $S; undef $S;
 
 use strict;
 
@@ -112,6 +113,7 @@ my $paramName;          # name of the current parameter
 my $paramType;          # type of the current parameter
 my $paramValue;         # value of the current parameter
 my $InsideComp;         # the component for which parameters are read
+my $UserInput;          # set to true between #USERINPUTBEGIN and #USERINPUTEND
 
 # Set the file handle for the top level file (or STDIN for interactive mode)
 if($Interactive){
@@ -219,6 +221,9 @@ sub check_arguments{
 sub init_comp{
 
     # Set variables in the COMP package for use in the XML files
+
+    # Set COMP::_IsStandAlone according to the -S switch
+    $COMP::_IsStandAlone = $StandAlone;
 
     # Set COMP::_IsFirstSession to true
     $COMP::_IsFirstSession = 1;
@@ -446,8 +451,15 @@ sub read_line{
     }
     use strict;
 
+    if($UserInput and /^\#(BEGIN_COMP|END_COMP|RUN|USERINPUTBEGIN)\b/){
+	print "Error at line $nLine in file $InputFile for ".
+	    "command $_".
+	    "\tthis command cannot occur after #USERINPUTBEGIN at line $UserInput\n";
+	    $UserInput = 0;
+    }
+
     # Check for BEGIN_COMP and END_COMP commands
-    if(/^\#BEGIN_COMP\b/){
+    if(/^\#BEGIN_COMP\b/ and not $StandAlone){
 	if($InsideComp){
 	    print "Error at line $nLine in file $InputFile for ".
 		"command $_".
@@ -476,7 +488,7 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^\#END_COMP/){
+    }elsif(/^\#END_COMP/ and not $StandAlone){
 	# Extract name of the component from #END_COMP ID
 	my $Comp;
 	($Comp) = /END_COMP ([A-Z][A-Z])/ or
@@ -495,23 +507,31 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^#RUN/){ # Check if a new session has started
-	   # Check if the required commands are defined and
-	   # if the parameters are correct for the session
+    }elsif(/^\#RUN/){ # Check if a new session has started
+	# Check if the required commands are defined and
+	# if the parameters are correct for the session
 
-	   print "Session $nSession is complete\n" if $Debug;
+	print "Session $nSession is complete\n" if $Debug;
 
-	   &check_session;
-	   undef %definedSessionLast;
-	   $nSession++;
-	   $COMP::_IsFirstSession=0;
+	&check_session;
+	undef %definedSessionLast;
+	$nSession++;
+	$COMP::_IsFirstSession=0;
+    }elsif(/^\#USERINPUTBEGIN/){
+	$UserInput = $nLine+1;
+    }elsif(/^\#USERINPUTEND/){
+	if(not $UserInput){
+	    print "Error at line $nLine in file $InputFile for ".
+		"command $_".
+		"\tthere is no matching #USERINPUTBEGIN command\n";
+	}
+	$UserInput = 0;
     }
     
     $nLine++;
 
-    # Return the line only for the selected component
-    # Return the #RUN line all the time, so components know about sessions
-    if($InsideComp eq $NameComp){
+    # Return the line only for the selected component outside user input
+    if($InsideComp eq $NameComp and not $UserInput){
 	return $_;
     }else{
 	return "\n";
@@ -1081,7 +1101,7 @@ Purpose:
 Usage:
 
     CheckParam.pl [-h] [-v] [-D] [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
-                 [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
+                [-S] [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
 
   -h            print help message and stop
 
@@ -1103,6 +1123,10 @@ Usage:
                 If the -s switch is given without a TREEFILE value, 
                 the tree is saved into the default tree file, which has
                 the same name as the XML file but with a .pl extension.
+
+  -S            Check parameters assuming a stand alone mode. 
+                In stand alone mode #BEGIN_COMP and #END_COMP commands are ignored.
+                Also sets \$_IsStandAlone to true to be used in the XML rules.
 
   -c=ID         Check the parameters for the component defined by ID,
                 which is the two-character name of the component.
