@@ -103,22 +103,6 @@ heliofloat		TypeBcOuter_E(Top_)
 helio_init
 9			initial_refinement_levels
 
-#AMR
--1			dn_refine
-F			automatic_refinement
-0.0			percentCoarsen
-10.0			percentRefine
-12000 			maxTotalBlocks
-
-#AMRLEVELS
-0			min_block_level
-9			max_block_level
-T			fix_body_level
-
-#AMRCRITERIA
-1			nRefineCrit
-AR8210			heliocurrRefineCrit(1)
-
 #OPTIMIZE
 allopt			OptimizeMessagePass
 
@@ -126,7 +110,6 @@ allopt			OptimizeMessagePass
 2			nORDER (1 or 2)
 4			fluxfcn_type: 1=Roe 2=Rusanov 3=Linde 4=Sokolov
 minmod			limiter_type mc or minmod
-
 
 #TIMESTEPPING
 2                       nStage
