@@ -326,6 +326,7 @@ sub compare_speed{
 	my @speed;
 	my $switch;
 	my $missing;
+	my $failed;
 
 	foreach $dir (@dir){
 	    my $speed;
@@ -350,6 +351,9 @@ sub compare_speed{
 	    }else{
 		$speed = "    --- "; $missing++;
 	    }
+	    if($speed ne "    --- " and $speed < 1){
+		$speed = "    !!! "; $$failed++;
+	    }
 	    push @speed, $speed;
 	}
 	next if $missing > $#dir; # nothing to report
@@ -369,7 +373,7 @@ sub compare_speed{
 	    print "   $switch\n";
 	}
 
-	next if $missing; # do not add up if any result is missing
+	next if $missing or $failed; # do not add up if any result is wrong
 
         # add up speeds
 	my $i;
@@ -423,6 +427,7 @@ sub grep_last{
 # 01/27/02 G.Toth - initial version developed for BATSRUS
 # 07/10/03 G.Toth - adapted to SWMF
 # 04/01/04 G.Toth - added -speed option to compare speeds
+# 09/17/04 G.Toth - show failed tests and do not add them
 #EOP
 
 sub print_help{
@@ -464,6 +469,9 @@ Dir2    Directory 2 containing test runs
         If called with more than one directory the speeds for a given
         test are listed next to each other which makes comparison easy.
         When 2 directories are compared, the difference is also printed.
+        Missing tests are shown as '---', failed tests (with execution 
+        time below 1 second) are shown as '!!!'. Tests which are missing
+        or failed in any of the run directories are not added to the sum.
 
 Dir1,Dir2,Dir2...    
         The directories containing test.xxx/log.xxx or log.xxx files,
