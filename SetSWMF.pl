@@ -212,17 +212,17 @@ sub install_swmf{
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
     &set_precision("init");
 
-    print "Configure the flush command in $FlushFile for $OS and $Compiler\n";
-    die "$ERROR could not find file $FlushFile\n" unless -f $FlushFile;
-    if(not $DryRun){
-	@ARGV=($FlushFile);
-	while(<>){
-	    # Uncomment lines !something !PERL if some_expression 
-	    # if some_expression evaluates to true
-	    eval("s/^\\s*!// if $'") if /!PERL if/;
-	    print;
-	}
-    }
+#    print "Configure the flush command in $FlushFile for $OS and $Compiler\n";
+#    die "$ERROR could not find file $FlushFile\n" unless -f $FlushFile;
+#    if(not $DryRun){
+#	@ARGV=($FlushFile);
+#	while(<>){
+#	    # Uncomment lines !something !PERL if some_expression 
+#	    # if some_expression evaluates to true
+#	    eval("s/^\\s*!// if $'") if /!PERL if/;
+#	    print;
+#	}
+#    }
 
     # Now SWMF is installed
     $Installed = 1 unless $DryRun;
