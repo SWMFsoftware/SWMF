@@ -15,8 +15,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : DoInitConstrainB                    !^CFG IF CONSTRAINB
   use ModAMR
   use ModParallel, ONLY : UseCorners,proc_dims
-  use ModRaytrace, ONLY : UseAccurateIntegral, &        !^CFG IF RAYTRACE
-       UseAccurateTrace, DtExchangeRay                  !^CFG IF RAYTRACE
+  use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
   use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
   use CON_planet,       ONLY: read_planet_var, check_planet_var
@@ -67,7 +66,7 @@ subroutine MH_set_parameters(TypeAction)
 
   logical            :: UseSimple=.true.
 
-  integer :: iSession
+  integer :: iSession, iPlotFile
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -466,7 +465,7 @@ subroutine MH_set_parameters(TypeAction)
         if (nfile > maxfile .or. nplotfile > maxplotfile)call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
              //' nplotfile>maxplotfile .or. nfile>maxfile')
-        do ifile=plot_+1,plot_+nplotfile
+        do iFile=plot_+1,plot_+nplotfile
 
            call read_var('plot_string',plot_string)
 
@@ -484,6 +483,28 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('plot_range(y2)',plot_range(4,ifile))
               call read_var('plot_range(z1)',plot_range(5,ifile))
               call read_var('plot_range(z2)',plot_range(6,ifile))
+           elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
+              iPlotFile = iFile - Plot_
+              plot_area='lin'
+              call read_var('NameLine',NameLine_I(iPlotFile))
+              call upper_case(NameLine_I(iPlotFile))
+              call read_var('IsSingleLine',IsSingleLine_I(iPlotFile))
+              call read_var('nLine',nLine_I(iPlotFile))
+              if(nLine_I(iPlotFile)==1)IsSingleLine_I(iPlotFile)=.true.
+              if(nLine_I(iPlotFile) > MaxLine)then
+                 if(iProc==0)then
+                    write(*,*)NameSub,' WARNING: nLine=',nLine_I(iPlotFile),&
+                         ' exceeds MaxLine=',MaxLine
+                    write(*,*)NameSub,' WARNING reducing nLine to MaxLine'
+                 end if
+                 nLine_I(iPlotFile) = MaxLine
+              end if
+              do i=1,nLine_I(iPlotFile)
+                 call read_var('xStartLine',XyzStartLine_DII(1,i,iPlotFile))
+                 call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
+                 call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
+                 call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
+              end do                                  !^CFG END RAYTRACE
            elseif (index(plot_string,'sph')>0)then    !^CFG IF NOT SIMPLE BEGIN
    	      plot_area='sph'
 	      call read_var('R_plot',plot_range(1,ifile))
@@ -573,8 +594,9 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'idl')>0)then
               plot_form(ifile)='idl'
               if ((plot_area /= 'ion')&
-                   .and.(plot_area /= 'sph') .and. &        !^CFG IF NOT SIMPLE
-                   (plot_area /= 'los')  &                  !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'sph' &        !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'los' &        !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('plot_dx',plot_dx(1,ifile))
               !                                     ^CFG IF NOT CARTESIAN BEGIN
               if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
