@@ -293,6 +293,7 @@ subroutine set_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar,isat)
      call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
           B0Sat_D)
      call get_satellite_data(xSatellite(iSat,:),.true.,StateSat_V,WeightSat)
+     call collect_satellite_data(xSatellite(iSat,:),StateSat_V,WeightSat)
   else
      ! The logfile usually needs the integral of conservative variables
      call integrate_cell_centered_vars(StateIntegral_V)
@@ -981,7 +982,8 @@ real function integrate_flux_sph(qnum,qrad,qa)
                    dy2*(   dz1*qa(i1,j1,k2,iBLK)+&
                    dz2*qa(i1,j1,k1,iBLK)))
 
-              flux_to_add = flux_to_add*2.0*(qrad**2)*dphi_sph*sin(dtheta_sph/2.0)*sin(theta_sph)
+              flux_to_add = flux_to_add* &
+                   2.0*(qrad**2)*dphi_sph*sin(dtheta_sph/2.0)*sin(theta_sph)
               Flux_sum = Flux_sum + flux_to_add
 
            end if
@@ -1002,7 +1004,7 @@ real function integrate_flux_sph(qnum,qrad,qa)
 end function integrate_flux_sph
 
 
-!=====================================================================================
+!==============================================================================
 
 real function integrate_flux_circ(qnum,qrad,qz,qa)
 
@@ -1163,7 +1165,6 @@ subroutine get_satellite_data(XyzIn_D,DoCurrent,StateCurrent_V,Weight)
   use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
   use ModParallel, ONLY : NeiLev
 
-  use ModMpi
   implicit none
 
   ! Input position is in generalized coordinates
@@ -1175,20 +1176,13 @@ subroutine get_satellite_data(XyzIn_D,DoCurrent,StateCurrent_V,Weight)
   ! Interpolated state at the input position on PE-0
   real, intent(out) :: StateCurrent_V(nVar+3)
 
-  ! The weight indicates the quality of the interpolation:
-  ! If weight is 1.0 then the returned state is second order accurate
-  ! If weight is positive but not 1.0 then the returned state is first order
-  ! If weight is 0.0 (or less?) then the point was not found and the 
-  !     returned state is -777.0
+  ! The total weight found on this processor
   real, intent(out) :: Weight
 
   ! Local variables
 
   ! Position in generalized coordinates
   real :: Xyz_D(3)
-
-  ! These are needed for MPI_reduce
-  real :: StateCurrentAll_V(nVar+3), WeightAll
 
   ! Cell size and buffer size for current block
   real,    dimension(3) :: Dxyz_D, DxyzInv_D, DxyzLo_D, DxyzHi_D
@@ -1330,29 +1324,6 @@ subroutine get_satellite_data(XyzIn_D,DoCurrent,StateCurrent_V,Weight)
      end do
   end do BLOCK
 
-  ! Collect contributions from all the processors to PE 0
-  if(nProc>1)then
-     call MPI_reduce(Weight        ,WeightAll        ,     1,&
-          MPI_REAL,MPI_SUM,0,iComm,iError)
-     call MPI_reduce(StateCurrent_V,StateCurrentAll_V,nVar+3,&
-          MPI_REAL,MPI_SUM,0,iComm,iError)
-     if(iProc==0)then
-        Weight         = WeightAll
-        StateCurrent_V = StateCurrentAll_V
-     end if
-  end if
-
-  ! Check total weight and divide by it if necessary
-  if(iProc==0)then
-     if(Weight<=0.0)then
-        write(*,*)'get_satellite_data WARNING total weight =',&
-             Weight,' at Xyz_D=',Xyz_D
-        StateCurrent_V = -777.0
-     elseif(abs(Weight - 1) > 1.e-5)then
-        StateCurrent_V = StateCurrent_V / Weight
-     end if
-  end if
-
 contains
 
   !============================================================================
@@ -1403,6 +1374,64 @@ contains
 
 end subroutine get_satellite_data
 
+!==============================================================================
+
+subroutine collect_satellite_data(Xyz_D, StateCurrent_V, Weight)
+
+  use ModProcMH, ONLY: nProc, iProc, iComm
+  use ModVarIndexes, ONLY : nVar
+  use ModMpi
+  implicit none
+
+  !INPUT ARGUMENTS:
+  real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
+
+  !INPUT/OUTPUT ARGUMENTS:
+  ! On input StateCurrent_V contains the interpolated state on a given PE
+  ! On output it contains the globally interpolated state on PE 0.
+  real, intent(inout) :: StateCurrent_V(nVar+3)
+
+  ! On input Weight contains the weight found on a given processor.
+  ! The returned weight on PE 0  indicates the quality of the interpolation:
+  ! If weight is 1.0 then the returned state is second order accurate
+  ! If weight is positive but not 1.0 then the returned state is first order
+  ! If weight is 0.0 (or less?) then the point was not found and the 
+  !     returned state is -777.0
+  real, intent(inout) :: Weight
+
+  !LOCAL VARIABLES:
+  ! These are needed for MPI_reduce
+  real :: StateCurrentAll_V(nVar+3), WeightAll
+
+  integer :: iError
+  !---------------------------------------------------------------------------
+  ! Collect contributions from all the processors to PE 0
+  if(nProc>1)then
+     call MPI_reduce(Weight        ,WeightAll        ,     1,&
+          MPI_REAL,MPI_SUM,0,iComm,iError)
+     call MPI_reduce(StateCurrent_V,StateCurrentAll_V,nVar+3,&
+          MPI_REAL,MPI_SUM,0,iComm,iError)
+     if(iProc==0)then
+        Weight         = WeightAll
+        StateCurrent_V = StateCurrentAll_V
+     end if
+  end if
+
+  ! Check total weight and divide by it if necessary
+  if(iProc==0)then
+     if(Weight<=0.0)then
+        write(*,*)'get_satellite_data WARNING total weight =',&
+             Weight,' at Xyz_D=',Xyz_D
+        StateCurrent_V = -777.0
+     elseif(abs(Weight - 1) > 1.e-5)then
+        StateCurrent_V = StateCurrent_V / Weight
+     end if
+  end if
+
+end subroutine collect_satellite_data
+
+!==============================================================================
+
 subroutine satellite_test
 
   use ModProcMH, ONLY: iProc
@@ -1418,6 +1447,7 @@ subroutine satellite_test
   State_VGB(Bz_,:,:,:,:) = x_BLK
 
   call get_satellite_data((/xTest,yTest,zTest/),.true.,State_V,Weight)
+  call collect_satellite_data((/xTest,yTest,zTest/),State_V,Weight)
 
   if(iProc==0)then
      if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&
