@@ -12,6 +12,7 @@ module CON_physics
 
   !USES:
 
+  use ModTimeConvert
   use CON_time
   use CON_axes
   use CON_planet
