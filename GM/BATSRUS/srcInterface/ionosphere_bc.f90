@@ -191,7 +191,95 @@ subroutine ionosphere_magBCs(&
 
 end subroutine ionosphere_magBCs
 
-!-------------------------------------------------------------------------
+!==========================================================================
+subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
+     Bx, By, Bz, B0x, B0y, B0z, Ux, Uy, Uz)
+
+  use ModIonoPotential
+  use ModMain, ONLY: TypeCoordSystem, nDim
+  use ModCoordTransform, ONLY: xyz_to_dir, cross_product
+  use CON_planet_field, ONLY: map_planet_field
+
+  implicit none
+  integer, intent(in) :: nIter
+  real, intent(in)    :: tSimulation
+  real, intent(in)    :: x, y, z, Bx, By, Bz, B0x, B0y, B0z
+  real, intent(out)   :: Ux, Uy, Uz
+
+  real, parameter :: Epsilon_D(nDim) = (/ 0.01, 0.01, 0.01 /)
+
+  real :: Xyz_D(nDim)              ! Position vector
+  real :: Xyz_DDI(nDim, nDim, 2)   ! Points shifted in 3 directions
+  real :: XyzIono_D(nDim)          ! Mapped point on the ionosphere
+  real :: Theta, Phi               ! Mapped point colatitude, longitude
+  real :: ThetaNorm, PhiNorm       ! Normalized colatitude, longitude
+  real :: Dist1, Dist2             ! Distance from ionosphere grid point
+
+  real :: Potential_DI(nDim, 2)    ! Potential at the shifted positions
+  real :: eField_D(nDim)           ! Electric field
+  real :: b_D(nDim), B2            ! Magnetic field and its square
+  real :: Velocity_D(nDim)         ! Velocity array
+
+  integer :: iDim, iSide, iTheta, iPhi, iHemisphere
+  !-------------------------------------------------------------------------
+
+  ! Copy point position into shifted positions
+  Xyz_D = (/ x, y, z /)
+  do iSide = 1, 2
+     do iDim = 1, nDim
+        Xyz_DDI(:, iDim, iSide) = Xyz_D
+     end do
+  end do
+
+  ! Shift positions
+  do iDim = 1, nDim
+     Xyz_DDI(iDim,iDim,1) = Xyz_DDI(iDim,iDim,1) - Epsilon_D(iDim)
+     Xyz_DDI(iDim,iDim,2) = Xyz_DDI(iDim,iDim,2) + Epsilon_D(iDim)
+  end do
+
+  ! Map points to obtain potential
+  do iSide = 1, 2
+     do iDim = 1, nDim
+        call map_planet_field(tSimulation, Xyz_DDI(:,iDim, iSide), &
+             TypeCoordSystem//' NORM', rIonosphere, XyzIono_D, iHemisphere)
+
+        call xyz_to_dir(XyzIono_D, Theta, Phi)
+
+        ThetaNorm = Theta / dThetaIono
+        PhiNorm   = Phi   / dPhiIono
+
+        iTheta    = floor(ThetaNorm) + 1
+        iPhi      = floor(PhiNorm)   + 1
+
+        Dist1     = ThetaNorm - (iTheta - 1)
+        Dist2     = PhiNorm   - (iPhi   - 1)
+
+        Potential_DI(iDim, iSide) = &
+             (1 - Dist1)*( (1-Dist2) * IonoPotential_II(iTheta  , iPhi  )  &
+             +             Dist2     * IonoPotential_II(iTheta  , iPhi+1)) &
+             + Dist1    *( (1-Dist2) * IonoPotential_II(iTheta  , iPhi  )  &
+             +             Dist2     * IonoPotential_II(iTheta  , iPhi+1))
+     end do
+  end do
+
+  b_D = (/ Bx + B0x, By + B0y, Bz + B0z /)
+  B2  = sum(b_D**2)
+  
+  ! E = -grad(Phi)
+  eField_D = - (Potential_DI(:,2) - Potential_DI(:,1))/(2*Epsilon_D)
+
+  ! U = (E x B) / B^2
+  Velocity_D = cross_product(eField_D, b_D) / B2
+
+  ! Return values
+  Ux = Velocity_D(1)
+  Uy = Velocity_D(2)
+  Uz = Velocity_D(3)
+
+end subroutine calc_inner_BC_velocities_new
+
+!============================================================================  
+
 !BOP
 !INTERFACE:
 subroutine calc_inner_BC_velocities(iter,time_now,XFace,YFace,ZFace,&
