@@ -24,13 +24,13 @@ subroutine body_force_averages
   fbody_y_BLK(:,:,:,globalBLK) = cZero
   fbody_z_BLK(:,:,:,globalBLK) = cZero
 
-  DxInv=cOne/dx_BLK(globalBLK)                                    !^CFG IF CARTESIAN BEGIN
+  DxInv=cOne/dx_BLK(globalBLK)                        !^CFG IF CARTESIAN BEGIN
   DyInv=cOne/dy_BLK(globalBLK)
-  DxInv=cOne/dx_BLK(globalBLK)                                    !^CFG END CARTESIAN
+  DzInv=cOne/dz_BLK(globalBLK)                        !^CFG END CARTESIAN
 
-  iVolumeCounter=nIJK*(globalBLK-1)                                  !^CFG IF NOT CARTESIAN
+  iVolumeCounter=nIJK*(globalBLK-1)                   !^CFG IF NOT CARTESIAN
   do k=1,nK; do j=1,nJ;  do i=1,nI  
-     iVolumeCounter=iVolumeCounter+1                                 !^CFG IF NOT CARTESIAN                      
+     iVolumeCounter=iVolumeCounter+1                  !^CFG IF NOT CARTESIAN
      if(.not.true_cell(i,j,k,globalBLK))cycle
      x = cHalf*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
