@@ -943,8 +943,8 @@ subroutine IE_finalize(tSimulation)
   use ModProcIE
   use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve
   use IE_ModIo, ONLY: nFile
-  use CON_physics, ONLY: get_physics, time_real_to_int
-  use ModTimeType
+  use CON_physics, ONLY: get_physics
+  use ModTimeConvert, ONLY: TimeType, time_real_to_int
   implicit none
 
   !INPUT PARAMETERS:
