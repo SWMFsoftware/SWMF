@@ -37,7 +37,8 @@
 ;    triplet, quadruplet, coarse
 ; eliminating degenerate dimensions from an array
 ;    reform2
-
+; converting IMF date+time into hours relative to the start of the month
+;    imf_hour
 ;==========================================
 pro openfile,unit,filename,filetype
 ;==========================================
@@ -462,6 +463,14 @@ endelse
 
 end
 
+;==========================================
+function imf_hour,wlog
+
+   return,(wlog(*,2)-wlog(0,2))*24.0 + $
+     wlog(*,3) + wlog(*,4)/60.0 + wlog(*,5)/3600.0 + $
+     wlog(*,6)/3.6e6
+
+end
 ;==========================================
 function reform2,x
 ;==========================================
