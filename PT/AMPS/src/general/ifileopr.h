@@ -11,12 +11,17 @@ public:
   char fname[100],init_str[1000];
   long int line;
 
+  CiFileOperations() {
+    line=-1;
+  };
+
   FILE* openfile(char* ifile) {
     sprintf(fname,"%s",ifile); 
+    line=0;
     return fd=fopen(ifile,"r");
   }; 
 
-  void closefile () {
+  void closefile() {
     fclose(fd);
   };
 

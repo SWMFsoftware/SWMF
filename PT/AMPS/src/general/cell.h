@@ -57,7 +57,7 @@ public:
     float center[3];
 
    GetCellCenter(center);
-   for (i=0;i<DIM;i++) x[i]=center[i];\
+   for (i=0;i<DIM;i++) x[i]=center[i]; 
   }; 
 
   void SetLocalGasModel(int model) {LocalGasModel=model;}; 

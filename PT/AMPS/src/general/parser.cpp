@@ -78,8 +78,21 @@ void error() {
 //===================================================
 //===================================================
 void GeneralBlock() {
+  static bool GeneralBlockLoadedFlag=false;
   char str1[100],str[100];
   char *endptr;
+
+  if (GeneralBlockLoadedFlag!=false) {
+    do {
+      GetInputStr(str,sizeof(str));
+      CutInputStr(str1,str);
+    }
+    while((!feof(fd))&&(strcmp("#ENDGENERAL",str1)!=0)); 
+
+    return;
+  }
+
+  GeneralBlockLoadedFlag=true; 
 
   while (!feof(fd)) {
     GetInputStr(str,sizeof(str));
@@ -149,6 +162,9 @@ void GeneralBlock() {
 }
 //===================================================
 void parser(char* InputFile) {
+  char nonstandardBlock_endname[100]; 
+  bool nonstandardBlock_flag=false;
+
   char str1[100],str[100];
 
   printf("InputFile: %s\n",InputFile);
@@ -186,8 +202,21 @@ void parser(char* InputFile) {
 #endif
 
     else if (strcmp("#END",str1)==0) return;
-    else error();
+
+    else if ((str1[0]=='#')&&(nonstandardBlock_flag==false)) {
+      printf("Found nonstandard block: %s\n",str1);
+
+      nonstandardBlock_flag=true;
+      sprintf(nonstandardBlock_endname,"#END%s",str1+1);     
+    } 
+    else if (nonstandardBlock_flag==true) {
+      if (strcmp(nonstandardBlock_endname,str1)==0) nonstandardBlock_flag=false;   
+    } 
+
+    else if (nonstandardBlock_flag==false) error();
   }
+
+  error();
 }  
 
 void parser_readGeneralBlock(FILE* fin,long int& line_in) {
@@ -197,3 +226,13 @@ void parser_readGeneralBlock(FILE* fin,long int& line_in) {
   GeneralBlock();
   line_in=line;
 }
+
+
+
+
+
+
+
+
+
+
