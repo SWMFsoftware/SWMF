@@ -42,7 +42,8 @@ If UseNewParam is false, the time frequencies are only read when DoTimeAccurate 
 and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
 
 If UseNewAxes is true, the planet's rotational and magnetix axes are set by the new
-algorithms found in share/Library/src/CON\_axes, the planet data is set and
+algorithms found in\\
+share/Library/src/CON\_axes, the planet data is set and
 stored by share/Library/src/CON\_planet, and magnetic field information and
 mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
 of the planet is calculated using $v_\phi=\Omega \times r$.
@@ -878,15 +879,15 @@ T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
 	</foreach>
 	<rule
 	expr="not($TypeBcEast eq 'periodic' xor $TypeBcWest eq 'periodic')">
-	! East and west BCs must be both periodic or neither
+		East and west BCs must be both periodic or neither
 	</rule>
 	<rule
 	expr="not($TypeBcSouth eq 'periodic' xor $TypeBcNorth eq 'periodic')">
-	! South and North BCs must be both periodic or neither
+		South and North BCs must be both periodic or neither
 	</rule>
 	<rule
 	expr="not($TypeBcBot eq 'periodic' xor $TypeBcTop eq 'periodic')">
-	! Bottom and top BCs must be both periodic or neither
+		Bottom and top BCs must be both periodic or neither
 	</rule>
 #OUTERBOUNDARY
 outflow                 TypeBcEast
@@ -940,8 +941,8 @@ float                   TypeBcTop
 		</parameter>
 	</if>
 	<rule
-	expr="not($TypeBcBody2 =~ /ionosphere/)">
-! Note: for the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
+	expr="not($TypeBcBody2 =~ /ionosphere/)"> 
+	For the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
 	</rule>
 <!-- ^CFG END SECONDBODY -->
 #INNERBOUNDARY
@@ -1147,7 +1148,7 @@ T               UsePartLocal
 		if="$UsePartImplicit or $UseFullImplicit"/>
 	<rule
 	expr="$UsePointImplicit + $UsePartImplicit + $UseFullImplicit &lt;= 1">
-	At most one of these logicals can be true!
+		At most one of these logicals can be true!
 	</rule>
 
 #IMPLICIT
@@ -2515,18 +2516,18 @@ T			UseBorisSimple
 	<parameter name="UseConstrainB"    type="logical" default="F"/><!--^CFG IF CONSTRAINB -->
 	<rule
 	expr="$UseDivbSource or $UseDivbDiffusion or $UseProjection or $UseConstrainB">
-	! At least one of the options should be true.
+		At least one of the options should be true.
 	</rule>
 	<!-- ^CFG IF PROJECTION BEGIN -->
 	<rule 
 	expr="not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))">
-	! If UseProjection is true, all others should be false.
+		If UseProjection is true, all others should be false.
 	</rule>
 	<!-- ^CFG END PROJECTION -->
 	<!-- ^CFG IF CONSTRAINB BEGIN -->
 	<rule
 	expr="not($UseConstrainB and ($UseDivbSource or $UseDivbDiffusion or $UseProjection))">
-	! If UseConstrainB is true, all others should be false.
+		If UseConstrainB is true, all others should be false.
 	</rule>
 	<!-- ^CFG END CONSTRAINB -->
 #DIVB
