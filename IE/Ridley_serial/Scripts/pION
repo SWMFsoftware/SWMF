@@ -5,6 +5,7 @@ my $Help = ($h or $help or $H or $HELP);
 &print_help if $Help;
 
 my $Keep = ($k or $keep or $K or $KEEP);
+my $Gzip = ($g or $gzip or $z);
 
 use strict;
 
@@ -26,6 +27,10 @@ foreach $file1 (sort @files){
     $err = `cat $file1 $file2 > $fileout`;
     die "Error occured: $err\n" if $err;
     unlink($file1, $file2) unless $Keep;
+    if($Gzip){
+	$err = `gzip $fileout`;
+	die "Error occured: $err\n" if $err;
+    }
 }
 
 exit 0;
@@ -39,11 +44,13 @@ Purpose:
    Concatanate north and south blocks into a single idl file.
 
 Usage:
-   pION [-h] [-k] [DIR]
+   pION [-h] [-k] [-g] [DIR]
 
    -h -help    - print this help message
    -k -keep    - keep original files
                  Default is to delete the two hemisphere files.
+   -g -gzip    - gzip the output files
+                 Default is to leave the output files uncompressed
    DIR         - name of the directory to process
                  Default is DIR = 'ionosphere'
 
