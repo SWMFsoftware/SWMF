@@ -2657,6 +2657,10 @@ rel			TypeProjStop
 							default="0.01"/>
 	<parameter name="pRatioHigh" type="real" min="$pRatioLow" max="1"
 							default="0.1"/>
+#CORRECTP
+0.01			pRatioLow
+0.1			pRatioHigh
+
 ! Default values are shown. 
 !
 ! The purpose of the correctP subroutine is to remove any discrepancies between
