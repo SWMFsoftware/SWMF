@@ -187,40 +187,45 @@ subroutine read_upstream_input_file(upstreamfilename)
 
      close(UNITTMP_)
 
+     dt_min = 366.0*24.0*3600.0
+     do i=1,Upstream_Npts
+        call time_int_to_real(Upstream_integer_Time(i,:),Upstream_Time(i))
+        Upstream_Time(i) = Upstream_Time(i) + timedelay
+        if (dt_min > abs(Upstream_Time(i) - StartTime)) then
+           dt_min = abs(Upstream_Time(i) - StartTime)
+        endif
+     end do
+
+     if (dt_min > 24.0*3600.0) then
+        write(*,*) "**********************************************************"
+        write(*,*) "*                                                        *"
+        write(*,*) "*         Warning! Warning! Warning! Warning! Warning!   *"
+        write(*,*) "*                                                        *"
+        write(*,*) "*  Time dependent solar wind file disagrees with the     *"
+        write(*,*) "*  starting time of the                                  *"
+        write(*,*) "*  simulation by more than 24 hours.  This could cause   *"
+        write(*,*) "*  results which you                                     *"
+        write(*,*) "*  may not enjoy.                                        *"
+        write(*,*) "*                                                        *"
+        if (UseStrict) call stop_mpi('Correct PARAM.in or the IMF data file')
+        
+        write(*,*) "*  I am assuming that you are smarter than I am.         *"
+        write(*,*) "*  Continuing with simulation.                           *"
+        write(*,*) "*                                                        *"
+        write(*,*) "**********************************************************"
+     endif
+
   endif
 
   call MPI_Bcast(Upstream_Npts,1,MPI_Integer,0,iComm,iError)
   if(iError>0)call stop_mpi(&
        "Upstream_Npts could not be broadcast by read_upstream_input_file")
 
-  call MPI_Bcast(Upstream_integer_time,Max_Upstream_Npts*7,MPI_Integer, &
+  call MPI_Bcast(Upstream_Time,Max_Upstream_Npts,MPI_DOUBLE_PRECISION, &
        0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Upstream_integer_Time could not be broadcast by read_upstream_input_file")
-
-  dt_min = 366.0*24.0*3600.0
-  do i=1,Upstream_Npts
-     call time_int_to_real(Upstream_integer_Time(i,:),Upstream_Time(i))
-     if (dt_min > abs(Upstream_Time(i) - StartTime)) then
-        dt_min = abs(Upstream_Time(i) - StartTime)
-     endif
-  end do
-
-  if ((dt_min > 24.0*3600.0).and.(iProc == 0)) then
-     write(*,*) "******************************************************************************"
-     write(*,*) "*                                                                            *"
-     write(*,*) "*  Warning! Warning! Warning! Warning! Warning! Warning! Warning! Warning!   *"
-     write(*,*) "*                                                                            *"
-     write(*,*) "*  Time dependent solar wind file disagrees with the starting time of the    *"
-     write(*,*) "*  simulation by more than 24 hours.  This could cause results which you     *"
-     write(*,*) "*  may not enjoy.                                                            *"
-     write(*,*) "*                                                                            *"
-     if (UseStrict) call stop_mpi('Correct PARAM.in or the IMF data file')
-
-     write(*,*) "*  I am assuming that you are smarter than I am. Continuing with simulation. *"
-     write(*,*) "*                                                                            *"
-     write(*,*) "******************************************************************************"
-  endif
+       "Upstream_Time could not be broadcast by "// &
+       "read_upstream_input_file")
 
   call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*8,MPI_Real, &
        0,iComm,iError)
@@ -229,15 +234,18 @@ subroutine read_upstream_input_file(upstreamfilename)
 
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "TypeInputCoordSystem could not be broadcast by read_upstream_input_file")
+       "TypeInputCoordSystem could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Propagation_Plane_XY,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XY could not be broadcast by read_upstream_input_file")
+       "Propagation_Plane_XY could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Propagation_Plane_XZ,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XZ could not be broadcast by read_upstream_input_file")
+       "Propagation_Plane_XZ could not be broadcast by "//&
+       "read_upstream_input_file")
 
   call MPI_Bcast(Satellite_Y_Pos,1,MPI_Real,0,iComm,iError)
   if(iError>0)call stop_mpi(&
