@@ -222,7 +222,7 @@ TEST: foreach $test (sort @test){
 		}
 		
 		@logvar=split(' ',$line1) if $logfile !~ /iono/ and $.==2;
-		$nheadline = $. if $line1 =~ /^BEGIN/;
+		$nheadline = $. if $line1 =~ /^BEGIN|ZONE/;
 		next LINE;
 	    }
 	    @item1=split(' ',$line1);
