@@ -908,6 +908,7 @@ subroutine testmessage_pass_nodes
   write(*,*)' '
 
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+  call MPI_Finalize(iError)
   stop
 
 end subroutine testmessage_pass_nodes

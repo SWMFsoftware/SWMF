@@ -196,6 +196,7 @@ subroutine time_message_passing
 
 !!!
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+  call MPI_Finalize(iError)
   stop
 
 end subroutine time_message_passing

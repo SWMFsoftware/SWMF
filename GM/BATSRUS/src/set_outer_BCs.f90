@@ -490,7 +490,7 @@ subroutine BC_arcade_bottom
 
      if(State_VGB(P_,i,j,k,iBLK) .lt. 0.0) then
         write(*,*) 'negative pressure at', i,j,k,iBLK
-        stop
+        call stop_mpi('ERROR in set_outer_BCs::BC_arcade_bottom')
      end if
   end do; end do; end do
 end subroutine BC_arcade_bottom
