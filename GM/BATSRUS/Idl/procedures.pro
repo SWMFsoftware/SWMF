@@ -2687,6 +2687,7 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
 
 END
 
+;============================================================================
 ;
 ; set_position
 ;
@@ -2758,16 +2759,9 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect,		$
 
 END
 
-;*****************************************************************************
-
+;============================================================================
 pro plotct, pos, maxmin
 
-;******************************************************************************
-
-    !p.title = ' '
-    !y.tickname=strarr(60)
-    !y.title = ' '
-    !x.title = ' '
     xrange=!x.range & yrange=!y.range & !x.range=0 & !y.range=0
 
     maxi = max(maxmin)
@@ -2779,12 +2773,14 @@ pro plotct, pos, maxmin
     levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
 
     contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
-        levels = levels, pos=pos
+        levels = levels, pos=pos, title=' '
 
-    plot, maxmin, /noerase, pos = pos, xstyle=1,ystyle=1, /nodata,$
+    plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
           xtickname = [' ',' '], xticks = 1, xminor=1  , $
-          ytickname = strarr(60) + ' ', yticklen = 0.25
-    axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.)
+          ytickname = strarr(60) + ' ', yticklen = 0.25, $
+          title=' ', xtitle=' ',ytitle=' '
+    axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.), $
+          ytitle=' ', ytickname = strarr(60)
 
     !x.range=xrange & !y.range=yrange
 
@@ -2792,15 +2788,7 @@ pro plotct, pos, maxmin
 
 end
 
-function mklower, string
-
-  temp = byte(string)
-  loc = where((temp ge 65) and (temp le 90), count)
-  if count ne 0 then temp(loc) = temp(loc)+32
-  return, string(temp)
-
-end
-
+;============================================================================
 pro makect, color
 
   common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
@@ -2826,7 +2814,7 @@ pro makect, color
 
   endif
 
-  color = mklower(color)
+  color = strlowcase(color)
 
   ; Set read, green, blue to values normalized to the 0.0 -- 1.0 range.
 
@@ -2910,5 +2898,3 @@ pro makect, color
   tvlct,r,g,b
 
 end
-
-
