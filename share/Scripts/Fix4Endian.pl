@@ -6,13 +6,16 @@
 #
 #!ROUTINE: Fix4Endian.pl - change the byte order of every 4 bytes
 #!DESCRIPTION:
-# Change the byte order in a binary file which consists of single precision
-# reals and 4 byte integers only. The -except=M:N flag allows to exclude
-# the bytes between the M-th to N-th positions (usually a character string).
+# Change the byte order in a binary file which normally consists of 
+# single precision reals and 4 byte integers and logicals only. 
+# The -only=A:B flag allows to limit the replacement to the bytes between
+# the A-th and B-th positions (positions are starting from 1).
+# The -except=M:N flag allows to exclude the bytes between 
+# the B-th and C-th positions (usually a character string).
 #\begin{verbatim}
 # Usage:  
-#         Fix4Endian.pl [-except=M:N] < InFile > Outfile
-#         perl -is Fix4Endian.pl [-except=M:N] File1 File2 ...
+#         Fix4Endian.pl [-only=A:B] [-except=C:D] < InFile > Outfile
+#         perl -is Fix4Endian.pl [-only=A:B] [-except=C:D] File1 File2 ...
 #\end{verbatim}
 #!REVISION HISTORY:
 # 07/13/2001 G. Toth - initial version
@@ -21,6 +24,17 @@
 #BOC
 # No end of line record
 undef $/;
+
+# Extract range
+if($only){
+    $_ = $only;
+    ($start,$finish) = /(\d+).(\d+)/;
+    die "Incorrect format for -only=$only\n"
+        unless 0 < $start and $start < $finish;
+}else{
+    $start  =  1; 
+    $finish = -1;
+}
 
 # Extract excpetion range if present
 if($except){
@@ -35,16 +49,34 @@ if($except){
 
 # Read the whole file into $_
 $_=<>;
+$length = length();
 
-if($max > length()){
-    $max = length();
+if($start > $length){
+    die "Starting byte number in -only=$only exceeds file length\n";
+}
+
+if($finish < 0){
+    $finish = $length;
+}elsif($finish > $length){
+    $finish = $length;
+    warn "Final byte number in -only=$only exceeds file length\n";
+}
+
+if($min > $length){
+    warn "Minimum byte number in -except=$except exceeds file length\n";
+}
+
+if($max > $length){
+    $max = $length;
     warn "Maximum byte number in -except=$except exceeds file length\n";
 }
 
 # Reverse every 4 bytes
-for($i=0; $i<length(); $i+=4){
-    $i = $max if $i+1 >= $min and $i+1 <= $max;
-    warn "i=$i\n";
+for($i = $start-1; $i < $finish; $i += 4){
+    if($i+1 >= $min and $i < $max){
+	$i = $max;
+	last if $i >= $finish;
+    }
     substr($_,$i,4)=reverse substr($_,$i,4);
 }
 
