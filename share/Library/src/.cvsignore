@@ -1,0 +1,5 @@
+*.mod
+*.o
+ModInitGridStorage.f90
+Makefile.DEPEND
+*.protex

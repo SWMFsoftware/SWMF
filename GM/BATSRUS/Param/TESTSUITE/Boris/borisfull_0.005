@@ -1,0 +1,7 @@
+^CFG FILE BORISCORR
+
+#BORIS
+T			UseBoris
+0.005			BorisFactor
+
+#END

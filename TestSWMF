@@ -1,0 +1,2 @@
+#!/bin/sh
+GM/BATSRUS/TestBatsrus.pl -x=SWMF.exe $*

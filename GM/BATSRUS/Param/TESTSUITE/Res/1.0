@@ -1,0 +1,6 @@
+
+#AMRINIT
+mag_new			InitialRefineType
+5			InitialRefineLevel
+
+#END
