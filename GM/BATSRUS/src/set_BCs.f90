@@ -439,13 +439,18 @@ contains
     end select
 !^CFG IF IONOSPHERE BEGIN
     if (UseIonosphereHere) then
-!       call calc_inner_BC_velocities_new(iter,time_now, FaceCoords_D, &
+!       call calc_inner_bc_velocity(iter,time_now, FaceCoords_D, &
 !            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
+!
+!       call calc_inner_bc_velocity2(iter,time_now, FaceCoords_D, &
+!            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
+!
        call calc_inner_BC_velocities(iter,time_now,&
             FaceCoords_D(x_),FaceCoords_D(y_),FaceCoords_D(z_), &
             VarsTrueFace_V(Bx_),VarsTrueFace_V(By_),VarsTrueFace_V(Bz_),&
             B0Face_D(x_),B0Face_D(y_),B0Face_D(z_),&
             uIono_D(x_),uIono_D(y_),uIono_D(z_))
+!
        select case(TypeBcHere)
        case('reflect','linetied',&
             'ionosphere','ionospherefloat')
