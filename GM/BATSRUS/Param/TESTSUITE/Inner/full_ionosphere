@@ -25,14 +25,14 @@ F                       UseFakeRegion2
 5.0                     StarLightConductance
 0.25                    PolarCapConductance
 
-#IE_SAVEPLOT
+#SAVEPLOT
 2			nPlot
 min idl                 StringPlot
-#INCLUDE
-Plots
+1			DnOutput
+1.1			DtOutput
 max tec                 StringPlot
-#INCLUDE
-Plots
+1			DnOutput
+1.1			DtOutput
 
 #END_COMP IE ###############################################################
 
