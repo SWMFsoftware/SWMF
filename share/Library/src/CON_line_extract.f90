@@ -136,10 +136,8 @@ contains
        call CON_stop(NameSub//' ERROR: incorrect number of variables!')
     end if
 
-    nPoint = nPoint + 1
-
-    if(nPoint > MaxPoint) call line_extend(nPoint + 100)
-
+    if(nPoint >= MaxPoint) call line_extend(nPoint + 100)
+    nPoint                     = nPoint + 1
     State_VI(0       , nPoint) = real(iLine)
     State_VI(1:nVarIn, nPoint) = Line_V
 
@@ -197,7 +195,7 @@ contains
        if(iProc == iProcFrom .and. iProc == iProcTo) CYCLE
 
        ! Send ray line data
-       if(iProc == iProcFrom) then
+       if(iProc == iProcFrom .and. nPoint>0) then
           call MPI_SEND(State_VI(:,1:nPoint), &
                nPoint * (nVar+1), MPI_REAL, &
                iProcTo, iTag, MPI_COMM_WORLD, iError)
@@ -206,7 +204,7 @@ contains
        end if
 
        ! Receive ray line data
-       if(iProc == iProcTo) then
+       if(iProc == iProcTo .and. nPoint_P(i)>0) then
           call MPI_RECV(State_VI(:,nPoint+1:nPoint + nPoint_P(i)), &
                nPoint_P(i) * (nVar+1), MPI_REAL, &
                iProcFrom, iTag, MPI_COMM_WORLD, Status_I, iError)
@@ -325,8 +323,8 @@ contains
 
     if(nPoint /= 3)write(*,*)NameSub,' line_put failed, iProc=',iProc, &
          ' nPoint =',nPoint,' should be 3'
-    if(MaxPoint /= 101)write(*,*)NameSub,' line_put failed, iProc=',iProc, &
-         ' MaxPoint =',MaxPoint,' should be 101'
+    if(MaxPoint /= 100)write(*,*)NameSub,' line_put failed, iProc=',iProc, &
+         ' MaxPoint =',MaxPoint,' should be 100'
 
     do iPoint = 1, nPoint
        if(any(State_VI(:,iPoint) /= (/ &
@@ -353,9 +351,9 @@ contains
        if(nPoint /= 0) &
             write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
             ' nPoint =',nPoint,' should be 0'
-       if(MaxPoint /= 101) &
+       if(MaxPoint /= 100) &
             write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
-            ' MaxPoint =',MaxPoint,' should be 101'
+            ' MaxPoint =',MaxPoint,' should be 100'
 
     end if
 
