@@ -8,6 +8,8 @@ double rnd();
 double erf(double);
 double gam(double);
 
+void PrintErrorLog(char*);
+
 
 template<class TMesh>
 bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid) {

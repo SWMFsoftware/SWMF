@@ -1,10 +1,13 @@
 #include <time.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifdef MPI_ON
   #include "mpi.h"
 #endif
+
+extern int ThisThread;
 
 long int nint(double a)
 {
@@ -68,4 +71,17 @@ double gam(double x) {
 
   return a*(1.0-0.5748646*y+0.9512363*y*y-0.6998588*y*y*y+
     0.4245549*y*y*y*y-0.1010678*y*y*y*y*y); 
+}
+
+//===================================================
+void PrintErrorLog(char* message) {
+  FILE* errorlog=fopen("error.log","a+");
+
+  time_t TimeValue=time(0);
+  tm *ct=localtime(&TimeValue);
+
+  fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+  fprintf(errorlog,"%s\n\n\n",message);
+
+  fclose(errorlog);
 }
