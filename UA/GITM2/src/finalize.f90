@@ -1,0 +1,42 @@
+
+subroutine finalize_gitm
+
+  use ModInputs
+  use ModSphereInterface
+
+  implicit none
+
+  logical :: IsOk
+  integer :: iError, iBlock, iOutputType
+  integer :: nMLTsTmp,nLatsTmp
+
+  call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
+
+  do iOutputType = 1, nOutputTypes
+     do iBlock = 1, nBlocks
+        call output("UA/data/",iBlock, iOutputType)
+     enddo
+  enddo
+
+  if (.not.IsFrameWork) then
+     call write_restart("UA/restartOUT/")
+     call end_timing("GITM")
+  endif
+
+  if (iDebugLevel >= 0) call report_timing("all")
+
+  if (.not. Is1D) then
+     ! cleanup UAM
+     !! get rid of data xfer structure
+     call UAM_XFER_destroy(ok=IsOk)
+     if (.not. IsOk) then
+        call UAM_write_error()
+        if (.not.IsFrameWork) call stop_gitm("problem with finalize")
+     endif
+
+     ! cleanup mpi
+     if (.not.IsFrameWork) call MPI_FINALIZE(iError)
+
+  endif
+
+end subroutine finalize_gitm
