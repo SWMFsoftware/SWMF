@@ -257,8 +257,8 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
         Potential_DI(iDim, iSide) = &
              (1 - Dist1)*( (1-Dist2) * IonoPotential_II(iTheta  , iPhi  )  &
              +             Dist2     * IonoPotential_II(iTheta  , iPhi+1)) &
-             + Dist1    *( (1-Dist2) * IonoPotential_II(iTheta  , iPhi  )  &
-             +             Dist2     * IonoPotential_II(iTheta  , iPhi+1))
+             + Dist1    *( (1-Dist2) * IonoPotential_II(iTheta+1, iPhi  )  &
+             +             Dist2     * IonoPotential_II(iTheta+1, iPhi+1))
      end do
   end do
 
