@@ -193,10 +193,12 @@ program SWMF
 
      if(iSession==1)then
         call timing_stop('SETUP')
+        call timing_stop('SWMF')
         CpuTimeSetup = MPI_WTIME()
         if(DnTiming > -3)call timing_report_total
         if(is_proc0())write(*,*)'Resetting timing counters after setup.'
         call timing_reset('#all',3)
+        call timing_start('SWMF')
      end if
 
      !\
