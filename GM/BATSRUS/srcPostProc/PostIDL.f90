@@ -55,16 +55,14 @@ program PostIDL
   ! Read information from STDIN
   read(*,'(a)')filenamehead
 
-  ! Get rid of the component name
-  if(  filenamehead(1:3)=='GM/' .or. &
-       filenamehead(1:3)=='IH/' .or. &
-       filenamehead(1:3)=='SC/')     &
-       filenamehead=filenamehead(4:len(filenamehead))
+  ! Get rid of the directory part
+  filenamehead = filenamehead( &
+       index(filenamehead,'/',BACK=.true.)+1:len(filenamehead))
 
   read(*,*)numprocs
   write(*,*)trim(filenamehead),', numprocs=',numprocs
 
-  if(index(filenamehead,'/sp')>0)then
+  if(filenamehead(1:2) == 'sp')then
      coord=coord_sph
   else
      coord=coord_xyz
@@ -522,9 +520,8 @@ contains
     enddo
     ! Add _xxx13, _xxx23 or _xxx33 to fileheadout based on ndim
     ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var)
-    ll=index(filenamehead,'/',BACK=.true.)
     write(fileheadout,'(a,i1,i1)') &
-         fileheadout(1:l)//filenamehead(ll+4:ll+7),ndim,3
+         fileheadout(1:l)//filenamehead(4:7),ndim,3
 
     ! Produce coordinate names 
     !         ('x y z ', 'x y ', 'x z ', 'y z ' or 'theta','phi')
