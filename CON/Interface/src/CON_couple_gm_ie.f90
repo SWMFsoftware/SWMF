@@ -296,7 +296,7 @@ contains
          ! The result will be on the root processor of GM
          !/
          if(is_proc(GM_)) &
-              call GM_get_for_ie_new(Buffer_II, iSize, jSize, NameVar_B(iBlock))
+              call GM_get_for_ie(Buffer_II, iSize, jSize, NameVar_B(iBlock))
          !\
          ! Transfer variables from GM to IE
          !/
@@ -313,7 +313,7 @@ contains
          ! Put variables into IE
          !/
          if(i_proc() == iProcTo )&
-              call IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar_B(iBlock))
+              call IE_put_from_gm(Buffer_II, iSize, jSize, NameVar_B(iBlock))
          !\
          ! Deallocate buffer to save memory
          !/

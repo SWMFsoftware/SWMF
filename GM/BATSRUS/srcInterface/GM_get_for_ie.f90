@@ -167,7 +167,7 @@ end module ModFieldAlignedCurrent
 
 !==============================================================================
 
-subroutine GM_get_for_ie_new(Buffer_II,iSize,jSize,NameVar)
+subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
 
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
@@ -199,7 +199,7 @@ subroutine GM_get_for_ie_new(Buffer_II,iSize,jSize,NameVar)
   end select
   if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
 
-end subroutine GM_get_for_ie_new
+end subroutine GM_get_for_ie
 
 !==============================================================================
 

@@ -446,77 +446,7 @@ subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 end subroutine IE_get_for_ua
 
 !==============================================================================
-
-subroutine IE_put_from_gm(Buffer_IV,nPoint,nVar,NameVar)
-
-  use IE_ModMain, ONLY: IsNewInput
-  use ModProcIE
-  use ModIonosphere
-
-  implicit none
-  character (len=*),parameter :: NameSub='IE_put_from_gm'
-  integer,          intent(in) :: nPoint, nVar
-  real,             intent(in) :: Buffer_IV(nPoint,nVar)
-  character(len=*) ,intent(in) :: NameVar
-
-  integer :: iError
-  logical :: DoTest, DoTestMe
-  !---------------------------------------------------------------------------
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
-
-  IsNewInput = .true.
-
-  select case(NameVar)
-
-  case('LocNorth3')
-     if (iProc/=0) RETURN
-
-     if(DoTest)write(*,*)NameSub,': nPoint,IONO_NORTH_nMagBndPts=',&
-          nPoint,IONO_NORTH_nMagBndPts
-     call IE_check_allocation_north(nPoint)
-     MAG_NORTH_IONO_LOC = Buffer_IV
-  case('LocSouth3')
-     if (iProc /= nProc-1) RETURN
-
-     if(DoTest)write(*,*)NameSub,': nPoint,IONO_SOUTH_nMagBndPts=',&
-          nPoint,IONO_SOUTH_nMagBndPts
-     call IE_check_allocation_south(nPoint)
-     MAG_SOUTH_IONO_LOC = Buffer_IV
-  case('jNorth3:BinfoNorth5')
-     if (iProc /= 0) RETURN
-     MAG_NORTH_Jx       = Buffer_IV(:,1)
-     MAG_NORTH_Jy       = Buffer_IV(:,2)
-     MAG_NORTH_Jz       = Buffer_IV(:,3)
-     MAG_NORTH_MagField = Buffer_IV(:,4:8)
-     if(nPoint>8)then
-        call ionosphere_fac(1)
-     else
-        write(*,*)NameSub//' SWMF_WARNING skipping ionosphere_fac(1), '&
-             ,'nPoint=',nPoint
-     end if
-  case('jSouth3:BinfoSouth5')
-     if (iProc /= nProc-1) RETURN
-     MAG_SOUTH_Jx       = Buffer_IV(:,1)
-     MAG_SOUTH_Jy       = Buffer_IV(:,2)
-     MAG_SOUTH_Jz       = Buffer_IV(:,3)
-     MAG_SOUTH_MagField = Buffer_IV(:,4:8)
-     if(nPoint>8)then
-        call ionosphere_fac(2)
-     else
-        write(*,*)NameSub//' SWMF_WARNING skipping ionosphere_fac(2), '&
-             ,'nPoint=',nPoint
-     end if
-  case default
-     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
-  end select
-
-  if(DoTest)write(*,*)'IE_put_from_gm finished'
-
-end subroutine IE_put_from_gm
-
-!==============================================================================
-subroutine IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar)
+subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
 
   use IE_ModMain, ONLY: IsNewInput
   use ModProcIE
@@ -552,7 +482,7 @@ subroutine IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar)
 
   if(DoTest)write(*,*)NameSub,' finished'
 
-end subroutine IE_put_from_gm_new
+end subroutine IE_put_from_gm
 
 !==============================================================================
 
