@@ -24,8 +24,8 @@ MPILIB =
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-#DEBUG   = -qextname -qarch=g5 -qtune=g5 -C -gline
-DEBUG   = -qextname -qarch=g5 -qtune=g5
+#DEBUG   = -qextname -qarch=auto -qtune=auto -C -gline
+DEBUG   = -qextname -qarch=auto -qtune=auto
 
 Cflag0  = ${SEARCH} -c -O0 ${DEBUG} ${PRECISION}
 Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
