@@ -166,8 +166,7 @@ contains
           if(restart_reals)call fix_block_geometry(globalBLK)
 
           ! For sake of backwards compatibility
-          if(.not.UseNewAxes .and. .not.restart_read .and. time_accurate &
-               .and. dt_UpdateB0 > cZero .and. .not.SetDipoleTilt)then
+          if(.not.UseNewAxes .and. .not.restart_read .and. DoUpdateB0)then
              ! Now we have time_simulation read from the first restart file
              restart_read = .true.
              call calculate_dipole_tilt
@@ -315,7 +314,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   end if
 
   ! Calculate unsplit dB0Dt term for every time step
-  if(time_accurate .and. dt_updateB0>0.0 .and. .not.DoSplitDb0Dt)then
+  if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
      call timing_start('update_B0')
      call calc_db0_dt(dt)
      call timing_stop('update_B0')
@@ -339,7 +338,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation
 
-  if (time_accurate .and. dt_updateB0 > 0.0) then
+  if (DoUpdateB0) then
      ! Unsplit dB0/dBt term is added every time step
      ! Split dB0/dt term is added at the dt_updateB0 frequency
      if (.not.DoSplitDb0Dt .or. &
