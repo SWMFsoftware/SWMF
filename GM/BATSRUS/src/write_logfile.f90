@@ -578,7 +578,7 @@ contains
           iVarTot = iVarTot + 1
           R_log = LogR_I(iR)
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
-          LogVar_I(iVarTot) = integrate_sphere(360, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = integrate_sphere(50, R_log, tmp1_BLK)
        end do
     case('rhoflx')
        ! rho*U_R
@@ -704,7 +704,7 @@ contains
                      ) / (State_VGB(rho_,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_flux_circ(nProc,R_log,0.0,tmp1_BLK)
+          LogVar_I(iVarTot) = integrate_flux_circ(R_log,0.0,tmp1_BLK)
        end do
 
        ! OTHER VALUES
@@ -1073,30 +1073,26 @@ end function integrate_sphere
 
 !==============================================================================
 
-real function integrate_flux_circ(qnum,qrad,qz,qa)
+real function integrate_flux_circ(qrad,qz,qa)
 
   ! This function calculates the integral of the incomming variable qa
   ! over a cirle parallel to the equitorial plane.  The radius of the circle
   ! for the z axis is defined by the radius qrad and the z position is
   ! is given by qz.  
 
-  use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModNumConst
-  use ModMpi
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: qnum
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
        intent(in) :: qa
   real, intent(in) :: qrad, qz 
 
   ! Local variables
-  integer :: iError
-  real :: integral_sum, GLOBAL_integral_sum, term_to_add 
+  real :: integral_sum, term_to_add 
 
   ! Indices and coordinates
   integer :: iBLK,i,j,i1,i2,j1,j2,k1,k2
@@ -1109,7 +1105,6 @@ real function integrate_flux_circ(qnum,qrad,qz,qa)
   !---------------------------------------------------------------------------
 
   integral_sum = 0.0
-  GLOBAL_integral_sum = 0.0
 
   call set_oktest('integrate_flux_circ',oktest,oktest_me)
 
@@ -1198,15 +1193,7 @@ real function integrate_flux_circ(qnum,qrad,qz,qa)
   ! now multiply by the size of each interval in the integral.  Since they are all the
   ! same we can do this after the fact and not inside the above loops
 
-  integral_sum = integral_sum*qrad*dphi_circ
-
-  if(qnum>1)then
-     call MPI_allreduce(integral_sum, GLOBAL_integral_sum, 1,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-  else
-     GLOBAL_integral_sum = integral_sum
-  end if
-  integrate_flux_circ = GLOBAL_integral_sum
+  integrate_flux_circ = integral_sum*qrad*dphi_circ
 
 end function integrate_flux_circ
 
