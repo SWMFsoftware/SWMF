@@ -4,7 +4,7 @@
 #!ROUTINE: Rename.pl - rename many variables/strings in many source files
 #!INTERFACE
 #!DESCRIPTION:
-# This scripts make variable renaming relatively safe and easy in 
+# This script makes variable renaming relatively safe and easy in 
 # a large number of source files. It can rename many variables at
 # the same time. Case insensitivity is taken care of, sub strings
 # are not replaced, and conflicting renaming rules are checked for.
@@ -13,6 +13,7 @@
 #
 #!REVISION HISTORY:
 # 07/13/2001 G.Toth gtoth@umich.edu - initial version
+# 07/23/2004 G.Toth allow protecting some lines
 #EOP
 
 $Help=$h; 
@@ -60,7 +61,8 @@ Options (specify them separately as  -a -b  and not as  -ab !):
 You have to specify exactly one of -l, -c, -r, or -u. 
 
 For replace (-r) and undo (-u) the original file is put into filename~
-if any replacements were done.
+if any replacements were done. Individual lines can be protected against
+renaming by adding a "!do not rename" trailing comment. 
 
 Typical usage:
 
@@ -155,9 +157,11 @@ sub rename{
 	close(FILE);
 	print "old text=\n$text\n" if $Debug;
 
-	# Remove lines which match case(' or case(".
+	# Protect lines with containing the '!DO NOT RENAME' string and 
+	# case(' or case(" statements.
 	$icase=0; @case=();
-	while($text =~ s/^(\s*case\s*\(\s*['"].*)/_\[CASE$icase\]_/im){
+	while($text =~ s/^(.*\!\s*do\ not\ rename.*|
+			   \s*case\s*\(\s*['"].*)/_\[CASE$icase\]_/imx){
 	    print " replacing case $icase\n" if $Debug;
 	    $case[$icase++]=$1;
 	}
