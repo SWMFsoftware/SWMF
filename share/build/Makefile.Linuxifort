@@ -26,7 +26,7 @@ SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
 ### -ipo -IPF_fma -ftz -IPF_fltacc, -save
 DEBUG   = -w 
-#DEBUG   = -dusty -w -C -gline
+#DEBUG   = -dusty -w -g traceback -check all
 
 Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
 Cflag1  = ${SEARCH} -c -O1 ${PRECISION} ${DEBUG}
@@ -37,15 +37,13 @@ Cflag4  = ${SEARCH} -c -O3 ${PRECISION} ${DEBUG}
 # RCM compilation flags
 CFLAGS = ${SEARCH}  -c -save -O2 ${DEBUG}
 
-# Add '-Bstatic' to link flags if segmentation fault occurs immediately
-
+# Link flags: Lflag1 for MPI parallel code, Lflag2 for serial code
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
 # BLAS and LAPACK libraries
 LBLAS =
 BLAS  = lapack.o blas.o
-
 
 #
 #       General rules
