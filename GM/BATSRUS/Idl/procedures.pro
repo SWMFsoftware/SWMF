@@ -80,7 +80,7 @@ if nwlog gt 0 then begin
         return,findgen(n_elements(wlog(*,0)))
     end
     if itime gt -1 then return,wlog(*,itime)/3600.0
-    if ihour gt -1 then return,wlog(*,ihour)
+    if iyear eq -1 and ihour gt -1 then return,wlog(*,ihour)
 endif else begin
     iyear = 0
 endelse
