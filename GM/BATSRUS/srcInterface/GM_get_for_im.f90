@@ -30,11 +30,14 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   real :: Radius
 
+  logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
+  call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
+  call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! Allocate arrays
@@ -77,11 +80,13 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
 
   if (iProc == 0) then
-     if(DoTest)call write_integrated_data_tec  ! TecPlot output before processing
-     if(DoTest)call write_integrated_data_idl  ! IDL output before processing
+     ! Output before processing
+     if(DoTest .or. DoTestTec)call write_integrated_data_tec
+     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
      call process_integrated_data
-     if(DoTest)call write_integrated_data_tec  ! TecPlot output
-     if(DoTest)call write_integrated_data_idl  ! IDL     output
+     ! Output after processing
+     if(DoTest .or. DoTestTec)call write_integrated_data_tec
+     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
      ! Put results into output buffer
      Buffer_IIV(:,:,InvB_)    = MHD_SUM_vol
