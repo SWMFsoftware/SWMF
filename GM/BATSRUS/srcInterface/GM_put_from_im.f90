@@ -43,10 +43,8 @@ subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
   end if
 
   ! Store IM variable for internal use
-  RCM_p = Buffer_II
-
-  ! Make sure that ray tracing has been done, so the pressure can be applied
-  call ray_trace
+  RCM_p   = Buffer_II
+  iNewPIm = iNewPIm + 1
 
   if(DoTest)call write_pressure_tec  ! TecPlot output
   if(DoTest)call write_pressure_idl  ! IDL     output
