@@ -127,7 +127,7 @@ module ModPhysics
   real :: Rscl, RHOscl, rho1scl, rho2scl, SSPscl, Vscl 
   real :: B1scl, a1scl
   real :: ModulationRho,ModulationP
-  real :: cRot_x_GL98,cRot_y_GL98,cRot_z_GL98
+  real :: OrientationGL98, LatitudeGL98, LongitudeGL98
   real :: widthArc, phi0Arc, muArc
   real :: RhoArcDim, TArcDim, UzArcDim, BArcDim, ByArcDim
   real :: B0_scl, B0y_scl, Phtscl

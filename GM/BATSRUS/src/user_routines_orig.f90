@@ -859,7 +859,7 @@ subroutine user_initial_perturbation
            !State_VGB(EnergyRL_,i,j,k,iBLK) = Pres_BLK   *& !^CFG UNCOMMENT IF ALWAVES
            !     (cOne/(Gamma_BLK-cOne)-inv_gm1)            !^CFG UNCOMMENT IF ALWAVES
         endif
-        if (UseFluxRope.and.restart) then
+        if (UseFluxRope) then
            R_GL98_D(x_) = x_BLK(i,j,k,iBLK)
            R_GL98_D(y_) = y_BLK(i,j,k,iBLK)
            R_GL98_D(z_) = z_BLK(i,j,k,iBLK)
@@ -993,7 +993,7 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   use ModPhysics,        ONLY: Gbody,g,inv_g,gm1,inv_gm1,&
        cme_a,cme_r1,cme_r0,cme_a1,a1scl,rho1scl,rho2scl, &
        SSPscl,cme_B1_dim,cme_alpha,ModulationRho,        &
-       ModulationP,cRot_x_GL98,cRot_y_GL98,cRot_z_GL98
+       ModulationP,OrientationGL98,LatitudeGL98,LongitudeGL98
   use ModUser,           ONLY: DoFirst_GL
   use ModIo,             ONLY: iUnitOut, write_prefix
   implicit none
@@ -1023,44 +1023,50 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   real:: A2,dA2dr,dA2dth, d2A2dr2,d2A2drdth,d2A2dth2
   real:: pres_1,dpres_1dr1,F_grav,alpha0,ga0r0,delta 
   real, dimension(3):: R1_GL98_D,B1_GL98_D
-  real, dimension(3,3):: Txz_GL98_DD,Txzy_GL98_DD
-  if (iProc==0.and.DoFirst_GL) then
-     call write_prefix; write(iUnitOut,*) ''
-     call write_prefix; write(iUnitOut,*) &
-          '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
-     call write_prefix; write(iUnitOut,*) &
-          '            Initial Perturbation Is Initiated!!!'
-     call write_prefix; write(iUnitOut,*) &
-          '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
-     call write_prefix; write(iUnitOut,*) ''
-     call write_prefix; write(iUnitOut,*) 'cme_init called by processor',iProc
-     call write_prefix; write(iUnitOut,*) 'B1_dim = ',cme_B1_dim
-     call write_prefix; write(iUnitOut,*) 'cme_a  = ',cme_a
-     call write_prefix; write(iUnitOut,*) 'cme_r1 = ',cme_r1
-     call write_prefix; write(iUnitOut,*) 'cme_r0 = ',cme_r0
-     call write_prefix; write(iUnitOut,*) 'cme_a1 = ',cme_a1
-     call write_prefix; write(iUnitOut,*) 'ModulationRho = ',ModulationRho
-     call write_prefix; write(iUnitOut,*) 'ModulationP   = ',ModulationP
+  real, dimension(3,3):: RotateGL98_DD
+  !--------------------------------------------------------------------------
+  if (DoFirst_GL) then
+
      DoFirst_GL=.false.
+     !\
+     ! Construct the rotational matrix RotateGL98_DD,
+     !/
+     RotateGL98_DD  = matmul( &
+          rot_matrix_z(OrientationGL98*cDegToRad),&
+          rot_matrix_y((LatitudeGL98-90)*cDegToRad))
+     RotateGL98_DD = matmul(RotateGL98_DD, &
+          rot_matrix_z(-LongitudeGL98*cDegToRad))
+
+     if(iProc==0)then
+        call write_prefix; write(iUnitOut,*) ''
+        call write_prefix; write(iUnitOut,*) &
+             '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
+        call write_prefix; write(iUnitOut,*) &
+             '            Initial Perturbation Is Initiated!!!'
+        call write_prefix; write(iUnitOut,*) &
+             '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
+        call write_prefix; write(iUnitOut,*) ''
+        call write_prefix; write(iUnitOut,*) 'B1_dim = ',cme_B1_dim
+        call write_prefix; write(iUnitOut,*) 'cme_a  = ',cme_a
+        call write_prefix; write(iUnitOut,*) 'cme_r1 = ',cme_r1
+        call write_prefix; write(iUnitOut,*) 'cme_r0 = ',cme_r0
+        call write_prefix; write(iUnitOut,*) 'cme_a1 = ',cme_a1
+        call write_prefix; write(iUnitOut,*) 'ModulationRho = ',ModulationRho
+        call write_prefix; write(iUnitOut,*) 'ModulationP   = ',ModulationP
+     end if
   end if
   !
   delta = cOne/(cTwo*(cOne+cFour))
   !\
-  ! Construct the rotational matrix Txzy_GL98_DD,
-  ! and compute R1_GL98_D::
+  ! Compute R1_GL98_D::
   !/
-  Txz_GL98_DD  = matmul(rot_matrix_x(cRot_x_GL98*cDegToRad),&
-                        rot_matrix_z(cRot_z_GL98*cDegToRad))
-  Txzy_GL98_DD = matmul(rot_matrix_y(cRot_y_GL98*cDegToRad),&
-                        Txz_GL98_DD)
-  R1_GL98_D = matmul(Txzy_GL98_DD,R_GL98_D)
+  R1_GL98_D = matmul(RotateGL98_DD,R_GL98_D)
   !\
   ! CALCULATE CELL CENTER FOR GLOBAL CARTESIAN COORDINATES 
-  ! (z,x,y)_BATSRUS -> (x,y,z)
   !/
-  x = R1_GL98_D(z_)
-  y = R1_GL98_D(x_)
-  z = R1_GL98_D(y_)
+  x = R1_GL98_D(x_)
+  y = R1_GL98_D(y_)
+  z = R1_GL98_D(z_)
   !\
   ! CALCULATE CELL CENTER FOR GLOBAL SPHERICAL COORDINATES 
   !/
@@ -1213,27 +1219,25 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
      Bphi   = Bphi1  *(lambda/r)
      !\
      ! Magnetic field components in global cartesian coordinates
-     ! Mind that (z,x,y)_BATSRUS -> (x,y,z)!!!
-     ! X-COMPONENT OF MAGNETIC FIELD:: (x,y,z)_BATSRUS -> (x,y,z)
      !/
-     B1_GL98_D(z_) = Br*sin_theta1*cos_phi1   + &
+     B1_GL98_D(x_) = Br*sin_theta1*cos_phi1   + &
           Btheta*cos_theta1*cos_phi1    - &
           Bphi*sin_phi1
      !\
      ! Y-COMPONENT OF MAGNETIC FIELD:: (x,y,z)_BATSRUS -> (x,y,z)
      !/
-     B1_GL98_D(x_) = Br*sin_theta1*sin_phi1   + &
+     B1_GL98_D(y_) = Br*sin_theta1*sin_phi1   + &
           Btheta*cos_theta1*sin_phi1    + &
           Bphi*cos_phi1
      !\
      ! Z-COMPONENT OF MAGNETIC FIELD:: (x,y,z)_BATSRUS -> (x,y,z)
      !/
-     B1_GL98_D(y_) = Br*cos_theta1-Btheta*sin_theta1
+     B1_GL98_D(z_) = Br*cos_theta1-Btheta*sin_theta1
      !\
      ! Transform back to the original coordinates
      ! given by R_GL98_D:: 
      !/
-     B_GL98_D  = matmul(transpose(Txzy_GL98_DD),B1_GL98_D)
+     B_GL98_D  = matmul(B1_GL98_D, RotateGL98_DD)
      !\
      ! PLASMA DENSITY with stretching transformation
      !/
