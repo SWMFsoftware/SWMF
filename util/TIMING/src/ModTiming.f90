@@ -45,7 +45,7 @@ module ModTiming
   integer :: ntiming=0, i_last=1, step_reset(maxclock)=-1, &
              current_depth=0, max_depth=-1
 
-  character (LEN=10) :: report_style='cumm'
+  character (LEN=10) :: report_style='cumu'
 
   integer :: step=-1
 

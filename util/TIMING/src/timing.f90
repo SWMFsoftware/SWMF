@@ -137,7 +137,7 @@ subroutine timing_report_style(value)
   ! the 'list' format shows the timings as a linear list with the
   ! sorted by the CPU time (timings called from different places are
   ! distinguished by the name of their 'parent' timings).
-  ! Finally 'cumm' results in a cummulative timing, where 
+  ! Finally 'cumu' results in a cumulative timing, where 
   ! all timings with the same name are added up and sorted.
   !EOP
   !BOC ------------------------------------------------------------------------
@@ -429,7 +429,7 @@ subroutine timing_show(name,iclock)
   ! Report timing results by clock iclock for name. 
   ! For clock 1 the  name, the calling parent, and the very last timing 
   ! are shown.
-  ! For clock 2 the cummulative timing since the last reset is given.
+  ! For clock 2 the cumulative timing since the last reset is given.
   ! All timings matching the name (but called from different parents) 
   ! are shown. The timing per iteration and per call and the percentage
   ! with respect to the parent are also shown.
