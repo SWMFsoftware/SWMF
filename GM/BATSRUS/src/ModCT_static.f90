@@ -6,6 +6,9 @@ module ModCT
   implicit none
   SAVE
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicConstrainB = .false.
+
   !\
   ! Variables for Constrained Transport
   !/

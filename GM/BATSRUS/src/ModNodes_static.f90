@@ -4,6 +4,9 @@ Module ModNodes
   implicit none
   save
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicNodes = .false.
+
   !\
   ! Block node-centered MHD numberings
   !/

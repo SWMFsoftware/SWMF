@@ -6,6 +6,9 @@ Module ModAdvance
   implicit none
   save
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicAdvance = .false.
+
   ! Update check parameters
   logical :: UseUpdateCheck
   real :: percent_max_rho(2), percent_max_p(2)

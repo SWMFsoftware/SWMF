@@ -7,6 +7,9 @@ module ModRaytrace
   implicit none
   save
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicRaytrace = .false.
+
   ! Select between fast less accurate and slower but more accurate algorithms
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.

@@ -6,6 +6,9 @@ Module ModGeometry
   implicit none
   SAVE
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicGeometry = .false.
+
   !\
   ! Geometry parameters.
   !/

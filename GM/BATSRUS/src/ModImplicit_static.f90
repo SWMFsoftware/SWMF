@@ -8,6 +8,9 @@ module ModImplicit
   implicit none
   SAVE
 
+  ! Logical parameter indicating static vs. dynamic allocation
+  logical, parameter :: IsDynamicImplicit = .false.
+
   !\
   ! Number of variables and the index of energy (replacing pressure)
   !/
