@@ -29,8 +29,8 @@
 
 \section{Description of the Testing Philosophy}
 
-The Space Weather Modeling Framework (SWMF) is a heterogeneous software
-comprising of the core of the framework and the various components
+The Space Weather Modeling Framework (SWMF) is
+composed of the core of the framework and the various components
 modeling the physics domains. Since the components are developed 
 independently, it is neither possible nor desirable to enforce a
 rigorous and comprehensive testing procedure for each component.
@@ -41,8 +41,8 @@ into the SWMF.
 On the other hand we must ensure that the core of the SWMF and
 the key components developed at the Center for Space Environment
 Modeling (CSEM) are well tested and reliable. 
-We also established some base line testing for the whole
-framework which involves all the components to verify that the SWMF
+We also established some base-line testing for the whole
+framework involving all the components to verify that the SWMF
 works as expected for a more or less typical space weather simulation
 run. This test can be run on different platforms, and it serves as
 the portability testing for the SWMF.
@@ -225,7 +225,7 @@ block adaptive grid and sophisticated spatial and temporal discretization.
 The BATS-R-US code is used as the Solar Corona (SC), the Inner Heliosphere (IH)
 and the Global Magnetosphere (GM) components in the SWMF.
 
-The BATS-R-US code has hundreds of adjustable parameters, which interact
+The BATS-R-US code has hundreds of adjustable parameters that interact
 in non-trivial ways. We have developed a test suite
 which tests the BATS-R-US code and its interaction with the IE/Ridley\_serial
 ionosphere electrodynamics model. This test suite can be run in
@@ -443,11 +443,9 @@ second session would persist.
 \subsection{The 5 Component Test}
 
 This test was developed for Milestone 7I. 
-It can be done in the current version as well with minor
-modifications. 
-The tests are in the Tests directory for the released code, otherwise
-they are in the SMWF\_7I\_TEST CVS repository.  The following tests
-are available:
+It can be done in the current version as well with minor modifications. 
+The tests are in the SMWF\_7I\_TEST CVS repository.  
+The following tests are available:
 \begin{itemize}
 \item {\tt StartTst.tgz}\\
       Steady state run for IH, GM and IE components.
@@ -572,8 +570,11 @@ Recompile the code:
 \begin{verbatim}
   make
 \end{verbatim}
-Now it is allowed to overlap GM and IH. The renamed IH code has the 
-version name IH\_BATSRUS, which is printed to the standard output at the
+Now it is allowed to overlap GM and IH in the {\tt LAYOUT.in} file.
+The renamed IH code has the version name {\tt IH\_BATSRUS}, 
+which is printed to the standard output at the
 beginning of the execution.
+The results should remain identical with those obtained with the 
+{\tt IH/BATSRUS\_share} component version.
 
 \end{document}
