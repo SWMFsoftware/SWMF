@@ -101,7 +101,7 @@ if($Table =~ /test/i){
 
     &execute($testbatsrus,"-Plottype=ray");               #^CFG IF RAYTRACE
 
-    &execute($testbatsrus,"-Plottype=sph");
+    &execute($testbatsrus,"-Plottype=sph -Logtype=logpntflx");
 
     &execute($testbatsrus,"-Plottype=los");
 
