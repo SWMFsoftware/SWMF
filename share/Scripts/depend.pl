@@ -1,22 +1,27 @@
 #!/usr/bin/perl
 #^CFG COPYRIGHT UM
+use strict;
 
 # Default values
 my $Output = "Makefile.DEPEND"; # Default output
 my $Help;                       # No help unless needed
 my @search;                     # Array of search
 
+# Error and warning messages
+my $ERROR   = "depend.pl ERROR:";
+my $WARNING = "depend.pl WARNING:";
+
 # Translation between directory names and Makefile definitions
-my %defdir = ('/share/Library/src' => SHAREDIR,
-	      '/CON/Library/src'   => LIBRARYDIR,
-	      '/CON/Coupler/src'   => COUPLERDIR,
-	      '/CON/Interface/src' => INTERFACEDIR);
+my %defdir = ('/share/Library/src' => 'SHAREDIR',
+	      '/CON/Library/src'   => 'LIBRARYDIR',
+	      '/CON/Coupler/src'   => 'COUPLERDIR',
+	      '/CON/Interface/src' => 'INTERFACEDIR');
 
 # Read flags
 while($ARGV[0] =~ /-/){
     my $flag = shift(@ARGV);
-    if($flag =~ /^-o=/){$Output=$'}; # -o=Makefile.test
-    if($flag =~ /^-h/i){$Help=1};    # -h -help -H -Help
+    if($flag =~ /^-o=/){$Output=$'};  # -o=Makefile.test
+    if($flag =~ /^-h/i){$Help=1};     # -h -help -H -Help
     if($flag =~ /^(-s|-I)=?/){        # -s=path1,path2 -Ipath
 	my $path = $';  $path = shift(@ARGV) unless $path;
 
@@ -61,6 +66,7 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 # 03/20/04 G.Toth - added multiple -Ipath option so the compiler flags 
 #                   can be used without any change
 # 07/30/04 I.Sokolov - added search for include files in the search path
+# 01/20/05 G.Toth - improved module -> object file association scheme
 #EOP
 if($Help){
     print 
@@ -91,49 +97,62 @@ Interactively:  depend.pl -o=Makefile.test main.o ModMain.o'
     exit 1;
 }
 
+# Open output file now so the code dies fast if there is an error
+open(OUTPUT,">$Output") or 
+    die "$ERROR could not open dependency file $Output !!!\n";
+
 # Collect the modules from the search path
+my %env;        # Directory name --> '${SHELLVAR}'
+my %modulefile; # Module object  --> File name containing the module
+my $dir;
 foreach $dir (@search){
-   
+
     if($dir =~ /:/){
 	# Split environment name from dir name if a colon is present
+	my $env;
 	($env,$dir)=split(':',$dir);
 
 	# Store environment variable for this directory in suitable form
         $env{$dir}='${'.$env.'}';
     }
 
-    -d $dir or die "depend.pl ERROR: $dir is not a directory\n";
-    opendir(DIR,$dir) or die "depend.pl ERROR: ".
-	"could not open directory $dir\n";
+    -d $dir or die "$ERROR $dir is not a directory\n";
+    opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
+    my @source; # List of fortran 90 files
     @source = grep /\.f90$/i, readdir DIR;
     closedir DIR;
 
+    my $file; # Actual F90 file
     foreach $file (@source){
-	open FILE,"$dir/$file" or die "depend.pl ERROR: ".
-	    "could not open $dir/$file\n";
+	open FILE,"$dir/$file" or die "$ERROR: could not open $dir/$file\n";
+
+	# Form object name from source file name
+	my $objectfile = $file; $objectfile =~ s/\.f90$/.o/i;
+
 	while(<FILE>){
 
 	    if(/^\s*module\s+(\w+)/i){
-		$module = uc($1); # capitalize module name (ignore case)
-		$object = $module.'.O'; 
+		my $module = uc($1); # capitalize module name (ignore case)
+		my $object = $module.'.O'; # capitalized object file name
 
-		
-                # Check if the file with the same name as the module
-		# has been found already
+		# The object file must exist already.
+		# If there are multiple source+object files for the same module
+		# use the source file with the name matching the module name.
 
 		# Remove IH_ or SC_ from the name of the module for matching
-		$modmatch = $module; $modmatch =~ s/^(IH|SC)_//;
+		# with the file name (the file name is never renamed)
+		$module =~ s/^(IH|SC)_//;
 
-		if($modulefile{$object} !~ /\/$modmatch\.o$/i){
+		if(-e "$dir/$objectfile" and 
+		   $modulefile{$object} !~ /\/$module\.o$/i){
 		    # If not, store the filename into %modulefile
-		    $file =~ s/\.f90$/.o/i;
 		    if($env{$dir}){
 			# Store the name using the environment variable
-			$modulefile{$object}="$env{$dir}/$file";
+			$modulefile{$object}="$env{$dir}/$objectfile";
 		    }else{
 			# Store the full path
-			$modulefile{$object}="$dir/$file";
+			$modulefile{$object}="$dir/$objectfile";
 		    }
 		}
 	    }
@@ -142,21 +161,25 @@ foreach $dir (@search){
     }
 }
 
-open(OUTPUT,">$Output") or die "depend.pl ERROR: ".
-    "could not open dependency file $Output !!!\n";
+my @base;    # List of base names (without extension)
+my %use;     # Base name --> space separated list of used module objects
+my %include; # Base name --> space separated list of include files
 
+my $object;  # Name of object file
 OBJECT: 
     while($object=shift(@ARGV)){
 
-    $base=$object;
+    my $base=$object;
     # Skip files in other directories
     next OBJECT if $base=~/^\.\./;
 
     # Skip files which do not have the .o extension
     $base=~s/\.o$// or next OBJECT;
 
-    $file = '';
+    my $file; # Name of the source file corresponding to the object file
 
+    # Try different extensions
+    my $ext;
   SOURCE: 
     foreach $ext ('.f90','.F90','.f','.F'){
 	if(-e "$base$ext"){
@@ -165,38 +188,41 @@ OBJECT:
 	}
     }
     if(not $file){
-	print "ERROR: source file not found, skipping $object !!!\n";
+	print "$WARNING source file not found, skipping $object !!!\n";
 	next OBJECT;
     }
 
-    if(not open(FILE,$file)){
-	print "Error opening file $file !!!\n";
+    if(not open(FILE, $file)){
+	print "$WARNING error opening file $file !!!\n";
 	next OBJECT;
     }
 
     # Store list of names without extension
-    push(@base,$base);
+    push(@base, $base);
 
     # Build dependency list $depend for file $file
-    $depend="";
-    while($_=<FILE>){
+    my $depend;
+    while($_ = <FILE>){
 	# Collect module file names corresponding to the modules
 	if(/^\s*module\s+(\w+)/i){
-	    $module=uc("$1\.o"); # capitalize module name (ignore case)
+	    my $module=uc("$1\.o"); # capitalize module name (ignore case)
 	    $modulefile{$module}=$object;
 	}
 	# Check for 'use module'
 	if(/^\s*use\s+(\w+)/i){
-	    $module="$1.o";
+	    my $module="$1.o";
+
+	    # Append module object to the %use hash if it is not yet listed
 	    $use{$base}.=" $module" 
 		unless $use{$base}=~/ $module\b/i;
-	    ### print "base=$base uses $use{$base}\n";
 	}
 	# Check for 'include "filename"'
 	if(/^\s*include\s+[\"\']([^\'\"]+)/i){
-	    $include=$1;
-	    $includeorig=$include;
+	    my $include=$1;
+	    my $includeorig=$include;
+	    # If include file is not found check the search path
 	    if(not -e $include){
+		my $dir;
 		foreach $dir (@search){
 		    if( -e "$dir/$include"){
 			if($env{$dir}){
@@ -208,17 +234,21 @@ OBJECT:
 		    }
 		}
 	    }
-	    $include{$base}.=" $include" 
-		unless $include{$base}=~/ $include\b/;
+	    # Append include file to the %include hash if it is not yet listed
+	    $include{$base} .= " $include" 
+		unless $include{$base} =~ / $include\b/;
 	}
     }
 }
 
+my $base; # Name of base file
 foreach $base (@base){
-    $use=$use{$base};
+    my $use; # Space separeted list of used module objects
+    $use = $use{$base};
     if($use){
 	# Correct module names to file names
-	@use=split(' ',$use);
+	my @use = split(' ',$use);
+	my $mfile;
 	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
 
         # Exclude dependency on itself and compiler provided modules
@@ -227,7 +257,8 @@ foreach $base (@base){
         # Make string out of array
 	$use=' '.join(' ',@use);
     }
-    $depend=$include{$base}.$use;
+    my $depend; # Space separated list of include files and used module objects
+    $depend = $include{$base}.$use;
 
     # Get rid of leading and trailing spaces
     $depend =~ s/^ *//; $depend =~ s/ *$//;
