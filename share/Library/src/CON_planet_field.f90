@@ -269,7 +269,7 @@ contains
     ! and the output position is set to a radial projection of the input
     ! position to the magnetic equator.
     !
-    ! If the DdirDxyz_DD argument is present, the 2 x 3 Jacobian matrix 
+    ! If the DdirDxyz\_DD argument is present, the 2 x 3 Jacobian matrix 
     ! dTheta/dx, dTheta/dy, dTheta/dz, dPhi/dx, dPhi/dy, dPhi/dz
     ! is returned.
 
