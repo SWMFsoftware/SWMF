@@ -1149,11 +1149,11 @@ contains
          write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
     
-    ! Do it again to check cashe
+    ! Do it again to check cashing
     v2_D = transform_velocity(0., (/0., 0., 0./), &
          matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
-         write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
+         write(*,*)'test angular_velocity failed: GEO-GSE2 v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
   end subroutine test_axes
