@@ -1151,7 +1151,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
 
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc
 
-  oktest_ray = .true.
+  call timing_start('integrate_ray')
+
+  oktest_ray = .false.
 
   ! Initialize R_raytrace, R2_raytrace
   R_raytrace = rBody
@@ -1258,6 +1260,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
   call MPI_reduce(RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
        MPI_REAL, MPI_SUM, 0, iComm, iError)
 
+  call timing_stop('integrate_ray')
+
 end subroutine integrate_ray_accurate
 
 !============================================================================
@@ -1331,6 +1335,8 @@ subroutine test_ray_integral
 
   ! Clean up CON_ray_trace ???
   !call clean_ray
+
+  call timing_show('integrate_ray',1)
 
   write(*,*)NameSub,' finished on iProc=',iProc
   call mpi_finalize(iError)
