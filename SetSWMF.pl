@@ -115,7 +115,7 @@ sub list_versions{
     while(<MAKEFILE>){
 	if(/^(\#)?\s*([A-Z][A-Z])_VERSION\s*=\s*(\w+)/){
 	    # Store version in both the array and the hash table
-	    if($1 and $Versions{$2}){
+	    if(not $1 and $Versions{$2}){
 		# Put the selected version to the front
 		$Versions{$2} ="$3,$Versions{$2}";
 	    }else{
@@ -127,12 +127,13 @@ sub list_versions{
     close(MAKEFILE);
 
     my $Comp;
-    print "List of component versions ".
-	"(starting with the currently selected):\n\n";
+    print "\nSelected version         Other versions\n","-" x 75,"\n";
     foreach $Comp (sort keys %Versions){
-	my $Versions = $Versions{$Comp};
-	$Versions =~ s/,$//; $Versions =~ s/,/,\t$Comp\//g;
-	print "$Comp/$Versions\n";
+	my $Version;
+	foreach $Version (split(',',$Versions{$Comp})){
+	    printf "%-25s","$Comp/$Version{$Comp}";
+	}
+	print "\n";
     }
     print "\n";
 
