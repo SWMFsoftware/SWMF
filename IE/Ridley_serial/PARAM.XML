@@ -121,19 +121,20 @@ The default is that no plotfiles are saved.
 		F107Flux must be positive for ConductanceModel = 3 or 5
 	</rule>
 
-The ConductanceModel variable determines which ionosphere model is used:
+The ConductanceModel variable determines which ionosphere model is used:\\
   0 - uses a constant Pedersen conductance which is set by 
-      StarLightPedConductance
+      StarLightPedConductance\\
   1 - uses a constant Pedersen conductance which is set by 
       StarLightPedConductance, and a constant Hall conductance
-      which is set by PolarCapPedConductance
+      which is set by PolarCapPedConductance\\
   2 - uses a solar EUV combined with a nightside conductance, so
-      it uses f107_flux and StarLightPedConductance
+      it uses f107_flux and StarLightPedConductance\\
   3 - uses solar EUV, nightside, and crude oval, so uses
       f107_flux, StarLightPedConductance, and PolarCapPedConductance,
-      since a polar cap is defined with the oval.
-  4 - doesn't work
-  5 - more realistic oval, uses same variables as 3.
+      since a polar cap is defined with the oval.\\
+  4 - doesn't work\\
+  5 - more realistic oval, uses same variables as 3.\\
+
 </command>
 
 <command name="IM">

@@ -332,17 +332,16 @@ Default is an empty string.
 #VERBOSE
 100			lVerbose
 
-The lVerbose variable sets the verbosity of CON. 
-If lVerbose=0 the verbose information is minimized.
+The lVerbose variable sets the verbosity of CON.\\
+If lVerbose=0 the verbose information is minimized.\\
 If lVerbose=1 some verbose information is printed in CON_main and CON_io
-    from processor zero.
+    from processor zero.\\
 If lVerbose=10, processor zero will produce a line on the standard output
     with the name of the subroutine and the iteration number 
-    for all subroutines which call CON_set_do_test.
+    for all subroutines which call CON_set_do_test.\\
 If lVerbose=100, all processors and all subroutines which call CON_set_do_test
     will produce a line on the standard output with the 
-    name of the subroutine, the iteration number and the processor number. 
-
+    name of the subroutine, the iteration number and the processor number.\\
 The default value is lVerbose=1.
 </command>
 
@@ -374,23 +373,27 @@ T                       UseTiming      (rest of parameters read if true)
 tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 If UseTiming=.true., the execution is timed by the TIMING utility.\\
-If UseTiming=.false., the execution is not timed.
+If UseTiming=.false., the execution is not timed.\\
 
+\noindent
 The Dntiming parameter determines the frequency of timing reports:\\
 If DnTiming is positive, a timing report is produced every DnTiming steps.\\
 If DnTiming is -1, a timing report is shown at the end of each session.\\
 If DnTiming is -2, a timing report is shown at the end of the whole run.\\
-If DnTiming is -3, no timing report is shown.
+If DnTiming is -3, no timing report is shown.\\
 
+\noindent
 The nDepthTiming parameters defines the depth of the timing tree.\\
 A negative value means unlimited depth.\\
-If nDepthTiming is 1, only the total SWMF execution is timed.
+If nDepthTiming is 1, only the total SWMF execution is timed.\\
 
-The TypeTimingReport parameter determines the format of the timing reports:\\
-'cumu' - cumulative list sorted by timings\\
-'list' - list based on caller and sorted by timings\\
+\noindent
+The TypeTimingReport parameter determines the format of the timing reports:
+\begin{verbatim}
+'cumu' - cumulative list sorted by timings
+'list' - list based on caller and sorted by timings
 'tree' - tree based on calling sequence.
-
+\end{verbatim}
 The default values are shown above.
 </command>
 

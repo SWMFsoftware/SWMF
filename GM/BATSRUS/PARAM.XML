@@ -45,7 +45,7 @@ If UseNewParam is false, the time frequencies are only read when DoTimeAccurate 
 and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
 
 If UseNewAxes is true, the planet's rotational and magnetic axes are set by the new
-algorithms found in\\
+algorithms found in
 share/Library/src/CON\_axes, the planet data is set and
 stored by share/Library/src/CON\_planet, and magnetic field information and
 mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
@@ -578,11 +578,12 @@ T                       UseStrict
 -1                      lVerbose
 
 ! Verbosity level controls the amount of output to STDOUT. Default level is 1.
-!   lVerbose .le. -1 only warnings and error messages are shown.
-!   lVerbose .ge.  0 start and end of sessions is shown.
-!   lVerbose .ge.  1 a lot of extra information is given.
-!   lVerbose .ge. 10 all calls of set_oktest are shown for the test processor.
-!   lVerbose .ge.100 all calls of set_oktest are shown for all processors.
+!\\
+!   lVerbose $\leq -1$ only warnings and error messages are shown.\\
+!   lVerbose $\geq  0$ start and end of sessions is shown.\\
+!   lVerbose $\leq  1$ a lot of extra information is given.\\
+!   lVerbose $\leq 10$ all calls of set_oktest are shown for the test processor.\\
+!   lVerbose $\leq 100$ all calls of set_oktest are shown for all processors.\\
 </command>
 
 <command name="DEBUG">
@@ -758,22 +759,23 @@ heat_test1		TypeProblemDiss
 ! select a problem type which defines defaults for a lot of parameters
 !
 ! Problem type has to be defined as the first item after #TEST..#DEBUG items!
-!
-!                           iProblem: 1=MHD Uniform Flow
-!                                     2=Shock tube
-!                                     3=Solar Wind and Inner Heliosphere
-!                                     5=Mass-Loaded Comet
-!                                     6=Rotation test
-!                                     7=Diffusion test
-!                                    11=Earth Magnetosphere
-!                                    12=Saturn Magnetosphere
-!                                    13=Jupiter Magnetosphere
-!                                    14=Venus Ionosphere
-!                                    21=Conducting Cylinder (2-D)
-!                                    22=Conducting Sphere   (3-D)
-!                                    25=Arcade
-!                                    26=CME
-!				     30=Test Dissipative MHD
+!\begin{verbatim}
+!       iProblem:     1=MHD Uniform Flow
+!                     2=Shock tube
+!                     3=Solar Wind and Inner Heliosphere
+!                     5=Mass-Loaded Comet
+!                     6=Rotation test
+!                     7=Diffusion test
+!                    11=Earth Magnetosphere
+!                    12=Saturn Magnetosphere
+!                    13=Jupiter Magnetosphere
+!                    14=Venus Ionosphere
+!                    21=Conducting Cylinder (2-D)
+!                    22=Conducting Sphere   (3-D)
+!                    25=Arcade
+!                    26=CME
+!		     30=Test Dissipative MHD
+!\end{verbatim}
 </command>
 
 <command name="COORDSYSTEM" if="$_IsFirstSession">
@@ -910,8 +912,9 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-! Default depends on problem type.
+! Default depends on problem type.\\
 ! Possible values:
+!\begin{verbatim}
 ! coupled       - GM coupled to the IH component (at the 'west' boundary)
 ! fixed/inflow  - fixed solarwind values
 ! fixedB1       - fixed solarwind values without correction for the dipole B0
@@ -927,6 +930,7 @@ float                   TypeBcTop
 ! arcadebot     - intended for arcade problem only
 ! arcadebotcont - intended for arcade problem only
 ! user          - user defined
+!\end{verbatim}
 </command>
 
 <command name="INNERBOUNDARY">
@@ -972,7 +976,7 @@ ionosphere              TypeBcBody2  !read only if UseBody2=T <!-- ^CFG IF SECON
 <!-- ^CFG END SECONDBODY -->
 
 ! Possible values for TypeBcInner are:
-!
+!\begin{verbatim}
 ! 'reflect'     - reflect Vr, reflect Vphi to rotation, float Vtheta,
 !                 reflect Br, float Bphi, float Btheta, float rho, float P
 ! 'float'       - float Vr, reflect Vphi to rotation, float Vtheta,
@@ -985,10 +989,10 @@ ionosphere              TypeBcBody2  !read only if UseBody2=T <!-- ^CFG IF SECON
 !                 float B, float rho, float P
 ! 'coronatoih'  - IH component obtains inner boundary from the SC component
 ! 'user'        - user defined
-!
+!\end{verbatim}
 ! For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
 ! the velocity at the inner boundary is determined by the ionosphere model.
-!
+!\\
 ! Default value for TypeBcInner is 'ionosphere' for problem types
 ! Earth, Saturn, Jupiter, and rotation.
 ! For all other problems with an inner boundary the default is 'unknown',
@@ -1203,15 +1207,18 @@ r		TypeImplCrit (dt or r or test)
 ! Default value is ImplCritType='dt'.
 !
 ! The options are
-!
+!\begin{verbatim}
 ! if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
 ! elseif (TypeImplCrit =='r'   ) then blocks with rMinBLK .lt. rImplicit
 ! elseif (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
-!
-! are handled with local/implicit scheme. Here DtBlock is the time step
+!\end{verbatim}
+! and are handled with local/implicit scheme. 
+! Here DtBlock is the time step
 ! allowed by the CFL condition for a given block, while rMinBLK is the
-! smallest radial distance for all the cells in the block.
-! The iBlockTest and iProcTest can be defined in the #TESTIJK command.
+! smallest radial distance for all the cells in the block.\\
+!
+! \noindent
+! The iBlockTest and iProcTest can be defined in the #TESTIJK command.\\
 ! DtFixed must be defined in the #FIXEDTIMESTEP command.
 </command>
 
@@ -1465,16 +1472,9 @@ T			DoSaveRestart Rest of parameters read if true
 ! Default is DoSaveRestart=.true. with DnSaveRestart=-1 and 
 ! DtSaveRestart=-1. This results in the restart file being 
 ! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! RESTARTOUTDIR/octree.rst
-!
+! block and named as RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst.
+! In addition the grid is described by RESTARTOUTDIR/octree.rst
 ! and an ASCII header file is produced with timestep and time info:
-!
 ! RESTARTOUTDIR/restart.H
 !
 ! The restart files are overwritten every time a new restart is done,
@@ -1550,31 +1550,34 @@ rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 
 ! Default is DoSaveLogfile=.false.
 ! The logfile can contain averages or point values and other scalar
-! quantities.  It is written into an ASCII file named as
+! quantities.  It is written into an ASCII file named as\\
 !
-! NAMEPLOTDIR/log_TIMESTEP.log
+! NAMEPLOTDIR/log_TIMESTEP.log\\
 !
-! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).
+! \noindent
+! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).\\
 ! The StringLog can contain two groups of information in arbitrary order.
 ! The first is LogVar which is a single 3 character string that indicates
 ! the type of variables that are to be written.  The second group indicates
 ! the type of time/iteration output format to use.  This second group is
-! not required and defaults to something standard for each logvar case.
+! not required and defaults to something standard for each logvar case.\\
 ! Any of the identifiers for the timetype can be included in arbitrary order.
 !
-! logvar  = 'mhd', 'raw', 'flx' or 'var' - unitless output
-! logvar  = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
+!\begin{verbatim}
+! logvar   = 'mhd', 'raw', 'flx' or 'var' - unitless output
+! logvar   = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
 ! timetype = 'none', 'step', 'time', 'date'
+!\end{verbatim}
 !
 ! The logvar string is not optional and must be found on the line.
 ! The timetype is optional - when not specified a logical choice is made
-!       by the code
+!  by the code.
 !
 ! The log_var string defines the variables to print in the log file
 ! It also controls whether or not the variables will come out in
 ! dimensional or non-dimensional form by the capitalization of the log_var
 ! string.
-!
+!\begin{verbatim}
 ! ALL CAPS  - dimensional
 ! all lower - dimensionless
 !
@@ -1586,31 +1589,31 @@ rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 !       - time: step date time
 ! 'var' - vars: READ FROM PARAMETER FILE
 !       - time: step time
-!
+!\end{verbatim}
 ! log_vars is read only when the log_string contains var or VAR.  The choices
 ! for variables are currently:
-!
-! Average value on grid: rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
+!\begin{verbatim}
+! Average value on grid:   rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
 ! Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
 !                          Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
 !                          Epnt Ppnt Jxpnt Jypnt Jzpnt
 !                          theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
-! Ionosphere values:  cpcpn cpcps                  <!-- ^CFG IF IONOSPHERE -->
+! Ionosphere values:       cpcpn cpcps                  <!-- ^CFG IF IONOSPHERE -->
 !
-! Max or Min on grid:    Pmin Pmax
-! Flux values:           Aflx rhoflx Bflx B2flx pvecflx e2dflx
+! Max or Min on grid:  Pmin Pmax
+! Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
 ! Other variables:     dt
-!
+!\end{verbatim}
 ! timetype values mean the following:
+!\begin{verbatim}
 !  none  = there will be no indication of time in the logfile (not even an
 !                # of steps)
 !  step  = # of time steps (n_steps)
 !  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
 !  time  = time is given as a real number - elapsed time since the start of
 !          the run.  Units are determined by log_var and unitUSER_t
-!
-!  these can be listed in any combination in the log_string line
-!
+!\end{verbatim}
+! these can be listed in any combination in the log_string line.\\
 ! R_log is read only when one of the variables used is a 'flx' variable.  R_log
 ! is a list of radii at which to calculate the flux through a sphere.
 </command>
@@ -1680,12 +1683,12 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! For each satellite the StringSatellite parameter determines what
 ! is saved into the satellite file(s).
 ! The StringSatellite can contain the following 3 parts in arbitrary order
-!
+!\begin{verbatim}
 ! satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
-!                 'MHD', 'FUL' or 'VAR' (dimensional output)
+!                  'MHD', 'FUL' or 'VAR' (dimensional output)
 ! trajectorytype = 'file' or 'eqn'
 ! timetype       = 'none', 'step', 'time', 'date'
-!
+!\end{verbatim}
 ! The 'satellitevar' part is required, 
 ! the 'trajectorytype' part is optional (defaults to 'file'), and
 ! the 'timetype' part is also optional (default depends on satellitevar)
@@ -1697,16 +1700,16 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! dimensionless. 
 !
 ! If 'satellitevar' is set to 'mhd', the variables 
-! 'rho ux uy uz bx by bz p jx jy jz' will be saved, while'ful' implies
+! 'rho ux uy uz bx by bz p jx jy jz' will be saved, while 'ful' implies
 ! 'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'.
+!
 ! If satellitevar is set to 'var' then the list of variables is read 
 ! from the NameSatelliteVar parameter as a space separated list. 
 ! The choices for variables are currently:
-!
-! rho, rho, rhouy, rhouz, ux, uy, uz,
-! Bx, By, Bz, B1x, B1y, B1z,
-! E, P, Jx, Jy, Jz,
-! theta1, theta2, phi1, phi2, status.
+!\begin{verbatim}
+! rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
+! E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
+!\end{verbatim}
 !
 ! If 'trajectorytype' is 'file' (default) than the trajectory of the 
 ! satellite is read from the file given by the NameTrajectoryFile parameter.
@@ -1715,27 +1718,59 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! in satellites.f90.
 !
 ! The 'timetype' values mean the following:
+!\begin{verbatim}
 !  none  = there will be no indication of time in the logfile 
 !          (not even the number of steps),
 !  step  = number of time steps (n_steps),
 !  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
 !  time  = time is given as a real number - elapsed time since the start of
 !          the run.  Units are determined by satellitevar and unitUSER_t.
-!
+!\end{verbatim}
 !  More than one 'timetype' can be listed. They can be put together in any
-!  combination.
+!  combination.\\
 !
+! \noindent
 ! The DnOutput and DtOutput parameters determine the frequency of extracting
-! values along the satellite trajectories. 
+! values along the satellite trajectories. \\
 !
+! \noindent
 ! The extracted satellite information is saved into the files named
-!
+!\begin{verbatim}
 ! PLOTDIR/satellite_NN_TRAJECTORYNAME.sat
-!
+!\end{verbatim}
 ! where NN is the number of the satellite (e.g. 01), and TRAJECTORYNAME
-! is the name of the trajectory file.
+! is the name of the trajectory file.\\
 !
+! \noindent
 ! The default is nSatellite=0, i.e. no satellite data is saved.
+!
+! Satellite input files contain the trajectory of the satellite.  They should
+! have to following format:
+!\begin{verbatim}
+! #COOR
+! GSM
+!
+! #START
+!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  
+!  2004  6  24   0   1  58   0  2.8  -3.2 - 3.6  
+!\end{verbatim}
+!
+! The #COOR command is optional.  It indicates which coordinate system the data
+! represents.  The default is GSM, but others are possible.
+
+! The file containing the upstream conditions should include data in the 
+! following order:
+!\begin{verbatim}
+! yr mn dy hr min sec msec x y z
+!\end{verbatim}
+! with the position variables in units of the body radii or the length scale
+! normalization.
+!
+! The maximum number of lines of data allowed in the input file is 50,000.  
+! However, this can be modified by changing the variable Max_Satellite_Npts 
+! in the file GM/BATSRUS/ModIO.f90.
+
+
 </command>
 
 <command name="SAVEPLOT">
@@ -1908,20 +1943,23 @@ F			IsParallel
 -3.5			zStartLine
 T			IsParallel
 
-! Default is nPlotFile=0
-! StringPlot must contain the following 3 parts in arbitrary order
+! Default is nPlotFile=0. \\
 !
+! \noindent
+! StringPlot must contain the following 3 parts in arbitrary order
+!\begin{verbatim}
 ! plotarea plotvar plotform
 !
 ! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'sph', 'los', 'lin'
 ! plotvar  = 'mhd', 'ful','raw', 'ray', 'flx', 'sol', 'var' - unitless output
 ! plotvar  = 'MHD', 'FUL','RAW', 'RAY', 'FLX', 'SOL', 'VAR' - dimensional
 ! plotform = 'tec', 'idl'
+!\end{verbatim}
+! NOTES: The plotvar option 'sol' is only valid for plotarea 'los'.\\
 !
-! NOTES: The plotvar option 'sol' is only valid for plotarea 'los'.
-!
+!\noindent
 ! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
-!
+!\begin{verbatim}
 ! x=0	- full x=0 plane: xmin=-0.001, xmax=0.001, average for symmetry plane
 ! y=0	- full y=0 plane: ymin=-0.001, ymax=0.001, average for symmetry plane
 ! z=0	- full z=0 plane: zmin=-0.001, zmax=0.001, average for symmetry plane
@@ -1930,11 +1968,11 @@ T			IsParallel
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
 ! los   - line of sight integrated plot
 ! lin   - one dimensional plot along a field or stream line
-!
+!\end{verbatim}
 ! The plotvar string defines the plot variables and the equation parameters.
 ! It also controls whether or not the variables will be plotted in dimensional
 ! values or as non-dimensional values:
-!
+!\begin{verbatim}
 ! ALL CAPS  - dimensional
 ! all lower - dimensionless
 !
@@ -1952,70 +1990,84 @@ T			IsParallel
 !         pars: READ FROM PARAMETER FILE
 ! 'sol' - vars: wl pb
 !         pars: mu
-!
+!\end{verbatim}
 ! The plot_string is always followed by the plotting frequency
-! DnSavePlot and for time accurate runs by DtSavePlot.
+! DnSavePlot and for time accurate runs by DtSavePlot.\\
 !
+!\noindent
 ! Depending on StringPlot, further information is read from the parameter file
 ! in this order:
-!
+!\begin{verbatim}
 ! PlotRange		if plotarea is 'cut'
 ! DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
 ! Radius		if plotarea is 'sph'
 ! NameVars		if plotform is 'var'
 ! NamePars		if plotform is 'var'
-!
+!\end{verbatim}
 ! The PlotRange is described by 6 coordinates. If the width in one or two 
 ! dimensions is less than the smallest cell size within the plotarea, 
 ! then the plot file will be 2 or 1 dimensional. If the range is thin but
 ! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
-! in the postprocessing.
+! in the postprocessing.\\
 !
+! \noindent
 ! Possible values for DxSavePlot (for IDL files):
-!
+!\begin{verbatim}
 !  0.5	- fixed resolution (any positive value)
 !  0.	- fixed resolution based on the smallest cell in the plotting area
 ! -1.	- unstructured grid will be produced by PostIDL.exe
-!
+!\end{verbatim}
 ! Radius is the radius of the spherical cut for plotarea='sph'
 !
-! LosVectorX,Y,Z define the direction of the line of sight integration
-! xSizeImage, ySizeImage defines the size of the LOS image
-! xOffset, yOffset defines the offset relative to the origin (Sun)
-! rOccult defines the minimum distance of the line from the origin (Sun)
-! MuLimbDarkening is the limb darkening parameter for the 'wl' (white light)
+! With #SAVEPLOT it is possible to create plots which are the integral along
+! the line of site of some quantity.  The variables which control this are the 
+! following:
+!\begin{verbatim}
+!    LosVectorX,Y,Z define the direction of the line of sight integration
+!    xSizeImage, ySizeImage defines the size of the LOS image
+!    xOffset, yOffset defines the offset relative to the origin (Sun)
+!    rOccult defines the minimum distance of the line from the origin (Sun)
+!    MuLimbDarkening is the limb darkening parameter for the 'wl' (white light)
 !                 and 'pb' (polarization brightness) plot variables.
+!\end{verbatim}
 !
+!\noindent
 ! The possible values for NameVars with plotarea 'los' 
-!       are listed in subroutine set_plotvar_los in write_plot_los.f90.
-! The possible values for NameVars for other plot areas
-!       are listed in subroutine set_plotvar in write_plot_common.f90.
+!       are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
 !
+! \noindent
+! The possible values for NameVars for other plot areas
+!       are listed in subroutine set_plotvar in write_plot_common.f90.\\
+!
+! \noindent
 ! The possible values for NamePars 
-!       are listed in subroutine set_eqpar in write_plot_common.f90
+!       are listed in subroutine set_eqpar in write_plot_common.f90\\
 !
 ! A plot file is produced by each processor.  This file is ASCII in 'tec'
 ! format and can be either binary or ASCII in 'idl' format as chosen under
 ! the #SAVEBINARY flag.  The name of the files are
-!
-! IO2/plotarea_plotvar_plotnumber_timestep_PEnumber.extenstion 
-!
+!\begin{verbatim}
+! IO2/plotarea_plotvar_plotnumber_timestep_PEnumber.extenstion
+!\end{verbatim}
 ! where extension is 'tec' for the TEC and 'idl' for the IDL file formats.
 ! The plotnumber goes from 1 to nplot in the order of the files in PARAM.in.
 ! After all processors wrote their plot files, processor 0 writes a small 
 ! ASCII header file named as
-!
+!\begin{verbatim}
 ! IO2/plotarea_plotvar_plotnumber_timestep.headextension
-!
+!\end{verbatim}
 ! where headextension is:
+!\begin{verbatim}
 !           'T' for TEC file format
 !           'S' for TEC and plot_area 'sph' 
 !           'h' for IDL file format       
+!\end{verbatim}
 !
+!\noindent
 ! The line of sight integration produces TecPlot and IDL files directly:
-!
+!\begin{verbatim}
 ! IO2/los_plotvar_plotnumber_timestep.extension
-!
+\end{verbatim}
 ! where extension is 'dat' for TecPlot and 'out' for IDL file formats.
 ! The IDL output from line of sight integration is always in ASCII format.
 
@@ -2077,10 +2129,10 @@ F			DoSavePlotsAmr
 default			TypeRefineInit
 4			nRefineLevelInit
 
-! These are the default values for the initial refinement.
-
-! Possible values for InitialRefineType:
+! These are the default values for the initial refinement.\\
+! Possible values for InitialRefineType:\\
 ! Default depends on problem_type. 
+!\begin{verbatim}
 ! 'none'		- Refine no blocks
 ! 'all' 		- Refine all blocks
 ! '3Dbodyfocus'		- Refinement focusing on body
@@ -2089,6 +2141,7 @@ default			TypeRefineInit
 ! 'points'      	- Refine around given points
 ! 'magnetosphere'	- Refine for generic magnetosphere
 ! *			- any other value will use default value by ProblemType
+!\end{verbatim}
 </command>
 
 <command name="AMRINITPHYSICS" if="$_IsFirstSession">
@@ -2291,7 +2344,7 @@ F			DoFixBodyLevel
 
 ! Set the minimum/maximum levels that can be affected by AMR.  The usage is as
 ! follows:
-!
+!\begin{verbatim}
 ! MinBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
 !                       further.
 ! MinBlockLevel .lt.0 The current grid is ``frozen'' for coarsening such that
@@ -2304,7 +2357,7 @@ F			DoFixBodyLevel
 !                       blocks are not allowed to be refined to a size
 !                       smaller than their current one.
 ! DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
-!
+!\end{verbatim}
 ! This command has no effect when DoAutoRefine is .false. in the #AMR command.
 !
 ! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
@@ -2438,9 +2491,9 @@ T			UseSunEarth   ! Only if 'Transient'
 0.00E+00		zEarth        ! Only if UseSunEarth
 5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
-! The default values depend on problem_type. 
+! The default values depend on problem_type.\\ 
 ! At most three criteria can be given. Possible criteria:
-!
+!\begin{verbatim}
 ! 'gradT'		- gradient of temperature
 ! 'gradP'		- gradient of pressure
 ! 'gradlogrho'		- gradient of log(rho)
@@ -2455,11 +2508,12 @@ T			UseSunEarth   ! Only if 'Transient'
 ! 'flux'		- radial mass flux
 ! 'heliocurrentsheet'	- refinement in the currentsheet of the heliosphere
 ! 'Rcurrents'		- refinement near Rcurrents value
+!\end{verbatim}
+! All the names can also be spelled with all small case letters.\\
 !
-! All the names can also be spelled with all small case letters.
-!
-! The possible choices for TypeTransient
-!
+!\noindent
+! The possible choices for TypeTransient:
+!\begin{verbatim}
 ! 'P_dot' (same as 'p_dot')
 ! 'T_dot' (same as 't_dot')
 ! 'Rho_dot' (same as 'rho_dot')
@@ -2467,14 +2521,17 @@ T			UseSunEarth   ! Only if 'Transient'
 ! 'B_dot' (same as 'b_dot')
 ! 'Rho_2nd_1' (same as 'rho_2nd_1')
 ! 'Rho_2nd_2' (same as 'rho_2nd_2')
-! 
+!\end{verbatim}
+!
 ! Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
 ! a factor that defines how close to the ray Sun-Earth to refine the grid.
 ! Note that the AMR occurs in a cylinder around the ray.
-! Example for InvD2Ray = 
+! Example for InvD2Ray =
+\begin{verbatim}
 !   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
 !   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
 !   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
+\end{verbatim}
 </command>
 </commandgroup>
 <commandgroup name="SCHEME PARAMETERS">
@@ -2506,22 +2563,27 @@ Rusanov			TypeFlux
 minmod			TypeLimiter ! Only for nOrder=2
 1.2			LimiterBeta ! Only for LimiterType='beta'
 
-! Default values are shown above.
+! Default values are shown above.\\
 !
+!\noindent
 ! Possible values for TypeFlux:
+!\begin{verbatim}
 ! 'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
 ! 'Linde        - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
 ! 'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
 ! 'Roe'         - Roe's approximate Riemann flux       <!--^CFG IF ROEFLUX  -->
-!
+!\end{verbatim}
 ! Possible values for TypeLimiter:
+!\begin{verbatim}
 ! 'minmod'	- minmod limiter is the most robust 1D limiter
 ! 'beta'        - Beta limiter
-!
+!\end{verbatim}
 ! Possible values for LimiterBeta are between 1.0 and 2.0 : 
+!\begin{verbatim}
 !  LimiterBeta = 1.0 is the same as the minmod limiter
 !  LimiterBeta = 2.0 is the same as the superbee limiter
 !  LimiterBeta = 1.2 is the recommended value
+!\end{verbatim}
 </command>
 
 <command name="NONCONSERVATIVE">
@@ -2572,22 +2634,23 @@ GradP		TypeConservCrit
 ! Select the parts of the grid where the conservative vs. non-conservative
 ! schemes are applied. The number of criteria is arbitrary, although 
 ! there is no point applying the same criterion more than once.
+!
 ! If no criteria is used, the whole domain will use conservative or
 ! non-conservative equations depending on UseNonConservative set in
 ! command #NONCONSERVATIVE.
 !
 ! The physics based conservative criteria ('p' and 'GradP')
 ! select cells which use the non-conservative scheme if ALL of them are true:
-!
+!\begin{verbatim}
 ! 'p'      - the pressure is smaller than fraction pCoeffConserv of the energy
 ! 'GradP'  - the relative gradient of pressure is less than GradPCoeffConserv
-!
+!\end{verbatim}
 ! The geometry based criteria are applied after the physics based criteria 
 ! (if any) and they select the non-conservative scheme if ANY of them is true:
-!
+!\begin{verbatim}
 ! 'r'        - radial distance of the cell is less than rConserv
 ! 'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
-!
+!\end{verbatim}
 ! Default values are nConservCrit = 1 with TypeConservCrit = 'r'
 ! and rConserv=2*rBody, where rBody has a problem dependent default.
 </command>
@@ -2634,21 +2697,28 @@ T			UseUpdateCheck
 2			nOrderProlong (1 or 2 for ghost cells)
 lr			TypeProlong  ! Only for nOrderProlong=2
 
-! Default is prolong_order=1. 
-! Possible values for prolong_type:
-! 1. in message_pass_dir (used if limiter_type is not 'LSG')
-! 'lr'		- interpolate only with left and right slopes 
-! 'central'	- interpolate only with central difference slope
-! 'minmod' 	- interpolate only with minmod limited slope
-! 'lr2'		- like 'lr' but extrapolate when necessary
-! 'central2'	- like 'central' but extrapolate when necessary
-! 'minmod2'	- like 'minmod' but extrapolate when necessary
-! 'lr3'		- only experimental
+! Default is prolong_order=1. \\
+! Possible values for prolong_type:\\
 !
+!\noindent
+! 1. in message_pass_dir (used if limiter_type is not 'LSG')
+!\begin{verbatim}
+!    'lr'          - interpolate only with left and right slopes 
+!    'central'	   - interpolate only with central difference slope
+!    'minmod' 	   - interpolate only with minmod limited slope
+!    'lr2'	   -  like 'lr' but extrapolate when necessary
+!    'central2'	   - like 'central' but extrapolate when necessary
+!    'minmod2'	   - like 'minmod' but extrapolate when necessary
+!    'lr3'         - only experimental
+!\end{verbatim}
+!
+!\noindent
 ! 2. in messagepass_all (used if limiter_type is 'LSG')
-! 'lr','lr2'		- left and right slopes (all interpolation)
-! 'central','central2'	- central differences (all interpolation)
-! 'minmod','minmod2'	- to be implemented
+\begin{verbatim}
+!    'lr','lr2'		    - left and right slopes (all interpolation)
+!    'central','central2'   - central differences (all interpolation)
+!    'minmod','minmod2'	    - to be implemented
+!\end{verbatim}
 </command>
 
 <command name="MESSAGEPASS" alias="OPTIMIZE">
@@ -2663,9 +2733,9 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 #MESSAGEPASS
 allopt			TypeMessagePass
 
-! Default value is shown above.
-! Possible values for optimize_message_pass
-!
+! Default value is shown above.\\
+! Possible values for optimize_message_pass:
+!\begin{verbatim}
 ! 'dir'		- message_pass_dir: group messages direction by direction
 ! 'face'	- message_pass_dir: group messages face by face
 ! 'min'		- message_pass_dir: send equal, restricted and prolonged 
@@ -2677,10 +2747,10 @@ allopt			TypeMessagePass
 ! 'all'		- message_pass_cell: corners, edges and faces in single message
 !
 ! 'allopt'      - message_pass_cell:  faces only in a single message
-!
-! Constrained transport requires corners, default is 'all'! <!--^CFG IF CONSTRAINB-->
-! Diffusive control requires corners, default is 'all'!<!--^CFG IF DIVBDIFFUSE-->
-! Projection uses message_pass_dir for efficiency!<!--^CFG IF PROJECTION-->
+!\end{verbatim}
+! Constrained transport requires corners, default is 'all'!\\ <!--^CFG IF CONSTRAINB-->
+! Diffusive control requires corners, default is 'all'!\\<!--^CFG IF DIVBDIFFUSE-->
+! Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
 </command>
 
 <!-- ^CFG IF BORISCORR BEGIN -->
@@ -2795,21 +2865,24 @@ rel			TypeProjectStop:'rel' or 'max' error for stop condition
 0.0			AbsoluteLimit 
 50			MaxMatvec (upper limit on matrix.vector multipl.)
 
-! Default values are shown above.
+! Default values are shown above.\\
 !
+!\noindent
 ! For symmetric Laplacian matrix TypeProjectIter='cg' (Conjugate Gradients)
 ! should be used, as it is faster than BiCGSTAB. In current applications
-! the Laplacian matrix is always symmetric.
-! 
-! The iterative scheme stops when the stopping condition is fulfilled:
-!   TypeProjectStop = 'rel' : 
-!        stop if ||div B|| &lt; RelativeLimit*||div B0||
-!   TypeProjectStop = 'max' and RelativeLimit is positive: 
-!        stop if max(|div B|) &lt; RelativeLimit*max(|div B0|)
-!   TypeProjectStop = 'max' and RelativeLimit is negative
-!        stop if max(|div B|) &lt; AbsoluteLimit
+! the Laplacian matrix is always symmetric.\\
 !
-!   where ||.|| is the second norm, and B0 is the magnetic
+!\noindent 
+! The iterative scheme stops when the stopping condition is fulfilled:
+!\begin{verbatim}
+!   TypeProjectStop = 'rel': 
+!        stop if ||div B||    &lt; RelativeLimit*||div B0||
+!   TypeProjectStop = 'max' and RelativeLimit is positive:
+!        stop if max(|div B|) &lt; RelativeLimit*max(|div B0|)
+!   TypeProjectStop = 'max' and RelativeLimit is negative: 
+!        stop if max(|div B|) &lt; AbsoluteLimit
+!\end{verbatim}
+!   where {\tt ||.||} is the second norm, and B0 is the magnetic
 !   field before projection. In words 'rel' means that the norm of the error
 !   should be decreased by a factor of RelativeLimit, while 
 !   'max' means that the maximum error should be less than either
@@ -2836,6 +2909,7 @@ rel			TypeProjStop
 0.0001			RelativeLimit
 0.0			AbsoluteLimit 
 500			MaxMatvec
+
 <!-- ^CFG END CONSTRAINB -->
 </command>
 
@@ -2855,13 +2929,13 @@ rel			TypeProjStop
 ! E_BLK variable. Such discrepancies can be caused by the
 ! constrained transport scheme and by the projection scheme
 ! which modify the magnetic energy. The algorithm is the following:
-!
+!\begin{verbatim}
 ! q = eThermal/e
 !
 !                  q.lt. pRatioLow  E is set to eThermal+(rho*u**2+B**2)/2
 ! if pRatioLow .lt.q.lt.pRatioHigh  both P and E are modified depending on q
 ! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
-!
+!\end{verbatim}
 ! The 2nd case is a linear interpolation between the 2nd and 4th cases.
 </command>
 <!-- ^CFG END PROJECTION -->
@@ -3017,10 +3091,10 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! the rotation angle is ShockSlope. 
 ! When the shock is rotated, it is best used in combination
 ! with sheared outer boundaries, but then only
-!
+!\begin{verbatim}
 ! ShockSlope = 1., 2., 3., 4., 5.      .....
 ! ShockSlope = 0.5, 0.33333333, 0.25, 0.2, .....
-!
+!\end{verbatim}
 ! can be used, because these angles can be accurately represented
 ! on the grid.
 </command>
@@ -3063,6 +3137,8 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 T			UseUpstreamInputFile (rest of parameters read if true)
 IMF.dat                 NameUpstreamFile
 
+! Default is UseUpstreamInputFile = .false.
+!
 ! Read IMF data from file NameUpstreamFile if UseUpstreamInputFile is true.
 ! The data file contains all information required for setting the upstream
 ! boundary conditions. Parameter TypeBcEast should be set to 'vary' for
@@ -3074,7 +3150,58 @@ IMF.dat                 NameUpstreamFile
 ! the #UPSTREAM_INPUT_FILE command with UseUpstreamInputFile=.true.
 ! is required by the GM component.
 !
-! Default is UseUpstreamInputFile = .false.
+! The input files are strutured similar to the PARAM.in file.  There are 
+! {\tt #commands} that can be  inserted as well as the data.
+! The file containing the upstream conditions should include data in the 
+! following order:
+! \begin{verbatim}
+! yr mn dy hr min sec msec bx by bz vx vy vz dens temp
+! \end{verbatim}
+! The units of the variables should be:
+! \begin{verbatim}
+! Magnetic field (b)     nT
+! Velocity (v)           km/s
+! Number Density (dens)  cm^-3
+! Temperature (Temp)     K
+! \end{verbatim}
+!
+! The input files  can have the following optional commands at the beginning
+! \begin{verbatim}
+! #COOR
+! GSM          The coordinate system of the data (GSM or GSE)
+!
+! #PLANE       The input data represents values on a tilted plane
+! 30.0         Angle to rotate in the XY plane
+! 30.0         Angle to rotate in the XZ plane
+!
+! #POSITION    Origin for the plane rotation (see #PLANE)
+! 30.0         Y location
+! 30.0         Z location
+!
+! #ZEROBX
+! T            T means Bx is ignored and set to zero
+!
+! #TIMEDELAY
+! 3600.0       A real number in seconds by which to delay the input
+! \end{verbatim}
+!
+! Finally, the data should be preceded by a {\tt #START}.  The beginning of 
+! a typical upstream input file might look like:
+! \begin{verbatim}
+! #COOR
+! GSM
+! 
+! #ZEROBX
+! T
+!
+! #START
+!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
+!  2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
+! \end{verbatim}
+!
+! The maximum number of lines of data allowed in the input file is 50,000.  
+! However, this can be modified by changing the variable Max_Upstream_Npts 
+! in the file GM/BATSRUS/get_solar_wind_point.f90.
 </command>
 
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
