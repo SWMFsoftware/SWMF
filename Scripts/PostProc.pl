@@ -11,8 +11,8 @@ use strict;
 my $Pwd = `pwd`; chop $Pwd;
 
 my $Dir;
-foreach $Dir ("GM/IO2", "IH/IO2", "SC/IO2"){
-    next unless -d $Dir;
+foreach $Dir ("GM", "IH", "SC"){
+    next unless -d "$Dir/IO2";
     print "cd $Dir\n" if $Verbose;
     chdir $Dir or die "Could not change directory to $Dir\n";
     &shell("./pIDL");
@@ -24,8 +24,8 @@ foreach $Dir ("GM/IO2", "IH/IO2", "SC/IO2"){
     chdir $Pwd;
 }    
 
-$Dir = "IE/ionosphere";
-if(-d $Dir){
+$Dir = "IE";
+if(-d "$Dir/ionosphere"){
     print "cd $Dir\n" if $Verbose;
     chdir $Dir or die "Could not change directory to $Dir\n";
     if($Gzip){
