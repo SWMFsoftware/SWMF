@@ -43,14 +43,14 @@ struct surface_interpolation_data_type {
   vector<surface_interpolation_element_data_type> node;
 };
 
-template<class CellType> class Cgrid{
+template<class DataType=double,class NodeType=Cnode<DataType>,class FaceType=Cface<DataType,NodeType>,class CellType=Ccell<DataType,NodeType,FaceType> > class Cgrid{
 public:
   long int nnodes,nfaces,ncells;
 
-  Cnode* node;
-  Cface* face;
+  NodeType* node;
+  FaceType* face;
   CellType* cell;
-  array_4d<float> TMatrix;
+  array_4d<DataType> TMatrix;
   cells_connection_data_type* cells_connection_data;
   array_4d<double> bvector;
   vector<surface_interpolation_data_type> surface_interpolation_data;
@@ -66,8 +66,8 @@ public:
   ~Cgrid() {
 
      if (nnodes>0) {
-       while (--nnodes>=0) node[nnodes].~Cnode();
-       while (--nfaces>=0) face[nfaces].~Cface();
+       while (--nnodes>=0) node[nnodes].~NodeType();
+       while (--nfaces>=0) face[nfaces].~FaceType();
        while (--ncells>=0) cell[ncells].~CellType();
 
        delete [] node;
@@ -179,7 +179,7 @@ public:
     char str1[200],str[200];
     long int i;
     int idim;
-    float x[3];
+    DataType x[3];
     long int line;
 
     errno=0;
@@ -209,8 +209,8 @@ public:
     line=2;
     if (errno!=0) error(line);
 
-    node=new Cnode[nnodes];
-    face=new Cface[nfaces];
+    node=new NodeType[nnodes];
+    face=new FaceType[nfaces];
     cell=new CellType[ncells];
 
     fgets(str,200,fd);line++;
@@ -304,8 +304,8 @@ public:
   void InitInterpolationData() {
     long int k,ncell,nnode;
     long int* nnn=new long int[nnodes];
-    float* sum=new float[nnodes];
-    float measure;
+    DataType* sum=new DataType[nnodes];
+    DataType measure;
     int idim;
 
     for (nnode=0;nnode<nnodes;nnode++) {
@@ -323,7 +323,7 @@ public:
     }
 
     for (nnode=0;nnode<nnodes;nnode++) {    
-      node[nnode].InterpolationWeight=new float[nnn[nnode]+1];
+      node[nnode].InterpolationWeight=new DataType[nnn[nnode]+1];
       node[nnode].InterpolationMask=new long int [nnn[nnode]+1];
       nnn[nnode]=0;
     } 
@@ -345,11 +345,11 @@ public:
        
 //==================================================
 //Get "global" number of cell, which contains point x 
-  long int GetNCell(float* x) {
+  long int GetNCell(DataType* x) {
     int idim,i;
     long int nnode,ncell;
-    float xmin[3],xmax[3],locx[3],summ;
-    array_1d<float> x_node(DIM);
+    DataType xmin[3],xmax[3],locx[3],summ;
+    array_1d<DataType> x_node(DIM);
     bool flag;
 
     for (ncell=0;ncell<ncells;ncell++) {
@@ -404,7 +404,7 @@ public:
 
 //==================================================
   void GetTMatrix2D() {
-    array_1d<float> a0(DIM),a1(DIM),b(DIM);
+    array_1d<DataType> a0(DIM),a1(DIM),b(DIM);
     int i,n[3];
     double detA,det;
 
@@ -493,7 +493,7 @@ public:
 //get bvector
           if (nbr_ncell>=0) {
             int idim;
-            array_1d<float> e(DIM);
+            array_1d<DataType> e(DIM);
             double a;
             int n,n_common_nodes;
 
@@ -580,7 +580,7 @@ public:
 //==================================================
   void GetTMatrix1D() {
     int n;
-    double l;
+    DataType l;
 
     TMatrix.init(DIM,DIM,DIM+1,ncells);
 
@@ -625,7 +625,7 @@ public:
 
 //==================================================
   void GetTMatrix3D() {
-    array_1d<float> a0(DIM),a1(DIM),a2(DIM),b(DIM);
+    array_1d<DataType> a0(DIM),a1(DIM),a2(DIM),b(DIM);
     int i,n[3];
     double detA,det;
 
