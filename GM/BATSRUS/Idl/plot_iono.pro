@@ -1015,7 +1015,7 @@ for n = 0, nfiles-1 do begin
 
       endif
 
-      if (strpos(mklower(line),"time") gt -1) then begin
+      if (strpos(line,"TIME") gt -1) then begin
 
         int_tmp = 0
         for i=0,5 do begin
