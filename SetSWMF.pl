@@ -14,7 +14,6 @@ my $MakefileComp     = 'Makefile.def';
 my $MakefileCompOrig = 'CON/Makefile.def';
 my $MakefileCompLocal= 'Makefile.def';
 my $GridSizeScript   = 'GridSize.pl';
-my $FlushFile        = 'share/Library/src/ModUtilities.f90';
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -211,18 +210,6 @@ sub install_swmf{
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
     &set_precision("init");
-
-#    print "Configure the flush command in $FlushFile for $OS and $Compiler\n";
-#    die "$ERROR could not find file $FlushFile\n" unless -f $FlushFile;
-#    if(not $DryRun){
-#	@ARGV=($FlushFile);
-#	while(<>){
-#	    # Uncomment lines !something !PERL if some_expression 
-#	    # if some_expression evaluates to true
-#	    eval("s/^\\s*!// if $'") if /!PERL if/;
-#	    print;
-#	}
-#    }
 
     # Now SWMF is installed
     $Installed = 1 unless $DryRun;
