@@ -131,9 +131,9 @@ subroutine calc_electric_field(iBlock)
 
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
-  use ModAdvance,    ONLY: Flux_VX,Flux_VY,Flux_VZ, Ex_CB, Ey_CB, Ez_CB
-  use ModGeometry,   ONLY: fAx_BLK,fAy_BLK,fAz_BLK
-  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ
+  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
