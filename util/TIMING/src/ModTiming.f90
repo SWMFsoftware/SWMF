@@ -29,7 +29,7 @@ module ModTiming
 
   logical :: UseTiming=.false.
 
-  integer, parameter :: maxtiming=100, maxclock=3
+  integer, parameter :: maxtiming=1000, maxclock=3
 
   character (LEN=40), dimension(maxtiming) :: sa_name
   character (LEN=40), parameter :: spaces = repeat(' ',40)
@@ -57,6 +57,7 @@ module ModTiming
 
   interface
      function timing_cpu()
+       implicit none
        real(selected_real_kind(12)) :: timing_cpu
      end function timing_cpu
   end interface
