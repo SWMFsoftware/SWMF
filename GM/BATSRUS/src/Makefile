@@ -70,7 +70,7 @@ OBJ2=   ${OBJ2A}\
 	ModPrecond.o precond.o ${BLAS}
 #^CFG END IMPLICIT
 
-OBJ3=ray_trace.o ray_pass.o #			^CFG IF RAYTRACE
+OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
 OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
