@@ -168,21 +168,20 @@ c  *****************  end subroutine PANGLE    ******************
 !INTERFACE:
       subroutine initial
 !EOP                   
-      include 'param.h'
+      include 'coupler.h'
       common /size /  nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
-     1                vr(0:nRMax)
       include 'stdout.h'
 
       do 10 i=0,nr
        algbb(i) = 0.       
        algll(i) = 0.      
        algnn(i) = 0.       
-          vr(i) = 0.       
+          vr(i) = 0.
+       VxOld(i) = 0.
+       VyOld(i) = 0.
+       VzOld(i) = 0.
 
       do 30 k=0,nw
       do 20 j=0,nmu
@@ -204,8 +203,10 @@ c **************************  end of INiT ****************
 !Uses the values obtained from MHD and calculates the Lagrangian time 
 !derivatives which are multipliers in the kinetic equation.
 !Sets actual values for spatial dependance of the scattering length
+!Input parameters: t - is not used, dt - time step, jj - is not used
+!is not used in the framework
 !EOP
-      include 'param.h'
+      include 'coupler.h'
       common /size / nr,nmu,nw, dim1
       common /gazdi/ ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1               ccmin,ccmax,aamin,aamax,bbmin,bbmax
@@ -222,8 +223,6 @@ c **************************  end of INiT ****************
       common /quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
       common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
-     1                vr(0:nRMax)
       common /smile / mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
@@ -233,7 +232,6 @@ c **************************  end of INiT ****************
      6       ,dbmds(0:6000),dbfids(0:6000)
       logical UseSelfSimilarity,UseRefresh
       common/log/UseSelfSimilarity,UseRefresh
-      include 'coupler.h'
       include 'stdout.h'
 c +++++++++++++++++++++++++++++++++++++++     concept:   +++++ 
 c    Transfers between similarity solution and actual, 
@@ -302,7 +300,7 @@ c -------------------------------   this one new for transport :
      1              +by(i+1)*(vy(i+1)-vyOld(i+1))
      2              +bz(i+1)*(vz(i+1)-vzOld(i+1)))/(abb*dt)
             abb=alog(abb)
-            ann=alog(dd(i+1))
+            ann=alog(dens(i+1))
             !Each used value of vx,vy,vz should be saved:
             vxOld(i+1)=vx(i+1)
             vyOld(i+1)=vy(i+1)
@@ -1027,14 +1025,12 @@ c  *****************  end subroutine SOLV-CC  ******************
 c ========================  OUTPUT ROUTINES to be revised ========
 
       subroutine alla(io,jst,t)
-      include 'param.h'
+      include 'coupler.h'
       common /size  / nr,nmu,nw, dim1
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
-     1                vr(0:nRMax)
       common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
@@ -1045,13 +1041,13 @@ c ========================  OUTPUT ROUTINES to be revised ========
       call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
-      if (io.eq.10) open(iFile,file = 'alla0.out')
-      if (io.eq.11) open(iFile,file = 'alla1.out')
-      if (io.eq.12) open(iFile,file = 'alla2.out')
-      if (io.eq.13) open(iFile,file = 'alla3.out')
-      if (io.eq.14) open(iFile,file = 'alla4.out')
-      if (io.eq.15) open(iFile,file = 'alla5.out')
-      if (io.eq.16) open(iFile,file = 'alla6.out')
+      if (io.eq.10) open(iFile,file = './SP/alla0.out',status='unknown')
+      if (io.eq.11) open(iFile,file = './SP/alla1.out',status='unknown')
+      if (io.eq.12) open(iFile,file = './SP/alla2.out',status='unknown')
+      if (io.eq.13) open(iFile,file = './SP/alla3.out',status='unknown')
+      if (io.eq.14) open(iFile,file = './SP/alla4.out',status='unknown')
+      if (io.eq.15) open(iFile,file = './SP/alla5.out',status='unknown')
+      if (io.eq.16) open(iFile,file = './SP/alla6.out',status='unknown')
 
       nn=nr
       write(iFile,901) jst,t
@@ -1109,13 +1105,13 @@ c ****************************    end ALL output ******************
       call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
-      if (io.eq.10) open(iFile,file = 'csilla0.out')
-      if (io.eq.11) open(iFile,file = 'csilla1.out')
-      if (io.eq.12) open(iFile,file = 'csilla2.out')
-      if (io.eq.13) open(iFile,file = 'csilla3.out')
-      if (io.eq.14) open(iFile,file = 'csilla4.out')
-      if (io.eq.15) open(iFile,file = 'csilla5.out')
-      if (io.eq.16) open(iFile,file = 'csilla6.out')
+      if (io.eq.10) open(iFile,file = './SP/csilla0.out',status='unknown')
+      if (io.eq.11) open(iFile,file = './SP/csilla1.out',status='unknown')
+      if (io.eq.12) open(iFile,file = './SP/csilla2.out',status='unknown')
+      if (io.eq.13) open(iFile,file = './SP/csilla3.out',status='unknown')
+      if (io.eq.14) open(iFile,file = './SP/csilla4.out',status='unknown')
+      if (io.eq.15) open(iFile,file = './SP/csilla5.out',status='unknown')
+      if (io.eq.16) open(iFile,file = './SP/csilla6.out',status='unknown')
       do 11 i=0,nr
       do 13 k=0,nw
       aa = 0.5*(f(i,0,k)+f(i,nmu,k))
@@ -1218,27 +1214,29 @@ c  *****************  end subroutine CSILLA   ******************
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
       common /iFile/  io(5),ip(5)
+      include 'stdout.h'
       do ke=1,kemax
       kk = keobs(ke)
          eobs(ke) = ee(kk)
       enddo
+  
       do 11 kr=1,krmax
       call get_io_unit_new(io(kr))
-      if (kr.eq.1) open(io(kr),file='timevar.r1')
-      if (kr.eq.2) open(io(kr),file='timevar.r2')
-      if (kr.eq.3) open(io(kr),file='timevar.r3')
-      if (kr.eq.4) open(io(kr),file='timevar.r4')
-      if (kr.eq.5) open(io(kr),file='timevar.r5')
+      if (kr.eq.1) open(io(kr),file='./SP/timevar.r1',status='unknown')
+      if (kr.eq.2) open(io(kr),file='./SP/timevar.r2',status='unknown')
+      if (kr.eq.3) open(io(kr),file='./SP/timevar.r3',status='unknown')
+      if (kr.eq.4) open(io(kr),file='./SP/timevar.r4',status='unknown')
+      if (kr.eq.5) open(io(kr),file='./SP/timevar.r5',status='unknown')
       write(io(kr),*)
       write(io(kr),711) robs(kr) 
       write(io(kr),712) (eobs(ke),ke=1,kemax) 
       write(io(kr),*)
       call get_io_unit_new(ip(kr))
-      if (kr.eq.1) open(ip(kr),file='plasma.r1')
-      if (kr.eq.2) open(ip(kr),file='plasma.r2')
-      if (kr.eq.3) open(ip(kr),file='plasma.r3')
-      if (kr.eq.4) open(ip(kr),file='plasma.r4')
-      if (kr.eq.5) open(ip(kr),file='plasma.r5')
+      if (kr.eq.1) open(ip(kr),file='./SP/plasma.r1',status='unknown')
+      if (kr.eq.2) open(ip(kr),file='./SP/plasma.r2',status='unknown')
+      if (kr.eq.3) open(ip(kr),file='./SP/plasma.r3',status='unknown')
+      if (kr.eq.4) open(ip(kr),file='./SP/plasma.r4',status='unknown')
+      if (kr.eq.5) open(ip(kr),file='./SP/plasma.r5',status='unknown')
       write(ip(kr),*)
       write(ip(kr),711) robs(kr) 
       write(ip(kr),722)  
@@ -1270,7 +1268,7 @@ c  *****************  end subroutine OPENTIME  ******************
 c  *****************  end subroutine OPENTIME  ******************
 
       subroutine timevar(jst,t)
-      include 'param.h'
+      include 'coupler.h'
       common /size  / nr,nmu,nw, dim1
       common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
@@ -1282,8 +1280,6 @@ c  *****************  end subroutine OPENTIME  ******************
       common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
-      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
-     1                vvr(0:nRMax)
       common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
       common /convrt/ cAUKm,hour,valf
@@ -1319,7 +1315,7 @@ c  *****************  end subroutine OPENTIME  ******************
       ffe(ke)=ff0*(fr2*ss1+fr1*ss2)*fpeel(kk)*pp(kk)**2
 30    continue
       
-      vv =  fr2*vvr(i1) + fr1*vvr(i2)
+      vv =  fr2*vr(i1) + fr1*vr(i2)
       vv = cAUKm/hour*vv
       abb= fr2*algbb(i1)+fr1*algbb(i2)
       all= fr2*algll(i1)+fr1*algll(i2)

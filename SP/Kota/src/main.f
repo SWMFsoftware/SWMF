@@ -49,7 +49,7 @@ c**************************************************************
       wghtl=1.0
       wghtmu=1.0
       wghtw=1.0
-   
+      tMax=0.0      
       emin=0.001
       emax=1000.
       einj=0.005
@@ -146,17 +146,17 @@ c ----------------------------------------------------------
 !bx,by,bz - three components of the magnetic field in 
 !the Lagrangian point, in nT
 !
-!dd - density in nucleons/cm^3
+!dens - density in nucleons/cm^3
 !
-!pp - pressure in erg/cm^3
+!pres - pressure in erg/cm^3
 !
-!      real rx,ry,rz,vx,vy,vz,bx,by,bz,dd,pp
+!      real rx,ry,rz,vx,vy,vz,bx,by,bz,dens,pres
 !      integer iMax,nMax
 !      PARAMETER(nMax=2500)
 !      common /ihcoord/ rx(nMax),ry(nMax),rz(nMax)
 !      common /ihvel/   vx(nMax), vy(nMax), vz(nMax)
 !      common /ihmagf/ bx(nMax), by(nMax), bz(nMax)
-!      common /ihpdi/     dd(nMax), pp(nMax), iMax
+!      common /ihpdi/     dens(nMax), pres(nMax), iMax
 !      real vxOld,vyOld,vzOld
 !      common /oldvel/     vxOld(nMax), vyOld(nMax), vzOld(nMax)
 !      integer Old_,New_
@@ -171,6 +171,7 @@ c ----------------------------------------------------------
       subroutine SP_clean_coupler
       implicit none
       include 'coupler.h'
+      include 'stdout.h'
       integer iR,iV
       real cZero
       parameter(cZero=0.00000000000000000000000000000000)
@@ -178,14 +179,14 @@ c ----------------------------------------------------------
          rx(iR)=cZero
          ry(iR)=cZero
          rz(iR)=cZero
-         dd(iR)=cZero
+         dens(iR)=cZero
          vx(iR)=cZero
          vy(iR)=cZero
          vz(iR)=cZero
          bx(iR)=cZero
          by(iR)=cZero
          bz(iR)=cZero
-         pp(iR)=cZero
+         pres(iR)=cZero
          vxOld(iR)=cZero
          vyOld(iR)=cZero
          vzOld(iR)=cZero
@@ -194,7 +195,7 @@ c ----------------------------------------------------------
             Smooth_VII(iV,iR,New_)=cZero
          end do
       end do
-      iMax=nMax
+      if(DoWriteAll)write(iStdOut,*)prefix,'Nullify the coupler'
       end subroutine SP_clean_coupler
 
 !-----------------------------------------------------------!
@@ -300,9 +301,9 @@ ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
 c ------------------------------------------    dynamical step done
          jStep=iStep/kFriss
          if(iStep.eq.jStep*kFriss)then
-            if (jstep.gt.0) call timevar(jstep,time)
             write(iStdout,*)prefix,
      1           jstep,'  j-step done -- time: ',time
+            if (jstep.gt.0) call timevar(jstep,time)
             if (jstep.eq.jnext) then
                if (time.le.1.) Misc = 11
                if (time.gt.1..and.time.le.2.)   Misc=12
@@ -329,19 +330,49 @@ c??   read(*,*)  jnext
       subroutine SP_sharpen_and_run(tSimulation,tFinal)
       implicit none
       include 'coupler.h'
+      include 'stdout.h'
       real  tSimulation
       real  tFinal
       integer jnext,jstep,jsep,Misc,kstep,iStep
       common /spmain/jnext,jsep,jstep,istep
+      integer nr,nmu,nw
+      real dim1    
+      common /size  / nr,nmu,nw, dim1  
       integer iCoupling,nCoupling,iR
       real DtCoupling
+      do iR=1,iMax
+         rx(iR)=Smooth_VII( 1,iR,New_) 
+         ry(iR)=Smooth_VII( 2,iR,New_)
+         rz(iR)=Smooth_VII( 3,iR,New_)
+         dens(iR)=Smooth_VII( 4,iR,New_)
+         vx(iR)=Smooth_VII( 5,iR,New_)
+         vy(iR)=Smooth_VII( 6,iR,New_)
+         vz(iR)=Smooth_VII( 7,iR,New_)
+         bx(iR)=Smooth_VII( 8,iR,New_)
+         by(iR)=Smooth_VII( 9,iR,New_)
+         bz(iR)=Smooth_VII(10,iR,New_)
+         pres(iR)=Smooth_VII(11,iR,New_)
+      end do
+      iMax=min(iMax,nR+1)
+      nR=iMax-1
+      if(DoWriteAll)write(iStdOut,*)prefix,'sharpen and run: ',
+     1   'iMax,tSimulation,tFinal: ',iMax,tSimulation,tFinal
       call get_ishock
+      if(tFinal-tSimulation.le.0.00001)then
+         !Save the values of log n, log b and so on
+         !Do do this, call helios with artificial positive dt
+         call helios(0.0,1.0,1,1)
+         tSimulation=tFinal
+         iMax=0
+         return
+      end if
       if(iShock<nResolution)then
          !Do not sharpen the shock wave
             call get_rshock
             call MASTER(tSimulation,tFinal)
       else
          nCoupling=max(1,iShock-iShockOld)
+         if(iShockOld<nResolution)nCoupling=1!No sharpening happened before
          if(nCoupling.eq.1)then
             call sharpen_profile
             call get_rshock
@@ -360,7 +391,7 @@ c??   read(*,*)  jnext
                   rz(iR)=(iCoupling*Smooth_VII(3,iR,New_)+
      1                 (nCoupling-iCoupling)*Smooth_VII(3,iR,Old_))/
      2                 nCoupling
-                  dd(iR)=(iCoupling*Smooth_VII(4,iR,New_)+
+                  dens(iR)=(iCoupling*Smooth_VII(4,iR,New_)+
      1                 (nCoupling-iCoupling)*Smooth_VII(4,iR,Old_))/
      2                 nCoupling
                   vx(iR)=(iCoupling*Smooth_VII(5,iR,New_)+
@@ -381,7 +412,7 @@ c??   read(*,*)  jnext
                   bz(iR)=(iCoupling*Smooth_VII(10,iR,New_)+
      1                 (nCoupling-iCoupling)*Smooth_VII(10,iR,Old_))/
      2                 nCoupling
-                  pp(iR)=(iCoupling*Smooth_VII(11,iR,New_)+
+                  pres(iR)=(iCoupling*Smooth_VII(11,iR,New_)+
      1                 (nCoupling-iCoupling)*Smooth_VII(11,iR,Old_))/
      2                 nCoupling
                end do
@@ -393,6 +424,7 @@ c??   read(*,*)  jnext
          end if
       end if
       tSimulation=tFinal !To eliminate the error accumulation.
+      iMax=0             !To be prepared for the next coupling
       end subroutine sp_sharpen_and_run
 !==================================================================
       subroutine get_ishock
@@ -404,7 +436,7 @@ c??   read(*,*)  jnext
       iShockOld=iShock
       iShock = 1
       DMax=0
-      DDens = dd(1)*(rx(1)**2+ry(1)**2+rz(1)**2)
+      DDens = dens(1)!*(rx(1)**2+ry(1)**2+rz(1)**2)
       do i=2,iMax
 
 CCC     drr = arr(i)-arr(i-1) 
@@ -419,8 +451,8 @@ CCC     drr = arr(i)-arr(i-1)
          else
             
             DDens0 = DDens
-            Rad2   = rx(i)**2+ry(i)**2+rz(i)**2
-            DDens = dd(i)*Rad2
+            Rad2   = 1.0!rx(i)**2+ry(i)**2+rz(i)**2
+            DDens = dens(i)*Rad2
             Diff = (DDens0-DDens)/(DDens0+DDens)*Rad2/Dist2
             
             if (Diff.gt.DMax) then
@@ -429,6 +461,9 @@ CCC     drr = arr(i)-arr(i-1)
             endif
          endif
       end do
+      if(DoWriteAll)then
+         write(iStdOut,*)prefix,'iShockOld,iShock=',iShockOld,iShock
+      end if
       end subroutine get_ishock
 !==================================================================
       subroutine get_rshock
@@ -452,26 +487,28 @@ CCC     drr = arr(i)-arr(i-1)
   !-------------------------------------------------
       nRes2=nResolution/2
       iDownstream=iShock-nRes2
+      if(iDownStream<1)return
       iUpStream=iShock+nRes2+1
+      if(iUpStream>iMax)return
       do i=iDownStream+1,iShock
-         dd(i)=dd(iDownStream)
+         dens(i)=dens(iDownStream)
          vx(i)=vx(iDownStream)
          vy(i)=vy(iDownStream)
          vz(i)=vz(iDownStream)
          bx(i)=bx(iDownStream)
          by(i)=by(iDownStream)
          bz(i)=bz(iDownStream)
-         pp(i)=pp(iDownStream)
+         pres(i)=pres(iDownStream)
       end do
       do i=iShock+1,iUpStream-1
-         dd(i)=dd(iUpStream)
+         dens(i)=dens(iUpStream)
          vx(i)=vx(iUpStream)
          vy(i)=vy(iUpStream)
          vz(i)=vz(iUpStream)
          bx(i)=bx(iUpStream)
          by(i)=by(iUpStream)
          bz(i)=bz(iUpStream)
-         pp(i)=pp(iUpStream)
+         pres(i)=pres(iUpStream)
       end do
       end subroutine sharpen_profile 
 !=============================================================== 
@@ -629,8 +666,8 @@ c -------------------------------- beolvasas meglenne
       bfi(i) = (qy*ax - qx*ay)/aro(i)
         bzz(i) = qz       
 
-        add(i) = dd(i)
-        app(i) = pp(i)
+        add(i) = dens(i)
+        app(i) = pres(i)
 30    continue
 
       write(iStdout,*) prefix,
@@ -929,7 +966,7 @@ c --------------------------------- finally rescale TBLAST
 
 c ???????????????????????????????????????????????????
       call get_io_unit_new(io)
-      open(io,file='ujcme-eta')
+      open(io,file='./SP/ujcme-eta',status='unknown')
       write(io,*) lineno,mm,ni,slamb,thr,tblast
       do 900 j=0,ni 
       write(io,911) j,eta(j),exx(j),ezz(j)

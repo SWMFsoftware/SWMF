@@ -15,15 +15,21 @@
 !
 !pp - pressure in erg/cm^3
 
-      real rx,ry,rz,vx,vy,vz,bx,by,bz,dd,pp
+      real rx,ry,rz,vx,vy,vz,bx,by,bz,dens,pres
+      include 'param.h'
       integer  iMax,nMax
-      PARAMETER(nMax=2500)
+      PARAMETER(nMax=nRMax)
       common /ihcoord/ rx(nMax),ry(nMax),rz(nMax)
       common /ihvel/   vx(nMax), vy(nMax), vz(nMax)
       common /ihmagf/ bx(nMax), by(nMax), bz(nMax)
-      common /ihpdi/     dd(nMax), pp(nMax), iMax
+      common /ihpdi/     dens(nMax), pres(nMax), iMax
       real vxOld,vyOld,vzOld
       common /oldvel/     vxOld(nMax), vyOld(nMax), vzOld(nMax)
+      real  algbb(0:nMax)
+      real  algll(0:nMax)
+      real  algnn(0:nMax)
+      real  vr(0:nMax)
+      common /plasma/ algbb,algll,algnn,vr
       integer Old_,New_
       parameter(Old_=1,New_=2)
       integer iShock,iShockOld

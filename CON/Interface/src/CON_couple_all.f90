@@ -70,7 +70,10 @@ contains
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     !                                                     ^CMP END IH
-    if(use_comp(SP_))call couple_mh_sp_init               !^CMP IF SP
+    if((&                                                 !^CMP IF SP BEGIN
+         use_comp(IH_).or.&                               !^CMP IF IH
+         use_comp(SC_).or.&                               !^CMP IF SC
+         .false.).and.use_comp(SP_))call couple_mh_sp_init !^CMP END SP
     !EOC
   end subroutine couple_all_init
 

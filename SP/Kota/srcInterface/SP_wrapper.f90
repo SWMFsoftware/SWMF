@@ -17,7 +17,7 @@ module SP_Mod
   real::XyzLine_D(3)=(/cZero,cZero,cZero/)
   real::RBoundSC=1.1      !^CMP IF SC
   real::RBoundIH=21.0     !^CMP IF IH
-  real::tSimulation,DataInputTime
+  real::tSimulation=cZero,DataInputTime=cZero
   integer::nStep=0
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
   integer::iProc=-1,nProc=-1,iComm=-1
@@ -36,6 +36,9 @@ subroutine SP_set_param(CompInfo,TypeAction)
   character (len=100) :: NameCommand
   logical,save::DoInit=.true.
   integer::iVerbose=0
+  integer::kfriss,kacc
+  real:: time,tmax,dlnt0,dt1,dta
+  common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
   !-----------------------------------------------------------!
   select case(TypeAction)
   case('VERSION')
@@ -83,6 +86,8 @@ subroutine SP_set_param(CompInfo,TypeAction)
            call read_var('nStep',nStep)
         case('TSIMULATION')
            call read_var('tSimulation',tSimulation)
+        case('#PLOT')
+           call read_var('DnPlot',kfriss)
         case('#VERBOSE')
            call read_var('iVerbose',iVerbose)
            if(iVerbose>0)DoWriteAll=.true.
@@ -103,11 +108,13 @@ subroutine SP_set_param(CompInfo,TypeAction)
 end subroutine SP_set_param
 !============================================================!
 subroutine SP_init_session(iSession,TimeIn)
-  use SP_Mod,ONLY:tSimulation,UseSelfSimilarity,UseRefresh,iMax
+  use SP_Mod
   implicit none
   integer,  intent(in) :: iSession    ! session number (starting from 1)
   real,     intent(in) :: TimeIn      ! seconds from start time
   logical,save::DoInit=.true.
+  integer::      jnext,jsep,jstep,iStep
+  common /spmain/jnext,jsep,jstep,istep
   if(.not.DoInit)return
   DoInit=.false.
   UseSelfSimilarity=.false.
@@ -116,6 +123,12 @@ subroutine SP_init_session(iSession,TimeIn)
   call SP_init
   call SP_clean_coupler
   iMax=0
+  iShock=1
+  if(jSep/=jStep)then
+     jSep=jStep
+     if(iProc==0)&
+          write(iStdOut,*)prefix, 'SWMF resets jsep=',jSep
+  end if
 end subroutine SP_init_session
 !=============================================================!
 subroutine SP_get_line_param(DsOut,&
@@ -278,6 +291,7 @@ subroutine SP_run(tInOut,tLimit)
      tInOut=max(tInOut,tLimit)
   else
      call SP_read_mh_data
+     tInOut=DataInputTime
   end if
   if(SaveMhData)call SP_save_mh_data
   if(DoRun)call SP_sharpen_and_run(tSimulation,DataInputTime)
