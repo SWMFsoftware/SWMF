@@ -117,7 +117,7 @@ minmod			TypeLimiter
 #SAVELOGFILE
 T                       DoSaveLogfile
 RAW                     StringLog
-10                      DnSaveLogfile
+1                       DnSaveLogfile
 -1.0			DtSaveLogfile
 
 #SAVEPLOT
@@ -199,7 +199,7 @@ coupledhelio    	TypeRefineInit
 #SAVELOGFILE
 T                       DoSaveLogfile
 RAW                     StringLog
-10                      DnSaveLogfile
+1                       DnSaveLogfile
 -1.0			DtSaveLogfile
 
 #SAVEPLOT
