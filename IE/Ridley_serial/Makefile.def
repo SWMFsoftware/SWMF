@@ -1,1 +1,1 @@
-STANDALONE=NO
+include /home/volov/DECOUPLED/SWMF_NEW/Makefile.def

@@ -1,2 +1,1 @@
-# Default setting
-STANDALONE=gm
+include /home/volov/DECOUPLED/SWMF_NEW/Makefile.def
