@@ -170,7 +170,7 @@ corelax_conf: corelax_src
 	cd ..; rm -rf BATSRUS_conf; \
 	ln -s BATSRUS/CORELAX/SPHERICAL BATSRUS_conf
 
-corelax:
+corelax: corelax_src
 	cd CORELAX/SPHERICAL; make
 
 #^CFG END ALWAVES
