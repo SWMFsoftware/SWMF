@@ -9,7 +9,7 @@ subroutine write_plot_common(ifile)
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
   use ModGeometry, ONLY : TypeGeometry                   !^CFG IF NOT CARTESIAN
-  use ModPhysics, ONLY : unitUSER_x, thetaTilt
+  use ModPhysics, ONLY : unitUSER_x, thetaTilt,Rbody
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
@@ -29,6 +29,7 @@ subroutine write_plot_common(ifile)
   ! Plot variables
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
+  logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)
@@ -69,6 +70,7 @@ subroutine write_plot_common(ifile)
 
   PlotVar = 0.0
   plotvar_inBody = 0.0
+  plotvar_useBody = .false.
 
   unitstr_TEC = ''
   unitstr_IDL = ''
@@ -229,7 +231,7 @@ subroutine write_plot_common(ifile)
      if(unusedBLK(iBLK))CYCLE
 
      call set_plotvar(iBLK, &
-          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
+          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody,plotvar_useBody)
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
@@ -440,8 +442,9 @@ Contains
 
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
-    integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1) :: nodeCount
-    real, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
+    integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeCount
+    real,    dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
+    real :: rr
 
     if(.not.allocated(PlotVarNodes)) allocate(&
          PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax),stat=iError)
@@ -450,23 +453,41 @@ Contains
     ! Initialize values
     nodeCount = 0; nodeV(:,:,:,:) = 0.00
 
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1;  ! Cell loop
-       if ( true_cell(i,j,k,iBLK) )then
-          do kk=-1,0; do jj=-1,0; do ii=-1,0; 
-             nodeCount(i+ii,j+jj,k+kk) = nodeCount(i+ii,j+jj,k+kk) +1
-             nodeV(i+ii,j+jj,k+kk,1:nplotvar) = &
-                  nodeV(i+ii,j+jj,k+kk,1:nplotvar) + plotvar(i,j,k,1:nplotvar)
-          end do; end do; end do
-       end if
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+       do iVar=1,nplotvar
+          if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
+             do kk=-1,0; do jj=-1,0; do ii=-1,0
+                nodeCount(i+ii,j+jj,k+kk,iVar) = nodeCount(i+ii,j+jj,k+kk,iVar) +1
+                nodeV(i+ii,j+jj,k+kk,iVar) = nodeV(i+ii,j+jj,k+kk,iVar)+ &
+                     plotvar(i,j,k,iVar)
+             end do; end do; end do
+          end if
+       end do
     end do; end do; end do
 
-    do k=0,nK; do j=0,nJ; do i=0,nI;   ! Node loop
-       if (nodeCount(i,j,k) > 0) then
-          PlotVarNodes(i,j,k,iBLK,1:nplotvar) = &
-               nodeV(i,j,k,1:nplotvar)/real(nodeCount(i,j,k))
-       else
-          PlotVarNodes(i,j,k,iBLK,1:nplotvar) = plotvar_inBody(1:nplotvar)
-       end if
+    do k=0,nK; do j=0,nJ; do i=0,nI  ! Node loop
+       rr=sqrt( &
+            NodeX_IIIB(i,j,k,iBLK)**2+ &
+            NodeY_IIIB(i,j,k,iBLK)**2+ &
+            NodeZ_IIIB(i,j,k,iBLK)**2)
+       do iVar=1,nplotvar
+          if (nodeCount(i,j,k,iVar) > 0) then
+             PlotVarNodes(i,j,k,iBLK,iVar) = &
+                  nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
+             ! This will zero out values otherwise true with plotvar_useBody
+             ! The intent of plotvar_useBody is to fill nodes inside of the body
+             !   with values for plotting.  However, when allowed to go all the
+             !   way to the origin, B traces will continuously loop through the
+             !   body and out.  Setting the values to zero inside of 0.51 fixes it.
+             if(plotvar_useBody(iVar))then
+                if(rr < 0.51*Rbody .and. rr < 0.51) then
+                   PlotVarNodes(i,j,k,iBLK,iVar) = 0.00
+                end if
+             end if
+          else
+             PlotVarNodes(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
+          end if
+       end do
     end do; end do; end do
 
   end subroutine plotvar_to_plotvarnodes
@@ -527,7 +548,7 @@ end subroutine set_EqPar
 
 !==============================================================================
 subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
-     plotvar_inBody)
+     plotvar_inBody,plotvar_useBody)
 
   use ModProcMH
   use ModMain
@@ -547,12 +568,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
   real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
   real, intent(out)   :: plotvar_inBody(nPlotVar)
+  logical, intent(out) :: plotvar_useBody(nPlotVar)
   character (len=10)  :: s
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
   integer :: iVar,itmp,jtmp, jVar
-  integer :: i,j,k
+  integer :: i,j,k, ip1,im1,jp1,jm1,kp1,km1
+  real :: xfactor,yfactor,zfactor
   !-------------------------------------------------------------------------
 
   do iVar = 1, nPlotVar
@@ -566,6 +589,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      ! Note that this is used for tecplot corner extrapolation and for nothing
      ! else.
      plotvar_inBody(iVar) = 0.0
+
+     ! Set plotvar_useBody to false unless cell values inside of the body are
+     ! to be used for plotting.
+     plotvar_useBody(iVar) = .false.
 
      select case(s)
 
@@ -590,10 +617,13 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('rhoUz','rhouz','mz')
         PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)
      case('Bx','bx')
+        plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
      case('By','by')
+        plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)
      case('Bz','bz')
+        plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)
 
      case('BxL','bxl')                           !^CFG IF CONSTRAINB BEGIN
@@ -653,29 +683,107 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)
      case('Jx','jx')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
-             -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
-             (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-             -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
+                -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
+                   -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK) - &
+                   (State_VGB(By_,i  ,j  ,kp1,iBLK) &
+                   -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
+           end do; end do; end do
+        end if
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN         
      case('Jy','jy')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-             -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
-             (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
-             -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
+                -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
+                   -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK) - &
+                   (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
+                   -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
+           end do; end do; end do
+        endif
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
      case('Jz','jz')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
-             -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
-             (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-             -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK))
+        if(true_BLK(iBLK))then
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
+                -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+                -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK))
+        else
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+
+              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+              if(.not.true_cell(im1,j,k,iBLK)) im1=i
+              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+              if(.not.true_cell(i,j,km1,iBLK)) km1=k
+              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+
+              xfactor=1.; yfactor=1.; zfactor=1.
+              if((ip1-im1)==1) xfactor=2.
+              if((jp1-jm1)==1) yfactor=2.
+              if((kp1-km1)==1) zfactor=2.
+
+              PlotVar(i,j,k,iVar)=0.5*(&
+                   (State_VGB(By_,ip1,j  ,k  ,iBLK) &
+                   -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK) - &
+                   (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
+                   -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
+           end do; end do; end do
+        end if
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
      case('enumx')
@@ -756,6 +864,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)
      case('Br','br')
+        plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=( &
              ( State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
              *X_BLK(:,:,:,iBLK)                         &  
