@@ -16,11 +16,26 @@ BATSVERSION = 7.53
 #MF = Makefile.${OS}
 MF = 
 
-COMPILE.f77     = /usr/bin/f90
 COMPILE.f90     = /usr/bin/f90
 LINK.f90	= /usr/bin/f90
 AR = ar -rs
+LN		= ln -s
+RM		= rm -f
+CP		= cp -p
+MKDIR           = mkdir -p
+CPPFLAGS	= -Dunix -D__unix__ -D__alpha -D__osf__
+F77PPFLAGS	= $(CPPFLAGS) -DLANGUAGE_FORTRAN -D__LANGUAGE_FORTRAN__
+F90PPFLAGS	= $(F77PPFLAGS) -DLANGUAGE_FORTRAN_90 -D__LANGUAGE_FORTRAN_90__
 
+
+_Dsys		= -DsysOSF1
+FPPFLAGS	= $(_Dsys)
+
+# preprocessor
+CPP		= /lib/cpp
+CPPFLAGS	= -P
+FPP		= $(CPP)
+	
 #Uncomment the appropriate line for double or single precision
 PRECISION     = -real_size 64
 #PRECISION     = -real_size 32		
@@ -34,7 +49,7 @@ SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 LOCAL_LIBS = /usr/local/lib
 
 MPILIB = -L$(LOCAL_LIBS) -lmpi -lelan	#For 64 bit compilation
-#MPILIB = -L${LIBDIR} -lNOMPI
+#MPILIB = -L. -lNOMPI
 
 #DEBUG = -g -C
 DEBUG =
@@ -76,13 +91,13 @@ BLAS  = lapack.o blas.o
 # UA component. Do not change this unless you know what you are doing...
 
 .f.o:
-	${COMPILE.f77} ${Cflag2} -extend_source $<
+	${COMPILE.f90} ${Cflag2} -extend_source $<
 
 .for.o:
-	${COMPILE.f77} ${Cflag2} -extend_source $<
+	${COMPILE.f90} ${Cflag2} -extend_source $<
 
 .ftn.o:
-	${COMPILE.f77} ${Cflag2} -extend_source $<
+	${COMPILE.f90} ${Cflag2} -extend_source $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

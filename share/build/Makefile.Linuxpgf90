@@ -12,6 +12,19 @@ COMPILE.f77     = pgf90
 COMPILE.f90     = pgf90
 LINK.f90	= mpif90
 AR = ar -rs
+LN		= ln -s
+RM		= rm -f
+CP		= cp -p
+MKDIR           = mkdir -p
+
+# preprocessor
+CPP		= /lib/cpp
+CPPFLAGS	= -P
+FPP		= $(CPP)
+FPPFLAGS	= $(CPPFLAGS)
+
+_Dsys		= -DsysLinux
+FPPFLAGS        = -DLANGUAGE_FORTRAN -traditional $(_Dsys) -DPGF90
 
 PRECISION = -r8
 #PRECISION =
