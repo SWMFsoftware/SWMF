@@ -280,14 +280,15 @@ dist: distclean
 	tar -rf tmp.tar  Makefile
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
-	tar -rf tmp.tar  SetSWMF.pl
-	tar -rf tmp.tar  Scripts
 	tar -rf tmp.tar  Configure.options
 	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
+	tar -rf tmp.tar  Scripts
+	tar -rf tmp.tar  SetSWMF.pl
 	tar -rf tmp.tar  share
 	tar -rf tmp.tar  util
+	tar -rf tmp.tar  CON
 	tar -rf tmp.tar  GM			#^CMP IF GM
 	tar -rf tmp.tar  IE			#^CMP IF IE
 	tar -rf tmp.tar  IH			#^CMP IF IH
