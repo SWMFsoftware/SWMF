@@ -61,7 +61,7 @@ ID
 Example:
 
 Eliminate name conflicts by renaming subroutines and functions in a 
-physics module with ID 'PM' and version 'VERSION':
+physics module with ID "PM" and version "VERSION":
 
      cd PM/VERSION/src
      ../../../share/Scripts/Methods.pl PM
