@@ -30,12 +30,13 @@ MODULES = ${MOD1} ${MOD2} ${MOD3} ${MOD4} ${MOD5} ${MOD6} \
 
 MY_LIB = ${LIBDIR}/libINTERFACE.a
 
-LIB:	${MY_LIB}
+LIB:	DEPEND
+	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_DEF}
+${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 

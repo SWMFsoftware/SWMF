@@ -19,7 +19,8 @@ MODULES = \
 
 MY_LIB = ${LIBDIR}/libINTERFACE.a
 
-LIB:	${MY_LIB}
+LIB:	DEPEND
+	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
