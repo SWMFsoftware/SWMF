@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w -s
+#!/usr/bin/perl -s
 
 my $Verbose = $v; undef $v;
 my $Help    = ($h or $help or $H); undef $h; undef $help; undef $H;
@@ -59,8 +59,14 @@ if(-x $GridSizeScript){
     warn "WARNING could not execute $GridSizeScript\n";
 }
 
-my @command = ($CheckParamScript,"-S","-v=$Verbose","-g=$GridSize","-p=$Precision",
-	       "-x=$XmlFile",@ARGV);
+my @command = (
+	       $CheckParamScript,
+	       "-S",
+	       "-v=$Verbose",
+	       "-g=$GridSize",
+	       "-p=$Precision",
+	       "-x=$XmlFile",
+	       @ARGV);
 
 print "@command\n" if $Verbose;
 system(@command);
