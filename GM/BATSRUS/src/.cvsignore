@@ -1,8 +1,0 @@
-*.mod
-*.o
-stand_alone.f90
-user_routines.f90
-Makefile.RULES
-Makefile.DEPEND
-Makefile.OPTIONS
-ModSize.f90
