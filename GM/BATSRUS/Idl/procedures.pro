@@ -2809,14 +2809,26 @@ for iter = iter0, 2 do begin
 
         for ifunc = 0, nfunc-1 do begin
 
-            ivar = where( wlognames eq funcs(ifunc))
+            ivar = where( wlognames eq funcs(ifunc)) & ivar = ivar(0)
+            if ivar ge 0 then begin
+                field = wlog(*,ivar)
+            endif else if funcs(ifunc) eq 'T' then begin
+                ; Convert p[nPa]/n[/cc] to T[eV]
+                ivar = where( wlognames eq 'p')   & ivar = ivar(0)
+                jvar = where( wlognames eq 'rho') & jvar = jvar(0)
+                if ivar ge 0 and jvar ge 0 then $
+                  field = 6241.5*wlog(*,ivar)/wlog(*,jvar)
+            endif else if funcs(ifunc) eq 'p' then begin
+                ; Convert T[eV]*n[/cc] to p[nPa] to T[eV]
+                ivar = where( wlognames eq 'T')   & ivar = ivar(0)
+                jvar = where( wlognames eq 'rho') & jvar = jvar(0)
+                if ivar ge 0 and jvar ge 0 then $
+                  field = wlog(*,ivar)*wlog(*,jvar)/6241.5
+            endif
             if ivar lt 0 then begin
                 if iter eq 1 then print,"function ",funcs(ifunc), $
                   " was not found in wlog",strtrim(string(ilog),2)
             endif else begin
-                ivar = ivar(0)
-                field = wlog(*,ivar)
-
                 if iter eq 1 then begin
                     if DoXrange then begin
                         xrange[0]   = min( [ xrange[0], hour ] )
