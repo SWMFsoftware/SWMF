@@ -232,13 +232,13 @@ minmod                  TypeLimiter
 SC			NameSource
 SP			NameTarget
 -1			DnCouple
-59.9000			DtCouple
+60.0000			DtCouple
 
 #COUPLE1
 IH			NameSource
 SP			NameTarget
 -1			DnCouple
-59.9000			DtCouple
+60.0000			DtCouple
 
 #BEGIN_COMP SP ---------------------------------------------------------------
 
