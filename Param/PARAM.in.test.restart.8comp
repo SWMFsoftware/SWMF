@@ -473,12 +473,6 @@ F			UseVForce
 
 #STOP
 -1                    MaxIteration
-14700.0               tSimulationMax
-
-#RUN #########################################################################
-
-#STOP
--1                    MaxIteration
 15000.0               tSimulationMax
 
 #END
