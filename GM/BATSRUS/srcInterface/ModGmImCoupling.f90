@@ -36,7 +36,7 @@ module ModGmImCoupling
        MHD_Fluxerror
   real, parameter :: noValue=-99999.
   real :: qb(3),eqB,xL,yL,zL
-  real :: colat,Ci,Cs,FCiCs,factor,Vol,Ri,s2,s8,factor1,factor2
+  real :: colat,Ci,Cs,FCiCs,factor,Vol,Ri,s2,s6,s8,factor1,factor2
 
   integer, parameter :: maxMessages=10
   integer :: itag, NewMsg, iError
@@ -541,8 +541,10 @@ contains
     Factor = 2. * (Ri**4) / abs(Bdp)
     do i=1,isize
        Colat = (90.0 - RCM_lat(i))*cDegToRad
-       s2=(sin(colat))**2
-       s8=(sin(colat))**8
+       s2    = sin(colat)**2
+       s6    = s2**3
+       s8    = s6*s2
+
        Ci=cos(colat)
 
        if( s2 < Ri/Rbody )then
@@ -560,52 +562,48 @@ contains
        if( s2 > Ri/Rcurrents )then
           !Fieldline stays inside of Rcurrents, recompute some values
 
-          !Compute the full volume
-          Cs=0.
-          FCiCs=(Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) &
-               - (1./7.)*(Ci**7-Cs**7)
-          Vol=factor*FCiCs/s8
+          !Compute the full analytic volume
+          FCiCs = Ci - Ci**3 + (3./5.)*Ci**5 - (1./7.)*Ci**7
+          Vol   = factor*FCiCs/s8
 
           !Compute equatorial B value for dipole at this latitude
-          xL=MHD_Xeq(i,1)
-          yL=MHD_Yeq(i,1)
-          zL=0.
-          call get_b0(xL,yL,zL,qb)
+          eqB = abs(Bdp)*s6/Ri**3
 
           if( s2 > Ri/Rbody )then
-             !Fieldline stays inside of Rbody
+             ! Fieldline stays inside of Rbody
 
-             !Recompute exact volume
+             ! Recompute exact volume
              MHD_SUM_vol(i,:)=Vol
 
-             !Fix the grid inside Rbody
+             ! Fix the grid inside Rbody
              MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
              MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
 
-             !Fix the equatorial B value
-             MHD_Beq(i,:) = sqrt(sum(qb**2))
+             ! Fix the equatorial B value
+             MHD_Beq(i,:) = eqB
 
           else
-             !Fieldline stays inside of Rcurrents but outside Rbody
+             ! Fieldline stays inside of Rcurrents but outside Rbody
              ! Weight analytic formula proportional to the distance 
              ! of the field line from rBody within the rBody-rCurrents range
 
              Factor1= (Ri/Rbody - s2)/ (Ri/Rbody - Ri/Rcurrents)
              Factor2= 1.0 - factor1
 
-             !Blend volume with exact volume
+             ! Check if numerical volume exists
              where(MHD_SUM_vol(i,:)>1.1E-8)
+                ! Blend numerical volume with exact volume
                 MHD_SUM_vol(i,:) = Factor1*MHD_SUM_vol(i,:) + Factor2*Vol
              elsewhere
-                !Recompute exact volume
+                ! Use analytic volume
                 MHD_SUM_vol(i,:)=Vol
 
-                !Fix the grid inside Rbody
+                ! Fix the grid
                 MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
                 MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
 
-                !Fix the equatorial B value
-                MHD_Beq(i,:) = sqrt(sum(qb**2))
+                ! Fix the equatorial B value
+                MHD_Beq(i,:) = eqB
              end where
 
           end if
