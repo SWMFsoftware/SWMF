@@ -410,65 +410,6 @@ real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
 
 end function integrate_BLK    
 
-subroutine integrate_cell_centered_vars(StateIntegral_V)
-  use ModProcMH
-  use ModAdvance,ONLY : State_VGB,tmp2_BLK
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlockMax,unusedBLK
-  use ModVarIndexes,ONLY:nVar,P_
-  use ModGeometry, ONLY :&
-                          cV_BLK,&                   
-                          true_BLK,true_cell
-  use ModNumConst
-  use ModMpi
-  implicit none 
-
-  ! Arguments
-
-  real,dimension( nVar),intent(out) :: &
-       StateIntegral_V
-
-  ! Local variables:
-  real ,dimension( nVar)   :: Sum_V, TotalSum_V
-  integer :: iBLK, iError,iVar
-
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('integrate_BLK',oktest, oktest_me)
-
-  Sum_V=cZero
-                                                     
-  do iBLK=1,nBlockMax
-     if(.not.unusedBLK(iBLK)) then
-        if(true_BLK(iBLK)) then
-           do iVar=1,nVar
-              Sum_V(iVar)=Sum_V(iVar) + sum(&
-              State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK))*&
-                cV_BLK(iBLK)
-           end do
-        else
-           do iVar=1,nVar
-              Sum_V(iVar)=Sum_V(iVar) + sum(&
-              State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK),&
-              MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))*cV_BLK(iBLK)
-           end do
-        end if
-        tmp2_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)
-     end if
-  end do
-
-  if(nProc>1)then
-     call MPI_allreduce(Sum_V, TotalSum_V, &
-          nVar,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-   
-     StateIntegral_V=TotalSum_V
-  else
-     StateIntegral_V=Sum_V
-  end if
-end subroutine integrate_cell_centered_vars
 !^CFG END CARTESIAN
 
 !=============================================================================
