@@ -1241,7 +1241,7 @@ contains
     do iDim=1,DomainDecomposition%nDim
        if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
        xyz_cell_dd(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
-            our_mod(xyz_cell_dd(iDim)-&
+            modulo(xyz_cell_dd(iDim)-&
             DomainDecomposition%XyzMin_D(iDim),&
             DomainDecomposition%XyzMax_D(iDim)-&
             DomainDecomposition%XyzMin_D(iDim))
@@ -1376,7 +1376,7 @@ contains
     do iDim=1,DomainDecomposition%nDim
        if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
        Xyz_D(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
-            our_mod(Xyz_D(iDim)-DomainDecomposition%XyzMin_D(iDim),&
+            modulo(Xyz_D(iDim)-DomainDecomposition%XyzMin_D(iDim),&
          DomainDecomposition%XyzMax_D(iDim)-&
          DomainDecomposition%XyzMin_D(iDim))
     end do
