@@ -168,6 +168,8 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm3' : uz=w(*,*,iw)/rho
       'e'  : e=w(*,*,iw)
       'e1' : e1=w(*,*,iw)
+      'absdivb': absdivb=w(*,*,iw)
+      'divb'   : divb=w(*,*,iw)
       else :
       endcase
    3: case wnames(iw) of
