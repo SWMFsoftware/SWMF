@@ -18,9 +18,9 @@ Plots
 lin mhd idl		StringPlot
 #INCLUDE
 Plots
-B			NameVectorField
-F			IsOneFile
-2			nLineExtrect
+B			NameLine
+F			IsSingelLine
+2			nLine
 -2.			xStartLine
 0.			yStartLine
 2.			zStartLine
@@ -32,9 +32,9 @@ T			IsParallel
 lin mhd idl		StringPlot
 #INCLUDE
 Plots
-U			NameVectorField
-T			IsOneFile
-2			nLineExtract
+U			NameLine
+T			IsSingleLine
+2			nLine
 -2.			xStartLine
 0.			yStartLine
 2.			zStartLine
