@@ -1,0 +1,5 @@
+
+#OPTIMIZE
+allopt                  OptimizeMessagePass
+
+#END

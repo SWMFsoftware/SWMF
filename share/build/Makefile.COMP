@@ -1,0 +1,62 @@
+DIR=${SWMF_ROOT}
+
+# This file is needed in dependency rules of component libraries:
+MAKEFILE_COMP_SELECT = ${DIR}/Common/Makefile.COMP
+
+# If this Makefile is used the components are not in a stand alone mode
+STANDALONE=NO
+
+# Do not touch the lines above this line #####################################
+#
+# Select the physics components by commenting out exactly one version for each
+# This is normally done by the perl script SetSWMF.pl
+
+GM_VERSION = BATSRUS#			^CMP IF GM
+#GM_VERSION = BATSRUS_conf#		^CMP IF GM
+#GM_VERSION = Empty#			^CMP IF GM
+
+IH_VERSION = BATSRUS_share#		^CMP IF IH
+#IH_VERSION = BATSRUS#			^CMP IF IH
+#IH_VERSION = Empty#			^CMP IF IH
+
+IE_VERSION = Ridley_serial#		^CMP IF IE
+#IE_VERSION = Ridley_parallel#		^CMP IF IE
+#IE_VERSION = Empty#			^CMP IF IE
+
+UA_VERSION = GITM#			^CMP IF UA
+#UA_VERSION = Empty#			^CMP IF UA
+
+IM_VERSION = RCM#			^CMP IF IM
+#IM_VERSION = Empty#			^CMP IF IM
+
+TIMING_VERSION =
+#TIMING_VERSION = Empty
+
+INT_VERSION = Interface
+#INT_VERSION = Stubs
+
+# Do not touch anything below this line #####################################
+
+CONDIR = ${DIR}/srcCON
+INTDIR = ${DIR}/srcCON/${INT_VERSION}
+
+IHDIR = ${DIR}/IH/${IH_VERSION}
+GMDIR = ${DIR}/GM/${GM_VERSION}
+IEDIR = ${DIR}/IE/${IE_VERSION}
+UADIR = ${DIR}/UA/${UA_VERSION}
+IMDIR = ${DIR}/IM/${IM_VERSION}
+
+TIMINGDIR = ${DIR}/srcTIMING/${TIMING_VERSION}
+MCTDIR = ${DIR}/MCT
+
+COMMONDIR = ${DIR}/Common
+MODDIR    = ${COMMONDIR}/modules
+INCLDIR   = ${COMMONDIR}/include
+POSTDIR   = $(COMMONDIR)/PostProc
+BUILDDIR  = ${COMMONDIR}/build
+BINDIR    = ${DIR}/bin
+LIBDIR    = ${DIR}/lib
+RUNDIR    = ${DIR}/run
+PROTEXDIR = ${DIR}/Doc/ProTex
+
+localdefault: help

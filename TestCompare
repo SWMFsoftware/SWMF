@@ -1,0 +1,2 @@
+#!/bin/sh
+GM/BATSRUS/TestCompare.pl $*

@@ -1,0 +1,5 @@
+*.mod
+*.o
+Makefile.DEPEND
+CON_methods.f90
+*.protex

@@ -1,0 +1,166 @@
+#^CFG COPYRIGHT UM
+#^CFG FILE CONFIGURE
+
+#^CFG IF CARTESIAN BEGIN
+############################################################################
+
+cartesian_src:
+	./Configure.pl -keepall -exe=cartesian -d=../BATSRUS_CARTESIAN
+	cd ../BATSRUS_CARTESIAN; make install
+
+cartesian_conf: cartesian_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_CARTESIAN BATSRUS_conf
+
+cartesian: cartesian_src
+
+#^CFG END CARTESIAN
+#^CFG IF NOT CARTESIAN BEGIN
+############################################################################
+
+spherical_src:
+	cd src; mv PostIDL.f90 PostIDL.tmp;\
+	mv PostIDL_SPH.f90 PostIDL.f90;\
+	cd ..;\
+	./Configure.pl -d=../BATSRUS_SPHERICAL \
+	-off=boriscorr,cartesian \
+	-on=awflux,lindeflux,faceouterbc,testing,userfiles -u;\
+	cd src; \
+	mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90;\
+	cd ../SPHERICAL/Param;\
+	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
+	mv EARTH/SSSSPH EARTH/SSSS;\
+	cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
+	mv PARAM.TEST.SPH PARAM.TEST
+	cd ../BATSRUS_SPHERICAL; make install
+
+spherical_conf: spherical_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_SPHERICAL BATSRUS_conf
+
+spherical: spherical_src
+	cd ../BATSRUS_SPHERICAL ;make
+
+############################################################################
+
+covariant_src:
+	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
+	cp user_routines_empty.f90 user_routines_orig.f90
+	./Configure.pl -d=../BATSRUS_COVARIANT -off=boriscorr,cartesian \
+		-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
+	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
+	cd ../BATSRUS_COVARIANT; make install
+
+covariant_conf: covariant_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_COVARIANT BATSRUS_conf
+
+covariant: covariant_src
+	cd COVARIANT; make
+
+#^CFG END CARTESIAN
+#^CFG IF GLOBALHELIOSPHERE BEGIN
+############################################################################
+
+globhelio_src:
+	cd src;mv user_routines.f90.orig user_routines.f90.tmp;\
+	cp user/user_routines.f90.globalhelio user_routines.f90.orig;\
+	cd ..;\
+	./Configure.pl -d=../BATSRUS_GLOBALHELIOSPHERE -keepall \
+	-off=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm \
+	-on=globalheliosphere,cartesian \
+	-exe=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
+	-u;\
+	cd src;\
+	rm -f user_routines.f90.orig;\
+	mv user_routines.f90.tmp user_routines.f90.orig;\
+	cd ../BATSRUS_GLOBALHELIOSPHERE; make install
+
+globhelio_conf: globhelio_src
+	cd ..; rm -rf BATSRUS_conf; \
+	ln -s BATSRUS_GLOBALHELIOSPHERE BATSRUS_conf
+
+globhelio: globhelio_src
+	cd ../BATSRUS_GLOBALHELIOSPHERE;make
+
+#^CFG END GLOBALHELIOSPHERE 
+#^CFG IF MULTISP BEGIN
+############################################################################
+
+multisp_src:
+	cd src;mv user_routines.f90.orig user_routines.f90.tmp;\
+	cp user/user_routines.f90.mars user_routines.f90.orig;\
+	cd ..;\
+	./Configure.pl -d=../BATSRUS_MULTISP_TMP -keepall \
+	-off=implicit,ionosphere,tiegcm,rusanovflux,roeflux,awflux \
+	-on=multisp \
+	-exe=implicit,ionosphere,tiegcm,rusanovflux,roeflux,awflux,multisp \
+	-u;\
+	cd src;\
+	rm -f user_routines.f90.orig;\
+	mv user_routines.f90.tmp user_routines.f90.orig;
+	rm -rf ../BATSRUS_SPHERICAL
+	cd ../BATSRUS_MULTISP_TMP; make spherical_src
+	mv ../BATSRUS_SPHERICAL ../BATSRUS_MULTISP
+	cd ../BATSRUS_MULTISP; make install
+
+multisp_conf: multisp_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_MULTISP BATSRUS_conf
+
+multisp: multisp_src
+	cd ../BATSRUS_MULTISP; make
+
+#^CFG END MULTISP
+#^CFG IF ALWAVES BEGIN
+############################################################################
+
+relax_src:
+	cd src;mv user_routines.f90.orig user_routines.f90.tmp;\
+	cp user/user_routines.f90.heliosphere user_routines.f90.orig;\
+	cd ..;\
+	./Configure.pl -d=../BATSRUS_RELAX \
+	-on=alwaves,awflux,userfiles,faceouterbc,cellouterbc,testing \
+	-off=rusanov,ionosphere,boriscorr -u;\
+	cd src;\
+	rm -f user_routines.f90.orig;\
+	mv user_routines.f90.tmp user_routines.f90.orig;
+	cd ../BATSRUS_RELAX; make install
+
+relax_conf: relax_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_RELAX BATSRUS_conf
+
+relax: relax_src
+	cd ../BATSRUS_RELAX; make
+
+#^CFG END ALWAVES
+#^CFG IF ALWAVES BEGIN
+############################################################################
+
+corelax_src:
+	cd src;mv user_routines.f90.orig user_routines.f90.tmp;\
+	cp user/user_routines.f90.heliosphere.covariant user_routines.f90.orig
+	./Configure.pl -d=../BATSRUS_CORELAX_TMP -keepall \
+	-on=alwaves,awflux,faceouterbc,cellouterbc \
+	-off=rusanovflux,ionosphere,tiegcm,boriscorr,implicit \
+	-exe=alwaves,awflux,faceouterbc,cellouterbc,rusanovflux,ionosphere,tiegcm,boriscorr,implicit -u;\
+	cd src; mv -f user_routines.f90.tmp user_routines.f90.orig
+	cd ../BATSRUS_CORELAX_TMP;\
+	cd src; mv PostIDL.f90 PostIDL.tmp;\
+	mv PostIDL_SPH.f90 PostIDL.f90;\
+	cd ..;\
+	./Configure.pl -d=../BATSRUS_CORELAX \
+	-off=cartesian \
+	-on=alwaves,awflux,faceouterbc,cellouterbc,testing,userfiles -u;\
+	cd src; \
+	mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
+	cd ../BATSRUS_CORELAX/Param;\
+	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
+	mv EARTH/SSSSPH EARTH/SSSS;\
+	cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
+	mv PARAM.TEST.SPH PARAM.TEST
+	cd ../BATSRUS_CORELAX; make install
+
+corelax_conf: corelax_src
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS_CORELAX BATSRUS_conf
+
+corelax:
+	cd ../BATSRUS_CORELAX; make
+
+#^CFG END ALWAVES

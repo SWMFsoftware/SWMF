@@ -1,0 +1,12 @@
+#TEST
+implicit
+
+#FIXEDTIMESTEP
+T			UseDtFixed
+2.			DtFixedDim
+
+#IMPLICIT
+F			UsePointImplicit	^CFG IF POINTIMPLICIT
+T			UsePartImplicit
+F			UseFullImplicit
+100.0			CflImpl

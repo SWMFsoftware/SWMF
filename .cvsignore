@@ -1,0 +1,5 @@
+bin
+lib
+run*
+*.protex
+*.log
