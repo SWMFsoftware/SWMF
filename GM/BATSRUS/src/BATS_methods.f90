@@ -665,8 +665,10 @@ contains
     ! in ghost cells.
 
     if(DoExchangeAgain)then
-       if(iProc==0.and.lVerbose>0)call write_prefix; write(iUnitOut,*)&
-            '  Calling exchange_messages to reset ghost cells ...'
+       if(iProc==0.and.lVerbose>0)then
+          call write_prefix; write(iUnitOut,*)&
+               'Calling exchange_messages to reset ghost cells ...'
+       end if
        call exchange_messages
     end if
 
