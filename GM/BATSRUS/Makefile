@@ -117,14 +117,14 @@ BATSRUSdotO:
 	@echo ' '	
 
 PIDL:
-	cd src; make PostIDL.exe
+	cd srcPostProc; make PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
 
 #^CFG IF NOT SIMPLE BEGIN
 PSPH:
-	cd src; make PostSPH.exe
+	cd srcPostProc; make PSPH
 	@echo ' '
 	@echo Program PostSPH has been brought up to date.
 	@echo ' '
@@ -132,14 +132,14 @@ PSPH:
 
 checklink:
 	@(if perl -e 'exit(-l "Scripts/Run/pp_IDL/PostIDL.exe")' ; then \
-	   echo "Creating link to bin/PostIDL.exe in Scripts/Run/pp_IDL/"; \
+	   echo "Creating link to PostIDL.exe in Scripts/Run/pp_IDL/"; \
 	   cd Scripts/Run/pp_IDL/; \
 	   rm -rf PostIDL.exe; \
 	   ln -s ${BINDIR}/PostIDL.exe .; \
 	fi)
 	@#^CFG IF NOT SIMPLE BEGIN
 	@(if perl -e 'exit(-l "Scripts/Run/pp_TEC/PostSPH.exe")' ; then \
-	   echo "Creating link to bin/PostSPH.exe in Scripts/Run/pp_TEC/"; \
+	   echo "Creating link to PostSPH.exe in Scripts/Run/pp_TEC/"; \
 	   cd Scripts/Run/pp_TEC/; \
 	   rm -rf PostSPH.exe; \
 	   ln -s ${BINDIR}/PostSPH.exe .; \
