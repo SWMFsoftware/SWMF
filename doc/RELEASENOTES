@@ -34,8 +34,10 @@ UA/GITM:
 
 UA/GITM2:
 	1. The new version 2 of GITM has not been tested on all platforms.
-	   Succesful test runs were made on the SGI Altix system.
-           Problems were encountered with the pgf90 compiler.
+	   Succesful test runs were made with 
+           the SGI Altix/Intel ifort8.070 and 
+	   the Linux/NAG f95 compilers.
+           Problems were encountered with the Linux/pgf90 compiler.
 
 IM/RCM:
         1. Restarting the RCM (IM module) requires that if both restart
