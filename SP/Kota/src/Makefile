@@ -6,15 +6,14 @@ include ../Makefile.def
 include ../Makefile.conf
 include Makefile.DEPEND
 
-OBJECTS = sep19.o main.o read_ihdata.o
+OBJECTS = sep19.o main.o read_ihdata.o io_unit_for77.o
 
 SEPEXE = ${BINDIR}/SEP.exe
 
 SEP: ${SEPEXE}
 
 ${SEPEXE}:	${OBJECTS} sp_stand_alone.o
-	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS} sp_stand_alone.o\
-	${SHAREDIR}/io_unit_for77.o ${SHAREDIR}/ModIoUnit.o 
+	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS} sp_stand_alone.o
 
 SEP77:	io_unit_for77.f stdout.h
 	f77 read_ihdata.f sp_stand_alone.f io_unit_for77.f main.f sep19.f
