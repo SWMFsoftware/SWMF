@@ -56,11 +56,15 @@ SetSWMF.pl -install -c=xlf90
 # Check if you have the user manual in the doc/ directory
 ls doc/SWMF.pdf
 
-# Otherwise create PDF versions of the manuals in the doc/ directory
+# Otherwise create PDF versions of the manuals in the doc/ directory.
 make PDF
 
 # Create HTML version of the manuals in the doc/HTML/ directory
 make HTML
+
+# Please note that creating both the PDF and HTML versions require that 
+# LaTex be installed on your system.  In addition, creating the HTML
+# version requires the latex2html utility 
 
 
 ####################

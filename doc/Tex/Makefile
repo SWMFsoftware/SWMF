@@ -117,12 +117,12 @@ SWMFREF = \
 
 #^CMP IF DOCHTML BEGIN
 .tex.html:
-	mv $*.tex $*orig.tex
-	perl -pe 's/\\tableofcontents/\%\\tableofcontents/' $*orig.tex > $*.tex
-	touch $*.ind
+	mv HEADER.tex HEADERorig.tex
+	perl -pe 's/\\tableofcontents/\%\\tableofcontents/' HEADERorig.tex > HEADER.tex
+	touch $*.ind $*.idx
 	latex $*
 	latex $*
-	rm -f $*.ind
+	makeindex $*.idx
 	latex2html -image_type gif -local_icons \
 		  -address "(c) 2003 University of Michigan" \
 		  -prev_url   "../../index.html"  \
@@ -140,8 +140,10 @@ SWMFREF = \
 		ALT="CSEM Home" SRC="csem_home.png"\>\<\/A\>/' \
 		$*.html node*.html index.html; \
 	cp ../../HTML/csem_home.png ./ 
-	rm -f $*.tex
-	mv $*orig.tex $*.tex
+	rm -f $*.ind $*.idx $*.ilg
+	rm -f HEADER.tex
+	mv HEADERorig.tex HEADER.tex
+	rm -rf ../HTML/$*
 	mv $* ../HTML
 #^CMP END DOCHTML
 

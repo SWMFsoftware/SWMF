@@ -161,8 +161,7 @@ building blocks provided by the framework. From
 component software technology perspective both the wrapper and
 coupling interface are component interfaces: the wrapper is an
 interface with CON, and the coupling interface is an interface with
-another component. In this release the wrappers and coupling
-interfaces for all five physics components are included. A physics
+another component. A physics
 model code and its wrapper, which comprise a component, share the
 communication group.  The coupling interface uses the union
 communicator of the two components that it links together.
@@ -191,7 +190,7 @@ sent to the components. The structure of the parameter file will be
 described in detail.
 
 If two components reside on different sets of processing elements
-(PE-s) they can execute in an efficient parallel manner.
+(PE-s) they can execute in an efficient concurrent manner.
 This is possible, because the coupling times are
 known in advance.  The components advance to the time of coupling and
 only the processors involved in the coupling need to communicate with
@@ -223,7 +222,7 @@ supported by the current implementation.
 The framework has been tested on the SGI Origin 3000, SGI Altix and 
 Compaq ES45 machines, and on Linux Beowulf clusters with the NAG f95 
 compiler. We have also run the framework with reasonable success under
-Mac OS Darwin using the XLF and NAG f95 compiler, and under Linux with
+Mac OS Darwin using the XLF and NAG f95 compilers, and under Linux with
 the PGF90 compiler.
 
 \section{System Requirements}
@@ -233,9 +232,10 @@ requirements apply.
 
 \begin{itemize}
 \item The SWMF runs only under the UNIX/Linux operating systems.  This now
-  includes Macintosh system 10.x because it is based on BSD linux.  The
+  includes Macintosh system 10.x because it is based on BSD UNIX.  The
   SWMF does not run under any Microsoft Windows operating system.
 \item A FORTRAN 77 and FORTRAN 90 compiler must be installed.
+\item The Perl interpreter must be installed.
 \item A version of the Message Passing Interface (MPI) library must be
   installed.
 \item You may be able to compile the code and do very small test
@@ -245,7 +245,8 @@ parallel processor machine with a minimum of 8 processors and a minimum of 8GB o
 memory.
 \item Very large runs require many more processors.
 \item In order to generate the documentation you must have LaTex installed on
-your system.  To generate the HTML version you also must install the
+your system.  The PDF generation requires the {\tt dvips} and {\tt ps2pdf}
+utilities.  To generate the HTML version you also must install the
 {\tt latex2html} package. 
 
 \end{itemize}
@@ -254,7 +255,7 @@ your system.  To generate the HTML version you also must install the
 In addition to the above requirements, the SWMF output is designed to
 be visualized using either IDL or Tecplot.  You may be able to
 visualize the output with other packages, but formats and scripts have
-been designed for only these two platforms.
+been designed for only these two visualization softwares.
 
 
 
@@ -299,6 +300,7 @@ and the following files
 
 \section{General Hints}
 
+\subsubsection{Getting help with scripts}
 Most of the Perl and shell scripts that are distributed with the SWMF
 provide help which can be accessed as follows using the {\tt -h} flag.
 For example, 
@@ -307,6 +309,28 @@ For example,
 \end{verbatim}
 will provide a detailed listing of the options and capabilities of the
 {\tt SetSWMF.pl} script.
+
+\subsubsection{Input commands: PARAM.XML}
+A very useful set of files to become familiar with are the {\tt PARAM.XML}
+files.  Such a file exists for the SWMF itself and for each of the
+physics components.  The file for the SWMF is found at
+\begin{verbatim}
+Param/PARAM.XML
+\end{verbatim}
+while the files for the physics components are found in the component's
+subdirectory.  For example, the file for the GM/BATSRUS component can
+be found at
+\begin{verbatim}
+GM/BATSRUS/PARAM.XML
+\end{verbatim}
+This file contains a complete list of all input commands for the
+component as well as the allowed ranges for each of the input parameters.
+Although the XML format makes the files a little hard to read, they are
+extreamely useful.  A typical usage is to cut and paste commands out of the
+PARAM.XML file into the PARAM.in file for a run.
+
+\subsubsection{Have the working directory in your path}
+
 
 
 \section{Installing the Code}
