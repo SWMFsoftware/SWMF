@@ -1,6 +1,11 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE RAYTRACE
 
+! The main subroutines in this file are
+! subroutine ray_trace_accurate     - trace all rays starting from 3D MHD grid
+! subroutine integrate_ray_accurate - integrate rays starting from 2D IM grid
+! subroutine write_plot_line        - extract lines into plot file(s)
+
 subroutine ray_trace_accurate
 
   ! Trace field lines from cell centers to the outer or inner boundaries
@@ -12,7 +17,7 @@ subroutine ray_trace_accurate
   use ModPhysics,    ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D
 
   use ModMpi
   implicit none
@@ -38,19 +43,20 @@ subroutine ray_trace_accurate
           iLastDecomposition,iNewDecomposition
   end if
 
-  if(  n_last             == n_step   .and. &
-       iLastGrid          == iNewGrid .and. &
-       iLastDecomposition == iNewDecomposition) RETURN
+  if(n_last == n_step .and. iLastGrid == iNewGrid .and. &
+       iLastDecomposition == iNewDecomposition) &
+       RETURN
 
-  if(n_last == -1)then
-     ! Initialize constants for the first time
-     R_raytrace = rBody
-     if(iProc==0)write(*,*)'Setting R_raytrace=',R_raytrace
-     R2_raytrace = R_raytrace**2
+  ! Initialize constants
+  R_raytrace   = rBody
+  R2_raytrace  = R_raytrace**2
+  RayLengthMax = 4*sum(XyzMax_D - XyzMin_D)
 
-     ! Initialize CON_ray_trace
-     call ray_init(iComm)
-  end if
+  NameTask        = 'trace'
+  NameVectorField = 'B'
+
+  ! (Re)initialize CON_ray_trace
+  call ray_init(iComm)
 
   ! Remember this call
   n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
@@ -60,8 +66,7 @@ subroutine ray_trace_accurate
   if(oktime)call timing_reset('ray_pass',2)
 
   ! Copy magnetic field into Bxyz_DGB
-  Bxyz_DGB(:,:,:,:,1:nBlock) = &
-       State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
+  Bxyz_DGB(:,:,:,:,1:nBlock) = State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
 
   ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
@@ -117,9 +122,7 @@ subroutine ray_trace_accurate
   end do; end do; end do  ! i, j, k
 
   ! Do remaining rays passed from other PE-s
-  call follow_ray(0,(/0,0,0,0/),(/0.0,0.0,0.0/))
-
-!!! write(*,*)'iProc=',iProc,': open ray interpolations=',nOpen
+  call finish_ray
 
   ! Convert x, y, z to latitude and longitude, and status
   do iBlock=1,nBlock
@@ -153,13 +156,47 @@ subroutine ray_trace_accurate
 end subroutine ray_trace_accurate
 
 !===========================================================================
+subroutine finish_ray
+
+  ! This subroutine is a simple interface for the last call to follow_ray
+  call follow_ray(0, (/0, 0, 0, 0/), (/ 0., 0., 0. /))
+
+end subroutine finish_ray
+
+!===========================================================================
 
 subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
-  ! Follow ray starting at initial cell iIn,jIn,kIn in block iBlockIn
-  ! in direction iRayIn until we hit the outer or inner boundary of
-  ! the computational domain. The final position is stored into
-  ! ModRayTrace::ray(:,iRayIn,iIn,jIn,kIn,iBlock).
+  !DESCRIPTION:
+  ! Follow ray in direction iRayIn (1 is parallel with the field, 
+  !                                 2 is anti-parallel, 
+  !                                 0 means that no ray is passed 
+  ! Always follow rays received from other PE-s.
+  !
+  ! The passed ray is identified by the four dimensional index array i\_D.
+  ! The meaning of i\_D d depends on the context: 
+  !  3 cell + 1 block index for 3D ray tracing
+  !  1 latitude + 1 longitude index for ray integration
+  !  1 linear index for ray extraction.
+  !
+  ! The rays are followed until the ray hits the outer or inner 
+  ! boundary of the computational domain. The results are saved into
+  ! arrays defined in ModRayTrace or into files based on 
+  ! ModRaytrace::NameTask:
+  !
+  ! If NameTask='trace', follow the ray, and save the final position into
+  !    ModRayTrace::ray(:,iRayIn,i_D(1),i_D(2),i_D(3),i_D(4)) on the 
+  !    processor that started the ray trace.
+  !
+  ! If NameTask='integrate', do integration along the ray and
+  !    save the integrals into ModRayTrace::RayIntegral_VII(i_D(1),i_D(2))
+  !
+  ! If NameTask='extract' or 'extractfile' or 'extractfiles', 
+  !    extract data along the ray and save it to either 
+  !    an array ???, one file, or multiple files (one for each line).
+  !    In this case the rays are indexed with i_D(1).
+  !
+  !EOP
 
   use ModRayTrace
   use CON_ray_trace
@@ -173,9 +210,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   implicit none
 
   !INPUT ARGUMENTS:
-  integer, intent(in) :: iRayIn        ! ray direction, 0 if no ray is passed
-  integer, intent(in) :: i_D(4)        ! cell/block index for starting position
-  real,    intent(in) :: XyzIn_D(3)    ! coordinates of starting position
+  integer, intent(in) :: iRayIn     ! ray direction, 0 if no ray is passed
+  integer, intent(in) :: i_D(4)     ! general index array for starting position
+  real,    intent(in) :: XyzIn_D(3) ! coordinates of starting position
 
   !LOCAL VARIABLES:
   ! Cell, block and PE indexes for initial position and ray direction
@@ -225,12 +262,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
      iRay   = iRayIn
 
      iStart_D = i_D
-     if(DoIntegrate)then
-        oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iTest,jTest/))
-     else
-        oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
-             all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
-     end if
+     if(DoTest)call set_oktest_ray
 
      ! Current position and length
      iBlockRay = i_D(4)
@@ -254,12 +286,8 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
                 IsParallel,DoneRay)
 
            if(IsFound)then
-              if(DoIntegrate)then
-                 oktest_ray = DoTest.and.all(iStart_D(1:2) == (/iTest,jTest/))
-              else
-                 oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
-                      all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
-              end if
+              if(DoTest)call set_oktest_ray
+
               if(IsParallel)then
                  iRay=1
               else
@@ -269,11 +297,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
                    iProc,iRay,DoneRay,XyzRay_D
 
               if(DoneRay)then
-
-                 if(DoIntegrate)then
-                    ! store integrals and final position (XyzRay_D)
-                    call store_integral(.true.)
-
+                 if(NameTask /= 'trace')then
+                    write(*,*)NameSub,' WARNING ',&
+                         'received DoneRay=T for task ',trim(NameTask),' !!!'
                     CYCLE GETRAY
                  end if
 
@@ -345,15 +371,17 @@ contains
   subroutine follow_this_ray
 
     ! Initialize integrals for this segment
-    if(DoIntegrate)RayIntegral_V = 0.0
+    if(NameTask=='integrate')RayIntegral_V = 0.0
 
     ! Follow the ray through the local blocks
     BLOCK: do iCount = 1, MaxCount
 
        if(iCount < MaxCount)then
-          call follow_ray_block(iRay,iBlockRay,XyzRay_D,iFace)
+          call follow_ray_block(iStart_D,iRay,iBlockRay,XyzRay_D,&
+               RayLength,iFace)
        else
-          write(*,*)NameSub,' WARNING ray passed through more than MaxCount blocks:'
+          write(*,*)NameSub,' WARNING ray passed through more than MaxCount=',&
+               MaxCount,' blocks:'
           write(*,*)NameSub,'    iStart_D    =',iStart_D
           write(*,*)NameSub,'    XyzRay_D    =',XyzRay_D
           write(*,*)NameSub,'    XyzStart_BLK=',XyzStart_BLK(:,iBlockRay)
@@ -375,7 +403,7 @@ contains
 
              ! Add partial results to the integrals. 
              ! Pass .false., because this is not the final position
-             if(DoIntegrate)call store_integral(.false.)
+             if(NameTask=='integrate')call store_integral(.false.)
 
              call ray_put(iProcStart,iStart_D,jProc,XyzRay_D,RayLength,&
                   iRay==1,.false.)
@@ -396,7 +424,7 @@ contains
                   Dx_BLK(jBlock)
              call stop_mpi(&
                   'GM_ERROR in follow_ray: continues in same BLOCK')
-          end if 
+          end if
        case(ray_open_)
           ! The ray reached the outer boundary (or expected to do so)
           XyzRay_D = OPENRAY
@@ -427,13 +455,13 @@ contains
           call stop_mpi('GM_ERROR in follow_ray: impossible iFace value')
        end select
 
-       ! The ray tracing of this ray is done if we got here
-       if(DoIntegrate)then
-          ! Store integrals and the final position
-          call store_integral(.true.)
-          EXIT BLOCK
-       end if
+       ! Store integrals and the final position
+       if(NameTask == 'integrate')call store_integral(.true.)
 
+       ! Nothing more to do if not tracing
+       if(NameTask /= 'trace') EXIT BLOCK
+
+       ! For tracing either store results or send them back to starting PE
        if(iProcStart == iProc)then
 
           ! Store the result into the ModRayTrace::ray
@@ -479,23 +507,48 @@ contains
     RayIntegral_VII(1:pInvB_,iLat,iLon) = &
          RayIntegral_VII(1:pInvB_,iLat,iLon) + RayIntegral_V
 
-    if(DoneRay)RayIntegral_VII(xEnd_:zEnd_,iLat,iLon) = XyzRay_D
+    if(DoneRay)then
+       RayIntegral_VII(xEnd_:zEnd_,iLat,iLon) = XyzRay_D
+       RayIntegral_VII(Length_,iLat,iLon)     = RayLength
+    end if
 
   end subroutine store_integral
+
+  subroutine set_oktest_ray
+
+    select case(NameTask)
+    case('extract','extractfile','extractfiles')
+       oktest_ray = DoTest .and. iStart_D(1) == iTest
+    case('integrate')
+       oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iTest,jTest/))
+    case('trace')
+       oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
+            all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
+    case default
+       call stop_mpi(NameSub//' ERROR: invalid NameTask='//NameTask)
+    end select
+
+  end subroutine set_oktest_ray
 
 end subroutine follow_ray
 
 !==========================================================================
-subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
+subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
-  ! Follow ray starting at initial position Xyz_D inside block iBlock
+  !DESCRIPTION:
+  ! Follow ray identified by index array iStart_D, 
+  ! starting at initial position Xyz_D inside block iBlock,
   ! in direction iRay until we hit the wall of the block or the ionosphere. 
-  ! Return Xyz_D with the final position.
+  ! Return Xyz_D with the final position. 
+  ! Integrate and/or extract values if required.
+  ! Also return Length increased by the length of the ray in this block.
+  !
   ! Return iFace = 1..6 if the ray hit the east,west,south,north,bot,top walls
   ! Return ray_iono_    if the ray hit the ionosphere
   ! Return ray_loop_    if the ray did not hit anything 
   ! Return ray_body_    if the ray goes into or is inside a body
   ! Return ray_open_    if the ray goes outside the computational box
+  !EOP
 
   use ModRayTrace
   use ModProcMH
@@ -509,9 +562,11 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
 
   ! Arguments
 
+  integer, intent(in) :: iStart_D(4)
   integer, intent(in) :: iRay
   integer, intent(in) :: iBlock
   real, intent(inout) :: Xyz_D(3)
+  real, intent(inout) :: Length
   integer, intent(out):: iFace
 
   ! Local variables
@@ -533,7 +588,10 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   real :: dx_rel, dx_opt
 
   ! Ray length, maximum length in block, step size, next step size 
-  real :: l, lmax, dl, dl_next
+  real :: l, lmax, dl, dLength, dl_next
+
+  ! Fraction of the last step inside the ionosphere
+  real :: Fraction
 
   ! Step size limits
   real, parameter :: dl_max=1.0, dl_min=0.05, dl_tiny=1.e-6
@@ -542,7 +600,7 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   integer :: nsegment 
 
   ! True if Rmin_BLK < R_raytrace
-  logical :: check_inside
+  logical :: DoCheckInnerBc
 
   ! True if the block already containes open rays
   logical :: DoCheckOpen
@@ -581,11 +639,11 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   x      = (Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D + 1.0
 
   ! Set flag if checking on the ionosphere is necessary
-  check_inside=Rmin_BLK(iBlock)<R_raytrace
+  DoCheckInnerBc=Rmin_BLK(iBlock)<R_raytrace
 
   ! Set flag if checking for open rays is useful
   DoCheckOpen = .false.
-  !!!! any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
+!!!! any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
 
   ! Set the boundaries of the control volume in block coordinates
   ! We go out to the first ghost cell centers for sake of speed and to avoid
@@ -601,119 +659,119 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   dl_next=sign(dl_max,1.5-iRay)
 
   ! Accuracy in terms of x in normalized coordinates
-  dx_opt=0.01
+  dx_opt   = 0.01
 
   ! Length and maximum length of ray within control volume
-  l=0
-  lmax=10*maxval(xmax-xmin)
-  nsegment=0
-  n_iono=0
+  l        = 0
+  lmax     = 10*maxval(xmax-xmin)
+  nsegment = 0
+  n_iono   = 0
 
   ! Integration loop
   FOLLOW: do
      ! Check if we are inside the ionosphere
-     if(check_inside)then
+     if(DoCheckInnerBc)then
         ! Convert x to real coordinates xx
         xx = XyzStart_BLK(:,iBlock) + Dxyz_D * (x-1.)
         r2 = sum(xx**2)
 
         if(r2<=R2_raytrace)then
 
-           if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
-                'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
-                iProc,iBlock,nsegment,x,xx
-
-           if(r2 <= rIonosphere2)then
-              write(*,*)'WARNING r<rIonosphere should not happen!'
-              if(nsegment==0)then
-                 iFace=ray_body_
-                 if(oktest_ray)write(*,*)&
-                      'Initial point inside rIonosphere at me,iBlock,xx=',&
-                      iProc,iBlock,xx
-              else
-                 r=sqrt(r2)
-                 xx_ini = XyzStart_BLK(:,iBlock)+Dxyz_D*(x_ini-1.0)
-                 r_ini=sqrt(sum(xx_ini**2))
-                 ! Interpolate to the surface linearly along last segment
-                 xx=(xx*(r_ini-rIonosphere)+xx_ini*(rIonosphere-r))/(r_ini-r)
-                 ! Normalize xx in radial direction
-                 xx=rIonosphere*xx/sqrt(sum(xx**2))
-                 Xyz_D=xx
-                 iFace=ray_iono_
-              end if
+           if(NameVectorField /= 'B')then
+              Xyz_D = xx
+              iFace=ray_iono_
               EXIT FOLLOW
-           end if
-
-           if(DoIntegrate)then
-              r=sqrt(r2)
-              xx_ini = XyzStart_BLK(:,iBlock)+Dxyz_D*(x_ini-1.0)
-              r_ini=sqrt(sum(xx_ini**2))
-
-              if(oktest_ray)write(*,'(a,4es12.4)')&
-                   'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
-                   RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
-
-              ! Reduce integrals with the fraction of the last step which is
-              ! inside rBody. This fraction is estimated from the radii.
-              InvBDl = InvBDl * (R_raytrace - r) / (r_ini - r)
-
-              ! Reduce field line volume
-              RayIntegral_V(InvB_) = RayIntegral_V(InvB_) - InvBDl
-
-              ! Reduce density and pressure integrals
-              RayIntegral_V(RhoInvB_:pInvB_) = RayIntegral_V(RhoInvB_:pInvB_) &
-                   - InvBDl * RhoP_V
-
-              if(oktest_ray)then
-                 write(*,'(a,4es12.4)')&
-                      'After  reduction InvBdl, RayIntegral_V=',InvBdl, &
-                      RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
-
-                 write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
-                 write(*,*)'Reduction r_ini,r,R_raytrace =',r_ini,r,R_raytrace
-              end if
-
            end if
 
            ! Try mapping down to rIonosphere if we haven't tried yet
            if(n_iono<1)then
-              if(follow_ray_iono())then
-                 Xyz_D=xx
-                 iFace=ray_iono_
-                 EXIT FOLLOW
-              else
+              if(.not.follow_ray_iono())then
                  ! We did not hit the surface of the ionosphere
                  ! continue the integration
                  n_iono=n_iono+1
+              else
+                 if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
+                      'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
+                      iProc,iBlock,nsegment,x,xx
+
+                 r=sqrt(r2)
+                 xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini-1.0)
+                 r_ini=sqrt(sum(xx_ini**2))
+
+                 ! The fraction of the last step inside body is estimated from 
+                 ! the radii.
+                 Fraction = (R_raytrace - r) / (r_ini - r)
+
+                 ! Reduce ray length
+                 Length = Length - Fraction * dLength
+
+                 ! Recalculate position
+                 x = x - Fraction*(x-x_ini)
+                 
+                 if(NameTask == 'integrate')then
+                    ! Reduce integrals with the fraction of the last step 
+                    if(oktest_ray)write(*,'(a,4es12.4)')&
+                         'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
+                         RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
+
+                    ! Recalculate dLength/abs(B)
+                    InvBDl = Fraction * InvBDl
+
+                    ! Reduce field line volume
+                    RayIntegral_V(InvB_) = RayIntegral_V(InvB_) - InvBDl
+
+                    ! Reduce density and pressure integrals
+                    RayIntegral_V(RhoInvB_:pInvB_) = &
+                         RayIntegral_V(RhoInvB_:pInvB_) - InvBDl * RhoP_V
+
+                    if(oktest_ray)then
+                       write(*,'(a,4es12.4)')&
+                            'After  reduction InvBdl, RayIntegral_V=',InvBdl, &
+                            RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
+
+                       write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
+                       write(*,*)'Reduction r_ini,r,R_raytrace =',&
+                            r_ini,r,R_raytrace
+                    end if
+                    
+                 end if
+
+                 ! Exit integration loop (xx was set by follow_ray_iono)
+                 Xyz_D=xx
+                 iFace=ray_iono_
+                 EXIT FOLLOW
               end if
            end if
         end if
      end if
-
      ! Integrate with 2nd order scheme
-     dl=dl_next
-     x_ini=x
+     dl    = dl_next
+     x_ini = x
 
      ! Half step
-     call interpolate_b(x_ini,b_D,b_ini)
-     x_mid=x_ini+0.5*dl*b_ini
+     call interpolate_b(x_ini, b_D, b_ini)
+     x_mid = x_ini + 0.5*dl*b_ini
+
+     ! Extract ray values using the interpolation coefficients around x_ini
+     if(NameTask(1:7)=='extract')call ray_extract(.false., x_ini)
 
      STEP: do
         ! Full step
-        call interpolate_b(x_mid,b_D,b_mid)
+        b_mid = b_ini ! In case interpolation would gives zero vector
+        call interpolate_b(x_mid, b_D, b_mid)
 
         ! Calculate the difference between 1st and 2nd order integration
         ! and take ratio relative to dx_opt
-        dx_rel=abs(dl)*maxval(abs(b_mid-b_ini))/dx_opt
+        dx_rel = abs(dl) * maxval(abs(b_mid-b_ini)) / dx_opt
 
         if(oktest_ray.and.okdebug)&
              write(*,*)'me,iBlock,x_mid,b_mid,dx_rel=', &
              iProc,iBlock,x_mid,b_mid,dx_rel
 
         ! Make sure that dl does not change more than a factor of 2 or 0.5
-        dx_rel=max(0.5,min(2.,dx_rel))
+        dx_rel = max(0.5, min(2., dx_rel))
 
-        if(dx_rel>1.)then
+        if(dx_rel > 1.)then
            ! Not accurate enough, decrease dl if possible
 
            if(abs(dl) <= dl_min + dl_tiny)then
@@ -725,14 +783,14 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
            dl = sign(max(dl_min,abs(dl)/(dx_rel+0.001)),dl)
 
            ! New mid point using the reduced dl
-           x_mid=x_ini+0.5*dl*b_ini
+           x_mid = x_ini + 0.5*dl*b_ini
 
            if(oktest_ray.and.okdebug)&
                 write(*,*)'new decreased dl: me,iBlock,dl=', &
                 iProc,iBlock,dl
         else
            ! Too accurate, increase dl if possible
-           if(abs(dl)<dl_max-dl_tiny)then
+           if(abs(dl) < dl_max - dl_tiny)then
 
               dl_next = sign(min(dl_max,abs(dl)/sqrt(dx_rel)),dl)
 
@@ -746,9 +804,20 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
         end if
      end do STEP
 
-     x=x_ini+b_mid*dl
+     ! Update position after the full step
+     x = x_ini + b_mid*dl
 
-     if(DoIntegrate)then
+     ! Update number of segments and the length in block coordinates
+     nsegment = nsegment + 1
+     l        = l + abs(dl)
+
+     ! Step size in MH units  !!! Use simpler formula for cubic cells ???
+     dLength = abs(dl)*sqrt( sum((b_mid*Dxyz_D)**2) )
+
+     ! Update ray length
+     Length  = Length + dLength
+
+     if(NameTask == 'integrate')then
 
         ! Interpolate density and pressure
         ! Use the last indexes and distances already set in interpolate_b
@@ -762,7 +831,7 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
              +                   dz2*Extra_VGB(:,i1,j1,k1,iBlock)))
 
         ! Calculate physical step size divided by physical field strength
-        InvBDl =  abs(dl) * sqrt( sum((b_mid*Dxyz_D)**2)/sum(b_D**2) )
+        InvBDl = dLength / sqrt( sum(b_D**2) )
 
         ! Intgrate field line volume = \int dl/B
         RayIntegral_V(InvB_) = RayIntegral_V(InvB_) + InvBDl
@@ -772,9 +841,12 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
              InvBDl * RhoP_V
 
         ! Check if we crossed the Z=0 plane
-        xx_ini = XyzStart_BLK(:,iBlock)+Dxyz_D*(x_ini-1.)
-        xx     = XyzStart_BLK(:,iBlock)+Dxyz_D*(x    -1.)
+        xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini - 1.)
+        xx     = XyzStart_BLK(:,iBlock) + Dxyz_D*(x     - 1.)
 
+        ! What about multiple crossings !!!
+        ! Should we check in which direction the equator is crossed !!!
+        ! We could check for south-to-north crossings here !!!
         if(xx(3)*xx_ini(3)<=0)then
 
            ! Interpolate x and y
@@ -797,9 +869,6 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
            end if
         end if
      end if
-
-     nsegment=nsegment+1
-     l=l+abs(dl)
 
      if(oktest_ray.and.okdebug)&
           write(*,*)'me,iBlock,nsegment,l,x=', &
@@ -829,7 +898,7 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
      end if
 
      ! Check if we have integrated for too long
-     if(l>lmax)then
+     if( l > lmax .or. Length > RayLengthMax )then
         ! Seems to be a closed loop within a block
         if(oktest_ray) &
              write(*,*)'CLOSED LOOP at me,iBlock,x,xx=',&
@@ -841,6 +910,11 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
 
   end do FOLLOW
 
+  ! Extract last point if ray is done. 
+  ! The interpolation coefficients are not known.
+  if(iFace /= ray_block_ .and. NameTask(1:7) == 'extract') &
+       call ray_extract(.true., x)
+
   if(oktest_ray) then
      write(*,'(a,4i4)')&
           'Finished follow_ray_block at me,iBlock,nsegment,iFace=',&
@@ -851,15 +925,18 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   end if
 
 contains
-  !===========================================================================
+  !========================================================================
 
   subroutine interpolate_b(x_D,b_D,Dir_D)
 
-    ! Obtain normalized bb field at normalized location x_D and put it into qb
+    ! Interpolate the magnetic field at normalized location x_D 
+    ! and return the result in b_D. 
+    ! The direction of b_D (normalized to a unit vector) is returned 
+    ! in Dir_D if the magnitude of b_D is not (almost) zero.
 
-    real, intent(in) :: x_D(3)      ! location
-    real, intent(out):: b_D(3)      ! interpolated magnetic field
-    real, intent(out):: Dir_D(3)    ! direction vector
+    real, intent(in)   :: x_D(3)      ! location
+    real, intent(out)  :: b_D(3)      ! interpolated magnetic field
+    real, intent(inout):: Dir_D(3)    ! direction vector
 
     !LOCAL VARIABLES:
     real :: AbsB
@@ -903,7 +980,6 @@ contains
        write(*,*)NameSub,' ERROR at iProc,iBlock,Xyz_D = ',iProc,iBlock,&
             XyzStart_BLK(:,iBlock)+Dxyz_D*(x_D-1.0)
        write(*,*)NameSub,' ERROR b_D=',b_D,' abs(B)=',AbsB
-       call stop_mpi(NameSub//' ERROR: magnetic field is zero')
     end if
 
   end subroutine interpolate_b
@@ -946,11 +1022,43 @@ contains
 
   end function follow_ray_iono
 
+  !=========================================================================
+
+  subroutine ray_extract(DoInterpolate, x_D)
+
+    use ModIO, ONLY: iUnitLine_I
+    logical, intent(in) :: DoInterpolate
+    real, intent(in) :: x_D(3)
+    real :: Xyz_D(3)
+    character(len=*), parameter :: NameSub='ray_extract'
+    !----------------------------------------------------------------------
+    !!! if(DoInterpolate) calculating coefficients to be implemented
+
+    ! Convert x_D to real coordinates
+    Xyz_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_D - 1.)
+
+    select case(NameTask)
+    case('extractfiles')
+       write(iUnitLine_I(iStart_D(1)),'(100es18.10)') Length, Xyz_D
+    case('extractfile')
+       write(iUnitLine_I(1),'(100es18.10)') Length, Xyz_D, real(iStart_D(1))
+    case('extract')
+       call stop_mpi(NameSub//' ERROR task=extract is not implemented yet')
+    case default
+       call stop_mpi(NameSub//' ERROR invalid task='//NameTask)
+    end select
+
+  end subroutine ray_extract
+
 end subroutine follow_ray_block
 
 !============================================================================
 
 subroutine ray_trace_sorted
+
+  ! This subroutine is an experiment to sort blocks and cells such that
+  ! open field lines can be found very fast. It works well for simple problems,
+  ! but it does not seem to improve the performance for realistic grids
 
   use ModMain, ONLY: MaxBlock, nBlock, nI, nJ, nK, unusedBLK
   use ModPhysics, ONLY: SW_Bx, SW_By, SW_Bz
@@ -1039,7 +1147,7 @@ subroutine ray_trace_sorted
         do k = kStart, kEnd, kStride
            do j = jStart, jEnd, jStride
               do i = iStart, iEnd, iStride
-                 
+
               end do
            end do
         end do
@@ -1062,9 +1170,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use ModPhysics, ONLY: rBody
   use ModProcMH
   use ModMpi
-  use ModNumConst, ONLY: cDegToRad, cTiny
+  use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
-  use ModUtilities, ONLY: check_allocate
+  use ModUtilities,      ONLY: check_allocate
+  use ModGeometry,       ONLY: XyzMax_D, XyzMin_D
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1089,11 +1198,14 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   oktest_ray = .false.
 
   ! Initialize R_raytrace, R2_raytrace
-  R_raytrace = rBody
-  if(DoTestMe)write(*,*)'Setting R_raytrace=',R_raytrace
-  R2_raytrace = R_raytrace**2
+  R_raytrace   = rBody
+  R2_raytrace  = R_raytrace**2
+  RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
 
-  ! Initialize CON_ray_trace
+  NameTask        = 'integrate'
+  NameVectorField = 'B'
+
+  ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
   ! Copy magnetic field into Bxyz_DGB
@@ -1124,7 +1236,6 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
   RayIntegral_VII = 0.0
   RayResult_VII   = 0.0
-  DoIntegrate = .true.
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
@@ -1147,8 +1258,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
 
         ! Check if the mapping is on the north hemisphere
         if(iHemisphere == 0)then
-!           write(*,*)NameSub,' point did not map to rBody, ',&
-!                'implement analytic integrals here! Lat, Lon=', Lat, Lon
+           !           write(*,*)NameSub,' point did not map to rBody, ',&
+                !                'implement analytic integrals here! Lat, Lon=', Lat, Lon
            CYCLE
         elseif(iHemisphere == -1)then
            write(*,*)NameSub,' point mapped to the southern hemisphere! ',&
@@ -1183,7 +1294,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   end do
 
   ! Do remaining rays obtained from other PE-s
-  call follow_ray(0, (/0, 0, 0, 0/), (/ 0., 0., 0. /))
+  call finish_ray
 
   if(DoTest.and.iTest<=nLat.and.jTest<=nLon) &
        write(*,*)NameSub,' iProc, RayIntegral_VII=',&
@@ -1201,8 +1312,8 @@ end subroutine integrate_ray_accurate
 
 subroutine test_ray_integral
 
-  use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, nRayIntegral, &
-       xyz_to_latlon
+  use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, Length_, &
+       nRayIntegral, xyz_to_latlon
   use ModMain,     ONLY: iTest, jTest
   use ModProcMH,   ONLY: iProc
   use ModIoUnit,   ONLY: UNITTMP_
@@ -1241,7 +1352,7 @@ subroutine test_ray_integral
      write(UNITTMP_,"(3i4)")nLat, nLon
      write(UNITTMP_,"(100(1pe13.5))")0.0
      write(UNITTMP_,"(a79)")&
-          'Lon Lat Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Param'
+          'Lon Lat Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length Param'
 
      do iLat=1,nLat
         Lat = Lat_I(iLat)
@@ -1252,7 +1363,7 @@ subroutine test_ray_integral
 
            if(iLat == iTest .and. iLon == jTest)then
               write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                   'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend'
+                   'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'
               write(*,'(2i4,100(1es12.4))') iLon, iLat, Lon, Lat, &
                    RayResult_VII(:,iLat,iLon)
            end if
@@ -1276,3 +1387,158 @@ subroutine test_ray_integral
   stop
 
 end subroutine test_ray_integral
+
+!==============================================================================
+
+subroutine write_plot_line(iFile)
+
+  use ModProcMH,   ONLY: iProc, iComm
+  use ModRayTrace, ONLY: NameTask, NameVectorField, &
+       oktest_ray, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
+  use CON_ray_trace, ONLY: ray_init
+  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModPhysics,  ONLY: rBody
+  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, Plot_,iUnitLine_I,&
+       NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
+  use ModMain,     ONLY: n_step, time_simulation, nBlock
+  use ModGeometry, ONLY: XyzMax_D, XyzMin_D
+  use ModIoUnit,   ONLY: io_unit_new, UnitTmp_
+  use ModUtilities,ONLY: flush_unit
+
+  implicit none
+
+  integer, intent(in) :: iFile ! The file index of the plot file
+
+  character(len=100) :: NameFile, NameStart
+  integer            :: nHeaderFile
+
+  real    :: Xyz_D(3)
+  integer :: iPlotFile, iProcFound, iBlockFound, i,j,k, iLine, iRay, iError
+
+  character(len=*), parameter :: NameSub = 'write_plot_line'
+  logical :: DoTest, DoTestMe
+  !-------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  iPlotFile = iFile - Plot_
+
+  ! Initialize R_raytrace, R2_raytrace
+  oktest_ray = .false.
+  R_raytrace   = rBody
+  R2_raytrace  = R_raytrace**2
+  RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
+
+  if(IsSingleLine_I(iPlotFile))then
+     NameTask    = 'extractfiles'
+     nHeaderFile = nLine_I(iPlotFile)
+  else
+     NameTask    = 'extractfile'
+     nHeaderFile = 1
+  end if
+
+  ! (Re)initialize CON_ray_trace
+  call ray_init(iComm)
+
+  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+  !call message_pass_cells8(.false.,.false.,.false.,8,State_VGB)
+
+  NameVectorField = NameLine_I(iPlotFile)
+  select case(NameVectorField)
+  case('B')
+     ! Store B1+B0 for faster interpolation
+     Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(Bx_,:,:,:,1:nBlock) &
+          + B0xCell_BLK(:,:,:,1:nBlock)
+     Bxyz_DGB(2,:,:,:,1:nBlock) = State_VGB(By_,:,:,:,1:nBlock) &
+          + B0yCell_BLK(:,:,:,1:nBlock)
+     Bxyz_DGB(3,:,:,:,1:nBlock) = State_VGB(Bz_,:,:,:,1:nBlock) &
+          + B0zCell_BLK(:,:,:,1:nBlock)
+  case('U')
+     ! Store momentum field (same as velocity field after normalization)
+     Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(RhoUx_,:,:,:,1:nBlock)
+     Bxyz_DGB(2,:,:,:,1:nBlock) = State_VGB(RhoUy_,:,:,:,1:nBlock)
+     Bxyz_DGB(3,:,:,:,1:nBlock) = State_VGB(RhoUz_,:,:,:,1:nBlock)
+  case default
+     write(*,*)NameSub,' WARNING: for iFile=',iFile,' invalid NameLine=',&
+          trim(NameVectorField),'!!!'
+     RETURN
+  end select
+
+  write(NameStart,'(a,i1,a)') &
+       trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile, &
+       '_'//NameVectorField
+
+  ! Write header information
+  do iLine = 1, nHeaderFile
+
+     NameFile = NameStart
+     if(NameTask == 'extractfiles' .and. nLine_I(iPlotFile)>1)then
+        write(NameFile,'(a,i1)') trim(NameFile),iLine
+     else
+        NameFile = NameStart
+     end if
+     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step,'.l'
+
+     if(iProc==0)then
+        open(UnitTmp_,file=NameFile)
+        select case(plot_form(iFile))
+        case('idl')
+           write(UnitTmp_,'(a79)')'Extract '//NameVectorField//'_var11'
+           if(NameTask == 'extractfiles')then
+              write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,3
+              write(UnitTmp_,'(a6)')             '__nn__'
+              if(IsParallelLine_II(iLine,iPlotFile))then
+                 write(UnitTmp_,'(es13.5)')      1.0
+              else
+                 write(UnitTmp_,'(es13.5)')      2.0
+              end if
+              write(UnitTmp_,'(a79)')            'Length x y z Dir'
+           else
+              write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,4
+              write(UnitTmp_,'(a6)')             '__nn__'
+              write(UnitTmp_,'(es13.5)')         real(nLine_I(iPlotFile))
+              write(UnitTmp_,'(a79)')            'Length x y z Index nLine'
+           end if
+        case('tec')
+           write(UnitTmp_,'(a)')'TEC header to be implemented'
+        end select
+        close(UnitTmp_)
+     end if
+
+     ! Open output files
+     write(NameFile,'(a,i4.4,a)') NameFile(1:len_trim(NameFile)-2) // &
+          '_pe',iProc,'.lst'
+     if(DoTest)write(*,*)NameSub,': saving results into file ',trim(NameFile)
+
+     iUnitLine_I(iLine) = io_unit_new();
+     open(iUnitLine_I(iLine), file = NameFile)
+
+  end do
+
+  do iLine = 1, nLine_I(iPlotFile)
+     Xyz_D = XyzStartLine_DII(:, iLine, iPlotFile)
+
+     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
+          iProcFound, iBlockFound, .true., i, j, k)
+
+     if(iProc == iProcFound)then
+        if(DoTest)write(*,*)NameSub,' follows ray ',iLine,&
+             ' from iProc,iBlock,i,j,k=',iProcFound, iBlockFound, i, j, k
+        if(IsParallelLine_II(iLine,iPlotFile))then
+           iRay = 1
+        else
+           iRay = 2
+        end if
+        call follow_ray(iRay, (/iLine, 0, 0, iBlockFound/), Xyz_D)
+     end if
+  end do
+
+  ! Do remaining rays obtained from other PE-s
+  call finish_ray
+
+  do iLine=1,nHeaderFile
+     close(iUnitLine_I(iLine))
+  end do
+
+end subroutine write_plot_line
+
