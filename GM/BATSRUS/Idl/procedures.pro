@@ -1552,6 +1552,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          tvf=bytscl(tvf,MIN=f_min,MAX=f_max,TOP=!D.TABLE_SIZE-3)+1
       endif
 
+      if showbar then $
+        plotct, [pos(2)+0.005, pos(1), pos(2)+0.025, pos(3)], [f_min,f_max]
+
       case axistype of
       'cells': case plotmod of
          'cont': contour,f>f_min,LEVELS=levels,$
@@ -1709,9 +1712,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          ; redraw box in case the body is at the edge
          plot,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
       endif
-
-      if showbar then $
-         plotct, [pos(2)+0.005, pos(1), pos(2)+0.025, pos(3)], [f_min,f_max]
 
       if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
                                    and plotmod ne 'shade' then begin
