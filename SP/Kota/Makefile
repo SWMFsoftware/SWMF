@@ -22,7 +22,5 @@ clean:
 distclean: 
 	cd src; make distclean
 	cd srcInterface; make distclean
-	rm -f Makefile.conf *~ \
-	src/io_unit_for77.f src/stdout.h \
-	Makefile.def
+	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
