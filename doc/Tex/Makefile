@@ -231,7 +231,7 @@ cleanpdf: clean
 
 #^CMP IF DOCHTML BEGIN
 cleanhtml: clean
-	cd ../HTML;rm -rf SWMF
+	cd ../HTML;rm -rf SWMF REFERENCE
 
 cleanall: cleanpdf cleanhtml
 #^CMP END DOCHTML
