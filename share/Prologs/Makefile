@@ -1,16 +1,40 @@
+#BOP
+#!QUOTE: \newpage \subsection{Scripts and Makefiles} 
+#!QUOTE: Here are the scripts and Makefile-s
+#!ROUTINE: Makefile - an example how to produce Protex documentation
+
+#!DESCRIPTION:
+# This Makefile is a template for creating documentation from 
+# Protex documented F90 source code and scripts/Makefile-s.
+#
+# Describe here the script or Makefile with Latex syntax
+# Note that in scripts/Makefile the Protex tags require a comment string 
+# and an exclamation mark except for \#BOP, \#EOP, \#BOC and \#EOC.
+# 
+# It is a good idea to include the help message of the script 
+# or the help target of the Makefile between the \#BOC and \#EOC,
+# so the manual contains the same information as the interactive help.
+#
+# The !QUOTE:$\backslash$newpage $\backslash$subsection\{..\} tag is 
+# only required in the first script in
+# the section.
+
+#!USES:
 include ../../Makefile.def
 include ../../Makefile.conf
 
-# This Makefile is a template for creating documentation from 
-# Protex documented F90 source code and scripts
+#!REVISION HISTORY:
+# 04/28/2004 G.Toth myemail@umich.edu - initial version
+#EOP
 
 # SCRIPTDIR = ../Scripts
 
 PROTEXFILES = \
 	program.protex \
-	module.protex \
 	subroutine.protex \
-	internal_subroutine.protex
+	module.protex \
+	internal_subroutine.protex \
+	Makefile.protex
 
 OBJECTS = \
 	module.o \
@@ -25,6 +49,7 @@ PROTEX.tex: ${PROTEXFILES}
 
 # TEST TARGETS
 
+#BOC
 help:
 	@echo 'The following targets are available:'
 	@echo
@@ -37,6 +62,7 @@ help:
 	@echo 'clean     - remove *~ and *.protex files'
 	@echo 'distclean - remove all temporary files'
 	@echo
+#EOC
 
 test:
 	make COMPILE
@@ -62,22 +88,32 @@ program_example.exe: ${OBJECTS}
 # CLEANING
 
 distclean: clean
-	rm -f *.dvi *.ps *.pdf PROTEX.tex program_example.exe
+	rm -f *.dvi *.ps *.pdf *.aux *.log PROTEX.tex program_example.exe
 
 # RULES
+
+# Since Makefile does not have an extension, this rule is explicit,
+# but otherwise the rule is the same as for scripts with a .pl extension.
+
+Makefile.protex: Makefile
+	${SCRIPTDIR}/protex -b -n -f -S Makefile > Makefile.protex
 
 .SUFFIXES:
 .SUFFIXES: .f90 .o .pl .protex .tex .dvi .ps .pdf
 
+# Rule to convert F90 to protex
 .f90.protex:
 	${SCRIPTDIR}/protex -b -n -f $*.f90 > $*.protex
 
+# Rule to convert Perl scripts to protex
 .pl.protex:
 	${SCRIPTDIR}/protex -b -n -f -S $*.pl > $*.protex
 
 # NOTE: Repeat latex $*.tex twice to get references right
 # NOTE: Repeat latex $*.tex three times to get table of contents right
 .tex.dvi:
+	latex $*.tex
+	latex $*.tex
 	latex $*.tex
 
 .dvi.ps: 
