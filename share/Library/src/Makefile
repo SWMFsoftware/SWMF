@@ -22,6 +22,7 @@ MODULES = \
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
+	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
 	CON_ray_trace.o
