@@ -2,8 +2,9 @@
 T
 
 #DESCRIPTION
-Use restart data for SC
-Create restart files for GM and IH. IH-GM-IE coupling. Needs user_routines.f\90.heliosphere!
+Use restart data for SC (/g/public/screstart.tar)
+Create restart files for IH. Needs user_routines.f\90.heliosphere!
+See the results and README file in /g/public/scihrestart.tar
 
 #INCLUDE
 RESTART.in
@@ -105,7 +106,7 @@ em_r ek_r et_r
 4.0  10.0               rLog
 
 #SAVEPLOT
-3			nplotfiles
+4			nplotfiles
 x=0 MHD tec             plot_string
 10000                   dn
 -1.0			dt
@@ -115,6 +116,10 @@ y=0 MHD tec		plot_string
 z=0 MHD tec		plot_string
 10000			dn
 -1.0			dt
+y=0 MHD idl             StringPlot
+500                     DnOutput(plot_+3)
+-1.			DtOutput
+-1.			DxOutput
 
 #END_COMP SC
 
@@ -128,7 +133,6 @@ IH			NameTarget
 
 
 #BEGIN_COMP IH ---------------------------------------------------------------
-
 
 #PROBLEMTYPE
 3			problem_type: 3=Solar Wind and Inner Heliosphere
@@ -151,35 +155,9 @@ coronatoih
 4.50			SIGMAheat
 F                       UseUserPerturbation
 
-! We use the extra source terms defined
-! in user_routines.f90.heliosphere
-
-#USER_FLAGS
-F                       UseUserInnerBcs
-T                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserSetPhysConst
-F                       UseUserUpdateStates
-
-#USERINPUTBEGIN
-
-#USEUSERHEATING
-F
-
-#USERINPUTEND
-
-
 #HELIODIPOLE
--3.0			HelioDipoleStrength(equatorial field strength in Gauss)
- 0.0			HelioDipoleTilt
+0.0			HelioDipoleStrength(equatorial field strength in Gauss)
+0.0			HelioDipoleTilt
 
 
 #GRID
@@ -219,40 +197,27 @@ RAW			StringLogfile
 #SAVEPLOT
 2                       nPlotFiles
 x=0 MHD tec             StringPlot
-1000                    DnOutput(plot_+3)
+10000                   DnOutput(plot_+3)
 -1.			DtOutput
 y=0 MHD idl             StringPlot
-1000                    DnOutput(plot_+3)
+500                     DnOutput(plot_+3)
 -1.			DtOutput
 -1.			DxOutput
 
 
-#END_COMP IH -----------------------------------------------------------------
-
-
-
-#STOP
-500                     MaxIter
--1.			TimeMax
-
-#RUN	######################################################################
-
-#BEGIN_COMP IH ---------------------------------------------------------------
-
-! Switch to a more accurate solver
+#GAMMA
+1.50000E+00		g
 
 #SCHEME
 2			nOrder
-Linde			TypeFlux
+Sokolov			TypeFlux
 minmod                  TypeLimiter
 
 #END_COMP IH -----------------------------------------------------------------
 
 
-#END_COMP SC ----------------------------------------------------------------
-
 #STOP
-20000                    MaxIter
+10000                   MaxIter
 -1.			TimeMax
 
 #END
