@@ -1,21 +1,44 @@
 !^CFG COPYRIGHT UM
-! This library contains all the MPI subroutines and functions used 
-! in BATS-R-US. This library can be used instead of the real MPI library
-! for sequential execution. Most subroutines and functions do nothing,
-! or almost nothing, or stop, as it is appropriate.
-
+!
+!BOP
+!
+!QUOTE: \section{util/NOMPI: Library for Sequential Execution}
+!
+!MODULE: NOMPI - a library replacing MPI for sequential execution
+!
+!DESCRIPTION:
+!
+! The NOMPI library can be used for debugging on a single processor,
+! and possibly running small problems on a machine with no MPI library.
+!
+! The NOMPI library contains all the MPI subroutines and functions used 
+! in SWMF and its parallel components. This library can be used instead 
+! of the real MPI library for sequential execution. You have to compile it
+! with 'make NOMPI' select MPILIB = ... -lNOMPI in Makefile.conf
+! and relink the executable.
+!
+! Most of the subroutines and functions in this library do nothing,
+! or almost nothing, or stop, as it is appropriate, and they are
+! needed by the compiler.
+!EOP
 !=============================================================================
 ! core subroutines and functions used by the real MPI subroutines/functions
 !=============================================================================
-
+!BOP
+!
+!ROUTINE: MPI_TYPE_SIZE - return size of datatype in bytes
+!
+!INTERFACE:
+!
 integer function MPI_TYPE_SIZE(datatype)
 
-  ! Return size of datatype in bytes
-
+  !USES:
   use ModMpi
   implicit none
 
+  !INPUT ARGUMENTS:
   integer, intent(in) :: datatype
+  !EOP
 
   integer, save :: byte_c=0, byte_l, byte_i, byte_r, byte_d
   !---------------------------------------------------------------------------
@@ -57,26 +80,32 @@ integer function MPI_TYPE_SIZE(datatype)
 
 end function MPI_TYPE_SIZE
 
-!=============================================================================
-
+!BOP =========================================================================
+!ROUTINE: MPI_SIMPLE_COPY - copy data between two buffers
+!INTERFACE:
 subroutine MPI_SIMPLE_COPY(caller,sendbuf,sendcount,sendtype,&
                                   recvbuf,recvcount,recvtype)
 
+  !DESCRIPTION:
   ! This subroutine is used by all the collective communication routines.
   ! Although the type of sendbuf and recvbuf are character (LEN=*),
   ! they are cast into character from arbitrary data types described by
   ! sendtype and recvtype. The number of bytes copied from sendbuf to
   ! recvbuf is determined by sendcount and sendtype. The number of bytes
   ! corresponding to a given data type is calculated by the function
-  ! MPI_TYPE_SIZE. recvcount and recvtype are used to check if the recieve
+  ! MPI\_TYPE\_SIZE. recvcount and recvtype are used to check if the recieve
   ! buffer is large enough.
 
   implicit none
 
+  !INPUT ARGUMENTS:
   character (LEN=*), intent(in) :: caller
   integer, intent(in) :: sendcount, sendtype, recvcount, recvtype
+
+  !INPUT/OUTPUT ARGUMENTS:
   character (LEN=*)   :: sendbuf
   character (LEN=*)   :: recvbuf
+  !EOP
 
   integer :: sendbyte,recvbyte
 
@@ -107,22 +136,29 @@ subroutine MPI_SIMPLE_COPY(caller,sendbuf,sendcount,sendtype,&
 
 end subroutine MPI_SIMPLE_COPY
 
-!=============================================================================
-
+!BOP ==========================================================================
+!ROUTINE: MPI_LOCAL_MSG - used by MPI send and receive subroutines
+!INTERFACE:
 subroutine MPI_LOCAL_MSG(caller,buf,count,datatype,rank,tag)
 
-  ! This subroutine is used by all MPI_??SEND and MPI_??RECV subroutines.
+  !DESCRIPTION:
+  ! This subroutine is used by all MPI SEND and RECV subroutines.
   ! We read and write messages of size count and type datatype from/into buf.
   ! The messages are identified by tag.
   ! Two dynamically resized buffers are used for storage. 
   ! Stop if RECV is issued before the corresponding SEND.
-
+  
+  !USES:
   use ModMpi
   implicit none
 
+  !INPUT ARGUMENTS:
   character (LEN=*), intent(in)   :: caller
   integer, intent(in)             :: count,datatype,rank,tag
+
+  !INPUT/OUTPUT ARGUMENTS:
   character (LEN=*)               :: buf
+  !EOP
 
   character, dimension(:,:), allocatable, save :: buffer,  buffer2
   integer,   dimension(:),   allocatable, save :: msg_tag, msg_tag2,&
