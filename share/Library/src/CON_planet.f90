@@ -27,7 +27,9 @@ module CON_planet
   !REVISION HISTORY:
   ! 01Aug03 - Aaron Ridly <ridley@umich.edu> and 
   !           Gabor Toth <gtoth@umich.edu>   - initial prototype/prolog/code
-  ! 23Mar   - added get_planet subroutine for OO type access
+  ! 23Mar03 - added get_planet subroutine for OO type access
+  ! 06May04 - K.C. Hansen and G. Toth added Saturn
+  !           G.Toth fixed bugs in degree to radian conversions
   !EOP
 
   implicit none
@@ -239,10 +241,10 @@ contains
           call read_var('RotAxisTheta', RotAxisTheta)
           if(RotAxisTheta < cZero)call CON_stop(NameSub// &
                ' ERROR: negative tilt should be entered as Phi=180.0')
-          RotAxisTheta = cRadToDeg * RotAxisTheta
+          RotAxisTheta = cDegToRad * RotAxisTheta
 
           call read_var('RotAxisPhi', RotAxisPhi)
-          RotAxisPhi = cRadToDeg * RotAxisPhi
+          RotAxisPhi = cDegToRad * RotAxisPhi
        else
           if(.not.IsMagAxisPrimary)call CON_stop(NameSub// &
                ' ERROR: either rotation or magnetic axis must be primary')
@@ -261,10 +263,10 @@ contains
           call read_var('MagAxisTheta', MagAxisTheta)
           if(MagAxisTheta < 0.0)call CON_stop(NameSub// &
                ' ERROR: negative tilt should be entered as Phi=180.0')
-          MagAxisTheta = cRadToDeg * MagAxisTheta
+          MagAxisTheta = cDegToRad * MagAxisTheta
 
           call read_var('MagAxisPhi', MagAxisPhi)
-          MagAxisPhi = cRadToDeg * MagAxisPhi
+          MagAxisPhi = cDegToRad * MagAxisPhi
        else
           if(.not.IsRotAxisPrimary)call CON_stop(NameSub//&
                ' ERROR: either rotation or magnetic axis must be primary')
