@@ -33,7 +33,7 @@ Module CON_global_vector
   !first index of the array enumerates the state component,
   !second is implied to be the global cell index in a grid 
   !descriptor 
-         
+
 
   !USES:
 
@@ -58,7 +58,7 @@ Module CON_global_vector
      logical,dimension(:),pointer::I
   end type GlobalMaskType
   !EOP
-  integer,private,parameter::nVectorMax=20,nLength=10
+  integer,parameter::nVectorMax=20,nLength=10
   integer,save::nVector=0,nMask=0
 
   type(GlobalVectorType),dimension(nVectorMax),save::&
@@ -94,25 +94,35 @@ Module CON_global_vector
   public::bcast_global_vector
   public::used_vector,used_mask,ubound_vector,ubound_mask
   public::set_mask,count_mask
+  public::point_state_v,point_state_vi,point_state_vx
+  interface point_state_v
+     module procedure point_state_vi
+     module procedure point_state_vx
+  end interface
+     
+     
+!  public::put_state,get_state
 contains
   !===========================================================!
-   subroutine allocate_vector_ilength(NameVector,nVar,nI)
+  subroutine allocate_vector_ilength(NameVector,nVar,nI)
     character(LEN=*),intent(in)::NameVector
     integer,intent(in)::nVar,nI
     integer:: iError
     nVector=nVector+1
+    if(nVector>nVectorMax)call CON_stop(&
+         'Insufficient nVectorMax in CON_global_vector')
     NameVector_I(nVector)=trim(NameVector)
     nullify(Vector_I(nVector)%I)
     allocate(Vector_I(nVector)%I(nVar,nI),stat=iError)
     call check_allocate(iError,'Global vector '//NameVector) 
   end subroutine allocate_vector_ilength
   !===========================================================!
-   subroutine allocate_vector_for_gd(NameVector,nVar,GD)
+  subroutine allocate_vector_for_gd(NameVector,nVar,GD)
     character(LEN=*),intent(in)::NameVector
     integer,intent(in)::nVar
     type(GridDescriptorType),intent(in)::GD
     call allocate_vector_ilength(NameVector,nVar,&
-    n_block_total(GD%DD%Ptr)*n_grid_points_per_block(GD))
+         n_block_total(GD%DD%Ptr)*n_grid_points_per_block(GD))
   end subroutine allocate_vector_for_gd
   !===========================================================!
   subroutine allocate_vector_for_mask(NameVector,nVar,NameMask)
@@ -132,8 +142,8 @@ contains
     allocate(Mask_I(nMask)%I(nI),stat=iError)
     call check_allocate(iError,'Global mask '//NameMask) 
   end subroutine allocate_mask_ilength
- !===========================================================!
-   subroutine allocate_mask_for_gd(NameMask,GD)
+  !===========================================================!
+  subroutine allocate_mask_for_gd(NameMask,GD)
     character(LEN=*),intent(in)::NameMask
     type(GridDescriptorType),intent(in)::GD
     call allocate_mask_ilength(NameMask,&
@@ -329,7 +339,7 @@ contains
        end if
     end do DIFFBLOCK
   end subroutine bcast_in_grid
-!=======================================================!
+  !=======================================================!
   subroutine bcast_in_union(&
        NameVector,GD,iTranslated_P,iCommUnion,NameMask)
     character(LEN=*),intent(in)::NameVector,NameMask
@@ -430,5 +440,103 @@ contains
     character(LEN=*),intent(in)::NameMask
     count_mask=count(Mask_I(i_mask(NameMask))%I)
   end function count_mask
+  !=======================================================
+  subroutine put_state(NameVector,iPoint,nVar,State_V,DoAdd)
+    character(LEN=*),intent(in)::NameVector
+    integer,intent(in)::iPoint,nVar
+    real,dimension(nVar),intent(in)::State_V
+    logical::DoAdd
+    integer,save::iVector=0
+    character(LEN=nLength),save::NameSaved=''
+    if(trim(NameSaved)/=trim(NameVector))then
+       iVector=i_vector(NameVector)
+       NameSaved=NameVector
+    end if
+    if(DoAdd)then
+       Vector_I(iVector)%I(:,iPoint)=&
+            Vector_I(iVector)%I(:,iPoint)+State_V
+    else
+       Vector_I(iVector)%I(:,iPoint)=State_V
+    end if
+  end subroutine put_state
+  !===================================================
+  function point_state_vi(NameVector,nVar,iPoint)
+    character(LEN=*),intent(in)::NameVector
+    integer,intent(in)::iPoint,nVar
+    real,dimension(nVar)::point_state_vi
+    integer,save::iVector=0
+    character(LEN=nLength),save::NameSaved=''
+    if(trim(NameSaved)/=trim(NameVector))then
+       iVector=i_vector(NameVector)
+       NameSaved=NameVector
+    end if
+    point_state_vi=Vector_I(iVector)%I(:,iPoint)
+  end function point_state_vi
+  function point_state_vx(&
+       NameVector, &
+       nVar,       &
+       Xyz_D,&
+       GD,   &
+       interpolate)
+    type(GridDescriptorType),intent(in):: GD
+    real,dimension(GD%nDim),intent(in):: Xyz_D
+    integer,intent(in)::nVar
+    character(LEN=*),intent(in)::NameVector
+    optional::interpolate
+    interface
+       subroutine interpolate(Xyz_D,&
+            GridDescriptor,&
+            nIndexes,&
+            Index_II,&
+            nImages,Weight_I)
+         use CON_grid_descriptor
+         implicit none
+         type(GridDescriptorType)::GridDescriptor     
+         real,dimension(GridDescriptor%nDim),&
+              intent(inout)::Xyz_D 
+         integer,intent(in)::nIndexes
+         integer,dimension(&
+              0:nIndexes,2**GridDescriptor%nDim)::Index_II
+         integer,intent(out)::nImages
+         real,dimension(2**GridDescriptor%nDim),&
+              intent(out)::Weight_I
+       end subroutine interpolate
+    end interface
+    real,dimension(nVar)::point_state_vx
+    !=========================================================
+    real,dimension(GD%nDim)::XyzMisc_D 
+    integer::nIndexes,nDim,iPoint
+    integer,dimension(&
+         0:GD%nDim+1,2**GD%nDim)::Index_II
+    integer::nImages,iImages,lGlobalNode
+    real,dimension(2**GD%nDim)::Weight_I
+    real,dimension(nVar)::State_V
+    nDim=GD%nDim;nIndexes=nDim+1;XyzMisc_D=Xyz_D
+    if(present(interpolate))then
+       call interpolate(XyzMisc_D,&
+            GD,&
+            nIndexes,&
+            Index_II,&
+            nImages,Weight_I)
+    else
+       call nearest_grid_points(XyzMisc_D,&
+            GD,&
+            nIndexes,&
+            Index_II,&
+            nImages,Weight_I)
+    end if
+    point_state_vx=cZero
+    do iImages=1,nImages
+       lGlobalNode=i_global_node_bp(GD%DD%Ptr,&
+            Index_II(nIndexes,iImages),&
+            Index_II(0,iImages))
+       iPoint=i_grid_point_global(GD,&
+            lGlobalNode,&
+            Index_II(1:nDim,iImages))
+       point_state_vx=point_state_vx+&
+            point_state_vi(NameVector,nVar,iPoint)&
+            *Weight_I(iImages)
+    end do
+  end function point_state_vx
 end Module CON_global_vector
       

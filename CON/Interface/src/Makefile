@@ -23,8 +23,15 @@ MOD4 = CON_couple_gm_im.o	#^CMP IF IM
 MOD5 = CON_couple_ie_im.o	#^CMP IF IM
 MOD6 = CON_couple_ie_ua.o	#^CMP IF UA
 #^CMP END IE
+#^CMP IF IH BEGIN
+MOD7 = CON_couple_ih_sc.o       #^CMP IF SC
+#CMP END IH
+
+MOD8 = CON_couple_mh_sp.o       #^CMP IF SP
+
 
 MODULES = ${MOD1} ${MOD2} ${MOD3} ${MOD4} ${MOD5} ${MOD6} \
+	${MOD7} ${MOD8}\
 	CON_wrapper.o \
 	CON_couple_all.o
 

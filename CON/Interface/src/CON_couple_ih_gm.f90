@@ -161,7 +161,7 @@ contains
             is_interface_block=GM_west_block,&
             interface_point_coords=GM_west_cells, &
             mapping=GM_IH_mapping,&
-            interpolate=bilinear_interpolation)
+            interpolate=interpolation_fix_reschange)
        IH_iGridRealization=i_realization(IH_)
        GM_iGridRealization=i_realization(GM_)
        IH_GM_iMapping=iMappingNew      

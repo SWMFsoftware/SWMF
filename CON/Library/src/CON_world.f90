@@ -95,6 +95,9 @@ module  CON_world
   public :: i_comm          ! return communicator used by component
   public :: i_group         ! return group used by component
   public :: i_proc_stride   ! return the PE stride
+  public :: i_proc_last     ! return the maximal PE rank among those 
+                            ! used by comp
+
   public :: check_i_comp    ! stop with error if component ID is out of range
                             ! this method is inherited from CON_comp_param
   public :: CON_stop        ! abort execution
@@ -157,6 +160,11 @@ module  CON_world
      module procedure i_proc_stride_world
      module procedure i_proc_stride_id
      module procedure i_proc_stride_name
+  end interface
+  interface i_proc_last
+     module procedure i_proc_last_world
+     module procedure i_proc_last_name
+     module procedure i_proc_last_id
   end interface
   interface CON_stop
      module procedure global_stop_
@@ -242,6 +250,10 @@ contains
   integer function i_proc_stride_world()
     i_proc_stride_world=1
   end function i_proc_stride_world
+  !===========================================================================
+  integer function i_proc_last_world()
+    i_proc_last_world=nProcWorld-1
+  end function i_proc_last_world
   !===========================================================================
   !BOP =======================================================================
   !IROUTINE: setup_from_file - read LAYOUT.in and register components
@@ -783,6 +795,19 @@ contains
     i_proc_stride_id =  &
          CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcStride_)
   end function i_proc_stride_id
+  !===========================================================================
+  integer function i_proc_last_name(Name)
+    character(len=*),intent(in)::Name
+    character(len=*),parameter :: NameSub=NameMod//'::i_proc_last_name'
+    i_proc_last_name = &
+         CompInfo_C(l_comp(Name,NameSub)) % iMpiParam_I(ProcLast_)
+  end function i_proc_last_name
+  !===========================================================================
+  integer function i_proc_last_id(iComp)
+    integer,intent(in)::iComp
+    character(len=*),parameter :: NameSub=NameMod//'::i_proc_last_id'
+    i_proc_last_id=CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcLast_)
+  end function i_proc_last_id
 !===============================================================!
 
   subroutine global_stop_(str,str1)

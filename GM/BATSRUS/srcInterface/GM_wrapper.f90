@@ -90,28 +90,26 @@ subroutine GM_set_grid
   !EOP
   logical ::DoTest,DoTestMe
   DoTest=.false.;DoTestMe=.false.
-  if(.not.done_dd_init(GM_))then
-     call init_decomposition(GM_,GM_,3,.true.)
-     call set_coord_system(GM_,TypeCoordSystem)
-
-     if(is_proc(GM_))then
-        call init_decomposition(&
-             MH_DomainDecomposition,GM_,3,.true.)
-        call MH_get_root_decomposition(MH_DomainDecomposition)
-        call MH_update_local_decomposition(MH_DomainDecomposition)
-        MH_DomainDecomposition%IsLocal=.true.
-     end if
-  call CON_set_do_test('test_grids',DoTest,DoTestMe)
+  if(done_dd_init(GM_))return
+  call init_decomposition(GM_,GM_,3,.true.)
+  call set_coord_system(GM_,TypeCoordSystem)
+  
+  if(is_proc(GM_))then
+     call init_decomposition(&
+          MH_DomainDecomposition,GM_,3,.true.)
+     call MH_get_root_decomposition(MH_DomainDecomposition)
+     call MH_update_local_decomposition(MH_DomainDecomposition)
+     MH_DomainDecomposition%IsLocal=.true.
   end if
+  call CON_set_do_test('test_grids',DoTest,DoTestMe)
 
 
   if(is_proc0(GM_))call MH_get_root_decomposition(GM_)
 
   call bcast_decomposition(GM_)
-!write(*,*) 'location 8'
 
   call synchronize_refinement(GM_,MH_domaindecomposition)
-!write(*,*) 'location 9'
+
   if(DoTest) call test_global_message_pass(GM_)
 end subroutine GM_set_grid
 !===================================================================!
