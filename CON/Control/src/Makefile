@@ -93,7 +93,7 @@ SWMFEXE = ${BINDIR}/SWMF.exe
 # - INTERFACEDIR: interface part of "superstructure"   --> libINTERFACE.a
 # - this directory contains control part of "superstructure" --> SWMF.exe
 
-SWMFEXE: DEPEND 
+SWMFEXE:
 	@cd ${SHAREDIR};     make LIB
 	@cd ${TIMINGDIR};    make LIB
 	@cd ${LIBRARYDIR};   make LIB
@@ -107,6 +107,7 @@ SWMFEXE: DEPEND
 	@cd ${SCDIR};        make LIB   #^CMP IF SC
 	@cd ${SPDIR};        make LIB   #^CMP IF SP
 	@cd ${INTERFACEDIR}; make LIB
+	make DEPEND
 	@make ${SWMFEXE}
 	@echo ' '
 	@echo Program ${SWMFEXE} has been brought up to date.
