@@ -50,6 +50,7 @@ module ModGmRbCoupling
 contains
 
   subroutine allocate_gm_rb(iSizeIn,jSizeIn)
+    use CON_comp_param, ONLY: RB_
 
     integer, intent(in) :: iSizeIn, jSizeIn
     character(len=*), parameter:: NameSub=NameMod//'::allocate_gm_rb'
