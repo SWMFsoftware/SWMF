@@ -75,14 +75,19 @@ module CON_wrapper
 
   logical, public  :: IsNewInputIe = .false. ! Store if IE got new input
 
-  real,    public :: DtCpu_C(MaxComp)=1.0    ! CPU time needed for a step
+  real,    public  :: TimeNewInputSp=-2.0    ! Last time when SP got input
+
+  real,    public  :: DtCpu_C(MaxComp)=1.0   ! CPU time needed for a step
 
   !REVISION HISTORY:
   ! 30Jul03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   !                                          based on the actual wrapper
+  ! 20Jul04 - Gabor Toth added exceptions for SP coupling (experimental)
   !EOP ___________________________________________________________________
 
   character(len=*),parameter :: NameMod='CON_wrapper_stub'
+
+  real :: TimeSp = -1.0                      ! The actual time SP has reached
 
   real,    dimension(MaxComp) :: DtRun_C=1.0
   real(Real8_)                :: Cpu0
@@ -287,6 +292,13 @@ contains
 
     call get_comp_info(iComp,iUnitOut=iUnitOut)
 
+    ! Set initial SP time
+    if(iComp == SP_)then
+       write(iUnitOut,*)'SP: ',NameSub,' old TimeSp=',TimeSp
+       if(TimeSp < 0.0) TimeSp = TimeSimulation
+       write(iUnitOut,*)'SP: ',NameSub,' new TimeSp=',TimeSp
+    end if
+
     write(iUnitOut,*)NameComp_I(iComp),': ',NameSub,&
          ' iProc,iSession,TimeSimulation=',&
          i_proc(),iSession,TimeSimulation
@@ -405,6 +417,26 @@ contains
     TimeSimulation = min(TimeSimulationLimit, TimeSimulation + DtRun_C(iComp))
 
     !\
+    ! SP can only solve up to the last coupling time TimeNewInputSp
+    !/
+    if(iComp==SP_)then
+       !write(iUnitOut,*)'SP: ',NameSub,' TimeNewInputSp=',TimeNewInputSp
+       !write(iUnitOut,*)'SP: ',NameSub,' TimeSp        =',TimeSp
+       if(TimeNewInputSp > TimeSp)then
+          ! Advance SP time by one step
+          TimeSp = min(TimeNewInputSp, TimeSp + DtRun_C(iComp))
+          write(iUnitOut,*)'SP: ',NameSub,' advancing to TimeSp=',TimeSp
+          ! Tell the framework if we are done by setting a fake TimeSimulation
+          TimeSimulation = TimeSimulationLimit + (TimeSp - TimeNewInputSp)
+       else
+          write(iUnitOut,*)'SP: ',NameSub,' cannot solve yet iProc=',i_proc()
+          ! Pretend that we are done
+          TimeSimulation = TimeSimulationLimit
+          RETURN
+       end if
+    end if
+
+    !\
     ! IE only solves if there is new info
     !/
     if(iComp==IE_)then
@@ -417,6 +449,7 @@ contains
        end if
     end if
 
+    ! Work on this time step
     call sleep(DtCpu_C(iComp))
 
   end subroutine run_comp_id
