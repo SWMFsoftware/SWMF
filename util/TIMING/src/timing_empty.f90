@@ -28,6 +28,12 @@ subroutine timing_step(value)
 end subroutine timing_step
 
 !==============================================================================
+subroutine timing_comp_proc(value1,value2)
+  character (len=*), intent(in) :: value1
+  integer, intent(in) :: value2
+end subroutine timing_comp_proc
+
+!==============================================================================
 subroutine timing_depth(value)
   integer, intent(in) :: value
 end subroutine timing_depth
