@@ -149,11 +149,11 @@ sub show_settings{
     print "The selected component versions and grid sizes are:\n";
     my $Comp;
     foreach $Comp (sort keys %Version){
-	print "\t$Comp/$Version{$Comp}";
+	print "\t$Comp/$Version{$Comp}\t\t";
 	if(-x "$Comp/$Version{$Comp}/$GridSizeScript"){
 	    my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript`;
 	    $Grid =~ s/$GridSizeScript(\s*-g=)?//;
-	    print "\t\tgrid: $Grid";
+	    print "grid: $Grid" if $Grid;
 	}else{
 	    print "\n";
 	}
