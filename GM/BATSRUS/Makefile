@@ -1,5 +1,3 @@
-include Makefile.def
-
 #
 # List the default target first for stand alone mode
 #
@@ -7,6 +5,8 @@ DEFAULT_TARGET = BATSRUS
 DEFAULT_EXE    = BATSRUS.exe
 
 default : ${DEFAULT_TARGET}
+
+include Makefile.def
 
 #
 # Menu of make options
