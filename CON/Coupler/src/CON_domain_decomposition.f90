@@ -782,7 +782,7 @@ contains
   end subroutine set_pe_and_local_blk_dd
 
   !===============================================================!
-  subroutine disable_global_blk_dd(&DomainDecomposition,&
+  subroutine disable_global_blk_dd(DomainDecomposition,&
        lGlobalTreeNode)
     type(DomainDecompositionType),intent(inout)::&
          DomainDecomposition
