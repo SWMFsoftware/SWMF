@@ -103,6 +103,12 @@ Module ModMain
   !\
   ! Model Coupling variables
   !/
+  
+  !\
+  ! Dimensions of the buffer grid
+  !/
+  integer::  nPhiBuff=90,nThetaBuff=45
+  real   ::RBuffMin=19.0,RBuffMax=21.0 
 
   logical :: UseIonosphere=.false.
 
