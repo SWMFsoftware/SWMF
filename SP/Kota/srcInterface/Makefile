@@ -1,4 +1,3 @@
-#^CFG COPYRIGHT SP
 
 SHELL =/bin/sh
 

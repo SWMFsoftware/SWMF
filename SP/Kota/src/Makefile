@@ -2,9 +2,8 @@
 
 SHELL =/bin/sh
 
-include ../../../Makefile.def
-include ../../../Makefile.conf
-
+include ../Makefile.def
+include ../Makefile.conf
 include Makefile.DEPEND
 
 OBJECTS = sep19.o main.o read_ihdata.o io_unit_for77.o
