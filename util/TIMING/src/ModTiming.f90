@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 module ModTiming
   implicit none
+  save
 
   integer, parameter :: Real8_ = selected_real_kind(12)
 
