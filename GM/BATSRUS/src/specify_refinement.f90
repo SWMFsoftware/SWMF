@@ -24,6 +24,7 @@ subroutine specify_initial_refinement(refb, lev)
 
   real,parameter::cRefinedTailCutoff=(cOne-cQuarter)*(cOne-cEighth)
 
+  character(len=*), parameter :: NameSub='specify_initial_refinement'
   logical :: oktest, oktest_me
 
   !----------------------------------------------------------------------------
@@ -987,7 +988,8 @@ subroutine specify_initial_refinement(refb, lev)
               endif
            endif
         case default
-           call stop_mpi('Unknown InitialRefineType='//InitialRefineType)
+           call stop_mpi(NameSub//' ERROR: unknown InitialRefineType='// &
+                trim(InitialRefineType)//'!!!')
         end select
      end if
   end do
