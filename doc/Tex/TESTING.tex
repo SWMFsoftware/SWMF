@@ -1,0 +1,73 @@
+%^CFG COPYRIGHT UM
+\documentclass[twoside,10pt]{report}
+
+\input HEADER
+
+\title{Test Procedures for the Space Weather Modeling Framework}
+
+\author{G\'abor T\'oth\\
+  {\it Center for Space Environment Modeling}\\
+  {\it The University of Michigan}}
+
+\begin{document}
+
+\pagestyle{fancy}
+\lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
+\rhead[\fancyplain{}{\bfseries\leftmark}]{\fancyplain{}{\bfseries\thepage}}
+\cfoot{}
+%\pagestyle{headings} % if fancy heading does not work
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Description of Testing Philosophy}
+
+The Space Weather Modeling Framework (SWMF) is a heterogeneous software
+comprising of the core of the framework and the various components
+modeling the physics domains. Since the components are developed 
+independently it is neither possible nor desirable to enforce a
+rigorous and comprehensive testing procedure for each component.
+On the other hand we must ensure that the core of the SWMF and
+the key components developed at the Center for Space Environment
+Modeling (CSEM) is well tested, reliable and portable. 
+We also established some base line testing for the whole
+framework involving all the components to verify that the SWMF
+works as expected on different platforms.
+
+\chapter{Description of Unit Testing}
+
+The core of the SWMF consists of three layers:
+\begin{itemize}
+\item The super structure:  CON/Control, CON/Interface, CON/Stubs
+\item The infra structure: CON/Library, CON/Coupler, share/, util/
+\end{itemize}
+The super structure, as the name suggests, can only be tested
+together with the components and the infra structure. 
+This complexity is somewhat reduced if the components are replaced
+with {\it stubs} which are implemented in the CON/Stubs directory.
+
+\section{Testing with Stub Components}
+
+The SWMF can be compiled with the stub components if the 
+\begin{verbatim}
+INT_VERSION = Stubs
+\end{verbatim}
+is selected in {\tt Makefile.def}. With this choice the core
+of SWMF can be tested with simplified parameter files,
+such as Para
+
+\section{Testing the Registry}
+
+\section{Testing the Library share}
+
+\section{Testing the Timing Utility}
+
+\chapter{Description of Functionality Testing}
+
+\section{Testing the BATSRUS code}
+
+\chapter{Description of Portability Testing}
+
+
+\end{document}
