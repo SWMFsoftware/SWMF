@@ -58,7 +58,8 @@ on Linux Beowulf clusters with the NAG F95 compiler.
     \item The path to these files should be externally set
     \end{itemize}
 
-\item A module must be implemented in the following languages only: Fortran 77, Fortran 90, and C/C++.
+\item A module must be implemented in the following languages only: 
+    Fortran 77, Fortran 90, and C/C++.
 
 \item The following is not permitted in the source code of the module:
 
@@ -68,7 +69,7 @@ on Linux Beowulf clusters with the NAG F95 compiler.
     \item Input-output that cannot be turned off or redirected
     \item Absence of error handling in the code
     \item Pointers that do not return error conditions
-\end{itemize}
+    \end{itemize}
 
 \item The source code of the module should be documented 
       at least through appropriate comments in source files.
@@ -219,6 +220,13 @@ polymorphism in Fortran 90 written code. They allow to use a single
 subroutine name for a component method and resolve at run-time which 
 particular component method was called.
 
+\newpage
+\section{Example for Component Wrapper}
+
+\input PM_wrapper.protex
+
+%\input PM_coupler.protex
+\newpage
 %%%
 % Bug Reporting
 %%%
