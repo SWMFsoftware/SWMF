@@ -1041,9 +1041,16 @@ c ========================  OUTPUT ROUTINES to be revised ========
      1     xsc(0:nRMax)
       integer  iFile
       include 'stdout.h'
-      call SP_get_io_unit_new(iFile)
-      if (io.lt.10) stop  'io kicsi'
-      if (io.gt.16) stop  'io nagy '
+
+      call CON_io_unit_new(iFile)
+      if (io.lt.10) then
+         write(iStdOut,*)prefix, 'io kicsi'
+         call CON_stop(' ')
+      end if 
+      if (io.gt.16) then
+         write(iStdOut,*)prefix, 'io nagy '
+         call CON_stop(' ')
+      end if
       if (io.eq.10) open(iFile,file = './SP/alla0.out',status='unknown')
       if (io.eq.11) open(iFile,file = './SP/alla1.out',status='unknown')
       if (io.eq.12) open(iFile,file = './SP/alla2.out',status='unknown')
@@ -1105,9 +1112,15 @@ c ****************************    end ALL output ******************
       dimension ract(10)
       integer  iFile
       include 'stdout.h'
-      call SP_get_io_unit_new(iFile)
-      if (io.lt.10) stop  'io kicsi'
-      if (io.gt.16) stop  'io nagy '
+      call CON_io_unit_new(iFile)
+       if (io.lt.10) then
+         write(iStdOut,*)prefix, 'io kicsi'
+         call CON_stop(' ')
+      end if 
+      if (io.gt.16) then
+         write(iStdOut,*)prefix, 'io nagy '
+         call CON_stop(' ')
+      end if
       if (io.eq.10) open(iFile,file = 'SP/csilla0.out',status='unknown')
       if (io.eq.11) open(iFile,file = 'SP/csilla1.out',status='unknown')
       if (io.eq.12) open(iFile,file = 'SP/csilla2.out',status='unknown')
@@ -1224,7 +1237,8 @@ c  *****************  end subroutine SP_csilla   ******************
       enddo
   
       do 11 kr=1,krmax
-      call SP_get_io_unit_new(io(kr))
+
+      call CON_io_unit_new(io(kr))
       if (kr.eq.1) open(io(kr),file='./SP/timevar.r1',status='unknown')
       if (kr.eq.2) open(io(kr),file='./SP/timevar.r2',status='unknown')
       if (kr.eq.3) open(io(kr),file='./SP/timevar.r3',status='unknown')
@@ -1234,7 +1248,7 @@ c  *****************  end subroutine SP_csilla   ******************
       write(io(kr),711) robs(kr) 
       write(io(kr),712) (eobs(ke),ke=1,kemax) 
       write(io(kr),*)
-      call SP_get_io_unit_new(ip(kr))
+      call CON_io_unit_new(ip(kr))
       if (kr.eq.1) open(ip(kr),file='./SP/plasma.r1',status='unknown')
       if (kr.eq.2) open(ip(kr),file='./SP/plasma.r2',status='unknown')
       if (kr.eq.3) open(ip(kr),file='./SP/plasma.r3',status='unknown')
@@ -1295,7 +1309,10 @@ c  *****************  end subroutine SP_opentime  ******************
 
       i=0
 20    if (r(i).lt.rr) then
-      if (i.eq.nr) stop 'miako tyukanyo'
+      if (i.eq.nr) then
+         write(iStdOut,*)prefix,  'miako tyukanyo'
+         call CON_stop(' ')
+      end if 
       if (i.eq.nr-1) then
          robs(kr)=r(i);rr=robs(kr)   
          write(iStdOut,*)prefix,'Reset robs(',kr,')=',rr
