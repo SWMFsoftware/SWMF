@@ -40,6 +40,8 @@ Module ModUser
   use ModMain,     ONLY: UseUserB0,UseUserHeating
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
   implicit none
+
+  SAVE
   !\
   ! PFSSM related variables::
   !/
@@ -255,7 +257,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
 
   use ModGeometry,   ONLY: R_BLK
   use ModAdvance,    ONLY: nFaceValueVars
-  use ModPhysics,    ONLY: cosTHETAtilt,sinTHETAtilt,g,inv_g,     &
+  use ModPhysics,    ONLY: CosThetatilt,SinThetatilt,g,inv_g,     &
        inv_gm1,OMEGAbody
   use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance
   implicit none
@@ -284,10 +286,10 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
          VrFaceInside,VthetaFaceInside,VphiFaceInside,   &
          BrFaceOutside,BthetaFaceOutside,BphiFaceOutside,&
          BrFaceInside,BthetaFaceInside,BphiFaceInside
-  real:: cosTheta,sinTheta,cosPhi,sinPhi
+  real:: CosTheta,SinTheta,CosPhi,SinPhi
   real, dimension(1:3):: location,v_phi
   real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
-  real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
+  real:: CosThetaT,SinThetaT,CosPhiT,SinPhiT
   real:: BodyDens,BodyPres,BodyGamma
   !
   !---------------------------------------------------------------------------
@@ -309,10 +311,10 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   ! Rotate to spherical coordinates
   !/
   RFace    = sqrt(XFace**2+YFace**2+ZFace**2)
-  cosTheta = ZFace/RFace
-  sinTheta = sqrt(XFace**2+YFace**2)/RFace
-  cosPhi   = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-  sinPhi   = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+  CosTheta = ZFace/RFace
+  SinTheta = sqrt(XFace**2+YFace**2)/RFace
+  CosPhi   = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+  SinPhi   = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
   VrFaceOutside = (VxFaceOutside*XFace      +&
        VyFaceOutside*YFace                  +&
        VzFaceOutside*ZFace)/RFace
@@ -321,7 +323,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
        VzFaceOutside*(XFace**2+YFace**2))   /&
        (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
   VphiFaceOutside = (VyFaceOutside*XFace    -&
-       VxFaceOutside*YFace)*sinTheta        /&
+       VxFaceOutside*YFace)*SinTheta        /&
        ((XFace**2+YFace**2+cTolerance**2)/RFace)
   BrFaceOutside = (BxFaceOutside*XFace      +&
        ByFaceOutside*YFace                  +&
@@ -331,7 +333,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
        BzFaceOutside*(XFace**2+YFace**2))   /&
        (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
   BphiFaceOutside = (ByFaceOutside*XFace    -&
-       BxFaceOutside*YFace)*sinTheta        /&
+       BxFaceOutside*YFace)*SinTheta        /&
        ((XFace**2+YFace**2+cTolerance**2)/RFace)
   if (.not.UseUserHeating) then
      VrFaceInside     = -VrFaceOutside
@@ -387,14 +389,14 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   else
      RFace = cOne
      call coronal_hole_boundary(RFace,sin2Theta_coronal_hole)
-     XFaceT    =  cosTHETAtilt*XFace+sinTHETAtilt*ZFace
+     XFaceT    =  CosThetatilt*XFace+SinThetatilt*ZFace
      YFaceT    = YFace
-     ZFaceT    = -sinTHETAtilt*XFace+cosTHETAtilt*ZFace
-     cosThetaT = ZFaceT/RFace
-     sinThetaT = sqrt(XFaceT**2+YFaceT**2)/RFace
-     cosPhiT   = XFaceT/sqrt(XFaceT**2+YFaceT**2+cTolerance**2)
-     sinPhiT   = YFaceT/sqrt(XFaceT**2+YFaceT**2+cTolerance**2)
-     if (sinThetaT*sinThetaT.gt.sin2Theta_coronal_hole) then
+     ZFaceT    = -SinThetatilt*XFace+CosThetatilt*ZFace
+     CosThetaT = ZFaceT/RFace
+     SinThetaT = sqrt(XFaceT**2+YFaceT**2)/RFace
+     CosPhiT   = XFaceT/sqrt(XFaceT**2+YFaceT**2+cTolerance**2)
+     SinPhiT   = YFaceT/sqrt(XFaceT**2+YFaceT**2+cTolerance**2)
+     if (SinThetaT*SinThetaT > sin2Theta_coronal_hole) then
         !\
         ! At the base of closed field regions::
         !/
@@ -426,21 +428,21 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   ! Rotate back to cartesian coordinates::
   !/
   VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
-       VthetaFaceInside*cosTheta*cosPhi          -&
-       VphiFaceInside*sinPhi 
+       VthetaFaceInside*CosTheta*CosPhi          -&
+       VphiFaceInside*SinPhi 
   VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
-       VthetaFaceInside*cosTheta*sinPhi          +&
-       VphiFaceInside*cosPhi
+       VthetaFaceInside*CosTheta*SinPhi          +&
+       VphiFaceInside*CosPhi
   VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
-       VthetaFaceInside*sinTheta
+       VthetaFaceInside*SinTheta
   VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
-       BthetaFaceInside*cosTheta*cosPhi          -&
-       BphiFaceInside*sinPhi
+       BthetaFaceInside*CosTheta*CosPhi          -&
+       BphiFaceInside*SinPhi
   VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
-       BthetaFaceInside*cosTheta*sinPhi          +&
-       BphiFaceInside*cosPhi
+       BthetaFaceInside*CosTheta*SinPhi          +&
+       BphiFaceInside*CosPhi
   VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
-       BthetaFaceInside*sinTheta
+       BthetaFaceInside*SinTheta
   !\
   ! Apply corotation:: Currently works only for the first body.
   !/
@@ -583,7 +585,7 @@ subroutine user_sources
        Theat0,qheat_BLK
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,VolumeInverse_I
   use ModConst,      ONLY: cZero,cHalf,cOne,cTwo,cTolerance
-  use ModPhysics,    ONLY: g,OMEGAbody,cosTHETAtilt,sinTHETAtilt,&
+  use ModPhysics,    ONLY: g,OMEGAbody,CosThetatilt,SinThetatilt,&
        Theat
   use ModProcMH,     ONLY: iProc 
   use ModUser,       ONLY: SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SP,SE
@@ -644,24 +646,24 @@ Contains
 
     subroutine calc_OLD_heating
     implicit none
-    real:: cosTheta,sinTheta,cosPhi,sinPhi,&
+    real:: CosTheta,SinTheta,CosPhi,SinPhi,&
          sin2Theta_coronal_hole,XT,YT,ZT
     !\
     ! Compute Heliosphere source terms::
     !/
-    XT =  cosTHETAtilt*x_BLK(i,j,k,globalBLK)+&
-         sinTHETAtilt*z_BLK(i,j,k,globalBLK)
+    XT =  CosThetatilt*x_BLK(i,j,k,globalBLK)+&
+         SinThetatilt*z_BLK(i,j,k,globalBLK)
     YT =  y_BLK(i,j,k,globalBLK)
-    ZT = -sinTHETAtilt*x_BLK(i,j,k,globalBLK)+&
-          cosTHETAtilt*z_BLK(i,j,k,globalBLK)
-    cosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
-    sinTheta = sqrt(XT**2+YT**2)             /&
+    ZT = -SinThetatilt*x_BLK(i,j,k,globalBLK)+&
+          CosThetatilt*z_BLK(i,j,k,globalBLK)
+    CosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
+    SinTheta = sqrt(XT**2+YT**2)             /&
          (R_BLK(i,j,k,globalBLK)+cTolerance)
-    cosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
-    sinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
+    CosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
+    SinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
     call coronal_hole_boundary(R_BLK(i,j,k,globalBLK),&
          sin2Theta_coronal_hole)
-    if (sinTheta*sinTheta.lt.sin2Theta_coronal_hole) then
+    if (SinTheta*SinTheta < sin2Theta_coronal_hole) then
        Theat0(i,j,k) = Theat
     else
        Theat0(i,j,k) = cOne
@@ -711,7 +713,7 @@ subroutine Gamma_iBlock(i,j,k,iBLK,Gamma_BLK)
   yy = y_BLK(i,j,k,iBLK)
   zz = z_BLK(i,j,k,iBLK)
   RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
-  if (RR.gt.cHalf) then
+  if (RR > cHalf) then
      !\
      ! Get the radial field component::
      !/
@@ -810,7 +812,7 @@ subroutine user_initial_perturbation
   do iBLK=1,nBLK
      if (unusedBLK(iBLK)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
-        if (R_BLK(i,j,k,iBLK).ge.cOne) then
+        if (R_BLK(i,j,k,iBLK) >= cOne) then
            tmp1_BLK(i,j,k,iBLK) = sqrt(    &
                 B0xCell_BLK(i,j,k,iBLK)**2+&
                 B0yCell_BLK(i,j,k,iBLK)**2+&
@@ -885,7 +887,7 @@ subroutine user_initial_perturbation
            ! to the mass density::
            !/
            if ((State_VGB(rho_,i,j,k,iBLK)+     &
-                ModulationRho*rho_GL98).lt.cOne*&
+                ModulationRho*rho_GL98) < cOne*&
                 State_VGB(rho_,i,j,k,iBLK)) then
               State_VGB(rho_,i,j,k,iBLK)       = &
                    cOne*State_VGB(rho_,i,j,k,iBLK)
@@ -899,7 +901,7 @@ subroutine user_initial_perturbation
            ! to the kinetic pressure::
            !/
            if ((State_VGB(P_,i,j,k,iBLK)+&
-                ModulationP*p_GL98).lt.cOne* &
+                ModulationP*p_GL98) < cOne* &
                 State_VGB(P_,i,j,k,iBLK)) then
               State_VGB(P_,i,j,k,iBLK)     = &
                    cOne*State_VGB(P_,i,j,k,iBLK)
@@ -1004,6 +1006,7 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
        SSPscl,cme_B1_dim,cme_alpha,ModulationRho,        &
        ModulationP,cRot_x_GL98,cRot_y_GL98,cRot_z_GL98
   use ModUser,           ONLY: DoFirst_GL
+  use ModIo,             ONLY: iUnitOut, write_prefix
   implicit none
   !  
   real, dimension(3), intent(in):: R_GL98_D
@@ -1033,19 +1036,22 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   real, dimension(3):: R1_GL98_D,B1_GL98_D
   real, dimension(3,3):: Txz_GL98_DD,Txzy_GL98_DD
   if (iProc==0.and.DoFirst_GL) then
-     write(*,*) ''
-     write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
-     write(*,*) '            Initial Perturbation Is Initiated!!!'
-     write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
-     write(*,*) ''
-     write(*,*) 'cme_init called by processor',iProc
-     write(*,*) 'B1_dim = ',cme_B1_dim
-     write(*,*) 'cme_a  = ',cme_a
-     write(*,*) 'cme_r1 = ',cme_r1
-     write(*,*) 'cme_r0 = ',cme_r0
-     write(*,*) 'cme_a1 = ',cme_a1
-     write(*,*) 'ModulationRho = ',ModulationRho
-     write(*,*) 'ModulationP   = ',ModulationP
+     call write_prefix; write(iUnitOut,*) ''
+     call write_prefix; write(iUnitOut,*) &
+          '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
+     call write_prefix; write(iUnitOut,*) &
+          '            Initial Perturbation Is Initiated!!!'
+     call write_prefix; write(iUnitOut,*) &
+          '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
+     call write_prefix; write(iUnitOut,*) ''
+     call write_prefix; write(iUnitOut,*) 'cme_init called by processor',iProc
+     call write_prefix; write(iUnitOut,*) 'B1_dim = ',cme_B1_dim
+     call write_prefix; write(iUnitOut,*) 'cme_a  = ',cme_a
+     call write_prefix; write(iUnitOut,*) 'cme_r1 = ',cme_r1
+     call write_prefix; write(iUnitOut,*) 'cme_r0 = ',cme_r0
+     call write_prefix; write(iUnitOut,*) 'cme_a1 = ',cme_a1
+     call write_prefix; write(iUnitOut,*) 'ModulationRho = ',ModulationRho
+     call write_prefix; write(iUnitOut,*) 'ModulationP   = ',ModulationP
      DoFirst_GL=.false.
   end if
   !
@@ -1074,7 +1080,7 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   sin_theta = sqrt(x**2 + y**2)/r
   cos_phi   = x/sqrt(x**2 + y**2)
   sin_phi   = y/sqrt(x**2 + y**2)
-  if (r.le.delta) then 
+  if (r <= delta) then 
      r = delta
      x = delta*sin_theta*cos_phi
      y = delta*sin_theta*sin_phi
@@ -1111,7 +1117,7 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   sin_theta2 = sqrt(z_2**2 + y_2**2)/r_2
   cos_phi2   = y_2/sqrt(z_2**2 + y_2**2)
   sin_phi2   = z_2/sqrt(z_2**2 + y_2**2)
-  if (r_2.le.delta) then
+  if (r_2 <= delta) then
      r_2 = delta
      y_2 = delta*sin_theta2*cos_phi2
      z_2 = delta*sin_theta2*sin_phi2
@@ -1190,7 +1196,7 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
   ! Define the magnetic field in the global cartesian coordinates
   ! INSIDE THE MAGNETIC FLUX ROPE REGION
   !/
-  if (sqrt(x_2**2 + y_2**2 + z_2**2).le.cme_r0) then
+  if (sqrt(x_2**2 + y_2**2 + z_2**2) <= cme_r0) then
      Bx_1 = Bx_2 
      By_1 = By_2 
      Bz_1 = Bz_2 
@@ -1269,35 +1275,38 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
 end subroutine add_GL98_fluxrope
 
 subroutine post_init_stat
-  use ModMain,ONLY:nBlockMax
   use ModAdvance,    ONLY: State_VGB,rho_,P_
   use ModProcMH,     ONLY: iProc
   use ModUser,       ONLY: InvH0,Mrope_GL98,MaxB0,Tnot,Bnot
   use ModPhysics,    ONLY: Gbody
+  use ModIO,         ONLY: iUnitOut, write_prefix
   implicit none
+  real, external :: maxval_blk, minval_blk
   !\
   ! Post-initialization statistics::
   !/
-  !  write(*,*) 'Mass in the flux rope on processor::',&
+  !  call write_prefix; write(iUnitOut,*) 'Mass in the flux rope on processor::',&
   !       iProc,Mrope_GL98
   if (iProc==0) then
-     write(*,*) ''
-     write(*,*) '>>>>>>>>>>>>>>>>>>> Pressure and Density Log <<<<<<<<<<<<<<<<<<<<<'
-     write(*,*) 'At PE=0'
-     write(*,*) 'The value of MaxB0 is :: ',MaxB0
-     write(*,*) 'The value of Bnot  is :: ',Bnot
-     write(*,*) 'The min,max P is      :: ',&
-          minval(State_VGB(P_,:,:,:,1:nBlockMax)),&
-          maxval(State_VGB(P_,:,:,:,1:nBlockMax))
-     write(*,*) 'The min,max Rho is    :: ',&
-          minval(State_VGB(rho_,:,:,:,1:nBlockMax))  ,&
-          maxval(State_VGB(rho_,:,:,:,1:nBlockMax))
-     write(*,*) 'The value of Tnot  is :: ',Tnot
-     write(*,*) 'The value of InvH0 is :: ',InvH0
-     write(*,*) 'The value of Gbody is :: ',Gbody
-     write(*,*) ''
-     write(*,*) '>>>>>>>>>>>>>>>>>>>                          <<<<<<<<<<<<<<<<<<<<<'
-     write(*,*) ''
+     call write_prefix; write(iUnitOut,*) ''
+     call write_prefix; write(iUnitOut,*) &
+          '>>>>>>>>>>>>>>>>>>> Pressure and Density Log <<<<<<<<<<<<<<<<<<<<<'
+     call write_prefix; write(iUnitOut,*) 'At PE=0'
+     call write_prefix; write(iUnitOut,*) 'The value of MaxB0 is :: ',MaxB0
+     call write_prefix; write(iUnitOut,*) 'The value of Bnot  is :: ',Bnot
+     call write_prefix; write(iUnitOut,*) 'The min,max P is      :: ',&
+          minval_blk(1,State_VGB(P_,:,:,:,:)),&
+          maxval_blk(1,State_VGB(P_,:,:,:,:))
+     call write_prefix; write(iUnitOut,*) 'The min,max Rho is    :: ',&
+          minval_blk(1,State_VGB(rho_,:,:,:,:))  ,&
+          maxval_blk(1,State_VGB(rho_,:,:,:,:))
+     call write_prefix; write(iUnitOut,*) 'The value of Tnot  is :: ',Tnot
+     call write_prefix; write(iUnitOut,*) 'The value of InvH0 is :: ',InvH0
+     call write_prefix; write(iUnitOut,*) 'The value of Gbody is :: ',Gbody
+     call write_prefix; write(iUnitOut,*) ''
+     call write_prefix; write(iUnitOut,*) &
+          '>>>>>>>>>>>>>>>>>>>                          <<<<<<<<<<<<<<<<<<<<<'
+     call write_prefix; write(iUnitOut,*) ''
   end if
 end subroutine post_init_stat
 
@@ -1327,7 +1336,7 @@ subroutine get_atmosphere_orig(i,j,k,iBLK,Dens_BLK,Pres_BLK)
   yy = y_BLK(i,j,k,iBLK)
   zz = z_BLK(i,j,k,iBLK)
   RR = sqrt(xx**2+yy**2+zz**2)
-  if (RR.gt.cHalf) then
+  if (RR > cHalf) then
      Dens_BLK = Rho0/RR**2
      Pres_BLK = Rho0*inv_g/RR**2
   else
@@ -1373,7 +1382,7 @@ subroutine get_atmosphere_poli(i,j,k,iBLK,Dens_BLK,Pres_BLK)
   yy = y_BLK(i,j,k,iBLK)
   zz = z_BLK(i,j,k,iBLK)
   RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
-  if (RR.gt.cHalf) then
+  if (RR > cHalf) then
      !\
      ! Get the radial field component::
      !/
@@ -1433,7 +1442,7 @@ subroutine get_atmosphere_BLK(i,j,k,iBLK,Dens_BLK,Pres_BLK,Gamma_BLK)
   yy = y_BLK(i,j,k,iBLK)
   zz = z_BLK(i,j,k,iBLK)
   RR = sqrt(xx**2+yy**2+zz**2+cTolerance**2)
-  if (RR.gt.cHalf) then
+  if (RR > cHalf) then
      !\
      ! Get the radial field component::
      !/
@@ -1475,6 +1484,7 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
        unitPFSSM_B,iHead_PFSSM,g_nm,h_nm,factRatio1,    &
        MaxB0
   use ModPhysics,  ONLY: unitUSER_B,OMEGAbody,unitUSER_t
+  use ModIO,       ONLY: iUnitOut, write_prefix
   implicit none
   
   real, intent(in):: xx,yy,zz
@@ -1483,11 +1493,11 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
   integer:: i,n,m
   real:: gtemp,htemp
   real:: delta_m0,c_n
-  real:: sinPhi,cosPhi
+  real:: SinPhi,CosPhi
   real:: sinmPhi,cosmPhi
-  real:: cosTheta,sinTheta
+  real:: CosTheta,SinTheta
   real:: stuff1,stuff2,stuff3
-  real:: sumr,sumt,sump,sumpsi
+  real:: SumR,SumT,SumP,SumPsi
   real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
   real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
   !\
@@ -1497,17 +1507,17 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
   !\
   ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
   !/
-  if (Rin_PFSSM.lt.9.00E-01) then
+  if (Rin_PFSSM < 9.00E-01) then
      Br_BLK = cZero
      RETURN
   end if
   Theta_PFSSM = acos(zz/Rin_PFSSM)
   Phi_PFSSM   = atan2(yy/sqrt(xx**2+yy**2+cTiny**2),&
                       xx/sqrt(xx**2+yy**2+cTiny**2))
-  sinTheta    = sqrt(xx**2+yy**2+cTiny**2)/Rin_PFSSM
-  cosTheta    = zz/Rin_PFSSM
-  sinPhi      = yy/sqrt(xx**2+yy**2+cTiny**2)
-  cosPhi      = xx/sqrt(xx**2+yy**2+cTiny**2)
+  SinTheta    = sqrt(xx**2+yy**2+cTiny**2)/Rin_PFSSM
+  CosTheta    = zz/Rin_PFSSM
+  SinPhi      = yy/sqrt(xx**2+yy**2+cTiny**2)
+  CosPhi      = xx/sqrt(xx**2+yy**2+cTiny**2)
   Rin_PFSSM   = Ro_PFSSM
   R_PFSSM     = Rin_PFSSM     
   !\
@@ -1522,16 +1532,18 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
      !/ 
      DoSecond=.false.
      if (iProc==0) then
-        write(*,*) '!!!This is the call from ICs!!!'
-        write(*,*) 'Norder = ',N_PFSSM
-        write(*,*) 'Entered coefficient file name :: ',File_PFSSM
-        write(*,*) 'Entered number of header lines:: ',iHead_PFSSM
+        call write_prefix; write(iUnitOut,*) '!!!This is the call from ICs!!!'
+        call write_prefix; write(iUnitOut,*) 'Norder = ',N_PFSSM
+        call write_prefix; write(iUnitOut,*) &
+             'Entered coefficient file name :: ',File_PFSSM
+        call write_prefix; write(iUnitOut,*) &
+             'Entered number of header lines:: ',iHead_PFSSM
      endif
      !\
      ! Formats adjusted for wso CR rad coeffs::
      !/
      open(UNIT_PFSSM,file=File_PFSSM,status='old',iostat=iError)
-     if (iHead_PFSSM.ne.0) then
+     if (iHead_PFSSM /= 0) then
         do i=1,iHead_PFSSM
            read(UNIT_PFSSM,'(a)') Head_PFSSM
         enddo
@@ -1546,8 +1558,8 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
      !/
      do
         read(UNIT_PFSSM,*,iostat=iError) n,m,gtemp,htemp
-        if (iError.ne.0) EXIT
-        if (n.gt.N_PFSSM.or.m.gt.N_PFSSM) CYCLE
+        if (iError /= 0) EXIT
+        if (n > N_PFSSM.or.m > N_PFSSM) CYCLE
         g_nm(n+1,m+1) = gtemp
         h_nm(n+1,m+1) = htemp
      enddo
@@ -1578,7 +1590,7 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
   ! for Theta_PFSSMa::
   !/
   do m=0,N_PFSSM
-     if (m.eq.0) then
+     if (m == 0) then
         delta_m0 = cOne
      else
         delta_m0 = cZero
@@ -1587,24 +1599,24 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
      ! Eq.(27) from Altschuler et al. 1976::
      !/
      p_nm(m+1,m+1) = factRatio1(m+1)*sqrt((cTwo-delta_m0)    *&
-          real(2*m+1))*sinTheta**m
+          real(2*m+1))*SinTheta**m
      !\
      ! Eq.(28) from Altschuler et al. 1976::
      !/
-     if (m.lt.N_PFSSM) &
+     if (m < N_PFSSM) &
           p_nm(m+2,m+1)  = p_nm(m+1,m+1)*sqrt(real(2*m+3))   *&
-          cosTheta
+          CosTheta
      !\
      ! Eq.(30) from Altschuler et al. 1976::
      !/
      dp_nm(m+1,m+1)      = factRatio1(m+1)*sqrt((cTwo        -&
-          delta_m0)*real(2*m+1))*m*cosTheta*sinTheta**(m-1)
+          delta_m0)*real(2*m+1))*m*CosTheta*SinTheta**(m-1)
      !\
      ! Eq.(31) from Altschuler et al. 1976::
      !/
-     if (m.lt.N_PFSSM) &
-          dp_nm(m+2,m+1) = sqrt(real(2*m+3))*(cosTheta       *&
-          dp_nm(m+1,m+1)-sinTheta*p_nm(m+1,m+1))
+     if (m < N_PFSSM) &
+          dp_nm(m+2,m+1) = sqrt(real(2*m+3))*(CosTheta       *&
+          dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
   enddo
   do m=0,N_PFSSM-2; do n=m+2,N_PFSSM
      !\
@@ -1613,13 +1625,13 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
      stuff1         = sqrt(real(2*n+1)/real(n**2-m**2))
      stuff2         = sqrt(real(2*n-1))
      stuff3         = sqrt(real((n-1)**2-m**2)/real(2*n-3))
-     p_nm(n+1,m+1)  = stuff1*(stuff2*cosTheta*p_nm(n,m+1)    -&
+     p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)    -&
           stuff3*p_nm(n-1,m+1))
      !\
      ! Eq.(32) from Altschuler et al. 1976::
      !/
-     dp_nm(n+1,m+1) = stuff1*(stuff2*(cosTheta*dp_nm(n,m+1)  -&
-          sinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
+     dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)  -&
+          SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
   enddo; enddo
   !\
   ! Apply Schmidt normailization::
@@ -1636,14 +1648,14 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
      dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
   enddo; enddo
   !\
-  ! Truncate the value of sinTheta::
+  ! Truncate the value of SinTheta::
   !/
-  if (sinTheta.eq.cZero) sinTheta = cOne/(cE9*cE1)
+  if (SinTheta == cZero) SinTheta = cOne/(cE9*cE1)
   !\
-  ! Initialize the values of sumr,sumt,sump, and sumpsi::
+  ! Initialize the values of SumR,SumT,SumP, and SumPsi::
   !/
-  sumr = cZero; sumt   = cZero
-  sump = cZero; sumpsi = cZero
+  SumR = cZero; SumT   = cZero
+  SumP = cZero; SumPsi = cZero
   !\
   ! Leave out monopole (n=0) term::
   !/
@@ -1666,22 +1678,22 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
         stuff1 = (real(n)+cOne)*(Ro_PFSSM/R_PFSSM)**(n+2)    -&
              c_n*real(n)*(R_PFSSM/Rs_PFSSM)**(n-1)
         stuff2 = g_nm(n+1,m+1)*cosmPhi+h_nm(n+1,m+1)*sinmPhi
-        sumr   = sumr+p_nm(n+1,m+1)*stuff1*stuff2
+        SumR   = SumR+p_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Bt_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dTheta_PFSSM::
         !/
         stuff1 = (Ro_PFSSM/R_PFSSM)**(n+2)+c_n*(R_PFSSM      /&
              Rs_PFSSM)**(n-1)
-        sumt   = sumt-dp_nm(n+1,m+1)*stuff1*stuff2
+        SumT   = SumT-dp_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Psi_PFSSM::
         !/
-        sumpsi = sumpsi+R_PFSSM*p_nm(n+1,m+1)*stuff1*stuff2
+        SumPsi = SumPsi+R_PFSSM*p_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Bp_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dPhi_PFSSM::
         !/
         stuff2 = g_nm(n+1,m+1)*sinmPhi-h_nm(n+1,m+1)*cosmPhi
-        sump   = sump+p_nm(n+1,m+1)*real(m)/sinTheta*stuff1  *&
+        SumP   = SumP+p_nm(n+1,m+1)*real(m)/SinTheta*stuff1  *&
              stuff2
      enddo
   enddo
@@ -1691,8 +1703,8 @@ subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
   ! Note that unitUSER_B is in Gauss,
   ! while unit_PFSSM_B is in microT=0.01*Gauss::
   !/
-  !  Br_BLK = sqrt(sumr**2+sumt**2+sump**2)*unitPFSSM_B/unitUSER_B
-  Br_BLK = abs(sumr)*unitPFSSM_B/unitUSER_B
+  !  Br_BLK = sqrt(SumR**2+SumT**2+SumP**2)*unitPFSSM_B/unitUSER_B
+  Br_BLK = abs(SumR)*unitPFSSM_B/unitUSER_B
 end subroutine get_Br_BLK
 !============================================================================
 subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
@@ -1755,6 +1767,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
        N_PFSSM,UNIT_PFSSM,R_PFSSM,Rs_PFSSM,Ro_PFSSM,   &
        unitPFSSM_B,iHead_PFSSM,g_nm,h_nm,factRatio1
   use ModPhysics,  ONLY: unitUSER_B,OMEGAbody,unitUSER_t
+  use ModIO,       ONLY: iUnitOut, write_prefix
   implicit none
   
   real, intent(in):: xx,yy,zz
@@ -1765,11 +1778,11 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   real, parameter:: Phi_Shift=cPi
   real:: gtemp,htemp
   real:: c_n
-  real:: sinPhi,cosPhi
+  real:: SinPhi,CosPhi
   real:: sinmPhi,cosmPhi
-  real:: cosTheta,sinTheta
+  real:: CosTheta,SinTheta
   real:: stuff1,stuff2,stuff3
-  real:: sumr,sumt,sump,sumpsi
+  real:: SumR,SumT,SumP,SumPsi
   real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
   real:: Br_PFSSM,Btheta_PFSSM,Bphi_PFSSM,Psi_PFSSM
   real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
@@ -1777,12 +1790,12 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !\
   ! Optimization
   !/
+  integer, parameter :: MaxInt=10000
+  real,save :: Sqrt_I(MaxInt)
   real    :: Xy
   real    :: SinThetaM, SinThetaM1
   integer :: delta_m0
-  integer, parameter :: MaxInt=10000
-  real,save :: sqrt_int(MaxInt)
-  real,save,dimension(-1:N_PFSSM+2) :: RoRsPower_I, RoRPower_I, rRsPower_I
+  real, dimension(-1:N_PFSSM+2) :: RoRsPower_I, RoRPower_I, rRsPower_I
   !--------------------------------------------------------------------------
   !\
   ! Calculate cell-centered spherical coordinates::
@@ -1798,10 +1811,10 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   Theta_PFSSM = acos(zz/Rin_PFSSM)
   Xy          = sqrt(xx**2+yy**2+cTiny**2)
   Phi_PFSSM   = atan2(yy,xx)
-  sinTheta    = Xy/Rin_PFSSM
-  cosTheta    = zz/Rin_PFSSM
-  sinPhi      = yy/Xy
-  cosPhi      = xx/Xy
+  SinTheta    = Xy/Rin_PFSSM
+  CosTheta    = zz/Rin_PFSSM
+  SinPhi      = yy/Xy
+  CosPhi      = xx/Xy
   !\
   ! Update Phi_PFSSM for central meridian and solar rotation::
   !/
@@ -1822,15 +1835,15 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !/ 
      DoFirst=.false.
      if (iProc==0) then
-        write(*,*) 'Norder = ',N_PFSSM
-        write(*,*) 'Entered coefficient file name :: ',File_PFSSM
-        write(*,*) 'Entered number of header lines:: ',iHead_PFSSM
+        call write_prefix; write(iUnitOut,*) 'Norder = ',N_PFSSM
+        call write_prefix; write(iUnitOut,*) 'Entered coefficient file name :: ',File_PFSSM
+        call write_prefix; write(iUnitOut,*) 'Entered number of header lines:: ',iHead_PFSSM
      endif
      !\
      ! Formats adjusted for wso CR rad coeffs::
      !/
      open(UNIT_PFSSM,file=File_PFSSM,status='old',iostat=iError)
-     if (iHead_PFSSM.ne.0) then
+     if (iHead_PFSSM /= 0) then
         do i=1,iHead_PFSSM
            read(UNIT_PFSSM,'(a)') Head_PFSSM
         enddo
@@ -1845,7 +1858,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !/
      do
         read(UNIT_PFSSM,*,iostat=iError) n,m,gtemp,htemp
-        if (iError.ne.0) EXIT
+        if (iError /= 0) EXIT
         if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
         g_nm(n+1,m+1) = gtemp
         h_nm(n+1,m+1) = htemp
@@ -1867,14 +1880,14 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      ! Calculate sqrt(integer) from 0 to 10000
      !/
      do m=1,MaxInt
-        sqrt_int(m) = sqrt(real(m))
+        Sqrt_I(m) = sqrt(real(m))
      end do
      !\
      ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
      !/
      factRatio1(:) = cZero; factRatio1(1) = cOne
      do m=1,N_PFSSM
-        factRatio1(m+1) = factRatio1(m)*sqrt_int(2*m-1)/sqrt_int(2*m)
+        factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
      enddo
   end if
   !\
@@ -1897,7 +1910,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   SinThetaM1 = cOne
 
   do m=0,N_PFSSM
-     if (m.eq.0) then
+     if (m == 0) then
         delta_m0 = 1
      else
         delta_m0 = 0
@@ -1905,22 +1918,22 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !\
      ! Eq.(27) from Altschuler et al. 1976::
      !/
-     p_nm(m+1,m+1) = factRatio1(m+1)*sqrt_int((2-delta_m0)*(2*m+1))*SinThetaM
+     p_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))*SinThetaM
      !\
      ! Eq.(28) from Altschuler et al. 1976::
      !/
-     if (m < N_PFSSM) p_nm(m+2,m+1) = p_nm(m+1,m+1)*sqrt_int(2*m+3)*CosTheta
+     if (m < N_PFSSM) p_nm(m+2,m+1) = p_nm(m+1,m+1)*Sqrt_I(2*m+3)*CosTheta
      !\
      ! Eq.(30) from Altschuler et al. 1976::
      !/
-     dp_nm(m+1,m+1) = factRatio1(m+1)*sqrt_int((2-delta_m0)*(2*m+1)) &
-          *m*cosTheta*SinThetaM1
+     dp_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1)) &
+          *m*CosTheta*SinThetaM1
      !\
      ! Eq.(31) from Altschuler et al. 1976::
      !/
-     if (m.lt.N_PFSSM) &
-          dp_nm(m+2,m+1) = sqrt_int(2*m+3)*(cosTheta       *&
-          dp_nm(m+1,m+1)-sinTheta*p_nm(m+1,m+1))
+     if (m < N_PFSSM) &
+          dp_nm(m+2,m+1) = Sqrt_I(2*m+3)*(CosTheta       *&
+          dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
 
      SinThetaM1= SinThetaM
      SinThetaM = SinThetaM * SinTheta
@@ -1930,16 +1943,16 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !\
      ! Eq.(29) from Altschuler et al. 1976::
      !/
-     stuff1         = sqrt_int(2*n+1)/sqrt_int(n**2-m**2)
-     stuff2         = sqrt_int(2*n-1)
-     stuff3         = sqrt_int((n-1)**2-m**2)/sqrt_int(2*n-3)
-     p_nm(n+1,m+1)  = stuff1*( stuff2*cosTheta*p_nm(n,m+1)    -&
+     stuff1         = Sqrt_I(2*n+1)/Sqrt_I(n**2-m**2)
+     stuff2         = Sqrt_I(2*n-1)
+     stuff3         = Sqrt_I((n-1)**2-m**2)/Sqrt_I(2*n-3)
+     p_nm(n+1,m+1)  = stuff1*( stuff2*CosTheta*p_nm(n,m+1)    -&
           stuff3*p_nm(n-1,m+1))
      !\
      ! Eq.(32) from Altschuler et al. 1976::
      !/
-     dp_nm(n+1,m+1) = stuff1*(stuff2*(cosTheta*dp_nm(n,m+1)  -&
-          sinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
+     dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)  -&
+          SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
   enddo; enddo
   !\
   ! Apply Schmidt normalization::
@@ -1948,7 +1961,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !\
      ! Eq.(33) from Altschuler et al. 1976::
      !/
-     stuff1 = cOne/sqrt_int(2*n+1)
+     stuff1 = cOne/Sqrt_I(2*n+1)
      !\
      ! Eq.(34) from Altschuler et al. 1976::
      !/
@@ -1956,14 +1969,14 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
   enddo; enddo
   !\
-  ! Truncate the value of sinTheta::
+  ! Truncate the value of SinTheta::
   !/
-  if (sinTheta.eq.cZero) sinTheta = cOne/(cE9*cE1)
+  if (SinTheta == cZero) SinTheta = cOne/(cE9*cE1)
   !\
-  ! Initialize the values of sumr,sumt,sump, and sumpsi::
+  ! Initialize the values of SumR,SumT,SumP, and SumPsi::
   !/
-  sumr = cZero; sumt   = cZero
-  sump = cZero; sumpsi = cZero
+  SumR = cZero; SumT   = cZero
+  SumP = cZero; SumPsi = cZero
   !\
   ! Leave out monopole (n=0) term::
   !/
@@ -1985,46 +1998,46 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         !/
         stuff1 = (n+1)*RoRPower_I(n+2) - c_n*n*rRsPower_I(n-1)
         stuff2 = g_nm(n+1,m+1)*cosmPhi + h_nm(n+1,m+1)*sinmPhi
-        sumr   = sumr + p_nm(n+1,m+1)*stuff1*stuff2
+        SumR   = SumR + p_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Bt_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dTheta_PFSSM::
         !/
         stuff1 = RoRPower_I(n+2)+c_n*rRsPower_I(n-1)
-        sumt   = sumt-dp_nm(n+1,m+1)*stuff1*stuff2
+        SumT   = SumT-dp_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Psi_PFSSM::
         !/
-        sumpsi = sumpsi+R_PFSSM*p_nm(n+1,m+1)*stuff1*stuff2
+        SumPsi = SumPsi+R_PFSSM*p_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Bp_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dPhi_PFSSM::
         !/
         stuff2 = g_nm(n+1,m+1)*sinmPhi-h_nm(n+1,m+1)*cosmPhi
-        sump   = sump + p_nm(n+1,m+1)*m/sinTheta*stuff1 * stuff2
+        SumP   = SumP + p_nm(n+1,m+1)*m/SinTheta*stuff1 * stuff2
      enddo
   enddo
   !\
   ! Compute (Br_PFSSM,Btheta_PFSSM,Bphi_PFSSM) and Psi_PFSSM::
   !/
-  Psi_PFSSM    = sumpsi
-  Br_PFSSM     = sumr
+  Psi_PFSSM    = SumPsi
+  Br_PFSSM     = SumR
   if (Rin_PFSSM > Rs_PFSSM) Br_PFSSM = Br_PFSSM * (Rs_PFSSM/Rin_PFSSM)**2
-  Btheta_PFSSM = sumt
-  Bphi_PFSSM   = sump
+  Btheta_PFSSM = SumT
+  Bphi_PFSSM   = SumP
   !\
   ! Magnetic field components in global Cartesian coordinates::
   ! Set B0xCell_BLK::
   !/
-  B0_PFSSM(1) = Br_PFSSM*sinTheta*cosPhi+&
-       Btheta_PFSSM*cosTheta*cosPhi - Bphi_PFSSM*sinPhi
+  B0_PFSSM(1) = Br_PFSSM*SinTheta*CosPhi+&
+       Btheta_PFSSM*CosTheta*CosPhi - Bphi_PFSSM*SinPhi
   !\
   ! Set B0yCell_BLK::
   !/
-  B0_PFSSM(2) = Br_PFSSM*sinTheta*sinPhi+&
-       Btheta_PFSSM*cosTheta*sinPhi + Bphi_PFSSM*cosPhi
+  B0_PFSSM(2) = Br_PFSSM*SinTheta*SinPhi+&
+       Btheta_PFSSM*CosTheta*SinPhi + Bphi_PFSSM*CosPhi
   !\
   ! Set B0zCell_BLK::
   !/
-  B0_PFSSM(3) = Br_PFSSM*cosTheta - Btheta_PFSSM*sinTheta
+  B0_PFSSM(3) = Br_PFSSM*CosTheta - Btheta_PFSSM*SinTheta
   !\
   ! Apply field strength normalization::
   ! Note that unitUSER_B is in Gauss,
@@ -2204,7 +2217,7 @@ end subroutine user_write_progress
 !========================================================================
 subroutine user_get_log_var(VarValue,TypeVar)
   use ModProcMH,     ONLY: nProc
-  use ModIO,         ONLY: dn_output,logfile_
+  use ModIO,         ONLY: dn_output,logfile_,write_myname
   use ModMain,       ONLY: unusedBLK,nBLK,iteration_number
   use ModVarIndexes, ONLY: Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,   &
        rhoUz_,P_
@@ -2286,6 +2299,7 @@ subroutine user_get_log_var(VarValue,TypeVar)
      VarValue = VarValue*cE1*cE6*unitSI_energydens*unitSI_x**3
   case default
      VarValue = -7777.
+     call write_myname; 
      write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
   end select
 end subroutine user_get_log_var
