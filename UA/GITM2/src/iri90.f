@@ -313,12 +313,12 @@ C
 8154	      IF(XNAR(JXNAR).GT.0.) TCON(JXNAR)=.TRUE. 
            ENDIF
 
-	write(konsol,*) '*** IRI parameters are being calculated ***'
+!!!	write(konsol,*) '*** IRI parameters are being calculated ***'
         if(NODEN) goto 2889
 	if(LAYVER) write(konsol,*) 'Ne, E-F: The LAY-Version is ',
      &	  'prelimenary. Erroneous profile features can occur.'
-	if(GULB0) write(konsol,*) 'Ne, B0: Bottomside thickness is ',
-     &	  'obtained with Gulyaeva-1987 model.'
+!!!	if(GULB0) write(konsol,*) 'Ne, B0: Bottomside thickness is ',
+!!!     &	  'obtained with Gulyaeva-1987 model.'
 	if(OLD79) write(konsol,*) 'Ne: Using IRI-79. Correction',
      &	  ' of equatorial topside is not included.'
 	if(HMF2IN) write(konsol,*) 'Ne, hmF2: Input values are used.'
@@ -327,12 +327,13 @@ C
 	  goto 2889
 	  endif
 	if(URSIF2) then
- 	  write(konsol,*) 'Ne, foF2: URSI model is used.'
+!!! 	  write(konsol,*) 'Ne, foF2: URSI model is used.'
 	else
 	  write(konsol,*) 'Ne, foF2: CCIR model is used.'
 	endif
-2889  if((.not.NOION).and.(DY)) 
-     &	   write(konsol,*) 'Ion Com.: Using Danilov-Yaichnikov-1985.'
+2889  continue
+!!!if((.not.NOION).and.(DY)) 
+!!!&	   write(konsol,*) 'Ion Com.: Using Danilov-Yaichnikov-1985.'
       if((.not.NOTEM).and.(TENEOP))
      &     write(konsol,*) 'Te: Temperature-density correlation is used'
 C
