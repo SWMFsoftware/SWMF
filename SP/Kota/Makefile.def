@@ -1,1 +1,1 @@
-include /home/gtoth/swmf/NEW/Makefile.def
+STANDALONE = sp
