@@ -777,7 +777,6 @@ subroutine user_initial_perturbation
        unitUSER_t,unitUSER_B,Body_T_dim,Body_rho_dim
   use ModUser,      ONLY: Mrope_GL98,InvH0,DoStaticICs,MaxB0,Tnot,&
        Bnot,DegFrm1,Emag_0,Ekin_0,Ethe_0
-  use ModMpi
   implicit none
   !\
   ! Variables required by this user subroutine::
@@ -837,9 +836,6 @@ subroutine user_initial_perturbation
      MaxB0 = maxval_BLK(2,tmp1_BLK)
   endif
   InvH0 = cGravitation*Msun/Rsun/unitSI_U**2
-  call MPI_BCAST(MaxB0     ,1,MPI_REAL,0,iComm,iError)
-  call MPI_BCAST(InvH0     ,1,MPI_REAL,0,iComm,iError)
-  call MPI_BCAST(Mrope_GL98,1,MPI_REAL,0,iComm,iError)
   do iBLK=1,nBLK
      if (unusedBLK(iBLK)) CYCLE   
      do k=1,nK;do j=1,nJ; do i=1,nI
