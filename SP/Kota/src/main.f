@@ -301,10 +301,10 @@ ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
 c ------------------------------------------    dynamical step done
          jStep=iStep/kFriss
          if(iStep.eq.jStep*kFriss)then
-            write(iStdout,*)prefix,
-     1           jstep,'  j-step done -- time: ',time
             if (jstep.gt.0) call timevar(jstep,time)
             if (jstep.eq.jnext) then
+               write(iStdout,*)prefix,
+     1           jstep,'  j-step done -- time: ',time
                if (time.le.1.) Misc = 11
                if (time.gt.1..and.time.le.2.)   Misc=12
                if (time.gt.2..and.time.le.6.)   Misc=13
@@ -356,7 +356,7 @@ c??   read(*,*)  jnext
       iMax=min(iMax,nR+1)
       nR=iMax-1
       if(DoWriteAll)write(iStdOut,*)prefix,'sharpen and run: ',
-     1   'iMax,tSimulation,tFinal: ',iMax,tSimulation,tFinal
+     1   'nR,tSimulation,tFinal: ',nR,tSimulation,tFinal
       call get_ishock
       if(tFinal-tSimulation.le.0.00001)then
          !Save the values of log n, log b and so on
