@@ -934,7 +934,6 @@ float                   TypeBcTop
 </command>
 
 <command name="INNERBOUNDARY">
-! Inner boundary types for body 1 and body 2
 	<parameter name="TypeBcInner" type="string" input="select">
 		<option name="reflect"				/>
 		<option name="float"				/>
@@ -966,37 +965,36 @@ float                   TypeBcTop
 ionosphere              TypeBcInner
 ionosphere              TypeBcBody2  !read only if UseBody2=T <!-- ^CFG IF SECONDBODY -->
 
-
 <!-- ^CFG IF SECONDBODY BEGIN -->
-! This command should appear after the #SECONDBODY command when using 
-! two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
-! BOUNDARY DO NOT WORK.
-!
-! Default value for TypeBcBody2 is 'reflect'.
+This command should appear after the #SECONDBODY command when using 
+two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
+BOUNDARY DO NOT WORK.
+
+Default value for TypeBcBody2 is 'reflect'.
 <!-- ^CFG END SECONDBODY -->
 
-! Possible values for TypeBcInner are:
-!\begin{verbatim}
-! 'reflect'     - reflect Vr, reflect Vphi to rotation, float Vtheta,
-!                 reflect Br, float Bphi, float Btheta, float rho, float P
-! 'float'       - float Vr, reflect Vphi to rotation, float Vtheta,
-!                 float B, float rho, float P
-! 'fixed'       - Vr=0, Vphi=rotation, Vtheta=0
-!                 B=B0 (ie B1=0), fix rho, fix P
-! 'ionosphere'  - set V as if ionosphere gave V_iono=0
-!                 float B, fix rho, fix P
-! 'ionospherefloat'-set V as if ionosphere gave V_iono=0
-!                 float B, float rho, float P
-! 'coronatoih'  - IH component obtains inner boundary from the SC component
-! 'user'        - user defined
-!\end{verbatim}
-! For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
-! the velocity at the inner boundary is determined by the ionosphere model.
-!\\
-! Default value for TypeBcInner is 'ionosphere' for problem types
-! Earth, Saturn, Jupiter, and rotation.
-! For all other problems with an inner boundary the default is 'unknown',
-! so the inner boundary must be set.
+Possible values for TypeBcInner are:
+\begin{verbatim}
+'reflect'         - reflect Vr, reflect Vphi to rotation, float Vtheta,
+                    reflect Br, float Bphi, float Btheta, float rho, float P
+'float'           - float Vr, reflect Vphi to rotation, float Vtheta,
+                    float B, float rho, float P
+'fixed'           - Vr=0, Vphi=rotation, Vtheta=0
+                    B=B0 (ie B1=0), fix rho, fix P
+'ionosphere'      - set V as if ionosphere gave V_iono=0
+                    float B, fix rho, fix P
+'ionospherefloat' - set V as if ionosphere gave V_iono=0
+                    float B, float rho, float P
+'coronatoih'      - IH component obtains inner boundary from the SC component
+'user'            - user defined
+\end{verbatim}
+For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
+the velocity at the inner boundary is determined by the ionosphere model.
+
+Default value for TypeBcInner is 'ionosphere' for problem types
+Earth, Saturn, Jupiter, and rotation.
+For all other problems with an inner boundary the default is 'unknown',
+so the inner boundary must be set.
 </command>
 
 <!-- ^CFG IF USERFILES BEGIN -->
@@ -1736,10 +1734,10 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! \noindent
 ! The extracted satellite information is saved into the files named
 !\begin{verbatim}
-! PLOTDIR/satellite_NN_TRAJECTORYNAME.sat
+! PLOTDIR/sat_TRAJECTORYNAME_nTIMESTEP.sat
 !\end{verbatim}
-! where NN is the number of the satellite (e.g. 01), and TRAJECTORYNAME
-! is the name of the trajectory file.\\
+! where TIMESTEP is the number of time steps (e.g. 000925), 
+! and TRAJECTORYNAME is the name of the trajectory file.\\
 !
 ! \noindent
 ! The default is nSatellite=0, i.e. no satellite data is saved.
@@ -2922,21 +2920,21 @@ rel			TypeProjStop
 0.01			pRatioLow
 0.1			pRatioHigh
 
-! Default values are shown. 
-!
-! The purpose of the correctP subroutine is to remove any discrepancies between
-! pressure in the p_BLK variable and the pressure calculated from the
-! E_BLK variable. Such discrepancies can be caused by the
-! constrained transport scheme and by the projection scheme
-! which modify the magnetic energy. The algorithm is the following:
-!\begin{verbatim}
-! q = eThermal/e
-!
-!                  q.lt. pRatioLow  E is set to eThermal+(rho*u**2+B**2)/2
-! if pRatioLow .lt.q.lt.pRatioHigh  both P and E are modified depending on q
-! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
-!\end{verbatim}
-! The 2nd case is a linear interpolation between the 2nd and 4th cases.
+Default values are shown. 
+
+The purpose of the correctP subroutine is to remove any discrepancies between
+pressure stored as the primitive variable P and the pressure calculated 
+from the total energy E. Such discrepancies can be caused by the 
+constrained transport scheme and by the projection scheme which modify 
+the magnetic energy. The algorithm is the following:
+\begin{verbatim}
+Define the rato of thermal and total energies q = eThermal/e and
+
+If              q &lt; pRatioLow   then E is recalculated from P
+If pRatioLow  &lt; q &lt; pRatioHigh  then both P and E are modified depending on q
+If pratioHigh &lt; q               then P is recalculated from E
+\end{verbatim}
+The second case is a linear interpolation between the first and third cases.
 </command>
 <!-- ^CFG END PROJECTION -->
 
