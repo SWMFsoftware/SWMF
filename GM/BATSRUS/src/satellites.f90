@@ -2,120 +2,141 @@
 !==============================================================================
 subroutine read_satellite_input_files
   use ModProcMH
-  use ModMain, ONLY : lVerbose
+  use ModMain, ONLY : nDim, lVerbose, TypeCoordSystem, StartTime
   use ModIO
   use ModPhysics, ONLY : unitSI_x
+  use CON_axes, ONLY: transform_matrix
   use ModTimeConvert, ONLY: time_int_to_real
   use ModMpi
+  use ModKind
   implicit none
 
-  integer :: ierror, i,isat , Npts_tmp
-  logical :: done
+  integer :: iError, i, iSat , nPoint
 
   ! One line of input
   character (len=100) :: line
 
-  integer, dimension(Max_Satellite_Npts,7) :: T_tmp
-  real, dimension(Max_Satellite_Npts,3) :: X_tmp
-!  real*8, external :: Time_of_Year
+  integer      :: iTime_I(7)
+  real         :: Xyz_D(nDim)
+  real(Real8_) :: DateTime
+  real         :: Time_I(Max_Satellite_Npts)
+  real         :: Xyz_DI(nDim, Max_Satellite_Npts)
 
-  logical :: oktest, oktest_me
+  character(len=*), parameter :: NameSub = 'read_satellite_input_files'
+
+  logical :: DoTest, DoTestMe
 
   !---------------------------------------------------------------------------
 
-  call set_oktest('read_satellite_input_files',oktest, oktest_me)
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
-  do iSat=1,nSatellite
+  SATELLITES: do iSat=1, nSatellite
 
+     if(.not.UseSatelliteFile(iSat)) CYCLE SATELLITES
+
+     ! Read file on the root processor
      if (iProc == 0) then
 
-        if (UseSatelliteFile(isat)) then
+        filename = Satellite_Name(iSat)
 
-           filename = Satellite_Name(isat)
+        if(lVerbose>0)then
+           call write_prefix; write(iUnitOut,*) NameSub, &
+                " reading: ",trim(filename)
+        end if
 
-           if(lVerbose>0)then
-              call write_prefix; write(iUnitOut,*) &
-                   "=> Reading Satellite Trajectory File = ",filename
-           end if
+        open(unit_tmp, file=filename, status="old", iostat = iError)
 
-           open(unit_tmp, file=filename, status="old", iostat = ierror)
+        if (iError /= 0) call stop_mpi(NameSub // &
+             ' ERROR: unable to open file ' // trim(filename))
 
-           if (ierror.ne.0) then
-              call stop_mpi("Satellites: Unable to open file "//filename//". Stopping.")
+        nPoint = 0
+
+        ! Read the file: read #COOR TypeCoord, #START and points
+        ! Default coordinate system is the one used by BATSRUS (or GSM?)
+        TypeSatCoord_I(iSat) = TypeCoordSystem
+        READFILE: do
+
+           read(unit_tmp,'(a)', iostat = iError ) line
+
+           if (iError /= 0) EXIT READFILE
+
+           if(index(line,'#COOR')>0) &
+                read(unit_tmp,'(a)') TypeSatCoord_I(iSat)
+           
+           if(index(line,'#START')>0)then
+
+              READPOINTS: do
+
+                 read(unit_tmp,*, iostat=iError) iTime_I, Xyz_D
+
+                 if (iError /= 0) EXIT READFILE
+
+                 if (nPoint >= Max_Satellite_Npts) then
+                    call write_prefix;
+                    write(*,*) NameSub,' WARNING: trajectory file: ',&
+                         trim(filename),' contains too many lines! '
+                    call write_prefix; write(*,*) NameSub, &
+                         ': max number of lines =',Max_Satellite_Npts
+                    EXIT READFILE
+                 endif
+
+                 ! Add new point
+                 nPoint = nPoint + 1
+
+                 ! Store coordinates
+                 Xyz_DI(:,nPoint) = Xyz_D
+
+                 ! Convert integer date/time to simulation time
+                 call time_int_to_real(iTime_I, DateTime)
+                 Time_I(nPoint) = DateTime - StartTime
+
+              enddo READPOINTS
+
            endif
 
-           done = .false.
-           Npts_tmp = 0
+        enddo READFILE
 
-           do while (.not.done)
+        close(unit_tmp)
 
-              read(unit_tmp,'(a)', iostat = ierror ) line
+        if(DoTest)write(*,*) NameSub,': nPoint=',nPoint
 
-              if (ierror.ne.0) done = .true.
-
-              if(index(line,'#COOR')>0) &
-                   read(unit_tmp,'(a)') TypeSatCoord_I(iSat)
-
-              if(index(line,'#START')>0)then
-
-                 do while (.not.done)
-
-                    Npts_tmp = Npts_tmp + 1
-
-                    read(unit_tmp,*,iostat=ierror) &
-                         (T_tmp(Npts_tmp,i),i=1,7), &
-                         (X_tmp(Npts_tmp,i),i=1,3)
-
-                    if (ierror.ne.0) then
-                       done = .true.
-                       Npts_tmp = Npts_tmp - 1
-                    else
-                       if (Npts_tmp >= Max_Satellite_Npts) then
-                          done = .true.
-                          call write_prefix;
-                          write(*,*) '=> Satellite trajectory file: ',&
-                               trim(Satellite_Name(isat)),&
-                               ' contains too many lines! '
-                          call write_prefix; write(*,*) &
-                               '(Max lines =',Max_Satellite_Npts,').'
-                       endif
-                    endif
-
-                 enddo
-
-              endif
-
-           enddo
-
-           close(unit_tmp)
-
+        ! Convert the coordinates if necessary
+        if(TypeSatCoord_I(iSat) /= TypeCoordSystem)then
+           do i = 1, nPoint
+              Xyz_DI(:,i) = matmul( &
+                   transform_matrix( Time_I(i), &
+                   TypeSatCoord_I(iSat), TypeCoordSystem), Xyz_DI(:,i) )
+           end do
         end if
+
      end if
 
-     call MPI_Bcast(Npts_tmp,1,MPI_Integer,0,iComm,iError)
-     if(iError>0)call stop_mpi(&
-  	  "Satellite_Npts could not be broadcast by read_satellite_input_files")
-     Satellite_Npts(isat) = Npts_tmp         
+     ! Tell the number of points to the other processors
+     call MPI_Bcast(nPoint, 1, MPI_INTEGER, 0, iComm, iError)
+     Satellite_Npts(iSat) = nPoint
 
-     call MPI_Bcast(TypeSatCoord_I(iSat),3,MPI_CHARACTER,0,iComm,iError)
-     if(iError>0)call stop_mpi(&
-  	  "TypeSatCoord_I could not be broadcast by read_satellite_input_files")
+     ! Tell the other processors the satellite time
+     call MPI_Bcast(Time_I, nPoint, MPI_REAL, 0, iComm, iError)
 
-     call MPI_Bcast(T_tmp,Max_Satellite_Npts*7,MPI_Integer, &
-  	  0,iComm,iError)
-     if(iError>0)call stop_mpi(&
-  	  "Satellite_Time could not be broadcast by read_satellite_input_files")
-     do i=1,Satellite_Npts(isat)
-        call time_int_to_real(T_tmp(i,:),Satellite_Time(isat,i))
+     ! Tell the other processors the coordinates
+     call MPI_Bcast(Xyz_DI, nDim*nPoint, MPI_REAL, 0, iComm, iError)
+
+     ! Store time and positions for satellite iSat on all PE-s
+
+     Satellite_Time(iSat, 1:nPoint) = Time_I(1:nPoint)
+     do i = 1, nPoint
+        xSatellite_traj(iSat, i, :) = Xyz_DI(:, i)
      end do
 
-     call MPI_Bcast(X_tmp,Max_Satellite_Npts*3,MPI_Real, &
-  	  0,iComm,iError)
-     if(iError>0)call stop_mpi(&
-  	  "XSatellite_traj could not be broadcast by read_satellite_input_files")
-     XSatellite_traj(isat,:,:) = X_tmp
+     if(DoTest)then
+        nPoint = min(10,nPoint)
+        write(*,*) NameSub,': tSat=', Satellite_Time( iSat, 1:nPoint)
+        write(*,*) NameSub,': xSat=', xSatellite_traj(iSat, 1:nPoint,1)
+        write(*,*) NameSub,': ySat=', xSatellite_traj(iSat, 1:nPoint,2)
+        write(*,*) NameSub,': zSat=', xSatellite_traj(iSat, 1:nPoint,3)
+     end if
 
-  end do
+  end do SATELLITES
 
 end subroutine read_satellite_input_files
 
@@ -127,7 +148,7 @@ subroutine set_satellite_flags
   use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
   use ModIO, ONLY : iBLKsatellite,iPEsatellite,Xsatellite,&
-       SatelliteInBLK,DoTrackSatellite_I,nsatellite
+       SatelliteInBLK,DoTrackSatellite_I,nSatellite
   use ModNumConst
   use ModMpi
   implicit none
@@ -142,24 +163,24 @@ subroutine set_satellite_flags
 
   if (oktest_me) &
        write(*,*)'Starting set_satellite_flags',&
-       nsatellite,', call set_satellite_positions'
+       nSatellite,', call set_satellite_positions'
 
   call set_satellite_positions
 
   do iSat=1, nSatellite
-     if(.not.DoTrackSatellite_I(iSat))cycle !Position is not defined
+     if(.not.DoTrackSatellite_I(iSat))CYCLE !Position is not defined
      select case(TypeGeometry)           !^CFG IF NOT CARTESIAN
      case('cartesian')                   !^CFG IF NOT CARTESIAN
-        XSat=XSatellite(iSat,1)
-        YSat=XSatellite(iSat,2)
-        ZSat=XSatellite(iSat,3)
+        xSat=XSatellite(iSat,1)
+        ySat=XSatellite(iSat,2)
+        zSat=XSatellite(iSat,3)
      case('spherical')                   !^CFG IF NOT CARTESIAN BEGIN
-        call xyz_to_spherical(XSatellite(iSat,1),XSatellite(iSat,2),&
-             XSatellite(iSat,3), XSat,YSat,ZSat)
+        call xyz_to_spherical(XSatellite(iSat,1), XSatellite(iSat,2),&
+             XSatellite(iSat,3), xSat, ySat, zSat)
      case('spherical_lnr')                   
-        call xyz_to_spherical(XSatellite(iSat,1),XSatellite(iSat,2),&
-             XSatellite(iSat,3), XSat,YSat,ZSat)
-        XSat=log(max(XSat,cTiny))
+        call xyz_to_spherical(XSatellite(iSat,1), XSatellite(iSat,2),&
+             XSatellite(iSat,3), XSat, YSat, ZSat)
+        xSat=log(max(xSat, cTiny))
      case default
         call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
      end select                          !^CFG END CARTESIAN
@@ -167,7 +188,7 @@ subroutine set_satellite_flags
      iPE = -1
      iBLKtemp = -1
 
-     do iBLK = 1,nBlockMax
+     do iBLK = 1, nBlockMax
 
         SatelliteInBLK(isat,iBLK) =.not.unusedBLK(iBLK).and.&
              XSat >  XyzStart_BLK(1,iBLK) - cHalf*dx_BLK(iBLK) .and. &
@@ -214,48 +235,45 @@ subroutine set_satellite_positions
   implicit none
 
 
-  integer :: i, isat, iBLK
+  integer :: i, iSat, iBLK
   real    :: XSat,YSat,ZSat
-  real*8  :: dtime, time_now
+  real    :: dtime
 
-  !  real*8, external :: Time_Of_Year
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
   if (iProc==0) &
        call set_oktest('set_satellite_positions',oktest, oktest_me)
 
-  time_now = StartTime + Time_Simulation
+  do iSat = 1, nSatellite
 
-  do isat = 1, nsatellite
+     if (UseSatelliteFile(iSat)) then
 
-     if (UseSatelliteFile(isat)) then
+        if (Satellite_Npts(iSat) > 0) then
 
-        if (Satellite_Npts(isat) > 0) then
+           i = icurrent_satellite_position(iSat)
 
-           i = icurrent_satellite_position(isat)
-
-           do while ((i < Satellite_Npts(isat)) .and.   &
-                (Satellite_Time(isat,i) < time_now))
+           do while ((i < Satellite_Npts(iSat)) .and.   &
+                (Satellite_Time(iSat,i) < Time_Simulation))
               i = i + 1
            enddo
 
-           icurrent_satellite_position(isat) = i
+           icurrent_satellite_position(iSat) = i
 
-           if ((i == Satellite_Npts(isat).and. &
-                Satellite_Time(isat,i) <= time_now ).or.(i==1)) then 
+           if ((i == Satellite_Npts(iSat).and. &
+                Satellite_Time(iSat,i) <= Time_Simulation ).or.(i==1)) then 
 
-              DoTrackSatellite_I(isat) = .false.
+              DoTrackSatellite_I(iSat) = .false.
 
            else
 
-              DoTrackSatellite_I(isat) = .true.
+              DoTrackSatellite_I(iSat) = .true.
 
-              dtime = 1.0 - (Satellite_Time(isat,i) - time_now) / &
-                   (Satellite_Time(isat,i) - Satellite_Time(isat,i-1) + 1.0e-6)
+              dTime = 1.0 - (Satellite_Time(iSat,i) - Time_Simulation) / &
+                   (Satellite_Time(iSat,i) - Satellite_Time(iSat,i-1) + 1.0e-6)
 
-              XSatellite(isat,:) = dtime * XSatellite_traj(isat,i,:) + &
-                   (1.0 - dtime) * XSatellite_traj(isat,i-1,:) 
+              xSatellite(iSat,:) = dTime * xSatellite_traj(iSat,i,:) + &
+                   (1.0 - dTime) * xSatellite_traj(iSat,i-1,:) 
 
            endif
 
@@ -263,7 +281,7 @@ subroutine set_satellite_positions
 
      else 
 
-        call satellite_trajectory_formula(isat)
+        call satellite_trajectory_formula(iSat)
 
      end if
 
@@ -274,25 +292,25 @@ end subroutine set_satellite_positions
 
 !=============================================================================
 
-subroutine satellite_trajectory_formula(isat)
+subroutine satellite_trajectory_formula(iSat)
   use ModIO, ONLY : DoTrackSatellite_I,XSatellite,Satellite_name
   implicit none
 
-  integer, intent(in) :: isat
+  integer, intent(in) :: iSat
   character (len=100) :: name_string
   real :: Xvect(3)
 
-  name_string = trim(Satellite_name(isat))
-  Xvect(:) = XSatellite(isat,:)
+  name_string = trim(Satellite_name(iSat))
+  Xvect(:) = XSatellite(iSat,:)
 
   ! Case should be for a specific satellite.  The trajectories can depend
   ! on the 'real' time so that the satellite knows where it is at.  For
   ! example, Cassini could be if'd on the date so that the code knows 
   ! whether the run is for a time near Earth, Jupiter or Saturn. 
 
-  ! This routine should always set the TrackSatellite(isat) flag. When
+  ! This routine should always set the TrackSatellite(iSat) flag. When
   ! the satellite is at a useless position the time should return a
-  ! do not track flag (DoTrackSatellite_I(isat) = .false.).
+  ! do not track flag (DoTrackSatellite_I(iSat) = .false.).
 
 
   select case(name_string)
@@ -300,17 +318,17 @@ subroutine satellite_trajectory_formula(isat)
      Xvect(1) = 5.0
      Xvect(2) = 5.0
      Xvect(3) = 5.0
-     DoTrackSatellite_I(isat) = .true.
+     DoTrackSatellite_I(iSat) = .true.
   case ('cassini')
      Xvect(1) = 5.0
      Xvect(2) = 5.0
      Xvect(3) = 5.0
-     DoTrackSatellite_I(isat) = .true.
+     DoTrackSatellite_I(iSat) = .true.
   case default 
      Xvect(1) = 1.0
      Xvect(2) = 1.0
      Xvect(3) = 1.0
-     DoTrackSatellite_I(isat) = .false.
+     DoTrackSatellite_I(iSat) = .false.
   end select
 
 end subroutine satellite_trajectory_formula
@@ -324,30 +342,30 @@ subroutine open_satellite_output_files
   implicit none
 
   logical :: from_end = .true.
-  integer :: isat, l1, l2
+  integer :: iSat, l1, l2
   character (len=4), Parameter :: IO_ext=".sat"
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
   call set_oktest('open_satellite_output_files',oktest, oktest_me)
 
-  do isat=1,nsatellite
-     l1 = index(Satellite_name(isat),'/',from_end) + 1
-     l2 = index(Satellite_name(isat),'.') - 1
+  do iSat=1,nSatellite
+     l1 = index(Satellite_name(iSat),'/',from_end) + 1
+     l2 = index(Satellite_name(iSat),'.') - 1
      if (l1-1<=0) l1=1
-     if (l2+1<=0) l2=len_trim(Satellite_name(isat))
+     if (l2+1<=0) l2=len_trim(Satellite_name(iSat))
 
      write(filename,'(a,i2.2,a)')trim(NamePlotDir)//&
-          'satellite_',isat, &
-          '_'//Satellite_name(isat)(l1:l2)//IO_ext
-     if(oktest) write(*,*) 'isat,l1,l2: ',isat,l1,l2
+          'satellite_',iSat, &
+          '_'//Satellite_name(iSat)(l1:l2)//IO_ext
+     if(oktest) write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
      if(oktest) write(*,*) 'open_satellite_output_files: satellitename:', &
-          Satellite_name(isat)
+          Satellite_name(iSat)
      if(oktest) write(*,*) 'open_satellite_output_files: filename:', &
           filename
 
      iUnitSat_I(iSat)=io_unit_new()
-     open(iUnitSat_I(iSat),file=filename,status="replace")
+     open(iUnitSat_I(iSat), file=filename, status="replace")
   end do
 
 end subroutine open_satellite_output_files
