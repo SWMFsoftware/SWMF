@@ -722,7 +722,7 @@ sub check_value_format{
 	# 3 -3 -3. .21 -3.21 -3.21e2 -3.21D+21
 	$bad = &bad_value
 	    unless $paramValue =~ 
-		/^\s*[\+\-]?(\d+(\.\d*)?|\.\d+)(e[\+\-]?\d+)?/i;
+		/^\s*[\+\-]?(\d+(\.\d*)?|\.\d+)(e[\+\-]?\d+)?$/i;
     }
     elsif($paramType =~ /string/)
     {
@@ -966,7 +966,8 @@ sub check_command{
     # Store the command
     $defined{$realName}="\#$commandName at line $nLine in file $InputFile";
     $definedSessionLast{$realName}=$defined{$realName};
-
+    &store("_command",$commandName);
+    
     print "Command \#$commandName defined at line $nLine in file $InputFile\n"
 	if $Debug;
 
