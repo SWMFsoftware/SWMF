@@ -516,7 +516,7 @@ with
   SetSWMF.pl -s
 \end{verbatim}
 
-{\bf IMPORTANT NOTE:
+{\bf IMPORTANT NOTES:
 On the Altix machine at NASA Ames (columbia)
 you should load the 8.0.070 version 
 of the Intel Fortran compiler 
@@ -529,7 +529,21 @@ so it executes at login time.
 Selecting the correct compiler version is 
 necessary both to compile and to run the code.
 Therefore the above line is needed in the job scripts
-as well.}
+as well.
+
+On Linux platforms with the NAG f95 compiler it may be necessary
+to add the {\tt -Bstatic} option to the link flag in {\tt Makfefile.conf}
+\begin{verbatim}
+Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG} -Bstatic
+\end{verbatim} 
+in case running the executable {\tt SWMF.exe}
+results in a segmentation fault immediately. This error occurs when 
+the memory usage is high, e.g. there are many implicit blocks in 
+the {\tt GM/BATSRUS} component. Running with the {\tt UA/GITM2} component 
+may also requires this flag. Some users reported
+that while this fix avoids the segmentation fault, the code crashes 
+with run time errors. Other users found that the fix works fine.
+}
 
 To build the executable {\bf bin/SWMF.exe}, type:
 \begin{verbatim}
