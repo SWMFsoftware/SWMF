@@ -215,26 +215,24 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 # Libraries should be compiled first, because modules are used in main.
-${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING}
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
-BATSRUS.exe: ${OBJECTS_EXE} ${OBJECTS} ${MODULES}
-	@(if [ ${OS} == "Darwin" ]; then \
-	    echo \
-	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
-		../util/TIMING/src/*.o ../share/Library/src/*.o \
-		${Lflag1}; \
-	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
-		../util/TIMING/src/*.o ../share/Library/src/*.o \
-		${Lflag1}; \
-	else \
-	    echo \
-	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
-		-L${LIBDIR} -lTIMING -lSHARE \
-		${Lflag1}; \
-	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
-		-L${LIBDIR} -lTIMING -lSHARE \
-		${Lflag1}; \
-	fi);
+BATSRUS.exe: ${OBJECTS_EXE}
+	@(if [ ${OS} != "Darwin" ]; then make BATSRUS_general; \
+	else                             make BATSRUS_Darwin; fi)
+
+BATSRUS_general:
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
+		${Lflag1}
+
+BATSRUS_Darwin:
+	ld -all_load -r -o LIBRARIES.o \
+		${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+		LIBRARIES.o ${LBLAS} \
+		${Lflag1}
+	rm -f LIBRARIES.o
 
 #
 #	cleaning
