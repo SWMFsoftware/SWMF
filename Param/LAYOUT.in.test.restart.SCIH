@@ -1,7 +1,4 @@
-This is an example layout to run the steady state startup with
-IH-GM-IE coupling test on arbitrary even number of PE-s.
-Every second PE is used by GM, and the other half by IH.
-IE runs on the first 2 PE-s.
+This layout is efficient to run SC and IH together.
 
 #COMPONENTMAP
 SC    0  999    1
