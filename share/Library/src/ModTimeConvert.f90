@@ -69,6 +69,8 @@ module ModTimeConvert
      module procedure time_real_to_int1, time_real_to_int2
   end interface
 
+  public :: test_time        ! unit tester
+
   !PUBLIC DATA MEMBERS:
 
   ! iYearBase MUST follow : mod(iYearBase,4) == 1
