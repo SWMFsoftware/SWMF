@@ -29,6 +29,9 @@ pro set_device, psfile, land=land, port=port, eps=eps, psfont=psfont, $
   !p.font = 0
 
   case (psfont) of
+       -1  : device, file = psfile, encapsulated=eps, /color, bits=8,         $
+                /inches, landscape=land, xsize = xs, ysize = ys, $
+               xoff = xoff, yoff = yoff
 
 	0  : device, file = psfile, encapsulated=eps, /color, bits=8,	      $
 		/inches, landscape=land, xsize = xs, ysize = ys, $

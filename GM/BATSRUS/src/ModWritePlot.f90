@@ -96,11 +96,15 @@ subroutine write_plot_common(ifile)
      write(*,*) plot_form(ifile)
   end if
 
+  ! Construct the file name
   if (ifile-plot_ > 9) then
      file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a,i4.4,a)'
   else
      file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a,i4.4,a)'
   end if
+
+  ! For time accurate runs the file name will contain the StringTimeH4M2S2
+  if(time_accurate)call get_time_string
 
   select case(plot_form(ifile))
   case('tec')
@@ -110,15 +114,16 @@ subroutine write_plot_common(ifile)
   end select
   if(index(plot_type1,'sph')>0)then
      if(time_accurate)then
-        call gettimestring
         ! do the northern hemisphere
         write(filename_n,file_format) &
              plot_type1(1:2)//"N"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
         ! do the southern hemisphere
         write(filename_s,file_format) &
              plot_type1(1:2)//"S"//plot_type1(4:len_trim(plot_type1))//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
      else
         ! do the northern hemisphere
         write(filename_n,file_format) &
@@ -132,21 +137,24 @@ subroutine write_plot_common(ifile)
      ! open the files
      unit_tmp2 = io_unit_new()
      if(save_binary .and. plot_form(ifile)=='idl') then
-        open(unit_tmp ,file=filename_n,status="unknown",err=999,form="unformatted")
-        open(unit_tmp2,file=filename_s,status="unknown",err=999,form="unformatted")
+        open(unit_tmp ,file=filename_n,status="replace",err=999,&
+             form="unformatted")
+        open(unit_tmp2,file=filename_s,status="replace",err=999,&
+             form="unformatted")
      else
-        open(unit_tmp ,file=filename_n,status="unknown",err=999)
-        open(unit_tmp2,file=filename_s,status="unknown",err=999)
+        open(unit_tmp ,file=filename_n,status="replace",err=999)
+        open(unit_tmp2,file=filename_s,status="replace",err=999)
      end if
   elseif(plot_form(ifile)=='tec')then
      if(time_accurate)then
-        call gettimestring
         write(filename_n,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_1_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_1_pe",iProc,&
+             file_extension
         write(filename_s,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_2_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_2_pe",iProc,&
+             file_extension
      else
         write(filename_n,file_format) &
              trim(plot_type1)//"_",&
@@ -156,23 +164,26 @@ subroutine write_plot_common(ifile)
              ifile-plot_,"_n",n_step,"_2_pe",iProc,file_extension
      end if
      unit_tmp2 = io_unit_new()
-     open(unit_tmp ,file=filename_n,status="unknown",err=999)
-     open(unit_tmp2,file=filename_s,status="unknown",err=999)
+     ! Open files
+     open(unit_tmp ,file=filename_n,status="replace",err=999)
+     open(unit_tmp2,file=filename_s,status="replace",err=999)
   else
      if(time_accurate)then
-        call gettimestring
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,"_pe",iProc,file_extension
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,"_pe",iProc,&
+             file_extension
      else
         write(filename,file_format) &
              trim(plot_type1)//"_",&
              ifile-plot_,"_n",n_step,"_pe",iProc,file_extension
      end if
+     ! Open file
      if(save_binary .and. plot_form(ifile)=='idl')then
-        open(unit_tmp,file=filename,status="unknown",err=999,form="unformatted")
+        open(unit_tmp,file=filename,status="replace",err=999,&
+             form="unformatted")
      else
-        open(unit_tmp,file=filename,status="unknown",err=999)
+        open(unit_tmp,file=filename,status="replace",err=999)
      end if
   end if
 
@@ -218,13 +229,14 @@ subroutine write_plot_common(ifile)
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
-     call set_plotvar(iBLK,ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
+     call set_plotvar(iBLK, &
+          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
      if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
      if (index(plot_type1,'sph')>0) then
-        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &      !^CFG IF NOT SIMPLE
-             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)           !^CFG IF NOT SIMPLE 
+        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, & !^CFG IF NOT SIMPLE
+             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)      !^CFG IF NOT SIMPLE 
    	dxblk=1.0
    	dyblk=180.0/real(ntheta-1)
    	dzblk=360.0/real(nphi)
@@ -334,7 +346,7 @@ subroutine write_plot_common(ifile)
               write(filename,file_format) &
                    plot_type1(1:2)//NorthOrSouth// &
                    plot_type1(4:len_trim(plot_type1))//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -344,10 +356,10 @@ subroutine write_plot_common(ifile)
            end if
         elseif(plot_form(ifile)=='tec')then
            if(time_accurate)then
-              call gettimestring
+              call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -356,10 +368,10 @@ subroutine write_plot_common(ifile)
            end if
         else
            if(time_accurate)then
-              call gettimestring
+              call get_time_string
               write(filename,file_format) &
                    trim(plot_type1)//"_",&
-                   ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",&
+                   ifile-plot_,"_t"//StringTimeH4M2S2//"_n",&
                    n_step,file_extension
            else
               write(filename,file_format) &
@@ -367,7 +379,7 @@ subroutine write_plot_common(ifile)
                    ifile-plot_,"_n",n_step,file_extension
            end if
         end if
-        open(unit_tmp,file=filename,status="unknown",err=999)
+        open(unit_tmp,file=filename,status="replace",err=999)
 
         write(unit_tmp,'(a)')filename
         write(unit_tmp,'(i8,a)')nProc,' nProc'

@@ -11,8 +11,6 @@ help:
 	@echo ' '
 	@echo 'help              - this help (default target)'
 	@echo ' '
-	@echo 'MAN               - MAN_TIMING.ps.gz manual'
-	@echo ' '
 	@echo 'test              - serial testing of TIMING module'
 	@echo 'test_mpi          - parallel testing of TIMING module'         
 	@echo 'test_empty        - serial testing of empty TIMING module'
@@ -20,14 +18,11 @@ help:
 	@echo 'TEST              - all four tests together'
 	@echo ' '
 	@echo 'LIB               - libTIMING.a the complete TIMING library'
-	@echo 'EMPTY             - timing_empty.o the empty TIMING library'
 	@echo ' '
 	@echo 'clean             - /bin/rm -f *.o *.exe'
 	@echo 'distclean         - /bin/rm -f *.o *.exe *.a *~'
-	@echo ' '
-	@echo 'dist              - /bin/tar -cf ../TIMING.tar .'
 
-OBJ_LIB = ModKind.o ModTiming.o timing_cpu.o timing.o
+OBJ_LIB = ModTiming.o timing_cpu.o timing.o
 
 LIB: ${MY_LIB}
 	@echo
@@ -52,16 +47,18 @@ test_empty: timing_empty.exe
 test_empty_mpi: timing_empty_mpi.exe
 	mpirun -np 2 timing_empty_mpi.exe
 
-
-EMPTY: timing_empty.o
-
 EXE: timing_test.exe
 
 timing.o: ModTiming.o
 
-OBJ_TEST = ModKind.o timing_test.o
+LIBNOMPI = ${LIBDIR}/libNOMPI.a
 
-timing_test.exe: $(OBJ_TEST) ${MY_LIB}
+${LIBNOMPI}:
+	cd ../../NOMPI/src; make LIB
+
+OBJ_TEST = timing_test.o
+
+timing_test.exe: $(OBJ_TEST) ${MY_LIB} ${LIBNOMPI}
 	$(LINK.f90) $(Lflag2) -o timing_test.exe $(OBJ_TEST) \
 	-L${LIBDIR} -lTIMING -lNOMPI
 
@@ -69,31 +66,17 @@ timing_test_mpi.exe: $(OBJ_TEST) ${MY_LIB}
 	$(LINK.f90) $(Lflag1) -o timing_test_mpi.exe $(OBJ_TEST) \
 	-L${LIBDIR} -lTIMING $(MPILIB)
 
-OBJ_EMPTY= ModKind.o timing_empty.o timing_test.o
+OBJ_EMPTY= ../srcEmpty/timing_empty.o timing_test.o
 
-timing_empty.exe: $(OBJ_EMPTY)
+../srcEmpty/timing_empty.o: ../srcEmpty/timing_empty.f90
+	cd ../srcEmpty; make timing_empty.o
+
+timing_empty.exe: $(OBJ_EMPTY) ${LIBNOMPI}
 	$(LINK.f90) ${Lflag1} -o timing_empty.exe $(OBJ_EMPTY) \
 	 -L${LIBDIR} -lNOMPI
 
 timing_empty_mpi.exe: $(OBJ_EMPTY)
 	$(LINK.f90) ${Lflag2} -o timing_empty_mpi.exe $(OBJ_EMPTY) $(MPILIB)
 
-MAN:	MAN_TIMING.ps.gz
-
-MAN_TIMING.dvi : MAN_TIMING.tex
-	latex MAN_TIMING.tex
-	latex MAN_TIMING.tex
-
-MAN_TIMING.ps : MAN_TIMING.dvi
-	dvips -o MAN_TIMING.ps MAN_TIMING.dvi
-
-MAN_TIMING.ps.gz : MAN_TIMING.ps
-	gzip -f MAN_TIMING.ps
-
 distclean: clean
-	/bin/rm -f *.a *.log *.aux *.dvi *~ 
 
-dist: distclean
-	/bin/tar -cf ../TIMING.tar .
-
-#

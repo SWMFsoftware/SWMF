@@ -307,9 +307,7 @@ subroutine option_list
 
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-!  call timing_version(on,name,number); call write_version
-!  write(iUnitOut,'(a)')&
-!       '#                                                                 #'
+
   call OPTION_RUSANOVFLUX(on,name);  call write_option     !^CFG IF RUSANOVFLUX
   call OPTION_LINDEFLUX(on,name);    call write_option     !^CFG IF LINDEFLUX
   call OPTION_AWFLUX(on,name);       call write_option     !^CFG IF AWFLUX
@@ -317,7 +315,6 @@ subroutine option_list
   call OPTION_CONSTRAIN_B(on,name);  call write_option     !^CFG IF CONSTRAINB
   call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION
   call OPTION_RAYTRACING(on,name);   call write_option     !^CFG IF RAYTRACE
-  call OPTION_FACE(on,name);         call write_option
   call OPTION_IMPLICIT(on,name);     call write_option     !^CFG IF IMPLICIT
 
   call write_prefix; write(iUnitOut,'(a)') &

@@ -111,7 +111,7 @@ subroutine calc_flux_roe(DoResChangeOnly)
 
   common/Eig1/ Eigenvalue_V,DeltaWave_V                
   common/Eig2/ EigenvectorL_VV,EigenvectorR_VV 
-  common/Flux/ FluxL_V,FluxR_V,FluxFull_V         
+  common/RoeFlux/ FluxL_V,FluxR_V,FluxFull_V         
 
 !!!  equivalence(zz(1),rho_lf)
 
@@ -133,7 +133,7 @@ subroutine calc_flux_roe(DoResChangeOnly)
   !T3E! !dir$ cache_align /face3/ 
   !T3E! !dir$ cache_align /Eig1/ 
   !T3E! !dir$ cache_align /Eig2/  
-  !T3E! !dir$ cache_align /flux/
+  !T3E! !dir$ cache_align /roeflux/
 
   cSqrt2 = sqrt(2.)
   cSqrt2Inv = 1./cSqrt2
@@ -395,12 +395,6 @@ Contains
        aH_I(i)   = g*pH_I(i)*RhoInvH_I(i)
     end do
 
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       aL_I(i) = 0.
-    !VSQRT!       aR_I(i) = 0.
-    !VSQRT!    end do
-    !VSQRT!   len = 2*MaxStrip + nStrip
-    !VSQRT!    call sqrt_v32(len,aL_I,aL_I)
     do i=1,nStrip
        !if(aL_I(i)<0.0)then
        !   write(*,*)'NEGATIVE aL_I Me, iDir, i, j, k, globalBLK',&
@@ -427,11 +421,6 @@ Contains
             (eH_I(i)**2 - 4.*aH_I(i)**2 * BnH_I(i)**2 * RhoInvH_I(i)))
     end do
 
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       CfL_I(i) = 0.
-    !VSQRT!       CfR_I(i) = 0.
-    !VSQRT!    end do
-    !VSQRT!    call sqrt_v32(len,CfL_I,CfL_I)
     do i=1,nStrip
        CfL_I(i)=sqrt(CfL_I(i))
        CfR_I(i)=sqrt(CfR_I(i))
@@ -453,13 +442,6 @@ Contains
        eH_I(i)   = pH_I(i)*inv_gm1 + 0.5*RhoH_I(i)*UuH_I(i) + 0.5*Bb1H_I(i)
     end do
 
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       CsL_I(i) = 0.
-    !VSQRT!       CsR_I(i) = 0.
-    !VSQRT!       CsH_I(i) = 0.
-    !VSQRT!    end do
-    !VSQRT!    len = 5*MaxStrip + nStrip
-    !VSQRT!    call sqrt_v32(len,CsL_I,CsL_I)
     do i=1,nStrip
        CsL_I(i)=sqrt(CsL_I(i))
        CsR_I(i)=sqrt(CsR_I(i))
@@ -480,14 +462,6 @@ Contains
        ! Non-dimensional scaling factors
        !/
        Tmp1_I(i) = max(1.00e-08, Bt1H_I(i)**2 + Bt2H_I(i)**2)
-    end do
-
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       Tmp1_I(i) = 1.0
-    !VSQRT!    end do
-    !VSQRT!    len = MaxStrip + nStrip
-    !VSQRT!    call sqrti_v32(len,Tmp1_I,Tmp1_I)
-    do i=1,nStrip
        Tmp1_I(i)=sqrt(1./Tmp1_I(i))
     end do
 
@@ -502,8 +476,11 @@ Contains
 
        Tmp1 = CfH_I(i)**2 - CsH_I(i)**2
        if (Tmp1 > 1.0e-08) then
-          AlphaF_I(i) = (aH_I(i)**2  - CsH_I(i)**2)/Tmp1
-          AlphaS_I(i) = (CfH_I(i)**2 - aH_I(i)**2 )/Tmp1
+          AlphaF_I(i) = max(0.00,(aH_I(i)**2  - CsH_I(i)**2)/Tmp1)
+          AlphaS_I(i) = max(0.00,(CfH_I(i)**2 - aH_I(i)**2 )/Tmp1)
+
+          AlphaF_I(i) = sqrt(AlphaF_I(i))
+          AlphaS_I(i) = sqrt(AlphaS_I(i))
        else if (BnH_I(i)**2 * RhoInvH_I(i) <= aH_I(i)**2 ) then
           AlphaF_I(i) = 1.00
           AlphaS_I(i) = 0.00
@@ -513,24 +490,9 @@ Contains
        endif
     end do
 
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       AlphaF_I(i) = 0.
-    !VSQRT!    end do
-    !VSQRT!    call sqrt_v32(len,AlphaF_I,AlphaF_I)
-    do i=1,nStrip
-       AlphaF_I(i)=sqrt(AlphaF_I(i))
-       AlphaS_I(i)=sqrt(AlphaS_I(i))
-    end do
-
     !\
     ! Set some values that are reused over and over
     !/
-    !VSQRT!    do i=nStrip+1,MaxStrip
-    !VSQRT!       RhoSqrtH_I(i) = 0.
-    !VSQRT!       RhoSqrtL_I(i) = 0.
-    !VSQRT!    end do
-    !VSQRT!    len = 2*MaxStrip + nStrip
-    !VSQRT!    call sqrt_v32(len,RhoH_I,RhoSqrtH_I)
     do i=1,nStrip
        RhoSqrtH_I(i)   =sqrt(RhoH_I(i))
        RhoSqrtL_I(i)   =sqrt(RhoL_I(i))

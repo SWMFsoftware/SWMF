@@ -7,8 +7,7 @@ Module MH_domain_decomposition
   integer,private::iLastGrid=-1,iLastDecomposition=-1
   
   integer,parameter::&
-       PELast_      =4,&
-       GlobalNumber_=5,&
+       PELast_      =5,&
        LEV_         =6,&
        LEVmin_      =7,&
        LEVmax_      =8
@@ -123,7 +122,7 @@ contains
        else
           if(.not.DoCountOnly)then
              DomainDecomposition% iDecomposition_II(FirstChild_,lOctree)=None_
-             DomainDecomposition%iDecomposition_II(GlobalNumber_,lOctree) = &
+             DomainDecomposition%iDecomposition_II(GlobalBlock_,lOctree) = &
                   octree % ptr % number
              DomainDecomposition%iDecomposition_II(PE_,lOctree) = &
                   octree % ptr % PE
@@ -168,7 +167,7 @@ contains
        octree % ptr % child_number =iChildNumber
        if(IsUsedBlock)then
           octree % ptr % number  = DomainDecomposition%&
-               iDecomposition_II(GlobalNumber_,lOctree)
+               iDecomposition_II(GlobalBlock_,lOctree)
           octree % ptr % PE      = DomainDecomposition%&
                iDecomposition_II(PE_,lOctree)
           octree % ptr % BLK     = DomainDecomposition%&
@@ -181,7 +180,8 @@ contains
                =>octree % ptr
        else
           !Choose the PE and BLK set to be used in refining the octree node.
-          iLEV=octree % ptr % LEV +1          
+          iLEV=octree % ptr % LEV +1
+          octree % ptr % used = .false.
           do iChild = 1, 8
              nullify(child % ptr)
              allocate ( child % ptr, stat=ierror )
@@ -208,6 +208,8 @@ contains
              child % ptr % refine  = .false.
              child % ptr % coarsen = .false.
              child % ptr % body    = .false.
+             child % ptr % IsExtraBoundary = .false.
+             child % ptr % IsOuterBoundary = .false.
 
              child % ptr % parent =>octree % ptr
              select case (iChildOrder_II(iChild,iChildNumber))

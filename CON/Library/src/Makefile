@@ -9,7 +9,9 @@ include Makefile.DEPEND
 MODULES = \
 	CON_comp_info.o\
 	CON_comp_param.o\
-	CON_world.o
+	CON_world.o\
+	CON_time.o\
+	CON_physics.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}

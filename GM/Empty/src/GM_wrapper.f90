@@ -115,51 +115,52 @@ subroutine GM_get_mapping_param_for_ie(&
 end subroutine GM_get_mapping_param_for_ie
 !==============================================================================
 subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
-
   implicit none
-
-  character (len=*), parameter :: NameSub='GM_get_for_im'
 
   integer, intent(in) :: iSize,jSize,nVar
   real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
   character (len=*), intent(in) :: NameVar
 
+  character (len=*), parameter :: NameSub='GM_get_for_im'
+
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
 end subroutine GM_get_for_im
-
 !==============================================================================
-
-subroutine GM_get_for_ie(Buffer_IV,nPoint,nVar,NameVar)
-
+subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
-  character (len=*), parameter :: NameSub='GM_get_for_ie'
+  integer, intent(in) :: iSize,jSize,nVar
+  real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
+  character (len=*), intent(in) :: NameVar
+
+  character (len=*), parameter :: NameSub='GM_get_for_rb'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+end subroutine GM_get_for_rb
+!==============================================================================
+subroutine GM_get_for_ie(Buffer_IV,nPoint,nVar,NameVar)
+  implicit none
 
   integer, intent(in) :: nPoint,nVar
   real, intent(out), dimension(nPoint,nVar) :: Buffer_IV
   character (len=*), intent(in) :: NameVar
 
+  character (len=*), parameter :: NameSub='GM_get_for_ie'
+
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
 end subroutine GM_get_for_ie
-
 !==============================================================================
-
 subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
-
   implicit none
-
-  character(len=*), parameter :: NameSub='GM_put_from_im'
 
   integer, intent(in) :: iSizeIn,jSizeIn
   real, intent(in) :: Buffer_II(iSizeIn,jSizeIn)
   character(len=*), intent(in) :: NameVar
 
+  character(len=*), parameter :: NameSub='GM_put_from_im'
+
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
 end subroutine GM_put_from_im
-
 !==============================================================================
 
 !==========================================================================

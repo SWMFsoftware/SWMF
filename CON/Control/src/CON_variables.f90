@@ -13,7 +13,7 @@ module CON_variables
   !EOP
   !BOC
   ! Version number for SWMF
-  real, parameter :: VersionSwmf = 1.0
+  real, parameter :: VersionSwmf = 2.0
 
   ! Description string for the problem being solved
   character (len=lStringLine) :: StringDescription='Please describe me!'
@@ -21,13 +21,7 @@ module CON_variables
   ! Number of bytes in the default real number (precision)
   ! nByteReal = 4 if range(1.0) is smaller than range(1.D0), otherwise 8
   ! This is standard F90 initialization expression but may give warnings:
-  integer, parameter :: nByteReal = 4 + (1.0000000004 - 1.0)*10000000000.0
-
-  ! This is not standard F90 and does not work for pgf90 compiler:
-  ! integer, parameter :: nByteReal = 6 + sign(2,range(1.0)-range(1.D0))
-
-  ! The type of session model: serial, parallel, overlap...
-  character (len=lStringLine) :: TypeSession='old'
+  integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
 
   ! Shall we use timing module
   logical :: UseTiming = .true.

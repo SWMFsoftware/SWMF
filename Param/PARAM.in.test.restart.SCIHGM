@@ -1,0 +1,383 @@
+#ECHO
+T
+
+#DESCRIPTION
+Use restart data for SC-IH (/g/public/scihrestart.tar)
+Create restart files for SC, IH and GM, SC-IH-GM-IE coupling. 
+Needs user_routines.f\90.heliosphere!
+
+#INCLUDE
+RESTART.in
+
+#IDEALAXES
+! align both the rotational and the magnetic axes of Earth with ecliptic North
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#INCLUDE
+SC/restartIN/restart.H
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+F			UseUserSetPhysConst
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#USEUSERHEATING
+F			UseUserHeating
+
+#PFSSM
+T			UseUserB0
+1.00E+00		Ro_PFSSM
+2.50E+00		Rs_PFSSM
+SC/CR1935_WSO.dat       File_PFSSM
+12			iHead_PFSSM
+-1.00E+00		dt_UpdateB0
+
+#AWHEAT
+1.50E+00		Bnot	[G]
+1.6304543E+00		Tnot
+9			DegFrm1
+2.10E+00		TemRatio
+F     			UseStaticICs
+F                       UseZeroOmega
+
+#USERINPUTEND ----------------------------
+
+#HELIOSPHERE
+1.80E+06		tSun    [K]      1.0E6 
+5.00E+13		NdSun [n/m-3]
+10.00			qSun
+1.76			tHeat
+1.00			rHeat
+4.50			SigmaHeat
+F			UseFluxRope
+
+#HELIOROTATION
+T			UseInertial, if false then corotating frame
+F			UseCorotation
+
+#GAMMA
+1.50000E+00		g
+
+#OUTERBOUNDARY
+coupled 		TypeBcOuter_E(East_)
+coupled 		TypeBcOuter_E(West_)
+coupled 		TypeBcOuter_E(South_)
+coupled 		TypeBcOuter_E(North_)
+coupled 		TypeBcOuter_E(Bot_)
+coupled 		TypeBcOuter_E(Top_)
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod			TypeLimiter
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+VAR                     StringLog
+10                      DnSaveLogfile
+-1.0			DtSaveLogfile
+em_r ek_r et_r
+4.0  10.0               rLog
+
+#SAVEPLOT
+4			nplotfiles
+x=0 MHD tec             plot_string
+2001                    dn
+-1.0			dt
+y=0 MHD tec		plot_string
+2001			dn
+-1.0			dt
+z=0 MHD tec		plot_string
+2001			dn
+-1.0			dt
+y=0 MHD idl             StringPlot
+2001                    DnOutput(plot_+3)
+-1.			DtOutput
+-1.			DxOutput
+
+#END_COMP SC
+
+! Do not run IE until GM gets some reasonable solution
+
+#COUPLE2
+SC			NameSource
+IH			NameTarget
+1			DnCouple
+10.			DtCouple
+
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#INCLUDE
+IH/restartIN/restart.H
+
+#PROBLEMTYPE
+3			problem_type: 3=Solar Wind and Inner Heliosphere
+
+#BODY
+T
+20.0
+
+#INNERBOUNDARY
+coronatoih
+
+
+#HELIOSPHERE
+2.85E+06		Tsun    [K]      1.0E6 
+1.50E+14		NDsun [n/m-3]
+25.00			Qsun
+1.75			Theat
+1.00			Rheat
+4.50			SIGMAheat
+F                       UseUserPerturbation
+
+#HELIODIPOLE
+0.0			HelioDipoleStrength(equatorial field strength in Gauss)
+0.0			HelioDipoleTilt
+
+
+#GRID
+1			proc_dims(1)
+1			proc_dims(2)
+1			proc_dims(3),
+-240.0			x1  
+ 240.0			x2  
+-240.0			y1 
+ 240.0			y2 
+-240.0			z1 
+ 240.0			z2 
+
+#OUTERBOUNDARY
+heliofloat		TypeOuterBC(east_)
+heliofloat		TypeOuterBC(west_)
+heliofloat		TypeOuterBC(south_) 
+heliofloat		TypeOuterBC(north_) 
+heliofloat		TypeOuterBC(bot_)  
+heliofloat		TypeOuterBC(top_) 
+
+#FACEOUTERBC
+6
+F
+
+
+#AMRINIT
+coupledhelio    	InitialRefineType
+6			nLevelInitialRefine
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+2                       nPlotFiles
+x=0 MHD tec             StringPlot
+2001                    DnOutput(plot_+3)
+-1.			DtOutput
+y=0 MHD idl             StringPlot
+2001                    DnOutput(plot_+3)
+-1.			DtOutput
+-1.			DxOutput
+
+
+#GAMMA
+1.50000E+00		g
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+minmod                  TypeLimiter
+
+#HELIOTEST
+T
+
+#END_COMP IH -----------------------------------------------------------------
+
+#COUPLE1
+IH			NameSource
+GM			NameTarget
+1			DnCouple
+10.			DtCouple
+
+#BEGIN_COMP GM
+
+#PROBLEMTYPE
+11
+
+#GRID
+2
+1
+1
+-224.0
+ 32.0
+-64.0
+ 64.0
+-64.0
+ 64.0
+
+#AMRINIT
+magneto12
+6
+
+#BODY
+T
+2.5
+3.5
+10.0
+25000.0
+
+#SOLARWIND
+ 5.0000000E+00
+ 1.5000000E+05
+-4.0000000E+02
+ 0.0000000E+00
+ 0.0000000E+00
+ 0.0000000E+00
+ 0.0000000E+00
+-5.0000000E+00
+
+#OUTERBOUNDARY
+outflow
+coupled
+float
+float
+float
+float
+
+#SAVELOGFILE
+T
+RAW
+10
+-1.
+
+#SAVEPLOT
+3
+x=0 MHD idl
+1500
+-1.
+-1.
+y=0 MHD idl
+1500
+-1.
+-1.
+z=0 MHD idl
+1500
+-1.
+-1.
+
+#TIMESTEPPING
+1
+0.60
+
+#SCHEME
+1
+Rusanov
+
+#BORIS
+F
+
+#END_COMP GM
+
+#STOP
+500
+-1.
+
+#RUN  ##############################################################
+
+#COUPLE2
+GM
+IE
+50
+-1.
+
+
+#BEGIN_COMP IE
+
+#IONOSPHERE
+5
+F
+F
+150.0
+0.5
+0.25
+
+#SAVEPLOT
+1
+min idl
+2000
+-1.0
+
+#END_COMP IE
+
+#BEGIN_COMP GM
+
+#TIMESTEPPING
+2
+0.8
+
+#SCHEME
+2
+Rusanov
+minmod
+
+#END_COMP GM
+
+#STOP
+1000
+-1.0
+
+#RUN #########################################################
+
+#BEGIN_COMP GM
+
+#AMRRESOLUTION
+0.25
+8.0
+T
+
+#AMR
+250
+T
+10.
+20.
+3000
+
+#AMRCRITERIA
+2
+gradlogP
+curlB
+
+#END_COMP GM
+
+#STOP
+2001                    MaxIter
+-1.			TimeMax
+
+#END

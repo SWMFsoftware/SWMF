@@ -5,7 +5,7 @@ subroutine read_satellite_input_files
   use ModMain, ONLY : lVerbose
   use ModIO
   use ModPhysics, ONLY : unitSI_x
-  use CON_physics, ONLY: time_int_to_real
+  use ModTimeConvert, ONLY: time_int_to_real
   use ModMpi
   implicit none
 
@@ -347,7 +347,7 @@ subroutine open_satellite_output_files
           filename
 
      iUnitSat_I(iSat)=io_unit_new()
-     open(iUnitSat_I(iSat),file=filename,status='unknown')
+     open(iUnitSat_I(iSat),file=filename,status="replace")
   end do
 
 end subroutine open_satellite_output_files

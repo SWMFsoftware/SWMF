@@ -5,7 +5,6 @@
 Module CON_global_message_pass
 !USES:
   use CON_router
-  use ModUtilities, ONLY: check_allocate
 !EOP
   implicit none
 !BOP

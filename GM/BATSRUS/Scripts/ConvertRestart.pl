@@ -1,9 +1,22 @@
 #!/usr/bin/perl 
 #^CFG COPYRIGHT UM
 
+#BOP
+#!ROUTINE: ConvertRestart.pl - change the endianness of BATSRUS restart files
+#!DESCRIPTION:
+# When moving restart files from one machine to another, it may be
+# necessary to change the endianness of the binary files.
+# This script is specifically written to convert all the binary restart
+# files produced by BATSRUS, as well as copy the ASCII header file.
+#!REVISION HISTORY:
+# 07/03/2001 G. Toth - initial revision
+# 03/11/2003 G. Toth - generalized to work on a machine with 
+#                      arbitrary endianness
+#EOP
 if($#ARGV != 1){
-    print "
-Purpose: change the endianness of blk*.rst and octree.rst files, 
+    print 
+#BOC
+"Purpose: change the endianness of blk*.rst and octree.rst files, 
          and copy restart.H.
 
 This perl script can be run on a machine with arbitrary endianness,
@@ -23,9 +36,9 @@ saved into the 'outputdir' (restart_export).
 If the files are moved to the Cray or from the Cray, the octree file needs
 to be fixed for the 4 vs. 8 byte integers using FixI4toI8.pl or FixI8toI4.pl.
 The endianness can be changed with ConvertRestart both after or before the 
-8-byte-integer-fix.
-
-"; 
+8-byte-integer-fix."
+#EOC
+    ,"\n\n";
     exit;
 }
 

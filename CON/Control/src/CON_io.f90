@@ -1,10 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Input and Output Controlled by CON}
 !
 !MODULE: CON_io - Input and output methods for CON
 !
@@ -18,7 +14,7 @@ module CON_io
   use CON_world
   use CON_comp_param
   use CON_wrapper
-  use CON_planet, ONLY: read_planet_var, IsRotaxisPrimary, IsMagAxisPrimary
+  use CON_planet, ONLY: read_planet_var, check_planet_var
   use CON_time
   use CON_axes
   use ModReadParam
@@ -40,7 +36,7 @@ module CON_io
   ! 07/31/03 Aaron Ridley and G.Toth - added commands to read physical params
   ! 08/20/03 G.Toth - added save_restart, Protex prolog, and made it private
   ! 08/25/03 G.Toth - save_restart calls save_restart_comp for all components
-
+  ! 05/20/04 G.Toth - added #CYCLE command
   !EOP
 
   character (len=*), parameter :: NameMod='CON_io'
@@ -55,7 +51,7 @@ module CON_io
   character(len=*), parameter :: NameStdoutExt='.log'
 
   ! Saving restart information
-  character(len=lNameFile)    :: NameRestartFile='RESTART.in'
+  character(len=lNameFile)    :: NameRestartFile='RESTART.out'
 
   ! How often shall we save restart files. Default is at the end only
   type(FreqType), public :: SaveRestart=FreqType(.true.,-1,-1.0,-1,-1.0)
@@ -72,7 +68,8 @@ contains
   subroutine read_inputs(IsLastRead)
 
     !USES:
-    use CON_coupler, ONLY: Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II
+    use CON_coupler, ONLY: &
+         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
     use CON_physics
 
     implicit none
@@ -376,9 +373,12 @@ contains
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
 
-       case("#SESSION")
-          call read_var('TypeSession',TypeSession)
-          call lower_case(TypeSession)
+       case("#COUPLETIME")
+          call read_var('NameComp',NameComp)
+          call read_var('DoCoupleOnTime',DoCoupleOnTime_C(i_comp(NameComp)))
+       case("#CYCLE")
+          call read_var('NameComp',NameComp)
+          call read_var('DnRun',DnRun_C(i_comp(NameComp)))
        case default
           if(IsFirstRead) then
              !
@@ -429,13 +429,9 @@ contains
                 call read_var('Description',StringDescription)
 
              case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-                  '#ROTATION','#NONDIPOLE','#DIPOLE')
+                  '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
 
                 call read_planet_var(NameCommand)
-
-             case('#UPDATEB0')
-                
-                call read_var('DtUpdateB0',DtUpdateB0)
 
              case default
                 if(is_proc0()) then
@@ -457,29 +453,9 @@ contains
     end do
     ! end reading parameters
 
-    ! Check if the parallel or general session models are used with 
-    ! a non-time accurate run
-    if(.not.DoTimeAccurate .and. TypeSession/='old')then
-       if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
-            ' DoTimeAccurate=F cannot be used with TypeSession=',&
-            trim(TypeSession)
-       if(UseStrict)call world_clean
-       if(is_proc0())write(*,*)NameSub,' setting TypeSession="old"'
-       TypeSession='old'
-    end if
-
-    ! Check if the old model is used without GM
-    if(TypeSession=='old' .and. .not. use_comp(GM_))then
-       if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
-            ' TypeSession="old" cannot be used without GM being ON'
-       if(UseStrict)call world_clean
-       if(is_proc0())write(*,*)NameSub,' setting TypeSession="general"'
-       TypeSession='general'
-    end if
-
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN
-    ! Check if UA is ON but IE is OFF
+    ! Check if UA is used but IE is not
     if(use_comp(UA_) .and. .not. use_comp(IE_)) then
        write(*,*) NameSub//' SWMF_ERROR: '//&
             'UA is used without IE. This combination is not allowed!'
@@ -489,34 +465,24 @@ contains
     !^CMP END IE
 
     ! Adjust nNext and tNext fields
-    call adjust_freq(SaveRestart,nStep,tSimulation)
-    call adjust_freq(CheckStop  ,nStep+1,tSimulation+cTiny)
+    call adjust_freq(SaveRestart,nStep,tSimulation,DoTimeAccurate)
+    call adjust_freq(CheckStop  ,nStep+1,tSimulation+cTiny,DoTimeAccurate)
 
     do iComp1=1,MaxComp;
        do iComp2=1,MaxComp
-          call adjust_freq(Couple_CC(iComp1,iComp2),nStep+1,tSimulation+cTiny)
+          call adjust_freq(Couple_CC(iComp1,iComp2),nStep+1,tSimulation+cTiny,&
+               DoTimeAccurate)
           !if(Couple_CC(iComp1,iComp2) % DoThis) &
           !     write(*,*)NameSub,': iComp1,iComp2,Couple_CC=',iComp1,iComp2,&
           !     Couple_CC(iComp1,iComp2)
        end do
     end do
 
-    !!! Maybe this should only be done in 1st session ???
-    call check_planet_var(is_proc0())
-
-    ! There is no need to update B0 if the axes are aligned or there is 
-    ! no rotation or the solution is not time accurate
-    if(UseAlignedAxes .or. .not.UseRotation .or. .not.DoTimeAccurate) &
-         DtUpdateB0 = -1.0
+    ! Check and set some planet variables (e.g. DoUpdateB0)
+    call check_planet_var(is_proc0(), DoTimeAccurate)
 
     ! Initialize axes
-    call init_axes
-
-    ! This is needed if we do not restart from a time accurate run
-    if(iSession==1)then
-       TimeCurrent % Time = TimeStart % Time + tSimulation
-       call time_real_to_int(TimeCurrent)
-    end if
+    call init_axes(TimeStart % Time)
 
     do lComp=1,n_comp()
        iComp = i_comp(lComp)
@@ -643,28 +609,28 @@ contains
     write(UNITTMP_,'(a)')trim(StringDescription)
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#PLANET'
-    write(UNITTMP_,'(a25,a15)') NamePlanet,'     NamePlanet'
+    write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#STARTTIME'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iYear,'year'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,'month'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iDay,'day'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iHour,'hour'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMinute,'minute'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iSecond,'second'
-    write(UNITTMP_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond'
+    write(UNITTMP_,'(i8,a32)')TimeStart % iYear,         'iYear      '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iDay,          'iDay       '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iHour,         'iHour      '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iMinute,       'iMinute    '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iSecond,       'iSecond    '
+    write(UNITTMP_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond '
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#NSTEP'
-    write(UNITTMP_,'(i8,a32)')nStep,'nStep'
+    write(UNITTMP_,'(i8,a32)')nStep,                     'nStep      '
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#TIMESIMULATION'
-    write(UNITTMP_,'(es15.8,a25)')tSimulation,'tSimulation'
+    write(UNITTMP_,'(es15.8,a25)')tSimulation,           'tSimulation'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#VERSION'
-    write(UNITTMP_,'(f5.2,a35)')VersionSwmf,'VersionSwmf'
+    write(UNITTMP_,'(f5.2,a35)')VersionSwmf,             'VersionSwmf'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#PRECISION'
-    write(UNITTMP_,'(i1,a39)')nByteReal,'nByteReal'
+    write(UNITTMP_,'(i1,a39)')nByteReal,                 'nByteReal  '
     write(UNITTMP_,*)
 
     close(UNITTMP_)

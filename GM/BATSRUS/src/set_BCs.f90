@@ -3,7 +3,6 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModAdvance
-!  use ModVarIndexes
   use ModNumConst
   use ModGeometry, ONLY:&
        IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
@@ -68,7 +67,6 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   use ModMain
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModAdvance
-!  use ModVarIndexes
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
   implicit none
@@ -269,8 +267,8 @@ contains
 
   subroutine set_body_BCs(iSide)
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
-    use ModPhysics, ONLY : FaceState_VI
-!    use ModVarIndexes
+    use ModPhysics, ONLY : &
+         FaceState_VI,UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
     real, dimension(1:3) :: v_phi, FaceIono_D
@@ -303,7 +301,9 @@ contains
     real:: UrTrue,UtTrue,BpTrue,BrGhost,BtGhost,BpGhost
 !^CFG IF USERFILES BEGIN
 !    For new ionosphere, multispecies, multifluids 
-    if(index(TypeBcHere,'user')>0.or.UseUserInnerBCs)then
+    if(  index(TypeBcHere,'user')>0 .or. &
+         (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
+         (UseUserOuterBCs .and. iBoundary >= east_ ) )then
        call user_face_bcs(i,j,k,globalBLK,iSide,iBoundary,&
             iter,time_now, FaceCoords_D,&
             VarsTrueFace_V,VarsGhostFace_V,&
@@ -416,6 +416,23 @@ contains
             PressureJumpLimit*VarsTrueFace_V(P_))
 
        VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
+    case('coronatoih')    !Only for nVar=8
+       !Get interpolated values from buffer grid:
+       call get_from_spher_buffer_grid(&
+            FaceCoords_D,nVar,FaceState_V)
+       !Transform to primitive variables
+       FaceState_V(Ux_:Uz_)=&
+            FaceState_V(rhoUx_:rhoUz_)/FaceState_V(rho_)
+       !Convert from SI:
+       FaceState_V(rho_)      =&
+             FaceState_V(rho_)    /UnitSI_rho
+       FaceState_V(Ux_:Uz_)   =&
+             FaceState_V(Ux_:Uz_) /UnitSI_U
+       FaceState_V(Bx_:Bz_)   =&
+            FaceState_V(Bx_:Bz_)  /UnitSI_B
+       FaceState_V(P_)        =&
+             FaceState_V(P_)      /UnitSI_P
+       VarsGhostFace_V = FaceState_V
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
     end select

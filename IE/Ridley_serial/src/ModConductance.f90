@@ -1,5 +1,7 @@
 
 Module ModConductance
+  implicit none
+  save
 
   integer :: longmx, latmx, ndx
   real    :: steplat

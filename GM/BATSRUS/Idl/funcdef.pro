@@ -133,6 +133,7 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,iw)/rho
       'm3' : uz=w(*,iw)/rho
       'e'  : e=w(*,iw)
+      'e1' : e1=w(*,iw)
       else :
       endcase
    2: case wnames(iw) of
@@ -166,6 +167,7 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,*,iw)/rho
       'm3' : uz=w(*,*,iw)/rho
       'e'  : e=w(*,*,iw)
+      'e1' : e1=w(*,*,iw)
       else :
       endcase
    3: case wnames(iw) of
@@ -199,6 +201,7 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,*,*,iw)/rho
       'm3' : uz=w(*,*,*,iw)/rho
       'e'  : e=w(*,*,*,iw)
+      'e1' : e1=w(*,*,*,iw)
       else :
       endcase
    endcase

@@ -82,8 +82,6 @@ subroutine update_states_MHD(iStage,iBLK)
      call update_Explicit
   end if                       !^CFG IF POINTIMPLICIT
 
-  if (UseIM) call update_pressure_from_IM !^CFG IF RCM
-
 Contains
 
   subroutine update_Explicit
@@ -515,58 +513,4 @@ Contains
   
   !^CFG END POINTIMPLICIT
   
-  !^CFG IF RCM BEGIN
-  subroutine update_pressure_from_IM
-
-    use ModRaytrace
-
-    real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: pIM
-
-    ! Now use the pressure from the IM to nudge the pressure in the MHD
-    ! code.  This will happen only on closed magnetic field lines.
-    ! Determining which field lines are closed is done by using the ray
-    ! tracing.
-
-    call get_im_pressure(iBLK,pIM)
-
-    where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. &
-         State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)<pIM(1:nI,1:nJ,1:nK))
-
-       State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+tauCoupleIM))* &
-            (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + tauCoupleIM*pIM(1:nI,1:nJ,1:nK))
-
-    end where
-
-    ! Now get the energy that corresponds to this new pressure
-    E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-            inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) &
-            + 0.5*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-                     /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-                   +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)
-
-  end subroutine update_pressure_from_IM
-  !^CFG END RCM
-
 end subroutine update_states_MHD
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
