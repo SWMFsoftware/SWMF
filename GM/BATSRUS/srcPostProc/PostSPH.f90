@@ -15,7 +15,10 @@ program PostSPH
   integer, parameter :: maxerror = 50000   !~maxtheta*maxphi*.01
   integer :: overcounts(maxtheta,maxphi)
   integer :: out_of_range_i(maxerror),out_of_range_j(maxerror)
-  character (LEN=linesize) :: lines_out(maxtheta,maxphi)
+
+  character(LEN=linesize), allocatable :: lines_out(:,:)
+  integer :: iError
+
   logical :: is_missing(maxtheta,maxphi),is_overcounted(maxtheta,maxphi)
   integer, dimension(7) :: date_time_array
 
@@ -106,6 +109,10 @@ program PostSPH
 
   ntheta = 1 + 90.0/dtheta
   nphi   = 360.0/dphi
+
+  allocate(lines_out(ntheta, nphi), STAT=iError)
+  if (iError/=0) stop 'PostSPH could not allocate lines_out array'
+
   nnodesmax = ntheta*nphi
   nmissing = nnodesmax
 
