@@ -99,7 +99,7 @@ Module CON_global_vector
      module procedure point_state_vi
      module procedure point_state_vx
   end interface
-     
+  public:: save_global_vector,read_global_vector
 contains
   !===========================================================!
   subroutine allocate_vector_ilength(NameVector,nVar,nI)
@@ -522,5 +522,88 @@ contains
             *Weight_I(iImages)
     end do
   end function point_state_vx
+  subroutine save_global_vector(NameVector,NameMask,iFileIn)
+    use ModIOUnit
+    character(LEN=*),intent(in)::NameVector,NameMask
+    integer,intent(in)::iFileIn
+    optional::NameMask,iFileIn
+    character(LEN=20)::NameFile
+    character(LEN=2)::NameComp
+    logical::UseMask
+    integer::lLengthMask,iFile,nU_I(2),iPoint,iVector,iMask
+    NameComp=NameVector(1:2)
+    NameFile='./'//NameComp//'/'//NameVector(&
+         3:len_trim(NameVector))
+    if(present(iFileIn))&
+         write(NameFile,'(a,i5.5)')trim(NameFile)//'_',iFileIn
+    iVector=i_vector(NameVector)
+    iFile=io_unit_new()
+    nU_I=ubound(Vector_I(iVector)%I)
+  
+    UseMask=present(NameMask)
+    if(UseMask)then
+       lLengthMask=len_trim(NameMask)
+       NameComp=NameMask(-1+lLengthMask:lLengthMask)
+       iMask=i_mask(NameMask)
+    end if
+    NameFile=trim(NameFile)//'_'//NameComp
+    open(iFile,file=NameFile)
+
+    if(UseMask)then
+       write(iFile,*)nU_I,count_mask(NameMask)
+       do iPoint=1,nU_I(2)
+          if(.not.Mask_I(iMask)%I(iPoint))CYCLE
+          write(iFile,*)iPoint,Vector_I(iVector)%I(:,iPoint)
+       end do
+    else
+       write(iFile,*)nU_I
+       do iPoint=1,nU_I(2)
+          if(.not.Mask_I(iMask)%I(iPoint))CYCLE
+          write(iFile,*)iPoint,Vector_I(iVector)%I(:,iPoint)
+       end do
+    end if
+    close(iFile)
+  end subroutine save_global_vector
+  subroutine read_global_vector(NameVector,iFileIn)
+    use ModIOUnit
+    use CON_comp_param,ONLY:NameComp_I
+    character(LEN=*),intent(in)::NameVector
+    integer,intent(in)::iFileIn
+    optional::iFileIn
+    integer::iFile,lComp,nU_I(2),nPoint,iVector,iError
+    integer::iPoint,jPoint,nPointHere
+    character(LEN=20)::NameFile,NameFilePreffix
+    NameFilePreffix='./'//NameVector(1:2)//'/'//NameVector(&
+         3:len_trim(NameVector))//'_'
+    if(present(iFileIn))&
+         write(NameFilePreffix,'(a,i5.5,a)')&
+         trim(NameFilePreffix),iFileIn,'_'
+    nPoint=0
+    iFile=io_unit_new()
+    do lComp=1,n_comp()
+       NameFile=trim(NameFilePreffix)//NameComp_I(i_comp(lComp))
+       open(iFile,FILE=NameFile,STATUS='old',IOSTAT=iError)
+       if(iError>0)CYCLE
+       if(NameFile(1:2)==NameComp_I(i_comp(lComp)))then
+          read(iFile,*)nU_I
+       else
+          read(iFile,*)nU_I,nPointHere
+       end if
+       if(.not.used_vector(NameVector))then
+          call allocate_vector(NameVector,nU_I(1),nU_I(2))
+          iVector=i_vector(NameVector)
+       end if
+       do jPoint=1,nPointHere
+          read(iFile,*)iPoint,Vector_I(iVector)%I(:,iPoint)
+          nPoint=nPoint+1
+       end do
+       close(iFile)
+    end do
+    if(nPoint/=nU_I(2))then
+       write(*,*)'Vector '//NameVector//' with dimensions ',nU_I
+       call CON_stop('For vector '//NameVector//' are read only nPoint=',&
+            nPoint)
+    end if
+  end subroutine read_global_vector
 end Module CON_global_vector
       
