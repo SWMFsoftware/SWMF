@@ -180,9 +180,9 @@ c  *****************  end subroutine PANGLE    ******************
        algll(i) = 0.      
        algnn(i) = 0.       
           vr(i) = 0.
-       VxOld(i) = 0.
-       VyOld(i) = 0.
-       VzOld(i) = 0.
+       VxOld(i+1) = 0.
+       VyOld(i+1) = 0.
+       VzOld(i+1) = 0.
 
       do 30 k=0,nw
       do 20 j=0,nmu
@@ -1111,13 +1111,13 @@ c ****************************    end ALL output ******************
       call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
-      if (io.eq.10) open(iFile,file = './SP/csilla0.out',status='unknown')
-      if (io.eq.11) open(iFile,file = './SP/csilla1.out',status='unknown')
-      if (io.eq.12) open(iFile,file = './SP/csilla2.out',status='unknown')
-      if (io.eq.13) open(iFile,file = './SP/csilla3.out',status='unknown')
-      if (io.eq.14) open(iFile,file = './SP/csilla4.out',status='unknown')
-      if (io.eq.15) open(iFile,file = './SP/csilla5.out',status='unknown')
-      if (io.eq.16) open(iFile,file = './SP/csilla6.out',status='unknown')
+      if (io.eq.10) open(iFile,file = 'SP/csilla0.out',status='unknown')
+      if (io.eq.11) open(iFile,file = 'SP/csilla1.out',status='unknown')
+      if (io.eq.12) open(iFile,file = 'SP/csilla2.out',status='unknown')
+      if (io.eq.13) open(iFile,file = 'SP/csilla3.out',status='unknown')
+      if (io.eq.14) open(iFile,file = 'SP/csilla4.out',status='unknown')
+      if (io.eq.15) open(iFile,file = 'SP/csilla5.out',status='unknown')
+      if (io.eq.16) open(iFile,file = 'SP/csilla6.out',status='unknown')
       do 11 i=0,nr
       do 13 k=0,nw
       aa = 0.5*(f(i,0,k)+f(i,nmu,k))
