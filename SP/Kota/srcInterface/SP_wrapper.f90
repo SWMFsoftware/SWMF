@@ -20,6 +20,7 @@ module SP_Mod
   real::tSimulation,DataInputTime
   integer::nStep=0
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
+  integer::iProc=-1,nProc=-1,iComm=-1
 end module SP_Mod
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
@@ -34,6 +35,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
   ! The name of the command
   character (len=100) :: NameCommand
   logical,save::DoInit=.true.
+  integer::iVerbose=0
   !-----------------------------------------------------------!
   select case(TypeAction)
   case('VERSION')
@@ -44,7 +46,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
           Version    =1.1)
   case('STDOUT')
      iStdOut=STDOUT_
-     prefix='SP'
+     prefix='SP: '
      DoWriteAll=.false.
   case('FILEOUT')
      call get(CompInfo,iUnitOut=iStdOut)
@@ -77,14 +79,25 @@ subroutine SP_set_param(CompInfo,TypeAction)
            call read_var('SaveMhData',SaveMhData)
         case('#DOREADMHDATA')
            call read_var('DoReadMhData',DoReadMhData)
-       case('NSTEP')
+        case('NSTEP')
            call read_var('nStep',nStep)
+        case('TSIMULATION')
+           call read_var('tSimulation',tSimulation)
+        case('#VERBOSE')
+           call read_var('iVerbose',iVerbose)
+           if(iVerbose>0)DoWriteAll=.true.
+           if(DoWriteAll.and.iProc==0)&
+                write(*,*)prefix,' Verbose everything'
         case default
            call CON_stop(NameSub//&
                 ': Unknown command '&
                 //NameCommand)
         end select
      end do
+  case('MPI')
+     call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
+     if(nProc/=1)call CON_stop(&
+          'The present SEP version can not use more than 1 PE')
   case default
   end select
 end subroutine SP_set_param
@@ -278,7 +291,7 @@ subroutine SP_save_mh_data
   character(LEN=20)::NameFile
   write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
   iFile=io_unit_new()
-  open(iFile,FILE=NameFile,STATUS='unknown')
+  open(iFile,file=NameFile,status='replace')
   write(iFile,*)DataInputTime,'     - is a Time'
   write(iFile,*)iMax,'              - is iMax'
   write(iFile,*)&
