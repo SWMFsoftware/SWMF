@@ -106,7 +106,7 @@ sub read_grid_size{
 	$nJ_=$1           if /\bnJ\s*=\s*(\d+)/i;
 	$nK_=$1           if /\bnK\s*=\s*(\d+)/i;
         $MaxBlock_=$1     if /\bnBLK\s*=\s*(\d+)/i;
-        $MaxImplBlock_=$1 if /\bMaxImplBLK\s*=[^\d]*(\d+)/i;
+	$MaxImplBlock_=$1 if /\bMaxImplBLK\s*=[^0-9]*(\d+)/i;
     }
     close MODSIZE;
 
