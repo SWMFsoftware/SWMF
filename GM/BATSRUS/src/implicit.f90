@@ -105,8 +105,6 @@ subroutine advance_impl
 
   call set_oktest('implicit',oktest,oktest_me)
 
-  call init_mod_implicit
-
   UseUpdateCheckOrig = UseUpdateCheck
   UseUpdateCheck = .false.
 
