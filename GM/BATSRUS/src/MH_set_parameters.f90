@@ -1363,9 +1363,9 @@ subroutine MH_set_parameters(TypeAction)
            if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
                 ' GM_ERROR: cannot handle coordinate system '&
                 //TypeCoordSystem)
-        case('IH')
+        case('IH','SC')
            if(TypeCoordSystem /= 'HGI')call stop_mpi(NameSub// &
-                ' IH_ERROR: cannot handle coordinate system '&
+                NameThisComp//'_ERROR: cannot handle coordinate system '&
                 //TypeCoordSystem)
         end select
      case("#NSTEP")
@@ -1529,7 +1529,7 @@ contains
 
     problem_type = -1                                      !^CFG IF NOT SIMPLE
 
-    if(NameThisComp=='IH')TypeCoordSystem = 'HGI'
+    if(NameThisComp=='IH'.or.NameThisComp=='SC')TypeCoordSystem = 'HGI'
 
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'

@@ -341,12 +341,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   Time_Simulation = Time_Simulation + dt*UnitSI_t
 
-  if(time_accurate)then
-     call timing_start('lagrangian_grid')
-     call update_lagrangian_grid(&
-            Time_Simulation - dt*UnitSI_t,Time_Simulation)
-     call timing_stop('lagrangian_grid')
-  end if
+  if(time_accurate)&
+       call update_lagrangian_grid(&
+       Time_Simulation - dt*UnitSI_t,Time_Simulation)
 
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation

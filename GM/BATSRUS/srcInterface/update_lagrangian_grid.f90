@@ -43,6 +43,7 @@ contains
     logical,save::DoInit=.true.
     !------------------------------------
     if(DoSkip)return
+    call timing_start('lagrangian_grid')
     if(DoInit)then
        DoInit=.false.
        DoSkip=.true.
@@ -84,6 +85,7 @@ contains
          SourceGD=MhGrid,&
          LineGD=LineGrid,&
          Router=Router)
+    call timing_stop('lagrangian_grid')
   end subroutine advance_lagrangian_grid
   subroutine get_u(&
        nPartial,iGetStart,Get,W,State_V,nVar)

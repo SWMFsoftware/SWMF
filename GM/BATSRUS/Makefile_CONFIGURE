@@ -138,8 +138,14 @@ relax_src:
 	-on=alwaves,awflux,userfiles,faceouterbc,cellouterbc,testing \
 	-off=rusanovflux,ionosphere,boriscorr -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
+	rm -f ${DREL}/srcInterface/GM_* \
+	${DREL}/CVS_Entries \
+	${DREL}/.cvsignore \
+	${DREL}/srcInterface/.cvsignore \
+	${DREL}/srcInterface/*bc.f90 \
+	${DREL}/srcInterface/*BC.f90 
 	cd ${DREL}; make install; \
-	perl -i -pe 's?GM?${COMP}?g' Makefile Makefile.def Param/PARAM.DEFAULT
+	perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
 
 relax_conf: relax_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DREL} BATSRUS_conf
