@@ -247,6 +247,7 @@ void parser_readGeneralBlock(char* InputFile) {
 
     if (strcmp("#GENERAL",str1)==0) {
       parser_readGeneralBlock(fd,ifile.CurrentLine());
+      ifile.closefile();
       return;
     }
   }
