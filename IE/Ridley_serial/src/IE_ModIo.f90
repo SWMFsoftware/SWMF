@@ -24,7 +24,7 @@ module IE_ModIo
 
   integer             :: dn_output(MaxFile)=-1
   real                :: dt_output(MaxFile)=-1.0
-  real                :: t_output_last(MaxFile)=-1
+  integer             :: t_output_last(MaxFile)=-1
 
 contains
 
