@@ -129,7 +129,7 @@ contains
   subroutine ray_clean
 
     !DESCRIPTION:
-    ! Remove storage allocated in CON_ray_trace.
+    ! Remove storage allocated in CON\_ray\_trace.
     !EOP
 
     character (len=*), parameter :: NameSub = NameMod//'::ray_clean'
@@ -418,7 +418,7 @@ contains
   subroutine ray_test
 
     !DESCRIPTION:
-    ! Test the CON_ray_trace module. This subroutine should be called from
+    ! Test the CON\_ray\_trace module. This subroutine should be called from
     ! a small stand alone program.
     !EOP
 
