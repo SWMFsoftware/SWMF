@@ -78,9 +78,9 @@ T			UseFluxRope
 0.0			CmeRho2
 1.0			ModulationRho
 1.0			ModulationP
-2.40E+01		cRotXGl98
-0.00E+00		cRotYGl98
-9.00E+01		cRotZGl98
+0.0			OrientationGL98
+-24.00			LatitudeGL98
+0.0			LongitudeGL98
 
 #HELIOROTATION
 T			UseInertial, if false then corotating frame
