@@ -126,7 +126,7 @@ subroutine parallel_refine
         ! update nBlock and nBlockMax
 
         nBlockMax = max(nBlockMax, local_cubeBLK(icube))
-        nBloc     = nBlockMax
+        nBlock    = nBlockMax
 
         ! find out if new block is on same PE as any other previous new blocks
         do ii = 1,nPEsRefBlk
