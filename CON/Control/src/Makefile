@@ -116,27 +116,71 @@ DEPEND:
 # - CON comes next as it uses general software libraries only
 # - general software libraries come last in the order of their interdependecies
 
-LIB1 = ${LIBIH} #^CMP IF IH
-lib1 = -lIH     #^CMP IF IH
-LIB2 = ${LIBGM} #^CMP IF GM
-lib2 = -lGM     #^CMP IF GM
-LIB3 = ${LIBIM} #^CMP IF IM
-lib3 = -lIM     #^CMP IF IM
-LIB4 = ${LIBIE} #^CMP IF IE
-lib4 = -lIE     #^CMP IF IE
-LIB5 = ${LIBUA} #^CMP IF UA
-lib5 = -lUA     #^CMP IF UA
+#^CMP IF IH BEGIN
+ LIB1  = ${LIBIH}
+ lib1  = -lIH
+ doto1 = ${IHDIR}/src/*.o
+#^CMP END IH
+
+#^CMP IF GM BEGIN
+ LIB2 = ${LIBGM}
+ lib2 = -lGM
+ doto2 = ${GMDIR}/src/*.o ${GMDIR}/srcInterface/*.o
+#^CMP END GM
+
+#^CMP IF IM BEGIN
+ LIB3 = ${LIBIM}
+ lib3 = -lIM
+ doto3 = ${IMDIR}/src/*.o ${IMDIR}/src/claw/*.o
+#^CMP END IM
+
+#^CMP IF IE BEGIN
+ LIB4 = ${LIBIE}
+ lib4 = -lIE
+ doto4 = ${IEDIR}/src/*.o
+#^CMP END IE
+
+#^CMP IF UA BEGIN
+ LIB5 = ${LIBUA}
+ lib5 = -lUA
+ doto5 = ${UADIR}/src*/*.o
+#^CMP END UA
 
 ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${MAKEFILE_COMP_SELECT}
-	${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+	@echo ' '
+	@(if [ ${OS} == "Darwin" ]; then \
+	    echo \
+	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+		${MODULES} ${OBJECTS} \
+		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
+		${INTERFACEDIR}/*.o ${COUPLERDIR}/*.o ${LIBRARYDIR}/*.o \
+		${TIMINGDIR}/*.o ${SHAREDIR}/*.o ${LBLAS} \
+		${Lflag1}; \
+	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+		${MODULES} ${OBJECTS} \
+		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
+		${INTERFACEDIR}/*.o ${COUPLERDIR}/*.o ${LIBRARYDIR}/*.o \
+		${TIMINGDIR}/*.o ${SHAREDIR}/*.o ${LBLAS} \
+		${Lflag1}; \
+	else \
+	    echo \
+	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
 		${MODULES} ${OBJECTS} \
 		-L${LIBDIR} -lINTERFACE \
 		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
 		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
-		${Lflag1}
+		${Lflag1}; \
+	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+		${MODULES} ${OBJECTS} \
+		-L${LIBDIR} -lINTERFACE \
+		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
+		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
+		${Lflag1}; \
+	fi);
+
 
 TESTREGISTRY: DEPEND
 	cd ${MODDIR}; make LIB
