@@ -2719,6 +2719,7 @@ end
 pro plot_log, logfilename, func, $
               wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2,$
               xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
+              smooths=smooths, $
               colors=colors, linestyles=linestyles, symbols=symbols
 
 ; Plot variables listed in the space separated func string from the
@@ -2746,6 +2747,9 @@ endif
 
 ; Shift times by 0 unless defined
 if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
+
+; Do not smooth data unless defined
+if n_elements(smooths) lt nlog then smooths = intarr(nlog)
 
 ; Calculat the xrange from the data unless defined
 if n_elements(xrange) ne 2 then begin
@@ -2832,6 +2836,9 @@ for iter = iter0, 2 do begin
                 if iter eq 1 then print,"function ",funcs(ifunc), $
                   " was not found in wlog",strtrim(string(ilog),2)
             endif else begin
+
+                if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
+
                 if iter eq 1 then begin
                     if DoXrange then begin
                         xrange[0]   = min( [ xrange[0], hour ] )
