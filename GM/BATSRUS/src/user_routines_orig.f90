@@ -1274,11 +1274,11 @@ subroutine post_init_stat
   use ModIO,         ONLY: iUnitOut, write_prefix
   implicit none
   real, external :: maxval_blk, minval_blk
+  real :: pMin, pMax, RhoMin, RhoMax
+  !---------------------------------------------------------------------
   !\
   ! Post-initialization statistics::
   !/
-  !  call write_prefix; write(iUnitOut,*) 'Mass in the flux rope on processor::',&
-  !       iProc,Mrope_GL98
   if (iProc==0) then
      call write_prefix; write(iUnitOut,*) ''
      call write_prefix; write(iUnitOut,*) &
@@ -1286,12 +1286,14 @@ subroutine post_init_stat
      call write_prefix; write(iUnitOut,*) 'At PE=0'
      call write_prefix; write(iUnitOut,*) 'The value of MaxB0 is :: ',MaxB0
      call write_prefix; write(iUnitOut,*) 'The value of Bnot  is :: ',Bnot
+     pMin = minval_BLK(1,State_VGB(P_,:,:,:,:))
+     pMax = maxval_BLK(1,State_VGB(P_,:,:,:,:))
      call write_prefix; write(iUnitOut,*) 'The min,max P is      :: ',&
-          minval_blk(1,State_VGB(P_,:,:,:,:)),&
-          maxval_blk(1,State_VGB(P_,:,:,:,:))
+          pMin, pMax
+     RhoMin = minval_BLK(1,State_VGB(Rho_,:,:,:,:))
+     RhoMax = maxval_BLK(1,State_VGB(Rho_,:,:,:,:))
      call write_prefix; write(iUnitOut,*) 'The min,max Rho is    :: ',&
-          minval_blk(1,State_VGB(rho_,:,:,:,:))  ,&
-          maxval_blk(1,State_VGB(rho_,:,:,:,:))
+          RhoMin, RhoMax
      call write_prefix; write(iUnitOut,*) 'The value of Tnot  is :: ',Tnot
      call write_prefix; write(iUnitOut,*) 'The value of InvH0 is :: ',InvH0
      call write_prefix; write(iUnitOut,*) 'The value of Gbody is :: ',Gbody
