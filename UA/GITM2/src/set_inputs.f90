@@ -53,7 +53,7 @@ subroutine set_inputs
 
            if (IsFramework) then
 
-              if (iDebugLevel >= 0) then
+              if (iProc == 0) then
                  write(*,*) "----------------------------------"
                  write(*,*) "-   UAM trying to set STARTTIME  -"
                  write(*,*) "-          Ignoring              -"
@@ -94,7 +94,7 @@ subroutine set_inputs
         case ("#TIMEEND","#ENDTIME")
 
            if (IsFramework) then
-              if (iDebugLevel >= 0) then
+              if (iProc == 0) then
                  write(*,*) "--------------------------------"
                  write(*,*) "-   UAM trying to set ENDTIME  -"
                  write(*,*) "-          Ignoring            -"
@@ -154,18 +154,28 @@ subroutine set_inputs
            endif
 
         case ("#TSIMULATION")
-           call read_in_real(tSim_temp, iError)
-           tSimulation = tSim_temp
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #TSIMULATION:'
-              write(*,*) '#TSIMULATION'
-              write(*,*) 'tsimulation    (real)'
-              write(*,*) 'This is typically only specified in a'
-              write(*,*) 'restart header.'
-              IsDone = .true.
+
+           if (IsFramework) then
+              if (iProc == 0) then
+                 write(*,*) "------------------------------------"
+                 write(*,*) "-   UAM trying to set tsimulation  -"
+                 write(*,*) "-          Ignoring                -"
+                 write(*,*) "------------------------------------"
+              endif
            else
-              CurrentTime = CurrentTime + tsimulation
-              call time_real_to_int(CurrentTime, iTimeArray)
+              call read_in_real(tSim_temp, iError)
+              tSimulation = tSim_temp
+              if (iError /= 0) then
+                 write(*,*) 'Incorrect format for #TSIMULATION:'
+                 write(*,*) '#TSIMULATION'
+                 write(*,*) 'tsimulation    (real)'
+                 write(*,*) 'This is typically only specified in a'
+                 write(*,*) 'restart header.'
+                 IsDone = .true.
+              else
+                 CurrentTime = CurrentTime + tsimulation
+                 call time_real_to_int(CurrentTime, iTimeArray)
+              endif
            endif
 
         case ("#F107")
