@@ -1,6 +1,34 @@
 !^CFG COPYRIGHT UM
 !^CMP FILE IE
 !==========================================================================
+module ModIonoPotential
+
+  use ModConst, ONLY: cPi, cTwoPi
+  implicit none
+  integer :: nThetaIono, nPhiIono
+  real    :: dThetaIono, dPhiIono
+  real, allocatable :: IonoPotential_II(:,:)
+
+contains
+
+  subroutine init_mod_iono_potential(iSize, jSize)
+
+    integer, intent(in) :: iSize, jSize
+
+    if(allocated(IonoPotential_II)) RETURN
+
+    nThetaIono = 2*iSize - 1
+    nPhiIono   = jSize
+
+    dThetaIono = cPi    / (nThetaIono - 1)
+    dPhiIono   = cTwoPi / (nPhiIono - 1)
+
+    allocate(IonoPotential_II(nThetaIono, nPhiIono))
+
+  end subroutine init_mod_iono_potential
+
+end module ModIonoPotential
+!==========================================================================
 module ModMapPotential
   use ModInnerBC
   use ModNumConst
@@ -67,6 +95,8 @@ end module ModMapPotential
 !BUFFER->PHI
 subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
+  use ModIonoPotential, ONLY: init_mod_iono_potential, IonoPotential_II
+
   use ModMapPotential,ONLY:init_map_potential_arrays,&
        IONO_nTheta,IONO_NORTH_Phi,IONO_SOUTH_Phi 
   implicit none
@@ -84,21 +114,26 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   if(IONO_nTheta < 0)then
      if(DoTest)write(*,*)NameSub,': allocating variables'
      call init_inner_bc_arrays(iSize,jSize)
+     call init_mod_iono_potential(iSize,jSize)
   end if
   if(.not.allocated(IONO_NORTH_Phi))call init_map_potential_arrays  
  
-
   if(DoTest)write(*,*)NameSub,': putting potential'
   select case(NameVar)
   case('PotNorth')
      IONO_NORTH_Phi = Buffer_II
+     IonoPotential_II(1:iSize,:) = IONO_NORTH_Phi
   case('PotSouth')
      IONO_SOUTH_Phi = Buffer_II
+     IonoPotential_II(iSize:2*iSize-1,:) = IONO_SOUTH_Phi
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select
 
+
   if(DoTest)write(*,*)NameSub,': done'
+
+
 
 end subroutine GM_put_from_ie
 
