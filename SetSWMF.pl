@@ -39,6 +39,7 @@ my %Version;               # Hash table to get version for a component
 my $Install;
 my $ReInstall;
 my $Show;
+my $ShowLong;
 my $ListVersions;
 my $NewPrecision;
 my $DryRun;
@@ -59,7 +60,7 @@ foreach (@switch){
     if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
     if(/^-i(nstall)?$/)       {$Install=1;$ReInstall=/-install/;next};
     if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
-    if(/^-s(how)?$/)          {$Show=1;                         next};
+    if(/^-s(how)?$/)          {$Show=1; $ShowLong=/show/;       next};
     if(/^-q(uiet)?$/)         {$Quiet=1;                        next};
     if(/^-D(ebug)?$/)         {$Debug=1;                        next};
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
@@ -181,8 +182,6 @@ sub get_settings{
 
 sub show_settings{
 
-    my $Show = 'SetSWMF.pl ';
-
     if(not $Installed){
 	print "SWMF is not installed\n";
 	return;
@@ -196,11 +195,20 @@ sub show_settings{
     print "The selected component versions and grid sizes are:\n";
     my $Comp;
     foreach $Comp (sort keys %Version){
-	printf "%-30s","\t$Comp/$Version{$Comp}";
+	if($ShowLong){
+	    print "\n$Comp/$Version{$Comp}";
+	}else{
+	    printf "%-30s","\t$Comp/$Version{$Comp}";
+	}
 	if(-x "$Comp/$Version{$Comp}/$GridSizeScript"){
-	    my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript`;
-	    $Grid =~ s/$GridSizeScript(\s*-g=)?//;
-	    print "grid: $Grid" if $Grid;
+	    if($ShowLong){
+		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript -s`;
+		print ":\n$Grid" if $Grid;
+	    }else{
+		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript`;
+		$Grid =~ s/$GridSizeScript(\s*-g=)?//;
+		print "grid: $Grid" if $Grid;
+	    }
 	}else{
 	    print "\n";
 	}
@@ -512,7 +520,7 @@ Options:
 
 -q  -quiet     quiet execution
 
--s  -show      show current settings
+-s  -show      show current settings. The long form -show gives more details.
 
 -uninstall     uninstall SWMF (make distclean)
 
@@ -527,6 +535,10 @@ Examples of use:
 Show current settings: 
 
     SetSWMF.pl -s
+
+Show current settings with more details: 
+
+    SetSWMF.pl -show
 
 Install SWMF with the ifort compiler and Altix MPI and select single precision:
 
