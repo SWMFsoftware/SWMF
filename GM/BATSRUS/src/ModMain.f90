@@ -113,6 +113,7 @@ Module ModMain
 
   real    :: ThetaTiltDeg = 0.0
   real    :: dt_UpdateB0  = 0.0001
+  logical :: DoUpdateB0   = .true.
   logical :: DoSplitDb0Dt = .true.
 
   logical, dimension(nBLK) :: unusedBLK
