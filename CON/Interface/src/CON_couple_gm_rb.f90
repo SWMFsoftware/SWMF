@@ -166,9 +166,6 @@ contains
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
 
-
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
-
     ! if(DoTest.and.is_proc0(RB_)) call RB_print_variables('GM',iError)
 
   end subroutine couple_gm_rb
