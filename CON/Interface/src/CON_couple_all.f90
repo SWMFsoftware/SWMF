@@ -42,7 +42,7 @@ module CON_couple_all
   !PUBLIC MEMBER FUNCTIONS:
 
   public :: couple_all_init ! initialize all couplers
-  public :: couple_comp     ! couple 2 components based on their IDs
+  public :: couple_two_comp     ! couple 2 components based on their IDs
 
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
@@ -79,9 +79,9 @@ contains
   end subroutine couple_all_init
 
   !BOP =======================================================================
-  !IROUTINE: couple_comp - call couple_**_** for components given by IDs
+  !IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
   !INTERFACE:
-  subroutine couple_comp(iCompSource, iCompTarget, TimeSimulation)
+  subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iCompSource, iCompTarget ! component IDs
@@ -96,7 +96,7 @@ contains
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     !EOP
 
-    character(len=*), parameter :: NameSub = NameMod//'::couple_comp'
+    character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
 
     logical :: DoTest,DoTestMe
     !-------------------------------------------------------------------
@@ -195,6 +195,6 @@ contains
            NameComp_I(iCompTarget))
     end subroutine error
 
-  end subroutine couple_comp
+  end subroutine couple_two_comp
 
 end module CON_couple_all

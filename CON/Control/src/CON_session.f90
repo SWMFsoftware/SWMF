@@ -155,7 +155,7 @@ contains
        ! Couple iCompSource --> iCompTarget
        if((IsProc_C(iCompSource) .or. IsProc_C(iCompTarget)) .and. &
             Couple_CC(iCompSource, iCompTarget) % DoThis) &
-            call couple_comp(iCompSource, iCompTarget, tSimulation)
+            call couple_two_comp(iCompSource, iCompTarget, tSimulation)
 
     end do
 
@@ -184,16 +184,16 @@ contains
     call check_couple_symm(IE_,GM_,NameSub)                    !^CMP IF IE
     call check_couple_symm(IM_,GM_,NameSub)                    !^CMP IF IM
 
-    if (use_comp(IH_)) call couple_comp(IH_,GM_,tSimulation)   !^CMP IF IH
+    if (use_comp(IH_)) call couple_two_comp(IH_,GM_,tSimulation)   !^CMP IF IH
   
     !^CMP IF IE BEGIN
     if (use_comp(IE_)) then
-       call couple_comp(GM_,IE_,tSimulation)
-       if(use_comp(UA_)) call couple_comp(UA_,IE_,tSimulation) !^CMP IF UA
+       call couple_two_comp(GM_,IE_,tSimulation)
+       if(use_comp(UA_)) call couple_two_comp(UA_,IE_,tSimulation) !^CMP IF UA
        if (is_proc(IE_) .and. nStep > 0) &
             call run_comp(IE_,tSimulation,tSimulation)
-       call couple_comp(IE_,GM_,tSimulation)
-       if(use_comp(UA_))call couple_comp(IE_,UA_,tSimulation)  !^CMP IF UA
+       call couple_two_comp(IE_,GM_,tSimulation)
+       if(use_comp(UA_))call couple_two_comp(IE_,UA_,tSimulation)  !^CMP IF UA
     end if
     !^CMP END IE
 
@@ -203,11 +203,11 @@ contains
        if(DoTestMe) write(*,*)NameSub// &
             ': initializing IM/RCM at start of session.'
 
-       call couple_comp(gm_,im_,tSimulation) ! MH_volume
+       call couple_two_comp(gm_,im_,tSimulation) ! MH_volume
 
-       call couple_comp(ie_,im_,tSimulation)                 !^CMP IF IE
+       call couple_two_comp(ie_,im_,tSimulation)                 !^CMP IF IE
 
-       call couple_comp(im_,gm_,tSimulation) ! IM_pressure_reset
+       call couple_two_comp(im_,gm_,tSimulation) ! IM_pressure_reset
 
        IsImUninitialized = .false.
     end if
@@ -406,7 +406,7 @@ contains
           if( (IsProc_C(iCompSource).or.IsProc_C(iCompTarget)) .and. &
                is_time_to(Couple_CC(iCompSource, iCompTarget),&
                nStep, tSimulation, DoTimeAccurate)) &
-               call couple_comp(iCompSource, iCompTarget, tSimulation)
+               call couple_two_comp(iCompSource, iCompTarget, tSimulation)
 
        end do
 
@@ -536,7 +536,7 @@ contains
        call show_progress
 
        ! Couple IH to GM in every step                           !^CMP IF IH
-       if (use_comp(IH_)) call couple_comp(ih_,gm_,tSimulation)  !^CMP IF IH
+       if (use_comp(IH_)) call couple_two_comp(ih_,gm_,tSimulation)  !^CMP IF IH
 
        !^CMP IF IM BEGIN
        !\
@@ -548,10 +548,10 @@ contains
           if (is_time_to(Couple_CC(IM_,GM_), nStep,&
                tSimulation + 0.5*dtCoupleIM, DoTimeAccurate)) then
 
-             call couple_comp(gm_,im_,tSimulation) ! field line volume
+             call couple_two_comp(gm_,im_,tSimulation) ! field line volume
 
              ! potential from IE to IM               !^CMP IF IE
-             call couple_comp(ie_,im_,tSimulation)   !^CMP IF IE
+             call couple_two_comp(ie_,im_,tSimulation)   !^CMP IF IE
 
              if(is_proc(IM_))then
                 ! Run IM 
@@ -573,7 +573,7 @@ contains
                 call flush_unit(6)
              end if
 
-             call couple_comp(im_,gm_,tSimulation) ! IM_pressure_reset
+             call couple_two_comp(im_,gm_,tSimulation) ! IM_pressure_reset
 
           end if
        end if
@@ -585,11 +585,11 @@ contains
        ! calculations as required.
        !/
        if(is_time_to(Couple_CC(IE_,GM_),nStep,tSimulation,DoTimeAccurate))then
-          call couple_comp(gm_,ie_,tSimulation)
-          if(use_comp(UA_)) call couple_comp(UA_,IE_,tSimulation) !^CMP IF UA
+          call couple_two_comp(gm_,ie_,tSimulation)
+          if(use_comp(UA_)) call couple_two_comp(UA_,IE_,tSimulation) !^CMP IF UA
           if (is_proc(IE_)) call run_comp(IE_,tSimulation,tSimulation)
-          call couple_comp(ie_,gm_,tSimulation)
-          if(use_comp(UA_))call couple_comp(IE_,UA_,tSimulation)  !^CMP IF UA
+          call couple_two_comp(ie_,gm_,tSimulation)
+          if(use_comp(UA_))call couple_two_comp(IE_,UA_,tSimulation)  !^CMP IF UA
        end if
        !^CMP END IE
 
