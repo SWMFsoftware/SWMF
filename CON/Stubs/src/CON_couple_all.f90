@@ -88,15 +88,15 @@ contains
     iProc0Source = i_proc()
 
     !\
+    ! SP is special as it can only solve up to the last coupling time
+    !/
+    if(iCompTarget == SP_)TimeNewInputSp = TimeSimulation
+
+    !\
     ! IE is special as it does not have time. 
     ! It solves when data is requested and new info is given.
     !/
     if(iCompTarget == IE_)IsNewInputIe = .true.
-
-    !\
-    ! SP is special as it can only solve up to the last coupling time
-    !/
-    if(iCompTarget == SP_)TimeNewInputSp = TimeSimulation
 
     if(iCompSource == IE_ .and. is_proc(IE_) .and. IsNewInputIe)then
        call get_comp_info(IE_,iUnitOut=iUnitOut)
