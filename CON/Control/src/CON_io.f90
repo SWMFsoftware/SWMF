@@ -429,13 +429,9 @@ contains
                 call read_var('Description',StringDescription)
 
              case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-                  '#ROTATION','#NONDIPOLE','#DIPOLE')
+                  '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
 
                 call read_planet_var(NameCommand)
-
-             case('#UPDATEB0')
-                
-                call read_var('DtUpdateB0',DtUpdateB0)
 
              case default
                 if(is_proc0()) then
@@ -502,14 +498,8 @@ contains
        end do
     end do
 
-    !!! Maybe this should only be done in 1st session ???
-    call check_planet_var(is_proc0())
-
-    ! There is no need to update B0 if the axes are aligned or there is 
-    ! no rotation or the solution is not time accurate
-    if(UseAlignedAxes .or. .not.UseRotation .or. .not.DoTimeAccurate .or. &
-         DtUpdateB0 < 0.0) &
-         DoUpdateB0 = .false.
+    ! Check and set some planet variables (e.g. DoUpdateB0)
+    call check_planet_var(is_proc0(), DoTimeAccurate)
 
     ! Initialize axes
     call init_axes(TimeStart % Time)
