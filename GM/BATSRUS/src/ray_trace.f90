@@ -518,67 +518,10 @@ subroutine ray_trace_fast
   ! Convert x, y, z to latitude and longitude, and status
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK)) CYCLE
-
-     ! Store ray values of block into ray_tmp
-     ray_tmp=ray(:,:,1:nI,1:nJ,1:nK,iBLK)
-
-     do iray=1,2
-        ! Check if this direction is closed or not
-        where(ray_tmp(1,iray,:,:,:)>CLOSEDRAY)
-           ! Make sure that asin will work, -1<=ray_tmp(3,iray,:,:,:)<=1
-           ray_tmp(3,iray,:,:,:)=max(-0.99999999,ray_tmp(3,iray,:,:,:))
-           ray_tmp(3,iray,:,:,:)=min( 0.99999999,ray_tmp(3,iray,:,:,:))
-           ! Calculate  -90 < theta=asin(z)  <  90
-           ray(1,iray,1:nI,1:nJ,1:nK,iBLK)=&
-                rad2deg*asin(ray_tmp(3,iray,:,:,:))
-           ! Calculate -180 < phi=atan2(y,z) < 180
-           where(abs(ray_tmp(1,iray,:,:,:))<1.E-8 .and. &
-                abs(ray_tmp(2,iray,:,:,:))<1.E-8) &
-                ray_tmp(1,iray,:,:,:)=1.
-           ray(2,iray,1:nI,1:nJ,1:nK,iBLK)=&
-                rad2deg*atan2(ray_tmp(2,iray,:,:,:),ray_tmp(1,iray,:,:,:))
-           ! Shift zero to subsolar
-           where(ray(2,iray,1:nI,1:nJ,1:nK,iBLK)<0.)
-              ray(2,iray,1:nI,1:nJ,1:nK,iBLK)= &
-                   ray(2,iray,1:nI,1:nJ,1:nK,iBLK)+360.
-           end where
-        elsewhere
-           ! Impossible values
-           ray(1,iray,1:nI,1:nJ,1:nK,iBLK)=-100.
-           ray(2,iray,1:nI,1:nJ,1:nK,iBLK)=-200.
-        endwhere
-
-     end do
-
-     ! Calculate and store ray status in ray(3,1...)
-     ! Assume strange status: disconnected in one direction at least
-     ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-3.
-
-     ! Fully closed
-     where(ray_tmp(1,1,:,:,:)>CLOSEDRAY .and. ray_tmp(1,2,:,:,:)>CLOSEDRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=3.
-
-     ! Half closed in positive direction
-     where(ray_tmp(1,1,:,:,:)>CLOSEDRAY .and. ray_tmp(1,2,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=2.
-
-     ! Half closed in negative direction
-     where(ray_tmp(1,2,:,:,:)>CLOSEDRAY .and. ray_tmp(1,1,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=1.
-
-     ! Fully open
-     where(ray_tmp(1,1,:,:,:)==OPENRAY .and. ray_tmp(1,2,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=0.
-
-     ! Cells inside body
-     where(ray_tmp(1,1,:,:,:)==BODYRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-1.
-
-     ! Loop ray within block
-     where(ray_tmp(1,1,:,:,:)==LOOPRAY .or.  ray_tmp(1,2,:,:,:)==LOOPRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-2.
-
-  end do ! iBLK
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        call xyz_to_latlonstatus(ray(:,:,i,j,k,iBLK))
+     end do; end do; end do
+  end do
 
   call timing_stop('ray_trace')
 
@@ -1447,6 +1390,32 @@ end subroutine rayface_interpolate
 
 !=========================================================================
 subroutine convFaces2LatLon(rayface_in)
+  use ModRaytrace, ONLY: nI, nJ, nK, xyz_to_latlonstatus
+  implicit none
+
+  real, intent(inout), dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_in
+
+  integer :: Di,i,j,k,iBlock
+  !---------------------------------------------------------------------
+  do k=1,nK+1
+     do j=1,nJ+1
+        ! Exclude inside points
+        if(k>1.and.k<nK+1.and.j>1.and.j<nJ+1)then
+           ! j and k are inside, do endpoints only in i
+           Di=nI
+        else
+           Di=1
+        end if
+        do i=1,nI+1,Di
+           call xyz_to_latlonstatus(rayface_in(:,:,i,j,k))
+        end do
+     end do
+  end do
+
+end subroutine convFaces2LatLon
+
+!=========================================================================
+subroutine convFaces2LatLon_old(rayface_in)
   use ModRaytrace
   implicit none
 
@@ -1526,7 +1495,7 @@ subroutine convFaces2LatLon(rayface_in)
 
   rayface_in(3,2,1:nI+1,1:nJ+1,1:nK+1) = rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)
 
-end subroutine convFaces2LatLon
+end subroutine convFaces2LatLon_old
 
 !=============================================================================
 
