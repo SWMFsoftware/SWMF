@@ -312,6 +312,10 @@ When SWMF is installed, its configuration can be checked with
 \begin{verbatim}
   SetSWMF.pl -s
 \end{verbatim}
+To get a list of the available component versions type
+\begin{verbatim}
+  SetSWMF.pl -l
+\end{verbatim}
 To get a complete description of the {\tt SetSWMF.pl}  script type
 \begin{verbatim}
   SetSWMF.pl -h
@@ -624,7 +628,8 @@ selected component versions the following restrictions apply:
 \item The SP/Kota component can use 1 processor only
 \item The IE/Ridley\_serial component can use 1 or 2 processors.
 \item The UA component can use at most 32 processors, 
-      and needs at least 8 processors.
+      and needs at least 8 processors. The number of blocks should
+      be the same on all processors, so use 8, 16 or 32 processors.
 \item The GM/BATSRUS component needs at least 25 processors.
 \item The SC/BATSRUS component needs at least 23 processors.
 \item The IH/BATSRUS(\_share) component needs at least 25 processors.
