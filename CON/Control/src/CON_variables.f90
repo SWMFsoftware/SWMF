@@ -23,9 +23,6 @@ module CON_variables
   ! This is standard F90 initialization expression but may give warnings:
   integer, parameter :: nByteReal = 4 + (1.0000000004 - 1.0)*10000000000.0
 
-  ! This is not standard F90 and does not work for pgf90 compiler:
-  ! integer, parameter :: nByteReal = 6 + sign(2,range(1.0)-range(1.D0))
-
   ! The type of session model: serial, parallel, overlap...
   character (len=lStringLine) :: TypeSession='old'
 
