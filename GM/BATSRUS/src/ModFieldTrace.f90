@@ -9,7 +9,6 @@ subroutine ray_trace_accurate
   use ModRaytrace
   use CON_ray_trace, ONLY: ray_init
   use ModMain
-  use ModNumConst,   ONLY: cRadToDeg, cTiny, cZero, cOne
   use ModPhysics,    ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
@@ -126,9 +125,21 @@ subroutine ray_trace_accurate
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE
      do k=1,nK; do j=1,nJ; do i=1,nI
-        call convert_ray(ray(:,:,i,j,k,iBlock))
+
+        call xyz_to_latlonstatus(ray(:,:,i,j,k,iBlock))
+
+        if(ray(3,1,i,j,k,iBlock)==-2.) write(*,*) &
+             'Loop ray found at iProc,iBlock,i,j,k,ray=',&
+             iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
+
+        if(ray(3,1,i,j,k,iBlock)==-3.) write(*,*) &
+             'Strange ray found at iProc,iBlock,i,j,k,ray=',&
+             iProc,iBlock,i,j,k,ray(:,:,i,j,k,iBlock)
      end do; end do; end do
   end do
+
+  if(oktest_me)write(*,*)'ray lat, lon, status=',&
+       ray(:,:,iTest,jTest,kTest,BlkTest)
 
   call timing_stop('ray_trace')
 
@@ -138,96 +149,6 @@ subroutine ray_trace_accurate
   end if
   call barrier_mpi
   if(oktest_me)write(*,*)'ray_trace completed.'
-
-contains
-
-  !=========================================================================
-
-  subroutine convert_ray(Ray_DI)
-
-    real, intent(inout) :: Ray_DI(3,2)
-    real :: RayTmp_DI(3,2)
-    logical :: DoTest
-
-    DoTest = .false.
-
-    ! Store input ray values into RayTmp_DI
-    RayTmp_DI = Ray_DI
-
-    do iRay=1,2
-
-       if(DoTest)then
-          write(*,*)'iProc,iBlock,i,j,k,iRay  =',iProc,iBlock,i,j,k,iRay
-          write(*,*)'iBlock,iRay,Ray_DI(:,iRay),CLOSED=',&
-               iBlock,iRay,Ray_DI(:,iRay),CLOSEDRAY
-       end if
-
-       ! Check if this direction is closed or not
-       if(RayTmp_DI(1,iRay)>CLOSEDRAY)then
-          ! Make sure that asin will work, -1<=RayTmp_DI(3,iRay)<=1
-          RayTmp_DI(3,iRay) = max(-cOne+cTiny, RayTmp_DI(3,iRay))
-          RayTmp_DI(3,iRay) = min( cOne-cTiny, RayTmp_DI(3,iRay))
-
-          ! Calculate  -90 < theta=asin(z)  <  90
-          Ray_DI(1,iRay) = cRadToDeg * asin(RayTmp_DI(3,iRay))
-
-          if(DoTest)write(*,*)'iBlock,iRay,theta=',iBlock,iRay,Ray_DI(1,iRay)
-
-          ! Calculate -180 < phi=atan2(y,z) < 180
-          if(  abs(RayTmp_DI(1,iRay))<cTiny .and. &
-               abs(RayTmp_DI(2,iRay))<cTiny) &
-               RayTmp_DI(1,iRay)=1.
-
-          Ray_DI(2,iRay) = &
-               cRadToDeg * atan2(RayTmp_DI(2,iRay),RayTmp_DI(1,iRay))
-
-          if(DoTest)write(*,*)'iBlock,iRay,phi  =',iBlock,iRay,Ray_DI(2,iRay)
-
-
-          ! Get rid of negative phi angles
-          if(Ray_DI(2,iRay) < cZero) Ray_DI(2,iRay) = Ray_DI(2,iRay)+360.
-
-          if(DoTest)write(*,*)'iBlock,iRay,phi+ =',iBlock,iRay,Ray_DI(2,iRay)
-
-       else
-          ! Impossible values
-          Ray_DI(1,iRay) = -100.
-          Ray_DI(2,iRay) = -200.
-
-          if(DoTest)write(*,*)'iBlock,iRay,Ray_DI- =',&
-               iBlock,iRay,Ray_DI(1:2,iRay)
-       endif
-
-    end do ! iRay
-
-    ! Calculate and store ray status in ray(3,1...)
-
-    if(RayTmp_DI(1,1)>CLOSEDRAY .and. RayTmp_DI(1,2)>CLOSEDRAY)then
-       Ray_DI(3,1)=3.      ! Fully closed
-    elseif(RayTmp_DI(1,1)>CLOSEDRAY .and. RayTmp_DI(1,2)==OPENRAY)then
-       Ray_DI(3,1)=2.      ! Half closed in positive direction
-    elseif(RayTmp_DI(1,2)>CLOSEDRAY .and. RayTmp_DI(1,1)==OPENRAY)then
-       Ray_DI(3,1)=1.      ! Half closed in negative direction
-    elseif(RayTmp_DI(1,1)==OPENRAY .and. RayTmp_DI(1,2)==OPENRAY) then
-       Ray_DI(3,1)=0.      ! Fully open
-    elseif(RayTmp_DI(1,1)==BODYRAY)then
-       Ray_DI(3,1)=-1.     ! Cells inside body
-    elseif(RayTmp_DI(1,1)==LOOPRAY .and.  RayTmp_DI(1,2)==LOOPRAY) then
-       Ray_DI(3,1)=-2.     ! Loop ray within block
-       write(*,*)'Loop ray found at iProc,iBlock,i,j,k,ray=',&
-            iProc,iBlock,i,j,k,Ray_DI
-    else
-       Ray_DI(3,1)=-3.     ! Strange status
-       !        if(  x_BLK(i,j,k,iBlock)==xTest.and.&
-       !             y_BLK(i,j,k,iBlock)==yTest.and.&
-       !             z_BLK(i,j,k,iBlock)==zTest) &
-       write(*,*)'Strange ray found at iProc,iBlock,i,j,k,ray=',&
-            iProc,iBlock,i,j,k,RayTmp_DI
-    end if
-
-    if(DoTest)write(*,*)'iBlock,iRay,status=',iBlock,iRay,Ray_DI(3,1)
-
-  end subroutine convert_ray
 
 end subroutine ray_trace_accurate
 
