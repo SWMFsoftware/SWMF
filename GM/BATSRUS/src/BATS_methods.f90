@@ -331,6 +331,8 @@ subroutine BATS_advance(TimeSimulationLimit)
      call advance_expl(.true., .true.)
   endif                                   !^CFG IF IMPLICIT  
 
+  if(UseIM)call apply_im_pressure         !^CFG IF RCM
+
   call timing_stop('advance')
 
   Time_Simulation = Time_Simulation + dt*UnitSI_t
@@ -706,46 +708,48 @@ contains
           end if
           RETURN
        end if
-       !^CFG IF NOT SIMPLE BEGIN
-       if(index(plot_type(ifile),'los')>0 .and. (.not. IsFound)) then
-          IsFound = .true.
-          ! Do message passing with corners once for plots
-          if(.not.DoExchangeAgain)then
-                if(iProc==0.and.lVerbose>0)then
-                   call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for los plot files ...'
-                end if
-                UsePlotMessageOptions = .true.
-                call exchange_messages
-                UsePlotMessageOptions = .false.
-                DoExchangeAgain = .true.
+
+       if(.not.DoExchangeAgain .and. ( &
+            index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
+            index(plot_type(iFile),'los')==1 .or. &    !^CFG IF NOT SIMPLE
+            plot_form(iFile) == 'tec')) then
+
+          if(iProc==0.and.lVerbose>0)then
+             call write_prefix; write(iUnitOut,*)&
+                  ' Message passing for plot files ...'
           end if
-          call write_plot_los(ifile)
+          UsePlotMessageOptions = .true.
+          call exchange_messages
+          UsePlotMessageOptions = .false.
+          DoExchangeAgain = .true.
        end if
-       !^CFG END SIMPLE 
-       if(plot_type(ifile)/='nul' .and. (.not. IsFound) ) then
-          ! Do message passing with corners once for tec plots
-          if( index(plot_form(ifile),'tec')>0 ) then
-             if(.not.DoExchangeAgain)then
-                if(iProc==0.and.lVerbose>0)then
-                   call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for tec plot files ...'
-                end if
-                UsePlotMessageOptions = .true.
-                call exchange_messages
-                UsePlotMessageOptions = .false.
-                DoExchangeAgain = .true.
-             end if
-             if(DoAssignNodeNumbers)then
-                call assign_node_numbers
-                DoAssignNodeNumbers = .false.
-             end if
+
+       !^CFG IF SIMPLE BEGIN
+       if(index(plot_type(iFile),'los')>0) then
+          IsFound = .true.
+          call write_plot_los(iFile)
+       end if
+       !^CFG END SIMPLE
+
+       !^CFG IF RAYTRACE BEGIN
+       if(index(plot_type(iFile),'lin')>0) then
+          IsFound = .true.
+          call write_plot_line(iFile)
+       end if
+       !^CFG END RAYTRACE
+
+       if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
+          ! Assign node numbers for tec plots
+          if( index(plot_form(ifile),'tec')>0 .and. DoAssignNodeNumbers)then
+             call assign_node_numbers
+             DoAssignNodeNumbers = .false.
           end if
 
           !^CFG IF RAYTRACE BEGIN
           if(  index(plot_type(ifile),'ray')>0 .or. &
                index(plot_vars(ifile),'status')>0) call ray_trace
           !^CFG END RAYTRACE
+
           call timing_start('save_plot')
           call write_plot_common(ifile)
           call timing_stop('save_plot')
