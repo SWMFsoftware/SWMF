@@ -111,7 +111,7 @@ subroutine ionosphere_solver(PHI, &
            if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
         enddo
      endif
-     lat_boundary = lat_boundary - 5.0*IONO_PI/180.0
+     lat_boundary = max(lat_boundary - 5.0*IONO_PI/180.0,0.0)
   endif
 
   !!! write(*,*)'PHI(:,nPsi/4), lat_boundary=',PHI(:,nPsi/4), lat_boundary !!!
