@@ -150,7 +150,7 @@ module CON_axes
 
   ! Difference between 01/01/1965 00:00:00 and 09/11/1853 00:00:00 in seconds
   real(Real8_), parameter :: tStartCarrington   = -3.5074080D+09
-  real(Real8_), parameter :: CarringtonRotation = cTwoPi/(27.2753D0*24*3600)
+  real(Real8_), parameter :: OmegaCarrington = cTwoPi/(27.2753D0*24*3600)
 
   ! Position and Velocity of Planet in HGI
   real :: XyzPlanet_D(3), vPlanetHgi_D(3)
@@ -581,9 +581,15 @@ contains
        write(*,*)NameSub,' new RotAxisGsm_D  =',RotAxisGsm_D
     end if
 
-    ! Calculate HgiHgr_DD  and HgrGse_DD Matrices
+    ! Calculate the HgiHgr_DD matrix
     HgrHgi_DD = rot_matrix_z( &
-         (TimeSim + tStart - tStartCarrington)*CarringtonRotation )
+         -OmegaCarrington*(TimeSim + tStart - tStartCarrington) )
+
+    ! The negative sign in front of OmegaCarrington comes from that 
+    ! this matrix transforms from HGI to HGR, so a point at rest 
+    ! in HGI rotates BACKWARDS in HGI
+
+    ! Calculate the HgrGse_DD matrix
     HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
 
   end subroutine set_axes
@@ -707,59 +713,67 @@ contains
   !IROUTINE: angular_velocity - get angular velocity between two coord systems
   !INTERFACE:
 
-  function angular_velocity(TimeSim, NameCoord1, NameCoord2In, iFrameIn) &
+  function angular_velocity(TimeSim, NameCoord1, NameCoord2In, iFrame) &
        result(Omega_D)
 
     !INPUT ARGUMENTS:
     real,                       intent(in) :: TimeSim      ! Simulation time
-    character(len=*),           intent(in) :: NameCoord1   ! Name of 1st coord. system
-    character(len=*), optional, intent(in) :: NameCoord2In ! Name of 2nd coord. system
-    integer, optional,intent(in) :: iFrameIn               ! Frame for result
+    character(len=*),           intent(in) :: NameCoord1   ! 1st coord. system
+    character(len=*), optional, intent(in) :: NameCoord2In ! 2nd coord. system
+    integer, optional,intent(in) :: iFrame                 ! Frame for result
     
     !RETURN VALUE:
     real :: Omega_D(3) ! Angular velocity components
     
     !DESCRIPTION:
-    ! This subroutine calculates the 3 components of the angular velocity between
+    ! This subroutine calculates the angular velocity vector between
     ! two coordinate systems from the transformation matrix between them.
     ! If the second frame is not present in the argument list, the result is
     ! the angular velocity of the first frame relative to an inertial frame.
     ! The angular velocity is given in the moving frame.
     ! When both frames are given, the relative angular rotation is returned.
-    ! If iFrame is presemt. it defines whether the output angular velocity is with 
-    ! respect to the first (iFrame=1) or second (iFrame=2) system.
+    ! If iFrame is presemt it defines whether the output angular velocity 
+    ! is with respect to the first (iFrame=1) or second (iFrame=2) system.
     ! If the iFrame argument is not present, the result is in the first frame.
+    ! This means that for example angular\_velocity(t,'GEO') is the same as 
+    ! angular\_velocity(t,'GEI','GEO',2) which gives the rotation of the
+    ! Earth relative to an inertial frame expressed in GEO coordinates.
+    ! On the other hand angular\_velocity(t,'GEI','GEO') is the same
+    ! as angular\_velocity(t,'GEI','GEO',1) which gives the opposite
+    ! (negative) sign for the angular velocity.
     !EOP
     
     ! Local variables
     character (len=3) :: NameCoord2
-    integer ::  iFrame
+    integer ::  iFrameOut
     real    ::  dTimeSim
-    real, dimension(3,3) ::  Rot_DD, RotMid_DD, RotPlus_DD, RotMinus_DD, dRot_DD
+    real, dimension(3,3) :: Rot_DD, RotMid_DD, RotPlus_DD, RotMinus_DD, dRot_DD
     
     character (len=*), parameter :: NameSub = NameMod // '::get_omega'
     !--------------------------------------------------------------------------
     ! Check optional arguments and set defaults
     if(present(NameCoord2In))then
        NameCoord2 = NameCoord2In
-       if(present(iFrameIn))then
-          if(iFrameIn /= 1 .and. iFrameIn /=2)then
+       if(present(iFrame))then
+          if(iFrame /= 1 .and. iFrame /=2)then
              write(*,*) NameSub, ' ERROR iFrame = ',iFrame
              call CON_stop(NameSub // ': invalid value for iFrame = 1 or 2')
           end if
-          iFrame = iFrameIn
+          iFrameOut = iFrame
        else
-          iFrame = 2 ! Default is to provide Omega_D in the output coord. system
+          ! Default is to provide Omega_D in the output coord. system
+          iFrameOut = 1 
        end if
     else
        if(NameCoord1(1:1) == 'H')then
           ! For heliocentric coordinate systems set the inertial frame to HGI
           NameCoord2 = 'HGI'
        else
-          ! For geocentric systems GSE is assumed to be inertial ! Otherwise use GEI!
+          ! For geocentric systems GSE is assumed to be inertial 
+          ! Otherwise better use GEI !!!
           NameCoord2 = 'GSE'
        end if
-       iFrame = 1
+       iFrameOut = 1
     end if
 
     ! Determine the perturbation of time
@@ -784,7 +798,19 @@ contains
 
     Omega_D = (/ Rot_DD(2,3), Rot_DD(3,1), Rot_DD(1,2) /)
     
-    if(iFrame == 2) Omega_D = matmul(RotMid_DD, Omega_D)
+!    write(*,*)'NameCoord1,2=',NameCoord1,NameCoord2
+!    write(*,*)'RotPlus ='; call show_rot_matrix(RotPlus_DD)
+!    write(*,*)'RotMinus='; call show_rot_matrix(RotMinus_DD)
+!    write(*,*)'dRot    ='; call show_rot_matrix(dRot_DD)
+!    write(*,*)'Rot     ='; call show_rot_matrix(Rot_DD)
+!    write(*,*)'Omega_D =', Omega_D
+
+    ! Change sign if called with one coordinate system
+    if(.not.present(NameCoord2In)) Omega_D = - Omega_D
+
+    ! Transform into frame 2 if required
+    if(iFrameOut == 2) Omega_D = matmul(RotMid_DD, Omega_D)
+
     where(abs(Omega_D) < 1e-12) Omega_D = 0.00
     
   end function angular_velocity
@@ -839,7 +865,7 @@ contains
        NameCoord2Last = NameCoord2
 
        ! Get transformation matrix and angular velocity between frames
-       Transform12_DD = transform_matrix(TimeSim,NameCoord1,NameCoord2)
+       Transform12_DD = transform_matrix(TimeSim, NameCoord1, NameCoord2)
        Omega12_D      = angular_velocity(TimeSim, NameCoord1, NameCoord2)
 
        if(NameCoord1(1:1) == 'H' .eqv. NameCoord2(1:1) == 'H')then 
@@ -857,7 +883,12 @@ contains
        end if
     end if
 
-    v1Total_D = v1_D + cross_product(Omega12_D, Position_D) + vPlanet1_D
+    ! Omega12_D defines the rotation of Frame2 with respect to Frame1,
+    ! so a point at rest in Frame1 should rotate with -Omega12 in Frame2
+
+    v1Total_D = v1_D - cross_product(Omega12_D, Position_D) + vPlanet1_D
+
+    ! Transform total velocity to Frame2
     v2_D = matmul(Transform12_DD, v1Total_D)
 
   end function transform_velocity
@@ -873,7 +904,7 @@ contains
     !EOP
     real :: MagAxisTilt
     real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
-    real:: Omega_D(3),v1_D(3),v2_D(3)
+    real :: Omega_D(3), v2_D(3), Result_D(3)
     !-------------------------------------------------------------------------
 
     if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
@@ -901,38 +932,148 @@ contains
          'test get_axes failed: MagAxisTilt =',MagAxisTilt*cRadToDeg,&
          ' should be 8.0414272433221718 degrees within round off error'
 
-    if(maxval(abs(RotAxisGsm_D - (/0.0, 0.131054271126, 0.991375195382/))) &
-         > 0.00001)write(*,*) 'test get_axes failed: RotAxisGsm_D =',&
-         RotAxisGsm_D,' should be equal to ', &
-         '(/0.0, 0.131054271126, 0.991375195382/) within round off errors'
+    Result_D = (/0.0, 0.131054271126, 0.991375195382/)
+    if(maxval(abs(RotAxisGsm_D - Result_D)) > 0.00001) &
+         write(*,*) 'test get_axes failed: RotAxisGsm_D =',&
+         RotAxisGsm_D,' should be equal to ',Result_D, &
+         ' within round off errors'
 
     write(*,'(a)')'Testing transform_matrix'
 
     Rot_DD = transform_matrix(0.0,'GSM','GEO')
     RotAxisGeo_D = matmul(Rot_DD,RotAxisGsm_D)
 
-    if(maxval(abs(RotAxisGeo_D - (/0.,0.,1./)))>0.0001) &
+    Result_D = (/0.0, 0.0, 1.0/)
+    if(maxval(abs(RotAxisGeo_D - Result_D)) > 0.0001) &
          write(*,*)'test transform_matrix failed: RotAxisGeo_D=',&
-         RotAxisGeo_D,' should be (/0.,0.,1./) within round off errors'
+         RotAxisGeo_D,' should be be equal to ',Result_D,&
+         ' within round off errors'
 
     write(*,'(a)')'Testing show_rot_matrix'
-    write(*,'(a)')'GeoGsm_DD='; call show_rot_matrix(Rot_DD)
+    write(*,'(a)')'GeiGeo_DD(0)='; call show_rot_matrix(GeiGeo_DD)
     
     write(*,'(a)')'Testing angular_velocity'
+
+    ! HGI is an inertial system
+    Omega_D  = angular_velocity(0.0,'HGI')
+    Result_D = (/0., 0., 0./)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: HGI Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! HGR rotates around its Z axis with the OmegaCarrington
+    Omega_D  = angular_velocity(0.0,'HGR')
+    Result_D = (/0., 0., OmegaCarrington/)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: HGR Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
     
-    Omega_D = angular_velocity(0.0,'GSE','SMG')
-    
-    if(maxval(abs(Omega_D - (/1.01128925E-05,9.55662927E-06,-1.42873158E-06/)))>1e-10) &
-         write(*,*)'test angular_velocity failed: Omega_D = ',Omega_D,&
-         ' should be (/1.0112892E-05,9.5566292E-06,-1.4287315E-06/)within round off errors'   
+    ! GEI is an inertial system
+    Omega_D  = angular_velocity(0.0,'GEI')
+    Result_D = (/0., 0., 0./)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GEI Omega_D = ',Omega_D, &
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! In the current approximation GSE is an inertial system
+    Omega_D  = angular_velocity(0.0,'GSE')
+    Result_D = (/0., 0., 0./)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GSE Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! GEO rotates with OmegaPlanet around the Z axis with respect to inertial
+    Omega_D  = angular_velocity(0.0,'GEO')
+    Result_D = (/0., 0., OmegaPlanet/)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GEO Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! GEO rotates with OmegaPlanet around the Z axis with respect to GSE
+    Omega_D  = angular_velocity(0.0,'GSE','GEO',iFrame=2)
+    Result_D = (/0., 0., OmegaPlanet/)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GSE,GEO Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! The GSM rotates around the X axis. At 07:35 UT in the morning 
+    ! the Northern magnetic pole is on the night side, 
+    ! so the northern magnetic pole moves towards -Y in GSE,
+    ! so GSM rotates with a positive sign around the X axis. 
+    ! The sign is right, the amplitude is reasonable.
+
+    Omega_D  = angular_velocity(0.0,'GSM')
+    Result_D = (/1.0213318187092477E-05 , 0., 0./)
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GSM Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! This is a general case, we believe the numbers
+    Omega_D  = angular_velocity(0.0,'GSE','SMG',iFrame=2)
+    Result_D = (/1.01128925E-05,9.55662927E-06,-1.42873158E-06/)    
+    if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
+         write(*,*)'test angular_velocity failed: GSE-SMG Omega_D in SMG= ',&
+         Omega_D,' should be equal to ',Result_D,' within round off errors'   
     
     write(*,'(a)')'Testing transform_velocity'
+
+    ! Let's take the (/0.,0.,cAU/) point with 0 velocity in HGR.
+    ! This will correspond to the point matmul((/cAU,0.,0./),HgrHgi_DD) in HGI
+    ! and it should rotate with (/0.,0.,OmegaCarrington/) in HGI.
+
+    v2_D = transform_velocity(0., (/0.,0.,0./), (/cAU,0.,0./), 'HGR', 'HGI')
+    Result_D = cross_product( (/0.,0.,OmegaCarrington/), &
+         matmul((/cAU,0.,0./), HgrHgi_DD) )
+
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: HGI-HGR v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
     
-    v2_D = transform_velocity(0.0, (/0.0, 0.0, 0.0/), (/cAU, 0.0, 0.0/), 'HGI', 'HGR')
-    
-    if(maxval(abs(v2_D -(/-1.99357971E+05,-3.45466075E+05,4.02175140E-12/)))>10) &
-         write(*,*)'test angular_velocity failed: v2_D = ',v2_D,&
-         ' should be (/-1.9935797E+05,-3.4546607E+05,4.0217514E-12/)within round off errors'
+    ! Let's transform back, the result should be 0
+    v2_D = transform_velocity(0., v2_D, matmul((/cAU,0.,0./), HgrHgi_DD), &
+         'HGI', 'HGR')
+    Result_D = (/ 0., 0., 0./)
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: HGR-HGI v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Let's check vPlanet. A point at rest in HGI should move towards the
+    ! +Y axis in GSE (opposite of the motion of the planet)
+    ! with roughly 30 km/s for Earth. In March the Earth
+    ! is getting farther away from the Sun, so the X component of the 
+    ! velocity should be a small positive number.
+    v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'HGI', 'GSE')
+    Result_D = (/ 4.8531599940505521E+02, 2.9901632640648619E+04, 0./)
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: HGI-GSE v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Let's transform back, the result should be 0
+    v2_D = transform_velocity(0., v2_D, (/0., 0., 0./), 'GSE', 'HGI')
+    Result_D = (/ 0., 0., 0./)
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GSE-HGI back v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! The center of the Earth is at 0,0,0 and at rest in GSE, 
+    ! and relative to HGI it moves with the planet speed
+    v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GSE', 'HGI')
+    Result_D = vPlanetHgi_D
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GSE-HGI v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! The surface of the Earth towards the Sun is RadiusPlanet,0,0 in GSE.
+    ! We convert this position to GEO and check how fast the surface moves
+    ! with respect to GSE. It should rotate with OmegaPlanet around the
+    ! rotation axis (in GSE) of the Earth.
+
+    v2_D = transform_velocity(0., (/0., 0., 0./), &
+         matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
+    Result_D = OmegaPlanet*cross_product(RotAxis_D, (/RadiusPlanet, 0., 0./))
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
 
   end subroutine test_axes
 
