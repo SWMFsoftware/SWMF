@@ -1637,9 +1637,9 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   ! correction.
   !---------------------------------------------------------------------------
 
-  use ModMain,     ONLY: Time_Simulation
+  use ModMain,     ONLY: Time_Simulation, TypeCoordSystem
   use ModNumConst, ONLY: cZero,cHalf,cOne,cTwo,cThree, &
-       cE1,cE9,cTolerance,cTiny,cDegToRad
+       cE1,cE9,cTolerance,cTiny,cDegToRad,cPi
   use ModProcMH,   ONLY: iProc
   use ModUser,     ONLY: DoFirst,File_PFSSM,Head_PFSSM,&
        N_PFSSM,R_PFSSM,Rs_PFSSM,Ro_PFSSM,   &
@@ -1647,7 +1647,8 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
        g_nm,h_nm,UnitB,Phi_Shift
   use ModPhysics,  ONLY: unitUSER_B,OmegaBody,unitUSER_t
   use ModIO,       ONLY: iUnitOut, write_prefix
-  use ModIoUnit,      ONLY: io_unit_new
+  use ModIoUnit,   ONLY: io_unit_new
+  use CON_axes,    ONLY: transform_matrix, XyzPlanetHgi_D
 
   implicit none
 
@@ -1677,6 +1678,12 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   real:: SinThetaM, SinThetaM1
   integer:: delta_m0
   real, dimension(-1:N_PFSSM+2):: RoRsPower_I, RoRPower_I, rRsPower_I
+
+  !\
+  ! G. Toth: added dPhi shift to rotate into the frame of the SC/IH component
+  !/
+  real, save :: dPhi
+  real       :: XyzPlanet_D(3)
   !--------------------------------------------------------------------------
   !\
   ! Calculate cell-centered spherical coordinates::
@@ -1696,10 +1703,6 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   CosTheta    = zz/Rin_PFSSM
   SinPhi      = yy/Xy
   CosPhi      = xx/Xy
-  !\
-  ! Update Phi_PFSSM for central meridian and solar rotation::
-  !/
-  Phi_PFSSM = Phi_PFSSM-Phi_Shift*cDegToRad
   !\
   ! Set the source surface radius::
   ! The inner boundary in the simulations starts at a height
@@ -1773,7 +1776,25 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      do m=1,N_PFSSM
         factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
      enddo
+
+     !\
+     ! Calculate the shift of the longitudes with respect to the magnetogram,
+     ! which assumes that the Earth is towards 180 longitude.  
+     !/
+     ! Calculate the longitude of the planet in the component's frame.
+     XyzPlanet_D = matmul(&
+          transform_matrix(0.0,'HGI',TypeCoordSystem),XyzPlanetHgi_D)
+
+     ! Adding dPhi shifts FROM the component frame TO the magnetogram frame
+     dPhi = cPi - atan2(XyzPlanet_D(2),XyzPlanet_D(1))
+
   end if
+  !\
+  ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame.
+  ! Add another shift defined by the user (usually should be zero).
+  !/
+  Phi_PFSSM = Phi_PFSSM + dPhi - Phi_Shift*cDegToRad
+
   !\
   ! Calculate powers of the ratios of radii
   !/
