@@ -6,7 +6,286 @@ List of MH (GM and IH) commands used in the PARAM.in file
 
 
 
-','type' => 't'},{'attrib' => {'value' => '$_GridSize[0]','type' => 'integer','name' => 'nI'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[1]','type' => 'integer','name' => 'nJ'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[2]','type' => 'integer','name' => 'nK'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[3]','type' => 'integer','name' => 'MaxBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[4]','type' => 'integer','name' => 'MaxImplBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','type' => 'integer','name' => 'MaxBlockALL'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'name' => 'TESTING AND TIMING'},'content' => [{'content' => '
+','type' => 't'},{'attrib' => {'value' => '$_GridSize[0]','type' => 'integer','name' => 'nI'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[1]','type' => 'integer','name' => 'nJ'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[2]','type' => 'integer','name' => 'nK'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[3]','type' => 'integer','name' => 'MaxBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[4]','type' => 'integer','name' => 'MaxImplBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','type' => 'integer','name' => 'MaxBlockALL'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'name' => 'STAND ALONE MODE'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!  STAND ALONE PARAMETER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+','type' => 't'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'NEWPARAM'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewParam'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewAxes'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseCorotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#NEWPARAM
+T			UseNewParam
+T			UseNewAxes
+T			DoTimeAccurate
+T			UseCorotation
+
+This command can be used to make the standalone code backwards compatible.
+
+If UseNewParam is true, the time frequencies of various commands 
+(SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
+of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
+
+If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
+and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+
+If UseNewAxes is true, the planet\'s rotational and magnetix axes are set by the new
+algorithms found in share/Library/src/CON\\_axes, the planet data is set and
+stored by share/Library/src/CON\\_planet, and magnetic field information and
+mapping is provided by share/Library/src/CON\\_planet_field, and the rotational speed
+of the planet is calculated using $v_\\phi=\\Omega$ \\times $r$.
+
+If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
+are used. Some of these algorithms are inaccurate, some of them contain bugs,
+some of them are inefficient. The algorithms were kept for sake of backwards
+compatibility.
+
+The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
+(consistent with the assumption that the default behaviour is as realistic as possible).
+
+The default values depend on how the standalone code was installed
+(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
+all the logicals have true default values (consistent with SWMF), 
+for STANDALONE=old and STANDALONE=oldtest the default values are false 
+(consistent with BATSRUS v7.72 and earlier).
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'DESCRIPTION'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'StringDescription'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#DESCRIPTION
+This is a test run for Jupiter with no rotation.
+
+This command is only used in the stand alone mode.
+
+The StringDescription string can be used to describe the simulation
+for which the parameter file is written. The #DESCRIPTION command and
+the StringDescription string are saved into the restart file,
+which helps in identifying the restart files.
+
+The default value is "Please describe me!", which is self explanatory.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ECHO'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoEcho'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#ECHO
+T                       DoEcho
+
+This command is only used in the stand alone mode.
+
+If the DoEcho variable is true, the input parameters are echoed back.
+The default value for DoEcho is .false., but it is a good idea to
+set it to true at the beginning of the PARAM.in file.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+#PROGRESS
+10			DnProgressShort
+100			DnProgressLong
+
+The frequency of short and long progress reports for BATSRUS in
+stand alone mode. These are the defaults. Set -1-s for no progress reports.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#TIMEACCURATE
+F               DoTimeAccurate
+
+This command is only used in stand alone mode.
+
+If DoTimeAccurate is set to true, BATSRUS solves
+a time dependent problem. If DoTimeAccurate is false, a steady-state
+solution is sought for. It is possible to use steady-state mode
+in the first few sessions to obtain a steady state solution,
+and then to switch to time accurate mode in the following sessions.
+In time accurate mode saving plot files, log files and restart files,
+or stopping conditions are taken in simulation time, which is the
+time relative to the initial time. In steady state mode the simulation
+time is not advanced at all, instead the time step or iteration number
+is used to control the frequencies of various actions.
+
+The steady-state mode allows BATSRUS to use local time stepping
+to accelarate the convergence towards steady state.
+
+The default value depends on how the stand alone code was installed.
+See the description of the NEWPARAM command.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'BEGIN_COMP'},'content' => [{'content' => '
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'END_COMP'},'content' => [{'content' => '
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'PLANET COMMANDS'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The planet commands can only be used in stand alone mode and only
+when UseNewAxes is set to true (see discussion at the NEWPARAM command).
+The commands allow to work with an arbitrary planet.
+It is also possible to change some parameters of the planet relative
+to the real values.
+
+By default Earth is assumed with its real parameters.
+Another planet can be selected with the #PLANET command.
+The real planet parameters can be modified and simplified
+with the other planet commands listed in this subsection.
+These modifier commands cannot preceed the #PLANET command!
+
+','type' => 't'},{'attrib' => {'if' => '$_IsFirstSession and $_IsStandAlone','name' => 'PLANET'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'content' => [{'attrib' => {'value' => 'EARTH/Earth/earth','default' => 'T','name' => 'Earth'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'New'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$NamePlanet eq \'New\''},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'RadiusPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'MassPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'OmegaPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'TiltRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'content' => [{'attrib' => {'name' => 'NONE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'default' => 'T','name' => 'DIPOLE'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisThetaGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhiGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => 'not $PlanetCommand'},'content' => [{'content' => '
+		PLANET should precede $PlanetCommand
+	','type' => 't'}],'type' => 'e','name' => 'rule'},{'content' => '
+
+#PLANET
+New			NamePlanet (rest of parameters read for unknown planet)
+6300000.0		RadiusPlanet [m]
+5.976E+24		MassPlanet   [kg]
+0.000000199		OmegaPlanet  [radian/s]
+23.5			TiltRotation [degree]
+DIPOLE			TypeBField
+11.0			MagAxisThetaGeo [degree]
+289.1			MagAxisPhiGeo   [degree]
+-31100.0E-9		DipoleStrength  [T]
+
+The NamePlanet parameter contains the name of the planet
+with arbitrary capitalization. In case the name of the planet
+is not recognized, the following variables are read:
+RadiusPlanet is the radius of the planet,
+MassPlanet is the mass of the planet, 
+OmegaPlanet is the angular speed relative to an inertial frame,
+TiltRotation is the tilt of the rotation axis relative to ecliptic North,
+TypeBField, which can be "NONE" or "DIPOLE". 
+TypeBField="NONE" means that the planet does not have magnetic field. 
+It TypeBField is set to "DIPOLE" than the following variables are read:
+MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
+of the north magnetic pole in corotating planetocentric coordinates.
+Finally DipoleStrength is the equatorial strength of the magnetic dipole
+field. The units are indicated in the above example, which shows the
+Earth values approximately.
+
+The default value is NamePlanet="Earth", which is currently
+the only recognized planet.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATIONAXIS'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsRotAxisPrimary'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$IsRotAxisPrimary'},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'RotAxisTheta'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'RotAxisPhi'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'ROTATIONAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#ROTATIONAXIS
+T			IsRotAxisPrimary (rest of parameters read if true)
+23.5			RotAxisTheta
+198.3			RotAxisPhi
+
+If the IsRotAxisPrimary variable is false, the rotational axis
+is aligned with the magnetic axis. If it is true, the other two variables
+are read, which give the position of the rotational axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true rotational axis determined by the
+date and time given by #STARTTIME.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATION'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseRotation'},'content' => [{'attrib' => {'type' => 'real','name' => 'RotationPeriod'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'MAGNETICAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#ROTATION
+T			UseRotation
+24.06575		RotationPeriod [hour] (read if UseRotation is true)
+
+If UseRotation is false, the planet is assumed to stand still, 
+and the OmegaPlanet variable is set to zero. 
+If UseRotation is true, the RotationPeriod variable is read in hours, 
+and it is converted to the angular speed OmegaPlanet given in radians/second.
+Note that OmegaPlanet is relative to an inertial coordinate system,
+so the RotationPeriod is not 24 hours for the Earth, but the
+length of the astronomical day.
+
+The default is to use rotation with the real rotation period of the planet.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'MAGNETICAXIS'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsMagAxisPrimary'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$IsMagAxisPrimary'},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisTheta'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhi'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'MAGNETICAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+34.5			MagAxisTheta [degree]
+0.0			MagAxisPhi   [degree]
+
+If the IsMagAxisPrimary variable is false, the magnetic axis
+is aligned with the rotational axis. If it is true, the other two variables
+are read, which give the position of the magnetic axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true magnetic axis determined by the
+date and time given by #STARTTIME.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'DIPOLE'},'content' => [{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#DIPOLE
+-3.11e-4		DipoleStrength [Tesla]
+
+The DipoleStrength variable contains the
+magnetic equatorial strength of the dipole magnetic field in Tesla.
+
+The default value is the real dipole strength for the planet.
+For the Earth the default is taken to be -31100 nT.
+The sign is taken to be negative so that the magnetic axis can
+point northward as usual.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'UPDATEB0'},'content' => [{'attrib' => {'min' => '-1','default' => '0.0001','type' => 'real','name' => 'DtUpdateB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+The DtUpdateB0 variable determines how often the position of
+the magnetic axis is recalculated. A negative value indicates that
+the motion of the magnetic axis during the course of the simulation
+is neglected. This is an optimization parameter, since recalculating
+the values which depend on the orientation of the magnetic
+field can be costly. Since the magnetic field moves relatively
+slowly as the planet rotates around, it may not be necessary
+to continuously update the magnetic field orientation.
+
+The default value is 0.0001, which means that the magnetic axis
+is continuously followed.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'IDEALAXES'},'content' => [{'content' => '
+
+#IDEALAXES
+
+The #IDEALAXES command has no parameters. It sets both the rotational
+and magnetic axes parallel with the ecliptic North direction. In fact
+it is identical with
+
+#ROTATIONAXIS
+T               IsRotAxisPrimary
+0.0             RotAxisTheta
+0.0             RotAxisPhi
+
+#MAGNETICAXIS
+F               IsMagAxisPrimary
+
+but much shorter.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'USER DEFINED INPUT'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+','type' => 't'},{'attrib' => {'name' => 'USER_FLAGS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserInnerBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSource'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserPerturbation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserOuterBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserICs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSpecifyRefinement'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserLogFiles'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserWritePlot'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserAMR'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserEchoInput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSetPhysConst'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserUpdateStates'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#USER_FLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserSetPhysConst
+F                       UseUserUpdateStates
+
+This command controls the use of user defined routines in user_routines.f90.
+For each flag that is set, an associated routine will be called in 
+user_routines.f90.  Default is .false. for all flags.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USERINPUTBEGIN'},'content' => [{'content' => '
+
+This command signals the beginning of the section of the file which 
+is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
+The section ends with the #USERINPUTEND command. There is no XML based parameter
+checking in the user section.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USERINPUTEND'},'content' => [{'content' => '
+
+This command signals the end of the section of the file which 
+is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
+The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
+checking in the user section.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'TESTING AND TIMING'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -170,13 +449,6 @@ F                       DoWriteSpeedFile
 
 ! controls the writing of speed_ files.  These have been used mostly on the
 ! cray to do timing tests.  The default is .false.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-#PROGRESS
-10			DnProgressShort
-100			DnProgressLong
-
-! The frequency of short and long progress reports for BATSRUS in
-! stand alone mode. These are the defaults. Set -1-s for no progress reports.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'INITIAL AND BOUNDARY CONDITIONS'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
@@ -388,29 +660,7 @@ have approximately zero tilt towards the Sun.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#TIMEACCURATE
-F               DoTimeAccurate
-
-This command is only used in stand alone mode.
-
-If DoTimeAccurate is set to true, BATSRUS solves
-a time dependent problem. If DoTimeAccurate is false, a steady-state
-solution is sought for. It is possible to use steady-state mode
-in the first few sessions to obtain a steady state solution,
-and then to switch to time accurate mode in the following sessions.
-In time accurate mode saving plot files, log files and restart files,
-or stopping conditions are taken in simulation time, which is the
-time relative to the initial time. In steady state mode the simulation
-time is not advanced at all, instead the time step or iteration number
-is used to control the frequencies of various actions.
-
-The steady-state mode also allows BATSRUS to use local time stepping
-as an accelarate convergence to steady state.
-
-The default value is false, which indicates local time stepping.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'TIMESTEPPING'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nStage'},'content' => [{'attrib' => {'value' => '1','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.8','type' => 'real','name' => 'CflExpl'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'},{'attrib' => {'name' => 'TIMESTEPPING'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nStage'},'content' => [{'attrib' => {'value' => '1','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.8','type' => 'real','name' => 'CflExpl'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #TIMESTEPPING
 2                       nStage
@@ -548,6 +798,9 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The commands in this group only work in stand alone mode.
+
 ','type' => 't'},{'attrib' => {'required' => '$_IsStandAlone','if' => '$_IsStandAlone','name' => 'STOP'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'MaxIteration'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'tSimulationMax'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #STOP
@@ -1481,26 +1734,6 @@ F                       UseDefaultUnits
 0.000000E-01            BZ0Diss
 
 ! Default values are shown. Parameters for problem_dissipation
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USER_FLAGS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserInnerBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSource'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserPerturbation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserOuterBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserICs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSpecifyRefinement'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserLogFiles'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserWritePlot'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserAMR'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserEchoInput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSetPhysConst'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserUpdateStates'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#USER_FLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserSetPhysConst
-F                       UseUserUpdateStates
-
-! This command controls the use of user defined routines in user_routines.f90.
-! For each flag that is set, an associated routine will be called in 
-! user_routines.f90.  Default is .false. for all flags.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'SECONDBODY'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseBody2'},'content' => [{'attrib' => {'min' => '0','default' => '0.1','type' => 'real','name' => 'rBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMin','max' => '$xMax','default' => '-40','type' => 'real','name' => 'xBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMin','max' => '$yMax','default' => '0','type' => 'real','name' => 'yBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMin','max' => '$zMax','default' => '0','type' => 'real','name' => 'zBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$rBody2','default' => '1.3*$rBody2','type' => 'real','name' => 'rCurrents2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '5','type' => 'real','name' => 'RhoDimBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '25000','type' => 'real','name' => 'tDimBody2'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
 
 #SECONDBODY

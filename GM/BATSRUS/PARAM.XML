@@ -15,6 +15,390 @@ List of MH (GM and IH) commands used in the PARAM.in file
 <set name="MaxBlockALL" type="integer" 
 	value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
 
+<commandgroup name="STAND ALONE MODE">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!  STAND ALONE PARAMETER !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="NEWPARAM" if="$_IsStandAlone">
+	<parameter name="UseNewParam"    type="logical" default="T"/>
+	<parameter name="UseNewAxes"     type="logical" default="T"/>
+	<parameter name="DoTimeAccurate" type="logical" default="T"/>
+	<parameter name="UseCorotation"  type="logical" default="T"/>
+
+#NEWPARAM
+T			UseNewParam
+T			UseNewAxes
+T			DoTimeAccurate
+T			UseCorotation
+
+This command can be used to make the standalone code backwards compatible.
+
+If UseNewParam is true, the time frequencies of various commands 
+(SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
+of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
+
+If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
+and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+
+If UseNewAxes is true, the planet's rotational and magnetix axes are set by the new
+algorithms found in share/Library/src/CON\_axes, the planet data is set and
+stored by share/Library/src/CON\_planet, and magnetic field information and
+mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
+of the planet is calculated using $v_\phi=\Omega$ \times $r$.
+
+If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
+are used. Some of these algorithms are inaccurate, some of them contain bugs,
+some of them are inefficient. The algorithms were kept for sake of backwards
+compatibility.
+
+The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
+(consistent with the assumption that the default behaviour is as realistic as possible).
+
+The default values depend on how the standalone code was installed
+(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
+all the logicals have true default values (consistent with SWMF), 
+for STANDALONE=old and STANDALONE=oldtest the default values are false 
+(consistent with BATSRUS v7.72 and earlier).
+</command>
+
+<command name="DESCRIPTION" if="$_IsStandAlone">
+	<parameter name="StringDescription" type="string" length="100" />
+
+#DESCRIPTION
+This is a test run for Jupiter with no rotation.
+
+This command is only used in the stand alone mode.
+
+The StringDescription string can be used to describe the simulation
+for which the parameter file is written. The #DESCRIPTION command and
+the StringDescription string are saved into the restart file,
+which helps in identifying the restart files.
+
+The default value is "Please describe me!", which is self explanatory.
+</command>
+
+<command name="ECHO" if="$_IsStandAlone">
+        <parameter name="DoEcho" type="logical" default="F"/>
+
+#ECHO
+T                       DoEcho
+
+This command is only used in the stand alone mode.
+
+If the DoEcho variable is true, the input parameters are echoed back.
+The default value for DoEcho is .false., but it is a good idea to
+set it to true at the beginning of the PARAM.in file.
+</command>
+
+<command name="PROGRESS" if="$_IsStandAlone">
+	<parameter name="DnProgressShort" type="integer" min="-1" 
+		default="10"  />
+	<parameter name="DnProgressLong"  type="integer" min="-1" 
+		default="100" />
+#PROGRESS
+10			DnProgressShort
+100			DnProgressLong
+
+The frequency of short and long progress reports for BATSRUS in
+stand alone mode. These are the defaults. Set -1-s for no progress reports.
+</command>
+
+<command name="TIMEACCURATE" if="$_IsStandAlone">
+        <parameter name="DoTimeAccurate" type="logical" default="T" />
+
+#TIMEACCURATE
+F               DoTimeAccurate
+
+This command is only used in stand alone mode.
+
+If DoTimeAccurate is set to true, BATSRUS solves
+a time dependent problem. If DoTimeAccurate is false, a steady-state
+solution is sought for. It is possible to use steady-state mode
+in the first few sessions to obtain a steady state solution,
+and then to switch to time accurate mode in the following sessions.
+In time accurate mode saving plot files, log files and restart files,
+or stopping conditions are taken in simulation time, which is the
+time relative to the initial time. In steady state mode the simulation
+time is not advanced at all, instead the time step or iteration number
+is used to control the frequencies of various actions.
+
+The steady-state mode allows BATSRUS to use local time stepping
+to accelarate the convergence towards steady state.
+
+The default value depends on how the stand alone code was installed.
+See the description of the NEWPARAM command.
+</command>
+
+<command name="BEGIN_COMP" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="END_COMP" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+</commandgroup>
+
+<commandgroup name="PLANET COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The planet commands can only be used in stand alone mode and only
+when UseNewAxes is set to true (see discussion at the NEWPARAM command).
+The commands allow to work with an arbitrary planet.
+It is also possible to change some parameters of the planet relative
+to the real values.
+
+By default Earth is assumed with its real parameters.
+Another planet can be selected with the #PLANET command.
+The real planet parameters can be modified and simplified
+with the other planet commands listed in this subsection.
+These modifier commands cannot preceed the #PLANET command!
+
+<command name="PLANET" if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="NamePlanet" type="string" input="select">
+		<option name="Earth" value="EARTH/Earth/earth" default="T" />
+		<option name="New" />
+	</parameter>
+	<if expr="$NamePlanet eq 'New'">
+		<parameter name="RadiusPlanet" type="real" min="0" />
+		<parameter name="MassPlanet"   type="real" min="0" />
+		<parameter name="OmegaPlanet"  type="real" min="0" />
+		<parameter name="TiltRotation" type="real" min="0" />
+		<parameter name="TypeBField"   type="string" input="select">
+			<option name="NONE" />
+			<option name="DIPOLE" default="T" />
+		</parameter>
+	</if>
+	<if expr="$TyepBField eq 'DIPOLE'">
+		<parameter name="MagAxisThetaGeo" type="real" 
+						min="0" max="180"/>
+		<parameter name="MagAxisPhiGeo"   type="real"
+						min="0" max="360"/>
+		<parameter name="DipoleStrength"  type="real"    />
+	</if>
+	<rule expr="not $PlanetCommand">
+		PLANET should precede $PlanetCommand
+	</rule>
+
+#PLANET
+New			NamePlanet (rest of parameters read for unknown planet)
+6300000.0		RadiusPlanet [m]
+5.976E+24		MassPlanet   [kg]
+0.000000199		OmegaPlanet  [radian/s]
+23.5			TiltRotation [degree]
+DIPOLE			TypeBField
+11.0			MagAxisThetaGeo [degree]
+289.1			MagAxisPhiGeo   [degree]
+-31100.0E-9		DipoleStrength  [T]
+
+The NamePlanet parameter contains the name of the planet
+with arbitrary capitalization. In case the name of the planet
+is not recognized, the following variables are read:
+RadiusPlanet is the radius of the planet,
+MassPlanet is the mass of the planet, 
+OmegaPlanet is the angular speed relative to an inertial frame,
+TiltRotation is the tilt of the rotation axis relative to ecliptic North,
+TypeBField, which can be "NONE" or "DIPOLE". 
+TypeBField="NONE" means that the planet does not have magnetic field. 
+It TypeBField is set to "DIPOLE" than the following variables are read:
+MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
+of the north magnetic pole in corotating planetocentric coordinates.
+Finally DipoleStrength is the equatorial strength of the magnetic dipole
+field. The units are indicated in the above example, which shows the
+Earth values approximately.
+
+The default value is NamePlanet="Earth", which is currently
+the only recognized planet.
+</command>
+
+<command name="ROTATIONAXIS" if="$_IsStandAlone">
+	<parameter name="IsRotAxisPrimary" type="logical" default="T" />
+	<if expr="$IsRotAxisPrimary">
+		<parameter name="RotAxisTheta" type="real" min="0" max="180"/>
+		<parameter name="RotAxisPhi"   type="real" min="0" max="360"/>
+	</if>
+	<set name="PlanetCommand" type="string" value="ROTATIONAXIS" />
+
+#ROTATIONAXIS
+T			IsRotAxisPrimary (rest of parameters read if true)
+23.5			RotAxisTheta
+198.3			RotAxisPhi
+
+If the IsRotAxisPrimary variable is false, the rotational axis
+is aligned with the magnetic axis. If it is true, the other two variables
+are read, which give the position of the rotational axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true rotational axis determined by the
+date and time given by #STARTTIME.
+</command>
+
+<command name="ROTATION" if="$_IsStandAlone">
+	<parameter name="UseRotation" type="logical" default="T" />
+	<if expr="$UseRotation">
+		<parameter name="RotationPeriod" type="real" />
+	</if>
+	<set name="PlanetCommand" type="string" value="MAGNETICAXIS" />
+
+#ROTATION
+T			UseRotation
+24.06575		RotationPeriod [hour] (read if UseRotation is true)
+
+If UseRotation is false, the planet is assumed to stand still, 
+and the OmegaPlanet variable is set to zero. 
+If UseRotation is true, the RotationPeriod variable is read in hours, 
+and it is converted to the angular speed OmegaPlanet given in radians/second.
+Note that OmegaPlanet is relative to an inertial coordinate system,
+so the RotationPeriod is not 24 hours for the Earth, but the
+length of the astronomical day.
+
+The default is to use rotation with the real rotation period of the planet.
+</command>
+
+<command name="MAGNETICAXIS" if="$_IsStandAlone">
+	<parameter name="IsMagAxisPrimary" type="logical" default="T" />
+	<if expr="$IsMagAxisPrimary">
+		<parameter name="MagAxisTheta" type="real" min="0" max="180"/>
+		<parameter name="MagAxisPhi"   type="real" min="0" max="360"/>
+	</if>
+	<set name="PlanetCommand" type="string" value="MAGNETICAXIS" />
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+34.5			MagAxisTheta [degree]
+0.0			MagAxisPhi   [degree]
+
+If the IsMagAxisPrimary variable is false, the magnetic axis
+is aligned with the rotational axis. If it is true, the other two variables
+are read, which give the position of the magnetic axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true magnetic axis determined by the
+date and time given by #STARTTIME.
+</command>
+
+<command name="DIPOLE" if="$_IsStandAlone">
+	<parameter name="DipoleStrength" type="real" />
+
+#DIPOLE
+-3.11e-4		DipoleStrength [Tesla]
+
+The DipoleStrength variable contains the
+magnetic equatorial strength of the dipole magnetic field in Tesla.
+
+The default value is the real dipole strength for the planet.
+For the Earth the default is taken to be -31100 nT.
+The sign is taken to be negative so that the magnetic axis can
+point northward as usual.
+</command>
+
+<command name="UPDATEB0" if="$_IsStandAlone">
+	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001" />
+
+The DtUpdateB0 variable determines how often the position of
+the magnetic axis is recalculated. A negative value indicates that
+the motion of the magnetic axis during the course of the simulation
+is neglected. This is an optimization parameter, since recalculating
+the values which depend on the orientation of the magnetic
+field can be costly. Since the magnetic field moves relatively
+slowly as the planet rotates around, it may not be necessary
+to continuously update the magnetic field orientation.
+
+The default value is 0.0001, which means that the magnetic axis
+is continuously followed.
+</command>
+
+<command name="IDEALAXES" if="$_IsStandAlone">
+
+#IDEALAXES
+
+The #IDEALAXES command has no parameters. It sets both the rotational
+and magnetic axes parallel with the ecliptic North direction. In fact
+it is identical with
+
+#ROTATIONAXIS
+T               IsRotAxisPrimary
+0.0             RotAxisTheta
+0.0             RotAxisPhi
+
+#MAGNETICAXIS
+F               IsMagAxisPrimary
+
+but much shorter.
+</command>
+
+</commandgroup>
+
+<commandgroup name="USER DEFINED INPUT">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="USER_FLAGS">
+	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
+	<parameter name="UseUserSource"	           type="logical" default="F"/>
+	<parameter name="UseUserPerturbation"      type="logical" default="F"/>
+	<parameter name="UseUserOuterBcs"          type="logical" default="F"/>
+	<parameter name="UseUserICs"               type="logical" default="F"/>
+	<parameter name="UseUserSpecifyRefinement" type="logical" default="F"/>
+	<parameter name="UseUserLogFiles"          type="logical" default="F"/>
+	<parameter name="UseUserWritePlot"         type="logical" default="F"/>
+	<parameter name="UseUserAMR"               type="logical" default="F"/>
+	<parameter name="UseUserEchoInput"         type="logical" default="F"/>
+	<parameter name="UseUserB0"                type="logical" default="F"/>
+	<parameter name="UseUserSetPhysConst"      type="logical" default="F"/>
+	<parameter name="UseUserUpdateStates"      type="logical" default="F"/>
+
+#USER_FLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserSetPhysConst
+F                       UseUserUpdateStates
+
+This command controls the use of user defined routines in user_routines.f90.
+For each flag that is set, an associated routine will be called in 
+user_routines.f90.  Default is .false. for all flags.
+</command>
+
+<command name="USERINPUTBEGIN">
+
+This command signals the beginning of the section of the file which 
+is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
+The section ends with the #USERINPUTEND command. There is no XML based parameter
+checking in the user section.
+</command>
+
+<command name="USERINPUTEND">
+
+This command signals the end of the section of the file which 
+is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
+The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
+checking in the user section.
+</command>
+
+</commandgroup>
+
 <commandgroup name="TESTING AND TIMING">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -293,19 +677,6 @@ F                       DoWriteSpeedFile
 
 ! controls the writing of speed_ files.  These have been used mostly on the
 ! cray to do timing tests.  The default is .false.
-</command>
-
-<command name="PROGRESS" if="$_IsStandAlone">
-	<parameter name="DnProgressShort" type="integer" min="-1" 
-		default="10"  />
-	<parameter name="DnProgressLong"  type="integer" min="-1" 
-		default="100" />
-#PROGRESS
-10			DnProgressShort
-100			DnProgressLong
-
-! The frequency of short and long progress reports for BATSRUS in
-! stand alone mode. These are the defaults. Set -1-s for no progress reports.
 </command>
 
 </commandgroup>
@@ -654,31 +1025,6 @@ have approximately zero tilt towards the Sun.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="TIMEACCURATE" if="$_IsStandAlone">
-        <parameter name="DoTimeAccurate" type="logical" default="T" />
-
-#TIMEACCURATE
-F               DoTimeAccurate
-
-This command is only used in stand alone mode.
-
-If DoTimeAccurate is set to true, BATSRUS solves
-a time dependent problem. If DoTimeAccurate is false, a steady-state
-solution is sought for. It is possible to use steady-state mode
-in the first few sessions to obtain a steady state solution,
-and then to switch to time accurate mode in the following sessions.
-In time accurate mode saving plot files, log files and restart files,
-or stopping conditions are taken in simulation time, which is the
-time relative to the initial time. In steady state mode the simulation
-time is not advanced at all, instead the time step or iteration number
-is used to control the frequencies of various actions.
-
-The steady-state mode also allows BATSRUS to use local time stepping
-as an accelarate convergence to steady state.
-
-The default value is false, which indicates local time stepping.
-</command>
-
 <command name="TIMESTEPPING">
 	<parameter name="nStage" type="integer" input="select">
 		<option value="1" default="T" />
@@ -920,6 +1266,9 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The commands in this group only work in stand alone mode.
+
 <command name="STOP" required="$_IsStandAlone" if="$_IsStandAlone">
 	<parameter name="MaxIteration" type="integer" min="-1" default="-1" />
 	<parameter name="tSimulationMax" type="real"  min="-1" default="-1" />
@@ -2469,40 +2818,6 @@ F                       UseDefaultUnits
 </command>
 
 <!-- ^CFG END DISSFLUX -->
-<command name="USER_FLAGS">
-	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
-	<parameter name="UseUserSource"	           type="logical" default="F"/>
-	<parameter name="UseUserPerturbation"      type="logical" default="F"/>
-	<parameter name="UseUserOuterBcs"          type="logical" default="F"/>
-	<parameter name="UseUserICs"               type="logical" default="F"/>
-	<parameter name="UseUserSpecifyRefinement" type="logical" default="F"/>
-	<parameter name="UseUserLogFiles"          type="logical" default="F"/>
-	<parameter name="UseUserWritePlot"         type="logical" default="F"/>
-	<parameter name="UseUserAMR"               type="logical" default="F"/>
-	<parameter name="UseUserEchoInput"         type="logical" default="F"/>
-	<parameter name="UseUserB0"                type="logical" default="F"/>
-	<parameter name="UseUserSetPhysConst"      type="logical" default="F"/>
-	<parameter name="UseUserUpdateStates"      type="logical" default="F"/>
-
-#USER_FLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserSetPhysConst
-F                       UseUserUpdateStates
-
-! This command controls the use of user defined routines in user_routines.f90.
-! For each flag that is set, an associated routine will be called in 
-! user_routines.f90.  Default is .false. for all flags.
-</command>
 
 <!-- ^CFG IF SECONDBODY BEGIN -->
 <command name="SECONDBODY" if="$_IsFirstSession">
