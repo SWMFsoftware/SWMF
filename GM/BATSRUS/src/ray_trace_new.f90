@@ -346,14 +346,15 @@ contains
     ! Follow the ray through the local blocks
     BLOCK: do iCount = 1, MaxCount
 
-       if(iCount == MaxCount)then
-          write(*,*)'iStart_D    =',iStart_D
-          write(*,*)'XyzRay_D    =',XyzRay_D
-          write(*,*)'XyzStart_BLK=',XyzStart_BLK(:,iBlockRay)
-          call stop_mpi('follow_ray passed through more than MaxCount blocks')
+       if(iCount < MaxCount)then
+          call follow_ray_block(iRay,iBlockRay,XyzRay_D,iFace)
+       else
+          write(*,*)NameSub,' WARNING ray passed through more than MaxCount blocks:'
+          write(*,*)NameSub,'    iStart_D    =',iStart_D
+          write(*,*)NameSub,'    XyzRay_D    =',XyzRay_D
+          write(*,*)NameSub,'    XyzStart_BLK=',XyzStart_BLK(:,iBlockRay)
+          iFace = ray_loop_
        end if
-
-       call follow_ray_block(iRay,iBlockRay,XyzRay_D,iFace)
 
        select case(iFace)
        case(ray_block_)
