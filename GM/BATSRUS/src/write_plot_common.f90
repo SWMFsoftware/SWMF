@@ -218,7 +218,7 @@ subroutine write_plot_common(ifile)
   ! Get the headers that contain variables names and units
   select case(plot_form(ifile))
   case('tec')
-     call get_TEC_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
+     call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
      call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
@@ -1126,534 +1126,244 @@ end subroutine dimensionalize_plotvar
 
 !==============================================================================
 
-subroutine get_TEC_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
+subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   use ModPhysics
-  use ModIO, ONLY : plot_type,plot_dimensional
-  use ModVarIndexes, ONLY : NameVar_V
+  use ModUtilities,  ONLY: lower_case
+  use ModIO,         ONLY: plot_type,plot_dimensional
+  use ModVarIndexes, ONLY: NameVar_V
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: Nplotvar,iFile
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=500), intent(out) :: unitstr_TEC 
-  character (len=10) :: s
+  integer, intent(in)              :: nPlotVar, iFile
+  character (len=10), intent(in)   :: NamePlotVar_V(nPlotVar)
+  character (len=500), intent(out) :: StringVarTec 
 
-  integer :: iVar, len, jVar
-
+  character (len=10) :: NamePlotVar, NameVar, NameTecVar, NameUnit
+  integer            :: iPlotVar, iVar
 
   !\
   ! This routine takes the plot_var information and loads the header file with
   ! the appropriate string of variable names and units
   !/
 
+  ! Coordinate names and units
   if(index(plot_type(ifile),'sph')>0) then
 
      if (plot_dimensional(ifile)) then
-   	write(unitstr_TEC,'(a)') 'VARIABLES = '
-    	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Z '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)// &
-             '", "`q [degree]", "`f[degree]'
+        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
+             // '", "Y ' // trim(unitstr_TEC_x) &
+             // '", "Z ' // trim(unitstr_TEC_x) &
+             // '", "`q [degree]", "`f[degree]'
      else
-   	write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y", "Z", "`q", "`f'
+   	StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
      end if
 
   else
 
      if (plot_dimensional(ifile)) then
-   	write(unitstr_TEC,'(a)') 'VARIABLES = '
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-             trim(unitstr_TEC_x)
-   	write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Z '//&
-             trim(unitstr_TEC_x)
+        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
+             // '", "Y ' // trim(unitstr_TEC_x) &
+             // '", "Z ' // trim(unitstr_TEC_x)
      else
-   	write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y", "Z'
+   	StringVarTec = 'VARIABLES = "X", "Y", "Z"'
      end if
 
   end if
 
-  do iVar = 1, nplotvar
+  do iPlotVar = 1, nPlotVar
 
-     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "'
+     NamePlotVar = NamePlotVar_V(iPlotVar)
+     call lower_case(NamePlotVar)
 
-     s=plotvarnames(iVar)
+     ! Default value for NameUnit is empty string
+     NameUnit = ''
 
-     if (plot_dimensional(ifile)) then
-
-        select case(s)
-
-           ! BASIC MHD variables 
-        case('rho') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r'//' '//&
-               trim(unitstr_TEC_rho)
-        case('rhoUx','rhoux','mx') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_x'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('rhoUy','rhouy','my') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_y'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('rhoUz','rhouz','mz') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'`r U_z'//' '//&
-               trim(unitstr_TEC_rhoU)
-        case('Bx','bx') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_x'//' '//&
-               trim(unitstr_TEC_B)
-        case('By','by') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_y'//' '//&
-               trim(unitstr_TEC_B)
-        case('Bz','bz') 
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'B_z'//' '//&
-               trim(unitstr_TEC_B)
-           ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
-        case('BxL','bxl') ! east
-           unitstr_TEC=trim(unitstr_TEC)//'B_e'//' '//trim(unitstr_TEC_B)
-        case('BxR','bxr') ! west
-           unitstr_TEC=trim(unitstr_TEC)//'B_w'//' '//trim(unitstr_TEC_B)
-        case('ByL','byl') ! south
-           unitstr_TEC=trim(unitstr_TEC)//'B_s'//' '//trim(unitstr_TEC_B)
-        case('ByR','byr') ! north
-           unitstr_TEC=trim(unitstr_TEC)//'B_n'//' '//trim(unitstr_TEC_B)
-        case('BzL','bzl') ! bottom
-           unitstr_TEC=trim(unitstr_TEC)//'B_b'//' '//trim(unitstr_TEC_B)
-        case('BzR','bzr') ! top
-           unitstr_TEC=trim(unitstr_TEC)//'B_t'//' '//trim(unitstr_TEC_B)
-           !                                        !^CFG END CONSTRAINB
-        case('E','e')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'E'//' '//&
-                trim(unitstr_TEC_energydens)
-        case('P','p','Pth','pth')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'p'//' '//&
-                trim(unitstr_TEC_p)
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Ew'//' '//&
-                trim(unitstr_TEC_energydens)
-!^CFG END ALWAVES
-
-           ! EXTRA MHD variables 
-
-        case('Ux','ux') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_x'//' '//&
-                trim(unitstr_TEC_U)
-        case('Uy','uy') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_y'//' '//&
-                trim(unitstr_TEC_U)
-        case('Uz','uz') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_z'//' '//&
-                trim(unitstr_TEC_U)
-        case('Ur','ur') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_r'//' '//&
-                trim(unitstr_TEC_U)
-        case('rhoUr','rhour','mr') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r U_r'//' '//&
-                trim(unitstr_TEC_rhoU)
-        case('Br','br') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'B_r'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1x','b1x') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'B1_x'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1y','b1y')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_y'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1z','b1z')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_z'//' '//&
-                trim(unitstr_TEC_B)
-        case('B1r','b1r')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B1_r'//' '//&
-                trim(unitstr_TEC_B)
-        case('Jx','jx') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'J_x'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jy','jy')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_y'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jz','jz')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_z'//' '//&
-                trim(unitstr_TEC_J)
-        case('Jr','jr')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'J_r'//' '//&
-                trim(unitstr_TEC_J)                
-        case('Ex','ex') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'E_x'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Ey','ey')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_y'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Ez','ez')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_z'//' '//&
-                trim(unitstr_TEC_electric)
-        case('Er','er')                                 
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'E_r'//' '//&
-                trim(unitstr_TEC_electric)                
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_x'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_y'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_z'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_r'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('B2ur','B2Ur','b2ur')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B^2/`u_0 U_r'//' '//&
-                trim(unitstr_TEC_Poynting)                
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'~Q~7B'//' '//&
-                trim(unitstr_TEC_DivB)
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-
-        case('theta1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_1'//' '//&
-                trim(unitstr_TEC_angle)
-        case('phi1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`f_1'//' '//&
-                trim(unitstr_TEC_angle)
-        case('theta2')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_2'//' '//&
-                trim(unitstr_TEC_angle)
-        case('phi2')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`f_2'//' '//&
-                trim(unitstr_TEC_angle)
-        case('status')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'Status'
-
-           ! EXTRA RAYTRACE variables
-        case('f1x')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'f1x'
-        case('f1y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1y'
-        case('f1z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1z'
-        case('f2x')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2x'
-        case('f2y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2y'
-        case('f2z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2z'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION
-        case('dx')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dx'//' '//&
-                trim(unitstr_TEC_x)
-        case('dt')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dt'//' '//&
-                trim(unitstr_TEC_t)
-        case('dtblk','dtBLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dtblk'//' '//&
-                trim(unitstr_TEC_t)
-        case('impl','IMPL')                                  !^CFG IF IMPLICIT BEGIN
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'impl' !^CFG END IMPLICIT
-        case('PE','pe','proc')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'PE #'
-        case('blk','BLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'Block #'
-        case('blkall','BLKALL')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'blkall'
-        case('child')
-           write(unitstr_TEC,'(a)') & 
-               trim(unitstr_TEC)//'Child #'
-
-           ! DEFAULT FOR A BAD SELECTION
-        case default
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)) )
-              jVar=jVar+1
-           end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//&
-                   ' '//trim(NameVar_V(jVar))//' '//&
-                   trim(TypeUnitVarsTec_V(jVar))
-           else           
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//'Default'
+     select case(NamePlotVar)
+     case('rho') 
+        NameTecVar = '`r'
+        NameUnit   = unitstr_TEC_rho
+     case('rhoux','mx') 
+        NameTecVar = '`r U_x'
+        NameUnit   = unitstr_TEC_rhoU
+     case('rhouy','my') 
+        NameTecVar = '`r U_y'
+        NameUnit   = unitstr_TEC_rhoU
+     case('rhouz','mz') 
+        NameTecVar = '`r U_z'
+        NameUnit   = unitstr_TEC_rhoU
+     case('bx') 
+        NameTecVar = 'B_x'
+        NameUnit   = unitstr_TEC_B
+     case('by') 
+        NameTecVar = 'B_y'
+        NameUnit   = unitstr_TEC_B
+     case('bz') 
+        NameTecVar = 'B_z'
+        NameUnit   = unitstr_TEC_B
+        ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
+     case('bxl') ! east
+        NameTecVar = 'B_e'
+        NameUnit   = unitstr_TEC_B
+     case('bxr') ! west
+        NameTecVar = 'B_w'
+        NameUnit   = unitstr_TEC_B
+     case('byl') ! south
+        NameTecVar = 'B_s'
+        NameUnit   = unitstr_TEC_B
+     case('byr') ! north
+        NameTecVar = 'B_n'
+        NameUnit   = unitstr_TEC_B
+     case('bzl') ! bottom
+        NameTecVar = 'B_b'
+        NameUnit   = unitstr_TEC_B
+     case('bzr') ! top
+        NameTecVar = 'B_t'
+        NameUnit   = unitstr_TEC_B
+        !                                        !^CFG END CONSTRAINB
+     case('e')
+        NameTecVar = 'E'
+        NameUnit   = unitstr_TEC_energydens
+     case('p','pth')
+        NameTecVar = 'p'
+        NameUnit   = unitstr_TEC_p
+     case('ew')                                  !^CFG IF ALWAVES BEGIN
+        NameTecVar = 'Ew'
+        NameUnit   = unitstr_TEC_energydens      !^CFG END ALWAVES
+     case('ux') 
+        NameTecVar = 'U_x'
+        NameUnit   = unitstr_TEC_U
+     case('uy') 
+        NameTecVar = 'U_y'
+        NameUnit   = unitstr_TEC_U
+     case('uz') 
+        NameTecVar = 'U_z'
+        NameUnit   = unitstr_TEC_U
+     case('ur') 
+        NameTecVar = 'U_r'
+        NameUnit   = unitstr_TEC_U
+     case('rhour','mr') 
+        NameTecVar = '`r U_r'
+        NameUnit   = unitstr_TEC_rhoU
+     case('br') 
+        NameTecVar = 'B_r'
+        NameUnit   = unitstr_TEC_B
+     case('b1x') 
+        NameTecVar = 'B1_x'
+        NameUnit   = unitstr_TEC_B
+     case('b1y')                                 
+        NameTecVar = 'B1_y'
+        NameUnit   = unitstr_TEC_B
+     case('b1z')                                 
+        NameTecVar = 'B1_z'
+        NameUnit   = unitstr_TEC_B
+     case('b1r')                                 
+        NameTecVar = 'B1_r'
+        NameUnit   = unitstr_TEC_B
+     case('jx') 
+        NameTecVar = 'J_x'
+        NameUnit   = unitstr_TEC_J
+     case('jy')                                 
+        NameTecVar = 'J_y'
+        NameUnit   = unitstr_TEC_J
+     case('jz')                                 
+        NameTecVar = 'J_z'
+        NameUnit   = unitstr_TEC_J
+     case('jr')                                 
+        NameTecVar = 'J_r'
+        NameUnit   = unitstr_TEC_J                
+     case('ex') 
+        NameTecVar = 'E_x'
+        NameUnit   = unitstr_TEC_electric
+     case('ey')                                 
+        NameTecVar = 'E_y'
+        NameUnit   = unitstr_TEC_electric
+     case('ez')                                 
+        NameTecVar = 'E_z'
+        NameUnit   = unitstr_TEC_electric
+     case('er')                                 
+        NameTecVar = 'E_r'
+        NameUnit   = unitstr_TEC_electric                
+     case('pvecx')
+        NameTecVar = 'S_x'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecy')
+        NameTecVar = 'S_y'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecz')
+        NameTecVar = 'S_z'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('pvecr')
+        NameTecVar = 'S_r'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('b2ur')
+        NameTecVar = 'B^2/`u_0 U_r'
+        NameUnit   = unitstr_TEC_Poynting                
+     case('divb', 'divb_cd', 'divb_ct', 'absdivb')
+        NameTecVar = '~Q~7B'
+        NameUnit   = unitstr_TEC_DivB
+     case('theta1')                              !^CFG  IF RAYTRACE BEGIN
+        NameTecVar = '`q_1'
+        NameUnit   = unitstr_TEC_angle
+     case('phi1')
+        NameTecVar = '`f_1'
+        NameUnit   = unitstr_TEC_angle
+     case('theta2')
+        NameTecVar = '`q_2'
+        NameUnit   = unitstr_TEC_angle
+     case('phi2')
+        NameTecVar = '`f_2'
+        NameUnit   = unitstr_TEC_angle
+     case('status')
+        NameTecVar = 'Status'
+     case('f1x','f1y','f1z','f2x','f2y','f2z')
+        NameTecVar = NamePlotVar                 !^CFG END RAYTRACE
+     case('dx')
+        NameTecVar = 'dx'
+        NameUnit   = unitstr_TEC_x
+     case('dt')
+        NameTecVar = 'dt'
+        NameUnit   = unitstr_TEC_t
+     case('dtblk')
+        NameTecVar = 'dtblk'
+        NameUnit   = unitstr_TEC_t
+     case('impl')                                !^CFG IF IMPLICIT
+        NameTecVar = 'impl'                      !^CFG IF IMPLICIT
+     case('PE','pe','proc')
+        NameTecVar = 'PE #'
+     case('blk')
+        NameTecVar = 'Block #'
+     case('blkall')
+        NameTecVar = 'blkall'
+     case('child')
+        NameTecVar = 'Child #'
+     case default
+        ! Use the plot variable name by default but unit is not known
+        NameTecVar = NamePlotVar
+        NameUnit   = 'Default'
+        ! Try to find the plot variable among the basic variables to set unit
+        do iVar = 1, nVar
+           NameVar = NameVar_V(iVar)
+           call lower_case(NameVar)
+           if(NameVar == NamePlotVar)then
+              NameUnit = TypeUnitVarsTec_V(iVar)
+              EXIT
            end if
+        end do
+     end select
 
-        end select
+     StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
 
-     else
-
-        select case(s)
-
-           ! BASIC MHD variables
-        case('rho') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'`r'
-        case('rhoUx','rhoux','mx') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_x'
-        case('rhoUy','rhouy','my') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_y'
-        case('rhoUz','rhouz','mz') 		       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_z'
-        case('Bx','bx') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_x'
-        case('By','by') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_y'
-        case('Bz','bz') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_z'
-
-           ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
-        case('BxL','bxl') ! east
-           unitstr_TEC=trim(unitstr_TEC)//'B_e'
-        case('BxR','bxr') ! west
-           unitstr_TEC=trim(unitstr_TEC)//'B_w'
-        case('ByL','byl') ! south
-           unitstr_TEC=trim(unitstr_TEC)//'B_s'
-        case('ByR','byr') ! north
-           unitstr_TEC=trim(unitstr_TEC)//'B_n'
-        case('BzL','bzl') ! bottom
-           unitstr_TEC=trim(unitstr_TEC)//'B_b'
-        case('BzR','bzr') ! top
-           unitstr_TEC=trim(unitstr_TEC)//'B_t'
-           !                                        !^CFG END CONSTRAINB
-        case('E','e')				       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'E'
-        case('P','p','Pth','pth')		       
-           write(unitstr_TEC,'(a)') & 		       
-               trim(unitstr_TEC)//'p'
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Ew'
-!^CFG END ALWAVES
-           ! EXTRA MHD variables
-
-        case('Ux','ux') 
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'U_x'
-        case('Uy','uy') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_y'
-        case('Uz','uz') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_z'
-        case('Ur','ur') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'U_r'
-        case('rhoUr','rhour','mr') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'`r U_r'
-        case('Br','br') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B_r'
-        case('B1x','b1x') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'B1_x'
-        case('B1y','b1y')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_y'
-        case('B1z','b1z')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_z'
-        case('B1r','b1r')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'B1_r'
-        case('Jx','jx') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'J_x'
-        case('Jy','jy')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_y'
-        case('Jz','jz')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_z'
-        case('Jr','jr')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'J_r'
-        case('Ex','ex') 			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'E_x'
-        case('Ey','ey')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_y'
-        case('Ez','ez')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_z'
-        case('Er','er')                                
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'E_r'
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_x'
-        case('pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_y'
-        case('pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_z'
-        case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'S_r'
-        case('B2ur','B2Ur','b2ur')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'B^2/`u_0 U_r'
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'~Q~7B'
-
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-
-        case('theta1')
-           write(unitstr_TEC,'(a)') &                      
-                trim(unitstr_TEC)//'`q_1'
-        case('phi1')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`f_1'
-        case('theta2')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`q_2'
-        case('phi2')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'`f_2'
-        case('status')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'Status'
-
-           ! EXTRA RAYTRACE variables		       
-        case('f1x')				       
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1x'
-        case('f1y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1y'
-        case('f1z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f1z'
-        case('f2x')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2x'
-        case('f2y')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2y'
-        case('f2z')				       	  
-           write(unitstr_TEC,'(a)') &                     
-                trim(unitstr_TEC)//'f2z'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION			       
-        case('dx')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dx'
-        case('dt')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dt'
-        case('dtblk','dtBLK')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'dtblk'
-        case('impl','IMPL')               !^CFG IF IMPLICIT BEGIN
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'impl' !^CFG END IMPLICIT
-        case('PE','pe','proc')			       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'PE #'
-        case('blk','BLK')
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Block #'
-        case('blkall','BLKALL')
-           write(unitstr_TEC,'(a)') & 
-                trim(unitstr_TEC)//'blkall'
-        case('child')				       
-           write(unitstr_TEC,'(a)') & 		       
-                trim(unitstr_TEC)//'Child #'
-
-        case default
-           jVar = 1
-           do while (jVar < nVar .and. s /= NameVar_V(jVar))
-              jVar=jVar+1
-           end do
-           if(trim(s) == trim(NameVar_V(jVar))) then
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//&
-                   ' '//trim(NameVar_V(jVar))
-           else           
-              write(unitstr_TEC,'(a)') & 
-                   trim(unitstr_TEC)//'Default'
-           end if
-        end select
-
-     end if
+     if (plot_dimensional(ifile)) &
+          StringVarTec = trim(StringVarTec) // ' ' //NameUnit
 
   end do
 
-  write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
+  ! Append a closing double quote
+  StringVarTec = trim(StringVarTec) // '"'
 
 end subroutine get_TEC_variables
-
 
 !==============================================================================
 
@@ -1661,8 +1371,8 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
-  use ModIO,         ONLY : plot_type, plot_dimensional
-  use ModVarIndexes, ONLY : NameVar_V
+  use ModIO,         ONLY: plot_type, plot_dimensional
+  use ModVarIndexes, ONLY: NameVar_V
   implicit none
 
   ! Arguments
@@ -1708,17 +1418,17 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = unitstr_IDL_energydens
      case('p','pth')
         NameUnit = unitstr_IDL_p
-     case('ew')                             !^CFG IF ALWAVES
+     case('ew')                                  !^CFG IF ALWAVES
         NameUnit = unitstr_IDL_energydens        !^CFG IF ALWAVES
      case('ux','uy','uz','ur')
         NameUnit = unitstr_IDL_U
      case('jx','jy','jz','jr') 
         NameUnit = unitstr_IDL_J
-     case('Ex','ex','Ey','ey','Ez','ez','Er','er')
+     case('ex','ey','ez','er')
         NameUnit = unitstr_IDL_electric
-     case('pvecx','pvecy','pvecz','pvecr','B2ur','B2Ur','b2ur')
+     case('pvecx','pvecy','pvecz','pvecr','b2ur')
         NameUnit = unitstr_IDL_Poynting
-     case('DivB','divB','divb','divb_cd','divb_ct')
+     case('divb','divb_cd','divb_ct','absdivb')
         NameUnit = unitstr_IDL_DivB
      case('theta1','phi1','theta2','phi2')       !^CFG  IF RAYTRACE BEGIN
         NameUnit = 'deg'
