@@ -94,7 +94,7 @@ Module CON_global_vector
   public::bcast_global_vector
   public::used_vector,used_mask,ubound_vector,ubound_mask
   public::set_mask,count_mask
-  public::point_state_v,point_state_vi,point_state_vx
+  public::point_state_v
   interface point_state_v
      module procedure point_state_vi
      module procedure point_state_vx
@@ -163,7 +163,9 @@ contains
        i_vector=iLoop
        if(trim(Name)==trim(NameVector_I(iLoop)))return
     end do
-    call CON_stop('Global vector '//Name//' is not allocated')
+    call CON_stop(&
+         'Global vector '//Name//' is not allocated at PE=',&
+         i_proc())
   end function i_vector
   !==========================================================!
   integer function i_mask(Name)
@@ -257,7 +259,7 @@ contains
           if(.not.Mask_I(iMask)%I(iLoop))CYCLE FINDTRUE
           iStart=iLoop
           FINDFALSE:do while (iLoop<nU_I(2))
-             if(Mask_I(iMask)%I(iLoop+1))EXIT FINDFALSE
+             if(.not.Mask_I(iMask)%I(iLoop+1))EXIT FINDFALSE
              iLoop=iLoop+1
           end do FINDFALSE
           call MPI_BCAST(Vector_I(iVector)%I(1,iStart),&
@@ -266,8 +268,8 @@ contains
                iProc,iComm,iError)
        end do FINDTRUE
     else
-       call MPI_BCAST(Vector_I(iVector)%I(1,iStart),&
-            (iLoop-iStart+1)*nU_I(1),&
+       call MPI_BCAST(Vector_I(iVector)%I(1,1),&
+            nU_I(1)*nU_I(2),&
             MPI_REAL,&
             iProc,iComm,iError)
     end if
@@ -371,19 +373,19 @@ contains
     iFinal=0
     iProcNew=pe_decomposition(GD%DD%Ptr,&
          i_global_node_a(GD%DD%Ptr,1))
-    DIFFBLOCK:do while(iBlockAll<nBlockAll)
+    DIFFPROC:do while(iBlockAll<nBlockAll)
        iBlockAll=iBlockAll+1
        iStart=iFinal+1
        iFinal=iFinal+nGridPointsPerBlock
        iProc= iProcNew
-       SAMEBLOCK:do while(iBlockAll<nBlockAll)
+       SAMEPROC:do while(iBlockAll<nBlockAll)
           iProcNew=pe_decomposition(&
                GD%DD%Ptr,&
                i_global_node_a(GD%DD%Ptr,iBlockAll+1))
-          if(iProc/=iProcNew)EXIT SAMEBLOCK
+          if(iProc/=iProcNew)EXIT SAMEPROC
           iBlockAll=iBlockAll+1
           iFinal=iFinal+nGridPointsPerBlock
-       end do SAMEBLOCK
+       end do SAMEPROC
        if(UseMask)then
           iLoop=iStart-1
           FINDTRUE:do while (iLoop<iFinal)
@@ -401,11 +403,11 @@ contains
           end do FINDTRUE
        else
           call MPI_BCAST(Vector_I(iVector)%I(1,iStart),&
-               (iLoop-iStart+1)*nU_I(1),&
+               (iFinal-iStart+1)*nU_I(1),&
                MPI_REAL,&
                iTranslated_P(iProc),iCommUnion,iError)
        end if
-    end do DIFFBLOCK
+    end do DIFFPROC
   end subroutine bcast_in_union
   !=======================================================
   function ubound_vector(NameVector)
@@ -440,26 +442,7 @@ contains
     character(LEN=*),intent(in)::NameMask
     count_mask=count(Mask_I(i_mask(NameMask))%I)
   end function count_mask
-  !=======================================================
-  subroutine put_state(NameVector,iPoint,nVar,State_V,DoAdd)
-    character(LEN=*),intent(in)::NameVector
-    integer,intent(in)::iPoint,nVar
-    real,dimension(nVar),intent(in)::State_V
-    logical::DoAdd
-    integer,save::iVector=0
-    character(LEN=nLength),save::NameSaved=''
-    if(trim(NameSaved)/=trim(NameVector))then
-       iVector=i_vector(NameVector)
-       NameSaved=NameVector
-    end if
-    if(DoAdd)then
-       Vector_I(iVector)%I(:,iPoint)=&
-            Vector_I(iVector)%I(:,iPoint)+State_V
-    else
-       Vector_I(iVector)%I(:,iPoint)=State_V
-    end if
-  end subroutine put_state
-  !===================================================
+  !======================================================!
   function point_state_vi(NameVector,nVar,iPoint)
     character(LEN=*),intent(in)::NameVector
     integer,intent(in)::iPoint,nVar
@@ -472,6 +455,7 @@ contains
     end if
     point_state_vi=Vector_I(iVector)%I(:,iPoint)
   end function point_state_vi
+  !======================================================!
   function point_state_vx(&
        NameVector, &
        nVar,       &

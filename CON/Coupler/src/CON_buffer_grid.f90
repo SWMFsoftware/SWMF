@@ -21,11 +21,15 @@ contains
          nIndexesTarget=1)
     if(is_proc(compid_grid(TargetGD%DD%Ptr)))&
          call allocate_vector(NameBuffer,nVar,TargetGD)
+    if(is_proc0(compid_grid(TargetGD%DD%Ptr)))&
+         write(*,*)'Allocated '//NameBuffer//' bounds=',&
+         ubound_vector(NameBuffer)
   end subroutine init_buffer_grid_couple
   !=============================================================!
   subroutine couple_buffer_grid(&
 !Router: should be preset. See CON_router for the instructions. !
-      Router,& 
+      Router,&
+      nVar,  &
 !You should use one external subroutines. It                    !
 !is important to mention that in the procedure itself there is  !
 !absolutely no names of the data sets to be sent-received. You  !
@@ -38,7 +42,8 @@ contains
 !particular place of the global buffer and proberly             !
 !sent-received. A name of your  procedure which gets your data  !
 !and place them to a small buffer should be used here. Use      !
-!fill_buffer=your_procedure_name best of all...                 !
+!fill_buffer=your_procedure_name best of all...
+!
       fill_buffer,&
       NameBuffer,TargetID_)
 !INPUT ARGUMENTS:         
@@ -88,10 +93,12 @@ contains
        end subroutine fill_buffer
     end interface
     character(LEN=*),intent(in)::NameBuffer
-    integer,intent(in)::TargetID_
-    call associate_with_global_vector(State_VI,NameBuffer)
+    integer,intent(in)::nVar,TargetID_
+    if(is_proc(TargetID_))&
+         call associate_with_global_vector(&
+         State_VI,NameBuffer)
     call global_message_pass(Router,&
-         ubound(State_VI,1),&
+         nVar,&
          fill_buffer,&
          put_to_global_vector)
     if(is_proc(TargetID_))&

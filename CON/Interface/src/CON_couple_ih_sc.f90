@@ -40,14 +40,15 @@ module CON_couple_ih_sc
  
   type(RouterType),save             :: RouterIhSc
   type(RouterType),save             :: RouterScBuff
-  type(GridDescriptorType),save     :: SC_Grid
+  type(GridDescriptorType),save     :: SC_SourceGrid
+  type(GridDescriptorType),save     :: SC_TargetGrid
   type(GridDescriptorType),save     :: IH_Grid
   type(GridDescriptorType),save     :: BuffGD
   type(DomainDecompositionType),&
        save,target                  :: BuffDD
   logical :: DoInitialize=.true., DoTest, DoTestMe
 
-  character(len=*), parameter :: NameMod='CON_couple_sc_ih'
+  character(len=*), parameter :: NameMod='couple_ih_sc'
 
 
 contains
@@ -67,14 +68,14 @@ contains
     DoInitialize=.false.
 
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-    if(DoTest)write(*,*)'couple_ih_sc_init iProc=',i_proc()
+ !   if(DoTest)write(*,*)'couple_ih_sc_init iProc=',i_proc()
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
        iCompTarget=SC_,             & ! component index for target
        nGhostPointTarget=2,         & ! number of halo points in target
        GridDescriptorSource=IH_Grid,& ! OUT!\
-       GridDescriptorTarget=SC_Grid,& ! OUT!-General coupler variables 
+       GridDescriptorTarget=SC_TargetGrid,& !-General coupler variables 
        Router=RouterIhSc)             ! OUT!/
 
     IH_iGridRealization=-1
@@ -85,9 +86,12 @@ contains
     call set_standard_grid_descriptor(&
          BuffDD,          &
          Standard_=Nodes_,&
+         nGhostGridPoints=1,  &
          GridDescriptor=BuffGD)
+    call set_standard_grid_descriptor(&
+         SC_,GridDescriptor=SC_SourceGrid)
     call init_buffer_grid_couple(&
-         SourceGD=SC_Grid,&
+         SourceGD=SC_SourceGrid,&
          TargetGD=BuffGD, &
          RouterToBuffer=RouterScBuff,    &
          nVar=8,&
@@ -130,7 +134,7 @@ contains
 !EOP
     if(.not.RouterIhSc%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-    if(DoTest)write(*,*)'couple_ih_sc iProc=',i_proc()
+!    if(DoTest)write(*,*)'couple_ih_sc iProc=',i_proc()
 
     ! Synchronize and broadcast domain decompostion (AMR may have changed it)
     call IH_synchronize_refinement(RouterIhSc%iProc0Source,&
@@ -142,17 +146,18 @@ contains
     if(IH_iGridRealization/=i_realization(IH_).or.&     
          SC_iGridInIhSc/=i_realization(SC_))then  
 
-       if(DoTest)write(*,*)'couple_ih_sc call set_router iProc=',i_proc()
+!       if(DoTest)write(*,*)'couple_ih_sc call set_router iProc=',i_proc()
 
        call set_router(&
             GridDescriptorSource=IH_Grid,&
-            GridDescriptorTarget=SC_Grid,&
+            GridDescriptorTarget=SC_TargetGrid,&
             Router=RouterIhSc,&
             is_interface_block=boundary_block,&
             interface_point_coords=outer_cells, &
             interpolate=interpolation_fix_reschange)
        IH_iGridRealization=i_realization(IH_)
        SC_iGridInIhSc       =i_realization(SC_)
+ !      if(DoTest)write(*,*)'couple_ih_sc passed set_router iProc=',i_proc()
     end if
 
     call couple_comp(&
@@ -169,9 +174,9 @@ contains
     logical,dimension(3)::IsBoundary_D
 
     IsBoundary_D=is_right_boundary_d(&
-         SC_Grid%DD%Ptr,lGlobalTreeNode).or.&
+         SC_TargetGrid%DD%Ptr,lGlobalTreeNode).or.&
          is_left_boundary_d(&
-         SC_Grid%DD%Ptr,lGlobalTreeNode)
+         SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     boundary_block=any(IsBoundary_D)
 
   end function Boundary_block
@@ -194,10 +199,10 @@ contains
     integer,parameter::x_=1,y_=2,z_=3
 
     IsLeftFace_D=Index_I(x_:z_)<1.and.is_left_boundary_d(&
-         SC_Grid%DD%Ptr,lGlobalTreeNode)
+         SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     IsRightFace_D=Index_I(x_:z_)>&
-         ncells_decomposition_d(SC_Grid%DD%Ptr).and.&
-         is_right_boundary_d(SC_Grid%DD%Ptr,lGlobalTreeNode)
+         ncells_decomposition_d(SC_TargetGrid%DD%Ptr).and.&
+         is_right_boundary_d(SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     IsInterfacePoint=any(IsRightFace_D.or.IsLeftFace_D)
   end subroutine outer_cells 
   !========================================================!
@@ -206,6 +211,7 @@ contains
 !IROUTINE: couple_sc_ih - interpolate and get MHD state at the IH buffer grid 
 !INTERFACE:
   subroutine couple_sc_ih(TimeCoupling)
+    use ModIoUnit
     !INPUT ARGUMENTS:
     interface
        subroutine SC_get_for_ih(&
@@ -218,32 +224,49 @@ contains
          real,dimension(nVar),intent(out)::State_V
        end subroutine SC_get_for_ih
     end interface
-
+    integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
+    integer,save::iCoupling=0
+    integer::iFile
+    character(LEN=21)::NameFile
 !EOP
     if(.not.RouterScBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-    if(DoTest)write(*,*)'couple_sc_ih iProc=',i_proc()
+!    if(DoTest)write(*,*)'couple_sc_ih iProc=',i_proc()
 
     if(SC_iGridInScIh/=SC_iGridInIhSc)then  
 
-       if(DoTest)write(*,*)'couple_sc_sc call set_router iProc=',i_proc()
+!       if(DoTest)write(*,*)'couple_sc_ih call set_router iProc=',i_proc()
 
        call set_router(&
-            GridDescriptorSource=SC_Grid,&
+            GridDescriptorSource=SC_SourceGrid,&
             GridDescriptorTarget=BuffGD,&
             Router=RouterScBuff,&
             mapping=buffer_grid_point,&
             interpolate=interpolation_fix_reschange)
+!       if(DoTest)write(*,*)'couple_sc_ih passed set_router iProc=',i_proc()
        SC_iGridInScIh= SC_iGridInIhSc
     end if
-
     call couple_buffer_grid(&
          RouterScBuff,&
+         nVar=8,&
          fill_buffer=SC_get_for_ih,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
-
+!    if(DoTest)write(*,*)'couple_sc_ih: passed messagepass iProc=',&
+!         i_proc()
+    if(DoTest.and.is_proc0(compid_grid(BuffGD%DD%Ptr)))then
+       nU_I=ubound_vector('IH_from_sc')
+       iCoupling=iCoupling+1
+       iFile=io_unit_new()
+       write(NameFile,'(a,i4.4,a)')'./IH/from_sc_',iCoupling,'.dat'
+       open(iFile,FILE=NameFile,STATUS='unknown')
+       do iPoint=1,nU_I(2)
+          write(iFile,*)point_state_v('IH_from_sc',8,iPoint)
+       end do
+       close(iFile)
+    end if
+    if(DoTest)write(*,*)'Couple passed at PE=',i_proc()
   end subroutine couple_sc_ih
   !======================================================!
   subroutine buffer_grid_point(&

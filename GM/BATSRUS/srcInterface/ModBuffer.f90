@@ -17,14 +17,13 @@ contains
   end subroutine set_buffer_name
   !====================================================
   subroutine set_spher_buffer_grid(DD,CompID_,IsLocal)
-    use ModProcMH,ONLY:iProc
     type(DomainDecompositionType),&
          intent(out)::DD
     integer,intent(in)::CompID_
     logical,intent(in)::IsLocal
     call init_decomposition(&
          DD,CompID_,nDim=3,IsLocal=IsLocal)
-    if(iProc==0.or.IsLocal)call get_root_decomposition(&
+    if(is_proc0(CompID_).or.IsLocal)call get_root_decomposition(&
          DD,&
          iRootMapDim_D=(/1,1,1/),&
          XyzMin_D=(/RBuffMin,cZero,cZero/),&
@@ -34,7 +33,9 @@ contains
     if(.not.IsLocal)then
        call bcast_decomposition(DD)
     else
+       call complete_grid(DD)
        call set_standard_grid_descriptor(DD,Standard_=Nodes_,&
+            nGhostGridPoints=1,  &
             GridDescriptor=LocalBufferGD)
     end if
   end subroutine set_spher_buffer_grid

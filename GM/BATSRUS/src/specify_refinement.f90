@@ -361,6 +361,11 @@ subroutine specify_initial_refinement(refb, lev)
 
            endif
 
+        case ('coupledhelio')
+           !refine to have resolution not worse 4.0 and
+           !refine the body intersecting blocks
+           refb(iBLK)=minRblk<=rBody.or.dx_BLK(iBLK)>4.01
+
         case ('magnetosphere')
            ! Refine for generic magnetosphere
            if (maxRblk > Rbody) then
