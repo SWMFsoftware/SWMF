@@ -52,15 +52,12 @@ SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 
 SWMFREF = \
 	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
-	${DIR}/share/Makefile.protex \
-	${DIR}/Makefile.protex \
-	${DIR}/CON/Makefile.protex \
-	${DIR}/share/build/Makefile.protex \
 	${DIR}/Scripts/TestParam.protex \
+	${DIR}/Scripts/Restart.protex \
+	${DIR}/Scripts/Performance.protex \
+	${BATSRUS_SCRIPTS} \
 	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/ExpandParam.protex \
-	${DIR}/Scripts/Restart.protex \
-	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/FixMakefileDef.protex \
 	${SCRIPTDIR}/FixMpi.protex \
@@ -76,9 +73,12 @@ SWMFREF = \
 	${SCRIPTDIR}/FixI8toI4.protex \
 	${SCRIPTDIR}/XmlToTex.protex \
 	${SCRIPTDIR}/protex.protex \
+	${DIR}/Makefile.protex \
+	${DIR}/share/Makefile.protex \
+	${DIR}/share/build/Makefile.protex \
 	${DIR}/share/build/Makefile.doc.protex \
 	${DIR}/doc/Tex/Makefile.protex \
-	${BATSRUS_SCRIPTS} \
+	${DIR}/CON/Makefile.protex \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
