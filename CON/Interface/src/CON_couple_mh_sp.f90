@@ -76,7 +76,6 @@ contains
        if(used_mask('SP_IsInIH'))DoneRestart=.true. !^CMP IF IH
     end if
     call MPI_BCAST(DoneRestart,1,MPI_LOGICAL,i_proc0(SP_),i_comm(),iError)
-    nPointIH=0
     if(.not.DoneRestart)then
        !Construct auxiliary SP_grid with ONE point per line
        if(is_proc0(SP_))&
@@ -344,7 +343,7 @@ contains
     end if
   end subroutine SP_put_a_line_point
  !==================================================================
-  subroutine couple_ih_sp(DataInputTime)
+  subroutine couple_ih_sp(DataInputTime)   !^CMP IF IH BEGIN
     use CON_global_message_pass
     interface
        subroutine IH_get_for_sp(nPartial,&
@@ -376,6 +375,7 @@ contains
          real,dimension(nVar),intent(in)::Buff_I
        end subroutine SP_put_from_mh
     end interface
+    
     real,intent(in)::DataInputTime
 
     if(.not.RouterIhSp%IsProc)return
@@ -397,7 +397,24 @@ contains
          fill_buffer=IH_get_for_sp,&
          apply_buffer=SP_put_from_mh)
     if(is_proc(SP_))call SP_put_input_time(DataInputTime)
+                                          !^CMP IF SC BEGIN
+    !This coupler is performed after SC-SP coupling, so that 
+    !on SP the updated coordinates are available for those
+    !points which passed from SC to IH
+
+    if(use_comp(SC_))&                     
+         call bcast_global_vector('SP_Xyz_DI',&
+         RouterIhSp%iProc0Target,&
+         RouterIhSp%iCommUnion)           !^CMP END SC
+
+    call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
   end subroutine couple_ih_sp
+  !-------------------------------------------------------------------------
+  logical function is_in_ih(Xyz_D)
+    real,dimension(:),intent(in)::Xyz_D
+    is_in_ih=dot_product(Xyz_D,Xyz_D)>=RBoundIH**2.and.&
+         all(Xyz_D<=xyz_max_d(IH_)).and.all(Xyz_D>=xyz_min_d(IH_))
+  end function is_in_ih              !^CMP END IH
   !=========================================================================
   subroutine couple_sc_sp(DataInputTime)
     use CON_global_message_pass
@@ -439,7 +456,7 @@ contains
     call bcast_global_vector('SP_Xyz_DI',&
          RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion,&
-         'SP_IsInIH')
+         'SP_IsInSC')
     call set_router(& 
          GridDescriptorSource=SC_GridDescriptor,&
          GridDescriptorTarget=SP_GridDescriptor,&
@@ -452,6 +469,19 @@ contains
          fill_buffer=SC_get_for_sp,&
          apply_buffer=SP_put_from_mh)
     if(is_proc(SP_))call SP_put_input_time(DataInputTime)
+    call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
   end subroutine couple_sc_sp
+  !-------------------------------------------------------------------------
+  logical function is_in_sc(Xyz_D)
+    real,dimension(:),intent(in)::Xyz_D
+    real::R2
+    R2=dot_product(Xyz_D,Xyz_D)
+    if(use_comp(IH_))then            !^CMP IF IH BEGIN
+       is_in_sc=R2>=RBoundSC**2.and.R2<RBoundIH**2
+    else                             !^CMP END IH
+       is_in_sc=R2>=RBoundSC**2.and.&
+            all(Xyz_D<=xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
+    end if                           !^CMP IF IH
+  end function is_in_sc              !^CMP END SC
   !=========================================================================
 end Module CON_couple_mh_sp
