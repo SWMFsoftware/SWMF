@@ -407,7 +407,7 @@ contains
     ! 30Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
-    integer :: iUnitOut
+    integer :: iUnitOut, iError
     !-------------------------------------------------------------------
     
     call check_i_comp(iComp,NameSub)
@@ -455,8 +455,16 @@ contains
        end if
     end if
 
+
+    ! Synchronize PE-s used by the component
+    call timing_start(NameComp_I(iComp)//'_barrier')
+    call MPI_barrier(i_comm(iComp),iError)
+    call timing_stop(NameComp_I(iComp)//'_barrier')
+
     ! Work on this time step
+    call timing_start(NameComp_I(iComp)//'_run')
     call sleep(DtCpu_C(iComp))
+    call timing_stop(NameComp_I(iComp)//'_run')
 
   end subroutine run_comp_id
 
