@@ -12,7 +12,7 @@ include Makefile.DEPEND
 OBJ_IH = GM_put_from_ih.o
 #^CMP END IH
 #^CMP IF IM BEGIN
-OBJ_IM = GM_get_for_im.o GM_put_from_im.o
+OBJ_IM = ModGmImCoupling.o GM_get_for_im.o GM_put_from_im.o
 #^CMP END IM
 #^CMP IF IE BEGIN
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
