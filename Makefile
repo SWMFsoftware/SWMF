@@ -4,7 +4,7 @@
 #
 
 SHELL=/bin/sh
-VERSION = 1.1
+VERSION = 2.0
 
 #
 # List the default target first
