@@ -54,6 +54,10 @@ SWMF:
 	   FIX (Aug25,2004): Stop and restart timing for 'SWMF' after setup.
 	   MODIFIED:         CON/Control/src/CON_main.f90
 
+        3. For some layouts the TIMING utility could not handle all timings.
+           Fix (Aug27,2004): Increased MaxTiming from 100 to 1000
+           MODIFIED:         util/TIMING/src/ModTiming.f90
+
 RB:
         1. The Radiation Belt (RB) module included with this release
            does not conform to several SWMF requirements for physics
