@@ -3214,7 +3214,7 @@ F			DoSendMHD
 	<parameter name="CmeA"	    type="real" min="0"	default="0.7"	/>
 	<parameter name="CmeR1"	    type="real" min="0"	default="1.2"	/>
 	<parameter name="CmeR0"     type="real" min="0"	default="1.0"	/>
-	<parameter name="CmeA1"     type="real" min="0"	default="0.23"	/>
+	<parameter name="CmeA1"     type="real" 	default="0.23"	/>
 	<parameter name="CmeAlpha"  type="real"		default="0.0"	/>
 	<parameter name="CmeRho1"   type="real" min="0"	default="2.5E-12"/>
 	<parameter name="CmeRho2"   type="real" min="0"	default="2.0E-13"/>
@@ -3225,7 +3225,7 @@ Low		TypeCme   model type ('Low')
 0.7		CmeA    [scaled] contraction distance
 1.2             CmeR1   [scaled] distance of spheromac from sun center
 1.0             CmeR0   [scaled] diameter of spheromac
-0.23		CmeA1   [Gauss]  spheromac B field strength
+0.23		CmeA1   [Gauss]  sets spheromac B strength which can be negative
 0.0		Cmealpha   [scaled] cme acceleration rate
 2.5E-12		CmeRho1 [kg/m^3] density of background corona before contract
 2.0E-13		CmeRho2 [kg/m^3] density of background corona after contract 
