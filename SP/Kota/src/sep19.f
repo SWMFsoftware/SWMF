@@ -1,133 +1,7 @@
 !All routines here include the following 'param.h' header
 !     integer::nRMax,nMuMax,nPMax
 !     parameter(nRMax=1000,nMuMax=40,nPMax=600)
-!BOP
-!ROUTINE: admit - reads the input parameters from the list
-!INTERFACE:
-      subroutine admit(iSize,NameList)
-!DESCRIPTION:
-!Read input parameters from list
-!in case of self similar solution, sets its parameters
-!sets the scattering length
-!EOP
-      include 'param.h'
-      integer iSize
-      character*80 Namelist(iSize)
-      common /size  / nr,nmu,nw, dim1
-      common /suly /  wghtl,wghtmu,wghtw
-      common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
-     1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /inphys/ wind0,period0,xlambda0
-      common /partid/ iz,massa,ekpp,xlmbda0
-      common /scphys/ wind,omega,xscatt1
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
-     1     xsc(0:nRMax)
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
-      common /convrt/ cAUKm,hour,valf
-      logical UseSelfSimilarity,UseRefresh
-      common/log/UseSelfSimilarity,UseRefresh
-      include 'stdout.h'
-      data  pmass,clight,xkm  / 938., 3.e10, 1.e5 / 
 
-c ----------------------------------- scales:
-      pi = 2.*asin(1.)
-      cAUKm = 1.5e8
-      hour = 3600.
-      valf = 21.8
-      e0 = pmass
-c ------------------------------------ input data:
-      read(NameList(1),*) nr,nmu,nw, wghtl,wghtmu,wghtw
-      write(iStdout,*) prefix,
-     1      'nr=',nr,'  nmu=',nmu,'  nw=',nw, 
-     2 '  wght1=',wghtl,'  wghtmu=',wghtmu,
-     3 '  wghtw=',wghtw
-      read(NameList(2),*) rmin,rmax,rshock
-      write(iStdout,*) prefix,
-     1    'rmin=',rmin,'  rmax=',rmax,'  rshock=',rshock
-      read(NameList(3),*) emin,emax,einj
-      write(iStdout,*) prefix,
-     1 'emin=',emin,'  emax=',emax,'  einj=',einj
-      read(NameList(4),*) 
-     1 UseSelfSimilarity,tmax,slamb,kfriss,kacc
-      UseRefresh=UseSelfSimilarity
-      write(iStdout,*) prefix,
-     1 'tmax=',tmax,'  slamb=',slamb,
-     2  '  kfriss=',kfriss,'  kacc=',kacc
-      read(NameList(5),*) swind,fwind,bbrad,period
-      write(iStdout,*) prefix,
-     1 'swind=',swind,'  fwind=',fwind,
-     2 '  bbrad=',bbrad,'  period=',period
-      read(NameList(6),*) iz,massa,ekpp,xlmbda0,qex
-      write(iStdout,*) prefix,
-     1 'iz=',iz,'  massa=',massa,'  ekpp=',
-     2 ekpp,'  xlambda0=',xlmbda0,'  qex=',qex
-      read(NameList(7),*) krmax,kemax
-      write(iStdout,*) prefix,
-     1 'krmax=',krmax,'  kemax=',kemax
-      read(NameList(8),*) (robs(k),k=1,krmax)
-      write(iStdout,*) prefix,
-     1       ('  robs(',k,')=',robs(k),k=1,krmax)
-      read(NameList(9),*) (keobs(k),k=1,kemax)
-      write(iStdout,*) prefix, 
-     1      ('  keobs(',k,')=',keobs(k),k=1,kemax)
-      write(iStdout,*) prefix, 
-     1       'particle energy in megavolts'
-      if(UseSelfSimilarity)then
-         dim = 3
-         dim1= dim-1
-c ------------------------------------ gasdynamics
-         nn = nr
-         mmdim = 2 
-         vvmin = swind
-         vvmax = fwind
-         vcmin =  0.
-         vcmax =  0.
-         bbrnt =  bbrad
-         bbrad =  bbrnt*valf*hour/cAUKm
-         vamin =  0.
-         vamax = vamin*sqrt(vvmin/vvmax)
-         ddmin = 10. 
-         ddmax = ddmin*vvmin/vvmax
-         vvmin = vvmin*hour/cAUKm
-         vvmax = vvmax*hour/cAUKm
-         ccmin = vcmin*hour/cAUKm
-         ccmax = vcmax*hour/cAUKm
-         aamin = vamin*hour/cAUKm
-         aamax = vamax*hour/cAUKm
-         bbmin = aamin*sqrt(ddmin)
-         bbmax = aamax*sqrt(ddmax)
-c ------------------------------------ times:     
-         dt1 = dt0/kfriss
-         dta = dt1/kacc   
-c ------------------------------------ calculation
-         wind = wind0*hour/cAUKm
-         swind = swind0*hour/cAUKm
-         if (period.gt.1.e3) then
-            omega = 0.
-         else
-            omega = 2.*pi/period/24.
-         end if
-      end if
-
-      xlambda0 = xlmbda0
-      if (xlambda0.gt.1.e3) then
-         xscatt1 = 0.
-      else
-         xscatt1 = ((3-qex)*(1-qex)/3.)/xlambda0
-      end if
-
-      return 
-      end
-
-c  *****************  end ADMIT   **************************
 !BOP
 !ROUTINE: cool - set functions of the energy coordinate
 !INTERFACE:
@@ -340,7 +214,8 @@ c **************************  end of INiT ****************
       
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
       common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)

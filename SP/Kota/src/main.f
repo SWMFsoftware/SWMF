@@ -13,6 +13,79 @@ c               no inward flux at i=nr+1, keep i=nr           *
 c               no inward flux at i=nr+1, keep i=nr           *
 c     PEEL-OFF  Routine added - but not used                  *
 c**************************************************************
+      subroutine sp_set_defaults
+      implicit none
+      include 'param.h'
+      integer nr,nmu,nw
+      real dim1
+      common /size  / nr,nmu,nw, dim1
+      real wghtl,wghtmu,wghtw
+      common /suly /  wghtl,wghtmu,wghtw
+      real  time,tmax,dlnt0,dlnt1,dta
+      integer kfriss,kacc
+      common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
+      real emin,emax,eein,ee
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      integer kinj
+      real einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /quelle/ kinj,einj,pinj,qqp,qqx
+      integer iz,massa
+      real ekpp,xlmbda0,omega,xscatt1
+      common /partid/ iz,massa,ekpp,xlmbda0
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common /scphys/ omega,xscatt1
+      real qex,cmu(nMuMax),scmu(nMuMax)
+      real wsc(0:nPMax),xsc(0:nRMax)
+      common /scatti/ qex,cmu,scmu,wsc,xsc
+      integer krMax,krObs,kEMax,kEObs
+      real rObs,eObs
+      common /obsrad/ krmax,krobs(5),robs(5)
+      common /obserg/ kemax,keobs(5),eobs(5)
+      real period
+      !-----------------------------------------------------
+      nr=nRMax      !1000
+      nMu=nMuMax    !10
+      nW=nPMax      !150
+      wghtl=1.0
+      wghtmu=1.0
+      wghtw=1.0
+   
+      emin=0.001
+      emax=1000.
+      einj=0.005
+      kFriss=5
+      kAcc=5
+      period=26.0 !Days
+      iz=1
+      massa=1
+      ekpp=0.33
+      xlmbda0=0.4
+      qex=0.0
+      krMax=4
+      kEMax=5
+      rObs(1)=0.05
+      rObs(2)=0.1
+      rObs(3)=0.2
+      rObs(4)=1.0
+      kEObs(1)=25
+      kEObs(2)=50
+      kEObs(3)=75
+      kEObs(4)=100
+      kEObs(5)=125
+      if (period.gt.1.e3) then
+         omega = 0.
+      else
+         omega = 4.*asin(1.)/period/24.
+      end if
+   
+      if (xlmbda0.gt.1.e3) then
+         xscatt1 = 0.
+      else
+         xscatt1 = ((3-qex)*(1-qex)/3.)/xlmbda0
+      end if
+
+      end subroutine sp_set_defaults
+      
       subroutine sp_init
       implicit none
       
@@ -27,21 +100,18 @@ c**************************************************************
       common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /radio / nn,rmin,rshock,rmax,r
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common /scphys/ omega,xscatt1
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       include 'stdout.h'
-      character*80::NameList(9)
-      integer::nLine=9,jnext,jstep,jsep,kstep
+      integer::jnext,jstep,jsep,kstep
       integer::iStep
       common /spmain/jnext,jsep,jstep,istep
 c ----------------------------------------------------------
-      call set_stdout('SP: ')
       jnext = 2
        if(DoWriteAll)write(iStdout,*)prefix,
      1 'first j-stop at ',jnext
-c      call sp_read_inputs(9,NameList)
-      call admit(9,NameList)  
       call cool   
       call pangle  
 c ----------------------------------------------------------
@@ -56,13 +126,12 @@ c     initial conditions
       call initial
       call peeloff      
       call opentime
-      call SP_clean_coupler
 c ----------------------------------------------------------
       end subroutine sp_init
 !===========================================================!
 !Data from heliosphere and/or solar corona model are
 !obtained through the common blocks which are put into
-!the geader file coupler.h
+!the header file coupler.h
 !==================coupler.h begin:==========================!
 !The data which are accepted by SEP module from the corona or
 !inner heliosphere
@@ -81,29 +150,29 @@ c ----------------------------------------------------------
 !
 !pp - pressure in erg/cm^3
 !
-!      real::rx,ry,rz,vx,vy,vz,bx,by,bz,dd,pp
-!      integer:: iMax,nMax
+!      real rx,ry,rz,vx,vy,vz,bx,by,bz,dd,pp
+!      integer iMax,nMax
 !      PARAMETER(nMax=2500)
 !      common /ihcoord/ rx(nMax),ry(nMax),rz(nMax)
 !      common /ihvel/   vx(nMax), vy(nMax), vz(nMax)
 !      common /ihmagf/ bx(nMax), by(nMax), bz(nMax)
 !      common /ihpdi/     dd(nMax), pp(nMax), iMax
-!      real::vxOld,vyOld,vzOld
+!      real vxOld,vyOld,vzOld
 !      common /oldvel/     vxOld(nMax), vyOld(nMax), vzOld(nMax)
-!      integer::Old_,New_
+!      integer Old_,New_
 !      parameter(Old_=1,New_=2)
-!      integer::iShock,iShockOld
+!      integer iShock,iShockOld
 !      common/ishock/ishock/
 !      real Smooth_VII
-!      common/smooth/Smooth_VII(11,nMax,Old_:New_)
+!      common/smooth/Smooth_VII(11,nMax,New_)
 !      integer nResolution
 !      PARAMETER(nResolution=10)
 !=======================end coupler.h======================!
       subroutine SP_clean_coupler
       implicit none
       include 'coupler.h'
-      integer::iR,iV
-      real::cZero
+      integer iR,iV
+      real cZero
       parameter(cZero=0.00000000000000000000000000000000)
       do iR=1,nMax
          rx(iR)=cZero
@@ -129,7 +198,7 @@ c ----------------------------------------------------------
       end subroutine SP_clean_coupler
 
 !-----------------------------------------------------------!
-      subroutine sp_run(tSimulation,tFinal)
+      subroutine MASTER(tSimulation,tFinal)
       implicit none
       real tSimulation 
 
@@ -140,7 +209,7 @@ c ----------------------------------------------------------
       real tFinal
 ! intent (in)
 ! The value of the physical time to stop the run
-! After the physical time exceeds this value the run stops
+! After the physical time exceeds this value the run stops.
 ! tFinal DIFFERS from tmax, which is the value of the INTERNAL
 ! selfsimilar time to stop the run
 
@@ -158,7 +227,8 @@ c ----------------------------------------------------------
       common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /radio / nn,rmin,rshock,rmax,r
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common /scphys/ omega,xscatt1
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       logical UseSelfSimilarity,UseRefresh
@@ -254,28 +324,28 @@ c??   read(*,*)  jnext
          end if
       end do
       ! End of main time step loop
-      end subroutine sp_run
+      end subroutine MASTER
 !---------------------------------------------------------------!
       subroutine SP_sharpen_and_run(tSimulation,tFinal)
       implicit none
       include 'coupler.h'
       real  tSimulation
       real  tFinal
-      integer::jnext,jstep,jsep,Misc,kstep,iStep
+      integer jnext,jstep,jsep,Misc,kstep,iStep
       common /spmain/jnext,jsep,jstep,istep
-      integer::iCoupling,nCoupling,iR
+      integer iCoupling,nCoupling,iR
       real DtCoupling
       call get_ishock
       if(iShock<nResolution)then
          !Do not sharpen the shock wave
             call get_rshock
-            call sp_run(tSimulation,tFinal)
+            call MASTER(tSimulation,tFinal)
       else
          nCoupling=max(1,iShock-iShockOld)
          if(nCoupling.eq.1)then
             call sharpen_profile
             call get_rshock
-            call sp_run(tSimulation,tFinal)
+            call MASTER(tSimulation,tFinal)
             tSimulation=tFinal
          else
             DtCoupling=(tFinal-tSimulation)/nCoupling
@@ -318,7 +388,7 @@ c??   read(*,*)  jnext
                iShock=iShockOld+iCoupling
                call sharpen_profile
                call get_rshock
-               call sp_run(tSimulation,tSimulation+DtCoupling)
+               call MASTER(tSimulation,tSimulation+DtCoupling)
             end do
          end if
       end if
@@ -367,7 +437,7 @@ CCC     drr = arr(i)-arr(i-1)
       include 'stdout.h'
       real cRsunPerAU
       parameter(cRsunPerAU= 149.59787000000000000/0.696)
-      real::slamb,tblast,tblst1,rshck1,dlnt
+      real slamb,tblast,tblst1,rshck1,dlnt
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       rshck1=sqrt(rx(iShock)**2+    
      1     ry(iShock)**2+    
@@ -414,7 +484,8 @@ c ********************* end routine MASTER  *********************
       common /radio / nn,rmin,rshock,rmax,r(0:1000)
       common /times/  time,tmax,dt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common /scphys/ omega,xscatt1
       common /elem /  zr(0:1000),zv(0:1000),zp(0:1000),zn(0:1000)
       common /magia/  qb(0:1000),zb(0:1000),zt(0:1000) 
       common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),

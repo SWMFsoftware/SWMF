@@ -11,6 +11,9 @@
       logical UseSelfSimilarity,UseRefresh
       common/log/UseSelfSimilarity,UseRefresh
 
+      call set_stdout(' :  ')      
+      UseSelfSimilarity=.true.
+      call admit 
       call sp_init
 
 
@@ -19,51 +22,167 @@
 CCC   if(DoWriteAll)write(iStdout,*) prefix, 'PRESS 1'
 CCC   read(*,*)  lineno
 
-      if(UseSelfSimilarity)then
-         iLine=1
-         if(DoWriteAll)write(iStdout,*) prefix, 
-     1        'lineno=',iLine
+ 
+      iLine=1
+      if(DoWriteAll)write(iStdout,*) prefix, 
+     1     'lineno=',iLine
 CCC   if(DoWriteAll)write(iStdout,*) prefix, 'PRESS 9'
 CCC   read(*,*)  iSnapshot
-         iSnapshot=9            
+      iSnapshot=9            
 
 
-         call sp_get_from_ih(iLine,iSnapshot)
+      call sp_get_from_ih(iLine,iSnapshot)
       
-! Physical time to start the update
-         tSimulation=tCoupleHr*3.60d3 
-! The start time is read from the snapshot
-         if(DoWriteAll)write(iStdout,*)'tSimulation=',tSimulation
-
-! Final value of physical time is not defined
-         tFinal=1.0e8
-
-         call sp_run(tSimulation,tFinal)
-      else
-         tSimulation=-1.0
-         do iLine=114,197
-            call read_ihdata_for_sp(iLine,1,5)
-            call sp_sharpen_and_run(tSimulation,TimeToRead)
-         end do
-      end if
+!     Physical time to start the update
+      tSimulation=tCoupleHr*3.60d3 
+!     The start time is read from the snapshot
+      if(DoWriteAll)write(iStdout,*)'tSimulation=',tSimulation
+      
+!     Final value of physical time is not defined
+      tFinal=1.0e8
+      
+      call MASTER(tSimulation,tFinal)
       write(iStdout,*)'tSimulation=',tSimulation 
       
       call closetime  !Finalize
       stop
       end 
 !=============================================================!
-      subroutine sp_read_inputs(nLine,NameList_I)
-      implicit none
-      integer::nLine
-      integer::iLine,Misc
-      character*80::NameList_I(nLine)
-      call get_io_unit_new(Misc)
-      open(Misc,file = 'violet.in')
-      do iLine=1,nLine
-         read(Misc,'(a)')Namelist_I(iLine)
-      end do
-      close(Misc)
+!BOP
+!ROUTINE: admit - reads the input parameters
+!INTERFACE:
+      subroutine admit
+!DESCRIPTION:
+!Read input parameters from list
+!in case of self similar solution, sets its parameters
+!sets the scattering length
+!EOP
+      include 'param.h'
+      common /size  / nr,nmu,nw, dim1
+      common /suly /  wghtl,wghtmu,wghtw
+      common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
+      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+     1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
+
+!      common /inphys/ wind0,period0,xlambda0
+!      commented out: is not a common block, variables are 
+!      undefined, their use is not proper 
+!      I.Sokolov<igorsok@umich.edu>
+
+      common /partid/ iz,massa,ekpp,xlmbda0
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /obsrad/ krmax,krobs(5),robs(5)
+      common /obserg/ kemax,keobs(5),eobs(5)
+      common /convrt/ cAUKm,hour,valf
+      logical UseSelfSimilarity,UseRefresh
+      common/log/UseSelfSimilarity,UseRefresh
+      include 'stdout.h'
+      integer iFile
+      data  pmass,clight,xkm  / 938., 3.e10, 1.e5 / 
+
+c ----------------------------------- scales:
+      pi = 2.*asin(1.)
+      cAUKm = 1.5e8
+      hour = 3600.
+      valf = 21.8
+      e0 = pmass
+c ------------------------------------ input data:
+      call get_io_unit_new(iFile)
+      open(iFile,FILE='violet.in')
+      read(iFile,*) nr,nmu,nw, wghtl,wghtmu,wghtw
+      write(iStdout,*) prefix,
+     1      'nr=',nr,'  nmu=',nmu,'  nw=',nw, 
+     2 '  wght1=',wghtl,'  wghtmu=',wghtmu,
+     3 '  wghtw=',wghtw
+      read(iFile,*) rmin,rmax,rshock
+      write(iStdout,*) prefix,
+     1    'rmin=',rmin,'  rmax=',rmax,'  rshock=',rshock
+      read(iFile,*) emin,emax,einj
+      write(iStdout,*) prefix,
+     1 'emin=',emin,'  emax=',emax,'  einj=',einj
+      read(iFile,*) 
+     1 tmax,slamb,kfriss,kacc
+      UseRefresh=UseSelfSimilarity
+      write(iStdout,*) prefix,
+     1 'tmax=',tmax,'  slamb=',slamb,
+     2  '  kfriss=',kfriss,'  kacc=',kacc
+      read(iFile,*) swind,fwind,bbrad,period
+      write(iStdout,*) prefix,
+     1 'swind=',swind,'  fwind=',fwind,
+     2 '  bbrad=',bbrad,'  period=',period
+      read(iFile,*) iz,massa,ekpp,xlmbda0,qex
+      write(iStdout,*) prefix,
+     1 'iz=',iz,'  massa=',massa,'  ekpp=',
+     2 ekpp,'  xlambda0=',xlmbda0,'  qex=',qex
+      read(iFile,*) krmax,kemax
+      write(iStdout,*) prefix,
+     1 'krmax=',krmax,'  kemax=',kemax
+      read(iFile,*) (robs(k),k=1,krmax)
+      write(iStdout,*) prefix,
+     1       ('  robs(',k,')=',robs(k),k=1,krmax)
+      read(iFile,*) (keobs(k),k=1,kemax)
+      close(iFile)
+      write(iStdout,*) prefix, 
+     1      ('  keobs(',k,')=',keobs(k),k=1,kemax)
+      write(iStdout,*) prefix, 
+     1       'particle energy in megavolts'
+      if(UseSelfSimilarity)then
+         dim = 3
+         dim1= dim-1
+c ------------------------------------ gasdynamics
+         nn = nr
+         mmdim = 2 
+         vvmin = swind
+         vvmax = fwind
+         vcmin =  0.
+         vcmax =  0.
+         bbrnt =  bbrad
+         bbrad =  bbrnt*valf*hour/cAUKm
+         vamin =  0.
+         vamax = vamin*sqrt(vvmin/vvmax)
+         ddmin = 10. 
+         ddmax = ddmin*vvmin/vvmax
+         vvmin = vvmin*hour/cAUKm
+         vvmax = vvmax*hour/cAUKm
+         ccmin = vcmin*hour/cAUKm
+         ccmax = vcmax*hour/cAUKm
+         aamin = vamin*hour/cAUKm
+         aamax = vamax*hour/cAUKm
+         bbmin = aamin*sqrt(ddmin)
+         bbmax = aamax*sqrt(ddmax)
+c ------------------------------------ times:     
+!     dt1 = dt0/kfriss  !dt0 is undefined at the moment
+!     dta = dt1/kacc    !Commented out, I.Sokolov<igorsok@umich.edu>
+      end if
+!       wind = wind0*hour/aukm!wind0 is undefined at the moment
+!      swind = swind0*hour/aukm!swind0 is undefined at the moment
+c ------------------------------------ calculation
+      if (period.gt.1.e3) then
+         omega = 0.
+      else
+         omega = 2.*pi/period/24.
+      end if
+   
+      xlambda0 = xlmbda0
+      if (xlambda0.gt.1.e3) then
+         xscatt1 = 0.
+      else
+         xscatt1 = ((3-qex)*(1-qex)/3.)/xlambda0
+      end if
+
+      return 
       end
+
+c  *****************  end ADMIT   **************************
 !===========================================================
       subroutine sp_get_from_ih(iLine,iSnapshot)
       implicit none
@@ -117,5 +236,5 @@ C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
       if(DoWriteAll)write(iStdout,*) prefix,
      1      'consider snapshot : ',iSnapshot
       end subroutine sp_get_from_ih
-
 C ======= END COMMUNICATION WITH IH COMPONENT HERE =====================
+
