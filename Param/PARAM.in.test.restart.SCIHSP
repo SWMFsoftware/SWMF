@@ -18,9 +18,6 @@ T			DoSaveRestart
 -1			DnSaveRestart
 3600.0			DtSaveRestart
 
-#RESTARTFILE
-RESTART.4hr
-
 #BEGIN_COMP SC --------------------------------------------------------------
 
 #INCLUDE
