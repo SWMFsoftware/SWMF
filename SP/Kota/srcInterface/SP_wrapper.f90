@@ -40,7 +40,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
      call put(CompInfo,&
           Use        =.true.,                        &
           NameVersion=&
-          'SEP acceleration with pitch-angle scattering, Kota(2004)', &
+          'SEP with pitch-angle scattering (Kota)', &
           Version    =1.1)
   case('STDOUT')
      iStdOut=STDOUT_

@@ -28,7 +28,9 @@ Module CON_couple_mh_sp
   integer::iPoint
   integer::iError
   real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
-  real::DsResolution,XyzLine_D(3),RBoundIH,RBoundSC
+  real::DsResolution,XyzLine_D(3)
+  real,save::RBoundIH                !^CMP IF IH
+  real,save::RBoundSC                !^CMP IF SC
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
 contains
@@ -102,14 +104,12 @@ contains
 
        !Set the initial point for the line
 
-       allocate(XyzTemp_DI(3,nPointMax),stat=iError)
-       call check_allocate(iError,NameSub//': XyzTemp_DI')
-
        if(is_proc0(SP_))then
           call SP_get_line_param(&
-            DsResolution,XyzLine_D,RBoundSC,RBoundIH)
-          if(DoTest)write(*,*)'DsResolution,XyzLine_D,RBoundSC,RBoundIH',&
-               DsResolution,XyzLine_D,RBoundSC,RBoundIH
+            DsResolution,XyzLine_D&
+            ,RBoundSC &              !^CMP IF SC
+            ,RBoundIH &              !^CMP IF IH
+            )
           if(sum(XyzLine_D**2)<cOne)then
              !Calculate the Earth position in SGI
              call get_time(tCurrentOut=tNow)
@@ -127,28 +127,37 @@ contains
           end if
        end if
 
-       call check_allocate(iError,&
-            'XyzTemp_DI in CON_couple_mh_sp')
+       allocate(XyzTemp_DI(3,nPointMax),stat=iError)
+       call check_allocate(iError,NameSub//': XyzTemp_DI')
+
+   
        if(is_proc(SP_))then
           iPoint=1
           XyzTemp_DI(:,iPoint)=XyzLine_D(:)
        end if
-
+       
        if(use_comp(IH_))then       !^CMP IF IH BEGIN
-          call IH_synchronize_refinement
+          call IH_synchronize_refinement(i_proc0(IH_),i_comm())
+  
+          call MPI_bcast(RBoundIH,1,MPI_REAL,&
+               i_proc0(SP_),i_comm(),iError)
           call trace_line(IH_,&
                IH_GridDescriptor,RouterIhSp,RBoundIH**2,IH_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
           nPointIH=nPoint
+          if(DoTest.and.is_proc0())write(*,*)'nPointIH=',nPointIH
        end if                      !^CMP END IH
 
        if(use_comp(SC_))then       !^CMP IF SC BEGIN
-          call SC_synchronize_refinement
+          call SC_synchronize_refinement(i_proc0(SC_),i_comm())
+          call MPI_bcast(RBoundSC,1,MPI_REAL,&
+               i_proc0(SP_),i_comm(),iError)
           call trace_line(SC_,&
                SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
+          if(DoTest.and.is_proc0())write(*,*)'nPoint',nPoint
        end if                      !^CMP END SC
     
        !\
@@ -171,13 +180,16 @@ contains
        !Save initial positions of all the grid points
        !/
        call allocate_vector('SP_Xyz_DI',3,SP_GridDescriptor)
-   
+       if(is_proc0())&
+            write(*,*)'Allocated global vector SP_Xyz_DI, dims=',&
+            ubound_vector('SP_Xyz_DI')
        if(is_proc0(SP_))then
           call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
           do iPoint=1,nPoint
              Xyz_DI(:,iPoint)= XyzTemp_DI(:,nPoint-iPoint+1)
           end do
           nullify(Xyz_DI)
+          if(DoTest)call save_global_vector('SP_Xyz_DI')
        end if
        deallocate(XyzTemp_DI)
     else
@@ -218,6 +230,8 @@ contains
           call associate_with_global_mask(Used_I,'SP_IsInIH')
           Used_I(1:nPointIH)=.true.
           nullify(Used_I)
+          if(is_proc0().and.DoTest)&
+               write(*,*)'Mask SP_IsInIH count=',count_mask('SP_IsInIH')
        end if
     end if                !^CMP END IH
     if(use_comp(SC_))then !^CMP IF SC BEGIN
@@ -227,6 +241,8 @@ contains
           call associate_with_global_mask(Used_I,'SP_IsInSC')
           Used_I(nPointIH+1:nPoint)=.true.
           nullify(Used_I)
+          if(is_proc0().and.DoTest)&
+               write(*,*)'Mask SP_IsInSC count=',count_mask('SP_IsInSC')
        end if
     end if                !^CMP END SC
   contains
@@ -254,7 +270,7 @@ contains
       real,intent(in)::R2
       
       integer::iPointStart
-      real::SignBDotR
+      real,save::SignBDotR
       !--------------------------------------------------------!
       call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
       call init_router(GD,SP_GridDescriptor,Router)
@@ -265,14 +281,18 @@ contains
            XyzTemp_DI(1,iPoint),3,MPI_REAL,&
            Router%iProc0Target,Router%iCommUnion,iError)
       iPointStart=iPoint
+      if(DoTest.and.is_proc0(SP_))write(*,*)'Start line from xyz=',&
+           XyzTemp_DI(:,iPointStart),' at PE=',i_proc()
       do while (dot_product(XyzTemp_DI(:,iPoint),XyzTemp_DI(:,iPoint))>=R2)
          if(iPoint>1)then
             if(dot_product(XyzTemp_DI(:,iPoint),XyzTemp_DI(:,iPoint))>=&
                  dot_product(XyzTemp_DI(:,iPoint-1),XyzTemp_DI(:,iPoint-1)))then
-               nPoint=iPoint
+               if(is_proc0(SP_))nPoint=iPoint
                EXIT
             end if
          end if
+         if(DoTest.and.is_proc0(SP_))write(*,*)NameSub//': done ',iPoint,&
+              ' Line Point, Xyz=',XyzTemp_DI(:,iPoint),' at PE=',i_proc()
          if(iPoint==nPointMax)call CON_stop(&
               'Insufficient number of points in couple_ih_sp =',iPoint)
          
@@ -304,9 +324,8 @@ contains
                  sqrt(dot_product(&
                  BAndDXyz_I(4:6),BAndDXyz_I(4:6)))*&
                  SignBDotR
+            nPoint=iPoint
          end if
-       
-         nPoint=iPoint
          iPoint=iPoint+1
          call MPI_bcast(&
               XyzTemp_DI(1,iPoint),3,MPI_REAL,&

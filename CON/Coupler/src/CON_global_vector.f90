@@ -140,7 +140,7 @@ contains
     nullify(Mask_I(nMask)%I)
     allocate(Mask_I(nMask)%I(nI),stat=iError)
     call check_allocate(iError,'Global mask '//NameMask)
-    Mask_I(nMask)%I=.true.
+    Mask_I(nMask)%I=.false.
   end subroutine allocate_mask_ilength
   !===========================================================!
   subroutine allocate_mask_for_gd(NameMask,GD)
@@ -540,7 +540,7 @@ contains
     integer::lLengthMask,iFile,nU_I(2),iPoint,iVector,iMask
     NameComp=NameVector(1:2)
     NameFile='./'//NameComp//'/'//NameVector(&
-         3:len_trim(NameVector))
+         4:len_trim(NameVector))
     if(present(iFileIn))&
          write(NameFile,'(a,i5.5)')trim(NameFile)//'_',iFileIn
     iVector=i_vector(NameVector)
@@ -554,7 +554,7 @@ contains
        iMask=i_mask(NameMask)
     end if
     NameFile=trim(NameFile)//'_'//NameComp
-    open(iFile,file=NameFile)
+    open(iFile,file=trim(NameFile),status='unknown')
 
     if(UseMask)then
        write(iFile,*)nU_I,count_mask(NameMask)
@@ -565,7 +565,6 @@ contains
     else
        write(iFile,*)nU_I
        do iPoint=1,nU_I(2)
-          if(.not.Mask_I(iMask)%I(iPoint))CYCLE
           write(iFile,*)iPoint,Vector_I(iVector)%I(:,iPoint)
        end do
     end if
@@ -593,6 +592,7 @@ contains
        if(iError>0)CYCLE
        if(NameFile(1:2)==NameComp_I(i_comp(lComp)))then
           read(iFile,*)nU_I
+          nPointHere=nU_I(2)
        else
           read(iFile,*)nU_I,nPointHere
        end if
