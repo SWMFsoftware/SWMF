@@ -225,7 +225,7 @@ sub check_layout{
 ###############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Testing and Checking}
+#!QUOTE: \subsection{Checking Layout and Parameters with Scripts/TestParam.pl}
 #!ROUTINE: TestParam.pl - check layout and parameter file before running SWMF
 #!DESCRIPTION:
 # A lot of time and frustration can be saved if the consistency of the
@@ -237,6 +237,7 @@ sub check_layout{
 # descriptions in the PARAM.XML files using the share/Scripts/CheckParam.pl script.
 #
 # If there are no errors, no output is produced.
+#
 #!REVISION HISTORY:
 # 09/01/2003 G. Toth - initial version
 #                      many improvements and extensions

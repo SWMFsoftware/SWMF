@@ -97,7 +97,7 @@ exit 0;
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Performance Estimation and Optimization}
+#!QUOTE: \subsection{Performance Optimization with Scripts/Performance.pl}
 #!ROUTINE: Performance.pl - estimate parallel performance on a single CPU
 #!DESCRIPTION:
 # This script can extract CPU time information from multiple run logs
@@ -110,6 +110,9 @@ exit 0;
 # the script can estimate the execution time with reasonable accuracy.
 # This can be used to optimize the LAYOUT and the coupling schedules
 # without the need to run the code on a big parallel computer. 
+#
+#!REVISION HISTORY:
+# 09/04/2004 G. Toth - initial version
 #EOP
 
 sub print_help{

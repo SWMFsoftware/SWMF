@@ -1105,7 +1105,10 @@ sub param_error{
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
+#!QUOTE: \clearpage
 #BOP
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
+#!QUOTE: \subsection{Checking Parameter Files}
 #!ROUTINE: CheckParam.pl - check a parameter file based on an XML description
 #!DESCRIPTION:
 # Before running an executable, it is a good idea to check the parameter file.

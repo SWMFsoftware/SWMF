@@ -456,12 +456,13 @@ sub shell_command{
 #!QUOTE: \chapter{Makefiles and Scripts}
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \section{The SMWF Makefiles and Scripts}
-#!QUOTE: \subsection{Installation and Configuration of SWMF}
+#!QUOTE: \section{The SMWF Scripts}
+#!QUOTE: \subsection{Installation and Configuration with SetSWMF.pl and Configure.pl}
 #!ROUTINE: SetSWMF.pl - (un)installation and configuration of SWMF
 #!DESCRIPTION:
 # The SetSWMF.pl provides a single uniform interface towards 
 # installation, configuration and uninstallation.
+#
 #!REVISION HISTORY:
 # 10/29/2003 G. Toth - initial version
 #                      several extensions and modifications

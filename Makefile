@@ -1,6 +1,8 @@
 #^CMP COPYRIGHT UM
 
+#!QUOTE: \clearpage
 #BOP
+#!QUOTE: \section{Makefiles}
 #!ROUTINE: Makefile - Space Weather Modeling Framework (SWMF) main Makefile
 #!DESCRIPTION:
 # This is the main Makefile to (re)compile executables, run the SWMF, 
