@@ -133,13 +133,13 @@ The default value depends on how the stand alone code was installed.
 See the description of the NEWPARAM command.
 </command>
 
-<command name="BEGIN_COMP" if="$_IsStandAlone">
+<command name="BEGIN_COMP" multiple="T" if="$_IsStandAlone">
 
 This command is allowed in stand alone mode only for sake of the 
 test suite, which contains these commands when the framework is tested.
 </command>
 
-<command name="END_COMP" if="$_IsStandAlone">
+<command name="END_COMP" multiple="T" if="$_IsStandAlone">
 
 This command is allowed in stand alone mode only for sake of the 
 test suite, which contains these commands when the framework is tested.
@@ -192,6 +192,7 @@ These modifier commands cannot preceed the #PLANET command!
 <command name="PLANET" if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="NamePlanet" type="string" input="select">
 		<option name="Earth" value="EARTH/Earth/earth" default="T" />
+		<option name="Saturn" value="SATURN/Saturn/saturn" />
 		<option name="New" />
 	</parameter>
 	<if expr="$NamePlanet eq 'New'">
@@ -1719,6 +1720,7 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 		<if expr="$plotarea =~ /\blin\b/">
 			<parameter name="NameLine" type="string" 
 			input="select">
+				<option name="Advected B" value="A" />
 				<option name="B" default="T"/>
 				<option name="U"/>
 				<option name="J"/>
