@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <iostream.h>
 
+using namespace std;
+
 template <class T>
 class array_3d {
 private:

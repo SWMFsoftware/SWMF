@@ -1,3 +1,6 @@
+
+#include "global.dfn"
+
 int DIM=3;
 double tau,tmax,GeneralTime=0.0;
 unsigned char NS=1;
@@ -7,6 +10,8 @@ int TotalThreadsNumber=1;
 bool dsmc_flag=true;
 bool chem_flag=false;
 bool idf_flag=false;
+
+int SymmetryMode=no_symmetry;
 
 //===================================================
 //global objects

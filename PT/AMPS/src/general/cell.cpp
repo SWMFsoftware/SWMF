@@ -6,6 +6,9 @@
 #include "cell.h"
 #include "specfunc.h"
 #include "array_1d.h"
+#include "data.h"
+
+#include "const.dfn"
 
 extern int DIM;
 
@@ -19,7 +22,7 @@ void Ccell::SetVolume_dim0(float volume) {
 //===================================================
 void Ccell::InitCellNormal() {
   int nface,nnode;
-  float m,normal[3];
+  float m;
   array_1d<float> r1(DIM),r2(DIM),n(DIM);
 
   for (nface=0;nface<DIM+1;nface++) {
@@ -82,6 +85,11 @@ double Ccell::Measure() {
     x1_2d=node[1]->X()-node[0]->X();
     x2_2d=node[2]->X()-node[0]->X();
     measure=0.5*fabsf(x1_2d(0)*x2_2d(1)-x1_2d(1)*x2_2d(0));
+
+    if (SymmetryMode==cylindrical_symmetry) {
+      double r=(node[0]->X()(1)+node[1]->X()(1)+node[2]->X()(1))/3.0;  
+      measure*=2.0*Pi*r;
+    } 
     break;
   case 3 :
     x1_3d=node[1]->X()-node[0]->X();

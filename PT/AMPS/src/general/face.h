@@ -6,6 +6,11 @@
 #include "array_1d.h"
 #include "specfunc.h"
 
+#include "const.dfn"
+#include "global.dfn"
+
+extern int SymmetryMode;
+
 class Cface{
   float nrml[3];
 public:
@@ -43,8 +48,23 @@ public:
       measure=1.0;
       break;
     case 2:
-      x_2d=(*node[1]).X()-(*node[0]).X();
-      measure=x_2d.abs();
+      if (SymmetryMode==no_symmetry) {
+        x_2d=(*node[1]).X()-(*node[0]).X();
+        measure=x_2d.abs(); 
+      }
+      else if (SymmetryMode==cylindrical_symmetry) {
+        double l,alfa,e[2],nd0[2];
+  
+        node[0]->GetX(nd0);node[1]->GetX(e);
+        e[0]-=nd0[0],e[1]-=nd0[1],l=sqrt(e[0]*e[0]+e[1]*e[1]); 
+
+        if (fabs(e[0]/l)<1.0E-8) measure=Pi*fabs((2.0*nd0[1]+e[1])*e[1]);
+        else {
+          alfa=e[1]/e[0];
+          measure=2.0*Pi*fabs(e[0]*(nd0[1]+alfa*e[0]/2.0));
+        } 
+      }
+
       break;
     case 3:
       x1_3d=(*node[1]).X()-(*node[0]).X();

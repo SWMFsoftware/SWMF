@@ -10,6 +10,8 @@
 #include <iostream.h>
 #include <vector>
 
+using namespace std;
+
 template<class T>
 
 class array_1d {

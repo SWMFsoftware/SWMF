@@ -35,7 +35,7 @@ void CutInputStr(char* dest, char* src) {
 }
 //===================================================
 void GetInputStr(char* str,int n){
-  int i,j,length; 
+  int i,j; 
  
   do {
     line++; 
@@ -108,6 +108,13 @@ void GeneralBlock() {
       DIM=(int)strtol(str1,&endptr,10);
       if ((str1[0]=='\0')||(endptr[0]!='\0')) error();
       if ((DIM<0)||(DIM>3)) error();}
+    else if (strcmp("SYMMETRY",str1)==0) {
+      CutInputStr(str1,str);
+      if (strcmp("NO",str1)==0)
+        SymmetryMode=no_symmetry;
+      else if (strcmp("CYLINDRICAL",str1)==0)
+        SymmetryMode=cylindrical_symmetry;
+      else error();}
     else if (strcmp("#ENDGENERAL",str1)==0) {
       mol.init(NS);
       return;}
@@ -117,7 +124,6 @@ void GeneralBlock() {
 //===================================================
 void parser(char* InputFile) {
   char str1[100],str[100];
-  const char* keywords[]={"#GENERAL","#SPECIES","#DSMC","#END",NULL};
 
   printf("InputFile: %s\n",InputFile);
   fd=fopen(InputFile,"r");

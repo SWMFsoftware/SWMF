@@ -29,9 +29,20 @@ public:
     for(idim=0;idim<DIM;idim++) x(idim)=node_coordinate[idim];
     return x;
   };
+
   void SetX(float* x) {
     int idim;
     for(idim=0;idim<DIM;idim++) node_coordinate[idim]=x[idim];
+  };
+
+  void GetX(float* x) {
+    int idim;
+    for(idim=0;idim<DIM;idim++) x[idim]=node_coordinate[idim];
+  };
+
+  void GetX(double* x) {
+    int idim;
+    for(idim=0;idim<DIM;idim++) x[idim]=node_coordinate[idim];
   };
 };
 

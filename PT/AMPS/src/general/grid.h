@@ -473,7 +473,7 @@ public:
               i=nbasis+ne+1; 
               if (i>DIM) i-=DIM+1;
     
-              char nbr_nface,nbr_ne,nbr_i;
+              char nbr_ne,nbr_i;
               for (nbr_ne=0;nbr_ne<DIM;nbr_ne++) {
                 nbr_i=cells_connection_data[ncell].nbasis[nbasis][nface]+1+nbr_ne;
                 if (nbr_i>DIM) nbr_i-=DIM+1;
@@ -575,7 +575,7 @@ public:
 
 //==================================================
   void GetTMatrix1D() {
-    int i,n;
+    int n;
     double l;
 
     TMatrix.init(DIM,DIM,DIM+1,ncells);
@@ -593,7 +593,7 @@ public:
 
 //==================================================
   void ChangeLocalVector1D(float* a,char nb1,char nb2) {
-    int idim,dn;
+    int dn;
 
     dn=nb2-nb1;
     if ((dn!=1)&&(dn!=-1)) {
@@ -607,7 +607,7 @@ public:
 
 //==================================================
   void ChangeLocalPositionVector1D(float* a,char nb1,char nb2) {
-    int idim,dn;
+    int dn;
 
     dn=nb2-nb1;
     if ((dn!=1)&&(dn!=-1)) {
@@ -735,7 +735,7 @@ public:
 //==================================================
   void InitSurfaceInterpolationData(vector< vector<long int> >&SurfaceSDataGroups) {
     long int ngroup;
-    long int nnode,nface,face_type,faceat;
+    long int nnode,nface,faceat;
     int idim;
     bool* use_flag;
     double measure, *sum;
