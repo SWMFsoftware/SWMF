@@ -948,7 +948,7 @@ contains
     !EOP
     real :: MagAxisTilt
     real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
-    real :: Omega_D(3), v2_D(3), Result_D(3)
+    real :: Omega_D(3), v2_D(3), Result_D(3), Position_D(3)
     !-------------------------------------------------------------------------
 
     if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
@@ -995,7 +995,7 @@ contains
 
     write(*,'(a)')'Testing show_rot_matrix'
     write(*,'(a)')'GeiGeo_DD(0)='; call show_rot_matrix(GeiGeo_DD)
-    
+
     write(*,'(a)')'Testing angular_velocity'
 
     ! HGI is an inertial system
@@ -1011,7 +1011,7 @@ contains
     if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
          write(*,*)'test angular_velocity failed: HGR Omega_D = ',Omega_D,&
          ' should be equal to ',Result_D,' within round off errors'   
-    
+
     ! GEI is an inertial system
     Omega_D  = angular_velocity(0.0,'GEI')
     Result_D = (/0., 0., 0./)
@@ -1058,24 +1058,24 @@ contains
     if(maxval(abs(Omega_D - Result_D)) > 1e-10) &
          write(*,*)'test angular_velocity failed: GSE-SMG Omega_D in SMG= ',&
          Omega_D,' should be equal to ',Result_D,' within round off errors'   
-    
+
     write(*,'(a)')'Testing transform_velocity'
 
     ! Let's take the (/0.,0.,cAU/) point with 0 velocity in HGR.
     ! This will correspond to the point matmul((/cAU,0.,0./),HgrHgi_DD) in HGI
     ! and it should rotate with (/0.,0.,OmegaCarrington/) in HGI.
 
-    v2_D = transform_velocity(0., (/0.,0.,0./), (/cAU,0.,0./), 'HGR', 'HGI')
-    Result_D = cross_product( (/0.,0.,OmegaCarrington/), &
-         matmul((/cAU,0.,0./), HgrHgi_DD) )
+    Position_D = (/cAU,0.,0./)
+    v2_D = transform_velocity(0., (/0.,0.,0./), Position_D, 'HGR', 'HGI')
+    Position_D = matmul(Position_D, HgrHgi_DD)
+    Result_D = cross_product( (/0.,0.,OmegaCarrington/), Position_D)
 
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: HGI-HGR v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
-    
+
     ! Let's transform back, the result should be 0
-    v2_D = transform_velocity(0., v2_D, matmul((/cAU,0.,0./), HgrHgi_DD), &
-         'HGI', 'HGR')
+    v2_D = transform_velocity(0., Result_D, Position_D, 'HGI', 'HGR')
     Result_D = (/ 0., 0., 0./)
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: HGR-HGI v2_D = ',v2_D, &
@@ -1116,14 +1116,15 @@ contains
     ! Velocity of Earth in HGR should be 
     ! HgrHgi_DD.(vPlanetHgi_D - OmegaCarrington x XyzPlanetHgi_D)
     v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GEO', 'HGR')
-    Result_D = matmul(HgrHgi_DD, &
-         vPlanetHgi_D - cross_product((/0.,0.,OmegaCarrington/), XyzPlanetHgi_D))
+    Result_D = matmul(HgrHgi_DD, vPlanetHgi_D &
+         - cross_product((/0.,0.,OmegaCarrington/), XyzPlanetHgi_D))
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: GEO-HGR v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
     ! Go back
-    v2_D = transform_velocity(0., v2_D, matmul(HgrHgi_DD,XyzPlanetHgi_D), 'HGR', 'GEO')
+    Position_D = matmul(HgrHgi_DD,XyzPlanetHgi_D)
+    v2_D = transform_velocity(0., Result_D, Position_D, 'HGR', 'GEO')
     Result_D = (/0., 0., 0./)
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: HGR-GEO v2_D = ',v2_D, &
@@ -1142,16 +1143,15 @@ contains
     ! with respect to GSE. It should rotate with OmegaPlanet around the
     ! rotation axis (in GSE) of the Earth.
 
-    v2_D = transform_velocity(0., (/0., 0., 0./), &
-         matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
+    Position_D = matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./))
+    v2_D = transform_velocity(0., (/0., 0., 0./), Position_D, 'GEO', 'GSE')
     Result_D = OmegaPlanet*cross_product(RotAxis_D, (/RadiusPlanet, 0., 0./))
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
-    
+
     ! Do it again to check cashing
-    v2_D = transform_velocity(0., (/0., 0., 0./), &
-         matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
+    v2_D = transform_velocity(0., (/0., 0., 0./), Position_D, 'GEO', 'GSE')
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: GEO-GSE2 v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
