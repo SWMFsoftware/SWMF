@@ -17,13 +17,15 @@ SWMFREF = \
 	${LIBRARYDIR}/CON_world.protex \
 	${LIBRARYDIR}/CON_comp_param.protex \
 	${LIBRARYDIR}/CON_comp_info.protex \
-	${INTERFACEDIR}/CON_wrapper.protex \
-	${INTERFACEDIR}/CON_couple_all.protex \
-	${INTERFACEDIR}/CON_couple_ih_gm.protex \
-	${INTERFACEDIR}/CON_couple_gm_ie_swmf.protex \
-	${INTERFACEDIR}/CON_couple_gm_im.protex \
-	${INTERFACEDIR}/CON_couple_ie_im.protex \
-	${INTERFACEDIR}/CON_couple_ie_ua.protex \
+	${CONDIR}/Interface/src/CON_wrapper.protex \
+	${CONDIR}/Interface/src/CON_couple_all.protex \
+	${CONDIR}/Interface/src/CON_couple_ih_gm.protex \
+	${CONDIR}/Interface/src/CON_couple_gm_ie_swmf.protex \
+	${CONDIR}/Interface/src/CON_couple_gm_im.protex \
+	${CONDIR}/Interface/src/CON_couple_ie_im.protex \
+	${CONDIR}/Interface/src/CON_couple_ie_ua.protex \
+	${CONDIR}/Stubs/src/CON_wrapper.protex \
+	${CONDIR}/Stubs/src/CON_couple_all.protex \
 	${COUPLERDIR}/CON_domain_decomposition.protex \
 	${COUPLERDIR}/CON_grid_descriptor.protex \
 	${COUPLERDIR}/CON_router.protex \
@@ -43,6 +45,7 @@ SWMFREF = \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
+	${UTILDIR}/NOMPI/src/NOMPI.protex \
 	${BATSRUS_SCRIPTS}
 
 .SUFFIXES:
