@@ -87,7 +87,7 @@ It is possible to switch back and forth between strict and non-strict mode.
 The default is strict mode.
 </command>
 
-<command name="DESCRIPTION">
+<command name="DESCRIPTION" multiple="T">
 	<parameter name="StringDescription" type="string" length="100" />
 
 #DESCRIPTION

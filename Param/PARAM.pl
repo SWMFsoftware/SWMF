@@ -74,7 +74,7 @@ but it stops after the warning message. If it is set to false, SWMF
 attempts to correct the problems after the warning message is issued.
 It is possible to switch back and forth between strict and non-strict mode. 
 The default is strict mode.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'DESCRIPTION'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'StringDescription'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'DESCRIPTION'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'StringDescription'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #DESCRIPTION
 This is a test run for GM-IE-UA coupling.
