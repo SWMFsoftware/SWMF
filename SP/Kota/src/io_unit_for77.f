@@ -47,7 +47,7 @@
 ! Step 3: If anywhere in your f77 program there is a handling of file
 ! unit, before you open the unit make the call:
 !
-!           call SP_get_io_unit_new(iFile)
+!           call CON_io_unit_new(iFile)
 !
 ! Remembder to declare the integer variable iFile before that:
 !
@@ -77,7 +77,7 @@
 ! That is it you have to do. Good luck with SWMF!
 ! 
 !INTERFACE:
-      subroutine SP_get_io_unit_new(iFileNew)
+      subroutine CON_io_unit_new(iFileNew)
 !EOP
       implicit none
   !--------------------------------------------------------------------------!
@@ -100,7 +100,7 @@
       end do
 
       iFileNew = -1
-      end subroutine SP_get_io_unit_new
+      end subroutine CON_io_unit_new
 !BOP
 !INTERFACE:
       subroutine SP_set_stdout(NameComp)
@@ -117,4 +117,14 @@
       prefix = NameComp
       DoWriteAll=.false.
       end subroutine SP_set_stdout
+!Use CON_stop in f77 files only as follows
+!     call CON_stop(' ')    !ONE space between TWO quotes, or ONE symbol
 !============================================================================! 
+      subroutine CON_stop(Name1)
+      implicit none
+      character*1 Name1
+      include 'stdout.h'
+      write(iStdOut,*)prefix,' stop ',Name1
+      stop
+      end subroutine CON_stop
+!=============================================================================!
