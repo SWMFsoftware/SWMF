@@ -304,6 +304,7 @@ subroutine SP_save_mh_data
   integer::iFile,iLine
   character(LEN=20)::NameFile
   write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
+  if(iProc==0)write(iStdOut,*)prefix,'Save file '//NameFile
   iFile=io_unit_new()
   open(iFile,file=NameFile,status='replace')
   write(iFile,*)DataInputTime,'     - is a Time'
@@ -324,6 +325,7 @@ subroutine SP_read_mh_data
   integer::iFile,iLine
   character(LEN=20)::NameFile
   write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
+  if(iProc==0)write(iStdOut,*)prefix,'Read file '//NameFile
   iFile=io_unit_new()
   open(iFile,FILE=NameFile,STATUS='old')
   read(iFile,*)DataInputTime
