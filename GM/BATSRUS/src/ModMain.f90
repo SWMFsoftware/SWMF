@@ -90,7 +90,7 @@ Module ModMain
   ! Time stepping parameters and values.
   !/
   integer :: n_step, nOrder, nStage, iteration_number=0
-  real :: dt, DtFixed, DtFixedDim, cfl, dt_BLK(nBLK)
+  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, cfl, dt_BLK(nBLK)
   logical :: time_accurate=.true.,           &
        boris_correction, &                   !^CFG IF BORISCORR       
        UseBorisSimple,   &                   !^CFG IF SIMPLEBORIS
