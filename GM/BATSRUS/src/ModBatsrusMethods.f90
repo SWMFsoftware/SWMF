@@ -298,6 +298,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
+  !Eliminate non-positive timesteps
+  if(Time_Simulation>=TimeSimulationLimit)return 
   call set_oktest(NameSub,DoTest,DoTestMe)
 
   ! We are advancing in time

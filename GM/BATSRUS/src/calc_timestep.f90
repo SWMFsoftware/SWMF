@@ -87,6 +87,7 @@ subroutine set_global_timestep(DtMax)
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModImplicit, ONLY: UsePartImplicit, implicitBLK     !^CFG IF IMPLICIT
   use ModPhysics,ONLY:UnitSI_x,UnitSI_U,UnitSI_t,UnitSI_B,UnitSI_rho,g
+  use ModNumConst
   use ModMpi
   implicit none
 
@@ -172,9 +173,10 @@ subroutine set_global_timestep(DtMax)
 
   end if
 
-  ! Limit Dt such that dt*cfl cannot exceed DtMax
-  dt = min(dt,DtMax/cfl)
-
+  !Limit Dt such that dt*cfl cannot considerably exceed DtMax and 
+  !infinitesimal timesteps are avoided
+  if(dt>(cOne-cTiny)*DtMax/cfl)dt=(cOne+cTiny)*DtMax/cfl
+ 
   do iBlock = 1,nBlock
      if (unusedBLK(iBlock)) CYCLE
 
