@@ -71,6 +71,7 @@ subroutine ionosphere_solver(PHI, &
 
   integer :: nThetaC, nPsiC, nThetaF, nPsiF
   integer :: i, j, i2, j2, ind_i, ind_j, k, jj, n, npts, npts_Theta
+  integer, save :: saved_npts_Theta=-1
 
   TYPE(MSR)                             :: S
   TYPE(LU_CSR_MSR)                      :: PC
@@ -87,31 +88,34 @@ subroutine ionosphere_solver(PHI, &
   
   logical :: oktest, oktest_me
   
+  SAVE
+
+
   call CON_set_do_test('ionosphere',oktest,oktest_me)
   call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
-  lat_boundary = 30.0 * IONO_PI/180.0
+  lat_boundary = 30.0 * cDegToRad
 
   north = .false.
 
-  if (Theta(1,1) < IONO_PI/4.0) north = .true.
+  if (Theta(1,1) < cPi/4.0) north = .true.
 
   if(oktest)write(*,*)'North=',north
 
   if (IsManualLatBoundary) then
-     lat_boundary = 60.0 * IONO_PI/180.0
+     lat_boundary = 60.0 * cDegToRad
   else
      if (north) then
         do i=1,nTheta
-           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(cHalfPi-Theta(i,1))
         enddo
      else
         do i=nTheta,1,-1
-           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(cHalfPi-Theta(i,1))
         enddo
      endif
-     lat_boundary = max(lat_boundary - 5.0*IONO_PI/180.0,0.0)
+     lat_boundary = max(lat_boundary - 5.0*cDegToRad,0.0)
   endif
 
   !!! write(*,*)'PHI(:,nPsi/4), lat_boundary=',PHI(:,nPsi/4), lat_boundary !!!
@@ -144,14 +148,14 @@ subroutine ionosphere_solver(PHI, &
   do j = 1, nPsi
      do i = 1, nTheta
         if (north) then
-           if (abs(IONO_PI/2.0-Theta(i,j)).gt.lat_boundary+5.0*IONO_PI/180.0) then
+           if (abs(cHalfPi-Theta(i,j)).gt.lat_boundary+5.0*cDegToRad) then
               PHI(i,j) = PHI(i,j)*Radius*Radius* &
                    sin(Theta(i,j))*sin(Theta(i,j))
            else
               PHI(i,j) = 0.0
            endif
         else
-           if (abs(Theta(i,j)-IONO_PI/2.0).gt.lat_boundary+5.0*IONO_PI/180.0) then
+           if (abs(Theta(i,j)-cHalfPi).gt.lat_boundary+5.0*cDegToRad) then
               PHI(i,j) = PHI(i,j)*Radius*Radius* &
                    sin(Theta(i,j))*sin(Theta(i,j))
            else
@@ -188,7 +192,7 @@ subroutine ionosphere_solver(PHI, &
 ! Add the Central Points
 
      do i=2,nTheta-1
-        if (abs(IONO_PI/2.0-Theta(i,j)).gt.lat_boundary) then
+        if (abs(cHalfPi-Theta(i,j)).gt.lat_boundary) then
            npts = npts + 5
            if (j.eq.1) npts_Theta = npts_Theta + 1
         endif
@@ -196,25 +200,36 @@ subroutine ionosphere_solver(PHI, &
 
   enddo
 
-  if(oktest)write(*,*)'npts_Theta=',npts_Theta
-
-  allocate(b(npts_Theta*nPsi))
-  allocate(x(npts_Theta*nPsi))
-
   npts = 5*npts_Theta*nPsi
 
-  CALL Nullify_Matrix ( S )
-  CALL Allocate_Matrix ( S, nPsi*npts_Theta, npts)
-  if (.NOT.allocated_matrix(S)) &
-     call CON_stop("Error allocating MSR structure S in ionosphere solver")
+  if(oktest)write(*,*)'npts_Theta=',npts_Theta
 
+  if(npts_Theta /= saved_npts_Theta)then
+     if(allocated(b)) deallocate(b)
+     if(allocated(x)) deallocate(x)
+     if(allocated_matrix(S))  call Deallocate_Matrix(S)
+     if(allocated_matrix(PC)) call Deallocate_Matrix(PC)
+  end if
+  saved_npts_Theta = npts_Theta
 
-!     write(6,*) '=> ALLOCATING MATRIX PC in ionosphere'
+  if (.NOT.allocated(b)) allocate( b(nPsi*npts_Theta) )
 
-  CALL Nullify_Matrix ( PC )
-  CALL Allocate_Matrix (PC, nPsi*npts_Theta,npts,npts)
-  if (.NOT.allocated_matrix(PC)) &
-     call CON_stop("Error allocating PC in ionosphere solver")
+  if (.NOT.allocated(x)) allocate( x(nPsi*npts_Theta) )
+
+  if (.NOT.allocated_matrix(S)) then
+     CALL Nullify_Matrix ( S )
+     CALL Allocate_Matrix ( S, nPsi*npts_Theta, npts)
+     if (.NOT.allocated_matrix(S)) &
+          call CON_stop("Error allocating MSR structure S in ionosphere solver")
+  end if
+
+  if (.NOT.allocated_matrix(PC)) then
+     CALL Nullify_Matrix ( PC )
+     CALL Allocate_Matrix (PC, nPsi*npts_Theta,npts,npts)
+     if (.NOT.allocated_matrix(PC)) &
+          call CON_stop("Error allocating PC in ionosphere solver")
+  end if
+
 !
 ! We basically are solving the equation:
 !  
@@ -230,7 +245,6 @@ subroutine ionosphere_solver(PHI, &
 !
 
   do j = 1, nPsi
-
      do i= 1, nTheta
 
         sn(i,j)  = sin(Theta(i,j))
@@ -239,30 +253,29 @@ subroutine ionosphere_solver(PHI, &
         cs2(i,j) = cs(i,j)*cs(i,j) 
   
         kappa_Theta2(i,j) = SigmaThTh(i,j)*sn2(i,j) 
-        kappa_Theta1(i,j) = SigmaThTh(i,j)*sn(i,j)*cs(i,j)             &
+        kappa_Theta1(i,j) = SigmaThTh(i,j)*sn(i,j)*cs(i,j)   &
              + dSigmaThTh_dTheta(i,j)*sn2(i,j)               &
              - dSigmaThPs_dPsi(i,j)*sn(i,j) 
         kappa_Psi2(i,j)   = SigmaPsPs(i,j)
-        kappa_Psi1(i,j)   = dSigmaThPs_dTheta(i,j)*sn(i,j)        &
+        kappa_Psi1(i,j)   = dSigmaThPs_dTheta(i,j)*sn(i,j)   &
              + dSigmaPsPs_dPsi(i,j)
            
-        C_A(i,j) = -2.0 * (kappa_Theta2(i,j)/dTheta2(i) +              &
-             kappa_Psi2(i,j)/dPsi2(j))
+        C_A(i,j) = -2.0 * (&
+             kappa_Theta2(i,j)/dTheta2(i) + kappa_Psi2(i,j)/dPsi2(j))
         
-        C_B(i,j) = kappa_Theta2(i,j)/dTheta2(i) -                      &
-             kappa_Theta1(i,j)/dTheta(i)
+        C_B(i,j) = &
+             kappa_Theta2(i,j)/dTheta2(i) - kappa_Theta1(i,j)/dTheta(i)
 
-        C_C(i,j) = kappa_Theta2(i,j)/dTheta2(i) +                      &
-             kappa_Theta1(i,j)/dTheta(i)
+        C_C(i,j) = &
+             kappa_Theta2(i,j)/dTheta2(i) + kappa_Theta1(i,j)/dTheta(i)
 
-        C_D(i,j) = kappa_Psi2(i,j)/dPsi2(j) -                          &
-             kappa_Psi1(i,j)/dPsi(j)
+        C_D(i,j) = &
+             kappa_Psi2(i,j)/dPsi2(j) - kappa_Psi1(i,j)/dPsi(j)
 
-        C_E(i,j) = kappa_Psi2(i,j)/dPsi2(j) +                          &
-             kappa_Psi1(i,j)/dPsi(j)
+        C_E(i,j) = &
+             kappa_Psi2(i,j)/dPsi2(j) + kappa_Psi1(i,j)/dPsi(j)
 
      enddo
-
   enddo
 
 !  write(6,*) "=> Filling MSR Array"
@@ -278,80 +291,68 @@ subroutine ionosphere_solver(PHI, &
         b(ind_i) = phi(i,j)
         x(ind_i) = 0.0
 
-        j2 = j-1
         i2 = i+1
-        if (j2 < 1) j2 = nPsi-1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(1) = ind_j
-        row(1) = C_D(i,j)
+        j2 = j-1 ; if (j2 < 1) j2 = nPsi-1
+        cols(1) = (j2-1)*npts_Theta + i2
         
-        j2 = j+(nPsi-1)/2
-        if (j2.gt.nPsi) j2 = j2 - nPsi
         i2 = i+1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(2) = ind_j
-        row(2) = C_B(i,j)
+        j2 = j+(nPsi-1)/2 ; if (j2.gt.nPsi) j2 = j2 - nPsi
+        cols(2) = (j2-1)*npts_Theta + i2
 
         i2 = i
         j2 = j
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(3) = ind_j
-        row(3) = C_A(i,j)
+        cols(3) = (j2-1)*npts_Theta + i2
         
+        i2 = i+1
         j2 = j
-        i2 = i+1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(4) = ind_j
-        row(4) = C_C(i,j)
+        cols(4) = (j2-1)*npts_Theta + i2
 
-        j2 = j+1
         i2 = i+1
-        if (j2 > nPsi) j2 = 2
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(5) = ind_j
+        j2 = j+1 ; if (j2 > nPsi) j2 = 2
+        cols(5) = (j2-1)*npts_Theta + i2
+
+        row(1) = C_D(i,j)
+        row(2) = C_B(i,j)
+        row(3) = C_A(i,j)
+        row(4) = C_C(i,j)
         row(5) = C_E(i,j)
 
         CALL SetRow(S,ind_i,cols,row)
 
         i = 2
 
-        do while (abs(IONO_PI/2.0-Theta(i,j)).gt.lat_boundary)
+        do while (abs(cHalfPi-Theta(i,j)).gt.lat_boundary)
 
            ind_i = (j-1)*npts_Theta + i
-
            b(ind_i) = phi(i,j)
            x(ind_i) = 0.0
 
            j2 = j-1
            i2 = i
            if (j2 < 1) j2 = nPsi-1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(1) = ind_j
-           row(1) = C_D(i,j)
+           cols(1) = (j2-1)*npts_Theta + i2
 
            j2 = j
            i2 = i-1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(2) = ind_j
-           row(2) = C_B(i,j)
+           cols(2) = (j2-1)*npts_Theta + i2
 
            j2 = j
            i2 = i
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(3) = ind_j
-           row(3) = C_A(i,j)
+           cols(3) = (j2-1)*npts_Theta + i2
         
            j2 = j
            i2 = i+1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(4) = ind_j
-           row(4) = C_C(i,j)
+           cols(4) = (j2-1)*npts_Theta + i2
 
            j2 = j+1
            i2 = i
            if (j2 > nPsi) j2 = 2
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(5) = ind_j
+           cols(5) = (j2-1)*npts_Theta + i2
+
+           row(1) = C_D(i,j)
+           row(2) = C_B(i,j)
+           row(3) = C_A(i,j)
+           row(4) = C_C(i,j)
            row(5) = C_E(i,j)
         
            call setrow(S,ind_i,cols,row)
@@ -396,33 +397,29 @@ subroutine ionosphere_solver(PHI, &
            j2 = j-1
            i2 = i - n + 1
            if (j2 < 1) j2 = nPsi-1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(1) = ind_j
-           row(1) = C_D(i,j)
+           cols(1) = (j2-1)*npts_Theta + i2
 
            j2 = j
            i2 = i-1 - n + 1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(2) = ind_j
-           row(2) = C_B(i,j)
+           cols(2) = (j2-1)*npts_Theta + i2
 
            j2 = j
            i2 = i - n + 1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(3) = ind_j
-           row(3) = C_A(i,j)
+           cols(3) = (j2-1)*npts_Theta + i2
         
            j2 = j
            i2 = i+1 - n + 1
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(4) = ind_j
-           row(4) = C_C(i,j)
+           cols(4) = (j2-1)*npts_Theta + i2
 
            j2 = j+1
            i2 = i - n + 1
            if (j2 > nPsi) j2 = 2
-           ind_j = (j2-1)*npts_Theta + i2
-           cols(5) = ind_j
+           cols(5) = (j2-1)*npts_Theta + i2
+
+           row(1) = C_D(i,j)
+           row(2) = C_B(i,j)
+           row(3) = C_A(i,j)
+           row(4) = C_C(i,j)
            row(5) = C_E(i,j)
 
            call setrow(S,ind_i,cols,row)
@@ -436,34 +433,30 @@ subroutine ionosphere_solver(PHI, &
         j2 = j-1
         i2 = i-1 - n + 1
         if (j2 < 1) j2 = nPsi-1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(1) = ind_j
-        row(1) = C_D(i,j)
+        cols(1) = (j2-1)*npts_Theta + i2
 
         j2 = j
         i2 = i-1 - n + 1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(2) = ind_j
-        row(2) = C_B(i,j)
+        cols(2) = (j2-1)*npts_Theta + i2
 
         i2 = i - n + 1
         j2 = j
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(3) = ind_j
-        row(3) = C_A(i,j)
+        cols(3) = (j2-1)*npts_Theta + i2
         
         j2 = j+(nPsi-1)/2
         if (j2.gt.nPsi) j2 = j2 - nPsi
         i2 = i-1 - n + 1
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(4) = ind_j
-        row(4) = C_C(i,j)
+        cols(4) = (j2-1)*npts_Theta + i2
 
         j2 = j+1
         i2 = i-1 - n + 1
         if (j2 > nPsi) j2 = 2
-        ind_j = (j2-1)*npts_Theta + i2
-        cols(5) = ind_j
+        cols(5) = (j2-1)*npts_Theta + i2
+
+        row(1) = C_D(i,j)
+        row(2) = C_B(i,j)
+        row(3) = C_A(i,j)
+        row(4) = C_C(i,j)
         row(5) = C_E(i,j)
 
         call setrow(S,ind_i,cols,row)
@@ -504,9 +497,6 @@ subroutine ionosphere_solver(PHI, &
   if(oktest)write(*,*)'GMRES_MSR done'
 
 !  write(6,*) '=> Deallocating Matrix S and PC'
-
-  CALL Deallocate_Matrix(S)
-  CALL Deallocate_Matrix(PC)
 
   phi(:,:) = 0.0
 
@@ -569,9 +559,6 @@ subroutine ionosphere_solver(PHI, &
   do j = 1, nPsi
      phi(i,j) = ave
   enddo
-
-  deallocate(b)
-  deallocate(x)
 
   call timing_stop('iono_solve')
 
