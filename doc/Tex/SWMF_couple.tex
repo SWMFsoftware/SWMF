@@ -21,11 +21,17 @@ The following components are involved in the couplings
 of the current distribution of SWMF:
 \begin{itemize}
 
+\item Solar Corona (SC).
+
+\item Solar Energetic Particles (SP).
+
 \item Inner Heliosphere (IH).
 
 \item Global Magnetosphere Model (GM).
 
 \item Inner Magnetosphere Model (IM).
+
+\item Radiation Belt Model (RB).
 
 \item Ionospheric Electrodynamics (IE).
 
@@ -36,8 +42,6 @@ We also describe here how couplings are envisioned for
 the components
 \begin{itemize}
 
-\item Radiation Belt Model (RB).
-
 \item Plasmasphere Model (PS).
 
 \end{itemize}
@@ -46,15 +50,65 @@ information sent from A to B, while the words ``A and B are
 coupled'' or ``A is coupled with B'' mean 
 that there is information going both ways.
 
+\section{Coupling the Solar Corona to the Inner Heliosphere}
+
+The Solar Corona model encompasses the near-Sun region of space,
+extending from the solar ``surface'' to 20 $R_s$ in each direction.
+This model is run in a rotating coordinate system, so a true
+steady-state can be created without having to run in time-accurate
+mode.
+
+\subsection{Technique in Initiating a Coronal Mass Ejection}
+
+The SC model also contains the ``eruptive events generator''.  This
+code inserts an unstable coronal loop structure that will erupt as
+soon as the code starts.  This model is described in
+\cite{manchester_cme}.
+
+\subsection{Technique in Coupling SC and IH}
+
+Because both the SC and IH codes are MHD codes, only the MHD states
+need to be passed between the coponents.  This is done by having the
+codes overlapping each other, and filling in the ghostcells of the IH
+component with linearly interpolated values from the SC component.  In
+addition, a corotation velocity is added to the velocity that is
+passed from the SC to the IH component.  This is because the SC
+component is in the corotating system, while the IH component is in a
+fixed coordinate system.
+
+It should be noted that the SC to IH coupling is only one way.  This
+is because the flows are supersonic at the boundary between the SC and
+IH components.  No information can flow back to the SC component from
+the IH component in reality and in the framework.
+
+\section{Coupling the Inner Heliosphere and Solar Corona to the 
+Solar Energetic Particles}
+
+The solar energetic particle component solves for particles that are
+energized by MHD shocks that are produced in front of coronal mass
+ejections.  These particles are accelerated along magnetic field
+lines, so the code is written as being field-aligned.  This means that
+the magnetic fields have to be traced from near the solar surface (in
+the SC code) to the outer boundary of the IH code.  There is no
+feedback from the SP component to the IH and SC components.
+
+\subsection{Technique in Coupling SC, IH and SP}
+
+When coupling the SC and IH to the SP, magnetic field lines must be
+traced.  The BATS-R-US code has a field line tracing technique in it,
+so these field lines are passed to the SP component.  In addition, the
+MHD quantities are passed.
+
 \section{Coupling the Inner Heliosphere to the Global Magnetosphere}
 
-The GM needs to be driven by the solar wind flow in which it sits.  One
-method of accomplishing this is by using an upstream solar wind monitor
-to feed the upstream boundary conditions of the GM.  Alternatively, the
-GM can be embedded into a full MHD IH model which provides to the GM
-all relevant flow conditions at the necessary time and location.  The
-GM needs a time and location varying set of data which includes the
-solar wind density, pressure, velocity, and magnetic field.
+The GM needs to be driven by the solar wind flow in which it sits.
+One method of accomplishing this is by using an upstream solar wind
+monitor to feed the upstream boundary conditions of the GM.
+Alternatively, the GM can be embedded into a full MHD IH model which
+provides to the GM all relevant flow conditions at the necessary time
+and location.  The GM needs a time and location varying set of data
+which includes the solar wind density, pressure, velocity, and
+magnetic field.
 
 \section{Coupling the Global Magnetosphere and the Inner Magnetosphere}
 
@@ -125,11 +179,11 @@ The ionosphere then provides to the magnetosphere:
 \item
 Ionosphere conductances.  These conductances allow the magnetospheric
 currents to close, and are driven primarily by particle precipitation
-and solar EUV ionization.
+(i.e. the aurora) and solar EUV ionization.
 
 \item
-Ionospheric outflow.  This is the outflow of hydrogen, helium, and
-oxygen into the magnetosphere.
+Ionospheric outflow.  This is the outflow of very low energy hydrogen,
+helium, and oxygen into the magnetosphere.
 
 \item
 Currents driven by the neutral winds.  These currents allow more or
@@ -137,7 +191,7 @@ less magnetospheric current to close through ionosphere.
 
 \end{itemize}
 
-Within the ionosphere itself, there are a number of processes which
+Within the ionosphere itself, there are a number of processes that
 must be coupled.  For example, when the sun shines on one hemisphere
 and not the other, excited photoelectrons travel along field lines and
 precipitate into the other hemisphere, causing ionization.  This
