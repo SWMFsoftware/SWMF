@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
+subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
      xmin,xmax,ymin,ymax,zmin,zmax)
   !
   !NOTE: This routine assumes that the blocks are sorted on PEs by their global
@@ -18,7 +18,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
   implicit none
 
   ! Arguments  
-  integer, intent(in) :: ifile, nplotvar, nplotvarmax
+  integer, intent(in) :: ifile, nplotvar
   character (LEN=500), intent(in) :: unitstr_TEC
   real, intent(in) :: PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
