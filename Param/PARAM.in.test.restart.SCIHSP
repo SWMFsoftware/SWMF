@@ -2,10 +2,10 @@
 T
 
 #DESCRIPTION
-Restart SC-IH in time accurate mode and starts SP
+Restart SC-IH in time accurate mode and start SP. Run for 4 hours.
 
 #INCLUDE
-RESTART.in
+RESTART.SCIH
 
 #IDEALAXES
 ! align both the rotational and the magnetic axes of Earth with ecliptic North
@@ -13,8 +13,13 @@ RESTART.in
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#TEST
-couple_mh_sp
+#SAVERESTART
+T			DoSaveRestart
+-1			DnSaveRestart
+3600.0			DtSaveRestart
+
+#RESTARTFILE
+RESTART.4hr
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
@@ -104,13 +109,43 @@ minmod			TypeLimiter
 1                       nStage
 0.80                    CflExpl
 
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+6			nPlotFiles
+x=0 MHD tec             StringPlot
+-1                      DnSavePlot
+600.0			DtSavePlot
+y=0 MHD tec		StringPlot
+-1			DnSavePlot
+600.0			DtSavePlot
+z=0 MHD tec		StringPlot
+-1			DnSavePlot
+300.0			DtSavePlot
+x=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
+
 #END_COMP SC ----------------------------------------------------------------
 
 #COUPLE2
 SC			NameSource
 IH			NameTarget
 -1			DnCouple
-60.			DtCouple
+60.000			DtCouple
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
@@ -159,8 +194,32 @@ coupledhelio    	TypeRefineInit
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
--1			DnSaveLogfile
-60.			DtSaveLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+6			nPlotFiles
+x=0 MHD tec             StringPlot
+-1                      DnSavePlot
+600.0			DtSavePlot
+y=0 MHD tec		StringPlot
+-1			DnSavePlot
+600.0			DtSavePlot
+z=0 MHD tec		StringPlot
+-1			DnSavePlot
+300.0			DtSavePlot
+x=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+-1                      DnSavePlot
+600.			DtSavePlot
+-1.			DxSavePlot
 
 #GAMMA
 1.50000E+00		Gamma
@@ -176,42 +235,45 @@ minmod                  TypeLimiter
 SC			NameSource
 SP			NameTarget
 -1			DnCouple
-59.9000			DtCouple
-
+60.000			DtCouple
 
 #COUPLE1
 IH			NameSource
 SP			NameTarget
 -1			DnCouple
-59.9000			DtCouple
+60.000			DtCouple
 
-#BEGIN_COMP SP
+#BEGIN_COMP SP ---------------------------------------------------------------
 
 #LINE
-1.61+02                 
--1.39E+02  
--15.0
-1.1
-21.0
+1.61+02                 xLine
+-1.39E+02		yLine
+-15.0			zLine
+1.1			rBoundSc
+21.0			rBoundIh
+
+#RTRANSIENT
+2.0			rTransient
+
+#NSMOOTH
+3			nSmooth
 
 #DORUN
-T
+T			DoRun
 
 #SAVEMHDATA
-T
+T			DoSaveMhData
 
 #VERBOSE
-1
+1			lVerbose
 
 #PLOT
-1                     DnPlot
+1			DnPlot
 
-#END_COMP SP
-
-
+#END_COMP SP ----------------------------------------------------------------
 
 #STOP
 -1                    MaxIteration
-600.0                 tSimulationMax
+14400.0               tSimulationMax
 
 #END
