@@ -394,7 +394,7 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 ! defined in ModMain. Used in newer restart header files. 
 ! Should be given in PARAM.in when reading old restart files, 
 ! which do not have version info in the header file.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$IsFirstSession','name' => 'EQUATION'},'content' => [{'attrib' => {'length' => '100','default' => 'MHD','type' => 'string','name' => 'NameEquation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '8','type' => 'integer','name' => 'nVar'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'EQUATION'},'content' => [{'attrib' => {'length' => '100','default' => 'MHD','type' => 'string','name' => 'NameEquation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '8','type' => 'integer','name' => 'nVar'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #EQUATION
 MHD			NameEquation
 8			nVar
@@ -635,6 +635,21 @@ This time is stored in the BATSRUS restart header file.
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'TIMESIMULATION'},'content' => [{'attrib' => {'min' => '0','default' => '0.0','type' => 'real','name' => 'tSimulation'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#TIMESIMULATION
+3600.0			tSimulation [sec]
+
+The tSimulation variable contains the simulation time in seconds
+relative to the initial time set by the #STARTTIME command.
+The #TIMESIMULATION command and tSimulation are saved into the restart 
+header file, which provides human readable information about the restart state.
+
+In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
+In stand alone mode time\\_simulation is set, but in case of a restart,
+it gets overwritten by the binary value saved into the .rst binary files. 
+
+The default value is tSimulation=0.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'NSTEP'},'content' => [{'attrib' => {'min' => '0','default' => '0','type' => 'integer','name' => 'nStep'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #NSTEP
@@ -1586,37 +1601,42 @@ rel			TypeProjStop
 ! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
 !
 ! The 2nd case is a linear interpolation between the 2nd and 4th cases.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseAccurateTrace'},'content' => [{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseAccurateIntegral'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #RAYTRACE
+T			UseAccurateIntegral
 T			UseAccurateTrace
-0.1			DtExchangeRay [sec] (read if UseAccurateTrace is true)
+0.1			DtExchangeRay [sec]
 
 Raytracing (field-line tracing) is needed to couple the GM and IM components.
 It can also be used to create plot files with open-closed field line 
-information. Currently there are two algorithms implemented for 
-plot files, but only one for the GM/IM coupling.
+information. There are two algorithms implemented for integrating rays
+and for tracing rays.
 
-If UseAccurateTrace is false, the block-wise algorithm is used,
-which interpolates at block faces. This algorithm works both for
-plot files and GM/IM coupling. It is fast, but less accurate than
-the other algorithm.
+If UseAccurateIntegral is true (default), the field line integrals
+are calculated with the accurate algorithm, which follows the lines
+all the way. If UseAccurateIntegral is false, the block-wise algorithm
+is used, which actually needs the face values computed by the 
+block-wise tracing algorithm (UseAccurateTrace must be false).
 
-If UseAccurateTrace is true, the field lines are followed all the way.
-This algorithm currently only works for creating plot files.
-It is more accurate but potentially slower than the other algorithm.
+If UseAccurateTrace is false (default), the block-wise algorithm is used,
+which interpolates at block faces. This algorithm is fast, but less 
+accurate than the other algorithm. If UseAccurateTrace is true, 
+the field lines are followed all the way. It is more accurate but 
+potentially slower than the other algorithm.
 
-In the accurate algorithm, when the ray exits the domain that belongs to the 
-PE, its information is sent to the other PE where the ray continues. 
+In the accurate tracing algorithms, when the ray exits the domain that belongs 
+to the PE, its information is sent to the other PE where the ray continues. 
 The information is buffered for sake of efficiency and to synchronize
 communitacation. The frequency of the information exchanges 
 (in terms of CPU seconds) is given by the DtExchangeRay parameter. 
 This is an optimization parameter for speed. Very small values of DtExchangeRay
-results in many exchanges with few rays, while very large values result
+result in many exchanges with few rays, while very large values result
 in infrequent exchages thus some PE-s may become idle (no more work to do).
 The optimal value is problem dependent. A typically acceptable value is 
-DtExchangeRay = 0.1 seconds.
+DtExchangeRay = 0.1 seconds (default).
 
-Default value is UseAccurateTrace = .false.
+Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.
+and DtExchangeRay = 0.1.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'IM'},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'TauCoupleIm'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #IM

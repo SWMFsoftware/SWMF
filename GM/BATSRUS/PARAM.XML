@@ -578,7 +578,7 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 ! which do not have version info in the header file.
 </command>
 
-<command name="EQUATION" if="$IsFirstSession">
+<command name="EQUATION" if="$_IsFirstSession">
 	<parameter name="NameEquation" type="string" length="100" 
 						default="MHD" />
 	<parameter name="nVar" type="integer" default="8" />
@@ -989,6 +989,24 @@ This time is stored in the BATSRUS restart header file.
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
+</command>
+
+<command name="TIMESIMULATION" if="$_IsFirstSession">
+	<parameter name="tSimulation" type="real" min="0" default="0.0" />
+
+#TIMESIMULATION
+3600.0			tSimulation [sec]
+
+The tSimulation variable contains the simulation time in seconds
+relative to the initial time set by the #STARTTIME command.
+The #TIMESIMULATION command and tSimulation are saved into the restart 
+header file, which provides human readable information about the restart state.
+
+In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
+In stand alone mode time\_simulation is set, but in case of a restart,
+it gets overwritten by the binary value saved into the .rst binary files. 
+
+The default value is tSimulation=0.
 </command>
 
 <command name="NSTEP" if="$_IsFirstSession">
