@@ -6,13 +6,14 @@ subroutine MH_set_parameters(TypeAction)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY :&
+  use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,iVolumeCounterBLK,iVolumeCounterI,& !^CFG IF NOT CARTESIAN
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
+  use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
   use ModPhysics
   use ModProject                                        !^CFG IF PROJECTION
-  use ModCT, ONLY : DoInitConstrainB                    !^CFG IF CONSTRAINB
+  use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModAMR
   use ModParallel, ONLY : UseCorners,proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -132,7 +133,13 @@ subroutine MH_set_parameters(TypeAction)
 
      call check_options
 
+     ! initialize module variables
+     call init_mod_advance
+     call init_mod_geometry
+     call init_mod_nodes
+
      if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
+        call init_mod_ct
         jMinFaceX=0; jMaxFaceX=nJ+1
         kMinFaceX=0; kMaxFaceX=nK+1
         iMinFaceY=0; iMaxFaceY=nI+1

@@ -130,5 +130,15 @@ module ModImplicit
 
   ! Counters for reports
   integer:: nexpl=0,nnewton=0,niterimpl=0,nmatvec=0
-  
+
+contains
+  !============================================================================
+  subroutine init_mod_implicit
+
+  end subroutine init_mod_implicit
+  !============================================================================
+  subroutine clean_mod_implicit
+
+  end subroutine clean_mod_implicit
+
 end module ModImplicit

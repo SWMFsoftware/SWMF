@@ -190,4 +190,16 @@ contains
 
   !============================================================================
 
+  subroutine init_mod_raytrace
+
+  end subroutine init_mod_raytrace
+
+  !============================================================================
+
+  subroutine clean_mod_raytrace
+
+  end subroutine clean_mod_raytrace
+
+  !============================================================================
+
 end module ModRaytrace

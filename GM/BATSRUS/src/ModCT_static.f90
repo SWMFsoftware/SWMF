@@ -29,4 +29,14 @@ module ModCT
 
   logical :: DoInitConstrainB = .true.
 
+contains
+  !============================================================================
+  subroutine init_mod_ct
+
+  end subroutine init_mod_ct
+  !============================================================================
+  subroutine clean_mod_ct
+
+  end subroutine clean_mod_ct
+
 end module ModCT

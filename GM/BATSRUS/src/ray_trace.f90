@@ -15,7 +15,8 @@ end subroutine OPTION_RAYTRACING
 subroutine ray_trace
 
   use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition
-  use ModRaytrace, ONLY: UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
+  use ModRaytrace, ONLY: init_mod_raytrace, &
+       UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
   use ModPhysics,  ONLY: rBody
   implicit none
 
@@ -42,6 +43,8 @@ subroutine ray_trace
   n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
 
   call timing_start('ray_trace')
+
+  call init_mod_raytrace
 
   ! Initialize R_raytrace, R2_raytrace to body radius
   R_raytrace  = rBody

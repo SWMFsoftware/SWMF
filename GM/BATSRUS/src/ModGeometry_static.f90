@@ -55,5 +55,15 @@ Module ModGeometry
        x_BLK,y_BLK,z_BLK,R_BLK
   real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK) :: &   !^CFG IF SECONDBODY
        R2_BLK                                                            !^CFG IF SECONDBODY
- 
+
+contains
+  !============================================================================
+  subroutine init_mod_geometry
+
+  end subroutine init_mod_geometry
+  !============================================================================
+  subroutine clean_mod_geometry
+
+  end subroutine clean_mod_geometry
+
 end module ModGeometry
