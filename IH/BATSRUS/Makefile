@@ -38,8 +38,8 @@ distclean: clean
 	fi)
 
 veryclean:
-	touch srcInterface/Makefile.DEPEND; cd srcInterface; make distclean; \
-	cd ..; rm -rf  src \
+	touch srcInterface/Makefile.DEPEND; cd srcInterface; make distclean
+	rm -rf  src \
 		srcInterface/IH_*.f90 \
 		srcInterface/ModGridDescriptor.f90 \
 		srcInterface/update_lagrangian_grid.f90 \
