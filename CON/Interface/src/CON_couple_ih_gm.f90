@@ -233,7 +233,7 @@ contains
   subroutine update_mapping_parameters(iMappingNew)
 
     use ModKind
-    use CON_physics, ONLY: get_physics, time_real_to_int
+    use CON_physics, ONLY: get_time, time_real_to_int
 
     ! The time at the beginning of the simulation
     real(Real8_), save :: tStart
@@ -244,7 +244,7 @@ contains
     RETURN
 
     ! This is how we could update the mapping for the current time
-    call get_physics(tStartOut=tStart)
+    call get_time(tStartOut=tStart)
 
     call time_real_to_int(tStart+IH_GM_CouplingTime, TimeGeoPack)
 
