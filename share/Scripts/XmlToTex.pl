@@ -15,6 +15,7 @@
 #!REVISION HISTORY:
 # 03/22/2004 G.Toth - initial version
 # 08/13/2004          preserve _{.. for subscripts in Latex.
+# 01/25/2005          added generation of index terms for commands.
 #EOP
 if($h|$help|$H|$Help){
     print 
@@ -40,7 +41,7 @@ Example:
     ,"\n\n";
     exit 0;
 }
-#BOC
+
 use strict;
 my ($verbatim, $comment, $rule, $start);
 
@@ -132,4 +133,4 @@ while(<>){
     # Print out the line
     print;
 }
-#EOC
+

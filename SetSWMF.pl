@@ -453,6 +453,7 @@ sub shell_command{
 }
 
 ##############################################################################
+#!QUOTE: \chapter{Makefiles and Scripts}
 #!QUOTE: \clearpage
 #BOP
 #!QUOTE: \section{The SMWF Makefiles and Scripts}

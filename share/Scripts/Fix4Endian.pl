@@ -27,7 +27,6 @@
 # 07/13/2001 G. Toth - initial version
 # 08/18/2004 G. Toth - added -i -only=A:B -except=C:D options
 #EOP
-#BOC
 # No end of line record
 undef $/;
 
@@ -118,4 +117,3 @@ if($except){
     }
 }
 
-#EOC

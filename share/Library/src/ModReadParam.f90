@@ -1,8 +1,7 @@
-!QUOTE: \clearpage
-!
 !BOP
 !
-!QUOTE: \section{share/Library: for CON and the Physics Modules}
+!QUOTE: \chapter{Fortran Libraries in share/ and util/}
+!QUOTE: \section{share/Library}
 !
 !MODULE: ModReadParam - read, include, broadcast and distribute parameters
 !INTERFACE:
