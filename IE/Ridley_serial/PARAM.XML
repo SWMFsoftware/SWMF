@@ -155,7 +155,7 @@ Default is not reading AMIE files.
 #SPS
 T			UseSPS
 
-???
+The UseSPS parameter indicates if the serial potential solver is used.
 </command>
 
 <command name="BACKGROUND">
