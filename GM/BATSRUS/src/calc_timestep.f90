@@ -172,7 +172,8 @@ subroutine set_global_timestep(DtMax)
 
   end if
 
-  dt = min(dt,DtMax)
+  ! Limit Dt such that dt*cfl cannot exceed DtMax
+  dt = min(dt,DtMax/cfl)
 
   do iBlock = 1,nBlock
      if (unusedBLK(iBlock)) CYCLE
