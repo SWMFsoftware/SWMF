@@ -20,7 +20,7 @@ subroutine write_progress(inopt)
      call write_prefix; write(iUnitOut,&
           '(1X,''         for 3D Heliospheric Flows,'')')
      call write_prefix; write(iUnitOut,&
-          '(1X,''University of Michigan, 1995-2003.'')')
+          '(1X,''University of Michigan, 1995-2004.'')')
      call write_prefix; write(iUnitOut,*)
      if(IsStandAlone)then
         write(*,'(a,f4.2,a,i4,a)') &
