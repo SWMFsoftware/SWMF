@@ -2,17 +2,46 @@
 ray_trace time_ray_trace
 
 #RAYTRACE
+T			UseAccurateIntegral
 T			UseAccurateTrace
 0.1			DtExchangeRay
 
 #SAVEPLOT
-2                       nplotfiles
-y=0 ray idl             plot_string
+4                       nPlotFiles
+y=0 ray idl             StringPlot
 #INCLUDE
 Plots
-0.                      dx (resolution, 0. maximum, -1. unstructured)
-y=0 ray tec             plot_string
+0.                      DxPlot
+y=0 ray tec             StringPlot
 #INCLUDE
 Plots
+lin mhd idl		StringPlot
+#INCLUDE
+Plots
+B			NameVectorField
+F			IsOneFile
+2			nLineExtrect
+-2.			xStartLine
+0.			yStartLine
+2.			zStartLine
+F			IsParallel
+-3.			xStartLine
+0.			yStartLine
+-3.			zStartLine
+T			IsParallel
+lin mhd idl		StringPlot
+#INCLUDE
+Plots
+U			NameVectorField
+T			IsOneFile
+2			nLineExtract
+-2.			xStartLine
+0.			yStartLine
+2.			zStartLine
+F			IsParallel
+-3.			xStartLine
+0.			yStartLine
+-3.			zStartLine
+T			IsParallel
 
 #END
