@@ -6,7 +6,10 @@ subroutine GM_set_param(CompInfo, TypeAction)
   use ModProcMH
   use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, &
        NamePlotDir, NameRestartInDir, NameRestartOutDir
-  use ModMain, ONLY : CodeVersion, NameThisComp
+  use ModMain, ONLY : CodeVersion, NameThisComp, &
+       time_accurate, StartTime, iStartTime_I, dt_UpdateB0
+  use CON_physics, ONLY: get_physics
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 
@@ -37,6 +40,12 @@ subroutine GM_set_param(CompInfo, TypeAction)
      NameRestartInDir = NameThisComp//'/'//NameRestartInDir
      NameRestartOutDir= NameThisComp//'/'//NameRestartOutDir
   case('READ','CHECK')
+     call get_physics( &
+          DoTimeAccurateOut = time_accurate, &
+          tStartOut         = StartTime,     &
+          DtUpdateB0Out     = dt_updateB0)
+     call time_real_to_int(StartTime,iStartTime_I)
+
      call MH_set_parameters(TypeAction)
   case('STDOUT')
      iUnitOut=STDOUT_
