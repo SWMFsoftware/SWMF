@@ -33,6 +33,12 @@ module IE_ModMain
   logical               :: IsNewInput = .false.
 
   !\
+  ! Character string selecting the potential sent to the IM module
+  ! Possible values are 'north', 'south', 'average', 'minmod'
+  !/
+  character (len=7) :: TypeImCouple = 'north   '
+
+  !\
   ! Dipole parameters obtained from CON_physics
   !/
   real :: ThetaTilt, SinThetaTilt, CosThetaTilt
