@@ -60,7 +60,6 @@ OBJECTS = \
 	IO_Library.o\
 	AMIE_Library.o\
 	readAMIEoutput.o\
-	time_routines.o\
         iono_conductances.o\
         iono_solver.o\
         iono_coupling.o\
