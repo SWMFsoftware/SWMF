@@ -154,7 +154,7 @@ contains
   end subroutine allocate_gm_im
 
   !============================================================================
-  subroutine write_integrated_data
+  subroutine write_integrated_data_tec
     use ModIoUnit, ONLY: UNITTMP_
     CHARACTER (LEN=80) :: filename
     integer :: j2
@@ -163,6 +163,7 @@ contains
 
     !write values to plot file
     write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",n_step,"_",nCalls,".dat"
+
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
     write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
@@ -193,35 +194,27 @@ contains
     end do
     CLOSE(UNITTMP_)
 
-  end subroutine write_integrated_data
+  end subroutine write_integrated_data_tec
 
   !============================================================================
   subroutine write_integrated_data_idl
 
     use ModIoUnit, ONLY: UNITTMP_
     use ModMain,   ONLY: time_simulation
-    integer :: nStepLast = -1, nSubStep = 1
     CHARACTER (LEN=100) :: filename
+    integer :: nCall = 0
     !-------------------------------------------------------------------------
 
     !write values to plot file
-
-    if(nStepLast/=n_step)then
-       nSubStep = 1
-       write(filename,'(a,i6.6,a)')"rayValues_n=",n_step,".out"
-    else
-       nSubStep = nSubStep + 1
-       write(filename,'(a,i6.6,a,i1,a)')&
-            "rayValues_n=",n_step,"_",nSubStep,".out"
-    end if
-    nStepLast = n_step
+    nCall = nCall+1
+    write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",n_step,"_",nCall,".out"
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
     write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
     write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,6
-    write(UNITTMP_,'(3i4)')            jSize,iSize
+    write(UNITTMP_,'(3i4)')            jSize+1,iSize
     write(UNITTMP_,'(100(1pe13.5))')   0.0
     write(UNITTMP_,'(a79)')            'Lon Lat Xeq Yeq vol rho p Beq nothing'
     do i=isize,1,-1
@@ -232,6 +225,11 @@ contains
                MHD_SUM_vol(i,j), &
                MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_Beq(i,j)
        end do
+       write(UNITTMP_,'(100(1pe18.10))') &
+               RCM_lon(j)+360.0, RCM_lat(i), &
+               MHD_Xeq(i,1),MHD_Yeq(i,1),&
+               MHD_SUM_vol(i,1), &
+               MHD_SUM_rho(i,1),MHD_SUM_p(i,1),MHD_Beq(i,1)
     end do
     CLOSE(UNITTMP_)
 
