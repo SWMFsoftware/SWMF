@@ -16,6 +16,7 @@
 # 03/22/2004 G.Toth - initial version
 # 08/13/2004          preserve _{.. for subscripts in Latex.
 # 01/25/2005          added generation of index terms for commands.
+# 01/27/2005          Better handling of verbatim environment.
 #EOP
 if($h|$help|$H|$Help){
     print 
@@ -43,7 +44,7 @@ Example:
 }
 
 use strict;
-my ($verbatim, $comment, $rule, $start);
+my ($verbatim, $Verbatim, $comment, $rule, $start);
 
 while(<>){
 
@@ -79,6 +80,12 @@ while(<>){
 	$_="\\subsubsection\{$command command\}\\index\{$index\}\n\n";
     }
 
+    # \begin{verbatim} starts forced verbatim mode
+    $Verbatim = 1 if /\\begin\{verbatim\}/;
+
+    # \end{verbatim} finishes forced verbatim mode
+    $Verbatim = 0 if /\\end\{verbatim\}/;
+
     # #COMMAND or #COMMAND ID --> verbatim
     if(/^\#[A-Z0-9_]+( [A-Z][A-Z])?\s*$/){
 	$_='\begin'.'{verbatim}'."\n$_";
@@ -91,8 +98,6 @@ while(<>){
 	$verbatim = 0;
     }
 
-    ### One line XML comments are replaced with Tex comments
-    ### s/<!--(.*?)-->/\%$1/;
     # Remove one line XML comments
     s/<!--(.*?)-->//;
 
@@ -112,14 +117,20 @@ while(<>){
     next if /[<>]/ or $comment or $rule;
 
     # Replace special XML characters with Tex
-    s/\&lt;/\$<\$/g;
-    s/\&gt;/\$>\$/g;
-    s/\&amp;/\\&/g;
+    if($verbatim or $Verbatim){
+	s/\&lt;/</g;
+	s/\&gt;/>/g;
+	s/\&amp;/\&/g;
+    }else{
+	s/\&lt;/\$<\$/g;
+	s/\&gt;/\$>\$/g;
+	s/\&amp;/\\&/g;
+    }
 
     # Replace TAB characters with spaces
     1 while s/\t+/' ' x (length($&) * 8 - length($`) % 8)/e;
 
-    if(not $verbatim){
+    if(not ($verbatim or $Verbatim)){
 	# Put \ before special Tex character #
 	s/\#/\\\#/g;
 	# Put \ before special Tex character _ but not before _{
