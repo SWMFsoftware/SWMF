@@ -23,6 +23,7 @@ module ModLagrangianGrid
   implicit none
   private !Except
   logical,save::DoSkip=.false.
+  logical,save::DoInit=.true.
   character(LEN=10),save::NameVector,NameMask
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
@@ -40,7 +41,6 @@ contains
          advance_vector
     real,intent(in)::tStart,tFinal
     integer::iError,iPoint,iCompLine,lComp
-    logical,save::DoInit=.true.
     !------------------------------------
     if(DoSkip)return
     call timing_start('lagrangian_grid')
