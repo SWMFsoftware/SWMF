@@ -51,7 +51,7 @@ while(<>){
 
     # commandList --> section
     if(/^\s*<commandList\s+name=[\'\"]([^\'\"]+)/){
-	$_="\\section\{Input Commands for the $1\}\n\n";
+	$_="\\clearpage\n\\section\{Input Commands for the $1\}\n\n";
         $start = 1;
     }
 
