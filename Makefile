@@ -105,7 +105,7 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 # install for the 1st time
 #
 
-install : ENV_CHECK mkdir
+install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd ${CONDIR};   make install
 	cd share;       make install
@@ -181,8 +181,7 @@ CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make clean
-	cd util/TIMING/srcEmpty;make clean
+	cd util;		make clean
 	cd GM/BATSRUS;		make clean    #^CMP IF GM
 	cd GM/Empty;		make clean    #^CMP IF GM
 	cd IE/Ridley_serial;	make clean    #^CMP IF IE
@@ -194,12 +193,9 @@ clean: ENV_CHECK
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
+	cd CON;			make clean
+	cd share;		make clean
+	cd util;		make clean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	cd doc/Tex;             make clean
@@ -214,8 +210,6 @@ clean: ENV_CHECK
 distclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make distclean
-	cd util/TIMING/srcEmpty;make distclean
 	cd GM/BATSRUS;		make distclean    #^CMP IF GM
 	cd GM/Empty;		make distclean    #^CMP IF GM
 	cd IE/Ridley_serial;	make distclean    #^CMP IF IE
@@ -227,14 +221,8 @@ distclean: ENV_CHECK rmdir
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
-	cd ${SHAREDIR};		make distclean
-	cd ${CONDIR};		make distclean
+	cd CON;			make distclean
+	cd util;		make distclean
 	cd share;               make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -346,14 +334,16 @@ IH/BATSRUS/src/Makefile:
 	cp Makefile.conf Makefile.def PARAM.XML PARAM.pl GridSize.pl \
 	../../IH/BATSRUS/
 
-IHBATSRUS: IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+IHBATSRUS:IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 	cd IH/BATSRUS/src; \
-	${SCRIPTDIR}/Methods.pl IH; \
-	${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
-	perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f; \
-	perl -i -pe 's/libBATSRUS.a/libIH.a/; s/^\#IH_WRAPPER_/IH_WRAPPER_/' \
-		Makefile; \
-	perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90
+		${SCRIPTDIR}/Methods.pl IH; \
+		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
+		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;
+	cd IH/BATSRUS/srcInterface; \
+		mv ../src/ModGridDescriptor.f90 .; \
+		mv ../src/IH_wrapper.f90 .; \
+		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90; \
+		touch Makefile.DEPEND
 
 #^CMP END IH
 # keep this line
