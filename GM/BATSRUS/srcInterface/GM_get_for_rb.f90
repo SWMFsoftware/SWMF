@@ -30,6 +30,7 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
+
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 

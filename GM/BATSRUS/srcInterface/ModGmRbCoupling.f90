@@ -67,8 +67,8 @@ contains
        end if
        allocate(RB_lat(iSize), RB_lon(jSize))
        ! Convert colat, lon to lat-lon in degrees
-       RB_lat = 90.0 - Grid_C(RB_) % Coord1_I * cRadToDeg
-       RB_lon =        Grid_C(RB_) % Coord2_I * cRadToDeg
+       RB_lat = 90.0 - Grid_C(RB_) % Coord1_I
+       RB_lon =        Grid_C(RB_) % Coord2_I
     end if
 
     if(.not.allocated(MHD_SUM_vol))then

@@ -17,6 +17,7 @@ module CON_couple_all
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_ie_swmf   !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
+  use CON_couple_gm_rb        !^CMP IF RB
   !^CMP END GM
   !^CMP IF IE BEGIN
   use CON_couple_ie_im        !^CMP IF IM
@@ -55,6 +56,7 @@ contains
        call init_couple_gm_ie_swmf                             !^CMP IF IE
     end if                                                     !^CMP IF IE
     if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
+    if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
@@ -133,6 +135,8 @@ contains
           end if                                   !^CMP END IE
        case(IM_)                                   !^CMP IF IM
           call couple_gm_im(TimeSimulation)        !^CMP IF IM
+       case(RB_)                                   !^CMP IF RB
+          call couple_gm_rb(TimeSimulation)        !^CMP IF RB
        case default
           call error
        end select                             !^CMP END GM
