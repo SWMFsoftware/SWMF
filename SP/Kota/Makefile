@@ -15,11 +15,11 @@ LIB:
 rundir: 
 	mkdir -p ${RUNDIR}/SP
 
-clean:
+clean: install
 	cd src; make clean
 	cd srcInterface; make clean
 
-distclean: 
+distclean: install
 	cd src; make distclean
 	cd srcInterface; make distclean
 	rm -f Makefile.conf Makefile.def *~
