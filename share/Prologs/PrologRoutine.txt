@@ -9,31 +9,28 @@
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
 !BOP -------------------------------------------------------------------------
-!
-! !ROUTINE:  
-!
-! !DESCRIPTION: 
-! 
-! !INTERFACE:
-!
-! !USES:
-!
-! !INPUT PARAMETERS: 
-!
-! !OUTPUT PARAMETERS:
-!
-! !BUGS:  
-!
-! !SEE ALSO: 
-!
-! !SYSTEM ROUTINES: 
-!
-! !FILES USED:  
-!
+
+!ROUTINE:  
+
+!DESCRIPTION: 
+
+!INTERFACE:
+
+!USES:
+
+  !INPUT ARGUMENTS: 
+
+  !INPUT/OUTPUT ARGUMENTS: 
+
+  !OUTPUT ARGUMENTS:
+
+  !LOCAL VARIABLES:
+
+
 ! !REVISION HISTORY: 
-!
-!  
-! 
+
+
+ 
 !EOP -------------------------------------------------------------------------
 
 
