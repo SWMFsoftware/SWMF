@@ -1,10 +1,12 @@
 Module CON_geopack
   use ModNumConst
   implicit none
+
   !Contains some subroutine of the geopack code (by N.V.Tsyganenko), 
   !rewritten as the .f90 module procedures. 
   !Added procedures: JulianDay(A.Ridley)and a  computation for 
   !the coordinate transformation like HGI=>other systems
+
   real,dimension(3,3)::GeiGse_DD,HgiGse_DD,GeiGsm_DD,GsmGse_DD
   real,dimension(3)::AxisMagGeo_D
 
@@ -181,11 +183,17 @@ contains
   !------------------------------------------------------------------------
   subroutine CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
     use ModCoordTransform,ONLY:rot_matrix_z,rot_matrix_x
+
     !Updates matrices for the coordinate transformations
     !Computations for GeiGse_DD and GeiGsm_DD are from the subroutine
     !RECALC of geopack.f by N.V.Tsyganenko
     !Computations for GeiHgi_DD - i.Roussev and I.Sokolov,
     !igorsok@umich.edu, phone (734)647-4705
+
+    ! 3/9/2005: G.Toth - corrected HgiGse_DD calculation,
+    !                    which was 180 degrees off. 
+    !                    NOTE: the GeiHgi_DD is only defined in the test.
+
     integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
     integer::jDay
     real::AxisMagGei_D(3),GSTime,SunLongitude,Obliq
@@ -204,18 +212,9 @@ contains
     !   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  
     !   DUE TO THE ORBITAL MOTION OF THE EARTH   
 
-
-
     HgiGse_DD = matmul( &
-         rot_matrix_x(cInclinationSolEquator),&
-         rot_matrix_z(SunLongitude-&
-         cLongAscNodeSolEquator+cPi)) 
-
-    !
-    !   THE PI CORRECTION IS BECAUSE THE X AXIS OF THE HGI SYSTEM IS 
-    !   DIRECTED FROM THE SUN, THAT OF THE GSE SYSTEM IS DIRECTED
-    !   TOWARDS THE SUN
-
+         rot_matrix_x(-cInclinationSolEquator),&
+         rot_matrix_z( SunLongitude - cLongAscNodeSolEquator ))
 
     !   THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE IN THE
     !   SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
