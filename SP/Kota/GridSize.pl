@@ -98,7 +98,10 @@ sub set_grid_size{
 
 sub show_grid_size{
 
-    print "nRMax=$nRMax, nMuMax=$nMuMax, nPMax=$nPMax\n";
+    print "Spatial dimension:     nR =$nRMax\n";
+    print "Pitch angle dimension: nMu=$nMuMax\n";
+    print "Momentum dimension:    nP =$nPMax\n"
+
 }
 
 #############################################################################
