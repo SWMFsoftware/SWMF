@@ -97,13 +97,17 @@ subroutine apply_im_pressure
   integer :: iLastPIm = -1, iLastGrid = -1
 
   integer :: iBlock
+  character (len=*), parameter :: NameSub='apply_im_pressure'
+  logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
   if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   ! redo ray tracing if necessary 
   ! (load_balance takes care of new decomposition)
   if(iNewPIm > iLastPIm .or. iNewGrid > iLastGrid) then
-     if(iProc==0)write(*,*)'GM_apply_im_pressure: call ray_trace ',&
+     if(DoTestMe)write(*,*)'GM_apply_im_pressure: call ray_trace ',&
           'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
           iNewPIm,iLastPIm,iNewGrid,iLastGrid
      call ray_trace
