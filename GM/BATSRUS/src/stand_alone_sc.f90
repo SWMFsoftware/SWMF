@@ -13,8 +13,8 @@ subroutine stand_alone
 
   NameThisComp  = 'SC'
   UseNewParam   = .true.
-  UseNewAxes    = .false.
-  time_accurate = .false.
+  UseNewAxes    = .true.
+  time_accurate = .true.
   UseRotatingBc = .false.
 
   NamePlotDir       = 'SC/'//NamePlotDir
