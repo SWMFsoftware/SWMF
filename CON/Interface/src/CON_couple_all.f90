@@ -1,10 +1,6 @@
 !^CMP COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE:\section{Component Couplers}
 !
 !MODULE: CON_couple_all - provide access to all the couplers
 !

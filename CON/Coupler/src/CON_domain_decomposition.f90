@@ -4,7 +4,7 @@
 !
 !BOP
 !
-!QUOTE: \section{The SWMF Parallel Coupling Toolkit}
+!QUOTE: \section{CON/Coupler: the SWMF Parallel Coupling Toolkit}
 !
 !MODULE: CON_domain_decomposition - for uniform or octree grids
 !INTERFACE:

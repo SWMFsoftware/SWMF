@@ -1,5 +1,10 @@
 !^CFG COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
 !BOP -------------------------------------------------------------------
+!
+!QUOTE: \section{CON/Stubs: Wrapper and Coupler for Stub Components}
 !
 !MODULE: CON_wrapper_stub - Stub wrapper for component specific subroutines
 !
@@ -7,8 +12,8 @@
 !
 ! Contains general subroutines which mimic the behaviour of the 
 ! physics components. Based on the real wrapper and the real physical
-! components. Compile with INTDIR = srcCON/Stubs and all components
-! GM_VERSION = Empty, ... UA_VERSION = Empty.
+! components. Selectt INTVERION = Stubs in Makefile.def and you can select
+! the Empty version for all the components.
 !
 ! This is useful for testing and profiling the control component.
 ! For example one can set a fraction of the realistic CPU times per

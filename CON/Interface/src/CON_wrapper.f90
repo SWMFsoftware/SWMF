@@ -4,7 +4,7 @@
 !
 !BOP -------------------------------------------------------------------
 !
-!QUOTE: \section{Interface for Component Wrappers}
+!QUOTE: \section{CON/Interface: between CON and Components and between Components}
 !
 !MODULE: CON_wrapper - Wrapper for component specific subroutines
 !

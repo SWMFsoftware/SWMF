@@ -4,7 +4,7 @@
 !
 !BOP
 !
-!QUOTE: \section{Library Shared by CON and Components}
+!QUOTE: \section{CON/Library: Shared by CON and Components}
 !
 !MODULE: CON_time - time related variables of CON
 !
