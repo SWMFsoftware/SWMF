@@ -307,7 +307,7 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
   endif
 
   ! Subtract the radial component of the velocity
-  Velocity_D = Velocity_D - sum(Xyz_D*Velocity_D) / sqrt(sum(Xyz_D**2))
+  Velocity_D = Velocity_D - Xyz_D*sum(Xyz_D*Velocity_D) / sum(Xyz_D**2)
 
   if(DoTestMe)then
      write(*,*)NameSub,' Final Velocity_D=',Velocity_D
