@@ -1,241 +1,372 @@
-			README
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-
-!---------------------!
-! BUILD INSTRUCTIONS  !
-!---------------------!
-
-1. To configure SWMF for the first, type in this directory
-
-	SetSWMF.pl -install
-
-   The installation only needs to be redone if the directory is renamed 
-   or moved. The current configuration can be checked with
-
-        SetSWMF.pl -s
-
-   You may wish to change the grid size for various components
-   in some cases, although the default values are reasonable.
-   For example, for GM/BATSRUS this can be done with
-
-       SetSWMF.pl -g=GM:8,8,8,400,1
-  
-   which edits the variables in GM/BATSRUS/src/ModSize.f90
-   and sets the number of implicit blocks to 1.
-
-2. To build SWMF.exe type
-	
-	make
-
-3. To get a list of other make targets type
-
-	make help
-
-4. To clean or distclean the whole directory tree or some subdirectory
-   type in the appropriate directory
-
-	make clean
-	make distclean
-
-5. To fully uninstall SWMF type
-
-        SetSWMF.pl -uninstall
-
-For more information on SetSWMF.pl type 'SetSWFM.pl -h'.
-
-!-------------------------------!
-! TESTING AND RUNNING THE SWMF  !
-!-------------------------------!
-
-
-The Tests directory contains tests and reference results for the Milestone 7I 
-prototype of the Space Weather Modeling Framework.
-
-The following tests are available:
-
-       StartTst.tgz      - input files for steady state run for IH, GM and IE
-			   components which generates restart files for subsequent
-			   tests.  The created restart files are equivalent to the
-			   ones contained in RestartTst.tgz or RestartTstSGI.tgz.
-
-       RestartTst.tgz    - input and restart files for time accurate run for
-			   IH-GM-IM-IE-UA component.
-                           The restart files are for little endian platforms.
-
-       RestartTstSGI.tgz - Same as RestartTst.tgz but for big endian platforms
-                           such as the SGI.
-
-On 16 CPU-s of a Linux cluster the StartTst required 2872 seconds to complete,
-while the restart test required 252 or 182 seconds depending on the method of
-time looping chosen (see below).
-
-Reference results are also provided:
-
-       StartResult.tgz   - results for the steady state run with IH, GM and IE
-
-       RestartResult.tgz - results for the restarted run using the default
-                           LAYOUT.in and PARAM.in files.
-
-       RestartResultGeneral.tgz - results for the restarted run using an alternate
-			   time looping (see below), specified by the files
-                           LAYOUT.in.general and PARAM.in.general.
-
-Only the ASCII output files are included for sake of easy comparison.
-Results may vary slightly from platform to platform due to round off errors.
-
-
-Opening a tar file
-------------------
-
-If the tar program knows about the -z flag, you can open the 
-gzipped tar files with a single UNIX command:
-
-       tar xzf SOMETARFILE.tgz
-
-If the tar program does not recognize the -z flag, two steps are needed:
-
-       gunzip SOMETARFILE.tgz
-       tar xf SOMETARFILE.tar
-
-In the following descriptions the shorter form is shown, but you may
-need to use the two step procedure on certain platforms.
-
-
-Running the start test (IH, GM, and IE only)
-----------------------
-
-IH and GM are the only models that need to generate a steady state solution
-before running in time accurate mode.  This test runs these models in order
-to generate restart files which are used in the time accurate test runs.
-This test can be skipped as we have included these files with the distribution.
-The tests described below assume that you will use the tarred restart files
-provided with the distribution.
-
-To run a test you need to have compiled the SWMF_7I (see above):
-From the root SWMF directory, create the run directory:
-
-	make rundir
-	cd run
-
-Now you can run the code interactively or submit a job.
-The default layout assumes 16 PE-s. For example an
-interactive execution could be like this:
-
-	mpirun -np 16 SWMF.exe
-
-After the run finishes, you may post process the IDL plot files:
-
-	cd ..
-	make PIDL
-	cd run/GM
-	./pIDL
-	cd ../IH
-	./pIDL
-
-The files can be visualized with IDL using the scripts in
-the Idl directory. You can also compare the ASCII output files
-with the ones given in the reference solutions.
-
-
-Time Accurate Test #1, sequential time looping, shared IH/GM
-------------------------------------------------------------
-
-The time accurate tests do not require the startup test above.
-All the instructions that follow assume that you will use the restart
-files provided.  We will also recreate the run directory to clean
-out remnants of any previous runs.
-
-This test executes the physics modules sequentially, ie only one model
-is running at any given time.  The "shared IH/GM" indicates that a
-single BATSRUS code is handling both physics domains on non-overlapping
-sets of processors.
-
-You can install the first test parameter and restart files.
-For example on a Linux or OSF1 machine the short restart test can
-be installed with the following commands:
-
-	make rundir
-	cd run
-	tar xzf ../Tests/RestartTst.tgz
-
-On a big endian platform use the RestartTstSGI.tgz file.
-
-Now you can run the code interactively or submit a job.
-
-	mpirun -np 16 SWMF.exe
-
-After the run finishes, you may post process the IDL plot files:
-
-	cd ..
-	make PIDL
-	cd run/GM
-	./pIDL
-	cd ../IH
-	./pIDL
-
-
-Time Accurate Test #2, concurrent time looping, shared IH/GM
-------------------------------------------------------------
-
-This test executes the physics modules concurrently, ie many models
-can be running at any given time.  This test again uses the shared IH/GM.
-
-The LAYOUT.in and PARAM.in files need to be updated for this test by copying as:
-
-	mv LAYOUT.in  LAYOUT.in.default
-	cp LAYOUT.in.general LAYOUT.in
-	mv PARAM.in PARAM.in.default
-	cp PARAM.in.general PARAM.in 
-
-Then execute the run as before.
-
-
-Time Accurate Test #3, concurrent time looping, independent IH/GM
------------------------------------------------------------------
-
-In the previous tests, the IH and GM components could not be overlapped
-(run on the same processors).  This restriction can be eliminated by
-running two copies of BATSRUS, one for each module.  This is done by
-renaming the IH source code using a Perl script to avoid name conflicts.
-
-To use an independent IH, several code changes need to be made and
-portions of the code recompiled. To select UofM as the IH_VERSION:
-
-     SetSWMF.pl -v=IH/UofM
-
-This will copy the source code from GM/UofM into IH/UofM and rename 
-all methods to avoid name conflicts. This will take some time.
-
-The renaming will increase the memory load of the SWMF, and you may
-need to cut back the number of blocks used in GM and IH. 
-To have 200 blocks and only 1 implicit block per processor, type
-
-     SetSWMF.pl -g=GM:8,8,8,200,1 -g=IH:8,8,8,200,1 -s
-
-This test requires 520 blocks for GM and 456 blocks for IH on the PE-s
-assigned to the components. So with at least 3 PE-s for GM and IH each,
-the above numbers are sufficient. This test does not require the implicit
-scheme, therefore the number of blocks with implicit time stepping can
-be minimized. You can specify different number of blocks for GM and IH. 
-
-Recompile the code:
-
-	make
-
-Now use the LAYOUT.in and PARAM.in from Test #2 (the *.general files).
-
-In order to show that GM and IH run with overlapped processors, you need
-to edit the LAYOUT.in file.  As an example:
-
-#COMPONENTMAP
-GM    0   15    1
-IE    0    1    1
-IM    2    2    1
-IH    8   15    1
-UA    8   15    1
-#END
-
-Then execute the run as before.
+#############################
+# Obtain SWMF and the tests #
+#############################
+
+# Get the source code
+cvs checkout SWMF_NEW
+
+# Change directory
+cd SWMF_NEW
+
+# Get the test tar ball into this directory and open it
+# It will create a test/ subdirectory with several files
+tar xf SWMF_TEST.tar
+
+################
+# install SWMF #
+################
+# !!! On the SGI Altix do the following !!!
+SetSWMF.pl -install -c=ifort -m=Altix
+module switch intel-comp.7.1.027 intel-comp.8.0.066
+
+# !!! On a Linux system with the PGF90 compiler !!!
+SetSWMF.pl -install -c=pgf90
+
+# !!! On Darwin using the xlf compiler !!!
+SetSWMF.pl -install -c=xlf
+
+# !!! On Linux or Darwin with NAG F95, on the SGI and on the Compaq !!!
+SetSWMF.pl -install
+
+##################
+# configure SWMF #
+##################
+# select the SC/BATSRUS component version (this will take a few minutes!)
+SetSWMF.pl -v=SC/BATSRUS
+
+# Set the recommended grid size for the tests
+SetSWMF.pl -g=UA:9,9,25,2,2 -g=GM:8,8,8,200,40 -g=SC:4,4,4,1000
+
+################
+# compile SWMF #
+################
+# compile bin/SWMF.exe (this may take an hour!)
+make
+
+# compile bin/PostIDL.exe (post processing code)
+make PIDL
+
+########################
+# create run directory #
+########################
+make rundir
+cd run
+
+############################################
+# TEST 1: restart at 4 hours physical time #
+############################################
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_4hr_restart.tgz
+tar xzf ../test/gmimieua_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_4hr_restart_sgi.tgz
+gunzip ../test/gmimieua_restart_sgi.tgz
+tar xf ../test/scih_4hr_restart_sgi.tar
+tar xf ../test/gmimieua_restart_sgi.tar
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.8comp PARAM.in
+cp ../test/LAYOUT.in.8comp LAYOUT.in
+
+# edit LAYOUT.in so that it fits on your machine
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ../SC
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+##########################################
+# TEST 2: restart from the steady state  #
+##########################################
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_restart.tgz
+tar xzf ../test/gmimieua_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_restart_sgi.tgz
+gunzip ../test/gmimieua_restart_sgi.tgz
+tar xf ../test/scih_restart_sgi.tar
+tar xf ../test/gmimieua_restart_sgi.tar
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.8comp.t=0 PARAM.in
+cp ../test/LAYOUT.in.8comp LAYOUT.in
+
+# edit LAYOUT.in so that it fits on your machine
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ../SC
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+###################################
+# TEST 3: create SC steady state  #
+###################################
+
+# You can use the SWMF with the default settings, 
+# but you only need the SC component,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.SC PARAM.in
+cp ../test/LAYOUT.in.SC LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd SC
+pIDL
+pTEC
+cd ..
+
+######################################
+# TEST 4: create SC-IH steady state  #
+######################################
+
+# !!! This test requires the SC restart files created in TEST 3 !!!
+
+# You can use the SWMF with the default settings, 
+# but you only need the SC and IH components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.SCIH PARAM.in
+cp ../test/LAYOUT.in.SCIH LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd SC
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ..
+
+########################################
+# TEST 5: create GM initial conditions #
+########################################
+
+# The parameters of the #SOLARWIND command were obtained
+# from the result of the SC-IH steady state. 
+# Otherwise this test can be run independently, 
+# no restart files are read.
+
+# You can use the SWMF with the default settings, 
+# but you only need the GM component,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.GM PARAM.in
+cp ../test/LAYOUT.in.GM LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=64
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 64 SWMF.exe > runlog.np64
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ..
+
+#################################################
+# TEST 6: create GM-IM-IE-UA initial conditions #
+#################################################
+
+# !!! This test requires the GM restart files created in TEST 5 !!!
+
+# You can use the SWMF with the default settings, 
+# but you only need the GM, IM, IE and UA components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.GMIMIEUA PARAM.in
+cp ../test/LAYOUT.in.GMIMIEUA LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+# To make this run useful for the 8 component test 
+# rename the restart directories
+cd GM
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartOUT
+cd ../IM
+rmdir restartIN
+mv restartOUT restartIN
+mkdir restartOUT
+cd ../UA
+mv RestartOUT RestartIN
+mkdir RestartOUT
+cd ..
+
+# To be able to start from a 4 hour simulation time
+# the GM/restartIN/restart.H file was copied and modified.
+# This is not absolutely necessary, because SWMF will overwrite
+# the time read by GM.
+cp GM/restartIN/restart.H GM/restartIN/restart.H.4hr
+
+# modify simulation time
+emacs M/restartIN/restart.H.4hr
+-------------------------------------------
+...
+#TIMESIMULATION
+ 1.44000000E+04              tSimulation
+...
+--------------------------------------------
+
+##########################################################
+# TEST 7: Run SC-IH-SP for 4 hours in time accurate mode #
+##########################################################
+
+# This test requires the restart files for SC and IH
+# which were generated in TEST 4. Alternatively open
+# the tar file:
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_restart_sgi.tgz
+tar xf ../test/scih_restart_sgi.tar
+
+# You can use the SWMF with the default settings, 
+# but you only need the SC, IH and SP components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.SCIHSP PARAM.in
+cp ../test/LAYOUT.in.SCIHSP LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd SC
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ..
+
+# To make the results of this test useful for TEST 1
+# the restart files have to be renamed
+cd SC
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartIN
+cd ../IH
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartIN
+cd ..
