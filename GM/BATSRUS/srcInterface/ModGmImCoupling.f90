@@ -226,7 +226,7 @@ contains
                MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_Beq(i,j)
        end do
        write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(j)+360.0, RCM_lat(i), &
+               RCM_lon(1)+360.0, RCM_lat(i), &
                MHD_Xeq(i,1),MHD_Yeq(i,1),&
                MHD_SUM_vol(i,1), &
                MHD_SUM_rho(i,1),MHD_SUM_p(i,1),MHD_Beq(i,1)
