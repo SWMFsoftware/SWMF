@@ -1,5 +1,7 @@
 !^CFG COPYRIGHT UM
 !
+!!QUOTE: \clearpage
+!
 !BOP
 !
 !QUOTE: \section{util/NOMPI: Library for Sequential Execution}
@@ -20,6 +22,10 @@
 ! Most of the subroutines and functions in this library do nothing,
 ! or almost nothing, or stop, as it is appropriate, and they are
 ! needed by the compiler.
+!
+!REVISION HISTORY:
+! 05/11/2001 G. Toth <gtoth@umich.edu> - initial version of NOMPI
+!
 !EOP
 !=============================================================================
 ! core subroutines and functions used by the real MPI subroutines/functions

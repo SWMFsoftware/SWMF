@@ -1092,6 +1092,7 @@ sub param_error{
 ##############################################################################
 #!QUOTE: \clearpage 
 #BOP
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
 #!QUOTE: \subsection{Checking parameters}
 #
 #!ROUTINE: CheckParam.pl - check a parameter file based on an XML description

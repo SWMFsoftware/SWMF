@@ -1,5 +1,27 @@
 !^CFG COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
+!BOP
+!
+!QUOTE: \section{util/TIMING: Library for Timing and Profiling}
+!
+!MODULE: ModTiming - the variables used by the TIMING utility
+!
+!INTERFACE:
 module ModTiming
+  !DESCRIPTION:
+  !
+  ! This module contains the variables shared by a collection of subroutines 
+  ! and functions which together form the TIMING library.
+  ! This utility facilitates timing and profiling of Fortran 90 codes.
+  ! See the user manual for usage.
+  !
+  !REVISION HISTORY:
+  ! 05/11/2001 G. Toth <gtoth@umich.edu> - initial version of TIMING
+  !            several bug fixes and improvements later on
+  !
+  !EOP
   implicit none
   save
 

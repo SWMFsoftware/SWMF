@@ -30,6 +30,7 @@ Module CON_couple_mh_sp
   real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
   real::DsResolution,XyzLine_DI(3),RBoundIH,RBoundSC
 contains
+  !==================================================================
   subroutine couple_mh_sp_init
     interface
        subroutine IH_get_a_line_point(nPartial,&         !^CMP IF IH BEGIN
@@ -80,7 +81,7 @@ contains
        !Construct auxiliary SP_grid with ONE point per line
        if(is_proc0(SP_))&
             call get_root_decomposition(&
-            SP_,&                             !GridDescroptor to be constructed
+            SP_,&                             !GridDescriptor to be constructed
             iRootMapDim_D=(/1/),&             !The block amount, along each direction(D)
             XyzMin_D=(/cHalf/),&              !Minimal gen. coordinates, along each D 
             XyzMax_D=(/cHalf+cOne/),&        !Maximal gen. coordinates, along each D
@@ -115,13 +116,13 @@ contains
           nPointIH=nPoint
        end if                      !^CMP END IH
 
-       if(use_comp(SC_))then       !^CMP IF IH BEGIN
+       if(use_comp(SC_))then       !^CMP IF SC BEGIN
           call SC_synchronize_refinement
           call trace_line(SC_,&
                SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
-       end if
+       end if                      !^CMP END SC
     !   XyzTemp_DI(1,iPoint)=15. 
     !   XyzTemp_DI(2,iPoint)=0.
     !   XyzTemp_DI(3,iPoint)=0.2
@@ -205,6 +206,7 @@ contains
        end if
     end if                !^CMP END SC
   contains
+    !==================================================================
     subroutine trace_line(CompID_,GD,Router,R2,MH_get_a_line_point)
       use CON_global_message_pass
       interface
@@ -229,8 +231,7 @@ contains
       
       integer::iPointStart
       real::SignBDotR
-      
-      call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
+      !-----------------------------------------------------------------------       call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
       call init_router(GD,SP_GridDescriptor,Router)
       if(.not.Router%IsProc)return
       call MPI_bcast(iPoint,1,MPI_INTEGER,&
@@ -320,7 +321,7 @@ contains
     MH_Xyz_D=XyzTemp_DI(:,iPoint)
     IsInterfacePoint=.true.
   end subroutine xyz_point_mapping
-
+  !==================================================================
   subroutine SP_put_a_line_point(nPartial,&
        iPutStart,&
        Put,&
@@ -335,6 +336,7 @@ contains
     real,dimension(nVar),intent(in)::Buff_I
     integer::iCell
     real:: Weight
+    !-------------------------------------------------------------------------
     Weight=W%Weight_I(iPutStart)
     if(DoAdd)then
        BAndDXyz_I=BAndDXyz_I+Buff_I(:)*Weight
@@ -342,8 +344,8 @@ contains
        BAndDXyz_I=Buff_I(:)*Weight
     end if
   end subroutine SP_put_a_line_point
- !==================================================================
-  subroutine couple_ih_sp(DataInputTime)   !^CMP IF IH BEGIN
+  !==================================================================
+  subroutine couple_ih_sp(DataInputTime)     !^CMP IF IH BEGIN
     use CON_global_message_pass
     interface
        subroutine IH_get_for_sp(nPartial,&
@@ -377,6 +379,7 @@ contains
     end interface
     
     real,intent(in)::DataInputTime
+    !-------------------------------------------------------------------------
 
     if(.not.RouterIhSp%IsProc)return
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
@@ -409,14 +412,14 @@ contains
 
     call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
   end subroutine couple_ih_sp
-  !-------------------------------------------------------------------------
+  !==================================================================
   logical function is_in_ih(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
     is_in_ih=dot_product(Xyz_D,Xyz_D)>=RBoundIH**2.and.&
          all(Xyz_D<=xyz_max_d(IH_)).and.all(Xyz_D>=xyz_min_d(IH_))
-  end function is_in_ih              !^CMP END IH
+  end function is_in_ih                      !^CMP END IH
   !=========================================================================
-  subroutine couple_sc_sp(DataInputTime)
+  subroutine couple_sc_sp(DataInputTime)     !^CMP IF SC BEGIN
     use CON_global_message_pass
     interface
        subroutine SC_get_for_sp(nPartial,&

@@ -648,7 +648,6 @@ sub output{
 ############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
 #!QUOTE: \subsection{Creating a configured software package}
 #
 #!ROUTINE: Configure.pl - create a configured software package based on directives
