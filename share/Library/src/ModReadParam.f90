@@ -2,7 +2,7 @@
 !
 !BOP
 !
-!QUOTE: \section{SWMF Library for the Physics Modules}
+!QUOTE: \section{share/Library: for CON and the Physics Modules}
 !
 !MODULE: ModReadParam - read, include, broadcast and distribute parameters
 !INTERFACE:

@@ -39,7 +39,7 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 
 #BOP
 
-#!QUOTE: \section{Scripts}
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
 #!QUOTE: \subsection{Source Code Manipulation}
 #
 #!ROUTINE: depend.pl - automatic generation of Fortran source dependencies
