@@ -623,22 +623,12 @@ subroutine user_sources
      if (UseUserHeating) call calc_OLD_heating
      if (.not.UseInertial) then
         !\
-        ! Note that the SrhoUx, SrhoUy, SBx, SBy corresponds to Omega x B::
-        ! This is used only in the rot. frame and is yet under investigation.
+        ! Coriolis forces
         !/
         SrhoUx(i,j,k) = SrhoUx(i,j,k) +&
              cTwo*OMEGAbody*State_VGB(rhoUy_,i,j,k,globalBLK)
         SrhoUy(i,j,k) = SrhoUy(i,j,k) -&
              cTwo*OMEGAbody*State_VGB(rhoUx_,i,j,k,globalBLK)
-        SBx(i,j,k)    = SBx(i,j,k)    +&
-             OMEGAbody*B0yCell_BLK(i,j,k,globalBLK)
-        SBy(i,j,k)    = SBy(i,j,k)    -&
-             OMEGAbody*B0xCell_BLK(i,j,k,globalBLK)
-        SE(i,j,k)     = SE(i,j,k)     +&
-             State_VGB(Bx_,i,j,k,globalBLK)        *&
-             OMEGAbody*B0yCell_BLK(i,j,k,globalBLK)-&
-             State_VGB(By_,i,j,k,globalBLK)        *&
-             OMEGAbody*B0xCell_BLK(i,j,k,globalBLK)
      endif
   end do; end do; end do
   
