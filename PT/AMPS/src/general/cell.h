@@ -14,8 +14,6 @@ private:
   static double measure_dim_0;
 
 public:
-  ParticlePtr first_ptr;
-  int thread,sbdm;
   long int nodeno[4],faceno[4],neighbour_cellno[4];
   Cnode* node[4];
   Cface* face[4];
