@@ -89,13 +89,13 @@ contains
     end interface
     character(LEN=*),intent(in)::NameBuffer
     integer,intent(in)::TargetID_
-    call associate_vector(State_VI,NameBuffer)
+    call associate_with_global_vector(State_VI,NameBuffer)
     call global_message_pass(Router,&
          ubound(State_VI,1),&
          fill_buffer,&
          put_to_global_vector)
     if(is_proc(TargetID_))&
-         call bcast_vector(NameBuffer,0,i_comm(TargetID_))
+         call bcast_global_vector(NameBuffer,0,i_comm(TargetID_))
   end subroutine couple_buffer_grid
   !=============================================================!
   subroutine put_to_global_vector(nPartial,&
