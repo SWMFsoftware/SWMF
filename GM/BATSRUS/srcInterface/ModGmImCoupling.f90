@@ -1,5 +1,6 @@
 !^CFG COPYRIGHT UM
 !^CMP FILE IM
+!^CFG FILE RAYTRACE
 module ModGmImCoupling
 
   use ModMpi
