@@ -82,7 +82,7 @@ T			UseFluxRope
 1.0			ModulationP
 0.0			OrientationGL98
 -24.00			LatitudeGL98
-0.0			LongitudeGL98
+140.0			LongitudeGL98
 
 #GAMMA
 1.50000E+00		Gamma
