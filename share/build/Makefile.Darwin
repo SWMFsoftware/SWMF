@@ -55,7 +55,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .F90.o:
-	cpp -P -DsysDarwin -DcompNAG $*.F90 | grep -v '^#' > $*.f95
+	cpp -P -DsysDarwin -DcompNAGF95 $*.F90 | grep -v '^#' > $*.f95
 	${COMPILE.f90} -o $*.o ${Cflag4} $*.f95
 	rm -f $*.f95
 
