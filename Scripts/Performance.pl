@@ -65,7 +65,7 @@ my $iSession;      # session number
 my %Time_C;        # physical time of the components
 my @Time_P;        # physical time for the processors
 my @WallTime_P;    # walltime for the processors
-my @WallHist_P;    # history of walltime costs for the processors
+my @WallHist_P;    # history of wall time costs for the processors
 my @CompList_P;    # list of local components for each processor
 my $NewIeData;     # true if IE component receives information (from GM or UA)
 
@@ -652,29 +652,39 @@ sub add_wall_time{
     my $WallExec = shift; # Wall time of task to be executed
     my @Proc     = @_;    # List of processors involved
 
-    # Find the maximum wall time of the PE-s involved
-    my $WallTime = &maxval(@WallTime_P[@Proc]);
-
     # Synchronize wall time of PE-s in @Proc
+    # Find the maximum wall time of the PE-s involved
+    my $WallTimeMax = &maxval(@WallTime_P[@Proc]);
     my $iProc;
     for $iProc (@Proc){
-	my $Idle = $WallTime - $WallTime_P[$iProc];
+	# Processors with wall time less than WallTimeMax must idle
+	my $Idle = $WallTimeMax - $WallTime_P[$iProc];
 	if($Idle){
-	    $WallTime_P[$iProc] = $WallTime;
-	    $WallHist_P[$iProc] .= 
-		sprintf("%6.1f%s", $Idle, "($NameSync) + ");
+	    $WallTime_P[$iProc] = $WallTimeMax;
+	    &add_wall_hist($iProc,$NameSync,$Idle);
 	}
     }
 
-    # Execute: increase wall clock time of PE-s in @Proc
+    # Execute task: increase wall clock time of PE-s in @Proc
     if($WallExec){
 	for $iProc (@Proc){
 	    $WallTime_P[$iProc] += $WallExec;
-
-	    $WallHist_P[$iProc] .= 
-		sprintf("%6.1f%s", $WallExec,"($NameExec) + ");
-
+	    &add_wall_hist($iProc,$NameExec,$WallExec);
 	}
+    }
+}
+##############################################################################
+sub add_wall_hist{
+    my $iProc=shift;
+    my $Name =shift;
+    my $Step =shift;
+
+    if($WallHist_P[$iProc][-1] eq $Name){
+	# If the last name is the same as $Name, increase the wall step value
+	$WallHist_P[$iProc][-2] += $Step;
+    }else{
+	# If new name, add new elements to the name and time history
+	push( @{$WallHist_P[$iProc]} , ($Step, $Name) );
     }
 }
 ##############################################################################
@@ -691,36 +701,31 @@ sub show_timing{
 	for $Comp (@ActiveComp){
 	    $ProcShow{$Layout_C{$Comp}{Proc0}} = 1;
 	}
-	@Proc = keys %ProcShow;
+	@Proc = sort {$a<=>$b} keys %ProcShow;
     }elsif( $ProcShow =~ /^[\d,]+$/ ){
 	@Proc = split(/,/, $ProcShow);
     }else{
 	die "$ERROR: Invalid format for -p=$ProcShow\n";
     }
 
-    print "-" x 79, "\n" ;
+    my $SepLine = "-" x (15*@Proc) . "\n";
+    print $SepLine;
     my $iProc;
-    my @Hist_P;
-
-    for $iProc (@Proc){
-	my @WallHist = split(/ \+ /,$WallHist_P[$iProc]);
-	$Hist_P[$iProc] = \@WallHist;
-    }
-
     for $iProc (@Proc){printf "%15d", $iProc}; print "\n";
     for $iProc (@Proc){printf "%15.2f", $WallTime_P[$iProc]}; print "\n";
-    print "-" x 79, "\n" ;
+    print $SepLine;
 
     my $iLine;
-    for ($iLine=0; 1; $iLine++){
+    for ($iLine=0; 1; $iLine+=2){
 	my $Continue;
 	for $iProc (@Proc){
-	    my $Line = $Hist_P[$iProc][$iLine];
-	    if($Line){
-		printf "%15s", $Line;
+	    my $Step = $WallHist_P[$iProc][$iLine];
+	    my $Name = $WallHist_P[$iProc][$iLine+1];
+	    if($Name){
+		printf "%6.1f(%s)", $Step, $Name;
 		$Continue = 1;
 	    }else{
-		printf "%15s"," ";
+		print " " x 15;
 	    }
 	}
 	print "\n";
