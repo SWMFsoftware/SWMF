@@ -126,22 +126,22 @@ iono_tgcm: ${EXE3}
 
 
 precision.o:		${MF} precision.f90
-			${COMPILE.f90} ${Cflag0} precision.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} precision.f90
 
 io.o:			${MF} io.f90
-			${COMPILE.f90} ${Cflag0} io.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} io.f90
 
 CSR.o:			${MF} precision.o io.o CSR.f90
-			${COMPILE.f90} ${Cflag0} CSR.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} CSR.f90
 
 MSR.o:			${MF} precision.o io.o MSR.f90
-			${COMPILE.f90} ${Cflag0} MSR.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} MSR.f90
 
 LUCS.o:			${MF} LUC.f90
-			${COMPILE.f90} ${Cflag0} LUC.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} LUC.f90
 
 LUCSRMSR.o:		${MF} CSR.o MSR.o LUCSRMSR.f90
-			${COMPILE.f90} ${Cflag0} LUCSRMSR.f90
+			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} LUCSRMSR.f90
 
 #			
 #	General Housekeeping
