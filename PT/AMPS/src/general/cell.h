@@ -13,6 +13,12 @@
 
 #include "const.dfn"
 
+#define UNDEFINEDMODEL -1
+#define UNDERDEFINING  -2 
+
+#define DSMCGASMODEL  0
+#define EULERGASMODEL 1 
+
 using namespace std;
 extern int DIM;
 
@@ -26,10 +32,36 @@ public:
   NodeType* node[4];
   FaceType* face[4];
 
+  int LocalGasModel;
+
   Ccell() {
     measure_value=-1.0;
+    LocalGasModel=-1;
     for (int i=0;i<4;i++) nodeno[i]=-1,faceno[i]=-1,neighbour_cellno[i]=-1,node[i]=NULL,face[i]=NULL;
   };
+
+  void GetCellCenter(double* x) {
+    int i,pnode;
+    double xnode[3],c=1.0/(DIM+1);
+
+    for (i=0;i<DIM;i++) x[i]=0.0;
+
+    for (pnode=0;pnode<DIM+1;pnode++) {
+      node[pnode]->GetX(xnode);
+      for (i=0;i<DIM;i++) x[i]+=c*xnode[i];
+    } 
+  }; 
+
+  void GetCellCenter(float* x) {
+    int i;
+    float center[3];
+
+   GetCellCenter(center);
+   for (i=0;i<DIM;i++) x[i]=center[i];\
+  }; 
+
+  void SetLocalGasModel(int model) {LocalGasModel=model;}; 
+  int GetLocalGasModel() {return LocalGasModel;}; 
 
   void SetVolume_dim0(double volume) {
     measure_value=volume;
