@@ -30,6 +30,13 @@ T			DoSaveRestart
 #RESTARTOUTDIR
 SC/restartIN
 
+! Check if the block size is correct and the number of blocks are sufficient
+#CHECKGRIDSIZE
+4			nI
+4			nJ
+4			nK
+10000			MinBlockALL
+
 #PROBLEMTYPE
 3                       iProblemType
 
@@ -132,7 +139,7 @@ em_r ek_r et_r
 4.0  10.0               rLog
 
 #SAVEPLOT
-3			nPlotFiles
+6			nPlotFiles
 x=0 MHD tec		StringPlot
 10000                   DnSavePlot
 -1.0			DtSavePlot
@@ -142,6 +149,18 @@ y=0 MHD tec		StringPlot
 z=0 MHD tec		StringPlot
 10000			DnSavePlot
 -1.0			DtSavePlot
+x=0 MHD idl		StringPlot
+10000                   DnSavePlot
+-1.0			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+-1.			DxSavePlot
 
 #END_COMP SC ----------------------------------------------------------------
 
