@@ -38,5 +38,8 @@ subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
   ! Store IM variable for internal use
   RCM_p = Buffer_II
 
+  ! Make sure that ray tracing has been done, so the pressure can be applied
+  call ray_trace
+
   !^CFG END RCM
 end subroutine GM_put_from_im
