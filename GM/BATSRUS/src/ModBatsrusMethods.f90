@@ -698,6 +698,7 @@ contains
        do globalBLK = 1,nBlockMax
           if (.not.unusedBLK(globalBLK)) call write_restart_file
        end do
+       if(iProc==0)call save_advected_points
        call timing_stop('save_restart')
 
     elseif(ifile==logfile_) then

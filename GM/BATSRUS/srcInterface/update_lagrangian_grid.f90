@@ -29,7 +29,7 @@ module ModLagrangianGrid
   type(DomainDecompositionType),save::LineDD
   !BOP
   !PUBLIC MEMBERS:
-  public:: advance_lagrangian_grid
+  public:: advance_lagrangian_grid,save_lagrangian_grid
   !EOP
 contains
 !=======================================================================
@@ -39,7 +39,7 @@ contains
          check_if_can_integrate,&
          advance_vector
     real,intent(in)::tStart,tFinal
-    integer::iError,iPoint,iCompLine
+    integer::iError,iPoint,iCompLine,lComp
     logical,save::DoInit=.true.
     !------------------------------------
     if(DoSkip)return
@@ -50,7 +50,8 @@ contains
        
        !Figure out if the component needs to advect 
        !lagrangian points
-       do iCompLine=1,MaxComp
+       do lComp=1,n_comp()
+          iCompLine=i_comp(lComp)
           if(used_mask(&
                NameComp_I(iCompLine)&
                //'_IsIn'//&
@@ -72,6 +73,7 @@ contains
                   Router=Router)
              call check_if_can_integrate(NameVector)
              DoSkip=.false.
+             EXIT
              !End of initialization
           end if
        end do
@@ -140,6 +142,11 @@ contains
             State_VGB(rho_,i,j,k,iBlock))/(dt*unitSI_t**2)
     end do
   end subroutine get_u
+  !-------------------------------------------------------
+  subroutine save_lagrangian_grid
+    if(.not.DoSkip)&
+         call save_global_vector(NameVector,NameMask)
+  end subroutine save_lagrangian_grid
 end module ModLagrangianGrid
 !============interface to BATS_methods====================
 subroutine update_lagrangian_grid(tStart,tFinal)
@@ -148,3 +155,9 @@ subroutine update_lagrangian_grid(tStart,tFinal)
   real,intent(in)::tStart,tFinal
   call advance_lagrangian_grid(tStart,tFinal)
 end subroutine update_lagrangian_grid
+!=========================================================
+subroutine save_advected_points
+  use ModLagrangianGrid,ONLY:save_lagrangian_grid
+  implicit none
+  call save_lagrangian_grid
+end subroutine save_advected_points

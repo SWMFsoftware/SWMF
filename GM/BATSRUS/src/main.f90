@@ -331,6 +331,11 @@ subroutine update_lagrangian_grid(tStart,tFinal)
   real,intent(in)::tStart,tFinal
   return
 end subroutine update_lagrangian_grid
+!=========================================================
+subroutine save_advected_points
+  implicit none
+  return
+end subroutine save_advected_points
 !============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
