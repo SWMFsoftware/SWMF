@@ -675,7 +675,7 @@ the minimum and maximum allowed refinement levels for each block.
 This command is only used in the restart header file.
 </command>
 
-<command name="TIMING">
+<command name="TIMING" if="$_IsStandAlone">
 	<parameter name="UseTiming" type="logical" default="T" />
 	<if expr="$UseTiming">
 		<parameter name="Frequency" type="integer" input="select">
@@ -690,7 +690,7 @@ This command is only used in the restart header file.
 							default="-1" />
 		<parameter name="TypeTimingReport" type="string" 
 							input="select">
-			<option name="cummulative" value="cumm" default="1" />
+			<option name="cumulative" value="cumu" default="1" />
 			<option name="list" />
 			<option name="tree" />
 		</parameter>
@@ -699,9 +699,12 @@ This command is only used in the restart header file.
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
 -1                      nDepthTiming   (-1 for arbitrary depth)
-cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
+tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 ! The default values are shown.
+!
+! This command can only be used in stand alone mode. In the SWMF the
+! #TIMING command should be issued for CON.
 !
 ! If UseTiming=.true., the TIMING module must be on.
 ! If UseTiming=.false., the execution is not timed.
@@ -718,7 +721,7 @@ cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
 ! is timed.
 !
 ! TypeTimingReport determines the format of the timing reports:
-! 'cumm' - cummulative list sorted by timings
+! 'cumu' - cumulative list sorted by timings
 ! 'list' - list based on caller and sorted by timings
 ! 'tree' - tree based on calling sequence
 </command>
@@ -957,9 +960,10 @@ float                   TypeBcTop
 <!-- ^CFG END SECONDBODY -->
 #INNERBOUNDARY
 ionosphere              TypeBcInner
-<!-- ^CFG IF SECONDBODY BEGIN -->
-ionosphere              TypeBcBody2  !read only if UseBody2=.true. 
+ionosphere              TypeBcBody2  !read only if UseBody2=T <!-- ^CFG IF SECONDBODY -->
 
+
+<!-- ^CFG IF SECONDBODY BEGIN -->
 ! This command should appear after the #SECONDBODY command when using 
 ! two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
 ! BOUNDARY DO NOT WORK.
@@ -2541,22 +2545,18 @@ T		UseNonConservative
 			<option name="p"    	value="p/P"		/>
 			<option name="grad P"	value="gradp/GradP"	/>
 		</parameter>
-		<parameter name="rConserv" type="real"
-				min="$rBody"		default = "2*$rBody"
-				if="$TypeConservCrit =~ /^r|radius$/i"/>
-		<parameter name="xParabolaConserv" type="real"
-				min="0"		        default = "6"
-				if="$TypeConservCrit =~ /^parabol/i"/>
-		<parameter name="yParabolaConserv" type="real"
-				min="0"		        default = "36"
-				if="$TypeConservCrit =~ /^parabol/i"/>
+		<parameter name="rConserv" type="real" min="$rBody"
+			default="6"  if="$TypeConservCrit =~ /^r|radius$/i"/>
+		<parameter name="xParabolaConserv" type="real" min="0"
+			default="6"  if="$TypeConservCrit =~ /^parabol/i"/>
+		<parameter name="yParabolaConserv" type="real" min="0"
+			default="36" if="$TypeConservCrit =~ /^parabol/i"/>
 		<parameter name="pCoeffConserv" type="real" min="0"
-							default = "0.05"
-				if="$TypeConservCrit =~ /^p$/i" 	/>
+			default = "0.05" if="$TypeConservCrit =~ /^p$/i"/>
 		<parameter name="GradPCoeffConserv" type="real" min="0"
-							default = "0.1"
-				if="$TypeConservCrit =~ /gradp/i"	/>
+			default = "0.1" if="$TypeConservCrit =~ /gradp/i"/>
 	</for>
+
 #CONSERVATIVECRITERIA
 3		nConservCrit
 r		TypeConservCrit
