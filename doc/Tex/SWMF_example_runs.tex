@@ -1,0 +1,453 @@
+\subsection{Configuration and Compilation for the Examples}
+
+Select the SC/BATSRUS component version (this will take a few minutes!),
+select UA/GITM instead of the default UA/GITM2 version, 
+and set the recommended grid sizes for the tests:
+\begin{verbatim}
+SetSWMF.pl -v=SC/BATSRUS
+SetSWMF.pl -v=UA/GITM
+SetSWMF.pl -g=UA:9,9,25,2,2 -g=GM:8,8,8,200,40 -g=SC:4,4,4,1000
+\end{verbatim}
+
+Compile the main executable code bin/SWMF.exe (this may take an hour!)
+and the post processing code bin/PostIDL.exe,
+and finally create a run directory and change the directory
+\begin{verbatim}
+make
+make PIDL
+make rundir
+cd run
+\end{verbatim}
+
+\section{Example 1: create SC steady state}
+
+This example involves the SC component only. It demonstrates
+how a steady state solar corona can be obtained from
+a magnetogram. The convergence to steady state is accelerated by 
+a gradual grid refinement, and a gradual application of the
+more-and-more accurate numerical schemes. The final state
+is a steady state to high accuracy. 
+
+You can use the SWMF with the settings recommended above
+but you only need the SC component and
+all other component versions can be Empty.
+
+Copy the PARAM.in and LAYOUT.in files
+\begin{verbatim}
+cp ../test/PARAM.in.SC PARAM.in
+cp ../test/LAYOUT.in.SC LAYOUT.in
+\end{verbatim}
+
+Check if everything is OK from the main directory.
+Define the number of CPU-s you plan to use after the -n= flag,
+for example
+\begin{verbatim}
+cd ..
+Scripts/TestParam.pl -n=32
+\end{verbatim}
+
+If there are error messages, fix them. 
+For example if there are not enough CPU-s for a component change the LAYOUT
+Repeat this until Scripts/TestParam.pl runs silently.
+
+Run the code by submitting a job, or interactively
+\begin{verbatim}
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+\end{verbatim}
+
+After the run finished postprocess the plot files
+\begin{verbatim}
+cd SC
+pIDL
+pTEC
+cd ..
+
+######################################
+# TEST 4: create SC-IH steady state  #
+######################################
+
+# This test involves the SC and IH components only. It demonstrates
+# how a steady state inner heliosphere solution can be obtained from
+# a steady state solar corona solution.
+# The convergence to steady state is accelerated by several means.
+# First of all the SC component only provides the boundary conditions,
+# it only runs in every 100th iteration. Second, the IH grid is built
+# up with a gradual grid refinement, and third the 
+# more-and-more accurate and expensive numerical schemes are 
+# applied in an optimal sequence. The final state
+# is a steady state for SC and IH to high accuracy. 
+
+# !!! This test requires the SC restart files created in TEST 3 !!!
+
+# You can use the SWMF with the settings used in the 8 components test, 
+# but you only need the SC and IH components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.SCIH PARAM.in
+cp ../test/LAYOUT.in.SCIH LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd SC
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ..
+
+########################################
+# TEST 5: create GM initial conditions #
+########################################
+
+# This test involves the GM component only. It demonstrates
+# how a reasonable global magnetosphere can be obtained.
+# The upwind boundary conditions are taken from TEST 4, but they
+# are intentionally modified to contain a discontinuity.
+# This is for demonstration purposes only, to make the subsequent
+# tests more dynamic.
+# The convergence to steady state is accelerated by 
+# a gradual grid refinement, and a gradual application of the
+# more-and-more accurate numerical schemes. The final state
+# is a reasonable global magnetosphere solution, but it is not 
+# a steady state.
+
+# The parameters of the #SOLARWIND command were obtained
+# from the result of the SC-IH steady state. 
+# Otherwise this test can be run independently, 
+# no restart files are read.
+
+# You can use the SWMF with the settings used in the 8 components test, 
+# but you only need the GM component,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.GM PARAM.in
+cp ../test/LAYOUT.in.GM LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=64
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 64 SWMF.exe > runlog.np64
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ..
+
+#################################################
+# TEST 6: create GM-IM-IE-UA initial conditions #
+#################################################
+
+# This test involves the GM, IM, IE and UA components. It demonstrates
+# how to obtain a reasonable solution for the 
+# coupled global/inner magnetosphere, ionosphere and upper atmosphere.
+# The initial global magnetosphere solution is taken from TEST 5.
+# The convergence to steady state is accelerated by component subcycling.
+# The GM, IM and UA components are called at different frequencies.
+# This allows the GM, IM and UA components to reach a reasonable solution
+# approximately at the same rate.
+
+# !!! This test requires the GM restart files created in TEST 5 !!!
+
+# You can use the SWMF with the settings used in the 8 components test, 
+# but you only need the GM, IM, IE and UA components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.GMIMIEUA PARAM.in
+cp ../test/LAYOUT.in.GMIMIEUA LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+# To make this run useful for the 8 component test 
+# rename the restart directories
+cd GM
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartOUT
+cd ../IM
+rmdir restartIN
+mv restartOUT restartIN
+mkdir restartOUT
+cd ../UA
+mv RestartOUT RestartIN
+mkdir RestartOUT
+cd ..
+
+# To be able to start from a 4 hour simulation time
+# the GM/restartIN/restart.H file was copied and modified.
+# This is not absolutely necessary, because SWMF will overwrite
+# the time read by GM.
+cp GM/restartIN/restart.H GM/restartIN/restart.H.4hr
+
+# modify simulation time
+emacs M/restartIN/restart.H.4hr
+-------------------------------------------
+...
+#TIMESIMULATION
+ 1.44000000E+04              tSimulation
+...
+--------------------------------------------
+
+##########################################################
+# TEST 7: Run SC-IH-SP for 4 hours in time accurate mode #
+##########################################################
+
+# This test involves the Solar Corona, Inner Heliosphere
+# and Solar Energetic Particles components.
+# The run starts from a steady state of the SC and IH components
+# which was obtained in TEST 4.
+# At the beginning of this time accurate run a CME is 
+# generated in the SC component. This demonstrates the
+# use of an Eruptive Event generator.
+# The SP component is coupled, and during the 4 hour evolution
+# of the CME, substantial particle acceleration is observed. 
+# By the end of the run the CME reaches is the boundary 
+# between the SC and IH components, and partially enters the IH domain.
+# The test demonstrates the coupling between the SC-IH and SP
+# components in a challenging simulation.
+
+# This test requires the restart files for SC and IH
+# which were generated in TEST 4. Alternatively open
+# the tar file:
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_restart_sgi.tgz
+tar xf ../test/scih_restart_sgi.tar
+
+# You can use the SWMF with the settings used in the 8 components test, 
+# but you only need the SC, IH and SP components,
+# all other component versions can be Empty.
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.SCIHSP PARAM.in
+cp ../test/LAYOUT.in.SCIHSP LAYOUT.in
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd SC
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ..
+
+# To make the results of this test useful for TEST 1
+# the restart files have to be renamed
+cd SC
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartIN
+cd ../IH
+mv restartIN restartIN_orig
+mv restartOUT restartIN
+mkdir restartIN
+cd ..
+
+#########################################################
+#                                                       #
+# NOTE: Test 1 is the official milestone 10 run.  It    #
+# will simultate 600 seconds of a fully coupled run.    #
+# On select platforms and with enough processors, it    #
+# runs faster than real time.                           #
+#                                                       #
+# The remainder of the tests are used both to test      #
+# subsets of components, and to build up the necessary  #
+# restart files to execute test 1.  These tests are     #
+# described in more detail in the manual.               #
+#                                                       #
+#########################################################
+
+#########################################################
+# TEST 1: restart 8 components at 4 hours physical time #
+#########################################################
+
+# This test involves all 8 components. The run starts 
+# from a CME eruption which has evolved for 4 hours.
+# By this time the CME is reaching the boundary between
+# the SC and IH components at 20 solar radii.
+# The test demonstrates that the CME passes this boundary.
+# The coupling with the SP component shows that particles are
+# accelerated, although the 10 minute run does not allow for
+# too much acceleration.
+#
+# The run is set up to contain a discontinuity at the boundary
+# between the GM and IH components at 32 Earth radii upstream
+# from the Earth. This is an artificially created discontinuity, 
+# but it satisfies the laws of physics. There is a contact
+# discontinuity in density and temperature, and a rotational
+# discontinuity in the Z component of the magnetic field.
+# The test demonstrates that the IH state propagates into the GM domain,
+# and the discontinuity interacts with the magnetosphere, which
+# affects the components GM, IM, RB, IE and UA.
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_4hr_restart.tgz
+tar xzf ../test/gmimieua_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_4hr_restart_sgi.tgz
+gunzip ../test/gmimieua_restart_sgi.tgz
+tar xf ../test/scih_4hr_restart_sgi.tar
+tar xf ../test/gmimieua_restart_sgi.tar
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.8comp PARAM.in
+cp ../test/LAYOUT.in.8comp LAYOUT.in
+
+# edit LAYOUT.in so that it fits on your machine
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ../SC
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+
+#################################################################
+# TEST 2: restart 8 components from an approximate steady state #
+#################################################################
+
+# This test involves all 8 components. The run starts 
+# from a steady state of the SC and IH components.
+# At the beginning of this time accurate run a CME is 
+# generated in the SC component. This demonstrates the
+# use of an Eruptive Event generator.
+# Although the SP component is coupled, the 10 minute 
+# evolution of the CME does not allow particle acceleration.
+# Try TEST 7 to study the particle acceleration.
+#
+# The run is set up to contain a discontinuity at the boundary
+# between the GM and IH components at 32 Earth radii upstream
+# from the Earth. This is an artificially created discontinuity, 
+# but it satisfies the laws of physics. There is a contact
+# discontinuity in density and temperature, and a rotational
+# discontinuity in the Z component of the magnetic field.
+# The test demonstrates that the IH state propagates into the GM domain,
+# and the discontinuity interacts with the magnetosphere, which
+# affects the components GM, IM, RB, IE and UA.
+
+# !!! on Linux and OSF1 machines use !!!
+tar xzf ../test/scih_restart.tgz
+tar xzf ../test/gmimieua_restart.tgz
+
+# !!! on the IRIX64 and Darwin machines use !!!
+gunzip ../test/scih_restart_sgi.tgz
+gunzip ../test/gmimieua_restart_sgi.tgz
+tar xf ../test/scih_restart_sgi.tar
+tar xf ../test/gmimieua_restart_sgi.tar
+
+# copy in PARAM and LAYOUT files
+cp ../test/PARAM.in.8comp.t=0 PARAM.in
+cp ../test/LAYOUT.in.8comp LAYOUT.in
+
+# edit LAYOUT.in so that it fits on your machine
+
+# Check if everything is OK from the main directory
+# Define the number of CPU-s you plan to use after the -n= flag.
+cd ..
+Scripts/TestParam.pl -n=128
+
+# If there are error messages, fix them. 
+# For example if there are not enough CPU-s for a component change the LAYOUT
+# Repeat this until Scripts/TestParam.pl runs silently.
+
+# run the code by submitting a job, or interactively
+cd run
+mpirun -np 128 SWMF.exe > runlog.np128
+
+# Postprocess the plot files
+cd GM
+pIDL
+pTEC
+cd ../IH
+pIDL
+pTEC
+cd ../SC
+pIDL
+pTEC
+cd ../IE
+pION -r
+cd ..
+
+\end{verbatim}
