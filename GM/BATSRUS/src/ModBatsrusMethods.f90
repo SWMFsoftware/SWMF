@@ -333,13 +333,13 @@ subroutine BATS_advance(TimeSimulationLimit)
   
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
+  Time_Simulation = Time_Simulation + dt*UnitSI_t
+
   call exchange_messages
   
   call advect_all_points
   
   call timing_stop('advance')
-
-  Time_Simulation = Time_Simulation + dt*UnitSI_t
 
   if(time_accurate)&
        call update_lagrangian_grid(&
