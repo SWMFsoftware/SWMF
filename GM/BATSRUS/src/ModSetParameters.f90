@@ -1924,7 +1924,7 @@ contains
     case(problem_earth, problem_saturn, problem_jupiter, problem_rotation)
        TypeBc_I(body1_)='ionosphere'
     case default
-       TypeBc_I(body1_)='reflect'
+       TypeBc_I(body1_)='unknown'
     end select
 
     !   UseRotatingFrame = problem_type == problem_heliosphere
@@ -2478,18 +2478,7 @@ contains
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
     !    MaxBoundary=max(MaxBoundary,Top_)           !^CFG IF NOT CELLOUTERBC
-
-    !if(iProc==0)then                                !^CFG IF FACEOUTERBC BEGIN
-    !   !These write outs are rather meaningless for the average user
-    !   !and the values never change when cell outer bc-s are used 
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'MinBoundary=',MinBoundary,'MaxBoundary=',MaxBoundary
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'DoFixOuterBoundary = ',DoFixOuterBoundary
-    !   call write_prefix; write(iUnitOut,*)&
-    !        'UseExtraBoundary =',UseExtraBoundary,&
-    !        'DoFixExtraBoundary =',DoFixExtraBoundary
-    !end if                                           !^CFG END FACEOUTERBC 
+ 
   end subroutine set_physics_parameters
 
 end subroutine MH_set_parameters
