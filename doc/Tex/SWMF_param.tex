@@ -227,7 +227,7 @@ The SWMF will read the following commands (the parameter values are
 examples only) from the included file:
 \begin{verbatim}
 #DESCRIPTION
-Create startup for GM-IM-IE-UA from GM stady state.
+Create startup for GM-IM-IE-UA from GM steady state.
 
 #PLANET
 EARTH                        NamePlanet
@@ -323,10 +323,10 @@ which defines the final time step or the final time of the run.
 
 \subsection{Iterations, Time Steps and Time \label{section:frequency}}
 
-In several commands the frequency or 'time' of some action has
+In several commands the frequency or `time' of some action has
 to be defined. This is usually done with a pair of parameters.
 The first defines the frequency or time in terms of the number of time steps,
-and the second one in terms of the simulation time.
+and the second in terms of the simulation time.
 A negative value for the frequency means that it should not be taken 
 into account. For example, in time accurate mode,
 \begin{verbatim}
@@ -342,7 +342,7 @@ T            DoSaveRestart
 -1           DnSaveRestart
 100.0        DtSaveRestart
 \end{verbatim}
-means that it should be saved every 100 second in terms of physical time.
+means that it should be saved every 100 seconds in terms of physical time.
 Defining positive values for both frequencies might be useful
 when switching from steady state mode to time accurate mode.
 In the steady state mode the DnSaveRestart parameter is used,
@@ -464,7 +464,7 @@ when the time is a multiple of 400.0 seconds or at 400.0 and 800.0 seconds.
 Note that a restart file will also be written at time 1000.0
 seconds since this is the end of a run.
 
-In the next example ee want to restart from 1000.0 seconds 
+In the next example we want to restart from 1000.0 seconds 
 and continue with a time accurate run.
 \begin{alltt}
                                              Restart Files Written at:

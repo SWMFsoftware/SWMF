@@ -15,7 +15,9 @@ Within one run the layout is determined by the \#COMPONENTMAP
 command in the LAYOUT.in file. The exact syntax of this file
 is documented in the reference manual of the CON\_world class.
 Here we provide several examples which will help to develop
-a sense of using optimal layouts.
+a sense of using optimal layouts.  An optimal layout is one that 
+maximizes the use of all processors and does not leave processors
+with nothing do while waiting for other processors to finish their work.
 
 First of all we have to define the processor rank:
 it is a number ranging from 0 to $N-1$, where
@@ -125,7 +127,7 @@ to see how fast they can execute.
 
 Here is an example with 4 components: the Ionospheric
 Electrodynamics (IE) component can run on 2 processors and 
-tt runs about 3 times faster than real time.
+runs about 3 times faster than real time.
 The serial Inner Magnetosphere (IM) component runs even faster,
 on the other hand the coupling of GM and IM is rather
 computationally expensive. The Upper Atmosphere (UA) component
@@ -134,7 +136,7 @@ as real time. The Global Magnetosphere model (GM) needs
 at least 32 processor to run faster than real time.
 If we have a lot of CPU-s, we may simply create a non-overlapping
 layout. Since GM has no restriction on the number of processors,
-it can be the last componentn in the map
+it can be the last component in the map
 \begin{verbatim}
 ID   proc0 last stride
 #COMPONENTMAP
@@ -167,7 +169,7 @@ since many of the components can run in time accurate
 mode only. Nevertheless, the SWMF can improve the convergence
 towards a steady state by allowing the different components
 to run at different speeds in terms of the physical time.
-In \BATSRUS the same idea is used on a much smaller scale:
+In \BATSRUS\ the same idea is used on a much smaller scale:
 local time stepping allows each cell to converge towards
 steady state as fast as possible, limited only by the local
 numerical stability limit.
@@ -215,7 +217,7 @@ stability too. When GM and IM are to be relaxed
 to a steady state, the GM/BATSRUS code is running in 
 local time stepping mode, while IM/RCM runs in time 
 accurate mode internally. Since GM and IM are coupled
-both ways, an instabiliy can occur if both GM and IM
+both ways, an instability can occur if both GM and IM
 are run every time step, because the GM physical time
 step is very small, and the MHD solution cannot relax
 while being continuously pushed by the IM coupling.
@@ -288,7 +290,7 @@ most possibilities for efficient concurrent execution.
 
 By default the component time steps are limited by the
 time of couplings. This means that if GM can take 4 second
-times stepe, and it is coupled with IE every 5 seconds,
+times steps, and it is coupled with IE every 5 seconds,
 then every second GM time step will be truncated to 1 second.
 There are two ways to avoid this. One is to choose the
 coupling frequencies to be round multiples of the time steps
@@ -305,7 +307,7 @@ GM             NameComp
 F              DoCoupleOnTime
 \end{verbatim}
 will alow the GM component to use 4 second time steps even
-if is coupled at every 5 seconds. Of course this will
+if it is coupled at every 5 seconds. Of course this will
 make the data transferred during the coupling be 
 first order accurate in time.
 

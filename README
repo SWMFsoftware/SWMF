@@ -1,5 +1,11 @@
+This document outlines how to install the SWMF on your system and how to
+create and access the documentation.  To learn more about the SWMF, including
+how to compile and run the code, please consult the user manual.  To install
+the SWMF and create the user manual please follow the instructions below. 
+
+
 #############################
-# Obtain SWMF and the tests #
+# Obtain SWMF               #
 #############################
 
 # Get the source code from cvs (UM only) or from the tar ball.
@@ -22,6 +28,14 @@ tar -xzf {path_to_file}/SWMF_v2.tgz
 ################
 # install SWMF #
 ################
+
+# !!! To install the SWMF using the default compiler for your platform !!!
+# !!! On Linux or Darwin with NAG F95, on the SGI and on the Compaq !!!
+SetSWMF.pl -install
+
+# Some platforms require additional flags or have other compilers as
+# an option.
+
 # !!! On the SGI Altix do the following !!!
 SetSWMF.pl -install -c=ifort -m=Altix
 module load intel-comp.8.0.070
@@ -30,10 +44,8 @@ module load intel-comp.8.0.070
 SetSWMF.pl -install -c=pgf90
 
 # !!! On Darwin using the xlf compiler !!!
-SetSWMF.pl -install -c=xlf
+SetSWMF.pl -install -c=xlf90
 
-# !!! On Linux or Darwin with NAG F95, on the SGI and on the Compaq !!!
-SetSWMF.pl -install
 
 ######################
 # Create the manuals #
@@ -49,6 +61,7 @@ make PDF
 # Create HTML version of the manuals in the doc/HTML/ directory
 make HTML
 
+
 ####################
 # Read the manuals #
 ####################
@@ -60,7 +73,10 @@ mozilla doc/index.html
 
 # Here is a short description of the manuals:
 
-# You should start by reading the user manual
+# !!! You should start by reading the user manual !!!
+# The user manual contains a quickstart section that will get you started
+# running the SWMF.  In addition there is a section with some example runs
+# that you might want to try.
 acroread doc/SWMF.pdf
 
 # To learn about the testing procedures of SWMF read the testing manual

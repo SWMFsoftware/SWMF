@@ -10,7 +10,7 @@
 This document describes a working prototype of the NASA-funded Space
 Weather Modeling Framework (SWMF) delivered to NASA to fulfill the
 Milestone 11K requirements. The SWMF was developed to provide flexible
-"plug and play" type simulation capabilities serving the Sun-Earth
+``plug and play" type simulation capabilities serving the Sun-Earth
 modeling community.  In its current form the SWMF links together eight
 models from the surface of the Sun to the upper atmosphere of the Earth: 
 \begin{enumerate}
@@ -75,12 +75,12 @@ energetic particles along a magnetic field line in a 3D phase space.
 
 \item
 The Inner Magnetosphere (IM) component is the Rice Convection Model
-(RCM) developed Rice University.  This code is 2-dimensional and
+(RCM) developed at Rice University.  This code is 2-dimensional and
 serial.
 
 \item
 The Radiation Belt (RB) component is the Rice RBM
-developed Rice University.  This code is 2-dimensional and
+developed at Rice University.  This code is 2-dimensional and
 serial.
 
 \item
@@ -96,7 +96,7 @@ models developed at CSEM.  They are fully parallel.
 
 \end{itemize}
 The transformation of physics models into physics components,
-the coupling of components to the SWMF and each other and,
+the coupling of components to the SWMF and each other and
 all the testing were done at CSEM.
 
 \section{What is New in Version 2.1}
@@ -126,8 +126,8 @@ version 1.0. Here are some of the highlights:
 \item The directory structure of the SWMF has been greatly improved and 
       reorganized. 
 \item This reorganization allows components to be used as stand alone 
-      physics models without any modification in the source code,
-      only a small library needs to be linked.
+      physics models without any modification in the source code.  The
+      Stand alone version only linking to a small SWMF library.
 \item The installation and configuration of SWMF has been greatly simplified
       with the aid of Perl scripts. 
 \item Layout and input parameter can be checked with Scripts/TestParam.pl
@@ -143,7 +143,7 @@ version 1.0. Here are some of the highlights:
 
 The SWMF is a structured collection of software building blocks that
 can be used or customized to develop Sun-Earth system modeling
-components, and to assemble them into applications. The SWMF consist
+components, and to assemble them into applications. The SWMF consists
 of utilities and data structures for coupling model components. The
 SWMF contains a Control Module (CON), which is responsible for
 component registration, processor layout for each component and
@@ -226,6 +226,39 @@ compiler. We have also run the framework with reasonable success under
 Mac OS Darwin using the XLF and NAG f95 compiler, and under Linux with
 the PGF90 compiler.
 
+\section{System Requirements}
+
+In order to install and run the SMWF the following minimum system
+requirements apply.
+
+\begin{itemize}
+\item The SWMF runs only under the UNIX/Linux operating systems.  This now
+  includes Macintosh system 10.x because it is based on BSD linux.  The
+  SWMF does not run under any Microsoft Windows operating system.
+\item A FORTRAN 77 and FORTRAN 90 compiler must be installed.
+\item A version of the Message Passing Interface (MPI) library must be
+  installed.
+\item You may be able to compile the code and do very small test
+runs on 1 or 2 processor machines.  However, to do most physically
+meaningful runs the SWMF requires a
+parallel processor machine with a minimum of 8 processors and a minimum of 8GB of
+memory.
+\item Very large runs require many more processors.
+\item In order to generate the documentation you must have LaTex installed on
+your system.  To generate the HTML version you also must install the
+{\tt latex2html} package. 
+
+\end{itemize}
+
+
+In addition to the above requirements, the SWMF output is designed to
+be visualized using either IDL or Tecplot.  You may be able to
+visualize the output with other packages, but formats and scripts have
+been designed for only these two platforms.
+
+
+
+
 %-----------------------------------------------------------------------
 % Chapter 2
 %-----------------------------------------------------------------------
@@ -235,7 +268,7 @@ the PGF90 compiler.
 \section{A Brief Description of the SWMF Distribution}
 
 The distribution in the form of the compressed tar image
-SWMF.tar.gz includes the SWMF source code.
+includes the SWMF source code.
 The top level directory contains the following subdirectories:
 \begin{itemize}
 \item {\tt CON}     - the directory of the framework's main building blocks
@@ -263,6 +296,18 @@ and the following files
 \item {\tt Configure.options} - default configuration options %^CMP IF CONFIGURE
 \item {\tt SetSWMF.pl}     - Perl script for (un)installation and configuration
 \end{itemize}
+
+\section{General Hints}
+
+Most of the Perl and shell scripts that are distributed with the SWMF
+provide help which can be accessed as follows using the {\tt -h} flag.
+For example, 
+\begin{verbatim}
+  SetSWMF.pl -h
+\end{verbatim}
+will provide a detailed listing of the options and capabilities of the
+{\tt SetSWMF.pl} script.
+
 
 \section{Installing the Code}
 
@@ -341,10 +386,14 @@ which creates the documentation
 \begin{verbatim}
   doc/SWMF.pdf
 \end{verbatim}
-in the Adobe PDF format.  An on-line version can be created by
+in the Adobe PDF format.  In order for this to work you must have
+LaTex installed on your system.  An on-line version can be created by
 \begin{verbatim}
   make HTML
 \end{verbatim}
+The HTML version is generated from the LaTex using the command {\tt
+  latex2html}.  You will have to install this if does not already exist
+  on your system.
 The top level HTML file is in
 \begin{verbatim}
   doc/HTML/index.html
@@ -362,7 +411,9 @@ To remove all the created documentation type
 
 \section{Building and Running an Executable}
 
-The physics components can be selected with the {\tt -v} flag
+At compile time, the user can select which physics components he would
+like to compile.  Any component not compiled will not be available for
+use at run time.  The physics components can be selected with the {\tt -v} flag
 of the SetSWMF.pl script. For example typing
 \begin{verbatim}
   SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS,SP/Kota
@@ -393,12 +444,14 @@ For example try
   GridSize.pl -s
 \end{verbatim}
 Compilation flags, such as the precision and optimization 
-level are stored in {\tt Makefile.conf}. The precision of reals
+level are stored in {\tt Makefile.conf}. This file is created on
+installation of the SWMF and has defaults which are appropriate for
+your system architecture.  The precision of reals
 can be changed to single precision (for example) by typing
 \begin{verbatim}
   SetSWMF.pl -p=single
 \end{verbatim}
-while the compiler flags can be editied in {\tt Makefile.conf} by hand.
+while the compiler flags can be edited in {\tt Makefile.conf} by hand.
 
 Before compiling SWMF it is always a good idea to check its configuration
 with
@@ -426,8 +479,8 @@ To build the executable {\bf bin/SWMF.exe}, type:
   make
 \end{verbatim} 
 Depending on the configuration, the compiler settings and the machine 
-that you are compiling on, this can take from 2 to upto 30 minutes.  
-In addition, you may want make the post processing
+that you are compiling on, this can take from 2 to up to 30 minutes.  
+In addition, you may want to make the post processing
 codes (for BATSRUS only) also:
 \begin{verbatim}
   make PSPH
@@ -437,7 +490,7 @@ These two commands will create the codes {\tt bin/PostSPH.exe}, for post
 processing spherical Tecplot files, and {\tt bin/PostIDL.exe} 
 for post processing IDL files.
 
-The executable should be run in a sub-directory, since a large number
+The {\tt SWMF.exe} executable should be run in a sub-directory, since a large number
 of files are created in each run.  To create this directory use the
 command:
 \begin{verbatim}
@@ -455,12 +508,14 @@ Here we assume that the {\tt run} directory is still called {\tt
 run}:
 \begin{verbatim}
   cd run
-\end{verbatim} 
-Edit the processor map input file LAYOUT.in to define the processor
-layout for the components involved in the future run.  Edit or create
-the input parameter file PARAM.in.  The default LAYOUT.in and PARAM.in
+\end{verbatim}
+In order to run the SWMF you must have two input files:  LAYOUT.in and
+PARAM.in.  The LAYOUT.in file defines the processor
+layout for the components involved in the future run.  The PARAM.in
+file contains the detailed commands for controlling what you want the
+code to do during the run.  The default LAYOUT.in and PARAM.in
 files in the run directory are suitable to perform the ``Start'' test
-on 16 PE-s. 
+on 16 processors (PE-s). 
 
 An example processor map file LAYOUT.in to run the executable with
 five components on 16 processors is:
@@ -492,7 +547,8 @@ in the main SWMF directory.
 The Perl script reports inconsistencies and errors. 
 If no errors are found, the script finishes silently.
 Now you are ready to run the executable through submitting a batch job or, 
-if it is possible on your computer, run the code interactively.  For example:
+if it is possible on your computer, run the code interactively.  For
+example, to run the SWMF interactively:
 \begin{verbatim}
 cd run
 mpirun -np 16 SWMF.exe
