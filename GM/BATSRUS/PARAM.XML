@@ -2563,7 +2563,7 @@ GradP		TypeConservCrit
 ! (if any) and they select the non-conservative scheme if ANY of them is true:
 !
 ! 'r'        - radial distance of the cell is less than rConserv
-! 'parabola' - x less than xParabolaConserv + (y**2+z**2)/yParabolaConserv
+! 'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
 !
 ! Default values are nConservCrit = 1 with TypeConservCrit = 'r'
 ! and rConserv=2*rBody, where rBody has a problem dependent default.
