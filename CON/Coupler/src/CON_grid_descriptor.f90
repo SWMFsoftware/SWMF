@@ -459,17 +459,16 @@ contains
     integer,intent(in):: lGlobalTreeNode
     integer,dimension(GridDescriptor%nDim),intent(in)::&
          iGridPoint_D
-    integer,dimension(0:GridDescriptor%nDim)::nGridPoints_D
+    integer,dimension(GridDescriptor%nDim)::nGridPoints_D
     integer::iDim,iMisc,iMisc1
     nGridPoints_D(1:GridDescriptor%nDim)=1+&
          GridDescriptor%iGridPointMax_D-&
          GridDescriptor%iGridPointMin_D
-    nGridPoints_D(0)=1
-    i_grid_point_global=(i_global_block(GridDescriptor%DD%Ptr,&
-         lGlobalTreeNode)-1)*nGridPoints_D(GridDescriptor%nDim)
+    i_grid_point_global=i_global_block(GridDescriptor%DD%Ptr,&
+         lGlobalTreeNode)-1
     do idim=GridDescriptor%nDim,1,-1
        i_grid_point_global=i_grid_point_global*&
-            nGridPoints_D(iDim-1)+iGridPoint_D(iDim)-&
+            nGridPoints_D(iDim)+iGridPoint_D(iDim)-&
             GridDescriptor%iGridPointMin_D(iDim)
     end do
     i_grid_point_global=i_grid_point_global+1
