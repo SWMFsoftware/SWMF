@@ -28,10 +28,10 @@ module CON_couple_gm_ie
   ! 07/25/2003 G.Toth <gtoth@umich.edu> - initial version as external 
   !                                       subroutines
   ! 08/27/2003 G.Toth - combined into a module
+  ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
   !EOP
 
   ! Communicator and logicals to simplify message passing and execution
-  integer, save :: iCommIeGm, iProc0Gm
   logical       :: UseMe=.true., IsInitialized=.false.
 
   ! Size of the 2D spherical structured IE grid
@@ -54,13 +54,10 @@ contains
 
     ! This works for a NODE BASED regular IE grid only
     nCells_D = ncells_decomposition_d(IE_) + 1
-    iSize=nCells_D(1); jSize=nCells_D(2)
+    iSize = nCells_D(1); jSize = nCells_D(2)
 
-    !\
-    ! Form the union group and calculate the root PE of GM in this group
-    !/
-    iProc0Gm = i_proc0(GM_)
-    call set_router_comm(IE_,GM_,iCommIeGm,UseMe,iProc0Gm)
+    ! Set UseMe to .true. for the participating PE-s
+    UseMe = is_proc(IE_) .or. is_proc(GM_)
 
   end subroutine couple_gm_ie_init
 
@@ -124,9 +121,6 @@ contains
 
       ! Message size
       integer :: nSize
-
-      ! Communicator and logicals to simplify message passing and execution
-      integer, save :: iCommGmIe
 
       integer :: iBlock     ! 1 for northern and 2 for southern hemisphere
       integer :: iProcFrom  ! PE number sending the potential for current block
@@ -221,10 +215,7 @@ contains
     !    Global Magnetosphere       (GM) source\\
     !    Ionosphere Electrodynamics (IE) target
     !
-    ! Send field aligned currents from GM to IE. This version is
-    ! not particularly efficient, as it sends the magnetic field
-    ! as well. It would be better to calculate the field aligned
-    ! current on GM.
+    ! Send field aligned currents from GM to IE. 
     !EOP
 
     !\
@@ -253,30 +244,15 @@ contains
     !=========================================================================
     subroutine couple_mpi
 
-      character (len=*), parameter :: NameSubSub=NameSub//'::couple_mpi'
-
-      ! Number of coordinates and number of variables to pass
-      integer, parameter :: nDimLoc=3, nVarIeGm=8
-
-      ! Names of locations for both blocks
-      character (len=*), parameter, dimension(2) :: &
-           NameLoc_B=(/'LocNorth3','LocSouth3'/)
+      character (len=*), parameter :: NameSubSub = NameSub//'::couple_mpi'
 
       ! Names of variables for both blocks
       character (len=*), parameter, dimension(2) :: &
-           NameVar_B=(/'jNorth3:BinfoNorth5','jSouth3:BinfoSouth5'/)
+           NameVar_B = (/ 'JrNorth', 'JrSouth' /)
 
-      ! Logical for new mapping points
-      logical :: IsNewFacPoint
 
-      ! Size of the 2D spherical structured (possibly non-uniform) IE grid
-      integer, save :: nPoint_B(2)
-
-      ! Colatitude limits for mapping (could be calculated from coordinates)
-      real :: ColatLim_B(2)
-
-      ! Buffer for the variables on the 2D IE grid
-      real, dimension(:,:), allocatable :: Buffer_IV
+      ! Buffer for the field aligned current on the 2D IE grid
+      real, dimension(:,:), allocatable :: Buffer_II
 
       ! MPI related variables
 
@@ -299,110 +275,49 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, i_proc0(IE_)=', &
            iProcWorld,i_proc0(GM_),i_proc0(IE_)
 
-      !\
-      ! Calculate field aligned currents in GM
-      !/
-      if(is_proc(GM_))then
-         if(DoTest)write(*,*)NameSubSub,': call GM_calc_fac'
-         call GM_calc_fac(IsNewFacPoint,nPoint_B,ColatLim_B)
-      end if
-      if(DoTest)write(*,*)NameSubSub,': bcast'
-
-      !\
-      ! Broadcast information about mapping points
-      !/
-      call MPI_bcast(IsNewFacPoint,1,MPI_LOGICAL,iProc0Gm,iCommIeGm,iError)
-      call MPI_bcast(nPoint_B     ,2,MPI_INTEGER,iProc0Gm,iCommIeGm,iError)
-      call MPI_bcast(ColatLim_B   ,2,MPI_REAL   ,iProc0Gm,iCommIeGm,iError)
-
-      ! Do Northern and then Southern hemispheres
+      ! Do Northern and then Southern hemispheres in this order!
       do iBlock = 1, 2
 
          if(DoTest)write(*,*)NameSubSub,': iBlock=',iBlock
 
          ! The IE processor for this block
-         iProcTo = pe_decomposition(IE_,iBlock)
+         iProcTo = pe_decomposition(IE_, iBlock)
 
          if(DoTest)write(*,*)NameSubSub,': iProcTo=',iProcTo
 
-         if(IsNewFacPoint)then
-
-            if(DoTest)write(*,*)NameSubSub,': New FAC points'
-            !\
-            ! Allocate variables for the locations
-            !/
-            allocate(Buffer_IV(nPoint_B(iBlock),nDimLoc), stat=iError)
-            call check_allocate(iError,NameSubSub//': '//NameLoc_B(iBlock))
-            !\
-            ! Get locations
-            !/
-            if(DoTest)write(*,*)NameSubSub,': get FAC point locations'
-
-            if(is_proc0(GM_))call GM_get_for_IE(&
-                 Buffer_IV,nPoint_B(iBlock),nDimLoc,NameLoc_B(iBlock))
-
-            if(DoTest)write(*,*)NameSubSub,': transfer FAC point locations'
-            !\
-            ! Transfer locations from GM to IE
-            !/
-            if(iProcTo /= i_proc0(GM_))then
-               nSize = nPoint_B(iBlock)*nDimLoc
-               if(is_proc0(GM_)) &
-                    call MPI_send(Buffer_IV,nSize,MPI_REAL,iProcTo,&
-                    1,i_comm(),iError)
-               if(i_proc() == iProcTo) &
-                    call MPI_recv(Buffer_IV,nSize,MPI_REAL,i_proc0(GM_),&
-                    1,i_comm(),iStatus_I,iError)
-            end if
-
-            if(DoTest)write(*,*)NameSubSub,': put FAC point locations'
-
-            !\
-            ! Put coordinates into IE
-            !/
-            if(i_proc() == iProcTo )then
-               call IE_put_from_gm(Buffer_IV,nPoint_B(iBlock),nDimLoc,&
-                    NameLoc_B(iBlock))
-               call IE_interpolate(iBlock,ColatLim_B(iBlock))
-            end if
-            !\
-            ! Deallocate buffer to save memory
-            !/
-            deallocate(Buffer_IV)
-         end if
          !\
          ! Allocate buffers for the variables both in GM and IE
          !/
-         allocate(Buffer_IV(nPoint_B(iBlock),nVarIeGm), stat=iError)
+         allocate(Buffer_II(iSize, jSize), stat=iError)
          call check_allocate(iError,NameSubSub//": "//NameVar_B(iBlock))
+
          !\
-         ! Get field aligned currents and B information from GM's root
+         ! Calculate field aligned currents on GM
+         ! The result will be on the root processor of GM
          !/
-         if(is_proc0(GM_)) &
-              call GM_get_for_ie(Buffer_IV,nPoint_B(iBlock),nVarIeGm,&
-              NameVar_B(iBlock))
+         if(is_proc(GM_)) &
+              call GM_get_for_ie_new(Buffer_II, iSize, jSize, NameVar_B(iBlock))
          !\
          ! Transfer variables from GM to IE
          !/
          if(iProcTo /= i_proc0(GM_))then
-            nSize = nPoint_B(iBlock)*nVarIeGm
+            nSize = iSize*jSize
             if(is_proc0(GM_)) &
-                 call MPI_send(Buffer_IV,nSize,MPI_REAL,iProcTo,&
-                 1,i_comm(),iError)
+                 call MPI_send(Buffer_II, nSize, MPI_REAL, iProcTo,&
+                 1, i_comm(), iError)
             if(i_proc() == iProcTo) &
-                 call MPI_recv(Buffer_IV,nSize,MPI_REAL,i_proc0(GM_),&
-                 1,i_comm(),iStatus_I,iError)
+                 call MPI_recv(Buffer_II, nSize, MPI_REAL, i_proc0(GM_),&
+                 1,i_comm(), iStatus_I, iError)
          end if
          !\
          ! Put variables into IE
          !/
          if(i_proc() == iProcTo )&
-              call IE_put_from_gm(Buffer_IV,nPoint_B(iBlock),nVarIeGm,&
-              NameVar_B(iBlock))
+              call IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar_B(iBlock))
          !\
          ! Deallocate buffer to save memory
          !/
-         deallocate(Buffer_IV)
+         deallocate(Buffer_II)
       end do
 
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
