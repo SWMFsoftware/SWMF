@@ -169,17 +169,20 @@ T			UseBody1
 coronatoih		TypeBcInner
 
 #HELIOSPHERE
-2.85E+06		Tsun    [K]      1.0E6 
-1.50E+14		NDsun [n/m-3]
-25.00			Qsun
-1.75			Theat
-1.00			Rheat
-4.50			SIGMAheat
+2.85E+06		BodyTDim   [K] 
+1.50E+14		BodyRhoDim [n/m-3]
+25.00			qSun
+1.75			tHeat
+1.00			rHeat
+4.50			SigmaHeat
 F                       UseUserPerturbation
 
 #HELIODIPOLE
--3.0			HelioDipoleStrength(equatorial field strength in Gauss)
+ 0.0			HelioDipoleStrength(equatorial field strength in Gauss)
  0.0			HelioDipoleTilt
+
+#HELIOUPDATEB0
+-1.0			DtUpdateB0
 
 #GRID
 1			nRootBlockX
