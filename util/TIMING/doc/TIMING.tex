@@ -23,8 +23,11 @@ Here is a short example of usage:
 {\footnotesize
 \begin{verbatim}
   call timing_version(on,vname,vnum)! check the version
+
+  call timing_comp_proc('GM',iProc) ! Set the component name and PE number
   ....
-  call timing_active(.true.)        ! Activate timing
+  if(iProc==0) &
+      call timing_active(.true.)    ! Activate timing on processor zero
   call timing_step(0)               ! Initialize step value
   call timing_start('main')         ! Start timing the main code
   ...
@@ -55,13 +58,25 @@ the empty timing module. The second string variable 'name' (of length 40)
 returns the name and the author of the module, and the last real variable
 'number' returns the version number. 
 
+The timing\_comp\_proc subroutine sets the name of the component and
+the processor rank (with respect to some MPI group). This
+information is needed if there are multiple components using the
+timing utility. Both the compnent name and processor number will be
+shown in the timing reports. If more components do timings on the same 
+processor, the timings will be reported together with the name
+of the component which called timing\_comp\_proc last.
+
 The timing is activated by timing\_active. For parallel runs
 one should usually activate the timing module for one processor only.
+For timing multiple components the root processor of each component
+can be used, for example.
 When the timing module is inactive, the timing commands are executed 
 but do not time and do not provide output.
 
 The timing is done by a pair of timing\_start and timing\_stop calls.
 The string name arguments of the two calls must match. 
+Make sure that if the timing\_start is called then the corresponding
+timing\_stop call is also executed. 
 Timings can be inside loops, and nested arbitrarily. 
 Note, however, that timing inside a recursive procedure does not work.
 The timings are distinguished by the name as well as by the nesting level.
@@ -139,7 +154,7 @@ means that the timings can be nested arbitrarily deep.
 If depth is set to 0, then no timing is done at all, while
 if depth is set to 1, only the main code is timed.
 
-The style of the report shown by the generic 
+The style of the report shown by the 
 {\tt timing\_report} and  {\tt timing\_report\_total} subroutines
 is determined by the {\tt report\_style}. The default style is
 'cumm', which produces cummulative timings sorted by the timing values.
@@ -167,7 +182,7 @@ is itself, so
   write(*,*)'Elapsed time=',timing_func_d('sum',1,'main','main')
 \end{verbatim}
 prints out the total time spent by 'main' since the last reset. 
-The parent is needed to distinquish between timings called from 
+The parent is needed to distinguish between timings called from 
 different places. If the names do not match, no output is produced.
 
 \subsubsection{Show individual timings: {\tt timing\_show}}
@@ -409,10 +424,13 @@ calc_gradients      (timing_test)           0.01    0.22       1       1
 \newpage
 \subsection{List of subroutines and functions}
 
+See the reference manual for a complete and documented list.
 \begin{verbatim}
-option_timing(on,name)
+option_timing(on,name,number)
 
 timing_active(value)
+
+timing_comp_proc(value1,value2)
 
 timing_param_put_i(name,value,error)
 timing_step(value)  ! == timing_param_put_i('step',value,error)
@@ -446,49 +464,43 @@ real*8 function timing_func_d(func_name,iclock,name,parent_name)
 \newpage
 \subsection{Files and make targets}
 
-A complete list of make targets can be listed with
+A complete list of make targets in the src and doc directories
+can be listed with
 \begin{verbatim}
   make help
 \end{verbatim}
 The actual TIMING module consists of
 \begin{verbatim}
-  ModTiming.f90
-  timing.f90
-  timing_cpu.f90
+  src/ModTiming.f90
+  src/timing.f90
+  src/timing_cpu.f90
 \end{verbatim}
-The last file contains the call to the actual timing function,
-e.g. MPI\_WTIME, or SYSTEM\_CLOCK.
+The last file contains the call to the actual timing function MPI\_WTIME, 
+but it could be replaced with a platform specific function or SYSTEM\_CLOCK.
 The three source files can be compiled into one library module:
 \begin{verbatim}
   libTIMING.a
 \end{verbatim}
 with the command
 \begin{verbatim}
+  cd src
   make LIB
 \end{verbatim}
-Compiler options can be edited in the 
+Compiler options can be edited in the main directory in
 \begin{verbatim}
-  Makefile
+  Makefile.conf
 \end{verbatim}
-or given as command line options e.g. as
+which is included into the Makefile.
+The empty version of the TIMING module is defined by
 \begin{verbatim}
-  make LIB FTN=f95 CFLAG='-c -O4' LFLAG='-O4'
-\end{verbatim}
-where FTN defines the compiler, CFLAG the compile flags, and LFLAG the
-link flags. This is usefule when the library is compiled from another
-Makefile. The interface and an empty version of the TIMING module
-is defined by
-\begin{verbatim}
-  timing_empty.f90
+  srcEmpty/timing_empty.f90
 \end{verbatim}
 When the TIMING module is not needed for the main code, 
-libTIMING.a should be replaced by
-\begin{verbatim}
-  timing_empty.o
-\end{verbatim}
+libTIMING.a should be produced in the srcEmpty directory.
 which can be compiled with
 \begin{verbatim}
-  make EMPTY
+  cd srcEmpty
+  make LIB
 \end{verbatim}
 The empty module does not use any memory, most subroutine calls 
 return directly to the caller without any output. The exceptions
@@ -499,38 +511,37 @@ the empty timing module.
 
 The use of the TIMING module is fully demonstrated in 
 \begin{verbatim}
-  timing_test.f90
+  src/timing_test.f90
 \end{verbatim}
 which can be compiled both to a serial and a parallel code, both with
 the real and the empty timing module. These four combinations
 provide 4 tests, which can be all executed with
 \begin{verbatim}
+  cd src
   make TEST
 \end{verbatim}
 A sample output can be found in
 \begin{verbatim}
-  EXAMPLE_OUTPUT
+  doc/EXAMPLE_OUTPUT
 \end{verbatim}
 which was obtained by
 \begin{verbatim}
-  make TEST > EXAMPLE_OUTPUT
+  cd src
+  make TEST > ../doc/EXAMPLE_OUTPUT
 \end{verbatim}
 
 This manual was produced from
 \begin{verbatim}
-  MAN_TIMING.tex
+  doc/MAN_TIMING.tex
+  doc/TIMING.tex
 \end{verbatim}
 with
 \begin{verbatim}
+  cd doc
   make MAN
 \end{verbatim}
-The distribution can be cleaned with
+The src, srcEmpty and doc directories can be cleaned with
 \begin{verbatim}
   make clean
   make distclean
 \end{verbatim}
-and a distribution produced with
-\begin{verbatim}
-  make dist
-\end{verbatim}
-
