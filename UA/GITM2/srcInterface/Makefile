@@ -20,7 +20,7 @@ OBJECTS = \
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcSphereAB
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 #
 #	Making executables and libraries

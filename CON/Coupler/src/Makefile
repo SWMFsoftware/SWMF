@@ -22,7 +22,7 @@ MODULES = \
 SEARCH_EXTRA = -I${LIBRARYDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
 
 MY_LIB = ${LIBDIR}/libCOUPLER.a
 

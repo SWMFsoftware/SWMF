@@ -10,7 +10,7 @@ OBJECTS = sep19.o main.o read_ihdata.o
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 SEPEXE = ${BINDIR}/SEP.exe
 

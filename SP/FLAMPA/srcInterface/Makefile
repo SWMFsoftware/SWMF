@@ -10,9 +10,7 @@ SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 OBJECTS = SP_wrapper.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS}
-
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
 
 #
 #	Making executables and libraries

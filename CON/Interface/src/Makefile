@@ -10,8 +10,7 @@ include Makefile.DEPEND
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
 
 #^CMP IF GM BEGIN
 MOD01 = CON_couple_gm_ie.o	#^CMP IF IE

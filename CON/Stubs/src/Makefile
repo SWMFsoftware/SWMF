@@ -10,8 +10,7 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
 
 MODULES = \
 	CON_wrapper.o \

@@ -80,8 +80,7 @@ OBJECTS = \
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}
 
 MY_LIB = ${LIBDIR}/libIE.a
 
