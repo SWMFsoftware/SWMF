@@ -59,8 +59,8 @@ if(-x $GridSizeScript){
     warn "WARNING could not execute $GridSizeScript\n";
 }
 
-my @command = 
-    ($CheckParamScript,"-S","-g=$GridSize","-p=$Precision","-x=$XmlFile",@ARGV);
+my @command = ($CheckParamScript,"-S","-v=$Verbose","-g=$GridSize","-p=$Precision",
+	       "-x=$XmlFile",@ARGV);
 
 print "@command\n" if $Verbose;
 system(@command);
