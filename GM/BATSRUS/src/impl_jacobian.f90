@@ -350,6 +350,9 @@ contains
          +(w_k(1:nI,1:nJ,2:nK+1,Bz_,implBLK)           &
          -w_k(1:nI,1:nJ,0:nK-1,Bz_,implBLK))/dxyz(z_))
 
+    ! Make sure that Qpowell is defined for all indexes
+    if(nw > 8)Qpowell = 0.0
+
     ! Calculate the coefficients Q that multiply div B in Powell Source terms
     ! Q(rhoU)= B
     Qpowell(:,:,:,rhoUx_)=qwk(:,:,:,Bx_) 
