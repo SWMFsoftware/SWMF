@@ -1,12 +1,14 @@
 \begin{verbatim}
 
 Known issues with the release of the University of Michigan
-Space Weather Modeling Framework (SWMF) and it constituent components.
+Space Weather Modeling Framework (SWMF) and its constituent components.
 
-SWMF:
-	None
+SWMF core:
+	1. The SC component can now use the corotating HGR frame,
+	   while the IH component uses the inertial HGI frame,
+           but the SC/IH coupling is not fully tested for this case.
 
-RB:
+RB/RiceV5:
         1. The Radiation Belt (RB) module included with this release
            does not conform to several SWMF requirements for physics
            modules.  These include:
@@ -20,20 +22,17 @@ RB:
         3. The RB module is quite sensitive to complier options,
            especially optimization settings.
 
-UA:
-        1. Although the UA module (GITM) can restart from a known 
+UA/GITM:
+        1. Although the UA/GITM model can restart from a known 
            steady-state, its initial output depends on its coupling 
            with IE.  Therefore UA results, even on restart from a 
            steady-state, tend to lack fidelity for the first several 
            couplings with the IE module.  Results from UA should be
            ignored during this period.
 
-        2. The UA module GITM is sensitive to the number of processors
-           on which it is running.   For some (unpredictable) 
-           combinations of numbers of blocks and numbers of processors 
-           it does not seem to work.
+	NOTE: the UA/GITM2 model restarts correctly.
 
-IM:
+IM/RCM:
         1. Restarting the RCM (IM module) requires that if both restart
            files and plot files were written that both files must exist
            in order to restart.  This is due to the fact that when RCM
@@ -41,12 +40,15 @@ IM:
            are assumed to exist already via a record number.  This is
            not a bug, but the behavior does seem somewhat counter
            intuitive and may need modification.
-	NOTE: The plotting output is being completely redesigned to address this.
+	NOTE: The plotting output is being completely redesigned 
+              to address this.
 
-IE:
-	None
+IE/Ridley_serial:
+	1. For the Darwin/NAG f95 platform/compiler combination
+           there seems to be a memory leak. This is likely to be
+           a compiler issue.
 
-GM, IH, SC (BATSRUS):
+GM, IH, SC  / BATSRUS:
         1. Automatic Mesh Refinement (AMR) on restart does not hold the
            blocks touching the body to a constant refinement level
            when told to do so.  The feature works within a run
@@ -56,13 +58,16 @@ GM, IH, SC (BATSRUS):
            in order to avoid incompatibilities of the different
            routines and flags.
 
-SP:
+SP/Kota:
         1. The SEP module included with this release does not have the
            ability to restart.
+
+           NOTE: One can save the MHD data needed by this model into files
+                 and the SP/Kota model can be (re)run continuously
+                 by itself.
 
         2. The shock sensing algorithm used in the SEP module is not 
            robust enough to find the correct shock structure in all
            situations.
-
 
 \end{verbatim}
