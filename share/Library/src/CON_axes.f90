@@ -1,10 +1,5 @@
 !^CFG COPYRIGHT UM
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Coordinate Systems}
-!
 !MODULE: CON_axes - coordinate system initialization and setting
 !INTERFACE:
 module CON_axes

@@ -1,4 +1,9 @@
+!QUOTE: \clearpage
+!
 !BOP
+!
+!QUOTE: \section{SWMF Library for the Physics Modules}
+!
 !MODULE: ModReadParam - read, include, broadcast and distribute parameters
 !INTERFACE:
 module ModReadParam

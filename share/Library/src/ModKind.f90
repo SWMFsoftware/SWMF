@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !BOP
-!MODULE: ModKind - Define various precisions in a machine independent way
+!MODULE: ModKind - define various precisions in a machine independent way
 
 !DESCRIPTION:
 ! The Fortran 77 style real*4 and real*8 declarations are obsolete,

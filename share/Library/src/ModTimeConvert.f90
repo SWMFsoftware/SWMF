@@ -1,11 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Time Conversion Related Types, Variables and Methods}
-!
 !MODULE: ModTimeConvert - time conversion related types, variables and methods 
 !
 !DESCRIPTION:

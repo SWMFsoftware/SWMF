@@ -1,10 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Planet}
 !
 !MODULE: CON_planet - planet parameters shared by components
 !INTERFACE:
