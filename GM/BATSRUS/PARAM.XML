@@ -2586,16 +2586,30 @@ and DtExchangeRay = 0.1.
 	<parameter name="TauCoupleIm" type="real" min="0"/>
 
 #IM
-0.01			TauCoupleIM
+0.01			TauCoupleIm
 
-! Determine how fast the GM pressure should be nudged towards the IM pressure.
-! A weighted average is taken every time step: 
+! Determine how fast the GM pressure p should be nudged towards the 
+! IM pressure pIm. The nudging is done in every GM time step.
+! The pIm pressure is updated every time IM->GM coupling occurs.
 !
-! pMHD = (pMHD + TauCoupleIM*pIM)/(1+TauCoupleIM)
+! If TauCoupleIm is less than 1.0, a weighted average is taken: 
 !
-! Therefore the smaller TauCoupleIM is the slower the adjustment will be. 
+! p' = (p + TauCoupleIm*pIm)/(1+TauCoupleIm)
 !
-! The default value is shown.
+! Therefore the smaller TauCoupleIm is the slower the adjustment will be.
+! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
+!
+! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
+! phyical time:
+!
+! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+!
+! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
+! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
+! p' = pIm is set in a single step.
+!
+! The default value is TauCoupleIm=0.01, which corresponds to a rather 
+! slow nudging.
 </command>
 <!-- ^CFG END RCM -->
 
