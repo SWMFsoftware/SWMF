@@ -24,9 +24,10 @@ subroutine timing_active(value)
   logical, intent(in) :: value
   !----------------------------------------------------------------------------
 
-  write(*,*)'!!!! timing_activate i_last =',i_last
-
-  if(i_last.ne.1)call CON_stop("i_last is not 1")
+  if(i_last.ne.1)then
+     write(*,*)'!!!! timing_activate i_last =',i_last
+     stop !call CON_stop("i_last is not 1")
+  end if
 
   UseTiming=value
 
