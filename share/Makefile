@@ -14,6 +14,8 @@ Library/src/mpif.h: Library/src/mpif90.h
 
 clean:
 	cd Library/src; make clean
+	cd Prologs;     make clean
 
 distclean: clean
+	cd Prologs;     make distclean
 	rm -f Library/src/mpif*.h Library/src/Makefile.DEPEND *~ */*~
