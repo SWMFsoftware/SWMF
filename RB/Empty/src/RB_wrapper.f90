@@ -140,44 +140,6 @@ subroutine RB_init_session(iSession, TimeSimulation)
   call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
 
 end subroutine RB_init_session
-!==============================================================================
-
-!BOP -------------------------------------------------------------------------
-!
-! !ROUTINE:  RB_save_restart
-!
-! !DESCRIPTION: 
-! 
-! !INTERFACE:
-!
-subroutine RB_save_restart(TimeSimulation)
-!
-! !USES:
-!
-  implicit none
-!
-! !INPUT PARAMETERS: 
-!
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
-!
-! !INPUT/OUTPUT PARAMETERS: 
-!
-! !OUTPUT PARAMETERS:
-!
-! !FILES USED:  
-!
-! !REVISION HISTORY: 
-!
-!  
-! 
-!EOP -------------------------------------------------------------------------
-
-!LOCAL VARIABLES:
-
-  character(len=*), parameter :: NameSub='RB_save_restart'
-
-  call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
-end subroutine RB_save_restart
 !============================================================================
 
 !BOP -------------------------------------------------------------------------
@@ -254,3 +216,81 @@ subroutine RB_finalize(TimeSimulation)
   call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
 end subroutine RB_finalize
 !===========================================================================
+!==============================================================================
+
+!BOP -------------------------------------------------------------------------
+!
+! !ROUTINE:  RB_save_restart
+!
+! !DESCRIPTION: 
+! 
+! !INTERFACE:
+!
+subroutine RB_save_restart(TimeSimulation)
+!
+! !USES:
+!
+  implicit none
+!
+! !INPUT PARAMETERS: 
+!
+  real,     intent(in) :: TimeSimulation   ! seconds from start time
+!
+! !INPUT/OUTPUT PARAMETERS: 
+!
+! !OUTPUT PARAMETERS:
+!
+! !FILES USED:  
+!
+! !REVISION HISTORY: 
+!
+!  
+! 
+!EOP -------------------------------------------------------------------------
+
+!LOCAL VARIABLES:
+
+  character(len=*), parameter :: NameSub='RB_save_restart'
+
+  call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
+end subroutine RB_save_restart
+!==============================================================================
+
+!BOP -------------------------------------------------------------------------
+!
+!ROUTINE:  RB_put_from_gm
+!
+!DESCRIPTION: 
+! 
+!INTERFACE:
+!
+subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+  !
+  !USES:
+  !
+  implicit none
+  !
+  !INPUT PARAMETERS: 
+  !
+  integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+  real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
+  character (len=*),intent(in) :: NameVar
+  !
+  !INPUT/OUTPUT PARAMETERS: 
+  !
+  !OUTPUT PARAMETERS:
+  !
+  !FILES USED:  
+  !
+  !REVISION HISTORY: 
+  !
+  !
+  !
+!EOP -------------------------------------------------------------------------
+
+!LOCAL VARIABLES:
+
+  character(len=*), parameter :: NameSub='RB_put_from_gm'
+
+  call CON_stop(NameSub//': RB_ERROR: empty version cannot be used!')
+end subroutine RB_put_from_gm
