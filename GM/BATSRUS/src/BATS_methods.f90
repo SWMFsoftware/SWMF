@@ -308,10 +308,9 @@ subroutine BATS_advance(TimeSimulationLimit)
   n_step = n_step + 1
   iteration_number = iteration_number+1
 
-  if (time_accurate) then
-     call set_global_timestep
-     dt = min(dt,(TimeSimulationLimit-Time_Simulation)/UnitSI_t)
-  end if
+  ! Calculate time step dt
+  if (time_accurate) &
+       call set_global_timestep((TimeSimulationLimit-Time_Simulation)/UnitSI_t)
 
   ! Calculate unsplit dB0Dt term for every time step
   if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
