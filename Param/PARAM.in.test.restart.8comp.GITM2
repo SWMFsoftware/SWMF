@@ -475,7 +475,7 @@ T			UseIonAdvection
 T			UseNeutralChemistry
 
 #SAVEPLOTS
-1800.0			DtRestart
+-1.0			DtRestart
 1			nOutputTypes
 2DGEO			TypeOutput
 600.0			DtPlot
