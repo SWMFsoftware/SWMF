@@ -267,9 +267,15 @@ contains
       if(.not.Router%IsProc)return
       call MPI_bcast(iPoint,1,MPI_INTEGER,&
            Router%iProc0Target,Router%iCommUnion,iError)
-      call MPI_bcast(&
-           XyzTemp_DI(1,iPoint),3,MPI_REAL,&
-           Router%iProc0Target,Router%iCommUnion,iError)
+      if(iPoint>1)then
+         call MPI_bcast(&
+              XyzTemp_DI(1,iPoint-1),6,MPI_REAL,&
+              Router%iProc0Target,Router%iCommUnion,iError)
+      else
+         call MPI_bcast(&
+              XyzTemp_DI(1,iPoint),3,MPI_REAL,&
+              Router%iProc0Target,Router%iCommUnion,iError)
+      end if
       iPointStart=iPoint
       if(DoTest.and.is_proc0(SP_))write(*,*)'Start line from xyz=',&
            XyzTemp_DI(:,iPointStart),' at PE=',i_proc()
