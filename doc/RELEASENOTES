@@ -7,6 +7,10 @@ SWMF:
         1. The SWMF and its components have not been fully tested on
            Linux platforms using the the PFG90 compiler.
 
+	2. The timing for the 'SWMF' was incorrect on some platforms.
+	   FIX: Stop and restart timing for 'SWMF' after setup.
+	   MODIFIED: CON/Control/src/CON_main.f90
+
 RB:
         1. The Radiation Belt (RB) module included with this release
            does not conform to several SWMF requirements for physics
@@ -47,6 +51,10 @@ IM:
            not a bug, but the behavior does seem somewhat counter
            intuitive and may need modification.
 
+	2. The RCM code stops with a run time error on halem (OSF1).
+           FIX (Aug 25,2004): use -fpe1 compiler flag.
+	   MODIFIED: share/build/Makefile.OSF1
+
 GM, IH, SC (BATSRUS):
         1. Automatic Mesh Refinement (AMR) on restart does not hold the
            blocks touching the body to a constant refinement level
@@ -56,6 +64,11 @@ GM, IH, SC (BATSRUS):
         2. The user_routine structure seems to require a reformulation
            in order to avoid incompatibilities of the different
            routines and flags.
+
+	3. SC only: the Z component of gravity was set to zero due to a bug.
+	   FIX (Aug 25, 2004): Initialize DzInv variable.
+	   MODIFIED: GM/BATSRUS/src/potential_force_averages.f90
+	   NOTE: this file is configured into SC and only used in SC.
 
 SP:
         1. The SEP module included with this release does not have the
