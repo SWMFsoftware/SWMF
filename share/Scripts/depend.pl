@@ -104,7 +104,6 @@ foreach $dir (@search){
     }
 
     -d $dir or die "depend.pl ERROR: $dir is not a directory\n";
-
     opendir(DIR,$dir) or die "depend.pl ERROR: ".
 	"could not open directory $dir\n";
 
@@ -197,8 +196,20 @@ OBJECT:
 	# Check for 'include "filename"'
 	if(/^\s*include\s+[\"\']?([^\'\"\s]+)/i){
 	    $include=$1;
+	    $includeorig=$include;
+	    if(! -e $include){
+		foreach $dir (@search){
+		    if( -e "$dir/$include"){
+			if($env{$dir}){
+			    $include="$env{$dir}/$include";
+			}
+			else{$include="$dir/$include"};
+			last;
+		    }
+		}
+	    }
 	    $include{$base}.=" $include" 
-		unless $include{$base}=~/ $include\b/i;
+		unless $include{$base}=~/[ \/]$includeorig/;
 	}
     }
 }
