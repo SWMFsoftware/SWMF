@@ -1126,7 +1126,8 @@ T                       UseDtFixed
 ! This is useful for debugging explicit schemes.
 <!-- ^CFG IF IMPLICIT BEGIN -->
 ! The real application is, however, for implicit and partially
-! implicit/local schemes.
+! implicit/local schemes. The time step is set to DtFixedDim unless the
+! update checking decides to reduce the time step for sake of robustness.
 <!-- ^CFG END IMPLICIT -->
 </command>
 
@@ -1233,8 +1234,9 @@ r		TypeImplCrit (dt or r or test)
 1               nOrderImpl
 Rusanov         TypeFluxImpl
 
-! Default values are shown, ie. first order Rusanov scheme.
-! This defines the scheme used in the implicit part.
+! This command defines the scheme used in the implicit part ('left hand side').
+! The default order is first order. The default scheme is the same as the
+! scheme selected for the explicit part. 
 </command>
 
 <command name="NEWTON">
