@@ -1,3 +1,5 @@
+!^CFG COPYRIGHT UM
+!^CMP FILE IE
 !BOP
 !MODULE: GM_put_from_ie_swmf - transform IE potential to GM boundary velocities
 !IROUTINE:GMIE_set_grid - set 2D spherical grid in GM_ to get IE_ potential

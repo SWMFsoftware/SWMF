@@ -538,7 +538,7 @@ contains
     else
        allocate(DomainDecomposition%iGlobal_BP(1:1,&
             0:&
-            -1+n_proc()),&
+            i_proc_last(CompID_)),&
             stat=iError)
     end if
     call check_allocate(iError,'iGlobal_BP,first allocation')

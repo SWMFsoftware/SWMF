@@ -326,18 +326,17 @@ contains
     !-----------------------------------------------------------!
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
     GridID=iComp
-    if(.not.done_dd_init(iComp))then
-       call init_decomposition(&
-            GridID,                             &!Decomposition ID_
-            iComp,                              &! component index
-            nDim)                                ! dimensionality
-       call set_coord_system(&
-            GridID,                             &!Decomposition ID_
-            TypeCoord,                          &
-            Coord1_I,                           &
-            Coord2_I,                           &
-            Coord3_I) 
-    end if
+    if(done_dd_init(iComp))return
+    call init_decomposition(&
+         GridID,                             &!Decomposition ID_
+         iComp,                              &! component index
+         nDim)                                ! dimensionality
+    call set_coord_system(&
+         GridID,                             &!Decomposition ID_
+         TypeCoord,                          &
+         Coord1_I,                           &
+         Coord2_I,                           &
+         Coord3_I) 
     if(is_proc0(iComp))call get_root_decomposition(&
          GridID,                             &!Decomposition ID_
          nRootBlock_D ,                      &

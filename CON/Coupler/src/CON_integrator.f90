@@ -160,9 +160,7 @@ contains
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
     integer::iCell
-    real:: Weight
     iCell=Put%iCB_II(1,iPutStart)
-    Weight=W%Weight_I(iPutStart)
     if(DoAdd)then
        Xyz_DI(1:nDim,iCell)=&
             Xyz_DI(1:nDim,iCell)+dt*Buff_I(:)

@@ -1,3 +1,5 @@
+!^CFG COPYRIGHT UM
+!^CMP FILE IE
 !==================================================================!
 !BOP
 !ROUTINE: GM_get_for_ie - gets FACurrents for coupling via SWMF

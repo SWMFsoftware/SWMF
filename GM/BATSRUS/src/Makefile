@@ -35,7 +35,6 @@ MODEL = ModVarIndexes.o
 #MODEL = ModVarIndexes_globhelio.o #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
 
 MODULES = \
-	${IH_WRAPPER_MOD}\
 	ModCompatibility.o\
 	ModInterface.o\
 	ModProcMH.o\
@@ -128,7 +127,6 @@ user_routines.f90:
 #^CFG END USERFILES
 
 OBJECTS = \
-	${IH_WRAPPER_OBJ}\
 	BATS_methods.o \
 	MH_set_parameters.o\
 	advect_points.o\
