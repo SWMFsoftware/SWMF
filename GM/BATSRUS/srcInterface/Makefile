@@ -43,7 +43,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-BATSRUS_LIB = ${LIBDIR}/libBATSRUS.a 
+BATSRUS_LIB = ../src/libBATSRUS.a 
 
 ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	cp -f ${BATSRUS_LIB} ${MY_LIB}
