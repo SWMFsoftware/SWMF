@@ -1,7 +1,9 @@
 !^CFG COPYRIGHT UM
 module ModTiming
-  use ModKind, ONLY: Real8_
   implicit none
+
+  integer, parameter :: Real8_ = selected_real_kind(12)
+
   logical :: UseTiming=.false.
 
   integer, parameter :: maxtiming=100, maxclock=3
@@ -32,8 +34,7 @@ module ModTiming
 
   interface
      function timing_cpu()
-       use ModKind
-       real(Real8_) :: timing_cpu
+       real(selected_real_kind(12)) :: timing_cpu
      end function timing_cpu
   end interface
 
