@@ -135,11 +135,13 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   !          by partial pivoting in subroutine 'Lapack_getrf'.
   !
 !!! Automatic arrays
-  REAL    :: dd(N,N)
-  INTEGER :: pivot(N)
+!!$  REAL    :: dd(N,N)
+!!$  INTEGER :: pivot(N)
+  real, dimension(:,:), allocatable :: dd
+  integer, dimension(:), allocatable :: pivot
 
   REAL    :: alf
-  INTEGER :: i,j,INFO
+  INTEGER :: i,j,INFO, iError
   REAL, PARAMETER :: zero=0.0, one=1.0
 
   ! ALF      : internal value for Gustafsson parameter
@@ -169,6 +171,10 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   !-----------------------------------------------------------------------------
 
   call timing_start('precond')
+
+  ! Allocate arrays that were "Automatic"
+  allocate(dd(N,N), stat=iError); call alloc_check(iError,"precond:dd")
+  allocate(pivot(N), stat=iError); call alloc_check(iError,"precond:pivot")
 
   alf=alf_in
   IF (alf < zero) THEN
@@ -277,6 +283,10 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   ! write(*,*)'F (140)  =',(( f(i,k,140),i=1,N),k=1,N)
   ! write(*,*)'F1(140)  =',((f1(i,k,140),i=1,N),k=1,N)
   ! write(*,*)'F2(140)  =',((f2(i,k,140),i=1,N),k=1,N)
+
+  ! Deallocate arrays that were "Automatic"
+  deallocate(dd)
+  deallocate(pivot)
 
   call timing_stop('precond')
 
@@ -449,9 +459,10 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
   !                                 Use scalar for block tri- and penta-diagonal
   !                                 matrices!
 !!! automatic array
-  REAL    :: work(N)
+!!$  REAL    :: work(N)
+  real, dimension(:), allocatable :: work
 
-  INTEGER :: j
+  INTEGER :: j, iError
   REAL, PARAMETER :: zero=0.0, one=1.0
 
   ! External subroutine
@@ -465,6 +476,9 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
   ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
 
   call timing_start('Lhepta')
+
+  ! Allocate arrays that were "Automatic"
+  allocate(work(N), stat=iError); call alloc_check(iError,"precond:work")
 
   if(N>20)then
      ! BLAS VERSION
@@ -497,6 +511,9 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
         x(:,j) = matmul( d(:,:,j),work)
      end do
   end if
+
+  ! Deallocate arrays that were "Automatic"
+  deallocate(work)
 
   call timing_stop('Lhepta')
 

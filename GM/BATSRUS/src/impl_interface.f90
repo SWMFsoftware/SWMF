@@ -350,7 +350,9 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
   real, intent(out)  :: cmax(qnI,qnJ,qnK)
 
   !!! Automatic arrays !!!
-  real, dimension(qnI,qnJ,qnK) :: csound2,cfast2
+!!$  real, dimension(qnI,qnJ,qnK) :: csound2,cfast2
+  real, dimension(:,:,:), allocatable :: csound2,cfast2
+  integer :: iError
 
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
@@ -360,6 +362,10 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
   else
      oktest=.false.; oktest_me=.false.
   end if
+
+  ! Allocate arrays that were "Automatic"
+  allocate(csound2(qnI,qnJ,qnK), stat=iError); call alloc_check(iError,"csound2")
+  allocate(cfast2(qnI,qnJ,qnK), stat=iError); call alloc_check(iError,"cfast2")
 
   if(oktest_me)then
      if(okdebug)then
@@ -411,6 +417,10 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
        -4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/w(:,:,:,rho_)))))
 
   if(oktest_me)write(*,*)'Finished getcmax: cmax=',cmax(Itest,Jtest,Ktest)
+
+  ! Deallocate arrays that were "Automatic"
+  deallocate(csound2)
+  deallocate(cfast2)
 
 end subroutine getcmax
 

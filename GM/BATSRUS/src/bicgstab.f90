@@ -105,7 +105,8 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
   ! Local variables (only 4 big vectors are needed):
 
   !!! Automatic arrays for BiCGSTAB!!!
-  real, dimension(n):: bicg_r, bicg_u, bicg_r1, bicg_u1
+!!$  real, dimension(n):: bicg_r, bicg_u, bicg_r1, bicg_u1
+  real, dimension(:), allocatable :: bicg_r, bicg_u, bicg_r1, bicg_u1
 
   !!! Allocatable array for initial guess !!!
   real, dimension(:), allocatable :: qx0
@@ -123,6 +124,13 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
   integer :: iError, nError 
 
   !---------------------------------------------------------------------------
+
+  ! Allocate arrays that were "Automatic"
+  allocate(bicg_r(n), stat=iError); call alloc_check(iError,"bicgstab:bicg_r")
+  allocate(bicg_u(n), stat=iError); call alloc_check(iError,"bicgstab:bicg_u")
+  allocate(bicg_r1(n), stat=iError); call alloc_check(iError,"bicgstab:bicg_r1")
+  allocate(bicg_u1(n), stat=iError); call alloc_check(iError,"bicgstab:bicg_u1")
+
   if(oktest)write(*,*)'BiCGSTAB tol,iter:',tol,iter
 
   info = 0
@@ -202,6 +210,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
      iter = nmv
      info = 3
      if(oktest) print *,'BiCGSTAB: nothing to do. info = ',info
+     call deallocate_bicgstab
      return
   end if
 
@@ -217,6 +226,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
      if (abs(rho0)<assumedzero**2) then
         info = 1
+        call deallocate_bicgstab
         return
      endif
      beta = alpha*(rho1/rho0)
@@ -234,6 +244,7 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
      if (abs(sigma)<assumedzero**2) then
         info = 1
+        call deallocate_bicgstab
         return
      endif
 
@@ -360,6 +371,8 @@ subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
   iter = nmv
 
+  call deallocate_bicgstab
+
 contains
 
   !============================================================================
@@ -414,5 +427,13 @@ contains
     stop
 
   end subroutine stop_bicgstab
+
+  subroutine deallocate_bicgstab
+    ! Deallocate arrays that were "Automatic"
+    deallocate(bicg_r)
+    deallocate(bicg_u)
+    deallocate(bicg_r1)
+    deallocate(bicg_u1)
+  end subroutine deallocate_bicgstab
 
 end subroutine bicgstab

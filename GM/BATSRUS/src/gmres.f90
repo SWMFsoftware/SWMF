@@ -70,16 +70,27 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
   !       write debug info if true
 
   ! Local variables
-  integer :: i,i1,its,j,k,k1
+  integer :: i,i1,its,j,k,k1, iError
   real :: coeff,Tol1,epsmac,gam,ro,ro0,t,tmp
 
   ! Automatic array for vectors in Krylov subspace
-  real :: Krylov_II(n,nKrylov+2)
+!!$  real :: Krylov_II(n,nKrylov+2)
+  real, dimension(:,:), allocatable :: Krylov_II
 
   ! Automatic arrays (Hessenberg matrix and some vectors)
-  real :: hh(nKrylov+1,nKrylov),c(nKrylov),s(nKrylov),rs(nKrylov+1)
+!!$  real :: hh(nKrylov+1,nKrylov),c(nKrylov),s(nKrylov),rs(nKrylov+1)
+  real, dimension(:,:), allocatable :: hh
+  real, dimension(:), allocatable :: c,s,rs
   !-----------------------------------------------------------------------
+
   if(oktest)write(*,*)'GMRES tol,iter:',Tol,Iter
+
+  ! Allocate arrays that were "Automatic"
+  allocate(Krylov_II(n,nKrylov+2), stat=iError); call alloc_check(iError,"gmres:Krylov_II")
+  allocate(hh(nKrylov+1,nKrylov), stat=iError); call alloc_check(iError,"gmres:hh")
+  allocate(c(nKrylov), stat=iError); call alloc_check(iError,"gmres:c")
+  allocate(s(nKrylov), stat=iError); call alloc_check(iError,"gmres:s")
+  allocate(rs(nKrylov+1), stat=iError); call alloc_check(iError,"gmres:rs")
 
   if(range(1.0)>100)then
      epsmac=0.0000000000000001
@@ -230,6 +241,14 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
   else
      info = -2
   endif
+
+  ! Deallocate arrays that were "Automatic"
+  deallocate(Krylov_II)
+  deallocate(hh)
+  deallocate(c)
+  deallocate(s)
+  deallocate(rs)
+
 contains
   !============================================================================
   real function dot_product_mpi(a,b)

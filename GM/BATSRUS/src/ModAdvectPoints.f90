@@ -34,7 +34,9 @@ subroutine advect_points(nPoint, Xyz_DI)
   real,    intent(inout) :: Xyz_DI(3,nPoint)
 
   ! automatic array
-  real :: XyzOld_DI(3,nPoint)
+!!$  real :: XyzOld_DI(3,nPoint)
+  real, dimension(:,:), allocatable :: XyzOld_DI
+  integer :: iError
 
   character(len=*), parameter :: NameSub = 'advect_points'
   !--------------------------------------------------------------------------
@@ -44,11 +46,13 @@ subroutine advect_points(nPoint, Xyz_DI)
      ! Full step uses StateOld
      call advect_points1(0.0, Dt, nPoint, Xyz_DI, Xyz_DI)
   else
+     allocate(XyzOld_DI(3,nPoint), stat=iError); call alloc_check(iError,"XyzOld_DI")
      XyzOld_DI = Xyz_DI
      ! Half step uses StateOld
      call advect_points1(1.0, Dt/2, nPoint, XyzOld_DI, Xyz_DI)
      ! Full step uses (State+StateOld)/2
      call advect_points1(0.5, Dt, nPoint, XyzOld_DI, Xyz_DI)
+     deallocate(XyzOld_DI)
   end if
   call timing_stop(NameSub)
 
@@ -74,7 +78,8 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
   integer, parameter :: nState = 4 ! Rho, RhoUx, RhoUy, RhoUz
 
   ! automatic arrays
-  real, dimension(Weight_:nState, nPoint) :: State_VI, StateAll_VI
+!!$  real, dimension(Weight_:nState, nPoint) :: State_VI, StateAll_VI
+  real, dimension(:,:), allocatable :: State_VI, StateAll_VI
 
   ! Temporary variables
   real    :: Weight
@@ -87,6 +92,10 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
   if(DoTestMe)write(*,*)NameSub,' nPoint=',nPoint
   if(DoTestMe)write(*,*)NameSub,' old Xyz_DI=',Xyz_DI
+
+  ! Allocate arrays that were "Automatic"
+  allocate(State_VI(Weight_:nState,nPoint), stat=iError); call alloc_check(iError,"State_VI")
+  allocate(StateAll_VI(Weight_:nState,nPoint), stat=iError); call alloc_check(iError,"StateAll_VI")
 
   ! Get weight, density and momentum on local PE for all points
   do iPoint = 1, nPoint
@@ -132,6 +141,10 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
   end if
   ! Move back along field lines
 !!! to be implemented
+
+  ! Deallocate arrays that were "Automatic"
+  deallocate(State_VI)
+  deallocate(StateAll_VI)
 
 end subroutine advect_points1
 
