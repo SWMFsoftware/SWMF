@@ -38,3 +38,6 @@
       common/smooth/Smooth_VII(11,nMax,Old_:New_)
       integer nResolution
       PARAMETER(nResolution=10)
+      real rTransient
+      integer iTransient
+      common/trans/rTransient,iTransient

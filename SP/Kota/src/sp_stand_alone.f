@@ -57,7 +57,7 @@ CCC   read(*,*)  iSnapshot
 !in case of self similar solution, sets its parameters
 !sets the scattering length
 !EOP
-      include 'param.h'
+      include 'coupler.h'
       common /size  / nr,nmu,nw, dim1
       common /suly /  wghtl,wghtmu,wghtw
       common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
@@ -178,7 +178,7 @@ c ------------------------------------ calculation
       else
          xscatt1 = ((3-qex)*(1-qex)/3.)/xlambda0
       end if
-
+      rTransient=1.0
       return 
       end
 
@@ -227,7 +227,7 @@ C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
             read(iFile,*)  iMisc,rx(iLoop),ry(iLoop),rz(iLoop)
             read(iFile,*)  iMisc,vx(iLoop),vy(iLoop),vz(iLoop)
             read(iFile,*)  iMisc,bx(iLoop),by(iLoop),bz(iLoop)
-            read(iFile,*)  iMisc,dd(iLoop),pp(iLoop)
+            read(iFile,*)  iMisc,dens(iLoop),pres(iLoop)
          end do
 
          read(iFile,*) 

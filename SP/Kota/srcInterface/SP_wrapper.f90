@@ -21,6 +21,7 @@ module SP_Mod
   integer::nStep=0
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
   integer::iProc=-1,nProc=-1,iComm=-1
+  integer::nSmooth=0
 end module SP_Mod
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
@@ -76,6 +77,8 @@ subroutine SP_set_param(CompInfo,TypeAction)
            call read_var('XyzLine_D(z_)',XyzLine_D(3))
            call read_var('RBoundSC'     ,RBoundSC    )!^CMP IF SC 
            call read_var('RBoundIH'     ,RBoundIH    )!^CMP IF IH
+        case('#RTRANSIENT')
+           call read_var('rTransient',rTransient)
         case('#DORUN')
            call read_var('DoRun',DoRun)
         case('#SAVEMHDATA')
@@ -93,6 +96,8 @@ subroutine SP_set_param(CompInfo,TypeAction)
            if(iVerbose>0)DoWriteAll=.true.
            if(DoWriteAll.and.iProc==0)&
                 write(*,*)prefix,' Verbose everything'
+        case('#NSMOOTH')
+           call read_var('nSmooth',nSmooth)
         case default
            call CON_stop(NameSub//&
                 ': Unknown command '&
@@ -280,7 +285,7 @@ subroutine SP_put_from_mh(nPartial,&
 end subroutine SP_put_from_mh
 !=============================================================!
 subroutine SP_run(tInOut,tLimit)
-  use SP_Mod,ONLY:tSimulation,DataInputTime,nStep
+  use SP_Mod,ONLY:tSimulation,DataInputTime,nStep,nSmooth
   use SP_Mod,ONLY:DoRun,SaveMhData,DoReadMhData
   use ModNumConst
   implicit none
@@ -288,6 +293,7 @@ subroutine SP_run(tInOut,tLimit)
   real,intent(in):: tLimit
   nStep=nStep+1
   if(.not.DoReadMhData)then
+     if(nSmooth>0)call SP_smooth_data
      tInOut=max(tInOut,tLimit)
   else
      call SP_read_mh_data
@@ -297,6 +303,36 @@ subroutine SP_run(tInOut,tLimit)
   if(DoRun)call SP_sharpen_and_run(tSimulation,DataInputTime)
 end subroutine SP_run
 !=============================================================!
+subroutine SP_smooth_data
+  use SP_Mod
+  implicit none
+  integer::iVar,iSmooth
+  integer,parameter::iVarMinSmooth=4,iVarMaxSmooth=11
+  logical:: DoSmooth_I(2:iMax-1)
+  do iVar=iVarMinSmooth,iVarMaxSmooth
+     SMOOTH:do iSmooth=1,nSmooth
+        DoSmooth_I=abs(Smooth_VII(iVar,1:iMax-2,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_))>   &
+              cTwo*abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_)).or.&
+              cTwo*abs(Smooth_VII(iVar,1:iMax-2,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_))<   &
+                   abs(Smooth_VII(iVar,3:iMax  ,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_)).or.&
+                      (Smooth_VII(iVar,1:iMax-2,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_))*   &
+                      (Smooth_VII(iVar,3:iMax  ,New_)-    &
+                       Smooth_VII(iVar,2:iMax-1,New_))>cZero
+        if(.not.any(DoSmooth_I))CYCLE SMOOTH
+        where(DoSmooth_I)
+           Smooth_VII(iVar,2:iMax-1,New_)=&
+                (Smooth_VII(iVar,1:iMax-2,New_)+    &
+                 Smooth_VII(iVar,3:iMax  ,New_))*cHalf
+        end where
+     end do SMOOTH
+  end do
+end subroutine SP_smooth_data
+!==============================================================
 subroutine SP_save_mh_data
   use SP_Mod
   use ModIoUnit

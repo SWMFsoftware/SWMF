@@ -180,10 +180,7 @@ c  *****************  end subroutine PANGLE    ******************
        algll(i) = 0.      
        algnn(i) = 0.       
           vr(i) = 0.
-       VxOld(i+1) = 0.
-       VyOld(i+1) = 0.
-       VzOld(i+1) = 0.
-
+   
       do 30 k=0,nw
       do 20 j=0,nmu
        f(i,j,k) = 0.
