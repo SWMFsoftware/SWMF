@@ -26,6 +26,8 @@ module CON_session
   use ModUtilities, ONLY: flush_unit
 
   use CON_time
+  use ModFreq
+  use ModNumConst
   use ModMpi
 
   implicit none
@@ -361,7 +363,7 @@ contains
        !\
        ! Check periodically for stop file and cpu time
        !/
-       if(is_time_to(CheckStop,nStep,tSimulation))then
+       if(is_time_to(CheckStop,nStep,tSimulation,DoTimeAccurate))then
           if(do_stop_now())then
              IsLastSession = .true.
              exit TIMELOOP
@@ -438,7 +440,7 @@ contains
           ! Couple iCompSource --> iCompTarget
           if( (IsProc_C(iCompSource).or.IsProc_C(iCompTarget)) .and. &
                is_time_to(Couple_CC(iCompSource, iCompTarget),&
-               nStep, tSimulation)) &
+               nStep, tSimulation, DoTimeAccurate)) &
                call couple_comp(iCompSource, iCompTarget, tSimulation)
 
        end do
@@ -446,7 +448,7 @@ contains
        !\
        ! Save restart files for the local components when scheduled
        !/
-       if( is_time_to(SaveRestart, nStep, tSimulation) ) then
+       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) then
           do lComp=1,nComp
              iComp = i_comp(lComp)
              if(.not.IsProc_C(iComp)) CYCLE
@@ -501,7 +503,7 @@ contains
        !\
        ! Check periodically for stop file and cpu time
        !/
-       if(is_time_to(CheckStop,nStep,tSimulation))then
+       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
           if(do_stop_now())then
              IsLastSession = .true.
              exit TIMELOOP
@@ -552,12 +554,12 @@ contains
 
           ! Couple iCompSource --> iCompTarget
           if(is_time_to(Couple_CC(iCompSource, iCompTarget),&
-               nStep, tSimulation)) &
+               nStep, tSimulation, DoTimeAccurate)) &
                call couple_comp(iCompSource, iCompTarget, tSimulation)
 
        end do
 
-       if( is_time_to(SaveRestart, nStep, tSimulation) ) &
+       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) &
             call save_restart_comp(iComp, tSimulation)
 
     end do TIMELOOP
@@ -622,7 +624,7 @@ contains
        !\
        ! Check periodically for stop file and cpu time
        !/
-       if(is_time_to(CheckStop,nStep,tSimulation))then
+       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
           if(do_stop_now())then
              IsLastSession = .true.
              EXIT TIMELOOP
@@ -675,7 +677,8 @@ contains
           call time_real_to_int(TimeCurrent)
        end if
 
-       if (is_time_to(SaveRestart,nStep,tSimulation)) call save_restart
+       if (is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate)) &
+            call save_restart
 
        call show_progress
 
@@ -689,8 +692,8 @@ contains
        if (use_comp(IM_)) then
           ! Shift time by dtCoupleIm/2 so that the first coupling
           ! occurs at dtCoupleIm/2.
-          if (is_time_to(Couple_CC(IM_,GM_),nStep,&
-               tSimulation + 0.5*dtCoupleIM)) then
+          if (is_time_to(Couple_CC(IM_,GM_), nStep,&
+               tSimulation + 0.5*dtCoupleIM, DoTimeAccurate)) then
 
              call couple_comp(gm_,im_,tSimulation) ! field line volume
 
@@ -729,7 +732,7 @@ contains
        ! Periodically perform ionosphere/magnetosphere coupling 
        ! calculations as required.
        !/
-       if(is_time_to(Couple_CC(IE_,GM_),nStep,tSimulation))then
+       if(is_time_to(Couple_CC(IE_,GM_),nStep,tSimulation,DoTimeAccurate))then
           call couple_comp(gm_,ie_,tSimulation)
           if(use_comp(UA_)) call couple_comp(UA_,IE_,tSimulation) !^CMP IF UA
           if (is_proc(IE_)) call run_comp(IE_,tSimulation,tSimulation)

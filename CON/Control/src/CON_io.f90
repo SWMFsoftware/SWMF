@@ -489,12 +489,13 @@ contains
     !^CMP END IE
 
     ! Adjust nNext and tNext fields
-    call adjust_freq(SaveRestart,nStep,tSimulation)
-    call adjust_freq(CheckStop  ,nStep+1,tSimulation+cTiny)
+    call adjust_freq(SaveRestart,nStep,tSimulation,DoTimeAccurate)
+    call adjust_freq(CheckStop  ,nStep+1,tSimulation+cTiny,DoTimeAccurate)
 
     do iComp1=1,MaxComp;
        do iComp2=1,MaxComp
-          call adjust_freq(Couple_CC(iComp1,iComp2),nStep+1,tSimulation+cTiny)
+          call adjust_freq(Couple_CC(iComp1,iComp2),nStep+1,tSimulation+cTiny,&
+               DoTimeAccurate)
           !if(Couple_CC(iComp1,iComp2) % DoThis) &
           !     write(*,*)NameSub,': iComp1,iComp2,Couple_CC=',iComp1,iComp2,&
           !     Couple_CC(iComp1,iComp2)
@@ -506,11 +507,12 @@ contains
 
     ! There is no need to update B0 if the axes are aligned or there is 
     ! no rotation or the solution is not time accurate
-    if(UseAlignedAxes .or. .not.UseRotation .or. .not.DoTimeAccurate) &
-         DtUpdateB0 = -1.0
+    if(UseAlignedAxes .or. .not.UseRotation .or. .not.DoTimeAccurate .or. &
+         DtUpdateB0 < 0.0) &
+         DoUpdateB0 = .false.
 
     ! Initialize axes
-    call init_axes
+    call init_axes(TimeStart % Time)
 
     ! This is needed if we do not restart from a time accurate run
     if(iSession==1)then
