@@ -4,7 +4,7 @@ SHELL=/bin/sh
 
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	NAG f95 Fortran 90/95 Compiler
+#	Intel Fortran 8.0 (ifort) Compiler
 #       Linux specific part of Makefile
 #
 
@@ -58,7 +58,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag2} $<
 
 .F90.o:
-	${COMPILE.f90} -fpp -DsysLinux -Dcompefc ${Cflag2} $<
+	${COMPILE.f90} -DsysLinux -Dcompifort ${Cflag2} $<
 
 .f.o:
 	${COMPILE.f77} ${Cflag2} -132 $<
