@@ -22,6 +22,7 @@ physics=''
 
 ; Parameters for the functions to be plotted
 func=''
+logfunc=''
 plotmode=''
 plottitle='default'
 autorange='y'
