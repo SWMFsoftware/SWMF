@@ -44,7 +44,7 @@ contains
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitSi_B
+    use ModPhysics,        ONLY: rCurrents, UnitSi_B, UnitSi_J
     use ModCoordTransform, ONLY: sph_to_xyz
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use CON_axes,          ONLY: transform_matrix
@@ -155,8 +155,8 @@ contains
           ! Take the radial component
           Fac = Fac * sum(b_D*XyzIono_D) / rIonosphere
 
-          ! Store the result
-          FieldAlignedCurrent_II(i,j) = Fac
+          ! Store the result in SI units
+          FieldAlignedCurrent_II(i,j) = Fac * UnitSi_J
 
        end do
     end do
