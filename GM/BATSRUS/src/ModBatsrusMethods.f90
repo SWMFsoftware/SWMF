@@ -741,8 +741,11 @@ contains
                 DoAssignNodeNumbers = .false.
              end if
           end if
-          
-          if(index(plot_type(ifile),'ray')>0) call ray_trace !^CFG IF RAYTRACE
+
+          !^CFG IF RAYTRACE BEGIN
+          if(  index(plot_type(ifile),'ray')>0 .or. &
+               index(plot_vars(ifile),'status')>0) call ray_trace
+          !^CFG END RAYTRACE
           call timing_start('save_plot')
           call write_plot_common(ifile)
           call timing_stop('save_plot')
