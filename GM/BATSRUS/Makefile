@@ -95,7 +95,7 @@ src/Makefile.RULES:
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
-		cp -f src/Makefile.RULES.empty src/Makefile.RULES; \
+		touch src/Makefile.RULES; \
 	fi);
 
 src/Makefile.OPTIONS:
