@@ -22,11 +22,12 @@ module CON_planet
 
   !USES:
   use ModConst
-  use ModTimeType
+  use ModTimeConvert, ONLY: TimeType
 
   !REVISION HISTORY:
   ! 01Aug03 - Aaron Ridly <ridley@umich.edu> and 
   !           Gabor Toth <gtoth@umich.edu>   - initial prototype/prolog/code
+  ! 23Mar   - added get_planet subroutine for OO type access
   !EOP
 
   implicit none
@@ -314,5 +315,25 @@ contains
          'while rotation axis is calculated from real time ?!'
 
   end subroutine check_planet_var
+
+  !==========================================================================
+
+  subroutine get_planet( &
+       NamePlanetOut, RadiusPlanetOut, IonosphereHeightOut, &
+       UseRotationOut, DipoleStrengthOut)
+
+    character(len=*), optional, intent(out) :: NamePlanetOut
+    real,             optional, intent(out) :: RadiusPlanetOut
+    real,             optional, intent(out) :: IonosphereHeightOut
+    logical,          optional, intent(out) :: UseRotationOut
+    real,             optional, intent(out) :: DipoleStrengthOut
+    !-----------------------------------------------------------------------
+    if(present(NamePlanetOut))      NamePlanetOut     = NamePlanet
+    if(present(RadiusPlanetOut))    RadiusPlanetOut   = RadiusPlanet
+    if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
+    if(present(UseRotationOut))     UseRotationOut    = UseRotation
+    if(present(DipoleStrengthOut))  DipoleStrengthOut = DipoleStrength
+
+  end subroutine get_planet
 
 end module CON_planet
