@@ -77,6 +77,7 @@ subroutine write_restart(dir)
 
      write(iRestartUnit_)  Velocity(:,:,:,:,iBlock)
      write(iRestartUnit_) IVelocity(:,:,:,:,iBlock)
+     write(iRestartUnit_) VerticalVelocity(:,:,:,:,iBlock)
 
      close(iRestartUnit_)
 
@@ -150,6 +151,8 @@ subroutine read_restart(dir)
      read(iRestartUnit_)  Velocity(:,:,:,:,iBlock)
      if (iDebugLevel > 4) write(*,*) "=====> Reading IVelocity"
      read(iRestartUnit_) IVelocity(:,:,:,:,iBlock)
+     if (iDebugLevel > 4) write(*,*) "=====> Reading VerticalVelocity"
+     read(iRestartUnit_) VerticalVelocity(:,:,:,:,iBlock)
 
      close(iRestartUnit_)
 
