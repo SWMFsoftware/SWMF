@@ -4,12 +4,13 @@
 #^CFG IF CARTESIAN BEGIN
 ############################################################################
 
+DCART =CARTESIAN
 cartesian_src:
-	./Configure.pl -keepall -exe=cartesian -d=CARTESIAN
+	./Configure.pl -keepall -exe=cartesian -d=${DCART}
 	cd CARTESIAN; make install
 
 cartesian_conf: cartesian_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/CARTESIAN BATSRUS_conf
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCART} BATSRUS_conf
 
 cartesian: cartesian_src
 
@@ -17,47 +18,50 @@ cartesian: cartesian_src
 #^CFG IF NOT CARTESIAN BEGIN
 ############################################################################
 
+DSPHER =SPHERICAL
 spherical_src:
 	cd src;\
 		mv user_routines_orig.f90 user_routines_tmp.f90;\
 		cp user_routines_empty.f90 user_routines_orig.f90
 	cd srcPostProc;\
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
-	./Configure.pl -d=SPHERICAL \
+	./Configure.pl -d=${DSPHER} \
 	-off=boriscorr,cartesian \
 	-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
 	cd src; \
 		mv user_routines_tmp.f90 user_routines_orig.f90;
 	cd srcPostProc;\
 		mv PostIDL.f90 PostIDL_SPH.f90; mv PostIDL.tmp PostIDL.f90
-	cd SPHERICAL/Param;\
+	cd ${DSPHER}/Param;\
 		mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
 		mv EARTH/SSSSPH EARTH/SSSS;\
 		mv PARAM.TEST.SPH PARAM.TEST
-	cd SPHERICAL/Param/TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT
-	cd SPHERICAL; make install
+	cd ${DSPHER}/Param/TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT
+	cd ${DSPHER}; make install
 
 spherical_conf: spherical_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/SPHERICAL BATSRUS_conf
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DSPHER} BATSRUS_conf
 
 spherical: spherical_src
-	cd SPHERICAL; make
+	cd ${DSPHER}; make
 
 ############################################################################
+
+DCOV =COVARIANT
 
 covariant_src:
 	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user_routines_empty.f90 user_routines_orig.f90
-	./Configure.pl -d=COVARIANT -off=boriscorr,cartesian \
+	./Configure.pl -d=${DCOV} -off=boriscorr,cartesian \
 		-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
 	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
-	cd COVARIANT; make install
+	cd ${DCOV}; make install
 
 covariant_conf: covariant_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/COVARIANT BATSRUS_conf
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCOV} BATSRUS_conf
 
 covariant: covariant_src
-	cd COVARIANT; make
+	cd ${DCOV}; make
 
 covarcheck_src:
 	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
@@ -77,25 +81,25 @@ covarcheck: covarcheck_src
 #^CFG END CARTESIAN
 #^CFG IF GLOBALHELIOSPHERE BEGIN
 ############################################################################
-
+DGLOBALH=GLOBALHELIOSPHERE
 globhelio_src:
 	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user/user_routines.f90.globalhelio user_routines_orig.f90;\
 	cd ..;\
-	./Configure.pl -d=GLOBALHELIOSPHERE -keepall \
+	./Configure.pl -d=${DGLOBALH} -keepall \
 	-off=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm \
 	-on=globalheliosphere,cartesian \
 	-exe=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
 	-u
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90;\
-	cd GLOBALHELIOSPHERE; make install
+	cd ${DGLOBALH}; make install
 
 globhelio_conf: globhelio_src
 	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/GLOBALHELIOSPHERE BATSRUS_conf
+	ln -s BATSRUS/${DGLOBALH} BATSRUS_conf
 
 globhelio: globhelio_src
-	cd GLOBALHELIOSPHERE; make
+	cd ${DGLOBALH}; make
 
 #^CFG END GLOBALHELIOSPHERE 
 #^CFG IF MULTISP BEGIN
@@ -112,34 +116,34 @@ multisp_src:
 	-u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd MULTISP; make install; make spherical_src
-	cd MULTISP/SPHERICAL; make install
+	cd MULTISP/${DSPHER}; make install
 
 multisp_conf: multisp_src
 	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/MULTISP/SPHERICAL BATSRUS_conf
+	ln -s BATSRUS/MULTISP/${DSPHER} BATSRUS_conf
 
 multisp: multisp_src
-	cd MULTISP/SPHERICAL; make
+	cd MULTISP/${DSPHER}; make
 
 #^CFG END MULTISP
 #^CFG IF ALWAVES BEGIN
 ############################################################################
-
+DREL=RELAX
 relax_src:
 	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user/user_routines.f90.heliosphere user_routines_orig.f90;\
 	cd ..;\
-	./Configure.pl -d=RELAX \
+	./Configure.pl -d=${DREL} \
 	-on=alwaves,awflux,userfiles,faceouterbc,cellouterbc,testing \
-	-off=rusanov,ionosphere,boriscorr -u;\
+	-off=rusanovflux,ionosphere,boriscorr -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
-	cd RELAX; make install
+	cd ${DREL}; make install
 
 relax_conf: relax_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/RELAX BATSRUS_conf
+	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DREL} BATSRUS_conf
 
 relax: relax_src
-	cd RELAX; make
+	cd ${DREL}; make
 
 #^CFG END ALWAVES
 #^CFG IF ALWAVES BEGIN
@@ -156,23 +160,23 @@ corelax_src:
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	cd CORELAX;\
-	./Configure.pl -d=SPHERICAL \
+	./Configure.pl -d=${DSPHER} \
 	-off=cartesian \
 	-on=alwaves,awflux,faceouterbc,cellouterbc,testing,userfiles -u
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
-	cd CORELAX/SPHERICAL/Param;\
+	cd CORELAX/${DSPHER}/Param;\
 	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
 	mv EARTH/SSSSPH EARTH/SSSS;\
 	cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
 	mv PARAM.TEST.SPH PARAM.TEST
-	cd CORELAX/SPHERICAL; make install
+	cd CORELAX/${DSPHER}; make install
 
 corelax_conf: corelax_src
 	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/CORELAX/SPHERICAL BATSRUS_conf
+	ln -s BATSRUS/CORELAX/${DSPHER} BATSRUS_conf
 
 corelax: corelax_src
-	cd CORELAX/SPHERICAL; make
+	cd CORELAX/${DSPHER}; make
 
 #^CFG END ALWAVES
