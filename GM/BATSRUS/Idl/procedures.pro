@@ -310,8 +310,8 @@ pro get_pict,unit,filetype,npict,x,w,$
        it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
 
    ; set rBody if listed among the parameters
-   for iPar = 0, neqpar-1 do begin
-       i = nDim + nW + iPar
+   for i = nDim + nW, n_elements(variables)-1 do begin
+       iPar = i - nDim - nW
        if variables(i) eq 'rbody' or variables(i) eq 'rBody' then $
            rBody = eqpar(iPar)
    endfor

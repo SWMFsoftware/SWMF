@@ -109,11 +109,12 @@ endif
 gamma = 5./3.
 clight = 1.0
 if nEqpar gt 0 then begin
-    for iEqpar=0,nEqpar-1 do begin
-        case variables(nDim+nW+iEqpar) of
-            'g'     : gamma = eqpar(iEqpar)
-            'gamma' : gamma = eqpar(iEqpar)
-            'c'     : clight= eqpar(iEqpar)
+    for i=nDim+nW,n_elements(variables)-1 do begin
+        iEqpar = i-nDim-nW
+        case variables(i) of
+            'g'     : gamma  = eqpar(iEqpar)
+            'gamma' : gamma  = eqpar(iEqpar)
+            'c'     : clight = eqpar(iEqpar)
             else:
         endcase
     endfor
