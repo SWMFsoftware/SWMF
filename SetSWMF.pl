@@ -127,11 +127,11 @@ sub list_versions{
     close(MAKEFILE);
 
     my $Comp;
-    print "\nSelected version         Other versions\n","-" x 75,"\n";
+    print "\nSelected version    Other versions\n","-" x 79,"\n";
     foreach $Comp (sort keys %Versions){
 	my $Version;
 	foreach $Version (split(',',$Versions{$Comp})){
-	    printf "%-25s","$Comp/$Version{$Comp}";
+	    printf "%-20s","$Comp/$Version";
 	}
 	print "\n";
     }
