@@ -100,16 +100,31 @@ contains
   subroutine sort_test
 
     integer, parameter :: n=5
-    real    :: a_I(n)
-    integer :: i_I(n)
+    real    :: a_I(n), b_I(n)
+    integer :: i_I(n), i
+    logical :: IsError
 
     a_I = (/0.0, 2.0, 1.0, 4.0, 0.0/)
 
+    write(*,'(a)')'Testing sort_quick'
     call sort_quick(n,a_I,i_I)
 
-    write(*,*)'a      =',a_I
-    write(*,*)'indx   =',i_I
-    write(*,*)'a(indx)=',a_I(i_I)
+    b_I = a_I(i_I)
+
+    IsError = .false.
+    do i=2,n
+       if(b_I(i-1) > b_I(i))then
+          write(*,*)'Error at index i=',i,': sorted b_I(i-1)=',b_I(i-1),&
+               ' should not exceed b_I(i)=',b_I(i)
+          IsError = .true.
+       end if
+    end do
+
+    if(IsError)then
+       write(*,'(a,5f5.0)')'original array =',a_I
+       write(*,'(a,5i5)'  )'sorted index   =',i_I
+       write(*,'(a,5f5.0)')'sorted array   =',b_I
+    end if
 
   end subroutine sort_test
 

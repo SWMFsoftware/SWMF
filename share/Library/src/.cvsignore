@@ -1,5 +1,6 @@
 *.mod
 *.o
-ModInitGridStorage.f90
+mpif90.h
+mpif.h
 Makefile.DEPEND
 *.protex

@@ -19,7 +19,7 @@ subroutine read_upstream_input_file(upstreamfilename)
   use ModUpstreamData
   use CON_geopack
   use ModIO, ONLY: iUnitOut, write_prefix
-  use CON_physics, ONLY: time_int_to_real
+  use ModTimeConvert, ONLY: time_int_to_real
   use ModUtilities, ONLY: upper_case
   use ModMpi
   implicit none

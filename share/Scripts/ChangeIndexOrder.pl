@@ -7,10 +7,21 @@ my $Order=($o or "23451");
 my $Debug=$D;
 
 use strict;
-
+#BOP
+#!ROUTINE: ChangeIndexOrder.pl - change the index order of F90 variables
+#!DESCRIPTION:
+# Efficiency of Fortran code can strongly depend on data locality.
+# By changing the index order of variables, data which is used together may
+# get closer together in memory. Changing the index order of a variable
+# which occurs thousands of times in dozens of files can be a daunting task.
+# This script helps automating this process.
+#!REVISION HISTORY:
+# 12/05/2003 G. Toth - initial version
+#EOP
 if($Help){
-    print '
-Purpose: 
+    print 
+#BOC
+'Purpose: 
    Change index order and rename variable.
 
 Usage:
@@ -50,8 +61,9 @@ Limitations:
 
     Even if the index order is changed correctly, there are several cases
     where the change results in an incorrect code. These need
-    to be fixed by hand. It is best to check all the replacements.
-';
+    to be fixed by hand. It is best to check all the replacements.'
+#EOC
+    ,"\n\n";
     exit;
 }
 

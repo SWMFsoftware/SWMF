@@ -157,7 +157,7 @@ subroutine set_ICs
            !/
            Rmax = max(21.00, sqrt(x2**2+y2**2+z2**2))
            if (UseInertial) then 
-              where (R_BLK(:,:,:,globalBLK) > 1.00)
+              where (R_BLK(:,:,:,globalBLK) > rBody)
                  State_VGB(rho_,:,:,:,globalBLK) = 1.00/R_BLK(:,:,:,globalBLK)**3
                  State_VGB(P_,:,:,:,globalBLK) = inv_g*State_VGB(rho_,:,:,:,globalBLK)
                  State_VGB(rhoUx_,:,:,:,globalBLK) = State_VGB(rho_,:,:,:,globalBLK)* &
@@ -180,7 +180,7 @@ subroutine set_ICs
                  State_VGB(Bz_,:,:,:,globalBLK)=0.00
               end where
            else
-              where (R_BLK(:,:,:,globalBLK) > 1.00)
+              where (R_BLK(:,:,:,globalBLK) > rBody)
                  State_VGB(rho_,:,:,:,globalBLK) = 1.00/R_BLK(:,:,:,globalBLK)**3
                  State_VGB(P_,:,:,:,globalBLK) = inv_g*State_VGB(rho_,:,:,:,globalBLK)
                  State_VGB(rhoUx_,:,:,:,globalBLK) = State_VGB(rho_,:,:,:,globalBLK)* &

@@ -133,6 +133,26 @@ module CON_grid_storage
      module procedure search_cell_dd
   end interface
 
+  interface i_global_node_bp
+     module procedure iglobal_bp_dd
+     module procedure iglobal_bp_id
+  end interface
+
+  interface i_global_node_a
+     module procedure iglobal_node_dd
+     module procedure iglobal_node_id
+  end interface
+
+  interface i_global_block
+     module procedure iglobal_block_dd
+     module procedure iglobal_block_id
+  end interface
+
+  interface used_bp
+     module procedure used_bp_dd
+     module procedure used_bp_id
+  end interface
+
   interface compid_grid
      module procedure compid_grid_id
      module procedure compid_grid_dd
@@ -183,7 +203,7 @@ module CON_grid_storage
      module procedure d_xyz_cell_dd
   end interface
 
-  interface is_used_block
+  interface used_node
      module procedure is_used_block_id
      module procedure is_used_block_dd
   end interface
@@ -201,6 +221,11 @@ module CON_grid_storage
   interface is_local_grid
      module procedure is_local_grid_id
      module procedure is_local_grid_dd
+  end interface
+
+  interface is_tree
+     module procedure is_tree_dd
+     module procedure is_tree_id
   end interface
 
   interface associate_dd_pointer
@@ -395,6 +420,7 @@ contains
           DD_I(GridID_)%Ptr%iDecomposition_II&
                (PE_,lBlock)=(lBlock-1)/MaxBlock
        end do
+       call set_iglobal_and_bp_dd(DD_I(GridID_)%Ptr)
        return
     end if
 
@@ -430,6 +456,7 @@ contains
                (BLK_,lBlock)=lBlock
        end do
     end if
+    call set_iglobal_and_bp_dd(DD_I(GridID_)%Ptr)
   end subroutine get_root_decomposition_id
   !---------------------------------------------------------------!
   !BOP
@@ -697,6 +724,32 @@ contains
     !EOP
     max_block_id=max_block_dd(DD_I(GridID_)%Ptr)
   end function max_block_id
+!---------------------------------------------------------------!
+  integer function iglobal_bp_id(GridID_,iBLK,iPE)
+    integer,intent(in)::GridID_
+    integer,intent(in)::iBLK,iPE
+    iglobal_bp_id=DD_I(GridID_)%Ptr%iGlobal_BP(iBLK,iPE)
+  end function iglobal_bp_id
+  !---------------------------------------------------------------!
+  integer function iglobal_node_id(GridID_,iBlockAll)
+    integer,intent(in)::GridID_
+    integer,intent(in)::iBlockAll
+    iglobal_node_id=DD_I(GridID_)%Ptr%iGlobal_A(iBlockAll)
+  end function iglobal_node_id
+  !---------------------------------------------------------------!
+  integer function iglobal_block_id(&
+       GridID_,iGlobalTreeNode)
+    integer,intent(in)::GridID_
+    integer,intent(in)::iGlobalTreeNode
+    iglobal_block_id=DD_I(GridID_)%Ptr%iDecomposition_II(&
+         GlobalBlock_,iGlobalTreeNode)
+  end function iglobal_block_id
+  !---------------------------------------------------------------!
+  logical function used_bp_id(GridID_,iBLK,iPE)
+    integer,intent(in)::GridID_
+    integer,intent(in)::iBLK,iPE
+    used_bp_id=used_bp_dd(DD_I(GridID_)%Ptr,iBLK,iPE)
+  end function used_bp_id
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
@@ -825,6 +878,11 @@ contains
     integer,intent(in)::GridID_
     is_local_grid_id=.false.
   end function is_local_grid_id
+!---------------------------------------------------------------!
+  logical function is_tree_id(GridID_)
+    integer,intent(in)::GridID_
+    is_tree_id=is_tree_dd(DD_I(GridID_)%Ptr)
+  end function is_tree_id
   !---------------------------------------------------------------!
   subroutine associate_dd_pointer_id(GridID_,DDPointer)
     integer,intent(in)::GridID_

@@ -15,18 +15,6 @@ module ModLimiter
   logical, dimension(-1:MaxIJK+2)    :: IsTrueCell_I
 end module ModLimiter
 
-subroutine OPTION_FACE(IsOn,Name)
-
-  implicit none
-
-  logical, intent(out) :: IsOn
-  character (len=40), intent(out) :: Name
-
-  IsOn=.true.
-  Name='FACEVALUES OPTIMIZED 1.2'
-
-end subroutine OPTION_FACE
-
 subroutine calc_facevalues(DoResChangeOnly)
 
   ! The subroutine calculates right and left face values.
@@ -580,9 +568,9 @@ subroutine limiter_body(lMin,lMax)
            dVarLim_VI(:,l)=cZero
         end if
      end do
-  case default                               !^CFG IF NOT SIMPLE BEGIN
-     dVarLim_VI(:,lMin-1:lMax)=cZero
-  end select                                 !^CFG END SIMPLE
+  case default
+     call stop_mpi('limiter_body: unknown TypeLimiter='//limiter_type)
+  end select
 
 end subroutine limiter_body
 !===========================================================================
@@ -627,8 +615,9 @@ subroutine limiter(lMin,lMax)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
         dVarLim_VI(:,l)=dVar2_I(1:nVar)* dVar2_I(Lo2_:Hi2_)
      end do
-  case default                              !^CFG IF NOT SIMPLE BEGIN
-     dVarLim_VI(:,lMin-1:lMax)=cZero
-  end select                                !^CFG END SIMPLE
+  case default
+     call stop_mpi('limiter: unknown TypeLimiter='//limiter_type)
+  end select
+
 end subroutine limiter
 

@@ -74,7 +74,7 @@ for ifile=0,nfile-1 do begin
    openfile,10,filenames(ifile),filetypes(ifile)
 
    getpict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
-          gencoord,ndim,neqpar,nw,nx,eqpar,variables,error
+          gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
    print,         'headline  =',strtrim(headline,2)
    print,FORMAT='("ndim      =",i2,", neqpar=",i2,", nw=",i2)',ndim,neqpar,nw
@@ -115,7 +115,7 @@ for ifile=0,nfile-1 do begin
       else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
       case transform of
          'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                   x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri,x_limited
+                   x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
          'polar'  :begin
                      polargrid,nvector,vectors,x,w,xreg,wreg
                      variables(0:1)=['r','phi']
@@ -140,4 +140,3 @@ close,10
 wnames=variables(ndim:ndim+nw-1)
 
 end
-

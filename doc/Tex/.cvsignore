@@ -4,4 +4,5 @@
 *.toc
 SWMF.tex
 SWMFREF.tex
-SWMF_xml.tex
+SWMFXML.tex
+Makefile.protex

@@ -28,7 +28,7 @@ subroutine write_plot_los(ifile)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
-       time_accurate,TimeH4,TimeM2,TimeS2
+       time_accurate,StringTimeH4M2S2
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
@@ -234,23 +234,23 @@ subroutine write_plot_los(ifile)
      end select
 
      if (ifile-plot_ > 9) then
-        file_format='("' // trim(NamePlotDir) // '"a,i2,a,i7.7,a)'
+        file_format='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
      else
-        file_format='("' // trim(NamePlotDir) // '"a,i1,a,i7.7,a)'
+        file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
      end if
 
      if(time_accurate)then
-        call gettimestring
+        call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,&
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,&
              file_extension
      else
         write(filename,file_format) &
              trim(plot_type1)//"_",&
              ifile-plot_,"_n",n_step,file_extension
      end if
-     open(unit_tmp,file=filename,status="unknown",err=999)
+     open(unit_tmp,file=filename,status="replace",err=999)
 
      ! write header file
      select case(plot_form(ifile))
@@ -410,8 +410,8 @@ contains
                 if( (intrsct(i,j,3) >= zz1) .and. (intrsct(i,j,3) <= zz2)) then
                    counter = counter + 1
                    do k=1,3  !fixed..do loop was misplaced
-                      if(i == 1) point_1(k) = intrsct(i,j,k)
-                      if(i == 2) point_2(k) = intrsct(i,j,k)
+                      if(counter == 1) point_1(k) = intrsct(i,j,k)
+                      if(counter == 2) point_2(k) = intrsct(i,j,k)
                    end do
                 end if
              end if

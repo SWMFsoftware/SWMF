@@ -4,7 +4,7 @@
 !
 !BOP
 !
-!QUOTE: \section{The SWMF Parallel Coupling Toolkit}
+!QUOTE: \section{CON/Coupler: the SWMF Parallel Coupling Toolkit}
 !
 !MODULE: CON_domain_decomposition - for uniform or octree grids
 !INTERFACE:
@@ -48,11 +48,10 @@ Module CON_domain_decomposition
   !interface procedure.                                              
 
   !USES:
-
+  use ModUtilities,ONLY:check_allocate
   use CON_world
   use ModNumConst                                               
   use ModMpi
-  use ModUtilities, ONLY: check_allocate
 
   !REVISION HISTORY:
   ! 6/18/03-7/11/03 Sokolov I.V. <igorsok@umich.edu> phone(734)647-4705
@@ -65,7 +64,8 @@ Module CON_domain_decomposition
        MyNumberAsAChild_ =0,&                                   
        FirstChild_  =1,&                                        
        BLK_         =2,&                                        
-       PE_          =3,&                                        
+       PE_          =3,&
+       GlobalBlock_ =4,&
        None_        =-777                                       
   !BOP
   !DESCRIPTION:
@@ -338,7 +338,20 @@ Module CON_domain_decomposition
      !correspondent model which accounts for any refinements as soon 
      !as they are done. The changes in iDecomoposition_II array then 
      !can come to the array DD_I only through the procedure          
-     !synchronize                                                             
+     !synchronize
+     !
+     !The inverse mapping (iPE,iBLK)->global node number is mantained
+     !using the following components:
+     
+     integer::MinBlock,MaxBlock
+     integer,dimension(:,:),pointer::iGlobal_BP
+
+     !The inverse mapping GlobalBlock number->global node number 
+     !is mantained using the following components:
+     
+     integer::nBlockAll
+     integer,dimension(:),pointer::iGlobal_A
+
      !===============================================================
      !\end{verbatim}
 
@@ -348,7 +361,10 @@ Module CON_domain_decomposition
   type DDPointerType
      type(DomainDecompositionType),pointer::Ptr
   end type DDPointerType
-
+  !Needed for searching and interpolating algorithms
+  real,parameter::cAlmostOne=cOne -cOne/(ce3*ce3*ce1),&
+       cAlmostTwo=cTwo*cAlmostOne,&
+       cAlmostHalf=cHalf*cAlmostOne
 contains
 
   !BOP
@@ -385,6 +401,10 @@ contains
        if(associated(DomainDecomposition%iRoot_I))&
             deallocate(DomainDecomposition%iRoot_I)
     end if
+    if(associated(DomainDecomposition%iGlobal_BP))&
+         deallocate(DomainDecomposition%iGlobal_BP)
+    if(associated(DomainDecomposition%iGlobal_A))&
+         deallocate(DomainDecomposition%iGlobal_A)
   end subroutine clean_decomposition_dd
   !===============================================================!
   !BOP
@@ -508,6 +528,26 @@ contains
     call check_octree_grid_allocation(DomainDecomposition)
     DomainDecomposition%lSearch=1
     DomainDecomposition%iRealization=0
+    nullify(DomainDecomposition%iGlobal_BP)
+    DomainDecomposition%MinBlock=1
+    DomainDecomposition%MaxBlock=1
+    if(DomainDecomposition%IsLocal)then
+       allocate(DomainDecomposition%iGlobal_BP(1:1,&
+            0:-1+n_proc(DomainDecomposition%CompID_)),&
+            stat=iError)
+    else
+       allocate(DomainDecomposition%iGlobal_BP(1:1,&
+            0:&
+            i_proc_last(CompID_)),&
+            stat=iError)
+    end if
+    call check_allocate(iError,'iGlobal_BP,first allocation')
+    DomainDecomposition%nBlockAll=1
+    nullify(DomainDecomposition%iGlobal_A)
+    allocate(DomainDecomposition%iGlobal_A(&
+         1:DomainDecomposition%nBlockAll),&
+         stat=iError)
+    call check_allocate(iError,'iGlobal_A,first allocation')
   end subroutine init_decomposition_dd
   !===============================================================!
   !============================NO INTERFACE=======================!
@@ -520,21 +560,16 @@ contains
          DomainDecomposition
     integer::iError,nUbound
 
-    nUbound=PE_
+    nUbound= GlobalBlock_
     if(DomainDecomposition%IsTreeDecomposition)&
          nUbound=max(nUbound,DomainDecomposition%nChildren)
     if(DomainDecomposition%nAllocatedNodes>=&
          DomainDecomposition%nTreeNodes)return
     if(associated(DomainDecomposition%iDecomposition_II))then
-!write(*,*) 'check_octree_grid 1', size(DomainDecomposition%iDecomposition_II)
        deallocate(DomainDecomposition%iDecomposition_II,stat=iError)
-!write(*,*) 'check_octree_grid 2',iError
        deallocate(DomainDecomposition%XyzBlock_DI,stat=iError)
-!write(*,*) 'check_octree_grid 3'
        deallocate(DomainDecomposition%DXyzBlock_DI,stat=iError)
-!write(*,*) 'check_octree_grid 4'
        deallocate(DomainDecomposition%DXyzCell_DI,stat=iError)
-!write(*,*) 'check_octree_grid 5'
     end if
 
     nullify(DomainDecomposition%iDecomposition_II)
@@ -682,11 +717,12 @@ contains
        MaxBlock=(DomainDecomposition%nTreeNodes-1)/&
             n_proc(DomainDecomposition%CompID_)+1
        do lBlock=1,DomainDecomposition%nTreeNodes
-          DomainDecomposition%iDecomposition_II&
-               (BLK_,lBlock)=mod(lBlock,MaxBlock)+1
-          DomainDecomposition%iDecomposition_II&
-               (PE_,lBlock)=(lBlock-1)/MaxBlock
+          call set_pe_and_local_blk_dd(DomainDecomposition,&
+               lBlock,&
+               iPE=(lBlock-1)/MaxBlock,&
+               iBlock=mod(lBlock,MaxBlock)+1)
        end do
+       call set_iglobal_and_bp_dd(DomainDecomposition)
        return
     end if
     !BOP
@@ -726,10 +762,85 @@ contains
                (BLK_,lBlock)=lBlock
        end do
     end if
-
+    call set_iglobal_and_bp_dd(DomainDecomposition)
   end subroutine get_root_decomposition_dd
   !===============================================================!
+  subroutine set_pe_and_local_blk_dd(&
+       DomainDecomposition,lGlobalTreeNode,iPE,iBlock)
+    type(DomainDecompositionType),intent(inout)::&
+         DomainDecomposition
+    integer,intent(in)::lGlobalTreeNode,iPE,iBlock
+    if(DomainDecomposition%iDecomposition_II&
+         (FirstChild_,lGlobalTreeNode)/=None_)call CON_stop(&
+         'You can not assign pe and blk for tree node=',&
+         lGlobalTreeNode)
 
+    DomainDecomposition%iDecomposition_II&
+         (BLK_,lGlobalTreeNode)=iBlock
+    DomainDecomposition%iDecomposition_II&
+         (PE_,lGlobalTreeNode)=iPE
+  end subroutine set_pe_and_local_blk_dd
+  !===============================================================!
+  subroutine set_iglobal_and_bp_dd(DomainDecomposition)
+    type(DomainDecompositionType),intent(inout)::&
+         DomainDecomposition
+    integer::iUpper_I(2),iLower_I(2),iError,iPE,iBlock
+    integer::iGlobalNode,iGlobalBlock
+    iLower_I=lbound(DomainDecomposition%iGlobal_BP)
+    iUpper_I=ubound(DomainDecomposition%iGlobal_BP)
+    DomainDecomposition%MinBlock=minval(&
+         DomainDecomposition%iDecomposition_II(&
+         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
+         DomainDecomposition%iDecomposition_II(&
+         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
+         .and.DomainDecomposition%iDecomposition_II(&
+         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
+    DomainDecomposition%MaxBlock=maxval(&
+         DomainDEcomposition%iDecomposition_II(&
+         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
+         DomainDecomposition%iDecomposition_II(&
+         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
+         .and.DomainDecomposition%iDecomposition_II(&
+         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
+    DomainDecomposition%nBlockAll=count(&
+         DomainDecomposition%iDecomposition_II(&
+         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
+         .and.DomainDecomposition%iDecomposition_II(&
+         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
+    if(iUpper_I(1)<DomainDecomposition%MaxBlock.or.&
+         iLower_I(1)>DomainDecomposition%MinBlock)then
+       deallocate(DomainDecomposition%iGlobal_BP)
+       allocate(DomainDecomposition%iGlobal_BP(&
+            DomainDecomposition%MinBlock:&
+            DomainDecomposition%MaxBlock,&
+            iLower_I(2):iUpper_I(2)),&
+            stat=iError)
+       call check_allocate(iError,'iGlobal_BP - reallocate')
+    end if
+    if(ubound(DomainDecomposition%iGlobal_A,1)<&
+         DomainDecomposition%nBlockAll)then
+       deallocate(DomainDecomposition%iGlobal_A)
+       allocate(DomainDecomposition%iGlobal_A(&
+            1:DomainDecomposition%nBlockAll),&
+            stat=iError)
+       call check_allocate(iError,'iGlobal_BP - reallocate')
+    end if
+    DomainDecomposition%iGlobal_BP=None_
+    DomainDecomposition%iGlobal_A=None_
+    iGlobalBlock=0
+    do iGlobalNode=1,DomainDecomposition%nTreeNodes
+       if(.not.is_used_block_dd(DomainDecomposition,iGlobalNode))&
+            CYCLE
+       call pe_and_blk_dd(DomainDecomposition,iGlobalNode,&
+            iPE,iBlock)
+       DomainDecomposition%iGlobal_BP(iBlock,iPE)=iGlobalNode
+       iGlobalBlock=iGlobalBlock+1
+       DomainDecomposition%iDecomposition_II(GlobalBlock_,&
+            iGlobalNode)=iGlobalBlock
+       DomainDecomposition%iGlobal_A(iGlobalBlock)=iGlobalNode
+    end do
+
+  end subroutine set_iglobal_and_bp_dd
   !=====================NO INTERFACE==============================!
 
   !===============================================================!
@@ -760,7 +871,7 @@ contains
          DomainDecomposition%iRootMapDim_D))&
          call allocate_iroot(DomainDecomposition)
   end subroutine check_iroot_allocation
-
+ 
   !===========================WITH INTERFACE======================!
   !===============================================================!
   !BOP
@@ -867,7 +978,9 @@ contains
        ! communicator (at the root pe only)                            ! 
        where(DomainDecomposition%iDecomposition_II(&
             FirstChild_,1:DomainDecomposition%nTreeNodes)&
-            ==None_)&
+            ==None_&
+            .and.DomainDecomposition%iDecomposition_II(&
+            PE_,1:DomainDecomposition%nTreeNodes)/=None_)&
             DomainDecomposition%iDecomposition_II(&
             PE_,1:DomainDecomposition%nTreeNodes)=&
             i_proc0()+i_proc0(DomainDecomposition%CompID_)+&
@@ -957,6 +1070,7 @@ contains
                *DomainDecomposition%iShift_DI(:,iChildNumber)
        end if
     end do
+    call set_iglobal_and_bp_dd(DomainDecomposition)
   end subroutine complete_grid
 
   !===============================================================!
@@ -1023,7 +1137,6 @@ contains
     else
        call bcast_indexes_dd(GlobalDD)
     end if
-
   end subroutine synchronize_refinement_dd
   !BOP
   !\begin{verbatim}
@@ -1156,7 +1269,7 @@ contains
          any(is_right_boundary_dd(DomainDecomposition,&
          lGlobalTreeNumber).and.iCells_D>&
          DomainDecomposition%nCells_D))then
-       l_neighbor_dd=lGlobalTreeNumber
+       l_neighbor_dd=None_
     else
        Xyz_D= xyz_cell_dd(DomainDecomposition,&
             lGlobalTreeNumber,iCells_D)
@@ -1167,6 +1280,20 @@ contains
   !===============================================================!
   !BOP
   !IROUTINE: l_level_neighbor - returns the level of neghboring block    
+  !DESCRIPTION:
+  !For the global node lGlobalTreeNumber and for cell index array, 
+  !iCells\_D, which is expected but not required to be out of the 
+  !limits 1:nCells for a given DomainDecomposition, hence, for the 
+  !point which in fact out of the block lGlobalTreeNumber, and 
+  !belongs to a neighboring block, the procedure returns:
+  !     integer larger than 1 if the neghboring block is more than 
+  !                              twice coarser than lGlobalTreeNumber
+  !       1, if the neghboring block is twice coarser than lGlobalTreeNumber
+  !       0, if the neighboring block is of the same resolution
+  !      -1, if the neighboring blcok is twice finer
+  !      -2,... if the neghboring block is more than twice finer
+  !      None\_, if the point is out of the computational domain
+  !EOP
 
   !BOP
   !INTERFACE:
@@ -1179,12 +1306,22 @@ contains
     integer,dimension(DomainDecomposition%nDim),&
          intent(in)::iCells_D
     !EOP
-    l_level_neighbor_dd=nint(&
-         log(DomainDecomposition%DXyzBlock_DI(1,&
-         l_neighbor_dd(DomainDecomposition,&
-         lGlobalTreeNumber,iCells_D))/&
-         DomainDecomposition%DXyzBlock_DI(&
-         1,lGlobalTreeNumber))/log(cTwo))
+    integer::lNeighbor
+    
+    lNeighbor=l_neighbor_dd(DomainDecomposition,&
+         lGlobalTreeNumber,iCells_D)
+    if(lNeighbor==None_)then
+       l_level_neighbor_dd=None_
+    else
+       if(.not.DomainDecomposition%IsTreeDecomposition)then
+          l_level_neighbor_dd=0
+          return
+       end if
+       l_level_neighbor_dd=int(&
+            cTwo*DomainDecomposition%DXyzBlock_DI(1,lNeighBor)&
+            /DomainDecomposition%DXyzBlock_DI(1,lGlobalTreeNumber)&
+            -cThree+cTiny)
+    end if
   end function l_level_neighbor_dd
   !BOP
   !IROUTINE: search_in - find which block involves the given point
@@ -1222,9 +1359,6 @@ contains
     !EOP
     real,dimension(DomainDecomposition%nDim)::&
          XyzTrunc_D,Discr_D
-    real,parameter::cAlmostOne=cOne -cOne/(ce3*ce3*ce1),&
-         cAlmostTwo=cTwo*cAlmostOne,&
-         cAlmostHalf=cHalf*cAlmostOne
     integer,dimension(DomainDecomposition%nDim)::&
          iRootMinusOne_D,iRootMinusOneStart_D
     integer,dimension(DomainDecomposition%nDimTree)::iShift_D
@@ -1445,10 +1579,7 @@ contains
     type(DomainDecompositionType),intent(in)::&
          DomainDecomposition
     !EOP
-    n_block_total_dd=count(&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)&
-         ==None_)
+    n_block_total_dd=DomainDecomposition%nBlockAll
   end function n_block_total_dd
   !===============================================================!
   !BOP
@@ -1501,11 +1632,7 @@ contains
     type(DomainDecompositionType),intent(in)::&
          DomainDecomposition
     !EOP
-    min_block_dd=minval(&
-         DomainDecomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_)
+    min_block_dd=DomainDecomposition%MinBlock
   end function min_block_dd
   !---------------------------------------------------------------!
   !BOP
@@ -1516,12 +1643,53 @@ contains
     type(DomainDecompositionType),intent(in)::&
          DomainDecomposition
     !EOP
-    max_block_dd=maxval(&
-         DomainDecomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_)
+    max_block_dd=DomainDecomposition%MaxBlock
+
   end function max_block_dd
+  !---------------------------------------------------------------!
+  integer function iglobal_bp_dd(DomainDecomposition,iBLK,iPE)
+    type(DomainDecompositionType),intent(in)::DomainDecomposition
+    integer,intent(in)::iBLK,iPE
+    iglobal_bp_dd=DomainDecomposition%iGlobal_BP(iBLK,iPE)
+  end function iglobal_bp_dd
+  !---------------------------------------------------------------!
+  integer function iglobal_node_dd(DomainDecomposition,iBlockAll)
+    type(DomainDecompositionType),intent(in)::DomainDecomposition
+    integer,intent(in)::iBlockAll
+    iglobal_node_dd=DomainDecomposition%iGlobal_A(iBlockAll)
+  end function iglobal_node_dd
+  !---------------------------------------------------------------!
+  integer function iglobal_block_dd(&
+       DomainDecomposition,iGlobalTreeNode)
+    type(DomainDecompositionType),intent(in)::DomainDecomposition
+    integer,intent(in)::iGlobalTreeNode
+    iglobal_block_dd=DomainDecomposition%iDecomposition_II(&
+         GlobalBlock_,iGlobalTreeNode)
+  end function iglobal_block_dd
+  !---------------------------------------------------------------!
+  logical function used_bp_dd(DomainDecomposition,iBLK,iPE)
+    type(DomainDecompositionType),intent(in)::DomainDecomposition
+    integer,intent(in)::iBLK,iPE
+    integer,dimension(2)::iUpper_I,iLower_I
+
+    iUpper_I=ubound(DomainDecomposition%iGlobal_BP)
+    iLower_I=lbound(DomainDecomposition%iGlobal_BP)
+
+    used_bp_dd=.false.
+    if(  iBLK>=iLower_I(1).and.&
+         iBLK<=iUpper_I(1).and.&
+         iPE >=iLower_I(2).and.&
+         iPE <=iUpper_I(2)    )&
+         used_bp_dd=DomainDecomposition%iGlobal_BP(iBLK,iPE)/=None_
+  end function used_bp_dd
+  !---------------------------------------------------------------!
+  
+  subroutine set_lsearch_dd(DomainDecomposition,iGlobal)
+    type(DomainDecompositionType),intent(inout)::DomainDecomposition
+    integer,intent(in)::iGlobal
+    DomainDecomposition%lSearch=iGlobal
+  end subroutine set_lsearch_dd
+ 
   !BOP
   !IROUTINE: access to decomposition elements: compid_grid (component ID)
   !DESCRIPTION:
@@ -1730,6 +1898,12 @@ contains
          DomainDecomposition
     is_local_grid_dd=DomainDecomposition%IsLocal
   end function is_local_grid_dd
+  !===============================================================!
+  logical function is_tree_dd(DomainDecomposition)
+    type(DomainDecompositionType),intent(in)::&
+         DomainDecomposition
+    is_tree_dd=DomainDecomposition%IsTreeDecomposition
+  end function is_tree_dd
   !===============================================================!
   subroutine associate_dd_pointer_dd(&
        DomainDecomposition,DDPointer)

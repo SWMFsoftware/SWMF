@@ -1,5 +1,10 @@
 !^CFG COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
 !BOP -------------------------------------------------------------------
+!
+!QUOTE: \section{CON/Stubs: Wrapper and Coupler for Stub Components}
 !
 !MODULE: CON_wrapper_stub - Stub wrapper for component specific subroutines
 !
@@ -7,8 +12,8 @@
 !
 ! Contains general subroutines which mimic the behaviour of the 
 ! physics components. Based on the real wrapper and the real physical
-! components. Compile with INTDIR = srcCON/Stubs and all components
-! GM_VERSION = Empty, ... UA_VERSION = Empty.
+! components. Selectt INTVERION = Stubs in Makefile.def and you can select
+! the Empty version for all the components.
 !
 ! This is useful for testing and profiling the control component.
 ! For example one can set a fraction of the realistic CPU times per
@@ -75,14 +80,19 @@ module CON_wrapper
 
   logical, public  :: IsNewInputIe = .false. ! Store if IE got new input
 
-  real,    public :: DtCpu_C(MaxComp)=1.0    ! CPU time needed for a step
+  real,    public  :: TimeNewInputSp=-2.0    ! Last time when SP got input
+
+  real,    public  :: DtCpu_C(MaxComp)=1.0   ! CPU time needed for a step
 
   !REVISION HISTORY:
   ! 30Jul03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
   !                                          based on the actual wrapper
+  ! 20Jul04 - Gabor Toth added exceptions for SP coupling (experimental)
   !EOP ___________________________________________________________________
 
   character(len=*),parameter :: NameMod='CON_wrapper_stub'
+
+  real :: TimeSp = -1.0                      ! The actual time SP has reached
 
   real,    dimension(MaxComp) :: DtRun_C=1.0
   real(Real8_)                :: Cpu0
@@ -125,6 +135,7 @@ contains
   !INTERFACE:
   subroutine set_param_id(iComp,TypeAction)
 
+    use CON_comp_info
     implicit none
 
     !INPUT PARAMETERS:
@@ -274,7 +285,7 @@ contains
     ! Initialize component for the session. Session numbers start from 1.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
@@ -286,6 +297,13 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     call get_comp_info(iComp,iUnitOut=iUnitOut)
+
+    ! Set initial SP time
+    if(iComp == SP_)then
+       write(iUnitOut,*)'SP: ',NameSub,' old TimeSp=',TimeSp
+       if(TimeSp < 0.0) TimeSp = TimeSimulation
+       write(iUnitOut,*)'SP: ',NameSub,' new TimeSp=',TimeSp
+    end if
 
     write(iUnitOut,*)NameComp_I(iComp),': ',NameSub,&
          ' iProc,iSession,TimeSimulation=',&
@@ -308,7 +326,7 @@ contains
     ! report errors, etc.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
@@ -340,7 +358,7 @@ contains
     ! Save restart information for the component.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
@@ -405,6 +423,26 @@ contains
     TimeSimulation = min(TimeSimulationLimit, TimeSimulation + DtRun_C(iComp))
 
     !\
+    ! SP can only solve up to the last coupling time TimeNewInputSp
+    !/
+    if(iComp==SP_)then
+       !write(iUnitOut,*)'SP: ',NameSub,' TimeNewInputSp=',TimeNewInputSp
+       !write(iUnitOut,*)'SP: ',NameSub,' TimeSp        =',TimeSp
+       if(TimeNewInputSp > TimeSp)then
+          ! Advance SP time by one step
+          TimeSp = min(TimeNewInputSp, TimeSp + DtRun_C(iComp))
+          write(iUnitOut,*)'SP: ',NameSub,' advancing to TimeSp=',TimeSp
+          ! Tell the framework if we are done by setting a fake TimeSimulation
+          TimeSimulation = TimeSimulationLimit + (TimeSp - TimeNewInputSp)
+       else
+          write(iUnitOut,*)'SP: ',NameSub,' cannot solve yet iProc=',i_proc()
+          ! Pretend that we are done
+          TimeSimulation = TimeSimulationLimit
+          RETURN
+       end if
+    end if
+
+    !\
     ! IE only solves if there is new info
     !/
     if(iComp==IE_)then
@@ -417,6 +455,7 @@ contains
        end if
     end if
 
+    ! Work on this time step
     call sleep(DtCpu_C(iComp))
 
   end subroutine run_comp_id

@@ -100,7 +100,7 @@ subroutine ionosphere_fine_grid
   use IE_ModIO, ONLY: iUnitOut, write_prefix
   use IE_ModMain, ONLY: conductance_model
   use ModIonosphere
-  use CON_physics, only: get_physics, lNamePlanet
+  use CON_planet, ONLY: get_planet, lNamePlanet
   implicit none
 
   integer :: i,j
@@ -111,7 +111,7 @@ subroutine ionosphere_fine_grid
   dTheta_l = 0.50*IONO_PI/real(IONO_nTheta-1)
   dPsi_l = dTheta_l
 
-  call get_physics(NamePlanetOut = NamePlanet, RadiusPlanetOut = IONO_Radius)
+  call get_planet(NamePlanetOut = NamePlanet, RadiusPlanetOut = IONO_Radius)
 
   select case (NamePlanet)
   case ('EARTH')

@@ -17,16 +17,14 @@
 
         SetSWMF.pl -s
 
-   You may wish to change the grid size for GM/IH and UA
+   You may wish to change the grid size for various components
    in some cases, although the default values are reasonable.
-   For GM and IH this can be done with
+   For example, for GM/BATSRUS this can be done with
 
        SetSWMF.pl -g=GM:8,8,8,400,1
   
-   which edits the variables in GM/UofM/src/ModSize.f90. 
-   For UA you have to edit the file:
-
-       emacs UA/GITM/src/ModUAM.f90
+   which edits the variables in GM/BATSRUS/src/ModSize.f90
+   and sets the number of implicit blocks to 1.
 
 2. To build SWMF.exe type
 	

@@ -7,11 +7,11 @@
 #COMPILE.f90     = f90
 
 calc_facefluxes.o: \
-	${MODDIR}/ModMpi.o ModMain.o ModAdvance.o calc_facefluxes.f90
+	${SHAREDIR}/ModMpi.o ModMain.o ModAdvance.o calc_facefluxes.f90
 	${COMPILE.f90} ${Cflag2} calc_facefluxes.f90
 
 set_outer_BCs.o: \
-	${MODDIR}/ModMpi.o ModMain.o ModAdvance.o \
+	${SHAREDIR}/ModMpi.o ModMain.o ModAdvance.o \
 	ModParallel.o  ModGeometry.o ModPhysics.o set_outer_BCs.f90
 	${COMPILE.f90} ${Cflag2} set_outer_BCs.f90
 

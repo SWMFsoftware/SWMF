@@ -1,4 +1,9 @@
+!QUOTE: \clearpage
+!
 !BOP
+!
+!QUOTE: \section{share/Library: for CON and the Physics Modules}
+!
 !MODULE: ModReadParam - read, include, broadcast and distribute parameters
 !INTERFACE:
 module ModReadParam
@@ -177,7 +182,6 @@ contains
   !IROUTINE: read_file - read parameter file
   !INTERFACE:
   subroutine read_file(NameFile,iComm,NameRestartFile)
-
     !INPUT ARGUMENTS:
     character (len=*), intent(in):: NameFile ! Name of the base param file
     integer,           intent(in):: iComm    ! MPI communicator for broadcast

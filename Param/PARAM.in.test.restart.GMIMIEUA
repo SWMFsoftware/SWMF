@@ -1,0 +1,210 @@
+#ECHO
+T			DoEcho
+
+#INCLUDE
+RESTART.in
+
+#DESCRIPTION
+Create startup for GM-IM-IE-UA from GM stady state.
+
+#IDEALAXES
+! Align rotational and magnetic axes with Z_GSE
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DnSaveRestart
+-1.0			DtSaveRestart
+
+! IM should run less frequently than GM to avoid some instability
+! in the coupling
+#CYCLE
+IM                      NameComp
+2                       DnRun
+
+! UA runs rather slow but does large 10s time steps, so it should run
+! less frequently
+#CYCLE
+UA                      NameComp
+10                      DnRun
+
+! This coupling order allows IE to run concurrently with the others
+! since it provides data before it would receive it
+#COUPLEORDER
+7                       nCouple
+IE GM                   NameSourceTarget
+IE IM                   NameSourceTarget
+IE UA			NameSourceTarget
+UA IE			NameSourceTarget
+GM IE                   NameSourceTarget
+GM IM                   NameSourceTarget
+IM GM                   NameSourceTarget
+
+#COUPLE2
+GM			NameComp1
+IE			NameComp2
+10                      DnCouple
+-1.                     DtCouple
+
+#COUPLE1
+IE			NameSource
+IM			NameTarget
+10                     DnCouple
+-1.                     DtCouple
+
+#COUPLE2
+UA			NameComp1
+IE			NameComp2
+10                      DnCouple
+-1.                     DtCouple
+
+#COUPLE2
+IM			NameComp1
+GM			NameComp2
+10                      DnCouple
+-1.                     DtCouple
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#INCLUDE
+GM/restartIN/restart.H
+
+! Ramp up GM pressure at a rate of 1/10th change per time step
+#IM
+0.1			TauCoupleIm
+
+! Do an accurate integration of field line volumes
+! Refresh 3D ray tracing every 80 steps only (for applying IM pressure)
+#RAYTRACE
+T                       UseAccurateIntegral
+F                       UseAccurateTrace
+0.1                     DtRayExchange
+80                      DnRaytrace
+
+#OUTERBOUNDARY
+outflow			TypeBcEast
+inflow			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#TIMESTEPPING
+1			nStage
+0.8			CflExlp
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+2                       nPlotFiles
+y=0 MHD idl             StringPlot
+1000                      DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+z=0 MHD idl             StringPlot
+1000                      DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP IE ---------------------------------------------------------------
+
+#IONOSPHERE
+5                       conductance_model
+F                       UseFullCurrent
+F			UseFakeRegion2
+150.0                   f107_flux
+0.2                     StarLightPedConductance
+0.5                     PolarCapPedConductance
+
+! Save every 20th solve which corresponds to every 200th SWMF iteration
+#IE_SAVEPLOT
+1			nFile
+min idl			StringPlot
+20			DnOutput
+-1.0			DtOutput
+
+#SPS
+T			UseSps (this is the serial potential solver)
+
+#END_COMP IE -----------------------------------------------------------------
+
+#BEGIN_COMP UA ---------------------------------------------------------------
+
+! Each block has 18x18 lon and lat cells, and we use 4 by 2 blocks
+! which corresponsd to a 20 by 10 degrees resolution:
+
+#GRID
+8		nLonBlock
+4		nLatBlock
+
+#PRESSURE
+F		PressureCoordinates
+95.0		BaseAlt [km]
+500.0		dz [km]
+
+#FORCING
+F		UsePressureGradient (logical)
+T		UseIonDrag          (logical)
+F		UseViscosity        (logical)
+F		UseCoriolis         (logical)
+F		UseHorAdvection     (logical)
+F		UseVerAdvection     (logical)
+F		UseVForce           (logical)
+
+#APEX
+F		UseApex
+
+#AMIEFILES
+SPS
+SPS
+
+#F107
+150.0
+150.0
+
+#HPI
+20.0
+
+#KP
+2.0
+
+#SOLARWIND
+ 1.224			SwBxDim  [nT]
+-0.2			SwByDim  [nT]
++0.744			SwBzDim  [nT]
+461.0			abs(SwUxDim) [km/s]
+
+#DT
+10.0			dT [s]
+
+#SAVEPLOTS
+100			dnOutput
+-1			dnRestart
+1			nOutputTypes
+2D			TypeOutput
+
+#STRETCH
+65.0			ConcentrationLatitude
+0.0			StretchingPercentage
+1.0			StretchingFactor
+
+#END_COMP UA   ---------------------------------------------------------------
+
+#STOP
+2000
+-1.
+
+#END

@@ -10,17 +10,17 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 #######################
-# Software libraries: #
-#######################
-
-LIBTIMING = ${LIBDIR}/libTIMING.a
-
-#######################
 # Shared libraries by #
 # CON and componets:  #
 #######################
 
 LIBSHARE   = ${LIBDIR}/libSHARE.a
+
+#######################
+# Software libraries: #
+#######################
+
+LIBTIMING = ${LIBDIR}/libTIMING.a
 
 #######################
 # CON infrastructure: #
@@ -47,6 +47,12 @@ LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
 LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
+
+LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
+
+LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
+
+LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
 
 #######################
 # Interface part of   #
@@ -88,22 +94,25 @@ SWMFEXE = ${BINDIR}/SWMF.exe
 # - this directory contains control part of "superstructure" --> SWMF.exe
 
 SWMFEXE: DEPEND 
-	@cd ${TIMINGDIR};    make LIB
 	@cd ${SHAREDIR};     make LIB
+	@cd ${TIMINGDIR};    make LIB
 	@cd ${LIBRARYDIR};   make LIB
 	@cd ${COUPLERDIR};   make LIB
+	@cd ${RBDIR};        make LIB	#^CMP IF RB
 	@cd ${GMDIR};        make LIB	#^CMP IF GM
 	@cd ${IEDIR};        make LIB	#^CMP IF IE
 	@cd ${IHDIR};        make LIB	#^CMP IF IH
 	@cd ${IMDIR};        make LIB	#^CMP IF IM
 	@cd ${UADIR};        make LIB	#^CMP IF UA
+	@cd ${SCDIR};        make LIB   #^CMP IF SC
+	@cd ${SPDIR};        make LIB   #^CMP IF SP
 	@cd ${INTERFACEDIR}; make LIB
 	@make ${SWMFEXE}
 	@echo ' '
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo ' '
 
-# CON uses modules from ${MODDIR} and the Interface subdirectory as well
+# CON uses modules from ${SHAREDIR} and the Interface subdirectory as well
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
 		${MODULES} ${OBJECTS}
@@ -116,30 +125,89 @@ DEPEND:
 # - CON comes next as it uses general software libraries only
 # - general software libraries come last in the order of their interdependecies
 
-LIB1 = ${LIBIH} #^CMP IF IH
-lib1 = -lIH     #^CMP IF IH
-LIB2 = ${LIBGM} #^CMP IF GM
-lib2 = -lGM     #^CMP IF GM
-LIB3 = ${LIBIM} #^CMP IF IM
-lib3 = -lIM     #^CMP IF IM
-LIB4 = ${LIBIE} #^CMP IF IE
-lib4 = -lIE     #^CMP IF IE
-LIB5 = ${LIBUA} #^CMP IF UA
-lib5 = -lUA     #^CMP IF UA
+LIB1  = ${LIBIH} #	^CMP IF IH
+lib1  = -lIH #		^CMP IF IH
 
-${SWMFEXE}: 	${MODULES} ${OBJECTS} \
+LIB2 = ${LIBGM}	#	^CMP IF GM
+lib2 = -lGM #		^CMP IF GM
+
+LIB3 = ${LIBIM}	#	^CMP IF IM
+lib3 = -lIM #		^CMP IF IM
+
+LIB4 = ${LIBIE}	#	^CMP IF IE
+lib4 = -lIE #		^CMP IF IE
+
+LIB5 = ${LIBUA}	#	^CMP IF UA
+lib5 = -lUA #		^CMP IF UA
+
+LIB6 = ${LIBRB}	#	^CMP IF RB
+lib6 = -lRB #		^CMP IF RB
+
+LIB7 = ${LIBSC} #       ^CMP IF SC
+lib7 = -lSC #       ^CMP IF SC
+
+LIB8 = ${LIBSP} #       ^CMP IF SC
+lib8 = -lSP #       ^CMP IF SC
+
+
+${SWMFEXE}: ${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
-		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
+		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
+		${LIB7} ${LIB8} \
 		${MAKEFILE_COMP_SELECT}
-	${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+	@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
+	elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
+	else                                      make SWMF_general; fi)
+
+SWMF_general:
+	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} \
 		-L${LIBDIR} -lINTERFACE \
-		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
-		-lCOUPLER -lLIBRARY -lSHARE -lTIMING ${LBLAS} \
+		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} ${lib6} \
+		${lib7} ${lib8} \
+		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
 		${Lflag1}
 
+# The following target is only needed to link SWMF on Darwin 
+# which has a problem with the ld linker.
+# This work around creates a temporary object file from all the F90
+# libraries using the -all_load option of the linker.
+
+SWMF_for_Darwin: 
+	ld -all_load -r -o LIBRARIES.o \
+		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
+		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
+		${LIB7} ${LIB8} \
+		${LIBINTERFACE}
+	${LINK.f90} -o ${SWMFEXE} \
+		${MODULES} ${OBJECTS} \
+		LIBRARIES.o ${LBLAS} \
+		${Lflag1}
+	rm -f LIBRARIES.o
+
+SWMF_for_xlf:
+	rm -rf Tmp_*
+	mkdir Tmp_SHARE;     cd Tmp_SHARE;     ar -x ${LIBSHARE};
+	mkdir Tmp_TIMING;    cd Tmp_TIMING;    ar -x ${LIBTIMING}; 
+	mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ar -x ${LIBLIBRARY};
+	mkdir Tmp_COUPLER;   cd Tmp_COUPLER;   ar -x ${LIBCOUPLER}; 
+	mkdir Tmp_INTERFACE; cd Tmp_INTERFACE; ar -x ${LIBINTERFACE}
+	mkdir Tmp_LIB1;      cd Tmp_LIB1;      ar -x ${LIB1} #^CMP IF IH
+	mkdir Tmp_LIB2;      cd Tmp_LIB2;      ar -x ${LIB2} #^CMP IF GM
+	mkdir Tmp_LIB3;      cd Tmp_LIB3;      ar -x ${LIB3} #^CMP IF IM
+	mkdir Tmp_LIB4;      cd Tmp_LIB4;      ar -x ${LIB4} #^CMP IF IE
+	mkdir Tmp_LIB5;      cd Tmp_LIB5;      ar -x ${LIB5} #^CMP IF UA
+	mkdir Tmp_LIB6;      cd Tmp_LIB6;      ar -x ${LIB6} #^CMP IF RB
+	mkdir Tmp_LIB7;      cd Tmp_LIB7;      ar -x ${LIB7} #^CMP IF SC
+	mkdir Tmp_LIB8;      cd Tmp_LIB8;      ar -x ${LIB8} #^CMP IF SP
+
+	${LINK.f90} -o ${SWMFEXE} \
+		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
+		${Lflag1}
+	rm -rf Tmp_*
+
 TESTREGISTRY: DEPEND
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
 	make test_registry.exe
 	mpirun -np 4 test_registry.exe
 	cat LAYOUT.in
@@ -148,22 +216,26 @@ TEST_REGISTRY_OBJ= \
 	test_registry.o
 
 test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
+	cd ${LIBRARYDIR}; make LIB
 	${LINK.f90} -o test_registry.exe ${SEARCH} \
-		${TEST_REGISTRY_OBJ} -L../lib -lCON
+		${TEST_REGISTRY_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE
 
 TEST_PHYS_OBJ = \
 	test_physics.o \
-	CON_methods.o
+	CON_methods.o \
+	CON_variables.o
 
 TESTPHYSICS: DEPEND
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
 	make test_physics.exe
 	test_physics.exe
 
-test_physics.exe: ${TEST_PHYS_OBJ} ${CONLIB}
+test_physics.exe: ${TEST_PHYS_OBJ}
+	cd ${SHAREDIR}; make LIB
+	cd ${LIBRARYDIR}; make LIB
 	${LINK.f90} -o test_physics.exe ${Lflag2} ${SEARCH} \
-		${TEST_PHYS_OBJ} -L../lib -lCON
+		${TEST_PHYS_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE 
 
 #
 #	cleaning
@@ -173,5 +245,3 @@ distclean: clean
 	rm -f Makefile.DEPEND
 
 # keep this line
-
-

@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !===========================================================================
 
-subroutine advance_expl(DoCalcTimestep, DoExchangeMessages)
+subroutine advance_expl(DoCalcTimestep)
 
   use ModMain
   use ModAdvance, ONLY : UseUpdateCheck
@@ -10,7 +10,7 @@ subroutine advance_expl(DoCalcTimestep, DoExchangeMessages)
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   implicit none
 
-  logical, intent(in) :: DoCalcTimestep, DoExchangeMessages
+  logical, intent(in) :: DoCalcTimestep
   integer :: istage
 
   real :: dtf, mdtf
@@ -167,7 +167,7 @@ subroutine advance_expl(DoCalcTimestep, DoExchangeMessages)
         call timing_stop('constrain_B')
      end if                                        !^CFG END CONSTRAINB
 
-     if(DoExchangeMessages.or.iStage<nStage)call exchange_messages
+     if(iStage<nStage)call exchange_messages
 
   end do STAGELOOP  ! Multi-stage solution update loop.
 

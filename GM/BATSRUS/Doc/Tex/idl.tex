@@ -337,6 +337,7 @@ bottomline=3, headerline=0
 wnames                     =  rho ux uy uz p bx by bz
 func(s) (e.g. rho p m1;m2) ? rho uy
 2D scalar: shade/surface/contour/contlabel/contfill/contbar/tv/tvbar
+2D polar : polar/polarlabel/polarfill/polarbar
 2D vector: stream/stream2/vector/velovect/ovelovect
 plotmode(s)                ? surface
 plottitle(s) (e.g. B [G];J)=default
@@ -415,16 +416,20 @@ x y z   rho p ux uy uz uu bx by bz bb   gamma
 
    For single functions the main plotmodes are 
 \begin{verbatim}
-Plotmode  Parameters     Description
----------------------------------------------------------------------
-surface   ax az          surface mesh, height proportional to value
-shade     ax az          shaded surface, height proportional to value
-contour   contourlevel   contourlines
-contlabel contourlevel   contourlines labeled by value
-contfill  contourlevel   levels colored by value
-contbar   contourlevel   levels colored by value plus colorbar
-tv                       grid cells colored by value
-tvbar                    grid cells colored by value plus colorbar
+Plotmode   Parameters     Description
+----------------------------------------------------------------------
+surface    ax az          surface mesh, height proportional to value
+shade      ax az          shaded surface, height proportional to value
+contour    contourlevel   contourlines
+contlabel  contourlevel   contourlines labeled by value
+contfill   contourlevel   levels colored by value
+contbar    contourlevel   levels colored by value plus colorbar
+polar                     polar contour plot
+polarlabel contourlevel   polar contour plot with labels
+polarfill  contourlevel   polar plot colored by value
+polarbar   contourlevel   polar plot colored by value plus colorbar
+tv                        grid cells colored by value
+tvbar                     grid cells colored by value plus colorbar
 \end{verbatim}
    The parameters {\bf ax} and {\bf az} define the viewing angle,
    while the {\bf contourlevel} parameter 
@@ -470,8 +475,17 @@ plotmode='vectorgrid contbarmesh'
    {\tt surface} plotting mode, on the other hand {\tt plotmode='shademesh'}
    will plot the shaded surface together with the mesh of 'surface'.
 
-   For any of the colored plotmodes ('shade', 'contfill', 'contbar', 'tv',
-   'tvbar') the colortable can be changed by one of the 
+   You can also add the string 'body' to show the spherical body with
+   radius {\bf rBody} at the origin as a black circle. By default 
+   {\bf rBody=3} but this can be changed by hand, or by an equation
+   parameter named 'rbody' or 'rBody', which is read from the data file.
+   For example
+\begin{verbatim}
+plotmode='stream2body contbarmeshbody'
+\end{verbatim}
+   For any of the colored plotmodes ('shade', 'contfill', 'contbar', 
+   'polarfill', 'polarbar', 'tv', and 'tvbar') the colortable can be 
+   changed by one of the 
 \begin{verbatim}
 xloadct
 loadct,3
@@ -552,7 +566,6 @@ cut=grid(*,50,*)
 cut=0
 \end{verbatim}
    or by running {\bf .r defaults}.
-
 
    The {\bf triplet} function provides an easy way to set the {\bf cut} 
    index array to represent a coarser grid. This is particularly useful
@@ -876,32 +889,31 @@ One or more (at most three) logfiles can be read by
    which reads data from the file(s) determined by the {\bf logfilename} 
    parameter. An initial guess for the name is made if the 
    {\bf filename} parameter has already been given. The data in the
-   logfile(s) is put into the {\bf step,t,dt,wlog} arrays in case of 
-   a single file, and into {\bf step0,t0,dt0,wlog0, step1,t1,dt1,wlog1} 
-   in case of two files.
-   If the {\bf residual} is calculated
-   and stored in the last column of the logfile, the {\bf resid} or 
-   {\bf resid0,resid1...} arrays are also generated. 
-   The {\bf wlog(nt,nwlog)} array contains the rest of the columns in the 
-   logfile. 
-   A simple example is 
+   logfile(s) is put into the {\bf wlog} array in case of 
+   a single file, and into {\bf wlog0, wlog1} in case of two files.
+   The {\bf wlog(nt,nwlog)} array contains the nt rows and nwlog columns of the
+   logfile. A simple example is 
 \begin{verbatim}
 .r getlog
-logfilename(s) ? example.log
-headline       =ExampleA_mhd23
-Reading arrays step,t,dt,wlog:
-  wlog(*, 0)= rho
-  wlog(*, 1)= mx
-  wlog(*, 2)= my
-  wlog(*, 3)= mz
-  wlog(*, 4)= e
-  wlog(*, 5)= bx
-  wlog(*, 6)= by
-  wlog(*, 7)= bz
-Number of recorded timesteps: nt=      20
-plot,t,wlog(*,0),xtitle='t',ytitle='rho_mean'
+logfilename(s) ? log_n000001.log
+headline       =Volume Averages, Fluxes, or point values
+Reading array wlog:
+  wlog(*, 0)= it
+  wlog(*, 1)= dt
+  wlog(*, 2)= rho
+  wlog(*, 3)= mx
+  wlog(*, 4)= my
+  wlog(*, 5)= mz
+  wlog(*, 6)= bx
+  wlog(*, 7)= by
+  wlog(*, 8)= bz
+  wlog(*, 9)= e
+  wlog(*,10)= Pmin
+  wlog(*,11)= Pmax
+Number of recorded timesteps: nt=      1000
+plot,wlog(*,0),wlog(*,2),xtitle='step',ytitle='rho_mean'
 \end{verbatim}
-which checks the global mass conservation for exampleA.
+which checks the global mass conservation.
 
 \subsection{Saving Plots into Postscript and GIF Files \label{s-postscript}}
 
@@ -919,26 +931,27 @@ For a non-color plot omit the {\bf /color,bits=8} parameters and the
 loading of the color table by the {\bf loadct} command. For a {\it portrait}
 picture use {\bf xsize=18, ysize=24} and omit the {\bf /landscape} keyword.
 If the printout is off the page, set {\bf yoffset=3} too.
+
 An alternative to the above general IDL commands are  
-the customized {\bf set\_device} and {\bf closedevice} procedures.
+the customized {\bf set\_device} and {\bf close\_device} procedures.
 \begin{verbatim}
 set_device,'myfile.ps'
 loadct,3
 .r plotfunc
-closedevice
+close_device
 \end{verbatim}
 The first optional argument of the {\bf set\_device} procedure is the filename.
 If it is not given, the default filename 'idl.ps' is used.
 There are several keyword arguments too: {\tt /port} for
 portrait (default is landscape), {\tt /eps} for encapsulated postscript
 file, {\tt percent=80} for an 80\% size reduction, and {\tt psfont=12}
-to select a specific font. The {\bf closedevice} procedure
+to select a specific font. The {\bf close\_device} procedure
 has no arguments, it simply closes the postscript device, and opens the
 'X' device.
 
 You can use .r animate instead of .r plotfunc (e.g. for multiple files or 
-for time series) in combination with {\tt set\_device} and {\tt closedevice}, 
-but make sure that only one plot is produced by setting
+for time series) in combination with {\tt set\_device} and 
+{\tt close\_device}, but make sure that only one plot is produced by setting
 {\bf npictmax=1}, and use {\bf firstpict} to select the snapshot.
 To save all frames of an animation into a series of Postscript files, 
 do not use {\bf set\_device} but set

@@ -7,14 +7,17 @@ include Makefile.DEPEND
 # These modules contain the coupling toolkit of SWMF.
 
 MODULES = \
+	CON_domain_decomposition.o\
 	ModInitGridStorage.o\
 	CON_grid_storage.o\
 	CON_grid_descriptor.o\
-	CON_test_global_message_pass.o\
-	CON_coupler.o\
+	CON_global_vector.o\
 	CON_router.o\
 	CON_global_message_pass.o\
-	CON_domain_decomposition.o
+	CON_integrator.o\
+	CON_buffer_grid.o\
+	CON_test_global_message_pass.o\
+	CON_coupler.o
 
 SEARCH_EXTRA = -I${LIBRARYDIR}
 

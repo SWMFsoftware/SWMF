@@ -111,7 +111,7 @@ subroutine calc_flux_roe(DoResChangeOnly)
 
   common/Eig1/ Eigenvalue_V,DeltaWave_V                
   common/Eig2/ EigenvectorL_VV,EigenvectorR_VV 
-  common/Flux/ FluxL_V,FluxR_V,FluxFull_V         
+  common/RoeFlux/ FluxL_V,FluxR_V,FluxFull_V         
 
 !!!  equivalence(zz(1),rho_lf)
 
@@ -133,7 +133,7 @@ subroutine calc_flux_roe(DoResChangeOnly)
   !T3E! !dir$ cache_align /face3/ 
   !T3E! !dir$ cache_align /Eig1/ 
   !T3E! !dir$ cache_align /Eig2/  
-  !T3E! !dir$ cache_align /flux/
+  !T3E! !dir$ cache_align /roeflux/
 
   cSqrt2 = sqrt(2.)
   cSqrt2Inv = 1./cSqrt2

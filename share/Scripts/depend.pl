@@ -35,11 +35,9 @@ while($ARGV[0] =~ /-/){
 
 $Help   = 1 if $#ARGV<0;                    # No source files
 
-#!QUOTE: \clearpage 
-
+#!QUOTE: \clearpage
 #BOP
-
-#!QUOTE: \section{Scripts}
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
 #!QUOTE: \subsection{Source Code Manipulation}
 #
 #!ROUTINE: depend.pl - automatic generation of Fortran source dependencies
@@ -62,6 +60,7 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 # 08/20/03 G.Toth - added search path options with intelligent file association
 # 03/20/04 G.Toth - added multiple -Ipath option so the compiler flags 
 #                   can be used without any change
+# 07/30/04 I.Sokolov - added search for include files in the search path
 #EOP
 if($Help){
     print 
@@ -81,9 +80,9 @@ Options:
 
 Examples of use:
 
-In a makefile:  depend.pl -s="MODDIR:${MODDIR},../Lib" ${OBJECTS}
+In a makefile:  depend.pl -s="SEARCHDIR:${SEARCHDIR},../src" ${OBJECTS}
 
-                SEARCH_EXTRA = -I${MODDIR} -I../src
+                SEARCH_EXTRA = -I${LIBRARYDIR} -I../src
                 depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
 
 Interactively:  depend.pl -o=Makefile.test main.o ModMain.o'
@@ -104,7 +103,6 @@ foreach $dir (@search){
     }
 
     -d $dir or die "depend.pl ERROR: $dir is not a directory\n";
-
     opendir(DIR,$dir) or die "depend.pl ERROR: ".
 	"could not open directory $dir\n";
 
@@ -120,9 +118,14 @@ foreach $dir (@search){
 		$module = uc($1); # capitalize module name (ignore case)
 		$object = $module.'.O'; 
 
+		
                 # Check if the file with the same name as the module
 		# has been found already
-		if($modulefile{$object} !~ /\/$module\.o$/i){
+
+		# Remove IH_ or SC_ from the name of the module for matching
+		$modmatch = $module; $modmatch =~ s/^(IH|SC)_//;
+
+		if($modulefile{$object} !~ /\/$modmatch\.o$/i){
 		    # If not, store the filename into %modulefile
 		    $file =~ s/\.f90$/.o/i;
 		    if($env{$dir}){
@@ -192,8 +195,21 @@ OBJECT:
 	# Check for 'include "filename"'
 	if(/^\s*include\s+[\"\']?([^\'\"\s]+)/i){
 	    $include=$1;
+	    $includeorig=$include;
+	    if(not -e $include){
+		foreach $dir (@search){
+		    if( -e "$dir/$include"){
+			if($env{$dir}){
+			    $include="$env{$dir}/$include";
+			}else{
+			    $include="$dir/$include";
+			}
+			last;
+		    }
+		}
+	    }
 	    $include{$base}.=" $include" 
-		unless $include{$base}=~/ $include\b/i;
+		unless $include{$base}=~/ $include\b/;
 	}
     }
 }
