@@ -54,8 +54,8 @@ module CON_coupler
   integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
        ! This is the default order based on the propagation of information
        ! from component to component
-       IH_, SC_, & 
        SC_, IH_, & 
+       IH_, SC_, & 
        SC_, SP_, & !\The mutual order of these two couplings is mandatory
        IH_, SP_, & !/Do not modify them, please.
        IH_, GM_, &
@@ -65,6 +65,9 @@ module CON_coupler
        UA_, IE_, &
        IE_, IM_, &
        IM_, GM_, &
+
+
+
        IE_, UA_, &
        IE_, GM_  /), (/2, MaxCouple/) )
 
