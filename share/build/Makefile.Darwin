@@ -34,7 +34,7 @@ Cflag3  = ${SEARCH} -c -O3 -w -dusty ${DEBUG} ${PRECISION}
 Cflag4  = ${SEARCH} -c -O4 -w -dusty ${DEBUG} ${PRECISION}
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  -c -w -C -save
+CFLAGS = ${SEARCH}  -c -w -save ${DEBUG}
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
