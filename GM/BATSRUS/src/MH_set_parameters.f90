@@ -67,10 +67,10 @@ subroutine MH_set_parameters(TypeAction)
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
 
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
-  character (len=lStringLine) :: StringAreaResolution, NameArea
+  character (len=lStringLine) :: NameArea
   integer                     :: nLevelArea
+  real                        :: AreaResolution, Radius, Radius1, Radius2
   real, dimension(3)          :: XyzStart_D, XyzEnd_D
-  real                        :: Radius, Radius1, Radius2
 
   logical            :: UseSimple=.true.
 
@@ -185,13 +185,13 @@ subroutine MH_set_parameters(TypeAction)
   !\
   ! Read parameters from the text
   !/
-  do
+  READPARAM: do
      if(.not.read_line(StringLine) )then
         IsLastRead = .true.
-        EXIT
+        EXIT READPARAM
      end if
 
-     if(.not.read_command(NameCommand)) CYCLE
+     if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
      case("#NEWPARAM")
@@ -216,11 +216,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#END")
         call check_stand_alone
         IslastRead=.true.
-        EXIT
+        EXIT READPARAM
      case("#RUN")
         call check_stand_alone
         IslastRead=.false.
-        EXIT
+        EXIT READPARAM
      case("#STOP")
         call check_stand_alone
         call read_var('MaxIteration',nIter)
@@ -720,6 +720,36 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSaveBinary',save_binary)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
+        if(index(NameCommand,"RESOLUTION")>0)then
+           call read_var('AreaResolution',AreaResolution)
+        else
+           call read_var('nLevelArea',nLevelArea)
+        end if
+        call read_var('NameArea',NameArea)
+        call lower_case(NameArea)
+
+        if(NameArea(1:4) == 'init')then
+           ! 'init' or 'initial' means that the initial resolution is set,
+           ! and no area is created. Replaces the #AMRINIT 'none' nlevel.
+           ! Convert resolution to level if necessary
+           if(index(NameCommand,"RESOLUTION")>0) &
+                nLevelArea = nint( &
+                alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
+                / AreaResolution) / alog(2.0) )
+
+           ! Set the initial levels and the refinement type to 'none'
+           initial_refine_levels = nLevelArea
+           InitialRefineType     = 'none'
+
+           ! No area is created, continue reading the parameters
+           CYCLE READPARAM
+        end if
+
+        ! Convert level to resolution if necessary
+        if(index(NameCommand,"LEVEL")>0) &
+             AreaResolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
+             / (proc_dims(x_) * nI * 2.0**nLevelArea)
+
         nArea = nArea + 1
         if(nArea > MaxArea)then
            if(UseStrict)call stop_mpi(NameSub,&
@@ -732,23 +762,7 @@ subroutine MH_set_parameters(TypeAction)
            nArea = MaxArea
         end if
 
-        if(index(NameCommand,"RESOLUTION")>0)then
-           call read_var('StringAreaResolution',StringAreaResolution)
-           i = index(StringAreaResolution,'1/')
-           if(i>0)then
-              read(StringAreaResolution(i+2:lStringLine),*) &
-                   Area_I(nArea)%Resolution
-              Area_I(nArea)%Resolution = 1/Area_I(nArea)%Resolution
-           else
-              read(StringAreaResolution,*) Area_I(nArea)%Resolution
-           end if
-        else
-           call read_var('nLevelArea',nLevelArea)
-           Area_I(nArea) % Resolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
-                / (proc_dims(x_) * nI * 2.0**nLevelArea)
-        end if
-        call read_var('NameArea',NameArea)
-        call lower_case(NameArea)
+        Area_I(nArea) % Resolution = AreaResolution
 
         ! Set the default center to be the origin, the size to be 1
         Area_I(nArea)%Center_D = 0.0
@@ -1153,14 +1167,14 @@ subroutine MH_set_parameters(TypeAction)
         call user_read_inputs        !^CFG END USERFILES
         !                                              ^CFG END SIMPLE
      case("#CODEVERSION")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('CodeVersion',CodeVersionRead)
         if(abs(CodeVersionRead-CodeVersion)>0.005.and.iProc==0)&
              write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
              ' WARNING: CodeVersion in file=',CodeVersionRead,&
              ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
      case("#PRECISION")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nByteReal',nByteRealRead)
         if(nByteReal/=nByteRealRead.and.iProc==0)then
            write(*,'(a,i1,a)')'BATSRUS was compiled with ',nByteReal,&
@@ -1168,7 +1182,7 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: incorrect precision for reals')
         end if
      case("#EQUATION")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameEquation',NameEquationRead)
         call read_var('nVar',        nVarRead)
         if(NameEquationRead /= NameEquation .and. iProc==0)then
@@ -1184,7 +1198,7 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
         end if
      case("#PROBLEMTYPE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         !                                        ^CFG IF NOT SIMPLE BEGIN
         call read_var('iProblemType',problem_type_r) 
         if(problem_type<0)then
@@ -1201,7 +1215,7 @@ subroutine MH_set_parameters(TypeAction)
                 ' WARNING: problem type set twice !!!'
         end if                                  !^CFG END SIMPLE
      case("#RESTARTINDIR")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var("NameRestartInDir",NameRestartInDir)
         call fix_dir_name(NameRestartInDir)
         if (iProc==0) call check_dir(NameRestartInDir)
@@ -1214,18 +1228,18 @@ subroutine MH_set_parameters(TypeAction)
         call fix_dir_name(NamePlotDir)
         if (iProc==0) call check_dir(NamePlotDir)
      case("#NEWRESTART")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         restart=.true.
         restart_reals=.true.
         restart_ghost=.false.
         call read_var('DoRestartBFace',restart_Bface) !^CFG IF CONSTRAINB
      case("#BLOCKLEVELSRELOADED")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         ! Sets logical for upgrade of restart files 
         ! to include LEVmin and LEVmax
         RestartBlockLevels=.true.
      case("#SATELLITE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nSatellite',nsatellite)
         if(nsatellite>0) save_satellite_data=.true.
         if(save_satellite_data)then
@@ -1315,7 +1329,7 @@ subroutine MH_set_parameters(TypeAction)
              //NameCommand)
         !                                         ^CFG END CARTESIAN 
         !^CFG IF NOT CARTESIAN BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeGeometry',TypeGeometry)      
         select case(TypeGeometry)                                   
         case('cartesian') 
@@ -1340,7 +1354,7 @@ subroutine MH_set_parameters(TypeAction)
         !^CFG END CARTESIAN 
      case("#GRID")
         !                                        ^CFG IF NOT SIMPLE BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
@@ -1386,7 +1400,7 @@ subroutine MH_set_parameters(TypeAction)
         ! call read_var('XyzMin_D(1)',XyzMin_D(1)) !^CFG IF NOT CARTESIAN
         ! call read_var('XyzMax_D(1)',XyzMax_D(1)) !^CFG IF NOT CARTESIAN
      case("#CHECKGRIDSIZE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))
         call read_var('nJ',nIJKRead_D(2))
         call read_var('nK',nIJKRead_D(3))
@@ -1401,10 +1415,10 @@ subroutine MH_set_parameters(TypeAction)
                 ' or increase nBLK in ModSize and recompile!')
         end if
      case("#AMRINITPHYSICS")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRefineLevelIC',nRefineLevelIC)
      case("#GAMMA")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('Gamma',g)
         !\
         ! Compute gamma related values.
@@ -1416,7 +1430,7 @@ subroutine MH_set_parameters(TypeAction)
         inv_gm1 = cOne/gm1
         g_half  = cHalf*g
      case('#EXTRABOUNDARY')                   !^CFG IF USERFILES BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
              TypeBc_I(ExtraBc_))      
@@ -1427,7 +1441,7 @@ subroutine MH_set_parameters(TypeAction)
         !                                      ^CFG END FACEOUTERBC
         !                                      ^CFG END USERFILES
      case('#FACEOUTERBC')                      !^CFG IF FACEOUTERBC BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
         !^CFG IF NOT CARTESIAN BEGIN
         select case(TypeGeometry)
@@ -1441,7 +1455,7 @@ subroutine MH_set_parameters(TypeAction)
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
         !                                       ^CFG END FACEOUTERBC 
      case("#SOLARWIND")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('SwRhoDim',SW_rho_dim)
         call read_var('SwTDim'  ,SW_T_dim)
         call read_var('SwUxDim' ,SW_Ux_dim)
@@ -1451,7 +1465,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('SwByDim' ,SW_By_dim)
         call read_var('SwBzDim' ,SW_Bz_dim)
      case("#MAGNETOSPHERE","#BODY")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody',body1)            !^CFG IF NOT SIMPLE BEGIN
         if(body1)then
            call read_var('rBody'     ,Rbody)
@@ -1462,11 +1476,11 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if                                  !^CFG END SIMPLE
      case("#GRAVITY")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)        !^CFG IF NOT SIMPLE
         if(UseGravity)call read_var('iDirGravity',GravityDir) !^CFG IF NOT SIMPLE
      case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody2',UseBody2)
         if(UseBody2)then
            call read_var('rBody2',rBody2)
@@ -1478,7 +1492,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('tDimBody2'  ,tDimBody2)
         end if
      case("#DIPOLEBODY2")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('BdpDimBody2x',BdpDimBody2_D(1))
         call read_var('BdpDimBody2y',BdpDimBody2_D(2))
         call read_var('BdpDimBody2z',BdpDimBody2_D(3))
@@ -1488,7 +1502,7 @@ subroutine MH_set_parameters(TypeAction)
           '#ROTATION','#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
 
         if(.not.UseNewAxes .and. iProc==0) &
              call stop_mpi(NameSub//': ERROR command '// &
@@ -1499,7 +1513,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#COROTATION","#AXES")
 
         call check_stand_alone
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
 
         if(UseNewAxes .and. iProc==0) &
              call stop_mpi(NameSub//': ERROR command '// &
@@ -1510,7 +1524,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#DIPOLE")
 
         call check_stand_alone
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
 
         if(UseNewAxes)then
            call read_planet_var(NameCommand)
@@ -1519,7 +1533,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#COORDSYSTEM")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeCoordSystem',TypeCoordSystem)
         call upper_case(TypeCoordSystem)
         select case(NameThisComp)
@@ -1533,14 +1547,14 @@ subroutine MH_set_parameters(TypeAction)
                 //TypeCoordSystem)
         end select
      case("#NSTEP")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nStep',n_step)
      case("#NPREVIOUS")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('nPrev',n_prev)             !^CFG IF IMPLICIT
         call read_var('DtPrev',dt_prev)           !^CFG IF IMPLICIT
      case("#STARTTIME", "#SETREALTIME")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('iYear'  ,iStartTime_I(1))
         call read_var('iMonth' ,iStartTime_I(2))
         call read_var('iDay'   ,iStartTime_I(3))
@@ -1555,11 +1569,11 @@ subroutine MH_set_parameters(TypeAction)
            call time_int_to_real(iStartTime_I, StartTimeCheck)
         end if
      case("#TIMESIMULATION")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('tSimulation',time_simulation)
         !                                    ^CFG IF NOT SIMPLE BEGIN
      case("#HELIOSPHERE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('BodyTDim' ,Body_T_dim)
         call read_var('BodyRhoDim',Body_rho_dim)
         call read_var('qSun' ,Qsun)
@@ -1585,12 +1599,12 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DtUpdateB0',dt_updateb0)
         DoUpdateB0 = dt_updateb0 > 0.0
      case("#HELIODIPOLE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('HelioDipoleStrength',Bdp_dim)
         call read_var('HelioDipoleTilt'    ,ThetaTilt)
         ThetaTilt = ThetaTilt * cDegToRad
      case("#HELIOROTATION", "#INERTIAL")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseInertialFrame',UseInertial)
         UseRotatingFrame = .not.UseInertial
         if(UseInertial)then
@@ -1602,7 +1616,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#HELIOTEST")
         call read_var('DoSendMHD',DoSendMHD)
      case("#ARCADE")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('TArcDim'  ,TArcDim)
         call read_var('RhoArcDim',RhoArcDim)
         call read_var('BArcDim'  ,BArcDim)
@@ -1613,7 +1627,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('expArc'   ,expArc)
         call read_var('widthArc' ,widthArc)
      case("#CME")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('Cmetype',cme_type)
         call read_var('Cmea' ,cme_a)
         call read_var('Cmer1',cme_r1)
@@ -1625,7 +1639,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('CmeB1_dim',cme_B1_dim)
         call read_var('Cmev_erupt',cme_v_erupt)
      case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseDefaultUnits',UseDefaultUnits)
         call read_var('Grav0Diss'      ,Grav0Diss)
         call read_var('Beta0Diss'      ,Beta0Diss)
@@ -1643,7 +1657,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('BZ0Diss'        ,BZ0Diss)
         !                                             ^CFG END DISSFLUX
      case("#COMET")
-        if(.not.is_first_session())CYCLE
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('Qprod' ,Qprod)
         call read_var('Unr_in' ,Unr_in)
         call read_var('mbar',mbar)
@@ -1657,7 +1671,8 @@ subroutine MH_set_parameters(TypeAction)
            if(UseStrict)call stop_mpi('Correct PARAM.in!')
         end if
      end select
-  end do
+  
+end do READPARAM
 
   ! end reading parameters
 
