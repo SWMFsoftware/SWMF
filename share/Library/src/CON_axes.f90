@@ -398,7 +398,7 @@ contains
     logical, optional, intent(in) :: DoSetAxes
 
     !DESCRIPTION:
-    ! The magnetic axis as well as the corotating GEO and MAG fremes
+    ! The magnetic axis as well as the corotating GEO and MAG frames
     ! are rotating around the rotational axis with OmegaPlanet 
     ! angular speed. Calculate the position of the axes and the
     ! transformation matrices for the given simulation time TimeSim.
