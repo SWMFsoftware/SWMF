@@ -10,9 +10,42 @@ subroutine OPTION_RAYTRACING(on,name)
 
 end subroutine OPTION_RAYTRACING
 
+!=============================================================================
+
 subroutine ray_trace
 
-  use ModRaytrace, ONLY: UseAccurateTrace
+  use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition
+  use ModRaytrace, ONLY: UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
+  use ModPhysics,  ONLY: rBody
+  implicit none
+
+  ! remember last call and the last grid number
+  integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
+
+  logical :: oktest, oktest_me
+  !-------------------------------------------------------------------------
+
+  call set_oktest('ray_trace',oktest,oktest_me)
+
+  if(oktest_me)then
+     write(*,*)'GM ray_trace: n_last,n_step         =',n_last,n_step
+     write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
+     write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
+          iLastDecomposition,iNewDecomposition
+  end if
+
+  if(  n_last + DnRaytrace > n_step   .and. &
+       iLastGrid          == iNewGrid .and. &
+       iLastDecomposition == iNewDecomposition) RETURN
+
+  ! Remember this call
+  n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
+
+  call timing_start('ray_trace')
+
+  ! Initialize R_raytrace, R2_raytrace to body radius
+  R_raytrace  = rBody
+  R2_raytrace = R_raytrace**2
 
   if(UseAccurateTrace)then
      call ray_trace_accurate
@@ -20,38 +53,30 @@ subroutine ray_trace
      call ray_trace_fast
   end if
 
+  call timing_stop('ray_trace')
+
 end subroutine ray_trace
 
+!==============================================================================
 subroutine ray_trace_fast
+
   use ModProcMH
   use ModMain
-  use ModPhysics, ONLY : rBody
-  use ModAdvance, ONLY : Bx_,By_,Bz_,State_VGB,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance,  ONLY : Bx_, Bz_, State_VGB
   use ModParallel, ONLY : NOBLK, neiLEV
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,Rmin_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       true_cell,true_BLK
-  use ModInterface
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
+       dx_BLK, dy_BLK, dz_BLK, true_cell
   use ModRaytrace
   use ModMpi
   implicit none
 
-  ! Arguments
-  ! remember last call and the last grid number
-  integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
-
   ! Iteration parameters
-  integer :: ray_iter, ray_iter_max=150
+  integer, parameter :: ray_iter_max=150
+  integer :: ray_iter
   logical :: done_me, done
   real    :: dray_min
 
-  ! Small temporary array for X,Y,Z => theta,phi conversion in a block
-  real, dimension(3,2,1:nI,1:nJ,1:nK):: ray_tmp
-  real, dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_tmp
-
-  real :: qqray(3), tmpValue(4)
-
-  ! Conversion from radians to degrees
-  real, save :: rad2deg
+  real :: qqray(3)
 
   ! Minimum value of B for which integration of field lines makes any sense
   real, parameter :: smallB=1.e-8
@@ -76,9 +101,6 @@ subroutine ray_trace_fast
   ! Radial distance and square of it: r2=sum(xx**2)
   real :: r2
 
-  ! The square of the body radius. Inside rBody we should not calculate B1, Rho, and p
-  real :: rBody2
-
   ! Cell indices corresponding to current or final x position
   integer :: i1,j1,k1,i2,j2,k2
 
@@ -94,8 +116,8 @@ subroutine ray_trace_fast
   ! Indices corresponding to the starting point of the ray
   integer :: ix,iy,iz
 
-  ! Current block, dimension and direction indices
-  integer :: iBLK, idim, idir, iray
+  ! Current block and direction indices
+  integer :: iBLK, iRay
 
   ! Testing and timing
   logical :: oktest, oktest_me, oktime, oktime_me
@@ -105,68 +127,39 @@ subroutine ray_trace_fast
   !----------------------------------------------------------------------------
 
   call set_oktest('ray_trace',oktest,oktest_me)
-
-  if(oktest_me)then
-     write(*,*)'GM ray_trace: n_last,n_step         =',n_last,n_step
-     write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
-     write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
-          iLastDecomposition,iNewDecomposition
-  end if
-
-  if(  n_last             == n_step   .and. &
-       iLastGrid          == iNewGrid .and. &
-       iLastDecomposition == iNewDecomposition) RETURN
-
-  ! Remember this call
-  n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
-
   call set_oktest('time_ray_trace',oktime,oktime_me)
-  call timing_start('ray_trace')
   if(oktime)call timing_reset('ray_pass',2)
 
   oktest_ray = .false.
 
-!!!
-  R_raytrace = rBody
-  if(iProc==0)write(*,*)'Setting R_raytrace=',R_raytrace
-  R2_raytrace = R_raytrace**2
-
   Bxyz_DGB = State_VGB(Bx_:Bz_,:,:,:,:)
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
-  rBody2 = rBody**2
+  ! Initial values !!! Maybe LOOPRAY would be better??
 
-!  if(iLastGrid/=iNewGrid .or.iLastDecomposition/=iNewDecomposition)then
-     ! Initialize constants
+  rayface=NORAY
+  ray=NORAY
 
-     rad2deg=45.0/atan(1.0)
+  do iBLK=1,nBlockMax
+     if(unusedBLK(iBLK))then
+        ! rayface in unused blocks is assigned to NORAY-1.
+        rayface(:,:,:,:,:,iBLK)=NORAY-1.
+        CYCLE
+     end if
+     ! Inner points of rayface should never be used, assign them to OPEN
+     ! so that checking for blocks with fully open rays becomes easy
+     rayface(:,:,2:nI,2:nJ,2:nK,iBLK)=OPENRAY
+     
+     ! Set rayface=OPENRAY at outer boundaries
+     if(neiLEV(east_ ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
+     if(neiLEV(west_ ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
+     if(neiLEV(south_,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
+     if(neiLEV(north_,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
+     if(neiLEV(bot_  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
+     if(neiLEV(top_  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
 
-     ! Initial values !!! Maybe LOOPRAY would be better??
-
-     rayface=NORAY
-     ray=NORAY
-
-     do iBLK=1,nBlockMax
-        if(unusedBLK(iBLK))then
-           ! rayface in unused blocks is assigned to NORAY-1.
-           rayface(:,:,:,:,:,iBLK)=NORAY-1.
-           CYCLE
-        end if
-        ! Inner points of rayface should never be used, assign them to OPEN
-        ! so that checking for blocks with fully open rays becomes easy
-        rayface(:,:,2:nI,2:nJ,2:nK,iBLK)=OPENRAY
-
-        ! Set rayface=OPENRAY at outer boundaries
-        if(neiLEV(east_ ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
-        if(neiLEV(west_ ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
-        if(neiLEV(south_,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
-        if(neiLEV(north_,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
-        if(neiLEV(bot_  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
-        if(neiLEV(top_  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
-
-     end do
-     if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
-!  end if
+  end do
+  if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
 
   ! Interpolate the B1 field to the nodes
   do iBLK=1, nBlockMax
@@ -524,8 +517,6 @@ subroutine ray_trace_fast
         call xyz_to_latlonstatus(ray(:,:,i,j,k,iBLK))
      end do; end do; end do
   end do
-
-  call timing_stop('ray_trace')
 
   if(oktime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
@@ -1136,9 +1127,6 @@ contains
 
     ! Local variables
 
-    ! rayface values in the 4 grid points surrounding location x on the face
-    real :: qrayface(3,4)
-
     ! Distances between x and the 4 grid points used for interpolation
     real :: d1,e1,d2,e2
 
@@ -1262,7 +1250,6 @@ subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
   ! The result is returned in qray.
   ! Note that qray and qrayface may overlap, so their intent must be inout!
 
-  use ModMain, ONLY : test_string
   use ModRaytrace
   implicit none
 
@@ -1397,7 +1384,7 @@ subroutine convFaces2LatLon(rayface_in)
 
   real, intent(inout), dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_in
 
-  integer :: Di,i,j,k,iBlock
+  integer :: Di,i,j,k
   !---------------------------------------------------------------------
   do k=1,nK+1
      do j=1,nJ+1
@@ -1425,7 +1412,7 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
   ! x_0, y_0, and z_0 sent in in real coordinates
 
   use ModProcMH
-  use ModAdvance, ONLY : rho_,Bx_,By_,Bz_,P_,State_VGB
+  use ModAdvance, ONLY : rho_, Bx_, Bz_, P_, State_VGB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Rmin_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace
   implicit none
@@ -1480,15 +1467,10 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
   ! Cell indices corresponding to current or final x position
   integer :: i1,j1,k1,i2,j2,k2
 
-  ! Indices corresponding to the starting point of the ray
-  integer :: ix,iy,iz
-
   ! counter for ray integration
   integer :: nsegment 
 
   real :: amount2add
-
-  CHARACTER (LEN=80) :: filename
   !--------------------------------------------------------------------------
 
   fvol=0.; rvol=0.; pvol=0.

@@ -14,17 +14,12 @@ subroutine ray_trace_accurate
   use ModRaytrace
   use CON_ray_trace, ONLY: ray_init
   use ModMain
-  use ModPhysics,    ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D
 
   use ModMpi
   implicit none
-
-  ! Arguments
-  ! remember last call and the last grid number
-  integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
 
   ! Indices corresponding to the starting point and directon of the ray
   integer :: i, j, k, iBlock, iRay
@@ -36,20 +31,7 @@ subroutine ray_trace_accurate
 
   call set_oktest('ray_trace',oktest,oktest_me)
 
-  if(oktest_me)then
-     write(*,*)'GM ray_trace: n_last,n_step         =',n_last,n_step
-     write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
-     write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
-          iLastDecomposition,iNewDecomposition
-  end if
-
-  if(n_last == n_step .and. iLastGrid == iNewGrid .and. &
-       iLastDecomposition == iNewDecomposition) &
-       RETURN
-
   ! Initialize constants
-  R_raytrace   = rBody
-  R2_raytrace  = R_raytrace**2
   RayLengthMax = 4*sum(XyzMax_D - XyzMin_D)
 
   NameTask        = 'trace'
@@ -58,11 +40,7 @@ subroutine ray_trace_accurate
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  ! Remember this call
-  n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
-
   call set_oktest('time_ray_trace',oktime,oktime_me)
-  call timing_start('ray_trace')
   if(oktime)call timing_reset('ray_pass',2)
 
   ! Copy magnetic field into Bxyz_DGB
@@ -143,8 +121,6 @@ subroutine ray_trace_accurate
 
   if(oktest_me)write(*,*)'ray lat, lon, status=',&
        ray(:,:,iTest,jTest,kTest,BlkTest)
-
-  call timing_stop('ray_trace')
 
   if(oktime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
@@ -1209,10 +1185,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use CON_ray_trace, ONLY: ray_init
   use CON_planet_field, ONLY: map_planet_field
   use ModRaytrace
-  use ModMain, ONLY: nBlock, Time_Simulation, iTest, jTest
+  use ModMain,    ONLY: nBlock, Time_Simulation, iTest, jTest
+  use ModPhysics, ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModPhysics, ONLY: rBody
   use ModProcMH
   use ModMpi
   use ModNumConst,       ONLY: cDegToRad, cTiny
@@ -1242,11 +1218,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
 
   oktest_ray = .false.
 
-  ! Initialize R_raytrace, R2_raytrace
-  R_raytrace   = rBody
-  R2_raytrace  = R_raytrace**2
-  RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
-
+  ! Initialize some basic variables
+  R_raytrace      = rBody
+  R2_raytrace     = R_raytrace**2
+  RayLengthMax    = 2*sum(XyzMax_D - XyzMin_D)
   NameTask        = 'integrate'
   NameVectorField = 'B'
 
@@ -1303,8 +1278,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
 
         ! Check if the mapping is on the north hemisphere
         if(iHemisphere == 0)then
-           !           write(*,*)NameSub,' point did not map to rBody, ',&
-                !                'implement analytic integrals here! Lat, Lon=', Lat, Lon
+           !  write(*,*)NameSub,' point did not map to rBody, ',&
+           !   'implement analytic integrals here! Lat, Lon=', Lat, Lon
            CYCLE
         elseif(iHemisphere == -1)then
            write(*,*)NameSub,' point mapped to the southern hemisphere! ',&
@@ -1322,7 +1297,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
 
-           if(iLat==iTest .and. iLon==jTest)then
+           if(DoTest .and. iLat==iTest .and. iLon==jTest)then
               write(*,'(a,2i3,a,i3,a,i4)') &
                    'start of ray iLat, iLon=',iLat, iLon,&
                    ' found on iProc=',iProc,' iBlock=',iBlockFound
@@ -1447,8 +1422,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
-  use ModPhysics,  ONLY: rBody
   use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK
+  use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
 
   implicit none
