@@ -1617,8 +1617,8 @@ C=============================================================================
       INTEGER            J, JP
 *     ..
 *     .. External Functions ..
-      INTEGER            ISAMAX
-      EXTERNAL           ISAMAX
+      INTEGER            IDAMAX
+      EXTERNAL           IDAMAX
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           XERBLA, DGER, DSCAL, DSWAP
