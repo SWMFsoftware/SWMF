@@ -214,6 +214,7 @@ clean:
 	cd src; make clean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make clean
+	cd srcPostProc;  make clean
 	@(if [ -d util  ]; then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
@@ -222,6 +223,7 @@ distclean:
 	cd src; make distclean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
+	cd srcPostProc;  make distclean
 	@				#^CFG IF DOC BEGIN
 	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
