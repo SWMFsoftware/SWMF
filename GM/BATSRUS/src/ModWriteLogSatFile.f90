@@ -1321,6 +1321,7 @@ subroutine normalize_name_log_var(NameIn, NameOut)
 
   ! Replace *test with *pnt
   l = len_trim(NameOut)
+  if(l<4) RETURN
   if(NameOut(l-3:l) == 'test') NameOut(l-3:l)='pnt '
 
 end subroutine normalize_name_log_var
