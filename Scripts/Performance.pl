@@ -26,6 +26,7 @@ if($ARGV[0]){
 if(not $LayoutFile){
     $LayoutFile = $ParamFile; $LayoutFile =~ s/PARAM/LAYOUT/;
 }
+
 if(not $TimingFile){
     $TimingFile = $ParamFile; $TimingFile =~ s/PARAM/TIMING/;
 }
@@ -94,9 +95,27 @@ my $NewIeData;     # true if IE component receives information (from GM or UA)
 exit 0;
 
 ##############################################################################
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \subsection{Performance Estimation and Optimization}
+#!ROUTINE: Performance.pl - estimate parallel performance on a single CPU
+#!DESCRIPTION:
+# This script can extract CPU time information from multiple run logs
+# and use this information to estimate the performance of the SWMF
+# for different number of processors, PARAM.in and LAYOUT.in combinations.
+# The script uses Amdahl's law to estimate the performance of the 
+# parallel components, and it calculates and reports idle time due
+# to the coupling of the components. As long as the run logs were 
+# produced on the same machine with similar parameters for all the components,
+# the script can estimate the execution time with reasonable accuracy.
+# This can be used to optimize the LAYOUT and the coupling schedules
+# without the need to run the code on a big parallel computer. 
+#EOP
+
 sub print_help{
-    print "
-Purpose:
+    print
+#BOC
+"Purpose:
  
    Extract physical and CPU time information from run log files.
    Estimate run time for a given PARAM.in and LAYOUT.in combination.
@@ -107,7 +126,7 @@ Usage:
 
    Scripts/Performance.pl -s [-T=FILE] FILE(s)
 
-   Scripts/Performance.pl [-v] [-n=nProc] [-l=LENGTH] 
+   Scripts/Performance.pl [-v] [-n=NPROC] [-l=LENGTH] 
                           [-H] [-S] [-p=PROCS]
                           [-T=FILE] [-L=FILE] [PARAMFILE]
 
@@ -122,7 +141,8 @@ Usage:
                number of iterations for non-time-accurate run.
                Default is LENGTH=60.
 
-   -n=nProc    emulate execution on nProc processors
+   -n=NPROC    emulate execution on nProc processors. 
+               Default is NPROC=8.
 
    -S          show summary of timings for the selected set of processors.
 
@@ -136,7 +156,8 @@ Usage:
                Default value is 'roots', the root PE for all components.
 
    -T=FILE     set the name of the timings file to FILE,
-               default is the same as the PARAMFILE but
+               default is run/TIMING.in when the timing file is saved (-s)
+               otherwise the name is the same as of the PARAMFILE but
                string 'PARAM' is replaced with 'TIMING'.
 
    -L=FILE     set the name of the layout file to FILE,
@@ -145,7 +166,33 @@ Usage:
 
    PARAMFILE   the name of the parameter file, default is 'run/PARAM.in'.
 
-";
+Examples:
+
+   Save timings into the default run/TIMING.in file from a number of run logs:
+
+Scripts/Performance.pl -s run/runlog.*
+
+   Save timings into the run_new/TIMING.in file and print verbose info:
+
+Scripts/Performance.pl -T=run_new/TIMING.in -v run_new/runlog.*
+
+   Estimate run time on 8 PE-s for run/PARAM.in, LAYOUT.in and TIMING.in:
+
+Scripts/Performance.pl
+
+   Estimate run time on 8 PE-s for run_new/PARAM.in, LAYOUT.in and TIMING.in:
+
+Scripts/Performance.pl run_new/PARAM.in
+
+   Show summary info on 4 PE-s using run/LAYOUT_test.in:
+
+Scripts/Performance.pl -S -n=4 -L=run/LAYOUT_test.in 
+
+   Show history info on all 4 PE-s for 10 second (or iteration) long sessions:
+
+Scripts/Performance.pl -H -n=4 -p=all -l=10"
+#EOC
+,"\n\n";
     exit;
 }
 ##############################################################################
@@ -154,6 +201,8 @@ sub save_timing{
     my $Comp;
     my $File;
     my %Info_C;
+
+    $TimingFile = "run/TIMING.in" if not $TimingFile;
 
     open(OUTFILE, ">$TimingFile") or 
 	die "$ERROR could not open timing file $TimingFile\n";
@@ -166,6 +215,7 @@ sub save_timing{
 	my $TimeAccurate=1;# True if time accurate
 	my $TimeStart;     # Start time (0 unless restart)
 	my $TimeStop;      # Final stop time
+	my $TimeSim;       # Simulation time in progress reports
 
 	open(INFILE,$File) or die "$ERROR could not open runlog file $File\n";
 
@@ -202,8 +252,21 @@ sub save_timing{
 		my $MaxIter = &read_var("integer", "MaxIter");
 		$TimeStop   = &read_var("real",    "TimeMax");
 	    }
+
+	    # Extract simulation time from progress reports
+	    if(/^Progress:/){
+		($TimeSim) = /([\d\.eEdD\+\-]+) +s simulation time,/;
+	    }
 	}
 	close(INFILE);
+
+	# Replace final time with last progress time if necessary
+	if($TimeStop < 0 and $TimeSim > 0){
+	    print "Replacing TimeStop=$TimeStop with TimeSim=$TimeSim\n"
+		if $Verbose;
+	    $TimeStop = $TimeSim + 0;
+	}
+
 	foreach $Comp (keys %nProc_C){
 	    next unless $CpuStep_C{$Comp};
 	    my $nProc = $nProc_C{$Comp};
