@@ -4,9 +4,11 @@ Known issues with the release of the University of Michigan
 Space Weather Modeling Framework (SWMF) and its constituent components.
 
 SWMF core:
-	1. The SC component can now use the corotating HGR frame,
-	   while the IH component uses the inertial HGI frame,
-           but the SC/IH coupling has not been fully tested for this case.
+	1. The SC component can now use the corotating HGR frame.
+	   The SC/IH coupling is tested, but the SC/SP and IH/SC
+           couplings do not work for this case yet. 
+
+        NOTE: All couplings work if SC is in the HGI frame.
 
 RB/RiceV5:
         1. The Radiation Belt (RB) module included with this release
