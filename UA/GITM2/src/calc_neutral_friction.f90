@@ -9,7 +9,7 @@ subroutine calc_neutral_friction(iBlock)
   integer, intent(in) :: iBlock
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-  real, parameter, dimension(4, 4) :: Diff0 = 0.0001 * reshape( (/ &
+  real, parameter, dimension(4, 4) :: Diff0 = reshape( (/ &
        ! 0      02     N2      N     NO
        !---------------------------------+
        0.00,  0.260, 0.260, 0.260, &            ! O
@@ -72,7 +72,7 @@ contains
        enddo
     enddo
 
-    Fraction = 1.0e-8 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Fraction = 1.0e-12 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     CoefMatrix = Fraction * CoefMatrix
 
 !    if (iAlt == 1) write(*,*) "low : ",CoefMatrix
