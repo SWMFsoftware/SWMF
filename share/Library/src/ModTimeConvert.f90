@@ -415,6 +415,8 @@ contains
     !-------------------------------------------------------------------------
     !BOC
     write(*,*)'Testing time conversion routines'
+    TimeStart % FracSecond = 0.0;
+
     TimeStart % iHour = 0; TimeStart % iMinute = 0; TimeStart % iSecond = 1
     call check_all_days
     TimeStart % iHour =23; TimeStart % iMinute =59; TimeStart % iSecond =59
