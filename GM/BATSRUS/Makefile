@@ -106,6 +106,16 @@ BATSRUS:
 	@echo Program BATSRUS has been brought up to date.
 	@echo ' '	
 
+BATSRUSdotO:
+	cd ${SHAREDIR}; make LIB
+	cd ${TIMINGDIR}; make LIB
+	cd src; make LIB
+	cd src; make BATSRUS.exe
+	cd src; make BATSRUSdotO.exe
+	@echo ' '
+	@echo Program BATSRUS has been brought up to date.
+	@echo ' '	
+
 PIDL:
 	cd src; make PostIDL.exe
 	@echo ' '

@@ -25,7 +25,7 @@ MPILIB =
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 
 #DEBUG   = -qextname -qarch=g5 -qtune=g5 -C -gline
-DEBUG   = -qextname -qarch=g5 -qtune=g5 
+DEBUG   = -qextname -qarch=g5 -qtune=g5
 
 Cflag0  = ${SEARCH} -c -O0 ${DEBUG} ${PRECISION}
 Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
@@ -75,5 +75,13 @@ SuffixMapftn = -qsuffix=f=ftn
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
 
+
+BATSRUSdotO.exe: 
+	@echo ' '
+	@echo 'Program BATSRUS is being relinked with only .o files.'
+	@echo ' '	
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+		../util/TIMING/src/*.o ../share/Library/src/*.o \
+		${Lflag1}
 
 # keep this line
