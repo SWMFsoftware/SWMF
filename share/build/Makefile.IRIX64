@@ -82,7 +82,7 @@ BLAS  = blas.o lapack.o
 #
 
 .SUFFIXES:
-.SUFFIXES: .f90 .F90 .f .o
+.SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag3} $<
@@ -92,6 +92,12 @@ BLAS  = blas.o lapack.o
 
 .f.o:
 	${COMPILE.f90} ${Cflag3} -extend_source $<
+
+.for.o:
+	${COMPILE.f90} ${Cflag2} -extend_source $<
+
+.ftn.o:
+	${COMPILE.f90} ${Cflag2} -extend_source $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

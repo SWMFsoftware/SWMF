@@ -48,7 +48,7 @@ BLAS  = lapack.o blas.o
 #
 
 .SUFFIXES:
-.SUFFIXES: .f90 .F90 .f .o
+.SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag4} $<
@@ -57,6 +57,12 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .f.o:
+	${COMPILE.f90} ${Cflag4} -132 $<
+
+.for.o:
+	${COMPILE.f90} ${Cflag4} -132 $<
+
+.ftn.o:
 	${COMPILE.f90} ${Cflag4} -132 $<
 
 clean:	
