@@ -65,8 +65,7 @@ while(<>){
     $module = $1 if ?^\s*module\s+(\w+)?i;
 
     # Edit the logical IsDynamic* variable/parameter to .true.:
-    s[(^\s*logical\s*(,\s*parameter)?(\s*::)?\s*IsDynamic\w*\s*=\s*)\.false\.]
-      [$1\.true\.]i;
+    s/\.false\./\.true\./i if /^\s*logical\b/i and /\bIsDynamic\w*\s*=/i;
 
     # Set $contains variable
     $contains = 1 if /^\s*contains\b/;
@@ -199,11 +198,14 @@ sub print_help{
 
 Purpose: Transform a module with static variable declarations into a 
          module with dynamic (allocatable) declarations.
+         If a logical variable/parameter named IsDynamic* = .false. is found,
+         its value is modified to .true.
          The original module must contain a subroutine named 
          'allocate_*' or 'init_*' (for example 'init_mod_advance')
          and it may contain a subroutine named 'deallocate_*' or 'clean_*'.
          These subroutines can be empty in the static version of the module,
-         or may contain initialization statements.
+         or may contain initialization statements or a conditional 
+         write statement about the (de)allocation based the logical IsDynamic*.
 
 Usage:   StaticToDynamic.pl [-h] [-D] [-t=TYPES] [-d=MINDIM] [-l=LARGE] 
                [INFILE] [> OUTFILE]
@@ -213,13 +215,14 @@ Usage:   StaticToDynamic.pl [-h] [-D] [-t=TYPES] [-d=MINDIM] [-l=LARGE]
    -D         - print debugging information
 
    -t=TYPES   - TYPES contains a | separated list of the types of variables 
-                to be transformed. Default value is -t='real|logical|integer'
+                to be transformed. 
+                Default value is -t='real|logical|integer|double precision'.
 
    -d=MINDIM  - MINDIM is the minimum dimensionality of variables to be 
                 transformed. Default values is -d=3.
 
    -l=LARGE   - LARGE is a pattern matching the large variable.
-                Default values is -l='nBLK|MaxBlock|MaxImplBLK'.
+                Default values is -l='nBLK|MaxBlock|MaxImplBLK|MaxImplVar'.
 
    INFILE     - the file to be transformed. Default is reading from STDIN.
 
