@@ -10,7 +10,9 @@ include Makefile.DEPEND
 
 OBJECTS = \
 	ModGridDescriptor.o\
+	ModBuffer.o\
 	update_lagrangian_grid.o\
+	IH_set_buffer_grid.o\
 	IH_get_for_gm.o\
 	IH_get_for_sc.o\
 	IH_get_for_sp.o\
