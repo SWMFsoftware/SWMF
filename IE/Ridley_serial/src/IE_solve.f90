@@ -5,12 +5,14 @@ subroutine IE_solve
   use ModProcIE
   use ModIonosphere
   use ModNumConst
+  use ModMpi
 
   implicit none
   character(len=*), parameter :: NameSub = 'IE_solve'
   real::CurrentMax
   real    :: Radius
   integer :: iBlock
+  integer :: nSize, iError
 
   logical DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -19,15 +21,9 @@ subroutine IE_solve
   SinThetaTilt = sin(ThetaTilt)
   CosThetaTilt = cos(ThetaTilt)
 
-  if (DoTestMe) then
-     write(*,*) "=> Computing Ionospheric Potential at Time :"
-     write(*,*) "           Year   : ",Time_Array(1)
-     write(*,*) "           Month  : ",Time_Array(2)
-     write(*,*) "           Day    : ",Time_Array(3)
-     write(*,*) "           Hour   : ",Time_Array(4)
-     write(*,*) "           Minute : ",Time_Array(5)
-     write(*,*) "           Second : ",Time_Array(6)
-  endif
+  if (DoTestMe) &
+       write(*,'(a,i4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)')&
+       " "//NameSub//" at ",Time_Array
 
   Radius = IONO_Radius + IONO_Height
 
@@ -182,5 +178,15 @@ subroutine IE_solve
      end select
 
   end do
+
+  ! Broad cast the sourthern current and the potential for IM if needed
+  if(TypeImCouple /= 'north' .and. nProc > 1)then
+
+     nSize = IONO_nTheta * IONO_nPsi
+     call MPI_bcast(IONO_SOUTH_PHI, nSize, MPI_REAL, 1, iComm, iError)
+     call MPI_bcast(IONO_SOUTH_JR,  nSize, MPI_REAL, 1, iComm, iError)
+     call MPI_bcast(cpcp_south,         1, MPI_REAL, 1, iComm, iError)
+
+  end if
 
 end subroutine IE_solve
