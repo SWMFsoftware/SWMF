@@ -264,9 +264,9 @@ subroutine read_restart_file
      write(*,*)'dx,dy,dz_BLK=',dx_BLK(globalBLK),dy_BLK(globalBLK),&
           dz_BLK(globalBLK)
      write(*,*)'xyzStart_BLK=',xyzStart_BLK(:,globalBLK)
-     write(*,*)'rho,p=',State_VGB(rho_,Itest,Jtest,Ktest,globalBLK),&
-          State_VGB(P_,Itest,Jtest,Ktest,globalBLK)
+     write(*,*)'State_VGB   =',State_VGB(:,Itest,Jtest,Ktest,globalBLK)
   end if
+
   return
 10 call CON_stop(NameThisComp//': '//filename//' is not available')
 end subroutine read_restart_file
