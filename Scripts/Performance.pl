@@ -595,7 +595,16 @@ sub init_session{
 ###############################################################################
 sub do_session{
 
-    # Do the session
+    if($TimeAccurate){
+	&do_session_time_accurate;
+    }else{
+	&do_session_steady_state;
+    }
+}
+###############################################################################
+sub do_session_time_accurate{
+
+    # Do the session in time accurate mode
 
     my $TimeMax=$Length;   # Final time is the length of the session
 
@@ -706,6 +715,86 @@ sub do_session{
 
 		# Add wall time due to synchronizetion and coupling
 
+		my @Proc = @{ $Couple_CC{$Comp1}{$Comp2}{ProcArray} };
+		&add_wall_time("$Comp1===$Comp2","$Comp1-->$Comp2",
+			       $WallCouple,@Proc);
+
+	    }
+	}
+	redo TIMELOOP;
+    }
+    &add_wall_time("ENDidle","ENDsess",0,(0..$nProcAll-1));
+
+}
+###############################################################################
+sub do_session_steady_state{
+
+    # Do the session in steady state mode
+
+    my $MaxStep=$Length;   # Final iteration number = length of the session
+
+    my $nStep;
+    my $iProc;
+  TIMELOOP:
+    {
+	$nStep++;
+	last TIMELOOP if $nStep > $MaxStep;
+
+	# Run all the active components
+	my $Comp;
+	for $Comp (@ActiveComp){
+
+	    my $DnRun = $DnRun_C{$Comp};
+
+	    # run component if it has not reached the next waiting time
+	    if($DnRun <= 1 or $nStep % $DnRun == 0){
+
+		my $WallStep;	# cost of the step
+		if($Comp eq "IE"){
+		    # IE component does work only if there is new data
+		    $WallStep = $WallStep_C{IE} if $NewIeData;
+		    $NewIeData = 0;
+		}else{
+		    # Doing a step with $Comp will cost some wall time
+		    $WallStep = $WallStep_C{$Comp};
+		}
+		my @Proc = @{ $Layout_C{$Comp}{ProcArray} };
+		&add_wall_time("$Comp idle","$Comp runs",$WallStep,@Proc);
+	    }
+	}
+
+	# Couple components in the order given by CoupleOrder
+	my $CouplePair;
+	foreach $CouplePair (@CoupleOrder){
+	    my $Comp1 = substr($CouplePair,0,2);
+	    my $Comp2 = substr($CouplePair,-2,2);
+
+	    next unless grep /$Comp1/, @ActiveComp;
+	    next unless grep /$Comp2/, @ActiveComp;
+	    next unless $Couple_CC{$Comp1}{$Comp2}{do};
+
+	    my %Couple = %{ $Couple_CC{$Comp1}{$Comp2} };
+	    my $nCouple = $Couple{nNext};
+
+	    if($nStep >= $nCouple){
+		print "Coupling $Comp1 => $Comp2 at n=$nStep\n" if $Verbose;
+
+		# Set next coupling time
+		$Couple_CC{$Comp1}{$Comp2}{nNext} += $Couple{dn};
+
+		# Estimate cost of coupling
+		my $WallCouple = 0;
+
+		# Set NewIeData if IE receives data
+		$NewIeData = 1 if $Comp2 eq "IE";
+
+		# If IE is sending info, it may need to do a potential solve
+		if($Comp1 eq "IE" and $NewIeData){
+		    $WallCouple += $WallStep_C{IE};
+		    $NewIeData  = 0;
+		}
+
+		# Add wall time due to synchronizetion and coupling
 		my @Proc = @{ $Couple_CC{$Comp1}{$Comp2}{ProcArray} };
 		&add_wall_time("$Comp1===$Comp2","$Comp1-->$Comp2",
 			       $WallCouple,@Proc);
