@@ -87,9 +87,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   ! Here iter and time now are the iteration number and physical time,
   ! which may be used for time-dependent BCs (not used now).
   ! 
-  ! RHere is 3d array of the distance values apart from the inner boundary center,
-  ! xBodyHere, yBodyHere,zBodyHere are the physical coordinates of the inner boundary center 
-  ! UseIonesphereHere=.true. allows to call subroutine calc_inner_BC_velocities
+  ! UseIonesphereHere = .true. allows to call calc_inner_bc_velocity
   ! UseCorotationHere = .true. allows to call calc_corotation_velocities
 
   integer :: i,j,k
@@ -439,18 +437,9 @@ contains
     end select
 !^CFG IF IONOSPHERE BEGIN
     if (UseIonosphereHere) then
-!       call calc_inner_bc_velocity(iter,time_now, FaceCoords_D, &
-!            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
-!
-!       call calc_inner_bc_velocity2(iter,time_now, FaceCoords_D, &
-!            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
-!
-       call calc_inner_BC_velocities(iter,time_now,&
-            FaceCoords_D(x_),FaceCoords_D(y_),FaceCoords_D(z_), &
-            VarsTrueFace_V(Bx_),VarsTrueFace_V(By_),VarsTrueFace_V(Bz_),&
-            B0Face_D(x_),B0Face_D(y_),B0Face_D(z_),&
-            uIono_D(x_),uIono_D(y_),uIono_D(z_))
-!
+       call calc_inner_bc_velocity(time_now, FaceCoords_D, &
+            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
+       
        select case(TypeBcHere)
        case('reflect','linetied',&
             'ionosphere','ionospherefloat')
