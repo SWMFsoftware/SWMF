@@ -14,7 +14,7 @@ LIB:
 
 rundir: 
 	mkdir -p ${RUNDIR}/SP
-	@(if [ ${STANDALONE} == 'sp' ]; then 	\
+	@(if [ "${STANDALONE}" != 'NO' ]; then 	\
 		cd ${RUNDIR}; 			\
 		ln -s ../bin/SEP.exe .; 	\
 		ln -s ../SP/Kota/src/a.out .;	\

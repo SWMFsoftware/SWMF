@@ -247,9 +247,9 @@ LIBTIMING = ${LIBDIR}/libTIMING.a
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 BATSRUS.exe: ${OBJECTS_EXE}
-	@(if [ ${COMPILE.f90} == "xlf90" ]; then make BATSRUS_for_xlf; \
-	elif [ ${OS} == "Darwin" ];         then make BATSRUS_for_Darwin; \
-	else                                     make BATSRUS_general; fi)
+	@(if [ ${COMPILE.f90} = "xlf90" ]; then make BATSRUS_for_xlf; \
+	elif [ ${OS} = "Darwin" ];         then make BATSRUS_for_Darwin; \
+	else                                    make BATSRUS_general; fi)
 
 BATSRUS_general:
 	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
