@@ -5,6 +5,8 @@ Module ModConst
 
   implicit none
 
+  save
+
   !\  
   ! Physical and astronomical constants
   !/
@@ -42,10 +44,10 @@ Module ModConst
   real, parameter :: cGravitation = 66.726/cE12
   ! Gravitation constant 6.6726E-11  (NRL 1994)
 
-  real(Real8_) :: cSecondPerYear   = 31536000.0
-  real(Real8_) :: cSecondPerDay    =    86400.0
-  real(Real8_) :: cSecondPerHour   =     3600.0
-  real(Real8_) :: cSecondPerMinute =       60.0
+  real(Real8_), parameter :: cSecondPerYear   = 31536000.0
+  real(Real8_), parameter :: cSecondPerDay    =    86400.0
+  real(Real8_), parameter :: cSecondPerHour   =     3600.0
+  real(Real8_), parameter :: cSecondPerMinute =       60.0
 
   !\
   ! Astronomical constants : r = radius, m = mass
