@@ -29,7 +29,7 @@ subroutine write_plot_common(ifile)
   ! Plot variables
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
-  real :: PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax)
+  real, allocatable :: PlotVarNodes(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)
   integer :: nplotvar
@@ -274,8 +274,9 @@ subroutine write_plot_common(ifile)
         call pass_and_average_nodes(.true.,NodeValue_IIIB)
         plotvarnodes(:,:,:,:,i)=NodeValue_IIIB
      end do
-     call write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC, &
+     call write_plot_tec(ifile,nplotvar,PlotVarNodes,unitstr_TEC, &
           xmin,xmax,ymin,ymax,zmin,zmax)
+     deallocate(PlotVarNodes)
   end if
 
   close(unit_tmp)
@@ -442,12 +443,16 @@ Contains
     integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1) :: nodeCount
     real, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
 
+    if(.not.allocated(PlotVarNodes)) allocate(&
+         PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax),stat=iError)
+    call alloc_check(iError,'write_plot_common:PlotVarNodes')
+
     ! Initialize values
     nodeCount = 0; nodeV(:,:,:,:) = 0.00
 
-    do i=0,nI+1; do j=0,nJ+1; do k=0,nK+1  ! Cell loop
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1;  ! Cell loop
        if ( true_cell(i,j,k,iBLK) )then
-          do ii=-1,0; do jj=-1,0; do kk=-1,0
+          do kk=-1,0; do jj=-1,0; do ii=-1,0; 
              nodeCount(i+ii,j+jj,k+kk) = nodeCount(i+ii,j+jj,k+kk) +1
              nodeV(i+ii,j+jj,k+kk,1:nplotvar) = &
                   nodeV(i+ii,j+jj,k+kk,1:nplotvar) + plotvar(i,j,k,1:nplotvar)
@@ -455,7 +460,7 @@ Contains
        end if
     end do; end do; end do
 
-    do i=0,nI; do j=0,nJ; do k=0,nK  ! Node loop
+    do k=0,nK; do j=0,nJ; do i=0,nI;   ! Node loop
        if (nodeCount(i,j,k) > 0) then
           PlotVarNodes(i,j,k,iBLK,1:nplotvar) = &
                nodeV(i,j,k,1:nplotvar)/real(nodeCount(i,j,k))
