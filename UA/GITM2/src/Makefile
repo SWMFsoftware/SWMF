@@ -135,3 +135,6 @@ LIB:
 ${MY_LIB}: ${LIBPREV} ${MF} ${MODULES} ${OBJECTS}
 	cp -f ${LIBPREV} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
+
+distclean:
+	rm -f ModGITM.f90 ModEUV.f90 ModSources.f90
