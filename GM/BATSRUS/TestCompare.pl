@@ -242,7 +242,7 @@ TEST: foreach $test (sort @test){
 		$line2 =~ s/\-(0\.0+)\b/ $1/;
 		if($line1 ne $line2){
 		    &report("$test $logfile, different head lines:\n",
-			    "    $line1    $line2\n");
+			    "    $line1    $line2\n") unless $Quiet;
 		    next LOGFILE if $Strict;
 		}
 		
