@@ -11,7 +11,7 @@ module ModRaytrace
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.
 
-  ! Task selection: trace/integrate/extract/extractfile/extractfiles
+  ! Task selection: trace/integrate/extract
   character(len=20) :: NameTask = 'trace'
 
   ! The vector field to trace: B/U/J
