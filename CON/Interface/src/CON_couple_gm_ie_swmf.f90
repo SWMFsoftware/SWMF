@@ -1,3 +1,5 @@
+! This code is not used any longer
+
 !^CMP COPYRIGHT UM
 !^CMP FILE GM
 !^CMP FILE IE
