@@ -547,9 +547,11 @@ T			Stretched grid in altitude
 	<for from="1" to="$nOutputTypes">
 		<parameter name="Outputtype" type="string" input="select">
 			<option name="3DALL" default="T"/>
-			<option name="2D"/>
-			<option name="ION"/>
-			<option name="NEUTRAL"/>
+			<option name="1DALL"/>
+			<option name="2DGEO"/>
+			<option name="2DMAG"/>
+			<option name="3DNEUTRAL"/>
+			<option name="3DION"/>
 		</parameter>
 		<parameter name="DtPlot"    type="real" default="3600.0" />
 	</for>
