@@ -762,6 +762,12 @@ contains
        LogVar_I(iVarTot) = StateSat_V(RhoUy_)/StateSat_V(Rho_)
     case('uz')
        LogVar_I(iVarTot) = StateSat_V(RhoUz_)/StateSat_V(Rho_)
+    case('b0x')
+       LogVar_I(iVarTot) = B0Sat_D(1)
+    case('b0y')
+       LogVar_I(iVarTot) = B0Sat_D(2)
+    case('b0z')
+       LogVar_I(iVarTot) = B0Sat_D(3)
     case('b1x')
        LogVar_I(iVarTot) = StateSat_V(Bx_)
     case('b1y')
@@ -825,7 +831,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('rhoux','rhouy','rhouz', 'rhouxpnt','rhouypnt','rhouzpnt')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rhoU
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
-          'dst','dstdivb')
+          'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_B
      case('e','epnt')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*unitUSER_energydens
