@@ -25,12 +25,8 @@ subroutine UA_run(SWMFTime, SWMFTimeLimit)
   EndTime     = StartTime + SWMFTimeLimit
 
   if (iDebugLevel > 1) then
-
      call time_real_to_int(CurrentTime, time_array)
      write(*,"(a,i5,5i3,i3)") "> Running UA from time : ",time_array(1:7)
-     call time_real_to_int(EndTime, time_array)
-     write(*,"(a,i5,5i3,i3)") ">            to time   : ",time_array(1:7)
-
   endif
 
   call calc_pressure
@@ -39,6 +35,8 @@ subroutine UA_run(SWMFTime, SWMFTimeLimit)
 
   call calc_timestep_vertical
   if (.not. Is1D) call calc_timestep_horizontal
+
+  if (iDebugLevel > 1) write(*,"(a,f13.5)") "> UA_run Dt : ",Dt
 
   call advance
 
