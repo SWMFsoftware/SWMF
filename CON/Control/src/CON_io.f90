@@ -18,7 +18,7 @@ module CON_io
   use CON_world
   use CON_comp_param
   use CON_wrapper
-  use CON_planet, ONLY: read_planet_var, IsRotaxisPrimary, IsMagAxisPrimary
+  use CON_planet, ONLY: read_planet_var, check_planet_var
   use CON_time
   use CON_axes
   use ModReadParam
