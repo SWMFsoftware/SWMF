@@ -11,9 +11,6 @@ subroutine write_output
   integer :: i, nMLTsTmp,nLatsTmp, iBlock
   logical :: IsDone
 
-
-write(*,*) "OUTPUT : ", tSimulation, dt, dtplot(1), dtreport
-
   if (floor((tSimulation-dt)/DtReport) /= &
        floor((tsimulation)/DtReport) .and. iDebugLevel >= 0) then
      if (IsFramework) then
