@@ -28,10 +28,13 @@ Module CON_couple_mh_sp
   integer::iPoint
   integer::iError
   real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
-  real::DsResolution,XyzLine_DI(3),RBoundIH,RBoundSC
+  real::DsResolution,XyzLine_D(3),RBoundIH,RBoundSC
 contains
   !==================================================================
   subroutine couple_mh_sp_init
+    use CON_geopack,ONLY:CON_recalc,SunEMBDistance,HgiGse_DD
+    use CON_physics, ONLY: get_time, time_real_to_int
+    use ModConst
     interface
        subroutine IH_get_a_line_point(nPartial,&         !^CMP IF IH BEGIN
             iGetStart,&
@@ -58,8 +61,9 @@ contains
          real,dimension(nVar),intent(out)::Buff_I
        end subroutine SC_get_a_line_point               !^CMP END SC
     end interface
+    real(Real8_) :: tNow
     logical::DoneRestart
-    integer,dimension(2)::nU_I
+    integer::nU_I(2),TimeGeopack(7)
     !======================================================================
     if(.not.DoInit)return
     DoInit=.false.
@@ -97,14 +101,30 @@ contains
 
        allocate(XyzTemp_DI(3,nPointMax),stat=iError)
 
-       if(is_proc0(SP_))call SP_get_line_param(&
-            DsResolution,XyzLine_DI,RBoundSC,RBoundIH)
+       if(is_proc0(SP_))then
+          call SP_get_line_param(&
+            DsResolution,XyzLine_D,RBoundSC,RBoundIH)
+          if(sum(XyzLine_D**2)<cOne)then
+             !Calculate the Earth position in SGI
+             call get_time(tCurrentOut=tNow)
+             call time_real_to_int(tNow, TimeGeoPack)
+             call CON_recalc(&
+                  TimeGeopack(1),& ! year
+                  TimeGeopack(2),& ! month
+                  TimeGeopack(3),& ! day
+                  TimeGeopack(4),& ! hour
+                  TimeGeopack(5),& ! minute
+                  TimeGeopack(6))  ! second
+             XyzLine_D = -cAU/rSun*&
+                  SunEMBDistance*HgiGse_DD(:,1)
+          end if
+       end if
 
        call check_allocate(iError,&
             'XyzTemp_DI in CON_couple_mh_sp')
        if(is_proc(SP_))then
           iPoint=1
-          XyzTemp_DI(:,iPoint)=XyzLine_DI(:)
+          XyzTemp_DI(:,iPoint)=XyzLine_D(:)
        end if
 
        if(use_comp(IH_))then       !^CMP IF IH BEGIN
