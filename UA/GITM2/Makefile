@@ -72,6 +72,7 @@ clean:
 distclean: clean
 	@(if [ -d share ]; then cd share; make distclean; fi);
 	@cd $(MAINDIR); make distclean
+	@cd srcInterface; make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
 
