@@ -26,9 +26,13 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   integer, intent(in)                                :: iSizeIn, jSizeIn, nVar
   real, intent(out), dimension(iSizeIn,jSizeIn,nVar) :: Buffer_IIV
   character (len=*), intent(in)                      :: NameVar
+
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   nCalls=nCalls+1
 
@@ -67,10 +71,10 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
 
   if (iProc == 0) then
-     call write_integrated_data_idl
+     if(DoTest)call write_integrated_data_idl
      call process_integrated_data
-!     if(dbg0) call write_integrated_data
-     call write_integrated_data_idl
+     !if(DoTest)call write_integrated_data !!! TecPlot output
+     if(DoTest)call write_integrated_data_idl
 
      ! Put results into output buffer
      Buffer_IIV(:,:,InvB_)    = MHD_SUM_vol
