@@ -69,15 +69,18 @@ nwlog = n_elements(wlognames)
 if nwlog gt 0 then begin
     iyear = -1
     itime = -1
+    ihour = -1
     for i = 0, nwlog-1 do begin
         if wlognames(i) eq 'year' or wlognames(i) eq 'yr' then iyear=i
         if wlognames(i) eq 'time' or wlognames(i) eq 't'  then itime=i
+        if wlognames(i) eq 'hour' or wlognames(i) eq 'hours'  then ihour=i
     end
-    if iyear eq -1 and itime eq -1 then begin
-        print,'Could not find year or time in wlognames=',wlognames
+    if iyear eq -1 and itime eq -1 and ihour eq -1 then begin
+        print,'Could not find year, time or hour in wlognames=',wlognames
         return,findgen(n_elements(wlog(*,0)))
     end
     if itime gt -1 then return,wlog(*,itime)/3600.0
+    if ihour gt -1 then return,wlog(*,ihour)
 endif else begin
     iyear = 0
 endelse
@@ -893,7 +896,7 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
       for i=0,nxreg(0)-1 do xreg(i,*,1)=dy*indgen(nxreg(1))+xreglimits(1)
 
    endif
-   if not keyword_set(wregpad) then begin
+   if n_elements(wregpad) ne nw then begin
       wregpad=dblarr(nw)
       for iw=0,nw-1 do begin
          wmax=max(w(*,*,iw))
