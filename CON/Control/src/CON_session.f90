@@ -656,7 +656,7 @@ contains
             'Progress:',                            &
             nStep,' steps,',                        &
             tSimulation,' s simulation time,',      &
-            MPI_WTIME()-CpuTimeStart,' s CPU time'
+            MPI_WTIME()-CpuTimeSetup,' s CPU time'
     end if
 
     if( DnTiming > 0 .and. mod(nStep,DnTiming) == 0) then

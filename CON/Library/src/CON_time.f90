@@ -61,6 +61,7 @@ module CON_time
 
   ! Maximum CPU time
   real(Real8_) :: CpuTimeStart    ! Initial value returned by MPI_WTIME
+  real(Real8_) :: CpuTimeSetup    ! Setup time returned by MPI_WTIME
   real :: CpuTimeMax = -1.0       ! Maximum time allowed for the run
 
   ! Shall we check for the stop file?
