@@ -1,21 +1,21 @@
 #^CFG FILE _FALSE_
-$tree = [{'attrib' => {'name' => 'BATSRUS: GM, SC and IH Components'},'name' => 'commandList','type' => 'e','content' => [{'type' => 't','content' => '
+$tree = [{'name' => 'commandList','type' => 'e','content' => [{'type' => 't','content' => '
 
 List of MH (GM, IH and SC) commands used in the PARAM.in file
 
 
-'},{'attrib' => {'type' => 'integer','name' => 'nI','value' => '$_GridSize[0]'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nJ','value' => '$_GridSize[1]'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nK','value' => '$_GridSize[2]'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxBlock','value' => '$_GridSize[3]'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxImplBlock','value' => '$_GridSize[4]'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxBlockALL','value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'string','name' => 'NameRestartOutDir','value' => '$_NameComp/restartOUT'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'string','name' => 'NamePlotDir','value' => '$_NameComp/IO2'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'name' => 'STAND ALONE MODE'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_GridSize[0]','name' => 'nI','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_GridSize[1]','name' => 'nJ','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_GridSize[2]','name' => 'nK','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_GridSize[3]','name' => 'MaxBlock','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_GridSize[4]','name' => 'MaxImplBlock','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','name' => 'MaxBlockALL','type' => 'integer'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_NameComp/restartOUT','name' => 'NameRestartOutDir','type' => 'string'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '$_NameComp/IO2','name' => 'NamePlotDir','type' => 'string'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-'},{'attrib' => {'name' => 'NEWPARAM','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseNewParam','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseNewAxes','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoTimeAccurate','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseCorotation','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseNewParam','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseNewAxes','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoTimeAccurate','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseRotatingBc','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 
 #NEWPARAM
 T			UseNewParam
 T			UseNewAxes
 T			DoTimeAccurate
-T			UseCorotation
+T			UseRotatingBc
 
 This command can be used to make the standalone code backwards compatible.
 
@@ -23,33 +23,40 @@ If UseNewParam is true, the time frequencies of various commands
 (SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
 of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
 
-If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
-and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+If UseNewParam is false, the time frequencies are only read when 
+DoTimeAccurate is true, and DoTimeAccurate can be set as the first 
+parameter of the TIMESTEPPING command.
 
-If UseNewAxes is true, the planet\'s rotational and magnetix axes are set by the new
-algorithms found in\\\\
+If UseNewAxes is true, the planet\'s rotational and magnetic axes 
+are set by the new algorithms found in
 share/Library/src/CON\\_axes, the planet data is set and
 stored by share/Library/src/CON\\_planet, and magnetic field information and
-mapping is provided by share/Library/src/CON\\_planet_field, and the rotational speed
+mapping is provided by share/Library/src/CON\\_planet_field, 
+and the rotational speed
 of the planet is calculated using $v_{\\phi}=\\Omega \\times r$.
 
-If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
-are used. Some of these algorithms are inaccurate, some of them contain bugs,
-some of them are inefficient. The algorithms were kept for sake of backwards
-compatibility.
+If UseNewAxes is false, the original algorithms in 
+GM/BATSRUS/src/ModCompatibility are used. 
+Some of these algorithms are inaccurate, some of them contain bugs and
+some of them are inefficient. The algorithms were kept for the sake 
+of backwards compatibility.
 
-The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
-default values can be set here. This is again useful for backwards compatibility,
-since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
-default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
-(consistent with the assumption that the default behaviour is as realistic as possible).
+The DoTimeAccurate and UseRotatingBc parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards 
+compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseRotatingBc=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseRotatingBc=T
+(consistent with the assumption that the default behavior is as realistic as 
+possible).
 
 The default values depend on how the standalone code was installed
-(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
-all the logicals have true default values (consistent with SWMF), 
-for STANDALONE=old and STANDALONE=oldtest the default values are false 
+(make install STANDALONE=???). For STANDALONE=gm and STANDALONE=ih
+all the logicals have true default values, while for 
+STANDALONE=sc all logicals are true except for UseRotatingBc 
+(consistent with the SWMF).
+For STANDALONE=old and STANDALONE=oldtest the default values are false 
 (consistent with BATSRUS v7.72 and earlier).
-'}]},{'attrib' => {'name' => 'COMPONENT'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NameComp'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'SC','if' => '$_NameComp eq \'SC\'','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'IH','if' => '$_NameComp eq \'IH\'','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'GM','if' => '$_NameComp eq \'GM\'','default' => 'T'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'NEWPARAM'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'if' => '$_NameComp eq \'SC\'','name' => 'SC','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'if' => '$_NameComp eq \'IH\'','name' => 'IH','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'if' => '$_NameComp eq \'GM\'','name' => 'GM','default' => 'T'}}],'attrib' => {'name' => 'NameComp','input' => 'select','type' => 'string'}},{'type' => 't','content' => '
 
 #COMPONENT
 GM			NameComp
@@ -63,7 +70,7 @@ variable, BATSRUS stops with an error message.
 This command is saved into the restart header file for consistency check.
 
 There is no default value: if the command is not given, the component ID is not checked.
-'}]},{'attrib' => {'name' => 'DESCRIPTION','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'StringDescription'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'COMPONENT'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'StringDescription','length' => '100','type' => 'string'}},{'type' => 't','content' => '
 
 #DESCRIPTION
 This is a test run for Jupiter with no rotation.
@@ -75,8 +82,8 @@ for which the parameter file is written. The #DESCRIPTION command and
 the StringDescription string are saved into the restart file,
 which helps in identifying the restart files.
 
-The default value is "Please describe me!", which is self explanatory.
-'}]},{'attrib' => {'name' => 'ECHO','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoEcho','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+The default value is ``Please describe me!", which is self explanatory.
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'DESCRIPTION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoEcho','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 
 #ECHO
 T                       DoEcho
@@ -86,14 +93,14 @@ This command is only used in the stand alone mode.
 If the DoEcho variable is true, the input parameters are echoed back.
 The default value for DoEcho is .false., but it is a good idea to
 set it to true at the beginning of the PARAM.in file.
-'}]},{'attrib' => {'name' => 'PROGRESS','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'DnProgressShort','default' => '10','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'DnProgressLong','default' => '100','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'ECHO'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnProgressShort','default' => '10','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnProgressLong','default' => '100','type' => 'integer'}},{'type' => 't','content' => '
 #PROGRESS
 10			DnProgressShort
 100			DnProgressLong
 
 The frequency of short and long progress reports for BATSRUS in
 stand alone mode. These are the defaults. Set -1-s for no progress reports.
-'}]},{'attrib' => {'name' => 'TIMEACCURATE','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoTimeAccurate','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'PROGRESS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoTimeAccurate','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 
 #TIMEACCURATE
 F               DoTimeAccurate
@@ -112,19 +119,19 @@ time is not advanced at all, instead the time step or iteration number
 is used to control the frequencies of various actions.
 
 The steady-state mode allows BATSRUS to use local time stepping
-to accelarate the convergence towards steady state.
+to accelerate the convergence towards steady state.
 
 The default value depends on how the stand alone code was installed.
 See the description of the NEWPARAM command.
-'}]},{'attrib' => {'multiple' => 'T','name' => 'BEGIN_COMP','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEACCURATE'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
-This command is allowed in stand alone mode only for sake of the 
+This command is allowed in stand alone mode only for the sake of the 
 test suite, which contains these commands when the framework is tested.
-'}]},{'attrib' => {'multiple' => 'T','name' => 'END_COMP','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'multiple' => 'T','if' => '$_IsStandAlone','name' => 'BEGIN_COMP'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
-This command is allowed in stand alone mode only for sake of the 
+This command is allowed in stand alone mode only for the sake of the 
 test suite, which contains these commands when the framework is tested.
-'}]},{'attrib' => {'name' => 'RUN','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'multiple' => 'T','if' => '$_IsStandAlone','name' => 'END_COMP'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
 #RUN
 
@@ -136,7 +143,7 @@ the current set of parameters. The parameters for the next session
 start after the #RUN command. For the last session there is no
 need to use the #RUN command, since the #END command or simply
 the end of the PARAM.in file makes BATSRUS execute the last session.
-'}]},{'attrib' => {'name' => 'END'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'RUN'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
 #END
 
@@ -145,7 +152,7 @@ end of the PARAM.in file. Lines following the #END command are
 ignored. It is not required to use the #END command. The end
 of the included file or PARAM.in file is equivalent with an 
 #END command in the last line.
-'}]}]},{'attrib' => {'name' => 'PLANET COMMANDS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'END'}}],'attrib' => {'name' => 'STAND ALONE MODE'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -160,11 +167,11 @@ By default Earth is assumed with its real parameters.
 Another planet can be selected with the #PLANET command.
 The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
-These modifier commands cannot preceed the #PLANET command!
+These modified commands cannot precede the #PLANET command!
 
-'},{'attrib' => {'name' => 'PLANET','if' => '$_IsFirstSession and $_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Earth','value' => 'EARTH/Earth/earth','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Saturn','value' => 'SATURN/Saturn/saturn'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'New'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NamePlanet eq \'New\''},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'RadiusPlanet','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'MassPlanet','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'OmegaPlanet','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'TiltRotation','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'NONE'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'DIPOLE','default' => 'T'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'MagAxisThetaGeo','max' => '180','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'MagAxisPhiGeo','max' => '360','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => 'not $PlanetCommand'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'EARTH/Earth/earth','name' => 'Earth','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'SATURN/Saturn/saturn','name' => 'Saturn'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'New'}}],'attrib' => {'name' => 'NamePlanet','input' => 'select','type' => 'string'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RadiusPlanet','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MassPlanet','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'OmegaPlanet','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'TiltRotation','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'NONE'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'DIPOLE','default' => 'T'}}],'attrib' => {'name' => 'TypeBField','input' => 'select','type' => 'string'}}],'attrib' => {'expr' => '$NamePlanet eq \'New\''}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MagAxisThetaGeo','type' => 'real','max' => '180'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MagAxisPhiGeo','type' => 'real','max' => '360'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DipoleStrength','type' => 'real'}}],'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		PLANET should precede $PlanetCommand
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not $PlanetCommand'}},{'type' => 't','content' => '
 
 #PLANET
 New			NamePlanet (rest of parameters read for unknown planet)
@@ -182,11 +189,11 @@ with arbitrary capitalization. In case the name of the planet
 is not recognized, the following variables are read:
 RadiusPlanet is the radius of the planet,
 MassPlanet is the mass of the planet, 
-OmegaPlanet is the angular speed relative to an inertial frame,
+OmegaPlanet is the angular speed relative to an inertial frame, and
 TiltRotation is the tilt of the rotation axis relative to ecliptic North,
 TypeBField, which can be "NONE" or "DIPOLE". 
 TypeBField="NONE" means that the planet does not have magnetic field. 
-It TypeBField is set to "DIPOLE" than the following variables are read:
+If TypeBField is set to "DIPOLE" then the following variables are read:
 MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
 of the north magnetic pole in corotating planetocentric coordinates.
 Finally DipoleStrength is the equatorial strength of the magnetic dipole
@@ -195,7 +202,7 @@ Earth values approximately.
 
 The default value is NamePlanet="Earth", which is currently
 the only recognized planet.
-'}]},{'attrib' => {'name' => 'ROTATIONAXIS','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'IsRotAxisPrimary','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$IsRotAxisPrimary'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'RotAxisTheta','max' => '180','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RotAxisPhi','max' => '360','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'ROTATIONAXIS'},'name' => 'set','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession and $_IsStandAlone','name' => 'PLANET'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'IsRotAxisPrimary','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RotAxisTheta','type' => 'real','max' => '180'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RotAxisPhi','type' => 'real','max' => '360'}}],'attrib' => {'expr' => '$IsRotAxisPrimary'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => 'ROTATIONAXIS','name' => 'PlanetCommand','type' => 'string'}},{'type' => 't','content' => '
 
 #ROTATIONAXIS
 T			IsRotAxisPrimary (rest of parameters read if true)
@@ -210,7 +217,7 @@ and stored internally in radians.
 
 The default is to use the true rotational axis determined by the
 date and time given by #STARTTIME.
-'}]},{'attrib' => {'name' => 'ROTATION','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseRotation','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseRotation'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'RotationPeriod'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'MAGNETICAXIS'},'name' => 'set','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATIONAXIS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseRotation','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'RotationPeriod','type' => 'real'}}],'attrib' => {'expr' => '$UseRotation'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => 'MAGNETICAXIS','name' => 'PlanetCommand','type' => 'string'}},{'type' => 't','content' => '
 
 #ROTATION
 T			UseRotation
@@ -225,7 +232,7 @@ so the RotationPeriod is not 24 hours for the Earth, but the
 length of the astronomical day.
 
 The default is to use rotation with the real rotation period of the planet.
-'}]},{'attrib' => {'name' => 'MAGNETICAXIS','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'IsMagAxisPrimary','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$IsMagAxisPrimary'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'MagAxisTheta','max' => '180','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'MagAxisPhi','max' => '360','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'MAGNETICAXIS'},'name' => 'set','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'IsMagAxisPrimary','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MagAxisTheta','type' => 'real','max' => '180'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MagAxisPhi','type' => 'real','max' => '360'}}],'attrib' => {'expr' => '$IsMagAxisPrimary'}},{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => 'MAGNETICAXIS','name' => 'PlanetCommand','type' => 'string'}},{'type' => 't','content' => '
 
 #MAGNETICAXIS
 T			IsMagAxisPrimary (rest of parameters read if true)
@@ -240,7 +247,7 @@ and stored internally in radians.
 
 The default is to use the true magnetic axis determined by the
 date and time given by #STARTTIME.
-'}]},{'attrib' => {'name' => 'DIPOLE','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'MAGNETICAXIS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DipoleStrength','type' => 'real'}},{'type' => 't','content' => '
 
 #DIPOLE
 -3.11e-4		DipoleStrength [Tesla]
@@ -252,7 +259,7 @@ The default value is the real dipole strength for the planet.
 For the Earth the default is taken to be -31100 nT.
 The sign is taken to be negative so that the magnetic axis can
 point northward as usual.
-'}]},{'attrib' => {'name' => 'UPDATEB0','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'DtUpdateB0','default' => '0.0001','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'DIPOLE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtUpdateB0','default' => '0.0001','type' => 'real'}},{'type' => 't','content' => '
 
 The DtUpdateB0 variable determines how often the position of
 the magnetic axis is recalculated. A negative value indicates that
@@ -265,13 +272,13 @@ to continuously update the magnetic field orientation.
 
 The default value is 0.0001, which means that the magnetic axis
 is continuously followed.
-'}]},{'attrib' => {'name' => 'IDEALAXES','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'UPDATEB0'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
 #IDEALAXES
 
 The #IDEALAXES command has no parameters. It sets both the rotational
 and magnetic axes parallel with the ecliptic North direction. In fact
-it is identical with
+it is identical with the commands:
 
 #ROTATIONAXIS
 T               IsRotAxisPrimary
@@ -282,12 +289,12 @@ T               IsRotAxisPrimary
 F               IsMagAxisPrimary
 
 but much shorter.
-'}]}]},{'attrib' => {'name' => 'USER DEFINED INPUT'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'IDEALAXES'}}],'attrib' => {'name' => 'PLANET COMMANDS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-'},{'attrib' => {'name' => 'USER_FLAGS'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseUserInnerBcs','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserSource','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserPerturbation','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserOuterBcs','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserICs','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserSpecifyRefinement','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserLogFiles','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserWritePlot','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserAMR','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserEchoInput','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserB0','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserSetPhysConst','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseUserUpdateStates','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserInnerBcs','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserSource','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserPerturbation','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserOuterBcs','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserICs','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserSpecifyRefinement','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserLogFiles','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserWritePlot','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserAMR','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserEchoInput','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserB0','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserSetPhysConst','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUserUpdateStates','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 
 #USER_FLAGS
 F			UseUserInnerBcs
@@ -307,39 +314,40 @@ F                       UseUserUpdateStates
 This command controls the use of user defined routines in user_routines.f90.
 For each flag that is set, an associated routine will be called in 
 user_routines.f90.  Default is .false. for all flags.
-'}]},{'attrib' => {'name' => 'USERINPUTBEGIN'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'USER_FLAGS'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
 This command signals the beginning of the section of the file which 
 is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
 The section ends with the #USERINPUTEND command. There is no XML based parameter
 checking in the user section.
-'}]},{'attrib' => {'name' => 'USERINPUTEND'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'USERINPUTBEGIN'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 
 This command signals the end of the section of the file which 
 is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
 The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
 checking in the user section.
-'}]}]},{'attrib' => {'name' => 'TESTING AND TIMING'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'USERINPUTEND'}}],'attrib' => {'name' => 'USER DEFINED INPUT'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'TEST'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'TestString'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'TestString','length' => '100','type' => 'string'}},{'type' => 't','content' => '
 #TEST
 read_inputs
 
 ! A space separated list of subroutine names. Default is empty string.
 !
-! Examples:
-!   read_inputs  - echo the input parameters following the #TEST line
-!   project_B    - info on projection scheme   
-!   implicit     - info on implicit scheme     
-!   krylov       - info on the Krylov solver   
-!   message_count- count messages
-!   initial_refinement
+! Examples:\\\\
+!   read_inputs  - echo the input parameters following the #TEST line\\\\
+!   project_B    - info on projection scheme\\\\   
+!   implicit     - info on implicit scheme\\\\     
+!   krylov       - info on the Krylov solver\\\\   
+!   message_count- count messages\\\\
+!   initial_refinement\\\\
 !   ...
+!
 ! Check the subroutines for call setoktest("...",oktest,oktest_me) to
 ! see the appropriate strings.
-'}]},{'attrib' => {'name' => 'TESTIJK'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'iTest','max' => '$nI+2','min' => '-2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'jTest','max' => '$nJ+2','min' => '-2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'kTest','max' => '$nK+2','min' => '-2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iBlockTest','max' => '$MaxBlock','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iProcTest','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TEST'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-2','name' => 'iTest','type' => 'integer','max' => '$nI+2'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-2','name' => 'jTest','type' => 'integer','max' => '$nJ+2'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-2','name' => 'kTest','type' => 'integer','max' => '$nK+2'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'iBlockTest','type' => 'integer','max' => '$MaxBlock'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'iProcTest','type' => 'integer'}},{'type' => 't','content' => '
 #TESTIJK
 1                       iTest           (cell index for testing)
 1                       jTest           (cell index for testing)
@@ -350,7 +358,7 @@ read_inputs
 ! The location of test info in terms of indices, block and processor number.
 ! Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
 ! are set, the final one in the session will set the test point.
-'}]},{'attrib' => {'name' => 'TESTXYZ'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xTest','max' => '$xMax','min' => '$xMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yTest','max' => '$yMax','min' => '$yMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zTest','max' => '$zMax','min' => '$zMin'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TESTIJK'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$xMin','name' => 'xTest','type' => 'real','max' => '$xMax'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$yMin','name' => 'yTest','type' => 'real','max' => '$yMax'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$zMin','name' => 'zTest','type' => 'real','max' => '$zMax'}},{'type' => 't','content' => '
 #TESTXYZ
 1.5                     xTest           (X coordinate of cell for testing)
 -10.5                   yTest           (Y coordinate of cell for testing)
@@ -359,46 +367,47 @@ read_inputs
 ! The location of test info in terms of coordinates.
 ! Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
 ! are set, the final one in the session will set the test point.
-'}]},{'attrib' => {'name' => 'TESTTIME'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nIterTest','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'TimeTest','default' => '1e30','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TESTXYZ'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'nIterTest','default' => '-1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'TimeTest','default' => '1e30','type' => 'real'}},{'type' => 't','content' => '
 
 #TESTTIME
 -1                      nIterTest       (iteration number to start testing)
 10.5                    TimeTest        (time to start testing in seconds)
 
 ! The time step and physical time to start testing.
-'}]},{'attrib' => {'name' => 'TESTVAR'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'iVarTest'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Rho','value' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'RhoUx','value' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'RhoUy','value' => '3'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'RhoUz','value' => '4'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Bx','value' => '5'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'By','value' => '6'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Bz','value' => '7'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'e','value' => '8'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'p','value' => '9'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TESTTIME'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','name' => 'Rho','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2','name' => 'RhoUx'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3','name' => 'RhoUy'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '4','name' => 'RhoUz'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '5','name' => 'Bx'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '6','name' => 'By'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '7','name' => 'Bz'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '8','name' => 'e'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '9','name' => 'p'}}],'attrib' => {'name' => 'iVarTest','input' => 'select','type' => 'integer'}},{'type' => 't','content' => '
 #TESTVAR
 1                       iVarTest
 
-! Index of variable to be tested. Default is rho_="1", ie. density.
-'}]},{'attrib' => {'name' => 'TESTDIM'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'iVarTest'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'all','value' => '0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'x','value' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'y','value' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'z','value' => '3'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+! Index of variable to be tested. Default is rho_="1", i.e. density.
+'}],'attrib' => {'name' => 'TESTVAR'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0','name' => 'all'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','name' => 'x','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2','name' => 'y'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3','name' => 'z'}}],'attrib' => {'name' => 'iVarTest','input' => 'select','type' => 'integer'}},{'type' => 't','content' => '
 #TESTDIM
 1                       iDimTest
 
 ! Index of dimension/direction to be tested. Default is X dimension.
-'}]},{'attrib' => {'name' => 'STRICT'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseStrict','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TESTDIM'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseStrict','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 #STRICT
 T                       UseStrict
 
 ! If true then stop when parameters are incompatible. If false, try to
-! correct parameters and continue. Default is true, ie. strict mode
-'}]},{'attrib' => {'name' => 'VERBOSE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'lVerbose'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'errors and warnings only','value' => '-1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'start and end of sessions','value' => '0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'normal','value' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'calls on test processor','value' => '10'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'calls on all processors','value' => '100'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+! correct parameters and continue. Default is true, i.e. strict mode
+'}],'attrib' => {'name' => 'STRICT'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '-1','name' => 'errors and warnings only'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0','name' => 'start and end of sessions'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','name' => 'normal','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '10','name' => 'calls on test processor'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '100','name' => 'calls on all processors'}}],'attrib' => {'name' => 'lVerbose','input' => 'select','type' => 'integer'}},{'type' => 't','content' => '
 #VERBOSE
 -1                      lVerbose
 
 ! Verbosity level controls the amount of output to STDOUT. Default level is 1.
-!   lVerbose .le. -1 only warnings and error messages are shown.
-!   lVerbose .ge.  0 start and end of sessions is shown.
-!   lVerbose .ge.  1 a lot of extra information is given.
-!   lVerbose .ge. 10 all calls of set_oktest are shown for the test processor.
-!   lVerbose .ge.100 all calls of set_oktest are shown for all processors.
-'}]},{'attrib' => {'name' => 'DEBUG'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoDebug','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoDebugGhost','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+!\\\\
+!   lVerbose $\\leq -1$ only warnings and error messages are shown.\\\\
+!   lVerbose $\\geq  0$ start and end of sessions is shown.\\\\
+!   lVerbose $\\leq  1$ a lot of extra information is given.\\\\
+!   lVerbose $\\leq 10$ all calls of set_oktest are shown for the test processor.\\\\
+!   lVerbose $\\leq 100$ all calls of set_oktest are shown for all processors.\\\\
+'}],'attrib' => {'name' => 'VERBOSE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoDebug','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoDebugGhost','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #DEBUG
 F                       DoDebug         (use it as if(okdebug.and.oktest)...)
 F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 
 ! Excessive debug output can be controlled by the global okdebug parameter
-'}]},{'attrib' => {'name' => 'CODEVERSION','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'CodeVersion','default' => '7.50','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'DEBUG'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CodeVersion','default' => '7.50','type' => 'real'}},{'type' => 't','content' => '
 #CODEVERSION
 7.50                    CodeVersion
 
@@ -406,7 +415,7 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 ! defined in ModMain.f90. Used in newer restart header files. 
 ! Should be given in PARAM.in when reading old restart files, 
 ! which do not have version info in the header file.
-'}]},{'attrib' => {'name' => 'EQUATION','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameEquation','default' => 'MHD'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nVar','default' => '8'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'CODEVERSION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameEquation','default' => 'MHD','length' => '100','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'nVar','default' => '8','type' => 'integer'}},{'type' => 't','content' => '
 #EQUATION
 MHD			NameEquation
 8			nVar
@@ -416,19 +425,19 @@ MHD			NameEquation
 ! by the code, BATSRUS stops with an error. Used in restart
 ! header files and can be given in PARAM.in as a check
 ! and as a description.
-'}]},{'attrib' => {'name' => 'PRECISION','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nByteReal'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'single precision (4)','value' => '4','default' => '$_nByteReal==4'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'double precision (8)','value' => '8','default' => '$_nByteReal==8'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$nByteReal==$_nByteReal'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'EQUATION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '4','name' => 'single precision (4)','default' => '$_nByteReal==4'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '8','name' => 'double precision (8)','default' => '$_nByteReal==8'}}],'attrib' => {'name' => 'nByteReal','input' => 'select','type' => 'integer'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		nByteReal in file must agree with _nByteReal.
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '$nByteReal==$_nByteReal'}},{'type' => 't','content' => '
 
 #PRECISION
 8                       nByteReal
 
 ! Define the number of bytes in a real number. If it does not agree
 ! with the value determined by the code, BATSRUS stops with an error.
-! This is a check, the internal value is calculated in parallel_setup.
-! Used in latest restart header files to check binary compatibility.
-! May be given in PARAM.in to enforce a certain precision.
-'}]},{'attrib' => {'name' => 'CHECKGRIDSIZE','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nI','default' => '$nI','max' => '$nI','min' => '$nI'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nJ','default' => '$nJ','max' => '$nJ','min' => '$nJ'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nK','default' => '$nK','max' => '$nK','min' => '$nK'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MinBlockALL','max' => '$MaxBlockALL','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+! This is used in latest restart header files to check binary 
+! compatibility between the restart file and the compiled code
+! The command may also be given in PARAM.in to enforce a certain precision.
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'PRECISION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$nI','name' => 'nI','default' => '$nI','type' => 'integer','max' => '$nI'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$nJ','name' => 'nJ','default' => '$nJ','type' => 'integer','max' => '$nJ'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$nK','name' => 'nK','default' => '$nK','type' => 'integer','max' => '$nK'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'MinBlockALL','type' => 'integer','max' => '$MaxBlockALL'}},{'type' => 't','content' => '
 
 #CHECKGRIDSIZE
        4                        nI
@@ -443,20 +452,23 @@ MHD			NameEquation
 ! This command is used in the restart headerfile to check consistency,
 ! and it is also useful to check if the executable is consistent with the 
 ! requirements of the problem described in the PARAM.in file.
-'}]},{'attrib' => {'name' => 'BLOCKLEVELSRELOADED'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'CHECKGRIDSIZE'}},{'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
 #BLOCKLEVELSRELOADED
 
 This command means that the restart file contains the information about
 the minimum and maximum allowed refinement levels for each block.
 This command is only used in the restart header file.
-'}]},{'attrib' => {'name' => 'TIMING'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseTiming','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseTiming'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'Frequency'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'none','value' => '-3'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'final only','value' => '-2','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'end of sessions','value' => '-1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'every X steps','default' => '100','min' => '1'},'name' => 'optioninput','type' => 'e','content' => []}]},{'attrib' => {'type' => 'integer','name' => 'nDepthTiming','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeTimingReport'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'cummulative','value' => 'cumm','default' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'list'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'tree'},'name' => 'option','type' => 'e','content' => []}]}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'BLOCKLEVELSRELOADED'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseTiming','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '-3','name' => 'none'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '-2','name' => 'final only','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '-1','name' => 'end of sessions'}},{'name' => 'optioninput','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'every X steps','default' => '100'}}],'attrib' => {'name' => 'Frequency','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'nDepthTiming','default' => '-1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'cumu','name' => 'cumulative','default' => '1'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'list'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'tree'}}],'attrib' => {'name' => 'TypeTimingReport','input' => 'select','type' => 'string'}}],'attrib' => {'expr' => '$UseTiming'}},{'type' => 't','content' => '
 #TIMING
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
 -1                      nDepthTiming   (-1 for arbitrary depth)
-cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
+tree                    TypeTimingReport   (\'cumu\', \'list\', or \'tree\')
 
 ! The default values are shown.
+!
+! This command can only be used in stand alone mode. In the SWMF the
+! #TIMING command should be issued for CON.
 !
 ! If UseTiming=.true., the TIMING module must be on.
 ! If UseTiming=.false., the execution is not timed.
@@ -473,14 +485,14 @@ cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
 ! is timed.
 !
 ! TypeTimingReport determines the format of the timing reports:
-! \'cumm\' - cummulative list sorted by timings
+! \'cumu\' - cumulative list sorted by timings
 ! \'list\' - list based on caller and sorted by timings
 ! \'tree\' - tree based on calling sequence
-'}]}]},{'attrib' => {'name' => 'INITIAL AND BOUNDARY CONDITIONS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMING'}}],'attrib' => {'name' => 'TESTING AND TIMING'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'required' => 'T','name' => 'PROBLEMTYPE','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'iProblem'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Uniform','value' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Shock tube','value' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Heliosphere','value' => '3'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Comet','value' => '5'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rotation','value' => '6'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Diffusion','value' => '7'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Earth','value' => '11','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Saturn','value' => '12'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Jupiter','value' => '13'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Venus','value' => '14'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Cylinder','value' => '21'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Sphere','value' => '22'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Arcade','value' => '25'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'CME','value' => '26'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Dissipation','value' => '30'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'length' => '20','type' => 'string','name' => 'TypeDissipation','if' => '$iProblem==30'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','name' => 'Uniform'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2','name' => 'Shock tube'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3','name' => 'Heliosphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '5','name' => 'Comet'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '6','name' => 'Rotation'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '7','name' => 'Diffusion'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '11','name' => 'Earth','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '12','name' => 'Saturn'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '13','name' => 'Jupiter'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '14','name' => 'Venus'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '21','name' => 'Cylinder'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '22','name' => 'Sphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '25','name' => 'Arcade'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '26','name' => 'CME'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '30','name' => 'Dissipation'}}],'attrib' => {'name' => 'iProblem','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'if' => '$iProblem==30','name' => 'TypeDissipation','length' => '20','type' => 'string'}},{'type' => 't','content' => '
 #PROBLEMTYPE
 30			iProblem
 heat_test1		TypeProblemDiss
@@ -488,23 +500,24 @@ heat_test1		TypeProblemDiss
 ! select a problem type which defines defaults for a lot of parameters
 !
 ! Problem type has to be defined as the first item after #TEST..#DEBUG items!
-!
-!                           iProblem: 1=MHD Uniform Flow
-!                                     2=Shock tube
-!                                     3=Solar Wind and Inner Heliosphere
-!                                     5=Mass-Loaded Comet
-!                                     6=Rotation test
-!                                     7=Diffusion test
-!                                    11=Earth Magnetosphere
-!                                    12=Saturn Magnetosphere
-!                                    13=Jupiter Magnetosphere
-!                                    14=Venus Ionosphere
-!                                    21=Conducting Cylinder (2-D)
-!                                    22=Conducting Sphere   (3-D)
-!                                    25=Arcade
-!                                    26=CME
-!				     30=Test Dissipative MHD
-'}]},{'attrib' => {'name' => 'COORDSYSTEM','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeCoordSystem'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'GeoSolarMagnetic, GSM','if' => '$_NameComp eq \'GM\'','value' => 'GSM','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'HelioGraphicInertial, HGI','if' => '$_NameComp ne \'GM\'','value' => 'HGI','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'HelioGraphic, HGR','if' => '$_NameComp ne \'GM\'','value' => 'HGR'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+!\\begin{verbatim}
+!       iProblem:     1=MHD Uniform Flow
+!                     2=Shock tube
+!                     3=Solar Wind and Inner Heliosphere
+!                     5=Mass-Loaded Comet
+!                     6=Rotation test
+!                     7=Diffusion test
+!                    11=Earth Magnetosphere
+!                    12=Saturn Magnetosphere
+!                    13=Jupiter Magnetosphere
+!                    14=Venus Ionosphere
+!                    21=Conducting Cylinder (2-D)
+!                    22=Conducting Sphere   (3-D)
+!                    25=Arcade
+!                    26=CME
+!		     30=Test Dissipative MHD
+!\\end{verbatim}
+'}],'attrib' => {'required' => 'T','if' => '$_IsFirstSession','name' => 'PROBLEMTYPE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'GSM','if' => '$_NameComp eq \'GM\'','name' => 'GeoSolarMagnetic, GSM','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'HGI','if' => '$_NameComp ne \'GM\'','name' => 'HelioGraphicInertial, HGI','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'HGR','if' => '$_NameComp ne \'GM\'','name' => 'HelioGraphic, HGR'}}],'attrib' => {'name' => 'TypeCoordSystem','input' => 'select','type' => 'string'}},{'type' => 't','content' => '
 
 #COORDSYSTEM
 GSM			TypeCoordSystem
@@ -516,9 +529,9 @@ GSM			TypeCoordSystem
 ! The coordinate systems are defined in share/Library/src/CON_axes.
 !
 ! Default is component dependent: "GSM" for GM and "HGI" for IH or SC.
-'}]},{'attrib' => {'name' => 'RESTARTINDIR','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameRestartInDir','default' => 'GM/restartIN'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '-d $NameRestartInDir'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'COORDSYSTEM'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameRestartInDir','default' => 'GM/restartIN','length' => '100','type' => 'string'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		Restart input directory $NameRestartInDir must exist!
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '-d $NameRestartInDir'}},{'type' => 't','content' => '
 
 #RESTARTINDIR
 GM/restart_n5000	NameRestartInDir
@@ -529,7 +542,7 @@ GM/restart_n5000	NameRestartInDir
 ! of the component.
 !
 ! Default value is "GM/restartIN".
-'}]},{'attrib' => {'name' => 'NEWRESTART','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoRestartBFace','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => ' 
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'RESTARTINDIR'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoRestartBFace','default' => 'F','type' => 'logical'}},{'type' => 't','content' => ' 
 
 #NEWRESTART
 T		DoRestartBFace 
@@ -547,7 +560,7 @@ T		DoRestartBFace
 ! is saved into the restart files. These values are used by the 
 ! Constrained Transport scheme.
 
-'}]},{'attrib' => {'required' => 'T','name' => 'GRID','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nRootBlockX','default' => '2','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nRootBlockY','default' => '1','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nRootBlockZ','default' => '1','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xMin','default' => '-192.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xMax','default' => '  64.0','min' => '$xMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMin','default' => ' -64.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMax','default' => '  64.0','min' => '$yMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMin','default' => ' -64.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMax','default' => '  64.0','min' => '$zMin'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'NEWRESTART'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'nRootBlockX','default' => '2','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'nRootBlockY','default' => '1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'nRootBlockZ','default' => '1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xMin','default' => '-192.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$xMin','name' => 'xMax','default' => '  64.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yMin','default' => ' -64.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$yMin','name' => 'yMax','default' => '  64.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zMin','default' => ' -64.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$zMin','name' => 'zMax','default' => '  64.0','type' => 'real'}},{'type' => 't','content' => '
 #GRID
 2                       nRootBlockX
 1                       nRootBlockY
@@ -560,20 +573,20 @@ T		DoRestartBFace
  64.                    zMax
 
 ! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
-! number of blocks of the base grid, ie. the roots of the octree. 
+! number of blocks of the base grid, i.e. the roots of the octree. 
 ! By varying these parameters, one can setup a grid which is elongated
-! in some direction. The xMin ... zMax parameters define the physical
+! in some direction. The xMin, ..., zMax parameters define the physical
 ! size of the grid.
 !
 ! There is no default value, the grid size must always be given.
 ! The #GRID command should be used before the #SAVEPLOT command.
-'}]},{'attrib' => {'name' => 'OUTERBOUNDARY'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'name' => 'Side','values' => 'TypeBcEast,TypeBcWest,TypeBcSouth,TypeBcNorth,TypeBcBot,TypeBcTop'},'name' => 'foreach','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => '$Side'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'coupled'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'fixed/inflow','default' => '$Side ne \'TypeBcEast\''},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'float/outflow','default' => '$Side eq \'TypeBcEast\''},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'heliofloat'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'reflect'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'periodic'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'vary'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'shear'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'linetied'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'raeder'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'arcadetop'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'arcadebot'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'arcadebotcont'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'user'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'expr' => 'not($TypeBcEast eq \'periodic\' xor $TypeBcWest eq \'periodic\')'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'required' => 'T','if' => '$_IsFirstSession','name' => 'GRID'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'foreach','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'coupled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'fixed/inflow','default' => '$Side ne \'TypeBcEast\''}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'float/outflow','default' => '$Side eq \'TypeBcEast\''}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'heliofloat'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'reflect'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'periodic'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'vary'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'shear'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'linetied'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'raeder'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'arcadetop'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'arcadebot'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'arcadebotcont'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'user'}}],'attrib' => {'name' => '$Side','input' => 'select','type' => 'string'}}],'attrib' => {'values' => 'TypeBcEast,TypeBcWest,TypeBcSouth,TypeBcNorth,TypeBcBot,TypeBcTop','name' => 'Side'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		East and west BCs must be both periodic or neither
-	'}]},{'attrib' => {'expr' => 'not($TypeBcSouth eq \'periodic\' xor $TypeBcNorth eq \'periodic\')'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($TypeBcEast eq \'periodic\' xor $TypeBcWest eq \'periodic\')'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		South and North BCs must be both periodic or neither
-	'}]},{'attrib' => {'expr' => 'not($TypeBcBot eq \'periodic\' xor $TypeBcTop eq \'periodic\')'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($TypeBcSouth eq \'periodic\' xor $TypeBcNorth eq \'periodic\')'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		Bottom and top BCs must be both periodic or neither
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($TypeBcBot eq \'periodic\' xor $TypeBcTop eq \'periodic\')'}},{'type' => 't','content' => '
 #OUTERBOUNDARY
 outflow                 TypeBcEast
 inflow                  TypeBcWest
@@ -582,8 +595,9 @@ float                   TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-! Default depends on problem type.
+! Default depends on problem type.\\\\
 ! Possible values:
+!\\begin{verbatim}
 ! coupled       - GM coupled to the IH component (at the \'west\' boundary)
 ! fixed/inflow  - fixed solarwind values
 ! fixedB1       - fixed solarwind values without correction for the dipole B0
@@ -599,47 +613,46 @@ float                   TypeBcTop
 ! arcadebot     - intended for arcade problem only
 ! arcadebotcont - intended for arcade problem only
 ! user          - user defined
-'}]},{'attrib' => {'name' => 'INNERBOUNDARY'},'name' => 'command','type' => 'e','content' => [{'type' => 't','content' => '
-! Inner boundary types for body 1 and body 2
-	'},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBcInner'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'reflect'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'float'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'fixed'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionosphere','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionosphereB0','value' => 'ionosphereB0/ionosphereb0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionospherefloat'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'coronatoih'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'user'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$UseBody2'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBcBody2'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'reflect','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'float'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'fixed'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionosphere'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionosphereB0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ionospherefloat'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'expr' => 'not($TypeBcBody2 =~ /ionosphere/)'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => ' 
+!\\end{verbatim}
+'}],'attrib' => {'name' => 'OUTERBOUNDARY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'reflect'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'float'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'fixed'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ionosphere','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'ionosphereB0/ionosphereb0','name' => 'ionosphereB0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ionospherefloat'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'coronatoih'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'user'}}],'attrib' => {'name' => 'TypeBcInner','input' => 'select','type' => 'string'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'reflect','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'float'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'fixed'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ionosphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ionosphereB0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ionospherefloat'}}],'attrib' => {'name' => 'TypeBcBody2','input' => 'select','type' => 'string'}}],'attrib' => {'expr' => '$UseBody2'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => ' 
 	For the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($TypeBcBody2 =~ /ionosphere/)'}},{'type' => 't','content' => '
 
 #INNERBOUNDARY
 ionosphere              TypeBcInner
-
-ionosphere              TypeBcBody2  !read only if UseBody2=.true. 
-
-! This command should appear after the #SECONDBODY command when using 
-! two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
-! BOUNDARY DO NOT WORK.
-!
-! Default value for TypeBcBody2 is \'reflect\'.
+ionosphere              TypeBcBody2  !read only if UseBody2=T 
 
 
-! Possible values for TypeBcInner are:
-!
-! \'reflect\'     - reflect Vr, reflect Vphi to rotation, float Vtheta,
-!                 reflect Br, float Bphi, float Btheta, float rho, float P
-! \'float\'       - float Vr, reflect Vphi to rotation, float Vtheta,
-!                 float B, float rho, float P
-! \'fixed\'       - Vr=0, Vphi=rotation, Vtheta=0
-!                 B=B0 (ie B1=0), fix rho, fix P
-! \'ionosphere\'  - set V as if ionosphere gave V_iono=0
-!                 float B, fix rho, fix P
-! \'ionospherefloat\'-set V as if ionosphere gave V_iono=0
-!                 float B, float rho, float P
-! \'coronatoih\'  - IH component obtains inner boundary from the SC component
-! \'user\'        - user defined
-!
-! For \'ionosphere\' and \'ionospherefloat\' types and a coupled GM-IE run,
-! the velocity at the inner boundary is determined by the ionosphere model.
-!
-! Default value for TypeBcInner is \'ionosphere\' for problem types
-! Earth, Saturn, Jupiter, and rotation.
-! For all other problems with an inner boundary the default is \'unknown\',
-! so the inner boundary must be set.
-'}]},{'attrib' => {'name' => 'EXTRABOUNDARY'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseExtraBoundary','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseExtraBoundary'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'string','name' => 'TypeBcExtra'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoFixExtraboundary','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'attrib' => {'name' => 'FACEOUTERBC'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'MaxBoundary','default' => '0','max' => '6','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$MaxBoundary >= 1'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoFixOuterBoundary','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+This command should appear after the #SECONDBODY command when using 
+two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
+BOUNDARY DO NOT WORK.
+
+Default value for TypeBcBody2 is \'reflect\'.
+
+
+Possible values for TypeBcInner are:
+\\begin{verbatim}
+\'reflect\'         - reflect Vr, reflect Vphi to rotation, float Vtheta,
+                    reflect Br, float Bphi, float Btheta, float rho, float P
+\'float\'           - float Vr, reflect Vphi to rotation, float Vtheta,
+                    float B, float rho, float P
+\'fixed\'           - Vr=0, Vphi=rotation, Vtheta=0
+                    B=B0 (ie B1=0), fix rho, fix P
+\'ionosphere\'      - set V as if ionosphere gave V_iono=0
+                    float B, fix rho, fix P
+\'ionospherefloat\' - set V as if ionosphere gave V_iono=0
+                    float B, float rho, float P
+\'coronatoih\'      - IH component obtains inner boundary from the SC component
+\'user\'            - user defined
+\\end{verbatim}
+For \'ionosphere\' and \'ionospherefloat\' types and a coupled GM-IE run,
+the velocity at the inner boundary is determined by the ionosphere model.
+
+Default value for TypeBcInner is \'ionosphere\' for problem types
+Earth, Saturn, Jupiter, and rotation.
+For all other problems with an inner boundary the default is \'unknown\',
+so the inner boundary must be set.
+'}],'attrib' => {'name' => 'INNERBOUNDARY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseExtraBoundary','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'TypeBcExtra','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoFixExtraboundary','default' => 'F','type' => 'logical'}}],'attrib' => {'expr' => '$UseExtraBoundary'}}],'attrib' => {'name' => 'EXTRABOUNDARY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MaxBoundary','default' => '0','type' => 'integer','max' => '6'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoFixOuterBoundary','default' => 'F','type' => 'logical'}}],'attrib' => {'expr' => '$MaxBoundary >= 1'}},{'type' => 't','content' => '
 #FACEOUTERBC
 0              MaxBoundary            
 F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
@@ -649,11 +662,11 @@ F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
 ! if DoFixOuterBoundary is .true., there is no resolution
 ! change along the outer boundaries with the number of
 ! of boundary being between East_ and MaxBoundary
-'}]}]},{'attrib' => {'name' => 'INITIAL TIME'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'FACEOUTERBC'}}],'attrib' => {'name' => 'INITIAL AND BOUNDARY CONDITIONS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'alias' => 'SETREALTIME','name' => 'STARTTIME','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'iYear','default' => '2000'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iMonth','default' => '3','max' => '12','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iDay','default' => '21','max' => '31','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iHour','default' => '0','max' => '23','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iMinute','default' => '0','max' => '59','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'iSecond','default' => '0','max' => '59','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'iYear','default' => '2000','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'iMonth','default' => '3','type' => 'integer','max' => '12'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'iDay','default' => '21','type' => 'integer','max' => '31'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'iHour','default' => '0','type' => 'integer','max' => '23'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'iMinute','default' => '0','type' => 'integer','max' => '59'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'iSecond','default' => '0','type' => 'integer','max' => '59'}},{'type' => 't','content' => '
 #STARTTIME
 2000                    iYear
 3                       iMonth
@@ -672,7 +685,7 @@ This time is stored in the BATSRUS restart header file.
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
-'}]},{'attrib' => {'name' => 'TIMESIMULATION','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'tSimulation','default' => '0.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'alias' => 'SETREALTIME','if' => '$_IsFirstSession','name' => 'STARTTIME'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'tSimulation','default' => '0.0','type' => 'real'}},{'type' => 't','content' => '
 
 #TIMESIMULATION
 3600.0			tSimulation [sec]
@@ -687,7 +700,7 @@ In stand alone mode time\\_simulation is set, but in case of a restart,
 it gets overwritten by the binary value saved into the .rst binary files. 
 
 The default value is tSimulation=0.
-'}]},{'attrib' => {'name' => 'NSTEP','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nStep','default' => '0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'TIMESIMULATION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'nStep','default' => '0','type' => 'integer'}},{'type' => 't','content' => '
 
 #NSTEP
 100			nStep
@@ -696,7 +709,7 @@ The default value is tSimulation=0.
 ! Generally it is not inserted in a PARAM.in file by the user.
 !
 ! The default is nStep=0 as the starting time step with no restart.
-'}]},{'attrib' => {'name' => 'NPREVIOUS','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nPrevious','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'NSTEP'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'nPrevious','default' => '-1','type' => 'integer'}},{'type' => 't','content' => '
 
 #NPREVIOUS
 100			nPrev
@@ -712,11 +725,11 @@ The default value is tSimulation=0.
 !
 ! The default is that the command is not present and no previous time step 
 ! is saved into the restart files.
-'}]}]},{'attrib' => {'name' => 'TIME INTEGRATION'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'NPREVIOUS'}}],'attrib' => {'name' => 'INITIAL TIME'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'TIMESTEPPING'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nStage'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'value' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '2'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'CflExpl','default' => '0.8','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2'}}],'attrib' => {'name' => 'nStage','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CflExpl','default' => '0.8','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 
 #TIMESTEPPING
 2                       nStage
@@ -724,7 +737,7 @@ The default value is tSimulation=0.
 
 ! Parameters for explicit time integration.
 ! Default is 1 stage and CflExpl=0.8
-'}]},{'attrib' => {'name' => 'FIXEDTIMESTEP'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseDtFixed','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtFixedDim','if' => '$UseDtFixed','default' => '1.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'TIMESTEPPING'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseDtFixed','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$UseDtFixed','name' => 'DtFixedDim','default' => '1.0','type' => 'real'}},{'type' => 't','content' => '
 #FIXEDTIMESTEP
 T                       UseDtFixed
 10.                     DtFixedDim [sec] (read if UseDtFixed is true)
@@ -736,9 +749,9 @@ T                       UseDtFixed
 
 ! The real application is, however, for implicit and partially
 ! implicit/local schemes. The time step is set to DtFixedDim unless the
-! update checking decides to reduce the time step for sake of robustness.
+! update checking decides to reduce the time step for the sake of robustness.
 
-'}]},{'attrib' => {'name' => 'PARTLOCAL'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UsePartLocal','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'FIXEDTIMESTEP'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UsePartLocal','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #PARTLOCAL
 T               UsePartLocal
 
@@ -747,9 +760,9 @@ T               UsePartLocal
 ! by the criteria defined in #STEPPINGCRITERIA are not used to
 ! calculate the time step, and all cells are advanced with the
 ! smaller of the stable and the global time steps.
-'}]},{'attrib' => {'name' => 'IMPLICIT'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UsePointImplicit','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UsePartImplicit','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseFullImplicit','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CflImpl','if' => '$UsePartImplicit or $UseFullImplicit','default' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UsePointImplicit + $UsePartImplicit + $UseFullImplicit <= 1'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'PARTLOCAL'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UsePointImplicit','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UsePartImplicit','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseFullImplicit','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$UsePartImplicit or $UseFullImplicit','name' => 'CflImpl','default' => '100','type' => 'real'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		At most one of these logicals can be true!
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '$UsePointImplicit + $UsePartImplicit + $UseFullImplicit <= 1'}},{'type' => 't','content' => '
 
 #IMPLICIT
 F               UsePointImplicit   
@@ -760,11 +773,11 @@ F               UseFullImplicit
 ! Default is false for all logicals. Only one of them can be set to true!
 ! The CFL number is used in the implicit blocks of the fully or partially
 ! implicit schemes. Ignored if UseDtFixed is true.
-'}]}]},{'attrib' => {'name' => 'IMPLICIT PARAMETERS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'IMPLICIT'}}],'attrib' => {'name' => 'TIME INTEGRATION'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!! PARAMETERS FOR FULL AND PART IMPLICIT TIME INTEGRATION !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'alias' => 'STEPPINGCRITERIA','name' => 'IMPLICITCRITERIA'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeImplCrit'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Time step','value' => 'dt','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Radial distance','value' => 'r/R'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Test block','value' => 'test'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'rImplicit','if' => '$TypeImplCrit eq \'R\'','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'dt','name' => 'Time step','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'r/R','name' => 'Radial distance'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'test','name' => 'Test block'}}],'attrib' => {'name' => 'TypeImplCrit','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$TypeImplCrit eq \'R\'','name' => 'rImplicit','type' => 'real'}},{'type' => 't','content' => '
 
 #IMPLICITCRITERIA
 r		TypeImplCrit (dt or r or test)
@@ -775,17 +788,20 @@ r		TypeImplCrit (dt or r or test)
 ! Default value is ImplCritType=\'dt\'.
 !
 ! The options are
-!
+!\\begin{verbatim}
 ! if     (TypeImplCrit ==\'dt\'  ) then blocks with DtBLK .gt. DtFixed
 ! elseif (TypeImplCrit ==\'r\'   ) then blocks with rMinBLK .lt. rImplicit
 ! elseif (TypeImplCrit ==\'test\') then block iBlockTest on processor iProcTest
-!
-! are handled with local/implicit scheme. Here DtBlock is the time step
+!\\end{verbatim}
+! and are handled with local/implicit scheme. 
+! Here DtBlock is the time step
 ! allowed by the CFL condition for a given block, while rMinBLK is the
-! smallest radial distance for all the cells in the block.
-! The iBlockTest and iProcTest can be defined in the #TESTIJK command.
+! smallest radial distance for all the cells in the block.\\\\
+!
+! \\noindent
+! The iBlockTest and iProcTest can be defined in the #TESTIJK command.\\\\
 ! DtFixed must be defined in the #FIXEDTIMESTEP command.
-'}]},{'attrib' => {'name' => 'IMPLSTEP'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'ImplCoeff','default' => '1','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseBdf2','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseSourceImpl','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'alias' => 'STEPPINGCRITERIA','name' => 'IMPLICITCRITERIA'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ImplCoeff','default' => '1','type' => 'real','max' => '1'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseBdf2','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseSourceImpl','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 ! For steady state run the default values are shown. For second order
 ! time accurate run the default is UseBdf2=T, since
 ! BDF2 is a 3 level second order stable implicit scheme.
@@ -796,7 +812,7 @@ r		TypeImplCrit (dt or r or test)
 ! is overwritten by the BDF2 scheme.
 ! UseSourceImpl true means that the preconditioner should take point
 ! source terms into account. Default is false.
-'}]},{'attrib' => {'name' => 'IMPLSCHEME'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nOrderImpl'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '2'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeFluxImpl'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Roe','value' => 'Roe/roe/1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rusanov','value' => 'Rusanov/rusanov/2/TVDLF','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Linde','value' => 'Linde/linde/3/HLLEL'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Sokolov','value' => 'Sokolov/sokolov/4/AW'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'IMPLSTEP'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '1','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '2'}}],'attrib' => {'name' => 'nOrderImpl','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Roe/roe/1','name' => 'Roe'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Rusanov/rusanov/2/TVDLF','name' => 'Rusanov','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Linde/linde/3/HLLEL','name' => 'Linde'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Sokolov/sokolov/4/AW','name' => 'Sokolov'}}],'attrib' => {'name' => 'TypeFluxImpl','input' => 'select','type' => 'string'}},{'type' => 't','content' => '
 #IMPLSCHEME
 1               nOrderImpl
 Rusanov         TypeFluxImpl
@@ -804,29 +820,29 @@ Rusanov         TypeFluxImpl
 ! This command defines the scheme used in the implicit part (\'left hand side\').
 ! The default order is first order. The default scheme is the same as the
 ! scheme selected for the explicit part. 
-'}]},{'attrib' => {'name' => 'NEWTON'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseConservativeImplicit','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseNewton','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseNewton'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseNewMatrix','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxIterNewton','default' => '10','min' => '1'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'IMPLSCHEME'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseConservativeImplicit','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseNewton','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseNewMatrix','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'MaxIterNewton','default' => '10','type' => 'integer'}}],'attrib' => {'expr' => '$UseNewton'}},{'type' => 't','content' => '
 #NEWTON
 F		UseConservativeImplicit
 T               UseNewton
 F               UseNewMatrix  (only read if UseNewton is true)
 10              MaxIterNewton (only read if UseNewton is true)
 
-! Default is UseConservativeImplicit=F and UseNewton=F, ie. 
+! Default is UseConservativeImplicit=F and UseNewton=F, i.e. 
 ! no conservative fix is used and only one "Newton" iteration is done.
 ! UseNewMatrix decides whether the Jacobian should be recalculated
 ! for every Newton iteration. MaxIterNewton is the maximum number
 ! of Newton iterations before giving up.
-'}]},{'attrib' => {'name' => 'JACOBIAN'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeJacobian'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Preconditioned','value' => 'prec','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'No preconditioning','value' => 'free'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'JacobianEps','default' => '$doublePrecision ? 1.e-12 : 1.e-6','max' => '1.e-5','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'NEWTON'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'prec','name' => 'Preconditioned','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'free','name' => 'No preconditioning'}}],'attrib' => {'name' => 'TypeJacobian','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'JacobianEps','default' => '$doublePrecision ? 1.e-12 : 1.e-6','type' => 'real','max' => '1.e-5'}},{'type' => 't','content' => '
 #JACOBIAN
 prec            TypeJacobian (prec, free)
 1.E-12          JacobianEps
 
 ! The Jacobian matrix is always calculated with a matrix free approach,
-! however it can be preconditioned  (\'prec\'), or not (\'free\')
+! however it can be preconditioned  (\'prec\'), or not (\'free\').  The
 ! Default value is TypeJacobian=\'prec\'.
 ! JacobianEps contains the machine round off error for numerical derivatives.
 ! The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
-'}]},{'attrib' => {'name' => 'PRECONDITIONER'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypePrecondSide'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'left'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'symmetric','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'right'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypePrecond'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'MBILU','default' => 'T'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'GustafssonPar','default' => '0.5','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'JACOBIAN'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'left'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'symmetric','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'right'}}],'attrib' => {'name' => 'TypePrecondSide','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'MBILU','default' => 'T'}}],'attrib' => {'name' => 'TypePrecond','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'GustafssonPar','default' => '0.5','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
 MBILU           TypePrecond (MBILU)
@@ -836,7 +852,7 @@ MBILU           TypePrecond (MBILU)
 ! the normalization of the residual. The Gustafsson parameter determines
 ! how much the MBILU preconditioner is modified. The default 0.5 value
 ! means a relaxed modification.
-'}]},{'attrib' => {'name' => 'KRYLOV'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeKrylov'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'gmres','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'bicgstab'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeInitKrylov'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => '0','value' => 'nul','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'previous','value' => 'old'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'explicit'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'scaled explicit','value' => 'explicit'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'ErrorMaxKrylov','default' => '0.001','max' => '0.1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxMatvecKrylov','default' => '100','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'PRECONDITIONER'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'gmres','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'bicgstab'}}],'attrib' => {'name' => 'TypeKrylov','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'nul','name' => '0','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'old','name' => 'previous'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'explicit'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'explicit','name' => 'scaled explicit'}}],'attrib' => {'name' => 'TypeInitKrylov','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ErrorMaxKrylov','default' => '0.001','type' => 'real','max' => '0.1'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'MaxMatvecKrylov','default' => '100','type' => 'integer'}},{'type' => 't','content' => '
 #KRYLOV
 gmres           TypeKrylov  (gmres, bicgstab)
 nul             TypeInitKrylov (nul, old, explicit, scaled)
@@ -848,7 +864,7 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 ! (\'explicit\'), or the scaled explicit solution (\'scaled\'). The iterative
 ! scheme stops if the required accuracy is achieved or the maximum number
 ! of matrix-vector multiplications is exceeded.
-'}]},{'attrib' => {'name' => 'KRYLOVSIZE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nKrylovVector','default' => 'MaxMatvecKrylov','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'KRYLOV'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'nKrylovVector','default' => 'MaxMatvecKrylov','type' => 'integer'}},{'type' => 't','content' => '
 #KRYLOVSIZE
 10		nKrylovVector
 
@@ -860,14 +876,14 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 ! On the other hand the dynamically allocated memory is also proportional 
 ! to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
 ! which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
-'}]}]},{'attrib' => {'name' => 'STOPPING CRITERIA'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'KRYLOVSIZE'}}],'attrib' => {'name' => 'IMPLICIT PARAMETERS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 The commands in this group only work in stand alone mode.
 
-'},{'attrib' => {'required' => '$_IsStandAlone','name' => 'STOP','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'MaxIteration','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'tSimulationMax','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'MaxIteration','default' => '-1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'tSimulationMax','default' => '-1','type' => 'real'}},{'type' => 't','content' => '
 
 #STOP
 100			MaxIteration
@@ -887,7 +903,7 @@ Using a negative value for either variables means that the
 corresponding condition is  not checked. The default values
 are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
 must be used in every session.
-'}]},{'attrib' => {'name' => 'CHECKSTOPFILE','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoCheckStopFile','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'required' => '$_IsStandAlone','if' => '$_IsStandAlone','name' => 'STOP'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoCheckStopFile','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 
 #CHECKSTOPFILE
 T			DoCheckStopFile
@@ -904,7 +920,7 @@ Restart files and plot files are saved as required by the
 appropriate parameters.
 
 The default is DoCheckStopFile=.true.
-'}]},{'attrib' => {'name' => 'CPUTIMEMAX','if' => '$_IsStandAlone'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'CpuTimeMax','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'CHECKSTOPFILE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'CpuTimeMax','default' => '-1','type' => 'real'}},{'type' => 't','content' => '
 
 #CPUTIMEMAX
 3600                    CpuTimeMax [sec]
@@ -921,13 +937,13 @@ queue with a limited wall clock time.
 
 The default value is -1.0, which means that the CPU time is not checked.
 To do the check the CpuTimeMax variable has to be set to a positive value.
-'}]}]},{'attrib' => {'name' => 'OUTPUT PARAMETERS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsStandAlone','name' => 'CPUTIMEMAX'}}],'attrib' => {'name' => 'STOPPING CRITERIA'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'RESTARTOUTDIR'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameRestartOutDir','default' => 'GM/restartOUT'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '-d $NameRestartOutDir'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameRestartOutDir','default' => 'GM/restartOUT','length' => '100','type' => 'string'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		Restart output directory $NameRestartOutDir must exist
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '-d $NameRestartOutDir'}},{'type' => 't','content' => '
 
 #RESTARTOUTDIR
 GM/restart_n5000	NameRestartOutDir
@@ -938,7 +954,7 @@ GM/restart_n5000	NameRestartOutDir
 ! of the component.
 !
 ! Default value is "GM/restartOUT".
-'}]},{'attrib' => {'name' => 'SAVERESTART'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoSaveRestart','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$DoSaveRestart'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'DnSaveRestart','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtSaveRestart','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'RESTARTOUTDIR'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoSaveRestart','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnSaveRestart','default' => '-1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtSaveRestart','default' => '-1','type' => 'real'}}],'attrib' => {'expr' => '$DoSaveRestart'}},{'type' => 't','content' => '
 #SAVERESTART
 T			DoSaveRestart Rest of parameters read if true
 100			DnSaveRestart
@@ -947,24 +963,17 @@ T			DoSaveRestart Rest of parameters read if true
 ! Default is DoSaveRestart=.true. with DnSaveRestart=-1 and 
 ! DtSaveRestart=-1. This results in the restart file being 
 ! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! RESTARTOUTDIR/octree.rst
-!
+! block and named as RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst.
+! In addition the grid is described by RESTARTOUTDIR/octree.rst
 ! and an ASCII header file is produced with timestep and time info:
-!
 ! RESTARTOUTDIR/restart.H
 !
 ! The restart files are overwritten every time a new restart is done,
 ! but one can change the name of the RESTARTOUTDIR with the #RESTARTOUTDIR
 ! command from session to session. The default directory name is \'restartOUT\'.
-'}]},{'attrib' => {'name' => 'PLOTDIR'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NamePlotDir','default' => 'GM/IO2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '-d $NamePlotDir'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SAVERESTART'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NamePlotDir','default' => 'GM/IO2','length' => '100','type' => 'string'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		Plot directory $NamePlotDir must exist
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '-d $NamePlotDir'}},{'type' => 't','content' => '
 
 The NamePlotDir variable contains the name of the directory
 where plot files and logfiles are saved relative to the run directory.
@@ -972,7 +981,7 @@ The directory should be inside the subdirectory with the name
 of the component.
 
 Default value is "GM/IO2".
-'}]},{'attrib' => {'name' => 'SAVELOGFILE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoSaveLogfile','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$DoSaveLogfile'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'strings','name' => 'StringLog','max' => '4','min' => '1'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'TypeLogVar'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'MHD vars. dimensional','value' => 'MHD','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Flux vars. dimensional','value' => 'FLX'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Raw vars. dimensional','value' => 'RAW'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Set vars. dimensional','value' => 'VAR'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'MHD vars. scaled','value' => 'mhd','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Flux vars. scaled','value' => 'flx'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Raw vars. scaled','value' => 'raw'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Set vars. scaled','value' => 'var'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'multiple' => 'T','required' => 'F','input' => 'select','type' => 'string','name' => 'TypeTime'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'step'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'date'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'time'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'type' => 'integer','name' => 'DnSaveLogfile','default' => '1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtSaveLogfile','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameLogVars','if' => '$TypeLogVar =~ /var/i'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'length' => '100','type' => 'strings','name' => 'StringLogRadii','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','max' => '10','min' => '1'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'multiple' => 'T','type' => 'real','name' => 'LogRadii','min' => '$rBody'},'name' => 'part','type' => 'e','content' => []}]}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'PLOTDIR'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoSaveLogfile','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'var','name' => 'Set vars. scaled'}}],'attrib' => {'required' => 'T','name' => 'TypeLogVar','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'none','exclusive' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'step'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'date'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'time'}}],'attrib' => {'multiple' => 'T','required' => 'F','name' => 'TypeTime','input' => 'select','type' => 'string'}}],'attrib' => {'min' => '1','name' => 'StringLog','type' => 'strings','max' => '4'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnSaveLogfile','default' => '1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtSaveLogfile','default' => '-1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'if' => '$TypeLogVar =~ /var/i','name' => 'NameLogVars','length' => '100','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'part','type' => 'e','content' => [],'attrib' => {'min' => '$rBody','multiple' => 'T','name' => 'LogRadii','type' => 'real'}}],'attrib' => {'min' => '1','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','name' => 'StringLogRadii','length' => '100','type' => 'strings','max' => '10'}}],'attrib' => {'expr' => '$DoSaveLogfile'}},{'type' => 't','content' => '
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date           StringLog
@@ -983,31 +992,34 @@ rho p rhoflx            NameLogVars (read if StrigLog is \'var\' or \'VAR\')
 
 ! Default is DoSaveLogfile=.false.
 ! The logfile can contain averages or point values and other scalar
-! quantities.  It is written into an ASCII file named as
+! quantities.  It is written into an ASCII file named as\\\\
 !
-! NAMEPLOTDIR/log_TIMESTEP.log
+! NAMEPLOTDIR/log_TIMESTEP.log\\\\
 !
-! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).
+! \\noindent
+! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).\\\\
 ! The StringLog can contain two groups of information in arbitrary order.
 ! The first is LogVar which is a single 3 character string that indicates
-! the type of variables that are to be writen.  The second group indicates
+! the type of variables that are to be written.  The second group indicates
 ! the type of time/iteration output format to use.  This second group is
-! not required and defaults to something standard for each logvar case.
-! Any of the identifiers for the timetype can be includec in arbitrary order.
+! not required and defaults to something standard for each logvar case.\\\\
+! Any of the identifiers for the timetype can be included in arbitrary order.
 !
-! logvar  = \'mhd\', \'raw\', \'flx\' or \'var\' - unitless output
-! logvar  = \'MHD\', \'RAW\', \'FLX\' or \'VAR\' - dimensional output
+!\\begin{verbatim}
+! logvar   = \'mhd\', \'raw\', \'flx\' or \'var\' - unitless output
+! logvar   = \'MHD\', \'RAW\', \'FLX\' or \'VAR\' - dimensional output
 ! timetype = \'none\', \'step\', \'time\', \'date\'
+!\\end{verbatim}
 !
 ! The logvar string is not optional and must be found on the line.
 ! The timetype is optional - when not specified a logical choice is made
-!       by the code
+!  by the code.
 !
 ! The log_var string defines the variables to print in the log file
 ! It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capatilization of the log_var
+! dimensional or non-dimensional form by the capitalization of the log_var
 ! string.
-!
+!\\begin{verbatim}
 ! ALL CAPS  - dimensional
 ! all lower - dimensionless
 !
@@ -1019,36 +1031,36 @@ rho p rhoflx            NameLogVars (read if StrigLog is \'var\' or \'VAR\')
 !       - time: step date time
 ! \'var\' - vars: READ FROM PARAMETER FILE
 !       - time: step time
-!
+!\\end{verbatim}
 ! log_vars is read only when the log_string contains var or VAR.  The choices
 ! for variables are currently:
-!
-! Average value on grid: rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
+!\\begin{verbatim}
+! Average value on grid:   rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
 ! Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
 !                          Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
 !                          Epnt Ppnt Jxpnt Jypnt Jzpnt
 !                          theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
-! Ionosphere values:  cpcpn cpcps                  
+! Ionosphere values:       cpcpn cpcps                  
 !
-! Max or Min on grid:    Pmin Pmax
-! Flux values:           Aflx rhoflx Bflx B2flx pvecflx e2dflx
+! Max or Min on grid:  Pmin Pmax
+! Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
 ! Other variables:     dt
-!
+!\\end{verbatim}
 ! timetype values mean the following:
+!\\begin{verbatim}
 !  none  = there will be no indication of time in the logfile (not even an
 !                # of steps)
 !  step  = # of time steps (n_steps)
 !  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
 !  time  = time is given as a real number - elapsed time since the start of
 !          the run.  Units are determined by log_var and unitUSER_t
-!
-!  these can be listed in any combination in the log_string line
-!
+!\\end{verbatim}
+! these can be listed in any combination in the log_string line.\\\\
 ! R_log is read only when one of the variables used is a \'flx\' variable.  R_log
 ! is a list of radii at which to calculate the flux through a sphere.
-'}]},{'attrib' => {'name' => 'SATELLITE','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nSatellite','default' => '0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'to' => '$nSatellite','from' => '1'},'name' => 'for','type' => 'e','content' => [{'attrib' => {'type' => 'strings','name' => 'StringSatellite','max' => '5','min' => '1'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'TypeSatelliteVar'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'MHD vars. dimensional','value' => 'MHD','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'All vars. dimensional','value' => 'FUL'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Set vars. dimensional','value' => 'VAR'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'MHD vars. scaled','value' => 'mhd'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'All vars. scaled','value' => 'ful'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Set vars. scaled','value' => 'var'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'required' => 'F','input' => 'select','type' => 'string','name' => 'TypeTrajectory'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'file','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'equation','value' => 'eqn'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'multiple' => 'T','required' => 'F','input' => 'select','type' => 'string','name' => 'TypeTime'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'step'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'date'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'time'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'type' => 'integer','name' => 'DnOutput','default' => '1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtOutput','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameTrajectoryFile'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '-f $NameTrajectoryFile'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SAVELOGFILE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'nSatellite','default' => '0','type' => 'integer'}},{'name' => 'for','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'ful','name' => 'All vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'var','name' => 'Set vars. scaled'}}],'attrib' => {'required' => 'T','name' => 'TypeSatelliteVar','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'file','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'eqn','name' => 'equation'}}],'attrib' => {'required' => 'F','name' => 'TypeTrajectory','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'none','exclusive' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'step'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'date'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'time'}}],'attrib' => {'multiple' => 'T','required' => 'F','name' => 'TypeTime','input' => 'select','type' => 'string'}}],'attrib' => {'min' => '1','name' => 'StringSatellite','type' => 'strings','max' => '5'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnOutput','default' => '1','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtOutput','default' => '-1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameTrajectoryFile','length' => '100','type' => 'string'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 			Trajectory file $NameTrajectoryFile must exist
-		'}]},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameSatelliteVars','if' => '$TypeSatelliteVar =~ /\\bvar\\b/i'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+		'}],'attrib' => {'expr' => '-f $NameTrajectoryFile'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'if' => '$TypeSatelliteVar =~ /\\bvar\\b/i','name' => 'NameSatelliteVars','length' => '100','type' => 'string'}}],'attrib' => {'to' => '$nSatellite','from' => '1'}},{'type' => 't','content' => '
 #SATELLITE
 2                       nSatellite
 MHD file                StringSatellite (variables and traj type)
@@ -1069,33 +1081,33 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! For each satellite the StringSatellite parameter determines what
 ! is saved into the satellite file(s).
 ! The StringSatellite can contain the following 3 parts in arbitrary order
-!
+!\\begin{verbatim}
 ! satellitevar   = \'mhd\', \'ful\' or \'var\' (unitless output)
-!                 \'MHD\', \'FUL\' or \'VAR\' (dimensional output)
+!                  \'MHD\', \'FUL\' or \'VAR\' (dimensional output)
 ! trajectorytype = \'file\' or \'eqn\'
 ! timetype       = \'none\', \'step\', \'time\', \'date\'
-!
+!\\end{verbatim}
 ! The \'satellitevar\' part is required, 
 ! the \'trajectorytype\' part is optional (defaults to \'file\'), and
 ! the \'timetype\' part is also optional (default depends on satellitevar)
 !
 ! The \'satellitevar\' string defines the variables to print in the satellite
 ! output file.  It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capatilization of the
+! dimensional or non-dimensional form by the capitalization of the
 ! satellitevars string: ALL CAPS means dimensional, all lower means 
 ! dimensionless. 
 !
 ! If \'satellitevar\' is set to \'mhd\', the variables 
-! \'rho ux uy uz bx by bz p jx jy jz\' will be saved, while\'ful\' implies
+! \'rho ux uy uz bx by bz p jx jy jz\' will be saved, while \'ful\' implies
 ! \'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz\'.
+!
 ! If satellitevar is set to \'var\' then the list of variables is read 
 ! from the NameSatelliteVar parameter as a space separated list. 
 ! The choices for variables are currently:
-!
-! rho, rho, rhouy, rhouz, ux, uy, uz,
-! Bx, By, Bz, B1x, B1y, B1z,
-! E, P, Jx, Jy, Jz,
-! theta1, theta2, phi1, phi2, status.
+!\\begin{verbatim}
+! rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
+! E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
+!\\end{verbatim}
 !
 ! If \'trajectorytype\' is \'file\' (default) than the trajectory of the 
 ! satellite is read from the file given by the NameTrajectoryFile parameter.
@@ -1104,28 +1116,60 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! in satellites.f90.
 !
 ! The \'timetype\' values mean the following:
+!\\begin{verbatim}
 !  none  = there will be no indication of time in the logfile 
 !          (not even the number of steps),
 !  step  = number of time steps (n_steps),
 !  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
 !  time  = time is given as a real number - elapsed time since the start of
 !          the run.  Units are determined by satellitevar and unitUSER_t.
-!
+!\\end{verbatim}
 !  More than one \'timetype\' can be listed. They can be put together in any
-!  combination.
+!  combination.\\\\
 !
+! \\noindent
 ! The DnOutput and DtOutput parameters determine the frequency of extracting
-! values along the satellite trajectories. 
+! values along the satellite trajectories. \\\\
 !
+! \\noindent
 ! The extracted satellite information is saved into the files named
+!\\begin{verbatim}
+! PLOTDIR/sat_TRAJECTORYNAME_nTIMESTEP.sat
+!\\end{verbatim}
+! where TIMESTEP is the number of time steps (e.g. 000925), 
+! and TRAJECTORYNAME is the name of the trajectory file.\\\\
 !
-! PLOTDIR/satellite_NN_TRAJECTORYNAME.sat
-!
-! where NN is the number of the satellite (e.g. 01), and TRAJECTORYNAME
-! is the name of the trajectory file.
-!
+! \\noindent
 ! The default is nSatellite=0, i.e. no satellite data is saved.
-'}]},{'attrib' => {'name' => 'SAVEPLOT'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nPlotFile','default' => '0','max' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'name' => 'for','type' => 'e','content' => [{'attrib' => {'type' => 'strings','name' => 'StringPlot','max' => '3','min' => '3'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'plotform'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'TECPLOT','value' => 'tec'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'IDL','value' => 'idl'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'plotarea'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => '3D','value' => '3d/3d_'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'x=0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'y=0','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'z=0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'sph'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'los'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => 'lin'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'if' => '$plotform =~ /\\bidl\\b/','value' => 'cut'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'plotvar'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'MHD vars. dimensional','value' => 'MHD'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'All vars. dimensional','value' => 'FUL'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Raw vars. dimensional','value' => 'RAW'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Ray tracing vars. dim.','value' => 'RAY'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Flux vars. dimensional','value' => 'FLX'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Solar vars. dimensional','value' => 'SOL'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Position vars. dimensional','if' => '$plotarea eq \'lin\'','value' => 'POS'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Select dimensional vars.','value' => 'VAR'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'MHD vars. scaled','value' => 'mhd'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'All vars. scaled','value' => 'ful'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Raw vars. scaled','value' => 'raw'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Ray tracing vars. scaled','value' => 'ray'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Flux vars. scaled','value' => 'flx'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Solar vars. scaled','value' => 'sol'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Position vars. scaled','if' => '$plotarea eq \'lin\'','value' => 'pos'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Select scaled vars.','value' => 'var'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'type' => 'integer','name' => 'DnSavePlot','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtSavePlot','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xMinCut'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xMaxCut','min' => '$xMinCut'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMinCut'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMaxCut','min' => '$yMinCut'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMinCut'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMaxCut','min' => '$zMinCut'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'Radius','if' => '$plotarea =~ /\\bsph\\b/','default' => '10','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'LosVectorX','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'LosVectorY','default' => '0.0001'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'LosVectorZ','default' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xSizeImage','default' => '20','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ySizeImage','default' => '20','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xOffset','default' => '10'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yOffset','default' => '10'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'rOccult','default' => '2.5','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'MuLimbDarkening','default' => '0.5','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nPixX','default' => '200','min' => '2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nPixY','default' => '200','min' => '2'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NameLine'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Advected B','value' => 'A'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'B','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'U'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'J'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'logical','name' => 'IsSingleLine','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nLine','default' => '1','max' => '20','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'to' => '$nLine','from' => '1'},'name' => 'for','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xStartLine'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yStartLine'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zStartLine'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'IsParallel'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'attrib' => {'type' => 'real','name' => 'DxSavePlot','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)','default' => '-1.0','min' => '-1.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameVars'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'length' => '100','type' => 'string','name' => 'NamePars'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'type' => 't','content' => '
+!
+! Satellite input files contain the trajectory of the satellite.  They should
+! have to following format:
+!\\begin{verbatim}
+! #COOR
+! GSM
+!
+! #START
+!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  
+!  2004  6  24   0   1  58   0  2.8  -3.2 - 3.6  
+!\\end{verbatim}
+!
+! The #COOR command is optional.  It indicates which coordinate system the data
+! represents.  The default is GSM, but others are possible.
+
+! The file containing the upstream conditions should include data in the 
+! following order:
+!\\begin{verbatim}
+! yr mn dy hr min sec msec x y z
+!\\end{verbatim}
+! with the position variables in units of the body radii or the length scale
+! normalization.
+!
+! The maximum number of lines of data allowed in the input file is 50,000.  
+! However, this can be modified by changing the variable Max_Satellite_Npts 
+! in the file GM/BATSRUS/ModIO.f90.
+
+
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'SATELLITE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'nPlotFile','default' => '0','type' => 'integer','max' => '100'}},{'name' => 'for','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'tec','name' => 'TECPLOT'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'idl','name' => 'IDL'}}],'attrib' => {'required' => 'T','name' => 'plotform','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3d/3d_','name' => '3D'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'x=0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'y=0','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'z=0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'sph'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'los'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'lin'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'cut','if' => '$plotform =~ /\\bidl\\b/'}}],'attrib' => {'required' => 'T','name' => 'plotarea','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'RAY','name' => 'Ray tracing vars. dim.'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'SOL','name' => 'Solar vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'POS','if' => '$plotarea eq \'lin\'','name' => 'Position vars. dimensional'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'VAR','name' => 'Select dimensional vars.'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'ful','name' => 'All vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'ray','name' => 'Ray tracing vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'sol','name' => 'Solar vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'pos','if' => '$plotarea eq \'lin\'','name' => 'Position vars. scaled'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'var','name' => 'Select scaled vars.'}}],'attrib' => {'required' => 'T','name' => 'plotvar','input' => 'select','type' => 'string'}}],'attrib' => {'min' => '3','name' => 'StringPlot','type' => 'strings','max' => '3'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnSavePlot','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtSavePlot','type' => 'real'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xMinCut','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$xMinCut','name' => 'xMaxCut','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yMinCut','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$yMinCut','name' => 'yMaxCut','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zMinCut','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$zMinCut','name' => 'zMaxCut','type' => 'real'}}],'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$plotarea =~ /\\bsph\\b/','name' => 'Radius','default' => '10','type' => 'real'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'LosVectorX','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'LosVectorY','default' => '0.0001','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'LosVectorZ','default' => '1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'xSizeImage','default' => '20','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ySizeImage','default' => '20','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xOffset','default' => '10','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yOffset','default' => '10','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'rOccult','default' => '2.5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'MuLimbDarkening','default' => '0.5','type' => 'real','max' => '1'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '2','name' => 'nPixX','default' => '200','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '2','name' => 'nPixY','default' => '200','type' => 'integer'}}],'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'A','name' => 'Advected B'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'B','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'U'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'J'}}],'attrib' => {'name' => 'NameLine','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'IsSingleLine','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'nLine','default' => '1','type' => 'integer','max' => '20'}},{'name' => 'for','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xStartLine','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yStartLine','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zStartLine','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'IsParallel','type' => 'logical'}}],'attrib' => {'to' => '$nLine','from' => '1'}}],'attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1.0','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)','name' => 'DxSavePlot','default' => '-1.0','type' => 'real'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameVars','length' => '100','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NamePars','length' => '100','type' => 'string'}}],'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'}}],'attrib' => {'to' => '$nPlotFile','from' => '1'}},{'type' => 't','content' => '
 #SAVEPLOT
 6			nPlotfile
 3d MHD tec		StringPlot ! 3d MHD data
@@ -1180,33 +1224,36 @@ F			IsParallel
 -3.5			zStartLine
 T			IsParallel
 
-! Default is nPlotFile=0
-! StringPlot must contain the following 3 parts in arbitrary order
+! Default is nPlotFile=0. \\\\
 !
+! \\noindent
+! StringPlot must contain the following 3 parts in arbitrary order
+!\\begin{verbatim}
 ! plotarea plotvar plotform
 !
 ! plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'sph\', \'los\', \'lin\'
 ! plotvar  = \'mhd\', \'ful\',\'raw\', \'ray\', \'flx\', \'sol\', \'var\' - unitless output
 ! plotvar  = \'MHD\', \'FUL\',\'RAW\', \'RAY\', \'FLX\', \'SOL\', \'VAR\' - dimensional
 ! plotform = \'tec\', \'idl\'
+!\\end{verbatim}
+! NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\'.\\\\
 !
-! NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\'.
-!
+!\\noindent
 ! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
-!
+!\\begin{verbatim}
 ! x=0	- full x=0 plane: xmin=-0.001, xmax=0.001, average for symmetry plane
 ! y=0	- full y=0 plane: ymin=-0.001, ymax=0.001, average for symmetry plane
 ! z=0	- full z=0 plane: zmin=-0.001, zmax=0.001, average for symmetry plane
 ! 3d	- full 3D volume
-! cut	- READ PLOTRANGE FROM PARAM.in, only works for plotform=\'idl\'
+! cut	- READ PLOTRANGE FROM PARAM.in, slightly different behavior for idl / Tec
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
 ! los   - line of sight integrated plot
 ! lin   - one dimensional plot along a field or stream line
-!
+!\\end{verbatim}
 ! The plotvar string defines the plot variables and the equation parameters.
 ! It also controls whether or not the variables will be plotted in dimensional
 ! values or as non-dimensional values:
-!
+!\\begin{verbatim}
 ! ALL CAPS  - dimensional
 ! all lower - dimensionless
 !
@@ -1224,74 +1271,105 @@ T			IsParallel
 !         pars: READ FROM PARAMETER FILE
 ! \'sol\' - vars: wl pb
 !         pars: mu
-!
+!\\end{verbatim}
 ! The plot_string is always followed by the plotting frequency
-! DnSavePlot and for time accurate runs by DtSavePlot.
+! DnSavePlot and for time accurate runs by DtSavePlot.\\\\
 !
+!\\noindent
 ! Depending on StringPlot, further information is read from the parameter file
 ! in this order:
-!
+!\\begin{verbatim}
 ! PlotRange		if plotarea is \'cut\'
 ! DxSavePlot		if plotform is \'idl\' and plotarea is not sph, ion, los
 ! Radius		if plotarea is \'sph\'
 ! NameVars		if plotform is \'var\'
 ! NamePars		if plotform is \'var\'
-!
-! The PlotRange is described by 6 coordinates. If the width in one or two 
+!\\end{verbatim}
+! The PlotRange is described by 6 coordinates. For IDL plots, If the width in 
+! one or two 
 ! dimensions is less than the smallest cell size within the plotarea, 
 ! then the plot file will be 2 or 1 dimensional. If the range is thin but
 ! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
-! in the postprocessing.
+! in the postprocessing.\\\\
 !
+! For Tecplot (tec) file, plot range is read but only 1 dimension is used.  
+! Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
+! implemented.  For x=constant, for example, the y and z ranges 
+! do not matter as long at they are "wider" than the x range.  The slice will be 
+! located at the average of the two x ranges.  So, for example to save a plot in
+! a x=-5 constant plane 
+! cut in tec.  The following would work for the plot range:
+!\\begin{verbatim}
+! -5.01			xMinCut
+! -4.99			xMaxCut
+! -10.			yMinCut
+!  10.			yMaxCut
+! -10.			zMinCut
+!  10.			zMaxCut
+!\\end{verbatim}
+!
+! \\noindent
 ! Possible values for DxSavePlot (for IDL files):
-!
+!\\begin{verbatim}
 !  0.5	- fixed resolution (any positive value)
 !  0.	- fixed resolution based on the smallest cell in the plotting area
 ! -1.	- unstructured grid will be produced by PostIDL.exe
-!
+!\\end{verbatim}
 ! Radius is the radius of the spherical cut for plotarea=\'sph\'
 !
-! LosVectorX,Y,Z define the direction of the line of sight integration
-! xSizeImage, ySizeImage defines the size of the LOS image
-! xOffset, yOffset defines the offset relative to the origin (Sun)
-! rOccult defines the minimum distance of the line from the origin (Sun)
-! MuLimbDarkening is the limb darkening parameter for the \'wl\' (white light)
+! With #SAVEPLOT it is possible to create plots which are the integral along
+! the line of site of some quantity.  The variables which control this are the 
+! following:
+!\\begin{verbatim}
+!    LosVectorX,Y,Z define the direction of the line of sight integration
+!    xSizeImage, ySizeImage defines the size of the LOS image
+!    xOffset, yOffset defines the offset relative to the origin (Sun)
+!    rOccult defines the minimum distance of the line from the origin (Sun)
+!    MuLimbDarkening is the limb darkening parameter for the \'wl\' (white light)
 !                 and \'pb\' (polarization brightness) plot variables.
+!\\end{verbatim}
 !
+!\\noindent
 ! The possible values for NameVars with plotarea \'los\' 
-!       are listed in subroutine set_plotvar_los in write_plot_los.f90.
-! The possible values for NameVars for other plot areas
-!       are listed in subroutine set_plotvar in write_plot_common.f90.
+!       are listed in subroutine set_plotvar_los in write_plot_los.f90. \\\\
 !
+! \\noindent
+! The possible values for NameVars for other plot areas
+!       are listed in subroutine set_plotvar in write_plot_common.f90.\\\\
+!
+! \\noindent
 ! The possible values for NamePars 
-!       are listed in subroutine set_eqpar in write_plot_common.f90
+!       are listed in subroutine set_eqpar in write_plot_common.f90\\\\
 !
 ! A plot file is produced by each processor.  This file is ASCII in \'tec\'
 ! format and can be either binary or ASCII in \'idl\' format as chosen under
 ! the #SAVEBINARY flag.  The name of the files are
-!
-! IO2/plotarea_plotvar_plotnumber_timestep_PEnumber.extenstion 
-!
+!\\begin{verbatim}
+! IO2/plotarea_plotvar_plotnumber_timestep_PEnumber.extenstion
+!\\end{verbatim}
 ! where extension is \'tec\' for the TEC and \'idl\' for the IDL file formats.
 ! The plotnumber goes from 1 to nplot in the order of the files in PARAM.in.
 ! After all processors wrote their plot files, processor 0 writes a small 
 ! ASCII header file named as
-!
+!\\begin{verbatim}
 ! IO2/plotarea_plotvar_plotnumber_timestep.headextension
-!
+!\\end{verbatim}
 ! where headextension is:
+!\\begin{verbatim}
 !           \'T\' for TEC file format
 !           \'S\' for TEC and plot_area \'sph\' 
 !           \'h\' for IDL file format       
+!\\end{verbatim}
 !
+!\\noindent
 ! The line of sight integration produces TecPlot and IDL files directly:
-!
+!\\begin{verbatim}
 ! IO2/los_plotvar_plotnumber_timestep.extension
-!
+\\end{verbatim}
 ! where extension is \'dat\' for TecPlot and \'out\' for IDL file formats.
 ! The IDL output from line of sight integration is always in ASCII format.
 
-'}]},{'attrib' => {'name' => 'SAVEBINARY'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoSaveBinary','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SAVEPLOT'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoSaveBinary','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 #SAVEBINARY
 T			DoSaveBinary   used only for \'idl\' plot file
 
@@ -1302,40 +1380,41 @@ T			DoSaveBinary   used only for \'idl\' plot file
 ! (lower) precision. For example PostIDL.exe may be compiled with 
 ! single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
 ! compiled in double precision, to make results more accurate.
-'}]},{'attrib' => {'name' => 'SAVEPLOTSAMR'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoSavePlotsAmr','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SAVEBINARY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoSavePlotsAmr','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #SAVEPLOTSAMR
 F			DoSavePlotsAmr
 
 ! Save plots before each AMR. Default is DoSavePlotsAMR=.false.
-'}]}]},{'attrib' => {'name' => 'AMR PARAMETERS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SAVEPLOTSAMR'}}],'attrib' => {'name' => 'OUTPUT PARAMETERS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'AMRINIT','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'InitialRefineType'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'default','default' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'all'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'none'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '3Dbodyfocus'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'spherefocus'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magnetosphere'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'points'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'coupledhelio'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'helio_init'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'helio_z=4'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'all_then_focus'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cme'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'points'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'mag_new'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magnetosphere'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magneto_fine'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magneto12'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magnetosaturn'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'magnetojupiter'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'paleo'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'comet'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'integer','name' => 'InitialRefineLevel','default' => '4','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'default','default' => '1'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'all'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'none'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '3Dbodyfocus'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'spherefocus'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magnetosphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'points'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'coupledhelio'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'helio_init'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'helio_z=4'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'all_then_focus'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cme'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'points'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'mag_new'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magnetosphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magneto_fine'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magneto12'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magnetosaturn'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'magnetojupiter'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'paleo'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'comet'}}],'attrib' => {'name' => 'InitialRefineType','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'InitialRefineLevel','default' => '4','type' => 'integer'}},{'type' => 't','content' => '
 #AMRINIT
 default			TypeRefineInit
 4			nRefineLevelInit
 
-! These are the default values for the initial refinement.
-
-! Possible values for InitialRefineType:
+! These are the default values for the initial refinement.\\\\
+! Possible values for InitialRefineType:\\\\
 ! Default depends on problem_type. 
+!\\begin{verbatim}
 ! \'none\'		- Refine no blocks
 ! \'all\' 		- Refine all blocks
 ! \'3Dbodyfocus\'		- Refinement focusing on body
-! \'spherefocus\'		- Refinement focusing on the orgin, does not require 
+! \'spherefocus\'		- Refinement focusing on the origin, does not require 
 !                           a body
 ! \'points\'      	- Refine around given points
 ! \'magnetosphere\'	- Refine for generic magnetosphere
 ! *			- any other value will use default value by ProblemType
-'}]},{'attrib' => {'name' => 'AMRINITPHYSICS','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nRefineLevelIC','default' => '0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+!\\end{verbatim}
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'AMRINIT'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'nRefineLevelIC','default' => '0','type' => 'integer'}},{'type' => 't','content' => '
 #AMRINITPHYSICS
 3			nRefineLevelIC
 
 ! Defines number of physics (initial condition) based AMR-s AFTER the 
 ! geometry based initial AMR-s defined by #AMRINIT were done.
 ! Only useful if the initial condition has a non-trivial analytic form.
-'}]},{'attrib' => {'multiple' => 'T','alias' => 'GRIDLEVEL','name' => 'GRIDRESOLUTION'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'name' => 'RotateArea','value' => '0'},'name' => 'set','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Resolution','if' => '$_command =~ /RESOLUTION/','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'nLevel','if' => '$_command =~ /LEVEL/','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'strings','name' => 'StringArea','max' => '2','min' => '1'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'required' => 'T','input' => 'select','type' => 'string','name' => 'NameArea'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'initial','value' => 'init/initial','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'all'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'box'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'brick'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'brick0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'sphere'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'sphere0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'shell'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'shell0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylinderx'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylinderx0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylindery'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylindery0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylinderz'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'cylinderz0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringx'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringx0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringy'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringy0'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringz'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'ringz0'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'required' => 'F','input' => 'select','type' => 'string','name' => 'RotateArea'},'name' => 'part','type' => 'e','content' => [{'attrib' => {'name' => 'rotated'},'name' => 'option','type' => 'e','content' => []}]}]},{'attrib' => {'expr' => '$NameArea !~ /box|all|init|0/'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xCenter','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yCenter','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zCenter','default' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /box/'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xMinBox'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMinBox'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMinBox'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xMaxBox'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yMaxBox'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zMaxBox'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /brick/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xSizeBrick','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ySizeBrick','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zSizeBrick','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /sphere/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Radius','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /shell/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Radius1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Radius2','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /cylinder/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'LengthCylinder','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Radius','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$NameArea =~ /ring/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'HeightRing','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Radius1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Radius2','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$RotateArea =~ /rotated/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xRotate','default' => '0','max' => '360','min' => '-360'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yRotate','default' => '0','max' => '360','min' => '-360'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zRotate','default' => '0','max' => '360','min' => '-360'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'AMRINITPHYSICS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'set','type' => 'e','content' => [],'attrib' => {'value' => '0','name' => 'RotateArea'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$_command =~ /RESOLUTION/','name' => 'Resolution','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$_command =~ /LEVEL/','name' => 'nLevel','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'init/initial','name' => 'initial','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'all'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'box'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'brick'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'brick0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'sphere'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'sphere0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'shell'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'shell0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylinderx'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylinderx0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylindery'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylindery0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylinderz'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'cylinderz0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringx'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringx0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringy'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringy0'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringz'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'ringz0'}}],'attrib' => {'required' => 'T','name' => 'NameArea','input' => 'select','type' => 'string'}},{'name' => 'part','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'rotated'}}],'attrib' => {'required' => 'F','name' => 'RotateArea','input' => 'select','type' => 'string'}}],'attrib' => {'min' => '1','name' => 'StringArea','type' => 'strings','max' => '2'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xCenter','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yCenter','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zCenter','default' => '0','type' => 'real'}}],'attrib' => {'expr' => '$NameArea !~ /box|all|init|0/'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xMinBox','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yMinBox','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zMinBox','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xMaxBox','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yMaxBox','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zMaxBox','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /box/'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'xSizeBrick','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ySizeBrick','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'zSizeBrick','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /brick/i'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /sphere/i'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius2','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /shell/i'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'LengthCylinder','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /cylinder/i'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'HeightRing','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'Radius2','type' => 'real'}}],'attrib' => {'expr' => '$NameArea =~ /ring/i'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-360','name' => 'xRotate','default' => '0','type' => 'real','max' => '360'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-360','name' => 'yRotate','default' => '0','type' => 'real','max' => '360'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-360','name' => 'zRotate','default' => '0','type' => 'real','max' => '360'}}],'attrib' => {'expr' => '$RotateArea =~ /rotated/i'}},{'type' => 't','content' => '
 
 #GRIDRESOLUTION
 2.0			Resolution
@@ -1434,7 +1513,7 @@ The ring area is given with the center, the height and the two radii.
 If the area name contains a zero, the center is taken to be at the origin.
 If the word rotated is added, the area can be rotated by 3 angles around
 the X, Y and Z axes in this order.
-'}]},{'attrib' => {'name' => 'AMRLEVELS'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'MinBlockLevel','default' => '0','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxBlockLevel','default' => '99','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoFixBodyLevel','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'multiple' => 'T','alias' => 'GRIDLEVEL','name' => 'GRIDRESOLUTION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'MinBlockLevel','default' => '0','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'MaxBlockLevel','default' => '99','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoFixBodyLevel','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #AMRLEVELS
 0			MinBlockLevel
 99			MaxBlockLevel
@@ -1442,26 +1521,26 @@ F			DoFixBodyLevel
 
 ! Set the minimum/maximum levels that can be affected by AMR.  The usage is as
 ! follows:
-!
+!\\begin{verbatim}
 ! MinBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
 !                       further.
 ! MinBlockLevel .lt.0 The current grid is ``frozen\'\' for coarsening such that
 !                       blocks are not allowed to be coarsened to a size
 !                       larger than their current one.
 ! MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
-!                       MaxBlockLevel is uneffected by AMR (cannot be coarsened
+!                       MaxBlockLevel is unaffected by AMR (cannot be coarsened
 !                       or refined).
 ! MaxBlockLevel .lt.0 The current grid is ``frozen\'\' for refinement such that
 !                       blocks are not allowed to be refined to a size
 !                       smaller than their current one.
 ! DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
-!
+!\\end{verbatim}
 ! This command has no effect when DoAutoRefine is .false. in the #AMR command.
 !
 ! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
 ! both.  If both are set, the final one in the session will set the values
 ! for AMR.
-'}]},{'attrib' => {'name' => 'AMRRESOLUTION'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'DxCellMin','default' => '0','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DxCellMax','default' => '99999','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoFixBodyLevel','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'AMRLEVELS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DxCellMin','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DxCellMax','default' => '99999','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoFixBodyLevel','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #AMRRESOLUTION
 0.			DxCellMin
 99999.			DxCellMax
@@ -1478,7 +1557,7 @@ F			DoFixBodyLevel
 ! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
 ! both.  If both are set, the final one in the session will set the values
 ! for AMR.
-'}]},{'attrib' => {'name' => 'AMR'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'DnRefine','default' => '-1','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$DnRefine>0'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoAutoRefine','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$DoAutoRefine'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'PercentCoarsen','default' => '20','max' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'PercentRefine','default' => '20','max' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxTotalBlocks','default' => '99999','min' => '1'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'AMRRESOLUTION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DnRefine','default' => '-1','type' => 'integer'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoAutoRefine','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'PercentCoarsen','default' => '20','type' => 'real','max' => '100'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'PercentRefine','default' => '20','type' => 'real','max' => '100'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'MaxTotalBlocks','default' => '99999','type' => 'integer'}}],'attrib' => {'expr' => '$DoAutoRefine'}}],'attrib' => {'expr' => '$DnRefine>0'}},{'type' => 't','content' => '
 #AMR
 2001			DnRefine
 T			DoAutoRefine   ! read if DnRefine is positive
@@ -1497,7 +1576,7 @@ T			DoAutoRefine   ! read if DnRefine is positive
 ! When DoAutoRefine is true, the grid is refined or coarsened 
 ! based on the criteria given in the #AMRCRITERIA command.
 ! The number of blocks to be refined or coarsened are determined by
-! the PercentRefine and PercentCoarsen parameters. These per centages
+! the PercentRefine and PercentCoarsen parameters. These percentages
 ! are approximate only, because the constraints of the block adaptive
 ! grid may result in more or fewer blocks than prescribed.
 ! The total number of blocks will not exceed the smaller of the 
@@ -1505,8 +1584,8 @@ T			DoAutoRefine   ! read if DnRefine is positive
 ! the PE-s (which is determined by the number of PE-s and 
 ! the MaxBlocks parameter in ModSize.f90).
 ! 
-! Default for DnRefine is -1, ie. no run time refinement.
-'}]},{'attrib' => {'name' => 'AMRCRITERIA'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nRefineCrit'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '3','default' => '1'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'to' => '$nRefineCrit','from' => '1'},'name' => 'for','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeRefine'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'grad T','value' => 'gradt/gradT'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'grad P','value' => 'gradp/gradP'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'grad log(Rho)','value' => 'gradlogrho'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'grad log(p)','value' => 'gradlogP/gradlogp'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'grad E','value' => 'gradE'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'curl U','value' => 'curlV/curlv/curlU/curlu'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'curl B','value' => 'curlB/curlb'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'div U','value' => 'divU/divu/divV/divv'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'divB','value' => 'divb/divB'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'vAlfven','value' => 'Valfven/vAlfven/valfven'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'heliospheric beta','value' => 'heliobeta'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'flux'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'heliospheric current sheet','value' => 'heliocurrentsheet'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'rCurrents','value' => 'rcurrents/Rcurrents'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Transient','value' => 'transient/Transient'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$TypeRefine =~ /transient/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeTransient'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'P_dot','value' => 'p_dot/P_dot'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'T_dot','value' => 't_dot/T_dot'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rho_dot','value' => 'rho_dot/Rho_dot','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'RhoU_dot','value' => 'RhoU_dot/rhou_dot'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rho_2nd_1','value' => 'Rho_2nd_1/rho_2nd_1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rho_2nd_2','value' => 'Rho_2nd_2/rho_2nd_2'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'logical','name' => 'UseSunEarth','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseSunEarth'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'xEarth'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yEarth'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zEarth'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'InvD2Ray'},'name' => 'parameter','type' => 'e','content' => []}]}]}]},{'type' => 't','content' => '
+! Default for DnRefine is -1, i.e. no run time refinement.
+'}],'attrib' => {'name' => 'AMR'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '1'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '2'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '3','default' => '1'}}],'attrib' => {'name' => 'nRefineCrit','input' => 'select','type' => 'integer'}},{'name' => 'for','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradt/gradT','name' => 'grad T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradp/gradP','name' => 'grad P'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradlogrho','name' => 'grad log(Rho)'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradlogP/gradlogp','name' => 'grad log(p)'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradE','name' => 'grad E'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'curlV/curlv/curlU/curlu','name' => 'curl U'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'curlB/curlb','name' => 'curl B'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'divU/divu/divV/divv','name' => 'div U'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'divb/divB','name' => 'divB'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Valfven/vAlfven/valfven','name' => 'vAlfven'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'heliobeta','name' => 'heliospheric beta'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'flux'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'heliocurrentsheet','name' => 'heliospheric current sheet'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'rcurrents/Rcurrents','name' => 'rCurrents'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'transient/Transient','name' => 'Transient'}}],'attrib' => {'name' => 'TypeRefine','input' => 'select','type' => 'string'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'p_dot/P_dot','name' => 'P_dot'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 't_dot/T_dot','name' => 'T_dot'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'rho_dot/Rho_dot','name' => 'Rho_dot','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'RhoU_dot/rhou_dot','name' => 'RhoU_dot'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Rho_2nd_1/rho_2nd_1','name' => 'Rho_2nd_1'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Rho_2nd_2/rho_2nd_2','name' => 'Rho_2nd_2'}}],'attrib' => {'name' => 'TypeTransient','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseSunEarth','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'xEarth','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yEarth','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'zEarth','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'InvD2Ray','type' => 'real'}}],'attrib' => {'expr' => '$UseSunEarth'}}],'attrib' => {'expr' => '$TypeRefine =~ /transient/i'}}],'attrib' => {'to' => '$nRefineCrit','from' => '1'}},{'type' => 't','content' => '
 #AMRCRITERIA
 3			nRefineCrit (number of refinement criteria: 1,2 or 3)
 gradlogP		TypeRefine
@@ -1519,9 +1598,9 @@ T			UseSunEarth   ! Only if \'Transient\'
 0.00E+00		zEarth        ! Only if UseSunEarth
 5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
-! The default values depend on problem_type. 
+! The default values depend on problem_type.\\\\ 
 ! At most three criteria can be given. Possible criteria:
-!
+!\\begin{verbatim}
 ! \'gradT\'		- gradient of temperature
 ! \'gradP\'		- gradient of pressure
 ! \'gradlogrho\'		- gradient of log(rho)
@@ -1536,11 +1615,12 @@ T			UseSunEarth   ! Only if \'Transient\'
 ! \'flux\'		- radial mass flux
 ! \'heliocurrentsheet\'	- refinement in the currentsheet of the heliosphere
 ! \'Rcurrents\'		- refinement near Rcurrents value
+!\\end{verbatim}
+! All the names can also be spelled with all small case letters.\\\\
 !
-! All the names can also be spelled with all small case letters.
-!
-! The possible choices for TypeTransient
-!
+!\\noindent
+! The possible choices for TypeTransient:
+!\\begin{verbatim}
 ! \'P_dot\' (same as \'p_dot\')
 ! \'T_dot\' (same as \'t_dot\')
 ! \'Rho_dot\' (same as \'rho_dot\')
@@ -1548,48 +1628,57 @@ T			UseSunEarth   ! Only if \'Transient\'
 ! \'B_dot\' (same as \'b_dot\')
 ! \'Rho_2nd_1\' (same as \'rho_2nd_1\')
 ! \'Rho_2nd_2\' (same as \'rho_2nd_2\')
-! 
+!\\end{verbatim}
+!
 ! Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
 ! a factor that defines how close to the ray Sun-Earth to refine the grid.
 ! Note that the AMR occurs in a cylinder around the ray.
-! Example for InvD2Ray = 
+! Example for InvD2Ray =
+\\begin{verbatim}
 !   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
 !   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
 !   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
-'}]}]},{'attrib' => {'name' => 'SCHEME PARAMETERS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+\\end{verbatim}
+'}],'attrib' => {'name' => 'AMRCRITERIA'}}],'attrib' => {'name' => 'AMR PARAMETERS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  SCHEME PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'SCHEME'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nOrder'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '2'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeFlux'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Roe','value' => 'Roe/roe/1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Rusanov','value' => 'Rusanov/rusanov/2/TVDLF','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Linde','value' => 'Linde/linde/3/HLLEL'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Sokolov','value' => 'Sokolov/sokolov/4/AW'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'expr' => '$nOrder == 2'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeLimiter'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'minmod','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'beta'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'LimiterBeta','if' => '$TypeLimiter eq \'beta\'','default' => '1.2','max' => '2','min' => '1'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '1','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '2'}}],'attrib' => {'name' => 'nOrder','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Roe/roe/1','name' => 'Roe'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Rusanov/rusanov/2/TVDLF','name' => 'Rusanov','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Linde/linde/3/HLLEL','name' => 'Linde'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Sokolov/sokolov/4/AW','name' => 'Sokolov'}}],'attrib' => {'name' => 'TypeFlux','input' => 'select','type' => 'string'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'minmod','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'beta'}}],'attrib' => {'name' => 'TypeLimiter','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','if' => '$TypeLimiter eq \'beta\'','name' => 'LimiterBeta','default' => '1.2','type' => 'real','max' => '2'}}],'attrib' => {'expr' => '$nOrder == 2'}},{'type' => 't','content' => '
 #SCHEME
 2			nOrder (1 or 2)
 Rusanov			TypeFlux
 minmod			TypeLimiter ! Only for nOrder=2
 1.2			LimiterBeta ! Only for LimiterType=\'beta\'
 
-! Default values are shown above.
+! Default values are shown above.\\\\
 !
+!\\noindent
 ! Possible values for TypeFlux:
+!\\begin{verbatim}
 ! \'Rusanov\'     - Rusanov or Lax-Friedrichs flux     
 ! \'Linde        - Linde\'s HLLEL flux                   
 ! \'Sokolov\'     - Sokolov\'s Local Artificial Wind flux 
 ! \'Roe\'         - Roe\'s approximate Riemann flux       
-!
+!\\end{verbatim}
 ! Possible values for TypeLimiter:
+!\\begin{verbatim}
 ! \'minmod\'	- minmod limiter is the most robust 1D limiter
 ! \'beta\'        - Beta limiter
-!
+!\\end{verbatim}
 ! Possible values for LimiterBeta are between 1.0 and 2.0 : 
+!\\begin{verbatim}
 !  LimiterBeta = 1.0 is the same as the minmod limiter
 !  LimiterBeta = 2.0 is the same as the superbee limiter
 !  LimiterBeta = 1.2 is the recommended value
-'}]},{'attrib' => {'name' => 'NONCONSERVATIVE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseNonConservative','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+!\\end{verbatim}
+'}],'attrib' => {'name' => 'SCHEME'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseNonConservative','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 #NONCONSERVATIVE
 T		UseNonConservative
 
 ! For Earth the default is using non-conservative equations 
 ! (close to the body).
-'}]},{'attrib' => {'name' => 'CONSERVATIVECRITERIA'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'integer','name' => 'nConservCrit','default' => '1','max' => '3','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'to' => '$nConservCrit','from' => '1'},'name' => 'for','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeConservCrit'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'radius','value' => 'r/R/radius/Radius','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'parabola','value' => 'parabola/paraboloid'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'p','value' => 'p/P'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'grad P','value' => 'gradp/GradP'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'rConserv','if' => '$TypeConservCrit =~ /^r|radius$/i','default' => '2*$rBody','min' => '$rBody'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xParabolaConserv','if' => '$TypeConservCrit =~ /^parabol/i','default' => '6','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yParabolaConserv','if' => '$TypeConservCrit =~ /^parabol/i','default' => '36','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pCoeffConserv','if' => '$TypeConservCrit =~ /^p$/i','default' => '0.05','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'GradPCoeffConserv','if' => '$TypeConservCrit =~ /gradp/i','default' => '0.1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'NONCONSERVATIVE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'nConservCrit','default' => '1','type' => 'integer','max' => '3'}},{'name' => 'for','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'r/R/radius/Radius','name' => 'radius','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'parabola/paraboloid','name' => 'parabola'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'p/P','name' => 'p'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'gradp/GradP','name' => 'grad P'}}],'attrib' => {'name' => 'TypeConservCrit','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$rBody','if' => '$TypeConservCrit =~ /^r|radius$/i','name' => 'rConserv','default' => '6','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$TypeConservCrit =~ /^parabol/i','name' => 'xParabolaConserv','default' => '6','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$TypeConservCrit =~ /^parabol/i','name' => 'yParabolaConserv','default' => '36','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$TypeConservCrit =~ /^p$/i','name' => 'pCoeffConserv','default' => '0.05','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$TypeConservCrit =~ /gradp/i','name' => 'GradPCoeffConserv','default' => '0.1','type' => 'real'}}],'attrib' => {'to' => '$nConservCrit','from' => '1'}},{'type' => 't','content' => '
+
 #CONSERVATIVECRITERIA
 3		nConservCrit
 r		TypeConservCrit
@@ -1605,25 +1694,26 @@ GradP		TypeConservCrit
 ! Select the parts of the grid where the conservative vs. non-conservative
 ! schemes are applied. The number of criteria is arbitrary, although 
 ! there is no point applying the same criterion more than once.
+!
 ! If no criteria is used, the whole domain will use conservative or
 ! non-conservative equations depending on UseNonConservative set in
 ! command #NONCONSERVATIVE.
 !
 ! The physics based conservative criteria (\'p\' and \'GradP\')
 ! select cells which use the non-conservative scheme if ALL of them are true:
-!
+!\\begin{verbatim}
 ! \'p\'      - the pressure is smaller than fraction pCoeffConserv of the energy
 ! \'GradP\'  - the relative gradient of pressure is less than GradPCoeffConserv
-!
+!\\end{verbatim}
 ! The geometry based criteria are applied after the physics based criteria 
 ! (if any) and they select the non-conservative scheme if ANY of them is true:
-!
+!\\begin{verbatim}
 ! \'r\'        - radial distance of the cell is less than rConserv
 ! \'parabola\' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
-!
+!\\end{verbatim}
 ! Default values are nConservCrit = 1 with TypeConservCrit = \'r\'
 ! and rConserv=2*rBody, where rBody has a problem dependent default.
-'}]},{'attrib' => {'name' => 'UPDATECHECK'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseUpdateCheck','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseUpdateCheck'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'RhoMinPercent','default' => '40','max' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RhoMaxPercent','default' => '400','min' => '100'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pMinPercent','default' => '40','max' => '100','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pMaxPercent','default' => '400','min' => '100'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'CONSERVATIVECRITERIA'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUpdateCheck','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RhoMinPercent','default' => '40','type' => 'real','max' => '100'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '100','name' => 'RhoMaxPercent','default' => '400','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'pMinPercent','default' => '40','type' => 'real','max' => '100'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '100','name' => 'pMaxPercent','default' => '400','type' => 'real'}}],'attrib' => {'expr' => '$UseUpdateCheck'}},{'type' => 't','content' => '
 #UPDATECHECK
 T			UseUpdateCheck
 40.			RhoMinPercent
@@ -1634,33 +1724,40 @@ T			UseUpdateCheck
 ! Default values are shown.  This will adjust the timestep so that
 ! density and pressure cannot change by more than the given percentages
 ! in a single timestep.
-'}]},{'attrib' => {'name' => 'PROLONGATION'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nOrderProlong'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => '1','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => '2'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeProlong','if' => '$nOrderProlong==2'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'left-right','value' => 'lr','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'central'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'minmod'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'left-right extrapolate','value' => 'lr2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'central    extrapolate','value' => 'central2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'minmod     extrapolate','value' => 'minmod2'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'UPDATECHECK'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '1','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => '2'}}],'attrib' => {'name' => 'nOrderProlong','input' => 'select','type' => 'integer'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'lr','name' => 'left-right','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'central'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'minmod'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'lr2','name' => 'left-right extrapolate'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'central2','name' => 'central    extrapolate'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'minmod2','name' => 'minmod     extrapolate'}}],'attrib' => {'if' => '$nOrderProlong==2','name' => 'TypeProlong','input' => 'select','type' => 'string'}},{'type' => 't','content' => '
 #PROLONGATION
 2			nOrderProlong (1 or 2 for ghost cells)
 lr			TypeProlong  ! Only for nOrderProlong=2
 
-! Default is prolong_order=1. 
-! Possible values for prolong_type:
-! 1. in message_pass_dir (used if limiter_type is not \'LSG\')
-! \'lr\'		- interpolate only with left and right slopes 
-! \'central\'	- interpolate only with central difference slope
-! \'minmod\' 	- interpolate only with minmod limited slope
-! \'lr2\'		- like \'lr\' but extrapolate when necessary
-! \'central2\'	- like \'central\' but extrapolate when necessary
-! \'minmod2\'	- like \'minmod\' but extrapolate when necessary
-! \'lr3\'		- only experimental
+! Default is prolong_order=1. \\\\
+! Possible values for prolong_type:\\\\
 !
+!\\noindent
+! 1. in message_pass_dir (used if limiter_type is not \'LSG\')
+!\\begin{verbatim}
+!    \'lr\'          - interpolate only with left and right slopes 
+!    \'central\'	   - interpolate only with central difference slope
+!    \'minmod\' 	   - interpolate only with minmod limited slope
+!    \'lr2\'	   -  like \'lr\' but extrapolate when necessary
+!    \'central2\'	   - like \'central\' but extrapolate when necessary
+!    \'minmod2\'	   - like \'minmod\' but extrapolate when necessary
+!    \'lr3\'         - only experimental
+!\\end{verbatim}
+!
+!\\noindent
 ! 2. in messagepass_all (used if limiter_type is \'LSG\')
-! \'lr\',\'lr2\'		- left and right slopes (all interpolation)
-! \'central\',\'central2\'	- central differences (all interpolation)
-! \'minmod\',\'minmod2\'	- to be implemented
-'}]},{'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeMessagePass'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'm_p_cell FACES ONLY','value' => 'allopt','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'm_p_cell','value' => 'all'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'm_p_dir FACES ONLY','value' => 'opt'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'm_p_dir group by directions','value' => 'dir'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'm_p_dir group by faces     ','value' => 'face'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'm_p_dir group by kind and face','value' => 'min'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+\\begin{verbatim}
+!    \'lr\',\'lr2\'		    - left and right slopes (all interpolation)
+!    \'central\',\'central2\'   - central differences (all interpolation)
+!    \'minmod\',\'minmod2\'	    - to be implemented
+!\\end{verbatim}
+'}],'attrib' => {'name' => 'PROLONGATION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'allopt','name' => 'm_p_cell FACES ONLY','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'all','name' => 'm_p_cell'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'opt','name' => 'm_p_dir FACES ONLY'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'dir','name' => 'm_p_dir group by directions'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'face','name' => 'm_p_dir group by faces     '}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'min','name' => 'm_p_dir group by kind and face'}}],'attrib' => {'name' => 'TypeMessagePass','input' => 'select','type' => 'string'}},{'type' => 't','content' => '
 #MESSAGEPASS
 allopt			TypeMessagePass
 
-! Default value is shown above.
-! Possible values for optimize_message_pass
-!
+! Default value is shown above.\\\\
+! Possible values for optimize_message_pass:
+!\\begin{verbatim}
 ! \'dir\'		- message_pass_dir: group messages direction by direction
 ! \'face\'	- message_pass_dir: group messages face by face
 ! \'min\'		- message_pass_dir: send equal, restricted and prolonged 
@@ -1672,11 +1769,11 @@ allopt			TypeMessagePass
 ! \'all\'		- message_pass_cell: corners, edges and faces in single message
 !
 ! \'allopt\'      - message_pass_cell:  faces only in a single message
-!
-! Constrained transport requires corners, default is \'all\'! 
-! Diffusive control requires corners, default is \'all\'!
-! Projection uses message_pass_dir for efficiency!
-'}]},{'attrib' => {'name' => 'BORIS'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseBorisCorrection','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BorisClightFactor','if' => '$UseBorisCorrection','default' => '1','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+!\\end{verbatim}
+! Constrained transport requires corners, default is \'all\'!\\\\ 
+! Diffusive control requires corners, default is \'all\'!\\\\
+! Projection uses message_pass_dir for efficiency!\\\\
+'}],'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseBorisCorrection','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$UseBorisCorrection','name' => 'BorisClightFactor','default' => '1','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 #BORIS
 T			UseBorisCorrection
 1.0			BorisClightFactor !Only if UseBorisCorrection is true
@@ -1687,7 +1784,7 @@ T			UseBorisCorrection
 ! MHD. Gives the same steady state as normal MHD analytically, but there
 ! can be differences due to discretization errors. 
 ! You can use either Boris or BorisSimple but not both. 
-'}]},{'attrib' => {'name' => 'BORISSIMPLE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseBorisSimple','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BorisClightFactor','if' => '$UseBorisSimple','default' => '1','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'BORIS'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseBorisSimple','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','if' => '$UseBorisSimple','name' => 'BorisClightFactor','default' => '1','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 #BORISSIMPLE
 T			UseBorisSimple
 0.05			BorisClightFactor !Only if UseBorisSimple is true
@@ -1698,13 +1795,13 @@ T			UseBorisSimple
 ! Should give the same steady state as normal MHD, but there can be a
 ! difference due to discretization errors.
 ! You can use either Boris or BorisSimple but not both. 
-'}]},{'attrib' => {'name' => 'DIVB'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseDivbSource','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseDivbDiffusion','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseProjection','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseConstrainB','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseDivbSource or $UseDivbDiffusion or $UseProjection or $UseConstrainB'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'BORISSIMPLE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseDivbSource','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseDivbDiffusion','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseProjection','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseConstrainB','default' => 'F','type' => 'logical'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		At least one of the options should be true.
-	'}]},{'attrib' => {'expr' => 'not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '$UseDivbSource or $UseDivbDiffusion or $UseProjection or $UseConstrainB'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		If UseProjection is true, all others should be false.
-	'}]},{'attrib' => {'expr' => 'not($UseConstrainB and ($UseDivbSource or $UseDivbDiffusion or $UseProjection))'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		If UseConstrainB is true, all others should be false.
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => 'not($UseConstrainB and ($UseDivbSource or $UseDivbDiffusion or $UseProjection))'}},{'type' => 't','content' => '
 	
 #DIVB
 T			UseDivbSource
@@ -1716,19 +1813,19 @@ F			UseConstrainB
 ! If UseProjection is true, all others should be false.
 ! If UseConstrainB is true, all others should be false.
 ! At least one of the options should be true.
-'}]},{'attrib' => {'name' => 'DIVBSOURCE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseB0Source','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'DIVB'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseB0Source','default' => 'T','type' => 'logical'}},{'type' => 't','content' => '
 #DIVBSOURCE
 T			UseB0Source
 
 ! Add extra source terms related to the non-zero divergence and curl of B0.
 ! Default is true.
-'}]},{'attrib' => {'name' => 'DIVBDIFFUSION'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'DivbDiffCoeff','default' => '0.1666667','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'DIVBSOURCE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'DivbDiffCoeff','default' => '0.1666667','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 #DIVBDIFFUSION
 0.1666667		DivbDiffCoeff
 
 ! Default value is shown above. 1.0/6.0
 ! If divb_diffcoeff .gt. 0.5 then cfl .lt. 0.5/DivbDiffCoeff is required!
-'}]},{'attrib' => {'name' => 'PROJECTION'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeProjectIter'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Conjugate Gradients','value' => 'cg','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'BiCGSTAB','value' => 'bicgstab'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeProjectStop'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Relative norm','value' => 'rel','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Maximum error','value' => 'max'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'RelativeLimit','default' => '0.1','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'AbsoluteLimit','default' => '0.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'MaxMatvec','default' => '50','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'DIVBDIFFUSION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'cg','name' => 'Conjugate Gradients','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'bicgstab','name' => 'BiCGSTAB'}}],'attrib' => {'name' => 'TypeProjectIter','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'rel','name' => 'Relative norm','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'max','name' => 'Maximum error'}}],'attrib' => {'name' => 'TypeProjectStop','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RelativeLimit','default' => '0.1','type' => 'real','max' => '1'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'AbsoluteLimit','default' => '0.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'MaxMatvec','default' => '50','type' => 'integer'}},{'type' => 't','content' => '
 #PROJECTION
 cg			TypeProjectIter:\'cg\' or \'bicgstab\' for iterative scheme
 rel			TypeProjectStop:\'rel\' or \'max\' error for stop condition
@@ -1736,21 +1833,24 @@ rel			TypeProjectStop:\'rel\' or \'max\' error for stop condition
 0.0			AbsoluteLimit 
 50			MaxMatvec (upper limit on matrix.vector multipl.)
 
-! Default values are shown above.
+! Default values are shown above.\\\\
 !
+!\\noindent
 ! For symmetric Laplacian matrix TypeProjectIter=\'cg\' (Conjugate Gradients)
 ! should be used, as it is faster than BiCGSTAB. In current applications
-! the Laplacian matrix is always symmetric.
-! 
-! The iterative scheme stops when the stopping condition is fulfilled:
-!   TypeProjectStop = \'rel\' : 
-!        stop if ||div B|| < RelativeLimit*||div B0||
-!   TypeProjectStop = \'max\' and RelativeLimit is positive: 
-!        stop if max(|div B|) < RelativeLimit*max(|div B0|)
-!   TypeProjectStop = \'max\' and RelativeLimit is negative
-!        stop if max(|div B|) < AbsoluteLimit
+! the Laplacian matrix is always symmetric.\\\\
 !
-!   where ||.|| is the second norm, and B0 is the magnetic
+!\\noindent 
+! The iterative scheme stops when the stopping condition is fulfilled:
+!\\begin{verbatim}
+!   TypeProjectStop = \'rel\': 
+!        stop if ||div B||    < RelativeLimit*||div B0||
+!   TypeProjectStop = \'max\' and RelativeLimit is positive:
+!        stop if max(|div B|) < RelativeLimit*max(|div B0|)
+!   TypeProjectStop = \'max\' and RelativeLimit is negative: 
+!        stop if max(|div B|) < AbsoluteLimit
+!\\end{verbatim}
+!   where {\\tt ||.||} is the second norm, and B0 is the magnetic
 !   field before projection. In words \'rel\' means that the norm of the error
 !   should be decreased by a factor of RelativeLimit, while 
 !   \'max\' means that the maximum error should be less than either
@@ -1778,27 +1878,28 @@ rel			TypeProjStop
 0.0			AbsoluteLimit 
 500			MaxMatvec
 
-'}]},{'attrib' => {'name' => 'CORRECTP'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'pRatioLow','default' => '0.01','max' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pRatioHigh','default' => '0.1','max' => '1','min' => '$pRatioLow'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+
+'}],'attrib' => {'name' => 'PROJECTION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'pRatioLow','default' => '0.01','type' => 'real','max' => '1'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$pRatioLow','name' => 'pRatioHigh','default' => '0.1','type' => 'real','max' => '1'}},{'type' => 't','content' => '
 #CORRECTP
 0.01			pRatioLow
 0.1			pRatioHigh
 
-! Default values are shown. 
-!
-! The purpose of the correctP subroutine is to remove any discrepancies between
-! pressure in the p_BLK variable and the pressure calculated from the
-! E_BLK variable. Such discrepancies can be caused by the
-! constrained transport scheme and by the projection scheme
-! which modify the magnetic energy. The algorithm is the following:
-!
-! q = eThermal/e
-!
-!                  q.lt. pRatioLow  E is set to eThermal+(rho*u**2+B**2)/2
-! if pRatioLow .lt.q.lt.pRatioHigh  both P and E are modified depending on q
-! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
-!
-! The 2nd case is a linear interpolation between the 2nd and 4th cases.
-'}]},{'attrib' => {'name' => 'RAYTRACE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseAccurateIntegral','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseAccurateTrace','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'DtExchangeRay','default' => '0.1','max' => '60','min' => '0.01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'integer','name' => 'DnRaytrace','default' => '1','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+Default values are shown. 
+
+The purpose of the correctP subroutine is to remove any discrepancies between
+pressure stored as the primitive variable P and the pressure calculated 
+from the total energy E. Such discrepancies can be caused by the 
+constrained transport scheme and by the projection scheme which modify 
+the magnetic energy. The algorithm is the following:
+\\begin{verbatim}
+Define the rato of thermal and total energies q = eThermal/e and
+
+If              q < pRatioLow   then E is recalculated from P
+If pRatioLow  < q < pRatioHigh  then both P and E are modified depending on q
+If pratioHigh < q               then P is recalculated from E
+\\end{verbatim}
+The second case is a linear interpolation between the first and third cases.
+'}],'attrib' => {'name' => 'CORRECTP'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseAccurateIntegral','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseAccurateTrace','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0.01','name' => 'DtExchangeRay','default' => '0.1','type' => 'real','max' => '60'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'DnRaytrace','default' => '1','type' => 'integer'}},{'type' => 't','content' => '
 
 #RAYTRACE
 T			UseAccurateIntegral
@@ -1826,11 +1927,11 @@ potentially slower than the other algorithm.
 In the accurate tracing algorithms, when the ray exits the domain that belongs 
 to the PE, its information is sent to the other PE where the ray continues. 
 The information is buffered for sake of efficiency and to synchronize
-communitacation. The frequency of the information exchanges 
+communication. The frequency of the information exchanges 
 (in terms of CPU seconds) is given by the DtExchangeRay parameter. 
 This is an optimization parameter for speed. Very small values of DtExchangeRay
 result in many exchanges with few rays, while very large values result
-in infrequent exchages thus some PE-s may become idle (no more work to do).
+in infrequent exchanges thus some PE-s may become idle (no more work to do).
 The optimal value is problem dependent. A typically acceptable value is 
 DtExchangeRay = 0.1 seconds (default).
 
@@ -1842,7 +1943,7 @@ The ray tracing is always redone if the grid changes due to an AMR.
 
 Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
 DtExchangeRay = 0.1 and DnRaytrace=1.
-'}]},{'attrib' => {'name' => 'IM'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'TauCoupleIm','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'RAYTRACE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'TauCoupleIm','type' => 'real'}},{'type' => 't','content' => '
 
 #IM
 0.01			TauCoupleIm
@@ -1859,7 +1960,7 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
 !
 ! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
-! phyical time:
+! physical time:
 !
 ! p\' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
 !
@@ -1869,18 +1970,18 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 !
 ! The default value is TauCoupleIm=0.01, which corresponds to a rather 
 ! slow nudging.
-'}]}]},{'attrib' => {'name' => 'PHYSICS PARAMETERS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'IM'}}],'attrib' => {'name' => 'SCHEME PARAMETERS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  PHYSICS PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'GAMMA','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Gamma','default' => '1.6666666667','min' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '1','name' => 'Gamma','default' => '1.6666666667','type' => 'real'}},{'type' => 't','content' => '
 #GAMMA
 1.6666666667		Gamma
 
 ! The adiabatic index (ratio of the specific heats for fixed pressure
 ! and volume. The default value is 5.0/3.0, which is valid for
 ! monoatomic gas or plasma.
-'}]},{'attrib' => {'name' => 'SHOCKTUBE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'RhoLeft','default' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'UnLeft','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Ut1Left','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Ut2Left','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BnLeft','default' => '0.75'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Bt1Left','default' => '1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Bt2Left','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pRight','default' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RhoRight','default' => '0.125','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'UnRight','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Ut1Right','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Ut2Right','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BnRight','default' => '0.75'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Bt1Right','default' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Bt2Right','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'pRight','default' => '0.1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'input' => 'select','type' => 'real','name' => 'ShockSlope'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'no rotation','value' => '0','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '0.25'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '0.3333333333333'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '0.5'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '3'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'value' => '4'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'GAMMA'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RhoLeft','default' => '1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UnLeft','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Ut1Left','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Ut2Left','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BnLeft','default' => '0.75','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Bt1Left','default' => '1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Bt2Left','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'pRight','default' => '1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RhoRight','default' => '0.125','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UnRight','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Ut1Right','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Ut2Right','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BnRight','default' => '0.75','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Bt1Right','default' => '-1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Bt2Right','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'pRight','default' => '0.1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0','name' => 'no rotation','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0.25'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0.3333333333333'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0.5'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '4'}}],'attrib' => {'name' => 'ShockSlope','input' => 'select','type' => 'real'}},{'type' => 't','content' => '
 #SHOCKTUBE
 1.		rho (left state)
 0.		Ux (Un)
@@ -1905,13 +2006,13 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! the rotation angle is ShockSlope. 
 ! When the shock is rotated, it is best used in combination
 ! with sheared outer boundaries, but then only
-!
+!\\begin{verbatim}
 ! ShockSlope = 1., 2., 3., 4., 5.      .....
 ! ShockSlope = 0.5, 0.33333333, 0.25, 0.2, .....
-!
+!\\end{verbatim}
 ! can be used, because these angles can be accurately represented
 ! on the grid.
-'}]},{'attrib' => {'name' => 'SOLARWIND','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'SwRhoDim','default' => '5','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwTDim','default' => '181712.175','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwUxDim','default' => '-400','max' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwUyDim','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwUzDim','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwBxDim','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwByDim','default' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SwBzDim','default' => '5'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'SHOCKTUBE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'SwRhoDim','default' => '5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'SwTDim','default' => '181712.175','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwUxDim','default' => '-400','type' => 'real','max' => '0'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwUyDim','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwUzDim','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwBxDim','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwByDim','default' => '0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'SwBzDim','default' => '5','type' => 'real'}},{'type' => 't','content' => '
 #SOLARWIND
 5.0			SwRhoDim [n/cc]
 181712.175		SwTDim [K]
@@ -1927,26 +2028,79 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! it is saved into the restart header file.
 ! One of the #SOLARWIND command and the #UPSTREAM_INPUT_FILE command
 ! (with UseUpstreamInputFile = .true.) is required by the GM component.
-'}]},{'attrib' => {'name' => 'UPSTREAM_INPUT_FILE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseUpstreamInputFile','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseUpstreamInputFile'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameUpstreamFile'},'name' => 'parameter','type' => 'e','content' => []}]},{'attrib' => {'expr' => '-f $NameUpstreamFile'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'SOLARWIND'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseUpstreamInputFile','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameUpstreamFile','length' => '100','type' => 'string'}}],'attrib' => {'expr' => '$UseUpstreamInputFile'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 		Upstream file $NameUpstreamFile must exist
-	'}]},{'type' => 't','content' => '
+	'}],'attrib' => {'expr' => '-f $NameUpstreamFile'}},{'type' => 't','content' => '
 #UPSTREAM_INPUT_FILE
 T			UseUpstreamInputFile (rest of parameters read if true)
 IMF.dat                 NameUpstreamFile
 
+! Default is UseUpstreamInputFile = .false.
+!
 ! Read IMF data from file NameUpstreamFile if UseUpstreamInputFile is true.
 ! The data file contains all information required for setting the upstream
 ! boundary conditions. Parameter TypeBcEast should be set to \'vary\' for
 ! the time dependent boundary condition.
 !
-! If the #SOLARWIND command is not provided than the first time read from
+! If the #SOLARWIND command is not provided then the first time read from
 ! the upstream input file will set the normalization of all variables
 ! in the GM component. Consequently either the #SOLARWIND command or
 ! the #UPSTREAM_INPUT_FILE command with UseUpstreamInputFile=.true.
 ! is required by the GM component.
 !
-! Default is UseUpstreamInputFile = .false.
-'}]},{'attrib' => {'alias' => 'MAGNETOSPHERE','name' => 'BODY','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseBody','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseBody'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'rBody','default' => '3','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$_NameComp eq \'GM\''},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'rCurrents','default' => '4','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BodyRhoDim','default' => '1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BodyTDim','default' => '10000','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'type' => 't','content' => '
+! The input files are strutured similar to the PARAM.in file.  There are 
+! {\\tt #commands} that can be  inserted as well as the data.
+! The file containing the upstream conditions should include data in the 
+! following order:
+! \\begin{verbatim}
+! yr mn dy hr min sec msec bx by bz vx vy vz dens temp
+! \\end{verbatim}
+! The units of the variables should be:
+! \\begin{verbatim}
+! Magnetic field (b)     nT
+! Velocity (v)           km/s
+! Number Density (dens)  cm^-3
+! Temperature (Temp)     K
+! \\end{verbatim}
+!
+! The input files  can have the following optional commands at the beginning
+! \\begin{verbatim}
+! #COOR
+! GSM          The coordinate system of the data (GSM or GSE)
+!
+! #PLANE       The input data represents values on a tilted plane
+! 30.0         Angle to rotate in the XY plane
+! 30.0         Angle to rotate in the XZ plane
+!
+! #POSITION    Origin for the plane rotation (see #PLANE)
+! 30.0         Y location
+! 30.0         Z location
+!
+! #ZEROBX
+! T            T means Bx is ignored and set to zero
+!
+! #TIMEDELAY
+! 3600.0       A real number in seconds by which to delay the input
+! \\end{verbatim}
+!
+! Finally, the data should be preceded by a {\\tt #START}.  The beginning of 
+! a typical upstream input file might look like:
+! \\begin{verbatim}
+! #COOR
+! GSM
+! 
+! #ZEROBX
+! T
+!
+! #START
+!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
+!  2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
+! \\end{verbatim}
+!
+! The maximum number of lines of data allowed in the input file is 50,000.  
+! However, this can be modified by changing the variable Max_Upstream_Npts 
+! in the file GM/BATSRUS/get_solar_wind_point.f90.
+'}],'attrib' => {'name' => 'UPSTREAM_INPUT_FILE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseBody','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'rBody','default' => '3','type' => 'real'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'rCurrents','default' => '4','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'BodyRhoDim','default' => '1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'BodyTDim','default' => '10000','type' => 'real'}}],'attrib' => {'expr' => '$_NameComp eq \'GM\''}}],'attrib' => {'expr' => '$UseBody'}},{'type' => 't','content' => '
 #BODY
 T			UseBody (rest of parameters read if true)
 3.0			rBody (user units)
@@ -1970,7 +2124,7 @@ T			UseBody (rest of parameters read if true)
 ! 
 ! The default values depend on the problem type defined 
 ! in the #PROBLEMTYPE command.
-'}]},{'attrib' => {'name' => 'GRAVITY','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseGravity','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'input' => 'select','type' => 'integer','name' => 'iDirGravity','if' => '$UseGravity'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'central mass','value' => '0','default' => 'T'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'X direction','value' => '1'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Y direction','value' => '2'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'Z direction','value' => '3'},'name' => 'option','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'alias' => 'MAGNETOSPHERE','if' => '$_IsFirstSession','name' => 'BODY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseGravity','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '0','name' => 'central mass','default' => 'T'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '1','name' => 'X direction'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '2','name' => 'Y direction'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => '3','name' => 'Z direction'}}],'attrib' => {'if' => '$UseGravity','name' => 'iDirGravity','input' => 'select','type' => 'integer'}},{'type' => 't','content' => '
 #GRAVITY
 T			UseGravity (rest of parameters read if true)
 0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
@@ -1986,17 +2140,17 @@ T			UseGravity (rest of parameters read if true)
 ! is independent of the GravityDir value.  Gravity due to the second body
 ! is radially inward toward the second body.
 
-'}]},{'attrib' => {'name' => 'MASSLOADING'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseMassLoading','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoAccelerateMassLoading','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'GRAVITY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseMassLoading','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoAccelerateMassLoading','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 #MASSLOADING
 F			UseMassLoading
 F			DoAccelerateMassLoading
-'}]},{'attrib' => {'name' => 'HEATFLUX'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseHeatFlux','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseSpitzerForm','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => 'not $UseSpitzerForm'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Kappa0Heat','default' => '1.23E-11'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Kappa0Heat','default' => '2.5'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'MASSLOADING'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseHeatFlux','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseSpitzerForm','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Kappa0Heat','default' => '1.23E-11','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Kappa0Heat','default' => '2.5','type' => 'real'}}],'attrib' => {'expr' => 'not $UseSpitzerForm'}},{'type' => 't','content' => '
 #HEATFLUX
 T		UseHeatFlux
 F		UseSpitzerForm
 1.23E-11	Kappa0Heat [W/m/K]	! Only if not UseSpitzerForm
 2.50E+00	ExponentHeat [-]	! Only if not UseSpitzerForm
-'}]},{'attrib' => {'name' => 'RESISTIVEFLUX'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseResistFlux','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'UseSpitzerForm','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => 'not $UseSpitzerForm'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeResist'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'localized','value' => 'Localized/localized'},'name' => 'option','type' => 'e','content' => []},{'attrib' => {'name' => 'constant','value' => 'Constant/constant','default' => 'T'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'Eta0Resist','default' => '9.69953E+8'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$TypeResist =~ /localized/i'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Alpha0Resist','default' => '150'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yShiftResist','default' => '0.5'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'TimeInitRise','default' => '0.05'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'TimeConstLev','default' => '1'},'name' => 'parameter','type' => 'e','content' => []}]}]},{'attrib' => {'type' => 'logical','name' => 'UseAnomResist','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseAnomResist'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'Eta0AnomResist','default' => '1.93991E+09'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'EtaAnomMaxResist','default' => '1.93991E+10'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ThresholdFactorResist','default' => '1'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'HEATFLUX'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseResistFlux','default' => 'F','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseSpitzerForm','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Localized/localized','name' => 'localized'}},{'name' => 'option','type' => 'e','content' => [],'attrib' => {'value' => 'Constant/constant','name' => 'constant','default' => 'T'}}],'attrib' => {'name' => 'TypeResist','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Eta0Resist','default' => '9.69953E+8','type' => 'real'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Alpha0Resist','default' => '150','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yShiftResist','default' => '0.5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'TimeInitRise','default' => '0.05','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'TimeConstLev','default' => '1','type' => 'real'}}],'attrib' => {'expr' => '$TypeResist =~ /localized/i'}}],'attrib' => {'expr' => 'not $UseSpitzerForm'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseAnomResist','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Eta0AnomResist','default' => '1.93991E+09','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'EtaAnomMaxResist','default' => '1.93991E+10','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'ThresholdFactorResist','default' => '1','type' => 'real'}}],'attrib' => {'expr' => '$UseAnomResist'}},{'type' => 't','content' => '
 #RESISTIVEFLUX
 T		UseResistFlux
 F		UseSpitzerForm
@@ -2019,7 +2173,7 @@ T		UseAnomResist
 ! with a peak value Eta0Resist. The enhanced resistivity has a Gaussian 
 ! shape with HWHM of 1/sqrt(Alpha0Resist), shifted along the y-axis on 
 ! -yShistResist*y2.
-'}]},{'attrib' => {'name' => 'TESTDISSMHD','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseDefaultUnits','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Grav0Diss','default' => '2.635620E-02'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Beta0Diss','default' => '1.640000E-01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Length0Diss','default' => '1.500000E+06'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Time0Diss','default' => '1.159850E+01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Rho0Diss','default' => '5.019000E-11'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Tem0Diss','default' => '1.000000E+05'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Theta0Diss','default' => '6.000000E-01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Delta0Diss','default' => '2.500000E+01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'EpsilonDiss','default' => '7.000000E+00'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RhoDifDiss','default' => '4.500000E+00'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yShiftDiss','default' => '4.000000E-01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ScaleHeightDiss','default' => '5.000000E-01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ScaleFactorDiss','default' => '1.159850E+01'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BZ0iss','default' => '5.000000E-01'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'RESISTIVEFLUX'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseDefaultUnits','default' => 'T','type' => 'logical'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Grav0Diss','default' => '2.635620E-02','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Beta0Diss','default' => '1.640000E-01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Length0Diss','default' => '1.500000E+06','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Time0Diss','default' => '1.159850E+01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Rho0Diss','default' => '5.019000E-11','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Tem0Diss','default' => '1.000000E+05','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Theta0Diss','default' => '6.000000E-01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Delta0Diss','default' => '2.500000E+01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'EpsilonDiss','default' => '7.000000E+00','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'RhoDifDiss','default' => '4.500000E+00','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'yShiftDiss','default' => '4.000000E-01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'ScaleHeightDiss','default' => '5.000000E-01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'ScaleFactorDiss','default' => '1.159850E+01','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BZ0iss','default' => '5.000000E-01','type' => 'real'}},{'type' => 't','content' => '
 #TESTDISSMHD
 F                       UseDefaultUnits
 2.635620E-02            Grav0Diss
@@ -2038,7 +2192,7 @@ F                       UseDefaultUnits
 0.000000E-01            BZ0Diss
 
 ! Default values are shown. Parameters for problem_dissipation
-'}]},{'attrib' => {'name' => 'SECONDBODY','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseBody2','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseBody2'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'rBody2','default' => '0.1','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'xBody2','default' => '-40','max' => '$xMax','min' => '$xMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'yBody2','default' => '0','max' => '$yMax','min' => '$yMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'zBody2','default' => '0','max' => '$zMax','min' => '$zMin'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'rCurrents2','default' => '1.3*$rBody2','min' => '$rBody2'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RhoDimBody2','default' => '5','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'tDimBody2','default' => '25000','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'TESTDISSMHD'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseBody2','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'rBody2','default' => '0.1','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$xMin','name' => 'xBody2','default' => '-40','type' => 'real','max' => '$xMax'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$yMin','name' => 'yBody2','default' => '0','type' => 'real','max' => '$yMax'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$zMin','name' => 'zBody2','default' => '0','type' => 'real','max' => '$zMax'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '$rBody2','name' => 'rCurrents2','default' => '1.3*$rBody2','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RhoDimBody2','default' => '5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'tDimBody2','default' => '25000','type' => 'real'}}],'attrib' => {'expr' => '$UseBody2'}},{'type' => 't','content' => '
 
 #SECONDBODY
 T			UseBody2   ! Rest of the parameters read if .true.
@@ -2050,10 +2204,10 @@ T			UseBody2   ! Rest of the parameters read if .true.
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
 
-! Default for UseBody2=.false.   -   All others no defaults!
+! Default for UseBody2=.false.   -   All others have no defaults!
 ! This command should appear before the #INNERBOUNDARY command when using
 ! a second body.
-'}]},{'attrib' => {'name' => 'DIPOLEBODY2','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'BdpDimBody2x'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BdpDimBody2y'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BdpDimBody2z'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'SECONDBODY'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BdpDimBody2x','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BdpDimBody2y','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'BdpDimBody2z','type' => 'real'}},{'type' => 't','content' => '
 
 #DIPOLEBODY2
 0.0			BdpDimBody2x [nT]
@@ -2067,12 +2221,13 @@ T			UseBody2   ! Rest of the parameters read if .true.
 !
 ! Default is no dipole field.
 
-!for now the dipole of the second body can only be aligned with the z-axis
-'}]}]},{'attrib' => {'name' => 'SOLAR PROBLEM TYPES'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+! For now the dipole of the second body can only be aligned with the z-axis
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'DIPOLEBODY2'}}],'attrib' => {'name' => 'PHYSICS PARAMETERS'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!! SOLAR PROBLEM TYPES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'HELIOSPHERE','if' => '$_IsFirstSession and $_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'BodyTDim','default' => '2.85E06','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'BodyRhoDim','default' => '1.50E8','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'qSun','default' => '25.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'tHeat','default' => '1.75','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'rHeat','default' => '1.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'SigmaHeat','default' => '4.5','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'logical','name' => 'DoInitRope','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$DoInitRope'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'CmeA','default' => '0.7','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeR1','default' => '1.2','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeR0','default' => '1.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeA1','default' => '0.23'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeAlpha','default' => '0.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeRho1','default' => '2.5E-12','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeRho2','default' => '2.0E-13','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ModulationRho','default' => '0.0','max' => '10','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ModulationP','default' => '0.0','max' => '10','min' => '0'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'BodyTDim','default' => '2.85E06','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'BodyRhoDim','default' => '1.50E8','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'qSun','default' => '25.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'tHeat','default' => '1.75','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'rHeat','default' => '1.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'SigmaHeat','default' => '4.5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoInitRope','default' => 'F','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeA','default' => '0.7','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeR1','default' => '1.2','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeR0','default' => '1.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'CmeA1','default' => '0.23','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'CmeAlpha','default' => '0.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeRho1','default' => '2.5E-12','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeRho2','default' => '2.0E-13','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ModulationRho','default' => '0.0','type' => 'real','max' => '10'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ModulationP','default' => '0.0','type' => 'real','max' => '10'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-360','name' => 'OrientationGL98','default' => '0.0','type' => 'real','max' => '360'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-90','name' => 'LatitudeGL98','default' => '0.0','type' => 'real','max' => '90'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-360','name' => 'LongitudeGL98','default' => '0.0','type' => 'real','max' => '360'}}],'attrib' => {'expr' => '$DoInitRope'}},{'type' => 't','content' => '
+
 #HELIOSPHERE
 2.85E06			BodyTDim	[K]
 1.50E8			BodyRhoDim	[N/ccm]
@@ -2090,9 +2245,9 @@ F			InitRope
 2.0E-13 		CmeRho2 [kg/m^3] density of background corona after contract 
 0.0                     ModulationRho
 0.0                     ModulationP
-0.0			cRotxGl98 [deg]
-0.0			cRotYGl98 [deg]
-0.0			cRotZGl98 [deg]
+0.0			OrientationGL98 [deg]
+0.0			LatitudeGL98 [deg]
+0.0			LongitudeGL98 [deg]
 
 This command defines the heliosphere parameters with a CME model.
 The coronal eruptive event generator is based on the
@@ -2102,7 +2257,7 @@ hydrostatic equilibrium in the presence of gravity.
 The GL solution is described in the Astrophysical
 Journal, volume 493, page 460.
 This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric speromak flux
+stretching operation to axisymmetric  flux
 rope.  The flux rope is of radius Cme_R0 and is
 placed Cme_R1 from the origin (solar center).  The
 stretching transformation draws space radially inward
@@ -2124,17 +2279,24 @@ the flux rope being out of equilibrium, owing to a reduction
 in filament mass (set with ModulationRho) and from pressure
 of the corona being unable to balance the magnetic pressure
 of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the conona.  Eruption energy
+rope being bodily expelled from the corona.  Eruption energy
 increases with flux rope size, field strength, stretching
 deformation and the buoyancy of the flux rope.
-'}]},{'attrib' => {'name' => 'HELIOUPDATEB0','if' => '$_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'DtUpdateB0','default' => '0.0001','min' => '-1'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+
+The flux rope can be rotated to an arbitrary position.
+The LatitudeGM98 and LongitudeGL98 parameters define the position
+of the center of the fluxrope in the coordinate system of the Solar
+Corona component. The OrientationGL98 parameter determines the 
+orientation of the fluxrope relative to the East-West direction
+(clock-wise).
+'}],'attrib' => {'if' => '$_IsFirstSession and $_NameComp ne \'GM\'','name' => 'HELIOSPHERE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-1','name' => 'DtUpdateB0','default' => '0.0001','type' => 'real'}},{'type' => 't','content' => '
 
 #HELIOUPDATEB0
 -1.0			DtUpdateB0 [s]
 
 Set the frequency of updating the B0 field for the solar corona.
 A negative value means that the B0 field is not updated.
-'}]},{'attrib' => {'name' => 'HELIODIPOLE','if' => '$_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'HelioDipoleStrength'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'HelioDipoleTilt','default' => '0','max' => '90','min' => '-90'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_NameComp ne \'GM\'','name' => 'HELIOUPDATEB0'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'HelioDipoleStrength','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '-90','name' => 'HelioDipoleTilt','default' => '0','type' => 'real','max' => '90'}},{'type' => 't','content' => '
 
 #HELIODIPOLE
 -3.0                    HelioDipoleStrength [G]
@@ -2145,7 +2307,7 @@ A negative value means that the B0 field is not updated.
 ! (negative sign means towards the planet) in degrees.
 !
 ! Default value is HelioDipoleStrength = 0.0.
-'}]},{'attrib' => {'alias' => 'INERTIAL','name' => 'HELIOROTATION','if' => '$_IsFirstSession and $_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseInertialFrame','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'expr' => '$UseInertialFrame'},'name' => 'if','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'UseRotatingBC','default' => 'T'},'name' => 'parameter','type' => 'e','content' => []}]},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_NameComp ne \'GM\'','name' => 'HELIODIPOLE'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseInertialFrame','default' => 'T','type' => 'logical'}},{'name' => 'if','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UseRotatingBC','default' => 'T','type' => 'logical'}}],'attrib' => {'expr' => '$UseInertialFrame'}},{'type' => 't','content' => '
 
 #HELIOROTATION
 T			UseInertialFrame
@@ -2159,7 +2321,7 @@ F			UseRotatingBC (read only if UseInertialFrame is true)
 ! or the rotation is neglected.
 !
 ! Default values are shown. The #INERTIAL command name is obsolete.
-'}]},{'attrib' => {'name' => 'HELIOTEST','if' => '$_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'logical','name' => 'DoSendMHD','default' => 'F'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'alias' => 'INERTIAL','if' => '$_IsFirstSession and $_NameComp ne \'GM\'','name' => 'HELIOROTATION'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'DoSendMHD','default' => 'F','type' => 'logical'}},{'type' => 't','content' => '
 
 #HELIOTEST
 F			DoSendMHD
@@ -2168,8 +2330,8 @@ F			DoSendMHD
 ! If DoSendMHD is false then the values read from the IMF file are sent,
 ! so there is no real coupling. Mostly used for testing the framework.
 !
-! Default value is true, ie. real coupling.
-'}]},{'attrib' => {'name' => 'CME','if' => '$_IsFirstSession and $_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeCme'},'name' => 'parameter','type' => 'e','content' => [{'attrib' => {'name' => 'Low','default' => 'T'},'name' => 'option','type' => 'e','content' => []}]},{'attrib' => {'type' => 'real','name' => 'CmeA','default' => '0.7','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeR1','default' => '1.2','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeR0','default' => '1.0','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeA1','default' => '0.23'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeAlpha','default' => '0.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeRho1','default' => '2.5E-12','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeRho2','default' => '2.0E-13','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeB1Dim','default' => '1.0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'CmeUErupt','default' => '4.0E5','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+! Default value is true, i.e. real coupling.
+'}],'attrib' => {'if' => '$_NameComp ne \'GM\'','name' => 'HELIOTEST'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [{'name' => 'option','type' => 'e','content' => [],'attrib' => {'name' => 'Low','default' => 'T'}}],'attrib' => {'name' => 'TypeCme','input' => 'select','type' => 'string'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeA','default' => '0.7','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeR1','default' => '1.2','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeR0','default' => '1.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'CmeA1','default' => '0.23','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'CmeAlpha','default' => '0.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeRho1','default' => '2.5E-12','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeRho2','default' => '2.0E-13','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'CmeB1Dim','default' => '1.0','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'CmeUErupt','default' => '4.0E5','type' => 'real'}},{'type' => 't','content' => '
 #CME
 Low		TypeCme   model type (\'Low\')
 0.7		CmeA    [scaled] contraction distance
@@ -2189,7 +2351,7 @@ hydrostatic equilibrium in the presence of gravity.
 The GL solution is described in the Astrophysical
 Journal, volume 493, page 460.
 This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric speromak flux
+stretching operation to axisymmetric spheromak flux
 rope.  The flux rope is of radius Cme_R0 and is
 placed Cme_R1 from the origin (solar center).  The
 stretching transformation draws space radially inward
@@ -2211,11 +2373,11 @@ the flux rope being out of equilibrium, owing to a reduction
 in filament mass (set with ModulationRho) and from pressure
 of the corona being unable to balance the magnetic pressure
 of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the conona.  Eruption energy
+rope being bodily expelled from the corona.  Eruption energy
 increases with flux rope size, field strength, stretching
 deformation and the buoyancy of the flux rope.
 Default values are shown above for the GL flux rope CME model.
-'}]},{'attrib' => {'name' => 'ARCADE','if' => '$_IsFirstSession and $_NameComp ne \'GM\''},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'tArcDim','default' => '1.0E6','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'RhoArcDim','default' => '1.0E-12','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'bArcDim','default' => '0.718144','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ByArcDim','default' => '1.0E6'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'UzArcDim','default' => '5.0E3'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'Phi0Arc','default' => '0.5'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'MuArc','default' => '1.3'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'ExpArc','default' => '3','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'WidthArc','default' => '0.5','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession and $_NameComp ne \'GM\'','name' => 'CME'}},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'tArcDim','default' => '1.0E6','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'RhoArcDim','default' => '1.0E-12','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'bArcDim','default' => '0.718144','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'ByArcDim','default' => '1.0E6','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'UzArcDim','default' => '5.0E3','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'Phi0Arc','default' => '0.5','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'MuArc','default' => '1.3','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ExpArc','default' => '3','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'WidthArc','default' => '0.5','type' => 'real'}},{'type' => 't','content' => '
 #ARCADE
 1.0E6                   tArcDim   [K]      1.0E6
 1.0E-12                 RhoArcDim [kg/m^3] 1.0E-12
@@ -2228,11 +2390,11 @@ Default values are shown above for the GL flux rope CME model.
 0.5                     WidthArc
 
 ! Default values are shown. Parameters for problem_arcade
-'}]}]},{'attrib' => {'name' => 'COMET PROBLEM TYPE'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession and $_NameComp ne \'GM\'','name' => 'ARCADE'}}],'attrib' => {'name' => 'SOLAR PROBLEM TYPES'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!! COMET PROBLEM TYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'COMET','if' => '$_IsFirstSession'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'type' => 'real','name' => 'ProdRate','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'UrNeutral','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'AverageMass','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'IonizationRate','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'attrib' => {'type' => 'real','name' => 'kFriction','min' => '0'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'ProdRate','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'UrNeutral','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'AverageMass','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'IonizationRate','type' => 'real'}},{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'min' => '0','name' => 'kFriction','type' => 'real'}},{'type' => 't','content' => '
 #COMET
 1.0E28		ProdRate    - Production rate (#/s)
 1.0		UrNeutral   - neutral radial outflow velocity (km/s)
@@ -2241,25 +2403,25 @@ Default values are shown above for the GL flux rope CME model.
 1.7E-9		kFriction - ion-neutral friction rate coefficient (cm^3/s)
 
 ! Only used by problem_comet.  Defaults are as shown.
-'}]}]},{'attrib' => {'name' => 'SCRIPT COMMANDS'},'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'COMET'}}],'attrib' => {'name' => 'COMET PROBLEM TYPE'}},{'name' => 'commandgroup','type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! SCRIPT COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-'},{'attrib' => {'name' => 'INCLUDE'},'name' => 'command','type' => 'e','content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameIncludeFile','default' => 'Param/'},'name' => 'parameter','type' => 'e','content' => []},{'type' => 't','content' => '
+'},{'name' => 'command','type' => 'e','content' => [{'name' => 'parameter','type' => 'e','content' => [],'attrib' => {'name' => 'NameIncludeFile','default' => 'Param/','length' => '100','type' => 'string'}},{'type' => 't','content' => '
 
 #INCLUDE
 Param/SSS_3000		NameIncludeFile
 
 ! Include a library file from Param/ or any file from anywhere else.
-'}]}]},{'attrib' => {'expr' => '($SwRhoDim > 0) or $UseUpstreamInputFile or $_NameComp ne \'GM\''},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'name' => 'INCLUDE'}}],'attrib' => {'name' => 'SCRIPT COMMANDS'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 	Either command #SOLARWIND or #UPSTREAM_INPUT_FILE must be used!
-'}]},{'attrib' => {'expr' => '$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'expr' => '($SwRhoDim > 0) or $UseUpstreamInputFile or $_NameComp ne \'GM\''}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 	Part implicit scheme requires more than 1 implicit block!
-'}]},{'attrib' => {'expr' => '$MaxImplBlock==$MaxBlock or not $UseFullImplicit'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'expr' => '$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 	Full implicit scheme should be used with equal number of 
 	explicit and implicit blocks!
-'}]},{'attrib' => {'expr' => '-d $NameRestartOutDir or not $_IsFirstSession'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'expr' => '$MaxImplBlock==$MaxBlock or not $UseFullImplicit'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 	Output restart directory $NameRestartOutDir should exist!
-'}]},{'attrib' => {'expr' => '-d $NamePlotDir or not $_IsFirstSession'},'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
+'}],'attrib' => {'expr' => '-d $NameRestartOutDir or not $_IsFirstSession'}},{'name' => 'rule','type' => 'e','content' => [{'type' => 't','content' => '
 	Plot directory $NamePlotDir should exist!
-'}]}]}];
+'}],'attrib' => {'expr' => '-d $NamePlotDir or not $_IsFirstSession'}}],'attrib' => {'name' => 'BATSRUS: GM, SC and IH Components'}}];
