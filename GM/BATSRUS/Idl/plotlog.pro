@@ -8,6 +8,7 @@ plot_log, logfilename, logfunc,                          $
   wlog,wlognames, wlog1, wlognames1, wlog2, wlognames2,  $
   xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
   smooths=smooths,                                       $
-  colors=colors, symbols=symbols, linestyles=linestyles
+  colors=colors, symbols=symbols, linestyles=linestyles, $
+  title=title, xtitle=xtitle, ytitles=ytitles
 
 end
