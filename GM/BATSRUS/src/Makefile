@@ -218,9 +218,23 @@ LIBTIMING = ${LIBDIR}/libTIMING.a
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING}
 
 BATSRUS.exe: ${OBJECTS_EXE} ${OBJECTS} ${MODULES}
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+	@(if [ ${OS} == "Darwin" ]; then \
+	    echo \
+	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+		../util/TIMING/src/*.o ../share/Library/src/*.o \
+		${Lflag1}; \
+	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+		../util/TIMING/src/*.o ../share/Library/src/*.o \
+		${Lflag1}; \
+	else \
+	    echo \
+	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
 		-L${LIBDIR} -lTIMING -lSHARE \
-		${Lflag1}
+		${Lflag1}; \
+	    ${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
+		-L${LIBDIR} -lTIMING -lSHARE \
+		${Lflag1}; \
+	fi);
 
 #
 # Other executables
