@@ -75,7 +75,7 @@ if nwlog gt 0 then begin
     end
     if iyear eq -1 and itime eq -1 then begin
         print,'Could not find year or time in wlognames=',wlognames
-        retall
+        return,findgen(n_elements(wlog(*,0)))
     end
     if itime gt -1 then return,wlog(*,itime)/3600.0
 endif else begin
