@@ -1,6 +1,6 @@
 <commandList name="Global Magnetosphere and Inner Heliosphere">
 
-List of MH (GM and IH) commands used in the PARAM.in file
+List of MH (GM, IH and SC) commands used in the PARAM.in file
 
 <!-- The XML syntax is described at the end of Param/PARAM.XML -->
 
@@ -750,7 +750,7 @@ heat_test1		TypeProblemDiss
 		<option name="GeoSolarMagnetic, GSM" value="GSM"
 					if="$_NameComp eq 'GM'" default="T" />
 		<option name="HelioGraphicInertial, HGI" value="HGI" 
-					if="$_NameComp eq 'IH'" default="T" />
+					if="$_NameComp ne 'GM'" default="T" />
 	</parameter>
 
 #COORDSYSTEM
@@ -758,10 +758,10 @@ GSM			TypeCoordSystem
 
 ! TypeCoordSystem defines the coordinate system for the component.
 ! Currently only one coordinate system is available for GM ("GSM")
-! and one for IH ("HGI"). In the near future "GSE" should be also
+! and one for IH or SC ("HGI"). In the near future "GSE" should be also
 ! an option for GM.
 !
-! Default is component dependent: "GSM" for GM and "HGI" for IH.
+! Default is component dependent: "GSM" for GM and "HGI" for IH or SC.
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
