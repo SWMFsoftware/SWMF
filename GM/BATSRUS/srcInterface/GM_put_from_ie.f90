@@ -3,17 +3,23 @@
 !==========================================================================
 module ModIonoPotential
 
-  use ModConst, ONLY: cPi, cTwoPi
   implicit none
   integer :: nThetaIono, nPhiIono
   real    :: dThetaIono, dPhiIono
+  real    :: rIonosphere
   real, allocatable :: IonoPotential_II(:,:)
 
 contains
 
   subroutine init_mod_iono_potential(iSize, jSize)
 
+    use ModConst, ONLY: cPi, cTwoPi
+    use ModPhysics, ONLY: UnitSi_X
+    use CON_planet, ONLY: get_planet
+
     integer, intent(in) :: iSize, jSize
+    real :: rPlanet, IonoHeight
+    !-------------------------------------------------------------------------
 
     if(allocated(IonoPotential_II)) RETURN
 
@@ -22,6 +28,9 @@ contains
 
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)
+
+    call get_planet(RadiusPlanetOut=rPlanet, IonosphereHeightOut=IonoHeight)
+    rIonosphere = (rPlanet + IonoHeight) / UnitSi_X
 
     allocate(IonoPotential_II(nThetaIono, nPhiIono))
 
