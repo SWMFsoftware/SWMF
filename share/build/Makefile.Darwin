@@ -27,11 +27,11 @@ SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 #DEBUG   = -C -gline
 DEBUG   =
 
-Cflag0  = ${SEARCH} -c -O0 ${DEBUG} ${PRECISION}
-Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
-Cflag2  = ${SEARCH} -c -O2 ${DEBUG} ${PRECISION}
-Cflag3  = ${SEARCH} -c -O3 ${DEBUG} ${PRECISION}
-Cflag4  = ${SEARCH} -c -O4 ${DEBUG} ${PRECISION}
+Cflag0  = ${SEARCH} -c -O0 -w -dusty ${DEBUG} ${PRECISION}
+Cflag1  = ${SEARCH} -c -O1 -w -dusty ${DEBUG} ${PRECISION}
+Cflag2  = ${SEARCH} -c -O2 -w -dusty ${DEBUG} ${PRECISION}
+Cflag3  = ${SEARCH} -c -O3 -w -dusty ${DEBUG} ${PRECISION}
+Cflag4  = ${SEARCH} -c -O4 -w -dusty ${DEBUG} ${PRECISION}
 
 # RCM compilation flags
 CFLAGS = ${SEARCH}  -c -w -C -save
