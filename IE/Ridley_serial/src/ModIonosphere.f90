@@ -9,6 +9,7 @@ module ModIonosphere
   use ModNumConst
   implicit none
   save
+
   !\
   ! Ionosphere array parameters
   !/
@@ -16,9 +17,6 @@ module ModIonosphere
   integer, parameter :: IONO_nPsi = 4*(IONO_nTheta-1)+1
   integer, parameter :: IONO_nRadial = 21
   real, parameter    :: IONO_PI=cPi
-  real, parameter    :: Max_FAC_Distance = cPi / IONO_nTheta
-  integer :: IONO_NORTH_nMagBndPts=-1, IONO_SOUTH_nMagBndPts=-1
-
   !\
   ! Some time dependent stuff
   !/
@@ -126,57 +124,8 @@ module ModIonosphere
        IONO_NORTH_Fake_JR,                          & !Region 2 current
        IONO_SOUTH_Fake_JR
 
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
-       IONO_NORTH_PHI_BC,IONO_SOUTH_PHI_BC,         & !Magnetosphere bound pot
-       IONO_NORTH_ETh_BC,IONO_NORTH_EPs_BC,         & !Magnetosphere bound E field
-       IONO_SOUTH_ETh_BC,IONO_SOUTH_EPs_BC,         & !
-       IONO_NORTH_UTh_BC,IONO_NORTH_UPs_BC,         & !Magnetosphere bound flow
-       IONO_NORTH_UR_BC,                            & !Velocities
-       IONO_SOUTH_UTh_BC,IONO_SOUTH_UPs_BC,         &
-       IONO_SOUTH_UR_BC
-
-  integer, dimension(1:IONO_nTheta,1:IONO_nPsi) ::             &
-       IONOtoMAG_NORTH_hemisphere, IONOtoMAG_SOUTH_hemisphere, &
-       IONOtoMAG_NORTH_lat_index, IONOtoMAG_SOUTH_lat_index,   &
-       IONOtoMAG_NORTH_lon_index, IONOtoMAG_SOUTH_lon_index
-
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::                &
-       IONOtoMAG_NORTH_lat_factor, IONOtoMAG_SOUTH_lat_factor, &
-       IONOtoMAG_NORTH_lon_factor, IONOtoMAG_SOUTH_lon_factor
-
   real, dimension(1:IONO_nTheta) :: dTheta_North, dTheta_South
   real, dimension(1:IONO_nPsi)   :: dPsi_North, dPsi_South
-
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi,1:8) ::  &
-       IONO_NORTH_Mapping_Distance, IONO_SOUTH_Mapping_Distance
-
-  integer, dimension(1:IONO_nTheta,1:IONO_nPsi,1:8) ::  &
-       IONO_NORTH_Mapping_Index, IONO_SOUTH_Mapping_Index
-
-  real, dimension(:), allocatable ::                          &
-       MAG_NORTH_X,MAG_NORTH_Y,MAG_NORTH_Z,MAG_NORTH_R,       & !Magnetospheric coordinates
-       MAG_NORTH_Theta,MAG_NORTH_Psi,                         & !
-       MAG_SOUTH_X,MAG_SOUTH_Y,MAG_SOUTH_Z,MAG_SOUTH_R,       & !
-       MAG_SOUTH_Theta,MAG_SOUTH_Psi,                         & !
-       MAG_NORTH_JR,MAG_NORTH_Jx,MAG_NORTH_Jy,MAG_NORTH_Jz,   & !Magnetospheric current
-       MAG_SOUTH_JR,MAG_SOUTH_Jx,MAG_SOUTH_Jy,MAG_SOUTH_Jz
-
-  real, dimension(:,:), allocatable ::   &
-       MAG_NORTH_MagField, MAG_SOUTH_MagField
-
-  real, dimension(:,:), allocatable ::   &
-       MAG_NORTH_IONO_LOC, MAG_SOUTH_IONO_LOC
-
-  !\
-  ! Magnetosphere inner boundary current solution variable definitions.
-  !/
-  integer :: nMagBndPts_North, nMagBndPts_South
-  integer, dimension(:), allocatable :: nMagBndPts_North_PE, nMagBndPts_South_PE
-  real, dimension(:), allocatable ::             &
-       Xmag_North,Ymag_North,Zmag_North,         & ! Magnetospheric coordinates
-       Xmag_South,Ymag_South,Zmag_South,         & !
-       JXmag_North,JYmag_North,JZmag_North,      & ! Magnetospheric current
-       JXmag_South,JYmag_South,JZmag_South
 
   data cond_mlts /  0.0,  1.0,  2.0,  3.0,  4.0,  5.0,  &
                     6.0,  7.0,  8.0,  9.0, 10.0, 11.0,  &
