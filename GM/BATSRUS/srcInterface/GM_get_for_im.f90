@@ -14,7 +14,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        allocate_gm_im, MHD_compute_from_raytrace, &
        process_integrated_data, &
        write_integrated_data_tec, write_integrated_data_idl, &
-       nCalls, RCM_lat, RCM_lon, &
+       RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
 
   use ModRaytrace, ONLY: UseAccurateIntegral, RayResult_VII, RayIntegral_VII, &
@@ -36,8 +36,6 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-  nCalls=nCalls+1
 
   ! Allocate arrays
   call allocate_gm_im(iSizeIn, jSizeIn)
@@ -79,6 +77,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   end if
 
   if (iProc == 0) then
+     if(DoTest)call write_integrated_data_tec  ! TecPlot output before processing
      if(DoTest)call write_integrated_data_idl  ! IDL output before processing
      call process_integrated_data
      if(DoTest)call write_integrated_data_tec  ! TecPlot output

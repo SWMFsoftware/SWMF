@@ -46,8 +46,6 @@ module ModGmImCoupling
 
   logical :: dbg0=.false.
 
-  integer, save :: nCalls=0
-
   integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
 
 contains
@@ -157,12 +155,14 @@ contains
   subroutine write_integrated_data_tec
     use ModIoUnit, ONLY: UNITTMP_
     CHARACTER (LEN=80) :: filename
-    integer :: j2
+    integer :: j2, nCall=0
     real :: tmpT, tmpV1,tmpV2, lonShift
     !-------------------------------------------------------------------------
 
+    nCall=nCall+1
+
     !write values to plot file
-    write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",n_step,"_",nCalls,".dat"
+    write(filename,'(a,i6.6,a,i4.4,a)')"rayValues_n=",n_step,"_",nCall,".dat"
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
