@@ -93,6 +93,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
   end if
 
+  !^CFG END RCM
 end subroutine GM_get_for_im
 
 !==========================================================================
