@@ -221,7 +221,7 @@ subroutine write_plot_common(ifile)
      call get_TEC_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_IDL_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+     call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
@@ -1615,7 +1615,7 @@ subroutine get_TEC_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
         case('dtblk','dtBLK')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'dtblk'
-        case('impl','IMPL')                                  !^CFG IF IMPLICIT BEGIN
+        case('impl','IMPL')               !^CFG IF IMPLICIT BEGIN
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'impl' !^CFG END IMPLICIT
         case('PE','pe','proc')			       
@@ -1631,13 +1631,12 @@ subroutine get_TEC_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
            write(unitstr_TEC,'(a)') & 		       
                 trim(unitstr_TEC)//'Child #'
 
-           ! DEFAULT FOR A BAD SELECTION
         case default
            jVar = 1
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)))
+           do while (jVar < nVar .and. s /= NameVar_V(jVar))
               jVar=jVar+1
            end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
+           if(trim(s) == trim(NameVar_V(jVar))) then
               write(unitstr_TEC,'(a)') & 
                    trim(unitstr_TEC)//&
                    ' '//trim(NameVar_V(jVar))
@@ -1658,162 +1657,95 @@ end subroutine get_TEC_variables
 
 !==============================================================================
 
-subroutine get_IDL_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
   use ModPhysics
-  use ModIO, ONLY : plot_type,plot_dimensional
+  use ModUtilities,  ONLY: lower_case
+  use ModIO,         ONLY : plot_type, plot_dimensional
   use ModVarIndexes, ONLY : NameVar_V
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: iFile,Nplotvar
-  character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  character (len=79), intent(out) :: unitstr_IDL 
-  character (len=10) :: s
+  integer, intent(in)             :: iFile, nPlotVar
+  character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
+  character (len=79), intent(out) :: StringUnitIdl 
 
-  integer :: iVar, len, jVar
 
+  character (len=10) :: NamePlotVar, NameVar, NameUnit
+  integer            :: iPlotVar, iVar
 
   !\
   ! This routine takes the plot_var information and loads the header file with
   ! the appropriate string of unit values
   !/
 
+  if(.not.plot_dimensional(iFile))then
+     StringUnitIdl = 'normalized variables'
+     RETURN
+  end if
+
   if(index(plot_type(ifile),'sph')>0) then
-
-     if (plot_dimensional(ifile)) then
-        write(unitstr_IDL,'(a)') trim(unitstr_IDL_x)//' '//&
-             'degree degree'
-     else
-        write(unitstr_IDL,'(a)') 'normalized variables'
-     end if
-
+     StringUnitIdl = trim(unitstr_IDL_x)//' deg deg'
   else
-     if (plot_dimensional(ifile)) then
-        write(unitstr_IDL,'(a)') trim(unitstr_IDL_x)//' '//&
-             trim(unitstr_IDL_x)//' '//&
-             trim(unitstr_IDL_x)
-     else
-        write(unitstr_IDL,'(a)') 'normalized variables'
-     end if
-
+     StringUnitIdl = trim(unitstr_IDL_x)//' '//&
+          trim(unitstr_IDL_x)//' '//trim(unitstr_IDL_x)
   end if
 
+  do iPlotVar = 1, nPlotVar
 
-  if (plot_dimensional(ifile)) then
+     NamePlotVar = NamePlotVar_V(iPlotVar)
+     call lower_case(NamePlotVar)
 
-     do iVar = 1, nplotvar
-
-   	s=plotvarnames(iVar)
-
-   	select case(s)
-
-           ! MHD variables 
-   	case('rho') 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_rho)
-   	case('rhoUx','rhoux','mx','rhoUy','rhouy','my','rhoUz','rhouz','mz',&
-             'rhoUr','rhour','mr')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_rhoU)
-   	case('Bx','bx','By','by','Bz','bz',&
-             'B1x','b1x','B1y','b1y','B1z','b1z',&
-             'Br','br','B1r','b1r')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_B)
-   	case('E','e')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_energydens)
-   	case('P','p','Pth','pth')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_p)
-!^CFG IF ALWAVES BEGIN
-        case('Ew','ew')
-           write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_energydens)
-!^CFG END ALWAVES
-        case('Ux','ux','Uy','uy','Uz','uz',&
-             'Ur','ur')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_U)
-   	case('Jx','jx','Jy','jy','Jz','jz','Jr','jr') 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_J)
-   	case('Ex','ex','Ey','ey','Ez','ez','Er','er')                                 
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_electric)
-        case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX', &
-             'pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY', &
-             'pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ', &
-             'pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR', &
-             'B2ur','B2Ur','b2ur')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '//&
-   		trim(unitstr_IDL_Poynting)
-        case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct')
-           write(unitstr_IDL,'(a)') &                      
-                trim(unitstr_IDL)//' '//&
-                trim(unitstr_IDL_DivB)
-
-!!$!^CFG  IF RAYTRACE BEGIN
-           ! BASIC RAYTRACE variables
-      	case('theta1','phi1','theta2','phi2')
-   	   write(unitstr_IDL,'(a)') &                      
-   		trim(unitstr_IDL)//' deg'
-   	case('status')
-   	   write(unitstr_IDL,'(a)') &                      
-   		trim(unitstr_IDL)//' --'
-
-           ! EXTRA RAYTRACE variables
-   	case('f1x','f1y','f1z','f2x','f2y','f2z')
-   	   write(unitstr_IDL,'(a)') &                 
-   		trim(unitstr_IDL)//' --'
-!!$!^CFG END RAYTRACE
-
-           ! GRID INFORMATION
-   	case('PE','pe','proc','blk','BLK','blkall','BLKALL','child', &
-             'impl','IMPL')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' 1'
-        case('dt','dtBLK','dtblk')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '// &
-                trim(unitstr_IDL_t)
-        case('dx')
-   	   write(unitstr_IDL,'(a)') & 
-   		trim(unitstr_IDL)//' '// &
-                trim(unitstr_IDL_x)
-
-
-           ! DEFAULT FOR A BAD SELECTION
-   	case default
-           jVar = 1
-           do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)))
-              jVar=jVar+1
-           end do
-           if(trim(s).eq.trim(NameVar_V(jVar))) then
-              write(unitstr_IDL,'(a)') & 
-                   trim(unitstr_IDL)//&
-                   ' '//trim(TypeUnitVarsIdl_V(jVar))
-           else
-              write(unitstr_IDL,'(a)') & 
-                   trim(unitstr_IDL)//' ?'
-              
+     select case(NamePlotVar)
+     case('rho') 
+        NameUnit = unitstr_IDL_rho
+     case('rhoux','mx','rhouy','rhoUz','rhouz','mz','rhour','mr')
+        NameUnit = unitstr_IDL_rhoU
+     case('bx','by','bz','b1x','b1y','b1z','br','b1r')
+        NameUnit = unitstr_IDL_B
+     case('e')
+        NameUnit = unitstr_IDL_energydens
+     case('p','pth')
+        NameUnit = unitstr_IDL_p
+     case('ew')                             !^CFG IF ALWAVES
+        NameUnit = unitstr_IDL_energydens        !^CFG IF ALWAVES
+     case('ux','uy','uz','ur')
+        NameUnit = unitstr_IDL_U
+     case('jx','jy','jz','jr') 
+        NameUnit = unitstr_IDL_J
+     case('Ex','ex','Ey','ey','Ez','ez','Er','er')
+        NameUnit = unitstr_IDL_electric
+     case('pvecx','pvecy','pvecz','pvecr','B2ur','B2Ur','b2ur')
+        NameUnit = unitstr_IDL_Poynting
+     case('DivB','divB','divb','divb_cd','divb_ct')
+        NameUnit = unitstr_IDL_DivB
+     case('theta1','phi1','theta2','phi2')       !^CFG  IF RAYTRACE BEGIN
+        NameUnit = 'deg'
+     case('status','f1x','f1y','f1z','f2x','f2y','f2z')
+        NameUnit = '--'                          !^CFG END RAYTRACE
+        ! GRID INFORMATION
+     case('pe', 'proc','blk','blkall','child','impl')
+        NameUnit = '1'
+     case('dt', 'dtblk')
+        NameUnit = unitstr_IDL_t
+     case('dx')
+        NameUnit = unitstr_IDL_x
+     case default
+        ! Unit is not known
+        NameUnit = '?'
+        ! Try to find the plot variable among the basic variables
+        do iVar = 1, nVar
+           NameVar = NameVar_V(iVar)
+           call lower_case(NameVar)
+           if(NameVar == NamePlotVar)then
+              NameUnit = TypeUnitVarsIdl_V(iVar)
+              EXIT
            end if
-   	end select
-
-     end do
-
-  end if
+        end do
+     end select
+     ! Append the unit string for this variable to the output string
+     StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
+  end do
 
 end subroutine get_idl_units
