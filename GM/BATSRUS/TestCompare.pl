@@ -215,8 +215,10 @@ TEST: foreach $test (sort @test){
 	    if($.<=$nheadline){
 		$line1 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
 		$line2 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
+		$line1 =~ s/\-(0\.0+)\b/ $1/;
+		$line2 =~ s/\-(0\.0+)\b/ $1/;
 		if($line1 ne $line2){
-		    &report("$test: different head lines:\n",
+		    &report("$test $logfile, different head lines:\n",
 			    "    $line1    $line2\n");
 		    next LOGFILE if $Strict;
 		}
