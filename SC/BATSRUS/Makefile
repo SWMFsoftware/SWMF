@@ -46,16 +46,5 @@ distclean: clean
 
 veryclean: distclean
 	@(if([ -f src/Makefile ]); then \
-	rm -rf  src \
-	srcInterface/SC_wrapper.f90 \
-	srcInterface/SC_get_for_sp.f90 \
-	srcInterface/ModGridDescriptor.f90 \
-	srcInterface/update_lagrangian_grid.f90 \
-	srcInterface/Makefile.DEPEND \
-	PARAM.XML \
-	*.pl Test* \
-	Idl Param \
-	Scripts srcPostProc *~; \
+		rm -rf  src PARAM.XML PARAM.pl GridSize.pl *~; \
 	fi)
-
-

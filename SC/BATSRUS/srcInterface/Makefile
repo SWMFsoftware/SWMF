@@ -39,6 +39,8 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f Makefile.DEPEND
+	rm -f   SC_wrapper.f90 SC_get_for_sp.f90 \
+		ModGridDescriptor.f90 update_lagrangian_grid.f90 \
+		Makefile.DEPEND
 
 # keep this line
