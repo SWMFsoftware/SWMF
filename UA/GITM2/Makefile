@@ -2,11 +2,11 @@ default : GITM
 
 include Makefile.def
 
-ABDIR   = ${UADIR}/srcSphereAB
-EDDIR   = ${UADIR}/srcRudy
-IEDIR   = ${UADIR}/srcIE
-IODIR   = ${UADIR}/srcIO
-MAINDIR = ${UADIR}/src
+ABDIR   = srcSphereAB
+EDDIR   = srcRudy
+IEDIR   = srcIE
+IODIR   = srcIO
+MAINDIR = src
 
 install: Makefile.def.orig MAKEFILE_DEF
 	@make install_cont;
@@ -42,34 +42,36 @@ install_cont:
 
 GITM:
 	@cd ${SHAREDIR}; make LIB
-	@cd $(ABDIR); make LIB
-	@cd $(IEDIR); make LIB
-	@cd $(EDDIR); make LIB
-	@cd $(IODIR); make LIB
-	@cd $(MAINDIR); make GITM.exe
+	@cd $(ABDIR);    make LIB
+	@cd $(IEDIR);    make LIB
+	@cd $(EDDIR);    make LIB
+	@cd $(IODIR);    make LIB
+	@cd $(MAINDIR);  make GITM.exe
+
+GITM2 = ${DIR}/UA/GITM2
 
 LIB:
-	cd $(ABDIR)     ; make                                LIB
-	cd $(EDDIR)     ; make LIBPREV=${ABDIR}/libSphere.a   LIBADD
-	cd $(IODIR)     ; make LIBPREV=${EDDIR}/libABIEED.a   LIBADD
-	cd $(MAINDIR)   ; make LIBPREV=${IODIR}/libABIEEDIO.a LIB
-	cd srcInterface ; make LIBPREV=${MAINDIR}/libUA.a     LIB
+	cd $(ABDIR)     ; make                                         LIB
+	cd $(EDDIR)     ; make LIBPREV=${GITM2}/${ABDIR}/libSphere.a   LIBADD
+	cd $(IODIR)     ; make LIBPREV=${GITM2}/${EDDIR}/libABIEED.a   LIBADD
+	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${IODIR}/libABIEEDIO.a LIB
+	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
 nompirun:
 	make GITM
 	cd run; ./GITM.exe
 
 clean:
-	@cd $(ABDIR); make clean
-	@cd $(IEDIR); make clean
-	@cd $(EDDIR); make clean
-	@cd $(IODIR); make clean
-	@cd $(MAINDIR); make clean
+	@cd $(ABDIR);    make clean
+	@cd $(IEDIR);    make clean
+	@cd $(EDDIR);    make clean
+	@cd $(IODIR);    make clean
+	@cd $(MAINDIR);  make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean: clean
 	@(if [ -d share ]; then cd share; make distclean; fi);
-	cd src; make distclean
+	@cd $(MAINDIR); make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
 
