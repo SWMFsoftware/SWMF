@@ -53,7 +53,7 @@ The only restriction is that the length of the lines cannot exceed
         <parameter name="NameIncludeFile" type="string" length="100" />
 
 #INCLUDE
-RESTART.in		NameIncludeFile
+run/GM/restartIN/restart.H		NameIncludeFile
 
 The NameIncludeFile parameter contains the name of the file to be included.
 The file name may be followed with a trailing comment if it
@@ -862,7 +862,7 @@ is saved at the end of the run.
 
 <command name="RESTARTFILE">
 	<parameter name="NameRestartFile" type="string" length="100"
-				default="RESTART.in" />
+				default="RESTART.out" />
 
 #RESTARTFILE
 RESTART_test.in
@@ -872,9 +872,10 @@ for the restart file for CON itself. This file contains information
 such as initial time, simulation time and time step, version number,
 description of the simulation, name of the planet, etc. The file
 is in the same format as PARAM.in, so it can be simply included
-with the #INCLUDE command.
+with the #INCLUDE command. To avoid unpleasant surprises,
+do not include the file which is being written.
 
-The default value for NameRestartFile is "RESTART.in".
+The default value for NameRestartFile is "RESTART.out".
 </command>
 
 </commandgroup>
