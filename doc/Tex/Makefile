@@ -226,7 +226,7 @@ HTML: cleanhtml
 #^CMP END DOCHTML
 
 clean:
-	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMFXML.tex
+	rm -f *.aux *.log *.toc *.dvi *.ps *~ *.f90 SWMFREF.tex SWMFXML.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
