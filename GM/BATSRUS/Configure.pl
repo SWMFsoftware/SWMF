@@ -2,9 +2,6 @@
 #^CFG COPYRIGHT UM
 #^CFG FILE CONFIGURE
 
-use strict;
-our ($D, $d, $h, $i, $o, $on, $off, $s, $t, $v, $u, $exe, $keepall); # switches
-
 # List of option files in the CVS distributions. First one is the default.
 my @Optionfiles=('Configure.options','Configure.public','Spherical.options');
 
@@ -22,6 +19,8 @@ my $Verbose    = $v;
 my $Update     = $u;
 my $Exe        = $exe;
 my $KeepAll    = $keepall;
+
+use strict;
 
 # Set default destination directory
 $Dir = "Build" unless length($Dir)>0;
