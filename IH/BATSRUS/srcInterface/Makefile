@@ -41,7 +41,8 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f IH_*.f90 ModGridDescriptor.f90 update_lagrangian_grid.f90
+	rm -f IH_*.f90 ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90
 	rm -f Makefile.DEPEND
 
 # keep this line
