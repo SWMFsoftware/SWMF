@@ -2,7 +2,7 @@
 T			DoEcho
 
 #DESCRIPTION
-Startup for GM-IM-IE-UA. Solar wind condition based on SC-IH run.
+Startup for GM. Solar wind condition based on SC-IH run.
 
 #PLANET
 EARTH			NamePlanet
@@ -22,6 +22,9 @@ EARTH			NamePlanet
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#RESTARTFILE
+RESTART.GM
+
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart
@@ -35,8 +38,14 @@ T			DoSaveRestart
 #PROBLEMTYPE
 11
 
-! For sake of simpler continuation save restart into GM/restartIN
+! Check if the block size is correct and the number of blocks are sufficient
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+8			nK
+2500			MinBlockALL
 
+! For sake of simpler continuation save restart into GM/restartIN
 #RESTARTOUTDIR
 GM/restartIN
 
