@@ -104,8 +104,9 @@ all the testing were done at CSEM.
 The SWMF has been developed further since the second release of
 version 2.0. Here is a partial list of improvements:
 \begin{itemize}
-\item The SWMF now contains a new version for the UA component: GITM2.
-\item Restartin SWMF is made easier with the Scripts/Restart.pl script.
+\item The documentation has been split into smaller parts.
+\item The SWMF contains a new version for the UA component: GITM2.
+\item Restarting SWMF is made easier with the Scripts/Restart.pl script.
 \item The Solar Corona can be solved in a corotating frame.
 \item The coupling between the GM and IE components has been rewritten
       with simpler and more accurate algorithms.
@@ -406,13 +407,12 @@ with
 \end{verbatim}
 
 {\bf IMPORTANT NOTE:
-On the Altix machine at NASA Ames (columbia),
-the current (08/12/2004) 
-default version of the Intel Fortran compiler 
-cannot be used for SWMF. 
-You should load the 8.0.066 version with the command
+On the Altix machine at NASA Ames (columbia)
+you should load the 8.0.070 version 
+of the Intel Fortran compiler 
+with the command
 \begin{verbatim}
-  module load intel-comp.8.0.066
+  module load intel-comp.8.0.070
 \end{verbatim}
 You may wish to insert this line into the .cshrc file
 so it executes at login time. 
@@ -517,5 +517,77 @@ make clean
 before recompiling the executables. It is possible to recompile
 only a component or just one subdirectory if the {\tt make clean}
 command is issued in the appropriate directory.
+
+\section{Restarting a Run}
+
+There are several reasons for restarting a run. A run may fail
+due to a run time error, due to hardware failure, due to 
+software failure (e.g. the machine crashes) or because the
+queue limits are exceeded. In such a case the run can be continued from
+the last saved state of SWMF. 
+
+It is also possible that one builds up a complex simulation from multiple 
+runs. For example the first run creates a steady state for the SC component.
+The second run includes both the SC and IH components and it 
+restarts from the results of the first run and creates a steady state
+for both components. A third run may restart from this solution and include
+the GM component, etc. 
+
+The restart files are saved at the frequency determined in the PARAM.in file.
+Normally the restart files are saved into the output restart directories
+of the individual components and subsequent saves overwrite the previous ones
+(to reduce the required disk space). A restart requires the modification
+of the PARAM.in file: one needs to include the restart file for the
+control module of SWMF as well as ask for restart by all the components.
+
+The Scripts/Restart.pl script simplifies the work of the restart in
+several ways:
+\begin{enumerate}
+\item The SWMF restart file and the individual output restart 
+directories of the components are collected into a single directory tree, 
+the {\bf restart tree}.
+\item The default input restart file of SWMF and the default 
+      input directories of the components can be linked to an existing
+      restart tree.
+\item The script can run continuously in the background and create
+      multiple restart trees while SWMF is running. 
+\item The script does extensive checking of the consistency 
+      of the restart files.
+\end{enumerate}
+The Restart.pl script is copied into the run directory and it should
+be executed in the run directory. Note that the PARAM.in file is not
+modified by the script: it has to be modified with an editor as needed.
+
+To demonstrate the use of the script, here are a few simple examples.
+After a successful or failed run which should be continued, simply type
+\begin{verbatim}
+cd run
+./Restart.pl
+\end{verbatim}
+to create a restart tree from the final output and to link to the tree for the
+next run. The default name of the restart tree is based on the simulation time
+for time accurate runs, or the time step for non-time accurate runs.
+But you can also specify a name explicitly, for example
+\begin{verbatim}
+./Restart.pl RESTART_SC_steady_state
+\end{verbatim}
+If you wish to continue the run in another run directory, or on anoher
+machine, transfer the restart tree as a whole into the new run
+directory and type
+\begin{verbatim}
+./Restart.pl -i=RESTART_SC_steady_state
+\end{verbatim}
+where the {\tt -i} stands for ``input only'', i.e. the script links to
+the tree, but it does not attempt to create the restart tree.
+
+To save multiple restart trees repeatedly at an hourly frequency of 
+wall clock time while the SWMF is running, type
+\begin{verbatim}
+./Restart.pl -r=3600 &
+\end{verbatim}
+To see all the options of the script type
+\begin{verbatim}
+./Restart.pl -h
+\end{verbatim}
 
 %\end{document}
