@@ -53,14 +53,16 @@ The default is that no plotfiles are saved.
 !!!!!!!!!!!!!!!!!!!!!!!!! Physical parameters !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'attrib' => {'name' => 'IONOSPHERE'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'ConductanceModel'},'content' => [{'attrib' => {'value' => '0','name' => '(0) constant pedersen and 0 Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '1','name' => '(1) constant pedersen and Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2','name' => '(2) F107 flux and and constant Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '3','name' => '(3) Simple oval'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '5','default' => 'T','name' => '(5) Realistic oval'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFullCurrent'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFakeRegion2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '150','type' => 'real','name' => 'F107Flux'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '0.25','type' => 'real','name' => 'StarLightPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '0.25','type' => 'real','name' => 'PolarCapPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'},{'attrib' => {'name' => 'IONOSPHERE'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'ConductanceModel'},'content' => [{'attrib' => {'value' => '0','name' => '(0) constant pedersen and 0 Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '1','name' => '(1) constant pedersen and Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2','name' => '(2) F107 flux and and constant Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '3','name' => '(3) Simple oval'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '5','default' => 'T','name' => '(5) Realistic oval'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFullCurrent'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFakeRegion2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '150','type' => 'real','name' => 'F107Flux'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.001','default' => '0.25','type' => 'real','name' => 'StarLightPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '0.25','type' => 'real','name' => 'PolarCapPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => 'not ($ConductanceModel=~/3|5/ and $F107Flux==0)'},'content' => [{'content' => '
+		F107Flux must be positive for ConductanceModel = 3 or 5
+	','type' => 't'}],'type' => 'e','name' => 'rule'},{'content' => '
 
 The ConductanceModel variable determines which ionosphere model is used:
-  0 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance
-  1 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance, and a constant Hall conductance
-      which is set by StarLightPedConductance
+  0 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance
+  1 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance, and a constant Hall conductance
+      which is set by PolarCapPedConductance
   2 - uses a solar EUV combined with a nightside conductance, so
       it uses f107_flux and StarLightPedConductance
   3 - uses solar EUV, nightside, and crude oval, so uses
