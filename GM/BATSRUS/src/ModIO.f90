@@ -112,7 +112,7 @@ Module ModIO
   integer, dimension(maxsatellitefile)                        :: iPEsatellite, iBLKsatellite
   real,    dimension(maxsatellitefile, Max_Satellite_Npts, 3) :: XSatellite_traj
   real,    dimension(maxsatellitefile, 3)                     :: XSatellite
-  real*8,  dimension(maxsatellitefile, Max_Satellite_Npts)    :: Satellite_Time
+  real,    dimension(maxsatellitefile, Max_Satellite_Npts)    :: Satellite_Time
   character (len=50)                                          :: Satellite_name(maxsatellitefile)
   character(len=3), dimension(maxsatellitefile) :: TypeSatCoord_I
 
