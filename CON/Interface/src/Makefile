@@ -15,7 +15,6 @@ DEPEND:
 
 #^CMP IF GM BEGIN
 MOD01 = CON_couple_gm_ie.o	#^CMP IF IE
-MOD02 = CON_couple_gm_ie_swmf.o	#^CMP IF IE
 MOD03 = CON_couple_ih_gm.o	#^CMP IF IH
 MOD04 = CON_couple_gm_im.o	#^CMP IF IM
 MOD09 = CON_couple_gm_rb.o	#^CMP IF RB
@@ -31,7 +30,7 @@ MOD07 = CON_couple_ih_sc.o       #^CMP IF SC
 MOD08 = CON_couple_mh_sp.o       #^CMP IF SP
 
 
-MODULES = ${MOD01} ${MOD02} ${MOD03} ${MOD04} ${MOD05} ${MOD06} \
+MODULES = ${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} \
 	${MOD07} ${MOD08} ${MOD09} \
 	CON_wrapper.o \
 	CON_couple_all.o
