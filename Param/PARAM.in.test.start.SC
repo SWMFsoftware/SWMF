@@ -95,6 +95,9 @@ F			UseCorotation
 6                       MaxBoundary
 F                       DoFixOuterBoundary
 
+#INNERBOUNADRY
+user                    TypeBc_I(body1_)
+
 #OUTERBOUNDARY
 heliofloat		TypeBcOuter_E(East_)
 heliofloat		TypeBcOuter_E(West_)

@@ -250,7 +250,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
      B0Face_D,UseIonosphereHere,UseCorotationHere)
   use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,   &
        Top_
-  use ModMain,       ONLY: UseUserHeating,UseInertial
+  use ModMain,       ONLY: UseUserHeating
   use ModVarIndexes, ONLY: &
  !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
 	rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_
@@ -446,7 +446,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   !\
   ! Apply corotation:: Currently works only for the first body.
   !/
-  if (UseInertial) then
+  if (UseCorotationHere) then
      !\
      ! The program is called which calculates the cartesian 
      ! corotation velocity::
