@@ -12,7 +12,7 @@ parameters from the PARAM.in file.
 In order to run GITM, a starting time and an ending time must be
 specified.  These are specified using the following commands:
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '2000','type' => 'integer','name' => 'iYear'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '3','type' => 'integer','max' => '12','name' => 'iMonth','min' => '1'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '21','type' => 'integer','max' => '31','name' => 'iDay','min' => '1'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '23','name' => 'iHour','min' => '0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '59','name' => 'iMinute','min' => '0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '59','name' => 'iSecond','min' => '0'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'iYear','type' => 'integer','default' => '2000'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '12','name' => 'iMonth','type' => 'integer','min' => '1','default' => '3'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '31','name' => 'iDay','type' => 'integer','min' => '1','default' => '21'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '23','name' => 'iHour','type' => 'integer','min' => '0','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '59','name' => 'iMinute','type' => 'integer','min' => '0','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '59','name' => 'iSecond','type' => 'integer','min' => '0','default' => '0'}},{'content' => '
 
 #TIMESTART
 1999			iYear
@@ -25,7 +25,7 @@ specified.  These are specified using the following commands:
 This command is only used in the stand alone mode.
 
 The #STARTTIME command sets the initial date and time for the simulation.
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'if' => '$_IsStandAlone','name' => 'TIMESTART','alias' => 'STARTTIME'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '2000','type' => 'integer','name' => 'iYear'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '3','type' => 'integer','max' => '12','name' => 'iMonth','min' => '1'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '21','type' => 'integer','max' => '31','name' => 'iDay','min' => '1'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '23','name' => 'iHour','min' => '0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '59','name' => 'iMinute','min' => '0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','max' => '59','name' => 'iSecond','min' => '0'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'TIMESTART','if' => '$_IsStandAlone','alias' => 'STARTTIME'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'iYear','type' => 'integer','default' => '2000'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '12','name' => 'iMonth','type' => 'integer','min' => '1','default' => '3'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '31','name' => 'iDay','type' => 'integer','min' => '1','default' => '21'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '23','name' => 'iHour','type' => 'integer','min' => '0','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '59','name' => 'iMinute','type' => 'integer','min' => '0','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '59','name' => 'iSecond','type' => 'integer','min' => '0','default' => '0'}},{'content' => '
 
 #TIMEEND
 1999			iYear
@@ -38,7 +38,9 @@ The #STARTTIME command sets the initial date and time for the simulation.
 This command is only used in the stand alone mode.
 
 The #TIMEEND command sets the final date and time for the simulation.
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEEND','alias' => 'ENDTIME'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'F','type' => 'logical','name' => 'DoRestart'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'TIMEEND','if' => '$_IsStandAlone','alias' => 'ENDTIME'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DoRestart','type' => 'logical','default' => 'F'}},{'content' => [{'content' => '
+                File UA/RestartIN/header.rst should exist!
+	','type' => 't'}],'name' => 'rule','type' => 'e','attrib' => {'expr' => '-f \'UA/RestartIN/header.rst\' or not $DoRestart'}},{'content' => '
 
 #RESTART
 F			DoRestart
@@ -47,7 +49,7 @@ There are two commands that are typically not input by a user, but are
 specified in the restart header file that is read in the exact same
 way as the input file.  It is possible to set these variables, though.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'RESTART'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'integer','name' => 'iStep'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'RESTART'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'iStep','type' => 'integer','default' => ''}},{'content' => '
 
 #ISTEP
 1
@@ -55,7 +57,7 @@ way as the input file.  It is possible to set these variables, though.
 This sets the current iStep to the read in value instead of starting at
 iteration 1.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'ISTEP'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'tsimulation'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'ISTEP'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'tsimulation','type' => 'real','default' => ''}},{'content' => '
 
 #TSIMULATION
 0.0
@@ -63,7 +65,7 @@ iteration 1.
 This offsets the current start time by the read in amount.  It is simply
 added to the #STARTTIME input time.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'TSIMULATION'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real, seconds','name' => 'CPUTimeMax'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'TSIMULATION'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'CPUTimeMax','type' => 'real, seconds','default' => ''}},{'content' => '
 
 #CPUTIMEMAX
 7200.0
@@ -77,11 +79,11 @@ give a buffer of only a couple of minutes.  On some systems, I
 sometimes give a full half hour, just to make absolutely sure the code
 will write all of the correct files and exit before the queue is up.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'CPUTIMEMAX'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Time Variables'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'CPUTIMEMAX'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Time Variables'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseMSIS'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseIRI'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'TempMin'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'TempMax'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'Number Density','min' => '0.01'}}],'type' => 'e','name' => 'for','attrib' => {'to' => '3','from' => '1'}}],'type' => 'e','name' => 'if','attrib' => {'expr' => '$UseMSIS'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseMSIS','type' => 'logical','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIRI','type' => 'logical','default' => ''}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'TempMin','type' => 'real','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'TempMax','type' => 'real','default' => ''}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'Number Density','type' => 'real','min' => '0.01','default' => ''}}],'name' => 'for','type' => 'e','attrib' => {'to' => '3','from' => '1'}}],'name' => 'if','type' => 'e','attrib' => {'expr' => '$UseMSIS'}},{'content' => '
 
 #INITIAL
 F			UseMSIS
@@ -112,7 +114,7 @@ with the neutral atmosphere.
 
 The variables TempMin, etc., are only read in if {\\tt UseMSIS = F}.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'INITIAL'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'F','type' => 'logical','name' => 'UseApex'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'INITIAL'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseApex','type' => 'logical','default' => 'F'}},{'content' => '
 
 #APEX
 T			UseApex
@@ -123,11 +125,11 @@ dipole (F). In the current framework only the dipole works.
 
 The default value is false.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'APEX'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Initial Conditions'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'APEX'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Initial Conditions'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'f107','min' => '65'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'f107a','min' => '65'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'f107','type' => 'real','min' => '65','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'f107a','type' => 'real','min' => '65','default' => ''}},{'content' => '
 
 #F107
 150.0			f107
@@ -141,7 +143,7 @@ electron densities will be well above $10^{12} /m^3$.  This is used in
 the routine {\\tt calc_euv.f90} to determine the solar flux at the top
 of the atmosphere.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'F107'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'HemisphericPower','min' => '0.0'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'F107'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'HemisphericPower','type' => 'real','min' => '0.0','default' => ''}},{'content' => '
 
 #HPI
 10.0		HPI
@@ -152,7 +154,7 @@ is a number that is typically in the 1-10 range, but during active
 times can reach 300.  This is used in the {\\tt get_potential.f90}
 routine to get the auroral inputs at the top of the atmosphere.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'HPI'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','max' => '9.3','name' => 'kp','min' => '0.0'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'HPI'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '9.3','name' => 'kp','type' => 'real','min' => '0.0','default' => ''}},{'content' => '
 
 #KP
 1.0			kp
@@ -161,7 +163,7 @@ KP is a 3 hour index that summarizes the general activity level of the
 magnetosphere.  It has a range from 0-9.  Currently, KP is not used in
 GITM.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'KP'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'bx'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'by'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'bz'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'vx'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'KP'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'bx','type' => 'real','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'by','type' => 'real','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'bz','type' => 'real','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'vx','type' => 'real','default' => ''}},{'content' => '
 
 #SOLARWIND
 0.0			Bx
@@ -178,7 +180,7 @@ cause large ionospheric potentials.  The velocity typically ranges
 between 350-600 $km/s$, although it has been known to go upwards of
 1700 $km/s$.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'SOLARWIND'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Indices'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'SOLARWIND'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Indices'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -193,7 +195,7 @@ to read in the appropriate data, add it to the {\\tt Makefile}, add a
 flag in the {\\tt set_inputs.f90} (in both the {\\tt src} and {\\tt
 srcIO} directories), then compile it and debug it.
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'none','length' => '80','type' => 'string','name' => 'cAMIEFileNorth'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'none','length' => '80','type' => 'string','name' => 'cAMIEFileSouth'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'cAMIEFileNorth','type' => 'string','default' => 'none','length' => '80'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'cAMIEFileSouth','type' => 'string','default' => 'none','length' => '80'}},{'content' => '
 
 #AMIEFILES
 b19980504n
@@ -205,7 +207,7 @@ mapping of ionospheric electrodynamics (AMIE) technique.  If you do,
 you have to specify a Northern hemisphere and Southern hemisphere
 file.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'AMIEFILES'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','length' => '80','type' => 'string','name' => 'cFileName'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'AMIEFILES'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'cFileName','type' => 'string','default' => '','length' => '80'}},{'content' => '
 
 #MHD_INDICES
 imf.dat
@@ -214,7 +216,7 @@ The first method only inputs the solar wind velocity, density,
 temperature and IMF.
 
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'MHD_INDICES'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'length' => '80','type' => 'string','name' => 'cFileName'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'MHD_INDICES'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'cFileName','type' => 'string','length' => '80'}},{'content' => '
 
 #NGDC_INDICES
 spidr.dat
@@ -222,18 +224,18 @@ spidr.dat
 The second method takes data from the NOAA SPIDR interface.  You can
 download almost all of the parameters in this format.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'NGDC_INDICES'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','length' => '80','type' => 'string','name' => 'cFileName'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'NGDC_INDICES'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'cFileName','type' => 'string','default' => '','length' => '80'}},{'content' => '
 
 #NOAAHPI_INDICES
 power_1998.txt
 
 The third method only accepts HPI data from the NOAA satellites.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'NOAAHPI_INDICES'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Index Files'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'NOAAHPI_INDICES'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Index Files'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','name' => 'iDebugLevel'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0','type' => 'integer','name' => 'iDebugProc'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '10.0','type' => 'real','name' => 'DtReport'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'F','type' => 'logical','name' => 'UseBarriers'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'iDebugLevel','type' => 'integer','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'iDebugProc','type' => 'integer','default' => '0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtReport','type' => 'real','default' => '10.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseBarriers','type' => 'logical','default' => 'F'}},{'content' => '
 
 #DEBUG
 1			iDebugLevel
@@ -253,7 +255,7 @@ remember that MPI counts from 0 (not from 1, as most people do).  The
 to make sure all of the processors are on the same page, but there is
 a bug in this is the {\\tt \\#SATELLITES} are used (don\'t ask).
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'DEBUG'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Information'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'DEBUG'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Information'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -275,7 +277,7 @@ options really only turn off one thing, though.
 This is for the neutral temperature equations and {\\bf not} for the
 electron and ion equations.
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseSolarHeating'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseJouleHeating'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseAuroralHeating'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNOCooling  '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseOCooling   '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseConduction '}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseSolarHeating','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseJouleHeating','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseAuroralHeating','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseNOCooling  ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseOCooling   ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseConduction ','type' => 'logical','default' => 'T'}},{'content' => '
 
 #THERMO
 T		 	UseSolarHeating
@@ -285,7 +287,7 @@ T		 	UseNOCooling
 T		 	UseOCooling
 T		 	UseConduction
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'THERMO'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseDiffusion'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'THERMO'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseDiffusion','type' => 'logical','default' => ''}},{'content' => '
 
 #DIFFUSION
 T
@@ -293,7 +295,7 @@ T
 This only applies to the neutral densities, and includes both Eddy and
 Molecular diffusion.  It should be seperated shortly.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'DIFFUSION'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UsePressureGradient'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseIonDrag      '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseViscosity    '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseCoriolis     '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseGravity      '}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'DIFFUSION'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UsePressureGradient','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIonDrag      ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseViscosity    ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseCoriolis     ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseGravity      ','type' => 'logical','default' => 'T'}},{'content' => '
 
 #FORCING
 T		UsePressureGradient
@@ -308,7 +310,7 @@ Everything else works as a source term (in {\\tt calc_sources.f90},
 except if {\\tt UseGravity = F}, gravity is zeroed in {\\tt
 initialize.f90}.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'FORCING'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseExB             '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseIonPressureGradient'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseIonGravity      '}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNeutralDrag     '}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'FORCING'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseExB             ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIonPressureGradient','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIonGravity      ','type' => 'logical','default' => 'T'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseNeutralDrag     ','type' => 'logical','default' => 'T'}},{'content' => '
 
 #IONFORCING
 T		UseExB
@@ -320,7 +322,7 @@ T		UseNeutralDrag
 
 All of these variables are used within {\\tt calc_ion_v.f90}.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'IONFORCING'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseIonChemistry'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseIonAdvection'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'logical','name' => 'UseNeutralChemistry'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'IONFORCING'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIonChemistry','type' => 'logical','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseIonAdvection','type' => 'logical','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseNeutralChemistry','type' => 'logical','default' => ''}},{'content' => '
 
 #CHEMISTRY
 T		UseIonChemistry
@@ -330,7 +332,7 @@ T		UseNeutralChemistry
 You can turn off the chemisty and the ion advection with these terms.
 
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'CHEMISTRY'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '60.0','type' => 'real, seconds','name' => 'DtPotential'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '60.0','type' => 'real, seconds','name' => 'DtAurora'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'CHEMISTRY'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtPotential','type' => 'real, seconds','default' => '60.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtAurora','type' => 'real, seconds','default' => '60.0'}},{'content' => '
 
 #ELECTRODYNAMICS
 60.0
@@ -343,11 +345,11 @@ values to something on the order of 60 seconds.  If you are using
 higher temporal resolution IMF parameters, you can set them as low as
 you want.
   
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'ELECTRODYNAMICS'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'The Control of Nature'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'ELECTRODYNAMICS'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'The Control of Nature'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '1','type' => 'integer','name' => 'nBlocksLon'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '1','type' => 'integer','name' => 'nBlocksLat'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '-90.0','type' => 'real','max' => '90.0','name' => 'LatStart','min' => '-91.0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '90.0','type' => 'real','max' => '91.0','name' => 'LatEnd  ','min' => '-90.0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '180.0','type' => 'real','max' => '360.0','name' => 'LonStart','min' => '-180.0'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'nBlocksLon','type' => 'integer','default' => '1'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'nBlocksLat','type' => 'integer','default' => '1'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '90.0','name' => 'LatStart','type' => 'real','min' => '-91.0','default' => '-90.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '91.0','name' => 'LatEnd  ','type' => 'real','min' => '-90.0','default' => '90.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '360.0','name' => 'LonStart','type' => 'real','min' => '-180.0','default' => '180.0'}},{'content' => '
 
 #GRID
 8			nBlocksLon
@@ -364,7 +366,7 @@ ModSize.f90, then recompile, then set LatStart
 and LonStart to the point on the Globe you want
 to model.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'GRID'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '65.0','type' => 'real','max' => '90.0','name' => 'ConcentrationLatitude','min' => '-90.0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '0.0','type' => 'real','max' => '1.0','name' => 'StretchingPercentage','min' => '0.0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','max' => '10.0','name' => 'StretchingFactor','min' => '0.0'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'GRID'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '90.0','name' => 'ConcentrationLatitude','type' => 'real','min' => '-90.0','default' => '65.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '1.0','name' => 'StretchingPercentage','type' => 'real','min' => '0.0','default' => '0.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'max' => '10.0','name' => 'StretchingFactor','type' => 'real','min' => '0.0','default' => ''}},{'content' => '
 
 #STRETCH
 65.0  			ConcentrationLatitude
@@ -376,18 +378,18 @@ The stretching is controlled by StretchingPercentage: 0 means no
 stretching, 1.0 means a lot. The StretchingFactor provides further control:
 greater than 1 means stretch less, less than 1 means stretch more.
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'STRETCH'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '95.0','type' => 'real','name' => 'AltMin','min' => '0.0'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '600.0','type' => 'real','name' => 'AltMax','min' => '$AltMin'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStretchedAltitude'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'STRETCH'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'AltMin','type' => 'real','min' => '0.0','default' => '95.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'AltMax','type' => 'real','min' => '$AltMin','default' => '600.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'UseStretchedAltitude','type' => 'logical','default' => 'T'}},{'content' => '
 
 #ALTITUDE
 95.0			AltMin (km)
 600.0			AltMax (km)
 T			Stretched grid in altitude
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'ALTITUDE'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Controlling the Grid'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'ALTITUDE'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Controlling the Grid'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '3600.0','type' => 'real','name' => 'DtRestart'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '1','type' => 'integer','name' => 'nOutputTypes'}},{'content' => [{'content' => [{'content' => [],'type' => 'e','name' => 'option','attrib' => {'default' => 'T','name' => '3DALL'}},{'content' => [],'type' => 'e','name' => 'option','attrib' => {'name' => '2D'}},{'content' => [],'type' => 'e','name' => 'option','attrib' => {'name' => 'ION'}},{'content' => [],'type' => 'e','name' => 'option','attrib' => {'name' => 'NEUTRAL'}}],'type' => 'e','name' => 'parameter','attrib' => {'type' => 'string','input' => 'select','name' => 'Outputtype'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '3600.0','type' => 'real','name' => 'DtPlot'}}],'type' => 'e','name' => 'for','attrib' => {'to' => '$nOutputTypes','from' => '1'}},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtRestart','type' => 'real','default' => '3600.0'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'nOutputTypes','type' => 'integer','default' => '1'}},{'content' => [{'content' => [{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '3DALL','default' => 'T'}},{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '1DALL'}},{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '2DGEO'}},{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '2DMAG'}},{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '3DNEUTRAL'}},{'content' => [],'name' => 'option','type' => 'e','attrib' => {'name' => '3DION'}}],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'Outputtype','type' => 'string','input' => 'select'}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtPlot','type' => 'real','default' => '3600.0'}}],'name' => 'for','type' => 'e','attrib' => {'to' => '$nOutputTypes','from' => '1'}},{'content' => '
 
 #SAVEPLOTS
 1800.0
@@ -395,7 +397,7 @@ T			Stretched grid in altitude
 3DALL
 900.0
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'SAVEPLOTS'}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'integer - max = 20','name' => 'nSats '}},{'content' => [{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'string','name' => 'SatFile1'}},{'content' => [],'type' => 'e','name' => 'parameter','attrib' => {'default' => '','type' => 'real','name' => 'DtPlot1'}}],'type' => 'e','name' => 'for','attrib' => {'to' => '$nSats','from' => '1'}},{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'SAVEPLOTS'}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'nSats ','type' => 'integer - max = 20','default' => ''}},{'content' => [{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'SatFile1','type' => 'string','default' => ''}},{'content' => [],'name' => 'parameter','type' => 'e','attrib' => {'name' => 'DtPlot1','type' => 'real','default' => ''}}],'name' => 'for','type' => 'e','attrib' => {'to' => '$nSats','from' => '1'}},{'content' => '
 
 #SATELLITES
 2
@@ -404,8 +406,12 @@ guvi.2002041623.in
 stfd.fpi.in
 60.0
 
-','type' => 't'}],'type' => 'e','name' => 'command','attrib' => {'name' => 'SATELLITES'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'Output'}},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','type' => 'e','attrib' => {'name' => 'SATELLITES'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'Output'}},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [],'type' => 'e','name' => 'command','attrib' => {'if' => '$_IsStandAlone','name' => 'END'}}],'type' => 'e','name' => 'commandgroup','attrib' => {'name' => 'This is the end'}}],'type' => 'e','name' => 'commandList','attrib' => {'name' => 'Global Ionosphere Thermosphere Model: UA Component'}}];
+','type' => 't'},{'content' => [],'name' => 'command','type' => 'e','attrib' => {'name' => 'END','if' => '$_IsStandAlone'}}],'name' => 'commandgroup','type' => 'e','attrib' => {'name' => 'This is the end'}},{'content' => [{'content' => '
+        Directory UA/RestartOUT should exist!
+','type' => 't'}],'name' => 'rule','type' => 'e','attrib' => {'expr' => '-d \'UA/RestartOUT\' or not $_IsFirstSession'}},{'content' => [{'content' => '
+        Output directory UA/data should exist!
+','type' => 't'}],'name' => 'rule','type' => 'e','attrib' => {'expr' => '-d \'UA/data\' or not $_IsFirstSession'}}],'name' => 'commandList','type' => 'e','attrib' => {'name' => 'Global Ionosphere Thermosphere Model: UA Component'}}];
