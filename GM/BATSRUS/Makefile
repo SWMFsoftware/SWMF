@@ -72,7 +72,8 @@ Makefile.def.orig:
 
 MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		echo GMDIR=`pwd`                        >  Makefile.def; \
+		echo DIR=`pwd`                          >  Makefile.def; \
+		echo GMDIR=`pwd`                        >> Makefile.def; \
 		echo OS=`uname`                         >> Makefile.def; \
 		echo STANDALONE=${STANDALONE}           >> Makefile.def; \
 		cat src/Makefile.def                    >> Makefile.def; \
