@@ -243,7 +243,7 @@ subroutine set_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar,isat)
 
   use ModProcMH
   use ModNumConst
-  use ModMain,       ONLY: n_step,dt,unusedBLK,nI,nJ,nK,gcn,UseUserLogFiles
+  use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK,tmp2_BLK,B0xCell_BLK,B0yCell_BLK, &
        B0zCell_BLK, State_VGB, E_BLK
@@ -343,7 +343,8 @@ contains
     case('E','e')
        var_value = integrate_BLK(nProc,E_BLK)/volume
 
-       ! Maximum and minimum values of pressure (tmp2_BLK=CellCenteredVar_VGB(P_,:,:,:,:))
+       ! Maximum and minimum values of pressure 
+       ! (tmp2_BLK=CellCenteredVar_VGB(P_,:,:,:,:))
     case('Pmin','pmin')
        var_value = minval_BLK(nProc,tmp2_BLK)
     case('Pmax','pmax')
@@ -353,49 +354,49 @@ contains
     case('P','p')
        var_value = StateIntegral_V(P_)/volume
     case('Ux','ux')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUx_,:,:,:,iBLK)/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = integrate_BLK(nProc,tmp1_BLK)/volume
     case('Uy','uy')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUy_,:,:,:,iBLK)/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = integrate_BLK(nProc,tmp1_BLK)/volume
     case('Uz','uz')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUz_,:,:,:,iBLK)/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = integrate_BLK(nProc,tmp1_BLK)/volume
     case('Ekinx','ekinx')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUx_,:,:,:,iBLK)**2/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = cHalf*integrate_BLK(nProc,tmp1_BLK)/volume
     case('Ekiny','ekiny')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUy_,:,:,:,iBLK)**2/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = cHalf*integrate_BLK(nProc,tmp1_BLK)/volume
     case('Ekinz','ekinz')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUz_,:,:,:,iBLK)**2/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = cHalf*integrate_BLK(nProc,tmp1_BLK)/volume
     case('Ekin','ekin')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = &
                (State_VGB(rhoUx_,:,:,:,iBLK)**2+&
@@ -405,8 +406,34 @@ contains
        end do
        var_value = cHalf*integrate_BLK(nProc,tmp1_BLK)/volume
 
+    case('dst','Dst','DST')
+       ! Calculate the Biot-Savart formula for the center of the Earth:
+       ! B = (1/4 Pi)*integral( (curl B) x R / R**3 dV)
+       ! Only the Z component is calculated here: (J x R)_z = J_x*y-Jy*x
+
+       ! Calculate 
+       do iBLK=1,nBlock
+          if(unusedBLK(iBLK))cycle           
+
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=0.5*(                           &
+               ((State_VGB(Bz_,1:nI,2:nJ+1,1:nK,iBLK)                   &
+               - State_VGB(Bz_,1:nI,0:nJ-1,1:nK,iBLK)) / dy_BLK(iBLK) - &
+               ( State_VGB(By_,1:nI,1:nJ,2:nK+1,iBLK)                   &
+               - State_VGB(By_,1:nI,1:nJ,0:nK-1,iBLK)) / dz_BLK(iBLK)   &
+               ) * y_BLK(1:nI,1:nJ,1:nK,iBLK)                           &
+               -                                                        &
+               ((State_VGB(Bx_,1:nI,1:nJ,2:nK+1,iBLK)                   &
+               - State_VGB(Bx_,1:nI,1:nJ,0:nK-1,iBLK)) / dz_BLK(iBLK) - &
+               ( State_VGB(Bz_,2:nI+1,1:nJ,1:nK,iBLK)                   &
+               - State_VGB(Bz_,0:nI-1,1:nJ,1:nK,iBLK)) / dx_BLK(iBLK)   &
+               ) * x_BLK(1:nI,1:nJ,1:nK,iBLK)                           &
+               ) / r_BLK(1:nI,1:nJ,1:nK,iBLK)**3
+       end do
+       var_value = integrate_BLK(nProc,tmp1_BLK) / (4*cPi)
+
        ! Basic MHD variables at a single point given by Itest, Jtest, Ktest, 
        !   BLKtest, PROCtest
+
     case('rhopnt','rhotest')
        var_value = test_cell_value(State_VGB(rho_,:,:,:,:),-1,nI+2,-1,nJ+2,-1,nK+2)
     case('rhoUxpnt','rhouxpnt','mxpnt','rhoUxtest','rhouxtest','mxtest')
@@ -433,7 +460,7 @@ contains
        ! EXTRA MHD variables at a single point given by Itest,Jtest,Ktest,
        !    BLKtest, PROCtest
     case('Uxpnt','uxpnt','Uxtest','uxtest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = &
                State_VGB(rhoUx_,:,:,:,iBLK)/&
@@ -441,14 +468,14 @@ contains
        end do
        var_value = test_cell_value(tmp1_BLK,-1,nI+2,-1,nJ+2,-1,nK+2)
     case('Uypnt','uypnt','Uytest','uytest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUy_,:,:,:,iBLK)/&
                State_VGB(rho_,:,:,:,iBLK)
        end do
        var_value = test_cell_value(tmp1_BLK,-1,nI+2,-1,nJ+2,-1,nK+2)
     case('Uzpnt','uzpnt','Uztest','uztest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(:,:,:,iBLK) = State_VGB(rhoUz_,:,:,:,iBLK)/&
                State_VGB(rho_,:,:,:,iBLK)
@@ -464,7 +491,7 @@ contains
        var_value = test_cell_value(&
             State_VGB(Bz_,:,:,:,:),-1,nI+2,-1,nJ+2,-1,nK+2)
     case('Jxpnt','jxpnt','Jxtest','jxtest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if(unusedBLK(iBLK))cycle           
           !^CFG IF CARTESIAN BEGIN
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK)=0.5*(&
@@ -479,7 +506,7 @@ contains
        end do
        var_value = test_cell_value(tmp1_BLK,-1,nI+2,-1,nJ+2,-1,nK+2)
     case('Jypnt','jypnt','Jytest','jytest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if(unusedBLK(iBLK))cycle
           !^CFG IF CARTESIAN BEGIN
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK)=0.5*(&
@@ -494,7 +521,7 @@ contains
        end do
        var_value = test_cell_value(tmp1_BLK,-1,nI+2,-1,nJ+2,-1,nK+2)
     case('Jzpnt','jzpnt','Jztest','jztest')
-       do iBLK=1,nBLK
+       do iBLK=1,nBlock
           if(unusedBLK(iBLK))cycle
           !^CFG IF CARTESIAN BEGIN
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK)=0.5*(&
@@ -570,7 +597,7 @@ contains
        do iR=1,nlogR
           iVarTot = iVarTot + 1
           R_log = logRvalues(iR)           
-          do iBLK=1,nBLK
+          do iBLK=1,nBlock
              if(unusedBLK(iBLK))cycle           
              tmp1_BLK(:,:,:,iBLK) = (State_VGB(Bx_,:,:,:,iBLK)+&
                   B0xCell_BLK(:,:,:,iBLK))**2 + &
@@ -591,7 +618,7 @@ contains
        do iR=1,nlogR
           iVarTot = iVarTot + 1
           R_log = logRvalues(iR)
-          do iBLK=1,nBLK
+          do iBLK=1,nBlock
              if(unusedBLK(iBLK))cycle           
              tmp1_BLK(:,:,:,iBLk) = (State_VGB(Bx_,:,:,:,iBLk)+B0xCell_BLK(:,:,:,iBLk))**2 + &
                   (State_VGB(By_,:,:,:,iBLk)+B0yCell_BLK(:,:,:,iBLk))**2 + &
@@ -625,7 +652,7 @@ contains
        do iR=1,nlogR
           iVarTot = iVarTot+1
           R_log = logRvalues(iR)
-          do iBLK = 1,nBLK
+          do iBLK = 1,nBlock
              if(unusedBLK(iBLK))cycle
              tmp1_BLK(:,:,:,iBLK) = -(-( State_VGB(rhoUy_,:,:,:,iBLK)* &
                   (State_VGB(Bz_,:,:,:,iBLk)+B0zCell_BLK(:,:,:,iBLk)) &
@@ -766,7 +793,8 @@ subroutine normalize_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar)
           'Bxpnt','bxpnt','Bypnt','bypnt','Bzpnt','bzpnt', &
           'B1xpnt','b1xpnt','B1ypnt','b1ypnt','B1zpnt','b1zpnt', &
           'Bxtest','bxtest','Bytest','bytest','Bztest','bztest', &
-          'B1xtest','b1xtest','B1ytest','b1ytest','B1ztest','b1ztest')
+          'B1xtest','b1xtest','B1ytest','b1ytest','B1ztest','b1ztest',&
+          'dst','Dst','DST')
         LogVar(iVarTot)= LogVar(iVarTot)*unitUSER_B
      case('E','e','Epnt','epnt','Etest','etest')
         LogVar(iVarTot) = LogVar(iVarTot)*unitUSER_energydens
@@ -859,7 +887,7 @@ subroutine normalize_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar)
 end subroutine normalize_logvar
 
 
-!=====================================================================================
+!==============================================================================
 
 real function integrate_flux_sph(qnum,qrad,qa)
 
