@@ -609,28 +609,28 @@ contains
     write(UNITTMP_,'(a)')trim(StringDescription)
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#PLANET'
-    write(UNITTMP_,'(a25,a15)') NamePlanet,'     NamePlanet'
+    write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#STARTTIME'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iYear,'year'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,'month'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iDay,'day'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iHour,'hour'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMinute,'minute'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iSecond,'second'
-    write(UNITTMP_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond'
+    write(UNITTMP_,'(i8,a32)')TimeStart % iYear,         'iYear      '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iDay,          'iDay       '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iHour,         'iHour      '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iMinute,       'iMinute    '
+    write(UNITTMP_,'(i8,a32)')TimeStart % iSecond,       'iSecond    '
+    write(UNITTMP_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond '
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#NSTEP'
-    write(UNITTMP_,'(i8,a32)')nStep,'nStep'
+    write(UNITTMP_,'(i8,a32)')nStep,                     'nStep      '
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#TIMESIMULATION'
-    write(UNITTMP_,'(es15.8,a25)')tSimulation,'tSimulation'
+    write(UNITTMP_,'(es15.8,a25)')tSimulation,           'tSimulation'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#VERSION'
-    write(UNITTMP_,'(f5.2,a35)')VersionSwmf,'VersionSwmf'
+    write(UNITTMP_,'(f5.2,a35)')VersionSwmf,             'VersionSwmf'
     write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#PRECISION'
-    write(UNITTMP_,'(i1,a39)')nByteReal,'nByteReal'
+    write(UNITTMP_,'(i1,a39)')nByteReal,                 'nByteReal  '
     write(UNITTMP_,*)
 
     close(UNITTMP_)
