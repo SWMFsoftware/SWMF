@@ -47,10 +47,11 @@ contains
     !Local variables
     integer :: i,j,k,iBlockStart, iBLK,nBLK
     integer :: iError,lOctree, iImages
-    real, dimension(3),parameter :: F_D=(/1.0,0.71,0.13/)
-    real::Xyz_D(3),Weight_I(8),VMisc
+    integer, parameter :: nDim=3
+    real, dimension(nDim),parameter :: F_D=(/1.0,0.71,0.13/)
+    real::Xyz_D(nDim),Weight_I(8),VMisc
     integer::nImages,lSearch
-    integer,dimension(3)::iCells_D,nCells_D
+    integer,dimension(nDim)::iCells_D,nCells_D
     integer,dimension(0:4,8)::Indexes_II
     type(RouterType)::Router
     type(GridDescriptorType)::Cell2,Cell,Temp 
@@ -74,7 +75,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -97,7 +98,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -239,10 +240,11 @@ contains
     !Local variables
     integer :: i,j,k,iBlockStart, iBLK,nBLK
     integer :: iError,lOctree, iImages
-    real, dimension(3),parameter :: F_D=(/1.0,0.71,0.13/)
-    real::Xyz_D(3),Weight_I(8),VMisc
+    integer, parameter :: nDim=3
+    real, dimension(nDim),parameter :: F_D=(/1.0,0.71,0.13/)
+    real::Xyz_D(nDim),Weight_I(8),VMisc
     integer::nImages,lSearch,iPoint
-    integer,dimension(3)::iCells_D,nCells_D
+    integer,dimension(nDim)::iCells_D,nCells_D
     integer,dimension(0:4,8)::Indexes_II
     type(RouterType)::Router
     type(GridDescriptorType)::Cell2,Cell,Temp 
@@ -278,7 +280,7 @@ contains
        Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
             (34-iPoint)*xyz_min_d(GridID_))/32
        if(is_proc0())write(*,*)"XyzTest",Xyz_D
-       call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       call bilinear_interpolation(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
        if(is_proc0())then
           do iImages=1,nImages
              write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -293,7 +295,7 @@ contains
        Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
             (34-iPoint)*xyz_min_d(GridID_))/32
        if(is_proc0())write(*,*)"XyzTest",Xyz_D
-       call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       call interpolation_fix_reschange(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
        if(is_proc0())then
           do iImages=1,nImages
              write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -330,7 +332,7 @@ contains
        Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
             (34-iPoint)*xyz_min_d(GridID_))/32
        if(is_proc0())write(*,*)"XyzTest",Xyz_D
-       call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       call bilinear_interpolation(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
        if(is_proc0())then
           do iImages=1,nImages
              write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -344,7 +346,7 @@ contains
        Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
             (34-iPoint)*xyz_min_d(GridID_))/32 
        if(is_proc0())write(*,*)"XyzTest",Xyz_D
-       call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       call interpolation_fix_reschange(nDim,Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
        if(is_proc0())then
           do iImages=1,nImages
              write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -579,10 +581,11 @@ contains
     !Local variables
     integer :: i,j, iBlockStart, iBLK,nBLK
     integer::iError,lOctree, iImages
-    real, dimension(2),parameter :: F_D=(/1.0,0.13/)
-    real::Xyz_D(2),Weight_I(4),VMisc
+    integer,parameter :: nDim=2
+    real, dimension(nDim),parameter :: F_D=(/1.0,0.13/)
+    real::Xyz_D(nDim),Weight_I(4),VMisc
     integer::nImages,lSearch
-    integer,dimension(2)::iCells_D,nCells_D
+    integer,dimension(nDim)::iCells_D,nCells_D
     integer,dimension(0:3,4)::Indexes_II
     type(RouterType)::Router
     type(GridDescriptorType)::Cell2,Cell,Temp 
@@ -606,7 +609,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -629,7 +632,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -747,6 +750,7 @@ contains
     write(*,*)' '
 
   end subroutine test_global_message_pass_2dd
+  !========================================================
   subroutine test_global_message_pass_2id(GridID_)
     use ModNumConst
     integer,intent(in)::GridID_
@@ -754,10 +758,11 @@ contains
     !Local variables
     integer :: i,j, iBlockStart, iBLK,nBLK
     integer::iError,lOctree, iImages
-    real, dimension(2),parameter :: F_D=(/1.0,0.13/)
-    real::Xyz_D(2),Weight_I(4),VMisc
+    integer,parameter :: nDim=2
+    real, dimension(nDim),parameter :: F_D=(/1.0,0.13/)
+    real::Xyz_D(nDim),Weight_I(4),VMisc
     integer::nImages,lSearch
-    integer,dimension(2)::iCells_D,nCells_D
+    integer,dimension(nDim)::iCells_D,nCells_D
     integer,dimension(0:3,4)::Indexes_II
     type(RouterType)::Router
     type(GridDescriptorType)::Cell2,Cell,Temp 
@@ -781,7 +786,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -804,7 +809,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(nDim,Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -1008,6 +1013,7 @@ contains
   subroutine do_all_ghostcells(&
        GridDescriptor,&
        lGlobalTreeNode,&
+       nDim,&
        Xyz_D,&
        nIndexes,&
        Index_I,&
@@ -1015,13 +1021,13 @@ contains
     type(GridDescriptorType),intent(in):: GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
     logical,intent(out)::IsInterfacePoint
-    real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
+    integer,intent(in)::nDim
+    real,dimension(nDim),intent(inout)::Xyz_D
     integer, dimension(nIndexes),intent(inout)::Index_I
-    logical,dimension(GridDescriptor%nDim)::&
+    logical,dimension(nDim)::&
          IsLeftFace_D,IsRightFace_D
-    integer::nDim
-    
-    nDim=GridDescriptor%nDim
+    !----------------------------------------------------------------------
+
     IsLeftFace_D=Index_I(1:nDim)<1
     IsRightFace_D=Index_I(1:nDim)>&
          ncells_decomposition_d(GridDescriptor%DD%Ptr)

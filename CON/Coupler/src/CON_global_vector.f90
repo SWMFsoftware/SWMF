@@ -459,45 +459,50 @@ contains
   function point_state_vx(&
        NameVector, &
        nVar,       &
-       Xyz_D,&
-       GD,   &
+       nDim,       &
+       Xyz_D,      &
+       GD,         &
        interpolate)
     type(GridDescriptorType),intent(in):: GD
-    real,dimension(GD%nDim),intent(in):: Xyz_D
+    integer,intent(in)::nDim
+    real,intent(in):: Xyz_D(nDim)
     integer,intent(in)::nVar
     character(LEN=*),intent(in)::NameVector
     optional::interpolate
     interface
-       subroutine interpolate(Xyz_D,&
+       subroutine interpolate(&
+            nDim,&
+            Xyz_D,&
             GridDescriptor,&
             nIndexes,&
             Index_II,&
             nImages,Weight_I)
          use CON_grid_descriptor
          implicit none
+         integer,intent(in)::nDim
+         real,dimension(nDim),intent(inout)::Xyz_D(nDim) 
          type(GridDescriptorType)::GridDescriptor     
-         real,dimension(GridDescriptor%nDim),&
-              intent(inout)::Xyz_D 
          integer,intent(in)::nIndexes
-         integer,dimension(&
-              0:nIndexes,2**GridDescriptor%nDim)::Index_II
+         integer           ::Index_II(0:nIndexes,2**nDim)
          integer,intent(out)::nImages
-         real,dimension(2**GridDescriptor%nDim),&
-              intent(out)::Weight_I
+         real,intent(out)::Weight_I(2**nDim)
        end subroutine interpolate
     end interface
+    !Return value:
     real,dimension(nVar)::point_state_vx
-    !=========================================================
-    real,dimension(GD%nDim)::XyzMisc_D 
-    integer::nIndexes,nDim,iPoint
-    integer,dimension(&
-         0:GD%nDim+1,2**GD%nDim)::Index_II
+    !Local variables:
+    real,dimension(nDim)::XyzMisc_D 
+    integer::nIndexes,iPoint
+    integer,dimension(0:nDim+1,2**nDim)::Index_II
     integer::nImages,iImages,lGlobalNode
-    real,dimension(2**GD%nDim)::Weight_I
+    real,dimension(2**nDim)::Weight_I
     real,dimension(nVar)::State_V
-    nDim=GD%nDim;nIndexes=nDim+1;XyzMisc_D=Xyz_D
+    !---------------------------------------------------------
+    nIndexes=nDim+1;XyzMisc_D=Xyz_D
     if(present(interpolate))then
-       call interpolate(XyzMisc_D,&
+       call interpolate(&
+            nDim,&
+            XyzMisc_D,&
             GD,&
             nIndexes,&
             Index_II,&

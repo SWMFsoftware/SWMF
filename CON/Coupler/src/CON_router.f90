@@ -468,6 +468,7 @@ contains
        subroutine interface_point_coords(&
                   GridDescriptor,&
                   lGlobalTreeNode,&
+                  nDim,&
                   Xyz_D,&
                   nIndexes,&
                   Index_I,&
@@ -477,8 +478,9 @@ contains
          type(GridDescriptorType),intent(in)::GridDescriptor
          integer,intent(in)::lGlobalTreeNode,nIndexes
          logical,intent(out)::IsInterfacePoint
-         real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
-         integer, dimension(nIndexes),intent(inout)::Index_I
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
+         integer,intent(inout)::Index_I(nIndexes)
        end subroutine interface_point_coords
        subroutine mapping(&
             nDimFrom,XyzFrom_D,nDimTo,XyzTo_D,IsInterfacePoint)
@@ -488,22 +490,23 @@ contains
          real,dimension(nDimTo),intent(out)::XyzTo_D
          logical,intent(out)::IsInterfacePoint
        end subroutine mapping
-       subroutine interpolate(Xyz_D,&
-                              GridDescriptor,&
-                              nIndexes,&
-                              Index_II,&
-                              nImages,Weight_I)
+       subroutine interpolate(&
+            nDim,&
+            Xyz_D,&
+            GridDescriptor,&
+            nIndexes,&
+            Index_II,&
+            nImages,&
+            Weight_I)
          use CON_grid_descriptor
          implicit none
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
          type(GridDescriptorType)::GridDescriptor     
-         real,dimension(GridDescriptor%nDim),&
-              intent(inout)::Xyz_D 
          integer,intent(in)::nIndexes
-         integer,dimension(&
-              0:nIndexes,2**GridDescriptor%nDim)::Index_II
+         integer,dimension(0:nIndexes,2**nDim)::Index_II
          integer,intent(out)::nImages
-         real,dimension(2**GridDescriptor%nDim),&
-              intent(out)::Weight_I
+         real,dimension(2**nDim),intent(out)::Weight_I
        end subroutine interpolate
     end interface
 
@@ -657,6 +660,7 @@ contains
                       call interface_point_coords(&
                            GridDescriptorTarget,&
                            lGlobalNode,&
+                           GridDescriptorTarget%nDim,&
                            XyzTarget_D,&
                            Router%nIndexesTarget,&
                            IndexRecv_I,&
@@ -679,6 +683,7 @@ contains
              call timing_start('set_router_interp')
              if( DoInterpolate)then
                 call interpolate(&
+                     GridDescriptorSource%nDim,&
                      XyzSource_D,&
                      GridDescriptorSource,&
                      Router%nIndexesSource,&
@@ -842,6 +847,7 @@ contains
        subroutine interface_point_coords(&
                   GridDescriptor,&
                   lGlobalTreeNode,&
+                  nDim,&
                   Xyz_D,&
                   nIndexes,&
                   Index_I,&
@@ -851,7 +857,8 @@ contains
          type(GridDescriptorType),intent(in)::GridDescriptor
          integer,intent(in)::lGlobalTreeNode,nIndexes
          logical,intent(out)::IsInterfacePoint
-         real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
          integer, dimension(nIndexes),intent(inout)::Index_I
        end subroutine interface_point_coords
        subroutine mapping(&
@@ -862,22 +869,23 @@ contains
          real,dimension(nDimTo),intent(out)::XyzTo_D
          logical,intent(out)::IsInterfacePoint
        end subroutine mapping
-       subroutine interpolate(Xyz_D,&
-                              GridDescriptor,&
-                              nIndexes,&
-                              Index_II,&
-                              nImages,Weight_I)
+       subroutine interpolate(&
+            nDim,&
+            Xyz_D,&
+            GridDescriptor,&
+            nIndexes,&
+            Index_II,&
+            nImages,&
+            Weight_I)
          use CON_grid_descriptor
          implicit none
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
          type(GridDescriptorType)::GridDescriptor     
-         real,dimension(GridDescriptor%nDim),&
-              intent(inout)::Xyz_D 
          integer,intent(in)::nIndexes
-         integer,dimension(&
-              0:nIndexes,2**GridDescriptor%nDim)::Index_II
+         integer,dimension(0:nIndexes,2**nDim)::Index_II
          integer,intent(out)::nImages
-         real,dimension(2**GridDescriptor%nDim),&
-              intent(out)::Weight_I
+         real,dimension(2**nDim),intent(out)::Weight_I
        end subroutine interpolate
     end interface
 
@@ -1007,6 +1015,7 @@ contains
                 call interface_point_coords(&
                      GridDescriptorSource,&
                      lGlobalNode,&
+                     GridDescriptorSource%nDim,&
                      XyzSource_D,&
                      Router%nIndexesSource,&
                      IndexGet_I,&
@@ -1031,6 +1040,7 @@ contains
 
              if( DoInterpolate)then
                 call interpolate(&
+                     GridDescriptorTarget%nDim,&
                      XyzTarget_D,&
                      GridDescriptorTarget,&
                      Router%nIndexesTarget,&
