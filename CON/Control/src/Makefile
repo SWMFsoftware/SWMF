@@ -48,6 +48,8 @@ LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
 LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
 
+LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
+
 #######################
 # Interface part of   #
 # super-structure:    #
