@@ -154,7 +154,8 @@ and other components are coupled to it.
 The simulation time is that of GM. The other components are ran in
 a serial manner, i.e. they wait for the coupling, and GM waits until
 they finish their execution. This time loop control is mainly preserved
-for backwards compatibility.
+for backwards compatibility. It is not recommended to use the 'old'
+session control for anything but development and testing purposes.
 
 The default is the 'general' mode.
 </command>
@@ -505,9 +506,12 @@ number is not checked.
 
 <command name="COMPONENT" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
+		<option name="SC" />
 		<option name="IH" default="T" />
+		<option name="SP" />
 		<option name="GM" />
 		<option name="IM" />
+		<option name="RB" />
 		<option name="IE" />
 		<option name="UA" />
 	</parameter>
@@ -534,9 +538,12 @@ file are used.
 
 <command name="CYCLE" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
-                <option name="IH" default="T" />
+		<option name="SC" default="T" />
+                <option name="IH" />
+		<option name="SP" />
                 <option name="GM" />
                 <option name="IM" />
+		<option name="RB" />
                 <option name="IE" />
                 <option name="UA" />
         </parameter>
@@ -561,25 +568,35 @@ The default is DnRun = 1 for all the active components.
 
 <command name="COUPLEORDER">
 	<parameter name="nCouple" type="integer" min="0" max="8" default="8" />
-	<for name="iComp" from="1" to="$nCouple">
+	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
-			<option name="IH GM" default="$iComp==1" />
-                        <option name="GM IE" default="$iComp==2" />
-                        <option name="GM IM" default="$iComp==3" />
-                        <option name="UA IE" default="$iComp==4" />
-                        <option name="IE IM" default="$iComp==5" />
-                        <option name="IM GM" default="$iComp==6" />
-                        <option name="IE UA" default="$iComp==7" />
-                        <option name="IE GM" default="$iComp==8" />
+			<option name="SC IH" default="$iCouple==1" />
+			<option name="IH SC" default="$iCouple==2" />
+			<option name="SC SP" default="$iCouple==3" />
+			<option name="IH SP" default="$iCouple==4" />
+			<option name="IH GM" default="$iCouple==5" />
+                        <option name="GM IE" default="$iCouple==6" />
+                        <option name="GM IM" default="$iCouple==7" />
+                        <option name="GM RB" default="$iCouple==8" />
+                        <option name="UA IE" default="$iCouple==9" />
+                        <option name="IE IM" default="$iCouple==10" />
+                        <option name="IM GM" default="$iCouple==11" />
+                        <option name="IE UA" default="$iCouple==12" />
+                        <option name="IE GM" default="$iCouple==13" />
 		</parameter>
 	</for>
 
 #COUPLEORDER
-8                 nCouple
+13                nCouple
+SC IH             NameSourceTarget
+IH SC             NameSourceTarget
+SC SP             NameSourceTarget
+IH SP             NameSourceTarget
 IH GM             NameSourceTarget
 GM IE             NameSourceTarget
 GM IM             NameSourceTarget
+GM RB             NameSourceTarget
 UA IE             NameSourceTarget
 IE IM             NameSourceTarget
 IM GM             NameSourceTarget
@@ -594,12 +611,9 @@ couplings done at the beginning of the session. Some components need
 to get information from the others before they can initialize properly.
 
 The default coupling order is shown above. It is based on the propagation 
-of information from component to component
+of information from component to component.
 
-NOTE: The order determined here is only taken into account by the 'parallel'
-and 'general' time looping models, which can be selected in
-the #SESSION command. The 'old' time looping model uses its own
-coupling order (which is similar to the default of the other models)
+NOTE: The order of the 'SC SP' and 'IH SP' couplings should not be reversed!
 </command>
 
 <command name="COUPLE1" multiple="T">
@@ -779,16 +793,19 @@ The default is no shifting.
 
 <command name="COUPLETIME" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
-		<option name="IH" default="T" />
-		<option name="GM" />
-		<option name="IM" />
-		<option name="IE" />
-		<option name="UA" />
+		<option name="SC" default="T" />
+                <option name="IH" />
+		<option name="SP" />
+                <option name="GM" />
+                <option name="IM" />
+		<option name="RB" />
+                <option name="IE" />
+                <option name="UA" />
 	</parameter>
 	<parameter name="DoCoupleOnTime" type="logical" default="T"/>
 
 #COUPLETIME
-IE			NameComp
+GM			NameComp
 F			DoCoupleOnTime
 
 The NameComp variable contains the two-character component ID, 
@@ -797,8 +814,7 @@ component should be limited such that it does not exceed the next
 coupling time. If DoCoupleOnTime is true, the component will limit the
 time step for couplings, if it is false, the time step is only limited
 by the final time, the time of saving restarts and the time of checking
-stop conditions. This command has effect only in time accurate mode when
-the general session model is used.
+stop conditions. 
 
 The default is that all components limit their time steps to match
 the coupling time.
