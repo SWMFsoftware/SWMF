@@ -60,14 +60,25 @@ SWMF:
 
         4. Timing percentage is negative or **** on morpheus.engin.umich.edu
            FIX (Aug27,2004): Set 'parent timing' to be at least 'child timing'
-           MODIFIED:         til/TIMING/src/timing.f90
+           MODIFIED:         util/TIMING/src/timing.f90
 
         5. SC-IH-SP coupled run hangs if SC and IH are not on the same set
            of processors. This was observed on the SGI.
+	   FIX (Sep02,2004): broadcast two point positions when needed
+           MODIFIED:         CON/Interface/src/CON_couple_mh_sp.f90
 
         6. GM-IE coupling results (especially the ionosphere potentail)
            somewhat depend on the number of PE-s on the SGI.
            (but not on the Altix). 
+
+        7. Certain layout, time step and coupling frequency combination
+           can cause a dead-lock (hanging) due to a simplified 
+           implementation of the session control algorithm.
+           This problem has never showed up in actual runs, it was 
+           discovered by a careful analysis of the algorithm.
+           FIX (Sep08,2004): advance component(s) with the smallest 
+                             physical time only.
+           MODIFIED:         CON/Control/src/CON_session.f90
 
 RB:
         1. The Radiation Belt (RB) module included with this release
