@@ -1,5 +1,5 @@
-#^CFG COPYRIGHT UM
-#^CFG FILE RAYTRACE
+!^CFG COPYRIGHT 
+!^CFG FILE RAYTRACE
 !==========================================================================
 subroutine getMinMaxLatLon(minLat,maxLat, minLon,maxLon, rayface_2d, shifted)
   use ModMain, ONLY : nI,nJ
