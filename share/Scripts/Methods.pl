@@ -23,8 +23,8 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 # for the IH component. This code only generates the renaming rules.
 # The rules can be used by Rename.pl to do the actual renaming.
 #
-# There are some special rules for IH and GM because the U of M
-# MHD code implements both components.
+# There are some special rules for IH, SC and GM because the
+# BATSRUS code implements both components.
 #
 #!REVISION HISTORY:
 # 08/03/2003 G.Toth gtoth@umich.edu - initial version
@@ -37,7 +37,7 @@ It collects the subroutine and function names from Fortran files
 and creates a renaming list which has the correct component prefix.
 The output list can be used by Rename.pl to do the actual renaming.
 
-For components IH and GM method names starting with MH_ IH_ and GM_
+For components IH, SC and GM method names starting with MH_ IH_ SC_ and GM_
 are handled intelligently.',
 #BOC
 'Usage:
@@ -146,9 +146,11 @@ foreach $method (sort values %method){
 
     next if /^$Comp\_/;              # name already starts with prefix
 
-    s/^(GM|MH)_// if $Comp eq "IH";  # GM_ and MH_ prefix replaced for IH
+    s/^(IH|MH)_// if $Comp eq "GM";  # IH_ and MH_ prefix removed for GM
 
-    s/^(IH|MH)_// if $Comp eq "GM";  # IH_ and MH_ prefix replaced for GM
+    s/^(GM|MH)_// if $Comp eq "IH";  # GM_ and MH_ prefix removed for IH
+
+    s/^(GM|IH|MH)_// if $Comp eq "SC";#IH_ GM_ and MH_ prefix removed for SC
 
     $replace = $Comp."_$_";          # Add component prefix
 
