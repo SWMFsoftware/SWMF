@@ -116,7 +116,8 @@ The default is that no plotfiles are saved.
 						default="0.25"/>
 	<parameter name="PolarCapPedConductance" type="real" min="0" 
 						default="0.25"/>
-	<rule expr="not ($ConductanceModel=~/3|5/ and $F107Flux<=0)">
+
+	<rule expr="not ($ConductanceModel=~/3|5/ and $F107Flux==0)">
 		F107Flux must be positive for ConductanceModel = 3 or 5
 	</rule>
 
