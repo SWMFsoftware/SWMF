@@ -46,7 +46,6 @@ Module ModUser
   ! PFSSM related variables::
   !/
   integer, parameter:: N_PFSSM=30
-  integer, parameter:: UNIT_PFSSM=30
   real, parameter:: unitPFSSM_B=cHundredth
   integer:: iHead_PFSSM
   logical:: DoFirst=.true.
@@ -126,7 +125,7 @@ subroutine user_read_inputs
   use ModMain
   use ModProcMH,    ONLY: iProc
   use ModReadParam
-  use ModIO, ONLY: write_prefix, write_myname, iUnitOut
+  use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
   use ModUser,      ONLY: DoStaticICs,UseUserB0,Ro_PFSSM,&
        Rs_PFSSM,File_PFSSM,iHead_PFSSM,TemRatio,DegFrm1, &
        Tnot,Bnot
@@ -257,8 +256,8 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
 
   use ModGeometry,   ONLY: R_BLK
   use ModAdvance,    ONLY: nFaceValueVars
-  use ModPhysics,    ONLY: CosThetatilt,SinThetatilt,g,inv_g,     &
-       inv_gm1,OMEGAbody
+  use ModPhysics,    ONLY: CosThetaTilt,SinThetaTilt,g,inv_g,      &
+       inv_gm1,OmegaBody
   use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance
   implicit none
   !\
@@ -389,9 +388,9 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   else
      RFace = cOne
      call coronal_hole_boundary(RFace,sin2Theta_coronal_hole)
-     XFaceT    =  CosThetatilt*XFace+SinThetatilt*ZFace
+     XFaceT    =  CosThetaTilt*XFace+SinThetaTilt*ZFace
      YFaceT    = YFace
-     ZFaceT    = -SinThetatilt*XFace+CosThetatilt*ZFace
+     ZFaceT    = -SinThetaTilt*XFace+CosThetaTilt*ZFace
      CosThetaT = ZFaceT/RFace
      SinThetaT = sqrt(XFaceT**2+YFaceT**2)/RFace
      CosPhiT   = XFaceT/sqrt(XFaceT**2+YFaceT**2+cTolerance**2)
@@ -407,8 +406,8 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
         BthetaFaceInside =  BthetaFaceOutside
         BphiFaceInside   =  BphiFaceOutside
         VarsGhostFace_V(rho_     ) = VarsTrueFace_V(rho_     )
-        VarsGhostFace_V(P_   ) = VarsTrueFace_V(P_   )
- !       VarsGhostFace_V(EnergyRL_) = VarsTrueFace_V(EnergyRL_)!^CFG UNCOMMENT IF ALWAVES
+        VarsGhostFace_V(P_       ) = VarsTrueFace_V(P_       )
+       ! VarsGhostFace_V(EnergyRL_) = VarsTrueFace_V(EnergyRL_)!^CFG UNCOMMENT IF ALWAVES
      else
         !\
         ! At the base of open field regions::
@@ -420,7 +419,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
         BthetaFaceInside = cZero 
         BphiFaceInside   = cZero
         VarsGhostFace_V(rho_     ) = cOne
-        VarsGhostFace_V(P_   ) = inv_g
+        VarsGhostFace_V(P_       ) = inv_g
        ! VarsGhostFace_V(EnergyRL_) = VarsTrueFace_V(EnergyRL_)!^CFG UNCOMMENT IF ALWAVES
      endif
   endif
@@ -452,9 +451,9 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
      ! corotation velocity::
      !/
      VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_) -&
-          cTwo*OMEGAbody*YFace
+          cTwo*OmegaBody*YFace
      VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) +&
-          cTwo*OMEGAbody*XFace
+          cTwo*OmegaBody*XFace
   end if
   
 Contains
@@ -585,7 +584,7 @@ subroutine user_sources
        Theat0,qheat_BLK
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,VolumeInverse_I
   use ModConst,      ONLY: cZero,cHalf,cOne,cTwo,cTolerance
-  use ModPhysics,    ONLY: g,OMEGAbody,CosThetatilt,SinThetatilt,&
+  use ModPhysics,    ONLY: g,OmegaBody,CosThetaTilt,SinThetaTilt,&
        Theat
   use ModProcMH,     ONLY: iProc 
   use ModUser,       ONLY: SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SP,SE
@@ -626,9 +625,9 @@ subroutine user_sources
         ! Coriolis forces
         !/
         SrhoUx(i,j,k) = SrhoUx(i,j,k) +&
-             cTwo*OMEGAbody*State_VGB(rhoUy_,i,j,k,globalBLK)
+             cTwo*OmegaBody*State_VGB(rhoUy_,i,j,k,globalBLK)
         SrhoUy(i,j,k) = SrhoUy(i,j,k) -&
-             cTwo*OMEGAbody*State_VGB(rhoUx_,i,j,k,globalBLK)
+             cTwo*OmegaBody*State_VGB(rhoUx_,i,j,k,globalBLK)
      endif
   end do; end do; end do
   
@@ -641,11 +640,11 @@ Contains
     !\
     ! Compute Heliosphere source terms::
     !/
-    XT =  CosThetatilt*x_BLK(i,j,k,globalBLK)+&
-         SinThetatilt*z_BLK(i,j,k,globalBLK)
+    XT =  CosThetaTilt*x_BLK(i,j,k,globalBLK)+&
+         SinThetaTilt*z_BLK(i,j,k,globalBLK)
     YT =  y_BLK(i,j,k,globalBLK)
-    ZT = -SinThetatilt*x_BLK(i,j,k,globalBLK)+&
-          CosThetatilt*z_BLK(i,j,k,globalBLK)
+    ZT = -SinThetaTilt*x_BLK(i,j,k,globalBLK)+&
+          CosThetaTilt*z_BLK(i,j,k,globalBLK)
     CosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
     SinTheta = sqrt(XT**2+YT**2)             /&
          (R_BLK(i,j,k,globalBLK)+cTolerance)
@@ -763,9 +762,9 @@ subroutine user_initial_perturbation
        cTolerance,cThree
   use ModConst,     ONLY: Rsun,Msun,cGravitation
   use ModGeometry,  ONLY: x_BLK,y_BLK,z_BLK,R_BLK,cV_BLK,x2,y2,z2
-  use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,ModulationP,  &
-       ModulationRho,UseFluxRope,rot_period_dim,OMEGAbody,        &
-       unitSI_U,unitSI_rho,unitSI_x,unitUSER_energydens,          &
+  use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,ModulationP,   &
+       ModulationRho,UseFluxRope,rot_period_dim,OmegaBody,        &
+       unitSI_U,unitSI_rho,unitSI_x,unitUSER_energydens,           &
        unitUSER_t,unitUSER_B,Body_T_dim,Body_rho_dim
   use ModUser,      ONLY: Mrope_GL98,InvH0,DoStaticICs,MaxB0,Tnot,&
        Bnot,DegFrm1,Emag_0,Ekin_0,Ethe_0
@@ -1467,239 +1466,6 @@ subroutine get_atmosphere_BLK(i,j,k,iBLK,Dens_BLK,Pres_BLK,Gamma_BLK)
   Dens_BLK  = g*Pres_BLK/Temp_BLK/TemMod
   Gamma_BLK = (DegF_BLK+cTwo)/DegF_BLK
 end subroutine get_atmosphere_BLK
-
-subroutine get_Br_BLK(xx,yy,zz,Br_BLK)
-  use ModMain,     ONLY: Time_Simulation
-  use ModNumConst, ONLY: cZero,cHalf,cOne,cTwo,cThree,  &
-       cE1,cE9,cTolerance,cTiny
-  use ModProcMH,   ONLY: iProc
-  use ModUser,     ONLY: DoSecond,File_PFSSM,Head_PFSSM,&
-       N_PFSSM,UNIT_PFSSM,R_PFSSM,Rs_PFSSM,Ro_PFSSM,    &
-       unitPFSSM_B,iHead_PFSSM,g_nm,h_nm,factRatio1,    &
-       MaxB0
-  use ModPhysics,  ONLY: unitUSER_B,OMEGAbody,unitUSER_t
-  use ModIO,       ONLY: iUnitOut, write_prefix
-  implicit none
-  
-  real, intent(in):: xx,yy,zz
-  real, intent(out):: Br_BLK
-  integer:: iError
-  integer:: i,n,m
-  real:: gtemp,htemp
-  real:: delta_m0,c_n
-  real:: SinPhi,CosPhi
-  real:: sinmPhi,cosmPhi
-  real:: CosTheta,SinTheta
-  real:: stuff1,stuff2,stuff3
-  real:: SumR,SumT,SumP,SumPsi
-  real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
-  real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
-  !\
-  ! Calculate cell-centered spherical coordinates::
-  !/
-  Rin_PFSSM   = sqrt(xx**2+yy**2+zz**2)
-  !\
-  ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
-  !/
-  if (Rin_PFSSM < 9.00E-01) then
-     Br_BLK = cZero
-     RETURN
-  end if
-  Theta_PFSSM = acos(zz/Rin_PFSSM)
-  Phi_PFSSM   = atan2(yy/sqrt(xx**2+yy**2+cTiny**2),&
-                      xx/sqrt(xx**2+yy**2+cTiny**2))
-  SinTheta    = sqrt(xx**2+yy**2+cTiny**2)/Rin_PFSSM
-  CosTheta    = zz/Rin_PFSSM
-  SinPhi      = yy/sqrt(xx**2+yy**2+cTiny**2)
-  CosPhi      = xx/sqrt(xx**2+yy**2+cTiny**2)
-  Rin_PFSSM   = Ro_PFSSM
-  R_PFSSM     = Rin_PFSSM     
-  !\
-  ! Update Phi_PFSSM for solar rotation::
-  !/
-  !  Phi_PFSSM = Phi_PFSSM-OMEGAbody*(Time_Simulation/unitUSER_t)
-  !
-  if (DoSecond) then
-     !\
-     ! Initialize once g(n+1,m+1) & h(n+1,m+1) by reading a file
-     ! created from Web data::
-     !/ 
-     DoSecond=.false.
-     if (iProc==0) then
-        call write_prefix; write(iUnitOut,*) '!!!This is the call from ICs!!!'
-        call write_prefix; write(iUnitOut,*) 'Norder = ',N_PFSSM
-        call write_prefix; write(iUnitOut,*) &
-             'Entered coefficient file name :: ',File_PFSSM
-        call write_prefix; write(iUnitOut,*) &
-             'Entered number of header lines:: ',iHead_PFSSM
-     endif
-     !\
-     ! Formats adjusted for wso CR rad coeffs::
-     !/
-     open(UNIT_PFSSM,file=File_PFSSM,status='old',iostat=iError)
-     if (iHead_PFSSM /= 0) then
-        do i=1,iHead_PFSSM
-           read(UNIT_PFSSM,'(a)') Head_PFSSM
-        enddo
-     endif
-     !\
-     ! Initialize all coefficient arrays::
-     !/
-     g_nm(:,:) = cZero; h_nm(:,:)  = cZero
-     p_nm(:,:) = cZero; dp_nm(:,:) = cZero
-     !\
-     ! Read file with coefficients, g_nm and h_nm::
-     !/
-     do
-        read(UNIT_PFSSM,*,iostat=iError) n,m,gtemp,htemp
-        if (iError /= 0) EXIT
-        if (n > N_PFSSM.or.m > N_PFSSM) CYCLE
-        g_nm(n+1,m+1) = gtemp
-        h_nm(n+1,m+1) = htemp
-     enddo
-     close(UNIT_PFSSM)
-     !\
-     ! Add correction factor for radial, not LOS, coefficients::
-     ! Note old "coefficients" file are LOS, all new coeffs and 
-     ! files are radial)
-     !/
-     do n=0,N_PFSSM
-        stuff1 = cOne/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
-        do m=0,n
-           g_nm(n+1,m+1) = g_nm(n+1,m+1)*stuff1
-           h_nm(n+1,m+1) = h_nm(n+1,m+1)*stuff1
-        enddo
-     enddo
-     !\
-     ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
-     !/
-     factRatio1(:) = cZero; factRatio1(1) = cOne
-     do m=1,N_PFSSM
-        factRatio1(m+1) = factRatio1(m)*&
-             sqrt(cOne-cHalf/real(m))
-     enddo
-  endif
-  !\
-  ! Calculate polynomials with appropriate normalization
-  ! for Theta_PFSSMa::
-  !/
-  do m=0,N_PFSSM
-     if (m == 0) then
-        delta_m0 = cOne
-     else
-        delta_m0 = cZero
-     endif
-     !\
-     ! Eq.(27) from Altschuler et al. 1976::
-     !/
-     p_nm(m+1,m+1) = factRatio1(m+1)*sqrt((cTwo-delta_m0)    *&
-          real(2*m+1))*SinTheta**m
-     !\
-     ! Eq.(28) from Altschuler et al. 1976::
-     !/
-     if (m < N_PFSSM) &
-          p_nm(m+2,m+1)  = p_nm(m+1,m+1)*sqrt(real(2*m+3))   *&
-          CosTheta
-     !\
-     ! Eq.(30) from Altschuler et al. 1976::
-     !/
-     dp_nm(m+1,m+1)      = factRatio1(m+1)*sqrt((cTwo        -&
-          delta_m0)*real(2*m+1))*m*CosTheta*SinTheta**(m-1)
-     !\
-     ! Eq.(31) from Altschuler et al. 1976::
-     !/
-     if (m < N_PFSSM) &
-          dp_nm(m+2,m+1) = sqrt(real(2*m+3))*(CosTheta       *&
-          dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
-  enddo
-  do m=0,N_PFSSM-2; do n=m+2,N_PFSSM
-     !\
-     ! Eq.(29) from Altschuler et al. 1976::
-     !/
-     stuff1         = sqrt(real(2*n+1)/real(n**2-m**2))
-     stuff2         = sqrt(real(2*n-1))
-     stuff3         = sqrt(real((n-1)**2-m**2)/real(2*n-3))
-     p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)    -&
-          stuff3*p_nm(n-1,m+1))
-     !\
-     ! Eq.(32) from Altschuler et al. 1976::
-     !/
-     dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)  -&
-          SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
-  enddo; enddo
-  !\
-  ! Apply Schmidt normailization::
-  !/
-  do m=0,N_PFSSM; do n=m,N_PFSSM
-     !\
-     ! Eq.(33) from Altschuler et al. 1976::
-     !/
-     stuff1 = cOne/sqrt(real(2*n+1))
-     !\
-     ! Eq.(34) from Altschuler et al. 1976::
-     !/
-     p_nm(n+1,m+1)  = p_nm(n+1,m+1)*stuff1
-     dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
-  enddo; enddo
-  !\
-  ! Truncate the value of SinTheta::
-  !/
-  if (SinTheta == cZero) SinTheta = cOne/(cE9*cE1)
-  !\
-  ! Initialize the values of SumR,SumT,SumP, and SumPsi::
-  !/
-  SumR = cZero; SumT   = cZero
-  SumP = cZero; SumPsi = cZero
-  !\
-  ! Leave out monopole (n=0) term::
-  !/
-  g_nm(1,1) = cZero
-  !\
-  ! Calculate B for (R_PFSSM,Phi_PFSSM)::
-  ! Also calculate magnetic potential Psi_PFSSM
-  !/
-  do m=0,N_PFSSM
-     cosmPhi  = cos(m*Phi_PFSSM)
-     sinmPhi  = sin(m*Phi_PFSSM)
-     do n=m,N_PFSSM
-        !\
-        ! c_n corresponds to Todd's c_l::
-        !/
-        c_n    = -(Ro_PFSSM/Rs_PFSSM)**(n+2)
-        !\
-        ! Br_PFSSM = -d(Psi_PFSSM)/dR_PFSSM::
-        !/
-        stuff1 = (real(n)+cOne)*(Ro_PFSSM/R_PFSSM)**(n+2)    -&
-             c_n*real(n)*(R_PFSSM/Rs_PFSSM)**(n-1)
-        stuff2 = g_nm(n+1,m+1)*cosmPhi+h_nm(n+1,m+1)*sinmPhi
-        SumR   = SumR+p_nm(n+1,m+1)*stuff1*stuff2
-        !\
-        ! Bt_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dTheta_PFSSM::
-        !/
-        stuff1 = (Ro_PFSSM/R_PFSSM)**(n+2)+c_n*(R_PFSSM      /&
-             Rs_PFSSM)**(n-1)
-        SumT   = SumT-dp_nm(n+1,m+1)*stuff1*stuff2
-        !\
-        ! Psi_PFSSM::
-        !/
-        SumPsi = SumPsi+R_PFSSM*p_nm(n+1,m+1)*stuff1*stuff2
-        !\
-        ! Bp_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dPhi_PFSSM::
-        !/
-        stuff2 = g_nm(n+1,m+1)*sinmPhi-h_nm(n+1,m+1)*cosmPhi
-        SumP   = SumP+p_nm(n+1,m+1)*real(m)/SinTheta*stuff1  *&
-             stuff2
-     enddo
-  enddo
-  !\
-  ! Compute Br_BLK at R_PFSSM = Ro_PFSSM = cOne::
-  ! Apply field strength normalization::
-  ! Note that unitUSER_B is in Gauss,
-  ! while unit_PFSSM_B is in microT=0.01*Gauss::
-  !/
-  !  Br_BLK = sqrt(SumR**2+SumT**2+SumP**2)*unitPFSSM_B/unitUSER_B
-  Br_BLK = abs(SumR)*unitPFSSM_B/unitUSER_B
-end subroutine get_Br_BLK
 !============================================================================
 subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !
@@ -1758,12 +1524,14 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
        cE1,cE9,cTolerance,cTiny,cPi
   use ModProcMH,   ONLY: iProc
   use ModUser,     ONLY: DoFirst,File_PFSSM,Head_PFSSM,&
-       N_PFSSM,UNIT_PFSSM,R_PFSSM,Rs_PFSSM,Ro_PFSSM,   &
+       N_PFSSM,R_PFSSM,Rs_PFSSM,Ro_PFSSM,   &
        unitPFSSM_B,iHead_PFSSM,g_nm,h_nm,factRatio1
-  use ModPhysics,  ONLY: unitUSER_B,OMEGAbody,unitUSER_t
+  use ModPhysics,  ONLY: unitUSER_B,OmegaBody,unitUSER_t
   use ModIO,       ONLY: iUnitOut, write_prefix
+  use ModIoUnit,      ONLY: io_unit_new
+
   implicit none
-  
+
   real, intent(in):: xx,yy,zz
   real, intent(out), dimension(3):: B0_PFSSM
   integer:: iError
@@ -1781,8 +1549,10 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   real:: Br_PFSSM,Btheta_PFSSM,Bphi_PFSSM,Psi_PFSSM
   real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
 
+  integer :: iUnit
+
   !\
-  ! Optimization
+  ! Optimization by G. Toth::
   !/
   integer, parameter :: MaxInt=10000
   real,save :: Sqrt_I(MaxInt)
@@ -1812,7 +1582,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !\
   ! Update Phi_PFSSM for central meridian and solar rotation::
   !/
-  !  Phi_PFSSM = Phi_PFSSM-OMEGAbody*(Time_Simulation/unitUSER_t)
+  !  Phi_PFSSM = Phi_PFSSM-OmegaBody*(Time_Simulation/unitUSER_t)
   Phi_PFSSM = Phi_PFSSM-Phi_Shift
   !\
   ! Set the source surface radius::
@@ -1836,10 +1606,11 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      !\
      ! Formats adjusted for wso CR rad coeffs::
      !/
-     open(UNIT_PFSSM,file=File_PFSSM,status='old',iostat=iError)
+     iUnit = io_unit_new()
+     open(iUnit,file=File_PFSSM,status='old',iostat=iError)
      if (iHead_PFSSM /= 0) then
         do i=1,iHead_PFSSM
-           read(UNIT_PFSSM,'(a)') Head_PFSSM
+           read(iUnit,'(a)') Head_PFSSM
         enddo
      endif
      !\
@@ -1851,13 +1622,13 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      ! Read file with coefficients, g_nm and h_nm::
      !/
      do
-        read(UNIT_PFSSM,*,iostat=iError) n,m,gtemp,htemp
+        read(iUnit,*,iostat=iError) n,m,gtemp,htemp
         if (iError /= 0) EXIT
         if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
         g_nm(n+1,m+1) = gtemp
         h_nm(n+1,m+1) = htemp
      enddo
-     close(UNIT_PFSSM)
+     close(iUnit)
      !\
      ! Add correction factor for radial, not LOS, coefficients::
      ! Note old "coefficients" file are LOS, all new coeffs and 
@@ -1871,7 +1642,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         enddo
      enddo
      !\
-     ! Calculate sqrt(integer) from 0 to 10000
+     ! Calculate sqrt(integer) from 1 to 10000::
      !/
      do m=1,MaxInt
         Sqrt_I(m) = sqrt(real(m))
@@ -1887,7 +1658,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !\
   ! Calculate powers of the ratios of radii
   !/
-  rRsPower_I(-1) = Rs_PFSSM/R_PFSSM ! this one can have negative power
+  rRsPower_I(-1) = Rs_PFSSM/R_PFSSM ! This one can have negative power.
   rRsPower_I(0)  = cOne
   RoRsPower_I(0) = cOne
   RoRPower_I(0)  = cOne
@@ -2130,7 +1901,7 @@ end subroutine user_amr_criteria
 !
 ! Written by Merav Opher Feb 14  2002
 !/
-! OMEGAbody is the rotation frequency of the Sun
+! OmegaBody is the rotation frequency of the Sun
 !========================================================================
 
 ! This subroutine allows the user to apply initial conditions to the domain
@@ -2192,11 +1963,11 @@ end subroutine user_update_states
 !
 ! The variables specific to the problem are loaded from ModUser
 subroutine user_write_progress
-    use ModProcMH
-   use ModMain
-   use ModPhysics
-   use ModUser
-   implicit none
+  use ModProcMH
+  use ModMain
+  use ModPhysics
+  use ModUser
+  implicit none
 end subroutine user_write_progress
 !========================================================================
 !========================================================================
