@@ -13,14 +13,8 @@ RESTART.in
 #TIMEACCURATE
 T			DoTimeAccurate
 
-
-#COUPLEORDER
-4			nCouple
-SC IH			NameSourceTarget
-IH SC			NameSourceTarget
-SC SP
-IH SP
-
+#TEST
+couple_mh_sp
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
@@ -210,7 +204,7 @@ T
 1
 
 #PLOT
-1000                    DnPlot
+1                     DnPlot
 
 #END_COMP SP
 
