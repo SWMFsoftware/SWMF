@@ -53,8 +53,8 @@ end subroutine timing_param_put_i
 !==============================================================================
 
 function timing_func_d(func_name,iclock,name,parent_name)
-  use ModKind
-  real(Real8_) timing_func_d
+  implicit none
+  real(selected_real_kind(12)) timing_func_d
   character (LEN=*), intent(in):: func_name, name, parent_name
   integer, intent(in) :: iclock
   timing_func_d = -1

@@ -10,8 +10,6 @@ include ../../../Makefile.conf
 OBJECTS = \
 	timing_empty.o
 
-timing_empty.o: ${SHAREDIR}/ModKind.o
-
 #
 #	Making library
 #
