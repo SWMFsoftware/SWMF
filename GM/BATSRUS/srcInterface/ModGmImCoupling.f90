@@ -4,7 +4,6 @@ module ModGmImCoupling
 
   use ModMpi
   use ModNumConst, ONLY: cRadToDeg, cDegToRad
-  use ModConst, ONLY: DipoleStrengthEarth
   use CON_coupler, ONLY: Grid_C, IM_, ncells_decomposition_d
 
   use ModProcMH
@@ -12,7 +11,7 @@ module ModGmImCoupling
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace, ONLY : ray,rayface
   use ModPhysics, ONLY: unitSI_p, unitSI_rho, unitSI_temperature, unitSI_b, &
-       Bdp_dim, rCurrents, rBody
+       Bdp, Bdp_dim, rCurrents, rBody
   implicit none
 
   character (len=*), parameter :: NameMod='ModGmImCoupling'
@@ -539,7 +538,7 @@ contains
     ! goes inside the body. If the field-line tracer did not
     ! return a good value, we will compute total V assuming dipole.
     Ri=(6378.+100.)/6378.
-    Factor = 2. * (Ri**4) / (abs(DipoleStrengthEarth)/unitSI_B)
+    Factor = 2. * (Ri**4) / abs(Bdp)
     do i=1,isize
        Colat = (90.0 - RCM_lat(i))*cDegToRad
        s2=(sin(colat))**2
