@@ -849,6 +849,12 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
         ! We could check for south-to-north crossings here !!!
         if(xx(3)*xx_ini(3)<=0)then
 
+           if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
+              ! Crossing from South to North
+              iFace = ray_loop_
+              EXIT FOLLOW
+           end if
+
            ! Interpolate x and y
            dz1 = abs(xx_ini(3))/(abs(xx(3))+abs(xx_ini(3))); dz2 = 1.0 - dz1
 
