@@ -273,18 +273,21 @@ contains
   subroutine IH_get_for_gm_and_transform(&
        nPartial,iGetStart,Get,W,State_V,nVar)
 
+    use CON_axes, ONLY: vPlanetHgi_D
+
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
     real,dimension(nVar),intent(out)::State_V
 
-    integer, parameter :: rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7
+    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7
     !------------------------------------------------------------
     call IH_get_for_gm(&
        nPartial,iGetStart,Get,W,State_V,nVar,IH_GM_CouplingTime)
 
     State_V(rhoUx_:rhoUz_)=&
-         matmul(GM_a_IH_DD,State_V(rhoUx_:rhoUz_))
+         matmul(GM_a_IH_DD,State_V(rhoUx_:rhoUz_) &
+         - State_V(rho_)*vPlanetHgi_D )
     State_V(Bx_:Bz_)=matmul(GM_a_IH_DD,State_V(Bx_:Bz_))
   end subroutine IH_get_for_gm_and_transform
 
