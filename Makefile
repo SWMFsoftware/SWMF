@@ -323,7 +323,7 @@ nompirun: ENV_CHECK ${DEFAULT_TARGET}
 ETAGS = etags
 
 tags:	ENV_CHECK
-	-$(ETAGS) */*.[fF]90 */*.[fF] */*/*.[fF]90 */*/*.[fF]
+	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
 
 clobber: ENV_CHECK distclean
 	-(@rm -rf run)
