@@ -55,8 +55,10 @@ contains
     real::Century,VL,G !Miscellaneous
     real,parameter::cDegToRadHere=cOne/57.295779513
     !----------------------------------------------------------------------
-    IF(iYear.LT.1901.OR.iYear.GT.2099)&
-         call CON_stop('No ephemers data for the year of',iYear)
+    IF(iYear.LT.1901.OR.iYear.GT.2099)then
+       write(*,*)'CON_geopack ERROR: No ephemers data for the year of ',iYear
+       call CON_stop('CON_geopack ERROR')
+    end IF
     FDAY=dble(IHOUR*3600+iMIN*60+ISEC)/86400.E0
     DJ=365*(IYear-1900)+(IYear-1901)/4+jDAY-0.5E0+FDAY
     Century=DJ/36525.0
