@@ -1065,11 +1065,6 @@ field can be costly. Since the magnetic field moves relatively
 slowly as the planet rotates around, it may not be necessary
 to continuously update the magnetic field orientation.
 
-This feature is now implemented in a simplistic manner: GM
-simply gets this value from CON and uses it for setting the frequency of
-updating the magnetic field information, which is stored locally.
-In the future the optimization should be done inside CON too.
-
 The default value is 0.0001, which means that the magnetic axis
 is continuously followed.
 </command>
