@@ -24,9 +24,6 @@ MPILIB =
 
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 
-#MCT -I${MCTDIR}/mct -I${MCTDIR}/mpeu
-#MCT -kind=byte
-
 DEBUG   = 
 #DEBUG   = -C -g
 
