@@ -8,6 +8,7 @@ include Makefile.DEPEND
 
 
 OBJECTS = \
+	ModBuffer.o\
 	ModGridDescriptor.o\
 	SC_get_for_ih.o\
 	SC_get_for_sp.o\
@@ -41,6 +42,6 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 distclean: clean
 	rm -f   SC_wrapper.f90 SC_get_for_sp.f90 \
 		ModGridDescriptor.f90 update_lagrangian_grid.f90 \
-		Makefile.DEPEND
+		Makefile.DEPEND ModBuffer.f90
 
 # keep this line
