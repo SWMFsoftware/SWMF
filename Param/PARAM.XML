@@ -1005,7 +1005,7 @@ The default value is NamePlanet="Earth", which is currently
 the only recognized planet.
 </command>
 
-<command name="ROTATIONAXIS">
+<command name="ROTATIONAXIS" if="$_IsFirstSession">
 	<parameter name="IsRotAxisPrimary" type="logical" default="T" />
 	<if expr="$IsRotAxisPrimary">
 		<parameter name="RotAxisTheta" type="real" min="0" max="180"/>
@@ -1028,12 +1028,12 @@ The default is to use the true rotational axis determined by the
 date and time given by #STARTTIME.
 </command>
 
-<command name="ROTATION">
+<command name="ROTATION" if="$_IsFirstSession">
 	<parameter name="UseRotation" type="logical" default="T" />
 	<if expr="$UseRotation">
 		<parameter name="RotationPeriod" type="real" />
 	</if>
-	<set name="PlanetCommand" type="string" value="MAGNETICAXIS" />
+	<set name="PlanetCommand" type="string" value="ROTATION" />
 
 #ROTATION
 T			UseRotation
@@ -1050,7 +1050,7 @@ length of the astronomical day.
 The default is to use rotation with the real rotation period of the planet.
 </command>
 
-<command name="MAGNETICAXIS">
+<command name="MAGNETICAXIS"  if="$_IsFirstSession">
 	<parameter name="IsMagAxisPrimary" type="logical" default="T" />
 	<if expr="$IsMagAxisPrimary">
 		<parameter name="MagAxisTheta" type="real" min="0" max="180"/>
@@ -1073,8 +1073,9 @@ The default is to use the true magnetic axis determined by the
 date and time given by #STARTTIME.
 </command>
 
-<command name="DIPOLE">
+<command name="DIPOLE" if="$_IsFirstSession">
 	<parameter name="DipoleStrength" type="real" />
+	<set name="PlanetCommand" type="string" value="DIPOLE" />
 
 #DIPOLE
 -3.11e-4		DipoleStrength [Tesla]
@@ -1104,7 +1105,8 @@ The default value is 0.0001, which means that the magnetic axis
 is continuously followed.
 </command>
 
-<command name="IDEALAXES">
+<command name="IDEALAXES" if="$_IsFirstSession">
+	<set name="PlanetCommand" type="string" value="IDEALAXES" />
 
 #IDEALAXES
 
