@@ -9,19 +9,19 @@ if($1 == 'help' || $1 == '-h' || $1 == '-help')then
    echo "TestCovariant.pl [some test runs]"
    echo ""
    echo "where the argument is a test run typically using TestBatsrus.pl or TestSuite.pl."
-   echo "The default test is running TestBatsrus.pl without arguments."
+   echo "The default test is running TestBatsrus.pl -x=SWMF.exe"
    echo "Examples:"
    echo ""
-   echo "TestCovariant                                    # do default test"
-   echo "TestCovariant GM/BATSRUS_conf/TestBatsrus.pl -ta # do another test"
-   echo "TestCovariant GM/BATSRUS_conf/TestSuite.pl func  # do test suite"
-   echo "TestCovariant make                               # just compile"
-   echo "TestCovariant echo Configuration done            # just configure"
+   echo "TestCovariant                                                # do default test"
+   echo "TestCovariant GM/BATSRUS_conf/TestBatsrus.pl -x=SWMF.exe -ta # do another test"
+   echo "TestCovariant GM/BATSRUS_conf/TestSuite.pl -x=SWMF.exe func  # do test suite"
+   echo "TestCovariant make                                           # just compile"
+   echo "TestCovariant echo Configuration done                        # just configure"
    exit
 endif
 
 if($1 == '')then
-   set test='GM/BATSRUS_conf/TestBatsrus.pl'
+   set test='GM/BATSRUS_conf/TestBatsrus.pl -x=SWMF.exe'
 else
    set test="$*"
 endif
@@ -47,6 +47,6 @@ $test
 if(-d run)then
     rm -rf run_covariant compare.txt
     mv run run_covariant
-    TestCompare.pl -o=1e-14 run_covariant run_covarcheck > compare.txt
+    TestCompare -o=1e-14 run_covariant run_covarcheck > compare.txt
     cat compare.txt
 endif
