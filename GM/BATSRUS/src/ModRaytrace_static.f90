@@ -116,6 +116,13 @@ module ModRaytrace
   real, allocatable :: RayIntegral_VII(:,:,:)
   real, allocatable :: RayResult_VII(:,:,:)
 
+  ! Conversion matrix between SM and GM coordinates 
+  ! (to be safe initialized to unit matrix)
+  real :: GmSm_DD(3,3) = reshape( (/ &
+       1.,0.,0., &
+       0.,1.,0., &
+       0.,0.,1. /), (/3,3/) )
+
 contains
 
   !============================================================================
@@ -134,6 +141,9 @@ contains
 
     ! Check if this direction is closed or not
     if(Pos_D(1) > CLOSEDRAY)then
+
+       ! Convert GM position into IM position
+       Pos_D = matmul(Pos_D, GmSm_DD)
 
        ! Store input coordinates
        x = Pos_D(1); y = Pos_D(2); z = Pos_D(3)

@@ -813,17 +813,20 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
         RayIntegral_V(RhoInvB_:pInvB_) = RayIntegral_V(RhoInvB_:pInvB_) + &
              InvBDl * RhoP_V
 
-        ! Check if we crossed the Z=0 plane
+        ! Check if we crossed the Z=0 plane in the SM coord system
+        ! Convert previous and current normalized positions into real coords
         xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini - 1.)
         xx     = XyzStart_BLK(:,iBlock) + Dxyz_D*(x     - 1.)
 
-        ! What about multiple crossings !!!
-        ! Should we check in which direction the equator is crossed !!!
-        ! We could check for south-to-north crossings here !!!
+        ! Convert GM position into SM frame using the transposed GmSm_DD
+        xx_ini = matmul(xx_ini, GmSm_DD)
+        xx     = matmul(xx    , GmSm_DD)
+
+        ! Check if we have crossed the magnetic equator in the SM frame
         if(xx(3)*xx_ini(3)<=0)then
 
            if(xx_ini(3) <= 0 .and. xx(3) >= 0)then
-              ! Crossing from South to North
+              ! Crossing from South to North is not accepted !!!
               iFace = ray_loop_
               EXIT FOLLOW
            end if
@@ -1184,8 +1187,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
 
   use CON_ray_trace, ONLY: ray_init
   use CON_planet_field, ONLY: map_planet_field
+  use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, iTest, jTest
+  use ModMain,    ONLY: nBlock, Time_Simulation, iTest, jTest, TypeCoordSystem
   use ModPhysics, ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
@@ -1200,6 +1204,12 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   !INPUT ARGUMENTS:
   integer, intent(in):: nLat, nLon
   real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
+
+  !DESCRIPTION:
+  ! Lat_I(nLat) and Lon_I(nLon) are the coordinates of a 2D spherical 
+  ! grid in the SM(G) coordinate system. The 2D grid is at radius Radius.
+  ! The subroutine calculates the integral of various quantities along
+  ! the field lines starting from the 2D spherical grid.
 
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
   integer :: iLat, iLon, iHemisphere
@@ -1257,6 +1267,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   RayIntegral_VII = 0.0
   RayResult_VII   = 0.0
 
+  ! Transformation matrix between the SM and GM coordinates
+  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
   do iLat = 1, nLat
@@ -1287,8 +1300,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
            CYCLE
         end if
 
-        ! Convert SMG to GSM (Note: these are identical for ideal axes)
-        !! Xyz_D = matmul(GmIm_DD,Xyz_D)
+        ! Convert SM position to GM (Note: these are identical for ideal axes)
+        Xyz_D = matmul(GmSm_DD,Xyz_D)
 
         ! Find processor and block for the location
         call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &

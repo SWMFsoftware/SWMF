@@ -14,8 +14,10 @@ end subroutine OPTION_RAYTRACING
 
 subroutine ray_trace
 
-  use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition
-  use ModRaytrace, ONLY: init_mod_raytrace, &
+  use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, &
+       time_simulation, TypeCoordSystem
+  use CON_axes,    ONLY: transform_matrix
+  use ModRaytrace, ONLY: init_mod_raytrace, GmSm_DD, &
        UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
   use ModPhysics,  ONLY: rBody
   implicit none
@@ -49,6 +51,9 @@ subroutine ray_trace
   ! Initialize R_raytrace, R2_raytrace to body radius
   R_raytrace  = rBody
   R2_raytrace = R_raytrace**2
+
+  ! Transformation matrix between the SM(G) and GM coordinates
+  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
 
   if(UseAccurateTrace)then
      call ray_trace_accurate
