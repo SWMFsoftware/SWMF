@@ -1651,8 +1651,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          tvf=bytscl(tvf,MIN=f_min,MAX=f_max,TOP=!D.TABLE_SIZE-3)+1
       endif
 
-      if showbar then $
-        plotct, [pos(2)+0.005, pos(1), pos(2)+0.025, pos(3)], [f_min,f_max]
+      if showbar then plot_color_bar, $
+        [pos(2)+0.005, pos(1), pos(2)+0.025, pos(3)], [f_min,f_max]
 
       case axistype of
       'cells': case plotmod of
@@ -3213,7 +3213,7 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
 end
 
 ;============================================================================
-pro plotct, pos, maxmin
+pro plot_color_bar, pos, maxmin
 
 ; plot color bar based on the current color table
 
