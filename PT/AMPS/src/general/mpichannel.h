@@ -63,7 +63,7 @@ public:
     sendptr=0,sendThread=send; 
   };
 
-  void closeSend() {
+  void flush() {
     if (sendptr!=0) {
       MPI_Status status;
       MPI_Request request;
@@ -73,9 +73,18 @@ public:
       MPI_Isend(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD,&request);
       MPI_Wait(&request,&status);
 
+      sendptr=0;
+    }
+  };
+
+
+  void closeSend() {
+    if (sendptr!=0) {
+      flush();
+
       delete [] sendBuffer;
 
-      sendBuffer=NULL,sendptr=0;
+      sendBuffer=NULL;
       sendThread=-1;
     }
   };
@@ -166,6 +175,13 @@ public:
   template<class T> void recv(T& data ,int thread) {
     recv(&data,1,thread);
   }; 
+
+  template<class T> T recv(int thread) {
+    T data;
+   
+    recv(&data,1,thread); 
+    return data;
+  };
 };
 
 #endif 
