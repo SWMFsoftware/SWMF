@@ -89,8 +89,8 @@ in the following sections.
 
 There are 3 clocks started and stopped by timing\_start
 and timing\_stop. Clock 1 always measures the latest timings,
-clock 2 measures cummulative timings since the last reset,
-while clock 3 typically measures cummulative timings for the whole run.
+clock 2 measures cumulative timings since the last reset,
+while clock 3 typically measures cumulative timings for the whole run.
 
 The clocks can be reset by
 \begin{verbatim}
@@ -115,7 +115,7 @@ Note that active timings (started but not yet stopped) are not stopped
 by the reset, but the start time is overwritten
 so that only the time after the reset is measured.
 
-Beside measuring cummulative timings, clocks 2 and 3 also count the number 
+Beside measuring cumulative timings, clocks 2 and 3 also count the number 
 of 'calls', and the number of 'iterations' for each timing entry. 
 The iterations are distinguished by the current step number 
 (a monotonically increasing positive integer) which can be set by calling
@@ -157,7 +157,7 @@ if depth is set to 1, only the main code is timed.
 The style of the report shown by the 
 {\tt timing\_report} and  {\tt timing\_report\_total} subroutines
 is determined by the {\tt report\_style}. The default style is
-'cumm', which produces cummulative timings sorted by the timing values.
+'cumu', which produces cumulative timings sorted by the timing values.
 The 'list' style also gives sorted timings, but timings with different calling
 parents are distinguished. Finally the 'tree' style gives the timings
 in the format of a nested calling tree.
@@ -196,7 +196,7 @@ For clock 1 the name, the calling parent, and the very last timing are shown:
   call timing_show('calc_gradients',1)
   Last timing for calc_gradients (advance_expl):    0.01 sec
 \end{verbatim}
-For clock 2 the cummulative timing since the last reset is given.
+For clock 2 the cumulative timing since the last reset is given.
 All timings matching the name (but called from different parents) are shown.
 The timing per iteration and per call and the percentage
 with respect to the parent are also shown:
@@ -226,12 +226,12 @@ Timing for calc_gradients at step      20 :
 For most purposes one can use the following two generic subroutines
 \begin{verbatim}
   timing_report  
-  ! same as timing_sort(2,-1,.true.)  if style is 'cumm'
+  ! same as timing_sort(2,-1,.true.)  if style is 'cumu'
   ! same as timing_sort(2,-1,.false.) if style is 'list'
   ! same as timing_tree(2,-1)         if style is 'tree'
 
   timing_report_total
-  ! same as timing_sort(3,-1,.true.)  if style is 'cumm'
+  ! same as timing_sort(3,-1,.true.)  if style is 'cumu'
   ! same as timing_sort(3,-1,.false.) if style is 'list'
   ! same as timing_tree(3,-1)         if style is 'tree'
 \end{verbatim}
@@ -354,7 +354,7 @@ initialize              0.00    0.00
 \end{table}
 The percentages are with respect to the longest timing in the first row.
 
-If clock 2 or 3 is used, the table contains the cummulative timings 
+If clock 2 or 3 is used, the table contains the cumulative timings 
 and the number of steps and calls are also indicated. 
 For example the first four of the uniquely sorted timings of clock 2 
 can be obtained with
@@ -451,10 +451,10 @@ timing_sort(iclock,show_length,unique)
 
 timing_tree(iclock,show_depth)
 
-timing_report       ! == timing_sort(2,-1,.true.)  for style 'cumm'
+timing_report       ! == timing_sort(2,-1,.true.)  for style 'cumu'
                     ! == timing_sort(2,-1,.false.) for style 'list'
                     ! == timing_tree(2,-1)         for style 'tree'
-timing_report_total ! == timing_sort(3,-1,.true.)  for style 'cumm'
+timing_report_total ! == timing_sort(3,-1,.true.)  for style 'cumu'
                     ! == timing_sort(3,-1,.false.) for style 'list'
                     ! == timing_tree(3,-1)         for style 'tree'
 
