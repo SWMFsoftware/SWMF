@@ -10,7 +10,7 @@ subroutine GM_put_from_ih(nPartial,&
      StateSI_V,&
      nVar)
   !USES:
-  use CON_router
+  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
   use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
 
