@@ -30,12 +30,12 @@ SWMFREF = \
 	${COUPLERDIR}/CON_global_message_pass.protex \
 	${SHAREDIR}/ModReadParam.protex \
 	${SHAREDIR}/ModIoUnit.protex \
-	${SHAREDIR}/ModCoordTransform.protex \
+	${SHAREDIR}/ModKind.protex \
+	${SHAREDIR}/ModMpi.protex \
 	${SHAREDIR}/ModTimeConvert.protex \
 	${SHAREDIR}/ModFreq.protex \
 	${SHAREDIR}/ModUtilities.protex \
-	${SHAREDIR}/ModKind.protex \
-	${SHAREDIR}/ModMpi.protex \
+	${SHAREDIR}/ModCoordTransform.protex \
 	${SHAREDIR}/CON_axes.protex \
 	${SHAREDIR}/CON_planet.protex \
 	${SHAREDIR}/CON_planet_field.protex \

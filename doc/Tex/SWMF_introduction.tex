@@ -7,31 +7,31 @@
 
 \chapter{Introduction}
 
-
 This document describes a working prototype of the NASA-funded Space
 Weather Modeling Framework (SWMF) delivered to NASA to fulfill the
-Milestone 7I requirements. The SWMF was developed to provide flexible
+Milestone ??? requirements. The SWMF was developed to provide flexible
 "plug and play" type simulation capabilities serving the Sun-Earth
-modeling community.  In its current form the SWMF links together five
-models: Global Magnetosphere, Inner Heliosphere, Ionosphere
-Electrodynamics, Upper Atmosphere and Inner Magnetosphere. The
-framework permits the switching of models of any type.
-
-
-In its fully developed form, the SWMF will comprise a series of
-inter-operating models of physics domains, ranging from the surface of
-the Sun to the upper atmosphere of the Earth.  In the future the SWMF
-will link the additional physics models: Solar Corona, Solar Energetic
-Particles, Eruptive Events, Cometary Environment, Interstellar
-Neutrals, Outer Heliosphere, Plasmasphere, Planetary Satellites, Polar
-Wind and Radiation Belts.
-
+modeling community.  In its current form the SWMF links together eight
+models from the surface of the Sun to the upper atmosphere of the Earth: 
+\begin{enumerate}
+\item SC -- Solar Corona which includes the Eruptive Event Generator,
+\item IH -- Inner Heliosphere
+\item SP -- Solar Energetic Particles 
+\item GM -- Global Magnetosphere 
+\item IM -- Inner Magnetosphere
+\item RB -- Radiation Belts
+\item IE -- Ionosphere Electrodynamics
+\item UA -- Upper Atmosphere
+\end{enumerate}
+Tn the future the SWMF may be extended to include even more 
+physics domains: Cometary Environment, Interstellar
+Neutrals, Outer Heliosphere, Plasmasphere, Planetary Satellites and
+Polar Wind. 
 
 The SWMF implementation is based on the component technology and
 Object-Oriented Programming emulated in Fortran 90.  The SWMF parallel
 communications are based on the MPI standard.  In its current
 implementation the SWMF creates a single executable.
-
 
 \section{Acknowledgments}
 
@@ -43,33 +43,38 @@ Adaptive Simulation Framework for Space-Weather Modeling (SWMF)''.
 The Project Director is Professor Tamas Gombosi, and the Co-Principal
 Investigators are Professors Quentin Stout and Kenneth Powell.
 
-The architectural design of the SWMF was developed by David Chesney,
+The SWMF and many of the physics components were developed at CSEM
+by the following individuals (in alphabetic order):
+David Chesney,
 Darren DeZeeuw, Tamas Gombosi, Kenneth Hansen, Kevin Kane, Ward (Chip)
 Manchester, Robert Oehmke, Kenneth Powell, Aaron Ridley, Ilia Roussev,
 Quentin Stout, Igor Sokolov, G\'abor T\'oth and Ovsei Volberg.
 
-{\bf The final architectural design of this prototype} was done by
-Ovsei Volberg and G\'abor T\'oth.
-
-{\bf The core code development} for this release was done by G\'abor
-T\'oth, Ovsei Volberg, Igor Sokolov and Aaron Ridley.
-
-{\bf The session and time management support} was designed and
-developed by G\'abor T\'oth.
-
-{\bf The SWMF coupling toolkit} was developed by Igor Sokolov.
-
-This release includes components for five physics domains: Global
-Magnetosphere (GM), Inner Heliosphere (IH), Ionosphere Electrodynamics
-(IE), Upper Atmosphere(UA) and Inner Magnetosphere (IM).  The physics
-model development for these components was done by the following
-research groups:
-
+The core design and code development was done by G\'abor
+T\'oth, Igor Sokolov, Kevin Kane and Ovsei Volberg:
+\begin{itemize}
+\item Component registration and layout was designed and implemented by 
+      Ovsei Volberg and G\'abor T\'oth.
+\item The session and time management support was designed and
+      developed by G\'abor T\'oth.
+\item The SWMF coupling toolkit was developed by Igor Sokolov.
+\item The SWMF graphical user interface was designed and implemented
+      by Kevin Kane.
+\end{itemize}
+The physics models were developed by the following research groups:
 \begin{itemize}
 \item
-The Global Magnetosphere (GM) and Inner Heliosphere (IH) components
-are based on \BATSRUS\ MHD code developed at CSEM. \BATSRUS\ is a
-3-dimensional block-adaptive cartesian code which is highly parallel.
+The Solar Corona (SC), Inner Heliosphere (IH) and the Global Magnetosphere 
+(GM) components are based on \BATSRUS\ MHD code developed at CSEM. 
+\BATSRUS\ is a 3-dimensional block-adaptive Cartesian code which is 
+highly parallel.
+
+\item
+The Solar Energetic Particle (SP) component has two versions:
+K\'ota's SEP model was developed at the University of Arizona.
+???
+The FLAMPA model was developed at CSEM.
+???
 
 \item
 The Inner Magnetosphere (IM) component is the Rice Convection Model
@@ -77,11 +82,18 @@ The Inner Magnetosphere (IM) component is the Rice Convection Model
 serial.
 
 \item
+The Radiation Belt (RB) component is the Rice RBM
+developed Rice University.  This code is 2-dimensional and
+serial.
+
+\item
 The Ionospheric Electrodynamics (IE) component is a 2-processor,
 2-dimensional spherical electric potential solver developed at CSEM
-(termed the ``Ridley Ionosphere''.  In addition, there are a number of
+(termed the ``Ridley Ionosphere''.  
+???
+In addition, there are a number of
 statistical models included with the distribution, which are described
-further in the document.
+further in the document ???
 
 \item
 The Upper Atmosphere (UA) component is the Global Ionosphere -
@@ -90,18 +102,38 @@ model developed at CSEM.  It is fully parallel.
 
 \end{itemize}
 
-Some additional pieces of code complementary to the core development
-of this SWMF prototype were developed in parallel.  Kevin Kane
-performed the preliminary design of the Graphical User Interface for
-the SWMF.  Robert Oehmke developed the spherical Adaptive Blocks (AB)
-library, which is used by GITM.
+The transformation of physics models into physics components,
+the coupling of components to the SWMF and each other and,
+all the testing were done at CSEM.
 
-Darren DeZeeuw, Kenneth Hansen, Ward (Chip) Manchester, Igor Sokolov,
-G\'abor T\'oth and Ovsei Volberg did all the testing.
+\section{What is New in Version 2.0}
 
+The SWMF has been developed extensively since the first release of
+version 1.0. Here are some of the highlights:
+\begin{itemize}
+\item The SWMF now contains 3 new components:
+      the Solar Corona (SC), the Solar Energetic Particles (SP) 
+      and the Radiation Belt (RB)
+\item Some components now support dynamic memory allocation which 
+      reduces the total memory required by a processing element. 
+\item The directory structure of the SWMF has been greatly improved and 
+      reorganized. 
+\item This reorganization allows components to be used as stand alone 
+      physics models without any modification in the source code,
+      only a small library needs to be linked.
+\item The installation and configuration of SWMF has been greatly simplified
+      with the aid of Perl scripts. 
+\item Layout and input parameter can be checked with TestParam.pl
+\item User manual is produced from the XML description of the input parameters 
+\item Unused components can be configured out completely.
+\item The SWMF contains a new Graphical User Interface. 
+\item The control module now fully supports steady state calculations 
+      including component subcycling. 
+\item The coupling toolkit provides means for extracting and following 
+      the motion of field lines.
+\end{itemize}
 
 \section{The SWMF in a Few Paragraphs}
-
 
 The SWMF is a structured collection of software building blocks that
 can be used or customized to develop Sun-Earth system modeling
@@ -132,7 +164,7 @@ model code and its wrapper, which comprise a component, share the
 communication group.  The coupling interface uses the union
 communicator of the two components that it links together.
 
-A SWMF component is compiled into a separate library that resides in
+An SWMF component is compiled into a separate library that resides in
 the directory {\tt lib}, which is created as part of the installation
 process described later in this document.  Currently the component
 libraries are static libraries. The executable image is created in the
@@ -155,23 +187,17 @@ read and broadcast by CON and the component specific parameters are
 sent to the components. The structure of the parameter file will be
 described in detail.
 
-The sessions can be executed in 3 different different ways: (1) The
-sequential execution model of the session is based on the \BATSRUS\
-code, and it is backward compatible with it. In this model the
-components are synchronized at every time step, so typically only one
-component is executing (possibly on many processors) at any given
-time.  In the parallel execution model, the components communicate
-only when necessary.  This is possible, because the coupling times are
+If two components reside on different sets of processing elements
+(PE-s) they can execute in an efficient parallel manner.
+This is possible, because the coupling times are
 known in advance.  The components advance to the time of coupling and
 only the processors involved in the coupling need to communicate with
-each other.  (2) The parallel execution model requires that there is
-no overlap in the layout of the components, i.e. there is exactly one
-component running on every processing element.  (3) The general
-execution model behaves the same way as the parallel model when there
-is no overlap, but it also allows more than one component on the same
-PE. Currently the parallel and general models are developed for time
-accurate runs only. The generalization for steady state simulations
-will be done in the final implementation.
+each other. The components are also allowed to share some processing elements.
+The execution is sequential for the components with overlapping layouts.
+Of course this still allows the individual components to execute in parallel.
+For steady state calculations the components are allowed to progress
+at different rates towards steady state. Each component can be called
+at different frequencies by the control module.
 
 The coupling of the components is realized either with plain MPI
 calls, or via the SWMF coupling toolkit, which can couple components
@@ -191,7 +217,7 @@ changes.  The coupling toolkit takes care of linear interpolation in
 space based on the grid descriptor.  Temporal interpolation is not
 supported by the current implementation.
 
-The framework has been tested on the SGI Origin 2000 and Compaq ES45
+The framework has been tested on the SGI Origin 3000 and Compaq ES45
 machines, and on Linux Beowulf clusters with the NAG F95 compiler.
 
 %-----------------------------------------------------------------------
@@ -203,25 +229,32 @@ machines, and on Linux Beowulf clusters with the NAG F95 compiler.
 \section{A Brief Description of the SWMF Distribution}
 
 The distribution in the form of the compressed tar image
-SWMF\_7I.tar.gz includes the directory structure that comprises the
-SWMF and test directories:
+SWMF.tar.gz includes the SWMF source code and the tests.
+The top level directory contains the following subdirectories:
 \begin{itemize}
-\item {\tt Common} - the directory of the framework's main building blocks
-\item {\tt srcCON} - the source directory for the Control Module
-\item {\tt srcTIMING} - the time profiling source directory
-\item {\tt srcNOMPI} - the source directory for an empty MPI library
-\item {\tt GM, IH, IE, IM, UA} - the directories of the five
-components included in the release
-\item {\tt Doc} - the documentation directory
-\item {\tt Scripts, Param} - the directories needed to create the run directory
-\item {\tt Tests} - the directory of test files and all data for the
-                    test result verification
+\item {\tt CON}   - the directory of the framework's main building blocks
+\item {\tt GM}    - Global Magnetosphere component       %^CMP IF GM
+\item {\tt IE}    - Ionosphere Electrodynamics Component %^CMP IF IE
+\item {\tt IH}    - Inner Heliosphere component          %^CMP IF IH
+\item {\tt IM}    - Inner Magnetosphere component        %^CMP IF IM
+\item {\tt RB}    - Radiation Belt component             %^CMP IF RB
+\item {\tt SC}    - Solar Corona component               %^CMP IF SC
+\item {\tt SP}    - Solar Energetic Particles component  %^CMP IF SP
+\item {\tt UA}    - Upper Atmosphere component           %^CMP IF UA
+\item {\tt Copyrights} - copyright files
+\item {\tt Param} - description of CON parameters, parameters and layout files
+\item {\tt bin}   - scripts for installation, configuration and testing
+\item {\tt doc}   - the documentation directory %^CMP IF DOC
+\item {\tt share} - shared scripts and source code
+\item {\tt test}  - input files for tests and reference output
+\item {\tt util}  - general utilities such as TIMING and NOMPI
 \end{itemize}
-The high level directory contains the high-level Makefile, the installation 
-turning script swmf.env and the PERL scripts for testing: TestSuite.pl, 
-TestSWMF.pl, TestCompare.pl.
-The PERL scripts are described in more details in the Reference Manual part of 
-this document. 
+and the following files
+\begin{itemize}
+\item {\tt README}   - a short instruction on installation and usage
+\item {\tt Makefile} - the main makefile
+\item {\tt Configure.options} - default configuration options %^CMP IF CONFIGURE
+\end{itemize}
 
 \section{Installing the Code}
 
@@ -241,28 +274,41 @@ need to use the two step procedure on certain platforms.
 
 Untar the distribution using the command:
 \begin{verbatim}
-tar xzf SWMF_7I_Release.tgz
+tar xzf SWMF.tgz
 \end{verbatim}
 
 Change directories into the distribution:
 \begin{verbatim}
-cd SWMF_7I_Release
+cd SWMF
 \end{verbatim}
 
 The SWMF needs to know what architecture you are running the code on.
 It can figure this out all by itself, but you have to run the command:
 \begin{verbatim}
-./swmf.env
+SetSWMF.pl -i
 \end{verbatim}
-in the main directory. This creates {\tt Common/Makefile.COMP} with
-the correct absolute path to the base directory, which is needed by
-the Makefile-s.  The {\tt swmf.env} script only needs to be run once,
-except if the base directory is renamed or moved.
-
-To install the framework, type:
+in the main directory. This creates {\tt Makefile.def} with
+the correct absolute path to the base directory and {\tt Makefile.conf}
+which contains the operating system and compiler specific part of
+the Makefile. If the compiler is not the default one for a given
+platform (e.g. not the NAG f95 compiler for a Linux platform) then
+the compiler must be specified explicitly with the {\tt -c}
+flag. For example
 \begin{verbatim}
-make install
-\end{verbatim} 
+SetSWMF.pl -i -c=pgf90
+\end{verbatim}
+The installation should only be done once unless the SWMF is uninstalled with
+\begin{verbatim}
+SetSWMF.pl -uninstall
+\end{verbatim}
+When SWMF is installed, its configuration can be checked with
+\begin{verbatim}
+SetSWMF.pl -s
+\end{verbatim}
+To get a complete description of the {\tt SetSWMF.pl}  script type
+\begin{verbatim}
+SetSWMF.pl -h
+\end{verbatim}
 
 \section{Creating Documentation}
 
@@ -272,46 +318,74 @@ the command
 make PDF
 \end{verbatim}
 which creates documentation files in the Adobe PDF format.  The PDF
-files are placed into the {\tt Doc} library.  An on-line version can
+files are placed into the {\tt doc} directory.  An on-line version can
 be created by
 \begin{verbatim}
 make HTML
 \end{verbatim}
-The top level HTML file is in {\tt Doc/HTML/index.html}, this the file
+The top level HTML file is in {\tt doc/HTML/index.html}, this is the file
 to point at with the browser.  To clean the intermediate files type
 \begin{verbatim}
-cd Doc/Tex
+cd doc/Tex
 make clean
 \end{verbatim}
 To remove all the documentation type
 \begin{verbatim}
-cd Doc/Tex
+cd doc/Tex
 make distclean
 \end{verbatim}
 
 \section{Building and Running an Executable}
 
-Manually edit the file Common/Makefile.COMP to select physics
-components for your future runs. The components that are not needed
-for the current run should be substituted by their "empty" version.
-It is OK to leave this file alone to start with.  The default is to
-include all models, which will take up more memory, but will be the
-most general.
+The physics components can be selected with the {\tt -v} flag
+of of the SetSWMF.pl script. For example typing
+\begin{verbatim}
+SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS,SP/Kota
+SetSWMF.pl -v=GM/Empty,RB/Empty,IM/Empty,IE/Empty,UA/Empty
+\end{verbatim}
+will select BATSRUS for the SC and IH components and K\'ota's SP model.
+The other components are set to Empty versions, which contain emmpty
+subroutines for compilation, but cannot be used.
+The default configuration includes a working version for all components, 
+which takes up more memory, but is the most general.
 
+The grid size of several components can also be set with the {\tt -g}
+flag of the {\tt SetSWMF.pl} script. For example the 
+\begin{verbatim}
+SetSWMF.pl -g=GM:8,8,8,400,100
+\end{verbatim}
+command sets the block size for the GM component to $8\times 8\times 8$ cells, 
+the maximum number of blocks per processor to 400, 
+and the maximum number of implicit blocks to 100.
+
+Compilation flags, such as the precision and optimization 
+level are stored in {\tt Makefile.conf}. The precision of reals
+can be changed to single precision (for example) by typing
+\begin{verbatim}
+SetSWMF.pl -p=single
+\end{verbatim}
+while the compiler flags can be editied in {\tt Makefile.conf} by hand.
+
+Before compiling SWMF it is always a good idea to check its configuration
+with
+\begin{verbatim}
+SetSWMF.pl -s
+\end{verbatim}
 To build the executable, type:
 \begin{verbatim}
 make
 \end{verbatim} 
-Depending on the machine that you are compiling on, this will take
-10-30 minutes.  In addition, you may want make the post processing
-codes also:
+Depending on the configuration and the machine that you are compiling on, 
+this will take 10-30 minutes.  
+In addition, you may want make the post processing
+codes (for BATSRUS only) also:
 \begin{verbatim}
-make PTEC
+make PSPH
 make PIDL
 \end{verbatim} 
-These two commands will create the codes {\tt PostTEC.exe}, for post
-processing Tecplot files, and {\tt PostIDL.exe} for post processing
-IDL files.
+These two commands will create the codes {\tt PostSPH.exe}, for post
+processing spherical Tecplot files, and {\tt PostIDL.exe} 
+for post processing IDL files.
 
 The executable should be run in a sub-directory, since a large number
 of files are created in each run.  To create this directory use the
@@ -321,7 +395,7 @@ make rundir
 \end{verbatim} 
 This command creates a directory called {\tt run}.  You can either
 leave this directory as named, or {\tt mv} it to a different name.  It
-is best to leave it in the same {\tt SWMF\_7I\_Release} directory, since
+is best to leave it in the same SWMF directory, since
 keeping track of the code version associated with each run is quite
 important.  The {\tt run} directory will contain links to the codes
 which were created in the previous step as well as subdirectories
@@ -336,10 +410,10 @@ Edit the processor map input file LAYOUT.in to define the processor
 layout for the components involved in the future run.  Edit or create
 the input parameter file PARAM.in.  The default LAYOUT.in and PARAM.in
 files in the run directory are suitable to perform the ``Start'' test
-on 16 PE-s.
+on 16 PE-s. 
 
 An example processor map file LAYOUT.in to run the executable with
-all five components on 16 processors is:
+five components on 16 processors is:
 \begin{verbatim}
 #COMPONENTMAP
 GM    0    4    1
@@ -358,25 +432,30 @@ to 4, and IM will run on only 1 processor, the processor 11.  If
 stride is not equal to 1, the processors for the component will not be
 neighboring processors.
 
-Run the executable through submitting a batch job or, if it's possible 
-on your computer, run the code interactively.  For example:
+It is useful to check the validity of the {\tt run/PARAM.in} and 
+{\tt run/LAYOUT.in} files berfore running the code. If the
+code will be run on 16 processors, type
+\begin{verbatim}
+TestParam.pl -n=16
+\end{verbatim}
+The Perl script reports inconsistencies and errors. 
+If no errors are found, the script finishes silently.
+Now you are read to run the executable through submitting a batch job or, 
+if it is possible on your computer, run the code interactively.  For example:
 \begin{verbatim}
 mpirun -np 16 SWMF.exe
 \end{verbatim}
-
 To recompile the executable with different compiler settings you have
 to use the command:
 \begin{verbatim}
 make clean
 \end{verbatim} 
-
-To discard the configuration and environment settings completely,
-type:
+To discard the configuration completely, type:
 \begin{verbatim}
-make distclean
+SetSWMF.pl -uninstall
 \end{verbatim} 
 
-\section{Executing the Test Runs}
+\section{??? Executing the Test Runs ???}
 
 We provide a number of test runs for this distribution of the code.
 The tests are in the Tests directory for the released code, otherwise
