@@ -64,7 +64,7 @@ while(<>){
     # skip things before the commandList
     next unless $start; 
 
-    # command --> subsubsection
+    # command --> subsubsection with an index term
     if(/^\s*<command/){
 	/name=[\'\"]([^\'\"]+)/;
 	my $command   = "\#$1";
@@ -75,7 +75,7 @@ while(<>){
 
 	$comp =~ s/GM\/BATSRUS/GM,SC,IH\/BATSRUS/; # GM --> GM,SC,IH
 
-	my $index = "$comp\!$command";# Form the index term
+	my $index = "$comp\!$command";           # Form the index term
 	$_="\\subsubsection\{$command command\}\\index\{$index\}\n\n";
     }
 
@@ -91,8 +91,10 @@ while(<>){
 	$verbatim = 0;
     }
 
-    # One line XML comments are replaced with Tex comments
-    s/<!--(.*?)-->/\%$1/;
+    ### One line XML comments are replaced with Tex comments
+    ### s/<!--(.*?)-->/\%$1/;
+    # Remove one line XML comments
+    s/<!--(.*?)-->//;
 
     # Beginning of multiline XML comment
     $comment = 1 if s/<!--.*//;
