@@ -301,7 +301,9 @@ contains
     real:: UrTrue,UtTrue,BpTrue,BrGhost,BtGhost,BpGhost
 !^CFG IF USERFILES BEGIN
 !    For new ionosphere, multispecies, multifluids 
-    if(index(TypeBcHere,'user')>0.or.UseUserInnerBCs)then
+    if(  index(TypeBcHere,'user')>0 .or. &
+         (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
+         (UseUserOuterBCs .and. iBoundary >= east_ ) )then
        call user_face_bcs(i,j,k,globalBLK,iSide,iBoundary,&
             iter,time_now, FaceCoords_D,&
             VarsTrueFace_V,VarsGhostFace_V,&
