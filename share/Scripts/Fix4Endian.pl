@@ -15,7 +15,7 @@
 #\begin{verbatim}
 # Usage:  
 #         Fix4Endian.pl [-only=A:B] [-except=C:D] < InFile > Outfile
-#         perl -is Fix4Endian.pl [-only=A:B] [-except=C:D] File1 File2 ...
+#         perl -si Fix4Endian.pl [-only=A:B] [-except=C:D] File1 File2 ...
 #\end{verbatim}
 #!REVISION HISTORY:
 # 07/13/2001 G. Toth - initial version
