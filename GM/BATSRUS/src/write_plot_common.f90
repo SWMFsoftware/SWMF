@@ -876,7 +876,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
         endif
 !^CFG END CARTESIAN
-     case('absdivB')
+     case('absdivB','absdivb','ABSDIVB')
          PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=abs(DivB1_GB(:,:,:,iBLK))
          if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
@@ -1085,9 +1085,9 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
      case('B2ur','B2Ur','b2ur')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
-     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct','absdivB')
+     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct',&
+          'absdivB','absdivb','ABSDIVB')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_DivB
-
 
         ! BASIC RAYTRACE variables
 
