@@ -89,7 +89,7 @@ CONTAINS
     !
     !  Local variables
     !
-    INTEGER                    :: i, k, l, ik, kj, level, CurrCol, Sorter_Len
+    INTEGER                    :: i, k, l, ik, kj, level, CurrCol, Sorter_Len, k2,k3
     INTEGER, DIMENSION (S % N) :: Sorter, NonZero
     INTEGER, PARAMETER         :: Mem_Block_Size = 100
     integer :: test
@@ -125,8 +125,18 @@ CONTAINS
        k = COUNT (S % JA (S % JA (i):S % JA (i+1)-1) < i)
        LU % L % IA (i+1) = LU % L % IA (i) + k
        IF (LU % L % IA (i+1) >= SIZE (LU % L % A)) CALL Reallocate_L
-       LU % L % JA (LU % L % IA (i):LU % L % IA (i+1)-1) = &
-            & PACK(S % JA (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) < i)
+!\\\
+       k3 = LU % L % IA (i)
+       do k2 = S % JA (i), S % JA (i+1) - 1
+          if (S % JA (k2) < i) then
+             LU % L % JA (k3) = S % JA (k2)
+             k3=k3+1
+          end if
+       end do
+!---
+!!$       LU % L % JA (LU % L % IA (i):LU % L % IA (i+1)-1) = &
+!!$            & PACK(S % JA (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) < i)
+!///
        Sorter_Len = k
        Sorter(1:Sorter_Len) = (/ (k, k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)
        CALL Sort_Sorter
@@ -144,8 +154,18 @@ CONTAINS
 
        if (LU % U % JA (i+1) > LU % U % JA (i)) then
 
-          LU % U % JA (LU % U % JA (i):LU % U % JA (i+1)-1) = &
-               & PACK(S % JA (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) > i)
+!\\\
+          k3 = LU % U % JA (i)
+          do k2 = S % JA (i), S % JA (i+1) - 1
+             if (S % JA (k2) > i) then
+                LU % U % JA (k3) = S % JA (k2)
+                k3=k3+1
+             end if
+          end do
+!---
+!!$          LU % U % JA (LU % U % JA (i):LU % U % JA (i+1)-1) = &
+!!$               & PACK(S % JA (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) > i)
+!///
 
        endif
 
@@ -154,10 +174,19 @@ CONTAINS
        ! Set the NonZero pointer for the level zero elements
        !
        NonZero (i) = i
-       NonZero ((/ (LU % L % JA (k), k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)) = &
-            (/ (k, k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)
-       NonZero ((/ (LU % U % JA (k), k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)) = &
-            (/ (k, k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)
+!\\\
+       do k=LU % L % IA (i), LU % L % IA (i+1) - 1
+          NonZero (LU % L % JA (k)) = k
+       end do
+       do k=LU % U % JA (i), LU % U % JA (i+1) - 1
+          NonZero (LU % U % JA (k)) = k
+       end do
+!---
+!!$       NonZero ((/ (LU % L % JA (k), k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)) = &
+!!$            (/ (k, k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)
+!!$       NonZero ((/ (LU % U % JA (k), k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)) = &
+!!$            (/ (k, k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)
+!///
        !
        ! Cancel elements up to level p in current row i
        ! 
@@ -214,8 +243,17 @@ CONTAINS
        !  Sparse set to zero
        !
        NonZero (i) = 0
-       NonZero ((/ (LU % L % JA (k), k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)) = 0
-       NonZero ((/ (LU % U % JA (k), k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)) = 0
+!\\\
+       do k=LU % L % IA (i), LU % L % IA (i+1) - 1
+          NonZero (LU % L % JA (k)) = 0
+       end do
+       do k=LU % U % JA (i), LU % U % JA (i+1) - 1
+          NonZero (LU % U % JA (k)) = 0
+       end do
+!---
+!!$       NonZero ((/ (LU % L % JA (k), k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)) = 0
+!!$       NonZero ((/ (LU % U % JA (k), k = LU % U % JA (i), LU % U % JA (i+1) - 1) /)) = 0
+!///
     END DO
 
   CONTAINS
@@ -303,7 +341,7 @@ CONTAINS
     !
     !  Local variables
     !
-    INTEGER                    :: i, ik, kj, ij, k, Sorter_Len
+    INTEGER                    :: i, ik, kj, ij, k, Sorter_Len, k2,k3
     INTEGER, DIMENSION( S % N) :: Sorter, NonZero
 
     NonZero = 0
@@ -312,22 +350,59 @@ CONTAINS
     LU % U % A (1) = S % A (1)
     LU % U % A (LU % U % JA(1):LU % U % JA(2) - 1) = S % A (S % JA(1):S % JA(2) - 1) 
     DO i = 2, S % N
-       NonZero ((/ LU % L % JA (LU % L % IA(i):LU % L % IA(i+1)-1), i, &
-            &      LU % U % JA (LU % U % JA(i):LU % U % JA(i+1)-1) /)) = &
-            &   (/ (LU % L % IA(i)+k, k=0, LU % L % IA (i+1) - LU % L % IA (i) - 1), i, &
-            &      (LU % U % JA(i)+k, k=0, LU % U % JA (i+1) - LU % U % JA (i) - 1) /)
+
+!\\\
+       k=0
+       do k2=LU % L % IA(i),LU % L % IA(i+1)-1
+          NonZero (LU % L % JA (k2)) = LU % L % IA(i)+k
+          k=k+1
+       end do
+       NonZero(i) = i
+       k=0
+       do k2=LU % U % JA(i),LU % U % JA(i+1)-1
+          NonZero (LU % U % JA (k2)) = LU % U % JA(i)+k
+          k=k+1
+       end do
+!---
+!!$       NonZero ((/ LU % L % JA (LU % L % IA(i):LU % L % IA(i+1)-1), i, &
+!!$            &      LU % U % JA (LU % U % JA(i):LU % U % JA(i+1)-1) /)) = &
+!!$            &   (/ (LU % L % IA(i)+k, k=0, LU % L % IA (i+1) - LU % L % IA (i) - 1), i, &
+!!$            &      (LU % U % JA(i)+k, k=0, LU % U % JA (i+1) - LU % U % JA (i) - 1) /)
+!///
        LU % U % A (i) = S % A (i)
        k = COUNT (S % JA (S % JA (i):S % JA (i+1)-1) < i)
-       LU % L % A (LU % L % IA (i):LU % L % IA (i)+k-1) = &
-            & PACK(S % A (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) < i)
+!\\\
+       k3 = LU % L % IA (i)
+       do k2 = S % JA (i), S % JA (i+1) - 1
+          if (S % JA (k2) < i) then
+             LU % L % A (k3) = S % A (k2)
+             k3=k3+1
+          end if
+       end do
+!---
+!!$       LU % L % A (LU % L % IA (i):LU % L % IA (i)+k-1) = &
+!!$            & PACK(S % A (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) < i)
+!///
        Sorter_Len = LU % L % IA (i+1) - LU % L % IA (i)
        Sorter(1:Sorter_Len) = (/ (k, k = LU % L % IA (i), LU % L % IA (i+1) - 1) /)
        CALL Sort_Sorter
        k = COUNT (S % JA (S % JA (i):S % JA (i+1)-1) > i)
-       if (LU % U % JA (i)+k-1 >= LU % U % JA (i)) then
-          LU % U % A (LU % U % JA (i):LU % U % JA (i)+k-1) = &
-               & PACK(S % A (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) > i)
+!\\\
+       if (k>1) then
+          k3 = LU % U % JA (i)
+          do k2 = S % JA (i), S % JA (i+1) - 1
+             if (S % JA (k2) > i ) then
+                LU % U % A (k3) = S % A (k2)
+                k3=k3+1
+             end if
+          end do
        endif
+!---
+!!$       if (LU % U % JA (i)+k-1 >= LU % U % JA (i)) then
+!!$          LU % U % A (LU % U % JA (i):LU % U % JA (i)+k-1) = &
+!!$               & PACK(S % A (S % JA (i):S % JA (i+1) - 1), S % JA (S % JA (i):S % JA (i+1) - 1) > i)
+!!$       endif
+!///
        DO k = 1, Sorter_Len
           ik = Sorter(k)
           LU % L % A (ik) = LU % L % A (ik) / LU % U % A (LU % L % JA (ik))
@@ -342,8 +417,23 @@ CONTAINS
              END IF
           END DO
        END DO
-       NonZero ((/ LU % L % JA (LU % L % IA(i):LU % L % IA(i+1)-1), i, &
-            &      LU % U % JA (LU % U % JA(i):LU % U % JA(i+1)-1) /)) = 0
+
+!\\\
+       k=0
+       do k2=LU % L % IA(i),LU % L % IA(i+1)-1
+          NonZero (LU % L % JA (k2)) = 0
+          k=k+1
+       end do
+       NonZero(i) = 0
+       k=0
+       do k2=LU % U % JA(i),LU % U % JA(i+1)-1
+          NonZero (LU % U % JA (k2)) = 0
+          k=k+1
+       end do
+!---
+!!$       NonZero ((/ LU % L % JA (LU % L % IA(i):LU % L % IA(i+1)-1), i, &
+!!$            &      LU % U % JA (LU % U % JA(i):LU % U % JA(i+1)-1) /)) = 0
+!///
     END DO
 
   CONTAINS

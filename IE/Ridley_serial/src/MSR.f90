@@ -227,10 +227,19 @@ CONTAINS
     !  start of row pointers (AJ(1:N+1)) to the base of the storeage
     !  vector (N+2)  (see the allocate_MSR routine)
     !
-    A % A (A % JA (i+1)+diff_len:A % JA (N+1)+diff_len) =&
-         & A % A (A % JA (i+1):A % JA (N+1))
-    A % JA (A % JA (i+1)+diff_len:A % JA (N+1)+diff_len) =&
-         & A % JA (A % JA (i+1):A % JA (N+1))
+!\\\
+    do j = A % JA (i+1), A % JA (N+1)
+       A % A (j+diff_len) = A % A (j)
+    end do
+    do j = A % JA (i+1), A % JA (N+1)
+       A % JA (j+diff_len) = A % JA (j)
+    end do
+!---
+!!$    A % A (A % JA (i+1)+diff_len:A % JA (N+1)+diff_len) =&
+!!$         & A % A (A % JA (i+1):A % JA (N+1))
+!!$    A % JA (A % JA (i+1)+diff_len:A % JA (N+1)+diff_len) =&
+!!$         & A % JA (A % JA (i+1):A % JA (N+1))
+!///
     !
     !  Adjust start of row pointers
     !
