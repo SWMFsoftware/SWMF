@@ -107,8 +107,6 @@ Module ModMain
   logical :: UseIonosphere=.false.
 
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
-  integer :: dn_raytrace=100                               !^CFG IF RAYTRACE
-  logical :: check_rayloop=.false.                         !^CFG IF RAYTRACE
 
   logical :: UseIM = .false.                               !^CFG IF RCM
   real    :: tauCoupleIM=0.01                              !^CFG IF RCM
