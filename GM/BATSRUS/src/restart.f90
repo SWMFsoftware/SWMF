@@ -62,15 +62,18 @@ subroutine write_restart_header
   open(unit_tmp,file=trim(NameRestartOutDir)//'restart.H')
 
   write(unit_tmp,'(a)')'#CODEVERSION'
-  write(unit_tmp,'(f5.2,a30)')CodeVersion,'CodeVersion'
+  write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
+  write(unit_tmp,*)
+  write(unit_tmp,'(a)')'#COMPONENT'
+  write(unit_tmp,'(a2,a38)')NameThisComp,'NameComp'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#PRECISION'
-  write(unit_tmp,'(i1,a30)')nByteReal,'nByteReal'
+  write(unit_tmp,'(i1,a39)')nByteReal,'nByteReal'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#EQUATION'
   write(unit_tmp,'(a,a32)')NameEquation,'NameEquation'
   write(unit_tmp,'(i8,a32)')nVar,'nVar'
-  write(unit_tmp,*)  
+  write(unit_tmp,*)
   write(unit_tmp,'(a)')'#CHECKGRIDSIZE'
   write(unit_tmp,'(i8,a32)') nI,'nI'
   write(unit_tmp,'(i8,a32)') nJ,'nJ'

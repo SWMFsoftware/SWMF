@@ -57,6 +57,7 @@ subroutine MH_set_parameters(TypeAction)
 
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
+  character (len=2)  :: NameCompCheck
   integer :: problem_type_r, qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
@@ -193,6 +194,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseNewAxes', UseNewAxes)
         call read_var('DoTimeAccurate',time_accurate)
         call read_var('UseCorotation',UseCorotation)
+     case("#COMPONENT")
+        call read_var('NameComp',NameCompCheck)
+        if(NameCompCheck /= NameThisComp)&
+             call stop_mpi(NameSub//' ERROR: BATSRUS is running as component '&
+             //NameThisComp//' and not as '//NameCompCheck)
      case("#DESCRIPTION")
         call check_stand_alone
      case("#BEGIN_COMP","#END_COMP")

@@ -65,6 +65,27 @@ for STANDALONE=old and STANDALONE=oldtest the default values are false
 (consistent with BATSRUS v7.72 and earlier).
 </command>
 
+<command name="COMPONENT">
+	<parameter name="NameComp" type="string" input="options">
+		<option name="SC" default="T" if="$_NameComp eq 'SC'" />
+		<option name="IH" default="T" if="$_NameComp eq 'IH'" />
+		<option name="GM" default="T" if="$_NameComp eq 'GM'" />
+	</parameter>
+
+#COMPONENT
+GM			NameComp
+
+This command is only used in the stand alone mode.
+
+The NameComp variable contains the two-character component ID
+for the component which BATSRUS is representing.
+If NameComp does not agree with the value of the NameThisComp
+variable, BATSRUS stops with an error message.
+This command is saved into the restart header file for consistency check.
+
+There is no default value: if the command is not given, the component ID is not checked.
+</command>
+
 <command name="DESCRIPTION" if="$_IsStandAlone">
 	<parameter name="StringDescription" type="string" length="100" />
 
