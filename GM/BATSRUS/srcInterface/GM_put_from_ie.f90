@@ -2,12 +2,16 @@
 !^CMP FILE IE
 module ModIeGrid
 
+  ! This module contains easily accessible information about the IE grid
+
   implicit none
   save
 
-  integer :: nThetaIono=-1, nPhiIono
-  real    :: dThetaIono, dPhiIono
-  real    :: rIonosphere
+  integer           :: nThetaIono = -1, nPhiIono = -1
+  real, allocatable :: ThetaIono_I(:), PhiIono_I(:)
+  real              :: rIonosphere
+
+  real, private     :: dThetaIono, dPhiIono
 
 contains
 
@@ -18,7 +22,7 @@ contains
 
     use ModNumConst, ONLY: cPi, cTwoPi
     use ModPhysics,  ONLY: UnitSi_X
-    use CON_planet,  ONLY: get_planet
+    use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize
     real :: rPlanet, IonoHeight
@@ -27,16 +31,33 @@ contains
 
     if(nThetaIono > 0) RETURN
 
-    nThetaIono = 2*iSize - 1
-    nPhiIono   = jSize
+    nThetaIono = Grid_C(IE_) % nCoord_D(1)
+    nPhiIono   = Grid_C(IE_) % nCoord_D(2)
+
+    if(nThetaIono /= 2*iSize - 1 .or. nPhiIono /= jSize)then
+       write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
+            Grid_C(IE_) % nCoord_D(1:2)
+       write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
+       call stop_mpi(NameSub//' ERROR: Inconsistent IE grid sizes')
+    endif
+
+    allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono))
+    ThetaIono_I = Grid_C(IE_) % Coord1_I
+    PhiIono_I   = Grid_C(IE_) % Coord2_I
+    rIonosphere = Grid_C(IE_) % Coord3_I(1) / UnitSi_X
 
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)
 
-    call get_planet(RadiusPlanetOut=rPlanet, IonosphereHeightOut=IonoHeight)
-    rIonosphere = (rPlanet + IonoHeight) / UnitSi_X
-
   end subroutine init_mod_ie_grid
+  !===========================================================================
+  subroutine get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
+    real, intent(in) :: Theta, Phi
+    real, intent(out):: ThetaNorm, PhiNorm
+
+    ThetaNorm = Theta / dThetaIono
+    PhiNorm   = Phi   / dPhiIono
+  end subroutine get_ie_grid_index
 
 end module ModIeGrid
 
@@ -83,13 +104,13 @@ contains
     do j = 1, nPhiIono; do i = 2, nThetaIono-1
        dIonoPotential_DII(Theta_, i, j) = &
             (IonoPotential_II(i+1, j) - IonoPotential_II(i-1, j)) &
-            / (2 * dThetaIono)
+            / (ThetaIono_I(i+1) - ThetaIono_I(i-1))
     end do; end do
 
     do j = 2, nPhiIono-1; do i = 1, nThetaIono
        dIonoPotential_DII(Phi_, i, j) = &
             (IonoPotential_II(i, j+1) - IonoPotential_II(i, j-1)) &
-            / (2 * dPhiIono)
+            / (PhiIono_I(j+1)-PhiIono_I(j-1))
     end do; end do
 
     ! Calculate the theta gradient at the poles
@@ -99,18 +120,19 @@ contains
     dIonoPotential_DII(Theta_, 1, :) = &
          ( 4*IonoPotential_II(2,:) &
          - 3*IonoPotential_II(1,:) &
-         -   IonoPotential_II(3,:) ) / (2*dThetaIono)
+         -   IonoPotential_II(3,:) ) / (ThetaIono_I(3)-ThetaIono_I(1))
 
     ! df/dx = (3f(x)-4f(x-dx)+f(x-2dx))/(2dx)
     dIonoPotential_DII(Theta_, nThetaIono, :) = &
          ( 3*IonoPotential_II(nThetaIono  ,:) &
          - 4*IonoPotential_II(nThetaIono-1,:) &
-         +   IonoPotential_II(nThetaIono-2,:) ) / (2*dThetaIono)
+         +   IonoPotential_II(nThetaIono-2,:) ) / &
+         (ThetaIono_I(nThetaIono)-ThetaIono_I(nThetaIono-2))
 
     ! Calculate the phi gradient at the edges from the periodicity
     dIonoPotential_DII(Phi_, :, 1) = &
          (IonoPotential_II(:, 2) - IonoPotential_II(:, nPhiIono - 1)) &
-         / (2 * dPhiIono)
+         / (2*(PhiIono_I(2)-PhiIono_I(1)))
 
     dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
 
