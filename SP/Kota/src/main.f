@@ -40,7 +40,7 @@ c ----------------------------------------------------------
       jnext = 2
        if(DoWriteAll)write(iStdout,*)prefix,
      1 'first j-stop at ',jnext
-      call sp_read_inputs(9,NameList)
+c      call sp_read_inputs(9,NameList)
       call admit(9,NameList)  
       call cool   
       call pangle  
