@@ -2,7 +2,7 @@
 subroutine set_root_block_geometry
   use ModProcMH
   use ModSize
-  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlockMAX
+  use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
        R2_BLK,&                !^CFG IF SECONDBODY
@@ -70,7 +70,8 @@ subroutine set_root_block_geometry
   end if
 
   ! Let every PE know the available blocks on PE 0
-  nBlockMax = proc_dims(1)*proc_dims(2)*proc_dims(3)
+  nBlock    = product(proc_dims)
+  nBlockMax = nBlock
   availableBLKs(0,0)=nBlockMax+1
 
 end subroutine set_root_block_geometry
