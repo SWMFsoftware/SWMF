@@ -1,56 +1,49 @@
+module ModExample2
 
+  implicit none
+  private
+  character(len=*), parameter:: NameMod='ModExample'
 
- Below is a template for a subroutine that comes after a CONTAINS statement, 
- i.e., routines internal to a module or another subroutine/function.
- The internal routine documentation will become the subsection of 
- the module's LaTeX section, thus saving the conceptual hierarchy.
-
- The template should be followed as closely as possible, but do not 
- leave in blank parts: 
-
- If no modules are used, omit the !USES: tag.
- If there are no output arguments, omit the !OUTPUT ARGUMENTS: tag.
- If local variables are not worth documenting, omit the !LOCAL VARIABLES: tag.
- If the source code is not short, do not use the !BOC ... !EOC tags.
- If the revision history is maintained for the module/subroutine containing, 
-    this subroutine, omit the !REVISION HISTORY: tag.
-
-The template (can be cut and pasted and EDITED):
+contains
 
   !BOP ======================================================================
-  !IROUTINE: put_name_here - put short description here
+  !IROUTINE: example_iroutine - put short description here
 
   !INTERFACE:
-  subroutine put_name_here(input_var, output_var, input_output_var)
+  subroutine example_iroutine(InputVar, OutputVar, InputOutputVar)
 
     !USES:
-    use ModSomething
-    use CON_Something
+    use ModExample, ONLY: ExampleParameter
 
     !INPUT ARGUMENTS: 
-    real, intent(in) :: input_var           ! short description of input_var
+    real, intent(in) :: InputVar          ! short description of InputVar
 
     !OUTPUT ARGUMENTS:
-    logical, intent(out) :: output_var      ! short description of output_var
+    logical, intent(out) :: OutputVar     ! short description of OutputVar
 
     !INPUT/OUTPUT ARGUMENTS: 
-    real, intent(inout) :: input_output_var ! short descr. of input_output_var
+    real, intent(inout) :: InputOutputVar ! short description of InputOutputVar
 
     !DESCRIPTION: 
-    ! Long description of subroutine in Latex format
-    ! Do not repeat information already provided by the above tags.
+    ! This is a template for a subroutine that comes after a CONTAINS 
+    ! statement, i.e. a routine internal to a module or another 
+    ! subroutine/function.
     !
+    ! Provide here long description of subroutine example\_routine 
+    ! in Latex format.
+    ! Do not repeat information already provided by the above tags.
 
     !LOCAL VARIABLES:
     real :: AnImportantLocalVariable
-    !
+
     !REVISION HISTORY: 
-    ! 04/01/04 My Name - description of change
+    ! 04/27/2004 G. Toth <myemail@umich.edu> - initial version
+    ! 04/28/2004 G. Toth <myemail@umich.edu> - fixed some typos
     !EOP  
 
     ! local variables not worth of documenting come here
 
-    character(len=*), parameter:: NameSub=NameMod//'put_name_here'
+    character(len=*), parameter:: NameSub=NameMod//'example_iroutine'
 
     !------------------------------------------------------------------------
     !BOC
@@ -59,4 +52,6 @@ The template (can be cut and pasted and EDITED):
 
     write(*,*)'This part should not appear in the documentation'
 
-    end subroutine put_name_here
+  end subroutine example_iroutine
+
+end module ModExample2
