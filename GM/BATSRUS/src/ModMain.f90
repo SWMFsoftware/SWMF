@@ -229,7 +229,7 @@ Module ModMain
   ! Solar Wind Input Parameters
 
   logical :: UseUpstreamInputFile
-  real :: Satellite_Y_Pos, Satellite_Z_Pos
+  real :: Satellite_Y_Pos = 0.0, Satellite_Z_Pos = 0.0
 
   ! Timing variables
   logical:: UseTiming = .true.
