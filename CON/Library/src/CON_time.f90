@@ -27,6 +27,7 @@ module CON_time
 
   !PUBLIC MEMBER FUNCTIONS:
   public :: init_time        ! Initialize start time
+  public :: get_time         ! Access time related variables
 
   !PUBLIC DATA MEMBERS:
 
@@ -70,6 +71,7 @@ module CON_time
   ! 22Aug03 G. Toth - added TypeFreq and is_time_to function
   ! 25Aug03 G. Toth - added adjust_freq subroutine
   ! 23Mar04 G. Toth - split CON_time into ModTime, ModFreq and CON_time
+  ! 26Mar04 G. Toth - added get_time access method
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_time'
@@ -96,5 +98,33 @@ contains
     !EOC
 
   end subroutine init_time
+
+  !BOP ========================================================================
+  !IROUTINE: get_time - get time related parameters
+  !INTERFACE:
+  subroutine get_time(&
+       DoTimeAccurateOut,tSimulationOut,TimeStartOut,TimeCurrentOut,&
+       tStartOut, tCurrentOut, nStepOut)
+
+    !OUTPUT ARGUMENTS:
+    logical,          optional, intent(out) :: DoTimeAccurateOut
+    real,             optional, intent(out) :: tSimulationOut
+    type(TimeType),   optional, intent(out) :: TimeStartOut
+    real(Real8_),     optional, intent(out) :: tStartOut
+    type(TimeType),   optional, intent(out) :: TimeCurrentOut
+    real(Real8_),     optional, intent(out) :: tCurrentOut
+    integer,          optional, intent(out) :: nStepOut
+    !EOP
+    !-------------------------------------------------------------------------
+
+    if(present(tSimulationOut))    tSimulationOut    = tSimulation
+    if(present(tSimulationOut))    tSimulationOut    = tSimulation
+    if(present(TimeCurrentOut))    TimeCurrentOut    = TimeCurrent
+    if(present(tCurrentOut))       tCurrentOut       = TimeCurrent % Time
+    if(present(TimeStartOut))      TimeStartOut      = TimeStart
+    if(present(tStartOut))         tStartOut         = TimeStart % Time
+    if(present(nStepOut))          nStepOut          = nStep
+
+  end subroutine get_time
 
 end module CON_time
