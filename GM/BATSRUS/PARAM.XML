@@ -903,6 +903,7 @@ float                   TypeBcTop
 		<option name="ionosphere"	default="T"	/>
 		<option name="ionosphereB0" value="ionosphereB0/ionosphereb0"/>
 		<option name="ionospherefloat"			/>
+		<option name="coronatoih"			/>
 		<option name="user"				/>
 	</parameter>
 <!-- ^CFG IF SECONDBODY BEGIN -->
@@ -946,6 +947,7 @@ ionosphere              TypeBcBody2  !read only if UseBody2=.true.
 !                 float B, fix rho, fix P
 ! 'ionospherefloat'-set V as if ionosphere gave V_iono=0
 !                 float B, float rho, float P
+! 'coronatoih'  - IH component obtains inner boundary from the SC component
 ! 'user'        - user defined
 !
 ! For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
@@ -2004,6 +2006,7 @@ F			DoSavePlotsAmr
 		<option name="spherefocus"	/>
 		<option name="magnetosphere"	/>
 		<option name="points"		/>
+		<option name="coupledhelio"	/>
 		<option name="helio_init"	/>
 		<option name="helio_z=4"	/>
 		<option name="all_then_focus"	/>
@@ -2783,8 +2786,8 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 </command>
 
 <command name="SOLARWIND" if="$_IsFirstSession">
-	<parameter name="SwRhoDim" type="real" min="0"	default="5"	/>
-	<parameter name="SwTDim"   type="real" min="0"	default="181712.175" />
+	<parameter name="SwRhoDim" type="real" min="-1"	default="5"	/>
+	<parameter name="SwTDim"   type="real" min="-1"	default="181712.175" />
 	<parameter name="SwUxDim"  type="real" max="0"	default="-400"	/>
 	<parameter name="SwUyDim"  type="real"		default="0"	/>
 	<parameter name="SwUzDim"  type="real"		default="0"	/>
@@ -2836,14 +2839,15 @@ IMF.dat                 NameUpstreamFile
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
 	<parameter name="UseBody" type="logical" default="F"/>
 	<if expr="$UseBody">
-		<parameter name="rBody" type="real" min="0"
-							      default="3"/>
-		<parameter name="rCurrents" type="real" min="-1" 
+		<parameter name="rBody" type="real" min="0" default="3"/>
+		<if expr="$_NameComp eq 'GM'">
+			<parameter name="rCurrents" type="real" min="-1" 
 							      default="4"/>
-		<parameter name="BodyRhoDim" type="real" min="0"
+			<parameter name="BodyRhoDim" type="real" min="0"
 							      default="1"/>
-		<parameter name="BodyTDim" type="real" min="0"
+			<parameter name="BodyTDim" type="real" min="0"
 							      default="10000"/>
+		</if>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
