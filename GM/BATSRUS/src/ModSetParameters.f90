@@ -763,7 +763,7 @@ subroutine MH_set_parameters(TypeAction)
 
         nArea = nArea + 1
         if(nArea > MaxArea)then
-           if(UseStrict)call stop_mpi(NameSub,&
+           if(UseStrict)call stop_mpi(NameSub// &
                 ' ERROR: Too many grid areas were defined')
            if(iProc == 0)then
               write(*,*)NameSub," nArea = ",nArea
