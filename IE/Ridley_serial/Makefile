@@ -40,11 +40,11 @@ rundir:
 	cd ${RUNDIR}/IE; ln -s ${BINDIR}/PostIONO.exe .
 
 clean:
-	touch src/Makefile.DEPEND
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
 
 distclean:
-	touch src/Makefile.DEPEND
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
