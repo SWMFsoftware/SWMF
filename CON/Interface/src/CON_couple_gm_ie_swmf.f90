@@ -201,7 +201,7 @@ contains
             mapping=sort_hemispheres)
 !\end{verbatim}
 !EOP
-       if(DoTest)write(*,*)NameSub//' Router is done at PE=',i_proc
+       if(DoTest)write(*,*)NameSub//' Router is done at PE=',i_proc()
        !Allocate arrays in IE_ to get data
        nPoint_B=0
        do iPE=0,RouterGmIe%nProc-1
