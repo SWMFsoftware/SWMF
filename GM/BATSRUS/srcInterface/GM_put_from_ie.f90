@@ -108,7 +108,7 @@ end module ModMapPotential
 subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
   use ModIonoPotential, ONLY: init_mod_iono_potential, IonoPotential_II
-
+  use ModPhysics,       ONLY: UnitSi_X, UnitSi_Electric
   use ModMapPotential,ONLY:init_map_potential_arrays,&
        IONO_nTheta,IONO_NORTH_Phi,IONO_SOUTH_Phi 
   implicit none
@@ -135,10 +135,10 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   select case(NameVar)
   case('PotNorth')
      IONO_NORTH_Phi = Buffer_II
-     IonoPotential_II(1:iSize,:) = IONO_NORTH_Phi
+     IonoPotential_II(1:iSize,:)         = Buffer_II/(UnitSi_Electric*UnitSi_X)
   case('PotSouth')
      IONO_SOUTH_Phi = Buffer_II
-     IonoPotential_II(iSize:2*iSize-1,:) = IONO_SOUTH_Phi
+     IonoPotential_II(iSize:2*iSize-1,:) = Buffer_II/(UnitSi_Electric*UnitSi_X)
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select
