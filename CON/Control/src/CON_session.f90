@@ -172,10 +172,14 @@ contains
 
     !BOC
     !\
-    ! If no component uses this PE and init_session_general did not stop
-    ! then simply return
+    ! If no component uses this PE and init_session did not stop
+    ! then set tSimulation to the final time and simply return
     !/
-    if( .not.any(IsProc_C) ) RETURN
+    if( .not.any(IsProc_C) ) then
+       if(DoTimeAccurate .and. tSimulationMax > cZero) &
+            tSimulation = tSimulationMax
+       RETURN
+    end if
 
     !\
     ! Set initial time for all components to be tSimulation
