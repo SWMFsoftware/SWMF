@@ -64,7 +64,7 @@ module ModReadParam
   ! \end{verbatim}
   ! {\bf Function read\_command} returns .true. if a command is found
   ! in the previously read line and it provides the name of the command
-  ! in it output argument by stripping off anything behind a blank.
+  ! in its output argument by stripping off anything behind a blank.
   !
   ! {\bf Subroutine read\_var} reads the parameter from the parameter line.
   ! The name of the parameter is provided as an input argument, the value
@@ -147,13 +147,19 @@ module ModReadParam
   public :: read_init         ! Select the appropriate section of the text
   public :: read_line         ! Read next line, return false at the end
   public :: read_command      ! Read command, return false if not a command
-  public :: read_var          ! Read scalar variable of any type
+  public :: read_var          ! Read scalar variable of any type with a name
+  public :: read_in           ! Read scalar variable of any type without name
   public :: read_echo_set     ! Set if parameters should be echoed
   public :: i_line_read       ! Return the current line number
   public :: n_line_read       ! Return the last line number in the selected
   public :: i_session_read    ! Return the session number
   public :: read_text         ! Provide the full text in the output argument
 
+  !REVISION HISTORY:
+  ! 01Sep03 G. Toth - initial implementation based on BATSRUS
+  ! 31Oct04 G. Toth - added fractions 3/5 for reals, 
+  !                   added read_in public method without a Name parameter,
+  !                   replaced err=1 with iostat=iReadError.
   !EOP
 
   character(len=*), parameter :: NameMod='ModReadParam'
@@ -162,7 +168,7 @@ module ModReadParam
   integer, parameter :: MaxLine=1000
   character (len=lStringLine), save :: StringLine_I(MaxLine)
 
-  character(len=lStringLine)        :: StringLine
+  character(len=lStringLine)        :: StringLine, StringParam
 
   character(len=2)  :: NameComp    = '  '  ! Name of the component
   character(len=3)  :: StringPrefix= '   ' ! Prefix for echo
@@ -173,7 +179,13 @@ module ModReadParam
   logical           :: DoEcho = .false.    ! Do we echo parameters?
 
   interface read_var
-     module procedure read_var_c, read_var_l, read_var_r, read_var_i
+     module procedure &
+          read_var_c, read_var_l, read_var_r, read_var_i
+  end interface
+
+  interface read_in
+     module procedure &
+          read_integer, read_real, read_string, read_logical
   end interface
 
 contains
@@ -304,6 +316,7 @@ contains
   end subroutine read_file
 
   !===========================================================================
+
   subroutine read_init(NameCompIn, iSessionIn, iLineIn, nLineIn, iIoUnitIn)
 
     ! Initialize module variables
@@ -334,6 +347,7 @@ contains
   end subroutine read_init
 
   !===========================================================================
+
   subroutine read_echo_set(DoEchoIn)
 
     logical, intent(in) :: DoEchoIn
@@ -410,12 +424,15 @@ contains
   end function read_command
 
   !===========================================================================
+
   subroutine read_line_param(Type,Name,iError)
 
     ! read next line from text
 
     character (len=*), intent(in) :: Type, Name
     integer, optional, intent(out):: iError
+
+    integer :: i, j
     !------------------------------------------------------------------------
 
     if(present(iError))iError=0
@@ -430,38 +447,37 @@ contains
     end if
     StringLine=StringLine_I(iLine)
 
-    if(len_trim(StringLine)==0)then
-       if(present(iError))then
-          iError=2
-       else
-          write(*,'(a,i8,a,a,a,i2)') 'Error at line iLine=',iLine, &
-               ' in component ',NameComp,' in session',iSession
-          call CON_stop(&
-               'Empty line found while reading '//Type//' variable '//Name)
-       end if
-    endif
+    ! Get rid of leading spaces 
+    StringParam = adjustl(StringLine)
+
+    ! Get rid of trailing comments after a TAB character or 3 spaces
+    i=index(StringParam,char(9))
+    j=index(StringParam,'   ')
+    if(i>1.and.j>1)then
+       i = min(i,j)      ! Both TAB and 3 spaces found, take the closer one
+    else
+       i = max(i,j)      ! Take the one that was found (if any)
+    end if
+    if(i>0) StringParam(i:lStringLine)=' '
+
+    if(len_trim(StringParam)==0)call read_error('missing',Name,iError)
 
   end subroutine read_line_param
 
   !===========================================================================
+
   subroutine read_echo(IsSame,Name)
 
     logical, intent(in) :: IsSame
     character (len=*), intent(in)    :: Name
-    integer :: nTrimLine
     !-------------------------------------------------------------------------
 
-    if(index(StringLine,Name)<1)then
-       nTrimLine=len_trim(StringLine)
-       StringLine=StringLine(1:nTrimLine)//char(9)//char(9)//Name
-    end if
-    if(IsSame)then
-       nTrimLine=len_trim(StringLine)
-       StringLine=StringLine(1:nTrimLine)//' (default/unchanged)'
-    end if
-    nTrimLine=len_trim(StringLine)
-    write(iIoUnit,'(a)') trim(StringPrefix)//StringLine(1:nTrimLine)
-       
+    if(index(StringLine,Name)<1) &
+         StringLine=trim(StringLine)//char(9)//char(9)//Name
+    if(IsSame) &
+         StringLine=trim(StringLine)//' (default/unchanged)'
+    write(iIoUnit,'(a)') trim(StringPrefix)//trim(StringLine)
+
   end subroutine read_echo
 
   !===========================================================================
@@ -476,6 +492,8 @@ contains
 
     if(present(iError))then
        select case(Type)
+       case('missing')
+          iError = 2
        case('integer')
           iError = 3
        case('logical')
@@ -494,41 +512,45 @@ contains
     end if
 
   end subroutine read_error
-  !===========================================================================
-  subroutine read_var_c(Name,StringVar,iError)
-    
-    ! Read a string variable described by Name
-    
-    implicit none
 
+  !===========================================================================
+
+  subroutine read_string(StringVar,iError)
+    ! Read a string variable
+    ! Arguments
+    character (len=*), intent(inout):: StringVar
+    integer, optional, intent(out)  :: iError
+    !-------------------------------------------------------------------------
+    call read_var_c(' ',StringVar,iError)
+  end subroutine read_string
+
+  !===========================================================================
+
+  subroutine read_var_c(Name,StringVar,iError)
+    ! Read a string variable described by Name
     ! Arguments
     character (len=*), intent(in)   :: Name
     character (len=*), intent(inout):: StringVar
     integer, optional, intent(out)  :: iError
-
-    ! Local variable
-    integer :: i,j
-
     !-------------------------------------------------------------------------
 
     call read_line_param('character',Name,iError)
 
-    if(DoEcho)call read_echo(StringLine(1:len(StringVar))==StringVar,Name)
+    if(DoEcho)call read_echo(StringParam==StringVar,Name)
 
-    ! Get rid of trailing comments after a TAB character or 3 spaces
-    i=index(StringLine,char(9))
-    j=index(StringLine,'   ')
-    if(i>1.and.j>1)then
-       i = min(i,j)      ! Both TAB and 3 spaces found, take the closer one
-    else
-       i = max(i,j)      ! Take the one that was found (if any)
-    end if
-
-    if(i>0)StringLine(i:len(StringLine))=' '
-
-    StringVar=StringLine(1:len(StringVar))
+    StringVar=StringParam
 
   end subroutine read_var_c
+
+  !===========================================================================
+ 
+  subroutine read_integer(IntVar,iError)
+    !OUTPUT ARGUMENTS:
+    integer,           intent(inout):: IntVar
+    integer, optional, intent(out)  :: iError
+    !-------------------------------------------------------------------------
+    call read_var_i(' ',IntVar,iError)
+  end subroutine read_integer
 
   !BOP ========================================================================
   !IROUTINE: read_var - read a variable following the command.
@@ -554,50 +576,79 @@ contains
     !EOP
 
     ! Local variable
-    integer :: IntTmp
+    integer :: IntTmp, iReadError
 
     !-------------------------------------------------------------------------
     call read_line_param('integer',Name,iError)
 
-    read(StringLine,*,err=1) IntTmp
-    if(DoEcho)call read_echo(IntTmp==IntVar,Name)
+    read(StringParam,*,iostat=iReadError) IntTmp
+    if(iReadError/=0) call read_error('integer',Name,iError)
+    if(DoEcho)        call read_echo(IntTmp==IntVar,Name)
     IntVar=IntTmp
-
-    return
-1   continue
-    call read_error('integer',Name,iError)
 
   end subroutine read_var_i
 
   !===========================================================================
+
+  subroutine read_real(RealVar,iError)
+    ! Read a real variable
+    ! Arguments
+    real, intent(inout)             :: RealVar
+    integer, optional, intent(out)  :: iError
+    !-------------------------------------------------------------------------
+    call read_var_r(' ',RealVar,iError)
+  end subroutine read_real
+
+  !===========================================================================
+
   subroutine read_var_r(Name,RealVar,iError)
 
     ! Read a real variable described by Name
     
-    implicit none
-
     ! Arguments
     character (len=*), intent(in)   :: Name
     real, intent(inout)             :: RealVar
     integer, optional, intent(out)  :: iError
 
     ! Local variable
-    real :: RealTmp
-
+    real :: Numerator, Denominator, RealTmp
+    integer :: i, iReadError
     !-------------------------------------------------------------------------
     call read_line_param('real',Name,iError)
 
-    read(StringLine,*,err=1) RealTmp
+    ! Check for fraction
+    i = index(StringParam,'/')
+    if(i<1)then
+       ! Simple real number
+       read(StringParam,*,iostat=iReadError) RealTmp
+       if(iReadError/=0)      call read_error('real',Name,iError)
+    else
+       ! Fraction: Numerator/Denominator
+       read(StringParam(1:i-1),*,iostat=iReadError) Numerator
+       if(iReadError/=0)      call read_error('numerator',Name,iError)
+       read(StringParam(i+1:lStringLine),*,iostat=iReadError) Denominator
+       if(iReadError/=0)      call read_error('denominator',Name,iError)
+       if(Denominator == 0.0) call read_error('zero denominator',Name,iError)
+       RealTmp = Numerator / Denominator
+    end if
     if(DoEcho)call read_echo(RealTmp==RealVar,Name)
     RealVar=RealTmp
-
-    return
-1   continue
-    call read_error('real',Name,iError)
 
   end subroutine read_var_r
 
   !===========================================================================
+
+  subroutine read_logical(IsLogicVar,iError)
+    ! Read a logical variable
+    ! Arguments
+    logical, intent(inout)          :: IsLogicVar
+    integer, optional, intent(out)  :: iError
+    !-------------------------------------------------------------------------
+    call read_var_l(' ',IsLogicVar,iError)
+  end subroutine read_logical
+
+  !===========================================================================
+
   subroutine read_var_l(Name,IsLogicVar,iError)
 
     ! Read a logical variable described by Name
@@ -609,31 +660,36 @@ contains
 
     ! Local variable
     logical :: IsLogicTmp
+    integer :: iReadError
 
     !-------------------------------------------------------------------------
     call read_line_param('logical',Name,iError)
 
-    read(StringLine,*,err=1) IsLogicTmp
-    if(DoEcho)call read_echo(IsLogicTmp.eqv.IsLogicVar,Name)
+    read(StringParam,*,iostat=iReadError) IsLogicTmp
+    if(iReadError/=0)call read_error('logical',Name,iError)
+    if(DoEcho)call        read_echo(IsLogicTmp.eqv.IsLogicVar,Name)
     IsLogicVar=IsLogicTmp
 
-    return
-1   continue
-    call read_error('logical',Name,iError)
-
   end subroutine read_var_l
+
   !===========================================================================
+
   integer function i_line_read()
     i_line_read = iLine
   end function i_line_read
+
   !===========================================================================
+
   integer function n_line_read()
     n_line_read = nLine
   end function n_line_read
+
   !===========================================================================
+
   integer function i_session_read()
     i_session_read = iSession
   end function i_session_read
+
   !BOP =======================================================================
   !IROUTINE: read_text - obtain selected text buffer 
   !INTERFACE:
@@ -645,5 +701,7 @@ contains
     String_I = StringLine_I(iLine+1:nLine)
     !EOC
   end subroutine read_text
+
   !===========================================================================
+
 end module ModReadParam
