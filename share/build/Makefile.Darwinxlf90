@@ -24,18 +24,18 @@ MPILIB =
 
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 
-#DEBUG   = -C -gline
-DEBUG   =
+#DEBUG   = -qextname -qarch=g5 -qtune=g5 -C -gline
+DEBUG   = -qextname -qarch=g5 -qtune=g5 
 
-Cflag0  = ${SEARCH} -c -O0 -qextname -qarch=g5 -qtune=g5 ${DEBUG} ${PRECISION}
-Cflag1  = ${SEARCH} -c -O1 -qextname -qarch=g5 -qtune=g5 ${DEBUG} ${PRECISION}
-Cflag2  = ${SEARCH} -c -O2 -qextname -qarch=g5 -qtune=g5 ${DEBUG} ${PRECISION}
-Cflag3  = ${SEARCH} -c -O3 -qextname -qarch=g5 -qtune=g5 ${DEBUG} ${PRECISION}
-Cflag4  = ${SEARCH} -c -O4 -qextname -qarch=g5 -qtune=g5 ${DEBUG} ${PRECISION}
-Cflag4f = ${SEARCH} -c -O4 -qextname -qarch=g5 -qtune=g5 ${DEBUG}
+Cflag0  = ${SEARCH} -c -O0 ${DEBUG} ${PRECISION}
+Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
+Cflag2  = ${SEARCH} -c -O2 ${DEBUG} ${PRECISION}
+Cflag3  = ${SEARCH} -c -O3 ${DEBUG} ${PRECISION}
+Cflag4  = ${SEARCH} -c -O4 ${DEBUG} ${PRECISION}
+Cflag4f = ${SEARCH} -c -O4 ${DEBUG}
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  -c -w -C -save
+CFLAGS  = ${SEARCH} -c -O2 ${DEBUG}
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
@@ -44,6 +44,11 @@ Lflag2  = ${PRECISION} ${DEBUG}
 LBLAS =
 BLAS  = lapack.o blas.o
 
+# Set suffix remapping options
+SuffixMapf90 = -qsuffix=f=f90
+SuffixMapF90 = -qsuffix=f=F90
+SuffixMapfor = -qsuffix=f=for
+SuffixMapftn = -qsuffix=f=ftn
 
 #
 #       General rules
@@ -53,19 +58,19 @@ BLAS  = lapack.o blas.o
 .SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
-	${COMPILE.f90} ${Cflag4} -qsuffix=f=f90 $<
+	${COMPILE.f90} ${Cflag4} ${SuffixMapf90} $<
 
 .F90.o:
-	${COMPILE.f90} ${Cflag4} -qsuffix=f=f90 $<
+	${COMPILE.f90} ${Cflag4} ${SuffixMapF90} $<
 
 .f.o:
-	${COMPILE.f77} ${Cflag4} -132 $<
+	${COMPILE.f77} ${Cflag4} $<
 
 .for.o:
-	${COMPILE.f77} ${Cflag4} -132 -qsuffix=f=for $<
+	${COMPILE.f77} ${Cflag4} ${SuffixMapfor} $<
 
 .ftn.o:
-	${COMPILE.f77} ${Cflag4} -132 -qsuffix=f=ftn $<
+	${COMPILE.f77} ${Cflag4} ${SuffixMapftn} $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
