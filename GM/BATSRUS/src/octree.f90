@@ -271,7 +271,7 @@ subroutine read_octree_file
   use ModOctree
   use ModIoUnit, Only : UNITTMP_
   use ModIO, ONLY : NameRestartInDir, iUnitOut, write_prefix
-  use ModMpi
+!  use ModMpi
   implicit none
 
   integer :: i,j,k, total_number_of_blocks_needed, BlksPerPE, iError,nError
@@ -280,15 +280,15 @@ subroutine read_octree_file
   logical :: isRoot
   type (adaptive_block_ptr) :: octree
 
-  if (iProc == 0) then
+!  if (iProc == 0) then
      open(UNITTMP_, file=trim(NameRestartInDir)//"octree"//octree_ext, &
           status="old", form="UNFORMATTED")
      read(UNITTMP_) r_proc_dims(1),r_proc_dims(2),r_proc_dims(3)
      read(UNITTMP_) total_number_of_blocks_needed
-  end if
+!  end if
 
-  call MPI_BCAST(r_proc_dims(1),                3, MPI_INTEGER, 0, iComm, iError)
-  call MPI_BCAST(total_number_of_blocks_needed, 1, MPI_INTEGER, 0, iComm, iError)
+!  call MPI_BCAST(r_proc_dims(1),                3, MPI_INTEGER, 0, iComm, iError)
+!  call MPI_BCAST(total_number_of_blocks_needed, 1, MPI_INTEGER, 0, iComm, iError)
 
   if ( (r_proc_dims(1) /= proc_dims(1)) .or. &
        (r_proc_dims(2) /= proc_dims(2)) .or. &
@@ -297,16 +297,14 @@ subroutine read_octree_file
           " Initial processor outlay incorrect, ", &
           & "proc_dims = ",proc_dims," r_proc_dims = ", &
           r_proc_dims
-     call MPI_ABORT(iComm, nError, iError)
-     stop
+     call stop_mpi('ERROR in read_octree_file')
   end if
 
   if (total_number_of_blocks_needed > nProc*nBLK) then
      write(*,*) "read_octree_file: PE = ",iProc, &
           " Error, insufficient number of solution blocks, ", &
           "total_number_of_blocks_needed = ",total_number_of_blocks_needed
-     call MPI_ABORT(iComm, nError, iError)
-     stop
+     call stop_mpi('ERROR in read_octree_file')
   end if
 
   BlksPerPE = ((total_number_of_blocks_needed-1)/nProc)+1
@@ -338,7 +336,7 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
   use ModIO, ONLY : restart_reals,RestartBlockLevels
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs
   use ModOctree
-  use ModMpi
+! use ModMpi
   implicit none
 
   type (adaptive_block_ptr) :: octree
@@ -354,15 +352,15 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
   !---------------------------------------------------------------------------
 
   if (associated(octree % ptr)) then
-     if (iProc == 0) &
+!     if (iProc == 0) &
           read(UNITTMP_) numberBLK, childNumber, iPE, iBLK, iLEV, sol_blk_used
 
-     call MPI_BCAST(numberBLK,    1, MPI_INTEGER, 0, iComm, iError)
-     call MPI_BCAST(childNumber,  1, MPI_INTEGER, 0, iComm, iError)
+!     call MPI_BCAST(numberBLK,    1, MPI_INTEGER, 0, iComm, iError)
+!     call MPI_BCAST(childNumber,  1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iPE,          1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iBLK,         1, MPI_INTEGER, 0, iComm, iError)
      !     call MPI_BCAST(iLEV,         1, MPI_INTEGER, 0, iComm, iError)
-     call MPI_BCAST(sol_blk_used, 1, MPI_LOGICAL, 0, iComm, iError)
+!     call MPI_BCAST(sol_blk_used, 1, MPI_LOGICAL, 0, iComm, iError)
 
      octree % ptr % number  = numberBLK
      octree % ptr % child_number = childNumber
@@ -376,10 +374,11 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
      iBLK = octree % ptr % BLK
 
      if(RestartBlockLevels)then
-        if (iProc == 0) read(UNITTMP_) iLEVmin,iLEVmax
+!        if (iProc == 0) &
+             read(UNITTMP_) iLEVmin,iLEVmax
 
-        call MPI_BCAST(iLEVmin,    1, MPI_INTEGER, 0, iComm, iError)
-        call MPI_BCAST(iLEVmax,    1, MPI_INTEGER, 0, iComm, iError)
+!        call MPI_BCAST(iLEVmin,    1, MPI_INTEGER, 0, iComm, iError)
+!        call MPI_BCAST(iLEVmax,    1, MPI_INTEGER, 0, iComm, iError)
 
         octree % ptr % LEVmin = iLEVmin
         octree % ptr % LEVmax = iLEVmax
@@ -391,10 +390,11 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
 
 !!! Backwards compatibility for old restart files !!!
         if(.not.restart_reals)then
-           if (iProc == 0) read(UNITTMP_) xyzends, dxyz
+!           if (iProc == 0) &
+           read(UNITTMP_) xyzends, dxyz
            xyzStart(:)=xyzends(1,:)
-           call MPI_BCAST(xyzStart(1), 3, MPI_REAL, 0, iComm, iError)
-           call MPI_BCAST(dxyz(1),      3, MPI_REAL, 0, iComm, iError)
+!           call MPI_BCAST(xyzStart(1), 3, MPI_REAL, 0, iComm, iError)
+!           call MPI_BCAST(dxyz(1),      3, MPI_REAL, 0, iComm, iError)
            if (iProc == iPE) call set_block_geometry_obsolete(iBLK)
         end if
 
