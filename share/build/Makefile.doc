@@ -34,7 +34,7 @@
 	rm -f $*.ind $*.idx $*.ilg
 
 .dvi.ps: 
-	dvips -o $*.ps $<
+	dvips -t letter -o $*.ps $<
 
 .ps.pdf:
 	ps2pdf $*.ps ../$*.pdf
