@@ -13,7 +13,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use ModGmImCoupling, ONLY: &
        allocate_gm_im, MHD_compute_from_raytrace, &
        process_integrated_data, &
-       write_integrated_data, write_integrated_data_idl, &
+       write_integrated_data_tec, write_integrated_data_idl, &
        nCalls, RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
 
@@ -81,7 +81,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   if (iProc == 0) then
      if(DoTest)call write_integrated_data_idl  ! IDL output before processing
      call process_integrated_data
-     if(DoTest)call write_integrated_data      ! TecPlot output
+     if(DoTest)call write_integrated_data_tec  ! TecPlot output
      if(DoTest)call write_integrated_data_idl  ! IDL     output
 
      ! Put results into output buffer
