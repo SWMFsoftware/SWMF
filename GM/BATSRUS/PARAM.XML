@@ -1,8 +1,8 @@
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+
 <commandList name="BATSRUS: GM, SC and IH Components">
 
 List of MH (GM, IH and SC) commands used in the PARAM.in file
-
-<!-- The XML syntax is described at the end of Param/PARAM.XML -->
 
 <!-- Grid size array is transformed into simple scalars -->
 <set name="nI"           type="integer" value="$_GridSize[0]" />

@@ -1,6 +1,6 @@
-<commandList name="Ridley Ionosphere Model: IE Component">
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-<!-- The XML syntax is described at the end of Param/PARAM.XML -->
+<commandList name="Ridley Ionosphere Model: IE Component">
 
 <commandgroup name="Testing">
 
