@@ -3016,6 +3016,16 @@ F			InitRope
 ! Default values are shown. Parameters for problem_heliosphere
 </command>
 
+<command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
+	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
+
+#HELIOUPDATEB0
+-1.0			DtUpdateB0 [s]
+
+Set the frequency of updating the B0 field for the solar corona.
+A negative value means that the B0 field is not updated.
+</command>
+
 <command name="HELIODIPOLE" if="$_NameComp ne 'GM'">
 	<parameter name="HelioDipoleStrength" type="real" />
 	<parameter name="HelioDipoleTilt" type="real" min="-90" max="90" 
