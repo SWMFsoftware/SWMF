@@ -1733,7 +1733,7 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 				<parameter name="IsParallel" type="logical"/>
 			</for>
 		</if>
-		<parameter name="plotDx" type="integer" min="-1" default="-1"
+		<parameter name="DxPlot" type="real" min="-1.0" default="-1.0"
 	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="plotVars" type="string" length="100"/>
