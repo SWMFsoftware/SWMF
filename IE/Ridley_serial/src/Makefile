@@ -105,53 +105,6 @@ PostIONO.exe:	PostIONO.o
 IONO: ${EXE2}
 	@echo Program IONO has been brought up to date.
 
-#^CFG  IF TIEGCM BEGIN
-TGCM: tiegcm iono_tgcm
-
-tiegcm: 
-	/bin/rm ${EXE3}
-	cd ${DIR}/srcTIEGCM ; make lib
-
-iono_tgcm: ${EXE3}
-	@echo Program IONO_TGCM has been brought up to date.
-
-#^CFG END TIEGCM
-
-
-#
-#	Compile each routine
-#
-
-
-precision.o:		${MF} precision.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} precision.f90
-
-io.o:			${MF} io.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} io.f90
-
-CSR.o:			${MF} precision.o io.o CSR.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} CSR.f90
-
-MSR.o:			${MF} precision.o io.o MSR.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} MSR.f90
-
-LUCS.o:			${MF} LUC.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} LUC.f90
-
-LUCSRMSR.o:		${MF} CSR.o MSR.o LUCSRMSR.f90
-			${COMPILE.f90} ${Cflag0} ${SuffixMapf90} LUCSRMSR.f90
-
-#			
-#	General Housekeeping
-#
-#clean:	
-#	@echo '>>> Removing *~, *.o, *.kmo, *.mod, *.T, *.lst and core files <<<'
-#	@echo ' '
-#	@touch a~ a.o a.kmo a.mod a.T a.lst core
-#	@rm -f `ls *~ *.o *.kmo *.mod *.T *.lst core`
-#	@ls -F
-#	@echo ' '
-
 backup:	
 	tar -cf IONO.`date +%m_%d_%y_%H%M.tar` Make* *.f90 *.h *.sub *.script *.llscript.* *.in mpi* perf_mjp.a BATio BATioPP* IOcat*
 
