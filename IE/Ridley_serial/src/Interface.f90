@@ -2,6 +2,7 @@ program Interface
 
   use ModIE_Interface
   use IE_ModMain, only: iDebugLevel
+  use ModTimeConvert, ONLY: time_int_to_real
 
   implicit none
 

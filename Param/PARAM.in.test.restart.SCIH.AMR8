@@ -1,0 +1,244 @@
+#ECHO
+T
+
+#INCLUDE
+RESTART.SC.AMR8
+
+#DESCRIPTION
+Use restart data for SC and create SC-IH steady state
+
+#IDEALAXES
+! align both the rotational and the magnetic axes of Earth with ecliptic North
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+! No need to run SC too often, it is already in steady state
+
+#CYCLE
+SC			NameComp
+100			DnRun
+
+! No need to couple SC too often
+
+#COUPLE2
+SC			NameSource
+IH			NameTarget
+100			DnCouple
+-1.0			DtCouple
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#INCLUDE
+SC/restartIN/restart.H
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+F			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+F			UseUserSetPhysConst
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#USEUSERHEATING
+F			UseUserHeating
+
+#PFSSM
+T			UseUserB0
+1.00E+00		Ro_PFSSM
+2.50E+00		Rs_PFSSM
+SC/CR1935_WSO.dat       File_PFSSM
+12			iHead_PFSSM
+-1.00E+00		dt_UpdateB0
+
+#AWHEAT
+1.50E+00		Bnot	[G]
+1.6304543E+00		Tnot
+9			DegFrm1
+2.10E+00		TemRatio
+F     			UseStaticICs
+F                       UseZeroOmega
+
+#USERINPUTEND ----------------------------
+
+#HELIOSPHERE
+1.80E+06		tSun    [K]      1.0E6 
+5.00E+13		NdSun [n/m-3]
+10.00			qSun
+1.76			tHeat
+1.00			rHeat
+4.50			SigmaHeat
+F			UseFluxRope
+
+#HELIOROTATION
+T			UseInertial, if false then corotating frame
+F			UseCorotation
+
+#GAMMA
+1.50000E+00		Gamma
+
+#OUTERBOUNDARY
+coupled			TypeBcEast
+coupled			TypeBcWest
+coupled			TypeBcSouth
+coupled			TypeBcNorth
+coupled			TypeBcBottom
+coupled 		TypeBcTop
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod			TypeLimiter
+
+#TIMESTEPPING
+1                       nStage
+0.80                    CflExpl
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+VAR                     StringLog
+10                      DnSaveLogfile
+-1.0			DtSaveLogfile
+em_r ek_r et_r
+4.0  10.0               rLog
+
+#SAVEPLOT
+3			nPlotFile
+x=0 MHD tec             StringPlot
+10000                   DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+z=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+
+#END_COMP SC ---------------------------------------------------------------
+
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#PROBLEMTYPE
+3			iProblemType: 3=Solar Wind and Inner Heliosphere
+
+#BODY
+T			UseBody1
+20.0			rBody
+
+#INNERBOUNDARY
+coronatoih
+
+#HELIOSPHERE
+2.85E+06		Tsun    [K]      1.0E6 
+1.50E+14		NDsun [n/m-3]
+25.00			Qsun
+1.75			Theat
+1.00			Rheat
+4.50			SIGMAheat
+F                       UseUserPerturbation
+
+#HELIODIPOLE
+-3.0			HelioDipoleStrength(equatorial field strength in Gauss)
+ 0.0			HelioDipoleTilt
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-240.0			xMin
+ 240.0			xMax
+-240.0			yMin
+ 240.0			yMax
+-240.0			zMin
+ 240.0			zMax
+
+#OUTERBOUNDARY
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth 
+float			TypeBcNorth 
+float			TypeBcBottom  
+float			TypeOuterBcTop
+
+#AMRINIT
+coupledhelio    	TypeRefineInit
+6			nLevelRefineInit
+
+#TIMESTEPPING
+1			nStage
+0.8			CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+6                       nPlotFiles
+x=0 MHD tec             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+y=0 MHD tec             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+z=0 MHD tec             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+x=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#GAMMA
+1.50000E+00		Gamma
+
+#SCHEME
+2			nOrder
+Sokolov			TypeFlux
+minmod                  TypeLimiter
+
+#END_COMP IH -----------------------------------------------------------------
+
+#STOP
+4000                    MaxIteration
+-1.			tSimulationMax
+
+#RUN #########################################################################
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#END_COMP IH ----------------------------------------------------------------
+
+#STOP
+6000			MaxIteration
+-1.			tSimulationMax
+
+#END

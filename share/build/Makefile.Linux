@@ -8,6 +8,7 @@ SHELL=/bin/sh
 #       Linux specific part of Makefile
 #
 
+COMPILE.f77     = f95
 COMPILE.f90     = f95
 LINK.f90	= mpif90
 AR = ar -rs
@@ -16,18 +17,15 @@ PRECISION = -r8
 #PRECISION =
 
 MPILIB = 
-#MPILIB = -L. -lNOMPI
+#MPILIB = -L${LIBDIR} -lNOMPI
 
 # This is the search path for used modules
 # SEARCH_EXTRA should be given in the individual Makefiles
 
-SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
+SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-#MCT -I${MCTDIR}/mct -I${MCTDIR}/mpeu
-#MCT -kind=byte
-
-DEBUG   = -dusty -w -maxcontin=50
-#DEBUG   = -dusty -w -C -gline -maxcontin=50
+DEBUG   = -dusty -w
+#DEBUG   = -dusty -w -C -gline
 
 Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
 Cflag1  = ${SEARCH} -c -O1 ${PRECISION} ${DEBUG}
@@ -36,7 +34,7 @@ Cflag3  = ${SEARCH} -c -O3 ${PRECISION} ${DEBUG}
 Cflag4  = ${SEARCH} -c -O4 ${PRECISION} ${DEBUG}
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  -c -w -C -save
+CFLAGS = ${SEARCH}  -c -save ${DEBUG}
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 
@@ -53,16 +51,22 @@ BLAS  = lapack.o blas.o
 #
 
 .SUFFIXES:
-.SUFFIXES: .f90 .F90 .f .o
+.SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag3} $<
 
 .F90.o:
-	${COMPILE.f90} ${Cflag3} $<
+	${COMPILE.f90} -DsysLinux -DcompNAGF95 ${Cflag3} $<
 
 .f.o:
-	${COMPILE.f90} ${Cflag3} -132 $<
+	${COMPILE.f77} ${Cflag3} -132 $<
+
+.for.o:
+	${COMPILE.f77} ${Cflag3} -132 $<
+
+.ftn.o:
+	${COMPILE.f77} ${Cflag3} -132 $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

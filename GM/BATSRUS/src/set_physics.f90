@@ -7,7 +7,8 @@ subroutine set_physics_constants
   use ModProcMH
   use ModMain
   use ModPhysics
-  use CON_physics, ONLY: get_axes, get_physics
+  use CON_axes,   ONLY: get_axes
+  use CON_planet, ONLY: get_planet
 !  use ModUser                      !^CFG UNCOMMENT IF USERFILES
   use ModVarIndexes
   use ModCompatibility, ONLY: calculate_dipole_tilt
@@ -247,7 +248,7 @@ subroutine set_physics_constants
   ! Nondimensionalize dipole strength.
   if(NameThisComp == 'GM' .and. UseNewAxes) then
      call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-     call get_physics(DipoleStrengthOut = Bdp_dim)
+     call get_planet(DipoleStrengthOut = Bdp_dim)
      Bdp      = Bdp_dim/unitSI_B 
   else
      Bdp      = Bdp_dim/unitUSER_B 

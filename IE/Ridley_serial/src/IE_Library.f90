@@ -28,6 +28,8 @@ subroutine IE_FindPoint(LocIn, LocOut, IsNormalGrid, iError)
   real :: MLTIn, LatIn
   integer :: j,i, iBLK
 
+  integer :: jTemp_I(1)
+
   logical :: IsFound
 
   LocOut = -1.0
@@ -90,10 +92,12 @@ subroutine IE_FindPoint(LocIn, LocOut, IsNormalGrid, iError)
 
      do while (j < IEi_HavenMLTs .and. LocOut(2) <0.0)
 
+        jTemp_I = maxloc(IEr3_HaveMLTs(:,1,iBLK),1)
+
         if ((MLTIn <  IEr3_HaveMLTs(j+1,1,iBLK) .and. &
             MLTIn >= IEr3_HaveMLTs(j,1,iBLK)).or.&
             MLTIn>=maxval(IEr3_HaveMLTs(:,1,iBLK)).and.&
-            j==maxloc(IEr3_HaveMLTs(:,1,iBLK),1))then
+            j==jTemp_I(1))then
            LocOut(2) = j 
         else
            j = j + 1

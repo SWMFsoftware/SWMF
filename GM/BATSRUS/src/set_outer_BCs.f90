@@ -74,8 +74,8 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
      if(neiLEV(iside,iBLK)/=NOBLK) CYCLE
 
      ! If boundary is coupled do not overwrite the ghost cells
-     if(TypeBc_I(iside)=='coupled')CYCLE
-
+     if(TypeBc_I(iside)=='coupled')CYCLE !^CFG IF NOT ALWAVES
+ 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
      jmin1g=-1; jmax1g=nJ+2; jmin2g=-1; jmax2g=nJ+2
@@ -107,6 +107,8 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
      end select
 
      select case(TypeBc_I(iside))
+     case('coupled')
+!        call BC_cont(EnergyRL_,EnergyRL_) !^CFG UNCOMMENT IF ALWAVES   
      case('periodic')
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
      case('float','outflow')       

@@ -512,10 +512,10 @@ subroutine get_b0(X0,Y0,Z0,B0)
   ! this interface allows use of various models for B0
   use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem, &
        UseNewAxes
-  use ModPhysics,  ONLY : unitSI_B
-  use CON_physics, ONLY : get_planet_field
-  use ModMain,     ONLY : UseBody2                  !^CFG IF SECONDBODY
-  use ModMain,     ONLY : UseUserB0                 !^CFG IF USERFILES
+  use ModPhysics,       ONLY : unitSI_B
+  use CON_planet_field, ONLY : get_planet_field
+  use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
+  use ModMain,          ONLY : UseUserB0            !^CFG IF USERFILES
   implicit none
 
   real, intent(in) :: X0,Y0,Z0

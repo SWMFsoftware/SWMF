@@ -78,12 +78,12 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
      openfile,10,filenames(ifile),filetypes(ifile)
 
      getpict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
-            gencoord,ndim,neqpar,nw,nx,eqpar,variables,error
+            gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
      if (nxreg(0) lt 0.0) then begin
 
        dxmin = 1000.0
-       for i=0,nx(0)-2 do $
+       for i=0L,nx(0)-2 do $
          if x(i+1,0,0)-x(i,0,0) gt 0 and x(i+1,0,0)-x(i,0,0) lt dxmin then $
            dxmin = x(i+1,0,0)-x(i,0,0)
        nxreg=abs(nxreg)/dxmin+1
@@ -122,7 +122,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
         else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
         case transform of
            'regular':regulargrid,x_old,nxreg_old,xreglimits_old,$
-                     x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri,x_limited
+                     x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
            'polar'  :begin
                        polargrid,nvector,vectors,x,w,xreg,wreg
                        variables(0:1)=['r','phi']
@@ -147,4 +147,3 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
   wnames=variables(ndim:ndim+nw-1)
 
 end
-

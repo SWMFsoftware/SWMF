@@ -4,7 +4,7 @@ my $Remove = $r;
 
 use strict;
 
-chdir 'ionosphere' or die "Could not cd into ionsophere/\n";
+chdir 'ionosphere' or die "Could not cd into ionosphere/\n";
 my @files = glob('*_b1.*');
 
 my $file1;   # _b1 file

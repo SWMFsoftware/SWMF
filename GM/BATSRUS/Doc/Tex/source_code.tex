@@ -1,25 +1,12 @@
 %^CFG COPYRIGHT UM
 \chapter{Organization and Modification of the Source Code \label{chapter:source_code}}
 
-\section{\BATSRUS, Ionosphere, TIEGCM \label{section:models}}
+\section{\BATSRUS source \label{section:models}}
 
-The source codes of \BATSRUS\ are located in the {\tt src/},
-{\tt srcIONO/} and {\tt srcTIEGCM/} directories.  The
-MHD code, the ionosphere solver and the Upper Atmosphere Model
-(UAM - TIEGCM) are distinct programs that in other
-incarnations operate completely independently. 
-Here they they are being coupled with
-the MHD code.  The end goal is to modify these codes so 
-that they can run in parallel and use block based architectures
-much like the MHD code does now.  When completed, the future
-implementations will allow each code to operate independent
-of the others by using dummy routines to mimic the 
-linking to the other codes.
-
-Within each directory, the source code is split into
+The source code of \BATSRUS\ is located in the {\tt src/},
+Within the directory, the source code is split into
 a number of different files that are named according to
 their function and the the subroutines which they contain.
-
 
 \section{Modules \label{section:modules}}
 

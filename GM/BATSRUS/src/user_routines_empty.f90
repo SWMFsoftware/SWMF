@@ -803,51 +803,51 @@ subroutine user_get_log_var(VarValue,TypeVar)
 
 end subroutine user_get_log_var
 
-real function rho_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  rho_BLK=State_VGB(rho_,i,j,k,iBlock)
-end function rho_BLK 
-real function rhoUx_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  rhoUx_BLK=State_VGB(rhoUx_,i,j,k,iBlock)
-end function rhoUx_BLK 
-real function rhoUy_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  rhoUy_BLK=State_VGB(rhoUy_,i,j,k,iBlock)
-end function rhoUy_BLK 
-real function rhoUz_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  rhoUz_BLK=State_VGB(rhoUz_,i,j,k,iBlock)
-end function rhoUz_BLK
-real function Bx_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  Bx_BLK=State_VGB(Bx_,i,j,k,iBlock)
-end function Bx_BLK 
-real function By_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  By_BLK=State_VGB(By_,i,j,k,iBlock)
-end function By_BLK 
-real function Bz_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  Bz_BLK=State_VGB(Bz_,i,j,k,iBlock)
-end function Bz_BLK
-real function P_BLK(i,j,k,iBlock)
-  use ModAdvance
-  implicit none
-  integer::i,j,k,iBlock
-  P_BLK=State_VGB(P_,i,j,k,iBlock)
-end function P_BLK
+!real function rho_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  rho_BLK=State_VGB(rho_,i,j,k,iBlock)
+!end function rho_BLK 
+!real function rhoUx_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  rhoUx_BLK=State_VGB(rhoUx_,i,j,k,iBlock)
+!end function rhoUx_BLK 
+!real function rhoUy_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  rhoUy_BLK=State_VGB(rhoUy_,i,j,k,iBlock)
+!end function rhoUy_BLK 
+!real function rhoUz_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  rhoUz_BLK=State_VGB(rhoUz_,i,j,k,iBlock)
+!end function rhoUz_BLK
+!real function Bx_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  Bx_BLK=State_VGB(Bx_,i,j,k,iBlock)
+!end function Bx_BLK 
+!real function By_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  By_BLK=State_VGB(By_,i,j,k,iBlock)
+!end function By_BLK 
+!real function Bz_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  Bz_BLK=State_VGB(Bz_,i,j,k,iBlock)
+!end function Bz_BLK
+!real function P_BLK(i,j,k,iBlock)
+!  use ModAdvance
+!  implicit none
+!  integer::i,j,k,iBlock
+!  P_BLK=State_VGB(P_,i,j,k,iBlock)
+!end function P_BLK

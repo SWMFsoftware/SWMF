@@ -21,7 +21,8 @@ c**************************************************************
       common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
 c ----------------------------------------------------------
@@ -118,9 +119,13 @@ c ********************* end routine MASTER  *********************
       common /radio / nn,rmin,rshock,rmax,r(0:1000)
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /inphys/ wind0,period0,xlambda0
+!      common /inphys/ wind0,period0,xlambda0
+!      commented out: is not a common block, variables are 
+!      undefined, their use is not proper 
+!      I.Sokolov<igorsok@umich.edu>
       common /partid/ iz,massa,ekpp,xlmbda0
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
       common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
       common /energy/ emin,emax,eein,ee(0:600)
       common /speed / wmin,wmax,wwin,ww(0:600)
@@ -183,11 +188,11 @@ c ------------------------------------ gasdynamics
       bbmin = aamin*sqrt(ddmin)
       bbmax = aamax*sqrt(ddmax)
 c ------------------------------------ times:     
-      dt1 = dt0/kfriss
-      dta = dt1/kacc   
+!     dt1 = dt0/kfriss  !dt0 is undefined at the moment
+!     dta = dt1/kacc    !Commented out, I.Sokolov<igorsok@umich.edu>
 c ------------------------------------ calculation
-       wind = wind0*hour/aukm
-      swind = swind0*hour/aukm
+!       wind = wind0*hour/aukm!wind0 is undefined at the moment
+!      swind = swind0*hour/aukm!swind0 is undefined at the moment
       if (period.gt.1.e3) then
 	  omega = 0.
 	  else
@@ -372,7 +377,8 @@ c ============================ real calculation cycle starts here ==
       common /radio / nn,rmin,rshock,rmax,r(0:1000)
       common /times/  time,tmax,dt0,dt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
       common /elem /  zr(0:1000),zv(0:1000),zp(0:1000),zn(0:1000)
       common /magia/  qb(0:1000),zb(0:1000),zt(0:1000) 
       common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
@@ -444,7 +450,8 @@ c ********************  end routine REFRESH *********************
       
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /scphys/ wind,omega,xscatt1
+!      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
+      common/scphys/ omega,xscatt1
       common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
       common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
      1                dndt(0:1000)

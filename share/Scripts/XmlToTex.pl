@@ -1,8 +1,25 @@
 #!/usr/bin/perl -s
-
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \subsection{Automated Documentation}
+#!ROUTINE: XmlToTex.pl - generate Latex documentation from XML definitions of input parameters
+#!DESCRIPTION:
+# Create Latex documentation based on the XML definitions of the 
+# input parameters typically found in the PARAM.XML files.
+# This script allows to store the parameter descriptions in a single XML file
+# which is suitable for automated parameter checking and GUI generation,
+# yet provide the same information in a well formatted and printable manual
+# as well. The specific format of the PARAM.XML files is described by the
+# share/Scripts/CheckParam.pl script and the manual.
+#
+#!REVISION HISTORY:
+# 03/22/2004 G.Toth - initial version
+# 08/13/2004          preserve _{.. for subscripts in Latex.
+#EOP
 if($h|$help|$H|$Help){
-    print "
-Purpose:
+    print 
+#BOC
+"Purpose:
 
    Convert XML description of input commands into LaTex description.
 
@@ -14,15 +31,16 @@ Usage:
 
 infile   Input file. Default is reading from STDIN.
 
-outfile  Output file. Default is writing to STDOUT
+outfile  Output file. Default is writing to STDOUT.
 
 Example: 
 
-  XmlToTex ../../Param/PARAM.XML > SWMF_commands.tex
-";
+  share/Scripts/XmlToTex.pl Param/PARAM.XML > Param/PARAM.xmltex"
+#EOC
+    ,"\n\n";
     exit 0;
 }
-
+#BOC
 use strict;
 my ($verbatim, $comment, $rule, $start);
 
@@ -33,7 +51,7 @@ while(<>){
 
     # commandList --> section
     if(/^\s*<commandList\s+name=[\'\"]([^\'\"]+)/){
-	$_="\\section\{Input Commands for the $1\}\n\n";
+	$_="\\clearpage\n\\section\{Input Commands for the $1\}\n\n";
         $start = 1;
     }
 
@@ -42,7 +60,8 @@ while(<>){
 	$_="\\subsection\{\u\L$1\}\n\n";
     }
 
-    next unless $start; # skip things before the first command group
+    # skip things before the commandList
+    next unless $start; 
 
     # command --> subsubsection
     if(/^\s*<command/){
@@ -52,13 +71,13 @@ while(<>){
 
     # #COMMAND or #COMMAND ID --> verbatim
     if(/^\#[A-Z0-9_]+( [A-Z][A-Z])?\s*$/){
-	$_='\begin{verbatim}'."\n$_";
+	$_='\begin'.'{verbatim}'."\n$_";
 	$verbatim = 1;
     }
 
     # verbatim part ends with an empty line
     if($verbatim and /^\s*$/){
-	$_='\end{verbatim}'."\n";
+	$_='\end'.'{verbatim}'."\n";
 	$verbatim = 0;
     }
 
@@ -88,9 +107,13 @@ while(<>){
     # Replace TAB characters with spaces
     1 while s/\t+/' ' x (length($&) * 8 - length($`) % 8)/e;
 
-    # Put \ before special Tex characters, but not 2 backslashes
     if(not $verbatim){
-	s/([\#_])/\\$1/g unless $verbatim;
+	# Put \ before special Tex character #
+	s/\#/\\\#/g;
+	# Put \ before special Tex character _ but not before _{
+	# This allows the use of _{1} subscript in math mode
+	s/(\_[^\{])/\\$1/g;
+	# Do not put two \ before # and _
 	s/\\\\([\#_])/\\$1/g;
     }
 
@@ -100,3 +123,4 @@ while(<>){
     # Print out the line
     print;
 }
+#EOC

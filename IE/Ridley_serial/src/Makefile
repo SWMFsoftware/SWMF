@@ -57,11 +57,9 @@ OBJECTS = \
 	IE_End.o\
 	IE_Initialize.o\
 	IE_Library.o\
-	Interface.o\
 	IO_Library.o\
 	AMIE_Library.o\
 	readAMIEoutput.o\
-	time_routines.o\
         iono_conductances.o\
         iono_solver.o\
         iono_coupling.o\
@@ -106,53 +104,6 @@ PostIONO.exe:	PostIONO.o
 
 IONO: ${EXE2}
 	@echo Program IONO has been brought up to date.
-
-#^CFG  IF TIEGCM BEGIN
-TGCM: tiegcm iono_tgcm
-
-tiegcm: 
-	/bin/rm ${EXE3}
-	cd ${DIR}/srcTIEGCM ; make lib
-
-iono_tgcm: ${EXE3}
-	@echo Program IONO_TGCM has been brought up to date.
-
-#^CFG END TIEGCM
-
-
-#
-#	Compile each routine
-#
-
-
-precision.o:		${MF} precision.f90
-			${COMPILE.f90} ${Cflag0} precision.f90
-
-io.o:			${MF} io.f90
-			${COMPILE.f90} ${Cflag0} io.f90
-
-CSR.o:			${MF} precision.o io.o CSR.f90
-			${COMPILE.f90} ${Cflag0} CSR.f90
-
-MSR.o:			${MF} precision.o io.o MSR.f90
-			${COMPILE.f90} ${Cflag0} MSR.f90
-
-LUCS.o:			${MF} LUC.f90
-			${COMPILE.f90} ${Cflag0} LUC.f90
-
-LUCSRMSR.o:		${MF} CSR.o MSR.o LUCSRMSR.f90
-			${COMPILE.f90} ${Cflag0} LUCSRMSR.f90
-
-#			
-#	General Housekeeping
-#
-#clean:	
-#	@echo '>>> Removing *~, *.o, *.kmo, *.mod, *.T, *.lst and core files <<<'
-#	@echo ' '
-#	@touch a~ a.o a.kmo a.mod a.T a.lst core
-#	@rm -f `ls *~ *.o *.kmo *.mod *.T *.lst core`
-#	@ls -F
-#	@echo ' '
 
 backup:	
 	tar -cf IONO.`date +%m_%d_%y_%H%M.tar` Make* *.f90 *.h *.sub *.script *.llscript.* *.in mpi* perf_mjp.a BATio BATioPP* IOcat*

@@ -1,3 +1,15 @@
+#BOP
+#!ROUTINE: CON/Makefile.def - original file for Makefile.def
+#!DESCRIPTION:
+# This file is copied into the main directory as Makefile.def during installation.
+# The copied file contains variables that define the operating system (OS), 
+# the main directory (SWMF\_ROOT). The version variables (XY\_VERSION)
+# are modified to select the appropriate component and module versions.
+# Normally this is done via the SetSWMF.pl script.
+# The Makefile.def file is included in almost all Makefile-s in the SWMF and its components.
+#EOP
+
+#BOC
 DIR=${SWMF_ROOT}
 
 # This file is needed in dependency rules of component libraries:
@@ -29,6 +41,16 @@ UA_VERSION = GITM#			^CMP IF UA
 IM_VERSION = RCM#			^CMP IF IM
 #IM_VERSION = Empty#			^CMP IF IM
 
+RB_VERSION = RiceV5#			^CMP IF RB
+#RB_VERSION = Rice#			^CMP IF RB
+#RB_VERSION = Empty#			^CMP IF RB
+
+SP_VERSION = Kota#                      ^CMP IF SP
+#SP_VERSION = Empty#                    ^CMP IF SP
+
+#SC_VERSION = BATSRUS#                  ^CMP IF SC
+SC_VERSION = Empty#                     ^CMP IF SC
+
 TIMING_VERSION = TIMING/src
 #TIMING_VERSION = TIMING/srcEmpty
 
@@ -56,6 +78,9 @@ GMDIR = ${DIR}/GM/${GM_VERSION}
 IEDIR = ${DIR}/IE/${IE_VERSION}
 UADIR = ${DIR}/UA/${UA_VERSION}
 IMDIR = ${DIR}/IM/${IM_VERSION}
+RBDIR = ${DIR}/RB/${RB_VERSION}
+SPDIR = ${DIR}/SP/${SP_VERSION}
+SCDIR = ${DIR}/SC/${SC_VERSION}
 
 #
 # Utilities
@@ -71,8 +96,7 @@ NOMPIDIR  = ${UTILDIR}/NOMPI/src
 
 COMMONDIR = ${DIR}/share
 SCRIPTDIR = ${COMMONDIR}/Scripts
-MODDIR    = ${COMMONDIR}/Library/src
-SHAREDIR  = ${MODDIR}
+SHAREDIR  = ${COMMONDIR}/Library/src
 INCLDIR   = ${COMMONDIR}/include
 BUILDDIR  = ${COMMONDIR}/build
 
@@ -84,4 +108,8 @@ BINDIR    = ${DIR}/bin
 LIBDIR    = ${DIR}/lib
 RUNDIR    = ${DIR}/run
 
+#
+# This ensures that typing make without arguments does not cause much harm
+#
 localdefault: help
+#EOC

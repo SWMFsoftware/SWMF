@@ -45,6 +45,7 @@ subroutine ionosphere_solver(PHI, &
   !/
 
   use ModIonosphere
+  use IE_ModIo, ONLY: write_prefix, iUnitOut
 
   USE MSR_Module
   USE Matrix_Arithmetic_Module
@@ -82,10 +83,12 @@ subroutine ionosphere_solver(PHI, &
 
   REAL :: ave, lat_boundary, min_pot, max_pot, cpcp
   LOGICAL :: north
+  LOGICAL, PARAMETER :: IsManualLatBoundary = .false.
   
   logical :: oktest, oktest_me
   
   call CON_set_do_test('ionosphere',oktest,oktest_me)
+  call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
   lat_boundary = 30.0 * IONO_PI/180.0
@@ -96,19 +99,22 @@ subroutine ionosphere_solver(PHI, &
 
   if(oktest)write(*,*)'North=',north
 
-  if (north) then
-     do i=1,nTheta
-        if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
-     enddo
+  if (IsManualLatBoundary) then
+     lat_boundary = 60.0 * IONO_PI/180.0
   else
-     do i=nTheta,1,-1
-        if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
-     enddo
+     if (north) then
+        do i=1,nTheta
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+        enddo
+     else
+        do i=nTheta,1,-1
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+        enddo
+     endif
+     lat_boundary = lat_boundary - 5.0*IONO_PI/180.0
   endif
 
   !!! write(*,*)'PHI(:,nPsi/4), lat_boundary=',PHI(:,nPsi/4), lat_boundary !!!
-
-  lat_boundary = lat_boundary - 5.0*IONO_PI/180.0
 
   if(oktest)write(*,*)'sum(abs(PHI),lat_boundary=',sum(abs(PHI)),lat_boundary
 
@@ -137,8 +143,21 @@ subroutine ionosphere_solver(PHI, &
   
   do j = 1, nPsi
      do i = 1, nTheta
-        PHI(i,j) = PHI(i,j)*Radius*Radius* &
+        if (north) then
+           if (abs(IONO_PI/2.0-Theta(i,j)).gt.lat_boundary+5.0*IONO_PI/180.0) then
+              PHI(i,j) = PHI(i,j)*Radius*Radius* &
                    sin(Theta(i,j))*sin(Theta(i,j))
+           else
+              PHI(i,j) = 0.0
+           endif
+        else
+           if (abs(Theta(i,j)-IONO_PI/2.0).gt.lat_boundary+5.0*IONO_PI/180.0) then
+              PHI(i,j) = PHI(i,j)*Radius*Radius* &
+                   sin(Theta(i,j))*sin(Theta(i,j))
+           else
+              PHI(i,j) = 0.0
+           endif
+        endif
      end do
   end do
 
@@ -532,18 +551,17 @@ subroutine ionosphere_solver(PHI, &
   enddo
   ave = ave/nPsi
 
+  call write_prefix
   if (north) then
      cpcp_north = cpcp/1000.0
+     write(iUnitOut,*) &
+          "iono_solver: Northern Cross Polar Cap Potential=",&
+          cpcp_north," kV"
   else
      cpcp_south = cpcp/1000.0
-  endif
-
-  if (oktest) then
-     if (north) then
-        write(6,*) "=> Northern Cross Polar Cap Potential : ",cpcp_north," kV"
-     else
-        write(6,*) "=> Southern Cross Polar Cap Potential : ",cpcp_south," kV"
-     endif
+     write(iUnitOut,*) &
+          "iono_solver: Southern Cross Polar Cap Potential=",&
+          cpcp_south," kV"
   endif
 
   i = nTheta
@@ -554,5 +572,7 @@ subroutine ionosphere_solver(PHI, &
 
   deallocate(b)
   deallocate(x)
+
+  call timing_stop('iono_solve')
 
 end subroutine ionosphere_solver

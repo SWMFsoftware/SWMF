@@ -1091,7 +1091,8 @@ end subroutine set_block_hanging_nodes
 !==========================================================================
 subroutine assign_node_numbers
   use ModProcMH
-  use ModMain, ONLY : nBlockALL
+  use ModIO, ONLY: write_prefix, iUnitOut
+  use ModMain, ONLY : lVerbose, nBlockALL
   use ModOctree
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModImplicit, ONLY : UsePartImplicit   !^CFG IF IMPLICIT
@@ -1107,8 +1108,8 @@ subroutine assign_node_numbers
   !------------------------------------------
 
   ! Write information to the screen
-  if(iProc==0)then
-     write(*,*)'Starting assign_node_numbers ...'
+  if(iProc==0.and.lVerbose>0)then
+     call write_prefix; write(iUnitOut,*)'Starting assign_node_numbers ...'
   end if
 
   ! Initialize all node numbers to zero

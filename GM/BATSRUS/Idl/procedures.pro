@@ -184,13 +184,17 @@ pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
       if n_elements(tmp) eq 2 then begin
          headline=tmp(0)
          physics=tmp(1)
+         ; work around for a bug
+         if physics eq '123' or physics eq '223' then physics='mhd23'
       endif
-   endelse
+  endelse
+
 end
 
 ;==========================================
 pro getpict,unit,filetype,npict,x,w,$
-    headline,physics,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,error
+    headline,physics,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
+    rBody,error
 ;==========================================
 
    on_error,2
@@ -224,6 +228,13 @@ pro getpict,unit,filetype,npict,x,w,$
    ; Read header information
    gethead,unit,filetype,headline,physics,$
        it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+
+   ; set rBody if listed among the parameters
+   for iPar = 0, neqpar-1 do begin
+       i = nDim + nW + iPar
+       if variables(i) eq 'rbody' or variables(i) eq 'rBody' then $
+           rBody = eqpar(iPar)
+   endfor
 
    ; Read data
    case filetype of
@@ -713,7 +724,7 @@ end
 
 ;===========================================================================
 pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
-                w,wreg,nw,wregpad,triangles,symmtri,x_limited
+                w,wreg,nw,wregpad,triangles,symmtri
 ;
 ;    Regularize grid and interpolate "w" via triangulate and trigrid.
 ;    The original "w" data is interpolated into "wreg", for points outside
@@ -816,17 +827,6 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
    err=check_math(0,0)
    ;Floating underflow is not a real error, the message is suppressed
    if err ne 32 and err ne 0 then print,'Math error in regulargrid:',err
-
-   xmisc=x*0.0
-   jmisc=0L
-   for i=0L,n_elements(xx)-1L do begin
-      if xx(i) ge xreglimits(0) and xx(i) le xreglimits(2) and $
-	 yy(i) ge xreglimits(1) and yy(i) le xreglimits(3) then begin
-	xmisc(jmisc,*,*)=x(i,*,*)
-	jmisc=jmisc+1L
-   endif
-   endfor
-   x_limited=xmisc(0L:jmisc-1L,*,*)
 
 end
 
@@ -1134,9 +1134,9 @@ if keyword_set(cut0) then begin
    if ndim gt 2 then zz=zz(cut0)
 endif
 
-!x.title=variables(0)
-if plotdim gt 1 then !y.title=variables(1)
-if plotdim gt 2 then !z.title=variables(2)
+!x.title=strupcase(variables(0))
+if plotdim gt 1 then !y.title=strupcase(variables(1))
+if plotdim gt 2 then !z.title=strupcase(variables(2))
 
 if ndim eq 3 and plotdim eq 2 then begin
    siz=size(cut)
@@ -1205,8 +1205,7 @@ pro plotfunc,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
   ax,az,contourlevel,linestyle,$
   velvector,velspeed,velseed,velpos,velx,vely,veltri,$
   cut,cut0,plotdim,$
-  nfunc,multix,multiy,fixaspect,plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f,$
-x_limited
+  nfunc,multix,multiy,fixaspect,plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
    on_error,2
 
@@ -1587,12 +1586,18 @@ x_limited
 
       if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
                                    and plotmod ne 'shade' then begin
-         if(plotmod eq 'polar')then                                       $
-           plotgrid,xx,yy*!pi/180,lines=showmesh,xstyle=1,ystyle=1,/polar $
-         else if keyword_set(cut) then                                    $
-             plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1,polar=polar  $
-         else                                                             $
-             plot,x_limited(*,*,0),x_limited(*,*,1),XSTYLE=5,YSTYLE=5, PSYM=1, SYMSIZE=!p.symsize, /NOERASE	
+          if(plotmod eq 'polar')then                                       $
+            plotgrid,xx,yy*!pi/180,lines=showmesh,xstyle=1,ystyle=1,/polar $
+          else if keyword_set(cut) then                                    $
+            plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1                $
+          else begin
+              if !x.range[0] ne !x.range[1] then xrange=!x.range else $
+                xrange=[min(xx),max(xx)]
+              if !y.range[0] ne !y.range[1] then yrange=!y.range else $
+                yrange=[min(yy),max(yy)]
+              plotgrid,x,lines=showmesh,xstyle=1,ystyle=1,$
+                xrange=xrange,yrange=yrange
+          endelse
       endif
 
       !p.multi(0) = multi0
@@ -1615,8 +1620,17 @@ if ninfo lt 1 then return
 info=''
 if ninfo gt 2 then info='nx='+string(nx,format='(i6,2(",",i4))')+' '
 if ninfo gt 1 then info=info+'it='+string(it,format='(i6)')+', '
+
 info=info+'time='+string(time,format='(g12.5)')
 xyouts,5+(ix*!d.x_size)/multix,8+(iy*!d.y_size)/multiy,/DEV,info
+
+;info='time ='+string(time/(17.24*3600),format='(f6.2)')+' Uday'
+;xyouts,3000+(0.9*ix*!d.x_size)/multix,3000+(0.82*(iy+1)*!d.y_size)/multiy,/DEV,info,charsize=1.2
+
+;info='time ='+string(time/60,format='(i4)')+' min'
+;xyouts,!p.position[0]-0.1*(!p.position(2)-!p.position(0)),$
+;       !p.position[1]-0.1*(!p.position(3)-!p.position(1)),$
+;       info,/NORM,charsize=0.8
 
 end
 ;===========================================================================
@@ -2246,14 +2260,17 @@ return
 end
 
 ;===================================================================
-pro plotgrid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar
+pro plotgrid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar,$
+             xrange=xrange,yrange=yrange,noorigin=noorigin
 ;===================================================================
 
 on_error,2
 
 if not keyword_set(x) then begin
-   print,'Usage: plotgrid, x [,y] [,/lines], [/polar], [,xstyle=3] [,ystyle=1]
-   retall
+    print,'Usage: plotgrid, x [,y] [,/lines] [,/polar]',$
+      ' [,xstyle=3] [,ystyle=1]',$
+      '                   [,xrange=[-10,10]], [yrange=[-10,10]]'
+    retall
 endif
 
 xx=reform2(x)
@@ -2262,45 +2279,66 @@ sizx=size(xx)
 if (n_elements(polar) eq 0) then polar = 0
 
 if not keyword_set(y) then begin
-   case sizx(0) of
-     3:begin
-         if sizx(3) ne 2 then goto, ERROR1
-         yy=xx(*,*,1)
-         xx=xx(*,*,0)
-       end
-     2:begin
-         if sizx(2) ne 2 then goto, ERROR1
-         yy=xx(*,1)
-         xx=xx(*,0)
-         lines=0
-       end
-   else: goto, ERROR1
-   endcase
+    case sizx(0) of
+        3:begin
+            if sizx(3) ne 2 then goto, ERROR1
+            yy=xx(*,*,1)
+            xx=xx(*,*,0)
+        end
+        2:begin
+            if sizx(2) ne 2 then goto, ERROR1
+            yy=xx(*,1)
+            xx=xx(*,0)
+            lines=0
+        end
+        else: goto, ERROR1
+    endcase
 endif else begin
-   yy=reform2(y)
-   sizy=size(yy)
-   if sizx(0) ne sizy(0)            then goto, ERROR2
-   if max(abs(sizx-sizy)) ne 0      then goto, ERROR2
-   if sizx(0) ne 2 and sizx(0) ne 1 then goto, ERROR2
-   if sizx(0) eq 1 then lines=0
+    yy=reform2(y)
+    sizy=size(yy)
+    if sizx(0) ne sizy(0)            then goto, ERROR2
+    if max(abs(sizx-sizy)) ne 0      then goto, ERROR2
+    if sizx(0) ne 2 and sizx(0) ne 1 then goto, ERROR2
+    if sizx(0) eq 1 then lines=0
 endelse
 
-if keyword_set(lines) then begin
-   plot, xx, yy, XSTYLE=xstyle, YSTYLE=ystyle, POLAR=polar, /NOERASE, /NODATA
+if not keyword_set(xrange) then xrange = [0,0]
+if not keyword_set(yrange) then yrange = [0,0]
 
-   for ix=0,sizx(1)-1 do begin
-      oplot,xx(ix,*),yy(ix,*),POLAR=polar
-   endfor
-   for iy=0,sizx(2)-1 do begin
-      oplot,xx(*,iy),yy(*,iy),POLAR=polar
-   endfor
+if keyword_set(lines) then begin
+    plot, xx, yy, XSTYLE=xstyle, YSTYLE=ystyle, POLAR=polar, $
+      XRANGE=xrange, YRANGE=yrange, /NOERASE, /NODATA
+
+    if(keyword_set(noorigin))then begin
+        for ix=0,sizx(1)-1 do $
+          for iy=0,sizx(2)-2 do $
+          if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
+             (xx(ix,iy+1) ne 0 or yy(ix,iy+1) ne 0)) then $
+          oplot,[xx(ix,iy),xx(ix,iy+1)],[yy(ix,iy),yy(ix,iy+1)],POLAR=polar
+
+        for iy=0,sizx(2)-1 do $
+          for ix=0,sizx(1)-2 do $
+          if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
+             (xx(ix+1,iy) ne 0 or yy(ix+1,iy) ne 0)) then $
+          oplot,[xx(ix,iy),xx(ix+1,iy)],[yy(ix,iy),yy(ix+1,iy)],POLAR=polar
+
+    endif else begin
+
+        for ix=0,sizx(1)-1 do $
+          oplot,xx(ix,*),yy(ix,*),POLAR=polar
+        for iy=0,sizx(2)-1 do $
+          oplot,xx(*,iy),yy(*,iy),POLAR=polar
+
+    endelse
+
 endif else begin
-   if polar then $
+    if polar then $
       plot, xx, yy, PSYM=3, SYMSIZE=!p.symsize, $
-         XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE, /POLAR  $
-   else $   
+      XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE,$
+      /POLAR $
+    else $
       plot, xx, yy, PSYM=1, SYMSIZE=!p.symsize, $
-         XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE
+      XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE
 endelse
 
 return

@@ -1,10 +1,6 @@
 program test_registry
 
-  use CON_world, &
-       world_init => init, &
-       world_setup => setup, &
-       world_clean => clean
-
+  use CON_world
   use CON_comp_param
   implicit none
   logical :: UseMe

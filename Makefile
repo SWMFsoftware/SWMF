@@ -1,44 +1,44 @@
 #^CMP COPYRIGHT UM
-#
-#	Space Weather Modeling Framework (SWMF) main Makefile
-#
+
+#BOP
+#!ROUTINE: Makefile - Space Weather Modeling Framework (SWMF) main Makefile
+#!DESCRIPTION:
+# This is the main Makefile to (re)compile executables, run the SWMF, 
+# produce documentation, make distribution clean distribution, etc.
+#EOP
 
 SHELL=/bin/sh
-VERSION = 1.1
+
+#BOC
+VERSION = 2.0
 
 #
-# List the default target first
+# The default target is SWMF so it is listed first
 #
-DEFAULT_TARGET = SWMF
-DEFAULT_EXE    = SWMF.exe
-
-default : ${DEFAULT_TARGET}
+default : SWMF
 
 #
-#       Definition of source directories
+#       Definition of OS, component versions and directory structure
 #
 include Makefile.def
 
-#			
-#	Menu of make options
-#
 help:
 	@echo ' '
 	@echo '  You can "make" the following:'
 	@echo ' '
-	@echo "    <default>   ${DEFAULT_TARGET}"
+	@echo '    <default>   SWMF'
 	@echo ' '
 	@echo '    install     (to be used via SetSWMF.pl only)'
 	@echo ' '
 	@echo '    SWMF        (bin/SWMF.exe the main executable for SWMF)'
-	@echo '    PIDL        (bin/PostIDL.exe creates 1 .out file from local .idl files)'
+	@echo '    PIDL        (bin/PostIDL.exe creates .out file from *.idl files)'
 	@echo '    PSPH        (bin/PostSPH.exe creates spherical tec file from sph*.tec files)'
-	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file rom idl files)'
+	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
 	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
 	@echo ' '
 	@echo '    help        (makefile option list)'
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    distclean   (remove all files which are not in distribution)'
+	@echo '    distlean    (remove all files which are not in distribution)'
 	@echo '    dist        (create source distribution tar file)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
@@ -51,18 +51,22 @@ help:
 	@echo '    rundir PLOT=TEC     (run directory with Tecplot postprocessing only)'
 	@echo '    rundir MACHINE=ames (run directory with job scripts for machines at NASA Ames)'
 	@echo ' '
-	@echo "    mpirun      (make ${DEFAULT_TARGET} and mpirun ${DEFAULT_EXE} on 8 PEs)"
-	@echo "    mpirun NP=7 (make ${DEFAULT_TARGET} and mpirun ${DEFAULT_EXE} on 7 PEs)"
-	@echo "    mprun  NP=5 (make ${DEFAULT_TARGET} and mprun  ${DEFAULT_EXE} on 5 PEs)"
-	@echo "    nompirun    (make ${DEFAULT_TARGET} and run it without MPI)"
+	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 8 PEs)'
+	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
+	@echo '    mprun  NP=5 (make SWMF and mprun  SWMF.exe on 5 PEs)'
+	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
 	@#^CMP IF IH BEGIN
 	@echo ' '
-	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS'
-	@echo ' '
+	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS)'
 	@#^CMP END IH
-
+	@#^CMP IF SC BEGIN
+	@echo ' '
+	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
+	@#^CMP END SC
+	@echo ' '
+#EOC
 #
 # Check the variables SWMF_ROOT=`pwd` and OS = `uname`
 #
@@ -72,7 +76,7 @@ ENV_CHECK:
 	  echo; \
 	  echo "SWMF_ROOT='${SWMF_ROOT}' and/or OS='${OS}' are incorrect!";\
 	  echo "Correcting Makefile.def";\
-	  perl -pi ${SCRIPTDIR}/FixMakefileDef.pl Makefile.def; \
+	  perl -pi share/Scripts/FixMakefileDef.pl Makefile.def; \
 	  echo "You may now try the previous make command again ..."; \
 	  exit 1; \
 	fi);
@@ -105,14 +109,17 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 # install for the 1st time
 #
 
-install : ENV_CHECK mkdir
+install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
+	cd share;       make install OS=${OS} COMPILER=${COMPILER} MPIVERSION=${MPIVERSION}
 	cd ${CONDIR};   make install
-	cd share;       make install
 	cd ${GMDIR};    make install    #^CMP IF GM
 	cd ${IEDIR};    make install    #^CMP IF IE
 	cd ${IHDIR};    make install    #^CMP IF IH
 	cd ${IMDIR};    make install    #^CMP IF IM
+	cd ${SCDIR};    make install    #^CMP IF SC
+	cd ${SPDIR};    make install    #^CMP IF SP
+	cd ${RBDIR};    make install    #^CMP IF RB
 	cd ${UADIR};    make install    #^CMP IF UA
 	@echo
 	@echo Installation succeeded
@@ -142,6 +149,13 @@ SWMF:	ENV_CHECK
 
 NOMPI: ENV_CHECK
 	cd ${NOMPIDIR}; make LIB
+#
+# STAND-ALONE EXECUTABLES FOR COMPONENTS
+#
+
+RBM:	ENV_CHECK                               #^CMP IF RB
+	@cd ${RBDIR}; make RBM                  #^CMP IF RB
+	@echo ' '                               #^CMP IF RB
 
 #
 #	Post processing
@@ -181,8 +195,6 @@ CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make clean
-	cd util/TIMING/srcEmpty;make clean
 	cd GM/BATSRUS;		make clean    #^CMP IF GM
 	cd GM/Empty;		make clean    #^CMP IF GM
 	cd IE/Ridley_serial;	make clean    #^CMP IF IE
@@ -194,12 +206,15 @@ clean: ENV_CHECK
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
+	cd RB/Rice;		make clean    #^CMP IF RB
+	cd RB/RiceV5;		make clean    #^CMP IF RB
+	cd RB/Empty;		make clean    #^CMP IF RB
+	cd SP/Kota;             make clean    #^CMP IF SP
+	cd SP/FLAMPA;           make clean    #^CMP IF SP
+	cd SP/Empty;            make clean    #^CMP IF SC
+	cd CON;			make clean
+	cd share;		make clean
+	cd util;		make clean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	cd doc/Tex;             make clean
@@ -211,11 +226,9 @@ clean: ENV_CHECK
 	@echo Clean succeeded
 	@echo
 
-distclean: ENV_CHECK rmdir
+distclean_comp: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make distclean
-	cd util/TIMING/srcEmpty;make distclean
 	cd GM/BATSRUS;		make distclean    #^CMP IF GM
 	cd GM/Empty;		make distclean    #^CMP IF GM
 	cd IE/Ridley_serial;	make distclean    #^CMP IF IE
@@ -227,14 +240,16 @@ distclean: ENV_CHECK rmdir
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
-	cd ${SHAREDIR};		make distclean
-	cd ${CONDIR};		make distclean
+	cd RB/Rice;		make distclean    #^CMP IF RB
+	cd RB/RiceV5;		make distclean    #^CMP IF RB
+	cd RB/Empty;		make distclean    #^CMP IF RB
+	cd SP/FLAMPA;           make distclean    #^CMP IF SP
+	cd SP/Kota;             make distclean    #^CMP IF SP
+	cd SP/Empty;            make distclean    #^CMP IF SP
+	cd SC/BATSRUS;          make distclean    #^CMP IF SC
+	cd SC/Empty;            make distclean    #^CMP IF SC
+	cd CON;			make distclean
+	cd util;		make distclean
 	cd share;               make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -246,15 +261,17 @@ distclean: ENV_CHECK rmdir
 	@echo Distclean succeeded
 	@echo
 
-swmfclean: distclean
-	@echo
-	rm -rf *~ doc/*~ Param/*~ TAGS
-	@				#^CMP IF DOC BEGIN
-	@				#^CMP IF NOT REMOVEDOCTEX BEGIN
-	cd doc/Tex; make clean ${CLEAN1} ${CLEAN2}
-	@				#^CMP END REMOVEDOCTEX
-	@				#^CMP END DOC
-	@echo
+distclean:
+	@(if([ -f IH/BATSRUS/src/Makefile ]); then \
+	echo 'Remove IH/BATSRUS/src'; \
+	cd IH/BATSRUS; make veryclean; \
+	fi)
+	@(if([ -f SC/BATSRUS/src/Makefile ]); then \
+	echo 'Remove SC/BATSRUS/src'; \
+	cd SC/BATSRUS; make veryclean; \
+	fi)
+	rm -f */BATSRUS/src/user_routines.f90
+	make distclean_comp
 
 dist: distclean
 	@echo ' '
@@ -264,20 +281,23 @@ dist: distclean
 	tar -rf tmp.tar  Makefile
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
-	tar -rf tmp.tar  SetSWMF.pl
-	tar -rf tmp.tar  TestParam.pl
 	tar -rf tmp.tar  Configure.options
 	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
-	tar -rf tmp.tar  TestC*	TestS*		#^CMP IF TESTING
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
+	tar -rf tmp.tar  Scripts
+	tar -rf tmp.tar  SetSWMF.pl
 	tar -rf tmp.tar  share
 	tar -rf tmp.tar  util
+	tar -rf tmp.tar  CON
 	tar -rf tmp.tar  GM			#^CMP IF GM
 	tar -rf tmp.tar  IE			#^CMP IF IE
 	tar -rf tmp.tar  IH			#^CMP IF IH
 	tar -rf tmp.tar  IM			#^CMP IF IM
 	tar -rf tmp.tar  UA			#^CMP IF UA
+	tar -rf tmp.tar  RB                     #^CMP IF RB
+	tar -rf tmp.tar  SP                     #^CMP IF SP
+	tar -rf tmp.tar  SC                     #^CMP IF SC
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
@@ -301,6 +321,9 @@ rundir: ENV_CHECK
 	cd ${IHDIR}; make rundir PLOT=${PLOT}    #^CMP IF IH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${UADIR}; make rundir                 #^CMP IF UA
+	cd ${RBDIR}; make rundir                 #^CMP IF RB
+	cd ${SPDIR}; make rundir                 #^CMP IF SP
+	cd ${SCDIR}; make rundir                 #^CMP IF SC
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
@@ -313,47 +336,81 @@ rundir: ENV_CHECK
 #
 NP=8
 
-mpirun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; mpirun -np ${NP} ./${DEFAULT_EXE}
+mpirun: ENV_CHECK SWMF
+	cd run; mpirun -np ${NP} ./SWMF.exe
 
-mprun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; mprun -np ${NP} ./${DEFAULT_EXE}
+mprun: ENV_CHECK SWMF
+	cd run; mprun -np ${NP} ./SWMF.exe
 
-nompirun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; ./${DEFAULT_EXE}
+nompirun: ENV_CHECK SWMF
+	cd run; ./SWMF.exe
 
 ETAGS = etags
 
 tags:	ENV_CHECK
-	-$(ETAGS) */*.[fF]90 */*.[fF] */*/*.[fF]90 */*/*.[fF]
-
-clobber: ENV_CHECK distclean
-	-(@rm -rf run)
-	@echo 'all clean'
+	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
 
 #^CMP IF IH BEGIN
 #
 #	Copy and rename GM/BATSRUS/src into IH/BATSRUS/src
 #
 
-IH/BATSRUS/src:
+IH/BATSRUS/src/Makefile:
 	mkdir -p IH/BATSRUS/src
 	cd GM/BATSRUS/src; cp *.f90 *.f Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 	cp GM/BATSRUS/srcInterface/ModGridDescriptor.f90 IH/BATSRUS/src
-	cp IH/BATSRUS_share/src/IH_wrapper.f90 IH/BATSRUS/src
+	cp GM/BATSRUS/srcInterface/update_lagrangian_grid.f90 IH/BATSRUS/src
+	cp GM/BATSRUS/srcInterface/ModBuffer.f90 IH/BATSRUS/src
+	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/src
 	cd GM/BATSRUS; \
-	cp Makefile.conf Makefile.def PARAM.XML PARAM.pl GridSize.pl \
-	../../IH/BATSRUS/
+		cp Makefile.def PARAM.XML PARAM.pl GridSize.pl \
+		../../IH/BATSRUS/
+	echo '*' > IH/BATSRUS/src/.cvsignore
 
-IHBATSRUS: IH/BATSRUS/src ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+IHBATSRUS: IH/BATSRUS/src/Makefile \
+		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 	cd IH/BATSRUS/src; \
-	${SCRIPTDIR}/Methods.pl IH; \
-	${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
-	perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f; \
-	perl -i -pe 's/libBATSRUS.a/libIH.a/; s/^\#IH_WRAPPER_/IH_WRAPPER_/' \
-		Makefile; \
-	perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90
+		${SCRIPTDIR}/Methods.pl IH; \
+		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
+		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;\
+		mv ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 IH_*.f90 \
+			../srcInterface
+	cd IH/BATSRUS/srcInterface; \
+		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
+		touch Makefile.DEPEND
 
 #^CMP END IH
+#^CMP IF SC BEGIN
+SC/BATSRUS/src/Makefile:
+	cd GM/BATSRUS; \
+		cp -f Makefile.conf ../../SC/BATSRUS; \
+		make COMP=SC DREL=TMP relax_src
+	cd GM/BATSRUS/TMP; \
+		mv Makefile.def GridSize.pl PARAM.XML src ../../../SC/BATSRUS;\
+		mv srcInterface/*.f90 ../../../SC/BATSRUS/src
+	rm -rf GM/BATSRUS/TMP
+	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+		      SC/BATSRUS/src/SC_wrapper.f90
+	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
+		      SC/BATSRUS/src/SC_get_for_sp.f90
+	cd SC/BATSRUS/src/; perl -i -pe \
+	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
+		SC_wrapper.f90 SC_get_for_sp.f90
+	cd SC/BATSRUS/src; rm -f main.f90 stand_alone*.f90
+
+SCBATSRUS: SC/BATSRUS/src/Makefile \
+		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+	cd SC/BATSRUS/src; \
+		${SCRIPTDIR}/Methods.pl SC; \
+		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
+		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f;\
+		mv ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 SC_*.f90 \
+			../srcInterface
+	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
+
+#^CMP END SC
+
 # keep this line

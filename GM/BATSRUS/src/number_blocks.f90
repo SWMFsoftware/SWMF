@@ -7,7 +7,6 @@ subroutine number_soln_blocks(renumber)
   use ModMain, ONLY : nBLK,nBlockALL,lVerbose
   use ModParallel, ONLY : proc_dims
   use ModOctree
-!  use MH_domain_decomposition
   use ModIO, ONLY : iUnitOut, write_prefix
   implicit none
 
@@ -20,7 +19,6 @@ subroutine number_soln_blocks(renumber)
   end do
 
   nBlockALL = 0
-!  MH_DomainDecomposition%nTreeNodes=0
   do k=1,proc_dims(3); do j=1,proc_dims(2); do i=1,proc_dims(1)
      octree % ptr => octree_roots(i, j, k) % ptr
      call renumber_octree_blocks(octree, nBlockALL)
@@ -37,7 +35,6 @@ recursive subroutine renumber_octree_blocks(octree, iBlockALL)
   use ModMain, ONLY : global_block_number
   use ModParallel, ONLY : iBlock_A,iProc_A,iBlockRestartALL_A
   use ModOctree
-!  use MH_domain_decomposition
   implicit none
 
   integer, intent(inout) :: iBlockALL
@@ -47,8 +44,6 @@ recursive subroutine renumber_octree_blocks(octree, iBlockALL)
   !---------------------------------------------------------------------------
 
   if (associated(octree % ptr)) then
-!     MH_DomainDecomposition%nTreeNodes=&
-!          MH_DomainDecomposition%nTreeNodes+1
      if (octree % ptr % used) then
         iBlockALL = iBlockALL +1
         ! Store number from octree for restart filename

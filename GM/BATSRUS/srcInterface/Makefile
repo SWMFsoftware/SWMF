@@ -12,8 +12,15 @@ include Makefile.DEPEND
 OBJ_IH = GM_put_from_ih.o
 #^CMP END IH
 #^CMP IF IM BEGIN
-OBJ_IM = GM_get_for_im.o GM_put_from_im.o
+OBJ1   = ModGmImCoupling.o  #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o #^CFG IF RAYTRACE
+OBJ_IM = $(OBJ1) GM_get_for_im.o GM_put_from_im.o
 #^CMP END IM
+#^CMP IF RB BEGIN
+OBJ2   = ModGmRbCoupling.o  #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o #^CFG IF RAYTRACE
+OBJ_RB = $(OBJ2) GM_get_for_rb.o
+#^CMP END RB
 #^CMP IF IE BEGIN
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
         GM_get_for_ie_swmf.o GM_put_from_ie_swmf.o \
@@ -23,14 +30,16 @@ OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
 
 OBJECTS = \
 	ModGridDescriptor.o\
+	ModBuffer.o\
 	GM_wrapper.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_IE)
+	update_lagrangian_grid.o\
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_RFUTIL)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS} ${OBJ_WRAPPER}
+		${MODULES} ${OBJECTS}
 
 #
 #	Making executables and libraries
@@ -43,7 +52,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-BATSRUS_LIB = ${LIBDIR}/libBATSRUS.a 
+BATSRUS_LIB = ../src/libBATSRUS.a 
 
 ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	cp -f ${BATSRUS_LIB} ${MY_LIB}

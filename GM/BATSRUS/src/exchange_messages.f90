@@ -68,13 +68,13 @@ subroutine exchange_messages
      select case(optimize_message_pass)
      case('max','dir','face','min')
         ! Pass corners
-        call message_pass_dir(1,3,2,.true.,prolong_order,8,&
+        call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
              Sol_VGB=State_VGB,restrictface=prolong_order==1&
              .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
              )
      case('opt')
         ! Do not pass corners
-        call message_pass_dir(1,3,nORDER,.false.,prolong_order,8,&
+        call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
              Sol_VGB=State_VGB,restrictface=prolong_order==1&
              .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
              )
@@ -136,13 +136,13 @@ subroutine time_message_passing
        ' nOrder=',nOrder,' DoOneLayer=',DoOneLayer
 
 !!!
-  call message_pass_dir(1,3,2,.true.,prolong_order,8,&
+  call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
        Sol_VGB=State_VGB,restrictface=prolong_order==1&
        .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
        )
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
-  call message_pass_dir(1,3,2,.true.,prolong_order,8,&
+  call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
        Sol_VGB=State_VGB,restrictface=prolong_order==1&
        .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
        )
@@ -151,13 +151,13 @@ subroutine time_message_passing
        write(*,'(a,f8.5,a)')' dir-1,3,2,T  took',MPI_WTIME()-time_this,' sec'
 
 !!!
-  call message_pass_dir(1,3,nORDER,.false.,prolong_order,8,&
+  call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
        Sol_VGB=State_VGB,restrictface=prolong_order==1&
        .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
        )
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
-  call message_pass_dir(1,3,nORDER,.false.,prolong_order,8,&
+  call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
        Sol_VGB=State_VGB,restrictface=prolong_order==1&
        .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
        )

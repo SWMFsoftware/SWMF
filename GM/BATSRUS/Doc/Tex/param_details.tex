@@ -1258,53 +1258,6 @@ effect.
 \ \ \\
 
 \begin{alltt}
-#IONOSPHERE \hfill {\bf No Restriction}
-T                      UseIonosphere  ! Rest of the parameters read if.true.
-3                      conductance_model
-150.                   f107_flux
-0.5                    StarLightPedConductance
-1.0                    PolarCapPedConductance
-100                    dn_couple_ionosphere
-60.0                   dt_couple_ionosphere
-\end{alltt}
-
-Aaron needs to document this since I really have no idea how it works!
-\ \ \\
-
-\begin{alltt}
-#UAM     \hfill  {\bf No Restriction}
-\end{alltt}
-
-This command is used to couple the MHD code with the TIEGCM code.
-This option is experimental.
-\ \ \\
-
-\begin{alltt}
-#IMM    \hfill {\bf Inoperative}
-\end{alltt}
-
-This command will couple the MHD code with the Inner Magnetosphere
-Model (IMM) when operative.  IMM will be a parallelized, updated
-version of the Rice Convection Model (RCM).
-\ \ \\
-
-\begin{alltt}
-#AMIE   \hfill {\bf Inoperative}
-\end{alltt}
-
-This command will couple the MHD code with the AMIE ionosphere
-code when operative.
-\ \ \\
-
-\begin{alltt}
-#RAM     \hfill {\bf Inoperative}
-\end{alltt}
-
-This command will couple the MHD code with the RAM ring
-current code when operative.
-\ \ \\
-
-\begin{alltt}
 #HELIOSPHERE  \hfill  {\bf Not Updated - Status Unknown}
 \end{alltt}
 

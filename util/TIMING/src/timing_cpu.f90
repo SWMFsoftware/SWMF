@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 function timing_cpu()
-  use ModKind
   implicit none
+  integer, parameter     :: Real8_ = selected_real_kind(12)
   real(Real8_)           :: timing_cpu
   real(Real8_), external :: MPI_WTIME
 

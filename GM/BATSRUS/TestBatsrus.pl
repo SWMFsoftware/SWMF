@@ -166,7 +166,7 @@ if(-f "Makefile"){
     }
     if(not $norun){
 	# Check if executable exists and compile if necessary
-	if($exe ne $exe_default){
+	if($exe ne $exe_default and $exe ne "SWMF.exe"){
 	    die "ERROR: No executable $rundir/$exe was found!\n" 
 		unless -x "$rundir/$exe";
 	}elsif(not -f "bin/$exe" and not -f "src/$exe"){
@@ -441,6 +441,7 @@ For detailed information on usage type
 
 #!QUOTE: \clearpage
 #BOP
+#!QUOTE: \section{GM/BATSRUS: scripts used by BATSRUS and SWMF}
 #!QUOTE: \subsection{Testing}
 #!ROUTINE: TestBatsrus.pl - test Batsrus with a set of parameters
 #!DESCRIPTION:

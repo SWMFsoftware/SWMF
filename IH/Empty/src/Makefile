@@ -4,7 +4,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = -I${LIBRARYDIR}
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.conf
 

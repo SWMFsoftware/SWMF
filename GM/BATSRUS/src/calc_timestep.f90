@@ -81,15 +81,18 @@ end subroutine calc_timestep
 subroutine set_global_timestep
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : time_BLK
-  use ModGeometry, ONLY : true_cell,true_BLK
+  use ModAdvance, ONLY : time_BLK,State_VGB,rho_,Bx_,By_,Bz_,P_
+  use ModAdvance,ONLY:   B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModGeometry, ONLY : true_cell,true_BLK,dx_BLK,XyzStart_BLK
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModImplicit, ONLY: UsePartImplicit, implicitBLK     !^CFG IF IMPLICIT
+  use ModPhysics,ONLY:UnitSI_x,UnitSI_U,UnitSI_t,UnitSI_B,UnitSI_rho,g
   use ModMpi
   implicit none
 
   integer :: iBlock
-  integer :: iError
-  real    :: dtMinPE
+  integer :: iError,lPosition_D(3)
+  real    :: dtMinPE,UAlfvMax
 
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
@@ -119,7 +122,47 @@ subroutine set_global_timestep
         do iBlock=1,nBlock
            if(unusedBLK(iBlock)) CYCLE
            if(dt_BLK(iBlock)==dt)then
-              write(*,*)'dt, me, iBlock=', dt, iProc, iBlock
+              write(*,*)'Time step dt=',dt,'=', dt*UnitSI_t,&
+                   ' s  is comtrolled by block with PE, iBlock=', iProc, iBlock
+              write(*,*)'The coordinates of (1,1,1) cell center are ',&
+                   XyzStart_BLK(:,iBlock)
+              write(*,*)'Block size, dimensionless and physical, are',&
+                   dx_BLK(iBlock), ' , ', dx_BLK(iBlock)*UnitSI_x,' m'
+              UAlfvMax=sqrt(&
+                   maxval(&
+                   ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                    (State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                    (State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                     g*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))/&
+                     State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock),&
+                     MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
+              lPosition_D=maxloc(((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                    (State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0yCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                    (State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)+&
+                     B0zCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
+                     g*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))/&
+                     State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock),&
+                     MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+              write(*,*)'Maximal magnetosonic speed =',UAlfvMax*UnitSI_U,&
+                     ' m/s is reached in the point with coords=',&
+                     x_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock),&
+                     y_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock),&
+                     z_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)
+              write(*,*)'Magnetic field in this point: B0:',&
+                     B0xCell_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     B0yCell_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     B0zCell_BLK(lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     ' T,  B1:',&
+                     State_VGB(Bx_,lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     State_VGB(By_,lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     State_VGB(Bz_,lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_B,&
+                     ' T,  Density=',&
+                     State_VGB(rho_,lPosition_D(1),lPosition_D(2),lPosition_D(3),iBlock)*UnitSI_rho
               EXIT
            end if
         end do

@@ -7,7 +7,7 @@ subroutine calc_corotation_velocities(iter,time_now,Xyz_D,uRot_D)
   !/
   !-------------------------------------------------------------------------
 
-  use CON_physics,       ONLY: get_axes
+  use CON_axes,          ONLY: get_axes
   use ModCompatibility,  ONLY: &
        compatible_rotation => calc_corotation_velocities
   use ModCoordTransform, ONLY: cross_product
