@@ -676,7 +676,7 @@ contains
                    end if
                 end if
              end if
-             call timing_start('interpolation')
+             call timing_start('set_router_interp')
              if( DoInterpolate)then
                 call interpolate(&
                      XyzSource_D,&
@@ -694,7 +694,7 @@ contains
                      nImages,&
                      Weight_I)
              end if
-             call timing_stop('interpolation')
+             call timing_stop('set_router_interp')
 !--------------------------------------------------------------!
 !Lookup
              nImagesPart=0     !At all CPUs
