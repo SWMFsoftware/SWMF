@@ -106,7 +106,7 @@ The default value is "Please describe me!", which is self explanatory.
 !!!!!!!!!!!!!!!!!!!!! TIME AND SESSION CONTROL  !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-The execution of SWMF is done in consequtive sessions. Each session is
+The execution of SWMF is done in consecutive sessions. Each session is
 executed with a set of parameters read from the parameter file.
 After the session is finished, CON reads and distributes the parameters for
 the next session. Parameters from previous sessions are carried over,
@@ -142,7 +142,7 @@ time is not advanced at all, instead the time step or iteration number
 is used to control the frequencies of various actions.
 
 The steady-state mode also allows the components to use various
-accelaration techniques. For example the UofM MHD code (in the GM and IH
+acceleration techniques. For example the UofM MHD code (in the GM and IH
 components) can use local time stepping to accelerate convergence
 to steady state. It is also envisioned that in steady state mode
 the various components will be allowed to use different number
@@ -175,7 +175,7 @@ simulation in Greenwich Mean Time (GMT) or Universal Time (UT).
 This time is stored in the restart files. 
 
 The default values are shown above.
-This is a date and time when both the rotational and the magnetic axes
+This is a date and time when, for the Earth, both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
 </command>
 
@@ -188,9 +188,8 @@ have approximately zero tilt towards the Sun.
 The tSimulation variable contains the simulation time in seconds
 relative to the initial time set by the #STARTTIME command.
 The #TIMESIMULATION command and tSimulation are saved into the restart file, 
-so that the simulatation can continue from the same time when the 
-restart was saved.
-
+so that the simulation can continue from the same time when the 
+restart was saved.  
 The default value is tSimulation=0.
 </command>
 
@@ -203,7 +202,7 @@ The default value is tSimulation=0.
 The nStep variable contains the number of time steps since the
 beginning of the simulation (including all restarts). 
 The #NSTEP command and the nStep variable  are saved into the restart file, 
-so that the simulatation can continue from the same time step when
+so that the simulation can continue from the same time step when
 the restart was saved.
 The default value is nStep=0.
 </command>
@@ -249,7 +248,7 @@ check the CPU time or the existence of the SWMF.STOP file in the
 run directory. If it is set to false, there is no checking.
 If it is set to true, the stop conditions are checked at the
 frequencies given by the DnCheckStop and DtCheckStop variables.
-The DnCheckStop variable determines the frequence in temrs of
+The DnCheckStop variable determines the frequency in terms of
 the time step number nStep, while  DtCheckStop determines the
 frequency in terms of the simulation time tSimulation.
 Negative values for either variable mean that the corresponding condition
@@ -258,7 +257,7 @@ steady-state mode DnCheckStop is the relevant frequency.
 
 The default value is DoCheckStop=.false., because the checks require
 synchronization of the components. The more frequent the checks
-are the less efficient the execution is, on the other had the
+are the less efficient the execution.  On the other hand the
 less frequent the checks are, the less control the user has to stop
 the code at a given time.
 </command>
@@ -273,7 +272,7 @@ If DoCheckStopFile is true (and DoCheckStop is set
 to true in the #CHECKSTOP command) then the code checks if the
 SWMF.STOP file exists in the run directory. This file is deleted at
 the beginning of the run, so the user must explicitly create the file
-with e.g. the "touch SWMF.STOP" UNIX command. 
+with, for example, the "touch SWMF.STOP" UNIX command. 
 If the file is found in the run directory,
 the execution stops in a graceful manner.
 Restart files and plot files are saved as required by the
@@ -337,11 +336,11 @@ The lVerbose variable sets the verbosity of CON.
 If lVerbose=0 the verbose information is minimized.
 If lVerbose=1 some verbose information is printed in CON_main and CON_io
     from processor zero.
-If lVerbose=10, processor zero will produce a line on the stdandard output
+If lVerbose=10, processor zero will produce a line on the standard output
     with the name of the subroutine and the iteration number 
     for all subroutines which call CON_set_do_test.
 If lVerbose=100, all processors and all subroutines which call CON_set_do_test
-    will produce a line on the stdandard output with the 
+    will produce a line on the standard output with the 
     name of the subroutine, the iteration number and the processor number. 
 
 The default value is lVerbose=1.
@@ -408,7 +407,7 @@ The DnShowProgressShort and DnShowProgressLong variables determine
 the frequency of showing short and long progress reports in terms
 of the number of time steps nStep. The short progress report
 consists of a single line which shows the number of time steps,
-simulatiion time and CPU time. The long progress report also shows
+simulation time and CPU time. The long progress report also shows
 a small timing report on the root processor.
 Negative values indicate that no report is requested.
 
@@ -937,7 +936,7 @@ By default the SWMF works with Earth and its real parameters.
 Another planet can be selected with the #PLANET command.
 The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
-These modifier commands cannot preceed the #PLANET command!
+These modifier commands cannot proceed the #PLANET command!
 
 <command name="PLANET" if="$_IsFirstSession">
 	<parameter name="NamePlanet" type="string" input="select">

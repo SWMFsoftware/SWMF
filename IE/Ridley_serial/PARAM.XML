@@ -11,7 +11,7 @@
 T                       UseStrict
 
 If true then stop when parameters are incompatible. If false, try to
-correct parameters and continue. Default is true, ie. strict mode.
+correct parameters and continue. Default is true, i.e. strict mode.
 </command>
 
 <command name="DEBUG">
@@ -43,7 +43,7 @@ Default is iDebugLevel=-1 which is no debug info on any and iDebugProc=0.
 IE/Plots		NameIonoDir
 
 The NameIonoDir variable contains the name of the directory to store
-ouput files. Default value is "IE/ionosphere".
+output files. Default value is "IE/ionosphere".
 
 </command>
 

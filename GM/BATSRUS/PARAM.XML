@@ -44,7 +44,7 @@ of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURAT
 If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
 and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
 
-If UseNewAxes is true, the planet's rotational and magnetix axes are set by the new
+If UseNewAxes is true, the planet's rotational and magnetic axes are set by the new
 algorithms found in\\
 share/Library/src/CON\_axes, the planet data is set and
 stored by share/Library/src/CON\_planet, and magnetic field information and
@@ -52,18 +52,18 @@ mapping is provided by share/Library/src/CON\_planet_field, and the rotational s
 of the planet is calculated using $v_{\phi}=\Omega \times r$.
 
 If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
-are used. Some of these algorithms are inaccurate, some of them contain bugs,
-some of them are inefficient. The algorithms were kept for sake of backwards
+are used. Some of these algorithms are inaccurate, some of them contain bugs and
+some of them are inefficient. The algorithms were kept for the sake of backwards
 compatibility.
 
 The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
 default values can be set here. This is again useful for backwards compatibility,
 since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
 default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
-(consistent with the assumption that the default behaviour is as realistic as possible).
+(consistent with the assumption that the default behavior is as realistic as possible).
 
 The default values depend on how the standalone code was installed
-(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
+(make install STANDALONE=???). For STANDALONE=gm and STANDALONE=ih
 all the logicals have true default values (consistent with SWMF), 
 for STANDALONE=old and STANDALONE=oldtest the default values are false 
 (consistent with BATSRUS v7.72 and earlier).
@@ -103,7 +103,7 @@ for which the parameter file is written. The #DESCRIPTION command and
 the StringDescription string are saved into the restart file,
 which helps in identifying the restart files.
 
-The default value is "Please describe me!", which is self explanatory.
+The default value is ``Please describe me!", which is self explanatory.
 </command>
 
 <command name="ECHO" if="$_IsStandAlone">
@@ -152,7 +152,7 @@ time is not advanced at all, instead the time step or iteration number
 is used to control the frequencies of various actions.
 
 The steady-state mode allows BATSRUS to use local time stepping
-to accelarate the convergence towards steady state.
+to accelerate the convergence towards steady state.
 
 The default value depends on how the stand alone code was installed.
 See the description of the NEWPARAM command.
@@ -160,13 +160,13 @@ See the description of the NEWPARAM command.
 
 <command name="BEGIN_COMP" multiple="T" if="$_IsStandAlone">
 
-This command is allowed in stand alone mode only for sake of the 
+This command is allowed in stand alone mode only for the sake of the 
 test suite, which contains these commands when the framework is tested.
 </command>
 
 <command name="END_COMP" multiple="T" if="$_IsStandAlone">
 
-This command is allowed in stand alone mode only for sake of the 
+This command is allowed in stand alone mode only for the sake of the 
 test suite, which contains these commands when the framework is tested.
 </command>
 
@@ -212,7 +212,7 @@ By default Earth is assumed with its real parameters.
 Another planet can be selected with the #PLANET command.
 The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
-These modifier commands cannot preceed the #PLANET command!
+These modified commands cannot precede the #PLANET command!
 
 <command name="PLANET" if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="NamePlanet" type="string" input="select">
@@ -257,11 +257,11 @@ with arbitrary capitalization. In case the name of the planet
 is not recognized, the following variables are read:
 RadiusPlanet is the radius of the planet,
 MassPlanet is the mass of the planet, 
-OmegaPlanet is the angular speed relative to an inertial frame,
+OmegaPlanet is the angular speed relative to an inertial frame, and
 TiltRotation is the tilt of the rotation axis relative to ecliptic North,
 TypeBField, which can be "NONE" or "DIPOLE". 
 TypeBField="NONE" means that the planet does not have magnetic field. 
-It TypeBField is set to "DIPOLE" than the following variables are read:
+If TypeBField is set to "DIPOLE" then the following variables are read:
 MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
 of the north magnetic pole in corotating planetocentric coordinates.
 Finally DipoleStrength is the equatorial strength of the magnetic dipole
@@ -377,7 +377,7 @@ is continuously followed.
 
 The #IDEALAXES command has no parameters. It sets both the rotational
 and magnetic axes parallel with the ecliptic North direction. In fact
-it is identical with
+it is identical with the commands:
 
 #ROTATIONAXIS
 T               IsRotAxisPrimary
@@ -541,7 +541,7 @@ read_inputs
 #TESTVAR
 1                       iVarTest
 
-! Index of variable to be tested. Default is rho_="1", ie. density.
+! Index of variable to be tested. Default is rho_="1", i.e. density.
 </command>
 
 <command name="TESTDIM">
@@ -563,7 +563,7 @@ read_inputs
 T                       UseStrict
 
 ! If true then stop when parameters are incompatible. If false, try to
-! correct parameters and continue. Default is true, ie. strict mode
+! correct parameters and continue. Default is true, i.e. strict mode
 </command>
 
 <command name="VERBOSE">
@@ -637,9 +637,9 @@ MHD			NameEquation
 
 ! Define the number of bytes in a real number. If it does not agree
 ! with the value determined by the code, BATSRUS stops with an error.
-! This is a check, the internal value is calculated in parallel_setup.
-! Used in latest restart header files to check binary compatibility.
-! May be given in PARAM.in to enforce a certain precision.
+! This is used in latest restart header files to check binary 
+! compatibility between the restart file and the compiled code
+! The command may also be given in PARAM.in to enforce a certain precision.
 </command>
 
 <command name="CHECKGRIDSIZE" if="$_IsFirstSession">
@@ -856,9 +856,9 @@ T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
  64.                    zMax
 
 ! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
-! number of blocks of the base grid, ie. the roots of the octree. 
+! number of blocks of the base grid, i.e. the roots of the octree. 
 ! By varying these parameters, one can setup a grid which is elongated
-! in some direction. The xMin ... zMax parameters define the physical
+! in some direction. The xMin, ..., zMax parameters define the physical
 ! size of the grid.
 !
 ! There is no default value, the grid size must always be given.
@@ -1020,6 +1020,7 @@ F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
 ! of boundary being between East_ and MaxBoundary
 </command>
 </commandgroup>
+
 <commandgroup name="INITIAL TIME">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1134,7 +1135,7 @@ T                       UseDtFixed
 <!-- ^CFG IF IMPLICIT BEGIN -->
 ! The real application is, however, for implicit and partially
 ! implicit/local schemes. The time step is set to DtFixedDim unless the
-! update checking decides to reduce the time step for sake of robustness.
+! update checking decides to reduce the time step for the sake of robustness.
 <!-- ^CFG END IMPLICIT -->
 </command>
 
@@ -1260,7 +1261,7 @@ T               UseNewton
 F               UseNewMatrix  (only read if UseNewton is true)
 10              MaxIterNewton (only read if UseNewton is true)
 
-! Default is UseConservativeImplicit=F and UseNewton=F, ie. 
+! Default is UseConservativeImplicit=F and UseNewton=F, i.e. 
 ! no conservative fix is used and only one "Newton" iteration is done.
 ! UseNewMatrix decides whether the Jacobian should be recalculated
 ! for every Newton iteration. MaxIterNewton is the maximum number
@@ -1279,7 +1280,7 @@ prec            TypeJacobian (prec, free)
 1.E-12          JacobianEps
 
 ! The Jacobian matrix is always calculated with a matrix free approach,
-! however it can be preconditioned  ('prec'), or not ('free')
+! however it can be preconditioned  ('prec'), or not ('free').  The
 ! Default value is TypeJacobian='prec'.
 ! JacobianEps contains the machine round off error for numerical derivatives.
 ! The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
@@ -1529,8 +1530,7 @@ Default value is "GM/IO2".
 								default="-1" />
 		<parameter name="NameLogVars" type="string" length="100"
 			if="$TypeLogVar =~ /var/i" />
-		<parameter name="StringLogRadii" type="strings" 
-			min="1" max="10" length="100"
+		<parameter name="StringLogRadii" type="strings" min="1" max="10" length="100"
 			if="($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)">
 			<part name="LogRadii" type="real" min="$rBody" 
 								multiple="T"/>
@@ -1553,10 +1553,10 @@ rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 ! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).
 ! The StringLog can contain two groups of information in arbitrary order.
 ! The first is LogVar which is a single 3 character string that indicates
-! the type of variables that are to be writen.  The second group indicates
+! the type of variables that are to be written.  The second group indicates
 ! the type of time/iteration output format to use.  This second group is
 ! not required and defaults to something standard for each logvar case.
-! Any of the identifiers for the timetype can be includec in arbitrary order.
+! Any of the identifiers for the timetype can be included in arbitrary order.
 !
 ! logvar  = 'mhd', 'raw', 'flx' or 'var' - unitless output
 ! logvar  = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
@@ -1568,7 +1568,7 @@ rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 !
 ! The log_var string defines the variables to print in the log file
 ! It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capatilization of the log_var
+! dimensional or non-dimensional form by the capitalization of the log_var
 ! string.
 !
 ! ALL CAPS  - dimensional
@@ -1688,7 +1688,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 !
 ! The 'satellitevar' string defines the variables to print in the satellite
 ! output file.  It also controls whether or not the variables will come out in
-! dimensional or non-dimensional form by the capatilization of the
+! dimensional or non-dimensional form by the capitalization of the
 ! satellitevars string: ALL CAPS means dimensional, all lower means 
 ! dimensionless. 
 !
@@ -1843,8 +1843,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 				<parameter name="IsParallel" type="logical"/>
 			</for>
 		</if>
-		<parameter name="DxSavePlot" type="real" min="-1.0" 
-			default="-1.0"
+		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
@@ -2081,7 +2080,7 @@ default			TypeRefineInit
 ! 'none'		- Refine no blocks
 ! 'all' 		- Refine all blocks
 ! '3Dbodyfocus'		- Refinement focusing on body
-! 'spherefocus'		- Refinement focusing on the orgin, does not require 
+! 'spherefocus'		- Refinement focusing on the origin, does not require 
 !                           a body
 ! 'points'      	- Refine around given points
 ! 'magnetosphere'	- Refine for generic magnetosphere
@@ -2295,7 +2294,7 @@ F			DoFixBodyLevel
 !                       blocks are not allowed to be coarsened to a size
 !                       larger than their current one.
 ! MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
-!                       MaxBlockLevel is uneffected by AMR (cannot be coarsened
+!                       MaxBlockLevel is unaffected by AMR (cannot be coarsened
 !                       or refined).
 ! MaxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
 !                       blocks are not allowed to be refined to a size
@@ -2362,7 +2361,7 @@ T			DoAutoRefine   ! read if DnRefine is positive
 ! When DoAutoRefine is true, the grid is refined or coarsened 
 ! based on the criteria given in the #AMRCRITERIA command.
 ! The number of blocks to be refined or coarsened are determined by
-! the PercentRefine and PercentCoarsen parameters. These per centages
+! the PercentRefine and PercentCoarsen parameters. These percentages
 ! are approximate only, because the constraints of the block adaptive
 ! grid may result in more or fewer blocks than prescribed.
 ! The total number of blocks will not exceed the smaller of the 
@@ -2370,7 +2369,7 @@ T			DoAutoRefine   ! read if DnRefine is positive
 ! the PE-s (which is determined by the number of PE-s and 
 ! the MaxBlocks parameter in ModSize.f90).
 ! 
-! Default for DnRefine is -1, ie. no run time refinement.
+! Default for DnRefine is -1, i.e. no run time refinement.
 </command>
 
 <command name="AMRCRITERIA">
@@ -2901,11 +2900,11 @@ potentially slower than the other algorithm.
 In the accurate tracing algorithms, when the ray exits the domain that belongs 
 to the PE, its information is sent to the other PE where the ray continues. 
 The information is buffered for sake of efficiency and to synchronize
-communitacation. The frequency of the information exchanges 
+communication. The frequency of the information exchanges 
 (in terms of CPU seconds) is given by the DtExchangeRay parameter. 
 This is an optimization parameter for speed. Very small values of DtExchangeRay
 result in many exchanges with few rays, while very large values result
-in infrequent exchages thus some PE-s may become idle (no more work to do).
+in infrequent exchanges thus some PE-s may become idle (no more work to do).
 The optimal value is problem dependent. A typically acceptable value is 
 DtExchangeRay = 0.1 seconds (default).
 
@@ -2939,7 +2938,7 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
 !
 ! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
-! phyical time:
+! physical time:
 !
 ! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
 !
@@ -3069,7 +3068,7 @@ IMF.dat                 NameUpstreamFile
 ! boundary conditions. Parameter TypeBcEast should be set to 'vary' for
 ! the time dependent boundary condition.
 !
-! If the #SOLARWIND command is not provided than the first time read from
+! If the #SOLARWIND command is not provided then the first time read from
 ! the upstream input file will set the normalization of all variables
 ! in the GM component. Consequently either the #SOLARWIND command or
 ! the #UPSTREAM_INPUT_FILE command with UseUpstreamInputFile=.true.
@@ -3287,7 +3286,7 @@ T			UseBody2   ! Rest of the parameters read if .true.
 5.0			RhoDimBody2 (/ccm) density for fixed BC for rho_BLK
 25000.0			TDimBody2 (K) temperature for fixed BC for P_BLK
 
-! Default for UseBody2=.false.   -   All others no defaults!
+! Default for UseBody2=.false.   -   All others have no defaults!
 ! This command should appear before the #INNERBOUNDARY command when using
 ! a second body.
 </command>
@@ -3309,7 +3308,7 @@ T			UseBody2   ! Rest of the parameters read if .true.
 !
 ! Default is no dipole field.
 
-!for now the dipole of the second body can only be aligned with the z-axis
+! For now the dipole of the second body can only be aligned with the z-axis
 </command>
 <!-- ^CFG END SECONDBODY -->
 </commandgroup>
@@ -3368,7 +3367,7 @@ hydrostatic equilibrium in the presence of gravity.
 The GL solution is described in the Astrophysical
 Journal, volume 493, page 460.
 This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric speromak flux
+stretching operation to axisymmetric  flux
 rope.  The flux rope is of radius Cme_R0 and is
 placed Cme_R1 from the origin (solar center).  The
 stretching transformation draws space radially inward
@@ -3390,7 +3389,7 @@ the flux rope being out of equilibrium, owing to a reduction
 in filament mass (set with ModulationRho) and from pressure
 of the corona being unable to balance the magnetic pressure
 of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the conona.  Eruption energy
+rope being bodily expelled from the corona.  Eruption energy
 increases with flux rope size, field strength, stretching
 deformation and the buoyancy of the flux rope.
 </command>
@@ -3452,7 +3451,7 @@ F			DoSendMHD
 ! If DoSendMHD is false then the values read from the IMF file are sent,
 ! so there is no real coupling. Mostly used for testing the framework.
 !
-! Default value is true, ie. real coupling.
+! Default value is true, i.e. real coupling.
 </command>
 
 <command name="CME" if="$_IsFirstSession and $_NameComp ne 'GM'" >
@@ -3487,7 +3486,7 @@ hydrostatic equilibrium in the presence of gravity.
 The GL solution is described in the Astrophysical
 Journal, volume 493, page 460.
 This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric speromak flux
+stretching operation to axisymmetric spheromak flux
 rope.  The flux rope is of radius Cme_R0 and is
 placed Cme_R1 from the origin (solar center).  The
 stretching transformation draws space radially inward
@@ -3509,7 +3508,7 @@ the flux rope being out of equilibrium, owing to a reduction
 in filament mass (set with ModulationRho) and from pressure
 of the corona being unable to balance the magnetic pressure
 of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the conona.  Eruption energy
+rope being bodily expelled from the corona.  Eruption energy
 increases with flux rope size, field strength, stretching
 deformation and the buoyancy of the flux rope.
 Default values are shown above for the GL flux rope CME model.

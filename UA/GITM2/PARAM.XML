@@ -340,8 +340,8 @@ iDebugLevel} variable controls the amount of information output, with
 written, and 10 being a torrent of so much information you can't read
 it all.  You can also choose which CPU is outputting the information -
 remember that MPI counts from 0 (not from 1, as most people do).  The
-{\tt DtReport} variabile says how often the time-report is given.  The
-{\tt UseBarriers} variabile is supposed to stop the code fairly often
+{\tt DtReport} variable says how often the time-report is given.  The
+{\tt UseBarriers} variable is supposed to stop the code fairly often
 to make sure all of the processors are on the same page, but there is
 a bug in this is the {\tt \#SATELLITES} are used (don't ask).
 
@@ -353,8 +353,9 @@ a bug in this is the {\tt \#SATELLITES} are used (don't ask).
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-I have tried to make the code quite versatile.  This means that most
-fundemental parameters have flags so you can turn them off and on.
+The GITM code development has been aimed toward making the code quite versatile.  
+This means that most
+fundamental parameters have flags so you can turn them off and on.
 Most of the time, these should be left on, since all of the being {\tt
 T} means that you are running the ``physically correct'' condition.
 But, if you want to turn something off to experiment with the physics,
@@ -396,7 +397,7 @@ T		 	UseConduction
 T
 
 This only applies to the neutral densities, and includes both Eddy and
-Molecular diffusion.  It should be seperated shortly.
+Molecular diffusion.  It should be separated shortly.
 
 </command>
 
@@ -450,7 +451,7 @@ T		UseIonChemistry
 T		UseIonAdvection	
 T		UseNeutralChemistry
 
-You can turn off the chemisty and the ion advection with these terms.
+You can turn off the chemistry and the ion advection with these terms.
 
 
 </command>

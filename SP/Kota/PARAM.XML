@@ -118,7 +118,7 @@ F                       DoReadMhData
 When .true. the SP component is expected to work as a single component or 
 at least it is assumed not to be coupled with an MHD model. 
 The MHD data are read from the flat files in this case, 
-rather then received thrhough the couplers.
+rather than received through the couplers.
 Default value is false. 
 </command>
 
@@ -147,9 +147,9 @@ Default value is 1.
 #NSMOOTH
 0                      nSmooth
 
-Usually the MHD data from the coupler contains some spurious occilation.
+Usually the MHD data from the coupler contains some spurious oscillation.
 If nSmooth &gt; 0, the SP code repeats some smoothing procedure nSmooth times 
-for the data data obtained from the coupler.
+for the data obtained from the coupler.
 Default value is 0. 
 </command>
 </commandgroup>
