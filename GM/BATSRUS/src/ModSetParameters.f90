@@ -681,30 +681,14 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'SOL')>0
               plot_vars(ifile)='wl pb' ! white light
               plot_pars(ifile)='mu'
-           elseif(index(plot_string,'MIN')>0.or.index(plot_string,'min')>0)then
-              plot_var='min'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='minimum'
-              plot_pars(ifile)=' '
-           elseif(index(plot_string,'MAX')>0.or.index(plot_string,'max')>0)then
-              plot_var='max'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='maximum'
-              plot_pars(ifile)=' '
-           elseif(index(plot_string,'UAM')>0.or. &        !^CFG IF TIEGCM BEGIN
-                index(plot_string,'uam')>0)then
-              plot_var='uam'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='uam'
-              plot_pars(ifile)=' '                        !^CFG END TIEGCM
-           elseif(index(plot_string,'AUR')>0.or.index(plot_string,'aur')>0)then
-              plot_var='aur'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)='aur'
-              plot_pars(ifile)=' '
+           elseif(index(plot_string,'pos')>0.or.index(plot_string,'POS')>0)then
+              plot_var='pos'
+              plot_dimensional(ifile) = index(plot_string,'POS')>0
+              if(plot_area /= 'lin')call stop_mpi(&
+                   'Variable "pos" can only be used with area "lin" !')
            else
-              call stop_mpi(&
-                   'Variable definition missing from plot_string='//plot_string)
+              call stop_mpi('Variable definition missing from plot_string=' &
+                   //plot_string)
            end if
 
            plot_type(ifile)=plot_area//'_'//plot_var
