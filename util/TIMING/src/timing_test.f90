@@ -2,7 +2,6 @@
 !=============================================================================
 program timing_test
 
-  use ModKind
   use ModMpi
   implicit none
 
@@ -12,6 +11,7 @@ program timing_test
   character (len=40) :: timing_version_name
   real   :: timing_version_number
 
+  integer, parameter :: Real8_= selected_real_kind(12)
   real(Real8_), external:: timing_func_d
 
   !------------------------------------------------------------------------

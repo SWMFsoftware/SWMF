@@ -1,0 +1,212 @@
+#ECHO
+T
+
+#DESCRIPTION
+Input file for creating a steady state solar corona
+
+#TIMEACCURATE
+F
+
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
+
+#RESTARTFILE
+RESTART.SC
+
+#SAVERESTART
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+! Make it easier to continue the run
+#RESTARTOUTDIR
+SC/restartIN
+
+#PROBLEMTYPE
+3                       iProblemType
+
+#USER_FLAGS
+T			UseUserInnerBCs
+F			UseUserSource
+T			UseUserPerturbation
+F			UseUserOuterBcs
+F			UseUserICs
+T			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+T			UseUserB0
+F			UseUserSetPhysConst
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#USEUSERHEATING
+F			UseUserHeating
+
+#PFSSM
+T			UseUserB0
+1.00E+00		Ro_PFSSM
+2.50E+00		Rs_PFSSM
+SC/CR1935_WSO.dat       File_PFSSM
+12			iHead_PFSSM
+-1.00E+00		dt_UpdateB0
+
+#AWHEAT
+1.50E+00		Bnot	[G]
+1.6304543E+00		Tnot
+9			DegFrm1
+2.10E+00		TemRatio
+F     			UseStaticICs
+F                       UseZeroOmega
+
+#USERINPUTEND ----------------------------
+
+#HELIOSPHERE
+1.80E+06		tSun    [K]      1.0E6 
+5.00E+13		NdSun [n/m-3]
+10.00			qSun
+1.76			tHeat
+1.00			rHeat
+4.50			SigmaHeat
+F			UseFluxRope
+
+#HELIOROTATION
+T			UseInertial, if false then corotating frame
+F			UseCorotation
+
+#GAMMA
+1.50000E+00		g
+
+#GRID
+1			nProcX
+1			nProcY
+1			nProcZ
+-24.0			xMin
+ 24.0			xMax 
+-24.0			yMin
+ 24.0			yMax
+-24.0			zMin
+ 24.0			zMax
+
+#FACEOUTERBC
+6                       MaxBoundary
+F                       DoFixOuterBoundary
+
+#OUTERBOUNDARY
+heliofloat		TypeBcOuter_E(East_)
+heliofloat		TypeBcOuter_E(West_)
+heliofloat		TypeBcOuter_E(South_)
+heliofloat		TypeBcOuter_E(North_)
+heliofloat		TypeBcOuter_E(Bot_)
+heliofloat		TypeBcOuter_E(Top_)
+
+#AMRINIT
+helio_init		TypeAmrInit
+4			nRefineLevelInit
+
+#SCHEME
+1			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod			TypeLimiter
+
+#TIMESTEPPING
+1                       nStage
+0.80                    CflExpl
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+VAR                     StringLog
+10                      DnSaveLogfile
+-1.0			DtSaveLogfile
+em_r ek_r et_r
+4.0  10.0               rLog
+
+#SAVEPLOT
+3			nPlotFiles
+x=0 MHD tec		StringPlot
+10000                   DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+z=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+
+#END_COMP SC ----------------------------------------------------------------
+
+#STOP
+50
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC -------------------------------------------------------------
+
+#AMR
+100
+F
+
+#END_COMP SC ---------------------------------------------------------------
+
+#STOP
+450
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC -------------------------------------------------------------
+
+#AMR
+2000
+F
+
+#END_COMP SC ---------------------------------------------------------------
+
+#STOP
+3999
+-1.0
+
+#RUN ########################################################################
+
+#BEGIN_COMP SC -------------------------------------------------------------
+
+#AMR
+-1
+
+#SCHEME
+2                       nOrder (1 or 2)
+Sokolov                 TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod                  TypeLimiter
+
+#END_COMP SC ---------------------------------------------------------------
+
+#STOP
+7000			MaxIteration
+-1.0			TimeSimulationMax
+
+#RUN #######################################################################
+
+#BEGIN_COMP SC -------------------------------------------------------------
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+#END_COMP SC -------------------------------------------------------------
+
+#STOP
+10000			MaxIteration
+-1.0			TimeSimulationMax
+
+#END

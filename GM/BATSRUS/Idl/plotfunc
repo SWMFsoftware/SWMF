@@ -91,7 +91,7 @@
       askstr,'dotransform (y/n)         ',dotransform,doask
       if dotransform eq 'y' then case transform of
       'regular': regulargrid,x_old,nxreg_old,xreglimits_old,$
-                 x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri,x_limited
+                 x,xreg,nxreg,xreglimits,w,wreg,nw,wregpad,triangles,symmtri
       'polar':   begin
                     polargrid,nvector,vectors,x,w,xreg,wreg
                     variables(0:1)=['r','phi']
@@ -144,7 +144,7 @@
      velvector,0,velseed,velpos,velx,vely,veltri,$
      cut,cut0,plotdim,$
      nfunc,multix,multiy,fixaspect,plotix,plotiy,$
-     funcs,funcs1,funcs2,fmin,fmax,f,x_limited
+     funcs,funcs1,funcs2,fmin,fmax,f
 
    putbottom,1,1,0,0,bottomline,nx,it,time
    putheader,1,1,0,0,headerline,headline,nx

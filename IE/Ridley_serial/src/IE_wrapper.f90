@@ -292,7 +292,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 
   use ModProcIE
   use ModIonosphere
-  use IE_ModMain, ONLY: IsNewInput
 
   implicit none
   character (len=*),parameter :: NameSub='IE_get_for_gm'
@@ -561,7 +560,7 @@ subroutine IE_put_from_gm_swmf(&
      iBlock,&
      iPoint,&
      ColatLim)
-  use CON_planet,ONLY:RadiusPlanet,IonosphereHeight
+  use CON_physics,ONLY:get_planet
   use ModIonosphere
   use IE_ModMain, ONLY: IsNewInput
   use CON_world
@@ -570,6 +569,7 @@ subroutine IE_put_from_gm_swmf(&
   real,dimension(nVar),intent(in)::State_V
   real,intent(inout)::ColatLim
   real,save::Radius
+  real :: RadiusPlanet,IonosphereHeight
   logical,save::DoInitialize=.true.
 
   !  logical :: DoTest,DoTestMe
@@ -579,6 +579,9 @@ subroutine IE_put_from_gm_swmf(&
   !  if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
 
   if(DoInitialize)then
+     call get_planet(                            &
+          RadiusPlanetOut     = RadiusPlanet,    &
+          IonosphereHeightOut = IonosphereHeight)
      Radius=cOne+IonosphereHeight/RadiusPlanet
      DoInitialize=.false.
   end if
@@ -900,7 +903,7 @@ subroutine IE_init_session(iSession, tSimulation)
 
   ! Initialize the Ionosphere Electrostatic (IE) module for session iSession
 
-  use CON_physics, ONLY: get_physics, get_axes
+  use CON_physics, ONLY: get_time, get_planet, get_axes
   use ModIonosphere, ONLY: IONO_Bdp
   use IE_ModMain
   implicit none
@@ -926,10 +929,9 @@ subroutine IE_init_session(iSession, tSimulation)
      IsUninitialized = .false.
   end if
 
-  call get_physics(DoTimeAccurateOut = time_accurate,&
-       DipoleStrengthOut = IONO_Bdp)
-
-  call get_axes(tSimulation,MagAxisTiltGsmOut=ThetaTilt)
+  call get_time(  DoTimeAccurateOut = time_accurate)
+  call get_planet(DipoleStrengthOut = IONO_Bdp)
+  call get_axes(tSimulation, MagAxisTiltGsmOut = ThetaTilt)
 
   IONO_Bdp = IONO_Bdp*1.0e9 ! Tesla -> nT
 
@@ -943,8 +945,9 @@ subroutine IE_finalize(tSimulation)
   use ModProcIE
   use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve
   use IE_ModIo, ONLY: nFile
-  use CON_physics, ONLY: get_physics, time_real_to_int
-  use ModTimeType
+  use CON_physics, ONLY: get_time
+  use ModTimeConvert, ONLY: time_real_to_int
+  use ModKind, ONLY: Real8_
   implicit none
 
   !INPUT PARAMETERS:
@@ -953,11 +956,10 @@ subroutine IE_finalize(tSimulation)
   character(len=*), parameter :: NameSub='IE_finalize'
 
   integer :: iFile
-  type(TimeType) :: TimeCurrent
+  real(Real8_) :: tCurrent
   !---------------------------------------------------------------------------
-  call get_physics(TimeCurrentOut = TimeCurrent)
-
-  call time_real_to_int(TimeCurrent % Time, Time_Array)
+  call get_time(tCurrentOut = tCurrent)
+  call time_real_to_int(tCurrent, Time_Array)
   time_simulation = tSimulation
 
   if(nSolve>0)then
@@ -997,7 +999,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   use ModProcIE
   use IE_ModMain
-  use CON_physics, ONLY: get_physics, get_axes, time_real_to_int
+  use CON_physics, ONLY: get_time, get_axes, time_real_to_int
   use ModKind
   implicit none
 
@@ -1015,7 +1017,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   logical :: DoTest,DoTestMe
   !----------------------------------------------------------------------------
 
-  call CON_set_do_Test(NameSub,DoTest,DoTestMe)
+  call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
   if(DoTest)write(*,*)NameSub,': iProc,tSimulation,tSimulationLimit=',&
        iProc,tSimulation,tSimulationLimit
@@ -1023,8 +1025,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   ! Store the current time
   time_simulation = tSimulation
 
-  ! Since IE has no time advance, it may advance to the next coupling time
-  tSimulation = tSimulationLimit
+  ! Since IE is not a time dependent component, it may advance to the 
+  ! next coupling time in a time accurate run
+  if(time_accurate)tSimulation = tSimulationLimit
 
   if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
 
@@ -1032,19 +1035,20 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   if(.not.IsNewInput) RETURN
 
   ! Check if we can have a reasonable magnetic field already
-  call get_physics(nStepOut=nStep)
+  call get_time(nStepOut=nStep)
 
   if(DoTest)write(*,*)NameSub,': iProc,nStep = ',iProc,nStep
-
-  if(nStep < 1) RETURN
 
   ! After the solve this input can be considered old
   IsNewInput = .false.
 
+!  ! No need to solve for the 1st time step (input cannot be reasonable)
+!  if(nStep <= 1) RETURN
+
   ! Obtain the position of the magnetix axis
   call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)
 
-  call get_physics(tStartOut=tStart)
+  call get_time(tStartOut=tStart)
   call time_real_to_int(tStart + time_simulation, Time_Array)
 
   nSolve = nSolve + 1

@@ -1,0 +1,10 @@
+*.mod
+*.protex
+*.pdf
+*.ps
+*.dvi
+*.aux
+*.log
+*.toc
+*.exe
+PROTEX.tex

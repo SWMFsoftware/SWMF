@@ -10,6 +10,8 @@ sub eval_comp{eval("package COMP; $_[0]")}
 # Read command line options
 my $Debug       = $D; undef $D;
 my $Help        = $h; undef $h;
+my $HelpXmlParam= $H; undef $H;
+my $HelpXml     = $X; undef $X;
 my $Interactive = $i; undef $i;
 my $Verbose     = $v; undef $v; 
 my $ReadTree    = $r; undef $r;
@@ -20,11 +22,12 @@ my $Components  = $C; undef $C;
 my $Precision   = $p; undef $p;
 my $GridSize    = $g; undef $g;
 my $nProc       = $n; undef $n;
+my $StandAlone  = $S; undef $S;
 
 use strict;
 
 # Pattern to match component ID-s
-my $ValidComp = 'IH|GM|IE|IM|UA';
+my $ValidComp = 'SC|IH|SP|GM|IM|RB|IE|UA';
 
 # Error string
 my $ERROR = 'CheckParam_ERROR:';
@@ -35,6 +38,12 @@ my $InputFileDefault = 'run/PARAM.in';
 
 # Print help message and exit if -h switch was used
 &print_help if $Help;
+
+# Print help for XML description of parameters and exit if -H switch was used
+&print_help_xml_param if $HelpXmlParam;
+
+# Print help about XML and exit if -X switch was used
+&print_help_xml if $HelpXml;
 
 # Reset filenames to defaults if needed
 $XmlFile  = $XmlFileDefault unless $XmlFile;
@@ -112,6 +121,7 @@ my $paramName;          # name of the current parameter
 my $paramType;          # type of the current parameter
 my $paramValue;         # value of the current parameter
 my $InsideComp;         # the component for which parameters are read
+my $UserInput;          # set to true between #USERINPUTBEGIN and #USERINPUTEND
 
 # Set the file handle for the top level file (or STDIN for interactive mode)
 if($Interactive){
@@ -206,7 +216,7 @@ sub check_arguments{
     }
 
     if(length($nProc) and not $nProc =~ /^[1-9]\d*$/){
-	die "$ERROR -n=$nProc is not a pozitive integer\n";
+	die "$ERROR -n=$nProc is not a positive integer\n";
     }
 
     if($Interactive and $ARGV[0]){
@@ -219,6 +229,9 @@ sub check_arguments{
 sub init_comp{
 
     # Set variables in the COMP package for use in the XML files
+
+    # Set COMP::_IsStandAlone according to the -S switch
+    $COMP::_IsStandAlone = $StandAlone;
 
     # Set COMP::_IsFirstSession to true
     $COMP::_IsFirstSession = 1;
@@ -446,8 +459,15 @@ sub read_line{
     }
     use strict;
 
+    if($UserInput and /^\#(BEGIN_COMP|END_COMP|RUN|USERINPUTBEGIN)\b/){
+	print "Error at line $nLine in file $InputFile for ".
+	    "command $_".
+	    "\tthis command cannot occur after #USERINPUTBEGIN at line $UserInput\n";
+	    $UserInput = 0;
+    }
+
     # Check for BEGIN_COMP and END_COMP commands
-    if(/^\#BEGIN_COMP\b/){
+    if(/^\#BEGIN_COMP\b/ and not $StandAlone){
 	if($InsideComp){
 	    print "Error at line $nLine in file $InputFile for ".
 		"command $_".
@@ -476,7 +496,7 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^\#END_COMP/){
+    }elsif(/^\#END_COMP/ and not $StandAlone){
 	# Extract name of the component from #END_COMP ID
 	my $Comp;
 	($Comp) = /END_COMP ([A-Z][A-Z])/ or
@@ -495,23 +515,31 @@ sub read_line{
 	    # Return an empty line
 	    $_="\n";
 	}
-    }elsif(/^#RUN/){ # Check if a new session has started
-	   # Check if the required commands are defined and
-	   # if the parameters are correct for the session
+    }elsif(/^\#RUN/){ # Check if a new session has started
+	# Check if the required commands are defined and
+	# if the parameters are correct for the session
 
-	   print "Session $nSession is complete\n" if $Debug;
+	print "Session $nSession is complete\n" if $Debug;
 
-	   &check_session;
-	   undef %definedSessionLast;
-	   $nSession++;
-	   $COMP::_IsFirstSession=0;
+	&check_session;
+	undef %definedSessionLast;
+	$nSession++;
+	$COMP::_IsFirstSession=0;
+    }elsif(/^\#USERINPUTBEGIN/){
+	$UserInput = $nLine+1;
+    }elsif(/^\#USERINPUTEND/){
+	if(not $UserInput){
+	    print "Error at line $nLine in file $InputFile for ".
+		"command $_".
+		"\tthere is no matching #USERINPUTBEGIN command\n";
+	}
+	$UserInput = 0;
     }
     
     $nLine++;
 
-    # Return the line only for the selected component
-    # Return the #RUN line all the time, so components know about sessions
-    if($InsideComp eq $NameComp){
+    # Return the line only for the selected component outside user input
+    if($InsideComp eq $NameComp and not $UserInput){
 	return $_;
     }else{
 	return "\n";
@@ -664,7 +692,7 @@ sub read_parameter{
 
     # Remove everything after 3 spaces or a TAB
     $paramValue =~ s/   .*//;
-    $paramValue =~ s/\t.*//;
+    $paramValue =~ s/ *\t.*//;
 
     print "reading $paramName = $paramValue\n" if $Debug;
 
@@ -685,7 +713,7 @@ sub check_value_format{
     elsif($paramType =~ /integer/)
     {
 	# 3 +30 -124
-	$bad = &bad_value unless $paramValue =~ /^\s*[\+\-]?\d+/;
+	$bad = &bad_value unless $paramValue =~ /^\s*[\+\-]?\d+$/;
     }
     elsif($paramType =~ /real/)
     {
@@ -1070,27 +1098,47 @@ sub param_error{
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
+#BOP
+#!ROUTINE: CheckParam.pl - check a parameter file based on an XML description
+#!DESCRIPTION:
+# Before running an executable, it is a good idea to check the parameter file.
+# This can save time and frustration.
+# This rather complex script is normally called from a customized
+# TestParam.pl script. For certain applications, however, it may be
+# necessary to call directly this script.
+# 
+#!REVISION HISTORY:
+# 03/22/2004 G.Toth - initial version based on the TestParam.pl script
+#                     which was developped for BATSRUS.
+#EOP
 sub print_help{
 
-    print "
-Purpose:
+    print 
+#BOC
+"Purpose:
 
      Read a parameter file and verify its correctness based on an 
-     XML description.
+     XML description. In most applications this scipt is called by 
+     TestParam.pl.
 
 Usage:
 
-    CheckParam.pl [-h] [-v] [-D] [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
-                 [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
+  CheckParam.pl [-h] [-H] [-X] [-v] [-D] 
+                [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
+                [-S] [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
 
   -h            print help message and stop
+
+  -H            print help about the XML tags used in PARAM.XML files and stop
+
+  -X            print a short introduction to the XML language and stop
 
   -D            print debug information
 
   -v            verbosity adds command description to every error message.
 
   -x=XMLFILE    Use XMLFILE for the XML description. 
-                If the -f switch is omitted the $XmlFileDefault file is used.
+                If the -x switch is omitted the $XmlFileDefault file is used.
 
   -r=TREEFILE   Read TREEFILE containing the parameter description in a Perl 
                 tree data structure if no XML description is found or the
@@ -1103,6 +1151,10 @@ Usage:
                 If the -s switch is given without a TREEFILE value, 
                 the tree is saved into the default tree file, which has
                 the same name as the XML file but with a .pl extension.
+
+  -S            Check parameters assuming a stand alone mode. In stand alone 
+                mode the #BEGIN_COMP and #END_COMP commands are ignored.
+                Also sets \$_IsStandAlone to true to be used in the XML rules.
 
   -c=ID         Check the parameters for the component defined by ID,
                 which is the two-character name of the component.
@@ -1140,7 +1192,7 @@ CheckParam.pl -x=GM/BATSRUS/PARAM.XML -s
 
     Set the XML file name to an empty string and read a Perl tree file:
 
-CheckParam.pl -x -r=mytree.pl
+CheckParam.pl -x= -r=mytree.pl
 
     Check lines typed through standard input with debug info:
 
@@ -1148,7 +1200,155 @@ CheckParam.pl -D -i
 #DESCRIPTION
 Just a test.
 ...
-Ctrl-D
-";
+Ctrl-D"
+#EOC
+    ,"\n\n";
+    exit 0;
+}
+############################################################################
+sub print_help_xml{
+
+    print
+#!QUOTE: \clearpage
+#BOC
+'XML - eXtended Markup Language
+
+XML is a very simple notation used for marking up arbitrary text. 
+It is a well defined standard, which is suitable for machine processing,
+yet it is relatively easy to read and produce with a normal text editor.
+
+An XML file consists of tags with attributes and text.
+The names of the tags and attributes can be any alphanumeric name.
+There are 3 special characters which cannot be used in the text
+or in the value of the attributes:
+
+   < > &
+
+The < and > are used to start and finish a tag, the & sign is 
+used to describe special characters, such as
+
+  &gt;  &lt;  &amp;
+
+which can be used in the text instead of "<", ">" and "&".
+
+A tag without a body is enclosed between the strings "<" and "/>":
+
+<TAGNAME ... />
+
+A tag with an (optional) body has a starting part enclosed between "<" and ">"
+and a matching finishing part with the name enclosed between "</" and ">":
+
+<TAGNAME ...>
+...
+</TAGNAME>
+
+Tags can have attributes, which are names followed by an "=" sign and
+the value is quoted with double quotation marks, for example
+
+<TAGNAME ATTRIBUTE1="VALUE1" ATTRIBUTE2="VALUE2" .../>
+
+Tags can be nested and they can contain a text body:
+
+<TAGNAME1>
+  <TAGNAME2>
+     <TAGNAME3/>
+     text2
+  </TAGNAME2>
+  text1
+</TAGNAME1>'
+#EOC
+    ,"\n\n";
+    exit;
+}
+############################################################################
+sub print_help_xml_param{
+
+    print
+#!QUOTE: \clearpage
+#BOC
+'XML Description of Input Parameters
+
+The following shows the structure of the XML tags which can be interpreted by
+the CheckParam.pl script, partially used by the XmlToLatex.pl script 
+(and it will also be used by the parameter editor of the GUI in the future).
+
+<commandList name=...>
+<set name=... type=... value=.../>
+<set name=... type=... value=.../>
+...
+<commandgroup name=...>
+
+Description for command group.
+
+<command name=... [alias=...] [if=...] [required="T"] [multiple="T"]>
+	<parameter name=... type="logical" default=.../>
+	<parameter name=... type="integer" [min=...] [max=...] [default=...]/>
+	<parameter name=... type="real" [min=...] [max=...] [default=...]/>
+	<parameter name=... type="string" length=... [default=...]/>
+	<parameter name=... type="integer|real|string" input="select"
+							[multiple="T"]>
+		<option name=... [value=...] [default="T"] 
+					[exclusive="T"] [if=...]/>
+		<optioninput name=... type=... [min=...] [max=...] [length=...]
+						[default=...] [if=...]/>
+	<parameter/>
+	<parameter name=... type="strings" min="..." max="..."
+					[ordered="T"] [duplicate="T"]>
+		<part name=... type="string" input="select"
+					[required="T"] [multiple="T"]>
+			<option name=... [value=...] [default="T"] 
+					[exclusive="T"] [if=...]/>
+		</part>
+	</parameter>
+	<if expr=...>
+		<parameter name=... type="real" [min=...] [max=...] 
+							default=... />
+	</if>
+	<foreach name=... values=...>
+		<parameter name=... type="logical" default=.../>
+		...
+	</foreach>
+	<for [index=] from=... to=...>
+		<parameter name=... type="integer" [min=...] [max=...]
+							default=.../>
+		...
+	</for>
+	<set name=... type=... value=.../>
+	<rule expr=...>
+	... error message for command rule ...
+	</rule>
+
+verbal description of command
+...
+</command>
+...
+...
+...
+<command name=... [required="T"] [if=...]>
+...
+</command>
+
+</commandgroup>
+...
+...
+...
+...
+...
+...
+<commandgroup name=...>
+...
+...
+...
+</commandgroup>
+
+<rule expr=...>
+... error message for global rule ...
+</rule>
+<rule expr=...>
+... error message for global rule ...
+</rule>
+<commandList>'
+#EOC
+    ,"\n\n";
     exit 0;
 }

@@ -161,7 +161,7 @@ contains
             is_interface_block=GM_west_block,&
             interface_point_coords=GM_west_cells, &
             mapping=GM_IH_mapping,&
-            interpolate=bilinear_interpolation)
+            interpolate=interpolation_fix_reschange)
        IH_iGridRealization=i_realization(IH_)
        GM_iGridRealization=i_realization(GM_)
        IH_GM_iMapping=iMappingNew      
@@ -190,6 +190,7 @@ contains
   subroutine GM_west_cells(&
        GridDescriptor,&
        lGlobalTreeNode,&
+       nDim,&
        Xyz_D,&
        nIndexes,&
        Index_I,&
@@ -197,11 +198,12 @@ contains
 
     type(GridDescriptorType),intent(in):: GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
+    integer,intent(in)::nDim
+    real,intent(inout)::Xyz_D(nDim)
+    integer,intent(inout)::Index_I(nIndexes)
     logical,intent(out)::IsInterfacePoint
-    real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
-    integer, dimension(nIndexes),intent(inout)::Index_I
-    logical,dimension(3)::&
-         IsLeftFace_D,IsRightFace_D
+
+    logical,dimension(3)::IsLeftFace_D,IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
     IsLeftFace_D=Index_I(x_:z_)<1
@@ -233,7 +235,7 @@ contains
   subroutine update_mapping_parameters(iMappingNew)
 
     use ModKind
-    use CON_physics, ONLY: get_physics, time_real_to_int
+    use CON_physics, ONLY: get_time, time_real_to_int
 
     ! The time at the beginning of the simulation
     real(Real8_), save :: tStart
@@ -244,7 +246,7 @@ contains
     RETURN
 
     ! This is how we could update the mapping for the current time
-    call get_physics(tStartOut=tStart)
+    call get_time(tStartOut=tStart)
 
     call time_real_to_int(tStart+IH_GM_CouplingTime, TimeGeoPack)
 

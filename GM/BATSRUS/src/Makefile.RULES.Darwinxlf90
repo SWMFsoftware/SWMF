@@ -1,0 +1,19 @@
+#^CFG COPYRIGHT UM
+#
+#	Specific Rules for Darwin fortran compiler
+#
+
+ModPrecond.o:	ModPrecond.f90
+	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModPrecond.f90
+
+project_B.o: project_B.f90 \
+	ModProcMH.o \
+	ModMain.o \
+	ModVarIndexes.o \
+	ModAdvance.o \
+	ModGeometry.o \
+	ModProject.o \
+	ModCT.o \
+	ModParallel.o \
+	ModInterface.o
+	${COMPILE.f90} ${Cflag2} ${SuffixMapf90} project_B.f90

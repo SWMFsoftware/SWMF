@@ -1007,7 +1007,7 @@ end subroutine barrier_mpi
 subroutine stop_mpi(str)
 
   use ModProcMH
-  use ModMain, ONLY : iteration_number
+  use ModMain, ONLY : iteration_number,NameThisComp,IsStandAlone
   use ModMpi
   implicit none
 
@@ -1018,12 +1018,18 @@ subroutine stop_mpi(str)
 
   !----------------------------------------------------------------------------
 
-  write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
-       iteration_number,' with msg:'
-  write(*,*)str
-  call MPI_abort(iComm, nError, iError)
+  if(IsStandAlone)then
+     write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
+          iteration_number,' with msg:'
+     write(*,*)str
+     call MPI_abort(iComm, nError, iError)
+     stop
+  else
+     write(*,*)NameThisComp,': stopping execution! me=',iProc,&
+          ' at iteration=',iteration_number
+     call CON_stop(NameThisComp//':'//str)
+  end if
 
-  stop
 end subroutine stop_mpi
 
 
@@ -1549,8 +1555,8 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   type(adaptive_block_ptr):: Octree
   real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
   integer,dimension(3)::IjkRoot_D
-  logical::Done
   logical,dimension(3):: IsLowerThanCenter_D
+  !----------------------------------------------------------------------
 
   nullify(Octree % ptr)
 
@@ -1582,10 +1588,9 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   Octree % ptr => &
        octree_roots(IjkRoot_D(1)+1,IjkRoot_D(2)+1,IjkRoot_D(3)+1) % ptr
   ! Recursive procedure to find the adaptive block:
-  Done=.false.
-  do while (.not.Done)
+  do
      if(Octree % ptr % used) then
-        iPE =octree % ptr % PE
+        iPE    = octree % ptr % PE
         iBlock = octree % ptr % BLK
         if(DoFindCell)then
            DXyz_D=DXyz_D/nCells
@@ -1593,7 +1598,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
            jCell=int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
            kCell=int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
         end if
-        Done=.true.
+        EXIT
      else
         DXyz_D=cHalf*DXyz_D
         XyzCenter_D=XyzCorner_D+DXyz_D
@@ -1641,8 +1646,8 @@ end subroutine xyz_to_peblk
 !=========================================================================
 subroutine get_date_time(iTime_I)
   
-  use ModMain,     ONLY : StartTime, Time_Simulation
-  use CON_physics, ONLY : time_real_to_int
+  use ModMain,        ONLY : StartTime, Time_Simulation
+  use ModTimeConvert, ONLY : time_real_to_int
 
   implicit none
   integer, intent(out) :: iTime_I(7)
@@ -1652,16 +1657,14 @@ subroutine get_date_time(iTime_I)
 end subroutine get_date_time
 !=========================================================================
 
-subroutine gettimestring
-  use ModMain, ONLY: TimeH4,TimeM2,TimeS2,Time_Simulation
+subroutine get_time_string
+  use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
   implicit none
 
-  write(TimeH4,'(i4.4)') &
-       int(                            Time_Simulation/3600.)
-  write(TimeM2,'(i2.2)') &
-       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.)
-  write(TimeS2,'(i2.2)') &
+  write(StringTimeH4M2S2,'(i4.4,i2.2i2.2)') &
+       int(                            Time_Simulation/3600.), &
+       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
        int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
 
-end subroutine gettimestring
+end subroutine get_time_string
 

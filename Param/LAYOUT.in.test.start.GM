@@ -1,0 +1,5 @@
+This is the layout to run the GM startup test
+
+#COMPONENTMAP
+GM   0  999    1
+#END

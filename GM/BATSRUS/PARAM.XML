@@ -1,8 +1,8 @@
-<commandList name="Global Magnetosphere and Inner Heliosphere">
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-List of MH (GM and IH) commands used in the PARAM.in file
+<commandList name="BATSRUS: GM, SC and IH Components">
 
-<!-- The XML syntax is described at the end of Param/PARAM.XML -->
+List of MH (GM, IH and SC) commands used in the PARAM.in file
 
 <!-- Grid size array is transformed into simple scalars -->
 <set name="nI"           type="integer" value="$_GridSize[0]" />
@@ -14,6 +14,440 @@ List of MH (GM and IH) commands used in the PARAM.in file
 <!-- Set max for total number of blocks if both _nProc and MaxBlock are set -->
 <set name="MaxBlockALL" type="integer" 
 	value="$_nProc and $MaxBlock and $_nProc*$MaxBlock" />
+
+<commandgroup name="STAND ALONE MODE">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="NEWPARAM" if="$_IsStandAlone">
+	<parameter name="UseNewParam"    type="logical" default="T"/>
+	<parameter name="UseNewAxes"     type="logical" default="T"/>
+	<parameter name="DoTimeAccurate" type="logical" default="T"/>
+	<parameter name="UseCorotation"  type="logical" default="T"/>
+
+#NEWPARAM
+T			UseNewParam
+T			UseNewAxes
+T			DoTimeAccurate
+T			UseCorotation
+
+This command can be used to make the standalone code backwards compatible.
+
+If UseNewParam is true, the time frequencies of various commands 
+(SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
+of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
+
+If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
+and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+
+If UseNewAxes is true, the planet's rotational and magnetix axes are set by the new
+algorithms found in\\
+share/Library/src/CON\_axes, the planet data is set and
+stored by share/Library/src/CON\_planet, and magnetic field information and
+mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
+of the planet is calculated using $v_{\phi}=\Omega \times r$.
+
+If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
+are used. Some of these algorithms are inaccurate, some of them contain bugs,
+some of them are inefficient. The algorithms were kept for sake of backwards
+compatibility.
+
+The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
+(consistent with the assumption that the default behaviour is as realistic as possible).
+
+The default values depend on how the standalone code was installed
+(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
+all the logicals have true default values (consistent with SWMF), 
+for STANDALONE=old and STANDALONE=oldtest the default values are false 
+(consistent with BATSRUS v7.72 and earlier).
+</command>
+
+<command name="COMPONENT">
+	<parameter name="NameComp" type="string" input="options">
+		<option name="SC" default="T" if="$_NameComp eq 'SC'" />
+		<option name="IH" default="T" if="$_NameComp eq 'IH'" />
+		<option name="GM" default="T" if="$_NameComp eq 'GM'" />
+	</parameter>
+
+#COMPONENT
+GM			NameComp
+
+This command is only used in the stand alone mode.
+
+The NameComp variable contains the two-character component ID
+for the component which BATSRUS is representing.
+If NameComp does not agree with the value of the NameThisComp
+variable, BATSRUS stops with an error message.
+This command is saved into the restart header file for consistency check.
+
+There is no default value: if the command is not given, the component ID is not checked.
+</command>
+
+<command name="DESCRIPTION" if="$_IsStandAlone">
+	<parameter name="StringDescription" type="string" length="100" />
+
+#DESCRIPTION
+This is a test run for Jupiter with no rotation.
+
+This command is only used in the stand alone mode.
+
+The StringDescription string can be used to describe the simulation
+for which the parameter file is written. The #DESCRIPTION command and
+the StringDescription string are saved into the restart file,
+which helps in identifying the restart files.
+
+The default value is "Please describe me!", which is self explanatory.
+</command>
+
+<command name="ECHO" if="$_IsStandAlone">
+        <parameter name="DoEcho" type="logical" default="F"/>
+
+#ECHO
+T                       DoEcho
+
+This command is only used in the stand alone mode.
+
+If the DoEcho variable is true, the input parameters are echoed back.
+The default value for DoEcho is .false., but it is a good idea to
+set it to true at the beginning of the PARAM.in file.
+</command>
+
+<command name="PROGRESS" if="$_IsStandAlone">
+	<parameter name="DnProgressShort" type="integer" min="-1" 
+		default="10"  />
+	<parameter name="DnProgressLong"  type="integer" min="-1" 
+		default="100" />
+#PROGRESS
+10			DnProgressShort
+100			DnProgressLong
+
+The frequency of short and long progress reports for BATSRUS in
+stand alone mode. These are the defaults. Set -1-s for no progress reports.
+</command>
+
+<command name="TIMEACCURATE" if="$_IsStandAlone">
+        <parameter name="DoTimeAccurate" type="logical" default="T" />
+
+#TIMEACCURATE
+F               DoTimeAccurate
+
+This command is only used in stand alone mode.
+
+If DoTimeAccurate is set to true, BATSRUS solves
+a time dependent problem. If DoTimeAccurate is false, a steady-state
+solution is sought for. It is possible to use steady-state mode
+in the first few sessions to obtain a steady state solution,
+and then to switch to time accurate mode in the following sessions.
+In time accurate mode saving plot files, log files and restart files,
+or stopping conditions are taken in simulation time, which is the
+time relative to the initial time. In steady state mode the simulation
+time is not advanced at all, instead the time step or iteration number
+is used to control the frequencies of various actions.
+
+The steady-state mode allows BATSRUS to use local time stepping
+to accelarate the convergence towards steady state.
+
+The default value depends on how the stand alone code was installed.
+See the description of the NEWPARAM command.
+</command>
+
+<command name="BEGIN_COMP" multiple="T" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="END_COMP" multiple="T" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="RUN" if="$_IsStandAlone">
+
+#RUN
+
+This command is only used in stand alone mode.
+
+The #RUN command does not have any parameters. It signals the end
+of the current session, and makes BATSRUS execute the session with
+the current set of parameters. The parameters for the next session
+start after the #RUN command. For the last session there is no
+need to use the #RUN command, since the #END command or simply
+the end of the PARAM.in file makes BATSRUS execute the last session.
+</command>
+
+<command name="END">
+
+#END
+
+The #END command signals the end of the included file or the
+end of the PARAM.in file. Lines following the #END command are
+ignored. It is not required to use the #END command. The end
+of the included file or PARAM.in file is equivalent with an 
+#END command in the last line.
+</command>
+
+</commandgroup>
+
+<commandgroup name="PLANET COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The planet commands can only be used in stand alone mode and only
+when UseNewAxes is set to true (see discussion at the NEWPARAM command).
+The commands allow to work with an arbitrary planet.
+It is also possible to change some parameters of the planet relative
+to the real values.
+
+By default Earth is assumed with its real parameters.
+Another planet can be selected with the #PLANET command.
+The real planet parameters can be modified and simplified
+with the other planet commands listed in this subsection.
+These modifier commands cannot preceed the #PLANET command!
+
+<command name="PLANET" if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="NamePlanet" type="string" input="select">
+		<option name="Earth" value="EARTH/Earth/earth" default="T" />
+		<option name="Saturn" value="SATURN/Saturn/saturn" />
+		<option name="New" />
+	</parameter>
+	<if expr="$NamePlanet eq 'New'">
+		<parameter name="RadiusPlanet" type="real" min="0" />
+		<parameter name="MassPlanet"   type="real" min="0" />
+		<parameter name="OmegaPlanet"  type="real" min="0" />
+		<parameter name="TiltRotation" type="real" min="0" />
+		<parameter name="TypeBField"   type="string" input="select">
+			<option name="NONE" />
+			<option name="DIPOLE" default="T" />
+		</parameter>
+	</if>
+	<if expr="$TyepBField eq 'DIPOLE'">
+		<parameter name="MagAxisThetaGeo" type="real" 
+						min="0" max="180"/>
+		<parameter name="MagAxisPhiGeo"   type="real"
+						min="0" max="360"/>
+		<parameter name="DipoleStrength"  type="real"    />
+	</if>
+	<rule expr="not $PlanetCommand">
+		PLANET should precede $PlanetCommand
+	</rule>
+
+#PLANET
+New			NamePlanet (rest of parameters read for unknown planet)
+6300000.0		RadiusPlanet [m]
+5.976E+24		MassPlanet   [kg]
+0.000000199		OmegaPlanet  [radian/s]
+23.5			TiltRotation [degree]
+DIPOLE			TypeBField
+11.0			MagAxisThetaGeo [degree]
+289.1			MagAxisPhiGeo   [degree]
+-31100.0E-9		DipoleStrength  [T]
+
+The NamePlanet parameter contains the name of the planet
+with arbitrary capitalization. In case the name of the planet
+is not recognized, the following variables are read:
+RadiusPlanet is the radius of the planet,
+MassPlanet is the mass of the planet, 
+OmegaPlanet is the angular speed relative to an inertial frame,
+TiltRotation is the tilt of the rotation axis relative to ecliptic North,
+TypeBField, which can be "NONE" or "DIPOLE". 
+TypeBField="NONE" means that the planet does not have magnetic field. 
+It TypeBField is set to "DIPOLE" than the following variables are read:
+MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
+of the north magnetic pole in corotating planetocentric coordinates.
+Finally DipoleStrength is the equatorial strength of the magnetic dipole
+field. The units are indicated in the above example, which shows the
+Earth values approximately.
+
+The default value is NamePlanet="Earth", which is currently
+the only recognized planet.
+</command>
+
+<command name="ROTATIONAXIS" if="$_IsStandAlone">
+	<parameter name="IsRotAxisPrimary" type="logical" default="T" />
+	<if expr="$IsRotAxisPrimary">
+		<parameter name="RotAxisTheta" type="real" min="0" max="180"/>
+		<parameter name="RotAxisPhi"   type="real" min="0" max="360"/>
+	</if>
+	<set name="PlanetCommand" type="string" value="ROTATIONAXIS" />
+
+#ROTATIONAXIS
+T			IsRotAxisPrimary (rest of parameters read if true)
+23.5			RotAxisTheta
+198.3			RotAxisPhi
+
+If the IsRotAxisPrimary variable is false, the rotational axis
+is aligned with the magnetic axis. If it is true, the other two variables
+are read, which give the position of the rotational axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true rotational axis determined by the
+date and time given by #STARTTIME.
+</command>
+
+<command name="ROTATION" if="$_IsStandAlone">
+	<parameter name="UseRotation" type="logical" default="T" />
+	<if expr="$UseRotation">
+		<parameter name="RotationPeriod" type="real" />
+	</if>
+	<set name="PlanetCommand" type="string" value="MAGNETICAXIS" />
+
+#ROTATION
+T			UseRotation
+24.06575		RotationPeriod [hour] (read if UseRotation is true)
+
+If UseRotation is false, the planet is assumed to stand still, 
+and the OmegaPlanet variable is set to zero. 
+If UseRotation is true, the RotationPeriod variable is read in hours, 
+and it is converted to the angular speed OmegaPlanet given in radians/second.
+Note that OmegaPlanet is relative to an inertial coordinate system,
+so the RotationPeriod is not 24 hours for the Earth, but the
+length of the astronomical day.
+
+The default is to use rotation with the real rotation period of the planet.
+</command>
+
+<command name="MAGNETICAXIS" if="$_IsStandAlone">
+	<parameter name="IsMagAxisPrimary" type="logical" default="T" />
+	<if expr="$IsMagAxisPrimary">
+		<parameter name="MagAxisTheta" type="real" min="0" max="180"/>
+		<parameter name="MagAxisPhi"   type="real" min="0" max="360"/>
+	</if>
+	<set name="PlanetCommand" type="string" value="MAGNETICAXIS" />
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+34.5			MagAxisTheta [degree]
+0.0			MagAxisPhi   [degree]
+
+If the IsMagAxisPrimary variable is false, the magnetic axis
+is aligned with the rotational axis. If it is true, the other two variables
+are read, which give the position of the magnetic axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true magnetic axis determined by the
+date and time given by #STARTTIME.
+</command>
+
+<command name="DIPOLE" if="$_IsStandAlone">
+	<parameter name="DipoleStrength" type="real" />
+
+#DIPOLE
+-3.11e-4		DipoleStrength [Tesla]
+
+The DipoleStrength variable contains the
+magnetic equatorial strength of the dipole magnetic field in Tesla.
+
+The default value is the real dipole strength for the planet.
+For the Earth the default is taken to be -31100 nT.
+The sign is taken to be negative so that the magnetic axis can
+point northward as usual.
+</command>
+
+<command name="UPDATEB0" if="$_IsStandAlone">
+	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001" />
+
+The DtUpdateB0 variable determines how often the position of
+the magnetic axis is recalculated. A negative value indicates that
+the motion of the magnetic axis during the course of the simulation
+is neglected. This is an optimization parameter, since recalculating
+the values which depend on the orientation of the magnetic
+field can be costly. Since the magnetic field moves relatively
+slowly as the planet rotates around, it may not be necessary
+to continuously update the magnetic field orientation.
+
+The default value is 0.0001, which means that the magnetic axis
+is continuously followed.
+</command>
+
+<command name="IDEALAXES" if="$_IsStandAlone">
+
+#IDEALAXES
+
+The #IDEALAXES command has no parameters. It sets both the rotational
+and magnetic axes parallel with the ecliptic North direction. In fact
+it is identical with
+
+#ROTATIONAXIS
+T               IsRotAxisPrimary
+0.0             RotAxisTheta
+0.0             RotAxisPhi
+
+#MAGNETICAXIS
+F               IsMagAxisPrimary
+
+but much shorter.
+</command>
+
+</commandgroup>
+
+<!-- ^CFG IF USERFILES BEGIN -->
+<commandgroup name="USER DEFINED INPUT">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="USER_FLAGS">
+	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
+	<parameter name="UseUserSource"	           type="logical" default="F"/>
+	<parameter name="UseUserPerturbation"      type="logical" default="F"/>
+	<parameter name="UseUserOuterBcs"          type="logical" default="F"/>
+	<parameter name="UseUserICs"               type="logical" default="F"/>
+	<parameter name="UseUserSpecifyRefinement" type="logical" default="F"/>
+	<parameter name="UseUserLogFiles"          type="logical" default="F"/>
+	<parameter name="UseUserWritePlot"         type="logical" default="F"/>
+	<parameter name="UseUserAMR"               type="logical" default="F"/>
+	<parameter name="UseUserEchoInput"         type="logical" default="F"/>
+	<parameter name="UseUserB0"                type="logical" default="F"/>
+	<parameter name="UseUserSetPhysConst"      type="logical" default="F"/>
+	<parameter name="UseUserUpdateStates"      type="logical" default="F"/>
+
+#USER_FLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserSetPhysConst
+F                       UseUserUpdateStates
+
+This command controls the use of user defined routines in user_routines.f90.
+For each flag that is set, an associated routine will be called in 
+user_routines.f90.  Default is .false. for all flags.
+</command>
+
+<command name="USERINPUTBEGIN">
+
+This command signals the beginning of the section of the file which 
+is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
+The section ends with the #USERINPUTEND command. There is no XML based parameter
+checking in the user section.
+</command>
+
+<command name="USERINPUTEND">
+
+This command signals the end of the section of the file which 
+is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
+The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
+checking in the user section.
+</command>
+
+</commandgroup>
+<!-- ^CFG END USERFILES -->
 
 <commandgroup name="TESTING AND TIMING">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -28,7 +462,6 @@ read_inputs
 !
 ! Examples:
 !   read_inputs  - echo the input parameters following the #TEST line
-!   ionosphere   - info on the ionosphere      <!-- ^CFG IF IONOSPHERE -->
 !   project_B    - info on projection scheme   <!-- ^CFG IF PROJECTION -->
 !   implicit     - info on implicit scheme     <!-- ^CFG IF IMPLICIT   -->
 !   krylov       - info on the Krylov solver   <!-- ^CFG IF IMPLICIT   -->
@@ -53,8 +486,8 @@ read_inputs
 1                       iTest           (cell index for testing)
 1                       jTest           (cell index for testing)
 1                       kTest           (cell index for testing)
-1                       BlockTest       (block index for testing)
-0                       ProcTest        (processor index for testing)
+1                       iBlockTest      (block index for testing)
+0                       iProcTest       (processor index for testing)
 
 ! The location of test info in terms of indices, block and processor number.
 ! Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
@@ -130,7 +563,7 @@ T                       UseStrict
 </command>
 
 <command name="VERBOSE">
-	<parameter name="iVarTest" type="integer" input="select">
+	<parameter name="lVerbose" type="integer" input="select">
 		<option name="errors and warnings only"  value="-1" />
 		<option name="start and end of sessions" value="0"  />
 		<option name="normal"                   value="1" default="T"/>
@@ -163,13 +596,13 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 #CODEVERSION
 7.50                    CodeVersion
 
-! Cheks CodeVersion. Prints a WARNING if it differs from the CodeVersion
-! defined in ModMain. Used in newer restart header files. 
+! Checks CodeVersion. Prints a WARNING if it differs from the CodeVersion
+! defined in ModMain.f90. Used in newer restart header files. 
 ! Should be given in PARAM.in when reading old restart files, 
 ! which do not have version info in the header file.
 </command>
 
-<command name="EQUATION" if="$IsFirstSession">
+<command name="EQUATION" if="$_IsFirstSession">
 	<parameter name="NameEquation" type="string" length="100" 
 						default="MHD" />
 	<parameter name="nVar" type="integer" default="8" />
@@ -286,28 +719,6 @@ cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
 ! 'tree' - tree based on calling sequence
 </command>
 
-<command name="SPEEDFILES">
-	<parameter name="DoWriteSpeedFile" type="logical" default="F" />
-#SPEEDFILES
-F                       DoWriteSpeedFile
-
-! controls the writing of speed_ files.  These have been used mostly on the
-! cray to do timing tests.  The default is .false.
-</command>
-
-<command name="PROGRESS" if="$_IsStandAlone">
-	<parameter name="DnProgressShort" type="integer" min="-1" 
-		default="10"  />
-	<parameter name="DnProgressLong"  type="integer" min="-1" 
-		default="100" />
-#PROGRESS
-10			DnProgressShort
-100			DnProgressLong
-
-! The frequency of short and long progress reports for BATSRUS in
-! stand alone mode. These are the defaults. Set -1-s for no progress reports.
-</command>
-
 </commandgroup>
 <commandgroup name="INITIAL AND BOUNDARY CONDITIONS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -363,7 +774,7 @@ heat_test1		TypeProblemDiss
 		<option name="GeoSolarMagnetic, GSM" value="GSM"
 					if="$_NameComp eq 'GM'" default="T" />
 		<option name="HelioGraphicInertial, HGI" value="HGI" 
-					if="$_NameComp eq 'IH'" default="T" />
+					if="$_NameComp ne 'GM'" default="T" />
 	</parameter>
 
 #COORDSYSTEM
@@ -371,10 +782,10 @@ GSM			TypeCoordSystem
 
 ! TypeCoordSystem defines the coordinate system for the component.
 ! Currently only one coordinate system is available for GM ("GSM")
-! and one for IH ("HGI"). In the near future "GSE" should be also
+! and one for IH or SC ("HGI"). In the near future "GSE" should be also
 ! an option for GM.
 !
-! Default is component dependent: "GSM" for GM and "HGI" for IH.
+! Default is component dependent: "GSM" for GM and "HGI" for IH or SC.
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
@@ -392,40 +803,31 @@ GM/restart_n5000	NameRestartInDir
 ! Default value is "GM/restartIN".
 </command>
 
-<command name="RESTARTOUTDIR" if="$_IsFirstSession">
-	<parameter name="NameRestartOutDir" type="string" length="100"
-				default="GM/restartOUT" />
-
-#RESTARTOUTDIR
-GM/restart_n5000	NameRestartOutDir
-
-! The NameRestartOutDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartOUT".
-</command>
-
-<!-- ^CFG IF CONSTRAINB BEGIN -->
 <command name="NEWRESTART" if="$_IsFirstSession">
-	<parameter name="IsRestartBFace" type="logical" default="F" />
-! The restartIN/restart.H file always contains the #NEWRESTART command.
+	<parameter name="DoRestartBFace" type="logical" default="F" /> <!-- ^CFG IF CONSTRAINB -->
+
+#NEWRESTART
+T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
+
+! The RESTARTINDIR/restart.H file always contains the #NEWRESTART command.
 ! This command is really used only in the restart headerfile.  Generally
 ! it is not inserted in a PARAM.in file by the user.
 !
-! Other than setting RestartBFace (used by the Constrained Transport scheme)
-! The #NEWRESTART command also sets the following global variables:
-!   DoRestart=.true.          read restart files
-!   DoRestartGhost=.false.    no ghost cells are saved into restart file
-!   DoRestartReals=.true.     only real numbers are saved in blk*.rst files
-</command>
+! The #NEWRESTART command sets the following global variables:
+! DoRestart=.true. (read restart files),
+! DoRestartGhost=.false.  (no ghost cells are saved into restart file)
+! DoRestartReals=.true.   (only real numbers are saved in blk*.rst files).
+<!-- ^CFG IF CONSTRAINB BEGIN -->
+! The DoRestartBFace parameter tells if the face centered magnetic field
+! is saved into the restart files. These values are used by the 
+! Constrained Transport scheme.
 <!-- ^CFG END CONSTRAINB -->
+</command>
 
 <command name="GRID" required="T" if="$_IsFirstSession">
-	<parameter name="nRootX" type="integer" min="1"  default="2" />
-	<parameter name="nRootY" type="integer" min="1"  default="1" />
-	<parameter name="nRootZ" type="integer" min="1"  default="1" />
+	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
+	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
+	<parameter name="nRootBlockZ" type="integer" min="1"  default="1" />
 	<parameter name="xMin"   type="real"             default="-192.0" />
 	<parameter name="xMax"   type="real" min="$xMin" default="  64.0" />
 	<parameter name="yMin"   type="real"             default=" -64.0" />
@@ -433,19 +835,24 @@ GM/restart_n5000	NameRestartOutDir
 	<parameter name="zMin"   type="real"             default=" -64.0" />
 	<parameter name="zMax"   type="real" min="$zMin" default="  64.0" />
 #GRID
-2                       nIRoot_D(1)
-1                       nJRoot_D(2)
-1                       nKRoot_D(3)
--224.                   xMinALL
- 32.                    xMaxALL
--64.                    yMinALL
- 64.                    yMaxALL
--64.                    zMinALL
- 64.                    zMaxALL
+2                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-224.                   xMin
+ 32.                    xMax
+-64.                    yMin
+ 64.                    yMax
+-64.                    zMin
+ 64.                    zMax
 
-! Grid size should always be set.
-! nRootX, nRootY, nRootZ define the number of blocks of the base grid, ie.
-! the roots of the octree. Each root block must be on a differenet PE.
+! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
+! number of blocks of the base grid, ie. the roots of the octree. 
+! By varying these parameters, one can setup a grid which is elongated
+! in some direction. The xMin ... zMax parameters define the physical
+! size of the grid.
+!
+! There is no default value, the grid size must always be given.
+! The #GRID command should be used before the #SAVEPLOT command.
 </command>
 
 <command name="OUTERBOUNDARY">
@@ -457,6 +864,7 @@ GM/restart_n5000	NameRestartOutDir
 					default="$Side ne 'TypeBcEast'" />
 			<option name="float/outflow" 
 					default="$Side eq 'TypeBcEast'" />
+			<option name="heliofloat"/>
 			<option name="reflect"/>
 			<option name="periodic"/>
 			<option name="vary"/>
@@ -466,33 +874,36 @@ GM/restart_n5000	NameRestartOutDir
 			<option name="arcadetop"/>
 			<option name="arcadebot"/>
 			<option name="arcadebotcont"/>
+			<option name="user"/>
 		</parameter>
 	</foreach>
 	<rule
 	expr="not($TypeBcEast eq 'periodic' xor $TypeBcWest eq 'periodic')">
-	! East and west BCs must be both periodic or neither
+		East and west BCs must be both periodic or neither
 	</rule>
 	<rule
 	expr="not($TypeBcSouth eq 'periodic' xor $TypeBcNorth eq 'periodic')">
-	! South and North BCs must be both periodic or neither
+		South and North BCs must be both periodic or neither
 	</rule>
 	<rule
 	expr="not($TypeBcBot eq 'periodic' xor $TypeBcTop eq 'periodic')">
-	! Bottom and top BCs must be both periodic or neither
+		Bottom and top BCs must be both periodic or neither
 	</rule>
 #OUTERBOUNDARY
-outflow                 TypeBcOuter_E(East_)
-inflow                  TypeBcOuter_E(West_)
-float                   TypeBcOuter_E(South_)
-float                   TypeBcOuter_E(North_)
-float                   TypeBcOuter_E(Bot_)
-float                   TypeBcOuter_E(Top_)
+outflow                 TypeBcEast
+inflow                  TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
 
 ! Default depends on problem type.
 ! Possible values:
+! coupled       - GM coupled to the IH component (at the 'west' boundary)
 ! fixed/inflow  - fixed solarwind values
 ! fixedB1       - fixed solarwind values without correction for the dipole B0
 ! float/outflow - zero gradient
+! heliofloat    - floating for the SC component (requires #FACEOUTERBC)
 ! linetied      - float P, rho, and B, reflect all components of U
 ! raeder        - Jimmy Raeder's BC
 ! reflect       - reflective
@@ -502,21 +913,24 @@ float                   TypeBcOuter_E(Top_)
 ! arcadetop     - intended for arcade problem only
 ! arcadebot     - intended for arcade problem only
 ! arcadebotcont - intended for arcade problem only
+! user          - user defined
 </command>
 
 <command name="INNERBOUNDARY">
 ! Inner boundary types for body 1 and body 2
-	<parameter name="TypeInnerBc" type="string" input="select">
+	<parameter name="TypeBcInner" type="string" input="select">
 		<option name="reflect"				/>
 		<option name="float"				/>
 		<option name="fixed"				/>
 		<option name="ionosphere"	default="T"	/>
 		<option name="ionosphereB0" value="ionosphereB0/ionosphereb0"/>
 		<option name="ionospherefloat"			/>
+		<option name="coronatoih"			/>
+		<option name="user"				/>
 	</parameter>
 <!-- ^CFG IF SECONDBODY BEGIN -->
 	<if expr="$UseBody2">
-		<parameter name="TypeInnerBcBody2" type="string" 
+		<parameter name="TypeBcBody2" type="string" 
 							input="select">
 			<option name="reflect"		default="T"	/>
 			<option name="float"				/>
@@ -527,27 +941,23 @@ float                   TypeBcOuter_E(Top_)
 		</parameter>
 	</if>
 	<rule
-	expr="not($TypeInnerBcBody2 =~ /ionosphere/)">
-! Note: for the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
+	expr="not($TypeBcBody2 =~ /ionosphere/)"> 
+	For the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
 	</rule>
 <!-- ^CFG END SECONDBODY -->
 #INNERBOUNDARY
-ionosphere              InnerBCType
+ionosphere              TypeBcInner
 <!-- ^CFG IF SECONDBODY BEGIN -->
-ionosphere              InnerBCTypeBody2  !read only if UseBody2=.true. 
+ionosphere              TypeBcBody2  !read only if UseBody2=.true. 
 
-!This command should appear after the #SECONDBODY command if using 2 bodies
-! Note:  for the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT
-!        WORK.
-! Default boundary for the second body is reflect.
+! This command should appear after the #SECONDBODY command when using 
+! two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
+! BOUNDARY DO NOT WORK.
+!
+! Default value for TypeBcBody2 is 'reflect'.
 <!-- ^CFG END SECONDBODY -->
 
-! Default is ionosphere for Earth, Saturn, Jupiter, and problem_rotation.
-! For all other problems with an inner boundary the default is 'reflect'.
-! If UseIonosphere=.true., velocity is determined by the coupled ionosphere
-! model.
-!
-! Possible values for TypeBcInner are
+! Possible values for TypeBcInner are:
 !
 ! 'reflect'     - reflect Vr, reflect Vphi to rotation, float Vtheta,
 !                 reflect Br, float Bphi, float Btheta, float rho, float P
@@ -559,8 +969,19 @@ ionosphere              InnerBCTypeBody2  !read only if UseBody2=.true.
 !                 float B, fix rho, fix P
 ! 'ionospherefloat'-set V as if ionosphere gave V_iono=0
 !                 float B, float rho, float P
+! 'coronatoih'  - IH component obtains inner boundary from the SC component
+! 'user'        - user defined
+!
+! For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
+! the velocity at the inner boundary is determined by the ionosphere model.
+!
+! Default value for TypeBcInner is 'ionosphere' for problem types
+! Earth, Saturn, Jupiter, and rotation.
+! For all other problems with an inner boundary the default is 'unknown',
+! so the inner boundary must be set.
 </command>
 
+<!-- ^CFG IF USERFILES BEGIN -->
 <command name="EXTRABOUNDARY">
 	<parameter name="UseExtraBoundary" type="logical" default="F"/>
 	<if expr="$UseExtraBoundary">
@@ -569,6 +990,7 @@ ionosphere              InnerBCTypeBody2  !read only if UseBody2=.true.
 							default="F"/>
 	</if>
 </command>
+<!-- ^CFG END USERFILES -->
 
 <command name="FACEOUTERBC">
 	<parameter name="MaxBoundary" type="integer" min="0" max="6"
@@ -580,10 +1002,10 @@ ionosphere              InnerBCTypeBody2  !read only if UseBody2=.true.
 #FACEOUTERBC
 0              MaxBoundary            
 F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
-! if MaxBoundary>=East_(=1) then the outer boundaries with
+! If MaxBoundary is East_(=1) or more then the outer boundaries with
 ! the number of boundary being between East_ and MaxBoundary
 ! are treated using set_BCs.f90 subroutines instead of set_outerBCs.f90 
-! if DoFixOuterBoundary==.true., there is no resolution
+! if DoFixOuterBoundary is .true., there is no resolution
 ! change along the outer boundaries with the number of
 ! of boundary being between East_ and MaxBoundary
 </command>
@@ -593,19 +1015,19 @@ F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
 !!!!!!!!!!!!!!!! INITIAL TIME AND STEP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="STARTTIME" alias="SETREALTIME" if="$_IsFirstSession">
-	<parameter name="year"   type="integer" default="2000" />
-	<parameter name="month"  type="integer" min="1" max="12" default="3"/>
-	<parameter name="day"    type="integer" min="1" max="31" default="21"/>
-	<parameter name="hour"   type="integer" min="0" max="23" default="0" />
-	<parameter name="minute" type="integer" min="0" max="59" default="0" />
-	<parameter name="second" type="integer" min="0" max="59" default="0" />
+	<parameter name="iYear"  type="integer" default="2000" />
+	<parameter name="iMonth" type="integer" min="1" max="12" default="3"/>
+	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
 #STARTTIME
-2000                    StartTime_i(1)=year
-3                       StartTime_i(2)=month
-21                      StartTime_i(3)=day
-10                      StartTime_i(4)=hour
-45                      StartTime_i(5)=minute
-0                       StartTime_i(6)=second
+2000                    iYear
+3                       iMonth
+21                      iDay
+10                      iHour
+45                      iMinute
+0                       iSecond
 
 The #STARTTIME command sets the initial date and time for the
 simulation in Greenwich Mean Time (GMT) or Universal Time (UT)
@@ -617,6 +1039,24 @@ This time is stored in the BATSRUS restart header file.
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
+</command>
+
+<command name="TIMESIMULATION" if="$_IsFirstSession">
+	<parameter name="tSimulation" type="real" min="0" default="0.0" />
+
+#TIMESIMULATION
+3600.0			tSimulation [sec]
+
+The tSimulation variable contains the simulation time in seconds
+relative to the initial time set by the #STARTTIME command.
+The #TIMESIMULATION command and tSimulation are saved into the restart 
+header file, which provides human readable information about the restart state.
+
+In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
+In stand alone mode time\_simulation is set, but in case of a restart,
+it gets overwritten by the binary value saved into the .rst binary files. 
+
+The default value is tSimulation=0.
 </command>
 
 <command name="NSTEP" if="$_IsFirstSession">
@@ -654,31 +1094,6 @@ have approximately zero tilt towards the Sun.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="TIMEACCURATE" if="$_IsStandAlone">
-        <parameter name="DoTimeAccurate" type="logical" default="T" />
-
-#TIMEACCURATE
-F               DoTimeAccurate
-
-This command is only used in stand alone mode.
-
-If DoTimeAccurate is set to true, BATSRUS solves
-a time dependent problem. If DoTimeAccurate is false, a steady-state
-solution is sought for. It is possible to use steady-state mode
-in the first few sessions to obtain a steady state solution,
-and then to switch to time accurate mode in the following sessions.
-In time accurate mode saving plot files, log files and restart files,
-or stopping conditions are taken in simulation time, which is the
-time relative to the initial time. In steady state mode the simulation
-time is not advanced at all, instead the time step or iteration number
-is used to control the frequencies of various actions.
-
-The steady-state mode also allows BATSRUS to use local time stepping
-as an accelarate convergence to steady state.
-
-The default value is false, which indicates local time stepping.
-</command>
-
 <command name="TIMESTEPPING">
 	<parameter name="nStage" type="integer" input="select">
 		<option value="1" default="T" />
@@ -733,7 +1148,7 @@ T               UsePartLocal
 		if="$UsePartImplicit or $UseFullImplicit"/>
 	<rule
 	expr="$UsePointImplicit + $UsePartImplicit + $UseFullImplicit &lt;= 1">
-	At most one of these logicals can be true!
+		At most one of these logicals can be true!
 	</rule>
 
 #IMPLICIT
@@ -762,18 +1177,26 @@ F               UseFullImplicit
 	</parameter>
 	<parameter name="rImplicit" type="real" min="0"
 		if="$TypeImplCrit eq 'R'" />
+
+#IMPLICITCRITERIA
+r		TypeImplCrit (dt or r or test)
+10.0		rImplicit    (only read for TypeImplCrit = r)
+
 ! Both #IMPLICITCRITERIA and #STEPPINGCRITERIA are acceptable.
 ! Only effective if PartImplicit or PartLocal is true in a time accurate run.
 ! Default value is ImplCritType='dt'.
 !
 ! The options are
 !
-! If     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
-! ElseIf (TypeImplCrit =='R'   ) then blocks with rMinBLK .lt. rImplicit
-! ElseIf (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
+! if     (TypeImplCrit =='dt'  ) then blocks with DtBLK .gt. DtFixed
+! elseif (TypeImplCrit =='r'   ) then blocks with rMinBLK .lt. rImplicit
+! elseif (TypeImplCrit =='test') then block iBlockTest on processor iProcTest
 !
-! are handled with local/implicit scheme.
-! DtFixed must be defined in #FIXEDTIMESTEP
+! are handled with local/implicit scheme. Here DtBlock is the time step
+! allowed by the CFL condition for a given block, while rMinBLK is the
+! smallest radial distance for all the cells in the block.
+! The iBlockTest and iProcTest can be defined in the #TESTIJK command.
+! DtFixed must be defined in the #FIXEDTIMESTEP command.
 </command>
 
 <command name="IMPLSTEP">
@@ -907,9 +1330,9 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 
 ! The number of Krylov vectors only matters for GMRES (TypeKrylov='gmres').
 ! If GMRES does not converge within nKrylovVector iterations, it needs
-! a restart, which usually degrade its convergence rate and robustness.
-! So nKrylovVector should exceed the number of iterations, on the other
-! hand it should not exceed the maximum number of iterations MaxMatvecKrylov.
+! a restart, which usually degrades its convergence rate and robustness.
+! So nKrylovVector should exceed the number of iterations, but
+! it should not exceed the maximum number of iterations MaxMatvecKrylov.
 ! On the other hand the dynamically allocated memory is also proportional 
 ! to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
 ! which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
@@ -920,6 +1343,9 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The commands in this group only work in stand alone mode.
+
 <command name="STOP" required="$_IsStandAlone" if="$_IsStandAlone">
 	<parameter name="MaxIteration" type="integer" min="-1" default="-1" />
 	<parameter name="tSimulationMax" type="real"  min="-1" default="-1" />
@@ -988,6 +1414,66 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="RESTARTOUTDIR">
+	<parameter name="NameRestartOutDir" type="string" length="100"
+				default="GM/restartOUT" />
+
+#RESTARTOUTDIR
+GM/restart_n5000	NameRestartOutDir
+
+! The NameRestartOutDir variable contains the name of the directory
+! where restart files are saved relative to the run directory.
+! The directory should be inside the subdirectory with the name 
+! of the component.
+!
+! Default value is "GM/restartOUT".
+</command>
+
+<command name="SAVERESTART">
+	<parameter name="DoSaveRestart" type="logical" default="T" />
+	<if expr="$DoSaveRestart">
+		<parameter name="DnSaveRestart" type="integer" min="-1" 
+							default="-1" />
+		<parameter name="DtSaveRestart" type="real"    min="-1" 
+							default="-1" />
+	</if>
+#SAVERESTART
+T			DoSaveRestart Rest of parameters read if true
+100			DnSaveRestart
+-1.			DtSaveRestart [seconds]
+
+! Default is DoSaveRestart=.true. with DnSaveRestart=-1 and 
+! DtSaveRestart=-1. This results in the restart file being 
+! saved only at the end.  A binary restart file is produced for every 
+! block and named as
+!
+! RESTARTOUTDIR/blkGLOBALBLKNUMBER.rst
+!
+! In addition the grid is described by
+!
+! RESTARTOUTDIR/octree.rst
+!
+! and an ASCII header file is produced with timestep and time info:
+!
+! RESTARTOUTDIR/restart.H
+!
+! The restart files are overwritten every time a new restart is done,
+! but one can change the name of the RESTARTOUTDIR with the #RESTARTOUTDIR
+! command from session to session. The default directory name is 'restartOUT'.
+</command>
+
+<command name="PLOTDIR">
+	<parameter name="NamePlotDir" type="string" length="100"
+				default="GM/IO2" />
+
+The NamePlotDir variable contains the name of the directory
+where plot files and logfiles are saved relative to the run directory.
+The directory should be inside the subdirectory with the name
+of the component.
+
+Default value is "GM/IO2".
+</command>
+
 <command name="SAVELOGFILE">
 	<parameter name="DoSaveLogfile" type="logical" default="F" />
 	<if expr="$DoSaveLogfile">
@@ -1019,9 +1505,9 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 				<option name="time" 		/>
 			</part>
 		</parameter>
-		<parameter name="DnOutput" type="integer" min="-1" 
+		<parameter name="DnSaveLogfile" type="integer" min="-1" 
 								default="1" />
-		<parameter name="DtOutput" type="real"    min="-1"
+		<parameter name="DtSaveLogfile" type="real"    min="-1"
 								default="-1" />
 		<parameter name="NameLogVars" type="string" length="100"
 			if="$TypeLogVar =~ /var/i" />
@@ -1035,17 +1521,18 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date           StringLog
-100                     DnOutput_i(logfile_)
--1.                     DtOutput_i(logfile_) in sec. Read only if time accurate
-rho p rhoflx            NameLogVars (variable to write) Read for 'var' or 'VAR'
-4.0  10.0               rLog  !radii where flx is calc. Read if vars inc. flx.
+100                     DnSaveLogfile
+-1.                     DtSaveLogfile [sec]
+rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
+4.0  10.0               rLog  (radii for the flux. Read if vars include 'flx')
 
-! Default is save_logfile=.false.
+! Default is DoSaveLogfile=.false.
 ! The logfile can contain averages or point values and other scalar
 ! quantities.  It is written into an ASCII file named as
 !
-! IO2/log_timestep.log
+! NAMEPLOTDIR/log_TIMESTEP.log
 !
+! where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).
 ! The StringLog can contain two groups of information in arbitrary order.
 ! The first is LogVar which is a single 3 character string that indicates
 ! the type of variables that are to be writen.  The second group indicates
@@ -1143,73 +1630,94 @@ rho p rhoflx            NameLogVars (variable to write) Read for 'var' or 'VAR'
 							default="1" />
 		<parameter name="DtOutput" type="real"    min="-1"
 							default="-1" />
-		<parameter name="NameSatellite" type="string" length="100" />
+		<parameter name="NameTrajectoryFile" type="string" 
+			length="100" />
 		<parameter name="NameSatelliteVars" type="string" length="100"
 			if="$TypeSatelliteVar =~ /\bvar\b/i" />
 	</for>
 #SATELLITE
 2                       nSatellite
 MHD file                StringSatellite (variables and traj type)
-100                     DnOutput_i(satellite_)
--1.                     DtOutput_i(satellite_) in sec. ALWAYS READ!
-satellite1.dat          Filename or satellite name (Satellite_name(satellite_))
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite1.dat          NameTrajectoryFile
 VAR eqn step date       StringSatellite
-100                     DnOutput_i(satellite_)
--1.                     DtOutput_i(satellite_) in sec. ALWAYS READ!
-satellite2.dat          NameSatellite_i(satellite_)
-rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
+100                     DnOutput
+-1.                     DtOutput [sec]
+satellite2.dat          NameTrajectoryFile
+rho p                   NameSatelliteVars ! Read if StringSatellite 
+                                          ! contains 'var' or 'VAR'
 
-! satellite_string can contain the following 3 parts in arbitrary order
+! The numerical solution can be extracted along one or more satellite
+! trajectories. The number of satellites is defined by the 
+! nSatellite parameter (default is 0).
 !
-! satellitevar  = 'mhd', 'ful' or 'var' - unitless output
-! satellitevar  = 'MHD', 'FUL' or 'VAR' - dimensional output
-! trajectory_type = 'file' or 'eqn'
-! timetype = 'none', 'step', 'time', 'date'
+! For each satellite the StringSatellite parameter determines what
+! is saved into the satellite file(s).
+! The StringSatellite can contain the following 3 parts in arbitrary order
 !
-! satellitevar -> REQUIRED
-! trajectory_type -> not required - defaults to 'file'
-! time_type -> not required - a logical default is used
+! satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
+!                 'MHD', 'FUL' or 'VAR' (dimensional output)
+! trajectorytype = 'file' or 'eqn'
+! timetype       = 'none', 'step', 'time', 'date'
 !
-! The satellitevar string defines the variables to print in the satellite
+! The 'satellitevar' part is required, 
+! the 'trajectorytype' part is optional (defaults to 'file'), and
+! the 'timetype' part is also optional (default depends on satellitevar)
+!
+! The 'satellitevar' string defines the variables to print in the satellite
 ! output file.  It also controls whether or not the variables will come out in
 ! dimensional or non-dimensional form by the capatilization of the
-! satellite_vars string.
+! satellitevars string: ALL CAPS means dimensional, all lower means 
+! dimensionless. 
 !
-! ALL CAPS  - dimensional
-! all lower - dimensionless
+! If 'satellitevar' is set to 'mhd', the variables 
+! 'rho ux uy uz bx by bz p jx jy jz' will be saved, while'ful' implies
+! 'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'.
+! If satellitevar is set to 'var' then the list of variables is read 
+! from the NameSatelliteVar parameter as a space separated list. 
+! The choices for variables are currently:
 !
-! 'mhd' - vars: rho Ux Uy Uz Bx By Bz P Jx Jy Jz
-! 'ful' - vars: rho Ux Uy Uz Bx By Bz P Jx Jy Jz theta1 phi1 theta2 phi2 status
-! 'var' - vars: READ FROM PARAMETER FILE
+! rho, rho, rhouy, rhouz, ux, uy, uz,
+! Bx, By, Bz, B1x, B1y, B1z,
+! E, P, Jx, Jy, Jz,
+! theta1, theta2, phi1, phi2, status.
 !
-! satellite_vars is read only when the satellite_string is var or VAR.  The
-! choices for variables are currently:
+! If 'trajectorytype' is 'file' (default) than the trajectory of the 
+! satellite is read from the file given by the NameTrajectoryFile parameter.
+! If 'trajectorytype' is 'eqn' then the trajectory is defined by an
+! equation, which is hard coded in subroutine satellite_trajectory_formula
+! in satellites.f90.
 !
-! rho, rho, rhouy, rhouz, ux, uy, uz
-! Bx, By, Bz, B1x, B1y, B1z
-! E, P, Jx, Jy, Jz
-! theta1,theta2,phi1,phi2,status
-!
-!
-! timetype values mean the following:
-!  none  = there will be no indication of time in the logfile (not even an
-!                # of steps)
-!  step  = # of time steps (n_steps)
-!  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
+! The 'timetype' values mean the following:
+!  none  = there will be no indication of time in the logfile 
+!          (not even the number of steps),
+!  step  = number of time steps (n_steps),
+!  date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
 !  time  = time is given as a real number - elapsed time since the start of
-!          the run.  Units are determined by satellitevar and unitUSER_t
+!          the run.  Units are determined by satellitevar and unitUSER_t.
 !
-!  More than one of these can be listed.  They can be put together in any
+!  More than one 'timetype' can be listed. They can be put together in any
 !  combination.
+!
+! The DnOutput and DtOutput parameters determine the frequency of extracting
+! values along the satellite trajectories. 
+!
+! The extracted satellite information is saved into the files named
+!
+! PLOTDIR/satellite_NN_TRAJECTORYNAME.sat
+!
+! where NN is the number of the satellite (e.g. 01), and TRAJECTORYNAME
+! is the name of the trajectory file.
+!
+! The default is nSatellite=0, i.e. no satellite data is saved.
 </command>
 
 <command name="SAVEPLOT">
-! plot_string must contain the following 3 parts in arbitrary order
-...
 	<parameter name="nPlotFile" type="integer" min="0" max="100"
 		default="0" />
 	<for from="1" to="$nPlotFile">
-		<parameter name="plotString" type="strings" min="3" max="3">
+		<parameter name="StringPlot" type="strings" min="3" max="3">
 			<part name="plotform" type="string" input="select" 
 								required="T">
 				<option value="tec" name="TECPLOT"/>
@@ -1217,55 +1725,54 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 			</part>
 			<part name="plotarea" type="string" input="select"
 								required="T">
-				<option value="3d"  />
+				<option name="3D" value="3d/3d_"/>
 				<option value="x=0" />
 				<option value="y=0" default="T" />
 				<option value="z=0" />
 				<option value="sph" />
-				<option value="ion" />
 				<option value="los" />
+				<option value="lin" />
 				<option value="cut" 
 					if="$plotform =~ /\bidl\b/"/>
 			</part>
 			<part name="plotvar" type="string" input="select" 
 							required="T">
-				<option name="min" value="min/mhd/MHD" 
-                                                    if="$plotarea=~/\bion\b/"/>
-				<option value="max" if="$plotarea=~/\bion\b/"/>
-				<option value="aur" if="$plotarea=~/\bion\b/"/>
-				<option value="uam" if="$plotarea=~/\bion\b/"/>
 				<option name="MHD vars. dimensional"
-					value="MHD" if="$plotarea!~/\bion\b/"/>
+					value="MHD"/>
 				<option name="All vars. dimensional"
-					value="FUL" if="$plotarea!~/\bion\b/"/>
+					value="FUL" />
 				<option name="Raw vars. dimensional"
-					value="RAW" if="$plotarea!~/\bion\b/"/>
+					value="RAW" />
 				<option name="Ray tracing vars. dim."
-					value="RAY" if="$plotarea!~/\bion\b/"/>
+					value="RAY" />
 				<option name="Flux vars. dimensional"
-					value="FLX" if="$plotarea!~/\bion\b/"/>
+					value="FLX" />
 				<option name="Solar vars. dimensional"
-					value="SOL" if="$plotarea!~/\bion\b/"/>
+					value="SOL" />
+				<option name="Position vars. dimensional"
+					value="POS" if="$plotarea eq 'lin'" />
 				<option name="Select dimensional vars."
-					value="VAR" if="$plotarea!~/\bion\b/"/>
+					value="VAR" />
 				<option name="MHD vars. scaled"
-					value="mhd" if="$plotarea!~/\bion\b/"/>
+					value="mhd" />
 				<option name="All vars. scaled"
-					value="ful" if="$plotarea!~/\bion\b/"/>
+					value="ful" />
 				<option name="Raw vars. scaled"
-					value="raw" if="$plotarea!~/\bion\b/"/>
-				<option name="Ray tracing vars. dim."
-					value="ray" if="$plotarea!~/\bion\b/"/>
+					value="raw" />
+				<option name="Ray tracing vars. scaled"
+					value="ray" />
 				<option name="Flux vars. scaled"
-					value="flx" if="$plotarea!~/\bion\b/"/>
+					value="flx" />
 				<option name="Solar vars. scaled"
-					value="sol" if="$plotarea!~/\bion\b/"/>
+					value="sol" />
+				<option name="Position vars. scaled"
+					value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Select scaled vars."
-					value="var" if="$plotarea!~/\bion\b/"/>
+					value="var" />
 			</part>
 		</parameter>
-		<parameter name="DnOutput" type="integer" min="-1" />
-		<parameter name="DtOutput" type="real"    min="-1" />
+		<parameter name="DnSavePlot" type="integer" min="-1" />
+		<parameter name="DtSavePlot" type="real"    min="-1" />
 		<if expr="$plotarea =~ /\bcut\b/">
 			<parameter name="xMinCut" type="real" />
 			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
@@ -1274,7 +1781,7 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 			<parameter name="zMinCut" type="real" />
 			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
 		</if>
-		<parameter name="radius" type="real" min="0" default="10"
+		<parameter name="Radius" type="real" min="0" default="10"
 			if="$plotarea =~ /\bsph\b/" />
                 <if expr="$plotarea =~ /\blos\b/">
 			<parameter name="LosVectorX" type="real" default="0"/>
@@ -1296,47 +1803,64 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 			<parameter name="nPixY" type="integer" min="2"
 								default="200"/>
                 </if>
-		<parameter name="plotDx" type="integer" min="-1" default="-1"
-	if="($plotform =~ /\bidl\b/ and $plotarea !~ /\b(ion|sph|los)\b/)" />
+		<if expr="$plotarea =~ /\blin\b/">
+			<parameter name="NameLine" type="string" 
+			input="select">
+				<option name="Advected B" value="A" />
+				<option name="B" default="T"/>
+				<option name="U"/>
+				<option name="J"/>
+			</parameter>
+			<parameter name="IsSingleLine" type="logical"
+							default="F" />
+			<parameter name="nLine" type="integer" min="1" max="20"
+							default="1" />
+			<for from="1" to="$nLine">
+				<parameter name="xStartLine" type="real"/>
+				<parameter name="yStartLine" type="real"/>
+				<parameter name="zStartLine" type="real"/>
+				<parameter name="IsParallel" type="logical"/>
+			</for>
+		</if>
+		<parameter name="DxSavePlot" type="real" min="-1.0" 
+			default="-1.0"
+	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
-			<parameter name="plotVars" type="string" length="100"/>
-			<parameter name="plotPars" type="string" length="100"/>
+			<parameter name="NameVars" type="string" length="100"/>
+			<parameter name="NamePars" type="string" length="100"/>
 		</if>
 	</for>
 #SAVEPLOT
 6			nPlotfile
-3d MHD tec		plotString ! 3d MHD data
-100			DnOutput_i(1)
--1.			DtOutput_i(1) (in s) Read only if time_accurate is set!
-y=0 VAR idl		plotString ! y=0 cut
--1			DnOutput_i(2)
-100.			DtOutput_i(2)  Read only if time_accurate is set!
-2.			plotDx_di(1,2) Read only for format 'idl'
-jx jy jz		plotVars_i(2)  Read only for content 'var'
-g unitx unitv unitn	plotPars_i(2)  Read only for content 'var'
-cut ray idl		plotString  ! ray tracing plot
-1			DnOutput_i(3)
--1.			DtOutput_i(3) (in s) Read only if time_accurate is set!
--10.			plotRange_ei(x1,3) Read only for area 'cut'
-10.			plotRange_ei(x2,3) Read only for area 'cut'
--10.			plotRange_ei(y1,3) Read only for area 'cut'
-10.			plotRange_ei(y2,3) Read only for area 'cut'
--10.			plotRange_ei(z1,3) Read only for area 'cut'
-10.			plotRange_ei(z2,3) Read only for area 'cut'
-1.			plotDx_di(1,3)     Read only for format 'idl'
-sph flx idl		plotString  ! spherical plot
--1			DnOutput_i(4)
-100.			DtOutput_i(4)  Read only if time_accurate is set!
-4.			rPlot - R of spherical cut, Read only for area 'sph'
-ion min idl		plotString  ! ionosphere plot
-100			DnOutput_i(5)
-100.			DtOutput_i(5)  Read only if time_accurate is set!
-los sol idl             PlotString  ! line of sight plot
--1			dnOutput_i(6)
-100.			dtOutput_i(6)  Read only if time_accurate is set!
-1.			LosVector_i(1)
-0.			LosVector_i(2)
-0.			LosVector_i(3)
+3d MHD tec		StringPlot ! 3d MHD data
+100			DnSavePlot
+-1.			DtSavePlot
+y=0 VAR idl		StringPlot ! y=0 cut
+-1			DnSavePlot
+100.			DtSavePlot
+2.			DxSavePlot ! Read only for format 'idl'
+jx jy jz		NameVars   ! Read only for content 'var'
+g unitx unitv unitn	NamePars   ! Read only for content 'var'
+cut ray idl		StringPlot ! ray tracing plot
+1			DnSavePlot
+-1.			DtSavePlot
+-10.			xMinCut    ! Read only for area 'cut'
+10.			xMaxCut    ! Read only for area 'cut'
+-10.			yMinCut    ! Read only for area 'cut'
+10.			yMaxCut    ! Read only for area 'cut'
+-10.			zMinCut    ! Read only for area 'cut'
+10.			zMaxCut    ! Read only for area 'cut'
+1.			DxSavePlot ! Read only for format 'idl'
+sph flx idl		StringPlot ! spherical plot
+-1			DnSavePlot
+100.			DtSavePlot
+4.			Radius     ! of spherical cut, Read only for area 'sph'
+los sol idl             StringPlot ! line of sight plot
+-1			DnSavePlot
+100.			DtSavePlot
+1.			xLosVector
+0.			yLosVector
+0.			zLosVector
 30.			xSizeImage
 50.			ySizeImage
 10.			xOffset
@@ -1345,24 +1869,32 @@ los sol idl             PlotString  ! line of sight plot
 0.5			MuLimbDarkening
 256			nPixX
 256			nPixY
+lin mhd idl		StringPlot  ! field line plot
+-1			DnSavePlot
+10.			DtSavePlot
+B			NameLine ! B - magnetic field line, U - stream line
+F			IsSingleLine
+2			nLine
+-2.0			xStartLine
+0.0			yStartLine
+3.5			zStartLine
+F			IsParallel
+-1.0			xStartLine
+1.0			yStartLine
+-3.5			zStartLine
+T			IsParallel
 
-! Default is nplotfile=0
-! plot_string must contain the following 3 parts in arbitrary order
+! Default is nPlotFile=0
+! StringPlot must contain the following 3 parts in arbitrary order
 !
 ! plotarea plotvar plotform
 !
-! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'sph', 'ion', 'los'
+! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'sph', 'los', 'lin'
 ! plotvar  = 'mhd', 'ful','raw', 'ray', 'flx', 'sol', 'var' - unitless output
 ! plotvar  = 'MHD', 'FUL','RAW', 'RAY', 'FLX', 'SOL', 'VAR' - dimensional
-! plotvar  = 'min', 'max' - for ion plots only, always dimensional
 ! plotform = 'tec', 'idl'
 !
 ! NOTES: The plotvar option 'sol' is only valid for plotarea 'los'.
-<!-- ^CFG IF IONOSPHERE BEGIN -->
-!        Ionosphere plots are called in ionosphere.f90 using completely
-!               seperate routines, 'var' option does not work. 
-!	        'min','max','aur','uam' work only with plotarea 'ion'
-<!-- ^CFG END IONOSPHERE -->
 !
 ! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 !
@@ -1372,8 +1904,8 @@ los sol idl             PlotString  ! line of sight plot
 ! 3d	- full 3D volume
 ! cut	- READ PLOTRANGE FROM PARAM.in, only works for plotform='idl'
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
-! ion   - ionosphere plots                        <!-- ^CFG IF IONOSPHERE -->
 ! los   - line of sight integrated plot
+! lin   - one dimensional plot along a field or stream line
 !
 ! The plotvar string defines the plot variables and the equation parameters.
 ! It also controls whether or not the variables will be plotted in dimensional
@@ -1396,54 +1928,46 @@ los sol idl             PlotString  ! line of sight plot
 !         pars: READ FROM PARAMETER FILE
 ! 'sol' - vars: wl pb
 !         pars: mu
-<!-- ^CFG IF IONOSPHERE BEGIN -->
-! 'min' - vars: Theta Psi SigmaH SigmaP Jr Phi
-! 'max' - vars: X Y Z Theta Psi SigmaH SigmaP Jr Phi Ex Ey Ez Jx Jy Jz Ux Uy Uz
-! 'aur' - vars: Theta Psi SigmaH SigmaP Jr Phi AveE TotE
-! 'uam' - vars: Theta Psi SigmaH SigmaP Jr Phi JrUAM
-<!-- ^CFG END IONOSPHERE -->
 !
 ! The plot_string is always followed by the plotting frequency
-! DnOutput and for time accurate runs by DtOutput.
+! DnSavePlot and for time accurate runs by DtSavePlot.
 !
-! Depending on plot_string, further information is read from the parameter file
+! Depending on StringPlot, further information is read from the parameter file
 ! in this order:
 !
-! plotRange		if plotarea is 'cut'
-! plotDx		if plotform is 'idl' and plotarea is not sph, ion, los
-! rPlot			if plotarea is 'sph'
-! plotVars		if plotform is 'var'
-! plotPars		if plotform is 'var'
+! PlotRange		if plotarea is 'cut'
+! DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
+! Radius		if plotarea is 'sph'
+! NameVars		if plotform is 'var'
+! NamePars		if plotform is 'var'
 !
-! The plot_range is described by 6 coordinates. If the width in one or two 
+! The PlotRange is described by 6 coordinates. If the width in one or two 
 ! dimensions is less than the smallest cell size within the plotarea, 
 ! then the plot file will be 2 or 1 dimensional. If the range is thin but
 ! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
 ! in the postprocessing.
 !
-! Possible values for plotDx (for IDL files):
+! Possible values for DxSavePlot (for IDL files):
 !
 !  0.5	- fixed resolution (any positive value)
 !  0.	- fixed resolution based on the smallest cell in the plotting area
 ! -1.	- unstructured grid will be produced by PostIDL.exe
 !
-! rPlot is the radius of the spherical cut for plotarea='sph'
+! Radius is the radius of the spherical cut for plotarea='sph'
 !
-! LosVector_i defines the direction of the line of sight integration
+! LosVectorX,Y,Z define the direction of the line of sight integration
 ! xSizeImage, ySizeImage defines the size of the LOS image
 ! xOffset, yOffset defines the offset relative to the origin (Sun)
 ! rOccult defines the minimum distance of the line from the origin (Sun)
 ! MuLimbDarkening is the limb darkening parameter for the 'wl' (white light)
 !                 and 'pb' (polarization brightness) plot variables.
 !
-! plot_vars should not be set for plotarea 'ion' 
-!       they are unimplemented.
-! The possible values for plot_vars with plotarea 'los' 
+! The possible values for NameVars with plotarea 'los' 
 !       are listed in subroutine set_plotvar_los in write_plot_los.f90.
-! The possible values for plot_vars for other plot areas
+! The possible values for NameVars for other plot areas
 !       are listed in subroutine set_plotvar in write_plot_common.f90.
 !
-! The possible values for plot_pars 
+! The possible values for NamePars 
 !       are listed in subroutine set_eqpar in write_plot_common.f90
 !
 ! A plot file is produced by each processor.  This file is ASCII in 'tec'
@@ -1487,43 +2011,12 @@ T			DoSaveBinary   used only for 'idl' plot file
 ! compiled in double precision, to make results more accurate.
 </command>
 
-<command name="SAVERESTART">
-	<parameter name="SaveRestart" type="logical" default="T" />
-	<if expr="$SaveRestart">
-		<parameter name="DnRestart" type="integer" min="-1" 
-							default="-1" />
-		<parameter name="DtRestart" type="real"    min="-1" 
-							default="-1" />
-	</if>
-#SAVERESTART
-T			saveRestartFile  Rest of parameters read if true
-100			DnOutput_i(restart_)
--1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
-
-! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
-! DtOutput(restart_)=-1. This results in the restart file being 
-! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! restartOUT/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! restartOUT/octree.rst
-!
-! and an ASCII header file is produced with timestep and time info:
-!
-! restartOUT/restart.H
-!
-! The restart files are overwritten every time a new restart is done.
-</command>
-
 <command name="SAVEPLOTSAMR">
-	<parameter name="SavePlotsAmr" type="logical" default="F" />
+	<parameter name="DoSavePlotsAmr" type="logical" default="F" />
 #SAVEPLOTSAMR
-F			savePlotsAMR to save plots before each AMR
+F			DoSavePlotsAmr
 
-! Default is save_plots_amr=.false.
+! Save plots before each AMR. Default is DoSavePlotsAMR=.false.
 </command>
 </commandgroup>
 <commandgroup name="AMR PARAMETERS">
@@ -1539,6 +2032,7 @@ F			savePlotsAMR to save plots before each AMR
 		<option name="spherefocus"	/>
 		<option name="magnetosphere"	/>
 		<option name="points"		/>
+		<option name="coupledhelio"	/>
 		<option name="helio_init"	/>
 		<option name="helio_z=4"	/>
 		<option name="all_then_focus"	/>
@@ -1556,8 +2050,8 @@ F			savePlotsAMR to save plots before each AMR
 	<parameter name="InitialRefineLevel" type="integer" min="0" 
 							default="4" />
 #AMRINIT
-default			InitialRefineType
-4			InitialRefineLevel
+default			TypeRefineInit
+4			nRefineLevelInit
 
 ! These are the default values for the initial refinement.
 
@@ -1584,31 +2078,31 @@ default			InitialRefineType
 </command>
 
 <command name="AMRLEVELS">
-	<parameter name="minBlockLevel" type="integer" min="-1" default="0" />
-	<parameter name="maxBlockLevel" type="integer" min="-1" default="99" />
-	<parameter name="FixBodyLevel"  type="logical" default="F" />
+	<parameter name="MinBlockLevel" type="integer" min="-1" default="0" />
+	<parameter name="MaxBlockLevel" type="integer" min="-1" default="99" />
+	<parameter name="DoFixBodyLevel" type="logical" default="F" />
 #AMRLEVELS
-0			minBlockLevel
-99			maxBlockLevel
-F			fixBodyLevel
+0			MinBlockLevel
+99			MaxBlockLevel
+F			DoFixBodyLevel
 
 ! Set the minimum/maximum levels that can be affected by AMR.  The usage is as
 ! follows:
 !
-! minBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
+! MinBlockLevel .ge.0 Cells can be coarsened up to the listed level but not
 !                       further.
-! minBlockLevel .lt.0 The current grid is ``frozen'' for coarsening such that
+! MinBlockLevel .lt.0 The current grid is ``frozen'' for coarsening such that
 !                       blocks are not allowed to be coarsened to a size
 !                       larger than their current one.
-! maxBlockLevel .ge.0 Any cell at a level greater than or equal to
-!                       maxBlockLevel is uneffected by AMR (cannot be coarsened
+! MaxBlockLevel .ge.0 Any cell at a level greater than or equal to
+!                       MaxBlockLevel is uneffected by AMR (cannot be coarsened
 !                       or refined).
-! maxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
+! MaxBlockLevel .lt.0 The current grid is ``frozen'' for refinement such that
 !                       blocks are not allowed to be refined to a size
 !                       smaller than their current one.
-! fixBodyLevel = T    Blocks touching the body cannot be coarsened or refined.
+! DoFixBodyLevel = T  Blocks touching the body cannot be coarsened or refined.
 !
-! This command has no effect when automatic_refinement is .false.
+! This command has no effect when DoAutoRefine is .false. in the #AMR command.
 !
 ! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
 ! both.  If both are set, the final one in the session will set the values
@@ -1616,20 +2110,21 @@ F			fixBodyLevel
 </command>
 
 <command name="AMRRESOLUTION">
-	<parameter name="minCellDx" type="real" min="-1" default="0"     />
-	<parameter name="maxCellDx" type="real" min="-1" default="99999" />
-	<parameter name="FixBodyLevel"  type="logical" default="F" />
+	<parameter name="DxCellMin" type="real" min="-1" default="0"     />
+	<parameter name="DxCellMax" type="real" min="-1" default="99999" />
+	<parameter name="DoFixBodyLevel"  type="logical" default="F" />
 #AMRRESOLUTION
-0.			minCellDx
-99999.			maxCellDx
-F			fixBodyLevel
+0.			DxCellMin
+99999.			DxCellMax
+F			DoFixBodyLevel
 
-! Serves the same function as AMRLEVELS. min_block_dx and max_block_dx are
-! converted into minBlockLevel and maxBlockLevel when they are read.
-! Note that minBlockLevel corresponds to maxCellDx and maxBlockLevel
-! corresponds to minCellDx.  See details above.
+! Serves the same function as AMRLEVELS. The DxCellMin and DxCellMmax
+! parameters are converted into MinBlockLevel and MaxBlockLevel 
+! when they are read.
+! Note that MinBlockLevel corresponds to DxCellMax and MaxBlockLevel
+! corresponds to DxCellMin.  See details above.
 !
-! This command has no effect when automatic_refinement is .false.
+! This command has no effect when DoAutoRefine is .false. in the #AMR command.
 !
 ! Note that the user can set either #AMRLEVELS or #AMRRESOLUTION but not
 ! both.  If both are set, the final one in the session will set the values
@@ -1641,22 +2136,41 @@ F			fixBodyLevel
 	<if expr="$DnRefine>0">
 		<parameter name="DoAutoRefine" type="logical" default="F" />
 		<if expr="$DoAutoRefine">
-			<parameter name="percentCoarsen" type="real" 
+			<parameter name="PercentCoarsen" type="real" 
 				min="0" max="100" default="20" />
-			<parameter name="percentRefine" type="real" 
+			<parameter name="PercentRefine" type="real" 
 				min="0" max="100" default="20" />
-			<parameter name="maxTotalBlocks" type="integer"
+			<parameter name="MaxTotalBlocks" type="integer"
 				min="1" default="99999" />
 		</if>
 	</if>
 #AMR
-2001			dnRefine (frequency in terms of total steps n_step)
-T			DoAutoRefine 
-0.			percentCoarsen
-0.			percentRefine
-99999			maxTotalBlocks
+2001			DnRefine
+T			DoAutoRefine   ! read if DnRefine is positive
+0.			PercentCoarsen ! read if DoAutoRefine is true
+0.			PercentRefine  ! read if DoAutoRefine is true
+99999			MaxTotalBlocks ! read if DoAutoRefine is true
 
-! Default for dn_refine is -1, ie. no run time refinement.
+! The DnRefine parameter determines the frequency of adaptive mesh refinements
+! in terms of total steps nStep.
+!
+! When DoAutoRefine is false, the grid is refined by one more level
+! based on the TypeRefineInit parameter given in the #AMRINIT command. 
+! If the number of blocks is not sufficient for this pre-specified refinement, 
+! the code stops with an error.
+!
+! When DoAutoRefine is true, the grid is refined or coarsened 
+! based on the criteria given in the #AMRCRITERIA command.
+! The number of blocks to be refined or coarsened are determined by
+! the PercentRefine and PercentCoarsen parameters. These per centages
+! are approximate only, because the constraints of the block adaptive
+! grid may result in more or fewer blocks than prescribed.
+! The total number of blocks will not exceed the smaller of the 
+! MaxTotalBlocks parameter and the total number of blocks available on all 
+! the PE-s (which is determined by the number of PE-s and 
+! the MaxBlocks parameter in ModSize.f90).
+! 
+! Default for DnRefine is -1, ie. no run time refinement.
 </command>
 
 <command name="AMRCRITERIA">
@@ -1711,15 +2225,15 @@ T			DoAutoRefine
 	</for>
 #AMRCRITERIA
 3			nRefineCrit (number of refinement criteria: 1,2 or 3)
-gradlogP		RefineCrit_i(1)
-divB			RefineCrit_i(2)
-Transient		RefineCrit_i(3)
-Rho_dot			TypeTransient_I(i) ! Only if 'Transient' or 'transient'
-T			UseSunEarth 	   ! Only if 'Transient'
-0.00E+00		xEarth		   ! Only if UseSunEarth
-2.56E+02 		yEarth		   ! Only if UseSunEarth
-0.00E+00		zEarth		   ! Only if UseSunEarth
-5.00E-01		InvD2Ray	   ! Only if UseSunEarth
+gradlogP		TypeRefine
+divB			TypeRefine
+Transient		TypeRefine
+Rho_dot			TypeTransient ! Only if 'Transient' or 'transient'
+T			UseSunEarth   ! Only if 'Transient'
+0.00E+00		xEarth        ! Only if UseSunEarth
+2.56E+02 		yEarth        ! Only if UseSunEarth
+0.00E+00		zEarth        ! Only if UseSunEarth
+5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
 ! The default values depend on problem_type. 
 ! At most three criteria can be given. Possible criteria:
@@ -1741,7 +2255,7 @@ T			UseSunEarth 	   ! Only if 'Transient'
 !
 ! All the names can also be spelled with all small case letters.
 !
-! The possible choices for TypeTransient_I 
+! The possible choices for TypeTransient
 !
 ! 'P_dot' (same as 'p_dot')
 ! 'T_dot' (same as 't_dot')
@@ -1754,7 +2268,7 @@ T			UseSunEarth 	   ! Only if 'Transient'
 ! Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
 ! a factor that defines how close to the ray Sun-Earth to refine the grid.
 ! Note that the AMR occurs in a cylinder around the ray.
-! Example:: for InvD2Ray = 
+! Example for InvD2Ray = 
 !   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
 !   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
 !   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
@@ -1779,8 +2293,6 @@ T			UseSunEarth 	   ! Only if 'Transient'
 		<parameter name="TypeLimiter" type="string" input="select">
 			<option name="minmod" default="T" 	/>
 			<option name="beta"			/>
-			<option name="mc"			/>
-			<option name="LSG"			/>
 		</parameter>
 		<parameter name="LimiterBeta" type="real" min="1" max="2"
 			default="1.2" if="$TypeLimiter eq 'beta'"/>
@@ -1801,8 +2313,6 @@ minmod			TypeLimiter ! Only for nOrder=2
 !
 ! Possible values for TypeLimiter:
 ! 'minmod'	- minmod limiter is the most robust 1D limiter
-! 'mc'		- Monotonized Central limiter is sharper but less robust
-! 'LSG'		- Least Squares Gradient: robust but expensive multiD limiter 
 ! 'beta'        - Beta limiter
 !
 ! Possible values for LimiterBeta are between 1.0 and 2.0 : 
@@ -1824,7 +2334,7 @@ T		UseNonConservative
 	<parameter name="nConservCrit" type="integer" min="0" max="3"
                                                              default="1"/>
 	<for from="1" to="$nConservCrit">
-		<parameter name="TypeConservCrit_I" type="string" 
+		<parameter name="TypeConservCrit" type="string" 
 							input="select">
 			<option name="radius"	value="r/R/radius/Radius"
 							default="T"/>
@@ -1833,22 +2343,22 @@ T		UseNonConservative
 		</parameter>
 		<parameter name="rConserv" type="real"
 				min="$rBody"		default = "2*$rBody"
-				if="$TypeConservCrit_I =~ /^r|radius$/i"/>
+				if="$TypeConservCrit =~ /^r|radius$/i"/>
 		<parameter name="pCoeffConserv" type="real" min="0"
 							default = "0.05"
-				if="$TypeConservCrit_I =~ /^p$/i" 	/>
+				if="$TypeConservCrit =~ /^p$/i" 	/>
 		<parameter name="GradPCoeffConserv" type="real" min="0"
 							default = "0.1"
-				if="$TypeConservCrit_I =~ /gradp/i"	/>
+				if="$TypeConservCrit =~ /gradp/i"	/>
 	</for>
 #CONSERVATIVECRITERIA
 3		nConservCrit
-r		TypeConservCrit_I(1)
-6.		rConserv             ! read if TypeConservCrit_I is 'r'
-p		TypeConservCrit_I(2)
-0.05		pCoeffConserv	     ! read if TypeConservCrit_I is 'p'
-GradP		TypeConservCrit_I(3)
-0.1		GradPCoeffConserv    ! read if TypeConservCrit_I is 'GradP'
+r		TypeConservCrit
+6.		rConserv             ! read if TypeConservCrit is 'r'
+p		TypeConservCrit
+0.05		pCoeffConserv	     ! read if TypeConservCrit is 'p'
+GradP		TypeConservCrit
+0.1		GradPCoeffConserv    ! read if TypeConservCrit is 'GradP'
 
 ! Select the parts of the grid where the conservative vs. non-conservative
 ! schemes are applied. The number of criteria is arbitrary, although 
@@ -1868,28 +2378,28 @@ GradP		TypeConservCrit_I(3)
 !
 ! 'r'      - radial distance of the cell is less than rConserv
 !
-! Default values are nConservCrit = 1 with TypeConservCrit_I(1)='r'
+! Default values are nConservCrit = 1 with TypeConservCrit = 'r'
 ! and rConserv=2*rBody, where rBody has a problem dependent default.
 </command>
 
 <command name="UPDATECHECK">
 	<parameter name="UseUpdateCheck" type="logical" default="T" />
 	<if expr="$UseUpdateCheck">
-		<parameter name="rhoMin" type="real" min="0" max="100"
+		<parameter name="RhoMinPercent" type="real" min="0" max="100"
 			default="40" />
-		<parameter name="rhoMax" type="real" min="100"
+		<parameter name="RhoMaxPercent" type="real" min="100"
 			default="400" />
-		<parameter name="pMin" type="real" min="0" max="100"
+		<parameter name="pMinPercent" type="real" min="0" max="100"
 			default="40" />
-		<parameter name="pMax" type="real" min="100"
+		<parameter name="pMaxPercent" type="real" min="100"
 			default="400" />
 	</if>
 #UPDATECHECK
 T			UseUpdateCheck
-40.			rhoMin[%]
-400.			rhoMax[%]
-40.			pMin[%]
-400.			pMax[%]
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
 
 ! Default values are shown.  This will adjust the timestep so that
 ! density and pressure cannot change by more than the given percentages
@@ -1939,8 +2449,6 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 		<option value="dir"    name="m_p_dir group by directions"    />
 		<option value="face"   name="m_p_dir group by faces     "    />
 		<option value="min"    name="m_p_dir group by kind and face" />
-		<option value="allold" name="m_p_all"			     />
-		<option value="oldopt" name="m_p_old FACES ONLY"	     />
 	</parameter>
 #MESSAGEPASS
 allopt			TypeMessagePass
@@ -1959,12 +2467,6 @@ allopt			TypeMessagePass
 ! 'all'		- message_pass_cell: corners, edges and faces in single message
 !
 ! 'allopt'      - message_pass_cell:  faces only in a single message
-!
-! 'allold'      - messagepass_all: corners, edges and faces in many messages
-!
-! 'oldopt'	- message_pass_equal_opt:     equal
-!		  message_pass_reschange_opt: restricted and prolonged
-!					  no corners, all variables together
 !
 ! Constrained transport requires corners, default is 'all'! <!--^CFG IF CONSTRAINB-->
 ! Diffusive control requires corners, default is 'all'!<!--^CFG IF DIVBDIFFUSE-->
@@ -2014,18 +2516,18 @@ T			UseBorisSimple
 	<parameter name="UseConstrainB"    type="logical" default="F"/><!--^CFG IF CONSTRAINB -->
 	<rule
 	expr="$UseDivbSource or $UseDivbDiffusion or $UseProjection or $UseConstrainB">
-	! At least one of the options should be true.
+		At least one of the options should be true.
 	</rule>
 	<!-- ^CFG IF PROJECTION BEGIN -->
 	<rule 
 	expr="not($UseProjection and ($UseDivbSource or $UseDivbDiffusion or $UseConstrainB))">
-	! If UseProjection is true, all others should be false.
+		If UseProjection is true, all others should be false.
 	</rule>
 	<!-- ^CFG END PROJECTION -->
 	<!-- ^CFG IF CONSTRAINB BEGIN -->
 	<rule
 	expr="not($UseConstrainB and ($UseDivbSource or $UseDivbDiffusion or $UseProjection))">
-	! If UseConstrainB is true, all others should be false.
+		If UseConstrainB is true, all others should be false.
 	</rule>
 	<!-- ^CFG END CONSTRAINB -->
 #DIVB
@@ -2152,24 +2654,54 @@ rel			TypeProjStop
 
 <!-- ^CFG IF RAYTRACE BEGIN -->
 <command name="RAYTRACE">
-	<parameter name="UseRayTrace" type="logical" default="F"/>
-	<if expr="$UseRayTrace">
-		<parameter name="DoCheckRayLoop" type="logical" default="F"/>
-		<parameter name="DnRayTrace" type="integer" min="1" 
-								default="100"/>
-		<parameter name="rRayTrace" type="real" min="0" default="1" />
-	</if>
-#RAYTRACE
-T			UseRayTrace    ! Rest of the parameters read if .true.
-F			DoCheckRayLoop print info for loops
-100			DnRayTrace   how often
-3.0			rRayTrace    where to stop with ray tracing
+	<parameter name="UseAccurateIntegral" type="logical" default="T"   />
+	<parameter name="UseAccurateTrace"    type="logical" default="F"   />
+	<parameter name="DtExchangeRay" type="real" 
+					 min="0.01" max="60" default="0.1" />
+	<parameter name="DnRaytrace" type="integer" min="1"  default="1"   />
 
-! Raytracing (field-line tracing) is needed to couple the GM and IM components.
-! It can also be used to create plot files with open-closed field line 
-! information.
-! Raytracing is done when needed, so the default values should work fine.
-! This command may be removed or modified in the future.
+#RAYTRACE
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.1			DtExchangeRay [sec]
+1			DnRaytrace
+
+Raytracing (field-line tracing) is needed to couple the GM and IM components.
+It can also be used to create plot files with open-closed field line 
+information. There are two algorithms implemented for integrating rays
+and for tracing rays.
+
+If UseAccurateIntegral is true (default), the field line integrals
+are calculated with the accurate algorithm, which follows the lines
+all the way. If UseAccurateIntegral is false, the block-wise algorithm
+is used, which actually needs the face values computed by the 
+block-wise tracing algorithm (UseAccurateTrace must be false).
+
+If UseAccurateTrace is false (default), the block-wise algorithm is used,
+which interpolates at block faces. This algorithm is fast, but less 
+accurate than the other algorithm. If UseAccurateTrace is true, 
+the field lines are followed all the way. It is more accurate but 
+potentially slower than the other algorithm.
+
+In the accurate tracing algorithms, when the ray exits the domain that belongs 
+to the PE, its information is sent to the other PE where the ray continues. 
+The information is buffered for sake of efficiency and to synchronize
+communitacation. The frequency of the information exchanges 
+(in terms of CPU seconds) is given by the DtExchangeRay parameter. 
+This is an optimization parameter for speed. Very small values of DtExchangeRay
+result in many exchanges with few rays, while very large values result
+in infrequent exchages thus some PE-s may become idle (no more work to do).
+The optimal value is problem dependent. A typically acceptable value is 
+DtExchangeRay = 0.1 seconds (default).
+
+The DnRaytrace parameter contains the minimum number of iterations between
+two ray tracings. The default value 1 means that every new step requires
+a new trace (since the magnetic field is changing). A larger value implies
+that the field does not change significantly in that many time steps.
+The ray tracing is always redone if the grid changes due to an AMR.
+
+Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
+DtExchangeRay = 0.1 and DnRaytrace=1.
 </command>
 <!-- ^CFG END RAYTRACE -->
 
@@ -2178,16 +2710,30 @@ F			DoCheckRayLoop print info for loops
 	<parameter name="TauCoupleIm" type="real" min="0"/>
 
 #IM
-0.01			TauCoupleIM
+0.01			TauCoupleIm
 
-! Determine how fast the GM pressure should be nudged towards the IM pressure.
-! A weighted average is taken every time step: 
+! Determine how fast the GM pressure p should be nudged towards the 
+! IM pressure pIm. The nudging is done in every GM time step.
+! The pIm pressure is updated every time IM->GM coupling occurs.
 !
-! pMHD = (pMHD + TauCoupleIM*pIM)/(1+TauCoupleIM)
+! If TauCoupleIm is less than 1.0, a weighted average is taken: 
 !
-! Therefore the smaller TauCoupleIM is the slower the adjustment will be. 
+! p' = (p + TauCoupleIm*pIm)/(1+TauCoupleIm)
 !
-! The default value is shown.
+! Therefore the smaller TauCoupleIm is the slower the adjustment will be.
+! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
+!
+! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
+! phyical time:
+!
+! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+!
+! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
+! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
+! p' = pIm is set in a single step.
+!
+! The default value is TauCoupleIm=0.01, which corresponds to a rather 
+! slow nudging.
 </command>
 <!-- ^CFG END RCM -->
 
@@ -2199,9 +2745,11 @@ F			DoCheckRayLoop print info for loops
 <command name="GAMMA" if="$_IsFirstSession">
 	<parameter name="Gamma" type="real" min="1" default="1.6666666667"/>
 #GAMMA
-1.6666666667		g
+1.6666666667		Gamma
 
-! Above value is the default.
+! The adiabatic index (ratio of the specific heats for fixed pressure
+! and volume. The default value is 5.0/3.0, which is valid for
+! monoatomic gas or plasma.
 </command>
 
 <command name="SHOCKTUBE">
@@ -2264,12 +2812,12 @@ F			DoCheckRayLoop print info for loops
 </command>
 
 <command name="SOLARWIND" if="$_IsFirstSession">
-	<parameter name="SwRhoDim" type="real" min="0"	default="5"	/>
-	<parameter name="SwTDim"   type="real" min="0"	default="181712.175" />
+	<parameter name="SwRhoDim" type="real" min="-1"	default="5"	/>
+	<parameter name="SwTDim"   type="real" min="-1"	default="181712.175" />
 	<parameter name="SwUxDim"  type="real" max="0"	default="-400"	/>
 	<parameter name="SwUyDim"  type="real"		default="0"	/>
 	<parameter name="SwUzDim"  type="real"		default="0"	/>
-	<parameter name="SwBxDim"  type="real" max="0"	default="-400"	/>
+	<parameter name="SwBxDim"  type="real"		default="0"	/>
 	<parameter name="SwByDim"  type="real"		default="0"	/>
 	<parameter name="SwBzDim"  type="real"		default="5"	/>
 #SOLARWIND
@@ -2282,8 +2830,13 @@ F			DoCheckRayLoop print info for loops
 0.0			SwByDim [nT]
 5.0			SwBzDim [nT]
 
-! No default values!
+! This command defines the solar wind parameters for the GM component.
+! It also defines the normalization for all the variables therefore
+! it is saved into the restart header file.
+! One of the #SOLARWIND command and the #UPSTREAM_INPUT_FILE command
+! (with UseUpstreamInputFile = .true.) is required by the GM component.
 </command>
+
 <command name="UPSTREAM_INPUT_FILE">
 	<parameter name="UseUpstreamInputFile" type="logical" default="F"/>
 	<if expr="$UseUpstreamInputFile">
@@ -2294,35 +2847,57 @@ F			DoCheckRayLoop print info for loops
 #UPSTREAM_INPUT_FILE
 T			UseUpstreamInputFile (rest of parameters read if true)
 IMF.dat                 NameUpstreamFile
-0.0                     SatelliteYPos
-0.0                     SatelliteZPos
 
-! UseUpstreamInputFile - default is false
-! UpstreamFileName     - user specified input file
-! Satellite_Y_Pos      - not yet used
-! Satellite_Z_Pos      - not yet used
+! Read IMF data from file NameUpstreamFile if UseUpstreamInputFile is true.
+! The data file contains all information required for setting the upstream
+! boundary conditions. Parameter TypeBcEast should be set to 'vary' for
+! the time dependent boundary condition.
+!
+! If the #SOLARWIND command is not provided than the first time read from
+! the upstream input file will set the normalization of all variables
+! in the GM component. Consequently either the #SOLARWIND command or
+! the #UPSTREAM_INPUT_FILE command with UseUpstreamInputFile=.true.
+! is required by the GM component.
+!
+! Default is UseUpstreamInputFile = .false.
 </command>
 
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
 	<parameter name="UseBody" type="logical" default="F"/>
 	<if expr="$UseBody">
-		<parameter name="rBody" type="real" min="0"
-							      default="3"/>
-		<parameter name="rCurrents" type="real" min="-1" 
+		<parameter name="rBody" type="real" min="0" default="3"/>
+		<if expr="$_NameComp eq 'GM'">
+			<parameter name="rCurrents" type="real" min="-1" 
 							      default="4"/>
-		<parameter name="BodyRhoDim" type="real" min="0"
+			<parameter name="BodyRhoDim" type="real" min="0"
 							      default="1"/>
-		<parameter name="BodyTDim" type="real" min="0"
+			<parameter name="BodyTDim" type="real" min="0"
 							      default="10000"/>
+		</if>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
-3.0			rBody
+3.0			rBody (user units)
 4.0			rCurrents
 1.0			BodyRhoDim (/ccm) density for fixed BC for rho_BLK
 10000.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
-! Default values depend on problem_type.
+! If UseBody is true, the inner boundary is a spherical surface
+! with radius rBody. The rBody is defined in units of the planet/solar
+! radius. It can be 1.0, in which case the simulation extends all the
+! way to the surface of the central body. In many cases it is more
+! economic to use an rBody larger than 1.0. 
+!
+! The rCurrents parameter defines where the currents are calculated for
+! the GM-IE coupling. This only matters if BATSRUS is running as GM
+! and it is coupled to IE.
+!
+! The BodyRhoDim and BodyTDim parameters define the density and temperature
+! at the inner boundary. The exact effect of these parameters depends 
+! on the settings in the #INNERBOUNDARY command.
+! 
+! The default values depend on the problem type defined 
+! in the #PROBLEMTYPE command.
 </command>
 
 <command name="GRAVITY" if="$_IsFirstSession">
@@ -2336,22 +2911,19 @@ T			UseBody (rest of parameters read if true)
 	</parameter>
 #GRAVITY
 T			UseGravity (rest of parameters read if true)
-0			GravityDir (0 - central, 1 - X, 2 - Y, 3 - Z direction)
+0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
-! Default values depend on problem_type.  
+! If UseGravity is false, the gravitational force of the central body
+! is neglected. If UseGravity is true and iDirGravity is 0, the
+! gravity points towards the origin. If iDirGravity is 1, 2 or 3,
+! the gravitational force is parallel with the X, Y or Z axes, respectively.
+!
+! Default values depend on problem_type.
 <!-- ^CFG IF SECONDBODY BEGIN -->
 ! When a second body is used the gravity direction for the second body
-!  is independent of the GravityDir value.  Gravity due to the second body
-!  is radially inward toward the second body.
+! is independent of the GravityDir value.  Gravity due to the second body
+! is radially inward toward the second body.
 <!-- ^CFG IF SECONDBODY END -->
-</command>
-
-<command name="FACONDUCTIVITYMODEL">
-	<parameter name="UsePhysicalFAConductance" type="logical" default="F"/>
-#FACONDUCTIVITYMODEL
-F			UsePhysicalFAConductance
-
-Default value is shown.
 </command>
 
 <command name="MASSLOADING">
@@ -2359,7 +2931,7 @@ Default value is shown.
 	<parameter name="DoAccelerateMassLoading" type="logical" default="F"/>
 #MASSLOADING
 F			UseMassLoading
-F			AccelerateMassLoading
+F			DoAccelerateMassLoading
 </command>
 
 <!-- ^CFG IF DISSFLUX BEGIN -->
@@ -2469,40 +3041,6 @@ F                       UseDefaultUnits
 </command>
 
 <!-- ^CFG END DISSFLUX -->
-<command name="USER_FLAGS">
-	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
-	<parameter name="UseUserSource"	           type="logical" default="F"/>
-	<parameter name="UseUserPerturbation"      type="logical" default="F"/>
-	<parameter name="UseUserOuterBcs"          type="logical" default="F"/>
-	<parameter name="UseUserICs"               type="logical" default="F"/>
-	<parameter name="UseUserSpecifyRefinement" type="logical" default="F"/>
-	<parameter name="UseUserLogFiles"          type="logical" default="F"/>
-	<parameter name="UseUserWritePlot"         type="logical" default="F"/>
-	<parameter name="UseUserAMR"               type="logical" default="F"/>
-	<parameter name="UseUserEchoInput"         type="logical" default="F"/>
-	<parameter name="UseUserB0"                type="logical" default="F"/>
-	<parameter name="UseUserSetPhysConst"      type="logical" default="F"/>
-	<parameter name="UseUserUpdateStates"      type="logical" default="F"/>
-
-#USER_FLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserSetPhysConst
-F                       UseUserUpdateStates
-
-! This command controls the use of user defined routines in user_routines.f90.
-! For each flag that is set, an associated routine will be called in 
-! user_routines.f90.  Default is .false. for all flags.
-</command>
 
 <!-- ^CFG IF SECONDBODY BEGIN -->
 <command name="SECONDBODY" if="$_IsFirstSession">
@@ -2577,7 +3115,7 @@ T			UseBody2   ! Rest of the parameters read if .true.
 	 <parameter name="CmeA"	     type="real" min="0" default="0.7"	  />
 	 <parameter name="CmeR1"     type="real" min="0" default="1.2"    />
 	 <parameter name="CmeR0"     type="real" min="0" default="1.0"    />
-	 <parameter name="CmeA1"     type="real" min="0" default="0.23"   />
+	 <parameter name="CmeA1"     type="real"         default="0.23"   />
 	 <parameter name="CmeAlpha"  type="real"	 default="0.0"	  />
 	 <parameter name="CmeRho1"   type="real" min="0" default="2.5E-12"/>
 	 <parameter name="CmeRho2"   type="real" min="0" default="2.0E-13"/>
@@ -2603,8 +3141,53 @@ F			InitRope
 2.0E-13 		CmeRho2 [kg/m^3] density of background corona after contract 
 0.0                     ModulationRho
 0.0                     ModulationP
+0.0			cRotxGl98 [deg]
+0.0			cRotYGl98 [deg]
+0.0			cRotZGl98 [deg]
 
-! Default values are shown. Parameters for problem_heliosphere
+This command defines the heliosphere parameters with a CME model.
+The coronal eruptive event generator is based on the
+Gibson and Low (GL) analytical solution prescribing a
+three-dimensional twisted magnetic flux rope in
+hydrostatic equilibrium in the presence of gravity.
+The GL solution is described in the Astrophysical
+Journal, volume 493, page 460.
+This flux rope is formed by applying a mathematical
+stretching operation to axisymmetric speromak flux
+rope.  The flux rope is of radius Cme_R0 and is
+placed Cme_R1 from the origin (solar center).  The
+stretching transformation draws space radially inward
+toward the origin by a distance of Cme_A, which
+distorts the flux rope to have a tear-drop shape.
+The parameter Cme_A1 modulates the magnetic field strength
+and negative values of Cme_A1 reverse the overall field
+direction.  For the GL flux rope to be in equilibrium, requires
+both dense plasma in the form of a filament inside the rope,
+(prescribed by the GL solution) as well as plasma pressure
+outside the flux rope which tends to be large than the
+solar corona can provide.  To initiate an eruption (the CME)
+we linearly superimpose the GL flux rope in the solar
+corona within the streamer belt.  The location of the flux
+rope is determined by the parameters cRotxGl98, cRotYGl98
+and cRotZGl98.  The flux rope is line-tied with both ends
+attached to the inner boundary.  The eruption follows from
+the flux rope being out of equilibrium, owing to a reduction
+in filament mass (set with ModulationRho) and from pressure
+of the corona being unable to balance the magnetic pressure
+of the flux rope.  The eruption takes the form of the flux
+rope being bodily expelled from the conona.  Eruption energy
+increases with flux rope size, field strength, stretching
+deformation and the buoyancy of the flux rope.
+</command>
+
+<command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
+	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
+
+#HELIOUPDATEB0
+-1.0			DtUpdateB0 [s]
+
+Set the frequency of updating the B0 field for the solar corona.
+A negative value means that the B0 field is not updated.
 </command>
 
 <command name="HELIODIPOLE" if="$_NameComp ne 'GM'">
@@ -2620,7 +3203,7 @@ F			InitRope
 ! while HelioDipoleTilt is the tilt relative to the ecliptic North 
 ! (negative sign means towards the planet) in degrees.
 !
-! Default values are ???
+! Default value is HelioDipoleStrength = 0.0.
 </command>
 
 <command name="HELIOROTATION" alias="INERTIAL" 
@@ -2664,7 +3247,7 @@ F			DoSendMHD
 	<parameter name="CmeA"	    type="real" min="0"	default="0.7"	/>
 	<parameter name="CmeR1"	    type="real" min="0"	default="1.2"	/>
 	<parameter name="CmeR0"     type="real" min="0"	default="1.0"	/>
-	<parameter name="CmeA1"     type="real" min="0"	default="0.23"	/>
+	<parameter name="CmeA1"     type="real" 	default="0.23"	/>
 	<parameter name="CmeAlpha"  type="real"		default="0.0"	/>
 	<parameter name="CmeRho1"   type="real" min="0"	default="2.5E-12"/>
 	<parameter name="CmeRho2"   type="real" min="0"	default="2.0E-13"/>
@@ -2675,14 +3258,46 @@ Low		TypeCme   model type ('Low')
 0.7		CmeA    [scaled] contraction distance
 1.2             CmeR1   [scaled] distance of spheromac from sun center
 1.0             CmeR0   [scaled] diameter of spheromac
-0.23		CmeA1   [Gauss]  spheromac B field strength
+0.23		CmeA1   [Gauss]  sets spheromac B strength which can be negative
 0.0		Cmealpha   [scaled] cme acceleration rate
 2.5E-12		CmeRho1 [kg/m^3] density of background corona before contract
 2.0E-13		CmeRho2 [kg/m^3] density of background corona after contract 
 1.0             CmeB1Dim [Gauss] field strength of dipole-type B field
 4.0E5           CmeUErupt  [m/s] cme velocity
 
-! Default values are shown above for B.C. Low's CME model
+The coronal eruptive event generator (TypeCme Low) is based on the
+Gibson and Low (GL) analytical solution prescribing a
+three-dimensional twisted magnetic flux rope in
+hydrostatic equilibrium in the presence of gravity.
+The GL solution is described in the Astrophysical
+Journal, volume 493, page 460.
+This flux rope is formed by applying a mathematical
+stretching operation to axisymmetric speromak flux
+rope.  The flux rope is of radius Cme_R0 and is
+placed Cme_R1 from the origin (solar center).  The
+stretching transformation draws space radially inward
+toward the origin by a distance of Cme_A, which
+distorts the flux rope to have a tear-drop shape.
+The parameter Cme_A1 modulates the magnetic field strength
+and negative values of Cme_A1 reverse the overall field
+direction.  For the GL flux rope to be in equilibrium, requires
+both dense plasma in the form of a filament inside the rope,
+(prescribed by the GL solution) as well as plasma pressure
+outside the flux rope which tends to be large than the
+solar corona can provide.  To initiate an eruption (the CME)
+we linearly superimpose the GL flux rope in the solar
+corona within the streamer belt.  The location of the flux
+rope is determined by the parameters cRotxGl98, cRotYGl98
+and cRotZGl98.  The flux rope is line-tied with both ends
+attached to the inner boundary.  The eruption follows from
+the flux rope being out of equilibrium, owing to a reduction
+in filament mass (set with ModulationRho) and from pressure
+of the corona being unable to balance the magnetic pressure
+of the flux rope.  The eruption takes the form of the flux
+rope being bodily expelled from the conona.  Eruption energy
+increases with flux rope size, field strength, stretching
+deformation and the buoyancy of the flux rope.
+Default values are shown above for the GL flux rope CME model.
 </command>
 
 <command name="ARCADE" if="$_IsFirstSession and $_NameComp ne 'GM'">
@@ -2750,31 +3365,13 @@ Param/SSS_3000		NameIncludeFile
 ! Include a library file from Param/ or any file from anywhere else.
 </command>
 
-<command name="RUN" if="$_IsStandAlone">
-
-#RUN
-
-This command is only used in stand alone mode.
-
-Run BATSRUS with the parameters above and then return for the next session
-</command>
-
-<command name="END" if="$_IsStandAlone">
-
-#END
-
-This command is only used in stand alone mode.
-
-Run the executable with the parameters above and then stop.
-In included files #END simply means the end of the included lines.
-</command>
 </commandgroup>
 <!--
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($SwRhoDim > 0) or $UseUpstreamInputFile">
+<rule expr="($SwRhoDim > 0) or $UseUpstreamInputFile or $_NameComp ne 'GM'">
 	Either command #SOLARWIND or #UPSTREAM_INPUT_FILE must be used!
 </rule>
 

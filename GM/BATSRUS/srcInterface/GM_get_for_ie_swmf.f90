@@ -1,3 +1,5 @@
+!^CFG COPYRIGHT UM
+!^CMP FILE IE
 !==================================================================!
 !BOP
 !ROUTINE: GM_get_for_ie - gets FACurrents for coupling via SWMF
@@ -7,7 +9,7 @@ subroutine GM_get_for_ie_swmf(&
 !USES:
   use ModMain, ONLY    : TypeCoordSystem, Time_Simulation
   use CON_physics, ONLY: get_planet_field, transform_matrix
-  use CON_router,ONLY  : IndexPtrType,WeightPtrType,cOne
+  use CON_coupler,ONLY : IndexPtrType,WeightPtrType,cOne
   use ModGeometry,ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics,ONLY  : UnitSI_J,UnitSI_X, RBody
   use ModAdvance,ONLY  : State_VGB, Bx_, By_, Bz_

@@ -6,40 +6,80 @@ subroutine OPTION_RAYTRACING(on,name)
   character (len=40), intent(out) :: name
 
   on  =.true.
-  name='RAY TRACING Toth 1.1'
+  name='RAY TRACING Toth 2.0'
 
 end subroutine OPTION_RAYTRACING
 
+!=============================================================================
+
 subroutine ray_trace
+
+  use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition
+  use ModRaytrace, ONLY: init_mod_raytrace, &
+       UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
+  use ModPhysics,  ONLY: rBody
+  implicit none
+
+  ! remember last call and the last grid number
+  integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
+
+  logical :: oktest, oktest_me
+  !-------------------------------------------------------------------------
+
+  call set_oktest('ray_trace',oktest,oktest_me)
+
+  if(oktest_me)then
+     write(*,*)'GM ray_trace: n_last,n_step         =',n_last,n_step
+     write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
+     write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
+          iLastDecomposition,iNewDecomposition
+  end if
+
+  if(  n_last + DnRaytrace > n_step   .and. &
+       iLastGrid          == iNewGrid .and. &
+       iLastDecomposition == iNewDecomposition) RETURN
+
+  ! Remember this call
+  n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
+
+  call timing_start('ray_trace')
+
+  call init_mod_raytrace
+
+  ! Initialize R_raytrace, R2_raytrace to body radius
+  R_raytrace  = rBody
+  R2_raytrace = R_raytrace**2
+
+  if(UseAccurateTrace)then
+     call ray_trace_accurate
+  else
+     call ray_trace_fast
+  end if
+
+  call timing_stop('ray_trace')
+
+end subroutine ray_trace
+
+!==============================================================================
+subroutine ray_trace_fast
+
   use ModProcMH
   use ModMain
-  use ModPhysics, ONLY : rBody
-  use ModAdvance, ONLY : Bx_,By_,Bz_,State_VGB,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance,  ONLY : Bx_, Bz_, State_VGB
   use ModParallel, ONLY : NOBLK, neiLEV
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,Rmin_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       true_cell,true_BLK
-  use ModInterface
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, R_BLK, Rmin_BLK, &
+       dx_BLK, dy_BLK, dz_BLK, true_cell
   use ModRaytrace
   use ModMpi
   implicit none
 
-  ! Arguments
-  ! remember last call and the last grid number
-  integer :: n_last=-1, iLastGrid=-1, iLastDecomposition=-1
-
   ! Iteration parameters
-  integer :: ray_iter, ray_iter_max=150
+  integer, parameter :: ray_iter_max=150
+  integer :: ray_iter
   logical :: done_me, done
   real    :: dray_min
 
-  ! Small temporary array for X,Y,Z => theta,phi conversion in a block
-  real, dimension(3,2,1:nI,1:nJ,1:nK):: ray_tmp
-  real, dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_tmp
-
-  real :: qqray(3), tmpValue(4)
-
-  ! Conversion from radians to degrees
-  real, save :: rad2deg
+  real :: qqray(3)
 
   ! Minimum value of B for which integration of field lines makes any sense
   real, parameter :: smallB=1.e-8
@@ -64,9 +104,6 @@ subroutine ray_trace
   ! Radial distance and square of it: r2=sum(xx**2)
   real :: r2
 
-  ! The square of the body radius. Inside rBody we should not calculate B1, Rho, and p
-  real :: rBody2
-
   ! Cell indices corresponding to current or final x position
   integer :: i1,j1,k1,i2,j2,k2
 
@@ -82,8 +119,8 @@ subroutine ray_trace
   ! Indices corresponding to the starting point of the ray
   integer :: ix,iy,iz
 
-  ! Current block, dimension and direction indices
-  integer :: iBLK, idim, idir, iray
+  ! Current block and direction indices
+  integer :: iBLK, iRay
 
   ! Testing and timing
   logical :: oktest, oktest_me, oktime, oktime_me
@@ -93,66 +130,39 @@ subroutine ray_trace
   !----------------------------------------------------------------------------
 
   call set_oktest('ray_trace',oktest,oktest_me)
-
-  if(oktest_me)then
-     write(*,*)'GM ray_trace: n_last,n_step         =',n_last,n_step
-     write(*,*)'GM ray_trace: iLastGrid,iNewGrid    =',iLastGrid,iNewGrid
-     write(*,*)'GM ray_trace: iLastDecomp,iNewDecomp=',&
-          iLastDecomposition,iNewDecomposition
-  end if
-
-  if(  n_last             == n_step   .and. &
-       iLastGrid          == iNewGrid .and. &
-       iLastDecomposition == iNewDecomposition) RETURN
-
-  ! Remember this call
-  n_last=n_step; iLastGrid = iNewGrid; iLastDecomposition = iNewDecomposition
-
   call set_oktest('time_ray_trace',oktime,oktime_me)
-  call timing_start('ray_trace')
   if(oktime)call timing_reset('ray_pass',2)
 
-!!!
-  R_raytrace = rBody
-  if(iProc==0)write(*,*)'Setting R_raytrace=',R_raytrace
-  R2_raytrace = R_raytrace**2
+  oktest_ray = .false.
 
   Bxyz_DGB = State_VGB(Bx_:Bz_,:,:,:,:)
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
-  rBody2 = rBody**2
+  ! Initial values !!! Maybe LOOPRAY would be better??
 
-!  if(iLastGrid/=iNewGrid .or.iLastDecomposition/=iNewDecomposition)then
-     ! Initialize constants
+  rayface=NORAY
+  ray=NORAY
 
-     rad2deg=45.0/atan(1.0)
+  do iBLK=1,nBlockMax
+     if(unusedBLK(iBLK))then
+        ! rayface in unused blocks is assigned to NORAY-1.
+        rayface(:,:,:,:,:,iBLK)=NORAY-1.
+        CYCLE
+     end if
+     ! Inner points of rayface should never be used, assign them to OPEN
+     ! so that checking for blocks with fully open rays becomes easy
+     rayface(:,:,2:nI,2:nJ,2:nK,iBLK)=OPENRAY
+     
+     ! Set rayface=OPENRAY at outer boundaries
+     if(neiLEV(east_ ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
+     if(neiLEV(west_ ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
+     if(neiLEV(south_,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
+     if(neiLEV(north_,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
+     if(neiLEV(bot_  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
+     if(neiLEV(top_  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
 
-     ! Initial values !!! Maybe LOOPRAY would be better??
-
-     rayface=NORAY
-     ray=NORAY
-
-     do iBLK=1,nBlockMax
-        if(unusedBLK(iBLK))then
-           ! rayface in unused blocks is assigned to NORAY-1.
-           rayface(:,:,:,:,:,iBLK)=NORAY-1.
-           CYCLE
-        end if
-        ! Inner points of rayface should never be used, assign them to OPEN
-        ! so that checking for blocks with fully open rays becomes easy
-        rayface(:,:,2:nI,2:nJ,2:nK,iBLK)=OPENRAY
-
-        ! Set rayface=OPENRAY at outer boundaries
-        if(neiLEV(east_ ,iBLK)==NOBLK)rayface(:,:,   1,:,:,iBLK)=OPENRAY
-        if(neiLEV(west_ ,iBLK)==NOBLK)rayface(:,:,nI+1,:,:,iBLK)=OPENRAY
-        if(neiLEV(south_,iBLK)==NOBLK)rayface(:,:,:,   1,:,iBLK)=OPENRAY
-        if(neiLEV(north_,iBLK)==NOBLK)rayface(:,:,:,nJ+1,:,iBLK)=OPENRAY
-        if(neiLEV(bot_  ,iBLK)==NOBLK)rayface(:,:,:,:,   1,iBLK)=OPENRAY
-        if(neiLEV(top_  ,iBLK)==NOBLK)rayface(:,:,:,:,nK+1,iBLK)=OPENRAY
-
-     end do
-     if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
-!  end if
+  end do
+  if(oktest_me)write(*,*)'ray_trace initialized ray and rayface arrays'
 
   ! Interpolate the B1 field to the nodes
   do iBLK=1, nBlockMax
@@ -506,69 +516,10 @@ subroutine ray_trace
   ! Convert x, y, z to latitude and longitude, and status
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK)) CYCLE
-
-     ! Store ray values of block into ray_tmp
-     ray_tmp=ray(:,:,1:nI,1:nJ,1:nK,iBLK)
-
-     do iray=1,2
-        ! Check if this direction is closed or not
-        where(ray_tmp(1,iray,:,:,:)>CLOSEDRAY)
-           ! Make sure that asin will work, -1<=ray_tmp(3,iray,:,:,:)<=1
-           ray_tmp(3,iray,:,:,:)=max(-0.99999999,ray_tmp(3,iray,:,:,:))
-           ray_tmp(3,iray,:,:,:)=min( 0.99999999,ray_tmp(3,iray,:,:,:))
-           ! Calculate  -90 < theta=asin(z)  <  90
-           ray(1,iray,1:nI,1:nJ,1:nK,iBLK)=&
-                rad2deg*asin(ray_tmp(3,iray,:,:,:))
-           ! Calculate -180 < phi=atan2(y,z) < 180
-           where(abs(ray_tmp(1,iray,:,:,:))<1.E-8 .and. &
-                abs(ray_tmp(2,iray,:,:,:))<1.E-8) &
-                ray_tmp(1,iray,:,:,:)=1.
-           ray(2,iray,1:nI,1:nJ,1:nK,iBLK)=&
-                rad2deg*atan2(ray_tmp(2,iray,:,:,:),ray_tmp(1,iray,:,:,:))
-           ! Shift zero to subsolar
-           where(ray(2,iray,1:nI,1:nJ,1:nK,iBLK)<0.)
-              ray(2,iray,1:nI,1:nJ,1:nK,iBLK)= &
-                   ray(2,iray,1:nI,1:nJ,1:nK,iBLK)+360.
-           end where
-        elsewhere
-           ! Impossible values
-           ray(1,iray,1:nI,1:nJ,1:nK,iBLK)=-100.
-           ray(2,iray,1:nI,1:nJ,1:nK,iBLK)=-200.
-        endwhere
-
-     end do
-
-     ! Calculate and store ray status in ray(3,1...)
-     ! Assume strange status: disconnected in one direction at least
-     ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-3.
-
-     ! Fully closed
-     where(ray_tmp(1,1,:,:,:)>CLOSEDRAY .and. ray_tmp(1,2,:,:,:)>CLOSEDRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=3.
-
-     ! Half closed in positive direction
-     where(ray_tmp(1,1,:,:,:)>CLOSEDRAY .and. ray_tmp(1,2,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=2.
-
-     ! Half closed in negative direction
-     where(ray_tmp(1,2,:,:,:)>CLOSEDRAY .and. ray_tmp(1,1,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=1.
-
-     ! Fully open
-     where(ray_tmp(1,1,:,:,:)==OPENRAY .and. ray_tmp(1,2,:,:,:)==OPENRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=0.
-
-     ! Cells inside body
-     where(ray_tmp(1,1,:,:,:)==BODYRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-1.
-
-     ! Loop ray within block
-     where(ray_tmp(1,1,:,:,:)==LOOPRAY .or.  ray_tmp(1,2,:,:,:)==LOOPRAY)&
-          ray(3,1,1:nI,1:nJ,1:nK,iBLK)=-2.
-
-  end do ! iBLK
-
-  call timing_stop('ray_trace')
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        call xyz_to_latlonstatus(ray(:,:,i,j,k,iBLK))
+     end do; end do; end do
+  end do
 
   if(oktime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
@@ -1102,7 +1053,7 @@ contains
 
     use ModMain,     ONLY: UseNewAxes, Time_Simulation
     use ModPhysics,  ONLY: Bdp_dim     ! only the sign of dipole is needed
-    use CON_physics, ONLY: map_planet_field
+    use CON_planet_field, ONLY: map_planet_field
 
     integer :: iHemisphere
     real    :: x_D(3)
@@ -1178,9 +1129,6 @@ contains
     real :: qqray(3)
 
     ! Local variables
-
-    ! rayface values in the 4 grid points surrounding location x on the face
-    real :: qrayface(3,4)
 
     ! Distances between x and the 4 grid points used for interpolation
     real :: d1,e1,d2,e2
@@ -1295,7 +1243,7 @@ contains
 
   end subroutine assign_ray
 
-end subroutine ray_trace
+end subroutine ray_trace_fast
 
 !=========================================================================
 subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
@@ -1305,7 +1253,6 @@ subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
   ! The result is returned in qray.
   ! Note that qray and qrayface may overlap, so their intent must be inout!
 
-  use ModMain, ONLY : test_string
   use ModRaytrace
   implicit none
 
@@ -1435,93 +1382,31 @@ end subroutine rayface_interpolate
 
 !=========================================================================
 subroutine convFaces2LatLon(rayface_in)
-  use ModRaytrace
+  use ModRaytrace, ONLY: nI, nJ, nK, xyz_to_latlonstatus
   implicit none
 
   real, intent(inout), dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_in
 
-  ! Direction index
-  integer :: iray
-
-  ! Conversion from radians to degrees
-  real :: rad2deg
-
-  ! Small temporary array for X,Y,Z => theta,phi conversion in a block
-  real, dimension(3,2,1:nI+1,1:nJ+1,1:nK+1):: rayface_tmp
-  !----------------------------------------------------------------------------
-
-  ! Initialize constants
-  rad2deg=45.0/atan(1.0)
-
-  ! Store ray values of block into rayface_tmp
-  rayface_tmp=rayface_in(:,:,1:nI+1,1:nJ+1,1:nK+1)
-
-  do iray=1,2
-     ! Check if this direction is closed or not
-     where(rayface_tmp(1,iray,:,:,:)>CLOSEDRAY)
-        ! Make sure that asin will work, -1<=rayface_tmp(3,iray,:,:,:)<=1
-        rayface_tmp(3,iray,:,:,:)=max(-0.99999999,rayface_tmp(3,iray,:,:,:))
-        rayface_tmp(3,iray,:,:,:)=min( 0.99999999,rayface_tmp(3,iray,:,:,:))
-        ! Calculate  -90 < theta=asin(z)  <  90
-        rayface_in(1,iray,1:nI+1,1:nJ+1,1:nK+1)=&
-             rad2deg*asin(rayface_tmp(3,iray,:,:,:))
-        ! Calculate -180 < phi=atan2(y,z) < 180
-        where(abs(rayface_tmp(1,iray,:,:,:))<1.E-8 .and. &
-             abs(rayface_tmp(2,iray,:,:,:))<1.E-8) &
-             rayface_tmp(1,iray,:,:,:)=1.
-        rayface_in(2,iray,1:nI+1,1:nJ+1,1:nK+1)=&
-             rad2deg*atan2(rayface_tmp(2,iray,:,:,:),rayface_tmp(1,iray,:,:,:))
-        ! Shift zero to subsolar
-        where(rayface_in(2,iray,1:nI+1,1:nJ+1,1:nK+1)<0.)
-           rayface_in(2,iray,1:nI+1,1:nJ+1,1:nK+1)= &
-                rayface_in(2,iray,1:nI+1,1:nJ+1,1:nK+1)+360.
-        end where
-     elsewhere
-        ! Impossible values
-        rayface_in(1,iray,1:nI+1,1:nJ+1,1:nK+1)=-100.
-        rayface_in(2,iray,1:nI+1,1:nJ+1,1:nK+1)=-200.
-     endwhere
-
+  integer :: Di,i,j,k
+  !---------------------------------------------------------------------
+  do k=1,nK+1
+     do j=1,nJ+1
+        ! Exclude inside points
+        if(k>1.and.k<nK+1.and.j>1.and.j<nJ+1)then
+           ! j and k are inside, do endpoints only in i
+           Di=nI
+        else
+           Di=1
+        end if
+        do i=1,nI+1,Di
+           call xyz_to_latlonstatus(rayface_in(:,:,i,j,k))
+        end do
+     end do
   end do
-
-  ! Calculate and store ray status in rayface_in(3,1...)
-  ! Assume strange status: disconnected in one direction at least
-  rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=-3.
-
-  ! Fully closed
-  where(rayface_tmp(1,1,:,:,:)>CLOSEDRAY .and. rayface_tmp(1,2,:,:,:)>CLOSEDRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=3.
-
-  ! Half closed in positive direction
-  where(rayface_tmp(1,1,:,:,:)>CLOSEDRAY .and. rayface_tmp(1,2,:,:,:)==OPENRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=2.
-
-  ! Half closed in negative direction
-  where(rayface_tmp(1,2,:,:,:)>CLOSEDRAY .and. rayface_tmp(1,1,:,:,:)==OPENRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=1.
-
-  ! Fully open
-  where(rayface_tmp(1,1,:,:,:)==OPENRAY .and. rayface_tmp(1,2,:,:,:)==OPENRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=0.
-
-  ! Cells inside body
-  where(rayface_tmp(1,1,:,:,:)==BODYRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=-1.
-
-  ! Loop ray within block
-  where(rayface_tmp(1,1,:,:,:)==LOOPRAY .and. rayface_tmp(1,2,:,:,:)==LOOPRAY)&
-       rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)=-2.
-
-  rayface_in(3,2,1:nI+1,1:nJ+1,1:nK+1) = rayface_in(3,1,1:nI+1,1:nJ+1,1:nK+1)
 
 end subroutine convFaces2LatLon
 
-
-!!$ ----------------------------------------------------------------------------------
-!!$ ----------------------------------------------------------------------------------
-!!$ ----------------------------------------------------------------------------------
-!!$ ----------------------------------------------------------------------------------
-
+!=============================================================================
 
 subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
   ! Follow ray starting at initial position x_0,y_0,z_0 in direction 1
@@ -1530,7 +1415,7 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
   ! x_0, y_0, and z_0 sent in in real coordinates
 
   use ModProcMH
-  use ModAdvance, ONLY : rho_,Bx_,By_,Bz_,P_,State_VGB
+  use ModAdvance, ONLY : rho_, Bx_, Bz_, P_, State_VGB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Rmin_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace
   implicit none
@@ -1585,15 +1470,10 @@ subroutine integrate_ray(dbg,iBLK,x_0,y_0,z_0,fvol,rvol,pvol)
   ! Cell indices corresponding to current or final x position
   integer :: i1,j1,k1,i2,j2,k2
 
-  ! Indices corresponding to the starting point of the ray
-  integer :: ix,iy,iz
-
   ! counter for ray integration
   integer :: nsegment 
 
   real :: amount2add
-
-  CHARACTER (LEN=80) :: filename
   !--------------------------------------------------------------------------
 
   fvol=0.; rvol=0.; pvol=0.

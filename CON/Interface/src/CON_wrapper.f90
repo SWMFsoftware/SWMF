@@ -1,5 +1,10 @@
 !^CMP COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
 !BOP -------------------------------------------------------------------
+!
+!QUOTE: \section{CON/Interface: between CON and Components and between Components}
 !
 !MODULE: CON_wrapper - Wrapper for component specific subroutines
 !
@@ -147,6 +152,12 @@ contains
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
     case(UA_)                                     !^CMP IF UA
        call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
+    case(RB_)                                     !^CMP IF RB
+       call RB_set_param(CompInfo,TypeAction)     !^CMP IF RB
+    case(SC_)                                     !^CMP IF SC
+       call SC_set_param(CompInfo,TypeAction)     !^CMP IF SC
+    case(SP_)                                     !^CMP IF SP
+       call SP_set_param(CompInfo,TypeAction)     !^CMP IF SP
     case default
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
@@ -203,6 +214,8 @@ contains
   !INTERFACE:
   subroutine get_version_id(iComp,IsOn,NameVersion,Version)
 
+    use CON_comp_info
+
     !INPUT PARAMETERS:
     integer,                      intent(in)  :: iComp
     !OUTPUT PARAMETERS:
@@ -233,6 +246,12 @@ contains
        call IH_set_param(CompInfo,'VERSION')     !^CMP IF IH
     case(UA_)                                    !^CMP IF UA
        call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA
+    case(RB_)                                    !^CMP IF RB
+       call RB_set_param(CompInfo,'VERSION')     !^CMP IF RB
+    case(SC_)                                    !^CMP IF SC
+       call SC_set_param(CompInfo,'VERSION')     !^CMP IF SC
+    case(SP_)                                    !^CMP IF SP
+       call SP_set_param(CompInfo,'VERSION')     !^CMP IF SP
     case default
        call put(CompInfo,Use=.false.,NameVersion='not implemented',Version=0.0)
     end select
@@ -255,7 +274,7 @@ contains
     ! Initialize component for the session. Session numbers start from 1.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
@@ -276,6 +295,12 @@ contains
        call IM_init_session(iSession,TimeSimulation)     !^CMP IF IM
     case(UA_)                                            !^CMP IF UA
        call UA_init_session(iSession,TimeSimulation)     !^CMP IF UA
+    case(RB_)                                            !^CMP IF RB
+       call RB_init_session(iSession,TimeSimulation)     !^CMP IF RB
+    case(SC_)                                            !^CMP IF SC
+       call SC_init_session(iSession,TimeSimulation)     !^CMP IF SC
+    case(SP_)                                            !^CMP IF SP
+       call SP_init_session(iSession,TimeSimulation)     !^CMP IF SP
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -297,7 +322,7 @@ contains
     ! report errors, etc.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
@@ -318,6 +343,12 @@ contains
        call IM_finalize(TimeSimulation)     !^CMP IF IM
     case(UA_)                               !^CMP IF UA
        call UA_finalize(TimeSimulation)     !^CMP IF UA
+    case(RB_)                               !^CMP IF RB
+       call RB_finalize(TimeSimulation)     !^CMP IF RB
+    case(SC_)                               !^CMP IF SC
+       call SC_finalize(TimeSimulation)     !^CMP IF SC
+    case(SP_)                               !^CMP IF SP
+       call SP_finalize(TimeSimulation)     !^CMP IF SP
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -338,7 +369,7 @@ contains
     ! Save restart information for the component.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
@@ -359,6 +390,12 @@ contains
        call IM_save_restart(TimeSimulation)     !^CMP IF IM
     case(UA_)                                   !^CMP IF UA
        call UA_save_restart(TimeSimulation)     !^CMP IF UA
+    case(RB_)                                   !^CMP IF RB
+       call RB_save_restart(TimeSimulation)     !^CMP IF RB
+    case(SC_)                                   !^CMP IF SC
+       call SC_save_restart(TimeSimulation)     !^CMP IF SC
+    case(SP_)                                   !^CMP IF SP
+       call SP_save_restart(TimeSimulation)     !^CMP IF SP
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -383,7 +420,7 @@ contains
     ! The updated TimeSimulation should not exceed TimeSimulationLimit.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
@@ -405,6 +442,12 @@ contains
        call IM_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF IM
     case(UA_)                                               !^CMP IF UA
        call UA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF UA
+    case(RB_)                                               !^CMP IF RB
+       call RB_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF RB
+    case(SC_)                                               !^CMP IF SC
+       call SC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SC
+    case(SP_)                                               !^CMP IF SP
+       call SP_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SP
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select

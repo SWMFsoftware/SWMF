@@ -1,6 +1,6 @@
-<commandList name="Inner Electrodynamics">
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-<!-- The XML syntax is described at the end of Param/PARAM.XML -->
+<commandList name="Ridley Ionosphere Model: IE Component">
 
 <commandgroup name="Testing">
 
@@ -112,17 +112,21 @@ The default is that no plotfiles are saved.
 	<parameter name="UseFullCurrent" type="logical" default="F"/>
 	<parameter name="UseFakeRegion2" type="logical" default="F"/>
 	<parameter name="F107Flux" type="real" min="0" default="150"/>
-	<parameter name="StarLightPedConductance" type="real" min="0" 
+	<parameter name="StarLightPedConductance" type="real" min="0.001" 
 						default="0.25"/>
 	<parameter name="PolarCapPedConductance" type="real" min="0" 
 						default="0.25"/>
 
+	<rule expr="not ($ConductanceModel=~/3|5/ and $F107Flux==0)">
+		F107Flux must be positive for ConductanceModel = 3 or 5
+	</rule>
+
 The ConductanceModel variable determines which ionosphere model is used:
-  0 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance
-  1 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance, and a constant Hall conductance
-      which is set by StarLightPedConductance
+  0 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance
+  1 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance, and a constant Hall conductance
+      which is set by PolarCapPedConductance
   2 - uses a solar EUV combined with a nightside conductance, so
       it uses f107_flux and StarLightPedConductance
   3 - uses solar EUV, nightside, and crude oval, so uses
@@ -151,7 +155,7 @@ Default is not reading AMIE files.
 #SPS
 T			UseSPS
 
-???
+The UseSPS parameter indicates if the serial potential solver is used.
 </command>
 
 <command name="BACKGROUND">

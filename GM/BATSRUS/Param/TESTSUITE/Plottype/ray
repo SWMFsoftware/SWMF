@@ -1,5 +1,5 @@
 #TEST
-ray_trace
+ray_trace time_ray_trace
 
 #SAVEPLOT
 2                       nplotfiles

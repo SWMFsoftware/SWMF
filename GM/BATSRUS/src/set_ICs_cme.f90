@@ -461,12 +461,11 @@ subroutine set_ICs_cme
            !NEGATIVE PRESSURE and DENSIY TEST
            if(State_VGB(P_,i,j,k,globalBLK) .le. 0.0) then
               write(*,*) 'cme_init: negative pressure at', i,j,k,globalBLK
-              stop
+              call stop_mpi('ERROR in set_ICs_cme')
            end if
            if(State_VGB(rho_,i,j,k,globalBLK) .le. 0.0) then
               write(*,*) 'cme_init: negative density at', i,j,k,globalBLK
-              stop
-
+              call stop_mpi('ERROR in set_ICs_cme')
            end if
         end do
      end do

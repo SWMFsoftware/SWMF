@@ -20,7 +20,7 @@ subroutine write_progress(inopt)
      call write_prefix; write(iUnitOut,&
           '(1X,''         for 3D Heliospheric Flows,'')')
      call write_prefix; write(iUnitOut,&
-          '(1X,''University of Michigan, 1995-2003.'')')
+          '(1X,''University of Michigan, 1995-2004.'')')
      call write_prefix; write(iUnitOut,*)
      if(IsStandAlone)then
         write(*,'(a,f4.2,a,i4,a)') &
@@ -232,11 +232,11 @@ subroutine write_runtime_values()
   write(iUnitOut,'(10X,a,a)') FluxType,' Flux Function'
 
   call write_prefix
-  if (UsePointImplicit) then                       !^CFG IF POINTIMPLICIT BEGIN  
-     write(iUnitOut,'(10X,''Multistage Point-Implicit Time Stepping'')')
-  else                                             !^CFG END POINTIMPLICIT
-     write(iUnitOut,'(10X,''Multistage Explicit Time Stepping'')')
-  end if                                           !^CFG IF POINTIMPLICIT
+  if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
+     write(iUnitOut,'(10X,''Implicit Time Stepping'')')
+  else                                             !^CFG END IMPLICIT
+     write(iUnitOut,'(10X,''Explicit Time Stepping'')')
+  end if                                           !^CFG IF IMPLICIT
   if(boris_correction)then                         !^CFG IF BORISCORR BEGIN 
      call write_prefix     
      write(iUnitOut,'(10X,''With Boris Correction, factor ='',f10.4)') &
@@ -307,9 +307,7 @@ subroutine option_list
 
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-!  call timing_version(on,name,number); call write_version
-!  write(iUnitOut,'(a)')&
-!       '#                                                                 #'
+
   call OPTION_RUSANOVFLUX(on,name);  call write_option     !^CFG IF RUSANOVFLUX
   call OPTION_LINDEFLUX(on,name);    call write_option     !^CFG IF LINDEFLUX
   call OPTION_AWFLUX(on,name);       call write_option     !^CFG IF AWFLUX
@@ -317,7 +315,6 @@ subroutine option_list
   call OPTION_CONSTRAIN_B(on,name);  call write_option     !^CFG IF CONSTRAINB
   call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION
   call OPTION_RAYTRACING(on,name);   call write_option     !^CFG IF RAYTRACE
-  call OPTION_FACE(on,name);         call write_option
   call OPTION_IMPLICIT(on,name);     call write_option     !^CFG IF IMPLICIT
 
   call write_prefix; write(iUnitOut,'(a)') &

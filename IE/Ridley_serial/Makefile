@@ -1,7 +1,11 @@
 include Makefile.def
 
-install: MAKEFILE_DEF
+install: Makefile.def.orig MAKEFILE_DEF
 	@make install_cont;
+
+Makefile.def.orig:
+	mv Makefile.def Makefile.def.orig
+	cp Makefile.def.orig Makefile.def
 
 MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
@@ -17,6 +21,11 @@ install_cont:
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
+	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
+		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
+	else \
+		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
+	fi);
 	touch src/Makefile.DEPEND
 
 LIB:
@@ -31,10 +40,11 @@ rundir:
 	cd ${RUNDIR}/IE; ln -s ${BINDIR}/PostIONO.exe .
 
 clean:
-	touch src/Makefile.DEPEND
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
 
 distclean:
-	touch src/Makefile.DEPEND
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
-	rm -f *~
+	rm -f Makefile.conf Makefile.def *~
+	mv Makefile.def.orig Makefile.def

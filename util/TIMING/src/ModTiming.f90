@@ -1,7 +1,32 @@
 !^CFG COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
+!BOP
+!
+!QUOTE: \section{util/TIMING: Library for Timing and Profiling}
+!
+!MODULE: ModTiming - the variables used by the TIMING utility
+!
+!INTERFACE:
 module ModTiming
-  use ModKind, ONLY: Real8_
+  !DESCRIPTION:
+  !
+  ! This module contains the variables shared by a collection of subroutines 
+  ! and functions which together form the TIMING library.
+  ! This utility facilitates timing and profiling of Fortran 90 codes.
+  ! See the user manual for usage.
+  !
+  !REVISION HISTORY:
+  ! 05/11/2001 G. Toth <gtoth@umich.edu> - initial version of TIMING
+  !            several bug fixes and improvements later on
+  !
+  !EOP
   implicit none
+  save
+
+  integer, parameter :: Real8_ = selected_real_kind(12)
+
   logical :: UseTiming=.false.
 
   integer, parameter :: maxtiming=100, maxclock=3
@@ -32,8 +57,7 @@ module ModTiming
 
   interface
      function timing_cpu()
-       use ModKind
-       real(Real8_) :: timing_cpu
+       real(selected_real_kind(12)) :: timing_cpu
      end function timing_cpu
   end interface
 

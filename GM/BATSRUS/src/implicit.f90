@@ -143,7 +143,7 @@ subroutine advance_impl
      ! advance explicit blocks, calc timestep but do not exchange messages
      ! after the last stage (it may exchange messages in the first stage)
      if(.not.UseDtFixed)cfl=explCFL
-     call advance_expl(.true.,.false.) 
+     call advance_expl(.true.) 
 
      ! update ghost cells for the implicit blocks to time level n+1
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
@@ -432,29 +432,28 @@ subroutine advance_impl
   if(UseNewton.and.oktest_me)write(*,*)'Final NewtonIter, dwnrm=',&
        NewtonIter, dwnrm
 
+  ! Restore StateOld and E_o_BLK in the implicit blocks
+  do implBLK=1,nImplBlk
+     iBLK=impl2iBLK(implBLK)
+     do iVar=1,nVar
+        if(iVar==E_)then
+           E_o_BLK(:,:,:,iBLK)=w_prev(:,:,:,E_,iBLK)
+        else
+           StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
+        end if
+     end do
+     StateOld_VCB(P_,:,:,:,iBLK)     = gm1*(E_o_BLK(:,:,:,iBLK)-cHalf*(&
+          (StateOld_VCB(rhoUx_,:,:,:,iBLK)**2                              &
+          +StateOld_VCB(rhoUy_,:,:,:,iBLK)**2                              &
+          +StateOld_VCB(rhoUz_,:,:,:,iBLK)**2)/                            &
+          StateOld_VCB(rho_,:,:,:,iBLK)                                    &
+          +StateOld_VCB(Bx_,:,:,:,iBLK)**2                                 &
+          +StateOld_VCB(By_,:,:,:,iBLK)**2                                 &
+          +StateOld_VCB(Bz_,:,:,:,iBLK)**2)                           )
+  end do
+
   if(UseUpdateCheckOrig)then
      UseUpdateCheck = .true.
-
-     ! Restore _o_ variables in the implicit blocks
-     do implBLK=1,nImplBlk
-        iBLK=impl2iBLK(implBLK)
-        do iVar=1,nVar
-           if(iVar==E_)then
-              E_o_BLK(:,:,:,iBLK)=w_prev(:,:,:,E_    ,iBLK)
-           else
-              StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
-           end if
-        end do
-        StateOld_VCB(P_,:,:,:,iBLK)     = gm1*(E_o_BLK(:,:,:,iBLK)-cHalf*(&
-             (StateOld_VCB(rhoUx_,:,:,:,iBLK)**2                              &
-             +StateOld_VCB(rhoUy_,:,:,:,iBLK)**2                              &
-             +StateOld_VCB(rhoUz_,:,:,:,iBLK)**2)/                            &
-             StateOld_VCB(rho_,:,:,:,iBLK)                                    &
-             +StateOld_VCB(Bx_,:,:,:,iBLK)**2                                 &
-             +StateOld_VCB(By_,:,:,:,iBLK)**2                                 &
-             +StateOld_VCB(Bz_,:,:,:,iBLK)**2)                           )
-     end do
-
      call update_check(nStage)
   endif
 

@@ -1,23 +1,35 @@
 #!/usr/bin/perl
 #^CFG COPYRIGHT UM
-
+#BOP
+#!ROUTINE: FixI4toI8.pl - replace 4 byte integers with 8 byte integers.
+#!DESCRIPTION:
+# Most machines use 4 byte integers as record length markers in a 
+# binary Fortran file. Some Cray machines, however, use 8 byte integers 
+# even for the Fortran record length markers. This script 
+# can convert binary files consisting of 4 byte integers only 
+# to a file consisting of 8 byte integers.
+#
+#!REVISION HISTORY:
+# 07/03/2001 G. Toth - initial version
+#EOP
 if($#ARGV != 0){
-    print "
-Purpose: add extra 0-s to 4 byte integers to make them 8 byte integers.
+    print
+#BOC
+"Purpose: add extra 0-s to 4 byte integers to make them 8 byte integers.
 
 Typical usage: 
 
-   FixI4toI8.pl octree.rst > octree_cray.rst
+   FixI4toI8.pl inputfile > crayfile
 
-This should be done on a machine with the same endianness as the input
-octree.rst file, but the script should not be run on the Cray itself,
+This should be done on a machine with the same endianness as the input file, 
+but the script should not be run on the Cray itself,
 because the Perl interpreter does not interpret long integers correctly 
 on the Cray.
 
-The endianness of the resulting octree_cray.rst file can be changed
-with ConvertRestart if necessary.
-
-";
+The endianness of the resulting output file can be changed
+with the Fix8Endian.pl script if necessary."
+#EOC
+   ,"\n\n";
     exit;
 }
 

@@ -1,39 +1,51 @@
 #!/usr/bin/perl -pi -s
 
+#BOP
+#!ROUTINE: FixMpi.pl
+#!DESCRIPTION:
+# It is customary to include the MPI header file into a Fortran 90 program.
+# But using a module is a nicer solution. This script replaces the include
+# statements with 'use ModMpi' or 'use ModMpiOrig' statements. 
+# Special care is taken for placing the use statement before the
+# 'implicit none' statement.
 # Usage:
 #
-#    fixmpi.pl [-mpi=ModMpiOrig] *.f90 *.F90
-#
-#  The default mpi module is ModMpi
-#
-# Replace 
-# 
+#\begin{verbatim}
+#    FixMpi.pl [-include=INCLUDEFILE] [-module=MODULE] *.f90 *.F90
+#\end{verbatim}
+#  The default MODULE is 'ModMpi', the default INCLUDEFILE is 'mpif90.h'.
+#  Here are a few examples of the effect of running this code:
+#\begin{verbatim}
 #   implicit none
 #   ! at most 2 lines here
 #   include '../Common/mpif90.h'
-#
-# with
-#
+#\end{verbatim}
+# is replaced with
+#\begin{verbatim}
 #   use ModMpi
 #   implicit none
-#   ! atmost 2 lines here
-#
-#  and the remaining 
-#
+#   ! at most 2 lines here
+#\end{verbatim}
+# and any remaining 
+#\begin{verbatim}
 #   include '../Common/mpif90.h' 
-#
-# strings with
-#
+#\end{verbatim}
+# is replaced with
+#\begin{verbatim}
 #   use ModMpi
-
-BEGIN{$mpi = "ModMpi" unless $mpi}
+#\end{verbatim}
+#!REVISION HISTORY:
+# 09/01/2003 G. Toth - initial version
+#EOP
+#BOC
+BEGIN{$module = "ModMpi" unless $module; $include ="mpif90.h" unless $include}
 
 if(/^ *implicit +none/i){
     $implnone=$_;
     for $i (1..3){
 	$_=<>;
-	if(/^( *)include +['"].*mpif90.h["']/i){
-	    $_="$1use $mpi\n$implnone";
+	if(/^( *)include +['"].*$include["']/i){
+	    $_="$1use $module\n$implnone";
 	    last;
 	}else{
 	    $implnone.=$_;
@@ -43,4 +55,5 @@ if(/^ *implicit +none/i){
 }
 
 # Replace the remaining strings
-s/include +['"].*mpif90.h["']/use $mpi/gi;
+s/include +['"].*$include["']/use $module/gi;
+#EOC

@@ -5,11 +5,11 @@ program test_physics
   use CON_planet_field
   use CON_axes
   use CON_time
+  use ModTimeConvert, ONLY: test_time
 
   !implicit none
 
   call test_time
-  stop
 
   call time_int_to_real(TimeEquinox)
   ! Equinox

@@ -147,7 +147,7 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
         !
         !           Krylov_II(i1):=A*Krylov_II(i)
         !
-        call matvec(Krylov_II(1,i),Krylov_II(1,i1),n) 
+        call matvec(Krylov_II(:,i),Krylov_II(:,i1),n) 
         !-----------------------------------------
         !  modified gram - schmidt...
         !-----------------------------------------

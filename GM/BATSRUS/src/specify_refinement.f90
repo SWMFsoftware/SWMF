@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine specify_initial_refinement(refb, lev)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,UseCorotation,UseMassLoading,unusedBLK
+  use ModSize
+  use ModMain, ONLY : body1,UseCorotation,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                                 !^CFG IF NOT CARTESIAN
        x_BLK,y_BLK,z_BLK,dx_BLK
@@ -30,7 +31,7 @@ subroutine specify_initial_refinement(refb, lev)
 
   refb = .false.
 
-  do iBLK = 1,nBLK  
+  do iBLK = 1,nBLK
      if (.not. unusedBLK(iBLK)) then
         ! Block min, max radius values
         xx1 = cHalf*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
@@ -54,6 +55,7 @@ subroutine specify_initial_refinement(refb, lev)
            maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
                 (max(abs(yy1),abs(yy2)))**2 + &
                 (max(abs(zz1),abs(zz2)))**2)
+           if(body1.and.maxRblk<rBody)CYCLE
         case('spherical')                                          !^CFG IF NOT CARTESIAN BEGIN
            SizeMax=max(dx_BLK(iBLK),dy_BLK(iBLK)*maxRblk)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
@@ -129,7 +131,7 @@ subroutine specify_initial_refinement(refb, lev)
               refb(iBLK) = .true.
            else
               critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
-              if ( RR < 1.10 + critx ) then
+              if ( RR < 1.10*rBody + critx ) then
                  refb(iBLK) = .true.
               else
                  refb(iBLK) = .false.
@@ -164,7 +166,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 14) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
@@ -195,7 +197,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 10) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
@@ -358,6 +360,11 @@ subroutine specify_initial_refinement(refb, lev)
               end if
 
            endif
+
+        case ('coupledhelio')
+           !refine to have resolution not worse 4.0 and
+           !refine the body intersecting blocks
+           refb(iBLK)=minRblk<=rBody.or.dx_BLK(iBLK)>4.01
 
         case ('magnetosphere')
            ! Refine for generic magnetosphere
@@ -606,6 +613,64 @@ subroutine specify_initial_refinement(refb, lev)
                  ! Refine tail
                  if (SizeMax>2 .and. (xxx<0. .and. xxx>-150.)) refb(iBLK) = .true.
 
+              end if
+           end if
+
+        case ('carrington')
+           ! Refine for Carrington Event grid
+
+           select case(TypeGeometry)                     !^CFG IF NOT CARTESIAN BEGIN
+           case('spherical')
+              call stop_mpi('No spherical definitions for carrington refinement')               
+           end select                                    !^CFG END CARTESIAN
+
+           ! Cycle if the whole block is inside body
+           if(maxRblk < Rbody) then
+              CYCLE
+           end if
+
+           ! Refine all blocks with dx greater than 8
+           if(dx_BLK(iBLK) > 8.) then
+              refb(iBLK) = .true.
+              CYCLE
+           end if
+
+           ! Refine all blocks inside Rcurrents
+           if(minRblk <= Rcurrents) then
+              refb(iBLK) = .true.
+              CYCLE
+           end if
+
+           ! Refine magnetopause/shock
+           if(SizeMax > 0.25 .and. xxx > 0.) then
+              tmpminRblk = sqrt( &
+                   1.00*((min(abs(xx1),abs(xx2)))**2) + &
+                   0.75*((min(abs(yy1),abs(yy2)))**2) + &
+                   0.75*((min(abs(zz1),abs(zz2)))**2) )
+              if(tmpminRblk < 12.) then
+                 refb(iBLK) = .true.
+                 CYCLE
+              end if
+           end if
+
+           ! Refine tail
+           if (SizeMax>2 .and. (xxx<0. .and. xxx>-100.)) then
+              tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
+                   1.*((min(abs(zz1),abs(zz2)))**2))
+              if (tmpminRblk < 50.) then
+                 refb(iBLK) = .true.
+                 CYCLE
+              end if
+           end if
+
+           ! Refine tail sheet
+           if (SizeMax>0.25 .and.&
+                (xxx<0. .and. xxx>-SizeMax*32.0-3.1)) then
+              tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
+                   25.*((min(abs(zz1),abs(zz2)))**2))
+              if (tmpminRblk < 12.) then
+                 refb(iBLK) = .true.
+                 CYCLE
               end if
            end if
 

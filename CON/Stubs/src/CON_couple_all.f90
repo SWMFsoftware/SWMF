@@ -14,7 +14,7 @@ module CON_couple_all
        get_comp_info
   use ModMpi
   use CON_time, ONLY: nStep
-  use CON_wrapper, ONLY: IsNewInputIe, DtCpu_C
+  use CON_wrapper, ONLY: IsNewInputIe, TimeNewInputSp, DtCpu_C
   use ModUtilities, ONLY: sleep
 
   implicit none
@@ -24,7 +24,7 @@ module CON_couple_all
   !PUBLIC MEMBER FUNCTIONS:
 
   public :: couple_all_init ! initialize all couplers
-  public :: couple_comp     ! couple 2 components based on their IDs
+  public :: couple_two_comp     ! couple 2 components based on their IDs
 
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
@@ -47,9 +47,9 @@ contains
   end subroutine couple_all_init
 
   !BOP =======================================================================
-  !IROUTINE: couple_comp - call couple_**_** for components given by IDs
+  !IROUTINE: couple_two_comp - call couple_**_** for components given by IDs
   !INTERFACE:
-  subroutine couple_comp(iCompSource, iCompTarget, TimeSimulation)
+  subroutine couple_two_comp(iCompSource, iCompTarget, TimeSimulation)
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iCompSource, iCompTarget ! component IDs
@@ -64,7 +64,7 @@ contains
     ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
     !EOP
 
-    character(len=*), parameter :: NameSub = NameMod//'::couple_comp'
+    character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
 
     integer :: iUnitOut
     logical :: DoTest,DoTestMe
@@ -92,6 +92,11 @@ contains
     ! It solves when data is requested and new info is given.
     !/
     if(iCompTarget == IE_)IsNewInputIe = .true.
+
+    !\
+    ! SP is special as it can only solve up to the last coupling time
+    !/
+    if(iCompTarget == SP_)TimeNewInputSp = TimeSimulation
 
     if(iCompSource == IE_ .and. is_proc(IE_) .and. IsNewInputIe)then
        call get_comp_info(IE_,iUnitOut=iUnitOut)
@@ -127,6 +132,6 @@ contains
     !if(is_proc0(iCompTarget))write(*,*)NameSub,' received iProc0Source=',&
     !     iProc0Source,' on iProc0Target=',i_proc()
 
-  end subroutine couple_comp
+  end subroutine couple_two_comp
 
 end module CON_couple_all

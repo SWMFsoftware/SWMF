@@ -6,7 +6,11 @@ subroutine GM_set_param(CompInfo, TypeAction)
   use ModProcMH
   use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, &
        NamePlotDir, NameRestartInDir, NameRestartOutDir
-  use ModMain, ONLY : CodeVersion, NameThisComp
+  use ModMain, ONLY : CodeVersion, NameThisComp, &
+       time_accurate, StartTime, iStartTime_I, &
+       dt_UpdateB0, DoUpdateB0, UseCorotation
+  use CON_physics, ONLY: get_time, get_planet
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 
@@ -36,7 +40,18 @@ subroutine GM_set_param(CompInfo, TypeAction)
      NamePlotDir      = NameThisComp//'/'//NamePlotDir
      NameRestartInDir = NameThisComp//'/'//NameRestartInDir
      NameRestartOutDir= NameThisComp//'/'//NameRestartOutDir
-  case('READ','CHECK')
+  case('READ')
+     call MH_set_parameters('READ')
+  case('CHECK')
+     call get_time( &
+          DoTimeAccurateOut = time_accurate, &
+          tStartOut         = StartTime)
+     call get_planet( &
+          DtUpdateB0Out  = dt_updateB0,   &
+          DoUpdateB0Out  = DoUpdateB0,    &
+          UseRotationOut = UseCorotation)
+     call time_real_to_int(StartTime,iStartTime_I)
+
      call MH_set_parameters(TypeAction)
   case('STDOUT')
      iUnitOut=STDOUT_
@@ -75,28 +90,26 @@ subroutine GM_set_grid
   !EOP
   logical ::DoTest,DoTestMe
   DoTest=.false.;DoTestMe=.false.
-  if(.not.done_dd_init(GM_))then
-     call init_decomposition(GM_,GM_,3,.true.)
-     call set_coord_system(GM_,TypeCoordSystem)
-
-     if(is_proc(GM_))then
-        call init_decomposition(&
-             MH_DomainDecomposition,GM_,3,.true.)
-        call MH_get_root_decomposition(MH_DomainDecomposition)
-        call MH_update_local_decomposition(MH_DomainDecomposition)
-        MH_DomainDecomposition%IsLocal=.true.
-     end if
-  call CON_set_do_test('test_grids',DoTest,DoTestMe)
+  if(done_dd_init(GM_))return
+  call init_decomposition(GM_,GM_,3,.true.)
+  call set_coord_system(GM_,TypeCoordSystem)
+  
+  if(is_proc(GM_))then
+     call init_decomposition(&
+          MH_DomainDecomposition,GM_,3,.true.)
+     call MH_get_root_decomposition(MH_DomainDecomposition)
+     call MH_update_local_decomposition(MH_DomainDecomposition)
+     MH_DomainDecomposition%IsLocal=.true.
   end if
+  call CON_set_do_test('test_grids',DoTest,DoTestMe)
 
 
   if(is_proc0(GM_))call MH_get_root_decomposition(GM_)
 
   call bcast_decomposition(GM_)
-!write(*,*) 'location 8'
 
   call synchronize_refinement(GM_,MH_domaindecomposition)
-!write(*,*) 'location 9'
+
   if(DoTest) call test_global_message_pass(GM_)
 end subroutine GM_set_grid
 !===================================================================!
@@ -197,7 +210,7 @@ subroutine GM_print_variables(NameSource)
 
 end subroutine GM_print_variables
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_init_session(iSession, TimeSimulation)
 
@@ -205,7 +218,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
   use ModMain,     ONLY: Time_Simulation, UseIonosphere, &
        TypeBC_I, west_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
-  use CON_physics, ONLY: get_physics
+  use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_
   implicit none
 
@@ -236,8 +249,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
 
   if(IsUninitialized)then
 
-     call get_physics(tSimulationOut=Time_Simulation)
-
+     call get_time(tSimulationOut=Time_Simulation)
      call BATS_setup
      IsUninitialized = .false.
   end if
@@ -287,13 +299,12 @@ subroutine GM_save_restart(TimeSimulation)
 
 end subroutine GM_save_restart
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: Time_Simulation, dt
-  use ModPhysics, ONLY: UnitSi_t
+  use ModMain,   ONLY: Time_Simulation
 
   implicit none
 
@@ -320,7 +331,7 @@ subroutine GM_run(TimeSimulation,TimeSimulationLimit)
   call BATS_advance(TimeSimulationLimit)
 
   ! Return time after the time step
-  TimeSimulation = TimeSimulation + dt*UnitSI_t
+  TimeSimulation = Time_Simulation
 
 end subroutine GM_run
 

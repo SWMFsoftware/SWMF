@@ -45,9 +45,9 @@ if($Table =~ /test/i){
 }elsif($Table =~ /func/i){
 ###########################################################################
 
-    &execute($testbatsrus,"-beta -rusanov");              #^CFG IF RUSANOVFLUX
+    &execute($testbatsrus,"-beta -rusanov -idltecamr");   #^CFG IF RUSANOVFLUX
     &execute($testbatsrus,"-beta -linde");                #^CFG IF LINDEFLUX
-    &execute($testbatsrus,"-beta -sokolov");              #^CFG IF AWFLUX
+    &execute($testbatsrus,"-beta -sokolov -idltecamr");   #^CFG IF AWFLUX
     &execute($testbatsrus,"-beta -roe");                  #^CFG IF ROEFLUX
 
     &execute($testbatsrus,"-Conservative=r6 -rusanov");   #^CFG IF RUSANOVFLUX
@@ -65,7 +65,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-borissimple -linde");         #^CFG IF LINDEFLUX
                                                     #^CFG END SIMPLEBORIS
 
-    &execute($testbatsrus,"-ta -Conservative=r6");
+    &execute($testbatsrus,"-ta -Conservative=r6 -idltecamr");
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF BORISCORR 
 		 "-borisfull");                           #^CFG IF BORISCORR 
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF SIMPLEBORIS
@@ -112,6 +112,8 @@ if($Table =~ /test/i){
 	     "-Implicit=empty",                           #^CFG IF IMPLICIT
 	     "-Inner=empty -Message=empty -Outer=empty",
 	     "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty");
+
+    &execute($testbatsrus,"-Plottype=raynew");
 
 ###########################################################################
 }elsif($Table =~ /robust/i){

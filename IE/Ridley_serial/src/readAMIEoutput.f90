@@ -1,6 +1,7 @@
 subroutine readAMIEoutput(iBLK, iError)
 
   use ModAMIE_Interface
+  use ModTimeConvert, ONLY: time_int_to_real
 
   implicit none
 
