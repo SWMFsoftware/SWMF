@@ -41,7 +41,7 @@ Cflag4	= ${Cflag} -O4
 Cflagf	= ${Cflag} -fast
 
 # RCM compilation flags
-CFLAGS = ${SEARCH} -c -warn argument_checking ${DEBUG}
+CFLAGS = ${SEARCH} -c -warn argument_checking -fpe1 ${DEBUG}
 
 Lflag1  = ${OPTSAFE} ${PRECISION} ${BITFLAG} ${MPILIB} 
 Lflag2  = ${OPT} ${PRECISION} ${BITFLAG} 
