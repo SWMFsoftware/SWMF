@@ -322,21 +322,20 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
 
-If UseTiming=.true., the TIMING module must be on.
+If UseTiming=.true., the execution is timed by the TIMING utility.
 If UseTiming=.false., the execution is not timed.
 
-Dntiming determines the frequency of timing reports.
-If DnTiming .ge.  1, a timing report is produced every dn_timing step.
-If DnTiming .eq. -1, a timing report is shown at the end of each session,
-                   before each AMR, and at the end of the whole run.
-If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
-If DnTiming .eq. -3, no timing report is shown.
+The Dntiming parameter determines the frequency of timing reports:
+If DnTiming is positive, a timing report is produced every DnTiming steps.
+If DnTiming is -1, a timing report is shown at the end of each session.
+If DnTiming is -2, a timing report is shown at the end of the whole run.
+If DnTiming is -3, no timing report is shown.
 
-nDepthTiming determines the depth of the timing tree. A negative number
-means unlimited depth. If TimingDepth is 1, only the full BATSRUS execution
-is timed.
-!
-TypeTimingReport determines the format of the timing reports:
+The nDepthTiming parameters defines the depth of the timing tree. 
+A negative value means unlimited depth. If nDepthTiming is 1, only the 
+total SWMF execution is timed.
+
+The TypeTimingReport parameter determines the format of the timing reports:
 \'cumm\' - cummulative list sorted by timings
 \'list\' - list based on caller and sorted by timings
 \'tree\' - tree based on calling sequence
@@ -344,15 +343,16 @@ TypeTimingReport determines the format of the timing reports:
 The default values are shown above.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #PROGRESS
-10			DnProgressShort (frequency of short reports to STDOUT)
-100			DnProgressLong  (frequency of long summaries to STDOUT)
+10			DnProgressShort
+100			DnProgressLong
 
-The DnShowProgressShort and DnShowProgressLong  variables determine
+The DnShowProgressShort and DnShowProgressLong variables determine
 the frequency of showing short and long progress reports in terms
-of the number of time steps nStep.
-Currently both the short and the long progress reports consist
-of a single line. In the future the long progress report will give
-more detailed information.
+of the number of time steps nStep. The short progress report
+consists of a single line which shows the number of time steps,
+simulatiion time and CPU time. The long progress report also shows
+a small timing report on the root processor.
+Negative values indicate that no report is requested.
 
 The default values are DnShowProgressShort=10 and DnShowProgressLong=100.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'PRECISION'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nByteReal'},'content' => [{'attrib' => {'value' => '4','default' => '$nByteReal==4','name' => 'single precision (4)'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '8','default' => '$nByteReal==8','name' => 'double precision (8)'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$nByteReal==$_nByteReal'},'content' => [{'content' => '
