@@ -214,6 +214,9 @@ SWMF.dvi: \
 REFERENCE.dvi:\
 	SWMFREF.tex
 
+MAINTENANCE.dvi:\
+	PM_wrapper.protex
+
 PDF_FILES = SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf PHYSICS.pdf
 PDF: ${PDF_FILES}
 
@@ -228,7 +231,8 @@ HTML: cleanhtml
 #^CMP END DOCHTML
 
 clean:
-	rm -f *.aux *.log *.toc *.dvi *.ps *~ *.f90 SWMFREF.tex SWMFXML.tex
+	rm -f *.aux *.log *.toc *.dvi *.ps *~
+	rm -f SWMFREF.tex SWMFXML.tex PM_wrapper.protex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
