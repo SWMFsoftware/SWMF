@@ -24,7 +24,7 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 # The rules can be used by Rename.pl to do the actual renaming.
 #
 # There are some special rules for IH, SC and GM because the
-# BATSRUS code implements both components.
+# BATSRUS code implements all three of these components.
 #
 #!REVISION HISTORY:
 # 08/03/2003 G.Toth gtoth@umich.edu - initial version
