@@ -82,8 +82,6 @@ subroutine update_states_MHD(iStage,iBLK)
      call update_Explicit
   end if                       !^CFG IF POINTIMPLICIT
 
-  if (UseIM) call update_pressure_from_IM !^CFG IF RCM
-
 Contains
 
   subroutine update_Explicit
@@ -515,55 +513,4 @@ Contains
   
   !^CFG END POINTIMPLICIT
   
-  !^CFG IF RCM BEGIN
-  subroutine update_pressure_from_IM
-
-    use ModRaytrace
-
-    real :: factor
-    real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn) :: pIM
-
-    ! Now use the pressure from the IM to nudge the pressure in the MHD
-    ! code.  This will happen only on closed magnetic field lines.
-    ! Determining which field lines are closed is done by using the ray
-    ! tracing.
-
-    call get_im_pressure(iBLK,pIM)
-
-    if(TauCoupleIm < 1.0)then
-       ! Ramp up is based on number of iterations: p' = (p + tau*pIm)/(1+tau)
-       ! A typical value might be 0.01, to get close to the RCM pressure in 200 iterations
-
-       factor = 1.0/(1.0+TauCoupleIM)
-
-       where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK)>0.0) &
-            State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+TauCoupleIM))* &
-            (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + TauCoupleIM*pIM(1:nI,1:nJ,1:nK))
-    else
-       ! Ramp up is based on physical time: p' = p + dt/tau * (pIM - p)
-       ! A typical value might be 5, to get close to the RCM pressure in 10 seconds
-
-       factor=cfl_factor/(tauCoupleIM/unitSI_t)
-
-       where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK)>0.0) &
-            State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + &
-            min(1.0, time_BLK(1:nI,1:nJ,1:nK,iBLK)*factor)* &
-            (pIM(1:nI,1:nJ,1:nK) - State_VGB(P_,1:nI,1:nJ,1:nK,iBLK))
-
-    end if
-
-    ! Now get the energy that corresponds to this new pressure
-    E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-            inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) &
-            + 0.5*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                    State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-                     /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-                   +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                       State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)
-
-  end subroutine update_pressure_from_IM
-  !^CFG END RCM
-
 end subroutine update_states_MHD
