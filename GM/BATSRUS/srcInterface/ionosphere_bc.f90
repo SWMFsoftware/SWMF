@@ -192,24 +192,25 @@ subroutine ionosphere_magBCs(&
 end subroutine ionosphere_magBCs
 
 !==========================================================================
-subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
-     Bx, By, Bz, B0x, B0y, B0z, Ux, Uy, Uz)
+subroutine calc_inner_BC_velocities_new(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   use ModIonoPotential
-  use ModMain, ONLY: TypeCoordSystem, nDim
+  use ModMain,           ONLY: TypeCoordSystem, nDim
+  use CON_axes,          ONLY: transform_matrix
   use ModCoordTransform, ONLY: xyz_to_dir, cross_product
-  use CON_planet_field, ONLY: map_planet_field
+  use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
   integer, intent(in) :: nIter
   real, intent(in)    :: tSimulation
-  real, intent(in)    :: x, y, z, Bx, By, Bz, B0x, B0y, B0z
-  real, intent(out)   :: Ux, Uy, Uz
+  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
+  real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
+  real, intent(in)    :: B0_D(nDim)     ! Magnetic field of planet
+  real, intent(out)   :: u_D(nDim)      ! Velocity vector (output)
 
-  real, parameter :: Epsilon_D(nDim) = (/ 0.01, 0.01, 0.01 /)
+  real, parameter :: Epsilon = 0.01 ! Perturbation of X, Y or Z
 
-  real :: Xyz_D(nDim)              ! Position vector
-  real :: Xyz_DDI(nDim, nDim, 2)   ! Points shifted in 3 directions
+  real :: XyzEpsilon_D(nDim)       ! Points shifted by Epsilon
   real :: XyzIono_D(nDim)          ! Mapped point on the ionosphere
   real :: Theta, Phi               ! Mapped point colatitude, longitude
   real :: ThetaNorm, PhiNorm       ! Normalized colatitude, longitude
@@ -217,43 +218,50 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
 
   real :: Potential_DI(nDim, 2)    ! Potential at the shifted positions
   real :: eField_D(nDim)           ! Electric field
-  real :: b_D(nDim), B2            ! Magnetic field and its square
-  real :: Velocity_D(nDim)         ! Velocity array
+  real :: b_D(nDim)                ! Magnetic field
+  real :: B2                       ! Magnetic field squared
 
   integer :: iDim, iSide, iTheta, iPhi, iHemisphere
 
   character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
   logical :: DoTest, DoTestMe
+  real :: tSimulationLast=-1.0
+  real, save :: SmgGm_DD(nDim,nDim)
   !-------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
 
-  ! Copy point position into shifted positions
-  Xyz_D = (/ x, y, z /)
-
   if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
 
-  do iSide = 1, 2
-     do iDim = 1, nDim
-        Xyz_DDI(:, iDim, iSide) = Xyz_D
-     end do
-  end do
-
-  ! Shift positions
-  do iDim = 1, nDim
-     Xyz_DDI(iDim,iDim,1) = Xyz_DDI(iDim,iDim,1) - Epsilon_D(iDim)
-     Xyz_DDI(iDim,iDim,2) = Xyz_DDI(iDim,iDim,2) + Epsilon_D(iDim)
-  end do
+  ! Calculate conversion matrix between GM and SMG coordinates
+  if( tSimulationLast /= tSimulation ) then
+     tSimulationLast = tSimulation
+     SmgGm_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
+  end if
 
   ! Map points to obtain potential
   do iSide = 1, 2
      do iDim = 1, nDim
 
-        call map_planet_field(tSimulation, Xyz_DDI(:,iDim, iSide), &
-             TypeCoordSystem//' NORM', rIonosphere, XyzIono_D, iHemisphere)
+        ! Perturb the iDim coordinate
+        XyzEpsilon_D = Xyz_D
+        if(iSide == 1)then
+           XyzEpsilon_D(idim) = XyzEpsilon_D(idim) - Epsilon
+        else
+           XyzEpsilon_D(idim) = XyzEpsilon_D(idim) + Epsilon
+        end if
 
+        ! Transform into SMG coordinates
+        XyzEpsilon_D = matmul(SmgGm_DD, XyzEpsilon_D)
+
+        ! Map down to the ionosphere at radius rIonosphere
+        call map_planet_field(tSimulation, XyzEpsilon_D, 'SMG NORM', &
+             rIonosphere, XyzIono_D, iHemisphere)
+
+        ! Calculate angular coordinates
         call xyz_to_dir(XyzIono_D, Theta, Phi)
 
+        ! Interpolate potential
         ThetaNorm = Theta / dThetaIono
         PhiNorm   = Phi   / dPhiIono
 
@@ -280,8 +288,8 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
 
         if(DoTestMe)then
            write(*,*)NameSub,' iDim, iSide  =',iDim, iSide
-           write(*,*)NameSub,' shifted Xyz_D=',Xyz_DDI(:,iDim,iSide)
-           write(*,*)NameSub,' shifted Sph_D=',XyzIono_D
+           write(*,*)NameSub,' XyzEpsilon_D =',XyzEpsilon_D
+           write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
            write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
            write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
            write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
@@ -291,33 +299,28 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
      end do
   end do
 
-  b_D = (/ Bx + B0x, By + B0y, Bz + B0z /)
+  b_D = B1_D + B0_D
   B2  = sum(b_D**2)
   
-  ! E = -grad(Phi)
-  eField_D = - (Potential_DI(:,2) - Potential_DI(:,1))/(2*Epsilon_D)
+  ! E = -grad(Potential)
+  eField_D = - (Potential_DI(:,2) - Potential_DI(:,1))/(2*Epsilon)
 
   ! U = (E x B) / B^2
-  Velocity_D = cross_product(eField_D, b_D) / B2
+  u_D = cross_product(eField_D, b_D) / B2
 
   if(DoTestMe)then
      write(*,*)NameSub,' b_D=',b_D
      write(*,*)NameSub,' E_D=',eField_D
-     write(*,*)NameSub,' Velocity_D=',Velocity_D
+     write(*,*)NameSub,' u_D=',u_D
   endif
 
   ! Subtract the radial component of the velocity
-  Velocity_D = Velocity_D - Xyz_D*sum(Xyz_D*Velocity_D) / sum(Xyz_D**2)
+  u_D = u_D - Xyz_D * sum(Xyz_D * u_D) / sum(Xyz_D**2)
 
   if(DoTestMe)then
-     write(*,*)NameSub,' Final Velocity_D=',Velocity_D
-     !!! if(maxval(abs(Velocity_D))>0.00001)call stop_mpi(NameSub)
+     write(*,*)NameSub,' Final u_D=',u_D
+     !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
   end if
-
-  ! Return values
-  Ux = Velocity_D(1)
-  Uy = Velocity_D(2)
-  Uz = Velocity_D(3)
 
 end subroutine calc_inner_BC_velocities_new
 
