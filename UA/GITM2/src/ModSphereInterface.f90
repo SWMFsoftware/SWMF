@@ -345,24 +345,30 @@ contains
     logical, intent(in) :: pole
     real, dimension(:),intent(out) :: out_array
     integer :: p,i
+    real :: tmpI(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nIons)
+    real :: tmpN(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nSpecies)
 
     p=1 ! start packing at position 1 in out_array
+
     call AB_array3_gc_pack(nLons,nLats,nAlts,2, &
          Rho(:,:,1:nAlts,index),dir,pole,p,out_array)
 
     call AB_array4_gc_pack(nLons,nLats,nAlts,3,2, &
          Velocity(:,:,1:nAlts,:,index),dir,pole,p,out_array)
 
+    tmpN = NDensityS(:,:,1:nAlts,1:nSpecies,index)
     call AB_array4_gc_pack(nLons,nLats,nAlts,nSpecies,2, &
-         NDensityS(:,:,1:nAlts,1:nSpecies,index),dir,pole,p,out_array)
+         tmpN,dir,pole,p,out_array)
 
     call AB_array3_gc_pack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,pole,p,out_array)
 
-    if (UseIonAdvection) &
-         call AB_array4_gc_pack(nLons,nLats,nAlts,nIons,2, &
-         IDensityS(:,:,1:nAlts,:,index),dir,pole,p,out_array)
+    if (UseIonAdvection) then
+       tmpI = IDensityS(:,:,1:nAlts,:,index)
+       call AB_array4_gc_pack(nLons,nLats,nAlts,nIons,2, &
+            tmpI,dir,pole,p,out_array)
 
+    endif
   end subroutine pack_vars_nblk
 
 
@@ -370,6 +376,8 @@ contains
     integer, intent(in) :: index,dir
     real, dimension(:), intent(in) :: in_array
     integer :: p,i
+    real :: tmpI(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nIons)
+    real :: tmpN(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nSpecies)
 
     p=1 ! start unpacking at position 1 in in_array
 
@@ -379,15 +387,22 @@ contains
     call AB_array4_gc_unpack(nLons,nLats,nAlts,3,2, &
          Velocity(:,:,1:nAlts,:,index),dir,p,in_array)
 
+    tmpN = NDensityS(:,:,1:nAlts,1:nSpecies,index)
     call AB_array4_gc_unpack(nLons,nLats,nAlts,nSpecies,2, &
-         NDensityS(:,:,1:nAlts,1:nSpecies,index),dir,p,in_array)
+         tmpN,dir,p,in_array)
+    NDensityS(:,:,1:nAlts,1:nSpecies,index) = tmpN
 
     call AB_array3_gc_unpack(nLons,nLats,nAlts,2, &
          Temperature(:,:,1:nAlts,index),dir,p,in_array)
 
-    if (UseIonAdvection) &
-         call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
-         IDensityS(:,:,1:nAlts,:,index),dir,p,in_array)
+    if (UseIonAdvection) then
+!       call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
+!            IDensityS(:,:,1:nAlts,:,index),dir,p,in_array)
+       tmpI = IDensityS(:,:,1:nAlts,:,index)
+       call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
+            tmpI,dir,p,in_array)
+       IDensityS(:,:,1:nAlts,:,index) = tmpI
+    endif
 
   end subroutine unpack_vars_nblk
 
