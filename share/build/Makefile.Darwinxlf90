@@ -61,7 +61,9 @@ SuffixMapftn = -qsuffix=f=ftn
 	${COMPILE.f90} ${Cflag4} ${SuffixMapf90} $<
 
 .F90.o:
-	${COMPILE.f90} ${Cflag4} ${SuffixMapF90} $<
+	cpp -P -DsysDarwin -DcompXLF $*.F90 | grep -v '^#' > $*.f
+	${COMPILE.f90} -o $*.o ${Cflag4} $*.f
+	rm -f $*.f
 
 .f.o:
 	${COMPILE.f77} ${Cflag4} $<
