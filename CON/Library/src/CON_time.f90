@@ -110,19 +110,19 @@ contains
     logical,          optional, intent(out) :: DoTimeAccurateOut
     real,             optional, intent(out) :: tSimulationOut
     type(TimeType),   optional, intent(out) :: TimeStartOut
-    real(Real8_),     optional, intent(out) :: tStartOut
     type(TimeType),   optional, intent(out) :: TimeCurrentOut
+    real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
     !EOP
     !-------------------------------------------------------------------------
 
+    if(present(DoTimeAccurateOut)) DoTimeAccurateOut = DoTimeAccurate
     if(present(tSimulationOut))    tSimulationOut    = tSimulation
-    if(present(tSimulationOut))    tSimulationOut    = tSimulation
-    if(present(TimeCurrentOut))    TimeCurrentOut    = TimeCurrent
-    if(present(tCurrentOut))       tCurrentOut       = TimeCurrent % Time
     if(present(TimeStartOut))      TimeStartOut      = TimeStart
+    if(present(TimeCurrentOut))    TimeCurrentOut    = TimeCurrent
     if(present(tStartOut))         tStartOut         = TimeStart % Time
+    if(present(tCurrentOut))       tCurrentOut       = TimeCurrent % Time
     if(present(nStepOut))          nStepOut          = nStep
 
   end subroutine get_time
