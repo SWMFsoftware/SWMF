@@ -39,9 +39,12 @@ module ModRaytrace
 
   real :: R_raytrace=1., R2_raytrace=1.
 
-  ! Normalized bb=B/|B| and Norm |B| for a BLK
+!!! These could be allocatable arrays ???
+  
+  ! Node interpolated magnetic field components without B0
   real, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK):: bb_x,bb_y,bb_z
 
+  ! Total magnetic field with second order ghost cells
   real, dimension(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Bxyz_DGB
 
   ! Prefer open and closed field lines in interpolation ?!
@@ -59,10 +62,33 @@ module ModRaytrace
        NORAY    = -(rIonosphere + 100.0), &
        OUTRAY   = -(rIonosphere + 200.0)
 
-  real(Real8_) :: TimeStartRay
+  real(Real8_) :: CpuTimeStartRay
 
   real         :: DtExchangeRay = 0.1
 
   integer      :: nOpen
+
+  ! ----------- Variables for integrals along the ray -------------------
+  ! True if the ray integrals are done
+  logical :: DoIntegrate = .false.  
+
+  ! Name indexes
+  integer, parameter :: &
+       ClosedRay_ = 0, InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6 
+
+  ! Number of integrals
+  integer, parameter :: nRayIntegral = 6
+
+  ! Flow variables to be integrated (rho and P) other than the magnetic field
+  real, dimension(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Extra_VGB
+
+  ! Integrals for a local ray segment
+  real :: RayIntegral_V(nRayIntegral)
+
+  ! Integrals added up for all the local ray segments
+  ! The fist index corresponds to the variables (index 0 shows closed vs. open)
+  ! The second and third indexes correspond to the latitude and longitude of
+  ! the IM/RCM grid
+  real, allocatable :: RayIntegral_VII(:,:,:)
 
 end module ModRaytrace
