@@ -206,6 +206,7 @@ clean: ENV_CHECK
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
 	cd RB/Rice;		make clean    #^CMP IF RB
+	cd RB/RiceV5;		make clean    #^CMP IF RB
 	cd RB/Empty;		make clean    #^CMP IF RB
 	cd SP/Kota;             make clean    #^CMP IF SP
 	cd SP/FLAMPA;           make clean    #^CMP IF SP
@@ -239,6 +240,7 @@ distclean_comp: ENV_CHECK rmdir
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
 	cd RB/Rice;		make distclean    #^CMP IF RB
+	cd RB/RiceV5;		make distclean    #^CMP IF RB
 	cd RB/Empty;		make distclean    #^CMP IF RB
 	cd SP/FLAMPA;           make distclean    #^CMP IF SP
 	cd SP/Kota;             make distclean    #^CMP IF SP
