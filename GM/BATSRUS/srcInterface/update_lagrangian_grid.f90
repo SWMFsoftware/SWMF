@@ -39,6 +39,8 @@ contains
          init_router_for_vector,&
          check_if_can_integrate,&
          advance_vector
+    use ModIO,ONLY:write_prefix,iUnitOut
+    use ModProcMH,ONLY:iProc
     real,intent(in)::tStart,tFinal
     integer::iError,iPoint,iCompLine,lComp
     !------------------------------------
@@ -63,6 +65,11 @@ contains
              NameMask=NameComp_I(iCompLine)&
                   //'_IsIn'//&
                   NameThisComp
+             if(iProc==0)then
+                call write_prefix
+                write(iUnitOut,*)' will update global vector '//&
+                     NameVector//' using mask '//NameMask
+             end if
              call set_standard_grid_descriptor(&
                   MH_DomainDecomposition,GridDescriptor=MhGrid)
              call init_router_for_vector(&
@@ -147,6 +154,7 @@ contains
     !Check if the lagrangian grid is itialized
     if(DoInit.or.DoSkip)return 
     !Save the part of the global vector updated by the comp
+    
     call save_global_vector(NameVector,NameMask)
   end subroutine save_lagrangian_grid
 end module ModLagrangianGrid
