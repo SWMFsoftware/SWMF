@@ -485,7 +485,7 @@ subroutine timing_show(name,iclock)
                 qsum,' sec, ',                            &
                 qsum/qiter,' s/iter',                     &
                 qsum/qcall,' s/call',                     &
-                100.0*qsum/qsumparent,' % of ',s_parent(1:len_trim(s_parent))
+                100*qsum/qsumparent,' % of ',s_parent(1:len_trim(s_parent))
   end do
 
 end subroutine timing_show
@@ -593,10 +593,10 @@ subroutine timing_tree(iclock,show_depth)
         da_start(i) = qnow
      endif
      qsum=da_sum(i,qclock)
-     if(qsum.lt.0.0005)CYCLE
+     if(qsum < 0.0005)CYCLE
 
      qsumparent=da_sum(ia_parent(i),qclock)
-     if(qsumparent.lt.qsum)qsumparent=-1.
+     if(qsumparent < qsum)qsumparent=qsum
      qiter=ia_iter(i,qclock); if(qiter<1)qiter=-1
      qcall=ia_call(i,qclock); if(qcall<1)qcall=-1
      ! Negative indent results in error because repeat(' ',-2) fails
@@ -638,7 +638,7 @@ subroutine timing_tree(iclock,show_depth)
 
         if(qsum<0.001) CYCLE
         qsumparent = da_sum(i_parent,qclock)
-        if(qsumparent.lt.qsum)qsumparent=-1.
+        if(qsumparent < qsum)qsumparent=qsum
         qiter      = ia_iter(i_parent,qclock)
         if(qiter<1)qiter=-1
 
@@ -784,7 +784,7 @@ subroutine timing_sort(iclock,show_length,unique)
           '('//s_parent(1:len_trim(s_parent))//')'//spaces
      end if
 
-     write(*,'(f10.2,f10.2)',ADVANCE='NO') qsum, 100.0*qsum/qsummax
+     write(*,'(f10.2,f10.2)',ADVANCE='NO') qsum, 100*qsum/qsummax
 
      if(qclock>1)write(*,'(i10,i10)',ADVANCE='NO') ia_qiter(i), ia_qcall(i)
      write(*,*)
@@ -800,7 +800,7 @@ subroutine timing_sort(iclock,show_length,unique)
   if(qsum>0.0)then
      write(*,'(a20)',ADVANCE='NO')'#others'//spaces
      if(.not.unique)write(*,'(a20)',ADVANCE='NO')' '
-     write(*,'(f8.2,f8.2)')qsum, 100.0*qsum/qsummax
+     write(*,'(f8.2,f8.2)')qsum, 100*qsum/qsummax
   end if
 
   write(*,'(a79)')'----------------------------------------'// &

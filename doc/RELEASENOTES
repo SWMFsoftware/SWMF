@@ -50,13 +50,17 @@ SWMF:
            1.c: SC writes NaN-s into the logfile.
            1.d: code fails with PBS error on random nodes
 
-	2. The timing for the 'SWMF' was incorrect on some platforms.
+	2. The timing for the 'SWMF' is incorrect on some platforms.
 	   FIX (Aug25,2004): Stop and restart timing for 'SWMF' after setup.
 	   MODIFIED:         CON/Control/src/CON_main.f90
 
-        3. For some layouts the TIMING utility could not handle all timings.
-           Fix (Aug27,2004): Increased MaxTiming from 100 to 1000
+        3. For some layouts the TIMING utility cannot handle all timings.
+           FIX (Aug27,2004): Increased MaxTiming from 100 to 1000
            MODIFIED:         util/TIMING/src/ModTiming.f90
+
+        4. Timing percentage is negative or **** on morpheus.engin.umich.edu
+           FIX (Aug27,2004): Set 'parent timing' to be at least 'child timing'
+           MODIFIED:         til/TIMING/src/timing.f90
 
 RB:
         1. The Radiation Belt (RB) module included with this release
