@@ -14,7 +14,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo ""
-	@echo "PDF          - produces SWMF.pdf and TESTING.pdf"
+	@echo "PDF          - produces SWMF.pdf, TESTING.pdf and MAINTENANCE.pdf"
 	@#^CMP IF DOCHTML BEGIN
 	@echo ""
 	@echo "HTML         - produces online manuals in ../HTML directory"
@@ -211,7 +211,7 @@ SWMF.dvi: \
 REFERENCE.dvi:\
 	SWMFREF.tex
 
-PDF: SWMF.pdf TESTING.pdf REFERENCE.pdf
+PDF: SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf
 
 #^CMP IF DOCHTML BEGIN
 SWMF.html: SWMFXML.tex
@@ -227,7 +227,7 @@ clean:
 	@rm -f ${SWMFREF} ${SWMFXML}
 
 cleanpdf: clean
-	cd ..; rm -f  SWMF.pdf REFERENCE.pdf TESTING.pdf
+	cd ..; rm -f  SWMF.pdf REFERENCE.pdf TESTING.pdf MAINTENANCE.pdf
 
 #^CMP IF DOCHTML BEGIN
 cleanhtml: clean
