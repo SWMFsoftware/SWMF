@@ -87,6 +87,7 @@ subroutine ionosphere_solver(PHI, &
   logical :: oktest, oktest_me
   
   call CON_set_do_test('ionosphere',oktest,oktest_me)
+  call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
   lat_boundary = 30.0 * IONO_PI/180.0
@@ -554,5 +555,7 @@ subroutine ionosphere_solver(PHI, &
 
   deallocate(b)
   deallocate(x)
+
+  call timing_stop('iono_solve')
 
 end subroutine ionosphere_solver
