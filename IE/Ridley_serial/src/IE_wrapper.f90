@@ -1025,8 +1025,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
   ! Store the current time
   time_simulation = tSimulation
 
-  ! Since IE has no time advance, it may advance to the next coupling time
-  tSimulation = tSimulationLimit
+  ! Since IE is not a time dependent component, it may advance to the 
+  ! next coupling time in a time accurate run
+  if(time_accurate)tSimulation = tSimulationLimit
 
   if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
 
