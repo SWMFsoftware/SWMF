@@ -70,8 +70,13 @@ while(<>){
 	if(not /^(\s*($types|common))\b/i){
 	    print; next;
 	}
-	# Store the type of the variables
+        # Store the type of the variables
 	$type = $1;
+
+	# Ignore parameter statements
+	if(/^\s*$type\s*,\s*parameter/i){
+	    print; next;
+	}
     }
 
     # Collect continuation lines together
