@@ -4,7 +4,7 @@
 ;
 ; Procedures for
 ;
-; reading ascii and binary data produced by VAC and VACINI:
+; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
 ;    openfile,gettype,gethead,getpict,getpict_asc,getpict_bin
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, readplotpar, readlimits
@@ -581,22 +581,33 @@ pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
         transform eq 'none':grid=lindgen(nx(0),nx(1))
         else: print,'Unknown value for transform:',transform
       endcase
-   endif else if gencoord and ndim eq 3 then begin
-      if transform eq '' then begin
-         transform="none" & askstr,"transform (s=sphere/n=none)",transform,1
-      endif else $
-         askstr,"transform (s=sphere/n=none)",transform,doask
-      case transform of
-         's': transform='sphere'
-         'n': transform='none'
-        else:
-      endcase
-      if transform eq 'sphere' then getvectors,physics,nvector,vectors
-      grid=lindgen(nx(0),nx(1),nx(2))
+   endif else if (gencoord or transform eq 'unpolar') and ndim eq 3 then begin
+       if transform eq '' then begin
+           transform="none" & askstr, $
+             "transform (p=polar/s=sphere/u=unpolar/n=none)",transform,1
+       endif else $
+         askstr, $
+         "transform (p=polar/s=sphere/u=unpolar/n=none)",transform,doask
+       case transform of
+           'p': transform='polar'
+           's': transform='sphere'
+           'u': transform='unpolar'
+           'n': transform='none'
+           else:
+       endcase
+       case 1 of
+           transform eq 'polar' or transform eq 'unpolar' or $
+             transform eq 'sphere' :begin
+               getvectors,physics,nvector,vectors
+               grid=lindgen(nx(0),nx(1),nx(2))
+           end
+           transform eq 'none': grid=lindgen(nx(0),nx(1),nx(2))
+           else: print,'Unknown value for transform:',transform
+       endcase
    endif else case ndim of
-      1: grid=lindgen(nx(0))
-      2: grid=lindgen(nx(0),nx(1))
-      3: grid=lindgen(nx(0),nx(1),nx(2))
+       1: grid=lindgen(nx(0))
+       2: grid=lindgen(nx(0),nx(1))
+       3: grid=lindgen(nx(0),nx(1),nx(2))
    endcase
 
    ;===== GRID HELPS TO CREATE A CUT, E.G.: cut=grid(*,4)
@@ -957,8 +968,8 @@ pro symm_triangles,xx,yy,triangles,$
    endif
 
 end
-;==============================================================================
 
+;==============================================================================
 pro fit_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
         triangles,ntriangles,rectangles
 
@@ -1013,7 +1024,27 @@ end
 ;===========================================================================
 pro polargrid,nvector,vectors,x,w,xreg,wreg
 ;
-;    Transform vector variables from x and y to radial and phi components
+;  Transform 2D or 3D grid and vector variables 
+;  from Cartesian to cylindrical components
+;
+  on_error,2
+
+  siz = size(x)
+  ndim = siz(0)-1
+  case ndim of
+      2: polargrid2,nvector,vectors,x,w,xreg,wreg
+      3: polargrid3,nvector,vectors,x,w,xreg,wreg
+      else: begin
+          print,'polargid works for 2D and 3D arrays only'
+          retall
+      end
+  endcase
+end
+;===========================================================================
+pro polargrid2,nvector,vectors,x,w,xreg,wreg
+;
+;  Transform 2D grid and vector variables 
+;  from x and y to radial and phi components
 ;
 ;===========================================================================
   on_error,2
@@ -1036,6 +1067,34 @@ pro polargrid,nvector,vectors,x,w,xreg,wreg
      phi(*,ix2)=phi(*,ix2)+pi2
 
   xreg(*,*,1)=phi
+end
+
+;===========================================================================
+pro polargrid3,nvector,vectors,x,w,xreg,wreg
+;
+;    Transform 3D vector variables from x,y,z to radial,phi,z components
+;
+;===========================================================================
+  on_error,2
+
+  xreg=x
+  xreg(*,*,*,0)=sqrt(x(*,*,*,0)^2+x(*,*,*,1)^2)
+  xreg(*,*,*,1)=atan(x(*,*,*,1),x(*,*,*,0))
+  phi=xreg(*,*,*,1)
+  wreg=w
+  for i=1,nvector do begin
+     ivx=vectors(i-1)
+     ivy=ivx+1
+     wreg(*,*,*,ivx)=  w(*,*,*,ivx)*cos(phi)+w(*,*,*,ivy)*sin(phi)
+     wreg(*,*,*,ivy)= -w(*,*,*,ivx)*sin(phi)+w(*,*,*,ivy)*cos(phi)
+  endfor
+
+  ;Remove 2*pi jumps from phi
+  pi2=8*atan(1) & sz=size(phi) & nx2=sz(2)
+  for ix2=1,nx2-1 do while phi(1,ix2-1) gt phi(1,ix2) do $
+     phi(*,ix2)=phi(*,ix2)+pi2
+
+  xreg(*,*,*,1)=phi
 end
 
 ;===========================================================================
@@ -1089,14 +1148,35 @@ end
 ;===========================================================================
 pro unpolargrid,nvector,vectors,x,w,xreg,wreg
 ;
-;    Transform vector variables from x and y to radial and phi components
+; Transform 2D and 3D vector variables cylindrical to Cartesian components
 ;
 ;===========================================================================
   on_error,2
 
+  siz = size(x)
+  ndim = siz(0)-1
+  case ndim of
+      2: unpolargrid2,nvector,vectors,x,w,xreg,wreg
+      3: unpolargrid3,nvector,vectors,x,w,xreg,wreg
+      else: begin
+          print,'unpolargid works for 2D and 3D arrays only'
+          retall
+      end
+  endcase
+
+end
+;===========================================================================
+pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
+;
+;    Transform 2D grid (and vector variables)
+;    from radial and phi to x and y components
+;
+;===========================================================================
+
   xreg=x
   phi=x(*,*,1)
 
+  ; If phi is in degrees, change it to radians
   if max(abs(phi)) gt 20. then phi=phi*!pi/180
 
   xreg(*,*,0)=x(*,*,0)*cos(phi)
@@ -1108,6 +1188,33 @@ pro unpolargrid,nvector,vectors,x,w,xreg,wreg
      ivy=ivx+1
      wreg(*,*,ivx)=  w(*,*,ivx)*cos(phi)-w(*,*,ivy)*sin(phi)
      wreg(*,*,ivy)=  w(*,*,ivx)*sin(phi)+w(*,*,ivy)*cos(phi)
+  endfor
+end
+
+;===========================================================================
+pro unpolargrid3,nvector,vectors,x,w,xreg,wreg
+;
+;  Transform 3D grid (and vector variables)
+;  from radial, phi,z to x, y, z components
+;
+;===========================================================================
+  on_error,2
+
+  xreg=x
+  phi=x(*,*,*,1)
+
+  ; If phi is in degrees, change it to radians
+  if max(abs(phi)) gt 20. then phi=phi*!pi/180
+
+  xreg(*,*,*,0)=x(*,*,*,0)*cos(phi)
+  xreg(*,*,*,1)=x(*,*,*,0)*sin(phi)
+
+  wreg=w
+  for i=1,nvector do begin
+     ivx=vectors(i-1)
+     ivy=ivx+1
+     wreg(*,*,*,ivx)=  w(*,*,*,ivx)*cos(phi)-w(*,*,*,ivy)*sin(phi)
+     wreg(*,*,*,ivy)=  w(*,*,*,ivx)*sin(phi)+w(*,*,*,ivy)*cos(phi)
   endfor
 end
 
