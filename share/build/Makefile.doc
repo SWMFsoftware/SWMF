@@ -25,9 +25,13 @@
 	${SCRIPTDIR}/protex.pl -b -n -f -S $*.pl > $*.protex
 
 .tex.dvi:
+	touch $*.ind $*.idx
 	latex $<
+	makeindex $*.idx
 	latex $<
+	makeindex $*.idx
 	latex $<
+	rm -f $*.ind $*.idx $*.ilg
 
 .dvi.ps: 
 	dvips -o $*.ps $<
