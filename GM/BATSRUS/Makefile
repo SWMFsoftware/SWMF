@@ -78,7 +78,7 @@ MAKEFILE_DEF:
 		cat src/Makefile.def                    >> Makefile.def; \
 	fi);
 
-install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90 STATIC
+install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
@@ -88,26 +88,7 @@ install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90 STATIC
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make user_routines.f90 #^CFG IF USERFILES
-
-# Copy modules with static declaration of large variables into used modules
-STATIC:
-	cp -f src/ModAdvance_static.f90 src/ModAdvance.f90
-	cp -f src/ModCT_static.f90 src/ModCT.f90           #^CFG IF CONSTRAINB
-	cp -f src/ModGeometry_static.f90 src/ModGeometry.f90
-	cp -f src/ModImplicit_static.f90 src/ModImplicit.f90 #^CFG IF IMPLICIT
-	cp -f src/ModNodes_static.f90 src/ModNodes.f90
-	cp -f src/ModRaytrace_static.f90 src/ModRaytrace.f90 #^CFG IF RAYTRACE
-
-# Transform modules with static declaration of large variables into 
-# modules with dynamic allocation as used modules
-Q = ${SCRIPTDIR}/StaticToDynamic.pl
-DYNAMIC:
-	$Q src/ModAdvance_static.f90 > src/ModAdvance.f90
-	$Q src/ModCT_static.f90 > src/ModCT.f90         #^CFG IF CONSTRAINB
-	$Q src/ModGeometry_static.f90 > src/ModGeometry.f90
-	$Q src/ModImplicit_static.f90 > src/ModImplicit.f90 #^CFG IF IMPLICIT
-	$Q src/ModNodes_static.f90 > src/ModNodes.f90
-	$Q src/ModRaytrace_static.f90 > src/ModRaytrace.f90 #^CFG IF RAYTRACE
+	cd src; make STATIC
 
 src/Makefile.RULES:
 	cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES

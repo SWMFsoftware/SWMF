@@ -178,6 +178,26 @@ OBJECTS = \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
 	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
 
+# Copy modules with static declaration of large variables into used modules
+STATIC:
+	cp -f ModAdvance_static.f90  ModAdvance.f90
+	cp -f ModCT_static.f90       ModCT.f90       #^CFG IF CONSTRAINB
+	cp -f ModGeometry_static.f90 ModGeometry.f90
+	cp -f ModImplicit_static.f90 ModImplicit.f90 #^CFG IF IMPLICIT
+	cp -f ModNodes_static.f90    ModNodes.f90
+	cp -f ModRaytrace_static.f90 ModRaytrace.f90 #^CFG IF RAYTRACE
+
+# Transform modules with static declaration of large variables into 
+# modules with dynamic allocation as used modules
+S2D = ${SCRIPTDIR}/StaticToDynamic.pl
+DYNAMIC:
+	${S2D} ModAdvance_static.f90  > ModAdvance.f90
+	${S2D} ModCT_static.f90       > ModCT.f90       #^CFG IF CONSTRAINB
+	${S2D} ModGeometry_static.f90 > ModGeometry.f90
+	${S2D} ModImplicit_static.f90 > ModImplicit.f90 #^CFG IF IMPLICIT
+	${S2D} ModNodes_static.f90    > ModNodes.f90
+	${S2D} ModRaytrace_static.f90 > ModRaytrace.f90 #^CFG IF RAYTRACE
+
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
 		${MODULES} ${OBJECTS}
