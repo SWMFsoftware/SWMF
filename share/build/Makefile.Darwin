@@ -23,8 +23,8 @@ MPILIB =
 
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 
-DEBUG   = -C -gline
-#DEBUG   =
+#DEBUG   = -C -gline
+DEBUG   =
 
 Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
 Cflag1  = ${SEARCH} -c -O1 ${PRECISION} ${DEBUG}
@@ -57,7 +57,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .f.o:
-	${COMPILE.f90} ${Cflag4} $<
+	${COMPILE.f90} ${Cflag4} -132 $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
