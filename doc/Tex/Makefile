@@ -1,12 +1,13 @@
-#^CFG COPYRIGHT UM
+#^CMP COPYRIGHT UM
 #BOP
 #!ROUTINE: doc/Tex/Makefile - produce documentation from LaTex, XML, Protex
 #!DESCRIPTION:
-# This Makefile produces documentation from Latex files, PARAM.XML files 
+# This Makefile produces documentation for SWMF from Latex, PARAM.XML
 # and Protex documented source code and scripts. 
 #EOP
 #BOC
 include ../../Makefile.def
+include ${DIR}/share/build/Makefile.doc
 
 help:
 	@echo "       Make manuals for SWMF"
@@ -14,20 +15,20 @@ help:
 	@echo "Targets:"
 	@echo ""
 	@echo "PDF          - produces SWMF.pdf"
-	@#^CFG IF DOCHTML BEGIN
+	@#^CMP IF DOCHTML BEGIN
 	@echo ""
 	@echo "HTML         - produces online manuals in ../HTML directory"
-	@#^CFG END DOCHTML
+	@#^CMP END DOCHTML
 	@echo ""
 	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
 	@echo ""
 	@echo "cleanpdf     - clean + remove PDF manuals"
-	@#^CFG IF DOCHTML BEGIN
+	@#^CMP IF DOCHTML BEGIN
 	@echo ""
 	@echo "cleanhtml    - clean + remove HTML manuals"
 	@echo ""
 	@echo "cleanall     - clean + remove PDF and HTML manuals"
-	@#^CFG END DOCHTML
+	@#^CMP END DOCHTML
 #EOC
 
 #^CMP IF GM BEGIN
@@ -99,43 +100,14 @@ SWMFREF = \
 	${SCRIPTDIR}/FixI8toI4.protex \
 	${SCRIPTDIR}/XmlToTex.protex \
 	${SCRIPTDIR}/protex.protex \
+	${DIR}/share/build/Makefile.doc.protex \
 	${DIR}/doc/Tex/Makefile.protex \
 	${UTILDIR}/NOMPI/src/NOMPI.protex \
 	${UTILDIR}/TIMING/src/ModTiming.protex \
 	${UTILDIR}/TIMING/src/timing.protex \
 	${BATSRUS_SCRIPTS}
 
-#BOC
-# Rules for files with standard extensions
-
-.SUFFIXES:
-.SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
-
-.XML.xmltex:
-	${SCRIPTDIR}/XmlToTex.pl $*.XML > $*.xmltex
-
-.f90.protex:
-	${SCRIPTDIR}/protex.pl -b -n -f $*.f90 > $*.protex
-
-.F90.protex:
-	${SCRIPTDIR}/protex.pl -b -n -f $*.F90 > $*.protex
-
-.pl.protex:
-	${SCRIPTDIR}/protex.pl -b -n -f -S $*.pl > $*.protex
-
-.tex.dvi:
-	latex $<
-	latex $<
-	latex $<
-
-.dvi.ps: 
-	dvips -o $*.ps $<
-
-.ps.pdf:
-	ps2pdf $*.ps ../$*.pdf
-
-#EOC
-#^CFG IF DOCHTML BEGIN
+#^CMP IF DOCHTML BEGIN
 .tex.html:
 	mv $*.tex $*orig.tex
 	perl -pe 's/\\tableofcontents/\%\\tableofcontents/' $*orig.tex > $*.tex
@@ -161,7 +133,7 @@ SWMFREF = \
 	rm -f $*.tex
 	mv $*orig.tex $*.tex
 	mv $* ../HTML
-#^CFG END DOCHTML
+#^CMP END DOCHTML
 
 #
 # Rules for files without a standard extension
@@ -183,6 +155,11 @@ ${DIR}/share/build/Makefile.protex: ${DIR}/share/build/Makefile.Linuxpgf90
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
 		${DIR}/share/build/Makefile.Linuxpgf90 > \
 		${DIR}/share/build/Makefile.protex
+
+${DIR}/share/build/Makefile.doc.protex: ${DIR}/share/build/Makefile.doc
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/share/build/Makefile.doc > \
+		${DIR}/share/build/Makefile.doc.protex
 
 ${DIR}/doc/Tex/Makefile.protex: ${DIR}/doc/Tex/Makefile
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
@@ -221,11 +198,11 @@ SWMF.dvi: \
 
 PDF: SWMF.pdf
 
-#^CFG IF DOCHTML BEGIN
+#^CMP IF DOCHTML BEGIN
 SWMF.html: SWMFREF.tex SWMF_xml.tex
 HTML: cleanhtml
 	make SWMF.html
-#^CFG END DOCHTML
+#^CMP END DOCHTML
 
 clean:
 	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMF_xml.tex
@@ -235,9 +212,9 @@ clean:
 cleanpdf: clean
 	cd ..;     rm -f  SWMF.pdf
 
-#^CFG IF DOCHTML BEGIN
+#^CMP IF DOCHTML BEGIN
 cleanhtml: clean
 	cd ../HTML;rm -rf SWMF
 
 cleanall: cleanpdf cleanhtml
-#^CFG END DOCHTML
+#^CMP END DOCHTML
