@@ -330,11 +330,8 @@ sub set_versions{
     &shell_command("make IHBATSRUS")
 	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
 
-   # Create and rename and SC/BATSRUS if needed
-    &shell_command("make SCBATSRUS")
-	if $Version{"SC"} eq "BATSRUS" and $Version{"GM"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
     # Create SC/BATSRUS if needed
-    &shell_command("make SC/BATSRUS/src/Makefile")
+    &shell_command("make SCBATSRUS")
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
 
     @Version = @NewVersion;
