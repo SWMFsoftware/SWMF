@@ -88,7 +88,7 @@ subroutine ray_trace_accurate
      do iBlock = 1, nBlock
         if(unusedBLK(iBlock))CYCLE
 
-        oktest_ray = &
+        oktest_ray = oktest .and. &
              x_BLK(i,j,k,iBlock)==xTest .and. &
              y_BLK(i,j,k,iBlock)==yTest .and. &
              z_BLK(i,j,k,iBlock)==zTest
@@ -206,7 +206,13 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
   real(Real8_) :: CpuTimeNow
 
+  character(len=*), parameter :: NameSub='follow_ray'
+
+  logical :: DoTest, DoTestMe
+
   !-----------------------------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(iRayIn /= 0)then
 
@@ -217,9 +223,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
      iStart_D = i_D
      if(DoIntegrate)then
-        oktest_ray = all(iStart_D(1:2) == (/iTest,jTest/))
+        oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iTest,jTest/))
      else
-        oktest_ray = iProcStart == ProcTest .and. &
+        oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
              all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
      end if
 
@@ -245,9 +251,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
            if(IsFound)then
               if(DoIntegrate)then
-                 oktest_ray = all(iStart_D(1:2) == (/iTest,jTest/))
+                 oktest_ray = DoTest.and.all(iStart_D(1:2) == (/iTest,jTest/))
               else
-                 oktest_ray = iProcStart == ProcTest .and. &
+                 oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
                       all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
               end if
               if(IsParallel)then
@@ -1039,7 +1045,7 @@ end subroutine ray_trace_sorted
 
 !============================================================================
 
-subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
+subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
 
   use CON_ray_trace, ONLY: ray_init
   use CON_planet_field, ONLY: map_planet_field
@@ -1051,13 +1057,13 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
   use ModProcMH
   use ModMpi
   use ModNumConst, ONLY: cDegToRad, cTiny
-  use ModCoordTransform, ONLY: dir_to_xyz
+  use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities, ONLY: check_allocate
   implicit none
 
   !INPUT ARGUMENTS:
   integer, intent(in):: nLat, nLon
-  real,    intent(in):: Lat_I(nLat), Lon_I(nLon)
+  real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
 
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
   integer :: iLat, iLon, iHemisphere
@@ -1127,7 +1133,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
         Phi = cDegToRad*Lon
 
         ! Convert to SMG Cartesian coordinates on the surface of the ionosphere
-        call dir_to_xyz(Theta, Phi, XyzIono_D)
+        call sph_to_xyz(Radius, Theta, Phi, XyzIono_D)
 
         ! Map from the ionosphere to rBody
         call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
@@ -1215,7 +1221,7 @@ subroutine test_ray_integral
   end do
 
   ! Integrate all points on the spherical grid
-  call integrate_ray_accurate(nLat,nLon,Lat_I,Lon_I)
+  call integrate_ray_accurate(nLat,nLon,Lat_I,Lon_I,1.0)
 
   ! Write out results into a file
   if(iProc==0)then
