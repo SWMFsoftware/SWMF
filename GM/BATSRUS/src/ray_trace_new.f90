@@ -1401,7 +1401,8 @@ subroutine write_plot_line(iFile)
   use ModPhysics,  ONLY: rBody
   use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, Plot_,iUnitLine_I,&
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_simulation, nI, nJ, nK, nBlock, unusedBLK
+  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
+       StringTimeH4M2S2, nI, nJ, nK, nBlock, unusedBLK
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
   use ModIoUnit,   ONLY: io_unit_new, UnitTmp_
   use ModUtilities,ONLY: flush_unit
@@ -1496,6 +1497,8 @@ subroutine write_plot_line(iFile)
        trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile, &
        '_'//NameVectorField
 
+  if(time_accurate)call get_time_string
+
   ! Write header information
   do iLine = 1, nHeaderFile
 
@@ -1505,6 +1508,7 @@ subroutine write_plot_line(iFile)
      else
         NameFile = NameStart
      end if
+     if(time_accurate) NameFile = trim(NameFile)// "_t"//StringTimeH4M2S2
      write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step,'.l'
 
      if(iProc==0)then

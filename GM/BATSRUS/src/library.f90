@@ -1652,16 +1652,14 @@ subroutine get_date_time(iTime_I)
 end subroutine get_date_time
 !=========================================================================
 
-subroutine gettimestring
-  use ModMain, ONLY: TimeH4,TimeM2,TimeS2,Time_Simulation
+subroutine get_time_string
+  use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
   implicit none
 
-  write(TimeH4,'(i4.4)') &
-       int(                            Time_Simulation/3600.)
-  write(TimeM2,'(i2.2)') &
-       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.)
-  write(TimeS2,'(i2.2)') &
+  write(StringTimeH4M2S2,'(i4.4,i2.2i2.2)') &
+       int(                            Time_Simulation/3600.), &
+       int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
        int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
 
-end subroutine gettimestring
+end subroutine get_time_string
 

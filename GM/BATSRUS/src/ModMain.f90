@@ -248,8 +248,7 @@ Module ModMain
   logical:: UseUserSetPhysConst=.false.
   logical:: UseUserUpdateStates=.false.
 
-  character (LEN=4) :: TimeH4
-  character (LEN=2) :: TimeM2,TimeS2
+  character (LEN=8) :: StringTimeH4M2S2
 
   logical :: DoSetLevels = .false.
   logical :: DoSendMHD   = .false.

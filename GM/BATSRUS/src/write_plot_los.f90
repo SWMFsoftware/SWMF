@@ -28,7 +28,7 @@ subroutine write_plot_los(ifile)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
-       time_accurate,TimeH4,TimeM2,TimeS2
+       time_accurate,StringTimeH4M2S2
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
@@ -240,10 +240,10 @@ subroutine write_plot_los(ifile)
      end if
 
      if(time_accurate)then
-        call gettimestring
+        call get_time_string
         write(filename,file_format) &
              trim(plot_type1)//"_",&
-             ifile-plot_,"_t"//TimeH4//TimeM2//TimeS2//"_n",n_step,&
+             ifile-plot_,"_t"//StringTimeH4M2S2//"_n",n_step,&
              file_extension
      else
         write(filename,file_format) &
