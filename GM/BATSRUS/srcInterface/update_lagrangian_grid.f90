@@ -75,7 +75,10 @@ contains
              !End of initialization
           end if
        end do
-       if(DoSkip)return !Nothing to advect in this component
+       if(DoSkip)then
+          call timing_stop('lagrangian_grid')
+          return !Nothing to advect in this component
+       end if
     end if
     call  advance_vector(tStart,&
          tFinal,&
