@@ -116,113 +116,51 @@ DEPEND:
 # - CON comes next as it uses general software libraries only
 # - general software libraries come last in the order of their interdependecies
 
-#^CMP IF IH BEGIN
-LIB1  = ${LIBIH}
-lib1  = -lIH
-doto1 = ${LIBDIR}/IH.o
+LIB1  = ${LIBIH} #	^CMP IF IH
+lib1  = -lIH #		^CMP IF IH
 
-${doto1}:	${LIBIH}
-	ld -o ${doto1} ${LIBIH} -all_load -r
+LIB2 = ${LIBGM}	#	^CMP IF GM
+lib2 = -lGM #		^CMP IF GM
 
-#^CMP END IH
-#^CMP IF GM BEGIN
-LIB2 = ${LIBGM}
-lib2 = -lGM
-doto2 = ${LIBDIR}/GM.o
+LIB3 = ${LIBIM}	#	^CMP IF IM
+lib3 = -lIM #		^CMP IF IM
 
-${doto2}:	${LIBGM}
-	ld -o ${doto2} ${LIBGM} -all_load -r
+LIB4 = ${LIBIE}	#	^CMP IF IE
+lib4 = -lIE #		^CMP IF IE
 
-#^CMP END GM
-#^CMP IF IM BEGIN
-LIB3 = ${LIBIM}
-lib3 = -lIM
-doto3 = ${LIBDIR}/IM.o
-
-${doto3}:	${LIBIM}
-	ld -o ${doto3} ${LIBIM} -all_load -r
-
-#^CMP END IM
-#^CMP IF IE BEGIN
-LIB4 = ${LIBIE}
-lib4 = -lIE
-doto4 = ${LIBDIR}/IE.o
-
-${doto4}:	${LIBIE}
-	ld -o ${doto4} ${LIBIE} -all_load -r
-
-#^CMP END IE
-#^CMP IF UA BEGIN
-LIB5 = ${LIBUA}
-lib5 = -lUA
-doto5 = ${LIBDIR}/UA.o
-
-${doto5}:	${LIBUA}
-	ld -o ${doto5} ${LIBUA} -all_load -r
-
-#^CMP END UA
-
-dotoINTERFACE = ${LIBDIR}/INTERFACE.o
-dotoTIMING = ${LIBDIR}/TIMING.o
-dotoCOUPLER = ${LIBDIR}/COUPLER.o
-dotoLIBRARY = ${LIBDIR}/LIBRARY.o
-dotoSHARE = ${LIBDIR}/SHARE.o
-
-${dotoINTERFACE}:	${LIBINTERFACE}
-	ld -o ${dotoINTERFACE} ${LIBINTERFACE} -all_load -r
-
-${dotoTIMING}:	${LIBTIMING}
-	ld -o ${dotoTIMING} ${LIBTIMING} -all_load -r
-
-${dotoCOUPLER}:	${LIBCOUPLER}
-	ld -o ${dotoCOUPLER} ${LIBCOUPLER} -all_load -r
-
-${dotoLIBRARY}:	${LIBLIBRARY}
-	ld -o ${dotoLIBRARY} ${LIBLIBRARY} -all_load -r
-
-${dotoSHARE}:	${LIBSHARE}
-	ld -o ${dotoSHARE} ${LIBSHARE} -all_load -r
-
-DotOs:	  ${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
-	  ${dotoINTERFACE} ${dotoTIMING} \
-	  ${dotoCOUPLER} ${dotoLIBRARY} ${dotoSHARE}
+LIB5 = ${LIBUA}	#	^CMP IF UA
+lib5 = -lUA #		^CMP IF UA
 
 ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${MAKEFILE_COMP_SELECT}
-	make DotOs
-	@echo ' '
-	@(if [ ${OS} == "Darwin" ]; then \
-	    echo \
-	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
-		${MODULES} ${OBJECTS} \
-		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
-		${dotoINTERFACE} ${dotoCOUPLER} ${dotoLIBRARY} \
-		${dotoTIMING} ${dotoSHARE} ${LBLAS} \
-		${Lflag1}; \
-	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
-		${MODULES} ${OBJECTS} \
-		${doto1} ${doto2} ${doto3} ${doto5} ${doto4} \
-		${dotoINTERFACE} ${dotoCOUPLER} ${dotoLIBRARY} \
-		${dotoTIMING} ${dotoSHARE} ${LBLAS} \
-		${Lflag1}; \
-	else \
-	    echo \
-	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
-		${MODULES} ${OBJECTS} \
-		-L${LIBDIR} -lINTERFACE \
-		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
-		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
-		${Lflag1}; \
-	    ${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
-		${MODULES} ${OBJECTS} \
-		-L${LIBDIR} -lINTERFACE \
-		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
-		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
-		${Lflag1}; \
-	fi);
+	@(if [ ${OS} != "Darwin" ]; then make SWMF_general; \
+	else 				 make SWMF_for_Darwin; fi)
 
+SWMF_general:
+	${LINK.f90} -o ${SWMFEXE} \
+		${MODULES} ${OBJECTS} \
+		-L${LIBDIR} -lINTERFACE \
+		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
+		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
+		${Lflag1}
+
+# The following target is only needed to link SWMF on Darwin 
+# which has a problem with the ld linker.
+# This work around creates a temporary object file from all the F90
+# libraries using the -all_load option of the linker.
+
+SWMF_for_Darwin: 
+	ld -all_load -r -o LIBRARIES.o \
+		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
+		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
+		${LIBINTERFACE}
+	${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+		${MODULES} ${OBJECTS} \
+		LIBRARIES.o ${LBLAS} \
+		${Lflag1}
+	rm -f LIBRARIES.o
 
 TESTREGISTRY: DEPEND
 	cd ${MODDIR}; make LIB
