@@ -396,15 +396,6 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
        + Dist1    *( (1-Dist2) * dIonoPotential_DII(:, iTheta+1, iPhi  )  &
        +             Dist2     * dIonoPotential_DII(:, iTheta+1, iPhi+1))
 
-  if(DoTestMe)then
-     write(*,*)NameSub,' Xyz_D        =',Xyz_D
-     write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
-     write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
-     write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
-     write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
-     write(*,*)NameSub,' dPotential_D =',dPotential_D
-  end if
-
   ! E = -grad(Potential) = - dPotential/d(Theta,Phi) * d(Theta,Phi)/d(x,y,z)
   eField_D = - matmul( dPotential_D, DdirDxyz_DD)
 
@@ -416,9 +407,17 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
   u_D = cross_product(eField_D, b_D) / B2
 
   if(DoTestMe)then
-     write(*,*)NameSub,' b_D=',b_D
+     write(*,*)NameSub,' Xyz_D        =',Xyz_D
+     write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
+     write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
+     write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
+     write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
+     write(*,*)NameSub,' dPotential_D =',dPotential_D
+     write(*,*)NameSub,' DdirDxyz_DD  =',DdirDxyz_DD
      write(*,*)NameSub,' E_D=',eField_D
+     write(*,*)NameSub,' b_D=',b_D
      write(*,*)NameSub,' u_D=',u_D
+     ! call CON_stop(NameSub) !!!
   endif
 
   ! Subtract the radial component of the velocity
