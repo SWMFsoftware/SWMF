@@ -32,10 +32,10 @@ function funcdef,x,w,func,physics,eqpar,wnames
 ;
 ; Examples for valid strings: '3', 'bphi', '-divb', 'r*m1/rho', ...
 ;
-; One can use "animfunc" interactively too, e.g.
+; One can use "funcdef" interactively too, e.g.
 ; 
-; ekin=animfunc(x,w,'(m1^2+m2^2)/rho','hdadiab12')
-; pneg=animfunc(x,w,'-pth','mhd22',eqpar)
+; ekin=funcdef(x,w,'(m1^2+m2^2)/rho','hdadiab12')
+; pneg=funcdef(x,w,'-pth','mhd22',eqpar)
 ;
 ; Note that "eqpar" is needed for the pressure but not for the kinetic energy, 
 ; while "wnames" is not needed in either case.
@@ -77,7 +77,7 @@ if n_elements(result) gt 0 then return,sign*result
 
 ; Extract variables from w based on physics
 if not keyword_set(physics) then begin
-   print,'Error in animfunc: physics=',physics,' is missing'
+   print,'Error in funcdef: physics=',physics,' is missing'
    retall
 endif
 case physics of
@@ -165,7 +165,7 @@ case physics of
       e=w(*,*,*,4) & b1=w(*,*,*,5) & b2=w(*,*,*,6) & b3=w(*,*,*,7)
    end
    else: begin
-     print,'Error in animfunc: physics=',physics,' is not known'
+     print,'Error in funcdef: physics=',physics,' is not known'
      retall
    end
 endcase
@@ -190,7 +190,7 @@ l=strlen(physics)
 phys=strmid(physics,0,l-2)
 ndir=long(strmid(physics,l-1,1))
 if ndim ne long(strmid(physics,l-2,1)) then begin
-   print,'Error in animfunc: physics=',physics,$
+   print,'Error in funcdef: physics=',physics,$
          ' is inconsistent with ndim=',ndim
    retall
 endif
@@ -247,7 +247,7 @@ case 1 of
   strmid(f,0,5) eq 'Mfast' or strmid(f,0,5) eq 'Mslow' $
   :begin
      if phys eq 'rho' then begin
-        print,'Error in animfunc: func=',f,$
+        print,'Error in funcdef: func=',f,$
               ' is not defined for physics=',physics
         retall
      endif
@@ -300,7 +300,7 @@ case 1 of
      1: result=deriv(x,b2)
      2: result=curl(b1,b2,xx,yy)
      3: begin
-          print,'Error in animfunc: jz is not implemented for 3D yet'
+          print,'Error in funcdef: jz is not implemented for 3D yet'
           retall
         end
   endcase
@@ -461,7 +461,7 @@ case 1 of
   ;If "f" has not matched any function yet, try evaluating it as an expression
   else:begin
      if not execute('result='+f) then begin
-        print,'Error in animfunc: cannot evaluate function=',func
+        print,'Error in funcdef: cannot evaluate function=',func
         retall
      endif
   end
@@ -470,7 +470,7 @@ endcase
 if n_elements(result) gt 0 then begin
    return,sign*result
 endif else begin
-   print,'Error in animfunc: function=',func,' was not calculated ?!'
+   print,'Error in funcdef: function=',func,' was not calculated ?!'
    retall
 endelse
 
