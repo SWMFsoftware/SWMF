@@ -246,6 +246,8 @@ BATSRUS_for_xlf:
 
 distclean: clean
 	rm -f Makefile.RULES Makefile.DEPEND Makefile.OPTIONS ModSize.f90
+	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
+		ModNodes.f90 ModRaytrace.f90
 	rm -f stand_alone.f90
 
 # keep this line
