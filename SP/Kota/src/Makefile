@@ -12,3 +12,6 @@ SEP: ${SEPEXE}
 
 ${SEPEXE}:	${OBJECTS} main.o
 	${LINK.f90} -o ${SEPEXE} ${OBJECTS} main.o
+
+clean:
+	rm -f *.o

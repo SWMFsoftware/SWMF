@@ -8,3 +8,4 @@ clean:
 	cd src; make clean
 
 distclean: clean
+	rm -f Makefile.conf *~

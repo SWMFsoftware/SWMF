@@ -231,6 +231,7 @@ distclean: ENV_CHECK rmdir
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
 	cd RB/Rice;		make distclean    #^CMP IF RB
+	cd SP/Kota;             make distclean    #^CMP IF SP
 	cd CON;			make distclean
 	cd util;		make distclean
 	cd share;               make distclean
