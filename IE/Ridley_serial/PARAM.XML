@@ -118,11 +118,11 @@ The default is that no plotfiles are saved.
 						default="0.25"/>
 
 The ConductanceModel variable determines which ionosphere model is used:
-  0 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance
-  1 - uses a constant pedersen conductance which is set by 
-      PolarCapPedConductance, and a constant Hall conductance
-      which is set by StarLightPedConductance
+  0 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance
+  1 - uses a constant Pedersen conductance which is set by 
+      StarLightPedConductance, and a constant Hall conductance
+      which is set by PolarCapPedConductance
   2 - uses a solar EUV combined with a nightside conductance, so
       it uses f107_flux and StarLightPedConductance
   3 - uses solar EUV, nightside, and crude oval, so uses
