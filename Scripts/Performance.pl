@@ -73,13 +73,13 @@ my $NewIeData;     # true if IE component receives information (from GM or UA)
 {
      $iSession++;
 
-     print " === Starting session $iSession === \n";
+     print " === Starting session $iSession === \n" if $Verbose;
      my $IsLastSession = &read_param;
 
      &init_session;
      &do_session;
      &show_timing;
-     print " === Finished session $iSession === \n";
+     print " === Finished session $iSession === \n" if $Verbose;
      redo SESSION unless $IsLastSession;
 }
 
@@ -533,110 +533,111 @@ sub do_session{
     my %tNext_C; # Next time a component should stop at
 
     my $iProc;
-  TIMELOOP:{
+  TIMELOOP:
+    {
 
-      # figure out next wait time for all active components
-      # this time is the same on all processors
-      my $Comp;
-      for $Comp (@ActiveComp){
-	  my $tNext = $TimeMax;
-	  my $Comp2;
-	  for $Comp2 (@ActiveComp){
-	      if($Couple_CC{$Comp}{$Comp2}{do}){
-		  my $tNextCouple = $Couple_CC{$Comp}{$Comp2}{tNext};
-		  $tNext = $tNextCouple if $tNextCouple < $tNext;
-	      }
-	      if($Couple_CC{$Comp2}{$Comp}{do}){
-		  my $tNextCouple = $Couple_CC{$Comp2}{$Comp}{tNext};
-		  $tNext = $tNextCouple if $tNextCouple < $tNext;
-	      }
-	  }
-	  $tNext_C{$Comp} = $tNext;
+	# figure out next wait time for all active components
+	# this time is the same on all processors
+	my $Comp;
+	for $Comp (@ActiveComp){
+	    my $tNext = $TimeMax;
+	    my $Comp2;
+	    for $Comp2 (@ActiveComp){
+		if($Couple_CC{$Comp}{$Comp2}{do}){
+		    my $tNextCouple = $Couple_CC{$Comp}{$Comp2}{tNext};
+		    $tNext = $tNextCouple if $tNextCouple < $tNext;
+		}
+		if($Couple_CC{$Comp2}{$Comp}{do}){
+		    my $tNextCouple = $Couple_CC{$Comp2}{$Comp}{tNext};
+		    $tNext = $tNextCouple if $tNextCouple < $tNext;
+		}
+	    }
+	    $tNext_C{$Comp} = $tNext;
 
-	  print "tNext_C{$Comp} = $tNext\n" if $Verbose;
-      }
+	    print "tNext_C{$Comp} = $tNext\n" if $Verbose;
+	}
 
-      # Run all the active components
-      my $Comp;
-      for $Comp (@ActiveComp){
+	# Run all the active components
+	my $Comp;
+	for $Comp (@ActiveComp){
 
-	  # run component if it has not reached the next waiting time
-	  if($Time_C{$Comp} < $tNext_C{$Comp}){
+	    # run component if it has not reached the next waiting time
+	    if($Time_C{$Comp} < $tNext_C{$Comp}){
 
-	      my $WallStep; # cost of the step
-	      if($Comp eq "IE"){
+		my $WallStep;	# cost of the step
+		if($Comp eq "IE"){
 
-		  # IE component always advances to next time
-		  $Time_C{$Comp} = $tNext_C{$Comp};
+		    # IE component always advances to next time
+		    $Time_C{$Comp} = $tNext_C{$Comp};
 
-		  # IE component does work only if there is new data
-		  $WallStep = $WallStep_C{IE} if $NewIeData;
-		  $NewIeData = 0;
-	      }else{
-		  # Increase component time
-		  $Time_C{$Comp} += $TimeStep_C{$Comp};
-		    
-		  # Limit component time
-		  $Time_C{$Comp} = $tNext_C{$Comp} if 
-		      $Time_C{$Comp} > $tNext_C{$Comp};
-		  
-		  # Doing a step with $Comp will cost some wall time
-		  $WallStep = $WallStep_C{$Comp};
-	      }
+		    # IE component does work only if there is new data
+		    $WallStep = $WallStep_C{IE} if $NewIeData;
+		    $NewIeData = 0;
+		}else{
+		    # Increase component time
+		    $Time_C{$Comp} += $TimeStep_C{$Comp};
 
-	      my @Proc = @{ $Layout_C{$Comp}{ProcArray} };
-	      &add_wall_time("$Comp idle","$Comp runs",$WallStep,@Proc);
+		    # Limit component time
+		    $Time_C{$Comp} = $tNext_C{$Comp} if 
+			$Time_C{$Comp} > $tNext_C{$Comp};
 
-	  }
-      }
+		    # Doing a step with $Comp will cost some wall time
+		    $WallStep = $WallStep_C{$Comp};
+		}
 
-      # Couple components
-      my $Time = &minval(@Time_C{@ActiveComp});
-      my $CouplePair;
-      foreach $CouplePair (@CoupleOrder){
-	  my $Comp1 = substr($CouplePair,0,2);
-	  my $Comp2 = substr($CouplePair,-2,2);
+		my @Proc = @{ $Layout_C{$Comp}{ProcArray} };
+		&add_wall_time("$Comp idle","$Comp runs",$WallStep,@Proc);
 
-	  next unless grep /$Comp1/, @ActiveComp;
-	  next unless grep /$Comp2/, @ActiveComp;
-	  next unless $Couple_CC{$Comp1}{$Comp2}{do};
+	    }
+	}
 
-	  my %Couple = %{ $Couple_CC{$Comp1}{$Comp2} };
-	  my $tCouple = $Couple{tNext};
+	# Couple components
+	my $Time = &minval(@Time_C{@ActiveComp});
 
-	  if($Time >= $tCouple){
-	      print "Coupling $Comp1 => $Comp2 at t=$tCouple\n" if $Verbose;
+	last TIMELOOP if $Time >= $TimeMax;
 
-	      # Set next coupling time
-	      $Couple_CC{$Comp1}{$Comp2}{tNext} += $Couple{dt};
+	my $CouplePair;
+	foreach $CouplePair (@CoupleOrder){
+	    my $Comp1 = substr($CouplePair,0,2);
+	    my $Comp2 = substr($CouplePair,-2,2);
 
-	      # Estimate cost of coupling
-	      my $WallCouple = 0;
+	    next unless grep /$Comp1/, @ActiveComp;
+	    next unless grep /$Comp2/, @ActiveComp;
+	    next unless $Couple_CC{$Comp1}{$Comp2}{do};
 
-	      # Set NewIeData if IE receives data
-	      $NewIeData = 1 if $Comp2 eq "IE";
+	    my %Couple = %{ $Couple_CC{$Comp1}{$Comp2} };
+	    my $tCouple = $Couple{tNext};
 
-	      # If IE is sending info, it may need to do a potential solve
-	      if($Comp1 eq "IE" and $NewIeData){
-		  $WallCouple += $WallStep_C{IE};
-		  $NewIeData  = 0;
-	      }
+	    if($Time >= $tCouple){
+		print "Coupling $Comp1 => $Comp2 at t=$tCouple\n" if $Verbose;
 
-	      # List of processors involved in the coupling
+		# Set next coupling time
+		$Couple_CC{$Comp1}{$Comp2}{tNext} += $Couple{dt};
 
-	      # Add wall time due to synchronizetion and coupling
+		# Estimate cost of coupling
+		my $WallCouple = 0;
 
-	      my @Proc = @{ $Couple_CC{$Comp1}{$Comp2}{ProcArray} };
-	      &add_wall_time("$Comp1===$Comp2","$Comp1-->$Comp2",
-			     $WallCouple,@Proc);
+		# Set NewIeData if IE receives data
+		$NewIeData = 1 if $Comp2 eq "IE";
 
-	  }
-      }
+		# If IE is sending info, it may need to do a potential solve
+		if($Comp1 eq "IE" and $NewIeData){
+		    $WallCouple += $WallStep_C{IE};
+		    $NewIeData  = 0;
+		}
 
-      my $Time = &minval(@Time_C{@ActiveComp});
+		# List of processors involved in the coupling
 
-      redo TIMELOOP if $Time < $TimeMax;
-  }
+		# Add wall time due to synchronizetion and coupling
+
+		my @Proc = @{ $Couple_CC{$Comp1}{$Comp2}{ProcArray} };
+		&add_wall_time("$Comp1===$Comp2","$Comp1-->$Comp2",
+			       $WallCouple,@Proc);
+
+	    }
+	}
+	redo TIMELOOP;
+    }
     &add_wall_time("ENDidle","ENDsess",0,(0..$nProcAll-1));
 
 }
@@ -690,10 +691,13 @@ sub add_wall_hist{
 ##############################################################################
 sub show_timing{
 
+
+    printf "%8.2f seconds wall time for session $iSession\n", $WallTime_P[0];
+    return if $ProcShow eq 'none';
+
     my @Proc;
     if( $ProcShow eq 'all' ){
 	@Proc = (0..$nProcAll-1);
-    }elsif( $ProcShow eq 'none' ){
     }elsif( $ProcShow eq 'roots' ){
 	# Collect root PE-s
 	my %ProcShow;
@@ -711,8 +715,7 @@ sub show_timing{
     my $SepLine = "-" x (15*@Proc) . "\n";
     print $SepLine;
     my $iProc;
-    for $iProc (@Proc){printf "%15d", $iProc}; print "\n";
-    for $iProc (@Proc){printf "%15.2f", $WallTime_P[$iProc]}; print "\n";
+    for $iProc (@Proc){printf "     PE%4d    ", $iProc}; print "\n";
     print $SepLine;
 
     my $iLine;
