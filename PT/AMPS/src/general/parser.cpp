@@ -6,9 +6,19 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "dsmc.h"
-#include "mol.h"
 #include "data.h"
+
+#if CompilationTarget==DSMCTARGET
+  #include "dsmc.h"
+  #include "mol.h"
+#elif CompilationTarget==PICTARGET
+  #include "dsmc.h"
+  #include "mol.h"
+  #include "pic.h"
+#elif CompilationTarget==EULERTARGET
+  #include "euler.h"
+#endif
+
 
 FILE* fd;
 char init_str[100];
@@ -69,16 +79,19 @@ void GeneralBlock() {
   while (!feof(fd)) {
     GetInputStr(str,sizeof(str));
     CutInputStr(str1,str);
-    if (strcmp("MOLECULARMODEL",str1)==0) {
+
+    if (strcmp("TAU",str1)==0) {
+      CutInputStr(str1,str);
+      tau=strtod(str1,&endptr);
+      if ((str1[0]=='\0')||(endptr[0]!='\0')) error();}
+#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)
+    else if (strcmp("MOLECULARMODEL",str1)==0) {
       CutInputStr(str1,str);
       if (strcmp("HS",str1)==0) mol.SetMolType(HS_MOL_TYPE); 
       else if (strcmp("VHS",str1)==0) mol.SetMolType(VHS_MOL_TYPE);
       else if (strcmp("VSS",str1)==0) mol.SetMolType(VSS_MOL_TYPE);
       else error();}
-    else if (strcmp("TAU",str1)==0) {
-      CutInputStr(str1,str);
-      tau=strtod(str1,&endptr);
-      if ((str1[0]=='\0')||(endptr[0]!='\0')) error();} 
+#endif
     else if (strcmp("TMAX",str1)==0) {
       CutInputStr(str1,str);
       tmax=strtod(str1,&endptr);
@@ -122,7 +135,9 @@ void GeneralBlock() {
         SymmetryMode=spherical_symmetry;
       else error();}
     else if (strcmp("#ENDGENERAL",str1)==0) {
+#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)
       mol.init(NS);
+#endif
       return;}
     else error();
   }
@@ -143,11 +158,14 @@ void parser(char* InputFile) {
     GetInputStr(str,sizeof(str));
     CutInputStr(str1,str);
     if (strcmp("#GENERAL",str1)==0) GeneralBlock();
-    else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile); 
 
-#if CompilationTarget==DSMCTARGET
+#if CompilationTarget==DSMCTARGET 
+    else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile);
     else if (strcmp("#DSMC",str1)==0) dsmc.parser(fd,line,InputFile);
-#elif CompilationTarget==PICTARGET
+#endif
+
+#if CompilationTarget==PICTARGET
+    else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile);
     else if (strcmp("#DSMC",str1)==0) pic.parser(fd,line,InputFile);
 #endif
 
