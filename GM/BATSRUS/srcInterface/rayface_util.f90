@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT 
+!^CFG COPYRIGHT UM
 !^CFG FILE RAYTRACE
 !==========================================================================
 subroutine getMinMaxLatLon(minLat,maxLat, minLon,maxLon, rayface_2d, shifted)
