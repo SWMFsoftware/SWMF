@@ -234,22 +234,26 @@ TEST_REGISTRY_OBJ= \
 	test_registry.o
 
 test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
+	cd ${LIBRARYDIR}; make LIB
 	${LINK.f90} -o test_registry.exe ${SEARCH} \
-		${TEST_REGISTRY_OBJ} -L../lib -lCON
+		${TEST_REGISTRY_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE
 
 TEST_PHYS_OBJ = \
 	test_physics.o \
-	CON_methods.o
+	CON_methods.o \
+	CON_variables.o
 
 TESTPHYSICS: DEPEND
 	cd ${MODDIR}; make LIB
 	make test_physics.exe
 	test_physics.exe
 
-test_physics.exe: ${TEST_PHYS_OBJ} ${CONLIB}
+test_physics.exe: ${TEST_PHYS_OBJ}
+	cd ${SHAREDIR}; make LIB
+	cd ${LIBRARYDIR}; make LIB
 	${LINK.f90} -o test_physics.exe ${Lflag2} ${SEARCH} \
-		${TEST_PHYS_OBJ} -L../lib -lCON
+		${TEST_PHYS_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE 
 
 #
 #	cleaning
