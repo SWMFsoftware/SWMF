@@ -80,7 +80,7 @@ subroutine set_covar_spherical_geometry(iBLK)
      do j=1,nJ
         do i=1,nI
            iVolumeCounter=iVolumeCounter+1
-           VolumeInverse_I(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&     
+           VolumeInverse_I(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&  
                 cTwo*tan(cHalf*dTheta)*sin(Theta_G(i,j,k))*&                 
                 dR*(cThree*R_BLK(i,j,k,iBLK)**2+cQuarter*dR**2))
         end do
@@ -1201,76 +1201,51 @@ real function integrate_BLK(qnum,qa)
   
 end function integrate_BLK
 
-subroutine integrate_cell_centered_vars(StateIntegral_V)
-  use ModProcMH
-  use ModAdvance,ONLY : State_VGB,tmp2_BLK,nVar
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nIJK,nBlockMax,unusedBLK
-  use ModVarIndexes,ONLY:P_
-  use ModGeometry, ONLY :&
-                          VolumeInverse_I,&                   
-                          true_BLK,true_cell
-  use ModNumConst
-  use ModMpi
+subroutine integrate_domain(Sum_V, Pressure_GB)
+  use ModAdvance,   ONLY: State_VGB, tmp2_BLK, nVar
+  use ModMain,      ONLY: nI, nJ, nK, nIJK, nBlock, MaxBlock, UnusedBLK
+  use ModGeometry,  ONLY: VolumeInverse_I, true_BLK, true_cell
+  use ModVarIndexes,ONLY: P_
+  use ModNumConst,  ONLY: cZero, cOne
   implicit none 
 
   ! Arguments
-
-  real,dimension( nVar),intent(out) :: &
-       StateIntegral_V
+  real, intent(out) :: Sum_V(nVar)
+  real, intent(out) :: Pressure_GB(-1:nI+2,-1:nJ+2,-1:nK+2,MaxBlock)
 
   ! Local variables:
-  real ,dimension( nVar)   :: Sum_V, TotalSum_V
-  real:: CellVolume
-  integer :: iBLK,iVolumeCounter, iError,iVar,i,j, k
-
-  logical :: oktest, oktest_me
-
+  real    :: CellVolume
+  integer :: iBlock, iVolumeCounter, iVar, i, j, k
+  logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
 
-  call set_oktest('integrate_BLK',oktest, oktest_me)
+  call set_oktest('integrate_domain',DoTest, DoTestMe)
 
   Sum_V=cZero
                                                      
-  do iBLK=1,nBlockMax
-     if(.not.unusedBLK(iBLK)) then
-        iVolumeCounter=nIJK*(iBLK-1)
-        if(true_BLK(iBLK)) then
-           do k=1,nK; do j=1,nJ; do i=1,nI
-              iVolumeCounter=iVolumeCounter+1
-              CellVolume=cOne/&
-                         VolumeInverse_I(iVolumeCounter)
-              do iVar=1,nVar
-                 Sum_V(iVar)=Sum_V(iVar) + &
-                      State_VGB(iVar,i,j,k,iBLK)*&
-                      CellVolume
-              end do
-           end do; end do; end do
-        else
-           do k=1,nK; do j=1,nJ; do i=1,nI
-              iVolumeCounter=iVolumeCounter+1
-              if(.not.true_cell(i,j,k,iBLK))CYCLE
-              CellVolume=cOne/&
-                         VolumeInverse_I(iVolumeCounter)
-              do iVar=1,nVar
-                 Sum_V(iVar)=Sum_V(iVar) + &
-                      State_VGB(iVar,i,j,k,iBLK)*&
-                 CellVolume
-              end do
-           end do; end do; end do
-        end if
-        tmp2_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)
+  do iBlock = 1, nBlock
+     if(unusedBLK(iBlock)) CYCLE
+     iVolumeCounter=nIJK*(iBlock-1)
+     if(true_BLK(iBlock)) then
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           iVolumeCounter=iVolumeCounter+1
+           CellVolume=cOne/VolumeInverse_I(iVolumeCounter)
+           do iVar=1,nVar
+              Sum_V(iVar)=Sum_V(iVar) + State_VGB(iVar,i,j,k,iBlock)*CellVolume
+           end do
+        end do; end do; end do
+     else
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           iVolumeCounter=iVolumeCounter+1
+           if(.not.true_cell(i,j,k,iBlock))CYCLE
+           CellVolume=cOne/VolumeInverse_I(iVolumeCounter)
+           do iVar = 1, nVar
+              Sum_V(iVar)=Sum_V(iVar) + State_VGB(iVar,i,j,k,iBlock)*CellVolume
+           end do
+        end do; end do; end do
      end if
+     Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
   end do
 
-  if(nProc>1)then
-     call MPI_allreduce(Sum_V, TotalSum_V, &
-          nVar,  MPI_REAL, MPI_SUM, &
-          iComm, iError)
-   
-     StateIntegral_V=TotalSum_V
-  else
-     StateIntegral_V=Sum_V
-  end if
-end subroutine integrate_cell_centered_vars    
+end subroutine integrate_domain
 !==============End of library programms=================================
