@@ -26,22 +26,21 @@ subroutine example_routine(InputVar, OutputVar, InputOutputVar)
 
   !LOCAL VARIABLES:
   real :: AnImportantLocalVariable
+  character(len=*), parameter:: NameSub='example_routine'
 
   !REVISION HISTORY: 
-  ! 04/27/2004 G. Toth <myemail@umich.edu> - initial version
-  ! 04/28/2004 G. Toth <myemail@umich.edu> - fixed some typos
+  ! 04/27/2004 My Name <myemail@umich.edu> - initial version
+  ! 04/28/2004 My Name <myemail@umich.edu> - fixed some typos
   !EOP  
 
   ! local variables not worth of documenting come here
 
-  character(len=*), parameter:: NameSub='example_routine'
-
   !------------------------------------------------------------------------
   !BOC
-  write(*,*)'Executable statement worth documenting come here'
+  write(*,*) NameSub,': documented executable statements come here'
   !EOC
 
-  write(*,*)'This part should not appear in the documentation'
+  write(*,*)NameSub,': this part should not appear in the documentation'
 
 end subroutine example_routine
 

@@ -13,22 +13,25 @@ program example_program
 
   !USES:
   use ModExample, ONLY: ExampleParameter
-  use ModExample2
+  use ModExample2, ONLY: example_iroutine
 
   implicit none
 
   !LOCAL VARIABLES:
-  real :: VeryImpotantVariable
+  character (len=*), parameter :: NameProgram='example_program'
+  real :: ImportantVar1, ImportantVar2
 
   !REVISION HISTORY:
-  ! 04/27/2004 G. Toth <myemail@umich.edu> - initial version
+  ! 04/27/2004 My Name <myemail@umich.edu> - initial version
   !EOP
   ! other local variables not worth documenting
   !...
   !---------------------------------------------------------------------------
   !BOC
-  write(*,*)'First executable statement of example_program worth documenting'
+  write(*,*)NameProgram,': documented executable statements come here'
+  call example_routine(1.0, ImportantVar1, ImportantVar2)
+  call example_iroutine(2.0, ImportantVar1, ImportantVar2)
   !EOC
-  write(*,*)'Executable statement of example_program not worth documenting'
+  write(*,*)NameProgram,': this part should not appear in the documentation'
 
 end program example_program
