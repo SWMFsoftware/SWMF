@@ -637,12 +637,12 @@ sub process_elements{
 	}
 	elsif($name eq 'rule')
 	{
+	    # Substitute $\w+ with the value of the variable in package COMP
 	    my $content = $element->{content}->[0]->{content};
 	    $content =~ s/^\s+//; $content =~ s/\s+$//;
 	    $content =~ s/\$(\w+)/'$COMP::'.$1/gee;
-	    &print_error(":\n".
-			 "\t$element->{attrib}->{expr}\n".
-			 "\tis false! Rule description:\n".$content);
+	    print "Rule:\t$element->{attrib}->{expr}\n" if $Verbose;
+	    &print_error(" for command \#$commandName:\n\t$content");
 	    print "Command description\n$commandText{$realName}\n"
 		if $Verbose;
 	}
@@ -1008,10 +1008,13 @@ sub check_session{
 
 	    next unless check_if($node);
 
-	    &print_error(" in session $nSession:\n".
-			 "\t$node->{attrib}->{expr}\n".
-			 "\tis false! Rule description:\n".
-			 "$node->{content}->[0]->{content}");
+	    # Substitute $\w+ with the value of the variable in package COMP
+	    my $content = $node->{content}->[0]->{content};
+	    $content =~ s/^\s+//; $content =~ s/\s+$//;
+	    $content =~ s/\$(\w+)/'$COMP::'.$1/gee;
+
+	    print "Rule:\t$node->{attrib}->{expr}\n" if $Verbose;
+	    &print_error(" in session $nSession:\n\t$content");
 	}
     }
 }
