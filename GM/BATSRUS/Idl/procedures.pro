@@ -239,15 +239,25 @@ pro getpict,unit,filetype,npict,x,w,$
 
    ; Read data
    case filetype of
-   'ascii':  getpict_asc ,unit, npict, ndim, nw, nx, x, w
-   'binary': getpict_bin ,unit, npict, ndim, nw, nx, x, w
-   'real4':  getpict_real,unit, npict, ndim, nw, nx, x, w
-    else:    begin
-                print,'Getpict: unknown filetype:',filetype
-                error=1
-                close,unit
-             end
+       'ascii':  getpict_asc ,unit, npict, ndim, nw, nx, x, w
+       'binary': getpict_bin ,unit, npict, ndim, nw, nx, x, w
+       'real4':  getpict_real,unit, npict, ndim, nw, nx, x, w
+       else:    begin
+           print,'Getpict: unknown filetype:',filetype
+           error=1
+           close,unit
+       end
    endcase
+
+   if ndim eq 2 and nx(1) eq 1 then begin
+       ; sort x and w according to the x + (max(x)-min(x)) * y function
+       xx = x(*,*,0)
+       yy = x(*,*,1)
+       xrange = max(xx) - min(xx)
+       isort = sort( xx + xrange*yy )
+       x(*,0,*) = x(isort,0,*)
+       w(*,0,*) = w(isort,0,*)
+   endif
 
 end
 
