@@ -1969,7 +1969,7 @@ T			IsParallel
 ! y=0	- full y=0 plane: ymin=-0.001, ymax=0.001, average for symmetry plane
 ! z=0	- full z=0 plane: zmin=-0.001, zmax=0.001, average for symmetry plane
 ! 3d	- full 3D volume
-! cut	- READ PLOTRANGE FROM PARAM.in, only works for plotform='idl'
+! cut	- READ PLOTRANGE FROM PARAM.in, slightly different behavior for idl / Tec
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
 ! los   - line of sight integrated plot
 ! lin   - one dimensional plot along a field or stream line
@@ -2009,11 +2009,28 @@ T			IsParallel
 ! NameVars		if plotform is 'var'
 ! NamePars		if plotform is 'var'
 !\end{verbatim}
-! The PlotRange is described by 6 coordinates. If the width in one or two 
+! The PlotRange is described by 6 coordinates. For IDL plots, If the width in 
+! one or two 
 ! dimensions is less than the smallest cell size within the plotarea, 
 ! then the plot file will be 2 or 1 dimensional. If the range is thin but
 ! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
 ! in the postprocessing.\\
+!
+! For Tecplot (tec) file, plot range is read but only 1 dimension is used.  
+! Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
+! implemented.  For x=constant, for example, the y and z ranges 
+! do not matter as long at they are "wider" than the x range.  The slice will be 
+! located at the average of the two x ranges.  So, for example to save a plot in
+! a x=-5 constant plane 
+! cut in tec.  The following would work for the plot range:
+!\begin{verbatim}
+! -5.01			xMinCut
+!  5.01			xMaxCut
+! -10.			yMinCut
+!  10.			yMaxCut
+! -10.			zMinCut
+!  10.			zMaxCut
+!\end{verbatim}
 !
 ! \noindent
 ! Possible values for DxSavePlot (for IDL files):
