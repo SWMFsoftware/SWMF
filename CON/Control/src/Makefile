@@ -156,7 +156,7 @@ SWMF_for_Darwin:
 		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${LIBINTERFACE}
-	${LINK.f90} -o ${SWMFEXE} ${SEARCH} \
+	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} \
 		LIBRARIES.o ${LBLAS} \
 		${Lflag1}
