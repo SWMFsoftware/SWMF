@@ -89,7 +89,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   ! 
   ! RHere is 3d array of the distance values apart from the inner boundary center,
   ! xBodyHere, yBodyHere,zBodyHere are the physical coordinates of the inner boundary center 
-  ! UseIonesphereHere=.true. allows to call subroutine calc_innerBC_velocities
+  ! UseIonesphereHere=.true. allows to call subroutine calc_inner_BC_velocities
   ! UseCorotationHere = .true. allows to call calc_corotation_velocities
 
   integer :: i,j,k
@@ -271,7 +271,7 @@ contains
          FaceState_VI,UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
-    real, dimension(1:3) :: v_phi, FaceIono_D
+    real, dimension(1:3) :: v_phi, uIono_D
 
     real:: FaceState_V(nFaceValueVars)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
@@ -318,7 +318,8 @@ contains
        FaceCoords_D(y_)= FaceCoords_D(y_)-yBody2
        FaceCoords_D(z_)= FaceCoords_D(z_)-zBody2
     end if
-    !^CFG END SECONDBODY                                                                
+    !^CFG END SECONDBODY
+
     FaceState_V=FaceState_VI(:,iBoundary)  
     if(iBoundary==west_.and.TypeBcHere=='vary') then                          
        call get_solar_wind_point(&
@@ -438,15 +439,17 @@ contains
     end select
 !^CFG IF IONOSPHERE BEGIN
     if (UseIonosphereHere) then
+!       call calc_inner_BC_velocities_new(iter,time_now, FaceCoords_D, &
+!            VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
        call calc_inner_BC_velocities(iter,time_now,&
             FaceCoords_D(x_),FaceCoords_D(y_),FaceCoords_D(z_), &
             VarsTrueFace_V(Bx_),VarsTrueFace_V(By_),VarsTrueFace_V(Bz_),&
             B0Face_D(x_),B0Face_D(y_),B0Face_D(z_),&
-            FaceIono_D(x_),FaceIono_D(y_),FaceIono_D(z_))
+            uIono_D(x_),uIono_D(y_),uIono_D(z_))
        select case(TypeBcHere)
        case('reflect','linetied',&
             'ionosphere','ionospherefloat')
-          VarsGhostFace_V(Ux_:Uz_) = cTwo*FaceIono_D + VarsGhostFace_V(Ux_:Uz_)
+          VarsGhostFace_V(Ux_:Uz_) = cTwo*uIono_D + VarsGhostFace_V(Ux_:Uz_)
        case default
           call stop_mpi('UseIonosphere is not compatible with TypeBc_I='//TypeBcHere)
        end select
