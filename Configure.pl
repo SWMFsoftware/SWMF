@@ -226,17 +226,20 @@ if(not -d $Dir){
 if($switch{MAKEPDF}      eq "ON" or
    $switch{MAKEHTML}     eq "ON" or
    $switch{REMOVEDOCTEX} eq "ON"){
+
+    # Try installation
+    chdir $Dir or die "Could not cd $Dir\n";
+    my $result=system('./SetSWMF.pl -i');
+    warn "./SetSWMF.pl -i: $result\n" if $result;
+
     my $texdir;
-    foreach $texdir ("$Dir/Doc/Tex","$Dir/doc/Tex","missing"){
+    foreach $texdir ("Doc/Tex","doc/Tex","missing"){
 
 	die "Could not find LaTex directory $Dir/[Dd]oc/Tex\n"
 	    if $texdir eq "missing";
 
 	# Try to enter the LaTex directory
 	chdir $texdir or next;
-
-	my $result=system("./SetSWMF.pl -i");
-	warn "Could not install with ./SetSWMF.pl: $result\n" if $result;
 
 	# Make HTML manual if required and possible
 	if($switch{MAKEHTML} eq "ON"){
@@ -251,12 +254,14 @@ if($switch{MAKEPDF}      eq "ON" or
 	}
 
         # Remove $texdir directory if required
-	chdir $Dir;
+	chdir "../.." or die "Could not cd ../..\n";
 	if($switch{REMOVEDOCTEX} eq "ON"){
-	    print "removing $texdir\n" if $Verbose;
+	    print "removing $texdir\n";### if $Verbose;
 	    my $result=system("rm -rf $texdir");
-	    die "Could not rm -rf Doc/Tex\n" if $result;
+	    warn "Could not rm -rf Doc/Tex\n" if $result;
 	}
+
+	last;
     }
 }
 
