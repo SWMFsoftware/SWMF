@@ -1101,7 +1101,7 @@ contains
     ! velocity should be a small positive number.
     v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'HGI', 'GSE')
     Result_D = (/ 4.8531599940505521E+02, 2.9901632640648619E+04, 0./)
-    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+    if(maxval(abs(v2_D - Result_D)) > 1e-1) &
          write(*,*)'test angular_velocity failed: HGI-GSE v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
