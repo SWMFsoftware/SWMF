@@ -1,7 +1,7 @@
 
 subroutine calc_ion_density(iBlock)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModPlanet
   use ModRates

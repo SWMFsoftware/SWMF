@@ -1,7 +1,7 @@
 
 subroutine calc_chemistry(iBlock)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModPlanet
   use ModRates

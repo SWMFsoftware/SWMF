@@ -82,7 +82,7 @@ subroutine advance_vertical_1stage( &
   use ModGITM, only: RadialDistance, &
        Dt, iO_, dAlt, Gravity, Altitude, iEast_, iNorth_, iUp_, TempUnit
   use ModPlanet
-  use ModSize
+  use ModSizeGitm
   use ModVertical, only : &
        Heating, KappaNS, nDensityS, KappaTemp, Centrifugal, Coriolis
   use ModTime
@@ -375,7 +375,7 @@ end subroutine advance_vertical_1stage
 
 subroutine calc_rusanov(Var, GradVar, DiffVar)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM, only : dAlt, Altitude
   use ModVertical, only : cmax
   implicit none

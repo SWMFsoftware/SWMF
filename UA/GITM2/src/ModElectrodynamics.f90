@@ -1,7 +1,7 @@
 
 module ModElectrodynamics
 
-  use ModSize
+  use ModSizeGitm
 
   ! This is the divergence of the Neutral wind current
   real, dimension(-1:nLons+2,-1:nLats+2,1:nAlts) :: DivJu

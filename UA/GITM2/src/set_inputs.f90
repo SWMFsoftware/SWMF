@@ -2,7 +2,7 @@
 subroutine set_inputs
 
   use ModInputs
-  use ModSize
+  use ModSizeGitm
   use ModGITM, only: iProc
   use ModTime
   use ModPlanet
@@ -476,7 +476,7 @@ subroutine set_inputs
               write(*,*) '> 90, respectively, then GITM does a whole'
               write(*,*) 'sphere.  If not, it models between the two.'
               write(*,*) 'If you want to do 1-D, set nLons=1, nLats=1 in'
-              write(*,*) 'ModSize.f90, then recompile, then set LatStart'
+              write(*,*) 'ModSizeGitm.f90, then recompile, then set LatStart'
               write(*,*) 'and LonStart to the point on the Globe you want'
               write(*,*) 'to model.'
               IsDone = .true.

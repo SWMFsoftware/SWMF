@@ -4,7 +4,7 @@
 
 module ModVertical
 
-  use ModSize, only: nAlts
+  use ModSizeGitm, only: nAlts
   use ModPlanet, only: nSpecies, nIonsAdvect
 
   implicit none

@@ -1,7 +1,7 @@
 
 module ModGITM
 
-  use ModSize
+  use ModSizeGitm
   use ModPlanet
 
   implicit none

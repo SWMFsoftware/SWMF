@@ -1,7 +1,7 @@
 
 subroutine calc_etemp_sources(Heating,Cooling,iBlock)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModPlanet
   use ModRates

@@ -3,7 +3,7 @@
 
 subroutine calc_neutral_density(iBlock)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModPlanet
   use ModRates

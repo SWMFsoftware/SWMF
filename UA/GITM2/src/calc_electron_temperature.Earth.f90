@@ -1,7 +1,7 @@
 
 subroutine calc_electron_temperature(iBlock)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModPlanet
   use ModRates
@@ -269,7 +269,7 @@ call Boundary_Conditions(flux,iBlock)
 
 subroutine Boundary_Conditions(flux,iBlock)
    
-      use ModSize
+      use ModSizeGitm
       implicit none
 
       real, intent(out)::flux(nlons,nlats)
@@ -373,7 +373,7 @@ end subroutine Boundary_Conditions
 
     Subroutine tridag(a,b,c,r,u)
       
-      use ModSize
+      use ModSizeGitm
       implicit none
 
       real, intent(in)::a(nAlts),b(nAlts),c(nAlts),r(nAlts)

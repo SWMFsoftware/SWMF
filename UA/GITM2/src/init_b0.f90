@@ -6,7 +6,7 @@
 
 subroutine init_b0
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM
   use ModInputs
   use ModTime

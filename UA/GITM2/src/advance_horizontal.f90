@@ -1,7 +1,7 @@
 subroutine advance_horizontal(iBlock)
 
   use ModConstants, only : Gamma, pi
-  use ModSize
+  use ModSizeGitm
   use ModPlanet, only : nSpecies, nIonsAdvect, OmegaBody
   use ModGITM
   use ModInputs, only : UseIonAdvection, iDebugLevel
@@ -345,7 +345,7 @@ contains
   !=====================================================================
   subroutine calc_rusanov_horizontal(Var, GradLonVar, GradLatVar, DiffVar)
 
-    use ModSize
+    use ModSizeGitm
     use ModGITM
 
     implicit none

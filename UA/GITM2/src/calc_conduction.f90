@@ -1,7 +1,7 @@
 
 subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM, only: Altitude, Latitude, Longitude, dt
   use ModConstants
 

@@ -118,7 +118,7 @@ subroutine UA_set_grid
   use CON_Coupler
   use CON_comp_info
   use ModNumConst
-  use ModSize
+  use ModSizeGitm
   use ModGITM, only: Longitude, Latitude, Altitude
   use ModSphereInterface, only: iStartBLK
   use ModInputs, only: nBlocksLat, nBlocksLon

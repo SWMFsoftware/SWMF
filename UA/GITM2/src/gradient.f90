@@ -9,7 +9,7 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
   ! and "OutArray" have the ghostcells defined.
 
 
-  use ModSize, only : nLons, nLats, nAlts
+  use ModSizeGitm, only : nLons, nLats, nAlts
   use ModGITM, only : Latitude, Longitude, RadialDistance, &
                      iEast_, iNorth_, iUp_
 

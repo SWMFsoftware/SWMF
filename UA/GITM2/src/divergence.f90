@@ -8,7 +8,7 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! for the given variable.  It is also assumed that the "InArray"
   ! and "OutArray" have the ghostcells defined.
 
-  use ModSize
+  use ModSizeGitm
   use ModGITM, only: Latitude, Longitude, RadialDistance
 
   use ModConstants

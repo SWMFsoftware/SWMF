@@ -1,7 +1,7 @@
 
 module ModSources
 
-  use ModSize
+  use ModSizeGitm
   use ModPlanet, only: nSpecies
 
   !\

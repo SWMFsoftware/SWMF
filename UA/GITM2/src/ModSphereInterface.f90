@@ -11,7 +11,7 @@ module ModSphereInterface
 
   use ModGITM
   use ModConstants
-  use ModSize
+  use ModSizeGitm
   use ModPlanet, only: nSpecies
   use ModInputs, only: UseIonAdvection
 
