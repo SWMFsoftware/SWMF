@@ -109,13 +109,13 @@ RAW			StringLogfile
 #SAVEPLOT
 2                       nPlotFiles
 y=0 MHD idl             StringPlot
-1000                      DnSavePlot
+1000                    DnSavePlot
 -1.			DtSavePlot
--1.			Dx
+-1.			DxSavePlot
 z=0 MHD idl             StringPlot
-1000                      DnSavePlot
+1000                    DnSavePlot
 -1.			DtSavePlot
--1.			Dx
+-1.			DxSavePlot
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -172,20 +172,8 @@ SPS
 SPS
 
 #F107
-150.0
-150.0
-
-#HPI
-20.0
-
-#KP
-2.0
-
-#SOLARWIND
- 1.224			SwBxDim  [nT]
--0.2			SwByDim  [nT]
-+0.744			SwBzDim  [nT]
-461.0			abs(SwUxDim) [km/s]
+150.0			f107
+150.0			f107a
 
 #DT
 10.0			dT [s]
