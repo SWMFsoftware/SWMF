@@ -13,7 +13,7 @@ module CON_session
   !USES:
   use CON_world
   use CON_comp_param
-  use CON_variables, ONLY: TypeSession, UseStrict
+  use CON_variables, ONLY: TypeSession, UseStrict, DnTiming
   use CON_wrapper
   use CON_couple_all
 
@@ -267,7 +267,7 @@ contains
     ! exceeded the next coupling, save restart or check for stop time.
     !EOP
 
-    real :: tSimulation_C(MaxComp)      ! Current time for the component
+    real :: tSimulation_C(MaxComp)=-1.0 ! Current time for the component
     real :: tSimulationWait_C(MaxComp)  ! After this time do not progress
     real :: tSimulationLimit_C(MaxComp) ! Time not to be passed by component
 
@@ -285,7 +285,11 @@ contains
     !\
     ! Set initial time for all components to be tSimulation
     !/
-    tSimulation_C = tSimulation
+    if(DoTimeAccurate)then
+       tSimulation_C = tSimulation
+    else
+       where(tSimulation_C < 0.0 .and. IsProc_C) tSimulation_C = tSimulation
+    end if
 
     TIMELOOP: do
 
@@ -374,7 +378,7 @@ contains
                 call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
 
                 ! There is no progress in time
-                tSimulation_C(iComp) = tSimulation
+                !tSimulation_C(iComp) = tSimulation
 
                 if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' at nStep=',nStep
@@ -525,7 +529,7 @@ contains
        !^CMP END IH
 
        ! In the old code GM's time is the time for everyone
-       ! Also there was no attempt to make the last time equal to tSimulationMax
+       ! There was no attempt to make the last time equal to tSimulationMax
        call run_comp(GM_,tSimulation,HUGE(tSimulation))
        call MPI_bcast(tSimulation,1,MPI_REAL,i_proc0(GM_),i_comm(),iError)
 
@@ -644,18 +648,23 @@ contains
 
     if(.not.is_proc0()) RETURN
 
-    if( (mod(nStep,DnShowProgressShort)== 0 .or.                 &
-         mod(nStep,DnShowProgressLong) == 0 ) .and. is_proc0() ) &
-         write(*,'(a,i8,a,g14.6,a,f10.2,a)')                     &
-         'Progress:',                                            &
-         nStep,' steps,',                                        &
-         tSimulation,' s simulation time,',                      &
-         MPI_WTIME()-CpuTimeStart,' s CPU time'
+    if(is_proc0() .and. ( &
+         (DnShowProgressShort>0 .and. mod(nStep,DnShowProgressShort)==0) .or. &
+         (DnShowProgressLong >0 .and.  mod(nStep,DnShowProgressLong)==0))) then
+       write(*,'(a,i8,a,g14.6,a,f10.2,a)')          &
+            'Progress:',                            &
+            nStep,' steps,',                        &
+            tSimulation,' s simulation time,',      &
+            MPI_WTIME()-CpuTimeStart,' s CPU time'
+    end if
 
-    if(  mod(nStep,DnShowProgressLong) == 0 .and. is_proc0() )   &
-         call timing_tree(2,2)
+    if( DnTiming > 0 .and. mod(nStep,DnTiming) == 0) then
+       call timing_report
+    elseif(is_proc0() .and. &
+         DnShowProgressLong>0 .and. mod(nStep,DnShowProgressLong)== 0) then
+       call timing_tree(2,2)
+    end if
 
   end subroutine show_progress
-
 
 end module CON_session
