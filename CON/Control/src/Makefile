@@ -135,8 +135,9 @@ ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
 		${MAKEFILE_COMP_SELECT}
-	@(if [ ${OS} != "Darwin" ]; then make SWMF_general; \
-	else 				 make SWMF_for_Darwin; fi)
+	@(if [ "${COMPILE.f90}" == "xlf90" ]; then make SWMF_for_xlf; \
+	elif [ "${OS}" == "Darwin" ];         then make SWMF_for_Darwin; \
+	else                                       make SWMF_general; fi)
 
 SWMF_general:
 	${LINK.f90} -o ${SWMFEXE} \
@@ -161,6 +162,23 @@ SWMF_for_Darwin:
 		LIBRARIES.o ${LBLAS} \
 		${Lflag1}
 	rm -f LIBRARIES.o
+
+SWMF_for_xlf:
+	rm -rf Tmp_*
+	mkdir Tmp_SHARE;     cd Tmp_SHARE;     ar -x ${LIBSHARE};
+	mkdir Tmp_TIMING;    cd Tmp_TIMING;    ar -x ${LIBTIMING}; 
+	mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ar -x ${LIBLIBRARY};
+	mkdir Tmp_COUPLER;   cd Tmp_COUPLER;   ar -x ${LIBCOUPLER}; 
+	mkdir Tmp_INTERFACE; cd Tmp_INTERFACE; ar -x ${LIBINTERFACE}
+	mkdir Tmp_LIB1;      cd Tmp_LIB1;      ar -x ${LIB1} #^CMP IF IH
+	mkdir Tmp_LIB2;      cd Tmp_LIB2;      ar -x ${LIB2} #^CMP IF GM
+	mkdir Tmp_LIB3;      cd Tmp_LIB3;      ar -x ${LIB3} #^CMP IF IM
+	mkdir Tmp_LIB4;      cd Tmp_LIB4;      ar -x ${LIB4} #^CMP IF IE
+	mkdir Tmp_LIB5;      cd Tmp_LIB5;      ar -x ${LIB5} #^CMP IF UA
+	${LINK.f90} -o ${SWMFEXE} \
+		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
+		${Lflag1}
+	rm -rf Tmp_*
 
 TESTREGISTRY: DEPEND
 	cd ${MODDIR}; make LIB
