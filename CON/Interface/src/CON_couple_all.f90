@@ -33,6 +33,7 @@ module CON_couple_all
   !^CMP IF IH BEGIN
   use CON_couple_ih_sc        !^CMP IF SC
   !^CMP END IH
+  use CON_couple_mh_sp        !^CMP IF SP
 
   implicit none
 
@@ -73,7 +74,7 @@ contains
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     !                                                     ^CMP END IH
-
+    if(use_comp(SP_))call couple_mh_sp_init               !^CMP IF SP
     !EOC
   end subroutine couple_all_init
 
@@ -118,8 +119,10 @@ contains
     select case(iCompSource)
     case(SC_)                                 !^CMP IF SC BEGIN
        select case(iCompTarget)
-       case(IH_)
+       case(IH_)                              !^CMP IF IH
           call couple_sc_ih(TimeSimulation)   !^CMP IF IH
+       case(SP_)                              !^CMP IF SP
+          call couple_sc_sp(TimeSimulation)   !^CMP IF SP
        case default                           
           call error
        end select                             !^CMP END SC
@@ -129,6 +132,8 @@ contains
           call couple_ih_gm(TimeSimulation)        !^CMP IF GM
        case(SC_)                                   !^CMP IF SC
           call couple_ih_sc(TimeSimulation)        !^CMP IF SC
+       case(SP_)                                   !^CMP IF SP
+          call couple_ih_sp(TimeSimulation)        !^CMP IF SP
        case default
           call error
        end select                             !^CMP END IH

@@ -48,7 +48,7 @@ CCC   read(*,*)  iSnapshot
       end if
       write(iStdout,*)'tSimulation=',tSimulation 
       
-      call sp_finalize
+      call closetime  !Finalize
       stop
       end 
 !=============================================================!

@@ -405,10 +405,6 @@ CCC     drr = arr(i)-arr(i-1)
       end do
       end subroutine sharpen_profile 
 !=============================================================== 
-      subroutine sp_finalize
-      ! Finalize
-      call closetime
-      end subroutine sp_finalize
 
 c ********************* end routine MASTER  *********************
 

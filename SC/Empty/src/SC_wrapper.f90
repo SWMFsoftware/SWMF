@@ -128,3 +128,36 @@ subroutine SC_get_for_ih(&
 
   call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 end subroutine SC_get_for_ih
+!===================================================================!
+subroutine SC_get_for_sp(&
+     nPartial,iGetStart,Get,W,State_V,nVar)
+  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  implicit none
+
+  !INPUT ARGUMENTS:
+  integer,intent(in)::nPartial,iGetStart,nVar
+  type(IndexPtrType),intent(in)::Get
+  type(WeightPtrType),intent(in)::W
+  real,dimension(nVar),intent(out)::State_V
+
+  character(len=*), parameter :: NameSub='SC_get_for_sp'
+
+  call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
+end subroutine SC_get_for_sp
+!===================================================================!
+subroutine SC_get_a_line_point(&
+     nPartial,iGetStart,Get,W,State_V,nVar)
+  use CON_coupler, ONLY: IndexPtrType, WeightPtrType
+  implicit none
+  
+  !INPUT ARGUMENTS:
+  integer,intent(in)::nPartial,iGetStart,nVar
+  type(IndexPtrType),intent(in)::Get
+  type(WeightPtrType),intent(in)::W
+  real,dimension(nVar),intent(out)::State_V
+  
+  character(len=*), parameter :: NameSub='SC_get_a_line_point'
+
+  call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
+end subroutine SC_get_a_line_point
+!===================================================================!
