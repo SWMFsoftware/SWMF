@@ -14,7 +14,7 @@ subroutine write_output
   if (floor((tSimulation-dt)/DtReport) /= &
        floor((tsimulation)/DtReport) .and. iDebugLevel >= 0) then
      if (IsFramework) then
-        write(*,"(a,i6,a,3i2.2)") "GITM2 iStep ", iStep, &
+        if(iProc==0)write(*,"(a,i6,a,3i2.2)") "UA:GITM2 iStep ", iStep, &
              ", Time : ",iTimeArray(4:6)
      else
         write(*,"(a,i6,a,3i2.2,a,f10.2,a)") "iStep ", iStep, &
