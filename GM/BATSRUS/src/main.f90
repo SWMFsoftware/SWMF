@@ -331,3 +331,12 @@ subroutine update_lagrangian_grid(tStart,tFinal)
   real,intent(in)::tStart,tFinal
   return
 end subroutine update_lagrangian_grid
+!============================================================================
+subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
+  implicit none
+  real,dimension(3),intent(in)::Xyz_D
+  integer,intent(in)::nVar
+  real,dimension(nVar)::State_V
+  call stop_mpi( &
+       'ERROR: get_from_spher_buffer_grid is for SWMF')
+end subroutine get_from_spher_buffer_grid
