@@ -25,20 +25,6 @@ subroutine IE_set_param(CompInfo, TypeAction)
   end select
 
 end subroutine IE_set_param
-!=============================================================================
-subroutine IE_check_allocation_south(nPoint)
-  implicit none
-  integer,intent(in)::nPoint
-  call CON_stop(&
-       'IE_check_allocation_south: IE_ERROR: empty version cannot be used!')
-end subroutine IE_check_allocation_south
-!=============================================================================
-subroutine IE_check_allocation_north(nPoint)
-  implicit none
-  integer,intent(in)::nPoint
-  call CON_stop(&
-       'IE_check_allocation_north: IE_ERROR: empty version cannot be used!')
-end subroutine IE_check_allocation_north
 
 !==============================================================================
 
@@ -106,21 +92,6 @@ end subroutine IE_run
 
 !==============================================================================
 
-subroutine IE_get_for_gm_swmf(nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_router                          
-  implicit none
-  integer,intent(in)::nPartial,iGetStart,nVar
-  type(IndexPtrType),intent(in)::Get
-  type(WeightPtrType),intent(in)::W
-  real,dimension(nVar),intent(out)::State_V
-  character(len=*), parameter :: NameSub='IE_get_for_gm_swmf'
-  
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_get_for_gm_swmf
-
-!==============================================================================
-
 subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar)
 
   implicit none
@@ -133,19 +104,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_get_for_gm
-!==============================================================================
-
-subroutine IE_put_from_gm_swmf(State_V,nVar,iBlock,nPoint,ColatLim)
-  implicit none
-  !INPUT ARGUMENTS
-  integer,intent(in)::nVar,iBlock,nPoint
-  real,dimension(nVar),intent(in):: State_V
-  real,intent(inout)::ColatLim
-  character (len=*),parameter :: NameSub='IE_put_from_gm_swmf'
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_put_from_gm_swmf
 
 !==============================================================================
 
@@ -174,21 +132,6 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine IE_get_for_im
-
-!==============================================================================
-
-subroutine IE_interpolate(iBlock,ColatLim)
-
-  implicit none
-
-  character (len=*),parameter :: NameSub='IE_interpolate'
-
-  integer, intent(in) :: iBlock     ! Block index 1 for north, 2 for south
-  real,    intent(in) :: ColatLim   ! Colatitude limit for the hemisphere
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_interpolate
 
 !==============================================================================
 
@@ -253,17 +196,3 @@ subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
 end subroutine SPS_put_into_ie
-
-!==============================================================================
-
-subroutine ionosphere_fac(iBlock) !srcIE/iono_coupling.f90
-  implicit none
-  integer,intent(in)::iBlock
-  character (len=*), parameter :: NameSub='ionosphere_fac'
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine ionosphere_fac
-
-!==============================================================================
-
