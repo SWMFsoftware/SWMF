@@ -26,10 +26,10 @@ extern int DIM;
 using namespace std;
 
 struct cells_connection_data_type {
-  int ne[4][4];
-  int ne1[2][4][4],ne2[2][4][4];
-  int  nbasis[4][4];
-  int pface[4][4];
+  char ne[4][4];
+  char ne1[2][4][4],ne2[2][4][4];
+  char nbasis[4][4];
+  char pface[4][4];
 };
 
 struct surface_interpolation_element_data_type {
