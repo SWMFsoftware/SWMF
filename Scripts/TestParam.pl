@@ -54,7 +54,7 @@ if(not $LayoutFile){
     $LayoutFile =~ s/\.expand/.in/;
     # If the LAYOUT file based on the PARAM file is not found try the default
     $LayoutFile = $LayoutFileDefault 
-	if not -f $LayoutFile and -f $LayoutFileDefault;
+	if (not -f $LayoutFile and -f $LayoutFileDefault);
 }
 print "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
