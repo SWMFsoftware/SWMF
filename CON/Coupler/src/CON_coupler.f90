@@ -65,9 +65,6 @@ module CON_coupler
        UA_, IE_, &
        IE_, IM_, &
        IM_, GM_, &
-
-
-
        IE_, UA_, &
        IE_, GM_  /), (/2, MaxCouple/) )
 
@@ -76,7 +73,6 @@ module CON_coupler
   logical :: DoCoupleOnTime_C(MaxComp) = .true.
 
   !PUBLIC MEMBER FUNCTIONS:
-  public :: init_coord_system_all !Initializes Grid_C
   public :: set_coord_system      !Sets coordinate information for a component
   public :: gen_to_stretched      !\ Transform generalized coordinates to
   public :: stretched_to_gen      !  stretched ones and vice versa for 
@@ -98,29 +94,12 @@ module CON_coupler
   ! 09/07/03 I.Sokolov - bug fixes in init_coord_system_all and
   !                 in set_coord_system. Add gen_to_stretched and 
   !                 streched_to_gen
+  ! 08/10/04 I.Sokolov - to avoid inproper use of init_coord_system_all
+  !                      with destroying all the 
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
-
 contains
-  !BOP
-  !IROUTINE: init_coord_system_all
-  !INTERFACE:
-  subroutine init_coord_system_all
-    !DESCRIPTION: 
-    ! Initialization for the coordinate system array Grid\_C(MaxCopm)
-    !EOP
-    integer :: iComp
-
-    do iComp=1,MaxComp+3
-       nullify(&
-            Grid_C(iComp)%Coord1_I, &
-            Grid_C(iComp)%Coord2_I, &
-            Grid_C(iComp)%Coord3_I)
-       Grid_C(iComp)%nCoord_D = 0
-    end do
-
-  end subroutine init_coord_system_all
   !===============================================================!
   subroutine set_coord_system( &
        GridID_,       &! Grid ID
@@ -143,7 +122,9 @@ contains
     integer :: iProc0, iComm, iError
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
-
+    logical,save::DoInit=.true.
+    !-------------------------------------------------------------!
+    if(DoInit)call init_coord_system_all
     if(present(iProc0In).and.present(iCommIn))then
        iProc0=iProc0In
        iComm=iCommIn
@@ -170,7 +151,7 @@ contains
     call MPI_bcast(ThisGrid%nCoord_D,3,MPI_INTEGER,iProc0,&
          iComm,iError)
 
-    if(ThisGrid%nCoord_D(1)>0)then
+    if(ThisGrid%nCoord_D(1)>0)then 
        if(associated(ThisGrid%Coord1_I))deallocate(ThisGrid%Coord1_I)
        allocate(ThisGrid%Coord1_I(&
             ThisGrid%nCoord_D(1)),stat=iError)
@@ -206,7 +187,18 @@ contains
        call MPI_bcast(ThisGrid%Coord3_I,ThisGrid%nCoord_D(3),&
             MPI_REAL,iProc0,iComm,iError)
     end if
-
+  contains
+      subroutine init_coord_system_all
+        integer :: iComp
+        DoInit=.false.
+        do iComp=1,MaxComp+3
+           nullify(&
+                Grid_C(iComp)%Coord1_I, &
+                Grid_C(iComp)%Coord2_I, &
+                Grid_C(iComp)%Coord3_I)
+           Grid_C(iComp)%nCoord_D = 0
+        end do
+      end subroutine init_coord_system_all
   end subroutine set_coord_system
   !=============================================================!
   !BOP

@@ -13,7 +13,7 @@ module CON_session
   use CON_wrapper
   use CON_couple_all
 
-  use CON_coupler, ONLY: init_coord_system_all, &
+  use CON_coupler, ONLY: &
        check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C
 
@@ -84,7 +84,6 @@ contains
     ! Initialize and broadcast grid descriptors for all the components
     ! This must involve all PE-s.
     !/
-    call init_coord_system_all
     do lComp = 1,nComp
        iComp = i_comp(lComp)
        if(use_comp(iComp)) call set_param_comp(iComp,'GRID')
