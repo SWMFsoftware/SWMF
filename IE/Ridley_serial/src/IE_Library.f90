@@ -92,7 +92,7 @@ subroutine IE_FindPoint(LocIn, LocOut, IsNormalGrid, iError)
 
      do while (j < IEi_HavenMLTs .and. LocOut(2) <0.0)
 
-        jTemp_I = maxloc(IEr3_HaveMLTs(:,1,iBLK),1)
+        jTemp_I = maxloc(IEr3_HaveMLTs(:,1,iBLK))
 
         if ((MLTIn <  IEr3_HaveMLTs(j+1,1,iBLK) .and. &
             MLTIn >= IEr3_HaveMLTs(j,1,iBLK)).or.&
