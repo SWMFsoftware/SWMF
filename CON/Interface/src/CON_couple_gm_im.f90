@@ -1,6 +1,6 @@
 !^CMP COPYRIGHT UM
 !^CMP FILE GM
-!^CMP FILE IE
+!^CMP FILE IM
 
 !BOP
 !MODULE: CON_couple_gm_im - couple GM and IM components
@@ -41,7 +41,7 @@ module CON_couple_gm_im
 contains
 
   !BOP =======================================================================
-  !IROUTINE: couple_gm_im_init - initialize GM-IE coupling
+  !IROUTINE: couple_gm_im_init - initialize GM-IM coupling
   !INTERFACE:
   subroutine couple_gm_im_init
     !DESCRIPTION:
