@@ -181,6 +181,10 @@ void parser(char* InputFile) {
     else if (strcmp("#HYBRID",str1)==0) hybrid.parser(fd,line,InputFile);
 #endif
 
+#if CompilationTarget==EULERTARGET 
+    else if (strcmp("#EULER",str1)==0) euler.parser(fd,line,InputFile);
+#endif
+
     else if (strcmp("#END",str1)==0) return;
     else error();
   }
