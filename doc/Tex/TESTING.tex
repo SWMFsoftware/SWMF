@@ -156,8 +156,10 @@ differences relative to the expected results due to round off errors.
 
 The TIMING utility provides a simple and compiler independent utility
 to measure the CPU time spent on various parts of a Fortran code.
-The NOMPI utility allows to run the an MPI parallel F90 code without 
-the MPI library on a single processor.
+The NOMPI utility allows to compile an MPI parallel F90 code with the
+NOMPI library instead of the MPI library. The resulting executable
+can run on a single processor. The NOMPI utility is useful for debugging 
+purposes.
 
 The TIMING can be tested with
 \begin{verbatim}
@@ -272,6 +274,12 @@ By running these tests on various platforms, the portability of SWMF
 can be tested. The test can also serve as a benchmark for parallel performance.
 Finally the input parameters and layout files can be used as a starting
 point for production runs.
+
+The tests can be performed on any of the target platforms 
+(SGI Altix, SGI Origin 3000, Compaq ES45, Linux cluster) without any change
+as long as there is a sufficient number of CPU-s available.
+The only platform dependent step is the installation of the SWMF
+which is described in the user manual. 
 
 \subsection{The 8 Component Test}
 
