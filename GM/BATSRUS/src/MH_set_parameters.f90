@@ -1404,6 +1404,9 @@ subroutine MH_set_parameters(TypeAction)
         if(IsStandAlone) &
              call read_var('tSimulation',time_simulation)
         !                                    ^CFG IF NOT SIMPLE BEGIN
+     case("#HELIOUPDATEB0")
+        call read_var('DtUpdateB0',dt_updateb0)
+        DoUpdateB0 = dt_updateb0 > 0.0
      case("#HELIOSPHERE")
         if(.not.is_first_session())CYCLE
         call read_var('Tsun' ,Body_T_dim)
