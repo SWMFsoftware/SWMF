@@ -4,9 +4,10 @@ EDDIR   = ../srcRudy
 IEDIR   = ../srcIE
 IODIR   = ../srcIO
 
-include ../srcMake/Makefile.conf
-
 SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
+
+include ../srcMake/Makefile.conf
+include Makefile.DEPEND
 
 MODULES = \
 	ModSize.o\
@@ -80,6 +81,9 @@ OBJECTS = \
 	apex.o\
 	gradient.o
 
+DEPEND:
+	${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
+
 GITM.exe:	${OBJECTS} ${MODULES} main.o
 	${LINK.f90} ${Lflag1} -o GITM.exe main.o ${OBJECTS} ${MODULES}\
 	-L${ABDIR} -lSphere -L${IODIR} -lindices -L${IEDIR} -lIE\
@@ -99,34 +103,9 @@ DYNAMIC:
 	perl -pi -e 's/nBlocksMax/nBlocks/ if /allocate/' \
 		ModGITM.f90 ModEUV.f90 ModSources.f90
 
-
-${OBJECTS}:		${MODULES}
-
-ModPlanet.o:	ModConstants.o
-
-ModGITM.o:	ModPlanet.o ModSize.o
-
-ModVertical.o:	ModSize.o ModPlanet.o
-
-ModSphereInterface.o:	ModGITM.o ModConstants.o ModSize.o ModPlanet.o ModInputs.o
-
-ModRates.o:	ModGITM.o
-
-ModInputs.o:	ModGITM.o ModTime.o
-
-ModInputs.o:	ModPlanet.o ModConstants.o
-
-ModEUV.o:	ModGITM.o ModPlanet.o
-
-ModSources.o:	ModSize.o
-
-ModSatellites.o:	ModInputs.o
-
-ModElectrodynamics.o:	ModSize.o
-
 MY_LIB = libGITM.a
 
-LIB:
+LIB:	DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
