@@ -11,7 +11,7 @@ module ModInitGridStorage
   integer,parameter::MaxGrid=MaxComp+3
   integer,parameter::GmIeGrid_=MaxComp+1
   type(DomainDecompositionType),private,save,target::&
-       GmIeGrid,GmGrid,IhGrid,UaGrid,IeGrid,ImGrid
+       GmIeGrid,GmGrid,IhGrid,UaGrid,IeGrid,ImGrid,SpGrid,ScGrid
 contains
   !BOP
   !REVISION HISTORY:
@@ -45,6 +45,10 @@ contains
        DD_I(GridID_)%Ptr=>UaGrid
     case(IH_)
        DD_I(GridID_)%Ptr=>IhGrid
+    case(SP_)
+       DD_I(GridID_)%Ptr=>SpGrid
+    case(SC_)
+       DD_I(GridID_)%Ptr=>ScGrid
     case default
        call CON_stop('Not implemented grid #',GridID_)
     end select

@@ -74,7 +74,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -97,7 +97,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -111,12 +111,13 @@ contains
          GridDescriptorTarget=Cell2,&
          Router=Router,&
          interface_point_coords=do_all_ghostcells) 
-
     nBLK=max_block_pe(Grid,i_proc())
     iBlockStart=min_block_pe(Grid,i_proc())
  
-    write(*,*)'For Grid of the component ',compid_grid(Grid)
-    write(*,*)'Testing message_pass, PE=',i_proc(),'  Starting tests ...'
+    if(is_proc0())then
+       write(*,*)'For Grid of the component ',compid_grid(Grid)
+       write(*,*)'Testing message_pass, PE=',i_proc(),'  Starting tests ...'
+    end if
     allocate( V0(1-nGhostCells:&
          nCells_D(1)+nGhostCells,&
          1-nGhostCells:&
@@ -137,7 +138,7 @@ contains
     V0=-999999.
     V1=V0
     do lOctree=1,ntree_nodes(Grid)
-       if(.not.is_used_block(Grid,lOctree))CYCLE
+       if(.not.used_node(Grid,lOctree))CYCLE
        if(pe_decomposition(Grid,lOctree)/=i_proc())CYCLE
        iBLK=blk_decomposition(Grid,lOctree)
 !V0 is assigned througout all cells
@@ -200,7 +201,7 @@ contains
             ' printing out values and exiting.'
        write(*,*)' '
        do lOctree=1,ntree_nodes(Grid)
-          if(.not.is_used_block(Grid,lOctree))CYCLE
+          if(.not.used_node(Grid,lOctree))CYCLE
           if(pe_decomposition(Grid,lOctree)/=i_proc())CYCLE
           iBLK=blk_decomposition(Grid,lOctree)
           write(*,*)xyz_block_d(Grid,lOctree)
@@ -223,10 +224,11 @@ contains
     call clean_router(Router)
     call clean_grid_descriptor(Cell)
     call clean_grid_descriptor(Cell2)
-
-    write(*,*)'Testing message_pass, PE=',i_proc(), &
-         '  All tests passed.'
-    write(*,*)' '
+    if(is_proc0())then
+       write(*,*)'Testing message_pass, PE=',i_proc(), &
+            '  All tests passed.'
+       write(*,*)' '
+    end if
 
   end subroutine test_global_message_pass_3dd
 !===============================================================
@@ -239,7 +241,7 @@ contains
     integer :: iError,lOctree, iImages
     real, dimension(3),parameter :: F_D=(/1.0,0.71,0.13/)
     real::Xyz_D(3),Weight_I(8),VMisc
-    integer::nImages,lSearch
+    integer::nImages,lSearch,iPoint
     integer,dimension(3)::iCells_D,nCells_D
     integer,dimension(0:4,8)::Indexes_II
     type(RouterType)::Router
@@ -252,49 +254,105 @@ contains
     call init_router&
          (Cell,Cell2,Router)
     nCells_D=ncells_decomposition_d(GridID_)
-    Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    if(is_proc0())write(*,*)"XyzTest",Xyz_D
+    if(is_proc0())write(*,*)
+    if(is_proc0())write(*,*)'Testing cell-centered grid'
+    if(is_proc0())write(*,*)
     call set_standard_grid_descriptor(GridID_,GridDescriptor=Temp)
-    call nearest_grid_points(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
-      if(is_proc0())then
-       do iImages=1,nImages
-          write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
-       end do
-       write(*,*)'Nearest Cell, nImages=',nImages,'Control sum:',&
-            sum(Weight_I(1:nImages))
-    end if
-    Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
-      if(is_proc0())then
-       do iImages=1,nImages
-          write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
-       end do
-       write(*,*)'Bilinear, Cells, nImages=',nImages,'Control sum:',&
-            sum(Weight_I(1:nImages))
-    end if
-    Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    if(is_proc0())write(*,*)"XyzTest",Xyz_D
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing nearest_grid_points routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+
+       call nearest_grid_points(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing bilinear_interpolation routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+       call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
+
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing interpolation_fix_reschange routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+       call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
+
+
     call clean_grid_descriptor(Temp)
     call set_standard_grid_descriptor(GridID_,&
          Standard_=Nodes_,&
          GridDescriptor=Temp)
-    call nearest_grid_points(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
-      if(is_proc0())then
-       do iImages=1,nImages
-          write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
-       end do
-       write(*,*)'NearestNode, nImages=',nImages,'Control sum:',&
-            sum(Weight_I(1:nImages))
-    end if
-    Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
-      if(is_proc0())then
-       do iImages=1,nImages
-          write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
-       end do
-       write(*,*)'Bilinear,nodes, nImages=',nImages,'Control sum:',&
-            sum(Weight_I(1:nImages))
-    end if
+    if(is_proc0())write(*,*)
+    if(is_proc0())write(*,*)'Testing node grid'
+    if(is_proc0())write(*,*)
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing nearest_grid_points routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+       call nearest_grid_points(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing bilinear_interpolation routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+       call bilinear_interpolation(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
+    do iPoint=1,35
+       if(is_proc0())write(*,*)'Testing interpolation_fix_reschange routine:'
+       Xyz_D=((iPoint-2)*xyz_max_d(GridID_)+&
+            (34-iPoint)*xyz_min_d(GridID_))/32 
+       if(is_proc0())write(*,*)"XyzTest",Xyz_D
+       call interpolation_fix_reschange(Xyz_D,Temp,4,Indexes_II,nImages,Weight_I)
+       if(is_proc0())then
+          do iImages=1,nImages
+             write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
+          end do
+          write(*,*)'nImages=',nImages,'Control sum:',&
+               sum(Weight_I(1:nImages))
+       end if
+    end do
     call clean_grid_descriptor(Temp)
     call set_router(&
          GridDescriptorSource=Cell,&
@@ -304,9 +362,10 @@ contains
 
     nBLK=max_block_pe(GridID_,i_proc())
     iBlockStart=min_block_pe(GridID_,i_proc())
- 
-    write(*,*)'For Grid of the component ',compid_grid(GridID_)
-    write(*,*)'Testing message_pass, PE=',i_proc(),'  Starting tests ...'
+    if(is_proc0())then
+       write(*,*)'For Grid of the component ',compid_grid(GridID_)
+       write(*,*)'Testing message_pass, PE=',i_proc(),'  Starting tests ...'
+    end if
     allocate( V0(1-nGhostCells:&
          nCells_D(1)+nGhostCells,&
          1-nGhostCells:&
@@ -327,7 +386,7 @@ contains
     V0=-999999.
     V1=V0
     do lOctree=1,ntree_nodes(GridID_)
-       if(.not.is_used_block(GridID_,lOctree))CYCLE
+       if(.not.used_node(GridID_,lOctree))CYCLE
        if(pe_decomposition(GridID_,lOctree)/=i_proc())CYCLE
        iBLK=blk_decomposition(GridID_,lOctree)
 !V0 is assigned througout all cells
@@ -390,7 +449,7 @@ contains
             ' printing out values and exiting.'
        write(*,*)' '
        do lOctree=1,ntree_nodes(GridID_)
-          if(.not.is_used_block(GridID_,lOctree))CYCLE
+          if(.not.used_node(GridID_,lOctree))CYCLE
           if(pe_decomposition(GridID_,lOctree)/=i_proc())CYCLE
           iBLK=blk_decomposition(GridID_,lOctree)
           write(*,*)xyz_block_d(GridID_,lOctree)
@@ -413,10 +472,11 @@ contains
     call clean_router(Router)
     call clean_grid_descriptor(Cell)
     call clean_grid_descriptor(Cell2)
-
-    write(*,*)'Testing message_pass, PE=',i_proc(), &
-         '  All tests passed.'
-    write(*,*)' '
+    if(is_proc0())then
+       write(*,*)'Testing message_pass, PE=',i_proc(), &
+            '  All tests passed.'
+       write(*,*)' '
+    end if
 
   end subroutine test_global_message_pass_3id
 !===============================================================
@@ -546,7 +606,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call bilinear_interpolation(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -569,7 +629,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(Grid)+xyz_min_d(Grid))
-    call bilinear_interpolation(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -605,7 +665,7 @@ contains
     V20=-999999.
     V21=V20
     do lOctree=1,ntree_nodes(Grid)
-       if(.not.is_used_block(Grid,lOctree))CYCLE
+       if(.not.used_node(Grid,lOctree))CYCLE
        if(pe_decomposition(Grid,lOctree)/=i_proc())CYCLE
        iBLK=blk_decomposition(Grid,lOctree)
 !V20 is assigned througout all cells
@@ -658,7 +718,7 @@ contains
             ' printing out values and exiting.'
        write(*,*)' '
        do lOctree=1,ntree_nodes(Grid)
-          if(.not.is_used_block(Grid,lOctree))CYCLE
+          if(.not.used_node(Grid,lOctree))CYCLE
           if(pe_decomposition(Grid,lOctree)/=i_proc())CYCLE
           iBLK=blk_decomposition(Grid,lOctree)
           write(*,*)xyz_block_d(Grid,lOctree)
@@ -721,7 +781,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call bilinear_interpolation(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -744,7 +804,7 @@ contains
             sum(Weight_I(1:nImages))
     end if
     Xyz_D=cHalf*(xyz_max_d(GridID_)+xyz_min_d(GridID_))
-    call bilinear_interpolation(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
+    call interpolation_fix_reschange(Xyz_D,Temp,3,Indexes_II,nImages,Weight_I)
       if(is_proc0())then
        do iImages=1,nImages
           write(*,*) Indexes_II(:,iImages),Weight_I(iImages)
@@ -780,7 +840,7 @@ contains
     V20=-999999.
     V21=V20
     do lOctree=1,ntree_nodes(GridID_)
-       if(.not.is_used_block(GridID_,lOctree))CYCLE
+       if(.not.used_node(GridID_,lOctree))CYCLE
        if(pe_decomposition(GridID_,lOctree)/=i_proc())CYCLE
        iBLK=blk_decomposition(GridID_,lOctree)
 !V20 is assigned througout all cells
@@ -833,7 +893,7 @@ contains
             ' printing out values and exiting.'
        write(*,*)' '
        do lOctree=1,ntree_nodes(GridID_)
-          if(.not.is_used_block(GridID_,lOctree))CYCLE
+          if(.not.used_node(GridID_,lOctree))CYCLE
           if(pe_decomposition(GridID_,lOctree)/=i_proc())CYCLE
           iBLK=blk_decomposition(GridID_,lOctree)
           write(*,*)xyz_block_d(GridID_,lOctree)
