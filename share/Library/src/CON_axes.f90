@@ -334,6 +334,9 @@ contains
     ! This matrix does not change with simulation time.
     call set_mag_geo_matrix
 
+    ! Set Hgi-Gse matrix and planet velocity 
+    call set_hgi_gse_v_planet
+
     ! Set the time dependent axes for the initial time
     call set_axes(0.0,.true.)
 
@@ -346,9 +349,6 @@ contains
     end if
 
     DoInitializeAxes=.false.
-
-    ! Set Hgi-Gse matrix and planet velocity 
-    call set_hgi_gse_v_planet
 
   contains
 
@@ -499,10 +499,31 @@ contains
 
     character(len=*), parameter :: NameSub=NameMod//'::set_axes'
 
-    real :: TimeSimLast = -1000.0 ! Last simulation time
+    real :: TimeSimLast = -1000.0  ! Last simulation time for magnetic fields
+    real :: TimeSimHgr  = -1000.0  ! Last simulation time for HGR update
 
     logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
+
+    ! Reset the helio-centered coordinate transformations if time changed
+    if(TimeSimHgr /= TimeSim)then
+
+       ! Recalculate the HgrHgi_DD matrix
+       HgrHgi_DD = rot_matrix_z( &
+            -OmegaCarrington*(TimeSim + tStart - tStartCarrington) )
+
+       ! The negative sign in front of OmegaCarrington comes from that 
+       ! this matrix transforms from HGI to HGR, so a point at rest 
+       ! in HGI rotates BACKWARDS in HGI
+
+       ! Calculate the HgrGse_DD matrix
+       HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
+
+       ! Remember the time
+       TimeSimHgr = TimeSim
+    end if
+
+    ! Check if there is a need to update the magnetic axis and related transformations
     if(.not.present(DoSetAxes))then
        ! If magnetic axis does not move, no need to update
        if(.not.DoUpdateB0) RETURN
@@ -581,17 +602,6 @@ contains
        write(*,*)NameSub,' new MagAxisTiltGsm=',MagAxisTiltGsm*cRadToDeg
        write(*,*)NameSub,' new RotAxisGsm_D  =',RotAxisGsm_D
     end if
-
-    ! Calculate the HgiHgr_DD matrix
-    HgrHgi_DD = rot_matrix_z( &
-         -OmegaCarrington*(TimeSim + tStart - tStartCarrington) )
-
-    ! The negative sign in front of OmegaCarrington comes from that 
-    ! this matrix transforms from HGI to HGR, so a point at rest 
-    ! in HGI rotates BACKWARDS in HGI
-
-    ! Calculate the HgrGse_DD matrix
-    HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
 
   end subroutine set_axes
 
@@ -1127,7 +1137,7 @@ contains
          write(*,*)'test angular_velocity failed: GSE-HGI v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
-    ! The surface of the Earth towards the Sun is RadiusPlanet,0,0 in GSE.
+    ! The surface of the Earth towards the Sun is (RadiusPlanet,0,0) in GSE.
     ! We convert this position to GEO and check how fast the surface moves
     ! with respect to GSE. It should rotate with OmegaPlanet around the
     ! rotation axis (in GSE) of the Earth.
@@ -1135,6 +1145,13 @@ contains
     v2_D = transform_velocity(0., (/0., 0., 0./), &
          matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
     Result_D = OmegaPlanet*cross_product(RotAxis_D, (/RadiusPlanet, 0., 0./))
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+    
+    ! Do it again to check cashe
+    v2_D = transform_velocity(0., (/0., 0., 0./), &
+         matmul(GeoGse_DD, (/RadiusPlanet, 0., 0./)), 'GEO', 'GSE')
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: GEO-GSE v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
