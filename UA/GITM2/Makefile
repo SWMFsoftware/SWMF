@@ -46,7 +46,7 @@ GITM:
 	@cd $(IEDIR);    make LIB
 	@cd $(EDDIR);    make LIB
 	@cd $(IODIR);    make LIB
-	@cd $(MAINDIR);  make GITM.exe
+	@cd $(MAINDIR);  make GITM
 
 GITM2 = ${DIR}/UA/GITM2
 
