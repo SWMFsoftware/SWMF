@@ -243,7 +243,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use ModRayTrace
   use CON_ray_trace
 
-  use ModMain, ONLY: xTest, yTest, zTest, iTest, jTest
+  use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest
   use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,XyzStart_BLK,Dx_BLK
   use ModProcMH
   use ModKind
@@ -259,7 +259,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   !LOCAL VARIABLES:
   ! Cell, block and PE indexes for initial position and ray direction
   integer :: iStart, jStart, kStart, iBlockStart, iProcStart, iRay
-  real    :: XyzStart_D(3)
+  integer :: iStart_D(4)
 
   ! Current position of the ray
   integer :: iBlockRay
@@ -294,18 +294,16 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
      iBlockStart = i_D(4); iProcStart = iProc
      iRay   = iRayIn
 
+     iStart_D = i_D
      if(DoIntegrate)then
-        ! Store initial RCM grid indexes as starting position
-        XyzStart_D = (/ real(iStart), real(jStart), 0.0 /)
-        oktest_ray = iStart == iTest .and. jStart == jTest
+        oktest_ray = all(iStart_D(1:2) == (/iTest,jTest/))
      else
-        ! Store starting Cartesian position
-        XyzStart_D = XyzIn_D
-        oktest_ray = all(XyzStart_D==(/xTest,yTest,zTest/))
+        oktest_ray = iProcStart == ProcTest .and. &
+             all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
      end if
 
      ! Current position
-     iBlockRay = iBlockStart
+     iBlockRay = i_D(4)
      XyzRay_D  = XyzIn_D
 
      if(oktest_ray)write(*,'(a,6i4,3es12.4)')&
@@ -321,14 +319,15 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
      if(DoGet)then
         GETRAY: do
-           call ray_get(IsFound,iProcStart,XyzStart_D,XyzRay_D,IsParallel,&
+           call ray_get(IsFound,iProcStart,iStart_D,XyzRay_D,IsParallel,&
                 DoneRay)
 
            if(IsFound)then
               if(DoIntegrate)then
-                 oktest_ray = all(nint(XyzStart_D(1:2)) == (/iTest,jTest/))
+                 oktest_ray = all(iStart_D(1:2) == (/iTest,jTest/))
               else
-                 oktest_ray = all(XyzStart_D==(/xTest,yTest,zTest/))
+                 oktest_ray = iProcStart == ProcTest .and. &
+                      all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
               end if
               if(IsParallel)then
                  iRay=1
@@ -347,14 +346,12 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
                     CYCLE GETRAY
                  end if
 
-                 ! Find the starting cell and check if it is local
-                 call xyz_to_peblk(XyzStart_D(1),XyzStart_D(2),XyzStart_D(3),&
-                      iProcStart,iBlockStart,.true.,iStart,jStart,kStart)
-
-                 if(iProcStart /= iProc)call stop_mpi(&
-                      'GM_ERROR in ray_trace: Done ray started from other PE')
-
                  ! Store the result into the ModRayTrace::ray
+                 iStart      = iStart_D(1)
+                 jStart      = iStart_D(2)
+                 kStart      = iStart_D(3)
+                 iBlockStart = iStart_D(4)
+
                  ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
 
                  if(oktest_ray)write(*,*)&
@@ -423,7 +420,7 @@ contains
     BLOCK: do iCount = 1, MaxCount
 
        if(iCount == MaxCount)then
-          write(*,*)'XyzStart_D  =',XyzStart_D
+          write(*,*)'iStart_D    =',iStart_D
           write(*,*)'XyzRay_D    =',XyzRay_D
           write(*,*)'XyzStart_BLK=',XyzStart_BLK(:,iBlockRay)
           call stop_mpi('follow_ray passed through more than MaxCount blocks')
@@ -448,7 +445,7 @@ contains
              ! Pass .false., because this is not the final position
              if(DoIntegrate)call store_integral(.false.)
 
-             call ray_put(iProcStart,XyzStart_D,jProc,XyzRay_D,iRay==1,&
+             call ray_put(iProcStart,iStart_D,jProc,XyzRay_D,iRay==1,&
                   .false.)
              RETURN
           elseif(jBlock /= iBlockRay)then
@@ -461,7 +458,7 @@ contains
           else
              write(*,*)'ERROR for follow_this_ray, iProc=',iProc
              write(*,*)'ERROR iBlockRay=jBlock=',jBlock
-             write(*,*)'ERROR for XyzStart_D  =',XyzStart_D
+             write(*,*)'ERROR for iStart_D    =',iStart_D
              write(*,*)'ERROR for XyzRay_D    =',XyzRay_D
              write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
                   Dx_BLK(jBlock)
@@ -507,24 +504,12 @@ contains
 
        if(iProcStart == iProc)then
 
-          ! If went through other PE-s, find starting cell/block from position
-          if(DoGet)then
-             call xyz_to_peblk(&
-                  XyzStart_D(1),XyzStart_D(2),XyzStart_D(3),&
-                  jProc,iBlockStart,.true.,iStart,jStart,kStart)
-             if(jProc /= iProc)call stop_mpi(&
-                  'GM_ERROR: in follow_ray: wrong PE for start position')
+          ! Store the result into the ModRayTrace::ray
+          iStart      = iStart_D(1)
+          jStart      = iStart_D(2)
+          kStart      = iStart_D(3)
+          iBlockStart = iStart_D(4)
 
-             if(oktest_ray)write(*,*) &
-                  'Found start pos iProc,iBlock,i,j,k,iRay=',&
-                  jProc,iBlockStart,iStart,jStart,kStart,iRay
-
-             if(oktest_ray)write(*,*) &
-                  'Found start pos iProc,iBlock,i,j,k,iRay=',&
-                  jProc,iBlockStart,iStart,jStart,kStart,iRay
-          end if
-
-          ! Store result locally
           ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
 
           if(oktest_ray)write(*,*) &
@@ -533,7 +518,7 @@ contains
 
        else
           ! Send back result to iProcStart. 
-          call ray_put(iProcStart,XyzStart_D,iProc,XyzRay_D,iRay==1,.true.)
+          call ray_put(iProcStart,iStart_D,iProc,XyzRay_D,iRay==1,.true.)
 
           if(oktest_ray)write(*,*) &
                'Send result iProc,iProcStart,iRay,Xyz=',&
@@ -555,8 +540,8 @@ contains
 
     integer :: iLat, iLon
 
-    iLat = nint(XyzStart_D(1))
-    iLon = nint(XyzStart_D(2))
+    iLat = iStart_D(1)
+    iLon = iStart_D(2)
 
     RayIntegral_VII(1:pInvB_,iLat,iLon) = &
          RayIntegral_VII(1:pInvB_,iLat,iLon) + RayIntegral_V
