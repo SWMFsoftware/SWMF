@@ -318,10 +318,6 @@ sub do_test{
 	    print "    Post Processing IDL files.\n";
 	    execute("./pIDL >> ../log.$num");
 	}
-	if(grep /\.l$/, @dir){
-	    print "    Post Processing LINE files.\n";
-	    execute("./pLIN >> ../log.$num");
-	}
 	if(grep /\.T$/, @dir){
 	    print "    Post Processing TEC files.\n";
 	    &execute("./pTEC p r T >> ../log.$num");
