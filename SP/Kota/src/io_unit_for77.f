@@ -40,14 +40,14 @@
 !
 ! Also, in the "INIT" section of your program, add a call to
 !
-!           call set_stdout('SP: ')
+!           call SP_set_stdout('SP: ')
 !
 ! in order to assign the value of variable *prefix*.
 !
 ! Step 3: If anywhere in your f77 program there is a handling of file
 ! unit, before you open the unit make the call:
 !
-!           call get_io_unit_new(iFile)
+!           call SP_get_io_unit_new(iFile)
 !
 ! Remembder to declare the integer variable iFile before that:
 !
@@ -77,7 +77,7 @@
 ! That is it you have to do. Good luck with SWMF!
 ! 
 !INTERFACE:
-      subroutine get_io_unit_new(iFileNew)
+      subroutine SP_get_io_unit_new(iFileNew)
 !EOP
       implicit none
   !--------------------------------------------------------------------------!
@@ -100,10 +100,10 @@
       end do
 
       iFileNew = -1
-      end subroutine get_io_unit_new
+      end subroutine SP_get_io_unit_new
 !BOP
 !INTERFACE:
-      subroutine set_stdout(NameComp)
+      subroutine SP_set_stdout(NameComp)
 !DESCRIPTION:
 ! This routine sets the prefix and assigns a standard/non-standard number    
 ! for STD output, compatible with f77. The f77 model is assumed not to be     
@@ -116,5 +116,5 @@
       iStdOut = 6
       prefix = NameComp
       DoWriteAll=.false.
-      end subroutine set_stdout
+      end subroutine SP_set_stdout
 !============================================================================! 

@@ -3,17 +3,17 @@
       integer iLine         !The # of the magnetic filed line to process
       integer iSnapshot     !The # of coupling 
       real TimeToRead,tSimulation
-      common/contime/TimeToRead,tSimulation
+      common/SP_contime/TimeToRead,tSimulation
       real tFinal
       real tCoupleHr
-      common /couple/tCoupleHr
+      common /SP_couple/tCoupleHr
       include 'stdout.h'
       logical UseSelfSimilarity,UseRefresh
-      common/log/UseSelfSimilarity,UseRefresh
+      common/SP_log/UseSelfSimilarity,UseRefresh
 
-      call set_stdout(' :  ')      
+      call SP_set_stdout(' :  ')      
       UseSelfSimilarity=.true.
-      call admit 
+      call SP_admit 
       call sp_init
 
 
@@ -33,7 +33,7 @@ CCC   read(*,*)  iSnapshot
 
       call sp_get_from_ih(iLine,iSnapshot)
       
-!     Physical time to start the update
+!     Physical time to start the SP_update
       tSimulation=tCoupleHr*3.60d3 
 !     The start time is read from the snapshot
       if(DoWriteAll)write(iStdout,*)'tSimulation=',tSimulation
@@ -41,29 +41,29 @@ CCC   read(*,*)  iSnapshot
 !     Final value of physical time is not defined
       tFinal=1.0e8
       
-      call MASTER(tSimulation,tFinal)
+      call SP_MASTER(tSimulation,tFinal)
       write(iStdout,*)'tSimulation=',tSimulation 
       
-      call closetime  !Finalize
+      call SP_closetime  !Finalize
       stop
       end 
 !=============================================================!
 !BOP
-!ROUTINE: admit - reads the input parameters
+!ROUTINE: SP_admit - reads the input parameters
 !INTERFACE:
-      subroutine admit
+      subroutine SP_admit
 !DESCRIPTION:
 !Read input parameters from list
 !in case of self similar solution, sets its parameters
 !sets the scattering length
 !EOP
       include 'coupler.h'
-      common /size  / nr,nmu,nw, dim1
-      common /suly /  wghtl,wghtmu,wghtw
-      common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_suly /  wghtl,wghtmu,wghtw
+      common /SP_times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
 
 !      common /inphys/ wind0,period0,xlambda0
@@ -71,20 +71,20 @@ CCC   read(*,*)  iSnapshot
 !      undefined, their use is not proper 
 !      I.Sokolov<igorsok@umich.edu>
 
-      common /partid/ iz,massa,ekpp,xlmbda0
+      common /SP_partid/ iz,massa,ekpp,xlmbda0
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common/scphys/ omega,xscatt1
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common/SP_scphys/ omega,xscatt1
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
-      common /convrt/ cAUKm,hour,valf
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
+      common /SP_convrt/ cAUKm,hour,valf
       logical UseSelfSimilarity,UseRefresh
-      common/log/UseSelfSimilarity,UseRefresh
+      common/SP_log/UseSelfSimilarity,UseRefresh
       include 'stdout.h'
       integer iFile
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 / 
@@ -96,7 +96,7 @@ c ----------------------------------- scales:
       valf = 21.8
       e0 = pmass
 c ------------------------------------ input data:
-      call get_io_unit_new(iFile)
+      call SP_get_io_unit_new(iFile)
       open(iFile,FILE='violet.in')
       read(iFile,*) nr,nmu,nw, wghtl,wghtmu,wghtw
       write(iStdout,*) prefix,
@@ -182,14 +182,14 @@ c ------------------------------------ calculation
       return 
       end
 
-c  *****************  end ADMIT   **************************
+c  *****************  end SP_admit   **************************
 !===========================================================
       subroutine sp_get_from_ih(iLine,iSnapshot)
       implicit none
       include 'stdout.h'
       include 'coupler.h'
       real tCoupleHr
-      common /couple/tCoupleHr
+      common /SP_couple/tCoupleHr
       integer iLine
       integer iFile
       integer iLoop
@@ -198,7 +198,7 @@ c  *****************  end ADMIT   **************************
       integer iMisc
 C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
 
-      call get_io_unit_new(iFile)
+      call SP_get_io_unit_new(iFile)
 
       if (iLine.eq.1) open(iFile,file = 'evolv1.cme' )
       if (iLine.eq.2) open(iFile,file = 'evolv2.cme' )

@@ -19,25 +19,25 @@
       include 'param.h'
       integer  iMax,nMax
       PARAMETER(nMax=nRMax)
-      common /ihcoord/ rx(nMax),ry(nMax),rz(nMax)
-      common /ihvel/   vx(nMax), vy(nMax), vz(nMax)
-      common /ihmagf/ bx(nMax), by(nMax), bz(nMax)
-      common /ihpdi/     dens(nMax), pres(nMax), iMax
+      common /SP_ihcoord/ rx(nMax),ry(nMax),rz(nMax)
+      common /SP_ihvel/   vx(nMax), vy(nMax), vz(nMax)
+      common /SP_ihmagf/ bx(nMax), by(nMax), bz(nMax)
+      common /SP_ihpdi/     dens(nMax), pres(nMax), iMax
       real vxOld,vyOld,vzOld
-      common /oldvel/     vxOld(nMax), vyOld(nMax), vzOld(nMax)
+      common /SP_oldvel/     vxOld(nMax), vyOld(nMax), vzOld(nMax)
       real  algbb(0:nMax)
       real  algll(0:nMax)
       real  algnn(0:nMax)
       real  vr(0:nMax)
-      common /plasma/ algbb,algll,algnn,vr
+      common /SP_plasma/ algbb,algll,algnn,vr
       integer Old_,New_
       parameter(Old_=1,New_=2)
       integer iShock,iShockOld
-      common/ishock/iShock,iShockOld
+      common/SP_ishock/iShock,iShockOld
       real Smooth_VII
-      common/SP_smooth/Smooth_VII(11,nMax,Old_:New_)
+      common/SP_SP_smooth/Smooth_VII(11,nMax,Old_:New_)
       integer nResolution
       PARAMETER(nResolution=10)
       real rTransient
       integer iTransient
-      common/trans/rTransient,iTransient
+      common/SP_trans/rTransient,iTransient

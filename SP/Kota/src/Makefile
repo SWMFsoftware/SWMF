@@ -31,8 +31,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJECTS} \
-	${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

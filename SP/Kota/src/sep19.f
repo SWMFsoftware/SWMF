@@ -3,25 +3,25 @@
 !     parameter(nRMax=1000,nMuMax=40,nPMax=600)
 
 !BOP
-!ROUTINE: cool - set functions of the energy coordinate
+!ROUTINE: SP_cool - set functions of the energy coordinate
 !INTERFACE:
-      subroutine cool
+      subroutine SP_cool
 !DESCRIPTION:
-!Subroutine cool sets pmin,pmax,pinj,dlnp,
+!Subroutine SP_cool sets pmin,pmax,pinj,dlnp,
 !arrays pp,ww,ee - momentum,speed and energy as a 
 !function of the energetic coordinate.
 !Also sets the scattering length dependence on energy
 !EOP 
       include 'param.h'   
-      common /size  / nr,nmu,nw, dim1
-      common /partid/ iz,massa,ekpp,xlmbda0
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_partid/ iz,massa,ekpp,xlmbda0
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
-      common /convrt/ cAUKm,hour,valf
+      common /SP_quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /SP_convrt/ cAUKm,hour,valf
       include 'stdout.h'
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 /
 c ----------------------------------- scales:
@@ -72,22 +72,22 @@ c        qqp(kk) = 1./pinj**2/dlnp
       return
       end
 
-c  *****************  end subroutine COOL     ******************
+c  *****************  end subroutine SP_cool     ******************
 !BOP
-!ROUTINE: peeloff - multiples distribution function by p^qex if desired
+!ROUTINE: SP_peeloff - multiples distribution function by p^qex if desired
 !INTERFACE:
-      subroutine peeloff
+      subroutine SP_peeloff
 !EOP
       include 'param.h'   
-      common /size  / nr,nmu,nw, dim1
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed/  wmin,wmax,wwin,ww(0:nPMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed/  wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
-      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
+      common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       pex = 0.
@@ -111,16 +111,16 @@ c  *****************  end subroutine COOL     ******************
       return
       end
 
-c  *****************  end subroutine PEELOFF  ******************
+c  *****************  end subroutine SP_peeloff  ******************
 !BOP
-!ROUTINE: pangle - sets \mu, 1-\mu^2, \mu-dependance for scattering
+!ROUTINE: SP_pangle - sets \mu, 1-\mu^2, \mu-dependance for scattering
 !INTERFACE:
-      subroutine pangle
+      subroutine SP_pangle
 !EOP
       include 'param.h'    
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       include 'stdout.h'
 c     linear grid in mu=cost
@@ -163,15 +163,15 @@ c ---  scatty representing  (1/lambda)
       return
       end
 
-c  *****************  end subroutine PANGLE    ******************
+c  *****************  end subroutine SP_pangle    ******************
 !BOP
-!ROUTINE: initial - nullify distribution function and related arrays 
+!ROUTINE: SP_initial - nullify distribution function and related arrays 
 !INTERFACE:
-      subroutine initial
+      subroutine SP_initial
 !EOP                   
       include 'coupler.h'
-      common /size /  nr,nmu,nw, dim1
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size /  nr,nmu,nw, dim1
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
 
@@ -194,9 +194,9 @@ c  *****************  end subroutine PANGLE    ******************
 
 c **************************  end of INiT ****************
 !BOP
-!ROUTINE: helios - sets multipliers in the kinetic equation coming from MHD
+!ROUTINE: SP_helios - sets multipliers in the kinetic equation coming from MHD
 !INTERFACE:
-      subroutine helios(t,dt,jj,kk)
+      subroutine SP_helios(t,dt,jj,kk)
 !DESCRIPTION:
 !Uses the values obtained from MHD and calculates the Lagrangian time 
 !derivatives which are multipliers in the kinetic equation.
@@ -205,23 +205,23 @@ c **************************  end of INiT ****************
 !is not used in the framework
 !EOP
       include 'coupler.h'
-      common /size / nr,nmu,nw, dim1
-      common /gazdi/ ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+      common /SP_size / nr,nmu,nw, dim1
+      common /SP_gazdi/ ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1               ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /elem / zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
-      common /magia/ qb(0:nRMax),qd(0:nRMax),zb(0:nRMax) 
+      common /SP_elem / zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
+      common /SP_magia/ qb(0:nRMax),qd(0:nRMax),zb(0:nRMax) 
       
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common/scphys/ omega,xscatt1
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common/SP_scphys/ omega,xscatt1
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /smile / mp,ni
+      common /SP_smile / mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
      3       ,edsm(0:6000),edfi(0:6000)
@@ -229,7 +229,7 @@ c **************************  end of INiT ****************
      5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
      6       ,dbmds(0:6000),dbfids(0:6000)
       logical UseSelfSimilarity,UseRefresh
-      common/log/UseSelfSimilarity,UseRefresh
+      common/SP_log/UseSelfSimilarity,UseRefresh
       include 'stdout.h'
 c +++++++++++++++++++++++++++++++++++++++     concept:   +++++ 
 c    Transfers between similarity solution and actual, 
@@ -317,7 +317,7 @@ c -------------------------------   this one new for transport :
 c ??????????????????????????????????????????????????????
       if (i.lt.0) then
       write(iStdout,*) prefix,
-     1         'I AM HERE IN HELIOS - kk,i,ii=  ', kk,i,ii
+     1         'I AM HERE IN SP_helios - kk,i,ii=  ', kk,i,ii
       write(iStdout,*) prefix,
      1           'R:       ',r(i)
       write(iStdout,*) prefix,
@@ -409,17 +409,17 @@ c +++++++++++++++++++++++++++++++++++++++++++
       end
 !===============================================================
 !BOP
-!ROUTINE: source - calculates the source of injected particles
+!ROUTINE: SP_source - calculates the SP_source of injected particles
 !INTERFACE: 
-      subroutine source(dt)
+      subroutine SP_source(dt)
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /SP_quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
       include 'stdout.h'
       do 31 k=0,nw
       do 11 i=1,nr
@@ -432,12 +432,12 @@ c +++++++++++++++++++++++++++++++++++++++++++
 
       return
       end
-c  *****************  end subroutine SOURCE   ******************
+c  *****************  end subroutine SP_source   ******************
 
 !BOP
-!ROUTINE: deltal - update the input from spatial derivative of f
+!ROUTINE: SP_deltal - SP_update the input from spatial derivative of f
 !INTERFACE:
-      subroutine deltal(dt)                      
+      subroutine SP_deltal(dt)                      
 !DESCIPTION
 !Updates the solution of the following equation
 !\partial f/\partial t+ v\mu\partial f/\partial s =0
@@ -445,13 +445,13 @@ c  *****************  end subroutine SOURCE   ******************
 !EOP
 !!! REWORK DLOGT!!!
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
@@ -502,24 +502,24 @@ c -------------------------------- end IN direction(s)
 30    continue
       return
       end
-c  *****************  end subroutine DELTAL  ******************
+c  *****************  end subroutine SP_deltal  ******************
                                                  !!! REWORK DLOGT!!!
 !BOP
-!ROUTINE: lcycle - corrects the increment from df/ds using implicit scheme
+!ROUTINE: SP_lcycle - corrects the increment from df/ds using implicit scheme
 !INTERFACE:
-      subroutine lcycle(dt,wght)
+      subroutine SP_lcycle(dt,wght)
 !DESCRIPTION:
 !Implicit scheme with two-diagonal matrix (oly one lower diagonal or
 !only one higher diagonal, depending on the \mu sign) is solved directly
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
@@ -574,9 +574,9 @@ c???    df(i,j,k) = (df(i,j,k)-fact*df(i+1,j,k))/(1.-fact)
       end
 c  *****************  end subroutine L-CYCLE  ******************
 !BOP
-!ROUTINE: deltamu - update the input from pitch angle derivative of f
+!ROUTINE: SP_deltamu - SP_update the input from pitch angle derivative of f
 !INTERFACE:                      
-      subroutine deltamu(i,dt)
+      subroutine SP_deltamu(i,dt)
 !DESCIPTION
 !Updates the solution of the following equation
 !\end{verbatim}
@@ -591,15 +591,15 @@ c  *****************  end subroutine L-CYCLE  ******************
 !throught one time step
 !EOP  
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
@@ -654,20 +654,20 @@ c --- add scattering :
 c  *****************  end subroutine DELTA-MU  ******************
                                                  !!! REWORK DLOGT!!!
 !BOP
-!ROUTINE: mucycle - corrects the increment from df/d\mu using implicit scheme
+!ROUTINE: SP_mucycle - corrects the increment from df/d\mu using implicit scheme
 !INTERFACE:
-      subroutine mucycle(i,dt,wght)
+      subroutine SP_mucycle(i,dt,wght)
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       dimension a2(0:nRMax),a1(0:nRMax),bb(0:nRMax),
      1          c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
@@ -737,7 +737,7 @@ c --- add scattering :
       c1(j) = c1(j) -sc2
 21    continue
 c --- now solve and fill :
-      call solve5(mm,a2,a1,bb,c1,c2,xy)
+      call SP_solve5(mm,a2,a1,bb,c1,c2,xy)
       do 22 j=0,mm 
       df(i,j,k) = xy(j)
 22    continue
@@ -749,9 +749,9 @@ c  *****************  end subroutine MU-CYCLE  ******************
                                                  !!! REWORK DLOGT!!!
                       
 !BOP
-!ROUTINE: deltap - update the input from the momentum derivative of f
+!ROUTINE: SP_deltap - SP_update the input from the momentum derivative of f
 !INTERFACE:
-      subroutine deltap(i,dt)
+      subroutine SP_deltap(i,dt)
 !DESCIPTION
 !Updates the solution of the following equation
 !\end{verbatim}
@@ -765,16 +765,16 @@ c  *****************  end subroutine MU-CYCLE  ******************
 !throught one time step
 !EOP  
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       data  cau / 7.2/
       nr1 = nr-1
        mm = nmu
@@ -816,21 +816,21 @@ ccc   do 11 i=1,nr
 c  *****************  end subroutine DELTA-P   ******************
                                                  !!! REWORK DLOGT!!!
 !BOP
-!ROUTINE: pcycle - corrects the increment from df/dp using implicit scheme
+!ROUTINE: SP_pcycle - corrects the increment from df/dp using implicit scheme
 !INTERFACE:
-      subroutine pcycle(i,dt,wght)
+      subroutine SP_pcycle(i,dt,wght)
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       dimension a2(0:nRMax),a1(0:nRMax),bb(0:nRMax),
      1          c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
       include 'stdout.h'
@@ -875,7 +875,7 @@ ccc   do 10 i=1,nr
 31    continue
 
 c --- solve and fill :
-      call solve5(nw,a2,a1,bb,c1,c2,xy)
+      call SP_solve5(nw,a2,a1,bb,c1,c2,xy)
       do 32 k = 0,nw
       df(i,j,k) = xy(k)
 32    continue
@@ -885,16 +885,16 @@ c --- solve and fill :
       end
 c  *****************  end subroutine P-CYCLE   ******************
 !BOP
-!ROUTINE: subsub - collect the inputs from \mu and momentum derivatives
-      subroutine subsub(dt)
+!ROUTINE: SP_subsub - collect the inputs from \mu and momentum derivatives
+      subroutine SP_subsub(dt)
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /suly  / wghtl,wghtmu,wghtw
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_suly  / wghtl,wghtmu,wghtw
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
       include 'stdout.h'
       do 10 i=1,nr
@@ -905,12 +905,12 @@ c  *****************  end subroutine P-CYCLE   ******************
       dts = dt/float(ksub)
       do 23 kk = 1,ksub
 
-      call deltamu(i,dts)
-      call mucycle(i,dts,wghtmu)
+      call SP_deltamu(i,dts)
+      call SP_mucycle(i,dts,wghtmu)
 
-      call deltap(i,dts)
-      call pcycle(i,dts,wghtw)
-      call updatsub(i)
+      call SP_deltap(i,dts)
+      call SP_pcycle(i,dts,wghtw)
+      call SP_updatsub(i)
 
 23    continue
 10    continue
@@ -920,13 +920,13 @@ c  *****************  end subroutine P-CYCLE   ******************
 
 c  *****************  end subroutine SUB-SUB   ******************
 !BOP
-!ROUTINE: update - adds df to f
+!ROUTINE: SP_update - adds df to f
 !INTERFACE:
-      subroutine update        
+      subroutine SP_update        
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       do 20 j=0,nmu
       do 30 k=0,nw
@@ -940,15 +940,15 @@ c  *****************  end subroutine SUB-SUB   ******************
 20    continue
       return 
       end
-c  *****************  end subroutine UPDATE    ******************
+c  *****************  end subroutine SP_update    ******************
 !BOP
-!ROUTINE: update - adds df to f for a given spatial point
+!ROUTINE: SP_update - adds df to f for a given spatial point
 !INTERFACE:
-      subroutine updatsub(i)    
+      subroutine SP_updatsub(i)    
 !EOP
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       do 20 j=0,nmu
       do 30 k=0,nw
@@ -958,13 +958,13 @@ c  *****************  end subroutine UPDATE    ******************
 20    continue
       return 
       end
-c  *****************  end subroutine UPDATE    ******************
+c  *****************  end subroutine SP_update    ******************
 
 c ==================== SOLVER ROUTINES: =========================== 
 !BOP
-!ROUTINE: solve5 - solves A\cdot x=b equation, with 5-diagonal matrix A
+!ROUTINE: SP_solve5 - solves A\cdot x=b equation, with 5-diagonal matrix A
 !INTERFACE
-      subroutine solve5(nx,a2,a1,bx,c1,c2,xy)
+      subroutine SP_solve5(nx,a2,a1,bx,c1,c2,xy)
 !EOP
       include 'param.h'
       dimension a2(0:nRMax),a1(0:nRMax),bx(0:nRMax),
@@ -996,7 +996,7 @@ c --  solve penta-diagonal
       return
       end
 c  *****************  end subroutine SOLVE-5  ******************
-      subroutine solvaa(nx,a2,a1,bx,xy)
+      subroutine SP_solvaa(nx,a2,a1,bx,xy)
       include 'param.h'
       dimension a2(0:nRMax),a1(0:nRMax),bx(0:nRMax),xy(0:nRMax)
 c --  solve lower diagonal
@@ -1009,7 +1009,7 @@ c --  solve lower diagonal
       return
       end
 c  *****************  end subroutine SOLV-AA  ******************
-      subroutine solvcc(nx,bx,c1,c2,xy)
+      subroutine SP_solvcc(nx,bx,c1,c2,xy)
       include 'param.h'
       dimension bx(0:nRMax),c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
 c --  solve upper diagonal
@@ -1027,21 +1027,21 @@ c  *****************  end subroutine SOLV-CC  ******************
 
 c ========================  OUTPUT ROUTINES to be revised ========
 
-      subroutine alla(io,jst,t)
+      subroutine SP_alla(io,jst,t)
       include 'coupler.h'
-      common /size  / nr,nmu,nw, dim1
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       integer  iFile
       include 'stdout.h'
-      call get_io_unit_new(iFile)
+      call SP_get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
       if (io.eq.10) open(iFile,file = './SP/alla0.out',status='unknown')
@@ -1087,25 +1087,25 @@ c ========================  OUTPUT ROUTINES to be revised ========
 
 c ****************************    end ALL output ******************
 
-      subroutine csilla(io,ist,t)
+      subroutine SP_csilla(io,ist,t)
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /azimut/ fi(0:nRMax)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_azimut/ fi(0:nRMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
+      common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
       dimension ff(0:nRMax,0:nPMax),s(0:nRMax,0:nPMax),ffx(5)
       dimension ract(10)
       integer  iFile
       include 'stdout.h'
-      call get_io_unit_new(iFile)
+      call SP_get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
       if (io.eq.10) open(iFile,file = 'SP/csilla0.out',status='unknown')
@@ -1202,21 +1202,21 @@ c --  formats:
 311   format(2x,i3,f10.3,4f14.6)
       end
 
-c  *****************  end subroutine CSILLA   ******************
+c  *****************  end subroutine SP_csilla   ******************
 
-      subroutine opentime
+      subroutine SP_opentime
       include 'param.h'
-      common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
-      common /iFile/  io(5),ip(5)
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
+      common /SP_iFile/  io(5),ip(5)
       include 'stdout.h'
       do ke=1,kemax
       kk = keobs(ke)
@@ -1224,7 +1224,7 @@ c  *****************  end subroutine CSILLA   ******************
       enddo
   
       do 11 kr=1,krmax
-      call get_io_unit_new(io(kr))
+      call SP_get_io_unit_new(io(kr))
       if (kr.eq.1) open(io(kr),file='./SP/timevar.r1',status='unknown')
       if (kr.eq.2) open(io(kr),file='./SP/timevar.r2',status='unknown')
       if (kr.eq.3) open(io(kr),file='./SP/timevar.r3',status='unknown')
@@ -1234,7 +1234,7 @@ c  *****************  end subroutine CSILLA   ******************
       write(io(kr),711) robs(kr) 
       write(io(kr),712) (eobs(ke),ke=1,kemax) 
       write(io(kr),*)
-      call get_io_unit_new(ip(kr))
+      call SP_get_io_unit_new(ip(kr))
       if (kr.eq.1) open(ip(kr),file='./SP/plasma.r1',status='unknown')
       if (kr.eq.2) open(ip(kr),file='./SP/plasma.r2',status='unknown')
       if (kr.eq.3) open(ip(kr),file='./SP/plasma.r3',status='unknown')
@@ -1251,12 +1251,12 @@ c  *****************  end subroutine CSILLA   ******************
       return
       end
 
-c  *****************  end subroutine OPENTIME  ******************
+c  *****************  end subroutine SP_opentime  ******************
 
-      subroutine closetime 
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
-      common /iFile/  io(5),ip(5)
+      subroutine SP_closetime 
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
+      common /SP_iFile/  io(5),ip(5)
       do 11 kr=1,krmax
       write(io(kr),*)
       write(io(kr),*) 'the end'
@@ -1268,26 +1268,26 @@ c  *****************  end subroutine OPENTIME  ******************
       return
       end
 
-c  *****************  end subroutine OPENTIME  ******************
+c  *****************  end subroutine SP_opentime  ******************
 
-      subroutine timevar(jst,t)
+      subroutine SP_timevar(jst,t)
       include 'coupler.h'
-      common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /energy/ emin,emax,eein,ee(0:nPMax)
-      common /speed / wmin,wmax,dlnw,ww(0:nPMax)
-      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_speed / wmin,wmax,dlnw,ww(0:nPMax)
+      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
-      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+      common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
+      common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /convrt/ cAUKm,hour,valf
+      common /SP_convrt/ cAUKm,hour,valf
       dimension ffe(10)
-      common /iFile/  io(5),ip(5)
+      common /SP_iFile/  io(5),ip(5)
       include 'stdout.h'
       do 10 kr=1,krmax
       rr = robs(kr)
@@ -1345,5 +1345,5 @@ c  *****************  end subroutine OPENTIME  ******************
 7881  format(a,i5,f8.2,5f14.6)
       end
 
-c  *****************  end subroutine TIMEVAR  ******************
+c  *****************  end subroutine SP_timevar  ******************
 

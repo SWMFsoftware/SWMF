@@ -1,9 +1,9 @@
 !=============================================================!
-subroutine get_io_unit_new(iNewUnit)
+subroutine SP_get_io_unit_new(iNewUnit)
   use ModIoUnit,ONLY:io_unit_new
   integer,intent(out)::iNewUnit
   iNewUnit=io_unit_new()
-end subroutine get_io_unit_new
+end subroutine SP_get_io_unit_new
 !=============================================================!
 module SP_Mod
   use ModConst
@@ -12,7 +12,7 @@ module SP_Mod
   include 'stdout.h'
   save
   logical:: UseSelfSimilarity,UseRefresh
-  common/log/UseSelfSimilarity,UseRefresh
+  common/SP_log/UseSelfSimilarity,UseRefresh
   real,parameter::DsResolution=cOne/nResolution
   real::XyzLine_D(3)=(/cZero,cZero,cZero/)
   real::RBoundSC=1.1      !^CMP IF SC
@@ -39,7 +39,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
   integer::iVerbose=0
   integer::kfriss,kacc
   real:: time,tmax,dlnt0,dt1,dta
-  common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
+  common /SP_times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
   !-----------------------------------------------------------!
   select case(TypeAction)
   case('VERSION')
@@ -119,7 +119,7 @@ subroutine SP_init_session(iSession,TimeIn)
   real,     intent(in) :: TimeIn      ! seconds from start time
   logical,save::DoInit=.true.
   integer::      jnext,jsep,jstep,iStep
-  common /spmain/jnext,jsep,jstep,istep
+  common /SP_spmain/jnext,jsep,jstep,istep
   if(.not.DoInit)return
   DoInit=.false.
   UseSelfSimilarity=.false.
@@ -377,7 +377,7 @@ end subroutine SP_read_mh_data
 subroutine SP_finalize(TimeSimulation)
   implicit none
   real,intent(in)::TimeSimulation
-  call closetime
+  call SP_closetime
 end subroutine SP_finalize
 !=============================================================!
 subroutine SP_save_restart(TimeSimulation) 

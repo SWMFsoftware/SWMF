@@ -18,29 +18,29 @@ c**************************************************************
       include 'coupler.h'
       integer nr,nmu,nw
       real dim1
-      common /size  / nr,nmu,nw, dim1
+      common /SP_size  / nr,nmu,nw, dim1
       real wghtl,wghtmu,wghtw
-      common /suly /  wghtl,wghtmu,wghtw
+      common /SP_suly /  wghtl,wghtmu,wghtw
       real  time,tmax,dlnt0,dlnt1,dta
       integer kfriss,kacc
-      common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
+      common /SP_times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
       real emin,emax,eein,ee
-      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /SP_energy/ emin,emax,eein,ee(0:nPMax)
       integer kinj
       real einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
-      common /quelle/ kinj,einj,pinj,qqp,qqx
+      common /SP_quelle/ kinj,einj,pinj,qqp,qqx
       integer iz,massa
       real ekpp,xlmbda0,omega,xscatt1
-      common /partid/ iz,massa,ekpp,xlmbda0
+      common /SP_partid/ iz,massa,ekpp,xlmbda0
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common /scphys/ omega,xscatt1
+      common /SP_scphys/ omega,xscatt1
       real qex,cmu(nMuMax),scmu(nMuMax)
       real wsc(0:nPMax),xsc(0:nRMax)
-      common /scatti/ qex,cmu,scmu,wsc,xsc
+      common /SP_scatti/ qex,cmu,scmu,wsc,xsc
       integer krMax,krObs,kEMax,kEObs
       real rObs,eObs
-      common /obsrad/ krmax,krobs(5),robs(5)
-      common /obserg/ kemax,keobs(5),eobs(5)
+      common /SP_obsrad/ krmax,krobs(5),robs(5)
+      common /SP_obserg/ kemax,keobs(5),eobs(5)
       real period
       !-----------------------------------------------------
       nr=nRMax      !1000
@@ -95,27 +95,27 @@ c**************************************************************
       real:: rmin,rshock,rmax,r(0:nRMax),wind,omega,xscatt1
       real::  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /size  / nr,nmu,nw, dim1        
-      common /suly  / wghtl,wghtmu,wghtw
-      common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r
+      common /SP_size  / nr,nmu,nw, dim1        
+      common /SP_suly  / wghtl,wghtmu,wghtw
+      common /SP_times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_radio / nn,rmin,rshock,rmax,r
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common /scphys/ omega,xscatt1
-      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+      common /SP_scphys/ omega,xscatt1
+      common /SP_gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       include 'stdout.h'
       integer::jnext,jstep,jsep,kstep
       integer::iStep
-      common /spmain/jnext,jsep,jstep,istep
+      common /SP_spmain/jnext,jsep,jstep,istep
 c ----------------------------------------------------------
       jnext = 2
        if(DoWriteAll)write(iStdout,*)prefix,
      1 'first j-stop at ',jnext
-      call cool   
-      call pangle  
+      call SP_cool   
+      call SP_pangle  
 c ----------------------------------------------------------
-c     initial conditions
+c     SP_initial conditions
       jstep = 0
       iStep=jStep*kfriss
       if(DoWriteAll)write(iStdout,*)prefix,
@@ -123,9 +123,9 @@ c     initial conditions
       jsep = 1
       if(DoWriteAll)write(iStdout,*)prefix,
      1 'Particles be calculated from j-sep : ',jsep
-      call initial
-      call peeloff    
-      call opentime
+      call SP_initial
+      call SP_peeloff    
+      call SP_opentime
 c ----------------------------------------------------------
       end subroutine sp_init
 !===========================================================!
@@ -199,7 +199,7 @@ c ----------------------------------------------------------
       end subroutine SP_clean_coupler
 
 !-----------------------------------------------------------!
-      subroutine MASTER(tSimulation,tFinal)
+      subroutine SP_MASTER(tSimulation,tFinal)
       implicit none
       real tSimulation 
 
@@ -223,25 +223,25 @@ c ----------------------------------------------------------
       real  rmin,rshock,rmax,r(0:nRMax),wind,omega,xscatt1
       real   ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /size  / nr,nmu,nw, dim1        
-      common /suly  / wghtl,wghtmu,wghtw
-      common /times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r
+      common /SP_size  / nr,nmu,nw, dim1        
+      common /SP_suly  / wghtl,wghtmu,wghtw
+      common /SP_times/  time,tmax,dlnt0,dt1,dta,kfriss,kacc
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_radio / nn,rmin,rshock,rmax,r
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common /scphys/ omega,xscatt1
-      common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
+      common /SP_scphys/ omega,xscatt1
+      common /SP_gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       logical UseSelfSimilarity,UseRefresh
-      common/log/UseSelfSimilarity,UseRefresh
+      common/SP_log/UseSelfSimilarity,UseRefresh
       include 'stdout.h'
       integer::jnext,jstep,jsep,Misc,kstep,iStep
-      common /spmain/jnext,jsep,jstep,istep
+      common /SP_spmain/jnext,jsep,jstep,istep
 c ----------------------------------------------------------
       tSimulationStart=tSimulation
       if(UseSelfSimilarity)then
          Misc = kfriss
-         call simile(Misc)
+         call SP_simile(Misc)
          Misc = jstep*kfriss
          tblst1= tblast*exp(float(Misc)*dlnt)
          time = tblst1 
@@ -280,7 +280,7 @@ c ----------------------------------------------------------
      1        jstep,kstep,istep,time
  900     format(a,5x,'step:',3i10,5x,'t[hour]: ',f12.6)
 c     ------------------------------------------ do dynamical step here
-         call helios(time,dt1,jstep,kstep)
+         call SP_helios(time,dt1,jstep,kstep)
 ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
          
          if (jstep.ge.jsep) then
@@ -288,12 +288,12 @@ ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
          ! Loop for acceleration of particles on a static grid
             do  Misc=1,kacc
                
-               call source(dta)
-               call deltal(dta)
-               call lcycle(dta,wghtl)
-               call update
+               call SP_source(dta)
+               call SP_deltal(dta)
+               call SP_lcycle(dta,wghtl)
+               call SP_update
                
-               call subsub(dta)
+               call SP_subsub(dta)
                if(.not.UseSelfSimilarity)
      1             tSimulation=tSimulation+dta*3.60e+3
             end do
@@ -301,7 +301,7 @@ ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
 c ------------------------------------------    dynamical step done
          jStep=iStep/kFriss
          if(iStep.eq.jStep*kFriss)then
-            if (jstep.gt.0) call timevar(jstep,time)
+            if (jstep.gt.0) call SP_timevar(jstep,time)
             if (jstep.eq.jnext) then
                write(iStdout,*)prefix,
      1           jstep,'  j-step done -- time: ',time
@@ -311,8 +311,8 @@ c ------------------------------------------    dynamical step done
                if (time.gt.6..and.time.le.12.)  Misc=14
                if (time.gt.12..and.time.le.48.) Misc=15
                if (time.gt.48.) Misc=16
-               call alla(Misc,jstep,time)
-               call csilla(Misc,istep,time)
+               call SP_alla(Misc,jstep,time)
+               call SP_csilla(Misc,istep,time)
                write(iStdout,*)prefix,
      1              'next j-stop ??'
 c??   read(*,*)  jnext
@@ -321,11 +321,11 @@ c??   read(*,*)  jnext
      1              jnext,'   auto - selected'
             end if
             
-            if(UseRefresh)call refresh
+            if(UseRefresh)call SP_refresh
          end if
       end do
       ! End of main time step loop
-      end subroutine MASTER
+      end subroutine SP_MASTER
 !---------------------------------------------------------------!
       subroutine SP_sharpen_and_run(tSimulation,tFinal)
       implicit none
@@ -334,10 +334,10 @@ c??   read(*,*)  jnext
       real  tSimulation
       real  tFinal
       integer jnext,jstep,jsep,Misc,kstep,iStep
-      common /spmain/jnext,jsep,jstep,istep
+      common /SP_spmain/jnext,jsep,jstep,istep
       integer nr,nmu,nw
       real dim1    
-      common /size  / nr,nmu,nw, dim1  
+      common /SP_size  / nr,nmu,nw, dim1  
       integer iCoupling,nCoupling,iR
       real DtCoupling
       do iR=1,iMax
@@ -357,28 +357,28 @@ c??   read(*,*)  jnext
       nR=iMax-1
       if(DoWriteAll)write(iStdOut,*)prefix,'sharpen and run: ',
      1   'nR,tSimulation,tFinal: ',nR,tSimulation,tFinal
-      call get_ishock
+      call SP_get_ishock
       if(tFinal-tSimulation.le.0.00001)then
          !Save the values of log n, log b and so on
-         !Do do this, call helios with artificial positive dt
-         call helios(0.0,1.0,1,1)
+         !Do do this, call SP_helios with artificial positive dt
+         call SP_helios(0.0,1.0,1,1)
          tSimulation=tFinal
          iMax=0
          return
       end if
       if(iShock<nResolution+iTransient)then
          !Do not sharpen the shock wave
-            call get_rshock
-            call MASTER(tSimulation,tFinal)
+            call SP_get_rshock
+            call SP_MASTER(tSimulation,tFinal)
       else
          nCoupling=max(1,iShock-iShockOld)
          if(iShockOld<nResolution+iTransient)then
              nCoupling=1    !No sharpening happened before
          end if
          if(nCoupling.eq.1)then
-            call sharpen_profile
-            call get_rshock
-            call MASTER(tSimulation,tFinal)
+            call SP_sharpen_profile
+            call SP_get_rshock
+            call SP_MASTER(tSimulation,tFinal)
             tSimulation=tFinal
          else
             DtCoupling=(tFinal-tSimulation)/nCoupling
@@ -419,9 +419,9 @@ c??   read(*,*)  jnext
      2                 nCoupling
                end do
                iShock=iShockOld+iCoupling
-               call sharpen_profile
-               call get_rshock
-               call MASTER(tSimulation,tSimulation+DtCoupling)
+               call SP_sharpen_profile
+               call SP_get_rshock
+               call SP_MASTER(tSimulation,tSimulation+DtCoupling)
             end do
          end if
       end if
@@ -429,7 +429,7 @@ c??   read(*,*)  jnext
       iMax=0             !To be prepared for the next coupling
       end subroutine sp_sharpen_and_run
 !==================================================================
-      subroutine get_ishock
+      subroutine SP_get_ishock
       implicit none
       include 'coupler.h'
       include 'stdout.h'
@@ -475,23 +475,23 @@ c??   read(*,*)  jnext
       if(DoWriteAll)then
          write(iStdOut,*)prefix,'iShockOld,iShock=',iShockOld,iShock
       end if
-      end subroutine get_ishock
+      end subroutine SP_get_ishock
 !==================================================================
-      subroutine get_rshock
+      subroutine SP_get_rshock
       implicit none
       include 'coupler.h'
       include 'stdout.h'
       real cRsunPerAU
       parameter(cRsunPerAU= 149.59787000000000000/0.696)
       real slamb,tblast,tblst1,rshck1,dlnt
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
       rshck1=sqrt(rx(iShock)**2+    
      1     ry(iShock)**2+    
      2     rz(iShock)**2)
       write(iStdOut,*)'Shock position is at ',rshck1*cRsunPerAU,' Rs'
-      end subroutine get_rshock
+      end subroutine SP_get_rshock
 !==================================================================    
-      subroutine sharpen_profile
+      subroutine SP_sharpen_profile
       implicit none
       include 'coupler.h'
       integer::nRes2,iUpStream,iDownstream,i
@@ -521,24 +521,24 @@ c??   read(*,*)  jnext
          bz(i)=bz(iUpStream)
          pres(i)=pres(iUpStream)
       end do
-      end subroutine sharpen_profile 
+      end subroutine SP_sharpen_profile 
 !=============================================================== 
 
-c ********************* end routine MASTER  *********************
+c ********************* end routine SP_MASTER  *********************
 
-      subroutine refresh
+      subroutine SP_refresh
       include 'coupler.h'
-      common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /times/  time,tmax,dt0,dt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_size  / nr,nmu,nw, dim1
+      common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_times/  time,tmax,dt0,dt1,dta,kfriss,kacc
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
 !      common /scphys/ wind,omega,xscatt1 !'wind' is undefined
-      common /scphys/ omega,xscatt1
-      common /elem /  zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
-      common /magia/  qb(0:nRMax),zb(0:nRMax),zt(0:nRMax) 
-      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+      common /SP_scphys/ omega,xscatt1
+      common /SP_elem /  zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
+      common /SP_magia/  qb(0:nRMax),zb(0:nRMax),zt(0:nRMax) 
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
-      common /smile/  mp,ni
+      common /SP_smile/  mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
      3       ,edsm(0:6000),edfi(0:6000)
@@ -593,19 +593,19 @@ c ********************************** ---------- *****************
       return 
       end
 
-c ********************  end routine REFRESH *********************
+c ********************  end routine SP_refresh *********************
                                                   !!!! REWORK
 
 c ********************  end routine GASDYN  *********************
 c ============================ real calculation cycle starts here ==
 
 
-      subroutine simile(mm)                 !!!  REWORK !!!
+      subroutine SP_simile(mm)                 !!!  REWORK !!!
       include 'coupler.h'
-      common /size /  nr,nmu,nw, dim1
-      common /radio/  nn,rmin,rshock,rmax,r(0:nRMax)
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /smile/  mp,ni
+      common /SP_size /  nr,nmu,nw, dim1
+      common /SP_radio/  nn,rmin,rshock,rmax,r(0:nRMax)
+      common /SP_blast/  slamb,tblast,tblst1,rshck1,dlnt
+      common /SP_smile/  mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
      3       ,edsm(0:6000),edfi(0:6000)
@@ -622,7 +622,7 @@ c ============================ real calculation cycle starts here ==
       dimension add(2500),app(2500)
       
       real iCoupleHr             !Physical time in hours
-      common/couple/tCoupleHr
+      common/SP_couple/tCoupleHr
 
       include 'stdout.h'
 c **************************************  concept: *****************
@@ -695,9 +695,9 @@ c -------------------------------- beolvasas meglenne
 
 c ==========================================  identify shock
 
-      call get_ishock
+      call SP_get_ishock
       ish=iShock
-      call get_rshock
+      call SP_get_rshock
       rsh=rshck1
 
       if(DoWriteAll)write(iStdout,*) prefix,
@@ -974,7 +974,7 @@ c --------------------------------- finally rescale TBLAST
       tblast = tblast*(rshock/rsh)**(1./slamb)
 
 c ???????????????????????????????????????????????????
-      call get_io_unit_new(io)
+      call SP_get_io_unit_new(io)
       open(io,file='./SP/ujcme-eta',status='unknown')
       write(io,*) lineno,mm,ni,slamb,thr,tblast
       do 900 j=0,ni 
@@ -1002,6 +1002,6 @@ c ???????????????????????????????????????????????????
       return
       end
 
-c **************************  end of SIMILE***************
+c **************************  end of SP_simile***************
 
 
