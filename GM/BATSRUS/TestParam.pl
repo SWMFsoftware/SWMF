@@ -34,11 +34,11 @@ Examples:
 
       TestParam.pl
 
-  Check another paameter file:
+  Check another parameter file:
 
       TestParam.pl run/test.000/PARAM.expand
 
-  Convert XML file into Perl tree file:
+  Convert the XML file PARAM.XML into the Perl tree file PARAM.pl:
 
       TestParam.pl -s
 
