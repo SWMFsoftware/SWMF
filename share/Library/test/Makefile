@@ -42,7 +42,7 @@ OBJ_TIME_CONVERT = \
 	../src/ModTimeConvert.o
 
 test_time_convert.exe: ${OBJ_TIME_CONVERT}
-	${LINK.f90} ${Lflag2} -o test_time_convert.exe ${OBJ_TIME_CONVERT}
+	${LINK.f90} -o test_time_convert.exe ${OBJ_TIME_CONVERT} ${Lflag2}
 
 test_time_convert:
 	@echo -----------------------------------------------------------------
@@ -63,8 +63,8 @@ OBJ_COORD_TRANSFORM = \
 	../src/ModCoordTransform.o
 
 test_coord_transform.exe: ${OBJ_COORD_TRANSFORM}
-	${LINK.f90} ${Lflag2} -o test_coord_transform.exe \
-		${OBJ_COORD_TRANSFORM}
+	${LINK.f90} -o test_coord_transform.exe ${OBJ_COORD_TRANSFORM} \
+		${Lflag2}
 
 test_coord_transform:
 	@echo -----------------------------------------------------------------
@@ -87,7 +87,7 @@ OBJ_FREQ = \
 	../src/ModFreq.o
 
 test_freq.exe: ${OBJ_FREQ}
-	${LINK.f90} ${Lflag2} -o test_freq.exe ${OBJ_FREQ}
+	${LINK.f90} -o test_freq.exe ${OBJ_FREQ} ${Lflag2}
 
 test_freq:
 	@echo -----------------------------------------------------------------
@@ -108,7 +108,7 @@ OBJ_SORT = \
 	../src/ModSort.o
 
 test_sort.exe: ${OBJ_SORT}
-	${LINK.f90} ${Lflag2} -o test_sort.exe ${OBJ_SORT}
+	${LINK.f90} -o test_sort.exe ${OBJ_SORT} ${Lflag2}
 
 test_sort:
 	@echo -----------------------------------------------------------------
@@ -129,8 +129,7 @@ OBJ_IO_UNIT = \
 	../src/ModIoUnit.o
 
 test_io_unit.exe: ${OBJ_IO_UNIT}
-	${LINK.f90} ${Lflag2} -o test_io_unit.exe \
-		${OBJ_IO_UNIT}
+	${LINK.f90} -o test_io_unit.exe ${OBJ_IO_UNIT} ${Lflag2}
 
 test_io_unit:
 	@echo -----------------------------------------------------------------
@@ -152,7 +151,7 @@ OBJ_RAY_TRACE = \
 	../src/CON_ray_trace.o
 
 test_ray_trace.exe: ${OBJ_RAY_TRACE}
-	${LINK.f90} ${Lflag1} -o test_ray_trace.exe ${OBJ_RAY_TRACE}
+	${LINK.f90} -o test_ray_trace.exe ${OBJ_RAY_TRACE} ${Lflag1}
 
 test_ray_trace:
 	@echo -----------------------------------------------------------------
@@ -176,8 +175,7 @@ OBJ_GEOPACK = \
 	../src/ModCoordTransform.o
 
 test_geopack.exe: ${OBJ_GEOPACK}
-	${LINK.f90} ${Lflag2} -o test_geopack.exe \
-		${OBJ_GEOPACK}
+	${LINK.f90} -o test_geopack.exe ${OBJ_GEOPACK} ${Lflag2}
 
 test_geopack:
 	@echo -----------------------------------------------------------------
@@ -206,7 +204,7 @@ OBJ_AXES = \
 	../src/ModUtilities.o
 
 test_axes.exe: ${OBJ_AXES}
-	${LINK.f90} ${Lflag2} -o test_axes.exe ${OBJ_AXES}
+	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
 
 test_axes: 
 	@echo -----------------------------------------------------------------
@@ -234,13 +232,13 @@ OBJ_PLANET_FIELD = \
 	../src/ModUtilities.o
 
 test_planet_field.exe: ${OBJ_PLANET_FIELD}
-	${LINK.f90} ${Lflag2} -o test_planet_field.exe ${OBJ_PLANET_FIELD}
+	${LINK.f90} -o test_planet_field.exe ${OBJ_PLANET_FIELD} ${Lflag1}
 
 test_planet_field: 
 	@echo -----------------------------------------------------------------
 	@echo test_planet_field starting
 	@echo
-	@(cd ../src; make LIB)
+	@(cd ../src; make CON_planet_field.o)
 	@make test_planet_field.exe
 	@echo
 	@echo './test_planet_field.exe > test_planet_field.tmp'
