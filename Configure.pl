@@ -1,6 +1,7 @@
 #!/usr/bin/perl -s
-#^CFG COPYRIGHT UM
-#^CFG FILE CONFIGURE
+# This code is a copyright protected software.
+# (c) 2002- University of Michigan
+#^CMP FILE CONFIGURE
 
 # List of option files in the CVS distributions. First one is the default.
 my @Optionfiles=('Configure.options','Configure.public','Spherical.options');
@@ -222,30 +223,42 @@ if(not -d $Dir){
 
 &process_dir(".");
 
+if($switch{MAKEPDF}      eq "ON" or
+   $switch{MAKEHTML}     eq "ON" or
+   $switch{REMOVEDOCTEX} eq "ON"){
+    my $texdir;
+    foreach $texdir ("$Dir/Doc/Tex","$Dir/doc/Tex","missing"){
 
-#                                          ^CFG IF DOC BEGIN
-#                                              ^CFG IF NOT REMOVEDOCTEX BEGIN
-chdir "$Dir/Doc/Tex";
-# Make HTML manual if required                    ^CFG IF DOCHTML BEGIN
-if($switch{MAKEHTML} eq "ON"){
-    my $result=system("make HTML");
-    if($result){die "Could not make HTML manuals\n"};
+	die "Could not find LaTex directory $Dir/[Dd]oc/Tex\n"
+	    if $texdir eq "missing";
+
+	# Try to enter the LaTex directory
+	chdir $texdir or next;
+
+	my $result=system("./SetSWMF.pl -i");
+	warn "Could not install with ./SetSWMF.pl: $result\n" if $result;
+
+	# Make HTML manual if required and possible
+	if($switch{MAKEHTML} eq "ON"){
+	    my $result=system("make HTML");
+	    die "Could not make HTML manuals\n" if $result;
+	}
+
+        # Make PDF manual if required
+        if($switch{MAKEPDF} eq "ON"){
+	    my $result=system("make PDF");
+	    die "Could not make PDF manuals\n" if $result;
+	}
+
+        # Remove $texdir directory if required
+	chdir $Dir;
+	if($switch{REMOVEDOCTEX} eq "ON"){
+	    print "removing $texdir\n" if $Verbose;
+	    my $result=system("rm -rf $texdir");
+	    die "Could not rm -rf Doc/Tex\n" if $result;
+	}
+    }
 }
-#                                                 ^CFG END DOCHTML
-# Make PDF manual if required
-if($switch{MAKEPDF} eq "ON"){
-    my $result=system("make PDF");
-    if($result){die "Could not make PDF manuals\n"};
-};
-# Remove Doc/Tex directory if required
-chdir $Dir;
-if($switch{REMOVEDOCTEX} eq "ON"){
-    print "removing $Dir/Doc/Tex\n" if $Verbose;
-    my $result=system("rm -rf Doc/Tex");
-    if($result){die "Could not rm -rf Doc/Tex\n"};
-}
-#                                              ^CFG END REMOVEDOCTEX
-#                                          ^CFG END DOC
 
 exit 0;
 
@@ -633,13 +646,19 @@ sub print_help{
 
     print "
 
-Configure.pl [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] [-keepall]
-            [-o=optionfile] [-on=option1,option2...] [-off=option3,option4...]
-            [-s] [-t] [-v]
-            [inputfile1] [inputfile2] ...
+Configure.pl [-c=STR] [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] 
+             [-keepall]
+             [-o=optionfile] [-on=option1,option2...] [-off=option3,option4...]
+             [-s] [-t] [-v]
+             [inputfile1] [inputfile2] ...
 
       NOTE: all option names, 'on' or 'off' strings and all $cfg directives
       are capitalized by Configure.pl, so the syntax is case insensitive !
+
+      -c=STR  The string used in the directives and the name of the 
+              directory config files. The default value for STR is 'CMP',
+              which means that the directives start with \^"."CMP and
+              the directory config files are named CMP.
 
       -D      print debug info
 
@@ -681,7 +700,7 @@ Configure.pl [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] [-keepall]
               Empty lines and comments following # are permitted.
 
               The options in combination with the $cfg directives and 
-              the CFG files can be used to remove or insert some text, 
+              the $Cfg files can be used to remove or insert some text, 
               to omit files, or to skip whole directories during configuration.
 
               Special options:
@@ -693,32 +712,19 @@ Configure.pl [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] [-keepall]
               option file contains an option it is regarded as configurable.
               When -keepall is used, all options are taken as configurable.
               A subset of the configurable options can be removed with
-              the -exe switch if required. ",
-		  #^CFG IF NOT COPYRIGHT BEGIN
-		  "
+              the -exe switch if required. 
 
               If COPYRIGHT is ON, the $cfg COPYRIGHT directives are 
-              replaced with the appropriate COPYRIGHT message.",
-		  #^CFG END COPYRIGHT
-		  #^CFG IF DOC BEGIN
-		  #^CFG IF NOT REMOVEDOCTEX BEGIN
-		  "
+              replaced with the appropriate COPYRIGHT message.
 
               If MAKEPDF is ON, Configure.pl will execute 'make PDF'
-              in the configured distribution. ",
-		  #^CFG IF DOCHTML BEGIN
-		  "
+              in the configured distribution.
 
               If MAKEHTML is ON, then HTML documentation is made 
-              in the configured distribution. ",
-		  #^CFG END DOCHTML
-		  #^CFG END REMOVEDOCTEX
-		  "
+              in the configured distribution. 
 
               If REMOVEDOCTEX is ON, the Doc/Tex directory will be removed
-              from the configured distribution.",
-		  #^CFG END DOC
-		  "
+              from the configured distribution.
 
               The _FALSE_ options is always OFF and it cannot be kept.
               This option marks unconfigurable features.
@@ -798,17 +804,11 @@ Configure.pl -on=configure,implicit -u -v
       Make a configurable but purely Cartesian build into CARTESIAN directory:
 
 Configure.pl -keepall -exe=cartesian -on=cartesian -d=CARTESIAN
-",
-    #^CFG IF DOC BEGIN
-    #^CFG IF NOT REMOVEDOCTEX BEGIN
-    "
+
       Build a complete distribution with manuals but no Doc/Tex directory:
 
 Configure.pl -on=DOC,DOCHTML,MAKEPDF,MAKEHTML,REMOVEDOCTEX
-",
-    #^CFG END REMOVEDOCTEX
-    #^CFG END DOC
-    "
+
       There can be only one $cfg directive per line, but 
       the $cfg IF (NOT) OPTION BEGIN ... $cfg END OPTION
       constructs can be arbitrarily nested. 
