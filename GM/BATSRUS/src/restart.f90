@@ -75,18 +75,18 @@ subroutine write_restart_header
   write(unit_tmp,'(i8,a32)') nI,'nI'
   write(unit_tmp,'(i8,a32)') nJ,'nJ'
   write(unit_tmp,'(i8,a32)') nK,'nK'
-  write(unit_tmp,'(i8,a32)') nBlockALL,'number_of_blocks'
+  write(unit_tmp,'(i8,a32)') nBlockALL,'MinBlockALL'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#PROBLEMTYPE'
-  write(unit_tmp,'(i8,a32)') iProblemType,'problem_type'
+  write(unit_tmp,'(i8,a32)') iProblemType,'iProblemType'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#NEWRESTART'
-  write(unit_tmp,'(l1,a39)') UseConstrainB,'restart_Bface'  !^CFG IF CONSTRAINB
+  write(unit_tmp,'(l1,a39)') UseConstrainB,'DoRestartBFace' !^CFG IF CONSTRAINB
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#BLOCKLEVELSRELOADED'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#NSTEP'
-  write(unit_tmp,'(i8,a32)')n_step,'n_step'
+  write(unit_tmp,'(i8,a32)')n_step,'nStep'
   write(unit_tmp,*)
   if(n_prev == n_step)then                              !^CFG IF IMPLICIT BEGIN
      write(unit_tmp,'(a)')'#NPREVIOUS'
@@ -95,60 +95,65 @@ subroutine write_restart_header
      write(unit_tmp,*)
   end if                                                !^CFG END IMPLICIT
   write(unit_tmp,'(a)')'#STARTTIME'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(1),'year'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(2),'month'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(3),'day'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(4),'hour'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(5),'minute'
-  write(unit_tmp,'(i8,a32)')iStartTime_I(6),'second'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(1),'iYear'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(2),'iMonth'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(3),'iDay'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(4),'iHour'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(5),'iMinute'
+  write(unit_tmp,'(i8,a32)')iStartTime_I(6),'iSecond'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#TIMESIMULATION'
   write(unit_tmp,'(es15.8,a25)')time_simulation,'tSimulation'
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#GRID'
-  write(unit_tmp,'(i8,a32)')proc_dims(1),'proc_dims(1)'
-  write(unit_tmp,'(i8,a32)')proc_dims(2),'proc_dims(2)'
-  write(unit_tmp,'(i8,a32)')proc_dims(3),'proc_dims(3)'
-  write(unit_tmp,'(1pe13.5,a27)')x1,'x1'
-  write(unit_tmp,'(1pe13.5,a27)')x2,'x2'
-  write(unit_tmp,'(1pe13.5,a27)')y1,'y1'
-  write(unit_tmp,'(1pe13.5,a27)')y2,'y2'
-  write(unit_tmp,'(1pe13.5,a27)')z1,'z1'
-  write(unit_tmp,'(1pe13.5,a27)')z2,'z2'
+  write(unit_tmp,'(i8,a32)')proc_dims(1),'nRootBlockX'
+  write(unit_tmp,'(i8,a32)')proc_dims(2),'nRootBlockY'
+  write(unit_tmp,'(i8,a32)')proc_dims(3),'nRootBlockZ'
+  write(unit_tmp,'(1pe13.5,a27)')x1,'xMin'
+  write(unit_tmp,'(1pe13.5,a27)')x2,'xMax'
+  write(unit_tmp,'(1pe13.5,a27)')y1,'yMin'
+  write(unit_tmp,'(1pe13.5,a27)')y2,'yMax'
+  write(unit_tmp,'(1pe13.5,a27)')z1,'zMin'
+  write(unit_tmp,'(1pe13.5,a27)')z2,'zMax'
   write(unit_tmp,*)
 !  write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   !^CFG IF NOT CARTESIAN
 !  write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' !^CFG IF NOT CARTESIAN
 !  write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' !^CFG IF NOT CARTESIAN
-  write(unit_tmp,'(a)')'#SOLARWIND'
-  write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SW_rho_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,'SW_T_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim,'SW_Ux_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim,'SW_Uy_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_Uz_dim,'SW_Uz_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_Bx_dim,'SW_Bx_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_By_dim,'SW_By_dim'
-  write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim,'SW_Bz_dim'
-  write(unit_tmp,*)
+!  write(unit_tmp,*)                                        !^CFG IF NOT CARTESIAN
+  if(NameThisComp=='GM')then
+     write(unit_tmp,'(a)')'#SOLARWIND'
+     write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SwRhoDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,  'SwTDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim, 'SwUxDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim, 'SwUyDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_Uz_dim, 'SwUzDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_Bx_dim, 'SwBxDdim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_By_dim, 'SwByDim'
+     write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
+     write(unit_tmp,*)
+  end if
   if(body1)then
      write(unit_tmp,'(a)')'#BODY'
-     write(unit_tmp,'(l1,a39)')body1,'body1'
-     write(unit_tmp,'(1pe13.5,a27)')Rbody,'Rbody'
-     write(unit_tmp,'(1pe13.5,a27)')Rcurrents,'Rcurrents'
-     write(unit_tmp,'(1pe13.5,a27)')Body_rho_dim,'Body_rho_dim'
-     write(unit_tmp,'(1pe13.5,a27)')Body_T_dim,'Body_T_dim'
+     write(unit_tmp,'(l1,a39)')body1,'UseBody'
+     write(unit_tmp,'(1pe13.5,a27)')Rbody,'rBody'
+     if(NameThisComp=='GM')then
+        write(unit_tmp,'(1pe13.5,a27)')Rcurrents,   'rCurrents'
+        write(unit_tmp,'(1pe13.5,a27)')Body_rho_dim,'BodyRhoDim'
+        write(unit_tmp,'(1pe13.5,a27)')Body_T_dim,  'BodyTDim'
+     end if
      write(unit_tmp,*)
   end if
   !^CFG IF SECONDBODY BEGIN
   if(UseBody2)then
      write(unit_tmp,'(a)')'#SECONDBODY'
-     write(unit_tmp,'(l1,a39)')UseBody2,'UseBody2'
-     write(unit_tmp,'(1pe13.5,a27)')Rbody2,'Rbody2'
-     write(unit_tmp,'(1pe13.5,a27)')xbody2,'xbody2'
-     write(unit_tmp,'(1pe13.5,a27)')ybody2,'ybody2'
-     write(unit_tmp,'(1pe13.5,a27)')zbody2,'zbody2'
+     write(unit_tmp,'(l1,a39)')     UseBody2,      'UseBody2'
+     write(unit_tmp,'(1pe13.5,a27)')Rbody2,        'rBody2'
+     write(unit_tmp,'(1pe13.5,a27)')xbody2,        'xBody2'
+     write(unit_tmp,'(1pe13.5,a27)')ybody2,        'yBody2'
+     write(unit_tmp,'(1pe13.5,a27)')zbody2,        'zBody2'
      write(unit_tmp,'(1pe13.5,a27)')rCurrentsBody2,'rCurrentsBody2'
-     write(unit_tmp,'(1pe13.5,a27)')RhoDimBody2,'RhoDimBody2'
-     write(unit_tmp,'(1pe13.5,a27)')tDimBody2,'tDimBody2'
+     write(unit_tmp,'(1pe13.5,a27)')RhoDimBody2,   'RhoDimBody2'
+     write(unit_tmp,'(1pe13.5,a27)')tDimBody2,     'tDimBody2'
      write(unit_tmp,*)
   end if
   !^CFG END SECONDBODY
