@@ -27,7 +27,7 @@ T			DoSaveRestart
 3                       iProblemType
 
 #USER_FLAGS
-F			UseUserInnerBCs
+T			UseUserInnerBCs
 F			UseUserSource
 T			UseUserPerturbation
 F			UseUserOuterBcs
@@ -94,9 +94,6 @@ F			UseCorotation
 #FACEOUTERBC
 6                       MaxBoundary
 F                       DoFixOuterBoundary
-
-#INNERBOUNADRY
-user                    TypeBc_I(body1_)
 
 #OUTERBOUNDARY
 heliofloat		TypeBcOuter_E(East_)

@@ -15,17 +15,17 @@ RESTART.in
 F			DoTimeAccurate
 
 #SAVERESTART
-T			save_restartfile
-2000			dn_output(restart_)
--1.0			dt_output(restart_)
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
 
-#BEGIN_COMP SC
+#BEGIN_COMP SC --------------------------------------------------------------
 
 #INCLUDE
 SC/restartIN/restart.H
 
 #USER_FLAGS
-F			UseUserInnerBCs
+T			UseUserInnerBCs
 F			UseUserSource
 T			UseUserPerturbation
 F			UseUserOuterBcs
@@ -39,7 +39,7 @@ T			UseUserB0
 F			UseUserSetPhysConst
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN ------------------------
 
 #USEUSERHEATING
 F			UseUserHeating
@@ -60,18 +60,18 @@ SC/CR1935_WSO.dat       File_PFSSM
 F     			UseStaticICs
 F                       UseZeroOmega
 
-#USERINPUTEND
+#USERINPUTEND ----------------------------
 
 #HELIOSPHERE
-1.80E+06		Tsun    [K]      1.0E6 
-5.00E+13		NDsun [n/m-3]
-10.00			Qsun
-1.76			Theat
-1.00			Rheat
-4.50			SIGMAheat
+1.80E+06		tSun    [K]      1.0E6 
+5.00E+13		NdSun [n/m-3]
+10.00			qSun
+1.76			tHeat
+1.00			rHeat
+4.50			SigmaHeat
 F			UseFluxRope
 
-#INERTIAL
+#HELIOROTATION
 T			UseInertial, if false then corotating frame
 F			UseCorotation
 
@@ -87,9 +87,9 @@ coupled 		TypeBcOuter_E(Bot_)
 coupled 		TypeBcOuter_E(Top_)
 
 #SCHEME
-2			nORDER (1 or 2)
-4			fluxfcn_type: 1=Roe 2=Rusanov 3=Linde 4=Sokolov
-minmod			limiter_type mc or minmod
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod			TypeLimiter
 
 #TIMESTEPPING
 2                       nStage
@@ -99,8 +99,8 @@ minmod			limiter_type mc or minmod
 #SAVELOGFILE
 T                       DoSaveLogfile
 VAR                     StringLog
-10                      dn_output(logfile_)
--1.0			dt_output(logfile_)
+10                      DnSaveLogfile
+-1.0			DtSaveLogfile
 em_r ek_r et_r
 4.0  10.0               rLog
 
@@ -249,6 +249,7 @@ minmod                  TypeLimiter
 #END_COMP IH -----------------------------------------------------------------
 
 
+#END_COMP SC ----------------------------------------------------------------
 
 #STOP
 20000                    MaxIter
