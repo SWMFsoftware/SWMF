@@ -430,7 +430,7 @@ contains
             FaceState_V(Bx_:Bz_)  /UnitSI_B
        FaceState_V(P_)        =&
              FaceState_V(P_)      /UnitSI_P
-       VarsGhostFace_V = cTwo*FaceState_V - VarsTrueFace_V
+       VarsGhostFace_V = FaceState_V
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
     end select
