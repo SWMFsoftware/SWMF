@@ -25,7 +25,7 @@ my $StandAlone  = $S; undef $S;
 use strict;
 
 # Pattern to match component ID-s
-my $ValidComp = 'IH|GM|IE|IM|UA';
+my $ValidComp = 'SC|IH|GM|IE|IM|UA';
 
 # Error string
 my $ERROR = 'CheckParam_ERROR:';
