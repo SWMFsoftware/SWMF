@@ -52,6 +52,7 @@ module ModGmImCoupling
 contains
 
   subroutine allocate_gm_im(iSizeIn,jSizeIn)
+    use CON_comp_param, ONLY: IM_
 
     integer, intent(in) :: iSizeIn, jSizeIn
     character(len=*), parameter:: NameSub=NameMod//'::allocate_gm_im'
