@@ -168,21 +168,9 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 !  LogNS(iN2_) = alog(msis_dens(3)/2.0)
   LogNS(iO_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
-  if (nSpecies > 2) then
-     ! This tricks the compiler...
-     iSpecies = iN2_
-     LogNS(iSpecies) = alog(msis_dens(3))
-  endif
-  if (nSpecies > 3) then
-     ! This tricks the compiler...
-     iSpecies = iN_4S_
-     LogNS(iSpecies) = alog(msis_dens(8))
-  endif
-  if (nSpecies > 4) then
-     ! This tricks the compiler...
-     iSpecies = iNO_
-     LogNS(iSpecies) = alog(8.0e12)
-  endif
+  if (nSpecies >= iN2_)   LogNS(min(iN2_  ,nSpecies)) = alog(msis_dens(3))
+  if (nSpecies >= iN_4S_) LogNS(min(iN_4S_,nSpecies)) = alog(msis_dens(8))
+  if (nSpecies >= iNO_)   LogNS(min(iNO_  ,nSpecies)) = alog(8.0e12)
 
   Temp        = msis_temp(2)/TempUnit
   LogRho      = alog(msis_dens(6))
