@@ -177,24 +177,35 @@ OBJECTS = \
 	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
 
 # Copy modules with static declaration of large variables into used modules
+NAME = Advance
+
+STATIC1:
+	cp -f Mod${NAME}_static.f90 Mod${NAME}.f90
+
 STATIC:
-	cp -f ModAdvance_static.f90  ModAdvance.f90
-	cp -f ModCT_static.f90       ModCT.f90       #^CFG IF CONSTRAINB
-	cp -f ModGeometry_static.f90 ModGeometry.f90
-	cp -f ModImplicit_static.f90 ModImplicit.f90 #^CFG IF IMPLICIT
-	cp -f ModNodes_static.f90    ModNodes.f90
-	cp -f ModRaytrace_static.f90 ModRaytrace.f90 #^CFG IF RAYTRACE
+	make -s STATIC1 NAME=Advance
+	make -s STATIC1 NAME=Nodes
+	make -s STATIC1 NAME=Geometry
+	make -s STATIC1 NAME=Implicit	#^CFG IF IMPLICIT
+	make -s STATIC1 NAME=Raytrace	#^CFG IF RAYTRACE
+	make -s STATIC1 NAME=CT		#^CFG IF CONSTRAINB
 
 # Transform modules with static declaration of large variables into 
 # modules with dynamic allocation as used modules
-S2D = ${SCRIPTDIR}/StaticToDynamic.pl
+DYNAMIC1: 
+	${SCRIPTDIR}/StaticToDynamic.pl ${LARGE} \
+		Mod${NAME}_static.f90 > Mod${NAME}.f90
+
 DYNAMIC:
-	${S2D} ModAdvance_static.f90  > ModAdvance.f90
-	${S2D} ModCT_static.f90       > ModCT.f90       #^CFG IF CONSTRAINB
-	${S2D} ModGeometry_static.f90 > ModGeometry.f90
-	${S2D} ModImplicit_static.f90 > ModImplicit.f90 #^CFG IF IMPLICIT
-	${S2D} ModNodes_static.f90    > ModNodes.f90
-	${S2D} ModRaytrace_static.f90 > ModRaytrace.f90 #^CFG IF RAYTRACE
+	make -s DYNAMIC1 NAME=Advance
+	make -s DYNAMIC1 NAME=Nodes
+	make -s DYNAMIC1 NAME=Geometry
+	@#^CFG IF IMPLICIT BEGIN
+	make -s DYNAMIC1 NAME=Implicit \
+		LARGE="-d=1 -l='MaxImplVar|,nBLK|,MaxImplBLK'" 
+	@#^CFG END IMPLICIT
+	make -s DYNAMIC1 NAME=Raytrace	#^CFG IF RAYTRACE
+	make -s DYNAMIC1 NAME=CT	#^CFG IF CONSTRAINB
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
