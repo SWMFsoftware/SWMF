@@ -278,6 +278,9 @@ contains
   !INTERFACE:
   subroutine show_all_comp
 
+    !USES:
+    use CON_variables,  ONLY: VersionSwmf
+    use CON_comp_param, ONLY: lNameVersion
     !DESCRIPTION:
     ! Show the version information and layout for all registered components.
     ! Show the version information for all working but unregistered components.
@@ -294,10 +297,9 @@ contains
 
     integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp
     !--------------------------------------------------------------------------
-    ! Show framework version
+    ! Get and show framework version
 
-    ! set code version 
-    call SWMF_version(IsOn, NameVersion, Version)
+    NameVersion  ='SWMF by Univ. of Michigan'
 
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
     write(*,'(2a)') &
@@ -305,7 +307,7 @@ contains
          'nproc proc0 stride#'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
     write(*,'(a,a,f5.2,3i6,a)')&
-         '# CON ',NameVersion//' version',Version,n_proc(),0,1,' #'
+         '# CON ',NameVersion//' version',VersionSwmf,n_proc(),0,1,' #'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
 
     ! Show registered components
@@ -398,18 +400,4 @@ end program SWMF
 
 !===========================================================================
 
-subroutine SWMF_version(IsOn,NameVersion,Version)
-
-  use CON_variables,  ONLY: VersionSwmf
-  use CON_comp_param, ONLY: lNameVersion
-
-  logical, intent(out)                      :: IsOn
-  character (len=lNameVersion), intent(out) :: NameVersion
-  real, intent(out)                         :: Version
-
-  IsOn         =.true.
-  NameVersion  ='SWMF by Univ. of Michigan'
-  Version      = VersionSwmf
-
-end subroutine SWMF_version
 
