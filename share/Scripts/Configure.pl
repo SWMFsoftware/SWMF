@@ -227,19 +227,23 @@ if($switch{MAKEPDF}      eq "ON" or
    $switch{MAKEHTML}     eq "ON" or
    $switch{REMOVEDOCTEX} eq "ON"){
 
-    # Try installation
     chdir $Dir or die "Could not cd $Dir\n";
-    my $result=system('./SetSWMF.pl -i');
-    warn "./SetSWMF.pl -i: $result\n" if $result;
 
+    # Try installation if SetSWMF.pl is in the configured directory
+    if(-f "SetSWMF.pl"){
+	my $result=system('./SetSWMF.pl -i');
+	warn "./SetSWMF.pl -i: $result\n" if $result;
+    }
+
+    # Process documentation if required
     my $texdir;
-    foreach $texdir ("Doc/Tex","doc/Tex","missing"){
+    TEXDIR: foreach $texdir ("Doc/Tex","doc/Tex","missing"){
 
 	die "Could not find LaTex directory $Dir/[Dd]oc/Tex\n"
 	    if $texdir eq "missing";
 
 	# Try to enter the LaTex directory
-	chdir $texdir or next;
+	chdir $texdir or next TEXDIR;
 
 	# Make HTML manual if required and possible
 	if($switch{MAKEHTML} eq "ON"){
@@ -261,7 +265,7 @@ if($switch{MAKEPDF}      eq "ON" or
 	    warn "Could not rm -rf Doc/Tex\n" if $result;
 	}
 
-	last;
+	last TEXDIR;
     }
 }
 
@@ -277,9 +281,9 @@ sub process_dir{
     # Check if directory contains a CVS directory or CVS_Entries file
     return unless -d "$dir/CVS" or -f "$dir/CVS_Entries";
 
-    # Check if there is a CFG file. 
-    # If the CFG file contains OPTION     then skipvalue is OFF
-    # if the CFG file contains NOT OPTION then skipvalue is ON.
+    # Check if there is a $Cfg file. 
+    # If the $Cfg file contains OPTION     then skipvalue is OFF
+    # if the $Cfg file contains NOT OPTION then skipvalue is ON.
     my $skipvalue;
     $infile = "$dir/$Cfg";
     if (-f $infile) {
@@ -328,7 +332,15 @@ sub process_dir{
     ENTRY: foreach $file (@entries){
 
 	#skip $Cfg file itself
-	next if $file eq $Cfg and not $KeepConfig;
+	if($file eq "$Cfg"){
+	    # The $Cfg file should not be kept if the build is not configurable
+	    next if not $KeepConfig;
+	    # The $Cfg file should not be kept if the option is not kept
+	    open(CFGDIRFILE,"$dir/$Cfg");
+	    $option=uc(<CFGDIRFILE>); chomp $option;
+	    close(CFGDIRFILE);
+	    next if $option !~ /$KeptOptions/i;
+	}
 
         my $infile="$dir/$file";       # recursive local variable
 	my $outfile="$Dir/$dir/$file"; # recursive local variable
