@@ -214,6 +214,8 @@ contains
   !INTERFACE:
   subroutine get_version_id(iComp,IsOn,NameVersion,Version)
 
+    use CON_comp_info
+
     !INPUT PARAMETERS:
     integer,                      intent(in)  :: iComp
     !OUTPUT PARAMETERS:

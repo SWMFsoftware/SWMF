@@ -130,6 +130,7 @@ contains
   !INTERFACE:
   subroutine set_param_id(iComp,TypeAction)
 
+    use CON_comp_info
     implicit none
 
     !INPUT PARAMETERS:
