@@ -294,7 +294,7 @@ subroutine write_restart_file
           global_block_number(globalBLK),restart_ext
   end if
 
-  open(unit_tmp, file=filename, status="unknown", form='UNFORMATTED')
+  open(unit_tmp, file=filename, status="replace", form='UNFORMATTED')
 
   write(Unit_tmp)  dt_BLK(globalBLK),time_Simulation
   write(Unit_tmp) &

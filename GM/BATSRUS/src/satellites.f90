@@ -347,7 +347,7 @@ subroutine open_satellite_output_files
           filename
 
      iUnitSat_I(iSat)=io_unit_new()
-     open(iUnitSat_I(iSat),file=filename,status='unknown')
+     open(iUnitSat_I(iSat),file=filename,status="replace")
   end do
 
 end subroutine open_satellite_output_files

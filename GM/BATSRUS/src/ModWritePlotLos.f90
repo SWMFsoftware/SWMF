@@ -250,7 +250,7 @@ subroutine write_plot_los(ifile)
              trim(plot_type1)//"_",&
              ifile-plot_,"_n",n_step,file_extension
      end if
-     open(unit_tmp,file=filename,status="unknown",err=999)
+     open(unit_tmp,file=filename,status="replace",err=999)
 
      ! write header file
      select case(plot_form(ifile))

@@ -162,7 +162,7 @@ subroutine write_logfile(log_type,ifile)
            unit_log = io_unit_new()
            write(filename,'(a,i6.6,a)')&
                 trim(NamePlotDir)//'log_n',n_step,'.log'
-           open(unit_log,file=filename,status='unknown')
+           open(unit_log,file=filename,status="replace")
            write(unit_log,'(a)')'Volume Averages, Fluxes, or point values'
            if (index(allnames,'pnt')>0 .or. index(allnames,'test')>0) then
    	      if (coord_test) then

@@ -473,7 +473,7 @@ subroutine write_octree_file
 
   call write_prefix; write(iUnitOut,*) '=> Writing restart files ...'
   open(UNITTMP_, file=trim(NameRestartOutDir)//"octree"//octree_ext, &
-       status="unknown", form="UNFORMATTED")
+       status="replace", form="UNFORMATTED")
   write(UNITTMP_) proc_dims(1),proc_dims(2),proc_dims(3)
   write(UNITTMP_) nBlockALL
 
