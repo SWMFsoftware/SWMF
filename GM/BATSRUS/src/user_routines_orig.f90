@@ -1269,8 +1269,8 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
 end subroutine add_GL98_fluxrope
 
 subroutine post_init_stat
-  use ModVarIndexes, ONLY: rho_,P_
-  use ModAdvance,    ONLY: State_VGB
+  use ModMain,ONLY:nBlockMax
+  use ModAdvance,    ONLY: State_VGB,rho_,P_
   use ModProcMH,     ONLY: iProc
   use ModUser,       ONLY: InvH0,Mrope_GL98,MaxB0,Tnot,Bnot
   use ModPhysics,    ONLY: Gbody
@@ -1283,15 +1283,15 @@ subroutine post_init_stat
   if (iProc==0) then
      write(*,*) ''
      write(*,*) '>>>>>>>>>>>>>>>>>>> Pressure and Density Log <<<<<<<<<<<<<<<<<<<<<'
-     write(*,*) ''
+     write(*,*) 'At PE=0'
      write(*,*) 'The value of MaxB0 is :: ',MaxB0
      write(*,*) 'The value of Bnot  is :: ',Bnot
      write(*,*) 'The min,max P is      :: ',&
-          minval(State_VGB(P_,:,:,:,:)),&
-          maxval(State_VGB(P_,:,:,:,:))
+          minval(State_VGB(P_,:,:,:,1:nBlockMax)),&
+          maxval(State_VGB(P_,:,:,:,1:nBlockMax))
      write(*,*) 'The min,max Rho is    :: ',&
-          minval(State_VGB(rho_,:,:,:,:))  ,&
-          maxval(State_VGB(rho_,:,:,:,:))
+          minval(State_VGB(rho_,:,:,:,1:nBlockMax))  ,&
+          maxval(State_VGB(rho_,:,:,:,1:nBlockMax))
      write(*,*) 'The value of Tnot  is :: ',Tnot
      write(*,*) 'The value of InvH0 is :: ',InvH0
      write(*,*) 'The value of Gbody is :: ',Gbody
