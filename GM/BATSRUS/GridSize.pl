@@ -138,11 +138,11 @@ sub set_grid_size{
 
     while(<>){
 	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(nI\s*=[^\d]*)(\d+)/$1$nI/i;
-	s/\b(nJ\s*=[^\d]*)(\d+)/$1$nJ/i;
-	s/\b(nK\s*=[^\d]*)(\d+)/$1$nK/i;
-	s/\b(nBLK\s*=[^\d]*)(\d+)/$1$MaxBlock/i;
-	s/\b(MaxImplBLK\s*=[^\d]*)(\d+)/$1$MaxImplBlock/i;
+	s/\b(nI\s*=[^0-9]*)(\d+)/$1$nI/i;
+	s/\b(nJ\s*=[^0-9]*)(\d+)/$1$nJ/i;
+	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
+	s/\b(nBLK\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
+	s/\b(MaxImplBLK\s*=[^0-9]*)(\d+)/$1$MaxImplBlock/i;
 	print;
     }
 
