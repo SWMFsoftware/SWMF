@@ -16,7 +16,7 @@ Module ModAdvance
   real :: percent_max_rho(2), percent_max_p(2)
 
 
-  ! Numerical flux type and optimization
+  ! Numerical flux type
   character (len=10) :: FluxType
 
   !\
@@ -36,7 +36,6 @@ Module ModAdvance
 
   ! Cells selected to be updated with conservative equations
   logical, dimension(:,:,:,:), allocatable :: IsConserv_CB
-
 
   !\
   ! Block cell-centered MHD solution
@@ -67,6 +66,8 @@ Module ModAdvance
   ! Array for storing dB0/dt derivatives
   real, allocatable :: Db0Dt_CDB(:,:,:,:,:)
 
+  ! Arrays for the total electric field
+  real, dimension(1:nI,1:nJ,1:nK,nBLK) :: Ex_CB, Ey_CB, Ez_CB
 
   !\
   ! Block cell-centered body forces & heat sources
@@ -81,12 +82,9 @@ Module ModAdvance
   real, dimension(1:nI,1:nJ,1:nK) :: Theat0
   real,dimension(0:nI+1,0:nJ+1,0:nK+1,nBLK):: DivB1_GB
   real, dimension( 0:nI+1, 0:nJ+1, 0:nK+1) :: &
-       gradX_rho,gradX_Ux,gradX_Uy,gradX_Uz,gradX_Bx,gradX_By,gradX_Bz,gradX_p,&
-       gradX_VAR,&
-       gradY_rho,gradY_Ux,gradY_Uy,gradY_Uz,gradY_Bx,gradY_By,gradY_Bz,gradY_p,&
-       gradY_VAR,&
-       gradZ_rho,gradZ_Ux,gradZ_Uy,gradZ_Uz,gradZ_Bx,gradZ_By,gradZ_Bz,gradZ_p,&
-       gradZ_VAR
+       gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
+       gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
+       gradZ_Ux, gradZ_Uy, gradZ_Uz, gradZ_Bx, gradZ_By, gradZ_Bz, gradZ_VAR
 
   !\
   ! Block face-centered intrinsic magnetic field array definitions.
@@ -107,7 +105,7 @@ Module ModAdvance
   integer, parameter :: nFaceValueVars = nVar
   real, dimension(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1) ::     &
        LeftState_VX,      &  ! Face Left  X
-       RightState_VX          ! Face Right X 
+       RightState_VX         ! Face Right X 
   real, dimension(2-gcn:nI+gcn,0:nJ+1,0:nK+1) ::     &
        EDotFA_X,                              & !^CFG IF BORISCORR      
        VdtFace_x,UDotFA_X    ! V/dt Face  X
