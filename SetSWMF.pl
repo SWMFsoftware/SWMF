@@ -503,7 +503,7 @@ Options:
                already exists.
                The long form -install redoes the installation in any case.
 
--l             List available component versions
+-l  -list      List available component versions
 
 -m=MPIVERSION  copy mpif90_OSMPIVERSION into mpif90.h during installation
 
@@ -528,13 +528,13 @@ Show current settings:
 
     SetSWMF.pl -s
 
-Install SWMF with the efc compiler and Altix MPI and select single precision:
+Install SWMF with the ifort compiler and Altix MPI and select single precision:
 
-    SetSWMF.pl -i -c=efc -m=Altix -p=single
+    SetSWMF.pl -i -c=ifort -m=Altix -p=single
 
-Reinstall SWMF with new parameters:
+Reinstall SWMF with new compiler:
 
-    SetSWMF.pl -install -c=ifort -m=Altix -p=double
+    SetSWMF.pl -install -c=pgf90
 
 Uninstall SWMF (if this fails, run SetSWMF.pl -install first):
 
