@@ -4,6 +4,8 @@ module ModImplicit
 
   use ModSize
   use ModVarIndexes, ONLY: nVar, P_
+  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModProcMH,     ONLY: iProc
 
   implicit none
   SAVE
@@ -138,9 +140,19 @@ contains
   !============================================================================
   subroutine init_mod_implicit
 
+    if(IsDynamicImplicit .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'init_mod_implicit allocated arrays'
+    end if
+
   end subroutine init_mod_implicit
   !============================================================================
   subroutine clean_mod_implicit
+
+    if(IsDynamicImplicit .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'clean_mod_implicit deallocated arrays'
+    end if
 
   end subroutine clean_mod_implicit
 

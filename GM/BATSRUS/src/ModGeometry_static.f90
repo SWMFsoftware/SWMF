@@ -2,6 +2,8 @@
 Module ModGeometry
   use ModSize
   use ModMain,ONLY:body2_,ExtraBc_
+  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModProcMH,     ONLY: iProc
 
   implicit none
   SAVE
@@ -63,9 +65,19 @@ contains
   !============================================================================
   subroutine init_mod_geometry
 
+    if(IsDynamicGeometry .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
+    end if
+
   end subroutine init_mod_geometry
   !============================================================================
   subroutine clean_mod_geometry
+
+    if(IsDynamicGeometry .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'clean_mod_geometry deallocated arrays'
+    end if
 
   end subroutine clean_mod_geometry
 

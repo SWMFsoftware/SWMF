@@ -3,6 +3,9 @@
 module ModCT
 
   use ModSize
+  use ModIO,         ONLY: iUnitOut, write_prefix
+  use ModProcMH,     ONLY: iProc
+
   implicit none
   SAVE
 
@@ -36,9 +39,19 @@ contains
   !============================================================================
   subroutine init_mod_ct
 
+    if(IsDynamicConstrainB .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'init_mod_ct allocated arrays'
+    end if
+
   end subroutine init_mod_ct
   !============================================================================
   subroutine clean_mod_ct
+
+    if(IsDynamicConstrainB .and. iProc==0)then
+       call write_prefix
+       write(iUnitOut,'(a)') 'clean_mod_ct deallocated arrays'
+    end if
 
   end subroutine clean_mod_ct
 
