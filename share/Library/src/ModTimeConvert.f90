@@ -409,7 +409,7 @@ contains
   !INTERFACE:
   subroutine test_time
 
-    type(TimeType) :: TimeCurrent, TimeStart
+    type(TimeType) :: TimeConvert, TimeStart
 
     !EOP
     !-------------------------------------------------------------------------
@@ -443,13 +443,13 @@ contains
 
                ! Convert to real time
                call time_int_to_real(TimeStart)
-               TimeCurrent % Time = TimeStart % Time
+               TimeConvert % Time = TimeStart % Time
                ! Convert back
-               call time_real_to_int(TimeCurrent)
+               call time_real_to_int(TimeConvert)
 
-               if(TimeCurrent % String /= TimeStart % String) then
+               if(TimeConvert % String /= TimeStart % String) then
                   write(*,*)'TimeStart  =',TimeStart % String
-                  write(*,*)'TimeCurrent=', TimeCurrent % String
+                  write(*,*)'TimeConvert=', TimeConvert % String
                   stop
                end if
             end do
