@@ -193,7 +193,7 @@ OBJECT:
 	    ### print "base=$base uses $use{$base}\n";
 	}
 	# Check for 'include "filename"'
-	if(/^\s*include\s+[\"\']?([^\'\"\s]+)/i){
+	if(/^\s*include\s+[\"\']([^\'\"]+)/i){
 	    $include=$1;
 	    $includeorig=$include;
 	    if(not -e $include){
