@@ -34,10 +34,23 @@ public:
 
   int LocalGasModel;
 
+  double midpoint[3];
+  bool midpointinitflag;
+
   Ccell() {
+    midpointinitflag=false;
     measure_value=-1.0;
     LocalGasModel=-1;
     for (int i=0;i<4;i++) nodeno[i]=-1,faceno[i]=-1,neighbour_cellno[i]=-1,node[i]=NULL,face[i]=NULL;
+  };
+
+  double *GetMidPoint() {
+    if (midpointinitflag==false) {
+      midpointinitflag=true;
+      GetCellCenter(midpoint);
+    }
+
+    return midpoint;
   };
 
   void GetCellCenter(double* x) {

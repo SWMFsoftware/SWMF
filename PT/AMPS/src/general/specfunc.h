@@ -13,24 +13,25 @@ template<class TMesh>
 bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid) {
   int counter,idim,pface;
   long int neib;
-  double x[4][3],x0[3],df[4];
+  double dx2,x[4][3],x0[3],df[4];
   double A[3][3],aa[3][3],af[3],detaa;
 
   switch (DIM) {
   case 1:
     grid.cell[ncell].GetCellCenter(x0);
-    counter=0,gradQ[0]=0.0;
+    counter=0,gradQ[0]=0.0,dx2=0.0;
 
     for (pface=0;pface<DIM+1;pface++) if ((neib=grid.cell[ncell].neighbour_cellno[pface])>=0) {
       counter++;
 
       grid.cell[neib].GetCellCenter(x[pface]);
-      gradQ[0]+=(Q[pface]-cellQ)/(x[pface][0]-x0[0]);
+      gradQ[0]+=(Q[pface]-cellQ)*(x[pface][0]-x0[0]);
+      dx2=pow(x[pface][0]-x0[0],2);
     }
 
-    if (counter!=DIM+1) return false;
+    gradQ[0]/=(counter!=0) ? dx2 : 1.0; 
 
-    gradQ[0]/=(counter!=0) ? counter : 1;
+    if (counter!=DIM+1) return false;
     break;
   case 2:
     grid.cell[ncell].GetCellCenter(x0);

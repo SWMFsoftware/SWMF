@@ -16,6 +16,9 @@ template<class DataType=float,class NodeType=Cnode<DataType> >
 class Cface{
   DataType nrml[3];
   double measure;
+
+  double midpoint[3]; 
+  bool midpointinitflag;
    
 public:
   unsigned char faceat,surface_group;
@@ -23,7 +26,26 @@ public:
   NodeType* node[3];
 
   Cface() {
+    midpointinitflag=false;
     measure=-1.0;
+  };
+
+  double* GetMidPoint() {
+    if (midpointinitflag==false) {
+      DataType nodex[3];
+      int pnode,idim;
+
+      for (idim=0;idim<DIM;idim++) midpoint[idim]=0.0;
+
+      for (pnode=0;pnode<DIM;pnode++) {
+        node[pnode]->GetX(nodex);
+        for (idim=0;idim<DIM;idim++) midpoint[idim]+=nodex[idim]/DIM;       
+      }
+
+      midpointinitflag=true;
+    }
+
+    return midpoint;
   };
 
 //===================================================
