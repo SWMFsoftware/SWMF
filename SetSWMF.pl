@@ -292,6 +292,9 @@ sub set_versions{
 	"and not GM/$Version{GM}\n"
         if $Version{IH} eq 'BATSRUS_share' and $Version{GM} !~ /^BATSRUS/;
 
+    die "$ERROR non Empty UA version requires non Empty IE version\n"
+        if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
+
     if(not $change){
 	&set_version_makefile_comp; return;
     }
