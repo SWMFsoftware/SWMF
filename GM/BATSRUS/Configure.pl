@@ -24,7 +24,7 @@ my $Exe        = $exe;
 my $KeepAll    = $keepall;
 
 # Set default destination directory
-$Dir = "../BATSRUS_conf" unless length($Dir)>0;
+$Dir = "Build" unless length($Dir)>0;
 
 # Define unique string for directives
 my $cfg='^'.'CFG';
