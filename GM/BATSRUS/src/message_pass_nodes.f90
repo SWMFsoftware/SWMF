@@ -896,7 +896,7 @@ subroutine testmessage_pass_nodes
                    ' Values=',V0(i,j,k,iBLK),V1(i,j,k,iBLK)
            end if
         end do; end do; end do
-        if(n/=0) stop
+        if(n/=0) call stop_mpi('testmessage_pass_nodes n/=0')
      end do
      call stop_mpi("testmessage_pass_nodes error")
   end if
@@ -1198,7 +1198,7 @@ subroutine assign_node_numbers
               write(*,*)'  NodeNumberGlobal_IIIB=',NodeNumberGlobal_IIIB(i,j,k,iBLK)
               write(*,*)'  nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
                    ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
-              stop
+              call stop_mpi('message_pass_nodes: error in numbering')
            end if
         end do; end do; end do
      end if
@@ -1210,7 +1210,8 @@ subroutine assign_node_numbers
 
   ! Write information to the screen
   if(iProc==0)then
-     write(*,*)' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
+     call write_prefix; write(iUnitOUt,*) &
+          ' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
           ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
   end if
 
