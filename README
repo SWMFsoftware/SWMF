@@ -3,10 +3,15 @@
 #############################
 
 # Get the source code from cvs (UM only) or from the tar ball.
-cvs checkout SWMF_NEW    -OR-    tar -xzf SWMF_v2.tgz
 
-# Change directory
+# !!! Getting from CVS !!!
+cvs checkout SWMF_NEW  
 cd SWMF_NEW
+
+# !!! Opening the tar ball !!!
+mkdir SWMF_NEW
+cd SWMF_NEW
+tar -xzf ../SWMF_v2.tgz
 
 # From withing this directory, open the test tar ball
 # It will create a test/ subdirectory with several files
@@ -211,7 +216,7 @@ cd ..
 # more-and-more accurate numerical schemes. The final state
 # is a steady state to high accuracy. 
 
-# You can use the SWMF with the default settings, 
+# You can use the SWMF with the settings used in the 8 components test, 
 # but you only need the SC component,
 # all other component versions can be Empty.
 
@@ -255,7 +260,7 @@ cd ..
 
 # !!! This test requires the SC restart files created in TEST 3 !!!
 
-# You can use the SWMF with the default settings, 
+# You can use the SWMF with the settings used in the 8 components test, 
 # but you only need the SC and IH components,
 # all other component versions can be Empty.
 
@@ -306,7 +311,7 @@ cd ..
 # Otherwise this test can be run independently, 
 # no restart files are read.
 
-# You can use the SWMF with the default settings, 
+# You can use the SWMF with the settings used in the 8 components test, 
 # but you only need the GM component,
 # all other component versions can be Empty.
 
@@ -348,7 +353,7 @@ cd ..
 
 # !!! This test requires the GM restart files created in TEST 5 !!!
 
-# You can use the SWMF with the default settings, 
+# You can use the SWMF with the settings used in the 8 components test, 
 # but you only need the GM, IM, IE and UA components,
 # all other component versions can be Empty.
 
@@ -436,7 +441,7 @@ tar xzf ../test/scih_restart.tgz
 gunzip ../test/scih_restart_sgi.tgz
 tar xf ../test/scih_restart_sgi.tar
 
-# You can use the SWMF with the default settings, 
+# You can use the SWMF with the settings used in the 8 components test, 
 # but you only need the SC, IH and SP components,
 # all other component versions can be Empty.
 
