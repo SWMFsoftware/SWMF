@@ -1048,7 +1048,7 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi('PROBLEM TYPE CANNOT BE OVERWRITTEN !')
         else
            if(iProc==0)write(*,'(a)')NameSub // &
-                ' WARNING: probem type set twice !!!'
+                ' WARNING: problem type set twice !!!'
         end if                                  !^CFG END SIMPLE
      case("#RESTARTINDIR")
         if(.not.is_first_session())CYCLE
