@@ -39,7 +39,7 @@ BATSRUS_SCRIPTS = \
 	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
 
 COUPLE_IHGM = ${CONDIR}/Interface/src/CON_couple_ih_gm.protex #     ^CMP IF IH
-COUPLE_GMIE = ${CONDIR}/Interface/src/CON_couple_gm_ie_swmf.protex #^CMP IF IE
+COUPLE_GMIE = ${CONDIR}/Interface/src/CON_couple_gm_ie.protex #     ^CMP IF IE
 COUPLE_GMIM = ${CONDIR}/Interface/src/CON_couple_gm_im.protex #     ^CMP IF IM
 #^CMP END GM
 
@@ -59,6 +59,7 @@ SWMFREF = \
 	${DIR}/Scripts/TestParam.protex \
 	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/ExpandParam.protex \
+	${DIR}/Scripts/Restart.protex \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
@@ -205,15 +206,19 @@ SWMF.dvi: \
 	SWMF_control.tex \
 	SWMFXML.tex \
 	SWMF_couple.tex \
-	SWMF_new_comp.tex \
+	SWMF_new_comp.tex
+
+REFERENCE.dvi:\
 	SWMFREF.tex
 
-PDF: SWMF.pdf TESTING.pdf
+PDF: SWMF.pdf TESTING.pdf REFERENCE.pdf
 
 #^CMP IF DOCHTML BEGIN
-SWMF.html: SWMFREF.tex SWMFXML.tex
+SWMF.html: SWMFXML.tex
+REFERENCE.html: SWMFREF.tex
 HTML: cleanhtml
 	make SWMF.html
+	make REFERENCE.html
 #^CMP END DOCHTML
 
 clean:
@@ -222,7 +227,7 @@ clean:
 	@rm -f ${SWMFREF} ${SWMFXML}
 
 cleanpdf: clean
-	cd ..;     rm -f  SWMF.pdf TESTING.pdf
+	cd ..; rm -f  SWMF.pdf REFERENCE.pdf TESTING.pdf
 
 #^CMP IF DOCHTML BEGIN
 cleanhtml: clean
