@@ -1,17 +1,2 @@
-precision.o:		precision.f90
-			${COMPILE.f90} ${Cflag0} precision.f90
-
-io.o:			io.f90
-			${COMPILE.f90} ${Cflag0} io.f90
-
-CSR.o:			precision.o io.o CSR.f90
-			${COMPILE.f90} ${Cflag0} CSR.f90
-
-MSR.o:			precision.o io.o MSR.f90
-			${COMPILE.f90} ${Cflag0} MSR.f90
-
-LUCS.o:			LUC.f90
-			${COMPILE.f90} ${Cflag0} LUC.f90
-
 LUCSRMSR.o:		CSR.o MSR.o LUCSRMSR.f90
-			${COMPILE.f90} ${Cflag0} LUCSRMSR.f90
+			${COMPILE.f90} ${Cflag1} LUCSRMSR.f90
