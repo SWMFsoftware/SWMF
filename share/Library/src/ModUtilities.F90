@@ -149,16 +149,21 @@ contains
 #endif
  
 #ifdef compPGF90
-    call flush(iUnit) !pgf90 case
+    call flush(iUnit)
 #endif
 
 #ifdef compXLF90
-    call flush(iUnit) !xlf case
+    call flush(iUnit)
+#endif
+
+#ifdef compifort
+    call flush(iUnit) 
 #endif
 
 #ifdef sysOSF1
     call flush(iUnit) 
 #endif
+
   end subroutine flush_unit
 
   !BOP ========================================================================
