@@ -195,11 +195,15 @@ described in detail.
 
 If two components reside on different sets of processing elements
 (PE-s) they can execute in an efficient concurrent manner.
-This is possible, because the coupling times are
-known in advance.  The components advance to the time of coupling and
+This is possible, because the coupling times (in terms of the simulation time
+or number of iterations) are known in advance.  
+The components advance to the time of coupling and
 only the processors involved in the coupling need to communicate with
 each other. The components are also allowed to share some processing elements.
 The execution is sequential for the components with overlapping layouts.
+This can be useful when the execution time of the components vary a lot
+during the run, or when a component needs a lot of processors 
+for memory storage, but it requires little CPU time.
 Of course this still allows the individual components to execute in parallel.
 For steady state calculations the components are allowed to progress
 at different rates towards steady state. Each component can be called
