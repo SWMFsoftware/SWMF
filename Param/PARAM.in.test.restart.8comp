@@ -8,7 +8,7 @@ Restart SC-IH-SP-GM-IM-RB-IE-UA/GITM in time accurate mode.
 T			UseTiming
 -1			DnTiming
 -1			nDepthTiming
-cumm			TypeTimingReport
+cumu			TypeTimingReport
 
 #INCLUDE
 RESTART.in
