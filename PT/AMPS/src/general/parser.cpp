@@ -144,7 +144,13 @@ void parser(char* InputFile) {
     CutInputStr(str1,str);
     if (strcmp("#GENERAL",str1)==0) GeneralBlock();
     else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile); 
+
+#if CompilationTarget==DSMCTARGET
     else if (strcmp("#DSMC",str1)==0) dsmc.parser(fd,line,InputFile);
+#elif CompilationTarget==PICTARGET
+    else if (strcmp("#DSMC",str1)==0) pic.parser(fd,line,InputFile);
+#endif
+
     else if (strcmp("#END",str1)==0) return;
     else error();
   }
