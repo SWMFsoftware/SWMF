@@ -302,6 +302,7 @@ contains
   subroutine near_r_current(&
        GridDescriptor,&
        lGlobalTreeNode,&
+       nDim,&
        Xyz_D,&
        nIndexes,&
        Index_I,&
@@ -309,7 +310,8 @@ contains
 !INPUT ARGUMENTS:
     type(GridDescriptorType),intent(in)::GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
-    real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
+    integer,intent(in)::nDim
+    real,intent(inout)::Xyz_D(nDim)
     integer, dimension(nIndexes),intent(inout)::Index_I
 !OUTPUT ARGUMENTS:
     logical,intent(out)::IsInterfacePoint

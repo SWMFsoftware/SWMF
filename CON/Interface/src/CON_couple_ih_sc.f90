@@ -179,6 +179,7 @@ contains
   subroutine outer_cells(&
        GridDescriptor,&
        lGlobalTreeNode,&
+       nDim,&
        Xyz_D,&
        nIndexes,&
        Index_I,&
@@ -187,10 +188,11 @@ contains
     type(GridDescriptorType),intent(in):: GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
     logical,intent(out)::IsInterfacePoint
-    real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D
-    integer, dimension(nIndexes),intent(inout)::Index_I
-    logical,dimension(3)::&
-         IsLeftFace_D,IsRightFace_D
+    integer,intent(in)::nDim
+    real,intent(inout)::Xyz_D(nDim)
+    integer,intent(inout)::Index_I(nIndexes)
+
+    logical,dimension(3)::IsLeftFace_D,IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
     IsLeftFace_D=Index_I(x_:z_)<1.and.is_left_boundary_d(&
