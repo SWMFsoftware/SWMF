@@ -684,13 +684,12 @@ sub print_help{
              [-s] [-t] [-v]
              [inputfile1] [inputfile2] ...
 
-      NOTE: all option names, 'on' or 'off' strings and all ^CMP directives
+      NOTE: all option names, 'on' or 'off' strings and all \^CXX directives
       are capitalized by Configure.pl, so the syntax is case insensitive !
 
-      -c=STR  The string used in the directives and the name of the 
-              directory config files. The default value for STR is 'CMP',
-              which means that the directives start with \^"."CMP and
-              the directory config files are named CMP.
+      -c=STR  Sets the string used in the directives to ^STR 
+              and the name of the directory config files to STR.
+              The default value for STR is 'CMP',
 
       -D      print debug info
 
@@ -731,13 +730,14 @@ sub print_help{
               that option3 can be ON only if option1 and option6 are ON.
               Empty lines and comments following # are permitted.
 
-              The options in combination with the ^CMP directives and 
-              the ^CMP files can be used to remove or insert some text, 
-              to omit files, or to skip whole directories during configuration.
+              The options in combination with the directives and the
+              directory config files can be used to remove or insert some 
+              text, to omit files, or to skip whole directories during 
+              configuration.
 
               Special options:
 
-              If CONFIGURE is ON then the ^CMP directives are kept 
+              If CONFIGURE is ON then the directives are kept 
               without any processing for the options which remain 
               configurable. This is based on the directives in the option file 
               (default is Configure.options): if the configured
@@ -746,7 +746,7 @@ sub print_help{
               A subset of the configurable options can be removed with
               the -exe switch if required. 
 
-              If COPYRIGHT is ON, the ^CMP COPYRIGHT directives are 
+              If COPYRIGHT is ON, the COPYRIGHT directives are 
               replaced with the appropriate COPYRIGHT message.
 
               If MAKEPDF is ON, Configure.pl will execute 'make PDF'
@@ -792,11 +792,11 @@ sub print_help{
                     Binary, .ps, and .eps files are copied 
                     without processing.
 
-                    If a ^CMP file exists in a directory and contains
-                    an OPTIONNAME (or NOT OPTIONNAME), the directory is 
-                    omitted when that option is OFF (or ON). 
+                    If a directory config file exists in a directory and c
+                    ontains an OPTIONNAME (or NOT OPTIONNAME), the directory 
+                    is omitted when that option is OFF (or ON). 
                     Otherwise the directory is processed, but 
-                    the ^CMP file is only kept if the CONFIGURE option is ON.
+                    the config file is only kept if the CONFIGURE option is ON.
 
       Examples:
 
@@ -841,34 +841,35 @@ Configure.pl -keepall -exe=cartesian -on=cartesian -d=CARTESIAN
 
 Configure.pl -on=DOC,DOCHTML,MAKEPDF,MAKEHTML,REMOVEDOCTEX
 
-      There can be only one ^CMP directive per line, but 
-      the ^CMP IF (NOT) OPTION BEGIN ... ^CMP END OPTION
+      There can be only one directive per line, but 
+      the IF (NOT) OPTION BEGIN ... END OPTION
       constructs can be arbitrarily nested. 
-      The following example shows all the ^CMP directives:
+      The following example shows all the directives with the directive
+      set to the STR string:
 
-!^CMP COPYRIGHT UM
-!^CMP FILE OPTION1
-!^CMP FILE NOT OPTION4
+!^STR COPYRIGHT UM
+!^STR FILE OPTION1
+!^STR FILE NOT OPTION4
 text0
-text1 !^CMP IF OPTION1
-text2 !^CMP IF OPTION2
-text3 !^CMP IF OPTION1 BEGIN
+text1 !^STR IF OPTION1
+text2 !^STR IF OPTION2
+text3 !^STR IF OPTION1 BEGIN
 text4
-text5 !^CMP END OPTION1
-text6 !^CMP IF OPTION2 BEGIN
+text5 !^STR END OPTION1
+text6 !^STR IF OPTION2 BEGIN
 text7
-text8 !^CMP END OPTION2
+text8 !^STR END OPTION2
 text9
 text10
-!text11 ^CMP UNCOMMENT IF OPTION1
-<!-- text12 ^CMP UNCOMMENT IF NOT OPTION2 -->
-text13 !^CMP IF NOT OPTION3 BEGIN
+!text11 ^STR UNCOMMENT IF OPTION1
+<!-- text12 ^STR UNCOMMENT IF NOT OPTION2 -->
+text13 !^STR IF NOT OPTION3 BEGIN
 text14
-text15 !^CMP END OPTION3
-text16 !^CMP IF NOT OPTION4 BEGIN
+text15 !^STR END OPTION3
+text16 !^STR IF NOT OPTION4 BEGIN
 text17
-text18 !^CMP END OPTION4
-text19 !^CMP IF OPTION3
+text18 !^STR END OPTION4
+text19 !^STR IF OPTION3
 
       If this is proccessed with 
 
@@ -893,7 +894,7 @@ text17
 text18
 text19
 
-       Note that the comment character in front of ^CMP COPYRIGHT is used
+       Note that the comment character in front of ^STR COPYRIGHT is used
        to comment out the text of the COPYRIGHT.
 
        Also note that the leading comment character 
@@ -902,19 +903,19 @@ text19
        in front of text11 and text12, respectively, were removed! 
 
        If OPTION1 was OFF or OPTION4 was ON, the configured file would be 
-       empty and omitted due to the ^CMP FILE directives. 
+       empty and omitted due to the ^STR FILE directives. 
 
        Recursive configuration is possible if the CONFIGURE option is ON.
        In this case all options which remain in the option file after
        configuration will keep their directives for later configuration.
        Let's assume that we have the following option file 'options':
 
-CONFIGURE                OFF            ^CMP IF CONFIGURE
-COPYRIGHT                OFF            ^CMP IF NOT COPYRIGHT
-OPTION1                  ON             ^CMP IF OPTION1
-OPTION2                  OFF            ^CMP IF OPTION2
-OPTION3                  ON             ^CMP IF OPTION3
-OPTION4                  OFF            ^CMP IF NOT OPTION4
+CONFIGURE                OFF            ^STR IF CONFIGURE
+COPYRIGHT                OFF            ^STR IF NOT COPYRIGHT
+OPTION1                  ON             ^STR IF OPTION1
+OPTION2                  OFF            ^STR IF OPTION2
+OPTION3                  ON             ^STR IF OPTION3
+OPTION4                  OFF            ^STR IF NOT OPTION4
 
        If the same input file is processed with
 
@@ -922,25 +923,25 @@ Configure.pl -o=options -on=CONFIGURE
 
        we obtain:
 
-!^CMP COPYRIGHT UM
-!^CMP FILE OPTION1
-!^CMP FILE NOT OPTION4
+!^STR COPYRIGHT UM
+!^STR FILE OPTION1
+!^STR FILE NOT OPTION4
 text0
-text1 !^CMP IF OPTION1
-text3 !^CMP IF OPTION1 BEGIN
+text1 !^STR IF OPTION1
+text3 !^STR IF OPTION1 BEGIN
 text4
-text5 !^CMP END OPTION1
+text5 !^STR END OPTION1
 text9
 text10
-!text11 ^CMP UNCOMMENT IF OPTION1
+!text11 ^STR UNCOMMENT IF OPTION1
 text12
-text13 !^CMP IF NOT OPTION3 BEGIN
+text13 !^STR IF NOT OPTION3 BEGIN
 text14
-text15 !^CMP END OPTION3
-text16 !^CMP IF NOT OPTION4 BEGIN
+text15 !^STR END OPTION3
+text16 !^STR IF NOT OPTION4 BEGIN
 text17
-text18 !^CMP END OPTION4
-text19 !^CMP IF OPTION3
+text18 !^STR END OPTION4
+text19 !^STR IF OPTION3
 
        The output remains configurable in terms of OPTION1, OPTION3, OPTION4,
        and COPYRIGHT. Note that line 11 remains commented out and 
@@ -952,21 +953,21 @@ Configure.pl -o=options -exe=OPTION3
 
        and we obtain:
 
-!^CMP COPYRIGHT UM
-!^CMP FILE OPTION1
-!^CMP FILE NOT OPTION4
+!^STR COPYRIGHT UM
+!^STR FILE OPTION1
+!^STR FILE NOT OPTION4
 text0
-text1 !^CMP IF OPTION1
-text3 !^CMP IF OPTION1 BEGIN
+text1 !^STR IF OPTION1
+text3 !^STR IF OPTION1 BEGIN
 text4
-text5 !^CMP END OPTION1
+text5 !^STR END OPTION1
 text9
 text10
-!text11 ^CMP UNCOMMENT IF OPTION1
+!text11 ^STR UNCOMMENT IF OPTION1
 text12
-text16 !^CMP IF NOT OPTION4 BEGIN
+text16 !^STR IF NOT OPTION4 BEGIN
 text17
-text18 !^CMP END OPTION4
+text18 !^STR END OPTION4
 text19
 
        Note that in this case all the OPTION3 directives were 
