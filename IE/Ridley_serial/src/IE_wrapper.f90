@@ -134,6 +134,8 @@ contains
                 plot_vars(iFile)='maximum'
              elseif(index(plot_string,'aur')>0)then
                 plot_vars(iFile)='aur'
+             elseif(index(plot_string,'uam')>0)then
+                plot_vars(iFile)='uam'
              else
                 call CON_stop(NameSub//&
                      ' IE_ERROR variable definition missing in #IE_SAVEPLOT'//&
