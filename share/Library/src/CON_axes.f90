@@ -346,6 +346,8 @@ contains
             RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
        write(*,*)'RotAxisGse_D=',RotAxis_D
        write(*,*)'RotAxisGsm_D=',RotAxisGsm_D
+       write(*,*)'XyzPlanetHgi_D = ',XyzPlanetHgi_D
+       write(*,*)'XyzPlanetHgr_D = ',matmul(HgrHgi_DD,XyzPlanetHgi_D)
     end if
 
     DoInitializeAxes=.false.
@@ -424,7 +426,7 @@ contains
       ! In GSE shifted to the center of Sun the planet is at (-d,0,0)
       call set_hgi_gse_d_planet(0.0)
       XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
-      
+
       ! Finite difference velocity with the 1 second time perturbation
       vPlanetHgi_D = XyzPlus_D - XyzPlanetHgi_D
       
