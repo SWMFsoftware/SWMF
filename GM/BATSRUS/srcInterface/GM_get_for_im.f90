@@ -18,7 +18,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
 
   use ModRaytrace, ONLY: UseAccurateIntegral, RayResult_VII, RayIntegral_VII, &
-       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_
+       InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
   implicit none
 
@@ -57,7 +57,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
 
         ! Put impossible values if ray was not found for a lat-lon grid cell
-        where(MHD_Beq <= 0.0)
+        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
            MHD_Xeq     = -99999.0
            MHD_Yeq     = -99999.0
            MHD_SUM_vol = 0.0
