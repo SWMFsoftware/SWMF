@@ -8,7 +8,11 @@ module ModRaytrace
   save
 
   ! Select between fast less accurate and slower but more accurate algorithms
-  logical :: UseAccurateTrace = .false. 
+  logical :: UseAccurateTrace    = .false. 
+  logical :: UseAccurateIntegral = .true.
+
+  ! How often shall we synchronize PE-s for the accurate algorithms
+  real         :: DtExchangeRay = 0.1
 
   ! Named parameters for ray status (must be less than east_=1)
   integer, parameter :: &
@@ -63,8 +67,6 @@ module ModRaytrace
        OUTRAY   = -(rIonosphere + 200.0)
 
   real(Real8_) :: CpuTimeStartRay
-
-  real         :: DtExchangeRay = 0.1
 
   integer      :: nOpen
 

@@ -15,7 +15,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : DoInitConstrainB                    !^CFG IF CONSTRAINB
   use ModAMR
   use ModParallel, ONLY : UseCorners,proc_dims
-  use ModRaytrace, ONLY : UseAccurateTrace, DtExchangeRay !^CFG IF RAYTRACE
+  use ModRaytrace, ONLY : UseAccurateIntegral, &        !^CFG IF RAYTRACE
+       UseAccurateTrace, DtExchangeRay                  !^CFG IF RAYTRACE
   use ModIO
   use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
   use CON_planet,       ONLY: read_planet_var, check_planet_var
@@ -945,9 +946,19 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('Satellite_Z_Pos',Satellite_Z_Pos)
         end if
         !                                               ^CFG IF RAYTRACE BEGIN
-     case("#RAYTRACE")                                  
-        call read_var('UseAccurateTrace',UseAccurateTrace)
-        if(UseAccurateTrace)call read_var('DtExchangeRay',DtExchangeRay)
+     case("#RAYTRACE")
+        call read_var('UseAccurateIntegral',UseAccurateIntegral)
+        call read_var('UseAccurateTrace'   ,UseAccurateTrace)
+        if(UseAccurateTrace .and. .not. UseAccurateIntegral)then
+           if(iProc==0)then
+              write(*,'(a)')NameSub//' WARNING: '// &
+                   'UseAccurateTrace=T requires UseAccurateIntegral=T'
+              if(UseStrict)call stop_mpi('Correct PARAM.in!')
+              write(*,*)NameSub//' setting UseAccurateIntegral=T'
+           end if
+           UseAccurateIntegral = .true.
+        end if
+        call read_var('DtExchangeRay',DtExchangeRay)
         !                                              ^CFG END RAYTRACE
      case("#IM")                                      !^CFG IF RCM
         call read_var('TauCoupleIm',TauCoupleIm)      !^CFG IF RCM

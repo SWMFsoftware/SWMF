@@ -2521,41 +2521,45 @@ rel			TypeProjStop
 
 <!-- ^CFG IF RAYTRACE BEGIN -->
 <command name="RAYTRACE">
-	<parameter name="UseAccurateTrace" type="logical" default="F"/>
-	<if expr="$UseAccurateTrace">
-		<parameter name="DtExchangeRay" type="real" 
-			min="0.01" max="60" default="0.1"/>
-	</if>
+	<parameter name="UseAccurateIntegral" type="logical" default="T"/>
+	<parameter name="UseAccurateTrace"    type="logical" default="F"/>
+	<parameter name="DtExchangeRay" type="real" 
+					 min="0.01" max="60" default="0.1"/>
 #RAYTRACE
+T			UseAccurateIntegral
 T			UseAccurateTrace
-0.1			DtExchangeRay [sec] (read if UseAccurateTrace is true)
+0.1			DtExchangeRay [sec]
 
 Raytracing (field-line tracing) is needed to couple the GM and IM components.
 It can also be used to create plot files with open-closed field line 
-information. Currently there are two algorithms implemented for 
-plot files, but only one for the GM/IM coupling.
+information. There are two algorithms implemented for integrating rays
+and for tracing rays.
 
-If UseAccurateTrace is false, the block-wise algorithm is used,
-which interpolates at block faces. This algorithm works both for
-plot files and GM/IM coupling. It is fast, but less accurate than
-the other algorithm.
+If UseAccurateIntegral is true (default), the field line integrals
+are calculated with the accurate algorithm, which follows the lines
+all the way. If UseAccurateIntegral is false, the block-wise algorithm
+is used, which actually needs the face values computed by the 
+block-wise tracing algorithm (UseAccurateTrace must be false).
 
-If UseAccurateTrace is true, the field lines are followed all the way.
-This algorithm currently only works for creating plot files.
-It is more accurate but potentially slower than the other algorithm.
+If UseAccurateTrace is false (default), the block-wise algorithm is used,
+which interpolates at block faces. This algorithm is fast, but less 
+accurate than the other algorithm. If UseAccurateTrace is true, 
+the field lines are followed all the way. It is more accurate but 
+potentially slower than the other algorithm.
 
-In the accurate algorithm, when the ray exits the domain that belongs to the 
-PE, its information is sent to the other PE where the ray continues. 
+In the accurate tracing algorithms, when the ray exits the domain that belongs 
+to the PE, its information is sent to the other PE where the ray continues. 
 The information is buffered for sake of efficiency and to synchronize
 communitacation. The frequency of the information exchanges 
 (in terms of CPU seconds) is given by the DtExchangeRay parameter. 
 This is an optimization parameter for speed. Very small values of DtExchangeRay
-results in many exchanges with few rays, while very large values result
+result in many exchanges with few rays, while very large values result
 in infrequent exchages thus some PE-s may become idle (no more work to do).
 The optimal value is problem dependent. A typically acceptable value is 
-DtExchangeRay = 0.1 seconds.
+DtExchangeRay = 0.1 seconds (default).
 
-Default value is UseAccurateTrace = .false.
+Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.
+and DtExchangeRay = 0.1.
 </command>
 <!-- ^CFG END RAYTRACE -->
 
