@@ -3,5 +3,4 @@
 mpif90.h
 mpif.h
 Makefile.DEPEND
-test_ray_trace.tmp
 *.protex
