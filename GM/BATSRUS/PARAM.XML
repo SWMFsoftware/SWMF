@@ -2350,12 +2350,19 @@ T		UseNonConservative
 							input="select">
 			<option name="radius"	value="r/R/radius/Radius"
 							default="T"/>
+			<option name="parabola"	value="parabola/paraboloid"/>
 			<option name="p"    	value="p/P"		/>
 			<option name="grad P"	value="gradp/GradP"	/>
 		</parameter>
 		<parameter name="rConserv" type="real"
 				min="$rBody"		default = "2*$rBody"
 				if="$TypeConservCrit =~ /^r|radius$/i"/>
+		<parameter name="xParabolaConserv" type="real"
+				min="0"		        default = "6"
+				if="$TypeConservCrit =~ /^parabol/i"/>
+		<parameter name="yParabolaConserv" type="real"
+				min="0"		        default = "36"
+				if="$TypeConservCrit =~ /^parabol/i"/>
 		<parameter name="pCoeffConserv" type="real" min="0"
 							default = "0.05"
 				if="$TypeConservCrit =~ /^p$/i" 	/>
@@ -2367,6 +2374,9 @@ T		UseNonConservative
 3		nConservCrit
 r		TypeConservCrit
 6.		rConserv             ! read if TypeConservCrit is 'r'
+parabola        TypeConservCrit
+6.		xParabolaConserv     ! read if TypeConservCrit is 'parabola'
+36.		yParabolaConserv     ! read if TypeConservCrit is 'parabola'
 p		TypeConservCrit
 0.05		pCoeffConserv	     ! read if TypeConservCrit is 'p'
 GradP		TypeConservCrit
@@ -2388,7 +2398,8 @@ GradP		TypeConservCrit
 ! The geometry based criteria are applied after the physics based criteria 
 ! (if any) and they select the non-conservative scheme if ANY of them is true:
 !
-! 'r'      - radial distance of the cell is less than rConserv
+! 'r'        - radial distance of the cell is less than rConserv
+! 'parabola' - x less than xParabolaConserv + (y**2+z**2)/yParabolaConserv
 !
 ! Default values are nConservCrit = 1 with TypeConservCrit = 'r'
 ! and rConserv=2*rBody, where rBody has a problem dependent default.
