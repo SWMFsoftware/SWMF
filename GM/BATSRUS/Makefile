@@ -215,10 +215,8 @@ distclean:
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cd share; make distclean; \
-		cd util; make distclean; \
-	fi);
+	@(if [ -d util  ]; then cd util;  make distclean; fi);
+	@(if [ -d share ]; then cd share; make distclean; fi);
 	rm -f Makefile.conf *~
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
