@@ -61,6 +61,8 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
 
 end subroutine set_BCs
 
+!=============================================================================
+
 subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
      IsBodyCell,IsTrueCell,iBoundary)
 
@@ -69,6 +71,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   use ModAdvance
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
+
   implicit none
 
   integer, intent(in) :: iter, iBoundary
@@ -92,7 +95,16 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
 
   integer :: i,j,k
 
-  real,dimension(1:nDim):: FaceCoords_D, B0Face_D
+  real              :: FaceCoords_D(nDim), B0Face_D(nDim)
+
+  character (len=*), parameter :: NameSub = 'set_face_BCs'
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  if(globalBLK==BLKtest.and.iProc==PROCtest)then
+     call set_oktest(NameSub, DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   if(iBoundary==Body1_)then
      UseIonosphereHere=UseIonosphere
@@ -103,6 +115,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   end if
 
   TypeBcHere=TypeBc_I(iBoundary)
+
   !\
   ! Apply body BCs as required.
   !/                            
@@ -265,34 +278,14 @@ contains
 
   subroutine set_body_BCs(iSide)
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
-    use ModPhysics, ONLY : &
-         FaceState_VI,UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p
+    use ModPhysics, ONLY : FaceState_VI
+    
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
     real, dimension(1:3) :: v_phi, uIono_D
 
     real:: FaceState_V(nFaceValueVars)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
-    ! Theoretical upper limit for DensityJumpLimit is (1-cfl) for nOrder=nStage=1
-    ! Practical estimate 0.1 (may be (1-cfl)/2 ???) for nOrder=nStage=2
-    !
-    ! ___________ATTENTION!!!!!___________
-    ! A non-zero value for the DensityJumpLimit physically corresponds 
-    ! to a partially penetrable surface through which matter can diffuse. The 
-    ! diffusion rate is restricted in a non-linear fashion due to the use 
-    ! of a small DensityJumpLimit.  The "diffusion mass velocity" is 
-    ! automatically lower than Alfven velocity*DensityJumpLimit.  Even the use 
-    ! of small DensityJumpLimit STRONGLY INFLUENCES the numerical solution 
-    ! in cases when RhoFace and RhoBodyHere are strongly different  near some 
-    ! part of the boundary.  Even when using a non-zero DensityJumpLimit, the
-    ! outer density tends to RhoBodyHere after a huge number of iterations.
-    !
-    !___________ATTENTION!!!!!!___________
-    ! A non-zero value for PressureJumpLimit is not recommended. A theoretical 
-    ! upper limit is unknown and numerical experiments with a non-zero value are
-    ! not robust. NO REAL PHYSICAL process corresponds to a non-zero 
-    ! PressureJumpLimit which would be like "pressure diffusion".
-
     real ::BdotR,BRefl_D(nDim)
     real:: BdotU,RInv
     real:: cosTheta,sinTheta,cosPhi,sinPhi
@@ -416,21 +409,11 @@ contains
 
        VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
     case('coronatoih')    !Only for nVar=8
+
        !Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
             FaceCoords_D,nVar,FaceState_V)
-       !Transform to primitive variables
-       FaceState_V(Ux_:Uz_)=&
-            FaceState_V(rhoUx_:rhoUz_)/FaceState_V(rho_)
-       !Convert from SI:
-       FaceState_V(rho_)      =&
-             FaceState_V(rho_)    /UnitSI_rho
-       FaceState_V(Ux_:Uz_)   =&
-             FaceState_V(Ux_:Uz_) /UnitSI_U
-       FaceState_V(Bx_:Bz_)   =&
-            FaceState_V(Bx_:Bz_)  /UnitSI_B
-       FaceState_V(P_)        =&
-             FaceState_V(P_)      /UnitSI_P
+
        VarsGhostFace_V = FaceState_V
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
