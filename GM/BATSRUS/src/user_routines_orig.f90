@@ -2261,16 +2261,15 @@ subroutine user_get_log_var(VarValue,TypeVar)
      Ekin_0 = cHalf*integrate_BLK(nProc,tmp1_BLK)/volume
      do iBLK=1,nBLK
         if (unusedBLK(iBLK)) cycle
-        tmp1_BLK(:,:,:,iBLK) = &
-             inv_gm1*State_VGB(P_,:,:,:,iBLK)
+        tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
      end do
-     Ethe_0 = integrate_BLK(nProc,tmp1_BLK)/volume
+     Ethe_0 = inv_gm1*integrate_BLK(nProc,tmp1_BLK)/volume
   endif
   !\
   ! Define log variable to be saved::
   !/
   select case(TypeVar)
-  case('em_r','Em_r')
+  case('em_r')
      do iBLK=1,nBLK
         if (unusedBLK(iBLK)) cycle
         tmp1_BLK(:,:,:,iBLK) = &
@@ -2278,9 +2277,9 @@ subroutine user_get_log_var(VarValue,TypeVar)
              (B0ycell_BLK(:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
              (B0zcell_BLK(:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
      end do
-     VarValue = cHalf*integrate_BLK(nProc,tmp1_BLK) 
+     VarValue = cHalf*integrate_BLK(1,tmp1_BLK) 
      VarValue = VarValue*cE1*cE6*unitSI_energydens*unitSI_x**3
-  case('ek_r','Ek_r')
+  case('ek_r')
      do iBLK=1,nBLK
         if (unusedBLK(iBLK)) cycle
         tmp1_BLK(:,:,:,iBLK) = &
@@ -2289,15 +2288,14 @@ subroutine user_get_log_var(VarValue,TypeVar)
               State_VGB(rhoUz_,:,:,:,iBLK)**2)/&
               State_VGB(rho_  ,:,:,:,iBLK)             
      end do
-     VarValue = cHalf*integrate_BLK(nProc,tmp1_BLK)
+     VarValue = cHalf*integrate_BLK(1,tmp1_BLK)
      VarValue = VarValue*cE1*cE6*unitSI_energydens*unitSI_x**3
-  case('et_r','Et_r')
+  case('et_r')
      do iBLK=1,nBLK
         if (unusedBLK(iBLK)) cycle
-        tmp1_BLK(:,:,:,iBLK) = &
-             inv_gm1*State_VGB(P_,:,:,:,iBLK)
+        tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
      end do
-     VarValue = integrate_BLK(nProc,tmp1_BLK)
+     VarValue = inv_gm1*integrate_BLK(1,tmp1_BLK)
      VarValue = VarValue*cE1*cE6*unitSI_energydens*unitSI_x**3
   case default
      VarValue = -7777.
