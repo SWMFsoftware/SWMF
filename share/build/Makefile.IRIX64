@@ -11,6 +11,7 @@ SHELL = /bin/sh
 #MF = Makefile.${OS}
 MF = 
 
+COMPILE.f77     = f90
 COMPILE.f90     = f90
 LINK.f90        = f90
 AR = ar -rs
@@ -91,13 +92,13 @@ BLAS  = blas.o lapack.o
 	${COMPILE.f90} ${Cflag3} $<
 
 .f.o:
-	${COMPILE.f90} ${Cflag3} -extend_source $<
+	${COMPILE.f77} ${Cflag3} -extend_source $<
 
 .for.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
+	${COMPILE.f77} ${Cflag2} -extend_source $<
 
 .ftn.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
+	${COMPILE.f77} ${Cflag2} -extend_source $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

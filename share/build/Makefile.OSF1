@@ -16,6 +16,7 @@ BATSVERSION = 7.53
 #MF = Makefile.${OS}
 MF = 
 
+COMPILE.f77     = /usr/bin/f90
 COMPILE.f90     = /usr/bin/f90
 LINK.f90	= /usr/bin/f90
 AR = ar -rs
@@ -75,13 +76,13 @@ BLAS  = lapack.o blas.o
 # UA component. Do not change this unless you know what you are doing...
 
 .f.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
+	${COMPILE.f77} ${Cflag2} -extend_source $<
 
 .for.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
+	${COMPILE.f77} ${Cflag2} -extend_source $<
 
 .ftn.o:
-	${COMPILE.f90} ${Cflag2} -extend_source $<
+	${COMPILE.f77} ${Cflag2} -extend_source $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

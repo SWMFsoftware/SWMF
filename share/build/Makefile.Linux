@@ -8,6 +8,7 @@ SHELL=/bin/sh
 #       Linux specific part of Makefile
 #
 
+COMPILE.f77     = f95
 COMPILE.f90     = f95
 LINK.f90	= mpif90
 AR = ar -rs
@@ -59,13 +60,13 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag3} $<
 
 .f.o:
-	${COMPILE.f90} ${Cflag3} -132 $<
+	${COMPILE.f77} ${Cflag3} -132 $<
 
 .for.o:
-	${COMPILE.f90} ${Cflag3} -132 $<
+	${COMPILE.f77} ${Cflag3} -132 $<
 
 .ftn.o:
-	${COMPILE.f90} ${Cflag3} -132 $<
+	${COMPILE.f77} ${Cflag3} -132 $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
