@@ -7,7 +7,6 @@ module CON_integrator
   real,dimension(:,:),allocatable,save::XyzStored_DI
   public::tNow
   public::init_router_for_vector
-  public::Init_router_for_line_advance
   public::check_if_can_integrate
   public::advance_vector
   integer::nDim
@@ -34,27 +33,18 @@ contains
             IsLocal=.true.)
     call get_root_decomposition(&
          LineDD,&                 !GridDescroptor to be constructed
-         iRootMapDim_D=(/nU_I(2)/),&!The block amount, along each direction(D)
+         iRootMapDim_D=(/1/),&!The block amount, along each direction(D)
          XyzMin_D=(/cHalf/),&      !Minimal gen. coordinates, along each D 
          XyzMax_D=(/cHalf+nU_I(2)/),& !Maximal gen. coordinates, along each D
-         nCells_D=(/1/))
+         nCells_D=(/nU_I(2)/))
     call set_standard_grid_descriptor(LineDD,&
          GridDescriptor=LineGD)
-    call init_router_for_line_advance(&
+    call init_router(&
          SourceGD,& !GridDesctriptor for the source field (in) 
          LineGD,&   !GirdDescriptor,save,intent(out)
-         Router)    !resulting router, intent(out)
+         Router,&   !resulting router, intent(out)
+         nIndexesTarget=1)
   end subroutine init_router_for_vector
-  !=============================================================!
-  subroutine init_router_for_line_advance(&
-         SourceGD,& !GridDesctriptor for the source field (in) 
-         LineGD,&   !GirdDescriptor,save,intent(out)
-         Router)    !resulting router, intent(out)
-    type(GridDescriptorType),intent(in)::SourceGD
-    type(GridDescriptorType),intent(in)::LineGD
-    type(RouterType),intent(out)::Router
-    call init_router(SourceGD,LineGD,Router,nIndexesTarget=1)
-  end subroutine init_router_for_line_advance
   !=============================================================!
   subroutine check_if_can_integrate(NameVector)
     character(LEN=*),intent(in)::NameVector
@@ -121,10 +111,10 @@ contains
          nVar=nDim,&
          fill_buffer=d_xyz,&
          apply_buffer=put_d_xyz)
-    call bcast_global_vector_in_router(&
+    call bcast_global_vector(&
          NameVector,&
-         LineGD,&
-         Router,&
+         0,&
+         Router%iComm,&
          NameMask)
     tNow=tNow+dt
     dt=dt+dt
@@ -140,10 +130,10 @@ contains
          nVar=nDim,&
          fill_buffer=d_xyz,&
          apply_buffer=put_d_xyz)
-    call bcast_global_vector_in_router(&
+    call bcast_global_vector(&
          NameVector,&
-         LineGD,&
-         Router,&
+         0,&
+         Router%iComm,&
          NameMask)
   end subroutine advance_vector
 !=======================================================
