@@ -1096,11 +1096,12 @@ sub print_help{
 Purpose:
 
      Read a parameter file and verify its correctness based on an 
-     XML description.
+     XML description. In most applications this scipt is called by 
+     TestParam.pl.
 
 Usage:
 
-    CheckParam.pl [-h] [-v] [-D] [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
+  CheckParam.pl [-h] [-v] [-D] [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
                 [-S] [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
 
   -h            print help message and stop
@@ -1110,7 +1111,7 @@ Usage:
   -v            verbosity adds command description to every error message.
 
   -x=XMLFILE    Use XMLFILE for the XML description. 
-                If the -f switch is omitted the $XmlFileDefault file is used.
+                If the -x switch is omitted the $XmlFileDefault file is used.
 
   -r=TREEFILE   Read TREEFILE containing the parameter description in a Perl 
                 tree data structure if no XML description is found or the
@@ -1124,8 +1125,8 @@ Usage:
                 the tree is saved into the default tree file, which has
                 the same name as the XML file but with a .pl extension.
 
-  -S            Check parameters assuming a stand alone mode. 
-                In stand alone mode #BEGIN_COMP and #END_COMP commands are ignored.
+  -S            Check parameters assuming a stand alone mode. In stand alone 
+                mode the #BEGIN_COMP and #END_COMP commands are ignored.
                 Also sets \$_IsStandAlone to true to be used in the XML rules.
 
   -c=ID         Check the parameters for the component defined by ID,
@@ -1164,7 +1165,7 @@ CheckParam.pl -x=GM/BATSRUS/PARAM.XML -s
 
     Set the XML file name to an empty string and read a Perl tree file:
 
-CheckParam.pl -x -r=mytree.pl
+CheckParam.pl -x= -r=mytree.pl
 
     Check lines typed through standard input with debug info:
 
