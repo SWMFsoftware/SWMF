@@ -336,7 +336,7 @@ clobber: ENV_CHECK distclean
 #	Copy and rename GM/BATSRUS/src into IH/BATSRUS/src
 #
 
-IH/BATSRUS/src:
+IH/BATSRUS/src/Makefile:
 	mkdir -p IH/BATSRUS/src
 	cd GM/BATSRUS/src; cp *.f90 *.f Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
@@ -346,7 +346,7 @@ IH/BATSRUS/src:
 	cp Makefile.conf Makefile.def PARAM.XML PARAM.pl GridSize.pl \
 	../../IH/BATSRUS/
 
-IHBATSRUS: IH/BATSRUS/src ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+IHBATSRUS: IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 	cd IH/BATSRUS/src; \
 	${SCRIPTDIR}/Methods.pl IH; \
 	${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \

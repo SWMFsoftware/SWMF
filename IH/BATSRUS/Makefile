@@ -1,7 +1,7 @@
 include ../../Makefile.def
 
 check_src:
-	@(if([ ! -d src ]); then \
+	@(if([ ! -f src/Makefile ]); then \
 		echo "The src directory is missing!"; \
 		echo "make IHBATSRUS"; \
 		exit 1; \
@@ -24,13 +24,13 @@ rundir: check_src
 	cd ${RUNDIR}/IH; ln -s ${GMDIR}/Scripts/Run/pp_${PLOT}/[Pp]* .
 
 clean:  
-	@(if([ -d src ]); then \
+	@(if([ -f src/Makefile ]); then \
 		touch src/Makefile.DEPEND src/Makefile.RULES src/Makefile.OPTIONS; \
 		cd src; make clean; \
 	fi)
 
 distclean: clean
-	@(if([ -d src ]); then cd src; make distclean; fi)
+	@(if([ -f src/Makefile ]); then cd src; make distclean; fi)
 
 veryclean:
 	rm -rf src Makefile.conf Makefile.def \
