@@ -17,9 +17,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModParallel, ONLY : UseCorners,proc_dims
   use ModRaytrace, ONLY : UseAccurateTrace, DtExchangeRay !^CFG IF RAYTRACE
   use ModIO
-  use ModCompatibility, ONLY: read_compatible_command
-  use CON_planet,       ONLY: read_planet_var, check_planet_var, UseAlignedAxes
-  use CON_axes,         ONLY: init_axes, DtUpdateB0, DoUpdateB0
+  use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
+  use CON_planet,       ONLY: read_planet_var, check_planet_var
+  use CON_axes,         ONLY: init_axes
   use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case
 
   use CON_planet,       ONLY: get_planet
@@ -100,21 +100,23 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
-     ! Obtain GM specific parameters from CON_planet and CON_axes
-     if(NameThisComp=='GM' .and. UseNewAxes) then
-        call get_planet(UseRotationOut = UseCorotation)
-
-        if(IsStandAlone) then
-           call check_planet_var(iProc==0)
-
-           ! There is no need to update B0 if the axes are aligned or there is
-           ! no rotation or the solution is not time accurate
-           if(UseAlignedAxes .or. .not.UseCorotation .or. .not.Time_Accurate &
-                .or. dt_updateB0 < 0.0) DoUpdateB0 = .false.
+     ! In standalone mode set and obtain GM specific parameters 
+     ! in CON_planet and CON_axes
+     if(IsStandAlone .and. NameThisComp=='GM') then
+        if(UseNewAxes)then
+           ! Check and set some planet variables (e.g. DoUpdateB0)
+           call check_planet_var(iProc==0, time_accurate)
 
            ! Initialize axes
            call init_axes(StartTime)
-        end if
+
+           ! Obtain some planet parameters
+           call get_planet(UseRotationOut = UseCorotation, &
+                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+        else
+           DoUpdateB0 = time_accurate .and. Dt_updateB0 > 0.0 .and. &
+                UseCorotation .and. .not.SetDipoleTilt
+        endif
      end if
 
      !^CFG IF NOT SIMPLE BEGIN
@@ -1301,14 +1303,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('BdpDimBody2z',BdpDimBody2_D(3))
         !                                           ^CFG END SECONDBODY
 
-     case('#UPDATEB0')
-
-        call check_stand_alone
-        call read_var('DtUpdateB0',Dt_UpdateB0)
-        if(UseNewAxes)DtUpdateB0 = Dt_UpdateB0
-
      case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-          '#ROTATION','#NONDIPOLE')
+          '#ROTATION','#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone
         if(.not.is_first_session())CYCLE
@@ -1721,15 +1717,16 @@ contains
        allocate( TypeConservCrit_I(nConservCrit) )
        TypeConservCrit_I(1) = 'r'
        rConserv             = 2*rBody
-       Bdp_dim = -31100.0
 
+       Bdp_dim              = -31100.0
        THETAtilt       = 0.00
        dt_UpdateB0     = -1.0
+       DoUpdateB0      = .false.
 
        TypeBc_I(east_)        ='outflow'
        TypeBc_I(west_)        ='vary'
        TypeBc_I(south_:top_)  ='fixed'
-       TypeBc_I(body1_)='ionosphere'
+       TypeBc_I(body1_)       ='ionosphere'
 
        SW_rho_dim =      5.0    ! n/cc
        SW_T_dim   = 150000.0    ! K
