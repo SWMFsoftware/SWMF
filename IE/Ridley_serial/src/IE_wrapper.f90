@@ -332,46 +332,6 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
   end select
 
 end subroutine IE_get_for_gm
-!=======================================================================
-subroutine IE_get_for_gm_swmf(nPartial,iGetStart,Get,W,State_V,nVar)
-  use CON_router
-  use ModIonosphere,ONLY:IONO_NORTH_Phi,IONO_SOUTH_Phi
-  implicit none
-  integer,intent(in)::nPartial,iGetStart,nVar
-  type(IndexPtrType),intent(in)::Get
-  type(WeightPtrType),intent(in)::W
-  real,dimension(nVar),intent(out)::State_V
-  integer::iGet
-
-  select case(Get%iCB_II(3,iGetStart))
-  case(1)
-     State_V(1)=&
-          IONO_NORTH_Phi(Get%iCB_II(1,iGetStart),Get%iCB_II(2,iGetStart))*&
-          W%Weight_I(iGetStart)
-  case(2)
-     State_V(1)=&
-          IONO_SOUTH_Phi(Get%iCB_II(1,iGetStart),Get%iCB_II(2,iGetStart))*&
-           W%Weight_I(iGetStart)
-  case default
-     call CON_stop('IE_get_for_gm_swmf: wrong block number',&      
-          Get%iCB_II(3,iGetStart))
-  end select
-  do iGet=iGetStart+1,iGetStart+nPartial-1
-     select case(Get%iCB_II(3,iGet))
-     case(1)
-        State_V(1)= State_V(1)+&
-             IONO_NORTH_Phi(Get%iCB_II(1,iGet),Get%iCB_II(2,iGet))*&
-             W%Weight_I(iGet)
-     case(2)
-        State_V(1)=State_V(1)+&
-             IONO_SOUTH_Phi(Get%iCB_II(1,iGet),Get%iCB_II(2,iGet))*&
-             W%Weight_I(iGet)
-     case default
-        call CON_stop('IE_get_for_gm_swmf: wrong block number',&      
-             Get%iCB_II(3,iGet))
-     end select
-  end do
-end subroutine IE_get_for_gm_swmf
 !==============================================================================
 
 subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
@@ -471,11 +431,9 @@ subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
   case('JrNorth')
      if (iProc /= 0) RETURN
      Iono_North_Jr         = Buffer_II
-     Iono_North_nMagBndPts = iSize*jSize
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
      Iono_South_Jr         = Buffer_II
-     Iono_South_nMagBndPts = iSize*jSize
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
   end select
@@ -483,109 +441,6 @@ subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
   if(DoTest)write(*,*)NameSub,' finished'
 
 end subroutine IE_put_from_gm
-
-!==============================================================================
-
-subroutine IE_check_allocation_north(nPoint)
-  use ModIonosphere
-  use ModUtilities, ONLY: check_allocate
-  implicit none
-  integer,intent(in)::nPoint
-  integer::iError
-  if(nPoint /= IONO_NORTH_nMagBndPts)then
-     IONO_NORTH_nMagBndPts = nPoint
-     if(allocated(MAG_NORTH_IONO_LOC)) deallocate( &
-          MAG_NORTH_IONO_LOC, MAG_NORTH_Jx, MAG_NORTH_Jy, MAG_NORTH_Jz, &
-          MAG_NORTH_MAGFIELD)
-     allocate(&
-          MAG_NORTH_IONO_LOC(nPoint,3), &
-          MAG_NORTH_Jx(nPoint),MAG_NORTH_Jy(nPoint),MAG_NORTH_Jz(nPoint),&
-          MAG_NORTH_MAGFIELD(nPoint,5),STAT=iError)
-     call check_allocate(iError,&
-          'IE_check_allocation_north loc3,j3,binfo5')
-  end if
-end subroutine IE_check_allocation_north
-
-!==============================================================================
-
-subroutine IE_check_allocation_south(nPoint)
-  use ModIonosphere
-  use ModUtilities, ONLY: check_allocate
-  implicit none
-  integer,intent(in)::nPoint
-  integer::iError
-  if(nPoint /= IONO_SOUTH_nMagBndPts)then
-     IONO_SOUTH_nMagBndPts = nPoint
-     if(allocated(MAG_SOUTH_IONO_LOC)) deallocate( &
-          MAG_SOUTH_IONO_LOC, MAG_SOUTH_Jx, MAG_SOUTH_Jy, MAG_SOUTH_Jz, &
-          MAG_SOUTH_MAGFIELD)
-     allocate(&
-          MAG_SOUTH_IONO_LOC(nPoint,3), &
-          MAG_SOUTH_Jx(nPoint),MAG_SOUTH_Jy(nPoint),MAG_SOUTH_Jz(nPoint),&
-          MAG_SOUTH_MAGFIELD(nPoint,5),STAT=iError)
-     call check_allocate(iError,&
-          'IE_check_allocation_south loc3,j3,binfo5')
-  end if
-end subroutine IE_check_allocation_south
-
-!=========================================================================
-subroutine IE_put_from_gm_swmf(&
-     State_V,&
-     nVar,&
-     iBlock,&
-     iPoint,&
-     ColatLim)
-  use CON_physics,ONLY:get_planet
-  use ModIonosphere
-  use IE_ModMain, ONLY: IsNewInput
-  use CON_world
-  implicit none
-  integer,intent(in)::nVar,iBlock,iPoint
-  real,dimension(nVar),intent(in)::State_V
-  real,intent(inout)::ColatLim
-  real,save::Radius
-  real :: RadiusPlanet,IonosphereHeight
-  logical,save::DoInitialize=.true.
-
-  !  logical :: DoTest,DoTestMe
-  !  character (len=*),parameter :: NameSub='IE_put_from_gm_swmf'
-  !----------------------------------------------------------------------
-  !  call CON_set_do_test(NameSub, DoTest, DoTestMe)
-  !  if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
-
-  if(DoInitialize)then
-     call get_planet(                            &
-          RadiusPlanetOut     = RadiusPlanet,    &
-          IonosphereHeightOut = IonosphereHeight)
-     Radius=cOne+IonosphereHeight/RadiusPlanet
-     DoInitialize=.false.
-  end if
-
-  IsNewInput=.true.
-
-  select case(iBlock)
-  case(1)     !North
-     MAG_NORTH_Jx(iPoint) = State_V(1)
-     MAG_NORTH_Jy(iPoint) = State_V(2)
-     MAG_NORTH_Jz(iPoint) = State_V(3)
-     if(nVar>3) MAG_NORTH_MagField(iPoint,:) = State_V(4:8)
-     if(nVar>8) then
-        MAG_NORTH_IONO_LOC(iPoint,:) = State_V(9:11)
-        ColatLim=max(ColatLim, acos(State_V(11)/Radius))
-     end if
-  case(2)
-     MAG_SOUTH_Jx(iPoint) = State_V(1)
-     MAG_SOUTH_Jy(iPoint) = State_V(2)
-     MAG_SOUTH_Jz(iPoint) = State_V(3)
-     if(nVar>3) MAG_SOUTH_MagField(iPoint,:) = State_V(4:8)
-     if(nVar>8) then
-        MAG_SOUTH_IONO_LOC(iPoint,:) = State_V(9:11)
-        ColatLim=min(ColatLim,acos(State_V(11)/Radius))
-     end if
-  case default
-     call CON_stop('Impossible block number in IE',iBlock)
-  end select
-end subroutine IE_put_from_gm_swmf
 
 !==============================================================================
 
