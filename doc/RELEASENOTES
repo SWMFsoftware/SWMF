@@ -69,7 +69,10 @@ SWMF:
 
         6. GM-IE coupling results (especially the ionosphere potentail)
            somewhat depend on the number of PE-s on the SGI.
-           (but not on the Altix). 
+           (but not on the Altix). The problem is actually coming from
+           the GM-IM coupling, the IM received incorrect field line integrals.
+           FIX (Oct27,2004): check inner BC crossing at the end of the loop
+           MODIFIED:         GM/BATSRUS/src/ray_trace_new.f90
 
         7. Certain layout, time step and coupling frequency combination
            can cause a dead-lock (hanging) due to a simplified 
