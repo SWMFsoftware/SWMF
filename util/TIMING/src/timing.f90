@@ -550,7 +550,7 @@ subroutine timing_sort(iclock,show_length,unique)
      do i=1,ntiming
         ! Check if the same name occured before or not
         do j=1,qntiming
-           if(sa_name(i)==sa_name(j))EXIT
+           if(sa_name(i)==sa_qname(j))EXIT
         end do
         sa_qname(j) = sa_name(i)
         if(la_active(i))then
