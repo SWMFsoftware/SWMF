@@ -105,8 +105,11 @@ while(<>){
     1 while s/\t+/' ' x (length($&) * 8 - length($`) % 8)/e;
 
     # Put \ before special Tex characters, but not 2 backslashes
+    # Do not put \ before _{ because it is likely to be a subscript in
+    # mathematical mode.
     if(not $verbatim){
-	s/([\#_])/\\$1/g unless $verbatim;
+	s/\#/\\\#/g;
+	s/(\_[^\{])/\\$1/g;
 	s/\\\\([\#_])/\\$1/g;
     }
 
