@@ -106,6 +106,7 @@ contains
 
     logical :: IsInitialized = .false.
     !-------------------------------------------------------------------------
+    IsKnown = .true.
 
     if(IsInitialized)then
        if(NamePlanet == NamePlanetIn) RETURN
@@ -130,8 +131,6 @@ contains
        IsKnown = .false.
        RETURN
     end select
-
-    IsKnown = .true.
 
   end function is_planet_init
 
