@@ -646,8 +646,12 @@ sub output{
     }
 }
 ############################################################################
+#!QUOTE: \clearpage
 #BOP
-#!ROUTINE: Configure.pl - configure software package based on directives
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
+#!QUOTE: \subsection{Creating a configured software package}
+#
+#!ROUTINE: Configure.pl - create a configured software package based on directives
 #!DESCRIPTION:
 # This script together with the directives inserted into the source files
 # (this can be any ASCII file, not just source code) allows a flexible
@@ -672,7 +676,7 @@ sub print_help{
              [-s] [-t] [-v]
              [inputfile1] [inputfile2] ...
 
-      NOTE: all option names, 'on' or 'off' strings and all $cfg directives
+      NOTE: all option names, 'on' or 'off' strings and all ^CMP directives
       are capitalized by Configure.pl, so the syntax is case insensitive !
 
       -c=STR  The string used in the directives and the name of the 
@@ -702,7 +706,7 @@ sub print_help{
       -o=OPTIONFILE
 
               If the option file OPTIONFILE is not defined with the -o flag, 
-              the default $Optionfiles[0] file is read if available.
+              the default Configure.options file is read if available.
 
               The option file contains the options, the ON/OFF info,
               and the dependencies in the following format
@@ -719,22 +723,22 @@ sub print_help{
               that option3 can be ON only if option1 and option6 are ON.
               Empty lines and comments following # are permitted.
 
-              The options in combination with the $cfg directives and 
-              the $Cfg files can be used to remove or insert some text, 
+              The options in combination with the ^CMP directives and 
+              the ^CMP files can be used to remove or insert some text, 
               to omit files, or to skip whole directories during configuration.
 
               Special options:
 
-              If CONFIGURE is ON then the $cfg directives are kept 
+              If CONFIGURE is ON then the ^CMP directives are kept 
               without any processing for the options which remain 
               configurable. This is based on the directives in the option file 
-              (default is $Optionfiles[0]): if the configured
+              (default is Configure.options): if the configured
               option file contains an option it is regarded as configurable.
               When -keepall is used, all options are taken as configurable.
               A subset of the configurable options can be removed with
               the -exe switch if required. 
 
-              If COPYRIGHT is ON, the $cfg COPYRIGHT directives are 
+              If COPYRIGHT is ON, the ^CMP COPYRIGHT directives are 
               replaced with the appropriate COPYRIGHT message.
 
               If MAKEPDF is ON, Configure.pl will execute 'make PDF'
@@ -780,24 +784,24 @@ sub print_help{
                     Binary, .ps, and .eps files are copied 
                     without processing.
 
-                    If a $Cfg file exists in a directory and contains
+                    If a ^CMP file exists in a directory and contains
                     an OPTIONNAME (or NOT OPTIONNAME), the directory is 
                     omitted when that option is OFF (or ON). 
                     Otherwise the directory is processed, but 
-                    the $Cfg file is only kept if the CONFIGURE option is ON.
+                    the ^CMP file is only kept if the CONFIGURE option is ON.
 
       Examples:
 
-      Show list of options in $Optionfiles[0]:
+      Show list of options in Configure.options:
 
 Configure.pl -s
 
-      Modify option list read from $Optionfiles[0] and put it into a 
+      Modify option list read from Configure.options and put it into a 
       new option file:
 
 Configure.pl -on=roeflux -off=implicit,lindeflux -s > new.options
 
-      Convert STDIN to STDOUT using $Optionfiles[0]:
+      Convert STDIN to STDOUT using Configure.options:
 
 Configure.pl -i
 
@@ -829,34 +833,34 @@ Configure.pl -keepall -exe=cartesian -on=cartesian -d=CARTESIAN
 
 Configure.pl -on=DOC,DOCHTML,MAKEPDF,MAKEHTML,REMOVEDOCTEX
 
-      There can be only one $cfg directive per line, but 
-      the $cfg IF (NOT) OPTION BEGIN ... $cfg END OPTION
+      There can be only one ^CMP directive per line, but 
+      the ^CMP IF (NOT) OPTION BEGIN ... ^CMP END OPTION
       constructs can be arbitrarily nested. 
-      The following example shows all the $cfg directives:
+      The following example shows all the ^CMP directives:
 
-!$cfg COPYRIGHT UM
-!$cfg FILE OPTION1
-!$cfg FILE NOT OPTION4
+!^CMP COPYRIGHT UM
+!^CMP FILE OPTION1
+!^CMP FILE NOT OPTION4
 text0
-text1 !$cfg IF OPTION1
-text2 !$cfg IF OPTION2
-text3 !$cfg IF OPTION1 BEGIN
+text1 !^CMP IF OPTION1
+text2 !^CMP IF OPTION2
+text3 !^CMP IF OPTION1 BEGIN
 text4
-text5 !$cfg END OPTION1
-text6 !$cfg IF OPTION2 BEGIN
+text5 !^CMP END OPTION1
+text6 !^CMP IF OPTION2 BEGIN
 text7
-text8 !$cfg END OPTION2
+text8 !^CMP END OPTION2
 text9
 text10
-!text11 $cfg UNCOMMENT IF OPTION1
-<!-- text12 $cfg UNCOMMENT IF NOT OPTION2 -->
-text13 !$cfg IF NOT OPTION3 BEGIN
+!text11 ^CMP UNCOMMENT IF OPTION1
+<!-- text12 ^CMP UNCOMMENT IF NOT OPTION2 -->
+text13 !^CMP IF NOT OPTION3 BEGIN
 text14
-text15 !$cfg END OPTION3
-text16 !$cfg IF NOT OPTION4 BEGIN
+text15 !^CMP END OPTION3
+text16 !^CMP IF NOT OPTION4 BEGIN
 text17
-text18 !$cfg END OPTION4
-text19 !$cfg IF OPTION3
+text18 !^CMP END OPTION4
+text19 !^CMP IF OPTION3
 
       If this is proccessed with 
 
@@ -881,7 +885,7 @@ text17
 text18
 text19
 
-       Note that the comment character in front of $cfg COPYRIGHT is used
+       Note that the comment character in front of ^CMP COPYRIGHT is used
        to comment out the text of the COPYRIGHT.
 
        Also note that the leading comment character 
@@ -890,19 +894,19 @@ text19
        in front of text11 and text12, respectively, were removed! 
 
        If OPTION1 was OFF or OPTION4 was ON, the configured file would be 
-       empty and omitted due to the $cfg FILE directives. 
+       empty and omitted due to the ^CMP FILE directives. 
 
        Recursive configuration is possible if the CONFIGURE option is ON.
        In this case all options which remain in the option file after
        configuration will keep their directives for later configuration.
        Let's assume that we have the following option file 'options':
 
-CONFIGURE                OFF            $cfg IF CONFIGURE
-COPYRIGHT                OFF            $cfg IF NOT COPYRIGHT
-OPTION1                  ON             $cfg IF OPTION1
-OPTION2                  OFF            $cfg IF OPTION2
-OPTION3                  ON             $cfg IF OPTION3
-OPTION4                  OFF            $cfg IF NOT OPTION4
+CONFIGURE                OFF            ^CMP IF CONFIGURE
+COPYRIGHT                OFF            ^CMP IF NOT COPYRIGHT
+OPTION1                  ON             ^CMP IF OPTION1
+OPTION2                  OFF            ^CMP IF OPTION2
+OPTION3                  ON             ^CMP IF OPTION3
+OPTION4                  OFF            ^CMP IF NOT OPTION4
 
        If the same input file is processed with
 
@@ -910,25 +914,25 @@ Configure.pl -o=options -on=CONFIGURE
 
        we obtain:
 
-!$cfg COPYRIGHT UM
-!$cfg FILE OPTION1
-!$cfg FILE NOT OPTION4
+!^CMP COPYRIGHT UM
+!^CMP FILE OPTION1
+!^CMP FILE NOT OPTION4
 text0
-text1 !$cfg IF OPTION1
-text3 !$cfg IF OPTION1 BEGIN
+text1 !^CMP IF OPTION1
+text3 !^CMP IF OPTION1 BEGIN
 text4
-text5 !$cfg END OPTION1
+text5 !^CMP END OPTION1
 text9
 text10
-!text11 $cfg UNCOMMENT IF OPTION1
+!text11 ^CMP UNCOMMENT IF OPTION1
 text12
-text13 !$cfg IF NOT OPTION3 BEGIN
+text13 !^CMP IF NOT OPTION3 BEGIN
 text14
-text15 !$cfg END OPTION3
-text16 !$cfg IF NOT OPTION4 BEGIN
+text15 !^CMP END OPTION3
+text16 !^CMP IF NOT OPTION4 BEGIN
 text17
-text18 !$cfg END OPTION4
-text19 !$cfg IF OPTION3
+text18 !^CMP END OPTION4
+text19 !^CMP IF OPTION3
 
        The output remains configurable in terms of OPTION1, OPTION3, OPTION4,
        and COPYRIGHT. Note that line 11 remains commented out and 
@@ -940,21 +944,21 @@ Configure.pl -o=options -exe=OPTION3
 
        and we obtain:
 
-!$cfg COPYRIGHT UM
-!$cfg FILE OPTION1
-!$cfg FILE NOT OPTION4
+!^CMP COPYRIGHT UM
+!^CMP FILE OPTION1
+!^CMP FILE NOT OPTION4
 text0
-text1 !$cfg IF OPTION1
-text3 !$cfg IF OPTION1 BEGIN
+text1 !^CMP IF OPTION1
+text3 !^CMP IF OPTION1 BEGIN
 text4
-text5 !$cfg END OPTION1
+text5 !^CMP END OPTION1
 text9
 text10
-!text11 $cfg UNCOMMENT IF OPTION1
+!text11 ^CMP UNCOMMENT IF OPTION1
 text12
-text16 !$cfg IF NOT OPTION4 BEGIN
+text16 !^CMP IF NOT OPTION4 BEGIN
 text17
-text18 !$cfg END OPTION4
+text18 !^CMP END OPTION4
 text19
 
        Note that in this case all the OPTION3 directives were 
