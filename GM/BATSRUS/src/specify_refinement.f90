@@ -1,7 +1,9 @@
 !^CFG COPYRIGHT UM
 subroutine specify_initial_refinement(refb, lev)
   use ModSize
-  use ModMain, ONLY : body1,UseRotatingBc,UseMassLoading,unusedBLK
+  use ModMain, ONLY : &
+       UseUserSpecifyRefinement,&           !^CFG IF USERFILES
+       body1,UseRotatingBc,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF NOT CARTESIAN
        x_BLK,y_BLK,z_BLK,dx_BLK
@@ -23,7 +25,7 @@ subroutine specify_initial_refinement(refb, lev)
   real :: SizeMax
 
   real,parameter::cRefinedTailCutoff=(cOne-cQuarter)*(cOne-cEighth)
-
+  logical::IsFound
   character(len=*), parameter :: NameSub='specify_initial_refinement'
   logical :: oktest, oktest_me
 
@@ -988,6 +990,11 @@ subroutine specify_initial_refinement(refb, lev)
               endif
            endif
         case default
+           IsFound=.false.                       !^CFG IF USERFILES BEGIN
+           if (UseUserSpecifyRefinement) &
+                call user_specify_initial_refinement(iBLK,refb(iBLK),lev,dx_BLK(iBLK), &
+                xxx,yyy,zzz,RR,minx,miny,minz,minRblk,maxx,maxy,maxz,maxRblk,IsFound)
+           if(.not.IsFound) &                    !^CFG IF USERFILES END
            call stop_mpi(NameSub//' ERROR: unknown InitialRefineType='// &
                 trim(InitialRefineType)//'!!!')
         end select
