@@ -229,9 +229,12 @@ contains
   !===========================================================================
   subroutine set_defaults
 
-    conductance_model       = 0
-    StarLightPedConductance = 0.0
-    PolarCapPedConductance  = 0.0
+    conductance_model       = 5
+    UseFullCurrent          = .false.
+    UseFakeRegion2          = .false.
+    StarLightPedConductance = 0.25
+    PolarCapPedConductance  = 0.25
+    f107_flux               = 150.0
 
   end subroutine set_defaults
 
