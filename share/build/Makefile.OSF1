@@ -62,9 +62,8 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag2} $<
 
 .F90.o:
-	cpp -DsysOSF1 $*.F90 $*.f90
-	${COMPILE.f90} ${Cflag2} $*.f90
-	rm -f $*.f90
+	${COMPILE.f90}  -DsysOSF1 ${Cflag2} $<
+
 
 # Compiling the F77 source with Clfag3 results in a runtime error for the
 # UA component. Do not change this unless you know what you are doing...
