@@ -10,6 +10,7 @@ module ModIonoPotential
   real    :: dThetaIono, dPhiIono
   real    :: rIonosphere
   real, allocatable :: IonoPotential_II(:,:)
+  real, allocatable :: dIonoPotential_DII(:,:,:)
 
 contains
 
@@ -35,9 +36,46 @@ contains
     call get_planet(RadiusPlanetOut=rPlanet, IonosphereHeightOut=IonoHeight)
     rIonosphere = (rPlanet + IonoHeight) / UnitSi_X
 
-    allocate(IonoPotential_II(nThetaIono, nPhiIono))
+    allocate( IonoPotential_II(nThetaIono, nPhiIono), &
+         dIonoPotential_DII(2, nThetaIono, nPhiIono) )
 
   end subroutine init_mod_iono_potential
+
+  subroutine calc_grad_iono_potential
+
+    integer, parameter :: Theta_=1, Phi_=2
+    integer :: i, j
+
+    ! Calculate the gradients for the internal points
+    do j = 1, nPhiIono; do i = 2, nThetaIono-1
+       dIonoPotential_DII(Theta_, i, j) = &
+            (IonoPotential_II(i+1, j) - IonoPotential_II(i-1, j)) &
+            / (2 * dThetaIono)
+    end do; end do
+
+    do j = 2, nPhiIono-1; do i = 1, nThetaIono
+       dIonoPotential_DII(Phi_, i, j) = &
+            (IonoPotential_II(i, j+1) - IonoPotential_II(i, j-1)) &
+            / (2 * dPhiIono)
+    end do; end do
+
+    ! Calculate the theta gradient at the poles first order accurate
+    ! We could also do a one sided second order approximation !!!
+    dIonoPotential_DII(Theta_, 1, :) = &
+         (IonoPotential_II(2,:) - IonoPotential_II(1,:)) / dThetaIono
+
+    dIonoPotential_DII(Theta_, nThetaIono, :) = &
+         (IonoPotential_II(nThetaIono,:) - IonoPotential_II(nThetaIono-1,:) &
+         ) / dThetaIono
+
+    ! Calculate the phi gradient at the edges from the periodicity
+    dIonoPotential_DII(Phi_, :, 1) = &
+         (IonoPotential_II(:, 2) - IonoPotential_II(:, nPhiIono - 1)) &
+         / (2 * dPhiIono)
+
+    dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
+
+  end subroutine calc_grad_iono_potential
 
 end module ModIonoPotential
 !==========================================================================
@@ -107,7 +145,8 @@ end module ModMapPotential
 !BUFFER->PHI
 subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
-  use ModIonoPotential, ONLY: init_mod_iono_potential, IonoPotential_II
+  use ModIonoPotential, ONLY: IonoPotential_II, &
+       init_mod_iono_potential, calc_grad_iono_potential
   use ModPhysics,       ONLY: UnitSi_X, UnitSi_Electric
   use ModMapPotential,ONLY:init_map_potential_arrays,&
        IONO_nTheta,IONO_NORTH_Phi,IONO_SOUTH_Phi 
@@ -139,6 +178,9 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   case('PotSouth')
      IONO_SOUTH_Phi = Buffer_II
      IonoPotential_II(iSize:2*iSize-1,:) = Buffer_II/(UnitSi_Electric*UnitSi_X)
+
+     ! After getting the southern potential as well, get the gradients
+     call calc_grad_iono_potential
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select
