@@ -1,18 +1,7 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE RAYTRACE
-subroutine OPTION_RAYTRACING(on,name)
 
-  logical, intent(out) :: on
-  character (len=40), intent(out) :: name
-
-  on  =.true.
-  name='RAY TRACING Toth 2.0'
-
-end subroutine OPTION_RAYTRACING
-
-!=============================================================================
-
-subroutine ray_trace
+subroutine ray_trace_accurate
 
   ! Trace field lines from cell centers to the outer or inner boundaries
 
@@ -83,13 +72,20 @@ subroutine ray_trace
   call timing_start('ray_trace')
   if(oktime)call timing_reset('ray_pass',2)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  call message_pass_cells8(.false.,.false.,.false.,3,&
-       State_VGB(Bx_:Bz_,:,:,:,:))
+  ! Copy magnetic field into Bxyz_DGB
+  Bxyz_DGB(:,:,:,:,1:nBlock) = &
+       State_VGB(Bx_:Bz_,:,:,:,1:nBlock)
 
-  Bx_GB = State_VGB(Bx_,:,:,:,:) + B0xCell_BLK
-  By_GB = State_VGB(By_,:,:,:,:) + B0yCell_BLK
-  Bz_GB = State_VGB(Bz_,:,:,:,:) + B0zCell_BLK
+  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+  call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
+
+  ! Add B0
+  Bxyz_DGB(1,:,:,:,1:nBlock) = Bxyz_DGB(1,:,:,:,1:nBlock) &
+       + B0xCell_BLK(:,:,:,1:nBlock)
+  Bxyz_DGB(2,:,:,:,1:nBlock) = Bxyz_DGB(2,:,:,:,1:nBlock) &
+       + B0yCell_BLK(:,:,:,1:nBlock)
+  Bxyz_DGB(3,:,:,:,1:nBlock) = Bxyz_DGB(3,:,:,:,1:nBlock) &
+       + B0zCell_BLK(:,:,:,1:nBlock)
 
   ! Initial values
   ray=NORAY
@@ -115,8 +111,6 @@ subroutine ray_trace
      Weight_D(2) = sign( 10.0,SW_By)
      Weight_D(3) = sign(100.0,SW_Bz)
   end if
-  !!!
-  !!! write(*,*)'Weight_D=',Weight_D
 
   do iBlock=1,nBlock
      if(unusedBLK(iBlock))then
@@ -302,7 +296,8 @@ subroutine ray_trace
         Ray_DI(3,1)=-1.     ! Cells inside body
      elseif(RayTmp_DI(1,1)==LOOPRAY .and.  RayTmp_DI(1,2)==LOOPRAY) then
         Ray_DI(3,1)=-2.     ! Loop ray within block
-        write(*,*)'Loop ray found at iProc,iBlock,i,j,k,ray=',iProc,iBlock,i,j,k,Ray_DI
+        write(*,*)'Loop ray found at iProc,iBlock,i,j,k,ray=',&
+             iProc,iBlock,i,j,k,Ray_DI
      else
         Ray_DI(3,1)=-3.     ! Strange status
 !        if(  x_BLK(i,j,k,iBlock)==xTest.and.&
@@ -316,7 +311,7 @@ subroutine ray_trace
 
    end subroutine convert_ray
 
-end subroutine ray_trace
+end subroutine ray_trace_accurate
 
 !===========================================================================
 
@@ -427,7 +422,8 @@ subroutine follow_ray(iRayIn,iIn,jIn,kIn,iBlockIn)
                  ! Store the result into the ModRayTrace::ray
                  ray(:,iRay,iStart,jStart,kStart,iBlockStart)=XyzRay_D
 
-                 if(oktest_ray)write(*,*)'Storing recv ray iProc,iRay,i,j,k,iBlock,ray=',&
+                 if(oktest_ray)write(*,*)&
+                      'Storing recv ray iProc,iRay,i,j,k,iBlock,ray=',&
                       iProc,iRay,iStart,jStart,kStart,iBlockStart,XyzRay_D
 
                  ! Get another ray from the others
@@ -439,7 +435,8 @@ subroutine follow_ray(iRayIn,iIn,jIn,kIn,iBlockIn)
                  if(jProc /= iProc)call stop_mpi(&
                       'GM_ERROR in ray_trace: Recvd ray is not in this PE')
 
-                 if(oktest_ray)write(*,*)'Block for recv ray iProc,iBlock=',iProc,iBlockRay
+                 if(oktest_ray)write(*,*)'Block for recv ray iProc,iBlock=',&
+                      iProc,iBlockRay
               end if
            end if
            EXIT GETRAY
@@ -673,9 +670,6 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   real, dimension(3), parameter :: &
        xmin=(/   0.0,   0.0,   0.0/),&
        xmax=(/nI+1.0,nJ+1.0,nK+1.0/)
-  !!!     xmin=(/   0.5,   0.5,   0.5/),&
-  !!!     xmax=(/nI+0.5,nJ+0.5,nK+0.5/)
-  !!! Maybe extend to 0 0 0 nI+1 nJ+1 nK+1 (but it did not help?!)
 
   ! Current position of ray in normalized and physical coordinates
   real, dimension(3) :: x, xx
@@ -910,9 +904,17 @@ contains
 
     ! Add in interpolated B1 values and take aspect ratios into account
 
-    qb(1) = interpolate_bb1(Bx_GB)/dx_BLK(iBlock)
-    qb(2) = interpolate_bb1(By_GB)/dy_BLK(iBlock)
-    qb(3) = interpolate_bb1(Bz_GB)/dz_BLK(iBlock)
+    qb = dx1*(   dy1*(   dz1*Bxyz_DGB(:,i2,j2,k2,iBlock)+&
+         dz2*Bxyz_DGB(:,i2,j2,k1,iBlock))+&
+         dy2*(   dz1*Bxyz_DGB(:,i2,j1,k2,iBlock)+&
+         dz2*Bxyz_DGB(:,i2,j1,k1,iBlock)))+&
+         dx2*(   dy1*(   dz1*Bxyz_DGB(:,i1,j2,k2,iBlock)+&
+         dz2*Bxyz_DGB(:,i1,j2,k1,iBlock))+&
+         dy2*(   dz1*Bxyz_DGB(:,i1,j1,k2,iBlock)+&
+         dz2*Bxyz_DGB(:,i1,j1,k1,iBlock)))
+
+
+    qb = qb/Dxyz_D
 
     ! Normalize
     qbD = sqrt(qb(1)**2 + qb(2)**2 + qb(3)**2)
@@ -924,78 +926,6 @@ contains
     end if
 
   end subroutine interpolate_bb
-
-  !===========================================================================
-
-  subroutine interpolate_bb0(qx,qb)
-
-    ! Obtain normalized bb field at normalized location qx and put it into qb
-
-    real, intent(in) :: qx(3)
-    real, intent(out):: qb(3)
-    real :: qbD
-
-    !-------------------------------------------------------------------------
-
-    ! Get B0 values for location
-
-    xx(1)=x_BLK(1,1,1,iBlock)+dx_BLK(iBlock)*(qx(1)-1.)
-    xx(2)=y_BLK(1,1,1,iBlock)+dy_BLK(iBlock)*(qx(2)-1.)
-    xx(3)=z_BLK(1,1,1,iBlock)+dz_BLK(iBlock)*(qx(3)-1.)
-
-    call get_b0(xx(1),xx(2),xx(3),qb)
-
-    ! Determine cell indices corresponding to location qx
-    i1=floor(qx(1)); i2=i1+1
-    j1=floor(qx(2)); j2=j1+1
-    k1=floor(qx(3)); k2=k1+1
-
-    ! Distance relative to the cell centers
-
-    dx1=qx(1)-i1; dx2=1.-dx1
-    dy1=qx(2)-j1; dy2=1.-dy1
-    dz1=qx(3)-k1; dz2=1.-dz1
-
-    ! Add in interpolated B1 values and take aspect ratios into account
-
-    qb(1)=(qb(1)+interpolate_bb1(State_VGB(Bx_,:,:,:,:)))/dx_BLK(iBlock)
-    qb(2)=(qb(2)+interpolate_bb1(State_VGB(By_,:,:,:,:)))/dy_BLK(iBlock)
-    qb(3)=(qb(3)+interpolate_bb1(State_VGB(Bz_,:,:,:,:)))/dz_BLK(iBlock)
-!!!    end if
-
-    ! Normalize
-    qbD=sqrt(qb(1)**2 + qb(2)**2 + qb(3)**2)
-
-    if(qbD>cTiny)then
-       qb=qb/qbD
-    else
-       qb=0.
-    end if
-
-  end subroutine interpolate_bb0
-
-  !===========================================================================
-
-  real function interpolate_bb1(qbb)
-
-    real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
-         intent(in):: qbb
-
-    !-------------------------------------------------------------------------
-
-    ! Bilinear interpolation in 3D
-
-    interpolate_bb1=&
-         dx1*(   dy1*(   dz1*qbb(i2,j2,k2,iBlock)+&
-         dz2*qbb(i2,j2,k1,iBlock))+&
-         dy2*(   dz1*qbb(i2,j1,k2,iBlock)+&
-         dz2*qbb(i2,j1,k1,iBlock)))+&
-         dx2*(   dy1*(   dz1*qbb(i1,j2,k2,iBlock)+&
-         dz2*qbb(i1,j2,k1,iBlock))+&
-         dy2*(   dz1*qbb(i1,j1,k2,iBlock)+&
-         dz2*qbb(i1,j1,k1,iBlock)))
-
-  end function interpolate_bb1
 
   !===========================================================================
 
@@ -1036,19 +966,3 @@ contains
   end function follow_ray_iono
 
 end subroutine follow_ray_block
-
-!=============================================================================
-
-subroutine convfaces2latlon
-
-  call stop_mpi('convfaces2latlon to be written')
-
-end subroutine convfaces2latlon
-
-!=============================================================================
-
-subroutine integrate_ray
-
-  call stop_mpi('integrate_ray to be written')
-
-end subroutine integrate_ray
