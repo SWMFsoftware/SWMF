@@ -370,7 +370,7 @@ IE			NameTarget
 UA			NameComp1
 IE			NameComp2
 -1                      DnCouple
-80.                     DtCouple
+40.                     DtCouple
 
 #COUPLE1
 IE			NameSource
@@ -450,8 +450,8 @@ SPS
 150.0			f107a
 
 #ELECTRODYNAMICS
-5.0			DtPotential
-5.0			DtAurora
+40.0			DtPotential
+40.0			DtAurora
 
 #THERMO
 T			UseSolarHeating
