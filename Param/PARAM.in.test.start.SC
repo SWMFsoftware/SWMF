@@ -139,7 +139,7 @@ z=0 MHD tec		StringPlot
 #END_COMP SC ----------------------------------------------------------------
 
 #STOP
-70000			MaxIteration
+20000			MaxIteration
 -1.0			TimeSimulationMax
 
 #END
