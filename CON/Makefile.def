@@ -1,3 +1,15 @@
+#BOP
+#!ROUTINE: CON/Makefile.def - original file for Makefile.def
+#!DESCRIPTION:
+# This file is copied into the main directory as Makefile.def during installation.
+# The copied file contains variables that define the operating system (OS), 
+# the main directory (SWMF\_ROOT). The version variables (XY\_VERSION)
+# are modified to select the appropriate component and module versions.
+# Normally this is done via the SetSWMF.pl script.
+# The Makefile.def file is included in almost all Makefile-s in the SWMF and its components.
+#EOP
+
+#BOC
 DIR=${SWMF_ROOT}
 
 # This file is needed in dependency rules of component libraries:
@@ -96,4 +108,8 @@ BINDIR    = ${DIR}/bin
 LIBDIR    = ${DIR}/lib
 RUNDIR    = ${DIR}/run
 
+#
+# This ensures that typing make without arguments does not cause much harm
+#
 localdefault: help
+#EOC
