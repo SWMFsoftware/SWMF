@@ -154,4 +154,8 @@ Default value is 0.
 </command>
 </commandgroup>
 
+<rule expr="-d 'SP' or not $_IsFirstSession">
+	Directory SP should exist!
+</rule>
+
 </commandList>
