@@ -1703,7 +1703,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 			</part>
 			<part name="plotarea" type="string" input="select"
 								required="T">
-				<option value="3d"  />
+				<option name="3D" value="3d/3d_"/>
 				<option value="x=0" />
 				<option value="y=0" default="T" />
 				<option value="z=0" />
@@ -1727,6 +1727,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					value="FLX" />
 				<option name="Solar vars. dimensional"
 					value="SOL" />
+				<option name="Position vars. dimensional"
+					value="POS" if="$plotarea eq 'lin'" />
 				<option name="Select dimensional vars."
 					value="VAR" />
 				<option name="MHD vars. scaled"
@@ -1741,6 +1743,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					value="flx" />
 				<option name="Solar vars. scaled"
 					value="sol" />
+				<option name="Position vars. scaled"
+					value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Select scaled vars."
 					value="var" />
 			</part>
