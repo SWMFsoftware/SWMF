@@ -965,6 +965,7 @@ subroutine MH_set_parameters(TypeAction)
            UseAccurateIntegral = .true.
         end if
         call read_var('DtExchangeRay',DtExchangeRay)
+        call read_var('DnRaytrace',   DnRaytrace)
         !                                              ^CFG END RAYTRACE
      case("#IM")                                      !^CFG IF RCM
         call read_var('TauCoupleIm',TauCoupleIm)      !^CFG IF RCM
