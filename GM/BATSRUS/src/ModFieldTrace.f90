@@ -1583,7 +1583,7 @@ subroutine write_plot_line(iFile)
      if(NameTask=='extractfile')then
         NameVar = trim(NameVar)//' Index nLine'
      else
-        NameVar = trim(NameVar)//' Index iLine'
+        NameVar = trim(NameVar)//' iLine'
      end if
   case('tec')
      NameVar = '"Length", "X", "Y", "Z"'
