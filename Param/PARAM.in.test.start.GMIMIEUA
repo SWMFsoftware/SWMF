@@ -39,7 +39,10 @@ F			UseComp
 #COMPONENT
 UA			NameComp
 F			UseComp
- 
+
+! Start with 1st order scheme and 4 levels of refinemet
+! and do 1 AMR-s at the 300th iteration
+
 #BEGIN_COMP GM ----------------------------------------------------------------
 
 #PROBLEMTYPE
@@ -126,10 +129,9 @@ z=0 MHD idl             StringPlot
 
 #RUN   ########################################################################
 
-#BEGIN_COMP GM ---------------------------------------------------------------
+! Continue with 2nd order scheme and do 1 more AMR-s at the 600th iteration
 
-#AMR
--1			DnRefine
+#BEGIN_COMP GM ---------------------------------------------------------------
 
 #SCHEME
 2			nOrder
@@ -139,7 +141,36 @@ minmod			TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-1000			MaxIteration
+700			MaxIteration
+-1.0			tSimulationMax
+
+#RUN   ########################################################################
+
+! Do physics based AMRs and increase the number of GM blocks to 2500
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#AMRRESOLUTION
+0.25			DxCellMin
+8.0			DxCellMax
+T			DoFixBodyLevel
+
+#AMR
+250			DnRefine
+T			DoAutoRefine
+10.			PercentCoarsen
+20.			PercentRefine
+2500			MaxTotalBlocks
+
+#AMRCRITERIA
+2			nRefineCrit
+gradlogP		TypeRefine
+curlB			TypeRefine
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+2000			MaxIteration
 -1.0			tSimulationMax
 
 #RUN   ########################################################################
@@ -162,6 +193,12 @@ T			UseComp
 #COMPONENT
 UA			NameComp
 T			UseComp
+
+! UA runs rather slow but does large 10s time steps, so it should run
+! less frequently
+#CYCLE
+UA                      NameComp
+10                      DnRun
 
 ! This coupling order allows IE to run concurrently with the others
 ! since it provides data before it would receive it
@@ -201,9 +238,13 @@ GM			NameComp2
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+! No more AMR while relaxing GM-IM-IE-UA
+#AMR
+-1
+
 ! Ramp up GM pressure at a rate of 1/10th change per time step
 #IM
-0.1			TauCoupleIm (
+0.1			TauCoupleIm
 
 ! Do an accurate integration of field line volumes
 ! Refresh 3D ray tracing every 80 steps only (for applying IM pressure)
@@ -232,16 +273,19 @@ min idl			StringPlot
 20			DnOutput
 -1.0			DtOutput
 
+#SPS
+T			UseSps (this is the serial potential solver)
+
 #END_COMP IE -----------------------------------------------------------------
 
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 ! Each block has 18x18 lon and lat cells, and we use 4 by 2 blocks
-! which corresponsd to a 20 by 10 degrees resolution:
+! which corresponsd to a 5-degree by 5-degree resolution:
 
 #GRID
-4		nLatBlock
-2		nLonBlock
+4		nLonBlock
+2		nLatBlock
 
 #PRESSURE
 F		PressureCoordinates
@@ -281,14 +325,13 @@ SPS
 461.0			abs(SwUxDim) [km/s]
 
 #DT
-10.0			DtDim [s]
+10.0			dT [s]
 
 #SAVEPLOTS
-10
-360
-2
-3DALL
-2D
+100			dnOutput
+-1			dnRestart
+1			nOutputTypes
+2D			TypeOutput
 
 #STRETCH
 65.0		! location of minimum grid spacing
@@ -298,8 +341,7 @@ SPS
 #END_COMP UA   ########################################################
 
 #STOP
-3000
+4000
 -1.
 
 #END
-
