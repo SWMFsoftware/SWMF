@@ -1270,6 +1270,8 @@ subroutine add_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
      ! Add background pressure
      !/
      p_GL98 = p_GL98 + abs(Gbody)*rho2scl/(cFour*r**4)
+  else
+     B_GL98_D = cZero; rho_GL98 = cZero; p_GL98 = cZero
   endif
   
 end subroutine add_GL98_fluxrope
