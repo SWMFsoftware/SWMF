@@ -128,6 +128,8 @@ subroutine advance_expl(DoCalcTimestep)
         call update_states(iStage,globalBLK)
         call timing_stop('update_states')
 
+!!!        if(iStage == nStage)call calc_electric_field(globalBLK)
+
         if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
            call timing_start('constrain_B')
            call get_VxB
