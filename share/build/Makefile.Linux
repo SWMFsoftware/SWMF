@@ -12,18 +12,6 @@ COMPILE.f77     = f95
 COMPILE.f90     = f95
 LINK.f90	= mpif90
 AR = ar -rs
-LN		= ln -s
-RM		= rm -f
-CP		= cp -p
-MKDIR           = mkdir -p
-
-# preprocessor
-CPP		= /lib/cpp
-CPPFLAGS	= -P
-FPP		= $(CPP)
-FPPFLAGS	= $(CPPFLAGS)
-FPPFLAGS        = -DLANGUAGE_FORTRAN -DNAG -traditional $(_Dsys)
-_Dsys		= -DsysLinux
 
 PRECISION = -r8
 #PRECISION =
@@ -69,7 +57,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag3} $<
 
 .F90.o:
-	${COMPILE.f90} ${Cflag3} $<
+	${COMPILE.f90} -DsysLinux -DcompNAG ${Cflag3} $<
 
 .f.o:
 	${COMPILE.f77} ${Cflag3} -132 $<
