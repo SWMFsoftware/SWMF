@@ -1,5 +1,6 @@
 Known issues with the August 23, 2004 release of the University of Michigan
-Space Weather Modeling Framework (SWMF) and it constituent components:
+Space Weather Modeling Framework (SWMF) and it constituent components.
+Fixes are also indicated as "FIX" as they become known.
 
 
 SWMF:
@@ -29,6 +30,8 @@ UA:
            ignored during this period.
 
         2. The UA does not currently run on the Compaq platform (halem).
+           FIX (Aug 25,2004): use -fpe1 compiler flag.
+	   MODIFIED: share/build/Makefile.OSF1
 
         3. The UA module GITM is sensitive to the number of processors
            on which it is running.   For some (unpredictable) 
