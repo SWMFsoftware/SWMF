@@ -15,7 +15,6 @@ subroutine SC_put_from_ih(nPartial,&
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
 
   use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B! nVarGm => nVar
-
   implicit none
 
   !INPUT ARGUMENTS:
@@ -31,7 +30,7 @@ subroutine SC_put_from_ih(nPartial,&
   !03SEP03     G.Toth    <gtoth@umich.edu>   - simplified
   !EOP
 
-  character (len=*), parameter :: NameSub='SC_put_from_ih.f90'
+  character (len=*), parameter :: NameSub='SC_put_from_ih'
 
   real,dimension(nVar)::State_V
   integer::iPut, i, j, k, iBlock
@@ -63,7 +62,6 @@ subroutine SC_put_from_ih(nPartial,&
   j      = Put%iCB_II(2,iPutStart)
   k      = Put%iCB_II(3,iPutStart)
   iBlock = Put%iCB_II(4,iPutStart)
-
   if(DoAdd)then
      State_VGB(rho_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock) + &
           State_V(BuffRho_)
