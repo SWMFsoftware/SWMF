@@ -244,10 +244,12 @@ subroutine set_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar,isat)
   use ModProcMH
   use ModNumConst
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles
+  use ModPhysics,    ONLY: rCurrents
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK,tmp2_BLK,B0xCell_BLK,B0yCell_BLK, &
        B0zCell_BLK, State_VGB, E_BLK
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+       x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModIO
   implicit none
@@ -409,27 +411,44 @@ contains
     case('dst','Dst','DST')
        ! Calculate the Biot-Savart formula for the center of the Earth:
        ! B = (1/4 Pi)*integral( (curl B) x R / R**3 dV)
-       ! Only the Z component is calculated here: (J x R)_z = J_x*y-Jy*x
+       ! where R is the vector FROM the CURRENT to the FIELD POINT!
+       ! Since the field point is at the origin, R = (-x,-y,-z)
+       ! Only the Z component is calculated here: (J x R)_z = -J_x*y + Jy*x
 
        ! Calculate 
        do iBLK=1,nBlock
           if(unusedBLK(iBLK))cycle           
-
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=0.5*(                           &
-               ((State_VGB(Bz_,1:nI,2:nJ+1,1:nK,iBLK)                   &
-               - State_VGB(Bz_,1:nI,0:nJ-1,1:nK,iBLK)) / dy_BLK(iBLK) - &
-               ( State_VGB(By_,1:nI,1:nJ,2:nK+1,iBLK)                   &
-               - State_VGB(By_,1:nI,1:nJ,0:nK-1,iBLK)) / dz_BLK(iBLK)   &
-               ) * y_BLK(1:nI,1:nJ,1:nK,iBLK)                           &
-               -                                                        &
-               ((State_VGB(Bx_,1:nI,1:nJ,2:nK+1,iBLK)                   &
-               - State_VGB(Bx_,1:nI,1:nJ,0:nK-1,iBLK)) / dz_BLK(iBLK) - &
-               ( State_VGB(Bz_,2:nI+1,1:nJ,1:nK,iBLK)                   &
-               - State_VGB(Bz_,0:nI-1,1:nJ,1:nK,iBLK)) / dx_BLK(iBLK)   &
-               ) * x_BLK(1:nI,1:nJ,1:nK,iBLK)                           &
-               ) / r_BLK(1:nI,1:nJ,1:nK,iBLK)**3
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
+                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
+                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
+                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
+                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
+                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
+                  z_BLK(i,j,k-1,iBLK) < z1 ) then
+                tmp1_BLK(i,j,k,iBLK)=0.0
+                CYCLE
+             end if
+             tmp1_BLK(i,j,k,iBLK) = (                             &
+                  ((State_VGB(Bz_,i,j+1,k,iBLK)                   &
+                  - State_VGB(Bz_,i,j-1,k,iBLK)) / dy_BLK(iBLK) - &
+                  ( State_VGB(By_,i,j,k+1,iBLK)                   &
+                  - State_VGB(By_,i,j,k-1,iBLK)) / dz_BLK(iBLK)   &
+                  ) * y_BLK(i,j,k,iBLK)                           &
+                  -                                               &
+                  ((State_VGB(Bx_,i,j,k+1,iBLK)                   &
+                  - State_VGB(Bx_,i,j,k-1,iBLK)) / dz_BLK(iBLK) - &
+                  ( State_VGB(Bz_,i+1,j,k,iBLK)                   &
+                  - State_VGB(Bz_,i-1,j,k,iBLK)) / dx_BLK(iBLK)   &
+                  ) * x_BLK(i,j,k,iBLK)                           &
+                  ) / r_BLK(i,j,k,iBLK)**3
+          end do; end do; end do
        end do
-       var_value = integrate_BLK(nProc,tmp1_BLK) / (4*cPi)
+       ! The negative sign is due to R = (-x,-y,-z), 
+       ! the 0.5 is because the centered difference formulae above used 
+       ! (1/Dx) instead of the correct 1/(2Dx), 
+       ! the 4pi is part of the Biot-Savart formula
+       var_value = -0.5 * integrate_BLK(nProc,tmp1_BLK) / (4*cPi)
 
        ! Basic MHD variables at a single point given by Itest, Jtest, Ktest, 
        !   BLKtest, PROCtest
