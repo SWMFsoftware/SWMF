@@ -1,8 +1,8 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT SIMPLE
 !=============================================================================
-subroutine write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
-     ntheta,nphi,rplot,nBLKcellsN,NBLKcellsS)
+subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
+     nTheta,nPhi,rPlot,nBlkCellsN,nBlkCellsS)
 
   ! Save all cells within plotting range, for each processor
 
@@ -13,12 +13,11 @@ subroutine write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
   implicit none
 
   ! Arguments
-
-  integer, intent(in) :: ifile, iBLK,ntheta,nphi
-  integer, intent(in) :: nplotvar
-  integer, intent(out) :: nBLKcellsN,nBLKcellsS
-  real, intent(in) :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvar)
-  real, intent(in)     :: rplot
+  integer, intent(in)  :: iFile, iBLK,nTheta,nPhi
+  integer, intent(in)  :: nPlotvar
+  integer, intent(out) :: nBlkCellsN,nBlkCellsS
+  real, intent(in)     :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvar)
+  real, intent(in)     :: rPlot
 
   ! Local variables
   ! Indices and coordinates
@@ -29,7 +28,7 @@ subroutine write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
   real :: xx1,xx2,yy1,yy2,zz1,zz2,minRblk, maxRblk
   real :: rplot_out,theta_plot, phi_plot, dphi_plot, dtheta_plot, dxblk
   real :: theta_out, phi_out
-  real :: PointVar(nplotvar)
+  real :: PointVar(nPlotvarMax)
 
   integer :: write_out_unit
 
