@@ -341,8 +341,8 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
               if(DoneRay)then
 
                  if(DoIntegrate)then
-                    ! store integrals and whether this is a closed ray
-                    call store_integral(XyzRay_D(1) > CLOSEDRAY)
+                    ! store integrals and final position (XyzRay_D)
+                    call store_integral(.true.)
 
                     CYCLE GETRAY
                  end if
@@ -445,8 +445,8 @@ contains
                   iProc,jProc,iRay,XyzRay_D
 
              ! Add partial results to the integrals. 
-             ! Pass .true., because this may well be a closed ray
-             if(DoIntegrate)call store_integral(.true.)
+             ! Pass .false., because this is not the final position
+             if(DoIntegrate)call store_integral(.false.)
 
              call ray_put(iProcStart,XyzStart_D,jProc,XyzRay_D,iRay==1,&
                   .false.)
@@ -500,8 +500,8 @@ contains
 
        ! The ray tracing of this ray is done if we got here
        if(DoIntegrate)then
-          ! Store integrals and the information of being a closed ray
-          call store_integral(iFace == ray_iono_)
+          ! Store integrals and the final position
+          call store_integral(.true.)
           EXIT BLOCK
        end if
 
@@ -547,21 +547,21 @@ contains
   end subroutine follow_this_ray
 
   !===========================================================================
-  subroutine store_integral(IsClosedRay)
+  subroutine store_integral(DoneRay)
 
     ! Store integrals of this ray into the 
 
-    logical, intent(in) :: IsClosedRay
+    logical, intent(in) :: DoneRay
 
     integer :: iLat, iLon
 
     iLat = nint(XyzStart_D(1))
     iLon = nint(XyzStart_D(2))
 
-    RayIntegral_VII(1:nRayIntegral,iLat,iLon) = &
-         RayIntegral_VII(1:nRayIntegral,iLat,iLon) + RayIntegral_V
+    RayIntegral_VII(1:pInvB_,iLat,iLon) = &
+         RayIntegral_VII(1:pInvB_,iLat,iLon) + RayIntegral_V
 
-    if(.not.IsClosedRay) RayIntegral_VII(ClosedRay_,iLat,iLon) = -1.0
+    if(DoneRay)RayIntegral_VII(xEnd_:zEnd_,iLat,iLon) = XyzRay_D
 
   end subroutine store_integral
 
@@ -633,9 +633,7 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   integer :: n_iono
 
   ! Control volume limits in local coordinates
-  real, dimension(3), parameter :: &
-       xmin=(/   0.0,   0.0,   0.0/),&
-       xmax=(/nI+1.0,nJ+1.0,nK+1.0/)
+  real, dimension(3) :: xmin, xmax
 
   ! Current position of ray in normalized and physical coordinates
   real, dimension(3) :: x, xx
@@ -660,12 +658,26 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
        'Starting follow_ray_block: me,iBlock,iRay,Xyz_D=',&
        iProc,iBlock,iRay,Xyz_D
 
+  ! Convert initial position to block coordinates
+  Dxyz_D = (/Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)/)
+  x      = (Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D + 1.0
+
   ! Set flag if checking on the ionosphere is necessary
   check_inside=Rmin_BLK(iBlock)<R_raytrace
 
   ! Set flag if checking for open rays is useful
   DoCheckOpen = .false.
   !!!! any(ray(1,iRay,1:nI,1:nJ,1:nK,iBlock)==OPENRAY)
+
+  ! Set the boundaries of the control volume in block coordinates
+  ! We go out to the first ghost cell centers for sake of speed and to avoid
+  ! problems at the boundaries
+  xmin=(/   0.0,   0.0,   0.0/)
+  xmax=(/nI+1.0,nJ+1.0,nK+1.0/)
+
+  ! Go out to the block interface at the edges of the computational domain
+  where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmax-1.0) > XyzMax_D)xmax = xmax - 0.5
+  where(XyzStart_BLK(:,iBlock)+Dxyz_D*(xmin-1.0) < XyzMin_D)xmin = xmin + 0.5
 
   ! Initial value
   dl_next=sign(dl_max,1.5-iRay)
@@ -679,19 +691,13 @@ subroutine follow_ray_block(iRay,iBlock,Xyz_D,iFace)
   nsegment=0
   n_iono=0
 
-  ! Convert initial position to block coordinates
-  Dxyz_D = (/Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)/)
-  x      = (Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D + 1.0
-
   ! Integration loop
   FOLLOW: do
      ! Check if we are inside the ionosphere
      if(check_inside)then
         ! Convert x to real coordinates xx
-
         xx = XyzStart_BLK(:,iBlock) + Dxyz_D * (x-1.)
-
-        r2=sum(xx**2)
+        r2 = sum(xx**2)
 
         if(r2<=R2_raytrace)then
 
@@ -976,9 +982,10 @@ contains
        Dir_D = Dir_D/AbsB
     else
        ! This is actually a big problem, and should not happen
-       write(*,*)NameSub,' ERROR at iProc,iBlock,Xyz_D = ',iProc,iBlock,Xyz_D
+       write(*,*)NameSub,' ERROR at iProc,iBlock,Xyz_D = ',iProc,iBlock,&
+            XyzStart_BLK(:,iBlock)+Dxyz_D*(x_D-1.0)
+       write(*,*)NameSub,' ERROR b_D=',b_D,' abs(B)=',AbsB
        call stop_mpi(NameSub//' ERROR: magnetic field is zero')
-       !!! Dir_D = 0.0
     end if
 
   end subroutine interpolate_b
@@ -1126,37 +1133,44 @@ end subroutine ray_trace_sorted
 
 !============================================================================
 
-subroutine test_ray_integral
+subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I)
 
   use CON_ray_trace, ONLY: ray_init
+  use CON_planet_field, ONLY: map_planet_field
   use ModRaytrace
-  use ModMain, ONLY: nBlock
+  use ModMain, ONLY: nBlock, Time_Simulation, iTest, jTest
   use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, By_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
   use ModPhysics, ONLY: rBody
   use ModProcMH
   use ModMpi
-  use ModNumConst, ONLY: cDegToRad
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use ModIoUnit, ONLY: UNITTMP_
+  use ModNumConst, ONLY: cDegToRad, cTiny
+  use ModCoordTransform, ONLY: dir_to_xyz
+  use ModUtilities, ONLY: check_allocate
   implicit none
 
-  integer, parameter :: nLat=50, nLon=50
+  !INPUT ARGUMENTS:
+  integer, intent(in):: nLat, nLon
+  real,    intent(in):: Lat_I(nLat), Lon_I(nLon)
 
-  real :: Result_VII(0:nRayIntegral, nLat, nLon)
-  real :: Theta, Phi, Lat, Lon, Xyz_D(3)
-  integer :: iProcFound, iBlockFound, i, j, k, iLat, iLon
+  real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
+  integer :: iLat, iLon, iHemisphere
+  integer :: iProcFound, iBlockFound, i, j, k
 
   integer :: iError
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub = 'integrate_ray_accurate'
   !-------------------------------------------------------------------------
 
-  write(*,*)'Starting test_ray_integral iProc=',iProc
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc
 
   oktest_ray = .true.
 
   ! Initialize R_raytrace, R2_raytrace
   R_raytrace = rBody
-  if(iProc==0)write(*,*)'Setting R_raytrace=',R_raytrace
+  if(DoTestMe)write(*,*)'Setting R_raytrace=',R_raytrace
   R2_raytrace = R_raytrace**2
 
   ! Initialize CON_ray_trace
@@ -1168,7 +1182,7 @@ subroutine test_ray_integral
   ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
   call message_pass_cells8(.false.,.false.,.false.,3,Bxyz_DGB)
 
-  ! Add B0
+  ! Add B0 for faster interpolation
   Bxyz_DGB(1,:,:,:,1:nBlock) = Bxyz_DGB(1,:,:,:,1:nBlock) &
        + B0xCell_BLK(:,:,:,1:nBlock)
   Bxyz_DGB(2,:,:,:,1:nBlock) = Bxyz_DGB(2,:,:,:,1:nBlock) &
@@ -1184,30 +1198,66 @@ subroutine test_ray_integral
   call message_pass_cells8(.false.,.false.,.false.,2,Extra_VGB)
 
   ! Initialize storage for the integrals
-  allocate(RayIntegral_VII(0:nRayIntegral,nLat,nLon))
+  allocate(&
+       RayIntegral_VII(nRayIntegral,nLat,nLon), &
+       RayResult_VII(nRayIntegral,nLat,nLon), STAT=iError)
+  call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
   RayIntegral_VII = 0.0
+  RayResult_VII   = 0.0
   DoIntegrate = .true.
 
-  ! Test cell in RCM grid and corresponding XYZ location
+  ! Integrate rays starting from the latitude-longitude pairs defined
+  ! by the arrays Lat_I, Lon_I
   do iLat = 1, nLat
-     Lat = 20.0 + (50.0*iLat)/nLat
-     Theta = cDegToRad*(90.0 - Lat)     
-     do iLon = 1, nLon
-        Lon = (360.0*iLon)/nLon
-        Phi = cDegToRad*Lon
-        call sph_to_xyz(rBody+0.1, Theta, Phi, Xyz_D)
 
-        ! Find location
+     Lat = Lat_I(iLat)
+     Theta = cDegToRad*(90.0 - Lat)     
+
+     do iLon = 1, nLon
+
+        Lon = Lon_I(iLon)
+        Phi = cDegToRad*Lon
+
+        ! Convert to SMG Cartesian coordinates on the surface of the ionosphere
+        call dir_to_xyz(Theta, Phi, XyzIono_D)
+
+        ! Map from the ionosphere to rBody
+        call map_planet_field(time_simulation, XyzIono_D, 'SMG NORM', &
+             rBody+cTiny, Xyz_D, iHemisphere)
+
+        ! Check if the mapping is on the north hemisphere
+        if(iHemisphere == 0)then
+!           write(*,*)NameSub,' point did not map to rBody, ',&
+!                'implement analytic integrals here! Lat, Lon=', Lat, Lon
+           CYCLE
+        elseif(iHemisphere == -1)then
+           write(*,*)NameSub,' point mapped to the southern hemisphere! ',&
+                'Lat, Lon=',Lat,Lon
+           CYCLE
+        end if
+
+        ! Convert SMG to GSM (Note: these are identical for ideal axes)
+        !! Xyz_D = matmul(GmIm_DD,Xyz_D)
+
+        ! Find processor and block for the location
         call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
              iProcFound, iBlockFound, .true., i, j, k)
 
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
-!           write(*,'(a,2i3,a,i3,a,i4)') &
-!                'start of ray iLat, iLon=',iLat, iLon,&
-!                ' found on iProc=',iProc,' iBlock=',iBlockFound
-!           write(*,'(a,5es12.4)')'Lon, Lat, Xyz_D=',Lon, Lat, Xyz_D
+
+           if(iLat==iTest .and. iLon==jTest)then
+              write(*,'(a,2i3,a,i3,a,i4)') &
+                   'start of ray iLat, iLon=',iLat, iLon,&
+                   ' found on iProc=',iProc,' iBlock=',iBlockFound
+              write(*,'(a,2i4,2es12.4)')'iLon, iLat, Lon, Lat=',&
+                   iLon, iLat, Lon, Lat
+              write(*,'(a,3es12.4)')'XyzIono_D=',XyzIono_D
+              write(*,'(a,3es12.4)')'Xyz_D    =',Xyz_D
+           end if
+
            call follow_ray(2, (/iLat, iLon, 0, iBlockFound/), Xyz_D)
+
         end if
      end do
   end do
@@ -1215,48 +1265,89 @@ subroutine test_ray_integral
   ! Do remaining rays obtained from other PE-s
   call follow_ray(0, (/0, 0, 0, 0/), (/ 0., 0., 0. /))
 
-  ! write(*,*)'iProc, RayIntegral_VII=',iProc, RayIntegral_VII
+  if(DoTest.and.iTest<=nLat.and.jTest<=nLon) &
+       write(*,*)NameSub,' iProc, RayIntegral_VII=',&
+       iProc, RayIntegral_VII(:,iTest,jTest)
 
   ! Add up local integrals onto the root PE
-  call MPI_reduce(RayIntegral_VII, Result_VII, nLat*nLon*(nRayIntegral+1), &
+  call MPI_reduce(RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
        MPI_REAL, MPI_SUM, 0, iComm, iError)
 
-  ! Write out results
+end subroutine integrate_ray_accurate
+
+!============================================================================
+
+subroutine test_ray_integral
+
+  use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, nRayIntegral, &
+       xyz_to_latlon
+  use ModMain,     ONLY: iTest, jTest
+  use ModProcMH,   ONLY: iProc
+  use ModIoUnit,   ONLY: UNITTMP_
+  use ModNumConst, ONLY: cTiny
+  implicit none
+
+  integer, parameter :: nLat=50, nLon=50
+  real :: Lat_I(nLat), Lon_I(nLon), Lat, Lon
+  integer :: iLat, iLon
+  integer :: iError
+  character(len=*), parameter :: NameSub='test_ray_integral'
+  !-------------------------------------------------------------------------
+
+  write(*,*)NameSub,' starting on iProc=',iProc
+
+  ! Initialize the spherical grid
+  do iLat = 1, nLat
+     Lat_I(iLat) = 50.0 + 40.0*(iLat-0.5)/nLat
+  end do
+  do iLon = 1, nLon
+     Lon_I(iLon) = 360.0*(iLon-0.5)/nLon
+  end do
+
+  ! Integrate all points on the spherical grid
+  call integrate_ray_accurate(nLat,nLon,Lat_I,Lon_I)
+
+  ! Write out results into a file
   if(iProc==0)then
 
      ! Take logarithm of field line volume for better plotting ?
-     Result_VII(InvB_,:,:)=alog10(Result_VII(InvB_,:,:))
+     RayResult_VII(InvB_,:,:)=alog10(RayResult_VII(InvB_,:,:)+cTiny)
 
      open(UNITTMP_,file='test_ray_integral.dat')
      write(UNITTMP_,"(a79)")'test-ray-integral_var22'
-     write(UNITTMP_,"(i7,1pe13.5,3i3)")0, 0.0, 2, 1, nRayIntegral+1
+     write(UNITTMP_,"(i7,1pe13.5,3i3)")0, 0.0, 2, 1, nRayIntegral
      write(UNITTMP_,"(3i4)")nLat, nLon
      write(UNITTMP_,"(100(1pe13.5))")0.0
-     write(UNITTMP_,"(a79)")'Lon Lat Closed Bvol Z0x Z0y Z0b Rho P nothing'
-
-!     write(*,*)'iLon iLat Lon Lat Closed Bvol Z0x Z0y Z0b Rho P'
+     write(UNITTMP_,"(a79)")&
+          'Lon Lat Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Param'
 
      do iLat=1,nLat
+        Lat = Lat_I(iLat)
         do iLon=1,nLon
-           Lat = 20.0 + (50.0*iLat)/nLat
-           Lon = (360.0 * iLon)/nLon
+           Lon = Lon_I(iLon)
 
-!           write(*,'(2i4,100(1es12.4))') iLon, iLat, Lat, Lon, &
-!                Result_VII(:,iLat,iLon)
+           call xyz_to_latlon(RayResult_VII(xEnd_:zEnd_,iLat,iLon))
 
-           write(UNITTMP_,"(100(1pe18.10))")Lon, Lat, Result_VII(:,iLat,iLon)
+           if(iLat == iTest .and. iLon == jTest)then
+              write(*,'(a,a)')'iLon iLat Lon Lat ',&
+                   'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend'
+              write(*,'(2i4,100(1es12.4))') iLon, iLat, Lon, Lat, &
+                   RayResult_VII(:,iLat,iLon)
+           end if
+
+           write(UNITTMP_,"(100(1pe18.10))")Lon,Lat,RayResult_VII(:,iLat,iLon)
         end do
      end do
      close(UNITTMP_)
   end if
 
   ! Deallocate buffers ???
-  deallocate(RayIntegral_VII)
+  ! deallocate(RayIntegral_VII, RayResult_VII)
 
   ! Clean up CON_ray_trace ???
   !call clean_ray
 
-  write(*,*)'Finished test_ray_integral iProc=',iProc
+  write(*,*)NameSub,' finished on iProc=',iProc
   call mpi_finalize(iError)
   stop
 
