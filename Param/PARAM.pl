@@ -106,13 +106,22 @@ the current set of parameters. The parameters for the next session
 start after the #RUN command. For the last session there is no
 need to use the #RUN command, since the #END command or simply
 the end of the PARAM.in file makes CON execute the last session.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SESSION'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeSession'},'content' => [{'attrib' => {'value' => 'old','default' => 'T','name' => 'old serial'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'parallel','name' => 'parallel'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'general','name' => 'new general'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SESSION'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeSession'},'content' => [{'attrib' => {'value' => 'general','default' => 'T','name' => 'general concurrent'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'old','name' => 'old serial'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #SESSION
 general			TypeSession
 
-The TypeSession string can be set to \'old\', \'parallel\' or \'general\'. 
+The TypeSession string can be set to \'general\' or \'old\'. 
 The value of TypeSession determines how the time looping is handled by CON.
+
+The \'general\' session model allows concurrent execution of the components.
+The components are synchronized only when conditions for the actions of 
+coupling, saving restart files, or stopping execution are met. 
+This is possible because it is known in advance by each component when 
+these actions will occur. In time accurate mode the components are 
+required to make a time step which does not exceed the next synchronization
+time. In steady state mode there is no limit on the time step, and 
+components can be called at different frequencies.
 
 If TypeSession=\'old\', then CON mimics the behaviour of the BATSRUS 
 time loop control: 
@@ -123,20 +132,7 @@ a serial manner, i.e. they wait for the coupling, and GM waits until
 they finish their execution. This time loop control is mainly preserved
 for backwards compatibility.
 
-The \'parallel\' session requires that all the processing elements (PE-s)
-are used by exactly one component. The components are executed in parallel,
-and coupled only when conditions for the actions of coupling, saving restart
-files, or stopping execution are met. This is possible because it is known
-in advance by each component when these actions will occur.
-The components are required to advance to the simulation time of the next
-action. Currently the \'parallel\' session model works in the time accurate
-mode only. Generalization to the steady-state mode will be done soon.
-
-Currently the default is the \'old\' mode, but in the future it
-will probably be replaced with the \'general\' mode.
-The \'parallel\' mode is mainly used as a simpler version of
-the \'general\' mode for development purposes.
-mode only. Generalization to the steady-state mode will be done soon.
+The default is the \'general\' mode.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #TIMEACCURATE
@@ -326,21 +322,20 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
 
-If UseTiming=.true., the TIMING module must be on.
+If UseTiming=.true., the execution is timed by the TIMING utility.
 If UseTiming=.false., the execution is not timed.
 
-Dntiming determines the frequency of timing reports.
-If DnTiming .ge.  1, a timing report is produced every dn_timing step.
-If DnTiming .eq. -1, a timing report is shown at the end of each session,
-                   before each AMR, and at the end of the whole run.
-If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
-If DnTiming .eq. -3, no timing report is shown.
+The Dntiming parameter determines the frequency of timing reports:
+If DnTiming is positive, a timing report is produced every DnTiming steps.
+If DnTiming is -1, a timing report is shown at the end of each session.
+If DnTiming is -2, a timing report is shown at the end of the whole run.
+If DnTiming is -3, no timing report is shown.
 
-nDepthTiming determines the depth of the timing tree. A negative number
-means unlimited depth. If TimingDepth is 1, only the full BATSRUS execution
-is timed.
-!
-TypeTimingReport determines the format of the timing reports:
+The nDepthTiming parameters defines the depth of the timing tree. 
+A negative value means unlimited depth. If nDepthTiming is 1, only the 
+total SWMF execution is timed.
+
+The TypeTimingReport parameter determines the format of the timing reports:
 \'cumm\' - cummulative list sorted by timings
 \'list\' - list based on caller and sorted by timings
 \'tree\' - tree based on calling sequence
@@ -348,15 +343,16 @@ TypeTimingReport determines the format of the timing reports:
 The default values are shown above.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #PROGRESS
-10			DnProgressShort (frequency of short reports to STDOUT)
-100			DnProgressLong  (frequency of long summaries to STDOUT)
+10			DnProgressShort
+100			DnProgressLong
 
-The DnShowProgressShort and DnShowProgressLong  variables determine
+The DnShowProgressShort and DnShowProgressLong variables determine
 the frequency of showing short and long progress reports in terms
-of the number of time steps nStep.
-Currently both the short and the long progress reports consist
-of a single line. In the future the long progress report will give
-more detailed information.
+of the number of time steps nStep. The short progress report
+consists of a single line which shows the number of time steps,
+simulatiion time and CPU time. The long progress report also shows
+a small timing report on the root processor.
+Negative values indicate that no report is requested.
 
 The default values are DnShowProgressShort=10 and DnShowProgressLong=100.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'PRECISION'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nByteReal'},'content' => [{'attrib' => {'value' => '4','default' => '$nByteReal==4','name' => 'single precision (4)'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '8','default' => '$nByteReal==8','name' => 'double precision (8)'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$nByteReal==$_nByteReal'},'content' => [{'content' => '
@@ -395,8 +391,8 @@ number is not checked.
 	','type' => 't'}],'type' => 'e','name' => 'rule'},{'attrib' => {'value' => '$UseComp','type' => 'logical','name' => '_UsedComp{$NameComp}'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
 
 #COMPONENT
-IE
-F
+IE			NameComp
+F			UseComp
 
 The NameComp variable contains the two-character component ID, 
 while the UseComp variable defines if the component should be 
@@ -407,6 +403,16 @@ be given any parameters.
 
 The default is that all the components registered in the LAYOUT.in
 file are used.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'CYCLE'},'content' => [{'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'content' => [{'attrib' => {'default' => 'T','name' => 'IH'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'GM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '1','type' => 'integer','name' => 'DnRun'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#CYCLE
+IH			NameComp
+10			DnRun
+
+The DnRun variable defines the frequency of calling component NameComp
+during a steady state run. In the example IH will be called for 
+nStep = 10, 20, 30, ... For time accurate runs this command has no effect.
+The default is DnRun = 1 for all the active components.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'COUPLING CONTROL'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! COUPLING CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -566,6 +572,23 @@ This way IE can solve the potential problem while GM advances by 3 seconds.
 That can improve the parallelization and efficiency.
 
 The default is no shifting.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'COUPLETIME'},'content' => [{'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'content' => [{'attrib' => {'default' => 'T','name' => 'IH'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'GM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoCoupleOnTime'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#COUPLETIME
+IE			NameComp
+F			DoCoupleOnTime
+
+The NameComp variable contains the two-character component ID, 
+while the DoCoupleOnTime parameter defines if the time step of the
+component should be limited such that it does not exceed the next 
+coupling time. If DoCoupleOnTime is true, the component will limit the
+time step for couplings, if it is false, the time step is only limited
+by the final time, the time of saving restarts and the time of checking
+stop conditions. This command has effect only in time accurate mode when
+the general session model is used.
+
+The default is that all components limit their time steps to match
+the coupling time.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'RESTART CONTROL'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! RESTART CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -690,7 +713,7 @@ The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
 These modifier commands cannot preceed the #PLANET command!
 
-','type' => 't'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'PLANET'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'content' => [{'attrib' => {'value' => 'EARTH/Earth/earth','default' => 'T','name' => 'Earth'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'New'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$NamePlanet eq \'New\''},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'RadiusPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'MassPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'OmegaPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'TiltRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'content' => [{'attrib' => {'name' => 'NONE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'default' => 'T','name' => 'DIPOLE'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisThetaGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhiGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => 'not $PlanetCommand'},'content' => [{'content' => '
+','type' => 't'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'PLANET'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'content' => [{'attrib' => {'value' => 'EARTH/Earth/earth','default' => 'T','name' => 'Earth'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SATURN/Saturn/saturn','name' => 'Saturn'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'New'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$NamePlanet eq \'New\''},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'RadiusPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'MassPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'OmegaPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'TiltRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'content' => [{'attrib' => {'name' => 'NONE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'default' => 'T','name' => 'DIPOLE'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisThetaGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhiGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => 'not $PlanetCommand'},'content' => [{'content' => '
 		PLANET should precede $PlanetCommand
 	','type' => 't'}],'type' => 'e','name' => 'rule'},{'content' => '
 
@@ -790,11 +813,6 @@ the values which depend on the orientation of the magnetic
 field can be costly. Since the magnetic field moves relatively
 slowly as the planet rotates around, it may not be necessary
 to continuously update the magnetic field orientation.
-
-This feature is now implemented in a simplistic manner: GM
-simply gets this value from CON and uses it for setting the frequency of
-updating the magnetic field information, which is stored locally.
-In the future the optimization should be done inside CON too.
 
 The default value is 0.0001, which means that the magnetic axis
 is continuously followed.

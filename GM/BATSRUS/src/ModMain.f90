@@ -107,14 +107,13 @@ Module ModMain
   logical :: UseIonosphere=.false.
 
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
-  integer :: dn_raytrace=100                               !^CFG IF RAYTRACE
-  logical :: check_rayloop=.false.                         !^CFG IF RAYTRACE
 
   logical :: UseIM = .false.                               !^CFG IF RCM
   real    :: tauCoupleIM=0.01                              !^CFG IF RCM
 
   real    :: ThetaTiltDeg = 0.0
   real    :: dt_UpdateB0  = 0.0001
+  logical :: DoUpdateB0   = .true.
   logical :: DoSplitDb0Dt = .true.
 
   logical, dimension(nBLK) :: unusedBLK
@@ -249,8 +248,7 @@ Module ModMain
   logical:: UseUserSetPhysConst=.false.
   logical:: UseUserUpdateStates=.false.
 
-  character (LEN=4) :: TimeH4
-  character (LEN=2) :: TimeM2,TimeS2
+  character (LEN=8) :: StringTimeH4M2S2
 
   logical :: DoSetLevels = .false.
   logical :: DoSendMHD   = .false.

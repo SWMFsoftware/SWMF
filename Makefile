@@ -72,7 +72,7 @@ ENV_CHECK:
 	  echo; \
 	  echo "SWMF_ROOT='${SWMF_ROOT}' and/or OS='${OS}' are incorrect!";\
 	  echo "Correcting Makefile.def";\
-	  perl -pi ${SCRIPTDIR}/FixMakefileDef.pl Makefile.def; \
+	  perl -pi share/Scripts/FixMakefileDef.pl Makefile.def; \
 	  echo "You may now try the previous make command again ..."; \
 	  exit 1; \
 	fi);
@@ -105,7 +105,7 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 # install for the 1st time
 #
 
-install : ENV_CHECK mkdir
+install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd ${CONDIR};   make install
 	cd share;       make install
@@ -114,6 +114,7 @@ install : ENV_CHECK mkdir
 	cd ${IHDIR};    make install    #^CMP IF IH
 	cd ${IMDIR};    make install    #^CMP IF IM
 	cd ${UADIR};    make install    #^CMP IF UA
+	cd ${RBDIR};    make install    #^CMP IF RB
 	@echo
 	@echo Installation succeeded
 	@echo
@@ -142,6 +143,13 @@ SWMF:	ENV_CHECK
 
 NOMPI: ENV_CHECK
 	cd ${NOMPIDIR}; make LIB
+#
+# STAND-ALONE EXECUTABLES FOR COMPONENTS
+#
+
+RBM:	ENV_CHECK                               #^CMP IF RB
+	@cd ${RBDIR}; make RBM                  #^CMP IF RB
+	@echo ' '                               #^CMP IF RB
 
 #
 #	Post processing
@@ -181,8 +189,6 @@ CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make clean
-	cd util/TIMING/srcEmpty;make clean
 	cd GM/BATSRUS;		make clean    #^CMP IF GM
 	cd GM/Empty;		make clean    #^CMP IF GM
 	cd IE/Ridley_serial;	make clean    #^CMP IF IE
@@ -194,12 +200,11 @@ clean: ENV_CHECK
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
+	cd RB/Rice;		make clean    #^CMP IF RB
+	cd SP/Kota;             make clean    #^CMP IF SP
+	cd CON;			make clean
+	cd share;		make clean
+	cd util;		make clean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	cd doc/Tex;             make clean
@@ -214,8 +219,6 @@ clean: ENV_CHECK
 distclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util/TIMING/src;	make distclean
-	cd util/TIMING/srcEmpty;make distclean
 	cd GM/BATSRUS;		make distclean    #^CMP IF GM
 	cd GM/Empty;		make distclean    #^CMP IF GM
 	cd IE/Ridley_serial;	make distclean    #^CMP IF IE
@@ -227,14 +230,10 @@ distclean: ENV_CHECK rmdir
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
-	cd ${CONTROLDIR};	make clean
-	cd ${LIBRARYDIR};	make clean
-	cd ${COUPLERDIR};	make clean
-	cd CON/Interface/src;	make clean
-	cd CON/Stubs/src;	make clean
-	cd ${SHAREDIR};		make clean
-	cd ${SHAREDIR};		make distclean
-	cd ${CONDIR};		make distclean
+	cd RB/Rice;		make distclean    #^CMP IF RB
+	cd SP/Kota;             make distclean    #^CMP IF SP
+	cd CON;			make distclean
+	cd util;		make distclean
 	cd share;               make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -278,6 +277,7 @@ dist: distclean
 	tar -rf tmp.tar  IH			#^CMP IF IH
 	tar -rf tmp.tar  IM			#^CMP IF IM
 	tar -rf tmp.tar  UA			#^CMP IF UA
+	tar -rf tmp.tar  RB                     #^CMP IF RB
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
@@ -301,6 +301,8 @@ rundir: ENV_CHECK
 	cd ${IHDIR}; make rundir PLOT=${PLOT}    #^CMP IF IH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${UADIR}; make rundir                 #^CMP IF UA
+	cd ${RBDIR}; make rundir                 #^CMP IF RB
+	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
@@ -325,7 +327,7 @@ nompirun: ENV_CHECK ${DEFAULT_TARGET}
 ETAGS = etags
 
 tags:	ENV_CHECK
-	-$(ETAGS) */*.[fF]90 */*.[fF] */*/*.[fF]90 */*/*.[fF]
+	-$(ETAGS) ./*/*/*/*.[fF]90 ./*/*/*/*.[fF] ./*/*/*/*.for
 
 clobber: ENV_CHECK distclean
 	-(@rm -rf run)
@@ -336,7 +338,7 @@ clobber: ENV_CHECK distclean
 #	Copy and rename GM/BATSRUS/src into IH/BATSRUS/src
 #
 
-IH/BATSRUS/src:
+IH/BATSRUS/src/Makefile:
 	mkdir -p IH/BATSRUS/src
 	cd GM/BATSRUS/src; cp *.f90 *.f Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
@@ -346,14 +348,16 @@ IH/BATSRUS/src:
 	cp Makefile.conf Makefile.def PARAM.XML PARAM.pl GridSize.pl \
 	../../IH/BATSRUS/
 
-IHBATSRUS: IH/BATSRUS/src ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+IHBATSRUS:IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 	cd IH/BATSRUS/src; \
-	${SCRIPTDIR}/Methods.pl IH; \
-	${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
-	perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f; \
-	perl -i -pe 's/libBATSRUS.a/libIH.a/; s/^\#IH_WRAPPER_/IH_WRAPPER_/' \
-		Makefile; \
-	perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90
+		${SCRIPTDIR}/Methods.pl IH; \
+		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
+		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;
+	cd IH/BATSRUS/srcInterface; \
+		mv ../src/ModGridDescriptor.f90 .; \
+		mv ../src/IH_wrapper.f90 .; \
+		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90; \
+		touch Makefile.DEPEND
 
 #^CMP END IH
 # keep this line

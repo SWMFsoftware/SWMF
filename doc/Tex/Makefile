@@ -4,13 +4,14 @@ include ../../Makefile.def
 SWMFREF = \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
+	${CONTROLDIR}/CON_session.protex \
+	${CONTROLDIR}/CON_io.protex \
+	${CONTROLDIR}/CON_methods.protex \
+	${LIBRARYDIR}/CON_time.protex \
+	${LIBRARYDIR}/CON_physics.protex \
 	${LIBRARYDIR}/CON_world.protex \
 	${LIBRARYDIR}/CON_comp_param.protex \
 	${LIBRARYDIR}/CON_comp_info.protex \
-	${CONTROLDIR}/CON_io.protex \
-	${SHAREDIR}/ModReadParam.protex \
-	${SHAREDIR}/ModIoUnit.protex \
-	${CONTROLDIR}/CON_session.protex \
 	${INTERFACEDIR}/CON_wrapper.protex \
 	${INTERFACEDIR}/CON_couple_all.protex \
 	${INTERFACEDIR}/CON_couple_ih_gm.protex \
@@ -22,16 +23,18 @@ SWMFREF = \
 	${COUPLERDIR}/CON_grid_descriptor.protex \
 	${COUPLERDIR}/CON_router.protex \
 	${COUPLERDIR}/CON_global_message_pass.protex \
-	${SHAREDIR}/CON_axes.protex \
+	${SHAREDIR}/ModReadParam.protex \
+	${SHAREDIR}/ModIoUnit.protex \
 	${SHAREDIR}/ModCoordTransform.protex \
-	${SHAREDIR}/CON_time.protex \
-	${SHAREDIR}/ModTimeType.protex \
+	${SHAREDIR}/ModTimeConvert.protex \
+	${SHAREDIR}/ModFreq.protex \
+	${SHAREDIR}/ModUtilities.protex \
 	${SHAREDIR}/ModKind.protex \
+	${SHAREDIR}/ModMpi.protex \
+	${SHAREDIR}/CON_axes.protex \
 	${SHAREDIR}/CON_planet.protex \
 	${SHAREDIR}/CON_planet_field.protex \
-	${SHAREDIR}/CON_physics.protex \
-	${CONTROLDIR}/CON_methods.protex \
-	${SHAREDIR}/ModMpi.protex \
+	${SHAREDIR}/CON_ray_trace.protex \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
@@ -40,13 +43,16 @@ SWMFREF = \
 	${GMDIR}/TestCompare.protex
 
 .SUFFIXES:
-.SUFFIXES: .f90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
+.SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
 
 .XML.xmltex:
 	${SCRIPTDIR}/XmlToTex.pl $*.XML > $*.xmltex
 
 .f90.protex:
 	${SCRIPTDIR}/protex -b -n -f $*.f90 > $*.protex
+
+.F90.protex:
+	${SCRIPTDIR}/protex -b -n -f $*.F90 > $*.protex
 
 .pl.protex:
 	${SCRIPTDIR}/protex -b -n -f -S $*.pl > $*.protex
@@ -116,7 +122,9 @@ SWMFREF.tex: ${SWMFREF}
 
 SWMFXML = \
 	${DIR}/Param/PARAM.xmltex \
-	${DIR}/GM/BATSRUS/PARAM.xmltex
+	${DIR}/GM/BATSRUS/PARAM.xmltex \
+	${DIR}/IM/RCM/PARAM.xmltex \
+	${DIR}/IE/Ridley_serial/PARAM.xmltex
 
 SWMF_xml.tex: ${SWMFXML}
 	cat ${SWMFXML} > SWMF_xml.tex
@@ -139,7 +147,7 @@ HTML: cleanhtml SWMF.html
 #^CFG END DOCHTML
 
 clean:
-	rm -rf *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex
+	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMF_xml.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
@@ -152,4 +160,3 @@ cleanhtml: clean
 
 cleanall: cleanpdf cleanhtml
 #^CFG END DOCHTML
-

@@ -62,6 +62,10 @@ module CON_coupler
        IE_, UA_, &
        IE_, GM_  /), (/2, MaxCouple/) )
 
+  public :: DoCoupleOnTime_C ! Should do coupling limit the time step
+
+  logical :: DoCoupleOnTime_C(MaxComp) = .true.
+
   !PUBLIC MEMBER FUNCTIONS:
   public :: init_coord_system_all !Initializes Grid_C
   public :: set_coord_system      !Sets coordinate information for a component

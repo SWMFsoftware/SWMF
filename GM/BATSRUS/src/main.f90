@@ -18,15 +18,13 @@ program BATSRUS
        dn_timing, UseTiming
   use ModIO, ONLY: NameRestartInDir
 
-  use CON_time, ONLY : init_time, &  !!! For now
-       iSession                      !!! For now, will be in ModMain
-
   use ModReadParam
 
   use ModMpi
 
   implicit none
 
+  integer :: iSession=1
   integer :: iError
   logical :: IsFound
   real(Real8_) :: CpuTimeStart
@@ -81,15 +79,10 @@ program BATSRUS
   end if
 
   !\
-  ! Initialize CON_time
-  !/
-  call init_time
-
-  !\
   ! Read input parameter file. Provide the default restart file for #RESTART
   !/
   call read_file('PARAM.in',iComm,trim(NameRestartInDir)//'restart.H')
-  call read_init('  ',iSessionIn=1,iLineIn=0)
+  call read_init('  ',iSessionIn=1,iLineIn=0,nLineIn=n_line_read())
 
   SESSIONLOOP: do
 
@@ -107,7 +100,7 @@ program BATSRUS
      !call set_oktest('main',DoTest,DoTestMe)
 
      !\
-     ! Time execution (timing parameters were read by read_inputs)
+     ! Time execution (timing parameters were set by MH_set_parameters)
      !/
      if(iSession==1)then
         call timing_start('BATSRUS')
@@ -230,6 +223,7 @@ contains
     use ModPhysics, ONLY: unitSI_t
 
     real(Real8_), external :: timing_func_d
+    real(Real8_) :: CpuTimeBATSRUS,CpuTimeAdvance
 
     integer :: nIterExpect, nIterExpectTime
 
@@ -241,19 +235,21 @@ contains
     if( UseTiming .and. iProc==0 &
          .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
 
+       CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
+       CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
        if (.not.time_accurate) then
           write(*,'(a,f9.1,a,f9.1,a,i8)') 'Speed is',&
                nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
-               /max(1.D-10,timing_func_d('sum',1,'advance','BATSRUS')),&
+               /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
-               timing_func_d('sum',3,'BATSRUS','BATSRUS'),&
+               CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
           write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e10.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
-               /max(1.D-10,timing_func_d('sum',1,'advance','BATSRUS')),&
+               /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
-               timing_func_d('sum',3,'BATSRUS','BATSRUS'),&
+               CpuTimeBATSRUS,&
                ' s at N =',n_step, ' (', Time_Simulation,' s)'
        endif
 
@@ -279,10 +275,11 @@ contains
              nIterExpect = min(nIterExpect, nIterExpectTime)
           endif
        end if
+       CpuTimeAdvance=timing_func_d('sum/iter',2,'advance','BATSRUS')
        write (*,'(i6,a,i6,a,f10.2)') iteration_number,' of ', &
             nIterExpect+iteration_number,  &
             ' iterations completed.   Expected time to completion:', &
-            timing_func_d('sum/iter',2,'advance','BATSRUS')*nIterExpect
+            CpuTimeAdvance*nIterExpect
        write(*,*)
     end if
 

@@ -12,7 +12,8 @@ include Makefile.DEPEND
 OBJ_IH = GM_put_from_ih.o
 #^CMP END IH
 #^CMP IF IM BEGIN
-OBJ_IM = GM_get_for_im.o GM_put_from_im.o
+OBJ1   = ModGmImCoupling.o #^CFG IF RAYTRACE
+OBJ_IM = $(OBJ1) GM_get_for_im.o GM_put_from_im.o
 #^CMP END IM
 #^CMP IF IE BEGIN
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
@@ -43,7 +44,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-BATSRUS_LIB = ${LIBDIR}/libBATSRUS.a 
+BATSRUS_LIB = ../src/libBATSRUS.a 
 
 ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	cp -f ${BATSRUS_LIB} ${MY_LIB}

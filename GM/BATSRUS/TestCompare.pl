@@ -17,6 +17,8 @@ if($Tar){
     exit 0;
 }
 
+&compare_speed if $speed;
+
 # Normal use with two directories
 &print_help if $#ARGV != 1;
 $Strict=$s;
@@ -213,14 +215,16 @@ TEST: foreach $test (sort @test){
 	    if($.<=$nheadline){
 		$line1 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
 		$line2 =~ s|GM/Param/TESTSUITE|Param/TESTSUITE|;
+		$line1 =~ s/\-(0\.0+)\b/ $1/;
+		$line2 =~ s/\-(0\.0+)\b/ $1/;
 		if($line1 ne $line2){
-		    &report("$test: different head lines:\n",
+		    &report("$test $logfile, different head lines:\n",
 			    "    $line1    $line2\n");
 		    next LOGFILE if $Strict;
 		}
 		
 		@logvar=split(' ',$line1) if $logfile !~ /iono/ and $.==2;
-		$nheadline = $. if $line1 =~ /^BEGIN/;
+		$nheadline = $. if $line1 =~ /^BEGIN|ZONE/;
 		next LINE;
 	    }
 	    @item1=split(' ',$line1);
@@ -273,6 +277,97 @@ sub report{
 }
 
 ##############################################################################
+
+sub compare_speed{
+
+    &print_help if $#ARGV == -1;
+
+    my @dir=@ARGV; # list of directories
+
+    my $What = $speed; $What = 'BATSRUS\|SWMF' if $What eq "1"; #speed of what?
+
+    my @speedsum; # sum of speeds for tests completed in all directories
+    my $speedsum; # number of tests completed in all directories
+
+    print "Timings for $What\n";
+    print "tst";
+    foreach (@dir){printf "%8s",substr($_,0,7)};
+    print "     diff" if $#dir==1;
+    print "   switches\n";
+    print "=" x 79,"\n";
+    foreach $number ("000".."050"){
+	my $test = "test.$number";
+
+	my @speed;
+	my $switch;
+	my $missing;
+
+	foreach $dir (@dir){
+	    if(-d "$dir/$test"){
+		my $myswitch;
+		$myswitch = `head -1 $dir/$test/SWITCHES`; chop($myswitch);
+		$myswitch =~ s/Test(Batsrus|SWMF).pl\s*//;
+		if(not $switch){
+		    $switch = $myswitch;
+		}else{
+		    warn "WARNING: switch=$switch ne myswitch=$myswitch ".
+			"in $dir/$test/SWITCHES\n"
+			if $switch ne $myswitch;
+		}
+		$_ = `grep "$What" $dir/$test/log* | tail -1`;
+		($speed) = /(\d+\.\d\d)/;
+		$speed   = sprintf("%8.2f",$speed);
+	    }elsif(-f "$dir/log.$number"){
+		$_ = `grep "$What" $dir/log.$number | tail -1`;
+		($speed) = /(\d+\.\d\d)/;
+		$speed   = sprintf("%8.2f",$speed);
+	    }else{
+		$speed = "    --- "; $missing++;
+	    }
+	    push @speed, $speed;
+	}
+	next if $missing > $#dir; # nothing to report
+
+	print "$number",join("",@speed);
+	if($#dir==1){
+	    # Calculate speed difference for 2 directories
+	    if($speed[0] > 0 and $speed[1] > 0){
+		printf "%9.2f",$speed[1]-$speed[0];
+	    }else{
+		print "     --- ";
+	    }
+	}
+	if(length($switch)>70){
+	    print "   ",substr($switch,0,70),"...\n";
+	}else{
+	    print "   $switch\n";
+	}
+
+	next if $missing; # do not add up if any result is missing
+
+	for $i (0..$#dir){$speedsum[$i] += $speed[$i]} # add up speeds
+	$speedsum++;
+    }
+    if(@speedsum){
+	print "-" x 79,"\n";
+	print "Sum";
+	for $i (0..$#dir){
+	    printf "%8.2f",$speedsum[$i];
+	}
+	if($#dir==1){
+	    # Calculate speed difference for 2 directories
+	    if($speedsum[1]>0 and $speedsum[1]>0){
+		printf "%9.2f",$speedsum[1]-$speedsum[0];
+	    }else{
+		print "     --- ";
+	    }
+	}
+	print "   for $speedsum compeleted tests\n";
+    }
+    exit 0;
+}
+
+##############################################################################
 #BOP
 #!ROUTINE: TestCompare.pl - a tool for quantitative comparison of test results
 #!DESCRIPTION:
@@ -282,12 +377,16 @@ sub report{
 #!REVISION HISTORY:
 # 01/27/02 G.Toth - initial version developed for BATSRUS
 # 07/10/03 G.Toth - adapted to SWMF
+# 04/01/04 G.Toth - added -speed option to compare speeds
 #EOP
 
 sub print_help{
 
     print "
-Purpose: Compare log files between complete test suites.
+Purpose: 
+Compare log files between complete test suites.
+Compare execution speeds between test suites.
+Tar up important log files from a test suite.
 
 ",
 #BOC
@@ -295,7 +394,11 @@ Purpose: Compare log files between complete test suites.
 
 TestCompare.pl [-h] [-q] [-s] [-v] [-o=L] [-tol=X] Dir1 Dir2
 
-        or
+or
+
+TestCompare.pl -speed[=WHAT] Dir1 [Dir2] [Dir3] ...
+
+or
 
 TestCompare.pl -tar Dir
 
@@ -309,8 +412,32 @@ TestCompare.pl -tar Dir
 Dir1    Directory 1 containing test runs
 Dir2    Directory 2 containing test runs
 
+-speed[=WHAT]
+        Extract and list execution speeds for all tests of the test suite.
+        The timings will be compared for 'WHAT' which is the (abbreviated) 
+        name found in the timing report. Default value is 'BATSRUS|SWMF'.
+        If called with more than one directory the speeds for a given
+        test are listed next to each other which makes comparison easy.
+        When 2 directories are compared, the difference is also printed.
+
+Dir1,Dir2,Dir2...    
+        The directories containing test.0xx/log.0xx or log.0xx files,
+        where xx goes from 00 to 35.
+
 -tar    Tar up files relevant for comparison into TEST.tar
-Dir     Directory containing test runs to be tarred up"
+Dir     Directory containing test runs to be tarred up
+
+Examples:
+
+      TestCompare.pl run1 run2
+
+      TestCompare.pl -q -v -o=1e-12 run1 run2
+
+      TestCompare.pl -speed run1 run2
+
+      TestCompare.pl -speed=exch_msgs run1 run2 run3
+
+      TestCompare.pl -tar run"
 #EOC
 ,"\n\n";
     exit;

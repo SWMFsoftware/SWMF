@@ -273,7 +273,7 @@ subroutine set_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar,isat)
   logical :: oktest,oktest_me
 
   ! B0, the state and the sum of weights at the position of the satellite
-  real :: StateSat_V(nVar+3), B0Sat_D(3), WeightSat
+  real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
   !-------------------------------------------------------------------------
   call set_oktest('set_logvar',oktest,oktest_me)
@@ -292,7 +292,8 @@ subroutine set_logvar(nlogvar,logvarnames,nlogR,logRvalues,nlogTot,LogVar,isat)
      ! Satellites need B0 and the state at the satellite position
      call get_b0(xSatellite(iSat,1),xSatellite(iSat,2),xSatellite(iSat,3),&
           B0Sat_D)
-     call get_satellite_data(xSatellite(iSat,:),.true.,StateSat_V,WeightSat)
+     call get_point_data(0.0,xSatellite(iSat,:),1,nVar+3,StateSat_V)
+     call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
   else
      ! The logfile usually needs the integral of conservative variables
      call integrate_cell_centered_vars(StateIntegral_V)
@@ -713,9 +714,9 @@ contains
     case('Jz','jz')
        var_sat = StateSat_V(nVar+3)
     case('weight')
-       var_sat = WeightSat
+       var_sat = StateSat_V(0)
     case('order')
-       if(abs(WeightSat-1)<1.e-5)then
+       if(abs(StateSat_V(0)-1)<1.e-5)then
           var_sat = 2
        else
           var_sat = 1
@@ -981,7 +982,8 @@ real function integrate_flux_sph(qnum,qrad,qa)
                    dy2*(   dz1*qa(i1,j1,k2,iBLK)+&
                    dz2*qa(i1,j1,k1,iBLK)))
 
-              flux_to_add = flux_to_add*2.0*(qrad**2)*dphi_sph*sin(dtheta_sph/2.0)*sin(theta_sph)
+              flux_to_add = flux_to_add* &
+                   2.0*(qrad**2)*dphi_sph*sin(dtheta_sph/2.0)*sin(theta_sph)
               Flux_sum = Flux_sum + flux_to_add
 
            end if
@@ -1002,7 +1004,7 @@ real function integrate_flux_sph(qnum,qrad,qa)
 end function integrate_flux_sph
 
 
-!=====================================================================================
+!==============================================================================
 
 real function integrate_flux_circ(qnum,qrad,qz,qa)
 
@@ -1143,265 +1145,59 @@ end function integrate_flux_circ
 
 !==============================================================================
 
-subroutine get_satellite_data(XyzIn_D,DoCurrent,StateCurrent_V,Weight)
+subroutine collect_satellite_data(Xyz_D, StateCurrent_V)
 
-  ! Interpolate the state vector and current for input position 
-  ! XyzIn_D given in Cartesian coordinates. The interpolated state 
-  ! is second order accurate everywhere except where there is a 
-  ! resolution change in more than one direction for the cell centers 
-  ! surrounding the given position. In these exceptional cases the 
-  ! interpolated state is first order accurate. The interpolation algorithm
-  ! is based on trilinear interpolation, but it is generalized for
-  ! trapezoidal rectangles.
-
-  use ModNumConst
-  use ModVarIndexes, ONLY : nVar, Bx_, By_, Bz_
-  use ModProcMH
-  use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
-  use ModAdvance, ONLY : State_VGB
-  use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
-  use ModParallel, ONLY : NeiLev
-
+  use ModProcMH, ONLY: nProc, iProc, iComm
+  use ModVarIndexes, ONLY : nVar
   use ModMpi
   implicit none
 
-  ! Input position is in generalized coordinates
-  real, intent(in)  :: XyzIn_D(3)
+  !INPUT ARGUMENTS:
+  real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
 
-  ! Do we need to calculate currents
-  logical, intent(in) :: DoCurrent
-
-  ! Interpolated state at the input position on PE-0
-  real, intent(out) :: StateCurrent_V(nVar+3)
-
-  ! The weight indicates the quality of the interpolation:
+  !INPUT/OUTPUT ARGUMENTS:
+  ! On input StateCurrent_V contains the weight and the interpolated state 
+  ! on a given PE.
+  ! On output only PE 0 contains new data.
+  ! In the first 0th element the total weight is returned.
   ! If weight is 1.0 then the returned state is second order accurate
   ! If weight is positive but not 1.0 then the returned state is first order
   ! If weight is 0.0 (or less?) then the point was not found and the 
   !     returned state is -777.0
-  real, intent(out) :: Weight
+  ! The rest of the elements contain the globally interpolated state.
 
-  ! Local variables
+  real, intent(inout) :: StateCurrent_V(0:nVar+3)
 
-  ! Position in generalized coordinates
-  real :: Xyz_D(3)
+  !LOCAL VARIABLES:
+  ! This is needed for MPI_reduce
+  real :: StateCurrentAll_V(0:nVar+3)
 
-  ! These are needed for MPI_reduce
-  real :: StateCurrentAll_V(nVar+3), WeightAll
-
-  ! Cell size and buffer size for current block
-  real,    dimension(3) :: Dxyz_D, DxyzInv_D, DxyzLo_D, DxyzHi_D
-
-  ! Position of cell center to the lower index direction
-  integer, dimension(3) :: IjkLo_D 
-
-  ! Position of satellite and current cell center
-  real :: x, y, z, xI, yJ, zK
-
-  ! Bilinear weights
-  real    :: WeightX,WeightY,WeightZ,WeightXyz
-
-  ! Dimension, cell, block index and MPI error code
-  integer :: iDim,i,j,k,iLo,jLo,kLo,iHi,jHi,kHi,iBlock,iError
-
-  ! Testing
-  logical :: DoTest,DoTestMe
-  !----------------------------------------------------------------------------
-  call set_oktest('get_satellite_data',DoTest,DoTestMe)
-
-  if(DoTestMe)write(*,*)'get_satellite_data called with XyzIn_D=',XyzIn_D
-
-  ! Convert to generalized coordinates if necessary
-  select case(TypeGeometry)           !^CFG IF NOT CARTESIAN
-  case('cartesian')                   !^CFG IF NOT CARTESIAN
-     Xyz_D = XyzIn_D
-  case('spherical','spherical_lnr')   !^CFG IF NOT CARTESIAN BEGIN
-     call xyz_to_spherical(XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),&
-          Xyz_D(1),Xyz_D(2),Xyz_D(3))
-     if(TypeGeometry=='spherical_lnr')Xyz_D(1)=alog(max(Xyz_D(1),cTiny))
-  case default
-     call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-  end select                          !^CFG END CARTESIAN
-
-  ! Set state and weight to zero, so MPI_reduce will add it up right
-  StateCurrent_V = cZero
-  Weight         = cZero
-
-  ! Loop through all blocks
-  BLOCK: do iBlock = 1, nBlock
-     if(unusedBLK(iBlock)) CYCLE
-
-     ! Put cell size of current block into an array
-     Dxyz_D(1)=dx_BLK(iBlock)
-     Dxyz_D(2)=dy_BLK(iBlock)
-     Dxyz_D(3)=dz_BLK(iBlock)
-
-     ! Set buffer zone according to relative size of neighboring block
-     do iDim = 1, 3
-        ! Block at the lower index side
-        select case(NeiLev(2*iDim-1,iBlock))
-        case(1)
-           DxyzLo_D(iDim) = 1.5*Dxyz_D(iDim)
-        case(-1)
-           DxyzLo_D(iDim) = 0.75*Dxyz_D(iDim)
-        case default
-           DxyzLo_D(iDim) = Dxyz_D(iDim)
-        end select
-        ! Check if satellite is inside the buffer zone on the lower side
-        if(Xyz_D(iDim)<XyzStart_BLK(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
-
-        ! Block at the upper index side
-        select case(NeiLev(2*iDim,iBlock))
-        case(1)
-           DxyzHi_D(iDim) = 1.5*Dxyz_D(iDim)
-        case(-1)
-           DxyzHi_D(iDim) = 0.75*Dxyz_D(iDim)
-        case default
-           DxyzHi_D(iDim) = Dxyz_D(iDim)
-        end select
-        ! Check if satellite is inside the buffer zone on the upper side
-        if(Xyz_D(iDim) > XyzStart_BLK(iDim,iBlock) + &
-             (nCells(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
-     end do
-
-     ! Find closest cell center indexes towards the lower index direction
-     IjkLo_D = floor((Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D)+1
-
-     ! Set the size of the box for bilinear interpolation
-
-     ! At resolution change the box size is the sum
-     ! average of the cell size of the neighboring blocks
-
-     ! Also make sure that IjkLo_D is not out of bounds
-     do iDim = 1,3
-        if(IjkLo_D(iDim) < 1)then
-           IjkLo_D(iDim)   = 0
-           DxyzInv_D(iDim) = 1/DxyzLo_D(iDim)
-        elseif(IjkLo_D(iDim) >= nCells(iDim))then
-           IjkLo_D(iDim)   = nCells(iDim)
-           DxyzInv_D(iDim) = 1/DxyzHi_D(iDim)
-        else
-           DxyzInv_D(iDim) = 1/Dxyz_D(iDim)
-        end if
-     end do
-
-     if(DoTest)then
-        write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
-             iProc,iBlock,IjkLo_D
-        write(*,*)'iProc, XyzStart_BLK,Dx_BLK=',iProc, &
-             XyzStart_BLK(:,iBlock),dx_BLK(iBlock)
-     end if
-
-     ! Set the index range for the physical cells
-     iLo = max(IjkLo_D(1),1)
-     jLo = max(IjkLo_D(2),1)
-     kLo = max(IjkLo_D(3),1)
-     iHi = min(IjkLo_D(1)+1,nI)
-     jHi = min(IjkLo_D(2)+1,nJ)
-     kHi = min(IjkLo_D(3)+1,nK)
-
-     ! Put the satellite position into scalars
-     x = Xyz_D(1); y = Xyz_D(2); z = Xyz_D(3)
-
-     ! Loop through the physical cells to add up their contribution
-     do k = kLo, kHi
-        zk = XyzStart_BLK(3,iBlock) + (k-1)*Dxyz_D(3)
-        WeightZ = 1 - DxyzInv_D(3)*abs(z-zK)
-        do j = jLo, jHi
-           yJ = XyzStart_BLK(2,iBlock) + (j-1)*Dxyz_D(2)
-           WeightY = 1 - DxyzInv_D(2)*abs(y-yJ)
-           do i = iLo, iHi
-              xI = XyzStart_BLK(1,iBlock) + (i-1)*Dxyz_D(1)
-              WeightX = 1 - DxyzInv_D(1)*abs(x-xI)
-
-              WeightXyz = WeightX*WeightY*WeightZ
-
-              if(WeightXyz>0.0)then
-                 StateCurrent_V(1:nVar) = StateCurrent_V(1:nVar) &
-                      + WeightXyz * State_VGB(:,i,j,k,iBlock)
-                 if(DoCurrent)call add_current
-                 Weight  = Weight + WeightXyz
-                 if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
-                      iProc,i,j,k,WeightXyz
-              end if
-           end do
-        end do
-     end do
-  end do BLOCK
-
+  ! Temporary variables
+  real    :: Weight
+  integer :: iError
+  !---------------------------------------------------------------------------
   ! Collect contributions from all the processors to PE 0
   if(nProc>1)then
-     call MPI_reduce(Weight        ,WeightAll        ,     1,&
-          MPI_REAL,MPI_SUM,0,iComm,iError)
-     call MPI_reduce(StateCurrent_V,StateCurrentAll_V,nVar+3,&
-          MPI_REAL,MPI_SUM,0,iComm,iError)
-     if(iProc==0)then
-        Weight         = WeightAll
-        StateCurrent_V = StateCurrentAll_V
-     end if
+     call MPI_reduce(StateCurrent_V, StateCurrentAll_V, nVar+4,&
+          MPI_REAL, MPI_SUM, 0, iComm, iError)
+     if(iProc==0)StateCurrent_V = StateCurrentAll_V
   end if
 
   ! Check total weight and divide by it if necessary
   if(iProc==0)then
+     Weight = StateCurrent_V(0)
      if(Weight<=0.0)then
-        write(*,*)'get_satellite_data WARNING total weight =',&
+        write(*,*)'collect_satellite_data WARNING total weight =',&
              Weight,' at Xyz_D=',Xyz_D
         StateCurrent_V = -777.0
      elseif(abs(Weight - 1) > 1.e-5)then
-        StateCurrent_V = StateCurrent_V / Weight
+        StateCurrent_V(1:nVar+3) = StateCurrent_V(1:nVar+3) / Weight
      end if
   end if
 
-contains
+end subroutine collect_satellite_data
 
-  !============================================================================
-  subroutine add_current
-
-    ! Add current to the current part of StateCurrent
-    use ModMain, ONLY: prolong_order
-    real :: Current_D(3)
-    real :: DxInv, DyInv, DzInv
-    integer :: iLo,iHi,jLo,jHi,kLo,kHi
-
-    iLo=i-1; jLo=j-1; kLo=k-1; iHi=i+1; jHi=j+1; kHi=k+1
-
-    if(prolong_order==1)then
-       ! Avoid the ghost cells
-       if(i==1 .and.DxyzLo_D(1)/=Dxyz_D(1))iLo=1
-       if(i==nI.and.DxyzHi_D(1)/=Dxyz_D(1))iHi=1
-       if(j==1 .and.DxyzLo_D(2)/=Dxyz_D(2))jLo=1
-       if(j==nJ.and.DxyzHi_D(2)/=Dxyz_D(2))jHi=nJ
-       if(k==1 .and.DxyzLo_D(3)/=Dxyz_D(3))kLo=1
-       if(k==nK.and.DxyzHi_D(3)/=Dxyz_D(3))kHi=nK
-    end if
-
-    DxInv = 1/((iHi-iLo)*Dxyz_D(1))
-    DyInv = 1/((jHi-jLo)*Dxyz_D(2))
-    DzInv = 1/((kHi-kLo)*Dxyz_D(3))
-
-    !^CFG IF CARTESIAN BEGIN
-    Current_D(1) = &
-         (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
-         (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
-
-    Current_D(2) = &
-         (State_VGB(Bx_,i,j,kHi,iBlock)-State_VGB(Bx_,i,j,kLo,iBlock))*DzInv- &
-         (State_VGB(Bz_,iHi,j,k,iBlock)-State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
-
-    Current_D(3) = &
-         (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
-         (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
-
-    !^CFG END CARTESIAN
-    !call covariant_curlb(i,j,k,iBlock,Current_D)   !^CFG IF NOT CARTESIAN
-
-    StateCurrent_V(nVar+1:nVar+3) = StateCurrent_V(nVar+1:nVar+3) &
-         + WeightXyz * Current_D
-
-  end subroutine add_current
-
-end subroutine get_satellite_data
+!==============================================================================
 
 subroutine satellite_test
 
@@ -1411,19 +1207,20 @@ subroutine satellite_test
   use ModAdvance, ONLY: State_VGB
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   implicit none
-  real :: State_V(nVar+3), Weight
+  real :: State_V(0:nVar+3)
 
   State_VGB(Bx_,:,:,:,:) = y_BLK
   State_VGB(By_,:,:,:,:) = z_BLK
   State_VGB(Bz_,:,:,:,:) = x_BLK
 
-  call get_satellite_data((/xTest,yTest,zTest/),.true.,State_V,Weight)
+  call get_point_data(0.0,(/xTest,yTest,zTest/),1,nVar+3,State_V)
+  call collect_satellite_data((/xTest,yTest,zTest/),State_V)
 
   if(iProc==0)then
      if(max(abs(State_V(Bx_)-yTest),abs(State_V(By_)-zTest),&
           abs(State_V(Bz_)-xTest)) > 1e-7)then
         write(*,*)'Satellite state=',State_V(1:nVar)
-        write(*,*)'Weight, Difference=', Weight, &
+        write(*,*)'Weight, Difference=', State_V(0), &
              State_V(Bx_)-yTest,State_V(By_)-zTest,State_V(Bz_)-xTest
      else
         write(*,*)'Satellite state is correct'

@@ -1,11 +1,6 @@
 include ../Makefile.def
 
-INSTALL_FILES = \
-	Library/src/mpif90.h \
-	Library/src/mpif.h   \
-	../Makefile.conf
-
-install: ${INSTALL_FILES}
+install: Library/src/mpif90.h Library/src/mpif.h ../Makefile.conf
 	touch Library/src/Makefile.DEPEND
 
 Library/src/mpif90.h:
@@ -17,5 +12,12 @@ Library/src/mpif.h: Library/src/mpif90.h
 ../Makefile.conf:
 	cp build/Makefile.${OS}${COMPILER} ../Makefile.conf
 
-distclean:
-	rm -f ${INSTALL_FILES} Library/src/Makefile.DEPEND *~ */*~
+clean:
+	cd Library/src; make clean
+	cd Library/test;make clean
+	cd Prologs;     make clean
+
+distclean: clean
+	cd Library/test;make distclean
+	cd Prologs;     make distclean
+	rm -f Library/src/mpif*.h Library/src/Makefile.DEPEND *~ */*~

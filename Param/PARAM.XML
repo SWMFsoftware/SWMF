@@ -128,16 +128,24 @@ the end of the PARAM.in file makes CON execute the last session.
 
 <command name="SESSION">
 	<parameter name="TypeSession" type="string" input="select">
-		<option name="old serial"  value="old" default="T"/>
-		<option name="parallel"    value="parallel"/>
-		<option name="new general" value="general"/>
+		<option name="general concurrent" value="general" default="T"/>
+		<option name="old serial"         value="old" />
 	</parameter>
 
 #SESSION
 general			TypeSession
 
-The TypeSession string can be set to 'old', 'parallel' or 'general'. 
+The TypeSession string can be set to 'general' or 'old'. 
 The value of TypeSession determines how the time looping is handled by CON.
+
+The 'general' session model allows concurrent execution of the components.
+The components are synchronized only when conditions for the actions of 
+coupling, saving restart files, or stopping execution are met. 
+This is possible because it is known in advance by each component when 
+these actions will occur. In time accurate mode the components are 
+required to make a time step which does not exceed the next synchronization
+time. In steady state mode there is no limit on the time step, and 
+components can be called at different frequencies.
 
 If TypeSession='old', then CON mimics the behaviour of the BATSRUS 
 time loop control: 
@@ -148,20 +156,7 @@ a serial manner, i.e. they wait for the coupling, and GM waits until
 they finish their execution. This time loop control is mainly preserved
 for backwards compatibility.
 
-The 'parallel' session requires that all the processing elements (PE-s)
-are used by exactly one component. The components are executed in parallel,
-and coupled only when conditions for the actions of coupling, saving restart
-files, or stopping execution are met. This is possible because it is known
-in advance by each component when these actions will occur.
-The components are required to advance to the simulation time of the next
-action. Currently the 'parallel' session model works in the time accurate
-mode only. Generalization to the steady-state mode will be done soon.
-
-Currently the default is the 'old' mode, but in the future it
-will probably be replaced with the 'general' mode.
-The 'parallel' mode is mainly used as a simpler version of
-the 'general' mode for development purposes.
-mode only. Generalization to the steady-state mode will be done soon.
+The default is the 'general' mode.
 </command>
 
 <command name="TIMEACCURATE">
@@ -422,21 +417,20 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
 
-If UseTiming=.true., the TIMING module must be on.
+If UseTiming=.true., the execution is timed by the TIMING utility.
 If UseTiming=.false., the execution is not timed.
 
-Dntiming determines the frequency of timing reports.
-If DnTiming .ge.  1, a timing report is produced every dn_timing step.
-If DnTiming .eq. -1, a timing report is shown at the end of each session,
-                   before each AMR, and at the end of the whole run.
-If DnTiming .eq. -2, a timing report is shown at the end of the whole run.
-If DnTiming .eq. -3, no timing report is shown.
+The Dntiming parameter determines the frequency of timing reports:
+If DnTiming is positive, a timing report is produced every DnTiming steps.
+If DnTiming is -1, a timing report is shown at the end of each session.
+If DnTiming is -2, a timing report is shown at the end of the whole run.
+If DnTiming is -3, no timing report is shown.
 
-nDepthTiming determines the depth of the timing tree. A negative number
-means unlimited depth. If TimingDepth is 1, only the full BATSRUS execution
-is timed.
-!
-TypeTimingReport determines the format of the timing reports:
+The nDepthTiming parameters defines the depth of the timing tree. 
+A negative value means unlimited depth. If nDepthTiming is 1, only the 
+total SWMF execution is timed.
+
+The TypeTimingReport parameter determines the format of the timing reports:
 'cumm' - cummulative list sorted by timings
 'list' - list based on caller and sorted by timings
 'tree' - tree based on calling sequence
@@ -450,15 +444,16 @@ The default values are shown above.
 	<parameter name="DnProgressLong"  type="integer" min="-1" 
 		default="100" />
 #PROGRESS
-10			DnProgressShort (frequency of short reports to STDOUT)
-100			DnProgressLong  (frequency of long summaries to STDOUT)
+10			DnProgressShort
+100			DnProgressLong
 
-The DnShowProgressShort and DnShowProgressLong  variables determine
+The DnShowProgressShort and DnShowProgressLong variables determine
 the frequency of showing short and long progress reports in terms
-of the number of time steps nStep.
-Currently both the short and the long progress reports consist
-of a single line. In the future the long progress report will give
-more detailed information.
+of the number of time steps nStep. The short progress report
+consists of a single line which shows the number of time steps,
+simulatiion time and CPU time. The long progress report also shows
+a small timing report on the root processor.
+Negative values indicate that no report is requested.
 
 The default values are DnShowProgressShort=10 and DnShowProgressLong=100.
 </command>
@@ -523,8 +518,8 @@ number is not checked.
 	<set name="_UsedComp{$NameComp}" type="logical" value="$UseComp"/>
 
 #COMPONENT
-IE
-F
+IE			NameComp
+F			UseComp
 
 The NameComp variable contains the two-character component ID, 
 while the UseComp variable defines if the component should be 
@@ -535,6 +530,26 @@ be given any parameters.
 
 The default is that all the components registered in the LAYOUT.in
 file are used.
+</command>
+
+<command name="CYCLE" multiple="T">
+	<parameter name="NameComp" type="string" input="options">
+                <option name="IH" default="T" />
+                <option name="GM" />
+                <option name="IM" />
+                <option name="IE" />
+                <option name="UA" />
+        </parameter>
+	<parameter name="DnRun" type="integer" min="1" default="1"/>
+
+#CYCLE
+IH			NameComp
+10			DnRun
+
+The DnRun variable defines the frequency of calling component NameComp
+during a steady state run. In the example IH will be called for 
+nStep = 10, 20, 30, ... For time accurate runs this command has no effect.
+The default is DnRun = 1 for all the active components.
 </command>
 
 </commandgroup>
@@ -762,6 +777,33 @@ That can improve the parallelization and efficiency.
 The default is no shifting.
 </command>
 
+<command name="COUPLETIME" multiple="T">
+	<parameter name="NameComp" type="string" input="options">
+		<option name="IH" default="T" />
+		<option name="GM" />
+		<option name="IM" />
+		<option name="IE" />
+		<option name="UA" />
+	</parameter>
+	<parameter name="DoCoupleOnTime" type="logical" default="T"/>
+
+#COUPLETIME
+IE			NameComp
+F			DoCoupleOnTime
+
+The NameComp variable contains the two-character component ID, 
+while the DoCoupleOnTime parameter defines if the time step of the
+component should be limited such that it does not exceed the next 
+coupling time. If DoCoupleOnTime is true, the component will limit the
+time step for couplings, if it is false, the time step is only limited
+by the final time, the time of saving restarts and the time of checking
+stop conditions. This command has effect only in time accurate mode when
+the general session model is used.
+
+The default is that all components limit their time steps to match
+the coupling time.
+</command>
+
 </commandgroup>
 
 <commandgroup name="RESTART CONTROL">
@@ -916,6 +958,7 @@ These modifier commands cannot preceed the #PLANET command!
 <command name="PLANET" if="$_IsFirstSession">
 	<parameter name="NamePlanet" type="string" input="select">
 		<option name="Earth" value="EARTH/Earth/earth" default="T" />
+		<option name="Saturn" value="SATURN/Saturn/saturn" />
 		<option name="New" />
 	</parameter>
 	<if expr="$NamePlanet eq 'New'">
@@ -1064,11 +1107,6 @@ the values which depend on the orientation of the magnetic
 field can be costly. Since the magnetic field moves relatively
 slowly as the planet rotates around, it may not be necessary
 to continuously update the magnetic field orientation.
-
-This feature is now implemented in a simplistic manner: GM
-simply gets this value from CON and uses it for setting the frequency of
-updating the magnetic field information, which is stored locally.
-In the future the optimization should be done inside CON too.
 
 The default value is 0.0001, which means that the magnetic axis
 is continuously followed.

@@ -166,7 +166,7 @@ if(-f "Makefile"){
     }
     if(not $norun){
 	# Check if executable exists and compile if necessary
-	if($exe ne $exe_default){
+	if($exe ne $exe_default and $exe ne "SWMF.exe"){
 	    die "ERROR: No executable $rundir/$exe was found!\n" 
 		unless -x "$rundir/$exe";
 	}elsif(not -f "bin/$exe" and not -f "src/$exe"){

@@ -8,7 +8,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, &
-       nBlockALL,nBlockMax, TimeH4,TimeM2,TimeS2,time_accurate,n_step
+       nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
   use ModParallel, ONLY : UseCorners, iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x
@@ -39,9 +39,11 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
 
   ! Create text string for zone name like 'N=0002000 T=0000:05:00'
   if(time_accurate)then
-     call gettimestring
-     write(textNandT,'(a,i7.7,a)') &
-          "N=",n_step," T="//TimeH4//":"//TimeM2//":"//TimeS2
+     call get_time_string
+     write(textNandT,'(a,i7.7,a)') "N=",n_step," T="// &
+          StringTimeH4M2S2(1:4)//":"// &
+          StringTimeH4M2S2(5:6)//":"// &
+          StringTimeH4M2S2(7:8)
   else
      write(textNandT,'(a,i7.7)') &
           "N=",n_step
@@ -50,22 +52,23 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
   call get_date_time(iTime_I)
   write(textDateTime,'(i4.4,"-",5(i2.2,"-"),i3.3)') iTime_I
 
-  if(plot_type1(1:3)=='3d_')then
+  select case(plot_type1(1:3))
+  case('3d_')
+     if(iProc==0)then
+        ! Write file header
+        write(unit_tmp,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+        write(unit_tmp,'(a)')trim(unitstr_TEC)
+        write(unit_tmp,'(a,a,i8,a,i8,a)') &
+             'ZONE T="3D   '//textNandT//'"', &
+             ', N=',nNodeALL, &
+             ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
+             ', F=FEPOINT, ET=BRICK'
+     end if
      do iBlockALL  = 1, nBlockALL
         iBLK = iBlock_A(iBlockALL)
         iPE  = iProc_A(iBlockALL)
         if(iProc==iPE)then
            !================================= 3d ============================
-           if(iBlockALL==1)then
-              ! Write file header
-              write(unit_tmp,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
-              write(unit_tmp,'(a)')trim(unitstr_TEC)
-              write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                   'ZONE T="3D   '//textNandT//'"', &
-                   ', N=',nNodeALL, &
-                   ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
-                   ', F=FEPOINT, ET=BRICK'
-           end if
            ! Write point values
            do k=0,nK; do j=0,nJ; do i=0,nI
               if(NodeUniqueGlobal_IIIB(i,j,k,iBLK))then
@@ -98,10 +101,6 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end do; end do; end do
         end if
      end do
-     return
-  end if
-
-  select case(plot_type1(1:3))
   case('cut','x=0','y=0','z=0')
      !================================ cut ============================
      ! Allocate memory for storing the blocks that are cut
@@ -125,6 +124,16 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end if
            call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
         end do
+        if(iProc==0)then
+           ! Write file header
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
+           write(unit_tmp,'(a)')trim(unitstr_TEC)
+           write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                'ZONE T="2D X '//textNandT//'"', &
+                ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
+                ', E=',nBlockCuts*((nJ  )*(nK  )), &
+                ', F=FEPOINT, ET=QUADRILATERAL'
+        end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
            iBLK = iBlock_A(iBlockALL)
@@ -144,16 +153,6 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
                        EXIT
                     end if
                  end do
-                 if(BlockCut(iBlockALL)==1)then
-                    ! Write file header
-                    write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
-                    write(unit_tmp,'(a)')trim(unitstr_TEC)
-                    write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                         'ZONE T="2D X '//textNandT//'"', &
-                         ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
-                         ', E=',nBlockCuts*((nJ  )*(nK  )), &
-                         ', F=FEPOINT, ET=QUADRILATERAL'
-                 end if
                  ! Write point values
                  do k=0,nK; do j=0,nJ
                     if (plot_dimensional(ifile)) then
@@ -199,6 +198,16 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end if
            call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
         end do
+        if(iProc==0)then
+           ! Write file header
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
+           write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+           write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                'ZONE T="2D Y '//textNandT//'"', &
+                ', N=',nBlockCuts*((nI+1)*(nK+1)), &
+                ', E=',nBlockCuts*((nI  )*(nK  )), &
+                ', F=FEPOINT, ET=QUADRILATERAL'
+        end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
            iBLK = iBlock_A(iBlockALL)
@@ -218,16 +227,6 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
                        EXIT
                     end if
                  end do
-                 if(BlockCut(iBlockALL)==1)then
-                    ! Write file header
-                    write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
-                    write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-                    write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                         'ZONE T="2D Y '//textNandT//'"', &
-                         ', N=',nBlockCuts*((nI+1)*(nK+1)), &
-                         ', E=',nBlockCuts*((nI  )*(nK  )), &
-                         ', F=FEPOINT, ET=QUADRILATERAL'
-                 end if
                  ! Write point values
                  do k=0,nK; do i=0,nI
                     if (plot_dimensional(ifile)) then
@@ -273,6 +272,16 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end if
            call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
         end do
+        if(iProc==0)then
+           ! Write file header
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Z Data, '//textDateTime//'"'
+           write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+           write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                'ZONE T="2D Z '//textNandT//'"', &
+                ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
+                ', E=',nBlockCuts*((nI  )*(nJ  )), &
+                ', F=FEPOINT, ET=QUADRILATERAL'
+        end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
            iBLK = iBlock_A(iBlockALL)
@@ -292,16 +301,6 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
                        EXIT
                     end if
                  end do
-                 if(BlockCut(iBlockALL)==1)then
-                    ! Write file header
-                    write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Z Data, '//textDateTime//'"'
-                    write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-                    write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                         'ZONE T="2D Z '//textNandT//'"', &
-                         ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
-                         ', E=',nBlockCuts*((nI  )*(nJ  )), &
-                         ', F=FEPOINT, ET=QUADRILATERAL'
-                 end if
                  ! Write point values
                  do j=0,nJ; do i=0,nI
                     if (plot_dimensional(ifile)) then
@@ -332,9 +331,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end if
         end do
      end if
-     return
+  case default
+     write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
   end select
-
-  write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
 
 end subroutine write_plot_tec

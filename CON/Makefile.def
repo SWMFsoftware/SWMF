@@ -29,6 +29,12 @@ UA_VERSION = GITM#			^CMP IF UA
 IM_VERSION = RCM#			^CMP IF IM
 #IM_VERSION = Empty#			^CMP IF IM
 
+RB_VERSION = Rice#			^CMP IF RB
+#RB_VERSION = Empty#			^CMP IF RB
+
+SP_VERSION = Kota#                      ^CMP IF SP
+#SP_VERSION = Empty#                    ^CMP IF SP
+
 TIMING_VERSION = TIMING/src
 #TIMING_VERSION = TIMING/srcEmpty
 
@@ -56,6 +62,8 @@ GMDIR = ${DIR}/GM/${GM_VERSION}
 IEDIR = ${DIR}/IE/${IE_VERSION}
 UADIR = ${DIR}/UA/${UA_VERSION}
 IMDIR = ${DIR}/IM/${IM_VERSION}
+RBDIR = ${DIR}/RB/${RB_VERSION}
+SPDIR = ${DIR}/SP/${SP_VERSION}
 
 #
 # Utilities
@@ -71,8 +79,7 @@ NOMPIDIR  = ${UTILDIR}/NOMPI/src
 
 COMMONDIR = ${DIR}/share
 SCRIPTDIR = ${COMMONDIR}/Scripts
-MODDIR    = ${COMMONDIR}/Library/src
-SHAREDIR  = ${MODDIR}
+SHAREDIR  = ${COMMONDIR}/Library/src
 INCLDIR   = ${COMMONDIR}/include
 BUILDDIR  = ${COMMONDIR}/build
 

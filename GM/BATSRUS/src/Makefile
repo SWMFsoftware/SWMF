@@ -3,15 +3,6 @@
 SHELL =/bin/sh
 
 include ../Makefile.def
-
-# IH WRAPPER DEFINITIONS 
-# these definitions are commented out in IH/BATSRUS/src/Makefile only
-
-#IH_WRAPPER_MOD    = ModGridDescriptor.o
-#IH_WRAPPER_OBJ    = IH_wrapper.o
-#IH_WRAPPER_SEARCH = -I${COUPLERDIR} -I${LIBRARYDIR}
-SEARCH_EXTRA = ${IH_WRAPPER_SEARCH}
-
 include ../Makefile.conf
 include Makefile.OPTIONS
 include Makefile.DEPEND
@@ -52,7 +43,6 @@ MODULES = \
 	ModMain.o\
 	ModAdvance.o\
 	ModGeometry.o\
-	ModInterface.o\
 	ModIO.o\
 	ModPhysics.o\
 	ModAMR.o\
@@ -79,7 +69,7 @@ OBJ2=   ${OBJ2A}\
 	ModPrecond.o precond.o ${BLAS}
 #^CFG END IMPLICIT
 
-OBJ3=ray_trace.o ray_pass.o #			^CFG IF RAYTRACE
+OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
 OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
@@ -141,7 +131,7 @@ OBJECTS = \
 	${IH_WRAPPER_OBJ}\
 	BATS_methods.o \
 	MH_set_parameters.o\
-	conserve_flux.o\
+	advect_points.o\
 	allocate_vars.o\
 	amr.o\
 	amr_criteria.o\
@@ -151,6 +141,7 @@ OBJECTS = \
 	calc_gradients.o\
 	calc_timestep.o\
 	coarsen_grid.o\
+	conserve_flux.o\
 	create_soln_blocks.o\
 	exchange_messages.o\
 	explicit.o\
@@ -200,7 +191,7 @@ DEPEND:
 # Library for framework and also for stand alone code
 #
 
-MY_LIB = ${LIBDIR}/libBATSRUS.a
+MY_LIB = libBATSRUS.a
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -225,25 +216,31 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 LIBTIMING = ${LIBDIR}/libTIMING.a
 
 # Libraries should be compiled first, because modules are used in main.
-${OBJECTS_EXE}: ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
 BATSRUS.exe: ${OBJECTS_EXE}
+	@(if [ ${COMPILE.f90} == "xlf90" ]; then make BATSRUS_for_xlf; \
+	elif [ ${OS} == "Darwin" ];         then make BATSRUS_for_Darwin; \
+	else                                     make BATSRUS_general; fi)
+
+BATSRUS_general:
 	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
-		-L${LIBDIR} -lBATSRUS -lSHARE -lTIMING \
+		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
 		${Lflag1}
 
-#
-# Other executables
-#
+BATSRUS_for_Darwin:
+	ld -all_load -r -o LIBRARIES.o \
+		${LIBSHARE} ${LIBTIMING} ${MY_LIB}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+		LIBRARIES.o ${LBLAS} ${Lflag1}
+	rm -f LIBRARIES.o
 
-PostIDL.exe:	PostIDL.o
-		${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o ${Lflag2}
-
-#^CFG IF NOT SIMPLE BEGIN
-PostSPH.exe:	PostSPH.o
-		${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
-#^CFG END SIMPLE
-
+BATSRUS_for_xlf:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
+	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} Tmp_/*.o \
+		${LBLAS} ${Lflag1}
+	rm -rf Tmp_
 #
 #	cleaning
 #

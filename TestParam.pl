@@ -6,11 +6,16 @@ my $Help        = $h; undef $h;
 my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
 my $Verbose     = $v; undef $v;
+my $Save        = $s; undef $s;
 
 use strict;
 
 # Print help message and exit if -h switch was used
 &print_help if $Help;
+
+# Name of BATSRUS and BATSRUS_share
+my $BATSRUS = "BATSRUS";
+my $BATSRUS_share = "BATSRUS_share";
 
 # Error and warning strings
 my $ERROR = 'TestParam_ERROR:';
@@ -21,10 +26,15 @@ my $ParamFileDefault  = 'run/PARAM.in';
 my $LayoutFileDefault = 'run/LAYOUT.in';
 
 # The script and the XML file names to check the parameters
-my $CheckParamScript  = 'Common/CheckParam.pl';
+my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XMLFile           = 'PARAM.XML';
 
 my $SetSWMF = 'SetSWMF.pl';
+
+if($Save){
+    system($CheckParamScript,"-s");
+    exit 0;
+}
 
 # Overwrite default is necessary
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
@@ -59,7 +69,7 @@ my $check =
     "$CheckParamScript -C=$Registered -n=$nProc -p=$Precision $ParamFile";
 print "$check\n" if $Verbose;
 my $Error = `$check`;
-die "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n" if $Error;
+print "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n" if $Error;
 
 # Check component parameters
 my $Comp;
@@ -73,7 +83,7 @@ foreach $Comp (sort keys %Layout){
 	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
-    die "$ERROR parameter errors for $Comp:\n\n$Error\n" if $Error;
+    print "$ERROR parameter errors for $Comp:\n\n$Error\n" if $Error;
 }
 
 exit 0;
@@ -108,8 +118,8 @@ sub get_settings{
        "Versions  = ",join('; ',%Version),"\n".
        "GridSize  = ",join('; ',%GridSize),"\n" if $Verbose;
 
-    die "$ERROR IH/UofM_share requires GM/UofM and not GM/$Version{GM}\n"
-	if $Version{IH} eq 'UofM_share' and $Version{GM} ne 'UofM';
+    die "$ERROR IH/$BATSRUS_share requires GM/$BATSRUS and not GM/$Version{GM}\n"
+	if $Version{IH} eq $BATSRUS_share and $Version{GM} !~ /^$BATSRUS/;
 
 }
 
@@ -177,9 +187,9 @@ sub check_layout{
 	    "\tfor the layout in $LayoutFile and $nProc processors.\n" 
 	    unless $Comps;
 
-	die "$ERROR IH/UofM_share overlaps with GM\n".
+	die "$ERROR IH/$BATSRUS_share overlaps with GM\n".
 	    "\tfor the layout in $LayoutFile and $nProc processors.\n"
-	    if $Version{IH} eq "UofM_share" and $Comps =~ /GM,.*IH,/;
+	    if $Version{IH} eq $BATSRUS_share and $Comps =~ /GM,.*IH,/;
     }
 
     my $Comp;
@@ -198,17 +208,19 @@ sub print_help{
     print "
 Purpose:
 
-    Based on the settings shown be SetSWMF.pl and the registration and layout 
+    Based on the settings shown by SetSWMF.pl and the registration and layout 
     information contained in the layout file, check the consistency of 
     settings and the correctness of the input parameter file.
 
 Usage:
 
-    TestParam.pl [-h] [-v] [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
+    TestParam.pl [-h] [-v] [-s] [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
 
   -h            print help message and stop
 
   -v            print verbose information
+
+  -s            convert Param/PARAM.XML into Param/PARAM.pl and exit
 
   -l=LAYOUTFILE obtain layout from LAYOUTFILE. Default value is 'run/LAYOUT.in'
 
@@ -216,9 +228,21 @@ Usage:
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
 
+
+Examples:
+
+  Check the default parameter file run/PARAM.in without checking the layout:
+
+      TestParam.pl
+
+  Check another parameter and layout file for a 16 processor execution:
+
+      TestParam.pl -n=16 -l=run/test.000/LAYOUT.in run/test.000/PARAM.expand
+
+  Convert the XML file Param/PARAM.XML into the Perl tree file Param/PARAM.pl:
+
+      TestParam.pl -s
+
 ";
     exit 0;
 }
-
-
-

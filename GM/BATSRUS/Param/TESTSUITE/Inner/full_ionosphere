@@ -8,8 +8,12 @@ GM			NameComp2
 50                      DnCouple
 1.1                     Dtcouple
 
+#COUPLETIME
+GM			NameComp
+F			DoCoupleOnTime
+
 #TEST
-IE_solve
+IE_run IE_solve
 
 #BEGIN_COMP IE #############################################################
 

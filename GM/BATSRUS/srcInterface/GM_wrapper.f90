@@ -6,7 +6,11 @@ subroutine GM_set_param(CompInfo, TypeAction)
   use ModProcMH
   use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, &
        NamePlotDir, NameRestartInDir, NameRestartOutDir
-  use ModMain, ONLY : CodeVersion, NameThisComp
+  use ModMain, ONLY : CodeVersion, NameThisComp, &
+       time_accurate, StartTime, iStartTime_I, &
+       dt_UpdateB0, DoUpdateB0, UseCorotation
+  use CON_physics, ONLY: get_time, get_planet
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 
@@ -36,7 +40,18 @@ subroutine GM_set_param(CompInfo, TypeAction)
      NamePlotDir      = NameThisComp//'/'//NamePlotDir
      NameRestartInDir = NameThisComp//'/'//NameRestartInDir
      NameRestartOutDir= NameThisComp//'/'//NameRestartOutDir
-  case('READ','CHECK')
+  case('READ')
+     call MH_set_parameters('READ')
+  case('CHECK')
+     call get_time( &
+          DoTimeAccurateOut = time_accurate, &
+          tStartOut         = StartTime)
+     call get_planet( &
+          DtUpdateB0Out  = dt_updateB0,   &
+          DoUpdateB0Out  = DoUpdateB0,    &
+          UseRotationOut = UseCorotation)
+     call time_real_to_int(StartTime,iStartTime_I)
+
      call MH_set_parameters(TypeAction)
   case('STDOUT')
      iUnitOut=STDOUT_
@@ -205,7 +220,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
   use ModMain,     ONLY: Time_Simulation, UseIonosphere, &
        TypeBC_I, west_
   use ModMain,     ONLY: UseIM                            !^CFG IF RCM
-  use CON_physics, ONLY: get_physics
+  use CON_physics, ONLY: get_time
   use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_
   implicit none
 
@@ -236,7 +251,7 @@ subroutine GM_init_session(iSession, TimeSimulation)
 
   if(IsUninitialized)then
 
-     call get_physics(tSimulationOut=Time_Simulation)
+     call get_time(tSimulationOut=Time_Simulation)
 
      call BATS_setup
      IsUninitialized = .false.

@@ -6,7 +6,307 @@ List of MH (GM and IH) commands used in the PARAM.in file
 
 
 
-','type' => 't'},{'attrib' => {'value' => '$_GridSize[0]','type' => 'integer','name' => 'nI'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[1]','type' => 'integer','name' => 'nJ'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[2]','type' => 'integer','name' => 'nK'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[3]','type' => 'integer','name' => 'MaxBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[4]','type' => 'integer','name' => 'MaxImplBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','type' => 'integer','name' => 'MaxBlockALL'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'name' => 'TESTING AND TIMING'},'content' => [{'content' => '
+','type' => 't'},{'attrib' => {'value' => '$_GridSize[0]','type' => 'integer','name' => 'nI'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[1]','type' => 'integer','name' => 'nJ'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[2]','type' => 'integer','name' => 'nK'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[3]','type' => 'integer','name' => 'MaxBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_GridSize[4]','type' => 'integer','name' => 'MaxImplBlock'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'value' => '$_nProc and $MaxBlock and $_nProc*$MaxBlock','type' => 'integer','name' => 'MaxBlockALL'},'content' => [],'type' => 'e','name' => 'set'},{'attrib' => {'name' => 'STAND ALONE MODE'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+','type' => 't'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'NEWPARAM'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewParam'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseNewAxes'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseCorotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#NEWPARAM
+T			UseNewParam
+T			UseNewAxes
+T			DoTimeAccurate
+T			UseCorotation
+
+This command can be used to make the standalone code backwards compatible.
+
+If UseNewParam is true, the time frequencies of various commands 
+(SAVEPLOT, SAVELOGFILE, STOP etc.) are always read, irrespective of the value 
+of DoTimeAccurate and the DoTimeAccurate logical can be set with the TIMEACCURATE command.
+
+If UseNewParam is false, the time frequencies are only read when DoTimeAccurate is true, 
+and DoTimeAccurate can be set as the first parameter of the TIMESTEPPING command.
+
+If UseNewAxes is true, the planet\'s rotational and magnetix axes are set by the new
+algorithms found in share/Library/src/CON\\_axes, the planet data is set and
+stored by share/Library/src/CON\\_planet, and magnetic field information and
+mapping is provided by share/Library/src/CON\\_planet_field, and the rotational speed
+of the planet is calculated using $v_\\phi=\\Omega \\times r$.
+
+If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
+are used. Some of these algorithms are inaccurate, some of them contain bugs,
+some of them are inefficient. The algorithms were kept for sake of backwards
+compatibility.
+
+The DoTimeAccurate and UseCorotation parameters can be set elsewhere, but their
+default values can be set here. This is again useful for backwards compatibility,
+since BATSRUS v7.72 and earlier has DoTimeAccurate=F and UseCorotation=F as the
+default, while SWMF has the default values DoTimeAccurate=T and UseCorotation=T
+(consistent with the assumption that the default behaviour is as realistic as possible).
+
+The default values depend on how the standalone code was installed
+(make install STANDALON=???). For STANDALONE=gm and STANDALONE=ih
+all the logicals have true default values (consistent with SWMF), 
+for STANDALONE=old and STANDALONE=oldtest the default values are false 
+(consistent with BATSRUS v7.72 and earlier).
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'DESCRIPTION'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'StringDescription'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#DESCRIPTION
+This is a test run for Jupiter with no rotation.
+
+This command is only used in the stand alone mode.
+
+The StringDescription string can be used to describe the simulation
+for which the parameter file is written. The #DESCRIPTION command and
+the StringDescription string are saved into the restart file,
+which helps in identifying the restart files.
+
+The default value is "Please describe me!", which is self explanatory.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ECHO'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoEcho'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#ECHO
+T                       DoEcho
+
+This command is only used in the stand alone mode.
+
+If the DoEcho variable is true, the input parameters are echoed back.
+The default value for DoEcho is .false., but it is a good idea to
+set it to true at the beginning of the PARAM.in file.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+#PROGRESS
+10			DnProgressShort
+100			DnProgressLong
+
+The frequency of short and long progress reports for BATSRUS in
+stand alone mode. These are the defaults. Set -1-s for no progress reports.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#TIMEACCURATE
+F               DoTimeAccurate
+
+This command is only used in stand alone mode.
+
+If DoTimeAccurate is set to true, BATSRUS solves
+a time dependent problem. If DoTimeAccurate is false, a steady-state
+solution is sought for. It is possible to use steady-state mode
+in the first few sessions to obtain a steady state solution,
+and then to switch to time accurate mode in the following sessions.
+In time accurate mode saving plot files, log files and restart files,
+or stopping conditions are taken in simulation time, which is the
+time relative to the initial time. In steady state mode the simulation
+time is not advanced at all, instead the time step or iteration number
+is used to control the frequencies of various actions.
+
+The steady-state mode allows BATSRUS to use local time stepping
+to accelarate the convergence towards steady state.
+
+The default value depends on how the stand alone code was installed.
+See the description of the NEWPARAM command.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','if' => '$_IsStandAlone','name' => 'BEGIN_COMP'},'content' => [{'content' => '
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','if' => '$_IsStandAlone','name' => 'END_COMP'},'content' => [{'content' => '
+
+This command is allowed in stand alone mode only for sake of the 
+test suite, which contains these commands when the framework is tested.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'RUN'},'content' => [{'content' => '
+
+#RUN
+
+This command is only used in stand alone mode.
+
+The #RUN command does not have any parameters. It signals the end
+of the current session, and makes BATSRUS execute the session with
+the current set of parameters. The parameters for the next session
+start after the #RUN command. For the last session there is no
+need to use the #RUN command, since the #END command or simply
+the end of the PARAM.in file makes BATSRUS execute the last session.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'END'},'content' => [{'content' => '
+
+#END
+
+The #END command signals the end of the included file or the
+end of the PARAM.in file. Lines following the #END command are
+ignored. It is not required to use the #END command. The end
+of the included file or PARAM.in file is equivalent with an 
+#END command in the last line.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'PLANET COMMANDS'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The planet commands can only be used in stand alone mode and only
+when UseNewAxes is set to true (see discussion at the NEWPARAM command).
+The commands allow to work with an arbitrary planet.
+It is also possible to change some parameters of the planet relative
+to the real values.
+
+By default Earth is assumed with its real parameters.
+Another planet can be selected with the #PLANET command.
+The real planet parameters can be modified and simplified
+with the other planet commands listed in this subsection.
+These modifier commands cannot preceed the #PLANET command!
+
+','type' => 't'},{'attrib' => {'if' => '$_IsFirstSession and $_IsStandAlone','name' => 'PLANET'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'content' => [{'attrib' => {'value' => 'EARTH/Earth/earth','default' => 'T','name' => 'Earth'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SATURN/Saturn/saturn','name' => 'Saturn'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'New'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$NamePlanet eq \'New\''},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'RadiusPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'MassPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'OmegaPlanet'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','type' => 'real','name' => 'TiltRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'content' => [{'attrib' => {'name' => 'NONE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'default' => 'T','name' => 'DIPOLE'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisThetaGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhiGeo'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => 'not $PlanetCommand'},'content' => [{'content' => '
+		PLANET should precede $PlanetCommand
+	','type' => 't'}],'type' => 'e','name' => 'rule'},{'content' => '
+
+#PLANET
+New			NamePlanet (rest of parameters read for unknown planet)
+6300000.0		RadiusPlanet [m]
+5.976E+24		MassPlanet   [kg]
+0.000000199		OmegaPlanet  [radian/s]
+23.5			TiltRotation [degree]
+DIPOLE			TypeBField
+11.0			MagAxisThetaGeo [degree]
+289.1			MagAxisPhiGeo   [degree]
+-31100.0E-9		DipoleStrength  [T]
+
+The NamePlanet parameter contains the name of the planet
+with arbitrary capitalization. In case the name of the planet
+is not recognized, the following variables are read:
+RadiusPlanet is the radius of the planet,
+MassPlanet is the mass of the planet, 
+OmegaPlanet is the angular speed relative to an inertial frame,
+TiltRotation is the tilt of the rotation axis relative to ecliptic North,
+TypeBField, which can be "NONE" or "DIPOLE". 
+TypeBField="NONE" means that the planet does not have magnetic field. 
+It TypeBField is set to "DIPOLE" than the following variables are read:
+MagAxisThetaGeo and MagAxisPhiGeo are the colatitude and longitude
+of the north magnetic pole in corotating planetocentric coordinates.
+Finally DipoleStrength is the equatorial strength of the magnetic dipole
+field. The units are indicated in the above example, which shows the
+Earth values approximately.
+
+The default value is NamePlanet="Earth", which is currently
+the only recognized planet.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATIONAXIS'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsRotAxisPrimary'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$IsRotAxisPrimary'},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'RotAxisTheta'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'RotAxisPhi'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'ROTATIONAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#ROTATIONAXIS
+T			IsRotAxisPrimary (rest of parameters read if true)
+23.5			RotAxisTheta
+198.3			RotAxisPhi
+
+If the IsRotAxisPrimary variable is false, the rotational axis
+is aligned with the magnetic axis. If it is true, the other two variables
+are read, which give the position of the rotational axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true rotational axis determined by the
+date and time given by #STARTTIME.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'ROTATION'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseRotation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseRotation'},'content' => [{'attrib' => {'type' => 'real','name' => 'RotationPeriod'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'MAGNETICAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#ROTATION
+T			UseRotation
+24.06575		RotationPeriod [hour] (read if UseRotation is true)
+
+If UseRotation is false, the planet is assumed to stand still, 
+and the OmegaPlanet variable is set to zero. 
+If UseRotation is true, the RotationPeriod variable is read in hours, 
+and it is converted to the angular speed OmegaPlanet given in radians/second.
+Note that OmegaPlanet is relative to an inertial coordinate system,
+so the RotationPeriod is not 24 hours for the Earth, but the
+length of the astronomical day.
+
+The default is to use rotation with the real rotation period of the planet.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'MAGNETICAXIS'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsMagAxisPrimary'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$IsMagAxisPrimary'},'content' => [{'attrib' => {'min' => '0','max' => '180','type' => 'real','name' => 'MagAxisTheta'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '360','type' => 'real','name' => 'MagAxisPhi'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'value' => 'MAGNETICAXIS','type' => 'string','name' => 'PlanetCommand'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
+
+#MAGNETICAXIS
+T			IsMagAxisPrimary (rest of parameters read if true)
+34.5			MagAxisTheta [degree]
+0.0			MagAxisPhi   [degree]
+
+If the IsMagAxisPrimary variable is false, the magnetic axis
+is aligned with the rotational axis. If it is true, the other two variables
+are read, which give the position of the magnetic axis at the
+initial time in the GSE coordinate system. Both angles are read in degrees
+and stored internally in radians.
+
+The default is to use the true magnetic axis determined by the
+date and time given by #STARTTIME.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'DIPOLE'},'content' => [{'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#DIPOLE
+-3.11e-4		DipoleStrength [Tesla]
+
+The DipoleStrength variable contains the
+magnetic equatorial strength of the dipole magnetic field in Tesla.
+
+The default value is the real dipole strength for the planet.
+For the Earth the default is taken to be -31100 nT.
+The sign is taken to be negative so that the magnetic axis can
+point northward as usual.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'UPDATEB0'},'content' => [{'attrib' => {'min' => '-1','default' => '0.0001','type' => 'real','name' => 'DtUpdateB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+The DtUpdateB0 variable determines how often the position of
+the magnetic axis is recalculated. A negative value indicates that
+the motion of the magnetic axis during the course of the simulation
+is neglected. This is an optimization parameter, since recalculating
+the values which depend on the orientation of the magnetic
+field can be costly. Since the magnetic field moves relatively
+slowly as the planet rotates around, it may not be necessary
+to continuously update the magnetic field orientation.
+
+The default value is 0.0001, which means that the magnetic axis
+is continuously followed.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'IDEALAXES'},'content' => [{'content' => '
+
+#IDEALAXES
+
+The #IDEALAXES command has no parameters. It sets both the rotational
+and magnetic axes parallel with the ecliptic North direction. In fact
+it is identical with
+
+#ROTATIONAXIS
+T               IsRotAxisPrimary
+0.0             RotAxisTheta
+0.0             RotAxisPhi
+
+#MAGNETICAXIS
+F               IsMagAxisPrimary
+
+but much shorter.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'USER DEFINED INPUT'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+','type' => 't'},{'attrib' => {'name' => 'USER_FLAGS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserInnerBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSource'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserPerturbation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserOuterBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserICs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSpecifyRefinement'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserLogFiles'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserWritePlot'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserAMR'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserEchoInput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSetPhysConst'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserUpdateStates'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#USER_FLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserSetPhysConst
+F                       UseUserUpdateStates
+
+This command controls the use of user defined routines in user_routines.f90.
+For each flag that is set, an associated routine will be called in 
+user_routines.f90.  Default is .false. for all flags.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USERINPUTBEGIN'},'content' => [{'content' => '
+
+This command signals the beginning of the section of the file which 
+is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
+The section ends with the #USERINPUTEND command. There is no XML based parameter
+checking in the user section.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USERINPUTEND'},'content' => [{'content' => '
+
+This command signals the end of the section of the file which 
+is read by the subroutine user\\_read\\_inputs in the user\\_routines.f90 file.
+The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
+checking in the user section.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'TESTING AND TIMING'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -18,7 +318,6 @@ read_inputs
 !
 ! Examples:
 !   read_inputs  - echo the input parameters following the #TEST line
-!   ionosphere   - info on the ionosphere      
 !   project_B    - info on projection scheme   
 !   implicit     - info on implicit scheme     
 !   krylov       - info on the Krylov solver   
@@ -94,7 +393,7 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 ! defined in ModMain. Used in newer restart header files. 
 ! Should be given in PARAM.in when reading old restart files, 
 ! which do not have version info in the header file.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$IsFirstSession','name' => 'EQUATION'},'content' => [{'attrib' => {'length' => '100','default' => 'MHD','type' => 'string','name' => 'NameEquation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '8','type' => 'integer','name' => 'nVar'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'EQUATION'},'content' => [{'attrib' => {'length' => '100','default' => 'MHD','type' => 'string','name' => 'NameEquation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '8','type' => 'integer','name' => 'nVar'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #EQUATION
 MHD			NameEquation
 8			nVar
@@ -164,19 +463,6 @@ cumm                    TypeTimingReport   (\'cumm\', \'list\', or \'tree\')
 ! \'cumm\' - cummulative list sorted by timings
 ! \'list\' - list based on caller and sorted by timings
 ! \'tree\' - tree based on calling sequence
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SPEEDFILES'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoWriteSpeedFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-#SPEEDFILES
-F                       DoWriteSpeedFile
-
-! controls the writing of speed_ files.  These have been used mostly on the
-! cray to do timing tests.  The default is .false.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'PROGRESS'},'content' => [{'attrib' => {'min' => '-1','default' => '10','type' => 'integer','name' => 'DnProgressShort'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '100','type' => 'integer','name' => 'DnProgressLong'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-#PROGRESS
-10			DnProgressShort
-100			DnProgressLong
-
-! The frequency of short and long progress reports for BATSRUS in
-! stand alone mode. These are the defaults. Set -1-s for no progress reports.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'INITIAL AND BOUNDARY CONDITIONS'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
@@ -227,17 +513,6 @@ GM/restart_n5000	NameRestartInDir
 ! of the component.
 !
 ! Default value is "GM/restartIN".
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'RESTARTOUTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/restartOUT','type' => 'string','name' => 'NameRestartOutDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#RESTARTOUTDIR
-GM/restart_n5000	NameRestartOutDir
-
-! The NameRestartOutDir variable contains the name of the directory
-! where restart files are saved relative to the run directory.
-! The directory should be inside the subdirectory with the name 
-! of the component.
-!
-! Default value is "GM/restartOUT".
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'NEWRESTART'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'IsRestartBFace'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 ! The restartIN/restart.H file always contains the #NEWRESTART command.
 ! This command is really used only in the restart headerfile.  Generally
@@ -359,6 +634,21 @@ This time is stored in the BATSRUS restart header file.
 The default values are shown above.
 This is a date and time when both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'TIMESIMULATION'},'content' => [{'attrib' => {'min' => '0','default' => '0.0','type' => 'real','name' => 'tSimulation'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#TIMESIMULATION
+3600.0			tSimulation [sec]
+
+The tSimulation variable contains the simulation time in seconds
+relative to the initial time set by the #STARTTIME command.
+The #TIMESIMULATION command and tSimulation are saved into the restart 
+header file, which provides human readable information about the restart state.
+
+In SWMF the command is ignored (SWMF has its own #TIMESIMULATION command).
+In stand alone mode time\\_simulation is set, but in case of a restart,
+it gets overwritten by the binary value saved into the .rst binary files. 
+
+The default value is tSimulation=0.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'NSTEP'},'content' => [{'attrib' => {'min' => '0','default' => '0','type' => 'integer','name' => 'nStep'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #NSTEP
@@ -388,29 +678,7 @@ have approximately zero tilt towards the Sun.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#TIMEACCURATE
-F               DoTimeAccurate
-
-This command is only used in stand alone mode.
-
-If DoTimeAccurate is set to true, BATSRUS solves
-a time dependent problem. If DoTimeAccurate is false, a steady-state
-solution is sought for. It is possible to use steady-state mode
-in the first few sessions to obtain a steady state solution,
-and then to switch to time accurate mode in the following sessions.
-In time accurate mode saving plot files, log files and restart files,
-or stopping conditions are taken in simulation time, which is the
-time relative to the initial time. In steady state mode the simulation
-time is not advanced at all, instead the time step or iteration number
-is used to control the frequencies of various actions.
-
-The steady-state mode also allows BATSRUS to use local time stepping
-as an accelarate convergence to steady state.
-
-The default value is false, which indicates local time stepping.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'TIMESTEPPING'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nStage'},'content' => [{'attrib' => {'value' => '1','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.8','type' => 'real','name' => 'CflExpl'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'},{'attrib' => {'name' => 'TIMESTEPPING'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'nStage'},'content' => [{'attrib' => {'value' => '1','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.8','type' => 'real','name' => 'CflExpl'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #TIMESTEPPING
 2                       nStage
@@ -548,6 +816,9 @@ nul             TypeInitKrylov (nul, old, explicit, scaled)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The commands in this group only work in stand alone mode.
+
 ','type' => 't'},{'attrib' => {'required' => '$_IsStandAlone','if' => '$_IsStandAlone','name' => 'STOP'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'MaxIteration'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'tSimulationMax'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #STOP
@@ -606,7 +877,48 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  OUTPUT PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'attrib' => {'name' => 'SAVELOGFILE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoSaveLogfile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$DoSaveLogfile'},'content' => [{'attrib' => {'min' => '1','max' => '4','type' => 'strings','name' => 'StringLog'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypeLogVar'},'content' => [{'attrib' => {'value' => 'MHD','default' => 'T','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','default' => 'T','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Set vars. scaled'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'multiple' => 'T','input' => 'select','required' => 'F','type' => 'string','name' => 'TypeTime'},'content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'step'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'date'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'time'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','if' => '$TypeLogVar =~ /var/i','type' => 'string','name' => 'NameLogVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','length' => '100','max' => '10','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','type' => 'strings','name' => 'StringLogRadii'},'content' => [{'attrib' => {'min' => '$rBody','multiple' => 'T','type' => 'real','name' => 'LogRadii'},'content' => [],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+','type' => 't'},{'attrib' => {'name' => 'RESTARTOUTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/restartOUT','type' => 'string','name' => 'NameRestartOutDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#RESTARTOUTDIR
+GM/restart_n5000	NameRestartOutDir
+
+! The NameRestartOutDir variable contains the name of the directory
+! where restart files are saved relative to the run directory.
+! The directory should be inside the subdirectory with the name 
+! of the component.
+!
+! Default value is "GM/restartOUT".
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVERESTART'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'SaveRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$SaveRestart'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'DnRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtRestart'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+#SAVERESTART
+T			saveRestartFile  Rest of parameters read if true
+100			DnOutput_i(restart_)
+-1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
+
+! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
+! DtOutput(restart_)=-1. This results in the restart file being 
+! saved only at the end.  A binary restart file is produced for every 
+! block and named as
+!
+! restartOUT/blkGLOBALBLKNUMBER.rst
+!
+! In addition the grid is described by
+!
+! restartOUT/octree.rst
+!
+! and an ASCII header file is produced with timestep and time info:
+!
+! restartOUT/restart.H
+!
+! The restart files are overwritten every time a new restart is done.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'PLOTDIR'},'content' => [{'attrib' => {'length' => '100','default' => 'GM/IO2','type' => 'string','name' => 'NamePlotDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+The NamePlotDir variable contains the name of the directory
+where plot files and logfiles are saved relative to the run directory.
+The directory should be inside the subdirectory with the name
+of the component.
+
+Default value is "GM/IO2".
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVELOGFILE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoSaveLogfile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$DoSaveLogfile'},'content' => [{'attrib' => {'min' => '1','max' => '4','type' => 'strings','name' => 'StringLog'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypeLogVar'},'content' => [{'attrib' => {'value' => 'MHD','default' => 'T','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Set vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','default' => 'T','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Set vars. scaled'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'multiple' => 'T','input' => 'select','required' => 'F','type' => 'string','name' => 'TypeTime'},'content' => [{'attrib' => {'exclusive' => 'T','name' => 'none'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'step'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'date'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'time'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','if' => '$TypeLogVar =~ /var/i','type' => 'string','name' => 'NameLogVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','length' => '100','max' => '10','if' => '($TypeLogVar=~/flx/i or $NameLogVars=~/flx/i)','type' => 'strings','name' => 'StringLogRadii'},'content' => [{'attrib' => {'min' => '$rBody','multiple' => 'T','type' => 'real','name' => 'LogRadii'},'content' => [],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 VAR step date           StringLog
@@ -737,38 +1049,35 @@ rho p                   NameSatelliteVars Read if satellitevar=\'var\' or \'VAR\
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVEPLOT'},'content' => [{'content' => '
 ! plot_string must contain the following 3 parts in arbitrary order
 ...
-	','type' => 't'},{'attrib' => {'min' => '0','max' => '100','default' => '0','type' => 'integer','name' => 'nPlotFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'content' => [{'attrib' => {'min' => '3','max' => '3','type' => 'strings','name' => 'plotString'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotform'},'content' => [{'attrib' => {'value' => 'tec','name' => 'TECPLOT'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'idl','name' => 'IDL'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotarea'},'content' => [{'attrib' => {'value' => '3d'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'x=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'y=0','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'z=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sph'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ion'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'los'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'cut','if' => '$plotform =~ /\\bidl\\b/'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotvar'},'content' => [{'attrib' => {'value' => 'min/mhd/MHD','if' => '$plotarea=~/\\bion\\b/','name' => 'min'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'max','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'aur','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'uam','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'MHD','if' => '$plotarea!~/\\bion\\b/','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FUL','if' => '$plotarea!~/\\bion\\b/','name' => 'All vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','if' => '$plotarea!~/\\bion\\b/','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAY','if' => '$plotarea!~/\\bion\\b/','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','if' => '$plotarea!~/\\bion\\b/','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SOL','if' => '$plotarea!~/\\bion\\b/','name' => 'Solar vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','if' => '$plotarea!~/\\bion\\b/','name' => 'Select dimensional vars.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','if' => '$plotarea!~/\\bion\\b/','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ful','if' => '$plotarea!~/\\bion\\b/','name' => 'All vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','if' => '$plotarea!~/\\bion\\b/','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ray','if' => '$plotarea!~/\\bion\\b/','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','if' => '$plotarea!~/\\bion\\b/','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sol','if' => '$plotarea!~/\\bion\\b/','name' => 'Solar vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','if' => '$plotarea!~/\\bion\\b/','name' => 'Select scaled vars.'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'},'content' => [{'attrib' => {'type' => 'real','name' => 'xMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMinCut','type' => 'real','name' => 'xMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMinCut','type' => 'real','name' => 'yMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMinCut','type' => 'real','name' => 'zMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '0','if' => '$plotarea =~ /\\bsph\\b/','default' => '10','type' => 'real','name' => 'radius'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'content' => [{'attrib' => {'default' => '0','type' => 'real','name' => 'LosVectorX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0.0001','type' => 'real','name' => 'LosVectorY'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '1','type' => 'real','name' => 'LosVectorZ'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'xSizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'ySizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'xOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'yOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '2.5','type' => 'real','name' => 'rOccult'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.5','type' => 'real','name' => 'MuLimbDarkening'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixY'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '-1','if' => '($plotform =~ /\\bidl\\b/ and $plotarea !~ /\\b(ion|sph|los)\\b/)','default' => '-1','type' => 'integer','name' => 'plotDx'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'plotVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'plotPars'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'}],'type' => 'e','name' => 'for'},{'content' => '
+	','type' => 't'},{'attrib' => {'min' => '0','max' => '100','default' => '0','type' => 'integer','name' => 'nPlotFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'content' => [{'attrib' => {'min' => '3','max' => '3','type' => 'strings','name' => 'plotString'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotform'},'content' => [{'attrib' => {'value' => 'tec','name' => 'TECPLOT'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'idl','name' => 'IDL'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotarea'},'content' => [{'attrib' => {'value' => '3d'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'x=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'y=0','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'z=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sph'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'los'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'lin'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'cut','if' => '$plotform =~ /\\bidl\\b/'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotvar'},'content' => [{'attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAY','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SOL','name' => 'Solar vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Select dimensional vars.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ful','name' => 'All vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ray','name' => 'Ray tracing vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sol','name' => 'Solar vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Select scaled vars.'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'},'content' => [{'attrib' => {'type' => 'real','name' => 'xMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMinCut','type' => 'real','name' => 'xMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMinCut','type' => 'real','name' => 'yMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMinCut','type' => 'real','name' => 'zMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '0','if' => '$plotarea =~ /\\bsph\\b/','default' => '10','type' => 'real','name' => 'radius'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'content' => [{'attrib' => {'default' => '0','type' => 'real','name' => 'LosVectorX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0.0001','type' => 'real','name' => 'LosVectorY'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '1','type' => 'real','name' => 'LosVectorZ'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'xSizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'ySizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'xOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'yOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '2.5','type' => 'real','name' => 'rOccult'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.5','type' => 'real','name' => 'MuLimbDarkening'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixY'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NameLine'},'content' => [{'attrib' => {'value' => 'A','name' => 'Advected B'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'default' => 'T','name' => 'B'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'U'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'J'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'IsSingleLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','max' => '20','default' => '1','type' => 'integer','name' => 'nLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nLine','from' => '1'},'content' => [{'attrib' => {'type' => 'real','name' => 'xStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'logical','name' => 'IsParallel'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'for'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '-1.0','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)','default' => '-1.0','type' => 'real','name' => 'DxPlot'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'plotVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'plotPars'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'}],'type' => 'e','name' => 'for'},{'content' => '
 #SAVEPLOT
 6			nPlotfile
-3d MHD tec		plotString ! 3d MHD data
-100			DnOutput_i(1)
--1.			DtOutput_i(1) (in s) Read only if time_accurate is set!
+3d MHD tec		StringPlot ! 3d MHD data
+100			DnOutput
+-1.			DtOutput
 y=0 VAR idl		plotString ! y=0 cut
--1			DnOutput_i(2)
-100.			DtOutput_i(2)  Read only if time_accurate is set!
-2.			plotDx_di(1,2) Read only for format \'idl\'
-jx jy jz		plotVars_i(2)  Read only for content \'var\'
-g unitx unitv unitn	plotPars_i(2)  Read only for content \'var\'
-cut ray idl		plotString  ! ray tracing plot
-1			DnOutput_i(3)
--1.			DtOutput_i(3) (in s) Read only if time_accurate is set!
--10.			plotRange_ei(x1,3) Read only for area \'cut\'
+-1			DnOutput
+100.			DtOutput
+2.			PlotDx     ! Read only for format \'idl\'
+jx jy jz		PlotVars   ! Read only for content \'var\'
+g unitx unitv unitn	PlotPars   ! Read only for content \'var\'
+cut ray idl		StringPlot ! ray tracing plot
+1			DnOutput
+-1.			DtOutput
+-10.			PlotRange_ei(x1,3) Read only for area \'cut\'
 10.			plotRange_ei(x2,3) Read only for area \'cut\'
 -10.			plotRange_ei(y1,3) Read only for area \'cut\'
 10.			plotRange_ei(y2,3) Read only for area \'cut\'
 -10.			plotRange_ei(z1,3) Read only for area \'cut\'
 10.			plotRange_ei(z2,3) Read only for area \'cut\'
-1.			plotDx_di(1,3)     Read only for format \'idl\'
+1.			plotDx      ! Read only for format \'idl\'
 sph flx idl		plotString  ! spherical plot
--1			DnOutput_i(4)
-100.			DtOutput_i(4)  Read only if time_accurate is set!
+-1			DnOutput
+100.			DtOutput
 4.			rPlot - R of spherical cut, Read only for area \'sph\'
-ion min idl		plotString  ! ionosphere plot
-100			DnOutput_i(5)
-100.			DtOutput_i(5)  Read only if time_accurate is set!
-los sol idl             PlotString  ! line of sight plot
--1			dnOutput_i(6)
-100.			dtOutput_i(6)  Read only if time_accurate is set!
+los sol idl             StringPlot  ! line of sight plot
+-1			DnOutput
+100.			DtOutput
 1.			LosVector_i(1)
 0.			LosVector_i(2)
 0.			LosVector_i(3)
@@ -780,24 +1089,32 @@ los sol idl             PlotString  ! line of sight plot
 0.5			MuLimbDarkening
 256			nPixX
 256			nPixY
+lin mhd idl		PlotString  ! field line plot
+-1			DnOutput
+10.			DtOutput
+B			NameLine ! B - magnetic field line, U - stream line
+F			IsSingleLine
+2			nLine
+-2.0			xStartLine
+0.0			yStartLine
+3.5			zStartLine
+F			IsParallel
+-1.0			xStartLine
+1.0			yStartLine
+-3.5			zStartLine
+T			IsParallel
 
 ! Default is nplotfile=0
 ! plot_string must contain the following 3 parts in arbitrary order
 !
 ! plotarea plotvar plotform
 !
-! plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'sph\', \'ion\', \'los\'
+! plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'sph\', \'los\', \'lin\'
 ! plotvar  = \'mhd\', \'ful\',\'raw\', \'ray\', \'flx\', \'sol\', \'var\' - unitless output
 ! plotvar  = \'MHD\', \'FUL\',\'RAW\', \'RAY\', \'FLX\', \'SOL\', \'VAR\' - dimensional
-! plotvar  = \'min\', \'max\' - for ion plots only, always dimensional
 ! plotform = \'tec\', \'idl\'
 !
 ! NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\'.
-
-!        Ionosphere plots are called in ionosphere.f90 using completely
-!               seperate routines, \'var\' option does not work. 
-!	        \'min\',\'max\',\'aur\',\'uam\' work only with plotarea \'ion\'
-
 !
 ! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 !
@@ -807,8 +1124,8 @@ los sol idl             PlotString  ! line of sight plot
 ! 3d	- full 3D volume
 ! cut	- READ PLOTRANGE FROM PARAM.in, only works for plotform=\'idl\'
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
-! ion   - ionosphere plots                        
 ! los   - line of sight integrated plot
+! lin   - one dimensional plot along a field or stream line
 !
 ! The plotvar string defines the plot variables and the equation parameters.
 ! It also controls whether or not the variables will be plotted in dimensional
@@ -831,12 +1148,6 @@ los sol idl             PlotString  ! line of sight plot
 !         pars: READ FROM PARAMETER FILE
 ! \'sol\' - vars: wl pb
 !         pars: mu
-
-! \'min\' - vars: Theta Psi SigmaH SigmaP Jr Phi
-! \'max\' - vars: X Y Z Theta Psi SigmaH SigmaP Jr Phi Ex Ey Ez Jx Jy Jz Ux Uy Uz
-! \'aur\' - vars: Theta Psi SigmaH SigmaP Jr Phi AveE TotE
-! \'uam\' - vars: Theta Psi SigmaH SigmaP Jr Phi JrUAM
-
 !
 ! The plot_string is always followed by the plotting frequency
 ! DnOutput and for time accurate runs by DtOutput.
@@ -844,8 +1155,8 @@ los sol idl             PlotString  ! line of sight plot
 ! Depending on plot_string, further information is read from the parameter file
 ! in this order:
 !
-! plotRange		if plotarea is \'cut\'
-! plotDx		if plotform is \'idl\' and plotarea is not sph, ion, los
+! PlotRange		if plotarea is \'cut\'
+! DxPlot		if plotform is \'idl\' and plotarea is not sph, ion, los
 ! rPlot			if plotarea is \'sph\'
 ! plotVars		if plotform is \'var\'
 ! plotPars		if plotform is \'var\'
@@ -871,8 +1182,6 @@ los sol idl             PlotString  ! line of sight plot
 ! MuLimbDarkening is the limb darkening parameter for the \'wl\' (white light)
 !                 and \'pb\' (polarization brightness) plot variables.
 !
-! plot_vars should not be set for plotarea \'ion\' 
-!       they are unimplemented.
 ! The possible values for plot_vars with plotarea \'los\' 
 !       are listed in subroutine set_plotvar_los in write_plot_los.f90.
 ! The possible values for plot_vars for other plot areas
@@ -917,28 +1226,6 @@ T			DoSaveBinary   used only for \'idl\' plot file
 ! (lower) precision. For example PostIDL.exe may be compiled with 
 ! single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
 ! compiled in double precision, to make results more accurate.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVERESTART'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'SaveRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$SaveRestart'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'DnRestart'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','default' => '-1','type' => 'real','name' => 'DtRestart'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
-#SAVERESTART
-T			saveRestartFile  Rest of parameters read if true
-100			DnOutput_i(restart_)
--1.			DtOutput_i(restart_) in seconds. Read if time_accurate!
-
-! Default is save_restartfile=.true. with DnOutput(restart_)=-1, 
-! DtOutput(restart_)=-1. This results in the restart file being 
-! saved only at the end.  A binary restart file is produced for every 
-! block and named as
-!
-! restartOUT/blkGLOBALBLKNUMBER.rst
-!
-! In addition the grid is described by
-!
-! restartOUT/octree.rst
-!
-! and an ASCII header file is produced with timestep and time info:
-!
-! restartOUT/restart.H
-!
-! The restart files are overwritten every time a new restart is done.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVEPLOTSAMR'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'SavePlotsAmr'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #SAVEPLOTSAMR
 F			savePlotsAMR to save plots before each AMR
@@ -1170,7 +1457,7 @@ lr			TypeProlong  ! Only for nOrderProlong=2
 ! \'lr\',\'lr2\'		- left and right slopes (all interpolation)
 ! \'central\',\'central2\'	- central differences (all interpolation)
 ! \'minmod\',\'minmod2\'	- to be implemented
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeMessagePass'},'content' => [{'attrib' => {'value' => 'allopt','default' => 'T','name' => 'm_p_cell FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'all','name' => 'm_p_cell'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'opt','name' => 'm_p_dir FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'dir','name' => 'm_p_dir group by directions'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'face','name' => 'm_p_dir group by faces     '},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'min','name' => 'm_p_dir group by kind and face'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'allold','name' => 'm_p_all'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'oldopt','name' => 'm_p_old FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'alias' => 'OPTIMIZE','name' => 'MESSAGEPASS'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeMessagePass'},'content' => [{'attrib' => {'value' => 'allopt','default' => 'T','name' => 'm_p_cell FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'all','name' => 'm_p_cell'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'opt','name' => 'm_p_dir FACES ONLY'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'dir','name' => 'm_p_dir group by directions'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'face','name' => 'm_p_dir group by faces     '},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'min','name' => 'm_p_dir group by kind and face'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
 #MESSAGEPASS
 allopt			TypeMessagePass
 
@@ -1188,12 +1475,6 @@ allopt			TypeMessagePass
 ! \'all\'		- message_pass_cell: corners, edges and faces in single message
 !
 ! \'allopt\'      - message_pass_cell:  faces only in a single message
-!
-! \'allold\'      - messagepass_all: corners, edges and faces in many messages
-!
-! \'oldopt\'	- message_pass_equal_opt:     equal
-!		  message_pass_reschange_opt: restricted and prolonged
-!					  no corners, all variables together
 !
 ! Constrained transport requires corners, default is \'all\'! 
 ! Diffusive control requires corners, default is \'all\'!
@@ -1316,31 +1597,77 @@ rel			TypeProjStop
 ! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
 !
 ! The 2nd case is a linear interpolation between the 2nd and 4th cases.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseRayTrace'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoCheckRayLoop'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '100','type' => 'integer','name' => 'DnRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '1','type' => 'real','name' => 'rRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
-#RAYTRACE
-T			UseRayTrace    ! Rest of the parameters read if .true.
-F			DoCheckRayLoop print info for loops
-100			DnRayTrace   how often
-3.0			rRayTrace    where to stop with ray tracing
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseAccurateIntegral'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '1','type' => 'integer','name' => 'DnRaytrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
-! Raytracing (field-line tracing) is needed to couple the GM and IM components.
-! It can also be used to create plot files with open-closed field line 
-! information.
-! Raytracing is done when needed, so the default values should work fine.
-! This command may be removed or modified in the future.
+#RAYTRACE
+T			UseAccurateIntegral
+T			UseAccurateTrace
+0.1			DtExchangeRay [sec]
+1			DnRaytrace
+
+Raytracing (field-line tracing) is needed to couple the GM and IM components.
+It can also be used to create plot files with open-closed field line 
+information. There are two algorithms implemented for integrating rays
+and for tracing rays.
+
+If UseAccurateIntegral is true (default), the field line integrals
+are calculated with the accurate algorithm, which follows the lines
+all the way. If UseAccurateIntegral is false, the block-wise algorithm
+is used, which actually needs the face values computed by the 
+block-wise tracing algorithm (UseAccurateTrace must be false).
+
+If UseAccurateTrace is false (default), the block-wise algorithm is used,
+which interpolates at block faces. This algorithm is fast, but less 
+accurate than the other algorithm. If UseAccurateTrace is true, 
+the field lines are followed all the way. It is more accurate but 
+potentially slower than the other algorithm.
+
+In the accurate tracing algorithms, when the ray exits the domain that belongs 
+to the PE, its information is sent to the other PE where the ray continues. 
+The information is buffered for sake of efficiency and to synchronize
+communitacation. The frequency of the information exchanges 
+(in terms of CPU seconds) is given by the DtExchangeRay parameter. 
+This is an optimization parameter for speed. Very small values of DtExchangeRay
+result in many exchanges with few rays, while very large values result
+in infrequent exchages thus some PE-s may become idle (no more work to do).
+The optimal value is problem dependent. A typically acceptable value is 
+DtExchangeRay = 0.1 seconds (default).
+
+The DnRaytrace parameter contains the minimum number of iterations between
+two ray tracings. The default value 1 means that every new step requires
+a new trace (since the magnetic field is changing). A larger value implies
+that the field does not change significantly in that many time steps.
+The ray tracing is always redone if the grid changes due to an AMR.
+
+Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
+DtExchangeRay = 0.1 and DnRaytrace=1.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'IM'},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'TauCoupleIm'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #IM
-0.01			TauCoupleIM
+0.01			TauCoupleIm
 
-! Determine how fast the GM pressure should be nudged towards the IM pressure.
-! A weighted average is taken every time step: 
+! Determine how fast the GM pressure p should be nudged towards the 
+! IM pressure pIm. The nudging is done in every GM time step.
+! The pIm pressure is updated every time IM->GM coupling occurs.
 !
-! pMHD = (pMHD + TauCoupleIM*pIM)/(1+TauCoupleIM)
+! If TauCoupleIm is less than 1.0, a weighted average is taken: 
 !
-! Therefore the smaller TauCoupleIM is the slower the adjustment will be. 
+! p\' = (p + TauCoupleIm*pIm)/(1+TauCoupleIm)
 !
-! The default value is shown.
+! Therefore the smaller TauCoupleIm is the slower the adjustment will be.
+! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
+!
+! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
+! phyical time:
+!
+! p\' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+!
+! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
+! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
+! p\' = pIm is set in a single step.
+!
+! The default value is TauCoupleIm=0.01, which corresponds to a rather 
+! slow nudging.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'PHYSICS PARAMETERS'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!  PHYSICS PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1381,7 +1708,7 @@ F			DoCheckRayLoop print info for loops
 !
 ! can be used, because these angles can be accurately represented
 ! on the grid.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'SOLARWIND'},'content' => [{'attrib' => {'min' => '0','default' => '5','type' => 'real','name' => 'SwRhoDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '181712.175','type' => 'real','name' => 'SwTDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'max' => '0','default' => '-400','type' => 'real','name' => 'SwUxDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwUyDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwUzDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'max' => '0','default' => '-400','type' => 'real','name' => 'SwBxDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwByDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '5','type' => 'real','name' => 'SwBzDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'SOLARWIND'},'content' => [{'attrib' => {'min' => '0','default' => '5','type' => 'real','name' => 'SwRhoDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '181712.175','type' => 'real','name' => 'SwTDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'max' => '0','default' => '-400','type' => 'real','name' => 'SwUxDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwUyDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwUzDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwBxDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0','type' => 'real','name' => 'SwByDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '5','type' => 'real','name' => 'SwBzDim'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #SOLARWIND
 5.0			SwRhoDim [n/cc]
 181712.175		SwTDim [K]
@@ -1481,26 +1808,6 @@ F                       UseDefaultUnits
 0.000000E-01            BZ0Diss
 
 ! Default values are shown. Parameters for problem_dissipation
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'USER_FLAGS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserInnerBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSource'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserPerturbation'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserOuterBcs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserICs'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSpecifyRefinement'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserLogFiles'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserWritePlot'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserAMR'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserEchoInput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserB0'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserSetPhysConst'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseUserUpdateStates'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
-
-#USER_FLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserSetPhysConst
-F                       UseUserUpdateStates
-
-! This command controls the use of user defined routines in user_routines.f90.
-! For each flag that is set, an associated routine will be called in 
-! user_routines.f90.  Default is .false. for all flags.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsFirstSession','name' => 'SECONDBODY'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseBody2'},'content' => [{'attrib' => {'min' => '0','default' => '0.1','type' => 'real','name' => 'rBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMin','max' => '$xMax','default' => '-40','type' => 'real','name' => 'xBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMin','max' => '$yMax','default' => '0','type' => 'real','name' => 'yBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMin','max' => '$zMax','default' => '0','type' => 'real','name' => 'zBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$rBody2','default' => '1.3*$rBody2','type' => 'real','name' => 'rCurrents2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '5','type' => 'real','name' => 'RhoDimBody2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '25000','type' => 'real','name' => 'tDimBody2'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
 
 #SECONDBODY

@@ -301,8 +301,8 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
 
   use ModIonosphere
   use ModCoordTransform, ONLY: dir_to_xyz, cross_product
-  use CON_physics, ONLY: get_planet_field
-  use IE_ModMain, ONLY: Time_Simulation
+  use CON_planet_field,  ONLY: get_planet_field
+  use IE_ModMain,        ONLY: Time_Simulation
 
   implicit none
 
@@ -435,7 +435,7 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
         Uz(i,j) = Vp_D(3)
 
 
-!!!!!  This is all wrong at this point. CON_physics needs to fix this.
+!!!!!  This is all wrong at this point. Someone should fix this.
 
 !!!!!        
 !!!!!        xx = NormRadius * sinTheta*cosPhi

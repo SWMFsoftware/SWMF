@@ -1,3 +1,5 @@
+!^CFG COPYRIGHT UM
+!^CFG FILE USERFILES
 !========================================================================
 !========================================================================
 !  This file contains routines that let the user make customizations to
@@ -60,7 +62,7 @@ Module ModUser
   !/
   logical:: DoStaticICs=.false.
   real:: InvH0,TemRatio
-  real:: DegFrm1,Tnot
+  real:: DegFrm1,Tnot=1.0
   real:: MaxB0,Bnot
   !\
   ! Variables related to energies::

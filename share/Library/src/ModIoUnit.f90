@@ -111,43 +111,77 @@ contains
   !==========================================================================
   subroutine io_unit_test
 
-    integer :: iUnit
+    integer :: iUnit1, iUnit2, iUnit3, iUnit4
     logical :: IsExisting
     !---------------------------------------------------------------------
 
-    iUnit = io_unit_new()
-    write(*,*)'iUnit=',iUnit
-    open(iUnit,file='baba1',status='unknown',form='formatted')
-    write(iUnit,*)1
+    write(*,'(a)')'Testing io_unit_new()'
+    iUnit1 = io_unit_new()
+    if(iUnit1/=MinUnitNumber)write(*,*)'test io_unit_new() failed: ',&
+         'iUnit1=',iUnit1,' should be MinUnitNumber=',MinUnitNumber
+    open(iUnit1,file='ascii',status='unknown',form='formatted')
+    write(iUnit1,*)1
 
-    iUnit = io_unit_new()
-    write(*,*)'iUnit=',iUnit
-    open(iUnit,file='baba2',status='unknown',form='unformatted')
-    write(iUnit)1
+    iUnit2 = io_unit_new()
+    if(iUnit2/=MinUnitNumber+1)write(*,*)'test io_unit_new() failed: ',&
+         'iUnit2=',iUnit2,' should be MinUnitNumber+1=',MinUnitNumber+1
+    open(iUnit2,file='binary',status='unknown',form='unformatted')
+    write(iUnit2)1
 
-    iUnit = io_unit_new()
-    write(*,*)'iUnit=',iUnit
-    open(iUnit,file='empty1',status='unknown',form='formatted')
+    iUnit3 = io_unit_new()
+    if(iUnit3/=MinUnitNumber+2)write(*,*)'test io_unit_new() failed: ',&
+         'iUnit3=',iUnit3,' should be MinUnitNumber+2=',MinUnitNumber+2
+    open(iUnit3,file='empty_ascii',status='unknown',form='formatted')
 
-    iUnit = io_unit_new()
-    write(*,*)'iUnit=',iUnit
-    open(iUnit,file='empty2',status='unknown',form='unformatted')
+    iUnit4 = io_unit_new()
+    if(iUnit4/=MinUnitNumber+3)write(*,*)'test io_unit_new() failed: ',&
+         'iUnit4=',iUnit4,' should be MinUnitNumber+3=',MinUnitNumber+3
+    open(iUnit4,file='empty_binary',status='unknown',form='unformatted')
 
+    write(*,'(a)')'Testing io_unit_clen'
     call io_unit_clean
 
-    inquire(file='baba1',exist=IsExisting)
-    if(.not.IsExisting)write(*,*)'test baba1 failed'
+    inquire(file='ascii',exist=IsExisting)
+    if(.not.IsExisting)then
+       write(*,*)'test io_unit_clean failed: ',&
+            'file "ascii" should not have been deleted'
+    else
+       open(iUnit1,file='ascii',status='unknown',form='formatted')
+       close(iUnit1,STATUS='delete')
+       inquire(file='ascii',exist=IsExisting)
+       if(IsExisting)write(*,*)'failed to delete file "ascii"'
+    end if
 
-    inquire(file='baba2',exist=IsExisting)
-    if(.not.IsExisting)write(*,*)'test baba2 failed'
+    inquire(file='binary',exist=IsExisting)
+    if(.not.IsExisting)then
+       write(*,*)'test io_unit_clean failed: ',&
+            'file "binary" should not have been deleted'
+    else
+       open(iUnit2,file='binary',status='unknown',form='unformatted')
+       close(iUnit2,STATUS='delete')
+       inquire(file='binary',exist=IsExisting)
+       if(IsExisting)write(*,*)'failed to delete file "binary"'
+    end if
 
-    inquire(file='empty1',exist=IsExisting)
-    if(IsExisting)write(*,*)'test empty1 failed'
+    inquire(file='empty_ascii',exist=IsExisting)
+    if(IsExisting)then
+       write(*,*)'test io_unit_clean failed: ',&
+            'file "empty_ascii" should have been deleted'
+       open(iUnit3,file='empty_ascii',status='unknown',form='formatted')
+       close(iUnit3,STATUS='delete')
+       inquire(file='empty_ascii',exist=IsExisting)
+       if(IsExisting)write(*,*)'failed to delete file "empty_ascii"'
+    end if
 
-    inquire(file='empty2',exist=IsExisting)
-    if(IsExisting)write(*,*)'test empty2 failed'
-
-    write(*,*)'io_unit_test done'
+    inquire(file='empty_binary',exist=IsExisting)
+    if(IsExisting)then
+       write(*,*)'test io_unit_clean failed: ',&
+            'file "empty_binary" should have been deleted'
+       open(iUnit4,file='empty_binary',status='unknown',form='unformatted')
+       close(iUnit4,STATUS='delete')
+       inquire(file='empty_binary',exist=IsExisting)
+       if(IsExisting)write(*,*)'failed to delete file "empty_binary"'
+    end if
 
   end subroutine io_unit_test
 

@@ -111,12 +111,14 @@ module CON_axes
   use ModKind
   use ModConst
   use ModCoordTransform
-  use CON_time
+  use ModTimeConvert, ONLY : time_int_to_real
   use CON_planet
 
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version
   ! 14Aug03 - Gabor Toth <gtoth@umich.edu> - major revision and extension
+  ! 23Mar04 - Gabor Toth eliminated the use of CON_time to make 
+  !                      CON_axes more indepenedent
   !EOP
 
   implicit none
@@ -126,6 +128,9 @@ module CON_axes
   character(len=*), parameter, private :: NameMod='CON_axes'
 
   integer, parameter, private :: x_=1, y_=2, z_=3
+
+  ! Initial time in 8 byte real
+  real(Real8_) :: tStart = -1.0
 
   ! Rotational axis in GSE and GSM
   real    :: RotAxis_D(3)      ! Permanent Cartesian components in GSE
@@ -140,9 +145,6 @@ module CON_axes
 
   ! Logical tells if the time independent axis parameters have been set
   logical :: DoInitializeAxes=.true.
-
-  ! Frequency of updating the magnetic field information
-  real    :: DtUpdateB0      = 0.0001
 
   ! Coordinate transformation matrices connecting all the systems
   real, dimension(3,3) :: &
@@ -161,7 +163,10 @@ contains
   !BOP ========================================================================
   !IROUTINE: init_axes - initialize the axes
   !INTERFACE:
-  subroutine init_axes
+  subroutine init_axes(tStartIn)
+
+    !INPUT ARGUMENTS:
+    real(Real8_) :: tStartIn
 
     !DESCRIPTION:
     ! Set the direction and position of the rotation axis in GSE
@@ -180,6 +185,8 @@ contains
 
     call CON_set_do_test(NameSub, DoTest,DoTestMe)
 
+    tStart = tStartIn
+
     call time_int_to_real(TimeEquinox)
 
     ! Get GSE position for the rotational axis
@@ -187,7 +194,7 @@ contains
        if(UseRealRotAxis .or. UseRealMagAxis)then
           RotAxisTheta = TiltRotation
           RotAxisPhi   = mod( &
-               cHalfPi - OmegaOrbit*(TimeStart % Time - TimeEquinox % Time), &
+               cHalfPi - OmegaOrbit*(tStart - TimeEquinox % Time), &
                real(cTwoPi,kind=Real8_))
        else
           ! Rotational axis must be aligned with magnetic axis
@@ -202,8 +209,11 @@ contains
        end if
     end if
 
-    if(DoTestMe)write(*,*)'RotAxisTheta,RotAxisPhi=',&
-         RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
+    if(DoTestMe)then
+       write(*,*)'tStart,TimeEquinox=',tStart,TimeEquinox
+       write(*,*)'RotAxisTheta,RotAxisPhi=',&
+            RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
+    end if
 
     ! Using the RotAxisTheta and RotAxisPhi 
     ! set the GseGei matrix to convert between GSE and  GEI systems
@@ -371,7 +381,7 @@ contains
        RETURN
     end if
 
-    AlphaEquinox = (TimeSim + TimeStart % Time - TimeEquinox % Time) &
+    AlphaEquinox = (TimeSim + tStart - TimeEquinox % Time) &
          * OmegaPlanet + AngleEquinox
 
     GeiGeo_DD = rot_matrix_z(AlphaEquinox)
@@ -388,7 +398,7 @@ contains
     logical, optional, intent(in) :: DoSetAxes
 
     !DESCRIPTION:
-    ! The magnetic axis as well as the corotating GEO and MAG fremes
+    ! The magnetic axis as well as the corotating GEO and MAG frames
     ! are rotating around the rotational axis with OmegaPlanet 
     ! angular speed. Calculate the position of the axes and the
     ! transformation matrices for the given simulation time TimeSim.
@@ -405,10 +415,10 @@ contains
     ! The last simulation time with which an update was done
     ! is stored into TimeSimLast. 
     !
-    ! If DtUpdateB0 <  0.0 the magnetic axis is taken to be fixed.
-    ! If DtUpdateB0 >= 0.0 and <= 0.001 (sec) the magnetic axis is updated
+    ! If DoUpdateB0 == .false. the magnetic axis is taken to be fixed.
+    ! If DtUpdateB0 <= 0.001 (sec) the magnetic axis is updated
     !      if TimeSim differs from TimeSimLast.
-    ! If DtUpdateB0 > 0.001 (sec) then the magnetic axis is updated
+    ! If DtUpdateB0 >  0.001 (sec) then the magnetic axis is updated
     !      if int(TimeSim/DtUpdateB0) differs from int(TimeSimLast/DtUpdateB0)
     !
     !EOP
@@ -423,8 +433,7 @@ contains
     !-------------------------------------------------------------------------
     if(.not.present(DoSetAxes))then
        ! If magnetic axis does not move, no need to update
-       if(DtUpdateB0 < 0.0 .or. UseAlignedAxes .or. .not.UseRotation &
-            .or. .not.DoTimeAccurate) RETURN
+       if(.not.DoUpdateB0) RETURN
 
        ! If DtUpdateB0 is more than 0.001 update if int(time/DtUpdateB0) differ
        if(DtUpdateB0 > 0.001)then
@@ -439,8 +448,8 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe)then
-       write(*,*) NameSub,'UseAlignedAxes,UseRotation,DoTimeAccurate=',&
-            UseAlignedAxes,UseRotation,DoTimeAccurate
+       write(*,*) NameSub,'UseAlignedAxes,UseRotation,DoUpdateB0=',&
+            UseAlignedAxes,UseRotation,DoUpdateB0
        write(*,*) NameSub,'DtUpdateB0,TimeSim,TimeSimLast=',&
             DtUpdateB0,TimeSim,TimeSimLast
     end if
@@ -522,7 +531,8 @@ contains
     character(len=*), parameter :: NameSub=NameMod//'::get_axes'
     !--------------------------------------------------------------------------
     ! Set time independent information
-    if(DoInitializeAxes)call init_axes
+    if(DoInitializeAxes)&
+         call CON_stop(NameSub//' ERROR: init_axes has not been called')
 
     ! Set time dependent information (TimeSim is cashed)
     call set_axes(TimeSim)
@@ -617,32 +627,47 @@ contains
     real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
     !-------------------------------------------------------------------------
 
-    write(*,*)'start test_physics_axes'
+    if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
+         DoInitializeAxes,' should be true'
 
-    write(*,*)'TimeEquinox = ',TimeEquinox
-    write(*,*)'TimeStart   = ',TimeStart
+    call time_int_to_real(TimeEquinox)
+    if(TimeEquinox % Time <= 0.0) write(*,*)'test failed: TimeEquinox =',&
+         TimeEquinox,' should have a large positive double in the %Time field'
 
-    write(*,*)'TESTING init_axes'
-    write(*,*)
-    write(*,*)'DoInitializeAxes=',DoinitializeAxes
-    call init_axes
-    write(*,*)'DoinitializeAxes=',DoinitializeAxes
-    write(*,*)
-    write(*,*)'TESTING get_axes'
-    write(*,*)
+    write(*,'(a)')'Testing init_axes'
+    call init_axes(TimeEquinox % Time)
+
+    if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&
+         'tStart=',tStart,' should be equal to TimeEquinox % Time=',&
+         TimeEquinox % Time
+
+    if(DoInitializeAxes) write(*,*)'test init_axes failed: DoInitializeAxes=',&
+         DoInitializeAxes,' should be fales'
+
+    write(*,'(a)')'Testing get_axes'
+
     call get_axes(0.0, MagAxisTilt, RotAxisGsm_D)
-    write(*,*)'MagAxisTilt =',MagAxisTilt*cRadToDeg
-    write(*,*)'RotAxisGsm_D=',RotAxisGsm_D
-    write(*,*)
-    write(*,*)'Test GSM->GSE->GEO transformation'
-    write(*,*)
+
+    if(abs(MagAxisTilt*cRadToDeg - 8.0414272433221718) > 0.00001)write(*,*) &
+         'test get_axes failed: MagAxisTilt =',MagAxisTilt*cRadToDeg,&
+         ' should be 8.0414272433221718 degrees within round off error'
+
+    if(maxval(abs(RotAxisGsm_D - (/0.0, 0.131054271126, 0.991375195382/))) &
+         > 0.00001)write(*,*) 'test get_axes failed: RotAxisGsm_D =',&
+         RotAxisGsm_D,' should be equal to ', &
+         '(/0.0, 0.131054271126, 0.991375195382/) within round off errors'
+
+    write(*,'(a)')'Testing transform_matrix'
+
     Rot_DD = transform_matrix(0.0,'GSM','GEO')
-    write(*,*)'GeoGsm_DD'; call show_rot_matrix(Rot_DD)
     RotAxisGeo_D = matmul(Rot_DD,RotAxisGsm_D)
-    write(*,*)'This should be 0,0,1: '
-    write(*,*)'RotAxisGeo_D=',RotAxisGeo_D
-    if(maxval(abs(RotAxisGeo_D - (/0.,0.,1./)))>0.0001)&
-         stop 'ERROR in test_physics_axes'
+
+    if(maxval(abs(RotAxisGeo_D - (/0.,0.,1./)))>0.0001) &
+         write(*,*)'test transform_matrix failed: RotAxisGeo_D=',&
+         RotAxisGeo_D,' should be (/0.,0.,1./) within round off errors'
+
+    write(*,'(a)')'Testing show_rot_matrix'
+    write(*,'(a)')'GeoGsm_DD='; call show_rot_matrix(Rot_DD)
 
   end subroutine test_axes
 

@@ -573,6 +573,39 @@ subroutine MPI_GROUP_RANK(group,rank,ierror)
   ierror=0
 end subroutine MPI_GROUP_RANK
 
+subroutine MPI_GROUP_SIZE(group, size, ierror)
+
+  integer, intent(in) :: group
+  integer, intent(out):: size, ierror
+
+  size   = 1
+  ierror = 0
+
+end subroutine MPI_GROUP_SIZE
+
+subroutine MPI_GROUP_TRANSLATE_RANKS(group1,n,ranks1,group2,ranks2,ierror)
+
+  integer, intent(in) :: group1, n
+  integer, intent(in) :: ranks1(n)
+  integer, intent(in) :: group2
+  integer, intent(out):: ranks2(n)
+  integer, intent(out):: ierror
+
+  ranks2 = ranks1
+  ierror = 0
+
+end  subroutine MPI_GROUP_TRANSLATE_RANKS
+
+subroutine MPI_GROUP_UNION(group1, group2, newgroup, ierror)
+
+  integer, intent(in) :: group1, group2
+  integer, intent(out):: newgroup, ierror
+
+  newgroup = group1
+  ierror   = 0
+
+end subroutine MPI_GROUP_UNION
+
 subroutine MPI_INIT(ierror)
   integer, intent(out):: ierror
   ierror=0

@@ -6,11 +6,12 @@ include Makefile.DEPEND
 
 # These modules provide the "infrastructure" for SWMF and components.
 # A component does not have to use the whole library.
-# The minimum requirement is ModIoUnit.o
+# The minimum reqguirement is ModIoUnit.o
 
 MODULES = \
 	ModKind.o\
-	ModTimeType.o\
+	ModTimeConvert.o\
+	ModFreq.o\
 	ModCoordTransform.o\
 	ModSort.o\
         ModNumConst.o\
@@ -21,11 +22,11 @@ MODULES = \
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
-	CON_physics.o\
+	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
 	CON_ray_trace.o\
-	CON_time.o
+	io_unit_for77.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${MODULES}
@@ -42,10 +43,9 @@ ${MY_LIB}: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 
-install: 
 
 distclean: clean
-	rm -f Makefile.DEPEND 
+	rm -f Makefile.DEPEND
 
 # keep this line
 

@@ -7,6 +7,22 @@ module ModRaytrace
   implicit none
   save
 
+  ! Select between fast less accurate and slower but more accurate algorithms
+  logical :: UseAccurateTrace    = .false. 
+  logical :: UseAccurateIntegral = .true.
+
+  ! Task selection: trace/integrate/extract
+  character(len=20) :: NameTask = 'trace'
+
+  ! The vector field to trace: B/U/J
+  character         :: NameVectorField = 'B'
+
+  ! How often shall we synchronize PE-s for the accurate algorithms
+  real         :: DtExchangeRay = 0.1
+
+  ! The minimum number of time steps between two ray traces on the same grid
+  integer      :: DnRaytrace = 1
+
   ! Named parameters for ray status (must be less than east_=1)
   integer, parameter :: &
        ray_iono_ = 0, &
@@ -36,17 +52,24 @@ module ModRaytrace
 
   real :: R_raytrace=1., R2_raytrace=1.
 
-  ! Normalized bb=B/|B| and Norm |B| for a BLK
+!!! These could be allocatable arrays ???
+  
+  ! Node interpolated magnetic field components without B0
   real, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK):: bb_x,bb_y,bb_z
 
+  ! Total magnetic field with second order ghost cells
   real, dimension(3,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Bxyz_DGB
 
   ! Prefer open and closed field lines in interpolation ?!
   logical :: UsePreferredInterpolation
 
+  ! Maximum length of ray
+  real :: RayLengthMax
+
   ! Testing
   logical :: oktest_ray=.false.
 
+  ! Constants to distinguish various ray types
   real, parameter :: rIonosphere = 1.0, rIonosphere2 = rIonosphere**2
   real, parameter :: &
        CLOSEDRAY= -(rIonosphere + 0.05), &
@@ -56,10 +79,115 @@ module ModRaytrace
        NORAY    = -(rIonosphere + 100.0), &
        OUTRAY   = -(rIonosphere + 200.0)
 
-  real(Real8_) :: TimeStartRay
+  ! Base time for timed exchanges between rays
+  real(Real8_) :: CpuTimeStartRay
 
-  real         :: DtExchangeRay = 0.1
-
+  ! Number of rays found to be open based on the neighbors
   integer      :: nOpen
+
+  ! ----------- Variables for extracting variables along the ray --------
+  logical :: DoExtractState = .false., DoExtractUnitSi = .false.
+
+  ! ----------- Variables for integrals along the ray -------------------
+  ! Named indexes
+  integer, parameter :: &
+       InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, &
+       xEnd_=7, yEnd_=8, zEnd_=9, Length_=10
+
+  ! Number of integrals
+  integer, parameter :: nRayIntegral = 10
+
+  ! Flow variables to be integrated (rho and P) other than the magnetic field
+  real, dimension(2,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK) :: Extra_VGB
+
+  ! Integrals for a local ray segment
+  real :: RayIntegral_V(InvB_:pInvB_)
+
+  ! Integrals added up for all the local ray segments
+  ! The fist index corresponds to the variables (index 0 shows closed vs. open)
+  ! The second and third indexes correspond to the latitude and longitude of
+  ! the IM/RCM grid
+  real, allocatable :: RayIntegral_VII(:,:,:)
+  real, allocatable :: RayResult_VII(:,:,:)
+
+contains
+
+  !============================================================================
+
+  subroutine xyz_to_latlon(Pos_D)
+
+    use ModNumConst, ONLY: cTiny, cRadToDeg
+
+    ! Convert xyz coordinates to latitude and longitude (in degrees)
+    ! Put the latitude and longitude into the 1st and 2nd elements
+    real, intent(inout) :: Pos_D(3)
+
+    real :: x, y, z
+
+    !-------------------------------------------------------------------------
+
+    ! Check if this direction is closed or not
+    if(Pos_D(1) > CLOSEDRAY)then
+
+       ! Store input coordinates
+       x = Pos_D(1); y = Pos_D(2); z = Pos_D(3)
+
+       ! Make sure that asin will work, -1<= z <=1
+       z = max(-1.0+cTiny, z)
+       z = min( 1.0-cTiny, z)
+
+       ! Calculate  -90 < latitude = asin(z)  <  90
+       Pos_D(1) = cRadToDeg * asin(z)
+
+       ! Calculate -180 < longitude = atan2(y,x) < 180
+       if(abs(x) < cTiny .and. abs(y) < cTiny) x = 1.0
+       Pos_D(2) = cRadToDeg * atan2(y,x)
+
+       ! Get rid of negative longitude angles
+       if(Pos_D(2) < 0.0) Pos_D(2) = Pos_D(2) + 360.0
+
+    else
+       ! Impossible values
+       Pos_D(1) = -100.
+       Pos_D(2) = -200.
+    endif
+
+  end subroutine xyz_to_latlon
+
+  !============================================================================
+
+  subroutine xyz_to_latlonstatus(Ray_DI)
+
+    real, intent(inout) :: Ray_DI(3,2)
+
+    integer :: iRay
+    !-------------------------------------------------------------------------
+
+    ! Convert 1st and 2nd elements into latitude and longitude
+    do iRay=1,2
+       call xyz_to_latlon(Ray_DI(:,iRay))
+    end do
+
+    ! Convert 3rd element into a status variable
+
+    if(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)>CLOSEDRAY)then
+       Ray_DI(3,:)=3.      ! Fully closed
+    elseif(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)==OPENRAY)then
+       Ray_DI(3,:)=2.      ! Half closed in positive direction
+    elseif(Ray_DI(3,2)>CLOSEDRAY .and. Ray_DI(3,1)==OPENRAY)then
+       Ray_DI(3,:)=1.      ! Half closed in negative direction
+    elseif(Ray_DI(3,1)==OPENRAY .and. Ray_DI(3,2)==OPENRAY) then
+       Ray_DI(3,:)=0.      ! Fully open
+    elseif(Ray_DI(3,1)==BODYRAY)then
+       Ray_DI(3,:)=-1.     ! Cells inside body
+    elseif(Ray_DI(3,1)==LOOPRAY .and.  Ray_DI(3,2)==LOOPRAY) then
+       Ray_DI(3,:)=-2.     ! Loop ray within block
+    else
+       Ray_DI(3,:)=-3.     ! Strange status
+    end if
+
+  end subroutine xyz_to_latlonstatus
+
+  !============================================================================
 
 end module ModRaytrace

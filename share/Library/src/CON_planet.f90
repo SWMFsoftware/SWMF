@@ -22,11 +22,14 @@ module CON_planet
 
   !USES:
   use ModConst
-  use ModTimeType
+  use ModTimeConvert, ONLY: TimeType
 
   !REVISION HISTORY:
   ! 01Aug03 - Aaron Ridly <ridley@umich.edu> and 
   !           Gabor Toth <gtoth@umich.edu>   - initial prototype/prolog/code
+  ! 23Mar03 - added get_planet subroutine for OO type access
+  ! 06May04 - K.C. Hansen and G. Toth added Saturn
+  !           G.Toth fixed bugs in degree to radian conversions
   !EOP
 
   implicit none
@@ -76,6 +79,10 @@ module CON_planet
   logical :: UseRealMagAxis  = .true.
   logical :: UseSetMagAxis   = .false.
 
+  ! Frequency of updating the magnetic field information
+  logical :: DoUpdateB0      = .true.
+  real    :: DtUpdateB0      = 0.0001
+
   ! A primary axis is set to the true value
   ! a secondary axis is aligned with the primary axis
   logical :: IsRotAxisPrimary = .true., IsMagAxisPrimary = .true.
@@ -107,7 +114,7 @@ contains
     if(IsInitialized)then
        if(NamePlanet == NamePlanetIn) RETURN
        call CON_stop(NameSub//&
-            ' SWMF_error attempt to change planet name from '// &
+            ' ERROR: attempt to change planet name from '// &
             trim(NamePlanet)//' to '//NamePlanetIn)
     end if
 
@@ -117,6 +124,12 @@ contains
     select case(NamePlanet)
     case('EARTH')
        ! This is the default so everything is already set
+    case('SATURN')
+       RadiusPlanet     = rSaturn
+       MassPlanet       = mSaturn
+       OmegaPlanet      = cTwoPi/RotationPeriodSaturn 
+       DipoleStrength   = DipoleStrengthSaturn
+       IonosphereHeight = IonoHeightSaturn
     case default
        IsKnown = .false.
        RETURN
@@ -148,7 +161,7 @@ contains
 
        if (NamePlanetCommands /= '') &
             call CON_stop(NameSub// &
-            ' SWMF_ERROR #PLANET should precede '// &
+            ' ERROR: #PLANET should precede '// &
             NamePlanetCommands)
 
        call read_var('NamePlanet',NamePlanetIn)
@@ -184,18 +197,17 @@ contains
 
              if (TypeBField == 'QUADRUPOLE') then
                 call CON_stop(NameSub// &
-                     ' SWMF_ERROR quadrupole field unimplemented')
+                     ' ERROR: quadrupole field unimplemented')
              endif
 
              if (TypeBField == 'OCTUPOLE') then
                 call CON_stop(NameSub// &
-                     ' SWMF_ERROR octupole field unimplemented')
+                     ' ERROR: octupole field unimplemented')
              endif
 
           case default
              call CON_stop(NameSub// &
-                  ' SWMF_ERROR unimplemented TypeBField='// &
-                  TypeBField)
+                  ' ERROR: unimplemented TypeBField='//TypeBField)
 
           end select
 
@@ -228,15 +240,14 @@ contains
 
           call read_var('RotAxisTheta', RotAxisTheta)
           if(RotAxisTheta < cZero)call CON_stop(NameSub// &
-               'Negative tilt should be entered as Phi=180.0')
-          RotAxisTheta = cRadToDeg * RotAxisTheta
+               ' ERROR: negative tilt should be entered as Phi=180.0')
+          RotAxisTheta = cDegToRad * RotAxisTheta
 
           call read_var('RotAxisPhi', RotAxisPhi)
-          RotAxisPhi = cRadToDeg * RotAxisPhi
+          RotAxisPhi = cDegToRad * RotAxisPhi
        else
-          if(.not.IsMagAxisPrimary)call CON_stop(NameSub//&
-               ': SWMF_ERROR ',&
-               'Either rotation or magnetic axis must be primary')
+          if(.not.IsMagAxisPrimary)call CON_stop(NameSub// &
+               ' ERROR: either rotation or magnetic axis must be primary')
        end if
 
     case('#MAGNETICAXIS')
@@ -251,15 +262,14 @@ contains
 
           call read_var('MagAxisTheta', MagAxisTheta)
           if(MagAxisTheta < 0.0)call CON_stop(NameSub// &
-               'Negative tilt should be entered as Phi=180.0')
-          MagAxisTheta = cRadToDeg * MagAxisTheta
+               ' ERROR: negative tilt should be entered as Phi=180.0')
+          MagAxisTheta = cDegToRad * MagAxisTheta
 
           call read_var('MagAxisPhi', MagAxisPhi)
-          MagAxisPhi = cRadToDeg * MagAxisPhi
+          MagAxisPhi = cDegToRad * MagAxisPhi
        else
           if(.not.IsRotAxisPrimary)call CON_stop(NameSub//&
-               ': SWMF_ERROR ',&
-               'Either rotation or magnetic axis must be primary')
+               ' ERROR: either rotation or magnetic axis must be primary')
        end if
 
     case('#ROTATION')
@@ -283,7 +293,7 @@ contains
           TypeBField = 'DIPOLE'
        else
           call CON_stop(NameSub// &
-               ' SWMF_ERROR Nondipole mags unimplemented')
+               ' ERROR: nondipole magnetic field unimplemented')
        endif
 
     case('#DIPOLE')
@@ -292,15 +302,19 @@ contains
 
        call read_var('DipoleStrength',DipoleStrength)
 
+    case('#UPDATEB0')
+
+       call read_var('DtUpdateB0',DtUpdateB0)
+
     end select
 
   end subroutine read_planet_var
 
   !==========================================================================
 
-  subroutine check_planet_var(IsProc0)
+  subroutine check_planet_var(IsProc0, DoTimeAccurate)
 
-    logical, intent(in) :: IsProc0
+    logical, intent(in) :: IsProc0, DoTimeAccurate
 
     character (len=*), parameter :: NameSub=NameMod//'::check_planet_var'
 
@@ -313,6 +327,34 @@ contains
          write(*,*)NameSub,' WARNING: magnetic axis is explicitly set ',&
          'while rotation axis is calculated from real time ?!'
 
+    ! Check if there is a need to update the magnetic field
+    DoUpdateB0 = DtUpdateB0 > 0.0 .and. DoTimeAccurate .and. UseRotation &
+         .and. .not.UseAlignedAxes
+
   end subroutine check_planet_var
+
+  !==========================================================================
+
+  subroutine get_planet( &
+       NamePlanetOut, RadiusPlanetOut, IonosphereHeightOut, &
+       UseRotationOut, DipoleStrengthOut, DoUpdateB0Out, DtUpdateB0Out)
+
+    character(len=*), optional, intent(out) :: NamePlanetOut
+    real,             optional, intent(out) :: RadiusPlanetOut
+    real,             optional, intent(out) :: IonosphereHeightOut
+    logical,          optional, intent(out) :: UseRotationOut
+    real,             optional, intent(out) :: DipoleStrengthOut
+    logical,          optional, intent(out) :: DoUpdateB0Out
+    real,             optional, intent(out) :: DtUpdateB0Out
+    !-----------------------------------------------------------------------
+    if(present(NamePlanetOut))      NamePlanetOut       = NamePlanet
+    if(present(RadiusPlanetOut))    RadiusPlanetOut     = RadiusPlanet
+    if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
+    if(present(UseRotationOut))     UseRotationOut      = UseRotation
+    if(present(DipoleStrengthOut))  DipoleStrengthOut   = DipoleStrength
+    if(present(DoUpdateB0Out))      DoUpdateB0Out       = DoUpdateB0
+    if(present(DtUpdateB0Out))      DtUpdateB0Out       = DtUpdateB0
+
+  end subroutine get_planet
 
 end module CON_planet

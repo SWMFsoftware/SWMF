@@ -91,7 +91,7 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;
 ; MODIFICATION HISTORY:
 ;	12/2/92	- modified to handle !p.multi (jiy-RSI)
-;	Neal Hurlburt, April, 1988.
+;	          Neal Hurlburt, April, 1988.
 ;       7/12/94 HJM - Fixed error in weighting factors in function
 ;                     vel_mybi() which produced incorrect velocity vectors.
 ;       30/5/96 - R. Keppens changed to allow for dynamic velocity plot.
@@ -111,22 +111,62 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;	25/11/96- G. Toth added /NOERASE keyword
 ;	02/12/96- G. Toth and R. Keppens fixed the plotting error for
 ;		  differrent number of grid points in the X and Y directions.
-;       03/27/97- G. Toth and D. Innes generalized VECTOR for non-uniform grids.
-;	04/07/00- G. Toth added second order integration useful from accurate
+;       03/27/97- G. Toth and D. Innes generalized VECTOR for non-uniform grids
+;	04/07/00- G. Toth added second order integration useful for accurate
 ;		  stream line drawing. It is used when NSTEPS>5
+;       10/01/02- G. Toth added error messages if U and V arrays are wrong
+;                 G. Toth added support for irregular grids stored as
+;                 a big linear array (ny=1).
 ;-
 
 ;Return to caller if an error occurs
 ;
 ;on_error,2
 
+if n_elements(U) eq 0 then begin
+   print,"Error in vector: first component of the vectorfield is missing"
+   retall
+endif
+
+if n_elements(V) eq 0 then begin
+   print,"Error in vector: second component of the vectorfield is missing"
+   retall
+endif
+
+if n_elements(U) ne n_elements(V) then begin
+   print,"Error in vector: first and second components of the vectorfield"
+   print,"                 have different number of elements"
+   retall
+endif
+
+if max(abs(size(U)-size(V))) ne 0 then begin
+   print,"Error in vector: first and second components of the vectorfield"
+   print,"                 have different shapes"
+   retall
+endif
+
 sizes=size(U)
-nx=sizes(1)
-ny=sizes(2)
+if sizes(0) eq 1 then begin
+  ; U is a 1D array (possibly an irregular grid)
+  irregular = 1
+  nx = sizes(1)
+  ny = 1
+  if n_elements(XX) eq 0 or n_elements(YY) eq 0 then begin
+     print,'Error in vector: one dimensional array without X and Y coordinates'
+     retall
+  endif
+endif else begin
+  ; U is a 2D array, assume regular
+  irregular = 0
+  nx = sizes(1)
+  ny = sizes(2)
+  ; Default values for optional coordinates
+  if n_elements(XX)       eq 0 then xx      = [0,nx-1]
+  if n_elements(YY)       eq 0 then yy      = [0,ny-1]
+endelse
+
 ; Default values for optional parameters
 ;
-if n_elements(XX)       eq 0 then xx      = [0,nx-1]
-if n_elements(YY)       eq 0 then yy      = [0,ny-1]
 if n_elements(NVECS)    eq 0 then nvecs   = 200
 if not keyword_set(MAXVAL)   then maxval  = max(sqrt(u^2+v^2))
 if n_elements(LENGTH)   eq 0 then length  = 0.04
@@ -142,11 +182,12 @@ xdel=xmax-xmin &   ydel=ymax-ymin
 if dynamic lt 0      then dynamic=0
 if dynamic gt nsteps then dynamic=nsteps
 
-; Check is X0 is provided
+; Check if X0 is provided
 random = n_elements(X0) ne 2*nvecs
 
 if random and keyword_set(X0) then print,$
-   'VECTOR: Initial position array X0 has incorrect size. Using random positions.'
+  'VECTOR: Initial position array X0 has incorrect size.',$
+  ' Using random positions.'
 
 if random then begin
    ; Random positions within (xmin-xmax,ymin-ymax) if x0 is not defined
@@ -161,34 +202,47 @@ endif else begin
    x0(*,1)=x0(*,1)-ydel*floor((x0(*,1)-ymin)/ydel)
 endelse
 
-; Assume first that U and V are defined on a regular grid
-irregular=0
-ureg=u
-vreg=v
-; Check if there is a grid passed in XX, YY
-if n_elements(xx) gt 2 and n_elements(yy) gt 2 then begin
-   ; Check if the grid is uniform by calculating maximum grid spacing
-   if min(xx(1:nx-1,*)-xx(0:nx-2,*)) lt xdel/(nx-0.99999) or $
-      min(yy(*,1:ny-1)-yy(*,0:ny-2)) lt ydel/(ny-0.99999) then begin
-      ; Check if the triangulation has already been done
-      newx=1
-      if keyword_set(triangles) and $
-         n_elements(xxold) eq nx*ny and n_elements(yyold) eq nx*ny then $
-            if max(abs(xx-xxold))+max(abs(yy-yyold)) eq 0 then newx=0
-      if newx then begin
-          print,'Triangulating in VECTOR ...'
-          triangulate,xx,yy,triangles
-          xxold=xx
-          yyold=yy
-      endif
-      ; Interpolate velocity arrays onto an nx*ny sized REGULAR grid
-      dx=xdel/(nx-1.00001) & dy=ydel/(ny-1.00001)
-      ureg=trigrid(xx,yy,u,triangles,[dx,dy])
-      vreg=trigrid(xx,yy,v,triangles,[dx,dy])
-      irregular=1
-      minval=maxval*1e-4
+; For a presumably regular grid, check if it is regular or not
+if not irregular then $
+   ; Check if there is a grid passed in XX, YY
+   if n_elements(xx) gt 2 and n_elements(yy) gt 2 then $
+      ; Check if the grid is uniform by calculating maximum grid spacing
+      if min(xx(1:nx-1,*)-xx(0:nx-2,*)) lt xdel/(nx-0.99999d0) or $
+         min(yy(*,1:ny-1)-yy(*,0:ny-2)) lt ydel/(ny-0.99999d0) then $
+           irregular = 1
+
+if not irregular then begin
+   ureg=u
+   vreg=v
+endif else begin
+   ; Check if the triangulation has already been done
+   newx=1
+   if keyword_set(triangles) and $
+       n_elements(xxold) eq nx*ny and n_elements(yyold) eq nx*ny then $
+          if max(abs(xx-xxold))+max(abs(yy-yyold)) eq 0 then newx=0
+   if newx then begin
+      print,'Triangulating in VECTOR ...'
+      triangulate,xx,yy,triangles
+      xxold=xx
+      yyold=yy
    endif
-endif
+   ; Calculate optimal size for regular grid. Overwrite nx and ny!
+   ; (i) Number of regular cells is the same as number of irregular points
+   ; (ii) cells should be squares
+   aspect = xdel/ydel
+   nx     = floor(sqrt(aspect*nx*ny))
+   ny     = floor(nx/aspect)
+
+   ; Interpolate velocity arrays onto a REGULAR grid with nx'*ny' spacing
+   dx     = xdel/(nx-1.00001d0)
+   dy     = ydel/(ny-1.00001d0)
+
+   ; Interpolate
+   ureg=trigrid(xx,yy,u,triangles,[dx,dy])
+   vreg=trigrid(xx,yy,v,triangles,[dx,dy])
+endelse
+
+minval=maxval*1e-4
 
 ; Calculate the coordinates forming the arrows: X(nvecs,nsteps+4,2)
 ; --> nvecs arrows to be drawn as 

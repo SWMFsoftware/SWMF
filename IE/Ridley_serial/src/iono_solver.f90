@@ -45,6 +45,7 @@ subroutine ionosphere_solver(PHI, &
   !/
 
   use ModIonosphere
+  use IE_ModIo, ONLY: write_prefix, iUnitOut
 
   USE MSR_Module
   USE Matrix_Arithmetic_Module
@@ -86,6 +87,7 @@ subroutine ionosphere_solver(PHI, &
   logical :: oktest, oktest_me
   
   call CON_set_do_test('ionosphere',oktest,oktest_me)
+  call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
   lat_boundary = 30.0 * IONO_PI/180.0
@@ -532,18 +534,17 @@ subroutine ionosphere_solver(PHI, &
   enddo
   ave = ave/nPsi
 
+  call write_prefix
   if (north) then
      cpcp_north = cpcp/1000.0
+     write(iUnitOut,*) &
+          "iono_solver: Northern Cross Polar Cap Potential=",&
+          cpcp_north," kV"
   else
      cpcp_south = cpcp/1000.0
-  endif
-
-  if (oktest) then
-     if (north) then
-        write(6,*) "=> Northern Cross Polar Cap Potential : ",cpcp_north," kV"
-     else
-        write(6,*) "=> Southern Cross Polar Cap Potential : ",cpcp_south," kV"
-     endif
+     write(iUnitOut,*) &
+          "iono_solver: Southern Cross Polar Cap Potential=",&
+          cpcp_south," kV"
   endif
 
   i = nTheta
@@ -554,5 +555,7 @@ subroutine ionosphere_solver(PHI, &
 
   deallocate(b)
   deallocate(x)
+
+  call timing_stop('iono_solve')
 
 end subroutine ionosphere_solver

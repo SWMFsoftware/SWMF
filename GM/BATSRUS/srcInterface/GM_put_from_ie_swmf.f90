@@ -62,7 +62,7 @@ end subroutine GMIE_set_grid
 !INTERFACE:
 subroutine GM_put_from_ie_swmf(nPartial,iPut,Put,W,DoAdd,State_V,nVar)
   !USES:
-  use CON_router
+  use CON_coupler,ONLY:IndexPtrType, WeightPtrType
   use ModInnerBC,ONLY:IONO_NORTH_Phi_BC,IONO_SOUTH_Phi_BC
   implicit none
 !INPUT ARGUMENTS:
