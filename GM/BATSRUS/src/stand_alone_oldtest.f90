@@ -5,7 +5,7 @@ subroutine stand_alone
   ! This version behaves like BATSRUS before the merge with old directories.
 
   use ModProcMH, ONLY: iProc
-  use ModMain,   ONLY: NameThisComp, UseNewParam, UseNewAxes, UseCorotation,&
+  use ModMain,   ONLY: NameThisComp, UseNewParam, UseNewAxes, UseRotatingBc,&
        time_accurate
 
   implicit none
@@ -14,6 +14,6 @@ subroutine stand_alone
   UseNewParam   = .false.
   UseNewAxes    = .false.
   time_accurate = .false.
-  UseCorotation = .false.
+  UseRotatingBc = .false.
 
 end subroutine stand_alone

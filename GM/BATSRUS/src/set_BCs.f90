@@ -79,7 +79,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   logical, intent (in) :: DoResChangeOnly
   logical, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn), intent(in) :: &
        IsBodyCell, IsTrueCell 
-  logical :: UseIonosphereHere, UseCorotationHere
+  logical :: UseIonosphereHere, UseRotatingBcHere
   character (len=20) :: TypeBcHere
   
   real,dimension(nFaceValueVars)::VarsTrueFace_V,VarsGhostFace_V
@@ -91,7 +91,7 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
   ! which may be used for time-dependent BCs (not used now).
   ! 
   ! UseIonesphereHere = .true. allows to call calc_inner_bc_velocity
-  ! UseCorotationHere = .true. allows to call calc_corotation_velocities
+  ! UseRotatingBcHere = .true. allows to call calc_corotation_velocities
 
   integer :: i,j,k
 
@@ -108,10 +108,10 @@ subroutine set_face_BCs(iter,time_now,DoResChangeOnly,&
 
   if(iBoundary==Body1_)then
      UseIonosphereHere=UseIonosphere
-     UseCorotationHere=UseCorotation
+     UseRotatingBcHere=UseRotatingBc
   else
      UseIonosphereHere=.false.
-     UseCorotationHere=.false.
+     UseRotatingBcHere=.false.
   end if
 
   TypeBcHere=TypeBc_I(iBoundary)
@@ -298,7 +298,7 @@ contains
        call user_face_bcs(i,j,k,globalBLK,iSide,iBoundary,&
             iter,time_now, FaceCoords_D,&
             VarsTrueFace_V,VarsGhostFace_V,&
-            B0Face_D,  UseIonosphereHere,UseCorotationHere)
+            B0Face_D,  UseIonosphereHere,UseRotatingBcHere)
        return
     end if
 !^CFG END USERFILES
@@ -432,7 +432,7 @@ contains
        end select
     end if
 !^CFG END IONOSPHERE
-    if (UseCorotationHere) then
+    if (UseRotatingBcHere) then
 
        !\
        ! The program is called which calculates the cartesian corotation velocity vector
@@ -445,7 +445,7 @@ contains
             'ionosphere','ionospherefloat')
           VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + cTwo*v_phi
        case default
-          call stop_mpi('UseCorotation is not compatible with TypeBc_I='//TypeBcHere) 
+          call stop_mpi('UseRotatingBc is not compatible with TypeBc_I='//TypeBcHere) 
        end select
     end if 
   end subroutine set_body_BCs

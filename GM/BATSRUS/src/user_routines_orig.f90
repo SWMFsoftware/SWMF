@@ -247,7 +247,7 @@ end subroutine set_extra_boundary_cells
 !/
 subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
      iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,   &
-     B0Face_D,UseIonosphereHere,UseCorotationHere)
+     B0Face_D,UseIonosphereHere,UseRotatingBcHere)
   use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,   &
        Top_
   use ModMain,       ONLY: UseUserHeating
@@ -272,7 +272,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   real, dimension(nFaceValueVars), intent(in)::        &
        VarsTrueFace_V
   logical, intent(in):: UseIonosphereHere,             &
-       UseCorotationHere
+       UseRotatingBcHere
   real, dimension(nFaceValueVars), intent(out)::       &
        VarsGhostFace_V
   !\
@@ -446,7 +446,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   !\
   ! Apply corotation:: Currently works only for the first body.
   !/
-  if (UseCorotationHere) then
+  if (UseRotatingBcHere) then
      !\
      ! The program is called which calculates the cartesian 
      ! corotation velocity::

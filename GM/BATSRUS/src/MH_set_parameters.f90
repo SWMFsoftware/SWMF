@@ -128,11 +128,11 @@ subroutine MH_set_parameters(TypeAction)
            call init_axes(StartTime)
 
            ! Obtain some planet parameters
-           call get_planet(UseRotationOut = UseCorotation, &
+           call get_planet(UseRotationOut = UseRotatingBc, &
                 DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
         else
            DoUpdateB0 = time_accurate .and. Dt_updateB0 > 0.0 .and. &
-                UseCorotation .and. .not.SetDipoleTilt
+                UseRotatingBc .and. .not.SetDipoleTilt
         endif
      end if
 
@@ -208,7 +208,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseNewParam',UseNewParam)
         call read_var('UseNewAxes', UseNewAxes)
         call read_var('DoTimeAccurate',time_accurate)
-        call read_var('UseCorotation',UseCorotation)
+        call read_var('UseRotatingBc',UseRotatingBc)
      case("#COMPONENT")
         call read_var('NameComp',NameCompCheck)
         if(NameCompCheck /= NameThisComp)&
@@ -981,7 +981,7 @@ subroutine MH_set_parameters(TypeAction)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter',limiter_type)
         if(limiter_type=='beta') call read_var('LimiterBeta',&  
-             v_limiter_beta_param)
+             BetaLimiter)
         !                                              ^CFG END SIMPLE
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative) !^CFG IF NOT SIMPLE
@@ -2393,7 +2393,7 @@ contains
           write(*,*)NameSub//' setting beta limiter with parameter 1.2'
        endif
        limiter_type='beta'
-       v_limiter_beta_param=1.2
+       BetaLimiter=1.2
     end if
     !^CFG END SIMPLE
 

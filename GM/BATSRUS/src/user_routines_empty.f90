@@ -183,7 +183,7 @@ end subroutine set_extra_boundary_cells
 subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
      iter,time_now, FaceCoords_D,&
      VarsTrueFace_V,VarsGhostFace_V,&
-     B0Face_D,  UseIonosphereHere,UseCorotationHere)
+     B0Face_D,  UseIonosphereHere,UseRotatingBcHere)
   use ModUser
   use ModMain
   use ModAdvance
@@ -195,7 +195,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
   real,dimension(nDim),intent(in)::FaceCoords_D,B0Face_D
   real,dimension(nFaceValueVars),intent(in)::VarsTrueFace_V
   real,dimension(nFaceValueVars),intent(out)::VarsGhostFace_V
-  logical,intent(in)::UseIonosphereHere,UseCorotationHere
+  logical,intent(in)::UseIonosphereHere,UseRotatingBcHere
   
   
   if( UseUserInnerBcs) then
@@ -222,7 +222,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
           VarsGhostFace_V(P_),&
           !
           B0Face_D(x_),B0Face_D(y_),B0Face_D(z_),&
-          UseIonosphereHere,UseCorotationHere,&
+          UseIonosphereHere,UseRotatingBcHere,&
           FaceState_VI(rho_,iBoundary), FaceState_VI(P_,iBoundary),&
           iBoundary)
   end if
@@ -269,7 +269,7 @@ subroutine user_set_innerBCs(iter,time_now, XFace, YFace, ZFace,&
             RhoFaceInside,VxFaceInside, VyFaceInside, VzFaceInside,&
             BxFaceInside,ByFaceInside,BzFaceInside, pFaceInside,&
             B0xFace,B0yFace,B0zFace,&
-            UseIonosphereHere,UseCorotationHere,&
+            UseIonosphereHere,UseRotatingBcHere,&
             RhoBodyHere, pBodyHere,BodyNumberHere)
 
   use ModMain
@@ -292,7 +292,7 @@ subroutine user_set_innerBCs(iter,time_now, XFace, YFace, ZFace,&
   real, intent (in) ::  B0xFace,B0yFace,B0zFace
   real, intent (in) ::  RhoBodyHere,pBodyHere
   logical,intent (in) :: UseIonosphereHere
-  logical,intent (in) :: UseCorotationHere
+  logical,intent (in) :: UseRotatingBcHere
   logical :: oktest,oktest_me
   real:: xBodyHere,yBodyHere,zBodyHere
 
@@ -327,7 +327,7 @@ subroutine user_set_innerBCs(iter,time_now, XFace, YFace, ZFace,&
   ! RhoBodyHere: value set in read_input as the density to assign the body
   ! pBodyHere: value set in read_inputs as the pressure to assign the body
   !
-  ! UseIonosphereHere, UseCorotationHere:  whether to use the ionosphere and
+  ! UseIonosphereHere, UseRotatingBcHere:  whether to use the ionosphere and
   !                                        to apply corotation.  
   !/
 
@@ -346,7 +346,7 @@ subroutine user_set_innerBCs(iter,time_now, XFace, YFace, ZFace,&
 
   !\
   ! The following is an example of the calculation of the inner boundary
-  ! condition for the option "ionosphere".  The option UseCorotation is
+  ! condition for the option "ionosphere".  The option UseRotatingBc is
   ! here used, but the UseIonosphere and the calls associated with calling
   ! the ionosphere potential solve as a boundary condition are not shown.
   !
@@ -416,7 +416,7 @@ subroutine user_set_innerBCs(iter,time_now, XFace, YFace, ZFace,&
   !  BzFaceInside  = BrFaceInside*ZFace/RFace - BthetaFaceInside*sinTheta
   !  
   !  ! apply corotation.  currently works only for the first body 
-  !  if (UseCorotationHere) then
+  !  if (UseRotatingBcHere) then
   !  
   !     location(1) = XFace 
   !     location(2) = YFace 

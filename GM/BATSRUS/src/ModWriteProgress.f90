@@ -141,7 +141,7 @@ subroutine write_runtime_values()
           'Body_rho_dim:',Body_rho_dim,', Body_T_dim:',Body_T_dim
      call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
           'Bdp:         ',Bdp      ,', Tilt:      ',ThetaTilt
-     if(UseCorotation)then
+     if(UseRotatingBc)then
         call write_prefix; write(iUnitOut,'(10X,a)') 'Corotation is used'
      end if
      if(UseGravity)then
@@ -218,7 +218,7 @@ subroutine write_runtime_values()
      write(iUnitOut,'(10x,a,a)')'with limiter ',limiter_type
      if(limiter_type=='beta') then
         call write_prefix
-        write(iUnitOut,'(10x,a,e13.5)')'beta=',v_limiter_beta_param
+        write(iUnitOut,'(10x,a,e13.5)')'beta=',BetaLimiter
      end if
   end select
   call write_prefix

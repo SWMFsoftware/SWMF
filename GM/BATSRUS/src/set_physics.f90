@@ -118,7 +118,7 @@ subroutine set_physics_constants
      OMEGAbody = 0.0
      write(*,*) "----------------------------------------"
      write(*,*) "              Warning:                  "
-     write(*,*) "Your have set UseCorotation - .true.    "
+     write(*,*) "Your have set UseRotatingBc - .true.    "
      write(*,*) "but the rotation period is set less than"
      write(*,*) "1 second.  This is too fast.            "
      write(*,*) "(rot_period_dim=",rot_period_dim," hours)"

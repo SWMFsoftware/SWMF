@@ -8,7 +8,7 @@ subroutine GM_set_param(CompInfo, TypeAction)
        NamePlotDir, NameRestartInDir, NameRestartOutDir
   use ModMain, ONLY : CodeVersion, NameThisComp, &
        time_accurate, StartTime, iStartTime_I, &
-       dt_UpdateB0, DoUpdateB0, UseCorotation
+       dt_UpdateB0, DoUpdateB0, UseRotatingBc
   use CON_physics, ONLY: get_time, get_planet
   use ModTimeConvert, ONLY: time_real_to_int
 
@@ -49,7 +49,7 @@ subroutine GM_set_param(CompInfo, TypeAction)
      call get_planet( &
           DtUpdateB0Out  = dt_updateB0,   &
           DoUpdateB0Out  = DoUpdateB0,    &
-          UseRotationOut = UseCorotation)
+          UseRotationOut = UseRotatingBc)
      call time_real_to_int(StartTime,iStartTime_I)
 
      call MH_set_parameters('CHECK')

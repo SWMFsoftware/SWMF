@@ -162,7 +162,7 @@ Module ModMain
   !^CFG END DIVBDIFFUSE
   ! Choice of limiter
   character*6 :: limiter_type='minmod'
-  real :: v_limiter_beta_param
+  real :: BetaLimiter
 
   ! Prolongation order (1 or 2) and type ('central','lr','minmod','central2'..)
   integer :: prolong_order=1
@@ -188,7 +188,7 @@ Module ModMain
   logical :: UseRotatingFrame
 
   ! Logical for corotation
-  logical :: UseCorotation=.false.
+  logical :: UseRotatingBc=.false.
   character(len=3) :: TypeCoordSystem='GSM'
 
   ! Logical for inertial frame

@@ -521,7 +521,7 @@ end subroutine calc_facevalues
 subroutine limiter_body(lMin,lMax)
   use ModLimiter
   use ModNumConst
-  use ModMain, ONLY: limiter_type, v_limiter_beta_param !^CFG IF NOT SIMPLE
+  use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
   implicit none
   integer, intent(in)::lMin,lMax
   real,dimension(Hi3_):: dVar2_I,dVar1_I
@@ -531,14 +531,14 @@ subroutine limiter_body(lMin,lMax)
   case('beta')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-     dVar1_I(Lo3_:Hi3_)=v_limiter_beta_param*&
+     dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
           dVar1_I(Lo2_:Hi2_)
      dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
      do l=lMax,lMin-1,-1
         dVar2_I=dVar1_I
         dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
         dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-        dVar1_I(Lo3_:Hi3_)=v_limiter_beta_param*&
+        dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
              dVar1_I(Lo2_:Hi2_)
         dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
         if(all(IsTrueCell_I(l-1:l+1)))then
@@ -577,7 +577,7 @@ end subroutine limiter_body
 subroutine limiter(lMin,lMax)
   use ModLimiter
   use ModNumConst
-  use ModMain, ONLY: limiter_type, v_limiter_beta_param !^CFG IF NOT SIMPLE
+  use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
   implicit none
   integer, intent(in)::lMin,lMax
   real,dimension(Hi3_):: dVar2_I,dVar1_I
@@ -587,14 +587,14 @@ subroutine limiter(lMin,lMax)
   case('beta')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-     dVar1_I(Lo3_:Hi3_)=v_limiter_beta_param*&
+     dVar1_I(Lo3_:Hi3_)=BetaLimiter*&
           dVar1_I(Lo2_:Hi2_)
      dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
      do l=lMax,lMin-1,-1
         dVar2_I=dVar1_I
         dVar1_I(1:nVar)=Primitive_VI(:,l)-Primitive_VI(:,l-1)
         dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
-        dVar1_I(Lo3_:Hi3_)=v_limiter_beta_param*dVar1_I(Lo2_:Hi2_)
+        dVar1_I(Lo3_:Hi3_)=BetaLimiter*dVar1_I(Lo2_:Hi2_)
         dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
         dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))

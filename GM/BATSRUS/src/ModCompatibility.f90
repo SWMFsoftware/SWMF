@@ -31,7 +31,7 @@ contains
     use ModProcMH, ONLY : iProc
     use ModReadParam
     use ModPhysics, ONLY: Bdp_dim, rot_period_dim
-    use ModMain, ONLY: ThetaTiltDeg, Dt_UpdateB0, UseCorotation, UseStrict
+    use ModMain, ONLY: ThetaTiltDeg, Dt_UpdateB0, UseRotatingBc, UseStrict
 
     character (len=*), intent(in) :: NameCommand
 
@@ -89,19 +89,19 @@ contains
        endif
 
        if (index(AxesType_Array(2),'none') > 0 ) then
-          UseCorotation = .false.
+          UseRotatingBc = .false.
        elseif (index(AxesType_Array(2),'planet') > 0 ) then
-          UseCorotation = .true.
+          UseRotatingBc = .true.
           AlignDipoleCorotation = .false.
           SetCorotationTilt = .false.
        elseif (index(AxesType_Array(2),'ideal') > 0 ) then
-          UseCorotation = .true.
+          UseRotatingBc = .true.
           AlignDipoleCorotation = .true.
           CorotationTiltDeg = ThetaTiltDeg
           CorotationLonDeg = 0.0
           SetCorotationTilt = .true.
        elseif (index(AxesType_Array(2),'user') > 0 ) then
-          UseCorotation = .true.
+          UseRotatingBc = .true.
           call read_var('CorotationTilt',CorotationTiltDeg)
           call read_var('CorotationLon',CorotationLonDeg)
           call read_var('rot_period',rot_period_dim)
@@ -113,8 +113,8 @@ contains
        call read_var('ThetaTiltDeg' ,ThetaTiltDeg)
        call read_var('dt_UpdateB0'  ,dt_UpdateB0)
     case("#COROTATION")
-       call read_var('UseCorotation',UseCorotation)
-       if (UseCorotation) then
+       call read_var('UseRotatingBc',UseRotatingBc)
+       if (UseRotatingBc) then
           call read_var('AlignDipoleCorotation',AlignDipoleCorotation)
           if (.not.AlignDipoleCorotation) then
              call read_var('SetCorotationTilt',SetCorotationTilt)

@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine specify_initial_refinement(refb, lev)
   use ModSize
-  use ModMain, ONLY : body1,UseCorotation,UseMassLoading,unusedBLK
+  use ModMain, ONLY : body1,UseRotatingBc,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF NOT CARTESIAN
        x_BLK,y_BLK,z_BLK,dx_BLK
@@ -377,7 +377,7 @@ subroutine specify_initial_refinement(refb, lev)
               else
    
                  ! Refine inner blocks for corotation
-                 if ((UseCorotation).and.(minRblk <= 6.0)) then
+                 if ((UseRotatingBc).and.(minRblk <= 6.0)) then
                     select case(TypeGeometry)                                     !^CFG IF NOT CARTESIAN
                     case('cartesian')                                             !^CFG IF NOT CARTESIAN
                        if (min(abs(zz1),abs(zz2)) < Rcurrents) refb(iBLK) = .true.   
@@ -493,7 +493,7 @@ subroutine specify_initial_refinement(refb, lev)
                  ! levels = 7 (i.e. 1/4 Re) 495616 cells rbody+corotation
                  ! levels = 8 (i.e. 1/8 Re) 1671168 cells rbody+corotation                 
                  ! Refine inner blocks for corotation
-                 if ((UseCorotation).and.(minRblk <= 6.0).and.SizeMax>=cQuarter) then
+                 if ((UseRotatingBc).and.(minRblk <= 6.0).and.SizeMax>=cQuarter) then
                        
                     if (minz < Rcurrents+ SizeMax) refb(iBLK) = .true.
                        
