@@ -15,8 +15,8 @@ subroutine ray_trace_accurate
   use CON_ray_trace, ONLY: ray_init
   use ModMain
   use ModPhysics,    ONLY: rBody
-  use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,r_BLK,true_cell,XyzMax_D,XyzMin_D
 
   use ModMpi
@@ -200,7 +200,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use CON_ray_trace
 
   use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-  use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,XyzStart_BLK,Dx_BLK
+  use ModGeometry, ONLY: XyzStart_BLK, Dx_BLK
   use ModProcMH
   use ModKind
 
@@ -240,7 +240,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   integer :: iFace, iCount, jProc, jBlock, i, j, k
 
   logical :: DoneAll
-  integer :: iCountRay = 0, DiCountRay = 2000
+  integer :: iCountRay = 0
 
   real(Real8_) :: CpuTimeNow
 
@@ -551,10 +551,9 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   use ModRayTrace
   use ModProcMH
   use ModNumConst, ONLY: cTiny, cOne
-  use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK, nBLK
+  use ModMain, ONLY: TypeCoordSystem, nI, nJ, nK
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
-       x_BLK,y_BLK,z_BLK, Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK
-  use ModAdvance, ONLY : State_VGB, Bx_, By_, Bz_
+       Dx_BLK, Dy_BLK, Dz_BLK, rMin_BLK
 
   implicit none
 
@@ -1030,10 +1029,9 @@ contains
   subroutine ray_extract(x_D)
 
     use CON_line_extract, ONLY: line_put
-    use ModIO, ONLY: iUnitLine_I
     use ModPhysics, ONLY: UnitSi_x, UnitSi_Rho, UnitSi_U, UnitSi_P, UnitSi_B
     use ModAdvance, ONLY: State_VGB, nVar, &
-         Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, p_, Bx_, By_, Bz_
+         Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
     real, intent(in) :: x_D(3)
 
     real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(20)
@@ -1212,7 +1210,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use CON_planet_field, ONLY: map_planet_field
   use ModRaytrace
   use ModMain, ONLY: nBlock, Time_Simulation, iTest, jTest
-  use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, By_, Bz_, &
+  use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
   use ModPhysics, ONLY: rBody
   use ModProcMH
@@ -1359,7 +1357,7 @@ end subroutine integrate_ray_accurate
 
 subroutine test_ray_integral
 
-  use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, Length_, &
+  use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, &
        nRayIntegral, xyz_to_latlon
   use ModMain,     ONLY: iTest, jTest
   use ModProcMH,   ONLY: iProc
@@ -1437,16 +1435,13 @@ end subroutine test_ray_integral
 
 !==============================================================================
 
-subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
-     PlotVar_VI)
+subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 
   ! Extract nLine ray lines parallel or anti_parallel according to
   ! IsParallel_I(nLine), starting from positions Xyz_DI(3,nLine).
-  ! Extract  nStateVar variables at each point (includes position and length).
-  ! Return the result in the pointer array PlotVar_VI(0:nStateVar, nPoint)
+  ! The results are stored by CON_line_extract.
 
-  use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
-  use ModProcMH,   ONLY: iProc, nProc, iComm
+  use ModProcMH,   ONLY: iProc, iComm
   use ModRayTrace, ONLY: oktest_ray, NameTask, NameVectorField, &
        R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
@@ -1462,15 +1457,10 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
   integer, intent(in) :: nLine
   logical, intent(in) :: IsParallel_I(nLine)
   real,    intent(in) :: Xyz_DI(3, nLine)
-  integer, intent(in) :: nStateVar
-
-  ! OUTPUT ARGUMENTS:
-  integer, intent(out):: nPoint            ! Number of points
-  real, pointer ::  PlotVar_VI(:,:)        ! Result of size 0:nStateVar,nPoint
 
   !EOP
   real    :: Xyz_D(3), Dx2Inv, Dy2Inv, Dz2Inv
-  integer :: iProcFound, iBlockFound, iLine, iRay, nVarOut
+  integer :: iProcFound, iBlockFound, iLine, iRay
 
   integer :: i, j, k, iBlock
 
@@ -1535,9 +1525,6 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
           trim(NameVectorField))
   end select
 
-  ! Set the number of the variables to be extracted
-  call line_init(nStateVar)
-
   ! Start extracting rays
   do iLine = 1, nLine
      Xyz_D = Xyz_DI(:,iLine)
@@ -1560,57 +1547,33 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
   ! Do remaining rays obtained from other PE-s
   call finish_ray
 
-  ! Collect lines from all PE-s to Proc 0
-  call line_collect(0,nProc,1,0)
-
-  if(iProc==0)then
-     call line_get(nVarOut, nPoint)
-     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
-     allocate(PlotVar_VI(0:nVarOut, nPoint))
-     call line_get(nVarOut, nPoint, PlotVar_VI, .true.)
-  end if
-     
-  call line_clean
-
 end subroutine ray_lines
 
 !==============================================================================
 
 subroutine write_plot_line(iFile)
 
-  use ModProcMH,   ONLY: iProc
-  use ModRayTrace, ONLY: oktest_ray, NameVectorField, DoExtractState, &
-       DoExtractUnitSi
-  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, plot_dimensional,&
-       Plot_, iUnitLine_I,&
+  use ModProcMH,   ONLY: iComm, iProc
+  use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
+  use ModIO,       ONLY: &
+       NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
   use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
        StringTimeH4M2S2
   use ModIoUnit,   ONLY: UnitTmp_
+  use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
   implicit none
 
   integer, intent(in) :: iFile ! The file index of the plot file
 
-  interface
-     subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
-          PlotVar_VI)
-       integer, intent(in) :: nLine
-       logical, intent(in) :: IsParallel_I(nLine)
-       real,    intent(in) :: Xyz_DI(3, nLine)
-       integer, intent(in) :: nStateVar
-       integer, intent(out):: nPoint
-       real, pointer ::  PlotVar_VI(:,:)
-     end subroutine ray_lines
-  end interface
-
-  character(len=100) :: NameFile, NameStart, NameVar, NameUnit, StringTitle
+  character(len=100) :: NameFile, NameStart, NameVar, StringTitle
   integer            :: nLineFile, nStateVar, nPlotVar
   integer            :: iPoint, nPoint, iPointNext, nPoint1
 
   real, pointer :: PlotVar_VI(:,:)
 
-  integer :: iPlotFile, iLine, nLine
+  integer :: iPlotFile, iLine, nLine, nVarOut
 
   logical :: IsSingleLine, IsIdl
 
@@ -1630,10 +1593,24 @@ subroutine write_plot_line(iFile)
   nStateVar = 4
   if(DoExtractState) nStateVar = nStateVar + 8
 
-  ! Obtain the line data on processor 0
+  ! Initialize CON_line_extract
+  call line_init(nStateVar)
+
+  ! Obtain the line data
   call ray_lines(nLine, IsParallelLine_II(1:nLine,iPlotFile), &
-       XyzStartLine_DII(:,1:nLine,iPlotFile), nStateVar, nPoint, &
-       PlotVar_VI)
+       XyzStartLine_DII(:,1:nLine,iPlotFile))
+
+  ! Collect lines from all PE-s to Proc 0
+  call line_collect(iComm,0)
+
+  if(iProc==0)then
+     call line_get(nVarOut, nPoint)
+     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+     allocate(PlotVar_VI(0:nVarOut, nPoint))
+     call line_get(nVarOut, nPoint, PlotVar_VI, .true.)
+  end if
+     
+  call line_clean
 
   ! Only iProc 0 works on writing the plot files
   if(iProc /= 0) RETURN
