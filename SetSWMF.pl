@@ -72,20 +72,17 @@ foreach (@switch){
 
 if($Uninstall){
     if(not $Installed){
-	print "$WARNING SWMF is not installed.\n";
+	die "$ERROR SWMF is not installed.\n";
     }else{
 	&shell_command("make distclean");
+	exit 0;
     }
-    exit 0;
 }
 
 # Execute the actions in the appropriate order
 &install_swmf if $Install;
 
-if(not $Installed){
-    print "$WARNING SWMF is not installed.\n";
-    exit 0;
-}
+die "$ERROR SWMF is not installed.\n" unless $Installed;
 
 if($ListVersions){
     &list_versions;
@@ -182,10 +179,7 @@ sub get_settings{
 
 sub show_settings{
 
-    if(not $Installed){
-	print "SWMF is not installed\n";
-	return;
-    }
+    die "SWMF is not installed\n" unless $Installed;
 
     print "\n";
     print "The SWMF is installed in directory $DIR.\n";
