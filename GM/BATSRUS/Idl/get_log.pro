@@ -46,7 +46,7 @@ dbuf  = long(10000)
 wlog  = dblarr(nwlog,buf)
 wlog_ = dblarr(nwlog)
 nt    = long(0)
-while not eof(1) do begin
+while not eof(unit) do begin
     on_ioerror,close_file
     readf,unit,wlog_
     wlog(*,nt)=wlog_
