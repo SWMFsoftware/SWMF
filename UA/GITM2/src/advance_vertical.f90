@@ -36,7 +36,6 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      Heating(iAlt) = EuvHeating(iLon,iLat,iAlt,iBlock)
      LogRho(iAlt)  = log(Rho(iLon,iLat,iAlt,iBlock))
      Temp(iAlt)    = Temperature(iLon,iLat,iAlt,iBlock)
-     cMax1(iAlt)   = cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock)
      do iVar = 1, nSpecies
         LogNS1(iAlt,iVar)  = log(NDensityS(iLon,iLat,iAlt,iVar,iBlock))
         VertVel(iAlt,iVar) = VerticalVelocity(iLon,iLat,iAlt,iVar,iBlock)
@@ -49,7 +48,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
         Vel_GD(iAlt,iDim)  = Velocity(iLon,iLat,iAlt,iDim,iBlock)
      end do
   end do
-!!!!  LogINS  = IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock)
+  do iAlt = 0, nAlts+1
+     cMax1(iAlt)   = cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock)
+  end do
 
   Lat = Latitude(iLat, iBlock) * 180.0/pi
   Lon = Longitude(iLon, iBlock) * 180.0/pi
