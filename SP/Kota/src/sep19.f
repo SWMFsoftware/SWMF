@@ -1,4 +1,6 @@
-      subroutine admit
+      subroutine admit(iSize,NameList)
+      integer::iSize
+      character*80::Namelist(iSize)
       common /size  / nr,nmu,nw, dim1
       common /suly /  wghtl,wghtmu,wghtw
       common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
@@ -17,7 +19,9 @@
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
       common /convrt/ aukm,hour,valf
-      data  pmass,clight,xkm  / 938., 3.e10, 1.e5 /
+      include 'stdout.h'
+      data  pmass,clight,xkm  / 938., 3.e10, 1.e5 / 
+
 c ----------------------------------- scales:
       pi = 2.*asin(1.)
       aukm = 1.5e8
@@ -25,28 +29,36 @@ c ----------------------------------- scales:
       valf = 21.8
       e0 = pmass
 c ------------------------------------ input data:
-      in = 3
-      open(in,file = 'violet.in')
-      read(in,*) nr,nmu,nw, wghtl,wghtmu,wghtw
-      write(*,*) nr,nmu,nw, wghtl,wghtmu,wghtw
-      read(in,*) rmin,rmax,rshock
-      write(*,*) rmin,rmax,rshock
-      read(in,*) emin,emax,einj
-      write(*,*) emin,emax,einj
-      read(in,*) tmax,slamb,kfriss,kacc
-      write(*,*) tmax,slamb,kfriss,kacc
-      read(in,*) swind,fwind,bbrad,period
-      write(*,*) swind,fwind,bbrad,period
-      read(in,*) iz,massa,ekpp,xlmbda0,qex
-      write(*,*) iz,massa,ekpp,xlmbda0,qex
-      read(in,*) krmax,kemax
-      Write(*,*) krmax,kemax
-      read(in,*) (robs(k),k=1,krmax)
-      write(*,*) (robs(k),k=1,krmax)
-      read(in,*) (keobs(k),k=1,kemax)
-      write(*,*) (keobs(k),k=1,kemax)
-      write(*,*) 'beolvasas megvolt '
-c --- close(in)
+      read(NameList(1),*) nr,nmu,nw, wghtl,wghtmu,wghtw
+      write(iStdout,*) prefix,
+     1      nr,nmu,nw, wghtl,wghtmu,wghtw
+      read(NameList(2),*) rmin,rmax,rshock
+      write(iStdout,*) prefix,
+     1      rmin,rmax,rshock
+      read(NameList(3),*) emin,emax,einj
+      write(iStdout,*) prefix,
+     1       emin,emax,einj
+      read(NameList(4),*) tmax,slamb,kfriss,kacc
+      write(iStdout,*) prefix,
+     1       tmax,slamb,kfriss,kacc
+      read(NameList(5),*) swind,fwind,bbrad,period
+      write(iStdout,*) prefix,
+     1       swind,fwind,bbrad,period
+      read(NameList(6),*) iz,massa,ekpp,xlmbda0,qex
+      write(iStdout,*) prefix,
+     1       iz,massa,ekpp,xlmbda0,qex
+      read(NameList(7),*) krmax,kemax
+      write(iStdout,*) prefix,
+     1       krmax,kemax
+      read(NameList(8),*) (robs(k),k=1,krmax)
+      write(iStdout,*) prefix,
+     1       ('robs(',k,')=',robs(k),k=1,krmax)
+      read(NameList(9),*) (keobs(k),k=1,kemax)
+      write(iStdout,*) prefix, 
+     1      (keobs(k),k=1,kemax)
+      write(iStdout,*) prefix, 
+     1       'energy in megavolts '
+
       dim = 3
       dim1= dim-1
 c ------------------------------------ gasdynamics
@@ -74,7 +86,7 @@ c ------------------------------------ times:
       dt1 = dt0/kfriss
       dta = dt1/kacc   
 c ------------------------------------ calculation
-       wind = wind0*hour/aukm
+      wind = wind0*hour/aukm
       swind = swind0*hour/aukm
       if (period.gt.1.e3) then
         omega = 0.
@@ -102,6 +114,7 @@ c  *****************  end ADMIT   **************************
       common /speed / wmin,wmax,wwin,ww(0:600)
       common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
       common /quelle/ kinj,einj,pinj,qqp(0:600),qqx(0:1000)
+      include 'stdout.h'
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 /
 c ----------------------------------- scales:
       pi = 2.*asin(1.)
@@ -162,16 +175,17 @@ c  *****************  end subroutine COOL     ******************
       common /quelle/ kinj,einj,winj,qqw(0:600),qqx(0:1000)
       common /peel /  pex,fpeel(0:600),gpeel(0:600)
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-     
+      include 'stdout.h'
       pex = 0.
-      write(*,*) 'PEEL-OFF -- what exponent ??',pex
+      write(iStdout,*) prefix,
+     1      'PEEL-OFF -- what exponent ??',pex
       do 30 k = 0,nw
       fact = (pp(k)/ppin)**pex
       fpeel(k) = 2./(1.+fact)
       gpeel(k) = pex*fact/(1.+fact)
-      write(*,911) pex,k,ee(k),fact,gpeel(k),fpeel(k)
-911   format(f10.2,i5,3f12.6,e14.4)
-
+      write(iStdout,911) prefix,
+     1        pex,k,ee(k),fact,gpeel(k),fpeel(k)
+911   format(a,f10.2,i5,3f12.6,e14.4)
       qqw(k) = qqw(k)/fpeel(k)
       do 10 i=0,nr
       do 20 j=0,nmu
@@ -189,6 +203,7 @@ c  *****************  end subroutine PEELOFF  ******************
       common /size  / nr,nmu,nw, dim1
       common /pitch / mm,amu(0:40),sint(0:40),dmu
       common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
+      include 'stdout.h'
 c     linear grid in mu=cost
       mm = nmu
        m = mm/2
@@ -231,7 +246,7 @@ c  *****************  end subroutine PITCH    ******************
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
       common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
      1                vr(0:1000)
-
+      include 'stdout.h'
       tblst1 = tblast
       rshck1 = rshock
        time  = tblst1
@@ -350,7 +365,7 @@ c ********************  end routine REFRESH *********************
      4       ,ebm(0:6000),ebr(0:6000),ebt(0:6000),ebfi(0:6000)
      5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
      6       ,dbmds(0:6000),dbfids(0:6000)
-
+      include 'stdout.h'
 c +++++++++++++++++++++++++++++++++++++++     concept:   +++++ 
 c    Transfers between similarity solution and actual         +
 c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -389,13 +404,20 @@ c -------------------------------   this one new for transport :
         vl(i) = 0.                            
 c ??????????????????????????????????????????????????????
       if (i.lt.0) then
-      write(*,*) 'I AM HERE IN HELIOS - kk,i,ii=  ', kk,i,ii
-      write(*,*)   'R:       ',r(i)
-      write(*,*)   'EBM-Fi : ',ebm(ii),ebfi(ii)
-      write(*,*)   'BBM-Fi : ',bbm,bbfi,bbb
-      write(*,*)   'BB     : ',abb,algbb(i),dbdt(i)
-      write(*,*)   'LL     : ',all,algll(i),dldt(i)
-      write(*,*)   'NN     : ',ann,algnn(i),dndt(i)
+      write(iStdout,*) prefix,
+     1         'I AM HERE IN HELIOS - kk,i,ii=  ', kk,i,ii
+      write(iStdout,*) prefix,
+     1           'R:       ',r(i)
+      write(iStdout,*) prefix,
+     1          'EBM-Fi : ',ebm(ii),ebfi(ii)
+      write(iStdout,*) prefix,
+     1                     'BBM-Fi : ',bbm,bbfi,bbb
+      write(iStdout,*) prefix,
+     1          'BB     : ',abb,algbb(i),dbdt(i)
+      write(iStdout,*) prefix,
+     1          'LL     : ',all,algll(i),dldt(i)
+      write(iStdout,*) prefix,
+     1         'NN     : ',ann,algnn(i),dndt(i)
       read(*,*)    lull
       endif
 c ??????????????????????????????????????????????????????
@@ -454,10 +476,14 @@ c +++++++++++++++++++++++++++++++++++++++++++
         ilmin = i
         endif
 88    continue
-      write(*,*) 'Min dldt: ',ilmin,dlmin
-      write(*,*) 'Max dldt: ',ilmax,dlmax
-      write(*,*) 'Min dbdt: ',ibmin,dbmin
-      write(*,*) 'Max dbdt: ',ibmax,dbmax
+      write(iStdout,*) prefix,
+     1         'Min dldt: ',ilmin,dlmin
+      write(iStdout,*) prefix,
+     1          'Max dldt: ',ilmax,dlmax
+      write(iStdout,*) prefix,
+     1           'Min dbdt: ',ibmin,dbmin
+      write(iStdout,*) prefix,
+     1           'Max dbdt: ',ibmax,dbmax
 
       return
       end
@@ -494,7 +520,7 @@ c ********************  end routine GASDYN  *********************
       dimension brr(2500),btt(2500),bro(2500),bzz(2500),bfi(2500)
       dimension add(2500),app(2500)
       dimension thour(20),imax(20)
-
+      include 'stdout.h'
 c **************************************  concept: *****************
 c     put in a similarity solution shifted so that eta=1 at i=nn   *
 c     CONCEPT: rmin-rshock-rmax at start -- read  sim-solution     *
@@ -505,12 +531,14 @@ c **************************************  -------- *****************
 
 C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
 
-      in = 7
-      write(*,*) 'Select line (1-2-3): '
-CCC      write(*,*) 'PRESS 1'
+      call get_io_unit_new(in)
+      write(iStdout,*) prefix, 
+     1       'Select line (1-2-3): '
+CCC      write(iStdout,*) prefix, 'PRESS 1'
 CCC      read(*,*)  lineno
       lineno=1
-      write(*,*) 'lineno=',lineno
+      write(iStdout,*) prefix, 
+     1         'lineno=',lineno
       if (lineno.eq.1) open(in,file = 'evolv1.cme' )
       if (lineno.eq.2) open(in,file = 'evolv2.cme' )
       if (lineno.eq.3) open(in,file = 'evolv3.cme' )
@@ -536,9 +564,11 @@ CCC      read(*,*)  lineno
 10    continue
       close(in)
 
-      write(*,*) 'beolvasas megvolt:'
-      write(*,*) 'lineno,kmax :  ',lineno,kmax
-      write(*,*)      
+      write(iStdout,*) prefix,
+     1           'beolvasas megvolt:'
+      write(iStdout,*) prefix,
+     1         'lineno,kmax :  ',lineno,kmax
+      write(iStdout,*) prefix      
 
 C ======= END COMMUNICATION WITH IH COMPONENT HERE =====================
 
@@ -551,9 +581,11 @@ c -------------------------------- beolvasas meglenne
       pres0 = 1.e5
       bb0   = 100.
  
-      write(*,*) 'selected line: ',lineno
-      write(*,*) 'Which snapshot to take (1-20): '
-CCC      write(*,*) 'PRESS 9'
+      write(iStdout,*) prefix,
+     1           'selected line: ',lineno
+      write(iStdout,*) prefix,
+     1       'Which snapshot to take (1-20): '
+CCC      write(iStdout,*) prefix, 'PRESS 9'
 CCC      read(*,*)  kk
       kk=9
 
@@ -593,14 +625,21 @@ CCC      read(*,*)  kk
         app(i) = pp(i,kk)
 30    continue
 
-      write(*,*) 'consider snapshot : ',kk
-      write(*,*) 't in hour         : ',thr
-      write(*,*) 'number of grids   : ',imx
-      write(*,*) '1-st r-ro-z-      : ',arr(1),aro(1),azz(1)
-      write(*,*) '1-st br-bt-bfi    : ',brr(1),btt(1),bfi(1)
-      write(*,*) 'last r-ro-z-roa   : ',arr(imx),aro(imx),azz(imx)
-      write(*,*) 'last br-bt-bfi    : ',brr(imx),btt(imx),bfi(imx)
-      write(*,*)      
+      write(iStdout,*) prefix,
+     1      'consider snapshot : ',kk
+      write(iStdout,*) prefix,
+     1       't in hour         : ',thr
+      write(iStdout,*) prefix,
+     1        'number of grids   : ',imx
+      write(iStdout,*) prefix,
+     1        '1-st r-ro-z-      : ',arr(1),aro(1),azz(1)
+      write(iStdout,*) prefix,
+     1        '1-st br-bt-bfi    : ',brr(1),btt(1),bfi(1)
+      write(iStdout,*) prefix,
+     1        'last r-ro-z-roa   : ',arr(imx),aro(imx),azz(imx)
+      write(iStdout,*) prefix,
+     1        'last br-bt-bfi    : ',brr(imx),btt(imx),bfi(imx)
+      write(iStdout,*) prefix      
 
 c ==========================================  identify shock
 
@@ -616,7 +655,7 @@ CCC     drr = arr(i)-arr(i-1)
      2             (azz(i)-azz(i-1))**2)
 
       if(drr==0.0)then
-         write(*,*)'i...=',
+         write(iStdout,*) prefix,'i...=',
      1      i,axx(i),axx(i-1),ayy(i),ayy(i-1),azz(i),azz(i-1)
       else
 
@@ -633,9 +672,11 @@ CCC     drr = arr(i)-arr(i-1)
 40    continue
            rsh = arr(ish)
 
-      write(*,*) 'shock azonositva ish : ',ish,rsh
-      write(*,*) '     tavolsagban r   : ',arr(ish),rsh
-      write(*,*)      
+      write(iStdout,*) prefix,
+     1      'shock azonositva ish : ',ish,rsh
+      write(iStdout,*) prefix,
+     1       '     tavolsagban r   : ',arr(ish),rsh
+      write(iStdout,*) prefix      
 
 c ====================================  identify end-points
 
@@ -663,9 +704,12 @@ c ---------------------------------------------   inside :
       eta1  = rmin/rshock
       jj = mp
       if (imin1.eq.0) then
-      write(*,*)  'imin1 = 0 -- not yet prepared ' 
-      write(*,*)  'rshock/rmin-s desired : ',rmin,rshock 
-      write(*,*)  'rshock/rmin-s read    : ',arr(1),rsh 
+      write(iStdout,*) prefix,
+     1        'imin1 = 0 -- not yet prepared ' 
+      write(iStdout,*) prefix,
+     1        'rshock/rmin-s desired : ',rmin,rshock 
+      write(iStdout,*) prefix,
+     1        'rshock/rmin-s read    : ',arr(1),rsh 
       stop 
       endif
       i1 = imin1
@@ -690,15 +734,23 @@ c ---------------------------------------------   inside :
        vv = vrr(ii)*tblast/slamb
       ss1 = alog((arr(ii)-vv)/(rmin1-vv))/slamb 
 
-      write(*,*) 'AT R-MIN :        ',rmin
-      write(*,*) 'Scaled to RMIN1   ',rmin1
-      write(*,*) 'Found after       ',imin1,arr(imin1)
-      write(*,*) 'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
-      write(*,*) 'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
-      write(*,*) 'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
-      write(*,*) 'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
-      write(*,*) 'j-edd        :    ',jj,edd(jj)
-      write(*,*)      
+      write(iStdout,*) prefix,
+     1     'AT R-MIN :        ',rmin
+      write(iStdout,*) prefix,
+     1     'Scaled to RMIN1   ',rmin1
+      write(iStdout,*) prefix,
+     1      'Found after       ',imin1,arr(imin1)
+      write(iStdout,*) prefix,
+     1       'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
+      write(iStdout,*) prefix,
+     1      'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
+      write(iStdout,*) prefix,
+     1       'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
+      write(iStdout,*) prefix,
+     1       'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
+      write(iStdout,*) prefix,
+     1        'j-edd        :    ',jj,edd(jj)
+      write(iStdout,*) prefix      
 
 c -----------------------------------------------  outside :
 
@@ -728,21 +780,30 @@ c -----------------------------------------------  outside :
        vv = vrr(ii)*tblast/slamb
       ss2 = alog((rmax2-vv)/(arr(ii)-vv))/slamb 
 
-      write(*,*) 'AT R-MAX :        ',rmax
-      write(*,*) 'Scaled to RMIN1   ',rmax2
-      write(*,*) 'Found after       ',imax1,arr(imax1)
-      write(*,*) 'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
-      write(*,*) 'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
-      write(*,*) 'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
-      write(*,*) 'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
-      write(*,*) 'j-edd        :    ',jj,edd(jj)
-      write(*,*)      
+      write(iStdout,*) prefix,
+     1       'AT R-MAX :        ',rmax
+      write(iStdout,*) prefix,
+     1      'Scaled to RMIN1   ',rmax2
+      write(iStdout,*) prefix,
+     1      'Found after       ',imax1,arr(imax1)
+      write(iStdout,*) prefix,
+     1      'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
+      write(iStdout,*) prefix,
+     1      'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
+      write(iStdout,*) prefix,
+     1      'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
+      write(iStdout,*) prefix,
+     1      'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
+      write(iStdout,*) prefix,
+     1      'j-edd        :    ',jj,edd(jj)
+      write(iStdout,*) prefix      
 
 c ---------------------------------------------  DIVIDE  
       sum = ss2
       tint(imax1) = ss2
 
-      write(*,*)'imax1=',imax1
+      write(iStdout,*) prefix,
+     1      'imax1=',imax1
 
 CCC      do 110 ii=imax1-1,1,-1
       do 110 ii=imax1-1,2,-1
@@ -757,15 +818,21 @@ CCC      do 110 ii=imax1-1,1,-1
        ede = float(mp)*ede
        edsm(ni) = ede*ebm(ni)/edd(ni)
 
-      write(*,*) 'Selected s-lambda  : ',sum
-      write(*,*) 'Integral r1-r2done : ',sum
-      write(*,*) 'Dlnt - resulting   : ',dlnt
-      write(*,*) 'ede                : ',ede       
-      write(*,*) 'edsm(ni)           : ',edsm(ni)
-      write(*,*) '=============================================='
-CCC      write(*,*) 'PRESS ANY NUMBER'
+      write(iStdout,*) prefix,
+     1      'Selected s-lambda  : ',sum
+      write(iStdout,*) prefix,
+     1      'Integral r1-r2done : ',sum
+      write(iStdout,*) prefix,
+     1      'Dlnt - resulting   : ',dlnt
+      write(iStdout,*) prefix,
+     1      'ede                : ',ede       
+      write(iStdout,*) prefix,
+     1      'edsm(ni)           : ',edsm(ni)
+      write(iStdout,*) prefix,
+     1      '=============================================='
+CCC      write(iStdout,*) prefix, 'PRESS ANY NUMBER'
 CCC      read(*,*)  lull
-      write(*,*) 
+      write(iStdout,*) prefix 
 
       jj = 0
       ii = imax1
@@ -814,9 +881,12 @@ CCC      read(*,*)  lull
       sinmx  = exx(ni)/eta(ni)
       omega  = ebfi(ni)/ebr(ni)/sinmx*vrr(imax1)
       
-      write(*,*) 'eddmx  : ',eddmx
-      write(*,*) 'ebfimx : ',ebfimx
-      write(*,*) 'sinmx  : ',sinmx
+      write(iStdout,*) prefix,
+     1      'eddmx  : ',eddmx
+      write(iStdout,*) prefix,
+     1      'ebfimx : ',ebfimx
+      write(iStdout,*) prefix,
+     1      'sinmx  : ',sinmx
 
       edd(ni) = 1.
 
@@ -876,7 +946,7 @@ c --------------------------------- finally rescale TBLAST
       tblast = tblast*(rshock/rsh)**(1./slamb)
 
 c ???????????????????????????????????????????????????
-      io = 11
+      call get_io_unit_new(io)
       open(io,file='ujcme-eta')
       write(io,*) lineno,mm,ni,slamb,thr,tblast
       do 900 j=0,ni 
@@ -896,7 +966,8 @@ c ???????????????????????????????????????????????????
       do j=k,ni,mp
          arc = arc + edsm(j)
       enddo
-      write(*,*) 'k - meridian arclength in eta: ',k,arc
+      write(iStdout,*) prefix,
+     1      'k - meridian arclength in eta: ',k,arc
 400   continue
 c ???????????????????????????????????????????????????
     
@@ -913,6 +984,7 @@ c **************************  end of SIMILE***************
       common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
       common /quelle/ kinj,einj,pinj,qqp(0:600),qqx(0:1000)
+      include 'stdout.h'
       do 31 k=0,nw
       do 11 i=1,nr
        qq = qqp(k)*qqx(i)
@@ -935,6 +1007,7 @@ c  *****************  end subroutine SOURCE   ******************
       common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
      1                dndt(0:1000)
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      include 'stdout.h'
       data  cau / 7.2/
 
       m = mm/2
@@ -993,6 +1066,7 @@ c  *****************  end subroutine DELTA-L  ******************
       common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
      1                dndt(0:1000)
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      include 'stdout.h'
       data  cau / 7.2/
 
       m = mm/2
@@ -1054,6 +1128,7 @@ c  *****************  end subroutine L-CYCLE  ******************
      1                dndt(0:1000)
       common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
        mm = nmu
@@ -1116,6 +1191,7 @@ c  *****************  end subroutine DELTA-MU  ******************
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
       dimension a2(0:1000),a1(0:1000),bb(0:1000),
      1          c1(0:1000),c2(0:1000),xy(0:1000)
+      include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
        mm = nmu
@@ -1253,6 +1329,7 @@ c  *****************  end subroutine DELTA-P   ******************
       common /peel /  pex,fpeel(0:600),gpeel(0:600)
       dimension a2(0:1000),a1(0:1000),bb(0:1000),
      1          c1(0:1000),c2(0:1000),xy(0:1000)
+      include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
       nw1 = nw-1
@@ -1310,7 +1387,7 @@ c  *****************  end subroutine P-CYCLE   ******************
       common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
       common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
      1                dndt(0:1000)
-
+      include 'stdout.h'
       do 10 i=1,nr
       ksub = 1
       acc1 = dldt(i)
@@ -1435,39 +1512,41 @@ c ========================  OUTPUT ROUTINES to be revised ========
       common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
      1                dndt(0:1000)
       common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      
+      integer:: iFile
+      include 'stdout.h'
+      call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
-      if (io.eq.10) open(io,file = 'alla0.out')
-      if (io.eq.11) open(io,file = 'alla1.out')
-      if (io.eq.12) open(io,file = 'alla2.out')
-      if (io.eq.13) open(io,file = 'alla3.out')
-      if (io.eq.14) open(io,file = 'alla4.out')
-      if (io.eq.15) open(io,file = 'alla5.out')
-      if (io.eq.16) open(io,file = 'alla6.out')
+      if (io.eq.10) open(iFile,file = 'alla0.out')
+      if (io.eq.11) open(iFile,file = 'alla1.out')
+      if (io.eq.12) open(iFile,file = 'alla2.out')
+      if (io.eq.13) open(iFile,file = 'alla3.out')
+      if (io.eq.14) open(iFile,file = 'alla4.out')
+      if (io.eq.15) open(iFile,file = 'alla5.out')
+      if (io.eq.16) open(iFile,file = 'alla6.out')
 
       nn=nr
-      write(io,901) jst,t
-      write(io,902) jst,t,rshck1,slamb
-      write(io,*)
-      write(io,910)      
-      write(io,*)
+      write(iFile,901) jst,t
+      write(iFile,902) jst,t,rshck1,slamb
+      write(iFile,*)
+      write(iFile,910)      
+      write(iFile,*)
       do 10 i=0,nn
-      write(io,911) i,r(i),vr(i),algbb(i),algll(i),algnn(i)
+      write(iFile,911) i,r(i),vr(i),algbb(i),algll(i),algnn(i)
 10    continue
-      write(io,*)
-      write(io,920)
-      write(io,*)
+      write(iFile,*)
+      write(iFile,920)
+      write(iFile,*)
       do 20 i=0,nn
-      write(io,921) i,r(i),dvdt(i),dldt(i),dbdt(i),dndt(i)
+      write(iFile,921) i,r(i),dvdt(i),dldt(i),dbdt(i),dndt(i)
 20    continue
-      write(io,*)
-      write(io,930)
-      write(io,*)
+      write(iFile,*)
+      write(iFile,930)
+      write(iFile,*)
       do 30 i=0,nn
-      write(io,931) i,r(i),tll(i),dbdl(i),xsc(i)
+      write(iFile,931) i,r(i),tll(i),dbdl(i),xsc(i)
 30    continue
-      close(io)
+      close(iFile)
 901   format(5x,i5,' th step -- time[hour] = ',f10.3)
 902   format(i6,3f12.6)
 910   format(6x,'Radius - Vradial - logB - logL - LogN :')
@@ -1495,15 +1574,18 @@ c ****************************    end ALL output ******************
       common /obserg/ kemax,keobs(5),eobs(5)
       dimension ff(0:1000,0:600),s(0:1000,0:600),ffx(5)
       dimension ract(10)
+      integer:: iFile
+      include 'stdout.h'
+      call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
       if (io.gt.16) stop  'io nagy '
-      if (io.eq.10) open(io,file = 'csilla0.out')
-      if (io.eq.11) open(io,file = 'csilla1.out')
-      if (io.eq.12) open(io,file = 'csilla2.out')
-      if (io.eq.13) open(io,file = 'csilla3.out')
-      if (io.eq.14) open(io,file = 'csilla4.out')
-      if (io.eq.15) open(io,file = 'csilla5.out')
-      if (io.eq.16) open(io,file = 'csilla6.out')
+      if (io.eq.10) open(iFile,file = 'csilla0.out')
+      if (io.eq.11) open(iFile,file = 'csilla1.out')
+      if (io.eq.12) open(iFile,file = 'csilla2.out')
+      if (io.eq.13) open(iFile,file = 'csilla3.out')
+      if (io.eq.14) open(iFile,file = 'csilla4.out')
+      if (io.eq.15) open(iFile,file = 'csilla5.out')
+      if (io.eq.16) open(iFile,file = 'csilla6.out')
       do 11 i=0,nr
       do 13 k=0,nw
       aa = 0.5*(f(i,0,k)+f(i,nmu,k))
@@ -1525,39 +1607,39 @@ c ****************************    end ALL output ******************
       eobs(kk) = ee(kobs)
 22    continue
 c --  energy spectra:
-      write(io,*) 
-      write(io,101) ist,t 
-      write(io,102) krmax,(ract(kk),kk=1,krmax)
-      write(io,*) 
+      write(iFile,*) 
+      write(iFile,101) ist,t 
+      write(iFile,102) krmax,(ract(kk),kk=1,krmax)
+      write(iFile,*) 
       do 51 k = 0,nw
       do 52 kk = 1,krmax
        ii = krobs(kk)
        ffx(kk) = ff(ii,k)*fpeel(k)*pp(k)**2
 52    continue
-       write(io,111) k,ee(k),(ffx(kk),kk=1,krmax)
+       write(iFile,111) k,ee(k),(ffx(kk),kk=1,krmax)
 51    continue
-         write(io,*) 
+         write(iFile,*) 
 c --  radial dependence :
-      write(io,*) 
-      write(io,201) ist,t
-      write(io,202) kemax,(eobs(kk),kk=1,kemax)
-      write(io,*) 
+      write(iFile,*) 
+      write(iFile,201) ist,t
+      write(iFile,202) kemax,(eobs(kk),kk=1,kemax)
+      write(iFile,*) 
       do 61 i = 0,nr
          do 62 kk = 1,kemax
             ke  = keobs(kk)
             ffx(kk) = ff(i,ke)*fpeel(ke)*pp(ke)**2
  62      continue
-         write(io,211) i,r(i),fi(i),(ffx(kk),kk=1,kemax)
+         write(iFile,211) i,r(i),fi(i),(ffx(kk),kk=1,kemax)
  61   continue
-         write(io,*) 
+         write(iFile,*) 
 c --  pitch - angles :
-      write(io,*) 
-      write(io,300) ist,t 
+      write(iFile,*) 
+      write(iFile,300) ist,t 
       do 71 kke = 1,kemax
       ke = keobs(kke)
-      write(io,*) 
-      write(io,301) eobs(kke)
-      write(io,*) 
+      write(iFile,*) 
+      write(iFile,301) eobs(kke)
+      write(iFile,*) 
       do 72 j = 0,nmu
       do 73 kkr=1,krmax
       ii = krobs(kkr)
@@ -1569,14 +1651,15 @@ c --  pitch - angles :
       endif
 
 73    continue
-        write(io,311) j,amu(j),(ffx(kk),kk=1,krmax)
+        write(iFile,311) j,amu(j),(ffx(kk),kk=1,krmax)
 72    continue
-        write(io,*) 
+        write(iFile,*) 
 71    continue
-      close(io)
+      close(iFile)
 c --- report:
       ixx = io-10
-      write(*,*) ixx, ' - output done at step/time[hour] :  ',ist,t
+      write(iStdout,*) prefix,
+     1      ixx, ' - output done at step/time[hour] :  ',ist,t
       return
 c --  formats:
 101   format(2x,'Energy spectra - after step/hour: ',i8,f10.2)
@@ -1602,31 +1685,32 @@ c  *****************  end subroutine CSILLA   ******************
       common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
+      common /iFile/  io(5),ip(5)
       do ke=1,kemax
       kk = keobs(ke)
          eobs(ke) = ee(kk)
       enddo
       do 11 kr=1,krmax
-      io = 20+kr
-      ip = 30+kr
-      if (kr.eq.1) open(io,file='timevar.r1')
-      if (kr.eq.2) open(io,file='timevar.r2')
-      if (kr.eq.3) open(io,file='timevar.r3')
-      if (kr.eq.4) open(io,file='timevar.r4')
-      if (kr.eq.5) open(io,file='timevar.r5')
-      write(io,*)
-      write(io,711) robs(kr) 
-      write(io,712) (eobs(ke),ke=1,kemax) 
-      write(io,*)
-      if (kr.eq.1) open(ip,file='plasma.r1')
-      if (kr.eq.2) open(ip,file='plasma.r2')
-      if (kr.eq.3) open(ip,file='plasma.r3')
-      if (kr.eq.4) open(ip,file='plasma.r4')
-      if (kr.eq.5) open(ip,file='plasma.r5')
-      write(ip,*)
-      write(ip,711) robs(kr) 
-      write(ip,722)  
-      write(ip,*)
+      call get_io_unit_new(io(kr))
+      if (kr.eq.1) open(io(kr),file='timevar.r1')
+      if (kr.eq.2) open(io(kr),file='timevar.r2')
+      if (kr.eq.3) open(io(kr),file='timevar.r3')
+      if (kr.eq.4) open(io(kr),file='timevar.r4')
+      if (kr.eq.5) open(io(kr),file='timevar.r5')
+      write(io(kr),*)
+      write(io(kr),711) robs(kr) 
+      write(io(kr),712) (eobs(ke),ke=1,kemax) 
+      write(io(kr),*)
+      call get_io_unit_new(ip(kr))
+      if (kr.eq.1) open(ip(kr),file='plasma.r1')
+      if (kr.eq.2) open(ip(kr),file='plasma.r2')
+      if (kr.eq.3) open(ip(kr),file='plasma.r3')
+      if (kr.eq.4) open(ip(kr),file='plasma.r4')
+      if (kr.eq.5) open(ip(kr),file='plasma.r5')
+      write(ip(kr),*)
+      write(ip(kr),711) robs(kr) 
+      write(ip(kr),722)  
+      write(ip(kr),*)
 11    continue
 711   format(5x,'Time-variation at radius[AU]: ',f10.2)
 712   format(5x,'Energies [MeV]:',5f10.3) 
@@ -1639,15 +1723,14 @@ c  *****************  end subroutine OPENTIME  ******************
       subroutine closetime 
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
+      common /iFile/  io(5),ip(5)
       do 11 kr=1,krmax
-      io = 20+kr
-      ip = 30+kr
-      write(io,*)
-      write(io,*) 'the end'
-      close(io)
-      write(ip,*)
-      write(ip,*) 'the end'
-      close(ip)
+      write(io(kr),*)
+      write(io(kr),*) 'the end'
+      close(io(kr))
+      write(ip(kr),*)
+      write(ip(kr),*) 'the end'
+      close(ip(kr))
 11    continue 
       return
       end
@@ -1671,10 +1754,9 @@ c  *****************  end subroutine OPENTIME  ******************
      1                dndt(0:1000)
       common /convrt/ aukm,hour,valf
       dimension ffe(10)
-
+      common /iFile/  io(5),ip(5)
+      include 'stdout.h'
       do 10 kr=1,krmax
-      io = 20+kr
-      ip = 30+kr
       rr = robs(kr)
       ff0 = 1.0
 
@@ -1709,15 +1791,19 @@ c  *****************  end subroutine OPENTIME  ******************
       all= fr2*algll(i1)+fr1*algll(i2)
       add= abb-all
       ann= fr2*algnn(i1)+fr1*algnn(i2)
-      write( *,788) jst,t,vv,add,all,abb,ann
-      write(ip,788) jst,t,vv,add,all,abb,ann
+      write(iStdout,7881)prefix,
+     1      jst,t,vv,add,all,abb,ann
+      write(ip(kr),788) jst,t,vv,add,all,abb,ann
 
-      write(io,777) jst,t,(ffe(ke),ke=1,kemax)
-      write( *,777) jst,t,(ffe(ke),ke=1,kemax)
+      write(io(kr),777) jst,t,(ffe(ke),ke=1,kemax)
+      write( iStdout,7771) prefix,
+     1      jst,t,(ffe(ke),ke=1,kemax)
 10    continue
       return
 777   format(i5,f8.2,5e14.4)
 788   format(i5,f8.2,5f14.6)
+7771  format(a,i5,f8.2,5e14.4)
+7881  format(a,i5,f8.2,5f14.6)
       end
 
 c  *****************  end subroutine TIMEVAR  ******************

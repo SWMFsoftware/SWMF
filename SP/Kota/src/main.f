@@ -24,19 +24,33 @@ c**************************************************************
       common /scphys/ wind,omega,xscatt1
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
+      include 'stdout.h'
+      character*80::NameList(9)
+      integer::iLine,nLine=9
 c ----------------------------------------------------------
+      call set_stdout('SP: ')
       jnext = 2
-       write(*,*) 'first j-stop at ',jnext
+       write(iStdout,*)prefix,
+     1 'first j-stop at ',jnext
       pi = 2.*asin(1.)
-      call admit
+      call get_io_unit_new(in)
+      open(in,file = 'violet.in')
+      do iLine=1,nLine
+         read(in,'(a)')Namelist(iLine)
+         write(iStdout,*)prefix//Namelist(iLine)
+      end do
+      close(in)
+      call admit(9,NameList)
       call cool   
       call pangle  
 c ----------------------------------------------------------
 c     initial conditions
       jstep = 0
-      write(*,*) 'want to start from negative j-step : ',jstep
+      write(iStdout,*)prefix,
+     1 'want to start from negative j-step : ',jstep
       jsep = 1
-      write(*,*) 'Particles be calculated from j-sep : ',jsep
+      write(iStdout,*)prefix,
+     1 'Particles be calculated from j-sep : ',jsep
       mm = kfriss
       call simile(mm)
       call initial
@@ -65,8 +79,9 @@ c ----------------------------------------------------------
        time = tblst1
         dt1 = tblst1*dlnt
       dta = dt1/float(kacc)
-      write(*,900) jstep,kstep,istep,time
-900   format(5x,'step:',3i10,5x,'t[hour]: ',f12.6)
+      write(iStdOut,900)prefix,
+     1 jstep,kstep,istep,time
+900   format(a,5x,'step:',3i10,5x,'t[hour]: ',f12.6)
 c ------------------------------------------ do dynamical step here
       call helios(time,dt1,jstep,kstep)
 ccc   if (mod(jstep,200).eq.0.and.kstep.eq.1) read(*,*) lull
@@ -89,22 +104,25 @@ c ------------------------------------------    dynamical step done
       if (kstep.lt.kfriss) go to 21
          jstep = jstep+1
       if (jstep.gt.0) call timevar(jstep,time)
-      write(*,*) jstep,'  j-step done -- time: ',time
+      write(iStdout,*)prefix,
+     1 jstep,'  j-step done -- time: ',time
       if (jstep.eq.jnext) then
-          if (time.le.1.) io = 11
-          if (time.gt.1..and.time.le.2.)   io=12
-          if (time.gt.2..and.time.le.6.)   io=13
-          if (time.gt.6..and.time.le.12.)  io=14
-          if (time.gt.12..and.time.le.48.) io=15
-          if (time.gt.48.) io=16
+         if (time.le.1.) io = 11
+         if (time.gt.1..and.time.le.2.)   io=12
+         if (time.gt.2..and.time.le.6.)   io=13
+         if (time.gt.6..and.time.le.12.)  io=14
+         if (time.gt.12..and.time.le.48.) io=15
+         if (time.gt.48.) io=16
          call alla(io,jstep,time)
-       call csilla(io,istep,time)
-       write(*,*) 'next j-stop ??'
-c??      read(*,*)  jnext
-       jnext = jnext+24
-         write(*,*) jnext,'   auto - selected'
+         call csilla(io,istep,time)
+         write(iStdout,*)prefix,
+     1     'next j-stop ??'
+c??   read(*,*)  jnext
+         jnext = jnext+24
+         write(iStdout,*)prefix,
+     1    jnext,'   auto - selected'
       end if
-
+      
        call refresh
        if (time.lt.tmax) go to 11
 
