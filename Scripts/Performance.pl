@@ -1,11 +1,14 @@
 #!/usr/bin/perl -s
 
-my $Help    = $h or $help;
-my $Extract = $e;
-my $Verbose = $v;
-my $nProcAll= ($n or 8);
-my $lSession= ($s or 60);
-my $ProcShow= ($p or "roots");
+my $Help       = $h or $help;
+my $Verbose    = $v;
+my $SaveTiming = $s;
+my $TimingFile = ($t or "run/TIMINGS");
+my $nProcAll   = ($n or 8);
+my $Length     = ($l or 60);
+my $ShowHistory= $H;
+my $ShowSummary= $S;
+my $ProcShow   = "roots"; $ProcShow = $p if length $p;
 
 use strict;
 
@@ -13,11 +16,9 @@ my $ERROR        ="ERROR in Performance.pl:";
 my $ValidComp    ="SC|IH|SP|GM|IM|RB|IE|UA";
 my $LayoutFile   ="run/LAYOUT.in";
 my $ParamFile    ="run/PARAM.in";
-my $TimingFile   ="run/TIMING.in";
-my $CompinfoFile ="run/COMPINFO.in";
 
-&print_help if $Help;
-&extract_timing if $Extract;
+&print_help  if $Help;
+&save_timing if $SaveTiming;
 
 die "$ERROR number of total processors is $nProcAll\n" 
     unless $nProcAll > 0;
@@ -28,10 +29,6 @@ my %nProc_C;        # number of PE-s assigned to the components
 &read_layout;
 
 my %TimeStep_C;     # Physical time step for the components
-my %MinProc_C;      # Minimum number of PE-s allowed for the components
-my %MaxProc_C;      # Maximum number of PE-s allowed for the components
-&read_compinfo;
-
 my %CpuStep_C;      # Total CPU time / time step for the components
 &read_timing;
 
@@ -66,6 +63,7 @@ my $iSession;      # session number
 my %Time_C;        # physical time of the components
 my @WallTime_P;    # walltime for the processors
 my @WallHist_P;    # history of wall time costs for the processors
+my @WallSumm_P;    # summary of wall time costs for the processors
 my @CompList_P;    # list of local components for each processor
 my $NewIeData;     # true if IE component receives information (from GM or UA)
 
@@ -90,57 +88,126 @@ sub print_help{
     print "
 Purpose:
  
-   Extract performance information, estimate run time, optimize layout
+   Extract physical and CPU time information from run log files.
+   Estimate run time for a given PARAM.in and LAYOUT.in combination.
 
 Usage: 
 
-   Scripts/Performance.pl [-h] [-v] [-e FILE(s)] [-n=nProc] [-p=PROCS]
+   Scripts/Performance.pl -h
+
+   Scripts/Performance.pl -s [-t=FILE] FILE(s)
+
+   Scripts/Performance.pl [-v] [-t=FILE] [-n=nProc] [-l=LENGTH] 
+                          [-H] [-S] [-p=PROCS]
 
    -h          print help message and exit
+
+   -s          save timings from runlog FILE(s) and exit
+
+   -t=FILE     set the name of the timings file to FILE,
+               default is run/TIMINGS
+
    -v          print verbose information
-   -e FILE(s)  extract timings from runlog FILE(s) and exit
-   -n=nProc    emulate runs on nProc processors
-   -p=PROCS    show history for the processors indicated by the PROCS string
-               Possible values are 'none', 'roots', 'all', and a list of
-               processor ranks separated by commas (e.g. 0,2,3). 
+
+   -l=LENGTH   set length of the sessions: 
+               in seconds for time accurate run,
+               number of iterations for non-time-accurate run.
+               Default is LENGTH=60.
+
+   -n=nProc    emulate execution on nProc processors
+
+   -S          show summary of timings for the selected set of processors.
+
+   -H          show history of timings for the selected set of processors.
+
+   -p=PROCS    select processors for which wall time summary and/or history  
+               is shown. Possible values for the PROCS strings are:
+               'roots' (root processor for active components), 
+               'all'   (all processors), 
+               list of processor ranks separated by commas (e.g. 0,2,3). 
                Default value is 'roots', the root PE for all components.
 ";
     exit;
 }
 ##############################################################################
-sub extract_timing{
+sub save_timing{
 
     my $Comp;
     my $File;
-    my %Info;
+    my %Info_C;
+
+    open(OUTFILE, ">$TimingFile") or 
+	die "$ERROR could not open timing file $TimingFile\n";
 
     while($File=shift(@ARGV)){
-	my %nProc_C;
-	my %CpuStep_C;
-	open(FILE,$File) or die "$ERROR could not open runlog file $File\n";
-	while(<FILE>){
+
+	my %nProc_C;       # Number of processors for each component
+	my %nStep_C;       # Number of steps taken by each component
+	my %CpuStep_C;     # The total CPU time / time step
+	my $TimeAccurate=1;# True if time accurate
+	my $TimeStart;     # Start time (0 unless restart)
+	my $TimeStop;      # Final stop time
+
+	open(INFILE,$File) or die "$ERROR could not open runlog file $File\n";
+
+	print OUTFILE "$File\n";
+
+	while(<INFILE>){
+
+	    # Extract number of processors for components
 	    if(/^\# ($ValidComp).*version \d\.\d\d +(\d+) +\d+ +\d+ +\#$/){
 		$nProc_C{$1} = $2;
 	    }
+
+	    # Extract total CPU time per time step
 	    if(/^($ValidComp)_run +(\d+\.\d\d) +\d+\.\d\d +(\d+) +\d+$/){
-		$CpuStep_C{$1} = ($2/$3);
+		my $Comp  = $1;
+		my $Wall  = $2;
+		my $nStep = $3;
+		$nStep_C{$Comp}   = $nStep;
+		$CpuStep_C{$Comp} = ($Wall/$nStep)*$nProc_C{$Comp};
+	    }
+
+	    # Extract time accurate mode
+	    if(/^\#TIMEACCURATE\b/){
+		$TimeAccurate = read_var("logical", "TimeAccurate");
+	    }
+
+	    # Extract start time
+	    if(/^\#TIMESIMULATION\b/){
+		$TimeStart = read_var("real", "tSimulation");
+	    }
+
+	    # Extract stop time (only the final stop time is saved)
+	    if(/^\#STOP\b/){
+		my $MaxIter = &read_var("integer", "MaxIter");
+		$TimeStop   = &read_var("real",    "TimeMax");
 	    }
 	}
-	close(FILE);
+	close(INFILE);
 	foreach $Comp (keys %nProc_C){
 	    next unless $CpuStep_C{$Comp};
-	    $Info{$Comp}{$File} = 
-		sprintf("%2s%8d%10.2f\n", 
-			$Comp, $nProc_C{$Comp}, $nProc_C{$Comp}*$CpuStep_C{$Comp});
+	    my $nProc = $nProc_C{$Comp};
+	    my $Info;
+	    $Info  = sprintf("%2s%8d%10.2f", $Comp, $nProc, $CpuStep_C{$Comp});
+	    $Info .= sprintf("%10.3f", ($TimeStop-$TimeStart)/$nStep_C{$Comp})
+		if $TimeAccurate;
+	    $Info_C{$Comp}{$nProc} = "$Info\n";
 	}
     }
-    printf "%2s%8s%10s\n", "ID","nProc","CPU[s]";
-    print  "-"x20,"\n";
-    foreach $Comp (keys %Info){
-	foreach $File (keys %{ $Info{$Comp} }){
-	    print $Info{$Comp}{$File};
+
+    print  OUTFILE "\n";
+    printf OUTFILE "%2s%8s%10s%10s\n", "ID","nProc","CPU[s]","Dt[s]";
+    print  OUTFILE "-"x30,"\n";
+    foreach $Comp (sort keys %Info_C){
+	my $nProc;
+	foreach $nProc (sort {$a<=>$b} keys %{ $Info_C{$Comp} }){
+	    print OUTFILE $Info_C{$Comp}{$nProc};
 	}
     }
+    close OUTFILE;
+
+    print "\nTiming info saved into $TimingFile:\n\n",`cat $TimingFile`,"\n";
 
     exit 0;
 }
@@ -214,13 +281,13 @@ sub read_layout{
 sub read_param{
 
     if($iSession == 1){
-	open(PARAMFILE,$ParamFile) or 
+	open(INFILE,$ParamFile) or 
 	    die "$ERROR could not open parameter file $ParamFile\n";
     }
 
     my $IsLastSession = 1;
   LINE:
-    while(<PARAMFILE>){
+    while(<INFILE>){
 
 	next LINE unless /^\#/;
 
@@ -324,7 +391,7 @@ sub read_param{
 
     }
 
-    close(PARAMFILE) if $IsLastSession;
+    close(INFILE) if $IsLastSession;
 
 
 
@@ -355,7 +422,7 @@ sub read_var{
     my $NameVar = shift;
 
     # read variable
-    my $Variable = <PARAMFILE>; chop $Variable;
+    my $Variable = <INFILE>; chop $Variable;
 
     # get rid of comments and leading/trailing spaces
     $Variable =~ s/ *\t.*//;
@@ -399,8 +466,9 @@ sub read_timing{
 	if(/^--------------------/){$start = 1; next};
 	next unless $start;
     
-	if(/^($ValidComp)\s+(\d+)\s+(\d+\.\d+)$/){
+	if(/^($ValidComp)\s+(\d+)\s+(\d+\.\d+)(\s+\d+\.\d+)?\s*$/){
 	    $CpuStep_C{$1}{$2}=$3;
+	    $TimeStep_C{$1}=$4;
 	}else{
 	    die "$ERROR could not read from timing file $TimingFile line $_";
 	}
@@ -417,63 +485,19 @@ sub read_timing{
     }
 
     if($Verbose){
-	print "ID on nProc PE-s uses   CpuTime sec total CPU time\n".
-	    "--------------------------------------------------\n";
-	foreach $Comp (@RegisteredComp){
+	printf "%2s%8s%10s%10s\n", "ID","nProc","CPU[s]","Dt[s]";
+	print  "-"x30,"\n";
+	foreach $Comp (sort @RegisteredComp){
 	    my $nProc;
 	    foreach $nProc (sort {$a<=>$b} keys %{ $CpuStep_C{$Comp} }){
-		printf "%s%4d%s%10.2f%s\n", "$Comp on ",$nProc," PE-s uses ",
-		    $CpuStep_C{$Comp}{$nProc}," sec total CPU time";
+		printf "%2s%8d%10.2f%10.3f\n", $Comp,$nProc,
+		    $CpuStep_C{$Comp}{$nProc},$TimeStep_C{$Comp};
 	    }
 	}
 	print "\n";
     }
 }
-##############################################################################
-sub read_compinfo{
-
-    open(FILE,$CompinfoFile) or 
-	die "$ERROR could not open compinfo file $CompinfoFile\n";
-
-    my $start;
-
-    while(<FILE>){
-
-	if(/^--------------------/){$start = 1; next};
-	next unless $start;
-    
-	if(/^($ValidComp)\s+([\+\-\d\.]+)\s+(\d+)\s+(\d+)\s*$/){
-	    $TimeStep_C{$1} = $2;
-	    $MinProc_C{$1}  = $3;
-	    $MaxProc_C{$1}  = $4;
-	}else{
-	    die "$ERROR could not read line from compinfo file $CompinfoFile:".
-		$_;
-	}
-    }
-    close(FILE);
-
-    die "$ERROR could not obtain info from compinfo file $CompinfoFile\n"
-	unless %TimeStep_C;
-
-    my $Comp;
-    foreach $Comp (@RegisteredComp){
-	die "$ERROR no info in file $CompinfoFile for component $Comp\n"
-	    unless $TimeStep_C{$Comp};
-    }
-
-    if($Verbose){
-	print "ID      Dt      MinProc MaxProc\n".
-	    "-------------------------------\n";
-
-	foreach $Comp (sort keys %TimeStep_C){
-	    printf "%s%10.2f%8d%8d\n", "$Comp",$TimeStep_C{$Comp},
-	    $MinProc_C{$Comp},$MaxProc_C{$Comp};
-	}
-	print "\n";
-    }
-}
-##############################################################################
+###############################################################################
 sub set_wallstep{
 
     if($Verbose){
@@ -557,6 +581,7 @@ sub init_session{
     %Time_C     = ();
     @WallTime_P = ();
     @WallHist_P = ();
+    @WallSumm_P = ();
 
     if($Verbose){
 	print "iProc: component list\n";
@@ -572,7 +597,7 @@ sub do_session{
 
     # Do the session
 
-    my $TimeMax=$lSession; # Final time is the length of the session
+    my $TimeMax=$Length;   # Final time is the length of the session
 
     my %tNext_C;           # Next time a component should stop at
 
@@ -697,7 +722,7 @@ sub add_wall_time{
 
     # Add wall time to WallTime_P due to synchronization of a group of PE-s.
     # Add wall time to WallTime_P due to execution of some task.
-    # Save wall time info into the WallHist_P array.
+    # Save wall time info into the WallHist_P and WallSumm_P arrays.
 
     my $NameSync = shift; # Name for synchronization in history
     my $NameExec = shift; # Name of task to be executed in history
@@ -738,13 +763,15 @@ sub add_wall_hist{
 	# If new name, add new elements to the name and time history
 	push( @{$WallHist_P[$iProc]} , ($Step, $Name) );
     }
+    $WallSumm_P[$iProc]{$Name} += $Step;
+
 }
 ##############################################################################
 sub show_timing{
 
 
     printf "%8.2f seconds wall time for session $iSession\n", $WallTime_P[0];
-    return if $ProcShow eq 'none';
+    return unless ($ShowHistory or $ShowSummary);
 
     my @Proc;
     if( $ProcShow eq 'all' ){
@@ -763,15 +790,72 @@ sub show_timing{
 	die "$ERROR: Invalid format for -p=$ProcShow\n";
     }
 
-    my $SepLine = "-" x (15*@Proc) . "\n";
+    my $Width = 15*@Proc;
+    my $SepLine = "-" x $Width . "\n";
+    my $HeadLine= $SepLine;
     print $SepLine;
     my $iProc;
-    for $iProc (@Proc){printf "     PE%4d    ", $iProc}; print "\n";
+
     print $SepLine;
+    for $iProc (@Proc){printf "     PE%4d    ", $iProc}; print "\n";
+
+    if($ShowSummary){
+	substr($HeadLine,int($Width/2)-4,9) = " Summary ";
+	print $HeadLine;
+        &show_summary(@Proc);
+    }
+
+    if($ShowHistory){
+	substr($HeadLine,int($Width/2)-4,9) = " History ";
+	print $HeadLine;
+        &show_history(@Proc);
+    }
+    print "$SepLine";
+
+}
+##############################################################################
+sub show_summary{
+
+    my @Proc = @_; # list of processors to show summary for
+
+    my %NameList; # all the task names that occured
+
+    # Collect wall history for the processors
+    my $iProc;
+    for $iProc (@Proc){
+	my $Name;
+	for $Name (keys %{ $WallSumm_P[$iProc] }){
+	    $NameList{$Name}++;
+	}
+    }
+
+    # Show wall summary for the processors
+    my $Name;
+    for $Name (sort keys %NameList){
+	my $Continue;
+	my $iProc;
+	for $iProc (@Proc){
+	    my $Step = $WallSumm_P[$iProc]{$Name};
+	    if($Step){
+		printf "%6.1f(%s)", $Step, $Name;
+		$Continue = 1;
+	    }else{
+		print " " x 15;
+	    }
+	}
+	print "\n";
+	last unless $Continue;
+    }
+}
+##############################################################################
+sub show_history{
+
+    my @Proc = @_; # list of processors to show history for
 
     my $iLine;
     for ($iLine=0; 1; $iLine+=2){
 	my $Continue;
+	my $iProc;
 	for $iProc (@Proc){
 	    my $Step = $WallHist_P[$iProc][$iLine];
 	    my $Name = $WallHist_P[$iProc][$iLine+1];
@@ -785,7 +869,6 @@ sub show_timing{
 	print "\n";
 	last unless $Continue;
     }
-
 }
 ##############################################################################
 sub minval{
@@ -800,3 +883,52 @@ sub maxval{
     foreach (@_){$maxval = $_ if $_ > $maxval};
     return $maxval;
 }
+##############################################################################
+sub read_compinfo{
+
+    # This subroutine is not used now, but it may be used later if
+    # layout optimization is done
+
+    my %MinProc_C;      # Minimum number of PE-s allowed for the components
+    my %MaxProc_C;      # Maximum number of PE-s allowed for the components
+    my $CompinfoFile = "COMPINFO";
+
+    open(FILE,$CompinfoFile) or 
+	die "$ERROR could not open compinfo file $CompinfoFile\n";
+
+    my $start;
+
+    while(<FILE>){
+
+	if(/^--------------------/){$start = 1; next};
+	next unless $start;
+    
+	if(/^($ValidComp)\s+(\d+)\s+(\d+)\s*$/){
+	    $MinProc_C{$1}  = $3;
+	    $MaxProc_C{$1}  = $4;
+	}else{
+	    die "$ERROR could not read line from compinfo file $CompinfoFile:".
+		$_;
+	}
+    }
+    close(FILE);
+
+    die "$ERROR could not obtain info from compinfo file $CompinfoFile\n"
+	unless %MinProc_C;
+
+    my $Comp;
+    foreach $Comp (@RegisteredComp){
+	die "$ERROR no info in file $CompinfoFile for component $Comp\n"
+	    unless $MinProc_C{$Comp};
+    }
+
+    if($Verbose){
+	print "ID  MinProc MaxProc\n".
+	    "-------------------\n";
+	foreach $Comp (sort keys %TimeStep_C){
+	    printf "%s%8d%8d\n", "$Comp",$MinProc_C{$Comp},$MaxProc_C{$Comp};
+	}
+	print "\n";
+    }
+}
+##############################################################################
