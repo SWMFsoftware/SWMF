@@ -1,6 +1,6 @@
 \section{Configuration of SWMF}
 
-Configuration refers to several different ways of controling how the 
+Configuration refers to several different ways of controlling how the 
 SWMF is compiled and run.  The most obvious is the setting of
 compiler flags specific to the machine and version of FORTRAN
 compiler.  The other methods refer to ways in which different physics
@@ -86,7 +86,7 @@ SetSWMF.pl -v=IH/BATSRUS
 \end{verbatim}
 in the main directory. With the renamed IH/BATSRUS version it is allowed 
 to run IH and GM on the same PE, and they can be configured differently.
-The SC/BATSRUS component is also derived from the GM/BATRUS source code,
+The SC/BATSRUS component is also derived from the GM/BATSRUS source code,
 but it is configured differently so the source code is always copied
 and renamed. This can be achieved by
 \begin{verbatim}
@@ -155,7 +155,7 @@ GM     0    999     1
 will still use the same executable, but will not allow the IE 
 physics component to participate in the run.
 
-\subsection{Controling physics components with PARAM.in}
+\subsection{Controlling physics components with PARAM.in}
 
 Finally components can be switched on and off during a run
 with the \#COMPONENT command in the PARAM.in file. 

@@ -129,7 +129,7 @@ the extension is {\tt .f} or {\tt .c} respectively.
 If a source file contains a set of procedures,
 it should be named by a group name that describes
 the set of procedures, or by the main procedure in the group.
-If a source file containes a Fortran 90 module, it should
+If a source file contains a Fortran 90 module, it should
 be named accordingly, e.g. the file containing the ModMain module
 should be named {\tt ModMain.f90}.
 
@@ -142,13 +142,13 @@ module identifier into the file name.
 We distinguish intra-module procedure names and inter-module 
 procedure names. Intra-module procedure names are used within a module,
 while inter procedure names are used in the framework.
-The conversion between these will be automatized, for example with 
+The conversion between these will be automated, for example with 
 the aid of a Perl script. This means that the modules can use 
 arbitrary procedure names, still the name conflicts can be avoided. 
 
 The inter-module procedure names start with the physics/software module 
 abreviation (see the list in the previous section) 
-in all capitals, followed by an undescore, then followed by the
+in all capitals, followed by an underscore, then followed by the
 intra-procedure name. 
 
 Here are some possible examples for the full inter-procedure names:
@@ -207,10 +207,10 @@ variables it is omitted. Some examples for prefixes:
 \section{Intra-Module Procedure Names for BATSRUS}
 
 The intra-module procedure name consists of 
-{\it procedure name parts} separated by undescores. 
+{\it procedure name parts} separated by underscores. 
 A procedure name part starts with a lower case letter, followed
 by an arbitrary number of lower case letters and numbers.
-The use of lower case letters and undescores between the procedure 
+The use of lower case letters and underscores between the procedure 
 name parts helps to distinguish procedure names from variable names, 
 which use capitalization (see later).
 The intra-procedure name should describe the action done

@@ -150,7 +150,7 @@ you can gzip the .dat files to save disk space and transfer time
 \begin{verbatim}
 pTEC g
 \end{verbatim}
-You can visualize the output files in run/SC/IO2 with your favoured 
+You can visualize the output files in run/SC/IO2 with your favored 
 visualization software. For visualization with IDL you should read the
 chapter on ``IDL visualization'' in the user manual in GM/BATSRUS/Doc.
 
@@ -171,7 +171,7 @@ Restart.pl RESTART_SC
 
 This example run is built on the previous example. We restart SC from the
 steady state created in the previous run and start the IH component from 
-scratch and run the two compnents coupled until the IH component reaches
+scratch and run the two components coupled until the IH component reaches
 a steady state. 
 
 First copy in the prepared parameter and layout files
@@ -309,7 +309,7 @@ The GM, IM and UA components are called at different frequencies.
 This allows the GM, IM and UA components to reach a reasonable solution
 approximately at the same rate. Another optimization trick is the changing of 
 the coupling order such that the IE component sends information before
-it would recieve it (see the \#COUPLEORDER command in PARAM.in),
+it would receive it (see the \#COUPLEORDER command in PARAM.in),
 so that IE component can solve for the electric potential concurrently with the
 other components running. To reduce the time spent on field line
 tracing, which is needed for the IM to GM coupling, the \#RAYTRACE command
@@ -327,7 +327,7 @@ GM   35  999    1
 As you can see all the components are running concurrently.
 Unless you have access to at least 64 processors, 
 you probably want to modify the layout file.
-For example for 32 processore you can overlap the UA component 
+For example for 32 processors you can overlap the UA component 
 with the other components and run IE on a single processor:
 \begin{verbatim}
 #COMPONENTMAP
@@ -453,7 +453,7 @@ Restart.pl -o RESTART_SCIHSP_4hr
 \section{Example 6: Time accurate run with all 8 components}
 
 This run is described in the TESTING manual. 
-The initital conditions were created with the runs described in
+The initial conditions were created with the runs described in
 this chapter using the higher resolution SC grid (AMR9) and the full 4 hour
 time accurate run with the SC-IH and SP components.
 

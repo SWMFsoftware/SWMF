@@ -181,7 +181,7 @@ The steady state mode should be signaled with the
 #TIMEACCURATE
 F                DoTimeAccurate
 \end{verbatim}
-command, ususally placed somewhere at the beginning of the session.
+command, usually placed somewhere at the beginning of the session.
 Since the SWMF runs in time accurate mode by default,
 this command is required in the first steady state session of the run.
 
@@ -242,7 +242,7 @@ command to couple the GM and IM components in both directions
 in every 10-th SWMF iteration.
 Note that according to the above \#CYCLE commands,
 GM and IM do 10 and 5 steps between two couplings,
-respectively. GM/BATRUS uses 10 local time steps,
+respectively. GM/BATSRUS uses 10 local time steps,
 while IM advances by 5 five-second time steps.
 
 Another example is the relaxation of SC and IH components.
@@ -306,7 +306,7 @@ step through the coupling time. For example
 GM             NameComp
 F              DoCoupleOnTime
 \end{verbatim}
-will alow the GM component to use 4 second time steps even
+will allow the GM component to use 4 second time steps even
 if it is coupled at every 5 seconds. Of course this will
 make the data transferred during the coupling be 
 first order accurate in time.
@@ -343,7 +343,7 @@ IE            NameComp2
 10.0          DtCouple
 -1            DnCouple
 \end{verbatim}
-then GM and UA wil have to wait until IE solves
+then GM and UA will have to wait until IE solves
 the Poisson equation, because IE receives new data
 and it is required to produce results immediately.
 With the reversed coupling order
@@ -373,9 +373,9 @@ IE UA         NameSourceTarget
 \end{verbatim}
 in case the coupling times with GM and UA coincide (always at the beginning
 of a the sessions).
-With this coupling order, IE first recieves information from GM,
+With this coupling order, IE first receives information from GM,
 then solves the Poisson equation and returns the information based
-on the solution to GM while GM is waiting. Then IE recieves extra
+on the solution to GM while GM is waiting. Then IE receives extra
 information from UA, solves the Poisson equation again, and sends
 back information to UA, while UA is waiting. 
 
