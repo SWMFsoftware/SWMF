@@ -131,12 +131,13 @@ subroutine init_iri
                  geo_lon = mod(geo_lon + 180.0,360.0)
               endif
 
-              !  write(*,*) "iri : ", geo_lat, geo_lon, -f107, -iJulianDay, &
-              !             utime/3600.+25.,geo_alt,nzkm
+              !if(iProc==0) write(*,*) "iri : ", &
+              !    geo_lat, geo_lon, -f107, -iJulianDay, &
+              !    utime/3600.+25.,geo_alt,iAlt
 
               call iri90 (jf,jmag,geo_lat,geo_lon,-f107,-iJulianDay, &
                    utime/3600.+25.,geo_alt,nzkm,'UA/DataIn/ccir.cofcnts', &
-                   'UA/DataIn/ursi.cofcnts',outf,oarr)
+                   'UA/DataIn/ursi.cofcnts',outf,oarr,iProc)
 
               IRIDensity(iLon,iLat,iAlt,ie_,iBlock)    = abs(outf(1,1))
               IRIDensity(iLon,iLat,iAlt,iO_4SP_,iBlock) = &
