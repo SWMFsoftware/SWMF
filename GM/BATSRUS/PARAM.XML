@@ -3170,9 +3170,8 @@ F		UseSpitzerForm
 			<option name="constant"  value="Constant/constant"
 								default="T"/>
 		</parameter>
+		<parameter name="Eta0Resist" type="real" default="9.69953E+8"/>
 		<if expr="$TypeResist =~ /localized/i">
-			<parameter name="Eta0Resist" type="real" 
-						default="9.69953E+8"	/>
 			<parameter name="Alpha0Resist" type="real"
 						default="150"		/>
 			<parameter name="yShiftResist" type="real"
