@@ -2779,6 +2779,7 @@ if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 ; Set size of plot windows
 ppp   = nfunc
 space = 0.05
+;;;space = float(!d.y_ch_size)/float(!d.y_size)
 set_space, ppp, space, sizes, ny = ppp
 
 erase
@@ -2828,6 +2829,7 @@ for iter = iter0, 2 do begin
                 endif else begin
                     set_position, sizes, 0, ifunc, posm, /rect
                     posm(0) = posm(0) + 0.05
+                    if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
                     title  = ''
                     xtitle = ''
                     if ilog eq 0 then begin
@@ -2858,6 +2860,7 @@ endfor
 
 if DoXrange then xrange =0
 if DoYrange then yranges=0
+if strpos(!d.name,'X') lt 0 then loadct,39
 
 end
 ;=============================================================================
