@@ -139,24 +139,24 @@ subroutine calc_electric_field(iBlock)
   !------------------------------------------------------------------------
 
   ! E_x=(fy+fy-fz-fz)/4
-  Ex_CB(:,:,:,iBlock)= 0.25*(                               &
-          (Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                  &
-          +Flux_VY(Bz_,1:nI,2:nJ+1,1:nK))/fAy_BLK(iBlock)   &
-         -(Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                  &
-          +Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1))/fAz_BLK(iBlock))
+  Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
+       + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / fAy_BLK(iBlock) - &
+       ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                      &
+       + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / fAz_BLK(iBlock) )
 
   ! E_y=(fz+fz-fx-fx)/4
-  Ey_CB(:,:,:,iBlock)= 0.25*(                               &
-          (Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                  &
-          +Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1))/fAz_BLK(iBlock) &
-         -(Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                  &
-          +Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  ))/fAx_BLK(iBlock))
+  Ey_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                      &
+       + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / fAz_BLK(iBlock) - &
+       ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                      &
+       + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / fAx_BLK(iBlock) )
 
   ! E_z=(fx+fx-fy-fy)/4
-  Ez_CB(:,:,:,iBlock)= 0.25*(                               &
-          (Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                  &
-          +Flux_VX(By_,2:nI+1,1:nJ  ,1:nK))/fAx_BLK(iBlock) &
-         -(Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                  &
-          +Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK))/fAy_BLK(iBlock))
+  Ez_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                      &
+       + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
+       ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
+       + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
 
 end subroutine calc_electric_field
