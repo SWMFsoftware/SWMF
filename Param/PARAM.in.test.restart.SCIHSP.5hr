@@ -246,29 +246,29 @@ SP			NameTarget
 #BEGIN_COMP SP ---------------------------------------------------------------
 
 #LINE
-1.61+02                 
--1.39E+02  
--15.0
-1.1
-21.0
+1.61+02                 xLine
+-1.39E+02		yLine
+-15.0			zLine
+1.1			rBoundSc
+21.0			rBoundIh
 
 #RTRANSIENT
-2.0
+2.0			rTransient
 
 #NSMOOTH
-3
+3			nSmooth
 
 #DORUN
-T
+T			DoRun
 
 #SAVEMHDATA
-T
+T			DoSaveMhData
 
 #VERBOSE
-1
+1			lVerbose
 
 #PLOT
-1                     DnPlot
+1			DnPlot
 
 #END_COMP SP ----------------------------------------------------------------
 
