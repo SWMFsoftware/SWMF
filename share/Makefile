@@ -17,5 +17,8 @@ Library/src/mpif.h: Library/src/mpif90.h
 ../Makefile.conf:
 	cp build/Makefile.${OS}${COMPILER} ../Makefile.conf
 
-distclean:
+clean:
+	cd Library/src; make clean
+	
+distclean: clean
 	rm -f ${INSTALL_FILES} Library/src/Makefile.DEPEND *~ */*~
