@@ -684,7 +684,7 @@ sub read_parameter{
 
     # Remove everything after 3 spaces or a TAB
     $paramValue =~ s/   .*//;
-    $paramValue =~ s/\t.*//;
+    $paramValue =~ s/ *\t.*//;
 
     print "reading $paramName = $paramValue\n" if $Debug;
 
