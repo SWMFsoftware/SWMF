@@ -1,9 +1,15 @@
 #^CMP COPYRIGHT UM
-#
-#	Space Weather Modeling Framework (SWMF) main Makefile
-#
+
+#BOP
+#!ROUTINE: Makefile - Space Weather Modeling Framework (SWMF) main Makefile
+#!DESCRIPTION:
+# This is the main Makefile to (re)compile executables, run the SWMF, 
+# produce documentation, make distribution clean distribution, etc.
+#EOP
 
 SHELL=/bin/sh
+
+#BOC
 VERSION = 2.0
 
 #
@@ -15,7 +21,7 @@ DEFAULT_EXE    = SWMF.exe
 default : ${DEFAULT_TARGET}
 
 #
-#       Definition of source directories
+#       Definition of OS, component versions and directory structure
 #
 include Makefile.def
 
@@ -66,6 +72,7 @@ help:
 	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
 	@#^CMP END SC
 	@echo ' '
+#EOC
 #
 # Check the variables SWMF_ROOT=`pwd` and OS = `uname`
 #
@@ -110,8 +117,8 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
+	cd share;       make install OS=${OS} COMPILER=${COMPILER} MPIVERSION=${MPIVERSION}
 	cd ${CONDIR};   make install
-	cd share;       make install MPIVERSION=${MPIVERSION}
 	cd ${GMDIR};    make install    #^CMP IF GM
 	cd ${IEDIR};    make install    #^CMP IF IE
 	cd ${IHDIR};    make install    #^CMP IF IH

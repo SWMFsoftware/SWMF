@@ -1,15 +1,26 @@
 include ../Makefile.def
 
-install: Library/src/mpif90.h Library/src/mpif.h ../Makefile.conf
+#BOP
+#!ROUTINE: share/Makefile - install, clean and distclean share
+#!DESCRIPTION:
+# This Makefile has three targets: install, clean and distclean
+# The install target installs the share/Library/src,
+# copies the OS and MPIVERSION dependent mpif90.h and mpif.h files into Library/src,
+# copies the OS and COMPILER dependent Makefile from build to the parent directory.
+# The OS, COMPILER and MPIVERSION variables should be set like in the following example:
+#\begin{verbatim}
+# make install OS=Linux COMPILER=ifort MPIVERSION=Altix
+#\end{verbatim}
+# The OS variable should always be set, the COMPILER and MPIVERSION are only needed if they
+# are not the defaults.
+#
+# The clean and distclean targets do not need any variables.
+#EOP
+#BOC
+install: 
 	touch Library/src/Makefile.DEPEND
-
-Library/src/mpif90.h:
 	cp include/mpif90_${OS}${MPIVERSION}.h Library/src/mpif90.h
-
-Library/src/mpif.h: Library/src/mpif90.h
 	cd Library/src; cat precision.h mpif90.h > mpif.h
-
-../Makefile.conf:
 	cp build/Makefile.${OS}${COMPILER} ../Makefile.conf
 
 clean:
@@ -21,3 +32,4 @@ distclean: clean
 	cd Library/test;make distclean
 	cd Prologs;     make distclean
 	rm -f Library/src/mpif*.h Library/src/Makefile.DEPEND *~ */*~
+#EOC
