@@ -122,6 +122,12 @@ contains
     select case(NamePlanet)
     case('EARTH')
        ! This is the default so everything is already set
+    case('SATURN')
+       RadiusPlanet     = rSaturn
+       MassPlanet       = mSaturn
+       OmegaPlanet      = cTwoPi/RotationPeriodSaturn 
+       DipoleStrength   = DipoleStrengthSaturn
+       IonosphereHeight = IonoHeightSaturn
     case default
        IsKnown = .false.
        RETURN

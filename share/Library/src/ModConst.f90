@@ -111,6 +111,8 @@ Module ModConst
   real,parameter :: rSaturn = 60268.00*cE3          ! = 60268.00E+03 [m]
   real,parameter :: mSaturn = 0.5685*cE27           ! = 5.685E26 [kg]
   real,parameter :: RotationPeriodSaturn = 10.5 * 3600.0
+  real,parameter :: DipoleStrengthSaturn = 20800.0 * 1.0e-9  ! in Tesla
+  real,parameter :: IonoHeightSaturn     = 1000.0 *1.0e3     ! 1000 km
 
   real,parameter :: rTitan = 2575.00*cE3            ! = 2575.00E3
   real,parameter :: rTitan_Orbit = 1.222*cE9        ! = 1.224E9 

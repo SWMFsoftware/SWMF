@@ -916,6 +916,7 @@ These modifier commands cannot preceed the #PLANET command!
 <command name="PLANET" if="$_IsFirstSession">
 	<parameter name="NamePlanet" type="string" input="select">
 		<option name="Earth" value="EARTH/Earth/earth" default="T" />
+		<option name="Saturn" value="SATURN/Saturn/saturn" />
 		<option name="New" />
 	</parameter>
 	<if expr="$NamePlanet eq 'New'">
