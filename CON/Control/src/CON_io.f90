@@ -40,7 +40,7 @@ module CON_io
   ! 07/31/03 Aaron Ridley and G.Toth - added commands to read physical params
   ! 08/20/03 G.Toth - added save_restart, Protex prolog, and made it private
   ! 08/25/03 G.Toth - save_restart calls save_restart_comp for all components
-
+  ! 05/20/04 G.Toth - added #CYCLE command
   !EOP
 
   character (len=*), parameter :: NameMod='CON_io'
@@ -376,6 +376,9 @@ contains
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
 
+       case("#CYCLE")
+          call read_var('NameComp',NameComp)
+          call read_var('DnRun',DnRun_C(i_comp(NameComp)))
        case("#SESSION")
           call read_var('TypeSession',TypeSession)
           call lower_case(TypeSession)
@@ -455,7 +458,7 @@ contains
 
     ! Check if the parallel or general session models are used with 
     ! a non-time accurate run
-    if(.not.DoTimeAccurate .and. TypeSession/='old')then
+    if(.not.DoTimeAccurate .and. TypeSession=='parallel')then
        if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
             ' DoTimeAccurate=F cannot be used with TypeSession=',&
             trim(TypeSession)
