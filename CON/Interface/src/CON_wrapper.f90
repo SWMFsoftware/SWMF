@@ -137,8 +137,6 @@ contains
     call get_comp_info(iComp,CompInfo=CompInfo)
 
     select case(iComp)
-    case(RB_)                                     !^CMP IF RB
-       call RB_set_param(CompInfo,TypeAction)     !^CMP IF RB
     case(IE_)                                     !^CMP IF IE
        call IE_set_param(CompInfo,TypeAction)     !^CMP IF IE
     case(GM_)                                     !^CMP IF GM
@@ -149,6 +147,8 @@ contains
        call IH_set_param(CompInfo,TypeAction)     !^CMP IF IH
     case(UA_)                                     !^CMP IF UA
        call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
+    case(RB_)                                     !^CMP IF RB
+       call RB_set_param(CompInfo,TypeAction)     !^CMP IF RB
     case default
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
@@ -225,8 +225,6 @@ contains
     call check_i_comp(iComp,NameSub)
 
     select case(iComp)
-    case(RB_)                                    !^CMP IF RB
-       call RB_set_param(CompInfo,'VERSION')     !^CMP IF RB
     case(IE_)                                    !^CMP IF IE
        call IE_set_param(CompInfo,'VERSION')     !^CMP IF IE
     case(IM_)                                    !^CMP IF IM
@@ -237,6 +235,8 @@ contains
        call IH_set_param(CompInfo,'VERSION')     !^CMP IF IH
     case(UA_)                                    !^CMP IF UA
        call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA
+    case(RB_)                                    !^CMP IF RB
+       call RB_set_param(CompInfo,'VERSION')     !^CMP IF RB
     case default
        call put(CompInfo,Use=.false.,NameVersion='not implemented',Version=0.0)
     end select
@@ -270,8 +270,6 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     select case(iComp)
-    case(GM_)                                            !^CMP IF GM
-       call GM_init_session(iSession,TimeSimulation)     !^CMP IF GM
     case(GM_)                                            !^CMP IF GM
        call GM_init_session(iSession,TimeSimulation)     !^CMP IF GM
     case(IE_)                                            !^CMP IF IE
