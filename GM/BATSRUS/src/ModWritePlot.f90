@@ -617,13 +617,13 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('rhoUz','rhouz','mz')
         PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)
      case('Bx','bx')
-        plotvar_useBody(iVar) = .true.
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
      case('By','by')
-        plotvar_useBody(iVar) = .true.
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)
      case('Bz','bz')
-        plotvar_useBody(iVar) = .true.
+        plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)
 
      case('BxL','bxl')                           !^CFG IF CONSTRAINB BEGIN
