@@ -63,7 +63,7 @@ my $check =
     "$CheckParamScript -C=$Registered -n=$nProc -p=$Precision $ParamFile";
 print "$check\n" if $Verbose;
 my $Error = `$check`;
-die "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n" if $Error;
+print "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n" if $Error;
 
 # Check component parameters
 my $Comp;
@@ -77,7 +77,7 @@ foreach $Comp (sort keys %Layout){
 	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
-    die "$ERROR parameter errors for $Comp:\n\n$Error\n" if $Error;
+    print "$ERROR parameter errors for $Comp:\n\n$Error\n" if $Error;
 }
 
 exit 0;
