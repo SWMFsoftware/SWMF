@@ -10,7 +10,7 @@ Module ModMain
 
   save
 
-  real :: CodeVersion=7.72, CodeVersionRead=-1.
+  real :: CodeVersion=7.73, CodeVersionRead=-1.
 
   ! BATSRUS may run as GM or IH component. This will be set by CON.
   character (len=2)   :: NameThisComp=''
