@@ -12,6 +12,10 @@ use strict;
 # Print help message and exit if -h switch was used
 &print_help if $Help;
 
+# Name of BATSRUS and BATSRUS_share
+my $BATSRUS = "BATSRUS";
+my $BATSRUS_share = "BATSRUS_share";
+
 # Error and warning strings
 my $ERROR = 'TestParam_ERROR:';
 my $WARNING='TestParam_WARNING:';
@@ -108,8 +112,8 @@ sub get_settings{
        "Versions  = ",join('; ',%Version),"\n".
        "GridSize  = ",join('; ',%GridSize),"\n" if $Verbose;
 
-    die "$ERROR IH/UofM_share requires GM/UofM and not GM/$Version{GM}\n"
-	if $Version{IH} eq 'UofM_share' and $Version{GM} ne 'UofM';
+    die "$ERROR IH/$BATSRUS_share requires GM/$BATSRUS and not GM/$Version{GM}\n"
+	if $Version{IH} eq $BATSRUS_share and $Version{GM} !~ /^$BATSRUS/;
 
 }
 
@@ -177,9 +181,9 @@ sub check_layout{
 	    "\tfor the layout in $LayoutFile and $nProc processors.\n" 
 	    unless $Comps;
 
-	die "$ERROR IH/UofM_share overlaps with GM\n".
+	die "$ERROR IH/$BATSRUS_share overlaps with GM\n".
 	    "\tfor the layout in $LayoutFile and $nProc processors.\n"
-	    if $Version{IH} eq "UofM_share" and $Comps =~ /GM,.*IH,/;
+	    if $Version{IH} eq $BATSRUS_share and $Comps =~ /GM,.*IH,/;
     }
 
     my $Comp;
@@ -198,7 +202,7 @@ sub print_help{
     print "
 Purpose:
 
-    Based on the settings shown be SetSWMF.pl and the registration and layout 
+    Based on the settings shown by SetSWMF.pl and the registration and layout 
     information contained in the layout file, check the consistency of 
     settings and the correctness of the input parameter file.
 
