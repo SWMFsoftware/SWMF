@@ -2,9 +2,9 @@
 
 my $Help  = ($h or $H or $help);
 my $Debug = $D;
-my $types = ($t or 'real|logical|integer');     # types of the variable
-my $large = ($l or 'nBLK|MaxBlock|MaxImplBLK'); # pattern for large variables
-my $mindim= ($d or 3);                          # minimum dimension 
+my $types = ($t or 'real|logical|integer|double precision');
+my $large = ($l or 'nBLK|MaxBlock|MaxImplBLK|MaxImplVar'); 
+my $mindim= ($d or 3);
 
 use strict;
 
@@ -15,10 +15,6 @@ my $line;            # current line with continuation lines
 my %dimension;       # hash contains dimension for variables
 my $type;            # the type of the variables in the current declaration
 my @allocated;       # list of allocated variables
-my $begin;           # true if a configuration is started
-my $config;          # current configuration directive
-my $configend;       # the config to be written at the end of declaration
-my %config;          # hash for configuration of allocate and deallocate
 my $allocate;        # true if allocation was written
 my $deallocate;      # true if deallocation was written
 my $contains;        # true if 'contains' statement has been found
@@ -32,50 +28,41 @@ while(<>){
     $contains = 1 if /^\s*contains\b/;
 
     if($contains){
-	# Add allocate statements into subroutine allocate_*
-	if(/^\s*end\s+subroutine\s+allocate_/i){
+	# Print the line out
+	print; 
+
+	# Add allocate statements into subroutine allocate_* or init_*
+	if(/^\s*subroutine\s+(allocate|init)_/i){
 	    $allocate=1;
 	    my $variable;
+	    print "\n";
+	    print "    use ModUtilities, ONLY: check_allocate\n";
+	    print "    integer :: iError\n";
+	    print "    !","-" x 70,"\n";
+	    print "    if(allocated($allocated[0])) return\n";
 	    foreach $variable (@allocated){
 		print "    allocate($variable".
-		    "$dimension{$variable},stat=iError) $config{$variable}\n";
+		    "$dimension{$variable},stat=iError)\n";
+		print "    call check_allocate(iError,'$variable')\n";
 	    }
-	    print "\n";
 	}
 
-	# Add deallocate statements into subroutine deallocate_*
-	if($contains and /^\s*end\s+subroutine\s+deallocate_/i){
+	# Add deallocate statements into subroutine deallocate_* or clean_*
+	if($contains and /^\s*subroutine\s+(deallocate|clean)_/i){
 	    $deallocate=1;
 	    my $variable;
-	    foreach $variable (@allocated){
-		print "    deallocate($variable) $config{$variable}\n";
-	    }
 	    print "\n";
+	    print "    if(.not.allocated($allocated[0])) return\n";
+	    foreach $variable (@allocated){
+		print "    deallocate($variable)\n";
+	    }
 	}
-	print; next;
+
+	# Nothing else to do
+	next;
     }
 
     # process lines which are before the contains statement
-
-    # Initialize configuration for this line
-    $configend = '';
-    $config = '' unless $begin;
-
-    # store configuration
-    if(/(\^CFG\s+IF\s+(NOT\s+)?\w+)(\s+BEGIN)?/i){
-	$config = "!$1";
-	$begin  = $3;
-	$configend = $config unless $begin;
-	print "config=$config begin=$begin configend=$configend\n" if $Debug;
-    }
-
-    # process end of configuration
-    if(/\^CFG\s+END\s/){
-	warn "$WARNING \^CFG END without \^CFG ... BEGIN!?\n" unless $begin;
-	$config= '';
-	$begin = '';
-	print "config=$config begin=$begin configend=$configend\n" if $Debug;
-    }
 
     # Check line for variable declaration
     if(not $cont){
@@ -172,20 +159,19 @@ while(<>){
 	if($dimension =~ /$large/){
 	    my $ndim = ($dimension =~ s/[^\(\),]+/:/g);
 	    if($ndim >= $mindim){
-		print "$type, allocatable :: $variable$dimension $configend\n";
-		# store variable and its configuration
+		print "$type, allocatable :: $variable$dimension\n";
+		# store variable for (de)allocation statements
 		push(@allocated,$variable);
-		$config{$variable}=$config;
 		next;
 	    }
 	}
-	print "$type :: $variable","$dimension{$variable} $configend\n";
+	print "$type :: $variable","$dimension{$variable}\n";
     }
 }
 
-warn "$ERROR subroutine allocate_* was not found in $ARGV !!!\n" 
+warn "$ERROR subroutine allocate_* or init_* was not found in $ARGV !!!\n" 
     unless $allocate;
-warn "$WARNING subroutine deallocate_* was not found in $ARGV !!!\n" 
+warn "$WARNING subroutine deallocate_* or clean_* was not found in $ARGV !\n" 
     if $Debug and not $deallocate;
 
 exit 0;
@@ -198,9 +184,11 @@ sub print_help{
 
 Purpose: Transform a module with static variable declarations into a 
          module with dynamic (allocatable) declarations.
-         The original module must contain a subroutine named 'allocate_*'
-         and it may contain a subroutine named 'deallocate_*'.
-         These subroutines can be empty in the static version of the module.
+         The original module must contain a subroutine named 
+         'allocate_*' or 'init_*' (for example 'init_mod_advance')
+         and it may contain a subroutine named 'deallocate_*' or 'clean_*'.
+         These subroutines can be empty in the static version of the module,
+         or may contain initialization statements.
 
 Usage:   StaticToDynamic.pl [-h] [-D] [-t=TYPES] [-d=MINDIM] [-l=LARGE] 
                [INFILE] [> OUTFILE]
