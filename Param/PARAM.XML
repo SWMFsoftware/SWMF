@@ -313,21 +313,13 @@ in the #CHECKSTOP command.
 	<parameter name="StringTest" type="string" length="100"/>
 
 #TEST
-read_inputs		StringTest
+CON_session::do_session		StringTest
 
-A space separated list of subroutine names. Default is empty string.
-
-Examples:
-  read_inputs  - echo the input parameters following the #TEST line
-  ionosphere   - info on the ionosphere      <!-- ^CFG IF IONOSPHERE -->
-  project_B    - info on projection scheme   <!-- ^CFG IF PROJECTION -->
-  implicit     - info on implicit scheme     <!-- ^CFG IF IMPLICIT   -->
-  krylov       - info on the Krylov solver   <!-- ^CFG IF IMPLICIT   -->
-  message_count- count messages
-  initial_refinement
-  ...
-Check the subroutines for call setoktest("...",oktest,oktest_me) to
-see the appropriate strings.
+A space separated list of subroutine and function names to be tested. 
+Only subroutines containing the 'call CON_set_do_test(...)' statement
+can be tested. The first argument is the name of the subroutine,
+usually defined as the string parameter 'NameSub'.
+Default is an empty string.
 </command>
 
 <command name="VERBOSE">
@@ -382,23 +374,23 @@ T                       UseTiming      (rest of parameters read if true)
 -1                      nDepthTiming   (-1 for arbitrary depth)
 cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
 
-If UseTiming=.true., the execution is timed by the TIMING utility.
+If UseTiming=.true., the execution is timed by the TIMING utility.\\
 If UseTiming=.false., the execution is not timed.
 
-The Dntiming parameter determines the frequency of timing reports:
-If DnTiming is positive, a timing report is produced every DnTiming steps.
-If DnTiming is -1, a timing report is shown at the end of each session.
-If DnTiming is -2, a timing report is shown at the end of the whole run.
+The Dntiming parameter determines the frequency of timing reports:\\
+If DnTiming is positive, a timing report is produced every DnTiming steps.\\
+If DnTiming is -1, a timing report is shown at the end of each session.\\
+If DnTiming is -2, a timing report is shown at the end of the whole run.\\
 If DnTiming is -3, no timing report is shown.
 
-The nDepthTiming parameters defines the depth of the timing tree. 
-A negative value means unlimited depth. If nDepthTiming is 1, only the 
-total SWMF execution is timed.
+The nDepthTiming parameters defines the depth of the timing tree.\\
+A negative value means unlimited depth.\\
+If nDepthTiming is 1, only the total SWMF execution is timed.
 
-The TypeTimingReport parameter determines the format of the timing reports:
-'cumm' - cummulative list sorted by timings
-'list' - list based on caller and sorted by timings
-'tree' - tree based on calling sequence
+The TypeTimingReport parameter determines the format of the timing reports:\\
+'cumm' - cummulative list sorted by timings\\
+'list' - list based on caller and sorted by timings\\
+'tree' - tree based on calling sequence.
 
 The default values are shown above.
 </command>
