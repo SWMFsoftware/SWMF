@@ -156,7 +156,6 @@ OBJECTS = \
 	message_pass_nodes.o\
 	number_blocks.o\
 	octree.o\
-	perfctr_cray.o\
 	refine_grid.o\
 	restart.o\
 	rotate.o\
