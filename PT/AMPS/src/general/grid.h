@@ -55,12 +55,21 @@ public:
   array_4d<double> bvector;
   vector<surface_interpolation_data_type> surface_interpolation_data;
 
+  typedef void (*InitGasModelDistributionType)(CellType*,long int);
+  InitGasModelDistributionType InitGasModelDistribution;
+
+  void SetInitGasModelDistribution(InitGasModelDistributionType func) {
+    InitGasModelDistribution=func;
+  };
+
 //==================================================
   Cgrid () {
     nnodes=0;node=NULL;
     nfaces=0;face=NULL;
     ncells=0;cell=NULL;
     cells_connection_data=NULL;
+
+    InitGasModelDistribution=NULL;
   };
 
   ~Cgrid() {
