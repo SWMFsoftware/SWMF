@@ -6,7 +6,7 @@ Space Weather Modeling Framework (SWMF) and its constituent components.
 SWMF core:
 	1. The SC component can now use the corotating HGR frame,
 	   while the IH component uses the inertial HGI frame,
-           but the SC/IH coupling is not fully tested for this case.
+           but the SC/IH coupling has not been fully tested for this case.
 
 RB/RiceV5:
         1. The Radiation Belt (RB) module included with this release
@@ -31,6 +31,11 @@ UA/GITM:
            ignored during this period.
 
 	NOTE: the UA/GITM2 model restarts correctly.
+
+UA/GITM2:
+	1. The new version 2 of GITM has not been tested on all platforms.
+	   Succesful test runs were made on the SGI Altix system.
+           Problems were encountered with the pgf90 compiler.
 
 IM/RCM:
         1. Restarting the RCM (IM module) requires that if both restart
@@ -57,6 +62,12 @@ GM, IH, SC  / BATSRUS:
         2. The user_routine structure seems to require a reformulation
            in order to avoid incompatibilities of the different
            routines and flags.
+
+	3. For the Darwin/xlf90 platform/compiler combination there are
+           various problems: the implicit scheme can run out of memory,
+           and the writing of the spherical plots can also crash.
+
+	   NOTE: These problems should be resolved soon.
 
 SP/Kota:
         1. The SEP module included with this release does not have the
