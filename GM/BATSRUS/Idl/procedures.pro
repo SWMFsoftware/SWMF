@@ -250,11 +250,10 @@ pro getpict,unit,filetype,npict,x,w,$
    endcase
 
    if ndim eq 2 and nx(1) eq 1 then begin
-       ; sort x and w according to the x + (max(x)-min(x)) * y function
-       xx = x(*,*,0)
-       yy = x(*,*,1)
-       xrange = max(xx) - min(xx)
-       isort = sort( xx + xrange*yy )
+       ; sort x and w according to the x + factor * y function
+       ; where factor is a transcendent number to avoid coincidences
+       factor = exp(1.0d0)
+       isort = sort( x(*,*,0) + factor*x(*,*,1) )
        x(*,0,*) = x(isort,0,*)
        w(*,0,*) = w(isort,0,*)
    endif
@@ -472,13 +471,16 @@ endif else begin
 endelse
 
 end
-
 ;==========================================
-function imf_hour,wlog
-
-   return,(wlog(*,2)-wlog(0,2))*24.0 + $
-     wlog(*,3) + wlog(*,4)/60.0 + wlog(*,5)/3600.0 + $
-     wlog(*,6)/3.6e6
+function imf_hour,wlog,iday=iday
+   if not keyword_set(iday) then iday = 2
+   ihour = iday+1
+   imin  = iday+2
+   isec  = iday+3
+   imsc  = iday+4
+   return,(wlog(*,iday)-wlog(0,iday))*24.0 + $
+     wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
+     wlog(*,imsc)/3.6e6
 
 end
 ;==========================================
