@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream.h>
 #include <errno.h>
 
 #include "dsmc.h"
@@ -57,7 +56,7 @@ void GetInputStr(char* str,int n){
 
 //===================================================
 void error() {
-  cout << "Error in input file (line=" << line << ")" << endl;
+  printf("Error in input file (line=%i)\n",line);
   exit(0);
 }
 
@@ -126,6 +125,12 @@ void parser(char* InputFile) {
   char str1[100],str[100];
 
   printf("InputFile: %s\n",InputFile);
+
+  if (access(InputFile,R_OK)!=0) {
+    printf("Cannot find the input file:%s\n",InputFile);
+    exit(0);
+  }
+
   fd=fopen(InputFile,"r");
   while (!feof(fd)) {
     GetInputStr(str,sizeof(str));
