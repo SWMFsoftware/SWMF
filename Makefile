@@ -205,6 +205,7 @@ clean: ENV_CHECK
 	cd IM/RCM;		make clean    #^CMP IF IM
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
+	cd UA/GITM2;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
 	cd RB/Rice;		make clean    #^CMP IF RB
 	cd RB/RiceV5;		make clean    #^CMP IF RB
@@ -239,6 +240,7 @@ distclean_comp: ENV_CHECK rmdir
 	cd IM/RCM;		make distclean    #^CMP IF IM
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
+	cd UA/GITM2;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
 	cd RB/Rice;		make distclean    #^CMP IF RB
 	cd RB/RiceV5;		make distclean    #^CMP IF RB
