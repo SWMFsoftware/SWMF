@@ -68,4 +68,21 @@ module ModAMR
   real :: min_cell_dx, max_cell_dx
   logical :: automatic_refinement, fix_body_level
 
+
+  !\
+  ! Variables controlling grid resolution in different areas
+  !/
+
+  integer, parameter :: MaxArea = 100, lNameArea = 20
+  integer            :: nArea   = 0
+
+  type AreaType
+     character(len=lNameArea) :: Name
+     real                     :: Resolution
+     real, dimension(3)       :: Center_D,  Size_D
+     real                     :: Radius1, Radius2
+  end type AreaType
+
+  type(AreaType) :: Area_I(MaxArea)
+
 end module ModAMR
