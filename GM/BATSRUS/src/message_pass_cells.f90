@@ -89,21 +89,26 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        V(     lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           V(     lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                V(lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         V(lR(1),lR(3),lR(5),lR(7)) = V(lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            V(i,j,k,lR(7)) = V(lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
-        V(lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine*V(lS(1),lS(3),lS(5),lS(7))+ &
-                V(lS(2),lS(3),lS(5),lS(7))+V(lS(1),lS(4),lS(5),lS(7))+V(lS(1),lS(3),lS(6),lS(7)))
+        V(lR(1),lR(3),lR(5),lR(7)) = (cOne/cTwelve)*(cNine* &
+             V(lS(1),lS(3),lS(5),lS(7))+ &
+             V(lS(2),lS(3),lS(5),lS(7))+ &
+             V(lS(1),lS(4),lS(5),lS(7))+ &
+             V(lS(1),lS(3),lS(6),lS(7)))
      else
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-        Counter=real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-        V(lR(1),lR(3),lR(5),lR(7)) = sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))/Counter
+        Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+        V(lR(1),lR(3),lR(5),lR(7)) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
      end if
   end do
 
@@ -116,12 +121,15 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
         if(lS(0)==1 .or. lS(0)==2)then
            VSend(iV) = V(lS(1),lS(3),lS(5),lS(7))
         elseif(lS(0)==3)then
-           VSend(iV) = (cOne/cTwelve)*(cNine*V(lS(1),lS(3),lS(5),lS(7))+ &
-                V(lS(2),lS(3),lS(5),lS(7))+V(lS(1),lS(4),lS(5),lS(7))+V(lS(1),lS(3),lS(6),lS(7)))
+           VSend(iV) = (cOne/cTwelve)*(cNine* &
+                V(lS(1),lS(3),lS(5),lS(7))+ &
+                V(lS(2),lS(3),lS(5),lS(7))+ &
+                V(lS(1),lS(4),lS(5),lS(7))+ &
+                V(lS(1),lS(3),lS(6),lS(7)))
         else
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
-           Counter=real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
-           VSend(iV) = sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))/Counter
+           Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
+           VSend(iV) = Counter*sum(V(lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end if
      end do
   end do
@@ -137,7 +145,8 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
            itag = nProc*(i-1)+iPE
            nRECVrequests = nRECVrequests + 1
            if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
-           call MPI_irecv(VRecv(nRecvStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+           call MPI_irecv(VRecv(nRecvStart(iPE)+1+((i-1)*MessageSize)), &
+                min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
                 MPI_REAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
         end do
      else
@@ -164,11 +173,13 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
         do i=1,nSends
            itag = nProc*(i-1)+iProc
            if(DoRSend)then
-              call MPI_rsend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_rsend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)), &
+                   min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,iError)
            else
               nSENDrequests = nSENDrequests + 1
-              call MPI_isend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)),min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+              call MPI_isend(VSend(nSendStart(iPE)+1+((i-1)*MessageSize)), &
+                   min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
                    MPI_REAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
            end if
         end do
@@ -195,7 +206,7 @@ subroutine message_pass_cells(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,V)
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               V(i,j,k,lR(7)) = VRecv(iV)
            end do; end do; end do
         else
@@ -269,13 +280,15 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        State_VGB(     :,lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             State_VGB(:,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           State_VGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                State_VGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         State_VGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
@@ -288,8 +301,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
         Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         do iVar=1,nVar
-           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) =  sum(&
-               State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) =  Counter*sum(&
+               State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end do
      end if
   end do
@@ -312,8 +325,8 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
            Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            do iVar=1,nVar
-              VSend8(iVar,iV) = sum(&
-                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+              VSend8(iVar,iV) = Counter*sum(&
+                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
            end do
         end if
      end do
@@ -393,7 +406,7 @@ subroutine message_pass_cells8(DoOneLayer,DoFacesOnly,UseMonotoneRestrict,nVar,S
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               State_VGB(:,i,j,k,lR(7)) = VRecv8(1:nVar,iV)
            end do; end do; end do
         else
@@ -466,13 +479,15 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
      lS(:)=VSendIlocal(:,iV)
      lR(:)=VRecvIlocal(:,iV)
      if(lS(0)==0)then
-        State_VGB(     :,lR(1):lR(2),lR(3):lR(4),lR(5):lR(6),lR(7)) = &
-             State_VGB(:,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7))
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           State_VGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                State_VGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
      elseif(lS(0)==1)then
         State_VGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
              State_VGB(:,lS(1),lS(3),lS(5),lS(7))
      elseif(lS(0)==2)then
-        do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
            State_VGB(:,i,j,k,lR(7)) = State_VGB(:,lS(1),lS(3),lS(5),lS(7))
         end do; end do; end do
      elseif(lS(0)==3)then
@@ -485,8 +500,8 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
         if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
         Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
         do iVar=1,nVar
-           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) = &
-                sum(State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+           State_VGB(iVar,lR(1),lR(3),lR(5),lR(7)) = Counter*sum( &
+                State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
         end do
      end if
   end do
@@ -509,8 +524,8 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
            if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
            Counter=cOne/real( (1+lS(2)-lS(1)) * (1+lS(4)-lS(3)) * (1+lS(6)-ls(5)) )
            do iVar=1,nVar
-              VSend8(iVar,iV) = &
-                   sum(State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))*Counter
+              VSend8(iVar,iV) = Counter*sum( &
+                   State_VGB(iVar,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
            end do
         end if
      end do
@@ -590,7 +605,7 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
      do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
         lR(:)=VRecvI(:,iV)
         if(lR(0)==2)then
-           do i=lR(1),lR(2); do j=lR(3),lR(4); do k=lR(5),lR(6)
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
               State_VGB(1:nVar,i,j,k,lR(7)) = VRecv8(:,iV)
            end do; end do; end do
         else
