@@ -57,8 +57,8 @@ The #TIMEEND command sets the final date and time for the simulation.
 
 <command name="RESTART">
 	<parameter name="DoRestart" type="logical" default="F" />
-        <rule expr="-f 'UA/RestartIN/header.rst' or not $DoRestart">
-                File UA/RestartIN/header.rst should exist!
+        <rule expr="-f 'UA/restartIN/header.rst' or not $DoRestart">
+                File UA/restartIN/header.rst should exist!
 	</rule>
 
 #RESTART
@@ -586,8 +586,8 @@ stfd.fpi.in
 
 </commandgroup>
 
-<rule expr="-d 'UA/RestartOUT' or not $_IsFirstSession">
-        Directory UA/RestartOUT should exist!
+<rule expr="-d 'UA/restartOUT' or not $_IsFirstSession">
+        Directory UA/restartOUT should exist!
 </rule>
 
 <rule expr="-d 'UA/data' or not $_IsFirstSession">
