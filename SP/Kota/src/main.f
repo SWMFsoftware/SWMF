@@ -701,9 +701,9 @@ c ==========================================  identify shock
       rsh=rshck1
 
       if(DoWriteAll)write(iStdout,*) prefix,
-     1      'shock azonositva ish : ',ish,rsh
+     1      'shock identified ish : ',ish,rsh
       if(DoWriteAll)write(iStdout,*) prefix,
-     1       '     tavolsagban r   : ',arr(ish),rsh
+     1       '     at distance r  : ',arr(ish),rsh
       if(DoWriteAll)write(iStdout,*) prefix      
 
 c ====================================  identify end-points
