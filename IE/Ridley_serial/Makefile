@@ -37,4 +37,5 @@ clean:
 distclean:
 	touch src/Makefile.DEPEND
 	cd src; make distclean
-	rm -f Makefile.conf *~
+	rm -f Makefile.conf Makefile.def *~
+	echo 'STANDALONE=NO' > Makefile.def
