@@ -1,13 +1,11 @@
 #ECHO
 T
 
-#DESCRIPTION
-Use restart data for SC (/g/public/screstart.tar)
-Create restart files for IH. Needs user_routines.f\90.heliosphere!
-See the results and README file in /g/public/scihrestart.tar
-
 #INCLUDE
-RESTART.in
+RESTART.SC
+
+#DESCRIPTION
+Use restart data for SC and create SC-IH steady state
 
 #IDEALAXES
 ! align both the rotational and the magnetic axes of Earth with ecliptic North
@@ -15,10 +13,27 @@ RESTART.in
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#RESTARTFILE
+RESTART.SCIH
+
 #SAVERESTART
 T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
+
+! No need to run SC too often, it is already in steady state
+
+#CYCLE
+SC			NameComp
+100			DnRun
+
+! No need to couple SC too often
+
+#COUPLE2
+SC			NameSource
+IH			NameTarget
+100			DnCouple
+-1.0			DtCouple
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
@@ -77,15 +92,15 @@ T			UseInertial, if false then corotating frame
 F			UseCorotation
 
 #GAMMA
-1.50000E+00		g
+1.50000E+00		Gamma
 
 #OUTERBOUNDARY
-coupled 		TypeBcOuter_E(East_)
-coupled 		TypeBcOuter_E(West_)
-coupled 		TypeBcOuter_E(South_)
-coupled 		TypeBcOuter_E(North_)
-coupled 		TypeBcOuter_E(Bot_)
-coupled 		TypeBcOuter_E(Top_)
+coupled			TypeBcEast
+coupled			TypeBcWest
+coupled			TypeBcSouth
+coupled			TypeBcNorth
+coupled			TypeBcBottom
+coupled 		TypeBcTop
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -93,9 +108,8 @@ Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
 minmod			TypeLimiter
 
 #TIMESTEPPING
-2                       nStage
+1                       nStage
 0.80                    CflExpl
-
 
 #SAVELOGFILE
 T                       DoSaveLogfile
@@ -106,45 +120,53 @@ em_r ek_r et_r
 4.0  10.0               rLog
 
 #SAVEPLOT
-4			nplotfiles
-x=0 MHD tec             plot_string
-10000                   dn
--1.0			dt
-y=0 MHD tec		plot_string
-10000			dn
--1.0			dt
-z=0 MHD tec		plot_string
-10000			dn
--1.0			dt
+6			nPlotFile
+x=0 MHD tec             StringPlot
+10000                   DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+z=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+x=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 y=0 MHD idl             StringPlot
-500                     DnOutput(plot_+3)
--1.			DtOutput
--1.			DxOutput
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 
-#END_COMP SC
-
-! Do not run IE until GM gets some reasonable solution
-
-#COUPLE2
-SC			NameSource
-IH			NameTarget
-1			DnCouple
-10.			DtCouple
-
+#END_COMP SC ---------------------------------------------------------------
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
+! Make continuation easier
+#RESTARTOUTDIR
+IH/restartIN
+
+! Check if the block size is correct and the number of blocks are sufficient
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+8			nK
+5000			MinBlockALL
+
 #PROBLEMTYPE
-3			problem_type: 3=Solar Wind and Inner Heliosphere
+3			iProblemType: 3=Solar Wind and Inner Heliosphere
 
 #BODY
-T
-20.0
+T			UseBody1
+20.0			rBody
 
 #INNERBOUNDARY
-coronatoih
-
-
+coronatoih		TypeBcInner
 
 #HELIOSPHERE
 2.85E+06		Tsun    [K]      1.0E6 
@@ -156,37 +178,35 @@ coronatoih
 F                       UseUserPerturbation
 
 #HELIODIPOLE
-0.0			HelioDipoleStrength(equatorial field strength in Gauss)
-0.0			HelioDipoleTilt
-
+-3.0			HelioDipoleStrength(equatorial field strength in Gauss)
+ 0.0			HelioDipoleTilt
 
 #GRID
-1			proc_dims(1)
-1			proc_dims(2)
-1			proc_dims(3),
--240.0			x1  
- 240.0			x2  
--240.0			y1 
- 240.0			y2 
--240.0			z1 
- 240.0			z2 
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-240.0			xMin
+ 240.0			xMax
+-240.0			yMin
+ 240.0			yMax
+-240.0			zMin
+ 240.0			zMax
 
 #OUTERBOUNDARY
-float			TypeOuterBC(east_)
-float			TypeOuterBC(west_)
-float			TypeOuterBC(south_) 
-float			TypeOuterBC(north_) 
-float			TypeOuterBC(bot_)  
-float			TypeOuterBC(top_) 
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth 
+float			TypeBcNorth 
+float			TypeBcBottom  
+float			TypeOuterBcTop
 
 #AMRINIT
-coupledhelio    	InitialRefineType
-6			nLevelInitialRefine
+coupledhelio    	TypeRefineInit
+6			nLevelRefineInit
 
 #TIMESTEPPING
-2			nStage
+1			nStage
 0.8			CflExpl
-
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -195,18 +215,31 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-2                       nPlotFiles
+6                       nPlotFiles
 x=0 MHD tec             StringPlot
-10000                   DnOutput(plot_+3)
--1.			DtOutput
+1000                    DnSavePlot
+-1.			DtSavePlot
+y=0 MHD tec             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+z=0 MHD tec             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+x=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 y=0 MHD idl             StringPlot
-500                     DnOutput(plot_+3)
--1.			DtOutput
--1.			DxOutput
-
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl             StringPlot
+1000                    DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 
 #GAMMA
-1.50000E+00		g
+1.50000E+00		Gamma
 
 #SCHEME
 2			nOrder
@@ -215,9 +248,22 @@ minmod                  TypeLimiter
 
 #END_COMP IH -----------------------------------------------------------------
 
+#STOP
+4000                    MaxIteration
+-1.			tSimulationMax
+
+#RUN #########################################################################
+
+#BEGIN_COMP IH ---------------------------------------------------------------
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#END_COMP IH ----------------------------------------------------------------
 
 #STOP
-10000                   MaxIter
--1.			TimeMax
+6000			MaxIteration
+-1.			tSimulationMax
 
 #END
