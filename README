@@ -2,15 +2,16 @@
 # Obtain SWMF and the tests #
 #############################
 
-# Get the source code
-cvs checkout SWMF_NEW
+# Get the source code from cvs (UM only) or from the tar ball.
+cvs checkout SWMF_NEW    -OR-    tar -xzf SWMF_v2.tgz
 
 # Change directory
 cd SWMF_NEW
 
-# Get the test tar ball into this directory and open it
+# From withing this directory, open the test tar ball
 # It will create a test/ subdirectory with several files
-tar xf SWMF_TEST.tar
+# Warning, this directory will be approximately 1GB in size!
+tar -xf {path_to_file}/SWMF_TEST.tar
 
 ################
 # install SWMF #
@@ -51,6 +52,20 @@ make PIDL
 ########################
 make rundir
 cd run
+
+#########################################################
+#                                                       #
+# NOTE: Test 1 is the official milestone 10 run.  It    #
+# will simultate 600 seconds of a fully coupled run.    #
+# On select platforms and with enough processors, it    #
+# runs faster than real time.                           #
+#                                                       #
+# The remainder of the tests are used both to test      #
+# subsets of components, and to build up the necessary  #
+# restart files to execute test 1.  These tests are     #
+# described in more detail in the manual.               #
+#                                                       #
+#########################################################
 
 #########################################################
 # TEST 1: restart 8 components at 4 hours physical time #
@@ -117,6 +132,7 @@ pTEC
 cd ../IE
 pION -r
 cd ..
+
 
 #################################################################
 # TEST 2: restart 8 components from an approximate steady state #
