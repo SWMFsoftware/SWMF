@@ -363,11 +363,19 @@ contains
     end if
 
     ! Check if the mapping radius differs from the radius of input position
-    if( abs(r-rMap) < DrNormLimit ) then
-       ! Trivial mapping
-       XyzMap_D = XyzIn_D
+    if( abs(r-rMap) < DrNormLimit .and. .not.present(DdirDxyz_DD) ) then
+
+       if(present(DoNotConvertBack) .and. DoConvert)then
+          ! Output is the converted coordinates
+          XyzMap_D = Xyz_D
+          if( index(TypeCoord,"NORM")<=0 ) Xyzmap_D = Xyzmap_D * RadiusPlanet
+       else
+          ! Trivial mapping
+          XyzMap_D = XyzIn_D
+       end if
        ! The hemisphere has been established already
        RETURN
+
     end if
 
     ! Find the mapped position
@@ -430,6 +438,7 @@ contains
           ! Transform into the system of the input coordinates
           ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
           if(DoConvert) DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
+
        endif
 
     case default
