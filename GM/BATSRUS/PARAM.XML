@@ -2655,7 +2655,7 @@ Default value is UseAccurateTrace = .false.
 	<parameter name="SwUxDim"  type="real" max="0"	default="-400"	/>
 	<parameter name="SwUyDim"  type="real"		default="0"	/>
 	<parameter name="SwUzDim"  type="real"		default="0"	/>
-	<parameter name="SwBxDim"  type="real" max="0"	default="-400"	/>
+	<parameter name="SwBxDim"  type="real"		default="0"	/>
 	<parameter name="SwByDim"  type="real"		default="0"	/>
 	<parameter name="SwBzDim"  type="real"		default="5"	/>
 #SOLARWIND
