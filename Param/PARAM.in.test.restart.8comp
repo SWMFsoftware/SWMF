@@ -11,7 +11,7 @@ T			UseTiming
 cumm			TypeTimingReport
 
 #INCLUDE
-RESTART.4hr
+RESTART.in
 
 #IDEALAXES
 ! align both the rotational and the magnetic axes of Earth with ecliptic North
@@ -286,7 +286,7 @@ GM			NameTarget
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #INCLUDE
-GM/restartIN/restart.H.4hr
+GM/restartIN/restart.H
 
 #AMRINIT
 magneto12		TypeRefineInit
