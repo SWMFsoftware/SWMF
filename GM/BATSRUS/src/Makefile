@@ -3,15 +3,6 @@
 SHELL =/bin/sh
 
 include ../Makefile.def
-
-# IH WRAPPER DEFINITIONS 
-# these definitions are commented out in IH/BATSRUS/src/Makefile only
-
-#IH_WRAPPER_MOD    = ModGridDescriptor.o
-#IH_WRAPPER_OBJ    = IH_wrapper.o
-#IH_WRAPPER_SEARCH = -I${COUPLERDIR} -I${LIBRARYDIR}
-SEARCH_EXTRA = ${IH_WRAPPER_SEARCH}
-
 include ../Makefile.conf
 include Makefile.OPTIONS
 include Makefile.DEPEND
@@ -200,7 +191,7 @@ DEPEND:
 # Library for framework and also for stand alone code
 #
 
-MY_LIB = ${LIBDIR}/libBATSRUS.a
+MY_LIB = libBATSRUS.a
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -229,7 +220,7 @@ ${OBJECTS_EXE}: ${MY_LIB} ${LIBSHARE} ${LIBTIMING}
 
 BATSRUS.exe: ${OBJECTS_EXE}
 	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
-		-L${LIBDIR} -lBATSRUS -lSHARE -lTIMING \
+		-L. -lBATSRUS -L${LIBDIR} -lSHARE -lTIMING \
 		${Lflag1}
 
 #
