@@ -2,7 +2,7 @@
 SHELL = /bin/sh
 
 help:
-	@echo 'Targets to make for the TIMING module:'
+	@echo 'Targets for the documentation of the TIMING utility:'
 	@echo ' '
 	@echo 'help              - this help (default target)'
 	@echo ' '
@@ -10,14 +10,10 @@ help:
 	@echo ' '
 	@echo 'clean             - /bin/rm -f *.o *.exe'
 	@echo 'distclean         - /bin/rm -f *.o *.exe *.a *~'
-	@echo ' '
-	@echo 'dist              - /bin/tar -cf ../TIMING.tar .'
 
 MAN:	MAN_TIMING.ps.gz
 
-MAN_TIMING.tex: TIMING.tex
-
-MAN_TIMING.dvi : MAN_TIMING.tex
+MAN_TIMING.dvi : MAN_TIMING.tex TIMING.tex
 	latex MAN_TIMING.tex
 	latex MAN_TIMING.tex
 
