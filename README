@@ -13,7 +13,7 @@ mkdir SWMF_NEW
 cd SWMF_NEW
 tar -xzf {path_to_file}/SWMF_v2.tgz
 
-# From withing the SWMF_NEW directory, open the test tar ball
+# From within the SWMF_NEW directory, open the test tar ball
 # It will create a test/ subdirectory with several files.
 # Warning, this directory will be approximately 1GB in size!
 tar -xf {path_to_file}/SWMF_TEST_part1.tar
@@ -24,7 +24,7 @@ tar -xf {path_to_file}/SWMF_TEST_part2.tar
 ################
 # !!! On the SGI Altix do the following !!!
 SetSWMF.pl -install -c=ifort -m=Altix
-module switch intel-comp.7.1.027 intel-comp.8.0.066
+module load intel-comp.8.0.070
 
 # !!! On a Linux system with the PGF90 compiler !!!
 SetSWMF.pl -install -c=pgf90
