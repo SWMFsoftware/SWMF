@@ -13,6 +13,7 @@ module CON_coupler
   !USES:
   use CON_comp_param
   use CON_world
+  use CON_buffer_grid
   use CON_global_message_pass, &
        couple_comp => global_message_pass
   use CON_router
@@ -53,10 +54,10 @@ module CON_coupler
   integer :: iCompCoupleOrder_II(2,MaxCouple) = reshape ( (/&
        ! This is the default order based on the propagation of information
        ! from component to component
-       SC_, IH_, & 
-       IH_, SC_, &
-       SC_, SP_, & !The order of these two couplings is mandatory
-       IH_, SP_, & !Do not modify them, please.
+       IH_, SC_, & !\The mutual order of these two couplings is mandatory
+       SC_, IH_, & !/Do not modify them, please.
+       SC_, SP_, & !\The mutual order of these two couplings is mandatory
+       IH_, SP_, & !/Do not modify them, please.
        IH_, GM_, &
        GM_, IE_, &
        GM_, IM_, &
