@@ -240,8 +240,8 @@ a warning is printed on the screen, and the command is ignored.
 
 In several commands the frequency or 'time' of some action has
 to be defined. This is usually done with a pair of parameters.
-The first defines the frequency or time in terms of time steps,
-and the second one in terms of number of simulation time.
+The first defines the frequency or time in terms of the number of time steps,
+and the second one in terms of the simulation time.
 A negative value for the frequency means that it should not be taken 
 into account. For example, in time accurate mode,
 \begin{verbatim}
@@ -333,7 +333,8 @@ with the meanings outlined above.
 As outlined in section~\ref{section:order}, commands that ask for a 
 frequency of doing something (say 
 writing the restart file) or for ending a session asks for either a number of
-iterations, time steps or a physical (simulated) time, depending on whether the time
+iterations, time steps or a physical (simulated) time, depending on 
+whether the time
 stepping mode is local or time accurate.
 With the {\tt \#SAVERESTART} command, for example, in local time stepping mode
 the command with its parameters would be
@@ -341,35 +342,22 @@ the command with its parameters would be
 #SAVERESTART
 T            DoSaveRestart
 2000         DnSaveRestart
-\end{verbatim}
-and a restart file would be written to disk every 2000 iterations. In
-time accurate mode, the form must be 
-\begin{verbatim}
-#SAVERESTART
-T            DoSaveRestart
-2000         DnSaveRestart
-10.0         DtSaveRestart
-\end{verbatim}
-Where the input for {\tt dn\_output} is an integer and for {\tt dt\_output}
-is a real.
-A negative value for the frequency means that it should not be taken 
-into account. For example, in time accurate mode,
-\begin{verbatim}
-#SAVERESTART
-T            DoSaveRestart
-2000         DnSaveRestart
 -1.          DtSaveRestart
 \end{verbatim}
-means that a restart file should be saved after every 2000th time step, while
+and a restart file would be written to disk every 2000 time steps. 
+A negative value for the time frequency means that it should not be taken 
+into account. The previous command works in time accurate mode too, 
+but it ismore typical to define the frequency in physical time:
 \begin{verbatim}
 #SAVERESTART
 T            DoSaveRestart
 -1           DnSaveRestart
 100.0        DtSaveRestart
 \end{verbatim}
-means that it should be saved every 100 seconds in terms of physical time.
-Defining positive values for both frequencies is unlikely to be useful but will
-work.  The code would write a restart file at both frequencies.
+which means that the restart files should be saved every 100 seconds. 
+Defining positive values for both frequencies is possible but not
+very easy to read. In steady state mode the time step frequency, 
+while in time accurate mode the physical time frequency will be used.
 
 Now, what happens when the user has more than one session and he or she
 changes the frequencies.  Let us examine what would happen in the following
