@@ -40,6 +40,10 @@ public:
     }
   };
 
+  int size() {
+    return nfuncs;
+  };
+
   void SetFunc(int fnum,T newfunc) {
     if ((func!=NULL)&&(nfuncs>fnum))
       func[fnum]=newfunc;
@@ -75,11 +79,15 @@ public:
     if ((func!=NULL)&&(n<nfuncs)) if (func[n]!=NULL) res=func[n];
 
     if (res==NULL) {
-       printf("Cbc::CExternalFaceBCFunction::GetFunc: Error: cannot find function for n=%i\n",n);
+       printf("template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
        exit(0);
     }
 
     return res;
+  };
+
+  T operator[] (int n) {
+    return (n<nfuncs) ? func[n] : NULL;
   };
 
   CExternalFunction() {nfuncs=0,func=NULL;};
