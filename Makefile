@@ -114,7 +114,7 @@ install: ENV_CHECK mkdir
 	cd ${IHDIR};    make install    #^CMP IF IH
 	cd ${IMDIR};    make install    #^CMP IF IM
 	cd ${UADIR};    make install    #^CMP IF UA
-	cd ${RBDIR};    make install
+	cd ${RBDIR};    make install    #^CMP IF RB
 	@echo
 	@echo Installation succeeded
 	@echo
@@ -147,9 +147,9 @@ NOMPI: ENV_CHECK
 # STAND-ALONE EXECUTABLES FOR COMPONENTS
 #
 
-RBM:	ENV_CHECK
-	@cd ${RBDIR}; make RBM 
-	@echo ' '
+RBM:	ENV_CHECK                               #^CMP IF RB
+	@cd ${RBDIR}; make RBM                  #^CMP IF RB
+	@echo ' '                               #^CMP IF RB
 
 #
 #	Post processing
@@ -200,7 +200,7 @@ clean: ENV_CHECK
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
-	cd RB/Rice;		make clean
+	cd RB/Rice;		make clean    #^CMP IF RB
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -229,7 +229,7 @@ distclean: ENV_CHECK rmdir
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
-	cd RB/Rice;		make distclean
+	cd RB/Rice;		make distclean    #^CMP IF RB
 	cd CON;			make distclean
 	cd util;		make distclean
 	cd share;               make distclean
@@ -275,6 +275,7 @@ dist: distclean
 	tar -rf tmp.tar  IH			#^CMP IF IH
 	tar -rf tmp.tar  IM			#^CMP IF IM
 	tar -rf tmp.tar  UA			#^CMP IF UA
+	tar -rf tmp.tar  RB                     #^CMP IF RB
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
@@ -298,7 +299,7 @@ rundir: ENV_CHECK
 	cd ${IHDIR}; make rundir PLOT=${PLOT}    #^CMP IF IH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${UADIR}; make rundir                 #^CMP IF UA
-	cd ${RBDIR}; make rundir
+	cd ${RBDIR}; make rundir                 #^CMP IF RB
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
