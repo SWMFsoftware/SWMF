@@ -20,8 +20,9 @@ help:
 	@echo '    install   (create MAKEFILES, src/ModSize.f90, src/mpif90.h)'	
 	@echo '    MAKEFILE_DEF (create/correct Makefile.def)'
 	@echo ' '
-	@echo '    LIB     (Component libraries libGM and libINTGM for SWMF)'
+	@echo '    LIB     (Component library libGM for SWMF)'
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
+	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL program creates 1 .out file from local .idl files)'
 	@echo '    PSPH    (PostSPH program creates spherical tec file from sph*.tec files)' #^CFG IF NOT SIMPLE
 	@echo ' '
@@ -106,15 +107,8 @@ BATSRUS:
 	@echo Program BATSRUS has been brought up to date.
 	@echo ' '	
 
-BATSRUSdotO:
-	cd ${SHAREDIR}; make LIB
-	cd ${TIMINGDIR}; make LIB
-	cd src; make LIB
-	cd src; make BATSRUS.exe
-	cd src; make BATSRUSdotO.exe
-	@echo ' '
-	@echo Program BATSRUS has been brought up to date.
-	@echo ' '	
+NOMPI:
+	cd util/NOMPI/src; make LIB
 
 PIDL:
 	cd srcPostProc; make PIDL
