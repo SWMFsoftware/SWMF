@@ -52,7 +52,7 @@ subroutine GM_set_param(CompInfo, TypeAction)
           UseRotationOut = UseCorotation)
      call time_real_to_int(StartTime,iStartTime_I)
 
-     call MH_set_parameters(TypeAction)
+     call MH_set_parameters('CHECK')
   case('STDOUT')
      iUnitOut=STDOUT_
      if(iProc==0)then
