@@ -9,10 +9,12 @@
 # This script allows to store the parameter descriptions in a single XML file
 # which is suitable for automated parameter checking and GUI generation,
 # yet provide the same information in a well formatted and printable manual
-# as well. The specific format of the PARAM.XML files is given elsewhere.
+# as well. The specific format of the PARAM.XML files is described by the
+# share/Scripts/CheckParam.pl script and the manual.
 #
 #!REVISION HISTORY:
-# 03/22/04 G.Toth - initial version
+# 03/22/2004 G.Toth - initial version
+# 08/13/2004          preserve _{.. for subscripts in Latex.
 #EOP
 if($h|$help|$H|$Help){
     print 
@@ -29,7 +31,7 @@ Usage:
 
 infile   Input file. Default is reading from STDIN.
 
-outfile  Output file. Default is writing to STDOUT
+outfile  Output file. Default is writing to STDOUT.
 
 Example: 
 
@@ -38,7 +40,7 @@ Example:
     ,"\n\n";
     exit 0;
 }
-
+#BOC
 use strict;
 my ($verbatim, $comment, $rule, $start);
 
@@ -58,7 +60,8 @@ while(<>){
 	$_="\\subsection\{\u\L$1\}\n\n";
     }
 
-    next unless $start; # skip things before the first command group
+    # skip things before the commandList
+    next unless $start; 
 
     # command --> subsubsection
     if(/^\s*<command/){
@@ -104,12 +107,13 @@ while(<>){
     # Replace TAB characters with spaces
     1 while s/\t+/' ' x (length($&) * 8 - length($`) % 8)/e;
 
-    # Put \ before special Tex characters, but not 2 backslashes
-    # Do not put \ before _{ because it is likely to be a subscript in
-    # mathematical mode.
     if(not $verbatim){
+	# Put \ before special Tex character #
 	s/\#/\\\#/g;
+	# Put \ before special Tex character _ but not before _{
+	# This allows the use of _{1} subscript in math mode
 	s/(\_[^\{])/\\$1/g;
+	# Do not put two \ before # and _
 	s/\\\\([\#_])/\\$1/g;
     }
 
@@ -119,3 +123,4 @@ while(<>){
     # Print out the line
     print;
 }
+#EOC
