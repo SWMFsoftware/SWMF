@@ -1,0 +1,14 @@
+This is the layout to run the 8 component test faster than real time
+
+#COMPONENTMAP
+UA	  0	 31	1
+SC	 32	999	2
+IH	 32	999	2
+IE	 33      35     2
+IM       37      37     1
+GM       39     999     2
+#END
+
+RB       37      37     1
+SP       39      39     1
+GM       41     999     1
