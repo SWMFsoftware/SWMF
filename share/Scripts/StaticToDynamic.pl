@@ -10,6 +10,7 @@ use strict;
 
 &print_help if $Help;
 
+my $module;          # the name of the module
 my $cont;            # true if previous line is continued
 my $line;            # current line with continuation lines
 my %dimension;       # hash contains dimension for variables
@@ -23,9 +24,6 @@ my $WARNING = "StaticToDynamic.pl WARNING:";
 my $ERROR = "StaticToDynamic.pl ERROR:";
 
 while(<>){
-
-    # Set $contains variable
-    $contains = 1 if /^\s*contains\b/;
 
     if($contains){
 	# Print the line out
@@ -43,7 +41,8 @@ while(<>){
 	    foreach $variable (@allocated){
 		print "    allocate($variable".
 		    "$dimension{$variable},stat=iError)\n";
-		print "    call check_allocate(iError,'$variable')\n";
+		print "    call check_allocate(iError,'$module","::".
+		    "$variable')\n";
 	    }
 	}
 
@@ -61,6 +60,17 @@ while(<>){
 	# Nothing else to do
 	next;
     }
+
+    # Get the name of the module
+    $module = $1 if ?^\s*module\s+(\w+)?i;
+
+    # Edit the logical IsDynamic* variable/parameter to .true.:
+    s[(^\s*logical\s*(,\s*parameter)?(\s*::)?\s*IsDynamic\w*\s*=\s*)\.false\.]
+      [$1\.true\.]i;
+
+    # Set $contains variable
+    $contains = 1 if /^\s*contains\b/;
+
 
     # process lines which are before the contains statement
 
