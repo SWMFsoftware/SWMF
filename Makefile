@@ -358,6 +358,7 @@ IH/BATSRUS/src/Makefile:
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 	cp GM/BATSRUS/srcInterface/ModGridDescriptor.f90 IH/BATSRUS/src
 	cp GM/BATSRUS/srcInterface/update_lagrangian_grid.f90 IH/BATSRUS/src
+	cp GM/BATSRUS/srcInterface/ModBuffer.f90 IH/BATSRUS/src
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/src
 	cd GM/BATSRUS; \
 		cp Makefile.def PARAM.XML PARAM.pl GridSize.pl \
@@ -370,7 +371,8 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl IH; \
 		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
 		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;\
-		mv ModGridDescriptor.f90 update_lagrangian_grid.f90 IH_*.f90 \
+		mv ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 IH_*.f90 \
 			../srcInterface
 	cd IH/BATSRUS/srcInterface; \
 		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
@@ -401,7 +403,8 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl SC; \
 		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
 		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f;\
-		mv ModGridDescriptor.f90 update_lagrangian_grid.f90 SC_*.f90 \
+		mv ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 SC_*.f90 \
 			../srcInterface
 	touch ${SCDIR}/srcInterface/Makefile.DEPEND
 
