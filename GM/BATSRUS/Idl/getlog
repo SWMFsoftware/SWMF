@@ -71,9 +71,18 @@ close_file:close,1
 
    if nlogfile gt 1 then begin
      case ifile of
-     0: wlog0=wlog
-     1: wlog1=wlog
-     2: wlog2=wlog
+     0: begin
+	   wlog0=wlog
+	   wlognames0 = wlognames
+        end
+     1: begin
+	   wlog1=wlog
+	   wlognames1 = wlognames
+        end
+     2: begin
+	   wlog2=wlog
+	   wlognames2 = wlognames
+        end
      endcase
    endif
 endfor
