@@ -791,6 +791,9 @@ GSM			TypeCoordSystem
 <command name="RESTARTINDIR" if="$_IsFirstSession">
 	<parameter name="NameRestartInDir" type="string" length="100"
 				default="GM/restartIN" />
+	<rule expr="-d $NameRestartInDir">
+		Restart input directory $NameRestartInDir must exist
+	</rule>
 
 #RESTARTINDIR
 GM/restart_n5000	NameRestartInDir
@@ -1417,6 +1420,9 @@ To do the check the CpuTimeMax variable has to be set to a positive value.
 <command name="RESTARTOUTDIR">
 	<parameter name="NameRestartOutDir" type="string" length="100"
 				default="GM/restartOUT" />
+	<rule expr="-d $NameRestartOutDir">
+		Restart output directory $NameRestartOutDir must exist
+	</rule>
 
 #RESTARTOUTDIR
 GM/restart_n5000	NameRestartOutDir
@@ -1465,6 +1471,9 @@ T			DoSaveRestart Rest of parameters read if true
 <command name="PLOTDIR">
 	<parameter name="NamePlotDir" type="string" length="100"
 				default="GM/IO2" />
+	<rule expr="-d $NamePlotDir">
+		Plot directory $NamePlotDir must exist
+	</rule>
 
 The NamePlotDir variable contains the name of the directory
 where plot files and logfiles are saved relative to the run directory.
@@ -1632,6 +1641,9 @@ rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 							default="-1" />
 		<parameter name="NameTrajectoryFile" type="string" 
 			length="100" />
+		<rule expr="-f $NameTrajectoryFile">
+			Trajectory file $NameTrajectoryFile must exist
+		</rule>
 		<parameter name="NameSatelliteVars" type="string" length="100"
 			if="$TypeSatelliteVar =~ /\bvar\b/i" />
 	</for>
@@ -2841,9 +2853,10 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 	<parameter name="UseUpstreamInputFile" type="logical" default="F"/>
 	<if expr="$UseUpstreamInputFile">
 		<parameter name="NameUpstreamFile" type="string" length="100"/>
-		<parameter name="SatelliteYPos"	type="real" default="0"	/>
-		<parameter name="SatelliteZPos"	type="real" default="0"	/>
 	</if>
+	<rule expr="-f $NameUpstreamFile">
+		Upstream file $NameUpstreamFile must exist
+	</rule>
 #UPSTREAM_INPUT_FILE
 T			UseUpstreamInputFile (rest of parameters read if true)
 IMF.dat                 NameUpstreamFile
