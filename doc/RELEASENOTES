@@ -37,9 +37,7 @@ UA/GITM:
 UA/GITM2:
 	1. The new version 2 of GITM has not been tested on all platforms.
 	   Succesful test runs were made with 
-           the SGI Altix/Intel ifort8.070 and 
-	   the Linux/NAG f95 compilers.
-           Problems were encountered with the Linux/pgf90 compiler.
+           SGI Altix/Intel ifort8.070, Linux/NAG f95, and Linux/pgf90.
 
 IM/RCM:
         1. Restarting the RCM (IM module) requires that if both restart
@@ -52,11 +50,6 @@ IM/RCM:
 	NOTE: The plotting output is being completely redesigned 
               to address this.
 
-IE/Ridley_serial:
-	1. For the Darwin/NAG f95 platform/compiler combination
-           there seems to be a memory leak. This is likely to be
-           a compiler issue.
-
 GM, IH, SC  / BATSRUS:
         1. Automatic Mesh Refinement (AMR) on restart does not hold the
            blocks touching the body to a constant refinement level
@@ -66,12 +59,6 @@ GM, IH, SC  / BATSRUS:
         2. The user_routine structure seems to require a reformulation
            in order to avoid incompatibilities of the different
            routines and flags.
-
-	3. For the Darwin/xlf90 platform/compiler combination there are
-           various problems: the implicit scheme can run out of memory,
-           and the writing of the spherical plots can also crash.
-
-	   NOTE: These problems should be resolved soon.
 
 SP/Kota:
         1. The SEP module included with this release does not have the
