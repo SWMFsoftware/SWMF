@@ -139,7 +139,7 @@ HTML: cleanhtml SWMF.html
 #^CFG END DOCHTML
 
 clean:
-	rm -rf *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex
+	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMF_xml.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
@@ -152,4 +152,3 @@ cleanhtml: clean
 
 cleanall: cleanpdf cleanhtml
 #^CFG END DOCHTML
-

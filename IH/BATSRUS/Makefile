@@ -28,17 +28,20 @@ clean:
 	@(if([ -f src/Makefile ]); then \
 	   touch src/Makefile.DEPEND src/Makefile.RULES src/Makefile.OPTIONS; \
 	   cd src; make clean; \
+	   touch srcInterface/Makefile.DEPEND; cd srcInterface; make clean; \
 	fi)
-	touch srcInterface/Makefile.DEPEND; cd srcInterface; make clean
 
 distclean: clean
-	@(if([ -f src/Makefile ]); then cd src; make distclean; fi)
-	touch srcInterface/Makefile.DEPEND; cd srcInterface; make distclean
+	@(if([ -f src/Makefile ]); then \
+	  cd src; make distclean; \
+	  cd srcInterface; make distclean; \
+	fi)
 
 veryclean:
 	touch srcInterface/Makefile.DEPEND; cd srcInterface; make distclean;
 	rm -rf  src \
 		srcInterface/IH_wrapper.f90 \
 		srcInterface/ModGridDescriptor.f90 \
+		srcInterface/Makefile.DEPEND \
 		Makefile.conf Makefile.def \
 		PARAM.XML PARAM.pl GridSize.pl *~
