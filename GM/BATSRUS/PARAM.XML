@@ -829,6 +829,7 @@ GM/restart_n5000	NameRestartInDir
 					default="$Side ne 'TypeBcEast'" />
 			<option name="float/outflow" 
 					default="$Side eq 'TypeBcEast'" />
+			<option name="heliofloat"/>
 			<option name="reflect"/>
 			<option name="periodic"/>
 			<option name="vary"/>
@@ -3182,7 +3183,7 @@ In included files #END simply means the end of the included lines.
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($SwRhoDim > 0) or $UseUpstreamInputFile">
+<rule expr="($SwRhoDim > 0) or $UseUpstreamInputFile or $_NameComp ne 'GM'">
 	Either command #SOLARWIND or #UPSTREAM_INPUT_FILE must be used!
 </rule>
 
