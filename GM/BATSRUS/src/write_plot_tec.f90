@@ -9,8 +9,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
-  use ModParallel, ONLY : UseCorners, iBlock_A, iProc_A
+  use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
   use ModNodes
