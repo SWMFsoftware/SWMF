@@ -43,7 +43,6 @@ MODULES = \
 	ModMain.o\
 	ModAdvance.o\
 	ModGeometry.o\
-	ModInterface.o\
 	ModIO.o\
 	ModPhysics.o\
 	ModAMR.o\
