@@ -7,12 +7,19 @@ T			UseAccurateTrace
 0.1			DtExchangeRay
 
 #SAVEPLOT
-4                       nPlotFiles
+8                       nPlotFiles
 y=0 ray idl             StringPlot
 #INCLUDE
 Plots
 0.                      DxPlot
 y=0 ray tec             StringPlot
+#INCLUDE
+Plots
+y=0 mhd idl		StringPlot
+#INCLUDE
+Plots
+0.			DxPlot
+3d_ mhd tec		StringPlot
 #INCLUDE
 Plots
 lin mhd idl		StringPlot
@@ -33,6 +40,34 @@ lin mhd idl		StringPlot
 #INCLUDE
 Plots
 U			NameLine
+T			IsSingleLine
+2			nLine
+2.			xStartLine
+0.			yStartLine
+2.			zStartLine
+T			IsParallel
+-3.			xStartLine
+0.			yStartLine
+-3.			zStartLine
+F			IsParallel
+lin mhd tec		StringPlot
+#INCLUDE
+Plots
+B			NameLine
+F			IsSingelLine
+2			nLine
+-2.			xStartLine
+0.			yStartLine
+2.			zStartLine
+F			IsParallel
+-3.			xStartLine
+0.			yStartLine
+-3.			zStartLine
+T			IsParallel
+lin mhd tec		StringPlot
+#INCLUDE
+Plots
+J			NameLine
 T			IsSingleLine
 2			nLine
 -2.			xStartLine
