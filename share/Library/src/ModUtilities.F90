@@ -122,7 +122,7 @@ contains
   subroutine flush_unit(iUnit)
 
     !USES:
-#ifdef NAG	
+#ifdef compNAG	
     use F90_UNIX_IO,only: flush 
 #endif
     implicit none
@@ -144,15 +144,15 @@ contains
     call flush_(iUnit)       
 #endif
 
-#ifdef NAG	
+#ifdef compNAG
     call flush(iUnit,iError)
 #endif
  
-#ifdef  PGF90 
+#ifdef compPGF90
     call flush(iUnit) !pgf90 case
 #endif
 
-#ifdef   sysOSF1 
+#ifdef sysOSF1
     call flush(iUnit) 
 #endif
   end subroutine flush_unit
