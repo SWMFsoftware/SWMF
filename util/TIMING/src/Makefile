@@ -15,7 +15,7 @@ help:
 	@echo 'test_mpi          - parallel testing of TIMING module'         
 	@echo 'test_empty        - serial testing of empty TIMING module'
 	@echo 'test_empty_mpi    - parallel testing of empty TIMING module'
-	@echo 'TEST              - all four tests together'
+	@echo 'tests             - all four tests together'
 	@echo ' '
 	@echo 'LIB               - libTIMING.a the complete TIMING library'
 	@echo ' '
@@ -33,7 +33,7 @@ ${MY_LIB}:  $(OBJ_LIB) ${MAKEFILE_COMP_SELECT}
 	@rm -f ${MY_LIB}
 	${AR} ${MY_LIB} $(OBJ_LIB)
 
-TEST: test test_mpi test_empty test_empty_mpi
+tests: test test_mpi test_empty test_empty_mpi
 
 test: timing_test.exe
 	timing_test.exe
