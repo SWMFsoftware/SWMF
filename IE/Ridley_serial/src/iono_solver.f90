@@ -560,6 +560,11 @@ subroutine ionosphere_solver(PHI, &
      phi(i,j) = ave
   enddo
 
+  if(allocated(b)) deallocate(b)
+  if(allocated(x)) deallocate(x)
+  if(allocated_matrix(S))  call Deallocate_Matrix(S)
+  if(allocated_matrix(PC)) call Deallocate_Matrix(PC)
+
   call timing_stop('iono_solve')
 
 end subroutine ionosphere_solver
