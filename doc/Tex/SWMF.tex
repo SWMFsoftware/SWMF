@@ -3,7 +3,7 @@
 
 \input HEADER
 
-\title{Space Weather Modeling Framework Manual \\ 
+\title{Space Weather Modeling Framework User Manual \\ 
        \hfill \\
        \large Code Version 2.1}
 \author{G\'abor T\'oth, Ovsei Volberg, Aaron Ridley\\
@@ -26,12 +26,16 @@
 % Introduction
 \input{SWMF_introduction}
 
-% User manual
-\chapter{User Manual}
+% Basic User manual
+\chapter{The Basics}
 
 \input{SWMF_configuration}
 \input{SWMF_param}
 \input{SWMF_control}
+
+% Detailed User manual
+\chapter{Complete list of Input Commands}
+
 \input{SWMFXML}
 
 % Physics of the coupling
@@ -39,18 +43,6 @@
 
 % Adding new component
 \input{SWMF_new_comp}
-
-% Shared library
-
-% Utilities
-\chapter{Utilites: util/}
-
-\input{../../util/TIMING/doc/TIMING.tex}
-
-% Reference manual
-\chapter{Reference Manual}
-
-\input{SWMFREF}
 
 % bibliography
 \input{SWMF_bibliography.tex}
