@@ -449,7 +449,7 @@ contains
     integer :: iHemisphere
     !------------------------------------------------------------------------
 
-    call init_axes
+    call init_axes(TimeEquinox % Time)
 
     write(*,*)
     write(*,*)'TEST GET_PLANET_FIELD'
