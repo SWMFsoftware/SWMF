@@ -201,6 +201,7 @@ clean: ENV_CHECK
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
 	cd RB/Rice;		make clean    #^CMP IF RB
+	cd SP/Kota;             make clean    #^CMP IF SP
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -300,6 +301,7 @@ rundir: ENV_CHECK
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
+	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
