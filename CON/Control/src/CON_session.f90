@@ -325,15 +325,10 @@ contains
        end do
 
        !\
-       ! Save restart files for the local components when scheduled
+       ! Save restart files when scheduled
        !/
-       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) then
-          do lComp=1,nComp
-             iComp = i_comp(lComp)
-             if(.not.IsProc_C(iComp)) CYCLE
-             call save_restart_comp(iComp, tSimulation)
-          end do
-       end if
+       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) &
+            call save_restart
 
     end do TIMELOOP
 
