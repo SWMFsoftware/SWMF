@@ -6,11 +6,23 @@ subroutine OPTION_RAYTRACING(on,name)
   character (len=40), intent(out) :: name
 
   on  =.true.
-  name='RAY TRACING Toth 1.1'
+  name='RAY TRACING Toth 2.0'
 
 end subroutine OPTION_RAYTRACING
 
 subroutine ray_trace
+
+  use ModRaytrace, ONLY: UseAccurateTrace
+
+  if(UseAccurateTrace)then
+     call ray_trace_accurate
+  else
+     call ray_trace_fast
+  end if
+
+end subroutine ray_trace
+
+subroutine ray_trace_fast
   use ModProcMH
   use ModMain
   use ModPhysics, ONLY : rBody
@@ -1295,7 +1307,7 @@ contains
 
   end subroutine assign_ray
 
-end subroutine ray_trace
+end subroutine ray_trace_fast
 
 !=========================================================================
 subroutine rayface_interpolate(qrayface,weight,nvalue,qray)
