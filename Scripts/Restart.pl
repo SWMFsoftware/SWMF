@@ -49,6 +49,8 @@ my %RestartInDir =  (
 		     IM => "IE/restartIN",
 		     UA => "UA/RestartIN,UA/restartIN" );
 
+my $HeaderFile = "restart.H"; # the name of the restart header files
+
 # List possible time units and corresponding number of seconds
 my %UnitSecond = (
 		  "s" => 1,          # second
@@ -94,8 +96,8 @@ sub get_time_step{
 	    $Step =~ s/\s.*//; # Remove anything after a space
 	}
     }
-    die "$ERROR could not find simulation time in file $File" if $Time < 0;
-    die "$ERROR could not find time step in file $File" if $Step < 0;
+    die "$ERROR could not find simulation time in file $File!\n" if $Time < 0;
+    die "$ERROR could not find time step in file $File!\n" if $Step < 0;
 
     # Save time and step if not yet specified
     $SimulationTime = $Time if $SimulationTime < 0;
@@ -150,13 +152,18 @@ sub create_tree_check{
 	my $Dirs = $RestartOutDir{$Comp};
 	my $Dir;
 	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir};
-	print "# Restart.pl is checking $Dirs\n" if $Verbose;
 	die "$ERROR could not find directory $Dirs!\n" unless -d $Dir;
 
 	opendir(DIR,$Dir) or die "$ERROR could not open directory $Dir!\n";
 	my @Content = readdir(DIR);
 	closedir(DIR);
 	die "$ERROR directory $Dir is empty!\n" unless $#Content > 1;
+
+	# Check consistency of the simulation time
+	my $File = "$Dir/$HeaderFile";
+	&get_time_step($File) if -f $File;
+
+	print "# Restart.pl has checked $Dir\n" if $Verbose;
     }
 
     print "# Restart.pl has checked output restart file and directories.\n";
@@ -213,12 +220,14 @@ sub link_tree_check{
     die "$ERROR could not find restart file $File!\n" 
 	unless (-f $File or $NoTreeCheck);
 
+    # Set the step and the simulation time
+    &get_time_step($File) unless $NoTreeCheck;
+
     my $Comp;
     foreach $Comp (sort keys %RestartInDir){
 	next unless -d $Comp;
 	my $Dirs = $RestartInDir{$Comp};
 	my $Dir;
-	print "# Restart.pl is checking $Dirs\n" if $Verbose;
 	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir or -l $Dir};
 
 	die "$ERROR could not find input restart directory/link $Dirs!\n" 
@@ -226,6 +235,12 @@ sub link_tree_check{
 
 	die "$ERROR could not find restart directory $RestartTree/$Comp!\n" 
 	    unless (-d "$RestartTree/$Comp" or $NoTreeCheck);
+
+	# Check the consistency of the simulation time
+	my $File = "$RestartTree/$Comp/$HeaderFile";
+	&get_time_step($File) if -f $File;
+
+	print "# Restart.pl has checked $Dir\n" if $Verbose;
     }
 
     print "# Restart.pl has checked  input restart file and directories.\n";
@@ -267,7 +282,7 @@ sub link_tree{
 	symlink "../$RestartTree/$Comp", $Dir or 
 	    die "$ERROR could not link $RestartTree/$Comp to $Dir!\n";
     }
-    print "# Restart.pl has linked to restart tree $RestartTree/.\n";
+    print "# Restart.pl has linked  restart tree $RestartTree/.\n";
 }
 ##############################################################################
 sub print_help{
