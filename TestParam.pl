@@ -6,6 +6,7 @@ my $Help        = $h; undef $h;
 my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
 my $Verbose     = $v; undef $v;
+my $Save        = $s; undef $s;
 
 use strict;
 
@@ -29,6 +30,11 @@ my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XMLFile           = 'PARAM.XML';
 
 my $SetSWMF = 'SetSWMF.pl';
+
+if($Save){
+    system($CheckParamScript,"-s");
+    exit 0;
+}
 
 # Overwrite default is necessary
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
@@ -208,11 +214,13 @@ Purpose:
 
 Usage:
 
-    TestParam.pl [-h] [-v] [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
+    TestParam.pl [-h] [-v] [-s] [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
 
   -h            print help message and stop
 
   -v            print verbose information
+
+  -s            convert Param/PARAM.XML into Param/PARAM.pl and exit
 
   -l=LAYOUTFILE obtain layout from LAYOUTFILE. Default value is 'run/LAYOUT.in'
 
@@ -220,9 +228,21 @@ Usage:
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
 
+
+Examples:
+
+  Check the default parameter file run/PARAM.in without checking the layout:
+
+      TestParam.pl
+
+  Check another parameter and layout file for a 16 processor execution:
+
+      TestParam.pl -n=16 -l=run/test.000/LAYOUT.in run/test.000/PARAM.expand
+
+  Convert the XML file Param/PARAM.XML into the Perl tree file Param/PARAM.pl:
+
+      TestParam.pl -s
+
 ";
     exit 0;
 }
-
-
-
