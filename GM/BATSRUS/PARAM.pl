@@ -1586,18 +1586,37 @@ rel			TypeProjStop
 ! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
 !
 ! The 2nd case is a linear interpolation between the 2nd and 4th cases.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseRayTrace'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoCheckRayLoop'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '100','type' => 'integer','name' => 'DnRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '1','type' => 'real','name' => 'rRayTrace'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$UseAccurateTrace'},'content' => [{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
 #RAYTRACE
-T			UseRayTrace    ! Rest of the parameters read if .true.
-F			DoCheckRayLoop print info for loops
-100			DnRayTrace   how often
-3.0			rRayTrace    where to stop with ray tracing
+T			UseAccurateTrace
+0.1			DtExchangeRay [sec] (read if UseAccurateTrace is true)
 
-! Raytracing (field-line tracing) is needed to couple the GM and IM components.
-! It can also be used to create plot files with open-closed field line 
-! information.
-! Raytracing is done when needed, so the default values should work fine.
-! This command may be removed or modified in the future.
+Raytracing (field-line tracing) is needed to couple the GM and IM components.
+It can also be used to create plot files with open-closed field line 
+information. Currently there are two algorithms implemented for 
+plot files, but only one for the GM/IM coupling.
+
+If UseAccurateTrace is false, the block-wise algorithm is used,
+which interpolates at block faces. This algorithm works both for
+plot files and GM/IM coupling. It is fast, but less accurate than
+the other algorithm.
+
+If UseAccurateTrace is true, the field lines are followed all the way.
+This algorithm currently only works for creating plot files.
+It is more accurate but potentially slower than the other algorithm.
+
+In the accurate algorithm, when the ray exits the domain that belongs to the 
+PE, its information is sent to the other PE where the ray continues. 
+The information is buffered for sake of efficiency and to synchronize
+communitacation. The frequency of the information exchanges 
+(in terms of CPU seconds) is given by the DtExchangeRay parameter. 
+This is an optimization parameter for speed. Very small values of DtExchangeRay
+results in many exchanges with few rays, while very large values result
+in infrequent exchages thus some PE-s may become idle (no more work to do).
+The optimal value is problem dependent. A typically acceptable value is 
+DtExchangeRay = 0.1 seconds.
+
+Default value is UseAccurateTrace = .false.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'IM'},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'TauCoupleIm'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #IM

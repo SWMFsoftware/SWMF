@@ -15,7 +15,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCT, ONLY : DoInitConstrainB                    !^CFG IF CONSTRAINB
   use ModAMR
   use ModParallel, ONLY : UseCorners,proc_dims
-  use ModRaytrace, ONLY : DtExchangeRay                 !^CFG IF RAYTRACE
+  use ModRaytrace, ONLY : UseAccurateTrace, DtExchangeRay !^CFG IF RAYTRACE
   use ModIO
   use ModCompatibility, ONLY: read_compatible_command
   use CON_planet,       ONLY: read_planet_var, check_planet_var, UseAlignedAxes
@@ -942,16 +942,11 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('Satellite_Y_Pos',Satellite_Y_Pos)
            call read_var('Satellite_Z_Pos',Satellite_Z_Pos)
         end if
-     case("#RAYTRACE")                                  !^CFG IF RAYTRACE BEGIN
-        call read_var('DtExchangeRay',DtExchangeRay)
-        !        call read_var('UseRayTrace',UseRayTrace)
-        !        if(UseRayTrace)then
-        !           call read_var('check_rayloop',check_rayloop)
-        !           call read_var('dn_raytrace'  ,dn_raytrace)
-        !           call read_var('R_raytrace'   ,R_raytrace)
-        !           R2_raytrace=R_raytrace**2
-        !        end if
-        !^CFG END RAYTRACE
+        !                                               ^CFG IF RAYTRACE BEGIN
+     case("#RAYTRACE")                                  
+        call read_var('UseAccurateTrace',UseAccurateTrace)
+        if(UseAccurateTrace)call read_var('DtExchangeRay',DtExchangeRay)
+        !                                              ^CFG END RAYTRACE
      case("#IM")                                      !^CFG IF RCM
         call read_var('TauCoupleIm',TauCoupleIm)      !^CFG IF RCM
      case("#MASSLOADING")                             !^CFG IF NOT SIMPLE BEGIN
