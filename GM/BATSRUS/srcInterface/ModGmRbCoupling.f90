@@ -348,12 +348,12 @@ contains
 
     !set values for open fieldlines
     do j=1,jsize
-       MHD_SUM_vol(1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_SUM_rho(1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_SUM_p  (1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_Beq    (1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_Xeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Xeq(int(MHD_lat_boundary(j)),j)
-       MHD_Yeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Yeq(int(MHD_lat_boundary(j)),j)
+       MHD_SUM_vol(1:int(MHD_lat_boundary(j))-1,j)=MHD_SUM_vol(int(MHD_lat_boundary(j)),j)
+       MHD_SUM_rho(1:int(MHD_lat_boundary(j))-1,j)=MHD_SUM_rho(int(MHD_lat_boundary(j)),j)
+       MHD_SUM_p  (1:int(MHD_lat_boundary(j))-1,j)=MHD_SUM_p  (int(MHD_lat_boundary(j)),j)
+       MHD_Beq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Beq    (int(MHD_lat_boundary(j)),j)
+       MHD_Xeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Xeq    (int(MHD_lat_boundary(j)),j)
+       MHD_Yeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Yeq    (int(MHD_lat_boundary(j)),j)
     end do
 
     !dimensionalize values
