@@ -95,7 +95,7 @@ endif
 ; Put elements of eqpar into simple variables based on phys
 neqpar = n_elements(eqpar)
 if neqpar ne 0 then case 1 of
-   phys eq 'mhd' or phys eq 'var' or phys eq 'raw': begin 
+   phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var': begin 
        gamma=eqpar(0)
        if neqpar gt 1 then clight=eqpar(1) else clight=59.958
    end
