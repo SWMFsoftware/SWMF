@@ -452,44 +452,44 @@ contains
     call init_axes(TimeEquinox % Time)
 
     write(*,*)
-    write(*,*)'TEST GET_PLANET_FIELD'
+    write(*,'(a)')'TEST GET_PLANET_FIELD'
     write(*,*)
 
     xSmg_D = (/1.0, 1.0, 0.1/)
-    write(*,*)'Location xSmg_D = ',xSmg_D
+    write(*,'(a,3f5.0)')'Location xSmg_D = ',xSmg_D
     call get_planet_field(0.0,xSmg_D,'SMG NORM',bSmg_D)
-    write(*,*)'Field    bSmg_D = ',bSmg_D
+    write(*,'(a,3es14.6)')'Field    bSmg_D = ',bSmg_D
     write(*,*)
     call get_planet_field(0.0,xSmg_D*RadiusPlanet,'SMG',bSmg_D)
-    write(*,*)'Field    bSmg_D = ',bSmg_D
+    write(*,'(a,3es14.6)')'Field    bSmg_D = ',bSmg_D
     write(*,*)
     xGsm_D = matmul(xSmg_D,SmgGsm_DD)
-    write(*,*)'Location xGsm_D =',xGsm_D
+    write(*,'(a,3es14.6)')'Location xGsm_D =',xGsm_D
     call get_planet_field(0.0,xGsm_D,'GSM NORM',bGsm_D)
-    write(*,*)'Field    bGsm_D = ',bGsm_D
-    write(*,*)'Rotated  bGsm_D = ',matmul(SmgGsm_DD,bGsm_D)
+    write(*,'(a,3es14.6)')'Field    bGsm_D = ',bGsm_D
+    write(*,'(a,3es14.6)')'Rotated  bGsm_D = ',matmul(SmgGsm_DD,bGsm_D)
     write(*,*)
     xGse_D = matmul(xGsm_D,GsmGse_DD)
-    write(*,*)'Location xGse_D =',xGse_D
+    write(*,'(a,3es14.6)')'Location xGse_D =',xGse_D
     call get_planet_field(0.0,xGse_D,'GSE NORM',bGse_D)
-    write(*,*)'Field    bGse_D = ',bGse_D
-    write(*,*)'Rotated  bGse_D = ',matmul(SmgGsm_DD,matmul(GsmGse_DD,bGse_D))
+    write(*,'(a,3es14.6)')'Field    bGse_D = ',bGse_D
+    write(*,'(a,3es14.6)')'Rotated  bGse_D = ',matmul(SmgGsm_DD,matmul(GsmGse_DD,bGse_D))
 
     TimeSim = 6*3600
-    write(*,*)'Test at time=', TimeSim
+    write(*,'(a,3es14.6)')'Test at time=', TimeSim
     call get_planet_field(TimeSim,xSmg_D,'SMG NORM',bSmg_D)
-    write(*,*)'Field    bSmg_D = ',bSmg_D
+    write(*,'(a,3es14.6)')'Field    bSmg_D = ',bSmg_D
     call get_planet_field(TimeSim,xGsm_D,'GSM NORM',bGsm_D)
-    write(*,*)'Field    bGsm_D = ',bGsm_D
+    write(*,'(a,3es14.6)')'Field    bGsm_D = ',bGsm_D
 
     write(*,*)
-    write(*,*)'TEST MAP_PLANET_FIELD'
+    write(*,'(a)')'TEST MAP_PLANET_FIELD'
     write(*,*)
     X_D=(/6.0, -8.0, -0.0001/)
     rMap  = 1.0
-    write(*,*)'x_D,rMap=',x_D,rMap
+    write(*,'(a,4es14.6)')'x_D,rMap=',x_D,rMap
     call map_planet_field(0.0,x_D,'SMG NORM',rMap,xMap_D,iHemisphere)
-    write(*,*)'xMap_D,iHemisphere=',xMap_D,iHemisphere
+    write(*,'(a,3es14.6,i3)')'xMap_D,iHemisphere=',xMap_D,iHemisphere
 
   end subroutine test_planet_field
 

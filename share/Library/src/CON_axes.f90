@@ -627,32 +627,47 @@ contains
     real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
     !-------------------------------------------------------------------------
 
-    write(*,*)'start test_physics_axes'
+    if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
+         DoInitializeAxes,' should be true'
 
-    write(*,*)'TimeEquinox = ',TimeEquinox
+    call time_int_to_real(TimeEquinox)
+    if(TimeEquinox % Time <= 0.0) write(*,*)'test failed: TimeEquinox =',&
+         TimeEquinox,' should have a large positive double in the %Time field'
 
-    write(*,*)'TESTING init_axes'
-    write(*,*)
-    write(*,*)'DoInitializeAxes=',DoinitializeAxes
+    write(*,'(a)')'Testing init_axes'
     call init_axes(TimeEquinox % Time)
-    write(*,*)'tStart      = ',tStart
-    write(*,*)'DoinitializeAxes=',DoinitializeAxes
-    write(*,*)
-    write(*,*)'TESTING get_axes'
-    write(*,*)
+
+    if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&
+         'tStart=',tStart,' should be equal to TimeEquinox % Time=',&
+         TimeEquinox % Time
+
+    if(DoInitializeAxes) write(*,*)'test init_axes failed: DoInitializeAxes=',&
+         DoInitializeAxes,' should be fales'
+
+    write(*,'(a)')'Testing get_axes'
+
     call get_axes(0.0, MagAxisTilt, RotAxisGsm_D)
-    write(*,*)'MagAxisTilt =',MagAxisTilt*cRadToDeg
-    write(*,*)'RotAxisGsm_D=',RotAxisGsm_D
-    write(*,*)
-    write(*,*)'Test GSM->GSE->GEO transformation'
-    write(*,*)
+
+    if(abs(MagAxisTilt*cRadToDeg - 8.0414272433221718) > 0.00001)write(*,*) &
+         'test get_axes failed: MagAxisTilt =',MagAxisTilt*cRadToDeg,&
+         ' should be 8.0414272433221718 degrees within round off error'
+
+    if(maxval(abs(RotAxisGsm_D - (/0.0, 0.131054271126, 0.991375195382/))) &
+         > 0.00001)write(*,*) 'test get_axes failed: RotAxisGsm_D =',&
+         RotAxisGsm_D,' should be equal to ', &
+         '(/0.0, 0.131054271126, 0.991375195382/) within round off errors'
+
+    write(*,'(a)')'Testing transform_matrix'
+
     Rot_DD = transform_matrix(0.0,'GSM','GEO')
-    write(*,*)'GeoGsm_DD'; call show_rot_matrix(Rot_DD)
     RotAxisGeo_D = matmul(Rot_DD,RotAxisGsm_D)
-    write(*,*)'This should be 0,0,1: '
-    write(*,*)'RotAxisGeo_D=',RotAxisGeo_D
-    if(maxval(abs(RotAxisGeo_D - (/0.,0.,1./)))>0.0001)&
-         stop 'ERROR in test_physics_axes'
+
+    if(maxval(abs(RotAxisGeo_D - (/0.,0.,1./)))>0.0001) &
+         write(*,*)'test transform_matrix failed: RotAxisGeo_D=',&
+         RotAxisGeo_D,' should be (/0.,0.,1./) within round off errors'
+
+    write(*,'(a)')'Testing show_rot_matrix'
+    write(*,'(a)')'GeoGsm_DD='; call show_rot_matrix(Rot_DD)
 
   end subroutine test_axes
 
