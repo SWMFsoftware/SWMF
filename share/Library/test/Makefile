@@ -15,6 +15,7 @@ help:
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_ray_trace        - test CON_ray_trace"
+	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_axes             - test CON_axes"
 	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   tests                 - test all the above"
@@ -31,6 +32,7 @@ tests: \
 	test_sort \
 	test_io_unit \
 	test_ray_trace \
+	test_geopack \
 	test_axes \
 	test_planet_field
 
@@ -165,6 +167,31 @@ test_ray_trace:
 	-@(diff test_ray_trace.tmp test_ray_trace.log)
 	@echo
 	@echo test_ray_trace done
+	@echo -----------------------------------------------------------------
+
+#######################################################################
+OBJ_GEOPACK = \
+	test_geopack.o \
+	../src/CON_geopack.o \
+	../src/ModCoordTransform.o
+
+test_geopack.exe: ${OBJ_GEOPACK}
+	${LINK.f90} ${Lflag2} -o test_geopack.exe \
+		${OBJ_GEOPACK}
+
+test_geopack:
+	@echo -----------------------------------------------------------------
+	@echo test_geopack starting
+	@echo
+	@(cd ../src; make ModCoordTransform.o CON_geopack.o)
+	@make test_geopack.exe
+	@echo
+	@echo './test_geopack.exe > test_geopack.tmp'
+	@./test_geopack.exe > test_geopack.tmp
+	@echo 'diff test_geopack.tmp test_geopack.log'
+	-@(diff test_geopack.tmp test_geopack.log)
+	@echo
+	@echo test_geopack done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
