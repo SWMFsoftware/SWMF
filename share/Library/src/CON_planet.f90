@@ -294,15 +294,19 @@ contains
 
        call read_var('DipoleStrength',DipoleStrength)
 
+    case('#UPDATEB0')
+
+       call read_var('DtUpdateB0',DtUpdateB0)
+
     end select
 
   end subroutine read_planet_var
 
   !==========================================================================
 
-  subroutine check_planet_var(IsProc0)
+  subroutine check_planet_var(IsProc0, DoTimeAccurate)
 
-    logical, intent(in) :: IsProc0
+    logical, intent(in) :: IsProc0, DoTimeAccurate
 
     character (len=*), parameter :: NameSub=NameMod//'::check_planet_var'
 
@@ -314,6 +318,10 @@ contains
     if(UseSetMagAxis .and. UseRealRotAxis .and. IsProc0) &
          write(*,*)NameSub,' WARNING: magnetic axis is explicitly set ',&
          'while rotation axis is calculated from real time ?!'
+
+    ! Check if there is a need to update the magnetic field
+    DoUpdateB0 = DtUpdateB0 > 0.0 .and. DoTimeAccurate .and. UseRotation &
+         .and. .not.UseAlignedAxes
 
   end subroutine check_planet_var
 
@@ -331,13 +339,13 @@ contains
     logical,          optional, intent(out) :: DoUpdateB0Out
     real,             optional, intent(out) :: DtUpdateB0Out
     !-----------------------------------------------------------------------
-    if(present(NamePlanetOut))      NamePlanetOut     = NamePlanet
-    if(present(RadiusPlanetOut))    RadiusPlanetOut   = RadiusPlanet
+    if(present(NamePlanetOut))      NamePlanetOut       = NamePlanet
+    if(present(RadiusPlanetOut))    RadiusPlanetOut     = RadiusPlanet
     if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
-    if(present(UseRotationOut))     UseRotationOut    = UseRotation
-    if(present(DipoleStrengthOut))  DipoleStrengthOut = DipoleStrength
-    if(present(DoUpdateB0Out))      DoUpdateB0Out     = DoUpdateB0
-    if(present(DtUpdateB0Out))      DtUpdateB0Out     = DtUpdateB0
+    if(present(UseRotationOut))     UseRotationOut      = UseRotation
+    if(present(DipoleStrengthOut))  DipoleStrengthOut   = DipoleStrength
+    if(present(DoUpdateB0Out))      DoUpdateB0Out       = DoUpdateB0
+    if(present(DtUpdateB0Out))      DtUpdateB0Out       = DtUpdateB0
 
   end subroutine get_planet
 
