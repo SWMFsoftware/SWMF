@@ -153,9 +153,9 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_advance
      call init_mod_geometry
      call init_mod_nodes
+     call init_mod_raytrace                    !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit)   call init_mod_implicit  !^CFG IF IMPLICIT
-     if(UseIM)         call init_mod_raytrace  !^CFG IF RCM
 
      if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
         jMinFaceX=0; jMaxFaceX=nJ+1
