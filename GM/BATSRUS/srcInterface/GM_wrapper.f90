@@ -142,8 +142,8 @@ subroutine GM_print_variables(NameSource)
   use ModMain, ONLY: NameThisComp
   use ModNumConst
   use ModImPressure                                  !^CFG IF RCM
-  use ModMapPotential,ONLY:IONO_NORTH_PHI,IONO_SOUTH_PHI
-  use ModInnerBc
+  use ModIonoPotential,ONLY:IonoPotential_II
+  use ModIeGrid,       ONLY:nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I
   use ModIoUnit, ONLY: UNITTMP_
   implicit none
   character(len=*), parameter :: NameSub='GM_print_variables'
@@ -161,7 +161,7 @@ subroutine GM_print_variables(NameSource)
   case('IM')                        !^CFG IF RCM
      NameVar='j i lon lat p'        !^CFG IF RCM
   case('IE','IE_swmf')
-     NameVar='i j theta psi pot'
+     NameVar='i j theta phi pot'
   case default
      write(*,*)NameSub,': incorrect NameSource=',NameSource
      RETURN
@@ -180,29 +180,10 @@ subroutine GM_print_variables(NameSource)
         end do
      end do                              !^CFG END RCM
   case('IE')
-     do j=1,IONO_nPsi
-        do i=1,IONO_nTheta 
+     do j=1,nPhiIono
+        do i=1,nThetaIono
            write(UNITTMP_,'(2i4,3G14.6)')i,j,&
-                IONO_NORTH_Theta(i,j),IONO_NORTH_Psi(i,j),&
-                IONO_NORTH_Phi(i,j)
-        end do
-        do i=1,IONO_nTheta
-           write(UNITTMP_,'(2i4,3G14.6)')i+IONO_nTheta,j,&
-                IONO_SOUTH_Theta(i,j),IONO_SOUTH_Psi(i,j),&
-                IONO_SOUTH_Phi(i,j)
-        end do
-     end do
-  case('IE_swmf')
-     do j=1,IONO_nPsi
-        do i=1,IONO_nTheta 
-           write(UNITTMP_,'(2i4,3G14.6)')i,j,&
-                IONO_NORTH_Theta(i,j),IONO_NORTH_Psi(i,j),&
-                IONO_NORTH_Phi_BC(i,j)
-        end do
-        do i=1,IONO_nTheta
-           write(UNITTMP_,'(2i4,3G14.6)')i+IONO_nTheta,j,&
-                IONO_SOUTH_Theta(i,j),IONO_SOUTH_Psi(i,j),&
-                IONO_SOUTH_Phi_BC(i,j)
+                ThetaIono_I(i),PhiIono_I(j),IonoPotential_II(i,j)
         end do
      end do
   end select
