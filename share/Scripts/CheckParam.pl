@@ -10,6 +10,8 @@ sub eval_comp{eval("package COMP; $_[0]")}
 # Read command line options
 my $Debug       = $D; undef $D;
 my $Help        = $h; undef $h;
+my $HelpXmlParam= $H; undef $H;
+my $HelpXml     = $X; undef $X;
 my $Interactive = $i; undef $i;
 my $Verbose     = $v; undef $v; 
 my $ReadTree    = $r; undef $r;
@@ -36,6 +38,12 @@ my $InputFileDefault = 'run/PARAM.in';
 
 # Print help message and exit if -h switch was used
 &print_help if $Help;
+
+# Print help for XML description of parameters and exit if -H switch was used
+&print_help_xml_param if $HelpXmlParam;
+
+# Print help about XML and exit if -X switch was used
+&print_help_xml if $HelpXml;
 
 # Reset filenames to defaults if needed
 $XmlFile  = $XmlFileDefault unless $XmlFile;
@@ -1090,11 +1098,7 @@ sub param_error{
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
-#!QUOTE: \clearpage 
 #BOP
-#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
-#!QUOTE: \subsection{Checking parameters}
-#
 #!ROUTINE: CheckParam.pl - check a parameter file based on an XML description
 #!DESCRIPTION:
 # Before running an executable, it is a good idea to check the parameter file.
@@ -1119,10 +1123,15 @@ sub print_help{
 
 Usage:
 
-  CheckParam.pl [-h] [-v] [-D] [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
+  CheckParam.pl [-h] [-H] [-X] [-v] [-D] 
+                [-x=XMLFILE] [-r=TREEFILE] [-s[=TREEFILE]] 
                 [-S] [-c=ID] [-C=IDLIST] [-p=PRECISION] [-i] [PARAMFILE]
 
   -h            print help message and stop
+
+  -H            print help about the XML tags used in PARAM.XML files and stop
+
+  -X            print a short introduction to the XML language and stop
 
   -D            print debug information
 
@@ -1192,6 +1201,153 @@ CheckParam.pl -D -i
 Just a test.
 ...
 Ctrl-D"
+#EOC
+    ,"\n\n";
+    exit 0;
+}
+############################################################################
+sub print_help_xml{
+
+    print
+#!QUOTE: \clearpage
+#BOC
+'XML - eXtended Markup Language
+
+XML is a very simple notation used for marking up arbitrary text. 
+It is a well defined standard, which is suitable for machine processing,
+yet it is relatively easy to read and produce with a normal text editor.
+
+An XML file consists of tags with attributes and text.
+The names of the tags and attributes can be any alphanumeric name.
+There are 3 special characters which cannot be used in the text
+or in the value of the attributes:
+
+   < > &
+
+The < and > are used to start and finish a tag, the & sign is 
+used to describe special characters, such as
+
+  &gt;  &lt;  &amp;
+
+which can be used in the text instead of "<", ">" and "&".
+
+A tag without a body is enclosed between the strings "<" and "/>":
+
+<TAGNAME ... />
+
+A tag with an (optional) body has a starting part enclosed between "<" and ">"
+and a matching finishing part with the name enclosed between "</" and ">":
+
+<TAGNAME ...>
+...
+</TAGNAME>
+
+Tags can have attributes, which are names followed by an "=" sign and
+the value is quoted with double quotation marks, for example
+
+<TAGNAME ATTRIBUTE1="VALUE1" ATTRIBUTE2="VALUE2" .../>
+
+Tags can be nested and they can contain a text body:
+
+<TAGNAME1>
+  <TAGNAME2>
+     <TAGNAME3/>
+     text2
+  </TAGNAME2>
+  text1
+</TAGNAME1>'
+#EOC
+    ,"\n\n";
+    exit;
+}
+############################################################################
+sub print_help_xml_param{
+
+    print
+#!QUOTE: \clearpage
+#BOC
+'XML Description of Input Parameters
+
+The following shows the structure of the XML tags which can be interpreted by
+the CheckParam.pl script, partially used by the XmlToLatex.pl script 
+(and it will also be used by the parameter editor of the GUI in the future).
+
+<commandList name=...>
+<set name=... type=... value=.../>
+<set name=... type=... value=.../>
+...
+<commandgroup name=...>
+
+Description for command group.
+
+<command name=... [alias=...] [if=...] [required="T"] [multiple="T"]>
+	<parameter name=... type="logical" default=.../>
+	<parameter name=... type="integer" [min=...] [max=...] [default=...]/>
+	<parameter name=... type="real" [min=...] [max=...] [default=...]/>
+	<parameter name=... type="string" length=... [default=...]/>
+	<parameter name=... type="integer|real|string" input="select"
+							[multiple="T"]>
+		<option name=... [value=...] [default="T"] 
+					[exclusive="T"] [if=...]/>
+		<optioninput name=... type=... [min=...] [max=...] [length=...]
+						[default=...] [if=...]/>
+	<parameter/>
+	<parameter name=... type="strings" min="..." max="..."
+					[ordered="T"] [duplicate="T"]>
+		<part name=... type="string" input="select"
+					[required="T"] [multiple="T"]>
+			<option name=... [value=...] [default="T"] 
+					[exclusive="T"] [if=...]/>
+		</part>
+	</parameter>
+	<if expr=...>
+		<parameter name=... type="real" [min=...] [max=...] 
+							default=... />
+	</if>
+	<foreach name=... values=...>
+		<parameter name=... type="logical" default=.../>
+		...
+	</foreach>
+	<for [index=] from=... to=...>
+		<parameter name=... type="integer" [min=...] [max=...]
+							default=.../>
+		...
+	</for>
+	<set name=... type=... value=.../>
+	<rule expr=...>
+	... error message for command rule ...
+	</rule>
+
+verbal description of command
+...
+</command>
+...
+...
+...
+<command name=... [required="T"] [if=...]>
+...
+</command>
+
+</commandgroup>
+...
+...
+...
+...
+...
+...
+<commandgroup name=...>
+...
+...
+...
+</commandgroup>
+
+<rule expr=...>
+... error message for global rule ...
+</rule>
+<rule expr=...>
+... error message for global rule ...
+</rule>
+<commandList>'
 #EOC
     ,"\n\n";
     exit 0;

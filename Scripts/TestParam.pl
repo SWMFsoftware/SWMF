@@ -3,6 +3,8 @@
 # Read command line options
 my $Debug       = $D; undef $D;
 my $Help        = $h; undef $h;
+my $HelpXmlParam= $H; undef $H;
+my $HelpXml     = $X; undef $X;
 my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
 my $Verbose     = $v; undef $v;
@@ -12,6 +14,15 @@ use strict;
 
 # Print help message and exit if -h switch was used
 &print_help if $Help;
+
+# The script and the XML file names to check the parameters
+my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
+my $XMLFile           = 'PARAM.XML';
+my $SetSWMF = 'SetSWMF.pl';
+
+# The -H and -X flags are transferred to CheckParam.pl
+exec("$CheckParamScript -X") if $HelpXml;
+exec("$CheckParamScript -H") if $HelpXmlParam;
 
 # Name of BATSRUS and BATSRUS_share
 my $BATSRUS = "BATSRUS";
@@ -24,12 +35,6 @@ my $WARNING='TestParam_WARNING:';
 # Set default values
 my $ParamFileDefault  = 'run/PARAM.in';
 my $LayoutFileDefault = 'run/LAYOUT.in';
-
-# The script and the XML file names to check the parameters
-my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
-my $XMLFile           = 'PARAM.XML';
-
-my $SetSWMF = 'SetSWMF.pl';
 
 if($Save){
     system($CheckParamScript,"-s");
@@ -213,11 +218,30 @@ sub check_layout{
     print "nProc     = ",join('; ',%nProc),"\n" if $Verbose;
 }
 ###############################################################################
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \subsection{Testing and Checking}
+#!ROUTINE: TestParam.pl - check layout and parameter file before running SWMF
+#!DESCRIPTION:
+# A lot of time and frustration can be saved if the consistency of the
+# SWMF configuration with the layout and input parameters are checked before
+# running the code. The TestParam.pl script does extensive checks and provides
+# detailed warnings and error messages. 
+# The configuration is obtained from SetSWMF.pl and it is checked against the LAYOUT file.
+# The parameters of CON and the physics components are checked against the XML
+# descriptions in the PARAM.XML files using the share/Scripts/CheckParam.pl script.
+#
+# If there are no errors, no output is produced.
+#!REVISION HISTORY:
+# 09/01/2003 G. Toth - initial version
+#                      many improvements and extensions
+#EOP
 
 sub print_help{
 
-    print "
-Purpose:
+    print 
+#BOC
+"Purpose:
 
     Based on the settings shown by SetSWMF.pl and the registration and layout 
     information contained in the layout file, check the consistency of 
@@ -225,19 +249,26 @@ Purpose:
 
 Usage:
 
-  Scripts/TestParam.pl [-h] [-v] [-s] [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
+  Scripts/TestParam.pl [-h] [-H] [-X] [-v] [-s] 
+                       [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
 
   -h            print help message and stop
+
+  -H            print help about the XML tags used in PARAM.XML files and stop
+
+  -X            print a short introduction to the XML language and stop
 
   -v            print verbose information
 
   -s            convert Param/PARAM.XML into Param/PARAM.pl and exit
+                (requires XML-PARSER::EasyTree Perl package)
 
   -l=LAYOUTFILE obtain layout from LAYOUTFILE. 
                 Default name of the LAYTOUFILE is obtained from the name
                 of the PARAMFILE: 
                 'PARAM' is replaced with 'LAYOUT' and '.expand' with '.in' 
-                and if that file is not found, run/LAYOUT.in is used if it exists
+                and if that file is not found, run/LAYOUT.in is used 
+                if it exists
 
   -n=NPROC      assume that SWMF will run on NPROC processors
 
@@ -252,12 +283,12 @@ Scripts/TestParam.pl
 
   Check another parameter and layout file for a 16 processor execution:
 
-Scripts/TestParam.pl -n=16 -l=run/test.000/LAYOUT.in run/test.000/PARAM.expand
+Scripts/TestParam.pl -n=16 run/test.000/PARAM.expand
 
   Convert the XML file Param/PARAM.XML into the Perl tree file Param/PARAM.pl:
 
-Scripts/TestParam.pl -s
-
-";
+Scripts/TestParam.pl -s"
+#EOC
+    ,"\n\n";
     exit 0;
 }

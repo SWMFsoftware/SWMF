@@ -1,10 +1,19 @@
 #!/usr/bin/perl -s
 
-my $Verbose = $v; undef $v;
-my $Help    = ($h or $help or $H); undef $h; undef $help; undef $H;
-my $Save    = $s; undef $s;
+my $Verbose     = $v; undef $v;
+my $Help        = $h; undef $h;
+my $HelpXmlParam= $H; undef $H;
+my $HelpXml     = $X; undef $X;
+my $Save        = $s; undef $s;
 
 use strict;
+
+# This script uses the CheckParam.pl script 
+my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
+
+# The -H and -X flags are transferred to CheckParam.pl
+exec("$CheckParamScript -X") if $HelpXml;
+exec("$CheckParamScript -H") if $HelpXmlParam;
 
 if($Help){
     print "
@@ -17,14 +26,18 @@ Purpose:
 
 Usage:
 
-    TestParam.pl [-h] [-v] [-s] [PARAMFILE]
+    TestParam.pl [-h] [-H] [-X] [-v] [-s] [PARAMFILE]
 
   -h            print help message and stop
 
-  -s            save PARAM.pl based on PARAM.XML 
-                (requires XML-PARSER::EasyTree package)
+  -H            print help about the XML tags used in PARAM.XML files and stop
+
+  -X            print a short introduction to the XML language and stop
 
   -v            print verbose information
+
+  -s            save PARAM.pl based on PARAM.XML 
+                (requires XML-PARSER::EasyTree Perl package)
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
 
@@ -46,7 +59,6 @@ Examples:
     exit 0;
 }
 
-my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XmlFile           = 'PARAM.XML';
 my $GridSizeScript    = 'GridSize.pl';
 my $MakefileConf      = 'Makefile.conf';
