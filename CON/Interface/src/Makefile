@@ -25,7 +25,7 @@ MOD6 = CON_couple_ie_ua.o	#^CMP IF UA
 #^CMP END IE
 #^CMP IF IH BEGIN
 MOD7 = CON_couple_ih_sc.o       #^CMP IF SC
-#CMP END IH
+#^CMP END IH
 
 MOD8 = CON_couple_mh_sp.o       #^CMP IF SP
 
