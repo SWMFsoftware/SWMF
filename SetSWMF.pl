@@ -25,7 +25,8 @@ my $ERROR   = "!!! SetSWMF_ERROR:";
 my $Installed;             # true if SWMF is installed ($MakefileConf exists)
 my $OS='unknown';          # operating system in $MakefileComp
 my $DIR='unknown';         # main directory for SWMF in $MakefileComp
-my $Compiler='unknown';    # F90 compiler in $MakefileConf
+my $Compiler='unknown';    # Non default F90 compiler in $MakefileConf
+my $MpiVersion='';         # Non default MPI version for mpif90.h
 my $Precision='unknown';   # Precision set in $MakefileConf
 my @Version;               # Component versions selected in $MakefileComp
 @Version = ('unknown');
@@ -50,6 +51,7 @@ my $Debug;
 my @switch = @ARGV;
 foreach (@switch){
     if(/^-c=(.*)/)            {$Compiler=$1; $IsCompilerSet=1;  next};
+    if(/^-m=(.*)/)            {$MpiVersion=$1;                  next};
     if(/^-d(ry)?(run)?$/)     {$DryRun=1;                       next};
     if(/^-h(elp)?$/i)         {&print_help};
     if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
@@ -204,11 +206,9 @@ sub install_swmf{
     &set_version_makefile_comp;
 
     # Initialize CON and the components
-    if($IsCompilerSet){
-	&shell_command("make install COMPILER='$Compiler'");
-    }else{
-	&shell_command("make install");
-    }
+    my $command = "make install MPIVERSION='$MpiVersion'";
+    $command .= " COMPILER='$Compiler'" if $IsCompilerSet;
+    &shell_command($command);
 
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
@@ -414,13 +414,17 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 This script will also be used by the GUI to interact with SWMF.
 
-Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-i [-c=COMPILER]] [-p=PRECISION] [-s]
-                  [-v=VERSION[,VERSION2,...] [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
+Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-s]
+                  [-i [-c=COMPILER] [-m=MPIVERSION]]
+                  [-p=PRECISION] 
+                  [-v=VERSION[,VERSION2,...] 
+                  [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
                   [-uninstall]
 
 Options:
 
--c=COMPILER    create Makefile.conf with a non-default F90 compiler COMPILER
+-c=COMPILER    copy Makefile.conf for a non-default F90 compiler COMPILER
+               during installation
 
 -d  -dry       dry run (do not modify anything, just show actions)
 
@@ -432,7 +436,9 @@ Options:
 
 -h  -help      show this help message
 
--i  -install   install SWMF (create Makefile.conf, Makefile.COMP, make install)
+-i  -install   install SWMF (create Makefile.conf, Makefile.def, make install)
+
+-m=MPIVERSION  copy mpif90_OSMPIVERSION into mpif90.h during installation
 
 -p=PRECISION   set precision (in Makefile.conf, copy mpif90.h and make clean)
                Possible values are 'single' and 'double'.
@@ -455,9 +461,9 @@ Show current settings:
 
     SetSWMF.pl -s
 
-Install SWMF with the pgf90 compiler and select single precision:
+Install SWMF with the efc compiler and Altix MPI and select single precision:
 
-    SetSWMF.pl -i -c=pgf90 -p=single
+    SetSWMF.pl -i -c=efc -m=Altix -p=single
 
 Select IH/BATSRUS, IM/Empty and UA/Empty component versions:
 
