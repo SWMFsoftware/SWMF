@@ -124,6 +124,8 @@ subroutine ray_trace_fast
   call timing_start('ray_trace')
   if(oktime)call timing_reset('ray_pass',2)
 
+  oktest_ray = .false.
+
 !!!
   R_raytrace = rBody
   if(iProc==0)write(*,*)'Setting R_raytrace=',R_raytrace
