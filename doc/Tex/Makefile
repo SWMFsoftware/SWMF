@@ -1,6 +1,11 @@
 #^CFG COPYRIGHT UM
 include ../../Makefile.def
 
+BATSRUS_SCRIPTS = \
+	${DIR}/GM/BATSRUS/TestBatsrus.protex \
+	${DIR}/GM/BATSRUS/TestSuite.protex \
+	${DIR}/GM/BATSRUS/TestCompare.protex
+
 SWMFREF = \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
@@ -38,9 +43,7 @@ SWMFREF = \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
-	${GMDIR}/TestBatsrus.protex \
-	${GMDIR}/TestSuite.protex \
-	${GMDIR}/TestCompare.protex
+	${BATSRUS_SCRIPTS}
 
 .SUFFIXES:
 .SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
@@ -120,11 +123,11 @@ help:
 SWMFREF.tex: ${SWMFREF}
 	cat ${SWMFREF} > SWMFREF.tex
 
-SWMFXML = \
-	${DIR}/Param/PARAM.xmltex \
-	${DIR}/GM/BATSRUS/PARAM.xmltex \
-	${DIR}/IM/RCM/PARAM.xmltex \
-	${DIR}/IE/Ridley_serial/PARAM.xmltex
+GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #	^CMP IF GM
+IMXML = ${DIR}/IM/RCM/PARAM.xmltex #		^CMP IF IM
+IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #	^CMP IF IE
+
+SWMFXML = ${DIR}/Param/PARAM.xmltex ${GMXML} ${IMXML} ${IEXML}
 
 SWMF_xml.tex: ${SWMFXML}
 	cat ${SWMFXML} > SWMF_xml.tex
@@ -142,8 +145,9 @@ SWMF.dvi: \
 PDF: SWMF.pdf
 
 #^CFG IF DOCHTML BEGIN
-SWMF.html: SWMFREF.tex
-HTML: cleanhtml SWMF.html
+SWMF.html: SWMFREF.tex SWMF_xml.tex
+HTML: cleanhtml
+	make SWMF.html
 #^CFG END DOCHTML
 
 clean:
