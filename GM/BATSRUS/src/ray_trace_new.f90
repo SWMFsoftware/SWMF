@@ -191,9 +191,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   ! If NameTask='integrate', do integration along the ray and
   !    save the integrals into ModRayTrace::RayIntegral_VII(i_D(1),i_D(2))
   !
-  ! If NameTask='extract' or 'extractfile' or 'extractfiles', 
-  !    extract data along the ray and save it to either 
-  !    an array ???, one file, or multiple files (one for each line).
+  ! If NameTask='extract', extract data along the ray, collect and sort it
   !    In this case the rays are indexed with i_D(1).
   !
   !EOP
@@ -299,7 +297,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
               if(DoneRay)then
                  if(NameTask /= 'trace')then
                     write(*,*)NameSub,' WARNING ',&
-                         'received DoneRay=T for task ',trim(NameTask),' !!!'
+                         'received DoneRay=T for task ',trim(NameTask),' !'
                     CYCLE GETRAY
                  end if
 
@@ -517,7 +515,7 @@ contains
   subroutine set_oktest_ray
 
     select case(NameTask)
-    case('extract','extractfile','extractfiles')
+    case('extract')
        oktest_ray = DoTest .and. iStart_D(1) == iTest
     case('integrate')
        oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iTest,jTest/))
@@ -753,7 +751,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      x_mid = x_ini + 0.5*dl*b_ini
 
      ! Extract ray values using around x_ini
-     if(NameTask(1:7)=='extract')call ray_extract(x_ini)
+     if(NameTask == 'extract')call ray_extract(x_ini)
 
      STEP: do
         ! Full step
@@ -918,7 +916,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Extract last point if ray is done. 
   ! The interpolation coefficients are not known.
-  if(iFace /= ray_block_ .and. NameTask(1:7) == 'extract')call ray_extract(x)
+  if(iFace /= ray_block_ .and. NameTask == 'extract')call ray_extract(x)
 
   if(oktest_ray) then
      write(*,'(a,4i4)')&
@@ -1031,6 +1029,7 @@ contains
 
   subroutine ray_extract(x_D)
 
+    use CON_line_extract, ONLY: line_put
     use ModIO, ONLY: iUnitLine_I
     use ModPhysics, ONLY: UnitSi_x, UnitSi_Rho, UnitSi_U, UnitSi_P, UnitSi_B
     use ModAdvance, ONLY: State_VGB, nVar, &
@@ -1094,16 +1093,7 @@ contains
        n = 4
     end if
 
-    select case(NameTask)
-    case('extractfiles')
-       write(iUnitLine_I(iStart_D(1)),'(100es18.10)') PlotVar_V(1:n)
-    case('extractfile')
-       write(iUnitLine_I(1),'(100es18.10)') PlotVar_V(1:n), real(iStart_D(1))
-    case('extract')
-       call stop_mpi(NameSub//' ERROR task=extract is not implemented yet')
-    case default
-       call stop_mpi(NameSub//' ERROR invalid task='//NameTask)
-    end select
+    call line_put(iStart_D(1),n,PlotVar_V(1:n))
 
   end subroutine ray_extract
 
@@ -1447,44 +1437,47 @@ end subroutine test_ray_integral
 
 !==============================================================================
 
-subroutine write_plot_line(iFile)
+subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
+     PlotVar_VI)
 
-  use ModProcMH,   ONLY: iProc, iComm
-  use ModRayTrace, ONLY: oktest_ray, &
-       NameTask, NameVectorField, &
-       DoExtractState, DoExtractUnitSi, &
+  ! Extract nLine ray lines parallel or anti_parallel according to
+  ! IsParallel_I(nLine), starting from positions Xyz_DI(3,nLine).
+  ! Extract  nStateVar variables at each point (includes position and length).
+  ! Return the result in the pointer array PlotVar_VI(0:nStateVar, nPoint)
+
+  use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
+  use ModProcMH,   ONLY: iProc, nProc, iComm
+  use ModRayTrace, ONLY: oktest_ray, NameTask, NameVectorField, &
        R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModPhysics,  ONLY: rBody
-  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, plot_dimensional,&
-       Plot_, iUnitLine_I,&
-       NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
-       StringTimeH4M2S2, nI, nJ, nK, nBlock, unusedBLK
+  use ModMain,     ONLY: nI, nJ, nK, nBlock, unusedBLK
   use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
-  use ModIoUnit,   ONLY: io_unit_new, UnitTmp_
-  use ModUtilities,ONLY: flush_unit
 
   implicit none
 
-  integer, intent(in) :: iFile ! The file index of the plot file
+  !INPUT ARGUMENTS:
+  integer, intent(in) :: nLine
+  logical, intent(in) :: IsParallel_I(nLine)
+  real,    intent(in) :: Xyz_DI(3, nLine)
+  integer, intent(in) :: nStateVar
 
-  character(len=100) :: NameFile, NameStart, NameVar, NameUnit, StringTitle
-  integer            :: nHeaderFile, nPlotVar
+  ! OUTPUT ARGUMENTS:
+  integer, intent(out):: nPoint            ! Number of points
+  real, pointer ::  PlotVar_VI(:,:)        ! Result of size 0:nStateVar,nPoint
 
+  !EOP
   real    :: Xyz_D(3), Dx2Inv, Dy2Inv, Dz2Inv
-  integer :: iPlotFile, iProcFound, iBlockFound, iLine, iRay, iError
+  integer :: iProcFound, iBlockFound, iLine, iRay, nVarOut
 
   integer :: i, j, k, iBlock
 
-  character(len=*), parameter :: NameSub = 'write_plot_line'
+  character(len=*), parameter :: NameSub = 'ray_lines'
   logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
   call set_oktest(NameSub, DoTest, DoTestMe)
-
-  iPlotFile = iFile - Plot_
 
   ! Initialize R_raytrace, R2_raytrace
   oktest_ray = .false.
@@ -1492,24 +1485,11 @@ subroutine write_plot_line(iFile)
   R2_raytrace  = R_raytrace**2
   RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
 
-  if(IsSingleLine_I(iPlotFile))then
-     NameTask    = 'extractfiles'
-     nHeaderFile = nLine_I(iPlotFile)
-  else
-     NameTask    = 'extractfile'
-     nHeaderFile = 1
-  end if
-
-  DoExtractState = index(plot_type(iFile),'pos')<1
-  DoExtractUnitSi= plot_dimensional(ifile)
+  NameTask    = 'extract'
 
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  !call message_pass_cells8(.false.,.false.,.false.,8,State_VGB)
-
-  NameVectorField = NameLine_I(iPlotFile)
   select case(NameVectorField)
   case('B')
      ! Store B1+B0 for faster interpolation
@@ -1551,19 +1531,136 @@ subroutine write_plot_line(iFile)
         end do; end do; end do
      end do
   case default
-     write(*,*)NameSub,' WARNING: for iFile=',iFile,' invalid NameLine=',&
-          trim(NameVectorField),'!!!'
-     RETURN
+     call stop_mpi(NameSub//': invalid NameVectorField='// &
+          trim(NameVectorField))
   end select
 
-  write(NameStart,'(a,i1,a)') &
-       trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile, &
-       '_'//NameVectorField
+  ! Set the number of the variables to be extracted
+  call line_init(nStateVar)
 
+  ! Start extracting rays
+  do iLine = 1, nLine
+     Xyz_D = Xyz_DI(:,iLine)
+
+     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
+          iProcFound, iBlockFound, .true., i, j, k)
+
+     if(iProc == iProcFound)then
+        if(DoTest)write(*,*)NameSub,' follows ray ',iLine,&
+             ' from iProc,iBlock,i,j,k=',iProcFound, iBlockFound, i, j, k
+        if(IsParallel_I(iLine))then
+           iRay = 1
+        else
+           iRay = 2
+        end if
+        call follow_ray(iRay, (/iLine, 0, 0, iBlockFound/), Xyz_D)
+     end if
+  end do
+
+  ! Do remaining rays obtained from other PE-s
+  call finish_ray
+
+  ! Collect lines from all PE-s to Proc 0
+  call line_collect(0,nProc,1,0)
+
+  if(iProc==0)then
+     call line_get(nVarOut, nPoint)
+     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+     allocate(PlotVar_VI(0:nVarOut, nPoint))
+     call line_get(nVarOut, nPoint, PlotVar_VI, .true.)
+  end if
+     
+  call line_clean
+
+end subroutine ray_lines
+
+!==============================================================================
+
+subroutine write_plot_line(iFile)
+
+  use ModProcMH,   ONLY: iProc
+  use ModRayTrace, ONLY: oktest_ray, NameVectorField, DoExtractState, &
+       DoExtractUnitSi
+  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, plot_dimensional,&
+       Plot_, iUnitLine_I,&
+       NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
+  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
+       StringTimeH4M2S2
+  use ModIoUnit,   ONLY: UnitTmp_
+
+  implicit none
+
+  integer, intent(in) :: iFile ! The file index of the plot file
+
+  interface
+     subroutine ray_lines(nLine, IsParallel_I, Xyz_DI, nStateVar, nPoint, &
+          PlotVar_VI)
+       integer, intent(in) :: nLine
+       logical, intent(in) :: IsParallel_I(nLine)
+       real,    intent(in) :: Xyz_DI(3, nLine)
+       integer, intent(in) :: nStateVar
+       integer, intent(out):: nPoint
+       real, pointer ::  PlotVar_VI(:,:)
+     end subroutine ray_lines
+  end interface
+
+  character(len=100) :: NameFile, NameStart, NameVar, NameUnit, StringTitle
+  integer            :: nLineFile, nStateVar, nPlotVar
+  integer            :: iPoint, nPoint, iPointNext, nPoint1
+
+  real, pointer :: PlotVar_VI(:,:)
+
+  integer :: iPlotFile, iLine, nLine
+
+  logical :: IsSingleLine, IsIdl
+
+  character(len=*), parameter :: NameSub = 'write_plot_line'
+  logical :: DoTest, DoTestMe
+  !-------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Set the global ModRaytrace variables for this plot file
+  iPlotFile      = iFile - Plot_
+  NameVectorField= NameLine_I(iPlotFile)
+  DoExtractState = index(plot_type(iFile),'pos')<1
+  DoExtractUnitSi= plot_dimensional(iFile)
+
+  ! Set the number lines and variables to be extracted
+  nLine     = nLine_I(iPlotFile)
+  nStateVar = 4
+  if(DoExtractState) nStateVar = nStateVar + 8
+
+  ! Obtain the line data on processor 0
+  call ray_lines(nLine, IsParallelLine_II(1:nLine,iPlotFile), &
+       XyzStartLine_DII(:,1:nLine,iPlotFile), nStateVar, nPoint, &
+       PlotVar_VI)
+
+  ! Only iProc 0 works on writing the plot files
+  if(iProc /= 0) RETURN
+  !------------------------------------------------------------------------
+  ! Write the result into 1 or more plot files from processor 0
+
+  IsSingleLine = IsSingleLine_I(iPlotFile)
+
+  if(IsSingleLine)then
+     nLineFile = nLine
+  else
+     nLineFile = 1
+  end if
+
+  if(iPlotFile < 10)then
+     write(NameStart,'(a,i1,a)') &
+          trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+  else
+     write(NameStart,'(a,i2,a)') &
+          trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
+  end if
+  NameStart = trim(NameStart)//'_'//NameVectorField
+     
   if(time_accurate)call get_time_string
 
   ! Set the title
-  if(NameTask=='extractfile')then
+  if(IsSingleLine)then
      StringTitle = NameVectorField//' line'
   else
      StringTitle = NameVectorField//' lines'
@@ -1576,105 +1673,118 @@ subroutine write_plot_line(iFile)
      StringTitle = trim(StringTitle)//" in normalized units"
   end if
 
-  ! Set the number of the variables to be extracted
-  nPlotVar = 3
-  if(DoExtractState)         nPlotVar = nPlotVar + 8
-  if(NameTask=='extractfile')nPlotVar = nPlotVar + 1
+  ! The Length is used as a coordinate in the IDL file, so it is not a plot var
+  nPlotVar = nStateVar - 1
+  ! Add 1 for the Index array if it is needed in the plot file
+  if(.not. IsSingleLine)nPlotVar = nPlotVar + 1
 
   ! Set the name of the variables
   select case(plot_form(iFile))
   case('idl')
+     IsIdl = .true.
      NameVar = 'Length x y z'
      if(DoExtractState)NameVar = trim(NameVar)//' rho ux uy uz bx by bz p'
-     if(NameTask=='extractfile')then
-        NameVar = trim(NameVar)//' Index nLine'
-     else
+     if(IsSingleLine)then
         NameVar = trim(NameVar)//' iLine'
+     else
+        NameVar = trim(NameVar)//' Index nLine'
      end if
   case('tec')
-     NameVar = '"Length", "X", "Y", "Z"'
+     IsIdl = .false.
+     NameVar = '"X", "Y", "Z"'
      if(DoExtractState)NameVar = trim(NameVar)// &
-             ',"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p"'
-     if(NameTask=='extractfile')NameVar = trim(NameVar)//', "Index"'
+          ',"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p"'
+     if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
+     NameVar = trim(NameVar)//', "Length"'
+  case default
+     call CON_stop(NameSub//' ERROR invalid plot form='//plot_form(iFile))
   end select
 
-  ! Write out header files and open output files
-  do iLine = 1, nHeaderFile
+  ! Write out plot files
+  ! If IsSingleLine is true write a new file for every line,
+  ! otherwise write a single file
 
-     ! Set the header file name
+  iPointNext = 1
+  do iLine = 1, nLineFile
+
+     ! Set the file name
      NameFile = NameStart
-     if(NameTask == 'extractfiles' .and. nLine_I(iPlotFile)>1)then
-        write(NameFile,'(a,i1)') trim(NameFile),iLine
-     else
-        NameFile = NameStart
+     if(IsSingleLine .and. nLine > 1)then
+        if(nLine < 10)then
+           write(NameFile,'(a,i1)') trim(NameFile),iLine
+        else
+           write(NameFile,'(a,i2)') trim(NameFile),iLine
+        end if
      end if
      if(time_accurate) NameFile = trim(NameFile)// "_t"//StringTimeH4M2S2
-     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step,'.l'
+     write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
 
-     if(iProc==0)then
-        open(UnitTmp_,file=NameFile)
-        select case(plot_form(iFile))
-        case('idl')
-           write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
-           write(UnitTmp_,'(i7,1pe13.5,3i3)') &
-                n_step,time_simulation,1,1,nPlotVar
-           write(UnitTmp_,'(a6)')  '__nn__'
-           if(NameTask == 'extractfiles')then
-              write(UnitTmp_,'(es13.5)') real(iLine)
-           else
-              write(UnitTmp_,'(es13.5)') real(nLine_I(iPlotFile))
-           end if
-           write(UnitTmp_,'(a79)') NameVar
-        case('tec')
-           write(UnitTmp_,'(a)')'TITLE ="'//trim(StringTitle)//'"'
-           write(UnitTmp_,'(a)')'VARIABLES='//trim(NameVar)//'"'
-           if(NameTask == 'extractfiles')then
-              write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
-                   NameVectorField//' line ',iLine,'", '//'I=__nn__'
-           else
-              write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
-                   NameVectorField//' ',nLine_I(iPlotFile),' lines", '// &
-                   'I=__nn__'
-           end if
-        end select
-        close(UnitTmp_)
+     if(IsIdl)then
+        NameFile = trim(NameFile) // '.out'
+     else
+        NameFile = trim(NameFile) // '.dat'
      end if
 
-     ! Open output files (replace .l with _peNNNN.lst)
-     write(NameFile,'(a,i4.4,a)') NameFile(1:len_trim(NameFile)-2) // &
-          '_pe',iProc,'.lst'
-     if(DoTest)write(*,*)NameSub,': saving results into file ',trim(NameFile)
+     ! Figure out the number of points for this ray
+     if(IsSingleLine) nPoint1 = count(nint(PlotVar_VI(0,1:nPoint))==iLine)
 
-     iUnitLine_I(iLine) = io_unit_new();
-     open(iUnitLine_I(iLine), file = NameFile)
-
-  end do
-
-  ! Start extracting rays
-  do iLine = 1, nLine_I(iPlotFile)
-     Xyz_D = XyzStartLine_DII(:, iLine, iPlotFile)
-
-     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
-          iProcFound, iBlockFound, .true., i, j, k)
-
-     if(iProc == iProcFound)then
-        if(DoTest)write(*,*)NameSub,' follows ray ',iLine,&
-             ' from iProc,iBlock,i,j,k=',iProcFound, iBlockFound, i, j, k
-        if(IsParallelLine_II(iLine,iPlotFile))then
-           iRay = 1
+     open(UnitTmp_,file=NameFile)
+     if(IsIdl)then
+        write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
+        write(UnitTmp_,'(i7,1pe13.5,3i3)') &
+             n_step,time_simulation,1,1,nPlotVar
+        if(IsSingleLine)then
+           write(UnitTmp_,'(i6)') nPoint1
+           write(UnitTmp_,'(es13.5)') real(iLine)
         else
-           iRay = 2
+           write(UnitTmp_,'(i6)') nPoint
+           write(UnitTmp_,'(es13.5)') real(nLine)
         end if
-        call follow_ray(iRay, (/iLine, 0, 0, iBlockFound/), Xyz_D)
+        write(UnitTmp_,'(a79)') NameVar
+     else
+        write(UnitTmp_,'(a)')'TITLE ="'//trim(StringTitle)//'"'
+        write(UnitTmp_,'(a)')'VARIABLES='//trim(NameVar)
+        if(IsSingleLine)then
+           write(UnitTmp_,'(a,i2.2,a,i6)')'ZONE T="'// &
+                NameVectorField//' line ',iLine,'", '//'I=',nPoint1
+        else
+           write(UnitTmp_,'(a,i2.2,a,i6)')'ZONE T="'// &
+                NameVectorField//' ',nLine,' lines", '//'I=',nPoint
+        end if
      end if
+
+     ! Write out data
+     if(IsSingleLine)then
+        ! Write out the part correspoinding to this line
+        do iPoint = iPointNext, iPointNext + nPoint1 - 1
+           if(IsIdl)then
+              ! Write Length as the first variable: the 1D coordinate
+              write(UnitTmp_,'(20es18.10)') PlotVar_VI(1:nStateVar,iPoint)
+           else
+              ! Write Length as the last variable, so that 
+              ! x,y,z can be used as 3D coordinates
+              write(UnitTmp_,'(20es18.10)') PlotVar_VI(2:nStateVar,iPoint),&
+                   PlotVar_VI(1,iPoint)
+           end if
+        end do
+        iPointNext = iPointNext + nPoint1
+     else
+        do iPoint = 1, nPoint
+           if(IsIdl)then
+              ! Write Index as the last variable
+              write(UnitTmp_, '(20es18.10)') &
+                   PlotVar_VI(1:nStateVar, iPoint), PlotVar_VI(0,iPoint)
+           else
+              ! Write Index and Length as the last 2 variables
+              write(UnitTmp_, '(20es18.10)') &
+                   PlotVar_VI(2:nStateVar, iPoint), PlotVar_VI(0:1,iPoint)
+           end if
+        end do
+     end if
+     close(UnitTmp_)
   end do
 
-  ! Do remaining rays obtained from other PE-s
-  call finish_ray
-
-  do iLine=1,nHeaderFile
-     close(iUnitLine_I(iLine))
-  end do
+  deallocate(PlotVar_VI)
 
 end subroutine write_plot_line
 
