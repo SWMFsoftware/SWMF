@@ -2,7 +2,7 @@
 
 SHELL =/bin/sh
 
-# CON also needs modules from the Interface subdirectory
+# CON needs modules from other subdirectories
 SEARCH_EXTRA = -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def
@@ -107,7 +107,7 @@ SWMFEXE:
 	@cd ${SCDIR};        make LIB   #^CMP IF SC
 	@cd ${SPDIR};        make LIB   #^CMP IF SP
 	@cd ${INTERFACEDIR}; make LIB
-	make DEPEND
+	@make DEPEND
 	@make ${SWMFEXE}
 	@echo ' '
 	@echo Program ${SWMFEXE} has been brought up to date.
@@ -115,8 +115,7 @@ SWMFEXE:
 
 # CON uses modules from ${SHAREDIR} and the Interface subdirectory as well
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}
 
 # The order of the objects and the libraries in the link phase:
 #
