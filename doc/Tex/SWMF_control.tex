@@ -284,7 +284,7 @@ IE will provide the solution from the previously received data,
 and it will have time to work on the new data while GM and UA
 are working on their time steps. The reversed coupling order
 allows the concurrent execution of IE with other components.
-The temporal accuracy, on the other hand, will be first order.
+The temporal accuracy, on the other hand, will be somewhat worse.
 
 An alternative way to achieve concurrent execution is to
 stagger the coupling times. For example the
@@ -301,3 +301,11 @@ IE                 NameComp2
 \end{verbatim}
 will schedule a GM to IE coupling at 0, 10, 20, 30, \ldots seconds,
 and the IE to GM coupling at 5, 15, 25, \ldots seconds.
+This provides IE half the GM time to solve the Poisson equations.
+If IE runs ate least twice as fast as GM, this solution will
+produce concurrent execution. The temporal accuracy is
+somewhat (by a factor of 2) better than in the reversed coupling case.
+This is a continuum: if we set tNaxt21 to 9.99 then we essentialy
+obtained the reversed coupling order, since IE to GM couplings
+at 9.99, 19.99 \ldots seconds will be immediately followed
+by the GM to IE couplings at 10, 20, 30, \ldots seconds.
