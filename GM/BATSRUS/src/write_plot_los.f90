@@ -410,8 +410,8 @@ contains
                 if( (intrsct(i,j,3) >= zz1) .and. (intrsct(i,j,3) <= zz2)) then
                    counter = counter + 1
                    do k=1,3  !fixed..do loop was misplaced
-                      if(i == 1) point_1(k) = intrsct(i,j,k)
-                      if(i == 2) point_2(k) = intrsct(i,j,k)
+                      if(counter == 1) point_1(k) = intrsct(i,j,k)
+                      if(counter == 2) point_2(k) = intrsct(i,j,k)
                    end do
                 end if
              end if
