@@ -54,6 +54,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   State_V=point_state_v(&
        NameBuffer,&
        nVar,    &
+       nDim,    &
        Sph_D,   &
        LocalBufferGD,&
        bilinear_interpolation)
