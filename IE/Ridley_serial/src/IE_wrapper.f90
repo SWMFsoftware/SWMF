@@ -516,6 +516,43 @@ subroutine IE_put_from_gm(Buffer_IV,nPoint,nVar,NameVar)
 end subroutine IE_put_from_gm
 
 !==============================================================================
+subroutine IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar)
+
+  use IE_ModMain, ONLY: IsNewInput
+  use ModProcIE
+  use ModIonosphere
+
+  implicit none
+  character (len=*), parameter :: NameSub = 'IE_put_from_gm'
+  integer,          intent(in) :: iSize, jSize
+  real,             intent(in) :: Buffer_II(iSize, jSize)
+  character(len=*), intent(in) :: NameVar
+
+  integer :: iError
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
+
+  IsNewInput = .true.
+
+  select case(NameVar)
+
+  case('JrNorth')
+     if (iProc /= 0) RETURN
+     Iono_North_Jr       = Buffer_II
+  case('JrSouth')
+     if (iProc /= nProc-1) RETURN
+     Iono_South_Jr       = Buffer_II
+  case default
+     call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
+  end select
+
+  if(DoTest)write(*,*)NameSub,' finished'
+
+end subroutine IE_put_from_gm_new
+
+!==============================================================================
 
 subroutine IE_check_allocation_north(nPoint)
   use ModIonosphere
