@@ -82,8 +82,9 @@ distclean: clean
 #
 rundir:
 	mkdir -p ${RUNDIR}/UA
-	cd ${RUNDIR}/UA; mkdir data restartOUT
-	ln -s ${UADIR}/srcData ${RUNDIR}/UA/DataIn
+	cd ${RUNDIR}/UA; \
+		mkdir restartIN restartOUT data; \
+		ln -s ${UADIR}/srcData DataIn
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/GITM.exe . ; \
