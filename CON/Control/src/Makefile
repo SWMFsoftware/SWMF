@@ -10,17 +10,17 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 #######################
-# Software libraries: #
-#######################
-
-LIBTIMING = ${LIBDIR}/libTIMING.a
-
-#######################
 # Shared libraries by #
 # CON and componets:  #
 #######################
 
 LIBSHARE   = ${LIBDIR}/libSHARE.a
+
+#######################
+# Software libraries: #
+#######################
+
+LIBTIMING = ${LIBDIR}/libTIMING.a
 
 #######################
 # CON infrastructure: #
@@ -88,8 +88,8 @@ SWMFEXE = ${BINDIR}/SWMF.exe
 # - this directory contains control part of "superstructure" --> SWMF.exe
 
 SWMFEXE: DEPEND 
-	@cd ${TIMINGDIR};    make LIB
 	@cd ${SHAREDIR};     make LIB
+	@cd ${TIMINGDIR};    make LIB
 	@cd ${LIBRARYDIR};   make LIB
 	@cd ${COUPLERDIR};   make LIB
 	@cd ${GMDIR};        make LIB	#^CMP IF GM
@@ -135,7 +135,7 @@ ${SWMFEXE}: 	${MODULES} ${OBJECTS} \
 		${MODULES} ${OBJECTS} \
 		-L${LIBDIR} -lINTERFACE \
 		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
-		-lCOUPLER -lLIBRARY -lSHARE -lTIMING ${LBLAS} \
+		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
 		${Lflag1}
 
 TESTREGISTRY: DEPEND
