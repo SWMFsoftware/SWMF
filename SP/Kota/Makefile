@@ -14,7 +14,11 @@ LIB:
 
 rundir: 
 	mkdir -p ${RUNDIR}/SP
-	cd ${RUNDIR};ln -s ../bin/SEP.exe .;ln -s ../SP/Kota/src/a.out .
+	@(if [ ${STANDALONE} == 'sp' ]; then 	\
+		cd ${RUNDIR}; 			\
+		ln -s ../bin/SEP.exe .; 	\
+		ln -s ../SP/Kota/src/a.out .;	\
+	fi)
 
 clean: install
 	cd src; make clean
