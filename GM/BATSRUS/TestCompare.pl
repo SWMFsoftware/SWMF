@@ -327,7 +327,14 @@ sub compare_speed{
 	next if $missing > $#dir; # nothing to report
 
 	print "$number",join("",@speed);
-	printf "%9.2f",$speed[1]-$speed[0] if $#dir==1;
+	if($#dir==1){
+	    # Calculate speed difference for 2 directories
+	    if($speed[0] > 0 and $speed[1] > 0){
+		printf "%9.2f",$speed[1]-$speed[0];
+	    }else{
+		print "   ---   ";
+	    }
+	}
 	if(length($switch)>70){
 	    print "   ",substr($switch,0,70),"...\n";
 	}else{
@@ -345,7 +352,14 @@ sub compare_speed{
 	for $i (0..$#dir){
 	    printf "%8.2f",$speedsum[$i];
 	}
-	printf "%9.2f",$speedsum[1]-$speedsum[0] if $#dir==1;
+	if($#dir==1){
+	    # Calculate speed difference for 2 directories
+	    if($speedsum[1]>0 and $speedsum[1]>0){
+		printf "%9.2f",$speedsum[1]-$speedsum[0];
+	    }else{
+		print "   ---   ";
+	    }
+	}
 	print "   for $speedsum compeleted tests\n";
     }
     exit 0;
