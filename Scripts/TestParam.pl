@@ -36,9 +36,22 @@ if($Save){
     exit 0;
 }
 
-# Overwrite default is necessary
+# Get the name of the PARAM file 
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
-$LayoutFile = $LayoutFileDefault unless $LayoutFile;
+die "$ERROR could not find $ParamFile\n" unless -f $ParamFile;
+
+# Try to guess the name of the LAYOUT file if not given
+if(not $LayoutFile){
+    $LayoutFile = $ParamFile;
+    # Replace PARAM with LAYOUT
+    $LayoutFile =~ s/PARAM/LAYOUT/;
+    # Replace .expand with .in
+    $LayoutFile =~ s/\.expand/.in/;
+    # If the LAYOUT file based on the PARAM file is not found try the default
+    $LayoutFile = $LayoutFileDefault 
+	if not -f $LayoutFile and -f $LayoutFileDefault;
+}
+print "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
 die "$ERROR could not find $SetSWMF" unless -f $SetSWMF;
 
@@ -55,8 +68,6 @@ my %nProc;   # Number of PE-s for a component ID
 if(-f $LayoutFile){
     &get_layout;
     &check_layout if $nProc;
-}else{
-    print "$WARNING No layout file $LayoutFile was found\n";
 }
 
 # Check parameters against the XML descriptions
@@ -222,7 +233,11 @@ Usage:
 
   -s            convert Param/PARAM.XML into Param/PARAM.pl and exit
 
-  -l=LAYOUTFILE obtain layout from LAYOUTFILE. Default value is 'run/LAYOUT.in'
+  -l=LAYOUTFILE obtain layout from LAYOUTFILE. 
+                Default name of the LAYTOUFILE is obtained from the name
+                of the PARAMFILE: 
+                'PARAM' is replaced with 'LAYOUT' and '.expand' with '.in' 
+                and if that file is not found, run/LAYOUT.in is used if it exists
 
   -n=NPROC      assume that SWMF will run on NPROC processors
 
