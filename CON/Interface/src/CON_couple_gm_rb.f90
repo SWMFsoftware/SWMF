@@ -78,10 +78,10 @@ contains
     !/
 
     ! Number of variables to pass
-    integer, parameter :: nVarGmRb=6
+    integer, parameter :: nVarGmRb=7
 
     ! Names of variables to pass
-    character (len=*), parameter :: NameVar='vol:z0x:z0y:bmin:rho:p'
+    character (len=*), parameter :: NameVar='vol:z0x:z0y:bmin:rho:p:imf'
 
     ! Buffer for the variables on the 2D RB grid
     real, dimension(:,:,:), allocatable :: Buffer_IIV
@@ -150,7 +150,7 @@ contains
     ! Put variables into RB
     !/
     if(is_proc0(RB_))then
-       call RB_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmRb,NameVar)
+       call RB_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmRb,NameVar,tSimulation)
        if(DoTest) &
             write(*,*)'RB got from GM: RB iProc, Buffer(1,1)=',&
             iProcWorld,Buffer_IIV(1,1,:)
