@@ -19,13 +19,11 @@ subroutine MH_set_parameters(TypeAction)
   use ModIO
   use ModCompatibility, ONLY: read_compatible_command
   use CON_planet,       ONLY: read_planet_var, check_planet_var, UseAlignedAxes
-  use CON_axes,         ONLY: init_axes, DtUpdateB0
+  use CON_axes,         ONLY: init_axes, DtUpdateB0, DoUpdateB0
   use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case
 
-  ! SWMF superstructure
-  use CON_physics, ONLY : get_physics, time_int_to_real, time_real_to_int
-
-  ! SWMF infrastructure
+  use CON_planet,       ONLY: get_planet
+  use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModReadParam
   use ModMpi
 
@@ -64,7 +62,7 @@ subroutine MH_set_parameters(TypeAction)
   character (len=10) :: TimingStyle='cumm'
 
   ! Variables for checking/reading #STARTTIME command
-  real (Real8_)         :: StartTimeCheck
+  real (Real8_)         :: StartTimeCheck = -1.0_Real8_
 
   logical            :: UseSimple=.true.
 
@@ -90,29 +88,32 @@ subroutine MH_set_parameters(TypeAction)
   case('CHECK')
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
 
-     ! Obtain general parameters from CON_physics
-     if(.not.IsStandAlone)then
-        call get_physics( &
-             DoTimeAccurateOut = time_accurate, &
-             tStartOut         = StartTime,     &
-             DtUpdateB0Out     = dt_updateB0)
-        call time_real_to_int(StartTime,iStartTime_I)
+     if(StartTimeCheck > 0.0 .and. abs(StartTime - StartTimeCheck) > 0.001)then
+        write(*,*)NameSub//' WARNING: GM::StartTimeCheck=', &
+             StartTimeCheck,' differs from CON::StartTime=', &
+             StartTime
+        if(UseStrict)then
+           call stop_mpi('Fix #STARTTIME commands in PARAM.in')
+        else
+           ! Fix iStartTime_I array
+           call time_real_to_int(StartTime, iStartTime_I)
+        end if
      end if
- 
-     ! Obtain GM specific parameters from CON_physics
+
+     ! Obtain GM specific parameters from CON_planet and CON_axes
      if(NameThisComp=='GM' .and. UseNewAxes) then
-        call get_physics(UseRotationOut = UseCorotation)
+        call get_planet(UseRotationOut = UseCorotation)
 
         if(IsStandAlone) then
            call check_planet_var(iProc==0)
 
            ! There is no need to update B0 if the axes are aligned or there is
            ! no rotation or the solution is not time accurate
-           if(UseAlignedAxes .or. .not.UseCorotation .or. .not.Time_Accurate) &
-                dt_updateB0 = -1.0
+           if(UseAlignedAxes .or. .not.UseCorotation .or. .not.Time_Accurate &
+                .or. dt_updateB0 < 0.0) DoUpdateB0 = .false.
 
            ! Initialize axes
-           call init_axes
+           call init_axes(StartTime)
         end if
      end if
 
@@ -1349,14 +1350,6 @@ subroutine MH_set_parameters(TypeAction)
               else
                  ! Check if things work out or not
                  call time_int_to_real(iStartTime_I, StartTimeCheck)
-                 call get_physics(tStartOut = StartTime)
-                 if(abs(StartTime - StartTimeCheck) > 0.001)then
-                    write(*,*)NameSub//' WARNING: GM::StartTimeCheck=', &
-                         StartTimeCheck,' differs from CON::StartTime=', &
-                         StartTime
-                    if(UseStrict)call stop_mpi(&
-                         'Fix #STARTTIME commands in PARAM.in')
-                 end if
               end if
            case("#TIMESIMULATION")
               if(IsStandAlone) &
