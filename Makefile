@@ -111,16 +111,16 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
-	cd share;       make install
-	cd ${CONDIR};   make install
-	cd ${GMDIR};    make install    #^CMP IF GM
-	cd ${IEDIR};    make install    #^CMP IF IE
-	cd ${IHDIR};    make install    #^CMP IF IH
-	cd ${IMDIR};    make install    #^CMP IF IM
-	cd ${SCDIR};    make install    #^CMP IF SC
-	cd ${SPDIR};    make install    #^CMP IF SP
-	cd ${RBDIR};    make install    #^CMP IF RB
-	cd ${UADIR};    make install    #^CMP IF UA
+	cd share;       	make install
+	cd CON;			make install
+	cd GM/BATSRUS;		make install    #^CMP IF GM
+	cd IE/Ridley_serial;	make install    #^CMP IF IE
+	cd IH/BATSRUS_share;	make install    #^CMP IF IH
+	cd IM/RCM;		make install    #^CMP IF IM
+	cd RB/RiceV5;		make install    #^CMP IF RB
+	cd SP/Kota;		make install    #^CMP IF SP
+	cd UA/GITM;		make install	#^CMP IF UA
+	cd UA/GITM2;		make install	#^CMP IF UA
 	@echo
 	@echo Installation succeeded
 	@echo
