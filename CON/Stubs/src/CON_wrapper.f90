@@ -279,7 +279,7 @@ contains
     ! Initialize component for the session. Session numbers start from 1.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
@@ -320,7 +320,7 @@ contains
     ! report errors, etc.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
@@ -352,7 +352,7 @@ contains
     ! Save restart information for the component.
 
     !REVISION HISTORY:
-    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volberg@umich.edu> 
+    ! 18Aug03 - G. Toth <gtoth@umich.edu> O. Volberg <volov@umich.edu> 
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
