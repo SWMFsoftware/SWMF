@@ -29,6 +29,8 @@ Module CON_couple_mh_sp
   integer::iError
   real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
   real::DsResolution,XyzLine_D(3),RBoundIH,RBoundSC
+  logical::DoTest,DoTestMe
+  character(LEN=*),parameter::NameSub='couple_mh_sp'
 contains
   !==================================================================
   subroutine couple_mh_sp_init
@@ -66,6 +68,7 @@ contains
     integer::nU_I(2),TimeGeopack(7)
     !======================================================================
     if(.not.DoInit)return
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
     DoInit=.false.
     !The initialization can be done only twice
     
@@ -100,10 +103,13 @@ contains
        !Set the initial point for the line
 
        allocate(XyzTemp_DI(3,nPointMax),stat=iError)
+       call check_allocate(iError,NameSub//': XyzTemp_DI')
 
        if(is_proc0(SP_))then
           call SP_get_line_param(&
             DsResolution,XyzLine_D,RBoundSC,RBoundIH)
+          if(DoTest)write(*,*)'DsResolution,XyzLine_D,RBoundSC,RBoundIH',&
+               DsResolution,XyzLine_D,RBoundSC,RBoundIH
           if(sum(XyzLine_D**2)<cOne)then
              !Calculate the Earth position in SGI
              call get_time(tCurrentOut=tNow)
@@ -117,6 +123,7 @@ contains
                   TimeGeopack(6))  ! second
              XyzLine_D = -cAU/rSun*&
                   SunEMBDistance*HgiGse_DD(:,1)
+             write(*,*)'Actual Earth position is at', XyzLine_D
           end if
        end if
 
@@ -143,10 +150,7 @@ contains
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
        end if                      !^CMP END SC
-    !   XyzTemp_DI(1,iPoint)=15. 
-    !   XyzTemp_DI(2,iPoint)=0.
-    !   XyzTemp_DI(3,iPoint)=0.2
-
+    
        !\
        !Reset SP_domain_decomposition
        !/
@@ -251,7 +255,8 @@ contains
       
       integer::iPointStart
       real::SignBDotR
-      !-----------------------------------------------------------------------       call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
+      !--------------------------------------------------------!
+      call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
       call init_router(GD,SP_GridDescriptor,Router)
       if(.not.Router%IsProc)return
       call MPI_bcast(iPoint,1,MPI_INTEGER,&
