@@ -263,8 +263,17 @@ of the current version and real precision with the run which
 is being continued. As it was explained above, 
 all modifications of the planet parameters should follow 
 the \#PLANET command, i.e. they should be after 
-the \#INCLUDE RESTART.in command.
+the \#INCLUDE RESTART.in command. In case the description is
+changed it should also follow, e.g.
+\begin{verbatim}
+#INCLUDE
+RESTART.in
 
+#DESCRIPTION
+We continue the run for another 2 hours
+
+#IDEALAXES
+\end{verbatim}
 When the run starts from scratch, the PARAM.in file
 should start similarly with the 
 \begin{verbatim}

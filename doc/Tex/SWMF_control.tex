@@ -164,7 +164,7 @@ GM    3     999    1
 The SWMF can run both in time accurate (default) and
 steady state mode. This sounds surprising first, 
 since many of the components can run in time accurate 
-mode only. However, the SWMF can improve the convergence
+mode only. Nevertheless, the SWMF can improve the convergence
 towards a steady state by allowing the different components
 to run at different speeds in terms of the physical time.
 In \BATSRUS the same idea is used on a much smaller scale:
@@ -172,14 +172,32 @@ local time stepping allows each cell to converge towards
 steady state as fast as possible, limited only by the local
 numerical stability limit.
 
+\subsubsection{Steady state session}
+
+The steady state mode should be signaled with the 
+\begin{verbatim}
+#TIMEACCURATE
+F                DoTimeAccurate
+\end{verbatim}
+command, ususally placed somewhere at the beginning of the session.
+Since the SWMF runs in time accurate mode by default,
+this command is required in the first steady state session of the run.
+
 When SWMF runs in steady state mode, the SWMF time is not
-advanced. The components may or may not advance their own
+advanced and tSimulation usually keeps its default initial value,
+which is zero. 
+The components may or may not advance their own
 internal times. The execution is controlled by the 
 step number {\tt nStep}, which goes from its initial value 
 to the final step allowed by the MaxIteration parameter
 of the \#STOP command. The components are called at
 the frequency defined by the \#CYCLE command. For example
 \begin{verbatim}
+#CYCLE
+GM          NameComp
+1           DnRun
+#END
+
 #CYCLE
 IM          NameComp
 2           DnRun
@@ -204,6 +222,61 @@ while being continuously pushed by the IM coupling.
 This unphysical instability can be avoided by calling the
 IM component less frequently.
 
+The coupling frequencies should be set to be optimal
+for reaching the steady state. If the components are
+coupled too frequently, a lot of CPU time is spent
+on the couplings. If they are coupled very infrequently,
+the solution may become oscillatory instead of relaxing
+into a (quasi-)steady state solution. For example
+we used the
+\begin{verbatim}
+#COUPLE2
+IMNameComp1
+GMNameComp2
+10                      DnCouple
+-1.                     DtCouple
+\end{verbatim}
+command to couple the GM and IM components in both directions
+in every 10-th SWMF iteration.
+Note that according to the above \#CYCLE commands,
+GM and IM do 10 and 5 steps between two couplings,
+respectively. GM/BATRUS uses 10 local time steps,
+while IM advances by 5 five-second time steps.
+
+Another example is the relaxation of SC and IH components.
+Under usual conditions the solar wind is supersonic at the 
+inner boundary of the IH component, thus the steady state SC
+solution can be obtained first, and then IH can converge
+to a steady state using the SC solution as the inner boundary 
+condition. In this second stage SC does not need to run
+(assuming that it has reached a good steady state solution),
+it is only needed for providing the inner boundary condition for IH.
+This can be achieved by
+\begin{verbatim}
+! No need to run SC too often, it is already in steady state
+#CYCLE
+  SC               NameComp
+  1000             DnRun
+
+! No need to couple SC too often
+#COUPLE2
+  SC               NameSource
+  IH               NameTarget
+  1000             DnCouple
+  -1.0             DtCouple
+\end{verbatim}
+Since SC and IH are always coupled at the beginning of the session,
+further couplings are not necessary.
+
+\subsubsection{Time accurate session}
+
+The SWMF runs in time accurate mode by default. The
+\begin{verbatim}
+#TIMEACCURATE
+T                DoTimeAccurate
+\end{verbatim}
+command is only needed in a time accurate session following a 
+steady state session.
 In time accurate mode the components advance in time at
 approximately the same rate. The component times are
 only synchronized when necessary, i.e. when they
@@ -221,7 +294,7 @@ There are two ways to avoid this. One is to choose the
 coupling frequencies to be round multiples of the time steps
 of the two components involved. This works well if both components
 have fixed time steps and/or much smaller time steps than the 
-couipling frequency.
+coupling frequency.
 
 In certain cases the efficiency can be improved with the
 \#COUPLETIME command, which can allow a component to 
@@ -273,7 +346,6 @@ the Poisson equation, because IE receives new data
 and it is required to produce results immediately.
 With the reversed coupling order
 \begin{verbatim}
-#COUPLEORDER
 4
 IE UA
 IE GM
@@ -285,6 +357,23 @@ and it will have time to work on the new data while GM and UA
 are working on their time steps. The reversed coupling order
 allows the concurrent execution of IE with other components.
 The temporal accuracy, on the other hand, will be somewhat worse.
+
+To demonstrate that the coupling order is important, here
+is a very {\bf inefficient} coupling order
+\begin{verbatim}
+4
+GM IE
+IE GM
+UA IE
+IE UA
+\end{verbatim}
+in case the coupling times with GM and UA coincide (always at the beginning
+of a the sessions).
+With this coupling order, IE first recieves information from GM,
+then solves the Poisson equation and returns the information based
+on the solution to GM while GM is waiting. Then IE recieves extra
+information from UA, solves the Poisson equation again, and sends
+back information to UA, while UA is waiting. 
 
 An alternative way to achieve concurrent execution is to
 stagger the coupling times. For example the
@@ -302,10 +391,8 @@ IE                 NameComp2
 will schedule a GM to IE coupling at 0, 10, 20, 30, \ldots seconds,
 and the IE to GM coupling at 5, 15, 25, \ldots seconds.
 This provides IE half the GM time to solve the Poisson equations.
-If IE runs ate least twice as fast as GM, this solution will
+If IE runs at least twice as fast as GM, this solution will
 produce concurrent execution. The temporal accuracy is
-somewhat (by a factor of 2) better than in the reversed coupling case.
-This is a continuum: if we set tNaxt21 to 9.99 then we essentialy
-obtained the reversed coupling order, since IE to GM couplings
-at 9.99, 19.99 \ldots seconds will be immediately followed
-by the GM to IE couplings at 10, 20, 30, \ldots seconds.
+somewhat better than in the reversed coupling case.
+Note that GM and IE will be synchronized at 0, 5, 10, \ldots seconds,
+which works best if the GM time step is an integer fraction of 5 seconds.
