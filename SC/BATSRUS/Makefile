@@ -38,13 +38,10 @@ clean:
 	fi)
 
 distclean: clean
-	@(if([ -f src/Makefile ]); then \
-	  cd src; make distclean; cd ..; \
-	  cd srcInterface; make distclean; \
-	cd ..; rm -f Makefile.*;\
+	@(if([ -f Makefile.def ]); then \
+		touch srcInterface/Makefile.DEPEND; \
+		cd srcInterface; make distclean; \
 	fi)
+	rm -rf src Makefile.* PARAM.XML GridSize.pl *~
 
 veryclean: distclean
-	@(if([ -f src/Makefile ]); then \
-		rm -rf src PARAM.XML GridSize.pl *~; \
-	fi)
