@@ -362,6 +362,7 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS; \
 		cp Makefile.def PARAM.XML PARAM.pl GridSize.pl \
 		../../IH/BATSRUS/
+	echo '*' > IH/BATSRUS/src/.cvsignore
 
 IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
