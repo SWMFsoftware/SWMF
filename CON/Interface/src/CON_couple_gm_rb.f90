@@ -22,7 +22,6 @@ module CON_couple_gm_rb
 
   public :: couple_gm_rb_init ! initialize both couplings
   public :: couple_gm_rb      ! couple GM to RB
-  public :: couple_rb_gm      ! couple RB to GM
 
   !REVISION HISTORY:
   ! 05/21/2004 O.Volberg - initial version
@@ -67,8 +66,8 @@ contains
 
     !DESCRIPTION:
     ! Couple between two components:\\
-    !    Inner Magnetosphere  (RB) source\\
-    !    Global Magnetosphere (GM) target
+    !    Global Magnetosphere (GM) source\\
+    !    Radiation Belt       (RB) target
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
@@ -91,7 +90,7 @@ contains
 
     if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
 
-    if(DoTest.and.is_proc0(RB_)) call RB_print_variables('GM',iError)
+    ! if(DoTest.and.is_proc0(RB_)) call RB_print_variables('GM',iError)
 
   contains
 
@@ -182,3 +181,5 @@ contains
     end subroutine couple_mpi
 
   end subroutine couple_gm_rb
+
+end module CON_couple_gm_rb
