@@ -39,8 +39,8 @@
 ;    triplet, quadruplet, coarse
 ; eliminating degenerate dimensions from an array
 ;    reform2
-; converting logfile time or date+time into hours
-;    log_time
+; converting logfile time or date+time into hours, getting other functions
+;    log_time, log_func
 
 
 ;=============================================================================
@@ -80,7 +80,13 @@ if nwlog gt 0 then begin
         return,findgen(n_elements(wlog(*,0)))
     end
     if itime gt -1 then return,wlog(*,itime)/3600.0
-    if iyear eq -1 and ihour gt -1 then return,wlog(*,ihour)
+    if iyear eq -1 and ihour gt -1 then begin
+        hours = wlog(*,ihour)
+        for i=1, n_elements(hours)-1 do $
+          while hours(i) lt hours(i-1) do $
+          hours(i) = hours(i) + 24.0
+        return, hours
+    endif
 endif else begin
     iyear = 0
 endelse
@@ -95,6 +101,35 @@ return,(wlog(*,iday)-wlog(0,iday))*24.0 + $
   wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
   wlog(*,imsc)/3.6e6
 
+end
+
+;=============================================================================
+function log_func, wlog, varnames, varname, error
+
+    error = 0
+    ivar  = where(varnames eq varname) & ivar = ivar(0)
+    ; Variable is found, return with array
+    if ivar ge 0 then return, wlog(*,ivar)
+
+    ; Try calculating temperature or pressure
+    if varname eq 'T' then begin
+                                ; Convert p[nPa]/n[/cc] to T[eV]
+        ivar = where( varnames eq 'p')   & ivar = ivar(0)
+        jvar = where( varnames eq 'rho') & jvar = jvar(0)
+        if ivar ge 0 and jvar ge 0 then $
+          return,6241.5*wlog(*,ivar)/wlog(*,jvar)
+
+    endif else if varname eq 'p' then begin
+                                ; Convert T[eV]*n[/cc] to p[nPa] to T[eV]
+        ivar = where( varnames eq 'T')   & ivar = ivar(0)
+        jvar = where( varnames eq 'rho') & jvar = jvar(0)
+        if ivar ge 0 and jvar ge 0 then $
+          return, wlog(*,ivar)*wlog(*,jvar)/6241.5
+    endif
+
+    error = 1
+    return,0*wlog(*,0)
+    
 end
 
 ;=============================================================================
@@ -2816,23 +2851,9 @@ for iter = iter0, 2 do begin
 
         for ifunc = 0, nfunc-1 do begin
 
-            ivar = where( wlognames eq funcs(ifunc)) & ivar = ivar(0)
-            if ivar ge 0 then begin
-                field = wlog(*,ivar)
-            endif else if funcs(ifunc) eq 'T' then begin
-                ; Convert p[nPa]/n[/cc] to T[eV]
-                ivar = where( wlognames eq 'p')   & ivar = ivar(0)
-                jvar = where( wlognames eq 'rho') & jvar = jvar(0)
-                if ivar ge 0 and jvar ge 0 then $
-                  field = 6241.5*wlog(*,ivar)/wlog(*,jvar)
-            endif else if funcs(ifunc) eq 'p' then begin
-                ; Convert T[eV]*n[/cc] to p[nPa] to T[eV]
-                ivar = where( wlognames eq 'T')   & ivar = ivar(0)
-                jvar = where( wlognames eq 'rho') & jvar = jvar(0)
-                if ivar ge 0 and jvar ge 0 then $
-                  field = wlog(*,ivar)*wlog(*,jvar)/6241.5
-            endif
-            if ivar lt 0 then begin
+            field = log_func(wlog, wlognames, funcs(ifunc), error)
+
+            if error then begin
                 if iter eq 1 then print,"function ",funcs(ifunc), $
                   " was not found in wlog",strtrim(string(ilog),2)
             endif else begin
@@ -2982,16 +3003,16 @@ for ivar = 0, nvar-1 do begin
 
     name = varnames(ivar)
 
-    ivar0 = where(varnames0 eq name) & ivar0 = ivar0(0)
-    ivar1 = where(varnames1 eq name) & ivar1 = ivar1(0)
-    
-    if ivar0 eq -1 then print,'Could not find variable ',name,' in wlog0'
-    if ivar1 eq -1 then print,'Could not find variable ',name,' in wlog1'
+    field0 = log_func(wlog0, varnames0, name, error0)
+    field1 = log_func(wlog1, varnames1, name, error1)
 
-    if ivar0 gt -1 and ivar1 gt -1 then begin
+    if error0 then print,'Could not find variable ',name,' in wlog0'
+    if error1 then print,'Could not find variable ',name,' in wlog1'
 
-        var0(*,ivar) = wlog0(index0,ivar0)
-        var1(*,ivar) = interpol(wlog1(*,ivar1),time1,time)
+    if not error0 and not error1 then begin
+
+        var0(*,ivar) = field0(index0)
+        var1(*,ivar) = interpol(field1,time1,time)
 
     endif
 endfor
