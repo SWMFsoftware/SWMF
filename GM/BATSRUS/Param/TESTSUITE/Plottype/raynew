@@ -22,7 +22,7 @@ Plots
 3d_ mhd tec		StringPlot
 #INCLUDE
 Plots
-lin mhd idl		StringPlot
+lin pos idl		StringPlot
 #INCLUDE
 Plots
 B			NameLine
@@ -36,7 +36,7 @@ F			IsParallel
 0.			yStartLine
 -3.			zStartLine
 T			IsParallel
-lin mhd idl		StringPlot
+lin MHD idl		StringPlot
 #INCLUDE
 Plots
 U			NameLine
@@ -64,7 +64,7 @@ F			IsParallel
 0.			yStartLine
 -3.			zStartLine
 T			IsParallel
-lin mhd tec		StringPlot
+lin POS tec		StringPlot
 #INCLUDE
 Plots
 J			NameLine
