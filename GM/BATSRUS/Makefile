@@ -89,6 +89,7 @@ install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90 STATIC
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make user_routines.f90 #^CFG IF USERFILES
 
+# Copy modules with static declaration of large variables into used modules
 STATIC:
 	cp -f src/ModAdvance_static.f90 src/ModAdvance.f90
 	cp -f src/ModCT_static.f90 src/ModCT.f90           #^CFG IF CONSTRAINB
@@ -97,8 +98,9 @@ STATIC:
 	cp -f src/ModNodes_static.f90 src/ModNodes.f90
 	cp -f src/ModRaytrace_static.f90 src/ModRaytrace.f90 #^CFG IF RAYTRACE
 
+# Transform modules with static declaration of large variables into 
+# modules with dynamic allocation as used modules
 Q = ${SCRIPTDIR}/StaticToDynamic.pl
-
 DYNAMIC:
 	$Q src/ModAdvance_static.f90 > src/ModAdvance.f90
 	$Q src/ModCT_static.f90 > src/ModCT.f90         #^CFG IF CONSTRAINB
