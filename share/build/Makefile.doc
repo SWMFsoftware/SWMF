@@ -9,7 +9,6 @@
 #BOC
 # Rules for files with standard extensions
 
-.SUFFIXES:
 .SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
 
 .XML.xmltex:
