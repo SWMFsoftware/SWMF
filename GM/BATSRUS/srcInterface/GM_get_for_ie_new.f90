@@ -16,6 +16,8 @@ module ModFieldAlignedCurrent
 
 contains
 
+  !============================================================================
+
   subroutine init_mod_field_aligned_current(iSize,jSize)
     integer, intent(in) :: iSize, jSize
 
@@ -30,17 +32,25 @@ contains
   end subroutine init_mod_field_aligned_current
 
   !============================================================================
+  subroutine clean_mod_field_aligned_current
+
+    if(allocated(FieldAlignedCurrent_II)) &
+         deallocate( bCurrent_VII, bCurrentLocal_VII, FieldAlignedCurrent_II)
+
+  end subroutine clean_mod_field_aligned_current
+  !============================================================================
 
   subroutine calc_field_aligned_current
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents
+    use ModPhysics,        ONLY: rCurrents, UnitSi_B
     use ModCoordTransform, ONLY: sph_to_xyz
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use CON_axes,          ONLY: transform_matrix
     use ModProcMH,         ONLY: iProc, iComm
     use ModMpi
+    use ModNumConst, ONLY: cUnit_DD
 
     ! Map the grid points from the ionosphere radius to rCurrents.
     ! Calculate the field aligned currents there, use the ratio of the
@@ -49,21 +59,32 @@ contains
 
     integer :: i, j, iHemisphere, iError
     real    :: Phi, Theta, XyzIono_D(3), Xyz_D(3)
-    real    :: bIono_D(3), bIono, b_D(3), b, j_D(3), Fac
+    real    :: bIono_D(3), bIono, B0_D(3), b_D(3), b, j_D(3), Fac
     real    :: GmSmg_DD(3,3)
     real    :: State_V(Bx_-1:nVar+3)
     !-------------------------------------------------------------------------
 
     GmSmg_DD = transform_matrix(Time_Simulation, 'SMG', TypeCoordSystem)
-    
+
     do j = 1, nPhiIono
        Phi = j*dPhiIono
        do i = 1, nThetaIono
+
           Theta = i*dThetaIono
           call sph_to_xyz(rIonosphere,Theta,Phi, XyzIono_D)
+
           call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
                rCurrents, Xyz_D, iHemisphere)
-          if(iHemisphere == 0) CYCLE
+
+          if(iHemisphere == 0) then
+             ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
+             bCurrentLocal_VII(:,i,j) = (/1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
+             CYCLE
+          end if
+
+          ! Get the B0 field at the mapped position
+          call get_planet_field(Time_Simulation, Xyz_D,'SMG NORM',B0_D)
+          B0_D = B0_D/UnitSi_B
 
           ! Convert to GM coordinates
           Xyz_D = matmul(GmSmg_DD, Xyz_D)
@@ -71,8 +92,21 @@ contains
           ! Extract currents and magnetic field for this position
           call get_point_data(0.0, Xyz_D, 1, nBlock, Bx_, nVar+3, State_V)
 
-          bCurrentLocal_VII(0:3,i,j) = State_V(Bx_-1:Bz_)     ! Weight and B
+          bCurrentLocal_VII(0  ,i,j) = State_V(Bx_-1)        ! Weight
+          bCurrentLocal_VII(1:3,i,j) = State_V(Bx_:Bz_) + &  ! B1 and B0
+               State_V(Bx_-1)*B0_D
           bCurrentLocal_VII(4:6,i,j) = State_V(nVar+1:nVar+3) ! Currents
+
+          if(.false. .and. i==6 .and. j==6)then
+             write(*,*)'iHemispher=',iHemisphere
+             write(*,*)'Phi,Theta=',Phi,Theta
+             write(*,*)'XyzIono_D=',XyzIono_D
+             write(*,*)'Xyz_D    =',Xyz_D
+             write(*,*)'rCurrents=',rCurrents,sqrt(sum(Xyz_D**2))
+             write(*,*)'b0_D     =',b0_D
+             write(*,*)'bCurrentLocal_VII =',bCurrentLocal_VII(:,i,j)
+             call stop_mpi('DEBUG')
+          end if
        end do
     end do
 
@@ -91,7 +125,10 @@ contains
           ! Calculate magnetic field strength at the ionosphere grid point
           call sph_to_xyz(rIonosphere, Theta, Phi, XyzIono_D)
           call get_planet_field(Time_Simulation, XyzIono_D,'SMG NORM',bIono_D)
-          bIono_D = sqrt(sum(bIono_D**2))
+
+          ! Convert to GM units and get magnitude
+          bIono_D = bIono_D/UnitSi_B
+          bIono   = sqrt(sum(bIono_D**2))
 
           ! Divide MHD values by the total weight if it exceeds 1.0
           if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
@@ -101,8 +138,10 @@ contains
           b_D = bCurrent_VII(1:3,i,j)
           j_D = bCurrent_VII(4:6,i,j)
 
+
           ! The strength of the field
           b = sqrt(sum(b_D**2))
+
 
           ! Convert b_D into a unit vector
           b_D = b_D / b
@@ -125,8 +164,10 @@ contains
   end subroutine calc_field_aligned_current
 
 end module ModFieldAlignedCurrent
+
 !==============================================================================
-subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
+
+subroutine GM_get_for_ie_new(Buffer_II,iSize,jSize,NameVar)
 
   use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
        init_mod_field_aligned_current, calc_field_aligned_current
@@ -158,4 +199,12 @@ subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
   end select
   if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
 
-end subroutine GM_get_for_ie
+end subroutine GM_get_for_ie_new
+
+!==============================================================================
+
+subroutine magnetosphere_deallocate
+  use ModFieldAlignedCurrent, ONLY: clean_mod_field_aligned_current
+
+  call clean_mod_field_aligned_current
+end subroutine magnetosphere_deallocate
