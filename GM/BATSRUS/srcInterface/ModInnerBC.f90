@@ -2,28 +2,35 @@
 !
 !-------------------------------------------------------------------------
 Module ModMappingParam
-  Use ModNumConst
+  use ModNumConst
+
   real,parameter::IONO_PI=cPi
   real, parameter :: IONO_TOLER = 5.0e-05
   real :: IONO_Radius_Mag_Boundary, &
        IONO_Radius, IONO_Height, rMap, DipoleSign
+
 end Module ModMappingParam
+
 !============================================================================
+
 subroutine set_mapping_param
 
-  use ModPhysics, ONLY : unitSI_x,Rbody
-  use CON_physics, ONLY:get_physics 
+  use ModPhysics,  ONLY: unitSI_x,Rbody
+  use CON_physics, ONLY: get_planet
   use ModMappingParam
   implicit none
   real::DipoleStrength
-  call get_physics(RadiusPlanetOut= IONO_Radius,&
-       IonosphereHeightOut= IONO_Height,&
-       DipoleStrengthOut=DipoleStrength)
+
+  call get_planet(&
+       RadiusPlanetOut      = IONO_Radius,&
+       IonosphereHeightOut  = IONO_Height,&
+       DipoleStrengthOut    = DipoleStrength)
 
   ! final radius is fixed, store it
   rMap=(IONO_Radius+ IONO_Height)/UnitSI_x
   IONO_Radius_Mag_Boundary = Rbody*UnitSI_x
   DipoleSign=sign(cOne,DipoleStrength)
+
 end subroutine set_mapping_param
 
 !============================================================================
@@ -51,7 +58,7 @@ module ModInnerBC
   real, dimension(:,:), allocatable ::     &
        IONO_NORTH_PHI_BC,IONO_SOUTH_PHI_BC,         & !Magnetospheric bound pot
        IONO_NORTH_ETh_BC,IONO_NORTH_EPs_BC,         & !Magnetospheric bound
-       IONO_SOUTH_ETh_BC,IONO_SOUTH_EPs_BC,         & !   electric fields
+       IONO_SOUTH_ETh_BC,IONO_SOUTH_EPs_BC,         & !Electric fields
        IONO_NORTH_UTh_BC,IONO_NORTH_UPs_BC,         & !Magnetosphere bound flow
        IONO_NORTH_UR_BC,                            & !Velocities
        IONO_SOUTH_UTh_BC,IONO_SOUTH_UPs_BC,         &
@@ -62,6 +69,7 @@ end module ModInnerBC
 !============================================================================
 
 subroutine init_inner_bc_arrays(iSize,jSize)
+
   use CON_coupler
   use ModInnerBc,ONLY:&
        IONO_nTheta, IONO_nPsi,&            
@@ -76,6 +84,9 @@ subroutine init_inner_bc_arrays(iSize,jSize)
        IONO_SOUTH_UR_BC, &
        IONO_SOUTH_UTh_BC, &
        IONO_SOUTH_UPs_BC
+
+  implicit none
+
   integer, intent(in) :: iSize,jSize
   character(len=*), parameter :: NameSub='GM_allocate_iono_arrays'
   integer :: nCells_D(2),iError, i
@@ -129,4 +140,5 @@ subroutine init_inner_bc_arrays(iSize,jSize)
      IONO_NORTH_Psi(i,:)   = Grid_C(IE_) % Coord2_I
      IONO_SOUTH_Psi(i,:)   = Grid_C(IE_) % Coord2_I
   end do
+
 end subroutine init_inner_bc_arrays
