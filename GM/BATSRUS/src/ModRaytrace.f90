@@ -95,6 +95,8 @@ module ModRaytrace
 
 contains
 
+  !============================================================================
+
   subroutine xyz_to_latlon(Pos_D)
 
     use ModNumConst, ONLY: cTiny, cRadToDeg
@@ -105,7 +107,7 @@ contains
 
     real :: x, y, z
 
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     ! Check if this direction is closed or not
     if(Pos_D(1) > CLOSEDRAY)then
@@ -134,5 +136,41 @@ contains
     endif
 
   end subroutine xyz_to_latlon
+
+  !============================================================================
+
+  subroutine xyz_to_latlonstatus(Ray_DI)
+
+    real, intent(inout) :: Ray_DI(3,2)
+
+    integer :: iRay
+    !-------------------------------------------------------------------------
+
+    ! Convert 1st and 2nd elements into latitude and longitude
+    do iRay=1,2
+       call xyz_to_latlon(Ray_DI(:,iRay))
+    end do
+
+    ! Convert 3rd element into a status variable
+
+    if(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)>CLOSEDRAY)then
+       Ray_DI(3,1)=3.      ! Fully closed
+    elseif(Ray_DI(3,1)>CLOSEDRAY .and. Ray_DI(3,2)==OPENRAY)then
+       Ray_DI(3,1)=2.      ! Half closed in positive direction
+    elseif(Ray_DI(3,2)>CLOSEDRAY .and. Ray_DI(3,1)==OPENRAY)then
+       Ray_DI(3,1)=1.      ! Half closed in negative direction
+    elseif(Ray_DI(3,1)==OPENRAY .and. Ray_DI(3,2)==OPENRAY) then
+       Ray_DI(3,1)=0.      ! Fully open
+    elseif(Ray_DI(3,1)==BODYRAY)then
+       Ray_DI(3,1)=-1.     ! Cells inside body
+    elseif(Ray_DI(3,1)==LOOPRAY .and.  Ray_DI(3,2)==LOOPRAY) then
+       Ray_DI(3,1)=-2.     ! Loop ray within block
+    else
+       Ray_DI(3,1)=-3.     ! Strange status
+    end if
+
+  end subroutine xyz_to_latlonstatus
+
+  !============================================================================
 
 end module ModRaytrace
