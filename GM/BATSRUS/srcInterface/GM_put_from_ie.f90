@@ -4,6 +4,8 @@
 module ModIonoPotential
 
   implicit none
+  save
+
   integer :: nThetaIono, nPhiIono
   real    :: dThetaIono, dPhiIono
   real    :: rIonosphere
@@ -19,6 +21,7 @@ contains
 
     integer, intent(in) :: iSize, jSize
     real :: rPlanet, IonoHeight
+    character(len=*), parameter :: NameSub='init_mod_iono_potential'
     !-------------------------------------------------------------------------
 
     if(allocated(IonoPotential_II)) RETURN
@@ -123,10 +126,11 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   if(IONO_nTheta < 0)then
      if(DoTest)write(*,*)NameSub,': allocating variables'
      call init_inner_bc_arrays(iSize,jSize)
-     call init_mod_iono_potential(iSize,jSize)
   end if
+  if(.not. allocated(IonoPotential_II)) &
+       call init_mod_iono_potential(iSize,jSize)
   if(.not.allocated(IONO_NORTH_Phi))call init_map_potential_arrays  
- 
+
   if(DoTest)write(*,*)NameSub,': putting potential'
   select case(NameVar)
   case('PotNorth')
