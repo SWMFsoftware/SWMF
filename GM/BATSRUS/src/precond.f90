@@ -134,9 +134,7 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   ! pivot:   integer array which contains the sequence generated
   !          by partial pivoting in subroutine 'Lapack_getrf'.
   !
-!!! Automatic arrays
-!!$  REAL    :: dd(N,N)
-!!$  INTEGER :: pivot(N)
+  ! these used to be automatic arrays
   real, dimension(:,:), allocatable :: dd
   integer, dimension(:), allocatable :: pivot
 
@@ -168,13 +166,13 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   !          with a general N-by-N matrix A using the LU factorization
   !          computed by LAPACK_GETRF.
   !
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   call timing_start('precond')
 
-  ! Allocate arrays that were "Automatic"
-  allocate(dd(N,N), stat=iError); call alloc_check(iError,"precond:dd")
-  allocate(pivot(N), stat=iError); call alloc_check(iError,"precond:pivot")
+  ! Allocate arrays that used to be automatic
+  allocate(dd(N,N), pivot(N), stat=iError)
+  call alloc_check(iError,"prehepta arrays")
 
   alf=alf_in
   IF (alf < zero) THEN
@@ -284,9 +282,8 @@ SUBROUTINE prehepta(nblock,N,M1,M2,alf_in,d,e,f,e1,f1,e2,f2)
   ! write(*,*)'F1(140)  =',((f1(i,k,140),i=1,N),k=1,N)
   ! write(*,*)'F2(140)  =',((f2(i,k,140),i=1,N),k=1,N)
 
-  ! Deallocate arrays that were "Automatic"
-  deallocate(dd)
-  deallocate(pivot)
+  ! Deallocate arrays that used to be automatic
+  deallocate(dd, pivot)
 
   call timing_stop('precond')
 
@@ -458,8 +455,7 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
   !                                 distance M2 from the main diagonal.
   !                                 Use scalar for block tri- and penta-diagonal
   !                                 matrices!
-!!! automatic array
-!!$  REAL    :: work(N)
+  ! this used to be an automatic array
   real, dimension(:), allocatable :: work
 
   INTEGER :: j, iError
@@ -477,8 +473,8 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
 
   call timing_start('Lhepta')
 
-  ! Allocate arrays that were "Automatic"
-  allocate(work(N), stat=iError); call alloc_check(iError,"precond:work")
+  ! Allocate arrays that used to be Automatic
+  allocate(work(N), stat=iError); call alloc_check(iError,"lhepta:work")
 
   if(N>20)then
      ! BLAS VERSION
@@ -512,7 +508,7 @@ SUBROUTINE Lhepta(nblock,N,M1,M2,x,d,e,e1,e2)
      end do
   end if
 
-  ! Deallocate arrays that were "Automatic"
+  ! Deallocate arrays that used to be automatic
   deallocate(work)
 
   call timing_stop('Lhepta')

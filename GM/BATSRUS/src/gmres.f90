@@ -73,24 +73,20 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
   integer :: i,i1,its,j,k,k1, iError
   real :: coeff,Tol1,epsmac,gam,ro,ro0,t,tmp
 
-  ! Automatic array for vectors in Krylov subspace
-!!$  real :: Krylov_II(n,nKrylov+2)
+  ! This array used to be automatic (Krylov subspace vectors)
   real, dimension(:,:), allocatable :: Krylov_II
 
-  ! Automatic arrays (Hessenberg matrix and some vectors)
-!!$  real :: hh(nKrylov+1,nKrylov),c(nKrylov),s(nKrylov),rs(nKrylov+1)
+  ! These arrays used to be automatic (Hessenberg matrix and some vectors)
   real, dimension(:,:), allocatable :: hh
-  real, dimension(:), allocatable :: c,s,rs
+  real, dimension(:),   allocatable :: c,s,rs
   !-----------------------------------------------------------------------
 
   if(oktest)write(*,*)'GMRES tol,iter:',Tol,Iter
 
-  ! Allocate arrays that were "Automatic"
-  allocate(Krylov_II(n,nKrylov+2), stat=iError); call alloc_check(iError,"gmres:Krylov_II")
-  allocate(hh(nKrylov+1,nKrylov), stat=iError); call alloc_check(iError,"gmres:hh")
-  allocate(c(nKrylov), stat=iError); call alloc_check(iError,"gmres:c")
-  allocate(s(nKrylov), stat=iError); call alloc_check(iError,"gmres:s")
-  allocate(rs(nKrylov+1), stat=iError); call alloc_check(iError,"gmres:rs")
+  ! Allocate arrays that used to be automatic
+  allocate(Krylov_II(n,nKrylov+2), hh(nKrylov+1,nKrylov), &
+       c(nKrylov), s(nKrylov), rs(nKrylov+1), stat=iError); 
+  call alloc_check(iError,"gmres arrays")
 
   if(range(1.0)>100)then
      epsmac=0.0000000000000001
@@ -242,12 +238,8 @@ subroutine gmres(matvec,Rhs,Sol,IsInit,n,nKrylov,Tol,TypeStop,Iter,info,&
      info = -2
   endif
 
-  ! Deallocate arrays that were "Automatic"
-  deallocate(Krylov_II)
-  deallocate(hh)
-  deallocate(c)
-  deallocate(s)
-  deallocate(rs)
+  ! Deallocate arrays that used to be automatic
+  deallocate(Krylov_II, hh, c, s, rs)
 
 contains
   !============================================================================
