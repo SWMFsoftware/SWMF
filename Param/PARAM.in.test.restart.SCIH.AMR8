@@ -141,7 +141,7 @@ T			UseBody1
 20.0			rBody
 
 #INNERBOUNDARY
-coronatoih
+coronatoih		TypeBcInner
 
 #HELIOSPHERE
 2.85E+06		Tsun    [K]      1.0E6 
