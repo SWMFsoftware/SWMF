@@ -68,6 +68,7 @@ install: Makefile.def.orig MAKEFILE_DEF
 
 Makefile.def.orig:
 	mv Makefile.def Makefile.def.orig
+	cp Makefile.def.orig Makefile.def
 
 MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
