@@ -22,7 +22,7 @@ MPILIB =
 # This is the search path for used modules
 # SEARCH_EXTRA should be given in the individual Makefiles
 
-SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
+SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
 #DEBUG   = -qextname -qarch=g5 -qtune=g5 -C -gline
 DEBUG   = -qextname -qarch=g5 -qtune=g5

@@ -71,8 +71,7 @@ NOMPIDIR  = ${UTILDIR}/NOMPI/src
 
 COMMONDIR = ${DIR}/share
 SCRIPTDIR = ${COMMONDIR}/Scripts
-MODDIR    = ${COMMONDIR}/Library/src
-SHAREDIR  = ${MODDIR}
+SHAREDIR  = ${COMMONDIR}/Library/src
 INCLDIR   = ${COMMONDIR}/include
 BUILDDIR  = ${COMMONDIR}/build
 

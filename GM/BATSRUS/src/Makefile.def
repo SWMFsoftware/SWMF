@@ -7,7 +7,6 @@ LIBDIR    = ${GMDIR}/src
 RUNDIR    = ${GMDIR}/run
 BINDIR    = ${GMDIR}/src
 SHAREDIR  = ${GMDIR}/share/Library/src
-MODDIR    = ${SHAREDIR}    # MODDIR is still used in makefiles !!!
 
-TIMINGDIR = util/TIMING/src
-#TIMINGDIR = util/TIMING/srcEmpty
+TIMINGDIR = ${GMDIR}/util/TIMING/src
+#TIMINGDIR = ${GMDIR}/util/TIMING/srcEmpty

@@ -22,7 +22,7 @@ MPILIB =
 # This is the search path for used modules
 # SEARCH_EXTRA should be given in the individual Makefiles
 
-SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
+SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
 DEBUG   = 
 #DEBUG   = -C -g

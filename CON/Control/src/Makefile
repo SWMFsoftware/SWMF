@@ -103,7 +103,7 @@ SWMFEXE: DEPEND
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo ' '
 
-# CON uses modules from ${MODDIR} and the Interface subdirectory as well
+# CON uses modules from ${SHAREDIR} and the Interface subdirectory as well
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
 		${MODULES} ${OBJECTS}
@@ -181,7 +181,7 @@ SWMF_for_xlf:
 	rm -rf Tmp_*
 
 TESTREGISTRY: DEPEND
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
 	make test_registry.exe
 	mpirun -np 4 test_registry.exe
 	cat LAYOUT.in
@@ -201,7 +201,7 @@ TEST_PHYS_OBJ = \
 	CON_variables.o
 
 TESTPHYSICS: DEPEND
-	cd ${MODDIR}; make LIB
+	cd ${SHAREDIR}; make LIB
 	make test_physics.exe
 	test_physics.exe
 
