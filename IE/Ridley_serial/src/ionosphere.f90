@@ -24,13 +24,11 @@ subroutine ionosphere(iter, iAction)
   use ModIonosphere
   use IE_ModMain
   use ModProcIE
-  use ModMpi
 
   implicit none
   
-  integer, intent(in) :: iter,iAction
-  integer :: iModel, size, itag, request, status(MPI_STATUS_SIZE), nump
-  integer :: iError
+  integer, intent(in) :: iter, iAction
+  integer :: iModel
   real :: f107
   real :: Radius
   
@@ -43,8 +41,6 @@ subroutine ionosphere(iter, iAction)
   
   f107 = f107_flux
   
-  nump = nProc
-
   select case (iAction)
      
   case (1)
