@@ -13,7 +13,7 @@ module CON_variables
   !EOP
   !BOC
   ! Version number for SWMF
-  real, parameter :: VersionSwmf = 2.0
+  real, parameter :: VersionSwmf = 2.1
 
   ! Description string for the problem being solved
   character (len=lStringLine) :: StringDescription='Please describe me!'
