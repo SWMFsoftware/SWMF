@@ -181,7 +181,6 @@ CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd util;		make clean
 	cd GM/BATSRUS;		make clean    #^CMP IF GM
 	cd GM/Empty;		make clean    #^CMP IF GM
 	cd IE/Ridley_serial;	make clean    #^CMP IF IE
