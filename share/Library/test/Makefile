@@ -228,12 +228,15 @@ test_geopack:
 OBJ_AXES = \
 	test_axes.o \
 	../src/CON_axes.o \
+	../src/CON_geopack.o \
 	../src/CON_planet.o \
 	../src/ModCoordTransform.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
-	../src/ModUtilities.o
+	../src/ModUtilities.o \
+	../src/ModKind.o \
+	../src/ModConst.o 
 
 test_axes.exe: ${OBJ_AXES}
 	${LINK.f90} -o test_axes.exe ${OBJ_AXES} ${Lflag1}
@@ -257,6 +260,7 @@ OBJ_PLANET_FIELD = \
 	../src/CON_planet_field.o \
 	../src/CON_planet.o \
 	../src/CON_axes.o \
+	../src/CON_geopack.o \
 	../src/ModCoordTransform.o \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
