@@ -387,7 +387,7 @@ contains
     !^CFG END CARTESIAN
     !call covariant_curlb(i,j,k,iBlock,Current_D)   !^CFG IF NOT CARTESIAN
 
-    StateCurrent_V(iVarMax-2:iVarMax) = StateCurrent_V(iVarMax-2:iVarMax) &
+    StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &
          + WeightXyz * Current_D
 
   end subroutine add_current
