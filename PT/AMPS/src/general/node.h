@@ -5,10 +5,11 @@
 
 extern int DIM;
 
+template <class T=float>
 class Cnode{
-  float node_coordinate[3];
+  T node_coordinate[3];
 public:
-  float* InterpolationWeight;
+  T* InterpolationWeight;
   long int* InterpolationMask;
   long int nodeno;
 
@@ -22,15 +23,15 @@ public:
     if (InterpolationMask!=NULL) delete [] InterpolationMask;
   };
 
-  array_1d<float> X() {
+  array_1d<T> X() {
     int idim;
-    array_1d<float> x(DIM);
+    array_1d<T> x(DIM);
 
     for(idim=0;idim<DIM;idim++) x(idim)=node_coordinate[idim];
     return x;
   };
 
-  void SetX(float* x) {
+  void SetX(T* x) {
     int idim;
     for(idim=0;idim<DIM;idim++) node_coordinate[idim]=x[idim];
   };

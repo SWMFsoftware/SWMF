@@ -12,22 +12,23 @@ extern int SymmetryMode;
 
 using namespace std;
 
+template<class DataType=float,class NodeType=Cnode<DataType> >
 class Cface{
-  float nrml[3];
+  DataType nrml[3];
 public:
   unsigned char faceat,surface_group;
   long int faceno,nodeno[3];
-  Cnode* node[3];
+  NodeType* node[3];
 
 //===================================================
-  void SetNormal(array_1d<float>& n) {
+  void SetNormal(array_1d<DataType>& n) {
     int idim;
 
     for (idim=0;idim<DIM;idim++) nrml[idim]=n(idim);
   };
 //===================================================
-  array_1d<float> Normal() {
-    array_1d<float> normal(DIM);
+  array_1d<DataType> Normal() {
+    array_1d<DataType> normal(DIM);
     int idim;
 
     for (idim=0;idim<DIM;idim++) normal(idim)=nrml[idim];
@@ -35,14 +36,16 @@ public:
   };
 
 //===================================================
-  void GetNormal(float* n) {
+  void GetNormal(DataType* n) {
     for (int idim=0;idim<DIM;idim++) n[idim]=nrml[idim];
   }; 
 //===================================================
   double Measure() {
-    static double measure;
-    static array_1d<float> x_2d(2);
-    static array_1d<float> x1_3d(3),x2_3d(3);
+    static double measure=-1.0;
+    array_1d<DataType> x_2d(2);
+    array_1d<DataType> x1_3d(3),x2_3d(3);
+
+    if (measure>0.0) return measure;
 
     switch(DIM) {
     case 1:  
@@ -89,7 +92,16 @@ public:
   };
 //===================================================
   void RandomPosition(float* x) {
-    float f1,f2;
+    double xtmp[3];
+    int i;
+
+    RandomPosition(xtmp);
+    for (i=0;i<DIM-1;i++) x[i]=xtmp[i];
+  }; 
+    
+
+  void RandomPosition(double* x) {
+    double f1,f2;
 
     switch (DIM) {
     case 3 :
