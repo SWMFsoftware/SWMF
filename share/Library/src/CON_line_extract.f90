@@ -11,6 +11,7 @@ module CON_line_extract
 
   !USES:
   use ModMpi
+  use ModSort
 
   implicit none
 
@@ -175,7 +176,10 @@ contains
     do i = 1, nProcFrom
        iProcFrom = iProc0From + (i-1)*DiProcFrom
 
-       if(iProc == iProcFrom .and. iProc == iProcTo) CYCLE
+       if(iProc == iProcFrom .and. iProc == iProcTo)then
+          nPoint_P(i) = nPoint
+          CYCLE
+       end if
 
        if(iProc == iProcFrom) call MPI_SEND(nPoint, &
             1, MPI_INTEGER, iProcTo, iTag, MPI_COMM_WORLD, iError)
@@ -218,11 +222,17 @@ contains
   !BOP ========================================================================
   !IROUTINE: line_get - obtain all the ray states
   !INTERFACE:
-  subroutine line_get(nVarOut, nPointOut, Line_VI)
+  subroutine line_get(nVarOut, nPointOut, Line_VI, DoSort)
+
+    !INPUT/OUTPUT ARGUMENTS:
+    integer, intent(inout)         :: nVarOut
+    integer, intent(inout)         :: nPointOut
+
+    !OUTPUT ARGUMENTS:
+    real,    intent(out), optional :: Line_VI(0:nVarOut, nPointOut)
 
     !INPUT ARGUMENTS:
-    integer, intent(inout)         :: nVarOut, nPointOut
-    real,    intent(out), optional :: Line_VI(0:nVarOut, nPointOut)
+    logical, intent(in), optional  :: DoSort
 
     !DESCRIPTION:
     ! Obtain all the ray states stored. 
@@ -237,29 +247,46 @@ contains
     ! 
     ! (the 0 index is needed for the line index) and then obtain the state
     !
-    !    call line_get(nVarOut, nPointOut, Line_VI)
+    !    call line_get(nVarOut, nPointOut, Line_VI, DoSort = .true.)
+    !
     !\end{verbatim}
     !EOP
 
     character (len=*), parameter :: NameSub = NameMod//'::line_get'
 
+    integer, allocatable :: iSorted_I(:)
+    real :: Factor
     !------------------------------------------------------------------------
     if(.not. present(Line_VI))then
        ! Provide size
        nVarOut   = nVar
        nPointOUt = nPoint
-    else
-       ! Check size
-       if(nVar /= nVarOut .or. nPoint /= nPointOut)then
-          write(*,*) NameSub,' ERROR: nVar  , nVarOut  =', &
-               nVar, nVarOut
-          write(*,*) NameSub,' ERROR: nPoint, nPointOut=', &
-               nPoint, nPointOut
-          call CON_stop(NameSub//' ERROR: incorrect array size')
-       end if
-
-       Line_VI = State_VI
+       RETURN
     end if
+
+    ! Check size
+    if(nVar /= nVarOut .or. nPoint /= nPointOut)then
+       write(*,*) NameSub,' ERROR: nVar  , nVarOut  =', &
+            nVar, nVarOut
+       write(*,*) NameSub,' ERROR: nPoint, nPointOut=', &
+            nPoint, nPointOut
+       call CON_stop(NameSub//' ERROR: incorrect array size')
+    end if
+
+    if(present(DoSort))then
+       if(DoSort)then
+          allocate(iSorted_I(nPoint))
+          Factor = 0.9/maxval(State_VI(1,1:nPoint))
+          call sort_quick(nPoint, &
+               State_VI(0,1:nPoint) + Factor*State_VI(1,1:nPoint), iSorted_I)
+          State_VI(:,1:nPoint) = State_VI(:,iSorted_I)
+          deallocate(iSorted_I)
+       end if
+    end if
+
+    Line_VI(:,1:nPoint) = State_VI(:,1:nPoint)
+
+    nPoint = 0
        
   end subroutine line_get
 
@@ -275,46 +302,123 @@ contains
 
     integer, parameter :: nVarTest = 4
     integer :: nProc, iError
-    integer :: nVarOut, nPointOut, iPoint
+    integer :: nVarOut, nPointOut, iPoint, iProcFrom
+    real    :: Length, Index, State_V(2:nVarTest)
     real, allocatable :: Result_VI(:,:)
-    !------------------------------------------------------------------------
 
-    call line_init(nVarTest)
+    character(len=*), parameter :: NameSub=NameMod//'::line_test'
+    !------------------------------------------------------------------------
 
     call MPI_COMM_SIZE(MPI_COMM_WORLD, nProc, iError)
 
-    write(*,*)iProc,': nProc = ',nProc
+    call line_init(nVarTest)
+    if(iProc==0)write(*,'(a)')'Testing line_init'
 
-    write(*,*)iProc,': line_init done, nVar =',nVar
+    if(nVar/=4)write(*,*)NameSub,' line_init failed, iProc=',iProc, &
+         ' nVar =',nVar,' should be 4 !'
 
-    call line_put(1, 4, (/0.0, 10.0+iProc, 20.0+iProc, 30.0+iProc/) )
-    call line_put(1, 4, (/1.0, 40.0+iProc, 50.0+iProc, 60.0+iProc/) )
-    call line_put(2, 4, (/0.0, 70.0+iProc, 80.0+iProc, 90.0+iProc/) )
+    if(iProc==0)write(*,'(a)')'Testing line_put'
 
-    write(*,*)iProc,': line_put done, nPoint, MaxPoint=',nPoint, MaxPoint
+    call line_put(1, 4, (/2.0*iProc,   10.0+iProc, 20.0+iProc, 30.0+iProc/) )
+    call line_put(1, 4, (/2.0*iProc+1, 40.0+iProc, 50.0+iProc, 60.0+iProc/) )
+    call line_put(2, 4, (/2.0*iProc,   70.0+iProc, 80.0+iProc, 90.0+iProc/) )
+
+    if(nPoint /= 3)write(*,*)NameSub,' line_put failed, iProc=',iProc, &
+         ' nPoint =',nPoint,' should be 3'
+    if(MaxPoint /= 101)write(*,*)NameSub,' line_put failed, iProc=',iProc, &
+         ' MaxPoint =',MaxPoint,' should be 101'
+
     do iPoint = 1, nPoint
-       write(*,'(i4,a,5f5.0)')iProc,': State_VI=',State_VI(:,iPoint)
+       if(any(State_VI(:,iPoint) /= (/ &
+            (iPoint+1)/2 +0.0, &
+            2.0*iProc + mod(iPoint+1,2), &
+            30.0*iPoint-20.0+iProc, &
+            30.0*iPoint-10.0+iProc, &
+            30.0*iPoint+iProc/)) ) &
+            write(*,*)NameSub,' line_put failed, iProc=',iProc, &
+            ' iPoint=',iPoint,' State_VI=',State_VI(:,iPoint)
     end do
- 
+
+    if(iProc==0)write(*,'(a)')'Testing line_collect'
     call line_collect(0,nProc,1,0)
 
-    write(*,*)iProc,': line_collect done, nPoint, MaxPoint=',nPoint, MaxPoint
+    if(iProc == 0)then
+       if(nPoint /= nProc*3) &
+            write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
+            ' nPoint =',nPoint,' should be',nProc*3
+       if(MaxPoint /= 100+nProc*3) &
+            write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
+            ' MaxPoint =',MaxPoint,' should be',100+nProc*3
+    else
+       if(nPoint /= 0) &
+            write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
+            ' nPoint =',nPoint,' should be 0'
+       if(MaxPoint /= 101) &
+            write(*,*)NameSub,' line_collect failed, iProc=',iProc, &
+            ' MaxPoint =',MaxPoint,' should be 101'
+
+    end if
 
     if(iProc==0)then
+       write(*,'(a)')'Testing line_get on PE 0'
+
        call line_get(nVarOut, nPointOut)
-       write(*,*)'nVarOut, nPointOut=',nVarOut, nPointOut
+       if(nVarOut /= nVar)write(*,*)NameSub,' line_get failed', &
+            ' nVarOut =',nVarOut,' should be ',nVar
+
+       if(nPointOut /= nPoint)write(*,*)NameSub,' line_get failed', &
+            ' nPointOut =',nPointOut,' should be', nPoint
+
        allocate(Result_VI(0:nVarOut,nPointOUt))
-       call line_get(nVarOut, nPointOut, Result_VI)
-       write(*,*)'iPoint Result_VI:'
+       call line_get(nVarOut, nPointOut, Result_VI, .true.)
+
        do iPoint = 1, nPointOut
-          write(*,'(i4,5f5.0)')iPoint, Result_VI(:,iPoint)
+          ! Test index
+          if(iPoint <= 2*nProc)then
+             Index = 1.0
+          else
+             Index = 2.0
+          end if
+          if(State_VI(0,iPoint) /= Index) &
+               write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
+               ' Index=',State_VI(0,iPoint),' should be ',Index
+
+          ! Test length
+          if(Index == 1.0)then
+             Length = iPoint - 1.0
+          else
+             Length = 2.0*(iPoint - 2*nProc - 1)
+          end if
+          if(State_VI(1,iPoint) /= real(Length)) &
+               write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
+               ' Length=',State_VI(1,iPoint),' should be ',Length
+
+          ! Test rest of the variables
+          if(Index == 1.0)then
+             iProcFrom = (iPoint - 1)/2
+             if(mod(iPoint,2)==1)then
+                State_V = (/10.0+iProcFrom, 20.0+iProcFrom, 30.0+iProcFrom/)
+             else
+                State_V = (/40.0+iProcFrom, 50.0+iProcFrom, 60.0+iProcFrom/)
+             end if
+          else
+             iProcFrom = nint(Length / 2.0)
+             State_V =    (/70.0+iProcFrom, 80.0+iProcFrom, 90.0+iProcFrom/)
+          end if
+          if(any(State_VI(2:nVar,iPoint) /= State_V)) &
+               write(*,*)NameSub,' line_get failed at iPoint=',iPoint, &
+               ' State = ',State_VI(2:nVar,iPoint),' should be ',State_V
+
        end do
     end if
 
+    if(iProc==0)write(*,'(a)')'Testing line_clean'
     call line_clean
 
-    write(*,*)iProc,': line_clean done, nPoint, MaxPoint, State_VI=',&
-         nPoint, MaxPoint, associated(State_VI)
+    if( nPoint/=0 .or. MaxPoint/=0 .or. associated(State_VI)) &
+         write(*,*) NameSub,' line_clean failed, iProc=',iProc, &
+         ' nPoint =',nPoint,' and Maxpoint =',MaxPoint,' should be 0', &
+         ' associated(State_VI)=',associated(State_VI),' should be False!'
     
   end subroutine line_test
 
