@@ -179,7 +179,8 @@ contains
             Version=1.0,&
             Use=.true.)
     case('GRID','MPI','CHECK','STDOUT','FILEOUT')
-       write(iUnitOut,*)NameComp_I(iComp),': set_param_comp Action=',TypeAction
+       write(iUnitOut,*)NameComp_I(iComp),': set_param_comp iProc, Action=',&
+            i_proc(),' ',TypeAction
     case('READ')
        do
           if(.not.read_line()) EXIT
@@ -306,7 +307,7 @@ contains
     end if
 
     write(iUnitOut,*)NameComp_I(iComp),': ',NameSub,&
-         ' iProc,iSession,TimeSimulation=',&
+         ' iProc,iSession,tSim=',&
          i_proc(),iSession,TimeSimulation
 
   end subroutine init_session_comp_id
@@ -405,7 +406,8 @@ contains
 
     !REVISION HISTORY:
     ! 30Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
-    !EOP ___________________________________________________________________
+    !EOP
+
     character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
     integer :: iUnitOut, iError
     !-------------------------------------------------------------------
