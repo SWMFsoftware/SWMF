@@ -12,7 +12,7 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   use ModGmImCoupling, ONLY: &
        allocate_gm_im, MHD_compute_from_raytrace, &
-       process_integrated_data, &
+       process_integrated_data, DoTestTec, DoTestIdl, &
        write_integrated_data_tec, write_integrated_data_idl, &
        RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
@@ -30,7 +30,6 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   real :: Radius
 
-  logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
@@ -81,12 +80,12 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   if (iProc == 0) then
      ! Output before processing
-     if(DoTest .or. DoTestTec)call write_integrated_data_tec
-     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
+     if(DoTestTec)call write_integrated_data_tec
+     if(DoTestIdl)call write_integrated_data_idl
      call process_integrated_data
      ! Output after processing
-     if(DoTest .or. DoTestTec)call write_integrated_data_tec
-     if(DoTest .or. DoTestIdl)call write_integrated_data_idl
+     if(DoTestTec)call write_integrated_data_tec
+     if(DoTestIdl)call write_integrated_data_idl
 
      ! Put results into output buffer
      Buffer_IIV(:,:,InvB_)    = MHD_SUM_vol
