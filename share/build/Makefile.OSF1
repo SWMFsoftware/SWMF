@@ -25,8 +25,10 @@ MPILIB = -L$(LOCAL_LIBS) -lmpi -lelan	#For 64 bit compilation
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-#DEBUG = -g -C
-DEBUG =
+# For some parts (GITM, RCM) of the code the -fpe1 flag is needed 
+# to avoid run time errors due to floating point underflows
+#DEBUG = -fpe1 -g -C
+DEBUG = -fpe1
 
 ARCH	= ev6 
 TUNE	= -tune ${ARCH} 
@@ -41,7 +43,7 @@ Cflag4	= ${Cflag} -O4
 Cflagf	= ${Cflag} -fast
 
 # RCM compilation flags
-CFLAGS = ${SEARCH} -c -warn argument_checking -fpe1 ${DEBUG}
+CFLAGS = ${SEARCH} -c -warn argument_checking ${DEBUG}
 
 Lflag1  = ${OPTSAFE} ${PRECISION} ${BITFLAG} ${MPILIB} 
 Lflag2  = ${OPT} ${PRECISION} ${BITFLAG} 
