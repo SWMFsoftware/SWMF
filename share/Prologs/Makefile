@@ -53,7 +53,7 @@ PROTEX.tex: ${PROTEXFILES}
 help:
 	@echo 'The following targets are available:'
 	@echo
-	@echo 'test      - make COMPILE DVI PS PDF'
+	@echo 'test      - make DVI PS PDF COMPILE RUN'
 	@echo 'DVI       - create README.dvi'
 	@echo 'PS        - create README.ps'
 	@echo 'DVI       - create README.pdf'
@@ -65,10 +65,16 @@ help:
 #EOC
 
 test:
-	make COMPILE
 	make DVI
 	make PS
 	make PDF
+	make COMPILE
+	make RUN
+	@echo
+	@echo 'All tests have been completed. You can read these files now:'
+	@ls -l README.ps README.pdf
+	@ls -l *.f90
+	@echo
 
 DVI: README.dvi
 
