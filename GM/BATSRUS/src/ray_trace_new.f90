@@ -752,8 +752,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      call interpolate_b(x_ini, b_D, b_ini)
      x_mid = x_ini + 0.5*dl*b_ini
 
-     ! Extract ray values using the interpolation coefficients around x_ini
-     if(NameTask(1:7)=='extract')call ray_extract(.false., x_ini)
+     ! Extract ray values using around x_ini
+     if(NameTask(1:7)=='extract')call ray_extract(x_ini)
 
      STEP: do
         ! Full step
@@ -912,8 +912,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Extract last point if ray is done. 
   ! The interpolation coefficients are not known.
-  if(iFace /= ray_block_ .and. NameTask(1:7) == 'extract') &
-       call ray_extract(.true., x)
+  if(iFace /= ray_block_ .and. NameTask(1:7) == 'extract')call ray_extract(x)
 
   if(oktest_ray) then
      write(*,'(a,4i4)')&
@@ -1024,24 +1023,76 @@ contains
 
   !=========================================================================
 
-  subroutine ray_extract(DoInterpolate, x_D)
+  subroutine ray_extract(x_D)
 
     use ModIO, ONLY: iUnitLine_I
-    logical, intent(in) :: DoInterpolate
+    use ModPhysics, ONLY: UnitSi_x, UnitSi_Rho, UnitSi_U, UnitSi_P, UnitSi_B
+    use ModAdvance, ONLY: State_VGB, nVar, &
+         Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, p_, Bx_, By_, Bz_
     real, intent(in) :: x_D(3)
-    real :: Xyz_D(3)
+
+    real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(20)
+    integer :: n
     character(len=*), parameter :: NameSub='ray_extract'
     !----------------------------------------------------------------------
-    !!! if(DoInterpolate) calculating coefficients to be implemented
 
     ! Convert x_D to real coordinates
     Xyz_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_D - 1.)
 
+    PlotVar_V(1)   = Length
+    PlotVar_V(2:4) = Xyz_D
+
+    if(DoExtractUnitSi) PlotVar_V(1:4) = PlotVar_V(1:4)*UnitSi_x
+
+    if(DoExtractState)then
+
+       ! Determine cell indices corresponding to location x_D
+       i1=floor(x_D(1)); i2=i1+1
+       j1=floor(x_D(2)); j2=j1+1
+       k1=floor(x_D(3)); k2=k1+1
+
+       ! Distance relative to the cell centers
+       dx1 = x_D(1) - i1; dx2 = cOne - dx1
+       dy1 = x_D(2) - j1; dy2 = cOne - dy1
+       dz1 = x_D(3) - k1; dz2 = cOne - dz1
+
+       ! Interpolate state to x_D
+       State_V = dx1*(   dy1*(   dz1*State_VGB(:,i2,j2,k2,iBlock)   &
+            +                    dz2*State_VGB(:,i2,j2,k1,iBlock))  &
+            +            dy2*(   dz1*State_VGB(:,i2,j1,k2,iBlock)   &
+            +                    dz2*State_VGB(:,i2,j1,k1,iBlock))) &
+            +    dx2*(   dy1*(   dz1*State_VGB(:,i1,j2,k2,iBlock)   &
+            +                    dz2*State_VGB(:,i1,j2,k1,iBlock))  &
+            +            dy2*(   dz1*State_VGB(:,i1,j1,k2,iBlock)   &
+            +                    dz2*State_VGB(:,i1,j1,k1,iBlock)))
+
+       ! Convert momentum to velocity
+       State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
+
+       ! Add B0 to the magnetic field
+       call get_b0(Xyz_D(1),Xyz_D(2),Xyz_D(3),B0_D)
+       State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+
+       ! Convert to SI units if required
+       if(DoExtractUnitSi)then
+          State_V(Rho_)    = State_V(Rho_)    * UnitSi_Rho
+          State_V(Ux_:Uz_) = State_V(Ux_:Uz_) * UnitSi_U
+          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * UnitSi_B
+          State_V(p_)      = State_V(p_)      * UnitSi_P
+       end if
+
+       PlotVar_V(5:4+nVar) = State_V
+
+       n = 4 + nVar
+    else
+       n = 4
+    end if
+
     select case(NameTask)
     case('extractfiles')
-       write(iUnitLine_I(iStart_D(1)),'(100es18.10)') Length, Xyz_D
+       write(iUnitLine_I(iStart_D(1)),'(100es18.10)') PlotVar_V(1:n)
     case('extractfile')
-       write(iUnitLine_I(1),'(100es18.10)') Length, Xyz_D, real(iStart_D(1))
+       write(iUnitLine_I(1),'(100es18.10)') PlotVar_V(1:n), real(iStart_D(1))
     case('extract')
        call stop_mpi(NameSub//' ERROR task=extract is not implemented yet')
     case default
@@ -1393,13 +1444,16 @@ end subroutine test_ray_integral
 subroutine write_plot_line(iFile)
 
   use ModProcMH,   ONLY: iProc, iComm
-  use ModRayTrace, ONLY: NameTask, NameVectorField, &
-       oktest_ray, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
+  use ModRayTrace, ONLY: oktest_ray, &
+       NameTask, NameVectorField, &
+       DoExtractState, DoExtractUnitSi, &
+       R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModPhysics,  ONLY: rBody
-  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, Plot_,iUnitLine_I,&
+  use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, plot_dimensional,&
+       Plot_, iUnitLine_I,&
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
   use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
        StringTimeH4M2S2, nI, nJ, nK, nBlock, unusedBLK
@@ -1411,8 +1465,8 @@ subroutine write_plot_line(iFile)
 
   integer, intent(in) :: iFile ! The file index of the plot file
 
-  character(len=100) :: NameFile, NameStart
-  integer            :: nHeaderFile
+  character(len=100) :: NameFile, NameStart, NameVar, NameUnit, StringTitle
+  integer            :: nHeaderFile, nPlotVar
 
   real    :: Xyz_D(3), Dx2Inv, Dy2Inv, Dz2Inv
   integer :: iPlotFile, iProcFound, iBlockFound, iLine, iRay, iError
@@ -1439,6 +1493,9 @@ subroutine write_plot_line(iFile)
      NameTask    = 'extractfile'
      nHeaderFile = 1
   end if
+
+  DoExtractState = index(plot_type(iFile),'pos')<1
+  DoExtractUnitSi= plot_dimensional(ifile)
 
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
@@ -1499,9 +1556,46 @@ subroutine write_plot_line(iFile)
 
   if(time_accurate)call get_time_string
 
-  ! Write header information
+  ! Set the title
+  if(NameTask=='extractfile')then
+     StringTitle = NameVectorField//' line'
+  else
+     StringTitle = NameVectorField//' lines'
+  end if
+
+  ! Add the string describing the units
+  if(DoExtractUnitSi)then
+     StringTitle = trim(StringTitle)//" in SI units"
+  else
+     StringTitle = trim(StringTitle)//" in normalized units"
+  end if
+
+  ! Set the number of the variables to be extracted
+  nPlotVar = 3
+  if(DoExtractState)         nPlotVar = nPlotVar + 8
+  if(NameTask=='extractfile')nPlotVar = nPlotVar + 1
+
+  ! Set the name of the variables
+  select case(plot_form(iFile))
+  case('idl')
+     NameVar = 'Length x y z'
+     if(DoExtractState)NameVar = trim(NameVar)//' rho ux uy uz bx by bz p'
+     if(NameTask=='extractfile')then
+        NameVar = trim(NameVar)//' Index nLine'
+     else
+        NameVar = trim(NameVar)//' Index iLine'
+     end if
+  case('tec')
+     NameVar = '"Length", "X", "Y", "Z"'
+     if(DoExtractState)NameVar = trim(NameVar)// &
+             ',"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p"'
+     if(NameTask=='extractfile')NameVar = trim(NameVar)//', "Index"'
+  end select
+
+  ! Write out header files and open output files
   do iLine = 1, nHeaderFile
 
+     ! Set the header file name
      NameFile = NameStart
      if(NameTask == 'extractfiles' .and. nLine_I(iPlotFile)>1)then
         write(NameFile,'(a,i1)') trim(NameFile),iLine
@@ -1515,28 +1609,23 @@ subroutine write_plot_line(iFile)
         open(UnitTmp_,file=NameFile)
         select case(plot_form(iFile))
         case('idl')
+           write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
+           write(UnitTmp_,'(i7,1pe13.5,3i3)') &
+                n_step,time_simulation,1,1,nPlotVar
+           write(UnitTmp_,'(a6)')  '__nn__'
            if(NameTask == 'extractfiles')then
-              write(UnitTmp_,'(a79)') NameVectorField//' line_var11'
-              write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,3
-              write(UnitTmp_,'(a6)')             '__nn__'
-              write(UnitTmp_,'(es13.5)')         real(iLine)
-              write(UnitTmp_,'(a79)')            'Length x y z iLine'
+              write(UnitTmp_,'(es13.5)') real(iLine)
            else
-              write(UnitTmp_,'(a79)') NameVectorField//' lines_var11'
-              write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,4
-              write(UnitTmp_,'(a6)')             '__nn__'
-              write(UnitTmp_,'(es13.5)')         real(nLine_I(iPlotFile))
-              write(UnitTmp_,'(a79)')            'Length x y z Index nLine'
+              write(UnitTmp_,'(es13.5)') real(nLine_I(iPlotFile))
            end if
+           write(UnitTmp_,'(a79)') NameVar
         case('tec')
+           write(UnitTmp_,'(a)')'TITLE ="'//trim(StringTitle)//'"'
+           write(UnitTmp_,'(a)')'VARIABLES='//trim(NameVar)//'"'
            if(NameTask == 'extractfiles')then
-              write(UnitTmp_,'(a)')'TITLE ="'//NameVectorField//' line"'
-              write(UnitTmp_,'(a)')'VARIABLES="Length","x","y","z"'
               write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
                    NameVectorField//' line ',iLine,'", '//'I=__nn__'
            else
-              write(UnitTmp_,'(a)')'TITLE ="'//NameVectorField//' lines"'
-              write(UnitTmp_,'(a)')'VARIABLES="Length","x","y","z","Index"'
               write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
                    NameVectorField//' ',nLine_I(iPlotFile),' lines", '// &
                    'I=__nn__'
@@ -1545,7 +1634,7 @@ subroutine write_plot_line(iFile)
         close(UnitTmp_)
      end if
 
-     ! Open output files
+     ! Open output files (replace .l with _peNNNN.lst)
      write(NameFile,'(a,i4.4,a)') NameFile(1:len_trim(NameFile)-2) // &
           '_pe',iProc,'.lst'
      if(DoTest)write(*,*)NameSub,': saving results into file ',trim(NameFile)
@@ -1555,6 +1644,7 @@ subroutine write_plot_line(iFile)
 
   end do
 
+  ! Start extracting rays
   do iLine = 1, nLine_I(iPlotFile)
      Xyz_D = XyzStartLine_DII(:, iLine, iPlotFile)
 
