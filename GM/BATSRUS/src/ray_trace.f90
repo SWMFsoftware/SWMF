@@ -1102,7 +1102,7 @@ contains
 
     use ModMain,     ONLY: UseNewAxes, Time_Simulation
     use ModPhysics,  ONLY: Bdp_dim     ! only the sign of dipole is needed
-    use CON_physics, ONLY: map_planet_field
+    use CON_planet_field, ONLY: map_planet_field
 
     integer :: iHemisphere
     real    :: x_D(3)

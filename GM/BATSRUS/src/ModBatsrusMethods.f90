@@ -16,7 +16,6 @@ subroutine BATS_setup
   use ModMpi
   use ModProcMH
   use ModIoUnit, ONLY: UNITTMP_
-  use CON_physics, ONLY: get_physics
   use ModMain
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
@@ -33,7 +32,6 @@ subroutine BATS_setup
   ! Local variables
 
   character(len=*), parameter :: NameSub = 'BATS_setup'
-  real    :: tSimulation
   integer :: iError 
   !---------------------------------------------------------------------------
 
@@ -198,12 +196,12 @@ contains
        if(iProc==0)then
           write(*,*)NameSub,' restarts at n_step,Time_Simulation=',&
                n_step,Time_Simulation
-          if(.not.IsStandAlone)then
-             call get_physics(tSimulationOut=tSimulation)
-             if(abs(tSimulation-Time_Simulation)>0.001) &
-                  write(*,*)NameSub,' WARNING Time_Simulation differs from ',&
-                  'tSimulation = ',tSimulation,' !!!'
-          end if
+          !if(.not.IsStandAlone)then
+          !   call get_physics(tSimulationOut=tSimulation)
+          !   if(abs(tSimulation-Time_Simulation)>0.001) &
+          !        write(*,*)NameSub,' WARNING Time_Simulation differs from ',&
+          !        'tSimulation = ',tSimulation,' !!!'
+          !end if
        end if
        ! ???n_step is already known, BCAST maybe for backwards compatibility???
        call MPI_BCAST(n_step,1,MPI_INTEGER,0,iComm,iError)

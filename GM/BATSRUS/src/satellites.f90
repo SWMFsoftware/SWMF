@@ -5,7 +5,7 @@ subroutine read_satellite_input_files
   use ModMain, ONLY : lVerbose
   use ModIO
   use ModPhysics, ONLY : unitSI_x
-  use CON_physics, ONLY: time_int_to_real
+  use ModTimeConvert, ONLY: time_int_to_real
   use ModMpi
   implicit none
 

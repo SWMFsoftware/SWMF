@@ -1008,13 +1008,14 @@ contains
     ! return false if the ray exited R_raytrace or too many integration 
     ! steps were done
 
-    use CON_physics, ONLY: get_physics, map_planet_field
+    use CON_planet_field, ONLY: map_planet_field
+    use CON_planet,       ONLY: get_planet
     use ModMain, ONLY: Time_Simulation
 
     integer :: iHemisphere
     real    :: x_D(3), DipoleStrength=0.0
     !---------------------------------------------------------------------
-    if(DipoleStrength==0)call get_physics(DipoleStrengthOut=DipoleStrength)
+    if(DipoleStrength==0)call get_planet(DipoleStrengthOut=DipoleStrength)
 
     call map_planet_field(Time_Simulation, xx, TypeCoordSystem//' NORM', &
          rIonosphere, x_D, iHemisphere)

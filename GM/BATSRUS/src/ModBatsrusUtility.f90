@@ -1641,8 +1641,8 @@ end subroutine xyz_to_peblk
 !=========================================================================
 subroutine get_date_time(iTime_I)
   
-  use ModMain,     ONLY : StartTime, Time_Simulation
-  use CON_physics, ONLY : time_real_to_int
+  use ModMain,        ONLY : StartTime, Time_Simulation
+  use ModTimeConvert, ONLY : time_real_to_int
 
   implicit none
   integer, intent(out) :: iTime_I(7)
