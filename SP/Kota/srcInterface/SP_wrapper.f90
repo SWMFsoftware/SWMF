@@ -11,6 +11,7 @@ end module SP_ModIhData
 !==============================================================================
 subroutine sp_set_ihdata(nPointIn,XyzIn_DI)
   use SP_ModIhData
+  use ModUtilities, ONLY: check_allocate
   implicit none
   integer,intent(in)::nPointIn
   real,dimension(3,nPoint),intent(in)::XyzIn_DI
