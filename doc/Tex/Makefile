@@ -60,6 +60,25 @@ SWMFREF = \
 	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/ExpandParam.protex \
 	${DIR}/Scripts/Restart.protex \
+	${SCRIPTDIR}/CheckParam.protex \
+	${SCRIPTDIR}/depend.protex \
+	${SCRIPTDIR}/FixMakefileDef.protex \
+	${SCRIPTDIR}/FixMpi.protex \
+	${SCRIPTDIR}/Rename.protex \
+	${SCRIPTDIR}/Methods.protex \
+	${SCRIPTDIR}/StopToConStop.protex \
+	${SCRIPTDIR}/StaticToDynamic.protex \
+	${SCRIPTDIR}/ChangeIndexOrder.protex \
+	${SCRIPTDIR}/CompareDirs.protex \
+	${SCRIPTDIR}/Fix4Endian.protex \
+	${SCRIPTDIR}/Fix8Endian.protex \
+	${SCRIPTDIR}/FixI4toI8.protex \
+	${SCRIPTDIR}/FixI8toI4.protex \
+	${SCRIPTDIR}/XmlToTex.protex \
+	${SCRIPTDIR}/protex.protex \
+	${DIR}/share/build/Makefile.doc.protex \
+	${DIR}/doc/Tex/Makefile.protex \
+	${BATSRUS_SCRIPTS} \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
@@ -92,28 +111,9 @@ SWMFREF = \
 	${SHAREDIR}/CON_planet.protex \
 	${SHAREDIR}/CON_planet_field.protex \
 	${SHAREDIR}/CON_ray_trace.protex \
-	${SCRIPTDIR}/CheckParam.protex \
-	${SCRIPTDIR}/depend.protex \
-	${SCRIPTDIR}/FixMakefileDef.protex \
-	${SCRIPTDIR}/FixMpi.protex \
-	${SCRIPTDIR}/Rename.protex \
-	${SCRIPTDIR}/Methods.protex \
-	${SCRIPTDIR}/StopToConStop.protex \
-	${SCRIPTDIR}/StaticToDynamic.protex \
-	${SCRIPTDIR}/ChangeIndexOrder.protex \
-	${SCRIPTDIR}/CompareDirs.protex \
-	${SCRIPTDIR}/Fix4Endian.protex \
-	${SCRIPTDIR}/Fix8Endian.protex \
-	${SCRIPTDIR}/FixI4toI8.protex \
-	${SCRIPTDIR}/FixI8toI4.protex \
-	${SCRIPTDIR}/XmlToTex.protex \
-	${SCRIPTDIR}/protex.protex \
-	${DIR}/share/build/Makefile.doc.protex \
-	${DIR}/doc/Tex/Makefile.protex \
 	${UTILDIR}/NOMPI/src/NOMPI.protex \
 	${UTILDIR}/TIMING/src/ModTiming.protex \
-	${UTILDIR}/TIMING/src/timing.protex \
-	${BATSRUS_SCRIPTS}
+	${UTILDIR}/TIMING/src/timing.protex
 
 #^CMP IF DOCHTML BEGIN
 .tex.html:
