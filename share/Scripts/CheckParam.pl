@@ -208,7 +208,7 @@ sub check_arguments{
     }
 
     if(length($nProc) and not $nProc =~ /^[1-9]\d*$/){
-	die "$ERROR -n=$nProc is not a pozitive integer\n";
+	die "$ERROR -n=$nProc is not a positive integer\n";
     }
 
     if($Interactive and $ARGV[0]){
@@ -705,7 +705,7 @@ sub check_value_format{
     elsif($paramType =~ /integer/)
     {
 	# 3 +30 -124
-	$bad = &bad_value unless $paramValue =~ /^\s*[\+\-]?\d+/;
+	$bad = &bad_value unless $paramValue =~ /^\s*[\+\-]?\d+$/;
     }
     elsif($paramType =~ /real/)
     {
