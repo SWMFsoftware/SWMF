@@ -91,7 +91,7 @@ globhelio_src:
 	-on=globalheliosphere,cartesian \
 	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
 	-u
-	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90;\
+	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd ${DGLOBALH}; make install
 
 globhelio_conf: globhelio_src
