@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine specify_initial_refinement(refb, lev)
-  use ModMain, ONLY : nI,nJ,nK,nBLK,UseCorotation,UseMassLoading,unusedBLK
+  use ModSize
+  use ModMain, ONLY : body1,UseCorotation,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                                 !^CFG IF NOT CARTESIAN
        x_BLK,y_BLK,z_BLK,dx_BLK
@@ -54,6 +55,7 @@ subroutine specify_initial_refinement(refb, lev)
            maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
                 (max(abs(yy1),abs(yy2)))**2 + &
                 (max(abs(zz1),abs(zz2)))**2)
+           if(body1.and.maxRblk<rBody)CYCLE
         case('spherical')                                          !^CFG IF NOT CARTESIAN BEGIN
            SizeMax=max(dx_BLK(iBLK),dy_BLK(iBLK)*maxRblk)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
@@ -129,7 +131,7 @@ subroutine specify_initial_refinement(refb, lev)
               refb(iBLK) = .true.
            else
               critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
-              if ( RR < 1.10 + critx ) then
+              if ( RR < 1.10*rBody + critx ) then
                  refb(iBLK) = .true.
               else
                  refb(iBLK) = .false.
@@ -164,7 +166,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 14) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
@@ -195,7 +197,7 @@ subroutine specify_initial_refinement(refb, lev)
            else
               if (lev <= 10) then
                  critx=(XyzMax_D(1)-XyzMin_D(1))/(cTwo**real(lev-1))
-                 if ( RR < 1.10 + critx ) then
+                 if ( RR < 1.10*rBody + critx ) then
                     refb(iBLK) = .true.
                  else
                     refb(iBLK) = .false.
