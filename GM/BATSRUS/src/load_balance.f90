@@ -163,12 +163,12 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : &
-       State_VGB
+  use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
-  use ModImplicit                      !^CFG IF IMPLICIT
   use ModParallel
+  use ModImplicit                                         !^CFG IF IMPLICIT
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
+  use ModRaytrace, ONLY : ray                             !^CFG IF RCM
   use ModMpi
   implicit none
 
@@ -179,10 +179,11 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        nCellGhostBLK=(nI+4)*(nJ+4)*(nK+4)
   integer, parameter :: nDataBLK= &
        nwIJK + &                   !^CFG IF IMPLICIT
+       3*2*nIJK + &                !^CFG IF RCM
        nScalarBLK + nVar*nCellGhostBLK 
 
   real, dimension(nDataBLK) :: blockData_L
-  integer :: iData, itag, i, j, k,iVar, iw, iSize
+  integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize
   integer :: iError
   integer :: status(MPI_STATUS_SIZE,1)
 
@@ -271,6 +272,12 @@ contains
              blockData_L(iData) = w_prev(i,j,k,iw,iBlockFrom)
           end do; end do; end do; end do
        end if                                       !^CFG END IMPLICIT
+
+       if(UseIM)then                                !^CFG IF RCM BEGIN
+          do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3; iData = iData+1
+             blockData_L(iData) = ray(i1,i2,i,j,k,iBlockFrom)
+          end do; end do; end do; end do; end do
+       end if                                       !^CFG END RCM
     end if
 
     if(DoTest)write(*,*)'sending blockData_L: iData=',iData,' from',&
@@ -294,7 +301,9 @@ contains
     if(DoMoveData)then
        iSize = nDataBLK
        if(.not.(UseBDF2 .and. n_prev > 0)) &    !^CFG IF IMPLICIT
-            iSize = nDataBLK - nWIJK            !^CFG IF IMPLICIT
+            iSize = iSize - nWIJK               !^CFG IF IMPLICIT
+       if(.not.(UseIM)) &                       !^CFG IF RCM
+            iSize = iSize - 3*2*nIJK            !^CFG IF RCM
     else
        iSize= nScalarBLK
     end if
@@ -359,6 +368,12 @@ contains
           w_prev(i,j,k,iw,iBlockTo) = blockData_L(iData)
        end do; end do; end do; end do
     end if                                      !^CFG END IMPLICIT
+
+    if(UseIM)then                               !^CFG IF RCM BEGIN
+       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3; iData = iData+1
+          ray(i1,i2,i,j,k,iBlockTo) = blockData_L(iData)
+       end do; end do; end do; end do; end do
+    end if                                      !^CFG END RCM
 
     ! Fix variables
     if(useConstrainB) call Bface2Bcenter        !^CFG IF CONSTRAINB
