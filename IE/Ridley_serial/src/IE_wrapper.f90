@@ -1039,7 +1039,7 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   if(DoTest)write(*,*)NameSub,': iProc,nStep = ',iProc,nStep
 
-  if(nStep < 1) RETURN
+  if(nStep <= 1) RETURN
 
   ! After the solve this input can be considered old
   IsNewInput = .false.
