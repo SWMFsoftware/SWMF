@@ -36,13 +36,16 @@ $RestartTree = $ARGV[0] if $ARGV[0];
 exit 0;
 ##############################################################################
 sub create_tree{
-    die "$ERROR restart tree $RestartTree is in the way!\n" if -d $RestartTree;
-    mkdir $RestartTree,0777 
-	or die "$ERROR restart tree $RestartTree could not be created!\n";
 
     # Take care of the SWMF restart file
     die "$ERROR could not find restart file $RestartOutFile\n" 
 	unless -f $RestartOutFile;
+
+    # Create restart directory
+    die "$ERROR restart tree $RestartTree is in the way!\n" if -d $RestartTree;
+    mkdir $RestartTree,0777 
+	or die "$ERROR restart tree $RestartTree could not be created!\n";
+
     my $File = "$RestartTree/$RestartOutFile";
     rename $RestartOutFile, $File or 
 	die "$ERROR could not move $RestartOutFile into $File";
@@ -58,7 +61,7 @@ sub create_tree{
 	opendir(DIR,$Dir) or die "$ERROR could not open directory $Dir\n";
 	my @Content = readdir(DIR);
 	closedir(DIR);
-	die "$ERROR directory $Dir is empty\n" unless  $#Content > 0;
+	die "$ERROR directory $Dir is empty\n" unless $#Content > 1;
 	rename $Dir, "$RestartTree/$Comp" or 
 	    die "$ERROR could not move $Dir into $RestartTree/$Comp\n";
 	mkdir $Dir, 0777 or die "$ERROR could not create directory $Dir\n";
