@@ -12,13 +12,13 @@ include Makefile.DEPEND
 OBJ_IH = GM_put_from_ih.o
 #^CMP END IH
 #^CMP IF IM BEGIN
-OBJ1   = ModGmImCoupling.o #^CFG IF RAYTRACE
-OBJ_RFUTIL = rayface_util.o
+OBJ1   = ModGmImCoupling.o  #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o #^CFG IF RAYTRACE
 OBJ_IM = $(OBJ1) GM_get_for_im.o GM_put_from_im.o
 #^CMP END IM
 #^CMP IF RB BEGIN
-OBJ2   = ModGmRbCoupling.o #^CFG IF RAYTRACE
-OBJ_RFUTIL = rayface_util.o
+OBJ2   = ModGmRbCoupling.o  #^CFG IF RAYTRACE
+OBJ_RFUTIL = rayface_util.o #^CFG IF RAYTRACE
 OBJ_RB = $(OBJ2) GM_get_for_rb.o
 #^CMP END RB
 #^CMP IF IE BEGIN

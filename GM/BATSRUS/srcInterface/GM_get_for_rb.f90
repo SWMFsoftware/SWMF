@@ -1,10 +1,13 @@
 !^CFG COPYRIGHT UM
-
+!^CMP FILE RB
 
 !==========================================================================
 !==========================================================================
 !==========================================================================
 subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+
+  !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
+  !^CFG IF RAYTRACE BEGIN
 
   use ModProcMH, ONLY: iProc
 
@@ -84,4 +87,5 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
   end if
 
+  !^CFG END RAYTRACE
 end subroutine GM_get_for_rb
