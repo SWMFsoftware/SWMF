@@ -330,16 +330,23 @@ subroutine BATS_advance(TimeSimulationLimit)
   else                                    !^CFG END IMPLICIT
      call advance_expl(.true.)
   endif                                   !^CFG IF IMPLICIT  
-
+  
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
   call exchange_messages
-
+  
   call advect_all_points
-
+  
   call timing_stop('advance')
 
   Time_Simulation = Time_Simulation + dt*UnitSI_t
+
+  if(time_accurate)then
+     call timing_start('lagrangian_grid')
+     call update_lagrangian_grid(&
+            Time_Simulation - dt*UnitSI_t,Time_Simulation)
+     call timing_stop('lagrangian_grid')
+  end if
 
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation
@@ -755,7 +762,6 @@ contains
           if(  index(plot_type(ifile),'ray')>0 .or. &
                index(plot_vars(ifile),'status')>0) call ray_trace
           !^CFG END RAYTRACE
-
           call timing_start('save_plot')
           call write_plot_common(ifile)
           call timing_stop('save_plot')

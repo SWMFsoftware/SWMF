@@ -25,13 +25,14 @@ OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
 OBJECTS = \
 	ModGridDescriptor.o\
 	GM_wrapper.o\
+	update_lagrangian_grid.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_IE)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
-		${MODULES} ${OBJECTS} ${OBJ_WRAPPER}
+		${MODULES} ${OBJECTS}
 
 #
 #	Making executables and libraries

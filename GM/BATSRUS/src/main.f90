@@ -325,3 +325,9 @@ real function logvar_ionosphere(NameLogvar)
 
 end function logvar_ionosphere
 !============================================================================
+!============interface to BATS_methods====================
+subroutine update_lagrangian_grid(tStart,tFinal)
+  implicit none
+  real,intent(in)::tStart,tFinal
+  return
+end subroutine update_lagrangian_grid
