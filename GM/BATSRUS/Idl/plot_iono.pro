@@ -1275,7 +1275,7 @@ for hem = 0, 1 do begin
         maxs = string(maxi_tmp,format="(e8.2)")
         mins = string(mini_tmp,format="(e9.2)")
       endif else begin
-        maxs = string(maxi_tmp,format="(f5.2)")
+        maxs = string(maxi_tmp,format="(f6.2)")
         mins = string(mini_tmp,format="(f7.2)")
       endelse
 
