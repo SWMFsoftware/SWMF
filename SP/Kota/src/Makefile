@@ -23,7 +23,7 @@ MY_LIB = libKota.a
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
-		${MODULES} ${OBJECTS}
+		${OBJECTS}
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -31,7 +31,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS} \
+${MY_LIB}: ${OBJECTS} \
 	${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
