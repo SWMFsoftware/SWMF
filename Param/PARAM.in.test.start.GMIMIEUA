@@ -284,8 +284,8 @@ T			UseSps (this is the serial potential solver)
 ! which corresponsd to a 5-degree by 5-degree resolution:
 
 #GRID
-4		nLonBlock
-2		nLatBlock
+8		nLonBlock
+4		nLatBlock
 
 #PRESSURE
 F		PressureCoordinates

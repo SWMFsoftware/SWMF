@@ -4,5 +4,5 @@ This is an example layout to run the GM-IM-IE-UA start up
 GM    0  999    1
 IM    0    0    1
 IE    1    2    1
-UA    3   10    1
+UA    0   31    1
 #END
