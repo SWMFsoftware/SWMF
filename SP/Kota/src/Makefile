@@ -12,12 +12,12 @@ SEPEXE = ${BINDIR}/SEP.exe
 
 SEP: ${SEPEXE}
 
-${SEPEXE}:	${OBJECTS} sp_stand_alone.o read_ihdata.o io_unit_for77.o
-	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS} read_ihdata.o \
+${SEPEXE}:	${OBJECTS} sp_stand_alone.o io_unit_for77.o
+	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS}  \
 	sp_stand_alone.o io_unit_for77.o
 
 SEP77:	stdout.h
-	f77 read_ihdata.f sp_stand_alone.f main.f sep19.f io_unit_for77.f
+	f77 sp_stand_alone.f main.f sep19.f io_unit_for77.f
 
 MY_LIB = libKota.a
 
