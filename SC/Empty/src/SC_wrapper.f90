@@ -3,7 +3,7 @@
 !==========================================================================
 subroutine SC_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+  use CON_comp_info, ONLY: CompInfoType, put
 
   implicit none
 
