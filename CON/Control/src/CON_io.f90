@@ -51,7 +51,7 @@ module CON_io
   character(len=*), parameter :: NameStdoutExt='.log'
 
   ! Saving restart information
-  character(len=lNameFile)    :: NameRestartFile='RESTART.in'
+  character(len=lNameFile)    :: NameRestartFile='RESTART.out'
 
   ! How often shall we save restart files. Default is at the end only
   type(FreqType), public :: SaveRestart=FreqType(.true.,-1,-1.0,-1,-1.0)
