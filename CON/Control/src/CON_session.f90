@@ -18,7 +18,8 @@ module CON_session
   use CON_couple_all
 
   use CON_coupler, ONLY: init_coord_system_all, &
-       check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II
+       check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
+       DoCoupleOnTime_C
 
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart
@@ -52,7 +53,6 @@ module CON_session
   integer :: lComp, iComp, nComp
   integer :: iCouple, iCompSource, iCompTarget
   integer :: iError
-  integer :: lCompPE, iCompPE       ! for parallel model
   logical :: IsProc_C(MaxComp)      ! for general model
 
   logical :: DoTest, DoTestMe
@@ -106,8 +106,6 @@ contains
     select case(TypeSession)
     case('general')
        call init_session_general
-    case('parallel')
-       call init_session_parallel
     case('old')                    !^CMP IF GM
        call init_session_old       !^CMP IF GM
     case default
@@ -122,14 +120,14 @@ contains
   !INTERFACE:
   subroutine init_session_general
     !DESCRIPTION:
-    ! Initialize possibly overlapping components for the current session. First
-    ! figure out which components belong to this PE.
+    ! Initialize possibly overlapping components for the current session. 
+    ! First figure out which components belong to this PE.
     ! Then couple the components in an appropriate order for the first time.
     ! The order is determined by the iCompCoupleOrder\_II array.
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'init_session_general'
-  
+    !-----------------------------------------------------------------------
     !\
     ! Figure out which components belong to this PE
     !/
@@ -152,7 +150,6 @@ contains
     !\
     ! Couple for the first time
     !/
-    iComp = iCompPE
     do iCouple = 1,nCouple
 
        iCompSource = iCompCoupleOrder_II(1,iCouple)
@@ -166,69 +163,6 @@ contains
     end do
 
   end subroutine init_session_general
-
-  !BOP ======================================================================
-  !IROUTINE: init_session_parallel - initialize for non-overlapping layout
-  !INTERFACE:
-  subroutine init_session_parallel
-    !DESCRIPTION:
-    ! Initialize non-overlapping components for the current session. First
-    ! figure out which component belongs to this PE and check for overlap.
-    ! Then couple the components in an appropriate order for the first time.
-    ! The order is determined by the iCompCoupleOrder\_II array.
-    !EOP
-
-    character(len=*), parameter :: NameSub=NameMod//'init_session_parallel'
-    !\
-    ! Figure out which component belongs to this PE and check for overlap
-    !/
-
-    lCompPE = -1
-    iCompPE = -1
-    do lComp = 1,nComp
-       iComp = i_comp(lComp)
-       if(is_proc(iComp))then
-          if(iCompPE /= -1)then
-             write(*,*)NameSub,' Both components ',NameComp_I(iComp),' and ',&
-                  'component ',NameComp_I(iCompPE),' use iProc=',i_proc()
-             call CON_stop(NameSub// &
-                  ' SWMF_ERROR: overlapping components.'// &
-                  ' Edit LAYOUT.in or change TypeSession')
-          else
-             lCompPE = lComp
-             iCompPE = iComp
-          end if
-       end if
-    end do
-
-    !\
-    ! Check for unused PE
-    !/
-    if(iCompPE == -1)then
-       write(*,*)NameSub//' WARNING: no component uses iProc=',i_proc()
-       if(UseStrict)call CON_stop(NameSub// &
-            'SWMF_ERROR: unused PE. Edit LAYOUT.in!')
-       RETURN
-    end if
-
-    !\
-    ! Couple for the first time
-    !/
-    iComp = iCompPE
-    do iCouple = 1,nCouple
-
-       if( all(iCompCoupleOrder_II(1:2,iCouple)/=iComp) ) CYCLE
-
-       iCompSource = iCompCoupleOrder_II(1,iCouple)
-       iCompTarget = iCompCoupleOrder_II(2,iCouple)
-
-       ! Couple iCompSource --> iCompTarget
-       if(Couple_CC(iCompSource, iCompTarget) % DoThis) &
-            call couple_comp(iCompSource, iCompTarget, tSimulation)
-
-    end do
-
-  end subroutine init_session_parallel
 
   !^CMP IF GM BEGIN
   !BOP ======================================================================
@@ -306,8 +240,6 @@ contains
     select case(TypeSession)
     case('general')
        call do_session_general(IsLastSession)
-    case('parallel')
-       call do_session_parallel(IsLastSession)
     case('old')                                 !^CMP IF GM
        call do_session_old(IsLastSession)       !^CMP IF GM
     case default
@@ -327,7 +259,7 @@ contains
 
     !DESCRIPTION:
     ! This is the general time looping routine which allows overlap in
-    ! the layout of the components but allows parallel execution. 
+    ! the layout of the components but allows concurrent execution. 
     ! Each component has its own tSimulation\_C(iComp). 
     ! The simulation time for control is defined as the {\bf minimum}
     ! of the component times. Always the component which is lagging behind
@@ -335,13 +267,17 @@ contains
     ! exceeded the next coupling, save restart or check for stop time.
     !EOP
 
-    real    :: tSimulation_C(MaxComp), tSimulationLimit_C(MaxComp)
+    real :: tSimulation_C(MaxComp)      ! Current time for the component
+    real :: tSimulationWait_C(MaxComp)  ! After this time do not progress
+    real :: tSimulationLimit_C(MaxComp) ! Time not to be passed by component
+
+    real :: tSimulationCouple, tSimulationLimit
 
     character(len=*), parameter :: NameSub=NameMod//'::do_session_general'
     !-----------------------------------------------------------------------
 
     !\
-    ! If no component uses this PE and init_session_parallel did not stop
+    ! If no component uses this PE and init_session_general did not stop
     ! then simply return
     !/
     if( .not.any(IsProc_C) ) RETURN
@@ -349,7 +285,7 @@ contains
     !\
     ! Set initial time for all components to be tSimulation
     !/
-    tSimulation_C=tSimulation
+    tSimulation_C = tSimulation
 
     TIMELOOP: do
 
@@ -382,27 +318,38 @@ contains
           do lComp=1,nComp
              iComp = i_comp(lComp)
              if(.not.IsProc_C(iComp)) CYCLE
-             
-             tSimulationLimit_C(iComp) = min( &
+
+             ! Find the time of the next coupling
+             tSimulationCouple = min( &
                   minval(Couple_CC(iComp,:) % tNext, &
                   MASK  =Couple_CC(iComp,:) % DoThis), &
                   minval(Couple_CC(:,iComp) % tNext, &
                   MASK  =Couple_CC(:,iComp) % DoThis))
 
+             ! Find the time of next save restart, stop check or end of session
+             tSimulationLimit = huge(1.0)
+             
              if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
-                  tSimulationLimit_C(iComp) = min(tSimulationLimit_C(iComp), &
-                  SaveRestart % tNext)
+                  tSimulationLimit = min(tSimulationLimit, SaveRestart % tNext)
 
              if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
-                  tSimulationLimit_C(iComp) = min(tSimulationLimit_C(iComp), &
-                  CheckStop % tNext)
+                  tSimulationLimit = min(tSimulationLimit, CheckStop % tNext)
 
              if(tSimulationMax > 0)&
-                  tSimulationLimit_C(iComp)  = min(tSimulationLimit_C(iComp), &
-                  tSimulationMax)
+                  tSimulationLimit = min(tSimulationLimit, tSimulationMax)
+
+             ! The next wait time is the smaller of coupling and limit times
+             tSimulationWait_C(iComp) = min(tSimulationCouple,tSimulationLimit)
+
+             if(DoCoupleOnTime_C(iComp))then
+                ! Limit component time to the next waiting time
+                tSimulationLimit_C(iComp) = tSimulationWait_C(iComp)
+             else
+                ! Limit time by save restart, stop check and maximum time only
+                tSimulationLimit_C(iComp) = tSimulationLimit
+             end if
+
           end do
-       else
-          tSimulationLimit_C = max(tSimulation,tSimulationMax)
        end if
 
        ! Advance solution
@@ -412,7 +359,7 @@ contains
           if(.not.IsProc_C(iComp)) CYCLE
 
           if(DoTimeAccurate)then
-             if(tSimulation_C(iComp) < tSimulationLimit_C(iComp)) then
+             if(tSimulation_C(iComp) < tSimulationWait_C(iComp)) then
 
                 call run_comp(iComp,tSimulation_C(iComp),&
                      tSimulationLimit_C(iComp))
@@ -423,7 +370,11 @@ contains
              end if
           else
              if(mod(nStep, DnRun_C(iComp)) == 0) then
+                ! tSimulationLimit=Huge since there is no limit on time step
                 call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
+
+                ! There is no progress in time
+                tSimulation_C(iComp) = tSimulation
 
                 if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' at nStep=',nStep
@@ -436,9 +387,9 @@ contains
        ! tSimulation for CON is the minimum of the simulation time of the
        ! components present on this processor
        !/
-       tSimulation = min(&
+       if(DoTimeAccurate) tSimulation = min(&
             minval(tSimulation_C,     MASK=IsProc_C), &
-            minval(tSimulationLimit_C,MASK=IsProc_C))
+            minval(tSimulationWait_C, MASK=IsProc_C))
 
        call show_progress
 
@@ -472,112 +423,6 @@ contains
     end do TIMELOOP
 
   end subroutine do_session_general
-
-  !BOP ======================================================================
-  !IROUTINE: do_session_parallel - time loop with no overlap between components
-  !INTERFACE:
-  subroutine do_session_parallel(IsLastSession)
-
-    !INPUT/OUTPUT ARGUMENTS:
-    logical, intent(inout) :: IsLastSession ! set it to true if run should stop
-
-    !DESCRIPTION:
-    ! This is a simple time looping routine which assumes that all
-    ! components run on non-overlapping sets of PE-s. This way there
-    ! is only one "time" on the PE, and there is no need to alternate
-    ! between components. Synchronization happens via the coupling,
-    ! restart and check for stop files and cpu time.
-    !EOP
-
-    real    :: tSimulationLimit
-
-    character(len=*), parameter :: NameSub=NameMod//'::do_session_parallel'
-    !-----------------------------------------------------------------------
-
-    !\
-    ! If no component uses this PE and init_session_parallel did not stop
-    ! then simply return
-    !/
-    if(iCompPE == -1) RETURN
-
-    lComp = lCompPE
-    iComp = iCompPE
-
-    TIMELOOP: do
-
-       !\
-       ! Stop this session if stopping conditions are fulfilled
-       !/
-       if(MaxIteration >= 0 .and. nIteration >= MaxIteration) exit TIMELOOP
-       if(DoTimeAccurate .and. tSimulationMax > cZero &
-            .and. tSimulation >= tSimulationMax) &
-            exit TIMELOOP
-
-       !\
-       ! Check periodically for stop file and cpu time
-       !/
-       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
-          if(do_stop_now())then
-             IsLastSession = .true.
-             exit TIMELOOP
-          end if
-       end if
-
-       nStep = nStep+1
-       nIteration = nIteration+1
-       call timing_step(nStep)
-
-       !\
-       ! Calculate next time to synchronize
-       !/
-       if(DoTimeAccurate)then
-          tSimulationLimit = min( &
-               minval(Couple_CC(iComp,:)%tNext, &
-               MASK  =Couple_CC(iComp,:)%DoThis), &
-               minval(Couple_CC(:,iComp)%tNext, &
-               MASK  =Couple_CC(:,iComp)%DoThis))
-
-          if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
-               tSimulationLimit = min(tSimulationLimit, SaveRestart % tNext)
-
-          if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
-               tSimulationLimit = min(tSimulationLimit, CheckStop % tNext)
-
-          if(tSimulationMax > 0)&
-               tSimulationLimit = min(tSimulationLimit, tSimulationMax)
-       else
-          tSimulationLimit = max(tSimulation,tSimulationMax)
-       end if
-
-       ! Advance solution
-
-       if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
-            ' with tSimulation and Limit=',tSimulation,tSimulationLimit
-
-       call run_comp(iComp,tSimulation,tSimulationLimit)
-
-       call show_progress
-
-       do iCouple = 1,nCouple
-
-          if( all(iCompCoupleOrder_II(1:2,iCouple)/=iComp) ) CYCLE
-
-          iCompSource = iCompCoupleOrder_II(1,iCouple)
-          iCompTarget = iCompCoupleOrder_II(2,iCouple)
-
-          ! Couple iCompSource --> iCompTarget
-          if(is_time_to(Couple_CC(iCompSource, iCompTarget),&
-               nStep, tSimulation, DoTimeAccurate)) &
-               call couple_comp(iCompSource, iCompTarget, tSimulation)
-
-       end do
-
-       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) &
-            call save_restart_comp(iComp, tSimulation)
-
-    end do TIMELOOP
-
-  end subroutine do_session_parallel
 
   !^CMP IF GM BEGIN
   !BOP ======================================================================
@@ -683,12 +528,6 @@ contains
        ! Also there was no attempt to make the last time equal to tSimulationMax
        call run_comp(GM_,tSimulation,HUGE(tSimulation))
        call MPI_bcast(tSimulation,1,MPI_REAL,i_proc0(GM_),i_comm(),iError)
-
-       if (DoTimeAccurate)then
-          !           tSimulation = tSimulation + dt*unitSI_t
-          TimeCurrent % Time =  TimeStart % Time + tSimulation
-          call time_real_to_int(TimeCurrent)
-       end if
 
        if (is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate)) &
             call save_restart
