@@ -88,7 +88,7 @@ contains
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
-    write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
+    write(UNITTMP_,'(a79)')            'IM pressure_var22'
     write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,1
     write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
     write(UNITTMP_,'(100(1pe13.5))')   0.0
