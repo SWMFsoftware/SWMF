@@ -221,10 +221,18 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
   real :: Velocity_D(nDim)         ! Velocity array
 
   integer :: iDim, iSide, iTheta, iPhi, iHemisphere
+
+  character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
+  logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   ! Copy point position into shifted positions
   Xyz_D = (/ x, y, z /)
+
+  if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
+
   do iSide = 1, 2
      do iDim = 1, nDim
         Xyz_DDI(:, iDim, iSide) = Xyz_D
@@ -240,6 +248,7 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
   ! Map points to obtain potential
   do iSide = 1, 2
      do iDim = 1, nDim
+
         call map_planet_field(tSimulation, Xyz_DDI(:,iDim, iSide), &
              TypeCoordSystem//' NORM', rIonosphere, XyzIono_D, iHemisphere)
 
@@ -251,6 +260,15 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
         iTheta    = floor(ThetaNorm) + 1
         iPhi      = floor(PhiNorm)   + 1
 
+        if(iTheta<1 .or. iTheta > nThetaIono .or. &
+             iPhi < 1 .or. iPhi > nPhiIono)then
+           write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
+           write(*,*)NameSub,' Phi, Theta=',Phi,Theta
+           write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
+           write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
+           call stop_mpi(NameSub//' index out of bounds')
+        end if
+
         Dist1     = ThetaNorm - (iTheta - 1)
         Dist2     = PhiNorm   - (iPhi   - 1)
 
@@ -259,6 +277,17 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
              +             Dist2     * IonoPotential_II(iTheta  , iPhi+1)) &
              + Dist1    *( (1-Dist2) * IonoPotential_II(iTheta+1, iPhi  )  &
              +             Dist2     * IonoPotential_II(iTheta+1, iPhi+1))
+
+        if(DoTestMe)then
+           write(*,*)NameSub,' iDim, iSide  =',iDim, iSide
+           write(*,*)NameSub,' shifted Xyz_D=',Xyz_DDI(:,iDim,iSide)
+           write(*,*)NameSub,' shifted Sph_D=',XyzIono_D
+           write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
+           write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
+           write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
+           write(*,*)NameSub,' Potential_DI =',Potential_DI(iDim, iSide)
+        end if
+
      end do
   end do
 
@@ -271,15 +300,24 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
   ! U = (E x B) / B^2
   Velocity_D = cross_product(eField_D, b_D) / B2
 
+  if(DoTestMe)then
+     write(*,*)NameSub,' b_D=',b_D
+     write(*,*)NameSub,' E_D=',eField_D
+     write(*,*)NameSub,' Velocity_D=',Velocity_D
+  endif
+
   ! Subtract the radial component of the velocity
   Velocity_D = Velocity_D - sum(Xyz_D*Velocity_D) / sqrt(sum(Xyz_D**2))
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' Final Velocity_D=',Velocity_D
+     !!! if(maxval(abs(Velocity_D))>0.00001)call stop_mpi(NameSub)
+  end if
 
   ! Return values
   Ux = Velocity_D(1)
   Uy = Velocity_D(2)
   Uz = Velocity_D(3)
-
-
 
 end subroutine calc_inner_BC_velocities_new
 
