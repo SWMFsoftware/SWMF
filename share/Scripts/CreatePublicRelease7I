@@ -1,7 +1,7 @@
 
-cvs -d darrens@herot:/p/volov/DEVTREE co SWMF_7I
+cvs -d darrens@herot:/FRAMEWORK co SWMF_7I
 cd SWMF_7I
-cvs -d darrens@herot:/p/volov/DEVTREE co SWMF_7I_TEST
+cvs -d darrens@herot:/FRAMEWORK co SWMF_7I_TEST
 cd ..
 
 mkdir SWMF_7I_Release
