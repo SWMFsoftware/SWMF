@@ -1,5 +1,34 @@
 #^CFG COPYRIGHT UM
+#BOP
+#!ROUTINE: doc/Tex/Makefile - produce documentation from LaTex, XML, Protex
+#!DESCRIPTION:
+# This Makefile produces documentation from Latex files, PARAM.XML files 
+# and Protex documented source code and scripts. 
+#EOP
+#BOC
 include ../../Makefile.def
+
+help:
+	@echo "       Make manuals for SWMF"
+	@echo ""
+	@echo "Targets:"
+	@echo ""
+	@echo "PDF          - produces SWMF.pdf"
+	@#^CFG IF DOCHTML BEGIN
+	@echo ""
+	@echo "HTML         - produces online manuals in ../HTML directory"
+	@#^CFG END DOCHTML
+	@echo ""
+	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
+	@echo ""
+	@echo "cleanpdf     - clean + remove PDF manuals"
+	@#^CFG IF DOCHTML BEGIN
+	@echo ""
+	@echo "cleanhtml    - clean + remove HTML manuals"
+	@echo ""
+	@echo "cleanall     - clean + remove PDF and HTML manuals"
+	@#^CFG END DOCHTML
+#EOC
 
 #^CMP IF GM BEGIN
 BATSRUS_SCRIPTS = \
@@ -12,7 +41,14 @@ BATSRUS_SCRIPTS = \
 SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 
 SWMFREF = \
-	${DIR}/SetSWMF.protex \
+	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
+	${DIR}/share/Makefile.protex \
+	${DIR}/Makefile.protex \
+	${DIR}/CON/Makefile.protex \
+	${DIR}/share/build/Makefile.protex \
+	${DIR}/Scripts/TestParam.protex \
+	${SCRIPTDIR}/CheckParam.protex \
+	${SCRIPTDIR}/ExpandParam.protex \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
@@ -49,7 +85,6 @@ SWMFREF = \
 	${SHAREDIR}/CON_planet_field.protex \
 	${SHAREDIR}/CON_ray_trace.protex \
 	${SCRIPTDIR}/CheckParam.protex \
-	${SCRIPTDIR}/ExpandParam.protex ${SCRIPT_CONF} \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/FixMakefileDef.protex \
 	${SCRIPTDIR}/FixMpi.protex \
@@ -64,10 +99,14 @@ SWMFREF = \
 	${SCRIPTDIR}/FixI8toI4.protex \
 	${SCRIPTDIR}/XmlToTex.protex \
 	${SCRIPTDIR}/protex.protex \
+	${DIR}/doc/Tex/Makefile.protex \
 	${UTILDIR}/NOMPI/src/NOMPI.protex \
 	${UTILDIR}/TIMING/src/ModTiming.protex \
 	${UTILDIR}/TIMING/src/timing.protex \
 	${BATSRUS_SCRIPTS}
+
+#BOC
+# Rules for files with standard extensions
 
 .SUFFIXES:
 .SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
@@ -80,11 +119,6 @@ SWMFREF = \
 
 .F90.protex:
 	${SCRIPTDIR}/protex.pl -b -n -f $*.F90 > $*.protex
-
-
-${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
-	${SCRIPTDIR}/protex.pl -b -n -f -S \
-		${SCRIPTDIR}/CompareDirs > ${SCRIPTDIR}/CompareDirs.protex
 
 .pl.protex:
 	${SCRIPTDIR}/protex.pl -b -n -f -S $*.pl > $*.protex
@@ -100,6 +134,7 @@ ${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
 .ps.pdf:
 	ps2pdf $*.ps ../$*.pdf
 
+#EOC
 #^CFG IF DOCHTML BEGIN
 .tex.html:
 	mv $*.tex $*orig.tex
@@ -128,26 +163,36 @@ ${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
 	mv $* ../HTML
 #^CFG END DOCHTML
 
-help:
-	@echo "       Make manuals for SWMF"
-	@echo ""
-	@echo "Targets:"
-	@echo ""
-	@echo "PDF          - produces SWMF.pdf"
-	@#^CFG IF DOCHTML BEGIN
-	@echo ""
-	@echo "HTML         - produces online manuals in ../HTML directory"
-	@#^CFG END DOCHTML
-	@echo ""
-	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
-	@echo ""
-	@echo "cleanpdf     - clean + remove PDF manuals"
-	@#^CFG IF DOCHTML BEGIN
-	@echo ""
-	@echo "cleanhtml    - clean + remove HTML manuals"
-	@echo ""
-	@echo "cleanall     - clean + remove PDF and HTML manuals"
-	@#^CFG END DOCHTML
+#
+# Rules for files without a standard extension
+#
+
+${DIR}/Makefile.protex: ${DIR}/Makefile
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/Makefile > ${DIR}/Makefile.protex
+
+${DIR}/share/Makefile.protex: ${DIR}/share/Makefile
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/share/Makefile > ${DIR}/share/Makefile.protex
+
+${DIR}/CON/Makefile.protex: ${DIR}/CON/Makefile.def
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/CON/Makefile.def > ${DIR}/CON/Makefile.protex
+
+${DIR}/share/build/Makefile.protex: ${DIR}/share/build/Makefile.Linuxpgf90
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/share/build/Makefile.Linuxpgf90 > \
+		${DIR}/share/build/Makefile.protex
+
+${DIR}/doc/Tex/Makefile.protex: ${DIR}/doc/Tex/Makefile
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${DIR}/doc/Tex/Makefile > ${DIR}/doc/Tex/Makefile.protex
+
+${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
+	${SCRIPTDIR}/protex.pl -b -n -f -S \
+		${SCRIPTDIR}/CompareDirs > ${SCRIPTDIR}/CompareDirs.protex
+
+${SWMFREF} : ${SCRIPTDIR}/protex.pl
 
 SWMFREF.tex: ${SWMFREF}
 	cat ${SWMFREF} > SWMFREF.tex
