@@ -14,6 +14,11 @@ RESTART.in
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#SAVERESTART
+T			save_restartfile
+2000			dn_output(restart_)
+-1.0			dt_output(restart_)
+
 #BEGIN_COMP SC
 
 #INCLUDE
@@ -89,17 +94,6 @@ minmod			limiter_type mc or minmod
 #TIMESTEPPING
 2                       nStage
 0.80                    CflExpl
-
-#DIVB
-T			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
-#SAVERESTART
-T			save_restartfile
-2000			dn_output(restart_)
--1.0			dt_output(restart_)
 
 
 #SAVELOGFILE
@@ -215,11 +209,6 @@ coupledhelio    	InitialRefineType
 2			nStage
 0.8			CflExpl
 
-#UPSTREAM_INPUT_FILE
-T                       UseUpstreamInputFile
-IMF9805.dat             UpstreamFileName
-0.0                     SatelliteYPos
-0.0                     SatelliteZPos
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -237,11 +226,6 @@ y=0 MHD idl             StringPlot
 -1.			DtOutput
 -1.			DxOutput
 
-
-#SAVERESTART
-T			save_restartfile
-2000			dn_output(restart_)
--1.0			dt_output(restart_)
 
 #END_COMP IH -----------------------------------------------------------------
 
