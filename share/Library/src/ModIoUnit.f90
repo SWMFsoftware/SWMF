@@ -51,17 +51,27 @@ module ModIoUnit
 
   !REVISION HISTORY:
   ! 01Aug03  Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
+  ! 20Aug04  Gabor Toth                     added debugging for io_unit_new
   !EOP ___________________________________________________________________
+
+  character (len=*), parameter :: NameMod = 'ModIoUnit'
 
 contains
 
   function io_unit_new()  result(iUnit)
 
     !  Returns a unit number of a unit that exists and is not connected
+    use ModMpi
 
     integer :: iUnit
     logical :: IsExisting, IsOpened
     integer :: iError
+
+    character (len=*), parameter :: NameSub = NameMod//'::io_unit_new'
+    logical, parameter :: DoDebug = .false.
+    integer :: iProc
+    !--------------------------------------------------------------------
+    if(DoDebug)call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
 
     do iUnit = MinUnitNumber, MaxUnitNumber
        inquire (&
@@ -70,6 +80,7 @@ contains
             opened = IsOpened,    &
             iostat = iError)
        if (IsExisting .and. .not. IsOpened .and. iError == 0) then
+          if(DoDebug)write(*,*) NameSub,' iProc, iUnit=', iProc, iUnit
           iUnitMax = max(iUnitMax, iUnit)
           return
        end if
