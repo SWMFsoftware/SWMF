@@ -1721,6 +1721,7 @@ rho p                   NameSatelliteVars Read if satellitevar='var' or 'VAR'
 			input="select">
 				<option name="B" default="T"/>
 				<option name="U"/>
+				<option name="J"/>
 			</parameter>
 			<parameter name="IsSingleLine" type="logical"
 							default="F" />
