@@ -3,8 +3,9 @@
 module ModGmImCoupling
 
   use ModMpi
-  use ModNumConst
-  use CON_coupler
+  use ModNumConst, ONLY: cRadToDeg, cDegToRad
+  use ModConst, ONLY: DipoleStrengthEarth
+  use CON_coupler, ONLY: Grid_C, IM_, ncells_decomposition_d
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,unusedBLK
@@ -86,8 +87,8 @@ contains
        end if
        allocate(RCM_lat(iSize), RCM_lon(jSize))
        ! Convert colat, lon to lat-lon in degrees
-       RCM_lat = (cHalfPi - Grid_C(IM_) % Coord1_I) * cRadToDeg
-       RCM_lon =  Grid_C(IM_) % Coord2_I             * cRadToDeg
+       RCM_lat = 90.0 - Grid_C(IM_) % Coord1_I * cRadToDeg
+       RCM_lon =        Grid_C(IM_) % Coord2_I * cRadToDeg
     end if
 
     ! Arrays needed for the field line integrals
@@ -538,30 +539,32 @@ contains
     ! goes inside the body. If the field-line tracer did not
     ! return a good value, we will compute total V assuming dipole.
     Ri=(6378.+100.)/6378.
-    factor=(unitSI_B*1.E+9) * 2. * (Ri**4) / 31100.
+    Factor = 2. * (Ri**4) / (abs(DipoleStrengthEarth)/unitSI_B)
     do i=1,isize
-       colat = cPi/2. - RCM_lat(i)*(cPi/180.)
+       Colat = (90.0 - RCM_lat(i))*cDegToRad
        s2=(sin(colat))**2
        s8=(sin(colat))**8
        Ci=cos(colat)
 
-!!$       if( s2 < Ri/Rbody .and. any(MHD_SUM_vol(i,:)>0.) )then
-!!$          !Fieldline goes beyond Rbody, add piece of fieldline volume
-!!$          Cs=sqrt(1.-(Rbody/Ri)*s2)
-!!$          FCiCs=(Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) - (1./7.)*(Ci**7-Cs**7)
-!!$          Vol=factor*FCiCs/s8
-!!$
-!!$          where(MHD_SUM_vol(i,:)>1.1E-8)
-!!$             MHD_SUM_vol(i,:)=MHD_SUM_vol(i,:) + Vol
-!!$          end where
-!!$       end if
+       if( s2 < Ri/Rbody )then
+          !Fieldline goes beyond Rbody, add piece of fieldline volume
+          Cs=sqrt(1.-(Rbody/Ri)*s2)
+          FCiCs = (Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) &
+               - (1./7.)*(Ci**7-Cs**7)
+          Vol   = Factor*FCiCs/s8
+
+          where(MHD_SUM_vol(i,:)>1.1E-8)
+             MHD_SUM_vol(i,:)=MHD_SUM_vol(i,:) + Vol
+          end where
+       end if
 
        if( s2 > Ri/Rcurrents )then
           !Fieldline stays inside of Rcurrents, recompute some values
 
           !Compute the full volume
           Cs=0.
-          FCiCs=(Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) - (1./7.)*(Ci**7-Cs**7)
+          FCiCs=(Ci-Cs) - (Ci**3-Cs**3) + (3./5.)*(Ci**5-Cs**5) &
+               - (1./7.)*(Ci**7-Cs**7)
           Vol=factor*FCiCs/s8
 
           if( s2 > Ri/Rbody )then
@@ -569,28 +572,29 @@ contains
              MHD_SUM_vol(i,:)=Vol
 
              !Fix the grid inside Rbody
-             MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*(cPi/180.))
-             MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*(cPi/180.))
+             MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
+             MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
 
              !Fix the equatorial B value
              xL=MHD_Xeq(i,1)
              yL=MHD_Yeq(i,1)
              zL=0.
              call get_b0(xL,yL,zL,qb)
-             eqB=sqrt(qb(1)**2+qb(2)**2+qb(3)**2)
-             MHD_Beq(i,:)=eqB
+             MHD_Beq(i,:) = sqrt(sum(qb**2))
 
           else
              !Fieldline stays inside of Rcurrents but outside Rbody
-             factor1=( 1. / ((Ri/Rbody)-(Ri/Rcurrents)) )*((Ri/Rbody)-s2)
-             factor2=( 1. / ((Ri/Rbody)-(Ri/Rcurrents)) )*(s2-(Ri/Rcurrents))
+             ! Weight analytic formula proportional to the distance 
+             ! of the field line from rBody within the rBody-rCurrents range
+
+             Factor1= (Ri/Rbody - s2)/ (Ri/Rbody - Ri/Rcurrents)
+             Factor2= 1.0 - factor1
 
              !Blend volume with exact volume
              where(MHD_SUM_vol(i,:)>1.1E-8)
-                MHD_SUM_vol(i,:)= factor1*MHD_SUM_vol(i,:) + factor2*Vol
-             end where
-             where(MHD_SUM_vol(i,:)<1.1E-8)
-                MHD_SUM_vol(i,:)=Vol
+                MHD_SUM_vol(i,:) = Factor1*MHD_SUM_vol(i,:) + Factor2*Vol
+             elsewhere
+                MHD_SUM_vol(i,:) = Vol
              end where
 
           end if
@@ -691,8 +695,9 @@ contains
                (MHD_Yeq(i,j+1)-MHD_Yeq(i,j))*(MHD_Xeq(i+1,j)-MHD_Xeq(i,j))) +&
                ABS((MHD_Xeq(i+1,j)-MHD_Xeq(i+1,j+1))*(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) -&
                (MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1))*(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
-               (ABS(Bdp_dim)*(SIN(Rcm_lat(i)/57.296)**2-SIN(Rcm_lat(i+1)/57.296)**2)* &
-               (RCM_lon(j+1)-RCM_lon(j))/57.296 )- 1.0
+               (ABS(Bdp_dim)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
+               -SIN(Rcm_lat(i+1)*cDegToRad)**2)* &
+               (RCM_lon(j+1)-RCM_lon(j))*cDegToRad )- 1.0
        ELSE
           MHD_Fluxerror (i,j) = 0.0
        END IF
