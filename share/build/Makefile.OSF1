@@ -7,9 +7,9 @@ SHELL=/bin/sh
 #	Space Weather Modeling Framework (SWMF) main Makefile
 #
 
-COMPILE.f77	= /usr/bin/f90
-COMPILE.f90     = /usr/bin/f90
-LINK.f90	= /usr/bin/f90
+COMPILE.f77	= f90
+COMPILE.f90     = f90
+LINK.f90	= f90
 AR = ar -rs
 
 #Uncomment the appropriate line for double or single precision
