@@ -2858,6 +2858,7 @@ for iter = iter0, 2 do begin
     endfor
 endfor 
 
+if DoXrange then xrange =0
 if DoYrange then yranges=0
 
 end
