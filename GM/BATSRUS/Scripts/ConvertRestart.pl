@@ -1,13 +1,16 @@
 #!/usr/bin/perl 
 #^CFG COPYRIGHT UM
 
+#!QUOTE: \clearpage
 #BOP
+#!QUOTE: \subsection{Change Endianness of BATSRUS Restart Files with Scripts/ConvertRestart.pl}
 #!ROUTINE: ConvertRestart.pl - change the endianness of BATSRUS restart files
 #!DESCRIPTION:
 # When moving restart files from one machine to another, it may be
 # necessary to change the endianness of the binary files.
 # This script is specifically written to convert all the binary restart
 # files produced by BATSRUS, as well as copy the ASCII header file.
+#
 #!REVISION HISTORY:
 # 07/03/2001 G. Toth - initial revision
 # 03/11/2003 G. Toth - generalized to work on a machine with 

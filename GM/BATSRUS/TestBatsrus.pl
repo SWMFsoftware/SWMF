@@ -441,8 +441,8 @@ For detailed information on usage type
 
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \section{GM/BATSRUS: scripts used by BATSRUS and SWMF}
-#!QUOTE: \subsection{Testing}
+#!QUOTE: \section{GM/BATSRUS: Scripts Used by BATSRUS and SWMF}
+#!QUOTE: \subsection{Testing the GM and IE Components}
 #!ROUTINE: TestBatsrus.pl - test Batsrus with a set of parameters
 #!DESCRIPTION:
 # Run BATSRUS.exe or SWMF.exe with various parameters in the run/ directory
