@@ -1,12 +1,19 @@
 #!/usr/bin/perl
 #^CFG COPYRIGHT UM
-
+#BOP
+#!ROUTINE: Fix8Endian.pl - change the byte order of a Fortran file of 8 byte reals
+#!DESCRIPTION:
 # Change the endianness (byte order) in a Fortran file,
-# which contains 8 byte reals and integers only
-
+# which contains 8 byte reals and integers only.
+# This script only works on a machine which has the same endianness as the
+# original file.
+#\begin{verbatim}
 # Usage:  Fix8Endian.pl InFile > Outfile
 #         Fix8Endian.pl < InFile > Outfile
-
+#\end{verbatim}
+#!REVISION HISTORY:
+# 07/13/2001 G. Toth - initial version
+#EOP
 # No end of line record
 undef $/;
 

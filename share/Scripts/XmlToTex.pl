@@ -1,8 +1,23 @@
 #!/usr/bin/perl -s
-
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \subsection{Automated Documentation}
+#!ROUTINE: XmlToTex.pl - generate Latex documentation from XML definitions of input parameters
+#!DESCRIPTION:
+# Create Latex documentation based on the XML definitions of the 
+# input parameters typically found in the PARAM.XML files.
+# This script allows to store the parameter descriptions in a single XML file
+# which is suitable for automated parameter checking and GUI generation,
+# yet provide the same information in a well formatted and printable manual
+# as well. The specific format of the PARAM.XML files is given elsewhere.
+#
+#!REVISION HISTORY:
+# 03/22/04 G.Toth - initial version
+#EOP
 if($h|$help|$H|$Help){
-    print "
-Purpose:
+    print 
+#BOC
+"Purpose:
 
    Convert XML description of input commands into LaTex description.
 
@@ -18,8 +33,9 @@ outfile  Output file. Default is writing to STDOUT
 
 Example: 
 
-  XmlToTex ../../Param/PARAM.XML > SWMF_commands.tex
-";
+  share/Scripts/XmlToTex.pl Param/PARAM.XML > Param/PARAM.xmltex"
+#EOC
+    ,"\n\n";
     exit 0;
 }
 

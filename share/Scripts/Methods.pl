@@ -58,12 +58,14 @@ are handled intelligently.',
 ID
     The 2 character component ID for the prefix (e.g. GM or UA)
 
-Example (creating srcIH from srcGM):
+Example:
 
-     cp GM/UofM/src/* IH/UofM/src
-     cd IH/UofM/src
-     ../../../Common/Methods.pl IH
-     ../../../Common/Rename.pl -r *.f90 *.f'
+Eliminate name conflicts by renaming subroutines and functions in a 
+physics module with ID 'PM' and version 'VERSION':
+
+     cd PM/VERSION/src
+     ../../../share/Scripts/Methods.pl PM
+     ../../../share/Scripts/Rename.pl -r *.f90'
 #EOC
 ,"\n\n";
     exit $Error;

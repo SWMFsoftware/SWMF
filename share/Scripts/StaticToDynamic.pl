@@ -194,9 +194,22 @@ exit 0;
 
 sub print_help{
 
-    print "
-
-Purpose: Transform a module with static variable declarations into a 
+#BOP
+#!ROUTINE: StaticToDynamic.pl - change static F90 declarations to dynamic
+#
+#!DESCRIPTION:
+# When more physics models are combined into a framework, the total memory
+# usage my exceed the memory found on one processor. This problem can
+# be avoided if the components dynamicallty allocate their variables
+# only on the processors used by that component.
+# 
+#!REVISION HISTORY:
+# 07/17/04 G.Toth - initial version
+#                   a few improvements added later
+#EOP
+    print
+#BOC
+"Purpose: Transform a module with static variable declarations into a 
          module with dynamic (allocatable) declarations.
          If a logical variable/parameter named IsDynamic* = .false. is found,
          its value is modified to .true.
@@ -237,8 +250,8 @@ StaticToDynamic.pl ModAdvance_static.f90 > ModAdvance.f90
   Convert only the real and double precision arrays of at least 4 dimensions 
   matching 'nBLK' or 'MaxBlock' in their declaration:
 
-StaticToDynamic.pl -t='real|double precision' -d=4 -l='nBLK|MaxBlock'
-
-";
+StaticToDynamic.pl -t='real|double precision' -d=4 -l='nBLK|MaxBlock'"
+#EOC
+   ,"\n\n";
     exit;
 }

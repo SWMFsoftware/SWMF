@@ -35,11 +35,8 @@ while($ARGV[0] =~ /-/){
 
 $Help   = 1 if $#ARGV<0;                    # No source files
 
-#!QUOTE: \clearpage 
-
+#!QUOTE: \clearpage
 #BOP
-
-#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
 #!QUOTE: \subsection{Source Code Manipulation}
 #
 #!ROUTINE: depend.pl - automatic generation of Fortran source dependencies
@@ -62,6 +59,7 @@ $Help   = 1 if $#ARGV<0;                    # No source files
 # 08/20/03 G.Toth - added search path options with intelligent file association
 # 03/20/04 G.Toth - added multiple -Ipath option so the compiler flags 
 #                   can be used without any change
+# 07/30/04 I.Sokolov - added search for include files in the search path
 #EOP
 if($Help){
     print 

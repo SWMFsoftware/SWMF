@@ -2,7 +2,7 @@
 #^CFG COPYRIGHT UM
 #BOP
 #!ROUTINE: Rename.pl - rename many variables/strings in many source files
-#!INTERFACE
+#
 #!DESCRIPTION:
 # This script makes variable renaming relatively safe and easy in 
 # a large number of source files. It can rename many variables at

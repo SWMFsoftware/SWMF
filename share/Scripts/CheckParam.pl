@@ -1090,10 +1090,28 @@ sub param_error{
     print "Command description:\n$commandText{$realName}" if $Verbose;
 }
 ##############################################################################
+#!QUOTE: \clearpage 
+#BOP
+#!QUOTE: \section{share/Scripts: for SWMF and Physics Modules}
+#!QUOTE: \subsection{Checking parameters}
+#
+#!ROUTINE: CheckParam.pl - check a parameter file based on an XML description
+#!DESCRIPTION:
+# Before running an executable, it is a good idea to check the parameter file.
+# This can save time and frustration.
+# This rather complex script is normally called from a customized
+# TestParam.pl script. For certain applications, however, it may be
+# necessary to call directly this script.
+# 
+#!REVISION HISTORY:
+# 03/22/2004 G.Toth - initial version based on the TestParam.pl script
+#                     which was developped for BATSRUS.
+#EOP
 sub print_help{
 
-    print "
-Purpose:
+    print 
+#BOC
+"Purpose:
 
      Read a parameter file and verify its correctness based on an 
      XML description. In most applications this scipt is called by 
@@ -1173,7 +1191,8 @@ CheckParam.pl -D -i
 #DESCRIPTION
 Just a test.
 ...
-Ctrl-D
-";
+Ctrl-D"
+#EOC
+    ,"\n\n";
     exit 0;
 }
