@@ -13,26 +13,20 @@ SHELL=/bin/sh
 VERSION = 2.0
 
 #
-# List the default target first
+# The default target is SWMF so it is listed first
 #
-DEFAULT_TARGET = SWMF
-DEFAULT_EXE    = SWMF.exe
-
-default : ${DEFAULT_TARGET}
+default : SWMF
 
 #
 #       Definition of OS, component versions and directory structure
 #
 include Makefile.def
 
-#			
-#	Menu of make options
-#
 help:
 	@echo ' '
 	@echo '  You can "make" the following:'
 	@echo ' '
-	@echo "    <default>   ${DEFAULT_TARGET}"
+	@echo '    <default>   SWMF'
 	@echo ' '
 	@echo '    install     (to be used via SetSWMF.pl only)'
 	@echo ' '
@@ -57,10 +51,10 @@ help:
 	@echo '    rundir PLOT=TEC     (run directory with Tecplot postprocessing only)'
 	@echo '    rundir MACHINE=ames (run directory with job scripts for machines at NASA Ames)'
 	@echo ' '
-	@echo "    mpirun      (make ${DEFAULT_TARGET} and mpirun ${DEFAULT_EXE} on 8 PEs)"
-	@echo "    mpirun NP=7 (make ${DEFAULT_TARGET} and mpirun ${DEFAULT_EXE} on 7 PEs)"
-	@echo "    mprun  NP=5 (make ${DEFAULT_TARGET} and mprun  ${DEFAULT_EXE} on 5 PEs)"
-	@echo "    nompirun    (make ${DEFAULT_TARGET} and run it without MPI)"
+	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 8 PEs)'
+	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
+	@echo '    mprun  NP=5 (make SWMF and mprun  SWMF.exe on 5 PEs)'
+	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
 	@#^CMP IF IH BEGIN
@@ -342,14 +336,14 @@ rundir: ENV_CHECK
 #
 NP=8
 
-mpirun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; mpirun -np ${NP} ./${DEFAULT_EXE}
+mpirun: ENV_CHECK SWMF
+	cd run; mpirun -np ${NP} ./SWMF.exe
 
-mprun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; mprun -np ${NP} ./${DEFAULT_EXE}
+mprun: ENV_CHECK SWMF
+	cd run; mprun -np ${NP} ./SWMF.exe
 
-nompirun: ENV_CHECK ${DEFAULT_TARGET}
-	cd run; ./${DEFAULT_EXE}
+nompirun: ENV_CHECK SWMF
+	cd run; ./SWMF.exe
 
 ETAGS = etags
 

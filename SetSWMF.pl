@@ -410,7 +410,7 @@ sub shell_command{
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \section{Main directory}
+#!QUOTE: \section{The SMWF Makefiles and Scripts}
 #!QUOTE: \subsection{Installation and Configuration of SWMF}
 #!ROUTINE: SetSWMF.pl - (un)installation and configuration of SWMF
 #!DESCRIPTION:
