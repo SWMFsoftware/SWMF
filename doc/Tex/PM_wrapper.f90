@@ -1,18 +1,4 @@
 !^CFG COPYRIGHT UM
-!BOP
-!MODULE: PM_wrapper - example wrapper methods for physics module PM
-!DESCRIPTION:
-! This collection of subroutines serves as an example for writing 
-! the wrapper for a new physics module. The PM string should be replaced
-! with the two-character ID of the actual module. The module, variable and
-! subroutine names starting with PM\_ in this example file should
-! be replaced with the appropriate module, variable and subroutine names of
-! the new physics module.
-!
-!REVISION HISTORY:
-!  03March05 - Gabor Toth - initial prototype/prolog/code
-!EOP
-
 !BOP =========================================================================
 !ROUTINE: PM_set_param - set parameters for the PM module
 !INTERFACE:
