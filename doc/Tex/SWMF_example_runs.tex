@@ -1,9 +1,9 @@
-The examples in this chapter are intended for make you familiar
-with the use of SWMF. By carefully following the steps you should
+The examples in this chapter are intended to make you familiar
+with the use of the SWMF. By carefully following the steps you should
 be able to do the tests as described. It is a good idea to read the
 provided PARAM.in and LAYOUT.in files and try to understand how
 the examples work. You may also experiment by changing these files
-after copied from the originals. These examples can also help you
+after copied from the originals. These examples should help you
 in setting up your own runs.
 
 For sake of simplicity we describe how to do all the example runs with the
@@ -110,7 +110,7 @@ SetSWMF.pl script. For example set
 SetSWMF.pl -g=SC:4,4,4,1500
 \end{verbatim}
 Keep fixing the problems until the Scripts/TestParam.pl runs silently.
-Remember to recompile SWMF.exe if you changed the grid size.
+Remember to recompile SWMF.exe if you change the grid size.
 
 Run the code by submitting a job or do it interactively
 \begin{verbatim}
@@ -134,7 +134,7 @@ magnetic, kinetic and thermal energies integrated over the surface of
 two spheres of radii 4 and 10. As the code approaches steady state,
 the integrated energies will change less and less. 
 
-When the run finished successfully (or even while the code is running), 
+When the run finishes successfully (or even while the code is running), 
 you can postprocess the plot files
 \begin{verbatim}
 cd SC
@@ -144,7 +144,8 @@ cd ..
 \end{verbatim}
 The 'p' and 'r' flags for the pTEC script mean that the raw ASCII data
 files are preprocessed with preplot into .plt files and the ASCII data
-files are removed. If the machine does not have the 'preplot' code installed,
+files are removed. If the machine does not have the 'preplot' code
+installed (preplot is a script that comes with the Tecplot software),
 you can gzip the .dat files to save disk space and transfer time
 \begin{verbatim}
 pTEC g
@@ -336,7 +337,7 @@ IM    1    1    1
 GM    2   31    1
 #END
 \end{verbatim}
-You can use the SWMF with the settings used in the 8 components test, 
+You can use the SWMF with the settings recommended for all the tests, 
 but you only need the GM, IM, IE and UA components,
 all other component versions can be Empty.
 
@@ -390,7 +391,7 @@ generated in the SC component. This demonstrates the
 use of an Eruptive Event generator.
 The SP component is coupled, and during the 4 hour evolution
 of the CME, substantial particle acceleration is observed. 
-By the end of the run the CME reaches is the boundary 
+By the end of the run the CME reaches the boundary 
 between the SC and IH components, and partially enters the IH domain.
 The test demonstrates the coupling between the SC-IH and SP
 components in a challenging simulation.
@@ -433,7 +434,7 @@ cd run
 mpirun -np 32 SWMF.exe | tee runlog.SCIHSP
 \end{verbatim}
 This run may take a long time if run all the way to 4 hours.
-After the run finished, postprocess the plot files
+After the run finishes, postprocess the plot files
 \begin{verbatim}
 cd SC
 pIDL

@@ -46,12 +46,12 @@ The configured package will be in the Build directory.  Type
 \begin{verbatim}
   Configure.pl -h
 \end{verbatim}
-to get complete usage information or read about this option 
+to get complete usage information or read about this script 
 in the reference manual.
 %^CMP END CONFIGURE
 
 
-\subsection{Selecting component versions to compile (SetSWMF.pl)}
+\subsection{Selecting component versions to compile with SetSWMF.pl}
 
 The physics component versions reside in the directories 
 GM, IE, IH, IM, RB, SC,
@@ -113,7 +113,7 @@ cd ../..
 make IHBATSRUS
 \end{verbatim}
 
-\subsection{Selecting Empty component versions}
+\subsection{Selecting Empty component versions with SetSWMF.pl}
 
 If a physics component is not needed for run, an Empty version of the
 component can be compiled.
@@ -126,7 +126,7 @@ For example the Empty UA component can be selected with
   SetSWMF.pl -v=UA/Empty
 \end{verbatim}
 
-\subsection{Registering components using LAYOUT.IN}
+\subsection{Registering components using LAYOUT.in}
 
 Components can also be excluded from a run by omitting them from the LAYOUT.in 
 file, which means that the component is not 'registered' at run time.
@@ -178,7 +178,7 @@ command in the second session.
 
 
 
-\subsection{Setting compiler flags}
+\subsection{Setting compiler flags in Makefile.conf and with SetSWMF.pl}
 
 The compiler flags can be modified by editing
 \begin{verbatim}
@@ -225,7 +225,7 @@ the distribution will be automatically cleaned with
 {\tt make clean}, which has to be done before recompiling the
 code with a different precision. 
 
-\subsection{Configuration of components}
+\subsection{Configuration of individual components}
 
 Some of the components can be configured individually. 
 The Configure.pl script can configure the {\tt GM/BATSRUS} code, for example.
@@ -307,3 +307,6 @@ and the CPU time needed by the components is approximately known.
 In the test runs with the Stubs, one can reduce the CPU times by 
 a fixed factor, so it takes less CPU time to see the efficiency of the 
 SWMF for a given layout and coupling scheme.
+
+An alternative way to test performance with different configurations is
+to use the Scripts/Performance.pl script.

@@ -8,7 +8,12 @@ The input parameters for the SWMF are read from the
 {\tt PARAM.in} file which must be located in the run directory.
 This file, together with the LAYOUT.in file, controls the SWMF
 and its components.
-The component specific parameters are given between
+There are many include files in the {\tt Param} directory. These
+can be included into the {\tt PARAM.in} files, or they can serve as
+examples. 
+
+In the PARAM.in file, 
+the parameters specific to a component are given between
 the \#BEGIN\_COMP ID and \#END\_COMP ID commands,
 where the ID is the two character identifier of the component.
 For example the GM parameters are enclosed between the 
@@ -79,9 +84,6 @@ The user can place his/her
 included parameter files into the main run directory or in any subdirectory
 as long as the correct path to the file from the run directory is
 included in the {\tt \#INCLUDE} command.
-There are many include files in the {\tt Param} directory. These
-can be included into the {\tt PARAM.in} files, or they can serve as
-examples. 
 
 \subsection{Commands, Parameters, and Comments \label{section:commands}}
 
@@ -97,7 +99,8 @@ The parameters, which follow, must conform to
 requirements of the command. They can be of four types: logical, integer,
 real, or character string. Logical parameters can be entered as 
 {\tt .true.} or {\tt .false.} or simply {\tt T} or {\tt F}.
-Integers and reals can be in any of the usual Fortran formats.
+Integers and reals can be in any of the usual Fortran formats.  In
+addition, real numbers can be entered as fractions (5/3 for example).
 All these can be followed by arbitrary comments, typically separated
 by space or TAB characters. In case of the character type input
 parameters (which may contain spaces themselves), the comments must
@@ -128,6 +131,13 @@ T                       DoTimeAccurate
 #STOP
 10.0                    tSimulationMax
 -1                      MaxIteration
+
+#BEGIN_COMP IH
+
+#GAMMA
+5/3                     Gamma
+
+#END_COMP IH
 
 \end{verbatim}
 
@@ -198,11 +208,11 @@ command. The true parameters of Earth can be modified or simplified
 with a number of other commands which {\bf must occur after the
 \#PLANET command}. These commands are (without showing their parameters)
 \begin{verbatim}
-\#IDEALAXES
-\#ROTATIONAXIS
-\#MAGNETICAXIS
-\#ROTATION
-\#DIPOLE
+#IDEALAXES
+#ROTATIONAXIS
+#MAGNETICAXIS
+#ROTATION
+#DIPOLE
 \end{verbatim}
 Other than this strict rule, it makes sense to follow a 'natural'
 order of commands. This will help in interpreting, maintaining
@@ -277,13 +287,13 @@ We continue the run for another 2 hours
 When the run starts from scratch, the PARAM.in file
 should start similarly with the 
 \begin{verbatim}
-\#DESCRIPTION
+#DESCRIPTION
 This is the start up run
 
-\#PLANET
+#PLANET
 SATURN
 
-\#STARTTIME
+#STARTTIME
     2004                     iYear
        8                     iMonth
       15                     iDay
@@ -315,7 +325,7 @@ a warning is printed on the screen and the code stops running
 
 Most command parameters have sensible default values.
 These are described in the PARAM.XML files,
-and in this manual (which was produced from them).
+and in chapter \ref{chapter:commands} (which was produced from them).
 The {\tt PARAM.XML} file also defines which commands are required
 with the {\tt required="T"} attribute of the {\tt <command...>} tag.
 For the control module the only required command is the \#STOP command,
@@ -483,7 +493,7 @@ T            DoSaveRestart
 
 #STOP
 -1           MaxIteration
-1500.0       tSimulationMax
+1400.0       tSimulationMax
 
 #RUN ==END OF SESSION 1== 
 
@@ -500,10 +510,8 @@ T            DoSaveRestart	  \hfill  2      1000     3000           2000.0
                           
 \end{alltt}
 In this example, we see that in time accurate mode the simulated, or
-physical, time is always cumulative.  To make 500.0 seconds more simulation,
-the original 1000.0 seconds must be taken into account.  In this example,
-since each second is 1 iteration, the restart file would be written at the
-same time steps as in the previous example.  The final output 
+physical, time is always cumulative.  To make 400.0 seconds more simulation,
+the original 1000.0 seconds must be taken into account.  The final output 
 at 2000.0 seconds is written because the run ended.
 
 Throughout this subsection, we have used the frequency of writing restart files

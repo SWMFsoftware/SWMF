@@ -78,7 +78,7 @@ of processors from 2 and up.
 It is not always possible, or even efficient to use non-overlapping
 layouts. For example both the SC and IH components require a lot of memory,
 but the IH component runs much faster (say 100 times faster) 
-in terms of real time than the SC component (this is due to the 
+in terms of cpu time than the SC component (this is due to the 
 larger cells and smaller wave speeds in IH).
 If we tried to use concurrent execution on 101 processors,
 SC should run on 100 and IH on 1 processors to get good load balancing.
@@ -113,7 +113,7 @@ SC    1     999    2
 Here GM is running on the processors with even rank,
 while SC is running on the processors with odd ranks.
 By using the processor stride, this layout works on
-an arbitrary even number of processors.
+an arbitrary number of processors.
 
 When more serial and parallel codes are executing together,
 finding the optimal layout may not be trivial. 
@@ -257,15 +257,15 @@ This can be achieved by
 \begin{verbatim}
 ! No need to run SC too often, it is already in steady state
 #CYCLE
-  SC               NameComp
-  1000             DnRun
+SC               NameComp
+1000             DnRun
 
 ! No need to couple SC too often
 #COUPLE2
-  SC               NameSource
-  IH               NameTarget
-  1000             DnCouple
-  -1.0             DtCouple
+SC               NameSource
+IH               NameTarget
+1000             DnCouple
+-1.0             DtCouple
 \end{verbatim}
 Since SC and IH are always coupled at the beginning of the session,
 further couplings are not necessary.
@@ -323,11 +323,11 @@ components. If GM, UA and IE are coupled
 in the default order
 \begin{verbatim}
 #COUPLEORDER
-4
-GM IE
-UA IE
-IE UA
-IE GM
+4             nCouple	  
+GM IE	      NameSourceTarget
+UA IE	      NameSourceTarget
+IE UA	      NameSourceTarget
+IE GM	      NameSourceTarget
 \end{verbatim}
 and the to-IE and from-IE coupling times coincide, e.g.
 \begin{verbatim}
@@ -348,11 +348,12 @@ the Poisson equation, because IE receives new data
 and it is required to produce results immediately.
 With the reversed coupling order
 \begin{verbatim}
-4
-IE UA
-IE GM
-GM IE
-UA IE
+#COUPLEORDER
+4             nCouple	  
+IE UA	      NameSourceTarget
+IE GM	      NameSourceTarget
+GM IE	      NameSourceTarget
+UA IE	      NameSourceTarget
 \end{verbatim}
 IE will provide the solution from the previously received data,
 and it will have time to work on the new data while GM and UA
@@ -363,11 +364,12 @@ The temporal accuracy, on the other hand, will be somewhat worse.
 To demonstrate that the coupling order is important, here
 is a very {\bf inefficient} coupling order
 \begin{verbatim}
-4
-GM IE
-IE GM
-UA IE
-IE UA
+#COUPLEORDER
+4             nCouple	  
+GM IE         NameSourceTarget
+IE GM         NameSourceTarget
+UA IE         NameSourceTarget
+IE UA         NameSourceTarget
 \end{verbatim}
 in case the coupling times with GM and UA coincide (always at the beginning
 of a the sessions).

@@ -127,7 +127,7 @@ version 1.0. Here are some of the highlights:
       reorganized. 
 \item This reorganization allows components to be used as stand alone 
       physics models without any modification in the source code.  The
-      Stand alone version only linking to a small SWMF library.
+      stand alone version only links to a small SWMF library.
 \item The installation and configuration of SWMF has been greatly simplified
       with the aid of Perl scripts. 
 \item Layout and input parameter can be checked with Scripts/TestParam.pl
@@ -300,7 +300,7 @@ and the following files
 
 \section{General Hints}
 
-\subsubsection{Getting help with scripts}
+\subsubsection{Getting help with scripts and the Makefile}
 Most of the Perl and shell scripts that are distributed with the SWMF
 provide help which can be accessed as follows using the {\tt -h} flag.
 For example, 
@@ -308,7 +308,11 @@ For example,
   SetSWMF.pl -h
 \end{verbatim}
 will provide a detailed listing of the options and capabilities of the
-{\tt SetSWMF.pl} script.
+{\tt SetSWMF.pl} script.  In addition, you can find all the possible
+targets  that can be built by typing
+\begin{verbatim}
+make help
+\end{verbatim}
 
 \subsubsection{Input commands: PARAM.XML}
 A very useful set of files to become familiar with are the {\tt PARAM.XML}
@@ -330,8 +334,22 @@ extreamely useful.  A typical usage is to cut and paste commands out of the
 PARAM.XML file into the PARAM.in file for a run.
 
 \subsubsection{Have the working directory in your path}
-
-
+In order to run executable files in the UNIX environment you must have
+the current working directory either your path or in the filename you
+want to execute.  In UNIX the current working directory is represented
+by the period (.).  For example
+\begin{verbatim} 
+./SWMF.exe
+\end{verbatim}
+will execute the SWMF.exe program if it is in your current directory.  If you
+add the `.' to your path using
+\begin{verbatim}
+set path = (~/bin /usr/local/mpi/bin /usr/local/bin ${path} .)
+\end{verbatim}
+then you can simply type
+\begin{verbatim} 
+SWMF.exe
+\end{verbatim}
 
 \section{Installing the Code}
 
@@ -359,8 +377,9 @@ Change directories into the distribution:
   cd SWMF
 \end{verbatim}
 
-The SWMF needs to know what architecture you are running the code on.
-It can figure this out all by itself, but you have to run the command:
+The SWMF needs to know what architecture you are running the code on
+and what FORTRAN compiler will be used.  For most platforms and compilers,
+tt can figure this out all by itself, but you have to run the command:
 \begin{verbatim}
   SetSWMF.pl -i
 \end{verbatim}
@@ -406,23 +425,26 @@ the command
 \begin{verbatim}
   make PDF
 \end{verbatim}
-which creates the documentation
+which creates the user manual
 \begin{verbatim}
   doc/SWMF.pdf
 \end{verbatim}
-in the Adobe PDF format.  In order for this to work you must have
-LaTex installed on your system.  An on-line version can be created by
+and several other documents in the Adobe PDF format.  
+In order for this to work you must have
+LaTex installed on your system (and dvips and ps2pdf).  
+An on-line version can be created by
 \begin{verbatim}
   make HTML
 \end{verbatim}
 The HTML version is generated from the LaTex using the command {\tt
-  latex2html}.  You will have to install this if does not already exist
+  latex2html}.  You will have to install this if it does not already exist
   on your system.
 The top level HTML file is in
 \begin{verbatim}
   doc/HTML/index.html
 \end{verbatim}
-to point at with the browser.  To clean the intermediate files type
+to point at with the browser.  This html file list the different
+documentation files and what they contain.  To clean the intermediate files type
 \begin{verbatim}
   cd doc/Tex
   make clean
@@ -430,21 +452,23 @@ to point at with the browser.  To clean the intermediate files type
 To remove all the created documentation type
 \begin{verbatim}
   cd doc/Tex
-  make distclean
+  make cleanall
 \end{verbatim}
 
 \section{Building and Running an Executable}
 
-At compile time, the user can select which physics components he would
-like to compile.  Any component not compiled will not be available for
+At compile time, the user can select which physics components should be
+compiled.  
+Any component not compiled will not be available for
 use at run time.  The physics components can be selected with the {\tt -v} flag
 of the SetSWMF.pl script. For example typing
 \begin{verbatim}
   SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS,SP/Kota
   SetSWMF.pl -v=GM/Empty,RB/Empty,IM/Empty,IE/Empty,UA/Empty
 \end{verbatim}
-will select BATSRUS for the SC and IH components and K\'ota's SP model.
-The other components are set to Empty versions, which contain emmpty
+will select BATSRUS for the SC and IH components and K\'ota's model for
+the SP component.
+The other components are set to Empty versions, which contain empty
 subroutines for compilation, but cannot be used.
 The default configuration includes a working version for all components, 
 which takes up more memory, but is the most general.
@@ -458,7 +482,7 @@ flag of the {\tt SetSWMF.pl} script. For example the
 \end{verbatim}
 command sets the block size for the GM component to $8\times 8\times 8$ cells, 
 the maximum number of blocks per processor to 400, 
-and the maximum number of implicit blocks to 100.
+and the maximum number of implicit blocks per processor to 100.
 The SetSWMF.pl script actually runs the individual GridSize.pl
 scripts in the component versions. These scripts can be run directly,
 and they provide more options and more verbose information than SetSWMF.pl.
@@ -561,8 +585,8 @@ to 4, and IM will run on only 1 processor, the processor 11.  If
 stride is not equal to 1, the processors for the component will not be
 neighboring processors.
 
-It is useful to check the validity of the {\tt run/PARAM.in} and 
-{\tt run/LAYOUT.in} files berfore running the code. If the
+It is strongly recommended to check the validity of the {\tt run/PARAM.in} and 
+{\tt run/LAYOUT.in} files before running the code. If the
 code will be run on 16 processors, type
 \begin{verbatim}
 Scripts/TestParam.pl -n=16
@@ -669,5 +693,19 @@ To see all the options of the script type
 \begin{verbatim}
 ./Restart.pl -h
 \end{verbatim}
+
+\section{What next?}
+
+Hopefully this section has guided you through installing the SWMF and
+given you a basic knowledge of how to run it.  However it has probably
+also convinced you that the SWMF is quite a complex tool and that there
+are many more things for you to learn.  So, what next?
+
+We suggest that you read all of chapter \ref{chapter:basics}, which
+outlines the basic features of the SWMF as well as some things you
+really must know in order to use the SWMF.  Once you have done this you
+are ready to experiment.  Chapter \ref{chapter:examples} gives several 
+examples which are intended to make you familiar with the use of the
+SWMF.  We suggest that you try them!
 
 %\end{document}
