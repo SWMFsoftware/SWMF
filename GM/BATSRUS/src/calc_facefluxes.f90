@@ -120,3 +120,43 @@ contains
   end subroutine print_values
 
 end subroutine calc_facefluxes
+
+!===========================================================================
+
+subroutine calc_electric_field(iBlock)
+
+  ! Calculate the total electric field which includes numerical resistivity
+  ! This estimate averages the numerical fluxes to the cell centers 
+  ! for sake of simplicity.
+
+  use ModSize,       ONLY: nI, nJ, nK
+  use ModVarIndexes, ONLY: Bx_,By_,Bz_
+  use ModAdvance,    ONLY: Flux_VX,Flux_VY,Flux_VZ, Ex_CB, Ey_CB, Ez_CB
+  use ModGeometry,   ONLY: fAx_BLK,fAy_BLK,fAz_BLK
+  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ
+  implicit none
+  integer, intent(in) :: iBlock
+  !------------------------------------------------------------------------
+
+  ! E_x=(fy+fy-fz-fz)/4
+  Ex_CB(:,:,:,iBlock)= 0.25*(                               &
+          (Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                  &
+          +Flux_VY(Bz_,1:nI,2:nJ+1,1:nK))/fAy_BLK(iBlock)   &
+         -(Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                  &
+          +Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1))/fAz_BLK(iBlock))
+
+  ! E_y=(fz+fz-fx-fx)/4
+  Ey_CB(:,:,:,iBlock)= 0.25*(                               &
+          (Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                  &
+          +Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1))/fAz_BLK(iBlock) &
+         -(Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                  &
+          +Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  ))/fAx_BLK(iBlock))
+
+  ! E_z=(fx+fx-fy-fy)/4
+  Ez_CB(:,:,:,iBlock)= 0.25*(                               &
+          (Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                  &
+          +Flux_VX(By_,2:nI+1,1:nJ  ,1:nK))/fAx_BLK(iBlock) &
+         -(Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                  &
+          +Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK))/fAy_BLK(iBlock))
+
+end subroutine calc_electric_field
