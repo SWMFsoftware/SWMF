@@ -22,14 +22,26 @@ PARAM.in file.
 
 Select the SC/BATSRUS component version. When this is done the first time
 after installation, the SC/BATSRUS source code is created from the GM/BATSRUS
-source code, which takes a few minutes. Also select 
-the UA/GITM version instead of the default UA/GITM2 version, 
-and set the recommended grid sizes for the tests:
+source code, which takes a few minutes:
 \begin{verbatim}
-SetSWMF.pl -v=SC/BATSRUS
-SetSWMF.pl -v=UA/GITM
-SetSWMF.pl -g=UA:9,9,25,2,2 -g=GM:8,8,8,200,40 -g=SC:4,4,4,1000
+SetSWMF.pl -v=SC/BATSRUS -g=SC:4,4,4,1000
 \end{verbatim}
+Set the grid size for the GM/BATSRUS and IH/BATSRUS\_share components:
+\begin{verbatim}
+SetSWMF.pl -g=GM:8,8,8,200,40
+\end{verbatim}
+You can select either the UA/GITM version with
+\begin{verbatim}
+SetSWMF.pl -v=UA/GITM -g=UA:9,9,25,2,2
+\end{verbatim}
+or the new (default) UA/GITM2 version with
+\begin{verbatim}
+SetSWMF.pl -v=UA/GITM -g=UA:9,9,25,4
+\end{verbatim}
+Note the difference in the grid size parameters.
+You should also take care of using the parameter files appropriate for
+the selected UA component version.
+
 Check the current settings with
 \begin{verbatim}
 SetSWMF.pl -s
@@ -46,6 +58,10 @@ IM/RCM
 RB/RiceV5                    
 SC/BATSRUS                   grid: 4,4,4,1000
 SP/Kota                      grid: 1000,10,150
+UA/GITM2                     grid: 9,9,25,4
+\end{verbatim}
+In case you selected the UA/GITM version, the last line will read
+\begin{verbatim}
 UA/GITM                      grid: 9,9,25,2,2
 \end{verbatim}
 If the settings differ you can change them with the SetSWMF.pl script.
@@ -288,25 +304,32 @@ cd ..
 The output restart file is RESTART.GM and the GM component saved
 its restart files into GM/restart.IN as determined by the PARAM.in file.
 
-\section{
-Example 4: Create Initial Conditions for the GM, IM, IE and UA Components}
+\section{Example 4: Create Initial Conditions for the GM, IM, IE 
+         and UA Components}
 
 This example involves the GM, IM, IE and UA components. It demonstrates
 how to obtain a reasonable solution for the 
 coupled global/inner magnetosphere, ionosphere and upper atmosphere.
 The initial global magnetosphere solution is taken from Example 3.
 
-Copy the prepared parameter and layout files into the run directory
+Copy the layout file into the run directory
 \begin{verbatim}
 rm -f PARAM.in LAYOUT.in
-cp Param/PARAM.in.test.restart.GMIMIEUA PARAM.in
 cp Param/LAYOUT.in.test.restart.GMIMIEUA LAYOUT.in
+\end{verbatim}
+If you are using the UA/GITM2 component version, copy this parameter file:
+\begin{verbatim}
+cp Param/PARAM.in.test.restart.GMIMIEUA.GITM2 PARAM.in
+\end{verbatim}
+If you are using the UA/GITM component version, copy this parameter file:
+\begin{verbatim}
+cp Param/PARAM.in.test.restart.GMIMIEUA PARAM.in
 \end{verbatim}
 Have a look at the PARAM.in file.
 The convergence to steady state is accelerated by component subcycling
 (see the \#CYCLE commands in PARAM.in).
-The GM, IM and UA components are called at different frequencies.
-This allows the GM, IM and UA components to reach a reasonable solution
+The components are called at different frequencies, which
+allows the components to reach a reasonable solution
 approximately at the same rate. Another optimization trick is the changing of 
 the coupling order such that the IE component sends information before
 it would receive it (see the \#COUPLEORDER command in PARAM.in),
@@ -450,7 +473,7 @@ with the Restart.pl script. For the full 4 hour run you could use
 Restart.pl -o RESTART_SCIHSP_4hr
 \end{verbatim}
 
-\section{Example 6: Time accurate run with all 8 components}
+\section{Example 6: Time Accurate Run with All Eight Components}
 
 This run is described in the TESTING manual. 
 The initial conditions were created with the runs described in
@@ -458,18 +481,79 @@ this chapter using the higher resolution SC grid (AMR9) and the full 4 hour
 time accurate run with the SC-IH and SP components.
 
 For sake of learning SWMF you can do this example with lower SC resolution
-(AMR8) and do a shorter time accurate run with the SC-IH and SP components.
-To copy the parameter and layout files
+(AMR8) and do a shorter time accurate run with the SC, IH and SP components.
+
+Copy the layout file into the run directory
 \begin{verbatim}
 rm -f PARAM.in LAYOUT.in
-cp Param/PARAM.in.test.restart.8comp PARAM.in
 cp Param/LAYOUT.in.test.restart.8comp LAYOUT.in
 \end{verbatim}
-Make sure that the final simulation time in the \#STOP command 
-is consistent with the time in the input restart file RESTART.in.
-To simplify this example run, 
-you can remove some of the components.
+If you are using the UA/GITM2 component version, copy this parameter file:
+\begin{verbatim}
+cp Param/PARAM.in.test.restart.8comp.GITM2 PARAM.in
+\end{verbatim}
+If you are using the UA/GITM component version, copy this parameter file:
+\begin{verbatim}
+cp Param/PARAM.in.test.restart.8comp PARAM.in
+\end{verbatim}
+This example is desinged to run for 600 seconds only.
+It is assumed that the input restart file RESTART.in contains
+the simulation time corresponding to 4 hours (14400 seconds),
+so the final time in the \#STOP command is 15000 seconds
+in the PARAM.in file.
+In case you are restarting from a different simulation time and/or
+you wish to change the length of the run, edit the maximum
+simulation time in the \#STOP command in the PARAM.in file.
+
+To simplify this example run, you can remove some of the components.
 To remove a component you need to edit the LAYOUT.in file and remove the
 appropriate line, and edit the PARAM.in file, and remove the 
 section belonging to the component and all the couplings with the 
-component. 
+component. In fact, in some cases it may not be necessary to remove 
+anything from the PARAM.in file. You may simply add an \#END command
+after the section belonging to the last included component,
+since the lines following the \#END command are ignored.
+For example to run with the SC and IH components only, you can put an
+\#END command after the \#END\_COMP IH command but before the coupling
+with the SP component:
+\begin{verbatim}
+#END_COMP IH ---------------------------------------
+
+#END
+
+#COUPLE1
+SC                      NameSource
+SP                      NameTarget
+-1                      DnCouple
+60.0                    DtCouple
+...
+
+\end{verbatim}
+Test the parameters and the layout as usual
+\begin{verbatim}
+cd ..
+Scripts/TestParam.pl -n=64
+\end{verbatim}
+and run the code
+\begin{verbatim}
+cd run
+mpirun -np 32 SWMF.exe | tee runlog.8comp
+\end{verbatim}
+After the run finishes, postprocess the plot files
+\begin{verbatim}
+cd SC
+pIDL
+pTEC p r
+cd ../IH
+pIDL
+pTEC p r
+cd ..
+cd ../GM
+pIDL
+pTEC p r
+cd ../IE
+pION
+cd ..
+\end{verbatim}
+Since this example run is very short, no restart files are saved
+(see the \#SAVERESTART command).
