@@ -22,10 +22,7 @@ OBJ_RFUTIL = rayface_util.o #^CFG IF RAYTRACE
 OBJ_RB = $(OBJ2) GM_get_for_rb.o
 #^CMP END RB
 #^CMP IF IE BEGIN
-OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
-        GM_get_for_ie_swmf.o GM_put_from_ie_swmf.o \
-	ModInnerBC.o \
-	ionosphere_bc.o map_ionosphere_bc.o
+OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o
 #^CMP END IE
 
 OBJECTS = \
