@@ -87,10 +87,12 @@ subroutine bound_VxB
 
   ! Apply continuous or fixed boundary conditions at outer boundaries
   if(neiLeast(globalBLK)==NOBLK)then
-     VxB_y(1,1:nJ,1:nK+1,globalBLK)=&
-          +Flux_VZ(Bx_,1,1:nJ,1:nK+1)/fAz_BLK(globalBLK)
-     VxB_z(1,1:nJ+1,1:nK,globalBLK)=&
-          -Flux_VY(Bx_,1,1:nJ+1,1:nK)/fAy_BLK(globalBLK)
+     do k=1,nK+1; do j=1,nJ
+        VxB_y(1,j,k,globalBLK) = +Flux_VZ(Bx_,1,j,k)/fAz_BLK(globalBLK)
+     end do; end do
+     do k=1,nK; do j=1,nJ+1
+        VxB_z(1,j,k,globalBLK) = -Flux_VY(Bx_,1,j,k)/fAy_BLK(globalBLK)
+     end do; end do
   end if
   if(neiLwest(globalBLK)==NOBLK)then
      ! fixed inflow!
@@ -101,52 +103,58 @@ subroutine bound_VxB
         VxB_z(nI+1,:,:,globalBLK)=SW_Ux*SW_By-SW_Uy*SW_Bx
      case default
         ! continuous
-        VxB_y(nI+1,1:nJ,1:nK+1,globalBLK)=&
-             +Flux_VZ(Bx_,nI,1:nJ,1:nK+1)/fAz_BLK(globalBLK)
-        VxB_z(nI+1,1:nJ+1,1:nK,globalBLK)=&
-             -Flux_VY(Bx_,nI,1:nJ+1,1:nK)/fAy_BLK(globalBLK)
+        do k=1,nK+1; do j=1,nJ
+           VxB_y(nI+1,j,k,globalBLK) = +Flux_VZ(Bx_,nI,j,k)/fAz_BLK(globalBLK)
+        end do; end do
+        do k=1,nK; do j=1,nJ+1
+           VxB_z(nI+1,j,k,globalBLK) = -Flux_VY(Bx_,nI,j,k)/fAy_BLK(globalBLK)
+        end do; end do
      end select
   end if
   if(neiLsouth(globalBLK)==NOBLK)then
-     VxB_x(1:nI,1,1:nK+1,globalBLK)=&
-          -Flux_VZ(By_,1:nI,1,1:nK+1)/fAz_BLK(globalBLK)
-     VxB_z(1:nI+1,1,1:nK,globalBLK)=&
-          +Flux_VX(By_,1:nI+1,1,1:nK)/fAx_BLK(globalBLK)
+     do k=1,nK+1; do i=1,nI
+        VxB_x(i,1,k,globalBLK) = -Flux_VZ(By_,i,1,k)/fAz_BLK(globalBLK)
+     end do; end do
+     do k=1,nK; do i=1,nI+1
+        VxB_z(i,1,k,globalBLK) = +Flux_VX(By_,i,1,k)/fAx_BLK(globalBLK)
+     end do; end do
   end if
   if(neiLnorth(globalBLK)==NOBLK)then
-     VxB_x(1:nI,nJ+1,1:nK+1,globalBLK)=&
-          -Flux_VZ(By_,1:nI,nJ,1:nK+1)/fAz_BLK(globalBLK)
-     VxB_z(1:nI+1,nJ+1,1:nK,globalBLK)=&
-          +Flux_VX(By_,1:nI+1,nJ,1:nK)/fAx_BLK(globalBLK)
+     do k=1,nK+1; do i=1,nI
+        VxB_x(i,nJ+1,k,globalBLK) = -Flux_VZ(By_,i,nJ,k)/fAz_BLK(globalBLK)
+     end do; end do
+     do k=1,nK; do i=1,nI+1
+        VxB_z(i,nJ+1,k,globalBLK) = +Flux_VX(By_,i,nJ,k)/fAx_BLK(globalBLK)
+     end do; end do
   end if
   if(neiLbot(globalBLK)==NOBLK)then
-     VxB_x(1:nI,1:nJ+1,1,globalBLK)=&
-          +Flux_VY(Bz_,1:nI,1:nJ+1,1)/fAy_BLK(globalBLK)
-     VxB_y(1:nI+1,1:nJ,1,globalBLK)=&
-          -Flux_VX(Bz_,1:nI+1,1:nJ,1)/fAx_BLK(globalBLK)
+     do j=1,nJ+1; do i=1,nI
+        VxB_x(i,j,1,globalBLK) = +Flux_VY(Bz_,i,j,1)/fAy_BLK(globalBLK)
+     end do; end do
+     do j=1,nJ; do i=1,nI+1
+        VxB_y(i,j,1,globalBLK) = -Flux_VX(Bz_,i,j,1)/fAx_BLK(globalBLK)
+     end do; end do
   end if
   if(neiLtop(globalBLK)==NOBLK)then
-     VxB_x(1:nI,1:nJ+1,nK+1,globalBLK)=&
-          +Flux_VY(Bz_,1:nI,1:nJ+1,nK)/fAy_BLK(globalBLK)
-     VxB_y(1:nI+1,1:nJ,nK+1,globalBLK)=&
-          -Flux_VX(Bz_,1:nI+1,1:nJ,nK)/fAx_BLK(globalBLK)
+     do j=1,nJ+1; do i=1,nI
+        VxB_x(i,j,nK+1,globalBLK) = +Flux_VY(Bz_,i,j,nK)/fAy_BLK(globalBLK)
+     end do; end do
+     do j=1,nJ; do i=1,nI+1
+        VxB_y(i,j,nK+1,globalBLK) = -Flux_VX(Bz_,i,j,nK)/fAx_BLK(globalBLK)
+     end do; end do
   end if
 
   !!! Set VxB to zero on the cell edges of the body cells !!!
   if(body_BLK(globalBLK))then
      ! Apply inner boundary condition on the electric field
      ! Make sure that edges belonging to body ghost cells are also corrected
-     do k=0,nK+1
-        do j=0,nJ+1
-           do i=0,nI+1
-              if(.not.true_cell(i,j,k,globalBLK))then
-                 VxB_x(i,j:j+1,k:k+1,globalBLK)=0.0
-                 VxB_y(i:i+1,j,k:k+1,globalBLK)=0.0
-                 VxB_z(i:i+1,j:j+1,k,globalBLK)=0.0
-              end if
-           end do
-        end do
-     end do
+     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+        if(.not.true_cell(i,j,k,globalBLK))then
+           VxB_x(i,j:j+1,k:k+1,globalBLK)=0.0
+           VxB_y(i:i+1,j,k:k+1,globalBLK)=0.0
+           VxB_z(i:i+1,j:j+1,k,globalBLK)=0.0
+        end if
+     end do; end do; end do
   end if
 
 end subroutine bound_VxB
@@ -275,19 +283,26 @@ subroutine Bcenter2Bface
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
 
+  integer:: i,j,k
   !---------------------------------------------------------------------------
 
   ! Estimate BFace from Bcenter
 
-  BxFace_BLK(1:nI+1,1:nJ  ,1:nK  ,globalBLK)= 0.5*( &
-       State_VGB(Bx_,0:nI  ,1:nJ  ,1:nK  ,globalBLK)+ &
-       State_VGB(Bx_,1:nI+1,1:nJ  ,1:nK  ,globalBLK))
-  ByFace_BLK(1:nI  ,1:nJ+1,1:nK  ,globalBLK)= 0.5*( &
-       State_VGB(By_,1:nI  ,0:nJ  ,1:nK  ,globalBLK)+ &
-       State_VGB(By_,1:nI  ,1:nJ+1,1:nK  ,globalBLK))
-  BzFace_BLK(1:nI  ,1:nJ  ,1:nK+1,globalBLK)= 0.5*( &
-       State_VGB(Bz_,1:nI  ,1:nJ  ,0:nK  ,globalBLK)+ &
-       State_VGB(Bz_,1:nI  ,1:nJ  ,1:nK+1,globalBLK))
+  do k=1,nK; do j=1,nJ; do i=1,nI+1
+     BxFace_BLK(i,j,k,globalBLK)= 0.5*( &
+          State_VGB(Bx_,i-1,j,k,globalBLK)+ &
+          State_VGB(Bx_,i  ,j,k,globalBLK))
+  end do; end do; end do
+  do k=1,nK; do j=1,nJ+1; do i=1,nI
+     ByFace_BLK(i,j,k,globalBLK)= 0.5*( &
+          State_VGB(By_,i,j-1,k,globalBLK)+ &
+          State_VGB(By_,i,j  ,k,globalBLK))
+  end do; end do; end do
+  do k=1,nK+1; do j=1,nJ; do i=1,nI
+     BzFace_BLK(i,j,k,globalBLK)= 0.5*( &
+          State_VGB(Bz_,i,j,k-1,globalBLK)+ &
+          State_VGB(Bz_,i,j,k  ,globalBLK))
+  end do; end do; end do
 
 
   call bound_Bface
