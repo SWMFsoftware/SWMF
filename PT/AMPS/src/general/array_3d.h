@@ -278,6 +278,21 @@ public:
     return v1;
   };
 
+//===================================================
+  friend void swap(array_3d<T> &v1,array_3d<T> &v2) {
+    if ((v1.size_dim0!=v2.size_dim0)||
+    (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
+      printf("Error: add two vectors of different length.\n");
+      exit(0);
+    }
+
+    T* t;
+
+    t=v1.data;
+    v1.data=v2.data;
+    v2.data=t; 
+  };  
+
 };
 
 #endif

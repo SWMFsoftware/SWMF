@@ -125,6 +125,11 @@ void GeneralBlock() {
       if (strcmp("ON",str1)==0) ExternalSpeciesUsingFlag=true;
       else if (strcmp("OFF",str1)==0) ExternalSpeciesUsingFlag=false;
       else error();} 
+    else if (strcmp("UNIMOLECULARTRANSFORMATIONS",str1)==0) {
+      CutInputStr(str1,str);
+      if (strcmp("ON",str1)==0) mol.UniMolTransformations=true;
+      else if (strcmp("OFF",str1)==0) mol.UniMolTransformations=false;
+      else error();}
     else if (strcmp("CHEMISTRY",str1)==0) {
       CutInputStr(str1,str);
       if (strcmp("ON",str1)==0) chem_flag=true;

@@ -80,6 +80,8 @@ public:
 
     if (res==NULL) {
        printf("template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
+       while (true) printf("Error:\n");
+
        exit(0);
     }
 

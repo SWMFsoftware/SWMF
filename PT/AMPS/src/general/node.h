@@ -45,6 +45,10 @@ public:
     int idim;
     for(idim=0;idim<DIM;idim++) x[idim]=node_coordinate[idim];
   };
+
+  T* GetX() {
+    return node_coordinate;
+  };
 };
 
 #endif

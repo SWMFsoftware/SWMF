@@ -42,7 +42,9 @@ public:
 
     if (recvBuffer!=NULL) {
       for (thread=0;thread<TotalThreadsNumber;thread++) if (recvBuffer[thread]!=NULL) delete [] recvBuffer[thread];
-      delete [] recvBuffer,recvptr,RecvDataLength;
+      delete [] recvBuffer;
+      delete [] recvptr;
+      delete [] RecvDataLength;
     }
   }; 
 
@@ -140,8 +142,12 @@ public:
  
 
   void closeRecv(int thread) {
+    if (recvptr[thread]!=RecvDataLength[thread]) {
+      printf("Error: closeRecv: (recvptr[thread]!=RecvDataLength[thread]) for thread=%i\n",thread);
+      exit(0);
+    }
+
     delete [] recvBuffer[thread];
-   
     recvBuffer[thread]=NULL,recvptr[thread]=0; 
   };
 

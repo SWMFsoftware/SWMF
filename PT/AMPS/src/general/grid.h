@@ -55,6 +55,9 @@ public:
   array_4d<double> bvector;
   vector<surface_interpolation_data_type> surface_interpolation_data;
 
+  DataType* InterpolationWeight;
+  long int* InterpolationMask;
+
   typedef void (*InitGasModelDistributionType)(CellType*,long int);
   InitGasModelDistributionType InitGasModelDistribution;
 
@@ -70,6 +73,8 @@ public:
     cells_connection_data=NULL;
 
     InitGasModelDistribution=NULL;
+
+    InterpolationWeight=NULL,InterpolationMask=NULL;
   };
 
   ~Cgrid() {
@@ -84,6 +89,11 @@ public:
        delete [] cell;
 
        delete [] cells_connection_data;
+     }
+
+     if (InterpolationWeight!=NULL) {
+       delete [] InterpolationWeight;
+       delete [] InterpolationMask;
      }
   };
 
@@ -331,9 +341,17 @@ public:
       }
     }
 
-    for (nnode=0;nnode<nnodes;nnode++) {    
-      node[nnode].InterpolationWeight=new DataType[nnn[nnode]+1];
-      node[nnode].InterpolationMask=new long int [nnn[nnode]+1];
+    long int offset=0;
+    for (nnode=0;nnode<nnodes;nnode++) offset+=nnn[nnode]+1;
+
+    InterpolationWeight=new DataType[offset];
+    InterpolationMask=new long int[offset];
+
+    for (nnode=0,offset=0;nnode<nnodes;nnode++) {    
+      node[nnode].InterpolationWeight=InterpolationWeight+offset;  
+      node[nnode].InterpolationMask=InterpolationMask+offset;       
+
+      offset+=nnn[nnode]+1;
       nnn[nnode]=0;
     } 
 
