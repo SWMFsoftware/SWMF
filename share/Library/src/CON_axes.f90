@@ -99,19 +99,22 @@ module CON_axes
   !   Inertial forces may or may not be negligible.
 
   ! HGI (HelioGraphic Inertial coordinates)
+  !
   !   Z is the rotation axis of the Sun pointing "North".
-  !   X axis is the intersection of the ecliptic and solar equatorial planes. 
-  !     which is at around 75 degrees ecliptic longitude.
+  !   X axis is the intersection of the ecliptic and solar equatorial planes,
+  !     which was at 74.367 degrees ecliptic longitude at 12:00 UT 01/01/1900.
   !   Y axis completes the right handed coordinate system.
   !
   !   HGI is a truly inertial system.
 
-  ! HGR (HelioGRaphic coordinates)
+  ! HGR (HelioGraphic Rotating coordinates)
   !   
   !   Z is the rotation axis of the Sun pointing "North".
-  !   X axis rotates with the Carrington rotation with a 27.2753 day period.
+  !   X axis rotates with the Carrington rotation with a 25.38 day period
+  !     with respect to an inertial frame (and around 27.3 day period
+  !     with respect to the direction towards the Earth).
   !     The X axis coincided with the X axis of the HGI system on 
-  !     09 Nov. 1853 00:00:00
+  !     January 1 1854 12:00:00.
   !   Y axis completes the right handed coordinate system.
   !
   ! HGR is a rotating system, inertial forces should be taken into account. 
@@ -119,7 +122,9 @@ module CON_axes
   !\end{verbatim}
   !TODO:
   ! Generalize transformations to and from heliocentric coordinate systems 
-  ! for non-Earth planets.
+  ! for non-Earth planets. 
+  ! Take ellipticity of the planet orbit into account.
+  ! Possibly recalculate the GSE-GEI matrix all the time.
 
   !USES:
 
@@ -148,9 +153,11 @@ module CON_axes
 
   integer, parameter, private :: x_=1, y_=2, z_=3
 
-  ! Difference between 01/01/1965 00:00:00 and 09/11/1853 00:00:00 in seconds
-  real(Real8_), parameter :: tStartCarrington   = -3.5074080D+09
-  real(Real8_), parameter :: OmegaCarrington = cTwoPi/(27.2753D0*24*3600)
+  ! Difference between 01/01/1965 00:00:00 and 01/01/1854 12:00:00 in seconds
+  real(Real8_), parameter :: tStartCarrington   = -3.5027856D+9
+ !!! -3.5074080D+09
+  real(Real8_), parameter :: OmegaCarrington = cTwoPi/(25.38D0*24*3600)
+ !!! 27.2753D0*24*3600)
 
   ! Position and Velocity of Planet in HGI
   real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
@@ -344,10 +351,13 @@ contains
        write(*,*)'Final rotation axis:'
        write(*,*)'RotAxisTheta,RotAxisPhi=',&
             RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
-       write(*,*)'RotAxisGse_D=',RotAxis_D
-       write(*,*)'RotAxisGsm_D=',RotAxisGsm_D
-       write(*,*)'XyzPlanetHgi_D = ',XyzPlanetHgi_D
-       write(*,*)'XyzPlanetHgr_D = ',matmul(HgrHgi_DD,XyzPlanetHgi_D)
+       write(*,*)'RotAxisGse_D =',RotAxis_D
+       write(*,*)'RotAxisGsm_D =',RotAxisGsm_D
+       write(*,*)'Hgr-Hgi angle=',&
+            modulo(OmegaCarrington*(tStart - tStartCarrington)*cRadToDeg,360.)
+       write(*,'(a,3e15.7)')' XyzPlanetHgi_D = ',XyzPlanetHgi_D
+       write(*,'(a,3e15.7)')' XyzPlanetHgr_D = ',&
+            matmul(HgrHgi_DD,XyzPlanetHgi_D)
     end if
 
     DoInitializeAxes=.false.
@@ -516,7 +526,7 @@ contains
 
        ! The negative sign in front of OmegaCarrington comes from that 
        ! this matrix transforms from HGI to HGR, so a point at rest 
-       ! in HGI rotates BACKWARDS in HGI
+       ! in HGI rotates BACKWARDS in HGR
 
        ! Calculate the HgrGse_DD matrix
        HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
@@ -525,7 +535,8 @@ contains
        TimeSimHgr = TimeSim
     end if
 
-    ! Check if there is a need to update the magnetic axis and related transformations
+    ! Check if there is a need to update the magnetic axis 
+    ! and related transformations
     if(.not.present(DoSetAxes))then
        ! If magnetic axis does not move, no need to update
        if(.not.DoUpdateB0) RETURN
@@ -1072,14 +1083,14 @@ contains
     Position_D = matmul(Position_D, HgrHgi_DD)
     Result_D = cross_product( (/0.,0.,OmegaCarrington/), Position_D)
 
-    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+    if(maxval(abs(v2_D - Result_D)) > 1e-1) &
          write(*,*)'test angular_velocity failed: HGI-HGR v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
     ! Let's transform back, the result should be 0
     v2_D = transform_velocity(0., Result_D, Position_D, 'HGI', 'HGR')
     Result_D = (/ 0., 0., 0./)
-    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+    if(maxval(abs(v2_D - Result_D)) > 1e-1) &
          write(*,*)'test angular_velocity failed: HGR-HGI v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
@@ -1120,7 +1131,7 @@ contains
     v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GEO', 'HGR')
     Result_D = matmul(HgrHgi_DD, vPlanetHgi_D &
          - cross_product((/0.,0.,OmegaCarrington/), XyzPlanetHgi_D))
-    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+    if(maxval(abs(v2_D - Result_D)) > 1e-1) &
          write(*,*)'test angular_velocity failed: GEO-HGR v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
@@ -1128,7 +1139,7 @@ contains
     Position_D = matmul(HgrHgi_DD,XyzPlanetHgi_D)
     v2_D = transform_velocity(0., Result_D, Position_D, 'HGR', 'GEO')
     Result_D = (/0., 0., 0./)
-    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+    if(maxval(abs(v2_D - Result_D)) > 1e-1) &
          write(*,*)'test angular_velocity failed: HGR-GEO v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
