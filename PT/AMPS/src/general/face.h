@@ -15,10 +15,16 @@ using namespace std;
 template<class DataType=float,class NodeType=Cnode<DataType> >
 class Cface{
   DataType nrml[3];
+  double measure;
+   
 public:
   unsigned char faceat,surface_group;
   long int faceno,nodeno[3];
   NodeType* node[3];
+
+  Cface() {
+    measure=-1.0;
+  };
 
 //===================================================
   void SetNormal(array_1d<DataType>& n) {
@@ -41,7 +47,6 @@ public:
   }; 
 //===================================================
   double Measure() {
-    static double measure=-1.0;
     array_1d<DataType> x_2d(2);
     array_1d<DataType> x1_3d(3),x2_3d(3);
 
