@@ -192,7 +192,7 @@ subroutine ionosphere_magBCs(&
 end subroutine ionosphere_magBCs
 
 !==========================================================================
-subroutine calc_inner_BC_velocities_new(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
+subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   use ModIonoPotential
   use ModMain,           ONLY: TypeCoordSystem, nDim
@@ -322,7 +322,114 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
      !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
   end if
 
-end subroutine calc_inner_BC_velocities_new
+end subroutine calc_inner_bc_velocity
+
+!==========================================================================
+subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
+
+  use ModIonoPotential
+  use ModMain,           ONLY: TypeCoordSystem, nDim
+  use CON_axes,          ONLY: transform_matrix
+  use ModCoordTransform, ONLY: xyz_to_dir, cross_product
+  use CON_planet_field,  ONLY: map_planet_field
+
+  implicit none
+  integer, intent(in) :: nIter
+  real, intent(in)    :: tSimulation
+  real, intent(in)    :: Xyz_D(nDim)    ! Position vector
+  real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
+  real, intent(in)    :: B0_D(nDim)     ! Magnetic field of planet
+  real, intent(out)   :: u_D(nDim)      ! Velocity vector (output)
+
+  real :: XyzIono_D(nDim)      ! Mapped point on the ionosphere
+  real :: Theta, Phi           ! Mapped point colatitude, longitude
+  real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
+  real :: Dist1, Dist2         ! Distance from ionosphere grid point
+
+  real :: dPotential_D(2)      ! Gradient of potential at the mapped position
+  real :: DdirDxyz_DD(2,3)     ! Jacobian matrix between Theta, Phi and Xyz_D
+  real :: eField_D(nDim)       ! Electric field
+  real :: b_D(nDim)            ! Magnetic field
+  real :: B2                   ! Magnetic field squared
+
+  integer :: iTheta, iPhi, iHemisphere
+
+  character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
+  logical :: DoTest, DoTestMe
+  real :: tSimulationLast=-1.0
+  !-------------------------------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
+
+  ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
+  ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
+  call map_planet_field(tSimulation, Xyz_D, TypeCoordSystem//' NORM', &
+       rIonosphere, XyzIono_D, iHemisphere, .true., DdirDxyz_DD)
+
+  ! Calculate angular coordinates
+  call xyz_to_dir(XyzIono_D, Theta, Phi)
+
+  ! Interpolate the spherical gradients of the electric potential
+  ThetaNorm = Theta / dThetaIono
+  PhiNorm   = Phi   / dPhiIono
+
+  iTheta    = floor(ThetaNorm) + 1
+  iPhi      = floor(PhiNorm)   + 1
+
+  if(iTheta<1 .or. iTheta > nThetaIono .or. &
+       iPhi < 1 .or. iPhi > nPhiIono)then
+     write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
+     write(*,*)NameSub,' Phi, Theta=',Phi,Theta
+     write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
+     write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
+     call stop_mpi(NameSub//' index out of bounds')
+  end if
+
+  Dist1     = ThetaNorm - (iTheta - 1)
+  Dist2     = PhiNorm   - (iPhi   - 1)
+
+  dPotential_D = &
+       (1 - Dist1)*( (1-Dist2) * dIonoPotential_DII(:, iTheta  , iPhi  )  &
+       +             Dist2     * dIonoPotential_DII(:, iTheta  , iPhi+1)) &
+       + Dist1    *( (1-Dist2) * dIonoPotential_DII(:, iTheta+1, iPhi  )  &
+       +             Dist2     * dIonoPotential_DII(:, iTheta+1, iPhi+1))
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' Xyz_D        =',Xyz_D
+     write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
+     write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
+     write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
+     write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
+     write(*,*)NameSub,' dPotential_D =',dPotential_D
+  end if
+
+  ! E = -grad(Potential) = - dPotential/d(Theta,Phi) * d(Theta,Phi)/d(x,y,z)
+  eField_D = - matmul( dPotential_D, DdirDxyz_DD)
+
+  ! Magnetic field
+  b_D = B1_D + B0_D
+  B2  = sum(b_D**2)
+
+  ! U = (E x B) / B^2
+  u_D = cross_product(eField_D, b_D) / B2
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' b_D=',b_D
+     write(*,*)NameSub,' E_D=',eField_D
+     write(*,*)NameSub,' u_D=',u_D
+  endif
+
+  ! Subtract the radial component of the velocity
+  u_D = u_D - Xyz_D * sum(Xyz_D * u_D) / sum(Xyz_D**2)
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' Final u_D=',u_D
+     !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
+  end if
+
+end subroutine calc_inner_bc_velocity2
 
 !============================================================================  
 
