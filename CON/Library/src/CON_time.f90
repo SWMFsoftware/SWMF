@@ -51,7 +51,7 @@ module CON_time
   integer :: DnRun_C(MaxComp) = 1
 
   ! Initial and current date/time
-  type(TimeType) :: TimeStart, TimeCurrent
+  type(TimeType) :: TimeStart
 
   ! Simulation time
   real :: tSimulation = 0.0
@@ -76,6 +76,8 @@ module CON_time
   ! 25Aug03 G. Toth - added adjust_freq subroutine
   ! 23Mar04 G. Toth - split CON_time into ModTime, ModFreq and CON_time
   ! 26Mar04 G. Toth - added get_time access method
+  ! 25May04 G. Toth - added DnRun_C for steady state runs and
+  !                   removed TimeCurrent variable
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_time'
@@ -107,14 +109,13 @@ contains
   !IROUTINE: get_time - get time related parameters
   !INTERFACE:
   subroutine get_time(&
-       DoTimeAccurateOut,tSimulationOut,TimeStartOut,TimeCurrentOut,&
+       DoTimeAccurateOut,tSimulationOut,TimeStartOut,&
        tStartOut, tCurrentOut, nStepOut)
 
     !OUTPUT ARGUMENTS:
     logical,          optional, intent(out) :: DoTimeAccurateOut
     real,             optional, intent(out) :: tSimulationOut
     type(TimeType),   optional, intent(out) :: TimeStartOut
-    type(TimeType),   optional, intent(out) :: TimeCurrentOut
     real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
@@ -124,10 +125,9 @@ contains
     if(present(DoTimeAccurateOut)) DoTimeAccurateOut = DoTimeAccurate
     if(present(tSimulationOut))    tSimulationOut    = tSimulation
     if(present(TimeStartOut))      TimeStartOut      = TimeStart
-    if(present(TimeCurrentOut))    TimeCurrentOut    = TimeCurrent
     if(present(tStartOut))         tStartOut         = TimeStart % Time
-    if(present(tCurrentOut))       tCurrentOut       = TimeCurrent % Time
     if(present(nStepOut))          nStepOut          = nStep
+    if(present(tCurrentOut))       tCurrentOut = TimeStart % Time + tSimulation
 
   end subroutine get_time
 
