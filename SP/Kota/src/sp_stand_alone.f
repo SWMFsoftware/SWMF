@@ -96,7 +96,7 @@ c ----------------------------------- scales:
       valf = 21.8
       e0 = pmass
 c ------------------------------------ input data:
-      call SP_get_io_unit_new(iFile)
+      call CON_io_unit_new(iFile)
       open(iFile,FILE='violet.in')
       read(iFile,*) nr,nmu,nw, wghtl,wghtmu,wghtw
       write(iStdout,*) prefix,
@@ -198,7 +198,7 @@ c  *****************  end SP_admit   **************************
       integer iMisc
 C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
 
-      call SP_get_io_unit_new(iFile)
+      call CON_io_unit_new(iFile)
 
       if (iLine.eq.1) open(iFile,file = 'evolv1.cme' )
       if (iLine.eq.2) open(iFile,file = 'evolv2.cme' )
