@@ -45,7 +45,7 @@ If UseNewAxes is true, the planet's rotational and magnetix axes are set by the 
 algorithms found in share/Library/src/CON\_axes, the planet data is set and
 stored by share/Library/src/CON\_planet, and magnetic field information and
 mapping is provided by share/Library/src/CON\_planet_field, and the rotational speed
-of the planet is calculated using $v_\phi=\Omega$ \times $r$.
+of the planet is calculated using $v_\phi=\Omega \times r$.
 
 If UseNewAxes is false, the original algorithms in GM/BATSRUS/src/ModCompatibility 
 are used. Some of these algorithms are inaccurate, some of them contain bugs,
