@@ -4,11 +4,10 @@ Fixes are also indicated as "FIX" as they become known.
 
 SWMF:
         1. The SWMF and its components have not been fully tested on
-           Linux platforms using the the PFG90 compiler.
+           Linux platforms using the the PGF90 compiler.
 
-        UPDATE: The first 60 seconds of the 8 component test has been 
-           successfully completed on 'morpheus.engin.umich.edu' using
-           'pgf90 3.3-2'. The full 600s test is running right now.
+        UPDATE: The 8 component test has been successfully completed on 
+           'morpheus.engin.umich.edu' using 'pgf90 3.3-2'. 
 
            The configuration was optimized for the limited memory:
 
@@ -43,12 +42,13 @@ SWMF:
                 SP        4       4     1
                 #END
  
-           Prior to this successful run there were several unreproducible 
+           Prior to this successful run there were several irreproducible 
            problems, including:
 
            1.a: GM-IM coupling fails with the accurate field line integration.
            1.b: GM-IE coupling hangs if IE is running on 2 PE-s
            1.c: SC writes NaN-s into the logfile.
+           1.d: code fails with PBS error on random nodes
 
 	2. The timing for the 'SWMF' was incorrect on some platforms.
 	   FIX (Aug25,2004): Stop and restart timing for 'SWMF' after setup.
