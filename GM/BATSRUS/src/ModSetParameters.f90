@@ -25,6 +25,7 @@ subroutine MH_set_parameters(TypeAction)
 
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+  use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMpi
 
@@ -70,8 +71,10 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
   character (len=lStringLine) :: NameArea
   integer                     :: nLevelArea
-  real                        :: AreaResolution, Radius, Radius1, Radius2
-  real, dimension(3)          :: XyzStart_D, XyzEnd_D
+  real                        :: AreaResolution, RadiusArea
+  logical                     :: DoReadAreaCenter
+  real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
+  real                        :: xRotateArea, yRotateArea, zRotateArea
 
   logical            :: UseSimple=.true.
 
@@ -734,6 +737,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('NameArea',NameArea)
         call lower_case(NameArea)
 
+        NameArea = adjustl(NameArea)
+
         if(NameArea(1:4) == 'init')then
            ! 'init' or 'initial' means that the initial resolution is set,
            ! and no area is created. Replaces the #AMRINIT 'none' nlevel.
@@ -770,101 +775,102 @@ subroutine MH_set_parameters(TypeAction)
 
         Area_I(nArea) % Resolution = AreaResolution
 
-        ! Set the default center to be the origin, the size to be 1
-        Area_I(nArea)%Center_D = 0.0
-        Area_I(nArea)%Size_D   = 1.0
+        ! Set the default center to be the origin, 
+        ! the size to be 1 and no rotatoin
+        Area_I(nArea)%Center_D  = 0.0
+        Area_I(nArea)%Size_D    = 1.
+
+        ! Check for the word rotated in the name
+        i = index(NameArea,'rotated')
+        Area_I(nArea)%DoRotate = i > 0
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+7:len(NameArea))
+
+        ! Check for the character '0' in the name
+        i = index(NameArea,'0')
+        DoReadAreaCenter = i < 1
+        if(i>0) NameArea = NameArea(1:i-1)//NameArea(i+1:len(NameArea))
+
+        ! Remove leading spaces
+        NameArea = adjustl(NameArea)
+        Area_I(nArea)%Name = NameArea
+
+        ! Read center of area if needed
+        if(DoReadAreaCenter .and. &
+             NameArea /= 'all' .and. NameArea /= 'box') then
+           call read_var("xCenter",Area_I(nArea)%Center_D(1))
+           call read_var("yCenter",Area_I(nArea)%Center_D(2))
+           call read_var("zCenter",Area_I(nArea)%Center_D(3))
+        endif
 
         select case(NameArea)
         case("all")
            ! No geometry info is needed for uniform refinement
-           Area_I(nArea)%Name     = "all"
 
         case("box")
-           call read_var("xMinBox",XyzStart_D(1))
-           call read_var("yMinBox",XyzStart_D(2))
-           call read_var("zMinBox",XyzStart_D(3))
-           call read_var("xMaxBox",XyzEnd_D(1))
-           call read_var("yMaxBox",XyzEnd_D(2))
-           call read_var("zMaxBox",XyzEnd_D(3))
+           call read_var("xMinBox",XyzStartArea_D(1))
+           call read_var("yMinBox",XyzStartArea_D(2))
+           call read_var("zMinBox",XyzStartArea_D(3))
+           call read_var("xMaxBox",XyzEndArea_D(1))
+           call read_var("yMaxBox",XyzEndArea_D(2))
+           call read_var("zMaxBox",XyzEndArea_D(3))
            ! Convert to center and size information
-           Area_I(nArea)%Center_D = 0.5*   (XyzStart_D + XyzEnd_D)
-           Area_I(nArea)%Size_D   = 0.5*abs(XyzEnd_D - XyzStart_D)
+           Area_I(nArea)%Center_D = 0.5*   (XyzStartArea_D + XyzEndArea_D)
+           Area_I(nArea)%Size_D   = 0.5*abs(XyzEndArea_D - XyzStartArea_D)
+
+           ! Overwrite name with brick
            Area_I(nArea)%Name     = "brick"
 
         case("brick")
-           call read_var("xCenterBrick",Area_I(nArea)%Center_D(1))
-           call read_var("yCenterBrick",Area_I(nArea)%Center_D(2))
-           call read_var("zCenterBrick",Area_I(nArea)%Center_D(3))
-           call read_var("xSizeBrick"  ,Area_I(nArea)%Size_D(1))
-           call read_var("ySizeBrick"  ,Area_I(nArea)%Size_D(2))
-           call read_var("zSizeBrick"  ,Area_I(nArea)%Size_D(3))
+           call read_var("xSize", Area_I(nArea)%Size_D(1))
+           call read_var("ySize", Area_I(nArea)%Size_D(2))
+           call read_var("zSize", Area_I(nArea)%Size_D(3))
+
+           ! Area size is measured from the center: half of brick size
            Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
-           Area_I(nArea)%Name     = "brick"
 
-        case("shell","shell0")
-           if(NameArea == "shell")then
-              call read_var("xCenterShell",  Area_I(nArea)%Center_D(1))
-              call read_var("yCenterShell",  Area_I(nArea)%Center_D(2))
-              call read_var("zCenterShell",  Area_I(nArea)%Center_D(3))
-           end if
-           call read_var("r1Shell", Radius1)
-           call read_var("r2Shell", Radius2)
-           ! Set outer size of the area
-           Radius = max(Radius1, Radius2)
-           Area_I(nArea)%Size_D = Radius
-           ! Normalize inner radius to the outer size
-           Area_I(nArea)%Radius1  = min(Radius1, Radius2) / Radius
-           Area_I(nArea)%Name     = "shell"
+        case("shell")
+           call read_area_radii
+           Area_I(nArea)%Size_D = RadiusArea
 
-        case("sphere","sphere0")
-           if(NameArea == "sphere")then
-              call read_var("xCenterSphere", Area_I(nArea)%Center_D(1))
-              call read_var("yCenterSphere", Area_I(nArea)%Center_D(2))
-              call read_var("zCenterSphere", Area_I(nArea)%Center_D(3))
-           end if
-           call read_var("rSphere", Radius)
-           Area_I(nArea)%Size_D   = Radius
-           Area_I(nArea)%Name     = "sphere"
+        case("sphere")
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D   = RadiusArea
 
-        case("cylinderx","cylinderx0")
-           call read_var("x1Cylinder", XyzStart_D(1))
-           if(NameArea == "cylinderx")then
-              call read_var("yCylinder",  Area_I(nArea)%Center_D(2))
-              call read_var("zCylinder",  Area_I(nArea)%Center_D(3))
-           end if
-           call read_var("x2Cylinder", XyzEnd_D(1))
-           call read_var("rCylinder" , Radius)
-           Area_I(nArea)%Center_D(1) = 0.5*   (XyzStart_D(1) + XyzEnd_D(1))
-           Area_I(nArea)%Size_D(1)   = 0.5*abs(XyzStart_D(1) - XyzEnd_D(1))
-           Area_I(nArea)%Size_D(2:3) = Radius
-           Area_I(nArea)%Name        = "cylinderx"
+        case("ringx")
+           call read_var("Height", Area_I(nArea)%Size_D(1))
+           Area_I(nArea)%Size_D(1)     = 0.5*Area_I(nArea)%Size_D(1)
+           call read_area_radii
+           Area_I(nArea)%Size_D(2:3)   = RadiusArea
 
-        case("cylindery","cylindery0")
-           if(NameArea == "cylindery") &
-                call read_var("xCylinder",  Area_I(nArea)%Center_D(1))
-           call read_var("y1Cylinder", XyzStart_D(2))
-           if(NameArea == "cylindery") &
-                call read_var("zCylinder",  Area_I(nArea)%Center_D(3))
-           call read_var("y2Cylinder", XyzEnd_D(2))
-           call read_var("rCylinder" , Radius)
-           Area_I(nArea)%Center_D(2) = 0.5*   (XyzStart_D(2) + XyzEnd_D(2))
-           Area_I(nArea)%Size_D(2)   = 0.5*abs(XyzStart_D(2) - XyzEnd_D(2))
-           Area_I(nArea)%Size_D(1)   = Radius
-           Area_I(nArea)%Size_D(3)   = Radius
-           Area_I(nArea)%Name        = "cylindery"
+        case("ringy")
+           call read_var("Height", Area_I(nArea)%Size_D(2))
+           Area_I(nArea)%Size_D(2)     = 0.5*Area_I(nArea)%Size_D(2)
+           call read_area_radii
+           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
 
-        case("cylinderz","cylinderz0")
-           if(NameArea == "cylinderz")then
-              call read_var("xCylinder",  Area_I(nArea)%Center_D(1))
-              call read_var("yCylinder",  Area_I(nArea)%Center_D(2))
-           end if
-           call read_var("z1Cylinder", XyzStart_D(3))
-           call read_var("z2Cylinder", XyzEnd_D(3))
-           call read_var("rCylinder" , Radius)
-           Area_I(nArea)%Center_D(3) = 0.5*   (XyzStart_D(3) + XyzEnd_D(3))
-           Area_I(nArea)%Size_D(3)   = 0.5*abs(XyzStart_D(3) - XyzEnd_D(3))
-           Area_I(nArea)%Size_D(1:2) = Radius
-           Area_I(nArea)%Name        = "cylinderz"
+        case("ringz")
+           call read_var("Height", Area_I(nArea)%Size_D(3))
+           Area_I(nArea)%Size_D(3)     = 0.5*Area_I(nArea)%Size_D(3)
+           call read_area_radii
+           Area_I(nArea)%Size_D(1:2)   = RadiusArea
+
+        case("cylinderx")
+           call read_var("Length", Area_I(nArea)%Size_D(1))
+           Area_I(nArea)%Size_D(1)     = 0.5 * Area_I(nArea)%Size_D(1)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(2:3)   = RadiusArea
+
+        case("cylindery")
+           call read_var("Length", Area_I(nArea)%Size_D(2))
+           Area_I(nArea)%Size_D(2)     = 0.5 * Area_I(nArea)%Size_D(2)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(1:3:2) = RadiusArea
+
+        case("cylinderz")
+           call read_var("Length", Area_I(nArea)%Size_D(3))
+           Area_I(nArea)%Size_D(3)     = 0.5 * Area_I(nArea)%Size_D(3)
+           call read_var("Radius", RadiusArea)
+           Area_I(nArea)%Size_D(1:2)   = RadiusArea
 
         case default
            if(UseStrict) call stop_mpi(NameSub//&
@@ -876,7 +882,25 @@ subroutine MH_set_parameters(TypeAction)
                 trim(NameCommand)
 
            nArea = nArea - 1
+           CYCLE READPARAM
         end select
+
+        if(Area_I(nArea) % DoRotate)then
+
+           ! Read 3 angles for the rotation matrix in degrees
+           call read_var('xRotate',xRotateArea)
+           call read_var('yRotate',yRotateArea)
+           call read_var('zRotate',zRotateArea)
+
+           ! Rotation matrix rotates around X, Y and Z axes in this order
+           Area_I(nArea)%Rotate_DD = matmul( matmul( &
+                rot_matrix_z(-zRotateArea*cDegToRad), &
+                rot_matrix_y(-yRotateArea*cDegToRad)),&
+                rot_matrix_x(-xRotateArea*cDegToRad))
+
+           !write(*,*)'Matrix=',Area_I(nArea)%Rotate_DD
+
+        end if
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
@@ -2649,5 +2673,21 @@ contains
     !    MaxBoundary=max(MaxBoundary,Top_)           !^CFG IF NOT CELLOUTERBC
  
   end subroutine set_physics_parameters
+
+  !==========================================================================
+  subroutine read_area_radii
+
+    real :: Radius1, Radius2
+
+    ! Read inner and outer radii for areas shell and ring
+    call read_var("Radius1", Radius1)
+    call read_var("Radius2", Radius2)
+
+    ! Set outer size of the area
+    RadiusArea = max(Radius1, Radius2)
+    ! Normalize inner radius to the outer size
+    Area_I(nArea)%Radius1  = min(Radius1, Radius2) / RadiusArea
+
+  end subroutine read_area_radii
 
 end subroutine MH_set_parameters

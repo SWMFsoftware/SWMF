@@ -81,6 +81,8 @@ module ModAMR
      real                     :: Resolution
      real, dimension(3)       :: Center_D,  Size_D
      real                     :: Radius1, Radius2
+     logical                  :: DoRotate
+     real, dimension(3,3)     :: Rotate_DD
   end type AreaType
 
   type(AreaType) :: Area_I(MaxArea)

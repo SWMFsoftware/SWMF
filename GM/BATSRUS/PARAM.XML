@@ -2092,26 +2092,47 @@ default			TypeRefineInit
 </command>
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
+	<set name="RotateArea" value="0"/>
 	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0"
-		if="$_command =~ /LEVEL/" /> 
-	<parameter name="NameArea" type="string" input="select">
-		<option name="initial" value="init/initial" default="T" />
-		<option name="all"					/>
-		<option name="box"					/>
-		<option name="brick"					/>
-		<option name="sphere"					/>
-		<option name="sphere0"					/>
-		<option name="shell"					/>
-		<option name="shell0"					/>
-		<option name="cylinderx"				/>
-		<option name="cylinderx0"				/>
-		<option name="cylindery"				/>
-		<option name="cylindery0"				/>
-		<option name="cylinderz"				/>
-		<option name="cylinderz0"				/>
+		if="$_command =~ /LEVEL/" />
+	<parameter name="StringArea" type="strings" min="1" max="2">
+		<part name="NameArea" type="string" input="select" 
+							required="T">
+			<option name="initial" value="init/initial" 
+								default="T" />
+			<option name="all"				/>
+			<option name="box"				/>
+			<option name="brick"				/>
+			<option name="brick0"				/>
+			<option name="sphere"				/>
+			<option name="sphere0"				/>
+			<option name="shell"				/>
+			<option name="shell0"				/>
+			<option name="cylinderx"			/>
+			<option name="cylinderx0"			/>
+			<option name="cylindery"			/>
+			<option name="cylindery0"			/>
+			<option name="cylinderz"			/>
+			<option name="cylinderz0"			/>
+			<option name="ringx"				/>
+			<option name="ringx0"				/>
+			<option name="ringy"				/>
+			<option name="ringy0"				/>
+			<option name="ringz"				/>
+			<option name="ringz0"				/>
+		</part>
+		<part name="RotateArea" type="string" input="select"
+							required="F">
+			<option name="rotated" />
+		</part>
 	</parameter>
+	<if expr="$NameArea !~ /box|all|init|0/">
+		<parameter name="xCenter" type="real" default="0"/>
+		<parameter name="yCenter" type="real" default="0"/>
+		<parameter name="zCenter" type="real" default="0"/>
+	</if>
 	<if expr="$NameArea =~ /box/">
 		<parameter name="xMinBox" type="real" />
 		<parameter name="yMinBox" type="real" />
@@ -2121,51 +2142,35 @@ default			TypeRefineInit
 		<parameter name="zMaxBox" type="real" />
 	</if>
 	<if expr="$NameArea =~ /brick/i">
-		<parameter name="xCenterBrick" type="real" />
-		<parameter name="yCenterBrick" type="real" />
-		<parameter name="zCenterBrick" type="real" />
 		<parameter name="xSizeBrick" type="real" min="0" />
 		<parameter name="ySizeBrick" type="real" min="0" />
 		<parameter name="zSizeBrick" type="real" min="0" />
 	</if>
-	<if expr="$NameArea =~ /shell/i">
-		<if expr="$NameArea !~ /0/i">
-			<parameter name="xCenterShell" type="real" />
-			<parameter name="yCenterShell" type="real" />
-			<parameter name="zCenterShell" type="real" />
-		</if>
-		<parameter name="r1Shell" type="real" min="0"/>
-		<parameter name="r2Shell" type="real" min="0"/>
-	</if>
 	<if expr="$NameArea =~ /sphere/i">
-		<if expr="$NameArea !~ /sphere0/i">
-			<parameter name="xCenterSphere" type="real"/>
-			<parameter name="yCenterSphere" type="real"/>
-			<parameter name="zCenterSphere" type="real"/>
-		</if>
-		<parameter name="rSphere" type="real" min="0"/>
+		<parameter name="Radius"  type="real" min="0"/>
 	</if>
-	<if expr="$NameArea =~ /cylinderx/i">
-		<parameter name="x1Cylinder" type="real"                     />
-		<parameter name="yCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="zCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="x2Cylinder" type="real"                     />
-		<parameter name="rCylinder"  type="real" min="0"             />
+	<if expr="$NameArea =~ /shell/i">
+		<parameter name="Radius1" type="real" min="0"/>
+		<parameter name="Radius2" type="real" min="0"/>
 	</if>
-	<if expr="$NameArea =~ /cylindery/i">
-		<parameter name="xCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="y1Cylinder" type="real"                     />
-		<parameter name="zCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="y2Cylinder" type="real"                     />
-		<parameter name="rCylinder"  type="real" min="0"             />
+	<if expr="$NameArea =~ /cylinder/i">
+		<parameter name="LengthCylinder" type="real" min="0" />
+		<parameter name="Radius"         type="real" min="0" />
 	</if>
-	<if expr="$NameArea =~ /cylinderz/i">
-		<parameter name="xCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="yCylinder"  type="real" if="$NameArea!~/0/" />
-		<parameter name="z1Cylinder" type="real"                     />
-		<parameter name="z2Cylinder" type="real"                     />
-		<parameter name="rCylinder"  type="real" min="0"             />
+	<if expr="$NameArea =~ /ring/i">
+		<parameter name="HeightRing" type="real" min="0" />
+		<parameter name="Radius1"    type="real" min="0" />
+		<parameter name="Radius2"    type="real" min="0" />
 	</if>
+	<if expr="$RotateArea =~ /rotated/i">
+		<parameter name="xRotate" type="real" min="-360" max="360" 
+								default="0"/>
+		<parameter name="yRotate" type="real" min="-360" max="360" 
+								default="0"/>
+		<parameter name="zRotate" type="real" min="-360" max="360" 
+								default="0"/>
+	</if>
+
 #GRIDRESOLUTION
 2.0			Resolution
 initial			NameArea
@@ -2187,9 +2192,9 @@ box			NameArea
 #GRIDLEVEL
 4			nLevel
 brick			NameArea
--48.0			xCenterBrick
-  0.0			yCenterBrick
- -8.0			zCenterBrick
+-48.0			xCenter
+  0.0			yCenter
+ -8.0			zCenter
  32.0			xSizeBrick
  32.0			ySizeBrick
  16.0			zSizeBrick
@@ -2210,19 +2215,22 @@ sphere			NameArea
 
 #GRIDRESOLUTION
 1/8			Resolution
-cylinderx0		NameArea
--60.0			x1Cylinder
--10.0			x2Cylinder
+cylinderx		NameArea
+-30.0			xCenter
+  0.0			yCenter
+  0.0			zCenter
+ 60.0			LengthCylinder
  20.0			rCylinder
 
 #GRIDRESOLUTION
 1/8			Resolution
-cylindery		NameArea
--60.0			xCylinder
--20.0			y1Cylinder
-  0.0			zCylinder
- 20.0			y2Cylinder
- 10.0			rCylinder
+ringz0 rotated		NameArea
+  5.0			HeightRing
+ 20.0			Radius1
+ 25.0			Radius2
+ 10.0			xRotate
+ 10.0			yRotate
+  0.0			zRotate
 
 The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
 or refinement level, respectively, in a given area. The Resolution parameter
@@ -2237,27 +2245,29 @@ For other values of NameArea, the command specifies the blocks to be refined.
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
 There are the following basic shapes: 
-'all', 'box', 'brick', 'sphere', 'shell', 'cylinderx', 'cylindery' 
-and 'cylinderz'.
+'all', 'box', 'brick', 'sphere', 'shell', 'cylinderx', 'cylindery', 
+'cylinderz', 'ringx', 'ringy' and 'ringz'.
+
 The area 'all' refers to the whole computational domain, and it can be
 used to set the overall minimum resolution. The area 'box' is a box
 aligned with the X, Y and Z axes, and it is given with the coordinates
 of two diagonally opposite corners. The area 'brick' has the same shape
-as 'box', but it is defines with the center of the brick and the 
+as 'box', but it is defined with the center of the brick and the 
 size of the brick. The area 'sphere' is a sphere around an arbitrary point,
 which is defined with the center point and the radius of the sphere.
 The area 'shell' consists of the volume between two concentric spherical
 surfaces, which is given with the center point and the two radii.
 The area 'cylinderx' is a cylinder with an axis parallel with the X axis,
-and it is given with the 3 coordinates of one end of the axis of the cylinder,
-the X coordinate of the other end of the axis and the radius of the cylinder.
+and it is given with the center, the length of the axis and the radius,
 The areas 'cylindery' and 'cylinderz' are cylinders parallel with the 
 Y and Z axes, respectively, and are defined analogously as 'cylinderx'.
-The areas 'sphere0' and 'shell0' are the same as areas 'sphere' and 'shell'
-except that their center is in the origin, so only the radii need to be
-given. The areas 'cylinderx0', 'cylindery0' and 'cylinderz0' are 
-cylinders with their axes lying on the X, Y and Z axes respectively,
-so only two coordinates and a radius are required.
+The area 'ringx', 'ringy' and 'ringz' are the volumes between 
+two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
+The ring area is given with the center, the height and the two radii.
+
+If the area name contains a zero, the center is taken to be at the origin.
+If the word rotated is added, the area can be rotated by 3 angles around
+the X, Y and Z axes in this order.
 </command>
 
 <command name="AMRLEVELS">

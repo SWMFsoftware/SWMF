@@ -3,7 +3,7 @@ subroutine specify_initial_refinement(refb, lev)
   use ModSize
   use ModMain, ONLY : body1,UseCorotation,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
-       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                                 !^CFG IF NOT CARTESIAN
+       dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF NOT CARTESIAN
        x_BLK,y_BLK,z_BLK,dx_BLK
   use ModPhysics, ONLY : Rbody,Rcurrents,Qprod
   use ModAMR, ONLY : InitialRefineType
@@ -1024,11 +1024,11 @@ subroutine specify_area_refinement(DoRefine_B)
   logical, intent(inout) :: DoRefine_B(MaxBlock)
 
   !LOCAL VARIABLES:
-  integer, parameter :: MaxCorner = 8
-  integer  :: iArea, iBlock, iCorner, nCorner = 2
-  real     :: CurrentResolution
+  integer, parameter :: nCorner = 8
+  real     :: CornerOrig_DI(3, nCorner), Corner_DI(3, nCorner)
   real     :: DistMin_D(3), DistMax_D(3)
-  real     :: CornerOrig_DI(3,MaxCorner), Corner_DI(3,MaxCorner)
+  integer  :: i, j, k, iDim, iArea, iBlock, iCorner
+  real     :: CurrentResolution
 
   character(len=*), parameter :: NameSub = 'specify_area_refinement'
 
@@ -1049,44 +1049,55 @@ subroutine specify_area_refinement(DoRefine_B)
 
      CurrentResolution = dx_BLK(iBlock)
 
-     CornerOrig_DI(:,1) = 0.5 * (/ &
-          x_BLK(0,1,1,iBlock) + x_BLK(1,1,1,iBlock), &
-          y_BLK(1,0,1,iBlock) + y_BLK(1,1,1,iBlock), &
-          z_BLK(1,1,0,iBlock) + z_BLK(1,1,1,iBlock) /)
-
-
-     CornerOrig_DI(:,2) = 0.5 * (/ &
-          x_BLK(nI+1,1,1,iBlock) + x_BLK(nI,1,1,iBlock), &
-          y_BLK(1,nJ+1,1,iBlock) + y_BLK(1,nJ,1,iBlock), &
-          z_BLK(1,1,nK+1,iBlock) + z_BLK(1,1,nK,iBlock) /)
+     iCorner = 0
+     do k=1,nK+1,nK; do j=1,nJ+1,nJ; do i=1,nI+1,nI
+        iCorner = iCorner+1
+        CornerOrig_DI(1,iCorner) = 0.125 * sum(x_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+        CornerOrig_DI(2,iCorner) = 0.125 * sum(y_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+        CornerOrig_DI(3,iCorner) = 0.125 * sum(z_BLK(i-1:i,j-1:j,k-1:k,iBlock))
+     end do; end do; end do
 
      AREA: do iArea = 1, nArea
 
         ! No need to check area if block is finer than area resolution
         if(Area_I(iArea) % Resolution >= CurrentResolution) CYCLE AREA
 
-        ! Normalize block corner coordinates to the center and size of area
+        ! Check if area refines the whole domain
+        if(Area_I(iArea) % Name == 'all')then
+           DoRefine_B(iBlock) = .true.
+           CYCLE AREA
+        endif
+           
+        ! Shift corner coordinates to the center of area
         do iCorner = 1, nCorner
            Corner_DI(:,iCorner) = &
-                ( CornerOrig_DI(:,iCorner) - Area_I(iArea) % Center_D ) &
-                / Area_I(iArea) % Size_D
+                CornerOrig_DI(:,iCorner) - Area_I(iArea) % Center_D
         end do
 
-        ! Calculate minimum distances in all 3 directions
-        where(Corner_DI(:,1)*Corner_DI(:,2) <= 0.0)
-           ! The block covers the center point in a certain dimension
-           DistMin_D = 0.0
-        elsewhere
-           ! Select the point that is closer in a certain dimension
-           DistMin_D = min(abs(Corner_DI(:,1)),abs(Corner_DI(:,2)))
-        end where
+        ! Rotate corners into the orientation of the area if required
+        if(Area_I(iArea) % DoRotate) &
+             Corner_DI = matmul(Area_I(iArea) % Rotate_DD, Corner_DI)
+
+        ! Normalize coordinates to the size of the area in all 3 directions
+        do iCorner = 1, nCorner
+           Corner_DI(:,iCorner) = Corner_DI(:,iCorner) / Area_I(iArea) % Size_D
+        end do
+
+        ! Calculate maximum and minimum distances in all 3 directions
+        do iDim = 1, 3
+           DistMax_D(iDim) = maxval(abs(Corner_DI(iDim,:)))
+
+           if( maxval(Corner_DI(iDim,:))*minval(Corner_DI(iDim,:)) <= 0.0)then
+              ! The block covers the center point in this dimension
+              DistMin_D(iDim) = 0.0
+           else
+              ! Select the point that is closer in this dimension
+              DistMin_D(iDim) = minval(abs(Corner_DI(iDim,:)))
+           end if
+        end do
 
         ! Check if this area is intersecting with the block
-        
         select case( Area_I(iArea) % Name)
-        case('all')
-           DoRefine_B(iBlock) = .true.
-
         case('brick')
            if( all( DistMin_D < 1.0 ) ) DoRefine_B(iBlock) = .true.
 
@@ -1096,7 +1107,6 @@ subroutine specify_area_refinement(DoRefine_B)
         case('shell')
            ! Check if block intersects with the enclosing sphere
            ! but it is not fully inside the inner sphere
-           DistMax_D = max(abs(Corner_DI(:,1)),abs(Corner_DI(:,2)))
            if(  sum(DistMin_D**2) < 1.0 .and. &
                 sum(DistMax_D**2) > Area_I(iArea) % Radius1**2 ) &
                 DoRefine_B(iBlock) = .true.
@@ -1111,6 +1121,27 @@ subroutine specify_area_refinement(DoRefine_B)
 
         case('cylinderz')
            if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringx')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0    &
+                .and. sum(DistMax_D(2:3)**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringy')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:3:2)**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('ringz')
+           ! Check if block intersects with the enclosing cylinder
+           ! but it is not fully inside the inner cylinder
+           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 &
+                .and. sum(DistMax_D(1:2)**2) > Area_I(iArea) % Radius1**2 ) &
                 DoRefine_B(iBlock) = .true.
 
         case default
