@@ -112,7 +112,6 @@ contains
          RouterGmIe%iProc0Source,RouterGmIe%iCommUnion,iError)
     call MPI_BCAST(rIonosphere,1,MPI_REAL,&
          RouterGmIe%iProc0Source,RouterGmIe%iCommUnion,iError)
-    
   end subroutine init_couple_gm_ie_swmf
 !========================COUPLER VIA SWMF=================!
 !BOP
@@ -202,6 +201,7 @@ contains
             mapping=sort_hemispheres)
 !\end{verbatim}
 !EOP
+       if(DoTest)write(*,*)NameSub//' Router is done at PE=',i_proc
        !Allocate arrays in IE_ to get data
        nPoint_B=0
        do iPE=0,RouterGmIe%nProc-1

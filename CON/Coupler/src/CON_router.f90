@@ -981,8 +981,8 @@ contains
 
 !GlobalCellNumber Loop, for a given (octree) block              !
           do iGlobalGridPoint=&
-                         1+nGridPointsPerBlock*(lGlobalNode-1),&
-                         nGridPointsPerBlock*lGlobalNode
+                         1+nGridPointsPerBlock*(iBlockAll-1),&
+                         nGridPointsPerBlock*iBlockAll
 
              call pe_and_blk(&
                   GridDescriptorSource%DD%Ptr,lGlobalNode,&
@@ -1019,6 +1019,7 @@ contains
                              GridDescriptorTarget%nDim,&
                              XyzTarget_D,&
                              IsInterfacePoint)
+                if(.not.IsInterfacePoint)CYCLE 
              else
                 XyzTarget_D=XyzSource_D
              end if

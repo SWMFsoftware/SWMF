@@ -780,16 +780,6 @@ contains
     DomainDecomposition%iDecomposition_II&
          (PE_,lGlobalTreeNode)=iPE
   end subroutine set_pe_and_local_blk_dd
-
-  !===============================================================!
-  subroutine disable_global_blk_dd(DomainDecomposition,&
-       lGlobalTreeNode)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    integer,intent(in)::lGlobalTreeNode
-    call set_pe_and_local_blk_dd(&
-       DomainDecomposition,lGlobalTreeNode,None_,None_)
-  end subroutine disable_global_blk_dd
   !===============================================================!
   subroutine set_iglobal_and_bp_dd(DomainDecomposition)
     type(DomainDecompositionType),intent(inout)::&
@@ -1873,9 +1863,7 @@ contains
     !EOP
     is_used_block_dd=&
          DomainDecomposition%iDecomposition_II(&
-         FirstChild_,lGlobalTreeNumber)==None_&
-         .and.DomainDecomposition%iDecomposition_II(&
-         PE_,lGlobalTreeNumber)/=None_
+         FirstChild_,lGlobalTreeNumber)==None_
   end function is_used_block_dd
 
   !===============================================================!

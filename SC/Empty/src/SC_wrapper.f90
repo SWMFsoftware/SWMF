@@ -118,7 +118,13 @@ subroutine SC_put_from_ih(nPartial,&
 
   call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 end subroutine SC_put_from_ih
+!===================================================================!
+subroutine SC_get_for_ih(&
+     nPartial,iGetStart,Get,W,State_V,nVar)
+  integer,intent(in)::nPartial,iGetStart,nVar
+  real,dimension(nVar),intent(in)::State_V
 
-subroutine SC_get_for_ih
+  character (len=*), parameter :: NameSub='SC_get_for_ih.f90'
 
+  call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 end subroutine SC_get_for_ih
