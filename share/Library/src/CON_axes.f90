@@ -153,7 +153,7 @@ module CON_axes
   real(Real8_), parameter :: OmegaCarrington = cTwoPi/(27.2753D0*24*3600)
 
   ! Position and Velocity of Planet in HGI
-  real :: XyzPlanet_D(3), vPlanetHgi_D(3)
+  real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
 
   ! Initial time in 8 byte real
   real(Real8_) :: tStart = -1.0
@@ -420,12 +420,13 @@ contains
       ! Calculate planet position for TimeSim and TimeSim+dt
       call set_hgi_gse_d_planet(1.0)
       XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
-      
+
+      ! In GSE shifted to the center of Sun the planet is at (-d,0,0)
       call set_hgi_gse_d_planet(0.0)
-      XyzPlanet_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+      XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
       
       ! Finite difference velocity with the 1 second time perturbation
-      vPlanetHgi_D = XyzPlus_D - XyzPlanet_D
+      vPlanetHgi_D = XyzPlus_D - XyzPlanetHgi_D
       
     end subroutine set_hgi_gse_v_planet
 
@@ -819,13 +820,13 @@ contains
   !IROUTINE: transform_velocity - transforms velocity between two coord systems
   !INTERFACE:
   
-  function transform_velocity(TimeSim, v1_D, Position_D, &
+  function transform_velocity(TimeSim, v1_D, Xyz1_D, &
        NameCoord1, NameCoord2) result(v2_D)
 
     !INPUT ARGUMENTS:
     real,             intent(in) :: TimeSim       ! Simulation time
     real,             intent(in) :: v1_D(3)       ! Velocity in 1st system
-    real,             intent(in) :: Position_D(3) ! Position in 1st system
+    real,             intent(in) :: Xyz1_D(3) ! Position in 1st system
     character(len=3), intent(in) :: NameCoord1    ! Name of 1st coord. system
     character(len=3), intent(in) :: NameCoord2    ! Name of 2nd coord. system
 
@@ -844,8 +845,10 @@ contains
     character (len=3) :: NameCoord1Last = 'XXX', NameCoord2Last = 'XXX' 
     real :: TimeSimLast = -1.0
 
-    real, dimension(3)   :: v1Total_D, Omega12_D, vPlanet1_D
-    real, dimension(3,3) :: Transform12_DD
+    real, dimension(3)   :: v1Total_D, Omega12_D
+    real, dimension(3,3) :: Transform21_DD
+    real, dimension(3)   :: XyzPlanet1_D, Xyz2_D, vPlanet1_D, Omega1_D, Omega2_D
+    logical :: IsHelioGeo = .false.
 
     character (len=*), parameter :: NameSub = NameMod // '::get_omega'
     !--------------------------------------------------------------------------
@@ -865,31 +868,62 @@ contains
        NameCoord2Last = NameCoord2
 
        ! Get transformation matrix and angular velocity between frames
-       Transform12_DD = transform_matrix(TimeSim, NameCoord1, NameCoord2)
-       Omega12_D      = angular_velocity(TimeSim, NameCoord1, NameCoord2)
+       Transform21_DD = transform_matrix(TimeSim, NameCoord1, NameCoord2)
 
        if(NameCoord1(1:1) == 'H' .eqv. NameCoord2(1:1) == 'H')then 
           ! Both helio-centric or both planet-centric, no planet speed added
-          vPlanet1_D = 0.0
+          IsHelioGeo = .false.
+          Omega12_D  = angular_velocity(TimeSim, NameCoord1, NameCoord2)
 
-       else if(NameCoord1(1:1) /= 'H' .and. NameCoord2(1:1) == 'H')then
-          ! Planet-centric --> helio-centric: add planet speed
-          vPlanet1_D = +matmul(&
+       else 
+          IsHelioGeo = .true.
+          Omega1_D   = angular_velocity(TimeSim, NameCoord1)
+          Omega2_D   = angular_velocity(TimeSim, NameCoord2)
+
+          ! Position of the planet in frame 1
+          XyzPlanet1_D = matmul(&
+               transform_matrix(TimeSim,'HGI',NameCoord1), XyzPlanetHgi_D)
+
+          ! Speed of the planet in frame 1
+          vPlanet1_D = matmul(&
                transform_matrix(TimeSim,'HGI',NameCoord1), vPlanetHgi_D)
-       else
-          ! Helio-centric --> planet-centric: subtract planet speed
-          vPlanet1_D = -matmul( &
-               transform_matrix(TimeSim,'HGI',NameCoord1), vPlanetHgi_D)
+
+          ! Planet-centric --> Helio-centric
+          if(NameCoord2(1:1) == 'H')then
+             ! subtract planet speed and flip planet position
+             XyzPlanet1_D = -XyzPlanet1_D
+             vPlanet1_D   = -vPlanet1_D
+          end if
+
        end if
     end if
 
-    ! Omega12_D defines the rotation of Frame2 with respect to Frame1,
-    ! so a point at rest in Frame1 should rotate with -Omega12 in Frame2
+    if(IsHelioGeo)then
+       ! Velocity with respect to the inertial frame comoving with Frame 1
+       ! and momentarily aligned with Frame 1.
 
-    v1Total_D = v1_D - cross_product(Omega12_D, Position_D) + vPlanet1_D
+       v1Total_D = v1_D + cross_product(Omega1_D, Xyz1_D)
 
-    ! Transform total velocity to Frame2
-    v2_D = matmul(Transform12_DD, v1Total_D)
+       ! Position relative to Frame2
+       Xyz2_D = matmul( Transform21_DD, (Xyz1_D - XyzPlanet1_D) )
+
+       ! Transform into Frame2 and subtract rotation speed of 
+       ! Frame2 with respect to the inertial frame, and add 
+       ! relative velocity of Frame2 with respect to Frame1 (vPlanet1)
+
+       v2_D = matmul(Transform21_DD, v1Total_D - vPlanet1_D) &
+            - cross_product(Omega2_D, Xyz2_D) 
+
+    else
+       ! Omega12_D defines the rotation of Frame2 with respect to Frame1,
+       ! so a point at rest in Frame1 should rotate with -Omega12 in Frame2
+
+       v1Total_D = v1_D - cross_product(Omega12_D, Xyz1_D)
+
+       ! Transform total velocity to Frame2
+       v2_D = matmul(Transform21_DD, v1Total_D)
+
+    end if
 
   end function transform_velocity
 
@@ -1053,6 +1087,36 @@ contains
     Result_D = (/ 0., 0., 0./)
     if(maxval(abs(v2_D - Result_D)) > 1e-3) &
          write(*,*)'test angular_velocity failed: GSE-HGI back v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Velocity of Earth in GEO should be zero
+    v2_D = transform_velocity(0., vPlanetHgi_D, XyzPlanetHgi_D, 'HGI', 'GEO')
+    Result_D = (/ 0., 0., 0./)
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: HGI-GEO v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Velocity of Earth in HGI should be vPlanetHgi_D
+    v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GEO', 'HGI')
+    Result_D = vPlanetHgi_D
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GEO-HGI v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Velocity of Earth in HGR should be 
+    ! HgrHgi_DD.(vPlanetHgi_D - OmegaCarrington x XyzPlanetHgi_D)
+    v2_D = transform_velocity(0., (/0., 0., 0./), (/0., 0., 0./), 'GEO', 'HGR')
+    Result_D = matmul(HgrHgi_DD, &
+         vPlanetHgi_D - cross_product((/0.,0.,OmegaCarrington/), XyzPlanetHgi_D))
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: GEO-HGR v2_D = ',v2_D, &
+         ' should be equal to ',Result_D,' within round off errors'
+
+    ! Go back
+    v2_D = transform_velocity(0., v2_D, matmul(HgrHgi_DD,XyzPlanetHgi_D), 'HGR', 'GEO')
+    Result_D = (/0., 0., 0./)
+    if(maxval(abs(v2_D - Result_D)) > 1e-3) &
+         write(*,*)'test angular_velocity failed: HGR-GEO v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
 
     ! The center of the Earth is at 0,0,0 and at rest in GSE, 
