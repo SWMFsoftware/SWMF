@@ -124,8 +124,8 @@ foreach $dir (@search){
                 # Check if the file with the same name as the module
 		# has been found already
 
-		# Remove IH_ from the name of the module for matching
-		$modmatch = $module; $modmatch =~ s/^IH_//;
+		# Remove IH_ or SC_ from the name of the module for matching
+		$modmatch = $module; $modmatch =~ s/^(IH|SC)_//;
 
 		if($modulefile{$object} !~ /\/$modmatch\.o$/i){
 		    # If not, store the filename into %modulefile
