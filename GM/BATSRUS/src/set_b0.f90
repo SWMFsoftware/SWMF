@@ -308,47 +308,44 @@ subroutine set_b0_face(iBlock)
   !   call calc_b0source_covar(iBlock)          !^CFG IF NOT CARTESIAN
 
 contains
+  !===========================================================================
   subroutine correct_b0_face(iSide)
     implicit none
     integer,intent(in)::iSide
     integer::iFace,jFace,kFace
+    !-------------------------------------------------------------------------
     select case(iSide)
     case(East_,West_)
        iFace=1+nI*(iSide-East_)
-       do k=1,nK
-          do j=1,nJ
-             call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-             B0xFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
+       do k=1,nK; do j=1,nJ
+          call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
+          B0xFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_x_BLK(iFace,j,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     case(South_,North_)
        jFace=1+nJ*(iSide-South_)
-       do k=1,nK
-          do i=1,nI
-             call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-             B0xFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
-
+       do k=1,nK; do i=1,nI
+          call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
+          B0xFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_y_BLK(i,jFace,k,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     case(Bot_,Top_)
        kFace=1+nK*(iSide-Bot_)
-       do j=1,nJ
-          do i=1,nI
-             call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-             B0xFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
-             B0yFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
-             B0zFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
-          end do
-       end do
+       do j=1,nJ; do i=1,nI
+          call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
+          B0xFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(x_,:,:,:))
+          B0yFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(y_,:,:,:))
+          B0zFace_z_BLK(i,j,kFace,iBlock) = cEighth*sum(RefB0_DIII(z_,:,:,:))
+       end do; end do
     end select
   end subroutine correct_b0_face
+  !===========================================================================
   subroutine get_refined_b0(iRef,jRef,kRef)
     integer,intent(in)::iRef,jRef,kRef
-    integer::i2,j2,k2         
+    integer::i2,j2,k2
+    !-------------------------------------------------------------------------
     do k2=0,1; do j2=0,1; do i2=0,1
        x=RefXyzStart_D(x_)+(iRef+i2)*RefDXyz_D(x_)
        y=RefXyzStart_D(y_)+(jRef+j2)*RefDXyz_D(y_)
@@ -710,23 +707,33 @@ end subroutine add_b0_body2
 
 subroutine update_b0
 
-  use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
-       time_simulation, lVerbose, UseNewAxes
-  use ModIO, ONLY: iUnitOut, write_prefix
-  use ModAdvance, ONLY : Bx_, By_, Bz_, State_VGB, &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModGeometry, ONLY: true_cell, body_BLK
+  use ModProcMH,        ONLY: iProc
+  use ModMain,          ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
+       time_simulation, lVerbose, UseNewAxes, NameThisComp
+  use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModGeometry,      ONLY: true_cell, body_BLK
+  use CON_axes,         ONLY: get_axes
+  use ModNumConst,      ONLY: cRadToDeg
+  use ModIO,            ONLY: iUnitOut, write_prefix
   use ModCompatibility, ONLY: calculate_dipole_tilt
 
   implicit none
 
+  real    :: MagAxisTiltGsm
   integer :: iBlock
   !============================================================================
 
   if (iProc == 0.and.lVerbose>0) then
-     call write_prefix; write(iUnitOut,*) &
-          "=> Updating B0 at Simulation time",Time_Simulation
+     if(UseNewAxes .and. NameThisComp=='GM')then
+        call get_axes(Time_Simulation, MagAxisTiltGsmOut=MagAxisTiltGsm)
+        call write_prefix; write(iUnitOut,*) &
+          "update_b0 at tSimulation, TiltGsm=", &
+          Time_Simulation, MagAxisTiltGsm*cRadToDeg
+     else
+        call write_prefix; write(iUnitOut,*) &
+             "update_b0 at tSimulation=",Time_Simulation
+     end if
   end if
   call timing_start('update_B0')
 
