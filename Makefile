@@ -281,10 +281,9 @@ dist: distclean
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
 	tar -rf tmp.tar  SetSWMF.pl
-	tar -rf tmp.tar  TestParam.pl
+	tar -rf tmp.tar  Scripts
 	tar -rf tmp.tar  Configure.options
 	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
-	tar -rf tmp.tar  TestC*	TestS*		#^CMP IF TESTING
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  share
