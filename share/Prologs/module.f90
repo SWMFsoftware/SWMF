@@ -2,7 +2,7 @@
 
 !BOP
 !
-!MODULE: ModExample - short explanation about ModExample
+!MODULE: ModExample - short description of ModExample
 !
 !DESCRIPTION:
 ! Long description of ModExample using LaTex syntax.
@@ -29,7 +29,7 @@ module ModExample
 
   !PUBLIC MEMBER FUNCTIONS:
 
-  public :: example_iroutine ! short explanation of example_routine
+  public :: example_iroutine ! short description of example_iroutine
 
   !PUBLIC DATA MEMBERS:
 
