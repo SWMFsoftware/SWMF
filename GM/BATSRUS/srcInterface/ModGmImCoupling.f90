@@ -566,8 +566,16 @@ contains
                - (1./7.)*(Ci**7-Cs**7)
           Vol=factor*FCiCs/s8
 
+          !Compute equatorial B value for dipole at this latitude
+          xL=MHD_Xeq(i,1)
+          yL=MHD_Yeq(i,1)
+          zL=0.
+          call get_b0(xL,yL,zL,qb)
+
           if( s2 > Ri/Rbody )then
-             !Fieldline stays inside of Rbody, recompute exact volume
+             !Fieldline stays inside of Rbody
+
+             !Recompute exact volume
              MHD_SUM_vol(i,:)=Vol
 
              !Fix the grid inside Rbody
@@ -575,10 +583,6 @@ contains
              MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
 
              !Fix the equatorial B value
-             xL=MHD_Xeq(i,1)
-             yL=MHD_Yeq(i,1)
-             zL=0.
-             call get_b0(xL,yL,zL,qb)
              MHD_Beq(i,:) = sqrt(sum(qb**2))
 
           else
@@ -593,7 +597,15 @@ contains
              where(MHD_SUM_vol(i,:)>1.1E-8)
                 MHD_SUM_vol(i,:) = Factor1*MHD_SUM_vol(i,:) + Factor2*Vol
              elsewhere
-                MHD_SUM_vol(i,:) = Vol
+                !Recompute exact volume
+                MHD_SUM_vol(i,:)=Vol
+
+                !Fix the grid inside Rbody
+                MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
+                MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
+
+                !Fix the equatorial B value
+                MHD_Beq(i,:) = sqrt(sum(qb**2))
              end where
 
           end if
