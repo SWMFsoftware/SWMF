@@ -82,7 +82,11 @@ OBJECTS = \
 	gradient.o
 
 DEPEND:
-	${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
+
+GITM:	DEPEND
+	@make GITM.exe
+	@echo "GITM.exe has been created"
 
 GITM.exe:	${OBJECTS} ${MODULES} main.o
 	${LINK.f90} ${Lflag1} -o GITM.exe main.o ${OBJECTS} ${MODULES}\
