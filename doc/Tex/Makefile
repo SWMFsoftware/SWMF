@@ -178,10 +178,11 @@ GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #	^CMP IF GM
 IMXML = ${DIR}/IM/RCM/PARAM.xmltex #		^CMP IF IM
 RBXML = ${DIR}/RB/RiceV5/PARAM.xmltex #		^CMP IF RB
 IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #	^CMP IF IE
+SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           ^CMP IF SP
 UAXML = ${DIR}/UA/GITM/PARAM.xmltex #		^CMP IF UA
 
 SWMFXML = \
-	${DIR}/Param/PARAM.xmltex ${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML}
+	${DIR}/Param/PARAM.xmltex ${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML} ${SPXML}
 
 SWMF_xml.tex: ${SWMFXML}
 	cat ${SWMFXML} > SWMF_xml.tex
