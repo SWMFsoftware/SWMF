@@ -18,12 +18,9 @@ help:
 	@echo 'TEST              - all four tests together'
 	@echo ' '
 	@echo 'LIB               - libTIMING.a the complete TIMING library'
-	@echo 'EMPTY             - timing_empty.o the empty TIMING library'
 	@echo ' '
 	@echo 'clean             - /bin/rm -f *.o *.exe'
 	@echo 'distclean         - /bin/rm -f *.o *.exe *.a *~'
-	@echo ' '
-	@echo 'dist              - /bin/tar -cf ../TIMING.tar .'
 
 OBJ_LIB = ModTiming.o timing_cpu.o timing.o
 
