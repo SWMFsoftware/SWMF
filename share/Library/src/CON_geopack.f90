@@ -12,7 +12,7 @@ Module CON_geopack
   !                                 the Earth-and-Moon barycentre
   real::SunEMBDistance
 contains
-!----------------------------------------------------------------------
+  !----------------------------------------------------------------------
   integer function JulianDay(iYear,iMonth,iDay)
     !Coded by A.Ridley
     integer,intent(in)::iYear,iMonth,iDay
@@ -22,7 +22,7 @@ contains
     if(iMonth>1)JulianDay=JulianDay+sum(nDayInMonth_I(1:iMonth-1))
     if(iMonth>2.and.mod(iYear,4)==0)JulianDay=JulianDay+1
   end function JulianDay
-!----------------------------------------------------------------------
+  !----------------------------------------------------------------------
   subroutine CON_sun(iYear,jDay,iHour,iMin,iSec,&
        GSTime,SunLongitude,Obliq)
     !
@@ -69,7 +69,7 @@ contains
     G=MOD(358.475845+0.985600267*DJ,360.D0)*cDegToRadHere
     SunLongitude=(VL+(1.91946-0.004789*Century)*SIN(G)+&
          0.020094*SIN(2.*G))*cDegToRadHere
-    
+
     !The following formula is for the distance from the Sun to the
     !Earth+Moon barycentre. See Eq.(36) from
     !Heliospheric Coordinate Systems by M.Franz and D.Harper
@@ -78,14 +78,14 @@ contains
     !http://www.space-plasma.qmul.ac.uk/heliocoords/
     !Added by I.Sokolov&I.Roussev, 08.17.03
     SunEMBDistance=1.000140-0.016710*cos(G)-0.000140*cos(G+G)
-    
+
     IF(SunLongitude.GT.6.2831853)SunLongitude=SunLongitude-6.2831853
     IF(SunLongitude.LT.0.)SunLongitude=SunLongitude+6.2831853
     Obliq=(23.45229-0.0130125*Century)*cDegToRadHere
     GeiGse_DD=&
          matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
   end subroutine CON_sun
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
   subroutine CON_mag_axis(iYear,jDay)
     !This is a part of the RECALC subroutine form geopack.f by Tsyganenko
     integer,intent(in)::iYear,jDay
@@ -96,205 +96,205 @@ contains
     integer::IYE=0,IDE=0,IPR=0
     integer::iY
     real::F1,F2,H11,G10,G11,SQR,DT
-      IF (IYear.EQ.IYE.AND.jDAY.EQ.IDE) return
-!
-!   IYE AND IDE ARE THE CURRENT VALUES OF YEAR AND DAY NUMBER
-!
-      IY=IYear
-      IDE=jDAY
-      IF(IY.LT.1965) IY=1965
-      IF(IY.GT.2005) IY=2005
-!
-!  WE ARE RESTRICTED BY THE INTERVAL 1965-2005,
-!  FOR WHICH THE IGRF COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL
-!  THE SUBROUTINE PRINTS A WARNING (BUT DOES NOT REPEAT IT AT NEXT INVOCATIONS)
-!
-      IF(IY.NE.IYear.AND.IPR.EQ.0)&
-           WRITE (*,*) 'No Igrf Coefficients are availble for the year ',&
-      IYear,'We use date for year ',IY
-      IF(IY.NE.IYear) IPR=1
-      IYE=IY   
-!
-!  LINEAR INTERPOLATION OF THE GEODIPOLE MOMENT COMPONENTS BETWEEN THE
-!  VALUES FOR THE NEAREST EPOCHS:
-!
-	IF (IY.LT.1970) THEN                            !1965-1970
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1965.)/5.
-	   F1=1.E0-F2
-           G10=30334.*F1+30220.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-2119.*F1-2068.*F2
-	   H11=5776.*F1+5737.*F2
-	ELSEIF (IY.LT.1975) THEN                        !1970-1975
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1970.)/5.
-	   F1=1.E0-F2
-           G10=30220.*F1+30100.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-2068.*F1-2013.*F2
-	   H11=5737.*F1+5675.*F2
-	ELSEIF (IY.LT.1980) THEN                        !1975-1980
-	   F2=(dble(IY)+dble(jDAY)/365.-1975.)/5.
-	   F1=1.E0-F2
-           G10=30100.*F1+29992.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-2013.*F1-1956.*F2
-	   H11=5675.*F1+5604.*F2
-	ELSEIF (IY.LT.1985) THEN                        !1980-1985
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1980.)/5.
-	   F1=1.E0-F2
-           G10=29992.*F1+29873.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-1956.*F1-1905.*F2
-	   H11=5604.*F1+5500.*F2
-	ELSEIF (IY.LT.1990) THEN			!1985-1990
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1985.)/5.
-	   F1=1.E0-F2
-           G10=29873.*F1+29775.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-1905.*F1-1848.*F2
-	   H11=5500.*F1+5406.*F2
-	ELSEIF (IY.LT.1995) THEN			!1990-1995
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
-	   F1=1.E0-F2
-           G10=29775.*F1+29682.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-	   G11=-1848.*F1-1789.*F2
-	   H11=5406.*F1+5318.*F2
-        ELSEIF (IY.LT.2000) THEN                        !1995-2000
-	   F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
-	   F1=1.E0-F2
-           G10=29682.*F1+29615.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-           G11=-1789.*F1-1728.*F2
-           H11=5318.*F1+5186.*F2
-        ELSE                                            !2000-2005
-!
-!   LINEAR EXTRAPOLATION BEYOND 2000 BY USING SECULAR VELOCITY COEFFICIENTS:
-!
-           DT=FLOAT(IY)+FLOAT(jDAY)/366.-2000.
-           G10=29615.-14.6*DT      ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
-           G11=-1728.+10.7*DT
-           H11=5186.-22.5*DT
-	ENDIF
-!
-!  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD.SYSTEM:
-!   SIN(TETA0)*COS(LAMBDA0), SIN(TETA0)*SIN(LAMBDA0), AND COS(TETA0)
-!         ST0 * CL0                ST0 * SL0                CT0
-!
-      SQR=G11**2+H11**2+G10**2
-      AxisMagGeo_D(3)=G10/SQR
-      AxisMagGeo_D(1)=-G11/SQR
-      AxisMagGeo_D(2)=-H11/SQR
-    end subroutine CON_mag_axis
-!------------------------------------------------------------------------
-    subroutine CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-      use ModCoordTransform,ONLY:rot_matrix_z,rot_matrix_x
-      !Updates matrices for the coordinate transformations
-      !Computations for GeiGse_DD and GeiGsm_DD are from the subroutine
-      !RECALC of geopack.f by N.V.Tsyganenko
-      !Computations for GeiHgi_DD - i.Roussev and I.Sokolov,
-      !igorsok@umich.edu, phone (734)647-4705
-      integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
-      integer::jDay
-      real::AxisMagGei_D(3),GSTime,SunLongitude,Obliq
-      real,parameter :: cLongAscNodeSolEquator = 75.77*cDegToRad
+    IF (IYear.EQ.IYE.AND.jDAY.EQ.IDE) return
+    !
+    !   IYE AND IDE ARE THE CURRENT VALUES OF YEAR AND DAY NUMBER
+    !
+    IY=IYear
+    IDE=jDAY
+    IF(IY.LT.1965) IY=1965
+    IF(IY.GT.2005) IY=2005
+    !
+    !  WE ARE RESTRICTED BY THE INTERVAL 1965-2005,
+    !  FOR WHICH THE IGRF COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL
+    !  THE SUBROUTINE PRINTS A WARNING (BUT DOES NOT REPEAT IT AT NEXT INVOCATIONS)
+    !
+    IF(IY.NE.IYear.AND.IPR.EQ.0)&
+         WRITE (*,*) 'No Igrf Coefficients are availble for the year ',&
+         IYear,'We use date for year ',IY
+    IF(IY.NE.IYear) IPR=1
+    IYE=IY   
+    !
+    !  LINEAR INTERPOLATION OF THE GEODIPOLE MOMENT COMPONENTS BETWEEN THE
+    !  VALUES FOR THE NEAREST EPOCHS:
+    !
+    IF (IY.LT.1970) THEN                            !1965-1970
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1965.)/5.
+       F1=1.E0-F2
+       G10=30334.*F1+30220.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-2119.*F1-2068.*F2
+       H11=5776.*F1+5737.*F2
+    ELSEIF (IY.LT.1975) THEN                        !1970-1975
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1970.)/5.
+       F1=1.E0-F2
+       G10=30220.*F1+30100.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-2068.*F1-2013.*F2
+       H11=5737.*F1+5675.*F2
+    ELSEIF (IY.LT.1980) THEN                        !1975-1980
+       F2=(dble(IY)+dble(jDAY)/365.-1975.)/5.
+       F1=1.E0-F2
+       G10=30100.*F1+29992.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-2013.*F1-1956.*F2
+       H11=5675.*F1+5604.*F2
+    ELSEIF (IY.LT.1985) THEN                        !1980-1985
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1980.)/5.
+       F1=1.E0-F2
+       G10=29992.*F1+29873.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1956.*F1-1905.*F2
+       H11=5604.*F1+5500.*F2
+    ELSEIF (IY.LT.1990) THEN			!1985-1990
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1985.)/5.
+       F1=1.E0-F2
+       G10=29873.*F1+29775.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1905.*F1-1848.*F2
+       H11=5500.*F1+5406.*F2
+    ELSEIF (IY.LT.1995) THEN			!1990-1995
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
+       F1=1.E0-F2
+       G10=29775.*F1+29682.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1848.*F1-1789.*F2
+       H11=5406.*F1+5318.*F2
+    ELSEIF (IY.LT.2000) THEN                        !1995-2000
+       F2=(FLOAT(IY)+FLOAT(jDAY)/365.-1990.)/5.
+       F1=1.E0-F2
+       G10=29682.*F1+29615.*F2 ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1789.*F1-1728.*F2
+       H11=5318.*F1+5186.*F2
+    ELSE                                            !2000-2005
+       !
+       !   LINEAR EXTRAPOLATION BEYOND 2000 BY USING SECULAR VELOCITY COEFFICIENTS:
+       !
+       DT=FLOAT(IY)+FLOAT(jDAY)/366.-2000.
+       G10=29615.-14.6*DT      ! HERE G10 HAS OPPOSITE SIGN TO THAT IN IGRF TABLES
+       G11=-1728.+10.7*DT
+       H11=5186.-22.5*DT
+    ENDIF
+    !
+    !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD.SYSTEM:
+    !   SIN(TETA0)*COS(LAMBDA0), SIN(TETA0)*SIN(LAMBDA0), AND COS(TETA0)
+    !         ST0 * CL0                ST0 * SL0                CT0
+    !
+    SQR=G11**2+H11**2+G10**2
+    AxisMagGeo_D(3)=G10/SQR
+    AxisMagGeo_D(1)=-G11/SQR
+    AxisMagGeo_D(2)=-H11/SQR
+  end subroutine CON_mag_axis
+  !------------------------------------------------------------------------
+  subroutine CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+    use ModCoordTransform,ONLY:rot_matrix_z,rot_matrix_x
+    !Updates matrices for the coordinate transformations
+    !Computations for GeiGse_DD and GeiGsm_DD are from the subroutine
+    !RECALC of geopack.f by N.V.Tsyganenko
+    !Computations for GeiHgi_DD - i.Roussev and I.Sokolov,
+    !igorsok@umich.edu, phone (734)647-4705
+    integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
+    integer::jDay
+    real::AxisMagGei_D(3),GSTime,SunLongitude,Obliq
+    real,parameter :: cLongAscNodeSolEquator = 75.77*cDegToRad
     ! Inclination of the solar equator on the ecliptic of date
-      real,parameter :: cInclinationSolEquator = 7.25*cDegToRad
-      integer,parameter::x_=1,y_=2,z_=3
-      !-------------------------------------------------------------------
-      jDay=JulianDay(iYear,iMonth,iDay)
-      call CON_mag_axis(iYear,jDay)
-      call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
+    real,parameter :: cInclinationSolEquator = 7.25*cDegToRad
+    integer,parameter::x_=1,y_=2,z_=3
+    !-------------------------------------------------------------------
+    jDay=JulianDay(iYear,iMonth,iDay)
+    call CON_mag_axis(iYear,jDay)
+    call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
 
-      GeiGse_DD=&
-           matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
-      !
-      !   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  
-      !   DUE TO THE ORBITAL MOTION OF THE EARTH   
+    GeiGse_DD=&
+         matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
+    !
+    !   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  
+    !   DUE TO THE ORBITAL MOTION OF THE EARTH   
 
 
 
-      HgiGse_DD = matmul( &
+    HgiGse_DD = matmul( &
          rot_matrix_x(cInclinationSolEquator),&
          rot_matrix_z(SunLongitude-&
          cLongAscNodeSolEquator+cPi)) 
 
-      !
-      !   THE PI CORRECTION IS BECAUSE THE X AXIS OF THE HGI SYSTEM IS 
-      !   DIRECTED FROM THE SUN, THAT OF THE GSE SYSTEM IS DIRECTED
-      !   TOWARDS THE SUN
+    !
+    !   THE PI CORRECTION IS BECAUSE THE X AXIS OF THE HGI SYSTEM IS 
+    !   DIRECTED FROM THE SUN, THAT OF THE GSE SYSTEM IS DIRECTED
+    !   TOWARDS THE SUN
 
 
-      !   THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE IN THE
-      !   SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
-      GeiGsm_DD(:,x_)=GeiGse_DD(:,x_)
-      
+    !   THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE IN THE
+    !   SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
+    GeiGsm_DD(:,x_)=GeiGse_DD(:,x_)
 
-      !   THE COMPONENTS OF THE UNIT VECTOR EZSM=EZMAG
-      !   IN THE SYSTEM GEI:
-      AxisMagGei_D=matmul(rot_matrix_z(GSTime),AxisMagGeo_D)
 
-      !
-      !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EYGSM 
-      !  IN THE SYSTEM GEI BY TAKING THE VECTOR PRODUCT
-      !   D x S AND NORMALIZING IT TO UNIT LENGTH:
-      
-      GeiGsm_DD(1,y_)=AxisMagGei_D(2)*GeiGsm_DD(3,x_)-&
-           AxisMagGei_D(3)*GeiGsm_DD(2,x_)
-      GeiGsm_DD(2,y_)=AxisMagGei_D(3)*GeiGsm_DD(1,x_)-&
-           AxisMagGei_D(1)*GeiGsm_DD(3,x_)
-      GeiGsm_DD(3,y_)=AxisMagGei_D(1)*GeiGsm_DD(2,x_)-&
-           AxisMagGei_D(2)*GeiGsm_DD(1,x_)
-      GeiGsm_DD(:,y_)=GeiGsm_DD(:,y_)/&
-           sqrt(dot_product(GeiGsm_DD(:,y_),GeiGsm_DD(:,y_)))
+    !   THE COMPONENTS OF THE UNIT VECTOR EZSM=EZMAG
+    !   IN THE SYSTEM GEI:
+    AxisMagGei_D=matmul(rot_matrix_z(GSTime),AxisMagGeo_D)
 
-      !
-      !   THEN IN THE GEI SYSTEM THE UNIT VECTOR 
-      !   Z = EZGSM = EXGSM x EYGSM = S x Y
-      !   HAS THE COMPONENTS:
-      GeiGsm_DD(1,z_)=GeiGsm_DD(2,x_)*GeiGsm_DD(3,y_)-&
-           GeiGsm_DD(3,x_)*GeiGsm_DD(2,y_)
-      GeiGsm_DD(2,z_)=GeiGsm_DD(3,x_)*GeiGsm_DD(1,y_)-&
-           GeiGsm_DD(1,x_)*GeiGsm_DD(3,y_)
-      GeiGsm_DD(3,z_)=GeiGsm_DD(1,x_)*GeiGsm_DD(2,y_)-&
-           GeiGsm_DD(2,x_)*GeiGsm_DD(1,y_)
+    !
+    !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EYGSM 
+    !  IN THE SYSTEM GEI BY TAKING THE VECTOR PRODUCT
+    !   D x S AND NORMALIZING IT TO UNIT LENGTH:
 
-      GsmGse_DD=matmul(transpose(GeiGsm_DD),GeiGse_DD)
+    GeiGsm_DD(1,y_)=AxisMagGei_D(2)*GeiGsm_DD(3,x_)-&
+         AxisMagGei_D(3)*GeiGsm_DD(2,x_)
+    GeiGsm_DD(2,y_)=AxisMagGei_D(3)*GeiGsm_DD(1,x_)-&
+         AxisMagGei_D(1)*GeiGsm_DD(3,x_)
+    GeiGsm_DD(3,y_)=AxisMagGei_D(1)*GeiGsm_DD(2,x_)-&
+         AxisMagGei_D(2)*GeiGsm_DD(1,x_)
+    GeiGsm_DD(:,y_)=GeiGsm_DD(:,y_)/&
+         sqrt(dot_product(GeiGsm_DD(:,y_),GeiGsm_DD(:,y_)))
 
-    end subroutine CON_recalc
-    !----------------------------------------------------------------
-    subroutine CON_test_geopack
-      ! Coded by I Sokolov, and I Roussev, 08.16.2003
-      ! The test compares the mean position of the pole of the solar
-      ! eqautor (see SUN,2001, p.C3) with the unity vector n_z of
-      ! the Heliographic inertial coordinates with respect to GEI  
-      ! coordinate system
-      real::GeiHgi_DD(3,3)
-      real,parameter::RightAssention=286.13*cDegToRad,&
-           Declination=63.87*cDegToRad
-      integer::iYear=2000,iMonth,iDay,iHour,iMin=0,iSec=0
-      !For perihelion
-      iMonth=1;iDay=3;iHour=5
-      call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-      write(*,*)'SunEMBDistance=',SunEMBDistance,&
-           ', should be 0.98329'
-      GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
-      write(*,*)&
-           'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
-           GeiHgi_DD(:,3)
-      write(*,*)&
-           'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
-           cos(RightAssention)*cos(Declination),&
-           sin(RightAssention)*cos(Declination),&
-           sin(Declination)
-      !For aphelion
-      iMonth=7;iDay=4;iHour=0
-      call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-      write(*,*)'SunEMBDistance=',SunEMBDistance,&
-           ', should be 1.01671'
-      GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
-      write(*,*)&
-           'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
-           GeiHgi_DD(:,3)
-      write(*,*)&
-           'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
-           cos(RightAssention)*cos(Declination),&
-           sin(RightAssention)*cos(Declination),&
-           sin(Declination)
+    !
+    !   THEN IN THE GEI SYSTEM THE UNIT VECTOR 
+    !   Z = EZGSM = EXGSM x EYGSM = S x Y
+    !   HAS THE COMPONENTS:
+    GeiGsm_DD(1,z_)=GeiGsm_DD(2,x_)*GeiGsm_DD(3,y_)-&
+         GeiGsm_DD(3,x_)*GeiGsm_DD(2,y_)
+    GeiGsm_DD(2,z_)=GeiGsm_DD(3,x_)*GeiGsm_DD(1,y_)-&
+         GeiGsm_DD(1,x_)*GeiGsm_DD(3,y_)
+    GeiGsm_DD(3,z_)=GeiGsm_DD(1,x_)*GeiGsm_DD(2,y_)-&
+         GeiGsm_DD(2,x_)*GeiGsm_DD(1,y_)
 
-    end subroutine CON_test_geopack
+    GsmGse_DD=matmul(transpose(GeiGsm_DD),GeiGse_DD)
+
+  end subroutine CON_recalc
+  !----------------------------------------------------------------
+  subroutine CON_test_geopack
+    ! Coded by I Sokolov, and I Roussev, 08.16.2003
+    ! The test compares the mean position of the pole of the solar
+    ! eqautor (see SUN,2001, p.C3) with the unity vector n_z of
+    ! the Heliographic inertial coordinates with respect to GEI  
+    ! coordinate system
+    real::GeiHgi_DD(3,3)
+    real,parameter::RightAssention=286.13*cDegToRad,&
+         Declination=63.87*cDegToRad
+    integer::iYear=2000,iMonth,iDay,iHour,iMin=0,iSec=0
+    !For perihelion
+    iMonth=1;iDay=3;iHour=5
+    call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+    write(*,*)'SunEMBDistance=',SunEMBDistance,&
+         ', should be 0.98329'
+    GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
+    write(*,*)&
+         'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
+         GeiHgi_DD(:,3)
+    write(*,*)&
+         'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
+         cos(RightAssention)*cos(Declination),&
+         sin(RightAssention)*cos(Declination),&
+         sin(Declination)
+    !For aphelion
+    iMonth=7;iDay=4;iHour=0
+    call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+    write(*,*)'SunEMBDistance=',SunEMBDistance,&
+         ', should be 1.01671'
+    GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
+    write(*,*)&
+         'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
+         GeiHgi_DD(:,3)
+    write(*,*)&
+         'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
+         cos(RightAssention)*cos(Declination),&
+         sin(RightAssention)*cos(Declination),&
+         sin(Declination)
+
+  end subroutine CON_test_geopack
 
 end Module CON_geopack
