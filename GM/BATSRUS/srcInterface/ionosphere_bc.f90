@@ -271,10 +271,15 @@ subroutine calc_inner_BC_velocities_new(nIter,tSimulation,x,y,z,&
   ! U = (E x B) / B^2
   Velocity_D = cross_product(eField_D, b_D) / B2
 
+  ! Subtract the radial component of the velocity
+  Velocity_D = Velocity_D - sum(Xyz_D*Velocity_D) / sqrt(sum(Xyz_D**2))
+
   ! Return values
   Ux = Velocity_D(1)
   Uy = Velocity_D(2)
   Uz = Velocity_D(3)
+
+
 
 end subroutine calc_inner_BC_velocities_new
 
