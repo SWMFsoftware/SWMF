@@ -178,18 +178,22 @@ Default is not reading AMIE files.
 T			UseSPS
 
 The UseSPS parameter indicates if the serial potential solver is used.
+This is the default in the SWMF and it cannot be modified in the SWMF.
 </command>
 
-<command name="BACKGROUND">
+<command name="BACKGROUND" if="$_IsStandAlone">
 	<parameter name="NameOfModelDir" type="string" length="100" />
-	<parameter name="NameOfFieldModel" type="string" length="100" />
+	<parameter name="NameOfEFieldModel" type="string" length="100" />
 	<parameter name="NameOfAuroralModel" type="string" length="100" />
 	<parameter name="NameOfSolarModel" type="string" length="100" />
 
 #BACKGROUND
-???
+dir			NameOfModelDir
+weimer96		NameOfEFieldModel
+ihp			NameOfAuroralModel
+xyz			NameOfSolarModel
 
-???
+This command cannot be used in the SWMF.
 </command>
 
 </commandgroup>
