@@ -336,7 +336,7 @@ GM			NameComp2
 -1                      DnCouple
 40.                     DtCouple
 
-COUPLE1
+#COUPLE1
 GM			NameSource
 RB			NameTarget
 -1                      DnCouple
