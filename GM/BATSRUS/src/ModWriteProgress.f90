@@ -232,11 +232,11 @@ subroutine write_runtime_values()
   write(iUnitOut,'(10X,a,a)') FluxType,' Flux Function'
 
   call write_prefix
-  if (UsePointImplicit) then                       !^CFG IF POINTIMPLICIT BEGIN  
-     write(iUnitOut,'(10X,''Multistage Point-Implicit Time Stepping'')')
-  else                                             !^CFG END POINTIMPLICIT
-     write(iUnitOut,'(10X,''Multistage Explicit Time Stepping'')')
-  end if                                           !^CFG IF POINTIMPLICIT
+  if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
+     write(iUnitOut,'(10X,''Implicit Time Stepping'')')
+  else                                             !^CFG END IMPLICIT
+     write(iUnitOut,'(10X,''Explicit Time Stepping'')')
+  end if                                           !^CFG IF IMPLICIT
   if(boris_correction)then                         !^CFG IF BORISCORR BEGIN 
      call write_prefix     
      write(iUnitOut,'(10X,''With Boris Correction, factor ='',f10.4)') &
