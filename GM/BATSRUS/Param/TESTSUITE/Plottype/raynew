@@ -5,6 +5,7 @@ ray_trace time_ray_trace
 T			UseAccurateIntegral
 T			UseAccurateTrace
 0.1			DtExchangeRay
+1			DnRaytrace
 
 #SAVEPLOT
 8                       nPlotFiles
