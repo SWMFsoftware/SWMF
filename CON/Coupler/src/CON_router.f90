@@ -458,7 +458,9 @@ contains
 !grid and the interpoltion weights for the image point:         !
 !nearest_grid_points and bilinear_interpolation.                !
 !Optional, if not present then the nearest_grid_points is used  !
-       interpolate) 
+       interpolate)
+    use ModIOUnit,ONLY:io_unit_new
+    use ModUtilities,ONLY:
     !INPUT ARGUMENTS:
     interface
        logical function is_interface_block(lGlobalNode)
@@ -530,7 +532,8 @@ contains
          nGetUbound_P,nPutUbound_P
 
     real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
-    real,dimension(GridDescriptorSource%nDim)::XyzSource_D
+    real,dimension(GridDescriptorSource%nDim)::&
+                                   XyzSource_D,XyzStored_D
     integer,dimension(GridDescriptorTarget%nDim)::iCell_D
     integer, dimension(Router%nIndexesTarget)::IndexRecv_I
     integer,dimension(0:Router%nIndexesSource,&
@@ -548,10 +551,11 @@ contains
     logical::UseMask,UseMappingVector,UseMappingFunction
 
     logical::DoCheckBlock,DoCheckPoint,DoInterpolate
-    integer::iError
+    integer::iError,iFile
+    logical::DoTest,DoTestMe
     iProc=Router%iProc
     if(iProc<0)return
-
+    DoTest=.false.;DoTestMe=.false.
     !Check a presence of mapping array.
     !Associate pointer if required.
 
@@ -560,9 +564,17 @@ contains
          call associate_with_global_vector(&
          XyzMapping_DI,NameMappingVector)
     UseMask=present(NameMask)
-    if(UseMask)&
-         call associate_with_global_mask(&
-         Used_I,NameMask)
+    if(UseMask)then
+       call associate_with_global_mask(&
+            Used_I,NameMask)
+    end if
+    if(UseMask)then
+       call CON_set_do_test('router_'//NameMask,DoTest,DoTestMe)
+    else
+       if(UseMappingVector)call CON_set_do_test(&
+            'router_'//NameMappingVector,DoTest,DoTestMe)
+    end if
+    DoTestMe=DoTest.and.iProc==Router%iProc0Target
 
     UseMappingFunction=present(mapping)
     if(.not.(UseMappingFunction.or.UseMappingVector).and.&
@@ -593,7 +605,13 @@ contains
 !If the check shows that the allocated array is not sufficient, ! 
 !then DoCountOnly will be set to true. The loop then will be    !
 !repeated for the second time                                   !
-
+       if(DoTestMe)then
+          iFile=io_unit_new()
+          open(iFile,file='router_'//NameMask,status='replace')
+          write(iFile,*)'iPointGlobal Xyz_D'
+          write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
+               'iImages '
+       end if
 
 
 !Initialize the counters                                        !
@@ -681,6 +699,10 @@ contains
                 end if
              end if
              call timing_start('set_router_interp')
+             if(DoTestMe)then
+                XyzStored_D=XyzSource_D
+                write(iFile,*)iGlobalGridPoint,XyzSource_D
+             end if
              if( DoInterpolate)then
                 call interpolate(&
                      GridDescriptorSource%nDim,&
@@ -699,6 +721,37 @@ contains
                      IndexGet_II,&
                      nImages,&
                      Weight_I)
+             end if
+             if(DoTestMe)then
+                do iImages=1,nImages
+                   if(iImages==1)then
+                      write(iFile,*)IndexGet_II(:,iImages),Weight_I(iImages),&
+                           sum(Weight_I(1:nImages))
+                   else
+                      write(iFile,*)IndexGet_II(:,iImages),Weight_I(iImages),&
+                           iImages
+                   end if
+                end do
+                if(Router%nIndexesSource==&
+                     GridDescriptorSource%nDim+1)then
+                   XyzSource_D=cZero
+                   do iImages=1,nImages
+                      XyzSource_D=&
+                           XyzSource_D+&
+                           xyz_grid_d(GridDescriptorSource,&
+                           i_global_node_bp(&
+                           GridDescriptorSource%DD%Ptr,&
+                           IndexGet_II(Router%nIndexesSource,iImages),&
+                           IndexGet_II(0,iImages)),&
+                           IndexGet_II(1:GridDescriptorSource%nDim,&
+                           iImages))*Weight_I(iImages)
+                      
+                   end do
+                   write(iFile,*)'Interpolated coordinate values=',&
+                        XyzSource_D,' Error=',&
+                        sqrt(sum((XyzSource_D-XyzStored_D)**2))
+                end if
+                write(iFile,*)
              end if
              call timing_stop('set_router_interp')
 !--------------------------------------------------------------!
@@ -798,7 +851,7 @@ contains
           end do !Global cell
        end do    !Target block
 
-
+       if(DoTestMe)close(iFile)
     end do       !Check if DoCountOnly
     if(UseMappingVector)nullify(XyzMapping_DI)
     if(UseMask)nullify(Used_I)
