@@ -1,48 +1,83 @@
 \section{Configuration of SWMF}
 
-SWMF is configurable via the GUI and/or with the 
-Configure.pl script and                             %^CMP IF CONFIGURE
-SetSWMF.pl script.
+The SWMF is configurable at various levels:
+\begin{itemize}
+\item The whole software package can be configured %^CMP IF CONFIGURE
+      with a subset of the components.             %^CMP IF CONFIGURE
+\item A particular version, including the Empty version,
+      of the component can be selected
+\item A subset of the non-empty components can be registered in 
+      the LAYOUT.in file.
+\item Registered components can be turned off and on with the \#COMPONENT
+      command in the PARAM.in file.
+\item Some of the components can be configured individually.
+\end{itemize}
+Each of these options have their useful application.
 
-The configuration for SWMF now consists of setting compiler flags,
-selecting the appropriate components and the configuration
-of the individual components.
-
-\subsection{Setting compiler flags}
-
-The compiler flags can be modified by editing
+%^CMP IF CONFIGURE BEGIN
+The Configure.pl script can build a new software package which
+contains only a subset of the components. The whole
+component directory and all references to the component 
+in the source code, in the scripts and the Makefiles are removed.
+This type of configuration results in a smaller software package.
+The main use of this type of configuration is to distribute
+a part of SWMF to users. For example one can create a 
+software distribution which includes GM, IE and UA only by typing
 \begin{verbatim}
-Makefile.conf
+  Configure.pl -on=GM,IE,UA -off=SC,IH,SP,IM,RB
 \end{verbatim}
-This makefile is created during installation, and it contains the
-platform and compiler specific part of the makefile system.
-Depending on the platform and compiler, one can change the
-precision of real numbers by setting the {\tt PRECISION} variable,
-the optimization level by setting the {\tt Cflag0...Cflag4},
-and the debug flags by setting the {\tt DEBUG} variable.
-For example, on a Linux machine with Nag F95 compiler, a single
-precision, zero optimization level, debugging run can be done
-with the following settings:
+The configured package will be in the Build directory.
 \begin{verbatim}
-#PRECISION = -r8
-PRECISION =
-...
-#DEBUG   = -dusty -w -maxcontin=50
-DEBUG   = -dusty -w -C -gline -maxcontin=50
-
-Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag1  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag2  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag3  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag4  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+  Configure.pl -h
 \end{verbatim}
-Note that not all the components take into account the selected
-compiler flags. For example the IM/RCM component cannot be 
-compiled with double precision, thus it uses the flags
-defined in the {\tt CFLAGS} variable. Also some of the files
-do not work if compiled with high optimization level.
-Such exceptions are described in the makefiles of the 
-components.
+to get complete usage information and/or read the reference manual.
+%^CMP END CONFIGURE
+
+Selecting the Empty version for unused components reduces
+compilation time and memory usage during run time.
+It may also improve performance slightly.
+This is achieved with the {\tt -v} flag of the SetSWMF.pl script. 
+For example the Empty UA component can be selected with
+\begin{verbatim}
+  SetSWMF.pl -v=UA/Empty
+\end{verbatim}
+Components can also be excluded from a run by omitting them from the LAYOUT.in 
+file, which means that the component is not 'registered' at run time.
+Note that empty component versions cannot be registered at all.
+Component registration allows to run the same executable with different 
+subsets of the components. For example the GM and IE components 
+can be selected with the following LAYOUT.in file
+\begin{verbatim}
+ID   proc0 last  stride
+#COMPONENTMAP
+GM     0    999     1
+IE     0      1     1
+#END
+\end{verbatim}
+The first column contains the component ID, the second is the
+root processor for the component, the third column is the
+last processor and the last column contains the stride.
+In the example GM will run on all available PE-s, while IE
+will run on the first 2 PE-s. 
+
+Finally components can be switched on and off during a run
+with the \#COMPONENT command in the PARAM.in file. 
+This approach allows the component to be switched on in a later 
+'session' of the run. For example, in the first session only GM 
+is running, while in the second session it is coupled to IE. 
+In this example the IE component can be switched off with the
+\begin{verbatim}
+#COMPONENT
+IE              NameComp
+F               UseComp
+\end{verbatim}
+in the first session and it can be switched on with the
+\begin{verbatim}
+#COMPONENT
+IE              NameComp
+T               UseComp
+\end{verbatim}
+command in the second session.
 
 \subsection{Selecting component versions}
 
@@ -57,7 +92,7 @@ and they also show the interface of the working versions.
 The appropriate version can be selected with the {\tt -v} flag
 of the {\tt SetSWMF.pl} script, which edits the
 \begin{verbatim}
-Makefile.def
+  Makefile.def
 \end{verbatim}
 file. The IH/BATSRUS and SC/BATSRUS components are special, since they use the
 same source code as GM/BATSRUS. The IH component has three versions: 
@@ -105,6 +140,53 @@ cd ../..
 make IHBATSRUS
 \end{verbatim}
 
+\subsection{Setting compiler flags}
+
+The compiler flags can be modified by editing
+\begin{verbatim}
+  Makefile.conf
+\end{verbatim}
+This makefile is created during installation, and it contains the
+platform and compiler specific part of the makefile system.
+Depending on the platform and compiler, one can change the
+precision of real numbers by setting the {\tt PRECISION} variable,
+the optimization level by setting the {\tt Cflag0...Cflag4},
+and the debug flags by setting the {\tt DEBUG} variable.
+For example, on a Linux machine with Nag F95 compiler, a single
+precision, zero optimization level, debugging run can be done
+with the following settings:
+\begin{verbatim}
+#PRECISION = -r8
+PRECISION =
+...
+#DEBUG   = -dusty -w -maxcontin=50
+DEBUG   = -dusty -w -C -gline -maxcontin=50
+
+Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+Cflag1  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+Cflag2  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+Cflag3  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+Cflag4  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+\end{verbatim}
+Note that not all the components take into account the selected
+compiler flags. For example the IM/RCM component cannot be 
+compiled with double precision, thus it uses the flags
+defined in the {\tt CFLAGS} variable. Also some of the files
+do not work if compiled with high optimization level.
+Such exceptions are described in the makefiles of the 
+components. 
+
+The PRECISION variable can be conveniently changed with the
+{\tt -p} flag of the SetSWMF.pl script. For example single
+precision can be selected with
+\begin{verbatim}
+  SetSWMF.pl -p=single
+\end{verbatim}
+If the precision is modified with the SetSWMF.pl script,
+the distribution will be automatically cleaned with 
+{\tt make clean}, which has to be done before recompiling the
+code with a different precision. 
+
 \subsection{Configuration of components}
 
 Some of the components can be configured individually. 
@@ -131,16 +213,16 @@ The block size and the number of blocks can be set with the
 {\tt -g} flag of the {\tt SetSWMF.pl} script.
 For example the
 \begin{verbatim}
-SetSWMF.pl -g=UA:36,36,50,4,4
+  SetSWMF.pl -g=UA:36,36,50,4,4
 \end{verbatim}
 will et the blocks size to $36\times 36\times 50$ and the number of blocks to 
 $4\times 4$ for the UA component. This command runs the {\tt GridSize.pl}
 script of the UA component. To get more detailed information, one can
 check the {\tt GridSize.pl} script directly, e.g.
 \begin{verbatim}
-cd GM/BATSRUS
-GridSize.pl -h
-GridSize.pl -s
+  cd GM/BATSRUS
+  GridSize.pl -h
+  GridSize.pl -s
 \end{verbatim}
 On machines with limited memory it is especially important to
 set the number of blocks correctly. 
@@ -151,8 +233,8 @@ dynamic allocation of the largest variables. The default is static
 for sake of fast execution. To switch to dynamic allocation type
 for example
 \begin{verbatim}
-cd GM/BATSRUS/src
-make DYNAMIC
+  cd GM/BATSRUS/src
+  make DYNAMIC
 \end{verbatim}
 Of course the SWMF code has to be recompiled.
 

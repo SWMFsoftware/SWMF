@@ -181,18 +181,20 @@ IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #	^CMP IF IE
 SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           ^CMP IF SP
 UAXML = ${DIR}/UA/GITM/PARAM.xmltex #		^CMP IF UA
 
-SWMFXML = \
-	${DIR}/Param/PARAM.xmltex ${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML} ${SPXML}
+SWMFXML = ${DIR}/Param/PARAM.xmltex \
+	${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML} ${SPXML}
 
-SWMF_xml.tex: ${SWMFXML}
-	cat ${SWMFXML} > SWMF_xml.tex
+${SWMFXML}: ${SCRIPTDIR}/XmlToTex.pl
+
+SWMFXML.tex: ${SWMFXML}
+	cat ${SWMFXML} > SWMFXML.tex
 
 SWMF.dvi: \
 	SWMF.tex \
 	HEADER.tex \
 	SWMF_introduction.tex \
 	SWMF_configuration.tex \
-	SWMF_xml.tex \
+	SWMFXML.tex \
 	SWMF_couple.tex \
 	SWMF_new_comp.tex \
 	SWMFREF.tex
@@ -200,13 +202,13 @@ SWMF.dvi: \
 PDF: SWMF.pdf
 
 #^CMP IF DOCHTML BEGIN
-SWMF.html: SWMFREF.tex SWMF_xml.tex
+SWMF.html: SWMFREF.tex SWMFXML.tex
 HTML: cleanhtml
 	make SWMF.html
 #^CMP END DOCHTML
 
 clean:
-	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMF_xml.tex
+	rm -f *.aux *.log *.toc *.dvi *~ *.f90 SWMFREF.tex SWMFXML.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
