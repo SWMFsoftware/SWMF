@@ -358,7 +358,7 @@ subroutine SP_read_mh_data
   write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
   if(iProc==0)write(iStdOut,*)prefix,'Read file '//NameFile
   iFile=io_unit_new()
-  open(iFile,FILE=NameFile,STATUS='old')
+  open(iFile,FILE=NameFile,STATUS='old',ERR=10)
   read(iFile,*)DataInputTime
   read(iFile,*)iMax
   read(iFile,*)
@@ -367,6 +367,8 @@ subroutine SP_read_mh_data
      read(iFile,*)Smooth_VII(:,iLine,New_)
   end do
   close(iFile)
+  return
+10 call CON_stop(NameFile//' is not available')  
 end subroutine SP_read_mh_data
 !=============================================================!
 subroutine SP_finalize(TimeSimulation)

@@ -36,7 +36,6 @@ subroutine read_restart_header
   call MPI_BCAST(restart_ghost,1,MPI_LOGICAL,0,iComm,iError)
   call MPI_BCAST(restart_reals,1,MPI_LOGICAL,0,iComm,iError)
   call MPI_BCAST(n_step,       1,MPI_INTEGER,0,iComm,iError)
-
 end subroutine read_restart_header
 
 !==============================================================================
@@ -210,7 +209,7 @@ subroutine read_restart_file
        iBlockRestartALL_A(global_block_number(globalBLK)),&
        restart_ext
 
-  open(unit_tmp, file=filename, status='old', form='UNFORMATTED')
+  open(unit_tmp, file=filename, status='old', form='UNFORMATTED',ERR=10)
 
   if(restart_reals)then
      ! Do not overwrite time_simulation which is read from restart.H
@@ -268,7 +267,8 @@ subroutine read_restart_file
      write(*,*)'rho,p=',State_VGB(rho_,Itest,Jtest,Ktest,globalBLK),&
           State_VGB(P_,Itest,Jtest,Ktest,globalBLK)
   end if
-
+  return
+10 call CON_stop(NameThisComp//': '//filename//' is not available')
 end subroutine read_restart_file
 
 subroutine write_restart_file
