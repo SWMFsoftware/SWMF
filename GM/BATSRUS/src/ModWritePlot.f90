@@ -529,7 +529,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
-       State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative
+       State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative, &
+       Ex_CB, Ey_CB, Ez_CB
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
   use ModImplicit, ONLY : implicitBLK                      !^CFG IF IMPLICIT
@@ -550,8 +551,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   integer :: i,j,k
   !-------------------------------------------------------------------------
 
-  do iVar=1,nPlotVar
-     s=plotvarnames(iVar)
+  do iVar = 1, nPlotVar
+     s = plotvarnames(iVar)
+!!! call lower_case(s)
+
      ! Set plotvar_inBody to something reasonable for inside the body.
      ! Load zeros (0) for most values - load something better for rho, p, and T.
      ! We know that U,B,J are okay with zeroes, others should be changed if
@@ -611,7 +614,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(By_,:,:,:,iBLK)**2 &
              -State_VGB(Bz_,:,:,:,iBLK)**2)
      case('P','p','Pth','pth')
-        PlotVar(:,:,:,iVar)=State_VGB(P_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = State_VGB(P_,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_p
 !^CFG IF ALWAVES BEGIN
      case('Ew','ew')
@@ -632,10 +635,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 + OMEGAbody*x_BLK(:,:,:,iBLK)
         else
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(rhoUy_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
         end if
      case('Uz','uz')
-        PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = &
+             State_VGB(rhoUz_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
      case('B1x','b1x')
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)
      case('B1y','b1y')
@@ -645,36 +650,43 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('Jx','jx')
 !^CFG IF CARTESIAN BEGIN
         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bz_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bz_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK) &
-             -(State_VGB(By_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(By_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK))
+             (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
+             -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+             (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+             -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN         
      case('Jy','jy')
 !^CFG IF CARTESIAN BEGIN
         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(Bx_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(Bx_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK) &
-             -(State_VGB(Bz_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(Bz_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK))
+             (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+             -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+             (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
+             -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
      case('Jz','jz')
 !^CFG IF CARTESIAN BEGIN
         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-             (State_VGB(By_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(By_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK) &
-             -(State_VGB(Bx_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bx_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK))
+             (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
+             -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
+             (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+             -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK))
 !^CFG END CARTESIAN
 !       call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
+     case('enumx')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
+     case('enumy')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ey_CB(:,:,:,iBLK)
+     case('enumz')
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
      case('ex','Ex','EX')
-        PlotVar(:,:,:,iVar)= ( State_VGB(rhoUz_,:,:,:,iBLK)* &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUy_,:,:,:,iBLK)* &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)))/ &
-             State_VGB(rho_,:,:,:,iBLK) 
+        PlotVar(:,:,:,iVar)= &
+             ( State_VGB(rhoUz_,:,:,:,iBLK) &
+             * ( State_VGB(By_,:,:,:,iBLK) + B0yCell_BLK(:,:,:,iBLK)) &
+             - State_VGB(rhoUy_,:,:,:,iBLK) &
+             * ( State_VGB(Bz_,:,:,:,iBLK) + B0zCell_BLK(:,:,:,iBLK)) &
+             ) / State_VGB(rho_,:,:,:,iBLK) 
      case('ey','Ey','EY')
         PlotVar(:,:,:,iVar)= ( State_VGB(rhoUx_,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
@@ -688,9 +700,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)))/ &
              State_VGB(rho_,:,:,:,iBLK) 
      case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
-        PlotVar(:,:,:,iVar) = ( ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
+        PlotVar(:,:,:,iVar) = ( &
+             ( (State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2  &
+             + (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2  &
+             + (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
              State_VGB(rhoUx_,:,:,:,iBLK) &
              -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUx_,:,:,:,iBLK) + &
@@ -727,46 +740,53 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         ! Radial component variables
 
      case('Ur','ur')
-        PlotVar(:,:,:,iVar)=( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK))  &
-             / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+        PlotVar(:,:,:,iVar) = &
+             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('rhoUr','rhour','mr')
-        PlotVar(:,:,:,iVar)=( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) + & 
-             State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK))  &
-             / R_BLK(:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = &
+             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / R_BLK(:,:,:,iBLK)
      case('Br','br')
-        PlotVar(:,:,:,iVar)=( (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
+        PlotVar(:,:,:,iVar)=( &
+             ( State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
              *X_BLK(:,:,:,iBLK)                         &  
              +(State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
              *Y_BLK(:,:,:,iBLK)                         &
              +(State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
              *Z_BLK(:,:,:,iBLK) ) / R_BLK(:,:,:,iBLK) 
      case('B1r','b1r')
-        PlotVar(:,:,:,iVar)=( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK)                         &  
-             +State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK)                         &
-             +State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) ) &
-             / R_BLK(:,:,:,iBLK)                                 
+        PlotVar(:,:,:,iVar)= &
+             ( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) &
+             + State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) &
+             + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / R_BLK(:,:,:,iBLK)                                 
      case('Jr','jr')
 !^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=                    &
-             ( ( 0.5*(&
-             (State_VGB(Bz_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bz_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK) &
-             -(State_VGB(By_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(By_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK)) )*x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             +( 0.5*(&
-             (State_VGB(Bx_,0:nI+1,0:nJ+1,1:nK+2,iBLK)-State_VGB(Bx_,0:nI+1,0:nJ+1,-1:nK,iBLK))&
-             /dz_BLK(iBLK) &
-             -(State_VGB(Bz_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(Bz_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK)) )*y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             +( 0.5*(&
-             (State_VGB(By_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-State_VGB(By_,-1:nI,0:nJ+1,0:nK+1,iBLK))&
-             /dx_BLK(iBLK) &
-             -(State_VGB(Bx_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-State_VGB(Bx_,0:nI+1,-1:nJ,0:nK+1,iBLK))&
-             /dy_BLK(iBLK)) )*z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) ) / &
-             R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK)
+        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+             0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
+             ( ( &
+             ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
+             - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+             ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+             - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK)   &
+             ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+             + ( &
+             ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
+             - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+             ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
+             - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK)   &
+             ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+             + ( &
+             ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
+             - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+             ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+             - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
+             ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )
 !^CFG END CARTESIAN
 !       call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN
      case('er','Er','ER')
@@ -786,10 +806,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))) &
              *z_BLK(:,:,:,iBLK) )/State_VGB(rho_,:,:,:,iBLK) 
      case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
-        tmp1Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
+        tmp1Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 
-        tmp2Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
+        tmp2Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUx_,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUy_,:,:,:,iBLK) + &
@@ -809,9 +831,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('B2ur','B2Ur','b2ur')
-        tmp1Var = (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
+        tmp1Var = &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2                       
+             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2  
         PlotVar(:,:,:,iVar)=0.5*( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK)* &
              X_BLK(:,:,:,iBLK) &
              +tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK)* &
@@ -854,7 +877,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(Bx_,-1:nI   ,0:nJ+1  ,-1:nK   ,iBLK)  &
-                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dx_BLK(iBLK)  &
+                -State_VGB(Bx_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dx_BLK(iBLK) &
                 +(State_VGB(By_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(By_,0:nI+1  ,0:nJ+1  ,-1:nK   ,iBLK)  &
@@ -862,7 +885,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,-1:nI   ,-1:nJ   ,0:nK+1  ,iBLK)  &
                 -State_VGB(By_,0:nI+1  ,-1:nJ   ,-1:nK   ,iBLK)  &
-                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dy_BLK(iBLK)  &
+                -State_VGB(By_,-1:nI   ,-1:nJ   ,-1:nK   ,iBLK))/dy_BLK(iBLK) &
                 +(State_VGB(Bz_,0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,-1:nI   ,0:nJ+1  ,0:nK+1  ,iBLK)  &
                 +State_VGB(Bz_,0:nI+1  ,-1:nJ   ,0:nK+1  ,iBLK)  &
@@ -877,10 +900,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         endif
 !^CFG END CARTESIAN
      case('absdivB','absdivb','ABSDIVB')
-         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=abs(DivB1_GB(:,:,:,iBLK))
+         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = abs(DivB1_GB(:,:,:,iBLK))
          if(.not.true_BLK(iBLK))then
-           where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
-        endif
+            where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
+         endif
 !!$!^CFG  IF RAYTRACE BEGIN
         ! BASIC RAYTRACE variables
 
@@ -1076,7 +1099,7 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_B
      case('Jx','jx','Jy','jy','Jz','jz','Jr','jr')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_J   
-     case('ex','Ex','ey','Ey','ez','Ez','er','Er')
+     case('ex','Ex','ey','Ey','ez','Ez','er','Er','enumx','enumy','enumz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_electric   
      case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX', &
           'pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY', &
@@ -1272,11 +1295,11 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = unitstr_TEC_J
      case('jr')                                 
         NameTecVar = 'J_r'
-        NameUnit   = unitstr_TEC_J                
-     case('ex') 
+        NameUnit   = unitstr_TEC_J
+     case('ex')
         NameTecVar = 'E_x'
         NameUnit   = unitstr_TEC_electric
-     case('ey')                                 
+     case('ey')
         NameTecVar = 'E_y'
         NameUnit   = unitstr_TEC_electric
      case('ez')                                 
@@ -1424,7 +1447,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = unitstr_IDL_U
      case('jx','jy','jz','jr') 
         NameUnit = unitstr_IDL_J
-     case('ex','ey','ez','er')
+     case('ex','ey','ez','er','enumx','enumy','enumz')
         NameUnit = unitstr_IDL_electric
      case('pvecx','pvecy','pvecz','pvecr','b2ur')
         NameUnit = unitstr_IDL_Poynting
