@@ -1007,7 +1007,7 @@ end subroutine barrier_mpi
 subroutine stop_mpi(str)
 
   use ModProcMH
-  use ModMain, ONLY : iteration_number,NameThisComp
+  use ModMain, ONLY : iteration_number,NameThisComp,IsStandAlone
   use ModMpi
   implicit none
 
@@ -1018,12 +1018,18 @@ subroutine stop_mpi(str)
 
   !----------------------------------------------------------------------------
 
-  write(*,*)NameThisComp//':Stopping execution! me=',iProc,' at iteration=',&
-       iteration_number,' with msg:'
-  write(*,*)NameThisComp//':'//str
-  call MPI_abort(iComm, nError, iError)
+  if(IsStandAlone)then
+     write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
+          iteration_number,' with msg:'
+     write(*,*)str
+     call MPI_abort(iComm, nError, iError)
+     stop
+  else
+     write(*,*)NameThisComp,': stopping execution! me=',iProc,&
+          ' at iteration=',iteration_number
+     call CON_stop(NameThisComp//':'//str)
+  end if
 
-  stop
 end subroutine stop_mpi
 
 
