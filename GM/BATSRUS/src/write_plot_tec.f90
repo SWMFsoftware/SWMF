@@ -50,7 +50,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
   call get_date_time(iTime_I)
   write(textDateTime,'(i4.4,"-",5(i2.2,"-"),i3.3)') iTime_I
 
-  if(plot_type1(1:3)=='3d_')then
+  select case(plot_type1(1:3))
+  case('3d_')
      do iBlockALL  = 1, nBlockALL
         iBLK = iBlock_A(iBlockALL)
         iPE  = iProc_A(iBlockALL)
@@ -98,10 +99,6 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end do; end do; end do
         end if
      end do
-     return
-  end if
-
-  select case(plot_type1(1:3))
   case('cut','x=0','y=0','z=0')
      !================================ cut ============================
      ! Allocate memory for storing the blocks that are cut
@@ -332,9 +329,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,nplotvarmax,unitstr_TEC,&
            end if
         end do
      end if
-     return
+  case default
+     write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
   end select
-
-  write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
 
 end subroutine write_plot_tec
