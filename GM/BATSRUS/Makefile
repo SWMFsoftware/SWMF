@@ -77,6 +77,7 @@ install_cont: src/Makefile.RULES src/Makefile.OPTIONS src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
+		cd share; make install;\
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
