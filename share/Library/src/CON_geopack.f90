@@ -32,7 +32,6 @@ contains
     !  AND SEASON)
     !  From geopack.f by N.V.Tsyganenko
     use ModCoordTransform
-!!!    use CON_world
     integer,intent(in)::iYear,jDay,iHour,iMin,iSec
     !-------  INPUT PARAMETERS:
     !  iYear,jDay,iHour,iMin,iSec -  YEAR, DAY, AND UNIVERSAL TIME 
@@ -269,13 +268,13 @@ contains
     !For perihelion
     iMonth=1;iDay=3;iHour=5
     call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-    write(*,*)'SunEMBDistance=',SunEMBDistance,&
+    write(*,'(a,f14.10,a)')'SunEMBDistance=',SunEMBDistance,&
          ', should be 0.98329'
     GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
-    write(*,*)&
+    write(*,'(a,3es16.8)')&
          'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
          GeiHgi_DD(:,3)
-    write(*,*)&
+    write(*,'(a,3es16.8)')&
          'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
          cos(RightAssention)*cos(Declination),&
          sin(RightAssention)*cos(Declination),&
@@ -283,13 +282,13 @@ contains
     !For aphelion
     iMonth=7;iDay=4;iHour=0
     call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-    write(*,*)'SunEMBDistance=',SunEMBDistance,&
+    write(*,'(a,f14.10,a)')'SunEMBDistance=',SunEMBDistance,&
          ', should be 1.01671'
     GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
-    write(*,*)&
+    write(*,'(a,3es16.8)')&
          'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
          GeiHgi_DD(:,3)
-    write(*,*)&
+    write(*,'(a,3es16.8)')&
          'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
          cos(RightAssention)*cos(Declination),&
          sin(RightAssention)*cos(Declination),&
