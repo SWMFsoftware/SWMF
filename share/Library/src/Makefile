@@ -4,17 +4,6 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 include Makefile.DEPEND
 
-# Files ending in .F90 or .F95 are taken to be free source form files 
-# requiring preprocessing 
-# (see the high platform-specific Makefile for the FPP definition)
-# here we over-wright rules for .F90 files with preprocessor directives
-
-.F90.o:
-	${FPP} ${FPPFLAGS} $*.F90 $*.f90
-	${COMPILE.f90} ${Cflag3} $*.f90
-	${RM} $*.f90
-
-
 # These modules provide the "infrastructure" for SWMF and components.
 # A component does not have to use the whole library.
 # The minimum reqguirement is ModIoUnit.o
