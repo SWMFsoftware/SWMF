@@ -16,12 +16,19 @@ F
 0			iSecond
 0.0 			FracSecond
 
+#RESTARTFILE
+RESTART.SC
+
 #SAVERESTART
 T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
 #BEGIN_COMP SC --------------------------------------------------------------
+
+! Make it easier to continue the run
+#RESTARTOUTDIR
+SC/restartIN
 
 #PROBLEMTYPE
 3                       iProblemType
