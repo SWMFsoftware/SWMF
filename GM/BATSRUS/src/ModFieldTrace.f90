@@ -494,7 +494,7 @@ contains
     case('extract')
        oktest_ray = DoTest .and. iStart_D(1) == iTest
     case('integrate')
-       oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iTest,jTest/))
+       oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iLatTest,iLonTest/))
     case('trace')
        oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
             all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
@@ -612,7 +612,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
   x      = (Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D + 1.0
 
   ! Set flag if checking on the ionosphere is necessary
-  DoCheckInnerBc=Rmin_BLK(iBlock)<R_raytrace
+  DoCheckInnerBc = Rmin_BLK(iBlock) < R_raytrace + sum(Dxyz_D)
 
   ! Set flag if checking for open rays is useful
   DoCheckOpen = .false.
@@ -642,81 +642,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Integration loop
   FOLLOW: do
-     ! Check if we are inside the ionosphere
-     if(DoCheckInnerBc)then
-        ! Convert x to real coordinates xx
-        xx = XyzStart_BLK(:,iBlock) + Dxyz_D * (x-1.)
-        r2 = sum(xx**2)
 
-        if(r2<=R2_raytrace)then
-
-           if(NameVectorField /= 'B')then
-              Xyz_D = xx
-              iFace=ray_iono_
-              EXIT FOLLOW
-           end if
-
-           ! Try mapping down to rIonosphere if we haven't tried yet
-           if(n_iono<1)then
-              if(.not.follow_ray_iono())then
-                 ! We did not hit the surface of the ionosphere
-                 ! continue the integration
-                 n_iono=n_iono+1
-              else
-                 if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
-                      'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
-                      iProc,iBlock,nsegment,x,xx
-
-                 r=sqrt(r2)
-                 xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini-1.0)
-                 r_ini=sqrt(sum(xx_ini**2))
-
-                 ! The fraction of the last step inside body is estimated from 
-                 ! the radii.
-                 Fraction = (R_raytrace - r) / (r_ini - r)
-
-                 ! Reduce ray length
-                 Length = Length - Fraction * dLength
-
-                 ! Recalculate position
-                 x = x - Fraction*(x-x_ini)
-                 
-                 if(NameTask == 'integrate')then
-                    ! Reduce integrals with the fraction of the last step 
-                    if(oktest_ray)write(*,'(a,4es12.4)')&
-                         'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
-                         RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
-
-                    ! Recalculate dLength/abs(B)
-                    InvBDl = Fraction * InvBDl
-
-                    ! Reduce field line volume
-                    RayIntegral_V(InvB_) = RayIntegral_V(InvB_) - InvBDl
-
-                    ! Reduce density and pressure integrals
-                    RayIntegral_V(RhoInvB_:pInvB_) = &
-                         RayIntegral_V(RhoInvB_:pInvB_) - InvBDl * RhoP_V
-
-                    if(oktest_ray)then
-                       write(*,'(a,4es12.4)')&
-                            'After  reduction InvBdl, RayIntegral_V=',InvBdl, &
-                            RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
-
-                       write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
-                       write(*,*)'Reduction r_ini,r,R_raytrace =',&
-                            r_ini,r,R_raytrace
-                    end if
-                    
-                 end if
-
-                 ! Exit integration loop (xx was set by follow_ray_iono)
-                 Xyz_D=xx
-                 iFace=ray_iono_
-                 EXIT FOLLOW
-              end if
-           end if
-        end if
-     end if
      ! Integrate with 2nd order scheme
      dl    = dl_next
      x_ini = x
@@ -861,6 +787,82 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
            iFace = ray_open_
            nOpen=nOpen+1
            EXIT FOLLOW
+        end if
+     end if
+
+     ! Check if we got inside the ionosphere
+     if(DoCheckInnerBc)then
+        ! Convert x to real coordinates xx
+        xx = XyzStart_BLK(:,iBlock) + Dxyz_D * (x-1.)
+        r2 = sum(xx**2)
+
+        if(r2<=R2_raytrace)then
+
+           if(NameVectorField /= 'B')then
+              Xyz_D = xx
+              iFace=ray_iono_
+              EXIT FOLLOW
+           end if
+
+           ! Try mapping down to rIonosphere if we haven't tried yet
+           if(n_iono<1)then
+              if(.not.follow_ray_iono())then
+                 ! We did not hit the surface of the ionosphere
+                 ! continue the integration
+                 n_iono=n_iono+1
+              else
+                 if(oktest_ray)write(*,'(a,3i4,6es12.4)')&
+                      'Inside R_raytrace at me,iBlock,nsegment,x,xx=',&
+                      iProc,iBlock,nsegment,x,xx
+
+                 r=sqrt(r2)
+                 xx_ini = XyzStart_BLK(:,iBlock) + Dxyz_D*(x_ini-1.0)
+                 r_ini=sqrt(sum(xx_ini**2))
+
+                 ! The fraction of the last step inside body is estimated from 
+                 ! the radii.
+                 Fraction = (R_raytrace - r) / (r_ini - r)
+
+                 ! Reduce ray length
+                 Length = Length - Fraction * dLength
+
+                 ! Recalculate position
+                 x = x - Fraction*(x-x_ini)
+                 
+                 if(NameTask == 'integrate')then
+                    ! Reduce integrals with the fraction of the last step 
+                    if(oktest_ray)write(*,'(a,4es12.4)')&
+                         'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
+                         RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
+
+                    ! Recalculate dLength/abs(B)
+                    InvBDl = Fraction * InvBDl
+
+                    ! Reduce field line volume
+                    RayIntegral_V(InvB_) = RayIntegral_V(InvB_) - InvBDl
+
+                    ! Reduce density and pressure integrals
+                    RayIntegral_V(RhoInvB_:pInvB_) = &
+                         RayIntegral_V(RhoInvB_:pInvB_) - InvBDl * RhoP_V
+
+                    if(oktest_ray)then
+                       write(*,'(a,4es12.4)')&
+                            'After  reduction InvBdl, RayIntegral_V=',InvBdl, &
+                            RayIntegral_V(InvB_),RayIntegral_V(RhoInvB_:pInvB_)
+
+                       write(*,*)'Reduction at InvBDl,RhoP_V   =',InvBDl,RhoP_V
+                       write(*,*)'Reduction r_ini,r,R_raytrace =',&
+                            r_ini,r,R_raytrace
+                    end if
+                    
+                 end if
+
+                 ! Exit integration loop (xx was set by follow_ray_iono)
+                 Xyz_D=xx
+                 iFace=ray_iono_
+                 EXIT FOLLOW
+              end if
+           end if
         end if
      end if
 
@@ -1189,7 +1191,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use CON_planet_field, ONLY: map_planet_field
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
-  use ModMain,    ONLY: nBlock, Time_Simulation, iTest, jTest, TypeCoordSystem
+  use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem
   use ModPhysics, ONLY: rBody
   use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
@@ -1223,6 +1225,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc
+
+  iLatTest = 34; iLonTest = 20
 
   call timing_start('integrate_ray')
 
@@ -1310,7 +1314,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
 
-           if(DoTest .and. iLat==iTest .and. iLon==jTest)then
+           if(DoTest .and. iLat==iLatTest .and. iLon==iLonTest)then
               write(*,'(a,2i3,a,i3,a,i4)') &
                    'start of ray iLat, iLon=',iLat, iLon,&
                    ' found on iProc=',iProc,' iBlock=',iBlockFound
@@ -1329,9 +1333,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   ! Do remaining rays obtained from other PE-s
   call finish_ray
 
-  if(DoTest.and.iTest<=nLat.and.jTest<=nLon) &
+  if(DoTest.and.iLatTest<=nLat.and.iLonTest<=nLon) &
        write(*,*)NameSub,' iProc, RayIntegral_VII=',&
-       iProc, RayIntegral_VII(:,iTest,jTest)
+       iProc, RayIntegral_VII(:,iLatTest,iLonTest)
 
   ! Add up local integrals onto the root PE
   call MPI_reduce(RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
@@ -1346,8 +1350,7 @@ end subroutine integrate_ray_accurate
 subroutine test_ray_integral
 
   use ModRayTrace, ONLY: RayResult_VII, InvB_, xEnd_, zEnd_, &
-       nRayIntegral, xyz_to_latlon
-  use ModMain,     ONLY: iTest, jTest
+       nRayIntegral, xyz_to_latlon, iLatTest, iLonTest
   use ModProcMH,   ONLY: iProc
   use ModIoUnit,   ONLY: UNITTMP_
   use ModNumConst, ONLY: cTiny
@@ -1394,7 +1397,7 @@ subroutine test_ray_integral
 
            call xyz_to_latlon(RayResult_VII(xEnd_:zEnd_,iLat,iLon))
 
-           if(iLat == iTest .and. iLon == jTest)then
+           if(iLat == iLatTest .and. iLon == iLonTest)then
               write(*,'(a,a)')'iLon iLat Lon Lat ',&
                    'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'
               write(*,'(2i4,100(1es12.4))') iLon, iLat, Lon, Lat, &
