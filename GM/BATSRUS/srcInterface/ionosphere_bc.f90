@@ -262,8 +262,9 @@ subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
         call xyz_to_dir(XyzIono_D, Theta, Phi)
 
         ! Interpolate potential
-        ThetaNorm = Theta / dThetaIono
-        PhiNorm   = Phi   / dPhiIono
+
+        ! Get normalized coordinates
+        call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
 
         iTheta    = floor(ThetaNorm) + 1
         iPhi      = floor(PhiNorm)   + 1
@@ -372,8 +373,7 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
   call xyz_to_dir(XyzIono_D, Theta, Phi)
 
   ! Interpolate the spherical gradients of the electric potential
-  ThetaNorm = Theta / dThetaIono
-  PhiNorm   = Phi   / dPhiIono
+  call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
 
   iTheta    = floor(ThetaNorm) + 1
   iPhi      = floor(PhiNorm)   + 1

@@ -67,10 +67,10 @@ contains
     GmSmg_DD = transform_matrix(Time_Simulation, 'SMG', TypeCoordSystem)
 
     do j = 1, nPhiIono
-       Phi = (j-1)*dPhiIono
+       Phi = PhiIono_I(j)
        do i = 1, nThetaIono
 
-          Theta = (i-1)*dThetaIono
+          Theta = ThetaIono_I(i)
           call sph_to_xyz(rIonosphere,Theta,Phi, XyzIono_D)
 
           call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
@@ -118,9 +118,9 @@ contains
 
     ! Calculate the field aligned current
     do j = 1, nPhiIono
-       Phi = (j-1)*dPhiIono
+       Phi = PhiIono_I(j)
        do i = 1, nThetaIono
-          Theta = (i-1)*dThetaIono
+          Theta = ThetaIono_I(i)
 
           ! Calculate magnetic field strength at the ionosphere grid point
           call sph_to_xyz(rIonosphere, Theta, Phi, XyzIono_D)
