@@ -1746,8 +1746,7 @@ contains
     ImplCritType     = 'dt'
 
     nOrder_impl   = 1
-    FluxTypeImpl  = 'Rusanov'               !^CFG IF RUSANOVFLUX
-    !FluxTypeImpl  = FluxType               !^CFG UNCOMMENT IF NOT RUSANOVFLUX
+    FluxTypeImpl  = 'default'
 
     ImplCoeff0    = 1.0
     UseBDF2       = .false.
@@ -2369,6 +2368,8 @@ contains
 
     ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
     select case(FluxTypeImpl)
+    case('default')
+       FluxTypeImpl = FluxType
     case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX
        FluxTypeImpl='Roe'                            !^CFG IF ROEFLUX
     case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
@@ -2382,11 +2383,10 @@ contains
           write(*,'(a)')NameSub// &
                ' WARNING: Unknown value for FluxTypeImpl='// &
                trim(FluxTypeImpl)//' !!!'
-          if(UseStrict)&                             !^CFG IF RUSANOVFLUX
-               call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting FluxTypeImpl=Rusanov' !^CFG IF RUSANOVFLUX
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting FluxTypeImpl=',trim(FluxType)
        end if
-       FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
+       FluxTypeImpl=FluxType
     end select                               !^CFG END IMPLICIT
 
     if (time_accurate .and. nStage==2) UseBDF2=.true. !^CFG IF IMPLICIT
@@ -2606,6 +2606,7 @@ contains
           UseDtFixed=.false.
        else ! fixed time step for time accurate
           DtFixed = DtFixedDim/unitSI_t
+          DtFixedOrig = DtFixed ! Store the initial setting
           dt = DtFixed
           cfl=1.0
        end if
