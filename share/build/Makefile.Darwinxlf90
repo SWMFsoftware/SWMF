@@ -76,12 +76,4 @@ clean:
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
 
 
-BATSRUSdotO.exe: 
-	@echo ' '
-	@echo 'Program BATSRUS is being relinked with only .o files.'
-	@echo ' '	
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} ${OBJECTS} ${MODULES} \
-		../util/TIMING/src/*.o ../share/Library/src/*.o \
-		${Lflag1}
-
 # keep this line
