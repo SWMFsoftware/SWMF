@@ -585,16 +585,6 @@ stfd.fpi.in
 
 </commandgroup>
 
-<commandgroup name="This is the end">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-<command name="END" if="$_IsStandAlone">
-
-</command>
-
-</commandgroup>
-
 <rule expr="-d 'UA/RestartOUT' or not $_IsFirstSession">
         Directory UA/RestartOUT should exist!
 </rule>
