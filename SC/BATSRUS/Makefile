@@ -46,5 +46,5 @@ distclean: clean
 
 veryclean: distclean
 	@(if([ -f src/Makefile ]); then \
-		rm -rf  src PARAM.XML PARAM.pl GridSize.pl *~; \
+		rm -rf src PARAM.XML GridSize.pl *~; \
 	fi)
