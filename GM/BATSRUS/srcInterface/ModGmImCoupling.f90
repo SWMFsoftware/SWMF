@@ -36,18 +36,16 @@ module ModGmImCoupling
        MHD_PE_Yeq,  MHD_Yeq, &
        MHD_Fluxerror
   real, parameter :: noValue=-99999.
-  real :: qb(3),eqB,xL,yL,zL
+  real :: eqB,xL,yL,zL
   real :: colat,Ci,Cs,FCiCs,factor,Vol,Ri,s2,s6,s8,factor1,factor2
 
-  integer, parameter :: maxMessages=10
-  integer :: itag, NewMsg, iError
-  integer :: nRECVrequests, RECVrequests(maxMessages), &
-       nSENDrequests, SENDrequests(maxMessages), &
-       MESGstatus(MPI_STATUS_SIZE, maxMessages)  
+  integer :: iError
 
   logical :: dbg0=.false.
 
   integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
+
+  logical :: DoTestTec, DoTestIdl
 
 contains
 
@@ -215,23 +213,33 @@ contains
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open raytrace File "//filename)
     write(UNITTMP_,'(a79)')            'Raytrace Values_var22'
-    write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,6
+    write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,7
     write(UNITTMP_,'(3i4)')            jSize+1,iSize
     write(UNITTMP_,'(100(1pe13.5))')   0.0
-    write(UNITTMP_,'(a79)')            'Lon Lat Xeq Yeq vol rho p Beq nothing'
+    write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p Beq FluxError nothing'
     do i=isize,1,-1
        do j=1,jsize
           write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(j),RCM_lat(i), &
-               MHD_Xeq(i,j),MHD_Yeq(i,j),&
+               RCM_lon(j),       &
+               RCM_lat(i),       &
+               MHD_Xeq(i,j),     &
+               MHD_Yeq(i,j),     &
                MHD_SUM_vol(i,j), &
-               MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_Beq(i,j)
+               MHD_SUM_rho(i,j), &
+               MHD_SUM_p(i,j),   &
+               MHD_Beq(i,j),     &
+               MHD_FluxError(i,j)
        end do
        write(UNITTMP_,'(100(1pe18.10))') &
-               RCM_lon(1)+360.0, RCM_lat(i), &
-               MHD_Xeq(i,1),MHD_Yeq(i,1),&
+               RCM_lon(1)+360.0, &
+               RCM_lat(i),       &
+               MHD_Xeq(i,1),     &
+               MHD_Yeq(i,1),     &
                MHD_SUM_vol(i,1), &
-               MHD_SUM_rho(i,1),MHD_SUM_p(i,1),MHD_Beq(i,1)
+               MHD_SUM_rho(i,1), &
+               MHD_SUM_p(i,1),   &
+               MHD_Beq(i,1),     &
+               MHD_FluxError(i,1)               
     end do
     CLOSE(UNITTMP_)
 
@@ -616,7 +624,11 @@ contains
 
     !set open fieldline values
     do j=1,jsize
-       i0=isize
+       ! Initialize the index of the last closed field line to be at
+       ! the highest latitude (index 1) in the RCM grid
+       i0 = 1
+
+       ! Ascend from the lowest latitude until the first open field line
        do i=isize,1,-1
           if(MHD_SUM_vol(i,j)<1.1E-8 .OR. &
                MHD_Xeq(i,j)<=noValue .OR. &
@@ -626,63 +638,40 @@ contains
           end if
        end do
 
-       i=i0
-       MHD_lat_boundary(j)=i
+       ! Save the index of the "last" closed field line into MHD_lat_boundary
+       MHD_lat_boundary(j)=i0
 
-       MHD_SUM_vol(1:i-1,j)=MHD_SUM_vol(i,j)
-       MHD_Beq    (1:i-1,j)=MHD_Beq    (i,j)
-       MHD_Xeq    (1:i-1,j)=MHD_Xeq    (i,j)
-       MHD_Yeq    (1:i-1,j)=MHD_Yeq    (i,j)
     end do
-
-    if(dbg0)then
-       if(iProc==0)write(*,*)' -G-'
-    end if
-
-    !error checking
-    do j=1,jsize; do i=isize,1,-1
-       IF (iProc ==0) then
-          if (mhd_sum_vol(i,j) > 1.0E-8 .and. &
-               (MHD_Xeq(i,j) < -999. .or. MHD_Yeq(i,j) < -999.)) then
-             print*,'999999:',i,j,MHD_Xeq(i,j),MHD_Yeq(i,j), mhd_sum_vol(i,j)
-             call stop_mpi('stanislav')
-          end if
-          if (mhd_lat_boundary(j) < i) then
-             if (mhd_sum_vol(i,j) < 1.1E-8) then
-                print*,'7777',i,j,mhd_lat_boundary(j),mhd_sum_vol(i,j), &
-                     MHD_Xeq(i,j),MHD_Yeq(i,j)
-                CALL STOP_MPI ('HOLE ')
-             end if
-          end if
-       end if
-    end do; enddo
 
     if(dbg0)then
        if(iProc==0)write(*,*)' -H-'
     end if
 
-    !set values for open fieldlines
+    ! Set impossible values for open fieldlines
+    ! except for Xeq and Yeq where the last closed values are used
+    ! which is useful when the equatorial grid is plotted
     do j=1,jsize
-       MHD_SUM_vol(1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_SUM_rho(1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_SUM_p  (1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_Beq    (1:int(MHD_lat_boundary(j))-1,j)=-1.
-       MHD_Xeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Xeq(int(MHD_lat_boundary(j)),j)
-       MHD_Yeq    (1:int(MHD_lat_boundary(j))-1,j)=MHD_Yeq(int(MHD_lat_boundary(j)),j)
+       i = int(MHD_lat_boundary(j))
+       MHD_SUM_vol(1:i-1,j) = -1.
+       MHD_SUM_rho(1:i-1,j) = -1.
+       MHD_SUM_p  (1:i-1,j) = -1.
+       MHD_Beq    (1:i-1,j) = -1.
+       MHD_Xeq    (1:i-1,j) = MHD_Xeq(i,j)
+       MHD_Yeq    (1:i-1,j) = MHD_Yeq(i,j)
     end do
 
     !dimensionalize values
-    where(MHD_SUM_vol>0.)
-       MHD_SUM_vol = MHD_SUM_vol  / unitSI_B
+    where(MHD_SUM_vol > 0.)
+       MHD_SUM_vol = MHD_SUM_vol / unitSI_B
        MHD_SUM_rho = MHD_SUM_rho * unitSI_rho
-       MHD_SUM_p   = MHD_SUM_p * unitSI_p
+       MHD_SUM_p   = MHD_SUM_p   * unitSI_p
     elsewhere
        MHD_SUM_vol = -1.
        MHD_SUM_rho = -1.
        MHD_SUM_p   = -1.
     end where
 
-    where(MHD_Beq>0.)
+    where(MHD_Beq > 0.)
        MHD_Beq = MHD_Beq * unitSI_B
     elsewhere
        MHD_Beq = -1.
@@ -692,28 +681,33 @@ contains
        if(iProc==0)write(*,*)' -I-'
     end if
 
-    do j=1,jsize-1; do i=1,isize-1
-       if ( MHD_SUM_vol(i  ,j) > 0.0 .AND. &
-            MHD_SUM_vol(i+1,j) > 0.0 .AND. &
-            MHD_SUM_vol(i,j+1) > 0.0 .AND. &
-            MHD_SUM_vol(i+1,j+1)> 0.0) THEN
-          MHD_Fluxerror(i,j) = &
-               0.25E+9*(MHD_Beq(i,j  ) + MHD_Beq(i+1,j  ) + &
-               MHD_Beq(i,j+1) + MHD_Beq(i+1,j+1)) * &
-               0.5*(ABS((MHD_Xeq(i,j+1)-MHD_Xeq(i,j))*(MHD_Yeq(i+1,j)-MHD_Yeq(i,j)) - &
-               (MHD_Yeq(i,j+1)-MHD_Yeq(i,j))*(MHD_Xeq(i+1,j)-MHD_Xeq(i,j))) +&
-               ABS((MHD_Xeq(i+1,j)-MHD_Xeq(i+1,j+1))*(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) -&
-               (MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1))*(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
-               (ABS(Bdp_dim)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
-               -SIN(Rcm_lat(i+1)*cDegToRad)**2)* &
-               (RCM_lon(j+1)-RCM_lon(j))*cDegToRad )- 1.0
-       ELSE
-          MHD_Fluxerror (i,j) = 0.0
-       END IF
-    end do; end do
-    MHD_fluxerror(:,jsize) = MHD_Fluxerror (:,1)
-    MHD_fluxerror(isize,:) = MHD_FLuxerror(isize-1,:)
-
+    if(DoTestTec .or. DoTestIdl)then
+       do j=1,jsize-1; do i=1,isize-1
+          if ( MHD_SUM_vol(i  ,j) > 0.0 .AND. &
+               MHD_SUM_vol(i+1,j) > 0.0 .AND. &
+               MHD_SUM_vol(i,j+1) > 0.0 .AND. &
+               MHD_SUM_vol(i+1,j+1)> 0.0) THEN
+             MHD_Fluxerror(i,j) = &
+                  0.25E+9*(MHD_Beq(i,j  ) + MHD_Beq(i+1,j  ) + &
+                  MHD_Beq(i,j+1) + MHD_Beq(i+1,j+1)) * &
+                  0.5*(ABS((MHD_Xeq(i,j+1)-MHD_Xeq(i,j))* &
+                  (MHD_Yeq(i+1,j)-MHD_Yeq(i,j))  &
+                  - (MHD_Yeq(i,j+1)-MHD_Yeq(i,j)) &
+                  * (MHD_Xeq(i+1,j)-MHD_Xeq(i,j))) &
+                  + ABS((MHD_Xeq(i+1,j)-MHD_Xeq(i+1,j+1)) &
+                  *(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) &
+                  -(MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1)) &
+                  *(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
+                  (ABS(Bdp_dim)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
+                  -SIN(Rcm_lat(i+1)*cDegToRad)**2)* &
+                  (RCM_lon(j+1)-RCM_lon(j))*cDegToRad )- 1.0
+          ELSE
+             MHD_Fluxerror (i,j) = 0.0
+          END IF
+       end do; end do
+       MHD_fluxerror(:,jsize) = MHD_Fluxerror (:,1)
+       MHD_fluxerror(isize,:) = MHD_FLuxerror(isize-1,:)
+    end if
     if(dbg0)then
        if(iProc==0)write(*,*)' -J-'
     end if
