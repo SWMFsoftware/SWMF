@@ -4,6 +4,7 @@
 #!DESCRIPTION:
 # This Makefile defines the rules for producing documentation 
 # from Latex files, PARAM.XML files and Protex documented source code.
+# This file can be included into the Makefile that produces the documentation.
 #EOP
 #BOC
 # Rules for files with standard extensions
