@@ -55,7 +55,7 @@ velpos   =0
 ; Animation parameters for the movie
 firstpict=1
 dpict=1
-npictmax=50
+npictmax=200
 npict=0
 
 ; Slicing parameters
