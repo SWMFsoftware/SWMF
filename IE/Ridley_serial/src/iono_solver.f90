@@ -82,7 +82,8 @@ subroutine ionosphere_solver(PHI, &
   INTEGER, DIMENSION(1:1)               :: cols1
 
   REAL :: ave, lat_boundary, min_pot, max_pot, cpcp
-  LOGICAL :: north, IsManualLatBoundary = .true.
+  LOGICAL :: north
+  LOGICAL, PARAMETER :: IsManualLatBoundary = .false.
   
   logical :: oktest, oktest_me
   
