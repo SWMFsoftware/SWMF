@@ -126,4 +126,5 @@ distclean:
 		init_iri.f90 \
 		init_msis.f90 \
 		output.f90 \
-		planet.f90
+		planet.f90 \
+		Makefile.DEPEND
