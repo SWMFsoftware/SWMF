@@ -70,7 +70,8 @@
    asknum,'dslice',dslice,doask
 
    siz=size(x)
-   nslice=(siz(slicedir)-firstslice)/dslice+1
+   if dslice gt 0 then nslice=(siz(slicedir)-firstslice)/dslice+1 $
+   else                nslice=-firstslice/dslice+1
    if nslice gt nslicemax then nslice=nslicemax
    if nslice lt 1 then nslice=0
    print,'Number of slices:',nslice
@@ -117,10 +118,12 @@
    if keyword_set(multiplot) then begin
       multix=multiplot(0)
       multiy=multiplot(1)
+      nslice1=(multix*multiy)/(nfunc*nfile)
       !p.multi=[0,multix,multiy,0,multiplot(2)]
    endif else begin
       multix=long(sqrt(nfunc-1)+1)
       multiy=long((nfunc-1)/multix+1)
+      nslice1=1
       !p.multi=[0,multix,multiy,0,0]
    endelse
 
@@ -158,10 +161,12 @@
 
 
    ;==== ANIMATE THE SLICES
-   doanimate= nslice gt 1 and !d.name eq 'X'
+   doanimate= nslice gt nslice1 and !d.name eq 'X'
    if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,nslice]
    if !d.name eq 'X' and !d.window ge 0 then wshow
 
+   islice1=0 ; slice index in a multiplot frame
+   iplot=0   ; plot index for animation
    for islice=1,nslice do begin
       ix=dslice*(islice-1)+firstslice-1
       dirname=variables(slicedir-1)
@@ -178,7 +183,6 @@
            w2d(*,*,*)=w(*,ix,*,*)
            height=x(0,ix,0,1)
            info1='i'+dirname+'='+string(ix,format='(i4)')
-           info2=dirname+'='+string(height)
         end
         3:begin
            x2d(*,*,*)=x(*,*,ix,0:1)
@@ -190,12 +194,12 @@
       info2=dirname+'='+string(height)
       case bottomline of
       0: info=''
-      1: info=info1
+      1: info=info2
       2: info=info1+' '+info2
       3: info='time='+string(time,format='(g12.5)')+' '+info1+' '+info2
       endcase
 
-      if not keyword_set(noerase) then erase
+      if not keyword_set(noerase) and islice1 eq 0 then erase
 
       if velrandom then velpos=0
 
@@ -210,11 +214,16 @@
         nfunc,multix,multiy,fixaspect,$
         plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
 
-      xyouts,5,8,/DEV,info
+      xyouts,5+(plotix*!d.x_size)/multix,8+(plotiy*!d.y_size)/multiy,/DEV,info
       putheader,1,1,0,0,headerline,headline,nx
 
-      if doanimate then xinteranimate,frame=islice-1,window=!d.window
-      
+      if doanimate then xinteranimate,frame=iplot,window=!d.window
+   
+      islice1=islice1+1
+      if islice1 ge nslice1 then begin
+         islice1=0
+         iplot=iplot+1
+      endif
    endfor
    
    print
