@@ -2833,7 +2833,9 @@ for iter = iter0, 2 do begin
                     if DoXrange then begin
                         xrange[0]   = min( [ xrange[0], hour ] )
                         xrange[1]   = max( [ xrange[1], hour ] )
-                    endif
+                    endif else $
+                        field = field( where(hour ge xrange[0] and $
+                                             hour le xrange[1]))
                     if DoYrange then begin
                         yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
                         yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
