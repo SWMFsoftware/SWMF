@@ -3486,7 +3486,14 @@ T			UseBody2   ! Rest of the parameters read if .true.
 							 default="0.0"	  />
 	 <parameter name="ModulationP" type="real" min="0" max="10"
 							 default="0.0"  />
+	 <parameter name="OrientationGL98" type="real" min="-360" max="360"
+							default="0.0" />
+	 <parameter name="LatitudeGL98" type="real" min="-90" max="90"
+							default="0.0" />
+	 <parameter name="LongitudeGL98" type="real" min="-360" max="360"
+							default="0.0" />
 	</if>
+
 #HELIOSPHERE
 2.85E06			BodyTDim	[K]
 1.50E8			BodyRhoDim	[N/ccm]
@@ -3504,9 +3511,9 @@ F			InitRope
 2.0E-13 		CmeRho2 [kg/m^3] density of background corona after contract 
 0.0                     ModulationRho
 0.0                     ModulationP
-0.0			cRotxGl98 [deg]
-0.0			cRotYGl98 [deg]
-0.0			cRotZGl98 [deg]
+0.0			OrientationGL98 [deg]
+0.0			LatitudeGL98 [deg]
+0.0			LongitudeGL98 [deg]
 
 This command defines the heliosphere parameters with a CME model.
 The coronal eruptive event generator is based on the
@@ -3541,6 +3548,13 @@ of the flux rope.  The eruption takes the form of the flux
 rope being bodily expelled from the corona.  Eruption energy
 increases with flux rope size, field strength, stretching
 deformation and the buoyancy of the flux rope.
+
+The flux rope can be rotated to an arbitrary position.
+The LatitudeGM98 and LongitudeGL98 parameters define the position
+of the center of the fluxrope in the coordinate system of the Solar
+Corona component. The OrientationGL98 parameter determines the 
+orientation of the fluxrope relative to the East-West direction
+(clock-wise).
 </command>
 
 <command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
