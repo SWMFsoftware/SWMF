@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream.h>
-#include <fstream.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -46,80 +44,75 @@ void cutstr(char* dest, char* src)
 
 //==================================================
 void error(long int line) {
-  cout << "Error in reading of grid's file (line=" << line << ")" << endl;
+  printf("Error in reading of grid's file (line=%i)\n",line);
   exit(0);
 }
 
 //==================================================
 void Cgrid::OutputInFile(char *fname) {
-  ofstream fout;
+  FILE* fout;
   int idim;
   long int n,f,c;
 
-  fout.open(fname);
-  fout.precision(5);
-  fout.setf(ios::scientific, ios::floatfield);
+  fout=fopen(fname,"w");
 
-  fout << " < Nnodes >< Nfaces >< Ncells >"<<endl;
-  fout << nnodes<<"  "<<nfaces<<"  "<<ncells<<endl;
+  fprintf(fout," < Nnodes >< Nfaces >< Ncells >\n");
+  fprintf(fout,"  %i  %i  %i\n",nnodes,nfaces,ncells);
 
-  fout << "node's coordinates"<<endl;
-  for (n=0;n<nnodes;n++) fout<<(node[n]).X();
+  fprintf(fout,"node's coordinates\n");
+  for (n=0;n<nnodes;n++) fprintf(fout,node[n]);
 
-  fout << "faces: nodes, faceat"<<endl;
+  fprintf(fout,"faces: nodes, faceat\n");
   for (f=0;f<nfaces;f++) {
-    fout <<"face="<<f<<"  nodes:"<<"  ";
+    fprintf(fout,"face=%i   nodes: ",f);
     for (idim=0;idim<DIM+1;idim++) {
       for (n=0;n<nnodes;n++)  
-        if (&(node[n])==face[f].node[idim]) fout <<n<<"  "; 
+        if (&(node[n])==face[f].node[idim]) fprintf(fout,"%i  ",n); 
     } 
-    fout <<"faceat="<<(int)face[f].faceat<<endl;
+    fprintf(fout,"faceat=%i\n",(int)face[f].faceat);
   }
 
-  fout << "cells: nodes,faces,neighbours"<<endl;
+  fprintf(fout,"cells: nodes,faces,neighbours\n");
   for (c=0;c<ncells;c++) {
-    fout << "cell="<<c<<"  nodes:  ";
+    fprintf(fout,"cell=%i nodes: ",c);
     for (idim=0;idim<DIM+1;idim++) 
       for (n=0;n<nnodes;n++)
-        if (&(node[n])==cell[c].node[idim]) fout <<n<<"  ";
+        if (&(node[n])==cell[c].node[idim]) fprintf(fout,"%i  ",n);
  
-    fout << "faces:  ";
+    fprintf(fout,"faces:  ");
     for (idim=0;idim<DIM+1;idim++) 
       for (f=0;f<nfaces;f++)
-        if (&(face[f])==cell[c].face[idim]) fout <<f<<"  ";
+        if (&(face[f])==cell[c].face[idim]) fprintf(fout,"%i  ",f);
   
-    fout << "neighbours:  ";
+    fprintf(fout,"neighbours:  ");
     for (idim=0;idim<DIM+1;idim++) 
-       fout << cell[c].neighbour_cellno[idim]<<"  ";
+       fprintf(fout,"%i  ",(long int)cell[c].neighbour_cellno[idim]);
 
-    fout <<endl; 
+    fprintf(fout,"\n"); 
   } 
 
 
   long int b; 
   int e1,e2;
-  fout <<endl;
-  fout <<"============ connection data ==========="<<endl;
+  fprintf(fout","\n");
+  fprintf(fout,"============ connection data ===========\n");
   for (c=0;c<ncells;c++)   
     for (f=0;f<DIM+1;f++) {
-      fout <<endl;
-      fout <<"cell="<<c<<", face="<<f<<endl;
+      fprintf(fout,"\ncell=%i, face=%i\n",c,f);
  
       for (b=0;b<DIM+1;b++) { 
         if (b==f) continue;
-        fout << "basis="<<b<<"  => basis=";
-        fout <<cells_connection_data[c].nbasis[b][f]<<endl; 
-
-        fout <<"ne="<<cells_connection_data[c].ne[b][f]<<endl; 
+        fprintf(fout,"basis=%i  => basis=%i\n",b,cells_connection_data[c].nbasis[b][f]);
+        fprintf(fout,"ne=%i\n",cells_connection_data[c].ne[b][f]); 
       
         for (idim=0;idim<DIM-1;idim++) {
           e1=cells_connection_data[c].ne1[idim][b][f]; 
           e2=cells_connection_data[c].ne2[idim][b][f];
-          fout <<"e1="<<e1<<"  =>  e2="<<e2<<endl;
+          fprintf(fout,"e1=%i  =>  e2=%i\n",e1,e2);
         }
       }
     }
-  fout.close();
+  fclose(fout);
 }
 
  
@@ -246,8 +239,8 @@ void Cgrid::InitGridData() {
     GetTMatrix1D();
     break;
   default :
-    cout << "Error: Cgrid::InitGridData()"<<endl;
-    cout << "value of variable DIM is out range (DIM="<<DIM<<")"<<endl;
+    printf("Error: Cgrid::InitGridData()\n");
+    printf("value of variable DIM is out range (DIM=%i)\n",DIM);
     exit(0);
   }  
 
@@ -346,10 +339,10 @@ long int Cgrid::GetNCell(float* x) {
   }
 
   if (flag==false) {
-    cout << "Error: proc. Cgrid::GetNCell" << endl;
-    cout << "Cannot find cell which contain point x=";
-    for (idim=0;idim<DIM;idim++) cout << "  " << x[idim];
-    cout << endl;
+    printf("Error: proc. Cgrid::GetNCell\n");
+    printf("Cannot find cell which contain point x=");
+    for (idim=0;idim<DIM;idim++) printf("  %e",x[idim]);
+    printf("\n");
     exit(0);
   }  
 
@@ -499,7 +492,7 @@ void Cgrid::ChangeLocalVector2D(float* a,char nb1,char nb2) {
     b[1]=a[0];
     break;
   default :
-    cout << "Error: proc. Cdsmc::ChangeLocalVector2D"<<endl;
+    printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
     exit(0);
   }
 
@@ -524,7 +517,7 @@ void Cgrid::ChangeLocalPositionVector2D(float* a,char nb1, char nb2) {
     b[1]=a[0];
     break;
   default :
-    cout << "Error: proc. Cdsmc::ChangeLocalVector2D"<<endl;
+    printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
     exit(0);
   }  
 
@@ -555,8 +548,8 @@ void Cgrid::ChangeLocalVector1D(float* a,char nb1,char nb2) {
 
   dn=nb2-nb1;
   if ((dn!=1)&&(dn!=-1)) {
-    cout << "Error: proc. Cgrid::ChangeLocalVector1D"<<endl;
-    cout << "dn="<<dn<<endl;
+    printf("Error: proc. Cgrid::ChangeLocalVector1D\n");
+    printf("dn=%i\n",dn);
     exit(0);
   }
 
@@ -569,8 +562,8 @@ void Cgrid::ChangeLocalPositionVector1D(float* a,char nb1,char nb2) {
 
   dn=nb2-nb1;
   if ((dn!=1)&&(dn!=-1)) {
-    cout << "Error: proc. Cgrid::ChangeLocalPositionVector1D"<<endl;
-    cout << "dn="<<dn<<endl;
+    printf("Error: proc. Cgrid::ChangeLocalPositionVector1D\n");
+    printf("dn=%i\n",dn);
     exit(0);
   }
 
@@ -670,8 +663,8 @@ void Cgrid::ChangeLocalVector3D(float* a,char nb1,char nb2) {
     b[2]=a[1];
     break;
   default :
-    cout << "Error: proc. Cdsmc::ChangeLocalVector3D"<<endl;
-    cout << "dn="<<dn<<endl;
+    printf("Error: proc. Cdsmc::ChangeLocalVector3D\n");
+    printf("dn=%i\n",dn);
     exit(0);
   }
 
@@ -704,8 +697,8 @@ void Cgrid::ChangeLocalPositionVector3D(float* a,char nb1,char nb2) {
     b[2]=a[1];
     break;
   default :
-    cout << "Error: proc. Cdsmc::ChangeLocalVector3D"<<endl;
-    cout << "dn="<<dn<<endl;
+    printf("Error: proc. Cdsmc::ChangeLocalVector3D\n");
+    printf("dn=%i\n",dn);
     exit(0);
   }
 

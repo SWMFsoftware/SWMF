@@ -5,7 +5,6 @@
 #ifndef CELL
 #define CELL
 
-#include <iostream.h>
 #include "face.h"
 #include "dsmc.dfn"
 
@@ -23,6 +22,10 @@ public:
   double Measure();
   void RandomPosition(float*); 
   friend bool CellsIntersection(Ccell&,Ccell&);
+
+  Ccell() {
+    for (int i=0;i<4;i++) nodeno[i]=-1,faceno[i]=-1,neighbour_cellno[i]=-1,node[i]=NULL,face[i]=NULL;
+  }; 
 };
 
 #endif
