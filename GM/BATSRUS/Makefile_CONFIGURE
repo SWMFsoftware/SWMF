@@ -87,9 +87,9 @@ globhelio_src:
 	cp user/user_routines.f90.globalhelio user_routines_orig.f90;\
 	cd ..;\
 	./Configure.pl -d=${DGLOBALH} -keepall \
-	-off=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm \
+	-off=ionosphere,boriscorr,implicit,roeflux,rcm \
 	-on=globalheliosphere,cartesian \
-	-exe=ionosphere,tiegcm,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
+	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
 	-u
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90;\
 	cd ${DGLOBALH}; make install
@@ -110,9 +110,9 @@ multisp_src:
 	cp user/user_routines.f90.mars user_routines_orig.f90;\
 	cd ..;\
 	./Configure.pl -d=MULTISP -keepall \
-	-off=implicit,ionosphere,tiegcm,rusanovflux,roeflux,awflux \
+	-off=implicit,ionosphere,rusanovflux,roeflux,awflux \
 	-on=multisp \
-	-exe=implicit,ionosphere,tiegcm,rusanovflux,roeflux,awflux,multisp \
+	-exe=implicit,ionosphere,rusanovflux,roeflux,awflux,multisp \
 	-u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd MULTISP; make install; make spherical_src
@@ -162,8 +162,8 @@ corelax_src:
 	cp user/user_routines.f90.heliosphere.covariant user_routines_orig.f90
 	./Configure.pl -d=CORELAX -keepall \
 	-on=alwaves,awflux,faceouterbc,cellouterbc \
-	-off=rusanovflux,ionosphere,tiegcm,boriscorr,implicit \
-	-exe=alwaves,awflux,faceouterbc,cellouterbc,rusanovflux,ionosphere,tiegcm,boriscorr,implicit -u;\
+	-off=rusanovflux,ionosphere,boriscorr,implicit \
+	-exe=alwaves,awflux,faceouterbc,cellouterbc,rusanovflux,ionosphere,boriscorr,implicit -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
