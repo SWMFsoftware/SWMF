@@ -132,19 +132,22 @@ lib4 = -lIE #		^CMP IF IE
 LIB5 = ${LIBUA}	#	^CMP IF UA
 lib5 = -lUA #		^CMP IF UA
 
-${SWMFEXE}: 	${MODULES} ${OBJECTS} \
+LIB6 = ${LIBRB}	#	^CMP IF RB
+lib6 = -lRB #		^CMP IF RB
+
+${SWMFEXE}: ${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
-		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
+		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
 		${MAKEFILE_COMP_SELECT}
-		@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
-		elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin; \
-		else                                       make SWMF_general; fi)
+	@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
+	elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
+	else                                      make SWMF_general; fi)
 
 SWMF_general:
 	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} \
 		-L${LIBDIR} -lINTERFACE \
-		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} \
+		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} ${lib6} \
 		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
 		${Lflag1}
 
@@ -156,7 +159,7 @@ SWMF_general:
 SWMF_for_Darwin: 
 	ld -all_load -r -o LIBRARIES.o \
 		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
-		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} \
+		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
 		${LIBINTERFACE}
 	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} \
@@ -176,6 +179,7 @@ SWMF_for_xlf:
 	mkdir Tmp_LIB3;      cd Tmp_LIB3;      ar -x ${LIB3} #^CMP IF IM
 	mkdir Tmp_LIB4;      cd Tmp_LIB4;      ar -x ${LIB4} #^CMP IF IE
 	mkdir Tmp_LIB5;      cd Tmp_LIB5;      ar -x ${LIB5} #^CMP IF UA
+	mkdir Tmp_LIB6;      cd Tmp_LIB6;      ar -x ${LIB6} #^CMP IF RB
 	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
 		${Lflag1}
