@@ -2049,8 +2049,8 @@ F			DoSavePlotsAmr
 	<parameter name="InitialRefineLevel" type="integer" min="0" 
 							default="4" />
 #AMRINIT
-default			InitialRefineType
-4			InitialRefineLevel
+default			TypeRefineInit
+4			nRefineLevelInit
 
 ! These are the default values for the initial refinement.
 
