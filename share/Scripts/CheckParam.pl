@@ -410,10 +410,10 @@ sub read_line{
 		use strict;
 		$nLine++; 
 		chop $paramValue;
-		$paramValue =~ s/^ +//;  # Remove leading spaces
-		# Remove everything after 3 spaces or a TAB
-		$paramValue =~ s/   .*//;
-		$paramValue =~ s/\t.*//;
+		$paramValue =~ s/^ +//;   # Remove leading spaces
+		$paramValue =~ s/   .*//; # Remove everything after 3 spaces
+		$paramValue =~ s/\t.*//;  # Remove everything after a TAB
+		$paramValue =~ s/\s+$//;  # Remove trailing spaces
 
 		print "read script parameter = $paramValue\n" if $Debug;
 	    }else{
@@ -688,12 +688,10 @@ sub read_parameter{
     $paramValue = &read_line or return 0;
     chop $paramValue;
 
-    # Remove leading spaces
-    $paramValue =~ s/^ +//;
-
-    # Remove everything after 3 spaces or a TAB
-    $paramValue =~ s/   .*//;
-    $paramValue =~ s/ *\t.*//;
+    $paramValue =~ s/^\s+//;  # Remove leading spaces
+    $paramValue =~ s/   .*//; # Remove everything after 3 spaces
+    $paramValue =~ s/\t.*//;  # Remove everything after a TAB
+    $paramValue =~ s/\s+$//;  # Remove trailing spaces
 
     print "reading $paramName = $paramValue\n" if $Debug;
 
@@ -708,24 +706,23 @@ sub check_value_format{
     {
 	# T F .true. .false.
 	$bad = &bad_value unless 
-	    $paramValue =~ s/^\s*(f|\.false\.)$/0/i or 
-	    $paramValue =~ s/^\s*(t|\.true\.)$/1/i;
+	    $paramValue =~ s/^(f|\.false\.)$/0/i or 
+	    $paramValue =~ s/^(t|\.true\.)$/1/i;
     }
     elsif($paramType =~ /integer/)
     {
 	# 3 +30 -124
-	$bad = &bad_value unless $paramValue =~ /^\s*[\+\-]?\d+$/;
+	$bad = &bad_value unless $paramValue =~ /^[\+\-]?\d+$/;
     }
     elsif($paramType =~ /real/)
     {
 
-	# replace exponent D with E
-	$paramValue =~ s/d/e/i;
-
-	# 3 -3 -3. .21 -3.21 -3.21e2 -3.21D+21
+	# 3 -3 -3. .21 -3.21 -3.21e2 -3.21D+21, 3/6, 3.6/4.2, 5.0D0/3.0D0
 	$bad = &bad_value
 	    unless $paramValue =~ 
-		/^\s*[\+\-]?(\d+(\.\d*)?|\.\d+)(e[\+\-]?\d+)?$/i;
+		/^[\+\-]?(\d+(\.\d*)?|\.\d+)([ed][\+\-]?\d+)?
+		(\s*\/\s*
+		  [\+\-]?(\d+(\.\d*)?|\.\d+)([ed][\+\-]?\d+)?)?$/xi;
     }
     elsif($paramType =~ /string/)
     {
