@@ -37,9 +37,9 @@ subroutine IE_solve
         if(iProc /= 0) CYCLE
         if (IONO_NORTH_nMagBndPts < 8) CYCLE
         CurrentMax=sum(abs(IONO_NORTH_JR))
-        if(CurrentMax<cTolerance)CYCLE
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=',&
              CurrentMax
+        if(CurrentMax<cTolerance)CYCLE
         if (UseFakeRegion2) then
            call Create_Region2_Currents(1)
            IONO_NORTH_JR = IONO_NORTH_JR + IONO_NORTH_Fake_JR
@@ -110,9 +110,9 @@ subroutine IE_solve
 
         if (IONO_SOUTH_nMagBndPts < 8) CYCLE
         CurrentMax=sum(abs(IONO_SOUTH_JR))
-        if(CurrentMax<cTolerance)CYCLE
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=',&
              CurrentMax
+        if(CurrentMax<cTolerance)CYCLE
 
         if (UseFakeRegion2) then
            call Create_Region2_Currents(iBlock)
