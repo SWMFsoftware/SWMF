@@ -15,8 +15,11 @@ subroutine advance_expl(DoCalcTimestep)
 
   real :: dtf, mdtf
 
-  logical :: oktest, oktest_me
+  character (len=*), parameter :: NameSub = 'advance_expl'
+
+  logical :: DoTest, DoTestMe
   !-------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   !\
   ! Perform multi-stage update of solution for this time (iteration) step
@@ -24,6 +27,8 @@ subroutine advance_expl(DoCalcTimestep)
   if(UsePartImplicit)call timing_start('advance_expl') !^CFG IF IMPLICIT
 
   STAGELOOP: do istage = 1, nSTAGE
+
+     if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
 
      call barrier_mpi
 
@@ -68,13 +73,22 @@ subroutine advance_expl(DoCalcTimestep)
         call save_conservative_facefluxes
      end do
 
+     if(DoTestMe)write(*,*)NameSub,' done res change only'
+
      ! Message pass conservative flux corrections.
      call timing_start('send_cons_flux')
 !!$     call send_conservative_facefluxes
+
+     if(DoTestMe)write(*,*)NameSub,' done send cons flux'
+
      call message_pass_faces_9conserve
      call timing_stop('send_cons_flux')
+
+     if(DoTestMe)write(*,*)NameSub,' done message pass'
+
      ! Multi-block solution update.
      do globalBLK = 1, nBlockMax
+
         if (unusedBLK(globalBLK)) CYCLE
 
         ! Calculate interface values for L/R states of each face
@@ -145,6 +159,8 @@ subroutine advance_expl(DoCalcTimestep)
 
      end do ! Multi-block solution update loop.
 
+     if(DoTestMe)write(*,*)NameSub,' done update blocks'
+
      call barrier_mpi
 
      ! Check for allowable update percentage change.
@@ -152,6 +168,8 @@ subroutine advance_expl(DoCalcTimestep)
         call timing_start('update_check')
         call update_check(iStage)
         call timing_stop('update_check')
+
+        if(DoTestMe)write(*,*)NameSub,' done update check'
      end if
 
      if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
@@ -167,12 +185,17 @@ subroutine advance_expl(DoCalcTimestep)
 !!$           call correctP
         end do
         call timing_stop('constrain_B')
+        if(DoTestMe)write(*,*)NameSub,' done constrain B'
      end if                                        !^CFG END CONSTRAINB
 
      if(iStage<nStage)call exchange_messages
 
+     if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
+
   end do STAGELOOP  ! Multi-stage solution update loop.
 
   if(UsePartImplicit)call timing_stop('advance_expl') !^CFG IF IMPLICIT
+
+  if(DoTestMe)write(*,*)NameSub,' finished'
 
 end subroutine advance_expl
