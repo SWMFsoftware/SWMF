@@ -8,7 +8,8 @@ SHELL=/bin/sh
 #       Mac OS (Darwin) specific part of Makefile
 #
 
-COMPILE.f90     = mpif90
+COMPILE.f77     = f95
+COMPILE.f90     = f95
 LINK.f90        = mpif90
 AR = ar -rs
 
@@ -26,11 +27,11 @@ SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 #DEBUG   = -C -gline
 DEBUG   =
 
-Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag1  = ${SEARCH} -c -O1 ${PRECISION} ${DEBUG}
-Cflag2  = ${SEARCH} -c -O2 ${PRECISION} ${DEBUG}
-Cflag3  = ${SEARCH} -c -O3 ${PRECISION} ${DEBUG}
-Cflag4  = ${SEARCH} -c -O4 ${PRECISION} ${DEBUG}
+Cflag0  = ${SEARCH} -c -O0 ${DEBUG} ${PRECISION}
+Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
+Cflag2  = ${SEARCH} -c -O2 ${DEBUG} ${PRECISION}
+Cflag3  = ${SEARCH} -c -O3 ${DEBUG} ${PRECISION}
+Cflag4  = ${SEARCH} -c -O4 ${DEBUG} ${PRECISION}
 
 # RCM compilation flags
 CFLAGS = ${SEARCH}  -c -w -C -save
@@ -57,13 +58,13 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .f.o:
-	${COMPILE.f90} ${Cflag4} -132 $<
+	${COMPILE.f77} ${Cflag4} -132 $<
 
 .for.o:
-	${COMPILE.f90} ${Cflag4} -132 $<
+	${COMPILE.f77} ${Cflag4} -132 $<
 
 .ftn.o:
-	${COMPILE.f90} ${Cflag4} -132 $<
+	${COMPILE.f77} ${Cflag4} -132 $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
