@@ -35,7 +35,7 @@ subroutine UA_set_param(CompInfo, TypeAction)
 
      call put(CompInfo,&
           Use=.true.,                                      &
-          NameVersion='Global Iono-Thermo Model (Ridley, Toth)', &
+          NameVersion='Global Iono-Thermo Model (Ridley)', &
           Version=2.0)
 
   case('MPI')
@@ -168,25 +168,25 @@ subroutine UA_set_grid
 
         iBlock = iStartBLK + iBlockPE
 
-        LatPE_I((iBlock-1)*nLats+1:iBlock*nLats) = &
-             Latitude(1:nLats,iBlockPE)
-        LonPE_I((iBlock-1)*nLons+1:iBlock*nLons) = &
-             Longitude(1:nLons,iBlockPE)
+!        LatPE_I((iBlock-1)*nLats+1:iBlock*nLats) = &
+!             Latitude(1:nLats,iBlockPE)
+!        LonPE_I((iBlock-1)*nLons+1:iBlock*nLons) = &
+!             Longitude(1:nLons,iBlockPE)
         iProcPE_A(iBlock) = iProc
 
      enddo
 
-     call MPI_allreduce( LatPE_I, CoLat_I, nBlocksLon*nBlocksLat*nLats, &
-          MPI_REAL, MPI_MAX, iComm, iError)
-     ! Save into colatitudes instead of latitude
-     CoLat_I = cHalfPi - CoLat_I
-
-     call MPI_allreduce( LonPE_I, Lon_I, nBlocksLon*nBlocksLat*nLons, &
-          MPI_REAL, MPI_MAX, iComm, iError)
+!     call MPI_allreduce( LatPE_I, CoLat_I, nBlocksLon*nBlocksLat*nLats, &
+!          MPI_REAL, MPI_MAX, iComm, iError)
+!     ! Save into colatitudes instead of latitude
+!     CoLat_I = cHalfPi - CoLat_I
+!
+!     call MPI_allreduce( LonPE_I, Lon_I, nBlocksLon*nBlocksLat*nLons, &
+!          MPI_REAL, MPI_MAX, iComm, iError)
 
      call MPI_allreduce( iProcPE_A, iProc_A, nBlocksLon*nBlocksLat, &
           MPI_INTEGER, MPI_MAX, iComm, iError)
-     Alt_I=Altitude(:)
+!     Alt_I=Altitude(:)
   else
      allocate( CoLat_I(1), Lon_I(1),iProc_A(1),Alt_I(1),stat=iError)
      call check_allocate(iError,NameSub)
@@ -200,9 +200,9 @@ subroutine UA_set_grid
        XyzMin_D=(/cHalf,cHalf,cHalf/),                   &! generalize coord
        XyzMax_D=(/nLats-cHalf,nLons-cHalf,nAlts-cHalf/), &! generalize coord
        TypeCoord='GEO',                            &! magnetic coordinates
-       Coord1_I= CoLat_I,                          &! colatitudes
-       Coord2_I= Lon_I,                            &! longitudes
-       Coord3_I= Alt_I,                            &! radial size in meters
+!       Coord1_I= CoLat_I,                          &! colatitudes
+!       Coord2_I= Lon_I,                            &! longitudes
+!       Coord3_I= Alt_I,                            &! radial size in meters
        iProc_A = iProc_A,                          &! processor assigment
        IsPeriodic_D=(/.false.,.true.,.false./))     ! periodic in longitude
 
