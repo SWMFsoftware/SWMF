@@ -109,74 +109,27 @@ subroutine calc_timestep_vertical
 
      do iLon = 1,nLons
         do iLat = 1,nLats
-!           cMax_GDB(iLon,iLat,:,iUp_,iBlock) = &
-!                abs(Velocity(iLon,iLat,0:nAlts+1,iUp_,iBlock)) + &
-!                sqrt(Gamma * Temperature(iLon,iLat,0:nAlts+1,iBlock))
 
            do iAlt = 0, nAlts+1
               cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock) = &
                    maxval(abs(VerticalVelocity(iLon,iLat,iAlt,:,iBlock))) + &
                    sqrt(Gamma * Temperature(iLon,iLat,iAlt,iBlock))
            enddo
-!           write(*,*) "neutral : ", &
-!                maxval(abs(Velocity(iLon,iLat,0:nAlts+1,iUp_,iBlock))), &
-!                maxval(cMax_GDB(iLon,iLat,1:nAlts,iUp_,iBlock)), &
-!                maxval(abs(Velocity(iLon,iLat,0:nAlts+1,iUp_,iBlock)) + &
-!                sqrt(Gamma * Temperature(iLon,iLat,0:nAlts+1,iBlock)))
-!
-!           do iAlt=0,nAlts
-!              write(*,*) "cmax : ",iLon,iLat,&
-!                   cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock), &
-!                   abs(Velocity(iLon,iLat,iAlt,iUp_,iBlock)), &
-!                   sqrt(Gamma * Temperature(iLon,iLat,iAlt,iBlock))
-!           enddo
 
            DtLocal = min(DtLocal, &
                 Cfl / &
                 maxval(cMax_GDB(iLon,iLat,1:nAlts,iUp_,iBlock)/dAlt(1:nAlts)))
-
-!write(*,*) "dt : ", dtlocal, maxval(cMax_GDB(iLon,iLat,1:nAlts,iUp_,iBlock)), &
-!     minval(Temperature(iLon,iLat,0:nAlts+1,iBlock)),&
-!     maxval(Temperature(iLon,iLat,0:nAlts+1,iBlock)), &
-!     maxval(abs(Velocity(iLon,iLat,0:nAlts+1,iUp_,iBlock)))
-!
-!do iAlt =1, nAlts
-!   write(*,*) Temperature(iLon,iLat,iAlt,iBlock), &
-!        Velocity(iLon,iLat,iAlt,iUp_,iBlock)
-!enddo
 
            if (UseIonAdvection) then
 
               cm = abs(IVelocity(iLon,iLat,1:nAlts,iUp_,iBlock)) + &
                 sqrt(Gamma * Temperature(iLon,iLat,1:nAlts,iBlock))
 
-!              write(*,*) "ion : ", &
-!                   maxval(abs(IVelocity(iLon,iLat,1:nAlts,iUp_,iBlock))), &
-!                   maxval(cm(1:nAlts))
-
               DtLocal = min(DtLocal, &
                    Cfl / &
                    maxval(cm/dAlt(1:nAlts)))
 
-!write(*,*) "dt ion : ", dtlocal, maxval(cM)
-
            endif
-
-!           if (UseConduction) then
-!              DtCond = 0.25*minval(cp(iLon,iLat,1:nAlts,iBlock)) / &
-!                   maxval((KappaTemp(iLon,iLat,1:nAlts,iBlock)) / &
-!                   (Rho(iLon,iLat,1:nAlts,iBlock))/dAlt(1:nAlts)**2)
-!              if (DtCond < DtLocal) then
-!                 iLatSave = iLat
-!                 iLonSave = iLon
-!              endif
-!              if(DoWarning .and. DtCond < DtLocal .and. iProc == 0)then
-!                 write(*,*)'Reduced time step for conduction from Dt=',&
-!                      Dt,' to DtCond=',DtCond
-!                 DoWarning = .false.
-!              endif
-!              DtLocal = min(DtLocal, DtCond)
-!           endif
 
         enddo
      enddo
@@ -189,16 +142,12 @@ subroutine calc_timestep_vertical
   call MPI_AllREDUCE(dTLocal, DtVertical, 1, MPI_REAL, MPI_MIN, &
        iCommGITM, iError)
 
-!  if (DtVertical == DtLocal .and. iLatSave > 0) then
-!     write(*,*) "Conduction : ",iLatSave, iLonSave
-!  endif
-
   Dt = min(Dt, DtVertical)
 
   if (iDebugLevel > 2) &
        write(*,*) "===> DtVertical : ", Dt
 
-  if (dt < cfl/100.0) then
+  if (dt < cfl/100.0 .and. dt < 0.99*DtEnd) then
      write(*,*) "Dt too slow!!!", dt
      call stop_gitm("Stopping in calc_timestep_vertical")
   endif
