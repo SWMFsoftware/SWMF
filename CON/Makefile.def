@@ -32,7 +32,6 @@ IH_VERSION = BATSRUS_share#		^CMP IF IH
 #IH_VERSION = Empty#			^CMP IF IH
 
 IE_VERSION = Ridley_serial#		^CMP IF IE
-#IE_VERSION = Ridley_parallel#		^CMP IF IE
 #IE_VERSION = Empty#			^CMP IF IE
 
 UA_VERSION = GITM#			^CMP IF UA
@@ -42,7 +41,6 @@ IM_VERSION = RCM#			^CMP IF IM
 #IM_VERSION = Empty#			^CMP IF IM
 
 RB_VERSION = RiceV5#			^CMP IF RB
-#RB_VERSION = Rice#			^CMP IF RB
 #RB_VERSION = Empty#			^CMP IF RB
 
 SP_VERSION = Kota#                      ^CMP IF SP
