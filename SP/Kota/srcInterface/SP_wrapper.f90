@@ -338,13 +338,13 @@ subroutine SP_save_mh_data
   if(iProc==0)write(iStdOut,*)prefix,'Save file '//NameFile
   iFile=io_unit_new()
   open(iFile,file=NameFile,status='replace')
-  write(iFile,*)DataInputTime,'     - is a Time'
-  write(iFile,*)iMax,'              - is iMax'
-  write(iFile,*)&
-       'x[AU] y[AU] z[AU] rho[cm-3] ux[AU/hour] uy[AU/hour]'//&
+  write(iFile,'(1es13.5,a,i8,a)') &
+       DataInputTime,' = DataInputTime',iMax,' = iMax'
+  write(iFile,'(a)')&
+       'x[AU] y[AU] z[AU] rho[cm-3] ux[AU/hour] uy[AU/hour] '//&
        'uz[AU/hour] Bx[nT] By[nT] Bz[nT] p[erg/cm3]'
   do iLine=1,iMax
-     write(iFile,*)Smooth_VII(:,iLine,New_)
+     write(iFile,'(100es13.5)')Smooth_VII(:,iLine,New_)
   end do
   close(iFile)
 end subroutine SP_save_mh_data
