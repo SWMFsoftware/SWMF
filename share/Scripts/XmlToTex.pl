@@ -71,13 +71,13 @@ while(<>){
 
     # #COMMAND or #COMMAND ID --> verbatim
     if(/^\#[A-Z0-9_]+( [A-Z][A-Z])?\s*$/){
-	$_='\begin{verbatim}'."\n$_";
+	$_='\begin'.'{verbatim}'."\n$_";
 	$verbatim = 1;
     }
 
     # verbatim part ends with an empty line
     if($verbatim and /^\s*$/){
-	$_='\end{verbatim}'."\n";
+	$_='\end'.'{verbatim}'."\n";
 	$verbatim = 0;
     }
 
