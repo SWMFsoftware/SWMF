@@ -206,21 +206,23 @@ SWMF.dvi: \
 	SWMF_configuration.tex \
 	SWMF_param.tex \
 	SWMF_control.tex \
-	SWMFXML.tex \
-	SWMF_couple.tex \
-	SWMF_new_comp.tex
+	SWMF_example_runs.tex \
+	SWMFXML.tex
 
 REFERENCE.dvi:\
 	SWMFREF.tex
 
-PDF: SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf
+PDF_FILES = SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf PHYSICS.pdf
+PDF: ${PDF_FILES}
 
 #^CMP IF DOCHTML BEGIN
+HTML_FILES = SWMF.html REFERENCE.html
+HTML_DIRS  = SWMF REFERENCE
+
 SWMF.html: SWMFXML.tex
 REFERENCE.html: SWMFREF.tex
 HTML: cleanhtml
-	make SWMF.html
-	make REFERENCE.html
+	make ${HTML_FILES}
 #^CMP END DOCHTML
 
 clean:
@@ -229,11 +231,11 @@ clean:
 	@rm -f ${SWMFREF} ${SWMFXML}
 
 cleanpdf: clean
-	cd ..; rm -f  SWMF.pdf REFERENCE.pdf TESTING.pdf MAINTENANCE.pdf
+	cd ..; rm -f ${PDF_FILES}
 
 #^CMP IF DOCHTML BEGIN
 cleanhtml: clean
-	cd ../HTML;rm -rf SWMF REFERENCE
+	cd ../HTML;rm -rf ${HTML_DIRS}
 
 cleanall: cleanpdf cleanhtml
 #^CMP END DOCHTML
