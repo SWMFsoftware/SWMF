@@ -596,22 +596,12 @@ contains
              ! of the field line from rBody within the rBody-rCurrents range
 
              Factor1= (Ri/Rbody - s2)/ (Ri/Rbody - Ri/Rcurrents)
-             Factor2= 1.0 - factor1
+             Factor2= 1.0 - Factor1
 
              ! Check if numerical volume exists
              where(MHD_SUM_vol(i,:)>1.1E-8)
                 ! Blend numerical volume with exact volume
                 MHD_SUM_vol(i,:) = Factor1*MHD_SUM_vol(i,:) + Factor2*Vol
-             elsewhere
-                ! Use analytic volume
-                MHD_SUM_vol(i,:)=Vol
-
-                ! Fix the grid
-                MHD_Xeq(i,:) = (Ri/s2)*cos(RCM_lon(:)*cDegToRad)
-                MHD_Yeq(i,:) = (Ri/s2)*sin(RCM_lon(:)*cDegToRad)
-
-                ! Fix the equatorial B value
-                MHD_Beq(i,:) = eqB
              end where
 
           end if
