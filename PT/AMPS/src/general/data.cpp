@@ -1,5 +1,6 @@
 
 #include "global.dfn"
+#include "data.h"
 
 int DIM=3;
 double tau,tmax,GeneralTime=0.0;
@@ -18,8 +19,19 @@ bool ExternalSpeciesUsingFlag=false;
 
 //===================================================
 //global objects
-#include "dsmc.h"
-#include "mol.h"
 
-Cdsmc dsmc;
-Cmol mol;
+#if CompilationTarget==DSMCTARGET 
+  #include "dsmc.h"
+  #include "mol.h"
+  Cdsmc dsmc;
+  Cmol mol;
+#endif 
+
+#if CompilationTarget==PICTARGET  
+  #include "dsmc.h"
+  #include "mol.h"
+  #include "pic.h"
+  Cpic pic;
+  Cmol mol;
+#endif
+
