@@ -72,7 +72,8 @@ contains
   subroutine read_inputs(IsLastRead)
 
     !USES:
-    use CON_coupler, ONLY: Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II
+    use CON_coupler, ONLY: &
+         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
     use CON_physics
 
     implicit none
@@ -376,6 +377,9 @@ contains
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
 
+       case("#COUPLETIME")
+          call read_var('NameComp',NameComp)
+          call read_var('DoCoupleOnTime',DoCoupleOnTime_C(i_comp(NameComp)))
        case("#CYCLE")
           call read_var('NameComp',NameComp)
           call read_var('DnRun',DnRun_C(i_comp(NameComp)))
@@ -456,18 +460,7 @@ contains
     end do
     ! end reading parameters
 
-    ! Check if the parallel or general session models are used with 
-    ! a non-time accurate run
-    if(.not.DoTimeAccurate .and. TypeSession=='parallel')then
-       if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
-            ' DoTimeAccurate=F cannot be used with TypeSession=',&
-            trim(TypeSession)
-       if(UseStrict)call world_clean
-       if(is_proc0())write(*,*)NameSub,' setting TypeSession="old"'
-       TypeSession='old'
-    end if
-
-    ! Check if the old model is used without GM
+    ! Check if the old session model is used without GM
     if(TypeSession=='old' .and. .not. use_comp(GM_))then
        if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
             ' TypeSession="old" cannot be used without GM being ON'
@@ -506,12 +499,6 @@ contains
 
     ! Initialize axes
     call init_axes(TimeStart % Time)
-
-    ! This is needed if we do not restart from a time accurate run
-    if(iSession==1)then
-       TimeCurrent % Time = TimeStart % Time + tSimulation
-       call time_real_to_int(TimeCurrent)
-    end if
 
     do lComp=1,n_comp()
        iComp = i_comp(lComp)
