@@ -848,7 +848,8 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
           'cpcps','cpcp_s','cpcp_south','cpcpsouth')
         ! User unit is kV = 1000 V
-        LogVar_I(iVarTot) = LogVar_I(iVarTot)/1000.0  !^CFG END IONOSPHERE
+        LogVar_I(iVarTot) = LogVar_I(iVarTot) &
+             *(UnitSi_Electric*UnitSi_X)/1000.0       !^CFG END IONOSPHERE
 
 !!$! Flux values
      case('aflx')
