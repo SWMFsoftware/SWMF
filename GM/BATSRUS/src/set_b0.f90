@@ -737,7 +737,7 @@ subroutine update_b0
   end if
   call timing_start('update_B0')
 
-  if(.not.UseNewAxes)call calculate_dipole_tilt
+  if(.not.UseNewAxes .and. NameThisComp=='GM')call calculate_dipole_tilt
 
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE
