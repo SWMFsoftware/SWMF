@@ -2,7 +2,7 @@
 T
 
 #INCLUDE
-RESTART.SC.AMR8
+RESTART.SC
 
 #DESCRIPTION
 Use restart data for SC and create SC-IH steady state
