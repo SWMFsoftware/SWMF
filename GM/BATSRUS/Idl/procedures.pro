@@ -2673,6 +2673,8 @@ headline=''
 readf,unit,headline
 wlogname=''
 readf,unit,wlogname
+i = strpos(wlogname,'#START')
+if i ge 0 then strput,wlogname,'      ',i
 str2arr,wlogname,wlognames,nwlog
 
 if verbose then begin
@@ -2768,10 +2770,8 @@ if n_elements(symbols) lt nlog then symbols = intarr(nlog)
 if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 
 ; If none of colors, linestyles or symbols are defined, make colors different
-if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then begin
-    colors = [150,250,255]
-    colors[nlog-1] = 255
-endif
+if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
+  colors = [255,150,250]
 
 if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
 if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
@@ -2788,7 +2788,7 @@ erase
 if DoXrange or DoYrange then iter0 = 1 else iter0 = 2
 
 for iter = iter0, 2 do begin
-    for ilog = 0, nlog-1 do begin
+    for ilog = nlog-1, 0, -1 do begin
         case ilog of 
             0: begin
                 wlog=wlog0
@@ -2828,13 +2828,11 @@ for iter = iter0, 2 do begin
                 endif else begin
                     set_position, sizes, 0, ifunc, posm, /rect
                     posm(0) = posm(0) + 0.05
-                    xtitle = ''
-                    ytitle = ''
                     title  = ''
-                    if ilog eq nlog-1 then begin
-                        if ifunc eq 0      then title = logfilename
+                    xtitle = ''
+                    if ilog eq 0 then begin
+                        if ifunc eq 0       then title = logfilename
                         if ifunc eq nfunc-1 then xtitle = 'hours'
-                        ytitle = funcs(ifunc)
                     endif
                     plot, hour, field, pos = posm, $
                       xrange = xrange, $
@@ -2842,7 +2840,7 @@ for iter = iter0, 2 do begin
                       xstyle = 1, $
                       title  = title, $
                       xtitle = xtitle, $
-                      ytitle = ytitle, $
+                      ytitle = funcs(ifunc), $
                       color = colors(ilog), $
                       psym  = symbols(ilog), $
                       linestyle = linestyles(ilog), $
