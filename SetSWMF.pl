@@ -37,6 +37,7 @@ my %Version;               # Hash table to get version for a component
 
 # Default values for the various actions
 my $Install;
+my $ReInstall;
 my $Show;
 my $NewPrecision;
 my $DryRun;
@@ -55,7 +56,7 @@ foreach (@switch){
     if(/^-d(ry)?(run)?$/)     {$DryRun=1;                       next};
     if(/^-h(elp)?$/i)         {&print_help};
     if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
-    if(/^-i(nstall)?$/)       {$Install=1;                      next};
+    if(/^-i(nstall)?$/)       {$Install=1;$ReInstall=/-install/;next};
     if(/^-s(how)?$/)          {$Show=1;                         next};
     if(/^-q(uiet)?$/)         {$Quiet=1;                        next};
     if(/^-D(ebug)?$/)         {$Debug=1;                        next};
@@ -173,7 +174,8 @@ sub install_swmf{
 
     if($Installed){
 	print "SWMF is already installed.\n";
-	return;
+	return unless $ReInstall; 
+	print "Reinstalling SWMF...\n";
     }
 
     # Obtain $OS and $DIR
@@ -199,15 +201,16 @@ sub install_swmf{
     die("$ERROR $makefile does not exist.") unless -e $makefile;
     &shell_command("cp $makefile $MakefileConf");
 
-    # Read version and other info from main Makefile.COMP
+    # Read version and other info from main Makefile.def
     &get_settings;
 
     # set Makefile.COMP in versions to point to SWMF
     &set_version_makefile_comp;
 
     # Initialize CON and the components
-    my $command = "make install MPIVERSION='$MpiVersion'";
+    my $command = "make install";
     $command .= " COMPILER='$Compiler'" if $IsCompilerSet;
+    $command .= " MPIVERSION='$MpiVersion'" if $MpiVersion;
     &shell_command($command);
 
     # Set initial precision for reals
@@ -405,17 +408,29 @@ sub shell_command{
 }
 
 ##############################################################################
-
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \section{Main directory}
+#!QUOTE: \subsection{Installation and Configuration of SWMF}
+#!ROUTINE: SetSWMF.pl - (un)installation and configuration of SWMF
+#!DESCRIPTION:
+# The SetSWMF.pl provides a single uniform interface towards 
+# installation, configuration and uninstallation.
+#!REVISION HISTORY:
+# 10/29/2003 G. Toth - initial version
+#                      several extensions and modifications
+#EOP
 sub print_help{
 
-    print "
-SetSWMF.pl can be used for installing and setting various options for SWMF.
+    print 
+#BOC
+"SetSWMF.pl can be used for installing and setting various options for SWMF.
 This script edits the appropriate Makefile-s, copies files and executes 
 shell commands. The script can also show the current settings.
 This script will also be used by the GUI to interact with SWMF.
 
 Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-s]
-                  [-i [-c=COMPILER] [-m=MPIVERSION]]
+                  [-i[nstall] [-c=COMPILER] [-m=MPIVERSION]]
                   [-p=PRECISION] 
                   [-v=VERSION[,VERSION2,...] 
                   [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
@@ -437,6 +452,8 @@ Options:
 -h  -help      show this help message
 
 -i  -install   install SWMF (create Makefile.conf, Makefile.def, make install)
+               The short form returns with a warning if Makefile.conf already exists.
+               The long form -install redoes the installation in any case.
 
 -m=MPIVERSION  copy mpif90_OSMPIVERSION into mpif90.h during installation
 
@@ -449,11 +466,11 @@ Options:
 
 -uninstall     uninstall SWMF (make distclean)
 
--v=VERSION     select component verion VERSION. This flag can occur 
+-v=VERSION     select component version VERSION. This flag can occur 
                multiple times and/or multiple versions can be given
                in a comma separated list.
-               If IH/BATSRUS is selected for the first time, 
-               make IHBATSRUS is done.
+               If IH/BATSRUS or SC/BATSRUS is selected for the first time, 
+               make IHBATSRUS or make SCBATSRUS is done, respectively.
 
 Examples of use:
 
@@ -465,15 +482,23 @@ Install SWMF with the efc compiler and Altix MPI and select single precision:
 
     SetSWMF.pl -i -c=efc -m=Altix -p=single
 
+Reinstall SWMF with new parameters:
+
+    SetSWMF.pl -install -c=ifort -m=Altix -p=double
+
+Uninstall SWMF (if this fails, run SetSWMF.pl -install first):
+
+    SetSWMF.pl -uninstall
+
 Select IH/BATSRUS, IM/Empty and UA/Empty component versions:
 
     SetSWMF.pl -v=IH/BATSRUS -v=IM/Empty,UA/Empty
 
 Set the grid size for GM and IH:
 
-    SetSWMF.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
-
-";
+    SetSWMF.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1"
+#EOC
+    ,"\n\n";
     exit 0;
 }
 
