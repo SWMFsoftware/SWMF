@@ -20,9 +20,10 @@ my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XMLFile           = 'PARAM.XML';
 my $SetSWMF = 'SetSWMF.pl';
 
-# The -H and -X flags are transferred to CheckParam.pl
+# The -H, -X and -s flags are transferred to CheckParam.pl
 exec("$CheckParamScript -X") if $HelpXml;
 exec("$CheckParamScript -H") if $HelpXmlParam;
+exec("$CheckParamScript -s") if $Save;
 
 # Name of BATSRUS and BATSRUS_share
 my $BATSRUS = "BATSRUS";
@@ -32,14 +33,12 @@ my $BATSRUS_share = "BATSRUS_share";
 my $ERROR = 'TestParam_ERROR:';
 my $WARNING='TestParam_WARNING:';
 
+# Error flag to be returned to Unix
+my $IsError;
+
 # Set default values
 my $ParamFileDefault  = 'run/PARAM.in';
 my $LayoutFileDefault = 'run/LAYOUT.in';
-
-if($Save){
-    system($CheckParamScript,"-s");
-    exit 0;
-}
 
 # Get the name of the PARAM file 
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
@@ -85,7 +84,10 @@ my $check =
     "$CheckParamScript -C=$Registered -n=$nProc -p=$Precision $ParamFile";
 print "$check\n" if $Verbose;
 my $Error = `$check`;
-print "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n" if $Error;
+if($Error){
+    $IsError = 1;
+    print "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
+}
 
 # Check component parameters
 my $Comp;
@@ -99,10 +101,13 @@ foreach $Comp (sort keys %Layout){
 	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
-    print "$ERROR parameter errors for $Comp:\n\n$Error\n" if $Error;
+    if($Error){
+	$IsError = 1;
+	print "$ERROR parameter errors for $Comp:\n\n$Error\n";
+    }
 }
 
-exit 0;
+exit $IsError;
 
 ###############################################################################
 
