@@ -19,20 +19,22 @@ cartesian: cartesian_src
 
 spherical_src:
 	cd src;\
-	mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user_routines_empty.f90 user_routines_orig.f90;\
-	mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
+		mv user_routines_orig.f90 user_routines_tmp.f90;\
+		cp user_routines_empty.f90 user_routines_orig.f90
+	cd srcPostProc;\
+		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	./Configure.pl -d=SPHERICAL \
 	-off=boriscorr,cartesian \
 	-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
 	cd src; \
-	mv user_routines_tmp.f90 user_routines_orig.f90;\
-	mv PostIDL.f90 PostIDL_SPH.f90; mv PostIDL.tmp PostIDL.f90;\
-	cd ../SPHERICAL/Param;\
-	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
-	mv EARTH/SSSSPH EARTH/SSSS;\
-	cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
-	mv PARAM.TEST.SPH PARAM.TEST
+		mv user_routines_tmp.f90 user_routines_orig.f90;
+	cd srcPostProc;\
+		mv PostIDL.f90 PostIDL_SPH.f90; mv PostIDL.tmp PostIDL.f90
+	cd SPHERICAL/Param;\
+		mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
+		mv EARTH/SSSSPH EARTH/SSSS;\
+		mv PARAM.TEST.SPH PARAM.TEST
+	cd SPHERICAL/Param/TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT
 	cd SPHERICAL; make install
 
 spherical_conf: spherical_src
@@ -151,14 +153,14 @@ corelax_src:
 	-off=rusanovflux,ionosphere,tiegcm,boriscorr,implicit \
 	-exe=alwaves,awflux,faceouterbc,cellouterbc,rusanovflux,ionosphere,tiegcm,boriscorr,implicit -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
-	cd CORELAX/src; \
-	mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
+	cd CORELAX/srcPostProc; \
+		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	cd CORELAX;\
 	./Configure.pl -d=SPHERICAL \
 	-off=cartesian \
 	-on=alwaves,awflux,faceouterbc,cellouterbc,testing,userfiles -u
-	cd CORELAX/src; \
-	mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
+	cd CORELAX/srcPostProc; \
+		mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
 	cd CORELAX/SPHERICAL/Param;\
 	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
 	mv EARTH/SSSSPH EARTH/SSSS;\
