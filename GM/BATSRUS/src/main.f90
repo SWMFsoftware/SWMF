@@ -223,6 +223,7 @@ contains
     use ModPhysics, ONLY: unitSI_t
 
     real(Real8_), external :: timing_func_d
+    real(Real8_) :: CpuTimeBATSRUS,CpuTimeAdvance
 
     integer :: nIterExpect, nIterExpectTime
 
@@ -234,19 +235,21 @@ contains
     if( UseTiming .and. iProc==0 &
          .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
 
+       CpuTimeBATSRUS=timing_func_d('sum',3,'BATSRUS','BATSRUS')
+       CpuTimeAdvance=timing_func_d('sum',1,'advance','BATSRUS')
        if (.not.time_accurate) then
           write(*,'(a,f9.1,a,f9.1,a,i8)') 'Speed is',&
                nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
-               /max(1.D-10,timing_func_d('sum',1,'advance','BATSRUS')),&
+               /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
-               timing_func_d('sum',3,'BATSRUS','BATSRUS'),&
+               CpuTimeBATSRUS,&
                ' s at N =',n_step
        else
           write(*,'(a,f9.1,a,f9.1,a,i8,a,1p,e10.4,a)') 'Speed is',&
                nI*nJ*nK*count(.not.unusedBLK(1:nBlock)) &
-               /max(1.D-10,timing_func_d('sum',1,'advance','BATSRUS')),&
+               /max(1.D-10,CpuTimeAdvance),&
                ' c/s/p after',&
-               timing_func_d('sum',3,'BATSRUS','BATSRUS'),&
+               CpuTimeBATSRUS,&
                ' s at N =',n_step, ' (', Time_Simulation,' s)'
        endif
 
@@ -272,10 +275,11 @@ contains
              nIterExpect = min(nIterExpect, nIterExpectTime)
           endif
        end if
+       CpuTimeAdvance=timing_func_d('sum/iter',2,'advance','BATSRUS')
        write (*,'(i6,a,i6,a,f10.2)') iteration_number,' of ', &
             nIterExpect+iteration_number,  &
             ' iterations completed.   Expected time to completion:', &
-            timing_func_d('sum/iter',2,'advance','BATSRUS')*nIterExpect
+            CpuTimeAdvance*nIterExpect
        write(*,*)
     end if
 
