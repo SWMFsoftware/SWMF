@@ -46,7 +46,12 @@ contains
     integer, parameter :: Theta_=1, Phi_=2
     integer :: i, j
 
-    ! Calculate the gradients for the internal points
+    !write(*,*)'calc_grad_iono_potential: overwriting potential !!!'
+    !do j = 1, nPhiIono;do i = 1, nThetaIono
+    !   IonoPotential_II(i,j) = 0.1*i**2 + 0.01*j**2
+    !end do; end do
+
+    ! Calculate the gradients for the internal points with central differences
     do j = 1, nPhiIono; do i = 2, nThetaIono-1
        dIonoPotential_DII(Theta_, i, j) = &
             (IonoPotential_II(i+1, j) - IonoPotential_II(i-1, j)) &
@@ -59,14 +64,20 @@ contains
             / (2 * dPhiIono)
     end do; end do
 
-    ! Calculate the theta gradient at the poles first order accurate
-    ! We could also do a one sided second order approximation !!!
-    dIonoPotential_DII(Theta_, 1, :) = &
-         (IonoPotential_II(2,:) - IonoPotential_II(1,:)) / dThetaIono
+    ! Calculate the theta gradient at the poles
+    ! with one sided second order approximations
 
+    ! df/dx = (4f(x+dx)-3f(x)-f(x+2dx))/(2dx)
+    dIonoPotential_DII(Theta_, 1, :) = &
+         ( 4*IonoPotential_II(2,:) &
+         - 3*IonoPotential_II(1,:) &
+         -   IonoPotential_II(3,:) ) / (2*dThetaIono)
+
+    ! df/dx = (3f(x)-4f(x-dx)+f(x-2dx))/(2dx)
     dIonoPotential_DII(Theta_, nThetaIono, :) = &
-         (IonoPotential_II(nThetaIono,:) - IonoPotential_II(nThetaIono-1,:) &
-         ) / dThetaIono
+         ( 3*IonoPotential_II(nThetaIono  ,:) &
+         - 4*IonoPotential_II(nThetaIono-1,:) &
+         +   IonoPotential_II(nThetaIono-2,:) ) / (2*dThetaIono)
 
     ! Calculate the phi gradient at the edges from the periodicity
     dIonoPotential_DII(Phi_, :, 1) = &
