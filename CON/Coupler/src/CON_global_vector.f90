@@ -100,8 +100,6 @@ Module CON_global_vector
      module procedure point_state_vx
   end interface
      
-     
-!  public::put_state,get_state
 contains
   !===========================================================!
   subroutine allocate_vector_ilength(NameVector,nVar,nI)
@@ -114,7 +112,8 @@ contains
     NameVector_I(nVector)=trim(NameVector)
     nullify(Vector_I(nVector)%I)
     allocate(Vector_I(nVector)%I(nVar,nI),stat=iError)
-    call check_allocate(iError,'Global vector '//NameVector) 
+    call check_allocate(iError,'Global vector '//NameVector)
+    Vector_I(nVector)%I=cZero
   end subroutine allocate_vector_ilength
   !===========================================================!
   subroutine allocate_vector_for_gd(NameVector,nVar,GD)
@@ -140,7 +139,8 @@ contains
     NameMask_I(nMask)=trim(NameMask)
     nullify(Mask_I(nMask)%I)
     allocate(Mask_I(nMask)%I(nI),stat=iError)
-    call check_allocate(iError,'Global mask '//NameMask) 
+    call check_allocate(iError,'Global mask '//NameMask)
+    Mask_I(nMask)%I=.true.
   end subroutine allocate_mask_ilength
   !===========================================================!
   subroutine allocate_mask_for_gd(NameMask,GD)
