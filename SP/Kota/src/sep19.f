@@ -1,124 +1,157 @@
+!All routines here include the following 'param.h' header
+!     integer::nRMax,nMuMax,nPMax
+!     parameter(nRMax=1000,nMuMax=40,nPMax=600)
+!BOP
+!ROUTINE: admit - reads the input parameters from the list
+!INTERFACE:
       subroutine admit(iSize,NameList)
-      integer::iSize
-      character*80::Namelist(iSize)
+!DESCRIPTION:
+!Read input parameters from list
+!in case of self similar solution, sets its parameters
+!sets the scattering length
+!EOP
+      include 'param.h'
+      integer iSize
+      character*80 Namelist(iSize)
       common /size  / nr,nmu,nw, dim1
       common /suly /  wghtl,wghtmu,wghtw
       common /times/  time,tmax,dlnt0,dlnt1,dta,kfriss,kacc
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
       common /inphys/ wind0,period0,xlambda0
       common /partid/ iz,massa,ekpp,xlmbda0
       common /scphys/ wind,omega,xscatt1
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /quelle/ kinj,einj,pinj,qqp(0:600),qqx(0:1000)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
-      common /convrt/ aukm,hour,valf
+      common /convrt/ cAUKm,hour,valf
+      logical UseSelfSimilarity,UseRefresh
+      common/log/UseSelfSimilarity,UseRefresh
       include 'stdout.h'
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 / 
 
 c ----------------------------------- scales:
       pi = 2.*asin(1.)
-      aukm = 1.5e8
+      cAUKm = 1.5e8
       hour = 3600.
       valf = 21.8
       e0 = pmass
 c ------------------------------------ input data:
       read(NameList(1),*) nr,nmu,nw, wghtl,wghtmu,wghtw
       write(iStdout,*) prefix,
-     1      nr,nmu,nw, wghtl,wghtmu,wghtw
+     1      'nr=',nr,'  nmu=',nmu,'  nw=',nw, 
+     2 '  wght1=',wghtl,'  wghtmu=',wghtmu,
+     3 '  wghtw=',wghtw
       read(NameList(2),*) rmin,rmax,rshock
       write(iStdout,*) prefix,
-     1      rmin,rmax,rshock
+     1    'rmin=',rmin,'  rmax=',rmax,'  rshock=',rshock
       read(NameList(3),*) emin,emax,einj
       write(iStdout,*) prefix,
-     1       emin,emax,einj
-      read(NameList(4),*) tmax,slamb,kfriss,kacc
+     1 'emin=',emin,'  emax=',emax,'  einj=',einj
+      read(NameList(4),*) 
+     1 UseSelfSimilarity,tmax,slamb,kfriss,kacc
+      UseRefresh=UseSelfSimilarity
       write(iStdout,*) prefix,
-     1       tmax,slamb,kfriss,kacc
+     1 'tmax=',tmax,'  slamb=',slamb,
+     2  '  kfriss=',kfriss,'  kacc=',kacc
       read(NameList(5),*) swind,fwind,bbrad,period
       write(iStdout,*) prefix,
-     1       swind,fwind,bbrad,period
+     1 'swind=',swind,'  fwind=',fwind,
+     2 '  bbrad=',bbrad,'  period=',period
       read(NameList(6),*) iz,massa,ekpp,xlmbda0,qex
       write(iStdout,*) prefix,
-     1       iz,massa,ekpp,xlmbda0,qex
+     1 'iz=',iz,'  massa=',massa,'  ekpp=',
+     2 ekpp,'  xlambda0=',xlmbda0,'  qex=',qex
       read(NameList(7),*) krmax,kemax
       write(iStdout,*) prefix,
-     1       krmax,kemax
+     1 'krmax=',krmax,'  kemax=',kemax
       read(NameList(8),*) (robs(k),k=1,krmax)
       write(iStdout,*) prefix,
-     1       ('robs(',k,')=',robs(k),k=1,krmax)
+     1       ('  robs(',k,')=',robs(k),k=1,krmax)
       read(NameList(9),*) (keobs(k),k=1,kemax)
       write(iStdout,*) prefix, 
-     1      (keobs(k),k=1,kemax)
+     1      ('  keobs(',k,')=',keobs(k),k=1,kemax)
       write(iStdout,*) prefix, 
-     1       'energy in megavolts '
-
-      dim = 3
-      dim1= dim-1
+     1       'particle energy in megavolts'
+      if(UseSelfSimilarity)then
+         dim = 3
+         dim1= dim-1
 c ------------------------------------ gasdynamics
-      nn = nr
-      mmdim = 2 
-      vvmin = swind
-      vvmax = fwind
-      vcmin =  0.
-      vcmax =  0.
-      bbrnt =  bbrad
-      bbrad =  bbrnt*valf*hour/aukm
-      vamin =  0.
-      vamax = vamin*sqrt(vvmin/vvmax)
-      ddmin = 10. 
-      ddmax = ddmin*vvmin/vvmax
-      vvmin = vvmin*hour/aukm
-      vvmax = vvmax*hour/aukm
-      ccmin = vcmin*hour/aukm
-      ccmax = vcmax*hour/aukm
-      aamin = vamin*hour/aukm
-      aamax = vamax*hour/aukm
-      bbmin = aamin*sqrt(ddmin)
-      bbmax = aamax*sqrt(ddmax)
+         nn = nr
+         mmdim = 2 
+         vvmin = swind
+         vvmax = fwind
+         vcmin =  0.
+         vcmax =  0.
+         bbrnt =  bbrad
+         bbrad =  bbrnt*valf*hour/cAUKm
+         vamin =  0.
+         vamax = vamin*sqrt(vvmin/vvmax)
+         ddmin = 10. 
+         ddmax = ddmin*vvmin/vvmax
+         vvmin = vvmin*hour/cAUKm
+         vvmax = vvmax*hour/cAUKm
+         ccmin = vcmin*hour/cAUKm
+         ccmax = vcmax*hour/cAUKm
+         aamin = vamin*hour/cAUKm
+         aamax = vamax*hour/cAUKm
+         bbmin = aamin*sqrt(ddmin)
+         bbmax = aamax*sqrt(ddmax)
 c ------------------------------------ times:     
-      dt1 = dt0/kfriss
-      dta = dt1/kacc   
+         dt1 = dt0/kfriss
+         dta = dt1/kacc   
 c ------------------------------------ calculation
-      wind = wind0*hour/aukm
-      swind = swind0*hour/aukm
-      if (period.gt.1.e3) then
-        omega = 0.
-      else
-        omega = 2.*pi/period/24.
+         wind = wind0*hour/cAUKm
+         swind = swind0*hour/cAUKm
+         if (period.gt.1.e3) then
+            omega = 0.
+         else
+            omega = 2.*pi/period/24.
+         end if
       end if
 
       xlambda0 = xlmbda0
       if (xlambda0.gt.1.e3) then
-        xscatt1 = 0.
+         xscatt1 = 0.
       else
-        xscatt1 = ((3-qex)*(1-qex)/3.)/xlambda0
+         xscatt1 = ((3-qex)*(1-qex)/3.)/xlambda0
       end if
 
       return 
       end
 
 c  *****************  end ADMIT   **************************
-      
-      subroutine cool   
+!BOP
+!ROUTINE: cool - set functions of the energy coordinate
+!INTERFACE:
+      subroutine cool
+!DESCRIPTION:
+!Subroutine cool sets pmin,pmax,pinj,dlnp,
+!arrays pp,ww,ee - momentum,speed and energy as a 
+!function of the energetic coordinate.
+!Also sets the scattering length dependence on energy
+!EOP 
+      include 'param.h'   
       common /size  / nr,nmu,nw, dim1
       common /partid/ iz,massa,ekpp,xlmbda0
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /quelle/ kinj,einj,pinj,qqp(0:600),qqx(0:1000)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
       include 'stdout.h'
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 /
 c ----------------------------------- scales:
       pi = 2.*asin(1.)
-      aukm = 1.5e8
+      cAUKm = 1.5e8
       hour = 3600.
       valf = 21.8
       e0 = pmass
@@ -138,14 +171,14 @@ c ----------------------------------- scales:
       eein = einj
       ppin = pinj
       btin = ppin/(eein+e0)
-      wwin = btin*clight*hour/xkm/aukm
+      wwin = btin*clight*hour/xkm/cAUKm
 
       do 11 k = 0,nw
       pp(k) = pmin*exp(float(k)*dlnp)
        etot = sqrt(pp(k)**2+e0**2)
        beta = pp(k)/etot
       ee(k) = pp(k)**2/(etot+e0)
-      ww(k) = beta*clight*hour/xkm/aukm
+      ww(k) = beta*clight*hour/xkm/cAUKm
       qqp(k)= 0.
        rg   = float(massa)*pp(k)/abs(qz)/gv
       wsc(k)= ww(k)*rg**expo
@@ -165,25 +198,31 @@ c        qqp(kk) = 1./pinj**2/dlnp
       end
 
 c  *****************  end subroutine COOL     ******************
-
+!BOP
+!ROUTINE: peeloff - multiples distribution function by p^qex if desired
+!INTERFACE:
       subroutine peeloff
+!EOP
+      include 'param.h'   
       common /size  / nr,nmu,nw, dim1
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed/  wmin,wmax,wwin,ww(0:600)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /quelle/ kinj,einj,winj,qqw(0:600),qqx(0:1000)
-      common /peel /  pex,fpeel(0:600),gpeel(0:600)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed/  wmin,wmax,wwin,ww(0:nPMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
+      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       pex = 0.
-      write(iStdout,*) prefix,
+      if(DoWriteAll)write(iStdout,*) prefix,
      1      'PEEL-OFF -- what exponent ??',pex
       do 30 k = 0,nw
       fact = (pp(k)/ppin)**pex
       fpeel(k) = 2./(1.+fact)
       gpeel(k) = pex*fact/(1.+fact)
-      write(iStdout,911) prefix,
+      if(DoWriteAll)write(iStdout,911) prefix,
      1        pex,k,ee(k),fact,gpeel(k),fpeel(k)
 911   format(a,f10.2,i5,3f12.6,e14.4)
       qqw(k) = qqw(k)/fpeel(k)
@@ -198,20 +237,29 @@ c  *****************  end subroutine COOL     ******************
       end
 
 c  *****************  end subroutine PEELOFF  ******************
-
-      subroutine pangle  
+!BOP
+!ROUTINE: pangle - sets \mu, 1-\mu^2, \mu-dependance for scattering
+!INTERFACE:
+      subroutine pangle
+!EOP
+      include 'param.h'    
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
       include 'stdout.h'
 c     linear grid in mu=cost
       mm = nmu
        m = mm/2
+
+      !Uniformly spaced grid, -1<=\mu<=1, index value 0 is for \mu=1
+      !d\mu is positive
       dmu = 2./float(mm) 
       do 11 jj=0,m
       jm = mm-jj
       amu(jj) = 1. - float(jj)*dmu
       amu(jm) = - amu(jj)
+      !sint=1-(\mu)^2
       sint(jj) = sqrt(1.-amu(jj)**2)
       sint(jm) = sint(jj)
 11    continue
@@ -233,23 +281,28 @@ c
        cmu(jm) = -ccmu
        scmu(jm) = scatty/dmu**2/2.
 21    continue
+      !Diffusion coefficient is as follows:
+      !D_{\mu\mu}=xscat(r)*fact(energy)*(1-\mu^2)|\mu|^q
+      !q can be related to the spectral index of turbulence
 c ---  scatty representing  (1/lambda)
       return
       end
 
-c  *****************  end subroutine PITCH    ******************
-
-      subroutine initial                                       
+c  *****************  end subroutine PANGLE    ******************
+!BOP
+!ROUTINE: initial - nullify distribution function and related arrays 
+!INTERFACE:
+      subroutine initial
+!EOP                   
+      include 'param.h'
       common /size /  nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vr(0:1000)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
+     1                vr(0:nRMax)
       include 'stdout.h'
-      tblst1 = tblast
-      rshck1 = rshock
-       time  = tblst1
 
       do 10 i=0,nr
        algbb(i) = 0.       
@@ -269,95 +322,33 @@ c  *****************  end subroutine PITCH    ******************
       end
 
 c **************************  end of INiT ****************
-
-c ============================ real calculation cycle starts here ==
-
-      subroutine refresh
-
-      common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /times/  time,tmax,dt0,dt1,dta,kfriss,kacc
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /scphys/ wind,omega,xscatt1
-      common /elem /  zr(0:1000),zv(0:1000),zp(0:1000),zn(0:1000)
-      common /magia/  qb(0:1000),zb(0:1000),zt(0:1000) 
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vr(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /smile/  mp,ni
-     1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
-     2       ,evr(0:6000),evx(0:6000),evz(0:6000)
-     3       ,edsm(0:6000),edfi(0:6000)
-     4       ,ebm(0:6000),ebr(0:6000),ebt(0:6000),ebfi(0:6000)
-     5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
-     6       ,dbmds(0:6000),dbfids(0:6000)
-
-c **********************************  concept : *****************
-c     shifts back to regions to be considered                   *
-c ********************************** ---------- *****************
-      
-      do i=0,nr-1
-         i2=i+1
-
-         algbb(i) = algbb(i2)
-         algnn(i) = algnn(i2)
-         algll(i) = algll(i2)
-         vr(i) = vr(i2)
-         do j=0,nmu
-            do k=0,nw
-               f(i,j,k) = f(i2,j,k)
-            enddo
-         enddo
-      enddo
-     
-      i = nr
-      r(nr) = rshck1*eta(ni)
-      vr(nr) = r(nr)/tblst1*evr(ni)
-        
-      bbr   = ebr(ni)/r(i)**2
-      bbm   = ebm(ni)/r(i)**2
-      bbfi  = ebfi(ni)/r(i)
-      bbb   = sqrt(bbm**2+bbfi**2)
-
-      abb   = alog(bbb)
-      ddd   = edd(ni)/r(i)**2
-      ann   = alog(ddd)
-       
-      dll   = rshck1*edsm(ni)*bbb/bbm
-      all   = alog(dll)
-
-      algbb(nr) = abb
-      algnn(nr) = ann
-      algll(nr) = all
-
-      do j=0,nmu
-         do k=0,nw
-            f(i,j,k) = 0.
-         enddo
-      enddo
-
-      return 
-      end
-
-c ********************  end routine REFRESH *********************
-                                                  !!!! REWORK
+!BOP
+!ROUTINE: helios - sets multipliers in the kinetic equation coming from MHD
+!INTERFACE:
       subroutine helios(t,dt,jj,kk)
+!DESCRIPTION:
+!Uses the values obtained from MHD and calculates the Lagrangian time 
+!derivatives which are multipliers in the kinetic equation.
+!Sets actual values for spatial dependance of the scattering length
+!EOP
+      include 'param.h'
       common /size / nr,nmu,nw, dim1
       common /gazdi/ ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1               ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /elem / zr(0:1000),zv(0:1000),zp(0:1000),zn(0:1000)
-      common /magia/ qb(0:1000),qd(0:1000),zb(0:1000) 
+      common /elem / zr(0:nRMax),zv(0:nRMax),zp(0:nRMax),zn(0:nRMax)
+      common /magia/ qb(0:nRMax),qd(0:nRMax),zb(0:nRMax) 
       
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /scphys/ wind,omega,xscatt1
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /quelle/ kinj,einj,winj,qqw(0:600),qqx(0:1000)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vr(0:1000)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
+     1                vr(0:nRMax)
       common /smile / mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
      2       ,evr(0:6000),evx(0:6000),evz(0:6000)
@@ -365,43 +356,88 @@ c ********************  end routine REFRESH *********************
      4       ,ebm(0:6000),ebr(0:6000),ebt(0:6000),ebfi(0:6000)
      5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
      6       ,dbmds(0:6000),dbfids(0:6000)
+      logical UseSelfSimilarity,UseRefresh
+      common/log/UseSelfSimilarity,UseRefresh
+      include 'coupler.h'
       include 'stdout.h'
 c +++++++++++++++++++++++++++++++++++++++     concept:   +++++ 
-c    Transfers between similarity solution and actual         +
+c    Transfers between similarity solution and actual, 
+!    as long as the self-similar solution is used.
+!    Otherwise needs the data through the same set of Lagrangian 
+!    points to calculate the Lagrangian time derivatives.
 c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 
       pi = 2.*asin(1.)
 
 c -----------------------------------------------------
-      rshck1 = rshock*(tblst1/tblast)**slamb 
+      if(UseSelfSimilarity)
+     1     rshck1 = rshock*(tblst1/tblast)**slamb 
       
       do 10 i=0,nr
-      ii = mp*(i+1)-kk 
+         if(UseSelfSimilarity)then
+            !     The lagrangian derivatives and 
+            !  scattering length is taken from self-similar soln   
+            ii = mp*(i+1)-kk 
 
 c -------------------------------   this one new for transport :
 
-         r(i) = rshck1*eta(ii)
-        vvr   = evr(ii)*r(i)/tblst1
+            r(i) = rshck1*eta(ii)
+            vvr   = evr(ii)*r(i)/tblst1
       
-        bbr   = ebr(ii)/r(i)**2
-      bbm   = ebm(ii)/r(i)**2
-      bbfi  = ebfi(ii)/r(i)
-      bbb   = sqrt(bbm**2+bbfi**2)
-        abb   = alog(bbb)
+            bbr   = ebr(ii)/r(i)**2
+            bbm   = ebm(ii)/r(i)**2
+            bbfi  = ebfi(ii)/r(i)
+            bbb   = sqrt(bbm**2+bbfi**2)
+            abb   = alog(bbb)
 
-      dll   = rshck1*edsm(ii)*bbb/bbm
-      all   = alog(dll)
-       tll(i) = dll                           
+            dll   = rshck1*edsm(ii)*bbb/bbm
+            all   = alog(dll)
+            tll(i) = dll                           
 
-      ddd   = edd(ii)/r(i)**2
-      ann   = alog(ddd)
-
-      dbdt(i) = (abb-algbb(i))/dt
-      dndt(i) = (ann-algnn(i))/dt
-      dldt(i) = (all-algll(i))/dt
-      dvdt(i) = (vvr-vr(i))/dt
-      
-        vl(i) = 0.                            
+            ddd   = edd(ii)/r(i)**2
+            ann   = alog(ddd)
+            dldt(i) = (all-algll(i))/dt
+            dvdt(i) = (vvr-vr(i))/dt
+         else
+            !The dirvatives and diffusion coefficient are
+            !taken from the updated coupling variables and
+            !from previous ones
+            !NOTE: arrays rx,ry,...pp start from the index value 1
+            !tll,d*dt d*ds - from index value 0
+            r(i)=sqrt(rx(i+1)**2
+     1              +ry(i+1)**2
+     2              +rz(i+1)**2)
+            if(i.eq.0)then
+               tll(i)=sqrt((rx(2)-rx(1))**2
+     1              +(ry(2)-ry(1))**2
+     2              +(rz(2)-rz(1))**2)
+            elseif(i.eq.nr)then
+               tll(i)=sqrt((rx(nr)-rx(nr+1))**2
+     1              +(ry(nr)-ry(nr+1))**2
+     2              +(rz(nr)-rz(nr+1))**2)
+            else
+               tll(i)=sqrt((rx(i+2)-rx(i))**2
+     1              +(ry(i+2)-ry(i))**2
+     2              +(rz(i+2)-rz(i))**2)/2.0
+            end if
+            abb=sqrt(bx(i+1)**2
+     1              +by(i+1)**2
+     2              +bz(i+1)**2)
+            dvdt(i)=(bx(i+1)*(vx(i+1)-vxOld(i+1))
+     1              +by(i+1)*(vy(i+1)-vyOld(i+1))
+     2              +bz(i+1)*(vz(i+1)-vzOld(i+1)))/(abb*dt)
+            abb=alog(abb)
+            ann=alog(dd(i+1))
+            !Each used value of vx,vy,vz should be saved:
+            vxOld(i+1)=vx(i+1)
+            vyOld(i+1)=vy(i+1)
+            vzOld(i+1)=vz(i+1)
+         end if
+            dbdt(i) = (abb-algbb(i))/dt
+            dndt(i) = (ann-algnn(i))/dt
+            
+            
+            vl(i) = 0.                            
 c ??????????????????????????????????????????????????????
       if (i.lt.0) then
       write(iStdout,*) prefix,
@@ -424,20 +460,25 @@ c ??????????????????????????????????????????????????????
 
       algbb(i) = abb
       algnn(i) = ann
-      algll(i) = all
+
+      if(UseSelfSimilarity)then
+         algll(i) = all
          vr(i) = vvr                  
+      else
+         dldt(i)=dbdt(i)-dndt(i)
+      end if
 
       qqx(i) = 0.        
          bbfac = 1./r(i)
        bbfak = bbfac
       xsc(i) = xscatt1*bbfak
-      if (eta(ii).lt.1.15) then
+      if (r(i).lt.1.15*rshck1) then
          xsc(i) = 50.*xsc(i)
          qqx(i) = 1/r(i)**2
-         endif
-      if (eta(ii).lt.0.50) then
+      endif
+      if (r(i).lt.0.50*rshck1) then
          qqx(i) = 0.        
-         endif
+      endif
 
 10    continue
       
@@ -454,10 +495,14 @@ c ??????????????????????????????????????????????????????
 20    continue
 
 c +++++++++++++++++++++++++++++++++++++++++++
-      dbmax = 0.
-      dbmin = 0.
-      dlmax = 0.
-      dlmin = 0.
+      ibmax = 1
+      ibmin = 1
+      ilmax = 1
+      ilmin = 1
+      dbmax = dbdt(1)
+      dbmin = dbdt(1)
+      dlmax = dldt(1)
+      dlmin = dldt(1)
       do 88 i=0,nr
       if (dbdt(i).gt.dbmax) then
         dbmax = dbdt(i)
@@ -476,514 +521,29 @@ c +++++++++++++++++++++++++++++++++++++++++++
         ilmin = i
         endif
 88    continue
-      write(iStdout,*) prefix,
+      if(DoWriteAll)write(iStdout,*) prefix,
      1         'Min dldt: ',ilmin,dlmin
-      write(iStdout,*) prefix,
+      if(DoWriteAll)write(iStdout,*) prefix,
      1          'Max dldt: ',ilmax,dlmax
-      write(iStdout,*) prefix,
+      if(DoWriteAll)write(iStdout,*) prefix,
      1           'Min dbdt: ',ibmin,dbmin
-      write(iStdout,*) prefix,
+      if(DoWriteAll)write(iStdout,*) prefix,
      1           'Max dbdt: ',ibmax,dbmax
-
       return
       end
-
-c ********************  end routine GASDYN  *********************
-
-
-
-
-
-
-      subroutine simile(mm)                 !!!  REWORK !!!
-      
-      common /size /  nr,nmu,nw, dim1
-      common /radio/  nn,rmin,rshock,rmax,r(0:1000)
-      common /blast/  slamb,tblast,tblst1,rshck1,dlnt
-      common /smile/  mp,ni
-     1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
-     2       ,evr(0:6000),evx(0:6000),evz(0:6000)
-     3       ,edsm(0:6000),edfi(0:6000)
-     4       ,ebm(0:6000),ebr(0:6000),ebt(0:6000),ebfi(0:6000)
-     5       ,ebx(0:6000),ebz(0:6000),edd(0:6000)
-     6       ,dbmds(0:6000),dbfids(0:6000)
-
-      dimension rx(2500,20),ry(2500,20),rz(2500,20)
-      dimension vx(2500,20),vy(2500,20),vz(2500,20)
-      dimension bx(2500,20),by(2500,20),bz(2500,20)
-      dimension dd(2500,20),pp(2500,20)
-      dimension axx(2500),ayy(2500),azz(2500)
-      dimension tint(2500)
-
-      dimension arr(2500),aro(2500)
-      dimension vrr(2500),vtt(2500),vro(2500),vzz(2500),vfi(2500)
-      dimension brr(2500),btt(2500),bro(2500),bzz(2500),bfi(2500)
-      dimension add(2500),app(2500)
-      dimension thour(20),imax(20)
-      include 'stdout.h'
-c **************************************  concept: *****************
-c     put in a similarity solution shifted so that eta=1 at i=nn   *
-c     CONCEPT: rmin-rshock-rmax at start -- read  sim-solution     *
-c              then place so that spans the desired region         *
-c              Divide into 1001 !! equal dlnt regions              *
-c **************************************  -------- *****************
-
-
-C ======= START COMMUNICATION WITH IH COMPONENT HERE =====================
-
-      call get_io_unit_new(in)
-      write(iStdout,*) prefix, 
-     1       'Select line (1-2-3): '
-CCC      write(iStdout,*) prefix, 'PRESS 1'
-CCC      read(*,*)  lineno
-      lineno=1
-      write(iStdout,*) prefix, 
-     1         'lineno=',lineno
-      if (lineno.eq.1) open(in,file = 'evolv1.cme' )
-      if (lineno.eq.2) open(in,file = 'evolv2.cme' )
-      if (lineno.eq.3) open(in,file = 'evolv3.cme' )
-
-      read(in,*)
-      read(in,*)
-      read(in,*) lineno,kmax  !   kmax = no of snapshots
-      read(in,*) 
-
-      do 10 k=1,kmax 
-      read(in,*)  kx,imx,tx
-      thour(k) = tx
-       imax(k) = imx
-
-      do 20 i=1,imx 
-         read(in,*)  i1,rx(i,k),ry(i,k),rz(i,k)
-         read(in,*)  i2,vx(i,k),vy(i,k),vz(i,k)
-         read(in,*)  i3,bx(i,k),by(i,k),bz(i,k)
-         read(in,*)  i4,dd(i,k),pp(i,k)
-20    continue
-
-      read(in,*) 
-10    continue
-      close(in)
-
-      write(iStdout,*) prefix,
-     1           'beolvasas megvolt:'
-      write(iStdout,*) prefix,
-     1         'lineno,kmax :  ',lineno,kmax
-      write(iStdout,*) prefix      
-
-C ======= END COMMUNICATION WITH IH COMPONENT HERE =====================
-
-c -------------------------------- beolvasas meglenne
-      ausun = 200.
-      hour  = 3600.
-      aukm  = 1.5e8
-      gauss = 1.e5
-      dens0 = 1.e20
-      pres0 = 1.e5
-      bb0   = 100.
- 
-      write(iStdout,*) prefix,
-     1           'selected line: ',lineno
-      write(iStdout,*) prefix,
-     1       'Which snapshot to take (1-20): '
-CCC      write(iStdout,*) prefix, 'PRESS 9'
-CCC      read(*,*)  kk
-      kk=9
-
-      imx = imax(kk)
-      thr = thour(kk)
-      do 30 i=1,imx
-         ax  = rx(i,kk)
-         ay  = ry(i,kk)
-         az  = rz(i,kk)
-        aro(i) = sqrt(ax**2 + ay**2)
-        arr(i) = sqrt(ax**2 + ay**2 + az**2)
-        axx(i) = ax
-        ayy(i) = ay
-        azz(i) = az
-
-         ux  = vx(i,kk)
-         uy  = vy(i,kk)
-         uz  = vz(i,kk)
-        vrr(i) = (ux*ax +uy*ay + uz*az)/arr(i)
-        vro(i) = (ux*ax +uy*ay)/aro(i)
-        vtt(i) = (uz*aro(i) - vro(i)*az)/arr(i)
-      vfi(i) = (uy*ax - ux*ay)/aro(i)
-      vvv    = (ux**2 + uy**2 + uz**2)
-        vzz(i) = uz       
-
-         qx  = bx(i,kk)
-         qy  = by(i,kk)
-         qz  = bz(i,kk)
-      bbb    = sqrt(qx**2 + qy**2 + qz**2)
-        brr(i) = (qx*ax +qy*ay + qz*az)/arr(i)
-        bro(i) = (qx*ax +qy*ay)/aro(i)
-        btt(i) = (qz*aro(i) - bro(i)*az)/arr(i)
-      bfi(i) = (qy*ax - qx*ay)/aro(i)
-        bzz(i) = qz       
-
-        add(i) = dd(i,kk)
-        app(i) = pp(i,kk)
-30    continue
-
-      write(iStdout,*) prefix,
-     1      'consider snapshot : ',kk
-      write(iStdout,*) prefix,
-     1       't in hour         : ',thr
-      write(iStdout,*) prefix,
-     1        'number of grids   : ',imx
-      write(iStdout,*) prefix,
-     1        '1-st r-ro-z-      : ',arr(1),aro(1),azz(1)
-      write(iStdout,*) prefix,
-     1        '1-st br-bt-bfi    : ',brr(1),btt(1),bfi(1)
-      write(iStdout,*) prefix,
-     1        'last r-ro-z-roa   : ',arr(imx),aro(imx),azz(imx)
-      write(iStdout,*) prefix,
-     1        'last br-bt-bfi    : ',brr(imx),btt(imx),bfi(imx)
-      write(iStdout,*) prefix      
-
-c ==========================================  identify shock
-
-      ish = 0
-      dmax= 0.
-      ddn = add(1)*arr(1)**2
-      do 40 i=2,imx
-
-CCC     drr = arr(i)-arr(i-1) 
-
-        drr = sqrt((axx(i)-axx(i-1))**2+
-     1             (ayy(i)-ayy(i-1))**2+
-     2             (azz(i)-azz(i-1))**2)
-
-      if(drr==0.0)then
-         write(iStdout,*) prefix,'i...=',
-     1      i,axx(i),axx(i-1),ayy(i),ayy(i-1),azz(i),azz(i-1)
-      else
-
-      ddo = ddn
-      ddn = add(i)*arr(i)**2
-        diff = (ddo-ddn)/(ddo+ddn)*arr(i)/drr
-         
-        if (diff.gt.dmax) then
-         ish = i-1
-        dmax = diff
-        endif
-      endif
-
-40    continue
-           rsh = arr(ish)
-
-      write(iStdout,*) prefix,
-     1      'shock azonositva ish : ',ish,rsh
-      write(iStdout,*) prefix,
-     1       '     tavolsagban r   : ',arr(ish),rsh
-      write(iStdout,*) prefix      
-
-c ====================================  identify end-points
-
-       rmin1 = rmin*(rsh/rshock) 
-       imin1 = 0
-       rmax2 = rmax*(rsh/rshock)
-       imax1 = 0
-      do 50 i=1,imx
-      if (arr(i).lt.rmin1)  imin1 = i
-      if (arr(i).lt.rmax2)  imax1 = i
-50    continue
-
-c      imin1,imax1 largest smaller (or 0)
-      
-c ================================  Now comes the ansatz
-     
-      tblast = thr              
-        nn = nr
-c ---------------  compute dlnt=lnt/nn  -- needed to move across
-
-      mp = mm
-      ni = mp*(nn+1)
-c ---------------------------------------------   inside :
-
-      eta1  = rmin/rshock
-      jj = mp
-      if (imin1.eq.0) then
-      write(iStdout,*) prefix,
-     1        'imin1 = 0 -- not yet prepared ' 
-      write(iStdout,*) prefix,
-     1        'rshock/rmin-s desired : ',rmin,rshock 
-      write(iStdout,*) prefix,
-     1        'rshock/rmin-s read    : ',arr(1),rsh 
-      stop 
-      endif
-      i1 = imin1
-      ii = i1+1
-    
-      eta(jj) = eta1
-      exx(jj) = eta1*aro(ii)/arr(ii)
-      ezz(jj) = eta1*azz(ii)/arr(ii)
-     
-      evr(jj) = vrr(ii)/rmin1*tblast
-      evx(jj) = vro(ii)/rmin1*tblast
-      evz(jj) = vzz(ii)/rmin1*tblast
-
-      ebx(jj) = bro(ii)*arr(ii)**2
-      ebz(jj) = bzz(ii)*arr(ii)**2
-      ebr(jj) = brr(ii)*arr(ii)**2
-      ebm(jj) = sqrt(ebx(jj)**2+ebz(jj)**2)
-
-      edd(jj) = add(ii)*arr(ii)**2
-
-                                           !!!  integral 1  !!!
-       vv = vrr(ii)*tblast/slamb
-      ss1 = alog((arr(ii)-vv)/(rmin1-vv))/slamb 
-
-      write(iStdout,*) prefix,
-     1     'AT R-MIN :        ',rmin
-      write(iStdout,*) prefix,
-     1     'Scaled to RMIN1   ',rmin1
-      write(iStdout,*) prefix,
-     1      'Found after       ',imin1,arr(imin1)
-      write(iStdout,*) prefix,
-     1       'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
-      write(iStdout,*) prefix,
-     1      'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
-      write(iStdout,*) prefix,
-     1       'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
-      write(iStdout,*) prefix,
-     1       'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
-      write(iStdout,*) prefix,
-     1        'j-edd        :    ',jj,edd(jj)
-      write(iStdout,*) prefix      
-
-c -----------------------------------------------  outside :
-
-      eta2  = rmax/rshock
-      eta(nn) = eta2
-      jj = ni
-
-      ii = imax1
-
-      eta(jj) = eta2
-      exx(jj) = eta2*aro(ii)/arr(ii)
-      ezz(jj) = eta2*azz(ii)/arr(ii)
-     
-      evr(jj) = vrr(ii)/arr(ii)*tblst
-      evx(jj) = vro(ii)/arr(ii)*tblst
-      evz(jj) = vzz(ii)/arr(ii)*tblst
-
-      ebx(jj) = bro(ii)*arr(ii)**2
-      ebz(jj) = bzz(ii)*arr(ii)**2
-      ebr(jj) = brr(ii)*arr(ii)**2
-      ebm(jj) = sqrt(ebx(jj)**2+ebz(jj)**2)
-
-      edd(jj) = add(ii)*arr(ii)**2
-      ebfi(jj)= bfi(ii)*arr(ii)
-
-                                           !!!  integral 2  !!!
-       vv = vrr(ii)*tblast/slamb
-      ss2 = alog((rmax2-vv)/(arr(ii)-vv))/slamb 
-
-      write(iStdout,*) prefix,
-     1       'AT R-MAX :        ',rmax
-      write(iStdout,*) prefix,
-     1      'Scaled to RMIN1   ',rmax2
-      write(iStdout,*) prefix,
-     1      'Found after       ',imax1,arr(imax1)
-      write(iStdout,*) prefix,
-     1      'j-eta-exx-ezz:    ',jj,eta(jj),exx(jj),ezz(jj)
-      write(iStdout,*) prefix,
-     1      'j-evr-evx-evz:    ',jj,evr(jj),evx(jj),evz(jj)
-      write(iStdout,*) prefix,
-     1      'j-ebx-ebz    :    ',jj,ebx(jj),ebz(jj)
-      write(iStdout,*) prefix,
-     1      'j-ebr-ebm    :    ',jj,ebr(jj),ebm(jj)
-      write(iStdout,*) prefix,
-     1      'j-edd        :    ',jj,edd(jj)
-      write(iStdout,*) prefix      
-
-c ---------------------------------------------  DIVIDE  
-      sum = ss2
-      tint(imax1) = ss2
-
-      write(iStdout,*) prefix,
-     1      'imax1=',imax1
-
-CCC      do 110 ii=imax1-1,1,-1
-      do 110 ii=imax1-1,2,-1
-      vv = vrr(ii)*tblast/slamb
-      ss = alog((arr(ii)-vv)/(arr(ii-1)-vv))/slamb 
-      sum = sum + ss
-      tint(ii) = sum
-110   continue
-      sum = tint(imin1+1) + ss1
-      dlnt = sum/float(nn*mp)
-       ede = edd(ni)/ebm(ni)*rmax/rshock*(slamb-evr(ni))*dlnt
-       ede = float(mp)*ede
-       edsm(ni) = ede*ebm(ni)/edd(ni)
-
-      write(iStdout,*) prefix,
-     1      'Selected s-lambda  : ',sum
-      write(iStdout,*) prefix,
-     1      'Integral r1-r2done : ',sum
-      write(iStdout,*) prefix,
-     1      'Dlnt - resulting   : ',dlnt
-      write(iStdout,*) prefix,
-     1      'ede                : ',ede       
-      write(iStdout,*) prefix,
-     1      'edsm(ni)           : ',edsm(ni)
-      write(iStdout,*) prefix,
-     1      '=============================================='
-CCC      write(iStdout,*) prefix, 'PRESS ANY NUMBER'
-CCC      read(*,*)  lull
-      write(iStdout,*) prefix 
-
-      jj = 0
-      ii = imax1
-      tio= 0.
-       r2= rmax2
-120   jj = jj + 1
-       j = ni-jj
-      tji = dlnt*float(jj)
-121   continue
-      tiu = tint(ii)
-      if (tiu.lt.tji) then
-        tio = tiu
-           r2 = arr(ii)
-          ii = ii-1
-        go to 121
-        endif
-
-      if (j.ne.mp) then
-           r1  = arr(ii) 
-          ti  = (tiu-tio)*slamb
-          tj  = (tji-tio)*slamb
-          rj  = r2 - (r2-r1)*(1.-exp(-tj))/(1.-exp(-ti))
-         eta(j) = rj/rsh 
-
-       exx(j) = eta(j)*aro(ii)/arr(ii)
-       ezz(j) = eta(j)*azz(ii)/arr(ii)
-
-         evr(j) = vrr(ii)/rj*tblast
-         evx(j) = vro(ii)/rj*tblast
-         evz(j) = vzz(ii)/rj*tblast
-
-         ebx(j) = bro(ii)*arr(ii)**2
-         ebz(j) = bzz(ii)*arr(ii)**2
-         ebr(j) = brr(ii)*arr(ii)**2
-         ebm(j) = sqrt(ebx(j)**2+ebz(j)**2)
-      
-       edd(j) = add(ii)*arr(ii)**2
-      endif
-         edsm(j)= ede*ebm(j)/edd(j)*exp(-float(jj)*slamb*dlnt)
-
-      if (j.gt.0) go to 120
-
-                                     !!! Normalize - Adjust N,Bfi
-      eddmx = edd(ni)
-      ebfimx = ebfi(ni)
-      sinmx  = exx(ni)/eta(ni)
-      omega  = ebfi(ni)/ebr(ni)/sinmx*vrr(imax1)
-      
-      write(iStdout,*) prefix,
-     1      'eddmx  : ',eddmx
-      write(iStdout,*) prefix,
-     1      'ebfimx : ',ebfimx
-      write(iStdout,*) prefix,
-     1      'sinmx  : ',sinmx
-
-      edd(ni) = 1.
-
-      do 130 j=ni-1,0,-1
-      jj = ni-j
-        edd(j) = edd(j)/eddmx
-       ebfi(j) = ebfimx/sinmx*edd(j)*exx(j)/eta(j)
-        timj = tblast*exp(float(j)*dlnt)
-        efi(j) = omega*timj
-130   continue
-
-c ------------------------------------  now differences:
-      do 210 jj=0,ni
-       j1 = jj-mp
-       j2 = jj+mp
-      if (j1.lt.0) then  
-       dex = exx(j2)-exx(jj)
-       dez = ezz(j2)-ezz(jj)
-       dbm = alog(ebm(j2)/ebm(jj))
-       dbfi= alog(ebfi(j2)/ebfi(jj))
-       go to 201
-       endif
-      if (j2.gt.ni) then  
-       dex = exx(jj)-exx(j1)
-       dez = ezz(jj)-ezz(j1)
-       dbm = alog(ebm(jj)/ebm(j1))
-       dbfi= alog(ebfi(jj)/ebfi(j1))
-      else     
-       dex = (exx(j2)-exx(j1))/2.
-       dez = (ezz(j2)-ezz(j1))/2.
-       dbm = alog(ebm(j2)/ebm(j1))/2.
-       dbfi= alog(ebfi(j2)/ebfi(j1))/2.
-      endif
-
-201   continue
-ccc   edsm(jj) = sqrt(dex**2 + dez**2)
-        dbmds(jj) = dbm/edsm(jj) 
-       dbfids(jj) = dbfi/edsm(jj) 
-      
-210   continue
-
-c --------------------------------------  PLAY w fi - dfi
-
-      efi(ni) = 0.
-      do 310 jj=0,mp-1
-        j = ni-jj
-         efi(j) = 0.
-310   continue
-      do 320 j=ni,mp,-1
-       j1= j-mp
-       edfi(j) = ebfi(j)/ebm(j)*edsm(j) 
-       efi(j1) = efi(j) + edfi(j)
-320   continue
-     
-c --------------------------------- finally rescale TBLAST
-
-      tblast = tblast*(rshock/rsh)**(1./slamb)
-
-c ???????????????????????????????????????????????????
-      call get_io_unit_new(io)
-      open(io,file='ujcme-eta')
-      write(io,*) lineno,mm,ni,slamb,thr,tblast
-      do 900 j=0,ni 
-      write(io,911) j,eta(j),exx(j),ezz(j)
-      write(io,912)   evr(j),evx(j),evz(j)
-      write(io,912)   ebr(j),ebx(j),ebz(j)
-      write(io,912)   ebm(j),ebfi(j),edd(j)
-      write(io,913)   edsm(j)
-900   continue
-911   format(i8,3f12.6)
-912   format(8x,3f12.6)
-913   format(8x, f12.6)
-      close(io)
-
-      do 400 k=1,mp
-      arc = 0.
-      do j=k,ni,mp
-         arc = arc + edsm(j)
-      enddo
-      write(iStdout,*) prefix,
-     1      'k - meridian arclength in eta: ',k,arc
-400   continue
-c ???????????????????????????????????????????????????
-    
-      return
-      end
-
-c **************************  end of SIMILE***************
-
-
-
-      subroutine source(dt)          
+!===============================================================
+!BOP
+!ROUTINE: source - calculates the source of injected particles
+!INTERFACE: 
+      subroutine source(dt)
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /quelle/ kinj,einj,pinj,qqp(0:600),qqx(0:1000)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
       include 'stdout.h'
       do 31 k=0,nw
       do 11 i=1,nr
@@ -998,15 +558,25 @@ c **************************  end of SIMILE***************
       end
 c  *****************  end subroutine SOURCE   ******************
 
-
-      subroutine deltal(dt)                      !!! REWORK DLOGT!!!
+!BOP
+!ROUTINE: deltal - update the input from spatial derivative of f
+!INTERFACE:
+      subroutine deltal(dt)                      
+!DESCIPTION
+!Updates the solution of the following equation
+!\partial f/\partial t+ v\mu\partial f/\partial s =0
+!throught one time step
+!EOP
+!!! REWORK DLOGT!!!
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
 
@@ -1056,16 +626,25 @@ c -------------------------------- end IN direction(s)
 30    continue
       return
       end
-c  *****************  end subroutine DELTA-L  ******************
+c  *****************  end subroutine DELTAL  ******************
                                                  !!! REWORK DLOGT!!!
+!BOP
+!ROUTINE: lcycle - corrects the increment from df/ds using implicit scheme
+!INTERFACE:
       subroutine lcycle(dt,wght)
+!DESCRIPTION:
+!Implicit scheme with two-diagonal matrix (oly one lower diagonal or
+!only one higher diagonal, depending on the \mu sign) is solved directly
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
 
@@ -1118,16 +697,34 @@ c???    df(i,j,k) = (df(i,j,k)-fact*df(i+1,j,k))/(1.-fact)
       return
       end
 c  *****************  end subroutine L-CYCLE  ******************
-                                                                    
+!BOP
+!ROUTINE: deltamu - update the input from pitch angle derivative of f
+!INTERFACE:                      
       subroutine deltamu(i,dt)
+!DESCIPTION
+!Updates the solution of the following equation
+!\end{verbatim}
+!\begin{equation}
+!\partial f/\partial t+ (1-\mu^2)\left(-\frac12v\frac{\partial ln B}
+!{\partial s}-\mu(frac12\frac{d ln B}{d t}+\frac{d ln \delta s}{dt}-
+!{\bf b}\cdot \frac{d{\bf u}}{dt}\left)
+!{\partial f/\partial \mu =\frac{\partial}{\partial \mu}
+!\left(D_{\mu\mu}\frac{\partial f}{\partial \mu}\right)
+!\end{equation}
+!\begin{verbatim}
+!throught one time step
+!EOP  
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
@@ -1143,7 +740,7 @@ ccc   do 11 i=1,nr
       do 21 j=1,mm1
       ae = 1.+ ww(k)*amu(j)*vl(i)/cau**2
       dte= dt/ae
-       
+      
       foc =-sint(j)**2*(0.5*ww(k)*dbdl(i)+dvdt(i)/ww(k) +
      1                  amu(j)*(dldt(i) + 0.5*dbdt(i)))
       foc = dte/dmu*foc
@@ -1180,17 +777,24 @@ c --- add scattering :
       end
 c  *****************  end subroutine DELTA-MU  ******************
                                                  !!! REWORK DLOGT!!!
+!BOP
+!ROUTINE: mucycle - corrects the increment from df/d\mu using implicit scheme
+!INTERFACE:
       subroutine mucycle(i,dt,wght)
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      dimension a2(0:1000),a1(0:1000),bb(0:1000),
-     1          c1(0:1000),c2(0:1000),xy(0:1000)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      dimension a2(0:nRMax),a1(0:nRMax),bb(0:nRMax),
+     1          c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
       include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
@@ -1267,16 +871,34 @@ c --- now solve and fill :
       end
 c  *****************  end subroutine MU-CYCLE  ******************
                                                  !!! REWORK DLOGT!!!
+                      
+!BOP
+!ROUTINE: deltap - update the input from the momentum derivative of f
+!INTERFACE:
       subroutine deltap(i,dt)
+!DESCIPTION
+!Updates the solution of the following equation
+!\end{verbatim}
+!\begin{equation}
+!d f/d t+ \left((1-\mu^2)frac12\frac{d ln B}{d t}-
+!-\mu^2\frac{d ln \delta s}{dt}-
+!\frac{\mu{\bf b}}v\cdot \frac{d{\bf u}}{dt}\left)
+!p{\partial f/\partial p = 0
+!\end{equation}
+!\begin{verbatim}
+!throught one time step
+!EOP  
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /peel /  pex,fpeel(0:600),gpeel(0:600)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       data  cau / 7.2/
       nr1 = nr-1
        mm = nmu
@@ -1285,8 +907,8 @@ ccc   do 11 i=1,nr
       do 21 j=0,nmu
        acc0= -amu(j)**2*dldt(i) + 0.5*sint(j)**2*dbdt(i)
        acc1= -amu(j)*dvdt(i)
-      do 31 k=0,nw
-      ae = 1.+vl(i)*ww(k)*amu(j)/cau**2
+      do 31 k=0,nw   
+      ae = 1.+vl(i)*ww(k)*amu(j)/cau**2   
        acc = dt*(acc0 + acc1/ww(k))/dlnp/ae
       if (acc.ge.0.) then
        if (k.eq.0) then
@@ -1317,18 +939,24 @@ ccc   do 11 i=1,nr
       end
 c  *****************  end subroutine DELTA-P   ******************
                                                  !!! REWORK DLOGT!!!
+!BOP
+!ROUTINE: pcycle - corrects the increment from df/dp using implicit scheme
+!INTERFACE:
       subroutine pcycle(i,dt,wght)
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /peel /  pex,fpeel(0:600),gpeel(0:600)
-      dimension a2(0:1000),a1(0:1000),bb(0:1000),
-     1          c1(0:1000),c2(0:1000),xy(0:1000)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
+      dimension a2(0:nRMax),a1(0:nRMax),bb(0:nRMax),
+     1          c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
       include 'stdout.h'
       data  cau / 7.2/
       nr1 = nr-1
@@ -1338,7 +966,7 @@ ccc   do 10 i=1,nr
        acc0= - amu(j)**2*dldt(i)+0.5*sint(j)**2*dbdt(i)
        acc1= - amu(j)*dvdt(i)
 
-      do 31 k=0,nw 
+      do 31 k=0,nw
       ae = 1.+vl(i)*ww(k)*amu(j)/cau**2
        acc = acc0+acc1/ww(k)
        acc = wght*dt*acc/ae
@@ -1380,17 +1008,22 @@ c --- solve and fill :
       return
       end
 c  *****************  end subroutine P-CYCLE   ******************
+!BOP
+!ROUTINE: subsub - collect the inputs from \mu and momentum derivatives
       subroutine subsub(dt)
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
       common /suly  / wghtl,wghtmu,wghtw
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
       include 'stdout.h'
       do 10 i=1,nr
       ksub = 1
-      acc1 = dldt(i)
+      acc1 = dldt(i) !To be used to calculate ksub - under development
       acc2 = dbdt(i)
 
       dts = dt/float(ksub)
@@ -1410,9 +1043,15 @@ c  *****************  end subroutine P-CYCLE   ******************
       end
 
 c  *****************  end subroutine SUB-SUB   ******************
-      subroutine update         
+!BOP
+!ROUTINE: update - adds df to f
+!INTERFACE:
+      subroutine update        
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       do 20 j=0,nmu
       do 30 k=0,nw
       do 10 i=1,nr
@@ -1426,9 +1065,15 @@ c  *****************  end subroutine SUB-SUB   ******************
       return 
       end
 c  *****************  end subroutine UPDATE    ******************
+!BOP
+!ROUTINE: update - adds df to f for a given spatial point
+!INTERFACE:
       subroutine updatsub(i)    
+!EOP
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       do 20 j=0,nmu
       do 30 k=0,nw
        f(i,j,k) = f(i,j,k) + df(i,j,k)
@@ -1440,10 +1085,14 @@ c  *****************  end subroutine UPDATE    ******************
 c  *****************  end subroutine UPDATE    ******************
 
 c ==================== SOLVER ROUTINES: =========================== 
-
+!BOP
+!ROUTINE: solve5 - solves A\cdot x=b equation, with 5-diagonal matrix A
+!INTERFACE
       subroutine solve5(nx,a2,a1,bx,c1,c2,xy)
-      dimension a2(0:1000),a1(0:1000),bx(0:1000),
-     1          c1(0:1000),c2(0:1000),xy(0:1000)
+!EOP
+      include 'param.h'
+      dimension a2(0:nRMax),a1(0:nRMax),bx(0:nRMax),
+     1          c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
 c --  solve penta-diagonal
       c1(0) = c1(0)/bx(0)
       c2(0) = c2(0)/bx(0)
@@ -1472,7 +1121,8 @@ c --  solve penta-diagonal
       end
 c  *****************  end subroutine SOLVE-5  ******************
       subroutine solvaa(nx,a2,a1,bx,xy)
-      dimension a2(0:1000),a1(0:1000),bx(0:1000),xy(0:1000)
+      include 'param.h'
+      dimension a2(0:nRMax),a1(0:nRMax),bx(0:nRMax),xy(0:nRMax)
 c --  solve lower diagonal
       xy(0) = xy(0)/bx(0)
       xy(1) = (xy(1)-a1(1)*xy(0))/bx(1)
@@ -1484,7 +1134,8 @@ c --  solve lower diagonal
       end
 c  *****************  end subroutine SOLV-AA  ******************
       subroutine solvcc(nx,bx,c1,c2,xy)
-      dimension bx(0:1000),c1(0:1000),c2(0:1000),xy(0:1000)
+      include 'param.h'
+      dimension bx(0:nRMax),c1(0:nRMax),c2(0:nRMax),xy(0:nRMax)
 c --  solve upper diagonal
       nx1 = nx-1
       xy(nx) = xy(nx)/bx(nx)
@@ -1500,19 +1151,21 @@ c  *****************  end subroutine SOLV-CC  ******************
 
 c ========================  OUTPUT ROUTINES to be revised ========
 
-      subroutine alla(io,jst,t)      
+      subroutine alla(io,jst,t)
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
       common /blast/  slamb,tblast,tblst1,rshck1,dlnt
       common /gazdi/  ggamma,bbrad,vvmin,vvmax,ddmin,ddmax,
      1                ccmin,ccmax,aamin,aamax,bbmin,bbmax
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vr(0:1000)
-      common /spiral/ tll(0:1000), dbdl(0:1000),vl(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /scatti/ qex,cmu(40),scmu(40),wsc(0:600),xsc(0:1000)
-      integer:: iFile
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
+     1                vr(0:nRMax)
+      common /spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+     1     xsc(0:nRMax)
+      integer  iFile
       include 'stdout.h'
       call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
@@ -1561,20 +1214,22 @@ c ========================  OUTPUT ROUTINES to be revised ========
 c ****************************    end ALL output ******************
 
       subroutine csilla(io,ist,t)
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /azimut/ fi(0:1000)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /peel /  pex,fpeel(0:600),gpeel(0:600)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /azimut/ fi(0:nRMax)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
-      dimension ff(0:1000,0:600),s(0:1000,0:600),ffx(5)
+      dimension ff(0:nRMax,0:nPMax),s(0:nRMax,0:nPMax),ffx(5)
       dimension ract(10)
-      integer:: iFile
+      integer  iFile
       include 'stdout.h'
       call get_io_unit_new(iFile)
       if (io.lt.10) stop  'io kicsi'
@@ -1675,14 +1330,16 @@ c --  formats:
 
 c  *****************  end subroutine CSILLA   ******************
 
-      subroutine opentime 
+      subroutine opentime
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed / wmin,wmax,wwin,ww(0:600)
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
       common /iFile/  io(5),ip(5)
@@ -1738,21 +1395,23 @@ c  *****************  end subroutine OPENTIME  ******************
 c  *****************  end subroutine OPENTIME  ******************
 
       subroutine timevar(jst,t)
+      include 'param.h'
       common /size  / nr,nmu,nw, dim1
-      common /radio / nn,rmin,rshock,rmax,r(0:1000)
-      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:600)
-      common /energy/ emin,emax,eein,ee(0:600)
-      common /speed / wmin,wmax,dlnw,ww(0:600)
-      common /pitch / mm,amu(0:40),sint(0:40),dmu
-      common /solutn/ f(0:1000,0:40,0:600),df(0:1000,0:40,0:600)
-      common /peel /  pex,fpeel(0:600),gpeel(0:600)
+      common /radio / nn,rmin,rshock,rmax,r(0:nRMax)
+      common /impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /energy/ emin,emax,eein,ee(0:nPMax)
+      common /speed / wmin,wmax,dlnw,ww(0:nPMax)
+      common /pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      common /peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
       common /obsrad/ krmax,krobs(5),robs(5)
       common /obserg/ kemax,keobs(5),eobs(5)
-      common /plasma/ algbb(0:1000),algll(0:1000),algnn(0:1000),
-     1                vvr(0:1000)
-      common /coeff / dvdt(0:1000),dldt(0:1000),dbdt(0:1000),
-     1                dndt(0:1000)
-      common /convrt/ aukm,hour,valf
+      common /plasma/ algbb(0:nRMax),algll(0:nRMax),algnn(0:nRMax),
+     1                vvr(0:nRMax)
+      common /coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
+     1                dndt(0:nRMax)
+      common /convrt/ cAUKm,hour,valf
       dimension ffe(10)
       common /iFile/  io(5),ip(5)
       include 'stdout.h'
@@ -1786,17 +1445,17 @@ c  *****************  end subroutine OPENTIME  ******************
 30    continue
       
       vv =  fr2*vvr(i1) + fr1*vvr(i2)
-      vv = aukm/hour*vv
+      vv = cAUKm/hour*vv
       abb= fr2*algbb(i1)+fr1*algbb(i2)
       all= fr2*algll(i1)+fr1*algll(i2)
       add= abb-all
       ann= fr2*algnn(i1)+fr1*algnn(i2)
-      write(iStdout,7881)prefix,
+      if(DoWriteAll)write(iStdout,7881)prefix,
      1      jst,t,vv,add,all,abb,ann
       write(ip(kr),788) jst,t,vv,add,all,abb,ann
 
       write(io(kr),777) jst,t,(ffe(ke),ke=1,kemax)
-      write( iStdout,7771) prefix,
+       if(DoWriteAll)write( iStdout,7771) prefix,
      1      jst,t,(ffe(ke),ke=1,kemax)
 10    continue
       return

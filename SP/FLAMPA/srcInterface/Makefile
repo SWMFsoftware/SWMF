@@ -1,30 +1,23 @@
-#^CFG COPYRIGHT UM
 
 SHELL =/bin/sh
 
-include ../Makefile.def
-include ../Makefile.conf
+include ../../../Makefile.def
+include ../../../Makefile.conf
 include Makefile.DEPEND
-
-# Configurable objects
-
-OBJECTS = \
-	ModGridDescriptor.o\
-	update_lagrangian_grid.o\
-	IH_get_for_gm.o\
-	IH_get_for_sc.o\
-	IH_get_for_sp.o\
-	IH_wrapper.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
+OBJECTS = SP_wrapper.o
+
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
+		${MODULES} ${OBJECTS}
+
 
 #
 #	Making executables and libraries
 #
-MY_LIB = ${LIBDIR}/libIH.a
+MY_LIB = ${LIBDIR}/libSP.a
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -32,10 +25,10 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-BATSRUS_LIB = ../src/libBATSRUS.a 
+FLAMPA_LIB = ../src/libFLAMPA.a 
 
 ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
-	cp -f ${BATSRUS_LIB} ${MY_LIB}
+	cp -f ${FLAMPA_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean

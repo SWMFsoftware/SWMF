@@ -115,5 +115,6 @@
       character*4  NameComp
       iStdOut = 6
       prefix = NameComp
+      DoWriteAll=.false.
       end subroutine set_stdout
 !============================================================================! 

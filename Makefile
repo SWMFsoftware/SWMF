@@ -63,6 +63,13 @@ help:
 	@echo ' '
 	@#^CMP END IH
 
+	@#^CMP IF SC BEGIN
+	@echo ' '
+	@echo '    SC/BATSRUS/src/Makefile   (Congigure GM/BATSRUS source into SC/BATSRUS'
+	@echo '    SCBATSRUS   (Congigure and rename GM/BATSRUS source into SC/BATSRUS'
+	@echo ' '
+	@#^CMP END SC
+	@echo '    veryclean   (cleans disstribution and removes created copies of BATSRUS'
 #
 # Check the variables SWMF_ROOT=`pwd` and OS = `uname`
 #
@@ -113,8 +120,10 @@ install: ENV_CHECK mkdir
 	cd ${IEDIR};    make install    #^CMP IF IE
 	cd ${IHDIR};    make install    #^CMP IF IH
 	cd ${IMDIR};    make install    #^CMP IF IM
-	cd ${UADIR};    make install    #^CMP IF UA
+	cd ${SCDIR};    make install    #^CMP IF SC
+	cd ${SPDIR};    make install    #^CMP IF SP
 	cd ${RBDIR};    make install    #^CMP IF RB
+	cd ${UADIR};    make install    #^CMP IF UA
 	@echo
 	@echo Installation succeeded
 	@echo
@@ -201,7 +210,10 @@ clean: ENV_CHECK
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
 	cd RB/Rice;		make clean    #^CMP IF RB
+	cd RB/Empty;		make clean    #^CMP IF RB
 	cd SP/Kota;             make clean    #^CMP IF SP
+	cd SP/FLAMPA;           make clean    #^CMP IF SP
+	cd SP/Empty;            make clean    #^CMP IF SC
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -231,7 +243,12 @@ distclean: ENV_CHECK rmdir
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
 	cd RB/Rice;		make distclean    #^CMP IF RB
+	cd RB/Empty;		make distclean    #^CMP IF RB
+	cd SP/FLAMPA;           make distclean    #^CMP IF SP
 	cd SP/Kota;             make distclean    #^CMP IF SP
+	cd SP/Empty;            make distclean    #^CMP IF SP
+	cd SC/BATSRUS;          make distclean    #^CMP IF SC
+	cd SC/Empty;            make distclean    #^CMP IF SC
 	cd CON;			make distclean
 	cd util;		make distclean
 	cd share;               make distclean
@@ -255,7 +272,7 @@ swmfclean: distclean
 	@				#^CMP END DOC
 	@echo
 
-dist: distclean
+dist: veryclean
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
@@ -278,6 +295,8 @@ dist: distclean
 	tar -rf tmp.tar  IM			#^CMP IF IM
 	tar -rf tmp.tar  UA			#^CMP IF UA
 	tar -rf tmp.tar  RB                     #^CMP IF RB
+	tar -rf tmp.tar  SP                     #^CMP IF SP
+	tar -rf tmp.tar  SC                     #^CMP IF SC
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
@@ -303,6 +322,7 @@ rundir: ENV_CHECK
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
+	cd ${SCDIR}; make rundir                 #^CMP IF SC
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
@@ -343,9 +363,10 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/src; cp *.f90 *.f Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 	cp GM/BATSRUS/srcInterface/ModGridDescriptor.f90 IH/BATSRUS/src
-	cp IH/BATSRUS_share/src/IH_wrapper.f90 IH/BATSRUS/src
+	cp GM/BATSRUS/srcInterface/update_lagrangian_grid.f90 IH/BATSRUS/src
+	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/src
 	cd GM/BATSRUS; \
-	cp Makefile.conf Makefile.def PARAM.XML PARAM.pl GridSize.pl \
+	cp Makefile.def PARAM.XML PARAM.pl GridSize.pl \
 	../../IH/BATSRUS/
 
 IHBATSRUS:IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -355,9 +376,67 @@ IHBATSRUS:IH/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
 		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;
 	cd IH/BATSRUS/srcInterface; \
 		mv ../src/ModGridDescriptor.f90 .; \
-		mv ../src/IH_wrapper.f90 .; \
-		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_wrapper.f90; \
+		mv ../src/update_lagrangian_grid.f90 .; \
+		mv ../src/IH_*.f90 .; \
+		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
 
 #^CMP END IH
+#^CMP IF SC BEGIN
+SC/BATSRUS/src/Makefile: 
+	cd GM/BATSRUS; cp -f Makefile.conf ${SCDIR};\
+	mv Makefile Makefile.BAK; \
+	cd srcInterface; mv Makefile Makefile.BAK; cd ..;\
+	make -f Makefile_CONFIGURE -e COMP=SC DREL=${SCDIR} relax_src;\
+	mv Makefile.BAK Makefile; \
+	cd srcInterface; mv Makefile.BAK Makefile; cd ..;\
+	cp -f \
+	../../IH/BATSRUS_share/src/IH_wrapper.f90 \
+	${SCDIR}/srcInterface/SC_wrapper.f90;\
+	cp -f \
+	../../IH/BATSRUS_share/src/IH_get_for_sp.f90 \
+	${SCDIR}/srcInterface/SC_get_for_sp.f90
+	cd ${SCDIR}/srcInterface/; \
+	perl -i -pe 's?IH?SC?g' SC_wrapper.f90 SC_get_for_sp.f90; \
+        perl -i -pe 's?BATSRUS?SC_BATSRUS?' SC_wrapper.f90; \
+	perl -i -pe 's?Inner?Solar?' SC_wrapper.f90; \
+	perl -i -pe 's?Heliosphere?Corona?' SC_wrapper.f90
+
+SCBATSRUS:SC/BATSRUS/src/Makefile ${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
+	cd SC/BATSRUS/srcInterface/; \
+	mv SC_get_for_ih.f90 get_ih.orig; \
+	mv SC_put_from_ih.f90 put_ih.orig;\
+	cp get_ih.orig SC_get_for_ih.f90; \
+	cp put_ih.orig SC_put_from_ih.f90;\
+	cd ../src; mv ../srcInterface/*.f90 .; \
+	rm -f main.f90 stand_alone*.f90; \
+	${SCRIPTDIR}/Methods.pl SC; \
+	${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
+	perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f; \
+	cd ../srcInterface; \
+	mv ../src/ModGridDescriptor.f90 .; \
+	mv ../src/update_lagrangian_grid.f90 .; \
+	mv ../src/SC_*.f90 .
+
+#^CMP END SC
+
+veryclean:
+	@(if([ -f IH/BATSRUS/src/Makefile ]); then \
+	echo 'Remove IH/BATSRUS/src'; \
+	cd IH/BATSRUS; make veryclean; \
+	fi)
+	@(if([ -f SC/BATSRUS/src/Makefile ]); then \
+	echo 'Remove SC/BATSRUS/src'; \
+	cd SC/BATSRUS; make veryclean; \
+	fi)
+	@(if([ -f SC/BATSRUS/srcInterface/get_ih.orig ]); then \
+	echo 'Recover SC_*ih.f90'; \
+	cd SC/BATSRUS/srcInterface; \
+	mv get_ih.orig SC_get_for_ih.f90; \
+	mv put_ih.orig SC_put_from_ih.f90;\
+	fi)
+	rm -f */BATSRUS/src/user_routines.f90
+	make distclean
+
+
 # keep this line

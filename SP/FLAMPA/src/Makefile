@@ -1,12 +1,16 @@
 #^CFG COPYRIGHT UM
 
 SHELL =/bin/sh
-
-include ../Makefile.def
-include ../Makefile.conf
+include ../../../Makefile.def
+include ../../../Makefile.conf
 include Makefile.DEPEND
 
 OBJECTS = sep19.o main.o read_ihdata.o
+
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
+
+DEPEND:
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
 
 SEPEXE = ${BINDIR}/SEP.exe
 
@@ -25,7 +29,7 @@ stdout.h:
 SEP77:	io_unit_for77.f stdout.h
 	f77 read_ihdata.f sp_stand_alone.f io_unit_for77.f main.f sep19.f
 
-MY_LIB = libKota.a
+MY_LIB = libFLAMPA.a
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \

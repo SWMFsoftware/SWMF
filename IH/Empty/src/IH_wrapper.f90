@@ -113,3 +113,11 @@ subroutine IH_get_for_gm(&
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
 end subroutine IH_get_for_gm
+
+subroutine IH_get_for_sc(&
+     nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
+! derived type parameters, it is easier not to declare them
+  character(len=*), parameter :: NameSub='IH_get_for_sc'
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+end subroutine IH_get_for_sc

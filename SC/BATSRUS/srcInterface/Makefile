@@ -1,30 +1,30 @@
-#^CFG COPYRIGHT UM
 
 SHELL =/bin/sh
 
-include ../Makefile.def
-include ../Makefile.conf
+include ../../../Makefile.def
+include ../../../Makefile.conf
 include Makefile.DEPEND
 
-# Configurable objects
+
 
 OBJECTS = \
 	ModGridDescriptor.o\
-	update_lagrangian_grid.o\
-	IH_get_for_gm.o\
-	IH_get_for_sc.o\
-	IH_get_for_sp.o\
-	IH_wrapper.o
+	SC_get_for_ih.o\
+	SC_get_for_sp.o\
+	SC_put_from_ih.o\
+	SC_wrapper.o\
+	update_lagrangian_grid.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${SEARCH_EXTRA} \
+		${MODULES} ${OBJECTS}
 
 #
 #	Making executables and libraries
 #
-MY_LIB = ${LIBDIR}/libIH.a
+MY_LIB = ${LIBDIR}/libSC.a
 
 LIB:	DEPEND
 	make ${MY_LIB}

@@ -149,6 +149,8 @@ contains
        call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
     case(RB_)                                     !^CMP IF RB
        call RB_set_param(CompInfo,TypeAction)     !^CMP IF RB
+    case(SC_)                                     !^CMP IF SC
+       call SC_set_param(CompInfo,TypeAction)     !^CMP IF SC
     case default
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
@@ -237,6 +239,8 @@ contains
        call UA_set_param(CompInfo,'VERSION')     !^CMP IF UA
     case(RB_)                                    !^CMP IF RB
        call RB_set_param(CompInfo,'VERSION')     !^CMP IF RB
+    case(SC_)                                    !^CMP IF SC
+       call SC_set_param(CompInfo,'VERSION')     !^CMP IF SC
     case default
        call put(CompInfo,Use=.false.,NameVersion='not implemented',Version=0.0)
     end select
@@ -282,6 +286,8 @@ contains
        call UA_init_session(iSession,TimeSimulation)     !^CMP IF UA
     case(RB_)                                            !^CMP IF RB
        call RB_init_session(iSession,TimeSimulation)     !^CMP IF RB
+    case(SC_)                                            !^CMP IF SC
+       call SC_init_session(iSession,TimeSimulation)     !^CMP IF SC
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -326,6 +332,8 @@ contains
        call UA_finalize(TimeSimulation)     !^CMP IF UA
     case(RB_)                               !^CMP IF RB
        call RB_finalize(TimeSimulation)     !^CMP IF RB
+    case(SC_)                               !^CMP IF SC
+       call SC_finalize(TimeSimulation)     !^CMP IF SC
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -369,6 +377,8 @@ contains
        call UA_save_restart(TimeSimulation)     !^CMP IF UA
     case(RB_)                                   !^CMP IF RB
        call RB_save_restart(TimeSimulation)     !^CMP IF RB
+    case(SC_)                                   !^CMP IF SC
+       call SC_save_restart(TimeSimulation)     !^CMP IF SC
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
@@ -417,6 +427,8 @@ contains
        call UA_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF UA
     case(RB_)                                               !^CMP IF RB
        call RB_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF RB
+    case(SC_)                                               !^CMP IF SC
+       call SC_run(TimeSimulation, TimeSimulationLimit)     !^CMP IF SC
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select

@@ -1,11 +1,11 @@
 install:
-	@echo 'No installation for SP Empty'
+	@echo 'No installation for SC Empty'
 
 LIB:
 	cd src; make LIB
 
 rundir:
-	@echo 'No run/SP for SP Empty'
+	@echo 'No run/SC for SC Empty'
 
 clean:
 	cd src; make clean

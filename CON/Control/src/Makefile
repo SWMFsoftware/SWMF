@@ -50,6 +50,10 @@ LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
 
 LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
 
+LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
+
+LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
+
 #######################
 # Interface part of   #
 # super-structure:    #
@@ -100,6 +104,8 @@ SWMFEXE: DEPEND
 	@cd ${IHDIR};        make LIB	#^CMP IF IH
 	@cd ${IMDIR};        make LIB	#^CMP IF IM
 	@cd ${UADIR};        make LIB	#^CMP IF UA
+	@cd ${SCDIR};        make LIB   #^CMP IF SC
+	@cd ${SPDIR};        make LIB   #^CMP IF SP
 	@cd ${INTERFACEDIR}; make LIB
 	@make ${SWMFEXE}
 	@echo ' '
@@ -137,9 +143,17 @@ lib5 = -lUA #		^CMP IF UA
 LIB6 = ${LIBRB}	#	^CMP IF RB
 lib6 = -lRB #		^CMP IF RB
 
+LIB7 = ${LIBSC} #       ^CMP IF SC
+lib7 = -lSC #       ^CMP IF SC
+
+LIB8 = ${LIBSP} #       ^CMP IF SC
+lib8 = -lSP #       ^CMP IF SC
+
+
 ${SWMFEXE}: ${MODULES} ${OBJECTS} \
 		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
+		${LIB7} ${LIB8} \
 		${MAKEFILE_COMP_SELECT}
 	@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
 	elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
@@ -150,6 +164,7 @@ SWMF_general:
 		${MODULES} ${OBJECTS} \
 		-L${LIBDIR} -lINTERFACE \
 		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} ${lib6} \
+		${lib7} ${lib8} \
 		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
 		${Lflag1}
 
@@ -162,6 +177,7 @@ SWMF_for_Darwin:
 	ld -all_load -r -o LIBRARIES.o \
 		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
 		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
+		${LIB7} ${LIB8} \
 		${LIBINTERFACE}
 	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} \
@@ -182,6 +198,9 @@ SWMF_for_xlf:
 	mkdir Tmp_LIB4;      cd Tmp_LIB4;      ar -x ${LIB4} #^CMP IF IE
 	mkdir Tmp_LIB5;      cd Tmp_LIB5;      ar -x ${LIB5} #^CMP IF UA
 	mkdir Tmp_LIB6;      cd Tmp_LIB6;      ar -x ${LIB6} #^CMP IF RB
+	mkdir Tmp_LIB7;      cd Tmp_LIB7;      ar -x ${LIB7} #^CMP IF SC
+	mkdir Tmp_LIB8;      cd Tmp_LIB8;      ar -x ${LIB8} #^CMP IF SP
+
 	${LINK.f90} -o ${SWMFEXE} \
 		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
 		${Lflag1}
