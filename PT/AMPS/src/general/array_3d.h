@@ -5,15 +5,13 @@
 #ifndef ARRAY_3D
 #define ARRAY_3D
 
-#include <math.h>
 #include <stdlib.h>
-#include <iostream.h>
-
-using namespace std;
+#include <stdio.h>
+#include <math.h>
 
 template <class T>
 class array_3d {
-private:
+protected:
   T* data;
   long int size_dim0,size_dim1,size_dim2;
   long int ndim0_ndim1;
@@ -36,8 +34,8 @@ public:
 //===================================================
   array_3d(long int n0,long int n1,long int n2) {
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
-      cerr << "Error: allocation of array_3d object " << endl;
-      cerr << "with negative number of elemens" << endl;
+      printf("Error: allocation of array_3d object\n");
+      printf("with negative number of elemens\n");
       exit(0);
     } 
 
@@ -55,17 +53,45 @@ public:
   }
 
 //===================================================
+  long int size(int idim) {
+    long int res=0;
+
+    switch(idim) {
+    case 0:
+      res=size_dim0;
+    case 1:
+      res=size_dim1;
+    case 2:
+      res=size_dim2;
+    } 
+
+    return res;
+  }
+
+//===================================================
   void init(long int n0,long int n1,long int n2) {
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
-      cerr << "Error: allocation of array_3d object " << endl;
-      cerr << "with negative number of elemens" << endl;
+      printf("Error: allocation of array_3d object\n");
+      printf("with negative number of elemens\n");
       exit(0);
     }
    
     if (size_dim0!=0) {
-      cerr << "Error: initialization of allocated of array_3d object " << endl;
+      printf("Error: initialization of allocated of array_3d object\n");
       exit(0);
     }
+
+   data=new T[n0*n1*n2];
+   size_dim0=n0;
+   size_dim1=n1;
+   size_dim2=n2;
+
+   ndim0_ndim1=n0*n1;
+  };
+
+//===================================================
+  void reinit(long int n0,long int n1,long int n2) {
+   if (data!=NULL) delete [] data;
 
    data=new T[n0*n1*n2];
    size_dim0=n0;
@@ -117,7 +143,7 @@ public:
   friend array_3d<T> operator + (const array_3d<T> &v1,const array_3d<T> &v2) {
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
-      cerr << "Error: add two array_3d<T> of different length.\n";
+      printf("Error: add two array_3d<T> of different length.\n");
       exit(0);
     }
 
@@ -137,7 +163,7 @@ public:
   friend array_3d<T> operator - (const array_3d<T> &v1,const array_3d<T> &v2) {
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
-      cerr << "Error: add two array_3d<T> of different length.\n";
+      printf("Error: add two array_3d<T> of different length.\n");
       exit(0);
     }
 
@@ -170,7 +196,7 @@ public:
 //===================================================
   friend array_3d<T> operator / (const array_3d<T> &v1, const T t) {
     if (t == 0) {
-      cerr << "Error: divide vector by 0.\n";
+      printf("Error: divide vector by 0.\n");
       exit(0);
     }
     long int offset;
@@ -189,7 +215,7 @@ public:
   friend array_3d<T>& operator += (array_3d<T> &v1,const array_3d<T> &v2) {
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
-      cerr << "Error: add two vectors of different length.\n";
+      printf("Error: add two vectors of different length.\n");
       exit(0);
     }
     long int offset;
@@ -207,7 +233,7 @@ public:
   friend array_3d<T>& operator -= (array_3d<T> &v1,const array_3d<T> &v2) {
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
-      cerr << "Error: add two vectors of different length.\n";
+      printf("Error: add two vectors of different length.\n");
       exit(0);
     }
     long int offset;
@@ -236,7 +262,7 @@ public:
 //===================================================
   friend array_3d<T>& operator /= (array_3d<T> &v1,const T t) {
     if (t == 0) {
-      cerr << "Error: divide array_3d<T> by 0.\n";
+      printf("Error: divide array_3d<T> by 0.\n");
       exit(0);
     }
 
@@ -249,19 +275,6 @@ public:
     }
 
     return v1;
-  };
-
-//===================================================
-  friend ostream &operator << (ostream &o, const array_3d<T> &v) {
-    long int offset;
-    for(long int i0=0;i0<v.size_dim0;i0++)
-    for(long int i1=0;i1<v.size_dim1;i1++)
-    for(long int i2=0;i2<v.size_dim2;i2++) {
-      offset=i0+v.size_dim0*i1+v.ndim0_ndim1*i2;
-      o <<v.data[offset]<<" ("<<i0<<","<<i1<<","<<i2<<")"<<endl;
-    }
-
-    return(o);
   };
 
 };
