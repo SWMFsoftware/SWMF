@@ -377,7 +377,7 @@ subroutine proj_matvec(phi,laplace_phi)
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(in) :: phi
+  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(inout) :: phi
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), intent(out) :: laplace_phi
 
