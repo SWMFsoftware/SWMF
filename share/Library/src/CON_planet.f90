@@ -77,6 +77,10 @@ module CON_planet
   logical :: UseRealMagAxis  = .true.
   logical :: UseSetMagAxis   = .false.
 
+  ! Frequency of updating the magnetic field information
+  logical :: DoUpdateB0      = .true.
+  real    :: DtUpdateB0      = 0.0001
+
   ! A primary axis is set to the true value
   ! a secondary axis is aligned with the primary axis
   logical :: IsRotAxisPrimary = .true., IsMagAxisPrimary = .true.
@@ -320,19 +324,23 @@ contains
 
   subroutine get_planet( &
        NamePlanetOut, RadiusPlanetOut, IonosphereHeightOut, &
-       UseRotationOut, DipoleStrengthOut)
+       UseRotationOut, DipoleStrengthOut, DoUpdateB0Out, DtUpdateB0Out)
 
     character(len=*), optional, intent(out) :: NamePlanetOut
     real,             optional, intent(out) :: RadiusPlanetOut
     real,             optional, intent(out) :: IonosphereHeightOut
     logical,          optional, intent(out) :: UseRotationOut
     real,             optional, intent(out) :: DipoleStrengthOut
+    logical,          optional, intent(out) :: DoUpdateB0Out
+    real,             optional, intent(out) :: DtUpdateB0Out
     !-----------------------------------------------------------------------
     if(present(NamePlanetOut))      NamePlanetOut     = NamePlanet
     if(present(RadiusPlanetOut))    RadiusPlanetOut   = RadiusPlanet
     if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
     if(present(UseRotationOut))     UseRotationOut    = UseRotation
     if(present(DipoleStrengthOut))  DipoleStrengthOut = DipoleStrength
+    if(present(DoUpdateB0Out))      DoUpdateB0Out     = DoUpdateB0
+    if(present(DtUpdateB0Out))      DtUpdateB0Out     = DtUpdateB0
 
   end subroutine get_planet
 

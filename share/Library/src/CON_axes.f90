@@ -146,10 +146,6 @@ module CON_axes
   ! Logical tells if the time independent axis parameters have been set
   logical :: DoInitializeAxes=.true.
 
-  ! Frequency of updating the magnetic field information
-  logical :: DoUpdateB0      = .true.
-  real    :: DtUpdateB0      = 0.0001
-
   ! Coordinate transformation matrices connecting all the systems
   real, dimension(3,3) :: &
        SmgGsm_DD, &            ! vSmg_D = matmul(SmgGsm_DD,vGsm_D)
