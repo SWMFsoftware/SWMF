@@ -537,12 +537,12 @@ subroutine ionosphere_solver(PHI, &
   if (north) then
      cpcp_north = cpcp/1000.0
      write(iUnitOut,*) &
-          "IE_iono_solver: Northern Cross Polar Cap Potential=",&
+          "iono_solver: Northern Cross Polar Cap Potential=",&
           cpcp_north," kV"
   else
      cpcp_south = cpcp/1000.0
      write(iUnitOut,*) &
-          "IE_iono_solver: Southern Cross Polar Cap Potential=",&
+          "iono_solver: Southern Cross Polar Cap Potential=",&
           cpcp_south," kV"
   endif
 
