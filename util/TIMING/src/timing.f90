@@ -18,16 +18,11 @@ end subroutine timing_version
 !==============================================================================
 subroutine timing_active(value)
 
-  use ModTiming, ONLY: UseTiming, i_last
+  use ModTiming, ONLY: UseTiming
   implicit none
 
   logical, intent(in) :: value
   !----------------------------------------------------------------------------
-
-  if(i_last.ne.1)then
-     write(*,*)'!!!! timing_activate i_last =',i_last
-     stop !call CON_stop("i_last is not 1")
-  end if
 
   UseTiming=value
 
