@@ -55,15 +55,17 @@ Module CON_router
 !For the router between LOCAL grids of a component we use the   !
 !communicator of the model for sending-receiving the data,      !
 !otherwise the global communicator                              !
+!\begin{verbatim}
      logical::IsLocal,IsProc
      integer::iProc,nProc,iComm
-
+!\end{verbatim}
 !If the union group is constructed, then for use with broadcast !
 !we need the union communicator and the root PE ranks in this   !
 !communicator
+!\begin{verbatim}
      integer::iCommUnion,iProc0Source,iProc0Target
      integer,dimension(:),pointer::iTranslated_P
-!\begin{verbatim}
+!\end{verbatim}
 !As the default we use iCB indexes to construct the router,     !
 !hence the grid point is characterized by the                   !
 !GridDescriptor%nDim grid point indexes plus one more index for !
@@ -71,18 +73,20 @@ Module CON_router
 !GridDescriptor%nDim indexes, without the block number which    !
 !only seems to be on sence for the component which is localized !
 !at one PE only, or which has exactly one block per PE          !
- 
-     integer::nIndexesSource,nIndexesTarget  
-
+!\begin{verbatim}
+      integer::nIndexesSource,nIndexesTarget  
+!\end{verbatim}
 !The total amounts of the buffer segmentsto be sent-received    !
 !to/from the PE. The total amounts of the grid points from which!
 !the data should be got or to which the data should be put,some !
 !data points may be counted more than one time                  !
-
+!\begin{verbatim}
      integer, dimension(:), pointer :: &
           nGet_P, nPut_P, nRecv_P, nSend_P
+!\end{verbatim}
 !iCB indexes and the weight coefficients for the points of the  !
 !target and source grids, which are connected through the router!
+!\begin{verbatim}
      type(IndexPtrType), dimension(:), pointer :: iGet_P
      type(IndexPtrType), dimension(:), pointer :: iPut_P
      type(DoAddPtrType), dimension(:), pointer :: DoAdd_P

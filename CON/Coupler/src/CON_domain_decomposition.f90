@@ -1282,17 +1282,17 @@ contains
   !IROUTINE: l_level_neighbor - returns the level of neghboring block    
   !DESCRIPTION:
   !For the global node lGlobalTreeNumber and for cell index array, 
-  !iCells_D, which is expected but not required to be out of the 
+  !iCells\_D, which is expected but not required to be out of the 
   !limits 1:nCells for a given DomainDecomposition, hence, for the 
   !point which in fact out of the block lGlobalTreeNumber, and 
   !belongs to a neighboring block, the procedure returns:
-  !    positive integer>1,if the neghboring block is more than twice coarser 
-  !                        than lGlobalTreeNumbe
+  !     integer larger than 1 if the neghboring block is more than 
+  !                              twice coarser than lGlobalTreeNumber
   !       1, if the neghboring block is twice coarser than lGlobalTreeNumber
   !       0, if the neighboring block is of the same resolution
   !      -1, if the neighboring blcok is twice finer
   !      -2,... if the neghboring block is more than twice finer
-  !      None_, if the point is out of the computational domain
+  !      None\_, if the point is out of the computational domain
   !EOP
 
   !BOP
