@@ -1597,11 +1597,13 @@ rel			TypeProjStop
 ! if pratioHigh.lt.q                P is set to (gamma-1)*(e-(rho*u**2+B**2)/2)
 !
 ! The 2nd case is a linear interpolation between the 2nd and 4th cases.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseAccurateIntegral'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'RAYTRACE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseAccurateIntegral'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseAccurateTrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.01','max' => '60','default' => '0.1','type' => 'real','name' => 'DtExchangeRay'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '1','type' => 'integer','name' => 'DnRaytrace'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
 #RAYTRACE
 T			UseAccurateIntegral
 T			UseAccurateTrace
 0.1			DtExchangeRay [sec]
+1			DnRaytrace
 
 Raytracing (field-line tracing) is needed to couple the GM and IM components.
 It can also be used to create plot files with open-closed field line 
@@ -1631,8 +1633,14 @@ in infrequent exchages thus some PE-s may become idle (no more work to do).
 The optimal value is problem dependent. A typically acceptable value is 
 DtExchangeRay = 0.1 seconds (default).
 
-Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.
-and DtExchangeRay = 0.1.
+The DnRaytrace parameter contains the minimum number of iterations between
+two ray tracings. The default value 1 means that every new step requires
+a new trace (since the magnetic field is changing). A larger value implies
+that the field does not change significantly in that many time steps.
+The ray tracing is always redone if the grid changes due to an AMR.
+
+Default values are UseAccurateIntegral = .true., UseAccurateTrace = .false.,
+DtExchangeRay = 0.1 and DnRaytrace=1.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'IM'},'content' => [{'attrib' => {'min' => '0','type' => 'real','name' => 'TauCoupleIm'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #IM
