@@ -1764,7 +1764,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
 !  real, parameter:: Phi_Shift=-cPi*1.39E+02/1.80E+02
   real, parameter:: Phi_Shift=cPi
   real:: gtemp,htemp
-  real:: delta_m0,c_n
+  real:: c_n
   real:: sinPhi,cosPhi
   real:: sinmPhi,cosmPhi
   real:: cosTheta,sinTheta
@@ -1773,6 +1773,17 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
   real:: Br_PFSSM,Btheta_PFSSM,Bphi_PFSSM,Psi_PFSSM
   real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
+
+  !\
+  ! Optimization
+  !/
+  real    :: Xy
+  real    :: SinThetaM, SinThetaM1
+  integer :: delta_m0
+  integer, parameter :: MaxInt=10000
+  real,save :: sqrt_int(MaxInt)
+  real,save,dimension(-1:N_PFSSM+2) :: RoRsPower_I, RoRPower_I, rRsPower_I
+  !--------------------------------------------------------------------------
   !\
   ! Calculate cell-centered spherical coordinates::
   !/
@@ -1780,26 +1791,26 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !\
   ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
   !/
-  if (Rin_PFSSM.lt.9.00E-01) then
+  if (Rin_PFSSM < 9.00E-01) then
      B0_PFSSM = cZero
      RETURN
   end if
   Theta_PFSSM = acos(zz/Rin_PFSSM)
-  Phi_PFSSM   = atan2(yy/sqrt(xx**2+yy**2+cTiny**2),&
-                      xx/sqrt(xx**2+yy**2+cTiny**2))
-  sinTheta    = sqrt(xx**2+yy**2+cTiny**2)/Rin_PFSSM
+  Xy          = sqrt(xx**2+yy**2+cTiny**2)
+  Phi_PFSSM   = atan2(yy,xx)
+  sinTheta    = Xy/Rin_PFSSM
   cosTheta    = zz/Rin_PFSSM
-  sinPhi      = yy/sqrt(xx**2+yy**2+cTiny**2)
-  cosPhi      = xx/sqrt(xx**2+yy**2+cTiny**2)
+  sinPhi      = yy/Xy
+  cosPhi      = xx/Xy
   !\
   ! Update Phi_PFSSM for central meridian and solar rotation::
   !/
-  Phi_PFSSM = Phi_PFSSM-OMEGAbody*(Time_Simulation/unitUSER_t)
+  !  Phi_PFSSM = Phi_PFSSM-OMEGAbody*(Time_Simulation/unitUSER_t)
   Phi_PFSSM = Phi_PFSSM-Phi_Shift
   !\
   ! Set the source surface radius::
   !/
-  if (Rin_PFSSM.gt.Rs_PFSSM) then 
+  if (Rin_PFSSM > Rs_PFSSM) then 
      R_PFSSM = Rs_PFSSM
   else
      R_PFSSM = Rin_PFSSM     
@@ -1835,7 +1846,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      do
         read(UNIT_PFSSM,*,iostat=iError) n,m,gtemp,htemp
         if (iError.ne.0) EXIT
-        if (n.gt.N_PFSSM.or.m.gt.N_PFSSM) CYCLE
+        if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
         g_nm(n+1,m+1) = gtemp
         h_nm(n+1,m+1) = htemp
      enddo
@@ -1853,55 +1864,76 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         enddo
      enddo
      !\
+     ! Calculate sqrt(integer) from 0 to 10000
+     !/
+     do m=1,MaxInt
+        sqrt_int(m) = sqrt(real(m))
+     end do
+     !\
      ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
      !/
      factRatio1(:) = cZero; factRatio1(1) = cOne
      do m=1,N_PFSSM
-        factRatio1(m+1) = factRatio1(m)*&
-             sqrt(cOne-cHalf/real(m))
+        factRatio1(m+1) = factRatio1(m)*sqrt_int(2*m-1)/sqrt_int(2*m)
      enddo
-  endif
+  end if
+  !\
+  ! Calculate powers of the ratios of radii
+  !/
+  rRsPower_I(-1) = Rs_PFSSM/R_PFSSM ! this one can have negative power
+  rRsPower_I(0)  = cOne
+  RoRsPower_I(0) = cOne
+  RoRPower_I(0)  = cOne
+  do m=1,N_PFSSM+2
+     RoRsPower_I(m) = RoRsPower_I(m-1) * (Ro_PFSSM/Rs_PFSSM)
+     RoRPower_I(m)  = RoRPower_I(m-1)  * (Ro_PFSSM/R_PFSSM)
+     rRsPower_I(m)  = rRsPower_I(m-1)  * (R_PFSSM /Rs_PFSSM)
+  end do
   !\
   ! Calculate polynomials with appropriate normalization
   ! for Theta_PFSSMa::
   !/
+  SinThetaM = cOne
+  SinThetaM1 = cOne
+
   do m=0,N_PFSSM
      if (m.eq.0) then
-        delta_m0 = cOne
+        delta_m0 = 1
      else
-        delta_m0 = cZero
+        delta_m0 = 0
      endif
      !\
      ! Eq.(27) from Altschuler et al. 1976::
      !/
-     p_nm(m+1,m+1) = factRatio1(m+1)*sqrt((cTwo-delta_m0)    *&
-          real(2*m+1))*sinTheta**m
+     p_nm(m+1,m+1) = factRatio1(m+1)*sqrt_int((2-delta_m0)*(2*m+1))*SinThetaM
      !\
      ! Eq.(28) from Altschuler et al. 1976::
      !/
-     if (m.lt.N_PFSSM) &
-          p_nm(m+2,m+1)  = p_nm(m+1,m+1)*sqrt(real(2*m+3))   *&
-          cosTheta
+     if (m < N_PFSSM) p_nm(m+2,m+1) = p_nm(m+1,m+1)*sqrt_int(2*m+3)*CosTheta
      !\
      ! Eq.(30) from Altschuler et al. 1976::
      !/
-     dp_nm(m+1,m+1)      = factRatio1(m+1)*sqrt((cTwo        -&
-          delta_m0)*real(2*m+1))*m*cosTheta*sinTheta**(m-1)
+     dp_nm(m+1,m+1) = factRatio1(m+1)*sqrt_int((2-delta_m0)*(2*m+1)) &
+          *m*cosTheta*SinThetaM1
      !\
      ! Eq.(31) from Altschuler et al. 1976::
      !/
      if (m.lt.N_PFSSM) &
-          dp_nm(m+2,m+1) = sqrt(real(2*m+3))*(cosTheta       *&
+          dp_nm(m+2,m+1) = sqrt_int(2*m+3)*(cosTheta       *&
           dp_nm(m+1,m+1)-sinTheta*p_nm(m+1,m+1))
+
+     SinThetaM1= SinThetaM
+     SinThetaM = SinThetaM * SinTheta
+
   enddo
   do m=0,N_PFSSM-2; do n=m+2,N_PFSSM
      !\
      ! Eq.(29) from Altschuler et al. 1976::
      !/
-     stuff1         = sqrt(real(2*n+1)/real(n**2-m**2))
-     stuff2         = sqrt(real(2*n-1))
-     stuff3         = sqrt(real((n-1)**2-m**2)/real(2*n-3))
-     p_nm(n+1,m+1)  = stuff1*(stuff2*cosTheta*p_nm(n,m+1)    -&
+     stuff1         = sqrt_int(2*n+1)/sqrt_int(n**2-m**2)
+     stuff2         = sqrt_int(2*n-1)
+     stuff3         = sqrt_int((n-1)**2-m**2)/sqrt_int(2*n-3)
+     p_nm(n+1,m+1)  = stuff1*( stuff2*cosTheta*p_nm(n,m+1)    -&
           stuff3*p_nm(n-1,m+1))
      !\
      ! Eq.(32) from Altschuler et al. 1976::
@@ -1910,13 +1942,13 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
           sinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
   enddo; enddo
   !\
-  ! Apply Schmidt normailization::
+  ! Apply Schmidt normalization::
   !/
   do m=0,N_PFSSM; do n=m,N_PFSSM
      !\
      ! Eq.(33) from Altschuler et al. 1976::
      !/
-     stuff1 = cOne/sqrt(real(2*n+1))
+     stuff1 = cOne/sqrt_int(2*n+1)
      !\
      ! Eq.(34) from Altschuler et al. 1976::
      !/
@@ -1947,19 +1979,17 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         !\
         ! c_n corresponds to Todd's c_l::
         !/
-        c_n    = -(Ro_PFSSM/Rs_PFSSM)**(n+2)
+        c_n    = - RoRsPower_I(n+2)
         !\
         ! Br_PFSSM = -d(Psi_PFSSM)/dR_PFSSM::
         !/
-        stuff1 = (real(n)+cOne)*(Ro_PFSSM/R_PFSSM)**(n+2)    -&
-             c_n*real(n)*(R_PFSSM/Rs_PFSSM)**(n-1)
-        stuff2 = g_nm(n+1,m+1)*cosmPhi+h_nm(n+1,m+1)*sinmPhi
-        sumr   = sumr+p_nm(n+1,m+1)*stuff1*stuff2
+        stuff1 = (n+1)*RoRPower_I(n+2) - c_n*n*rRsPower_I(n-1)
+        stuff2 = g_nm(n+1,m+1)*cosmPhi + h_nm(n+1,m+1)*sinmPhi
+        sumr   = sumr + p_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Bt_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dTheta_PFSSM::
         !/
-        stuff1 = (Ro_PFSSM/R_PFSSM)**(n+2)+c_n*(R_PFSSM      /&
-             Rs_PFSSM)**(n-1)
+        stuff1 = RoRPower_I(n+2)+c_n*rRsPower_I(n-1)
         sumt   = sumt-dp_nm(n+1,m+1)*stuff1*stuff2
         !\
         ! Psi_PFSSM::
@@ -1969,8 +1999,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         ! Bp_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dPhi_PFSSM::
         !/
         stuff2 = g_nm(n+1,m+1)*sinmPhi-h_nm(n+1,m+1)*cosmPhi
-        sump   = sump+p_nm(n+1,m+1)*real(m)/sinTheta*stuff1  *&
-             stuff2
+        sump   = sump + p_nm(n+1,m+1)*m/sinTheta*stuff1 * stuff2
      enddo
   enddo
   !\
@@ -1978,8 +2007,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   !/
   Psi_PFSSM    = sumpsi
   Br_PFSSM     = sumr
-  if (Rin_PFSSM.gt.Rs_PFSSM) Br_PFSSM = Br_PFSSM              *&
-       (Rs_PFSSM/Rin_PFSSM)**2
+  if (Rin_PFSSM > Rs_PFSSM) Br_PFSSM = Br_PFSSM * (Rs_PFSSM/Rin_PFSSM)**2
   Btheta_PFSSM = sumt
   Bphi_PFSSM   = sump
   !\
@@ -1987,27 +2015,23 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   ! Set B0xCell_BLK::
   !/
   B0_PFSSM(1) = Br_PFSSM*sinTheta*cosPhi+&
-       Btheta_PFSSM*cosTheta*cosPhi     -&
-       Bphi_PFSSM*sinPhi
+       Btheta_PFSSM*cosTheta*cosPhi - Bphi_PFSSM*sinPhi
   !\
   ! Set B0yCell_BLK::
   !/
   B0_PFSSM(2) = Br_PFSSM*sinTheta*sinPhi+&
-       Btheta_PFSSM*cosTheta*sinPhi     +&
-       Bphi_PFSSM*cosPhi
+       Btheta_PFSSM*cosTheta*sinPhi + Bphi_PFSSM*cosPhi
   !\
   ! Set B0zCell_BLK::
   !/
-  B0_PFSSM(3) = Br_PFSSM*cosTheta       -&
-       Btheta_PFSSM*sinTheta
+  B0_PFSSM(3) = Br_PFSSM*cosTheta - Btheta_PFSSM*sinTheta
   !\
   ! Apply field strength normalization::
   ! Note that unitUSER_B is in Gauss,
   ! while unit_PFSSM_B is in microT=0.01*Gauss::
   !/
-  B0_PFSSM(1) = 3.0*B0_PFSSM(1)*unitPFSSM_B/unitUSER_B
-  B0_PFSSM(2) = 3.0*B0_PFSSM(2)*unitPFSSM_B/unitUSER_B
-  B0_PFSSM(3) = 3.0*B0_PFSSM(3)*unitPFSSM_B/unitUSER_B
+  B0_PFSSM(1:3) = B0_PFSSM(1:3)*(unitPFSSM_B/unitUSER_B)
+
 end subroutine get_user_b0
 !========================================================================
 !========================================================================
