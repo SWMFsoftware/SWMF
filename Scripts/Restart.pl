@@ -39,15 +39,15 @@ my %RestartOutDir = (
 		     GM => "GM/restartOUT",
 		     SC => "SC/restartOUT",
 		     IH => "IH/restartOUT",
-		     IM => "IE/restartOUT",
-		     UA => "UA/RestartOUT,UA/restartOUT" );
+		     IM => "IM/restartOUT",
+		     UA => "UA/restartOUT,UA/RestartOUT" );
 
 my %RestartInDir =  (
 		     GM => "GM/restartIN",
 		     SC => "SC/restartIN",
 		     IH => "IH/restartIN",
-		     IM => "IE/restartIN",
-		     UA => "UA/RestartIN,UA/restartIN" );
+		     IM => "IM/restartIN",
+		     UA => "UA/restartIN,UA/RestartIN" );
 
 my $HeaderFile = "restart.H"; # the name of the restart header files
 
@@ -85,19 +85,23 @@ sub get_time_step{
     while(<FILE>){
 	if(/\#TIMESIMULATION/){
 	    # Read in simulation time
-	    $Time = <FILE>;
+	    $Time = <FILE>; chop($Time);
 	    $Time =~ s/^\s+//; # Remove leading spaces
 	    $Time =~ s/\s.*//; # Remove anything after a space
+	    $Time += 0;        # Convert to a number
 	}
 	if(/\#NSTEP/){
 	    # Read in number of steps
-	    $Step = <FILE>;
+	    $Step = <FILE>; chop($Step);
 	    $Step =~ s/^\s+//; # Remove leading spaces
 	    $Step =~ s/\s.*//; # Remove anything after a space
+	    $Step += 0;        # Convert to a number
 	}
     }
     die "$ERROR could not find simulation time in file $File!\n" if $Time < 0;
     die "$ERROR could not find time step in file $File!\n" if $Step < 0;
+
+    print "# Restart.pl read Time=$Time Step=$Step from $File\n" if $Verbose;
 
     # Save time and step if not yet specified
     $SimulationTime = $Time if $SimulationTime < 0;
