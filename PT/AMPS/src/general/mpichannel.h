@@ -1,5 +1,5 @@
 //====================================================================
-//$Id!
+//$Id$
 //====================================================================
 
 #ifndef MPI_CHANNEL
@@ -122,12 +122,24 @@ public:
 
     recvptr[thread]=0;
   };
+
+  void openRecvAll() {
+    int thread;
+
+    for (thread=0;thread<TotalThreadsNumber;thread++) if (thread!=ThisThread) openRecv(thread);
+  };
  
 
   void closeRecv(int thread) {
     delete [] recvBuffer[thread];
    
     recvBuffer[thread]=NULL,recvptr[thread]=0; 
+  };
+
+  void closeRecvAll() {
+    int thread;
+
+    for (thread=0;thread<TotalThreadsNumber;thread++) if (thread!=ThisThread) closeRecv(thread);
   };
 
   template<class T> void recv(T* data,long int nrecv,int thread) {
