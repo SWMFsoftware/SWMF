@@ -113,6 +113,8 @@ if($Table =~ /test/i){
 	     "-Inner=empty -Message=empty -Outer=empty",
 	     "-Stage=empty -Time=empty -Timestep=empty -Upstream=empty");
 
+    &execute($testbatsrus,"-Plottype=raynew");
+
 ###########################################################################
 }elsif($Table =~ /robust/i){
 ###########################################################################
