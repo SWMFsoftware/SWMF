@@ -778,6 +778,8 @@ heat_test1		TypeProblemDiss
 					if="$_NameComp eq 'GM'" default="T" />
 		<option name="HelioGraphicInertial, HGI" value="HGI" 
 					if="$_NameComp ne 'GM'" default="T" />
+		<option name="HelioGraphic, HGR" value="HGR" 
+					if="$_NameComp ne 'GM'"             />
 	</parameter>
 
 #COORDSYSTEM
@@ -785,8 +787,9 @@ GSM			TypeCoordSystem
 
 ! TypeCoordSystem defines the coordinate system for the component.
 ! Currently only one coordinate system is available for GM ("GSM")
-! and one for IH or SC ("HGI"). In the near future "GSE" should be also
-! an option for GM.
+! and two for IH or SC ("HGI" or "HGR"). 
+! In the future "GSE" should be also an option for GM.
+! The coordinate systems are defined in share/Library/src/CON_axes.
 !
 ! Default is component dependent: "GSM" for GM and "HGI" for IH or SC.
 </command>
