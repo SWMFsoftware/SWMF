@@ -1406,8 +1406,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE
-        if(IsStandAlone) &
-             call read_var('tSimulation',time_simulation)
+        call read_var('tSimulation',time_simulation)
         !                                    ^CFG IF NOT SIMPLE BEGIN
      case("#HELIOSPHERE")
         if(.not.is_first_session())CYCLE

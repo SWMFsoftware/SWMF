@@ -193,7 +193,7 @@ subroutine read_restart_file
   implicit none
 
   integer :: nIRead,nJRead,nKRead,iVar,i,j,k
-  real  ::   r_x1,r_x2,r_y1,r_y2,r_z1,r_z2
+  real  ::   r_x1,r_x2,r_y1,r_y2,r_z1,r_z2, tSimulationRead
   character (len=4), Parameter :: restart_ext=".rst"
 
   logical :: oktest, oktest_me
@@ -213,7 +213,8 @@ subroutine read_restart_file
   open(unit_tmp, file=filename, status='old', form='UNFORMATTED')
 
   if(restart_reals)then
-     read(unit_tmp) dt_BLK(globalBLK),time_Simulation
+     ! Do not overwrite time_simulation which is read from restart.H
+     read(unit_tmp) dt_BLK(globalBLK),tSimulationRead
      read(unit_tmp) &
           dx_BLK(globalBLK),dy_BLK(globalBLK),dz_BLK(globalBLK),&
           xyzStart_BLK(:,globalBLK)
