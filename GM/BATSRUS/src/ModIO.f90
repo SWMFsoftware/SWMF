@@ -28,7 +28,7 @@ Module ModIO
 
   ! Maximum number of output files and output variables
   ! note that:
-  !     maxfile > maxplotfile + maxsatellitefile + extras
+  !     maxfile > MaxPlotFile + maxsatellitefile + extras
   ! is required
   integer, parameter :: MaxPlotFile=15
   integer, parameter :: MaxSatelliteFile=10
@@ -42,9 +42,9 @@ Module ModIO
 
   ! Named indexes for output parameters
   integer, parameter :: restart_=1, &
-       logfile_=2, plot_=2, satellite_ = plot_+maxplotfile
+       logfile_=2, plot_=2, satellite_ = plot_+MaxPlotFile
 
-! variables for the line of sight integration plots
+  ! variables for the line of sight integration plots
   character (LEN=2) :: TypeLosImage
   integer, parameter :: nplotvarlosmax=10
   integer :: n_pix_X, n_pix_Y
@@ -52,6 +52,15 @@ Module ModIO
   real :: radius_occult, mu_los
   real, dimension(3,maxfile) :: los_vector
   real, dimension(3,maxfile) :: los_corner 
+
+  ! Variables for field/stream/current line files
+  logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
+  integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
+  integer, parameter :: MaxLine=20            ! Max numbe of lines/plot file
+  integer   :: iUnitLine_I(MaxLine) = -1      ! Unit numbers for subfiles
+  character :: NameLine_I(MaxPlotFile)                 ! Name of vector field
+  real      :: XyzStartLine_DII(3,MaxLine,MaxPlotFile) ! Starting positions
+  logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
 
   ! Actual number of output files and plot files
   ! note that nfile is not the number of output files but rather the 
