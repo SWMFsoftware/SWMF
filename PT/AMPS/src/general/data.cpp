@@ -40,7 +40,7 @@ bool ExternalSpeciesUsingFlag=false;
   CEuler euler;
 #endif
 
-//#if CompilationTarget==HYBRIDTARGET
+#if CompilationTarget==HYBRIDTARGET
   #include "dsmc.h"
   #include "mol.h"
   #include "euler.h"
@@ -48,7 +48,7 @@ bool ExternalSpeciesUsingFlag=false;
 
   Cmol mol;
   Chybrid hybrid;
-//#endif
+#endif
 
 
 
