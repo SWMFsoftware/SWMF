@@ -99,21 +99,25 @@ module CON_axes
   !   Inertial forces may or may not be negligible.
   !\end{verbatim}
   !TODO:
-  ! Coordinate systems with their center in the Sun.
+  ! Generalize heliocentric coordinate systems for non-Earth planets.
 
   !USES:
 
   use ModKind
   use ModConst
   use ModCoordTransform
-  use ModTimeConvert, ONLY : time_int_to_real
+  use ModTimeConvert, ONLY : time_int_to_real,time_real_to_int
   use CON_planet
+  use CON_geopack, ONLY: &
+       HgiGse_DD, CON_recalc, CON_sun, SunEMBDistance, JulianDay
 
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version
   ! 14Aug03 - Gabor Toth <gtoth@umich.edu> - major revision and extension
   ! 23Mar04 - Gabor Toth eliminated the use of CON_time to make 
   !                      CON_axes more indepenedent
+  ! 17Jan05 - Ofer Cohen and G. Toth merged in GEOPACK and added functions
+  !                      angular_velocity and transform_velocity
   !EOP
 
   implicit none
@@ -123,6 +127,13 @@ module CON_axes
   character(len=*), parameter, private :: NameMod='CON_axes'
 
   integer, parameter, private :: x_=1, y_=2, z_=3
+
+  ! Difference between 01/01/1965 00:00:00 and 09/11/1853 00:00:00 in seconds
+  real(Real8_), parameter :: tStartCarrington   = -3.5074080D+09
+  real(Real8_), parameter :: CarringtonRotation = cTwoPi/(27.2753D0*24*3600)
+
+  ! Position and Velocity of Planet in HGI
+  real :: XyzPlanet_D(3), vPlanetHgi_D(3)
 
   ! Initial time in 8 byte real
   real(Real8_) :: tStart = -1.0
@@ -147,7 +158,9 @@ module CON_axes
        GsmGse_DD, &            ! vGsm_D = matmul(GsmGse_DD,vGse_D)
        GseGei_DD, &            ! vGse_D = matmul(GseGei_DD,vGei_D)
        GeiGeo_DD, &            ! vGei_D = matmul(GeiGeo_DD,vGeo_D)
-       MagGeo_DD               ! vMag_D = matmul(MagGeo_DD,vGeo_D)
+       MagGeo_DD, &            ! vMag_D = matmul(MagGeo_DD,vGeo_D)
+       HgrHgi_DD, &            ! vHgr_D = matmul(HgrHgi_DD,vHgi_D)
+       HgrGse_DD               ! vHgr_D = matmul(HgrGse_DD,vGse_D)
 
   ! Remaining coordinate transformation matrices to convert to/from GSE
   real, dimension(3,3) :: &
@@ -314,6 +327,9 @@ contains
 
     DoInitializeAxes=.false.
 
+    ! Set Hgi-Gse matrix and planet velocity 
+    call set_hgi_gse_v_planet
+
   contains
 
     !=========================================================================
@@ -354,6 +370,46 @@ contains
            rot_matrix_z(-MagAxisPhiGeo))
 
     end subroutine set_mag_geo_matrix
+
+    !=========================================================================
+
+    subroutine set_hgi_gse_d_planet(tSimulation)
+      ! Calculate HgiGse matrix from CON_recalc in CON_geopack
+      real, intent(in) :: tSimulation
+
+      integer :: iTime_I(1:7)
+      integer::iYear,iMonth,iDay,iHour,iMin,iSec,jDay
+      real :: GSTime, SunLongitude, Obliq
+      
+      !-----------------------------------------------------------------------
+      call time_real_to_int(tStart + tSimulation, iTime_I)
+      iYear=iTime_I(1);iMonth=iTime_I(2);iDay=iTime_I(3)
+      iHour=iTime_I(4);iMin=iTime_I(5);iSec=iTime_I(6)
+      call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+      jDay = JulianDay(iYear,iMonth,iDay)
+      call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
+
+    end subroutine set_hgi_gse_d_planet
+
+    !=========================================================================
+
+    subroutine set_hgi_gse_v_planet
+      ! Caculate vPlanet in HGI system
+      real, dimension(3) :: XyzPlus_D
+      !----------------------------------------------------------------------
+      ! Calculate planet position for TimeSim and TimeSim+dt
+      call set_hgi_gse_d_planet(1.0)
+      XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+
+      call set_hgi_gse_d_planet(0.0)
+      XyzPlanet_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+      
+      ! Finite difference velocity with the 1 second time perturbation
+      vPlanetHgi_D = XyzPlus_D - XyzPlanet_D
+      
+    end subroutine set_hgi_gse_v_planet
+
+    !=========================================================================
 
   end subroutine init_axes
 
@@ -505,6 +561,11 @@ contains
        write(*,*)NameSub,' new RotAxisGsm_D  =',RotAxisGsm_D
     end if
 
+    ! Calculate HgiHgr_DD  and HgrGse_DD Matrices
+    HgrHgi_DD = rot_matrix_z( &
+         (TimeSim + tStart - tStartCarrington)*CarringtonRotation )
+    HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
+
   end subroutine set_axes
 
   !BOP ========================================================================
@@ -587,6 +648,12 @@ contains
        InGse_DD = MagGse_DD
     case('GEO')
        InGse_DD = GeoGse_DD
+    case('GEI')
+       InGse_DD = transpose(GseGei_DD)
+    case('HGI')
+       InGse_DD = HgiGse_DD
+    case('HGR')
+       InGse_DD = HgrGse_DD
     case default
        call CON_stop(NameSub//' unknown TypeCoordIn='//TypeCoordIn)
     end select
@@ -602,24 +669,191 @@ contains
        OutGse_DD = MagGse_DD
     case('GEO')
        OutGse_DD = GeoGse_DD
+    case('GEI')
+       OutGse_DD = transpose(GseGei_DD)  
+    case('HGI')
+       OutGse_DD = HgiGse_DD
+    case('HGR')
+       OutGse_DD = HgrGse_DD
     case default
        call CON_stop(NameSub//' unknown TypeCoordOut='//TypeCoordOut)
     end select
 
     Rot_DD = matmul(OutGse_DD,transpose(InGse_DD))
-
+    
   end function transform_matrix
+
+  !BOP ========================================================================
+  !IROUTINE: angular_velocity - get angular velocity between two coord systems
+  !INTERFACE:
+
+  function angular_velocity(TimeSim, NameCoord1, NameCoord2In, iFrameIn) &
+       result(Omega_D)
+
+    !INPUT ARGUMENTS:
+    real,                       intent(in) :: TimeSim      ! Simulation time
+    character(len=*),           intent(in) :: NameCoord1   ! Name of 1st coord. system
+    character(len=*), optional, intent(in) :: NameCoord2In ! Name of 2nd coord. system
+    integer, optional,intent(in) :: iFrameIn               ! Frame for result
+    
+    !RETURN VALUE:
+    real :: Omega_D(3) ! Angular velocity components
+    
+    !DESCRIPTION:
+    ! This subroutine calculates the 3 components of the angular velocity between
+    ! two coordinate systems from the transformation matrix between them.
+    ! If the second frame is not present in the argument list, the result is
+    ! the angular velocity of the first frame relative to an inertial frame.
+    ! The angular velocity is given in the moving frame.
+    ! When both frames are given, the relative angular rotation is returned.
+    ! If iFrame is presemt. it defines whether the output angular velocity is with 
+    ! respect to the first (iFrame=1) or second (iFrame=2) system.
+    ! If the iFrame argument is not present, the result is in the first frame.
+    !EOP
+    
+    ! Local variables
+    character (len=3) :: NameCoord2
+    integer ::  iFrame
+    real    ::  dTimeSim
+    real, dimension(3,3) ::  Rot_DD, RotMid_DD, RotPlus_DD, RotMinus_DD, dRot_DD
+    
+    character (len=*), parameter :: NameSub = NameMod // '::get_omega'
+    !--------------------------------------------------------------------------
+    ! Check optional arguments and set defaults
+    if(present(NameCoord2In))then
+       NameCoord2 = NameCoord2In
+       if(present(iFrameIn))then
+          if(iFrameIn /= 1 .and. iFrameIn /=2)then
+             write(*,*) NameSub, ' ERROR iFrame = ',iFrame
+             call CON_stop(NameSub // ': invalid value for iFrame = 1 or 2')
+          end if
+          iFrame = iFrameIn
+       else
+          iFrame = 2 ! Default is to provide Omega_D in the output coord. system
+       end if
+    else
+       if(NameCoord1(1:1) == 'H')then
+          ! For heliocentric coordinate systems set the inertial frame to HGI
+          NameCoord2 = 'HGI'
+       else
+          ! For geocentric systems GSE is assumed to be inertial ! Otherwise use GEI!
+          NameCoord2 = 'GSE'
+       end if
+       iFrame = 1
+    end if
+
+    ! Determine the perturbation of time
+    if(precision(TimeSim) >= 12) then 
+       dTimeSim = max(1.0, 1e-6*TimeSim)
+    else
+       dTimeSim = max(1.0, 1e-4*TimeSim)
+    end if
+    
+    if(NameCoord1 == NameCoord2)then
+       ! Nothing to do
+       Omega_D = 0.0
+       RETURN
+    end if
+       
+    RotMinus_DD = transform_matrix(TimeSim-dTimeSim,NameCoord1,NameCoord2)
+    RotPlus_DD  = transform_matrix(TimeSim+dTimeSim,NameCoord1,NameCoord2)
+    dRot_DD = (RotPlus_DD-RotMinus_DD)/(cTwo*dTimeSim)
+
+    RotMid_DD = transform_matrix(TimeSim,NameCoord1,NameCoord2)
+    Rot_DD  = matmul(transpose(RotMid_DD), dRot_DD)
+
+    Omega_D = (/ Rot_DD(2,3), Rot_DD(3,1), Rot_DD(1,2) /)
+    
+    if(iFrame == 2) Omega_D = matmul(RotMid_DD, Omega_D)
+    where(abs(Omega_D) < 1e-12) Omega_D = 0.00
+    
+  end function angular_velocity
+
+  !BOP ========================================================================
+  !IROUTINE: transform_velocity - transforms velocity between two coord systems
+  !INTERFACE:
+  
+  function transform_velocity(TimeSim, v1_D, Position_D, &
+       NameCoord1, NameCoord2) result(v2_D)
+
+    !INPUT ARGUMENTS:
+    real,             intent(in) :: TimeSim       ! Simulation time
+    real,             intent(in) :: v1_D(3)       ! Velocity in 1st system
+    real,             intent(in) :: Position_D(3) ! Position in 1st system
+    character(len=3), intent(in) :: NameCoord1    ! Name of 1st coord. system
+    character(len=3), intent(in) :: NameCoord2    ! Name of 2nd coord. system
+
+    !RETURN VALUE:
+    real :: v2_D(3)                                        ! v2 components
+
+    !DESCRIPTION:
+    ! This function transforms the velocity vector from one coordinate system 
+    ! to another. The input position and velocity should be in SI units and 
+    ! the output velocity vector is also in SI units.
+    ! If the two systems have the same name, then the input and output 
+    ! velocity vectors are the same.
+    !EOP
+
+    ! Local variables
+    character (len=3) :: NameCoord1Last = 'XXX', NameCoord2Last = 'XXX' 
+    real :: TimeSimLast = -1.0
+
+    real, dimension(3)   :: v1Total_D, Omega12_D, vPlanet1_D
+    real, dimension(3,3) :: Transform12_DD
+
+    character (len=*), parameter :: NameSub = NameMod // '::get_omega'
+    !--------------------------------------------------------------------------
+
+    !If NameCoord1 is the same as NameCoord2 there is no transformation.
+    if(NameCoord1 == NameCoord2)then
+       v2_D = v1_D
+       RETURN
+    end if
+
+    if(.not.(TimeSim == TimeSimLast .and. NameCoord1 == NameCoord1Last &
+         .and. NameCoord1 == NameCoord2Last) )then
+
+       ! Store current time and coordinate system names
+       TimeSimLast = TimeSim
+       NameCoord1Last = NameCoord1
+       NameCoord2Last = NameCoord2
+
+       ! Get transformation matrix and angular velocity between frames
+       Transform12_DD = transform_matrix(TimeSim,NameCoord1,NameCoord2)
+       Omega12_D      = angular_velocity(TimeSim, NameCoord1, NameCoord2)
+
+       if(NameCoord1(1:1) == 'H' .eqv. NameCoord2(1:1) == 'H')then 
+          ! Both helio-centric or both planet-centric, no planet speed added
+          vPlanet1_D = 0.0
+
+       else if(NameCoord1(1:1) /= 'H' .and. NameCoord2(1:1) == 'H')then
+          ! Planet-centric --> helio-centric: add planet speed
+          vPlanet1_D = +matmul(&
+               transform_matrix(TimeSim,'HGI',NameCoord1), vPlanetHgi_D)
+       else
+          ! Helio-centric --> planet-centric: subtract planet speed
+          vPlanet1_D = -matmul( &
+               transform_matrix(TimeSim,'HGI',NameCoord1), vPlanetHgi_D)
+       end if
+    end if
+
+    v1Total_D = v1_D + cross_product(Omega12_D, Position_D) - vPlanet1_D
+    v2_D = matmul(Transform12_DD, v1Total_D)
+
+  end function transform_velocity
 
   !BOP ========================================================================
   !IROUTINE: test_axes - test the CON_axes class
   !INTERFACE:
   subroutine test_axes
+
     !DESCRIPTION:
     ! Do some self consistency checks. Stop with an error message if
     ! test fails. Otherwise write out success.
     !EOP
     real :: MagAxisTilt
     real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
+    real:: Omega_D(3),v1_D(3),v2_D(3)
     !-------------------------------------------------------------------------
 
     if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
@@ -663,6 +897,22 @@ contains
 
     write(*,'(a)')'Testing show_rot_matrix'
     write(*,'(a)')'GeoGsm_DD='; call show_rot_matrix(Rot_DD)
+    
+    write(*,'(a)')'Testing angular_velocity'
+    
+    Omega_D = angular_velocity(0.0,'GSE','SMG')
+    
+    if(maxval(abs(Omega_D - (/1.01128925E-05,9.55662927E-06,-1.42873158E-06/)))>1e-10) &
+         write(*,*)'test angular_velocity failed: Omega_D = ',Omega_D,&
+         ' should be (/1.0112892E-05,9.5566292E-06,-1.4287315E-06/)within round off errors'   
+    
+    write(*,'(a)')'Testing transform_velocity'
+    
+    v2_D = transform_velocity(0.0, (/0.0, 0.0, 0.0/), (/cAU, 0.0, 0.0/), 'HGI', 'HGR')
+    
+    if(maxval(abs(v2_D -(/-1.99357971E+05,-3.45466075E+05,4.02175140E-12/)))>10) &
+         write(*,*)'test angular_velocity failed: v2_D = ',v2_D,&
+         ' should be (/-1.9935797E+05,-3.4546607E+05,4.0217514E-12/)within round off errors'
 
   end subroutine test_axes
 
