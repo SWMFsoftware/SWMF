@@ -38,7 +38,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   integer, intent(out) :: UAi_nMLTs, UAi_nLats
 
-  integer :: i,j,k,bs, iError, iBlock, iDir, iLon, iLat, iAlt
+  integer :: i,j,k,bs, iError, iBlock, iDir, iLon, iLat, iAlt, ip, im
 
   real :: GeoLat, GeoLon, GeoAlt, xAlt, len, ped, hal
   real :: xmag, ymag, zmag, bmag, signz, alon, alat
@@ -304,12 +304,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
            enddo
 
-!           if (iLon == 2) write(*,*) "Divjuline : ",&
-!                divjuFieldLine(iLon,iLat), divjualt(iLon,iLat), &
-!                HallFieldLine(iLon,iLat), HallConductance(iLon,iLat,iBlock), &
-!                LengthFieldLine(iLon,iLat), Altitude(nAlts) - Altitude(1)
-
-
         enddo
      enddo
 
@@ -370,6 +364,73 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   call MPI_AllREDUCE(MagBufferMC, LengthMC,  &
        bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
+  ! We may have missed some points in MLT, so let's check
+
+  do j=5, nMagLats-5
+
+     i = 1
+     if (LengthMC(i,j) < 0.0) then
+        ip = i+1
+        do while (ip < nMagLons .and. LengthMC(ip,j) < 0.0) 
+           ip = ip+1
+        enddo
+        im = nMagLons+1
+        do while (im > 2 .and. LengthMC(im,j) < 0.0) 
+           im = im-1
+        enddo
+        if (ip >= nMagLons .or. im <= 2 .or. &
+             LengthMC(ip,j) < 0.0 .or. LengthMC(im,j) < 0.0) then
+           if (iDebugLevel > -1) then
+              write(*,*) "Problem with electrodynamics. A field-line length"
+              write(*,*) "is less than 0.0. ip, im, j, LengthMC(i,j) :",&
+                   ip,im,j,LengthMC(i,j)
+           endif
+           call stop_gitm("Can't continue")
+        else
+           SigmaHallMC(i,j) = (SigmaHallMC(ip,j)+SigmaHallMC(im,j))/2.0
+           SigmaPedersenMC(i,j) = &
+                (SigmaPedersenMC(ip,j)+SigmaPedersenMC(im,j))/2.0
+           LengthMC(i,j) = (LengthMC(ip,j)+LengthMC(im,j))/2.0
+           DivJuAltMC(i,j) = (DivJuAltMC(ip,j)+DivJuAltMC(im,j))/2.0
+           if (iDebugLevel > 2) then
+              write(*,*) "Bad Field line length found in calc_electrodynamics."
+              write(*,*) "Correcting.  This is because of a bad MLT.", i,j
+           endif
+        endif
+     endif
+
+     do i=2,nMagLons
+        if (LengthMC(i,j) < 0.0) then
+           ip = i+1
+           if (ip > nMagLons) ip = 1
+           do while (ip < nMagLons .and. LengthMC(ip,j) < 0.0) 
+              ip = ip+1
+           enddo
+           im = i-1
+           if (ip >= nMagLons .or. im <= 2 .or. &
+                LengthMC(ip,j) < 0.0 .or. LengthMC(im,j) < 0.0) then
+              if (iDebugLevel > -1) then
+                 write(*,*) "Problem with electrodynamics. A field-line length"
+                 write(*,*) "is less than 0.0. ip, im, j, LengthMC(i,j) :",&
+                      ip,im,j,LengthMC(i,j)
+              endif
+              call stop_gitm("Can't continue")
+           else
+              SigmaHallMC(i,j) = (SigmaHallMC(ip,j)+SigmaHallMC(im,j))/2.0
+              SigmaPedersenMC(i,j) = &
+                   (SigmaPedersenMC(ip,j)+SigmaPedersenMC(im,j))/2.0
+              LengthMC(i,j) = (LengthMC(ip,j)+LengthMC(im,j))/2.0
+              DivJuAltMC(i,j) = (DivJuAltMC(ip,j)+DivJuAltMC(im,j))/2.0
+              if (iDebugLevel > 2) then
+                 write(*,*) &
+                      "Bad Field line length found in calc_electrodynamics."
+                 write(*,*) "Correcting.  This is because of a bad MLT.", i,j
+              endif
+           endif
+        endif
+     enddo
+  enddo
+
   ! There is the possibility that there may be some points missing
   ! near the magnetic pole.  This is due to the grid.  So, let's find
   ! those places and fill them in.
@@ -381,6 +442,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            SigmaPedersenMC(i,j) = sum(SigmaPedersenMC(:,j-1))/(nMagLons+1)
            LengthMC(i,j) = sum(LengthMC(:,j-1))/(nMagLons+1)
            DivJuAltMC(i,j) = sum(DivJuAltMC(:,j-1))/(nMagLons+1)
+           if (iDebugLevel > 2) then
+              write(*,*) "Bad Field line length found in calc_electrodynamics."
+              write(*,*) "Correcting.  This is because of a bad Latitude.", i,j
+           endif
         endif
      enddo
      do j=5, 1, -1
@@ -389,6 +454,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            SigmaPedersenMC(i,j) = sum(SigmaPedersenMC(:,j+1))/(nMagLons+1)
            LengthMC(i,j) = sum(LengthMC(:,j+1))/(nMagLons+1)
            DivJuAltMC(i,j) = sum(DivJuAltMC(:,j+1))/(nMagLons+1)
+           if (iDebugLevel > 2) then
+              write(*,*) "Bad Field line length found in calc_electrodynamics."
+              write(*,*) "Correcting.  This is because of a bad Latitude.", i,j
+           endif
         endif
      enddo
   enddo
@@ -397,9 +466,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      if (LengthMC(10,iLat) < 1.0) then
         write(*,*) iLat, &
              LengthMC(10,iLat),MagLatMC(10,iLat)
-!        do i = 0, nLats+1
-!           write(*,*) i,Mlatitude(1,i,1,1),Mlongitude(1,i,1,1)
-!        enddo
         write(*,*) "Problem with electrodynamics. A field-line length"
         write(*,*) "is less than 0.0"
         call stop_gitm("Can't continue")
