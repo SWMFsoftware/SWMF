@@ -7,7 +7,7 @@
 
 \subsection{Introduction}
 
-This module was developed by G. T\'oth (2001).
+This module was developed by G. T\'oth (2001-).
 It can be used for timing and profiling Fortran 90 codes.
 
 It is platform and compiler independent and very easy to use.
@@ -67,6 +67,7 @@ but do not time and do not provide output.
 The timing is done by a pair of timing\_start and timing\_stop calls.
 The string name arguments of the two calls must match. 
 Timings can be inside loops, and nested arbitrarily. 
+Note, however, that timing inside a recursive procedure does not work.
 The timings are distinguished by the name as well as by the nesting level.
 
 The timing clocks can be reset, and the results of timings can be printed 
