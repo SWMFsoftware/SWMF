@@ -29,7 +29,7 @@ Module ModAdvance
   character (len=10), dimension(:), allocatable :: TypeConservCrit_I
 
   ! Geometrical parameters
-  real    :: rConserv
+  real    :: rConserv, xParabolaConserv, yParabolaConserv 
 
   ! Physics based parameters (to locate shocks)
   real    :: pCoeffConserv, GradPCoeffConserv

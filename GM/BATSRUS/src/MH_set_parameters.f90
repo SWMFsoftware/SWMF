@@ -21,7 +21,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
   use CON_planet,       ONLY: read_planet_var, check_planet_var
   use CON_axes,         ONLY: init_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case
 
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -804,24 +804,29 @@ subroutine MH_set_parameters(TypeAction)
            allocate( TypeConservCrit_I(nConservCrit) )
            do i=1,nConservCrit
               call read_var('TypeConservCrit',TypeConservCrit_I(i) )
+              call lower_case(TypeConservCrit_I(i))
               select case(TypeConservCrit_I(i))
                  !\
                  ! Geometry based criteria: 
-                 !    non-conservative scheme is used for r < rConserv
                  !/
-              case('R','r','radius','Radius')
+              case('r','radius')
+                 !    non-conservative scheme is used for r < rConserv
                  TypeConservCrit_I(i) = 'r'
                  call read_var('rConserv',rConserv)
+              case('parabola','paraboloid')
+                 !    non-conservative scheme is used for 
+                 !    x < xParabolaConserv - (y**2+z**2)/yParabolaConserv
+                 TypeConservCrit_I(i) = 'parabola'
+                 call read_var('xParabolaConserv',xParabolaConserv)
+                 call read_var('yParabolaConserv',yParabolaConserv)
                  !\
                  ! Physics based criteria
                  !/
-              case('p','P')
+              case('p')
                  ! Balsara/Ryu switch 1
-                 TypeConservCrit_I(i) = 'p'
                  call read_var('pCoeffConserv',pCoeffConserv)
-              case('GradP','gradp')
+              case('gradp')
                  ! Balsara/Ryu switch 2
-                 TypeConservCrit_I(i) = 'GradP'
                  call read_var('GradPCoeffConserv',GradPCoeffConserv)
               case default
                  if(UseStrict)then
