@@ -537,6 +537,26 @@ The default is that all the components registered in the LAYOUT.in
 file are used.
 </command>
 
+<command name="CYCLE" multiple="T">
+	<parameter name="NameComp" type="string" input="options">
+                <option name="IH" default="T" />
+                <option name="GM" />
+                <option name="IM" />
+                <option name="IE" />
+                <option name="UA" />
+        </parameter>
+	<parameter name="DnRun" type="integer" min="1" default="1"/>
+
+#CYCLE
+IH		NameComp
+10		DnRun
+
+The DnRun variable defines the frequency of calling component NameComp
+during a steady state run. In the example IH will be called for 
+nStep = 10, 20, 30, ... For time accurate runs this command has no effect.
+The default is DnRun = 1 for all the active components.
+</command>
+
 </commandgroup>
 
 <commandgroup name="COUPLING CONTROL">

@@ -407,6 +407,16 @@ be given any parameters.
 
 The default is that all the components registered in the LAYOUT.in
 file are used.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'CYCLE'},'content' => [{'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'content' => [{'attrib' => {'default' => 'T','name' => 'IH'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'GM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '1','type' => 'integer','name' => 'DnRun'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#CYCLE
+IH		NameComp
+10		DnRun
+
+The DnRun variable defines the frequency of calling component NameComp
+during a steady state run. In the example IH will be called for 
+nStep = 10, 20, 30, ... For time accurate runs this command has no effect.
+The default is DnRun = 1 for all the active components.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'COUPLING CONTROL'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! COUPLING CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
