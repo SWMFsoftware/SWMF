@@ -463,14 +463,15 @@ read_inputs
 
 ! A space separated list of subroutine names. Default is empty string.
 !
-! Examples:
-!   read_inputs  - echo the input parameters following the #TEST line
-!   project_B    - info on projection scheme   <!-- ^CFG IF PROJECTION -->
-!   implicit     - info on implicit scheme     <!-- ^CFG IF IMPLICIT   -->
-!   krylov       - info on the Krylov solver   <!-- ^CFG IF IMPLICIT   -->
-!   message_count- count messages
-!   initial_refinement
+! Examples:\\
+!   read_inputs  - echo the input parameters following the #TEST line\\
+!   project_B    - info on projection scheme\\   <!-- ^CFG IF PROJECTION -->
+!   implicit     - info on implicit scheme\\     <!-- ^CFG IF IMPLICIT   -->
+!   krylov       - info on the Krylov solver\\   <!-- ^CFG IF IMPLICIT   -->
+!   message_count- count messages\\
+!   initial_refinement\\
 !   ...
+!
 ! Check the subroutines for call setoktest("...",oktest,oktest_me) to
 ! see the appropriate strings.
 </command>
