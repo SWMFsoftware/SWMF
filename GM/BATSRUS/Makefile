@@ -161,6 +161,7 @@ rundir: checklink
 		cp Scripts/Run/${OS}/*${MACHINE}* run/; \
 		rm -f run/TMP_${MACHINE} Scripts/Run/${OS}/TMP_${MACHINE}; \
 		cd run; ln -s ${BINDIR}/BATSRUS.exe .; \
+		ln -s GM/* .;                          \
 	fi);
 
 #
