@@ -1,19 +1,27 @@
 #^CFG COPYRIGHT UM
-DIR	= `pwd`
+include ../../Makefile.def
+include ${DIR}/share/build/Makefile.doc
 
-.SUFFIXES:
-.SUFFIXES: .tex .dvi .ps .pdf .html
-
-.tex.dvi:
-	latex $<
-	latex $<
-	latex $<
-
-.dvi.ps: 
-	dvips -o $*.ps $<
-
-.ps.pdf:
-	ps2pdf $*.ps ../$*.pdf
+help:
+	@echo "       Make manuals for BATSRUS"
+	@echo ""
+	@echo "Targets:"
+	@echo ""
+	@echo "PDF          - produces USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf"
+	@#^CFG IF DOCHTML BEGIN
+	@echo ""
+	@echo "HTML         - produces online manuals in ../HTML directory"
+	@#^CFG END DOCHTML
+	@echo ""
+	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
+	@echo ""
+	@echo "cleanpdf     - clean + remove PDF manuals"
+	@#^CFG IF DOCHTML BEGIN
+	@echo ""
+	@echo "cleanhtml    - clean + remove HTML manuals"
+	@echo ""
+	@echo "cleanall     - clean + remove PDF and HTML manuals"
+	@#^CFG END DOCHTML
 
 #^CFG IF DOCHTML BEGIN
 .tex.html:
@@ -41,26 +49,19 @@ DIR	= `pwd`
 	mv $* ../HTML
 #^CFG END DOCHTML
 
-help:
-	@echo "       Make manuals for BATSRUS"
-	@echo ""
-	@echo "Targets:"
-	@echo ""
-	@echo "PDF          - produces USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf"
-	@#^CFG IF DOCHTML BEGIN
-	@echo ""
-	@echo "HTML         - produces online manuals in ../HTML directory"
-	@#^CFG END DOCHTML
-	@echo ""
-	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
-	@echo ""
-	@echo "cleanpdf     - clean + remove PDF manuals"
-	@#^CFG IF DOCHTML BEGIN
-	@echo ""
-	@echo "cleanhtml    - clean + remove HTML manuals"
-	@echo ""
-	@echo "cleanall     - clean + remove PDF and HTML manuals"
-	@#^CFG END DOCHTML
+USERMANUAL.dvi: \
+	USERMANUAL.tex \
+	HEADER.tex \
+	introduction.tex \
+	quickstart.tex \
+	hardware_software.tex \
+	installation.tex \
+	runs.tex \
+	param.tex \
+	../../PARAM.xmltex \
+	output.tex \
+	idl.tex \
+	tecplot.tex
 
 PDF:  USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
 
