@@ -1521,8 +1521,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
         end do; end do; end do
      end do
   case default
-     call stop_mpi(NameSub//': invalid NameVectorField='// &
-          trim(NameVectorField))
+     call stop_mpi(NameSub//': invalid NameVectorField='//NameVectorField)
   end select
 
   ! Start extracting rays
@@ -1584,7 +1583,16 @@ subroutine write_plot_line(iFile)
 
   ! Set the global ModRaytrace variables for this plot file
   iPlotFile      = iFile - Plot_
-  NameVectorField= NameLine_I(iPlotFile)
+  select case(NameLine_I(iPlotFile))
+  case('A', 'B')
+     NameVectorField = 'B'
+  case('U','J')
+     NameVectorField = NameLine_I(iPlotFile)
+  case default
+     write(*,*) NameSub//' WARNING invalid NameVectorField='// &
+          NameVectorField//' for iPlotFile=',iPlotFile
+     RETURN
+  end select
   DoExtractState = index(plot_type(iFile),'pos')<1
   DoExtractUnitSi= plot_dimensional(iFile)
 
@@ -1632,8 +1640,8 @@ subroutine write_plot_line(iFile)
      write(NameStart,'(a,i2,a)') &
           trim(NamePlotDir)//trim(plot_type(iFile))//'_',iPlotFile
   end if
-  NameStart = trim(NameStart)//'_'//NameVectorField
-     
+  NameStart = trim(NameStart)//'_'//NameLine_I(iPlotFile)
+
   if(time_accurate)call get_time_string
 
   ! Set the title
