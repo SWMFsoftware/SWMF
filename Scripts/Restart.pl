@@ -329,9 +329,25 @@ sub link_tree{
     print "# Restart.pl has linked  restart tree $RestartTree/.\n";
 }
 ##############################################################################
+#!QUOTE: \clearpage
+#BOP
+#!QUOTE: \subsection{Restarting Runs}
+#!ROUTINE: Restart.pl - create and link restart file trees in SWMF
+#!DESCRIPTION:
+# This script is copied into the run directory and it should be executed there.
+# The script can collect the output restart files from individual components 
+# into one directory tree: the restart tree. The script can also link the 
+# input restart directories of the components to the restart tree. 
+# Finally the script can run continuously (in the background) and save
+# the output restart files into restart trees as they are created during 
+# the run. This way multiple restart trees can be saved from a single run.
+# The script checks the consistency of the restart files.
+#EOP
+
 sub print_help{
-    print '
-Purpose:
+    print
+#BOC
+'Purpose:
 
     Collect current output restart directories into one tree (and link to it).
     Link input restart files to an existing directory tree. 
@@ -412,9 +428,9 @@ Restart.pl -i -c RESTART_t002.00h
 
     Link to the existing RESTART_t002.00h tree and print verbose info:
 
-Restart.pl -v -i RESTART_t002.00h
-
-';
+Restart.pl -v -i RESTART_t002.00h'
+#EOC
+    ,"\n\n";
     exit;
 }
 ##############################################################################
