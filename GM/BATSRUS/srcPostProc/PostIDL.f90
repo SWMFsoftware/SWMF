@@ -421,7 +421,7 @@ contains
        call check_corners
     else
        ! Negative lookup value means an error
-       write(*,*)'!!! Error: 3rd data for same projected position'
+       write(*,*)'!!! Error: 3rd data for same projected position in ',filename
        write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',ix1,ix2,icell,jcell,dxcell,xyz
        stop
     end if
