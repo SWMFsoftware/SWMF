@@ -267,12 +267,6 @@ distclean:
 	echo 'Remove SC/BATSRUS/src'; \
 	cd SC/BATSRUS; make veryclean; \
 	fi)
-	@(if([ -f SC/BATSRUS/srcInterface/get_ih.orig ]); then \
-	echo 'Recover SC_*ih.f90'; \
-	cd SC/BATSRUS/srcInterface; \
-	mv get_ih.orig SC_get_for_ih.f90; \
-	mv put_ih.orig SC_put_from_ih.f90;\
-	fi)
 	rm -f */BATSRUS/src/user_routines.f90
 	make distclean_comp
 
@@ -383,31 +377,27 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 
 #^CMP END IH
 #^CMP IF SC BEGIN
-SC/BATSRUS/src/Makefile: 
+SC/BATSRUS/src/Makefile:
 	cd GM/BATSRUS; cp -f Makefile.conf ${SCDIR};\
 	mv Makefile Makefile.BAK; \
 	cd srcInterface; mv Makefile Makefile.BAK; cd ..;\
 	make -f Makefile_CONFIGURE -e COMP=SC DREL=${SCDIR} relax_src;\
 	mv Makefile.BAK Makefile; \
-	cd srcInterface; mv Makefile.BAK Makefile; cd ..;\
-	cp -f ../../IH/BATSRUS_share/src/IH_wrapper.f90 \
-		   ${SCDIR}/srcInterface/SC_wrapper.f90;\
-	cp -f ../../IH/BATSRUS_share/src/IH_get_for_sp.f90 \
-		   ${SCDIR}/srcInterface/SC_get_for_sp.f90
-	cd ${SCDIR}/srcInterface/; perl -i -pe \
+	cd srcInterface; mv Makefile.BAK Makefile
+	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+		      ${SCDIR}/src/SC_wrapper.f90
+	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
+		      ${SCDIR}/src/SC_get_for_sp.f90
+	cd ${SCDIR}/src/; perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
 		SC_wrapper.f90 SC_get_for_sp.f90
+	cd ${SCDIR}/src; rm -f main.f90 stand_alone*.f90
+	cd ${SCDIR}/srcInterface/; \
+		mv ModGridDescriptor.f90 update_lagrangian_grid.f90 ../src
 
 SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
-	cd SC/BATSRUS/srcInterface/; \
-		mv SC_get_for_ih.f90 get_ih.orig; \
-		mv SC_put_from_ih.f90 put_ih.orig;\
-		cp get_ih.orig SC_get_for_ih.f90; \
-		cp put_ih.orig SC_put_from_ih.f90;\
-		mv *.f90 ../src
 	cd SC/BATSRUS/src; \
-		rm -f main.f90 stand_alone*.f90; \
 		${SCRIPTDIR}/Methods.pl SC; \
 		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
 		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f;\

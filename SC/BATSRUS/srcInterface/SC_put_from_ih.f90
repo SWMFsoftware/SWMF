@@ -11,10 +11,10 @@ subroutine SC_put_from_ih(nPartial,&
      nVar)
   !USES:
   use CON_coupler, ONLY: IndexPtrType, WeightPtrType
-  use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
+  use SC_ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
 
-  use ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B! nVarGm => nVar
+  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B! nVarGm => nVar
 
   implicit none
 

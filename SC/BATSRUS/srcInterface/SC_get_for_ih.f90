@@ -3,12 +3,12 @@ subroutine SC_get_for_ih(&
      nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
 
   !USES:
-  use ModAdvance,ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
+  use SC_ModAdvance,ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
        rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
        
 
-  use ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B
-  use ModMain,ONLY:DoSendMHD
+  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B
+  use SC_ModMain,ONLY:DoSendMHD
   use CON_router
 
   implicit none
@@ -84,7 +84,7 @@ subroutine SC_get_for_ih(&
              State_VGB(P_,      i,j,k,iBlock) *Weight
      end do
   else
-     call get_solar_wind_point(TimeCoupling,cZero,cZero,State_V(1),&
+     call SC_get_solar_wind_point(TimeCoupling,cZero,cZero,State_V(1),&
           State_V(2),State_V(3),State_V(4),&
           State_V(5), State_V(6), State_V(7), State_V(8))
      State_V(BuffRhoUx_:BuffRhoUz_)=&
