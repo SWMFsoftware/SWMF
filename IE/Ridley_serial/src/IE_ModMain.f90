@@ -39,6 +39,11 @@ module IE_ModMain
   character (len=7) :: TypeImCouple = 'north   '
 
   !\
+  ! Logical for coupling the UA current
+  !/
+  logical :: DoCoupleUaCurrent = .false.
+
+  !\
   ! Dipole parameters obtained from CON_physics
   !/
   real :: ThetaTilt, SinThetaTilt, CosThetaTilt

@@ -170,6 +170,19 @@ The default value is 'north', which is backward compatible,
 and it requires no communication between the IE processors.
 </command>
 
+<command name="UA">
+	<parameter name="DoCoupleUaCurrent" type="logical" default="F"/>
+
+#UA
+T		DoCoupleUaCurrent
+
+The DoCoupleUaCurrent parameter determines if the field aligned current
+calculated by the UA component should be used. Usually the currents are
+dominated by the field aligned currents provided by the GM component.
+The coupling with the UA currents is still experimental.
+The default value is false, i.e. the UA currents are not included.
+</command>
+
 <command name="AMIEFILES">
 	<parameter name="AMIEFileNorth" type="string" length="100" />
 	<parameter name="AMIEFileSouth" type="string" length="100" />

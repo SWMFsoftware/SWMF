@@ -153,6 +153,8 @@ contains
        case("#IM")
           call read_var('TypeImCouple',TypeImCouple)
           call lower_case(TypeImCouple)
+       case("UA")
+          call read_var('DoCoupleUaCurrent',DoCoupleUaCurrent)
        case("#SPS")
           call read_var('UseSPS',UseSPS)
           IE_NameOfEFieldModel = "SPS"
@@ -447,9 +449,9 @@ end subroutine IE_put_from_gm
 
 !==============================================================================
 
-subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
+subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
-  use IE_ModMain, ONLY: IsNewInput
+  use IE_ModMain, ONLY: IsNewInput, DoCoupleUaCurrent
   use ModIonosphere
   use ModConst
   use ModUtilities, ONLY: check_allocate
@@ -485,7 +487,7 @@ subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
   integer, parameter :: Lat_ = 4
   integer, parameter :: Mlt_ = 5
 
-  character(len=*), parameter :: NameSub='IE_put_for_UA'
+  character(len=*), parameter :: NameSub='IE_put_from_ua'
 
   !--------------------------------------------------------------------------
 
@@ -599,11 +601,15 @@ subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
                 (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Ped_) + &
                 (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Ped_)
 
-           IONO_NORTH_TGCM_JR(i,j) =                          &
-                (    t)*(    p)*Buffer_III(jj  ,ii  ,Fac_) + &
-                (1.0-t)*(    p)*Buffer_III(jj  ,ii+1,Fac_) + &
-                (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Fac_) + &
-                (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Fac_)
+           if(DoCoupleUaCurrent)then
+              IONO_NORTH_TGCM_JR(i,j) =                          &
+                   (    t)*(    p)*Buffer_III(jj  ,ii  ,Fac_) + &
+                   (1.0-t)*(    p)*Buffer_III(jj  ,ii+1,Fac_) + &
+                   (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Fac_) + &
+                   (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Fac_)
+           else
+              IONO_NORTH_TGCM_JR(i,j) = 0.0
+           end if
 
         enddo
      enddo
@@ -640,18 +646,21 @@ subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
                 (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Ped_) + &
                 (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Ped_)
 
-           IONO_SOUTH_TGCM_JR(i,j) =                          &
-                (    t)*(    p)*Buffer_III(jj  ,ii  ,Fac_) + &
-                (1.0-t)*(    p)*Buffer_III(jj  ,ii+1,Fac_) + &
-                (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Fac_) + &
-                (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Fac_)
-
+           if(DoCoupleUaCurrent)then
+              IONO_SOUTH_TGCM_JR(i,j) =                          &
+                   (    t)*(    p)*Buffer_III(jj  ,ii  ,Fac_) + &
+                   (1.0-t)*(    p)*Buffer_III(jj  ,ii+1,Fac_) + &
+                   (    t)*(1.0-p)*Buffer_III(jj+1,ii  ,Fac_) + &
+                   (1.0-t)*(1.0-p)*Buffer_III(jj+1,ii+1,Fac_)
+           else
+              IONO_SOUTH_TGCM_JR(i,j) = 0.0
+           end if
         enddo
      enddo
 
   end if
 
-end subroutine IE_put_from_UA
+end subroutine IE_put_from_ua
 
 !==============================================================================
 
