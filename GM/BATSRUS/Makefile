@@ -63,8 +63,11 @@ help:
 	@#^CFG END CONFIGURE
 
 
-install: MAKEFILE_DEF
+install: Makefile.def.orig MAKEFILE_DEF
 	@make install_cont;
+
+Makefile.def.orig:
+	mv Makefile.def Makefile.def.orig
 
 MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
@@ -225,7 +228,6 @@ distclean:
 	@(if [ -d util  ]; then cd util;  make distclean; fi);
 	@(if [ -d share ]; then cd share; make distclean; fi);
 	rm -f Makefile.conf Makefile.def *~
-	echo '# Default setting' > Makefile.def
-	echo 'STANDALONE=gm'    >> Makefile.def
+	mv Makefile.def.orig Makefile.def
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE

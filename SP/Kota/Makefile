@@ -1,5 +1,10 @@
-
 include Makefile.def 
+
+install: Makefile.def.orig
+
+Makefile.def.orig:
+	mv Makefile.def Makefile.def.orig
+	cp Makefile.def.orig Makefile.def
 
 rundir: 
 	mkdir -p ${RUNDIR}/SP
@@ -9,4 +14,4 @@ clean:
 
 distclean: clean
 	rm -f Makefile.conf *~ src/io_unit_for77.f src/stdout.h
-	echo 'STANDALONE = sp' > Makefile.def
+	mv Makefile.def.orig Makefile.def

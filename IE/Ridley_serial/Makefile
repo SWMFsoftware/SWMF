@@ -1,7 +1,10 @@
 include Makefile.def
 
-install: MAKEFILE_DEF
+install: Makefile.def.orig MAKEFILE_DEF
 	@make install_cont;
+
+Makefile.def.orig:
+	mv Makefile.def Makefile.def.orig
 
 MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
@@ -38,4 +41,4 @@ distclean:
 	touch src/Makefile.DEPEND
 	cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
-	echo 'STANDALONE=NO' > Makefile.def
+	mv Makefile.def.orig Makefile.def
