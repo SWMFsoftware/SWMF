@@ -170,7 +170,8 @@ differences relative to the expected results due to round off errors.
 
 The TIMING utility provides a simple and compiler independent utility
 to measure the CPU time spent on various parts of a Fortran code.
-The NOMPI utility allows to run the 
+The NOMPI utility allows to run the an MPI parallel F90 code without 
+the MPI library on a single processor.
 
 The TIMING can be tested with
 \begin{verbatim}
@@ -184,7 +185,8 @@ make -s tests > tmp.log
 diff tmp.log tests.log
 \end{verbatim}
 Note that the timings and the order of the output can vary from
-test run to test run.
+test run to test run. Two of the four tests involve the NOMPI
+library, although only a few of the NOMPI methods are used.
 
 \section{Description of Functionality Testing}
 
