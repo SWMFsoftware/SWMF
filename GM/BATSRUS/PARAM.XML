@@ -3144,7 +3144,39 @@ F			InitRope
 0.0			cRotYGl98 [deg]
 0.0			cRotZGl98 [deg]
 
-! This command defines the heliosphere parameters with a CME model.
+This command defines the heliosphere parameters with a CME model.
+The coronal eruptive event generator is based on the
+Gibson and Low (GL) analytical solution prescribing a
+three-dimensional twisted magnetic flux rope in
+hydrostatic equilibrium in the presence of gravity.
+The GL solution is described in the Astrophysical
+Journal, volume 493, page 460.
+This flux rope is formed by applying a mathematical
+stretching operation to axisymmetric speromak flux
+rope.  The flux rope is of radius Cme_R0 and is
+placed Cme_R1 from the origin (solar center).  The
+stretching transformation draws space radially inward
+toward the origin by a distance of Cme_A, which
+distorts the flux rope to have a tear-drop shape.
+The parameter Cme_A1 modulates the magnetic field strength
+and negative values of Cme_A1 reverse the overall field
+direction.  For the GL flux rope to be in equilibrium, requires
+both dense plasma in the form of a filament inside the rope,
+(prescribed by the GL solution) as well as plasma pressure
+outside the flux rope which tends to be large than the
+solar corona can provide.  To initiate an eruption (the CME)
+we linearly superimpose the GL flux rope in the solar
+corona within the streamer belt.  The location of the flux
+rope is determined by the parameters cRotxGl98, cRotYGl98
+and cRotZGl98.  The flux rope is line-tied with both ends
+attached to the inner boundary.  The eruption follows from
+the flux rope being out of equilibrium, owing to a reduction
+in filament mass (set with ModulationRho) and from pressure
+of the corona being unable to balance the magnetic pressure
+of the flux rope.  The eruption takes the form of the flux
+rope being bodily expelled from the conona.  Eruption energy
+increases with flux rope size, field strength, stretching
+deformation and the buoyancy of the flux rope.
 </command>
 
 <command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
@@ -3232,7 +3264,39 @@ Low		TypeCme   model type ('Low')
 1.0             CmeB1Dim [Gauss] field strength of dipole-type B field
 4.0E5           CmeUErupt  [m/s] cme velocity
 
-! Default values are shown above for B.C. Low's CME model
+The coronal eruptive event generator (TypeCme Low) is based on the
+Gibson and Low (GL) analytical solution prescribing a
+three-dimensional twisted magnetic flux rope in
+hydrostatic equilibrium in the presence of gravity.
+The GL solution is described in the Astrophysical
+Journal, volume 493, page 460.
+This flux rope is formed by applying a mathematical
+stretching operation to axisymmetric speromak flux
+rope.  The flux rope is of radius Cme_R0 and is
+placed Cme_R1 from the origin (solar center).  The
+stretching transformation draws space radially inward
+toward the origin by a distance of Cme_A, which
+distorts the flux rope to have a tear-drop shape.
+The parameter Cme_A1 modulates the magnetic field strength
+and negative values of Cme_A1 reverse the overall field
+direction.  For the GL flux rope to be in equilibrium, requires
+both dense plasma in the form of a filament inside the rope,
+(prescribed by the GL solution) as well as plasma pressure
+outside the flux rope which tends to be large than the
+solar corona can provide.  To initiate an eruption (the CME)
+we linearly superimpose the GL flux rope in the solar
+corona within the streamer belt.  The location of the flux
+rope is determined by the parameters cRotxGl98, cRotYGl98
+and cRotZGl98.  The flux rope is line-tied with both ends
+attached to the inner boundary.  The eruption follows from
+the flux rope being out of equilibrium, owing to a reduction
+in filament mass (set with ModulationRho) and from pressure
+of the corona being unable to balance the magnetic pressure
+of the flux rope.  The eruption takes the form of the flux
+rope being bodily expelled from the conona.  Eruption energy
+increases with flux rope size, field strength, stretching
+deformation and the buoyancy of the flux rope.
+Default values are shown above for the GL flux rope CME model.
 </command>
 
 <command name="ARCADE" if="$_IsFirstSession and $_NameComp ne 'GM'">
