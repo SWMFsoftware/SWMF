@@ -52,7 +52,7 @@ while(<>){
 
     # commandList --> section
     if(/^\s*<commandList\s+name=[\'\"]([^\'\"]+)/){
-	$_="\\clearpage\n\\section\{Input Commands for the $1\}\n\n";
+	$_="\\section\{Input Commands for the $1\}\n\n";
         $start = 1;
     }
 
@@ -134,3 +134,5 @@ while(<>){
     print;
 }
 
+# Finish with closing the page
+print "\\clearpage\n";
