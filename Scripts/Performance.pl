@@ -4,6 +4,7 @@ my $Help    = $h or $help;
 my $Extract = $e;
 my $Verbose = $v;
 my $nProcAll= ($n or 8);
+my $lSession= ($s or 60);
 my $ProcShow= ($p or "roots");
 
 use strict;
@@ -43,8 +44,6 @@ my $TimeAccurate=1; # True for time accurate session (initially true)
 my %DnRun_C;        # Frequency of calling components in non-time accurate run 
 my %Couple_CC;      # Coupling info for component pairs (dt, dn, tnext ...)
 my %CoupleOnTime_C; # Logical array for letting components pass coupling time
-my $MaxIter;        # Final iteration number for the session
-my $TimeMax;        # Final physical time for the session
 
 my @ActiveComp = @RegisteredComp; # List of components active in a session
 my @CoupleOrder = ("SC IH",       # Order of pairwise couplings
@@ -283,8 +282,8 @@ sub read_param{
 		$Couple_CC{$Comp2}{$Comp1}{do}    = $DoCouple;
 		$Couple_CC{$Comp2}{$Comp1}{dn}    = $DnCouple;
 		$Couple_CC{$Comp2}{$Comp1}{dt}    = $DtCouple;
-		$Couple_CC{$Comp2}{$Comp1}{tNext} = $DtCouple;
 		$Couple_CC{$Comp2}{$Comp1}{nNext} = $DnCouple;
+		$Couple_CC{$Comp2}{$Comp1}{tNext} = $DtCouple;
 	    }
 	    if($Shift){
 		$Couple_CC{$Comp1}{$Comp2}{nNext} = 
@@ -298,6 +297,19 @@ sub read_param{
 			read_var("real",   "tNext21");
 		}
 	    }
+
+	    # Store first coupling time and step for multisession
+	    $Couple_CC{$Comp1}{$Comp2}{nFirst} = 
+		$Couple_CC{$Comp1}{$Comp2}{nNext};
+	    $Couple_CC{$Comp1}{$Comp2}{tFirst} = 
+		$Couple_CC{$Comp1}{$Comp2}{tNext};
+	    if($nWay == 2){
+		$Couple_CC{$Comp2}{$Comp1}{nFirst} = 
+		    $Couple_CC{$Comp2}{$Comp1}{nNext};
+		$Couple_CC{$Comp2}{$Comp1}{tFirst} = 
+		    $Couple_CC{$Comp2}{$Comp1}{tNext};
+	    }
+
 	}
 
 	if(/^\#COUPLETIME\b/){
@@ -310,10 +322,6 @@ sub read_param{
 	    $DnRun_C{$Comp} = &read_var("integer","DnRun");
 	}
 
-	if(/^\#STOP\b/){
-	    $MaxIter = &read_var("integer", "MaxIter");
-	    $TimeMax = &read_var("real", "TimeMax");
-	}
     }
 
     close(PARAMFILE) if $IsLastSession;
@@ -324,8 +332,6 @@ sub read_param{
 	print "\n";
 	print "IsLastSession = $IsLastSession\n";
 	print "TimeAccurate  = $TimeAccurate\n";
-	print "MaxIter = $MaxIter\n";
-	print "TimeMax = $TimeMax\n\n";
 	print "Coupling schedule\n\n";
 	print "Source => Target: DtCouple [s]\n".
 	    "------------------------------\n";
@@ -523,6 +529,7 @@ sub init_session{
     for $iProc (0..$nProcAll-1){chop $CompList_P[$iProc]};
 
     # Set the array of PE-s for all the active couplings
+    # Reset the next coupling time and step
     my $Comp1;
     foreach $Comp1 (@ActiveComp){
 	my $Comp2;
@@ -537,10 +544,18 @@ sub init_session{
 
 	    # Store the list
 	    $Couple_CC{$Comp1}{$Comp2}{ProcArray} = \@Proc;
+
+	    # Reset the next coupling time and step
+	    $Couple_CC{$Comp1}{$Comp2}{tNext} = 
+		$Couple_CC{$Comp1}{$Comp2}{tFirst};
+	    $Couple_CC{$Comp1}{$Comp2}{nNext} = 
+		$Couple_CC{$Comp1}{$Comp2}{nFirst};
 	}
     }
 
-    # Initialize the wall time histories
+    # Initialize physical time, wall time and histories
+    %Time_C     = ();
+    @WallTime_P = ();
     @WallHist_P = ();
 
     if($Verbose){
@@ -557,7 +572,9 @@ sub do_session{
 
     # Do the session
 
-    my %tNext_C; # Next time a component should stop at
+    my $TimeMax=$lSession; # Final time is the length of the session
+
+    my %tNext_C;           # Next time a component should stop at
 
     my $iProc;
   TIMELOOP:
