@@ -530,23 +530,27 @@ Contains
 
     call get_im_pressure(iBLK,pIM)
 
-    factor=cfl_factor/(tauCoupleIM/unitSI_t)
+    if(TauCoupleIm < 1.0)then
+       ! Ramp up is based on number of iterations: p' = (p + tau*pIm)/(1+tau)
+       ! A typical value might be 0.01, to get close to the RCM pressure in 200 iterations
 
-    where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK)>0.0)
+       factor = 1.0/(1.0+TauCoupleIM)
 
-       !A typical value might be 0.01, to get close to the RCM pressure in 200 iterations
+       where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK)>0.0) &
+            State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+TauCoupleIM))* &
+            (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + TauCoupleIM*pIM(1:nI,1:nJ,1:nK))
+    else
+       ! Ramp up is based on physical time: p' = p + dt/tau * (pIM - p)
+       ! A typical value might be 5, to get close to the RCM pressure in 10 seconds
 
-       State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+tauCoupleIM))* &
-            (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + tauCoupleIM*pIM(1:nI,1:nJ,1:nK))
+       factor=cfl_factor/(tauCoupleIM/unitSI_t)
 
-       !based on time dt rather than number of iterations and not inverse
-       !A typical value might be 5, to get close to the RCM pressure in 10 seconds
+       where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK)>0.0) &
+            State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + &
+            min(1.0, time_BLK(1:nI,1:nJ,1:nK,iBLK)*factor)* &
+            (pIM(1:nI,1:nJ,1:nK) - State_VGB(P_,1:nI,1:nJ,1:nK,iBLK))
 
-!       State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + &
-!            min(1.0, time_BLK(1:nI,1:nJ,1:nK,iBLK)*factor)* &
-!            (pIM(1:nI,1:nJ,1:nK) - State_VGB(P_,1:nI,1:nJ,1:nK,iBLK))
-
-    end where
+    end if
 
     ! Now get the energy that corresponds to this new pressure
     E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
