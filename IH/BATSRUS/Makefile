@@ -22,7 +22,9 @@ PLOT = ???
 rundir: check_src
 	mkdir ${RUNDIR}/IH
 	cd ${RUNDIR}/IH; mkdir restartIN restartOUT IO2
-	cd ${RUNDIR}/IH; ln -s ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/[Pp]* .
+	cd ${RUNDIR}/IH; \
+		ln -s ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/P*.exe .; \
+		cp    ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/p??? .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \

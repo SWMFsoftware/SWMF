@@ -163,9 +163,11 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 
 rundir: checklink
 	mkdir -p ${RUNDIR}/GM
-	cd ${RUNDIR}/GM; mkdir restartIN restartOUT IO2
-	cd ${RUNDIR}/GM; ln -s ${GMDIR}/Scripts/Run/pp_${PLOT}/[Pp]* .
-	cd ${RUNDIR}/GM; ln -s ${GMDIR}/Param .
+	cd ${RUNDIR}/GM; \
+		mkdir restartIN restartOUT IO2; \
+		ln -s ${GMDIR}/Scripts/Run/pp_${PLOT}/P*.exe .; \
+		cp    ${GMDIR}/Scripts/Run/pp_${PLOT}/p??? .; \
+		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f Param/PARAM.DEFAULT run/PARAM.in; \
 		touch run/core; chmod 444 run/core; \

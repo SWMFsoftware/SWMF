@@ -27,7 +27,9 @@ PLOT = ???
 rundir: check_src
 	mkdir ${RUNDIR}/SC
 	cd ${RUNDIR}/SC; mkdir restartIN restartOUT IO2
-	cd ${RUNDIR}/SC; ln -s ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/[Pp]* .
+	cd ${RUNDIR}/SC; \
+		ln -s ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/P*.exe .; \
+		cp    ${DIR}/GM/BATSRUS/Scripts/Run/pp_${PLOT}/p??? .
 	cp ../../Param/CR1935_WSO.dat ${RUNDIR}/SC/
 
 clean:  

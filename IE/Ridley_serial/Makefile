@@ -36,7 +36,7 @@ PIONO:
 
 rundir:
 	mkdir -p ${RUNDIR}/IE/ionosphere
-	cd ${RUNDIR}/IE; ln -s ${IEDIR}/Scripts/pION .
+	cd ${RUNDIR}/IE; cp ${IEDIR}/Scripts/pION .
 	cd ${RUNDIR}/IE; ln -s ${BINDIR}/PostIONO.exe .
 
 clean:
