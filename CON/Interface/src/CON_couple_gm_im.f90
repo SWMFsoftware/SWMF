@@ -70,8 +70,8 @@ contains
 
     !DESCRIPTION:
     ! Couple between two components:\\
-    !    Inner Magnetosphere  (IM) source\\
-    !    Global Magnetosphere (GM) target
+    !    Global Magnetosphere (GM) source\\
+    !    Inner Magnetosphere  (IM) target
     !
     ! Send field line volumes, average density and pressure and
     ! geometrical information.
