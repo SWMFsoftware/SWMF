@@ -41,6 +41,7 @@ module CON_session
 
   !REVISION HISTORY:
   ! 08/26/03 G.Toth - initial version
+  ! 05/20/04 G.Toth - general steady state session model
   !EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
@@ -326,7 +327,7 @@ contains
 
     !DESCRIPTION:
     ! This is the general time looping routine which allows overlap in
-    ! the layout of the  components but allows parallel execution. 
+    ! the layout of the components but allows parallel execution. 
     ! Each component has its own tSimulation\_C(iComp). 
     ! The simulation time for control is defined as the {\bf minimum}
     ! of the component times. Always the component which is lagging behind
@@ -410,13 +411,25 @@ contains
           iComp = i_comp(lComp)
           if(.not.IsProc_C(iComp)) CYCLE
 
-          if(tSimulation_C(iComp) < tSimulationLimit_C(iComp)) &
-               call run_comp(iComp,tSimulation_C(iComp),&
-               tSimulationLimit_C(iComp))
+          if(DoTimeAccurate)then
+             if(tSimulation_C(iComp) < tSimulationLimit_C(iComp)) then
 
-          if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
-               ' with tSimulation and Limit=',tSimulation_C(iComp),&
-               tSimulationLimit_C(iComp)
+                call run_comp(iComp,tSimulation_C(iComp),&
+                     tSimulationLimit_C(iComp))
+
+                if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
+                     ' with tSimulation and Limit=',tSimulation_C(iComp),&
+                     tSimulationLimit_C(iComp)
+             end if
+          else
+             if(mod(nStep, DnRun_C(iComp)) == 0) then
+                call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
+
+                if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
+                     ' at nStep=',nStep
+             end if
+          end if
+
        end do
 
        !\

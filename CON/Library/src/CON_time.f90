@@ -20,6 +20,7 @@ module CON_time
   use ModKind, ONLY: Real8_
   use ModFreq                 !!, ONLY: FreqType
   use ModTimeConvert          !!, ONLY: time_int_to_real, TimeType
+  use CON_comp_param, ONLY: MaxComp
 
   implicit none
 
@@ -45,6 +46,9 @@ module CON_time
 
   ! Maximum number of iterations since last restart
   integer :: MaxIteration=0
+
+  ! How often a component should run
+  integer :: DnRun_C(MaxComp) = 1
 
   ! Initial and current date/time
   type(TimeType) :: TimeStart, TimeCurrent
