@@ -57,7 +57,6 @@ Module ModIO
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
   integer :: nLine_I(MaxPlotFile)             ! Number of lines for a plot file
   integer, parameter :: MaxLine=20            ! Max numbe of lines/plot file
-  integer   :: iUnitLine_I(MaxLine) = -1      ! Unit numbers for subfiles
   character :: NameLine_I(MaxPlotFile)                 ! Name of vector field
   real      :: XyzStartLine_DII(3,MaxLine,MaxPlotFile) ! Starting positions
   logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
