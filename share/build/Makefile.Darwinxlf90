@@ -32,7 +32,7 @@ Cflag1  = ${SEARCH} -c -O1 ${DEBUG} ${PRECISION}
 Cflag2  = ${SEARCH} -c -O2 ${DEBUG} ${PRECISION}
 Cflag3  = ${SEARCH} -c -O3 ${DEBUG} ${PRECISION}
 Cflag4  = ${SEARCH} -c -O4 ${DEBUG} ${PRECISION}
-Cflag4f = ${SEARCH} -c -O4 ${DEBUG}
+Cflag4NoP = ${SEARCH} -c -O4 ${DEBUG}
 
 # RCM compilation flags
 CFLAGS  = ${SEARCH} -c -O2 ${DEBUG}
