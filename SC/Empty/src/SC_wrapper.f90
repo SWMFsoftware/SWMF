@@ -118,3 +118,7 @@ subroutine SC_put_from_ih(nPartial,&
 
   call CON_stop(NameSub//': SC_ERROR: empty version cannot be used!')
 end subroutine SC_put_from_ih
+
+subroutine SC_get_for_ih
+
+end subroutine SC_get_for_ih
