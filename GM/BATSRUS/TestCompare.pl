@@ -284,7 +284,7 @@ sub compare_speed{
 
     my @dir=@ARGV; # list of directories
 
-    my $What = $speed; $What = 'BATSRUS\|SWMF' if $What eq "1"; # speed of what?
+    my $What = $speed; $What = 'BATSRUS\|SWMF' if $What eq "1"; #speed of what?
 
     my @speedsum; # sum of speeds for tests completed in all directories
     my $speedsum; # number of tests completed in all directories
@@ -316,13 +316,15 @@ sub compare_speed{
 		}
 		$_ = `grep "$What" $dir/$test/log* | tail -1`;
 		($speed) = /(\d+\.\d\d)/;
+		$speed   = sprintf("%8.2f",$speed);
 	    }elsif(-f "$dir/log.$number"){
 		$_ = `grep "$What" $dir/log.$number | tail -1`;
 		($speed) = /(\d+\.\d\d)/;
+		$speed   = sprintf("%8.2f",$speed);
 	    }else{
-		$speed = -1.0; $missing++;
+		$speed = "    --- "; $missing++;
 	    }
-	    push @speed, sprintf("%8.2f",$speed);
+	    push @speed, $speed;
 	}
 	next if $missing > $#dir; # nothing to report
 
@@ -332,7 +334,7 @@ sub compare_speed{
 	    if($speed[0] > 0 and $speed[1] > 0){
 		printf "%9.2f",$speed[1]-$speed[0];
 	    }else{
-		print "   ---   ";
+		print "     --- ";
 	    }
 	}
 	if(length($switch)>70){
@@ -357,7 +359,7 @@ sub compare_speed{
 	    if($speedsum[1]>0 and $speedsum[1]>0){
 		printf "%9.2f",$speedsum[1]-$speedsum[0];
 	    }else{
-		print "   ---   ";
+		print "     --- ";
 	    }
 	}
 	print "   for $speedsum compeleted tests\n";
