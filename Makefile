@@ -111,7 +111,7 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd ${CONDIR};   make install
-	cd share;       make install
+	cd share;       make install MPIVERSION=${MPIVERSION}
 	cd ${GMDIR};    make install    #^CMP IF GM
 	cd ${IEDIR};    make install    #^CMP IF IE
 	cd ${IHDIR};    make install    #^CMP IF IH
