@@ -623,7 +623,7 @@ LINE:
 #   --------------------------------
     if ($source) {
         # Do not print config lines from Makefiles
-        next LINE if /^\s*\@\#\^CMP/;
+        next LINE if /^\s*\@\#\^ CMP/x;
         # replace @echo '...' and @echo "..." with ...
 	s/\@echo\s+\'([^\']*)\'/$1/; 
 	s/\@echo\s+\"([^\"]*)\"/$1/; 
