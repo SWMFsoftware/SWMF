@@ -6,6 +6,8 @@ SEARCH_EXTRA = -I../src
 
 include ../../../Makefile.conf
 
+NP = 2
+
 help:
 	@echo "You can test the following modules in ../src:"
 	@echo
@@ -15,6 +17,7 @@ help:
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_ray_trace        - test CON_ray_trace"
+	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_geopack          - test CON_geopack"
 	@echo "   test_axes             - test CON_axes"
 	@echo "   test_planet_field     - test CON_planet_field"
@@ -24,6 +27,11 @@ help:
 	@echo
 	@echo "   make -s tests"
 	@echo
+	@echo "The number of PE-s for the parallel tests can be set by"
+	@echo
+	@echo "   make NP=4 test_line_extract"
+	@echo
+	@echo "The default value is 2."
 
 tests: \
 	test_time_convert \
@@ -32,6 +40,7 @@ tests: \
 	test_sort \
 	test_io_unit \
 	test_ray_trace \
+	test_line_extract \
 	test_geopack \
 	test_axes \
 	test_planet_field
@@ -160,12 +169,34 @@ test_ray_trace:
 	@(cd ../src; make ModMpi.o CON_ray_trace.o)
 	@make test_ray_trace.exe
 	@echo
-	@echo 'mpirun -np 2 test_ray_trace.exe > test_ray_trace.tmp'
-	@mpirun -np 2 test_ray_trace.exe > test_ray_trace.tmp
+	@echo 'mpirun -np ${NP} test_ray_trace.exe > test_ray_trace.tmp'
+	@mpirun -np ${NP} test_ray_trace.exe > test_ray_trace.tmp
 	@echo 'diff test_ray_trace.tmp test_ray_trace.log'
 	-@(diff test_ray_trace.tmp test_ray_trace.log)
 	@echo
 	@echo test_ray_trace done
+	@echo -----------------------------------------------------------------
+
+#######################################################################
+OBJ_LINE_EXTRACT = \
+	test_line_extract.o \
+	../src/ModMpi.o \
+	../src/CON_line_extract.o
+
+test_line_extract.exe: ${OBJ_LINE_EXTRACT}
+	${LINK.f90} -o test_line_extract.exe ${OBJ_LINE_EXTRACT} ${Lflag1}
+
+test_line_extract:
+	@echo -----------------------------------------------------------------
+	@echo test_line_extract starting
+	@echo
+	@(cd ../src; make ModMpi.o CON_line_extract.o)
+	@make test_line_extract.exe
+	@echo
+	@echo 'mpirun -np ${NP} test_line_extract.exe'
+	@mpirun -np ${NP} test_line_extract.exe 
+	@echo
+	@echo test_line_extract done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
