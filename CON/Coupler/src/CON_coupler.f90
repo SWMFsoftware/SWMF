@@ -94,8 +94,8 @@ module CON_coupler
   ! 09/07/03 I.Sokolov - bug fixes in init_coord_system_all and
   !                 in set_coord_system. Add gen_to_stretched and 
   !                 streched_to_gen
-  ! 08/10/04 I.Sokolov - to avoid inproper use of init_coord_system_all
-  !                      with destroying all the 
+  ! 08/10/04 I.Sokolov - to avoid an inproper use of init_coord_system_all
+  !                      which destroys the Grid_C structure. 
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
