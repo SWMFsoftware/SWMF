@@ -1,3 +1,5 @@
+!^CFG COPYRIGHT UM
+!^CFG FILE USERFILES
 !========================================================================
 !========================================================================
 !  This file contains routines that let the user make customizations to
