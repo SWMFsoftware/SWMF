@@ -97,6 +97,7 @@ SWMFREF = \
 	${SCRIPTDIR}/FixMpi.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
+	${SCRIPTDIR}/StopToConStop.protex \
 	${SCRIPTDIR}/StaticToDynamic.protex \
 	${SCRIPTDIR}/ChangeIndexOrder.protex \
 	${SCRIPTDIR}/CompareDirs.protex \
