@@ -4,7 +4,9 @@
 \title{Space Weather Modeling Framework Maintenance Manual \\ 
        \hfill \\
        \large Code Version \SWMFVERSION}
-\author{Center for Space Environment Modeling\\
+\author{G\'abor T\'oth, Darren De Zeeuw\\
+        \hfill \\
+       {\it Center for Space Environment Modeling}\\
        {\it The University of Michigan}}
 
 \input HEADER
@@ -156,7 +158,6 @@ directories).
 
 \begin{itemize}
 \item SP\_set\_param
-\item SP\_set\_grid
 \item SP\_init\_session
 \item SP\_run
 \item SP\_save\_restart
@@ -221,15 +222,166 @@ subroutine name for a component method and resolve at run-time which
 particular component method was called.
 
 \newpage
-\section{Example for Component Wrapper}
+\section{Examples for Component Wrapper and Coupler}
+
+\subsection{Example Wrapper for Component PM}
+
+This subsection provides explicit interfaces and examples for
+all the methods (subroutines) that must be defined by a component wrapper. 
+The documentation is produced from the 
+\begin{verbatim}
+doc/Tex/PM_wrapper.f90
+\end{verbatim}
+file which can be used as a template for writing a new wrapper.
+
+In this example the abbreviated name of the component (the component ID)
+is {\tt PM} (which stands for Physics Module). 
+If the file is used as a template for an actual wrapper, then
+the file should be placed into the appropriate component version 
+interface directory named analogous to
+\begin{verbatim}
+PM/PmVersion/srcInterface/PM_wrapper.f90
+\end{verbatim}
+Further the {\tt PM} string should be replaced with the two-character ID 
+of the actual component and/or the module, variable and subroutine names 
+that belong to the physics module (all start with {\tt PM\_} in this file)
+should be replaced with the appropriate module, variable and subroutine 
+names of the new physics module. For example if the component ID is 'IE'
+then the subroutine {\tt PM\_init\_session} should be renamed to 
+{\tt IE\_init\_session}, while the variable {\tt PM\_iProc} in 
+module {\tt PM\_ModProc} may have a completely different name.
+
+The PM component wrapper provides the following six subroutines
+\begin{itemize}
+\item PM\_set\_param
+\item PM\_init\_session
+\item PM\_run
+\item PM\_save\_restart
+\item PM\_finalize
+\end{itemize}
+which will be described in detail below. All these subroutines are 
+called by the control module from {\tt CON/Insterface/src/CON\_wrapper}.
 
 \input PM_wrapper.protex
 
-%\input PM_coupler.protex
+\parskip 12pt
+
+\newpage
+\subsection{Example coupler between Components PM and XY}
+
+This subsection provides an example for the component coupling interfaces. 
+The documentation is produced from the
+\begin{verbatim}
+doc/Tex/PM_XY_coupler.f90
+\end{verbatim}
+file, which contains methods for coupling particular versions of the
+componets PM and XY. It can be used as a starting point 
+for writing new couplers.
+
+The coupling interfaces are not standardized, but 
+they follow a typical pattern in the SWMF. The coupler
+between components PM and XY consists of three parts: 
+\begin{itemize}
+\item the {\tt PM\_put\_from\_xy} and {\tt PM\_get\_for\_xy} subroutines 
+      in {\tt PM/PmVersion/srcInterface/}
+\item the {\tt XY\_put\_from\_pm} and {\tt XY\_get\_for\_pm} subroutines 
+      in {\tt XY/XyVersion/srcInterface/}
+\item the {\tt CON\_couple\_pm\_xy} module in {\tt CON/Interface/src/}
+\end{itemize}
+If the coupling is one way only, for example if data is sent from 
+the XY component to the PM component only, then 
+the {\tt PM\_get\_for\_xy} and {\tt XY\_put\_from\_pm}
+subroutines do not need to be implemented.
+
+The {\tt get} and {\tt put} subroutines are specific for the component 
+versions.
+These subroutines provide access to the data in the physics modules. 
+The {\tt PM\_get} and {\tt PM\_put} subroutines are executed
+on the processors that belong to the PM component, while the {\tt XY\_put} and
+{\tt XY\_get} subroutines are executed on the processors that belong to the 
+XY component. In these subroutines only communication internal to the 
+component can occur, if any. The {\tt get} subroutines are responsible for 
+converting from the internal units of the sending component to SI units,
+while the {\tt put} subroutines convert from SI units to the internal
+units of the receiving component. If the coupler does not use the
+SWMF coupling toolkit, the interpolation from the sending grid to the
+requested positions occurs in the {\tt get} or the {\tt put} subroutines.
+If the SWMF coupling toolkit is used, the mapping and interpolation
+are done by the toolkit.
+
+The {\tt CON\_couple\_pm\_xy} module 
+should be specific to a pair of components,
+but it should be general with respect to the component versions.
+The methods in the {\tt CON\_couple\_pm\_xy} module implement both PM to XY
+and XY to PM coupling if the components are coupled both ways.
+These methods allocate and deallocate the data buffers and transfer the data 
+between the PM and XY processors. 
+If the coupler does not use the SWMF coupling toolkit,
+the data transfer is implemented with plain MPI calls.
+If the SWMF toolkit is used, the data transfer is done by the toolkit
+based on the grid descriptors and the mapping information.
+
+The following example shows a one way coupling with plain MPI calls.
+For the use of the SWMF coupling toolkit, please see the appropriate
+part of the reference manual and the examples in the SWMF source code.
+
+\input PM_XY_coupler.protex
+
+\parskip 12pt
 \newpage
 %%%
 % Bug Reporting
 %%%
+\section{Documentation}
+
+New source code should be documented with the Protex utility.
+Examples for the protex style documentation can be found in the 
+{\tt share/Prologs} directory. To get a description and examples
+\begin{verbatim}
+cd share/Prologs
+make PDF
+acroread README.pdf
+\end{verbatim}
+There are several F90 files in the {\tt share/Prologs} directory
+that can be used as templates.
+The source code documentation is turned into Latex documentation
+by the {\tt share/Scripts/protex.pl} script.
+The file containing the documented source code should be listed
+in the appropriate part of the
+\begin{verbatim}
+doc/Tex/Makefile
+\end{verbatim}
+
+New or modified input parameters should be described in the XML files. 
+For the control module parameters this file is
+\begin{verbatim}
+Param/PARAM.XML
+\end{verbatim}
+For the component versions the XML file is located in the top level
+of the component version directory named like
+\begin{verbatim}
+PM/PmVersion/PARAM.XML
+\end{verbatim}
+A brief description of the syntax of the PARAM.XML files can be obtained
+by running
+\begin{verbatim}
+Scripts/TestParam.pl -X
+Scripts/TestParam.pl -H
+\end{verbatim}
+The XML files are used for parameter checking with the 
+\begin{verbatim}
+Scripts/TestParam.pl
+\end{verbatim}
+script. They are also read with a text editor by the users of the SWMF.
+Finally the XML files are used for producing documentation with the
+\begin{verbatim}
+share/Scripts/XmlToTex
+\end{verbatim}
+script. The PARAM.XML file should be listed in the appropriate part of the
+\begin{verbatim}
+doc/Tex/Makefile
+\end{verbatim}
+
 \section{Reporting Bugs}
 
 Bugzilla is the Center for Space Environment Modeling (CSEM)
