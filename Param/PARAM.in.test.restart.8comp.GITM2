@@ -38,6 +38,10 @@ GM IM                   NameSourceTarget
 GM RB                   NameSourceTarget
 IM GM                   NameSourceTarget
 
+#STOP
+-1                    MaxIteration
+15000.0               tSimulationMax
+
 #BEGIN_COMP SC --------------------------------------------------------------
 
 #INCLUDE
@@ -482,9 +486,5 @@ T			UseNeutralChemistry
 1.0			StretchingFactor
 
 #END_COMP UA  ----------------------------------------------------------------
-
-#STOP
--1                    MaxIteration
-15000.0               tSimulationMax
 
 #END
