@@ -2,7 +2,13 @@
 T
 
 #DESCRIPTION
-Restart SC-IH-GM-IE in time accurate mode.
+Restart SC-IH-SP-GM-IM-RB-IE-UA in time accurate mode.
+
+#TIMING
+T			UseTiming
+-1			DnTiming
+-1			nDepthTiming
+cumm			TypeTimingReport
 
 #INCLUDE
 RESTART.in
@@ -17,9 +23,11 @@ T			DoTimeAccurate
 F			DoSaveRestart
 
 #COUPLEORDER
-11			nCouple
+13			nCouple
 SC IH			NameSourceTarget
 IH SC			NameSourceTarget
+SC SP			NameSourceTarget
+IH SP			NameSourceTarget
 IH GM			NameSourceTarget
 IE GM			NameSourceTarget
 IE IM                   NameSourceTarget
@@ -221,6 +229,47 @@ minmod                  TypeLimiter
 #END_COMP IH -----------------------------------------------------------------
 
 #COUPLE1
+SC			NameSource
+SP			NameTarget
+-1			DnCouple
+59.9000			DtCouple
+
+#COUPLE1
+IH			NameSource
+SP			NameTarget
+-1			DnCouple
+59.9000			DtCouple
+
+#BEGIN_COMP SP ---------------------------------------------------------------
+
+#LINE
+1.61+02                 xLine
+-1.39E+02		yLine
+-15.0			zLine
+1.1			rBoundSc
+21.0			rBoundIh
+
+#RTRANSIENT
+2.0			rTransient
+
+#NSMOOTH
+3			nSmooth
+
+#DORUN
+T			DoRun
+
+#SAVEMHDATA
+F			DoSaveMhData
+
+#VERBOSE
+0			lVerbose
+
+#PLOT
+1                       DnPlot
+
+#END_COMP SP -----------------------------------------------------------------
+
+#COUPLE1
 IH			NameSource
 GM			NameTarget
 -1			DnCouple
@@ -322,7 +371,7 @@ IE			NameTarget
 UA			NameComp1
 IE			NameComp2
 -1                      DnCouple
-40.                     DtCouple
+80.                     DtCouple
 
 #COUPLE1
 IE			NameSource
@@ -433,10 +482,16 @@ SPS
 0.0		! Amount of stretch 0 (none) to 1 (lots)
 1.0		! More control of stretch ( > 1 stretch less < 1 stretch more)
 
-#END_COMP UA   ########################################################
+#END_COMP UA  ----------------------------------------------------------------
 
 #STOP
 -1                    MaxIteration
 300.0                 tSimulationMax
+
+#RUN #########################################################################
+
+#STOP
+-1                    MaxIteration
+600.0                 tSimulationMax
 
 #END
