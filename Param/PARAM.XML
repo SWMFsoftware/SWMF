@@ -124,40 +124,6 @@ need to use the #RUN command, since the #END command or simply
 the end of the PARAM.in file makes CON execute the last session.
 </command>
 
-<command name="SESSION">
-	<parameter name="TypeSession" type="string" input="select">
-		<option name="general concurrent" value="general" default="T"/>
-		<option name="old serial"         value="old" />
-	</parameter>
-
-#SESSION
-general			TypeSession
-
-The TypeSession string can be set to 'general' or 'old'. 
-The value of TypeSession determines how the time looping is handled by CON.
-
-The 'general' session model allows concurrent execution of the components.
-The components are synchronized only when conditions for the actions of 
-coupling, saving restart files, or stopping execution are met. 
-This is possible because it is known in advance by each component when 
-these actions will occur. In time accurate mode the components are 
-required to make a time step which does not exceed the next synchronization
-time. In steady state mode there is no limit on the time step, and 
-components can be called at different frequencies.
-
-If TypeSession='old', then CON mimics the behaviour of the BATSRUS 
-time loop control: 
-the global magnetosphere (GM) is regarded as the main component, 
-and other components are coupled to it.
-The simulation time is that of GM. The other components are ran in
-a serial manner, i.e. they wait for the coupling, and GM waits until
-they finish their execution. This time loop control is mainly preserved
-for backwards compatibility. It is not recommended to use the 'old'
-session control for anything but development and testing purposes.
-
-The default is the 'general' mode.
-</command>
-
 <command name="TIMEACCURATE">
 	<parameter name="DoTimeAccurate" type="logical" default="T" />
 
@@ -501,6 +467,16 @@ number is not checked.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!! COMPONENT CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The session model allows concurrent execution of the components.
+The components are synchronized only when conditions for the actions of 
+coupling, saving restart files, or stopping execution are met. 
+This is possible because it is known in advance by each component when 
+these actions will occur. In time accurate mode the components are 
+required to make a time step which does not exceed the next synchronization
+time. In steady state mode there is no limit on the time step, and 
+components can be called at different frequencies.
+Components which are not used in a session can be switched off.
 
 <command name="COMPONENT" multiple="T">
 	<parameter name="NameComp" type="string" input="options">

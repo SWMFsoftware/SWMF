@@ -379,9 +379,6 @@ contains
        case("#CYCLE")
           call read_var('NameComp',NameComp)
           call read_var('DnRun',DnRun_C(i_comp(NameComp)))
-       case("#SESSION")
-          call read_var('TypeSession',TypeSession)
-          call lower_case(TypeSession)
        case default
           if(IsFirstRead) then
              !
@@ -455,15 +452,6 @@ contains
        end select
     end do
     ! end reading parameters
-
-    ! Check if the old session model is used without GM
-    if(TypeSession=='old' .and. .not. use_comp(GM_))then
-       if(is_proc0())write(*,*)NameSub,' SWMF_WARNING:',&
-            ' TypeSession="old" cannot be used without GM being ON'
-       if(UseStrict)call world_clean
-       if(is_proc0())write(*,*)NameSub,' setting TypeSession="general"'
-       TypeSession='general'
-    end if
 
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN

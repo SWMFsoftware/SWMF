@@ -23,9 +23,6 @@ module CON_variables
   ! This is standard F90 initialization expression but may give warnings:
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
 
-  ! The type of session model: 'general' or 'old'
-  character (len=lStringLine) :: TypeSession='general'
-
   ! Shall we use timing module
   logical :: UseTiming = .true.
   integer :: DnTiming  = -2       ! Show timing at the end of run only

@@ -9,7 +9,7 @@ module CON_session
   !USES:
   use CON_world
   use CON_comp_param
-  use CON_variables, ONLY: TypeSession, UseStrict, DnTiming
+  use CON_variables, ONLY: UseStrict, DnTiming
   use CON_wrapper
   use CON_couple_all
 
@@ -39,6 +39,7 @@ module CON_session
   !REVISION HISTORY:
   ! 08/26/03 G.Toth - initial version
   ! 05/20/04 G.Toth - general steady state session model
+  ! 08/11/04 G.Toth - removed 'old' and 'parallel' session models
   !EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
@@ -49,7 +50,7 @@ module CON_session
   integer :: lComp, iComp, nComp
   integer :: iCouple, iCompSource, iCompTarget
   integer :: iError
-  logical :: IsProc_C(MaxComp)      ! for general model
+  logical :: IsProc_C(MaxComp)
 
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
@@ -62,7 +63,10 @@ contains
   subroutine init_session
 
     !DESCRIPTION:
-    ! This subroutine does the session according to the value of TypeSession
+    ! Initialize possibly overlapping components for the current session. 
+    ! First figure out which components belong to this PE.
+    ! Then couple the components in an appropriate order for the first time.
+    ! The order is determined by the iCompCoupleOrder\_II array.
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
@@ -95,34 +99,6 @@ contains
     !/
     call couple_all_init
 
-    !\
-    ! Do the initial coupling according to the value of TypeSession
-    !/
-    select case(TypeSession)
-    case('general')
-       call init_session_general
-    case('old')                    !^CMP IF GM
-       call init_session_old       !^CMP IF GM
-    case default
-       call CON_stop(NameSub//' SWMF_ERROR invalid TypeSession='//TypeSession)
-    end select
-    !EOC
-
-  end subroutine init_session
-
-  !BOP ======================================================================
-  !IROUTINE: init_session_general - initialize for general layout
-  !INTERFACE:
-  subroutine init_session_general
-    !DESCRIPTION:
-    ! Initialize possibly overlapping components for the current session. 
-    ! First figure out which components belong to this PE.
-    ! Then couple the components in an appropriate order for the first time.
-    ! The order is determined by the iCompCoupleOrder\_II array.
-    !EOP
-
-    character(len=*), parameter :: NameSub=NameMod//'init_session_general'
-    !-----------------------------------------------------------------------
     !\
     ! Figure out which components belong to this PE
     !/
@@ -157,63 +133,9 @@ contains
             call couple_two_comp(iCompSource, iCompTarget, tSimulation)
 
     end do
+    !EOC
 
-  end subroutine init_session_general
-
-  !^CMP IF GM BEGIN
-  !BOP ======================================================================
-  !IROUTINE: init_session_old - initialize the backwards compatible way
-  !INTERFACE:
-  subroutine init_session_old
-
-    !DESCRIPTION:
-    ! This subroutine does the initial coupling the old way:
-    ! Couple GM and UA to IE\\
-    ! solve IE\\
-    ! couple IE to GM and UA\\
-    ! couple GM and IE to IM\\
-    ! couple IM to GM.
-    !EOP
-
-    logical :: IsImUninitialized=.true.
-
-    character(len=*), parameter :: NameSub=NameMod//'::init_session_old'
-    !--------------------------------------------------------------------------
-
-    call check_couple_symm(IE_,GM_,NameSub)                    !^CMP IF IE
-    call check_couple_symm(IM_,GM_,NameSub)                    !^CMP IF IM
-
-    if (use_comp(IH_)) call couple_two_comp(IH_,GM_,tSimulation)   !^CMP IF IH
-  
-    !^CMP IF IE BEGIN
-    if (use_comp(IE_)) then
-       call couple_two_comp(GM_,IE_,tSimulation)
-       if(use_comp(UA_)) call couple_two_comp(UA_,IE_,tSimulation) !^CMP IF UA
-       if (is_proc(IE_) .and. nStep > 0) &
-            call run_comp(IE_,tSimulation,tSimulation)
-       call couple_two_comp(IE_,GM_,tSimulation)
-       if(use_comp(UA_))call couple_two_comp(IE_,UA_,tSimulation)  !^CMP IF UA
-    end if
-    !^CMP END IE
-
-    !^CMP IF IM BEGIN
-    if (use_comp(IM_).and.IsImUninitialized) then
-
-       if(DoTestMe) write(*,*)NameSub// &
-            ': initializing IM/RCM at start of session.'
-
-       call couple_two_comp(gm_,im_,tSimulation) ! MH_volume
-
-       call couple_two_comp(ie_,im_,tSimulation)                 !^CMP IF IE
-
-       call couple_two_comp(im_,gm_,tSimulation) ! IM_pressure_reset
-
-       IsImUninitialized = .false.
-    end if
-    !^CMP END IM
-
-  end subroutine init_session_old
-  !^CMP END GM
+  end subroutine init_session
 
   !BOP ======================================================================
   !IROUTINE: do_session - time loop with a fixed set of input parameters
@@ -224,7 +146,23 @@ contains
     logical, intent(inout) :: IsLastSession ! set it to true if run should stop
 
     !DESCRIPTION:
-    ! This subroutine does the session according to the value of TypeSession
+    ! This subroutine executes one session.
+    ! This is general time looping routine allows overlap in
+    ! the layout of the components but allows concurrent execution 
+    ! if there is no overlap.
+    ! Each component has its own tSimulation\_C(iComp). 
+    ! The simulation time for control is defined as the {\bf minimum}
+    ! of the component times. Always the component which is lagging behind
+    ! should run. Coupling occurs when all the involved components reached or
+    ! exceeded the next coupling, save restart or check for stop time.
+
+    !LOCAL VARIABLES:
+    real :: tSimulation_C(MaxComp)=-1.0 ! Current time for the component
+    real :: tSimulationWait_C(MaxComp)  ! After this time do not progress
+    real :: tSimulationLimit_C(MaxComp) ! Time not to be passed by component
+
+    real :: tSimulationCouple, tSimulationLimit
+
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::do_session'
@@ -233,45 +171,6 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     !BOC
-    select case(TypeSession)
-    case('general')
-       call do_session_general(IsLastSession)
-    case('old')                                 !^CMP IF GM
-       call do_session_old(IsLastSession)       !^CMP IF GM
-    case default
-       call CON_stop(NameSub//' SWMF_ERROR invalid TypeSession='//TypeSession)
-    end select
-    !EOC
-
-  end subroutine do_session
-
-  !BOP ======================================================================
-  !IROUTINE: do_session_general - time loop for general layout
-  !INTERFACE:
-  subroutine do_session_general(IsLastSession)
-
-    !INPUT/OUTPUT ARGUMENTS:
-    logical, intent(inout) :: IsLastSession ! set it to true if run should stop
-
-    !DESCRIPTION:
-    ! This is the general time looping routine which allows overlap in
-    ! the layout of the components but allows concurrent execution. 
-    ! Each component has its own tSimulation\_C(iComp). 
-    ! The simulation time for control is defined as the {\bf minimum}
-    ! of the component times. Always the component which is lagging behind
-    ! should run. Coupling occurs when all the involved components reached or
-    ! exceeded the next coupling, save restart or check for stop time.
-    !EOP
-
-    real :: tSimulation_C(MaxComp)=-1.0 ! Current time for the component
-    real :: tSimulationWait_C(MaxComp)  ! After this time do not progress
-    real :: tSimulationLimit_C(MaxComp) ! Time not to be passed by component
-
-    real :: tSimulationCouple, tSimulationLimit
-
-    character(len=*), parameter :: NameSub=NameMod//'::do_session_general'
-    !-----------------------------------------------------------------------
-
     !\
     ! If no component uses this PE and init_session_general did not stop
     ! then simply return
@@ -280,6 +179,8 @@ contains
 
     !\
     ! Set initial time for all components to be tSimulation
+    ! For steady state mode do this only for the first time,
+    ! because the SWMF time does not advance but the component time might.
     !/
     if(DoTimeAccurate)then
        tSimulation_C = tSimulation
@@ -307,6 +208,10 @@ contains
           end if
        end if
 
+       !\
+       ! Advance step number and iteration (in current run)
+       ! Inform the TIMING utility about the new time step
+       !/
        nStep = nStep+1
        nIteration = nIteration+1
        call timing_step(nStep)
@@ -359,6 +264,10 @@ contains
           if(.not.IsProc_C(iComp)) CYCLE
 
           if(DoTimeAccurate)then
+             !\
+             ! In time accurate mode advance component 
+             ! if it has not reached the 'wait time'
+             !/
              if(tSimulation_C(iComp) < tSimulationWait_C(iComp)) then
 
                 call run_comp(iComp,tSimulation_C(iComp),&
@@ -369,6 +278,9 @@ contains
                      tSimulationLimit_C(iComp)
              end if
           else
+             !\
+             ! In steady state mode advance component every DnRun step
+             !/
              if(mod(nStep, DnRun_C(iComp)) == 0) then
                 ! tSimulationLimit=Huge since there is no limit on time step
                 call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
@@ -384,13 +296,16 @@ contains
        end do
 
        !\
-       ! tSimulation for CON is the minimum of the simulation time of the
+       ! tSimulation for CON is the minimum of the simulation times of the
        ! components present on this processor
        !/
        if(DoTimeAccurate) tSimulation = min(&
             minval(tSimulation_C,     MASK=IsProc_C), &
             minval(tSimulationWait_C, MASK=IsProc_C))
 
+       !\
+       ! Print progress report at given frequency
+       !/
        call show_progress
 
        !\
@@ -422,180 +337,9 @@ contains
 
     end do TIMELOOP
 
-  end subroutine do_session_general
+    !EOC
 
-  !^CMP IF GM BEGIN
-  !BOP ======================================================================
-  !IROUTINE: do_session_old - time loop the old way for backwards compatibility
-  !INTERFACE:
-  subroutine do_session_old(IsLastSession)
-
-    !INPUT/OUTPUT ARGUMENTS:
-    logical, intent(inout) :: IsLastSession ! set it to true if run should stop
-
-    !DESCRIPTION:
-    ! This is based on BATSRUS main and should give identical results.
-    ! GM is the principal component, it controls the flow of time.
-    ! IM is coupled in a serial fashion with some time staggering.
-    ! IE is also coupled serially, it does the solve between the
-    ! GM to IE and IE to GM couplings.
-    ! UA is only added experimentally, it was not part of BATSRUS.
-    ! IH is only added experimentally, it was not coupled in BATSRUS.
-    !EOP
-
-    !^CMP IF IM BEGIN
-    real    :: tSimulationIm, tSimulationLimitIm
-    real    :: DtCoupleIm
-    !^CMP END IM
-
-    real    :: tSimulationUa
-    real    :: tSimulationIh
-    character(len=*), parameter :: NameSub=NameMod//'::do_session_old'
-    !-------------------------------------------------------------------------
-
-    !^CMP IF IM BEGIN
-    ! To simplify expressions use this local variable for GM-IM coupling
-    ! frequency.
-    dtCoupleIM = Couple_CC(IM_,GM_) % Dt
-    !^CMP END IM
-
-    ! Simulation time for UA and IH start to be the same as for GM/CON
-    tSimulationUa = tSimulation       !^CMP IF UA
-    tSimulationIh = tSimulation       !^CMP IF IH
-
-    !\
-    ! Begin time step (iterations) loop.
-    !/
-    TIMELOOP: do
-
-       if(DoTestMe)write(*,*)NameSub,&
-            ': Starting TIMELOOP at nStep, tSimulation=',nStep,tSimulation
-
-       !\
-       ! Stop this session if stopping conditions are fulfilled
-       !/
-       if(MaxIteration >= 0 .and. nIteration >= MaxIteration) exit TIMELOOP
-       if(DoTimeAccurate .and. tSimulationMax > cZero &
-            .and. tSimulation >= tSimulationMax) &
-            exit TIMELOOP
-
-       !\
-       ! Check periodically for stop file and cpu time
-       !/
-       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
-          if(do_stop_now())then
-             IsLastSession = .true.
-             EXIT TIMELOOP
-          end if
-       end if
-
-       nStep = nStep + 1
-       nIteration = nIteration+1
-
-       call timing_step(nStep)
-
-       ! Advance solution
-
-       !^CMP IF UA BEGIN
-       ! This is only added experimentally
-       if(is_proc(UA_))then
-          ! UA can go up to one time step ahead
-          do
-             if(tSimulationUa > tSimulation) EXIT
-             call run_comp(UA_,tSimulationUa, tSimulationMax)
-          end do
-       end if
-       !^CMP END UA
-
-       !^CMP IF IH BEGIN
-       ! This is only added experimentally
-       if(is_proc(IH_))then
-          ! IH can go up to one time step ahead
-          !do
-          !   if(tSimulationIh > tSimulation) EXIT
-          if(tSimulationIh <= tSimulation.or..not.DoTimeAccurate) then
-             if(DoTimeAccurate.and.tSimulationMax>cZero)then
-                call run_comp(IH_,tSimulationIh,tSimulationMax)
-             else
-                call run_comp(IH_,tSimulationIh, HUGE(tSimulation))
-             end if
-          end if
-          !end do
-       end if
-       !^CMP END IH
-
-       ! In the old code GM's time is the time for everyone
-       ! There was no attempt to make the last time equal to tSimulationMax
-       call run_comp(GM_,tSimulation,HUGE(tSimulation))
-       call MPI_bcast(tSimulation,1,MPI_REAL,i_proc0(GM_),i_comm(),iError)
-
-       if (is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate)) &
-            call save_restart
-
-       call show_progress
-
-       ! Couple IH to GM in every step                           !^CMP IF IH
-       if (use_comp(IH_)) call couple_two_comp(ih_,gm_,tSimulation)  !^CMP IF IH
-
-       !^CMP IF IM BEGIN
-       !\
-       ! Periodically perform IM coupling as required.
-       !/
-       if (use_comp(IM_)) then
-          ! Shift time by dtCoupleIm/2 so that the first coupling
-          ! occurs at dtCoupleIm/2.
-          if (is_time_to(Couple_CC(IM_,GM_), nStep,&
-               tSimulation + 0.5*dtCoupleIM, DoTimeAccurate)) then
-
-             call couple_two_comp(gm_,im_,tSimulation) ! field line volume
-
-             ! potential from IE to IM               !^CMP IF IE
-             call couple_two_comp(ie_,im_,tSimulation)   !^CMP IF IE
-
-             if(is_proc(IM_))then
-                ! Run IM 
-                ! from tSimulation-dtCoupleIM/2 to tSimulation+dtCoupleIM/2 + 5
-                tSimulationIm      = tSimulation   - 0.5*dtCoupleIM
-
-                tSimulationLimitIm = tSimulationIm + dtCoupleIM
-
-                if(DoTestMe) write(*,*)NameSub,': loop IM_run with',&
-                     ' tSimulationIm=',tSimulationIm, &
-                     ' tSimulationLimitIm= ',tSimulationLimitIm, &
-                     ' dtCoupleIM= ', dtCoupleIM 
-                do
-                   call run_comp(IM_,tSimulationIm,tSimulationLimitIm)
-                   if(tSimulationIm >= tSimulationLimitIm - cTiny) EXIT
-                end do
-                if(DoTestMe) write(*,*)NameSub,': IM_run finished with',&
-                     ' tSimulationIm=',tSimulationIm
-                call flush_unit(6)
-             end if
-
-             call couple_two_comp(im_,gm_,tSimulation) ! IM_pressure_reset
-
-          end if
-       end if
-       !^CMP END IM
-
-       !^CMP IF IE BEGIN
-       !\
-       ! Periodically perform ionosphere/magnetosphere coupling 
-       ! calculations as required.
-       !/
-       if(is_time_to(Couple_CC(IE_,GM_),nStep,tSimulation,DoTimeAccurate))then
-          call couple_two_comp(gm_,ie_,tSimulation)
-          if(use_comp(UA_)) call couple_two_comp(UA_,IE_,tSimulation) !^CMP IF UA
-          if (is_proc(IE_)) call run_comp(IE_,tSimulation,tSimulation)
-          call couple_two_comp(ie_,gm_,tSimulation)
-          if(use_comp(UA_))call couple_two_comp(IE_,UA_,tSimulation)  !^CMP IF UA
-       end if
-       !^CMP END IE
-
-    end do TIMELOOP
-
-  end subroutine do_session_old
-  !^CMP END GM
+  end subroutine do_session
 
   !BOP =======================================================================
   !IROUTINE: do_stop_now - return true if stop file exists or cpu time is over
