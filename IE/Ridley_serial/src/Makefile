@@ -57,7 +57,6 @@ OBJECTS = \
 	IE_End.o\
 	IE_Initialize.o\
 	IE_Library.o\
-	Interface.o\
 	IO_Library.o\
 	AMIE_Library.o\
 	readAMIEoutput.o\
