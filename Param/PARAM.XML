@@ -142,7 +142,7 @@ time is not advanced at all, instead the time step or iteration number
 is used to control the frequencies of various actions.
 
 The steady-state mode also allows the components to use various
-acceleration techniques. For example the UofM MHD code (in the GM and IH
+acceleration techniques. For example the BATSRUS code (in the GM, IH, SC
 components) can use local time stepping to accelerate convergence
 to steady state. It is also envisioned that in steady state mode
 the various components will be allowed to use different number
@@ -361,7 +361,7 @@ The default value is lVerbose=1.
 							default="-1" />
 		<parameter name="TypeTimingReport" type="string" 
 							input="select">
-			<option name="cummulative" value="cumm" default="T" />
+			<option name="cumulative" value="cumu" default="T" />
 			<option name="list" />
 			<option name="tree" />
 		</parameter>
@@ -371,7 +371,7 @@ The default value is lVerbose=1.
 T                       UseTiming      (rest of parameters read if true)
 -2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
 -1                      nDepthTiming   (-1 for arbitrary depth)
-cumm                    TypeTimingReport   ('cumm', 'list', or 'tree')
+tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 
 If UseTiming=.true., the execution is timed by the TIMING utility.\\
 If UseTiming=.false., the execution is not timed.
@@ -387,7 +387,7 @@ A negative value means unlimited depth.\\
 If nDepthTiming is 1, only the total SWMF execution is timed.
 
 The TypeTimingReport parameter determines the format of the timing reports:\\
-'cumm' - cummulative list sorted by timings\\
+'cumu' - cumulative list sorted by timings\\
 'list' - list based on caller and sorted by timings\\
 'tree' - tree based on calling sequence.
 
@@ -1150,8 +1150,5 @@ the run.
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($DoTimeAccurate or $TypeSession !~ /genereal|parallel/)" >
-	For non time accurate runs only "old" session type can be used!
-</rule>
 
 </commandList>
