@@ -1,6 +1,6 @@
 <!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
-<commandList name="Global Ionosphere Thermosphere Model: UA Component">
+<commandList name="Global Ionosphere Thermosphere Model 2: UA Component">
 
 GITM is typically run with a {\tt UAM.in} file, which resides in the
 directory that you are running from. In the framework it obtains 
