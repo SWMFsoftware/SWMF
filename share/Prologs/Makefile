@@ -22,9 +22,11 @@
 #!USES:
 include ../../Makefile.def
 include ../../Makefile.conf
+include ../build/Makefile.doc
 
 #!REVISION HISTORY:
-# 04/28/2004 G.Toth myemail@umich.edu - initial version
+# 04/28/2004 G.Toth - initial version
+# 03/04/2005 G.Toth - include ../build/Makefile.doc
 #EOP
 
 # SCRIPTDIR = ../Scripts
@@ -56,7 +58,7 @@ help:
 	@echo 'test      - make DVI PS PDF COMPILE RUN'
 	@echo 'DVI       - create README.dvi'
 	@echo 'PS        - create README.ps'
-	@echo 'DVI       - create README.pdf'
+	@echo 'PDF       - create README.pdf'
 	@echo 'COMPILE   - compile the Fortran files into program_example.exe'
 	@echo 'RUN       - run program_example.exe'
 	@echo 'clean     - remove *~ and *.protex files'
@@ -87,11 +89,16 @@ RUN: COMPILE
 
 COMPILE: program_example.exe
 
+
+# The compilation of object files is defined Makefile.conf
+# Only the linking needs to be specified here
 program_example.exe: ${OBJECTS}
 	${LINK.f90} -o program_example.exe ${OBJECTS}
 
 
 # CLEANING
+
+# The clean target is defined in Makefile.conf
 
 distclean: clean
 	rm -f *.dvi *.ps *.pdf *.aux *.log *.toc PROTEX.tex program_example.exe
@@ -102,29 +109,9 @@ distclean: clean
 # but otherwise the rule is the same as for scripts with a .pl extension.
 
 Makefile.protex: Makefile
-	${SCRIPTDIR}/protex -b -n -f -S Makefile > Makefile.protex
+	${SCRIPTDIR}/protex.pl -b -n -f -S Makefile > Makefile.protex
 
-.SUFFIXES:
-.SUFFIXES: .f90 .o .pl .protex .tex .dvi .ps .pdf
-
-# Rule to convert F90 to protex
-.f90.protex:
-	${SCRIPTDIR}/protex -b -n -f $*.f90 > $*.protex
-
-# Rule to convert Perl scripts to protex
-.pl.protex:
-	${SCRIPTDIR}/protex -b -n -f -S $*.pl > $*.protex
-
-# NOTE: Repeat latex $*.tex twice to get references right
-# NOTE: Repeat latex $*.tex three times to get table of contents right
-.tex.dvi:
-	latex $*.tex
-	latex $*.tex
-	latex $*.tex
-
-.dvi.ps: 
-	dvips -o $*.ps $*.dvi
-
-.ps.pdf:
-	ps2pdf $*.ps $*.pdf
-
+# The general rule Makefile.doc puts the PDF into the ../ directory. 
+# To get the REAME.pdf in the local directory, explicit rule is used
+README.pdf: README.ps
+	ps2pdf README.ps README.pdf
