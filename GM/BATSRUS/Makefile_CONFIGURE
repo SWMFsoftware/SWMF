@@ -129,7 +129,7 @@ multisp: multisp_src
 #^CFG IF ALWAVES BEGIN
 ############################################################################
 DREL=RELAX
-MODEL=IH
+COMP=IH
 relax_src:
 	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user/user_routines.f90.heliosphere user_routines_orig.f90;\
@@ -139,7 +139,7 @@ relax_src:
 	-off=rusanovflux,ionosphere,boriscorr -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd ${DREL}; make install; \
-	perl -i -pe 's?GM?${MODEL}?' Makefile Makefile.def src/stand_alone.f90
+	perl -i -pe 's?GM?${COMP}?g' Makefile Makefile.def Param/PARAM.DEFAULT
 
 relax_conf: relax_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DREL} BATSRUS_conf
