@@ -2413,6 +2413,7 @@ if not keyword_set(xrange) then xrange = [0,0]
 if not keyword_set(yrange) then yrange = [0,0]
 
 if keyword_set(lines) then begin
+
     plot, xx, yy, XSTYLE=xstyle, YSTYLE=ystyle, POLAR=polar, $
       XRANGE=xrange, YRANGE=yrange, /NOERASE, /NODATA
 
@@ -2421,24 +2422,27 @@ if keyword_set(lines) then begin
           for iy=0,sizx(2)-2 do $
           if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
              (xx(ix,iy+1) ne 0 or yy(ix,iy+1) ne 0)) then $
-          oplot,[xx(ix,iy),xx(ix,iy+1)],[yy(ix,iy),yy(ix,iy+1)],POLAR=polar
+          oplot,[xx(ix,iy),xx(ix,iy+1)],[yy(ix,iy),yy(ix,iy+1)],POLAR=polar,$
+          psym=0
 
         for iy=0,sizx(2)-1 do $
           for ix=0,sizx(1)-2 do $
           if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
              (xx(ix+1,iy) ne 0 or yy(ix+1,iy) ne 0)) then $
-          oplot,[xx(ix,iy),xx(ix+1,iy)],[yy(ix,iy),yy(ix+1,iy)],POLAR=polar
+          oplot,[xx(ix,iy),xx(ix+1,iy)],[yy(ix,iy),yy(ix+1,iy)],POLAR=polar,$
+          psym=0
 
     endif else begin
 
         for ix=0,sizx(1)-1 do $
-          oplot,xx(ix,*),yy(ix,*),POLAR=polar
+          oplot,xx(ix,*),yy(ix,*),POLAR=polar,psym=0
         for iy=0,sizx(2)-1 do $
-          oplot,xx(*,iy),yy(*,iy),POLAR=polar
+          oplot,xx(*,iy),yy(*,iy),POLAR=polar,psym=0
 
     endelse
 
 endif else begin
+
     if polar then $
       plot, xx, yy, PSYM=3, SYMSIZE=!p.symsize, $
       XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE,$
