@@ -112,7 +112,7 @@ contains
     if(IsInitialized)then
        if(NamePlanet == NamePlanetIn) RETURN
        call CON_stop(NameSub//&
-            ' SWMF_error attempt to change planet name from '// &
+            ' ERROR: attempt to change planet name from '// &
             trim(NamePlanet)//' to '//NamePlanetIn)
     end if
 
@@ -153,7 +153,7 @@ contains
 
        if (NamePlanetCommands /= '') &
             call CON_stop(NameSub// &
-            ' SWMF_ERROR #PLANET should precede '// &
+            ' ERROR: #PLANET should precede '// &
             NamePlanetCommands)
 
        call read_var('NamePlanet',NamePlanetIn)
@@ -189,18 +189,17 @@ contains
 
              if (TypeBField == 'QUADRUPOLE') then
                 call CON_stop(NameSub// &
-                     ' SWMF_ERROR quadrupole field unimplemented')
+                     ' ERROR: quadrupole field unimplemented')
              endif
 
              if (TypeBField == 'OCTUPOLE') then
                 call CON_stop(NameSub// &
-                     ' SWMF_ERROR octupole field unimplemented')
+                     ' ERROR: octupole field unimplemented')
              endif
 
           case default
              call CON_stop(NameSub// &
-                  ' SWMF_ERROR unimplemented TypeBField='// &
-                  TypeBField)
+                  ' ERROR: unimplemented TypeBField='//TypeBField)
 
           end select
 
@@ -233,15 +232,14 @@ contains
 
           call read_var('RotAxisTheta', RotAxisTheta)
           if(RotAxisTheta < cZero)call CON_stop(NameSub// &
-               'Negative tilt should be entered as Phi=180.0')
+               ' ERROR: negative tilt should be entered as Phi=180.0')
           RotAxisTheta = cRadToDeg * RotAxisTheta
 
           call read_var('RotAxisPhi', RotAxisPhi)
           RotAxisPhi = cRadToDeg * RotAxisPhi
        else
-          if(.not.IsMagAxisPrimary)call CON_stop(NameSub//&
-               ': SWMF_ERROR ',&
-               'Either rotation or magnetic axis must be primary')
+          if(.not.IsMagAxisPrimary)call CON_stop(NameSub// &
+               ' ERROR: either rotation or magnetic axis must be primary')
        end if
 
     case('#MAGNETICAXIS')
@@ -256,15 +254,14 @@ contains
 
           call read_var('MagAxisTheta', MagAxisTheta)
           if(MagAxisTheta < 0.0)call CON_stop(NameSub// &
-               'Negative tilt should be entered as Phi=180.0')
+               ' ERROR: negative tilt should be entered as Phi=180.0')
           MagAxisTheta = cRadToDeg * MagAxisTheta
 
           call read_var('MagAxisPhi', MagAxisPhi)
           MagAxisPhi = cRadToDeg * MagAxisPhi
        else
           if(.not.IsRotAxisPrimary)call CON_stop(NameSub//&
-               ': SWMF_ERROR ',&
-               'Either rotation or magnetic axis must be primary')
+               ' ERROR: either rotation or magnetic axis must be primary')
        end if
 
     case('#ROTATION')
@@ -288,7 +285,7 @@ contains
           TypeBField = 'DIPOLE'
        else
           call CON_stop(NameSub// &
-               ' SWMF_ERROR Nondipole mags unimplemented')
+               ' ERROR: nondipole magnetic field unimplemented')
        endif
 
     case('#DIPOLE')
