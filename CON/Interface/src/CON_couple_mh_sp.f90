@@ -21,10 +21,8 @@ Module CON_couple_mh_sp
   real,allocatable,dimension(:,:)::XyzTemp_DI
 
   real,dimension(:,:),pointer ::Xyz_DI
-  logical,dimension(:),pointer::Used_I
   integer,parameter::nPointMax=5000
-  integer::nPoint
-  integer::nPointIH=0
+  integer::nPoint=0
   integer::iPoint
   integer::iError
   real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
@@ -145,8 +143,8 @@ contains
                IH_GridDescriptor,RouterIhSp,RBoundIH**2,IH_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
-          nPointIH=nPoint
-          if(DoTest.and.is_proc0())write(*,*)'nPointIH=',nPointIH
+
+          if(DoTest.and.is_proc0())write(*,*)'nPointIH=',nPoint
        end if                      !^CMP END IH
 
        if(use_comp(SC_))then       !^CMP IF SC BEGIN
@@ -189,7 +187,7 @@ contains
              Xyz_DI(:,iPoint)= XyzTemp_DI(:,nPoint-iPoint+1)
           end do
           nullify(Xyz_DI)
-          if(DoTest)call save_global_vector('SP_Xyz_DI')
+          if(DoTest)call save_global_vector('SP_Xyz_DI',iFileIn=0)
        end if
        deallocate(XyzTemp_DI)
     else
@@ -211,11 +209,6 @@ contains
        nU_I(2:2)=ncells_decomposition_d(SP_)
        nPoint=nU_I(2)
        if(.not.is_proc0(SP_))call allocate_vector('SP_Xyz_DI',3,nPoint)
-       if(use_comp(IH_))then
-          if(is_proc0(SP_))nPointIH=count_mask('SP_IsInIH')
-          call MPI_BCAST(npointIH,1,MPI_INTEGER,&
-               i_proc0(SP_),i_comm(),iError)
-       end if
     end if
 
     call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
@@ -226,10 +219,9 @@ contains
     !/
     if(use_comp(IH_))then !^CMP IF IH BEGIN
        if(RouterIhSp%IsProc)then
-          call allocate_mask('SP_IsInIH','SP_Xyz_DI')
-          call associate_with_global_mask(Used_I,'SP_IsInIH')
-          Used_I(1:nPointIH)=.true.
-          nullify(Used_I)
+          if(.not.DoneRestart.or..not.is_proc0(SP_))&
+               call allocate_mask('SP_IsInIH','SP_Xyz_DI')
+          call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
           if(is_proc0().and.DoTest)&
                write(*,*)'Mask SP_IsInIH count=',count_mask('SP_IsInIH')
        end if
@@ -238,9 +230,7 @@ contains
        if(RouterScSp%IsProc)then
           if(.not.DoneRestart.or..not.is_proc0(SP_))&
                call allocate_mask('SP_IsInSC','SP_Xyz_DI')
-          call associate_with_global_mask(Used_I,'SP_IsInSC')
-          Used_I(nPointIH+1:nPoint)=.true.
-          nullify(Used_I)
+          call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
           if(is_proc0().and.DoTest)&
                write(*,*)'Mask SP_IsInSC count=',count_mask('SP_IsInSC')
        end if
