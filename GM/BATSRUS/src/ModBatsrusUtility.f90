@@ -1555,8 +1555,8 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   type(adaptive_block_ptr):: Octree
   real,dimension(3) :: Xyz_D,DXyz_D,XyzCorner_D,XyzCenter_D
   integer,dimension(3)::IjkRoot_D
-  logical::Done
   logical,dimension(3):: IsLowerThanCenter_D
+  !----------------------------------------------------------------------
 
   nullify(Octree % ptr)
 
@@ -1588,10 +1588,9 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   Octree % ptr => &
        octree_roots(IjkRoot_D(1)+1,IjkRoot_D(2)+1,IjkRoot_D(3)+1) % ptr
   ! Recursive procedure to find the adaptive block:
-  Done=.false.
-  do while (.not.Done)
+  do
      if(Octree % ptr % used) then
-        iPE =octree % ptr % PE
+        iPE    = octree % ptr % PE
         iBlock = octree % ptr % BLK
         if(DoFindCell)then
            DXyz_D=DXyz_D/nCells
@@ -1599,7 +1598,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
            jCell=int((Xyz_D(2)-XyzCorner_D(2))/DXyz_D(2))+1
            kCell=int((Xyz_D(3)-XyzCorner_D(3))/DXyz_D(3))+1
         end if
-        Done=.true.
+        EXIT
      else
         DXyz_D=cHalf*DXyz_D
         XyzCenter_D=XyzCorner_D+DXyz_D
