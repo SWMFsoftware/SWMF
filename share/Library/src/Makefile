@@ -42,24 +42,8 @@ ${MY_LIB}: ${MODULES}
 	${AR} ${MY_LIB} ${MODULES}
 
 
-OBJ_RAY_TEST = \
-	test_ray_trace.o \
-	ModMpi.o \
-	CON_ray_trace.o
-
-test_ray_trace.exe: ${OBJ_RAY_TEST}
-	${LINK.f90} ${Lflag1} -o test_ray_trace.exe ${OBJ_RAY_TEST}
-
-test_ray_trace: test_ray_trace.exe
-	mpirun -np 2 test_ray_trace.exe > test_ray_trace.tmp
-	@echo 'There should be no difference:'
-	diff test_ray_trace.tmp test_ray_trace.log
-
-install: 
-
-
 distclean: clean
-	rm -f Makefile.DEPEND test_ray_trace.tmp
+	rm -f Makefile.DEPEND
 
 # keep this line
 
