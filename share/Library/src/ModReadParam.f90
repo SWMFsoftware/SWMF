@@ -290,7 +290,7 @@ contains
     if(iError>0)call CON_stop(NameSub// &
          " MPI_ERROR: number of lines could not be broadcast")
 
-    call MPI_Bcast(StringLine_I(1),lStringLine*nLine,MPI_CHARACTER,&
+    call MPI_Bcast(StringLine_I,lStringLine*nLine,MPI_CHARACTER,&
          0,iComm,iError)
 
     if(iError>0)call CON_stop(NameSub// &
