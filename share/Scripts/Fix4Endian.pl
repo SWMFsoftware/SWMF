@@ -12,73 +12,98 @@
 # the A-th and B-th positions (positions are starting from 1).
 # The -except=M:N flag allows to exclude the bytes between 
 # the B-th and C-th positions (usually a character string).
+# The -i flag means that the changes are made "inplace" in possibly
+# multiple files.
 #\begin{verbatim}
 # Usage:  
 #         Fix4Endian.pl [-only=A:B] [-except=C:D] < InFile > Outfile
-#         perl -si Fix4Endian.pl [-only=A:B] [-except=C:D] File1 File2 ...
+#         Fix4Endian.pl -i [-only=A:B] [-except=C:D] File1 [File2 ...]
 #\end{verbatim}
 #!REVISION HISTORY:
 # 07/13/2001 G. Toth - initial version
-# 08/18/2004 G. Toth - added -except=M:N option for RCM restart files.
+# 08/18/2004 G. Toth - added -i -only=A:B -except=C:D options
 #EOP
 #BOC
 # No end of line record
 undef $/;
 
+$Inplace = $i;
+
 # Extract range
 if($only){
     $_ = $only;
-    ($start,$finish) = /(\d+).(\d+)/;
+    ($Start,$Finish) = /(\d+).(\d+)/;
     die "Incorrect format for -only=$only\n"
-        unless 0 < $start and $start < $finish;
+        unless 0 < $start and $start < $Finish;
 }else{
-    $start  =  1; 
-    $finish = -1;
+    $Start  =  1; 
+    $Finish = -1;
 }
 
 # Extract excpetion range if present
 if($except){
     $_ = $except;
-    ($min,$max) = /(\d+).(\d+)/;
+    ($Min,$Max) = /(\d+).(\d+)/;
     die "Incorrect format for -except=$except\n" 
-	unless 0 < $min and $min <= $max;
+	unless 0 < $Min and $Min <= $Max;
 }else{
-    $min = -1;
-    $max = -1;
+    $Min = -1;
+    $Max = -1;
 }
 
-# Read the whole file into $_
-$_=<>;
-$length = length();
 
-if($start > $length){
-    die "Starting byte number in -only=$only exceeds file length\n";
-}
+ FILE: foreach $file (@ARGV){
 
-if($finish < 0){
-    $finish = $length;
-}elsif($finish > $length){
-    $finish = $length;
-    warn "Final byte number in -only=$only exceeds file length\n";
-}
+     # Read the whole file into $_
+     open(FILE,$file) or (warn "Could not open file=$file\n" and next FILE);
+     $_=<FILE>;
+     close(FILE);
+     $length = length();
 
-if($min > $length){
-    warn "Minimum byte number in -except=$except exceeds file length\n";
-}
+     # Initialize variables for this file
+     $start  = $Start;
+     $finish = $Finish;
+     $min    = $Min;
+     $max    = $Max;
 
-if($max > $length){
-    $max = $length;
-    warn "Maximum byte number in -except=$except exceeds file length\n";
-}
+     # Check variables
+     if($start > $length){
+	 warn "Starting byte number in -only=$only exceeds file length\n";
+	 next FILE;
+     }
 
-# Reverse every 4 bytes
-for($i = $start-1; $i < $finish; $i += 4){
-    if($i+1 >= $min and $i < $max){
-	$i = $max;
-	last if $i >= $finish;
+     if($finish < 0){
+	$finish = $length;
+    }elsif($finish > $length){
+	$finish = $length;
+	warn "Final byte number in -only=$only exceeds file length\n";
     }
-    substr($_,$i,4)=reverse substr($_,$i,4);
+    
+    if($min > $length){
+	warn "Minimum byte number in -except=$except exceeds file length\n";
+    }
+    
+    if($max > $length){
+	$max = $length;
+	warn "Maximum byte number in -except=$except exceeds file length\n";
+    }
+    
+    # Reverse every 4 bytes
+    for($i = $start-1; $i < $finish; $i += 4){
+	if($i+1 >= $min and $i < $max){
+	    $i = $max;
+	    last if $i >= $finish;
+	}
+	substr($_,$i,4)=reverse substr($_,$i,4);
+    }
+
+    if($Inplace){
+	open(FILE,">$file") 
+	    or (warn "Could not open $file for writing\n" and next);
+        print FILE $_;
+    }else{
+        print
+    }
 }
 
-print;
 #EOC
