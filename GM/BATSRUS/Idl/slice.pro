@@ -151,7 +151,7 @@
 
       first= islice eq 1
       getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                         x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,wnames,cut0
+        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,variables,cut0
 
    endfor
 

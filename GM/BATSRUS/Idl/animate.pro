@@ -126,7 +126,8 @@
 
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
-                  doask,x,w,xreg,wreg,usereg,physicss(ifile),eqpar,wnames,cut0
+                 doask,x,w,xreg,wreg,usereg,physicss(ifile),eqpar,variables,$
+                 cut0
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'

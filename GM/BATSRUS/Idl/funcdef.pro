@@ -1,18 +1,19 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,xx,w,func,physics,eqpar,wnames
+function funcdef,xx,w,func,physics,eqpar,variables
 ;
 ; Originally developed for the Versatile Advection Code by G. Toth (1996-99).
 ; Rewritten for the BATSRUS code by G. Toth (2000).
 ;
 ; This is the function called by ".r animate" and ".r plotfunc".
 ;
-; "xx" array contains the "ndim" components of the coordinates for the grid.
-; "w" array contains the "nw" conservative variables for the grid.
-; "func" string describes the function to be returned.
-; "physics" string defines the meaning of the variables in "w".
-; "eqpar" array contains the equation parameters.
-; "wnames" string array contains the names for the conservative variables.
+; "xx"        array contains the "ndim" components of the coordinates.
+; "w"         array contains the "nw" variables.
+; "func"      string describes the function to be returned.
+; "physics"   string defines the meaning of the variables in "w".
+; "eqpar"     array contains the equation parameters.
+; "variables" string array contains the names of the coordinates in xx
+;             the variables in w and the equation parameters in eqpar
 ;
 ; The "func" string is interpreted by the following rules:
 ;
@@ -31,7 +32,14 @@ function funcdef,xx,w,func,physics,eqpar,wnames
 ;     and equation parameter names (gamma) and any IDL function
 ;     and operator are evaluated and returned. 
 ;
-; Examples for valid strings: '3', 'rho', '-T', 'rho*ux', ...
+;   Expressions can also contain coordinate, variable or equation
+;   parameter names enclosed in curly brackets. For example
+;   {r} or {bx1} or {rbody}. These will be replaced with strings like
+;   xx(*,*,0) or w(*,*,10) or eqpar(2) before evaluation.
+
+
+; Examples for valid strings: 
+;   '3', 'rho', 'Mfast', '-T', 'rho*ux', '{bx1}^2+{by1}^2'...
 ;
 ; One can use "funcdef" interactively too, e.g.
 ; 
@@ -49,12 +57,18 @@ if ndim eq 0 then ndim=1
 n1=siz(1)
 if ndim gt 1 then n2=siz(2)
 if ndim gt 2 then n3=siz(3)
+
 ; For 1 variable: w(n1),   w(n1,n2),   w(n1,n2,n3)
 ; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
 siz=size(w)
 if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 
-if n_elements(wnames) eq 0 then wnames=strarr(nw)
+; Number of equation parameters
+neqpar = n_elements(eqpar)
+
+; Variable names
+if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
+wnames = strlowcase(variables(ndim:ndim+nw-1))
 
 ; Check for a negative sign in func
 if strmid(func,0,1) eq '-' then begin 
@@ -67,7 +81,7 @@ endelse
 
 ; Check if f is among the variable names listed in wnames or if it is a number
 for iw=0,nw-1 do $
-   if f eq strtrim(string(iw),2) or f eq wnames(iw) then $
+   if f eq strtrim(string(iw),2) or strlowcase(f) eq wnames(iw) then $
    case ndim of
       1:result=w(*,iw)
       2:result=w(*,*,iw)
@@ -92,22 +106,23 @@ if ndim ne long(strmid(physics,l-2,1)) then begin
    retall
 endif
 
-; Put elements of eqpar into simple variables based on phys
-neqpar = n_elements(eqpar)
-if neqpar ne 0 then case 1 of
-   phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var': begin 
-       gamma=eqpar(0)
-       if neqpar gt 1 then clight=eqpar(1) else clight=59.958
-   end
-   phys eq 'ray': R_ray=eqpar(0)
-   phys eq 'vol': begin
-      dtheta=eqpar(0) & dphi=eqpar(1)
-   end
-   else :
-endcase
+; Find gamma for calculating pressure and 
+; clight for functions for Boris correction
+gamma = 5./3.
+clight = 1.0
+if nEqpar gt 0 then begin
+    for iEqpar=0,nEqpar-1 do begin
+        case variables(nDim+nW+iEqpar) of
+            'g'     : gamma = eqpar(iEqpar)
+            'gamma' : gamma = eqpar(iEqpar)
+            'c'     : clight= eqpar(iEqpar)
+            else:
+        endcase
+    endfor
+endif
 
+; Extract primitive variables for calculating MHD type functions
 if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
-   ; Extract primitive variables
    ux=0 & uy=0 & uz=0 & bx=0 & by=0 & bz=0
    for iw=0,nw-1 do case ndim of
    1: case wnames(iw) of
@@ -121,9 +136,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,iw)
       'b2' : by=w(*,iw)
       'b3' : bz=w(*,iw)
-      'b1x': b1x=w(*,iw)
-      'b1y': b1y=w(*,iw)
-      'b1z': b1z=w(*,iw)
       'p'  : p=w(*,iw)
       'pth': p=w(*,iw)
       'mx' : ux=w(*,iw)/rho
@@ -133,18 +145,9 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,iw)/rho
       'm3' : uz=w(*,iw)/rho
       'e'  : e=w(*,iw)
-      'e1' : e1=w(*,iw)
       else :
       endcase
    2: case wnames(iw) of
-      'RHO': rho=w(*,*,iw)
-      'UX' : ux=w(*,*,iw)
-      'UY' : uy=w(*,*,iw)
-      'UZ' : uz=w(*,*,iw)
-      'BX' : bx=w(*,*,iw)
-      'BY' : by=w(*,*,iw)
-      'BZ' : bz=w(*,*,iw)
-      'P'  : p=w(*,*,iw)
       'rho': rho=w(*,*,iw)
       'ux' : ux=w(*,*,iw)
       'uy' : uy=w(*,*,iw)
@@ -155,9 +158,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,*,iw)
       'b2' : by=w(*,*,iw)
       'b3' : bz=w(*,*,iw)
-      'b1x': b1x=w(*,*,iw)
-      'b1y': b1y=w(*,*,iw)
-      'b1z': b1z=w(*,*,iw)
       'p'  : p=w(*,*,iw)
       'pth': p=w(*,*,iw)
       'mx' : ux=w(*,*,iw)/rho
@@ -167,20 +167,9 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,*,iw)/rho
       'm3' : uz=w(*,*,iw)/rho
       'e'  : e=w(*,*,iw)
-      'e1' : e1=w(*,*,iw)
-      'absdivb': absdivb=w(*,*,iw)
-      'divb'   : divb=w(*,*,iw)
       else :
       endcase
    3: case wnames(iw) of
-      'RHO': rho=w(*,*,*,iw)
-      'UX' : ux=w(*,*,*,iw)
-      'UY' : uy=w(*,*,*,iw)
-      'UZ' : uz=w(*,*,*,iw)
-      'BX' : bx=w(*,*,*,iw)
-      'BY' : by=w(*,*,*,iw)
-      'BZ' : bz=w(*,*,*,iw)
-      'P'  : p=w(*,*,*,iw)
       'rho': rho=w(*,*,*,iw)
       'ux' : ux=w(*,*,*,iw)
       'uy' : uy=w(*,*,*,iw)
@@ -191,9 +180,6 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'b1' : bx=w(*,*,*,iw)
       'b2' : by=w(*,*,*,iw)
       'b3' : bz=w(*,*,*,iw)
-      'b1x': b1x=w(*,*,*,iw)
-      'b1y': b1y=w(*,*,*,iw)
-      'b1z': b1z=w(*,*,*,iw)
       'p'  : p=w(*,*,*,iw)
       'pth': p=w(*,*,*,iw)
       'mx' : ux=w(*,*,*,iw)/rho
@@ -203,53 +189,22 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
       'm2' : uy=w(*,*,*,iw)/rho
       'm3' : uz=w(*,*,*,iw)/rho
       'e'  : e=w(*,*,*,iw)
-      'e1' : e1=w(*,*,*,iw)
       else :
       endcase
    endcase
    ; Some extra variables
    uu=ux^2+uy^2+uz^2
    bb=bx^2+by^2+bz^2
+
    ; Change energy into pressure
    if n_elements(p) eq 0 and n_elements(e) gt 0 then $
       p=(gamma-1)*(e-0.5*(rho*uu+bb))
+
    ; Calculate gamma*p+bb if that is needed for the function
    if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then cc=gamma*p+bb
-endif else begin
-   case physics of
-   'ray13':begin
-      bx =w(*,0) & by =w(*,1) & bz =w(*,2)
-      theta1=w(*,3) & phi1=w(*,4) & theta2=w(*,5) & phi2=w(*,6) 
-      status=w(*,7) & blk=w(*,8)
-      f1x=w(*,9)  & f1y=w(*,10) & f1z=w(*,11)
-      f2x=w(*,12) & f2y=w(*,13) & f2z=w(*,14)
-   end
-   'ray23':begin
-      bx =w(*,*,0) & by =w(*,*,1) & bz =w(*,*,2)
-      theta1=w(*,*,3) & phi1=w(*,*,4) & theta2=w(*,*,5) & phi2=w(*,*,6) 
-      status=w(*,*,7) & blk=w(*,*,8)
-      f1x=w(*,*,9)  & f1y=w(*,*,10) & f1z=w(*,*,11)
-      f2x=w(*,*,12) & f2y=w(*,*,13) & f2z=w(*,*,14)
-   end
-   'ray33':begin
-      bx =w(*,*,*,0) & by =w(*,*,*,1) & bz =w(*,*,*,2)
-      theta1=w(*,*,*,3) & phi1=w(*,*,*,4)
-      theta2=w(*,*,*,5) & phi2=w(*,*,*,6) 
-      status=w(*,*,*,7) & blk=w(*,*,*,8)
-      f1x=w(*,*,*,9)  & f1y=w(*,*,*,10) & f1z=w(*,*,*,11)
-      f2x=w(*,*,*,12) & f2y=w(*,*,*,13) & f2z=w(*,*,*,14)
-   end
-   'vol22':begin
-      vol1=w(*,*,0) & vol2=w(*,*,1)
-   end
-   else: begin
-     print,'Error in funcdef: physics=',physics,' is not known'
-     retall
-   end
-   endcase
-endelse
+endif
 
-; Extract coordinate variables from x:
+; Extract coordinate variables from xx to take derivatives:
 case ndim of
    1:begin
       x=xx
@@ -373,23 +328,56 @@ case f of
   'bb1':result=w(*,*,*,10)^2+w(*,*,*,11)^2+w(*,*,*,12)^2
 
   'Jy_cut': begin
-	result=diff2(2,w(*,*,9),z)-diff2(1,w(*,*,11),x)
-	loc=where(x^2+z^2 lt 16.,count)
-	if count gt 0 then result(loc)=0.0
-            end
+      result=diff2(2,w(*,*,9),z)-diff2(1,w(*,*,11),x)
+      loc=where(x^2+z^2 lt 16.,count)
+      if count gt 0 then result(loc)=0.0
+  end
 
   'logrho':result=alog10(rho)
 
   ;If "f" has not matched any function yet, try evaluating it as an expression
   else:begin
-     if sign eq -1 then begin
-        f='-'+f
-        sign=1
-     endif
-     if not execute('result='+f) then begin
-        print,'Error in funcdef: cannot evaluate function=',func
-        retall
-     endif
+      if sign eq -1 then begin
+          f='-'+f
+          sign=1
+      endif
+
+      ; Create * or *,* or *,*,* for {var} --> w(*,*,iVar) replacements
+      case nDim of
+          1: Stars = '*,'
+          2: Stars = '*,*,'
+          3: Stars = '*,*,*,'
+      endcase
+
+      ; replace {name} with appropriate variable
+      while strpos(f,'{') ge 0 do begin
+          iStart = strpos(f,'{')
+          iEnd   = strpos(f,'}')
+          Name   = strmid(f,iStart+1,iEnd-iStart-1)
+          iVar   = where( variables eq Name)
+          if iVar lt 0 then begin
+              print,'Error in funcdef: cannot find variable "{',Name, $
+                '}" among variables'
+              print,variables
+              retall
+          endif
+          iVar = iVar(0)
+          fStart = strmid(f,0,iStart)
+          fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
+          if iVar lt ndim then $
+            f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
+          else if iVar lt ndim+nw then $
+            f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
+          else $
+            f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd
+
+      endwhile
+
+
+      if not execute('result='+f) then begin
+          print,'Error in funcdef: cannot evaluate function=',func
+          retall
+      endif
   end
 endcase
 

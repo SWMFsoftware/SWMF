@@ -113,7 +113,7 @@
 
    if noautorange eq 0 then begin
       getlimits,1,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                x,w,xreg,wreg,usereg,physics,eqpar,wnames,cut0
+                x,w,xreg,wreg,usereg,physics,eqpar,variables,cut0
 
       print
       for ifunc=0,nfunc-1 do $
