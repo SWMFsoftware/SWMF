@@ -400,7 +400,7 @@ contains
       ! Calculate planet position for TimeSim and TimeSim+dt
       call set_hgi_gse_d_planet(1.0)
       XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
-
+      
       call set_hgi_gse_d_planet(0.0)
       XyzPlanet_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
       
@@ -837,7 +837,7 @@ contains
        end if
     end if
 
-    v1Total_D = v1_D + cross_product(Omega12_D, Position_D) - vPlanet1_D
+    v1Total_D = v1_D + cross_product(Omega12_D, Position_D) + vPlanet1_D
     v2_D = matmul(Transform12_DD, v1Total_D)
 
   end function transform_velocity
