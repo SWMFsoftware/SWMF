@@ -192,7 +192,7 @@ subroutine ionosphere_magBCs(&
 end subroutine ionosphere_magBCs
 
 !==========================================================================
-subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
+subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   use ModIonoPotential
   use ModMain,           ONLY: TypeCoordSystem, nDim
@@ -201,7 +201,6 @@ subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
   use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
-  integer, intent(in) :: nIter
   real, intent(in)    :: tSimulation
   real, intent(in)    :: Xyz_D(nDim)    ! Position vector
   real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
@@ -223,7 +222,7 @@ subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   integer :: iDim, iSide, iTheta, iPhi, iHemisphere
 
-  character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
+  character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity1'
   logical :: DoTest, DoTestMe
   real :: tSimulationLast=-1.0
   real, save :: SmgGm_DD(nDim,nDim)
@@ -323,11 +322,15 @@ subroutine calc_inner_bc_velocity(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
      !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
   end if
 
-end subroutine calc_inner_bc_velocity
+end subroutine calc_inner_bc_velocity1
 
 !==========================================================================
-subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
+!BOP
+!ROUTINE: calc_inner_bc_velocity - calculate velocity at the inner boundary
+!INTERFACE:
+subroutine calc_inner_bc_velocity(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
+  !USES:
   use ModIonoPotential
   use ModMain,           ONLY: TypeCoordSystem, nDim
   use CON_axes,          ONLY: transform_matrix
@@ -335,12 +338,30 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
   use CON_planet_field,  ONLY: map_planet_field
 
   implicit none
-  integer, intent(in) :: nIter
-  real, intent(in)    :: tSimulation
+
+  !INPUT ARGUMENTS:
+  real, intent(in)    :: tSimulation    ! Simulation time
   real, intent(in)    :: Xyz_D(nDim)    ! Position vector
   real, intent(in)    :: B1_D(nDim)     ! Magnetic field perturbation
   real, intent(in)    :: B0_D(nDim)     ! Magnetic field of planet
-  real, intent(out)   :: u_D(nDim)      ! Velocity vector (output)
+
+  !OUTPUT ARGUMENTS:
+  real, intent(out)   :: u_D(nDim)      ! Velocity vector
+
+  !DESCRIPTION:
+  ! This subroutine calculates the velocity vector derived from
+  ! the electric field of the ionosphere. The location is given by
+  ! the Xyz\_D coordinates and the corresponding magnetic field is
+  ! passed because it has been calculated already.
+  ! The algorithm is the following: the input location is mapped down
+  ! to the ionosphere where the Theta and Phi gradients of the potential
+  ! are interpolated to the mapped point. This gradient is multiplied by
+  ! the 2 by 3 Jacobian matrix of the mapping which converts the 
+  ! Theta,Phi gradient to the X,Y,Z gradient of the potential, which is
+  ! the electric field at the required location. The velocity is
+  ! determined from the electric field and the magnetic field using
+  ! the fact that the electric field is orthogonal to the magnetic field.
+  !EOP
 
   real :: XyzIono_D(nDim)      ! Mapped point on the ionosphere
   real :: Theta, Phi           ! Mapped point colatitude, longitude
@@ -357,7 +378,6 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
   character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
   logical :: DoTest, DoTestMe
-  real :: tSimulationLast=-1.0
   !-------------------------------------------------------------------------
 
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -428,12 +448,10 @@ subroutine calc_inner_bc_velocity2(nIter,tSimulation,Xyz_D,B1_D,B0_D,u_D)
      !!! if(maxval(abs(u_D))>0.00001)call stop_mpi(NameSub)
   end if
 
-end subroutine calc_inner_bc_velocity2
+end subroutine calc_inner_bc_velocity
 
 !============================================================================  
 
-!BOP
-!INTERFACE:
 subroutine calc_inner_BC_velocities(iter,time_now,XFace,YFace,ZFace,&
      BxOutside,ByOutside,BzOutside,B0faceX,B0FaceY,B0FaceZ,&
      VxFace,VyFace,VzFace)
