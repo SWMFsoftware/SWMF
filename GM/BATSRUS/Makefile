@@ -224,6 +224,8 @@ distclean:
 	@				#^CFG END DOC
 	@(if [ -d util  ]; then cd util;  make distclean; fi);
 	@(if [ -d share ]; then cd share; make distclean; fi);
-	rm -f Makefile.conf *~
+	rm -f Makefile.conf Makefile.def *~
+	echo '# Default setting' > Makefile.def
+	echo 'STANDALONE=gm'    >> Makefile.def
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
