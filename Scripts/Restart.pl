@@ -164,7 +164,8 @@ sub create_tree_check{
 	    # If the time unit is not set try to guess it from simulation time
 	    if(not $TimeUnit){
 		my $Unit;
-		foreach $Unit (keys %UnitSecond){
+		foreach $Unit (sort {$UnitSecond{$a} <=> $UnitSecond{$b}} 
+			       keys %UnitSecond){
 		    $TimeUnit = $Unit if $SimulationTime >= $UnitSecond{$Unit};
 		}
 	    }
