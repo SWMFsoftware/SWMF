@@ -946,7 +946,8 @@ subroutine IE_finalize(tSimulation)
   use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve
   use IE_ModIo, ONLY: nFile
   use CON_physics, ONLY: get_time
-  use ModTimeConvert, ONLY: TimeType, time_real_to_int
+  use ModTimeConvert, ONLY: time_real_to_int
+  use ModKind, ONLY: Real8_
   implicit none
 
   !INPUT PARAMETERS:
@@ -955,11 +956,10 @@ subroutine IE_finalize(tSimulation)
   character(len=*), parameter :: NameSub='IE_finalize'
 
   integer :: iFile
-  type(TimeType) :: TimeCurrent
+  real(Real8_) :: tCurrent
   !---------------------------------------------------------------------------
-  call get_time(TimeCurrentOut = TimeCurrent)
-
-  call time_real_to_int(TimeCurrent % Time, Time_Array)
+  call get_time(tCurrentOut = tCurrent)
+  call time_real_to_int(tCurrent, Time_Array)
   time_simulation = tSimulation
 
   if(nSolve>0)then
