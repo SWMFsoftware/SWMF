@@ -97,9 +97,29 @@ module CON_axes
   !   MAG orbits around the Sun.
   !
   !   Inertial forces may or may not be negligible.
+
+  ! HGI (HelioGraphic Inertial coordinates)
+  !   Z is the rotation axis of the Sun pointing "North".
+  !   X axis is the intersection of the ecliptic and solar equatorial planes. 
+  !     which is at around 75 degrees ecliptic longitude.
+  !   Y axis completes the right handed coordinate system.
+  !
+  !   HGI is a truly inertial system.
+
+  ! HGR (HelioGRaphic coordinates)
+  !   
+  !   Z is the rotation axis of the Sun pointing "North".
+  !   X axis rotates with the Carrington rotation with a 27.2753 day period.
+  !     The X axis coincided with the X axis of the HGI system on 
+  !     09 Nov. 1853 00:00:00
+  !   Y axis completes the right handed coordinate system.
+  !
+  ! HGR is a rotating system, inertial forces should be taken into account. 
+  !
   !\end{verbatim}
   !TODO:
-  ! Generalize heliocentric coordinate systems for non-Earth planets.
+  ! Generalize transformations to and from heliocentric coordinate systems 
+  ! for non-Earth planets.
 
   !USES:
 
