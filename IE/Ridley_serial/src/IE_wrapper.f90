@@ -758,9 +758,10 @@ subroutine IE_init_session(iSession, tSimulation)
 
   ! Initialize the Ionosphere Electrostatic (IE) module for session iSession
 
-  use CON_physics, ONLY: get_time, get_planet, get_axes
+  use CON_physics,   ONLY: get_time, get_planet, get_axes
   use ModIonosphere, ONLY: IONO_Bdp
-  use IE_ModMain
+  use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
+  use IE_ModIo,      ONLY: dt_output, t_output_last
   implicit none
 
   !INPUT PARAMETERS:
@@ -791,6 +792,12 @@ subroutine IE_init_session(iSession, tSimulation)
   IONO_Bdp = IONO_Bdp*1.0e9 ! Tesla -> nT
 
   write(*,*)NameSub,': IONO_Bdp, ThetaTilt =',IONO_Bdp,ThetaTilt
+
+  ! Reset t_output_last in case the plotting frequency has changed
+  if(time_accurate)then
+     where(dt_output>0.) &
+          t_output_last=int(time_simulation/dt_output)
+  end if
 
 end subroutine IE_init_session
 
