@@ -138,7 +138,7 @@
 
    if !d.name eq 'X' and !d.window ge 0 then wshow
 
-   plotfunc,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
+   plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
      variables,wnames,axistype,plotmodes,plottitles,$
      ax,az,contourlevel,0,$
      velvector,0,velseed,velpos,velx,vely,veltri,$

@@ -7,20 +7,6 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 ;===========================================================================
 ;    Read the npict-th picture from an ascii or binary ini or out file 
 ;
-;    Usage: 
-;
-; .r getpict
-;
-;    "getpict" will prompt you for "filename(s)" and "npict"
-;    unless they are already set. Previous settings can be erased by 
-;
-; .r defaults
-;
-;    or modified explicitly, e.g.:
-;
-; filename='data/example.ini'
-; npict=1
-;
 ;    The "x" and "w" arrays and the header info will be read from the file. 
 ;
 ;    If a file is read with generalized coordinates, "gencoord=1" is set,
@@ -33,14 +19,6 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 ;
 ;    In this case the data is read into x0,w0 and x1,w1 for the two files,
 ;    and possibly transformeed into wreg0,wreg1.
-;
-;    To plot a variable, type e.g.:
-;
-; surface,w(*,*,2)
-;
-;    or 
-;
-; .r plotfunc
 ;
 ;===========================================================================
 
@@ -56,7 +34,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
   str2arr,filename,filenames,nfile
   if nfile gt 3 then begin
-     print,'Error in GetPict: cannot handle more than 3 files.'
+     print,'Error in getpict: cannot handle more than 3 files.'
      retall
   endif
   gettype,filenames,filetypes,npictinfiles
@@ -77,7 +55,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
      openfile,10,filenames(ifile),filetypes(ifile)
 
-     getpict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
+     get_pict,10,filetypes(ifile),npict,x,w,headline,phys,it,time,$
             gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
      if (nxreg(0) lt 0.0) then begin

@@ -102,7 +102,7 @@
 
          if npict eq 0 then nextpict=firstpict else nextpict=dpict
          for ifile=0,nfile-1 do begin
-            getpict,ifile+10,filetypes(ifile),nextpict,x,w,$
+            get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
                 headline, phys, it, time, gencoord, ndim, neqpar, nw, nx,$
                 eqpar, variables, rBody, err
 
@@ -204,7 +204,7 @@
       for ifile=0,nfile-1 do begin
 
          if npict gt 1 or nfile gt 1 or noautorange then begin
-            getpict,ifile+10,filetypes(ifile),nextpict,x,w,$
+            get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
                headline,phys,it,time,gencoord,ndim,neqpar,nw,nx,$
                eqpar, variables, rBody, err
 
@@ -242,7 +242,7 @@
 	    linestyle=0
             if multix*multiy lt nfunc*nfile then linestyle=ifile
 
-            plotfunc,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
+            plot_func,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
 	      velvector,velspeed,velseed,velpos,velx,vely,veltri,$

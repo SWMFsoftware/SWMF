@@ -5,7 +5,7 @@
 ; Procedures for
 ;
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
-;    openfile,gettype,gethead,getpict,getpict_asc,getpict_bin
+;    openfile,gettype,gethead,get_pict,get_pict_asc,get_pict_bin
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, readplotpar, readlimits
 ; transforming initial data:
@@ -13,7 +13,7 @@
 ; calculating functions of the data
 ;    getfunc, getlimits
 ; plotting
-;    plotfunc, plotgrid
+;    plot_func, plotgrid
 ; calculating cell corners and cell volumes for general 2D grids
 ;    gengrid
 ; comparing two w or x arrays for relative differences
@@ -193,7 +193,7 @@ pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
 end
 
 ;==========================================
-pro getpict,unit,filetype,npict,x,w,$
+pro get_pict,unit,filetype,npict,x,w,$
     headline,physics,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
     rBody,error
 ;==========================================
@@ -239,11 +239,11 @@ pro getpict,unit,filetype,npict,x,w,$
 
    ; Read data
    case filetype of
-       'ascii':  getpict_asc ,unit, npict, ndim, nw, nx, x, w
-       'binary': getpict_bin ,unit, npict, ndim, nw, nx, x, w
-       'real4':  getpict_real,unit, npict, ndim, nw, nx, x, w
+       'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
+       'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
+       'real4':  get_pict_real,unit, npict, ndim, nw, nx, x, w
        else:    begin
-           print,'Getpict: unknown filetype:',filetype
+           print,'get_pict: unknown filetype:',filetype
            error=1
            close,unit
        end
@@ -261,7 +261,7 @@ pro getpict,unit,filetype,npict,x,w,$
 end
 
 ;==========================================
-pro getpict_asc,unit,npict,ndim,nw,nx,x,w
+pro get_pict_asc,unit,npict,ndim,nw,nx,x,w
 ;==========================================
   on_error,2
   ;----------------------------------------
@@ -310,7 +310,7 @@ pro getpict_asc,unit,npict,ndim,nw,nx,x,w
 end
 
 ;==========================================
-pro getpict_bin,unit,npict,ndim,nw,nx,x,w
+pro get_pict_bin,unit,npict,ndim,nw,nx,x,w
 ;==========================================
   on_error,2
   ;----------------------------------------
@@ -360,7 +360,7 @@ pro getpict_bin,unit,npict,ndim,nw,nx,x,w
 end
 
 ;==========================================
-pro getpict_real,unit,npict,ndim,nw,nx,x,w
+pro get_pict_real,unit,npict,ndim,nw,nx,x,w
 ;==========================================
   on_error,2
   ;----------------------------------------
@@ -1329,7 +1329,7 @@ endelse
 end
 
 ;===========================================================================
-pro plotfunc,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
+pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
   variables,wnames,axistype,plotmodes,plottitles,$
   ax,az,contourlevel,linestyle,$
   velvector,velspeed,velseed,velpos,velx,vely,veltri,$

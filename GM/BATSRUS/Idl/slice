@@ -206,7 +206,7 @@
       if abs(height) ge rBody then rBodySlice=0.0 $
       else                         rBodySlice=sqrt(rBody^2 - height^2)
 
-      plotfunc,x2d,w2d,xreg,wreg,usereg,2,physics2d,eqpar,rBodySlice,$
+      plot_func,x2d,w2d,xreg,wreg,usereg,2,physics2d,eqpar,rBodySlice,$
         var2d,wnames,axistype,plotmodes,plottitles,$
         ax,az,contourlevel,0,$
         velvector,0,velseed,velpos,velx,vely,veltri,$
