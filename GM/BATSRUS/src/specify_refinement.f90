@@ -24,10 +24,10 @@ subroutine specify_initial_refinement(refb, lev)
 
   real,parameter::cRefinedTailCutoff=(cOne-cQuarter)*(cOne-cEighth)
 
-  logical :: oktest, oktest_me, localtestdone=.false.
+  logical :: oktest, oktest_me
 
+  !----------------------------------------------------------------------------
   call set_oktest('initial_refinement',oktest,oktest_me)
-  if (lev > 4) localtestdone = .true.
 
   refb = .false.
 
@@ -992,6 +992,8 @@ subroutine specify_initial_refinement(refb, lev)
      end if
   end do
 
+  call specify_area_refinement(refb)
+
 contains
 
   real function minmod(x,y)
@@ -1000,3 +1002,129 @@ contains
   end function minmod
 
 end subroutine specify_initial_refinement
+
+!==============================================================================
+
+subroutine specify_area_refinement(DoRefine_B)
+
+  !DESCRIPTION:
+  ! Set DoRefine_B to .true. for blocks touching the predefined areas
+  ! if the area has a finer resolution than the block
+
+  use ModProcMH,   ONLY: iProc
+  use ModMain,     ONLY: MaxBlock, nBlock, nBlockMax, nI, nJ, nK, UnusedBlk
+  use ModAMR,      ONLY: nArea, Area_I
+  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK
+
+  implicit none
+
+  !INPUT/OUTPUT ARGUMENTS:
+  logical, intent(inout) :: DoRefine_B(MaxBlock)
+
+  !LOCAL VARIABLES:
+  integer, parameter :: MaxCorner = 8
+  integer  :: iArea, iBlock, iCorner, nCorner = 2
+  real     :: CurrentResolution
+  real     :: DistMin_D(3), DistMax_D(3)
+  real     :: CornerOrig_DI(3,MaxCorner), Corner_DI(3,MaxCorner)
+
+  character(len=*), parameter :: NameSub = 'specify_area_refinement'
+
+  logical :: DoTest, DoTestMe
+  !---------------------------------------------------------------------------
+  if(nArea <= 0) RETURN
+
+  call set_oktest(NameSub,DoTest,DoTestMe)
+  if(DoTestMe)write(*,*)NameSub,' nArea, nBlock, nBlockMax, MaxBlock=',&
+       nArea, nBlock, nBlockMax, MaxBlock
+
+  BLOCK: do iBlock = 1, nBlockMax
+
+     if( UnusedBlk(iBlock) ) CYCLE BLOCK
+
+     ! No need to check block if it is to be refined already
+     if(DoRefine_B(iBlock)) CYCLE BLOCK
+
+     CurrentResolution = dx_BLK(iBlock)
+
+     CornerOrig_DI(:,1) = 0.5 * (/ &
+          x_BLK(0,1,1,iBlock) + x_BLK(1,1,1,iBlock), &
+          y_BLK(1,0,1,iBlock) + y_BLK(1,1,1,iBlock), &
+          z_BLK(1,1,0,iBlock) + z_BLK(1,1,1,iBlock) /)
+
+
+     CornerOrig_DI(:,2) = 0.5 * (/ &
+          x_BLK(nI+1,1,1,iBlock) + x_BLK(nI,1,1,iBlock), &
+          y_BLK(1,nJ+1,1,iBlock) + y_BLK(1,nJ,1,iBlock), &
+          z_BLK(1,1,nK+1,iBlock) + z_BLK(1,1,nK,iBlock) /)
+
+     AREA: do iArea = 1, nArea
+
+        ! No need to check area if block is finer than area resolution
+        if(Area_I(iArea) % Resolution >= CurrentResolution) CYCLE AREA
+
+        ! Normalize block corner coordinates to the center and size of area
+        do iCorner = 1, nCorner
+           Corner_DI(:,iCorner) = &
+                ( CornerOrig_DI(:,iCorner) - Area_I(iArea) % Center_D ) &
+                / Area_I(iArea) % Size_D
+        end do
+
+        ! Calculate minimum distances in all 3 directions
+        where(Corner_DI(:,1)*Corner_DI(:,2) <= 0.0)
+           ! The block covers the center point in a certain dimension
+           DistMin_D = 0.0
+        elsewhere
+           ! Select the point that is closer in a certain dimension
+           DistMin_D = min(abs(Corner_DI(:,1)),abs(Corner_DI(:,2)))
+        end where
+
+        ! Check if this area is intersecting with the block
+        
+        select case( Area_I(iArea) % Name)
+        case('all')
+           DoRefine_B(iBlock) = .true.
+
+        case('brick')
+           if( all( DistMin_D < 1.0 ) ) DoRefine_B(iBlock) = .true.
+
+        case('sphere')
+           if( sum(DistMin_D**2) < 1.0 ) DoRefine_B(iBlock) = .true.
+
+        case('shell')
+           ! Check if block intersects with the enclosing sphere
+           ! but it is not fully inside the inner sphere
+           DistMax_D = max(abs(Corner_DI(:,1)),abs(Corner_DI(:,2)))
+           if(  sum(DistMin_D**2) < 1.0 .and. &
+                sum(DistMax_D**2) > Area_I(iArea) % Radius1**2 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylinderx')
+           if( DistMin_D(1) < 1.0 .and. sum(DistMin_D(2:3)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylindery')
+           if( DistMin_D(2) < 1.0 .and. sum(DistMin_D(1:3:2)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case('cylinderz')
+           if( DistMin_D(3) < 1.0 .and. sum(DistMin_D(1:2)**2) < 1.0 ) &
+                DoRefine_B(iBlock) = .true.
+
+        case default
+           call stop_mpi(NameSub // &
+                ' ERROR: Unknown NameArea = ',Area_I(iArea) % Name)
+
+        end select
+
+        ! No need to check more areas if block is to be refined already
+        if(DoRefine_B(iBlock)) EXIT AREA
+
+     end do AREA
+
+  end do BLOCK
+
+  if(DoTest)write(*,*)NameSub,' on iProc=',iProc,&
+       ' number of selected blocks=',count(DoRefine_B)
+
+end subroutine specify_area_refinement
