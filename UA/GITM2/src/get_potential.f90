@@ -91,7 +91,9 @@ subroutine get_potential(iBlock)
 
 !  if (UseVariableInputs) then
 
-     call IO_SetNorth
+  call IO_SetNorth
+
+  if (.not. IsFramework) then
 
      call get_IMF_Bz(CurrentTime, temp, iError)
      call IO_SetIMFBz(temp)
@@ -141,6 +143,8 @@ subroutine get_potential(iBlock)
         write(*,*) "Code Error in get_hpi called from get_amie_potential.f90"
         call stop_gitm("Stopping in get_potential")
      endif
+
+  endif
 
 !  endif
 
