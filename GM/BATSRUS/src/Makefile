@@ -237,18 +237,6 @@ BATSRUS.exe: ${OBJECTS_EXE} ${OBJECTS} ${MODULES}
 	fi);
 
 #
-# Other executables
-#
-
-PostIDL.exe:	PostIDL.o
-		${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o ${Lflag2}
-
-#^CFG IF NOT SIMPLE BEGIN
-PostSPH.exe:	PostSPH.o
-		${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
-#^CFG END SIMPLE
-
-#
 #	cleaning
 #
 
