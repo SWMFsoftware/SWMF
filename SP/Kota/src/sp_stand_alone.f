@@ -11,7 +11,7 @@
       logical UseSelfSimilarity,UseRefresh
       common/SP_log/UseSelfSimilarity,UseRefresh
 
-      call SP_set_stdout(' :  ')      
+      call set_stdout(' :  ')      
       UseSelfSimilarity=.true.
       call SP_admit 
       call sp_init

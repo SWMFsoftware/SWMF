@@ -40,9 +40,10 @@
 !
 ! Also, in the "INIT" section of your program, add a call to
 !
-!           call SP_set_stdout('SP: ')
+!           call set_stdout('SP: ')
 !
-! in order to assign the value of variable *prefix*.
+! where SP is two-symbol identifier,in order to assign the value of variable 
+! *prefix* to be equal to 'SP: ', for this particular example
 !
 ! Step 3: If anywhere in your f77 program there is a handling of file
 ! unit, before you open the unit make the call:
@@ -103,7 +104,7 @@
       end subroutine CON_io_unit_new
 !BOP
 !INTERFACE:
-      subroutine SP_set_stdout(NameComp)
+      subroutine set_stdout(NameComp)
 !DESCRIPTION:
 ! This routine sets the prefix and assigns a standard/non-standard number    
 ! for STD output, compatible with f77. The f77 model is assumed not to be     
@@ -116,7 +117,7 @@
       iStdOut = 6
       prefix = NameComp
       DoWriteAll=.false.
-      end subroutine SP_set_stdout
+      end subroutine set_stdout
 !Use CON_stop in f77 files only as follows
 !     call CON_stop(' ')    !ONE space between TWO quotes, or ONE symbol
 !============================================================================! 

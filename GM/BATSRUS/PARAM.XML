@@ -3115,7 +3115,7 @@ T			UseBody2   ! Rest of the parameters read if .true.
 	 <parameter name="CmeA"	     type="real" min="0" default="0.7"	  />
 	 <parameter name="CmeR1"     type="real" min="0" default="1.2"    />
 	 <parameter name="CmeR0"     type="real" min="0" default="1.0"    />
-	 <parameter name="CmeA1"     type="real" min="0" default="0.23"   />
+	 <parameter name="CmeA1"     type="real"         default="0.23"   />
 	 <parameter name="CmeAlpha"  type="real"	 default="0.0"	  />
 	 <parameter name="CmeRho1"   type="real" min="0" default="2.5E-12"/>
 	 <parameter name="CmeRho2"   type="real" min="0" default="2.0E-13"/>
