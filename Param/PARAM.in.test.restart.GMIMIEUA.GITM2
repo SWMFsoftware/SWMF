@@ -5,7 +5,7 @@ T			DoEcho
 RESTART.GM
 
 #DESCRIPTION
-Create startup for GM-IM-IE-UA from GM stady state.
+Create startup for GM-IM-IE-UA/GITM2 from GM stady state.
 
 #IDEALAXES
 ! Align rotational and magnetic axes with Z_GSE
@@ -138,22 +138,22 @@ T			UseSps (this is the serial potential solver)
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 ! Each block has 18x18 lon and lat cells, and we use 4 by 2 blocks
-! which corresponsd to a 20 by 10 degrees resolution:
+! which corresponds to a 20 by 10 degrees resolution:
 
 #GRID
-8		nLonBlock
-4		nLatBlock
--90.0		LatStart
- 90.0		LatEnd
-180.0		LonStart
+8			nLonBlock
+4			nLatBlock
+-90.0			LatStart
+ 90.0			LatEnd
+180.0			LonStart
 
 #ALTITUDE
-95.0		AltMin [km]
-600.0		AltMax [km]
-T		DoStretchGrid
+95.0			AltMin [km]
+600.0			AltMax [km]
+T			DoStretchGrid
 
 #APEX
-F		UseApex
+F			UseApex
 
 #AMIEFILES
 SPS
@@ -168,36 +168,34 @@ SPS
 5.0			DtAurora
 
 #THERMO
-T         UseSolarHeating
-T         UseJouleHeating
-T         UseAuroralHeating
-T         UseNOCooling
-T         UseOCooling
-T         UseConduction
-                                                                                
-#FORCING
-T        UsePressureGradient
-T        UseIonDrag
-F        UseNeutralDrag
-T        UseViscosity
-T        UseCoriolis
-T        UseGravity
-                                                                               #CHEMISTRY
-T        UseIonChemistry
-T        UseIonAdvection
-T        UseNeutralChemistry
+T			UseSolarHeating
+T			UseJouleHeating
+T			UseAuroralHeating
+T			UseNOCooling
+T			UseOCooling
+T			UseConduction
 
+#FORCING
+T			UsePressureGradient
+T			UseIonDrag
+F			UseNeutralDrag
+T			UseViscosity
+T			UseCoriolis
+T			UseGravity
+
+#CHEMISTRY
+T			UseIonChemistry
+T			UseIonAdvection
+T			UseNeutralChemistry
 
 #SAVEPLOTS
 1800.0			DtRestart
 1			nOutputTypes
 2DGEO			TypeOutput
 600.0			DtPlot
-3DALL			TypeOutput
-3600.0			DtPlot
 
 #STRETCH
-65.0			ConcentrationLatitude
+65.0			ConcentrationLatitude [deg]
 0.0			StretchingPercentage
 1.0			StretchingFactor
 

@@ -5,7 +5,7 @@ T			DoEcho
 RESTART.GM
 
 #DESCRIPTION
-Create startup for GM-IM-IE-UA from GM stady state.
+Create startup for GM-IM-IE-UA/GITM from GM stady state.
 
 #IDEALAXES
 ! Align rotational and magnetic axes with Z_GSE
@@ -144,28 +144,19 @@ T			UseSps (this is the serial potential solver)
 #BEGIN_COMP UA ---------------------------------------------------------------
 
 ! Each block has 18x18 lon and lat cells, and we use 4 by 2 blocks
-! which corresponsd to a 20 by 10 degrees resolution:
+! which corresponds to a 20 by 10 degrees resolution:
 
 #GRID
-8		nLonBlock
-4		nLatBlock
+8			nLonBlock
+4			nLatBlock
 
 #PRESSURE
-F		PressureCoordinates
-95.0		BaseAlt [km]
-500.0		dz [km]
-
-#FORCING
-F		UsePressureGradient (logical)
-T		UseIonDrag          (logical)
-F		UseViscosity        (logical)
-F		UseCoriolis         (logical)
-F		UseHorAdvection     (logical)
-F		UseVerAdvection     (logical)
-F		UseVForce           (logical)
+F			PressureCoordinates
+95.0			BaseAlt [km]
+500.0			dz [km]
 
 #APEX
-F		UseApex
+F			UseApex
 
 #AMIEFILES
 SPS
@@ -174,6 +165,15 @@ SPS
 #F107
 150.0			f107
 150.0			f107a
+
+#FORCING
+F			UsePressureGradient
+T			UseIonDrag
+F			UseViscosity
+F			UseCoriolis
+F			UseHorAdvection
+F			UseVerAdvection
+F			UseVForce
 
 #DT
 10.0			dT [s]
