@@ -529,8 +529,7 @@ Contains
 
     call get_im_pressure(iBLK,pIM)
 
-    where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. &
-         State_VGB(P_,1:nI,1:nJ,1:nK,iBLK)<pIM(1:nI,1:nJ,1:nK))
+    where(ray(3,1,1:nI,1:nJ,1:nK,iBLK)==3 .and. pIM(1:nI,1:nJ,1:nK) > 0.0)
 
        State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = (1.0/(1.0+tauCoupleIM))* &
             (State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) + tauCoupleIM*pIM(1:nI,1:nJ,1:nK))
