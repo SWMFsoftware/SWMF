@@ -205,38 +205,6 @@ SWMF_for_xlf:
 		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
 		${Lflag1}
 	rm -rf Tmp_*
-
-TESTREGISTRY: DEPEND
-	cd ${SHAREDIR}; make LIB
-	make test_registry.exe
-	mpirun -np 4 test_registry.exe
-	cat LAYOUT.in
-
-TEST_REGISTRY_OBJ= \
-	test_registry.o
-
-test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
-	cd ${SHAREDIR}; make LIB
-	cd ${LIBRARYDIR}; make LIB
-	${LINK.f90} -o test_registry.exe ${SEARCH} \
-		${TEST_REGISTRY_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE
-
-TEST_PHYS_OBJ = \
-	test_physics.o \
-	CON_methods.o \
-	CON_variables.o
-
-TESTPHYSICS: DEPEND
-	cd ${SHAREDIR}; make LIB
-	make test_physics.exe
-	test_physics.exe
-
-test_physics.exe: ${TEST_PHYS_OBJ}
-	cd ${SHAREDIR}; make LIB
-	cd ${LIBRARYDIR}; make LIB
-	${LINK.f90} -o test_physics.exe ${Lflag2} ${SEARCH} \
-		${TEST_PHYS_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE 
-
 #
 #	cleaning
 #
