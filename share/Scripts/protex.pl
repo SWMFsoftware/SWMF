@@ -4,12 +4,12 @@
 #
 #BOP
 #
-# !ROUTINE: ProTeX v. 2.00 - Translates DAO Prologues to LaTeX
+#!ROUTINE: ProTeX v. 2.10 - Translates Prologues to LaTeX
 #
-# !INTERFACE:
-#         protex [-hbACFS] ] [+-nlsxf] [src_file(s)]
+#!INTERFACE:
+#         protex [-hbACFS] ] [+-nlsxf] [srcfile(s)]
 #
-# !DESCRIPTION:
+#!DESCRIPTION:
 #         Perl filter to produce a \LaTeX compatible document 
 #         from a DAO Fortran source code with standard Pro\TeX 
 #         prologues. If source files are not specified it
@@ -40,26 +40,15 @@
 # remaining options effects only the input from the files listed after
 # the option and prior to any overriding option.  The plus sign
 # turns off the option.  For example, the command-line input,
-# \bv
+# \begin{verbatim}
 #      protex -bnS File1 -F File2.f +n File3.f
-# \ev
+# \end{verbatim}
 # will cause the option, {\tt -n} to affect the input from the files,
 # {\tt File} and {\tt File2.f}, but not from {\tt File3.f}.  The
 # {\tt -S} option is implemented for {\tt File1} but is overridden by
 # the {\tt -F} for files {\tt File2.f} and {\tt File3.f}.
 #
-#
-# !SEE ALSO:
-#         For a more detailed description of ProTeX functionality,
-#         DAO Prologue and other conventions, consult:
-#
-#           Sawyer, W., and A. da Silva, 1997: ProTeX: A Sample 
-#           Fortran 90 Source Code Documentation System.
-#           DAO Office Note 97-11
-#         
-#
-# !REVISION HISTORY:
-#
+#!REVISION HISTORY:
 #  20Dec1995  da Silva  First experimental version
 #  10Nov1996  da Silva  First internal release (v1.01)
 #  28Jun1997  da Silva  Modified so that !DESCRIPTION can appear after
@@ -96,11 +85,15 @@
 #                       Added \bigskip before CONTENTS (needed when 
 #                       CONTENTS (!BOC) immediately follows !DESCRIPTION:
 #                       Nicer format for Tex output: newline after 
-#                       \end{verbatim} etc.
+#                       end{verbatim} etc.
 #                       Using single quote instead of double quote when useful.
 #  08/27/2003 G. Toth   Added -L option for Latex files, which are simply 
 #                       copied. Useful for inserting Latex between source files
 #                       Commented out the section Routine/Function...
+#  08/07/2004 G. Toth   Corrected the self-description.
+#                       Changed the version number to 2.10
+#                       Renamed the script from protex to protex.pl
+#                       
 #EOP
 #----------------------------------------------------------------------------
 
@@ -840,10 +833,9 @@ sub print_help {
 sub print_notice {
 
     print "%                **** IMPORTANT NOTICE *****" ;
-    print "% This LaTeX file has been automatically produced by ProTeX v. 1.1";
+    print "% This LaTeX file has been automatically produced by ProTeX v. 2.1";
     print "% Any changes made to this file will likely be lost next time";
-    print "% this file is regenerated from its source. Send questions ";
-    print "% to Arlindo da Silva, dasilva\@gsfc.nasa.gov";
+    print "% this file is regenerated from its source.";
     print " ";
 
 }# sub print_notice
