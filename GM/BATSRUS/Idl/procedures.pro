@@ -2755,7 +2755,8 @@ pro plot_log, logfilename, func, $
               wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2,$
               xrange=xrange, yranges=yranges, timeshifts=timeshifts, $
               smooths=smooths, $
-              colors=colors, linestyles=linestyles, symbols=symbols
+              colors=colors, linestyles=linestyles, symbols=symbols, $
+              title=title, xtitle=xtitle, ytitles=ytitles
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the space separated list of filenames in logfilename.
@@ -2764,7 +2765,13 @@ pro plot_log, logfilename, func, $
 ; Use xrange to set the time range, shift times by timeshifts(nlog), 
 ; set the function ranges with the optional yranges(2,nfunc) array,
 ; set the colors, the linestyles and the symbols with the 
-; colors(nlog), linestyles(nlog) and symbols(nlog) arrays respectively.
+; colors(nlog), linestyles(nlog) and symbols(nlog) arrays, respectively.
+; Smooth data with a boxcar filter of width smooths(nlog). 
+; Set the title (default is the list of file names)
+; the X title (default is Time [hr]) and 
+; the Y titles (defaults are the function names) with the 
+; title, xtitle and ytitles(nfunc) arrays, respectively.
+; Set the optional variables to zero to get the default behavior.
 
 str2arr,logfilename,logfilenames,nlog
 str2arr,func,funcs,nfunc
@@ -2814,6 +2821,18 @@ if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 ; If none of colors, linestyles or symbols are defined, make colors different
 if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
   colors = [255,150,250]
+
+; Define default title
+if n_elements(title) eq 1 and size(title,/type) eq 7 then $
+  title0=title else title0=logfilename
+
+; Define default xtitle
+if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then $
+  xtitle0=xtitle else xtitle0='Time [hour]'
+
+; Define default ytitles
+if n_elements(ytitles) eq nfunc then $
+  ytitles0=ytitles else ytitles0=funcs
 
 if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
 if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
@@ -2875,19 +2894,19 @@ for iter = iter0, 2 do begin
                     set_position, sizes, 0, ifunc, posm, /rect
                     posm(0) = posm(0) + 0.05
                     if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
-                    title  = ''
-                    xtitle = ''
+                    title1  = ''
+                    xtitle1 = ''
                     if ilog eq 0 then begin
-                        if ifunc eq 0       then title = logfilename
-                        if ifunc eq nfunc-1 then xtitle = 'hours'
+                        if ifunc eq 0       then title1  = title0
+                        if ifunc eq nfunc-1 then xtitle1 = xtitle0
                     endif
                     plot, hour, field, pos = posm, $
                       xrange = xrange, $
                       yrange = yranges(*,ifunc), $
                       xstyle = 1, $
-                      title  = title, $
-                      xtitle = xtitle, $
-                      ytitle = funcs(ifunc), $
+                      title  = title1, $
+                      xtitle = xtitle1, $
+                      ytitle = ytitles0(ifunc), $
                       color = colors(ilog), $
                       psym  = symbols(ilog), $
                       linestyle = linestyles(ilog), $
