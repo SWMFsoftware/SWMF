@@ -336,33 +336,34 @@ end subroutine satellite_trajectory_formula
 !=============================================================================
 
 subroutine open_satellite_output_files
-  use ModIoUnit, ONLY : io_unit_new
-  use ModIO, ONLY : nSatellite,Satellite_name,filename,&
-       NamePlotDir,iUnitSat_I
+
+  use ModMain,   ONLY: n_step
+  use ModIoUnit, ONLY: io_unit_new
+  use ModIO,     ONLY: nSatellite, Satellite_name, filename,&
+       NamePlotDir, iUnitSat_I
   implicit none
 
-  logical :: from_end = .true.
   integer :: iSat, l1, l2
-  character (len=4), Parameter :: IO_ext=".sat"
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
-  call set_oktest('open_satellite_output_files',oktest, oktest_me)
+  call set_oktest('open_satellite_output_files', oktest, oktest_me)
 
-  do iSat=1,nSatellite
-     l1 = index(Satellite_name(iSat),'/',from_end) + 1
-     l2 = index(Satellite_name(iSat),'.') - 1
+  do iSat = 1, nSatellite
+     l1 = index(Satellite_name(iSat), '/', back=.true.) + 1
+     l2 = index(Satellite_name(iSat), '.') - 1
      if (l1-1<=0) l1=1
      if (l2+1<=0) l2=len_trim(Satellite_name(iSat))
 
-     write(filename,'(a,i2.2,a)')trim(NamePlotDir)//&
-          'satellite_',iSat, &
-          '_'//Satellite_name(iSat)(l1:l2)//IO_ext
-     if(oktest) write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
-     if(oktest) write(*,*) 'open_satellite_output_files: satellitename:', &
+     write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
+          'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
+
+     if(oktest) then
+        write(*,*) 'open_satellite_output_files: satellitename:', &
           Satellite_name(iSat)
-     if(oktest) write(*,*) 'open_satellite_output_files: filename:', &
-          filename
+        write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
+        write(*,*) 'open_satellite_output_files: filename:', filename
+     end if
 
      iUnitSat_I(iSat)=io_unit_new()
      open(iUnitSat_I(iSat), file=filename, status="replace")
@@ -373,6 +374,7 @@ end subroutine open_satellite_output_files
 !=============================================================================
 
 subroutine close_satellite_output_files
+
   use ModIO, ONLY : nSatellite,iUnitSat_I
   implicit none
 
