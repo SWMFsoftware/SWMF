@@ -143,7 +143,7 @@ subroutine advance_impl
      ! advance explicit blocks, calc timestep but do not exchange messages
      ! after the last stage (it may exchange messages in the first stage)
      if(.not.UseDtFixed)cfl=explCFL
-     call advance_expl(.true.,.false.) 
+     call advance_expl(.true.) 
 
      ! update ghost cells for the implicit blocks to time level n+1
      iNewDecomposition=mod(iNewDecomposition+1, 10000)

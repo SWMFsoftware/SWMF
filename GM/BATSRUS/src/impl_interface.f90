@@ -224,7 +224,7 @@ subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
   ! RES = w(t+dt)
   call implicit2explicit(w)
   call exchange_messages
-  call advance_expl(do_calc_timestep,.false.)
+  call advance_expl(do_calc_timestep)
   call explicit2implicit(1,nI,1,nJ,1,nK,RES)
 
   if(do_subtract) &
