@@ -23,7 +23,7 @@ models from the surface of the Sun to the upper atmosphere of the Earth:
 \item IE -- Ionosphere Electrodynamics
 \item UA -- Upper Atmosphere
 \end{enumerate}
-Tn the future the SWMF may be extended to include even more 
+In the future the SWMF may be extended to include even more 
 physics domains: Cometary Environment, Interstellar
 Neutrals, Outer Heliosphere, Plasmasphere, Planetary Satellites and
 Polar Wind. 
@@ -51,15 +51,13 @@ Manchester, Robert Oehmke, Kenneth Powell, Aaron Ridley, Ilia Roussev,
 Quentin Stout, Igor Sokolov, G\'abor T\'oth and Ovsei Volberg.
 
 The core design and code development was done by G\'abor
-T\'oth, Igor Sokolov, Kevin Kane and Ovsei Volberg:
+T\'oth, Igor Sokolov and Ovsei Volberg:
 \begin{itemize}
 \item Component registration and layout was designed and implemented by 
       Ovsei Volberg and G\'abor T\'oth.
 \item The session and time management support was designed and
       developed by G\'abor T\'oth.
 \item The SWMF coupling toolkit was developed by Igor Sokolov.
-\item The SWMF graphical user interface was designed and implemented
-      by Kevin Kane.
 \end{itemize}
 The physics models were developed by the following research groups:
 \begin{itemize}
@@ -101,7 +99,6 @@ Thermosphere Model (GITM).  This model is a 3-dimensional spherical
 model developed at CSEM.  It is fully parallel.
 
 \end{itemize}
-
 The transformation of physics models into physics components,
 the coupling of components to the SWMF and each other and,
 all the testing were done at CSEM.
@@ -123,10 +120,9 @@ version 1.0. Here are some of the highlights:
       only a small library needs to be linked.
 \item The installation and configuration of SWMF has been greatly simplified
       with the aid of Perl scripts. 
-\item Layout and input parameter can be checked with TestParam.pl
-\item User manual is produced from the XML description of the input parameters 
+\item Layout and input parameter can be checked with Scripts/TestParam.pl
+\item User manual is produced from the XML description of the input parameters.
 \item Unused components can be configured out completely.
-\item The SWMF contains a new Graphical User Interface. 
 \item The control module now fully supports steady state calculations 
       including component subcycling. 
 \item The coupling toolkit provides means for extracting and following 
@@ -145,17 +141,14 @@ coupling schedules.  It controls initialization and execution of the
 components. A component is adapted from user-supplied physics codes,
 (for example \BATSRUS\ or RCM), by adding two relatively small units
 of code:
-
 \begin{itemize}
 \item A wrapper, which provides the control functions, and
 \item A coupling interface to perform the data exchange with other
 components.
 \end{itemize}
-
 Both the wrapper and coupling interface are constructed from the
-building blocks provided by the framework.
-
-From component software technology perspective both the wrapper and
+building blocks provided by the framework. From 
+component software technology perspective both the wrapper and
 coupling interface are component interfaces: the wrapper is an
 interface with CON, and the coupling interface is an interface with
 another component. In this release the wrappers and coupling
@@ -232,28 +225,31 @@ The distribution in the form of the compressed tar image
 SWMF.tar.gz includes the SWMF source code and the tests.
 The top level directory contains the following subdirectories:
 \begin{itemize}
-\item {\tt CON}   - the directory of the framework's main building blocks
-\item {\tt GM}    - Global Magnetosphere component       %^CMP IF GM
-\item {\tt IE}    - Ionosphere Electrodynamics Component %^CMP IF IE
-\item {\tt IH}    - Inner Heliosphere component          %^CMP IF IH
-\item {\tt IM}    - Inner Magnetosphere component        %^CMP IF IM
-\item {\tt RB}    - Radiation Belt component             %^CMP IF RB
-\item {\tt SC}    - Solar Corona component               %^CMP IF SC
-\item {\tt SP}    - Solar Energetic Particles component  %^CMP IF SP
-\item {\tt UA}    - Upper Atmosphere component           %^CMP IF UA
+\item {\tt CON}     - the directory of the framework's main building blocks
+\item {\tt GM}      - Global Magnetosphere component       %^CMP IF GM
+\item {\tt IE}      - Ionosphere Electrodynamics Component %^CMP IF IE
+\item {\tt IH}      - Inner Heliosphere component          %^CMP IF IH
+\item {\tt IM}      - Inner Magnetosphere component        %^CMP IF IM
+\item {\tt RB}      - Radiation Belt component             %^CMP IF RB
+\item {\tt SC}      - Solar Corona component               %^CMP IF SC
+\item {\tt SP}      - Solar Energetic Particles component  %^CMP IF SP
+\item {\tt UA}      - Upper Atmosphere component           %^CMP IF UA
 \item {\tt Copyrights} - copyright files
-\item {\tt Param} - description of CON parameters, parameters and layout files
-\item {\tt bin}   - scripts for installation, configuration and testing
-\item {\tt doc}   - the documentation directory %^CMP IF DOC
-\item {\tt share} - shared scripts and source code
-\item {\tt test}  - input files for tests and reference output
-\item {\tt util}  - general utilities such as TIMING and NOMPI
+\item {\tt Param}   - description of CON parameters, parameter and layout files
+\item {\tt Scripts} - shell and Perl scripts
+\item {\tt bin}     - scripts for installation, configuration and testing
+\item {\tt doc}     - the documentation directory %^CMP IF DOC
+\item {\tt share}   - shared scripts and source code
+\item {\tt test}    - input files for tests and reference output
+\item {\tt util}    - general utilities such as TIMING and NOMPI
 \end{itemize}
 and the following files
 \begin{itemize}
-\item {\tt README}   - a short instruction on installation and usage
-\item {\tt Makefile} - the main makefile
+\item {\tt README}           - a short instruction on installation and usage
+\item {\tt Makefile}         - the main makefile
+\item {\tt Configure.pl}     - Perl script for configuration %^CMP IF CONFIGURE
 \item {\tt Configure.options} - default configuration options %^CMP IF CONFIGURE
+\item {\tt SetSWMF.pl}     - Perl script for (un)installation and configuration
 \end{itemize}
 
 \section{Installing the Code}
