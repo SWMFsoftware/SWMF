@@ -266,14 +266,6 @@ distclean_comp: ENV_CHECK rmdir
 	@echo
 
 distclean:
-	@(if([ -f IH/BATSRUS/src/Makefile ]); then \
-	echo 'Remove IH/BATSRUS/src'; \
-	cd IH/BATSRUS; make veryclean; \
-	fi)
-	@(if([ -f SC/BATSRUS/src/Makefile ]); then \
-	echo 'Remove SC/BATSRUS/src'; \
-	cd SC/BATSRUS; make veryclean; \
-	fi)
 	rm -f */BATSRUS/src/user_routines.f90
 	make distclean_comp
 
