@@ -17,6 +17,11 @@
   #include "pic.h"
 #elif CompilationTarget==EULERTARGET
   #include "euler.h"
+#elif CompilationTarget==HYBRIDTARGET
+  #include "dsmc.h"
+  #include "mol.h"
+  #include "euler.h"
+  #include "hybrid.h"
 #endif
 
 
@@ -84,7 +89,7 @@ void GeneralBlock() {
       CutInputStr(str1,str);
       tau=strtod(str1,&endptr);
       if ((str1[0]=='\0')||(endptr[0]!='\0')) error();}
-#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)
+#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)||(CompilationTarget==HYBRIDTARGET) 
     else if (strcmp("MOLECULARMODEL",str1)==0) {
       CutInputStr(str1,str);
       if (strcmp("HS",str1)==0) mol.SetMolType(HS_MOL_TYPE); 
@@ -135,7 +140,7 @@ void GeneralBlock() {
         SymmetryMode=spherical_symmetry;
       else error();}
     else if (strcmp("#ENDGENERAL",str1)==0) {
-#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)
+#if (CompilationTarget==DSMCTARGET)||(CompilationTarget==PICTARGET)||(CompilationTarget==HYBRIDTARGET) 
       mol.init(NS);
 #endif
       return;}
@@ -167,6 +172,13 @@ void parser(char* InputFile) {
 #if CompilationTarget==PICTARGET
     else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile);
     else if (strcmp("#DSMC",str1)==0) pic.parser(fd,line,InputFile);
+#endif
+
+#if CompilationTarget==HYBRIDTARGET
+    else if (strcmp("#SPECIES",str1)==0) mol.parser(fd,line,InputFile);
+    else if (strcmp("#DSMC",str1)==0) hybrid.dsmc.parser(fd,line,InputFile);
+    else if (strcmp("#EULER",str1)==0) hybrid.euler.parser(fd,line,InputFile);
+    else if (strcmp("#HYBRID",str1)==0) hybrid.parser(fd,line,InputFile);
 #endif
 
     else if (strcmp("#END",str1)==0) return;

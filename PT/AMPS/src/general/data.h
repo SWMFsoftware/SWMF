@@ -6,6 +6,7 @@
 #define DSMCTARGET 0
 #define PICTARGET  1
 #define EULERTARGET 2
+#define HYBRIDTARGET 3
 
 extern int DIM;
 extern double tau,tmax,GeneralTime;
@@ -48,6 +49,16 @@ extern bool ExternalSpeciesUsingFlag;
 
   extern CEuler euler;
 #endif 
+
+///#if CompilationTarget==HYBRIDTARGET
+  #include "dsmc.h"
+  #include "mol.h"
+  #include "euler.h"
+  #include "hybrid.h"
+
+  extern Cmol mol;
+  extern Chybrid hybrid;
+//#endif
 
 
 
