@@ -68,7 +68,6 @@ contains
     DoInitialize=.false.
 
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
- !   if(DoTest)write(*,*)'couple_ih_sc_init iProc=',i_proc()
 
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
@@ -134,7 +133,6 @@ contains
 !EOP
     if(.not.RouterIhSc%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-!    if(DoTest)write(*,*)'couple_ih_sc iProc=',i_proc()
 
     ! Synchronize and broadcast domain decompostion (AMR may have changed it)
     call IH_synchronize_refinement(RouterIhSc%iProc0Source,&
@@ -146,8 +144,6 @@ contains
     if(IH_iGridRealization/=i_realization(IH_).or.&     
          SC_iGridInIhSc/=i_realization(SC_))then  
 
-!       if(DoTest)write(*,*)'couple_ih_sc call set_router iProc=',i_proc()
-
        call set_router(&
             GridDescriptorSource=IH_Grid,&
             GridDescriptorTarget=SC_TargetGrid,&
@@ -157,7 +153,6 @@ contains
             interpolate=interpolation_fix_reschange)
        IH_iGridRealization=i_realization(IH_)
        SC_iGridInIhSc       =i_realization(SC_)
- !      if(DoTest)write(*,*)'couple_ih_sc passed set_router iProc=',i_proc()
     end if
 
     call couple_comp(&
@@ -179,7 +174,7 @@ contains
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     boundary_block=any(IsBoundary_D)
 
-  end function Boundary_block
+  end function boundary_block
   !===============================================================!
   subroutine outer_cells(&
        GridDescriptor,&
@@ -232,20 +227,19 @@ contains
 !EOP
     if(.not.RouterScBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
-!    if(DoTest)write(*,*)'couple_sc_ih iProc=',i_proc()
 
-    if(SC_iGridInScIh/=SC_iGridInIhSc)then  
+    call SC_synchronize_refinement(RouterScBuff%iProc0Source,&
+                                   RouterScBuff%iCommUnion)
 
-!       if(DoTest)write(*,*)'couple_sc_ih call set_router iProc=',i_proc()
 
+    if(SC_iGridInScIh/=i_realization(SC_))then  
        call set_router(&
             GridDescriptorSource=SC_SourceGrid,&
             GridDescriptorTarget=BuffGD,&
             Router=RouterScBuff,&
             mapping=buffer_grid_point,&
             interpolate=interpolation_fix_reschange)
-!       if(DoTest)write(*,*)'couple_sc_ih passed set_router iProc=',i_proc()
-       SC_iGridInScIh= SC_iGridInIhSc
+       SC_iGridInScIh= i_realization(SC_)
     end if
     call couple_buffer_grid(&
          RouterScBuff,&
@@ -253,8 +247,7 @@ contains
          fill_buffer=SC_get_for_ih,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
-!    if(DoTest)write(*,*)'couple_sc_ih: passed messagepass iProc=',&
-!         i_proc()
+
     if(DoTest.and.is_proc0(compid_grid(BuffGD%DD%Ptr)))then
        nU_I=ubound_vector('IH_from_sc')
        iCoupling=iCoupling+1
