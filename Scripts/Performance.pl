@@ -3,7 +3,8 @@
 my $Help       = $h or $help;
 my $Verbose    = $v;
 my $SaveTiming = $s;
-my $TimingFile = ($t or "run/TIMINGS");
+my $LayoutFile = $L;
+my $TimingFile = $T;
 my $nProcAll   = ($n or 8);
 my $Length     = ($l or 60);
 my $ShowHistory= $H;
@@ -14,11 +15,20 @@ use strict;
 
 my $ERROR        ="ERROR in Performance.pl:";
 my $ValidComp    ="SC|IH|SP|GM|IM|RB|IE|UA";
-my $LayoutFile   ="run/LAYOUT.in";
 my $ParamFile    ="run/PARAM.in";
 
 &print_help  if $Help;
 &save_timing if $SaveTiming;
+
+if($ARGV[0]){
+    $ParamFile  = $ARGV[0];
+}
+if(not $LayoutFile){
+    $LayoutFile = $ParamFile; $LayoutFile =~ s/PARAM/LAYOUT/;
+}
+if(not $TimingFile){
+    $TimingFile = $ParamFile; $TimingFile =~ s/PARAM/TIMING/;
+}
 
 die "$ERROR number of total processors is $nProcAll\n" 
     unless $nProcAll > 0;
@@ -95,17 +105,15 @@ Usage:
 
    Scripts/Performance.pl -h
 
-   Scripts/Performance.pl -s [-t=FILE] FILE(s)
+   Scripts/Performance.pl -s [-T=FILE] FILE(s)
 
-   Scripts/Performance.pl [-v] [-t=FILE] [-n=nProc] [-l=LENGTH] 
+   Scripts/Performance.pl [-v] [-n=nProc] [-l=LENGTH] 
                           [-H] [-S] [-p=PROCS]
+                          [-T=FILE] [-L=FILE] [PARAMFILE]
 
    -h          print help message and exit
 
    -s          save timings from runlog FILE(s) and exit
-
-   -t=FILE     set the name of the timings file to FILE,
-               default is run/TIMINGS
 
    -v          print verbose information
 
@@ -126,6 +134,17 @@ Usage:
                'all'   (all processors), 
                list of processor ranks separated by commas (e.g. 0,2,3). 
                Default value is 'roots', the root PE for all components.
+
+   -T=FILE     set the name of the timings file to FILE,
+               default is the same as the PARAMFILE but
+               string 'PARAM' is replaced with 'TIMING'.
+
+   -L=FILE     set the name of the layout file to FILE,
+               default is the same as the PARAMFILE but
+               string 'PARAM' is replaced with 'LAYOUT'.
+
+   PARAMFILE   the name of the parameter file, default is 'run/PARAM.in'.
+
 ";
     exit;
 }
