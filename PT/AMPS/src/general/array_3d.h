@@ -142,29 +142,21 @@ public:
 
 //===================================================
   array_3d<T>& operator = (const array_3d<T>& v) {
-    long int offset;
+    long int i,imax;
 
-    for(long int i0=0;i0<v.size_dim0;i0++) 
-    for(long int i1=0;i1<v.size_dim1;i1++)
-    for(long int i2=0;i2<v.size_dim2;i2++) {
-      offset=i0+v.size_dim0*i1+v.ndim0_ndim1*i2;
-      data[offset]=v.data[offset];
-    }
+    imax=size_dim0*size_dim1*size_dim2;
+    for (i=0;i<imax;i++) data[i]=v.data[i];
 
     return *this;
   };
 
 //===================================================
   array_3d<T>& operator = (T f) {
-    long int offset;
- 
-    for(long int i0=0;i0<size_dim0;i0++)
-    for(long int i1=0;i1<size_dim1;i1++)
-    for(long int i2=0;i2<size_dim2;i2++) {
-      offset=i0+size_dim0*i1+ndim0_ndim1*i2;
-      data[offset]=f;
-    }
+    long int i,imax;
 
+    imax=size_dim0*size_dim1*size_dim2;
+    for (i=0;i<imax;i++) data[i]=f;
+ 
     return *this;
   };
 
@@ -176,14 +168,11 @@ public:
       exit(0);
     }
 
-    long int offset;
+    long int i,imax;
     array_3d<T> v3(v1.size_dim0,v1.size_dim1,v1.size_dim2);
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v3.data[offset]=v1.data[offset]+v2.data[offset];
-    }
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v3.data[i]=v1.data[i]+v2.data[i];
 
     return v3;
   };
@@ -196,29 +185,23 @@ public:
       exit(0);
     }
 
-    long int offset;
+    long int i,imax;
     array_3d<T> v3(v1.size_dim0,v1.size_dim1,v1.size_dim2);
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v3.data[offset]=v1.data[offset]-v2.data[offset];
-    }
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v3.data[i]=v1.data[i]-v2.data[i];
 
     return v3;
   };
 
 //===================================================
   friend array_3d<T> operator * (const array_3d<T> &v1, const T t) {
-    long int offset;
+    long int i,imax;
     array_3d<T> v3(v1.size_dim0,v1.size_dim1,v1.size_dim2);
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v3.data[offset]=t*v1.data[offset];
-    }
-    
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v3.data[i]=t*v1.data[i];
+
     return v3;
   };
 
@@ -228,14 +211,12 @@ public:
       printf("Error: divide vector by 0.\n");
       exit(0);
     }
-    long int offset;
+
+    long int i,imax;
     array_3d<T> v3(v1.size_dim0,v1.size_dim1,v1.size_dim2);
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v3.data[offset]=v1.data[offset]/t;
-    }
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v3.data[i]=v1.data[i]/t;
 
     return v3;
   };
@@ -247,13 +228,11 @@ public:
       printf("Error: add two vectors of different length.\n");
       exit(0);
     }
-    long int offset;
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v1.data[offset]+=v2.data[offset];
-    }
+
+    long int i,imax;
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v1.data[i]+=v2.data[i];
 
     return v1;
   };
@@ -265,26 +244,22 @@ public:
       printf("Error: add two vectors of different length.\n");
       exit(0);
     }
-    long int offset;
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v1.data[offset]-=v2.data[offset];
-    }
+
+    long int i,imax;
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v1.data[i]-=v2.data[i];
 
     return v1;
   };
 
 //===================================================
   friend array_3d<T>& operator *= (array_3d<T> &v1,const T t) {
-    long int offset;
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v1.data[offset]*=t;
-    }
+    long int i,imax;
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v1.data[i]*=t;
+
     return v1;
   };
 
@@ -295,13 +270,10 @@ public:
       exit(0);
     }
 
-    long int offset;
-    for(long int i0=0;i0<v1.size_dim0;i0++)
-    for(long int i1=0;i1<v1.size_dim1;i1++)
-    for(long int i2=0;i2<v1.size_dim2;i2++) {
-      offset=i0+v1.size_dim0*i1+v1.ndim0_ndim1*i2;
-      v1.data[offset]/=t;
-    }
+    long int i,imax;
+
+    imax=v1.size_dim0*v1.size_dim1*v1.size_dim2;
+    for (i=0;i<imax;i++) v1.data[i]/=t;
 
     return v1;
   };
