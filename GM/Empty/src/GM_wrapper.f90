@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-! Wrapper for Global Magnetosphere (GM) component
+! Wrapper for the empty Global Magnetosphere (GM) component
 !==========================================================================
 subroutine GM_set_param(CompInfo, TypeAction)
 
@@ -91,29 +91,6 @@ subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 end subroutine GM_run
 
 !==============================================================================
-
-subroutine GM_get_for_ie_swmf(nPartial,iGet,Get,W,State_V,nVar)
-
-  character(len=*), parameter :: NameSub='GM_get_for_ie_swmf'
-
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-end subroutine GM_get_for_ie_swmf
-
-!==============================================================================
-subroutine GMIE_set_grid
-  implicit none
-  call CON_stop('GMIE_set_grid: GM_ERROR: empty version cannot be used!')
-end subroutine GMIE_set_grid
-!==============================================================================
-subroutine GM_get_mapping_param_for_ie(& 
-     rCurrentGm,rIonosphere)    !srcGM/map_ionosphere_bc.f90
-  implicit none
-  real,intent(out)::rCurrentGm,rIonosphere
-  call CON_stop(&
-       'GM_get_mapping_param_for_ie: GM_ERROR: empty version cannot be used!')
-end subroutine GM_get_mapping_param_for_ie
-!==============================================================================
 subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
@@ -125,7 +102,9 @@ subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 end subroutine GM_get_for_im
+
 !==============================================================================
+
 subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar,NameVar)
   implicit none
 
@@ -137,7 +116,9 @@ subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar,NameVar)
 
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 end subroutine GM_get_for_rb
+
 !==============================================================================
+
 subroutine GM_get_for_ie(Buffer_IV,nPoint,nVar,NameVar)
   implicit none
 
@@ -149,7 +130,9 @@ subroutine GM_get_for_ie(Buffer_IV,nPoint,nVar,NameVar)
 
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 end subroutine GM_get_for_ie
+
 !==============================================================================
+
 subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
   implicit none
 
@@ -161,9 +144,9 @@ subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
 
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 end subroutine GM_put_from_im
+
 !==============================================================================
 
-!==========================================================================
 subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
   implicit none
@@ -177,72 +160,22 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
 end subroutine GM_put_from_ie
-!==============================================================================
 
-!==============================================================================
-
-subroutine GM_calc_fac(IsNewFacPoint, nPoint_I, ColatLim_B)
-
-  implicit none
-
-  character(len=*), parameter :: NameSub='GM_calc_fac'
-
-  ! Logical for new positions and
-  ! the number of mapped FAC points for North and South hemispheres
-  logical, intent(out) :: IsNewFacPoint
-  integer, intent(out) :: nPoint_I(2)
-  real, intent(out)    :: ColatLim_B(2)
-
-  
-
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-end subroutine GM_calc_fac
-
-!==============================================================================
-subroutine GM_put_from_ie_swmf(nPartial,iPut,Put,W,DoAdd,State_V,nVar)
-  use CON_router                           !See srcGM
-  implicit none
-  integer,intent(in)::nPartial,iPut,nVar
-  type(IndexPtrType),intent(in)::Put
-  type(WeightPtrType),intent(in)::W
-  logical,intent(in)::DoAdd
-  real,dimension(nVar),intent(in)::State_V
-  call CON_stop(&
-       'GM_put_from_ie_swmf: GM_ERROR: empty version cannot be used!')
-end subroutine GM_put_from_ie_swmf
-!==============================================================================
-!subroutine ionosphere_fac(iBlock) !srcIE/iono_coupling.f90
-!  implicit none
-!  integer,intent(in)::iBlock
-!  call CON_stop('ionosphere_fac: GM_ERROR: empty version cannot be used!')
-!end subroutine ionosphere_fac
 !=============================================================================
-subroutine transform_phi_bc_to_u_bc
-  implicit none
-  call CON_stop(&
-       ' transform_phi_bc_to_u_bc: GM_ERROR: empty version cannot be used!')
-end subroutine transform_phi_bc_to_u_bc
-!=============================================================================
+
+! This function is only needed because of IH/BATSRUS/src/write_logfile
 real function logvar_ionosphere()
   call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
   logvar_ionosphere = -777.77
 end function logvar_ionosphere
+
 !=============================================================================
-subroutine calc_inner_bc_velocities
-  call CON_stop('calc_inner_bc_velocities: '// &
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+subroutine calc_inner_bc_velocity
+  call CON_stop('calc_inner_bc_velocity: '// &
        'GM_ERROR: empty version cannot be used!')
-end subroutine calc_inner_bc_velocities
-!=============================================================================
-subroutine GM_calc_iono_bcs
-
-  implicit none
-
-  character(len=*), parameter :: NameSub='GM_calc_iono_bcs'
-
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-end subroutine GM_calc_iono_bcs
+end subroutine calc_inner_bc_velocity
 
 !==============================================================================
 
