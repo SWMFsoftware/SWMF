@@ -540,10 +540,12 @@ subroutine IE_put_from_gm_new(Buffer_II, iSize, jSize, NameVar)
 
   case('JrNorth')
      if (iProc /= 0) RETURN
-     Iono_North_Jr       = Buffer_II
+     Iono_North_Jr         = Buffer_II
+     Iono_North_nMagBndPts = iSize*jSize
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
-     Iono_South_Jr       = Buffer_II
+     Iono_South_Jr         = Buffer_II
+     Iono_South_nMagBndPts = iSize*jSize
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
   end select
