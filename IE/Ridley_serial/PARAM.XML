@@ -112,10 +112,13 @@ The default is that no plotfiles are saved.
 	<parameter name="UseFullCurrent" type="logical" default="F"/>
 	<parameter name="UseFakeRegion2" type="logical" default="F"/>
 	<parameter name="F107Flux" type="real" min="0" default="150"/>
-	<parameter name="StarLightPedConductance" type="real" min="0" 
+	<parameter name="StarLightPedConductance" type="real" min="0.001" 
 						default="0.25"/>
 	<parameter name="PolarCapPedConductance" type="real" min="0" 
 						default="0.25"/>
+	<rule expr="not ($ConductanceModel=~/3|5/ and $F107Flux<=0)">
+		F107Flux must be positive for ConductanceModel = 3 or 5
+	</rule>
 
 The ConductanceModel variable determines which ionosphere model is used:
   0 - uses a constant Pedersen conductance which is set by 
