@@ -15,8 +15,9 @@ use strict;
 
 &print_help if $Help;
 
-my $ERROR ="ERROR in Restart.pl:";             # Error message string
-my $HELP  ="\nType Restart.pl -h for help.\n"; # Help message string
+my $WARNING ="WARNING in Restart.pl:";           # Warning message string
+my $ERROR   ="ERROR in Restart.pl:";             # Error message string
+my $HELP    ="\nType Restart.pl -h for help.\n"; # Help message string
 
 # Check for illegal combination of switches
 die "$ERROR at most one argument can be specified!$HELP" if $#ARGV > 0;
@@ -35,7 +36,7 @@ my $SimulationTime = -1;           # Simulation time
 my $nStep          = -1;           # Number of steps
 
 # List of input and output restart directory name(s) for each component
-# Multiple names should be separated by commas without space.
+# Alternative names should be separated by commas without space.
 my %RestartOutDir = (
 		     GM => "GM/restartOUT",
 		     SC => "SC/restartOUT",
@@ -49,6 +50,10 @@ my %RestartInDir =  (
 		     IH => "IH/restartIN",
 		     IM => "IM/restartIN",
 		     UA => "UA/restartIN,UA/RestartIN" );
+
+# Hashes for the actually found directories
+my %RestartOutDirFound;
+my %RestartInDirFound;
 
 # The name of the restart header file (if any) for each component.
 my %HeaderFile   =  (
@@ -190,18 +195,28 @@ sub create_tree_check{
 
     # Check output restart directories for alll components
     my $Comp;
+  COMPONENT:
     foreach $Comp (sort keys %RestartOutDir){
-	next unless -d $Comp;
+	next COMPONENT unless -d $Comp;
 
 	my $Dirs = $RestartOutDir{$Comp};
 	my $Dir;
 	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir};
-	die "$ERROR could not find directory $Dirs!\n" unless -d $Dir;
+	if(not -d $Dir){
+	    print "$WARNING could not find directory $Dirs!\n";
+	    next COMPONENT;
+	}
 
 	opendir(DIR,$Dir) or die "$ERROR could not open directory $Dir!\n";
 	my @Content = readdir(DIR);
 	closedir(DIR);
-	die "$ERROR directory $Dir is empty!\n" unless $#Content > 1;
+	if($#Content < 2){
+	    print "$WARNING directory $Dir is empty!\n";
+	    next COMPONENT;
+        }
+
+	# Store the directory for this component
+	$RestartOutDirFound{$Comp} = $Dir;
 
 	# Check if header file exists and check the simulation time
 	my $HeaderFile = $HeaderFile{$Comp};
@@ -229,11 +244,8 @@ sub create_tree{
     # Move the output restart directories of the components into the tree
     # and create empty output restart directories
     my $Comp;
-    foreach $Comp (sort keys %RestartOutDir){
-	next unless -d $Comp;
-	my $Dirs = $RestartOutDir{$Comp};
-	my $Dir;
-	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir};
+    foreach $Comp (sort keys %RestartOutDirFound){
+	my $Dir=$RestartOutDirFound{$Comp};
 
 	print "mv $Dir $RestartTree/$Comp\n" if $Verbose;
 	rename $Dir, "$RestartTree/$Comp" or 
@@ -268,17 +280,21 @@ sub link_tree_check{
     &get_time_step($File) unless $NoTreeCheck;
 
     my $Comp;
+  COMPONENT:
     foreach $Comp (sort keys %RestartInDir){
-	next unless -d $Comp;
+	next COMPONENT unless -d $Comp;
+	if(not -d "$RestartTree/$Comp"){
+	    print "$WARNING could not find restart directory ".
+		"$RestartTree/$Comp!\n";
+	    next COMPONENT;
+	}
+		
 	my $Dirs = $RestartInDir{$Comp};
 	my $Dir;
 	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir or -l $Dir};
 
 	die "$ERROR could not find input restart directory/link $Dirs!\n" 
 	    unless -d $Dir or -l $Dir;
-
-	die "$ERROR could not find restart directory $RestartTree/$Comp!\n" 
-	    unless (-d "$RestartTree/$Comp" or $NoTreeCheck);
 
 	# Check if the header file exists and check the simulation time
 	my $HeaderFile = $HeaderFile{$Comp};
@@ -306,11 +322,8 @@ sub link_tree{
 	die "$ERROR could not link $File to $RestartInFile!\n";
 
     my $Comp;
-    foreach $Comp (sort keys %RestartInDir){
-	next unless -d $Comp;
-	my $Dirs = $RestartInDir{$Comp};
-	my $Dir;
-	foreach (split /,/,$Dirs){$Dir=$_; last if -d $Dir or -l $Dir};
+    foreach $Comp (sort keys %RestartInDirFound){
+	my $Dir=$RestartInDirFound{$Comp};
 
 	# Remove input restart link or directory
 	if(-l $Dir){
@@ -345,6 +358,8 @@ sub link_tree{
 #
 #!REVISION HISTORY:
 # 12/21/2004 G. Toth - initial version
+# 02/10/2005 G. Toth - allow restart info for a subset of components: 
+#                      warns about missing restart dirs but does not die.
 #EOP
 
 sub print_help{
