@@ -432,6 +432,7 @@ contains
     integer::iPoint,nPoint,iVector,iMask
     iVector=i_vector(NameVector)
     iMask=i_mask(NameMask)
+    nPoint=ubound(Mask_I(iMask)%I,1)
     do iPoint=1,nPoint
        Mask_I(iMask)%I(iPoint)=&
             used(Vector_I(iVector)%I(:,iPoint))
@@ -554,7 +555,7 @@ contains
        iMask=i_mask(NameMask)
     end if
     NameFile=trim(NameFile)//'_'//NameComp
-    open(iFile,file=trim(NameFile),status='unknown')
+    open(iFile,file=trim(NameFile),status='replace')
 
     if(UseMask)then
        write(iFile,*)nU_I,count_mask(NameMask)
