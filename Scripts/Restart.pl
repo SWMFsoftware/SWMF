@@ -50,7 +50,11 @@ my %RestartInDir =  (
 		     IM => "IM/restartIN",
 		     UA => "UA/restartIN,UA/RestartIN" );
 
-my $HeaderFile = "restart.H"; # the name of the restart header files
+# The name of the restart header file (if any) for each component.
+my %HeaderFile   =  (
+		     GM => "restart.H",
+		     SC => "restart.H",
+		     IH => "restart.H" );
 
 # List possible time units and corresponding number of seconds
 my %UnitSecond = (
@@ -82,14 +86,24 @@ LOOP:{
 	    sleep $Wait - $age;
 	}
     }
+
+    # Initialize simulation time and number of steps to impossible values
+    $SimulationTime = -1;
+    $nStep          = -1;
+
+    # Create restart tree if required
     if(not $InputOnly){
 	&create_tree_check;
 	&create_tree unless $CheckOnly;
     }
+
+    # Link restart tree if required
     if(not $OutputOnly){
 	&link_tree_check;
 	&link_tree unless $CheckOnly;
     }
+
+    # Loop if required
     redo LOOP if $Repeat;
 }
 
@@ -118,8 +132,8 @@ sub get_time_step{
 	    $Step += 0;        # Convert to a number
 	}
     }
-    die "$ERROR could not find simulation time in file $File!\n" if $Time < 0;
-    die "$ERROR could not find time step in file $File!\n" if $Step < 0;
+    die "$ERROR could not find simulation time in $File!\n" if $Time < 0;
+    die "$ERROR could not find time step in $File!\n" if $Step < 0;
 
     print "# Restart.pl read Time=$Time Step=$Step from $File\n" if $Verbose;
 
@@ -188,9 +202,9 @@ sub create_tree_check{
 	closedir(DIR);
 	die "$ERROR directory $Dir is empty!\n" unless $#Content > 1;
 
-	# Check consistency of the simulation time
-	my $File = "$Dir/$HeaderFile";
-	&get_time_step($File) if -f $File;
+	# Check if header file exists and check the simulation time
+	my $HeaderFile = $HeaderFile{$Comp};
+	&get_time_step("$Dir/$HeaderFile") if $HeaderFile;
 
 	print "# Restart.pl has checked $Dir\n" if $Verbose;
     }
@@ -265,9 +279,9 @@ sub link_tree_check{
 	die "$ERROR could not find restart directory $RestartTree/$Comp!\n" 
 	    unless (-d "$RestartTree/$Comp" or $NoTreeCheck);
 
-	# Check the consistency of the simulation time
-	my $File = "$RestartTree/$Comp/$HeaderFile";
-	&get_time_step($File) if -f $File;
+	# Check if the header file exists and check the simulation time
+	my $HeaderFile = $HeaderFile{$Comp};
+	&get_time_step("$RestartTree/$Comp/$HeaderFile") if $HeaderFile;
 
 	print "# Restart.pl has checked $Dir\n" if $Verbose;
     }
