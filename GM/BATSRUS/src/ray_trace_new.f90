@@ -186,6 +186,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   integer :: iBlockRay
   real    :: XyzRay_D(3)
 
+  ! Current length of ray
+  real    :: RayLength
+
   ! Is the ray trace done
   logical :: DoneRay
 
@@ -229,9 +232,10 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
              all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
      end if
 
-     ! Current position
+     ! Current position and length
      iBlockRay = i_D(4)
      XyzRay_D  = XyzIn_D
+     RayLength = 0.0
 
      if(oktest_ray)write(*,'(a,6i4,3es12.4)')&
           'Local ray at iProc,i_D,iRay,XyzIn_D=',iProc,i_D,iRay,XyzIn_D
@@ -246,8 +250,8 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
 
      if(DoGet)then
         GETRAY: do
-           call ray_get(IsFound,iProcStart,iStart_D,XyzRay_D,IsParallel,&
-                DoneRay)
+           call ray_get(IsFound,iProcStart,iStart_D,XyzRay_D,RayLength,&
+                IsParallel,DoneRay)
 
            if(IsFound)then
               if(DoIntegrate)then
@@ -373,8 +377,8 @@ contains
              ! Pass .false., because this is not the final position
              if(DoIntegrate)call store_integral(.false.)
 
-             call ray_put(iProcStart,iStart_D,jProc,XyzRay_D,iRay==1,&
-                  .false.)
+             call ray_put(iProcStart,iStart_D,jProc,XyzRay_D,RayLength,&
+                  iRay==1,.false.)
              RETURN
           elseif(jBlock /= iBlockRay)then
              ! Continue the same ray in the next block
@@ -446,7 +450,8 @@ contains
 
        else
           ! Send back result to iProcStart. 
-          call ray_put(iProcStart,iStart_D,iProc,XyzRay_D,iRay==1,.true.)
+          call ray_put(iProcStart,iStart_D,iProc,XyzRay_D,RayLength,&
+               iRay==1,.true.)
 
           if(oktest_ray)write(*,*) &
                'Send result iProc,iProcStart,iRay,Xyz=',&
