@@ -217,10 +217,11 @@ sub read_layout{
     open(FILE,$LayoutFile) or 
 	die "$ERROR could not open layout file $LayoutFile\n";
     my $start;
+    @RegisteredComp = ();
     while(<FILE>){
-	if(/^\#COMPONENTMAP/){$start=1; next}
-	next unless $start; # Skip lines before #COMPONENTMAP
-	last if /^\#END/;   # Ignore lines after #END
+	if(/^\#COMPONENTMAP/){$start=1; next} # start after #COMPONENTMAP
+	next unless $start;                   # Skip lines before #COMPONENTMAP
+	last if /^\#END/;                     # Ignore lines after #END
 
 	# extract layout information from one line in the component map
         /^($ValidComp)\s+(\d+)\s+(\d+)\s+(\d+)/ or
@@ -239,6 +240,9 @@ sub read_layout{
         die "$ERROR stride=$ProcStride must be positive ".
 	    "at line $. in $LayoutFile:\n$_"
             if $ProcStride < 1;
+
+	# Add component to the list of registered components
+	push (@RegisteredComp, $Comp);
 
 	# Reduce component ranks if necessary
 	$Proc0    = $nProcAll-1 unless $Proc0    < $nProcAll;
@@ -260,9 +264,6 @@ sub read_layout{
 
     }
     close(FILE);
-
-    # Store list of components
-    @RegisteredComp = sort keys %nProc_C;
 
     if($Verbose){
 	my $Comp;
@@ -607,6 +608,7 @@ sub do_session_time_accurate{
     # Do the session in time accurate mode
 
     my $TimeMax=$Length;   # Final time is the length of the session
+    my $Time;              # Overall simulation time
 
     my %tNext_C;           # Next time a component should stop at
 
@@ -639,8 +641,8 @@ sub do_session_time_accurate{
 	my $Comp;
 	for $Comp (@ActiveComp){
 
-	    # run component if it has not reached the next waiting time
-	    if($Time_C{$Comp} < $tNext_C{$Comp}){
+	    # run component(s) with the smallest simulation time
+	    if($Time_C{$Comp} <= $Time){
 
 		my $WallStep;	# cost of the step
 		if($Comp eq "IE"){
@@ -676,11 +678,12 @@ sub do_session_time_accurate{
 	    }
 	}
 
-	# Couple components
-	my $Time = &minval(@Time_C{@ActiveComp});
+	# The overall time is defined as the smallest of the component times
+	$Time = &minval(@Time_C{@ActiveComp});
 
 	last TIMELOOP if $Time >= $TimeMax;
 
+	# Couple components
 	my $CouplePair;
 	foreach $CouplePair (@CoupleOrder){
 	    my $Comp1 = substr($CouplePair,0,2);
