@@ -1,4 +1,4 @@
-#!/usr/bin/perl -i -w
+#!/usr/bin/perl -i
 use strict;
 
 # Pattern to match component ID-s
