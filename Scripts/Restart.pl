@@ -1,33 +1,34 @@
 #!/usr/bin/perl -s
 
-my $Help       = $h or $H or $help;
-my $OutputOnly = $o;
-my $InputOnly  = $i;
-my $CheckOnly  = $c;
-my $Verbose    = $v;
-my $TimeUnit   = $t;
+my $Help        = ($h or $H or $help);
+my $OutputOnly  = ($o or $output);
+my $InputOnly   = ($i or $input);
+my $CheckOnly   = ($c or $check);
+my $Verbose     = ($v or $verbose);
+my $TimeUnit    = ($t or $u or $timeunit or $unit);
+my $Repeat      = ($r or $repeat);
+my $Wait        = ($w or $wait or 120);
+my $RestartTree = $ARGV[0];        # Name of the restart tree directory
+$RestartTree =~ s/\/+$//;          # Remove trailing /
 
 use strict;
 
 &print_help if $Help;
 
-my $ERROR ="ERROR in Restart.pl:"; # Error message string
+my $ERROR ="ERROR in Restart.pl:";             # Error message string
+my $HELP  ="\nType Restart.pl -h for help.\n"; # Help message string
 
-if($InputOnly and $OutputOnly){
-    print "$ERROR cannot use -i and -o together!\n".
-	"Type Restart.pl -h for help.\n";
-    exit 1;
-}
+# Check for illegal combination of switches
+die "$ERROR at most one argument can be specified!$HELP" if $#ARGV > 0;
+die "$ERROR cannot use -i and -o together!$HELP" if $InputOnly and $OutputOnly;
+die "$ERROR cannot use -i and -r together!$HELP" if $InputOnly and $Repeat;
+die "$ERROR cannot use -c and -r together!$HELP" if $CheckOnly and $Repeat;
+die "$ERROR restart tree must be specified with -i option!$HELP" 
+    if $InputOnly and not $RestartTree;
+die "$ERROR restart tree cannot be specified with -r option!$HELP" 
+    if $Repeat and $RestartTree;
 
-my $RestartTree = $ARGV[0];        # Name of the restart tree directory
-$RestartTree =~ s/\/+$//;          # Remove trailing /
-
-if($InputOnly and not $RestartTree){
-    print "$ERROR restart tree must be specified with -i option!\n".
-	"Type Restart.pl -h for help.\n";
-    exit 1;
-}
-
+# Declare global variables
 my $RestartOutFile = "RESTART.out";# Name of SWMF output restart file
 my $RestartInFile  = "RESTART.in"; # Name of SWMF input restart file
 my $SimulationTime = -1;           # Simulation time
@@ -64,13 +65,32 @@ my %UnitSecond = (
 die "$ERROR time unit $TimeUnit is unknown!\n" 
     if $TimeUnit and not $UnitSecond{$TimeUnit};
 
-if(not $InputOnly){
-    &create_tree_check;
-    &create_tree unless $CheckOnly;
-}
-if(not $OutputOnly){
-    &link_tree_check;
-    &link_tree unless $CheckOnly;
+LOOP:{
+    if($Repeat){
+	if(not -f $RestartOutFile){
+	    # If there is no new file wait $Repeat seconds
+	    print "sleep $Repeat\n" if $Verbose;
+	    sleep $Repeat;
+	    redo LOOP;
+	}
+	# Check if the output restart files are old enogh to be moved
+	my @stat = stat($RestartOutFile);
+	my $age = time - $stat[9];
+	if($age < $Wait){
+	    my $wait = $Wait - $age;
+	    print "sleep $wait\n" if $Verbose;
+	    sleep $Wait - $age;
+	}
+    }
+    if(not $InputOnly){
+	&create_tree_check;
+	&create_tree unless $CheckOnly;
+    }
+    if(not $OutputOnly){
+	&link_tree_check;
+	&link_tree unless $CheckOnly;
+    }
+    redo LOOP if $Repeat;
 }
 
 exit 0;
@@ -123,8 +143,8 @@ sub create_tree_check{
     # Obtain time/step from the restart file
     &get_time_step($RestartOutFile);
 
-    # Form the name of restart tree if not specified already
-    if(not $RestartTree){
+    # Set the name of restart tree if not specified in the command line
+    if(not $ARGV[0]){
 	# Check if it is a time accurate run
 	if($SimulationTime){
 	    # If the time unit is not set try to guess it from simulation time
@@ -134,13 +154,18 @@ sub create_tree_check{
 		    $TimeUnit = $Unit if $SimulationTime >= $UnitSecond{$Unit};
 		}
 	    }
+	    # Use the simulation time for time accurate runs
 	    $RestartTree = sprintf("RESTART_t%6.2f%s", 
 				   $SimulationTime/$UnitSecond{$TimeUnit},
 				   $TimeUnit);
 	}else{
+	    # Use the time step number for steady state runs
 	    $RestartTree = sprintf "RESTART_n%6d", $nStep;
 	}
+
+	# Replace spaces with zeros
 	$RestartTree =~ s/ /0/g;
+
 	print "# Restart.pl set restart tree name to $RestartTree/.\n"
 	    if $Verbose;
     }
@@ -290,50 +315,69 @@ sub link_tree{
 }
 ##############################################################################
 sub print_help{
-    print "
+    print '
 Purpose:
 
-    Collect current output restart files into one directory tree and/or 
-    link input restart files to a directory tree.
+    Collect current output restart directories into one tree (and link to it).
+    Link input restart files to an existing directory tree. 
+    Create multiple restart trees while the SWMF is running.
 
 Usage:
 
-    Restart.pl [-h] [-v] [-c] [-o] [-t=s|m|h|d|y] [[-i] DIR]
+    Restart.pl -h
 
-    -h         Print help message and exit.
+    Restart.pl [-o] [-t=s|m|h|d|y] [-c] [-v] [DIR]
 
-    -v         Print verbose information.
+    Restart.pl -i [-c] [-v] DIR
 
-    -c         Check only, do not actually create or link.
-               Default is to create and link as specified by -i and -o.
+    Restart.pl -r=REPEAT [-w=WAIT] [-o] [-t=s|m|h|d|y] [-v] &
 
-    -o         Create restart tree from output directories only.
-               Cannot be used together with the -i switch.
-               Default is to link input directories to the tree as well.
+    -h -help    Print help message and exit.
 
-    -i         Link input restart directories to the restart tree only.
-               Cannot be used together with the -o switch.
-               The name of the restart tree must be specified.
-               Default is to create the restart tree first.
+    -o -output  Create restart tree from output directories but do not link.
+                Cannot be used together with the -i switch.
+                Default is to link input directories to the tree as well.
 
-    -t=UNIT    Time unit to form the name of the restart tree.
-               The UNIT can be given as one of the following characters:
-               s, m, h, d, y corresponding to seconds, minute, hour, day and
-               year respectively. The -t option has no effect if the 
-               name of the restart tree is specified by the parameter DIR.
-               The default time unit is the largest unit which does not 
-               exceed the simulation time.
+    -i -input   Link input restart directories to an existing restart tree.
+                The name of the restart tree must be specified.
+                Cannot be used together with the -o switch.
+                Default is to create the restart tree first and then link.
 
-    DIR        Name of the restart directory tree. This argument
-               must be specified if the -i switch is used. Otherwise
-               the default name is RESTART_n012345 for steady state runs
-               and RESTART_t012.34u for time accurate runs, where the
-               numbers should be replaced with the actual time step and
-               simulation time, and the 'u' with the actual time unit.
+    -c -check   Check but do not actually create or link.
+                Default is to create and link as specified by -i and -o.
+
+    -r=REPEAT   Repeat creating (and linking unless -o is used) of the 
+    -repeat=... restart tree every REPEAT seconds. This can be used to
+                store multiple copies of the restart tree.
+                Cannot be used together with the -i or -c switches.
+                Cannot specify the name of the directory tree.
+                Default is to create the restart tree only once.
+
+    -w=WAIT     Wait WAIT seconds before moving the output restart files.
+    -wait=...   This switch can only be used with the -r switch.
+                Default is to wait 2 minutes.
+
+    -t=UNIT     Time unit to form the name of the restart tree from the
+    -time=...   simulation time (only matters for time accurate run).
+    -u=UNIT     The UNIT can be given as one of the following characters:
+    -unit=...   s, m, h, d, y corresponding to seconds, minute, hour, day and
+                year respectively. The -t option has no effect if the 
+                name of the restart tree is specified by the parameter DIR.
+                The default time unit is the largest unit which does not 
+                exceed the simulation time.
+
+    -v -verbose Print verbose information.
+
+    DIR         Name of the restart directory tree. This argument
+                must be specified if the -i switch is used. Otherwise
+                the default name is RESTART_n012345 for steady state runs
+                and RESTART_t012.34u for time accurate runs, where the
+                numbers should be replaced with the actual time step and
+                simulation time, and the "u" with the actual time unit.
 
 Examples:
 
-    Check the output and input restart file and directories:
+    Check the output and input restart files and directories:
 
 Restart.pl -c
 
@@ -341,11 +385,13 @@ Restart.pl -c
 
 Restart.pl
 
-    Create restart tree from current results and use hours as time unit:
+    Create restart trees every 10 minutes, wait one minute before 
+    moving newly written restart information and use hours as the 
+    time unit for the simulation time in the restart tree names:
 
-Restart.pl -o -u=h
+Restart.pl -o -r=600 -w=60 -t=h &
 
-    Check linking to the existing RESTART_t002.00h tree
+    Check linking to the existing RESTART_t002.00h tree:
 
 Restart.pl -i -c RESTART_t002.00h
 
@@ -353,7 +399,7 @@ Restart.pl -i -c RESTART_t002.00h
 
 Restart.pl -v -i RESTART_t002.00h
 
-";
+';
     exit;
 }
 ##############################################################################
