@@ -146,9 +146,9 @@ subroutine CON_io_unit_new(iUnit)
 end subroutine CON_io_unit_new
 
 !BOP ==========================================================================
-!ROUTINE: CON_tmp_unit - provide a temporary unit number for open and close
+!ROUTINE: CON_io_unit_tmp - provide a temporary unit number for open and close
 !INTERFACE:
-subroutine CON_tmp_unit(iUnit)
+subroutine CON_io_unit_tmp(iUnit)
   !USES:
   use ModIoUnit, ONLY: UnitTMP_
   implicit none
@@ -162,5 +162,5 @@ subroutine CON_tmp_unit(iUnit)
   !BOC
   iUnit = UnitTMP_
   !EOC
-end subroutine CON_tmp_unit
+end subroutine CON_io_unit_tmp
 
