@@ -703,10 +703,9 @@ contains
              if(is_proc(IM_))then
                 ! Run IM 
                 ! from tSimulation-dtCoupleIM/2 to tSimulation+dtCoupleIM/2 + 5
-                ! The + 5 mimics a minor bug in the BATSRUS coupling !!!
                 tSimulationIm      = tSimulation   - 0.5*dtCoupleIM
 
-                tSimulationLimitIm = tSimulationIm + dtCoupleIM + 5.0
+                tSimulationLimitIm = tSimulationIm + dtCoupleIM
 
                 if(DoTestMe) write(*,*)NameSub,': loop IM_run with',&
                      ' tSimulationIm=',tSimulationIm, &
