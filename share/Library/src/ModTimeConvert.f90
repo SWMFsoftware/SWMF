@@ -388,7 +388,7 @@ contains
   end function is_leap_year
 
   !BOP ========================================================================
-  !IROUTINE - number of days since the beginning of this year
+  !IROUTINE n_day_of_year - number of days since the beginning of this year
   !INTERFACE:
   integer function n_day_of_year(iYear, iMonth, iDay)
     !INPUT ARGUMENTS:
