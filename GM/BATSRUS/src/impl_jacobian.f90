@@ -81,7 +81,7 @@ subroutine impl_jacobian(implBLK,JAC)
   integer:: i,j,k,i1,i2,i3,j1,j2,j3,k1,k2,k3,istencil,iw,jw,idim,qj
 
   logical :: oktest, oktest_me
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
 
   if(iProc==PROCtest.and.implBLK==implBLKtest)then
      call set_oktest('impl_jacobian',oktest, oktest_me)
@@ -133,10 +133,10 @@ subroutine impl_jacobian(implBLK,JAC)
      i1 = 1-kr(1,idim); j1= 1-kr(2,idim); k1= 1-kr(3,idim)
 
      ! Calculate orthogonal cmax for each interface in advance
-     call getcmax(                                                              &
-          0.5*(w_k( 1:i2, 1:j2, 1:k2,1:nw,implBLK)+&
-          w_k(i1:nI,j1:nJ,k1:nK,1:nw,implBLK)), &
-          B0face(1:i2,1:j2,1:k2,1:ndim,idim),                                   &
+     call getcmax(                                  &
+          0.5*(w_k( 1:i2, 1:j2, 1:k2,1:nw,implBLK)+ &
+          w_k(i1:nI,j1:nJ,k1:nK,1:nw,implBLK)),     &
+          B0face(1:i2,1:j2,1:k2,1:ndim,idim),       &
           i2,j2,k2,idim,implBLK,cmaxFace(1:i2,1:j2,1:k2,idim))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
@@ -189,9 +189,11 @@ subroutine impl_jacobian(implBLK,JAC)
            coeff=-ImplCoeff*0.5/dxyz(idim)/qeps/wnrm(iw)
 
            dfdwLface(i1:i2,j1:j2,k1:k2)=coeff*&
-                (fepsLface(i1:i2,j1:j2,k1:k2)-fLface(i1:i2,j1:j2,k1:k2,iw,idim))
+                (fepsLface(i1:i2,j1:j2,k1:k2) &
+                -fLface(   i1:i2,j1:j2,k1:k2,iw,idim))
            dfdwRface( 1:nI, 1:nJ, 1:nK)=coeff*&
-                (fepsRface( 1:nI, 1:nJ, 1:nK)-fRface( 1:nI, 1:nJ, 1:nK,iw,idim))
+                (fepsRface( 1:nI, 1:nJ, 1:nK) &
+                -fRface(    1:nI, 1:nJ, 1:nK,iw,idim))
 
            if(oktest_me)write(*,'(a,i1,i2,6(f15.8))') &
                 'iw,jw,f0L,fepsL,dfdwL,R:', &
@@ -202,7 +204,8 @@ subroutine impl_jacobian(implBLK,JAC)
 
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
-           !write(*,*)'BEFORE addcmax dfdw(iih)=',dfdwLface(Itest,Jtest,Ktest-1)
+           !write(*,*)'BEFORE addcmax dfdw(iih)=',&
+           !          dfdwLface(Itest,Jtest,Ktest-1)
 
            ! Add contribution of cmax to dfdwL and dfdwR
            if(iw==jw)then
@@ -216,7 +219,8 @@ subroutine impl_jacobian(implBLK,JAC)
 
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
-           !write(*,*)'AFTER  addcmax dfdwL(iih)=',dfdwLface(Itest,Jtest,Ktest-1)
+           !write(*,*)'AFTER  addcmax dfdwL(iih)=',&
+           !           dfdwLface(Itest,Jtest,Ktest-1)
 
            ! Contribution of fluxes to main diagonal (middle cell)
            ! dR_i/dW_i = 0.5/Dx*[ (dFxR/dW-cmax)_i-1/2 - (dFxL/dW+cmax)_i+1/2 ]
@@ -240,8 +244,8 @@ subroutine impl_jacobian(implBLK,JAC)
                    coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw) 
            end if
 
-           JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  ) =  dfdwLface(i1:nI,j1:nJ,k1:nK)
-           JAC(iw,jw, 1:i3, 1:j3, 1:k3,2*idim+1) = -dfdwRface(i1:nI,j1:nJ,k1:nK)
+           JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  )=  dfdwLface(i1:nI,j1:nJ,k1:nK)
+           JAC(iw,jw, 1:i3, 1:j3, 1:k3,2*idim+1)= -dfdwRface(i1:nI,j1:nJ,k1:nK)
         enddo ! iw
      enddo ! idim
      if(oktest_me)then
