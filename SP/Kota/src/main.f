@@ -15,7 +15,7 @@ c     PEEL-OFF  Routine added - but not used                  *
 c**************************************************************
       subroutine sp_set_defaults
       implicit none
-      include 'param.h'
+      include 'coupler.h'
       integer nr,nmu,nw
       real dim1
       common /size  / nr,nmu,nw, dim1
@@ -83,7 +83,7 @@ c**************************************************************
       else
          xscatt1 = ((3-qex)*(1-qex)/3.)/xlmbda0
       end if
-
+      rTransient = 1.0 ![RSun]
       end subroutine sp_set_defaults
       
       subroutine sp_init
@@ -366,13 +366,15 @@ c??   read(*,*)  jnext
          iMax=0
          return
       end if
-      if(iShock<nResolution)then
+      if(iShock<nResolution+iTransient)then
          !Do not sharpen the shock wave
             call get_rshock
             call MASTER(tSimulation,tFinal)
       else
          nCoupling=max(1,iShock-iShockOld)
-         if(iShockOld<nResolution)nCoupling=1!No sharpening happened before
+         if(iShockOld<nResolution+iTransient)then
+             nCoupling=1    !No sharpening happened before
+         end if
          if(nCoupling.eq.1)then
             call sharpen_profile
             call get_rshock
@@ -433,13 +435,23 @@ c??   read(*,*)  jnext
       include 'stdout.h'
       real DMax,DDens,DDens0,Diff,Rad2,Dist2
       integer i
-      iShockOld=iShock
-      iShock = 1
-      DMax=0
-      DDens = dens(1)!*(rx(1)**2+ry(1)**2+rz(1)**2)
-      do i=2,iMax
+      real cRsunPerAU,R2
+      parameter(cRsunPerAU= 149.59787000000000000/0.696)
 
-CCC     drr = arr(i)-arr(i-1) 
+      !set iTransient at the last point at which r<rTransient
+      i=0;R2=(rTransient/cRSunPerAU)**2
+      do while(rx(i+1)**2+ry(i+1)**2+rz(i+1)**2<R2)
+         i=i+1
+      end do
+      iTransient=i
+      if(DoWriteAll)write(iStdOut,*)prefix,'iTransient=',iTransient
+      iShockOld=iShock
+      iShock =iTransient+1
+      DMax=0
+      DDens = dens(iTransient+1)
+      
+      do i=iTransient+2,iMax
+ 
 
          Dist2 = sqrt((rx(i)-rx(i-1))**2+
      1        (ry(i)-ry(i-1))**2+
@@ -451,9 +463,8 @@ CCC     drr = arr(i)-arr(i-1)
          else
             
             DDens0 = DDens
-            Rad2   = 1.0!rx(i)**2+ry(i)**2+rz(i)**2
-            DDens = dens(i)*Rad2
-            Diff = (DDens0-DDens)/(DDens0+DDens)*Rad2/Dist2
+            DDens = dens(i)
+            Diff = (DDens0-DDens)/(DDens0+DDens)/Dist2
             
             if (Diff.gt.DMax) then
                iShock = i-1
