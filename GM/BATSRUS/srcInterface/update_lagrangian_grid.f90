@@ -144,8 +144,10 @@ contains
   end subroutine get_u
   !-------------------------------------------------------
   subroutine save_lagrangian_grid
-    if(.not.DoSkip)&
-         call save_global_vector(NameVector,NameMask)
+    !Check if the lagrangian grid is itialized
+    if(DoInit.or.DoSkip)return 
+    !Save the part of the global vector updated by the comp
+    call save_global_vector(NameVector,NameMask)
   end subroutine save_lagrangian_grid
 end module ModLagrangianGrid
 !============interface to BATS_methods====================
@@ -158,6 +160,7 @@ end subroutine update_lagrangian_grid
 !=========================================================
 subroutine save_advected_points
   use ModLagrangianGrid,ONLY:save_lagrangian_grid
+  use ModMain,ONLY:time_accurate
   implicit none
-  call save_lagrangian_grid
+  if(time_accurate)call save_lagrangian_grid
 end subroutine save_advected_points
