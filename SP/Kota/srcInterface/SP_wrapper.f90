@@ -11,13 +11,15 @@ module SP_Mod
   include 'coupler.h'
   include 'stdout.h'
   save
-  logical UseSelfSimilarity,UseRefresh
+  logical:: UseSelfSimilarity,UseRefresh
   common/log/UseSelfSimilarity,UseRefresh
   real,parameter::DsResolution=cOne/nResolution
   real::XyzLine_D(3)=(/cZero,cZero,cZero/)
   real::RBoundSC=1.1      !^CMP IF SC
   real::RBoundIH=21.0     !^CMP IF IH
   real::tSimulation,DataInputTime
+  integer::nStep=0
+  logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
 end module SP_Mod
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
@@ -68,7 +70,15 @@ subroutine SP_set_param(CompInfo,TypeAction)
            call read_var('XyzLine_D(y_)',XyzLine_D(2))
            call read_var('XyzLine_D(z_)',XyzLine_D(3))
            call read_var('RBoundSC'     ,RBoundSC    )!^CMP IF SC 
-           call read_var('RBoundIH'     ,RBoundIH    )!^CMP IF IH  
+           call read_var('RBoundIH'     ,RBoundIH    )!^CMP IF IH
+        case('#DORUN')
+           call read_var('DoRun',DoRun)
+        case('#SAVEMHDATA')
+           call read_var('SaveMhData',SaveMhData)
+        case('#DOREADMHDATA')
+           call read_var('DoReadMhData',DoReadMhData)
+       case('NSTEP')
+           call read_var('nStep',nStep)
         case default
            call CON_stop(NameSub//&
                 ': Unknown command '&
@@ -244,20 +254,67 @@ subroutine SP_put_from_mh(nPartial,&
 end subroutine SP_put_from_mh
 !=============================================================!
 subroutine SP_run(tInOut,tLimit)
-  use SP_Mod,ONLY:tSimulation,DataInputTime
+  use SP_Mod,ONLY:tSimulation,DataInputTime,nStep
+  use SP_Mod,ONLY:DoRun,SaveMhData,DoReadMhData
+  use ModNumConst
   implicit none
   real,intent(inout)::tInOut
   real,intent(in):: tLimit
-  tInOut=max(tInOut,tLimit)
-  call SP_sharpen_and_run(tSimulation,DataInputTime)
+  nStep=nStep+1
+  if(.not.DoReadMhData)then
+     tInOut=max(tInOut,tLimit)
+  else
+     call SP_read_mh_data
+  end if
+  if(SaveMhData)call SP_save_mh_data
+  if(DoRun)call SP_sharpen_and_run(tSimulation,DataInputTime)
 end subroutine SP_run
-!======================================================================
+!=============================================================!
+subroutine SP_save_mh_data
+  use SP_Mod
+  use ModIoUnit
+  implicit none
+  integer::iFile,iLine
+  character(LEN=20)::NameFile
+  write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
+  iFile=io_unit_new()
+  open(iFile,FILE=NameFile,STATUS='unknown')
+  write(iFile,*)DataInputTime,'     - is a Time'
+  write(iFile,*)iMax,'              - is iMax'
+  write(iFile,*)&
+       'x[AU] y[AU] z[AU] rho[cm-3] ux[AU/hour] uy[AU/hour]'//&
+       'uz[AU/hour] Bx[nT] By[nT] Bz[nT] p[erg/cm3]'
+  do iLine=1,iMax
+     write(iFile,*)Smooth_VII(:,iLine,New_)
+  end do
+  close(iFile)
+end subroutine SP_save_mh_data
+!=============================================================!
+subroutine SP_read_mh_data
+  use SP_Mod
+  use ModIoUnit
+  implicit none
+  integer::iFile,iLine
+  character(LEN=20)::NameFile
+  write(NameFile,'(a,i5.5,a)')'./SP/mh_',nStep,'.dat'
+  iFile=io_unit_new()
+  open(iFile,FILE=NameFile,STATUS='old')
+  read(iFile,*)DataInputTime
+  read(iFile,*)iMax
+  read(iFile,*)
+  do iLine=1,iMax
+     Smooth_VII(:,iLine,Old_)=Smooth_VII(:,iLine,New_)
+     read(iFile,*)Smooth_VII(:,iLine,New_)
+  end do
+  close(iFile)
+end subroutine SP_read_mh_data
+!=============================================================!
 subroutine SP_finalize(TimeSimulation)
   implicit none
   real,intent(in)::TimeSimulation
   call closetime
 end subroutine SP_finalize
-!======================================================================
+!=============================================================!
 subroutine SP_save_restart(TimeSimulation) 
   implicit none
   real,     intent(in) :: TimeSimulation 
