@@ -117,14 +117,18 @@ contains
     ! defined with the component ID.
 
     !REVISION HISTORY:
-    ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized verion
+    ! 19Jul03 - G. Toth <gtoth@umich.edu> - simplified and generalized version
     ! 09Jul03 - G. Toth <gtoth@umich.edu> - initial prototype/prolog/code
     !EOP ___________________________________________________________________
 
     character(len=*),parameter :: NameSub=NameMod//'.set_param_id'
-
+    logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
     !-------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' starting for Comp, TypeAction=',&
+         NameComp_I(iComp),' ',TypeAction
+
     if(.not.use_comp(iComp)) call CON_stop(NameSub//' '//TypeAction// &
          ' SWMF_ERROR component '//NameComp_I(iComp)//' is not used')
 
@@ -229,10 +233,13 @@ contains
     !EOP ___________________________________________________________________
 
     character(len=*),parameter :: NameSub=NameMod//'::get_version_id'
-
+    logical :: DoTest, DoTestMe
     type(CompInfoType) :: CompInfo
 
     !-------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp)
+
     call check_i_comp(iComp,NameSub)
 
     select case(iComp)
@@ -278,9 +285,14 @@ contains
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::init_session_comp_id'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
-    
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
     call check_i_comp(iComp,NameSub)
+
+    if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
+         ': iSession, Time=',iSession, TimeSimulation
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
@@ -326,9 +338,14 @@ contains
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::finalize_comp_id'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
     call check_i_comp(iComp,NameSub)
+
+    if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
+         ': Time=', TimeSimulation
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
@@ -373,11 +390,15 @@ contains
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::save_restart_comp_id'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
     
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
+
+    if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
+         ': Time=', TimeSimulation
 
     select case(iComp)
     case(GM_)                                   !^CMP IF GM
@@ -424,11 +445,16 @@ contains
     !         - initial prototype/prolog/code
     !EOP ___________________________________________________________________
     character(len=*), parameter :: NameSub = NameMod//'::run_comp_id'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
-    
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
     call check_i_comp(iComp,NameSub)
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
+
+    if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
+         ': Time, Limit=', TimeSimulation, TimeSimulationLimit
 
     call timing_start(NameComp_I(iComp)//'_run')
     select case(iComp)
