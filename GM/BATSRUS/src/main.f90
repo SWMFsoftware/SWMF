@@ -82,7 +82,7 @@ program BATSRUS
   ! Read input parameter file. Provide the default restart file for #RESTART
   !/
   call read_file('PARAM.in',iComm,trim(NameRestartInDir)//'restart.H')
-  call read_init('  ',iSessionIn=1,iLineIn=0)
+  call read_init('  ',iSessionIn=1,iLineIn=0,nLineIn=n_line_read())
 
   SESSIONLOOP: do
 
@@ -100,7 +100,7 @@ program BATSRUS
      !call set_oktest('main',DoTest,DoTestMe)
 
      !\
-     ! Time execution (timing parameters were read by read_inputs)
+     ! Time execution (timing parameters were set by MH_set_parameters)
      !/
      if(iSession==1)then
         call timing_start('BATSRUS')
