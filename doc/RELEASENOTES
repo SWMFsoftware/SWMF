@@ -7,9 +7,26 @@ SWMF:
         1. The SWMF and its components have not been fully tested on
            Linux platforms using the the PFG90 compiler.
 
+           Already known problems on 'morpheus':
+
+           1.a: GM-IM coupling fails with the accurate field line integration.
+                WORK AROUND: in the GM section of PARAM.in insert
+ 
+                             #RAYTRACE 
+                             F                  UseAccurateIntegral
+                             F                  UseAccurateTrace
+                             0.1                DtExchangeRay [sec]
+                             1                  DnRaytrace
+
+
+           1.b: GM-IE coupling hangs if IE is running on 2 PE-s
+                WORK AROUND: put IE onto a single PE in LAYOUT.in
+
 	2. The timing for the 'SWMF' was incorrect on some platforms.
 	   FIX: Stop and restart timing for 'SWMF' after setup.
 	   MODIFIED: CON/Control/src/CON_main.f90
+
+
 
 RB:
         1. The Radiation Belt (RB) module included with this release
@@ -69,6 +86,9 @@ GM, IH, SC (BATSRUS):
 	   FIX (Aug 25, 2004): Initialize DzInv variable.
 	   MODIFIED: GM/BATSRUS/src/potential_force_averages.f90
 	   NOTE: this file is configured into SC and only used in SC.
+
+        4. SC only: the logfile contains NaN-s when the test is run
+           with the PGF90 compiled code on 'morpheus'.
 
 SP:
         1. The SEP module included with this release does not have the
