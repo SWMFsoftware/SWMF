@@ -110,7 +110,7 @@ subroutine ionosphere_fine_grid
   character(len=lNamePlanet) :: NamePlanet
   !------------------------------------------------------------------------
   dTheta_l = 0.50*IONO_PI/real(IONO_nTheta-1)
-  dPsi_l = dTheta_l
+  dPsi_l = 2.00*IONO_PI/real(IONO_nPsi-1)
 
   call get_planet(NamePlanetOut = NamePlanet, RadiusPlanetOut = IONO_Radius)
 
