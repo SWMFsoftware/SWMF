@@ -415,9 +415,7 @@ subroutine BATS_amr_refinement
   real, external :: maxval_loc_abs_BLK
   integer :: ifile
   integer :: iLoc_I(5)  ! full location index
-  logical :: DoExchangeAgain
-
-  DoExchangeAgain =.false.
+  !----------------------------------------------------------------------------
 
   !\
   ! Perform the AMR.
@@ -584,7 +582,7 @@ subroutine BATS_save_files(TypeSaveIn)
   character(len=*), intent(in) :: TypeSaveIn
 
   character(len=len(TypeSaveIn)) :: TypeSave
-  logical :: DoExchangeAgain, IsFound
+  logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound
   integer :: iFile
   
   character(len=*), parameter :: NameSub='BATS_save_files'
@@ -592,6 +590,8 @@ subroutine BATS_save_files(TypeSaveIn)
   logical :: IsTimeAccuratePrevious = .false.
   !--------------------------------------------------------------------------
 
+  DoExchangeAgain     = .false.
+  DoAssignNodeNumbers = .true.
   TypeSave = TypeSaveIn
   call upper_case(TypeSave)
   select case(TypeSave)
@@ -643,7 +643,6 @@ contains
 
   subroutine save_files
 
-    DoExchangeAgain = .false.
     do ifile=1,nfile
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
@@ -714,7 +713,7 @@ contains
           if(.not.DoExchangeAgain)then
                 if(iProc==0.and.lVerbose>0)then
                    call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for plot files ...'
+                        '  Message passing for los plot files ...'
                 end if
                 UsePlotMessageOptions = .true.
                 call exchange_messages
@@ -725,21 +724,24 @@ contains
        end if
        !^CFG END SIMPLE 
        if(plot_type(ifile)/='nul' .and. (.not. IsFound) ) then
-          ! Do message passing with corners once for plots
-          if(.not.DoExchangeAgain)then
-             if(  index(plot_form(ifile),'tec')>0 ) then
+          ! Do message passing with corners once for tec plots
+          if( index(plot_form(ifile),'tec')>0 ) then
+             if(.not.DoExchangeAgain)then
                 if(iProc==0.and.lVerbose>0)then
                    call write_prefix; write(iUnitOut,*)&
-                        '  Message passing for plot files ...'
+                        '  Message passing for tec plot files ...'
                 end if
                 UsePlotMessageOptions = .true.
                 call exchange_messages
                 UsePlotMessageOptions = .false.
                 DoExchangeAgain = .true.
+             end if
+             if(DoAssignNodeNumbers)then
                 call assign_node_numbers
+                DoAssignNodeNumbers = .false.
              end if
           end if
-
+          
           if(index(plot_type(ifile),'ray')>0) call ray_trace !^CFG IF RAYTRACE
           call timing_start('save_plot')
           call write_plot_common(ifile)
@@ -784,7 +786,6 @@ contains
 
   subroutine save_files_final
 
-    DoExchangeAgain = .false.
     do ifile=1,plot_+nplotfile
        call save_file
     end do
