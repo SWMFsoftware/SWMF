@@ -200,11 +200,3 @@ subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
   if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
 
 end subroutine GM_get_for_ie
-
-!==============================================================================
-
-subroutine magnetosphere_deallocate
-  use ModFieldAlignedCurrent, ONLY: clean_mod_field_aligned_current
-
-  call clean_mod_field_aligned_current
-end subroutine magnetosphere_deallocate

@@ -245,6 +245,8 @@ end subroutine GM_init_session
 subroutine GM_finalize(TimeSimulation)
 
   use ModMain, ONLY: UseIonosphere, time_loop
+  use ModFieldAlignedCurrent, ONLY: &     !^CFG IF IONOSPHERE
+       clean_mod_field_aligned_current    !^CFG IF IONOSPHERE
   implicit none
 
   !INPUT PARAMETERS:
@@ -259,7 +261,7 @@ subroutine GM_finalize(TimeSimulation)
 
   call BATS_save_files('FINAL')
 
-  if (UseIonosphere) call magnetosphere_deallocate  !^CFG IF IONOSPHERE
+  if (UseIonosphere) call clean_mod_field_aligned_current  !^CFG IF IONOSPHERE
 
   call error_report('PRINT',0.,iError,.true.)
 
