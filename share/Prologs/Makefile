@@ -88,7 +88,7 @@ program_example.exe: ${OBJECTS}
 # CLEANING
 
 distclean: clean
-	rm -f *.dvi *.ps *.pdf *.aux *.log PROTEX.tex program_example.exe
+	rm -f *.dvi *.ps *.pdf *.aux *.log *.toc PROTEX.tex program_example.exe
 
 # RULES
 
