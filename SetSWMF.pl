@@ -13,8 +13,6 @@ my $MakefileConfLocal= 'Makefile.conf';
 my $MakefileComp     = 'Makefile.def';
 my $MakefileCompOrig = 'CON/Makefile.def';
 my $MakefileCompLocal= 'Makefile.def';
-my $MpiHeader        = 'CON/Library/src/mpif90.h';
-my $MpiHeaderOrig    = 'share/include/mpif90_';
 my $GridSizeScript   = 'GridSize.pl';
 my $FlushFile        = 'share/Library/src/ModUtilities.f90';
 
@@ -249,14 +247,6 @@ sub set_precision{
     # clean the distribution unless initial installation is done
     &shell_command("make clean") unless $init;
 
-    # Copy appropriate MPI header file
-    my $mpiheader=$MpiHeaderOrig.$OS.'.h';
-
-    die "$ERROR could not find MPI header file $mpiheader\n"
-	unless -e $mpiheader;
-
-    &shell_command("cp $mpiheader $MpiHeader");
-
     print "Setting PRECISION variable to $Precision precision in ".
 	"$MakefileConf\n";
     if(not $DryRun){
@@ -348,7 +338,7 @@ sub set_versions{
 
     # Create IH/BATSRUS if needed
     &shell_command("make IHBATSRUS")
-	if $Version{"IH"} eq "BATSRUS" and not -d "IH/BATSRUS/src";
+	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
 
     @Version = @NewVersion;
 
