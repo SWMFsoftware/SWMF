@@ -178,6 +178,23 @@ mprun: ${DEFAULT_TARGET}
 nompirun: ${DEFAULT_TARGET}
 	cd run; ./${DEFAULT_EXE}
 
+#					^CFG IF DOC BEGIN
+#	Create the documentation files      ^CFG IF NOT REMOVEDOCTEX BEGIN
+#	
+PDF:
+	@cd Doc/Tex; make cleanpdf; make PDF
+
+CLEAN1 = cleanpdf #				^CFG IF NOT MAKEPDF
+
+#	Create HTML documentation		^CFG IF DOCHTML BEGIN
+HTML:
+	@cd Doc/Tex; make cleanhtml; make HTML
+
+CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
+#						^CFG END DOCHTML
+#					    ^CFG END REMOVEDOCTEX
+#					^CFG END DOC
+
 #
 # Cleaning
 #
@@ -193,6 +210,15 @@ distclean:
 	cd src; make distclean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
+	@				#^CFG IF DOC BEGIN
+	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
+	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
+	@					#^CFG END REMOVEDOCTEX
+	@				#^CFG END DOC
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		cd share; make distclean; \
+		cd util; make distclean; \
+	fi);
 	rm -f Makefile.conf *~
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
