@@ -34,7 +34,7 @@ module IE_ModMain
 
   !\
   ! Character string selecting the potential sent to the IM module
-  ! Possible values are 'north', 'south', 'average', 'minmod'
+  ! Possible values are 'north', 'south', 'average', 'cpcpmin'
   !/
   character (len=7) :: TypeImCouple = 'north   '
 
