@@ -461,6 +461,13 @@ contains
             'UA is used without IE. This combination is not allowed!'
        call world_clean
     end if
+    ! Check if UA and IE are coupled
+    if(use_comp(UA_) .and. .not. Couple_CC(IE_,UA_) % DoThis) then
+       write(*,*) NameSub//' SWMF_ERROR: '//&
+            'UA is used without IE-->UA coupling! Not allowed!'
+       call world_clean
+    end if
+
     !^CMP END UA
     !^CMP END IE
 
