@@ -805,15 +805,16 @@ contains
 
     if(.not.is_proc0()) RETURN
 
-    if(mod(nStep,DnShowProgressShort)==0 .and. is_proc0())then
-       write(*,*)'Short progress report at nStep,tSimulation=',&
-            nStep,tSimulation
-    end if
+    if( (mod(nStep,DnShowProgressShort)== 0 .or.                 &
+         mod(nStep,DnShowProgressLong) == 0 ) .and. is_proc0() ) &
+         write(*,'(a,i8,a,g14.6,a,f10.2,a)')                     &
+         'Progress:',                                            &
+         nStep,' steps,',                                        &
+         tSimulation,' s simulation time,',                      &
+         MPI_WTIME()-CpuTimeStart,' s CPU time'
 
-    if(mod(nStep,DnShowProgressLong)==0 .and. is_proc0())then
-       write(*,*)'Long progress report at nStep=',&
-            nStep,tSimulation
-    end if
+    if(  mod(nStep,DnShowProgressLong) == 0 .and. is_proc0() )   &
+         call timing_tree(2,2)
 
   end subroutine show_progress
 
