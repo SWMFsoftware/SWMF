@@ -62,7 +62,7 @@ Cflag2  = -c ${SEARCH} ${PRECISION} ${BITFLAG} -O2 ${DEBUG}
 Cflag3  = -c ${SEARCH} ${PRECISION} ${BITFLAG} -O2 ${DEBUG}
 
 # RCM compilation flags
-CFLAGS = -c ${SEARCH} ${BITFLAG} -w ${DEBUG}
+CFLAGS = -c ${SEARCH} ${BITFLAG} -O2 -w ${DEBUG}
 
 Lflag1  = ${BITFLAG} ${MPILIB} ${BITLIB} -woff136
 Lflag2  = ${BITFLAG} ${BITLIB} -woff136
