@@ -1401,8 +1401,8 @@ subroutine write_plot_line(iFile)
   use ModPhysics,  ONLY: rBody
   use ModIO,       ONLY: NamePlotDir, plot_type, plot_form, Plot_,iUnitLine_I,&
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_simulation, nBlock
-  use ModGeometry, ONLY: XyzMax_D, XyzMin_D
+  use ModMain,     ONLY: n_step, time_simulation, nI, nJ, nK, nBlock, unusedBLK
+  use ModGeometry, ONLY: XyzMax_D, XyzMin_D, Dx_BLK, Dy_BLK, Dz_BLK
   use ModIoUnit,   ONLY: io_unit_new, UnitTmp_
   use ModUtilities,ONLY: flush_unit
 
@@ -1413,8 +1413,10 @@ subroutine write_plot_line(iFile)
   character(len=100) :: NameFile, NameStart
   integer            :: nHeaderFile
 
-  real    :: Xyz_D(3)
-  integer :: iPlotFile, iProcFound, iBlockFound, i,j,k, iLine, iRay, iError
+  real    :: Xyz_D(3), Dx2Inv, Dy2Inv, Dz2Inv
+  integer :: iPlotFile, iProcFound, iBlockFound, iLine, iRay, iError
+
+  integer :: i, j, k, iBlock
 
   character(len=*), parameter :: NameSub = 'write_plot_line'
   logical :: DoTest, DoTestMe
@@ -1458,6 +1460,32 @@ subroutine write_plot_line(iFile)
      Bxyz_DGB(1,:,:,:,1:nBlock) = State_VGB(RhoUx_,:,:,:,1:nBlock)
      Bxyz_DGB(2,:,:,:,1:nBlock) = State_VGB(RhoUy_,:,:,:,1:nBlock)
      Bxyz_DGB(3,:,:,:,1:nBlock) = State_VGB(RhoUz_,:,:,:,1:nBlock)
+  case('J')
+     ! Store current
+     do iBlock=1,nBlock;
+        if(unusedBLK(iBlock)) CYCLE
+        Dx2Inv = 0.5/Dx_BLK(iBlock)
+        Dy2Inv = 0.5/Dy_BLK(iBlock)
+        Dz2Inv = 0.5/Dz_BLK(iBlock)
+
+        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+           Bxyz_DGB(1,i,j,k,iBlock) = &
+                (State_VGB(Bz_,i,j+1,k,iBlock)-State_VGB(Bz_,i,j-1,k,iBlock)) &
+                *Dy2Inv - &
+                (State_VGB(By_,i,j,k+1,iBlock)-State_VGB(By_,i,j,k-1,iBlock)) &
+                *Dz2Inv
+           Bxyz_DGB(2,i,j,k,iBlock) = &
+                (State_VGB(Bx_,i,j,k+1,iBlock)-State_VGB(Bx_,i,j,k-1,iBlock)) &
+                *Dz2Inv - &
+                (State_VGB(Bz_,i+1,j,k,iBlock)-State_VGB(Bz_,i-1,j,k,iBlock)) &
+                *Dx2Inv
+           Bxyz_DGB(3,i,j,k,iBlock) = &
+                (State_VGB(By_,i+1,j,k,iBlock)-State_VGB(By_,i-1,j,k,iBlock)) &
+                *Dx2Inv - &
+                (State_VGB(Bx_,i,j+1,k,iBlock)-State_VGB(Bx_,i,j-1,k,iBlock)) &
+                *Dy2Inv
+        end do; end do; end do
+     end do
   case default
      write(*,*)NameSub,' WARNING: for iFile=',iFile,' invalid NameLine=',&
           trim(NameVectorField),'!!!'
@@ -1483,24 +1511,32 @@ subroutine write_plot_line(iFile)
         open(UnitTmp_,file=NameFile)
         select case(plot_form(iFile))
         case('idl')
-           write(UnitTmp_,'(a79)')'Extract '//NameVectorField//'_var11'
            if(NameTask == 'extractfiles')then
+              write(UnitTmp_,'(a79)') NameVectorField//' line_var11'
               write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,3
               write(UnitTmp_,'(a6)')             '__nn__'
-              if(IsParallelLine_II(iLine,iPlotFile))then
-                 write(UnitTmp_,'(es13.5)')      1.0
-              else
-                 write(UnitTmp_,'(es13.5)')      2.0
-              end if
-              write(UnitTmp_,'(a79)')            'Length x y z Dir'
+              write(UnitTmp_,'(es13.5)')         real(iLine)
+              write(UnitTmp_,'(a79)')            'Length x y z iLine'
            else
+              write(UnitTmp_,'(a79)') NameVectorField//' lines_var11'
               write(UnitTmp_,'(i7,1pe13.5,3i3)') n_step,time_simulation,1,1,4
               write(UnitTmp_,'(a6)')             '__nn__'
               write(UnitTmp_,'(es13.5)')         real(nLine_I(iPlotFile))
               write(UnitTmp_,'(a79)')            'Length x y z Index nLine'
            end if
         case('tec')
-           write(UnitTmp_,'(a)')'TEC header to be implemented'
+           if(NameTask == 'extractfiles')then
+              write(UnitTmp_,'(a)')'TITLE ="'//NameVectorField//' line"'
+              write(UnitTmp_,'(a)')'VARIABLES="Length","x","y","z"'
+              write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
+                   NameVectorField//' line ',iLine,'", '//'I=__nn__'
+           else
+              write(UnitTmp_,'(a)')'TITLE ="'//NameVectorField//' lines"'
+              write(UnitTmp_,'(a)')'VARIABLES="Length","x","y","z","Index"'
+              write(UnitTmp_,'(a,i2.2,a)')'ZONE T="'// &
+                   NameVectorField//' ',nLine_I(iPlotFile),' lines", '// &
+                   'I=__nn__'
+           end if
         end select
         close(UnitTmp_)
      end if
