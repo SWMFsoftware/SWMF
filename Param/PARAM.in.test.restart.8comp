@@ -251,7 +251,7 @@ SP			NameTarget
 #BEGIN_COMP SP ---------------------------------------------------------------
 
 #LINE
-1.61+02                 xLine
+ 1.61E+02               xLine
 -1.39E+02		yLine
 -15.0			zLine
 1.1			rBoundSc
