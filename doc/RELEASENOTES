@@ -2,31 +2,57 @@ Known issues with the August 23, 2004 release of the University of Michigan
 Space Weather Modeling Framework (SWMF) and it constituent components.
 Fixes are also indicated as "FIX" as they become known.
 
-
 SWMF:
         1. The SWMF and its components have not been fully tested on
            Linux platforms using the the PFG90 compiler.
 
-           Already known problems on 'morpheus':
+        UPDATE: The first 60 seconds of the 8 component test has been 
+           successfully completed on 'morpheus.engin.umich.edu' using
+           'pgf90 3.3-2'. The full 600s test is running right now.
+
+           The configuration was optimized for the limited memory:
+
+                GM/BATSRUS                   grid: 8,8,8,250,80
+                IE/Ridley_serial
+                IH/BATSRUS                   grid: 8,8,8,330,1
+                IM/RCM
+                RB/RiceV5
+                SC/BATSRUS                   grid: 4,4,4,1500
+                SP/Kota                      grid: 1000,10,150
+                UA/GITM                      grid: 9,9,25,2,2
+
+           Dynamic memory allocation was used in GM, IH and SC using:
+
+              cd GM/BATSRUS/src
+              make DYNAMIC
+              cd ../../../IH/BATSRUS/src
+              make DYNAMIC
+              cd ../../../SC/BATSRUS/src
+              make DYNAMIC
+
+           The SWMF was run on 32 PE-s with the following LAYOUT.in:
+
+                #COMPONENTMAP
+                UA        0      31     1
+                IE        0       1     1
+                IM        2       2     1
+                RB        3       3     1
+                GM        0     999     1
+                IH        0     999     1
+                SC        0     999     1
+                SP        4       4     1
+                #END
+ 
+           Prior to this successful run there were several unreproducible 
+           problems, including:
 
            1.a: GM-IM coupling fails with the accurate field line integration.
-                WORK AROUND: in the GM section of PARAM.in insert
- 
-                             #RAYTRACE 
-                             F                  UseAccurateIntegral
-                             F                  UseAccurateTrace
-                             0.1                DtExchangeRay [sec]
-                             1                  DnRaytrace
-
-
            1.b: GM-IE coupling hangs if IE is running on 2 PE-s
-                WORK AROUND: put IE onto a single PE in LAYOUT.in
+           1.c: SC writes NaN-s into the logfile.
 
 	2. The timing for the 'SWMF' was incorrect on some platforms.
-	   FIX: Stop and restart timing for 'SWMF' after setup.
-	   MODIFIED: CON/Control/src/CON_main.f90
-
-
+	   FIX (Aug25,2004): Stop and restart timing for 'SWMF' after setup.
+	   MODIFIED:         CON/Control/src/CON_main.f90
 
 RB:
         1. The Radiation Belt (RB) module included with this release
@@ -86,9 +112,6 @@ GM, IH, SC (BATSRUS):
 	   FIX (Aug 25, 2004): Initialize DzInv variable.
 	   MODIFIED: GM/BATSRUS/src/potential_force_averages.f90
 	   NOTE: this file is configured into SC and only used in SC.
-
-        4. SC only: the logfile contains NaN-s when the test is run
-           with the PGF90 compiled code on 'morpheus'.
 
 SP:
         1. The SEP module included with this release does not have the
