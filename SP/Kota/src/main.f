@@ -738,7 +738,7 @@ c ---------------------------------------------   inside :
      1        'rshock/rmin-s desired : ',rmin,rshock 
       if(DoWriteAll)write(iStdout,*) prefix,
      1        'rshock/rmin-s read    : ',arr(1),rsh 
-      stop 
+      call CON_stop(' ')
       endif
       i1 = imin1
       ii = i1+1
@@ -974,7 +974,8 @@ c --------------------------------- finally rescale TBLAST
       tblast = tblast*(rshock/rsh)**(1./slamb)
 
 c ???????????????????????????????????????????????????
-      call SP_get_io_unit_new(io)
+
+      call CON_io_unit_new(io)
       open(io,file='./SP/ujcme-eta',status='unknown')
       write(io,*) lineno,mm,ni,slamb,thr,tblast
       do 900 j=0,ni 
