@@ -8,6 +8,8 @@
 
 \maketitle
 
+\tableofcontents
+
 \section{Introduction to the Usage of Protex}
 
 This directory contains files which should be used to create self documented
@@ -16,11 +18,11 @@ In the following text {\it procedure} means a Fortran subroutine or function.
 
 Please use the templates provided in the following files:
 \begin{verbatim}
- module.f90               ! template for an F90 module
-
- subroutine.f90           ! template for an F90 procedure
-
- internal_subroutine.f90  ! template for an F90 internal procedure
+   program.f90              - template for an F90 program
+   module.f90               - template for an F90 module
+   subroutine.f90           - template for an F90 procedure
+   internal_subroutine.f90  - template for an F90 internal procedure
+   Makefile                 - an example for scripts and Makefile-s
 \end{verbatim}
 The templates contain compilable source code (except for the use statements), 
 and they can be converted to Protex. 
@@ -70,11 +72,18 @@ Tags                       Where to use it
 
 !REVISION HISTORY:        - in a procedure/module which has 
                             its own revision history
+
+!QUOTE:                   - in a file which needs extra LaTex commands
 \end{verbatim}
 
 \newpage
 
-\section{Documentation Produced from Templates}
+\section{Documentation Produced from the Templates}
+
+The rest of this documents shows the Protex documentation
+produced from the templates. To learn how Protex should be
+used, study the templates themselves. This documentation
+shows the result.
 
 \input{PROTEX}
 
