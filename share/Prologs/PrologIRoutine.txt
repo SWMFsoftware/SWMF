@@ -1,0 +1,32 @@
+!
+! Use !IROUTINE for subroutines/functions that come after a CONTAINS
+! statement, i.e., routines internal to a Module or subroutine.
+! The internal routine documentation will become the subsection of 
+! the module's LaTeX section, thus saving the conceptual hierarchy.
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!               Space Weather Modeling Framework (SWMF)                !
+!    Center for Space Environment Modeling, The University of Michigan !
+!-----------------------------------------------------------------------
+!BOP -------------------------------------------------------------------
+!
+! !IROUTINE:  
+! 
+! !DESCRIPTION: 
+!
+! !INTERFACE:
+!
+! !USES:
+!
+! !INPUT PARAMETERS: 
+!
+! !INPUT/OUTPUT PARAMETERS: 
+!
+! !OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY: 
+!
+!  
+!
+!EOP -------------------------------------------------------------------------
+

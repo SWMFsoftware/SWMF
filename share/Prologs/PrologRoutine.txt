@@ -1,0 +1,39 @@
+!
+! Use !ROUTINE for your usual subroutine/functions (read: not internal)
+! Routines can either be Fortran90 subroutines, functions or main programs 
+! which are not part of a module (for routines inside a module use !IROUTINE:).
+
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!               Space Weather Modeling Framework (SWMF)                !
+!    Center for Space Environment Modeling, The University of Michigan !
+!-----------------------------------------------------------------------
+!BOP -------------------------------------------------------------------------
+!
+! !ROUTINE:  
+!
+! !DESCRIPTION: 
+! 
+! !INTERFACE:
+!
+! !USES:
+!
+! !INPUT PARAMETERS: 
+!
+! !OUTPUT PARAMETERS:
+!
+! !BUGS:  
+!
+! !SEE ALSO: 
+!
+! !SYSTEM ROUTINES: 
+!
+! !FILES USED:  
+!
+! !REVISION HISTORY: 
+!
+!  
+! 
+!EOP -------------------------------------------------------------------------
+
+

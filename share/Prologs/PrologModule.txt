@@ -1,0 +1,29 @@
+!
+! Use this for your f90 module definition
+!
+
+!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!               Space Weather Modeling Framework (SWMF)                !
+!    Center for Space Environment Modeling, The University of Michigan !
+!-----------------------------------------------------------------------
+BOP -------------------------------------------------------------------------
+!
+! !MODULE: 
+!
+! !DESCRIPTION: 
+!
+! !INTERFACE:	
+! 
+! !USES:
+!
+! !PUBLIC TYPES:
+!
+! !PUBLIC MEMBER FUNCTIONS:
+!
+! !PUBLIC DATA MEMBERS:
+!
+! !REVISION HISTORY: 
+!
+!  June 2003 Ovsei Volberg <volov@umich.edu>  Initial code.
+!
+!EOP -------------------------------------------------------------------------
