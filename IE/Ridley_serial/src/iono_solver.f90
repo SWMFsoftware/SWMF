@@ -82,7 +82,7 @@ subroutine ionosphere_solver(PHI, &
   INTEGER, DIMENSION(1:1)               :: cols1
 
   REAL :: ave, lat_boundary, min_pot, max_pot, cpcp
-  LOGICAL :: north
+  LOGICAL :: north, IsManualLatBoundary = .true.
   
   logical :: oktest, oktest_me
   
@@ -98,19 +98,22 @@ subroutine ionosphere_solver(PHI, &
 
   if(oktest)write(*,*)'North=',north
 
-  if (north) then
-     do i=1,nTheta
-        if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
-     enddo
+  if (IsManualLatBoundary) then
+     lat_boundary = 60.0 * IONO_PI/180.0
   else
-     do i=nTheta,1,-1
-        if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
-     enddo
+     if (north) then
+        do i=1,nTheta
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+        enddo
+     else
+        do i=nTheta,1,-1
+           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(IONO_PI/2.0-Theta(i,1))
+        enddo
+     endif
+     lat_boundary = lat_boundary - 5.0*IONO_PI/180.0
   endif
 
   !!! write(*,*)'PHI(:,nPsi/4), lat_boundary=',PHI(:,nPsi/4), lat_boundary !!!
-
-  lat_boundary = lat_boundary - 5.0*IONO_PI/180.0
 
   if(oktest)write(*,*)'sum(abs(PHI),lat_boundary=',sum(abs(PHI)),lat_boundary
 
@@ -139,8 +142,21 @@ subroutine ionosphere_solver(PHI, &
   
   do j = 1, nPsi
      do i = 1, nTheta
-        PHI(i,j) = PHI(i,j)*Radius*Radius* &
+        if (north) then
+           if (abs(IONO_PI/2.0-Theta(i,j)).gt.lat_boundary+5.0*IONO_PI/180.0) then
+              PHI(i,j) = PHI(i,j)*Radius*Radius* &
                    sin(Theta(i,j))*sin(Theta(i,j))
+           else
+              PHI(i,j) = 0.0
+           endif
+        else
+           if (abs(Theta(i,j)-IONO_PI/2.0).gt.lat_boundary+5.0*IONO_PI/180.0) then
+              PHI(i,j) = PHI(i,j)*Radius*Radius* &
+                   sin(Theta(i,j))*sin(Theta(i,j))
+           else
+              PHI(i,j) = 0.0
+           endif
+        endif
      end do
   end do
 
