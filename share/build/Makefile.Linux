@@ -23,11 +23,8 @@ MPILIB =
 
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
 
-#MCT -I${MCTDIR}/mct -I${MCTDIR}/mpeu
-#MCT -kind=byte
-
-DEBUG   = -dusty -w -maxcontin=50
-#DEBUG   = -dusty -w -C -gline -maxcontin=50
+DEBUG   = -dusty -w
+#DEBUG   = -dusty -w -C -gline
 
 Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
 Cflag1  = ${SEARCH} -c -O1 ${PRECISION} ${DEBUG}
@@ -53,7 +50,7 @@ BLAS  = lapack.o blas.o
 #
 
 .SUFFIXES:
-.SUFFIXES: .f90 .F90 .f .o
+.SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag3} $<
@@ -62,6 +59,12 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag3} $<
 
 .f.o:
+	${COMPILE.f90} ${Cflag3} -132 $<
+
+.for.o:
+	${COMPILE.f90} ${Cflag3} -132 $<
+
+.ftn.o:
 	${COMPILE.f90} ${Cflag3} -132 $<
 
 clean:	
