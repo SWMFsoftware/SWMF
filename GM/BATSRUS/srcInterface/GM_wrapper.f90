@@ -210,7 +210,7 @@ subroutine GM_print_variables(NameSource)
 
 end subroutine GM_print_variables
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_init_session(iSession, TimeSimulation)
 
@@ -250,7 +250,6 @@ subroutine GM_init_session(iSession, TimeSimulation)
   if(IsUninitialized)then
 
      call get_time(tSimulationOut=Time_Simulation)
-
      call BATS_setup
      IsUninitialized = .false.
   end if
@@ -300,13 +299,12 @@ subroutine GM_save_restart(TimeSimulation)
 
 end subroutine GM_save_restart
 
-!==============================================================================
+!=============================================================================
 
 subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: Time_Simulation, dt
-  use ModPhysics, ONLY: UnitSi_t
+  use ModMain,   ONLY: Time_Simulation
 
   implicit none
 
@@ -333,7 +331,7 @@ subroutine GM_run(TimeSimulation,TimeSimulationLimit)
   call BATS_advance(TimeSimulationLimit)
 
   ! Return time after the time step
-  TimeSimulation = TimeSimulation + dt*UnitSI_t
+  TimeSimulation = Time_Simulation
 
 end subroutine GM_run
 
