@@ -1,0 +1,138 @@
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+
+<commandList name="SEP with pitch-angle dependence: SP Component">
+
+<commandgroup name="Testing">
+
+<command name="VERBOSE">
+	<parameter name="iVerbose" type="integer" min="0" default="0" />
+
+#VERBOSE
+0                       iVerbose
+
+For test purpose set iVerbose>0. SP code will provide a huge
+output of the information to STDOUT
+</command>
+
+</commandgroup>
+
+<commandgroup name="Output">
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="PLOT">
+	<parameter name="nPlot" type="integer" min="1" default="5" />
+
+#PLOT
+5                       nPlot
+
+The iDtPlot parameter defines the frequency for saving the information .
+to file. Default is 5
+
+</command>
+
+</commandgroup>
+
+<commandgroup name="MAGNETIC FIELD LINES">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!    MAGNETIC FIELD LINES       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="LINE">
+	<parameter name="XyzLine_Dx" type="real" default="0" />
+	<parameter name="XyzLine_Dy" type="real" default="0" />
+	<parameter name="XyzLine_Dz" type="real" default="0" />
+	<parameter name="RBoundSC" type="real" min="1" default="1.1" /> 
+	<parameter name="RBoundIH" type="real" min="1" default="21" />
+
+ #LINE
+ 0.0 		        XyzLine_D(x_)
+ 0.0                    XyzLine_D(y_)
+ 0.0                    XyzLine_D(z_)
+ 1.1 	                RBoundSC             
+ 21.0                   RBoundIH            
+
+XyzLine_D are three coordinates of the starting point of the magnetic field line.
+Coordinates are expressed in Rsun, measured in SGI frame of reference.
+Default values are Zero, at these values and at any other satisfying the condition
+sum(XyzLine_D**2).lt.1 the XyzLine_D is set to coinside with the Earth position at the time the
+SP component is switched on.
+RBoundSC is the radius of sphere, inside of which the points of the line are considered as
+not belonging to the Solar Corona. The integration of the original magnetic field line is from
+XyzLine_D towards the Sun. On reaching the surface of the radius of RBoundSC the integration
+inside the SC component stops. Expressed in Rsun, default value is 1.1 [Rsun]
+RBoundIH is the radius of sphere, inside of which the points of the line are considered as
+not belonging to the Inner Heliosphere. The integration of the original magnetic field line is from
+XyzLine_D towards the Sun. On reaching the surface of the radius of RBoundIH the integration
+inside the IH component stops.  Expressed in Rsun, default value is 21.0 [Rsun]
+
+</command>
+
+</commandgroup>
+
+<commandgroup name="CONTROL">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!               CONTROL         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="DORUN">
+	<parameter name="DoRun" type="logical" default="T" />
+#DORUN
+T                       DoRun
+
+When DoRun is set to non-default value .false., the component skips all computations
+
+</command>
+
+<command name="SAVEMHDATA">
+	<parameter name="SaveMhData" type="logical" default="F" />
+
+#SAVEMHDATA
+F                       SaveMhData
+
+Default .false.. When .true. saves all the MHD data coming from the coupler(s). Setting
+DoRun=.false. (or .true.) and SaveMhData=.true. one can the perform (or repeat) complete 
+run for SP only, without running the other components.
+
+</command>
+
+<command name="DOREADMHDATA">
+	<parameter name="DoReadMhData" type="logical" default="F" />
+
+#DOREADMHDATA
+F                       DoReadMhData
+
+Default .false.. When .true. the SP component is expected to work as alone component or 
+at least it is assumed not to be coupled with MHD model. The MHD data are read from
+the flat files in this case, rather then from the couplers
+
+</command>
+
+</commandgroup>
+<commandgroup name="SHOCK WAVE SENSOR">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!   SHOCK WAVE SENSOR       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="RTRANSIENT">
+	<parameter name="rTransient" type="real" default="1" />
+
+#RTRANSIENT
+1.0                    rTransient
+
+Default=1.0, Expressed in Rsun. The code searches for the shock wave at the
+distances from the Solar centre larger than rTransient
+
+</command> 
+<command name="NSMOOTH">
+	<parameter name="nSmooth" type="integer" default="0" />
+
+#NSMOOTH
+0                      nSmooth
+
+Default=0. Usually the MHD data from the coupler are messed with some spurious occilation.
+If nSmooth>0, the SP code nSmooth times repeats some smoothing precedure for the
+data data obtained from the coupler.
+</command>
+</commandgroup>
+
+</commandList>
