@@ -49,11 +49,11 @@ subroutine MH_set_parameters(TypeAction)
   logical                     :: DoEcho
 
   ! Variables to remember for multiple calls
-  character (len=100) :: UpstreamFileName='???'
+  character (len=lStringLine) :: UpstreamFileName='???'
 
   ! Temporary variables
   integer :: nByteRealRead, nVarRead
-  character (len=100) :: NameEquationRead
+  character (len=lStringLine) :: NameEquationRead
 
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
@@ -65,6 +65,12 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for checking/reading #STARTTIME command
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
+
+  ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
+  character (len=lStringLine) :: StringAreaResolution, NameArea
+  integer                     :: nLevelArea
+  real, dimension(3)          :: XyzStart_D, XyzEnd_D
+  real                        :: Radius, Radius1, Radius2
 
   logical            :: UseSimple=.true.
 
@@ -712,6 +718,145 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSavePlotsAmr',save_plots_amr)
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
+
+     case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL")
+        nArea = nArea + 1
+        if(nArea > MaxArea)then
+           if(UseStrict)call stop_mpi(NameSub,&
+                ' ERROR: Too many grid areas were defined')
+           if(iProc == 0)then
+              write(*,*)NameSub," nArea = ",nArea
+              write(*,*)NameSub," WARNING: Too many grid areas were defined"
+              write(*,*)NameSub," ignoring command ",NameCommand
+           end if
+           nArea = MaxArea
+        end if
+
+        if(index(NameCommand,"RESOLUTION")>0)then
+           call read_var('StringAreaResolution',StringAreaResolution)
+           i = index(StringAreaResolution,'1/')
+           if(i>0)then
+              read(StringAreaResolution(i+2:lStringLine),*) &
+                   Area_I(nArea)%Resolution
+              Area_I(nArea)%Resolution = 1/Area_I(nArea)%Resolution
+           else
+              read(StringAreaResolution,*) Area_I(nArea)%Resolution
+           end if
+        else
+           call read_var('nLevelArea',nLevelArea)
+           Area_I(nArea) % Resolution = (XyzMax_D(x_)-XyzMin_D(x_)) &
+                / (proc_dims(x_) * nI * 2.0**nLevelArea)
+        end if
+        call read_var('NameArea',NameArea)
+        call lower_case(NameArea)
+
+        ! Set the default center to be the origin, the size to be 1
+        Area_I(nArea)%Center_D = 0.0
+        Area_I(nArea)%Size_D   = 1.0
+
+        select case(NameArea)
+        case("all")
+           ! No geometry info is needed for uniform refinement
+           Area_I(nArea)%Name     = "all"
+
+        case("box")
+           call read_var("xMinBox",XyzStart_D(1))
+           call read_var("yMinBox",XyzStart_D(2))
+           call read_var("zMinBox",XyzStart_D(3))
+           call read_var("xMaxBox",XyzEnd_D(1))
+           call read_var("yMaxBox",XyzEnd_D(2))
+           call read_var("zMaxBox",XyzEnd_D(3))
+           ! Convert to center and size information
+           Area_I(nArea)%Center_D = 0.5*   (XyzStart_D + XyzEnd_D)
+           Area_I(nArea)%Size_D   = 0.5*abs(XyzEnd_D - XyzStart_D)
+           Area_I(nArea)%Name     = "brick"
+
+        case("brick")
+           call read_var("xCenterBrick",Area_I(nArea)%Center_D(1))
+           call read_var("yCenterBrick",Area_I(nArea)%Center_D(2))
+           call read_var("zCenterBrick",Area_I(nArea)%Center_D(3))
+           call read_var("xSizeBrick"  ,Area_I(nArea)%Size_D(1))
+           call read_var("ySizeBrick"  ,Area_I(nArea)%Size_D(2))
+           call read_var("zSizeBrick"  ,Area_I(nArea)%Size_D(3))
+           Area_I(nArea)%Size_D   = 0.5*Area_I(nArea)%Size_D
+           Area_I(nArea)%Name     = "brick"
+
+        case("shell","shell0")
+           if(NameArea == "shell")then
+              call read_var("xCenterShell",  Area_I(nArea)%Center_D(1))
+              call read_var("yCenterShell",  Area_I(nArea)%Center_D(2))
+              call read_var("zCenterShell",  Area_I(nArea)%Center_D(3))
+           end if
+           call read_var("r1Shell", Radius1)
+           call read_var("r2Shell", Radius2)
+           ! Set outer size of the area
+           Radius = max(Radius1, Radius2)
+           Area_I(nArea)%Size_D = Radius
+           ! Normalize inner radius to the outer size
+           Area_I(nArea)%Radius1  = min(Radius1, Radius2) / Radius
+           Area_I(nArea)%Name     = "shell"
+
+        case("sphere","sphere0")
+           if(NameArea == "sphere")then
+              call read_var("xCenterSphere", Area_I(nArea)%Center_D(1))
+              call read_var("yCenterSphere", Area_I(nArea)%Center_D(2))
+              call read_var("zCenterSphere", Area_I(nArea)%Center_D(3))
+           end if
+           call read_var("rSphere", Radius)
+           Area_I(nArea)%Size_D   = Radius
+           Area_I(nArea)%Name     = "sphere"
+
+        case("cylinderx","cylinderx0")
+           call read_var("x1Cylinder", XyzStart_D(1))
+           if(NameArea == "cylinderx")then
+              call read_var("yCylinder",  Area_I(nArea)%Center_D(2))
+              call read_var("zCylinder",  Area_I(nArea)%Center_D(3))
+           end if
+           call read_var("x2Cylinder", XyzEnd_D(1))
+           call read_var("rCylinder" , Radius)
+           Area_I(nArea)%Center_D(1) = 0.5*   (XyzStart_D(1) + XyzEnd_D(1))
+           Area_I(nArea)%Size_D(1)   = 0.5*abs(XyzStart_D(1) - XyzEnd_D(1))
+           Area_I(nArea)%Size_D(2:3) = Radius
+           Area_I(nArea)%Name        = "cylinderx"
+
+        case("cylindery","cylindery0")
+           if(NameArea == "cylindery") &
+                call read_var("xCylinder",  Area_I(nArea)%Center_D(1))
+           call read_var("y1Cylinder", XyzStart_D(2))
+           if(NameArea == "cylindery") &
+                call read_var("zCylinder",  Area_I(nArea)%Center_D(3))
+           call read_var("y2Cylinder", XyzEnd_D(2))
+           call read_var("rCylinder" , Radius)
+           Area_I(nArea)%Center_D(2) = 0.5*   (XyzStart_D(2) + XyzEnd_D(2))
+           Area_I(nArea)%Size_D(2)   = 0.5*abs(XyzStart_D(2) - XyzEnd_D(2))
+           Area_I(nArea)%Size_D(1)   = Radius
+           Area_I(nArea)%Size_D(3)   = Radius
+           Area_I(nArea)%Name        = "cylindery"
+
+        case("cylinderz","cylinderz0")
+           if(NameArea == "cylinderz")then
+              call read_var("xCylinder",  Area_I(nArea)%Center_D(1))
+              call read_var("yCylinder",  Area_I(nArea)%Center_D(2))
+           end if
+           call read_var("z1Cylinder", XyzStart_D(3))
+           call read_var("z2Cylinder", XyzEnd_D(3))
+           call read_var("rCylinder" , Radius)
+           Area_I(nArea)%Center_D(3) = 0.5*   (XyzStart_D(3) + XyzEnd_D(3))
+           Area_I(nArea)%Size_D(3)   = 0.5*abs(XyzStart_D(3) - XyzEnd_D(3))
+           Area_I(nArea)%Size_D(1:2) = Radius
+           Area_I(nArea)%Name        = "cylinderz"
+
+        case default
+           if(UseStrict) call stop_mpi(NameSub//&
+                   ' ERROR: unknown NameArea='//trim(Area_I(nArea)%Name))
+
+           if(iProc == 0) &
+                write(*,*) NameSub//' WARNING: unknown NameArea=' // &
+                trim(Area_I(nArea)%Name) // ', ignoring command ' // &
+                trim(NameCommand)
+
+           nArea = nArea - 1
+        end select
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
