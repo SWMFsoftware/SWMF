@@ -465,9 +465,11 @@ c??   read(*,*)  jnext
             DDens0 = DDens
             DDens = dens(i)
 
-C           Find maximum of -(r/rho)*(drho/dr) which is 
-C           constant for rho proportional to 1/r**2
-C           and it should have a large peak at the shock
+C           Find maximum of -(r/rho)*(drho/ds) which is proportional
+C           to -1<dr/ds<1 for rho proportional to 1/r**alpha, alpha>=2. 
+C           The formula should have a large peak where the field line
+C           crosses the shock and drho/ds is a large negative number
+C           Note that the field line starts on the Sun and ends at the Earth
             Diff = (DDens0-DDens)/(DDens0+DDens)/Dist2 
      &            * sqrt(rx(i)**2+ry(i)**2+rz(i)**2)
             
