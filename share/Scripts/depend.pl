@@ -197,19 +197,20 @@ OBJECT:
 	if(/^\s*include\s+[\"\']?([^\'\"\s]+)/i){
 	    $include=$1;
 	    $includeorig=$include;
-	    if(! -e $include){
+	    if(not -e $include){
 		foreach $dir (@search){
 		    if( -e "$dir/$include"){
 			if($env{$dir}){
 			    $include="$env{$dir}/$include";
+			}else{
+			    $include="$dir/$include";
 			}
-			else{$include="$dir/$include"};
 			last;
 		    }
 		}
 	    }
 	    $include{$base}.=" $include" 
-		unless $include{$base}=~/[ \/]$includeorig/;
+		unless $include{$base}=~/ $include\b/;
 	}
     }
 }
