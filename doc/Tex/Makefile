@@ -14,7 +14,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo ""
-	@echo "PDF          - produces SWMF.pdf"
+	@echo "PDF          - produces SWMF.pdf and TESTING.pdf"
 	@#^CMP IF DOCHTML BEGIN
 	@echo ""
 	@echo "HTML         - produces online manuals in ../HTML directory"
@@ -181,12 +181,12 @@ ${SWMFREF} : ${SCRIPTDIR}/protex.pl
 SWMFREF.tex: ${SWMFREF}
 	cat ${SWMFREF} > SWMFREF.tex
 
-GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #	^CMP IF GM
-IMXML = ${DIR}/IM/RCM/PARAM.xmltex #		^CMP IF IM
-RBXML = ${DIR}/RB/RiceV5/PARAM.xmltex #		^CMP IF RB
-IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #	^CMP IF IE
-SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           ^CMP IF SP
-UAXML = ${DIR}/UA/GITM/PARAM.xmltex #		^CMP IF UA
+GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #			  ^CMP IF GM
+IMXML = ${DIR}/IM/RCM/PARAM.xmltex #				  ^CMP IF IM
+RBXML = ${DIR}/RB/RiceV5/PARAM.xmltex #				  ^CMP IF RB
+IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #			  ^CMP IF IE
+SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           		  ^CMP IF SP
+UAXML = ${DIR}/UA/GITM/PARAM.xmltex ${DIR}/UA/GITM2/PARAM.xmltex #^CMP IF UA
 
 SWMFXML = ${DIR}/Param/PARAM.xmltex \
 	${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML} ${SPXML}
@@ -208,7 +208,7 @@ SWMF.dvi: \
 	SWMF_new_comp.tex \
 	SWMFREF.tex
 
-PDF: SWMF.pdf
+PDF: SWMF.pdf TESTING.pdf
 
 #^CMP IF DOCHTML BEGIN
 SWMF.html: SWMFREF.tex SWMFXML.tex
@@ -222,7 +222,7 @@ clean:
 	@rm -f ${SWMFREF} ${SWMFXML}
 
 cleanpdf: clean
-	cd ..;     rm -f  SWMF.pdf
+	cd ..;     rm -f  SWMF.pdf TESTING.pdf
 
 #^CMP IF DOCHTML BEGIN
 cleanhtml: clean
