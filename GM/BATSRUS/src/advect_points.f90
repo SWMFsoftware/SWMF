@@ -57,6 +57,7 @@ end subroutine advect_points
 !==============================================================================
 subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
+  use ModMain,    ONLY: nBlock
   use ModAdvance, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
   use ModProcMH,  ONLY: nProc, iComm
   use ModMpi
@@ -89,7 +90,7 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
   ! Get weight, density and momentum on local PE for all points
   do iPoint = 1, nPoint
-     call get_point_data(WeightOldState, Xyz_DI(:,iPoint), &
+     call get_point_data(WeightOldState, Xyz_DI(:,iPoint), 1, nBlock, &
           Rho_, RhoUz_, State_VI(:, iPoint))
   end do
 
@@ -136,8 +137,8 @@ end subroutine advect_points1
 
 !==============================================================================
 
-subroutine get_point_data(WeightOldState, XyzIn_D, iVarMin, iVarMax, &
-     StateCurrent_V)
+subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
+     iVarMin, iVarMax, StateCurrent_V)
 
   ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and 
   ! the current (if iVarMax=nVar+3) for input position 
@@ -165,6 +166,9 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iVarMin, iVarMax, &
 
   ! Input position is in generalized coordinates
   real, intent(in)  :: XyzIn_D(3)
+
+  ! Block index range (typically 1:nBlock or iBlock:iBlock)
+  integer, intent(in) :: iBlockMin, iBlockMax
 
   ! Do we need to calculate currents
   integer, intent(in) :: iVarMin, iVarMax
@@ -225,7 +229,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iVarMin, iVarMax, &
   StateCurrent_V = cZero
 
   ! Loop through all blocks
-  BLOCK: do iBlock = 1, nBlock
+  BLOCK: do iBlock = iBlockMin, iBlockMax
      if(unusedBLK(iBlock)) CYCLE
 
      ! Put cell size of current block into an array
