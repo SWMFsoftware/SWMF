@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include "data.h"
+#include "parser.h"
 
 #if CompilationTarget==DSMCTARGET
   #include "dsmc.h"
@@ -226,6 +227,34 @@ void parser_readGeneralBlock(FILE* fin,long int& line_in) {
   GeneralBlock();
   line_in=line;
 }
+
+void parser_readGeneralBlock(char* InputFile) {
+  CiFileOperations ifile;
+  FILE* fd;
+  char str1[100],str[100];
+
+  printf("InputFile: %s\n",InputFile);
+
+  if (access(InputFile,R_OK)!=0) {
+    printf("Cannot find the input file:%s\n",InputFile);
+    exit(0);
+  }
+
+  fd=ifile.openfile(InputFile);
+  while (!feof(fd)) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("#GENERAL",str1)==0) {
+      parser_readGeneralBlock(fd,ifile.CurrentLine());
+      return;
+    }
+  }
+
+  printf("Error: void parser_readGeneralBlock(char* InputFile), cannot find #GENERAL block \n");
+  exit(0);
+}
+
 
 
 

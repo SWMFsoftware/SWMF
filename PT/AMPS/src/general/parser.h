@@ -2,13 +2,14 @@
 //$Id$
 //===================================================
 
-#ifndef PARSER
-#define PARSER
+#ifndef _PARSER_ 
+#define _PARSER_ 
 
 #include "ifileopr.h"
 
 void parser(char*);
 void parser_readGeneralBlock(FILE*,long int&);
+void parser_readGeneralBlock(char*);
 
 template<class T>
 void parser(char* BlockName,char* InputFile,T& v) {
@@ -36,10 +37,8 @@ void parser(char* BlockName,char* InputFile,T& v) {
     }
   }
 
-  printf("Error: parser(char* BlockName,char* InputFile,T& v), cannot fine block \"%s\"\n",BlockName);
+  printf("Error: parser(char* BlockName,char* InputFile,T& v), cannot find block \"%s\"\n",BlockName);
   exit(0);
 }
-
-
 
 #endif
