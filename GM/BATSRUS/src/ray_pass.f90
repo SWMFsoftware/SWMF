@@ -73,31 +73,38 @@ subroutine prolong_ray_after_pass(iface,iBLK)
   !-------------------------------------------------------------------------
 
   ! Extract qrayface and qrayend_ind for the appropriate face
+  !NOTE: qrayend_ind assignment split to two lines to avoid reshaping compiler bug!
   select case(iface)
   case(1)
      nFaceJ=nJ+1; nFaceK=nK+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1,1:nJ+1,1:nK+1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1,1:nJ+1,1:nK+1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1,1:nJ+1,1:nK+1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1,1:nJ+1,1:nK+1,iBLK)
   case(2)
      nFaceJ=nJ+1; nFaceK=nK+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,nI+1,1:nJ+1,1:nK+1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,nI+1,1:nJ+1,1:nK+1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,nI+1,1:nJ+1,1:nK+1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,nI+1,1:nJ+1,1:nK+1,iBLK)
   case(3)
      nFaceJ=nI+1; nFaceK=nK+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1,1:nK+1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1,1:nK+1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1,1:nK+1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1,1:nK+1,iBLK)
   case(4)
      nFaceJ=nI+1; nFaceK=nK+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,nJ+1,1:nK+1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,nJ+1,1:nK+1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,nJ+1,1:nK+1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,nJ+1,1:nK+1,iBLK)
   case(5)
      nFaceJ=nI+1; nFaceK=nJ+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1:nJ+1,1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1:nJ+1,1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1:nJ+1,1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1:nJ+1,1,iBLK)
   case(6)
      nFaceJ=nI+1; nFaceK=nJ+1
      qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1:nJ+1,nK+1,iBLK)
-     qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1:nJ+1,nK+1,iBLK)
+     qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1:nJ+1,nK+1,iBLK)
+     qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1:nJ+1,nK+1,iBLK)
   case default
      call stop_mpi('Impossible value for iface in prolong_ray')
   end select
@@ -787,31 +794,38 @@ contains
     if(oktest)write(*,*)'Prolong_ray, me, iBLK, iface=',iProc, iBLK, iface
 
     ! Extract qrayface and qrayend_ind for the appropriate face
+    !NOTE: qrayend_ind assignment split to two lines to avoid reshaping compiler bug!
     select case(iface)
     case(1)
        nFaceJ=nJ+1; nFaceK=nK+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1,1:nJ+1,1:nK+1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1,1:nJ+1,1:nK+1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1,1:nJ+1,1:nK+1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1,1:nJ+1,1:nK+1,iBLK)
     case(2)
        nFaceJ=nJ+1; nFaceK=nK+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,nI+1,1:nJ+1,1:nK+1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,nI+1,1:nJ+1,1:nK+1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,nI+1,1:nJ+1,1:nK+1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,nI+1,1:nJ+1,1:nK+1,iBLK)
     case(3)
        nFaceJ=nI+1; nFaceK=nK+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1,1:nK+1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1,1:nK+1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1,1:nK+1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1,1:nK+1,iBLK)
     case(4)
        nFaceJ=nI+1; nFaceK=nK+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,nJ+1,1:nK+1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,nJ+1,1:nK+1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,nJ+1,1:nK+1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,nJ+1,1:nK+1,iBLK)
     case(5)
        nFaceJ=nI+1; nFaceK=nJ+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1:nJ+1,1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1:nJ+1,1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1:nJ+1,1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1:nJ+1,1,iBLK)
     case(6)
        nFaceJ=nI+1; nFaceK=nJ+1
        qrayface( :,:,1:nFaceJ,1:nFaceK)=rayface(   :,:,1:nI+1,1:nJ+1,nK+1,iBLK)
-       qrayend_ind(:,1:nFaceJ,1:nFaceK)=rayend_ind(1,:,1:nI+1,1:nJ+1,nK+1,iBLK)
+       qrayend_ind(1,1:nFaceJ,1:nFaceK)=rayend_ind(1,1,1:nI+1,1:nJ+1,nK+1,iBLK)
+       qrayend_ind(2,1:nFaceJ,1:nFaceK)=rayend_ind(1,2,1:nI+1,1:nJ+1,nK+1,iBLK)
     case default
        call stop_mpi('Impossible value for iface in prolong_ray')
     end select
