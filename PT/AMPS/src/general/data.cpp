@@ -35,3 +35,7 @@ bool ExternalSpeciesUsingFlag=false;
   Cmol mol;
 #endif
 
+#if CompilationTarget==EULERTARGET
+  #include "euler.h"
+  CEuler euler;
+#endif

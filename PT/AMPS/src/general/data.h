@@ -5,6 +5,7 @@
 
 #define DSMCTARGET 0
 #define PICTARGET  1
+#define EULERTARGET 2
 
 extern int DIM;
 extern double tau,tmax,GeneralTime;
@@ -41,6 +42,12 @@ extern bool ExternalSpeciesUsingFlag;
   extern Cpic pic;
   extern Cmol mol;
 #endif
+
+#if CompilationTarget==EULERTARGET
+  #include "euler.h"
+
+  extern CEuler euler;
+#endif 
 
 
 
