@@ -338,21 +338,22 @@ extremely useful.  A typical usage is to cut and paste commands out of the
 PARAM.XML file into the PARAM.in file for a run.
 
 \subsubsection{Have the working directory in your path}
+
 In order to run executable files in the UNIX environment you must have
 the current working directory either your path or in the filename you
-want to execute.  In UNIX the current working directory is represented
+want to execute. In UNIX the current working directory is represented
 by the period (.).  For example
 \begin{verbatim} 
-./SWMF.exe
+./SetSWMF.pl -s
 \end{verbatim}
-will execute the SWMF.exe program if it is in your current directory.  If you
-add the `.' to your path using
+will execute the SetSWMF.pl script if it is in your current directory.  
+If you add the `.' to your path using for example
 \begin{verbatim}
-set path = (~/bin /usr/local/mpi/bin /usr/local/bin ${path} .)
+set path = (${path} .)
 \end{verbatim}
 then you can simply type
 \begin{verbatim} 
-SWMF.exe
+SetSWMF.pl -s
 \end{verbatim}
 
 \section{Installing the Code}
