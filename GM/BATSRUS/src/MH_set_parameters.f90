@@ -1612,7 +1612,7 @@ contains
     PrecondType   = 'MBILU'
     GustafssonPar = 0.5
 
-    KrylovType      = 'gmres'
+    KrylovType      = 'gmres' !do not rename the gmres string
     KrylovInitType  = 'nul'
     KrylovErrorMax  = 0.001
     KrylovMatvecMax = 100
