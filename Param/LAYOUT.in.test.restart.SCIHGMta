@@ -1,9 +1,0 @@
-This layout provides half of the PE-s to SC and IH,
-the other half to GM and IE. IE uses 2 PE-s only.
-
-#COMPONENTMAP
-SC    0 999    2
-IH    0 999    2
-IE    1   3    2
-GM    5 999    2
-#END

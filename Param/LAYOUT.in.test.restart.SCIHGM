@@ -1,7 +1,0 @@
-!Interacting SC-IH-GM-IE components
-#COMPONENTMAP
-SC    0  29    1
-IH    0  29    1
-IE   30  31    1
-GM   32 999    1 
-#END
