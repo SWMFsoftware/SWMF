@@ -106,13 +106,22 @@ the current set of parameters. The parameters for the next session
 start after the #RUN command. For the last session there is no
 need to use the #RUN command, since the #END command or simply
 the end of the PARAM.in file makes CON execute the last session.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SESSION'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeSession'},'content' => [{'attrib' => {'value' => 'old','default' => 'T','name' => 'old serial'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'parallel','name' => 'parallel'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'general','name' => 'new general'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SESSION'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeSession'},'content' => [{'attrib' => {'value' => 'general','default' => 'T','name' => 'general concurrent'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'old','name' => 'old serial'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #SESSION
 general			TypeSession
 
-The TypeSession string can be set to \'old\', \'parallel\' or \'general\'. 
+The TypeSession string can be set to \'general\' or \'old\'. 
 The value of TypeSession determines how the time looping is handled by CON.
+
+The \'general\' session model allows concurrent execution of the components.
+The components are synchronized only when conditions for the actions of 
+coupling, saving restart files, or stopping execution are met. 
+This is possible because it is known in advance by each component when 
+these actions will occur. In time accurate mode the components are 
+required to make a time step which does not exceed the next synchronization
+time. In steady state mode there is no limit on the time step, and 
+components can be called at different frequencies.
 
 If TypeSession=\'old\', then CON mimics the behaviour of the BATSRUS 
 time loop control: 
@@ -123,20 +132,7 @@ a serial manner, i.e. they wait for the coupling, and GM waits until
 they finish their execution. This time loop control is mainly preserved
 for backwards compatibility.
 
-The \'parallel\' session requires that all the processing elements (PE-s)
-are used by exactly one component. The components are executed in parallel,
-and coupled only when conditions for the actions of coupling, saving restart
-files, or stopping execution are met. This is possible because it is known
-in advance by each component when these actions will occur.
-The components are required to advance to the simulation time of the next
-action. Currently the \'parallel\' session model works in the time accurate
-mode only. Generalization to the steady-state mode will be done soon.
-
-Currently the default is the \'old\' mode, but in the future it
-will probably be replaced with the \'general\' mode.
-The \'parallel\' mode is mainly used as a simpler version of
-the \'general\' mode for development purposes.
-mode only. Generalization to the steady-state mode will be done soon.
+The default is the \'general\' mode.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'TIMEACCURATE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #TIMEACCURATE
@@ -395,8 +391,8 @@ number is not checked.
 	','type' => 't'}],'type' => 'e','name' => 'rule'},{'attrib' => {'value' => '$UseComp','type' => 'logical','name' => '_UsedComp{$NameComp}'},'content' => [],'type' => 'e','name' => 'set'},{'content' => '
 
 #COMPONENT
-IE
-F
+IE			NameComp
+F			UseComp
 
 The NameComp variable contains the two-character component ID, 
 while the UseComp variable defines if the component should be 
@@ -410,8 +406,8 @@ file are used.
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'CYCLE'},'content' => [{'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'content' => [{'attrib' => {'default' => 'T','name' => 'IH'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'GM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '1','type' => 'integer','name' => 'DnRun'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #CYCLE
-IH		NameComp
-10		DnRun
+IH			NameComp
+10			DnRun
 
 The DnRun variable defines the frequency of calling component NameComp
 during a steady state run. In the example IH will be called for 
@@ -576,6 +572,23 @@ This way IE can solve the potential problem while GM advances by 3 seconds.
 That can improve the parallelization and efficiency.
 
 The default is no shifting.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'multiple' => 'T','name' => 'COUPLETIME'},'content' => [{'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'content' => [{'attrib' => {'default' => 'T','name' => 'IH'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'GM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IM'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'IE'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoCoupleOnTime'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#COUPLETIME
+IE			NameComp
+F			DoCoupleOnTime
+
+The NameComp variable contains the two-character component ID, 
+while the DoCoupleOnTime parameter defines if the time step of the
+component should be limited such that it does not exceed the next 
+coupling time. If DoCoupleOnTime is true, the component will limit the
+time step for couplings, if it is false, the time step is only limited
+by the final time, the time of saving restarts and the time of checking
+stop conditions. This command has effect only in time accurate mode when
+the general session model is used.
+
+The default is that all components limit their time steps to match
+the coupling time.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'RESTART CONTROL'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! RESTART CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
