@@ -2,7 +2,10 @@
 #BOP
 #!ROUTINE: StopToConStop.pl
 #!DESCRIPTION:
-# Replace STOP statements with call CON_STOP(string).
+# This script helps eliminating stop statements from the 
+# F90 and F77 source code. Avoiding STOP statements is a 
+# requirement in SWMF.
+# It replaces STOP statements with call CON\_stop(string) in F90 and F77 codes.
 # The string will start with the 'ERROR in FILENAME' message.
 # In case the script is called from the main SWMF directory,
 # the filename will contain the path as well. This is the
@@ -18,9 +21,8 @@
 #\end{verbatim}
 #
 # Limitations: 
-#     if(...) stop ... is not recognized yet
-#     continuation lines are not handled yet
-#\end{verbatim}
+#     "if(...) stop", "command; stop" and 
+#     stop statements with continuation lines are not recognized.
 #
 #!REVISION HISTORY:
 # 08/18/2004: G. Toth - initial version
