@@ -1046,7 +1046,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#NEWRESTART")
         if(.not.is_first_session())CYCLE
         restart=.true.
-        if (iProc==0) call check_dir(NameRestartInDir)
         restart_reals=.true.
         restart_ghost=.false.
         call read_var('restart_Bface',restart_Bface) !^CFG IF CONSTRAINB
