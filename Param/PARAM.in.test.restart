@@ -1,6 +1,9 @@
 #ECHO
 T
 
+#SESSION
+old
+
 #DESCRIPTION
 Short coupling test for IH-GM-IM-IE-UA. Restart. Needs user_routines.f90.heliosphere.
 
