@@ -41,6 +41,15 @@ ${MY_LIB}: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 
+
+OBJ_RAY_TEST = \
+	test_ray_trace.o \
+	ModMpi.o \
+	CON_ray_trace.o
+
+test_ray_trace.exe: ${OBJ_RAY_TEST}
+	${LINK.f90} ${Lflag1} -o test_ray_trace.exe ${OBJ_RAY_TEST}
+
 install: 
 
 distclean: clean
