@@ -7,15 +7,7 @@ SHELL=/bin/sh
 #	Space Weather Modeling Framework (SWMF) main Makefile
 #
 
-VERSION = 0.1
-BATSVERSION = 7.53
-
-#
-# Source directories
-#
-#MF = Makefile.${OS}
-MF = 
-
+COMPILE.f77	= /usr/bin/f90
 COMPILE.f90     = /usr/bin/f90
 LINK.f90	= /usr/bin/f90
 AR = ar -rs
@@ -24,20 +16,21 @@ AR = ar -rs
 PRECISION     = -real_size 64
 #PRECISION     = -real_size 32		
 
-ARCH	= ev6 
-TUNE	= -tune ${ARCH} 
-BITFLAG = -arch ${ARCH}
+LOCAL_LIBS = /usr/local/lib
+MPILIB = -L$(LOCAL_LIBS) -lmpi -lelan	#For 64 bit compilation
+#MPILIB = -L${LIBDIR} -lNOMPI
+
+# This is the search path for used modules
+# SEARCH_EXTRA should be given in the individual Makefiles
 
 SEARCH = -I${MODDIR} ${SEARCH_EXTRA}
-
-LOCAL_LIBS = /usr/local/lib
-
-MPILIB = -L$(LOCAL_LIBS) -lmpi -lelan	#For 64 bit compilation
-#MPILIB = -L. -lNOMPI
 
 #DEBUG = -g -C
 DEBUG =
 
+ARCH	= ev6 
+TUNE	= -tune ${ARCH} 
+BITFLAG = -arch ${ARCH}
 Cflag = ${SEARCH} -c -align dcommons ${PRECISION} ${TUNE} ${BITFLAG} ${DEBUG}
 
 Cflag0	= ${Cflag} -O0
@@ -63,7 +56,7 @@ BLAS  = lapack.o blas.o
 #
 
 .SUFFIXES:
-.SUFFIXES:	.f90 .F90 .f .for .ftn .o
+.SUFFIXES: .f90 .F90 .f .for .ftn .o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag2} $<
