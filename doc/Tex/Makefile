@@ -194,6 +194,8 @@ SWMF.dvi: \
 	HEADER.tex \
 	SWMF_introduction.tex \
 	SWMF_configuration.tex \
+	SWMF_param.tex \
+	SWMF_control.tex \
 	SWMFXML.tex \
 	SWMF_couple.tex \
 	SWMF_new_comp.tex \
