@@ -39,6 +39,7 @@ my %Version;               # Hash table to get version for a component
 my $Install;
 my $ReInstall;
 my $Show;
+my $ListVersions;
 my $NewPrecision;
 my $DryRun;
 my @NewVersion;
@@ -57,6 +58,7 @@ foreach (@switch){
     if(/^-h(elp)?$/i)         {&print_help};
     if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
     if(/^-i(nstall)?$/)       {$Install=1;$ReInstall=/-install/;next};
+    if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
     if(/^-s(how)?$/)          {$Show=1;                         next};
     if(/^-q(uiet)?$/)         {$Quiet=1;                        next};
     if(/^-D(ebug)?$/)         {$Debug=1;                        next};
@@ -84,6 +86,11 @@ if(not $Installed){
     exit 0;
 }
 
+if($ListVersions){
+    &list_versions;
+    exit 0;
+}
+
 &set_precision;
 
 &set_versions if @NewVersion;
@@ -98,6 +105,40 @@ if($Show){
 exit 0;
 ##############################################################################
 
+sub list_versions{
+
+    # Read information from $MakefileComp
+    open(MAKEFILE, $MakefileComp)
+	or die "$ERROR could not open $MakefileComp\n";
+
+    my %Versions;
+    while(<MAKEFILE>){
+	if(/^(\#)?\s*([A-Z][A-Z])_VERSION\s*=\s*(\w+)/){
+	    # Store version in both the array and the hash table
+	    if($1 and $Versions{$2}){
+		# Put the selected version to the front
+		$Versions{$2} ="$3,$Versions{$2}";
+	    }else{
+		# Append the version
+		$Versions{$2}.=$3.",";
+	    }
+	}
+    }
+    close(MAKEFILE);
+
+    my $Comp;
+    print "List of component versions ".
+	"(starting with the currently selected):\n\n";
+    foreach $Comp (sort keys %Versions){
+	my $Versions = $Versions{$Comp};
+	$Versions =~ s/,$//; $Versions =~ s/,/,\t$Comp\//g;
+	print "$Comp/$Versions\n";
+    }
+    print "\n";
+
+}
+
+##############################################################################
 sub get_settings{
 
     $Installed = -e $MakefileConf;
@@ -432,7 +473,7 @@ This script edits the appropriate Makefile-s, copies files and executes
 shell commands. The script can also show the current settings.
 This script will also be used by the GUI to interact with SWMF.
 
-Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-s]
+Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-l] [-s]
                   [-i[nstall] [-c=COMPILER] [-m=MPIVERSION]]
                   [-p=PRECISION] 
                   [-v=VERSION[,VERSION2,...] 
@@ -455,8 +496,11 @@ Options:
 -h  -help      show this help message
 
 -i  -install   install SWMF (create Makefile.conf, Makefile.def, make install)
-               The short form returns with a warning if Makefile.conf already exists.
+               The short form returns with a warning if Makefile.conf 
+               already exists.
                The long form -install redoes the installation in any case.
+
+-l             List available component versions
 
 -m=MPIVERSION  copy mpif90_OSMPIVERSION into mpif90.h during installation
 
