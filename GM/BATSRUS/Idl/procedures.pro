@@ -812,7 +812,6 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
       for i=0,nxreg(1)-1 do xreg(*,i,0)=dx*indgen(nxreg(0))+xreglimits(0)
       for i=0,nxreg(0)-1 do xreg(i,*,1)=dy*indgen(nxreg(1))+xreglimits(1)
 
-      wreg=dblarr(nxreg(0),nxreg(1),nw)
    endif
    if not keyword_set(wregpad) then begin
       wregpad=dblarr(nw)
@@ -823,6 +822,8 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
          else                   wregpad(iw)=wmin-0.1*(wmax-wmin)
       endfor
    endif
+
+   wreg=dblarr(nxreg(0),nxreg(1),nw)
 
    case 1 of
 
