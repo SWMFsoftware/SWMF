@@ -43,13 +43,16 @@ SWMFREF = \
 	${GMDIR}/TestCompare.protex
 
 .SUFFIXES:
-.SUFFIXES: .f90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
+.SUFFIXES: .f90 .F90 .pl .protex .tex .dvi .ps .pdf .html .XML .xmltex
 
 .XML.xmltex:
 	${SCRIPTDIR}/XmlToTex.pl $*.XML > $*.xmltex
 
 .f90.protex:
 	${SCRIPTDIR}/protex -b -n -f $*.f90 > $*.protex
+
+.F90.protex:
+	${SCRIPTDIR}/protex -b -n -f $*.F90 > $*.protex
 
 .pl.protex:
 	${SCRIPTDIR}/protex -b -n -f -S $*.pl > $*.protex
@@ -119,7 +122,9 @@ SWMFREF.tex: ${SWMFREF}
 
 SWMFXML = \
 	${DIR}/Param/PARAM.xmltex \
-	${DIR}/GM/BATSRUS/PARAM.xmltex
+	${DIR}/GM/BATSRUS/PARAM.xmltex \
+	${DIR}/IM/RCM/PARAM.xmltex \
+	${DIR}/IE/Ridley_serial/PARAM.xmltex
 
 SWMF_xml.tex: ${SWMFXML}
 	cat ${SWMFXML} > SWMF_xml.tex
