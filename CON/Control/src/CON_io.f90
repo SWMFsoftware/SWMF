@@ -1,10 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Input and Output Controlled by CON}
 !
 !MODULE: CON_io - Input and output methods for CON
 !

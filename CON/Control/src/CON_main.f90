@@ -5,7 +5,7 @@
 !============================================================
 !BOP 
 !
-!QUOTE: \newpage \section{Main executable}
+!QUOTE: \newpage \section{Main Executable and Control}
 !
 !MODULE: CON_main - the main executable
 !

@@ -1,5 +1,10 @@
 !^CMP COPYRIGHT UM
+!
+!QUOTE: \clearpage
+!
 !BOP -------------------------------------------------------------------
+!
+!QUOTE: \section{Interface for Component Wrappers}
 !
 !MODULE: CON_wrapper - Wrapper for component specific subroutines
 !

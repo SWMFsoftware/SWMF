@@ -1,10 +1,6 @@
 !^CFG COPYRIGHT UM
 !
-!QUOTE: \clearpage
-!
 !BOP
-!
-!QUOTE: \section{Shared Methods for Components and CON}
 !
 !MODULE: CON_physics - provides methods for physics accessible by components
 !INTERFACE:

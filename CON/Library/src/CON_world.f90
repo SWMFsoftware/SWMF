@@ -2,11 +2,8 @@
 !               Space Weather Modeling Framework (SWMF)                !
 !    Center for Space Environment Modeling, The University of Michigan !
 !-----------------------------------------------------------------------
-!QUOTE: \clearpage
 !
 !BOP -------------------------------------------------------------------------
-!
-!QUOTE: \section{Component Registration and Layout}
 !
 !MODULE: CON_world - component registration and handling component info
 ! 

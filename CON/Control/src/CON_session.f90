@@ -1,10 +1,6 @@
 !^CMP COPYRIGHT UM
 !
-!QUOTE:\clearpage
-!
 !BOP
-!
-!QUOTE:\section{Execution and Coupling of Components}
 !
 !MODULE: CON_session - run the framework with a set of parameters
 !INTERFACE:
