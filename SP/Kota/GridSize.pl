@@ -43,8 +43,7 @@ if($IsNewGrid){
 
 &show_grid_size if $ShowHuman;
 
-print "GridSize.pl -g=$nRMax, $nMuMax, $nPMax",
-    ,"\n" if $ShowCompact;
+print "GridSize.pl -g=$nRMax,$nMuMax,$nPMax\n" if $ShowCompact;
 
 exit 0;
 
@@ -99,7 +98,7 @@ sub set_grid_size{
 
 sub show_grid_size{
 
-    print "Number of cells in a block: nRMax=$nRMax, nMuMax=$nMuMax, nPMax=$nPMax\n";
+    print "nRMax=$nRMax, nMuMax=$nMuMax, nPMax=$nPMax\n";
 }
 
 #############################################################################
@@ -115,19 +114,27 @@ Purpose:
 
 Usage:
 
-    GridSize.pl [-h]
-                [-g=nRMax,nMuMax,nPMax] [-s]
+  GridSize.pl [-h] [-g=nR,nMu,nP] [-s]
 
   -h              print help message and stop
 
-  -g=nRMax,nMuMax,nPMax...  set the block size and the number of blocks together
+  -g=nR,nMu,nP    set the grid size to nR x nMu x nP
 
   -s              show current settings in human readable form
 
 Examples:
 
-GridSize.pl -g=1500,60,100
+  Show the current gridsize in compact form:
 
+GridSize.pl
+
+  Show the current grid size in human readable form:
+
+GridSize.pl -s
+
+  Set the grid size to 1500x60x100:
+
+GridSize.pl -g=1500,60,100
 \n\n";
     exit 0;
 }
