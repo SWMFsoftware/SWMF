@@ -1,87 +1,8 @@
-Known issues with the August 23, 2004 release of the University of Michigan
+Known issues with the release of the University of Michigan
 Space Weather Modeling Framework (SWMF) and it constituent components.
-Fixes are also indicated as "FIX" as they become known.
 
 SWMF:
-        1. The SWMF and its components have not been fully tested on
-           Linux platforms using the the PGF90 compiler.
-
-        UPDATE: The 8 component test has been successfully completed on 
-           'morpheus.engin.umich.edu' using 'pgf90 3.3-2'. 
-
-           The configuration was optimized for the limited memory:
-
-                GM/BATSRUS                   grid: 8,8,8,250,80
-                IE/Ridley_serial
-                IH/BATSRUS                   grid: 8,8,8,330,1
-                IM/RCM
-                RB/RiceV5
-                SC/BATSRUS                   grid: 4,4,4,1500
-                SP/Kota                      grid: 1000,10,150
-                UA/GITM                      grid: 9,9,25,2,2
-
-           Dynamic memory allocation was used in GM, IH and SC using:
-
-              cd GM/BATSRUS/src
-              make DYNAMIC
-              cd ../../../IH/BATSRUS/src
-              make DYNAMIC
-              cd ../../../SC/BATSRUS/src
-              make DYNAMIC
-
-           The SWMF was run on 32 PE-s with the following LAYOUT.in:
-
-                #COMPONENTMAP
-                UA        0      31     1
-                IE        0       1     1
-                IM        2       2     1
-                RB        3       3     1
-                GM        0     999     1
-                IH        0     999     1
-                SC        0     999     1
-                SP        4       4     1
-                #END
- 
-           Prior to this successful run there were several irreproducible 
-           problems, including:
-
-           1.a: GM-IM coupling fails with the accurate field line integration.
-           1.b: GM-IE coupling hangs if IE is running on 2 PE-s
-           1.c: SC writes NaN-s into the logfile.
-           1.d: code fails with PBS error on random nodes
-
-	2. The timing for the 'SWMF' is incorrect on some platforms.
-	   FIX (Aug25,2004): Stop and restart timing for 'SWMF' after setup.
-	   MODIFIED:         CON/Control/src/CON_main.f90
-
-        3. For some layouts the TIMING utility cannot handle all timings.
-           FIX (Aug27,2004): Increased MaxTiming from 100 to 1000
-           MODIFIED:         util/TIMING/src/ModTiming.f90
-
-        4. Timing percentage is negative or **** on morpheus.engin.umich.edu
-           FIX (Aug27,2004): Set 'parent timing' to be at least 'child timing'
-           MODIFIED:         util/TIMING/src/timing.f90
-
-        5. SC-IH-SP coupled run hangs if SC and IH are not on the same set
-           of processors. This was observed on the SGI.
-	   FIX (Sep02,2004): broadcast two point positions when needed
-           MODIFIED:         CON/Interface/src/CON_couple_mh_sp.f90
-
-        6. GM-IE coupling results (especially the ionosphere potentail)
-           somewhat depend on the number of PE-s on the SGI.
-           (but not on the Altix). The problem is actually coming from
-           the GM-IM coupling, the IM received incorrect field line integrals.
-           FIX (Oct27,2004): check inner BC crossing at the end of the loop
-           MODIFIED:         GM/BATSRUS/src/ray_trace_new.f90
-
-        7. Certain layout, time step and coupling frequency combination
-           can cause a dead-lock (hanging) due to a simplified 
-           implementation of the session control algorithm.
-           This problem has never showed up in actual runs, it was 
-           discovered by a careful analysis of the algorithm.
-           FIX (Sep08,2004): advance component(s) with the smallest 
-                             physical time only.
-           MODIFIED:         CON/Control/src/CON_session.f90
+	None
 
 RB:
         1. The Radiation Belt (RB) module included with this release
@@ -105,11 +26,7 @@ UA:
            couplings with the IE module.  Results from UA should be
            ignored during this period.
 
-        2. The UA does not currently run on the Compaq platform (halem).
-           FIX (Aug 25,2004): use -fpe1 compiler flag.
-	   MODIFIED: share/build/Makefile.OSF1
-
-        3. The UA module GITM is sensitive to the number of processors
+        2. The UA module GITM is sensitive to the number of processors
            on which it is running.   For some (unpredictable) 
            combinations of numbers of blocks and numbers of processors 
            it does not seem to work.
@@ -122,10 +39,10 @@ IM:
            are assumed to exist already via a record number.  This is
            not a bug, but the behavior does seem somewhat counter
            intuitive and may need modification.
+	NOTE: The plotting output is being completely redesigned to address this.
 
-	2. The RCM code stops with a run time error on halem (OSF1).
-           FIX (Aug 25,2004): use -fpe1 compiler flag.
-	   MODIFIED: share/build/Makefile.OSF1
+IE:
+	None
 
 GM, IH, SC (BATSRUS):
         1. Automatic Mesh Refinement (AMR) on restart does not hold the
@@ -136,11 +53,6 @@ GM, IH, SC (BATSRUS):
         2. The user_routine structure seems to require a reformulation
            in order to avoid incompatibilities of the different
            routines and flags.
-
-	3. SC only: the Z component of gravity was set to zero due to a bug.
-	   FIX (Aug 25, 2004): Initialize DzInv variable.
-	   MODIFIED: GM/BATSRUS/src/potential_force_averages.f90
-	   NOTE: this file is configured into SC and only used in SC.
 
 SP:
         1. The SEP module included with this release does not have the
