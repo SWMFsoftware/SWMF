@@ -378,12 +378,13 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 #^CMP END IH
 #^CMP IF SC BEGIN
 SC/BATSRUS/src/Makefile:
-	cd GM/BATSRUS; cp -f Makefile.conf ${SCDIR};\
-	mv Makefile Makefile.BAK; \
-	cd srcInterface; mv Makefile Makefile.BAK; cd ..;\
-	make -f Makefile_CONFIGURE -e COMP=SC DREL=${SCDIR} relax_src;\
-	mv Makefile.BAK Makefile; \
-	cd srcInterface; mv Makefile.BAK Makefile
+	cd GM/BATSRUS; \
+		cp -f Makefile.conf ${SCDIR}; \
+		make COMP=SC DREL=TMP relax_src
+	cd GM/BATSRUS/TMP; \
+		mv Makefile.def GridSize.pl PARAM.XML src ${SCDIR};\
+		mv srcInterface/*.f90 ${SCDIR}/src
+	rm -rf GM/BATSRUS/TMP
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		      ${SCDIR}/src/SC_wrapper.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
@@ -392,8 +393,6 @@ SC/BATSRUS/src/Makefile:
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
 		SC_wrapper.f90 SC_get_for_sp.f90
 	cd ${SCDIR}/src; rm -f main.f90 stand_alone*.f90
-	cd ${SCDIR}/srcInterface/; \
-		mv ModGridDescriptor.f90 update_lagrangian_grid.f90 ../src
 
 SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -403,6 +402,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f;\
 		mv ModGridDescriptor.f90 update_lagrangian_grid.f90 SC_*.f90 \
 			../srcInterface
+	touch ${SCDIR}/srcInterface/Makefile.DEPEND
 
 #^CMP END SC
 
