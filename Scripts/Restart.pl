@@ -215,7 +215,7 @@ sub create_tree_check{
 	    next COMPONENT;
         }
 
-	# Store the directory for this component
+	# Store the output directory for this component
 	$RestartOutDirFound{$Comp} = $Dir;
 
 	# Check if header file exists and check the simulation time
@@ -295,6 +295,9 @@ sub link_tree_check{
 
 	die "$ERROR could not find input restart directory/link $Dirs!\n" 
 	    unless -d $Dir or -l $Dir;
+
+	# Store the input directory for this component
+	$RestartInDirFound{$Comp} = $Dir;
 
 	# Check if the header file exists and check the simulation time
 	my $HeaderFile = $HeaderFile{$Comp};
