@@ -399,7 +399,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         endif
      endif
 
-     do i=2,nMagLons
+     do i=2,nMagLons+1
         if (LengthMC(i,j) < 0.0) then
            ip = i+1
            if (ip > nMagLons) ip = 1
@@ -435,8 +435,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   ! near the magnetic pole.  This is due to the grid.  So, let's find
   ! those places and fill them in.
 
-  do i=1,nMagLons+1
-     do j=nMagLats-5, nMagLats
+  do j=nMagLats-5, nMagLats
+     do i=1,nMagLons+1
         if (LengthMC(i,j) < 0.0) then
            SigmaHallMC(i,j) = sum(SigmaHallMC(:,j-1))/(nMagLons+1)
            SigmaPedersenMC(i,j) = sum(SigmaPedersenMC(:,j-1))/(nMagLons+1)
@@ -445,10 +445,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            if (iDebugLevel > 2) then
               write(*,*) "Bad Field line length found in calc_electrodynamics."
               write(*,*) "Correcting.  This is because of a bad Latitude.", i,j
+              write(*,*) LengthMC(i,j)
            endif
         endif
      enddo
-     do j=5, 1, -1
+  enddo
+  do j=5, 1, -1
+     do i=1,nMagLons+1
         if (LengthMC(i,j) < 0.0) then
            SigmaHallMC(i,j) = sum(SigmaHallMC(:,j+1))/(nMagLons+1)
            SigmaPedersenMC(i,j) = sum(SigmaPedersenMC(:,j+1))/(nMagLons+1)
