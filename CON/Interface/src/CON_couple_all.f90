@@ -43,7 +43,7 @@ module CON_couple_all
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   !EOP
-  logical:: UseMpi=.false.  
+  logical:: UseMpi=.true.  
   character(len=*), parameter :: NameMod='CON_couple_all'
 
 contains
