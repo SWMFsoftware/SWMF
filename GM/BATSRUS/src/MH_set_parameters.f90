@@ -2160,18 +2160,14 @@ contains
     !^CFG END RAYTRACE
     !^CFG IF NOT SIMPLE BEGIN
     if(limiter_type=='mc')then
-       call OPTION_FACE(IsOn,Name)
-       if(index(Name,'OPTIMIZE')>0)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: MC limiter is not available any longer !!!'
-             if(UseStrict)call stop_mpi( &
-                  'Correct PARAM.in or select unoptimized OPTION_FACE!')
-             write(*,*)NameSub//' setting beta limiter with parameter 1.2'
-          endif
-          limiter_type='beta'
-          v_limiter_beta_param=1.2
-       end if
+       if(iProc==0)then
+          write(*,'(a)')NameSub//&
+               ' WARNING: MC limiter is not available any longer !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting beta limiter with parameter 1.2'
+       endif
+       limiter_type='beta'
+       v_limiter_beta_param=1.2
     end if
     !^CFG END SIMPLE
 

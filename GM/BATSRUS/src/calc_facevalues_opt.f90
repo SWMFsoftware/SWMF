@@ -15,18 +15,6 @@ module ModLimiter
   logical, dimension(-1:MaxIJK+2)    :: IsTrueCell_I
 end module ModLimiter
 
-subroutine OPTION_FACE(IsOn,Name)
-
-  implicit none
-
-  logical, intent(out) :: IsOn
-  character (len=40), intent(out) :: Name
-
-  IsOn=.true.
-  Name='FACEVALUES OPTIMIZED 1.2'
-
-end subroutine OPTION_FACE
-
 subroutine calc_facevalues(DoResChangeOnly)
 
   ! The subroutine calculates right and left face values.
