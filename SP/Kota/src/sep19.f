@@ -21,6 +21,7 @@
       common /scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
+      common /convrt/ cAUKm,hour,valf
       include 'stdout.h'
       data  pmass,clight,xkm  / 938., 3.e10, 1.e5 /
 c ----------------------------------- scales:
@@ -305,6 +306,11 @@ c -------------------------------   this one new for transport :
             vxOld(i+1)=vx(i+1)
             vyOld(i+1)=vy(i+1)
             vzOld(i+1)=vz(i+1)
+            !vr is used in the output files:
+            vr(i) =       vx(i+1)*rx(i+1)
+            vr(i) = vr(i)+vy(i+1)*ry(i+1) 
+            vr(i) = vr(i)+vz(i+1)*rz(i+1)
+            vr(i) = vr(i)/r(i)
          end if
             dbdt(i) = (abb-algbb(i))/dt
             dndt(i) = (ann-algnn(i))/dt
@@ -1293,15 +1299,20 @@ c  *****************  end subroutine OPENTIME  ******************
       i=0
 20    if (r(i).lt.rr) then
       if (i.eq.nr) stop 'miako tyukanyo'
+      if (i.eq.nr-1) then
+         robs(kr)=r(i);rr=robs(kr)   
+         write(iStdOut,*)prefix,'Reset robs(',kr,')=',rr
+      end if
       i=i+1
       go to 20
       endif
+
       i1 = i-1
       i2 = i
       fr1 = (rr-r(i1))/(r(i2)-r(i1))
       fr2 = 1.-fr1
       krobs(kr) = i1
-
+ 
       do 30 ke=1,kemax
       kk = keobs(ke)
       ss1 = 0.5*(f(i1,0,kk)+f(i1,nmu,kk))
@@ -1317,6 +1328,7 @@ c  *****************  end subroutine OPENTIME  ******************
       
       vv =  fr2*vr(i1) + fr1*vr(i2)
       vv = cAUKm/hour*vv
+
       abb= fr2*algbb(i1)+fr1*algbb(i2)
       all= fr2*algll(i1)+fr1*algll(i2)
       add= abb-all
