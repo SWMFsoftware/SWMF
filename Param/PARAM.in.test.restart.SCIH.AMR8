@@ -130,8 +130,11 @@ z=0 MHD tec		StringPlot
 
 #END_COMP SC ---------------------------------------------------------------
 
-
 #BEGIN_COMP IH ---------------------------------------------------------------
+
+! Make continuation easier
+#RESTARTOUTDIR
+IH/restartIN
 
 #PROBLEMTYPE
 3			iProblemType: 3=Solar Wind and Inner Heliosphere
