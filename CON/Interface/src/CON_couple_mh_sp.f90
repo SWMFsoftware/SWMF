@@ -32,7 +32,7 @@ Module CON_couple_mh_sp
 contains
   subroutine couple_mh_sp_init
     interface
-       subroutine IH_get_a_line_point(nPartial,&
+       subroutine IH_get_a_line_point(nPartial,&         !^CMP IF IH BEGIN
             iGetStart,&
             Get,&
             Weight,&
@@ -43,8 +43,8 @@ contains
          type(IndexPtrType),intent(in)::Get
          type(WeightPtrType),intent(in)::Weight
          real,dimension(nVar),intent(out)::Buff_I
-       end subroutine IH_get_a_line_point
-       subroutine SC_get_a_line_point(nPartial,&
+       end subroutine IH_get_a_line_point                !^CMP END IH
+       subroutine SC_get_a_line_point(nPartial,&         !^CMP IF SC BEGIN
             iGetStart,&
             Get,&
             Weight,&
@@ -55,93 +55,136 @@ contains
          type(IndexPtrType),intent(in)::Get
          type(WeightPtrType),intent(in)::Weight
          real,dimension(nVar),intent(out)::Buff_I
-       end subroutine SC_get_a_line_point
+       end subroutine SC_get_a_line_point               !^CMP END SC
     end interface
+    logical::DoneRestart
+    integer,dimension(2)::nU_I
     !======================================================================
     if(.not.DoInit)return
     DoInit=.false.
-
-
+    !The initialization can be done only twice
+    
+    !Initialize grid
     call init_decomposition(SP_,SP_,1)
-    if(is_proc0(SP_))&
-         call get_root_decomposition(&
-         SP_,&                             !GridDescroptor to be constructed
-         iRootMapDim_D=(/1/),&             !The block amount, along each direction(D)
-         XyzMin_D=(/cHalf/),&              !Minimal gen. coordinates, along each D 
-         XyzMax_D=(/cHalf+cOne/),& !Maximal gen. coordinates, along each D
-         nCells_D=(/1/),&
-         PE_I=(/0/))                     !PEs layout, throughout all the blocks
-    call bcast_decomposition(SP_)
+
+    !Check, if the lagrangian meshes are saved in restart files
 
 
-    call set_standard_grid_descriptor(SP_,GridDescriptor=&
-         SP_GridDescriptor)
-
-    !Set the initial point for the line
-
-    allocate(XyzTemp_DI(3,nPointMax),stat=iError)
-
-    if(is_proc0(SP_))call SP_get_line_param(&
-         DsResolution,XyzLine_DI,RBoundSC,RBoundIH)
-
-    call check_allocate(iError,&
-         'XyzTemp_DI in CON_couple_mh_sp')
-    if(is_proc(SP_))then
-       iPoint=1
-       XyzTemp_DI(:,iPoint)=XyzLine_DI(:)
+    if(is_proc0(SP_))then
+       DoneRestart=.false.
+       if(used_mask('SP_IsInSC'))DoneRestart=.true. !^CMP IF SC
+       if(used_mask('SP_IsInIH'))DoneRestart=.true. !^CMP IF IH
     end if
+    call MPI_BCAST(DoneRestart,1,MPI_LOGICAL,i_proc0(SP_),i_comm(),iError)
+    nPointIH=0
+    if(.not.DoneRestart)then
+       !Construct auxiliary SP_grid with ONE point per line
+       if(is_proc0(SP_))&
+            call get_root_decomposition(&
+            SP_,&                             !GridDescroptor to be constructed
+            iRootMapDim_D=(/1/),&             !The block amount, along each direction(D)
+            XyzMin_D=(/cHalf/),&              !Minimal gen. coordinates, along each D 
+            XyzMax_D=(/cHalf+cOne/),&        !Maximal gen. coordinates, along each D
+            nCells_D=(/1/),&
+            PE_I=(/0/))                     !PEs layout, throughout all the blocks
+       call bcast_decomposition(SP_)
+       
 
-    if(use_comp(IH_))then       !^CMP IF IH BEGIN
-       call IH_synchronize_refinement
-       call trace_line(IH_,&
-            IH_GridDescriptor,RouterIhSp,RBoundIH**2,IH_get_a_line_point)
-       call MPI_bcast(nPoint,1,MPI_INTEGER,&
-           i_proc0(SP_),i_comm(),iError)
-       nPointIH=nPoint
-    end if                      !^CMP END IH
+       call set_standard_grid_descriptor(SP_,GridDescriptor=&
+            SP_GridDescriptor)
 
-    if(use_comp(SC_))then       !^CMP IF IH BEGIN
-       call SC_synchronize_refinement
-       call trace_line(SC_,&
-            SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
-       call MPI_bcast(nPoint,1,MPI_INTEGER,&
-            i_proc0(SP_),i_comm(),iError)
-    end if
+       !Set the initial point for the line
+
+       allocate(XyzTemp_DI(3,nPointMax),stat=iError)
+
+       if(is_proc0(SP_))call SP_get_line_param(&
+            DsResolution,XyzLine_DI,RBoundSC,RBoundIH)
+
+       call check_allocate(iError,&
+            'XyzTemp_DI in CON_couple_mh_sp')
+       if(is_proc(SP_))then
+          iPoint=1
+          XyzTemp_DI(:,iPoint)=XyzLine_DI(:)
+       end if
+
+       if(use_comp(IH_))then       !^CMP IF IH BEGIN
+          call IH_synchronize_refinement
+          call trace_line(IH_,&
+               IH_GridDescriptor,RouterIhSp,RBoundIH**2,IH_get_a_line_point)
+          call MPI_bcast(nPoint,1,MPI_INTEGER,&
+               i_proc0(SP_),i_comm(),iError)
+          nPointIH=nPoint
+       end if                      !^CMP END IH
+
+       if(use_comp(SC_))then       !^CMP IF IH BEGIN
+          call SC_synchronize_refinement
+          call trace_line(SC_,&
+               SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
+          call MPI_bcast(nPoint,1,MPI_INTEGER,&
+               i_proc0(SP_),i_comm(),iError)
+       end if
     !   XyzTemp_DI(1,iPoint)=15. 
     !   XyzTemp_DI(2,iPoint)=0.
     !   XyzTemp_DI(3,iPoint)=0.2
 
-    !\
-    !Reset SP_domain_decomposition
-    !/
-    if(is_proc0(SP_))&
-         call get_root_decomposition(&
-         SP_,&                            !GridDescroptor to be constructed
-         iRootMapDim_D=(/1/),&            !The block amount, along each direction(D)
-         XyzMin_D=(/cHalf/),&             !Minimal gen. coordinates, along each D 
-         XyzMax_D=(/cHalf+real(nPoint)/),&!Maximal gen. coordinates, along each D
-         nCells_D=(/nPoint/))
-    call bcast_decomposition(SP_)
-    call clean_grid_descriptor(SP_GridDescriptor)
-    call set_standard_grid_descriptor(SP_,GridDescriptor=&
-         SP_GridDescriptor)
+       !\
+       !Reset SP_domain_decomposition
+       !/
+       if(is_proc0(SP_))&
+            call get_root_decomposition(&
+            SP_,&                            !GridDescroptor to be constructed
+            iRootMapDim_D=(/1/),&            !The block amount, along each direction(D)
+            XyzMin_D=(/cHalf/),&             !Minimal gen. coordinates, along each D 
+            XyzMax_D=(/cHalf+real(nPoint)/),&!Maximal gen. coordinates, along each D
+            nCells_D=(/nPoint/))
+       call bcast_decomposition(SP_)
+       call clean_grid_descriptor(SP_GridDescriptor)
+       call set_standard_grid_descriptor(SP_,GridDescriptor=&
+            SP_GridDescriptor)
 
 
-    !\
-    !Save initial positions of all the grid points
-    !/
-    call allocate_vector('SP_Xyz_DI',3,SP_GridDescriptor)
+       !\
+       !Save initial positions of all the grid points
+       !/
+       call allocate_vector('SP_Xyz_DI',3,SP_GridDescriptor)
    
-    if(is_proc0(SP_))then
-       call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
-       do iPoint=1,nPoint
-          Xyz_DI(:,iPoint)= XyzTemp_DI(:,nPoint-iPoint+1)
-       end do
-       nullify(Xyz_DI)
+       if(is_proc0(SP_))then
+          call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
+          do iPoint=1,nPoint
+             Xyz_DI(:,iPoint)= XyzTemp_DI(:,nPoint-iPoint+1)
+          end do
+          nullify(Xyz_DI)
+       end if
+       deallocate(XyzTemp_DI)
+    else
+       !In this case all the point coordinates are
+       !available on SP PEs
+       if(is_proc0(SP_))then
+          nU_I=ubound_vector('SP_Xyz_DI')
+          nPoint=nU_I(2)
+          call get_root_decomposition(&
+               SP_,&
+               iRootMapDim_D=(/1/),&
+               XyzMin_D=(/cHalf/),&
+               XyzMax_D=(/cHalf+real(nPoint)/),&
+               nCells_D=(/nPoint/))
+       end if
+       call bcast_decomposition(SP_)
+       call set_standard_grid_descriptor(SP_,GridDescriptor=&
+            SP_GridDescriptor)
+       nU_I(2:2)=ncells_decomposition_d(SP_)
+       nPoint=nU_I(2)
+       if(.not.is_proc0(SP_))call allocate_vector('SP_Xyz_DI',3,nPoint)
+       if(use_comp(IH_))then
+          if(is_proc0(SP_))nPointIH=count_mask('SP_IsInIH')
+          call MPI_BCAST(npointIH,1,MPI_INTEGER,&
+               i_proc0(SP_),i_comm(),iError)
+       end if
     end if
-    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-    deallocate(XyzTemp_DI)
 
+    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
+       
+    
     !\
     !Set masks
     !/
@@ -153,14 +196,15 @@ contains
           nullify(Used_I)
        end if
     end if                !^CMP END IH
-    if(use_comp(SC_))then !^CMP IF IH BEGIN
+    if(use_comp(SC_))then !^CMP IF SC BEGIN
        if(RouterScSp%IsProc)then
-          call allocate_mask('SP_IsInSC','SP_Xyz_DI')
+          if(.not.DoneRestart.or..not.is_proc0(SP_))&
+               call allocate_mask('SP_IsInSC','SP_Xyz_DI')
           call associate_with_global_mask(Used_I,'SP_IsInSC')
           Used_I(nPointIH+1:nPoint)=.true.
           nullify(Used_I)
        end if
-    end if                !^CMP END IH
+    end if                !^CMP END SC
   contains
     subroutine trace_line(CompID_,GD,Router,R2,MH_get_a_line_point)
       use CON_global_message_pass
