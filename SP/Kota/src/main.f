@@ -464,7 +464,12 @@ c??   read(*,*)  jnext
             
             DDens0 = DDens
             DDens = dens(i)
-            Diff = (DDens0-DDens)/(DDens0+DDens)/Dist2
+
+C           Find maximum of (r/rho)*|drho/dr| which is 
+C           constant for rho proportional to 1/r**2
+C           and it should have a large peak at the shock
+            Diff = abs(DDens0-DDens)/(DDens0+DDens)/Dist2 
+     &            * sqrt(rx(i)**2+ry(i)**2+rz(i)**2)
             
             if (Diff.gt.DMax) then
                iShock = i-1
