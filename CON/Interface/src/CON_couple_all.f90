@@ -22,6 +22,9 @@ module CON_couple_all
   use CON_couple_ie_im        !^CMP IF IM
   use CON_couple_ie_ua        !^CMP IF UA
   !^CMP END IE
+  !^CMP IF IH BEGIN
+  use CON_couple_ih_sc        !^CMP IF SC
+  !^CMP END IH
 
   implicit none
 
@@ -35,7 +38,7 @@ module CON_couple_all
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
   !EOP
-  logical:: UseMpi=.true.!Use plain MPI couplers whenever it is possible  
+  logical:: UseMpi=.false.  
   character(len=*), parameter :: NameMod='CON_couple_all'
 
 contains
@@ -58,6 +61,10 @@ contains
     if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
     if(use_comp(IE_).and.use_comp(UA_))call couple_ie_ua_init  !^CMP IF UA
     !                                                     ^CMP END IE
+    !                                                     ^CMP IF IH BEGIN
+    if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
+    !                                                     ^CMP END IH
+
     !EOC
   end subroutine couple_all_init
 
@@ -100,10 +107,19 @@ contains
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
     select case(iCompSource)
+    case(SC_)                                 !^CMP IF SC BEGIN
+       select case(iCompTarget)
+       case(IH_)
+          call couple_sc_ih(TimeSimulation)   !^CMP IF IH
+       case default                           
+          call error
+       end select                             !^CMP END SC
     case(IH_)                                 !^CMP IF IH BEGIN
        select case(iCompTarget)
        case(GM_)                                   !^CMP IF GM
           call couple_ih_gm(TimeSimulation)        !^CMP IF GM
+       case(SC_)                                   !^CMP IF SC
+          call couple_ih_sc(TimeSimulation)        !^CMP IF SC
        case default
           call error
        end select                             !^CMP END IH
