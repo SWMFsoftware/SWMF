@@ -318,7 +318,6 @@ read_inputs
 !
 ! Examples:
 !   read_inputs  - echo the input parameters following the #TEST line
-!   ionosphere   - info on the ionosphere      
 !   project_B    - info on projection scheme   
 !   implicit     - info on implicit scheme     
 !   krylov       - info on the Krylov solver   
@@ -1050,38 +1049,35 @@ rho p                   NameSatelliteVars Read if satellitevar=\'var\' or \'VAR\
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVEPLOT'},'content' => [{'content' => '
 ! plot_string must contain the following 3 parts in arbitrary order
 ...
-	','type' => 't'},{'attrib' => {'min' => '0','max' => '100','default' => '0','type' => 'integer','name' => 'nPlotFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'content' => [{'attrib' => {'min' => '3','max' => '3','type' => 'strings','name' => 'plotString'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotform'},'content' => [{'attrib' => {'value' => 'tec','name' => 'TECPLOT'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'idl','name' => 'IDL'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotarea'},'content' => [{'attrib' => {'value' => '3d'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'x=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'y=0','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'z=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sph'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ion'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'los'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'cut','if' => '$plotform =~ /\\bidl\\b/'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotvar'},'content' => [{'attrib' => {'value' => 'min/mhd/MHD','if' => '$plotarea=~/\\bion\\b/','name' => 'min'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'max','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'aur','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'uam','if' => '$plotarea=~/\\bion\\b/'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'MHD','if' => '$plotarea!~/\\bion\\b/','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FUL','if' => '$plotarea!~/\\bion\\b/','name' => 'All vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','if' => '$plotarea!~/\\bion\\b/','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAY','if' => '$plotarea!~/\\bion\\b/','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','if' => '$plotarea!~/\\bion\\b/','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SOL','if' => '$plotarea!~/\\bion\\b/','name' => 'Solar vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','if' => '$plotarea!~/\\bion\\b/','name' => 'Select dimensional vars.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','if' => '$plotarea!~/\\bion\\b/','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ful','if' => '$plotarea!~/\\bion\\b/','name' => 'All vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','if' => '$plotarea!~/\\bion\\b/','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ray','if' => '$plotarea!~/\\bion\\b/','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','if' => '$plotarea!~/\\bion\\b/','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sol','if' => '$plotarea!~/\\bion\\b/','name' => 'Solar vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','if' => '$plotarea!~/\\bion\\b/','name' => 'Select scaled vars.'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'},'content' => [{'attrib' => {'type' => 'real','name' => 'xMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMinCut','type' => 'real','name' => 'xMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMinCut','type' => 'real','name' => 'yMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMinCut','type' => 'real','name' => 'zMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '0','if' => '$plotarea =~ /\\bsph\\b/','default' => '10','type' => 'real','name' => 'radius'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'content' => [{'attrib' => {'default' => '0','type' => 'real','name' => 'LosVectorX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0.0001','type' => 'real','name' => 'LosVectorY'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '1','type' => 'real','name' => 'LosVectorZ'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'xSizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'ySizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'xOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'yOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '2.5','type' => 'real','name' => 'rOccult'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.5','type' => 'real','name' => 'MuLimbDarkening'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixY'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '-1','if' => '($plotform =~ /\\bidl\\b/ and $plotarea !~ /\\b(ion|sph|los)\\b/)','default' => '-1','type' => 'integer','name' => 'plotDx'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'plotVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'plotPars'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'}],'type' => 'e','name' => 'for'},{'content' => '
+	','type' => 't'},{'attrib' => {'min' => '0','max' => '100','default' => '0','type' => 'integer','name' => 'nPlotFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'content' => [{'attrib' => {'min' => '3','max' => '3','type' => 'strings','name' => 'plotString'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotform'},'content' => [{'attrib' => {'value' => 'tec','name' => 'TECPLOT'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'idl','name' => 'IDL'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotarea'},'content' => [{'attrib' => {'value' => '3d'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'x=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'y=0','default' => 'T'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'z=0'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sph'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'los'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'lin'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'cut','if' => '$plotform =~ /\\bidl\\b/'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'plotvar'},'content' => [{'attrib' => {'value' => 'MHD','name' => 'MHD vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FUL','name' => 'All vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAW','name' => 'Raw vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'RAY','name' => 'Ray tracing vars. dim.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'FLX','name' => 'Flux vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'SOL','name' => 'Solar vars. dimensional'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'VAR','name' => 'Select dimensional vars.'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'mhd','name' => 'MHD vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ful','name' => 'All vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'raw','name' => 'Raw vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'ray','name' => 'Ray tracing vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'flx','name' => 'Flux vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'sol','name' => 'Solar vars. scaled'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'var','name' => 'Select scaled vars.'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\bcut\\b/'},'content' => [{'attrib' => {'type' => 'real','name' => 'xMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$xMinCut','type' => 'real','name' => 'xMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$yMinCut','type' => 'real','name' => 'yMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zMinCut'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '$zMinCut','type' => 'real','name' => 'zMaxCut'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '0','if' => '$plotarea =~ /\\bsph\\b/','default' => '10','type' => 'real','name' => 'radius'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotarea =~ /\\blos\\b/'},'content' => [{'attrib' => {'default' => '0','type' => 'real','name' => 'LosVectorX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0.0001','type' => 'real','name' => 'LosVectorY'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '1','type' => 'real','name' => 'LosVectorZ'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'xSizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '20','type' => 'real','name' => 'ySizeImage'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'xOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '10','type' => 'real','name' => 'yOffset'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','default' => '2.5','type' => 'real','name' => 'rOccult'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','default' => '0.5','type' => 'real','name' => 'MuLimbDarkening'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixX'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '2','default' => '200','type' => 'integer','name' => 'nPixY'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'attrib' => {'expr' => '$plotarea =~ /\\blin\\b/'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'NameLine'},'content' => [{'attrib' => {'default' => 'T','name' => 'B'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'U'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'IsSingleLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '1','max' => '20','default' => '1','type' => 'integer','name' => 'nLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nLine','from' => '1'},'content' => [{'attrib' => {'type' => 'real','name' => 'xStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'yStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'real','name' => 'zStartLine'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'type' => 'logical','name' => 'IsParallel'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'for'}],'type' => 'e','name' => 'if'},{'attrib' => {'min' => '-1','if' => '($plotform=~/\\bidl\\b/ and $plotarea!~/\\b(sph|los|lin)\\b/)','default' => '-1','type' => 'integer','name' => 'plotDx'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$plotvar =~ /\\bvar\\b/i'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'plotVars'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'plotPars'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'}],'type' => 'e','name' => 'for'},{'content' => '
 #SAVEPLOT
 6			nPlotfile
-3d MHD tec		plotString ! 3d MHD data
-100			DnOutput_i(1)
--1.			DtOutput_i(1) (in s) Read only if time_accurate is set!
+3d MHD tec		StringPlot ! 3d MHD data
+100			DnOutput
+-1.			DtOutput
 y=0 VAR idl		plotString ! y=0 cut
--1			DnOutput_i(2)
-100.			DtOutput_i(2)  Read only if time_accurate is set!
-2.			plotDx_di(1,2) Read only for format \'idl\'
-jx jy jz		plotVars_i(2)  Read only for content \'var\'
-g unitx unitv unitn	plotPars_i(2)  Read only for content \'var\'
-cut ray idl		plotString  ! ray tracing plot
-1			DnOutput_i(3)
--1.			DtOutput_i(3) (in s) Read only if time_accurate is set!
--10.			plotRange_ei(x1,3) Read only for area \'cut\'
+-1			DnOutput
+100.			DtOutput
+2.			PlotDx     ! Read only for format \'idl\'
+jx jy jz		PlotVars   ! Read only for content \'var\'
+g unitx unitv unitn	PlotPars   ! Read only for content \'var\'
+cut ray idl		StringPlot ! ray tracing plot
+1			DnOutput
+-1.			DtOutput
+-10.			PlotRange_ei(x1,3) Read only for area \'cut\'
 10.			plotRange_ei(x2,3) Read only for area \'cut\'
 -10.			plotRange_ei(y1,3) Read only for area \'cut\'
 10.			plotRange_ei(y2,3) Read only for area \'cut\'
 -10.			plotRange_ei(z1,3) Read only for area \'cut\'
 10.			plotRange_ei(z2,3) Read only for area \'cut\'
-1.			plotDx_di(1,3)     Read only for format \'idl\'
+1.			plotDx      ! Read only for format \'idl\'
 sph flx idl		plotString  ! spherical plot
--1			DnOutput_i(4)
-100.			DtOutput_i(4)  Read only if time_accurate is set!
+-1			DnOutput
+100.			DtOutput
 4.			rPlot - R of spherical cut, Read only for area \'sph\'
-ion min idl		plotString  ! ionosphere plot
-100			DnOutput_i(5)
-100.			DtOutput_i(5)  Read only if time_accurate is set!
-los sol idl             PlotString  ! line of sight plot
--1			dnOutput_i(6)
-100.			dtOutput_i(6)  Read only if time_accurate is set!
+los sol idl             StringPlot  ! line of sight plot
+-1			DnOutput
+100.			DtOutput
 1.			LosVector_i(1)
 0.			LosVector_i(2)
 0.			LosVector_i(3)
@@ -1093,24 +1089,32 @@ los sol idl             PlotString  ! line of sight plot
 0.5			MuLimbDarkening
 256			nPixX
 256			nPixY
+lin mhd idl		PlotString  ! field line plot
+-1			DnOutput
+10.			DtOutput
+B			NameLine ! B - magnetic field line, U - stream line
+F			IsSingleLine
+2			nLine
+-2.0			xStartLine
+0.0			yStartLine
+3.5			zStartLine
+F			IsParallel
+-1.0			xStartLine
+1.0			yStartLine
+-3.5			zStartLine
+T			IsParallel
 
 ! Default is nplotfile=0
 ! plot_string must contain the following 3 parts in arbitrary order
 !
 ! plotarea plotvar plotform
 !
-! plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'sph\', \'ion\', \'los\'
+! plotarea = \'3d\' , \'x=0\', \'y=0\', \'z=0\', \'cut\', \'sph\', \'los\', \'lin\'
 ! plotvar  = \'mhd\', \'ful\',\'raw\', \'ray\', \'flx\', \'sol\', \'var\' - unitless output
 ! plotvar  = \'MHD\', \'FUL\',\'RAW\', \'RAY\', \'FLX\', \'SOL\', \'VAR\' - dimensional
-! plotvar  = \'min\', \'max\' - for ion plots only, always dimensional
 ! plotform = \'tec\', \'idl\'
 !
 ! NOTES: The plotvar option \'sol\' is only valid for plotarea \'los\'.
-
-!        Ionosphere plots are called in ionosphere.f90 using completely
-!               seperate routines, \'var\' option does not work. 
-!	        \'min\',\'max\',\'aur\',\'uam\' work only with plotarea \'ion\'
-
 !
 ! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 !
@@ -1120,8 +1124,8 @@ los sol idl             PlotString  ! line of sight plot
 ! 3d	- full 3D volume
 ! cut	- READ PLOTRANGE FROM PARAM.in, only works for plotform=\'idl\'
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
-! ion   - ionosphere plots                        
 ! los   - line of sight integrated plot
+! lin   - one dimensional plot along a field or stream line
 !
 ! The plotvar string defines the plot variables and the equation parameters.
 ! It also controls whether or not the variables will be plotted in dimensional
@@ -1144,12 +1148,6 @@ los sol idl             PlotString  ! line of sight plot
 !         pars: READ FROM PARAMETER FILE
 ! \'sol\' - vars: wl pb
 !         pars: mu
-
-! \'min\' - vars: Theta Psi SigmaH SigmaP Jr Phi
-! \'max\' - vars: X Y Z Theta Psi SigmaH SigmaP Jr Phi Ex Ey Ez Jx Jy Jz Ux Uy Uz
-! \'aur\' - vars: Theta Psi SigmaH SigmaP Jr Phi AveE TotE
-! \'uam\' - vars: Theta Psi SigmaH SigmaP Jr Phi JrUAM
-
 !
 ! The plot_string is always followed by the plotting frequency
 ! DnOutput and for time accurate runs by DtOutput.
@@ -1157,8 +1155,8 @@ los sol idl             PlotString  ! line of sight plot
 ! Depending on plot_string, further information is read from the parameter file
 ! in this order:
 !
-! plotRange		if plotarea is \'cut\'
-! plotDx		if plotform is \'idl\' and plotarea is not sph, ion, los
+! PlotRange		if plotarea is \'cut\'
+! DxPlot		if plotform is \'idl\' and plotarea is not sph, ion, los
 ! rPlot			if plotarea is \'sph\'
 ! plotVars		if plotform is \'var\'
 ! plotPars		if plotform is \'var\'
@@ -1184,8 +1182,6 @@ los sol idl             PlotString  ! line of sight plot
 ! MuLimbDarkening is the limb darkening parameter for the \'wl\' (white light)
 !                 and \'pb\' (polarization brightness) plot variables.
 !
-! plot_vars should not be set for plotarea \'ion\' 
-!       they are unimplemented.
 ! The possible values for plot_vars with plotarea \'los\' 
 !       are listed in subroutine set_plotvar_los in write_plot_los.f90.
 ! The possible values for plot_vars for other plot areas
