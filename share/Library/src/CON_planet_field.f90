@@ -290,7 +290,9 @@ contains
     character(len=3) :: NameCoordSystem ! Input/Output coordinate system
 
     ! Temporary variables for the analytic mapping
-    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Tmp
+    real :: rMap, rMap2, rMap3, r, r3, XyRatio, XyMap2, XyMap, Xy2
+    logical :: DoConvert
+    real    :: Convert_DD(3,3)
 
 !!! logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
@@ -322,25 +324,29 @@ contains
     end if
 
     ! Convert input position into MAG or SMG system
+    DoConvert=.true.
     NameCoordSystem = TypeCoord(1:3)
     select case(NameCoordSystem)
     case('MAG','SMG')
        ! There is nothing to do
+       DoConvert=.false.
     case ('GEO')
        ! Convert into MAG
-       Xyz_D = matmul(MagGeo_DD,Xyz_D)
+       Convert_DD = MagGeo_DD
     case('GSM')
        ! Convert into SMG
        call set_axes(TimeSim)
-       Xyz_D = matmul(SmgGsm_DD,Xyz_D)
+       Convert_DD = SmgGsm_DD
     case('GSE')
        ! Convert into SMG
        call set_axes(TimeSim)
-       Xyz_D = matmul(SmgGse_DD,Xyz_D)
+       Convert_DD = SmgGse_DD
     case default
        call CON_stop(NameSub//' SWMF_ERROR unimplemented NameCoordSystem='//&
             NameCoordSystem)
     end select
+
+    if(DoConvert) Xyz_D = matmul(Convert_DD, Xyz_D)
 
     ! In MAG/SMG coordinates the hemisphere depends on the sign of Z
     iHemisphere = sign(1.0,Xyz_D(3))
@@ -391,7 +397,7 @@ contains
           iHemisphere = 0
 
           ! Put mapped point to the magnetic equator
-          XyzMap_D(1:2) = (rMap/sqrt(sum(Xyz_D(1:2)**2)))*Xyz_D(1:2)
+          XyzMap_D(1:2) = (rMap/sqrt(Xyz_D(1)**2 + Xyz_D(2)**2))*Xyz_D(1:2)
           XyzMap_D(3) = 0
        else
           ! Calculate the Z component of the mapped position
@@ -400,48 +406,39 @@ contains
        end if
 
        if(present(DdirDxyz_DD))then
-          ! dTheta/dx = xMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
-          ! dTheta/dy = yMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
+          ! dTheta/dx = -xMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
+          ! dTheta/dy = -yMap*(0.5-1.5*z^2/r^2)/(zMap*sqrt(x^2+y^2))
 
           XyMap = sqrt(XyMap2)
 
-          Tmp = ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
+          DdirDxyz_DD(1,1:2) = - XyzMap_D(1:2) * &
+               ( 0.5 - 1.5 * (Xyz_D(3) / r)**2 ) / &
                ( XyzMap_D(3) * XyMap / XyRatio )
 
-          DdirDxyz_DD(1,1:2) = XyzMap_D(1:2) * Tmp
-
-          ! dTheta/dz = sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
-          DdirDxyz_DD(1,3) = XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
+          ! dTheta/dz = - sqrt(xMap^2+yMap^2)/zMap*1.5*z/r^2
+          DdirDxyz_DD(1,3) = - XyMap / XyzMap_D(3) * 1.5 * Xyz_D(3) / r**2
 
           ! dPhi/dx = -y/(x^2+y^2)
-          DdirDxyz_DD(2,1) = - XyzMap_D(2) / XyMap2
-
-          ! dPhi/dy = x/(x^2+y^2)
-          DdirDxyz_DD(2,2) =   XyzMap_D(1) / XyMap2
+          ! dPhi/dy =  x/(x^2+y^2)
+          Xy2              =   Xyz_D(1)**2 + Xyz_D(2)**2
+          DdirDxyz_DD(2,1) = - Xyz_D(2) / Xy2
+          DdirDxyz_DD(2,2) =   Xyz_D(1) / Xy2
 
           ! dPhi/dz = 0.0
           DdirDxyz_DD(2,3) = 0.0
+
+          ! Transform into the system of the input coordinates
+          ! dDir/dXyzIn = dDir/dXyzSMGMAG . dXyzSMGMAG/dXyzIn
+          if(DoConvert) DdirDxyz_DD = matmul(DdirDxyz_DD, Convert_DD)
        endif
 
     case default
        call CON_stop(NameSub//' unimplemented TypeBField='//TypeBField)
     end select
 
-    ! Convert position back to the input coordinate system
-    select case(NameCoordSystem)
-    case('GEO')
-       ! Convert back from MAG
-       XyzMap_D = matmul(XyzMap_D,MagGeo_DD)
-       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, MagGeo_DD)
-    case('GSM')
-       ! Convert back from SMG
-       XyzMap_D = matmul(XyzMap_D,SmgGsm_DD)
-       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGsm_DD)
-    case('GSE')
-       ! Convert back from SMG
-       XyzMap_D = matmul(XyzMap_D,SmgGse_DD)
-       if(present(DdirDxyz_DD)) DdirDxyz_DD = matmul(DdirDxyz_DD, SmgGse_DD)
-    end select
+    ! Convert position back to the input coordinate system if required
+    if(.not.present(DoNotConvertBack) .and. DoConvert) &
+         XyzMap_D = matmul(XyzMap_D, Convert_DD)
 
     ! Undo the normalization
     if( index(TypeCoord,"NORM")<=0 ) then
