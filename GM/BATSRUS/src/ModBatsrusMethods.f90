@@ -331,6 +331,7 @@ subroutine BATS_advance(TimeSimulationLimit)
      call advance_expl(.true., .true.)
   endif                                   !^CFG IF IMPLICIT  
 
+  call advect_all_points
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
   call timing_stop('advance')

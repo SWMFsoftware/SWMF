@@ -131,7 +131,7 @@ OBJECTS = \
 	${IH_WRAPPER_OBJ}\
 	BATS_methods.o \
 	MH_set_parameters.o\
-	conserve_flux.o\
+	advect_points.o\
 	allocate_vars.o\
 	amr.o\
 	amr_criteria.o\
@@ -141,6 +141,7 @@ OBJECTS = \
 	calc_gradients.o\
 	calc_timestep.o\
 	coarsen_grid.o\
+	conserve_flux.o\
 	create_soln_blocks.o\
 	exchange_messages.o\
 	explicit.o\
