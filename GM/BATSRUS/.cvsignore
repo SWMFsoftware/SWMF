@@ -1,4 +1,5 @@
 run*
 Makefile.conf
+Makefile.def
 *.protex
 *.xmltex
