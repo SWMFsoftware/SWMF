@@ -269,7 +269,7 @@ subroutine write_plot_common(ifile)
   end do ! iBLK
 
   ! Write files for new tecplot format
-  if(plot_form(ifile)=='tec')then
+  if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
      do i=1,nplotvar
         NodeValue_IIIB=plotvarnodes(:,:,:,:,i)
         call pass_and_average_nodes(.true.,NodeValue_IIIB)
