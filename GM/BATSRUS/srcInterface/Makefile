@@ -24,6 +24,7 @@ OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o \
 
 OBJECTS = \
 	ModGridDescriptor.o\
+	ModBuffer.o\
 	GM_wrapper.o\
 	update_lagrangian_grid.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_IE)
