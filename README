@@ -4,9 +4,9 @@ how to compile and run the code, please consult the user manual.  To install
 the SWMF and create the user manual please follow the instructions below. 
 
 
-#############################
-# Obtain SWMF               #
-#############################
+###############
+# Obtain SWMF #
+###############
 
 # Get the source code from cvs (UM only) or from the tar ball.
 
@@ -23,18 +23,20 @@ cd SWMF_NEW
 # !!! Opening the tar ball !!!
 mkdir SWMF_NEW
 cd SWMF_NEW
-tar -xzf {path_to_file}/SWMF_v2.tgz
+tar -xzf {path_to_file}/SWMF_v2.1.tgz
+
 
 ################
-# install SWMF #
+# Install SWMF #
 ################
 
-# !!! To install the SWMF using the default compiler for your platform !!!
-# !!! On Linux or Darwin with NAG F95, on the SGI and on the Compaq !!!
-SetSWMF.pl -install
-
+# For several platform/compiler combinations installation is very simple.
 # Some platforms require additional flags or have other compilers as
-# an option.
+# an option. Choose the appropriate platform/compiler combination:
+
+# !!! On Linux or Darwin with NAG F95 compiler,     !!!  
+# !!! on the SGI Origin and on the Compaq machines  !!!
+SetSWMF.pl -install
 
 # !!! On the SGI Altix do the following !!!
 SetSWMF.pl -install -c=ifort -m=Altix
@@ -45,7 +47,6 @@ SetSWMF.pl -install -c=pgf90
 
 # !!! On Darwin using the xlf compiler !!!
 SetSWMF.pl -install -c=xlf90
-
 
 ######################
 # Create the manuals #
@@ -67,31 +68,7 @@ make HTML
 ####################
 
 # All manuals can be accessed by opening the top index file doc/index.html
+# The contents of the documents is briefly described in this file.
 mozilla doc/index.html
 
 # You may also read the PDF files directly with a PDF reader. 
-
-# Here is a short description of the manuals:
-
-# !!! You should start by reading the user manual !!!
-# The user manual contains a quickstart section that will get you started
-# running the SWMF.  In addition there is a section with some example runs
-# that you might want to try.
-acroread doc/SWMF.pdf
-
-# To learn about the testing procedures of SWMF read the testing manual
-acroread doc/TESTING.pdf
-
-# The reference manual contains the documentation of the source code, 
-# it also contains description of the makefiles and various scripts
-acroread doc/REFERENCE.pdf
-
-# The maintenance manual is mostly intended for developers
-acroread doc/MAINTENANCE.pdf
-
-# The software engineering aspects are documented in the design document
-acroread doc/DESIGN_DOC.pdf
-
-# The data naming convention adapted by the developers of the SWMF
-# is described in the Backus-Naur Format (BNF)
-acroread doc/NAMING_STANDARD.pdf
