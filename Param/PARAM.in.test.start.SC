@@ -1,26 +1,30 @@
-!- PARAM.in: This is an input file for the 
-!- NEW heliosphere
-
 #ECHO
 T
+
+#DESCRIPTION
+Input file for creating a steady state solar corona
 
 #TIMEACCURATE
 F
 
 #STARTTIME
-1998		year
-5		month
-1		day
-0		hour
-0		minute
-0		second
-0.0 		FracSecond
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond
+0.0 			FracSecond
 
-#BEGIN_COMP SC
+#SAVERESTART
+T			DoSaveRestart
+2000			DnSaveRestart
+-1.0			DtSaveRestart
 
+#BEGIN_COMP SC --------------------------------------------------------------
 
 #PROBLEMTYPE
-3                       problem_type
+3                       iProblemType
 
 #USER_FLAGS
 F			UseUserInnerBCs
@@ -37,7 +41,7 @@ T			UseUserB0
 F			UseUserSetPhysConst
 T			UseUserUpdateStates
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN ------------------------
 
 #USEUSERHEATING
 F			UseUserHeating
@@ -58,18 +62,18 @@ SC/CR1935_WSO.dat       File_PFSSM
 F     			UseStaticICs
 F                       UseZeroOmega
 
-#USERINPUTEND
+#USERINPUTEND ----------------------------
 
 #HELIOSPHERE
-1.80E+06		Tsun    [K]      1.0E6 
-5.00E+13		NDsun [n/m-3]
-10.00			Qsun
-1.76			Theat
-1.00			Rheat
-4.50			SIGMAheat
+1.80E+06		tSun    [K]      1.0E6 
+5.00E+13		NdSun [n/m-3]
+10.00			qSun
+1.76			tHeat
+1.00			rHeat
+4.50			SigmaHeat
 F			UseFluxRope
 
-#INERTIAL
+#HELIOROTATION
 T			UseInertial, if false then corotating frame
 F			UseCorotation
 
@@ -77,15 +81,15 @@ F			UseCorotation
 1.50000E+00		g
 
 #GRID
-1			proc_dims(1)
-1			proc_dims(2)
-1			proc_dims(3),
--24.0			x1  
- 24.0			x2  
--24.0			y1 
- 24.0			y2 
--24.0			z1 
- 24.0			z2 
+1			nProcX
+1			nProcY
+1			nProcZ
+-24.0			xMin
+ 24.0			xMax 
+-24.0			yMin
+ 24.0			yMax
+-24.0			zMin
+ 24.0			zMax
 
 #FACEOUTERBC
 6                       MaxBoundary
@@ -100,57 +104,42 @@ heliofloat		TypeBcOuter_E(Bot_)
 heliofloat		TypeBcOuter_E(Top_)
 
 #AMRINIT
-helio_init
-9			initial_refinement_levels
-
-#OPTIMIZE
-allopt			OptimizeMessagePass
+helio_init		TypeAmrInit
+9			nRefineLevelInit
 
 #SCHEME
-2			nORDER (1 or 2)
-4			fluxfcn_type: 1=Roe 2=Rusanov 3=Linde 4=Sokolov
-minmod			limiter_type mc or minmod
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+minmod			TypeLimiter
 
 #TIMESTEPPING
 2                       nStage
 0.80                    CflExpl
 
-#DIVB
-T			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
-#SAVERESTART
-T			save_restartfile
-2000			dn_output(restart_)
--1.0			dt_output(restart_)
-
-
 #SAVELOGFILE
 T                       DoSaveLogfile
 VAR                     StringLog
-10                      dn_output(logfile_)
--1.0			dt_output(logfile_)
+10                      DnSaveLogfile
+-1.0			DtSaveLogfile
 em_r ek_r et_r
 4.0  10.0               rLog
 
 #SAVEPLOT
-3			nplotfiles
-x=0 MHD tec             plot_string
-10000                   dn
--1.0			dt
-y=0 MHD tec		plot_string
-10000			dn
--1.0			dt
-z=0 MHD tec		plot_string
-10000			dn
--1.0			dt
+3			nPlotFiles
+x=0 MHD tec		StringPlot
+10000                   DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
+z=0 MHD tec		StringPlot
+10000			DnSavePlot
+-1.0			DtSavePlot
 
-#END_COMP SC
+#END_COMP SC ----------------------------------------------------------------
 
 #STOP
-70000			nITER
--1.0			t_max
+7000			MaxIteration
+-1.0			TimeSimulationMax
 
 #END
