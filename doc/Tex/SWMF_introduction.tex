@@ -289,14 +289,22 @@ which contains the operating system and compiler specific part of
 the Makefile. If the compiler is not the default one for a given
 platform (e.g. not the NAG f95 compiler for a Linux platform) then
 the compiler must be specified explicitly with the {\tt -c}
-flag. For example
+flag. If the MPI header file is not the default one, it can be
+specified with the {\tt -m} flag. For example on the Altix machines
+SWMF should be installed as
 \begin{verbatim}
-SetSWMF.pl -i -c=pgf90
+SetSWMF.pl -i -c=ifort -m=Altix
 \end{verbatim}
-The installation should only be done once unless the SWMF is uninstalled with
+To uninstall SWMF type
 \begin{verbatim}
 SetSWMF.pl -uninstall
 \end{verbatim}
+If the uninstallation fails (this can happen if some makefiles are missing)
+force installation with
+\begin{verbatim}
+SetSWMF.pl -install
+\end{verbatim}
+and then try uninstalling the code again.
 When SWMF is installed, its configuration can be checked with
 \begin{verbatim}
 SetSWMF.pl -s
@@ -325,7 +333,7 @@ to point at with the browser.  To clean the intermediate files type
 cd doc/Tex
 make clean
 \end{verbatim}
-To remove all the documentation type
+To remove all the created documentation type
 \begin{verbatim}
 cd doc/Tex
 make distclean
@@ -334,7 +342,7 @@ make distclean
 \section{Building and Running an Executable}
 
 The physics components can be selected with the {\tt -v} flag
-of of the SetSWMF.pl script. For example typing
+of the SetSWMF.pl script. For example typing
 \begin{verbatim}
 SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS,SP/Kota
 SetSWMF.pl -v=GM/Empty,RB/Empty,IM/Empty,IE/Empty,UA/Empty
@@ -344,6 +352,8 @@ The other components are set to Empty versions, which contain emmpty
 subroutines for compilation, but cannot be used.
 The default configuration includes a working version for all components, 
 which takes up more memory, but is the most general.
+The only exception is SC, which requires configuration, so the 
+default version is Empty for the Solar Corona component.
 
 The grid size of several components can also be set with the {\tt -g}
 flag of the {\tt SetSWMF.pl} script. For example the 
@@ -353,7 +363,14 @@ SetSWMF.pl -g=GM:8,8,8,400,100
 command sets the block size for the GM component to $8\times 8\times 8$ cells, 
 the maximum number of blocks per processor to 400, 
 and the maximum number of implicit blocks to 100.
-
+The SetSWMF.pl script actually runs the individual GridSize.pl
+scripts in the component versions. These scripts can be run directly,
+and they provide more options and more verbose information than SetSWMF.pl.
+For example try
+\begin{verbatim}
+cd GM/BATSRUS
+GridSize.pl -s
+\end{verbatim}
 Compilation flags, such as the precision and optimization 
 level are stored in {\tt Makefile.conf}. The precision of reals
 can be changed to single precision (for example) by typing
@@ -367,20 +384,20 @@ with
 \begin{verbatim}
 SetSWMF.pl -s
 \end{verbatim}
-To build the executable, type:
+To build the executable {\bf bin/SWMF.exe}, type:
 \begin{verbatim}
 make
 \end{verbatim} 
-Depending on the configuration and the machine that you are compiling on, 
-this will take 10-30 minutes.  
+Depending on the configuration, the compiler settings and the machine 
+that you are compiling on, this can take from 2 to upto 30 minutes.  
 In addition, you may want make the post processing
 codes (for BATSRUS only) also:
 \begin{verbatim}
 make PSPH
 make PIDL
 \end{verbatim} 
-These two commands will create the codes {\tt PostSPH.exe}, for post
-processing spherical Tecplot files, and {\tt PostIDL.exe} 
+These two commands will create the codes {\tt bin/PostSPH.exe}, for post
+processing spherical Tecplot files, and {\tt bin/PostIDL.exe} 
 for post processing IDL files.
 
 The executable should be run in a sub-directory, since a large number
@@ -432,28 +449,47 @@ It is useful to check the validity of the {\tt run/PARAM.in} and
 {\tt run/LAYOUT.in} files berfore running the code. If the
 code will be run on 16 processors, type
 \begin{verbatim}
-TestParam.pl -n=16
+Scripts/TestParam.pl -n=16
 \end{verbatim}
+in the main SWMF directory.
 The Perl script reports inconsistencies and errors. 
 If no errors are found, the script finishes silently.
-Now you are read to run the executable through submitting a batch job or, 
+Now you are ready to run the executable through submitting a batch job or, 
 if it is possible on your computer, run the code interactively.  For example:
 \begin{verbatim}
+cd run
 mpirun -np 16 SWMF.exe
 \end{verbatim}
+The SWMF provides example job scripts for several architectures and
+machines used by the developers. These job scripts are found in 
+\begin{verbatim}
+CON/Scripts
+\end{verbatim}
+in the subdirectories named after the operating system. If the name
+of the file in the appropriate subdirectory matches the 
+name of the machine, the job script is copied into
+the {\tt run} directory when it is created.
+These job scripts serve as a starting point only, they must
+be customized before they can be used for submitting a job.
+
 To recompile the executable with different compiler settings you have
-to use the command:
+to use the command
 \begin{verbatim}
 make clean
-\end{verbatim} 
-To discard the configuration completely, type:
-\begin{verbatim}
-SetSWMF.pl -uninstall
-\end{verbatim} 
+\end{verbatim}
+before recompiling the executables. It is possible to recompile
+only a component or just one subdirectory if the {\tt make clean}
+command is issued in the appropriate directory.
 
-\section{??? Executing the Test Runs ???}
+\section{Executing the Test Runs}
 
-We provide a number of test runs for this distribution of the code.
+\subsection{The 8 Component Test}
+
+\subsection{The 5 Component Test}
+
+This test was developped for Milestone 7I. 
+It can be done in the current version as well with minor
+modifications. 
 The tests are in the Tests directory for the released code, otherwise
 they are in the SMWF\_7I\_TEST CVS repository.  The following tests
 are available:
@@ -473,18 +509,12 @@ are available:
 \end{itemize}
 On 16 CPU-s of a Linux cluster (AMD Athlon 1900+, using a 100Mbs
 network) the StartTst required 2872 seconds to complete, while the
-restart test required 252 seconds with the old time looping, and 182
-seconds with the new general time looping (set up time is not
-included).
+restart test requires 182 seconds (set up time is not included).
 
 Reference results are also  provided:
 \begin{itemize}
 \item {\tt StartResult.tgz}\\
        Results for the steady state run with IH, GM and IE
-
-\item {\tt RestartResult.tgz}\\
-      Results for the restarted run using the default
-       LAYOUT.in and PARAM.in files.
 
 \item {\tt RestartResultGeneral.tgz}\\
       Results for the restarted run using the 
@@ -493,16 +523,64 @@ Reference results are also  provided:
 Only the ASCII output files are included for sake of easy comparison.
 Results may vary slightly from platform to platform due to round off errors.
 
+
+\subsubsection{Running the startup test}
+
+To run this test you need to install, configure and compile SWMF.
+The {\tt IH/BATSRUS} (or {\tt BATSRUS\_share}), 
+{\tt GM/BATSRUS} and {\tt IE/Ridley\_serial}
+components are required, but it is useful to include all five
+components so the same executable and run directory 
+can be used for the next test too. For example set
+\begin{verbatim}
+  SetSWMF.pl -v=IH/BATSRUS_share,GM/BATSRUS,IM/RCM,IE/Ridley_serial,UA/GITM
+  SetSWMF.pl -v=SC/Empty,SP/Empty,RB/Empty
+  SetSWMF.pl -g=GM:8,8,8,400,1 -p=double
+\end{verbatim}
+The default parameter and layout files can be used. 
+These are copied into the run directory during {\tt make rundir},
+or can be copied with
+\begin{verbatim}
+  cd run
+  cp Param/PARAM.DEFAULT  PARAM.in
+  cp Param/LAYOUT.DEFAULT LAYOUT.in
+\end{verbatim}
+This test takes some time, and it creates the restart files
+for the following test. 
+
+After the run finished, you may post process the IDL plot files (the
+{\tt .idl} and {\tt .h} files produced by GM and IH can be processed
+into {\tt .out} files), and the northern and southern hemispheres
+plots of the IE component can be put together: 
+\begin{verbatim}
+  cd run/GM
+  ./pIDL
+  cd ../IH
+  ./pIDL
+  cd ../IE
+  ./pION -r
+\end{verbatim}
+The {\tt .out} files can be visualized with IDL using the scripts in
+the Idl directory.  You can also compare the ASCII output files with
+the ones given in the reference solutions.
+
 \subsubsection{Running the short restart test}
 
-To run this test you need to install and compile SWMF as described
-above and create the run directory. After this you can install the
-test into the run directory.  For example on a Linux or TrueUnix
+To run this test you need to install, configure and compile SWMF
+as described above and create the run directory. 
+The {\tt IH/BATSRUS} (or {\tt BATSRUS\_share}),
+{\tt GM/BATSRUS}, {\tt IM/RCM}, {\tt IE/Ridley\_serial} and
+{\tt UA/GITM} components are required. The configuration shown
+in the previous section can be used, for example.
+After this you can install the test into the run directory.  
+For example on a Linux or TrueUnix
 (OSF1) machine the short restart test can be installed with the
 following commands:
 \begin{verbatim}
-	cd run
-	tar xzf ../Tests/RestartTst.tgz
+  cd run
+  tar xzf ../Tests/RestartTst.tgz
+  cp Param/PARAM.in.test.restart.IHGMIMIEUA PARAM.in
+  cp Param/LAYOUT.in.test.restart.IHGMIMIEUA LAYOUT.in
 \end{verbatim}
 On a big endian platform use the {\tt RestartTstSGI.tgz} file instead.
 
@@ -510,66 +588,24 @@ Now you can run the code interactively or submit a job.  The default
 layout assumes 16 PE-s. For example an interactive execution could be
 like this:
 \begin{verbatim}
-	mpirun -np 16 SWMF.exe
+  mpirun -np 16 SWMF.exe
 \end{verbatim}
-After the run finished, you may post process the IDL plot files (the
-{\tt .idl} and {\tt .h} files produced by GM and IH can be processed
-into {\tt .out} files):
-\begin{verbatim}
-	cd run/GM
-	./pIDL
-	cd ../IH
-	./pIDL
-\end{verbatim}
-The {\tt .out} files can be visualized with IDL using the scripts in
-the Idl directory.  You can also compare the ASCII output files with
-the ones given in the reference solutions.
-
-\subsubsection{Test with the general time looping model}
-
-You may modify the LAYOUT.in file as well as use the LAYOUT.in.general
-and PARAM.in.general files which test the "general" execution model
-(parallel execution, but overlap of components is also allowed). Use
-the following commands in the run directory
-\begin{verbatim}
-	mv LAYOUT.in LAYOUT.in.default
-	cp LAYOUT.in.general LAYOUT.in
-	mv PARAM.in  PARAM.in.default
-	cp PARAM.in.general PARAM.in 
-\end{verbatim}
-When editing the LAYOUT.in file, remember that the GM and IH
-components cannot overlap if they share the same source code!
+The post processing of the plot files is the same as described above. 
+The IM/RCM and UA/GITM components do not require post processing.
 
 \subsubsection{Test with the renamed IH code}
 
 The restriction on the overlapping of the IH and GM components
 can be eliminated by the use of the renamed IH source code. 
-First of all edit {\tt Common/Makefile.COMP} and
-select UofM as the {\tt IH\_VERSION}:
+To test this, select the {\tt IH/BATSRUS} component:
 \begin{verbatim}
-#IH_VERSION = UofM_share
-IH_VERSION = UofM
-#IH_VERSION = Empty
+  SetSWMF.pl -v=IH/BATSRUS
 \end{verbatim}
-Now create the renamed source code by typing
+This will automatically create the renamed source code for IH/BATSRUS.
+which will take 2-5 minutes. Once the renaming
+is done, reduce the number of the blocks for GM and IH:
 \begin{verbatim}
-	make IHUOFM
-\end{verbatim}
-in the main directory. This will take 2-5 minutes. Once the renaming
-is done, reduce the number of the blocks for GM and IH by editing
-GM/UofM/src/ModSize.f90 and IH/UofM/src/ModSize.f90 to contain
-something like this:
-\begin{verbatim}
-  !\
-  ! Block parameters.
-  !/
-  ! Maximum number of blocks per processor
-  integer, parameter :: nBLK=200
-
-  integer, parameter :: MaxBlock = nBLK
-
-  ! Maximum number of implicit blocks                   !^CFG IF IMPLICIT
-  integer, parameter :: MaxImplBLK = min(MaxBlock, 1)   !^CFG IF IMPLICIT
+  SetSWMF.pl -g=GM:8,8,8,200,1 -g=IH:8,8,8,200,1
 \end{verbatim}
 The test requires 520 blocks for GM and 456 blocks for IH on the PE-s
 assigned to the components. So with at least 3 PE-s for GM and IH each,
@@ -579,11 +615,58 @@ be minimized. You can specify different number of blocks for GM and IH.
 
 Recompile the code:
 \begin{verbatim}
-	make
+  make
 \end{verbatim}
 Now it is allowed to overlap GM and IH. The renamed IH code has the 
 version name IH\_BATSRUS, which is printed to the standard output at the
 beginning of the execution.
 
+\subsection{Testing GM/BATSRUS and IE/Ridley\_serial}
 
+The \BATSRUS\ code is used in many components, so it comes
+with an extensive test suite. The test suite resides in
+\begin{verbatim}
+  GM/BATSRUS/Param/TESTSUITE
+\end{verbatim}
+but it can be used from the SWMF as well. Two of the tests
+involve the {\tt IE/Ridley\_serial} component as well. These tests
+can only be done in the framework, the rest should give
+identical results in the framework and in the standalone
+BATSRUS code.
+
+The functionality testsuite requires two components only,
+so the following configuration is recommended:
+\begin{verbatim}
+  SetSWMF.pl -v=GM/BATSRUS,IE/Ridley_serial
+  SetSWMF.pl -v=SC/Empty,IH/Empty,SP/Empty,IM/Empty,RB/Empty,UA/Empty
+  SetSWMF.pl -g=GM:8,8,8,400,100 -p=double
+  make
+  make PIDL
+  make PSPH
+  make rundir
+\end{verbatim}
+After compilation and creation of the run directory, the test suite
+can be executed on 2 processors with
+\begin{verbatim}
+  Scripts/TestSuite func
+\end{verbatim}
+An individaul test can be run with the {\tt TestSWMF} script,
+for example the first test of the test suite is 
+\begin{verbatim}
+  Scripts/TestSWMF -Limiter=beta -Plottype=idltecamr
+\end{verbatim}
+Two test suite results obtained with different versions of the code,
+or with different platforms/compilers, can be compared for 
+consistency and performance:
+\begin{verbatim}
+  Scripts/TestCompare run1 run2
+  Scripts/TestCompare -speed run1 run2
+\end{verbatim}
+The configuration of BATSRUS to a 'covariant' (generalized coordinate) version
+can be tested with
+\begin{verbatim}
+  Scripts/TestCovariant
+\end{verbatim}
+All these scripts provide a complete usage information when called with the 
+{\tt -h} flag.
 %\end{document}
