@@ -181,6 +181,7 @@ test_ray_trace:
 OBJ_LINE_EXTRACT = \
 	test_line_extract.o \
 	../src/ModMpi.o \
+	../src/ModSort.o \
 	../src/CON_line_extract.o
 
 test_line_extract.exe: ${OBJ_LINE_EXTRACT}
