@@ -315,6 +315,7 @@ rundir: ENV_CHECK
 	cp Param/LAYOUT.DEFAULT run/LAYOUT.in
 	cp Param/PARAM.DEFAULT run/PARAM.in
 	cp Param/IMF.DEFAULT run/IMF.dat
+	cp Scripts/Restart.pl run/Restart.pl
 	touch run/core
 	chmod 444 run/core
 	cd run; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
