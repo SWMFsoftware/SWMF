@@ -353,11 +353,14 @@ contains
             RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
        write(*,*)'RotAxisGse_D =',RotAxis_D
        write(*,*)'RotAxisGsm_D =',RotAxisGsm_D
-       write(*,*)'Hgr-Hgi angle=',&
-            modulo(OmegaCarrington*(tStart - tStartCarrington)*cRadToDeg,360.)
-       write(*,'(a,3e15.7)')' XyzPlanetHgi_D = ',XyzPlanetHgi_D
-       write(*,'(a,3e15.7)')' XyzPlanetHgr_D = ',&
-            matmul(HgrHgi_DD,XyzPlanetHgi_D)
+       write(*,*)'r/AU,HG_lat,HGR_lon,HGI_lon=',&
+            sqrt(sum(XyzPlanetHgi_D**2))/cAU,&
+            asin(XyzPlanetHgi_D(3)/sqrt(sum(XyzPlanetHgi_D**2)))*cRadToDeg, &
+            modulo(atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1)) - &
+            OmegaCarrington*(tStart - tStartCarrington), cTwoPi)*cRadToDeg,&
+            atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1))*cRadToDeg
+       write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
+       write(*,*)'XyzPlanetHgr_D/rSun = ',matmul(HgrHgi_DD,XyzPlanetHgi_D)/rSun
     end if
 
     DoInitializeAxes=.false.
