@@ -1616,7 +1616,7 @@ subroutine get_time_string
   use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
   implicit none
 
-  write(StringTimeH4M2S2,'(i4.4,i2.2i2.2)') &
+  write(StringTimeH4M2S2,'(i4.4,i2.2,i2.2)') &
        int(                            Time_Simulation/3600.), &
        int((Time_Simulation-(3600.*int(Time_Simulation/3600.)))/60.), &
        int( Time_Simulation-(  60.*int(Time_Simulation/  60.)))
