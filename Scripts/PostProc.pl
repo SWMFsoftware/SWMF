@@ -3,6 +3,7 @@
 my $Help    = ($h or $H or $help);
 my $Verbose = ($v or $verbose);
 my $Gzip    = ($g or $gzip);
+my $Repeat  = ($r or $repeat);
 
 use strict;
 
@@ -10,32 +11,37 @@ use strict;
 
 my $Pwd = `pwd`; chop $Pwd;
 
-my $Dir;
-foreach $Dir ("GM", "IH", "SC"){
-    next unless -d "$Dir/IO2";
-    print "cd $Dir\n" if $Verbose;
-    chdir $Dir or die "Could not change directory to $Dir\n";
-    &shell("./pIDL");
-    if($Gzip){
-	&shell("./pTEC g");
-    }else{
-	&shell("./pTEC p r");
+REPEAT:{
+    my $Dir;
+    foreach $Dir ("GM", "IH", "SC"){
+	next unless -d "$Dir/IO2";
+	print "cd $Dir\n" if $Verbose;
+	chdir $Dir or die "Could not change directory to $Dir\n";
+	&shell("./pIDL");
+	if($Gzip){
+	    &shell("./pTEC g");
+	}else{
+	    &shell("./pTEC p r");
+	}
+	chdir $Pwd;
     }
-    chdir $Pwd;
-}    
 
-$Dir = "IE";
-if(-d "$Dir/ionosphere"){
-    print "cd $Dir\n" if $Verbose;
-    chdir $Dir or die "Could not change directory to $Dir\n";
-    if($Gzip){
-	&shell("./pION -g");
-    }else{
-	&shell("./pION");
+    $Dir = "IE";
+    if(-d "$Dir/ionosphere"){
+	print "cd $Dir\n" if $Verbose;
+	chdir $Dir or die "Could not change directory to $Dir\n";
+	if($Gzip){
+	    &shell("./pION -g");
+	}else{
+	    &shell("./pION");
+	}
+	chdir $Pwd;
     }
-    chdir $Pwd;
+    if($Repeat){
+	sleep $Repeat;
+	redo REPEAT;
+    }
 }
-
 
 exit 0;
 
@@ -78,6 +84,8 @@ Usage:
 
    -g -gzip    Gzip the ASCII files.
 
+   -r=REPEAT   Repeat post processing every REPEAT seconds.
+
 Examples:
 
    Post-process the plot files:
@@ -86,7 +94,11 @@ PostProc.pl
 
    Post-process the plot files, compress them and print verbose info:
 
-PostProc.pl -g -v'
+PostProc.pl -g -v
+
+   Repeat post-processing every 360 seconds and gzip files:
+
+PostProc.pl -r=360 -g &'
 #EOC
     ,"\n\n";
     exit;
