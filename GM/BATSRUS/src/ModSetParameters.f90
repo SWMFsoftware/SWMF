@@ -1568,13 +1568,40 @@ subroutine MH_set_parameters(TypeAction)
         select case(NameThisComp)
         case('GM')
            if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
-                ' GM_ERROR: cannot handle coordinate system '&
+                ' ERROR: cannot handle coordinate system '&
                 //TypeCoordSystem)
-        case('IH','SC')
-           if(TypeCoordSystem /= 'HGI')call stop_mpi(NameSub// &
-                NameThisComp//'_ERROR: cannot handle coordinate system '&
-                //TypeCoordSystem)
+        case('IH')
+           select case(TypeCoordSystem)
+           case('HGI')
+              UseInertial = .true.
+           case('HGR')
+              if(iProc==0)then
+                 write(*,*) NameSub, &
+                      ' WARNING: corotating IH does not fully work'
+                 if(UseStrict)call stop_mpi('Correct PARAM.in!')
+                 write(*,*)NameSub//' setting UseInertial = T'
+              end if
+              UseInertial = .false.
+           case default
+              call stop_mpi(NameSub// &
+                   ' ERROR: cannot handle coordinate system '&
+                   //TypeCoordSystem)
+           end select
+        case('SC')
+           select case(TypeCoordSystem)
+           case('HGR')
+              UseInertial = .false.
+           case('HGI')
+              if(iProc==0) write(*,*) NameSub,&
+                      ' WARNING: inertial SC is less accurate'
+              UseInertial = .true.
+           case default
+              call stop_mpi(NameSub// &
+                   ' ERROR: cannot handle coordinate system '&
+                   //TypeCoordSystem)
+           end select
         end select
+        UseRotatingFrame = .not.UseInertial
      case("#NSTEP")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nStep',n_step)
@@ -1633,15 +1660,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('HelioDipoleTilt'    ,ThetaTilt)
         ThetaTilt = ThetaTilt * cDegToRad
      case("#HELIOROTATION", "#INERTIAL")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseInertialFrame',UseInertial)
-        UseRotatingFrame = .not.UseInertial
-        if(UseInertial)then
-           call read_var('UseRotatingBC',UseCorotation)
-        else
-           ! In the corotating frame the inner BC does not rotate
-           UseCorotation=.false.
-        end if
+        if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
+             ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
      case("#HELIOTEST")
         call read_var('DoSendMHD',DoSendMHD)
      case("#ARCADE")
@@ -1739,7 +1759,21 @@ contains
 
     problem_type = -1                                      !^CFG IF NOT SIMPLE
 
-    if(NameThisComp=='IH'.or.NameThisComp=='SC')TypeCoordSystem = 'HGI'
+    ! Default coordinate systems
+    select case(NameThisComp)
+    case('IH')
+       TypeCoordSystem = 'HGI'
+       UseInertial     = .true.
+    case('SC')
+!!!       TypeCoordSystem = 'HGR'
+!!!       UseInertial     = .false.
+       TypeCoordSystem = 'HGI'
+       UseInertial     = .true.
+    case('GM')
+       TypeCoordSystem = 'GSM'
+       UseInertial     = .true.
+    end select
+    UseRotatingFrame = .not.UseInertial
 
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'
@@ -2121,9 +2155,6 @@ contains
     case default
        TypeBc_I(body1_)='unknown'
     end select
-
-    !   UseRotatingFrame = problem_type == problem_heliosphere
-    UseRotatingFrame = .not.UseInertial
 
     ! These are used for problem_heliosphere only
     Qsun  = 25.00
