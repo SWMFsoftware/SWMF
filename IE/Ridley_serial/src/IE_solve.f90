@@ -21,7 +21,7 @@ subroutine IE_solve
   SinThetaTilt = sin(ThetaTilt)
   CosThetaTilt = cos(ThetaTilt)
 
-  if (DoTestMe) &
+  if (DoTest .and. iProc==0) &
        write(*,'(a,i4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)')&
        " "//NameSub//" at ",Time_Array
 
