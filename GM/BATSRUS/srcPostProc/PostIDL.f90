@@ -175,7 +175,8 @@ program PostIDL
   dyperdx=dxyzmin(2)/dxyzmin(1); dzperdx=dxyzmin(3)/dxyzmin(1)
 
   ! Allocate w and xx, the arrays of variables and coordinates
-  allocate(w1(nw),w(nx,ny,nz,nw),xx(nx,ny,nz,ndim))
+  allocate(w1(nw),w(nx,ny,nz,nw),xx(nx,ny,nz,ndim),STAT=iError)
+  if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate w and x arrays'
 
   !Initialize w
   w=0.0
