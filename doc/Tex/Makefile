@@ -14,13 +14,13 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo ""
-	@echo "PDF          - produces SWMF.pdf, TESTING.pdf and MAINTENANCE.pdf"
+	@echo "PDF          - produces PDF manuals in the ../ directory"
 	@#^CMP IF DOCHTML BEGIN
 	@echo ""
 	@echo "HTML         - produces online manuals in ../HTML directory"
 	@#^CMP END DOCHTML
 	@echo ""
-	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
+	@echo "clean        - remove temporary files"
 	@echo ""
 	@echo "cleanpdf     - clean + remove PDF manuals"
 	@#^CMP IF DOCHTML BEGIN
@@ -119,8 +119,10 @@ SWMFREF = \
 .tex.html:
 	mv $*.tex $*orig.tex
 	perl -pe 's/\\tableofcontents/\%\\tableofcontents/' $*orig.tex > $*.tex
+	touch $*.ind
 	latex $*
 	latex $*
+	rm -f $*.ind
 	latex2html -image_type gif -local_icons \
 		  -address "(c) 2003 University of Michigan" \
 		  -prev_url   "../../index.html"  \
