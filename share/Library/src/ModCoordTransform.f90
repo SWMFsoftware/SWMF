@@ -45,6 +45,8 @@
 
 module ModCoordTransform
 
+  use ModNumConst, ONLY: cTwoPi
+
   implicit none
 
   save
@@ -660,6 +662,7 @@ contains
     else
        atan2_check = atan2(x,y)
     end if
+    if(atan2_check < 0.0)atan2_check = atan2_check + cTwoPi
     !EOC
   end function atan2_check
 
