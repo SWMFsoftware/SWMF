@@ -554,40 +554,41 @@ contains
   !EOP 
   !BOP
   !INTERFACE:
-  subroutine nearest_grid_points(Xyz_D,&
+  subroutine nearest_grid_points(nDim,Xyz_D,&
        GridDescriptor,&
        nIndexes,&
        Index_II,&
        nImages,Weight_I)
     !INPUT ARGUMENTS:                       
-    type(GridDescriptorType)::GridDescriptor     
-    real,dimension(GridDescriptor%nDim),intent(inout)::Xyz_D 
+    type(GridDescriptorType)::GridDescriptor
+    integer,intent(in)::nDim
+    real,dimension(nDim),intent(inout)::Xyz_D 
     integer,intent(in)::nIndexes
     !OUTPUT ARGUMENTS:
-    integer,dimension(0:nIndexes,2**GridDescriptor%nDim),intent(out)::&
+    integer,dimension(0:nIndexes,2**nDim),intent(out)::&
          Index_II
     integer,intent(out)::nImages
-    real,dimension(2**GridDescriptor%nDim),intent(out)::&
+    real,dimension(2**nDim),intent(out)::&
          Weight_I
     !EOP
-    real,dimension(GridDescriptor%nDim)::&
+    real,dimension(nDim)::&
          XyzStored_D, DXyzCells_D,DXyzTolerance_D
-    integer,dimension(GridDescriptor%nDim)::iGridPoints_D
-    logical,dimension(GridDescriptor%nDim)::IsAtFace_D
-    real,dimension(GridDescriptor%nDim,2**GridDescriptor%nDim)&
+    integer,dimension(nDim)::iGridPoints_D
+    logical,dimension(nDim)::IsAtFace_D
+    real,dimension(nDim,2**nDim)&
          :: Xyz_DI
     real,parameter::Tolerance=cOne/cE3
     integer::lGlobalTreeNode,iDim,iImages
-    logical,dimension(GridDescriptor%nDim,2**GridDescriptor%nDim)::&
+    logical,dimension(nDim,2**nDim)::&
          Up_DI,Down_DI
-    logical,dimension(GridDescriptor%nDim)::&
+    logical,dimension(nDim)::&
          IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
 
     Index_II=0;Weight_I=cZero
     XyzStored_D=Xyz_D
-    Index_II(1:GridDescriptor%nDim,1)=&
+    Index_II(1:nDim,1)=&
          GridDescriptor%iGridPointMax_D+1
-    do while(any(Index_II(1:GridDescriptor%nDim,1)>&
+    do while(any(Index_II(1:nDim,1)>&
          GridDescriptor%iGridPointMax_D))
        Xyz_D=XyzStored_D
        call search_in(GridDescriptor%DD%Ptr,Xyz_D,lGlobalTreeNode)
@@ -609,15 +610,15 @@ contains
        Xyz_D=Xyz_D-DXyzCells_D*GridDescriptor%Displacement_D
        iGridPoints_D=floor(Xyz_D/DXyzCells_D)
        Xyz_D=Xyz_D-DXyzCells_D*iGridPoints_D
-       Index_II(1:GridDescriptor%nDim,1)=iGridPoints_D+1
+       Index_II(1:nDim,1)=iGridPoints_D+1
        DXyzTolerance_D=Tolerance*DXyzCells_D
        IsAtFace_D=abs(Xyz_D)<DXyzTolerance_D&
             .or.abs(Xyz_D-DXyzCells_D )<DXyzTolerance_D
        where(is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))&
-            Index_II(1:GridDescriptor%nDim,1)=&
-            min(Index_II(1:GridDescriptor%nDim,1),&
+            Index_II(1:nDim,1)=&
+            min(Index_II(1:nDim,1),&
             GridDescriptor%iGridPointMax_D)
-       where(Index_II(1:GridDescriptor%nDim,1)>&
+       where(Index_II(1:nDim,1)>&
             GridDescriptor%iGridPointMax_D)&
             XyzStored_D=XyzStored_D+DXyzTolerance_D*cQuarter
     end do
@@ -627,7 +628,7 @@ contains
 
     if(.not.(any(IsAtFace_D)))return
     Xyz_DI(:,1)=XyzStored_D
-    do iDim=1,GridDescriptor%nDim
+    do iDim=1,nDim
        if(IsAtFace_D(iDim))then
           Xyz_DI(:,1+nImages:nImages+nImages)=Xyz_DI(:,1:nImages)
           Xyz_DI(iDim,1:nImages)=Xyz_DI(iDim,1:nImages)-&
@@ -651,16 +652,16 @@ contains
             lGlobalTreeNode)*GridDescriptor%Displacement_D
        call search_cell(GridDescriptor%DD%Ptr,&
             lGlobalTreeNode,Xyz_DI(:,iImages),&
-            Index_II(1:GridDescriptor%nDim,iImages))
+            Index_II(1:nDim,iImages))
     end do
     iImages=1
     do while(iImages<=nImages)
        !Exclude the stencil nodes which are out of the 
        !computational domain
        do while(any(GridDescriptor%iGridPointMin_D>&
-            Index_II(1:GridDescriptor%nDim,iImages).or.&
+            Index_II(1:nDim,iImages).or.&
             GridDescriptor%iGridPointMax_D<&
-            Index_II(1:GridDescriptor%nDim,iImages)))
+            Index_II(1:nDim,iImages)))
           if(iImages==nImages)then
              nImages=nImages-1
              EXIT
@@ -1095,7 +1096,7 @@ contains
             (OrigCoord_D(iDim)-ResChangeCoord_D(iDim))
        Weight_I(1:nImages)=Weight_I(1:nImages)*WeightLeft
        call bilinear_interpolation(&
-            GridDescriptor%nDim,&
+            nDim,&
             ResChangeCoord_D,&
             GridDescriptor,&
             nIndexes,& 
@@ -1207,7 +1208,7 @@ contains
              end select
           end do DIM
           call bilinear_interpolation(&
-               GridDescriptor%nDim,&
+               nDim,&
                XyzMisc_D,&
                GridDescriptor,&
                nIndexes,& 

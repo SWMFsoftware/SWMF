@@ -508,7 +508,9 @@ contains
             Index_II,&
             nImages,Weight_I)
     else
-       call nearest_grid_points(XyzMisc_D,&
+       call nearest_grid_points(&
+            nDim,&
+            XyzMisc_D,&
             GD,&
             nIndexes,&
             Index_II,&

@@ -692,6 +692,7 @@ contains
                      Weight_I)
              else
                 call nearest_grid_points(&
+                     GridDescriptorSource%nDim,&
                      XyzSource_D,&
                      GridDescriptorSource,&
                      Router%nIndexesSource,&
@@ -1049,6 +1050,7 @@ contains
                      Weight_I)
                 else
                    call nearest_grid_points(&
+                     GridDescriptorTarget%nDim,&   
                      XyzTarget_D,&
                      GridDescriptorTarget,&
                      Router%nIndexesTarget,&
