@@ -44,7 +44,9 @@ Module ModNumConst
 
   real(Real8_), parameter:: &
        cTiny8     =  0.000000000100000,                       &
-       cZero8     =  0.0000000000000000000000000000000  
+       cZero8     =  0.0000000000000000000000000000000,       &
+       cPi8       =  3.1415926535897932384626433832795,       &
+       cTwoPi8    =  cPi8+cPi8
 
   real, parameter, dimension(3,3) :: cUnit_DD = reshape( &
        (/cOne,cZero,cZero, cZero,cOne,cZero, cZero,cZero,cOne/),&
