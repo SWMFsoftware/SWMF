@@ -5,6 +5,8 @@
 #ifndef EXTERNALFUNC 
 #define EXTERNALFUNC 
 
+#include "specfunc.h"
+
 template<class T>
 class CExternalFunction {
 private:
@@ -79,8 +81,9 @@ public:
     if ((func!=NULL)&&(n<nfuncs)) if (func[n]!=NULL) res=func[n];
 
     if (res==NULL) {
-       printf("template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
-       while (true) printf("Error:\n");
+       char str[200];
+       sprintf(str,"template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
+       PrintErrorLog(str);
 
        exit(0);
     }
