@@ -212,9 +212,10 @@ clean: ENV_CHECK
 	cd RB/Rice;		make clean    #^CMP IF RB
 	cd RB/RiceV5;		make clean    #^CMP IF RB
 	cd RB/Empty;		make clean    #^CMP IF RB
+	cd SC/BATSRUS;          make clean    #^CMP IF SC
 	cd SP/Kota;             make clean    #^CMP IF SP
 	cd SP/FLAMPA;           make clean    #^CMP IF SP
-	cd SP/Empty;            make clean    #^CMP IF SC
+	cd SP/Empty;            make clean    #^CMP IF SP
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
