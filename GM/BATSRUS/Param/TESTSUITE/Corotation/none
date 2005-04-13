@@ -1,9 +1,0 @@
-
-#IDEALAXES
-! align rotation and magnetic axes with z axis
-
-#ROTATION
-F		UseRotation
-
-#END
-
