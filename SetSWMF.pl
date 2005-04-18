@@ -169,7 +169,7 @@ sub get_settings{
 
     while(<MAKEFILE>){
 	$Compiler = $1 if /^\s*COMPILE.f90\s*=\s*(\S+)/;
-	$Precision = 'double' if /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64)/;
+	$Precision = 'double' if /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64|\-\-dbl)/;
     }
 
     close(MAKEFILE);
