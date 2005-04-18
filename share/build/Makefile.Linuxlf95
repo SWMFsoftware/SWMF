@@ -24,18 +24,18 @@ MPILIB =
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-DEBUG   = 
+DEBUG   =
 #DEBUG   = -dusty -w -C -gline
 
-Cflag0  = ${SEARCH} -O0 ${PRECISION} ${DEBUG} -c
+Cflag0  = ${SEARCH} -O ${PRECISION} ${DEBUG} -c
 Cflag1  = ${SEARCH} -O  ${PRECISION} ${DEBUG} -c
 Cflag2  = ${SEARCH} -O  ${PRECISION} ${DEBUG} -c
 Cflag3  = ${SEARCH} -O  ${PRECISION} ${DEBUG} -c
 Cflag4  = ${SEARCH} -O  ${PRECISION} ${DEBUG} -c
-Cflag4NoP = ${SEARCH} -O ${DEBUG} -c
+Cflag4NoP = ${SEARCH} -O  ${DEBUG} -c
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  --sav ${DEBUG} -c
+CFLAGS = ${SEARCH}  ${PRECISION} -O --sav ${DEBUG} -c
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 
