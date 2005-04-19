@@ -1579,7 +1579,7 @@ subroutine MH_set_parameters(TypeAction)
                  write(*,*) NameSub, &
                       ' WARNING: corotating IH does not fully work'
                  if(UseStrict)call stop_mpi('Correct PARAM.in!')
-                 write(*,*)NameSub//' setting UseInertial = T'
+                 write(*,*)NameSub//' setting UseInertial = F'
               end if
               UseInertial = .false.
            case default
@@ -1602,6 +1602,7 @@ subroutine MH_set_parameters(TypeAction)
            end select
         end select
         UseRotatingFrame = .not.UseInertial
+
      case("#NSTEP")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nStep',n_step)
