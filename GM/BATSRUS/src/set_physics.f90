@@ -113,17 +113,16 @@ subroutine set_physics_constants
   ! if the rotation period is less than 1 second then you made
   ! a mistake - the period is to fast
   if (abs(rot_period_dim) > 1./3600.) then
-     OMEGAbody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
+     OmegaBody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
   else
-     OMEGAbody = 0.0
-     write(*,*) "----------------------------------------"
-     write(*,*) "              Warning:                  "
-     write(*,*) "Your have set UseRotatingBc - .true.    "
-     write(*,*) "but the rotation period is set less than"
-     write(*,*) "1 second.  This is too fast.            "
-     write(*,*) "(rot_period_dim=",rot_period_dim," hours)"
-     write(*,*) "setting rot_period_dim=0.0              "
-     write(*,*) "----------------------------------------"
+     write(*,*) "--------------------------------------------------"
+     write(*,*) "WARNING in set_physics:                           "
+     write(*,*) "You have set UseRotatingBc = .true.               "
+     write(*,*) "but the rotation period is set less than 1 second."
+     write(*,*) "This is too fast: rot_period_dim in hours=",rot_period_dim
+     write(*,*) "Setting OmegaBody=0.0                             "
+     write(*,*) "--------------------------------------------------"
+     OmegaBody = 0.0
   end if
 
   Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
