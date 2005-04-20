@@ -26,7 +26,7 @@
 !========================================================================
 
 !========================================================================
-!  MODULE MODUSER
+!  MODULE ModUser
 !========================================================================
 !\
 ! This module is where the user should define any variables that are
@@ -66,8 +66,15 @@ Module ModUser
   ! Header string in the input file
   character (LEN=80):: Head_PFSSM
 
-  ! Shift in longitude in degrees
-  ! (0 means that the Earth is towards the -X axis)
+  ! Rotation angle around z-axis, in degrees,
+  ! from the coordinate system of the component
+  ! towards the coordinate system of the magnetic 
+  ! map in the positive direction - hence, is positive. 
+  ! Is set automatically to be equal to the 
+  ! H(eliographic) L(ongitude) of C(entral) M(eridian)
+  ! of the M(ap) minus 180 Deg, if in the input file 
+  ! Phi_Shift is negative
+  !
   real:: Phi_Shift
 
   ! Units of the magnetic field in the file including corrections
@@ -100,7 +107,7 @@ Module ModUser
        Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SEr,SE
 end Module ModUser
 !========================================================================
-!  SUBROUTINE USER_READ_INPUTS
+!  SUBROUTINE user_read_inputs
 !========================================================================
 
 !\
@@ -222,7 +229,7 @@ subroutine user_heat_source
 end subroutine user_heat_source
 
 !========================================================================
-!  SET_EXTRA_BOUNDARY_CELLS::
+!  set_extra_boundary_cells::
 !  Allows to define boundary conditions at the user defined boundary.
 !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using a boundary
 !  condition for iBLK block.
@@ -614,7 +621,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
      case(Top_)
         kCell  = kFace-1
      case default
-        call stop_mpi('User_face_BCs')
+        call stop_mpi('user_face_bcs')
      end select
      call get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
           DensCell,PresCell,GammaCell)
@@ -763,7 +770,7 @@ subroutine user_calc_sources
  ! Source_VC(EnergyRL_  ,:,:,:) = SEr   +Source_VC(EnergyRL_  ,:,:,:) !^CFG UNCOMMENT IF ALWAVES
 end subroutine user_calc_sources
 !========================================================================
-!  SUBROUTINE USER_SOURCES
+!  SUBROUTINE user_sources
 !========================================================================
 !\
 ! This subroutine is used to calculate sources for the MHD equations.  The
@@ -997,7 +1004,7 @@ subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
 end subroutine get_plasma_parameters_cell
 
 !========================================================================
-!  SUBROUTINE USER_INITIAL_PERTURBATION
+!  SUBROUTINE user_initial_perturbation
 !========================================================================
 !\
 ! This subroutine allows the user to add a perturbation to a solutions
@@ -1583,6 +1590,63 @@ subroutine get_atmosphere_orig(i,j,k,iBLK,Dens_BLK,Pres_BLK)
   endif
   
 end subroutine get_atmosphere_orig
+!=================================================================
+! SUBROUTINE get_hlcmm
+! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
+! the M(ap). Assign Phi_Shift=HLCMM-180
+subroutine get_hlcmm
+  use ModUser,ONLY:Head_PFSSM, Phi_Shift,File_PFSSM
+  use ModProcMH,ONLY:iProc
+  use ModIO,       ONLY: iUnitOut, write_prefix
+!  use CON_geopack,ONLY:is_advanced_hgr,get_advanced_hgr_longitude
+  use ModNumConst
+  implicit none
+  real::HLCMM     !Heliographic Longitudee of the central meridian of map
+  integer::iHLCMM !The same, but HLCMM is integer at WSO magnetograms
+  integer::iErrorRead,iPosition
+     iPosition=index(Head_PFSSM,'Centered')	
+     if (iPosition>0.and.Phi_Shift<cZero)then	
+        Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+	          Head_PFSSM(iPosition+1:len(Head_PFSSM))
+        iPosition=index(Head_PFSSM,':')
+        Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+	          Head_PFSSM(iPosition+1:len(Head_PFSSM))
+        iPosition=index(Head_PFSSM,':')
+        Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+                  Head_PFSSM(iPosition+1:len(Head_PFSSM))
+        read(Head_PFSSM,'(i3)',iostat=iErrorRead)iHLCMM
+        if(iErrorRead>0)call stop_mpi(&
+                 'Can nod find HLCMM, '//File_PFSSM//&
+	         ' is not a true WSO magnetogram')
+        Phi_Shift=real(iHLCMM)-180
+!        if(is_advanced_hgr())call get_advanced_hgr_longitude(&
+!	         Phi_Shift,Phi_Shift)
+	if(Phi_Shift<cZero)Phi_Shift=Phi_Shift+360
+        if(iProc==0)then
+           call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
+        end if
+        return
+     end if
+     iPosition=index(Head_PFSSM,'Central')
+     if(iPosition>0.and.Phi_Shift<cZero)then
+        Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+                 Head_PFSSM(iPosition+1:len(Head_PFSSM))
+        iPosition=index(Head_PFSSM,':')
+        Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+	         Head_PFSSM(iPosition+1:len(Head_PFSSM))
+        read(Head_PFSSM,*,iostat=iErrorRead)HLCMM
+        if(iErrorRead>0)call stop_mpi(&
+                 'Can nod find HLCMM, '//File_PFSSM//&
+	         ' is not a true MDI magnetogram')
+        Phi_Shift=HLCMM-180
+!        if(is_advanced_hgr())call get_advanced_hgr_longitude(&
+!	         Phi_Shift,Phi_Shift)
+        if(Phi_Shift<cZero)Phi_Shift=Phi_Shift+360
+        if(iProc==0)then
+           call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
+        end if
+     end if
+end subroutine get_hlcmm
 
 !============================================================================
 subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
@@ -1678,12 +1742,6 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
   real:: SinThetaM, SinThetaM1
   integer:: delta_m0
   real, dimension(-1:N_PFSSM+2):: RoRsPower_I, RoRPower_I, rRsPower_I
-
-  !\
-  ! G. Toth: added dPhi shift to rotate into the frame of the SC/IH component
-  !/
-  real, save :: dPhi
-  real       :: XyzPlanet_D(3)
   !--------------------------------------------------------------------------
   !\
   ! Calculate cell-centered spherical coordinates::
@@ -1733,6 +1791,7 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
      if (iHead_PFSSM /= 0) then
         do i=1,iHead_PFSSM
            read(iUnit,'(a)') Head_PFSSM
+           if(Phi_Shift<-cTiny)call get_hlcmm	
         enddo
      endif
      !\
@@ -1777,23 +1836,11 @@ subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
         factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
      enddo
 
-     !\
-     ! Calculate the shift of the longitudes with respect to the magnetogram,
-     ! which assumes that the Earth is towards 180 longitude.  
-     !/
-     ! Calculate the longitude of the planet in the component's frame.
-     XyzPlanet_D = matmul(&
-          transform_matrix(0.0,'HGI',TypeCoordSystem),XyzPlanetHgi_D)
-
-     ! Adding dPhi shifts FROM the component frame TO the magnetogram frame
-     dPhi = cPi - atan2(XyzPlanet_D(2),XyzPlanet_D(1))
-
   end if
   !\
   ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame.
-  ! Add another shift defined by the user (usually should be zero).
   !/
-  Phi_PFSSM = Phi_PFSSM + dPhi - Phi_Shift*cDegToRad
+  Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
 
   !\
   ! Calculate powers of the ratios of radii
@@ -2117,7 +2164,7 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
 end subroutine user_specify_initial_refinement
 !========================================================================
 !========================================================================
-!  SUBROUTINE USER_AMR_CRITERIA
+!  SUBROUTINE user_amr_criteria
 !========================================================================
 !
 !\
@@ -2217,7 +2264,7 @@ subroutine user_amr_criteria(iBLK, userCriteria, TypeCriteria, IsFound)
 end subroutine user_amr_criteria
 !========================================================================
 !========================================================================
-!  SUBROUTINE USER_SET_ICs
+!  SUBROUTINE user_set_ICs
 ! (It will include set_ICs_global.f90
 !!\
 ! Calculates the initial conditions of the grid for the Global Heliosphere
@@ -2277,7 +2324,7 @@ subroutine user_update_states(iStage,iBlock)
 end subroutine user_update_states
 !========================================================================
 !========================================================================
-!  SUBROUTINE USER_WRITE_PROGRESS
+!  SUBROUTINE user_write_progress
 !========================================================================
 
 !
@@ -2294,7 +2341,7 @@ subroutine user_write_progress
 end subroutine user_write_progress
 !========================================================================
 !========================================================================
-!  SUBROUTINE USER_GET_LOG_VAR
+!  SUBROUTINE user_get_log_var
 !========================================================================
 !
 ! This subroutine allows the user to write to the log files variables
