@@ -376,6 +376,13 @@ pro get_pict,unit,filetype,npict,x,w,$
        w(*,0,*) = w(isort,0,*)
    endif
 
+   if ndim eq 1 and gencoord then begin
+       ; sort points to have increasing coordinates
+       isort = sort(x)
+       x     = x(isort)
+       w     = w(isort,*)
+   endif
+
 end
 
 ;=============================================================================
