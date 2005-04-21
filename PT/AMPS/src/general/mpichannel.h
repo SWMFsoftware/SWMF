@@ -110,12 +110,12 @@ public:
     } 
      
     for (i=0,ptr=(char*)data;i<length;i++,ptr++) sendBuffer[sendptr++]=*ptr; 
-  };
+  }
 
 
   template<class T> void send(T data) {
     send(&data,1);
-  };
+  }
 
   void openRecv(int thread) { 
     if (recvBuffer[thread]!=NULL) {  
@@ -176,18 +176,18 @@ public:
     }
 
     for (i=0,ptr=(char*)data;i<length;i++,ptr++) *ptr=recvBuffer[thread][recvptr[thread]++];    
-  };
+  }
 
   template<class T> void recv(T& data ,int thread) {
     recv(&data,1,thread);
-  }; 
+  } 
 
   template<class T> T recv(int thread) {
     T data;
    
     recv(&data,1,thread); 
     return data;
-  };
+  }
 };
 
 #endif 

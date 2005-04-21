@@ -81,7 +81,7 @@ void PrintErrorLog(char* message) {
   tm *ct=localtime(&TimeValue);
 
   fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  fprintf(errorlog,"%s\n\n\n",message);
+  fprintf(errorlog,"%s\n\n",message);
 
   fclose(errorlog);
 }
