@@ -35,7 +35,8 @@ Cflag4  = ${SEARCH} -O  ${PRECISION} ${DEBUG} -c
 Cflag4NoP = ${SEARCH} -O  ${DEBUG} -c
 
 # RCM compilation flags
-CFLAGS = ${SEARCH}  ${PRECISION} -O --sav ${DEBUG} -c
+# To allow RCM to compile as double precision, add PRECISION flag
+CFLAGS = ${SEARCH}  -c --sav ${DEBUG} -O
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 

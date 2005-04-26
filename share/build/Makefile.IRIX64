@@ -62,6 +62,7 @@ Cflag2  = -c ${SEARCH} ${PRECISION} ${BITFLAG} -O2 ${DEBUG}
 Cflag3  = -c ${SEARCH} ${PRECISION} ${BITFLAG} -O2 ${DEBUG}
 
 # RCM compilation flags
+# To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS = -c ${SEARCH} ${BITFLAG} -O2 -w ${DEBUG}
 
 Lflag1  = ${BITFLAG} ${MPILIB} ${BITLIB} -woff136

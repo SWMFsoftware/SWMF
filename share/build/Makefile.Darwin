@@ -34,6 +34,7 @@ Cflag3  = ${SEARCH} -c -O3 -ieee=full -w -dusty ${DEBUG} ${PRECISION}
 Cflag4  = ${SEARCH} -c -O4 -ieee=full -w -dusty ${DEBUG} ${PRECISION}
 
 # RCM compilation flags
+# To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS = ${SEARCH}  -c -w -save ${DEBUG}
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}

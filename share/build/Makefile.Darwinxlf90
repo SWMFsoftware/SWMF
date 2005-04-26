@@ -35,6 +35,7 @@ Cflag4  = ${SEARCH} -c -O4 ${DEBUG} ${PRECISION}
 Cflag4NoP = ${SEARCH} -c -O4 ${DEBUG}
 
 # RCM compilation flags
+# To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS  = ${SEARCH} -c -O2 ${DEBUG}
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}

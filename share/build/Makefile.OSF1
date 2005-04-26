@@ -43,6 +43,7 @@ Cflag4	= ${Cflag} -O4
 Cflagf	= ${Cflag} -fast
 
 # RCM compilation flags
+# To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS = ${SEARCH} -c -warn argument_checking ${DEBUG}
 
 Lflag1  = ${OPTSAFE} ${PRECISION} ${BITFLAG} ${MPILIB} 
