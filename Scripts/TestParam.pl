@@ -55,7 +55,7 @@ if(not $LayoutFile){
     $LayoutFile = $LayoutFileDefault 
 	if (not -f $LayoutFile and -f $LayoutFileDefault);
 }
-print "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
+warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
 die "$ERROR could not find $SetSWMF" unless -f $SetSWMF;
 
@@ -86,7 +86,7 @@ print "$check\n" if $Verbose;
 my $Error = `$check`;
 if($Error){
     $IsError = 1;
-    print "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
+    warn "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
 }
 
 # Check component parameters
@@ -94,7 +94,7 @@ my $Comp;
 foreach $Comp (sort keys %Layout){
     my $xml = "$Comp/$Version{$Comp}/$XMLFile";
     if(not -f $xml){
-	print "$WARNING could not find XML description $xml\n";
+	warn "$WARNING could not find XML description $xml\n";
 	next;
     }
     my $check = "$CheckParamScript -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
@@ -103,7 +103,7 @@ foreach $Comp (sort keys %Layout){
     $Error = `$check`;
     if($Error){
 	$IsError = 1;
-	print "$ERROR parameter errors for $Comp:\n\n$Error\n";
+	warn "$ERROR parameter errors for $Comp:\n\n$Error\n";
     }
 }
 
@@ -200,9 +200,6 @@ sub check_layout{
 		$Comps .= "$Comp,";
 		$nProc{$Comp}++;
 	    }
-	}
-	if($iProc==10000){
-	    print "Hi $Comps=$Comps\n";
 	}
 	die "$ERROR processor $iProc is not used by any component\n".
 	    "\tfor the layout in $LayoutFile and $nProc processors.\n" 
