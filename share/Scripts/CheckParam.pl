@@ -123,8 +123,11 @@ my $nSession=1;         # current session number
 my $paramName;          # name of the current parameter
 my $paramType;          # type of the current parameter
 my $paramValue;         # value of the current parameter
-my $InsideComp;         # the component for which parameters are read
 my $UserInput;          # set to true between #USERINPUTBEGIN and #USERINPUTEND
+my $InsideComp;         # the component for which parameters are read
+
+$InsideComp = $NameComp if $StandAlone; # For stand alone mode start reading
+                                        # the component commands immediately.
 
 # Set the file handle for the top level file (or STDIN for interactive mode)
 if($Interactive){
@@ -979,7 +982,7 @@ sub check_session{
 
     print "InsideComp: $InsideComp\n" if $Debug;
 
-    if($InsideComp){
+    if($InsideComp and not $StandAlone){
 	print "Error in session $nSession ending at line $nLine ".
                 "in file $InputFile:\n".
                 "\tBEGIN_COMP $InsideComp does not have matching END_COMP\n";
