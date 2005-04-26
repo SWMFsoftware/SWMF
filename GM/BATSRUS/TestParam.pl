@@ -62,20 +62,41 @@ Examples:
 my $XmlFile           = 'PARAM.XML';
 my $GridSizeScript    = 'GridSize.pl';
 my $MakefileConf      = 'Makefile.conf';
-my $GridSize;
+my $StandAloneCode    = 'src/stand_alone.f90';
+my $NameComp;
 my $Precision;
+my $GridSize;
 
 if($Save){
     system($CheckParamScript,"-s","-x=$XmlFile");
     exit 0;
 }
 
+if(open(CODE,$StandAloneCode)){
+    while(<CODE>){
+	$NameComp = $1 if /^\s*NameThisComp\s*=\s*[\'\"]([A-Z][A-Z])/;
+    }
+    close(CODE);
+    if(not $NameComp){
+       warn "WARNING Could not find NameThisComp setting in $StandAloneCode\n"
+	   ."Assuming component=GM\n";
+       $NameComp = 'GM';
+   }
+}else{
+    warn "WARNING Could not open $StandAloneCode,".
+	" assuming component=GM\n";
+    $NameComp = 'GM';
+}
+
 if(open(MAKEFILE,$MakefileConf)){
     $Precision = 'unknown';
     while(<MAKEFILE>){
-	$Precision = 'double' if /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64)/;
-	$Precision = 'single' if /^\s*PRECISION\s*=\s*(\-r4|\-real_size\s*32)?\s*$/;
+	$Precision = 'double' if 
+	    /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64)/;
+	$Precision = 'single' if 
+	    /^\s*PRECISION\s*=\s*(\-r4|\-real_size\s*32)?\s*$/;
     }
+    close(MAKEFILE);
     if($Precision eq 'unknown'){
 	warn "WARNING Could not find PRECISION setting in $MakefileConf,".
 	    " assuming double precision\n";
@@ -97,6 +118,7 @@ if(-x $GridSizeScript){
 my @command = (
 	       $CheckParamScript,
 	       "-S",
+	       "-c=$NameComp",
 	       "-v=$Verbose",
 	       "-g=$GridSize",
 	       "-p=$Precision",
