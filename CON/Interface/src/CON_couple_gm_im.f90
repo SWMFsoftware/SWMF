@@ -228,11 +228,14 @@ contains
 
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
+      ! Number of variables to pass
+      integer, parameter :: nVarImGm=2
+
       ! Variable to pass is pressure
-      character (len=*), parameter :: NameVar='p'
+      character (len=*), parameter :: NameVar='p:rho'
 
       ! Buffer for the variables on the 2D IM grid
-      real, dimension(:,:), allocatable :: Buffer_II
+      real, dimension(:,:,:), allocatable :: Buffer_IIV
 
       ! MPI related variables
 
@@ -260,8 +263,8 @@ contains
       !\
       ! Allocate buffers both in GM and IM
       !/
-      allocate(Buffer_II(iSize,jSize), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_II")
+      allocate(Buffer_IIV(iSize,jSize,nVarImGm), stat=iError)
+      call check_allocate(iError,NameSubSub//": Buffer_IIV")
 
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
@@ -270,24 +273,24 @@ contains
       ! Get pressure from IM
       !/
       if(is_proc(IM_)) &
-           call IM_get_for_gm(Buffer_II,iSize,jSize,NameVar)
+           call IM_get_for_gm(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
 
       !\
       ! Transfer variables from IM to GM
       !/ 
-      nSize = iSize*jSize
+      nSize = iSize*jSize*nVarImGm
       if(i_proc0(IM_) /= i_proc0(GM_))then
          if(is_proc0(IM_)) &
-              call MPI_send(Buffer_II,nSize,MPI_REAL,i_Proc0(GM_),&
+              call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_Proc0(GM_),&
               1,i_comm(),iError)
          if(is_proc0(GM_)) &
-              call MPI_recv(Buffer_II,nSize,MPI_REAL,i_proc0(IM_),&
+              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(IM_),&
               1,i_comm(),iStatus_I,iError)
       end if
 
       ! Broadcast variables inside GM
       if(n_proc(GM_)>1 .and. is_proc(GM_)) &
-           call MPI_bcast(Buffer_II,nSize,MPI_REAL,0,i_comm(GM_),iError)
+           call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
       if(DoTest)write(*,*)NameSubSub,', variables transferred',&
            ', iProc:',iProcWorld
@@ -296,16 +299,16 @@ contains
       ! Put variables into GM
       !/
       if(is_proc(GM_))then
-         call GM_put_from_im(Buffer_II,iSize,jSize,NameVar)
+         call GM_put_from_im(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
          if(DoTest) &
-              write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
-              iProcWorld,Buffer_II(1,1)
+              write(*,*)NameSubSub//' iProc, Buffer(1,1,1)=',&
+              iProcWorld,Buffer_IIV(1,1,1)
       end if
 
       !\
       ! Deallocate buffer to save memory
       !/
-      deallocate(Buffer_II)
+      deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld

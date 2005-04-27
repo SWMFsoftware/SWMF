@@ -176,7 +176,8 @@ subroutine GM_print_variables(NameSource)
   case('IM')                             !^CFG IF RCM BEGIN
      do i=1,iSize
         do j=1,jSize
-           write(UNITTMP_,'(2i4,3G14.6)')j,i,RCM_lon(j),RCM_lat(i),RCM_p(i,j)
+           write(UNITTMP_,'(2i4,3G14.6)')j,i,RCM_lon(j),RCM_lat(i), &
+                RCM_p(i,j),RCM_dens(i,j)
         end do
      end do                              !^CFG END RCM
   case('IE')

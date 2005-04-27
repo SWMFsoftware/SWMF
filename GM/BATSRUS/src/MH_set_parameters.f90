@@ -1176,6 +1176,10 @@ subroutine MH_set_parameters(TypeAction)
         !                                              ^CFG END RAYTRACE
      case("#IM")                                      !^CFG IF RCM
         call read_var('TauCoupleIm',TauCoupleIm)      !^CFG IF RCM
+     case("#IMCOUPLING")                                        !^CFG IF RCM
+        call read_var('TauCoupleIm',TauCoupleIm)                !^CFG IF RCM
+        call read_var('DoCoupleImPressure',DoCoupleImPressure)  !^CFG IF RCM
+        call read_var('DoCoupleImDensity',DoCoupleImDensity)    !^CFG IF RCM
      case("#MASSLOADING")                             !^CFG IF NOT SIMPLE BEGIN
         call read_var('UseMassLoading',UseMassLoading)
         call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 

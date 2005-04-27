@@ -115,6 +115,8 @@ Module ModMain
   logical :: UseRaytrace=.false.                           !^CFG IF RAYTRACE
 
   logical :: UseIM = .false.                               !^CFG IF RCM
+  logical :: DoCoupleImPressure = .true.                   !^CFG IF RCM
+  logical :: DoCoupleImDensity  = .false.                  !^CFG IF RCM
   real    :: tauCoupleIM=0.01                              !^CFG IF RCM
 
   real    :: ThetaTiltDeg = 0.0

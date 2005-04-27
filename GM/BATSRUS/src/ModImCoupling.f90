@@ -14,7 +14,7 @@ module ModImPressure
   integer :: iSize, jSize
 
   real, dimension(:), allocatable   :: RCM_lat, RCM_lon
-  real, dimension(:,:), allocatable :: RCM_p
+  real, dimension(:,:), allocatable :: RCM_p, RCM_dens
 
 contains
 
@@ -23,7 +23,11 @@ contains
 
     iSize = iSizeIn
     jSize = jSizeIn
-    allocate(RCM_lat(iSize), RCM_lon(jSize), RCM_p(iSize,jSize), &
+    allocate(&
+         RCM_lat(iSize), &
+         RCM_lon(jSize), &
+         RCM_p(iSize,jSize), &
+         RCM_dens(iSize,jSize), &
          stat=iError)
 
     call check_allocate(iError, 'GM_im_pressure_init: RCM arrays')
@@ -34,16 +38,17 @@ end module ModImPressure
 
 !==========================================================================
 
-subroutine get_im_pressure(iBlock, pIm_C)
+subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
 
   use ModImPressure
   use ModMain,     ONLY : nI,nJ,nK,gcn
   use ModRaytrace, ONLY : ray
-  use ModPhysics,  ONLY : unitSI_p
+  use ModPhysics,  ONLY : unitSI_p,unitSI_rho
   implicit none
 
   integer, intent(in)  :: iBlock
   real,    intent(out) :: pIm_C(1:nI, 1:nJ, 1:nK)
+  real,    intent(out) :: dIm_C(1:nI, 1:nJ, 1:nK)
 
   integer :: i,j,k, n, i1,i2
 
@@ -71,8 +76,10 @@ subroutine get_im_pressure(iBlock, pIm_C)
         if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) i2=1
 
         pIm_C(i,j,k) = RCM_p(i1,i2)/unitSI_p
+        dIm_C(i,j,k) = RCM_dens(i1,i2)/unitSI_rho
      else
         pIm_C(i,j,k) = -1.0
+        dIm_C(i,j,k) = -1.0
      end if
   end do; end do; end do
 
@@ -84,7 +91,7 @@ subroutine apply_im_pressure
 
   use ModProcMH,  ONLY: iProc
   use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, unusedBLK, &
-       time_accurate, Dt
+       time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity
   use ModAdvance, ONLY: time_BLK, &
        State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, E_BLK
   use ModPhysics, ONLY: unitSI_t, inv_gm1
@@ -94,6 +101,7 @@ subroutine apply_im_pressure
 
   real :: Factor
   real :: pIm_C(1:nI, 1:nJ, 1:nK)
+  real :: dIm_C(1:nI, 1:nJ, 1:nK)
 
   integer :: iLastPIm = -1, iLastGrid = -1
 
@@ -102,6 +110,7 @@ subroutine apply_im_pressure
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
   if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
+  if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN  ! Nothing to do
 
   call set_oktest(NameSub, DoTest, DoTestMe)
 
@@ -140,27 +149,107 @@ subroutine apply_im_pressure
   do iBlock = 1, nBlock
      if(unusedBLK(iBlock)) CYCLE
 
-     call get_im_pressure(iBlock, pIm_C)
+     call get_im_pressure(iBlock, pIm_C, dIm_C)
+
+     if(all(pIm_C < 0.0)) CYCLE  ! Nothing to do
 
      if(TauCoupleIm < 1.0)then
-        where(pIm_C > 0.0) &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
-             (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*pIm_C)
+        if(DoCoupleImPressure)then
+           where(pIm_C > 0.0) &
+                State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*pIm_C)
+        end if
+        if(DoCoupleImDensity)then
+           where(dIm_C > 0.0)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*dIm_C)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+           end where
+        end if
      elseif(time_accurate)then
-        where(pIm_C > 0.0) &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
-             + min(1.0, Factor * Dt) &
-             * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+        if(DoCoupleImPressure)then
+           where(pIm_C > 0.0) &
+                State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
+                State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
+                + min(1.0, Factor * Dt) &
+                * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+        end if
+        if(DoCoupleImDensity)then
+           where(dIm_C > 0.0)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*dIm_C)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+           end where
+        end if
      else
-        where(pIm_C > 0.0) &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
-             + min(1.0, Factor * time_BLK(1:nI,1:nJ,1:nK,iBlock)) &
-             * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+        if(DoCoupleImPressure)then
+           where(pIm_C > 0.0) &
+                State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = &
+                State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)   &
+                + min(1.0, Factor * time_BLK(1:nI,1:nJ,1:nK,iBlock)) &
+                * (pIm_C - State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))
+        end if
+        if(DoCoupleImDensity)then
+           where(dIm_C > 0.0)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)/ &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) = Factor* &
+                   (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) + TauCoupleIM*dIm_C)
+              State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+              State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)= &
+                   State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)* &
+                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+           end where
+        end if
      end if
 
-     ! Now get the energy that corresponds to this new pressure
+     ! Now get the energy that corresponds to these new values
      E_BLK(1:nI,1:nJ,1:nK,iBlock) = &
           inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) + 0.5*( &
           ( State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)**2 &
