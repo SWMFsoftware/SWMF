@@ -3045,6 +3045,51 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 ! The default value is TauCoupleIm=0.01, which corresponds to a rather 
 ! slow nudging.
 </command>
+
+<command name="IMCOUPLING">
+	<parameter name="TauCoupleIm" type="real" min="0"/>
+	<parameter name="DoCoupleImPressure" type="logical" default="T"/>
+	<parameter name="DoCoupleImDensity"  type="logical" default="F"/>
+
+#IMCOUPLING
+0.01			TauCoupleIm
+T			DoCoupleImPressure
+F			DoCoupleImDensity
+
+! TauCoupleIm:
+! 
+! Determine how fast the GM pressure p should be nudged towards the 
+! IM pressure pIm. The nudging is done in every GM time step.
+! The pIm pressure is updated every time IM->GM coupling occurs.
+!
+! If TauCoupleIm is less than 1.0, a weighted average is taken: 
+!
+! p' = (p + TauCoupleIm*pIm)/(1+TauCoupleIm)
+!
+! Therefore the smaller TauCoupleIm is the slower the adjustment will be.
+! It takes approximately 2/TauCoupleIm time steps to get p close to pIm.
+!
+! If TauCoupleIm is greater or equal than 1.0, the nudging is based on
+! physical time:
+!
+! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+!
+! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
+! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
+! p' = pIm is set in a single step.
+!
+! The default value is TauCoupleIm=0.01, which corresponds to a rather 
+! slow nudging.
+! 
+! DoCoupleImPressure:
+!
+! Logical which sets whether GM pressure is driven by IM pressure, default T
+! 
+! DoCoupleImDensity:
+!
+! Logical which sets whether GM density is driven by IM density, default F
+! 
+</command>
 <!-- ^CFG END RCM -->
 
 </commandgroup>
