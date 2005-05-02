@@ -1773,6 +1773,10 @@ allopt			TypeMessagePass
 ! Constrained transport requires corners, default is \'all\'!\\\\ 
 ! Diffusive control requires corners, default is \'all\'!\\\\
 ! Projection uses message_pass_dir for efficiency!\\\\
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'TVDRESCHANGE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseTVDAtResChange'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+! Default value is shown above
+! For UseTVDResChange=T the second order TVD scheme is used ar resolution
+! changes
 ','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'BORIS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseBorisCorrection'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '1','if' => '$UseBorisCorrection','default' => '1','type' => 'real','name' => 'BorisClightFactor'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 #BORIS
 T			UseBorisCorrection
