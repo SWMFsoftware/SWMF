@@ -317,7 +317,7 @@ subroutine BC_shear(iVar,iSide)
              State_VGB(iVar,imin1p  :imax1p-1, jmin2g+Dn, kmin1p:kmax1p,iBLK)
      case(north_)
         State_VGB(iVar,    imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p+1:imax1g,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
+             State_VGB(iVar,imin1p+1:imax1p,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
         State_VGB(iVar,     imin2g  :imax2g-1, jmin2g,    kmin2g:kmax2g,iBLK)=&
              State_VGB(iVar,imin1p+1:imax1p,   jmin2g-Dn, kmin1p:kmax1p,iBLK)
      end select
