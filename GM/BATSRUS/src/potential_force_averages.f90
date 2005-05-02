@@ -126,7 +126,7 @@ real function  CentripetalForcePotential(X0,Y0,Z0)
   use ModPhysics, ONLY : OMEGAbody
   implicit none
   real, intent(in) :: X0,Y0,Z0
-  if(.not.UseInertial)then
+  if(UseRotatingFrame)then
      CentripetalForcePotential = - OMEGAbody*OMEGAbody*cHalf*(X0**2+Y0**2)
   else
      CentripetalForcePotential = cZero

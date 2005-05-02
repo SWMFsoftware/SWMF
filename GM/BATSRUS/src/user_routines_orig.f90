@@ -620,7 +620,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
   use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,    &
        Top_
   use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
-       UseInertial
+       UseRotatingFrame
   use ModVarIndexes, ONLY: & 
  !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
         rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
@@ -817,7 +817,7 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
   !\
   ! Apply corotation:: Currently works only for the first body.
   !/
-  if (UseInertial) then
+  if (.not.UseRotatingFrame) then
      !\
      ! The program is called which calculates the cartesian 
      ! corotation velocity::
@@ -885,7 +885,7 @@ end subroutine user_calc_sources
 !/
 subroutine user_sources
   use ModMain,       ONLY: nI,nJ,nK,globalBLK,PROCtest,BLKtest,  &
-       UseUserHeating,UseInertial,gcn
+       UseUserHeating,UseRotatingFrame,gcn
   use ModVarIndexes, ONLY: &
        !EnergyRL_, &    !^CFG UNCOMMENT IF ALWAVES
        rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
@@ -930,7 +930,7 @@ subroutine user_sources
      ! Srho(i,j,k) = Srho(i,j,k) + user source term for rho
      !/
      if (UseUserHeating) call calc_OLD_heating
-     if (.not.UseInertial) then
+     if (UseRotatingFrame) then
         !\
         ! Coriolis forces
         !/

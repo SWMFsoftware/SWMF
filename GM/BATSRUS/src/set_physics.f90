@@ -115,10 +115,10 @@ subroutine set_physics_constants
   if (abs(rot_period_dim) > 1./3600.) then
      OmegaBody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
   else
-     if(.not.UseInertial)then
+     if(UseRotatingFrame)then
         write(*,*) "--------------------------------------------------"
         write(*,*) "WARNING in set_physics:                           "
-        write(*,*) "You have set UseInertial = ",UseInertial
+        write(*,*) "You have set UseRotatingFrame = ",UseRotatingFrame
         write(*,*) "but rot_period_dim in hours= ",rot_period_dim
         write(*,*) "This is too fast! Setting OmegaBody=0.0           "
         write(*,*) "--------------------------------------------------"

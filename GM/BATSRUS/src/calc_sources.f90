@@ -265,7 +265,7 @@ subroutine calc_sources
      end do; end do; end do
   end if                                                 !^CFG END BORISCORR
   
-  if(UseGravity.or..not.UseInertial) then
+  if(UseGravity.or.UseRotatingFrame) then
      Source_VC(rhoUx_,:,:,:) = Source_VC(rhoUx_,:,:,:) + &
           State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
           fbody_x_BLK(:,:,:,globalBLK)

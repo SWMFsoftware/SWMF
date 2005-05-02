@@ -266,7 +266,7 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
 
   select case (problem_type)             !^CFG IF NOT SIMPLE BEGIN
   case (problem_heliosphere)
-     if (UseInertial) then
+     if (.not.UseRotatingFrame) then
         f0(1) = 0.00
         f0(2) = 0.00
         f0(3) = 0.00

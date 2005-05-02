@@ -192,7 +192,7 @@ Module ModMain
 
   ! Logical for inertial frame: .true. means inertial frame,
   ! otherwise - rotating frame.
-  logical :: UseInertial=.true. 
+  logical :: UseRotatingFrame=.false. 
 
   ! String variable for debugging. A space separated list of words,
   ! typically names of subroutines. Listing "QUIET" suppresses progress reports

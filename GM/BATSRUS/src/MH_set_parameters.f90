@@ -1598,15 +1598,15 @@ subroutine MH_set_parameters(TypeAction)
         case('IH')
            select case(TypeCoordSystem)
            case('HGI')
-              UseInertial = .true.
+              UseRotatingFrame = .false.
            case('HGR')
               if(iProc==0)then
                  write(*,*) NameSub, &
                       ' WARNING: corotating IH does not fully work'
                  if(UseStrict)call stop_mpi('Correct PARAM.in!')
-                 write(*,*)NameSub//' setting UseInertial = F'
+                 write(*,*)NameSub//' setting .UseRotatingFrame = T'
               end if
-              UseInertial = .false.
+              UseRotatingFrame = .true.
            case default
               call stop_mpi(NameSub// &
                    ' ERROR: cannot handle coordinate system '&
@@ -1615,14 +1615,14 @@ subroutine MH_set_parameters(TypeAction)
         case('SC')
            select case(TypeCoordSystem)
            case('HGR')
-              UseInertial = .false.
+              UseRotatingFrame = .true.
               if(iProc==0)then
-                 write(*,*)NameSub//' setting UseInertial = F'
+                 write(*,*)NameSub//' setting .UseRotatingFrame = T'
               end if
            case('HGI')
               if(iProc==0) write(*,*) NameSub,&
                       ' WARNING: inertial SC is less accurate'
-              UseInertial = .true.
+              UseRotatingFrame = .false.
            case default
               call stop_mpi(NameSub// &
                    ' ERROR: cannot handle coordinate system '&
@@ -1790,15 +1790,15 @@ contains
     select case(NameThisComp)
     case('IH')
        TypeCoordSystem = 'HGI'
-       UseInertial     = .true.
+       UseRotatingFrame     = .false.
     case('SC')
 !!!       TypeCoordSystem = 'HGR'
-!!!       UseInertial     = .false.
+!!!       UseRotatingFrame     = .true.
        TypeCoordSystem = 'HGI'
-       UseInertial     = .true.
+       UseRotatingFrame     = .false.
     case('GM')
        TypeCoordSystem = 'GSM'
-       UseInertial     = .true.
+       UseRotatingFrame     = .false.
     end select
     
     ! Initialize StartTime to the default values
