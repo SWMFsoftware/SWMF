@@ -61,9 +61,6 @@ subroutine exchange_messages
      call message_pass_cells_8state(DoOneLayer,.false.,.true.&
           .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
           )
-     if(.not.UseConstrainB)then !^CFG IF CONSTRAINB
-!       call correct_monotone_restrict !^CFG UNCOMMENT IF NOT IMPLICIT
-     end if                     !^CFG IF CONSTRAINB
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
           iProc,optimize_message_pass
@@ -88,9 +85,6 @@ subroutine exchange_messages
       case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
      end select
-     if(.not.UseConstrainB)then !^CFG IF CONSTRAINB
-!       call correct_monotone_restrict !^CFG UNCOMMENT IF NOT IMPLICIT
-     end if   !^CFG IF CONSTRAINB
   end if
 
   if(oktest)write(*,*)'Ensure that E and P consistent, me=',iProc
@@ -352,97 +346,3 @@ subroutine correctE
   end do; end do; end do
 
 end subroutine correctE
-
-!==============================================================================
-
-subroutine correct_monotone_restrict
-  use Modmain, ONLY : nI,nJ,nK,nBlockMax,unusedBLK
-  use ModVarIndexes,ONLY:DefaultState_V,nVar
-  use ModAdvance, ONLY : &
-       State_VGB
-  use ModParallel, ONLY : neiLEV, &
-       neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-  use ModNumConst
-  implicit none
-
-  integer :: iBLK,i,j,k
-
-
-  ! Correct the result of monotone restriction
-  do iBLK=1,nBlockMax
-     if(unusedBLK(iBLK)) CYCLE
-     if(all(neiLEV(:,iBLK)/=-1))CYCLE
-     if(neiLnorth(iBLK)==-1) then
-        do k=1,nK;do i=1,nI
-           State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
-                State_VGB(1:nVar,i,nJ+1,k,iBLK)+ cThird*(&
-                State_VGB(1:nVar,i,nJ+1,k,iBLK)-&
-                State_VGB(1:nVar,i,nJ,k,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,i,nJ+1,k,iBLK) = max(&
-                   State_VGB(1:nVar,i,nJ+1,k,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-     if(neiLsouth(iBLK)==-1)then
-        do k=1,nK;do i=1,nI
-           State_VGB(1:nVar,i,0,k,iBLK) = &
-                State_VGB(1:nVar,i,0,k,iBLK)+ cThird*(&
-                State_VGB(1:nVar,i,0,k,iBLK)- &
-                State_VGB(1:nVar,i,1,k,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,i,0,k,iBLK) =max(&
-                   State_VGB(1:nVar,i,0,k,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-     if(neiLeast(iBLK)==-1) then
-        do k=1,nK;do j=1,nJ
-           State_VGB(1:nVar,0,j,k,iBLK) = &
-                State_VGB(1:nVar,0,j,k,iBLK)+ cThird*(&
-                State_VGB(1:nVar,0,j,k,iBLK)- &
-                State_VGB(1:nVar,1,j,k,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,0,j,k,iBLK) =max(&
-                   State_VGB(1:nVar,0,j,k,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-     if(neiLwest(iBLK)==-1) then
-        do k=1,nK;do j=1,nJ
-           State_VGB(1:nVar,nI+1,j,k,iBLK) = &
-                State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*(&
-                State_VGB(1:nVar,nI+1,j,k,iBLK) - &
-                State_VGB(1:nVar,nI,  j,k,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,nI+1,j,k,iBLK) = max(&
-                   State_VGB(1:nVar,nI+1,j,k,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-     if(neiLtop(iBLK)==-1) then
-        do j=1,nJ;do i=1,nI
-           State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-                State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
-                State_VGB(1:nVar,i,j,nK+1,iBLK) - &
-                State_VGB(1:nVar,i,j,nK,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,i,j,nK+1,iBLK) =max( &
-                   State_VGB(1:nVar,i,j,nK+1,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-     if(neiLbot(iBLK)==-1) then
-        do j=1,nJ;do i=1,nI
-           State_VGB(1:nVar,i,j,0,iBLK) = &
-             State_VGB(1:nVar,i,j,0,iBLK) + cThird*(&
-             State_VGB(1:nVar,i,j,0,iBLK) - &
-             State_VGB(1:nVar,i,j,1,iBLK))
-           where(DefaultState_V(1:nVar)>cTiny)
-              State_VGB(1:nVar,i,j,0,iBLK) =max( &
-             State_VGB(1:nVar,i,j,0,iBLK),cTiny)
-           end where
-        end do;end do
-     end if
-  end do
-end subroutine correct_monotone_restrict
