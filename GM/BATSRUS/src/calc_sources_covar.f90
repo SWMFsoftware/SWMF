@@ -234,7 +234,7 @@ subroutine calc_sources
   end if
 
 
-  if(UseGravity.or.UseRotatingFrame) then
+  if(UseGravity.or..not.UseInertial) then
      Source_VC(rhoUx_,:,:,:) = Source_VC(rhoUx_,:,:,:) + &
           State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
           fbody_x_BLK(:,:,:,globalBLK)

@@ -186,14 +186,12 @@ Module ModMain
   logical :: UseGravity
   integer :: GravityDir
 
-  ! Logical for rotating frame
-  logical :: UseRotatingFrame
-
   ! Logical for corotation
   logical :: UseRotatingBc=.false.
   character(len=3) :: TypeCoordSystem='GSM'
 
-  ! Logical for inertial frame
+  ! Logical for inertial frame: .true. means inertial frame,
+  ! otherwise - rotating frame.
   logical :: UseInertial=.true. 
 
   ! String variable for debugging. A space separated list of words,

@@ -601,14 +601,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=State_VGB(rho_,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_rho
      case('rhoUx','rhoux','mx')
-        if (UseRotatingFrame) then
+        if (.not.UseInertial) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK) &
                 - State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*y_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)
         end if
      case('rhoUy','rhouy','my')
-        if (UseRotatingFrame) then
+        if (.not.UseInertial) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK) &
                 + State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*x_BLK(:,:,:,iBLK)
         else
@@ -658,14 +658,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         ! EXTRA MHD variables
 
      case('Ux','ux')
-        if (UseRotatingFrame) then
+        if (.not.UseInertial) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 - OMEGAbody*y_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
         end if
      case('Uy','uy')
-        if (UseRotatingFrame) then
+        if (.not.UseInertial) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 + OMEGAbody*x_BLK(:,:,:,iBLK)
         else

@@ -1595,6 +1595,9 @@ subroutine MH_set_parameters(TypeAction)
            select case(TypeCoordSystem)
            case('HGR')
               UseInertial = .false.
+              if(iProc==0)then
+                 write(*,*)NameSub//' setting UseInertial = F'
+              end if
            case('HGI')
               if(iProc==0) write(*,*) NameSub,&
                       ' WARNING: inertial SC is less accurate'
@@ -1605,8 +1608,6 @@ subroutine MH_set_parameters(TypeAction)
                    //TypeCoordSystem)
            end select
         end select
-        UseRotatingFrame = .not.UseInertial
-
      case("#NSTEP")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nStep',n_step)
@@ -1778,8 +1779,7 @@ contains
        TypeCoordSystem = 'GSM'
        UseInertial     = .true.
     end select
-    UseRotatingFrame = .not.UseInertial
-
+    
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'
     if(IsStandAlone)call time_int_to_real(iStartTime_I, StartTime)

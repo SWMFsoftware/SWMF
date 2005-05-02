@@ -714,7 +714,7 @@ subroutine calc_other_soln_vars(iBLK)
 
   globalBLK = iBLK
 
-  if(UseGravity.or.UseRotatingFrame) call body_force_averages
+  if(UseGravity.or..not.UseInertial) call body_force_averages
 
   qheat_BLK(:,:,:,iBLK) = 0.00
 
