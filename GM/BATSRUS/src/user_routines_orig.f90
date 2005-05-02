@@ -240,6 +240,7 @@ subroutine set_extra_boundary_cells(iBLK)
   use ModNumConst
   use ModParallel, ONLY: neiLEV,neiLtop, neiLbot,&
        neiLeast,neiLwest,neiLnorth,neiLsouth
+  use ModMPCells,ONLY:DoOneCoarserLayer
   implicit none
   integer, intent(in):: iBLK
   integer:: i2,j2,k2,i,j,k
@@ -257,14 +258,29 @@ subroutine set_extra_boundary_cells(iBLK)
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
      i2=0
-     do k2=2,nK,2
-        do j2=2,nJ,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        do k2=2,nK,2
+           do j2=2,nJ,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        do k2=2,nK,2
+           do j2=2,nJ,2
+              IsBoundaryCell_GI(i2-1,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*(cHalf+cTwo))**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+              IsBoundaryCell_GI(i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+	   end do
+        end do
+     end if
   elseif(neiLeast(iBLK)==-1)then
      !Make any ghostcell covered by finer cell become a body cell, if
      !any of the finer cell centers is inside the body::
@@ -295,15 +311,31 @@ subroutine set_extra_boundary_cells(iBLK)
  if(neiLwest(iBLK)==+1)then
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
-     i2=nI+2
-     do k2=2,nK,2
-        do j2=2,nJ,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        i2=nI+2
+        do k2=2,nK,2
+           do j2=2,nJ,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        i2=nI+1
+        do k2=2,nK,2
+           do j2=2,nJ,2
+              IsBoundaryCell_GI(i2+1,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*(cHalf-cTwo))**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+              IsBoundaryCell_GI(i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+	   end do
+        end do
+     end if
   elseif(neiLwest(iBLK)==-1)then
      !Make any ghostcell covered by finer cell become a body cell, if
      !any of the finer cell centers is inside the body::
@@ -335,14 +367,29 @@ subroutine set_extra_boundary_cells(iBLK)
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
      j2=0
-     do k2=2,nK,2
-        do i2=2,nI,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        do k2=2,nK,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        do k2=2,nK,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*(cHalf+cTwo))**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+              IsBoundaryCell_GI(i2-1:i2,j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
+        end do
+     end if
   elseif(neiLnorth(iBLK)==-1)then
      !Make any ghostcell covered by finer cell become a body cell, if
      !any of the finer cell centers is inside the body::
@@ -375,15 +422,31 @@ subroutine set_extra_boundary_cells(iBLK)
  if(neiLsouth(iBLK)==+1)then
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
-     j2=nJ+2
-     do k2=2,nK,2
-        do i2=2,nI,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        j2=nJ+2
+        do k2=2,nK,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        j2=nJ+1
+        do k2=2,nK,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2+1,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*(cHalf-cTwo))**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+              IsBoundaryCell_GI(i2-1:i2,j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
+        end do
+     end if
   elseif(neiLsouth(iBLK)==-1)then
      !Make all the ghostcell covered by finer cell to be body cells, if
      !any of the finer cell centers is inside the body
@@ -415,14 +478,29 @@ subroutine set_extra_boundary_cells(iBLK)
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
      k2=0
-     do j2=2,nJ,2
-        do i2=2,nI,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        do j2=2,nJ,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        do j2=2,nJ,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*(cHalf+cTwo))**2)<R2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
+        end do
+     end if
   elseif(neiLbot(iBLK)==-1)then
      !Make any ghostcell covered by finer cell become a body cell, if
      !any of the finer cell centers is inside the body::
@@ -452,15 +530,31 @@ subroutine set_extra_boundary_cells(iBLK)
  if(neiLtop(iBLK)==+1)then
      !Make all the ghostcells covered by a coarser cell become body cells,
      !if the coarser cell center is inside the body::
-     k2=nK+2
-     do j2=2,nJ,2
-        do i2=2,nI,2
-           IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
-                (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
-                (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
-                (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+     if(DoOneCoarserLayer)then
+        k2=nK+2
+        do j2=2,nJ,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2-1:k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
         end do
-     end do
+     else
+        k2=nK+1
+        do j2=2,nJ,2
+           do i2=2,nI,2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2+1,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*(cHalf-cTwo))**2)<R2
+              IsBoundaryCell_GI(i2-1:i2,j2-1:j2,k2,ExtraBc_)=(    &
+                   (x_BLK(i2,j2,k2,iBLK)-dx_BLK(iBLK)*cHalf)**2+       &
+                   (y_BLK(i2,j2,k2,iBLK)-dy_BLK(iBLK)*cHalf)**2+       &
+                   (z_BLK(i2,j2,k2,iBLK)-dz_BLK(iBLK)*cHalf)**2)<R2
+           end do
+        end do
+     end if
   elseif(neiLtop(iBLK)==-1)then
      !Make any ghostcell covered by finer cell become a body cell, if
      !any of the finer cell centers is inside the body::
@@ -489,7 +583,6 @@ subroutine set_extra_boundary_cells(iBLK)
   end if
 
 end subroutine set_extra_boundary_cells
-!========================================================================
 
 !========================================================================
 !  SUBROUTINE USER_SET_INNER_BCS

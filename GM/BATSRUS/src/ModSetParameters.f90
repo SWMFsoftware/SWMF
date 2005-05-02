@@ -28,6 +28,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMpi
+  use ModMPCells,ONLY:iCFExchangeType,DoOneCoarserLayer
+  use ModLimiter,ONLY:UseTVDAtResChange
+  use ModLimiter,ONLY:DoLimitMomentum                   !^CFG IF BORISCORR
 
   implicit none
 
@@ -1063,6 +1066,24 @@ subroutine MH_set_parameters(TypeAction)
               optimize_message_pass='allopt'
            end if
         end if                                           !^CFG IF NOT CARTESIAN
+     case('#TVDRESCHANGE')
+        if(optimize_message_pass/='all'.and.&
+             optimize_message_pass/='allopt')then
+           if(iProc==0)write(*,*)&
+                'TVD Limiter at the resolution change '//&
+                'does not work with the message pass mode ='//&
+                optimize_message_pass//', do nothing'
+           CYCLE
+        end if
+        if(iCFExchangeType/=2)then
+           if(iProc==0)write(*,*)&
+                'TVD Limiter at the resolution change '//&
+                'requires to set iCFExchangeType/=2  '//&
+                'in the message_pass_cells, do nothing'
+           CYCLE
+        end if
+        call read_var('UseTVDAtResChange',UseTVDAtResChange)
+        DoOneCoarserLayer=.not.UseTVDAtResChange
         !                                              ^CFG END SIMPLE
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
@@ -2494,7 +2515,14 @@ contains
        UseConstrainB=.false.
        UseDivbSource=.true.
     end if
-
+    if(UseConstrainB.and.UseTVDAtReschange)then
+       if(iProc==0)write(*,'(a)')NameSub//&
+            'Do not use TVD at resolution changes with ConstrainB'
+       if(UseStrict)call stop_mpi('Correct PARAM.in!')
+       if(iProc==0)write(*,'(a)')NameSub//&
+            'Set UseTVDAtReschange=F'
+       UseTVDAtReschange=.false.
+    end if
     if (UseConstrainB .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
@@ -2585,7 +2613,7 @@ contains
     end if                                              !^CFG END POINTIMPLICIT
     if(UseSimple)&                                          !^CFG IF SIMPLE
          boris_cLIGHT_factor=max(boris_cLIGHT_factor,0.02)  !^CFG IF SIMPLE
-
+    DoLimitMomentum=boris_correction.and.(.not.UseTVDAtResChange)
     ! Finish checks for boris                       !^CFG END BORISCORR
 
     if(UseSimple)  nStage = max(nStage,nOrder)      !^CFG IF SIMPLE

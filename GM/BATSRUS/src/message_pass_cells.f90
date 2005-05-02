@@ -28,6 +28,17 @@ module ModMPCells
   !                    using simple prolongation
   integer, parameter :: iCFExchangeType=2
 
+  !With DoOneCoarserLayer=.false., the finer cells of the "second" layer are filled in 
+  !with the values from the "second" layer of the coarser block
+  logical::DoOneCoarserLayer=.true.
+  
+  !With DoOneCoarserLayer=.true., the following nDuplicateIJK=2 and
+  !the values from only one layer of the physical cells are sent to the finer neighbor
+  
+  integer:: nDuplicateI=2,nDuplicateJ=2,nDuplicateK=2
+  integer:: iTwoOrOneForTwoCoarserLayers=2,iZeroOrOneForTwoCoarserLayers=0
+
+
   logical :: DoFacesOnlyLast, DoOneLayerLast
   logical, parameter :: DoLimitCornerMemory=.false.
   logical, parameter :: DoRSend=.true.
@@ -887,6 +898,15 @@ subroutine mp_build_cell_indices(JustCount)
      sS=1 ; sR=2
   end if
 
+  if(.not.DoOneCoarserLayer) then
+     iTwoOrOneForTwoCoarserLayers=1
+     iZeroOrOneForTwoCoarserLayers=1
+  else
+     iTwoOrOneForTwoCoarserLayers=2
+     iZeroOrOneForTwoCoarserLayers=0
+  end if
+
+
   do iPE = 0,nProc-1
      do iBLK = 1,nBLK
         if (.not.associated(global_block_ptrs(iBLK, iPE+1) % ptr)) CYCLE
@@ -1159,10 +1179,10 @@ contains
           elseif(iCFExchangeType==2)then
              ! New Style: receive 1 value for 8 fine cells to use
              iAdd=1; jAdd=1; kAdd=1
-             if(i1R==i2R) iAdd=0
-             if(j1R==j2R) jAdd=0
-             if(k1R==k2R) kAdd=0
-             do i=i1R,i2R,2; do j=j1R,j2R,2; do k=k1R,k2R,2
+             if(i1R==i2R.or.nDuplicateI==1) iAdd=0
+             if(j1R==j2R.or.nDuplicateJ==1) jAdd=0
+             if(k1R==k2R.or.nDuplicateK==1) kAdd=0
+             do i=i1R,i2R,nDuplicateI; do j=j1R,j2R,nDuplicateJ; do k=k1R,k2R,nDuplicateK
                 if(iPE==nborPE)then
                    nRecv(iPE)=nRecv(iPE)+1
                    if(JustCount) CYCLE
@@ -1309,18 +1329,21 @@ contains
        !i
        select case(dLOOP(idir,1))
        case(1)
-          i1S=nI ; i1R=-1
+          nDuplicateI=iTwoOrOneForTwoCoarserLayers
+          i1S=nI-iZeroOrOneForTwoCoarserLayers; i1R=-1
           i2S=nI ; i2R= 0
           if(DoOneLayerLast)then
-             i1R= 0
+             i1R= i2R; i1S=i2S
           end if
        case(-1)
+          nDuplicateI=iTwoOrOneForTwoCoarserLayers
           i1S= 1 ; i1R=nI+1
-          i2S= 1 ; i2R=nI+2
+          i2S= 1+iZeroOrOneForTwoCoarserLayers; i2R=nI+2
           if(DoOneLayerLast)then
-             i2R=nI+1
+             i2R=i1R;i2S=i1S
           end if
        case(0)
+          nDuplicateI=2
           select case(sSubF)
           case(1)
              i1S= 1        ; i1R= 1
@@ -1352,18 +1375,21 @@ contains
        !j
        select case(dLOOP(idir,2))
        case(1)
-          j1S=nJ ; j1R=-1
+          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
+          j1S=nJ-iZeroOrOneForTwoCoarserLayers; j1R=-1
           j2S=nJ ; j2R= 0
           if(DoOneLayerLast)then
-             j1R= 0
+             j1R= j2R; j1S=j2S
           end if
        case(-1)
+          nDuplicateJ=iTwoOrOneForTwoCoarserLayers
           j1S= 1 ; j1R=nJ+1
-          j2S= 1 ; j2R=nJ+2
+          j2S= 1+iZeroOrOneForTwoCoarserLayers ; j2R=nJ+2
           if(DoOneLayerLast)then
-             j2R=nJ+1
+             j2R=j1R; j2S=j1S
           end if
        case(0)
+          nDuplicateJ=2
           select case(sSubF)
           case(1)
              j1S= 1        ; j1R= 1
@@ -1389,18 +1415,21 @@ contains
        !k
        select case(dLOOP(idir,3))
        case(1)
-          k1S=nK ; k1R=-1
+          nDuplicateK=iTwoOrOneForTwoCoarserLayers
+          k1S=nK-iZeroOrOneForTwoCoarserLayers ; k1R=-1
           k2S=nK ; k2R= 0
           if(DoOneLayerLast)then
-             k1R= 0
+             k1R=  k2R;  k1S=k2S
           end if
        case(-1)
+          nDuplicateK=iTwoOrOneForTwoCoarserLayers
           k1S= 1 ; k1R=nK+1
-          k2S= 1 ; k2R=nK+2
+          k2S= 1+iZeroOrOneForTwoCoarserLayers; k2R=nK+2
           if(DoOneLayerLast)then
-             k2R=nK+1
+             k2R=k1R; k2S=k1S
           end if
        case(0)
+          nDuplicateK=2
           select case(sSubF)
           case(1)
              k1S= 1        ; k1R= 1
