@@ -102,7 +102,7 @@ subroutine advance_impl
 
   logical :: UseUpdateCheckOrig
 
-  real    :: pRelativeMin
+  real    :: pRhoRelativeMin
 
   character(len=15) :: NameSub = 'MH_advance_impl'
 
@@ -469,18 +469,21 @@ subroutine advance_impl
   end do
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
-
-!!!     call update_check(nStage)
-
+     
+     ! Calculate the largest relative drop in density or pressure
      do iBLK=1,nBlock
         if(UnusedBlk(iBLK)) CYCLE
         tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
+             min( &
              State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
-             StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK)
+             StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK), &
+             State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
+             StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) &
+             )
      end do
-     pRelativeMin = minval_BLK(nProc,tmp1_BLK)
+     pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
 
-     if(pRelativeMin < 0.3)then
+     if(pRhoRelativeMin < 0.3 .or. info/=0)then
         ! Redo step if pressure decreased to less than 30% anywhere
         Dt = 0.0
         ! Do not use previous step in BDF2 scheme
@@ -495,17 +498,17 @@ subroutine advance_impl
         end do
         ! Reduce next time step by a factor of 2
         DtFixed = 0.5*DtFixed
-     elseif(pRelativeMin < 0.6)then
+     elseif(pRhoRelativeMin < 0.6)then
         ! Reduce next time step by 10% if pressure is reduced to 60% or less
         DtFixed = 0.9*DtFixed
-     elseif(pRelativeMin > 0.8 .and. Dt == DtFixed)then
+     elseif(pRhoRelativeMin > 0.8 .and. Dt == DtFixed)then
         ! Increase next time step by 5% if pressure remained above 80%
         ! and the last step was taken with DtFixed. Do not exceed DtFixedOrig
         DtFixed = min(DtFixedOrig, DtFixed*1.05)
      end if
 
      if(oktest_me) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
-          pRelativeMin,Dt*unitSI_t, DtFixed*unitSI_t
+          pRhoRelativeMin,Dt*unitSI_t, DtFixed*unitSI_t
   endif
 
   UseUpdateCheck = UseUpdateCheckOrig
