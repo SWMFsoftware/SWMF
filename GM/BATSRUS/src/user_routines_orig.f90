@@ -792,7 +792,7 @@ end subroutine user_calc_sources
 !/
 subroutine user_sources
   use ModMain,       ONLY: nI,nJ,nK,globalBLK,PROCtest,BLKtest,  &
-       .not.UseInertial,UseUserHeating,UseInertial,gcn
+       UseUserHeating,UseInertial,gcn
   use ModVarIndexes, ONLY: &
        !EnergyRL_, &    !^CFG UNCOMMENT IF ALWAVES
        rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
