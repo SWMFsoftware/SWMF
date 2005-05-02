@@ -678,6 +678,7 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
   use ModIonosphere, ONLY: IONO_nTheta, IONO_nPsi, &
        IONO_NORTH_PHI, IONO_NORTH_JR, IONO_SOUTH_PHI, IONO_SOUTH_JR, &
+       IONO_NORTH_SigmaH, IONO_NORTH_SigmaP, IONO_SOUTH_SigmaH, IONO_SOUTH_SigmaP, &
        cpcp_north, cpcp_south
   use IE_ModMain,    ONLY: TypeImCouple
 
@@ -721,22 +722,36 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
      case('north')
         Buff_V(1) = Buff_V(1) + w * IONO_NORTH_PHI(i,j)
         Buff_V(2) = Buff_V(2) + w * IONO_NORTH_JR(i,j)
+        Buff_V(3) = Buff_V(3) + w * IONO_NORTH_SigmaH(i,j)
+        Buff_V(4) = Buff_V(4) + w * IONO_NORTH_SigmaP(i,j)
      case('south')
         Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_PHI(iSouth,j)
         Buff_V(2) = Buff_V(2) + w * IONO_SOUTH_JR(iSouth,j)
+        Buff_V(3) = Buff_V(3) + w * IONO_SOUTH_SigmaH(iSouth,j)
+        Buff_V(4) = Buff_V(4) + w * IONO_SOUTH_SigmaP(iSouth,j)
      case('cpcpmin')
         if(cpcp_north < cpcp_south)then
            Buff_V(1) = Buff_V(1) + w * IONO_NORTH_PHI(i,j)
            Buff_V(2) = Buff_V(2) + w * IONO_NORTH_JR(i,j)
+           Buff_V(3) = Buff_V(3) + w * IONO_NORTH_SigmaH(i,j)
+           Buff_V(4) = Buff_V(4) + w * IONO_NORTH_SigmaP(i,j)
         else
            Buff_V(1) = Buff_V(1) + w * IONO_SOUTH_PHI(iSouth,j)
            Buff_V(2) = Buff_V(2) + w * IONO_SOUTH_JR(iSouth,j)
+           Buff_V(3) = Buff_V(3) + w * IONO_SOUTH_SigmaH(iSouth,j)
+           Buff_V(4) = Buff_V(4) + w * IONO_SOUTH_SigmaP(iSouth,j)
         end if
      case('average')
         Buff_V(1) = Buff_V(1) + w * &
              0.5*(IONO_NORTH_PHI(i,j) + IONO_SOUTH_PHI(iSouth,j))
         Buff_V(2) = Buff_V(2) + w * &
              0.5*(IONO_NORTH_JR(i,j)  + IONO_SOUTH_JR(iSouth,j))
+        Buff_V(3) = Buff_V(3) + w * 0.5*( &
+             IONO_NORTH_SigmaH(i,j)  + &
+             IONO_SOUTH_SigmaH(iSouth,j))
+        Buff_V(4) = Buff_V(4) + w * 0.5*( &
+             IONO_NORTH_SigmaP(i,j)  + &
+             IONO_SOUTH_SigmaP(iSouth,j))
      case default
         call CON_stop(NameSub//' ERROR: Unknown value for TypeImCouple='// &
              TypeImCouple)

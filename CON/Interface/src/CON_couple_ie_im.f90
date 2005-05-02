@@ -103,7 +103,7 @@ contains
     !EOP
 
     external IE_get_for_im,IM_put_from_ie
-    integer, parameter :: nVarIeIm=2
+    integer, parameter :: nVarIeIm=4
     !-------------------------------------------------------------------------
     
     ! After everything is initialized exclude PEs which are not involved
