@@ -2776,10 +2776,17 @@ allopt			TypeMessagePass
 </command>
 
 <command name="TVDRESCHANGE">
-	<parameter name="UseTVDAtResChange" type="logical" default="F" />
-! Default value is shown above
-! For UseTVDResChange=T the second order TVD scheme is used ar resolution
-! changes
+	<parameter name="UseTvdAtReschange" type="logical" default="F" />
+#TVDRESCHANGE
+T		UseTvdAtResChange
+
+! For UseTvdAtResChange=T a second order TVD limited scheme is used 
+! at the resolution changes. 
+! This scheme is compatible with the TypeMessagePass='all' and 'allopt' 
+! options in the MESSAGEPASS command.
+!
+! Default value is false, which results in first order 
+! prolongation and restriction operators at the resolution changes.
 </command>
 
 <!-- ^CFG IF BORISCORR BEGIN -->
