@@ -1078,7 +1078,7 @@ subroutine MH_set_parameters(TypeAction)
         if(iCFExchangeType/=2)then
            if(iProc==0)write(*,*)&
                 'TVD Limiter at the resolution change '//&
-                'requires to set iCFExchangeType/=2  '//&
+                'requires to set iCFExchangeType=2  '//&
                 'in the message_pass_cells, do nothing'
            CYCLE
         end if
