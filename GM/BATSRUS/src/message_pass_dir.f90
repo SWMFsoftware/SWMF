@@ -911,7 +911,7 @@ contains
           qsol(iminP:imaxP,jminP:jmaxP,kmaxP+1)=&
                qsol(iminP:imaxP,jminP:jmaxP,kmaxP)
        endif
-    case('central2','lr2','mindmod2','lr3')
+    case('central2','lr2','minmod2','lr3')
        if(prolong_type/='lr3' .or. sendcorners)then
           ! Use second order extrapolation in the other directions
           if(idir/=1)then
@@ -959,7 +959,7 @@ contains
        gradz=0.125*(&
             qsol(iminP:imaxP,jminP:jmaxP,kminP+1:kmaxP+1)-&
             qsol(iminP:imaxP,jminP:jmaxP,kminP-1:kmaxP-1))
-    case('lr','minmod','lr2','mindmod2','lr3')
+    case('lr','minmod','lr2','minmod2','lr3')
        gradxl=0.25*(&
             qsol(iminP  :imaxP  ,jminP:jmaxP,kminP:kmaxP)-&
             qsol(iminP-1:imaxP-1,jminP:jmaxP,kminP:kmaxP))
