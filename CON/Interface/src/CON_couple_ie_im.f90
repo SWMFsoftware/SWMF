@@ -105,6 +105,7 @@ contains
     external IE_get_for_im,IM_put_from_ie
     integer, parameter :: nVarIeIm=4
     !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
     ! After everything is initialized exclude PEs which are not involved
     if(.not.RouterIeIm%IsProc) RETURN
@@ -113,6 +114,10 @@ contains
          RouterIeIm, nVarIeIm,&
          fill_buffer =IE_get_for_im,&
          apply_buffer=IM_put_from_ie)
+
+    call IM_put_from_ie_complete
+
+    if(DoTest.and.is_proc0(IM_)) call IM_print_variables('IE')
 
   end subroutine couple_ie_im
 
