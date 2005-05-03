@@ -105,6 +105,7 @@ subroutine update_check(iStage)
 
   use ModProcMH
   use ModMain
+  use ModImplicit, ONLY: UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance
   use ModPhysics
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,true_cell
@@ -199,6 +200,15 @@ subroutine update_check(iStage)
      end do
      PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
      PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
+
+     !^CFG IF IMPLICIT BEGIN
+     ! The part implicit scheme can get here if all blocks become explicit
+     ! due to time step reductions. To be able to recover the time step,
+     ! increase fixed time step if there was no time step reduction above.
+     if(UsePartImplicit .and. dt == DtFixed) &
+          DtFixed = min(DtFixedOrig, DtFixed*1.05)
+     !^CFG END IMPLICIT
+
      if(oktest) then
         if (iProc == 0 .and. report_tf < 1.) &
              write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
