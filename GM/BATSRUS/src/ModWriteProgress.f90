@@ -77,43 +77,10 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   Problem Type'
   call write_prefix; write(iUnitOut,*)'   ------------'
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,'(10X,A14,I8)') 'problem_type: ',&
-       problem_type   !^CFG IF NOT SIMPLE BEGIN
-  call write_prefix
-  select case (problem_type)
-  case (problem_uniform)
-     write(iUnitOut,'(10X,''MHD Uniform Flow Problem'')')
-  case (problem_shocktube)
-     write(iUnitOut,'(10X,''Shock Tube Initial Value Problem'')')
-  case (problem_heliosphere)
-     write(iUnitOut,'(10X,''Solar Wind and Inner Heliosphere Problem'')')
-  case (problem_arcade)
-     write(iUnitOut,'(10X,''Arcade Eruption'')')
-  case (problem_cme)
-     write(iUnitOut,'(10X,''CME Initiated by Magnetic Flux Rope'')')
-  case (problem_comet)
-     write(iUnitOut,'(10X,''Mass-Loaded Comet Problem'')')
-  case (problem_rotation)
-     write(iUnitOut,'(10X,''Rotation Test Case Problem'')')
-  case (problem_diffusion)
-     write(iUnitOut,'(10X,''Magnetic Diffusion Test Case Problem'')')
-  case (problem_earth)                !^CFG END SIMPLE
-     write(iUnitOut,'(10X,''Earth Magnetosphere Problem'')')
-  case (problem_saturn)               !^CFG IF NOT SIMPLE BEGIN
-     write(iUnitOut,'(10X,''Saturn Magnetosphere Problem'')')
-  case (problem_jupiter)
-     write(iUnitOut,'(10X,''Jupiter Magnetosphere Problem'')')
-  case (problem_venus)
-     write(iUnitOut,'(10X,''Venus Ionosphere Problem'')')
-  case (problem_mars)
-     write(iUnitOut,'(10X,''Mars Ionosphere Problem'')')
-  case (problem_cylinder)
-     write(iUnitOut,'(10X,''Conducting Cylinder (2-D), MHD Shock Problem'')')
-  case (problem_sphere)
-     write(iUnitOut,'(10X,''Conducting Sphere (3-D), MHD Shock Problem'')')
-  case default
-     write(iUnitOut,'(10X,''Nameless Problem'')')
-  end select                          !^CFG END SIMPLE
+!^CFG IF NOT SIMPLE BEGIN
+  call write_prefix; write(iUnitOut,'(10X,A14,I8)') 'problem_type: ',problem_type
+  call write_prefix; write(iUnitOut,'(10X,A)') trim(problem_type_string(problem_type))
+!^CFG END SIMPLE
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*) '   Physical Model Input Solution Parameters'
   call write_prefix; write(iUnitOut,*) '   ----------------------------------------'
