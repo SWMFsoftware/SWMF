@@ -1599,6 +1599,19 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
 end subroutine xyz_to_peblk
 
 !=========================================================================
+subroutine get_date_time_start(iTime_I)
+  
+  use ModMain,        ONLY : StartTime
+  use ModTimeConvert, ONLY : time_real_to_int
+
+  implicit none
+  integer, intent(out) :: iTime_I(7)
+
+  call time_real_to_int(StartTime,iTime_I)
+
+end subroutine get_date_time_start
+
+!=========================================================================
 subroutine get_date_time(iTime_I)
   
   use ModMain,        ONLY : StartTime, Time_Simulation
@@ -1610,8 +1623,8 @@ subroutine get_date_time(iTime_I)
   call time_real_to_int(StartTime+Time_Simulation,iTime_I)
 
 end subroutine get_date_time
-!=========================================================================
 
+!=========================================================================
 subroutine get_time_string
   use ModMain, ONLY: StringTimeH4M2S2,Time_Simulation
   implicit none
@@ -1623,3 +1636,18 @@ subroutine get_time_string
 
 end subroutine get_time_string
 
+!=========================================================================
+subroutine clear_leading_spaces(str)
+  !
+  !This routine takes a passed in string and strips it of leading spaces
+  !
+  character (len=*), intent(inout):: str
+  integer :: i,l
+
+  i=1; l=len(str)
+  do while(str(i:i)==' '.and.i<l)
+     i=i+1
+  end do
+  if(i>1)str=str(i:l)
+
+end subroutine clear_leading_spaces
