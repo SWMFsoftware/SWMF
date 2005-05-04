@@ -8,11 +8,15 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   !
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, &
-       nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step
+       nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
+       boris_correction, nOrder, limiter_type,betalimiter, UseRotatingBc, &
+       TypeCoordSystem, problem_type, problem_type_string, CodeVersion
   use ModParallel, ONLY : iBlock_A, iProc_A
-  use ModPhysics, ONLY : unitUSER_x
+  use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
+       Body_rho_dim, g
   use ModIO
   use ModNodes
+  use ModNumConst, ONLY : cRadToDeg
   use ModMpi
   implicit none
 
@@ -28,9 +32,10 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   logical :: oktest,oktest_me
   integer, allocatable, dimension(:) :: BlockCut
   character (len=22) :: textNandT
-  character (len=23) :: textDateTime
+  character (len=23) :: textDateTime0,textDateTime
+  character (len=80) :: format
 
-  integer :: iTime_I(7)
+  integer :: iTime0_I(7),iTime_I(7)
   !----------------------------------------------------------------------------
 
   call set_oktest('write_plot_tec',oktest,oktest_me)
@@ -48,8 +53,11 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
           "N=",n_step
   end if
 
+  write(format,*)'(i4.4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)'
+  call get_date_time_start(iTime0_I)
   call get_date_time(iTime_I)
-  write(textDateTime,'(i4.4,"-",5(i2.2,"-"),i3.3)') iTime_I
+  write(textDateTime0,format) iTime0_I
+  write(textDateTime ,format) iTime_I
 
   select case(plot_type1(1:3))
   case('3d_')
@@ -62,6 +70,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
              ', N=',nNodeALL, &
              ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
              ', F=FEPOINT, ET=BRICK'
+        call write_auxdata
      end if
      do iBlockALL  = 1, nBlockALL
         iBLK = iBlock_A(iBlockALL)
@@ -132,6 +141,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                 ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
                 ', E=',nBlockCuts*((nJ  )*(nK  )), &
                 ', F=FEPOINT, ET=QUADRILATERAL'
+           call write_auxdata
         end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
@@ -206,6 +216,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                 ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                 ', E=',nBlockCuts*((nI  )*(nK  )), &
                 ', F=FEPOINT, ET=QUADRILATERAL'
+           call write_auxdata
         end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
@@ -280,6 +291,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                 ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
                 ', E=',nBlockCuts*((nI  )*(nJ  )), &
                 ', F=FEPOINT, ET=QUADRILATERAL'
+           call write_auxdata
         end if
         ! Now loop to write values
         do iBlockALL  = 1, nBlockALL
@@ -333,5 +345,130 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   case default
      write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
   end select
+
+contains
+
+  subroutine write_auxdata
+    character(len=8)  :: real_date
+    character(len=10) :: real_time
+    character(len=80) :: stmp
+
+    !BLOCKS
+    write(stmp,'(i12,3(a,i2))')nBlockALL,'  ',nI,' x',nJ,' x',nK
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA BLOCKS="',trim(stmp),'"'
+
+    !BODYDENSITY
+    write(stmp,'(f12.2)')Body_rho_dim
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA RBODY="',trim(stmp),'"'
+
+    !BORIS
+    if(boris_correction)then
+       write(stmp,'(a,f8.4)')'T ',boris_cLIGHT_factor
+    else
+       write(stmp,'(a)')'F'
+    end if
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA BORIS="',trim(stmp),'"'
+
+    !BTHETATILT
+    write(stmp,'(f12.4)')thetaTilt*cRadToDeg
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(stmp),'"'
+
+    !CELLS
+    write(stmp,'(i12)')nBlockALL*nI*nJ*nK
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA CELLS="',trim(stmp),'"'
+
+    !CODEVERSION
+    write(stmp,'(a,f5.2)')'BATSRUS',CodeVersion
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA CODEVERSION="',trim(stmp),'"'
+
+    !COORDSYSTEM
+    write(stmp,'(a)')TypeCoordSystem
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA COORDSYSTEM="',trim(stmp),'"'
+
+    !COROTATION
+    if(UseRotatingBc)then
+       write(stmp,'(a)')'T'
+    else
+       write(stmp,'(a)')'F'
+    end if
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA COROTATION="',trim(stmp),'"'
+
+    !GAMMA
+    write(stmp,'(f14.6)')g
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA GAMMA="',trim(stmp),'"'
+
+    !ITER
+    write(stmp,'(i12)')n_step
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(stmp),'"'
+
+    !NPROC
+    write(stmp,'(i12)')nProc
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA NPROC="',trim(stmp),'"'
+
+    !ORDER
+    if(nORDER==2)then
+       if(limiter_type=='beta')then
+          write(stmp,'(i12,a,e13.5)')nOrder,', beta=',BetaLimiter
+       else
+          write(stmp,'(i12,a)')nORDER,' '//trim(limiter_type)
+       end if
+    else
+       write(stmp,'(i12)')nORDER
+    end if
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA ORDER="',trim(stmp),'"'
+
+    !PROBLEMTYPE
+    write(stmp,'(i12,a)')problem_type,' '//trim(problem_type_string(problem_type))
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA PROBLEMTYPE="',trim(stmp),'"'
+
+    !RBODY
+    write(stmp,'(f12.2)')rBody
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA RBODY="',trim(stmp),'"'
+
+    !SAVEDATE
+    call Date_and_time (real_date, real_time)
+    write(stmp,'(a11,a4,a1,a2,a1,a2, a4,a2,a1,a2,a1,a2)') &
+         'Save Date: ', real_date(1:4),'/',real_date(5:6),'/',real_date(7:8), &
+         ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6)
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA SAVEDATE="',trim(stmp),'"'
+
+    !TIMEEVENT
+    write(stmp,'(a)')textDateTime
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(stmp),'"'
+
+    !TIMEEVENTSTART
+    write(stmp,'(a)')textDateTime0
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(stmp),'"'
+
+    !TIMESIM
+    if(time_accurate)then
+       write(stmp,'(a)')'T='// &
+            StringTimeH4M2S2(1:4)//":"// &
+            StringTimeH4M2S2(5:6)//":"// &
+            StringTimeH4M2S2(7:8)
+    else
+       write(stmp,'(a)')'T= N/A'
+    end if
+    call clear_leading_spaces(stmp)
+    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESIM="',trim(stmp),'"'
+
+  end subroutine write_auxdata
 
 end subroutine write_plot_tec
