@@ -79,7 +79,7 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)
 !^CFG IF NOT SIMPLE BEGIN
   call write_prefix; write(iUnitOut,'(10X,A14,I8)') 'problem_type: ',problem_type
-  call write_prefix; write(iUnitOut,'(10X,A)') trim(problem_type_string(problem_type))
+  call write_prefix; write(iUnitOut,'(10X,A)') trim(StringProblemType_I(problem_type))
 !^CFG END SIMPLE
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*) '   Physical Model Input Solution Parameters'

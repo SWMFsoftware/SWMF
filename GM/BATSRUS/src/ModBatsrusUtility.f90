@@ -1636,18 +1636,3 @@ subroutine get_time_string
 
 end subroutine get_time_string
 
-!=========================================================================
-subroutine clear_leading_spaces(str)
-  !
-  !This routine takes a passed in string and strips it of leading spaces
-  !
-  character (len=*), intent(inout):: str
-  integer :: i,l
-
-  i=1; l=len(str)
-  do while(str(i:i)==' '.and.i<l)
-     i=i+1
-  end do
-  if(i>1)str=str(i:l)
-
-end subroutine clear_leading_spaces

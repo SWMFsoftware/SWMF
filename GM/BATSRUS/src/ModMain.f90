@@ -64,8 +64,8 @@ Module ModMain
        problem_cme        =26,&
        problem_globalhelio=28,&
        problem_dissipation=30
-  character (len=80) :: problem_type_string(30)
-  data problem_type_string / &
+  character (len=80) :: StringProblemType_I(30)
+  data StringProblemType_I / &
        'MHD Uniform Flow Problem', &
        'Shock Tube Initial Value Problem', &
        'Solar Wind and Inner Heliosphere Problem', &
