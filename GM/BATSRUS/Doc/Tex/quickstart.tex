@@ -24,14 +24,14 @@ or, if the {\tt tar} command does not recognize the 'z' flag, use
 
 If CVS (Concurrent Versions System) is available on your computer
 and you have an account on the CVS server machine 
-{\tt butch.engin.umich.edu}, you can use CVS to install
+{\tt herot.engin.umich.edu}, you can use CVS to install
 the current or a particular version of the code.
 First of all have the following environment variables set
 \begin{verbatim}
   setenv CVSROOT UserName@herot.engin.umich.edu:/FRAMEWORK
   setenv CVS_RSH ssh
 \end{verbatim}
-where {\tt UserName} is your user name on butch. Here it is assumed
+where {\tt UserName} is your user name on herot. Here it is assumed
 that you use csh or tcsh. Also put these settings into your .cshrc file
 so it is automatically executed at login. Alternatively, use
 \begin{verbatim}
@@ -250,10 +250,11 @@ changed with directly running the {\tt GridSize.pl} Perl script. Type
   GridSize.pl -h
 \end{verbatim}
 to see the usage. The script edits the {\tt src/ModSize.f90} file
-and sets the number of the blocks {\tt nBLK=MaxBlock}
-, the number of implicit blocks {\tt MaxImplBLK}             %^CFG IF IMPLICIT
-and the size of the blocks {\tt nI=nCellsI, nJ=nCellsJ, nK=nCellsK}. 
-See section \ref{section:block} for details.
+and sets the number of the blocks {\tt nBLK=MaxBlock},
+the number of implicit blocks {\tt MaxImplBLK}             %^CFG IF IMPLICIT
+and the size of the blocks {\tt nI, nJ, nK}, i.e. the number of cells
+in a block.
+See the section on the block structure in the DESIGN document for details.
 
 The allocation of the largest arrays can be static or dynamic
 (in Fortran 90 the latter is called allocatable). The default
@@ -329,9 +330,6 @@ parameter file
 \end{verbatim}
 The files in the Param directory can be used as examples or included
 with the {\tt \#INCLUDE} command.
-Especially useful is the Param/FULL file which contains
-all the possible commands and descriptions.
-See \ref{section:param} for details.
 
 Now you are ready to run the code. For an interactive run
 on 8 processors type
@@ -368,10 +366,9 @@ for example
   qsub job.columbia
 \end{verbatim}
 The format the job scripts and submission commands depend on
-the queuing system. Some of these will be described in 
-section \ref{section:platforms}.
+the queuing system. 
 
-\subsection{Postprocssing}
+\subsection{Postprocessing}
 
 After the code has successfully run, the output files 
 found in {\tt run/IO2} need some post processing before 

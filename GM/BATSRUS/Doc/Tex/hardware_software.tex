@@ -25,7 +25,7 @@ library which is included in the util/NOMPI utility
 While it is designed to run on massively parallel platforms, the
 code will run on any number of nodes from a single processor to as
 many as the user has access to. We have run \BATSRUS\ on up
-to 1400 nodes.  As described in section~\ref{section:blocks},
+to 1400 nodes.  As described in the DESIGN document,
 blocks are distributed on different
 processors and must communicate with each other through message passing.
 The communication time between processors, or latency, will have an 
@@ -61,20 +61,19 @@ Figure~\ref{fig:scalability}.
 \begin{center}
 \includegraphics*[width=8.4cm]{NewScaling.eps}
 \end{center}
-\caption{Scaling of \BATSRUS\ is shown for several 
-different platforms.  The 
-near perfect scalability is show by the small deviations of the code performance
-from the theoretically perfect scaling curves.}
+\caption{Scaling of \BATSRUS\ is shown for several different
+platforms.  The near perfect scalability is show by the small
+deviations of the code performance from the theoretically perfect
+scaling curves.}
 \label{fig:scalability}
 \end{figure}
 
 
 \subsection{Memory and Disk Requirements \label{section:memory}}
 
-\BATSRUS\ is a block based simulation code (see sections~\ref{section:grid})
- and as
-such, memory requirements are most easily discussed in terms of the number
-of blocks in a simulation.
+\BATSRUS\ is a block based simulation code (see the DESIGN document)
+and as such, memory requirements are most easily discussed in terms 
+of the number of blocks in a simulation.
 
 To establish the computation requirements needed to run the code, the
 user must determine how large of a simulation region 

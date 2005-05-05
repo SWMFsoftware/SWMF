@@ -64,16 +64,15 @@ parameters that must be changed.
 
 \subsubsection{Number of Blocks per Processor: {\tt nBLK} \label{section:nblk}}
 
-As described in section~\ref{section:blocks}, 
-the main unit of mesh used for computation in \BATSRUS\ 
-is the Cartesian block.  The major part of memory is dimensioned in this
-block structure.  Therefore, the number of blocks basically determines the
-amount of memory the code will use.  The number
-of blocks that any given processor can handle depends on the amount of
-memory that each node has available and must be changed in the file 
-{\tt src/ModSize.f90}. This is normally done with the {\tt GridSize.pl}
-script.
-The maximum number of blocks is defined by the variable {\tt nBLK}.  
+As described in the DESIGN document, the main unit of mesh used for
+computation in \BATSRUS\ is the Cartesian block.  The major part of
+memory is dimensioned in this block structure.  Therefore, the number
+of blocks basically determines the amount of memory the code will use.
+The number of blocks that any given processor can handle depends on
+the amount of memory that each node has available and must be changed
+in the file {\tt src/ModSize.f90}. This is normally done with the {\tt
+GridSize.pl} script.  The maximum number of blocks is defined by the
+variable {\tt nBLK}.
 
 \subsubsection{Number of Cells in Each Block: {\tt nI},
 {\tt nJ}, {\tt nK} \label{section:ncells}}
@@ -121,22 +120,19 @@ a number of blocks determined by the {\tt proc\_dims(i)} variable, where
   proc_dims(2) = 1
   proc_dims(3) = 1
 \end{verbatim}
-then the top level blocks form a brick consisting of 2 blocks arranged along the
-x axis. This variable is called {\tt proc\_dims} because in the
-original design of \BATSRUS\ the initial
-number of blocks could not exceed the number of processors.
-In the current version there is no such restriction, and
-the name is kept for historical reasons only. A more descriptive
-name would be {\tt nRootBlock\_D} which refers to the number
-of root blocks in the 3 coordinate directions.
+then the top level blocks form a brick consisting of 2 blocks arranged
+along the x axis. This variable is called {\tt proc\_dims} because in
+the original design of \BATSRUS\ the initial number of blocks could
+not exceed the number of processors.  In the current version there is
+no such restriction, and the name is kept for historical reasons
+only. A more descriptive name would be {\tt nRootBlock\_D} which
+refers to the number of root blocks in the 3 coordinate directions.
 
-The sizes of cells in these top level blocks is determined
-by the initial number of blocks and
-also by the physical size of the computational domain and the 
-values of {\tt nI}, {\tt nJ}, {\tt nCellK}.
-As an example, we show
-a section of the input parameters used when running the code (see 
-section~\ref{section:param_details}).
+The sizes of cells in these top level blocks is determined by the
+initial number of blocks and also by the physical size of the
+computational domain and the values of {\tt nI}, {\tt nJ}, {\tt nK}.
+As an example, we show a section of the input parameters used when
+running the code
 \begin{verbatim}
 #GRID        
 4                      nRootBlockX
