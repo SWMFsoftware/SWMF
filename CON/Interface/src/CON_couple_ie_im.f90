@@ -104,18 +104,26 @@ contains
 
     external IE_get_for_im,IM_put_from_ie
     integer, parameter :: nVarIeIm=4
+    real :: tSimulationTmp
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
     ! After everything is initialized exclude PEs which are not involved
     if(.not.RouterIeIm%IsProc) RETURN
-    
+
+    ! Make sure that IE provides the most recent results
+    if(is_proc(IE_)) then
+       ! Use temporary variable for the intent(inout) argument of IE_run.
+       tSimulationTmp = tSimulation
+       call IE_run(tSimulationTmp, tSimulation)
+    endif
+
     call couple_comp(& 
          RouterIeIm, nVarIeIm,&
          fill_buffer =IE_get_for_im,&
          apply_buffer=IM_put_from_ie)
 
-    call IM_put_from_ie_complete
+    if(is_proc(IM_)) call IM_put_from_ie_complete
 
     if(DoTest.and.is_proc0(IM_)) call IM_print_variables('IE')
 

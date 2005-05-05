@@ -63,10 +63,10 @@ module CON_coupler
        GM_, IM_, &
        GM_, RB_, &
        UA_, IE_, &
+       IE_, IM_, &
+       IM_, GM_, &
        IE_, UA_, &
-       IE_, GM_, & !\The order of these three insures that the first time IM
-       IE_, IM_, & !-  runs that is has valid data from IE
-       IM_, GM_  & !/
+       IE_, GM_  &
        /), (/2, MaxCouple/) )
 
   public :: DoCoupleOnTime_C ! Should do coupling limit the time step
