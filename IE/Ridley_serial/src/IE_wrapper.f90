@@ -323,7 +323,7 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
-  call IE_run(tSimulationTmp,tSimulationTmp)
+  call IE_run(tSimulationTmp,tSimulation)
 
   select case(NameVar)
   case('PotNorth')
@@ -364,7 +364,7 @@ subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
-  call IE_run(tSimulationTmp,tSimulationTmp)
+  call IE_run(tSimulationTmp,tSimulation)
 
   select case(NameHem)
 
@@ -678,7 +678,8 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   use CON_coupler,   ONLY: IndexPtrType, WeightPtrType
   use ModIonosphere, ONLY: IONO_nTheta, IONO_nPsi, &
        IONO_NORTH_PHI, IONO_NORTH_JR, IONO_SOUTH_PHI, IONO_SOUTH_JR, &
-       IONO_NORTH_SigmaH, IONO_NORTH_SigmaP, IONO_SOUTH_SigmaH, IONO_SOUTH_SigmaP, &
+       IONO_NORTH_SigmaH, IONO_NORTH_SigmaP, &
+       IONO_SOUTH_SigmaH, IONO_SOUTH_SigmaP, &
        cpcp_north, cpcp_south
   use IE_ModMain,    ONLY: TypeImCouple
 
@@ -693,7 +694,6 @@ subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
   integer :: iBlock, i, j, iSouth, iPoint
   real    :: w
   !---------------------------------------------------------------------------
-
   Buff_V = 0.0
 
   do iPoint = iPointStart, iPointStart + nPoint - 1
