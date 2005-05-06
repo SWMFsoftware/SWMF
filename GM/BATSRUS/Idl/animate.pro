@@ -243,6 +243,9 @@
 	    linestyle=0
             if multix*multiy lt nfunc*nfile then linestyle=ifile
 
+            if(keyword_set(timetitle))then $
+              plottitles(0) = string(format='("t = ",i2)',time)
+
             plot_func,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
