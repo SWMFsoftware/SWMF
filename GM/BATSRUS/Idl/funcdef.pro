@@ -270,6 +270,8 @@ case f of
   'Mslowx':result=ux/sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
   'Mslowy':result=uy/sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
   'Mslowz':result=uz/sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
+  'divbxy':result=div(bx,by,x,y)
+  'absdivbxy':result=abs(div(bx,by,x,y))
   'jz': case ndim of
      1: result=deriv(x,by)
      2: result=curl(bx,by,x,y)
