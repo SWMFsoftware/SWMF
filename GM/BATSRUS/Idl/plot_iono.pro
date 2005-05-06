@@ -997,7 +997,7 @@ endif else begin
 
 endelse
 
-plotsouth = mklower(ask('whether to plot southern hemisphere (Y or N)','N'))
+plotsouth = mklower(ask('whether to plot southern hemisphere (y or n)','n'))
 isouth = 1
 if (strpos(plotsouth,'n') eq 0) then isouth = 0
 
@@ -1238,6 +1238,7 @@ for hem = 0, isouth do begin
     if (ntotal eq 1) and (nvars_to_plot le 2) then begin
       if hem eq 0 and i eq 0 then begin
         pn = -1
+        print,'opening1 file=',list(0)+'.ps'
         setdevice, list(0)+'.ps','p',4
 	pos_space, ppp, space, sizes
       endif
@@ -1246,6 +1247,7 @@ for hem = 0, isouth do begin
       if (ntotal le 5) and (nvars_to_plot le 3) then begin
         if hem eq 1 and i eq 0 then closedevice
         if i eq 0 then begin
+          print,'opening2 file=',list(0)+'_'+strmid(hems(hem),0,5)+'.ps'
           setdevice, list(0)+'_'+strmid(hems(hem),0,5)+'.ps','p',4
           pos_space, ppp, space, sizes, nx = nvars_to_plot
         endif
@@ -1253,7 +1255,12 @@ for hem = 0, isouth do begin
 
         if ((i eq 0) and (ntotal eq 1)) or (ntotal gt 1) then begin
           pn = -1
-          if i gt 0 then closedevice
+          if i gt 0 then begin
+              closedevice
+              print,'closing file'
+          endif
+          print,'opening3 file=',list(0)+'_Var'+tostr(i) $
+            +'_'+strmid(hems(hem),0,5)+'.ps'
           setdevice, list(0)+'_Var'+tostr(i)+'_'+strmid(hems(hem),0,5)+'.ps',$
                      'p',4
           pos_space, ppp, space, sizes
