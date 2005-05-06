@@ -9,8 +9,9 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
-       boris_correction, nOrder, limiter_type,betalimiter, UseRotatingBc, &
+       nOrder, limiter_type,betalimiter, UseRotatingBc, &
        TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
+  use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
        Body_rho_dim, g
@@ -361,6 +362,7 @@ contains
     write(stmp,'(f12.2)')Body_rho_dim
     write(unit_tmp,'(a,a,a)') 'AUXDATA RBODY="',trim(adjustl(stmp)),'"'
 
+    !^CFG IF BORISCORR BEGIN
     !BORIS
     if(boris_correction)then
        write(stmp,'(a,f8.4)')'T ',boris_cLIGHT_factor
@@ -368,9 +370,10 @@ contains
        write(stmp,'(a)')'F'
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA BORIS="',trim(adjustl(stmp)),'"'
+    !^CFG END BORISCORR
 
     !BTHETATILT
-    write(stmp,'(f12.4)')thetaTilt*cRadToDeg
+    write(stmp,'(f12.4)')ThetaTilt*cRadToDeg
     write(unit_tmp,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(adjustl(stmp)),'"'
 
     !CELLS
