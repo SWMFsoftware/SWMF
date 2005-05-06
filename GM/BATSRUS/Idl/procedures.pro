@@ -1606,6 +1606,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
           endelse
         endif
 
+        xtickname=!x.tickname
+        ytickname=!y.tickname
+
         ; Omit X axis if unneeded
         if (plotiy gt 0) then begin
           !x.tickname = strarr(60)+' '
@@ -1838,9 +1841,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       !p.multi(0) = multi0
       !p.position = 0
       !x.title    = xtitle
-      !x.tickname = strarr(60)
+      !x.tickname = xtickname
       !y.title    = ytitle
-      !y.tickname = strarr(60)
+      !y.tickname = ytickname
    endfor
 
    !p.position = 0
