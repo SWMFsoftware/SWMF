@@ -15,6 +15,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
        Body_rho_dim, g
+  use ModAdvance, ONLY : FluxType
   use ModIO
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -395,6 +396,10 @@ contains
        write(stmp,'(a)')'F'
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA COROTATION="',trim(adjustl(stmp)),'"'
+
+    !FLUXTYPE
+    write(stmp,'(a)')FluxType
+    write(unit_tmp,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
 
     !GAMMA
     write(stmp,'(f14.6)')g
