@@ -90,10 +90,10 @@ contains
          iostat =iError)
     if (iError /= 0) call CON_stop("Can not open file "//filename)
     write(UNITTMP_,'(a79)')            'IM pressure_var22'
-    write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,1
+    write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,2
     write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
     write(UNITTMP_,'(100(1pe13.5))')   0.0
-    write(UNITTMP_,'(a79)')            'Lon Lat p dens'
+    write(UNITTMP_,'(a79)')            'Lon Lat p rho nothing'
     do i=iSizeIn,1,-1
        do j=1,jSizeIn
           write(UNITTMP_,'(100(1pe18.10))') &
