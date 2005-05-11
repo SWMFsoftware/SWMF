@@ -137,7 +137,7 @@ Module ModMain
   logical :: UseIM = .false.                               !^CFG IF RCM
   logical :: DoCoupleImPressure = .true.                   !^CFG IF RCM
   logical :: DoCoupleImDensity  = .false.                  !^CFG IF RCM
-  real    :: TauCoupleIM = 0.01                            !^CFG IF RCM
+  real    :: TauCoupleIM = 20.0                            !^CFG IF RCM
 
   !\
   ! Parameters for the B0 field
