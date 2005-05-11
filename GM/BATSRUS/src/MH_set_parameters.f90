@@ -1195,28 +1195,20 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DtExchangeRay',DtExchangeRay)
         call read_var('DnRaytrace',   DnRaytrace)
         !                                              ^CFG END RAYTRACE
-     case("#IM")                                      !^CFG IF RCM BEGIN
+     case("#IMCOUPLING","#IM")                        !^CFG IF RCM BEGIN
         call read_var('TauCoupleIm',TauCoupleIm)
-        if(TauCoupleIm<1.0)then
-           TauCoupleIM=1.0/TauCoupleIM
+        if(TauCoupleIm < 1.0)then
+           TauCoupleIM = 1.0/TauCoupleIM
            if(iProc==0)then
-              write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be > 1'
+              write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be >= 1'
               if(UseStrict)call stop_mpi('Correct PARAM.in!')
               write(*,*)NameSub//' using the inverse:',TauCoupleIm
            end if
         end if
-     case("#IMCOUPLING")
-        call read_var('TauCoupleIm',TauCoupleIm)
-        if(TauCoupleIm<1.0)then
-           TauCoupleIM=1.0/TauCoupleIM
-           if(iProc==0)then
-              write(*,'(a)')NameSub//' WARNING: TauCoupleIm should be > 1'
-              if(UseStrict)call stop_mpi('Correct PARAM.in!')
-              write(*,*)NameSub//' using the inverse:',TauCoupleIm
-           end if
-        end if
-        call read_var('DoCoupleImPressure',DoCoupleImPressure)
-        call read_var('DoCoupleImDensity',DoCoupleImDensity)    !^CFG END RCM
+        if(NameCommand == "#IMCOUPLING")then
+           call read_var('DoCoupleImPressure',DoCoupleImPressure)
+           call read_var('DoCoupleImDensity',DoCoupleImDensity)
+        end if                                        !^CFG END RCM
      case("#MASSLOADING")                             !^CFG IF NOT SIMPLE BEGIN
         call read_var('UseMassLoading',UseMassLoading)
         call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
