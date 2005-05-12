@@ -2574,16 +2574,17 @@ T			UseSunEarth   ! Only if 'Transient'
 	<if expr="$nOrder == 2">
 		<parameter name="TypeLimiter" type="string" input="select">
 			<option name="minmod" default="T" 	/>
+			<option name="mc"			/>
 			<option name="beta"			/>
 		</parameter>
 		<parameter name="LimiterBeta" type="real" min="1" max="2"
-			default="1.2" if="$TypeLimiter eq 'beta'"/>
+			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
 #SCHEME
 2			nOrder (1 or 2)
 Rusanov			TypeFlux
-minmod			TypeLimiter ! Only for nOrder=2
-1.2			LimiterBeta ! Only for LimiterType='beta'
+mc			TypeLimiter ! Only for nOrder=2
+1.2			LimiterBeta ! Only if LimiterType is NOT 'minmod'
 
 ! Default values are shown above.\\
 !
@@ -2597,14 +2598,18 @@ minmod			TypeLimiter ! Only for nOrder=2
 !\end{verbatim}
 ! Possible values for TypeLimiter:
 !\begin{verbatim}
-! 'minmod'	- minmod limiter is the most robust 1D limiter
-! 'beta'        - Beta limiter
+! 'minmod'	- minmod limiter is the most robust limiter
+! 'mc'          - monotonized central limiter with a beta parameter
+! 'beta'        - beta limiter is less robust than the mc limiter for 
+!                 the same beta value
 !\end{verbatim}
-! Possible values for LimiterBeta are between 1.0 and 2.0 : 
+! Possible values for LimiterBeta (for 'beta' and 'mc' limiters only)
+! are between 1.0 and 2.0 : 
 !\begin{verbatim}
 !  LimiterBeta = 1.0 is the same as the minmod limiter
-!  LimiterBeta = 2.0 is the same as the superbee limiter
-!  LimiterBeta = 1.2 is the recommended value
+!  LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
+!  LimiterBeta = 1.5 is a typical value for the mc limiter
+!  LimiterBeta = 1.2 is the recommended value for the beta limiter
 !\end{verbatim}
 </command>
 
@@ -3036,26 +3041,10 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 #IM
 20.0			TauCoupleIm
 
-! Determine how fast the GM pressure p should be nudged towards the 
-! IM pressure pIm. The nudging is done in every GM time step.
-! The pIm pressure is updated every time IM->GM coupling occurs.
-!
-! If not time accurate, a weighted average is taken: 
-!
-! p' = (p*TauCoupleIm + pIm)/(TauCoupleIm+1)
-!
-! Therefore the larger TauCoupleIm is the slower the adjustment will be.
-! It takes approximately 2*TauCoupleIm time steps to get p close to pIm.
-!
-! If time accurate, the nudging is based on physical time:
-!
-! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
-!
-! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
-! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
-! p' = pIm is set in a single step.
-!
-! The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
+Same as command IMCOUPLING, except it does not read the two logicals.
+See description for command IMCOUPLING.
+
+The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
 </command>
 
 <command name="IMCOUPLING">
@@ -3068,37 +3057,41 @@ DtExchangeRay = 0.1 and DnRaytrace=1.
 T			DoCoupleImPressure
 F			DoCoupleImDensity
 
-! TauCoupleIm:
-! 
-! Determine how fast the GM pressure p should be nudged towards the 
-! IM pressure pIm. The nudging is done in every GM time step.
-! The pIm pressure is updated every time IM->GM coupling occurs.
-!
-! If not time accurate, a weighted average is taken: 
-!
-! p' = (p*TauCoupleIm + pIm)/(TauCoupleIm+1)
-!
-! Therefore the larger TauCoupleIm is the slower the adjustment will be.
-! It takes approximately 2*TauCoupleIm time steps to get p close to pIm.
-!
-! If time accurate, the nudging is based on physical time:
-!
-! p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
-!
-! where dt is the (local) time step. It takes about 2*TauCoupleIm seconds
-! to get p close to pIm. If the (local) time step dt exceeds TauCoupleIm, 
-! p' = pIm is set in a single step.
-!
-! The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
-! 
-! DoCoupleImPressure:
-!
-! Logical which sets whether GM pressure is driven by IM pressure, default T
-! 
-! DoCoupleImDensity:
-!
-! Logical which sets whether GM density is driven by IM density, default F
-! 
+TauCoupleIm:
+
+Determine how fast the GM pressure p (and possibly density rho) 
+should be nudged towards the IM pressure pIm (and density dIM). 
+The RCM prssure and denstiy are updated every time IM->GM coupling occurs,
+but the nudging towards these values is done in every GM time step.
+
+If not time accurate, a weighted average is taken: 
+
+p' = (p*TauCoupleIm + pIm)/(TauCoupleIm+1)
+
+Therefore the larger TauCoupleIm is the slower the adjustment will be.
+It takes approximately 2*TauCoupleIm time steps to get p close to pIm.
+
+If time accurate, the nudging is based on physical time:
+
+p' = p + max(1.0, dt/TauCoupleIm)*(pIm - p)
+
+where dt is the time step. It takes about 2*TauCoupleIm seconds
+to get p close to pIm. If the time step dt exceeds TauCoupleIm, 
+p' = pIm is set in a single step.
+
+The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
+
+DoCoupleImPressure:
+
+Logical which sets whether GM pressure is driven by IM pressure, default 
+is true, and it should always be true, because pressure is the dominant
+variable in the IM to GM coupling.
+
+DoCoupleImDensity:
+
+Logical which sets whether GM density is driven by IM density, default is
+false. This is a new feature in the IM-GM coupling, which is not fully
+tested.
 </command>
 <!-- ^CFG END RCM -->
 
