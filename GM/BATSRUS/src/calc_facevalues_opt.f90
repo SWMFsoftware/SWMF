@@ -935,7 +935,8 @@ subroutine limiter_body(lMin,lMax)
   use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
   implicit none
   integer, intent(in)::lMin,lMax
-  real,dimension(Hi3_):: dVar2_I,dVar1_I
+  real,dimension(Hi3_):: dVar1_I, dVar2_I
+  real,dimension(nVar):: dVar1_V, dVar2_V
   integer::l
 
   select case(limiter_type)                   !^CFG IF NOT SIMPLE BEGIN
@@ -979,6 +980,19 @@ subroutine limiter_body(lMin,lMax)
            dVarLim_VI(:,l)=cZero
         end if
      end do
+  case('mc')
+     dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+     do l=lMax,lMin-1,-1
+        dVar2_V = dVar1_V
+        dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+        if(all(IsTrueCell_I(l-1:l+1)))then
+           dVarLim_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+                cHalf*abs(dVar1_V+dVar2_V))
+        else
+           dVarLim_VI(:,l)=cZero
+        end if
+     end do
   case default
      call stop_mpi('limiter_body: unknown TypeLimiter='//limiter_type)
   end select
@@ -991,7 +1005,8 @@ subroutine limiter(lMin,lMax)
   use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
   implicit none
   integer, intent(in)::lMin,lMax
-  real,dimension(Hi3_):: dVar2_I,dVar1_I
+  real,dimension(Hi3_):: dVar1_I, dVar2_I
+  real,dimension(nVar):: dVar1_V, dVar2_V
   integer::l
 
   select case(limiter_type)                  !^CFG IF NOT SIMPLE BEGIN
@@ -1025,6 +1040,15 @@ subroutine limiter(lMin,lMax)
         dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
         dVarLim_VI(:,l)=dVar2_I(1:nVar)* dVar2_I(Lo2_:Hi2_)
+     end do
+  case('mc')
+     dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+     do l=lMax,lMin-1,-1
+        dVar2_V = dVar1_V
+        dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+        dVarLim_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V)) * &
+             min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+             cHalf*abs(dVar1_V+dVar2_V))
      end do
   case default
      call stop_mpi('limiter: unknown TypeLimiter='//limiter_type)
