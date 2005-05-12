@@ -983,7 +983,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter',limiter_type)
-        if(limiter_type=='beta') call read_var('LimiterBeta',&  
+        if(limiter_type/='minmod') call read_var('LimiterBeta',&  
              BetaLimiter)
         !                                              ^CFG END SIMPLE
      case("#NONCONSERVATIVE")
@@ -2418,18 +2418,6 @@ contains
        end if
     end if
     !^CFG END RAYTRACE
-    !^CFG IF NOT SIMPLE BEGIN
-    if(limiter_type=='mc')then
-       if(iProc==0)then
-          write(*,'(a)')NameSub//&
-               ' WARNING: MC limiter is not available any longer !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting beta limiter with parameter 1.2'
-       endif
-       limiter_type='beta'
-       BetaLimiter=1.2
-    end if
-    !^CFG END SIMPLE
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
