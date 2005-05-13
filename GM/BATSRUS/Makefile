@@ -100,7 +100,7 @@ src/Makefile.OPTIONS:
 	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
 
 src/ModSize.f90:
-	cp -f src/ModSize_${OS}.f90 src/ModSize.f90
+	cp -f src/ModSize_orig.f90 src/ModSize.f90
 
 LIB:
 	cd src; make LIB

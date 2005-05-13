@@ -14,7 +14,7 @@ install: check_src
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES
 	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
-	cp -f src/ModSize_${OS}.f90 src/ModSize.f90
+	cp -f src/ModSize_orig.f90 src/ModSize.f90
 	cd src; make user_routines.f90
 
 
