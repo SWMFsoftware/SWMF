@@ -17,6 +17,7 @@ module ModLimiter
   logical::DoLimitMomentum=.false.     !^CFG IF BORISCORR
   real,parameter::cTwoThird=cTwo*cThird
 contains
+  !===========================================================================
   subroutine tvd_reschange_body(& 
        Coarse2_V         ,& !State in the coarser ghostcell, 2nd layer
        Coarse1_V         ,& !State in the coarser ghostcell, 1st layer
@@ -25,10 +26,10 @@ contains
        CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& !Facevalues in the physical cell,looking at the coarser cell 
        FineF_VII         ,& !Facevalues in the physical cell,looking at the physical cell  
-       IsTrueCoarse2     ,& !True is the coarser ghostcell of the 2nd layer is true
-       IsTrueCoarse1     ,& !True is the coarser ghostcell of the 1st layer is true
-       IsTrueFine1       ,& !True is all physical cells of the 1st layer are true
-       IsTrusFine2_II)      !True is for true physical cell of the 2nd layer
+       IsTrueCoarse2     ,& !True if the coarser ghostcell of the 2nd layer is true
+       IsTrueCoarse1     ,& !True if the coarser ghostcell of the 1st layer is true
+       IsTrueFine1       ,& !True if all physical cells of the 1st layer are true
+       IsTrusFine2_II)      !True for true physical cell of the 2nd layer
     !_____________!_____________!_______!_______!_
     !             !         CToF!FToC FF!
     ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
@@ -64,7 +65,8 @@ contains
           !Before limiting the transversal gradients are equal to
           !Fine1_VII-AveragedFine1_V
           CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-               sign(min(abs(GradNormalLtd_V),abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+               sign(min(abs(GradNormalLtd_V), &
+               abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
                Fine1_VII(:,i2,j2)-AveragedFine1_V)
        end do;end do
     else
@@ -87,7 +89,8 @@ contains
                   max(cZero,&
                   min(cThird*GradNormal2_V,&
                   GradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-                  cHalf*GradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))/&
+                  cHalf*GradNormal_V*&
+                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))/&
                   max(GradNormal2_V,cTiny)
           else
              !First order scheme
@@ -98,6 +101,7 @@ contains
        end do;end do
     end if
   end subroutine tvd_reschange_body
+  !===========================================================================
   subroutine tvd_reschange(&
        Coarse2_V         ,& !State in the coarser ghostcell, 2nd layer
        Coarse1_V         ,& !State in the coarser ghostcell, 1st layer
@@ -137,7 +141,8 @@ contains
        !Before limiting the transversal gradients are equal to
        !Fine1_VII-AveragedFine1V
        CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-            sign(min(abs(GradNormalLtd_V),abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+            sign(min(abs(GradNormalLtd_V),&
+            abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
             Fine1_VII(:,i2,j2)-AveragedFine1_V)
     end do;end do
     do j2=1,2;do i2=1,2
@@ -154,7 +159,7 @@ contains
 
   end subroutine tvd_reschange
 end module ModLimiter
-
+!=============================================================================
 subroutine calc_facevalues(DoResChangeOnly)
 
   ! The subroutine calculates right and left face values.
@@ -590,270 +595,169 @@ contains
   end subroutine BorisFaceZtoMHD
   !============================================================================
   !^CFG END BORISCORR
+  !=======================================================================
   subroutine get_face_tvd(iSideIn)
     integer,intent(in)::iSideIn
-    
     select case(iSideIn)
     case(east_)
-       if(body_BLK(iBlock))then
-          do k=1,nK,2
-             do j=1,nJ,2
-                if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
-                        Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
-                        Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
-                        Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
-                        CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
-                        IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
-                        IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
-                        IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                        IsTrusFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
-                        Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
-                        Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
-                        Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
-                        CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
-                end if
-             end do
-          end do
-       else
-          do k=1,nK,2
-             do j=1,nJ,2
-                call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
-                        Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
-                        Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
-                        Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
-                        CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
-                        FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
-             end do
-          end do
-       end if
+       do k=1,nK,2; do j=1,nJ,2
+          if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
+                  Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
+                  Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
+                  Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1)   ,&
+                  IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
+                  IsTrusFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
+                  Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
+                  Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
+                  Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
+                  CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
+          end if
+       end do; end do
     case(west_)
-       if(body_BLK(iBlock))then
-          do k=1,nK,2
-             do j=1,nJ,2
-                if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
-                        Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
-                        Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
-                        Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
-                        CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
-                        FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
-                        FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
-                        IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
-                        IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
-                        IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
-                        IsTrusFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
-                        Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
-                        Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
-                        Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
-                        CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
-                        FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
-                        FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
-                end if
-             end do
-          end do
-       else
-          do k=1,nK,2
-             do j=1,nJ,2
-                call tvd_reschange(&
-                     Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
-                     Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
-                     Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
-                     Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
-                     CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
-                     FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
-                     FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1))
-             end do
-          end do
-       end if
+       do k=1,nK,2; do j=1,nJ,2
+          if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
+                  Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
+                  Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
+                  Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII        =RightState_VX(:,nI,j:j+1,k:k+1)  ,&
+                  IsTrueCoarse2    = true_cell(nI+2,j,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
+                  IsTrusFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
+                  Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
+                  Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
+                  Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
+                  CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                  FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
+          end if
+       end do; end do
     case(south_)
-       if(body_BLK(iBlock))then
-          do k=1,nK,2
-             do i=1,nI,2
-                if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
-                        Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
-                        CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
-                        FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
-                        FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
-                        IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
-                        IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
-                        IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
-                        IsTrusFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
-                        Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
-                        CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
-                        FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
-                        FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
-                end if
-             end do
-          end do
-       else
-          do k=1,nK,2
-             do i=1,nI,2
-                call tvd_reschange(&
-                     Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
-                     Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
-                     Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
-                     Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
-                     CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
-                     FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
-                     FineF_VII        =LeftState_VY(:,i:i+1,2,k:k+1))
-             end do
-          end do
-       end if
+       do k=1,nK,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
+                  Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII        = LeftState_VY(:,i:i+1,2,k:k+1)   ,&
+                  IsTrueCoarse2    = true_cell(i,-1,k,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
+                  IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
+                  IsTrusFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
+                  Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
+                  CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                  FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
+          end if
+       end do; end do
     case(north_)
-       if(body_BLK(iBlock))then
-          do k=1,nK,2
-             do i=1,nI,2
-                if(.not.all(true_cell(i:i+1,nI-1:nI+2,k:k+1,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
-                        Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
-                        CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
-                        FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                        FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)  ,&
-                        IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
-                        IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
-                        IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
-                        IsTrusFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
-                        Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
-                        CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
-                        FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                        FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
-                end if
-             end do
-          end do
-       else
-          do k=1,nK,2
-             do i=1,nI,2
-                call tvd_reschange(&
-                     Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
-                     Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
-                     Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
-                     Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
-                     CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
-                     FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                     FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
-             end do
-          end do
-       end if
+       do k=1,nK,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,nI-1:nI+2,k:k+1,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
+                  Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)  ,&
+                  IsTrueCoarse2    = true_cell(i,nJ+2,k,iBlock)      ,&
+                  IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
+                  IsTrusFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
+                  Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
+                  CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                  FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                  FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
+          end if
+       end do; end do
     case(bot_)
-       if(body_BLK(iBlock))then
-          do j=1,nJ,2
-             do i=1,nI,2
-                if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
-                        Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
-                        CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
-                        FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                        FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
-                        IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
-                        IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
-                        IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
-                        IsTrusFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
-                        Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
-                        CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
-                        FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                        FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
-                end if
-             end do
-          end do
-       else
-          do j=1,nJ,2
-             do i=1,nI,2
-                call tvd_reschange(&
-                     Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
-                     Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
-                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
-                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
-                     CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
-                     FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                     FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
-             end do
-          end do
-       end if
+       do j=1,nJ,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
+                  Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2)   ,&
+                  IsTrueCoarse2    = true_cell(i,j,-1,iBlock)        ,&
+                  IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
+                  IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
+                  IsTrusFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
+                  Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
+                  CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                  FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
+          end if
+       end do; end do
     case(top_)
-       if(body_BLK(iBlock))then
-          do j=1,nJ,2
-             do i=1,nI,2
-                if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
-                   call tvd_reschange_body(& 
-                        Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
-                        Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
-                        CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
-                        FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                        FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
-                        IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
-                        IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
-                        IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
-                        IsTrusFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
-                else
-                   call tvd_reschange(&
-                        Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
-                        Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
-                        Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
-                        Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
-                        CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
-                        FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                        FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
-                end if
-             end do
-          end do
-       else
-          do j=1,nJ,2
-             do i=1,nI,2
-                call tvd_reschange(&
-                     Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
-                     Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
-                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
-                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
-                     CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
-                     FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                     FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
-             end do
-          end do
-       end if
+       do j=1,nJ,2; do i=1,nI,2
+          if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
+             call tvd_reschange_body(& 
+                  Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
+                  Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)  ,&
+                  IsTrueCoarse2    =true_cell(i,j,nK+2,iBlock)       ,&
+                  IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
+                  IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
+                  IsTrusFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
+          else
+             call tvd_reschange(&
+                  Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
+                  Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
+                  Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
+                  Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
+                  CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                  FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                  FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
+          end if
+       end do; end do
     end select
   end subroutine get_face_tvd
+  !===========================================================================
   subroutine get_faceX_second(iMin,iMax,jMin,jMax,kMin,kMax)
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
     integer::i1
@@ -868,8 +772,8 @@ contains
        end if
        do i=iMin,iMax
           i1=i-1
-          LeftState_VX(:,i,j,k) =Primitive_VI(:,i1)+dVarLim_VI(:,i1)
-          RightState_VX(:,i,j,k) =Primitive_VI(:,i )-dVarLim_VI(:,i )
+          LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLim_VI(:,i1)
+          RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLim_VI(:,i )
 
        end do
     end do; end do
@@ -891,8 +795,8 @@ contains
        end if
        do j=jMin, jMax
           j1=j-1
-          LeftState_VY(:,i,j,k) =Primitive_VI(:,j1)+dVarLim_VI(:,j1)
-          RightState_VY(:,i,j,k) =Primitive_VI(:,j )-dVarLim_VI(:,j )
+          LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLim_VI(:,j1)
+          RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLim_VI(:,j )
        end do
     end do; end do
     if(DoLimitMomentum) &                                    !^CFG IF BORISCORR
@@ -913,8 +817,8 @@ contains
        end if
        do k=kMin,kMax
           k1=k-1
-          LeftState_VZ(:,i,j,k) =Primitive_VI(:,k1)+dVarLim_VI(:,k1)
-          RightState_VZ(:,i,j,k) =Primitive_VI(:,k )-dVarLim_VI(:,k )
+          LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLim_VI(:,k1)
+          RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLim_VI(:,k )
        end do
     end do; end do
     if(DoLimitMomentum)&                                     !^CFG IF BORISCORR
@@ -922,23 +826,42 @@ contains
   end subroutine get_faceZ_second
 end subroutine calc_facevalues
 !============================================================================
+! Limiters:
+! mimod limiter:
+!                slim = minmod(s1,s2)
 !
-! beta-limiter is implemented (see C.Hirsch, Numerical Computation of
-! internal and external flows, V2,page.544-545.
-! In particular case beta=1.0 (default)
-! this limiter coincides with minmod.
+! generalized MC (monotonized central) limiter:
+!                slim = minmod(beta*s1, beta*s2, (s1+s2)/2)
 !
-!=============================================
+! beta-limiter   slim = maxmod(minmod(beta*s1,s2), minmod(beta*s2,s1))
+!
+!                (see C.Hirsch, Numerical Computation of
+!                 internal and external flows, Volume 2, page 544-545.)
+!
+! where s1 and s2 are the unlimited slopes, the minmod function
+! is zero if the arguments have different signs, otherwise it
+! select the argument with the smallest absolute value, while
+! the maxmod function selects the argument with the largest absolute value.
+!
+! For beta=1.0 the MC and the beta limiters coincide with minmod.
+! For beta=2.0 the beta limiter becomes the superbee limiter.
+!
+! Note: the subroutines limiter() and limiter_body() calculate the
+!       HALF of the limited difference, so it can be applied simply as
+!
+!       left_face  = central_value - limited_slope
+!       right_face = central_value + limited_slope
+!===========================================================================
 subroutine limiter_body(lMin,lMax)
   use ModLimiter
   use ModNumConst
   use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
   implicit none
   integer, intent(in)::lMin,lMax
-  real,dimension(Hi3_):: dVar1_I, dVar2_I
-  real,dimension(nVar):: dVar1_V, dVar2_V
+  real,dimension(Hi3_):: dVar1_I, dVar2_I ! 
+  real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
   integer::l
-
+  !---------------------------------------------------------------------------
   select case(limiter_type)                   !^CFG IF NOT SIMPLE BEGIN
   case('beta')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
@@ -958,9 +881,9 @@ subroutine limiter_body(lMin,lMax)
            dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
            dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
            dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-           dVarLim_VI(:,l)=dVar2_I(1:nVar)* dVar2_I(Lo2_:Hi2_)
+           dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
         else
-           dVarLim_VI(:,l)=cZero
+           dVarLim_VI(:,l) = cZero
         end if
      end do
   case('minmod')                                      !^CFG END SIMPLE
@@ -975,9 +898,9 @@ subroutine limiter_body(lMin,lMax)
         if(all(IsTrueCell_I(l-1:l+1)))then
            dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
            dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
-           dVarLim_VI(:,l)=dVar2_I(1:nVar)* dVar2_I(Lo2_:Hi2_)
+           dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
         else
-           dVarLim_VI(:,l)=cZero
+           dVarLim_VI(:,l) = cZero
         end if
      end do
   case('mc')
@@ -990,7 +913,7 @@ subroutine limiter_body(lMin,lMax)
                 min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                 cHalf*abs(dVar1_V+dVar2_V))
         else
-           dVarLim_VI(:,l)=cZero
+           dVarLim_VI(:,l) = cZero
         end if
      end do
   case default
@@ -1026,7 +949,7 @@ subroutine limiter(lMin,lMax)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
         dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
         dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-        dVarLim_VI(:,l)=dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+        dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
      end do
   case('minmod')                             !^CFG END SIMPLE
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
@@ -1039,13 +962,17 @@ subroutine limiter(lMin,lMax)
         dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
         dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
-        dVarLim_VI(:,l)=dVar2_I(1:nVar)* dVar2_I(Lo2_:Hi2_)
+        dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
      end do
   case('mc')
+     ! Calculate right most unlimited slope
      dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
      do l=lMax,lMin-1,-1
+        ! Propagate old left slope to become the right slope
         dVar2_V = dVar1_V
+        ! Calculate left slope
         dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+        ! Calculate the limited slope
         dVarLim_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V)) * &
              min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
              cHalf*abs(dVar1_V+dVar2_V))
