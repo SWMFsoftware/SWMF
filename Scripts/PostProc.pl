@@ -181,13 +181,14 @@ PostProc.pl
 
 PostProc.pl -g -v
 
-   Repeat post-processing every 360 seconds and gzip files:
+   Repeat post-processing every 360 seconds, gzip files and pipe 
+   standard output and error into a log file:
 
-PostProc.pl -r=360 -g &
+PostProc.pl -r=360 -g >& PostProc.log &
 
-   Collect processed output into a directory tree named NEWRESULTS:
+   Collect processed output into a directory tree named OUTPUT/New:
 
-PostProc.pl -o NEWRESULTS'
+PostProc.pl -o OUTPUT/New'
 
 #EOC
     ,"\n\n";
