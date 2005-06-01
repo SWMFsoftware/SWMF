@@ -351,7 +351,7 @@ date and time given by #STARTTIME.
 	<parameter name="DipoleStrength" type="real" />
 
 #DIPOLE
--3.11e-4		DipoleStrength [Tesla]
+-3.11e-5		DipoleStrength [Tesla]
 
 The DipoleStrength variable contains the
 magnetic equatorial strength of the dipole magnetic field in Tesla.
