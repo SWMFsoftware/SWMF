@@ -137,7 +137,7 @@ Module ModConst
   real,parameter :: Rsun = 0.696*cE9                ! = 6.96E+08 [m]   
   real,parameter :: mSun = 1.99*cE30                ! = 1.99E+30 [kg]
 
-  real,parameter :: tSunRot = 26.0    !Rotation period in days
+  real,parameter :: tSunRot = 25.38    !Rotation period in days
   real,parameter :: RotationPeriodSun = Tsunrot * RotationPeriodEarth
 
   ! Astronomical Unit (1AU)
