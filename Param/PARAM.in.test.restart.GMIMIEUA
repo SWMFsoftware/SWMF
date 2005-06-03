@@ -71,10 +71,6 @@ GM			NameComp2
 #INCLUDE
 GM/restartIN/restart.H
 
-! Ramp up GM pressure at a rate of 1/10th change per time step
-#IM
-0.1			TauCoupleIm
-
 ! Do an accurate integration of field line volumes
 ! Refresh 3D ray tracing every 80 steps only (for applying IM pressure)
 #RAYTRACE
