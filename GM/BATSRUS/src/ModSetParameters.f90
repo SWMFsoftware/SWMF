@@ -79,13 +79,9 @@ subroutine MH_set_parameters(TypeAction)
   real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
   real                        :: xRotateArea, yRotateArea, zRotateArea
 
-  logical            :: UseSimple=.true.
-
   integer :: iSession, iPlotFile
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
-
-  UseSimple = .false.              !^CFG IF NOT SIMPLE
 
   iSession = i_session_read()
 
@@ -139,10 +135,8 @@ subroutine MH_set_parameters(TypeAction)
         endif
      end if
 
-     !^CFG IF NOT SIMPLE BEGIN
      if(problem_type==-1) call stop_mpi(&
           NameSub//': ERROR problem type must be set in PARAM.in')
-     !^CFG END SIMPLE
 
      call correct_parameters
 
@@ -298,22 +292,18 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('TypeTimingReport',TimingStyle)
         end if
      case("#OUTERBOUNDARY")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('TypeBcEast'  ,TypeBc_I(east_))  
         call read_var('TypeBcWest'  ,TypeBc_I(west_))
         call read_var('TypeBcSouth' ,TypeBc_I(south_))
         call read_var('TypeBcNorth' ,TypeBc_I(north_))
         call read_var('TypeBcBottom',TypeBc_I(bot_))
         call read_var('TypeBcTop'   ,TypeBc_I(top_))    
-        !                                              ^CFG END SIMPLE
      case("#INNERBOUNDARY")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('TypeBcInner',TypeBc_I(body1_))
         !                                              ^CFG IF SECONDBODY BEGIN
         if(UseBody2) &                                      
              call read_var('TypeBcBody2',TypeBc_I(body2_)) 
         !                                              ^CFG END SECONDBODY
-        !                                              ^CFG END SIMPLE
      case("#TIMESTEPPING")
         if(.not.UseNewParam)call read_var('DoTimeAccurate',time_accurate)
         call read_var('nStage',nSTAGE)
@@ -322,10 +312,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
         if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
-        !                                                ^CFG IF IMPLICIT BEGIN
-
-     case("#PARTLOCAL")                                 !^CFG IF NOT SIMPLE
-        call read_var('UsePartLocal',UsePartLocal)      !^CFG IF NOT SIMPLE
+        !                                                
+     case("#PARTLOCAL")                                 !^CFG IF IMPLICIT BEGIN
+        call read_var('UsePartLocal',UsePartLocal)
      case("#IMPLICIT")
         call read_var('UsePointImplicit', UsePointImplicit) !^CFG IF POINTIMPLICIT
         call read_var('UsePartImplicit',  UsePartImplicit)
@@ -346,7 +335,6 @@ subroutine MH_set_parameters(TypeAction)
 
         if(UseImplicit)call read_var('ImplCFL',ImplCFL)
 
-        !                                             ^CFG IF NOT SIMPLE BEGIN
      case("#IMPLICITCRITERIA", "#STEPPINGCRITERIA")
         call read_var('TypeImplCrit',ImplCritType)
         select case(ImplCritType)
@@ -393,11 +381,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('MaxMatvecKrylov',KrylovMatvecMax)
         nKrylovVector = KrylovMatvecMax
      case("#KRYLOVSIZE")
-        call read_var('nKrylovVector',nKrylovVector)
-        !                                               ^CFG END SIMPLE
-        !                                               ^CFG END IMPLICIT
-        !                                               ^CFG IF DISSFLUX BEGIN
-     case("#HEATFLUX")
+        call read_var('nKrylovVector',nKrylovVector)    !^CFG END IMPLICIT
+
+     case("#HEATFLUX")                                  !^CFG IF DISSFLUX BEGIN
         call read_var('UseHeatFlux'   ,UseHeatFlux)
         call read_var('UseSpitzerForm',UseSpitzerForm)
         if (.not.UseSpitzerForm) then
@@ -538,7 +524,7 @@ subroutine MH_set_parameters(TypeAction)
                  call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
                  call read_var('IsParallel',IsParallelLine_II(i,iPlotFile))
               end do                                  !^CFG END RAYTRACE
-           elseif (index(plot_string,'sph')>0)then    !^CFG IF NOT SIMPLE BEGIN
+           elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
            elseif (index(plot_string,'los')>0) then
@@ -559,7 +545,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
               call read_var('nPixX',n_pix_X)
-              call read_var('nPixY',n_pix_Y)        !^CFG END SIMPLE
+              call read_var('nPixY',n_pix_Y)
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
            else
@@ -627,8 +613,8 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'idl')>0)then
               plot_form(ifile)='idl'
               if ((plot_area /= 'ion')&
-                   .and. plot_area /= 'sph' &        !^CFG IF NOT SIMPLE
-                   .and. plot_area /= 'los' &        !^CFG IF NOT SIMPLE
+                   .and. plot_area /= 'sph' &
+                   .and. plot_area /= 'los' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
               !                                     ^CFG IF NOT CARTESIAN BEGIN
@@ -642,7 +628,7 @@ subroutine MH_set_parameters(TypeAction)
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)
            end if
-           if (plot_area == 'sph') then            !^CFG IF NOT SIMPLE BEGIN
+           if (plot_area == 'sph') then
               select case(TypeGeometry)                !^CFG IF NOT CARTESIAN
               case('cartesian')                        !^CFG IF NOT CARTESIAN
                  plot_dx(1,ifile) = 1.0    ! set to match value in write_plot_sph
@@ -673,7 +659,7 @@ subroutine MH_set_parameters(TypeAction)
                  call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                       //TypeGeometry)
               end select                           !^CFG END CARTESIAN 
-           end if                                  !^CFG END SIMPLE
+           end if
 
            ! Plot variables
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
@@ -907,7 +893,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
         call read_var('MaxBlockLevel',max_block_level)
-        call read_var('DoFixBodyLevel',fix_body_level)    !^CFG IF NOT SIMPLE
+        call read_var('DoFixBodyLevel',fix_body_level)
         if(iSession==1)then
            DoSetLevels=.true.
         else
@@ -916,7 +902,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#AMRRESOLUTION")
         call read_var('DxCellMin',min_cell_dx)
         call read_var('DxCellMax',max_cell_dx)
-        call read_var('DoFixBodyLevel',fix_body_level)      !^CFG IF NOT SIMPLE
+        call read_var('DoFixBodyLevel',fix_body_level)
         local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
         if    (max_cell_dx < -1.E-6) then
            min_block_level = -1
@@ -954,17 +940,14 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
      case("#AMRINIT")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('TypeRefineInit'  ,InitialRefineType)
         call read_var('nRefineLevelInit',initial_refine_levels)
-        !                                              ^CFG END SIMPLE
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
         if(nRefineCrit<1 .or. nRefineCrit>3)&
              call stop_mpi('nRefineCrit must be 1,2,or 3')
         do i=1,nRefineCrit
            call read_var('TypeRefine',RefineCrit(i))
-           !                                           ^CFG IF NOT SIMPLE BEGIN
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
               call read_var('TypeTransient_I(i)',TypeTransient_I(i))
               call read_var('UseSunEarth'       ,UseSunEarth)
@@ -975,21 +958,17 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('zEarth'  ,zEarth)
               call read_var('InvD2Ray',InvD2Ray)
            end if
-           !                                           ^CFG END SIMPLE
         end do
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter',limiter_type)
         if(limiter_type/='minmod') call read_var('LimiterBeta',&  
              BetaLimiter)
-        !                                              ^CFG END SIMPLE
      case("#NONCONSERVATIVE")
-        call read_var('UseNonConservative',UseNonConservative) !^CFG IF NOT SIMPLE
+        call read_var('UseNonConservative',UseNonConservative)
      case("#CONSERVATIVECRITERIA")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('nConservCrit',nConservCrit)
         if(nConservCrit > 0) then
            if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
@@ -1039,9 +1018,7 @@ subroutine MH_set_parameters(TypeAction)
               end if
            end do
         end if
-        !                                              ^CFG END SIMPLE
      case("#UPDATECHECK")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var("UseUpdateCheck",UseUpdateCheck)          
         if(UseUpdateCheck)then
            call read_var("RhoMinPercent", percent_max_rho(1))        
@@ -1049,12 +1026,10 @@ subroutine MH_set_parameters(TypeAction)
            call read_var("pMinPercent",   percent_max_p(1))
            call read_var("pMaxPercent",   percent_max_p(2))
         end if
-        !                                              ^CFG END SIMPLE
      case("#PROLONGATION")
-        call read_var('nOrderProlong',prolong_order)  !^CFG IF NOT SIMPLE
-        call read_var('TypeProlong' ,prolong_type)   !^CFG IF NOT SIMPLE
+        call read_var('nOrderProlong',prolong_order)
+        call read_var('TypeProlong' ,prolong_type)
      case("#MESSAGEPASS","#OPTIMIZE")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         if(TypeGeometry=='cartesian') then               !^CFG IF NOT CARTESIAN
            call read_var('TypeMessagePass',optimize_message_pass)
            if(optimize_message_pass=='allold' .or.&
@@ -1084,7 +1059,6 @@ subroutine MH_set_parameters(TypeAction)
         end if
         call read_var('UseTVDAtResChange',UseTVDAtResChange)
         DoOneCoarserLayer=.not.UseTVDAtResChange
-        !                                              ^CFG END SIMPLE
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
         call read_var('UseBorisCorrection',boris_correction)   
@@ -1104,7 +1078,6 @@ subroutine MH_set_parameters(TypeAction)
            boris_cLIGHT_factor = 1.0
         end if                                       !^CFG END SIMPLEBORIS
      case("#DIVB")
-        !                                              ^CFG IF NOT SIMPLE BEGIN
         call read_var('UseDivbSource'   ,UseDivbSource)   
         call read_var('UseDivbDiffusion',UseDivbDiffusion)!^CFG IF DIVBDIFFUSE
         call read_var('UseProjection'   ,UseProjection)  !^CFG IF PROJECTION
@@ -1145,9 +1118,8 @@ subroutine MH_set_parameters(TypeAction)
         DivbMax = -1.0                                   !^CFG IF PROJECTION
         ! reinitialize constrained transport if needed   !^CFG IF CONSTRAINB
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
-        !                                              ^CFG END SIMPLE
      case("#DIVBSOURCE")
-	call read_var('UseB0Source'   ,UseB0Source)   !^CFG IF NOT SIMPLE
+	call read_var('UseB0Source'   ,UseB0Source)
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
         call read_var('TypeProjectIter' ,proj_method)
         call read_var('TypeProjectStop' ,proj_typestop)
@@ -1164,7 +1136,7 @@ subroutine MH_set_parameters(TypeAction)
         if(Pratio_lo>=Pratio_hi)&
              call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
         !                                              ^CFG END PROJECTION
-     case("#SHOCKTUBE")                               !^CFG IF NOT SIMPLE BEGIN
+     case("#SHOCKTUBE")
         do i=1,nVar
            call read_var('LeftState',shock_Lstate(i))
         end do
@@ -1172,7 +1144,6 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RightState',shock_Rstate(i))
         end do
         call read_var('ShockSlope',ShockSlope)
-        !                                              ^CFG END SIMPLE
      case("#UPSTREAM_INPUT_FILE")
         call read_var('UseUpstreamInputFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
@@ -1209,7 +1180,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DoCoupleImPressure',DoCoupleImPressure)
            call read_var('DoCoupleImDensity',DoCoupleImDensity)
         end if                                        !^CFG END RCM
-     case("#MASSLOADING")                             !^CFG IF NOT SIMPLE BEGIN
+     case("#MASSLOADING")
         call read_var('UseMassLoading',UseMassLoading)
         call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
      case("#USER_FLAGS")             !^CFG IF USERFILES BEGIN
@@ -1228,7 +1199,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
      case("#USERINPUTBEGIN")        
         call user_read_inputs        !^CFG END USERFILES
-        !                                              ^CFG END SIMPLE
      case("#CODEVERSION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('CodeVersion',CodeVersionRead)
@@ -1262,7 +1232,6 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#PROBLEMTYPE")
         if(.not.is_first_session())CYCLE READPARAM
-        !                                        ^CFG IF NOT SIMPLE BEGIN
         call read_var('iProblemType',problem_type_r) 
         if(problem_type<0)then
            problem_type=problem_type_r
@@ -1276,7 +1245,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            if(iProc==0)write(*,'(a)')NameSub // &
                 ' WARNING: problem type set twice !!!'
-        end if                                  !^CFG END SIMPLE
+        end if
      case("#RESTARTINDIR")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var("NameRestartInDir",NameRestartInDir)
@@ -1415,7 +1384,6 @@ subroutine MH_set_parameters(TypeAction)
         end select
         !^CFG END CARTESIAN 
      case("#GRID")
-        !                                        ^CFG IF NOT SIMPLE BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
         call read_var('nRootBlockY',proc_dims(2))
@@ -1443,7 +1411,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('yMin',y1)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
-        call read_var('zMax',z2)      !^CFG END SIMPLE
+        call read_var('zMax',z2)
         select case(TypeGeometry)   !^CFG IF NOT CARTESIAN
         case('cartesian')           !^CFG IF NOT CARTESIAN
            call set_xyzminmax_cart  
@@ -1528,7 +1496,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('SwBzDim' ,SW_Bz_dim)
      case("#MAGNETOSPHERE","#BODY")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseBody',body1)            !^CFG IF NOT SIMPLE BEGIN
+        call read_var('UseBody',body1)
         if(body1)then
            call read_var('rBody'     ,Rbody)
            if(NameThisComp=='GM')then
@@ -1536,11 +1504,11 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('BodyRhoDim',Body_Rho_Dim)
               call read_var('BodyTDim'  ,Body_T_dim)
            end if
-        end if                                  !^CFG END SIMPLE
+        end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseGravity',UseGravity)        !^CFG IF NOT SIMPLE
-        if(UseGravity)call read_var('iDirGravity',GravityDir) !^CFG IF NOT SIMPLE
+        call read_var('UseGravity',UseGravity)
+        if(UseGravity)call read_var('iDirGravity',GravityDir)
      case("#SECONDBODY")                        !^CFG IF SECONDBODY BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseBody2',UseBody2)
@@ -1662,7 +1630,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('tSimulation',time_simulation)
-        !                                    ^CFG IF NOT SIMPLE BEGIN
      case("#HELIOSPHERE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('BodyTDim' ,Body_T_dim)
@@ -1746,8 +1713,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('Unr_in' ,Unr_in)
         call read_var('mbar',mbar)
         call read_var('ionization_rate',ionization_rate)
-        call read_var('kin_in',kin_in)                              
-        !                                            ^CFG END SIMPLE
+        call read_var('kin_in',kin_in)
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
@@ -1792,7 +1758,7 @@ contains
 
     CodeVersionRead = -1.
 
-    problem_type = -1                                      !^CFG IF NOT SIMPLE
+    problem_type = -1
 
     ! Default coordinate systems
     select case(NameThisComp)
@@ -1913,14 +1879,14 @@ contains
     proc_dims(2) = 1  
     proc_dims(3) = 1
 
-    x1 = -10.                                         !^CFG IF NOT SIMPLE BEGIN
+    x1 = -10.
     x2 =  10.
     y1 = -10.
     y2 =  10.
     z1 = -10.
     z2 =  10.
 
-    call set_xyzminmax_cart                           !^CFG END SIMPLE
+    call set_xyzminmax_cart
 
     optimize_message_pass = 'allopt'
     UseCorners            = .false.
@@ -1936,116 +1902,10 @@ contains
     restart           = .false.
     read_new_upstream = .false.
 
-    if(UseSimple)then                               !^CFG IF SIMPLE BEGIN
-       proc_dims(1) = 2
-       proc_dims(2) = 1
-       proc_dims(3) = 1
-       if(nProc<2)then
-          write(*,*)'Code is running on ',nProc,' processor'
-          call stop_mpi('Not less than 2 processors should be used!!')
-       end if
-
-
-
-       if (nI == 4 .and. nJ == 4 .and. nK == 4) then 
-          x1 = -224.                                           
-          x2 =   32.
-          y1 =  -64.
-          y2 =   64.
-          z1 =  -64.
-          z2 =   64.
-          initial_refine_levels = 7
-          InitialRefineType = 'magneto12'
-       elseif (nI == 6 .and. nJ == 6 .and. nK == 6) then
-          x1 = -288.0
-          x2 =   96.0
-          y1 =  -96.0
-          y2 =   96.0
-          z1 =  -96.0
-          z2 =   96.0
-          initial_refine_levels = 7
-          InitialRefineType = 'magneto12'
-       elseif (nI == 8 .and. nJ == 8 .and. nK == 8) then
-          x1 = -224.0
-          x2 =   32.0
-          y1 =  -64.0
-          y2 =   64.0
-          z1 =  -64.0
-          z2 =   64.0
-          initial_refine_levels = 6
-          InitialRefineType = 'magneto12'
-       elseif (nI ==10 .and. nJ ==10 .and. nK ==10) then
-          x1 = -280.0
-          x2 =   40.0
-          y1 =  -80.0
-          y2 =   80.0
-          z1 =  -80.0
-          z2 =   80.0
-          initial_refine_levels = 6
-          InitialRefineType = 'magneto12'
-       elseif (nI ==12 .and. nJ ==12 .and. nK ==12) then
-          x1 = -288.0
-          x2 =   96.0
-          y1 =  -96.0
-          y2 =   96.0
-          z1 =  -96.0
-          z2 =   96.0
-          initial_refine_levels = 6
-          InitialRefineType = 'magneto12'
-       else
-          write(*,*)'nI, nJ, or nK is not set correctly.  They must be equal '
-          write(*,*)'and have a value of 4,6,8,10, or 12 : ',nI,nJ,nK
-          call stop_mpi('Please reset nI,nJ,nK in ModSize!!')
-       end if
-
-       UseGravity=.false.
-       GravityDir=0  
-       body1      =.true.
-       Rbody      = 2.50
-       Rcurrents  = 3.50
-
-       fix_body_level = .true.
-
-       UseNonConservative   = .true.
-       nConservCrit         = 1
-       if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-       allocate( TypeConservCrit_I(nConservCrit) )
-       TypeConservCrit_I(1) = 'r'
-       rConserv             = 2*rBody
-
-       Bdp_dim              = -31100.0
-       THETAtilt       = 0.00
-       dt_UpdateB0     = -1.0
-       DoUpdateB0      = .false.
-
-       TypeBc_I(east_)        ='outflow'
-       TypeBc_I(west_)        ='vary'
-       TypeBc_I(south_:top_)  ='fixed'
-       TypeBc_I(body1_)       ='ionosphere'
-
-       SW_rho_dim =      5.0    ! n/cc
-       SW_T_dim   = 150000.0    ! K
-       SW_Ux_dim  =   -400.0    ! km/s
-       SW_Uy_dim  =      0.0    ! km/s
-       SW_Uz_dim  =      0.0    ! km/s
-       SW_Bx_dim  =      0.0    ! nT
-       SW_By_dim  =      0.0    ! nT
-       SW_Bz_dim  =     -5.0    ! nT
-
-       Body_rho_dim = 10.0    ! n/cc
-       Body_T_dim   = 25000.0! K
-
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'gradlogP'
-       RefineCrit(2)  = 'curlB'
-       RefineCrit(3)  = 'Rcurrents'
-
-    end if                                          !^CFG END SIMPLE
-
   end subroutine set_defaults
 
   !===========================================================================
-  subroutine set_problem_defaults                   !^CFG IF NOT SIMPLE BEGIN
+  subroutine set_problem_defaults
 
 
     !\
@@ -2345,7 +2205,7 @@ contains
        InitialRefineType = 'none'
     end select
 
-  end subroutine set_InitialRefineType                      !^CFG END SIMPLE
+  end subroutine set_InitialRefineType
 
   !=========================================================================
   subroutine check_options
@@ -2494,13 +2354,8 @@ contains
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
 
     ! Reset initial refine type if it is set to 'default'
-    if(InitialRefineType=='default')then
-       if(UseSimple)then                             
-          InitialRefineType='magneto12'
-       else                                          !^CFG IF NOT SIMPLE
-          call set_InitialRefineType                 !^CFG IF NOT SIMPLE
-       end if
-    end if
+    if(InitialRefineType=='default') call set_InitialRefineType
+ 
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then
           write(*,'(a)')NameSub//&
@@ -2563,10 +2418,6 @@ contains
   !===========================================================================
   subroutine check_parameters
 
-    ! Make sure the cfl conditions are good for SIMPLE case  !^CFG IF SIMPLE
-    if(UseSimple)&                                           !^CFG IF SIMPLE
-         cfl=min(cfl,0.80)                                   !^CFG IF SIMPLE
-
     ! Check CFL number
     if(.not.time_accurate .and. iProc==0)then
        if(boris_correction)then                     !^CFG IF BORISCORR BEGIN
@@ -2607,13 +2458,9 @@ contains
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
        UsePointImplicit = .false.
     end if                                              !^CFG END POINTIMPLICIT
-    if(UseSimple)&                                          !^CFG IF SIMPLE
-         boris_cLIGHT_factor=max(boris_cLIGHT_factor,0.02)  !^CFG IF SIMPLE
+
     DoLimitMomentum=boris_correction.and.(.not.UseTVDAtResChange)
     ! Finish checks for boris                       !^CFG END BORISCORR
-
-    if(UseSimple)  nStage = max(nStage,nOrder)      !^CFG IF SIMPLE
-
 
     ! Check parameters for implicit                 !^CFG IF IMPLICIT BEGIN
 
