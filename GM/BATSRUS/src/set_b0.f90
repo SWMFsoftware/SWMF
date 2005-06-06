@@ -38,7 +38,6 @@ subroutine set_b0_cell(iBlock)
   real :: x,y,z
 
   logical :: oktest, oktest_me
-  !^CFG IF NOT SIMPLE BEGIN
   logical:: UseCellAveragesAsFaceField
   !--------------------------------------------------------------------------
   !
@@ -48,7 +47,6 @@ subroutine set_b0_cell(iBlock)
   !  UseCellAveragesAsFaceField = UseB0Source  
 
   !--------------------------------------------------------------------------
-  !^CFG END SIMPLE
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_cell',oktest,oktest_me)
   else
@@ -75,7 +73,7 @@ subroutine set_b0_cell(iBlock)
        B0yCell_BLK(Itest,Jtest,Ktest,BLKtest),&
        B0zCell_BLK(Itest,Jtest,Ktest,BLKtest)
 
-  if(.not. UseCellAveragesAsFaceField) then                      !^CFG IF NOT SIMPLE BEGIN
+  if(.not. UseCellAveragesAsFaceField) then
      !The face B0 field is the field in the center of face
      !\
      ! Face fields (X)
@@ -127,7 +125,7 @@ subroutine set_b0_cell(iBlock)
            end do
         end do
      end do
-  end if                                           !^CFG END SIMPLE
+  end if
 end subroutine set_b0_cell
 
 !============================================================================
@@ -157,7 +155,6 @@ subroutine set_b0_face(iBlock)
   logical :: oktest, oktest_me
 
   !--------------------------------------------------------------------------
-  !^CFG IF NOT SIMPLE BEGIN
   logical:: UseB0FaceRestriction
   logical:: UseCellAveragesAsFaceField
   !--------------------------------------------------------------------------
@@ -173,7 +170,6 @@ subroutine set_b0_face(iBlock)
   UseB0FaceRestriction=.true. !in versions 6.10-7_0_2
   ! UseB0FaceRestriction  = UseB0Source  
   !--------------------------------------------------------------------------
-  !^CFG END SIMPLE
 
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_face',oktest,oktest_me)
@@ -181,7 +177,7 @@ subroutine set_b0_face(iBlock)
      oktest=.false.; oktest_me=.false.
   endif
 
-  if(UseCellAveragesAsFaceField)then                    !^CFG IF NOT SIMPLE
+  if(UseCellAveragesAsFaceField)then
      !\
      ! Face averages (X)
      !/
@@ -221,11 +217,11 @@ subroutine set_b0_face(iBlock)
           B0zCell_BLK(0:nI+1,0:nJ+1,2-gcn:nK+gcn,iBlock)+&
           B0zCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
 
-  end if                               !^CFG IF NOT SIMPLE
+  end if
 
   !^CFG IF CARTESIAN BEGIN
 
-  if(.not. UseB0FaceRestriction)return !^CFG IF NOT SIMPLE
+  if(.not. UseB0FaceRestriction)return
 
   RefDXyz_D(x_)=cHalf*dx_BLK(iBlock)
   RefDXyz_D(y_)=cHalf*dy_BLK(iBlock)
@@ -412,7 +408,7 @@ subroutine calc_db0_dt(dTime)
 end subroutine calc_db0_dt
 !============================================================================
 
-subroutine set_b0_matrix(iBlock)                      !^CFG IF NOT SIMPLE BEGIN
+subroutine set_b0_matrix(iBlock)
 
   ! Calculate the elements of the B0SourceMatrix
 
@@ -500,7 +496,7 @@ subroutine set_b0_matrix(iBlock)                      !^CFG IF NOT SIMPLE BEGIN
 
   end do; end do; end do
 
-end subroutine set_b0_matrix                                 !^CFG END SIMPLE
+end subroutine set_b0_matrix
 
 !============================================================================
 

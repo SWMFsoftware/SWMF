@@ -340,9 +340,9 @@ contains
 
     if (.not.SetDipoleTilt) then
 
-       select case(problem_type)                      !^CFG IF NOT SIMPLE
+       select case(problem_type)
 
-       case(problem_earth)                            !^CFG IF NOT SIMPLE
+       case(problem_earth)
 
           ! This is an angle:
 
@@ -359,7 +359,7 @@ contains
                Time_Array(3)) - &
                jday(Time_Array(1), 3, 21)) * cTwoPi / 365.0
 
-       end select                                    !^CFG IF NOT SIMPLE
+       end select
 
        THETAtilt_DoY = -Max_DoY_Tilt * sin(DoY)
        THETAtilt_ToD = -Magnetic_Pole_Colat * sin(ToD - cHalfPi)

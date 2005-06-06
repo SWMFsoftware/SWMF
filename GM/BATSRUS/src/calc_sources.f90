@@ -285,12 +285,12 @@ subroutine calc_sources
   end if
   
   if(UseUserSource) call user_calc_sources          !^CFG IF USERFILES
-Contains                                  !^CFG IF NOT SIMPLE BEGIN
+Contains
  
   subroutine write_source(String)
     character(len=*) :: String
     write(*,'(a,a)',advance='no')String," S=",Source_VC(VarTest,iTest,jTest,kTest) 
-  end subroutine write_source                      !^CFG END SIMPLE
+  end subroutine write_source
   !========================================================================= 
 end subroutine calc_sources
 subroutine calc_divb

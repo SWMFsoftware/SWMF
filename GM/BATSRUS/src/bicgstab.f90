@@ -1,5 +1,4 @@
 !^CFG FILE IMPLICIT
-!^CFG FILE NOT SIMPLE
 subroutine bicgstab(matvec,rhs,qx,nonzero,n,tol,typestop,iter,info,oktest)
 
   ! Simple BiCGstab(\ell=1) iterative method

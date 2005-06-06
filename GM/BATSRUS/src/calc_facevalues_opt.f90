@@ -855,14 +855,14 @@ end subroutine calc_facevalues
 subroutine limiter_body(lMin,lMax)
   use ModLimiter
   use ModNumConst
-  use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
+  use ModMain, ONLY: limiter_type, BetaLimiter
   implicit none
   integer, intent(in)::lMin,lMax
   real,dimension(Hi3_):: dVar1_I, dVar2_I ! 
   real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
   integer::l
   !---------------------------------------------------------------------------
-  select case(limiter_type)                   !^CFG IF NOT SIMPLE BEGIN
+  select case(limiter_type)
   case('beta')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
@@ -886,7 +886,7 @@ subroutine limiter_body(lMin,lMax)
            dVarLim_VI(:,l) = cZero
         end if
      end do
-  case('minmod')                                      !^CFG END SIMPLE
+  case('minmod')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
      dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
@@ -925,14 +925,14 @@ end subroutine limiter_body
 subroutine limiter(lMin,lMax)
   use ModLimiter
   use ModNumConst
-  use ModMain, ONLY: limiter_type, BetaLimiter !^CFG IF NOT SIMPLE
+  use ModMain, ONLY: limiter_type, BetaLimiter
   implicit none
   integer, intent(in)::lMin,lMax
   real,dimension(Hi3_):: dVar1_I, dVar2_I
   real,dimension(nVar):: dVar1_V, dVar2_V
   integer::l
 
-  select case(limiter_type)                  !^CFG IF NOT SIMPLE BEGIN
+  select case(limiter_type)
   case('beta')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
@@ -951,7 +951,7 @@ subroutine limiter(lMin,lMax)
         dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
         dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
      end do
-  case('minmod')                             !^CFG END SIMPLE
+  case('minmod')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
      dVar1_I(Lo2_:Hi2_)=abs(dVar1_I(1:nVar))
      dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))

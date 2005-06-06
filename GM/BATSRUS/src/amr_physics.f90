@@ -15,11 +15,7 @@ subroutine amr_physics
   logical :: unique, noNeighbor, stopRefinement, done
   logical :: oktest=.false., oktest_me=.false.
   type (adaptive_block_ptr) :: BlockPtr, tmpBlockPtr
-
-  logical :: UseSimple = .true.
   !---------------------------------------------------------------------------
-  UseSimple = .false.             !^CFG IF NOT SIMPLE
-
   call set_oktest('amr',oktest,oktest_me)
   if(oktest .and. iProc == 0) then
      call write_myname; write(*,*) '| amr_physics beginning ...'
@@ -111,8 +107,6 @@ subroutine amr_physics
         BlockPtr%ptr => global_block_ptrs(SortB(n,i),SortP(n,i)+1)%ptr
         if(BlockPtr%ptr%LEV >= BlockPtr%ptr%LEVmax) CYCLE
 
-        !Don't allow refining on body                ^CFG IF SIMPLE
-        if(UseSimple .and. BlockPtr%ptr%body) CYCLE !^CFG IF SIMPLE 
        
         unique=.true.
         do j=1,k
@@ -140,8 +134,6 @@ subroutine amr_physics
            BlockPtr%ptr => global_block_ptrs(SortB(n,i-i1),SortP(n,i-i1)+1)%ptr
            if(BlockPtr%ptr%LEV >= BlockPtr%ptr%LEVmax) CYCLE
 
-           !Don't allow refining on body                ^CFG IF SIMPLE
-           if(UseSimple .and. BlockPtr%ptr%body) CYCLE !^CFG IF SIMPLE 
 
            unique=.true.
            do j=1,k
@@ -218,8 +210,6 @@ subroutine amr_physics
      BlockPtr%ptr => global_block_ptrs(SortB(n,i),SortP(n,i)+1)%ptr
      if(BlockPtr%ptr%LEV <= BlockPtr%ptr%LEVmin) CYCLE
 
-     !Don't allow refining on body                ^CFG IF SIMPLE
-     if(UseSimple .and. BlockPtr%ptr%body) CYCLE !^CFG IF SIMPLE 
 
      unique=.true.
      do j=1,k
@@ -276,8 +266,6 @@ subroutine amr_physics
            BlockPtr%ptr => global_block_ptrs(SortB(n,i+i1),SortP(n,i+i1)+1)%ptr
            if(BlockPtr%ptr%LEV <= BlockPtr%ptr%LEVmin) CYCLE
 
-           !Don't allow refining on body                ^CFG IF SIMPLE
-           if(UseSimple .and. BlockPtr%ptr%body) CYCLE !^CFG IF SIMPLE 
 
            unique=.true.
            do j=1,k
@@ -670,10 +658,7 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
   integer :: idir, iLEV1, iLEV2
   logical :: noNeighbor
   type (adaptive_block_ptr) :: inBlockPtr, outBlockPtr
-
-  logical :: UseSimple = .true.
   !---------------------------------------------------------------------------
-  UseSimple = .false.             !^CFG IF NOT SIMPLE
 
   if(associated(inBlockPtr % ptr)) then
      !Check for valid neighbor level changes
@@ -711,9 +696,6 @@ recursive subroutine fix_octree_refine_flags(inBlockPtr, nCoarsened, nRefined, &
                        stopRefinement = .true.
                     end if
 
-                    !Don't allow refining on body       ^CFG IF SIMPLE BEGIN
-                    if(UseSimple .and. outBlockPtr%ptr%body) &
-                         stopRefinement = .true.        !^CFG END SIMPLE
 
                     if(.not. stopRefinement) then
                        call fix_octree_refine_flags(outBlockPtr, nCoarsened, nRefined, &

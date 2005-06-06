@@ -723,7 +723,7 @@ contains
 
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &    !^CFG IF RAYTRACE
-            index(plot_type(iFile),'los')==1 .or. &    !^CFG IF NOT SIMPLE
+            index(plot_type(iFile),'los')==1 .or. &
             plot_form(iFile) == 'tec')) then
 
           if(iProc==0.and.lVerbose>0)then
@@ -736,12 +736,10 @@ contains
           DoExchangeAgain = .true.
        end if
 
-       !^CFG IF SIMPLE BEGIN
        if(index(plot_type(iFile),'los')>0) then
           IsFound = .true.
           call write_plot_los(iFile)
        end if
-       !^CFG END SIMPLE
 
        !^CFG IF RAYTRACE BEGIN
        if(index(plot_type(iFile),'lin')>0) then

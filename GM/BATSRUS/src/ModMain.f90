@@ -42,7 +42,6 @@ Module ModMain
   ! This is a standard F90 initialization expression but may give warnings:
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
 
-  !^CFG IF NOT SIMPLE BEGIN
   !\
   ! Problem definition.
   !/
@@ -97,7 +96,6 @@ Module ModMain
        'globalhelio', &
        '29-Nameless Problem', &
        'dissipation' /
-  !^CFG END SIMPLE
 
   !\
   ! Named indexes for directions

@@ -29,7 +29,7 @@ subroutine set_physics_constants
   !\
   ! Load body rotation rates, masses, and radii by problem type
   !/
-  select case(problem_type)          !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case (problem_rotation,problem_saturn)
      unitSI_x       = Rsaturn       ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = Msaturn       ! Mass of body in kg
@@ -44,11 +44,11 @@ subroutine set_physics_constants
      Mbody_dim      = Msun                      ! Mass of body in kg
      rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
 !^CFG END GLOBALHELIOSPHERE
-  case (problem_earth)               !^CFG END SIMPLE
+  case (problem_earth)
      unitSI_x       = Rearth        ! Radius - MUST BE IN meters
      Mbody_dim      = Mearth        ! Mass of body in kg
      rot_period_dim = RotationPeriodEarth/3600.0
-  case (problem_jupiter)             !^CFG IF NOT SIMPLE BEGIN
+  case (problem_jupiter)
      unitSI_x       = Rjupiter      ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = Mjupiter      ! Mass of body in kg
      rot_period_dim = RotationPeriodJupiter/3600.0
@@ -72,7 +72,7 @@ subroutine set_physics_constants
      unitSI_x       = 1.0           ! Radius - NOTE - MUST BE IN meters
      Mbody_dim      = 0.00          ! Mass of body in kg
      rot_period_dim = 0.00          ! rotation period in hours
-  end select                         !^CFG END SIMPLE
+  end select
 
   ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
   MBody2Dim = 0.0                                !^CFG IF SECONDBODY
@@ -154,7 +154,6 @@ subroutine set_physics_constants
   SW_By  = SW_By_dim/unitUSER_B
   SW_Bz  = SW_Bz_dim/unitUSER_B
 
-!^CFG IF NOT SIMPLE BEGIN
   !\
   ! Convert comet input parameters to SI
   !/
@@ -186,14 +185,14 @@ subroutine set_physics_constants
      pBody2  = Body_p                              !^CFG IF SECONDBODY
 !^CFG END GLOBALHELIOSPHERE
 
-  case default                                      !^CFG END SIMPLE
+  case default
      Body_rho= Body_rho_dim/unitUSER_n
      Body_p  = cBoltzmann*Body_rho_dim*&
                1.0E6*Body_T_dim/unitSI_p
      RhoBody2= RhoDimBody2/unitUSER_n               !^CFG IF SECONDBODY
      pBody2  = cBoltzmann*RhoDimBody2*&             !^CFG IF SECONDBODY
                1.0E6*TDimBody2/unitSI_p             !^CFG IF SECONDBODY
-  end select                                        !^CFG IF NOT SIMPLE
+  end select
 
   !Here the arrays of the FACE VALUE are formed
   !Initialization
@@ -270,7 +269,7 @@ subroutine set_physics_constants
   ! Now do extra varibles that are problem dependent.
   ! As well as case by case exceptions to the above.
   !/
-  select case (problem_type)                      !^CFG IF NOT SIMPLE BEGIN
+  select case (problem_type)
   case (problem_earth)
      !     !\
      !     ! Temporary for the paleo earth case
@@ -411,7 +410,6 @@ subroutine set_physics_constants
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
   if( UseUserSetPhysConst)call user_set_physics_constants  !^CFG IF USERFILES 
-!^CFG END SIMPLE
 end subroutine set_physics_constants
 
 
@@ -442,12 +440,12 @@ subroutine set_dimensions
   !\
   ! set independent normalizing SI variables first - on a case by case basis
   !/
-  select case(problem_type)                          !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet, problem_mars)    !^CFG END SIMPLE
+       problem_venus,problem_comet, problem_mars)
      unitSI_rho  = cProtonMass*(cMillion*SW_rho_dim)         ! kg/m^3
      unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)   ! m/s
-  case(problem_arcade)                               !^CFG IF NOT SIMPLE BEGIN
+  case(problem_arcade)
      unitSI_rho  = RHOsun                                    ! kg/m^3
      unitSI_U    = SSPsun                                    ! m/s
   case(problem_heliosphere,problem_cme)
@@ -477,7 +475,7 @@ subroutine set_dimensions
      unitSI_x    = 1.0                                       ! dimensionless
      unitSI_rho  = 1.0                                       ! dimensionless
      unitSI_U    = 1.0                                       ! dimensionless
-  end select                                                 !^CFG END SIMPLE
+  end select
   !\
   ! set other normalizing SI variables from the independent ones
   !/
@@ -505,9 +503,9 @@ subroutine set_dimensions
   ! Also load the string variables associated with the USER variables - 
   ! note that they are loaded differently for IDL and TEC output
   !/
-  select case(problem_type)                        !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet,problem_mars)   !^CFG END SIMPLE
+       problem_venus,problem_comet,problem_mars)
      ! load units
      unitUSER_x           = unitSI_x/unitSI_x                ! planetary radii
      unitUSER_rho         = 1.0E-6*unitSI_n                  ! (#/cm^3) (amu/cm^3)
@@ -563,7 +561,7 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = 'nT/R'           
      unitstr_IDL_temperature = 'K'             
 
-  case(problem_heliosphere,problem_cme)             !^CFG IF NOT SIMPLE BEGIN
+  case(problem_heliosphere,problem_cme)
      unitUSER_x           = unitSI_x/unitSI_x                ! R
      unitUSER_rho         = 1.0e-3*unitSI_rho                ! g/cm^3
      unitUSER_U           = 1.0E-3*unitSI_U                  ! km/s
@@ -733,7 +731,7 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = ''    
      unitstr_IDL_temperature = ''           
 
-  end select                                   !^CFG END SIMPLE
+  end select
   unitUSERVars_V(rho_)     = unitUSER_rho
   unitUSERVars_V(rhoUx_)   = unitUSER_rhoU
   unitUSERVars_V(rhoUy_)   = unitUSER_rhoU

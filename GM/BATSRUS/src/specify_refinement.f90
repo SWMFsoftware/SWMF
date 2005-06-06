@@ -54,7 +54,6 @@ subroutine specify_initial_refinement(refb, lev)
            RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
            minRblk = sqrt(&
              minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
-!^CFG IF NOT SIMPLE BEGIN
            maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
                 (max(abs(yy1),abs(yy2)))**2 + &
                 (max(abs(zz1),abs(zz2)))**2)
@@ -82,12 +81,10 @@ subroutine specify_initial_refinement(refb, lev)
         case default
            call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
         end select                                                 !^CFG END CARTESIAN
-!^CFG END SIMPLE
 
         select case (InitialRefineType)
         case ('none')
            ! Refine no blocks
-!^CFG IF NOT SIMPLE BEGIN
         case ('all')
            ! Refine all used blocks
            refb(iBLK) = .true.
@@ -464,7 +461,6 @@ subroutine specify_initial_refinement(refb, lev)
               end if
            end if
 
-!^CFG END SIMPLE
 
         case ('magneto12')
            ! Refine for generic magnetosphere
@@ -555,7 +551,6 @@ subroutine specify_initial_refinement(refb, lev)
                          dz_BLK(iBLK)>cPi/128+cTiny               !^CFG END CARTESIAN
                  end if
 
-!^CFG IF NOT SIMPLE BEGIN
                  minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
                       (min(abs(yy1),abs(yy2)))**2 + &
                       (min(abs(zz1),abs(zz2)))**2)
@@ -986,7 +981,6 @@ subroutine specify_initial_refinement(refb, lev)
                       minRblk < 0.1*lscale ) then
                     refb(iBLK) = .true.
                  endif
-!^CFG END SIMPLE
               endif
            endif
         case default

@@ -264,7 +264,7 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(1:3) :: f0
 
-  select case (problem_type)             !^CFG IF NOT SIMPLE BEGIN
+  select case (problem_type)
   case (problem_heliosphere)
      if (.not.UseRotatingFrame) then
         f0(1) = 0.00
@@ -275,11 +275,11 @@ subroutine centripetal_force(X0,Y0,Z0,f0)
         f0(2) = OMEGAbody*OMEGAbody*Y0
         f0(3) = 0.00
      endif
-  case default                           !^CFG END SIMPLE
+  case default
      f0(1) = 0.00
      f0(2) = 0.00
      f0(3) = 0.00
-  end select                             !^CFG IF NOT SIMPLE
+  end select
 
 end subroutine centripetal_force
 
@@ -532,7 +532,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
 
   real, intent(in) :: X0,Y0,Z0
   real :: q0
-!^CFG IF NOT SIMPLE BEGIN
   real :: R0,XT,YT,ZT,SIGMAHeat2
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
        sin2Theta_coronal_hole
@@ -583,7 +582,6 @@ subroutine heat_source(X0,Y0,Z0,q0)
   end if
   !^CFG IF SECONDBODY END
 
-!^CFG END SIMPLE
 end subroutine heat_source
 
 !----------------------------------------------------------------------

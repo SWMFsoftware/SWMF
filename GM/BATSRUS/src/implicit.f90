@@ -372,16 +372,16 @@ subroutine advance_impl
 
      call set_oktest('krylov',DoTestKrylov,DoTestKrylovMe)
      call timing_start('krylov solver')
-     select case(KrylovType)                       !^CFG IF NOT SIMPLE BEGIN
+     select case(KrylovType)
      case('bicgstab','BiCGSTAB')
         call bicgstab(impl_matvec,rhs,dw,non0dw,nimpl,&
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe)
-     case('GMRES','gmres')                         !^CFG END SIMPLE
+     case('GMRES','gmres')
         call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
              KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe)
-     case default                                  !^CFG IF NOT SIMPLE BEGIN
+     case default
         call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
-     end select                                    !^CFG END SIMPLE
+     end select
      call timing_stop('krylov solver')
 
      if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,&

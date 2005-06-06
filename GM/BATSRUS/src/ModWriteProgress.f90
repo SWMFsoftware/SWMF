@@ -77,15 +77,12 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   Problem Type'
   call write_prefix; write(iUnitOut,*)'   ------------'
   call write_prefix; write(iUnitOut,*)
-!^CFG IF NOT SIMPLE BEGIN
   call write_prefix; write(iUnitOut,'(10X,A14,I8)') 'problem_type: ',problem_type
   call write_prefix; write(iUnitOut,'(10X,A)') trim(StringProblemType_I(problem_type))
-!^CFG END SIMPLE
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*) '   Physical Model Input Solution Parameters'
   call write_prefix; write(iUnitOut,*) '   ----------------------------------------'
   call write_prefix; write(iUnitOut,*)
-!^CFG IF NOT SIMPLE BEGIN
   if(problem_type==problem_heliosphere .or. problem_type==problem_cme)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
           'Rhosun:      ',Rhosun,   ', Presun:    ',Presun
@@ -100,7 +97,6 @@ subroutine write_runtime_values()
      call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
           'SIGMAheat:   ',SIGMAheat,', Rheat:     ',Rheat
   endif
-!^CFG END SIMPLE
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
           'rBody:       ', rBody,      ', rPlanet:   ',unitSI_x
@@ -144,10 +140,10 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))')&
        'cLIGHTfactor:',boris_cLIGHT_factor,', cLIGHT:    ',cLIGHT
   call write_prefix; write(iUnitOut,*)
-  select case(problem_type)                                                      !^CFG IF NOT SIMPLE BEGIN
+  select case(problem_type)
   case(problem_shocktube, problem_uniform, problem_heliosphere, problem_cme)
      call write_prefix; write(iUnitOut,*)
-  case default                                                                   !^CFG END SIMPLE
+  case default
      call write_prefix; write(iUnitOut,*)
      call write_prefix
      write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_rho_dim [n/cc]: ',SW_rho_dim,',  SW_rho: ',SW_rho
@@ -169,7 +165,7 @@ subroutine write_runtime_values()
      write(iUnitOut,'(10X,A19,F15.6)')           'SW_a_dim   [km/s]: ',SW_a_dim
      call write_prefix
      write(iUnitOut,'(10X,A19,F15.6)')           'SW_T_dim   [   K]: ',SW_T_dim
-  end select                                                              !^CFG IF NOT SIMPLE
+  end select
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
   call write_prefix; write(iUnitOut,*)'   ---------------------------------'

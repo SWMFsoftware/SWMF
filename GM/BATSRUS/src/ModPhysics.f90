@@ -132,7 +132,6 @@ module ModPhysics
   real :: RhoArcDim, TArcDim, UzArcDim, BArcDim, ByArcDim
   real :: B0_scl, B0y_scl, Phtscl
   integer :: expArc
-!^CFG IF NOT SIMPLE BEGIN
   !\
   ! Position of Earth for Dynamic AMR purposes, including
   ! a parameter that specifies the opening angle of the ray
@@ -166,7 +165,6 @@ module ModPhysics
   logical :: UseDefaultUnits = .false.
   real :: Grav0Diss,Beta0Diss,Length0Diss
   real :: Time0Diss,Rho0Diss,Tem0Diss
-!^CFG END SIMPLE
   !\
   ! Comet terms.
   !/

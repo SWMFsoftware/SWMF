@@ -1,5 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT SIMPLE
 !=============================================================================
 subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
      nTheta,nPhi,rPlot,nBlkCellsN,nBlkCellsS)

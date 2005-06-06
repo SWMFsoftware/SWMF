@@ -95,9 +95,7 @@ Module ModAdvance
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK
   real,  dimension(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nBLK) :: &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
-!^CFG IF NOT SIMPLE BEGIN
   real,dimension(3,3,1:nI,1:nJ,1:nK,nBLK) :: B0SourceMatrix_DDCB
-!^CFG END SIMPLE
 
   !\
   ! X Face local MHD solution array definitions.

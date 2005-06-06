@@ -54,7 +54,7 @@ subroutine set_ICs
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     select case (problem_type)                !^CFG IF NOT SIMPLE BEGIN
+     select case (problem_type)
      case(problem_dissipation)                    !^CFG IF DISSFLUX
         if(.not.restart) call set_ICs_diss_test   !^CFG IF DISSFLUX
      case (problem_uniform)
@@ -304,7 +304,7 @@ subroutine set_ICs
            end where
         end if
 
-     case (problem_earth)                       !^CFG END SIMPLE
+     case (problem_earth)
         !\
         ! Initialize solution variables for
         ! Earth Magnetosphere flow problem.
@@ -329,7 +329,7 @@ subroutine set_ICs
            end do;end do;end do
         end if
 
-     case (problem_saturn,problem_jupiter)    !^CFG IF NOT SIMPLE BEGIN
+     case (problem_saturn,problem_jupiter)
         !\
         ! Initialize solution variables for
         ! Saturn and Jupiter Magnetosphere flow problem.
@@ -458,10 +458,9 @@ subroutine set_ICs
            end do;end do;end do
         end if
 
-     end select             !^CFG END SIMPLE             
+     end select
      if(UseUserICs) call user_set_ICs       !^CFG IF USERFILES
   end if ! unusedBLK
-!^CFG IF NOT SIMPLE BEGIN
   ! Eliminate B1 around body if necessary
   if(.not.restart)then
      if(UseConstrainB)then  !^CFG IF CONSTRAINB BEGIN
@@ -483,7 +482,6 @@ subroutine set_ICs
         end if
      end if                 !^CFG IF CONSTRAINB
   end if
-!^CFG END SIMPLE 
   !\
   ! Compute energy from set values above.
   !/
@@ -491,7 +489,6 @@ subroutine set_ICs
 end subroutine set_ICs
 
 
-!^CFG IF NOT SIMPLE BEGIN
 subroutine coronal_hole_boundary(RadiusSun, sin2Theta_coronal_hole)
   implicit none
 
@@ -538,4 +535,3 @@ subroutine coronal_hole_boundary(RadiusSun, sin2Theta_coronal_hole)
   end if
 
 end subroutine coronal_hole_boundary
-!^CFG END SIMPLE 

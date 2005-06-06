@@ -236,8 +236,8 @@ subroutine write_plot_common(ifile)
           ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
      if (index(plot_type1,'sph')>0) then
-        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, & !^CFG IF NOT SIMPLE
-             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)      !^CFG IF NOT SIMPLE 
+        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
+             ntheta,nphi,rplot,nBLKcellsN,nBLKcellsS)
    	dxblk=1.0
    	dyblk=180.0/real(ntheta-1)
    	dzblk=360.0/real(nphi)

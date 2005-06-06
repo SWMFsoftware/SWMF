@@ -56,7 +56,7 @@ subroutine write_restart_header
   !--------------------------------------------------------------------------
 
   if (iProc/=0) RETURN
-  iProblemType = problem_type                     !^CFG IF NOT SIMPLE
+  iProblemType = problem_type
 
   open(unit_tmp,file=trim(NameRestartOutDir)//'restart.H')
 
