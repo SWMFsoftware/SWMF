@@ -3143,7 +3143,7 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
      dxBlock,xCenter,yCenter,zCenter,rCenter,minx,miny,minz,minR,&
      maxx,maxy,maxz,maxR,IsFound)
   use ModSize,       ONLY: nI,nJ,nK,gcn
-  use ModVarIndexes, ONLY: Bx_,By_,Bz_
+  use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
   use ModAdvance,    ONLY: B0xCell_BLK,B0yCell_BLK,       &
        B0zCell_BLK,State_VGB
   use ModAMR,        ONLY: InitialRefineType
@@ -3152,7 +3152,7 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
   use ModGeometry,   ONLY: XyzMin_D,XyzMax_D,x_BLK,y_BLK, &
        z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModNumConst,   ONLY: cTiny,cHundredth,cEighth,cHalf,&
-       cQuarter,cOne,cTwo,cFour,cE1,cE2
+       cQuarter,cOne,cTwo,cFour,cE1,cE2,cZero
   use ModPhysics,    ONLY: unitUSER_B
   use ModUser
   implicit none
@@ -3165,33 +3165,77 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
   real, intent(in):: maxx,maxy,maxz,maxR
   integer, intent(in):: iBLK
   !------------------------------------------------------------------------
-  logical:: IsInRangeCS
+  logical:: DoRefineInitCS=.false.
+  logical:: ResolveNullPount=.false.
+  logical:: DoCallUserB0
+  logical:: IsInRangeAR,IsInRangeCS
   real:: dsMin,dsNewMin
-  real:: critx,critxCenter,R2Cell
-  real, dimension(3):: RCell_D
+  real:: critx,critvRdotR0,critxCenter
+  real:: RminRv,RdotRv,RminRn,RdotR0,R2Cell
+  real, dimension(3):: RCell_D,RvCell_D,RnCell_D,R0Cell_D
   !------------------------------------------------------------------------
   integer:: i,j,k
+  real, parameter:: XLoc_V=-9.6722621E-01,YLoc_V=-4.2230144E-02,ZLoc_V=-2.5038001E-01
+  real, parameter:: XLoc_0=-9.6800017E-01,YLoc_0=-1.6896725E-02,ZLoc_0=-2.5038001E-01
   real:: XCell,YCell,ZCell,RCell,RCentre
   real:: B0xCell,B0yCell,B0zCell
   real:: BIxCell,BIyCell,BIzCell
+  real:: DensCell,PresCell,GammaCell
   logical, dimension(3):: IsGhostCell_D
-  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: Br_D
+  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: Br_D,Beta_D
   !------------------------------------------------------------------------
   dsMin = min(&
        dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK))
   RCell_D (x_) = xCenter
   RCell_D (y_) = yCenter
   RCell_D (z_) = zCenter
+  RvCell_D(x_) = XLoc_V
+  RvCell_D(y_) = YLoc_V
+  RvCell_D(z_) = ZLoc_V
+  !At 01:35UT on Oct 27, 2003:
+  !  RnCell_D(x_) = -1.0156200
+  !  RnCell_D(y_) = -0.034179699
+  !  RnCell_D(z_) = -0.18133120
+  !At 09:35UT on Oct 28, 2003:
+  RnCell_D(x_) = -1.083020
+  RnCell_D(y_) = -0.106262
+  RnCell_D(z_) = -0.220000
+  R0Cell_D(x_) = XLoc_0
+  R0Cell_D(y_) = YLoc_0
+  R0Cell_D(z_) = ZLoc_0
   R2Cell = sqrt(dot_product(RCell_D,RCell_D))
+  RdotRv = dot_product(RCell_D,RvCell_D)/&
+       max(cTiny,R2Cell)
+  RdotR0 = dot_product(RCell_D,R0Cell_D)/&
+       max(cTiny,R2Cell)
+  RminRv = sqrt(dot_product(&
+       RCell_D-RvCell_D,RCell_D-RvCell_D))
+  RminRn = sqrt(dot_product(&
+       RCell_D-RnCell_D,RCell_D-RnCell_D))
   RefineBlock = .false.
-  IsInRangeCS = .false.
+  IsInRangeAR = .false.; IsInRangeCS = .false.
   !\
-  ! If not in the time_loop, refine the current sheet over
-  ! the course of 3 iterations::
+  ! Construct a logical switch DoRefineInitCS whether or
+  ! not to refine the current sheet initially AND the active
+  ! region of interest::
   !/
-  if (time_loop) then
-     dsNewMin = (cOne+cQuarter)/cFour+cHundredth
-     if (dsMin>dsNewMin) then
+  if (DoRefineInitCS) then
+     DoCallUserB0 = (lev>9.and.RminRv<0.19.and.R2Cell>0.98).or.&
+                    (lev>3.and.lev<6)
+  else
+     DoCallUserB0 = (lev>9.and.RminRv<0.19.and.R2Cell>0.98).or.&
+!For 01:35UT on Oct 27, 2003: (lev>12.and.RminRn<2.00E-01.and.R2Cell>1.035)
+!For 09:35UT on Oct 28, 2003: (lev>11.and.RminRn<4.00E-01.and.R2Cell>1.07)
+                    (lev>11.and.RminRn<0.4.and.R2Cell>1.07)
+  endif
+  !\
+  ! For initial refinement, get the radial magnetic field
+  ! to refine the desired blocks in the AR and in the CS,
+  ! as long as DoCallUserB0 = .true.
+  !/
+  if (.not.time_loop) then
+     if (DoCallUserB0) then
+        call set_b0(iBLK)
         do k=1-gcn,nK+gcn
            IsGhostCell_D(3)=k<1.or.k>nK
            do j=1-gcn,nJ+gcn
@@ -3199,9 +3243,12 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
               do i=1-gcn,nI+gcn
                  IsGhostCell_D(1)=i<1.or.i>nI
                  if (count(IsGhostCell_D)>1) then
-                    Br_D(i,j,k) = huge(cOne)
+                    Br_D(i,j,k)   = huge(cOne)
+                    Beta_D(i,j,k) = cZero
                     CYCLE
                  end if
+                 call get_plasma_parameters_cell(i,j,k,iBLK,&
+                      DensCell,PresCell,GammaCell)
                  XCell = x_BLK(i,j,k,iBLK)
                  YCell = y_BLK(i,j,k,iBLK)
                  ZCell = z_BLK(i,j,k,iBLK)
@@ -3209,28 +3256,112 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
                  B0xCell = B0xCell_BLK(i,j,k,iBLK)
                  B0yCell = B0yCell_BLK(i,j,k,iBLK)
                  B0zCell = B0zCell_BLK(i,j,k,iBLK)
-                 BIxCell = State_VGB(Bx_,i,j,k,iBLK)
-                 BIyCell = State_VGB(By_,i,j,k,iBLK)
-                 BIzCell = State_VGB(Bz_,i,j,k,iBLK)
-                 Br_D(i,j,k) = abs(             &
-                      (XCell*(B0xCell+BIxCell)+ &
-                       YCell*(B0yCell+BIyCell)+ &
-                       ZCell*(B0zCell+BIzCell))/&
+                 Br_D(i,j,k) = abs(   &
+                      (XCell*B0xCell+ &
+                       YCell*B0yCell+ &
+                       ZCell*B0zCell)/&
                        RCell)
+                 Beta_D(i,j,k) = cTwo*PresCell/max(cTiny,&
+                      (B0xCell**2+B0yCell**2+B0zCell**2))
               end do
            end do
         end do
         !\
         ! Construct refinement criteria to refine blocks in the
-        ! current sheet only (IsInRangeCS = .true.)::
+        ! AR (IsInRangeAR) and in the CS (IsInRangeCS)::
         !/
-        RCentre = cEighth*&
-             (R_BLK( 1, 1, 1,iBLK)+R_BLK( 1, 1,nK,iBLK)+&
-              R_BLK( 1,nJ, 1,iBLK)+R_BLK( 1,nJ,nK,iBLK)+&
-              R_BLK(nI, 1, 1,iBLK)+R_BLK(nI, 1,nK,iBLK)+&
-              R_BLK(nI,nJ, 1,iBLK)+R_BLK(nI,nJ,nK,iBLK))
-        IsInRangeCS = (RCentre**3*minval(Br_D)<3.50E-01)
-     end if
+        if (lev>3.and.lev<6.and.DoRefineInitCS) &
+             IsInRangeCS = (minval(Br_D)<1.50E-05)
+        if (lev>9) &
+             IsInRangeAR = (minval(Br_D)<2.50E+00/unitUSER_B)
+!For 01:35UT on Oct 27, 2003: if (lev>12) &
+!For 09:35UT on Oct 28, 2003: if (lev>11) &
+        if (lev>11) &
+             IsInRangeAR = (minval(Br_D)<2.50E+00/unitUSER_B).and.&
+!For 01:35UT on Oct 27, 2003: (R2Cell<1.020E+00).or.(maxval(Beta_D)>0.01)
+!For 09:35UT on Oct 28, 2003: (R2Cell<1.025E+00).or.(maxval(Beta_D)>0.055)
+                           (R2Cell<1.025E+00).or.(maxval(Beta_D)>0.055)
+     endif
+  else
+     if (.not.ResolveNullPount) then
+        dsNewMin = (cOne+cQuarter)/cFour+cHundredth
+        if (dsMin>dsNewMin) then
+           do k=1-gcn,nK+gcn
+              IsGhostCell_D(3)=k<1.or.k>nK
+              do j=1-gcn,nJ+gcn
+                 IsGhostCell_D(2)=j<1.or.j>nJ           
+                 do i=1-gcn,nI+gcn
+                    IsGhostCell_D(1)=i<1.or.i>nI
+                    if (count(IsGhostCell_D)>1) then
+                       Br_D(i,j,k) = huge(cOne)
+                       CYCLE
+                    end if
+                    XCell = x_BLK(i,j,k,iBLK)
+                    YCell = y_BLK(i,j,k,iBLK)
+                    ZCell = z_BLK(i,j,k,iBLK)
+                    RCell = sqrt(XCell**2+YCell**2+ZCell**2)
+                    B0xCell = B0xCell_BLK(i,j,k,iBLK)
+                    B0yCell = B0yCell_BLK(i,j,k,iBLK)
+                    B0zCell = B0zCell_BLK(i,j,k,iBLK)
+                    BIxCell = State_VGB(Bx_,i,j,k,iBLK)
+                    BIyCell = State_VGB(By_,i,j,k,iBLK)
+                    BIzCell = State_VGB(Bz_,i,j,k,iBLK)
+                    Br_D(i,j,k) = abs(             &
+                         (XCell*(B0xCell+BIxCell)+ &
+                          YCell*(B0yCell+BIyCell)+ &
+                          ZCell*(B0zCell+BIzCell))/&
+                          RCell)
+                 end do
+              end do
+           end do
+           !\
+           ! Construct refinement criteria to refine blocks in the
+           ! current sheet only (IsInRangeCS = .true.)::
+           !/
+           RCentre = cEighth*&
+                (R_BLK( 1, 1, 1,iBLK)+R_BLK( 1, 1,nK,iBLK)+&
+                 R_BLK( 1,nJ, 1,iBLK)+R_BLK( 1,nJ,nK,iBLK)+&
+                 R_BLK(nI, 1, 1,iBLK)+R_BLK(nI, 1,nK,iBLK)+&
+                 R_BLK(nI,nJ, 1,iBLK)+R_BLK(nI,nJ,nK,iBLK))
+           IsInRangeCS = (RCentre**3*minval(Br_D)<3.50E-01)
+        end if
+     else
+!For 01:35UT on Oct 27, 2003: if (RminRn<1.50E-01.and.R2Cell>1.035) then
+!For 09:35UT on Oct 28, 2003: if (RminRn<1.50E-01.and.R2Cell>1.060) then
+        if (RminRn<1.50E-01.and.R2Cell>1.060) then
+           do k=1-gcn,nK+gcn
+              IsGhostCell_D(3)=k<1.or.k>nK
+              do j=1-gcn,nJ+gcn
+                 IsGhostCell_D(2)=j<1.or.j>nJ           
+                 do i=1-gcn,nI+gcn
+                    IsGhostCell_D(1)=i<1.or.i>nI
+                    if (count(IsGhostCell_D)>1) then
+                       Beta_D(i,j,k) = cZero
+                       CYCLE
+                    end if
+                    B0xCell  = B0xCell_BLK(i,j,k,iBLK)
+                    B0yCell  = B0yCell_BLK(i,j,k,iBLK)
+                    B0zCell  = B0zCell_BLK(i,j,k,iBLK)
+                    BIxCell  = State_VGB(Bx_   ,i,j,k,iBLK)
+                    BIyCell  = State_VGB(By_   ,i,j,k,iBLK)
+                    BIzCell  = State_VGB(Bz_   ,i,j,k,iBLK)
+                    PresCell = State_VGB(P_,i,j,k,iBLK)
+                    Beta_D(i,j,k) = cTwo*PresCell/max(cTiny,&
+                                     ((B0xCell+BIxCell)**2+ &
+                                      (B0yCell+BIyCell)**2+ &
+                                      (B0zCell+BIzCell)**2))
+                 end do
+              end do
+           end do
+           !\
+           ! Construct refinement criteria to refine blocks in the
+           ! current sheet only (IsInRangeCS = .true.)::
+           !/
+!For 01:35UT on Oct 27, 2003: IsInRangeCS = (maxval(Beta_D)>0.015)
+!For 09:35UT on Oct 28, 2003: IsInRangeCS = (maxval(Beta_D)>0.045)
+           IsInRangeCS = (maxval(Beta_D)>0.045)
+        end if
+     endif
   end if
 
   select case (InitialRefineType)
@@ -3242,6 +3373,25 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
         if (rCenter<1.10+critx) then
            RefineBlock = .true.
         end if
+     else if (lev<11) then
+        RefineBlock = (RminRv<0.29).and.(R2Cell>0.96)
+     else if (lev<12) then
+        RefineBlock = (RminRv<0.23).and.(R2Cell>0.96)
+     else
+        RefineBlock = (RminRv<0.17).and.(R2Cell>0.96)
+     endif
+     IsFound = .true.
+  case('UserAR8210')
+     RefineBlock =  (RminRv<0.36).and.(R2Cell>0.95)
+     IsFound = .true.
+  case('UserCME')
+     if (lev<4) then
+        critxCenter = cHalf*(XyzMax_D(1)-XyzMin_D(1))/cTwo**real(3-lev)
+        critvRdotR0 = 0.96
+        if ((RdotR0>critvRdotR0).and.(abs(xCenter)>critxCenter)) &
+             RefineBlock = .true.
+     else
+	RefineBlock = .false.
      endif
      IsFound = .true.
   case('UserAR486','userar486','USERAR486')
@@ -3251,6 +3401,9 @@ subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
         else if (lev<10) then
            !Block is in the CS or intersects the body::
            RefineBlock = IsInRangeCS.or.(minR<=1.00)
+        else 
+           !Block is in the AR::
+           RefineBlock = IsInRangeAR
         endif
         !Do not refine inside the body::
         RefineBlock = RefineBlock.and.(maxR>1.00)
