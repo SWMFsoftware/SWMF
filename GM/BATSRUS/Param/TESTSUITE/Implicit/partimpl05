@@ -10,10 +10,10 @@ F			UsePointImplicit	^CFG IF POINTIMPLICIT
 T			UsePartImplicit
 F			UseFullImplicit
 100.0			CflImpl
-^CFG IF NOT SIMPLE BEGIN
+
 #KRYLOV
 bicgstab		TypeKrylov (gmres, bicgstab)
 nul			TypeInitKrylov (nul, old, explicit, scaled)
 0.001			ErrorMaxKrylov
 100			MaxMatvecKrylov
-^CFG END SIMPLE
+
