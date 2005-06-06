@@ -1774,6 +1774,12 @@ contains
        TypeCoordSystem = 'GSM'
        UseRotatingFrame     = .false.
     end select
+
+    ! Do not update B0 for SC or IH by default
+    if(NameThisComp /= 'GM')then
+       DoUpdateB0 = .false.
+       Dt_UpdateB0 = -1.0
+    end if
     
     ! Initialize StartTime to the default values
     ! For SWMF it is set during 'CHECK'
