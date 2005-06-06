@@ -20,20 +20,20 @@ subroutine amr(idepth)
   !
   call exchange_messages
 
-  if (automatic_refinement) then              !^CFG IF NOT SIMPLE
+  if (automatic_refinement) then
      !-----------------------------------------------------------------
      ! Physics based refinement.
      !
      call amr_physics
 
-  else                                        !^CFG IF NOT SIMPLE BEGIN
+  else
      !-----------------------------------------------------------------
      ! Prespecified refinement.
      !
      call specify_initial_refinement(local_refine, idepth)
      call refine_grid(local_refine)
 
-  end if                                      !^CFG END SIMPLE
+  end if
   call fixRefinementLevels
 
   ! Find new min and max dx
