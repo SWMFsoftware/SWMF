@@ -211,15 +211,19 @@ contains
   subroutine associate_with_global_vector(Ptr,Name)
     real,dimension(:,:),pointer::Ptr
     character(LEN=*),intent(in)::Name
+    integer :: iTemp
+    iTemp=i_vector(Name)
     nullify(Ptr)
-    Ptr=>Vector_I(i_vector(Name))%I
+    Ptr=>Vector_I(iTemp)%I
   end subroutine associate_with_global_vector
   !===========================================================!
   subroutine associate_with_global_mask(Ptr,Name)
     logical,dimension(:),pointer::Ptr
     character(LEN=*),intent(in)::Name
+    integer :: iTemp
+    iTemp=i_mask(Name)
     nullify(Ptr)
-    Ptr=>Mask_I(i_mask(Name))%I
+    Ptr=>Mask_I(iTemp)%I   
   end subroutine associate_with_global_mask
   !===========================================================!
   logical function used_vector(Name)
@@ -441,7 +445,9 @@ contains
   !=======================================================
   integer function count_mask(NameMask)
     character(LEN=*),intent(in)::NameMask
-    count_mask=count(Mask_I(i_mask(NameMask))%I)
+    integer :: iTemp
+    iTemp=i_mask(NameMask)
+    count_mask=count(Mask_I(iTemp)%I)
   end function count_mask
   !======================================================!
   function point_state_vi(NameVector,nVar,iPoint)
