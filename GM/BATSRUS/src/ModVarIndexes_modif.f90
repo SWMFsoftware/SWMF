@@ -78,17 +78,16 @@ Module ModVarIndexes
   !(say, the change cOne=>cTwo) should make absolutely no difference on
   !any results.
 
-  character(len=*),parameter,dimension(nVar)::NameVar_V=reshape(&
-       (/'rho  ',& !rho_
-       'rhoUx',&!rhoUx_
-       'rhoUy',&!rhoUy_
-       'rhoUz',&!rhoUz_
-       'Bx   ',&!Bx_
-       'By   ',&!By_
-       'Bz   ',&!Bz_
-       'RLEn ',&!EnergyRL_
-       'P    '/),&!P_
-       (/nVar/))
+  character(len=*),parameter,dimension(nVar)::NameVar_V = (/ &
+       'rho  ', & !rho_
+       'rhoUx', & !rhoUx_
+       'rhoUy', & !rhoUy_
+       'rhoUz', & !rhoUz_
+       'Bx   ', & !Bx_
+       'By   ', & !By_
+       'Bz   ', & !Bz_
+       'RLEn ', & !EnergyRL_
+       'P    ' /) !P_
   !These are the character names of the variables used in i/o
 
 ! Additional convention (related to the program correct_monotone_restrict:

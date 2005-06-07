@@ -26,10 +26,10 @@ Module ModVarIndexes
   ! Named indexes for CellCentered variables
   integer, parameter:: &
        rho_=1,  &
-       Hp_=2, &
-       O2p_=3, &
-       Op_=4, &
-       CO2p_=5,&
+       Hp_=2,   &
+       O2p_=3,  &
+       Op_=4,   &
+       CO2p_=5, &
        rhoUx_=6,&
        rhoUy_=7,&
        rhoUz_=8,&
@@ -85,20 +85,20 @@ Module ModVarIndexes
   !(say, the change cOne=>cTwo) should make absolutely no difference on
   !any results.
 
-  character(len=*),parameter,dimension(nVar)::NameVar_V=reshape(&
-       (/'rho  ',& !rho_
-       'HP   ',&
-       'O2P  ',&
-       'OP   ',&
-       'CO2P ',&
-       'rhoUx',&!rhoUx_
-       'rhoUy',&!rhoUy_
-       'rhoUz',&!rhoUz_
-       'Bx   ',&!Bx_
-       'By   ',&!By_
-       'Bz   ',&!Bz_
-       'P    '/),&!P_
-       (/nVar/))
+  character(len=*),parameter,dimension(nVar)::NameVar_V = (/ &
+       'rho  ', & !rho_
+       'HP   ', &
+       'O2P  ', &
+       'OP   ', &
+       'CO2P ', &
+       'rhoUx', & !rhoUx_
+       'rhoUy', & !rhoUy_
+       'rhoUz', & !rhoUz_
+       'Bx   ', & !Bx_
+       'By   ', & !By_
+       'Bz   ', & !Bz_
+       'P    '/)  !P_
+
   !These are the character names of the variables used in i/o
 
 

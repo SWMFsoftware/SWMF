@@ -50,18 +50,18 @@ Module ModVarIndexes
 
   real,dimension(nVar)::DefaultState_V
   data DefaultState_V/&
-       cOne,& !rho_
-       cOne,& !rhoHp_
-       cOne,& !rhoO2p_
-       cOne,& !rhoOp_
-       cOne,& !rhoCO2p_
-       cZero,&!rhoUx_
-       cZero,&!rhoUy_
-       cZero,&!rhoUz_
-       cZero,&!Bx_
-       cZero,&!By_
-       cZero,&!Bz_
-       cOne/  !P_
+       cOne,  & !rho_
+       cOne,  & !rhoHp_
+       cOne,  & !rhoO2p_
+       cOne,  & !rhoOp_
+       cOne,  & !rhoCO2p_
+       cZero, & !rhoUx_
+       cZero, & !rhoUy_
+       cZero, & !rhoUz_
+       cZero, & !Bx_
+       cZero, & !By_
+       cZero, & !Bz_
+       cOne/    !P_
   !For the cell centered vars from the first up to nVar 'th
   !the components of the Default array MUST be defined following STRICTLY the
   !following rules: the components which are POSITIVE according to their 
@@ -87,20 +87,20 @@ Module ModVarIndexes
   !(say, the change cOne=>cTwo) should make absolutely no difference on
   !any results.
 
-  character(len=*),parameter,dimension(nVar)::NameVar_V=reshape(&
-       (/'rho  ',& !rho_
-       'Hp   ',&
-       'O2p  ',&
-       'Op   ',&
-       'CO2p ',&
-       'rhoUx',&!rhoUx_
-       'rhoUy',&!rhoUy_
-       'rhoUz',&!rhoUz_
-       'Bx   ',&!Bx_
-       'By   ',&!By_
-       'Bz   ',&!Bz_
-       'P    '/),&!P_
-       (/nVar/))
+  character(len=*),parameter,dimension(nVar)::NameVar_V = (/ &
+       'rho  ', & !rho_
+       'Hp   ', &
+       'O2p  ', &
+       'Op   ', &
+       'CO2p ', &
+       'rhoUx', & !rhoUx_
+       'rhoUy', & !rhoUy_
+       'rhoUz', & !rhoUz_
+       'Bx   ', & !Bx_
+       'By   ', & !By_
+       'Bz   ', & !Bz_
+       'P    '/)  !P_
+
   !These are the character names of the variables used in i/o
 
 

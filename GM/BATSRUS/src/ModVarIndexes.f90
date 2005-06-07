@@ -37,22 +37,20 @@ Module ModVarIndexes
   !These indexes should go subsequently, from 1 to nVar.
 
   integer, parameter::rhoU_=1,B_=4
-! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
-
+  ! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
 
   !This is an important step: define the default set of the cell centered
   !variables.
-  real,parameter,dimension(nVar)::DefaultState_V=reshape(&
-       (/&
-       cOne,& !rho_
-       cZero,&!rhoUx_
-       cZero,&!rhoUy_
-       cZero,&!rhoUz_
-       cZero,&!Bx_
-       cZero,&!By_
-       cZero,&!Bz_
-       cOne/),&  !P_
-       (/nVar/))
+  real,parameter,dimension(nVar)::DefaultState_V = (/ &
+       cOne,  & ! rho_
+       cZero, & ! rhoUx_
+       cZero, & ! rhoUy_
+       cZero, & ! rhoUz_
+       cZero, & ! Bx_
+       cZero, & ! By_
+       cZero, & ! Bz_
+       cOne/)   ! P_
+
   !For the cell centered vars from the first up to nVar 'th
   !the components of the Default array MUST be defined following STRICTLY the
   !following rules: the components which are POSITIVE according to their 
@@ -78,17 +76,16 @@ Module ModVarIndexes
   !(say, the change cOne=>cTwo) should make absolutely no difference on
   !any results.
 
-  
-  character(len=*),parameter,dimension(nVar)::NameVar_V=reshape(&
-       (/' rho ',& !rho_
-       'rhoUx',&!rhoUx_
-       'rhoUy',&!rhoUy_
-       'rhoUz',&!rhoUz_
-       '  Bx ',&!Bx_
-       '  By ',&!By_
-       '  Bz ',&!Bz_
-       '  P  '/),&!P_
-       (/nVar/))
+  character(len=*),parameter,dimension(nVar)::NameVar_V = (/ &
+       ' rho ',& ! rho_
+       'rhoUx',& ! rhoUx_
+       'rhoUy',& ! rhoUy_
+       'rhoUz',& ! rhoUz_
+       '  Bx ',& ! Bx_
+       '  By ',& ! By_
+       '  Bz ',& ! Bz_
+       '  P  '/) ! P_
+
   !These are the character names of the variables used in i/o
 
 
