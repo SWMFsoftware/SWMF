@@ -57,8 +57,7 @@ MODULES = \
 OBJ1=constrain_B.o #				^CFG IF CONSTRAINB
 
 #^CFG IF IMPLICIT BEGIN
-OBJ2A=bicgstab.o #				^CFG IF NOT SIMPLE
-OBJ2=   ${OBJ2A}\
+OBJ2=   bicgstab.o\
 	gmres.o\
 	implicit.o\
 	impl_interface.o\
@@ -115,10 +114,8 @@ OBJ10=\
 
 OBJ11=set_outer_BCs.o #				^CFG IF CELLOUTERBC
 
-#^CFG IF NOT SIMPLE BEGIN
 OBJ12= write_plot_los.o write_plot_sph.o \
 		     set_ICs_arc.o set_ICs_cme.o      
-#^CFG END SIMPLE
 
 #^CFG IF USERFILES BEGIN
 OBJ13 = user_routines.o 

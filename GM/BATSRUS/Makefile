@@ -24,7 +24,7 @@ help:
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL program creates 1 .out file from local .idl files)'
-	@echo '    PSPH    (PostSPH program creates spherical tec file from sph*.tec files)' #^CFG IF NOT SIMPLE
+	@echo '    PSPH    (PostSPH program creates spherical tec file from sph*.tec files)'
 	@echo ' '
 	@echo '    help      (makefile option list)'
 	@echo '    clean     (rm -f *~ *.o *.kmo *.mod *.T *.lst core)'
@@ -124,13 +124,11 @@ PIDL:
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
 
-#^CFG IF NOT SIMPLE BEGIN
 PSPH:
 	cd srcPostProc; make PSPH
 	@echo ' '
 	@echo Program PostSPH has been brought up to date.
 	@echo ' '
-#^CFG END SIMPLE
 
 checklink:
 	@(if perl -e 'exit(-l "Scripts/Run/pp_IDL/PostIDL.exe")' ; then \
@@ -139,14 +137,12 @@ checklink:
 	   rm -rf PostIDL.exe; \
 	   ln -s ${BINDIR}/PostIDL.exe .; \
 	fi)
-	@#^CFG IF NOT SIMPLE BEGIN
 	@(if perl -e 'exit(-l "Scripts/Run/pp_TEC/PostSPH.exe")' ; then \
 	   echo "Creating link to PostSPH.exe in Scripts/Run/pp_TEC/"; \
 	   cd Scripts/Run/pp_TEC/; \
 	   rm -rf PostSPH.exe; \
 	   ln -s ${BINDIR}/PostSPH.exe .; \
 	fi)
-	@#^CFG END SIMPLE
 
 # Ths PLOT=??? will copy both IDL and TEC scripts into the run directory
 PLOT = ???
