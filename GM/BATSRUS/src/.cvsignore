@@ -4,7 +4,6 @@ stand_alone.f90
 user_routines.f90
 Makefile.RULES
 Makefile.DEPEND
-Makefile.OPTIONS
 ModSize.f90
 ModAdvance.f90
 ModCT.f90

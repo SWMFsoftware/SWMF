@@ -4,7 +4,6 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 include ../Makefile.conf
-include Makefile.OPTIONS
 include Makefile.DEPEND
 include Makefile.RULES
 
@@ -151,6 +150,7 @@ OBJECTS = \
 	message_pass_nodes.o\
 	number_blocks.o\
 	octree.o\
+	potential_force_averages.o\
 	refine_grid.o\
 	restart.o\
 	rotate.o\
@@ -168,7 +168,6 @@ OBJECTS = \
 	write_plot_idl.o\
 	write_plot_tec.o\
 	write_progress.o\
-	${OPTION_FORCE}\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
 	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
@@ -224,8 +223,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${OBJECTS} \
-	Makefile.OPTIONS ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
 
@@ -271,7 +269,7 @@ BATSRUS_for_xlf:
 #
 
 distclean: clean
-	rm -f Makefile.RULES Makefile.DEPEND Makefile.OPTIONS ModSize.f90
+	rm -f Makefile.RULES Makefile.DEPEND ModSize.f90
 	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
 		ModNodes.f90 ModRaytrace.f90
 	rm -f stand_alone.f90
