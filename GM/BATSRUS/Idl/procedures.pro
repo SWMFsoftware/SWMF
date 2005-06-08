@@ -2849,8 +2849,9 @@ if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 
 ; Set size of plot windows
 ppp   = nfunc
-space = 0.05
-;;;space = float(!d.y_ch_size)/float(!d.y_size)
+;space = 0.05
+;if !y.charsize gt 0 then space = space*!y.charsize
+space = 5*float(!d.y_ch_size)/float(!d.y_size)
 set_space, ppp, space, sizes, ny = ppp
 
 erase
@@ -2906,9 +2907,13 @@ for iter = iter0, 2 do begin
                     if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
                     title1  = ''
                     xtitle1 = ''
+                    xtickname1 = strarr(60)+' '
                     if ilog eq 0 then begin
                         if ifunc eq 0       then title1  = title0
-                        if ifunc eq nfunc-1 then xtitle1 = xtitle0
+                        if ifunc eq nfunc-1 then begin
+                            xtitle1    = xtitle0
+                            xtickname1 = !x.tickname
+                        endif
                     endif
                     plot, hour, field, pos = posm, $
                       xrange = xrange, $
@@ -2916,6 +2921,7 @@ for iter = iter0, 2 do begin
                       xstyle = 1, $
                       title  = title1, $
                       xtitle = xtitle1, $
+                      xtickname = xtickname1, $
                       ytitle = ytitles0(ifunc), $
                       color = colors(ilog), $
                       psym  = symbols(ilog), $
