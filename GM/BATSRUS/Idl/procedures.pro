@@ -1817,7 +1817,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       if rBody gt abs(rSlice) then begin
          theta = findgen(37)*!pi*2.0/36.0
          rBodySlice=sqrt(rBody^2-rSlice^2)
-         polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta), color = 0
+         polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta),color = 0, $
+           noclip=0
          ; redraw box in case the body is at the edge
          plot,xx,yy,XSTYLE=1,YSTYLE=1,/NODATA,/NOERASE
       endif
