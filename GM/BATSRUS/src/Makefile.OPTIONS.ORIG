@@ -1,6 +1,5 @@
 #^CFG COPYRIGHT UM
 
-#^CFG IF NOT SIMPLE BEGIN
 ################################################################
 ################################################################
 ##                                                            ##
@@ -12,16 +11,9 @@
 ##                                                            ##
 ################################################################
 ################################################################
-#^CFG END SIMPLE
-#^CFG IF SIMPLE BEGIN
-########## Do not modify this file ##############
-#^CFG END SIMPLE
-
 ##
 ##   BODY FORCE
 ##
 
-#^CFG IF SIMPLE BEGIN
-OPTION_FORCE=body_force_averages.o
-#^CFG END SIMPLE
-#OPTION_FORCE=potential_force_averages.o #^CFG IF NOT SIMPLE
+#OPTION_FORCE=body_force_averages.o
+OPTION_FORCE=potential_force_averages.o
