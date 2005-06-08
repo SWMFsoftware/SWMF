@@ -398,14 +398,17 @@ subroutine write_plot_common(ifile)
                                             ' thetatilt[deg] phitilt[deg]'
         case('idl')
            if(plot_dimensional(ifile)) then
-              write(unit_tmp,'(6(1pe13.5),a)')plot_range(:,ifile)*unitUSER_x,' plot_range'
-              write(unit_tmp,'(6(1pe13.5),i8,a)') &
-                   plot_dx(:,ifile)*unitUSER_x,dxGLOBALmin*unitUSER_x,nGLOBALcells,&
+              write(unit_tmp,'(6(1pe18.10),a)') &
+                   plot_range(:,ifile)*unitUSER_x,' plot_range'
+              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+                   plot_dx(:,ifile)*unitUSER_x, &
+                   dxGLOBALmin*unitUSER_x, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            else
-              write(unit_tmp,'(6(1pe13.5),a)')plot_range(:,ifile),' plot_range'
-              write(unit_tmp,'(6(1pe13.5),i8,a)') &
-                   plot_dx(:,ifile),dxGLOBALmin,nGLOBALcells,&
+              write(unit_tmp,'(6(1pe18.10),a)') &
+                   plot_range(:,ifile),' plot_range'
+              write(unit_tmp,'(6(1pe18.10),i8,a)') &
+                   plot_dx(:,ifile), dxGLOBALmin, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            end if
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
