@@ -145,17 +145,22 @@ program PostIDL
      nx1=nint((xmax1-xmin1)/dx1)
      nx2=nint((xmax2-xmin2)/dx2)
      if(.not.structured)then
-        allocate(lookup(nx1,nx2),stat=iError)
-
-        if(iError/=0 .or. size(lookup) < real(nx1)*real(nx2)-0.9 )then
-           write(*,*)'Allocating lookup table was not successful!'
-           write(*,*)'iError,size(lookup)=',iError,size(lookup)
-           write(*,*)'No averaging is done!'
+        if(real(nx1)*real(nx2) > 1e8)then
+           write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
         else
-           UseLookup=.true.
-           lookup=0
-           ! Cell sizes have to be stored for unstructured 2D grid
-           allocate(dxdoubled(ncell))
+           allocate(lookup(nx1,nx2),stat=iError)
+
+           if(iError/=0 .or. size(lookup) < real(nx1)*real(nx2)-0.9 )then
+              write(*,*)'Allocating lookup table was not successful!'
+              write(*,*)'iError,size(lookup)=',iError,size(lookup)
+              write(*,*)'No averaging is done!'
+           else
+              UseLookup=.true.
+              lookup=0
+              ! Cell sizes have to be stored for unstructured 2D grid
+              allocate(dxdoubled(ncell))
+           end if
+           write(*,*)'allocate done'
         end if
      end if
   endif
@@ -351,7 +356,7 @@ contains
     dxyzcell(1)=dxcell; dxyzcell(2)=dycell; dxyzcell(3)=dzcell
     dx1cell=dxyzcell(idim1); dx2cell=dxyzcell(idim2)
 
-    if(dx1cell>dx1)then
+    if(dx1cell>1.9*dx1)then
        ! Lookup indices of possible finer pairs
        ixmin1=nint((xyz(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps)
        ixmax1=nint((xyz(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps)
