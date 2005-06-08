@@ -1,22 +1,21 @@
 !^CFG COPYRIGHT UM
-!---------------------------------------------------------------------------
-!                     body_force_averages
 
 subroutine body_force_averages
   use ModMain
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
   use ModGeometry, ONLY :&
-       dx_BLK, dy_BLK, dz_BLK,&                                   !^CFG IF CARTESIAN
+       dx_BLK, dy_BLK, dz_BLK,&                       !^CFG IF CARTESIAN
         x_BLK, y_BLK, z_BLK, true_cell
   use ModNumConst
   implicit none
 
   integer :: i,j,k
-  integer :: iVolumeCounter                                       !^CFG IF NOT CARTESIAN
+  integer :: iVolumeCounter                           !^CFG IF NOT CARTESIAN
 
-  real ::  DxInv,DyInv,DzInv                                      !^CFG IF CARTESIAN
+  real ::  DxInv,DyInv,DzInv                          !^CFG IF CARTESIAN
   real ::  Potential_S(6),x,y,z
-  real::GravityForcePotential,CentripetalForcePotential
+  real ::  GravityForcePotential, CentrifugalForcePotential
+  !---------------------------------------------------------------------------
 
   !true_cell note: using true_cell to replace an Rbody test does not apply here
 
@@ -35,43 +34,52 @@ subroutine body_force_averages
      x = cHalf*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i-1,j,k,globalBLK) + z_BLK(i,j,k,globalBLK))
-     Potential_S(east_) = GravityForcePotential(x,y,z)+CentripetalForcePotential(x,y,z)
+     Potential_S(east_) = GravityForcePotential(x,y,z) &
+          + CentrifugalForcePotential(x,y,z)
 
      x = cHalf*(x_BLK(i+1,j,k,globalBLK)+x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i+1,j,k,globalBLK)+y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i+1,j,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-     Potential_S(west_) = -GravityForcePotential(x,y,z)-CentripetalForcePotential(x,y,z)
+     Potential_S(west_) = -GravityForcePotential(x,y,z) &
+          - CentrifugalForcePotential(x,y,z)
 
      x = cHalf*(x_BLK(i,j-1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i,j-1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i,j-1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-     Potential_S(south_) = GravityForcePotential(x,y,z)+CentripetalForcePotential(x,y,z)
+     Potential_S(south_) = GravityForcePotential(x,y,z) &
+          + CentrifugalForcePotential(x,y,z)
 
      x = cHalf*(x_BLK(i,j+1,k,globalBLK)+x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i,j+1,k,globalBLK)+y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i,j+1,k,globalBLK)+z_BLK(i,j,k,globalBLK))
-     Potential_S(north_) = -GravityForcePotential(x,y,z)-CentripetalForcePotential(x,y,z)
+     Potential_S(north_) = -GravityForcePotential(x,y,z) &
+          - CentrifugalForcePotential(x,y,z)
 
      x = cHalf*(x_BLK(i,j,k-1,globalBLK)+x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i,j,k-1,globalBLK)+y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i,j,k-1,globalBLK)+z_BLK(i,j,k,globalBLK))
-     Potential_S(bot_) = GravityForcePotential(x,y,z)+CentripetalForcePotential(x,y,z)
+     Potential_S(bot_) = GravityForcePotential(x,y,z) &
+          + CentrifugalForcePotential(x,y,z)
 
      x = cHalf*(x_BLK(i,j,k+1,globalBLK)+x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i,j,k+1,globalBLK)+y_BLK(i,j,k,globalBLK))
      z = cHalf*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
-     Potential_S(top_) = -GravityForcePotential(x,y,z)-CentripetalForcePotential(x,y,z)
+     Potential_S(top_) = -GravityForcePotential(x,y,z) &
+          - CentrifugalForcePotential(x,y,z)
 
-!^CFG IF CARTESIAN BEGIN
-     fbody_x_BLK(i,j,k,globalBLK)=(Potential_S(east_)+Potential_S(west_))*DxInv 
-     fbody_y_BLK(i,j,k,globalBLK)=(Potential_S(south_)+Potential_S(north_))*DyInv   
-     fbody_z_BLK(i,j,k,globalBLK)=(Potential_S(bot_)+Potential_S(top_))*DzInv
-!^CFG END CARTESIAN
-!     call covariant_force_integral(iVolumeCounter,i,j,k,globalBLK,Potential_S)     !^CFG IF NOT CARTESIAN 
+     !^CFG IF CARTESIAN BEGIN
+     fbody_x_BLK(i,j,k,globalBLK) = &
+          (Potential_S(east_)  + Potential_S(west_))*DxInv 
+     fbody_y_BLK(i,j,k,globalBLK) = &
+          (Potential_S(south_) + Potential_S(north_))*DyInv   
+     fbody_z_BLK(i,j,k,globalBLK) = &
+          (Potential_S(bot_) + Potential_S(top_))*DzInv
+     !^CFG END CARTESIAN
+     !call covariant_force_integral(iVolumeCounter,i,j,k,globalBLK,Potential_S)     !^CFG IF NOT CARTESIAN 
 
   end do ; end do ;end do 
 end subroutine body_force_averages
-!=============================================================================================
+!==============================================================================
 real function GravityForcePotential(X0,Y0,Z0)
   use ModMain, ONLY : UseGravity,GravityDir
   use ModMain, ONLY : UseBody2                !^CFG IF SECONDBODY
@@ -115,23 +123,23 @@ real function GravityForcePotential(X0,Y0,Z0)
      !^CFG IF SECONDBODY END
   end if
 end function GravityForcePotential
-!=======================================================================================
+!=============================================================================
 !\
-! Evaluates the non-dimensional centripetal force potential at the
+! Evaluates the non-dimensional centrifugal force potential at the
 ! specified location (X0,Y0,Z0) for a rotating coordinate frame.
 !/
-real function  CentripetalForcePotential(X0,Y0,Z0)
+real function  CentrifugalForcePotential(X0,Y0,Z0)
   use ModMain
   use ModNumConst  
   use ModPhysics, ONLY : OMEGAbody
   implicit none
   real, intent(in) :: X0,Y0,Z0
   if(UseRotatingFrame)then
-     CentripetalForcePotential = - OMEGAbody*OMEGAbody*cHalf*(X0**2+Y0**2)
+     CentrifugalForcePotential = - OMEGAbody*OMEGAbody*cHalf*(X0**2+Y0**2)
   else
-     CentripetalForcePotential = cZero
+     CentrifugalForcePotential = cZero
   end if
-end function CentripetalForcePotential
+end function CentrifugalForcePotential
 
 !---------------------------------------------------------------------------
 !                     heat_source_averages
@@ -163,6 +171,7 @@ subroutine heat_source_averages
   end do !end k loop
 end subroutine heat_source_averages
 
+!==============================================================================
 !\
 ! Evaluates the non-dimensional heating source at the
 ! specified location (X0,Y0,Z0).
@@ -194,13 +203,13 @@ real function HeatSource(X0,Y0,Z0)
      HeatSource = Qsun*exp(-((R0-Rheat)/SIGMAheat)**2)
   end if
 
-!^CFG IF SECONDBODY BEGIN
+  !^CFG IF SECONDBODY BEGIN
   !\
   ! If there is a second body for which there is a heat source
   ! add its contribution in the if block below
   !/
   if (UseBody2) then  
   end if
-!^CFG IF SECONDBODY END
+  !^CFG IF SECONDBODY END
 end function HeatSource
 
