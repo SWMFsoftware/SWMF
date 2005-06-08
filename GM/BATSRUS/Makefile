@@ -28,7 +28,7 @@ help:
 	@echo ' '
 	@echo '    help      (makefile option list)'
 	@echo '    clean     (rm -f *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND Makefile.OPTIONS)'
+	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND)'
 	@echo '    dist      (create source distribution tar file)'
 	@#^CFG IF DOC BEGIN
 	@#	^CFG IF NOT REMOVEDOCTEX BEGIN
@@ -79,7 +79,7 @@ MAKEFILE_DEF:
 		cat src/Makefile.def                    >> Makefile.def; \
 	fi);
 
-install_cont: src/Makefile.OPTIONS src/ModSize.f90
+install_cont: src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
@@ -95,9 +95,6 @@ install_cont: src/Makefile.OPTIONS src/ModSize.f90
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make user_routines.f90 #^CFG IF USERFILES
 	cd src; make STATIC
-
-src/Makefile.OPTIONS:
-	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
 
 src/ModSize.f90:
 	cp -f src/ModSize_orig.f90 src/ModSize.f90
@@ -211,7 +208,7 @@ CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
 #
 
 clean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES src/Makefile.OPTIONS
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make clean
@@ -220,7 +217,7 @@ clean:
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean:
-	@touch src/Makefile.DEPEND src/Makefile.RULES src/Makefile.OPTIONS
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
