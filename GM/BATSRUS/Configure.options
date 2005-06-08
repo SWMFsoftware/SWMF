@@ -52,6 +52,9 @@ USERFILES               OFF                     #^CFG IF USERFILES
 # Extra physics
 #
 SECONDBODY		OFF			#^CFG IF SECONDBODY
+MULTISP                 OFF                     #^CFG IF MULTISP
+ALWAVES                 OFF                     #^CFG IF ALWAVES
+GLOBALHELIOSPHERE       OFF                     #^CFG IF GLOBALHELIOSPHERE
 
 #
 # Numerical schemes
@@ -84,12 +87,3 @@ CARTESIAN               ON                      #^CFG END CARTESIAN
 # Dynamic allocation of big arrays
 #
 DYNAMIC			OFF			#^CFG END DYNAMIC
-#						#^CFG IF NOT SIMPLE BEGIN
-# Features are removed and parameters are fixed 
-# to make things simple for the external users.
-#
-SIMPLE                  OFF			#^CFG END SIMPLE
-
-MULTISP                 OFF                     #^CFG IF MULTISP
-ALWAVES                 OFF                     #^CFG IF ALWAVES
-GLOBALHELIOSPHERE       OFF                     #^CFG IF GLOBALHELIOSPHERE
