@@ -13,7 +13,6 @@ check_src:
 install: check_src
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES
-	cp -f src/Makefile.OPTIONS.ORIG src/Makefile.OPTIONS
 	cp -f src/ModSize_orig.f90 src/ModSize.f90
 	cd src; make user_routines.f90
 
@@ -34,7 +33,7 @@ rundir: check_src
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
-	   touch src/Makefile.DEPEND src/Makefile.RULES src/Makefile.OPTIONS; \
+	   touch src/Makefile.DEPEND src/Makefile.RULES; \
 	   cd src; make clean; cd ..;\
 	   touch srcInterface/Makefile.DEPEND; cd srcInterface; make clean; \
 	fi)
