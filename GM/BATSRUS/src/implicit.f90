@@ -483,8 +483,9 @@ subroutine advance_impl
      end do
      pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
 
-     if(pRhoRelativeMin < 0.3 .or. info/=0)then
-        ! Redo step if pressure decreased to less than 30% anywhere
+     if(pRhoRelativeMin < RejectStepLevel .or. info/=0)then
+        ! Redo step if pressure decreased below RejectStepLevel
+        ! or the Krylov iteration failed.
         Dt = 0.0
         ! Do not use previous step in BDF2 scheme
         n_prev = -1
@@ -496,15 +497,15 @@ subroutine advance_impl
            E_BLK(1:nI,1:nJ,1:nK,iBLK)       = E_o_BLK(1:nI,1:nJ,1:nK,iBLK)
            time_BLK(1:nI,1:nJ,1:nK,iBLK)    = 0.0
         end do
-        ! Reduce next time step by a factor of 2
-        DtFixed = 0.5*DtFixed
-     elseif(pRhoRelativeMin < 0.6)then
-        ! Reduce next time step by 10% if pressure is reduced to 60% or less
-        DtFixed = 0.9*DtFixed
-     elseif(pRhoRelativeMin > 0.8 .and. Dt == DtFixed)then
-        ! Increase next time step by 5% if pressure remained above 80%
+        ! Reduce next time step
+        DtFixed = RejectStepFactor*DtFixed
+     elseif(pRhoRelativeMin < ReduceStepLevel)then
+        ! Reduce next time step if pressure is reduced below ReduceStepLevel
+        DtFixed = ReduceStepFactor*DtFixed
+     elseif(pRhoRelativeMin > IncreaseStepLevel .and. Dt == DtFixed)then
+        ! Increase next time step if pressure remained above IncreaseStepLevel
         ! and the last step was taken with DtFixed. Do not exceed DtFixedOrig
-        DtFixed = min(DtFixedOrig, DtFixed*1.05)
+        DtFixed = min(DtFixedOrig, DtFixed*IncreaseStepFactor)
      end if
 
      if(oktest_me) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&

@@ -1227,7 +1227,7 @@ r		TypeImplCrit (dt or r or test)
 ! DtFixed must be defined in the #FIXEDTIMESTEP command.
 </command>
 
-<command name="IMPLSTEP">
+<command name="IMPLSTEP" alias="IMPLICITSTEP">
 	<parameter name="ImplCoeff" type="real" min="0" max="1" default="1"/>
 	<parameter name="UseBdf2"   type="logical" default="T" />
 	<parameter name="UseSourceImpl" type="logical" default="F" />
@@ -1243,7 +1243,7 @@ r		TypeImplCrit (dt or r or test)
 ! source terms into account. Default is false.
 </command>
 
-<command name="IMPLSCHEME">
+<command name="IMPLSCHEME" alias="IMPLICITSCHEME">
 	<parameter name="nOrderImpl" type="integer" input="select">
 		<option name="1" default="T"	/>
 		<option name="2"		/>
@@ -1261,6 +1261,50 @@ Rusanov         TypeFluxImpl
 ! This command defines the scheme used in the implicit part ('left hand side').
 ! The default order is first order. The default scheme is the same as the
 ! scheme selected for the explicit part. 
+</command>
+
+<command name="IMPLCHECK" alias="IMPLICITCHECK">
+	<parameter name="RejectStepLevel"  type="real" 
+			min="0"  max="0.9" default="0.3" />
+	<parameter name="RejectStepFactor" type="real" 
+			min="0"  max="0.9" default="0.5" />
+	<parameter name="ReduceStepLevel"  type="real" 
+			min="0"  max="0.9" default="0.6" />
+	<parameter name="ReduceStepFactor" type="real" 
+			min="0"  max="1"   default="0.9" />
+	<parameter name="IncreaseStepLevel" type="real" 
+			min="0"  max="1"   default="0.8" />
+	<parameter name="IncreaseStepFactor" type="real" 
+			min="1"  max="2"   default="1.05"/>
+
+#IMPLCHECK
+0.3		RejectStepLevel
+0.5		RejectStepFactor
+0.6		ReduceStepLevel
+0.95		ReduceStepFactor
+0.8		IncreaseStepLevel
+1.05		IncreaseStepFactor
+
+The update checking of the implicit scheme can be tuned with this command.
+Update checking is done unless it is switched off (see UPDATECHECK command).
+After each (partially) implicit time step, the code computes pRhoRelMin,
+which is the minimum of the relative pressure and density drops over 
+the whole computational domain. The algorithm is the following:
+
+If pRhoRelMin is less than RejectStepLevel,
+the step is rejected, and the time step is reduced by RejectStepFactor;
+else if pRhoRelMin is less than ReduceStepLevel,
+the step is accepted, but the next time step is reduced by ReduceStepFactor;
+else if pRhoRelMin is greater than IncreaseStepFactor,
+the step is accepted and the next time step is increased by IncreaseStepFactor,
+but it is never increased above the value given in the FIXEDTIMESTEP command.
+
+Assigning ReduceStepFactor=1.0 means that the
+time step is not reduced unless the step is rejected.
+Assigning IncreaseStepFactor=1.0 means that the 
+time step is never increased, only reduced.
+
+Default values are shown.
 </command>
 
 <command name="NEWTON">

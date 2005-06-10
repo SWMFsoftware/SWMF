@@ -136,6 +136,12 @@ module ModImplicit
   ! Counters for reports
   integer:: nexpl=0,nnewton=0,niterimpl=0,nmatvec=0
 
+  ! Update check
+  real :: &
+       RejectStepLevel   = 0.3, RejectStepFactor   = 0.50, &
+       ReduceStepLevel   = 0.6, ReduceStepFactor   = 0.95, &
+       IncreaseStepLevel = 0.8, IncreaseStepFactor = 1.05
+
 contains
   !============================================================================
   subroutine init_mod_implicit
