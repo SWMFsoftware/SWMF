@@ -1082,6 +1082,7 @@ subroutine user_read_inputs
            call read_var('Phi_Shift'  ,Phi_Shift)
            call read_var('UnitB'      ,UnitB)
            call read_var('dt_UpdateB0',dt_UpdateB0)
+           DoUpdateB0 = dt_updateb0 > 0.0
         endif
      case("#AWHEAT")
         call read_var('Bnot        ',Bnot)
