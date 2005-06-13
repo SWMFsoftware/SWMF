@@ -2,7 +2,7 @@
 subroutine message_pass_dir(&
      idirmin,idirmax,width,sendcorners,prolongorder,nVar,sol_BLK,&
      sol2_BLK,sol3_BLK,sol4_BLK,sol5_BLK,sol6_BLK,sol7_BLK,sol8_BLK,sol9_BLK,&
-     Sol_VGB,restrictface)
+     Sol_VGB,restrictface,DoTwoCoarseLayers)
 
   ! Exchange messages for array sol_BLK, ..., sol9_BLK or for Sol_VGB
   ! for directions idir=idirmin..idirmax using a ghost cell layer of 
@@ -25,7 +25,9 @@ subroutine message_pass_dir(&
   !                'mindod2'  (fully 2nd order using unlimited if needed)
   !
   ! If restrictface=.true., average only the 4 fine cells next to the face
-
+  ! If DoTwoCoarseLayers=.true., prolong the 2nd coarse cell into the 
+  !                              2nd layer of fine cells for TVD res change.
+  !                              Only for Sol_VGB and prolongorder=1.
 
   ! Notation: _o original   (for equal blocks) 
   !           _g ghost      (for equal blocks)
@@ -37,7 +39,7 @@ subroutine message_pass_dir(&
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,prolong_type,nBlockMax,okdebug,unusedBLK, &
-       east_,west_,south_,north_,bot_,top_,optimize_message_pass
+       east_,west_,south_,north_,bot_,top_, optimize_message_pass, BlkTest
   use ModAMR, ONLY : unusedBlock_BP,child2subface
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK, BLKneighborCHILD
   use ModVarIndexes,ONLY:MaxVarState=>nVar
@@ -62,7 +64,7 @@ subroutine message_pass_dir(&
   real, dimension(nVar,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
        optional, intent(inout) :: Sol_VGB
 
-  logical, optional, intent(in) :: restrictface
+  logical, optional, intent(in) :: restrictface, DoTwoCoarseLayers
 
   ! Local variables
 
@@ -100,6 +102,11 @@ subroutine message_pass_dir(&
   real, dimension(:,:,:), allocatable :: qsol,avrg,avrg1,gradx,grady,gradz,&
        gradxl,gradxr,gradyl,gradyr,gradzl,gradzr,pr_buf1
 
+  ! Number of coarse layers to be prolonged: 
+  ! 1 for 1st order, 2 for TVD res change.
+  ! nCoarse1 = nCoarseLayer-1
+  integer :: nCoarseLayer, nCoarse1
+
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
@@ -112,11 +119,17 @@ subroutine message_pass_dir(&
      qrestrictface=.false.
   endif
 
+  nCoarseLayer=1
+  if(present(DoTwoCoarseLayers))then
+     if(DoTwoCoarseLayers) nCoarseLayer=2
+  end if
+  nCoarse1 = nCoarseLayer - 1
+
   if(oktest)write(*,*)&
        'message_pass_dir me,idirmin,max,width,sendcorners,prolorder,nvar,',&
-       'Sol_BLK,Sol_VGB,restrictface=',&
+       'Sol_BLK,Sol_VGB,restrictface,nCoarseLayer=',&
        iProc,idirmin,idirmax,width,sendcorners,prolongorder,nvar,&
-       present(Sol_BLK),present(Sol_VGB),qrestrictface
+       present(Sol_BLK),present(Sol_VGB),qrestrictface,nCoarseLayer
 
   if(present(Sol_VGB).eqv.present(Sol_BLK))&
        call stop_mpi('message_pass_dir must be called with '// &
@@ -137,6 +150,13 @@ subroutine message_pass_dir(&
   if(sendcorners.and.width==1)call stop_mpi(&
        'width must be 2 if sendcorners=T in message_pass_dir!')
 
+  if(nCoarseLayer==2) then
+     if(.not.present(Sol_VGB)) call stop_mpi('ERROR in message_pass_dir: '// &
+          'DoTwoCoarseLayer=2 requires Sol_VGB to be present')
+     if(prolongorder/=1) call stop_mpi('ERROR in message_pass_dir: '// &
+          'DoTwoCoarseLayer=2 requires prolongorder=1')
+  end if
+  
   ! These will be useful for index limits
   width1=width-1; width2=2*width-1
 
@@ -489,7 +509,7 @@ contains
        imin_g=nI+1; imax_g=nI+width;
        iminR =1;    imaxR=2*width;
        imin_r=1;    imax_r=width;
-       iminP =1;    imaxP=1;
+       iminP =1;    imaxP=nCoarseLayer;
        imin_p=1;    imax_p=2;
     case(3)
        otherface=4
@@ -497,7 +517,7 @@ contains
        jmin_g=nJ+1; jmax_g=nJ+width; 
        jminR =1;    jmaxR=2*width;
        jmin_r=1;    jmax_r=width; 
-       jminP =1;    jmaxP=1;
+       jminP =1;    jmaxP=nCoarseLayer;
        jmin_p=1;    jmax_p=2;
     case(5)
        otherface=6
@@ -505,7 +525,7 @@ contains
        kmin_g=nK+1; kmax_g=nK+width;
        kminR =1;    kmaxR =2*width; 
        kmin_r=1;    kmax_r=width;
-       kminP =1;    kmaxP=1;
+       kminP =1;    kmaxP=nCoarseLayer;
        kmin_p=1;    kmax_p=2;
     case(2)
        otherface=1
@@ -513,7 +533,7 @@ contains
        imin_g=-width1;     imax_g=0; 
        iminR=nI-width2;    imaxR =nI;
        imin_r=nI/2-width1; imax_r=nI/2;
-       iminP=nI;           imaxP =nI;
+       iminP =nI-nCoarse1; imaxP =nI;
        imin_p=nI*2-1;      imax_p=nI*2;
     case(4)
        otherface=3
@@ -521,7 +541,7 @@ contains
        jmin_g=-width1;     jmax_g=0; 
        jminR =nJ-width2;   jmaxR =nJ;
        jmin_r=nJ/2-width1; jmax_r=nJ/2;
-       jminP =nJ;          jmaxP =nJ;
+       jminP =nJ-nCoarse1; jmaxP =nJ;
        jmin_p=nJ*2-1;      jmax_p=nJ*2;
     case(6)
        otherface=5
@@ -529,7 +549,7 @@ contains
        kmin_g=-width1;     kmax_g=0; 
        kminR=nK-width2;    kmaxR=nK;
        kmin_r=nK/2-width1; kmax_r=nK/2;
-       kminP=nK;           kmaxP=nK;
+       kminP=nK-nCoarse1;  kmaxP=nK;
        kmin_p=nK*2-1;      kmax_p=nK*2;
     end select
 
@@ -1065,6 +1085,37 @@ contains
   end subroutine prolong1_state
 
   !===========================================================================
+
+  subroutine prolong2_state
+
+    ! Prolongation for 2nd order TVD resolution change.
+    ! Put 2 coarse layers of Sol_VGB into pr_buf
+
+    !-------------------------------------------------------------------------
+    ! First order prolongation
+    avrg_state=Sol_VGB(:,iminP:imaxP,jminP:jmaxP,kminP:kmaxP,iBLK)
+
+    select case(iFace)
+    case(east_, west_)
+       pr_buf(:,imin_p:imax_p,jmin_p  :jmax_p:2,kmin_p  :kmax_p:2) = avrg_state
+       pr_buf(:,imin_p:imax_p,jmin_p+1:jmax_p:2,kmin_p  :kmax_p:2) = avrg_state
+       pr_buf(:,imin_p:imax_p,jmin_p  :jmax_p:2,kmin_p+1:kmax_p:2) = avrg_state
+       pr_buf(:,imin_p:imax_p,jmin_p+1:jmax_p:2,kmin_p+1:kmax_p:2) = avrg_state
+    case(south_, north_)
+       pr_buf(:,imin_p  :imax_p:2,jmin_p:jmax_p,kmin_p  :kmax_p:2) = avrg_state
+       pr_buf(:,imin_p+1:imax_p:2,jmin_p:jmax_p,kmin_p  :kmax_p:2) = avrg_state
+       pr_buf(:,imin_p  :imax_p:2,jmin_p:jmax_p,kmin_p+1:kmax_p:2) = avrg_state
+       pr_buf(:,imin_p+1:imax_p:2,jmin_p:jmax_p,kmin_p+1:kmax_p:2) = avrg_state
+    case(bot_, top_)
+       pr_buf(:,imin_p  :imax_p:2,jmin_p  :jmax_p:2,kmin_p:kmax_p) = avrg_state
+       pr_buf(:,imin_p+1:imax_p:2,jmin_p  :jmax_p:2,kmin_p:kmax_p) = avrg_state
+       pr_buf(:,imin_p  :imax_p:2,jmin_p+1:jmax_p:2,kmin_p:kmax_p) = avrg_state
+       pr_buf(:,imin_p+1:imax_p:2,jmin_p+1:jmax_p:2,kmin_p:kmax_p) = avrg_state
+    end select
+
+  end subroutine prolong2_state
+
+  !===========================================================================
   subroutine send_equal
 
     ! Same level
@@ -1279,8 +1330,13 @@ contains
           call prolong2(iVar)
        end do
     else if(present(Sol_VGB))then
-       ! Optimized 1st order prolongation
-       call prolong1_state
+       if(nCoarseLayer == 1)then
+          ! Optimized 1st order prolongation
+          call prolong1_state
+       else
+          ! Prolong 2 coarse layers for 2nd order TVD resolution change
+          call prolong2_state
+       end if
     else
        ! Variable by variable 1st order prolongation
        call prolong1(1,sol_BLK)

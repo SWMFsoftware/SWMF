@@ -15,7 +15,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
   use ModAMR
-  use ModParallel, ONLY : UseCorners,proc_dims
+  use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
   use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
@@ -153,6 +153,11 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_raytrace                    !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit)   call init_mod_implicit  !^CFG IF IMPLICIT
+
+     ! These logicals are always related like this !!!
+     DoOneCoarserLayer = .not.UseTVDAtResChange
+     DoLimitMomentum = &                                  !^CFG IF BORISCORR
+          boris_correction .and. (.not.UseTVDAtResChange) !^CFG IF BORISCORR
 
      if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
         jMinFaceX=0; jMaxFaceX=nJ+1
@@ -1049,23 +1054,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if                                           !^CFG IF NOT CARTESIAN
      case('#TVDRESCHANGE')
-        if(optimize_message_pass/='all'.and.&
-             optimize_message_pass/='allopt')then
-           if(iProc==0)write(*,*)&
-                'TVD Limiter at the resolution change '//&
-                'does not work with the message pass mode ='//&
-                optimize_message_pass//', do nothing'
-           CYCLE
-        end if
-        if(iCFExchangeType/=2)then
-           if(iProc==0)write(*,*)&
-                'TVD Limiter at the resolution change '//&
-                'requires to set iCFExchangeType=2  '//&
-                'in the message_pass_cells, do nothing'
-           CYCLE
-        end if
         call read_var('UseTVDAtResChange',UseTVDAtResChange)
-        DoOneCoarserLayer=.not.UseTVDAtResChange
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
         call read_var('UseBorisCorrection',boris_correction)   
@@ -1902,7 +1891,6 @@ contains
     call set_xyzminmax_cart
 
     optimize_message_pass = 'allopt'
-    UseCorners            = .false.
 
     UseUpstreamInputFile = .false.
 
@@ -2379,13 +2367,12 @@ contains
        UseConstrainB=.false.
        UseDivbSource=.true.
     end if
-    if(UseConstrainB.and.UseTVDAtReschange)then
+    if(UseConstrainB .and. UseTVDAtReschange)then
        if(iProc==0)write(*,'(a)')NameSub//&
-            'Do not use TVD at resolution changes with ConstrainB'
+            ' WARNING: do not use TVD at resolution changes with ConstrainB'
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
-       if(iProc==0)write(*,'(a)')NameSub//&
-            'Set UseTVDAtReschange=F'
-       UseTVDAtReschange=.false.
+       if(iProc==0)write(*,*)NameSub//' setting UseTVDAtReschange=F'
+       UseTVDAtReschange = .false.
     end if
     if (UseConstrainB .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
@@ -2411,13 +2398,21 @@ contains
     endif
     !^CFG END DIVBDIFFUSE
 
-    UseCorners= limiter_type=='LSG' .or. limiter_type=='lsg'
-
-    if(prolong_order/=1&
-         .and.(index(optimize_message_pass,'old')>0.or.&
-         index(optimize_message_pass,'all')>0))&
+    if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
          'The prolongation order=2 requires message_pass_dir')
+
+    if(UseTVDAtResChange .and. &
+         optimize_message_pass(1:3)=='all' .and. iCFExchangeType/=2)then
+       if(iProc==0)then
+          write(*,'(a)') NameSub// &
+               ' WARNING: TVD limiter at the resolution change' //&
+               ' requires iCFExchangeType=2 in message_pass_cells'
+          if(UseStrict)call stop_mpi('Correct PARAM.in or message_pass_cells')
+          write(*,*)NameSub//' setting UseTVDAtResChange = F'
+       end if
+       UseTVDAtResChange = .false.
+    end if
 
     ! Check test processor
     if(procTEST>nProc)then
@@ -2472,7 +2467,6 @@ contains
        UsePointImplicit = .false.
     end if                                              !^CFG END POINTIMPLICIT
 
-    DoLimitMomentum=boris_correction.and.(.not.UseTVDAtResChange)
     ! Finish checks for boris                       !^CFG END BORISCORR
 
     ! Check parameters for implicit                 !^CFG IF IMPLICIT BEGIN

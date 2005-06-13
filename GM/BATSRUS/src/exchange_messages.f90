@@ -10,13 +10,14 @@ subroutine exchange_messages
   use ModAdvance, ONLY : &
        State_VGB
   use ModInterface
-  use ModParallel, ONLY : UseCorners,UsePlotMessageOptions
+  use ModParallel, ONLY : UsePlotMessageOptions
   use ModGeometry, ONLY : far_field_BCs_BLK            !^CFG IF CELLOUTERBC
   use ModMpi
+  use ModMPCells, ONLY : DoOneCoarserLayer
   implicit none
 
   logical :: oktest, oktest_me, oktime, oktime_me
-  logical :: DoOneLayer
+  logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
 
   !---------------------------------------------------------------------------
 
@@ -26,16 +27,21 @@ subroutine exchange_messages
 !!$  !^CFG END DEBUGGING
 
   ! For first order, message pass cells can pass only one layer of ghost cells.
-  DoOneLayer=.false.
-  if(nOrder==1)DoOneLayer=.true.
+  DoOneLayer = nOrder==1
   if(UseDivbDiffusion)DoOneLayer=.false.     !^CFG IF DIVBDIFFUSE
+
+  DoRestrictFace = prolong_order==1
+  if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
+
+  DoTwoCoarseLayers = &
+       nOrder==2 .and. prolong_order==1 .and. .not. DoOneCoarserLayer
 
   call set_oktest('exchange_messages',oktest,oktest_me)
   call set_oktest('time_exchange',oktime,oktime_me)
 
   call timing_start('exch_msgs')
   ! Ensure that energy and pressure are consistent and positive in real cells
-!if(prolong_order==2)then     !^CFG IF NOT PROJECTION
+  !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
   do globalBLK = 1, nBlockMax
      if (unusedBLK(globalBLK)) CYCLE
      if (far_field_BCs_BLK(globalBLK).and.prolong_order==2) &       !^CFG IF CELLOUTERBC
@@ -43,7 +49,7 @@ subroutine exchange_messages
      if(UseConstrainB)call correctP   !^CFG IF CONSTRAINB
      if(UseProjection)call correctP   !^CFG IF PROJECTION
   end do
-!end if                       !^CFG IF NOT PROJECTION
+  !end if                       !^CFG IF NOT PROJECTION
   if(oktest)write(*,*)'Checked negative P, me=',iProc
 
   if (UsePlotMessageOptions) then
@@ -54,13 +60,10 @@ subroutine exchange_messages
      ! Don't send just one layer
      call message_pass_cells_8state(.false.,.false.,.false.)
 
-  elseif (UseCorners .or. &
-       optimize_message_pass=='all') then
+  elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
-     call message_pass_cells_8state(DoOneLayer,.false.,.true.&
-          .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-          )
+     call message_pass_cells_8state(DoOneLayer,.false.,DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
           iProc,optimize_message_pass
@@ -69,19 +72,15 @@ subroutine exchange_messages
      case('max','dir','face','min')
         ! Pass corners
         call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
-             Sol_VGB=State_VGB,restrictface=prolong_order==1&
-             .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-             )
+             Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
+             restrictface=DoRestrictFace)
      case('opt')
         ! Do not pass corners
         call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
-             Sol_VGB=State_VGB,restrictface=prolong_order==1&
-             .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-             )
+             Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
+             restrictface=DoRestrictFace)
      case('allopt')
-        call message_pass_cells_8state(DoOneLayer,.true.,.true.&
-             .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-             )
+        call message_pass_cells_8state(DoOneLayer,.true.,DoRestrictFace)
       case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
      end select
@@ -122,14 +121,16 @@ subroutine time_message_passing
 
   integer :: iError
   real*8 :: time_this
-  logical :: DoOneLayer
+  logical :: DoOneLayer, DoRestrictFace
 
   !---------------------------------------------------------------------------
 
   ! For first order, message pass cells can pass only one layer of ghost cells.
-  DoOneLayer=.false.
-  if(nOrder==1)DoOneLayer=.true.
+  DoOneLayer = nOrder==1
   if(UseDivbDiffusion)DoOneLayer=.false.     !^CFG IF DIVBDIFFUSE
+
+  DoRestrictFace = prolong_order==1
+  if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
 
   if(iProc==0) &
        write(*,*)' Timing message passing options ...', &
@@ -137,30 +138,26 @@ subroutine time_message_passing
 
 !!!
   call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
-       Sol_VGB=State_VGB,restrictface=prolong_order==1&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+       Sol_VGB=State_VGB, restrictface=DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
   call message_pass_dir(1,3,2,.true.,prolong_order,nVar,&
-       Sol_VGB=State_VGB,restrictface=prolong_order==1&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+       Sol_VGB=State_VGB, restrictface=DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &
        write(*,'(a,f8.5,a)')' dir-1,3,2,T  took',MPI_WTIME()-time_this,' sec'
 
 !!!
   call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
-       Sol_VGB=State_VGB,restrictface=prolong_order==1&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+       Sol_VGB=State_VGB,restrictface=DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
   call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
-       Sol_VGB=State_VGB,restrictface=prolong_order==1&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+       Sol_VGB=State_VGB,restrictface=DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &
        write(*,'(a,f8.5,a)')' dir-1,3,nORDER,F  took',MPI_WTIME()-time_this,' sec'
@@ -169,27 +166,23 @@ subroutine time_message_passing
   call testmessage_pass_cells
 
 !!!
-  call message_pass_cells_8state(DoOneLayer,.false.,.true.&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+  call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   time_this=MPI_WTIME()
-  call message_pass_cells_8state(DoOneLayer,.false.,.true.&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+  call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &
        write(*,'(a,f8.5,a)')' 8state-DoOneLayer,F,T  took',MPI_WTIME()-time_this,' sec'
 
 !!!
-  call message_pass_cells_8state(DoOneLayer,.true.,.true.&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+  call message_pass_cells_8state(DoOneLayer, .true., DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------  
   time_this=MPI_WTIME()  
-  call message_pass_cells_8state(DoOneLayer,.true.,.true.&
-       .and.(.not.UseConstrainB)& !^CFG IF CONSTRAINB
-       )
+  call message_pass_cells_8state(DoOneLayer, .true., DoRestrictFace)
+
   call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
   if(iProc==0) &
        write(*,'(a,f8.5,a)')' 8state-DoOneLayer,T,T  took',MPI_WTIME()-time_this,' sec'
