@@ -2831,8 +2831,6 @@ T		UseTvdAtResChange
 
 ! For UseTvdAtResChange=T a second order TVD limited scheme is used 
 ! at the resolution changes. 
-! This scheme is compatible with the TypeMessagePass='all' and 'allopt' 
-! options in the MESSAGEPASS command.
 !
 ! Default value is false, which results in first order 
 ! prolongation and restriction operators at the resolution changes.
