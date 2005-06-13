@@ -65,9 +65,6 @@ module ModParallel
   integer :: curr_nb_buff(0:nBLK)
   integer :: nb_buff_req(NUM_NB_BUFFS,0:nBLK)
 
-  ! Use corners/edges in gradients and message passing
-  logical :: UseCorners
-
   ! Use special options in exchange_messages if creating plot files
   logical :: UsePlotMessageOptions = .false.
 
