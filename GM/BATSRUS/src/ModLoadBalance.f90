@@ -2,7 +2,7 @@
 subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   use ModProcMH
   use ModMain
-  use ModImplicit, ONLY : implicitBLK          !^CFG IF IMPLICIT
+  use ModImplicit, ONLY : implicitBLK, UsePartImplicit !^CFG IF IMPLICIT
   use ModAMR, ONLY : availableBLKs
   use ModParallel
   use ModIO
@@ -16,7 +16,15 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   logical, intent(in) :: DoMoveCoord, DoMoveData
   integer, intent(out):: nBlockMoved
 
+  ! Maximum number of attempts to accomplish the load balancing
+  ! The algorithm needs multiple tries if the actual number of blocks
+  ! is very close to the maximum number of blocks and many blocks are moved
   integer, parameter :: MaxTry = 100
+  
+  ! Set this logical to .false. to return to the previous version,
+  ! which did not move the B0, body force and heating variables.
+  ! There is another declaration in subroutine move_block! Change together!!!
+  logical, parameter :: DoMoveExtraData = .true.
 
   integer :: iError
   integer :: iBlockALL, iBlock
@@ -39,9 +47,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   ! starting value of number of blocks moved between processors
   nBlockMoved = 0
 
-!!! Find the last used block on the processor
-  do iBlock=nBlockMax,1,-1
-     nBlock=iBlock
+  ! Find the last used block on the processor
+  do iBlock = nBlockMax,1,-1
+     nBlock = iBlock
      if (.not.unusedBLK(iBlock)) EXIT
   end do
 
@@ -146,10 +154,18 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   if(DoMoveData .and. nBlockMoved > 0)then
      !call timing_start('load_fix_var')
      do iBlock = 1,nBlock
-        if(DoFixVar_B(iBlock)) then
-           globalBLK = iBlock
-           if(useConstrainB) call Bface2Bcenter       !^CFG IF CONSTRAINB
-           call correctE
+        if(.not.DoFixVar_B(iBlock)) CYCLE
+        globalBLK = iBlock
+        if(useConstrainB) call Bface2Bcenter          !^CFG IF CONSTRAINB
+        call correctE
+
+        if(DoMoveExtraData)then
+           call set_b0_matrix(iBlock)                 !^CFG IF CARTESIAN
+           !call calc_b0source_covar(iBlock)          !^CFG IF NOT CARTESIAN
+           
+           if(UsePartImplicit)&                            !^CFG IF IMPLICIT
+                call init_conservative_facefluxes(iBlock)  !^CFG IF IMPLICIT
+        else
            call calc_other_soln_vars(iBlock)
         end if
      end do
@@ -184,7 +200,12 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB
+  use ModAdvance, ONLY : State_VGB, &
+       fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, qheat_BLK, &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
+       B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, &
+       B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, &
+       B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModParallel
   use ModImplicit                                         !^CFG IF IMPLICIT
@@ -196,14 +217,28 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   logical, intent(in) :: DoMoveCoord, DoMoveData
   integer, intent(in) :: iBlockALL, iBlockFrom, iProcFrom, iBlockTo,iProcTo
 
+  ! Set this logical to .false. to return to the previous version,
+  ! which did not move the B0, body force and heating variables.
+  ! There is another declaration in subroutine load_balance! Change together!!!
+  logical, parameter :: DoMoveExtraData = .true.
+
   integer, parameter :: nScalarBLK=13, &
        nCellGhostBLK=(nI+4)*(nJ+4)*(nK+4)
+  integer, parameter :: nExtraData = &
+       3*nCellGhostBLK +                 & ! B0*Cell
+       3*((nI+3)*(nJ+2)*(nK+2)           & ! B0*Face_x
+       +  (nI+2)*(nJ+3)*(nK+2)           & ! B0*Face_y
+       +  (nI+2)*(nJ+2)*(nK+3)) +        & ! B0*Face_x
+       4*nIJK                              ! fbody_* and qheat
+       
   integer, parameter :: nDataBLK= &
-       nwIJK + &                   !^CFG IF IMPLICIT
-       3*2*nIJK + &                !^CFG IF RCM
-       nScalarBLK + nVar*nCellGhostBLK 
+       nwIJK +                           & !^CFG IF IMPLICIT
+       3*2*nIJK +                        & !^CFG IF RCM
+       nScalarBLK +                      & ! scalars
+       nVar*nCellGhostBLK +              & ! State_VGB
+       nExtraData                          ! B0, fbody, qheat
 
-  real, dimension(nDataBLK) :: blockData_L
+  real, dimension(nDataBLK) :: BlockData_I
   integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize
   integer :: iError
   integer :: status(MPI_STATUS_SIZE,1)
@@ -252,59 +287,128 @@ contains
   !============================================================================
   subroutine send_block_data
     globalBLK = iBlockFrom
-    blockData_L(1)   = dx_BLK(iBlockFrom)
-    blockData_L(2)   = dy_BLK(iBlockFrom)
-    blockData_L(3)   = dz_BLK(iBlockFrom)
-    blockData_L(4:6) = xyzStart_BLK(:,iBlockFrom)
-    blockData_L(7)   = dt_BLK(iBlockFrom)
-    blockData_L(8:13)= real(neiLev(:,iBlockFrom))
+    BlockData_I(1)   = dx_BLK(iBlockFrom)
+    BlockData_I(2)   = dy_BLK(iBlockFrom)
+    BlockData_I(3)   = dz_BLK(iBlockFrom)
+    BlockData_I(4:6) = xyzStart_BLK(:,iBlockFrom)
+    BlockData_I(7)   = dt_BLK(iBlockFrom)
+    BlockData_I(8:13)= real(neiLev(:,iBlockFrom))
 
     iData = nScalarBLK
 
     if(DoMoveData)then
        if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
           do iVar=1,Bx_-1
-             do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-                blockData_L(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
+             do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+                iData = iData+1
+                BlockData_I(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
              end do; end do; end do
           end do
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-             blockData_L(iData) = Bxface_BLK(i,j,k,iBlockFrom)
+          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+             iData = iData+1
+             BlockData_I(iData) = Bxface_BLK(i,j,k,iBlockFrom)
           end do; end do; end do
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-             blockData_L(iData) = Byface_BLK(i,j,k,iBlockFrom)
+          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+             iData = iData+1
+             BlockData_I(iData) = Byface_BLK(i,j,k,iBlockFrom)
           end do; end do; end do
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-             blockData_L(iData) = Bzface_BLK(i,j,k,iBlockFrom)
+          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+             iData = iData+1
+             BlockData_I(iData) = Bzface_BLK(i,j,k,iBlockFrom)
           end do; end do; end do
           do iVar=Bz_+1,nVar
-             do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-                blockData_L(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
+             do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+                iData = iData+1
+                BlockData_I(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
              end do; end do; end do
           end do
        else                                         !^CFG END CONSTRAINB
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; do iVar=1,nVar;iData = iData+1
-             blockData_L(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
+          do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn;do iVar=1,nVar
+             iData = iData+1
+             BlockData_I(iData) = State_VGB(iVar,i,j,k,iBlockFrom)
           end do; end do; end do; end do
        end if                                       !^CFG IF CONSTRAINB
-       
+
+       if(DoMoveExtraData)then
+          ! B0*Cell
+          do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
+             iData = iData+1
+             BlockData_I(iData) = B0xCell_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0yCell_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0zCell_BLK(i,j,k,iBlockFrom)
+          end do; end do; end do
+
+          ! B0*Face_x
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
+             iData = iData+1
+             BlockData_I(iData) = B0xFace_x_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0yFace_x_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0zFace_x_BLK(i,j,k,iBlockFrom)
+          end do; end do; end do
+
+          ! B0*Face_y
+          do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
+             iData = iData+1
+             BlockData_I(iData) = B0xFace_y_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0yFace_y_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0zFace_y_BLK(i,j,k,iBlockFrom)
+          end do; end do; end do
+
+          ! B0*Face_z
+          do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
+             iData = iData+1
+             BlockData_I(iData) = B0xFace_z_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0yFace_z_BLK(i,j,k,iBlockFrom)
+             iData = iData+1
+             BlockData_I(iData) = B0zFace_z_BLK(i,j,k,iBlockFrom)
+          end do; end do; end do
+
+          ! fbody*
+          if(UseGravity.or.UseRotatingFrame)then
+             do k=1,nK; do j=1,nJ; do i=1,nI
+                iData = iData+1
+                BlockData_I(iData) = fBody_x_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = fBody_y_BLK(i,j,k,iBlockFrom)
+                iData = iData+1
+                BlockData_I(iData) = fBody_z_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
+          end if
+
+          ! heating
+          if(UseUserHeating)then
+             do k=1,nK; do j=1,nJ; do i=1,nI
+                iData = iData+1
+                BlockData_I(iData) = qHeat_BLK(i,j,k,iBlockFrom)
+             end do; end do; end do
+          end if
+       end if ! DoMoveExtraData
+
        if(UseBDF2 .and. n_prev > 0)then             !^CFG IF IMPLICIT BEGIN
           do iw=1,nw; do k=1,nK; do j=1,nJ; do i=1,nI; iData = iData+1
-             blockData_L(iData) = w_prev(i,j,k,iw,iBlockFrom)
+             BlockData_I(iData) = w_prev(i,j,k,iw,iBlockFrom)
           end do; end do; end do; end do
        end if                                       !^CFG END IMPLICIT
 
        if(UseIM)then                                !^CFG IF RCM BEGIN
-          do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3; iData = iData+1
-             blockData_L(iData) = ray(i1,i2,i,j,k,iBlockFrom)
+          do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
+             iData = iData+1
+             BlockData_I(iData) = ray(i1,i2,i,j,k,iBlockFrom)
           end do; end do; end do; end do; end do
        end if                                       !^CFG END RCM
     end if
 
-    if(DoTest)write(*,*)'sending blockData_L: iData=',iData,' from',&
+    if(DoTest)write(*,*)'sending BlockData_I: iData=',iData,' from',&
          iProc,' to',iProcTo
     itag=1
-    call MPI_SEND(blockData_L, iData, MPI_REAL, iProcTo, &
+    call MPI_SEND(BlockData_I, iData, MPI_REAL, iProcTo, &
          itag, iComm, iError)
 
     if(DoTest)write(*,*)'send done, me=',iProc
@@ -316,11 +420,14 @@ contains
 
     globalBLK = iBlockTo
 
-    if(DoTest)write(*,*)'recv blockData_L: iData=',nDataBLK,' from',&
+    if(DoTest)write(*,*)'recv BlockData_I: iData=',nDataBLK,' from',&
          iProcFrom,' to',iProc
 
     if(DoMoveData)then
+       ! This is only an upper estimate of the number of reals received
        iSize = nDataBLK
+       if(.not.DoMoveExtraData) &
+            iSize = iSize - nExtraData
        if(.not.(UseBDF2 .and. n_prev > 0)) &    !^CFG IF IMPLICIT
             iSize = iSize - nWIJK               !^CFG IF IMPLICIT
        if(.not.(UseIM)) &                       !^CFG IF RCM
@@ -329,17 +436,17 @@ contains
        iSize= nScalarBLK
     end if
     itag=1
-    call MPI_RECV(blockData_L, iSize, MPI_REAL, iProcFrom, &
+    call MPI_RECV(BlockData_I, iSize, MPI_REAL, iProcFrom, &
          itag, iComm, status, iError)
 
     if(DoTest)write(*,*)'recv done, me=',iProc
 
-    dx_BLK(iBlockTo)           = blockData_L(1)
-    dy_BLK(iBlockTo)           = blockData_L(2)
-    dz_BLK(iBlockTo)           = blockData_L(3)
-    xyzStart_BLK(1:3,iBlockTo) = blockData_L(4:6)
-    dt_BLK(iBlockTo)           = blockData_L(7)
-    neiLev(:,iBlockTo)         = nint(blockData_L(8:13))
+    dx_BLK(iBlockTo)           = BlockData_I(1)
+    dy_BLK(iBlockTo)           = BlockData_I(2)
+    dz_BLK(iBlockTo)           = BlockData_I(3)
+    xyzStart_BLK(1:3,iBlockTo) = BlockData_I(4:6)
+    dt_BLK(iBlockTo)           = BlockData_I(7)
+    neiLev(:,iBlockTo)         = nint(BlockData_I(8:13))
     ! Put neighbor info into other arrays 
     ! (used for B0 face restriction)
     neiLeast(iBlockTo)         = neiLev(east_,iBlockTo)
@@ -358,41 +465,115 @@ contains
     iData = nScalarBLK
     if (UseConstrainB) then                      !^CFG IF CONSTRAINB BEGIN
        do iVar=1,Bx_-1
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-             State_VGB(iVar,i,j,k,iBlockTo) = blockData_L(iData)
+          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+             iData = iData+1
+             State_VGB(iVar,i,j,k,iBlockTo) = BlockData_I(iData)
           end do; end do; end do
        end do
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-          Bxface_BLK(i,j,k,iBlockTo) = blockData_L(iData) 
+       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+          iData = iData+1
+          Bxface_BLK(i,j,k,iBlockTo) = BlockData_I(iData) 
        end do; end do; end do
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-          Byface_BLK(i,j,k,iBlockTo) = blockData_L(iData)
+       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+          iData = iData+1
+          Byface_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-          Bzface_BLK(i,j,k,iBlockTo) = blockData_L(iData)
+       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+          iData = iData+1
+          Bzface_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do
        do iVar=Bz_+1,nVar
-          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; iData = iData+1
-             State_VGB(iVar,i,j,k,iBlockTo) = blockData_L(iData)
+          do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
+             iData = iData+1
+             State_VGB(iVar,i,j,k,iBlockTo) = BlockData_I(iData)
           end do; end do; end do
        end do
     else                                         !^CFG END CONSTRAINB
-       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; do iVar=1,nVar;iData = iData+1
-          State_VGB(iVar,i,j,k,iBlockTo) = blockData_L(iData)
+       do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; do iVar=1,nVar
+          iData = iData+1
+          State_VGB(iVar,i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do; end do
     end if                                      !^CFG IF CONSTRAINB
 
+    if(DoMoveExtraData)then
+       ! B0*Cell
+       do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn;do i=1-gcn,nI+gcn
+          iData = iData+1
+          B0xCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0yCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0zCell_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+       end do; end do; end do
 
+       ! B0*Face_x
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
+          iData = iData+1
+          B0xFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0yFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0zFace_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+       end do; end do; end do
+       
+       ! B0*Face_y
+       do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
+          iData = iData+1
+          B0xFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0yFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0zFace_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+       end do; end do; end do
+
+       ! B0*Face_z
+       do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
+          iData = iData+1
+          B0xFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0yFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          iData = iData+1
+          B0zFace_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+       end do; end do; end do
+
+       ! fbody*
+       if(UseGravity.or.UseRotatingFrame)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             iData = iData+1
+             fBody_x_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             fBody_y_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+             iData = iData+1
+             fBody_z_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
+       else
+          fbody_x_BLK(:,:,:,iBlockTo) = 0.0
+          fbody_y_BLK(:,:,:,iBlockTo) = 0.0
+          fbody_z_BLK(:,:,:,iBlockTo) = 0.0
+       end if
+
+       ! heating
+       if(UseUserHeating)then
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             iData = iData+1
+             qHeat_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
+          end do; end do; end do
+       else
+          qheat_BLK(:,:,:,iBlockTo) = 0.0
+       end if
+    end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN
-       do iw=1,nw; do k=1,nK; do j=1,nJ; do i=1,nI; iData = iData+1
-          w_prev(i,j,k,iw,iBlockTo) = blockData_L(iData)
+       do iw=1,nw; do k=1,nK; do j=1,nJ; do i=1,nI
+          iData = iData+1
+          w_prev(i,j,k,iw,iBlockTo) = BlockData_I(iData)
        end do; end do; end do; end do
     end if                                      !^CFG END IMPLICIT
 
     if(UseIM)then                               !^CFG IF RCM BEGIN
-       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3; iData = iData+1
-          ray(i1,i2,i,j,k,iBlockTo) = blockData_L(iData)
+       do k=1,nK; do j=1,nJ; do i=1,nI; do i2=1,2; do i1=1,3
+          iData = iData+1
+          ray(i1,i2,i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do; end do; end do
     end if                                      !^CFG END RCM
 
