@@ -71,6 +71,7 @@ contains
     use CON_coupler, ONLY: &
          Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
     use CON_physics
+    use CON_geopack, ONLY: set_advanced_hgr
 
     implicit none
 
@@ -115,6 +116,7 @@ contains
     ! Temporary variables
     integer :: nByteRealRead
     real    :: FracSecond ! Default precision is sufficient for reading
+    real    :: AdvanceHgrDeg! To rotate HGR by constant positive angle
 
     integer            :: TimingDepth=-1
     character (len=10) :: TimingStyle='cumm'
@@ -433,6 +435,10 @@ contains
 
                 call read_planet_var(NameCommand)
 
+             case('#ADVANCEHGR')
+                call read_var('AdvanceHgrDeg',AdvanceHgrDeg)
+                call set_advanced_hgr(AdvanceHgrDeg)
+
              case default
                 if(is_proc0()) then
                    write(*,*) NameSub,' WARNING: Invalid #COMMAND ',&
@@ -583,7 +589,7 @@ contains
   !IROUTINE: save_restart - save restart information for SWMF
   !INTERFACE:
   subroutine save_restart
-
+    use CON_geopack,ONLY:is_advanced_hgr,get_advanced_hgr_longitude
     !DESCRIPTION:
     ! Save restart information for all components.
     ! Then save restart information for CON, such as code version,
@@ -595,7 +601,7 @@ contains
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::save_restart'
-    
+    real    :: AdvanceHgrDeg! To rotate HGR by constant positive angle
     integer :: lComp, iComp
     !------------------------------------------------------------------------
 
@@ -639,7 +645,12 @@ contains
     write(UNITTMP_,'(a)')'#PRECISION'
     write(UNITTMP_,'(i1,a39)')nByteReal,                 'nByteReal  '
     write(UNITTMP_,*)
-
+    if(is_advanced_hgr())then
+       write(UNITTMP_,'(a)')'#ADVANCEHGR'
+       call get_advanced_hgr_longitude(cZero,AdvanceHgrDeg)
+       write(UNITTMP_,'(f13.8,a27)')-AdvanceHgrDeg,    'AdvanceHgrDeg'
+    end if
+    write(UNITTMP_,*)
     close(UNITTMP_)
 
   end subroutine save_restart
