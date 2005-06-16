@@ -243,9 +243,10 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
+  use ModMain, ONLY: DoTransformToHgi
   use ModMain, ONLY: UseProjection                 !^CFG IF PROJECTION
   use ModMain, ONLY: UseConstrainB                 !^CFG IF CONSTRAINB
-  use ModCT, ONLY : DoInitConstrainB               !^CFG IF CONSTRAINB
+  use ModCT,   ONLY: DoInitConstrainB              !^CFG IF CONSTRAINB
 
   implicit none
 
@@ -258,6 +259,12 @@ subroutine BATS_init_session
   ! Set number of explicit and implicit blocks !^CFG IF  IMPLICIT BEGIN
   ! Partially implicit/local selection will be done in each time step
   call select_stepping(.false.)                !^CFG END IMPLICIT 
+
+  ! Transform velocities from a rotating system to the HGI system if required
+  if(DoTransformToHgi)then
+     call transform_to_hgi
+     DoTransformToHgi = .false.
+  end if
 
   ! Ensure zero divergence for the CT scheme   !^CFG IF CONSTRAINB
   if(UseConstrainB .and. DoInitConstrainB)&    !^CFG IF CONSTRAINB
