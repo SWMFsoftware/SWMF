@@ -71,7 +71,6 @@ contains
     use CON_coupler, ONLY: &
          Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
     use CON_physics
-    use CON_geopack, ONLY: set_advanced_hgr
 
     implicit none
 
@@ -116,7 +115,6 @@ contains
     ! Temporary variables
     integer :: nByteRealRead
     real    :: FracSecond ! Default precision is sufficient for reading
-    real    :: AdvanceHgrDeg! To rotate HGR by constant positive angle
 
     integer            :: TimingDepth=-1
     character (len=10) :: TimingStyle='cumm'
@@ -435,9 +433,13 @@ contains
 
                 call read_planet_var(NameCommand)
 
-             case('#ADVANCEHGR')
-                call read_var('AdvanceHgrDeg',AdvanceHgrDeg)
-                call set_advanced_hgr(AdvanceHgrDeg)
+             case("#ROTATEHGR")
+                call read_var('dLongitudeHgr', dLongitudeHgrDeg)
+                dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
+
+             case("#ROTATEHGI")
+                call read_var('dLongitudeHgi', dLongitudeHgiDeg)
+                dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
              case default
                 if(is_proc0()) then
@@ -589,7 +591,7 @@ contains
   !IROUTINE: save_restart - save restart information for SWMF
   !INTERFACE:
   subroutine save_restart
-    use CON_geopack,ONLY:is_advanced_hgr,get_advanced_hgr_longitude
+
     !DESCRIPTION:
     ! Save restart information for all components.
     ! Then save restart information for CON, such as code version,
@@ -601,7 +603,7 @@ contains
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::save_restart'
-    real    :: AdvanceHgrDeg! To rotate HGR by constant positive angle
+    
     integer :: lComp, iComp
     !------------------------------------------------------------------------
 
@@ -645,12 +647,23 @@ contains
     write(UNITTMP_,'(a)')'#PRECISION'
     write(UNITTMP_,'(i1,a39)')nByteReal,                 'nByteReal  '
     write(UNITTMP_,*)
-    if(is_advanced_hgr())then
-       write(UNITTMP_,'(a)')'#ADVANCEHGR'
-       call get_advanced_hgr_longitude(cZero,AdvanceHgrDeg)
-       write(UNITTMP_,'(f13.8,a27)')-AdvanceHgrDeg,    'AdvanceHgrDeg'
-    end if
-    write(UNITTMP_,*)
+    if(dLongitudeHgr /= 0.0)then
+       write(UNITTMP_,'(a)')'#ROTATEHGR'
+       write(UNITTMP_,'(es15.8,a27)')dLongitudeHgrDeg,   'dLongitudeHgr'
+       if(dLongitudeHgrDeg < 0.0) &
+            write(UNITTMP_,'(es15.8,a27)') &
+            dLongitudeHgr*cRadToDeg,                     'actual offset'
+       write(UNITTMP_,*)
+    endif
+    if(dLongitudeHgi /= 0.0)then
+       write(UNITTMP_,'(a)')'#ROTATEHGI'
+       write(UNITTMP_,'(es15.8,a27)')dLongitudeHgiDeg,   'dLongitudeHgi'
+       if(dLongitudeHgiDeg < 0.0) &
+            write(UNITTMP_,'(es15.8,a27)') &
+            dLongitudeHgi*cRadToDeg,                     'actual offset'
+       write(UNITTMP_,*)
+    endif
+
     close(UNITTMP_)
 
   end subroutine save_restart
