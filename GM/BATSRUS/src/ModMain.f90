@@ -270,13 +270,16 @@ Module ModMain
   !/
 
   ! Logical for rotating inner boundary
-  logical          :: UseRotatingBc=.false.
+  logical          :: UseRotatingBc = .false.
 
   ! Coordinate system
-  character(len=3) :: TypeCoordSystem='GSM'
+  character(len=3) :: TypeCoordSystem = 'GSM'
 
   ! Rotating frame or (at least approximately) inertial frame
-  logical :: UseRotatingFrame=.false. 
+  logical :: UseRotatingFrame = .false. 
+
+  ! Transformation from HGC to HGI systems can be done in a simulation
+  logical :: DoTransformToHgi = .false.
 
   !\
   ! Variables for debugging. 
