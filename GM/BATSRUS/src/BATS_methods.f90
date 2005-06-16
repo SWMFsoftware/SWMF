@@ -285,6 +285,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAmr, ONLY: dn_refine
   use ModPhysics, ONLY: UnitSI_t
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
+  use ModPartSteady, ONLY: UsePartSteady, part_steady_switch
 
   implicit none
 
@@ -306,6 +307,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   time_loop = .true.
 
   call BATS_select_blocks              !^CFG IF IMPLICIT
+
+  if(UsePartSteady) call part_steady_switch(.true.) !!!
 
   n_step = n_step + 1
   iteration_number = iteration_number+1
@@ -338,6 +341,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   call exchange_messages
   
+  if(UsePartSteady) call part_steady_switch(.false.) !!!
+
   call advect_all_points
   
   call timing_stop('advance')
@@ -544,29 +549,36 @@ subroutine BATS_init_constrain_b
 end subroutine BATS_init_constrain_b
 
 !^CFG END CONSTRAINB
-!^CFG IF IMPLICIT BEGIN
+
 !=============================================================================
 subroutine BATS_select_blocks
 
   use ModProcMH
   use ModMain, ONLY: UsePartLocal, lVerbose
-  use ModImplicit, ONLY : UsePartImplicit
+  use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModIO, ONLY: write_prefix, iUnitOut
+  use ModPartSteady, ONLY: UsePartSteady, part_steady_select
   implicit none
 
   !LOCAL VARIABLES:
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   integer :: iError
   integer :: nBlockMoved
+  logical :: IsNew
   !----------------------------------------------------------------------------
 
   ! Select blocks for partially local time stepping
 
   if(UsePartLocal)call select_stepping(.true.)
 
-  ! Select and load balance blocks for partially implicit scheme
-  if(UsePartImplicit)then                      
-     ! Redo load balancing for partially implicit scheme
+  if(UsePartSteady)call part_steady_select(IsNew)
+
+  ! Select and load balance blocks for partially implicit/steady scheme
+  if( (UsePartSteady .and. IsNew) &
+       .or. UsePartImplicit &                !^CFG IF IMPLICIT
+       )then
+
+     ! Redo load balancing
      call load_balance(.true.,.true.,nBlockMoved)
      if(nBlockMoved>0)then
         if(iProc == 0.and.lVerbose>0)then
@@ -580,7 +592,7 @@ subroutine BATS_select_blocks
   end if
 
 end subroutine BATS_select_blocks
-!^CFG END IMPLICIT
+
 !===========================================================================
 
 subroutine BATS_save_files(TypeSaveIn)
