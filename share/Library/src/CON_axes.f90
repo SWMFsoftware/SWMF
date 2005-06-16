@@ -102,7 +102,19 @@ module CON_axes
   !
   !   Z is the rotation axis of the Sun pointing "North".
   !   X axis is the intersection of the ecliptic and solar equatorial planes,
-  !     which was at 74.367 degrees ecliptic longitude at 12:00 UT 01/01/1900.
+  !     which was at 74.367 degrees ecliptic longitude at 12:00 UT 01/01/1900
+  !     by default but we allow a rotation around Z by the dLongitudeHgi angle.
+  !   Y axis completes the right handed coordinate system.
+  !
+  !   HGI is a truly inertial system.
+
+  ! HGC (HelioGraphic Corotating coordinates)
+  !
+  !   Z is the rotation axis of the Sun pointing "North".
+  !   X axis rotates with the Carrington rotation with a 25.38 day period
+  !     with respect to an inertial frame. 
+  !     The X axis coincides with the X axis of the HGI system at the
+  !     initial time of the simulation.
   !   Y axis completes the right handed coordinate system.
   !
   !   HGI is a truly inertial system.
@@ -114,7 +126,8 @@ module CON_axes
   !     with respect to an inertial frame (and around 27.3 day period
   !     with respect to the direction towards the Earth).
   !     The X axis coincided with the X axis of the HGI system on 
-  !     January 1 1854 12:00:00.
+  !     January 1 1854 12:00:00, but we allow a rotation by dLongitudeHgr
+  !     around the Z axis.
   !   Y axis completes the right handed coordinate system.
   !
   ! HGR is a rotating system, inertial forces should be taken into account. 
@@ -134,7 +147,8 @@ module CON_axes
   use ModTimeConvert, ONLY : time_int_to_real,time_real_to_int
   use CON_planet
   use CON_geopack, ONLY: &
-       HgiGse_DD, CON_recalc, CON_sun, SunEMBDistance, JulianDay
+       HgiGse_DD, dLongitudeHgiDeg, dLongitudeHgi, &
+       CON_recalc, CON_sun, SunEMBDistance, JulianDay
 
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version
@@ -155,12 +169,14 @@ module CON_axes
 
   ! Difference between 01/01/1965 00:00:00 and 01/01/1854 12:00:00 in seconds
   real(Real8_), parameter :: tStartCarrington   = -3.5027856D+9
- !!! -3.5074080D+09
+
   real(Real8_), parameter :: OmegaCarrington = cTwoPi/(25.38D0*24*3600)
- !!! 27.2753D0*24*3600)
 
   ! Position and Velocity of Planet in HGI
   real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
+
+  ! Offset longitude angle for HGR in degrees and radians
+  real :: dLongitudeHgrDeg = 0.0, dLongitudeHgr = 0.0
 
   ! Initial time in 8 byte real
   real(Real8_) :: tStart = -1.0
@@ -187,7 +203,9 @@ module CON_axes
        GeiGeo_DD, &            ! vGei_D = matmul(GeiGeo_DD,vGeo_D)
        MagGeo_DD, &            ! vMag_D = matmul(MagGeo_DD,vGeo_D)
        HgrHgi_DD, &            ! vHgr_D = matmul(HgrHgi_DD,vHgi_D)
-       HgrGse_DD               ! vHgr_D = matmul(HgrGse_DD,vGse_D)
+       HgrGse_DD, &            ! vHgr_D = matmul(HgrGse_DD,vGse_D)
+       HgcHgi_DD, &            ! vHgc_D = matmul(HgcHgi_DD,vHgi_D)
+       HgcGse_DD               ! vHgc_D = matmul(HgcGse_DD,vGse_D)
 
   ! Remaining coordinate transformation matrices to convert to/from GSE
   real, dimension(3,3) :: &
@@ -212,6 +230,8 @@ contains
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::init_axes'
+
+    real :: XyzPlanetHgr_D(3)
 
     logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
@@ -341,8 +361,18 @@ contains
     ! This matrix does not change with simulation time.
     call set_mag_geo_matrix
 
-    ! Set Hgi-Gse matrix and planet velocity 
-    call set_hgi_gse_v_planet
+    ! Calculate HgiGse matrix for the first time. 
+    ! This should be done for t=0.0 so that the HgiGse can be shifted
+    ! to be aligned with the planet if this is required by a negative
+    ! value of dLongitudeHgi. Also calculates the planet distance.
+    call set_hgi_gse_d_planet(0.0)
+
+    ! Calculate the planet position in HGI
+    ! In GSE shifted to the center of the Sun the planet is at (-d,0,0)
+    XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
+
+    ! Calculate the planet velocity in HGI
+    call set_v_planet
 
     ! Set the time dependent axes for the initial time
     call set_axes(0.0,.true.)
@@ -353,14 +383,15 @@ contains
             RotAxisTheta*cRadToDeg, RotAxisPhi*cRadToDeg
        write(*,*)'RotAxisGse_D =',RotAxis_D
        write(*,*)'RotAxisGsm_D =',RotAxisGsm_D
+       XyzPlanetHgr_D = matmul(HgrHgi_DD, XyzPlanetHgi_D)
        write(*,*)'r/AU,HG_lat,HGR_lon,HGI_lon=',&
             sqrt(sum(XyzPlanetHgi_D**2))/cAU,&
             asin(XyzPlanetHgi_D(3)/sqrt(sum(XyzPlanetHgi_D**2)))*cRadToDeg, &
-            modulo(atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1)) - &
-            OmegaCarrington*(tStart - tStartCarrington), cTwoPi8)*cRadToDeg,&
+            atan2(XyzPlanetHgr_D(2),XyzPlanetHgr_D(1))*cRadToDeg,&
             atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1))*cRadToDeg
        write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
-       write(*,*)'XyzPlanetHgr_D/rSun = ',matmul(HgrHgi_DD,XyzPlanetHgi_D)/rSun
+       write(*,*)'XyzPlanetHgr_D/rSun = ',XyzPlanetHgr_D/rSun
+       write(*,*)'vPlanetHgi_D/(km/s) = ',vPlanetHgi_D/1000.0
     end if
 
     DoInitializeAxes=.false.
@@ -424,11 +455,44 @@ contains
       jDay = JulianDay(iYear,iMonth,iDay)
       call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
 
+      ! A negative dLongitudeHgi means that the planet should be in 
+      ! in the -X,Z plane of the rotated HGI system.
+
+      if(dLongitudeHgi < 0.0)then
+         ! Figure out the longitude of the planet to offset the HGI system
+         ! In GSE moved to the center of the Sun the planet is in the -1,0,0
+         ! direction, so in HGI the direction vector is
+         ! x_Hgi,y_Hgi = -HgiGse_DD(1,1), -HgiGse_DD(2,1).
+         ! Since we want the -X axis to point towards Earth, change signs,
+         ! so the angle is
+
+         dLongitudeHgi = modulo(atan2(HgiGse_DD(2,1), HgiGse_DD(1,1)), cTwoPi)
+
+         ! Recalculate the HgiGse matrix with the new offset
+         call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+
+      end if
+
+      ! A negative dLongitudeHgr means that the planet should be in 
+      ! in the -X,Z plane of the rotated HGI system.
+      if(dLongitudeHgr < 0.0)then
+
+         ! The offset angle for HGR
+         dLongitudeHgr = modulo( &
+              + dLongitudeHgi &                         ! HGI logtitude offset
+              + atan2(HgiGse_DD(2,1), HgiGse_DD(1,1)) & ! HGI_lon of anti-Earth
+              - OmegaCarrington*(tStart - tStartCarrington), & ! HGI-HGR angle
+              cTwoPi8)                                         ! at tSim=0
+
+      endif
+
+
     end subroutine set_hgi_gse_d_planet
 
     !=========================================================================
 
-    subroutine set_hgi_gse_v_planet
+    subroutine set_v_planet
+
       ! Caculate vPlanet in HGI system
       real, dimension(3) :: XyzPlus_D, XyzMinus_D
       real, parameter :: Delta = 600.0
@@ -440,14 +504,13 @@ contains
       call set_hgi_gse_d_planet(Delta)
       XyzPlus_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
 
-      ! In GSE shifted to the center of Sun the planet is at (-d,0,0)
-      call set_hgi_gse_d_planet(0.0)
-      XyzPlanetHgi_D = matmul(HgiGse_DD, (/-cAU*SunEMBDistance, 0.0, 0.0/))
-
-      ! Finite difference velocity with the Delta second time perturbation
+      ! Finite difference velocity with the Delta second time perturbations
       vPlanetHgi_D = (XyzPlus_D - XyzMinus_D)/(2*Delta)
 
-    end subroutine set_hgi_gse_v_planet
+      ! Reset the HgiGse matrix for t=0.0
+      call set_hgi_gse_d_planet(0.0)
+
+    end subroutine set_v_planet
 
     !=========================================================================
 
@@ -528,17 +591,25 @@ contains
     if(TimeSimHgr /= TimeSim)then
 
        ! Recalculate the HgrHgi_DD matrix
-       Angle = modulo(-OmegaCarrington*(TimeSim + tStart - tStartCarrington), &
-            cTwoPi8)
-
-       HgrHgi_DD = rot_matrix_z( Angle )
-
        ! The negative sign in front of OmegaCarrington comes from that 
        ! this matrix transforms from HGI to HGR, so a point at rest 
        ! in HGI rotates BACKWARDS in HGR
 
+       Angle = modulo(-OmegaCarrington*(TimeSim + tStart - tStartCarrington), &
+            cTwoPi8)
+
+       ! Modify angle by the offsets
+       Angle = Angle + dLongitudeHgi - dLongitudeHgr
+
+       HgrHgi_DD = rot_matrix_z( Angle )
+
        ! Calculate the HgrGse_DD matrix
        HgrGse_DD = matmul(HgrHgi_DD, HgiGse_DD)
+
+       ! Recalculate the HgcHgi and HgcGse matrixes
+       Angle     = -OmegaCarrington*TimeSim
+       HgcHgi_DD = rot_matrix_z( Angle )
+       HgcGse_DD = matmul(HgcHgi_DD, HgiGse_DD)
 
        ! Remember the time
        TimeSimHgr = TimeSim
@@ -711,6 +782,8 @@ contains
        InGse_DD = transpose(GseGei_DD)
     case('HGI')
        InGse_DD = HgiGse_DD
+    case('HGC')
+       InGse_DD = HgcGse_DD
     case('HGR')
        InGse_DD = HgrGse_DD
     case default
@@ -732,6 +805,8 @@ contains
        OutGse_DD = transpose(GseGei_DD)  
     case('HGI')
        OutGse_DD = HgiGse_DD
+    case('HGC')
+       OutGse_DD = HgcGse_DD
     case('HGR')
        OutGse_DD = HgrGse_DD
     case default
@@ -969,7 +1044,7 @@ contains
     ! test fails. Otherwise write out success.
     !EOP
     real :: MagAxisTilt
-    real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3)
+    real :: RotAxisGsm_D(3), RotAxisGeo_D(3), Rot_DD(3,3), Result_DD(3,3)
     real :: Omega_D(3), v2_D(3), Result_D(3), Position_D(3)
     real :: Epsilon1, Epsilon2, Epsilon3
     !-------------------------------------------------------------------------
@@ -992,6 +1067,8 @@ contains
          TimeEquinox,' should have a large positive double in the %Time field'
 
     write(*,'(a)')'Testing init_axes'
+    dLongitudeHgi = 1.0
+    dLongitudeHgr = 0.5
     call init_axes(TimeEquinox % Time)
 
     if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&
@@ -1026,6 +1103,15 @@ contains
          RotAxisGeo_D,' should be be equal to ',Result_D,&
          ' within round off errors'
 
+    Rot_DD = transform_matrix(10.0,'HGI','HGC')
+    Result_DD = rot_matrix_z(-10.0*real(OmegaCarrington))
+    if(maxval(abs(Rot_DD - Result_DD)) > Epsilon1) then
+       write(*,*)'test transform_matrix failed: HGI->HGC matrix is'
+       call show_rot_matrix(Rot_DD)
+       write(*,*)'instead of'
+       call show_rot_matrix(Result_DD)
+    end if
+
     write(*,'(a)')'Testing show_rot_matrix'
     write(*,'(a)')'GeiGeo_DD(0)='; call show_rot_matrix(GeiGeo_DD)
 
@@ -1043,6 +1129,13 @@ contains
     Result_D = (/0., 0., real(OmegaCarrington)/)
     if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
          write(*,*)'test angular_velocity failed: HGR Omega_D = ',Omega_D,&
+         ' should be equal to ',Result_D,' within round off errors'   
+
+    ! HGC rotates around its Z axis with the OmegaCarrington
+    Omega_D  = angular_velocity(0.0,'HGC')
+    Result_D = (/0., 0., real(OmegaCarrington)/)
+    if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
+         write(*,*)'test angular_velocity failed: HGC Omega_D = ',Omega_D,&
          ' should be equal to ',Result_D,' within round off errors'   
 
     ! GEI is an inertial system
@@ -1188,6 +1281,9 @@ contains
     if(maxval(abs(v2_D - Result_D)) > Epsilon3) &
          write(*,*)'test angular_velocity failed: GEO-GSE2 v2_D = ',v2_D, &
          ' should be equal to ',Result_D,' within round off errors'
+
+    
+
 
   end subroutine test_axes
 
