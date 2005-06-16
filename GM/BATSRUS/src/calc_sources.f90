@@ -283,6 +283,24 @@ subroutine calc_sources
           State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK)* &
           fbody_z_BLK(:,:,:,globalBLK)) 
   end if
+
+  ! Add Coriolis forces here
+  if(UseRotatingFrame)then
+     select case(TypeCoordSystem)
+     case('HGC','HGR')
+        ! This is a special case since Omega is parallel with the Z axis
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) + &
+                cTwo*OmegaBody*State_VGB(rhoUy_,i,j,k,globalBLK)
+           Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) - &
+             cTwo*OmegaBody*State_VGB(rhoUx_,i,j,k,globalBLK)
+        end do; end do; end do
+     case default
+        call stop_mpi('ERROR in calc_sources: '// &
+             'Coriolis force is not implemented for '// &
+             'TypeCoordSystem=',TypeCoordSystem)
+     end select
+  end if
   
   if(UseUserSource) call user_calc_sources          !^CFG IF USERFILES
 Contains

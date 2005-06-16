@@ -1858,6 +1858,8 @@ subroutine user_sources
   !/
   !---------------------------------------------------------------------------
   !
+  if (.not.UseUserHeating) RETURN
+
   if (iProc==PROCtest.and.globalBLK==BLKtest) then
      call set_oktest('user_sources',oktest,oktest_me)
   else
@@ -1870,18 +1872,9 @@ subroutine user_sources
      ! values already loaded in the arrays. For example::
      ! Srho(i,j,k) = Srho(i,j,k) + user source term for rho
      !/
-     if (UseUserHeating) call calc_OLD_heating
-     if (UseRotatingFrame) then
-        !\
-        ! Coriolis forces
-        !/
-        SrhoUx(i,j,k) = SrhoUx(i,j,k) +&
-             cTwo*OmegaBody*State_VGB(rhoUy_,i,j,k,globalBLK)
-        SrhoUy(i,j,k) = SrhoUy(i,j,k) -&
-             cTwo*OmegaBody*State_VGB(rhoUx_,i,j,k,globalBLK)
-     endif
+     call calc_OLD_heating
   end do; end do; end do
-  
+
 Contains
 
     subroutine calc_OLD_heating
