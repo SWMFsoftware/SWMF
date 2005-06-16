@@ -561,7 +561,8 @@ end subroutine BATS_init_constrain_b
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModMain, ONLY: UsePartLocal, lVerbose
+  use ModMain, ONLY: UsePartLocal         !^CFG IF IMPLICIT
+  use ModMain, ONLY: lVerbose
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModIO, ONLY: write_prefix, iUnitOut
   use ModPartSteady, ONLY: UsePartSteady, part_steady_select
@@ -576,7 +577,7 @@ subroutine BATS_select_blocks
 
   ! Select blocks for partially local time stepping
 
-  if(UsePartLocal)call select_stepping(.true.)
+  if(UsePartLocal)call select_stepping(.true.) !^CFG IF IMPLICIT
 
   if(UsePartSteady)call part_steady_select(IsNew)
 
