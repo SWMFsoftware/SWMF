@@ -2698,7 +2698,7 @@ subroutine get_hlcmm
   use ModUser,ONLY:Head_PFSSM, Phi_Shift,File_PFSSM
   use ModProcMH,ONLY:iProc
   use ModIO,       ONLY: iUnitOut, write_prefix
-!  use CON_geopack,ONLY:is_advanced_hgr,get_advanced_hgr_longitude
+  use CON_axes,ONLY:dLongitudeHgrDeg 
   use ModNumConst
   implicit none
   real::HLCMM     !Heliographic Longitudee of the central meridian of map
@@ -2718,10 +2718,7 @@ subroutine get_hlcmm
         if(iErrorRead>0)call stop_mpi(&
                  'Can nod find HLCMM, '//File_PFSSM//&
 	         ' is not a true WSO magnetogram')
-        Phi_Shift=real(iHLCMM)-180
-!        if(is_advanced_hgr())call get_advanced_hgr_longitude(&
-!	         Phi_Shift,Phi_Shift)
-	if(Phi_Shift<cZero)Phi_Shift=Phi_Shift+360
+        Phi_Shift=modulo(real(iHLCMM)-180-dLongitudeHgrDeg,360.0) 
         if(iProc==0)then
            call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
         end if
@@ -2738,10 +2735,7 @@ subroutine get_hlcmm
         if(iErrorRead>0)call stop_mpi(&
                  'Can nod find HLCMM, '//File_PFSSM//&
 	         ' is not a true MDI magnetogram')
-        Phi_Shift=HLCMM-180
-!        if(is_advanced_hgr())call get_advanced_hgr_longitude(&
-!	         Phi_Shift,Phi_Shift)
-        if(Phi_Shift<cZero)Phi_Shift=Phi_Shift+360
+        Phi_Shift=modulo(real(HLCMM)-180-dLongitudeHgrDeg,360.0) 
         if(iProc==0)then
            call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
         end if
