@@ -27,10 +27,11 @@ subroutine MH_set_parameters(TypeAction)
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
-  use ModMpi
-  use ModMPCells,ONLY:iCFExchangeType,DoOneCoarserLayer
-  use ModLimiter,ONLY:UseTVDAtResChange
-  use ModLimiter,ONLY:DoLimitMomentum                   !^CFG IF BORISCORR
+  use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
+  use ModLimiter,       ONLY: UseTVDAtResChange
+  use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
+  use ModPartSteady,    ONLY: UsePartSteady, &
+       part_steady_init, part_steady_clean
 
   implicit none
 
@@ -317,7 +318,13 @@ subroutine MH_set_parameters(TypeAction)
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
         if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
-        !                                                
+     case("#PARTSTEADY")
+        call read_var('UsePartSteady',UsePartSteady)
+        if(UsePartSteady)then
+           call part_steady_init
+        else
+           call part_steady_clean
+        end if
      case("#PARTLOCAL")                                 !^CFG IF IMPLICIT BEGIN
         call read_var('UsePartLocal',UsePartLocal)
      case("#IMPLICIT")
