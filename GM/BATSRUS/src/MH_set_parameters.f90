@@ -1577,7 +1577,10 @@ subroutine MH_set_parameters(TypeAction)
         case('IH')
            select case(TypeCoordSystem)
            case('HGI')
+              DoTransformToHgi = UseRotatingFrame
               UseRotatingFrame = .false.
+           case('HGC')
+              UseRotatingFrame = .true.
            case('HGR')
               if(iProc==0)then
                  write(*,*) NameSub, &
@@ -1593,7 +1596,7 @@ subroutine MH_set_parameters(TypeAction)
            end select
         case('SC')
            select case(TypeCoordSystem)
-           case('HGR')
+           case('HGR','HGC')
               UseRotatingFrame = .true.
               if(iProc==0)then
                  write(*,*)NameSub//' setting .UseRotatingFrame = T'
@@ -1769,10 +1772,8 @@ contains
        TypeCoordSystem = 'HGI'
        UseRotatingFrame     = .false.
     case('SC')
-!!!       TypeCoordSystem = 'HGR'
-!!!       UseRotatingFrame     = .true.
-       TypeCoordSystem = 'HGI'
-       UseRotatingFrame     = .false.
+       TypeCoordSystem = 'HGR'
+       UseRotatingFrame     = .true.
     case('GM')
        TypeCoordSystem = 'GSM'
        UseRotatingFrame     = .false.
