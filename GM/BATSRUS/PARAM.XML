@@ -785,14 +785,13 @@ heat_test1		TypeProblemDiss
 !\end{verbatim}
 </command>
 
-<command name="COORDSYSTEM" if="$_IsFirstSession">
+<command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
 	<parameter name="TypeCoordSystem" type="string" input="select">
-		<option name="GeoSolarMagnetic, GSM" value="GSM"
-					if="$_NameComp eq 'GM'" default="T" />
-		<option name="HelioGraphicInertial, HGI" value="HGI" 
-					if="$_NameComp ne 'GM'" default="T" />
-		<option name="HelioGraphic, HGR" value="HGR" 
-					if="$_NameComp ne 'GM'"             />
+		<option name="GSM" default="T"	if="$_NameComp eq 'GM'"/>
+		<option name="HGI" default="T"	if="$_NameComp eq 'IH'"/>
+		<option name="HGC" 		if="$_NameComp eq 'IH'"/>
+		<option name="HGR" default="T"	if="$_NameComp eq 'SC'"/>
+		<option name="HGI" 		if="$_NameComp eq 'SC'"/>
 	</parameter>
 
 #COORDSYSTEM
@@ -800,11 +799,11 @@ GSM			TypeCoordSystem
 
 ! TypeCoordSystem defines the coordinate system for the component.
 ! Currently only one coordinate system is available for GM ("GSM")
-! and two for IH or SC ("HGI" or "HGR"). 
+! and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
 ! In the future "GSE" should be also an option for GM.
 ! The coordinate systems are defined in share/Library/src/CON_axes.
 !
-! Default is component dependent: "GSM" for GM and "HGI" for IH or SC.
+! Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
 </command>
 
 <command name="RESTARTINDIR" if="$_IsFirstSession">
@@ -1150,6 +1149,15 @@ T                       UseDtFixed
 ! implicit/local schemes. The time step is set to DtFixedDim unless the
 ! update checking decides to reduce the time step for the sake of robustness.
 <!-- ^CFG END IMPLICIT -->
+</command>
+
+<command name="PARTSTEADY">
+	<parameter name="UsePartSteady" type="logical" default="F" />
+
+! If UsePartSteady is true, the partially steady state algorithm is used.
+! Only blocks which are changing or next to changing blocks are evolved.
+! This can speed up the calculation if part of the domain is in a 
+! numerical steady state. Default value is .false.
 </command>
 
 <!-- ^CFG IF IMPLICIT BEGIN -->
@@ -3671,27 +3679,6 @@ A negative value means that the B0 field is not updated.
 ! (negative sign means towards the planet) in degrees.
 !
 ! Default value is HelioDipoleStrength = 0.0.
-</command>
-
-<command name="HELIOROTATION" alias="INERTIAL" 
-		if="$_IsFirstSession and $_NameComp ne 'GM'">
-	<parameter name="UseInertialFrame" type="logical" default="T"/>
-	<if expr="$UseInertialFrame">
-		<parameter name="UseRotatingBC" type="logical" default="T"/>
-	</if>
-
-#HELIOROTATION
-T			UseInertialFrame
-F			UseRotatingBC (read only if UseInertialFrame is true)
-
-! If UseInertialFrame is false, the heliosphere is modeled in a corotating
-! frame. In this frame the inner boundary (the solar surface) is not rotating
-! (for now differential rotation is ignored). If UseInertialFrame is true,
-! the heliosphere is modeled in an inertial coordinate system.
-! In that case UseRotatingBC determines if the inner boundary is rotating
-! or the rotation is neglected.
-!
-! Default values are shown. The #INERTIAL command name is obsolete.
 </command>
 
 <command name="HELIOTEST" if="$_NameComp ne 'GM'">
