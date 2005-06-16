@@ -650,17 +650,11 @@ contains
     if(dLongitudeHgr /= 0.0)then
        write(UNITTMP_,'(a)')'#ROTATEHGR'
        write(UNITTMP_,'(es15.8,a27)')dLongitudeHgrDeg,   'dLongitudeHgr'
-       if(dLongitudeHgrDeg < 0.0) &
-            write(UNITTMP_,'(es15.8,a27)') &
-            dLongitudeHgr*cRadToDeg,                     'actual offset'
        write(UNITTMP_,*)
     endif
     if(dLongitudeHgi /= 0.0)then
        write(UNITTMP_,'(a)')'#ROTATEHGI'
        write(UNITTMP_,'(es15.8,a27)')dLongitudeHgiDeg,   'dLongitudeHgi'
-       if(dLongitudeHgiDeg < 0.0) &
-            write(UNITTMP_,'(es15.8,a27)') &
-            dLongitudeHgi*cRadToDeg,                     'actual offset'
        write(UNITTMP_,*)
     endif
 
