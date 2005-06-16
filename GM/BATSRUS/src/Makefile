@@ -44,6 +44,7 @@ MODULES = \
 	ModIO.o\
 	ModPhysics.o\
 	ModAMR.o\
+	ModPartSteady.o\
 	ModParallel.o\
 	ModOctree.o\
 	ModNodes.o\
