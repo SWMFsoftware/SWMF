@@ -176,8 +176,6 @@ module CON_axes
   real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
 
   ! Offset longitude angle for HGR in degrees and radians
-  ! Note: dLongitudeHgrDeg is the input value, which can be negative
-  !       with a special meaning. For calculations use dLongitudeHgr only!!
   real :: dLongitudeHgrDeg = 0.0, dLongitudeHgr = 0.0
 
   ! Initial time in 8 byte real
@@ -473,6 +471,9 @@ contains
          ! Recalculate the HgiGse matrix with the new offset
          call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
 
+         ! Reset dLongitudeHgiDeg to be a valid but negative value
+         dLongitudeHgiDeg = dLongitudeHgi*cRadToDeg - 360.0
+
       end if
 
       ! A negative dLongitudeHgr means that the planet should be in 
@@ -484,7 +485,10 @@ contains
               + dLongitudeHgi &                         ! HGI logtitude offset
               + atan2(HgiGse_DD(2,1), HgiGse_DD(1,1)) & ! HGI_lon of anti-Earth
               - OmegaCarrington*(tStart - tStartCarrington), & ! HGI-HGR angle
-              cTwoPi8)                                         ! at tSim=0
+              cTwoPi8)                                         !     at tSim=0
+
+         ! Reset dLongitudeHgrDeg to be a valid but negative value
+         dLongitudeHgrDeg = dLongitudeHgr*cRadToDeg - 360.0
 
       endif
 
@@ -1069,8 +1073,8 @@ contains
          TimeEquinox,' should have a large positive double in the %Time field'
 
     write(*,'(a)')'Testing init_axes'
-    dLongitudeHgi = 1.0
-    dLongitudeHgr = 0.5
+    dLongitudeHgi = -1.0
+    dLongitudeHgr = 0.0
     call init_axes(TimeEquinox % Time)
 
     if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&
@@ -1115,7 +1119,7 @@ contains
     end if
 
     write(*,'(a)')'Testing show_rot_matrix'
-    write(*,'(a)')'GeiGeo_DD(0)='; call show_rot_matrix(GeiGeo_DD)
+    write(*,'(a)')'HgiGse_DD(0)='; call show_rot_matrix(HgiGse_DD)
 
     write(*,'(a)')'Testing angular_velocity'
 
