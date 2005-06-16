@@ -11,6 +11,8 @@ Module CON_geopack
   real,dimension(3)::AxisMagGeo_D
 
   ! Offset longitude angle for HGI in degrees and in radians
+  ! Note: dLongitudeHgiDeg is the input value, which can be negative
+  !       with a special meaning. For calculations use dLongitudeHgi only!!
   real :: dLongitudeHgiDeg = 0.0, dLongitudeHgi = 0.0
 
   !  SunE(arth)M(oon)B(arycenter) - The distance from the Sun to

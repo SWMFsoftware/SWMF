@@ -176,6 +176,8 @@ module CON_axes
   real :: XyzPlanetHgi_D(3), vPlanetHgi_D(3)
 
   ! Offset longitude angle for HGR in degrees and radians
+  ! Note: dLongitudeHgrDeg is the input value, which can be negative
+  !       with a special meaning. For calculations use dLongitudeHgr only!!
   real :: dLongitudeHgrDeg = 0.0, dLongitudeHgr = 0.0
 
   ! Initial time in 8 byte real
