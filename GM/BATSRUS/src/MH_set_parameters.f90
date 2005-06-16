@@ -1565,7 +1565,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_compatible_command(NameCommand)
         end if
 
-     case("#COORDSYSTEM")
+     case("#COORDSYSTEM","#COORDINATESYSTEM")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeCoordSystem',TypeCoordSystem)
         call upper_case(TypeCoordSystem)
