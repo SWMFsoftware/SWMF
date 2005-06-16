@@ -118,6 +118,10 @@ subroutine write_restart_header
   write(unit_tmp,'(1pe13.5,a27)')z1,'zMin'
   write(unit_tmp,'(1pe13.5,a27)')z2,'zMax'
   write(unit_tmp,*)
+  write(unit_tmp,'(a)')'#COORDSYSTEM'
+  write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
+  write(unit_tmp,*)
+  write(unit_tmp,*)
 !  write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   !^CFG IF NOT CARTESIAN
 !  write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' !^CFG IF NOT CARTESIAN
 !  write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' !^CFG IF NOT CARTESIAN
