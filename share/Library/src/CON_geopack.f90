@@ -1,249 +1,28 @@
-!^CFG COPYRIGHT UM
-!BOP -------------------------------------------------------------------
-!
-!MODULE: CON_geopack - geopack code + heliocentric systems
-!
-!DESCRIPTION:
-!
-!Contains some subroutines of the geopack code (by N.V.Tsyganenko), 
-!rewritten as the .f90 module procedures. 
-!Added procedures: JulianDay(A.Ridley)and a  computation for 
-!the coordinate transformation like HGI=>other systems
-!In the comments and for newly introduced matrices we follow a paper by 
-!M.Franz and D.Harper, Planetary and Space Scieance, V.50, 217ff(2002),
-!Also see the corrected version in 
-!http://www.space-plasma.qmul.ac.uk/heliocoords/systems2art.pdf
-!Below we cite it as F&P, a numeration of pages follows the Internet version
-!INTERFACE:
 Module CON_geopack
-
   use ModNumConst
-!  use CON_world,ONLY:CON_stop
   implicit none
 
-  save
+  !Contains some subroutine of the geopack code (by N.V.Tsyganenko), 
+  !rewritten as the .f90 module procedures. 
+  !Added procedures: JulianDay(A.Ridley)and a  computation for 
+  !the coordinate transformation like HGI=>other systems
 
-  private ! except
-  
+  real,dimension(3,3)::GeiGse_DD,HgiGse_DD,GeiGsm_DD,GsmGse_DD
+  real,dimension(3)::AxisMagGeo_D
 
-  !DESCRIPTION:
-  !The use of CON_geopack is very simple and follows the original
-  !design of the GEOPACK package. 
-  !Call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec).
-  !After this a lot of global and publically accessible variables
-  !and transformation matrices are constructed, related to this
-  !instant of time.
-  ! 
-  !While using the transformation matrix, we denote HgiGse so that
-  !${\bf r}_{HGI}=HgiGse_DD\cdot${\bf r}_{GSE}
-  !In F&H they use T(GSE,HGI) for such the matrix
-  !EOP
+  ! Offset longitude angle for HGI in degrees and in radians
+  real :: dLongitudeHgiDeg = 0.0, dLongitudeHgi = 0.0
 
-  !================================================================
-  !Slowly varying parameters and matrices, are calculated once 
-
-  real,dimension(3,3)::HaeGei_DD !Transformation matrix T(GEI,HAE)
-
-  !Parameters of the Solar Equator:
-  real,parameter :: cLongAscNodeSolEquator = 75.77*cDegToRad
-  ! Inclination of the solar equator on the ecliptic of date
-  real,parameter :: cInclinationSolEquator = 7.25*cDegToRad
-  !First and second Euler angles for transformation of 
-  !HAE to HGI system of coordinates.
-
-  real,dimension(3,3) :: HgiHae_DD 
-  !Transformation matrix T(HAE,HGI)=&
-  !          E(cLongAscNodeSolEquator,cInclinationSolEquator)
-  real,dimension(3)::  AxisMagGeo_D
-  !==================================================================  
- 
   !  SunE(arth)M(oon)B(arycenter) - The distance from the Sun to
   !                                 the Earth-and-Moon barycentre
   real::SunEMBDistance
-  real,dimension(3)::Sun2EarthDirHae_D,Sun2EarthDirHgi_D
-  !SunEMDDistance*Sun2EarthDirHae_D[1 AU]- the Sun-Earth vector in HAE
-  !SunEMDDistance*Sun2EarthDirHgi_D[1 AU]- the Sun-Earth vector in HGI
-
-
-  real::HPMLongitude  
-  !H(eoigraphic)P(rime)M(eridian)Longitude[rad] in HGI 
-
-  !We may want to introduce the coordinate system which is rotated by
-  !a constant angle AdvanceHgr with respect to the "true" HGR system
-  !The "advanced" HGR coordinate system coinsides with that advanced 
-  !in time for AdvanceHgr[rad]/(2\pi)*25.38 days
-  !The feature at the solar surface, having a true heliographic 
-  !equal to AdvanceHgr[deg] is in xOz plane of the anvanced Hgr
-  !For all the other features, Longitude_adv=Longitude-AdvanceHgr 
-  logical::DoAdvanceHgr=.false.
-  real::AdvanceHgr
-  
-  real::STPLongitude,STPColatitude 
-  !S(ub)T(errestrial)P(oint) angular coordinates [rad] in HGI
-
-  real::CarringtonLongitude 
-  !=STPLongitude-HPMLongitude - Carrington longitude 
-  !By definition this is a Heliographic Longitude 
-  !(in rotating H(elio)G(raphic) coordinate system)
-  !of the subterrestrial point
-
-  real,dimension(3,3)::GeiGse_DD,HgiGse_DD,GeiGsm_DD,GsmGse_DD
-
-  real,dimension(3,3)::HgrHgi_DD 
-  !Transformation matrix from HGI to Heiographic coordinates
-  !Definition of Heliographic coordinates (HGC) see p.7 in F&H
-
-  integer,parameter::x_=1,y_=2,z_=3
-
-  !PUBLIC MEMBER FUNCTIONS
-  public::HaeGei_DD !Transformation matrix T(GEI,HAE) 
-  public::HgiHae_DD !Transformation matrix T(HAE,HGI)
-  public::AxisMagGeo_D !Vector of the Earth magnetic axis, in GEO
-  public::SunEMBDistance,Sun2EarthDirHae_D,Sun2EarthDirHgi_D
-  public::HPMLongitude  
-  !H(eoigraphic)P(rime)M(eridian)Longitude[rad] in HGI 
-  !With the use of the advanced Hgr, the value of HPMLongitude
-  !is increased by a constant value of AdvanceHgr
-  public::STPLongitude,STPColatitude 
-  !S(ub)T(errestrial)P(oint) angular coordinates [rad] in HGI
-  public::CarringtonLongitude 
-  !=HPMLongitude - Carrington longitude 
-  !By definition this is a Heliographic Longitude 
-  !(in rotating H(elio)G(raphic) coordinate system)
-  !of the subterrestrial point
-  
-  !Other transformational matrices
-  public::GeiGse_DD,HgiGse_DD,GeiGsm_DD,GsmGse_DD,HgrHgi_DD
-  
-  public::rot_matrix !Rotational matrix
-  public::show_matrix!prints out a matrix
-  public::eulerian_matrix !Eulerian rotational matrix
-  public::JulianDay !Julian day of a year
-  public::CON_sun !redundat, better do not use it outside
-  public::CON_recalc !(Re)calculates all the public variables
-  public::CON_test_geopack !Do test
-  public::set_advanced_hgr !Introduced the advanced heliographic coordinates
-  public::is_advanced_hgr  !Return .true. is hgr is advanced
-  public::get_advanced_hgr_longitude !Returns the longitude of
-                                     !in the advanced HGR 
 contains
-  !BOP ========================================================================
-  !IROUTINE: rotation_matrix - rotational matrix
-  !INTERFACE:
-  function rot_matrix(iDir,Phi)
-    !INPUT ARGUMENTS:
-    integer,intent(in)::iDir  !axis of rotation (1,2,3 for x-,y-,z-axis)
-    real,intent(in)::Phi !Angle of rotation.
-    !RETURN VALUE:
-    real             :: rot_matrix(3,3) 
-    !DESCRIPTION:
-    ! This is the fundamental routine that calculates the rotation
-    ! matrix. If the rotation of coordinate system A by the angle
-    ! Phi around one of the coordinate axis of A (generally, around
-    ! a unity vector {\bf n} given in the system A) gives the coordinate 
-    ! system B, then the rotation matrix is defined as the 
-    ! transformation matrix from  A to B:
-    ! $$ 
-    ! {\bf r}_B={\bf rotmatrix}({\bf n},\Phi)\cdot{\bf r}_A
-    ! $$
-    ! For arbitrarily directed {\bf n} the rotmatrix is as follows
-    ! $$
-    ! {\bf rotmatrix}({\bf n},Phi)={\bf n}{\bf n}+
-    ! cos(\Phi)({\bf I}-{\bf n}{\bf n})+
-    ! sin(\Phi)e_{ijk}n_k
-    ! $$
-    !where (\bf I} is a unity tensor and $e_{ijk}$ is a fully asymmetric 
-    !object in 3D space. Usually, the rotational matrix described is used only
-    !with {\bf n} being directed along one of the coordinate axis of A.
-    !In this case the rotational matrices are denoted as 
-    !${\bf R}_x, ${\bf R}_y, ${\bf R}_z$ correspondingly
-    !
-    !EOP
-    !-------------------------------------------------------------------------
-    !BOC
-    real,dimension(3,3),parameter::&
-         I_DD=reshape((/&
-         !i = 1,   2,   3,     /j
-            cOne, cZero, cZero,&!1
-           cZero,  cOne, cZero,&!2
-           cZero, cZero,  cOne &!3
-           /),(/3,3/))
-    real,dimension(3,3,3),parameter::&
-         E_DDD=reshape((/&
-         !i = 1,   2,   3,     /j  \
-           cZero, cZero, cZero,&!1  | k=1
-           cZero, cZero, -cOne,&!2  |
-           cZero,  cOne, cZero,&!3 / 
-                     !i = 1,   2,   3,     /j  \
-                       cZero, cZero,  cOne,&!1  | k=2
-                       cZero, cZero, cZero,&!2  |
-                       -cOne, cZero, cZero,&!3 /
-                                !i = 1,   2,   3,     /j  \
-                                  cZero, -cOne, cZero,&!1  | k=3
-                                   cOne, cZero, cZero,&!2  |
-                                  cZero, cZero, cZero &!3 /
-           /),(/3,3,3/))
-    !E_DDD(1,2,3)=E_DDD(2,3,1)=E(3,1,2)=1
-    !E_DDD(2,1,3)=E_DDD(3,2,1)=E(1,3,2)=-1
-    !Otherwise E_DDD=0
-    rot_matrix=I_DD
-    if(Phi/=cZero)then
-       rot_matrix=cos(Phi)*rot_matrix+sin(Phi)*E_DDD(:,:,iDir)
-       rot_matrix(iDir,iDir)=cOne
-    end if
-  end function rot_matrix
-  !BOP ========================================================================
-  !IROUTINE: show_matrix - writes a matrix
-  !INTERFACE:
-  subroutine show_matrix(M_DD)
-    real,dimension(3,3),intent(in)::M_DD
-    integer::i,j
-    write(*,'(3(3F14.10,/))')((M_DD(i,j),j=1,3),i=1,3)
-  end subroutine show_matrix
-  !BOP ========================================================================
-  !IROUTINE: eulerian_matrix - the rotational matrix for 3 Eulerian angles
-  !INTERFACE:
-  function eulerian_matrix(Omega,Theta,Psi)
-    !INPUT ARGUMENTS:
-    real, intent(in) :: Omega,Theta,Psi
-    optional::Psi
-    !RETURN VALUE:
-    real             :: eulerian_matrix(3,3)
-    !DESCRIPTION:
-    !
-    ! This is the fundamental routine that calculates the rotation
-    ! matrix for three Eulerian angles (see, e.g. the Appendix A.1
-    ! in  www.space-plasma.qmul.ac.uk/heliocoords/systems2art.pdf)
-    ! The matrix is obtained from 3 rotations:
-    ! $$
-    !      E(\Omega,\theta,\psi) = R_z(\psi)\cdot R_x(\theta)\cdot R_z(Omega)
-    ! $$
-    !EOP
-    !-------------------------------------------------------------------------
-    !BOC
-    if(Theta==cZero)then
-       eulerian_matrix=rot_matrix(z_,Omega)
-    elseif(Omega==cZero)then
-       eulerian_matrix=rot_matrix(x_,Theta)
-    else
-       eulerian_matrix=matmul(rot_matrix(x_,Theta),rot_matrix(z_,Omega))
-    end if
-    if(present(Psi))&
-         eulerian_matrix=matmul(rot_matrix(z_,Psi),eulerian_matrix)
-    !EOC
-  end function eulerian_matrix
-
   !----------------------------------------------------------------------
   integer function JulianDay(iYear,iMonth,iDay)
     !Coded by A.Ridley
-    !Comment: valid for 1900<iYear<2100
     integer,intent(in)::iYear,iMonth,iDay
     integer, dimension(1:12),parameter :: nDayInMonth_I = (/ &
          31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/)
-    IF(iYear.LT.1901.OR.iYear.GT.2099)then
-       write(*,*)'CON_geopack ERROR: No ephemers data for the year of ',iYear
-       call CON_stop('CON_geopack ERROR')
-    end IF
     JulianDay=iDay
     if(iMonth>1)JulianDay=JulianDay+sum(nDayInMonth_I(1:iMonth-1))
     if(iMonth>2.and.mod(iYear,4)==0)JulianDay=JulianDay+1
@@ -257,19 +36,14 @@ contains
     !  WHICH DEPEND ON SUN POSITION (AND, HENCE, ON UNIVERSAL TIME 
     !  AND SEASON)
     !  From geopack.f by N.V.Tsyganenko
+    use ModCoordTransform
     integer,intent(in)::iYear,jDay,iHour,iMin,iSec
     !-------  INPUT PARAMETERS:
-    !  iYear,jDay,iHour,iMin,iSec -  YEAR, DAY OF A YEAR, AND UNIVERSAL TIME 
+    !  iYear,jDay,iHour,iMin,iSec -  YEAR, DAY, AND UNIVERSAL TIME 
     !  IN HOURS, MINUTES,
     !    AND SECONDS  (IDAY=1 CORRESPONDS TO JANUARY 1).
     !
-    real::Century
-
-    real,intent(out):: GSTime,SunLongitude,Obliq   
-    !Angle between the rotation axis of the Earth
-    !The rotation around X-axis by the angle Obliq transforms
-    !GEI system to HAE system
-
+    real,intent(out):: GSTime,SunLongitude,Obliq
     !-------  OUTPUT PARAMETERS:
     !  GSTime - GREENWICH MEAN SIDEREAL TIME
     !  SunLongitude - The Sun Longitude
@@ -282,117 +56,39 @@ contains
     !     ORIGINAL VERSION WRITTEN BY:    Gilbert D. Mead
 
     real*8:: DJ,FDAY
-    real::VL,G !Miscellaneous
+    real::Century,VL,G !Miscellaneous
     real,parameter::cDegToRadHere=cOne/57.295779513
-    logical::DoInit=.true.
     !----------------------------------------------------------------------
     IF(iYear.LT.1901.OR.iYear.GT.2099)then
        write(*,*)'CON_geopack ERROR: No ephemers data for the year of ',iYear
        call CON_stop('CON_geopack ERROR')
     end IF
-    FDAY=dble(IHOUR*3600+iMIN*60+ISEC)/86400.E0       !Fraction of a day
-
+    FDAY=dble(IHOUR*3600+iMIN*60+ISEC)/86400.E0
     DJ=365*(IYear-1900)+(IYear-1901)/4+jDAY-0.5E0+FDAY
-    !This is a day of epoch Jan,1,1900 
-
-   
     Century=DJ/36525.0
-    !To calculate the slowly varying parameters   
-
-    Obliq=(23.45229-0.0130125*Century)*cDegToRadHere
-    
-       !Transformation matrix for Heleocentric Aries Ecliptic system
-       !see F&H, p 6, the formula for T(GEI,HAE)
-       HaeGei_DD=eulerian_matrix(cZero,Obliq)
-
-       !Transformation matrix to HGI system
-       !See formula for T(HAE,HCI) at p.7 in F&H, where HCI stands for HGI
-       HgiHae_DD=eulerian_matrix(&
-            cLongAscNodeSolEquator,cInclinationSolEquator)
-
-
     VL=MOD(279.696678+0.9856473354*DJ,360.D0)
-    !Comparing this with Table 4 at p.13 in F&H, we see that this is
-    !a "mean" longitude $\lambda_{mean} of the Earth+MoonBaricenter in 
-    !the Heleocentric
-    !Aries Ecliptic system, with 180 degree offset. Were HAE the geocentric
-    !system, moving with the Earth, VL would be a "mean" longitude of the Sun.
-
     GSTime=&
          MOD(279.690983+0.9856473354*DJ+360.0*FDAY+180.,360.D0)&
          *cDegToRadHere
-    !The G(reenwich mean) S(idereal) Time is the angle between the meridian of 
-    !Greenwich and equinox
-
     G=MOD(358.475845+0.985600267*DJ,360.D0)*cDegToRadHere
-    !g in B&H is referred to as "mean anomaly" and equals the
-    !difference between the "mean longitude" and the longitude of perihelii.
-    !The following formula is for the distance from the Sun to the
-    !Earth+Moon barycentre. See Eq.(36) in F&H. Not that in perihelii (g=0)
-    !SunEMBDistance has a minimum
-    !Added by I.Sokolov&I.Roussev, 08.17.03
-    SunEMBDistance=1.000140-0.016710*cos(G)-0.000140*cos(G+G)
-  
     SunLongitude=(VL+(1.91946-0.004789*Century)*SIN(G)+&
          0.020094*SIN(2.*G))*cDegToRadHere
-    !$\lambda$ in Eq.(36) in F&H is used instead of SunLongitude, again there
-    !is difference betwen $\lambda$ and SunLongitude is a half of a full 
-    !angle. At the equinox time the Earth is in -X direction from the Sun
-    !in HAE system (which is the heliocentric system with X-axis along the 
-    !equinox line. So $\lambda$ of F&H is 180 degrees, while SunLongitude=0
-    !Note, that in perihelii (g=0) the value of d SunLongitude/ d Time 
-    !has a maximum, as it should be  
 
-  
+    !The following formula is for the distance from the Sun to the
+    !Earth+Moon barycentre. See Eq.(36) from
+    !Heliospheric Coordinate Systems by M.Franz and D.Harper
+    !Planetary and Space Scieance, V.50, 217ff(2002),
+    !Also see the corrected version in 
+    !http://www.space-plasma.qmul.ac.uk/heliocoords/
+    !Added by I.Sokolov&I.Roussev, 08.17.03
+    SunEMBDistance=1.000140-0.016710*cos(G)-0.000140*cos(G+G)
+
     IF(SunLongitude.GT.6.2831853)SunLongitude=SunLongitude-6.2831853
     IF(SunLongitude.LT.0.)SunLongitude=SunLongitude+6.2831853
-
-   
-    Sun2EarthDirHae_D(1)=-cos(SunLongitude)
-    Sun2EarthDirHae_D(2)=-sin(SunLongitude)
-    Sun2EarthDirHae_D(3)=cZero
-
-    Sun2EarthDirHgi_D=matmul(HgiHae_DD,Sun2EarthDirHae_D)
-
-    !H(eliographic)P(rime)M(eridian)Longitude
-    !This is a longitude of the main geliographic meridian in the HGI
-    !coordinate system: see Eq.(16) in F&H
-    HPMLongitude=cTwoPi*real(mod((&
-         DJ + &  !Day of epoch
-         2415020.0000000D0 - &!Julian day for Jan,1,1900,NoonUT (epoch)
-         2398220.0000000D0)  &!Julian day For Jan,1,1854,NoonUT 
-         /25.38000000000D0,&  !Sidereal rotation period for the Sun
-         1.0000000000000D0))  
-    
-    STPLongitude=atan2(Sun2EarthDirHgi_D(2),Sun2EarthDirHgi_D(1))
-    if(STPLongitude<cZero)STPLongitude=STPLongitude+cTwoPi
-   
-    STPColatitude=acos(Sun2EarthDirHgi_D(3))
-    
-    CarringtonLongitude= STPLongitude-HPMLongitude
-    if(CarringtonLongitude<cZero)&
-         CarringtonLongitude=CarringtonLongitude+cTwoPi
-
-    !We can introduce, if desired, the Advanced Heliographic System
-    !
-    if(DoAdvanceHgr) HPMLongitude=HPMLongitude+AdvanceHgr
+    Obliq=(23.45229-0.0130125*Century)*cDegToRadHere
+    GeiGse_DD=&
+         matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
   end subroutine CON_sun
-  !---------------------------------------------------------------------------
-  subroutine set_advanced_hgr(AdvanceHgrDeg)
-    real,intent(in)::AdvanceHgrDeg
-    AdvanceHgr=AdvanceHgrDeg*cDegToRad
-    DoAdvanceHgr=.true.
-  end subroutine set_advanced_hgr
-  !---------------------------------------------------------------------------
-  logical function is_advanced_hgr()
-    is_advanced_hgr=DoAdvanceHgr
-  end function is_advanced_hgr
-  !---------------------------------------------------------------------------
-  subroutine get_advanced_hgr_longitude(HGRLongitute,AdvHGRLongitute)
-    real,intent(in)::HGRLongitute
-    real,intent(out)::AdvHGRLongitute
-    AdvHGRLongitute=HGRLongitute-AdvanceHgr*cRadToDeg
-  end subroutine get_advanced_hgr_longitude
   !---------------------------------------------------------------------------
   subroutine CON_mag_axis(iYear,jDay)
     !This is a part of the RECALC subroutine form geopack.f by Tsyganenko
@@ -489,6 +185,8 @@ contains
   end subroutine CON_mag_axis
   !------------------------------------------------------------------------
   subroutine CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+    use ModCoordTransform,ONLY:rot_matrix_z,rot_matrix_x
+
     !Updates matrices for the coordinate transformations
     !Computations for GeiGse_DD and GeiGsm_DD are from the subroutine
     !RECALC of geopack.f by N.V.Tsyganenko
@@ -502,42 +200,29 @@ contains
     integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
     integer::jDay
     real::AxisMagGei_D(3),GSTime,SunLongitude,Obliq
-    real,dimension(3,3)::GseHae_DD !Transformation matrix T(HAE,GSE)
-    real,dimension(3,3)::GeoGei_DD !Transformation matrix T(GEI,GEO)
-
+    real,parameter :: cLongAscNodeSolEquator = 75.77*cDegToRad
+    ! Inclination of the solar equator on the ecliptic of date
+    real,parameter :: cInclinationSolEquator = 7.25*cDegToRad
+    integer,parameter::x_=1,y_=2,z_=3
     !-------------------------------------------------------------------
     jDay=JulianDay(iYear,iMonth,iDay)
     call CON_mag_axis(iYear,jDay)
     call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
-    
-    !GseHae= T(HAE,GSE)=E(\lambda+180,0,0) see F&H, p.9 
-  
-    GseHae_DD=eulerian_matrix(SunLongitude-9.924E-5,cZero)
-    
-    !Trasnformation matrix GeiGse is calculated as 
-    !transpose(T(HAE,GSE)\cdot HaeGei_DD)
-  
-    GeiGse_DD=transpose(matmul(GseHae_DD,HaeGei_DD))
 
-    
-    !GSTime is the Eulerian angle for the transformation
-    !matrix T(GEI,GEO)
-    GeoGei_DD=eulerian_matrix(GSTime,cZero)
-    
-    !Transformation matrix HgiGse_DD is caculated as a
-    !product of the above defined matrices
-    HgiGse_DD = matmul(HgiHae_DD,transpose(GseHae_DD))
+    GeiGse_DD=&
+         matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
+    !
+    !   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  
+    !   DUE TO THE ORBITAL MOTION OF THE EARTH   
 
-    !Transformation matrix to Heliographic coordinates
-    !By definition (see  F&H, p.7), T(HAE,HGC)=E(\Omega,i,w_0)
-    !By definition of the Eulerian Matrix 
-    !E(\Omega,i,w_0)=R_z(w_0)\cdot E(\Omega,i,0)=R_z(w_0)\cdot T(HAE,HGI)
-    !(above T(HAE,HGI) was mentioned to be E(\Omega,i,0)
-    !w_0 is calculated above as H(eleiographic)P(rime)M(eridian)Longitude
-    !Hence
-    HgrHgi_DD=rot_matrix(z_,HPMLongitude)
+    HgiGse_DD = matmul( &
+         rot_matrix_x(-cInclinationSolEquator),&
+         rot_matrix_z( SunLongitude - cLongAscNodeSolEquator ))
 
-   
+    ! Offset the HGI coordinate system if required
+    if(dLongitudeHgi > 0.0) &
+         HgiGse_DD = matmul( rot_matrix_z(-dLongitudeHgi), HgiGse_DD)
+
     !   THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE IN THE
     !   SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
     GeiGsm_DD(:,x_)=GeiGse_DD(:,x_)
@@ -545,7 +230,7 @@ contains
 
     !   THE COMPONENTS OF THE UNIT VECTOR EZSM=EZMAG
     !   IN THE SYSTEM GEI:
-    AxisMagGei_D=matmul(transpose(GeoGei_DD),AxisMagGeo_D)
+    AxisMagGei_D=matmul(rot_matrix_z(GSTime),AxisMagGeo_D)
 
     !
     !  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EYGSM 
@@ -584,18 +269,8 @@ contains
     ! coordinate system
     real::GeiHgi_DD(3,3)
     real,parameter::RightAssention=286.13*cDegToRad,&
-         Declination=63.87*cDegToRad,&
-         cQuarterPi=cQuarter*cPi
-    integer::iYear=2000,iMonth,iDay,iHour,iMin=0,iSec=0,iDir
-    do iDir=1,3
-       write(*,*)'Show a rotational matrix for Phi=Pi/4 and iDir=',iDir
-       call show_matrix(rot_matrix(iDir,cQuarterPi))
-       if(iDir/=2)CYCLE
-       write(*,*)'Check a formula R_y(Phi)=E(90,Phi,-90):'
-       write(*,*)'E(90,Pi/4,-90)'
-       call show_matrix(eulerian_matrix(cPi*cHalf,cQuarterPi,-cPi*cHalf))
-    end do
-  
+         Declination=63.87*cDegToRad
+    integer::iYear=2000,iMonth,iDay,iHour,iMin=0,iSec=0
     !For perihelion
     iMonth=1;iDay=3;iHour=5
     call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
@@ -624,28 +299,7 @@ contains
          cos(RightAssention)*cos(Declination),&
          sin(RightAssention)*cos(Declination),&
          sin(Declination)
-    iYear=2003;iMonth=10;iDay=23;iHour=13
-    write(*,*)&
-         'For Oct,23,2003,13.00 UT - the Carrington rotation 2009 starts:'
-    call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-    write(*,'(a,F14.10,a)')'HMMLongitude=',HPMLongitude*cRadToDeg,' Deg'
-    write(*,'(a,2(F14.10,a))')&
-         'STPLongitude=',STPLongitude*cRadToDeg, &
-         ' Deg,  STPLatitude=',90.0-STPColatitude*cRadToDeg,' Deg'
-    write(*,'(a,F14.10,a)')'CarringtonLongitude=',&
-         CarringtonLongitude*cRadToDeg,&
-         ' Deg - should be zero as the Carrington rotation starts'
-    call CON_recalc(iYear,iMonth,iDay,iHour+1,iMin,iSec)
-    write(*,*)'Show matrix HgcHgi_DD - should be R_z(HMMLongitude)'
-    call show_matrix(HgrHgi_DD)
-    write(*,*)'One hour later:'
-    write(*,'(a,F14.10,a)')'HMMLongitude=',HPMLongitude*cRadToDeg,' Deg'
-    write(*,'(a,2(F14.10,a))')&
-         'STPLongitude=',STPLongitude*cRadToDeg,&
-         ' Deg,  STPLatitude=',90.0-STPColatitude*cRadToDeg,' Deg'
-    write(*,'(a,F14.10,a)')'CarringtonLongitude=',&
-         CarringtonLongitude*cRadToDeg,&
-         ' Deg'
+
   end subroutine CON_test_geopack
 
 end Module CON_geopack
