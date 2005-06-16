@@ -384,6 +384,8 @@ contains
        write(*,*)'RotAxisGse_D =',RotAxis_D
        write(*,*)'RotAxisGsm_D =',RotAxisGsm_D
        XyzPlanetHgr_D = matmul(HgrHgi_DD, XyzPlanetHgi_D)
+       write(*,*)'dLongitudeHgr,dLongitudeHgi=',&
+            dLongitudeHgrDeg, dLongitudeHgiDeg
        write(*,*)'r/AU,HG_lat,HGR_lon,HGI_lon=',&
             sqrt(sum(XyzPlanetHgi_D**2))/cAU,&
             asin(XyzPlanetHgi_D(3)/sqrt(sum(XyzPlanetHgi_D**2)))*cRadToDeg, &
@@ -863,7 +865,7 @@ contains
     real    ::  dTimeSim
     real, dimension(3,3) :: Rot_DD, RotMid_DD, RotPlus_DD, RotMinus_DD, dRot_DD
     
-    character (len=*), parameter :: NameSub = NameMod // '::get_omega'
+    character (len=*), parameter :: NameSub = NameMod // '::angular_velocity'
     !--------------------------------------------------------------------------
     ! Check optional arguments and set defaults
     if(present(NameCoord2In))then
@@ -960,10 +962,11 @@ contains
 
     real, dimension(3)   :: v1Total_D, Omega12_D
     real, dimension(3,3) :: Transform21_DD
-    real, dimension(3)   :: XyzPlanet1_D, Xyz2_D, vPlanet1_D, Omega1_D, Omega2_D
+    real, dimension(3)   :: XyzPlanet1_D, Xyz2_D, vPlanet1_D, &
+         Omega1_D, Omega2_D
     logical :: IsHelioGeo = .false.
 
-    character (len=*), parameter :: NameSub = NameMod // '::get_omega'
+    character (len=*), parameter :: NameSub = NameMod // '::transform_velocity'
     !--------------------------------------------------------------------------
 
     !If NameCoord1 is the same as NameCoord2 there is no transformation.
