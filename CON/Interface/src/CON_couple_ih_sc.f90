@@ -16,6 +16,7 @@ module CON_couple_ih_sc
 
   !USES:
   use CON_coupler
+  use CON_axes, ONLY: transform_matrix
   use ModConst
 
   implicit none
@@ -36,7 +37,13 @@ module CON_couple_ih_sc
   integer :: IH_iGridRealization=-2
   integer :: SC_iGridInScIh=-2
   integer :: SC_iGridInIhSc=-2
-  
+
+  ! IH to SC conversion matrix
+  real :: IhToSc_DD(3,3)
+
+  ! Maximum time difference [s] without remap 
+  ! The 600 s corresponds to about 0.1 degree rotation between SC and IH
+  real :: dTimeMappingMax = 600.0
  
   type(RouterType),save             :: RouterIhSc
   type(RouterType),save             :: RouterScBuff
@@ -131,6 +138,10 @@ contains
 
     real,intent(in)::TimeCoupling
 !EOP
+    ! Last coupling time
+    real :: TimeCouplingLast = -1
+    !-------------------------------------------------------------------------
+
     if(.not.RouterIhSc%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
@@ -140,9 +151,17 @@ contains
     call SC_synchronize_refinement(RouterIhSc%iProc0Target,&
                                    RouterIhSc%iCommUnion)
 
-
+    ! Redo the router if any of the grids changed or 
+    ! the two coordinate systems have rotated away too much
     if(IH_iGridRealization/=i_realization(IH_).or.&     
-         SC_iGridInIhSc/=i_realization(SC_))then  
+         SC_iGridInIhSc/=i_realization(SC_) .or. &
+         (Grid_C(IH_) % TypeCoord /= Grid_C(SC_) % TypeCoord &
+         .and. TimeCoupling - TimeCouplingLast > dTimeMappingMax)) then  
+
+       ! Recalculate the IH to SC transformation matrix used in IH_SC_mapping
+       ! (it is time dependent in general)
+       IhToSc_DD = transform_matrix(TimeCoupling, &
+            Grid_C(IH_) % TypeCoord, Grid_C(SC_) % TypeCoord)
 
        call set_router(&
             GridDescriptorSource=IH_Grid,&
@@ -150,9 +169,12 @@ contains
             Router=RouterIhSc,&
             is_interface_block=boundary_block,&
             interface_point_coords=outer_cells, &
+            mapping=IH_SC_mapping, &
             interpolate=interpolation_fix_reschange)
-       IH_iGridRealization=i_realization(IH_)
-       SC_iGridInIhSc       =i_realization(SC_)
+
+       IH_iGridRealization = i_realization(IH_)
+       SC_iGridInIhSc      = i_realization(SC_)
+       TimeCouplingLast    = TimeCoupling
     end if
 
     call couple_comp(&
@@ -203,6 +225,19 @@ contains
     IsInterfacePoint=any(IsRightFace_D.or.IsLeftFace_D)
   end subroutine outer_cells 
   !========================================================!
+  subroutine IH_SC_mapping(&
+       IH_nDim,IH_Xyz_D,SC_nDim,SC_Xyz_D,IsInterfacePoint)
+
+    integer,intent(in)::IH_nDim,SC_nDim
+    real,dimension(IH_nDim),intent(in)::IH_Xyz_D
+    real,dimension(SC_nDim),intent(out)::SC_Xyz_D
+    logical,intent(out)::IsInterfacePoint
+
+    SC_Xyz_D = matmul(IhToSc_DD, IH_Xyz_D)
+    IsInterfacePoint=.true.
+
+  end subroutine IH_SC_Mapping
+
 !===============================================================!
   !BOP
 !IROUTINE: couple_sc_ih - interpolate and get MHD state at the IH buffer grid 
