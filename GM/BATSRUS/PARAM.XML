@@ -2844,8 +2844,6 @@ T		UseTvdAtResChange
 ! prolongation and restriction operators at the resolution changes.
 </command>
 
-</command>
-
 <command name="USEROTATINGBUFFER">
 	<parameter name="UseRotatingBufferGrid" type="logical" default="F" />
 
