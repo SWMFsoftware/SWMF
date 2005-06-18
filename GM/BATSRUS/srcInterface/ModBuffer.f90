@@ -11,7 +11,6 @@ module ModBuffer
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
   logical::DoInit
-  logical::UseRotatingBufferGrid=.false.
   real,dimension(3,3)::BuffToMh_DD
 contains
   subroutine set_buffer_name(NameIn)
@@ -48,21 +47,20 @@ end module ModBuffer
 subroutine set_rotate_buffer_grid(Time)
   use ModBuffer
   use ModMain,       ONLY: nDim,TypeBc_I,&
-       TypeCoordSystem, Time_Simulation,UseRotatingBc
+       TypeCoordSystem, Time_Simulation,UseRotatingBufferGrid
   use CON_coupler,   ONLY: SC_, Grid_C
   use CON_axes,      ONLY: transform_matrix
   use ModNumConst,ONLY:cUnit_DD
   implicit none
   real,intent(in)::Time
   real:: TimeLast=-1.0
-  if(any(TypeBc_I=='coronatoih').and.UseRotatingBc.and.Time/=TimeLast)then
+  if(any(TypeBc_I=='coronatoih').and.UseRotatingBufferGrid &
+       .and.Time/=TimeLast)then
     BuffToMh_DD = &
           transform_matrix(Time,Grid_C(SC_) % TypeCoord,TypeCoordSystem)
     TimeLast=Time
-    UseRotatingBufferGrid=.true.
   else
       TimeLast=Time
-      UseRotatingBufferGrid=.false.
       BuffToMh_DD=cUnit_DD
   end if
   
@@ -72,6 +70,7 @@ end subroutine set_rotate_buffer_grid
 subroutine get_from_spher_buffer_grid(XyzMh_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_
+  use ModMain,       ONLY: UseRotatingBufferGrid
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
   use ModPhysics,    ONLY: UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p,UnitSI_X
 
