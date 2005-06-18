@@ -7,8 +7,13 @@ subroutine SC_get_for_ih(&
        rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
        
 
-  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B
+  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B, UnitSI_X
   use CON_router
+
+  use CON_coupler, ONLY: Grid_C, IH_
+  use CON_axes, ONLY: transform_velocity
+  use SC_ModMain,  ONLY: TypeCoordSystem, Time_Simulation
+  use SC_ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
   implicit none
 
@@ -26,13 +31,13 @@ subroutine SC_get_for_ih(&
   !different. Below are the conventions for buffer:
   integer,parameter::&
        BuffRho_  =1,&
-       BuffRhoUx_=2,&
-       BuffRhoUz_=4,&
+       BuffRhoUx_=2, BuffUx_=BuffRhoUx_, &
+       BuffRhoUz_=4, BuffUz_=BuffRhoUz_, &
        BuffBx_   =5,&
        BuffBy_   =6,&
        BuffBz_   =7,&
        BuffP_    =8
-       
+  real :: XyzSc_D(3)     
 
   !----------------------------------------------------------
  
@@ -87,5 +92,27 @@ subroutine SC_get_for_ih(&
        State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
   State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
   State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
+
+  ! Transform vector variables from SC to IH
+  if( Grid_C(IH_) % TypeCoord /= TypeCoordSystem)then
+
+     ! Calculate the location vector in SI units
+     XyzSc_D = UnitSi_X * &
+          (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock) /)
+
+     ! Transform momentum to velocity
+     State_V(BuffUx_:BuffUz_) = &
+          State_V(BuffRhoUx_:BuffRhoUz_) / State_V(BuffRho_)
+     
+     ! Transform velocity from SC to IH
+     State_V(BuffUx_:BuffUz_) = transform_velocity(Time_Simulation,&
+          State_V(BuffUx_:BuffUz_), XyzSc_D, TypeCoordSystem,&
+          Grid_C(IH_) % TypeCoord) 
+
+     ! Transform back to momentum
+     State_V(BuffRhoUx_:BuffRhoUz_) = &
+          State_V(BuffUx_:BuffUz_) * State_V(BuffRho_)
+  end if
+
 
 end subroutine SC_get_for_ih
