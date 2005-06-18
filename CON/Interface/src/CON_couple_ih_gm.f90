@@ -30,6 +30,7 @@ module CON_couple_ih_gm
   use CON_time,ONLY:TimeStart
   use ModConst
   use CON_geopack
+  use CON_axes, ONLY: transform_matrix, vPlanetHgi_D
 
   implicit none
   private !except
@@ -51,7 +52,7 @@ module CON_couple_ih_gm
   integer :: GM_iGridRealization=-2
   integer :: IH_GM_iMapping=-1
 
-  real,dimension(3)   :: IH_EarthPosition_D
+  real,dimension(3)   :: IH_EarthPosition_D,vPlanetIh_D
   real,dimension(3,3) :: IH_a_GM_DD,GM_a_IH_DD
 
   type(RouterType),save         :: Router
@@ -77,6 +78,27 @@ contains
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
     if(DoTest)write(*,*)'couple_ih_gm_init iProc=',i_proc()
 
+    !Initialize the transformation matrices, compute the position 
+    !of the Earth and its orbital velocity in IH, at the time zero  
+
+    IH_a_GM_DD         = transform_matrix(cZero, &
+         Grid_C(GM_) % TypeCoord, Grid_C(IH_) % TypeCoord)
+
+    GM_a_IH_DD         = transpose(IH_a_GM_DD)
+
+    !Compute the Earth position in Hgi and transform 
+    !to IH coordinates
+ 
+    IH_EarthPosition_D = -cAU/rSun*SunEMBDistance*matmul(&
+         transform_matrix(cZero, 'HGI', &
+         Grid_C(IH_) % TypeCoord),HgiGse_DD(:,1))
+
+    !Compute the Earth velocity in Hgi and transform 
+    !to IH coordinates 
+
+    vPlanetIh_D = matmul(transform_matrix(cZero,'HGI',&
+            Grid_C(IH_) % TypeCoord),vPlanetHgi_D)
+
     call init_coupler(              &    
        iCompSource=IH_,             & ! component index for source
        iCompTarget=GM_,             & ! component index for target
@@ -89,25 +111,6 @@ contains
     GM_iGridRealization=-1
 
     ! Initialize the coordinate transformation
-
-    call CON_recalc(TimeStart%iYear,&
-                    TimeStart%iMonth,&
-                    TimeStart%iDay,&
-                    TimeStart%iHour,&
-                    TimeStart%iMinute,&
-                    TimeStart%iSecond)
-
-    ! This assumes here that GM uses GSM.  We should use 
-    !
-    ! transform_matrix(IH_GM_CouplingTime,'Grid_C(GM_) % TypeCoord',&
-    !                                     'Grid_C(IH_) & TypeCoord)
-    !
-    IH_a_GM_DD         = matmul(HgiGse_DD,transpose(GsmGse_DD))
-    GM_a_IH_DD         = transpose(IH_a_GM_DD)
-    IH_EarthPosition_D = -cAU/rSun*SunEMBDistance*HgiGse_DD(:,1)
-
-    if(DoTestMe)write(*,*)'couple_ih_gm_init IH_EarthPosition_D=',&
-         IH_EarthPosition_D
 
   end subroutine couple_ih_gm_init
   !===============================================================!
@@ -153,7 +156,9 @@ contains
          IH_GM_iMapping/=iMappingNew)then  
 
        if(DoTest)write(*,*)'couple_ih_gm call set_router iProc=',i_proc()
-
+       
+       if(DoTestMe)write(*,*)'couple_ih_gm_init IH_EarthPosition_D=',&
+            IH_EarthPosition_D
        call set_router(&
             GridDescriptorSource=IH_Grid,&
             GridDescriptorTarget=GM_Grid,&
@@ -236,7 +241,7 @@ contains
 
     use ModKind
     use CON_physics, ONLY: get_time, time_real_to_int
-
+    use CON_geopack
     ! The time at the beginning of the simulation
     real(Real8_), save :: tStart
     integer,intent(out)::iMappingNew
@@ -245,26 +250,31 @@ contains
     iMappingNew=1
     RETURN
 
-    ! This is how we could update the mapping for the current time
-    call get_time(tStartOut=tStart)
+    !Initialize the transformation matrices, compute the position 
+    !of the Earth and its orbital velocity in IH, at the coupling time  
 
-    call time_real_to_int(tStart+IH_GM_CouplingTime, TimeGeoPack)
+    !This matrix is needed to map the points of the target (GM)
+    !to the source grid (IH), for interpolation
+    IH_a_GM_DD         = transform_matrix(IH_GM_CouplingTime, &
+            Grid_C(GM_) % TypeCoord, Grid_C(IH_) % TypeCoord)
 
-    call CON_recalc(&
-         TimeGeopack(1),& ! year
-         TimeGeopack(2),& ! month
-         TimeGeopack(3),& ! day
-         TimeGeopack(4),& ! hour
-         TimeGeopack(5),& ! minute
-         TimeGeopack(6))  ! second
+    !The transposed matrix is needed to convert vectors to be sent
+    !from the source (IH) to target (GM)
 
-    ! This assumes here that GM uses GSM.  We should use 
-    !
-    ! transform_matrix(IH_GM_CouplingTime,'Grid_C(GM_) % TypeCoord','GSE')
-    !
-    IH_a_GM_DD         = matmul(HgiGse_DD,transpose(GsmGse_DD))
     GM_a_IH_DD         = transpose(IH_a_GM_DD)
-    IH_EarthPosition_D = -cAU/rSun*SunEMBDistance*HgiGse_DD(:,1)
+
+    !Compute the Earth position in Hgi and transform 
+    !to IH coordinates
+
+    IH_EarthPosition_D = -cAU/rSun*SunEMBDistance*&
+         matmul(transform_matrix(IH_GM_CouplingTime,'HGI',&
+         Grid_C(IH_) % TypeCoord),HgiGse_DD(:,1))
+
+    !Compute the Earth velocity in Hgi and transform 
+    !to IH coordinates
+
+    vPlanetIh_D = matmul(transform_matrix(IH_GM_CouplingTime,'HGI',&
+         Grid_C(IH_) % TypeCoord),vPlanetHgi_D)
 
   end subroutine update_mapping_parameters
 
@@ -272,8 +282,6 @@ contains
 
   subroutine IH_get_for_gm_and_transform(&
        nPartial,iGetStart,Get,W,State_V,nVar)
-
-    use CON_axes, ONLY: vPlanetHgi_D
 
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
@@ -287,7 +295,7 @@ contains
 
     State_V(rhoUx_:rhoUz_)=&
          matmul(GM_a_IH_DD,State_V(rhoUx_:rhoUz_) &
-         - State_V(rho_)*vPlanetHgi_D )
+         - State_V(rho_)*vPlanetIh_D )
     State_V(Bx_:Bz_)=matmul(GM_a_IH_DD,State_V(Bx_:Bz_))
   end subroutine IH_get_for_gm_and_transform
 
