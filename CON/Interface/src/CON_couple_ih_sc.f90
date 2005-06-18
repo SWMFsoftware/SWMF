@@ -38,8 +38,10 @@ module CON_couple_ih_sc
   integer :: SC_iGridInScIh=-2
   integer :: SC_iGridInIhSc=-2
 
-  ! IH to SC conversion matrix
+  ! IH <-> SC conversion matrices
   real :: IhToSc_DD(3,3),ScToIh_DD(3,3)
+
+  real :: BuffToIh_DD(3,3)
 
   ! Maximum time difference [s] without remap 
   ! The 600 s corresponds to about 0.1 degree rotation between SC and IH
@@ -291,6 +293,9 @@ contains
 
        ScToIh_DD = transpose(IhToSc_DD)
 
+       !Recalculate the matrix for conversion from the Buffer Grid to IH
+       call IH_rotate_buffer_grid(TimeCoupling,BuffToIH_DD)
+
        call set_router(&
             GridDescriptorSource=SC_SourceGrid,&
             GridDescriptorTarget=BuffGD,&
@@ -329,13 +334,15 @@ contains
     !The order of spherical indexes as in BATSRUS
     integer,parameter::R_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
     real::RSinTheta
-    real,dimension(nDimTo)::IH_Xyz_D
+    real,dimension(nDimTo)::IH_Xyz_D,BuffXyz_D
     IsInterfacePoint=.true.
-    !Transform to cartesian grid in IH
-    RSinTheta   = Sph_D(R_)*sin(Sph_D(Theta_))!To be modified
-    IH_Xyz_D(x_)= RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
-    IH_Xyz_D(y_)= RSinTheta*sin(Sph_D(Psi_))  !/is spherical
-    IH_Xyz_D(z_)= Sph_D(R_)*cos(Sph_D(Theta_))!To be modified
+    !Transform to cartesian grid related to buffer (possibly, rotating)
+    RSinTheta    = Sph_D(R_)*sin(Sph_D(Theta_))!To be modified
+    BuffXyz_D(x_)= RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
+    BuffXyz_D(y_)= RSinTheta*sin(Sph_D(Psi_))  !/is spherical
+    BuffXyz_D(z_)= Sph_D(R_)*cos(Sph_D(Theta_))!To be modified
+    !Transform to IH
+    IH_Xyz_D=matmul(BuffToIh_DD,BuffXyz_D)
 
     !IH_Xyz_D should be transformed to SC coordinates,
     SC_Xyz_D = matmul(IhToSc_DD, IH_Xyz_D)
@@ -357,7 +364,12 @@ contains
     call SC_get_for_ih(&
          nPartial,iGetStart,Get,W,State_V,nVar)
     !Velocity computation is delegated to wrapper
+    !Transform magnetic field
     State_V(Bx_:Bz_)=matmul(ScToIh_DD,State_V(Bx_:Bz_))
+
+    !Transform to the cartesian grid assigned to the buffer
+    State_V(Bx_:Bz_)= matmul(State_V(Bx_:Bz_),BuffToIh_DD)
+    State_V(rhoUx_:rhoUz_)=matmul(State_V(rhoUx_:rhoUz_),BuffToIh_DD)
   end subroutine SC_get_for_ih_and_transform
 end module CON_couple_ih_sc
 

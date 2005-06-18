@@ -409,7 +409,7 @@ contains
 
        VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
     case('coronatoih')    !Only for nVar=8
-
+       if(UseRotatingBcHere)call set_rotate_buffer_grid(time_now)
        !Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
             FaceCoords_D,nVar,FaceState_V)
@@ -432,8 +432,7 @@ contains
        end select
     end if
 !^CFG END IONOSPHERE
-    if (UseRotatingBcHere) then
-
+    if (UseRotatingBcHere.and.(.not.TypeBcHere=='coronatoih')) then
        !\
        ! The program is called which calculates the cartesian corotation velocity vector
        ! v_phi as a function of the radius-vector "FaceCoords"

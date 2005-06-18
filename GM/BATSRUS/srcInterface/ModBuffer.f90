@@ -3,6 +3,7 @@ module ModBuffer
        nPhiBuff,nThetaBuff,RBuffMin,RBuffMax
   use CON_global_vector
   use CON_grid_descriptor
+  use ModNumConst,ONLY:cUnit_DD
   implicit none
   save
   character(LEN=10)::NameBuffer
@@ -10,6 +11,8 @@ module ModBuffer
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
   logical::DoInit
+  logical::UseRotatingBufferGrid=.false.
+  real,dimension(3,3)::BuffToMh_DD
 contains
   subroutine set_buffer_name(NameIn)
     character(LEN=*),intent(in)::NameIn
@@ -38,12 +41,35 @@ contains
             nGhostGridPoints=1,  &
             GridDescriptor=LocalBufferGD)
     end if
+    BuffToMh_DD=cUnit_DD
   end subroutine set_spher_buffer_grid
 end module ModBuffer
-
 !=============================================================!
+subroutine set_rotate_buffer_grid(Time)
+  use ModBuffer
+  use ModMain,       ONLY: nDim,TypeBc_I,&
+       TypeCoordSystem, Time_Simulation,UseRotatingBc
+  use CON_coupler,   ONLY: SC_, Grid_C
+  use CON_axes,      ONLY: transform_matrix
+  use ModNumConst,ONLY:cUnit_DD
+  implicit none
+  real,intent(in)::Time
+  real:: TimeLast=-1.0
+  if(any(TypeBc_I=='coronatoih').and.UseRotatingBc.and.Time/=TimeLast)then
+    BuffToMh_DD = &
+          transform_matrix(Time,Grid_C(SC_) % TypeCoord,TypeCoordSystem)
+    TimeLast=Time
+    UseRotatingBufferGrid=.true.
+  else
+      TimeLast=Time
+      UseRotatingBufferGrid=.false.
+      BuffToMh_DD=cUnit_DD
+  end if
+  
 
-subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
+end subroutine set_rotate_buffer_grid
+
+subroutine get_from_spher_buffer_grid(XyzMh_D,nVar,State_V)
   use ModBuffer
   use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
@@ -51,14 +77,18 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
 
   implicit none
   integer,intent(in)::nVar
-  real,intent(in)::Xyz_D(nDim)
+  real,intent(in)::XyzMh_D(nDim)
   real,dimension(nVar),intent(out)::State_V
-  real,dimension(nDim)::Sph_D
+  real,dimension(nDim)::Sph_D,XyzBuff_D
 
   !---------------------------------------------------------------------------
-
+  if(UseRotatingBufferGrid)then
+     XyzBuff_D=matmul(XyzMh_D,BuffToMh_DD)
+  else
+     XyzBuff_D=XyzMh_D
+  end if
   ! Convert to left handed spherical coordinates !!!
-  call xyz_to_spherical(Xyz_D(x_),Xyz_D(y_),Xyz_D(z_),&
+  call xyz_to_spherical(XyzBuff_D(x_),XyzBuff_D(y_),XyzBuff_D(z_),&
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
   ! Get the state from the spherical buffer grid
@@ -78,6 +108,11 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)/UnitSI_U
   State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)/UnitSI_B
   State_V(P_)        = State_V(P_)     /UnitSI_P
+  
+  if(UseRotatingBufferGrid)then
+    State_V(Ux_:Uz_)= matmul(BuffToMh_DD,State_V(Ux_:Uz_))
+    State_V(Bx_:Bz_)= matmul(BuffToMh_DD,State_V(Bx_:Bz_))
+ end if
 
 end subroutine get_from_spher_buffer_grid
           
