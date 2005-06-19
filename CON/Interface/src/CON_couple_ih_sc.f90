@@ -16,7 +16,7 @@ module CON_couple_ih_sc
 
   !USES:
   use CON_coupler
-  use CON_axes, ONLY: transform_matrix
+  use CON_axes, ONLY: transform_matrix,transform_velocity
   use ModConst
 
   implicit none
@@ -56,9 +56,9 @@ module CON_couple_ih_sc
   type(DomainDecompositionType),&
        save,target                  :: BuffDD
   logical :: DoInitialize=.true., DoTest, DoTestMe
-
+  real :: tNow
   character(len=*), parameter :: NameMod='couple_ih_sc'
-
+  
 
 contains
 
@@ -150,7 +150,6 @@ contains
          SC_iGridInIhSc/=i_realization(SC_) .or. &
          (Grid_C(IH_) % TypeCoord /= Grid_C(SC_) % TypeCoord &
          .and. TimeCoupling - TimeCouplingLast > dTimeMappingMax)) then  
-
        ! Recalculate the SC to IH transformation matrix used in mapping
        ! a target point (SC) to the source (IH)
        !(it is time dependent in general)
@@ -174,8 +173,8 @@ contains
        IH_iGridRealization = i_realization(IH_)
        SC_iGridInIhSc      = i_realization(SC_)
        TimeCouplingLast    = TimeCoupling
+       tNow=TimeCoupling
     end if
-
     call couple_comp(&
          RouterIhSc,&
          nVar=8,&
@@ -245,17 +244,29 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
     real,dimension(nVar),intent(out)::State_V
-
-    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7
+    real,dimension(nVar+3)::State3_V
+    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7,&
+         BuffX_=9,BuffZ_=11
     !------------------------------------------------------------
     call IH_get_for_sc(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-    !Velocity computation is delegated to wrapper
+       nPartial,iGetStart,Get,W,State3_V,nVar+3)
+    State_V=State3_V(1:nVar)
+
+    !Transform velocity
+    State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
+         transform_velocity(tNow,&
+         State_V(rhoUx_:rhoUz_)/State_V(rho_),&
+         State_V(BuffX_:BuffZ_)/State_V(rho_),&
+         Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord)
+    
     State_V(Bx_:Bz_)=matmul(IhToSc_DD,State_V(Bx_:Bz_))
 
   end subroutine IH_get_for_sc_and_transform
 
 !===============================================================!
+!===============================================================!
+!===============================================================!
+!===============================================================
 !BOP
 !IROUTINE: couple_sc_ih - interpolate and get MHD state at the IH buffer grid 
 !INTERFACE:
@@ -303,6 +314,8 @@ contains
             mapping=buffer_grid_point,&
             interpolate=interpolation_fix_reschange)
        SC_iGridInScIh= i_realization(SC_)
+       tNow=TimeCoupling
+       TimeCouplingLast=TimeCoupling
     end if
     call couple_buffer_grid(&
          RouterScBuff,&
@@ -358,12 +371,23 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
     real,dimension(nVar),intent(out)::State_V
-    
-    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7
+    real,dimension(nVar+3)::State3_V
+    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7,&
+       BuffX_    =9,BuffZ_=11
+         
     !------------------------------------------------------------
     call SC_get_for_ih(&
-         nPartial,iGetStart,Get,W,State_V,nVar)
-    !Velocity computation is delegated to wrapper
+         nPartial,iGetStart,Get,W,State3_V,nVar+3)
+
+    State_V=State3_V(1:nVar)
+    
+    !Transform velocity
+    State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
+         transform_velocity(tNow,&
+         State_V(rhoUx_:rhoUz_)/State_V(rho_),&
+         State_V(BuffX_:BuffZ_)/State_V(rho_),&
+         Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
+                  
     !Transform magnetic field
     State_V(Bx_:Bz_)=matmul(ScToIh_DD,State_V(Bx_:Bz_))
 

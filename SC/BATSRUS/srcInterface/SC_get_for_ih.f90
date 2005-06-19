@@ -10,9 +10,6 @@ subroutine SC_get_for_ih(&
   use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B, UnitSI_X
   use CON_router
 
-  use CON_coupler, ONLY: Grid_C, IH_
-  use CON_axes, ONLY: transform_velocity
-  use SC_ModMain,  ONLY: TypeCoordSystem, Time_Simulation
   use SC_ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
   implicit none
@@ -36,8 +33,9 @@ subroutine SC_get_for_ih(&
        BuffBx_   =5,&
        BuffBy_   =6,&
        BuffBz_   =7,&
-       BuffP_    =8
-  real :: XyzSc_D(3)     
+       BuffP_    =8,&
+       BuffX_    =9,BuffZ_=11
+     
 
   !----------------------------------------------------------
  
@@ -62,6 +60,9 @@ subroutine SC_get_for_ih(&
        B0zCell_BLK(i,j,k,iBlock))*Weight
   State_V(BuffP_)            = &
        State_VGB(P_,       i,j,k,iBlock) *Weight
+  State_V(BuffX_:BuffZ_)     = &
+       (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)&
+      *State_VGB(rho_,         i,j,k,iBlock)*Weight
   
   do iGet=iGetStart+1,iGetStart+nPartial-1
      i      = Get%iCB_II(1,iGet)
@@ -84,35 +85,18 @@ subroutine SC_get_for_ih(&
           B0zCell_BLK(i,j,k,iBlock))*Weight
      State_V(BuffP_)               =State_V(BuffP_)               +&
           State_VGB(P_,      i,j,k,iBlock) *Weight
+     State_V(BuffX_:BuffZ_)        = State_V(BuffX_:BuffZ_)       +&
+          (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)&
+          *State_VGB(rho_,         i,j,k,iBlock)*Weight
   end do
-
+  
   ! Convert to SI units
   State_V(BuffRho_)             = State_V(BuffRho_)     *UnitSI_rho
   State_V(BuffRhoUx_:BuffRhoUz_)= &
        State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
   State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
   State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
-
-  ! Transform vector variables from SC to IH
-  if( Grid_C(IH_) % TypeCoord /= TypeCoordSystem)then
-
-     ! Calculate the location vector in SI units
-     XyzSc_D = UnitSi_X * &
-          (/ x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock) /)
-
-     ! Transform momentum to velocity
-     State_V(BuffUx_:BuffUz_) = &
-          State_V(BuffRhoUx_:BuffRhoUz_) / State_V(BuffRho_)
-     
-     ! Transform velocity from SC to IH
-     State_V(BuffUx_:BuffUz_) = transform_velocity(Time_Simulation,&
-          State_V(BuffUx_:BuffUz_), XyzSc_D, TypeCoordSystem,&
-          Grid_C(IH_) % TypeCoord) 
-
-     ! Transform back to momentum
-     State_V(BuffRhoUx_:BuffRhoUz_) = &
-          State_V(BuffUx_:BuffUz_) * State_V(BuffRho_)
-  end if
-
+  State_V(BuffX_:BuffZ_)        = &
+       State_V(BuffX_:BuffZ_)        *        (UnitSI_rho*UnitSI_x) 
 
 end subroutine SC_get_for_ih
