@@ -3,6 +3,7 @@
 Module CON_couple_mh_sp
   use CON_coupler
   use CON_global_message_pass
+  use CON_axes
   implicit none
   private !Except
   public::couple_mh_sp_init
@@ -21,6 +22,7 @@ Module CON_couple_mh_sp
   real,allocatable,dimension(:,:)::XyzTemp_DI
 
   real,dimension(:,:),pointer ::Xyz_DI
+  logical,dimension(:),pointer :: Is_I
   integer,parameter::nPointMax=5000
   integer::nPoint=0
   integer::iPoint
@@ -31,11 +33,21 @@ Module CON_couple_mh_sp
   real,save::RBoundSC                !^CMP IF SC
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
+  real,dimension(3,3)::ScToIh_DD
+
+  real :: tNow
+
+!====================================================================!
+!The coupler is generalized for the following assumptions:
+!The IH coordinate system is assumed to be inertial (non-rotatating).
+!The SP coordinate system is assumed to be the same as in IH.
+!The SC coordinate system can be arbitrary, if IH is used, otherwise 
+!it is inertial and coincides with SP
+!The unit of length in IH,SC is rSun
 contains
   !==================================================================
   subroutine couple_mh_sp_init
-    use CON_geopack,ONLY:CON_recalc,SunEMBDistance,HgiGse_DD
-    use CON_physics, ONLY: get_time, time_real_to_int
+    use CON_physics, ONLY: get_time
     use ModConst
     interface
        subroutine IH_get_a_line_point(nPartial,&         !^CMP IF IH BEGIN
@@ -63,9 +75,9 @@ contains
          real,dimension(nVar),intent(out)::Buff_I
        end subroutine SC_get_a_line_point               !^CMP END SC
     end interface
-    real(Real8_) :: tNow
+
     logical::DoneRestart
-    integer::nU_I(2),TimeGeopack(7)
+    integer::nU_I(2)
     !======================================================================
     if(.not.DoInit)return
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -100,6 +112,7 @@ contains
        call set_standard_grid_descriptor(SP_,GridDescriptor=&
             SP_GridDescriptor)
 
+       call get_time(tSimulationOut=tNow)
        !Set the initial point for the line
 
        if(is_proc0(SP_))then
@@ -110,17 +123,16 @@ contains
             )
           if(sum(XyzLine_D**2)<cOne)then
              !Calculate the Earth position in SGI
-             call get_time(tCurrentOut=tNow)
-             call time_real_to_int(tNow, TimeGeoPack)
-             call CON_recalc(&
-                  TimeGeopack(1),& ! year
-                  TimeGeopack(2),& ! month
-                  TimeGeopack(3),& ! day
-                  TimeGeopack(4),& ! hour
-                  TimeGeopack(5),& ! minute
-                  TimeGeopack(6))  ! second
-             XyzLine_D = -cAU/rSun*&
-                  SunEMBDistance*HgiGse_DD(:,1)
+             XyzLine_D = XyzPlanetHgi_D/rSun   !In HGI
+             if(use_comp(IH_))then             !^CMP IF IH BEGIN
+                XyzLine_D=matmul(&
+                     transform_matrix(tNow,'HGI',&
+                     Grid_C(IH_) % TypeCoord),XyzLine_D)
+             else                              !^CMP END IH
+                XyzLine_D=matmul(&
+                     transform_matrix(tNow,'HGI',&
+                     Grid_C(SC_) % TypeCoord),XyzLine_D)
+             end if                            !^CMP IF IH
              write(*,*)'Actual Earth position is at', XyzLine_D
           end if
        end if
@@ -151,6 +163,13 @@ contains
           call SC_synchronize_refinement(i_proc0(SC_),i_comm())
           call MPI_bcast(RBoundSC,1,MPI_REAL,&
                i_proc0(SP_),i_comm(),iError)
+          if(Grid_C(SC_)%TypeCoord/=Grid_C(IH_)%TypeCoord& !^CMP IF IH BEGIN
+               .and.is_proc0(SP_))&
+               XyzTemp_DI(:,nPoint)=matmul(transform_matrix(&
+               tNow,Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord),&
+               XyzTemp_DI(:,nPoint))                       !^CMP END IH
+
+
           call trace_line(SC_,&
                SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
@@ -417,11 +436,12 @@ contains
          real,dimension(nVar),intent(in)::Buff_I
        end subroutine SP_put_from_mh
     end interface
-    
+
     real,intent(in)::DataInputTime
     !-------------------------------------------------------------------------
 
     if(.not.RouterIhSp%IsProc)return
+    tNow=DataInputTime
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
     call bcast_global_vector('SP_Xyz_DI',&
@@ -434,22 +454,38 @@ contains
          Router=RouterIhSp,&
          NameMappingVector='SP_Xyz_DI',&
          NameMask='SP_IsInIH',&
-         interpolate=interpolation_fix_reschange)     
+         interpolate=interpolation_fix_reschange)
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)     
     call global_message_pass(RouterIhSp,&
          nVar=8,&
          fill_buffer=IH_get_for_sp,&
          apply_buffer=SP_put_from_mh)
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
-                                          !^CMP IF SC BEGIN
+    !^CMP IF SC BEGIN
     !This coupler is performed after SC-SP coupling, so that 
     !on SP the updated coordinates are available for those
     !points which passed from SC to IH
 
-    if(use_comp(SC_))&                     
-         call bcast_global_vector('SP_Xyz_DI',&
-         RouterIhSp%iProc0Target,&
-         RouterIhSp%iCommUnion)           !^CMP END SC
+    if(use_comp(SC_))then
+       !Reset the transformation matrix 
+       !Check the points which passed from SC to IH:
+       ScToIh_DD=transform_matrix(DataInputTime,&
+            Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)
 
+       call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
+       call associate_with_global_mask(Is_I,'SP_IsInIH')
+
+       do iPoint=1,nPoint
+          if(.not.Is_I(iPoint) &      !This point before was   not in IH
+               .and.is_in_ih(Xyz_DI(:,iPoint)))& !... and now it is in IH
+               Xyz_DI(:,iPoint)=matmul(ScToIh_DD,Xyz_DI(:,iPoint)) 
+                !..that is why we convert it to IH coordinates
+       end do
+       nullify(Xyz_DI)
+       nullify(Is_I)
+       call bcast_global_vector('SP_Xyz_DI',&
+            RouterIhSp%iProc0Target,&
+            RouterIhSp%iCommUnion)           !^CMP END SC
+    end if
     call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
   end subroutine couple_ih_sp
   !==================================================================
@@ -461,20 +497,6 @@ contains
   !=========================================================================
   subroutine couple_sc_sp(DataInputTime)     !^CMP IF SC BEGIN
     use CON_global_message_pass
-    interface
-       subroutine SC_get_for_sp(nPartial,&
-            iGetStart,&
-            Get,&
-            Weight,&
-            Buff_I,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iGetStart,nVar
-         type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::Weight
-         real,dimension(nVar),intent(out)::Buff_I
-       end subroutine SC_get_for_sp
-    end interface
     interface
        subroutine SP_put_from_mh(nPartial,&
             iPutStart,&
@@ -494,6 +516,10 @@ contains
     real,intent(in)::DataInputTime
 
     if(.not.RouterScSp%IsProc)return
+    tNow=DataInputTime
+    ScToIh_DD=transform_matrix(DataInputTime,&
+         Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)
+
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
     call bcast_global_vector('SP_Xyz_DI',&
@@ -506,12 +532,12 @@ contains
          Router=RouterScSp,&
          NameMappingVector='SP_Xyz_DI',&
          NameMask='SP_IsInSC',&
-         interpolate=interpolation_fix_reschange)     
+         interpolate=interpolation_fix_reschange)
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)     
     call global_message_pass(RouterScSp,&
          nVar=8,&
-         fill_buffer=SC_get_for_sp,&
+         fill_buffer=SC_get_for_sp_and_transform,&
          apply_buffer=SP_put_from_mh)
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
     call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
   end subroutine couple_sc_sp
   !-------------------------------------------------------------------------
@@ -525,6 +551,30 @@ contains
        is_in_sc=R2>=RBoundSC**2.and.&
             all(Xyz_D<=xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
     end if                           !^CMP IF IH
-  end function is_in_sc              !^CMP END SC
+  end function is_in_sc             
+  !--------------------------------------------------------------------------
+   subroutine SC_get_for_sp_and_transform(&
+       nPartial,iGetStart,Get,W,State_V,nVar)
+    
+    integer,intent(in)::nPartial,iGetStart,nVar
+    type(IndexPtrType),intent(in)::Get
+    type(WeightPtrType),intent(in)::W
+    real,dimension(nVar),intent(out)::State_V
+    real,dimension(nVar+3)::State3_V
+    integer, parameter :: rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
+       BuffX_    =9,BuffZ_=11
+    !------------------------------------------------------------
+    call SC_get_for_sp(&
+         nPartial,iGetStart,Get,W,State3_V,nVar+3)
+    State_V=State3_V(1:nVar)
+    
+    State_V(Ux_:Uz_)=&
+         transform_velocity(tNow,&
+         State_V(Ux_:Uz_),&
+         State_V(BuffX_:BuffZ_),&
+         Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
+
+    State_V(Bx_:Bz_)=matmul(ScToIh_DD,State_V(Bx_:Bz_))
+  end subroutine SC_get_for_sp_and_transform
   !=========================================================================
 end Module CON_couple_mh_sp

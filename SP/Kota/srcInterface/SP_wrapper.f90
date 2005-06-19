@@ -17,6 +17,24 @@ module SP_Mod
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
   integer::iProc=-1,nProc=-1,iComm=-1
   integer::nSmooth=0
+  real,dimension(3,3)::ScToIh_DD !Transformation matrix from SC
+  logical,pointer,dimension(:)::IsInSc_I
+contains
+  function SP_xyz_i(iPoint)
+    use CON_coupler
+    implicit none
+    logical,save::DoInit=.true.
+    real,dimension(3)::SP_xyz_i
+    integer,intent(in)::iPoint
+    SP_xyz_i= point_state_v('SP_Xyz_DI',3,iPoint)
+    if(use_comp(SC_).and.use_comp(IH_))then
+       if(DoInit)then
+          DoInit=.false.
+          call associate_with_global_mask(IsInSc_I,'SP_IsInSc')
+       end if
+       if(IsInSc_I(iPoint))SP_xyz_i=matmul(ScToIh_DD,SP_xyz_i)
+    end if
+  end function SP_xyz_i
 end module SP_Mod
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
@@ -148,10 +166,14 @@ subroutine SP_get_line_param(DsOut,&
 end subroutine SP_get_line_param 
 !=============================================================!
 subroutine SP_put_input_time(TimeIn)
-  use SP_Mod,ONLY:DataInputTime
+  use SP_Mod
+  use CON_coupler
+  use CON_axes
   implicit none
   real,intent(in)::TimeIn
   DataInputTime=TimeIn
+  if(use_comp(SC_).and.use_comp(IH_))ScToIh_DD=transform_matrix(&
+       DataInputTime,Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
 end subroutine SP_put_input_time
 !=============================================================!
 subroutine SP_put_from_mh(nPartial,&
@@ -160,8 +182,8 @@ subroutine SP_put_from_mh(nPartial,&
      W,&
      DoAdd,&
      Buff_I,nVar)
-  use CON_router
   use SP_Mod
+  use CON_router
   implicit none
   integer,intent(in)::nPartial,iPutStart,nVar
   type(IndexPtrType),intent(in)::Put
@@ -262,7 +284,7 @@ subroutine SP_put_from_mh(nPartial,&
      Smooth_VII(:,iCell,Old_)=Smooth_VII(:,iCell,New_)
      !Get the lagrangian mesh coordinates from global vector
      Smooth_VII(x_:z_,iCell,New_)=&
-          point_state_v('SP_Xyz_DI',3,iCell)*RsPerAu
+         SP_xyz_i(iCell)*RsPerAu
      
      Smooth_VII(rho_,iCell,New_)=Buff_I(BuffRho_)*&
                                  Weight*NucleonPerCm3Inv
