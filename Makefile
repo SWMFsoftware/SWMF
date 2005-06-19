@@ -393,11 +393,9 @@ SC/BATSRUS/src/Makefile:
 	rm -rf GM/BATSRUS/TMP
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
 		      SC/BATSRUS/src/SC_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
-		      SC/BATSRUS/src/SC_get_for_sp.f90
 	cd SC/BATSRUS/src/; perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
-		SC_wrapper.f90 SC_get_for_sp.f90
+		SC_wrapper.f90 
 	cd SC/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 
 SCBATSRUS: SC/BATSRUS/src/Makefile \
