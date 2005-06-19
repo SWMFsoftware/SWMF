@@ -571,7 +571,7 @@ contains
     State_V(Ux_:Uz_)=&
          transform_velocity(tNow,&
          State_V(Ux_:Uz_),&
-         State_V(BuffX_:BuffZ_),&
+         State3_V(BuffX_:BuffZ_),&
          Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
 
     State_V(Bx_:Bz_)=matmul(ScToIh_DD,State_V(Bx_:Bz_))

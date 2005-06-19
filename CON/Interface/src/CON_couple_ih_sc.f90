@@ -256,7 +256,7 @@ contains
     State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
          transform_velocity(tNow,&
          State_V(rhoUx_:rhoUz_)/State_V(rho_),&
-         State_V(BuffX_:BuffZ_)/State_V(rho_),&
+         State3_V(BuffX_:BuffZ_)/State_V(rho_),&
          Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord)
     
     State_V(Bx_:Bz_)=matmul(IhToSc_DD,State_V(Bx_:Bz_))
@@ -317,6 +317,9 @@ contains
        tNow=TimeCoupling
        TimeCouplingLast=TimeCoupling
     end if
+   !Recalculate the matrix for conversion from the Buffer Grid to IH
+    call IH_rotate_buffer_grid(TimeCoupling,BuffToIH_DD)
+
     call couple_buffer_grid(&
          RouterScBuff,&
          nVar=8,&
@@ -385,7 +388,7 @@ contains
     State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
          transform_velocity(tNow,&
          State_V(rhoUx_:rhoUz_)/State_V(rho_),&
-         State_V(BuffX_:BuffZ_)/State_V(rho_),&
+         State3_V(BuffX_:BuffZ_)/State_V(rho_),&
          Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
                   
     !Transform magnetic field
