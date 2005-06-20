@@ -7,7 +7,7 @@ module ModInputs
 
   implicit none
 
-  integer, parameter        :: iCharLen_     = 80
+  integer, parameter        :: iCharLen_     = 100
 
   integer                   :: iOutputUnit_  = UnitTmp_
   integer                   :: iInputUnit_   = UnitTmp_
