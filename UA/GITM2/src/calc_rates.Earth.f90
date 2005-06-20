@@ -52,6 +52,8 @@ subroutine calc_rates(iBlock)
           MassI(iIon) * IDensityS(:,:,:,iIon,iBlock) / Ne
   enddo
 
+  TempUnit = MeanMajorMass / Boltzmanns_Constant       
+
   !\
   ! These are needed for the Euv Heating and other thermodynamics:
   !/
@@ -76,31 +78,31 @@ subroutine calc_rates(iBlock)
           (2.0 * NDensity(1:nLons,1:nLats,iAlt,iBlock))
 
      KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
-          (Temperature(1:nLons,1:nLats,iAlt,iBlock)*TempUnit)**0.75
-!     KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
-!          (Temperature(1:nLons,1:nLats,iAlt,iBlock)*TempUnit)**0.80
+          (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+          TempUnit(1:nLons,1:nLats,iAlt))**0.75
 
      iiAlt = iAlt
      if (iAlt == 0) iiAlt = 1
      if (iAlt == nAlts+1) iiAlt = nAlts
 
      ScaleHeight = &
-          -Temperature(1:nLons,1:nLats,iAlt,iBlock) * TempUnit * &
+          -Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+          TempUnit(1:nLons,1:nLats,iAlt) * &
           Boltzmanns_Constant / ( &
           Gravity(iAlt) * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
-!     kappaeddy = 0.0
-     kappaeddy = 2.5
+     if (altitude(iAlt)/1000.0 < 150.0) then
+        ! Add in an eddy diffusion term:
+        KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
+             KappaEddy * (Pressure(1:nLons,1:nLats,iAlt,iBlock) / &
+             3.1e-2)
+!Pressure(1:nLons,1:nLats,1,iBlock))
+     endif
 
-     ! Add in an eddy diffusion term:
-     KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
-          KappaEddy * (Pressure(1:nLons,1:nLats,iAlt,iBlock) / &
-          Pressure(1:nLons,1:nLats,1,iBlock))
-! * &
-!          ScaleHeight**2
+!write(*,*) "p: ",Pressure(1,1,1,iBlock)
 
      ViscCoef(:,:,iAlt) = 4.5e-5 * &
-          (Temperature(1:nLons,1:nLats,iAlt,iBlock)*TempUnit/ 1000.)**(-0.71)
+          (Temperature(1:nLons,1:nLats,iAlt,iBlock)*TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
 
   enddo
 
@@ -114,7 +116,7 @@ subroutine calc_rates(iBlock)
   ! Need to get the neutral, ion, and electron temperature
   !/
 
-  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*TempUnit
+  Tn = Temperature(1:nLons,1:nLats,1:nAlts,iBlock)*TempUnit(1:nLons,1:nLats,1:nAlts)
   Ti = ITemperature(1:nLons,1:nLats,1:nAlts,iBlock)
 
   !\
@@ -163,117 +165,9 @@ subroutine calc_rates(iBlock)
 !!  Collisions(:,:,:,VEI) = (34.0 + 4.18*log((TE**3.0)/(Ne*1.0e-6))) &
 !!       * Ne * TE**(-3.0/2.0) * 1.0e-6
 !  
-!!
-!! Ion Gyrofrequency
-!!
-!
-!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!  if (iDebugLevel > 4) write(*,*) "=====> igyro", iblock
-!
 
   i_gyro = Element_Charge * B0(:,:,:,iMag_,iBlock) / &
        MeanIonMass
-
-!
-!  Vi = Collisions(:,:,:,iVIN_)
-!  Ve = Collisions(:,:,:,iVEN_) ! + Collisions(:,:,:,VEI)
-!
-!  MeVen = Mass_Electron * Collisions(:,:,:,iVEN_)
-!  MeVei = Mass_Electron * Collisions(:,:,:,iVEI_)
-!  MiVin = MeanIonMass * Collisions(:,:,:,iVIN_)
-!
-!  VeOe = Ve**2 + e_gyro**2
-!  ViOi = Vi**2 + i_gyro**2
-!
-!!
-!! Here we calculate the conductivities. There are a number of different
-!! forms for there, but Song et al, 2001 show a pretty complete set which
-!! allows the current to be solved for (assuming that you have the electric
-!! field), independent of the neutral wind.
-!!  Conductivities are in mho/m=Siemens/m in mks units.  
-!! (In cgs, 1 S/m = 9e9 sec-1)
-!
-!!
-!! This may be changed in a future version of the code.
-!!
-!
-!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!  if (iDebugLevel > 4) write(*,*) "=====> sigmas", iblock
-!
-!  Sigma_0 = e2 * Ne / MeVei
-!
-!!  Alpha_Pedersen = Collisions(:,:,:,VEI) * (MiVin + MeVen) / &
-!!        (MeVen * Collisions(:,:,:,VEI) + MiVin * Ve)
-!!
-!!  Alpha_Hall = Collisions(:,:,:,VEI) * &
-!!       (MiVin - (Mass_Electron / MeanIonMass * MeVen)) / &
-!!       (MeVen * Collisions(:,:,:,VEI) + MiVin * Ve)
-!!
-!!  Sigma_Field_Aligned = Alpha_Pedersen * Sigma_0
-!!
-!!  Sigma_Pedersen = Sigma_Field_Aligned * &
-!!       (Collisions(:,:,:,VEI)*Collisions(:,:,:,VEI) / &
-!!       (Collisions(:,:,:,VEI)*Collisions(:,:,:,VEI) + &
-!!       Alpha_Hall*Alpha_Hall * e_Gyro*e_Gyro))
-!!
-!!  Sigma_Hall = Sigma_Field_Aligned * &
-!!       (Alpha_Hall*Collisions(:,:,:,VEI)*e_Gyro / &
-!!       (Collisions(:,:,:,VEI)*Collisions(:,:,:,VEI) + &
-!!       Alpha_Hall*Alpha_Hall * e_Gyro*e_Gyro))
-!
-!  Sigma_Pedersen = ((1.0/MeVen) * (Ve*Ve/VeOe) + &
-!                    (1.0/MiVin) * (Vi*Vi/ViOi)) * Ne * e2
-!
-!  Sigma_Hall = ((1.0/MeVen) * (Ve*e_gyro/VeOe) - &
-!                (1.0/MiVin) * (Vi*i_gyro/ViOi)) * Ne * e2
-!
-!! Calculate the lambda's for the ion-drag term.  lambda is in sec-1.
-!!  In cgs units, lambda1=sigma_ped*B*B/rho, where sigma_ped is in s-1, 
-!!   B is in gauss,
-!!   and rho is in g/cm3
-!!  Conductivities are in mho/m=Siemens/m in mks units.  
-!!  (In cgs, 1 S/m = 9e9 sec-1)
-!!  B is in T in mks, and in gauss in cgs (1 T = 1.e4 gauss)
-!!  rho is in kg/m3 in mks, and in g/cm3 in cgs (1 kg/m3 = 1.e-3 g/cm3)
-!!   Thus, the conversion from mks to cgs is:  
-!!  9.e9 * 1.e4 * 1.e4 / 1.e-3 = 9.e20
-!!  The momentum equations are written in cgs in geographic coordinates.
-!!    lambda is multiplied by a velocity (cm/s in cgs or m/s in mks), so
-!!   no further conversion need be done after multiplying by 9.e20.
-!!
-!!  lambda_1 = sigma_Pedersen * B**2 / rho
-!!  lambda_2 = sigma_Hall * B**2 / rho
-!!  D = magnetic delination angle, I = magnetic dip angle
-!!  lambda_xx = lambda_1 * (1 - sinD*sinD*cosI*cosI)
-!!  lambda_yy = lambda_1 * (1 - cosD*cosD*cosI*cosI)
-!!  lambda_xy=lambda_yx = lambda_1*sinD*cosD*cosI*cosI + lambda_2*sinI
-!
-!  sin_dip = B0(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) / &
-!            B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
-!  cos_dip = sqrt(1.0 - sin_dip**2)
-!
-!  tmp = sqrt(B0(1:nLons,1:nLats,1:nAlts,iEast_,iBlock)**2 + &
-!             B0(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock)**2)
-!  sin_dec = B0(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) / tmp
-!  cos_dec = B0(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) / tmp
-!
-!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!  if (iDebugLevel > 4) write(*,*) "=====> lambdas", iblock
-!
-!  Lambda_1 = &
-!       Sigma_Pedersen * &
-!       B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)**2 / &
-!       Rho(1:nLons,1:nLats,1:nAlts,iBlock)
-!
-!  Lambda_2 = &
-!       Sigma_Hall * B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)**2 * &
-!       sin_dip / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
-!
-!  Lambda_xx = Lambda_1 * (1. - sin_dec**2 * cos_dip**2)
-!
-!  Lambda_yy = Lambda_1 * (1. - cos_dec**2 * cos_dip**2)
-!
-!  Lambda_xy = Lambda_1 * sin_dec * cos_dec + Lambda_2 * sin_dip
 
   call end_timing("calc_rates")
 

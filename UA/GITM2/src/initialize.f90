@@ -21,6 +21,8 @@ subroutine initialize_gitm
 
   real :: LogRho(-1:nLons+2,-1:nLats+2), NewSumRho(-1:nLons+2,-1:nLats+2)
 
+  real :: TempUnit_const
+
   logical :: IsThere, IsOk, IsDone, IsFirstTime = .true.
 
   if (.not.IsFirstTime) return
@@ -87,7 +89,7 @@ subroutine initialize_gitm
 
   if (UseStretchedAltitude) then
      do iAlt=1,nAlts
-        Gravity = &
+        Gravity(iAlt) = &
              -Gravitational_Constant*&
              (RBody/((RadialDistance(iAlt)+RadialDistance(iAlt+1))/2)) ** 2
      enddo
@@ -106,8 +108,6 @@ subroutine initialize_gitm
 !!!  Mass = 22.5 * AMU
 !!!!!!
 
-  TempUnit = Mass(1) / Boltzmanns_Constant
-!  TempUnit = 1.0
 
   if (Is1D) then
      Latitude(0,1)  = Latitude(1,1) - 1.0 * pi/180.0
@@ -145,8 +145,10 @@ subroutine initialize_gitm
      ! EARTH Specific !!!
      !/
      do iAlt=1,nAlts
+!        HeatingEfficiency(iAlt) = &
+!             max(0.6-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.05)
         HeatingEfficiency(iAlt) = &
-             max(0.6-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.12)
+             max(0.45-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.15)
 
         if (altitude(iAlt)/1000. > 150.) then
            eHeatingEfficiency(iAlt)= &
@@ -178,14 +180,12 @@ subroutine initialize_gitm
 
   if (.not. DoRestart) then
 
-     TempAve  = (TempMax+TempMin)/2/TempUnit
-     TempDiff = (TempMax-TempMin)/2/TempUnit
 
      Velocity = 0.0
      IVelocity = 0.0
      VerticalVelocity = 0.0
 
-     TempMax = TempMin
+!     TempMax = TempMin
 
      if (UseMsis .and. IsEarth) then
 
@@ -193,11 +193,29 @@ subroutine initialize_gitm
 
      else
 
+     TempUnit_const = 1. * Mass(1) / Boltzmanns_Constant
+  !  TempUnit = 1.0        
+     TempAve  = (TempMax+TempMin)/2/TempUnit_const
+     TempDiff = (TempMax-TempMin)/2/TempUnit_const
+
+     TempWidth    =  20.0*1e3
+     TempHeight   = 140.0*1e3
+
+     
         do iBlock = 1, nBlocks
 
            do iAlt=-1,nAlts+2
-              Temperature(:,:,iAlt,iBlock)  = TempAve &
-                   + TempDiff*tanh((Altitude(iAlt) - TempHeight)/TempWidth)
+              if (Altitude(iAlt) <= TempHeight) then
+                 Temperature(:,:,iAlt,iBlock)  = TempAve &
+                      + TempDiff*tanh((Altitude(iAlt) - TempHeight)/TempWidth)
+              else
+                 Temperature(:,:,iAlt,iBlock)  = TempAve &
+                      + TempDiff*tanh((Altitude(iAlt)-TempHeight)/(3.7*TempWidth))
+              endif
+              eTemperature(:,:,iAlt,iBlock) = &
+                   Temperature(:,:,iAlt,iBlock)*TempUnit_const
+              iTemperature(:,:,iAlt,iBlock) = &
+                   Temperature(:,:,iAlt,iBlock)*TempUnit_const
            enddo
            
            do iAlt=-1,nAlts+2
@@ -219,29 +237,36 @@ subroutine initialize_gitm
 
                  if (iAlt > -1) then
                     InvScaleHeightS = -Gravity(iAlt) * &
-!!!                         22.5*Mass_Proton/ &
                          Mass(iSpecies) / &
-                         (Temperature(:,:,iAlt,iBlock)*TempUnit* &
+                         (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
                          Boltzmanns_Constant)
                  else
                     InvScaleHeightS = -Gravity(iAlt) * &
-!!!                         22.5*Mass_Proton/ &
-                   Mass(iSpecies) / &
-                         (Temperature(:,:,iAlt,iBlock)*TempUnit* &
+                         Mass(iSpecies) / &
+                         (Temperature(:,:,iAlt,iBlock)*TempUnit_const* &
                          Boltzmanns_Constant)
                  endif
 
-                 if(iAlt < 1)then
+                 if(iAlt < 2)then
                     LogNS(:,:,iAlt,iSpecies,iBlock) = &
                          - (Altitude(iAlt)-AltMin)*InvScaleHeightS + &
                          LogNS0(iSpecies)
-                 else
+                 endif
+                 if(iAlt > 1 .and. iAlt < nAlts+2)then
+                    LogNS(:,:,iAlt,iSpecies,iBlock) = &
+                         LogNS(:,:,iAlt-1,iSpecies,iBlock) &
+                         -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS &
+                         -(Temperature(:,:,iAlt+1,iBlock) - &
+                          Temperature(:,:,iAlt-1,iBlock))/ &
+                          (2.0*Temperature(:,:,iAlt,iBlock))
+                 endif
+                 if(iAlt == nAlts+2)then
                     LogNS(:,:,iAlt,iSpecies,iBlock) = &
                          LogNS(:,:,iAlt-1,iSpecies,iBlock) &
                          -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS &
                          -(Temperature(:,:,iAlt,iBlock) - &
                           Temperature(:,:,iAlt-1,iBlock))/ &
-                          Temperature(:,:,iAlt,iBlock)
+                          (Temperature(:,:,iAlt,iBlock))
                  endif
 
                  NewSumRho      = NewSumRho + &
@@ -276,8 +301,8 @@ subroutine initialize_gitm
 
         do iBlock = 1, nBlocks
 
-           IDensityS(:,:,:,:,iBlock)    = 0.01
-           IDensityS(:,:,:,ie_,iBlock)  = 0.01*(nIons-1)
+           IDensityS(:,:,:,:,iBlock)    = 1.00e8
+           IDensityS(:,:,:,ie_,iBlock)  = 1.00e8*(nIons-1)
 
         enddo
 

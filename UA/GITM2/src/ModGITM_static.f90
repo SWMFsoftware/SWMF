@@ -59,6 +59,9 @@ module ModGITM
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) :: &
        IonDrag, Viscosity
 
+  real, dimension(1:nLons, 1:nLats, 1:nAlts, nSpecies) :: &
+       VerticalIonDrag
+
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax) :: &
        Potential
 
@@ -73,7 +76,7 @@ module ModGITM
 
   real :: Emissions(nLons, nLats, nAlts, nEmissions, nBlocksMax)
 
-  real :: TempUnit
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: TempUnit
 
   real :: LocalTime(-1:nLons+2)
 

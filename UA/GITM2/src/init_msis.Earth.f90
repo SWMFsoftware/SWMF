@@ -75,8 +75,8 @@ subroutine init_msis
 
   do iBlock = 1, nBlocks
      do iAlt = -1, nAlts+2
-        do iLon=1,nLons
-           do iLat=1,nLats
+        do iLon=-1,nLons+2
+           do iLat=-1,nLats+2
 
               geo_lat = Latitude(iLat,iBlock)*180.0/pi
               geo_lon = Longitude(iLon,iBlock)*180.0/pi
@@ -101,7 +101,18 @@ subroutine init_msis
               NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock)       = &
                    NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)/100.0
 
-              Temperature(iLon,iLat,iAlt,iBlock) = msis_temp(2)/TempUnit
+              MeanMajorMass(iLon,iLat,iAlt)=0
+
+              do iSpecies = 1, nSpecies
+                 MeanMajorMass(iLon,iLat,iAlt) = MeanMajorMass(iLon,iLat,iAlt) +   &
+                      Mass(iSpecies) * NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)/   &
+                      sum(NDensityS(iLon,iLat,iAlt,1:3,iBlock))
+              enddo
+  
+              TempUnit(iLon,iLat,iAlt) = &
+                   MeanMajorMass(iLon,iLat,iAlt)/ Boltzmanns_Constant
+
+              Temperature(iLon,iLat,iAlt,iBlock) = msis_temp(2)/TempUnit(iLon,iLat,iAlt)
               Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
               ! The initial profile of [NO] is refered to:
@@ -168,11 +179,23 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 !  LogNS(iN2_) = alog(msis_dens(3)/2.0)
   LogNS(iO_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
-  if (nSpecies >= iN2_)   LogNS(min(iN2_  ,nSpecies)) = alog(msis_dens(3))
-  if (nSpecies >= iN_4S_) LogNS(min(iN_4S_,nSpecies)) = alog(msis_dens(8))
-  if (nSpecies >= iNO_)   LogNS(min(iNO_  ,nSpecies)) = alog(8.0e12)
+  if (nSpecies > 2) then
+     ! This tricks the compiler...
+     iSpecies = iN2_
+     LogNS(max(nSpecies,iSpecies)) = alog(msis_dens(3))
+  endif
+  if (nSpecies > 3) then
+     ! This tricks the compiler...
+     iSpecies = iN_4S_
+     LogNS(max(nSpecies,iSpecies)) = alog(msis_dens(8))
+  endif
+  if (nSpecies > 4) then
+     ! This tricks the compiler...
+     iSpecies = iNO_
+     LogNS(max(nSpecies,iSpecies)) = alog(8.0e12)
+  endif
 
-  Temp        = msis_temp(2)/TempUnit
+  Temp        = msis_temp(2) ! /TempUnit(1,1,1)
   LogRho      = alog(msis_dens(6))
 
 end subroutine msis_bcs

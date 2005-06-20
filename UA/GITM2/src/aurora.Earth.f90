@@ -52,8 +52,6 @@ subroutine aurora(iBlock)
                    a*sqrt(ed_energies(n))*exp(-1.5*ed_energies(n)/avee)/pi
            enddo
 
-!!!!!!!!  15:/cm2-s-erg,  30:/cm2-s-sr-ev  !!!!!!!!!
-
            call R_ELEC_EDEP (ED_Flux, 30, ED_Energies, 3, ED_Ion, 7)
            call R_ELEC_EDEP (ED_Flux, 30, ED_Energies, 3, ED_Heating, 11)
 

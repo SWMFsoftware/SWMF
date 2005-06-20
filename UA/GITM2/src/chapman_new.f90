@@ -55,13 +55,13 @@ subroutine chapman_integrals(iBlock)
                       NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)*dAlt(iAlt)
               else
                  ScaleHeightS = &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit * &
+                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt) * &
                       Boltzmanns_Constant / (-Gravity(iAlt) * Mass(iSpecies))
                  Integrals(iLon,iLat,iAlt,iSpecies) = &
                       NDensityS(iLon,iLat,iAlt,iSpecies, iBlock) * ScaleHeightS
               endif
               ScaleHeightS = &
-                   Temperature(iLon,iLat,iAlt,iBlock)*TempUnit * &
+                   Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt) * &
                    Boltzmanns_Constant / (-Gravity(iAlt) * Mass(iSpecies))
               xp(iLon,iLat,iAlt,iSpecies) = &
                    sqrt(0.5 * pi * &
@@ -109,7 +109,7 @@ subroutine chapman_integrals(iBlock)
                     ! here, but the integral is going to be huge anyways...
 
                     ScaleHeightS = &
-                         Temperature(iLon,iLat,iiAlt,iBlock)*TempUnit * &
+                         Temperature(iLon,iLat,iiAlt,iBlock)*TempUnit(iLon,iLat,iiAlt) * &
                          Boltzmanns_Constant/(-Gravity(iiAlt)*Mass(iSpecies))
 
                     ! xp is evaluated at the tangent point, which is where

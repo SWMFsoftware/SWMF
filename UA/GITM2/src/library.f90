@@ -47,42 +47,6 @@ subroutine stop_gitm(str)
 
 end subroutine stop_gitm
 
-!!---------------------------------------------------------------------------
-!!
-!!---------------------------------------------------------------------------
-!
-!subroutine merge_str(str1, str2)
-!
-!  character (len=100) :: str1, str2, temp
-!  integer :: i, j, k
-!
-!  i = 1
-!  do while (iachar(str1(i:i)) /= 32 .and. &
-!            iachar(str1(i:i)) /= 9  .and. &
-!            i < 100) 
-!     i=i+1
-!  enddo
-!
-!  j = 1
-!  do while (iachar(str2(j:j)) /= 32 .and. &
-!            iachar(str2(j:j)) /= 9  .and. &
-!            j < 100) 
-!     j=j+1
-!  enddo
-!
-!  temp = str1
-!  do k = i,100
-!     temp(k:k) = ' '
-!  enddo
-!
-!  if (i+j-1 > 100) j = 100 - i + 1
-!
-!  temp(i:i+j-1) = str2(1:j)
-!
-!  str2 = temp
-!
-!end subroutine merge_str
-
 !---------------------------------------------------------------------------
 !
 !---------------------------------------------------------------------------

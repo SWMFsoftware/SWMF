@@ -78,8 +78,15 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
  Vel_GD( 0,iUp_)      = 0.0
  Vel_GD(-1,iUp_)      = 0.0
 
-! Vel_GD( 0,iUp_)      = Vel_GD( 1,iUp_)
-! Vel_GD(-1,iUp_)      = Vel_GD( 1,iUp_)
+!!$ Vel_GD( 0,iUp_)      = Vel_GD( 1,iUp_)
+!!$ Vel_GD(-1,iUp_)      = Vel_GD( 1,iUp_)
+!!$
+!!$ VertVel(0,:)  = VertVel(1,:)
+!!$ VertVel(-1,:) = VertVel(1,:)
+
+ VertVel(0,:)  = 0
+ VertVel(-1,:) = 0
+
 
  IVel( 0,iUp_)      = 0.0
  IVel(-1,iUp_)      = 0.0
@@ -113,13 +120,18 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   endif
 
-  if (UseConduction) then
-     Temp(nAlts+1) = max(Temp(nAlts), TempMin/TempUnit)
-     Temp(nAlts+2) = max(Temp(nAlts), TempMin/TempUnit)
-  else
-     Temp(nAlts+1) = TempMax/TempUnit
-     Temp(nAlts+2) = TempMax/TempUnit
-  endif
+!  if (UseConduction) then
+!     Temp(nAlts+1) = max(Temp(nAlts), TempMin/TempUnit(1,1,1))
+!     Temp(nAlts+2) = max(Temp(nAlts), TempMin/TempUnit(1,1,1))
+!  else
+!     Temp(nAlts+1) = TempMax/TempUnit(1,1,nalts+1)
+!     Temp(nAlts+2) = TempMax/TempUnit(1,1,nalts+2)
+!  endif
+
+
+!!!! CHANGE !!!!
+  Temp(nAlts+1) = Temp(nAlts)
+  Temp(nAlts+2) = Temp(nAlts-1)
 
   do iAlt = nAlts+1, nAlts+2
      InvScaleHgt  =  &
@@ -142,7 +154,9 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   do iSpecies=1,nSpecies
      do iAlt = nAlts+1, nAlts+2
         InvScaleHeightS = -Gravity(iAlt) * &
-             Mass(iSpecies) / (Temp(iAlt)*TempUnit*Boltzmanns_Constant)
+             Mass(iSpecies) / (Temp(iAlt)*Boltzmanns_Constant)
+!!!! CHANGE !!!!
+!             Mass(iSpecies) / (Temp(iAlt)*TempUnit(1,1,iAlt)*Boltzmanns_Constant)
         LogNS(iAlt,iSpecies) = &
              LogNS(iAlt-1,iSpecies) &
              -(Altitude(iAlt)-Altitude(iAlt-1))*InvScaleHeightS

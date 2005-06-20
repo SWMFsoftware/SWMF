@@ -104,7 +104,7 @@ call Boundary_Conditions(flux,iBlock)
            a(1)=0
 !!$           b(1)=1
 !!$           c(1)=0
-           r(1)=-Temperature(iLon,iLat,1,iBlock)*TempUnit
+           r(1)=-Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
 
 
 
@@ -157,7 +157,7 @@ call Boundary_Conditions(flux,iBlock)
            a(1)=0
 !!$           b(1)=1
 !!$           c(1)=0
-           r(1)=-Temperature(iLon,iLat,1,iBlock)*TempUnit
+           r(1)=-Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
 
 
 
@@ -179,11 +179,12 @@ call Boundary_Conditions(flux,iBlock)
 
                 eTemperature(iLon,iLat,iAlt,iBlock)=  &
                      max(eTemperature(iLon,iLat,iAlt,iBlock),&
-                         1.1*Temperature(iLon,iLat,iAlt,iBlock)*TempUnit)
+                         1.1*Temperature(iLon,iLat,iAlt,iBlock)*&
+                         TempUnit(iLon,iLat,iAlt))
 
-                if (eTemperature(iLon,iLat,iAlt,iBlock)<100.0) then
-                   write(*,*) "Temperature(i,j,k,iBlock)<100.0!!!"
-                   write(*,*)"Temperature=",eTemperature(ilon,ilat,ialt,iBlock)
+                if (eTemperature(iLon,iLat,iAlt,iBlock)<10.0) then
+                   write(*,*) "eTemperature(i,j,k,iBlock)<10.0!!!"
+                   write(*,*)"eTemperature=",eTemperature(ilon,ilat,ialt,iBlock)
                    write(*,*)"i=",ilon,"j=",ilat,"k=",ialt,&
                    'heating=',Heating(iLon,iLat,iAlt), &
                    'cooling=',cooling(iLon,iLat,iAlt)
@@ -206,7 +207,8 @@ call Boundary_Conditions(flux,iBlock)
            temp_B = (6.6e-14*NDensityS(iLon,iLat,iAlt,iN2_,iBlock) + &
                     5.8e-14*NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
                     0.21e-14*NDensityS(iLon,iLat,iAlt,iO_,iBlock)*  &
-                    sqrt(2*Temperature(iLon,iLat,iAlt,iBlock)*TempUnit)) *  &
+                    sqrt(2*Temperature(iLon,iLat,iAlt,iBlock)*&
+                    TempUnit(iLon,iLat,iAlt))) *  &
                     IDensityS(iLon,iLat,iAlt,iO_4SP_,iBlock)
 
            temp_B = temp_B + &
@@ -219,7 +221,8 @@ call Boundary_Conditions(flux,iBlock)
            temp_B = temp_B + &
                     (5.8e-14*NDensityS(iLon,iLat,iAlt,iN2_,iBlock) + &
                     0.14e-14*NDensityS(iLon,iLat,iAlt,iO2_,iBlock)*  &
-                      sqrt(Temperature(iLon,iLat,iAlt,iBlock)*TempUnit) + &
+                      sqrt(Temperature(iLon,iLat,iAlt,iBlock)* &
+                      TempUnit(iLon,iLat,iAlt)) + &
                     4.4e-14*NDensityS(iLon,iLat,iAlt,iO_,iBlock)) *  &
                     IDensityS(iLon,iLat,iAlt,iO2P_,iBlock)
 
@@ -231,7 +234,8 @@ call Boundary_Conditions(flux,iBlock)
 
            ITemperature(iLon,iLat,iAlt,iBlock) = &
                (temp_A * eTemperature(iLon,iLat,iAlt,iBlock) +         &
-                temp_B * Temperature(iLon,iLat,iAlt,iBlock)*TempUnit + &
+                temp_B * Temperature(iLon,iLat,iAlt,iBlock)*&
+                TempUnit(iLon,iLat,iAlt) + &
                 IJouleHeating(iLon,iLat,iAlt))/ &
                 (temp_A + temp_B)
 
@@ -280,7 +284,7 @@ subroutine Boundary_Conditions(flux,iBlock)
 
 !!!! Lower Boundary Conditions!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   k=1
-  eTemperature(:,:,k,iBlock)=Temperature(:,:,k,iBlock)*TempUnit
+  eTemperature(:,:,k,iBlock)=Temperature(:,:,k,iBlock)*TempUnit(:,:,k)
 
 
 

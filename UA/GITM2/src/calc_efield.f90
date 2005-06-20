@@ -12,7 +12,7 @@ subroutine calc_efield(iBlock)
   real :: maxi, dLon
   real :: p1, p2
 
-  call report("Electric Field",1)
+  call report("Electric Field",2)
   call start_timing("calc_efield")
 
   EField = 0.0

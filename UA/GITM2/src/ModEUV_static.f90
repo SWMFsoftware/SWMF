@@ -14,7 +14,7 @@ module ModEUV
        EuvIonRate
 
   real, dimension(nLons, nLats, nAlts, nIons,nBlocksMax) :: &
-       EuvIonRateS
+       EuvIonRateS, EuvDissRateS
 
   real, dimension(nLons, nLats, nAlts, nSpecies,nBlocksMax) :: &
        Chapman

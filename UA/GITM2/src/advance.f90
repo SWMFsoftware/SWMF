@@ -11,7 +11,7 @@ subroutine advance
 
   integer, external :: jday
 
-  integer :: iBlock, iAlt, iLat, iLon
+  integer :: iBlock, iAlt, iLat, iLon,ispecies
   real*8 :: DTime
 
   call report("advance",1)
@@ -21,15 +21,9 @@ subroutine advance
 
   if (.not. UseStatisticalModelsOnly) then
 
-!     if (mod(iStep,2) == 0) then
         call add_sources
         if (.not. Is1D) call advance_horizontal_all
         call advance_vertical_all
-!     else
-!        call advance_vertical_all
-!        if (.not. Is1D) call advance_horizontal_all
-!        call add_sources
-!     end if
 
   else
 
@@ -37,7 +31,7 @@ subroutine advance
 
   endif
 
-  if (iDebugLevel > 0) write(*,*) "=> MaxTemp : ",maxval(temperature)*TempUnit
+  if (iDebugLevel > 0) write(*,*) "=> MaxTemp : ",maxval(temperature)*TempUnit(1,1,nalts)
 
   tSimulation = tSimulation + dt
   CurrentTime = StartTime + tSimulation

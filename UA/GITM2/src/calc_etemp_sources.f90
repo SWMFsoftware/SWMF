@@ -80,13 +80,13 @@ do i=1,nLons
   Lrot_E_N2(i,j,k)=2.9e-14 * Temp_IDensity(i,j,k,ie_) *       &
                              Temp_NDensity(i,j,k,iN2_) *               &
                             (eTemperature(i,j,k,iBlock) -        &
-                             (Temperature(i,j,k,iBlock)*TempUnit))/         &
+                             (Temperature(i,j,k,iBlock)*TempUnit(i,j,k)))/         &
                             sqrt(eTemperature(i,j,k,iBlock))
 
   Lrot_E_O2(i,j,k) =6.9e-14 * Temp_IDensity(i,j,k,ie_) *       &
                               Temp_NDensity(i,j,k,iO2_) *               &
                              (eTemperature(i,j,k,iBlock) -        &
-                              (Temperature(i,j,k,iBlock)*TempUnit))/         &
+                              (Temperature(i,j,k,iBlock)*TempUnit(i,j,k)))/         &
                              sqrt(eTemperature(i,j,k,iBlock))
 
 
@@ -106,9 +106,9 @@ do i=1,nLons
                     exp(f(i,j,k)*(eTemperature(i,j,k,iBlock) - 2000)/   & 
                                (2000.*eTemperature(i,j,k,iBlock)))*     &
                    (exp(-g(i,j,k)*(eTemperature(i,j,k,iBlock)-          &
-                                   Temperature(i,j,k,iBlock)*TempUnit)/ &
+                                   Temperature(i,j,k,iBlock)*TempUnit(i,j,k))/ &
                                   (eTemperature(i,j,k,iBlock)*          &
-                                   Temperature(i,j,k,iBlock)*TempUnit))-1)
+                                   Temperature(i,j,k,iBlock)*TempUnit(i,j,k)))-1)
  
 
 !     write(*,*)'It is Ok----------1bb'
@@ -118,12 +118,12 @@ do i=1,nLons
                     exp(hh(i,j,k)*(eTemperature(i,j,k,iBlock) - 700)/    & 
                                (700.*eTemperature(i,j,k,iBlock)))*      &
                           (exp(-2770*(eTemperature(i,j,k,iBlock)-       &
-                                   (Temperature(i,j,k,iBlock)*TempUnit))/ &
+                                   (Temperature(i,j,k,iBlock)*TempUnit(i,j,k)))/ &
                                   (eTemperature(i,j,k,iBlock)*          &
-                                   (Temperature(i,j,k,iBlock)*TempUnit)))-1)                              
+                                   (Temperature(i,j,k,iBlock)*TempUnit(i,j,k))))-1)                              
 !     write(*,*)'It is Ok----------1b'
-  T0(i,j,k) =  Temperature(i,j,k,iBlock)*TempUnit
-  T1(i,j,k) =  Temperature(i,j,k,iBlock)*TempUnit
+  T0(i,j,k) =  Temperature(i,j,k,iBlock)*TempUnit(i,j,k)
+  T1(i,j,k) =  Temperature(i,j,k,iBlock)*TempUnit(i,j,k)
   ZZ(i,j,k) = 5. + 3.* exp(-228./T1(i,j,k)) + exp(-326./T0(i,j,k))
   c1 = 0.02
   c2 = 0.028
@@ -146,17 +146,19 @@ do i=1,nLons
 
 
   ABT(i,j,k) =AA1*B1*eTemperature(i,j,k,iBlock)**(B1-0.5)*          &
-             ( c1*(Dx1(i,j,k)-Ex1(i,j,k))+5.91e-9*(TempUnit*Temperature(i,j,k,iBlock)-     &
+             ( c1*(Dx1(i,j,k)-Ex1(i,j,k))+5.91e-9*(TempUnit(i,j,k)* &
+             Temperature(i,j,k,iBlock)-     &
              eTemperature(i,j,k,iBlock))*((1+B1)*Dx1(i,j,k)+               &
              (E1/eTemperature(i,j,k,iBlock)+1+B1)*Ex1(i,j,k)))
 
   ABT(i,j,k) =ABT(i,j,k)+AA2*B2*eTemperature(i,j,k,iBlock)**(B2-0.5)*&
-             ( c2*(Dx2(i,j,k)-Ex2(i,j,k))+5.91e-9*(TempUnit*Temperature(i,j,k,iBlock)-     &
+             ( c2*(Dx2(i,j,k)-Ex2(i,j,k))+5.91e-9*(TempUnit(i,j,k)* &
+             Temperature(i,j,k,iBlock)-     &
              eTemperature(i,j,k,iBlock))*((1+B2)*Dx2(i,j,k)+               &
              (E2/eTemperature(i,j,k,iBlock)+1+B2)*Ex2(i,j,k)))
 
   ABT(i,j,k) =ABT(i,j,k)+AA3*B3*eTemperature(i,j,k,iBlock)**(B3-0.5)*&
-             ( c3*(Dx3(i,j,k)-Ex3(i,j,k))+5.91e-9*(TempUnit*Temperature(i,j,k,iBlock)-     &
+             ( c3*(Dx3(i,j,k)-Ex3(i,j,k))+5.91e-9*(TempUnit(i,j,k)*Temperature(i,j,k,iBlock)-     &
              eTemperature(i,j,k,iBlock))*((1+B3)*Dx3(i,j,k)+               &
              (E3/eTemperature(i,j,k,iBlock)+1+B3)*Ex3(i,j,k)))
 
@@ -170,8 +172,8 @@ do i=1,nLons
                   Temp_NDensity(i,j,k,iO_) *            &
                   (150./eTemperature(i,j,k,iBlock)+0.4)* &
                   (eTemperature(i,j,k,iBlock)- &
-                   Temperature(i,j,k,iBlock)*TempUnit)/ &
-                   (Temperature(i,j,k,iBlock)*TempUnit)
+                   Temperature(i,j,k,iBlock)*TempUnit(i,j,k))/ &
+                   (Temperature(i,j,k,iBlock)*TempUnit(i,j,k))
 
 
 !     write(*,*)'It is Ok----------1c'
@@ -186,9 +188,9 @@ do i=1,nLons
                     exp(d(i,j,k)*(eTemperature(i,j,k,iBlock) -3000)/    & 
                                (3000.*eTemperature(i,j,k,iBlock)))*     &
                           (exp(-22713*(eTemperature(i,j,k,iBlock)-      &
-                                   TempUnit*Temperature(i,j,k,iBlock))/     &
+                                   TempUnit(i,j,k)*Temperature(i,j,k,iBlock))/     &
                                   (eTemperature(i,j,k,iBlock)*          &
-                                   TempUnit*Temperature(i,j,k,iBlock)))-1)
+                                   TempUnit(i,j,k)*Temperature(i,j,k,iBlock)))-1)
 !     write(*,*)'It is Ok----------1d'
 
   Ki2(i,j,k) = 4 * 3.14159 * Temp_IDensity(i,j,k,ie_) *              &

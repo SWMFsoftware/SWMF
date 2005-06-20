@@ -131,9 +131,8 @@ subroutine init_iri
                  geo_lon = mod(geo_lon + 180.0,360.0)
               endif
 
-              !if(iProc==0) write(*,*) "iri : ", &
-              !    geo_lat, geo_lon, -f107, -iJulianDay, &
-              !    utime/3600.+25.,geo_alt,iAlt
+              !  write(*,*) "iri : ", geo_lat, geo_lon, -f107, -iJulianDay, &
+              !             utime/3600.+25.,geo_alt,nzkm
 
               call iri90 (jf,jmag,geo_lat,geo_lon,-f107,-iJulianDay, &
                    utime/3600.+25.,geo_alt,nzkm,'UA/DataIn/ccir.cofcnts', &
@@ -157,9 +156,9 @@ subroutine init_iri
 
               if (outf(4,1) < 0.) then
                  eTemperature(iLon,iLat,iAlt,iBlock) =  &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit
+                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
                  ITemperature(iLon,iLat,iAlt,iBlock) =  &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit
+                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
               else
                  eTemperature(iLon,iLat,iAlt,iBlock) = outf(4,1)
                  ITemperature(iLon,iLat,iAlt,iBlock) = outf(3,1)

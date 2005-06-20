@@ -20,8 +20,8 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '3DNEUTRAL') IsFound = .true.
      if (OutputType(iOutputType) == '3DION')     IsFound = .true.
-     if (OutputType(iOutputType) == '2DMAG')     IsFound = .true.
      if (OutputType(iOutputType) == '2DGEO')     IsFound = .true.
+     if (OutputType(iOutputType) == '2DMAG')     IsFound = .true.
 
      if (.not. IsFound) then
         bad_outputtype = iOutputType
@@ -308,6 +308,12 @@ contains
     nvars_to_write = 12
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
+    write(iOutputUnit_,*) "BLOCKS"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLat"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLon"
+    write(iOutputUnit_,*) ""
+
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,A)") nvars_to_write, " nvars"
     write(iOutputUnit_,"(I7,A)") 1, " nAltitudes"
@@ -365,6 +371,12 @@ contains
     nvars_to_write = 7
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
+    write(iOutputUnit_,*) "BLOCKS"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLat"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLon"
+    write(iOutputUnit_,*) ""
+
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,A)") nvars_to_write, " nvars"
     write(iOutputUnit_,"(I7,A)") 1, " nAltitudes"
@@ -415,6 +427,12 @@ contains
        nGCs = 2
     endif
 
+    write(iOutputUnit_,*) "BLOCKS"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
+    write(iOutputUnit_,"(I7,A)") nBlocksLat, " nBlocksLat"
+    write(iOutputUnit_,"(I7,A)") nBlocksLon, " nBlocksLon"
+    write(iOutputUnit_,*) ""
+
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
     write(iOutputUnit_,"(I7,7A)") nAlts+4, " nAltitudes"
@@ -449,12 +467,19 @@ contains
     write(iOutputUnit_,"(I7,A1,a)") 24, " ", "Vi (north)"
     write(iOutputUnit_,"(I7,A1,a)") 25, " ", "Vi (up)"
     write(iOutputUnit_,"(I7,A1,a)") 26, " ", "Potential (kV)"
-    write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Vn (up,O)"
-    write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Vn (up,O2)"
+    write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Vn (up,O)"
+    write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Vn (up,O2)"
     if (nSpecies >= iN2_) &
-         write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Vn (up,N2)"
+         write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Vn (up,N2)"
     if (nSpecies >= iN_4S_) &
-         write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Vn (up,N)"
+         write(iOutputUnit_,"(I7,A1,a)") 30, " ", "Vn (up,N)"
+!  write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Source_O"
+!  write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Source_O2"
+!  write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Source_N2"
+!  write(iOutputUnit_,"(I7,A1,a)") 30, " ", "advance_O"
+!  write(iOutputUnit_,"(I7,A1,a)") 31, " ", "advance_O2"
+!  write(iOutputUnit_,"(I7,A1,a)") 32, " ", "advance_N2"
+
     write(iOutputUnit_,*) ""
 
     write(iOutputUnit_,*) "BEGIN"
@@ -470,29 +495,45 @@ contains
                   Latitude(iLat,iBlock), &
                   altitude(iAlt),&
                   Rho(iLon,iLat,iAlt,iBlock),&
-                  Temperature(iLon,iLat,iAlt,iBlock)*TempUnit,&
+                  Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt),&
                   NDensityS(iLon,iLat,iAlt,iO_,iBlock), &
                   NDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
                   NDensityS(iLon,iLat,iAlt,iN2_,iBlock), &
                   NDensityS(iLon,iLat,iAlt,iNO_,iBlock), &
                   NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock), &
                   NDensityS(iLon,iLat,iAlt,iN_2D_,iBlock), &
-                  velocity(iLon,iLat,iAlt,iEast_,iBlock), &
+                  velocity(iLon,iLat,iAlt,iEast_,iBlock) , &
                   velocity(iLon,iLat,iAlt,iNorth_,iBlock), &
-                  velocity(iLon,iLat,iAlt,iUp_,iBlock), &
-                  IDensityS(iLon,iLat,iAlt,iO_4SP_,iBlock), &
-                  IDensityS(iLon,iLat,iAlt,iNP_,iBlock), &
+                  velocity(iLon,iLat,iAlt,iUp_,iBlock)   , &
+                  IDensityS(iLon,iLat,iAlt,iO_4SP_,iBlock),&
+                  IDensityS(iLon,iLat,iAlt,iNP_,iBlock) , &
                   IDensityS(iLon,iLat,iAlt,iO2P_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,iN2P_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,iNOP_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,ie_,iBlock), &
-                  eTemperature(iLon,iLat,iAlt,iBlock),&
-                  ITemperature(iLon,iLat,iAlt,iBlock),&
+                  eTemperature(iLon,iLat,iAlt,iBlock)  ,&
+                  ITemperature(iLon,iLat,iAlt,iBlock)  ,&
                   Ivelocity(iLon,iLat,iAlt,iEast_,iBlock), &
                   Ivelocity(iLon,iLat,iAlt,iNorth_,iBlock), &
                   Ivelocity(iLon,iLat,iAlt,iUp_,iBlock), &
                   Potential(iiLon,iiLat,iiAlt,iBlock), &
-                  VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock)
+                  VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) !,&
+!!$                  O_sources(iiLon,iiLat,iiAlt),&
+!!$                  O2_sources(iiLon,iiLat,iiAlt),&
+!!$                  N2_sources(iiLon,iiLat,iiAlt),&
+!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iO_,iBlock)/ &
+!!$                  NDensityS(iLon,iLat,iAlt,iO_,iBlock), &
+!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iO2_,iBlock)/ &
+!!$                  NDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
+!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iN2_,iBlock)/&
+!!$                  NDensityS(iLon,iLat,iAlt,iN2_,iBlock), &
+!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iO_,iBlock)/ &
+!!$                  NDensityS(iLon,iLat,iAlt,iO_,iBlock), &
+!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iO2_,iBlock)/ &
+!!$                  NDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
+!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iN2_,iBlock)/ &
+!!$                  NDensityS(iLon,iLat,iAlt,iN2_,iBlock)
+!!$                  
           enddo
        enddo
     enddo
@@ -513,6 +554,12 @@ contains
     else
        nGCs = 2
     endif
+
+    write(iOutputUnit_,*) "BLOCKS"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
+    write(iOutputUnit_,"(I7,A)") nBlocksLat, " nBlocksLat"
+    write(iOutputUnit_,"(I7,A)") nBlocksLon, " nBlocksLon"
+    write(iOutputUnit_,*) ""
 
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
@@ -591,6 +638,12 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 
   write(output_format,"('(1p,',I2,'E11.3)')") nVars
 
+  write(iUnit,*) "BLOCKS"
+  write(iUnit,"(I7,A)") 1, " nBlocksAlt"
+  write(iUnit,"(I7,A)") 1, " nBlocksLat"
+  write(iUnit,"(I7,A)") 1, " nBlocksLon"
+  write(iUnit,*) ""
+
   write(iUnit,*) "NUMERICAL VALUES"
   write(iUnit,"(I7,6A)") nVars, " nvars"
   write(iUnit,"(I7,7A)") nAlts+4, " nAltitudes"
@@ -624,6 +677,9 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
   write(iUnit,"(I7,A1,a)") 24, " ", "Vi (north)"
   write(iUnit,"(I7,A1,a)") 25, " ", "Vi (up)"
   write(iUnit,"(I7,A1,a)") 26, " ", "Potential (kV)"
+
+
+
   write(iUnit,*) ""
   write(iUnit,*) "BEGIN"
 
@@ -641,7 +697,7 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
           (1-rLon)*(  rLat)*Rho(iiLon+1,iiLat  ,iAlt,iBlock) + &
           (  rLon)*(1-rLat)*Rho(iiLon  ,iiLat+1,iAlt,iBlock) + &
           (1-rLon)*(1-rLat)*Rho(iiLon+1,iiLat+1,iAlt,iBlock)
-     Vars(5) = TempUnit * ( &
+     Vars(5) = TempUnit(iiLon,iiLat,iAlt) * ( &
           (  rLon)*(  rLat)*Temperature(iiLon,iiLat,iAlt,iBlock) + &
           (1-rLon)*(  rLat)*Temperature(iiLon+1,iiLat,iAlt,iBlock) + &
           (  rLon)*(1-rLat)*Temperature(iiLon,iiLat+1,iAlt,iBlock) + &
@@ -751,6 +807,10 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
           (1-rLon)*(  rLat)*Potential(iiLon+1,iiLat,iiAlt,iBlock) + &
           (  rLon)*(1-rLat)*Potential(iiLon,iiLat+1,iiAlt,iBlock) + &
           (1-rLon)*(1-rLat)*Potential(iiLon+1,iiLat+1,iiAlt,iBlock)
+
+
+
+
 
      write(iUnit,output_format) Vars
 

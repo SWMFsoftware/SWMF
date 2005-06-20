@@ -53,7 +53,7 @@ subroutine set_inputs
 
            if (IsFramework) then
 
-              if (iProc == 0) then
+              if (iDebugLevel > 0) then
                  write(*,*) "----------------------------------"
                  write(*,*) "-   UAM trying to set STARTTIME  -"
                  write(*,*) "-          Ignoring              -"
@@ -87,6 +87,8 @@ subroutine set_inputs
                     call time_real_to_int(CurrentTime, iTimeArray)
                  endif
 
+                 call fix_vernal_time
+
               endif
 
            endif
@@ -94,7 +96,7 @@ subroutine set_inputs
         case ("#TIMEEND","#ENDTIME")
 
            if (IsFramework) then
-              if (iProc == 0) then
+              if (iDebugLevel > 0) then
                  write(*,*) "--------------------------------"
                  write(*,*) "-   UAM trying to set ENDTIME  -"
                  write(*,*) "-          Ignoring            -"
@@ -156,7 +158,7 @@ subroutine set_inputs
         case ("#TSIMULATION")
 
            if (IsFramework) then
-              if (iProc == 0) then
+              if (iDebugLevel > 0) then
                  write(*,*) "------------------------------------"
                  write(*,*) "-   UAM trying to set tsimulation  -"
                  write(*,*) "-          Ignoring                -"
@@ -192,6 +194,9 @@ subroutine set_inputs
               f107a = 150.0
               IsDone = .true.
            endif
+
+           call IO_set_f107_single(f107)
+           call IO_set_f107_single(f107a)
 
         case ("#INITIAL")
 
@@ -249,7 +254,6 @@ subroutine set_inputs
               IsDone = .true.
            else
               call IO_set_kp_single(kp)
-              ! call IO_SetKp(kp)
            endif
 
         case ("#CFL")
@@ -278,11 +282,6 @@ subroutine set_inputs
               call IO_set_imf_by_single(by)
               call IO_set_imf_bz_single(bz)
               call IO_set_sw_v_single(abs(vx))
-
-              !    call IO_SetIMFBy(by)
-              !    call IO_SetIMFBz(bz)
-              !    call IO_SetSWV(vx)
-
            endif
 
         case ("#AMIEFILES")
@@ -310,6 +309,9 @@ subroutine set_inputs
               UseMinMod = .true.
               UseMC     = .false.
            case("mc")
+              UseMinMod = .false.
+              UseMC     = .true.
+           case("beta")
               UseMinMod = .false.
               UseMC     = .true.
            case default
@@ -358,12 +360,25 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#THERMALDIFFUSION")
+           call read_in_real(KappaTemp0, iError)
+           call read_in_real(KappaEddy, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #THERMALDIFFUSION:'
+              write(*,*) '#THERMALDIFFUSION'
+              write(*,*) "KappaTemp0    (thermal conductivity, real)"
+              write(*,*) "KappaEddy     (eddy diffusion, real)"
+           endif
+
         case ("#DIFFUSION")
            call read_in_logical(UseDiffusion, iError)
-           if (iError /= 0) then
+            if (UseDiffusion) &
+                call read_in_real(EddyDiffusionCoef, iError)
+            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DIFFUSION:'
               write(*,*) '#DIFFUSION'
               write(*,*) "UseDiffusion (logical)"
+              write(*,*) "EddyDiffusionCoef (real)"
            endif
 
         case ("#FORCING")
@@ -593,6 +608,15 @@ subroutine set_inputs
               write(*,*) '#ELECTRODYNAMICS'
               write(*,*) 'DtPotential (real, seconds)'
               write(*,*) 'DtAurora    (real, seconds)'
+              IsDone = .true.
+           endif
+
+        case ("#LOGFILE")
+           call read_in_real(dTLogFile, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #LOGFILE'
+              write(*,*) '#LOGFILE'
+              write(*,*) 'DtLogFile   (real, seconds)'
               IsDone = .true.
            endif
 

@@ -13,6 +13,10 @@ module ModInputs
   integer                   :: iInputUnit_   = UnitTmp_
   integer                   :: iRestartUnit_ = UnitTmp_
 
+  integer                   :: iLogFileUnit_ = 92
+  logical                   :: IsOpenLogFile = .false.
+  real                      :: DtLogFile = 60.0
+
   integer, parameter        :: nInputMaxLines = 10000
   integer                   :: nInputLines
   character (len=iCharLen_) :: cInputText(nInputMaxLines)
@@ -67,8 +71,8 @@ module ModInputs
 
   real :: TempMax = 1000.0
   real :: TempMin =  200.0
-  real :: TempWidth    =  50.0*1e3
-  real :: TempHeight   = 200.0*1e3
+  real :: TempWidth    =  25.0*1e3
+  real :: TempHeight   = 150.0*1e3
 
   real :: LogRho0
 
@@ -114,7 +118,11 @@ module ModInputs
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
   logical :: UseDiffusion      = .false.
+  real    :: EddyDiffusionCoef = 0.0
   logical :: UseVerAdvectionT  = .true.
+
+  real :: KappaTemp0 = 5.6e-4
+  real :: KappaEddy  = 2.5
 
   logical :: UseIonChemistry     = .true.
   logical :: UseNeutralChemistry = .true.

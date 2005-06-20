@@ -62,8 +62,8 @@ OBJECTS = \
 	advance_vertical.o\
 	advance_horizontal.o\
 	set_vertical_bcs.o\
-	write_output.o\
 	output.o\
+	logfile.o\
 	calc_conduction.o\
 	calc_physics.o\
 	calc_euv.o\

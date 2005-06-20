@@ -7,19 +7,21 @@ subroutine euv_ionization_heat(iBlock)
   use ModConstants
   use ModInputs
   use ModSources
-  use ModTime, only : tSimulation
+  use ModTime, only : tSimulation, CurrentTime
+  use ModIndicesInterfaces
 
   implicit none
 
   integer, intent(in) :: iBlock
 
-  integer :: iAlt, iWave, iSpecies, iIon
+  integer :: iAlt, iWave, iSpecies, iIon, iError
   real, dimension(nLons,nLats) :: Tau, Intensity
 
   logical :: IsFirstTime(nBlocksMax) = .true.
 
   real :: photoion(Num_WaveLengths_High, nIons-1)
   real :: photoabs(Num_WaveLengths_High, nSpecies)
+  real :: photodis(Num_WaveLengths_High, nSpecies)
 
   real :: NeutralDensity(nLons, nLats, nSpecies)
   real :: ChapmanLittle(nLons, nLats, nSpecies)
@@ -35,20 +37,37 @@ subroutine euv_ionization_heat(iBlock)
   call report("euv_ionization_heat",2)
   call start_timing("euv_ionization_heat")
 
+  iError = 0
+  call get_f107(CurrentTime, f107, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107 value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
+
+  call get_f107a(CurrentTime, f107a, iError)
+  if (iError /= 0) then
+     write(*,*) "Error in getting F107a value.  Is this set?"
+     write(*,*) "Code : ",iError
+     call stop_gitm("Stopping in euv_ionization_heat")
+  endif
+
   call chapman_integrals(iBlock)
 
   EuvIonRate = 0.0
   EuvHeating(:,:,:,iBlock)= 0.0
   eEuvHeating(:,:,:,iBlock) = 0.0
   EuvIonRateS(:,:,:,:,iBlock) = 0.0 
+  EuvDissRateS(:,:,:,:,iBlock) = 0.0
 
   photoion = 0.0
   photoabs = 0.0
+  photodis = 0.0
 
   ! This transfers the specific photo absorption and ionization cross
   ! sections into general variables, so we can use loops...
 
-  call fill_photo(photoion, photoabs)
+  call fill_photo(photoion, photoabs, photodis)
 
   do iAlt = 1, nAlts
 
@@ -73,6 +92,18 @@ subroutine euv_ionization_heat(iBlock)
         enddo
 
         do iSpecies = 1, nSpecies
+           EuvDissRateS(:,:,iAlt,iSpecies,iBlock) = &
+                EuvDissRateS(:,:,iAlt,iSpecies,iBlock) + &
+                Intensity*PhotoDis(iWave,iSpecies)
+
+!        write(*,*)ialt, euvdissrates(:,:,iAlt,iO2_,iBlock),Intensity,PhotoDis(iWave,iSpecies)
+
+        enddo
+
+
+!        pause
+
+        do iSpecies = 1, nSpecies
            EHeat = EHeat + &
                 Intensity*PhotonEnergy(iWave)* &
                 photoabs(iWave, iSpecies) * NeutralDensity(:,:,iSpecies)
@@ -83,6 +114,8 @@ subroutine euv_ionization_heat(iBlock)
      EuvHeating(:,:,iAlt,iBlock) = EHeat * HeatingEfficiency(iAlt)
      eEuvHeating(:,:,iAlt,iBlock) = EHeat * eHeatingEfficiency(iAlt)
 
+!        write(*,*)ialt, euvdissrates(:,:,iAlt,iO2_,iBlock)
+
   enddo
 
   !\
@@ -92,7 +125,9 @@ subroutine euv_ionization_heat(iBlock)
   if (UseSolarHeating) then
      do iAlt = 1, nAlts
         EuvHeating(:,:,iAlt,iBlock) = EuvHeating(:,:,iAlt,iBlock) / &
-             Rho(1:nLons,1:nLats,iAlt,iBlock) / cp(:,:,iAlt,iBlock) / TempUnit
+           Rho(1:nLons,1:nLats,iAlt,iBlock) / &
+           cp(1:nLons,1:nLats,iAlt,iBlock) / &
+           TempUnit(1:nLons,1:nLats,iAlt)
      enddo
   else
      EuvHeating = 0.0

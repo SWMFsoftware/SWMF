@@ -21,12 +21,14 @@ subroutine advance_horizontal(iBlock)
   real :: Vel_CD(-1:nLons+2,-1:nLats+2,3)
   real :: IVel_CD(-1:nLons+2,-1:nLats+2,3)
   real :: Num_CV(-1:nLons+2,-1:nLats+2,nSpecies)
+  real :: VertVel_CV(-1:nLons+2,-1:nLats+2,nSpecies)
   real :: INum_CV(-1:nLons+2,-1:nLats+2,nIonsAdvect)
 
   real :: NewRho_C(nLons,nLats)
   real :: NewTemp_C(nLons,nLats)
   real :: NewVel_CD(nLons,nLats, 3)
   real :: NewNum_CV(nLons,nLats, nSpecies)
+  real :: NewVertVel_CV(nLons,nLats, nSpecies)
   real :: NewINum_CV(nLons,nLats, nIonsAdvect)
 
   MaxDiff = 0.0
@@ -35,26 +37,29 @@ subroutine advance_horizontal(iBlock)
 
   do iAlt=1,nAlts
 
-     cp_c   = cp(:,:,iAlt,iBlock)
-     Rho_C  = Rho(:,:,iAlt,iBlock)
-     Vel_CD = Velocity(:,:,iAlt,:,iBlock)
-     Num_CV = nDensityS(:,:,iAlt,1:nSpecies,iBlock)
-     Temp_C = Temperature(:,:,iAlt,iBlock)
+     cp_c       = cp(:,:,iAlt,iBlock)
+     Rho_C      = Rho(:,:,iAlt,iBlock)
+     Vel_CD     = Velocity(:,:,iAlt,:,iBlock)
+     VertVel_CV = VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)
+     Num_CV     = nDensityS(:,:,iAlt,1:nSpecies,iBlock)
+     Temp_C     = Temperature(:,:,iAlt,iBlock)
 
      IVel_CD = IVelocity(:,:,iAlt,:,iBlock)
      INum_CV = IDensityS(:,:,iAlt,1:nIonsAdvect,iBlock)
      
-     NewRho_C  = Rho_C(1:nLons,1:nLats)
-     NewVel_CD = Vel_CD(1:nLons,1:nLats,:)
-     NewNum_CV = Num_CV(1:nLons,1:nLats,:)
-     NewTemp_C = Temp_C(1:nLons,1:nLats)
-     NewINum_CV = INum_CV(1:nLons,1:nLats,:)
+     NewRho_C      = Rho_C(1:nLons,1:nLats)
+     NewVel_CD     = Vel_CD(1:nLons,1:nLats,:)
+     NewNum_CV     = Num_CV(1:nLons,1:nLats,:)
+     NewVertVel_CV = VertVel_CV(1:nLons,1:nLats,:)
+     NewTemp_C     = Temp_C(1:nLons,1:nLats)
+     NewINum_CV    = INum_CV(1:nLons,1:nLats,:)
 
      call horizontal_solver
 
      Rho(1:nLons,1:nLats,iAlt,iBlock)                     = NewRho_C
      Velocity(1:nLons,1:nLats,iAlt,:,iBlock)              = NewVel_CD
      Temperature(1:nLons,1:nLats,iAlt,iBlock)             = NewTemp_C
+     VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)         = VertVel_CV
 
      if (minval(NewNum_CV) < 0.0) then
         write(*,*) "Negative Density after horizontal advection!!"
@@ -183,7 +188,7 @@ contains
     do iLat = 1, nLats
        DivVel_C(:,iLat) = &
             GradLatVel_CD(:,iLat,iNorth_) + GradLonVel_CD(:,iLat,iEast_) &
-            + TanLatitude(iLat,iBlock) * Vel_CD(1:nLons,iLat,iNorth_) / &
+            - TanLatitude(iLat,iBlock) * Vel_CD(1:nLons,iLat,iNorth_) / &
             RadialDistance(iAlt)
     end do
 
@@ -280,12 +285,22 @@ contains
 
           ! dv_r/dt = -(V grad V)_r
 
-          ! Need to add the Vertical Velocity here!!!!!
           NewVel_CD(iLon,iLat,iUp_) = NewVel_CD(iLon,iLat,iUp_) &
                - Dt * ( &
                Vel_CD(iLon,iLat,iNorth_)*GradLatVel_CD(iLon,iLat,iUp_) + &
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iUp_)) &
                + Dt * DiffVel_CD(iLon,iLat,iUp_)
+
+          do iSpc = 1, nSpecies
+             call calc_rusanov_horizontal( VertVel_CV(:,:,iSpc), &
+                  GradLonVel_CD(:,:,iUp_), GradLatVel_CD(:,:,iUp_), &
+                  DiffVel_CD(:,:,iUp_))
+             NewVertVel_CV(iLon,iLat,iSpc) = NewVertVel_CV(iLon,iLat,iSpc) &
+                  - Dt * ( &
+                  Vel_CD(iLon,iLat,iNorth_)*GradLatVel_CD(iLon,iLat,iUp_) + &
+                  Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iUp_)) &
+                  + Dt * DiffVel_CD(iLon,iLat,iUp_)
+          enddo
 
           if (UseCoriolis) then
 
@@ -359,16 +374,20 @@ contains
 
     integer :: iLon, iLat
 
+    real :: InvdLat(nLats), InvdLon
+
     ! Calculate gradient and diffusive flux with respect to latitude
+
+    InvdLat = 1.0 / dLatDist_GB(1:nLats,iAlt,iBlock)
+
     do iLon = 1, nLons
-       call calc_GITM_facevalues(nLats, latitude(:,iBlock), Var(iLon,:), &
+       call calc_facevalues(nLats, latitude(:,iBlock), Var(iLon,:), &
             VarSouth, VarNorth)
        ! Gradient based on averaged Left/Right values
 
        GradLatVar(iLon,:) = 0.5 * &
             (VarSouth(2:nLats+1)+VarNorth(2:nLats+1) - &
-            VarSouth(1:nLats)-VarNorth(1:nLats)) &
-            / dLatDist_GB(1:nLats,iAlt,iBlock)
+            VarSouth(1:nLats)-VarNorth(1:nLats)) * InvdLat
 
        ! Rusanov/Lax-Friedrichs diffusive term
        DiffLatFlux = 0.5 * max(&
@@ -376,21 +395,23 @@ contains
             cMax_GDB(iLon,1:nLats+1,iAlt,iNorth_,iBlock)) &
             * (VarNorth - VarSouth)
 
-       DiffVar(iLon,:) = (DiffLatFlux(2:nLats+1) - DiffLatFlux(1:nLats)) &
-            / dLatDist_GB(1:nLats,iAlt,iBlock)
+       DiffVar(iLon,:) = (DiffLatFlux(2:nLats+1) - DiffLatFlux(1:nLats)) * &
+            InvdLat
     end do
 
     ! Calculate gradient and diffusive flux with respect to longitude
     do iLat = 1, nLats
-       call calc_GITM_facevalues(nLons, Longitude(:,iBlock), Var(:,iLat), &
+
+       InvdLon = 1.0 / dLonDist_GB(iLat,iAlt,iBlock)
+
+       call calc_facevalues(nLons, Longitude(:,iBlock), Var(:,iLat), &
             VarWest, VarEast)
 
        ! Gradient based on averaged West/East values
 
        GradLonVar(:,iLat) = 0.5 * &
             (VarWest(2:nLons+1) + VarEast(2:nLons+1) - &
-            VarWest(1:nLons)    - VarEast(1:nLons)) &
-            / dLonDist_GB(iLat,iAlt,iBlock)
+            VarWest(1:nLons)    - VarEast(1:nLons)) * InvdLon
 
        ! Rusanov/Lax-Friedrichs diffusive term
        DiffLonFlux = 0.5 * max(&
@@ -399,8 +420,8 @@ contains
             * (VarEast - VarWest)
 
        DiffVar(:,iLat) = DiffVar(:,iLat) + &
-            (DiffLonFlux(2:nLons+1) - DiffLonFlux(1:nLons)) &
-            / dLonDist_GB(iLat, iAlt, iBlock)
+            (DiffLonFlux(2:nLons+1) - DiffLonFlux(1:nLons)) * InvdLon
+
     end do
 
   end subroutine calc_rusanov_horizontal

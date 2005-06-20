@@ -80,6 +80,12 @@ subroutine get_potential(iBlock)
      call IE_set_inputs(Lines)
      call IE_Initialize(iError)
 
+     if (iError /= 0) then
+        write(*,*) &
+             "Code Error in IE_Initialize called from get_potential.f90"
+        call stop_gitm("Stopping in get_potential")
+     endif
+
      call IO_SetnMLTs(nLons+4)
      call IO_SetnLats(nLats+4)
       
@@ -95,6 +101,7 @@ subroutine get_potential(iBlock)
 
   if (.not. IsFramework) then
 
+     iError = 0
      call get_IMF_Bz(CurrentTime, temp, iError)
      call IO_SetIMFBz(temp)
 
@@ -162,6 +169,8 @@ subroutine get_potential(iBlock)
 
      if (iDebugLevel > 0) write(*,*) "=> Getting Potential"
 
+     Potential = 0.0
+
      do iAlt=-1,nAlts+2
 
         call start_timing("setgrid")
@@ -179,6 +188,7 @@ subroutine get_potential(iBlock)
         if (iDebugLevel > 1 .and. iAlt == 1) &
              write(*,*) "==> Getting IE potential"
 
+        TempPotential = 0.0
         call start_timing("getpotential")
         call IO_GetPotential(TempPotential, iError)
         call end_timing("getpotential")
@@ -200,7 +210,7 @@ subroutine get_potential(iBlock)
   if (floor((tSimulation-dt)/DtAurora) /= &
        floor((tsimulation)/DtAurora) .or. IsFirstAurora(iBlock)) then
 
-     if (iDebugLevel > 0) write(*,*) "=> Getting Aurora"
+     if (iDebugLevel > 2) write(*,*) "=> Getting Aurora"
 
      iAlt = nAlts+1
 

@@ -23,7 +23,8 @@ subroutine add_sources
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-          - NOCooling - OCooling + AuroralHeating + JouleHeating) + Conduction
+          - NOCooling - OCooling + AuroralHeating + JouleHeating) + &
+          Conduction + ChemicalHeatingRate
 
      do while (minval(temperature(1:nLons, 1:nLats, 1:nAlts, iBlock)) < 0.0)
         write(*,*) "Negative Temperature Found!!!  Correcting!!!"
@@ -44,16 +45,17 @@ subroutine add_sources
      enddo
 
      if (iDebugLevel > 2 .and. Is1D) then
-        do iAlt = 1,nAlts
+!        do iAlt = 1,nAlts
+iAlt = 10
            write(*,*) "===> MaxVal Temp Sources : ", iAlt, dt,&
                 EuvHeating(1, 1, iAlt, iBlock)*dt, &
-                NOCooling(1,1,iAlt)*dt, &
-                OCooling(1,1,iAlt)*dt, &
+!                NOCooling(1,1,iAlt)*dt, &
+!                OCooling(1,1,iAlt)*dt, &
                 AuroralHeating(1,1,iAlt)*dt, &
                 JouleHeating(1,1,iAlt)*dt, &
-                ChemicalHeatingRate(1,1,iAlt)*dt, &
+                ChemicalHeatingRate(1,1,iAlt), &
                 Conduction(1,1,iAlt), temperature(1,1,iAlt,iBlock)
-        enddo
+!        enddo
      endif
 
      iAlt = nAlts-2
@@ -64,12 +66,6 @@ subroutine add_sources
           maxval(AuroralHeating(:,:,iAlt))*dt, &
           maxval(JouleHeating(:,:,iAlt))*dt, &
           maxval(Conduction(:,:,iAlt))
-!     if (iDebugLevel > 2) &
-!          write(*,*) "===> MaxVal Temp Sources : ", &
-!                maxval(EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock))*dt, &
-!                maxval(NOCooling)*dt, maxval(OCooling)*dt, &
-!                maxval(AuroralHeating)*dt, maxval(JouleHeating)*dt, &
-!                maxval(Conduction)
 
      Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
           Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
@@ -78,23 +74,17 @@ subroutine add_sources
      do iSpecies = 1, nSpecies
         VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) = &
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
-             Dt*(IonDrag(:,:,:,iUp_)) + NeutralFriction(:,:,:,iSpecies)
+             Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
+             NeutralFriction(:,:,:,iSpecies) 
      enddo
 
-!     if (UseIonChemistry) then
-!        call calc_ion_density(iBlock)
-!     endif
-
-     call calc_electron_temperature(iBlock)
+!     call calc_electron_temperature(iBlock)
 
      do iSpecies = 1, nSpecies
         NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &
-             NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
-             Diffusion(1:nLons, 1:nLats, 1:nAlts, iSpecies)
+             NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock)+ &
+             Diffusion(1:nLons, 1:nLats, 1:nAlts, iSpecies)*Dt
      enddo
-!     if (UseNeutralChemistry) then
-!        call calc_neutral_density(iBlock)
-!     endif
 
      do iLon = 1, nLons
         do iLat = 1, nLats

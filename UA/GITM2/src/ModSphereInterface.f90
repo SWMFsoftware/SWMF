@@ -344,7 +344,7 @@ contains
     integer, intent(in) :: dir,index
     logical, intent(in) :: pole
     real, dimension(:),intent(out) :: out_array
-    integer :: p,i
+    integer :: p,i, iIon
     real :: tmpI(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nIons)
     real :: tmpN(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nSpecies)
 
@@ -364,10 +364,11 @@ contains
          Temperature(:,:,1:nAlts,index),dir,pole,p,out_array)
 
     if (UseIonAdvection) then
-       tmpI = IDensityS(:,:,1:nAlts,:,index)
+       do iIon = 1, nIons
+          tmpI(:,:,:,iIon) = IDensityS(:,:,1:nAlts,iIon,index)
+       enddo
        call AB_array4_gc_pack(nLons,nLats,nAlts,nIons,2, &
             tmpI,dir,pole,p,out_array)
-
     endif
   end subroutine pack_vars_nblk
 
@@ -375,7 +376,7 @@ contains
   subroutine unpack_vars_nblk(index,dir,in_array)
     integer, intent(in) :: index,dir
     real, dimension(:), intent(in) :: in_array
-    integer :: p,i
+    integer :: p,i, iIon
     real :: tmpI(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nIons)
     real :: tmpN(-1:nLons+2, -1:nLats+2, 1:nAlts, 1:nSpecies)
 
@@ -398,10 +399,14 @@ contains
     if (UseIonAdvection) then
 !       call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
 !            IDensityS(:,:,1:nAlts,:,index),dir,p,in_array)
-       tmpI = IDensityS(:,:,1:nAlts,:,index)
+       do iIon = 1, nIons
+          tmpI(:,:,:,iIon) = IDensityS(:,:,1:nAlts,iIon,index)
+       enddo
        call AB_array4_gc_unpack(nLons,nLats,nAlts,nIons,2, &
             tmpI,dir,p,in_array)
-       IDensityS(:,:,1:nAlts,:,index) = tmpI
+       do iIon = 1, nIons
+          IDensityS(:,:,1:nAlts,iIon,index) = tmpI(:,:,:,iIon)
+       enddo
     endif
 
   end subroutine unpack_vars_nblk

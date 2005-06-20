@@ -12,12 +12,13 @@ module ModPlanet
   integer, parameter :: iN_4S_ =  4
   integer, parameter :: iNO_   =  5
 
-  integer, parameter :: nSpeciesTotal = 10
+  integer, parameter :: nSpeciesTotal = 11
   integer, parameter :: iN_2D_ =  6
   integer, parameter :: iN_2P_ =  7
   integer, parameter :: iH_    =  8
   integer, parameter :: iHe_   =  9
   integer, parameter :: iAr_   = 10
+  integer, parameter :: iO_1D_ = 11
 
   integer, parameter  :: iO_4SP_ = 1
   integer, parameter  :: iO2P_   = 2
@@ -76,10 +77,6 @@ module ModPlanet
 
   logical :: IsEarth = .true.
   character (len=10) :: cPlanet = "Earth"
-
-  real :: KappaTemp0 = 3.6e-4
-  ! This value is created so the eddy diffusion is 160 m2/s at the bottom
-  real :: KappaEddy  = 7.5e-9 ! 5.0e-6
 
 contains
 

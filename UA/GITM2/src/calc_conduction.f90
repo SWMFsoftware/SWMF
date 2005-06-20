@@ -23,7 +23,7 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
   logical :: NewSolver = .true., UseDebug = .false.
 
   call start_timing("conduction")
-  call report("calc_conduction",1)
+  call report("calc_conduction",3)
 
   !C-----------------------------------------------------------------------
   !      Subroutine tridag(a,b,c,r,u,n)
@@ -57,8 +57,8 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
 
         do iAlt = 1, nAlts
 
-           beta(iAlt) = dt / &
-                MulFac(iLon, iLat, iAlt) / &
+           beta(iAlt) = (dt / &
+                MulFac(iLon, iLat, iAlt)) / &
                 (((Altitude(iAlt+1) - Altitude(iAlt-1))/2)**2)
 
            dk(iAlt) = ( &

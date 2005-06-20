@@ -16,60 +16,61 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        Centrifugal, Coriolis, &
        LogINS, &
        IVel, Lat, Lon, &
-       VertVel
+       VertVel, &
+       MeanMajorMass_1d
   implicit none
 
   integer, intent(in) :: iLon, iLat, iBlock
 
-  integer :: iIon, iSpecies, iAlt, iVar, iDim
+  integer :: iIon, iSpecies, iAlt
 
 !  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
+
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then
      write(*,*) "negative density found!"
      call stop_gitm("Can't Continue")
   endif
 
+  Heating     = EuvHeating(iLon,iLat,:,iBlock)
   Centrifugal = (cos(Latitude(iLat,iBlock)) * OmegaBody)**2
   Coriolis    = 2 * cos(Latitude(iLat,iBlock)) * OmegaBody
-  do iAlt = -1, nAlts+2
-     Heating(iAlt) = EuvHeating(iLon,iLat,iAlt,iBlock)
-     LogRho(iAlt)  = log(Rho(iLon,iLat,iAlt,iBlock))
-     Temp(iAlt)    = Temperature(iLon,iLat,iAlt,iBlock)
-     do iVar = 1, nSpecies
-        LogNS1(iAlt,iVar)  = log(NDensityS(iLon,iLat,iAlt,iVar,iBlock))
-        VertVel(iAlt,iVar) = VerticalVelocity(iLon,iLat,iAlt,iVar,iBlock)
-     end do
-     do iVar = 1, nIonsAdvect
-        LogINS(iAlt,iVar) = log(IDensityS(iLon,iLat,iAlt,iVar,iBlock))
-     end do
-     do iDim = 1, 3
-        IVel(iAlt,iDim)    = IVelocity(iLon,iLat,iAlt,iDim,iBlock)
-        Vel_GD(iAlt,iDim)  = Velocity(iLon,iLat,iAlt,iDim,iBlock)
-     end do
-  end do
-  do iAlt = 0, nAlts+1
-     cMax1(iAlt)   = cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock)
-  end do
+  LogRho  = log(Rho(iLon,iLat,:,iBlock))
+  Vel_GD  = Velocity(iLon,iLat,:,:,iBlock)
+
+  !!!! CHANGE !!!!
+  Temp    = Temperature(iLon,iLat,:,iBlock)*TempUnit(iLon,iLat,:)
+  do iSpecies = 1, nSpecies 
+     LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
+     VertVel(:,iSpecies) = VerticalVelocity(iLon,iLat,:,iSpecies,iBlock)
+  enddo
+
+  cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
+  IVel    = IVelocity(iLon,iLat,:,:,iBlock)
+
+  do iSpecies = 1, nIonsAdvect
+     LogINS(:,iSpecies)  = log(IDensityS(iLon,iLat,:,iSpecies,iBlock))
+  enddo
+
+  MeanMajorMass_1d = MeanMajorMass(iLon,iLat,:)
+
+!!!!  LogINS  = IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock)
 
   Lat = Latitude(iLat, iBlock) * 180.0/pi
   Lon = Longitude(iLon, iBlock) * 180.0/pi
 
-!  write(*,*) "advance_vertical_1d", iLat, iLon, iBlock
 
   call advance_vertical_1d
 
-  do iAlt = -1, nAlts+2
-     Rho(iLon,iLat,iAlt,iBlock)         = exp(LogRho(iAlt))
-     Temperature(iLon,iLat,iAlt,iBlock) = Temp(iAlt)
-     do iDim = 1, 3
-        Velocity(iLon,iLat,iAlt,iDim,iBlock) = Vel_GD(iAlt,iDim)
-     end do
-     do iVar = 1, nSpecies
-        VerticalVelocity(iLon,iLat,iAlt,iVar,iBlock) = VertVel(iAlt, iVar)
-        LogNS(iLon,iLat,iAlt,iVar,iBlock)            = LogNS1(iAlt, iVar)
-     end do
-  end do
+  Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
+  Velocity(iLon,iLat,:,:,iBlock)           = Vel_GD
+  !!!! CHANGE !!!!
+  Temperature(iLon,iLat,:,iBlock)          = Temp/TempUnit(iLon,iLat,:)
+
+  do iSpecies = 1, nSpecies 
+     LogNS(iLon,iLat,:,iSpecies,iBlock)              = LogNS1(:,iSpecies)
+     VerticalVelocity(iLon,iLat,:,iSpecies,iBlock) = VertVel(:,iSpecies)
+  enddo
 
   if (minval(Temp) < 0.0) then
      write(*,*) "Temperature is negative!!!"
@@ -97,10 +98,15 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      call stop_gitm("Can't continue")
   endif
 
-  do iVar = 1, nSpecies; do iAlt = -1, nAlts+2
-     nDensityS(iLon,iLat,iAlt,iVar,iBlock) = exp(LogNS1(iAlt, iVar))
-  end do; end do
+  do iSpecies = 1, nSpecies 
+     nDensityS(iLon,iLat,:,iSpecies,iBlock) = exp(LogNS1(:,iSpecies))
+  enddo
+
   if (UseIonAdvection) then
+
+     do iIon = 1, nIonsAdvect
+        IDensityS(iLon,iLat,:,iIon,iBlock) = exp(LogINS(:,iIon))
+     enddo
 
 !     if (Maxval(LogINS) > 75.0) then
 !        write(*,*) "Maxval of Ion LogINS too high!!!"
@@ -119,10 +125,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 !     endif
 !
 
-     do iVar = 1, nIonsAdvect; do iAlt = -1, nAlts+2
-        IDensityS(iLon,iLat,iAlt, iVar, iBlock) = exp(LogINS(iAlt, iVar))
 !!!!!     IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock) = LogINS
-     end do; end do
      !\
      ! New Electron Density
      !/

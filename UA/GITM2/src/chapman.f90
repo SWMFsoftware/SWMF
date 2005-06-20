@@ -28,7 +28,7 @@ subroutine chapman_integrals(iBlock)
               iAlt = nAlts
 
               ScaleHeightS = &
-                   Temperature(iLon,iLat,iAlt,iBlock)*TempUnit * &
+                   Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt) * &
                    Boltzmanns_Constant / (-Gravity(iAlt) * Mass(iSpecies))
 
               Chapman(iLon,iLat,iAlt,iSpecies,iBlock) = &

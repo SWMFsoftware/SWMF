@@ -84,7 +84,8 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, KappaNS, nDensityS, KappaTemp, Centrifugal, Coriolis
+       Heating, KappaNS, nDensityS, KappaTemp, Centrifugal, Coriolis, &
+       MeanMajorMass_1d
   use ModTime
   use ModInputs
   use ModConstants
@@ -126,12 +127,12 @@ subroutine advance_vertical_1stage( &
   Rho = exp(LogRho)
   LogNum = alog(sum(NS,dim=2))
   AveMass = Rho/sum(NS,dim=2)
-  TempKoM = Temp*TempUnit * Boltzmanns_Constant / AveMass
+  TempKoM = Temp
 
   call calc_rusanov(LogRho ,GradLogRho,  DiffLogRho)
   call calc_rusanov(LogNum ,GradLogNum,  DiffLogNum)
   call calc_rusanov(Temp   ,GradTemp,    DiffTemp)
-  call calc_rusanov(TempKoM,GradTempKoM, DiffTmp)
+!  call calc_rusanov(TempKoM,GradTempKoM, DiffTmp)
   do iDim = 1, 3
      call calc_rusanov(Vel_GD(:,iDim), GradVel_CD(:,iDim), DiffVel_CD(:,iDim))
   end do
@@ -140,14 +141,17 @@ subroutine advance_vertical_1stage( &
   DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)/RadialDistance(1:nAlts)
 
   do iSpecies=1,nSpecies
+
      call calc_rusanov(LogNS(:,iSpecies),GradTmp, DiffTmp)
      GradLogNS(:,iSpecies) = GradTmp
      DiffLogNS(:,iSpecies) = DiffTmp
+
      call calc_rusanov(VertVel(:,iSpecies),GradTmp, DiffTmp)
      GradVertVel(:,iSpecies) = GradTmp
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
           2*VertVel(1:nAlts,iSpecies)/RadialDistance(1:nAlts)
+
   enddo
 
   do iSpecies=1,nIonsAdvect
@@ -163,22 +167,31 @@ subroutine advance_vertical_1stage( &
           + Dt * DiffLogRho(iAlt)
 
      do iSpecies=1,nSpecies
-
-!        NewLogNS(iAlt,iSpecies) = NewLogNS(iAlt,iSpecies) - Dt * &
-!             (DivVel(iAlt) + Vel_GD(iAlt,iUp_) * GradLogNS(iAlt,iSpecies) ) &
-!             + Dt * DiffLogNS(iAlt,iSpecies)
         NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
              (DivVertVel(iAlt,iSpecies) + &
              VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) &
              + Dt * DiffLogNS(iAlt,iSpecies)
+
+!if (iSpecies == 1 .and. iAlt == 30) &
+!     write(*,*) iAlt, LogNS(iAlt,iSpecies), &
+!     DivVertVel(iAlt,iSpecies), &
+!     VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies), & 
+!     VertVel(iAlt,iSpecies), &
+!     - Dt * &
+!     (DivVertVel(iAlt,iSpecies) + &
+!     VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ), &
+!     Dt * DiffLogNS(iAlt,iSpecies)
+
+!        NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
+!             (DivVertVel(iAlt,iSpecies) + &
+!             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) &
+!             + Dt * DiffLogNS(iAlt,iSpecies)
      enddo
 
      do iSpecies=1,nIonsAdvect
-
         NewLogINS(iAlt,iSpecies) = NewLogINS(iAlt,iSpecies) - Dt * &
              (IVel(iAlt,iUp_) * GradLogINS(iAlt,iSpecies) ) &
              + Dt * DiffLogINS(iAlt,iSpecies)
-
      enddo
 
 !     ! dVr/dt = -[ (V grad V)_r + grad T + T grad ln Rho - g ]
@@ -192,14 +205,7 @@ subroutine advance_vertical_1stage( &
 !          - Gravity(iAlt)) &
 !          + Dt * DiffVel_CD(iAlt,iUp_)
 
-!     NewVel2_G(iAlt) = NewVel_GD(iAlt,iUp_) - Dt * &
-!          (GradTempKoM(iAlt) + TempKoM(iAlt)*GradLogRho(iAlt))
-!     NewVel_GD(iAlt, iUp_) = NewVel2_G(iAlt) 
-
      NewVel_GD(iAlt,iUp_) = 0.0
-
-!     rat = Rho(iAlt) / Rho(1)
-!     rat = 0.0
 
      do iSpecies=1,nSpecies
 
@@ -207,14 +213,37 @@ subroutine advance_vertical_1stage( &
 !             (exp(LogNS(iAlt,iSpecies)) / (exp(LogRho(iAlt)) / Mass(1))) * &
 !             (GradTemp(iAlt) + Temp(iAlt)*GradLogNS(iAlt,iSpecies))
 
+!        NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
+!             (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
+!             - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
+!             / RadialDistance(iAlt)) &
+!             + Dt * DiffVertVel(iAlt,iSpecies)
+
+!! Version of vertical velocity with grad(p) and g in neutral friction:
+!        NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
+!             (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
+!             - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
+!             / RadialDistance(iAlt)) &
+!             + Dt * DiffVertVel(iAlt,iSpecies)
+
+!if (iAlt == 30) write(*,*) "NewVertVel : ",iSpecies, NewVertVel(iAlt, iSpecies)
+
+! Version of vertical velocity with grad(p) and g here :
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-             / RadialDistance(iAlt) &
-             - Gravity(iAlt) + &
-             Mass(1)/Mass(iSpecies) * &
-             (GradTemp(iAlt) + Temp(iAlt)*GradLogNS(iAlt,iSpecies))) &
+             / RadialDistance(iAlt) + &
+             Temp(iAlt)*gradLogNS(iAlt,iSpecies) * Boltzmanns_Constant / &
+             Mass(iSpecies) + &
+             gradtemp(iAlt) * Boltzmanns_Constant / Mass(iSpecies) &
+             - Gravity(iAlt)) &
              + Dt * DiffVertVel(iAlt,iSpecies)
+
+        if (UseCoriolis) then
+           NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
+                Centrifugal * RadialDistance(iAlt) + &
+                Coriolis * Vel_GD(iAlt,iEast_))
+        endif
 
         NewVertVel(iAlt, iSpecies) = max(-500.0, NewVertVel(iAlt, iSpecies))
         NewVertVel(iAlt, iSpecies) = min( 500.0, NewVertVel(iAlt, iSpecies))
@@ -224,13 +253,6 @@ subroutine advance_vertical_1stage( &
              (Mass(iSpecies) * NS(iAlt,iSpecies) / Rho(iAlt))
 
      enddo
-
-     if (UseCoriolis) then
-        ! Need to add vertical velocity here!!!!
-        NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + Dt * ( &
-             Centrifugal * RadialDistance(iAlt) + &
-             Coriolis * Vel_GD(iAlt,iEast_))
-     endif
 
      ! dVphi/dt = - (V grad V)_phi
      NewVel_GD(iAlt,iEast_) = NewVel_GD(iAlt,iEast_) - Dt * &
@@ -249,121 +271,17 @@ subroutine advance_vertical_1stage( &
           (Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt))&
           + Dt * DiffTemp(iAlt)
 
-  end do
+!if (iAlt == 5) write(*,*) "t : ", NewTemp(iAlt), &
+!     Vel_GD(iAlt,iUp_)*GradTemp(iAlt), &
+!      Dt * DiffTemp(iAlt), &
+!      ((Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt))*dt
 
-!  ! Add molecular diffusion
-!  if(UseDiffusion) call add_diffusion
+  end do
 
   do iAlt = 1, nAlts
      NewSumRho    = sum( Mass(1:nSpecies)*exp(NewLogNS(iAlt,1:nSpecies)) )
      NewLogRho(iAlt) = alog(NewSumRho)
   enddo
-
-!contains
-
-!  subroutine add_diffusion
-!
-!    ! Colgrove, JGR, 1966, p2229
-!
-!!    ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-!!    real, parameter, dimension(5, 5) :: Diff0 = 0.0001 * reshape( (/ &
-!!         ! 0      02     N2      N     NO
-!!         !---------------------------------+
-!!         0.00,  0.260, 0.260, 0.260, 0.260, &            ! O
-!!         0.26,  0.000, 0.181, 0.181, 0.181, &            ! O2
-!!         0.26,  0.181, 0.000, 0.181, 0.181, &            ! N2
-!!         0.26,  0.181, 0.181, 0.000, 0.260, &            ! N
-!!         0.26,  0.181, 0.181, 0.260, 0.000  /), (/5,5/) )  ! NO
-!!
-!!    ! These are the exponents - 1
-!!    real, parameter, dimension(5, 5) :: DiffExp = reshape( (/ &
-!!         ! 0      02     N2
-!!         !---------------------------------+
-!!         0.00,  0.75,  0.75, 0.75, 0.75, &             ! O
-!!         0.75,  0.00,  0.75, 0.75, 0.75, &             ! O2
-!!         0.75,  0.75,  0.00, 0.75, 0.75, &             ! N2
-!!         0.75,  0.75,  0.75, 0.00, 0.75, &             ! N
-!!         0.75,  0.75,  0.75, 0.75, 0.00  /), (/5,5/) )  ! NO
-!
-!    ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-!    real, parameter, dimension(4, 4) :: Diff0 = 0.0001 * reshape( (/ &
-!         ! 0      02     N2      N     NO
-!         !---------------------------------+
-!         0.00,  0.260, 0.260, 0.260, &            ! O
-!         0.26,  0.000, 0.181, 0.181, &            ! O2
-!         0.26,  0.181, 0.000, 0.181, &            ! N2
-!         0.26,  0.181, 0.181, 0.000 /), (/4,4/) )  ! N
-!
-!    ! These are the exponents - 1
-!    real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
-!         ! 0      02     N2
-!         !---------------------------------+
-!         0.00,  0.75,  0.75, 0.75, &             ! O
-!         0.75,  0.00,  0.75, 0.75, &             ! O2
-!         0.75,  0.75,  0.00, 0.75, &             ! N2
-!         0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
-!
-!    real :: NS(nAlts, nSpecies), N0
-!    real :: Diffusion(nAlts)
-!    real :: Rate(nAlts, nSpecies)
-!    !-------------------------------------------------------------------------
-!
-!    NS = exp(LogNS(1:nAlts, : ))  
-!    
-!    N0 = sum(NS(1,:))
-!
-!    Rate = 0
-!    do iSpecies = 1, nSpecies
-!
-!       ! Rate_i = Sum n_j/(N D_ij)
-!
-!       do jSpecies = 1, nSpecies
-!
-!          if(jSpecies == iSpecies) CYCLE
-!
-!          Rate(:,iSpecies) = Rate(:,iSpecies) + &
-!               NS(:,jSpecies) /  &
-!               (Diff0(iSpecies, jSpecies)                               &
-!               * (Temp(1:nAlts)/Temp(1)) ** DiffExp(iSpecies, jSpecies) &
-!               * N0 &
-!               )
-!
-!       end do
-!    end do
-!
-!    do iSpecies=1,nSpecies
-!
-!       Diffusion = &
-!            ( GradTemp/Temp(1:nAlts) + GradLogNS(1:nAlts,iSpecies) &
-!            - Gravity(1:nAlts)/Temp(1:nAlts)*(Mass(iSpecies)/Mass(1)) &
-!            )/ Rate(:,iSpecies)
-!
-!       do iAlt = 2, nAlts-1
-!
-!!          write(*,*) "diff : ", iAlt, iSpecies, &
-!!               0.5*(Diffusion(iAlt+1)-Diffusion(iAlt-1))/dAlt(iAlt), &
-!!               Diffusion(iAlt) * GradLogNS(iAlt, iSpecies), NewLogNS(iAlt,iSpecies)
-!
-!          NewLogNS(iAlt, iSpecies) = NewLogNS(iAlt,iSpecies) - Dt * &
-!              ( 0.5*(Diffusion(iAlt+1)-Diffusion(iAlt-1))/dAlt(iAlt) &
-!              + Diffusion(iAlt) * GradLogNS(iAlt, iSpecies))
-!       end do
-!
-!       iAlt = nAlts
-!       NewLogNS(iAlt, iSpecies) = NewLogNS(iAlt,iSpecies) + Dt * &
-!            ( 0.5*(Diffusion(iAlt)-Diffusion(iAlt-2))/dAlt(iAlt-1) &
-!            + Diffusion(iAlt) * GradLogNS(iAlt, iSpecies))
-!
-!    end do
-!
-!    !        write(*,*)'NewLogNS=',iSpecies,NewLogNS(50,iSpecies)
-!    ! Fix total density
-!    !do iAlt = 1, nAlts
-!    !   NewLogRho(iAlt) = alog(sum(Mass(1:nSpecies)*&
-!    !        exp(NewLogNS(iAlt,1:nSpecies))))
-!    !end do
-!
-!  end subroutine add_diffusion
 
 end subroutine advance_vertical_1stage
 
@@ -388,7 +306,7 @@ subroutine calc_rusanov(Var, GradVar, DiffVar)
 
 !  call start_timing("rusanov")
 
-  call calc_GITM_facevalues(nAlts, Altitude(-1:nAlts+2), Var, VarLeft, VarRight)
+  call calc_facevalues(nAlts, Altitude(-1:nAlts+2), Var, VarLeft, VarRight)
 
   ! Gradient based on averaged Left/Right values
   GradVar = 0.5 * &
@@ -406,11 +324,11 @@ end subroutine calc_rusanov
 
 !\
 ! ------------------------------------------------------------
-! calc_GITM_facevalues
+! calc_facevalues
 ! ------------------------------------------------------------
 !/
 
-subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
+subroutine calc_facevalues(n, Location, Var, VarLeft, VarRight)
 
   use ModInputs, only: TypeLimiter, UseMinMod, UseMC
 
@@ -421,6 +339,7 @@ subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
   real, intent(out):: VarLeft(1:n+1), VarRight(1:n+1)
 
   real :: dVarUp, dVarDown, dVarLimited(0:n+1)
+  real :: DiffLocP(-1:n+1), InvDiffLocP(-1:n+1)
 
   integer :: i
 
@@ -428,28 +347,26 @@ subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
 
 !  call start_timing("facevalues")
 
-!!! write(*,*)'Var(19:23)=',Var(19:23)
+  DiffLocP = Location(0:n+2) - Location(-1:n+1)
+  InvDiffLocP = 1.0/DiffLocP
 
   do i=0,n+1
 
-     dVarUp            = (Var(i+1) - Var(i))  / (Location(i+1) - Location(i))
-     dVarDown          = (Var(i)   - Var(i-1))/ (Location(i)   - Location(i-1))
+     dVarUp            = (Var(i+1) - Var(i))   * InvDiffLocP(i)
+     dVarDown          = (Var(i)   - Var(i-1)) * InvDiffLocP(i-1)
 
      if (UseMinMod) dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
 
      if (UseMC) dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
 
-!!! if(i>=20.and. i<23)write(*,*)'dVarUp,dVarDown,dVarLimited=',&
-!!!     dVarUp,dVarDown,dVarLimited(i)
-
   end do
 
   do i=1,n+1
 
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * &
-          (Location(i) - Location(i-1))
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i) * &
-          (Location(i) - Location(i-1))
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * DiffLocP(i-1) 
+
+     !!!! CHECK This Later  ERROR !!!!
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * DiffLocP(i-1) 
 
   end do
 
@@ -472,16 +389,17 @@ contains
   real function Limiter_mc(dUp, dDown)
 
     real :: dUp, dDown
+    real :: beta = 1.2
 
     if (dUp > 0.0) then
        if (dDown > 0.0) then
-          Limiter_mc = min(2*dUp,2*dDown,(dUp+dDown)*0.5)
+          Limiter_mc = min(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
        else
           Limiter_mc = 0.0
        endif
     else
        if (dDown < 0.0) then
-          Limiter_mc = max(2*dUp,2*dDown,(dUp+dDown)*0.5)
+          Limiter_mc = max(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
        else
           Limiter_mc = 0.0
        endif
@@ -489,5 +407,5 @@ contains
 
   end function Limiter_mc
 
-end subroutine calc_GITM_facevalues
+end subroutine calc_facevalues
 
