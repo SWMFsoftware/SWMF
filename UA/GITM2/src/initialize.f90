@@ -148,7 +148,7 @@ subroutine initialize_gitm
 !        HeatingEfficiency(iAlt) = &
 !             max(0.6-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.05)
         HeatingEfficiency(iAlt) = &
-             max(0.45-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.15)
+             max(0.60-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.30)
 
         if (altitude(iAlt)/1000. > 150.) then
            eHeatingEfficiency(iAlt)= &
