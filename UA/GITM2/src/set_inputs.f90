@@ -196,7 +196,7 @@ subroutine set_inputs
            endif
 
            call IO_set_f107_single(f107)
-           call IO_set_f107_single(f107a)
+           call IO_set_f107a_single(f107a)
 
         case ("#INITIAL")
 
