@@ -306,7 +306,7 @@ subroutine calc_rusanov(Var, GradVar, DiffVar)
 
 !  call start_timing("rusanov")
 
-  call calc_facevalues(nAlts, Altitude(-1:nAlts+2), Var, VarLeft, VarRight)
+  call calc_GITM_facevalues(nAlts, Altitude(-1:nAlts+2), Var, VarLeft, VarRight)
 
   ! Gradient based on averaged Left/Right values
   GradVar = 0.5 * &
@@ -328,7 +328,7 @@ end subroutine calc_rusanov
 ! ------------------------------------------------------------
 !/
 
-subroutine calc_facevalues(n, Location, Var, VarLeft, VarRight)
+subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
 
   use ModInputs, only: TypeLimiter, UseMinMod, UseMC
 

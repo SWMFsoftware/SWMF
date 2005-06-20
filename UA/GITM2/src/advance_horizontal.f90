@@ -381,7 +381,7 @@ contains
     InvdLat = 1.0 / dLatDist_GB(1:nLats,iAlt,iBlock)
 
     do iLon = 1, nLons
-       call calc_facevalues(nLats, latitude(:,iBlock), Var(iLon,:), &
+       call calc_GITM_facevalues(nLats, latitude(:,iBlock), Var(iLon,:), &
             VarSouth, VarNorth)
        ! Gradient based on averaged Left/Right values
 
@@ -404,7 +404,7 @@ contains
 
        InvdLon = 1.0 / dLonDist_GB(iLat,iAlt,iBlock)
 
-       call calc_facevalues(nLons, Longitude(:,iBlock), Var(:,iLat), &
+       call calc_GITM_facevalues(nLons, Longitude(:,iBlock), Var(:,iLat), &
             VarWest, VarEast)
 
        ! Gradient based on averaged West/East values
