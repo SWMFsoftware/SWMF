@@ -32,8 +32,7 @@ contains
 
 
 subroutine AB_COMM_create(c,context)
-  use ModMPI
-!  include "mpif90.h"
+  use ModMpi
   type(AB_COMM), intent(out) ::c
   integer, intent(in) :: context
   integer ierror
@@ -65,8 +64,7 @@ end subroutine AB_COMM_get_my_proc_num
 
 
 subroutine AB_COMM_XCHNG_create(xchng,c,tag,ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM), intent(in),target ::c
   integer, intent(in) :: tag
   type(AB_COMM_XCHNG), intent(out) :: xchng
@@ -114,8 +112,7 @@ end subroutine AB_COMM_XCHNG_create
 subroutine AB_COMM_XCHNG_REAL_start(xchng,snd_size,snd, &
                                     rcv_size,rcv, &
                                     ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM_XCHNG), intent(inout) :: xchng
   integer, dimension(0:) :: snd_size, rcv_size
   type(AB_ARRAY_REAL), dimension(0:) :: snd, rcv 
@@ -195,8 +192,7 @@ end subroutine AB_COMM_XCHNG_REAL_start
 subroutine AB_COMM_XCHNG_INT_2D_start(xchng,snd_size,snd_size_mult,snd, &
                                     rcv_size,rcv_size_mult,rcv, &
                                     ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM_XCHNG), intent(inout) :: xchng
   integer, dimension(0:) :: snd_size, rcv_size
   type(AB_ARRAY_INT_2D), dimension(0:) :: snd, rcv
@@ -275,8 +271,7 @@ subroutine AB_COMM_XCHNG_INT_2D_start(xchng,snd_size,snd_size_mult,snd, &
 end subroutine AB_COMM_XCHNG_INT_2D_start
 
 subroutine AB_COMM_XCHNG_finish_rcv(xchng,ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM_XCHNG), intent(inout) :: xchng
   logical, intent(out) :: ok
   integer :: ierror
@@ -295,8 +290,7 @@ subroutine AB_COMM_XCHNG_finish_rcv(xchng,ok)
 end subroutine AB_COMM_XCHNG_finish_rcv
 
 subroutine AB_COMM_XCHNG_finish_snd(xchng,ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM_XCHNG), intent(inout) :: xchng
   logical, intent(out) :: ok
   integer :: ierror
@@ -315,8 +309,7 @@ subroutine AB_COMM_XCHNG_finish_snd(xchng,ok)
 end subroutine AB_COMM_XCHNG_finish_snd
 
 subroutine AB_COMM_XCHNG_destroy(xchng,ok)
-  use ModMPI
-!  include "mpif90.h" 
+  use ModMpi
   type(AB_COMM_XCHNG), intent(inout) :: xchng
   logical, intent(out) :: ok
   integer i,np,ierror
