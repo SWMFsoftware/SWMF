@@ -708,7 +708,7 @@ subroutine calc_GITM_sources(iBlock)
   call aurora(iBlock)
   if (UseAuroralHeating) then
      AuroralHeating = AuroralHeatingRate(:,:,:,iBlock) / &
-          TempUnit(:,:,1:nAlts) / cp(:,:,1:nAlts,iBlock)
+          TempUnit(1:nLons,1:nLats,1:nAlts) / cp(:,:,1:nAlts,iBlock)
   else
      AuroralHeating = 0.0
   endif
