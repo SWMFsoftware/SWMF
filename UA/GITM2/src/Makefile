@@ -79,6 +79,7 @@ OBJECTS = \
 	msis_library.o\
 	iri90.o\
 	apex.o\
+	write_output.o\
 	gradient.o
 
 DEPEND:

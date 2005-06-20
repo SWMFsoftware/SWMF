@@ -59,48 +59,48 @@ program GITM
 
   call finalize_gitm
 
-contains
-
-  subroutine write_output
-
-    real, external :: get_timing
-    integer :: i, nMLTsTmp,nLatsTmp
-    logical :: IsDone
-
-    if (floor((tSimulation-dt)/DtReport) /= &
-         floor((tsimulation)/DtReport) .and. iDebugLevel >= 0) then
-       write(*,"(a,i6,a,3i2.2,a,f10.2,a)") "iStep ", iStep, &
-            ", Time : ",iTimeArray(4:6), &
-            ", RealTime : ",get_timing("GITM")/60.0," min"
-    endif
-
-    if (floor((tSimulation-dt)/DtLogFile) /= &
-         floor((tsimulation)/DtLogFile)) then
-       call logfile("UA/data")
-    endif
-
-    IsDone = .false.
-    do i = 1, nOutputTypes
-       if (floor((tSimulation-dt)/DtPlot(i)) /= &
-            floor((tsimulation)/DtPlot(i)) .or. tSimulation == 0.0) then
-          if (.not. IsDone .and. .not. Is1D) then
-             call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
-             IsDone = .true.
-          endif
-          do iBlock = 1, nBlocks
-             call output("UA/data/",iBlock, i)
-          enddo
-       endif
-    enddo
-
-    call move_satellites
-
-    if (floor((tSimulation-dt)/DtRestart) /= &
-         floor((tsimulation)/DtRestart)) then
-       call write_restart("UA/restartOUT/")
-    endif
-
-  end subroutine write_output
+!!!  contains
+!!!  
+!!!    subroutine write_output
+!!!  
+!!!      real, external :: get_timing
+!!!      integer :: i, nMLTsTmp,nLatsTmp
+!!!      logical :: IsDone
+!!!  
+!!!      if (floor((tSimulation-dt)/DtReport) /= &
+!!!           floor((tsimulation)/DtReport) .and. iDebugLevel >= 0) then
+!!!         write(*,"(a,i6,a,3i2.2,a,f10.2,a)") "iStep ", iStep, &
+!!!              ", Time : ",iTimeArray(4:6), &
+!!!              ", RealTime : ",get_timing("GITM")/60.0," min"
+!!!      endif
+!!!  
+!!!      if (floor((tSimulation-dt)/DtLogFile) /= &
+!!!           floor((tsimulation)/DtLogFile)) then
+!!!         call logfile("UA/data")
+!!!      endif
+!!!  
+!!!      IsDone = .false.
+!!!      do i = 1, nOutputTypes
+!!!         if (floor((tSimulation-dt)/DtPlot(i)) /= &
+!!!              floor((tsimulation)/DtPlot(i)) .or. tSimulation == 0.0) then
+!!!            if (.not. IsDone .and. .not. Is1D) then
+!!!               call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
+!!!               IsDone = .true.
+!!!            endif
+!!!            do iBlock = 1, nBlocks
+!!!               call output("UA/data/",iBlock, i)
+!!!            enddo
+!!!         endif
+!!!      enddo
+!!!  
+!!!      call move_satellites
+!!!  
+!!!      if (floor((tSimulation-dt)/DtRestart) /= &
+!!!           floor((tsimulation)/DtRestart)) then
+!!!         call write_restart("UA/restartOUT/")
+!!!      endif
+!!!  
+!!!    end subroutine write_output
 
 end program GITM
 
