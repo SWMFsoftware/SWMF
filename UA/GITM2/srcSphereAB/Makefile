@@ -42,10 +42,9 @@ AB_XFER_module.o: AB_XFER_module.f90 AB_COMM_module.o AB_ARRAY_module.o \
 AB_SPH_module.o: AB_SPH_module.f90 AB_module.o AB_COMM_module.o \
 	AB_ERROR_module.o
 
-AB_COMM_module.f90: AB_COMM_module_mpi.f90
-	cp AB_COMM_module_mpi.f90 AB_COMM_module.f90
-
-AB_COMM_module.o:  AB_COMM_module.f90 AB_ARRAY_module.o AB_ERROR_module.o
+AB_COMM_module.o:  AB_COMM_module_mpi.f90 AB_ARRAY_module.o AB_ERROR_module.o \
+		$(MPI_INC)
+	${COMPILE.f90} ${Cflag3} AB_COMM_module_mpi.f90 -o AB_COMM_module.o
 
 AB_ARRAY_module.o:  AB_ARRAY_module.f90
 
