@@ -324,7 +324,7 @@ end subroutine calc_rusanov
 
 !\
 ! ------------------------------------------------------------
-! calc_facevalues
+! calc_GITM_facevalues
 ! ------------------------------------------------------------
 !/
 
@@ -407,5 +407,5 @@ contains
 
   end function Limiter_mc
 
-end subroutine calc_facevalues
+end subroutine calc_GITM_facevalues
 
