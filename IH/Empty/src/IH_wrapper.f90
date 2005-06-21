@@ -160,9 +160,3 @@ subroutine IH_get_a_line_point(&
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_get_a_line_point
 !===================================================================!
-!================================================
-subroutine IH_rotate_buffer_grid(Time,BuffToIh_DD)
-  implicit none
-  real,intent(in)::Time
-  real,dimension(3,3),intent(out)::BuffToIh_DD
-end subroutine IH_rotate_buffer_grid
