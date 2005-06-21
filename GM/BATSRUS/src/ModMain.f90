@@ -269,11 +269,8 @@ Module ModMain
   ! Rotation and coordinate system
   !/
 
-  ! Logicals for rotating inner boundary. 
-  !    If the corotation velocity is set for planet: 
-  logical          :: UseRotatingBc = .false.!
-  !    If the boundary condition is applied using rotating buffer grid.
-  logical          :: UseRotatingBufferGrid=.false.
+  ! Logical for rotating inner boundary
+  logical          :: UseRotatingBc = .false.
 
   ! Coordinate system
   character(len=3) :: TypeCoordSystem = 'GSM'
