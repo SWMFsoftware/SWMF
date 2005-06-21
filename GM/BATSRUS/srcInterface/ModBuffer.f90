@@ -3,7 +3,6 @@ module ModBuffer
        nPhiBuff,nThetaBuff,RBuffMin,RBuffMax
   use CON_global_vector
   use CON_grid_descriptor
-  use ModNumConst,ONLY:cUnit_DD
   implicit none
   save
   character(LEN=10)::NameBuffer
@@ -11,7 +10,6 @@ module ModBuffer
        LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
   logical::DoInit
-  real,dimension(3,3)::BuffToMh_DD
 contains
   subroutine set_buffer_name(NameIn)
     character(LEN=*),intent(in)::NameIn
@@ -40,57 +38,51 @@ contains
             nGhostGridPoints=1,  &
             GridDescriptor=LocalBufferGD)
     end if
-    BuffToMh_DD=cUnit_DD
   end subroutine set_spher_buffer_grid
 end module ModBuffer
+
 !=============================================================!
-subroutine set_rotate_buffer_grid(Time)
-  use ModBuffer
-  use ModMain,       ONLY: nDim,TypeBc_I,&
-       TypeCoordSystem, Time_Simulation,UseRotatingBufferGrid
-  use CON_coupler,   ONLY: SC_, Grid_C
-  use CON_axes,      ONLY: transform_matrix
-  use ModNumConst,ONLY:cUnit_DD
-  implicit none
-  real,intent(in)::Time
-  real:: TimeLast=-1.0
-  if(any(TypeBc_I=='coronatoih').and.UseRotatingBufferGrid &
-       .and.Time/=TimeLast)then
-    BuffToMh_DD = &
-          transform_matrix(Time,Grid_C(SC_) % TypeCoord,TypeCoordSystem)
-    TimeLast=Time
-  else
-      TimeLast=Time
-      BuffToMh_DD=cUnit_DD
-  end if
-  
 
-end subroutine set_rotate_buffer_grid
-
-subroutine get_from_spher_buffer_grid(XyzMh_D,nVar,State_V)
+subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   use ModBuffer
-  use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_
-  use ModMain,       ONLY: UseRotatingBufferGrid
+  use ModMain,       ONLY: nDim, R_, Phi_, Theta_, x_, y_, z_,&
+       TypeCoordSystem, Time_Simulation
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
+  use CON_coupler,   ONLY: SC_, Grid_C
+  use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p,UnitSI_X
 
   implicit none
   integer,intent(in)::nVar
-  real,intent(in)::XyzMh_D(nDim)
+  real,intent(in)::Xyz_D(nDim)
   real,dimension(nVar),intent(out)::State_V
-  real,dimension(nDim)::Sph_D,XyzBuff_D
+  real,dimension(nDim)::Sph_D
 
+  character (len=3) :: TypeCoordSc
+  real, save        :: ScIh_DD(nDim, nDim)
+  real              :: TimeSimulationLast = -1.0
+  real              :: XyzSc_D(nDim)
   !---------------------------------------------------------------------------
-  if(UseRotatingBufferGrid)then
-     XyzBuff_D=matmul(XyzMh_D,BuffToMh_DD)
+
+  TypeCoordSc = Grid_C(SC_) % TypeCoord
+
+  if(TypeCoordSc /= TypeCoordSystem) then
+     ! Convert IH coordinates to SC coordinates
+     if(Time_Simulation > TimeSimulationLast)then
+        ScIh_DD = &
+             transform_matrix(Time_Simulation, TypeCoordSystem, TypeCoordSc)
+        TimeSimulationLast = Time_Simulation
+     end if
+     XyzSc_D = matmul(ScIh_DD, Xyz_D)
   else
-     XyzBuff_D=XyzMh_D
+     XyzSc_D = Xyz_D
   end if
+
   ! Convert to left handed spherical coordinates !!!
-  call xyz_to_spherical(XyzBuff_D(x_),XyzBuff_D(y_),XyzBuff_D(z_),&
+  call xyz_to_spherical(XyzSc_D(x_),XyzSc_D(y_),XyzSc_D(z_),&
        Sph_D(R_),Sph_D(Phi_),Sph_D(Theta_))
 
-  ! Get the state from the spherical buffer grid
+  ! Get the SC state from the spherical buffer grid
   State_V=point_state_v(&
        NameBuffer,&
        nVar,    &
@@ -102,16 +94,19 @@ subroutine get_from_spher_buffer_grid(XyzMh_D,nVar,State_V)
   !Transform to primitive variables
   State_V(Ux_:Uz_) = State_V(rhoUx_:rhoUz_)/State_V(rho_)
 
+  ! Transform vector variables from SC to IH
+  if(TypeCoordSc /= TypeCoordSystem)then
+     State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
+          State_V(Ux_:Uz_), XyzSc_D * UnitSI_X, &
+          TypeCoordSc, TypeCoordSystem)
+     State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), ScIh_DD)
+  end if
+
   !Convert from SI units to normalized units
   State_V(rho_)      = State_V(rho_)   /UnitSI_rho
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)/UnitSI_U
   State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)/UnitSI_B
   State_V(P_)        = State_V(P_)     /UnitSI_P
-  
-  if(UseRotatingBufferGrid)then
-    State_V(Ux_:Uz_)= matmul(BuffToMh_DD,State_V(Ux_:Uz_))
-    State_V(Bx_:Bz_)= matmul(BuffToMh_DD,State_V(Bx_:Bz_))
- end if
 
 end subroutine get_from_spher_buffer_grid
           
