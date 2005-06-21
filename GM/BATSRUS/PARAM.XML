@@ -2844,20 +2844,6 @@ T		UseTvdAtResChange
 ! prolongation and restriction operators at the resolution changes.
 </command>
 
-<command name="USEROTATINGBUFFER">
-	<parameter name="UseRotatingBufferGrid" type="logical" default="F" />
-
-#USEROTATINGBUFER
-T		UseRotatingBufferGrid
-
-! For UseRotatingBufferGrid=.true., the buffer grid and all vectors at it
-! rotate with respect to the grid of model (for example, the buffer grid in IH
-! can co-rotate with SC. 
-!
-! Default value is false which results in the buffer grid oriented 
-! exactly as the buffer grid
-</command>
-
 <!-- ^CFG IF BORISCORR BEGIN -->
 <command name="BORIS">
 	<parameter name="UseBorisCorrection" type="logical" default="F"/>

@@ -1553,8 +1553,6 @@ subroutine MH_set_parameters(TypeAction)
              trim(NameCommand)//' cannot be used with UseNewAxes=T')
 
         call read_compatible_command(NameCommand)
-     case('#USEROTATINGBUFER')
-        call read_var('UseRotatingBufferGrid',UseRotatingBufferGrid)
 
      case("#DIPOLE")
 
