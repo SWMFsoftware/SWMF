@@ -2,17 +2,17 @@
 !^CMP FILE IH
 !^CMP FILE SC
 !BOP
-!MODULE: CON_couple_ih_sc - couple IH to SC one way
+!MODULE: CON_couple_ih_sc - couple IH and SC both ways
 !INTERFACE:
 module CON_couple_ih_sc
 !DESCRIPTION:
-!This coupler is  based on the global message  pass.
-!The toolkit for coupling the different data sets within a
-!single component code, or within a framework as it is now 
+! This coupler uses the SWMF parallel coupling toolkit.
+! The SC grid is coupled to a buffer grid in IH. The buffer grid
+! uses the same coordinate system as SC, so the transformation is
+! done in the IH wrapper.
 !
-!The features of the present coupler: the domain decompositions
-!both for a target and for a source are with AMR.
-!IH is a source, SC is a target
+! The IH grid is coupled to the outer ghost cells of the SC grid directly.
+! Both SC and IH use AMR grids, the buffer is a simple spherical grid.
 
   !USES:
   use CON_coupler
@@ -40,8 +40,6 @@ module CON_couple_ih_sc
 
   ! IH <-> SC conversion matrices
   real :: IhToSc_DD(3,3),ScToIh_DD(3,3)
-
-  real :: BuffToIh_DD(3,3)
 
   ! Maximum time difference [s] without remap 
   ! The 600 s corresponds to about 0.1 degree rotation between SC and IH
@@ -273,14 +271,23 @@ contains
   subroutine couple_sc_ih(TimeCoupling)
     use ModIoUnit
     !INPUT ARGUMENTS:
+    interface
+       subroutine SC_get_for_ih(&
+            nPartial,iGetStart,Get,W,State_V,nVar)
+         use CON_router
+         implicit none
+         integer,intent(in)::nPartial,iGetStart,nVar
+         type(IndexPtrType),intent(in)::Get
+         type(WeightPtrType),intent(in)::W
+         real,dimension(nVar),intent(out)::State_V
+       end subroutine SC_get_for_ih
+    end interface
     integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
     integer,save::iCoupling=0
     integer::iFile
     character(LEN=21)::NameFile
 !EOP
-    ! Last coupling time
-    real :: TimeCouplingLast = -1
     if(.not.RouterScBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
 
@@ -288,25 +295,7 @@ contains
                                    RouterScBuff%iCommUnion)
 
 
-    if(SC_iGridInScIh/=i_realization(SC_).or. &
-         (Grid_C(IH_) % TypeCoord /= Grid_C(SC_) % TypeCoord &
-         .and. TimeCoupling - TimeCouplingLast > dTimeMappingMax)) then  
-
-       ! Recalculate the IH to SC transformation matrix used in mapping
-       ! the buffer grid point (IH) to SC source grid
-       ! (it is time dependent in general)
-
-       IhToSc_DD = transform_matrix(TimeCoupling, &
-            Grid_C(IH_) % TypeCoord, Grid_C(SC_) % TypeCoord)
-  
-       !Recalculate the transposed matrix, used in transforming vectors
-       !of velocity and magnetic field to be sent from SC to IH
-
-       ScToIh_DD = transpose(IhToSc_DD)
-
-       !Recalculate the matrix for conversion from the Buffer Grid to IH
-       call IH_rotate_buffer_grid(TimeCoupling,BuffToIH_DD)
-
+    if(SC_iGridInScIh/=i_realization(SC_))then  
        call set_router(&
             GridDescriptorSource=SC_SourceGrid,&
             GridDescriptorTarget=BuffGD,&
@@ -314,16 +303,12 @@ contains
             mapping=buffer_grid_point,&
             interpolate=interpolation_fix_reschange)
        SC_iGridInScIh= i_realization(SC_)
-       tNow=TimeCoupling
-       TimeCouplingLast=TimeCoupling
     end if
-   !Recalculate the matrix for conversion from the Buffer Grid to IH
-    call IH_rotate_buffer_grid(TimeCoupling,BuffToIH_DD)
 
     call couple_buffer_grid(&
          RouterScBuff,&
          nVar=8,&
-         fill_buffer=SC_get_for_ih_and_transform,&
+         fill_buffer=SC_get_for_ih,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
 
@@ -343,60 +328,26 @@ contains
   !======================================================!
   subroutine buffer_grid_point(&
        nDimFrom,Sph_D,nDimTo,SC_Xyz_D,IsInterfacePoint)         
-    integer,intent(in)::nDimFrom,nDimTo       
-    real,dimension(nDimFrom),intent(in)::Sph_D
-    real,dimension(nDimTo),intent(out)::SC_Xyz_D
-    logical,intent(out)::IsInterfacePoint
-    !The order of spherical indexes as in BATSRUS
-    integer,parameter::R_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
-    real::RSinTheta
-    real,dimension(nDimTo)::IH_Xyz_D,BuffXyz_D
-    IsInterfacePoint=.true.
-    !Transform to cartesian grid related to buffer (possibly, rotating)
-    RSinTheta    = Sph_D(R_)*sin(Sph_D(Theta_))!To be modified
-    BuffXyz_D(x_)= RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
-    BuffXyz_D(y_)= RSinTheta*sin(Sph_D(Psi_))  !/is spherical
-    BuffXyz_D(z_)= Sph_D(R_)*cos(Sph_D(Theta_))!To be modified
-    !Transform to IH
-    IH_Xyz_D=matmul(BuffToIh_DD,BuffXyz_D)
 
-    !IH_Xyz_D should be transformed to SC coordinates,
-    SC_Xyz_D = matmul(IhToSc_DD, IH_Xyz_D)
+    ! Transform from the spherical buffer grid to the Cartesian SC grid
+
+    integer,intent(in)                    :: nDimFrom, nDimTo       
+    real,dimension(nDimFrom), intent(in)  :: Sph_D
+    real,dimension(nDimTo),   intent(out) :: SC_Xyz_D
+    logical,intent(out)::IsInterfacePoint
+
+    ! The order of spherical indexes as in BATSRUS
+    ! This is a left handed system !!! should be replaced !!!
+    integer,parameter::R_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
+    real :: rSinTheta
+    !-----------------------------------------------------------------------
+    RSinTheta    = Sph_D(R_)*sin(Sph_D(Theta_))!To be modified
+    SC_Xyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
+    SC_Xyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  !/is spherical
+    SC_Xyz_D(z_) = Sph_D(R_)*cos(Sph_D(Theta_))!To be modified
+
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point
   
-  !=================================================================!
-
-  subroutine SC_get_for_ih_and_transform(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-    
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-    real,dimension(nVar+3)::State3_V
-    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7,&
-       BuffX_    =9,BuffZ_=11
-         
-    !------------------------------------------------------------
-    call SC_get_for_ih(&
-         nPartial,iGetStart,Get,W,State3_V,nVar+3)
-
-    State_V=State3_V(1:nVar)
-    
-    !Transform velocity
-    State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
-         transform_velocity(tNow,&
-         State_V(rhoUx_:rhoUz_)/State_V(rho_),&
-         State3_V(BuffX_:BuffZ_)/State_V(rho_),&
-         Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
-                  
-    !Transform magnetic field
-    State_V(Bx_:Bz_)=matmul(ScToIh_DD,State_V(Bx_:Bz_))
-
-    !Transform to the cartesian grid assigned to the buffer
-    State_V(Bx_:Bz_)= matmul(State_V(Bx_:Bz_),BuffToIh_DD)
-    State_V(rhoUx_:rhoUz_)=matmul(State_V(rhoUx_:rhoUz_),BuffToIh_DD)
-  end subroutine SC_get_for_ih_and_transform
 end module CON_couple_ih_sc
 
