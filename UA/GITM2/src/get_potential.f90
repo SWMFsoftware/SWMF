@@ -169,7 +169,7 @@ subroutine get_potential(iBlock)
 
      if (iDebugLevel > 0) write(*,*) "=> Getting Potential"
 
-     Potential = 0.0
+     Potential(:,:,:,iBlock) = 0.0
 
      do iAlt=-1,nAlts+2
 
