@@ -236,6 +236,8 @@ subroutine output(dir, iBlock, iOutputType)
           file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
           status="unknown")
 
+     call write_head_blocks
+     call write_head_time
      call output_3dall
 
      !! close file
@@ -248,6 +250,8 @@ subroutine output(dir, iBlock, iOutputType)
           file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
           status="unknown")
 
+     call write_head_blocks
+     call write_head_time
      call output_2d
 
      !! close file
@@ -262,6 +266,7 @@ subroutine output(dir, iBlock, iOutputType)
              file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
              status="unknown")
 
+        call write_head_time
         call output_2delectro
 
         !! close file
@@ -276,6 +281,7 @@ subroutine output(dir, iBlock, iOutputType)
           file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
           status="unknown")
 
+     call write_head_time
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
      !! close file
@@ -288,6 +294,8 @@ subroutine output(dir, iBlock, iOutputType)
           file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
           status="unknown")
 
+     call write_head_blocks
+     call write_head_time
      call output_3dion
 
      !! close file
@@ -301,18 +309,44 @@ contains
   !
   !----------------------------------------------------------------
 
+  subroutine write_head_blocks
+
+    write(iOutputUnit_,*) "BLOCKS"
+    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
+    write(iOutputUnit_,"(I7,A)") nBlocksLat, " nBlocksLat"
+    write(iOutputUnit_,"(I7,A)") nBlocksLon, " nBlocksLon"
+    write(iOutputUnit_,*) ""
+
+  end subroutine write_head_blocks
+
+
+  !----------------------------------------------------------------
+  !
+  !----------------------------------------------------------------
+
+  subroutine write_head_time
+
+    write(iOutputUnit_,*) "TIME"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(1), " Year"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(2), " Month"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(3), " Day"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(4), " Hour"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(5), " Minute"
+    write(iOutputUnit_,"(I7,A)") iTimeArray(6), " Second"
+    write(iOutputUnit_,*) ""
+
+  end subroutine write_head_time
+
+  !----------------------------------------------------------------
+  !
+  !----------------------------------------------------------------
+
   subroutine output_2d
 
     use ModElectrodynamics
 
     nvars_to_write = 12
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
-
-    write(iOutputUnit_,*) "BLOCKS"
-    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
-    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLat"
-    write(iOutputUnit_,"(I7,A)") 1, " nBlocksLon"
-    write(iOutputUnit_,*) ""
 
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,A)") nvars_to_write, " nvars"
@@ -426,12 +460,6 @@ contains
     else
        nGCs = 2
     endif
-
-    write(iOutputUnit_,*) "BLOCKS"
-    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
-    write(iOutputUnit_,"(I7,A)") nBlocksLat, " nBlocksLat"
-    write(iOutputUnit_,"(I7,A)") nBlocksLon, " nBlocksLon"
-    write(iOutputUnit_,*) ""
 
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
@@ -554,12 +582,6 @@ contains
     else
        nGCs = 2
     endif
-
-    write(iOutputUnit_,*) "BLOCKS"
-    write(iOutputUnit_,"(I7,A)") 1, " nBlocksAlt"
-    write(iOutputUnit_,"(I7,A)") nBlocksLat, " nBlocksLat"
-    write(iOutputUnit_,"(I7,A)") nBlocksLon, " nBlocksLon"
-    write(iOutputUnit_,*) ""
 
     write(iOutputUnit_,*) "NUMERICAL VALUES"
     write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
