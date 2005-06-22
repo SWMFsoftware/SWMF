@@ -32,8 +32,15 @@ module ModTiming
   integer, parameter :: maxtiming=1000, maxclock=3
 
   character (LEN=40), dimension(maxtiming) :: sa_name
-  character (LEN=40), parameter :: spaces = repeat(' ',40)
-  character (LEN=79), parameter :: sepline = repeat('-',79)
+
+  ! These two declarations were replaced to avoid a pgf90 compiler error:
+  ! character (LEN=40), parameter :: spaces = repeat(' ',40)
+  ! character (LEN=79), parameter :: sepline = repeat('-',79)
+  character (LEN=40), parameter :: spaces = &
+       '                                        '
+  character (LEN=79), parameter :: sepline = &
+       '-------------------------------------------------------------------------------'
+
   real(Real8_), dimension(maxtiming):: da_start=0.0, da_last=0.0, da_sum_other
   real(Real8_), dimension(maxtiming,maxclock) :: da_sum=0.0
 
