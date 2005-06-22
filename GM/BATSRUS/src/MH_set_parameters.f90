@@ -1672,6 +1672,14 @@ subroutine MH_set_parameters(TypeAction)
              ' #HELIOROTATION / #INERTIAL command is obsolete and ignored'
      case("#HELIOTEST")
         call read_var('DoSendMHD',DoSendMHD)
+     case("#HELIOBUFFERGRID")
+        if(.not.is_first_session())CYCLE READPARAM
+        if(NameThisComp /= "IH")call stop_mpi(NameSub//' ERROR:'// &
+             ' #HELIOBUFFERGRID command can be used in IH component only')
+        call read_var('rBuffMin',  rBuffMin)
+        call read_var('rBuffMax',  rBuffMax)
+        call read_var('nThetaBuff',nThetaBuff)
+        call read_var('nPhiBuff',  nPhiBuff)
      case("#ARCADE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TArcDim'  ,TArcDim)

@@ -3694,6 +3694,25 @@ F			DoSendMHD
 ! Default value is true, i.e. real coupling.
 </command>
 
+<command name="HELIOBUFFERGRID" if="$_IsFirstSession and $_NameComp eq 'IH'">
+	<parameter name="rBuffMin"   type="real" min="1" default="19"/>
+	<parameter name="rBuffMax"   type="real" min="1" default="21"/>
+	<parameter name="nThetaBuff" type="integer" min="18" default="45"/>
+	<parameter name="nPhiBuff"   type="integer" min="36" default="90"/>
+#HELIOBUFFERGRID
+19.0		rBuffMin
+21.0		rBuffMax
+45		nThetaBuff
+90		nPhiBuff
+
+Define the radius and the grid resolution for the uniform 
+spherical buffer grid which passes information 
+from the SC component to the IH component. The resolution should
+be similar to the grid resolution of the coarser of the SC and IH grids.
+This command can only be used in the first session by the IH component. 
+Default values are shown above.
+</command>
+
 <command name="CME" if="$_IsFirstSession and $_NameComp ne 'GM'" >
 	<parameter name="TypeCme" type="string" input="select">
 		<option name="Low" default="T" />
