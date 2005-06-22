@@ -560,6 +560,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
        State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative, &
        Ex_CB, Ey_CB, Ez_CB
   use ModGeometry
+  use ModPartSteady, ONLY: IsEvolving_B, IsSteadyBoundary_B
   use ModParallel, ONLY : BLKneighborCHILD
   use ModImplicit, ONLY : implicitBLK                      !^CFG IF IMPLICIT
   use ModPhysics, ONLY : Body_rho,Body_p,OMEGAbody,CellState_VI
@@ -1115,6 +1116,18 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
         end if
+     case('evolve')
+        if(allocated(IsEvolving_B))then
+           if(IsEvolving_B(iBLK))then
+              PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
+           elseif(IsSteadyBoundary_B(iBLK))then
+              PlotVar(1:nI,1:nJ,1:nK,iVar)=0.5
+           else
+              PlotVar(1:nI,1:nJ,1:nK,iVar)=0.0
+           endif
+        else
+           PlotVar(1:nI,1:nJ,1:nK,iVar)=0.5
+        end if
      case('PE','pe','proc')
         PlotVar(:,:,:,iVar)=iProc
      case('blk','BLK')
@@ -1574,7 +1587,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
         NameUnit = '--'                          !^CFG END RAYTRACE
         ! GRID INFORMATION
-     case('pe', 'proc','blk','blkall','child','impl')
+     case('pe', 'proc','blk','blkall','child','impl','evolve')
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = unitstr_IDL_t
