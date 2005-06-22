@@ -38,8 +38,8 @@ subroutine divergence(InArray, OutArray, iBlock)
   cosmaxt = cos(maxt)
   tanmaxt = tan(maxt)
 
-  do i = 1, nLons
-     do j = 1, nLats
+  do i = 0, nLons+1
+     do j = 0, nLats+1
 
         k = 1
         dr(i,j,k) = RadialDistance(k+1) - RadialDistance(k)
@@ -68,8 +68,8 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! East First  (same as the gradient)
   !/
 
-  do i = 1, nLons
-     do j = 1, nLats
+  do i = 0, nLons+1
+     do j = 0, nLats+1
         do k = 1, nAlts
            maxi = max(cos(Latitude(j,iBlock)),cosmaxt) ! this is 80 degrees...
            OutArray(i,j,k) = ((InArray(i+1,j,k) - InArray(i-1,j,k)) / &
@@ -83,8 +83,8 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! North Second
   !/
 
-  do i = 1, nLons
-     do j = 1, nLats
+  do i = 0, nLons+1
+     do j = 0, nLats+1
         do k = 1, nAlts
 
            ! North has 2 terms - gradient term and tan term
@@ -107,8 +107,8 @@ subroutine divergence(InArray, OutArray, iBlock)
   ! Up Third
   !/
 
-  do i = 1, nLons
-     do j = 1, nLats
+  do i = 0, nLons+1
+     do j = 0, nLats+1
 
         ! Up has 2 terms also - gradient and 2/r term
 
