@@ -84,18 +84,17 @@ subroutine ionosphere_solver(PHI, &
 
   REAL :: ave, lat_boundary, min_pot, max_pot, cpcp
   LOGICAL :: north
-  LOGICAL, PARAMETER :: IsManualLatBoundary = .false.
+  LOGICAL, PARAMETER :: IsManualLatBoundary = .true.
   
   logical :: oktest, oktest_me
   
   SAVE
 
-
   call CON_set_do_test('ionosphere',oktest,oktest_me)
   call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
-  lat_boundary = 30.0 * cDegToRad
+  lat_boundary = 45.0 * cDegToRad
 
   north = .false.
 
