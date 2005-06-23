@@ -614,9 +614,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
         case(min_vars)
            write(iUnit, '(I5,a)')           6, ' nvars'
         case(all_vars)
-           write(iUnit, '(I5,a)')           18, ' nvars'
+           write(iUnit, '(I5,a)')           20, ' nvars'
         case(uam_vars)                                      !^CFG  IF TIEGCM
-           write(iUnit, '(I5,a)')           7, ' nvars'     !^CFG  IF TIEGCM
+           write(iUnit, '(I5,a)')           9, ' nvars'     !^CFG  IF TIEGCM
         end select
         write(iUnit, '(I5,a)') IONO_nTheta, ' nTheta'
         write(iUnit, '(I5,a)')   IONO_nPsi, ' nPhi'
@@ -644,17 +644,19 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  5, ' Psi [deg]'
            write(iUnit, '(I5,a)')  6, ' SigmaH [mhos]'
            write(iUnit, '(I5,a)')  7, ' SigmaP [mhos]'
-           write(iUnit, '(I5,a)')  8, ' Jr [mA/m^2]'
-           write(iUnit, '(I5,a)')  9, ' Phi [kV]'
-           write(iUnit, '(I5,a)') 10, ' Ex [mV/m]'
-           write(iUnit, '(I5,a)') 11, ' Ey [mV/m]'
-           write(iUnit, '(I5,a)') 12, ' Ez [mV/m]'
-           write(iUnit, '(I5,a)') 13, ' Jx [microA/m2]'
-           write(iUnit, '(I5,a)') 14, ' Jy [microA/m2]'
-           write(iUnit, '(I5,a)') 15, ' Jz [microA/m2]'
-           write(iUnit, '(I5,a)') 16, ' Ux [km/s]'
-           write(iUnit, '(I5,a)') 17, ' Uy [km/s]'
-           write(iUnit, '(I5,a)') 18, ' Uz [km/s]'
+           write(iUnit, '(I5,a)')  8, ' E-Flux [W/m2]'
+           write(iUnit, '(I5,a)')  9, ' Ave-E [eV]'
+           write(iUnit, '(I5,a)') 10, ' Jr [mA/m^2]'
+           write(iUnit, '(I5,a)') 11, ' Phi [kV]'
+           write(iUnit, '(I5,a)') 12, ' Ex [mV/m]'
+           write(iUnit, '(I5,a)') 13, ' Ey [mV/m]'
+           write(iUnit, '(I5,a)') 14, ' Ez [mV/m]'
+           write(iUnit, '(I5,a)') 15, ' Jx [microA/m2]'
+           write(iUnit, '(I5,a)') 16, ' Jy [microA/m2]'
+           write(iUnit, '(I5,a)') 17, ' Jz [microA/m2]'
+           write(iUnit, '(I5,a)') 18, ' Ux [km/s]'
+           write(iUnit, '(I5,a)') 19, ' Uy [km/s]'
+           write(iUnit, '(I5,a)') 20, ' Uz [km/s]'
 
         case(uam_vars)                                  !^CFG  IF TIEGCM BEGIN
            write(iUnit, '(I5,a)')  1, ' Theta [deg]'
@@ -663,7 +665,9 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  4, ' SigmaP [mhos]'
            write(iUnit, '(I5,a)')  5, ' Jr [mA/m^2]'
            write(iUnit, '(I5,a)')  6, ' Jr(NW) [mA/m^2]'
-           write(iUnit, '(I5,a)')  7, ' Phi [kV]'        !^CFG END TIEGCM
+           write(iUnit, '(I5,a)')  7, ' E-Flux [ergs/cm2/s]'
+           write(iUnit, '(I5,a)')  8, ' Ave-E [eV]'
+           write(iUnit, '(I5,a)')  9, ' Phi [kV]'        !^CFG END TIEGCM
         end select
 
         write(iUnit, *) ' '
@@ -709,6 +713,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, *)  'VARIABLES= "X [R]","Y [R]","Z [R]"'
            write(iUnit, *)  ' "Theta [deg]","Psi [deg]"'
            write(iUnit, *)  ' "SigmaH [S]","SigmaP [S]"'
+           write(iUnit, *)  ' "E-Flux [W/m2]"'
+           write(iUnit, *)  ' "Ave-E [eV]"'
            write(iUnit, *)  ' "JR [`mA/m^2]","PHI [kV]"'
            write(iUnit, *)  ' "Ex [mV/m]","Ey [mV/m]","Ez [mV/m]"'
            write(iUnit, *)  ' "Jx [`mA/m^2]","Jy [`mA/m^2]","Jz [`mA/m^2]"'
@@ -745,6 +751,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
                    (360.00/(2.00*IONO_PI))*IONO_NORTH_Psi(i,j), &
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
+                   IONO_NORTH_EFlux(i,j), &
+                   IONO_NORTH_Ave_E(i,j), &
                    1.0e06*IONO_NORTH_JR(i,j),1.0e-03*IONO_NORTH_PHI(i,j), &
                    1.0e03*IONO_NORTH_Ex(i,j),1.0e03*IONO_NORTH_Ey(i,j), &
                    1.0e03*IONO_NORTH_Ez(i,j), &
@@ -763,6 +771,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
                    1.0e06*IONO_NORTH_JR(i,j), &
                    1.0e06*IONO_NORTH_TGCM_JR(i,j), &
+                   IONO_NORTH_EFlux(i,j), &
+                   IONO_NORTH_Ave_E(i,j), &
                    1.0e-03*IONO_NORTH_PHI(i,j)
            end do
         end do                                        !^CFG END TIEGCM
@@ -798,6 +808,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
                    (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j), &
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
+                   IONO_SOUTH_EFlux(i,j), &
+                   IONO_SOUTH_Ave_E(i,j), &
                    1.0e06*IONO_SOUTH_JR(i,j),1.0e-03*IONO_SOUTH_PHI(i,j), &
                    1.0e03*IONO_SOUTH_Ex(i,j),1.0e03*IONO_SOUTH_Ey(i,j), &
                    1.0e03*IONO_SOUTH_Ez(i,j), &
@@ -816,6 +828,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
                    1.0e06*IONO_SOUTH_JR(i,j), &
                    1.0e06*IONO_SOUTH_TGCM_JR(i,j),  &
+                   IONO_SOUTH_EFlux(i,j), &
+                   IONO_SOUTH_Ave_E(i,j), &
                    1.0e-03*IONO_SOUTH_PHI(i,j)
            end do
         end do                                           !^CFG END TIEGCM
