@@ -13,8 +13,8 @@ module ModIonosphere
   !\
   ! Ionosphere array parameters
   !/
-  integer, parameter :: IONO_nTheta = 65
-  integer, parameter :: IONO_nPsi = 4*(IONO_nTheta-1)+1
+  integer, parameter :: IONO_nTheta = 90
+  integer, parameter :: IONO_nPsi = 180
   integer, parameter :: IONO_nRadial = 21
   real, parameter    :: IONO_PI=cPi
   !\
