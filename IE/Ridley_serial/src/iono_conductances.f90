@@ -316,16 +316,16 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               endif
 
-              distance = (IONO_NORTH_Theta(i,j) - Loc_of_Oval(j))/3.0
+              distance = (IONO_NORTH_Theta(i,j) - Loc_of_Oval(j))
 
               !
               ! We want minimal conductance lower than the oval
               !
 
               if (distance > 0.0) then
-                 !               distance = distance/3.0
-                 !               hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                 !               ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                 !  distance = distance/3.0
+                 !  hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                 !  ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
                  polarcap = .false.
               else
                  polarcap = .true.
@@ -343,7 +343,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               hall=hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2)
               ped =ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2)
 
-              if ((hall.gt.0).and.(ped.gt.0)) then
+              if ((hall.gt.1.0).and.(ped.gt.0.5)) then
 
                  IONO_NORTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
                  IONO_NORTH_EFlux(i,j) = (ped*(16.0+IONO_NORTH_Ave_E(i,j)**2)/ &
@@ -463,7 +463,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               endif
 
-              distance = (IONO_SOUTH_Theta(i,j)-Loc_of_Oval(j))/3.0
+              distance = (IONO_SOUTH_Theta(i,j)-Loc_of_Oval(j))
 
               if (distance < 0.0) then
                  !               distance = distance/3.0
@@ -486,7 +486,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               hall=hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2)
               ped =ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2)
 
-              if ((hall.gt.0).and.(ped.gt.0)) then
+              if ((hall.gt.1.0).and.(ped.gt.0.5)) then
 
                  IONO_SOUTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
                  IONO_SOUTH_EFlux(i,j) = (ped*(16.0+IONO_SOUTH_Ave_E(i,j)**2)/ &
@@ -971,7 +971,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   ! Start the Oval Determination
   !
 
-  dJ = IONO_nPsi/8
+  dJ = IONO_nPsi/9
 
   do n = 1, 8 
 
@@ -988,7 +988,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
      J_Save(n) = J_Start 
      do j = J_Start, J_End
         do i = 4, IONO_nTheta
-           if (abs(Current(i,j)) > max_fac(n)) then
+           if (Current(i,j) > max_fac(n)) then
               max_fac(n) = abs(Current(i,j))
               max_fac_colat(n) = Theta(i,j)
               J_Save(n) = j
@@ -1004,18 +1004,13 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
      width(n) = 0.0
      j = J_Save(n)
      do i = nloc, IONO_nTheta
-        if (abs(Current(i,j)) > max_fac(n)/5.0) then
+        if (Current(i,j) > max_fac(n)/4.0) then
            width(n) = abs(max_fac_colat(n) - Theta(i,j))
         endif
      enddo
 
-     if (width(n).eq.0.0) width(n) = max_fac_colat(n)/2.0
+     if (width(n).le.(theta(2,1)-theta(1,1))) width(n) = max_fac_colat(n)/5.0
 
-  enddo
-
-  night_width = 0.0
-  do n=1,8
-     night_width = night_width + width(n) * max_fac(n)
   enddo
 
   day_colat = (max_fac_colat(1) + max_fac_colat(8))/2.0
@@ -1028,16 +1023,17 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   midnight_fac = (max_fac(4) + max_fac(5))/2.0
   dawn_fac = (max_fac(6) + max_fac(7))/2.0
 
+  night_width = 0.0
   sum = 0.0
   mean_colat = 0.0
 
   do n=1,8
+     night_width = night_width + width(n) * max_fac(n)
      mean_colat = mean_colat + max_fac_colat(n) * max_fac(n)
      sum = sum + max_fac(n)
   enddo
 
   mean_colat = mean_colat/sum
-
   Night_Width = Night_Width/sum
 
   if (Night_Width > 6.0*IONO_PI/180.0) Night_Width=6.0*IONO_PI/180.0
