@@ -19,7 +19,7 @@ subroutine initialize_ie_ua_buffers(iOutputError)
   logical :: IsFound_EFieldModel
   logical :: IsFound_AuroralModel
 
-  integer :: i, j, nCells_D(2)
+  integer :: i, j, k, nCells_D(2)
 
   logical :: IsInitialized = .false.
 
@@ -188,6 +188,10 @@ subroutine initialize_ie_ua_buffers(iOutputError)
 
            IEr3_HaveMLTs(j,i,:) = &
                 mod(12 + Grid_C(IE_) % Coord2_I(j) * 24.0 / (cTwo * cPi),24.0)
+           do k=1,2
+              if (IEr3_HaveMLTs(j,i,k) < 0.1)  IEr3_HaveMLTs(j,i,k)=0.0
+              if (IEr3_HaveMLTs(j,i,k) > 23.9) IEr3_HaveMLTs(j,i,k)=23.9
+           enddo
 
         enddo
      enddo
