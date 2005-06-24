@@ -665,7 +665,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
            write(iUnit, '(I5,a)')  4, ' SigmaP [mhos]'
            write(iUnit, '(I5,a)')  5, ' Jr [mA/m^2]'
            write(iUnit, '(I5,a)')  6, ' Jr(NW) [mA/m^2]'
-           write(iUnit, '(I5,a)')  7, ' E-Flux [ergs/cm2/s]'
+           write(iUnit, '(I5,a)')  7, ' E-Flux [W/m2]'
            write(iUnit, '(I5,a)')  8, ' Ave-E [eV]'
            write(iUnit, '(I5,a)')  9, ' Phi [kV]'        !^CFG END TIEGCM
         end select
