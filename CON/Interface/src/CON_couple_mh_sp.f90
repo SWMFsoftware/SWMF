@@ -165,9 +165,9 @@ contains
                i_proc0(SP_),i_comm(),iError)
           if(Grid_C(SC_)%TypeCoord/=Grid_C(IH_)%TypeCoord& !^CMP IF IH BEGIN
                .and.is_proc0(SP_))&
-               XyzTemp_DI(:,nPoint)=matmul(transform_matrix(&
+               XyzTemp_DI(:,iPoint)=matmul(transform_matrix(&
                tNow,Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord),&
-               XyzTemp_DI(:,nPoint))                       !^CMP END IH
+               XyzTemp_DI(:,iPoint))                       !^CMP END IH
 
 
           call trace_line(SC_,&
@@ -466,22 +466,23 @@ contains
     !points which passed from SC to IH
 
     if(use_comp(SC_))then
-       !Reset the transformation matrix 
-       !Check the points which passed from SC to IH:
-       ScToIh_DD=transform_matrix(DataInputTime,&
-            Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)
+       if(is_proc0(SP_))then
+          !Reset the transformation matrix 
+          !Check the points which passed from SC to IH:
+          ScToIh_DD=transform_matrix(DataInputTime,&
+               Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)
+          call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
+          call associate_with_global_mask(Is_I,'SP_IsInIH')
 
-       call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
-       call associate_with_global_mask(Is_I,'SP_IsInIH')
-
-       do iPoint=1,nPoint
-          if(.not.Is_I(iPoint) &      !This point before was   not in IH
-               .and.is_in_ih(Xyz_DI(:,iPoint)))& !... and now it is in IH
-               Xyz_DI(:,iPoint)=matmul(ScToIh_DD,Xyz_DI(:,iPoint)) 
-                !..that is why we convert it to IH coordinates
-       end do
-       nullify(Xyz_DI)
-       nullify(Is_I)
+          do iPoint=1,nPoint
+             if(.not.Is_I(iPoint) &      !This point before was   not in IH
+                  .and.is_in_ih(Xyz_DI(:,iPoint)))& !... and now it is in IH
+                  Xyz_DI(:,iPoint)=matmul(ScToIh_DD,Xyz_DI(:,iPoint)) 
+             !..that is why we convert it to IH coordinates
+          end do
+          nullify(Xyz_DI)
+          nullify(Is_I)
+       end if
        call bcast_global_vector('SP_Xyz_DI',&
             RouterIhSp%iProc0Target,&
             RouterIhSp%iCommUnion)           !^CMP END SC
