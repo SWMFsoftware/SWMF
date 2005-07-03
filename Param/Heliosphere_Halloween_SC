@@ -15,7 +15,7 @@ T			UseUserLogFiles          !Magnetic and other energies
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
-F			UseUserB0
+T			UseUserB0
 F			UseUserSetPhysConst
 T			UseUserUpdateStates      !Update the relaxation energy
 

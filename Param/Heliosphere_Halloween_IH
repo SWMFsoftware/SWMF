@@ -14,7 +14,7 @@ F			UseUserPerturbation
 F			UseUserOuterBcs
 F			UseUserICs
 T			UseUserSpecifyRefinement !To refine the current sheet
-F			UseUserLogFiles
+T			UseUserLogFiles
 F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
@@ -37,7 +37,7 @@ F                                      !the body refinement level
 
 
 #HELIOSPHERE
-5.0E+05	        	BodyTDim   [K] 
+5.05E+05        	BodyTDim   [K] 
 5.00E+11		BodyRhoDim [n/m-3]
 25.00			qSun
 1.75			tHeat
@@ -80,16 +80,17 @@ heliofloat
 coupledhelio    	TypeRefineInit         !Version for 4*4*4
 7			nLevelRefineInit       !blocks
 
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
 
 #SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
+T                       DoSaveLogfile
+VAR                     StringLogfile
+1                       DnSaveLogfile
+-1.0                    DtSaveLogfile
+em_t ek_t et_t 
+4.0  10.0               rLog
 
 #GAMMA
 1.50000E+00		Gamma
