@@ -30,7 +30,7 @@ contains
     if(use_comp(SC_).and.use_comp(IH_))then
        if(DoInit)then
           DoInit=.false.
-          call associate_with_global_mask(IsInSc_I,'SP_IsInSc')
+          call associate_with_global_mask(IsInSc_I,'SP_IsInSC')
        end if
        if(IsInSc_I(iPoint))SP_xyz_i=matmul(ScToIh_DD,SP_xyz_i)
     end if
