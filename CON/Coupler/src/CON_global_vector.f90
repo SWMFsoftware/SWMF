@@ -541,7 +541,7 @@ contains
     character(LEN=*),intent(in)::NameVector,NameMask
     integer,intent(in)::iFileIn
     optional::NameMask,iFileIn
-    character(LEN=20)::NameFile
+    character(LEN=nLength+11)::NameFile
     character(LEN=2)::NameComp
     logical::UseMask
     integer::lLengthMask,iFile,nU_I(2),iPoint,iVector,iMask
@@ -585,7 +585,7 @@ contains
     optional::iFileIn
     integer::iFile,lComp,nU_I(2),nPoint,iVector,iError
     integer::iPoint,jPoint,nPointHere
-    character(LEN=20)::NameFile,NameFilePreffix
+    character(LEN=nLength+11)::NameFile,NameFilePreffix
     NameFilePreffix='./'//NameVector(1:2)//'/'//NameVector(&
          3:len_trim(NameVector))//'_'
     if(present(iFileIn))&
