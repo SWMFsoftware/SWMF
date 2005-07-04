@@ -188,7 +188,6 @@ c  *****************  end subroutine SP_pangle    ******************
 20    continue
 30    continue
 10    continue
-
       return
       end
 
@@ -1231,13 +1230,15 @@ c  *****************  end subroutine SP_csilla   ******************
       common /SP_obserg/ kemax,keobs(5),eobs(5)
       common /SP_iFile/  io(5),ip(5)
       include 'stdout.h'
+      
       do ke=1,kemax
-      kk = keobs(ke)
+         kk = keobs(ke)
          eobs(ke) = ee(kk)
+         write(iStdout,*) prefix,'The #',ke,' level of energy =',eobs(ke)
       enddo
   
       do 11 kr=1,krmax
-
+      
       call CON_io_unit_new(io(kr))
       if (kr.eq.1) open(io(kr),file='./SP/timevar.r1',status='unknown')
       if (kr.eq.2) open(io(kr),file='./SP/timevar.r2',status='unknown')
