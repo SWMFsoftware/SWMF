@@ -80,6 +80,7 @@ subroutine GM_set_grid
   use CON_coupler
   use CON_test_global_message_pass
   use ModMain,ONLY:TypeCoordSystem
+  use ModPhysics,ONLY:UnitSI_x
   use CON_comp_param,ONLY:GM_
 
   implicit none
@@ -92,7 +93,7 @@ subroutine GM_set_grid
   DoTest=.false.;DoTestMe=.false.
   if(done_dd_init(GM_))return
   call init_decomposition(GM_,GM_,3,.true.)
-  call set_coord_system(GM_,TypeCoordSystem)
+  call set_coord_system(GM_,TypeCoordSystem,UnitSI_x)
   
   if(is_proc(GM_))then
      call init_decomposition(&

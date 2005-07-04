@@ -29,6 +29,7 @@ module CON_coupler
      real, dimension(:),pointer :: Coord1_I, Coord2_I, Coord3_I
      integer, dimension(3)      :: nCoord_D
      character (len=lTypeCoord) :: TypeCoord
+     real::UnitX
   end type CoordSystemType
 
   !PUBLIC DATA MEMBERS:
@@ -105,6 +106,7 @@ contains
   subroutine set_coord_system( &
        GridID_,       &! Grid ID
        TypeCoord,     &! Coordinate system type (MAG,GEO,..)
+       UnitX,         &! Unit of length, in SI (meters)
        Coord1_I,      &! Non-uniform coords in 1st dim (optional)
        Coord2_I,      &! Non-uniform coords in 2nd dim (optional)
        Coord3_I,      &! Non-uniform coords in 3rd dim (optional)
@@ -120,6 +122,7 @@ contains
     real,    intent(in), optional :: &
          Coord1_I(:), Coord2_I(:), Coord3_I(:)
     integer,intent(in),optional:: iProc0In,iCommIn
+    real,intent(in),optional::UnitX
     integer :: iProc0, iComm, iError
     logical :: IsRoot
     type(CoordSystemType), pointer :: ThisGrid
@@ -140,6 +143,13 @@ contains
     ! Broadcast the coordinate type
     call MPI_bcast(ThisGrid%TypeCoord,lTypeCoord,MPI_CHARACTER,&
          iProc0,iComm,iError)
+    if(present(UnitX))then
+       if(IsRoot)Thisgrid%UnitX=UnitX
+       ! Broadcast the unit of length
+       call MPI_bcast(ThisGrid%UnitX,1,MPI_REAL,&
+         iProc0,iComm,iError)
+    end if
+       
 
     ! Get the size of the coordinate arrays
     if(IsRoot)then
@@ -198,6 +208,7 @@ contains
                 Grid_C(iComp)%Coord2_I, &
                 Grid_C(iComp)%Coord3_I)
            Grid_C(iComp)%nCoord_D = 0
+           Grid_C(iComp)%UnitX=cOne
         end do
       end subroutine init_coord_system_all
   end subroutine set_coord_system
@@ -314,7 +325,6 @@ contains
     real,    intent(in), optional :: Coord3_I(:)
     integer, intent(in), optional :: iProc_A(:), iBlock_A(:)
     logical, intent(in), optional :: IsPeriodic_D(:)
-
     !DESCRIPTION: 
     ! Describe and broadcast non-octree grids
     !EOP
@@ -332,9 +342,9 @@ contains
     call set_coord_system(&
          GridID,                             &!Decomposition ID_
          TypeCoord,                          &
-         Coord1_I,                           &
-         Coord2_I,                           &
-         Coord3_I) 
+         Coord1_I=Coord1_I,                  &
+         Coord2_I=Coord2_I,                  &
+         Coord3_I=Coord3_I)                           
     if(is_proc0(iComp))call get_root_decomposition(&
          GridID,                             &!Decomposition ID_
          nRootBlock_D ,                      &

@@ -146,9 +146,9 @@ contains
             'HGI', Grid_C(IH_) % TypeCoord)
 
        ! Transform the Earth position in HGI to IH coordinates 
-       ! and change distance units to rSun (used in IH/BATSRUS)
+       ! and change distance units to that used in IH
  
-       XyzPlanetIh_D = matmul(HgiToIh_DD, XyzPlanetHgi_D) / rSun
+       XyzPlanetIh_D = matmul(HgiToIh_DD, XyzPlanetHgi_D)/Grid_C(IH_)%UnitX
 
        ! Transform the Earth velocity from Hgi to IH coordinates 
 
@@ -230,7 +230,8 @@ contains
     real,dimension(IH_nDim),intent(out)::IH_Xyz_D
     logical,intent(out)::IsInterfacePoint
 
-    IH_Xyz_D = XyzPlanetIh_D + matmul(GmToIh_DD, GM_Xyz_D)*REarth/RSun
+    IH_Xyz_D = XyzPlanetIh_D + matmul(GmToIh_DD, GM_Xyz_D)*&
+         Grid_C(GM_)%UnitX/Grid_C(IH_)%UnitX
     IsInterfacePoint=.true.
 
   end subroutine GM_IH_Mapping
