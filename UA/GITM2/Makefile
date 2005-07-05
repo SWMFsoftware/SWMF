@@ -33,7 +33,7 @@ install_cont:
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
-	cd src; make STATIC
+	cd src; make DYNAMIC
 	./config.pl -${PLANET}
 
 #
