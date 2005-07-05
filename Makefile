@@ -121,6 +121,7 @@ install: ENV_CHECK mkdir
 	cd IM/RCM;		make install    #^CMP IF IM
 	cd RB/RiceV5;		make install    #^CMP IF RB
 	cd SP/Kota;		make install    #^CMP IF SP
+	cd SP/FLAMPA;           make install    #^CMP IF SP
 	cd UA/GITM;		make install	#^CMP IF UA
 	cd UA/GITM2;		make install	#^CMP IF UA
 	@echo
