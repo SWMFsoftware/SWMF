@@ -1,33 +1,22 @@
 #^CFG COPYRIGHT UM
 
 SHELL =/bin/sh
-include ../../../Makefile.def
-include ../../../Makefile.conf
+include ../Makefile.def
+include ../Makefile.conf
 include Makefile.DEPEND
 
-OBJECTS = sep19.o main.o read_ihdata.o
+
+OBJECTS = SP_main.o \
+	read_ihdata_for_sp.o \
+	sp_diffusive_acceleration.o \
+	write_logfile_SP.o \
+	write_plotfile_SP.o 
+
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
-
-SEPEXE = ${BINDIR}/SEP.exe
-
-SEP: ${SEPEXE}
-
-${SEPEXE}:	${OBJECTS} sp_stand_alone.o
-	${LINK.f90} ${SEARCH} -o ${SEPEXE} ${OBJECTS} sp_stand_alone.o\
-	${SHAREDIR}/io_unit_for77.o ${SHAREDIR}/ModIoUnit.o 
-
-io_unit_for77.f: 
-	cp  ${SHAREDIR}/io_unit_for77.f .
-
-stdout.h:
-	cp  ${SHAREDIR}/stdout.h .
-
-SEP77:	io_unit_for77.f stdout.h
-	f77 read_ihdata.f sp_stand_alone.f io_unit_for77.f main.f sep19.f
 
 MY_LIB = libFLAMPA.a
 
