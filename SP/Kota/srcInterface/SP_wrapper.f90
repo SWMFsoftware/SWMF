@@ -17,28 +17,19 @@ module SP_Mod
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
   integer::iProc=-1,nProc=-1,iComm=-1
   integer::nSmooth=0
-  real,dimension(3,3)::ScToIh_DD !Transformation matrix from SC
-  logical,pointer,dimension(:)::IsInSc_I
 contains
   function SP_xyz_i(iPoint)
     use CON_coupler
     implicit none
-    logical,save::DoInit=.true.
     real,dimension(3)::SP_xyz_i
     integer,intent(in)::iPoint
-    SP_xyz_i= point_state_v('SP_Xyz_DI',3,iPoint)
-    if(use_comp(SC_).and.use_comp(IH_))then
-       if(DoInit)then
-          DoInit=.false.
-          call associate_with_global_mask(IsInSc_I,'SP_IsInSC')
-       end if
-       if(IsInSc_I(iPoint))SP_xyz_i=matmul(ScToIh_DD,SP_xyz_i)
-    end if
+    SP_xyz_i= point_state_v('SP_XyzSP',3,iPoint)
   end function SP_xyz_i
 end module SP_Mod
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
   use CON_comp_info
+  use CON_coupler
   use ModReadParam
   use ModIOUnit,ONLY:STDOUT_
   use SP_Mod
@@ -74,6 +65,13 @@ subroutine SP_set_param(CompInfo,TypeAction)
         call sp_set_defaults
         DoInit=.false.
      end if
+     if(DoRestart)then
+        write(iStdOut,*)prefix,'Restart from nStep=',nStep,&
+             ', tSimulation=',tSimulation
+        call SP_initial
+        call SP_read_mh_data
+        DoRestart=.false.
+     end if
   case('READ')
      write(iStdOut,*)NameSub//': CHECK iSession =',i_session_read()
      if(DoInit)then
@@ -84,6 +82,8 @@ subroutine SP_set_param(CompInfo,TypeAction)
         if(.not.read_line() ) EXIT
         if(.not.read_command(NameCommand)) CYCLE
         select case(NameCommand)
+        case('#RESTART')
+           DoRestart=.true.
         case('#LINE')
            call read_var('XyzLine_D(x_)',XyzLine_D(1))
            call read_var('XyzLine_D(y_)',XyzLine_D(2))
@@ -121,10 +121,15 @@ subroutine SP_set_param(CompInfo,TypeAction)
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc/=1)call CON_stop(&
           'The present SEP version can not use more than 1 PE')
+  case('GRID')
+     !Initialize grid
+     call init_decomposition(SP_,SP_,1)
+
+     call set_coord_system(SP_,'HGI',cAU)
   case default
   end select
 end subroutine SP_set_param
-!============================================================!
+!======================================================================!
 subroutine SP_init_session(iSession,TimeIn)
   use SP_Mod
   implicit none
@@ -137,7 +142,8 @@ subroutine SP_init_session(iSession,TimeIn)
   DoInit=.false.
   UseSelfSimilarity=.false.
   UseRefresh=.false.
-  tSimulation=TimeIn
+  if(tSimulation==cZero)tSimulation=TimeIn
+  DoRestart=.false.
   call SP_init
   call SP_clean_coupler
   iMax=0
@@ -172,8 +178,6 @@ subroutine SP_put_input_time(TimeIn)
   implicit none
   real,intent(in)::TimeIn
   DataInputTime=TimeIn
-  if(use_comp(SC_).and.use_comp(IH_))ScToIh_DD=transform_matrix(&
-       DataInputTime,Grid_C(SC_)%TypeCoord,Grid_C(IH_)%TypeCoord)
 end subroutine SP_put_input_time
 !=============================================================!
 subroutine SP_put_from_mh(nPartial,&
@@ -399,8 +403,30 @@ subroutine SP_finalize(TimeSimulation)
   call SP_closetime
 end subroutine SP_finalize
 !=============================================================!
-subroutine SP_save_restart(TimeSimulation) 
+subroutine SP_save_restart(TimeSimulation)
+  use ModIOUnit,ONLY:io_unit_new
+  use SP_Mod
+  use CON_coupler
   implicit none
-  real,     intent(in) :: TimeSimulation 
+  real,     intent(in) :: TimeSimulation
+  integer::iFile
+  !-----------------------------------------------
+  iFile=io_unit_new()
+  open(iFile,FILE='SP/restartOUT/restart.H',&
+       STATUS='replace',ERR=10)
+  write(iFile,*)
+  write(iFile,'(a)')'#RESTART'
+  write(iFile,*)
+  write(iFile,'(a)')'#TSIMULATION'
+  write(iFile,*)tSimulation
+  write(iFile,*)
+  write(iFile,'(a)')'#NSTEP'
+  write(iFile,*)nStep
+  write(iFile,*)
+  close(iFile)
+  call SP_save_f
+  if(.not.SaveMhData)call SP_save_mh_data
+  return
+10 call CON_stop('SP/restartOUT directory is not available')
 end subroutine SP_save_restart
  
