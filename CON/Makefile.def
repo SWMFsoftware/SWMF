@@ -44,6 +44,7 @@ IM_VERSION = RCM#			^CMP IF IM
 RB_VERSION = RiceV5#			^CMP IF RB
 #RB_VERSION = Empty#			^CMP IF RB
 
+#SP_VERSION = FLAMPA#                   ^CMP IF SP
 SP_VERSION = Kota#                      ^CMP IF SP
 #SP_VERSION = Empty#                    ^CMP IF SP
 
