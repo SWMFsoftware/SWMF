@@ -174,6 +174,7 @@ c  *****************  end subroutine SP_pangle    ******************
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       include 'stdout.h'
+      integer iFile
 
       do 10 i=0,nr
        algbb(i) = 0.       
@@ -188,6 +189,31 @@ c  *****************  end subroutine SP_pangle    ******************
 20    continue
 30    continue
 10    continue
+      if(DoRestart)then
+         call CON_io_unit_new(iFile)
+         open(iFile,file='./SP/restartIN/f',
+     1        status='old',form='unformatted')
+         read(iFile)f
+         close(iFile)
+      end if
+      return
+      end
+!BOP
+!ROUTINE: SP_save_f - saves the distribution function 
+!INTERFACE:
+      subroutine SP_save_f
+!EOP                   
+      include 'coupler.h'
+      common /SP_size /  nr,nmu,nw, dim1
+      common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
+     1     df(0:nRMax,0:nMuMax,0:nPMax)
+      include 'stdout.h'
+      integer iFile
+         call CON_io_unit_new(iFile)
+         open(iFile,file='./SP/restartOUT/f',
+     1          status='replace',FORM='unformatted')
+         write(iFile)f
+         close(iFile)
       return
       end
 
