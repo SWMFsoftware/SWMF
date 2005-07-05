@@ -587,7 +587,7 @@ contains
     integer::iPoint,jPoint,nPointHere
     character(LEN=nLength+11)::NameFile,NameFilePreffix
     NameFilePreffix='./'//NameVector(1:2)//'/'//NameVector(&
-         3:len_trim(NameVector))//'_'
+         4:len_trim(NameVector))//'_'
     if(present(iFileIn))&
          write(NameFilePreffix,'(a,i5.5,a)')&
          trim(NameFilePreffix),iFileIn,'_'
