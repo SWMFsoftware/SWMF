@@ -41,3 +41,5 @@
       real rTransient
       integer iTransient
       common/SP_trans/rTransient,iTransient
+      logical DoRestart
+      common/SP_restart/DoRestart
