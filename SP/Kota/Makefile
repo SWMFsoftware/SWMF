@@ -8,12 +8,12 @@ Makefile.def.orig:
 	mv Makefile.def Makefile.def.orig
 	cp Makefile.def.orig Makefile.def
 
-LIB:
+LIB:    install
 	cd src; make LIB
 	cd srcInterface; make LIB
 
 rundir: 
-	mkdir -p ${RUNDIR}/SP
+	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN
 	@(if [ "${STANDALONE}" != 'NO' ]; then 	\
 		cd ${RUNDIR}; 			\
 		ln -s ../bin/SEP.exe .; 	\
