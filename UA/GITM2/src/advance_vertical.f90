@@ -22,7 +22,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   integer, intent(in) :: iLon, iLat, iBlock
 
-  integer :: iIon, iSpecies, iAlt
+  integer :: iIon, iSpecies, iAlt, iDim
 
 !  KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
 
@@ -36,7 +36,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   Centrifugal = (cos(Latitude(iLat,iBlock)) * OmegaBody)**2
   Coriolis    = 2 * cos(Latitude(iLat,iBlock)) * OmegaBody
   LogRho  = log(Rho(iLon,iLat,:,iBlock))
-  Vel_GD  = Velocity(iLon,iLat,:,:,iBlock)
+  do iDim = 1, 3 
+     Vel_GD(:,iDim)  = Velocity(iLon,iLat,:,iDim,iBlock)
+  enddo
 
   !!!! CHANGE !!!!
   Temp    = Temperature(iLon,iLat,:,iBlock)*TempUnit(iLon,iLat,:)
@@ -46,7 +48,10 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   enddo
 
   cMax1   = cMax_GDB(iLon,iLat,:,iUp_,iBlock)
-  IVel    = IVelocity(iLon,iLat,:,:,iBlock)
+
+  do iDim = 1, 3 
+     IVel(:,iDim) = IVelocity(iLon,iLat,:,iDim,iBlock)
+  enddo
 
   do iSpecies = 1, nIonsAdvect
      LogINS(:,iSpecies)  = log(IDensityS(iLon,iLat,:,iSpecies,iBlock))
@@ -59,11 +64,14 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   Lat = Latitude(iLat, iBlock) * 180.0/pi
   Lon = Longitude(iLon, iBlock) * 180.0/pi
 
-
   call advance_vertical_1d
 
   Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
-  Velocity(iLon,iLat,:,:,iBlock)           = Vel_GD
+
+  do iDim = 1, 3 
+     Velocity(iLon,iLat,:,iDim,iBlock)           = Vel_GD(:,iDim)
+  enddo
+
   !!!! CHANGE !!!!
   Temperature(iLon,iLat,:,iBlock)          = Temp/TempUnit(iLon,iLat,:)
 
