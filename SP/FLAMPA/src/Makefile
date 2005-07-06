@@ -15,9 +15,6 @@ OBJECTS = SP_main.o \
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
-DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
-
 MY_LIB = libFLAMPA.a
 
 DEPEND:
