@@ -144,10 +144,10 @@ LIB6 = ${LIBRB}	#	^CMP IF RB
 lib6 = -lRB #		^CMP IF RB
 
 LIB7 = ${LIBSC} #       ^CMP IF SC
-lib7 = -lSC #       ^CMP IF SC
+lib7 = -lSC #           ^CMP IF SC
 
-LIB8 = ${LIBSP} #       ^CMP IF SC
-lib8 = -lSP #       ^CMP IF SC
+LIB8 = ${LIBSP} #       ^CMP IF SP
+lib8 = -lSP #           ^CMP IF SP
 
 
 ${SWMFEXE}: ${MODULES} ${OBJECTS} \
