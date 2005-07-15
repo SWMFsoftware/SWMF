@@ -10,7 +10,7 @@ subroutine finalize_gitm
   integer :: iError, iBlock, iOutputType
   integer :: nMLTsTmp,nLatsTmp
 
-  if (.not. Is1D) call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
+!  if (.not. Is1D) call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
 
   do iOutputType = 1, nOutputTypes
      do iBlock = 1, nBlocks
@@ -21,6 +21,11 @@ subroutine finalize_gitm
   if (IsOpenLogFile) close(iLogFileUnit_)
 
   if (.not.IsFrameWork) call write_restart("UA/restartOUT/")
+
+  if (iProc == 0) then
+     open(unit=iOutputUnit_, file="GITM.DONE", status="unknown")
+     close(iOutputUnit_)
+  endif
 
   call end_timing("GITM")
 

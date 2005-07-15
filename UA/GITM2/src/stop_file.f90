@@ -31,6 +31,8 @@ subroutine check_stop
   if (get_timing("GITM") > CPUTimeMax) then
      if (iProc == 0) write(*,*) "CPUTimeMax Exceeded. Exiting."
      EndTimeLocal = CurrentTime - 1.0
+     open(unit=iOutputUnit_, file="GITM.CPU", status="unknown")
+     close(iOutputUnit_)
   endif
 
   call MPI_AllREDUCE(EndTimeLocal, EndTime,  &
@@ -63,6 +65,12 @@ subroutine delete_stop
   inquire(file='GITM.DONE',EXIST=IsThere)
   if (IsThere .and. iProc == 0) then
      open(iOutputUnit_, file = 'GITM.DONE', status = 'OLD')
+     close(iOutputUnit_, status = 'DELETE')
+  endif
+
+  inquire(file='GITM.CPU',EXIST=IsThere)
+  if (IsThere .and. iProc == 0) then
+     open(iOutputUnit_, file = 'GITM.CPU', status = 'OLD')
      close(iOutputUnit_, status = 'DELETE')
   endif
 
