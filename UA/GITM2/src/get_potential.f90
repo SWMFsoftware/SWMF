@@ -177,7 +177,7 @@ subroutine get_potential(iBlock)
 
   endif
 
-  if (index(cAMIEFileNorth,"none") <= 0 .and. 
+  if (index(cAMIEFileNorth,"none") <= 0 .and. &
      index(cAMIEFileNorth,"SPS") <= 0 .and. iBlock == 1) then 
      if (iDebugLevel > 1) &
           write(*,*) "==> Reading AMIE values for time :",CurrentTime
