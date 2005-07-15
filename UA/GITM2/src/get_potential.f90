@@ -14,6 +14,9 @@ subroutine get_potential(iBlock)
   logical :: IsFirstPotential(nBlocksMax) = .true.
   logical :: IsFirstAurora(nBlocksMax) = .true.
 
+  logical :: UseIMF = .false.
+  logical :: UseHPI = .false.
+
   real, dimension(-1:nLons+2,-1:nLats+2) :: TempPotential, Grid
 
   character (len=100), dimension(100) :: Lines
@@ -23,6 +26,8 @@ subroutine get_potential(iBlock)
 
   call start_timing("Get AMIE Potential")
   call report("get_potential",2)
+
+  iError = 0
 
   if (index(cPlanet,"Earth") == 0) then 
 
@@ -39,7 +44,19 @@ subroutine get_potential(iBlock)
 
         Lines(1) = "#BACKGROUND"
         Lines(2) = "UA/DataIn/"
-        Lines(3) = "weimer96"    ! Change to "zero" if you want
+
+        UseHPI = .true.
+        call get_IMF_Bz(CurrentTime, temp, iError)
+        call IO_SetIMFBz(temp)
+        if (iError /= 0) then
+           write(*,*) "Can not find IMF Bz."
+           write(*,*) "Setting potential to Millstone HPI."
+           Lines(3) = "millstone_hpi"    ! Change to "zero" if you want
+        else
+           write(*,*) "Setting potential to Weimer [1996]."
+           Lines(3) = "weimer96"    ! Change to "zero" if you want
+           UseIMF = .true.
+        endif
         Lines(4) = "ihp"
         Lines(5) = "idontknow"
         Lines(6) = ""
@@ -58,6 +75,8 @@ subroutine get_potential(iBlock)
            Lines(5) = TimeLine
            Lines(6) = ""
 
+           UseIMF = .false.
+
         else
 
            Lines(1) = "#AMIEFILES"
@@ -66,6 +85,8 @@ subroutine get_potential(iBlock)
            Lines(4) = ""
            Lines(5) = ""
            Lines(6) = ""
+
+           UseIMF = .false.
 
         endif
 
@@ -78,11 +99,13 @@ subroutine get_potential(iBlock)
      Lines(11) = "#END"
 
      call IE_set_inputs(Lines)
+
      call IE_Initialize(iError)
 
      if (iError /= 0) then
         write(*,*) &
              "Code Error in IE_Initialize called from get_potential.f90"
+        write(*,*) "Error : ",iError
         call stop_gitm("Stopping in get_potential")
      endif
 
@@ -95,19 +118,16 @@ subroutine get_potential(iBlock)
 
   call IO_SetTime(CurrentTime)
 
-!  if (UseVariableInputs) then
-
   call IO_SetNorth
 
-  if (.not. IsFramework) then
+  if (UseIMF) then
 
-     iError = 0
      call get_IMF_Bz(CurrentTime, temp, iError)
      call IO_SetIMFBz(temp)
 
      if (iError /= 0) then
         write(*,*) &
-             "Code Error in get_IMF_Bz called from get_amie_potential.f90"
+             "Code Error in get_IMF_Bz called from get_potential.f90"
         write(*,*) "Code : ",iError
         call stop_gitm("Stopping in get_potential")
      endif
@@ -119,7 +139,7 @@ subroutine get_potential(iBlock)
 
      if (iError /= 0) then
         write(*,*) &
-             "Code Error in get_IMF_By called from get_amie_potential.f90"
+             "Code Error in get_IMF_By called from get_potential.f90"
         call stop_gitm("Stopping in get_potential")
      endif
 
@@ -129,7 +149,7 @@ subroutine get_potential(iBlock)
      call IO_SetSWV(temp)
 
      if (iError /= 0) then
-        write(*,*) "Code Error in get_sw_v called from get_amie_potential.f90"
+        write(*,*) "Code Error in get_sw_v called from get_potential.f90"
         call stop_gitm("Stopping in get_potential")
      endif
 
@@ -139,24 +159,26 @@ subroutine get_potential(iBlock)
      call IO_Setkp(temp)
 
      if (iError /= 0) then
-        write(*,*) "Code Error in get_kp called from get_amie_potential.f90"
-        call stop_gitm("Stopping in get_potential")
-     endif
-
-     call get_HPI(CurrentTime, temp, iError)
-     call IO_SetHPI(temp)
-
-     if (iError /= 0) then
-        write(*,*) "Code Error in get_hpi called from get_amie_potential.f90"
+        write(*,*) "Code Error in get_kp called from get_potential.f90"
         call stop_gitm("Stopping in get_potential")
      endif
 
   endif
 
-!  endif
+  if (UseHPI) then
 
-  if (index(cAMIEFileNorth,"none") <= 0 .and. &
-       index(cAMIEFileNorth,"SPS") <= 0 .and. iBlock == 1) then 
+     call get_HPI(CurrentTime, temp, iError)
+     call IO_SetHPI(temp)
+
+     if (iError /= 0) then
+        write(*,*) "Code Error in get_hpi called from get_potential.f90"
+        call stop_gitm("Stopping in get_potential")
+     endif
+
+  endif
+
+  if (index(cAMIEFileNorth,"none") <= 0 .and. 
+     index(cAMIEFileNorth,"SPS") <= 0 .and. iBlock == 1) then 
      if (iDebugLevel > 1) &
           write(*,*) "==> Reading AMIE values for time :",CurrentTime
      call get_AMIE_values(CurrentTime)
@@ -167,7 +189,7 @@ subroutine get_potential(iBlock)
   if (floor((tSimulation-dt)/DtPotential) /= &
        floor((tsimulation)/DtPotential) .or. IsFirstPotential(iBlock)) then
 
-     if (iDebugLevel > 0) write(*,*) "=> Getting Potential"
+     if (iDebugLevel > 1) write(*,*) "==> Getting Potential"
 
      Potential(:,:,:,iBlock) = 0.0
 
@@ -188,7 +210,6 @@ subroutine get_potential(iBlock)
         if (iDebugLevel > 1 .and. iAlt == 1) &
              write(*,*) "==> Getting IE potential"
 
-        TempPotential = 0.0
         call start_timing("getpotential")
         call IO_GetPotential(TempPotential, iError)
         call end_timing("getpotential")
@@ -210,7 +231,7 @@ subroutine get_potential(iBlock)
   if (floor((tSimulation-dt)/DtAurora) /= &
        floor((tsimulation)/DtAurora) .or. IsFirstAurora(iBlock)) then
 
-     if (iDebugLevel > 2) write(*,*) "=> Getting Aurora"
+     if (iDebugLevel > 1) write(*,*) "==> Getting Aurora"
 
      iAlt = nAlts+1
 
