@@ -5,6 +5,7 @@ subroutine advance_horizontal(iBlock)
   use ModPlanet, only : nSpecies, nIonsAdvect, OmegaBody
   use ModGITM
   use ModInputs, only : UseIonAdvection, iDebugLevel
+  use ModSources, only : HorizontalTempSource
   
   implicit none
 
@@ -58,6 +59,10 @@ subroutine advance_horizontal(iBlock)
 
      Rho(1:nLons,1:nLats,iAlt,iBlock)                     = NewRho_C
      Velocity(1:nLons,1:nLats,iAlt,:,iBlock)              = NewVel_CD
+
+     HorizontalTempSource(1:nLons,1:nLats,iAlt)           = &
+          NewTemp_C-Temperature(1:nLons,1:nLats,iAlt,iBlock)
+
      Temperature(1:nLons,1:nLats,iAlt,iBlock)             = NewTemp_C
      VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)         = VertVel_CV
 
@@ -350,6 +355,18 @@ contains
                + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
                + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
                + Dt * DiffTemp_C(iLon,iLat)
+
+          if (iDebugLevel > 5 .and. iLon <= 2 .and. iAlt == 30) then
+             write(*,*) "newtemp_c : ",ilon, ilat, ialt, NewTemp_C(iLon,iLat), &
+                  (gamma-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat), &
+                  GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_), &
+                  GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_), &
+                  Dt * DiffTemp_C(iLon,iLat), &
+                  GradLatVel_CD(iLon,iLat,iNorth_), &
+                  GradLonVel_CD(iLon,iLat,iEast_), &                                                        
+                  -TanLatitude(iLat,iBlock) * Vel_CD(iLon,iLat,iNorth_) / &                                                         
+                  RadialDistance(iAlt)
+          endif
 
        end do
     end do

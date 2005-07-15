@@ -3,7 +3,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModGITM
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
-  use ModSources, only: EUVHeating
+  use ModSources, only: EUVHeating, VerticalTempSource
   use ModInputs, only: UseIonAdvection, iDebugLevel
   use ModVertical, ONLY: &
        LogRho, &
@@ -41,6 +41,10 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   enddo
 
   !!!! CHANGE !!!!
+
+  VerticalTempSource(iLon,iLat,1:nAlts) = &
+       Temp(1:nAlts)/TempUnit(iLon,iLat,1:nAlts)-Temperature(iLon,iLat,1:nAlts,iBlock)
+
   Temp    = Temperature(iLon,iLat,:,iBlock)*TempUnit(iLon,iLat,:)
   do iSpecies = 1, nSpecies 
      LogNS1(:,iSpecies)  = log(NDensityS(iLon,iLat,:,iSpecies,iBlock))
