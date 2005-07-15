@@ -98,6 +98,8 @@ subroutine calc_GITM_sources(iBlock)
           (MeanIonMass(1:nLons,1:nLats,1:nAlts)/AMU + &
           MeanMajorMass(1:nLons,1:nLats,1:nAlts)/AMU)
 
+     JouleHeating = 0.0
+
      do iDir = 1, 3
 
         JouleHeating(:,:,:) = JouleHeating(:,:,:) + tmp2 * &
@@ -708,7 +710,8 @@ subroutine calc_GITM_sources(iBlock)
   call aurora(iBlock)
   if (UseAuroralHeating) then
      AuroralHeating = AuroralHeatingRate(:,:,:,iBlock) / &
-          TempUnit(1:nLons,1:nLats,1:nAlts) / cp(:,:,1:nAlts,iBlock)
+          TempUnit(1:nLons,1:nLats,1:nAlts) / cp(:,:,1:nAlts,iBlock) / &
+          rho(1:nLons,1:nLats,1:nAlts, iBlock)
   else
      AuroralHeating = 0.0
   endif
@@ -734,7 +737,7 @@ subroutine calc_GITM_sources(iBlock)
   call calc_chemistry(iBlock)
 
   ChemicalHeatingRate(:,:,:) = &
-       0.3*ChemicalHeatingRate(:,:,:) * Element_Charge / &
+       ChemicalHeatingRate(:,:,:) * Element_Charge / &
        TempUnit(1:nLons,1:nLats,1:nAlts) / cp(1:nLons,1:nLats,1:nAlts,iBlock)/&
        rho(1:nLons,1:nLats,1:nAlts,iBlock)
 
