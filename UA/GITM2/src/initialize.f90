@@ -130,7 +130,7 @@ subroutine initialize_gitm
                 RadialDistance(iAlt)
            dLonDist_GB(iLat, iAlt, iBlock) = &
                 (Longitude(2,iBlock) - Longitude(1,iBlock)) * &
-                RadialDistance(iAlt) * abs(cos(Latitude(iLat,iBlock)))
+                RadialDistance(iAlt) * max(abs(cos(Latitude(iLat,iBlock))),0.01)
         enddo
      enddo
   enddo
@@ -148,7 +148,7 @@ subroutine initialize_gitm
 !        HeatingEfficiency(iAlt) = &
 !             max(0.6-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.05)
         HeatingEfficiency(iAlt) = &
-             max(0.60-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.30)
+             max(0.40-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.1)
 
         if (altitude(iAlt)/1000. > 150.) then
            eHeatingEfficiency(iAlt)= &
