@@ -2,12 +2,14 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream.h>
 
 #ifdef MPI_ON
   #include "mpi.h"
 #endif
 
 extern int ThisThread;
+extern int TotalThreadsNumber;
 
 long int nint(double a)
 {
@@ -85,3 +87,22 @@ void PrintErrorLog(char* message) {
 
   fclose(errorlog);
 }
+
+//===================================================
+void StampSignature(char* message) {
+  double *buffer=new double[TotalThreadsNumber];
+  double sign=0.0;
+  int thread;
+
+  buffer[0]=rnd();
+  MPI_Gather(buffer,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+  if (ThisThread==0) {
+    for (thread=0;thread<TotalThreadsNumber;thread++) sign+=buffer[thread];
+
+    cout << "Signature=" << sign << " (msg: " <<  message  << ")" << endl;
+  }
+
+  delete [] buffer;
+}
+

@@ -95,6 +95,12 @@ public:
     return (n<nfuncs) ? func[n] : NULL;
   };
 
+  bool initialized(int n) {
+    if ((func!=NULL)&&(n<nfuncs)) if (func[n]!=NULL) return true;
+
+    return false;
+  };
+
   CExternalFunction() {nfuncs=0,func=NULL;};
 };
 

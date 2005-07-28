@@ -9,6 +9,7 @@ double erf(double);
 double gam(double);
 
 void PrintErrorLog(char*);
+void StampSignature(char*);
 
 
 template<class TMesh>
@@ -70,6 +71,56 @@ bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid
 
   return true;
 }
+
+//=========================================================
+//calculation of CRC-32
+class CRC32 {
+private:
+  unsigned long crc_accum,crc_table[256];
+
+  //generate the table of CRC remainders for all possible bytes 
+  void generare_crc_table() { 
+    register int i, j;  
+    register unsigned long crc_accum;
+
+    for (i=0;i<256;i++) { 
+      crc_accum=((unsigned long)i<<24);
+      for (j=0;j<8;j++) crc_accum=(crc_accum&0x80000000L) ? (crc_accum<<1)^0x04c11db7L : crc_accum<<1;
+      crc_table[i]=crc_accum; 
+    }
+  };
+
+public: 
+
+  CRC32 () {
+    crc_accum=0;
+    generare_crc_table();
+  };
+
+  //update the CRC on the data block one byte at a time
+  template <class T> 
+  void add(T* buffer, long int size) {
+    char *data_blk_ptr=(char*)buffer;
+    long int data_blk_size=size*sizeof(T); 
+    register long int i,j;
+
+    for (j=0;j<data_blk_size;j++) { 
+      i=((int)(crc_accum>>24)^ *data_blk_ptr++)&0xff;
+      crc_accum=(crc_accum<<8)^crc_table[i]; 
+    }
+  };
+
+  void clear() {
+    crc_accum=0;
+  };
+
+  unsigned long checksum() { 
+    return crc_accum;
+  }; 
+};
+
+ 
+  
 
 #endif
    
