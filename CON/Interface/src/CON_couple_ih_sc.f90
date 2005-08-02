@@ -5,15 +5,16 @@
 !MODULE: CON_couple_ih_sc - couple IH and SC both ways
 !INTERFACE:
 module CON_couple_ih_sc
-!DESCRIPTION:
-! This coupler uses the SWMF parallel coupling toolkit.
-! The SC grid is coupled to a buffer grid in IH. The buffer grid
-! uses the same coordinate system as SC, so the transformation is
-! done in the IH wrapper.
-!
-! The IH grid is coupled to the outer ghost cells of the SC grid directly.
-! Both SC and IH use AMR grids, the buffer is a simple spherical grid.
 
+  !DESCRIPTION:
+  ! This coupler uses the SWMF parallel coupling toolkit.
+  ! The SC grid is coupled to a buffer grid in IH. The buffer grid
+  ! uses the same coordinate system as SC, so the transformation is
+  ! done in the IH wrapper.
+  !
+  ! The IH grid is coupled to the outer ghost cells of the SC grid directly.
+  ! Both SC and IH use AMR grids, the buffer is a simple spherical grid.
+  
   !USES:
   use CON_coupler
   use CON_axes, ONLY: transform_matrix,transform_velocity
@@ -104,9 +105,9 @@ contains
          NameBuffer='IH_from_sc')  !Version for the first order in time
   end subroutine couple_ih_sc_init
   !===============================================================!
-!BOP
-!IROUTINE: couple_ih_sc - interpolate and get MHD state at SC outer ghostpoints
-!INTERFACE:
+  !BOP
+  !IROUTINE: couple_ih_sc - get IH solution at SC outer ghostpoints
+  !INTERFACE:
   subroutine couple_ih_sc(TimeCoupling)
     !INPUT ARGUMENTS:
     interface
@@ -128,9 +129,10 @@ contains
     end interface
 
     real,intent(in)::TimeCoupling
-!EOP
+    !EOP
+
     ! Last coupling time
-    real :: TimeCouplingLast = -1
+    real :: TimeCouplingLast = -1.0
     !-------------------------------------------------------------------------
 
     if(.not.RouterIhSc%IsProc)return
