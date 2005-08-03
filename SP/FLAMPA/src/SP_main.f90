@@ -1,5 +1,6 @@
 module SP_ModMain
   use ModConst
+  use ModUtilities,ONLY:check_allocate
   implicit none
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
@@ -66,7 +67,7 @@ module SP_ModMain
   integer:: SP_iPlot=0  !Initialize plot index for SP data.                  !
   character(LEN=50):: SP_TypePlot='cdf def ind tec '
                         !Type of output SP data to be saved in a file.       !
-  character(LEN=10):: SP_DirOut='./IO_SP/'
+  character(LEN=10):: SP_DirOut='./SP/IO/'
                         !Output directory for SP plot and log files.         !
   real:: SP_TimePlot=6.0e+01
                         !Time interval to save plot file.                    ! 
@@ -87,7 +88,6 @@ module SP_ModMain
   integer,save::iShock,iShockOld=1
 Contains
   subroutine SP_allocate
-    use CON_world, ONLY: check_allocate
     !------------------------------------------------------------------------!
     integer:: iError,iX,iLnP
     character(LEN=*),parameter:: NameSub='SP_allocate'

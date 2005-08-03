@@ -1,7 +1,7 @@
 !=============================================================================
 subroutine write_plotfile_SP(DoPlot,TypeOutput)
+  use ModIOUnit
   use SP_ModMain
-  use CON_world, ONLY: check_allocate
   implicit none
   include 'stdout.h'
   !--------------------------------------------------------------------------!
@@ -31,7 +31,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   real,allocatable:: PlotVar_III(:,:,:)
   !--------------------------------------------------------------------------!
   if (.not.DoPlot) return
-  call get_io_unit_new(iFile)
+  iFile=io_unit_new()
   SP_iPlot = int(SP_Time/SP_TimePlot)
   !\
   ! Set units for spatial and energy coordinates.
@@ -164,7 +164,8 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
            Energy   = momentum_to_kinetic_energy(&
                 Momentum,NameParticle)            !in MKS units.
            call sp_set_plotvar
-           write(iFile,'(50(1pe13.5))')& Location*SP_Unit_X,&
+           write(iFile,'(50(1pe13.5))')& 
+                Location*SP_Unit_X,&
                 Energy*SP_Unit_E,PlotVar_III(iLnP,iX,1:nVar)
         end do
      end do

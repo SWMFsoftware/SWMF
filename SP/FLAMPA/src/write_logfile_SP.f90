@@ -1,7 +1,7 @@
 !============================================================================!
 subroutine write_logfile_SP(TypeActionLogFile)
-  use CON_world, ONLY: check_allocate
   use SP_ModMain
+  use ModIOUnit
   implicit none
   include 'stdout.h'
   character(LEN=*),intent(in):: TypeActionLogFile
@@ -25,7 +25,7 @@ subroutine write_logfile_SP(TypeActionLogFile)
      allocate(E_I(1:nP),stat=iError)
      call check_allocate(iError,NameSub//'E_I')
      !-----------------------------------------------------------------------!
-     call get_io_unit_new(iFile)
+     iFile=io_unit_new()
      write(NameLogFile,'(a,i4.4,a)')trim(SP_DirOut)//&
           'SP_logfile.dat'
      write(iStdOut,*)prefix//'Open '//trim(NameLogFile)

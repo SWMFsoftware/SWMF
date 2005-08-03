@@ -2,7 +2,7 @@
 !============================================================================!
 subroutine read_ihdata_for_sp(NameFileIn,nLineHeader,nLineBad)
   use SP_ModMain
-  use CON_world, ONLY: CON_stop
+  use ModIOUnit
   use ModConst,  ONLY: cProtonMass,Rsun
   implicit none
   include 'stdout.h'
@@ -22,7 +22,7 @@ subroutine read_ihdata_for_sp(NameFileIn,nLineHeader,nLineBad)
   !\
   ! First reading of file sets the value of nX::
   !/
-  call get_io_unit_new(iFile)
+  iFile=io_unit_new()
   open(iFile,file=NameFile,status='old',iostat=iError)
   if (nLineHeader>0) then
      do iLine=1,nLineHeader
@@ -45,7 +45,7 @@ subroutine read_ihdata_for_sp(NameFileIn,nLineHeader,nLineBad)
   !\
   ! Second reading of file with data from IH_::
   !/
-  call get_io_unit_new(iFile)
+  iFile=io_unit_new()
   open(iFile,file=NameFile,status='old',iostat=iError)
   if (nLineHeader>0) then
      do iLine=1,nLineHeader
