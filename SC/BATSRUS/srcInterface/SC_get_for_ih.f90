@@ -7,10 +7,8 @@ subroutine SC_get_for_ih(&
        rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
        
 
-  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B, UnitSI_X
+  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B
   use CON_router
-
-  use SC_ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
 
   implicit none
 
@@ -28,14 +26,13 @@ subroutine SC_get_for_ih(&
   !different. Below are the conventions for buffer:
   integer,parameter::&
        BuffRho_  =1,&
-       BuffRhoUx_=2, BuffUx_=BuffRhoUx_, &
-       BuffRhoUz_=4, BuffUz_=BuffRhoUz_, &
+       BuffRhoUx_=2,&
+       BuffRhoUz_=4,&
        BuffBx_   =5,&
        BuffBy_   =6,&
        BuffBz_   =7,&
-       BuffP_    =8,&
-       BuffX_    =9,BuffZ_=11
-     
+       BuffP_    =8
+       
 
   !----------------------------------------------------------
  
@@ -60,9 +57,6 @@ subroutine SC_get_for_ih(&
        B0zCell_BLK(i,j,k,iBlock))*Weight
   State_V(BuffP_)            = &
        State_VGB(P_,       i,j,k,iBlock) *Weight
-  State_V(BuffX_:BuffZ_)     = &
-       (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)&
-      *State_VGB(rho_,         i,j,k,iBlock)*Weight
   
   do iGet=iGetStart+1,iGetStart+nPartial-1
      i      = Get%iCB_II(1,iGet)
@@ -85,18 +79,13 @@ subroutine SC_get_for_ih(&
           B0zCell_BLK(i,j,k,iBlock))*Weight
      State_V(BuffP_)               =State_V(BuffP_)               +&
           State_VGB(P_,      i,j,k,iBlock) *Weight
-     State_V(BuffX_:BuffZ_)        = State_V(BuffX_:BuffZ_)       +&
-          (/x_BLK(i,j,k,iBlock),y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)/)&
-          *State_VGB(rho_,         i,j,k,iBlock)*Weight
   end do
-  
+
   ! Convert to SI units
   State_V(BuffRho_)             = State_V(BuffRho_)     *UnitSI_rho
   State_V(BuffRhoUx_:BuffRhoUz_)= &
        State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
   State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
   State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
-  State_V(BuffX_:BuffZ_)        = &
-       State_V(BuffX_:BuffZ_)        *        (UnitSI_rho*UnitSI_x) 
 
 end subroutine SC_get_for_ih
