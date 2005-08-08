@@ -8,6 +8,7 @@ SEARCH_EXTRA = -I${ABDIR} -I${IODIR}
 
 include ../srcMake/Makefile.conf
 include Makefile.DEPEND
+include Makefile.RULES
 
 MODULES = \
 	ModSize.o\
@@ -132,4 +133,4 @@ distclean:
 		init_msis.f90 \
 		output.f90 \
 		planet.f90 \
-		Makefile.DEPEND
+		Makefile.DEPEND Makefile.RULES

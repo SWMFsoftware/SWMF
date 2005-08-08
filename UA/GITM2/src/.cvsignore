@@ -2,6 +2,7 @@ ModGITM.f90
 ModEUV.f90
 ModSources.f90
 Makefile.DEPEND
+Makefile.RULES
 ModPlanet.f90
 calc_electron_temperature.f90
 calc_ion_density.f90

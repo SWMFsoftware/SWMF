@@ -32,6 +32,11 @@ install_cont:
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
+	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
+		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
+	else \
+		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
+	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
 	./config.pl -${PLANET}
@@ -62,6 +67,7 @@ nompirun:
 	cd run; ./GITM.exe
 
 clean:
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd $(ABDIR);    make clean
 	@cd $(IEDIR);    make clean
 	@cd $(EDDIR);    make clean
