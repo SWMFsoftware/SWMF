@@ -16,7 +16,7 @@ subroutine set_inputs
   integer, dimension(7) :: iEndTime
 
   logical :: IsDone
-  integer :: iDebugProc, n
+  integer :: iDebugProc=0, n
   character (len=iCharLen_) :: cLine
   integer :: iLine, iSpecies, iSat
   integer :: i, iError, iOutputTypes
@@ -335,10 +335,6 @@ subroutine set_inputs
               write(*,*) 'DtReport    (real)'
               write(*,*) 'UseBarriers (logical)'
               IsDone = .true.
-           else
-              if (iDebugProc >= 0 .and. iProc /= iDebugProc) then
-                 iDebugLevel = -1
-              endif
            endif
 
         case ("#THERMO")
@@ -699,6 +695,10 @@ subroutine set_inputs
     if (iLine >= nInputLines) IsDone = .true.
 
   enddo
+
+  if (iDebugProc >= 0 .and. iProc /= iDebugProc) then
+     iDebugLevel = -1
+  endif
 
   if (iError /= 0) then
      call stop_gitm("Must Stop!!")
