@@ -129,12 +129,12 @@ subroutine advance_vertical_1stage( &
   AveMass = Rho/sum(NS,dim=2)
   TempKoM = Temp
 
-  call calc_rusanov(LogRho ,GradLogRho,  DiffLogRho)
-  call calc_rusanov(LogNum ,GradLogNum,  DiffLogNum)
-  call calc_rusanov(Temp   ,GradTemp,    DiffTemp)
-!  call calc_rusanov(TempKoM,GradTempKoM, DiffTmp)
+  call calc_rusanov_alts(LogRho ,GradLogRho,  DiffLogRho)
+  call calc_rusanov_alts(LogNum ,GradLogNum,  DiffLogNum)
+  call calc_rusanov_alts(Temp   ,GradTemp,    DiffTemp)
   do iDim = 1, 3
-     call calc_rusanov(Vel_GD(:,iDim), GradVel_CD(:,iDim), DiffVel_CD(:,iDim))
+     call calc_rusanov_alts(Vel_GD(:,iDim), &
+          GradVel_CD(:,iDim),DiffVel_CD(:,iDim))
   end do
 
   ! Add geometrical correction to gradient and obtain divergence
@@ -142,11 +142,11 @@ subroutine advance_vertical_1stage( &
 
   do iSpecies=1,nSpecies
 
-     call calc_rusanov(LogNS(:,iSpecies),GradTmp, DiffTmp)
+     call calc_rusanov_alts(LogNS(:,iSpecies),GradTmp, DiffTmp)
      GradLogNS(:,iSpecies) = GradTmp
      DiffLogNS(:,iSpecies) = DiffTmp
 
-     call calc_rusanov(VertVel(:,iSpecies),GradTmp, DiffTmp)
+     call calc_rusanov_alts(VertVel(:,iSpecies),GradTmp, DiffTmp)
      GradVertVel(:,iSpecies) = GradTmp
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
@@ -155,7 +155,7 @@ subroutine advance_vertical_1stage( &
   enddo
 
   do iSpecies=1,nIonsAdvect
-     call calc_rusanov(LogINS(:,iSpecies), GradTmp, DiffTmp)
+     call calc_rusanov_alts(LogINS(:,iSpecies), GradTmp, DiffTmp)
      GradLogINS(:,iSpecies) = GradTmp
      DiffLogINS(:,iSpecies) = DiffTmp
   enddo
@@ -171,21 +171,6 @@ subroutine advance_vertical_1stage( &
              (DivVertVel(iAlt,iSpecies) + &
              VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) &
              + Dt * DiffLogNS(iAlt,iSpecies)
-
-!if (iSpecies == 1 .and. iAlt == 30) &
-!     write(*,*) iAlt, LogNS(iAlt,iSpecies), &
-!     DivVertVel(iAlt,iSpecies), &
-!     VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies), & 
-!     VertVel(iAlt,iSpecies), &
-!     - Dt * &
-!     (DivVertVel(iAlt,iSpecies) + &
-!     VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ), &
-!     Dt * DiffLogNS(iAlt,iSpecies)
-
-!        NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
-!             (DivVertVel(iAlt,iSpecies) + &
-!             VertVel(iAlt,iSpecies) * GradLogNS(iAlt,iSpecies) ) &
-!             + Dt * DiffLogNS(iAlt,iSpecies)
      enddo
 
      do iSpecies=1,nIonsAdvect
@@ -197,7 +182,6 @@ subroutine advance_vertical_1stage( &
 !     ! dVr/dt = -[ (V grad V)_r + grad T + T grad ln Rho - g ]
 !     ! and V grad V contains the centripetal acceleration 
 !     ! (Vphi**2+Vtheta**2)/R
-!
 !     NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) - Dt * &
 !          (Vel_GD(iAlt,iUp_)*GradVel_CD(iAlt,iUp_) &
 !          - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
@@ -271,11 +255,6 @@ subroutine advance_vertical_1stage( &
           (Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt))&
           + Dt * DiffTemp(iAlt)
 
-!if (iAlt == 5) write(*,*) "t : ", NewTemp(iAlt), &
-!     Vel_GD(iAlt,iUp_)*GradTemp(iAlt), &
-!      Dt * DiffTemp(iAlt), &
-!      ((Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt))*dt
-
   end do
 
   do iAlt = 1, nAlts
@@ -291,7 +270,7 @@ end subroutine advance_vertical_1stage
 ! ------------------------------------------------------------
 !/
 
-subroutine calc_rusanov(Var, GradVar, DiffVar)
+subroutine calc_rusanov_alts(Var, GradVar, DiffVar)
 
   use ModSizeGitm
   use ModGITM, only : dAlt, Altitude
@@ -304,9 +283,7 @@ subroutine calc_rusanov(Var, GradVar, DiffVar)
   real, dimension(1:nAlts+1) :: VarLeft, VarRight, DiffFlux
   !------------------------------------------------------------
 
-!  call start_timing("rusanov")
-
-  call calc_GITM_facevalues(nAlts, Altitude(-1:nAlts+2), Var, VarLeft, VarRight)
+  call calc_facevalues_alts(Var, VarLeft, VarRight)
 
   ! Gradient based on averaged Left/Right values
   GradVar = 0.5 * &
@@ -318,42 +295,34 @@ subroutine calc_rusanov(Var, GradVar, DiffVar)
 
   DiffVar = (DiffFlux(2:nAlts+1) - DiffFlux(1:nAlts))/dAlt(1:nAlts)
 
-!  call end_timing("rusanov")
-
-end subroutine calc_rusanov
+end subroutine calc_rusanov_alts
 
 !\
 ! ------------------------------------------------------------
-! calc_GITM_facevalues
+! calc_facevalues_alts
 ! ------------------------------------------------------------
 !/
 
-subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
+subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
-  use ModInputs, only: TypeLimiter, UseMinMod, UseMC
+  use ModGitm, only: dAlt, InvDAlt
+  use ModSizeGITM, only: nAlts
+  use ModInputs, only: UseMinMod, UseMC
+  use ModLimiter
 
   implicit none
   
-  integer, intent(in) :: n
-  real, intent(in) :: Var(-1:n+2), Location(-1:n+2)
-  real, intent(out):: VarLeft(1:n+1), VarRight(1:n+1)
+  real, intent(in) :: Var(-1:nAlts+2)
+  real, intent(out):: VarLeft(1:nAlts+1), VarRight(1:nAlts+1)
 
-  real :: dVarUp, dVarDown, dVarLimited(0:n+1)
-  real :: DiffLocP(-1:n+1), InvDiffLocP(-1:n+1)
+  real :: dVarUp, dVarDown, dVarLimited(0:nAlts+1)
 
   integer :: i
 
-  logical :: IsFirstWarning = .true.
+  do i=0,nAlts+1
 
-!  call start_timing("facevalues")
-
-  DiffLocP = Location(0:n+2) - Location(-1:n+1)
-  InvDiffLocP = 1.0/DiffLocP
-
-  do i=0,n+1
-
-     dVarUp            = (Var(i+1) - Var(i))   * InvDiffLocP(i)
-     dVarDown          = (Var(i)   - Var(i-1)) * InvDiffLocP(i-1)
+     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt(i)
+     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt(i-1)
 
      if (UseMinMod) dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
 
@@ -361,51 +330,11 @@ subroutine calc_GITM_facevalues(n, Location, Var, VarLeft, VarRight)
 
   end do
 
-  do i=1,n+1
-
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * DiffLocP(i-1) 
-
-     !!!! CHECK This Later  ERROR !!!!
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * DiffLocP(i-1) 
-
+  do i=1,nAlts+1
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt(i-1) 
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt(i) 
   end do
 
-!  call end_timing("facevalues")
+end subroutine calc_facevalues_alts
 
-contains
-
-  !---------------------------------------------------
-  !---------------------------------------------------
-  real function Limiter_minmod(dUp, dDown)
-
-    real :: dUp, dDown
-
-    Limiter_minmod = (sign(0.5,dUp) + sign(0.5,dDown))*min(abs(dUp),abs(dDown))
-
-  end function Limiter_minmod
-
-  !---------------------------------------------------
-  !---------------------------------------------------
-  real function Limiter_mc(dUp, dDown)
-
-    real :: dUp, dDown
-    real :: beta = 1.2
-
-    if (dUp > 0.0) then
-       if (dDown > 0.0) then
-          Limiter_mc = min(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
-       else
-          Limiter_mc = 0.0
-       endif
-    else
-       if (dDown < 0.0) then
-          Limiter_mc = max(beta*dUp,beta*dDown,(dUp+dDown)*0.5)
-       else
-          Limiter_mc = 0.0
-       endif
-    endif
-
-  end function Limiter_mc
-
-end subroutine calc_GITM_facevalues
 

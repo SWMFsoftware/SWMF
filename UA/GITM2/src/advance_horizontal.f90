@@ -94,21 +94,21 @@ stop
  
      nDensityS(1:nLons,1:nLats,iAlt,1:nSpecies,iBlock)    = NewNum_CV
 
-    do iLon = 1, nLons
-        do iLat = 1, nLats
-           if (abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
-                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1) &
-                > MaxDiff) then
-!              write(*,*) "MaxDiff: ",iLon, iLat, iAlt, &
-!                   MaxDiff, &
-!                   IDensityS(iLon,iLat,iAlt,1,iBlock), &
-!                   NewINum_CV(iLon,iLat,1),&
-!                   IVel_CD(iLon,iLat,1),IVel_CD(iLon,iLat,2)
-              MaxDiff = abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
-                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1)
-           endif
-        enddo
-     enddo
+!    do iLon = 1, nLons
+!        do iLat = 1, nLats
+!           if (abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
+!                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1) &
+!                > MaxDiff) then
+!!              write(*,*) "MaxDiff: ",iLon, iLat, iAlt, &
+!!                   MaxDiff, &
+!!                   IDensityS(iLon,iLat,iAlt,1,iBlock), &
+!!                   NewINum_CV(iLon,iLat,1),&
+!!                   IVel_CD(iLon,iLat,1),IVel_CD(iLon,iLat,2)
+!              MaxDiff = abs(IDensityS(iLon,iLat,iAlt,1,iBlock) - &
+!                NewINum_CV(iLon,iLat,1))/NewINum_CV(iLon,iLat,1)
+!           endif
+!        enddo
+!     enddo
 
 !     MaxDiff = max(MaxDiff, &
 !          maxval(abs((IDensityS(1:nLons,1:nLats,iAlt,1:nIonsAdvect,iBlock) - &
@@ -162,60 +162,85 @@ contains
 
     integer :: iDim, iSpc
 
+    real, dimension(-1:nLons+2,-1:nLats+2):: &
+         Quantity 
     real, dimension(nLons,nLats)          :: &
-         GradLonRho_C, GradLatRho_C,   DiffRho_C
+         GradLonQuantity, GradLatQuantity, DiffQuantity
     real, dimension(nLons,nLats)          :: &
-         GradLonTemp_C, GradLatTemp_C, DiffTemp_C, DivVel_C
+         GradLonRho_C, GradLatRho_C,   &
+         DiffLonRho_C, DiffLatRho_C
+    real, dimension(nLons,nLats)          :: &
+         GradLonTemp_C, GradLatTemp_C, &
+         DiffLonTemp_C, DiffLatTemp_C, DivVel_C
     real, dimension(nLons,nLats,3)        :: &
-         GradLonVel_CD, GradLatVel_CD, DiffVel_CD
+         GradLonVel_CD, GradLatVel_CD, &
+         DiffLonVel_CD, DiffLatVel_CD
     real, dimension(nLons,nLats,nSpecies) :: &
-         GradLonNum_CV, GradLatNum_CV, DiffNum_CV
+         GradLonVertVel_CV, GradLatVertVel_CV, &
+         DiffLonVertVel_CV, DiffLatVertVel_CV
+    real, dimension(nLons,nLats,nSpecies) :: &
+         GradLonNum_CV, GradLatNum_CV, &
+         DiffLonNum_CV, DiffLatNum_CV
     real, dimension(nLons,nLats,nIonsAdvect) :: &
-         GradLonINum_CV, GradLatINum_CV, DiffINum_CV
+         GradLonINum_CV, GradLatINum_CV, &
+         DiffLonINum_CV, DiffLatINum_CV
 
     real :: CoriolisSin, CoriolisCos, CentrifugalParameter
 
-    real :: RhoTest
+    real :: RhoTest, coslat(nLats), sinlat(nLats)
 
     integer :: iLon, iLat
 
-    call calc_rusanov_horizontal( &
-         Rho_C,  GradLonRho_C,  GradLatRho_C,  DiffRho_C)
-    call calc_rusanov_horizontal( &
-         Temp_C, GradLonTemp_C, GradLatTemp_C, DiffTemp_C)
+    call calc_rusanov_lons( Rho_C,  GradLonRho_C,  DiffLonRho_C)
+    call calc_rusanov_lats( Rho_C,  GradLatRho_C,  DiffLatRho_C)
+
+    call calc_rusanov_lons( Temp_C, GradLonTemp_C, DiffLonTemp_C)
+    call calc_rusanov_lats( Temp_C, GradLatTemp_C, DiffLatTemp_C)
 
     do iDim = 1,3
-       call calc_rusanov_horizontal( Vel_CD(:,:,iDim), &
-            GradLonVel_CD(:,:,iDim), GradLatVel_CD(:,:,iDim), &
-            DiffVel_CD(:,:,iDim))
+       call calc_rusanov_lons(Vel_CD(:,:,iDim), &
+            GradLonVel_CD(:,:,iDim), DiffLonVel_CD(:,:,iDim))
+       call calc_rusanov_lats(Vel_CD(:,:,iDim), &
+            GradLatVel_CD(:,:,iDim), DiffLatVel_CD(:,:,iDim))
     end do
 
     do iLat = 1, nLats
        DivVel_C(:,iLat) = &
             GradLatVel_CD(:,iLat,iNorth_) + GradLonVel_CD(:,iLat,iEast_) &
-            - TanLatitude(iLat,iBlock) * Vel_CD(1:nLons,iLat,iNorth_) / &
-            RadialDistance(iAlt)
+            - TanLatitude(iLat,iBlock) * Vel_CD(1:nLons,iLat,iNorth_) * &
+            InvRadialDistance(iAlt)
     end do
 
     do iSpc = 1,nSpecies
-       call calc_rusanov_horizontal(Num_CV(:,:,iSpc), &
-            GradLonNum_CV(:,:,iSpc), GradLatNum_CV(:,:,iSpc), &
-            DiffNum_CV(:,:,iSpc))
+       call calc_rusanov_lons(Num_CV(:,:,iSpc), &
+            GradLonNum_CV(:,:,iSpc), DiffLonNum_CV(:,:,iSpc))
+       call calc_rusanov_lats(Num_CV(:,:,iSpc), &
+            GradLatNum_CV(:,:,iSpc), DiffLatNum_CV(:,:,iSpc))
+
+       call calc_rusanov_lons( VertVel_CV(:,:,iSpc), &
+            GradLonVertVel_CV(:,:,iSpc), DiffLonVertVel_CV(:,:,iSpc))
+       call calc_rusanov_lats( VertVel_CV(:,:,iSpc), &
+            GradLatVertVel_CV(:,:,iSpc), DiffLatVertVel_CV(:,:,iSpc))
+       
     end do
 
     do iSpc = 1,nIonsAdvect
-       call calc_rusanov_horizontal(INum_CV(:,:,iSpc), &
-            GradLonINum_CV(:,:,iSpc), GradLatINum_CV(:,:,iSpc), &
-            DiffINum_CV(:,:,iSpc))
+       call calc_rusanov_lons(INum_CV(:,:,iSpc), &
+            GradLonINum_CV(:,:,iSpc), DiffLonINum_CV(:,:,iSpc))
+       call calc_rusanov_lats(INum_CV(:,:,iSpc), &
+            GradLatINum_CV(:,:,iSpc), DiffLatINum_CV(:,:,iSpc))
     end do
+
+    sinlat = sin(Latitude(1:nLats,iBlock))
+    coslat = cos(Latitude(1:nLats,iBlock))
 
     do iLat=1,nLats
 
-       CoriolisSin = sin(Latitude(iLat,iBlock)) * 2 * OmegaBody
-       CoriolisCos = cos(Latitude(iLat,iBlock)) * 2 * OmegaBody
+       CoriolisSin = sinLat(iLat) * 2 * OmegaBody
+       CoriolisCos = cosLat(iLat) * 2 * OmegaBody
 
-       CentrifugalParameter = OmegaBody**2 * cos(Latitude(iLat,iBlock)) * &
-            sin(Latitude(iLat,iBlock))
+       CentrifugalParameter = OmegaBody**2 * cosLat(iLat) * &
+            sinLat(iLat)
 
        do iLon=1,nLons
 
@@ -228,14 +253,15 @@ contains
                Rho_C(iLon,iLat) * DivVel_C(iLon,iLat) &
                + GradLatRho_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
                + GradLonRho_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
-               + Dt * DiffRho_C(iLon,iLat)
+               + Dt * (DiffLonRho_C(iLon,iLat)+DiffLatRho_C(iLon,iLat))
 
           do iSpc = 1, nSpecies
              NewNum_CV(iLon,iLat,iSpc) = NewNum_CV(iLon,iLat,iSpc) - Dt * ( &
                   Num_CV(iLon,iLat,iSpc) * DivVel_C(iLon,iLat) &
                   + GradLatNum_CV(iLon,iLat,iSpc)*Vel_CD(iLon,iLat,iNorth_) & 
                   + GradLonNum_CV(iLon,iLat,iSpc)*Vel_CD(iLon,iLat,iEast_)) & 
-                  + Dt * DiffNum_CV(iLon,iLat,iSpc)
+                  + Dt * (&
+                  DiffLonNum_CV(iLon,iLat,iSpc)+DiffLatNum_CV(iLon,iLat,iSpc))
           enddo
 
           do iSpc = 1, nIonsAdvect
@@ -243,15 +269,17 @@ contains
 !                  INum_CV(iLon,iLat,iSpc) * DivVel_C(iLon,iLat) &
                   + GradLatINum_CV(iLon,iLat,iSpc)*IVel_CD(iLon,iLat,iNorth_) &
                   + GradLonINum_CV(iLon,iLat,iSpc)*IVel_CD(iLon,iLat,iEast_)) &
-                  + Dt * DiffINum_CV(iLon,iLat,iSpc)
+                  + Dt * (&
+                  DiffLonINum_CV(iLon,iLat,iSpc)+&
+                  DiffLatINum_CV(iLon,iLat,iSpc))
           enddo
 
           RhoTest = sum(Mass(1:nSpecies) * NewNum_CV(iLon,iLat,1:nSpecies))
 
-          if (abs(RhoTest - NewRho_C(iLon,iLat))/RhoTest > 0.1) then
-             write(*,*) "Problem!! ", RhoTest, NewRho_C(iLon,iLat)
-!             call stop_gitm("Have to stop")
-          endif
+!          if (abs(RhoTest - NewRho_C(iLon,iLat))/RhoTest > 0.1) then
+!             write(*,*) "Problem!! ", RhoTest, NewRho_C(iLon,iLat)
+!!             call stop_gitm("Have to stop")
+!          endif
 
           ! dv_phi/dt = -(V grad V + (1/rho) grad P)_phi
           ! (1/rho) grad p = grad T + T/rho grad rho 
@@ -261,17 +289,15 @@ contains
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iEast_) + &
                Vel_CD(iLon,iLat,iEast_)*(Vel_CD(iLon,iLat,iUp_) &
                - TanLatitude(iLat,iBlock)*Vel_CD(iLon,iLat,iNorth_)) &
-               / RadialDistance(iAlt) + &
+               * InvRadialDistance(iAlt) + &
                GradLonTemp_C(iLon,iLat) + & 
                GradLonRho_C(iLon,iLat)*Temp_C(iLon,iLat)/Rho_C(iLon,iLat)) &
-               + Dt * DiffVel_CD(iLon,iLat,iEast_)
+               + Dt * (&
+               DiffLonVel_CD(iLon,iLat,iEast_)+DiffLatVel_CD(iLon,iLat,iEast_))
 
 
           ! dv_theta/dt = -(V grad V + (1/rho) grad P)_theta
           ! (1/rho) grad p = grad T + T/rho grad rho 
-
-!          if (iLon == 1) &
-!          write(*,*) "vel before adv : ",NewVel_CD(iLon,iLat,iNorth_) 
 
           NewVel_CD(iLon,iLat,iNorth_) = NewVel_CD(iLon,iLat,iNorth_) &
                - Dt * ( &
@@ -279,10 +305,12 @@ contains
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iNorth_) + &
                (Vel_CD(iLon,iLat,iNorth_)*Vel_CD(iLon,iLat,iUp_) &
                + TanLatitude(iLat,iBlock)*Vel_CD(iLon,iLat,iEast_)**2 &
-               ) / RadialDistance(iAlt) + &
+               ) * InvRadialDistance(iAlt) + &
                GradLatTemp_C(iLon,iLat) + & 
                GradLatRho_C(iLon,iLat)*Temp_C(iLon,iLat)/Rho_C(iLon,iLat)) &
-               + Dt * DiffVel_CD(iLon,iLat,iNorth_)
+               + Dt * ( &
+               DiffLonVel_CD(iLon,iLat,iNorth_)+ &
+               DiffLatVel_CD(iLon,iLat,iNorth_))
 
 !          if (iLon == 1) then
 !             write(*,*) "vel before cor : ",NewVel_CD(iLon,iLat,iNorth_) 
@@ -294,17 +322,19 @@ contains
                - Dt * ( &
                Vel_CD(iLon,iLat,iNorth_)*GradLatVel_CD(iLon,iLat,iUp_) + &
                Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iUp_)) &
-               + Dt * DiffVel_CD(iLon,iLat,iUp_)
+               + Dt * (&
+               DiffLonVel_CD(iLon,iLat,iUp_)+DiffLatVel_CD(iLon,iLat,iUp_))
+
+          ! Same as bulk vertical velocity (above) but for each species
 
           do iSpc = 1, nSpecies
-             call calc_rusanov_horizontal( VertVel_CV(:,:,iSpc), &
-                  GradLonVel_CD(:,:,iUp_), GradLatVel_CD(:,:,iUp_), &
-                  DiffVel_CD(:,:,iUp_))
              NewVertVel_CV(iLon,iLat,iSpc) = NewVertVel_CV(iLon,iLat,iSpc) &
                   - Dt * ( &
-                  Vel_CD(iLon,iLat,iNorth_)*GradLatVel_CD(iLon,iLat,iUp_) + &
-                  Vel_CD(iLon,iLat,iEast_ )*GradLonVel_CD(iLon,iLat,iUp_)) &
-                  + Dt * DiffVel_CD(iLon,iLat,iUp_)
+                  Vel_CD(iLon,iLat,iNorth_)*GradLatVertVel_CV(iLon,iLat,iSpc)+&
+                  Vel_CD(iLon,iLat,iEast_ )*GradLonVertVel_CV(iLon,iLat,iSpc))&
+                  + Dt * ( &
+                  DiffLatVertVel_CV(iLon,iLat,iSpc) + &
+                  DiffLonVertVel_CV(iLon,iLat,iSpc))
           enddo
 
           if (UseCoriolis) then
@@ -319,63 +349,69 @@ contains
                   + CoriolisSin * Vel_CD(iLon,iLat,iEast_))
           endif
 
-!          if (iLon == 1) then
-!             write(*,*) "dt : ",dt, iAlt
-!             write(*,*) "gradlon: ",GradLonVel_CD(iLon,iLat,iNorth_)
-!             write(*,*) "tanlat : ",&
-!                  TanLatitude(iLat,iBlock)*Vel_CD(iLon,iLat,iEast_)**2 &
-!                  / RadialDistance(iAlt)
-!             write(*,*) "gradt  : ",GradLatTemp_C(iLon,iLat)
-!             write(*,*) "gradrho: ", &
-!                  GradLatRho_C(iLon,iLat)*Temp_C(iLon,iLat)/Rho_C(iLon,iLat)
-!             write(*,*) "diff   : ",DiffVel_CD(iLon,iLat,iNorth_)
-!            write(*,*) "centr  : ",CentrifugalParameter * RadialDistance(iAlt)
-!            write(*,*) "cori   : ",CoriolisParameter *Vel_CD(iLon,iLat,iEast_)
-!             write(*,*) "vel after cor : ",NewVel_CD(iLon,iLat,iNorth_)
-!          endif
-
-
           ! dT/dt = -(V.grad T + (gamma - 1) T div V
-
-!          NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat)
-
-!          NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat) - Dt * ( &
-!               + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
-!               + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
-!               + Dt * DiffTemp_C(iLon,iLat)
-          
-!          NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat) - Dt * ( &
-!               Temp_C(iLon,iLat) * DivVel_C(iLon,iLat)/cp_c(iLon,iLat) &
-!               + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
-!               + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
-!               + Dt * DiffTemp_C(iLon,iLat)
 
           NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat) - Dt * ( &
                (gamma-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat) &
                + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
                + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
-               + Dt * DiffTemp_C(iLon,iLat)
-
-          if (iDebugLevel > 5 .and. iLon <= 2 .and. iAlt == 30) then
-             write(*,*) "newtemp_c : ",ilon, ilat, ialt, NewTemp_C(iLon,iLat), &
-                  (gamma-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat), &
-                  GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_), &
-                  GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_), &
-                  Dt * DiffTemp_C(iLon,iLat), &
-                  GradLatVel_CD(iLon,iLat,iNorth_), &
-                  GradLonVel_CD(iLon,iLat,iEast_), &                                                        
-                  -TanLatitude(iLat,iBlock) * Vel_CD(iLon,iLat,iNorth_) / &                                                         
-                  RadialDistance(iAlt)
-          endif
+               + Dt * (DiffLonTemp_C(iLon,iLat)+DiffLatTemp_C(iLon,iLat))
 
        end do
     end do
 
   end subroutine horizontal_solver
 
+  !=====================================================================
+  subroutine calc_rusanov_lats(Var, GradVar, DiffVar)
+
+    use ModSizeGitm
+    use ModGITM
+
+    implicit none
+  
+    real, intent(in)  :: Var(-1:nLons+2, -1:nLats+2)
+    real, intent(out) :: GradVar(nLons, nLats)
+    real, intent(inout) :: DiffVar(nLons, nLats)
+
+    real :: DiffLocP(-1:nLats+1), InvDiffLocP(-1:nLats+1)
+
+    real, dimension(1:nLats+1) :: VarNorth, VarSouth, DiffFlux
+    real :: InvdLat(nLats), InvdLon
+
+    integer :: iLon
+
+    ! Calculate gradient and diffusive flux with respect to latitude
+
+    InvdLat = InvDLatDist_GB(1:nLats,iAlt,iBlock)
+
+    do iLon = 1, nLons
+
+       call calc_facevalues_lats(iAlt, iBlock, Var(iLon,:), &
+            VarSouth, VarNorth)
+
+       ! Gradient based on averaged Left/Right values
+
+       GradVar(iLon,:) = 0.5 * &
+            (VarSouth(2:nLats+1)+VarNorth(2:nLats+1) - &
+            VarSouth(1:nLats)-VarNorth(1:nLats)) * InvdLat
+
+       ! Rusanov/Lax-Friedrichs diffusive term
+       DiffFlux = 0.5 * max(&
+            cMax_GDB(iLon,0:nLats  ,iAlt,iNorth_,iBlock),&
+            cMax_GDB(iLon,1:nLats+1,iAlt,iNorth_,iBlock)) &
+            * (VarNorth - VarSouth)
+
+       DiffVar(iLon,:) = &
+            (DiffFlux(2:nLats+1) - DiffFlux(1:nLats)) * &
+            InvdLat
+
+    end do
+
+  end subroutine calc_rusanov_lats
 
   !=====================================================================
-  subroutine calc_rusanov_horizontal(Var, GradLonVar, GradLatVar, DiffVar)
+  subroutine calc_rusanov_lons(Var, GradVar, DiffVar)
 
     use ModSizeGitm
     use ModGITM
@@ -383,64 +419,129 @@ contains
     implicit none
 
     real, intent(in)  :: Var(-1:nLons+2, -1:nLats+2)
-    real, intent(out) :: GradLonVar(nLons, nLats), GradLatVar(nLons, nLats)
+    real, intent(out) :: GradVar(nLons, nLats)
     real, intent(out) :: DiffVar(nLons, nLats)
 
-    real, dimension(1:nLats+1) :: VarNorth, VarSouth, DiffLatFlux
-    real, dimension(1:nLons+1) :: VarEast,  VarWest,  DiffLonFlux
+    real, dimension(1:nLons+1) :: VarEast,  VarWest,  DiffFlux
 
-    integer :: iLon, iLat
+    integer :: iLat
 
     real :: InvdLat(nLats), InvdLon
-
-    ! Calculate gradient and diffusive flux with respect to latitude
-
-    InvdLat = 1.0 / dLatDist_GB(1:nLats,iAlt,iBlock)
-
-    do iLon = 1, nLons
-       call calc_GITM_facevalues(nLats, latitude(:,iBlock), Var(iLon,:), &
-            VarSouth, VarNorth)
-       ! Gradient based on averaged Left/Right values
-
-       GradLatVar(iLon,:) = 0.5 * &
-            (VarSouth(2:nLats+1)+VarNorth(2:nLats+1) - &
-            VarSouth(1:nLats)-VarNorth(1:nLats)) * InvdLat
-
-       ! Rusanov/Lax-Friedrichs diffusive term
-       DiffLatFlux = 0.5 * max(&
-            cMax_GDB(iLon,0:nLats  ,iAlt,iNorth_,iBlock),&
-            cMax_GDB(iLon,1:nLats+1,iAlt,iNorth_,iBlock)) &
-            * (VarNorth - VarSouth)
-
-       DiffVar(iLon,:) = (DiffLatFlux(2:nLats+1) - DiffLatFlux(1:nLats)) * &
-            InvdLat
-    end do
 
     ! Calculate gradient and diffusive flux with respect to longitude
     do iLat = 1, nLats
 
-       InvdLon = 1.0 / dLonDist_GB(iLat,iAlt,iBlock)
+       InvdLon = InvDLonDist_GB(iLat,iAlt,iBlock)
 
-       call calc_GITM_facevalues(nLons, Longitude(:,iBlock), Var(:,iLat), &
-            VarWest, VarEast)
+       call calc_facevalues_lons(Var(:,iLat), VarWest, VarEast)
 
        ! Gradient based on averaged West/East values
 
-       GradLonVar(:,iLat) = 0.5 * &
+       GradVar(:,iLat) = 0.5 * &
             (VarWest(2:nLons+1) + VarEast(2:nLons+1) - &
             VarWest(1:nLons)    - VarEast(1:nLons)) * InvdLon
 
        ! Rusanov/Lax-Friedrichs diffusive term
-       DiffLonFlux = 0.5 * max(&
+       DiffFlux = 0.5 * max(&
             cMax_GDB(0:nLons,   iLat, iAlt, iEast_, iBlock), &
             cMax_GDB(1:nLons+1, iLat, iAlt, iEast_, iBlock)) &
             * (VarEast - VarWest)
 
-       DiffVar(:,iLat) = DiffVar(:,iLat) + &
-            (DiffLonFlux(2:nLons+1) - DiffLonFlux(1:nLons)) * InvdLon
+       DiffVar(:,iLat) = &
+            (DiffFlux(2:nLons+1) - DiffFlux(1:nLons)) * InvdLon
 
     end do
 
-  end subroutine calc_rusanov_horizontal
+  end subroutine calc_rusanov_lons
 
 end subroutine advance_horizontal
+
+!=====================================================================
+!
+!=====================================================================
+
+subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
+
+  use ModSizeGITM, only: nLats
+  use ModGITM, only: dLatDist_GB, InvDLatDist_GB
+  use ModInputs, only: TypeLimiter, UseMinMod, UseMC
+  use ModLimiter
+
+  implicit none
+  
+  integer, intent(in) :: iAlt, iBlock
+  real, intent(in)    :: Var(-1:nLats+2)
+  real, intent(out)   :: VarLeft(1:nLats+1), VarRight(1:nLats+1)
+
+  real :: dVarUp, dVarDown, dVarLimited(0:nLats+1)
+  real :: DiffLocP(-1:nLats+1), InvDiffLocP(-1:nLats+1)
+
+  integer :: i
+
+  if (UseMinMod) then 
+     do i=0,nLats+1
+        dVarUp         = (Var(i+1) - Var(i))  *InvDLatDist_GB(i,iAlt,iBlock)
+        dVarDown       = (Var(i)   - Var(i-1))*InvDLatDist_GB(i-1,iAlt,iBlock)
+        dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
+     end do
+  endif
+
+  if (UseMC) then
+     do i=0,nLats+1
+        dVarUp        = (Var(i+1) - Var(i))   * InvDLatDist_GB(i,iAlt,iBlock)
+        dVarDown      = (Var(i)   - Var(i-1)) * InvDLatDist_GB(i-1,iAlt,iBlock)
+        dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+     end do
+  endif
+
+  do i=1,nLats+1
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLatDist_GB(i-1,iAlt,iBlock)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_GB(i,iAlt,iBlock)
+  end do
+
+end subroutine calc_facevalues_lats
+
+
+!=====================================================================
+!
+!=====================================================================
+
+subroutine calc_facevalues_lons(Var, VarLeft, VarRight)
+
+  use ModSizeGITM, only: nLons
+  use ModInputs, only: UseMinMod, UseMC
+  use ModLimiter
+
+  implicit none
+  
+  real, intent(in)    :: Var(-1:nLons+2)
+  real, intent(out)   :: VarLeft(1:nLons+1), VarRight(1:nLons+1)
+
+  real :: dVarUp, dVarDown, dVarLimited(0:nLons+1)
+
+  integer :: i
+
+  if (UseMinMod) then 
+     do i=0,nLons+1
+        dVarUp         = (Var(i+1) - Var(i))  
+        dVarDown       = (Var(i)   - Var(i-1))
+        dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
+     end do
+  endif
+
+  if (UseMC) then
+     do i=0,nLons+1
+        dVarUp        = (Var(i+1) - Var(i))   
+        dVarDown      = (Var(i)   - Var(i-1)) 
+        dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
+     end do
+  endif
+
+  do i=1,nLons+1
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  
+  end do
+
+end subroutine calc_facevalues_lons
+
+
