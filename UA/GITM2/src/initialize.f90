@@ -82,7 +82,11 @@ subroutine initialize_gitm
 
   endif
 
+  InvDAlt = 1.0/dAlt
+
   RadialDistance = RBody + Altitude
+  InvRadialDistance = 1.0/RadialDistance
+
   Gravity = &
        -Gravitational_Constant*&
        (RBody/RadialDistance) ** 2
@@ -123,17 +127,25 @@ subroutine initialize_gitm
 
   ! Precalculate the physical size of cells in the Lat and Lon directions
   do iLat = 0, nLats+1
-     do iAlt = 0, nAlts+1
+     do iAlt = -1, nAlts+2
         do iBlock = 1, nBlocks
            dLatDist_GB(iLat, iAlt, iBlock) = 0.5 * &
                 (Latitude(iLat+1, iBlock) - Latitude(iLat-1, iBlock)) * &
-                RadialDistance(iAlt)
+                RadialDistance(iAlt)           
            dLonDist_GB(iLat, iAlt, iBlock) = &
                 (Longitude(2,iBlock) - Longitude(1,iBlock)) * &
-                RadialDistance(iAlt) * max(abs(cos(Latitude(iLat,iBlock))),0.01)
+                RadialDistance(iAlt)*max(abs(cos(Latitude(iLat,iBlock))),0.01)
         enddo
      enddo
   enddo
+  dLatDist_GB(-1, :, 1:nBlocks)      = dLatDist_GB(0, :, 1:nBlocks)
+  dLatDist_GB(nLats+2, :, 1:nBlocks) = dLatDist_GB(nLats+1, :, 1:nBlocks)
+
+  dLonDist_GB(-1, :, 1:nBlocks)      = dLonDist_GB(0, :, 1:nBlocks)
+  dLonDist_GB(nLats+2, :, 1:nBlocks) = dLonDist_GB(nLats+1, :, 1:nBlocks)
+
+  InvDLatDist_GB = 1/dLatDist_GB
+  InvDLonDist_GB = 1/dLonDist_GB
 
   ! Precalculate the tangent of the latitude
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
