@@ -27,7 +27,8 @@ subroutine calc_chemistry(iBlock)
   real, dimension(nLons,nLats,nAlts) :: &
        tr3d, tr33d, tr3m0443d, tr3m083d, tr3m043d, &
        te3m0393d, te3m0853d, te33d, te3m053d
-  real :: te3m05, tr3m044, tr3m04, tr3m08, te3m039, te3m085, rr_opn2
+  real :: te3m05, tr3m044, tr3m04, tr3m08, te3m039, te3m085
+  real :: rr_n2d_e, rr_opn2, rr_no, rr_no_2
 
   logical :: UseNeutralConstituent(nSpeciesTotal)
   logical :: UseIonConstituent(nIons)
@@ -91,14 +92,18 @@ subroutine calc_chemistry(iBlock)
            tn = Temperature(iLon,iLat,iAlt,iBlock)*&
                 TempUnit(iLon,iLat,iAlt)
 
-           rr_opn2 = min(5.0e-19,4.5e-20*tr3**2)
-
            DtTotal = 0.0
            EmissionTotal = 0.0
 
            Ions = IDensityS(iLon,iLat,iAlt,:,iBlock)
            Neutrals = NDensityS(iLon,iLat,iAlt,:,iBlock)
  
+           rr_opn2 = min(5.0e-19,4.5e-20*tr3**2)
+           rr_n2d_e = 5.5e-16 * sqrt(te3)
+           rr_no = 4.5e-6*exp(-1.e-8*(Neutrals(iO2_)*1.e-6)**0.38)
+           rr_no_2 = 5.88e-7*(1+0.2*(f107-65)/100)*exp(-2.115e-18* &
+                (Neutrals(iO2_)*1.e-6)**0.8855)
+
            do while (DtTotal < Dt)
 
               ChemicalHeatingSub = 0.0
@@ -1043,10 +1048,8 @@ subroutine calc_chemistry(iBlock)
               ! N(2D) + e -> N(4S) + e + 2.38 eV
               ! -----------
 
-              rr = 5.5e-16 * te3 ** (0.5)
-
               Reaction = &
-                   rr * &
+                   rr_n2d_e * &
                    Neutrals(iN_2D_) * &
                    Ions(ie_)
 
@@ -1096,11 +1099,8 @@ subroutine calc_chemistry(iBlock)
               ! NO -> N(4S) + O
               ! -----------
 
-!              rr = 8.3e-6
-              rr=4.5e-6*exp(-1.e-8*(Neutrals(iO2_)*1.e-6)**0.38)
-
               Reaction = &
-                   rr * &
+                   rr_no * &
                    Neutrals(iNO_)
 
               NeutralSources(iN_4S_) = NeutralSources(iN_4S_) + Reaction
@@ -1216,11 +1216,8 @@ subroutine calc_chemistry(iBlock)
 
 !              rr = 6.0e-7
 
-              rr=5.88e-7*(1+0.2*(f107-65)/100)*exp(-2.115e-18* &
-                   (Neutrals(iO2_)*1.e-6)**0.8855)
-
               Reaction = &
-                   rr * &
+                   rr_no_2 * &
                    Neutrals(iNO_)
 
               IonSources(iNOP_)   = IonSources(iNOP_)   + Reaction
