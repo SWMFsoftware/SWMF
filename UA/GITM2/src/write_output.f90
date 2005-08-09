@@ -10,6 +10,8 @@ subroutine write_output
   real, external :: get_timing
   integer :: i, nMLTsTmp,nLatsTmp, iBlock
   logical :: IsDone
+  real    :: t
+  character (len=4) :: sTimeUnit
 
   if (floor((tSimulation-dt)/DtReport) /= &
        floor((tsimulation)/DtReport) .and. iDebugLevel >= 0) then
@@ -17,9 +19,21 @@ subroutine write_output
         if(iProc==0)write(*,"(a,i6,a,3i2.2)") "UA:GITM2 iStep ", iStep, &
              ", Time : ",iTimeArray(4:6)
      else
+        t = get_timing("GITM")
+        if (t < 120.0) then
+           sTimeUnit = " sec"
+        else 
+           if (t < 7200.0) then
+              t = t/60.0
+              sTimeUnit = " min"
+           else
+              t = t/3600.0
+              sTimeUnit = " hrs"
+           endif
+        endif
         write(*,"(a,i6,a,3i2.2,a,f10.2,a)") "iStep ", iStep, &
              ", Time : ",iTimeArray(4:6), &
-             ", RealTime : ",get_timing("GITM")/60.0," min"
+             ", RealTime : ",t,sTimeUnit
      endif
   endif
 
