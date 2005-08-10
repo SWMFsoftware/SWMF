@@ -24,7 +24,8 @@ MODULES = \
 	ModRates.o\
 	ModEUV.o\
 	ModElectrodynamics.o\
-	ModSatellites.o
+	ModSatellites.o\
+	ModLimiter.o
 
 OBJECTS = \
 	planet.o\

@@ -308,7 +308,7 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
   use ModGitm, only: dAlt, InvDAlt
   use ModSizeGITM, only: nAlts
   use ModInputs, only: UseMinMod, UseMC
-  use ModLimiter
+  use ModLimiterGitm
 
   implicit none
   

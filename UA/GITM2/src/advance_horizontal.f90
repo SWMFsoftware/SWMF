@@ -465,7 +465,7 @@ subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
   use ModSizeGITM, only: nLats
   use ModGITM, only: dLatDist_GB, InvDLatDist_GB
   use ModInputs, only: TypeLimiter, UseMinMod, UseMC
-  use ModLimiter
+  use ModLimiterGitm
 
   implicit none
   
@@ -510,7 +510,7 @@ subroutine calc_facevalues_lons(Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLons
   use ModInputs, only: UseMinMod, UseMC
-  use ModLimiter
+  use ModLimiterGitm
 
   implicit none
   

@@ -1,4 +1,4 @@
-module ModLimiter
+module ModLimiterGitm
   implicit none
 contains
   !============================================================================
@@ -31,4 +31,4 @@ contains
 
   end function Limiter_mc
 
-end module ModLimiter
+end module ModLimiterGitm
