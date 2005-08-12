@@ -2554,14 +2554,28 @@ contains
     if(UsePartImplicit)then
        select case(optimize_message_pass)
        case('oldopt','allold')
-          write(*,'(2a)') NameSub//&
-               ' WARNING: PartImplicit scheme does not work with',&
-               ' TypeMessagePass=oldopt or allold !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass=allopt'
+          if(iProc==0)then
+             write(*,'(2a)') NameSub//&
+                  ' WARNING: PartImplicit scheme does not work with',&
+                  ' TypeMessagePass=oldopt or allold !!!'
+             if(UseStrict)call stop_mpi('Correct PARAM.in!')
+             write(*,*) NameSub//' setting optimize_message_pass=allopt'
+          end if
           optimize_message_pass='allopt'
        end select
     end if
+
+    if(UseImplicit .and. UsePartSteady)then
+       if(iProc==0)then
+          write(*,'(a)') NameSub//&
+               ' WARNING: Implicit and part steady schemes do not'//&
+               ' work together !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*) NameSub//' setting UsePartSteady=F'
+       endif
+       UsePartSteady = .false.
+    end if
+
     !Finish checks for implicit                     !^CFG END IMPLICIT
 
   end subroutine check_parameters
