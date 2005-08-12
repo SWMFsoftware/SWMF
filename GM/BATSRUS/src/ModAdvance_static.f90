@@ -3,8 +3,8 @@ Module ModAdvance
   use ModSize
   use ModVarIndexes
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
-  
+  use ModProcMH,     ONLY: iProc, nProc
+
   implicit none
   save
 
@@ -170,11 +170,30 @@ Module ModAdvance
   real, dimension(nCorrectedFaceValues,1:nI,1:nJ,1:2,nBLK) :: &
           CorrectedFlux_VZB
 
+  !\
+  ! Block type information
+  !/
+  integer              :: iTypeAdvance_B(MaxBlock)
+  integer, allocatable :: iTypeAdvance_BP(:,:)
+
+  ! Named indexes for block types
+  integer, parameter :: &
+       SkippedBlock_=0,     & ! Blocks which were unused originally.
+       SteadyBlock_=1,      & ! Blocks which do not change
+       SteadyBoundBlock_=2, & ! Blocks surrounding the evolving blocks
+       ExplBlock_=3,        & ! Blocks changing with the explicit scheme
+       ImplBlock_=4           ! Blocks changing with the implicit scheme
+
 contains
 
   !============================================================================
 
   subroutine init_mod_advance
+
+    if(allocated(iTypeAdvance_BP)) RETURN
+    allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
+    iTypeAdvance_B  = -1
+    iTypeAdvance_BP = -1
 
     if(IsDynamicAdvance .and. iProc==0)then
        call write_prefix
@@ -186,6 +205,8 @@ contains
   !============================================================================
 
   subroutine clean_mod_advance
+
+    if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
 
     if(IsDynamicAdvance .and. iProc==0)then
        call write_prefix
