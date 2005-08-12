@@ -23,7 +23,7 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
   use ModMain
   use ModVarIndexes,ONLY:nVar
   use ModCT                                             !^CFG IF CONSTRAINB
-  use ModAdvance, ONLY :  State_VGB
+  use ModAdvance, ONLY :  State_VGB, iTypeAdvance_B
   use ModAMR, ONLY : &
        local_cube,local_cubeBLK
   use ModParallel, ONLY: &
@@ -42,7 +42,10 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
   real    :: BzFaceFine_ZQS(1:nI,1:nJ,4,2)
   logical :: IsFinerNei_E(east_:top_)       !^CFG END CONSTRAINB
 
-  real,dimension(1) :: DtBroadcast
+  ! Buffer for broadcasting some scalars to the refined blocks
+  integer, parameter :: nSizeBcastBuffer = 8
+  real               :: BcastBuffer_I(nSizeBcastBuffer)
+
   real, dimension(1:nVar,&
       1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn):: sol
   real, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn):: sol1,sol2,sol3
@@ -54,27 +57,28 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
   if(.not.any(PEsRefBlk(1:nPEsRefBlk)==iProc)) return
 
   !\
-  ! Send coarse block geometry to all PEs owning
-  ! eight newly created refined blocks.
+  ! Send coarse block geometry and time stepping info to all PEs owning
+  ! the eight newly created refined blocks.
   !/
   if (iProc == refined_PE) then
-     dxyz(1) = dx_BLK(refined_BLK)
-     dxyz(2) = dy_BLK(refined_BLK)
-     dxyz(3) = dz_BLK(refined_BLK)
-     xyzStart(:)=xyzStart_BLK(:,refined_BLK)
-     DtBroadcast(1) = dt_BLK(refined_BLK)/2
+     BcastBuffer_I(1)   = 0.5*Dt_BLK(refined_BLK)
+     BcastBuffer_I(2)   = iTypeAdvance_B(refined_BLK)
+     BcastBuffer_I(3)   = Dx_BLK(refined_BLK)
+     BcastBuffer_I(4)   = Dy_BLK(refined_BLK)
+     BcastBuffer_I(5)   = Dz_BLK(refined_BLK)
+     BcastBuffer_I(6:8) = XyzStart_BLK(:,refined_BLK)
   end if
-  if (nPEsRefBlk > 1) then
-     call cube_bcast_r(nPEsRefBlk,PEsRefBlk,xyzStart,3)
-     call cube_bcast_r(nPEsRefBlk,PEsRefBlk,dxyz,3)
-     call cube_bcast_r(nPEsRefBlk,PEsRefBlk,DtBroadcast,1)
-  end if
+  if (nPEsRefBlk > 1) &
+       call cube_bcast_r(nPEsRefBlk,PEsRefBlk,BcastBuffer_I,nSizeBcastBuffer)
   do iCube=1,8
-     if(iProc==local_cube(iCube))&
-          dt_BLK(local_cubeBLK(iCube))= DtBroadcast(1)
+     if(iProc==local_cube(iCube)) then
+        iBLK = local_cubeBLK(iCube)
+        Dt_BLK(iBLK)         =      BcastBuffer_I(1)
+        iTypeAdvance_B(iBLK) = nint(BcastBuffer_I(2))
+        Dxyz                 =      BcastBuffer_I(3:5)
+        XyzStart             =      BcastBuffer_I(6:8)
+     end if
   end do
-
-
   !\
   ! If inside the time loop, must also assign solution to
   ! newly created refined blocks.
@@ -209,12 +213,12 @@ subroutine  cube_bcast_r(nPar,Par,var,isize)
 
      if (number_send_requests > 0) then
         call MPI_waitall(number_send_requests, &
-             send_requests(1), status(1,1), iError)
+             send_requests(1), Status, iError)
      end if
   else
      var = -888888.
      call MPI_recv(var,isize, MPI_REAL, Par(1), &
-          itag, iComm,RECstatus,iError)
+          itag, iComm, RECstatus, iError)
   end if
 
 end subroutine cube_bcast_r
@@ -244,7 +248,7 @@ subroutine  cube_bcast_l(nPar,Par,var,isize)
 
      if (number_send_requests > 0) then
         call MPI_waitall(number_send_requests, &
-             send_requests(1), status(1,1), iError)
+             send_requests(1), status, iError)
      end if
   else
      var = .false.
@@ -392,10 +396,11 @@ subroutine set_refined_block_geometry
      ! Get the multiblock level for the current block.
      !/
      iBLK = local_cubeBLK(iPE)
-  !\
+     !\
      ! Set refined block corner offsets.
      !/
-     xyzStart_BLK(:,iBLK)=xyzStart(:) +(iShiftChild_ID(iPE,:) - cQuarter)*dxyz(:)
+     xyzStart_BLK(:,iBLK) = xyzStart(:) &
+          + (iShiftChild_ID(iPE,:) - cQuarter)*dxyz(:)
      !\
      ! Assign refined block geometry parameters.
      !/
@@ -421,25 +426,27 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
   use ModProcMH
   use ModMain
   use ModVarIndexes,ONLY:nVar
-  use ModAdvance, ONLY : &
-       State_VGB,tmp1_BLK
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK          !^CFG IF CONSTRAINB
+  use ModAdvance, ONLY : State_VGB, tmp1_BLK, &
+       iTypeAdvance_B, SkippedBlock_
+  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
   use ModAMR, ONLY : local_cube,local_cubeBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK, &
        dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK
-  use ModGeometry, ONLY :  R2_BLK                             !^CFG IF SECONDBODY
+  use ModGeometry, ONLY :  R2_BLK                           !^CFG IF SECONDBODY
   use ModNumConst
   use ModMpi
   implicit none
 
   integer, intent(in) :: nPEsCrseBlk, PEsCrseBlk(8)
 
-  integer :: remaining_PE, remaining_BLK, icube, i
+  integer :: remaining_PE, remaining_BLK, icube, i, iBLK
   integer :: iError,iTag
   integer :: send_request, receive_requests(7), number_receive_requests, &
-       status(MPI_STATUS_SIZE, 7)
+       Status(MPI_STATUS_SIZE, 7)
 
-  real:: DtToReduce, DtBuff(8)
+  real    :: DtToReduce, DtBuff(8)
+  integer :: MaxTypeAdvance, iTypeAdvance_I(8)
+  !--------------------------------------------------------------------------
 
   ! Return if processor is not needed here
   if(.not.any(PEsCrseBlk(1:nPEsCrseBlk) == iProc)) return
@@ -475,22 +482,23 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
      else if (iProc == local_cube(icube)) then
         !\
-        ! Reset the geometry parameters for the other
-        ! seven blocks that are nolonger used to defaults
-        ! values.
+        ! Reset the geometry parameters to the default values
+        ! for the other seven blocks that are no longer used.
         !/
-        dx_BLK(local_cubeBLK(icube)) = -777777.
-        dy_BLK(local_cubeBLK(icube)) = -777777.
-        dz_BLK(local_cubeBLK(icube)) = -777777.
-        xyzStart_BLK(:,local_cubeBLK(icube)) = -777777.
+        iBLK = local_cubeBLK(icube)
+        Dx_BLK(iBLK)         = -777777.
+        Dy_BLK(iBLK)         = -777777.
+        Dz_BLK(iBLK)         = -777777.
+        XyzStart_BLK(:,iBLK) = -777777.
 
-        x_BLK(:,:,:,local_cubeBLK(icube)) = -777777.
-        y_BLK(:,:,:,local_cubeBLK(icube)) = -777777.
-        z_BLK(:,:,:,local_cubeBLK(icube)) = -777777.
-        R_BLK(:,:,:,local_cubeBLK(icube)) = -777777.
-        R2_BLK(:,:,:,local_cubeBLK(icube)) = -777777.   !^CFG IF SECONDBODY
+        x_BLK(:,:,:,iBLK)    = -777777.
+        y_BLK(:,:,:,iBLK)    = -777777.
+        z_BLK(:,:,:,iBLK)    = -777777.
+        R_BLK(:,:,:,iBLK)    = -777777.
+        R2_BLK(:,:,:,iBLK)   = -777777.   !^CFG IF SECONDBODY
 
-        unusedBLK(local_cubeBLK(icube)) = .true.
+        UnusedBlk(iBLK)      = .true.
+        iTypeAdvance_B(iBLK) = SkippedBlock_
 
      end if
   end do
@@ -508,23 +516,41 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
      end if                                       !^CFG END CONSTRAINB
  
      !\ 
-     !Calculating dt_BLK(Coarse)=2*min(dt_BLK(Ref))
+     ! Calculating dt_BLK(Coarse)=2*min(dt_BLK(Ref))
      !/
-
      DtToReduce = minval(dt_BLK(local_cubeBLK(1:8)),&
           MASK=local_cube(1:8)==iProc)
      iTag=10
      if(iProc/=remaining_PE) then 
         call MPI_isend(DtToReduce,1,MPI_REAL,remaining_PE,&
              iTag,iComm,send_request,iError)
-        call MPI_waitall(1,send_request,status(1,1),iError)
+        call MPI_waitall(1,send_request,Status,iError)
      else
         DtBuff(1) = DtToReduce
         do i=2,nPEsCrseBlk
            call MPI_recv(DtBuff(i),1,MPI_REAL,PEsCrseBlk(i),&
-                iTag,iComm,status(1,1),iError)
+                iTag,iComm,Status,iError)
         end do
         dt_BLK(remaining_BLK) = minval(DtBuff(1:nPEsCrseBlk))*2
+     end if
+
+     !\ 
+     ! Calculating iTypeAdvance_B(Coarse)=maxval(iTypeAdvance_I(Refined))
+     !/
+     MaxTypeAdvance = maxval(iTypeAdvance_B(local_cubeBLK(1:8)),&
+          MASK=local_cube(1:8)==iProc)
+
+     if(iProc/=remaining_PE) then 
+        call MPI_isend(MaxTypeAdvance,1,MPI_INTEGER,remaining_PE,&
+             iTag,iComm,send_request,iError)
+        call MPI_waitall(1,send_request,Status,iError)
+     else
+        iTypeAdvance_I(1) = MaxTypeAdvance
+        do i=2,nPEsCrseBlk
+           call MPI_recv(iTypeAdvance_I(i),1,MPI_INTEGER,PEsCrseBlk(i),&
+                iTag,iComm,Status,iError)
+        end do
+        iTypeAdvance_B(remaining_BLK) = maxval(iTypeAdvance_I(1:nPEsCrseBlk))
      end if
 
      if (iProc == remaining_PE) then
@@ -551,6 +577,7 @@ contains
     integer,parameter :: isize=(nI/2)*(nJ/2)*(nK/2)*nVar
     integer :: number_send_requests, send_requests(7) 
     integer :: iBLK, iShift,jShift,kShift
+
     number_send_requests = 0
 
     do icube = 1, 8
@@ -566,7 +593,7 @@ contains
                State_VGB(1:nVar,2:nI:2, 1:nJ:2, 2:nK:2,iBLK)+  &
                State_VGB(1:nVar,1:nI:2, 2:nJ:2, 2:nK:2,iBLK)+  &
                State_VGB(1:nVar,2:nI:2, 2:nJ:2, 2:nK:2,iBLK))
-          if (icube > 1 .and. iProc .ne. remaining_PE) then
+          if (icube > 1 .and. iProc /= remaining_PE) then
              itag = iBLK
              number_send_requests = number_send_requests + 1
              call MPI_isend(restricted_soln_blks(1,1,1,1,icube), &
@@ -586,7 +613,7 @@ contains
 
     if (iProc == remaining_PE) then ! remaining coarse block
        do icube = 2, 8
-          if (local_cube(icube) .ne. remaining_PE) then
+          if (local_cube(icube) /= remaining_PE) then
              itag = local_cubeBLK(icube)
              number_receive_requests = number_receive_requests + 1
              call MPI_irecv(restricted_soln_blks(1,1,1,1,icube), &
@@ -600,21 +627,24 @@ contains
                receive_requests(1), &
                status(1,1), iError)
        end if
-!\
-  ! Assign default value (to get corners).
-  !/
-  State_VGB(1:nVar,:,:,:,remaining_BLK) = cOne
+       !\
+       ! Assign default value (to get corners).
+       !/
+       State_VGB(1:nVar,:,:,:,remaining_BLK) = cOne
 
-  !\
-  ! Assign coarse solution from the eight restricted solution quadrants of
-  ! original fine blocks.
-  !/
-  do iCube = 1,8
-     call get_shifts(iCube,iShift,jShift,kShift)
-     State_VGB(1:nVar,&
-          1+iShift:nI/2+iShift ,1+jShift:nJ/2+jShift,1+kShift:nK/2+kShift,&
-           remaining_BLK) =  restricted_soln_blks(:,1:nI/2,1:nJ/2,1:nK/2,icube)
-  end do
+       !\
+       ! Assign coarse solution from the eight restricted solution quadrants of
+       ! original fine blocks.
+       !/
+       do iCube = 1,8
+          call get_shifts(iCube,iShift,jShift,kShift)
+          State_VGB(1:nVar,          &
+               1+iShift:nI/2+iShift, &
+               1+jShift:nJ/2+jShift, &
+               1+kShift:nK/2+kShift, &
+               remaining_BLK)        &
+               = restricted_soln_blks(:,1:nI/2,1:nJ/2,1:nK/2,icube)
+       end do
        
     end if ! remaining coarse block
 
@@ -630,6 +660,7 @@ subroutine set_coarse_block_geometry(iBLK)
   integer, intent(in) :: iBLK
 
   dxyz=cTwo*dxyz
+
   ! Former the first child becomes the coarse block. Now his coordinates
   ! are in xyzStart_BLK(:,iBLK)
   xyzStart_BLK(:,iBLK)=xyzStart_BLK(:,iBLK)-&
