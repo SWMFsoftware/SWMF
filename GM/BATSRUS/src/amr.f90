@@ -1,10 +1,11 @@
 !^CFG COPYRIGHT UM
 subroutine amr(idepth)
   use ModProcMH
-  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,unusedBLK,lVerbose
+  use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,MaxBlock,&
+       unusedBLK,lVerbose
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
-  use ModAdvance, ONLY : DivB1_GB
+  use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
   implicit none
@@ -42,11 +43,14 @@ subroutine amr(idepth)
   call MPI_allreduce(minDX,minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
   call MPI_allreduce(maxDX,maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
 
-
-  !--------------------------------------------------------------------
-  ! Fix up other variables due to refinement
-  !
+  ! Renumber blocks
   call number_soln_blocks
+
+  ! Update the global advance info
+  call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+
+  ! Load balance
   call load_balance(.true.,.true.,nBlockMoved)
   if(iProc==0.and.lVerbose>0)then
      ! Write block/cell summary after AMR
@@ -63,12 +67,19 @@ subroutine amr(idepth)
      call write_prefix; write(iUnitOut,*) '|'
   end if
 
+  ! Recalculate neighbor information
   call find_neighbors
+
+  ! Update ghost cells
   call exchange_messages
+
   ! Correct B0 face at newly created and removed resolution changes
   do iBlock=1,nBlock
      if (unusedBLK(iBlock)) CYCLE
      call set_b0_face(iBlock)
   end do
+
+  ! Reset divb (it is undefined in newly created/moved blocks)
   DivB1_GB=-7.70
+
 end subroutine amr
