@@ -30,8 +30,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
   use ModLimiter,       ONLY: UseTVDAtResChange
   use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
-  use ModPartSteady,    ONLY: UsePartSteady, &
-       part_steady_init, part_steady_clean
+  use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
+       RelativeEps_V, AbsoluteEps_V
 
   implicit none
 
@@ -52,18 +52,18 @@ subroutine MH_set_parameters(TypeAction)
 
   ! The name of the command
   character (len=lStringLine) :: NameCommand, StringLine
-  logical                     :: DoEcho
 
   ! Variables to remember for multiple calls
   character (len=lStringLine) :: UpstreamFileName='???'
 
   ! Temporary variables
+  logical :: DoEcho
   integer :: nByteRealRead, nVarRead
   character (len=lStringLine) :: NameEquationRead
 
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
-  character (len=2)  :: NameCompCheck
+  character (len=2)  :: NameCompRead
   integer :: problem_type_r, qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
@@ -80,7 +80,7 @@ subroutine MH_set_parameters(TypeAction)
   real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
   real                        :: xRotateArea, yRotateArea, zRotateArea
 
-  integer :: iSession, iPlotFile
+  integer :: iSession, iPlotFile, iVar
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -213,10 +213,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoTimeAccurate',time_accurate)
         call read_var('UseRotatingBc',UseRotatingBc)
      case("#COMPONENT")
-        call read_var('NameComp',NameCompCheck)
-        if(NameCompCheck /= NameThisComp)&
+        call read_var('NameComp',NameCompRead)
+        if(NameCompRead /= NameThisComp)&
              call stop_mpi(NameSub//' ERROR: BATSRUS is running as component '&
-             //NameThisComp//' and not as '//NameCompCheck)
+             //NameThisComp//' and not as '//NameCompRead)
      case("#DESCRIPTION")
         call check_stand_alone
      case("#BEGIN_COMP","#END_COMP")
@@ -320,11 +320,13 @@ subroutine MH_set_parameters(TypeAction)
         if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
      case("#PARTSTEADY")
         call read_var('UsePartSteady',UsePartSteady)
-        if(UsePartSteady)then
-           call part_steady_init
-        else
-           call part_steady_clean
-        end if
+     case("#PARTSTEADYCRITERIA","#STEADYCRITERIA")
+        call read_var('MinCheckVar',MinCheckVar)
+        call read_var('MaxCheckVar',MaxCheckVar)
+        do iVar=MinCheckVar, MaxCheckVar
+           call read_var('RelativeEps',RelativeEps_V(iVar))
+           call read_var('AbsoluteEps',AbsoluteEps_V(iVar))
+        end do
      case("#PARTLOCAL")                                 !^CFG IF IMPLICIT BEGIN
         call read_var('UsePartLocal',UsePartLocal)
      case("#IMPLICIT")
