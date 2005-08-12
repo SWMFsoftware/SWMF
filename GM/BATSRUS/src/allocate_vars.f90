@@ -113,12 +113,4 @@ subroutine allocate_vars
   unusedBLK     = .true.
   unusedBlock_BP= .false.
 
-  !^CFG IF IMPLICIT BEGIN
-  !\
-  ! allocate implicitBlock_BP and set the default false value
-  !/
-  allocate(implicitBlock_BP(MaxBlock, 0:nProc-1))
-  implicitBlock_BP=.false.
-  !^CFG END IMPLICIT
-
 end subroutine allocate_vars

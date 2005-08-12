@@ -21,11 +21,6 @@ module ModParallel
   !/
   integer, allocatable, dimension(:) :: iBlock_A, iProc_A, iBlockRestartALL_A
 
-  !\                                               !^CFG IF IMPLICIT BEGIN
-  ! logical for explicit vs. implicit blocks
-  !/
-  logical, allocatable :: implicitBlock_BP(:,:)    !^CFG END IMPLICIT
-
   !\
   ! Neighbor solution block refinement levels
   ! ( 0=neighbors at same level, 
