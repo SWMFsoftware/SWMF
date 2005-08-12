@@ -11,6 +11,8 @@ module ModPartSteady
   use ModSize,       ONLY: MaxBlock
   use ModProcMH,     ONLY: nProc
   use ModMain,       ONLY: nBlock
+  use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
+       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_
 
   implicit none
 
@@ -18,65 +20,20 @@ module ModPartSteady
 
   private ! except
 
-  logical, public :: UsePartSteady ! True if the part steady scheme used
+  logical, public :: UsePartSteady       ! True if the part steady scheme used
+  integer, public :: MinCheckVar = 1     ! First variable to check for change
+  integer, public :: MaxCheckVar = nVar  ! Last  variable to check for change
 
-  public IsEvolving_B       ! Logical array for evolving blocks
-  public IsSteadyBoundary_B ! Logical array for blocks around evolving blocks
-  public part_steady_init   ! Allocate and initialize variables
-  public part_steady_clean  ! Deallocate variables
+  real, public :: RelativeEps_V(nVar) = 0.001  ! Relative change per variable
+  real, public :: AbsoluteEps_V(nVar) = 0.0001 ! Absolute change per variable
+
   public part_steady_switch ! Switch to and from the evolving/bounday blocks
   public part_steady_select ! Select the evolving/bounday blocks
 
-
-  logical, parameter :: DoDebug = .true.
-
-  ! Logicals for the local PE (*_B) and for all PE-s (*_BP) for
-  ! 1. Blocks which were unused originally.
-  ! 2. Blocks which have changed already are 'evolving'.
-  ! 3. Blocks surrounding the evolving blocks from the 'steady boundary'.
-  logical, allocatable :: &
-       IsUnusedOrig_B(:),     IsUnusedOrig_BP(:,:), &
-       IsEvolving_B(:),       IsEvolving_BP(:,:), &
-       IsSteadyBoundary_B(:), IsSteadyBoundary_BP(:,:)
-
-
-  ! The variables to be checked are indexed from MinCheckVar to MaxCheckVar
-  integer :: MinCheckVar = 1, MaxCheckVar = nVar
-
-  ! The significant relative and absolute changes for all variables
-  real :: RelativeEps_V(nVar) = 0.001, AbsoluteEps_V(nVar) = 1.0e-4
+  logical, parameter :: DoDebug = .false.
 
 contains
   !===========================================================================
-  subroutine part_steady_init
-
-    if(allocated(IsEvolving_B)) RETURN
-
-    allocate( &
-         IsUnusedOrig_B( MaxBlock),              &
-         IsUnusedOrig_BP(MaxBlock,0:nProc-1),    &
-         IsEvolving_B( MaxBlock),                &
-         IsEvolving_BP(MaxBlock,0:nProc-1),      &
-         IsSteadyBoundary_B( MaxBlock),          &
-         IsSteadyBoundary_BP(MaxBlock,0:nProc-1) &
-         )
-
-    if(DoDebug)write(*,*)'part_steady_init: allocated variables'
-
-  end subroutine part_steady_init
-
-  !===========================================================================
-  subroutine part_steady_clean
-
-    if(.not.allocated(IsEvolving_B)) RETURN
-
-    deallocate(IsEvolving_B, IsEvolving_BP, IsSteadyBoundary_B)
-
-    if(DoDebug)write(*,*)'part_steady_clean: deallocated variables'
-
-  end subroutine part_steady_clean
-  !===========================================================================
-
   subroutine part_steady_switch(IsOn)
 
     use ModMain, ONLY: iNewDecomposition, nBlockMax, UnusedBLK
@@ -92,25 +49,27 @@ contains
 
     if(IsOn)then
        ! Store unused blocks
-       IsUnusedOrig_B( 1:nBlockMax)   = UnusedBLK(1:nBlockMax)
-       IsUnusedOrig_BP(1:nBlockMax,:) = UnusedBlock_BP(1:nBlockMax,:)
+       where(UnusedBLK(1:nBlockMax)) &
+            iTypeAdvance_B(1:nBlockMax) = SkippedBlock_ 
 
-       ! Select UnusedBLK = IsUnusedOrig or not(evolving or steady_boundary)
-       UnusedBLK(1:nBlockMax) = IsUnusedOrig_B(1:nBlockMax) .or. &
-            .not. (IsEvolving_B(1:nBlockMax) &
-            .or.   IsSteadyBoundary_B(1:nBlockMax) )
+       where(UnusedBlock_BP(1:nBlockMax,:)) &
+            iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
 
-       UnusedBlock_BP(1:nBlockMax,:) = IsUnusedOrig_BP(1:nBlockMax,:) .or. &
-            .not. (IsEvolving_BP(1:nBlockMax,:) &
-            .or.   IsSteadyBoundary_BP(1:nBlockMax,:) )
+       ! Select UnusedBLK to be skipped or steady
+       UnusedBLK(1:nBlockMax) = &
+            iTypeAdvance_B(1:nBlockMax)    <= SteadyBlock_
+       UnusedBlock_BP(1:nBlockMax,:) = &
+            iTypeAdvance_BP(1:nBlockMax,:) <= SteadyBlock_
 
        ! Change the decomposition index
        iNewDecomposition=mod(iNewDecomposition+1, 10000)
 
     else
        ! Restore the original unused blocks
-       UnusedBLK(1:nBlockMax)        = IsUnusedOrig_B(1:nBlockMax)
-       UnusedBlock_BP(1:nBlockMax,:) = IsUnusedOrig_BP(1:nBlockMax,:)
+       UnusedBLK(1:nBlockMax)        = &
+            iTypeAdvance_B(1:nBlockMax)    == SkippedBlock_
+       UnusedBlock_BP(1:nBlockMax,:) = &
+            iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
        ! Restore the decomposition index
        iNewDecomposition = mod(iNewDecomposition-1, 10000)
@@ -135,7 +94,7 @@ contains
 
     logical, intent(out) :: IsNew
 
-    logical :: IsFirstCall = .true.
+    logical :: IsFirstCall = .true., IsFirstSelect=.true.
     integer :: nEvolving, nEvolvingALL, nEvolvingLastALL = -1
     integer :: i, j, k, iVar, iBlock
     integer :: jBlock, jProc, iFace, nSubFace, iSubFace
@@ -150,12 +109,8 @@ contains
        IsFirstCall = .false.
 
        ! Assign all blocks to be in the steady boundary
-       IsSteadyBoundary_B  = .true.
-       IsSteadyBoundary_BP = .true.
-
-       ! Assign all blocks to be non-evolving for now
-       IsEvolving_B  = .false.
-       IsEvolving_BP = .false.
+       iTypeAdvance_B  = SteadyBoundBlock_
+       iTypeAdvance_BP = SteadyBoundBlock_
 
        ! There is nothing else to do
        RETURN
@@ -167,9 +122,9 @@ contains
     ! Check the steady boundary blocks for change
     do iBlock = 1, nBlock
 
-       if(.not.IsSteadyBoundary_B(iBlock)) CYCLE
+       if(iTypeAdvance_B(iBlock) /= SteadyBoundBlock_) CYCLE
 
-       ! Calculate the change the state
+       ! Calculate the change in the state
        dState_V = 0.0
        Norm_V  = 0.0
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -188,16 +143,15 @@ contains
        ! Normalize change in all variables
        dState_V = dState_V / (RelativeEps_V * Norm_V + nIJK*AbsoluteEps_V)
 
-       ! Check if the change is significant
-       if(any(dState_V > 1.0)) then
-          IsEvolving_B(iBlock)       = .true.
-          IsSteadyBoundary_B(iBlock) = .false.
-       end if
+       ! Check if the change is significant and modify block type
+       if(any(dState_V > 1.0)) &
+            iTypeAdvance_B(iBlock) = ExplBlock_
 
     end do
 
     ! Count the number of evolving blocks
-    nEvolving = count(IsEvolving_B(1:nBlock))
+    nEvolving = count(iTypeAdvance_B(1:nBlock) == ExplBlock_)
+
     call MPI_allreduce(nEvolving, nEvolvingALL, 1, MPI_INTEGER, MPI_SUM, &
           iComm, iError)
 
@@ -212,17 +166,23 @@ contains
     nEvolvingLastALL = nEvolvingALL
 
     ! Update the global information about evolving blocks
-    call MPI_allgather(IsEvolving_B, MaxBlock, MPI_LOGICAL, &
-         IsEvolving_BP, MaxBlock, MPI_LOGICAL, iComm, iError)
+    call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    ! Check the unevolving blocks if they became part of the steady boundary
-    IsSteadyBoundary_B = .false.
+
+    if(IsFirstSelect)then
+       ! The original setting is that all blocks are part of the 
+       ! steady boundary, so that they are all checked for change.
+       ! Here the block type needs to be changed to steady.
+       where(iTypeAdvance_B == SteadyBoundBlock_) iTypeAdvance_B = SteadyBlock_
+       IsFirstSelect = .false.
+    endif
+
+    ! Check the steady blocks if they are now part of the steady boundary
     BLOCKS: do iBlock = 1, nBlock
 
        ! Skip all other blocks
-       if(  IsUnusedOrig_B(iBlock) .or. &
-            IsEvolving_B(iBlock)  .or. &
-            IsSteadyBoundary_B(iBlock)) CYCLE
+       if(iTypeAdvance_B(iBlock) /= SteadyBlock_) CYCLE
 
        write(*,*)'checking iBlock=',iBlock
 
@@ -239,8 +199,8 @@ contains
           SUBFACES: do iSubFace = 1, nSubFace
              jProc  = NeiPE( iSubFace,iFace,iBlock)
              jBlock = NeiBLK(iSubFace,iFace,iBlock)
-             if(IsEvolving_BP(jBlock, jProc)) then
-                IsSteadyBoundary_B(iBlock) = .true.
+             if(iTypeAdvance_BP(jBlock, jProc) >= ExplBlock_) then
+                iTypeAdvance_B(iBlock) = SteadyBoundBlock_
                 CYCLE BLOCKS
              end if
           end do SUBFACES
@@ -248,11 +208,11 @@ contains
 
     end do BLOCKS
 
-    ! Update the global information about steady boundary blocks
-    call MPI_allgather(IsSteadyBoundary_B, MaxBlock, MPI_LOGICAL, &
-         IsSteadyBoundary_BP, MaxBlock, MPI_LOGICAL, iComm, iError)
+    ! Update the global information about block types
+    call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    write(*,*)'nSteadyBoundary=',count(IsSteadyBoundary_BP)
+    write(*,*)'nSteadyBoundary=',count(iTypeAdvance_BP == SteadyBoundBlock_)
 
   end subroutine part_steady_select
 
