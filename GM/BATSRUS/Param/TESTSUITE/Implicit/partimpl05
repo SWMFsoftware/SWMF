@@ -1,5 +1,5 @@
 #TEST
-read_inputs implicit krylov
+implicit krylov
 
 #FIXEDTIMESTEP
 T			UseDtFixed
