@@ -173,7 +173,6 @@ OBJECTS = \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
 	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
 
-# Copy modules with static declaration of large variables into used modules
 NAME = Advance
 
 STATIC1:
@@ -203,6 +202,38 @@ DYNAMIC:
 	@#^CFG END IMPLICIT
 	make -s DYNAMIC1 NAME=Raytrace	#^CFG IF RAYTRACE
 	make -s DYNAMIC1 NAME=CT	#^CFG IF CONSTRAINB
+
+# Dependency rules for static/dynamic modules
+
+# Default variable declaration type for 1 module (select one)
+STATIC_OR_DYNAMIC = STATIC1
+#STATIC_OR_DYNAMIC = DYNAMIC1
+
+ModAdvance.f90: ModAdvance_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=Advance
+
+ModNodes.f90: ModNodes_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=Nodes
+
+ModGeometry.f90: ModGeometry_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=Geometry
+
+#^CFG IF CONSTRAINB BEGIN
+ModCT.f90: ModCT_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=CT
+#^CFG END CONSTRAINB
+
+#^CFG IF RAYTRACE BEGIN
+ModRaytrace.f90: ModRaytrace_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=Raytrace
+#^CFG END RAYTRACE
+
+#^CFG IF IMPLICIT BEGIN
+ModImplicit.f90: ModImplicit_static.f90
+	make -s ${STATIC_OR_DYNAMIC} NAME=Implicit \
+		LARGE="-d=1 -l='MaxImplVar|,nBLK|,MaxImplBLK'"
+#^CFG END IMPLICIT
+############################################################################
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
