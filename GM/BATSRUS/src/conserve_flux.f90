@@ -1,6 +1,5 @@
 !^CFG COPYRIGHT UM
 
-!^CFG IF IMPLICIT BEGIN
 subroutine init_conservative_facefluxes(iBLK)
   use ModAdvance, ONLY: CorrectedFlux_VXB, &
        CorrectedFlux_VYB, CorrectedFlux_VZB
@@ -12,7 +11,6 @@ subroutine init_conservative_facefluxes(iBLK)
   CorrectedFlux_VYB(:,:,:,:,iBLK)=cZero
   CorrectedFlux_VZB(:,:,:,:,iBLK)=cZero
 end subroutine init_conservative_facefluxes
-!^CFG END IMPLICIT
 
 !============================================================================
 

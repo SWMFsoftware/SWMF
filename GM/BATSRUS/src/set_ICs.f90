@@ -38,11 +38,7 @@ subroutine set_ICs
   Flux_VY = cZero
   Flux_VZ = cZero
 
-
-
-
-  if(UsePartImplicit)&                              !^CFG IF IMPLICIT
-       call init_conservative_facefluxes(globalBLK) !^CFG IF IMPLICIT
+  call init_conservative_facefluxes(globalBLK)
 
   if(unusedBLK(globalBLK))then  
      do iVar=1,nVar

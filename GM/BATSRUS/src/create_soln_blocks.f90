@@ -740,8 +740,7 @@ subroutine calc_other_soln_vars(iBLK)
   fbody_y_BLK(:,:,:,iBLK) = 0.00
   fbody_z_BLK(:,:,:,iBLK) = 0.00
 
-  if(UsePartImplicit)&                              !^CFG IF IMPLICIT
-       call init_conservative_facefluxes(iBLK)      !^CFG IF IMPLICIT  
+  call init_conservative_facefluxes(iBLK)
 
   globalBLK = iBLK
 
