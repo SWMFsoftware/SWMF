@@ -26,11 +26,6 @@ module ModImplicit
   logical :: UsePartImplicit, UseFullImplicit, UseConservativeImplicit
 
   !\
-  ! Logical arrays determining if a block is handled implicitly
-  !/
-  logical, dimension(nBLK) :: ImplicitBLK, SkippedBLK
-
-  !\
   ! Parameters for selecting implicit blocks
   !/
   character (len=10) :: ImplCritType
