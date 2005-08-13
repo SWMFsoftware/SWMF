@@ -1160,6 +1160,51 @@ T                       UseDtFixed
 ! numerical steady state. Default value is .false.
 </command>
 
+<command name="PARTSTEADYCRITERIA" alias="STEADYCRITERIA">
+	<parameter name="MinCheckVar" type="integer" 
+		min="1" default="1"/>
+	<parameter name="MaxCheckVar" type="integer" 
+		min="$MinCheckVar" default="8" />
+	<for from="$MinCheckVar" to="$MaxCheckVar">
+		<parameter name="RelativeEps" type="real" 
+				min="0" max="1" default="0.001" />
+		<parameter name="AbsoluteEps" type="real"
+				min="0"		default="0.0001" />
+	</for>
+#PARTSTEADYCRITERIA
+5               MinCheckVar
+8               MaxCheckVar
+0.001           RelativeEps(bx)
+0.0001          AbsoluteEps(bx)
+0.001           RelativeEps(by)
+0.0001          AbsoluteEps(by)
+0.001           RelativeEps(bz)
+0.0001          AbsoluteEps(bz)
+0.001           RelativeEps(p)
+0.0001          AbsoluteEps(p)
+
+The part steady scheme only evolves blocks which are changing,
+or neighbors of changing blocks. The scheme checks the neighbor blocks
+every time step if their state variable has changed significantly.
+This command allows the user to select the variables to be checked,
+and to set the relative and absolute limits for each variable.
+Only the state variables indexed from MinCheckVar to MaxCheckVar are checked.
+The change in the block is significant if 
+
+abs(sum(StateNew - StateOld))/(RelativeEps*Sum(abs(StateOld))+nIJK*AbsoluteEps)
+
+exceeds 1.0 for any of the checked variables. Here nIJK is the number of cells
+in the block (including body cells but excluding ghost cells).
+The RelativeEps variable determines the maximum ratio of the change
+and the norm of the old state. The AbsoluteEps variable is only needed
+if the old state is very close to zero. It should be set to a positive
+value which is much smaller than the typical significantly non-zero
+value of the variable.
+
+Default values are such that all variables are checked with
+relative error 0.001 and absolute error 0.0001.
+</command>
+
 <!-- ^CFG IF IMPLICIT BEGIN -->
 <command name="PARTLOCAL">
 	<parameter name="UsePartLocal" type="logical" default="F" />
