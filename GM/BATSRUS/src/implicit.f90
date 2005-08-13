@@ -80,10 +80,11 @@ subroutine advance_impl
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, E_BLK, StateOld_VCB, E_o_BLK, time_BlK, &
-       tmp1_BLK, UseUpdateCheck
+       tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
+       SkippedBlock_, ExplBlock_, ImplBlock_
   use ModPhysics, ONLY : gm1, UnitSi_t
   use ModImplicit
-  use ModAMR, ONLY : unusedBlock_BP
+  use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
   use ModMpi
   implicit none
@@ -118,9 +119,6 @@ subroutine advance_impl
   UseUpdateCheckOrig = UseUpdateCheck
   UseUpdateCheck = .false.
 
-  ! Store unusedBLK into skippedBLK
-  skippedBLK(1:nBlockMax)=unusedBLK(1:nBlockMax)
-
   ! Advance explicitly treated blocks if any
   if(UsePartImplicit .and. nBlockExplALL > 0)then
 
@@ -132,7 +130,7 @@ subroutine advance_impl
         ! This is needed for explicit blocks, because they may become
         ! implicit in the next time step...
         do iBLK=1,nBlock
-           if(skippedBLK(iBLK).or.implicitBLK(iBLK))CYCLE
+           if(iTypeAdvance_B(iBLK) /= ExplBlock_)CYCLE
            do iVar=1,nVar
               if(iVar==E_)then
                  w_prev(:,:,:,E_    ,iBLK)=    E_BLK(1:nI,1:nJ,1:nK,iBLK)
@@ -144,13 +142,11 @@ subroutine advance_impl
         end do
      end if
 
-     ! Select unusedBLK = not explicit blocks = skipped or implicit blocks
+     ! Select unusedBLK = not explicit blocks
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     unusedBLK(1:nBlockMax) = skippedBLK(1:nBlockMax) .or. &
-          implicitBLK(1:nBlockMax)
-
-     call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
-          unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
+     UnusedBlock_BP(1:nBlockMax,:) = &
+          iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
+     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
 
      ! advance explicit blocks, calc timestep but do not exchange messages
      ! after the last stage (it may exchange messages in the first stage)
@@ -159,18 +155,17 @@ subroutine advance_impl
 
      ! update ghost cells for the implicit blocks to time level n+1
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     unusedBLK(1:nBlockMax) = skippedBLK(1:nBlockMax)
-
-     call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
-          unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
+     UnusedBlock_BP(1:nBlockMax,:) = &
+          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
+     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
 
      call exchange_messages
 
      ! The implicit scheme is only applied on implicit blocks
      iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     unusedBLK(1:nBlockMax) = .not.implicitBLK(1:nBlockMax)
-     call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
-          unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
+     UnusedBlock_BP(1:nBlockMax,:) = &
+          iTypeAdvance_BP(1:nBlockMax,:) /= ImplBlock_
+     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
   end if
 
   !\
@@ -433,10 +428,9 @@ subroutine advance_impl
   if(UsePartImplicit)then
      ! Restore unusedBLK
      iNewDecomposition=mod(iNewDecomposition-3, 10000)
-     unusedBLK(1:nBlockMax)=skippedBLK(1:nBlockMax)
-     call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
-          unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
-
+     UnusedBlock_BP(1:nBlockMax,:) = &
+          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
+     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
   endif
 
   ! Exchange messages, so ghost cells of all blocks are updated
