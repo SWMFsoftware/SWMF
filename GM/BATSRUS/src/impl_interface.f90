@@ -9,13 +9,14 @@ subroutine implicit_init
 
   use ModMain
   use ModImplicit
+  use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
   implicit none
 
   logical :: IsInitialized=.false.
   integer :: iBLK, iBlockImpl
   !---------------------------------------------------------------------------
 
-  nImplBLK=count(implicitBLK(1:nBlock))
+  nImplBLK=count(iTypeAdvance_B(1:nBlock) == ImplBlock_)
 
   ! Check for too many implicit blocks
   if(nImplBLK>MaxImplBLK)then
@@ -33,7 +34,7 @@ subroutine implicit_init
   implBLKtest=1
   iBlockImpl=0
   do iBLK=1,nBlock
-     if (implicitBLK(iBLK)) then
+     if (iTypeAdvance_B(iBLK) == ImplBlock_) then
         iBlockImpl = iBlockImpl + 1
         impl2iBLK(iBlockImpl)=iBLK
         if(iBLK==BLKtest)implBLKtest=iBlockImpl

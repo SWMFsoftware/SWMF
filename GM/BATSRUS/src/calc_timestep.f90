@@ -81,12 +81,13 @@ end subroutine calc_timestep
 subroutine set_global_timestep(DtMax)
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : time_BLK,State_VGB,rho_,Bx_,By_,Bz_,P_
-  use ModAdvance,ONLY:   B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModGeometry, ONLY : true_cell,true_BLK,dx_BLK,XyzStart_BLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
-  use ModImplicit, ONLY: UsePartImplicit, implicitBLK     !^CFG IF IMPLICIT
-  use ModPhysics,ONLY:UnitSI_x,UnitSI_U,UnitSI_t,UnitSI_B,UnitSI_rho,g
+  use ModAdvance,  ONLY: time_BLK,State_VGB,rho_,Bx_,By_,Bz_,P_,&
+       iTypeAdvance_B, ExplBlock_
+  use ModAdvance,  ONLY: B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModGeometry, ONLY: true_cell,true_BLK,dx_BLK,XyzStart_BLK
+  use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK
+  use ModImplicit, ONLY: UsePartImplicit                 !^CFG IF IMPLICIT
+  use ModPhysics,  ONLY: UnitSI_x,UnitSI_U,UnitSI_t,UnitSI_B,UnitSI_rho,g
   use ModNumConst
   use ModMpi
   implicit none
@@ -107,13 +108,12 @@ subroutine set_global_timestep(DtMax)
      dt = DtFixed
   else
      !\
-     ! Impose global time step for time-accurate 
-     ! calculations as required
+     ! Impose global time step for time-accurate calculations as required
      !/
      if(UsePartImplicit .or. UsePartLocal)then        !^CFG IF IMPLICIT BEGIN
         ! Implicit blocks are not taken into account for partially implicit run
         dtMinPE = minval(dt_BLK(1:nBlock),&
-             MASK=.not.(unusedBLK(1:nBlock) .or. implicitBLK(1:nBlock)))
+             MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
      else                                             !^CFG END IMPLICIT
         dtMinPE = minval(dt_BLK(1:nBlock), MASK=.not.unusedBLK(1:nBlock))
      end if                                           !^CFG IF IMPLICIT
