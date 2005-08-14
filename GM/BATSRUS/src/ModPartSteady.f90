@@ -86,8 +86,9 @@ contains
     ! Select the blocks which are evolving and in the steady boundary
     ! Return IsNew = .true. if there is any change, .false. otherwise.
 
-    use ModMain,     ONLY: East_, Top_, Time_Accurate, Time_Simulation
-    use ModProcMH,   ONLY: iComm
+    use ModMain,     ONLY: East_, Top_, Time_Accurate, Time_Simulation, &
+         lVerbose
+    use ModProcMH,   ONLY: iProc, iComm
     use ModAdvance,  ONLY: State_VGB, StateOld_VCB, nI, nJ, nK, nIJK
     use ModParallel, ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
     use ModMpi
@@ -109,8 +110,9 @@ contains
        IsFirstCall = .false.
 
        ! Assign all blocks to be in the steady boundary
-       iTypeAdvance_B  = SteadyBoundBlock_
-       iTypeAdvance_BP = SteadyBoundBlock_
+       where(iTypeAdvance_BP /= SkippedBlock_) &
+            iTypeAdvance_BP = SteadyBoundBlock_
+       iTypeAdvance_B = iTypeAdvance_BP(:,iProc)
 
        ! There is nothing else to do
        RETURN
@@ -184,7 +186,7 @@ contains
        ! Skip all other blocks
        if(iTypeAdvance_B(iBlock) /= SteadyBlock_) CYCLE
 
-       write(*,*)'checking iBlock=',iBlock
+       if(DoDebug)write(*,*)'part_steady checking iBlock=',iBlock
 
        ! Check all faces and subfaces
        FACES: do iFace = East_, Top_
@@ -212,7 +214,12 @@ contains
     call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    write(*,*)'nSteadyBoundary=',count(iTypeAdvance_BP == SteadyBoundBlock_)
+    if(iProc==0 .and. lVerbose>0) &
+         write(*,*)'part_steady finished with nSkipped,Steady,Bound,ExplALL=',&
+         count(iTypeAdvance_BP == SkippedBlock_), & 
+         count(iTypeAdvance_BP == SteadyBlock_), & 
+         count(iTypeAdvance_BP == SteadyBoundBlock_), &
+         count(iTypeAdvance_BP == ExplBlock_)
 
   end subroutine part_steady_select
 
