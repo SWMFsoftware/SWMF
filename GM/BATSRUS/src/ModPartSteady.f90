@@ -20,7 +20,8 @@ module ModPartSteady
 
   private ! except
 
-  logical, public :: UsePartSteady       ! True if the part steady scheme used
+  logical, public :: UsePartSteady = .false.     ! True if the scheme is used
+  logical, public :: IsNewSteadySelect = .false. ! True if selection changed
   integer, public :: MinCheckVar = 1     ! First variable to check for change
   integer, public :: MaxCheckVar = nVar  ! Last  variable to check for change
 
@@ -81,22 +82,19 @@ contains
   end subroutine part_steady_switch
   !===========================================================================
 
-  subroutine part_steady_select(IsNew)
+  subroutine part_steady_select
 
     ! Select the blocks which are evolving and in the steady boundary
-    ! Return IsNew = .true. if there is any change, .false. otherwise.
+ !!! Set IsNewSteady = .true. if there is any change, .false. otherwise ???
 
-    use ModMain,     ONLY: East_, Top_, Time_Accurate, Time_Simulation, &
-         lVerbose
+    use ModMain,     ONLY: East_, Top_, n_step, lVerbose
     use ModProcMH,   ONLY: iProc, iComm
     use ModAdvance,  ONLY: State_VGB, StateOld_VCB, nI, nJ, nK, nIJK
     use ModParallel, ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
     use ModMpi
 
-    logical, intent(out) :: IsNew
-
-    logical :: IsFirstCall = .true., IsFirstSelect=.true.
-    integer :: nEvolving, nEvolvingALL, nEvolvingLastALL = -1
+    logical :: DoPreserveExpl = .false. ! Preserve explicit blocks
+    logical :: IsChanged
     integer :: i, j, k, iVar, iBlock
     integer :: jBlock, jProc, iFace, nSubFace, iSubFace
     integer :: iError
@@ -106,26 +104,17 @@ contains
 
     if(DoDebug)write(*,*)'part_steady_select'
 
-    if(IsFirstCall)then
-       IsFirstCall = .false.
+!!! Possibly check cell by cell ???
 
-       ! Assign all blocks to be in the steady boundary
-       where(iTypeAdvance_BP /= SkippedBlock_) &
-            iTypeAdvance_BP = SteadyBoundBlock_
-       iTypeAdvance_B = iTypeAdvance_BP(:,iProc)
-
-       ! There is nothing else to do
-       RETURN
-    end if
-
-    ! The first time accurate time step with zero progress cannot be used
-    if(Time_Accurate .and. Time_Simulation == 0) RETURN
-
-    ! Check the steady boundary blocks for change
+    ! Check the advanced blocks (ExplBlock_ and SteadyBoundBlock_) for change
+    IsChanged = .false.
     do iBlock = 1, nBlock
+       ! Skip steady blocks
+       if(iTypeAdvance_B(iBlock) <= SteadyBlock_) CYCLE
 
-       if(iTypeAdvance_B(iBlock) /= SteadyBoundBlock_) CYCLE
-
+       ! Skip explicit blocks if Expl->Steady change is not allowed
+       if(DoPreserveExpl .and. iTypeAdvance_B(iBlock) == ExplBlock_) CYCLE
+       
        ! Calculate the change in the state
        dState_V = 0.0
        Norm_V  = 0.0
@@ -145,40 +134,40 @@ contains
        ! Normalize change in all variables
        dState_V = dState_V / (RelativeEps_V * Norm_V + nIJK*AbsoluteEps_V)
 
-       ! Check if the change is significant and modify block type
-       if(any(dState_V > 1.0)) &
-            iTypeAdvance_B(iBlock) = ExplBlock_
+       ! Check if the change is significant and modify block type if necessary
+       if(any(dState_V > 1.0))then
+          if(iTypeAdvance_B(iBlock) == SteadyBoundBlock_)then
+             iTypeAdvance_B(iBlock) = ExplBlock_
+             IsChanged = .true.
+          end if
+       elseif( .not. DoPreserveExpl) then
+          if(iTypeAdvance_B(iBlock) ==  ExplBlock_) then
+             iTypeAdvance_B(iBlock) = SteadyBoundBlock_
+             IsChanged = .true.
+          end if
+       end if
 
     end do
 
-    ! Count the number of evolving blocks
-    nEvolving = count(iTypeAdvance_B(1:nBlock) == ExplBlock_)
-
-    call MPI_allreduce(nEvolving, nEvolvingALL, 1, MPI_INTEGER, MPI_SUM, &
+    call MPI_allreduce(IsChanged, IsNewSteadySelect, 1, MPI_LOGICAL, MPI_LOR, &
           iComm, iError)
 
+    if(DoDebug)write(*,*)'iProc, IsChanged, IsNewSteadySelect=',&
+         iProc, IsChanged, IsNewSteadySelect
+
+!!! For now preserve explicit blocks after the first selection
+    DoPreserveExpl = .true.
+
     ! If no new evolving blocks were found, simply return
-    IsNew = nEvolvingALL /= nEvolvingLastALL
-
-    if(DoDebug)write(*,*)'nEvolvingALL,IsNew=',nEvolvingALL,IsNew
-
-    if(.not. IsNew) RETURN
-
-    ! Store number of evolving blocks
-    nEvolvingLastALL = nEvolvingALL
+    if(.not. IsNewSteadySelect) RETURN
 
     ! Update the global information about evolving blocks
     call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-
-    if(IsFirstSelect)then
-       ! The original setting is that all blocks are part of the 
-       ! steady boundary, so that they are all checked for change.
-       ! Here the block type needs to be changed to steady.
-       where(iTypeAdvance_B == SteadyBoundBlock_) iTypeAdvance_B = SteadyBlock_
-       IsFirstSelect = .false.
-    endif
+    ! Find the blocks surrounding the evolving blocks
+    ! First set all non-explicit blocks to steady
+    where(iTypeAdvance_B == SteadyBoundBlock_) iTypeAdvance_B = SteadyBlock_
 
     ! Check the steady blocks if they are now part of the steady boundary
     BLOCKS: do iBlock = 1, nBlock
@@ -215,7 +204,8 @@ contains
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
     if(iProc==0 .and. lVerbose>0) &
-         write(*,*)'part_steady finished with nSkipped,Steady,Bound,ExplALL=',&
+         write(*,*)'part_steady finished:',&
+         ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
          count(iTypeAdvance_BP == SkippedBlock_), & 
          count(iTypeAdvance_BP == SteadyBlock_), & 
          count(iTypeAdvance_BP == SteadyBoundBlock_), &
