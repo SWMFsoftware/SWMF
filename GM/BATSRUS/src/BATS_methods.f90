@@ -579,7 +579,11 @@ subroutine BATS_select_blocks
 
   if(UsePartLocal)call select_stepping(.true.) !^CFG IF IMPLICIT
 
-  if(UsePartSteady)call part_steady_select(IsNew)
+  if(UsePartSteady)then
+     call timing_start('part_steady')
+     call part_steady_select(IsNew)
+     call timing_stop('part_steady')
+  end if
 
   ! Select and load balance blocks for partially implicit/steady scheme
   if( (UsePartSteady .and. IsNew) &
