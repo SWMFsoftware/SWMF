@@ -292,7 +292,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAmr, ONLY: dn_refine
   use ModPhysics, ONLY: UnitSI_t
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
-  use ModPartSteady, ONLY: UsePartSteady, part_steady_switch
+  use ModPartSteady, ONLY: UsePartSteady, part_steady_select, &
+       part_steady_switch
 
   implicit none
 
@@ -313,9 +314,11 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! We are advancing in time
   time_loop = .true.
 
-  call BATS_select_blocks              !^CFG IF IMPLICIT
+  ! Select block types and load balance blocks
+  call BATS_select_blocks
 
-  if(UsePartSteady) call part_steady_switch(.true.) !!!
+  ! Switch off steady blocks to reduce calculation
+  if(UsePartSteady) call part_steady_switch(.true.)
 
   n_step = n_step + 1
   iteration_number = iteration_number+1
@@ -348,7 +351,18 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   call exchange_messages
   
-  if(UsePartSteady) call part_steady_switch(.false.) !!!
+  if(UsePartSteady) then
+     ! Based on the time step select steady and unsteady blocks
+!!! Exclude very small time accurate steps ???
+     if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
+        call timing_start('part_steady')
+        call part_steady_select
+        call timing_stop('part_steady')
+     end if
+
+     ! Switch on steady blocks to be included in AMR, plotting, etc.
+     call part_steady_switch(.false.)
+  end if
 
   call advect_all_points
   
@@ -362,7 +376,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        iProc,n_step,Time_Simulation
 
   if (DoUpdateB0) then
-     ! Unsplit dB0/dBt term is added every time step
+     ! Unsplit dB0/dt term is added every time step
      ! Split dB0/dt term is added at the dt_updateB0 frequency
      if (.not.DoSplitDb0Dt .or. &
           int(Time_Simulation/dt_UpdateB0) >  &
@@ -565,28 +579,21 @@ subroutine BATS_select_blocks
   use ModMain, ONLY: lVerbose
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModIO, ONLY: write_prefix, iUnitOut
-  use ModPartSteady, ONLY: UsePartSteady, part_steady_select
+  use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
   !LOCAL VARIABLES:
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   integer :: iError
   integer :: nBlockMoved
-  logical :: IsNew
   !----------------------------------------------------------------------------
 
   ! Select blocks for partially local time stepping
 
   if(UsePartLocal)call select_stepping(.true.) !^CFG IF IMPLICIT
 
-  if(UsePartSteady)then
-     call timing_start('part_steady')
-     call part_steady_select(IsNew)
-     call timing_stop('part_steady')
-  end if
-
   ! Select and load balance blocks for partially implicit/steady scheme
-  if( (UsePartSteady .and. IsNew) &
+  if( UsePartSteady .and. IsNewSteadySelect &
        .or. UsePartImplicit &                !^CFG IF IMPLICIT
        )then
 
@@ -601,6 +608,7 @@ subroutine BATS_select_blocks
         call analyze_neighbors   !^CFG IF DEBUGGING
         call find_test_cell
      end if
+     IsNewSteadySelect = .false.
   end if
 
 end subroutine BATS_select_blocks
