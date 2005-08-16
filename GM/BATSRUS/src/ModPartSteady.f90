@@ -21,6 +21,7 @@ module ModPartSteady
   private ! except
 
   logical, public :: UsePartSteady = .false.     ! True if the scheme is used
+  logical, public :: IsSteadyState = .false.     ! True for full steady state
   logical, public :: IsNewSteadySelect = .false. ! True if selection changed
   integer, public :: MinCheckVar = 1     ! First variable to check for change
   integer, public :: MaxCheckVar = nVar  ! Last  variable to check for change
@@ -80,14 +81,16 @@ contains
          nBlockMax, count(UnusedBLK(1:nBlockMax))
 
   end subroutine part_steady_switch
+
   !===========================================================================
 
   subroutine part_steady_select
 
     ! Select the blocks which are evolving and in the steady boundary
- !!! Set IsNewSteady = .true. if there is any change, .false. otherwise ???
+    ! Set IsNewSteadySelect = .true. if there is any change
 
-    use ModMain,     ONLY: East_, Top_, n_step, lVerbose
+    use ModMain,     ONLY: East_, Top_, time_accurate, n_step, lVerbose, &
+         nBlockMax
     use ModProcMH,   ONLY: iProc, iComm
     use ModAdvance,  ONLY: State_VGB, StateOld_VCB, nI, nJ, nK, nIJK
     use ModParallel, ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
@@ -99,12 +102,10 @@ contains
     integer :: jBlock, jProc, iFace, nSubFace, iSubFace
     integer :: iError
 
-    real :: dState_V(nVar), Norm_V(nVar)
+    real :: dState_V(nVar)
     !--------------------------------------------------------------------------
 
     if(DoDebug)write(*,*)'part_steady_select'
-
-!!! Possibly check cell by cell ???
 
     ! Check the advanced blocks (ExplBlock_ and SteadyBoundBlock_) for change
     IsChanged = .false.
@@ -115,27 +116,21 @@ contains
        ! Skip explicit blocks if Expl->Steady change is not allowed
        if(DoPreserveExpl .and. iTypeAdvance_B(iBlock) == ExplBlock_) CYCLE
        
-       ! Calculate the change in the state
+       ! Calculate the maximum change in the block for each variable
        dState_V = 0.0
-       Norm_V  = 0.0
        do k=1,nK; do j=1,nJ; do i=1,nI
           do iVar = MinCheckVar, MaxCheckVar
-             Norm_V(iVar)   = Norm_V(iVar) + &
-                  abs(StateOld_VCB(iVar,i,j,k,iBlock))
-             dState_V(iVar) = dState_V(iVar) &
+             ! Normalize maximum change to relative and absolute limits
+             dState_V(iVar) = max(dState_V(iVar), &
                   + abs(State_VGB(iVar,i,j,k,iBlock) &
-                  -  StateOld_VCB(iVar,i,j,k,iBlock))
+                  -     StateOld_VCB(iVar,i,j,k,iBlock)) &
+                  / (RelativeEps_V(iVar) * abs(State_VGB(iVar,i,j,k,iBlock)) &
+                  +  AbsoluteEps_V(iVar)))
           end do
        end do; end do; end do
 
-!       if(DoDebug)write(*,*)'iBlock, dState_V, Norm_V=',&
-!            iBlock, dState_V, Norm_V
-
-       ! Normalize change in all variables
-       dState_V = dState_V / (RelativeEps_V * Norm_V + nIJK*AbsoluteEps_V)
-
        ! Check if the change is significant and modify block type if necessary
-       if(any(dState_V > 1.0))then
+       if(any(dState_V(MinCheckVar:MaxCheckVar) > 1.0))then
           if(iTypeAdvance_B(iBlock) == SteadyBoundBlock_)then
              iTypeAdvance_B(iBlock) = ExplBlock_
              IsChanged = .true.
@@ -155,8 +150,10 @@ contains
     if(DoDebug)write(*,*)'iProc, IsChanged, IsNewSteadySelect=',&
          iProc, IsChanged, IsNewSteadySelect
 
-!!! For now preserve explicit blocks after the first selection
-    DoPreserveExpl = .true.
+    ! In time accurate runs the explicit blocks should not be modified
+    ! to steady state, because the blocks may change slowly for long time.
+    ! In steady state runs, the blocks become all steady state in the end..
+    DoPreserveExpl = time_accurate
 
     ! If no new evolving blocks were found, simply return
     if(.not. IsNewSteadySelect) RETURN
@@ -202,6 +199,10 @@ contains
     ! Update the global information about block types
     call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+
+    ! Check for full steady state
+    if(.not.time_accurate) &
+         IsSteadyState = all(iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_)
 
     if(iProc==0 .and. lVerbose>0) &
          write(*,*)'part_steady finished:',&
