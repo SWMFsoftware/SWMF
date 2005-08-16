@@ -1108,7 +1108,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
         end if
-     case('evolve','impl','IMPL')
+     case('evolve','impl')
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
      case('PE','pe','proc')
         PlotVar(:,:,:,iVar)=iProc
@@ -1569,7 +1569,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
         NameUnit = '--'                          !^CFG END RAYTRACE
         ! GRID INFORMATION
-     case('pe', 'proc','blk','blkall','child','impl','evolve','impl','IMPL')
+     case('pe', 'proc','blk','blkall','child','impl','evolve')
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = unitstr_IDL_t
