@@ -292,8 +292,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModAmr, ONLY: dn_refine
   use ModPhysics, ONLY: UnitSI_t
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
-  use ModPartSteady, ONLY: UsePartSteady, part_steady_select, &
-       part_steady_switch
+  use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
+       part_steady_select, part_steady_switch
 
   implicit none
 
@@ -309,6 +309,15 @@ subroutine BATS_advance(TimeSimulationLimit)
   !-------------------------------------------------------------------------
   !Eliminate non-positive timesteps
   if(Time_Simulation>=TimeSimulationLimit)return 
+
+  ! Check if steady state is achieved
+  if(.not.time_accurate .and. UsePartSteady .and. IsSteadyState)then
+     ! Create stop condition for stand alone mode
+     nIter = iteration_number
+     ! There is nothing to do, simply return
+     RETURN
+  end if
+
   call set_oktest(NameSub,DoTest,DoTestMe)
 
   ! We are advancing in time
@@ -352,8 +361,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   call exchange_messages
   
   if(UsePartSteady) then
-     ! Based on the time step select steady and unsteady blocks
-!!! Exclude very small time accurate steps ???
+     ! Select steady and unsteady blocks
      if(.not. (Time_Accurate .and. Time_Simulation == 0.0))then
         call timing_start('part_steady')
         call part_steady_select
