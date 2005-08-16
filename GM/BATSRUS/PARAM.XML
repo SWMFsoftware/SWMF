@@ -1156,8 +1156,12 @@ T                       UseDtFixed
 
 ! If UsePartSteady is true, the partially steady state algorithm is used.
 ! Only blocks which are changing or next to changing blocks are evolved.
-! This can speed up the calculation if part of the domain is in a 
-! numerical steady state. Default value is .false.
+! This scheme can speed up the calculation if part 
+! of the domain is in a numerical steady state. 
+! In steady state runs the code stops when a full steady state is
+! achieved. The conditions for checking the numerical steady state are set 
+! by the #PARTSTEADYCRITERIA command.
+! Default value is UsePartSteady = .false.
 </command>
 
 <command name="PARTSTEADYCRITERIA" alias="STEADYCRITERIA">
@@ -1190,11 +1194,11 @@ This command allows the user to select the variables to be checked,
 and to set the relative and absolute limits for each variable.
 Only the state variables indexed from MinCheckVar to MaxCheckVar are checked.
 The change in the block is significant if 
-
-abs(sum(StateNew - StateOld))/(RelativeEps*Sum(abs(StateOld))+nIJK*AbsoluteEps)
-
-exceeds 1.0 for any of the checked variables. Here nIJK is the number of cells
-in the block (including body cells but excluding ghost cells).
+\begin{verbatim}
+max(abs(State - StateOld)) / (RelativeEps*abs(State) + AbsoluteEps)
+\end{verbatim}
+exceeds 1.0 for any of the checked variables in any cells of the block.
+(including body cells but excluding ghost cells).
 The RelativeEps variable determines the maximum ratio of the change
 and the norm of the old state. The AbsoluteEps variable is only needed
 if the old state is very close to zero. It should be set to a positive
