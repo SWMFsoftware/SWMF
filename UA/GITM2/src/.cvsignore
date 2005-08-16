@@ -4,6 +4,7 @@ ModSources.f90
 Makefile.DEPEND
 Makefile.RULES
 ModPlanet.f90
+calc_chemistry.f90
 calc_electron_temperature.f90
 calc_ion_density.f90
 calc_neutral_density.f90
