@@ -59,7 +59,7 @@ contains
             'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
 
        do iVar=1,nVar
-          write(*,'(a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
                LeftState_VX(iVar,iTest,jTest,kTest),&
                RightState_VX(iVar,iTest,  jTest,kTest),&
                LeftState_VX(iVar,iTest+1,jTest,kTest),&
@@ -81,7 +81,7 @@ contains
             'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
 
        do iVar=1,nVar
-          write(*,'(a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
                LeftState_VY(iVar,iTest,jTest,kTest),&
                RightState_VY(iVar,iTest,  jTest,kTest),&
                LeftState_VY(iVar,iTest,jTest+1,kTest),&
@@ -100,7 +100,7 @@ contains
 
     if(DimTest==z_ .or. DimTest==0)then
        do iVar=1,nVar
-          write(*,'(a,4(1pe13.5))')NameVar_V(iVar),'=',&
+          write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
                LeftState_VZ(iVar,iTest,jTest,kTest),&
                RightState_VZ(iVar,iTest,  jTest,kTest),&
                LeftState_VZ(iVar,iTest,jTest,kTest+1),&
