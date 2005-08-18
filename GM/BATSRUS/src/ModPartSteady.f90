@@ -89,8 +89,9 @@ contains
     ! Select the blocks which are evolving and in the steady boundary
     ! Set IsNewSteadySelect = .true. if there is any change
 
-    use ModMain,     ONLY: East_, Top_, time_accurate, n_step, lVerbose, &
-         nBlockMax
+    use ModMain,     ONLY: East_, Top_, time_accurate, &
+         n_step, lVerbose, nBlockMax
+    use ModGeometry, ONLY: Dx_BLK, MinDxValue
     use ModProcMH,   ONLY: iProc, iComm
     use ModAdvance,  ONLY: State_VGB, StateOld_VCB, nI, nJ, nK, nIJK
     use ModParallel, ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
@@ -102,7 +103,7 @@ contains
     integer :: jBlock, jProc, iFace, nSubFace, iSubFace
     integer :: iError
 
-    real :: dState_V(nVar)
+    real :: dState_V(nVar), dStateLimit
     !--------------------------------------------------------------------------
 
     if(DoDebug)write(*,*)'part_steady_select'
@@ -129,8 +130,19 @@ contains
           end do
        end do; end do; end do
 
+       if(time_accurate)then
+          ! Take into account the cell size difference between blocks
+          ! so that the same FLUX has the same effect (dU/dt=dF/dx)
+          dStateLimit = MinDxValue / Dx_BLK(iBlock)
+       else
+          ! The local time step takes care of most of the cell size differences
+          ! Ideally one should use Limit = min(dx)/dx*dtcell/min(dtcell)
+          ! but that would require extra memory and communication.
+          dStateLimit = 1.0
+       end if
+
        ! Check if the change is significant and modify block type if necessary
-       if(any(dState_V(MinCheckVar:MaxCheckVar) > 1.0))then
+       if(any(dState_V(MinCheckVar:MaxCheckVar) > dStateLimit))then
           if(iTypeAdvance_B(iBlock) == SteadyBoundBlock_)then
              iTypeAdvance_B(iBlock) = ExplBlock_
              IsChanged = .true.
