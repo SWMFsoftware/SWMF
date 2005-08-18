@@ -1477,9 +1477,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
                 float(!d.x_ch_size)/float(!d.x_size)])*3.0*!p.charsize
    set_space, ppp, space, sizes, nx = multix, ny = multiy
 
-   ; Store x and y titles
-   xtitle = !x.title
-   ytitle = !y.title
+   ; Store x and y titles and tick names
+   xtitle    = !x.title
+   ytitle    = !y.title
+   xtickname = !x.tickname
+   ytickname = !y.tickname
 
    for ifunc=0,nfunc-1 do begin
 
@@ -1605,9 +1607,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
              pos(3)=posmid + posdif*aspectratio
           endelse
         endif
-
-        xtickname=!x.tickname
-        ytickname=!y.tickname
 
         ; Omit X axis if unneeded
         if (plotiy gt 0) then begin
