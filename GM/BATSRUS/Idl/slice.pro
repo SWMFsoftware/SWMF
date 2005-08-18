@@ -88,23 +88,22 @@
         1:begin
            x2d=dblarr(n2,n3,2)
            w2d=dblarr(n2,n3,nw)
-           var2d=['y','z']
+           var2d=variables(1:*)
            grid2d=lindgen(n2,n3)
         end
         2:begin
            x2d=dblarr(n1,n3,2)
            w2d=dblarr(n1,n3,nw)
-           var2d=['x','z']
+           var2d=[variables(0),variables(2:*)]
            grid2d=lindgen(n1,n3)
         end
         3:begin
            x2d=dblarr(n1,n2,2)
            w2d=dblarr(n1,n2,nw)
-           var2d=['x','y']
+           var2d=[variables(0:1),variables(3:*)]
            grid2d=lindgen(n1,n2)
         end
    endcase
-   var2d=[var2d,variables(3:n_elements(variables)-1)]
 
    help,grid2d
 
@@ -147,11 +146,11 @@
            x2d(*,*,*)=x(*,*,ix,0:1)
            w2d(*,*,*)=w(*,*,ix,*)
         end
-      endcase
-
-      first= islice eq 1
-      getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,variables,cut0
+    endcase
+    
+    first= islice eq 1
+    getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
+        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,var2d,cut0
 
    endfor
 
