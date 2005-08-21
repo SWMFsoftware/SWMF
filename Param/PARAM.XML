@@ -358,19 +358,27 @@ The default value is lVerbose=1.
 		</parameter>
 		<parameter name="nDepthTiming" type="integer" min="-1" 
 							default="-1" />
-		<parameter name="TypeTimingReport" type="string" 
-							input="select">
-			<option name="cumulative" value="cumu" default="T" />
-			<option name="list" />
-			<option name="tree" />
+		<parameter name="TypeTimingReport" type="strings" 
+							min="1" max="2">
+			<part name="TypeTimingStyle" type="string" required="T"
+								input="select">
+				<option name="cumulative" value="cumu" 
+								default="T" />
+				<option name="list" />
+				<option name="tree" />
+			</part>
+			<part name="UseTimingAll" type="string" required="F"
+								input="select">
+				<option name="all" />
+			</part>
 		</parameter>
 	</if>
 
 #TIMING
-T                       UseTiming      (rest of parameters read if true)
--2                      DnTiming       (-3 none, -2 final, -1 each session/AMR)
--1                      nDepthTiming   (-1 for arbitrary depth)
-tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
+T                       UseTiming        rest of parameters read if true
+-2                      DnTiming         -3 none, -2 final, -1 each session
+-1                      nDepthTiming     -1 for arbitrary depth
+tree all		TypeTimingReport 'cumu','list','tree', +optional 'all'
 
 If UseTiming=.true., the execution is timed by the TIMING utility.\\
 If UseTiming=.false., the execution is not timed.\\
@@ -394,7 +402,13 @@ The TypeTimingReport parameter determines the format of the timing reports:
 'list' - list based on caller and sorted by timings
 'tree' - tree based on calling sequence.
 \end{verbatim}
-The default values are shown above.
+If the word 'all' is added, the timing is done on all the CPU-s.
+By default only the root CPUs of the components do timings.
+When all the CPU-s are timed, it is probably a good idea to 
+direct the output into separate files (see the #STDOUT command).
+
+The default values are shown above, except for the 
+TimingReportStyle, which is 'cumu' by default without the 'all'.
 </command>
 
 <command name="PROGRESS">
