@@ -60,6 +60,8 @@ module ModTiming
 
   integer :: iProc=0
 
+  integer :: iUnit=6
+
   character (LEN=2) :: NameComp='  '
 
   interface
