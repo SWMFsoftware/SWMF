@@ -116,8 +116,9 @@ contains
     integer :: nByteRealRead
     real    :: FracSecond ! Default precision is sufficient for reading
 
-    integer            :: TimingDepth=-1
-    character (len=10) :: TimingStyle='cumm'
+    integer            :: nDepthTiming  = -1
+    character (len=10) :: TypeTimingReport  = 'cumu'
+    logical            :: UseTimingAll = .false.
 
     ! Timing parameters
     character (lNameVersion) :: NameVersion
@@ -276,9 +277,11 @@ contains
 
           call read_var('UseTiming',UseTiming)
           if(UseTiming)then
-             call read_var('DnTiming',DnTiming)
-             call read_var('TimingDepth',TimingDepth)
-             call read_var('TimingStyle',TimingStyle)
+             call read_var('DnTiming'        ,DnTiming)
+             call read_var('nDepthTiming'    ,nDepthTiming)
+             call read_var('TypeTimingReport',TypeTimingReport)
+             UseTimingAll = index(TypeTimingReport,'all') > 0
+             TypeTimingReport = TypeTimingReport(1:4)
           end if
 
        case("#CPUTIMEMAX")
@@ -517,7 +520,7 @@ contains
     end if
 
     ! Initialize timing for CON
-    if(is_proc0())then
+    if(is_proc0() .or. UseTimingAll)then
        call timing_active(UseTiming)
        call timing_comp_proc('  ',i_proc())
     end if
@@ -525,15 +528,15 @@ contains
     do lComp=1,n_comp()
        iComp = i_comp(lComp)
        if(.not.use_comp(iComp))CYCLE
-       if(is_proc0(iComp))then
+       if(is_proc0(iComp) .or. (UseTimingAll .and. is_proc(iComp)))then
           call timing_active(UseTiming)
           call timing_comp_proc(NameComp_I(iComp),i_proc())
        end if
     end do
 
     if(IsFirstRead)call timing_step(0)
-    call timing_depth(TimingDepth)
-    call timing_report_style(TimingStyle)
+    call timing_depth(nDepthTiming)
+    call timing_report_style(TypeTimingReport)
 
     IsFirstRead = .false.
 
@@ -580,9 +583,13 @@ contains
           end if
           ! Tell the component to write into a file
           call set_param_comp(iComp,"FILEOUT")
+          ! Tell the timing utility to use the file
+          call timing_iounit(iUnitOut)
        else
           ! Tell the component to write to STDOUT
           call set_param_comp(iComp,"STDOUT")
+          ! Tell the timing utilty to use STDOUT
+          call timing_iounit(STDOUT_)
        end if
     end do
   end subroutine set_stdout
