@@ -82,7 +82,7 @@ end subroutine timing_step
 
 !==============================================================================
 !BOP
-!ROUTINE: timing_comp_proc - set the component name and processor rank
+!ROUTINE: timing_comp_proc - set component name and processor rank
 !INTERFACE:
 subroutine timing_comp_proc(value1,value2)
   !USES:
@@ -100,6 +100,24 @@ subroutine timing_comp_proc(value1,value2)
   iProc    = value2
   !EOC
 end subroutine timing_comp_proc
+
+!==============================================================================
+!BOP
+!ROUTINE: timing_iounit - set I/O unit for normal output
+!INTERFACE:
+subroutine timing_iounit(value1)
+  !USES:
+  use ModTiming, ONLY: iUnit
+  implicit none
+  !INPUT ARGUMENTS:
+  integer, intent(in) :: value1
+  !DESCRIPTION:
+  ! Set the I/O unit for normal output for this processor.
+  !EOP
+  !BOC ------------------------------------------------------------------------
+  iUnit = value1
+  !EOC
+end subroutine timing_iounit
 
 !==============================================================================
 !BOP
@@ -457,7 +475,7 @@ subroutine timing_show(name,iclock)
      end if
 
      if(qclock==1)then
-        write(*,'(5a,f8.2,a)')                            &
+        write(iUnit,'(5a,f8.2,a)')                            &
                 'Timing for last ',name,                  &
                 ' (',s_parent(1:len_trim(s_parent)),'):', &
                 qsum,' sec'
@@ -474,14 +492,14 @@ subroutine timing_show(name,iclock)
      qiter=ia_iter(i,qclock); if(qiter<1)qiter=-1
      qcall=ia_call(i,qclock); if(qcall<1)qcall=-1
 
-     write(*,'(2a)',ADVANCE='NO')'Timing for ',name
+     write(iUnit,'(2a)',ADVANCE='NO')'Timing for ',name
      if(qclock==maxclock .or. step_reset(qclock)==-1)then
-        write(*,'(a,i8,a)') ' at step',step,' :'
+        write(iUnit,'(a,i8,a)') ' at step',step,' :'
      else
-        write(*,'(a,i8,a,i8,a)')&
+        write(iUnit,'(a,i8,a,i8,a)')&
              ' from step',step_reset(qclock),' to',step,' :'
      end if
-     write(*,'(f8.2,a,f8.3,a,f8.3,a,f8.2,2a)')           &
+     write(iUnit,'(f8.2,a,f8.3,a,f8.3,a,f8.2,2a)')           &
                 qsum,' sec, ',                            &
                 qsum/qiter,' s/iter',                     &
                 qsum/qcall,' s/call',                     &
@@ -565,23 +583,21 @@ subroutine timing_tree(iclock,show_depth)
 
   qclock = min(max(iclock,2),maxclock)
 
-  write(*,'(a79)')'----------------------------------------'// &
-       '------------------------------------------'
-  write(*,'(a)',ADVANCE='NO')'TIMING TREE'
+  write(iUnit,'(a79)') sepline
+  write(iUnit,'(a)',ADVANCE='NO')'TIMING TREE'
   if(show_depth>0)&
-       write(*,'(a,i2)',ADVANCE='NO')' of depth',show_depth
+       write(iUnit,'(a,i2)',ADVANCE='NO')' of depth',show_depth
   if(step_reset(qclock)>=0)then
-     write(*,'(a,i8,a,i8)',ADVANCE='NO') &
+     write(iUnit,'(a,i8,a,i8)',ADVANCE='NO') &
           ' from step',step_reset(qclock),' to',step
   else
-     write(*,'(a,i8)',ADVANCE='NO')' at step',step
+     write(iUnit,'(a,i8)',ADVANCE='NO')' at step',step
   end if
-  write(*,'(a,i4)')' '//NameComp//' on PE ',iProc
+  write(iUnit,'(a,i4)')' '//NameComp//' on PE ',iProc
 
-  write(*,'(a20,a7,a8,a9,a9,a9,a9)') &
+  write(iUnit,'(a20,a7,a8,a9,a9,a9,a9)') &
        'name'//spaces,'#iter','#calls','sec','s/iter','s/call','percent'
-  write(*,'(a79)')'----------------------------------------'// &
-       '------------------------------------------'
+  write(iUnit,'(a79)')sepline
   qdepth = 0
   qnow   = timing_cpu()
   do i=1,ntiming
@@ -603,7 +619,7 @@ subroutine timing_tree(iclock,show_depth)
      ! and spaces(1:-2) (although correct F90) also fails due to a
      ! PGF90 compiler bug
      indent=max(0,ia_depth(i)*2-4)
-     write(*,'(a20,i7,i8,a,f9.2,f9.3,f9.3,f9.2)')                    &
+     write(iUnit,'(a20,i7,i8,a,f9.2,f9.3,f9.3,f9.2)')                    &
           repeat(' ',indent)//sa_name(i),                            &
           qiter,                                                     &
           qcall,                                                     &
@@ -613,7 +629,7 @@ subroutine timing_tree(iclock,show_depth)
           qsum/qcall,                                                &
           100*qsum/qsumparent
 
-     if(ia_depth(i)==1) write(*,'(a79)')sepline
+     if(ia_depth(i)==1) write(iUnit,'(a79)')sepline
      
      ! Add up times for this depth and report missing part
 
@@ -643,7 +659,7 @@ subroutine timing_tree(iclock,show_depth)
         if(qiter<1)qiter=-1
 
         indent = max(0,qdepth*2-4)
-        write(*,'(a,a35,f9.2,f9.3,f18.2)')    &
+        write(iUnit,'(a,a35,f9.2,f9.3,f18.2)')    &
              repeat(' ',indent),              &
              '#others'//spaces,               &
              qsum,                            &
@@ -653,7 +669,7 @@ subroutine timing_tree(iclock,show_depth)
      end do
      qdepth = i_depth
   end do
-  write(*,'(a79)')sepline
+  write(iUnit,'(a79)')sepline
 
 end subroutine timing_tree
 
@@ -743,25 +759,25 @@ subroutine timing_sort(iclock,show_length,unique)
      RETURN
   end if
 
-  write(*,'(a79)')sepline
+  write(iUnit,'(a79)')sepline
 
-  write(*,'(a,i8,a,i2)',ADVANCE='NO')'SORTED TIMING'
+  write(iUnit,'(a,i8,a,i2)',ADVANCE='NO')'SORTED TIMING'
   if(show_length>0)&
-       write(*,'(a,i3)',ADVANCE='NO')' of length',show_length
+       write(iUnit,'(a,i3)',ADVANCE='NO')' of length',show_length
   if(qclock>1 .and. step_reset(qclock)>=0)then
-     write(*,'(a,i8,a,i8)',ADVANCE='NO') &
+     write(iUnit,'(a,i8,a,i8)',ADVANCE='NO') &
           ' from step',step_reset(qclock),' to',step
   else
-     write(*,'(a,i8)',ADVANCE='NO')' at step',step
+     write(iUnit,'(a,i8)',ADVANCE='NO')' at step',step
   end if
-  write(*,'(a,i4)')' '//NameComp//' on PE ',iProc
+  write(iUnit,'(a,i4)')' '//NameComp//' on PE ',iProc
 
-  write(*,'(a20)',ADVANCE='NO')                'name'//spaces
-  if(.not.unique)write(*,'(a20)',ADVANCE='NO') '(parent)'//spaces
-  write(*,'(a10,a10)',ADVANCE='NO')              'sec','percent'
-  if(qclock>1)write(*,'(a10,a10)',ADVANCE='NO')  '#iter','#calls'
-  write(*,*)
-  write(*,'(a79)')sepline
+  write(iUnit,'(a20)',ADVANCE='NO')                'name'//spaces
+  if(.not.unique)write(iUnit,'(a20)',ADVANCE='NO') '(parent)'//spaces
+  write(iUnit,'(a10,a10)',ADVANCE='NO')              'sec','percent'
+  if(qclock>1)write(iUnit,'(a10,a10)',ADVANCE='NO')  '#iter','#calls'
+  write(iUnit,*)
+  write(iUnit,'(a79)')sepline
 
   if(show_length>0)then
      showntiming=min(show_length,qntiming)
@@ -776,19 +792,19 @@ subroutine timing_sort(iclock,show_length,unique)
 
      if(qsum < 0.001) CYCLE
 
-     write(*,'(a20)',ADVANCE='NO')       s_name
+     write(iUnit,'(a20)',ADVANCE='NO')       s_name
 
      if(.not.unique)then
         s_parent=sa_name(ia_parent(i))
-        write(*,'(a20)',ADVANCE='NO') &
+        write(iUnit,'(a20)',ADVANCE='NO') &
           '('//s_parent(1:len_trim(s_parent))//')'//spaces
      end if
 
-     write(*,'(f10.2,f10.2)',ADVANCE='NO') qsum, 100*qsum/qsummax
+     write(iUnit,'(f10.2,f10.2)',ADVANCE='NO') qsum, 100*qsum/qsummax
 
-     if(qclock>1)write(*,'(i10,i10)',ADVANCE='NO') ia_qiter(i), ia_qcall(i)
-     write(*,*)
-     if(ia_depth(i)==1) write(*,'(a79)')sepline
+     if(qclock>1)write(iUnit,'(i10,i10)',ADVANCE='NO') ia_qiter(i), ia_qcall(i)
+     write(iUnit,*)
+     if(ia_depth(i)==1) write(iUnit,'(a79)')sepline
 
   end do
 
@@ -798,11 +814,11 @@ subroutine timing_sort(iclock,show_length,unique)
      qsum=qsum+da_qsum(i)
   end do
   if(qsum>0.0)then
-     write(*,'(a20)',ADVANCE='NO')'#others'//spaces
-     if(.not.unique)write(*,'(a20)',ADVANCE='NO')' '
-     write(*,'(f8.2,f8.2)')qsum, 100*qsum/qsummax
+     write(iUnit,'(a20)',ADVANCE='NO')'#others'//spaces
+     if(.not.unique)write(iUnit,'(a20)',ADVANCE='NO')' '
+     write(iUnit,'(f8.2,f8.2)')qsum, 100*qsum/qsummax
   end if
 
-  write(*,'(a79)')'----------------------------------------'// &
-       '------------------------------------------'
+  write(iUnit,'(a79)')sepline
+
 end subroutine timing_sort
