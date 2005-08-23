@@ -34,6 +34,7 @@ MODEL = ModVarIndexes.o
 #MODEL = ModVarIndexes_globhelio.o #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
 
 MODULES = \
+	ModBlockData.o\
 	ModCompatibility.o\
 	ModInterface.o\
 	ModProcMH.o\
