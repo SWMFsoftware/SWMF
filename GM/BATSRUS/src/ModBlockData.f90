@@ -8,17 +8,21 @@ module ModBlockData
 
   logical, public :: UseBlockData = .false. ! True if any block data is used
 
-  public put_block_data ! store 1 or more values into storage
+  public put_block_data    ! store 1 or more values into storage
   interface put_block_data
      module procedure put_point, put_array
   end interface
 
-  public get_block_data ! get 1 or more values from storage
+  public set_block_data    ! indicate that all block data has been set
+
+  public is_set_block_data ! function to check if block data has been set
+
+  public get_block_data    ! get 1 or more values from storage
   interface get_block_data
      module procedure get_point, get_array
   end interface
 
-  public n_block_data ! function for number of data values stored
+  public n_block_data      ! function for number of data values stored
   interface n_block_data
      module procedure n_data, max_data
   end interface
@@ -31,9 +35,10 @@ module ModBlockData
   public test_block_data
 
   ! These arrays can be initialized
-  integer :: nData_B(MaxBlock) = -1   ! Number of data elements
-  integer :: iData_B(MaxBlock) = -1   ! Current position for put/get
-  
+  integer :: nData_B(MaxBlock) = -1      ! Number of data elements
+  integer :: iData_B(MaxBlock) = -1      ! Current position for put/get
+  logical :: IsSet_B(MaxBlock) = .false. ! Is all data set?
+
   ! Allocatable storage type for block data
   type BlockDataType
      real, pointer :: Array_I(:)
@@ -56,6 +61,7 @@ contains
     allocate(Data_B(iBlock) % Array_I(nValue))
     iData_B(iBlock) = 0
     nData_B(iBlock) = 0
+    IsSet_B(iBlock) = .false.
 
     UseBlockData = .true.
 
@@ -92,7 +98,12 @@ contains
   subroutine put_point(iBlock, Value)
     integer, intent(in) :: iBlock
     real,    intent(in) :: Value
+    character (len=*), parameter :: NameSub=NameMod//'::put_point'
     !------------------------------------------------------------------------
+    if(IsSet_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call CON_stop('IsSet_B=.true. in '//NameSub)
+    end if
 
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
     if(nData_B(iBlock)+1 > size(Data_B(iBlock) % Array_I)) &
@@ -112,7 +123,13 @@ contains
     real,    intent(in) :: Value_I(nValue)
 
     integer :: i
+    character (len=*), parameter :: NameSub=NameMod//'::put_array'
     !------------------------------------------------------------------------
+    if(IsSet_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call CON_stop('IsSet_B=.true. in '//NameSub)
+    end if
+
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
     if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
          call extend_array(iBlock, nValue)
@@ -126,6 +143,28 @@ contains
   end subroutine put_array
 
   !===========================================================================
+  subroutine set_block_data(iBlock)
+    integer, intent(in) :: iBlock
+    character(len=*), parameter :: NameSub = NameMod//'::set_block_data'
+    !------------------------------------------------------------------------
+    if(nData_B(iBlock)<0) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
+            ' nData_B(iBlock) =',nData_B(iBlock)
+       call CON_stop(NameSub//' ERROR: nData_B<0')
+    end if
+
+    IsSet_B(iBlock) = .true.
+  end subroutine set_block_data
+
+  !===========================================================================
+
+  logical function is_set_block_data(iBlock)
+    integer, intent(in) :: iBlock
+    !------------------------------------------------------------------------
+    is_set_block_data = IsSet_B(iBlock)
+  end function is_set_block_data
+
+  !===========================================================================
 
   subroutine get_point(iBlock, Value)
     integer, intent(in) :: iBlock
@@ -137,6 +176,11 @@ contains
        write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
             ' nData_B(iBlock) =',nData_B(iBlock)
        call CON_stop('nData_B(iBlock) < 1 in '//NameSub)
+    end if
+
+    if(.not.IsSet_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call CON_stop('IsSet_B=.false. in '//NameSub)
     end if
 
     ! wrap around
@@ -170,6 +214,11 @@ contains
        call CON_stop('nData_B(iBlock) < iData_B+nValue in '//NameSub)
     end if
 
+    if(.not.IsSet_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call CON_stop('IsSet_B=.false. in '//NameSub)
+    end if
+
     ! Read data
     Value_I = Data_B(iBlock) % Array_I(i+1:i+nValue)
 
@@ -187,6 +236,7 @@ contains
     deallocate(Data_B(iBlock) % Array_I)
     nData_B(iBlock) = -1
     iData_B(iBlock) = -1
+    IsSet_B(iBlock) = .false.
   end subroutine clean_block
 
   !===========================================================================
@@ -259,6 +309,19 @@ contains
     if(i /= 7)write(*,*)'put_block_data failed, iData=',i,' should be 7'
     i = size(Data_B(1) % Array_I)
     if(i /= 8)write(*,*)'put_block_data failed, size(Array)=',i,' should be 8'
+
+    ! This should fail with error message (get before set)
+    ! call get_block_data(1,Value)
+
+    write(*,*)'Testing set_block_data/is_set_block_data'
+    if(is_set_block_data(1)) &
+         write(*,*)'is_set_block_data(1)failed, =.true., should be .false.'
+    call set_block_data(1)
+    if(.not.is_set_block_data(1)) &
+         write(*,*)'is_set_block_data(1)failed, =.false., should be .true.'
+
+    ! This should fail with error message (put after set)
+    ! call put_block_data(1,1.0)
 
     write(*,*)'Testing get_block_data'
     ! Get back first value
