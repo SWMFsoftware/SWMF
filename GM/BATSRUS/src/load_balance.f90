@@ -56,7 +56,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   !---------------------------------------------------------------------------
   call set_oktest('load_balance',DoTest,DoTestMe)
 
-  if (DoTest) write(*,*)'load_balance: iProc, DoMoveCoord, DoMoveData=',&
+  if (DoTestMe) write(*,*)'load_balance: iProc, DoMoveCoord, DoMoveData=',&
        iProc, DoMoveCoord, DoMoveData
 
   ! starting value of number of blocks moved between processors
@@ -113,7 +113,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
 
 
   if(DoTestMe)write(*,*)'load_balance starting: nBlockMax=',nBlockMax
-  if(DoTest)then
+  if(DoTestMe)then
      write(*,*)'load_balance starting: me, nBlock, nBlockUsed=',&
           iProc, nBlock, count(.not.unusedBLK(1:nBlock))
      if(iTypeAdvanceLimit > SkippedBlock_) then
@@ -222,12 +222,12 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
        'nTry, nBlockMax, nBlockMoved=',&
        iTry, nBlockMax, nBlockMoved
 
-  if(DoTest)write(*,*)&
+  if(DoTestMe)write(*,*)&
        'load_balance finished: me, nBlock, nBlockUsed=',&
        iProc, nBlock, count(.not.unusedBLK(1:nBlock)), &
        count(iTypeAdvance_B /= SkippedBlock_)
 
-  if(DoTest .and. iTypeAdvanceLimit > SkippedBlock_) &
+  if(DoTestMe .and. iTypeAdvanceLimit > SkippedBlock_) &
        write(*,*)'load_balance finished: iProc, nType1=',&
        iProc,count(iTypeAdvance_B(1:nBlockMax) > iTypeAdvanceLimit)
 
@@ -254,6 +254,8 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModParallel
+  use ModBlockData, ONLY: get_block_data, put_block_data, &
+       n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit                                         !^CFG IF IMPLICIT
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK      !^CFG IF CONSTRAINB
   use ModRaytrace, ONLY : ray                             !^CFG IF RCM
@@ -268,7 +270,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   ! There is another declaration in subroutine load_balance! Change together!!!
   logical, parameter :: DoMoveExtraData = .true.
 
-  integer, parameter :: nScalarBLK=13, &
+  integer, parameter :: nScalarBLK=14, &
        nCellGhostBLK=(nI+4)*(nJ+4)*(nK+4)
   integer, parameter :: nExtraData = &
        3*nCellGhostBLK +                 & ! B0*Cell
@@ -282,13 +284,19 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        3*2*nIJK +                        & !^CFG IF RCM
        nScalarBLK +                      & ! scalars
        nVar*nCellGhostBLK +              & ! State_VGB
-       nExtraData                          ! B0, fbody, qheat
+       nExtraData +                      & ! B0, fbody, qheat
+       3*nWIJK                             ! max for dynamic data
 
+  ! Buffer for send and recieve
   real, dimension(nDataBLK) :: BlockData_I
+
   integer :: iData, itag, i, j, k, i1,i2, iVar, iw, iSize
   integer :: iError
   integer :: status(MPI_STATUS_SIZE,1)
 
+  ! Number of data values stored in ModBlockData
+  integer :: nDynamicData
+  
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
 
@@ -305,6 +313,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
      if (DoMoveCoord) call send_block_data
      unusedBLK(iBlockFrom)   = .true.
      iTypeAdvance_B(iBlockFrom) = SkippedBlock_
+     call clean_block_data(iBlockFrom)
      do
         if (nBlock==0) EXIT
         if (.not.unusedBLK(nBlock)) EXIT
@@ -338,6 +347,10 @@ contains
     BlockData_I(4:6) = xyzStart_BLK(:,iBlockFrom)
     BlockData_I(7)   = dt_BLK(iBlockFrom)
     BlockData_I(8:13)= real(neiLev(:,iBlockFrom))
+
+    nDynamicData = 0
+    if(use_block_data(iBlockFrom)) nDynamicData = n_block_data(iBlockFrom)
+    BlockData_I(14)  = real(nDynamicData)
 
     iData = nScalarBLK
 
@@ -448,6 +461,20 @@ contains
              BlockData_I(iData) = ray(i1,i2,i,j,k,iBlockFrom)
           end do; end do; end do; end do; end do
        end if                                       !^CFG END RCM
+
+       if(nDynamicData > 0)then
+          call get_block_data(iBlockFrom, nDynamicData, &
+               BlockData_I(iData+1:iData+nDynamicData))
+          iData = iData + nDynamicData
+       endif
+
+       if(iData > nDataBLK)then
+          write(*,*)'ERROR in load_balance: iData=',iData,&
+               ' > nDataBLK=',nDataBLK
+          call CON_stop('load_balnce: increase nDataBLK')
+       end if
+
+
     end if
 
     if(DoTest)write(*,*)'sending BlockData_I: iData=',iData,' from',&
@@ -456,7 +483,7 @@ contains
     call MPI_SEND(BlockData_I, iData, MPI_REAL, iProcTo, &
          itag, iComm, iError)
 
-    if(DoTest)write(*,*)'send done, me=',iProc
+    if(DoTest)write(*,*)'send done, me,iBlockFrom,nDynamic=',iProc,iBlockFrom,nDynamicData
 
   end subroutine send_block_data
 
@@ -484,14 +511,16 @@ contains
     call MPI_RECV(BlockData_I, iSize, MPI_REAL, iProcFrom, &
          itag, iComm, status, iError)
 
-    if(DoTest)write(*,*)'recv done, me=',iProc
-
     dx_BLK(iBlockTo)           = BlockData_I(1)
     dy_BLK(iBlockTo)           = BlockData_I(2)
     dz_BLK(iBlockTo)           = BlockData_I(3)
     xyzStart_BLK(1:3,iBlockTo) = BlockData_I(4:6)
     dt_BLK(iBlockTo)           = BlockData_I(7)
     neiLev(:,iBlockTo)         = nint(BlockData_I(8:13))
+    nDynamicData               = nint(BlockData_I(14))
+
+    if(DoTest)write(*,*)'recv done, me,iBlockTo,nDynamic=',iProc,iBlockTo,nDynamicData
+
     ! Put neighbor info into other arrays 
     ! (used for B0 face restriction)
     neiLeast(iBlockTo)         = neiLev(east_,iBlockTo)
@@ -621,6 +650,12 @@ contains
           ray(i1,i2,i,j,k,iBlockTo) = BlockData_I(iData)
        end do; end do; end do; end do; end do
     end if                                      !^CFG END RCM
+
+    if(nDynamicData > 0)then
+       call put_block_data(iBlockTo, nDynamicData, &
+            BlockData_I(iData+1:iData+nDynamicData))
+       call set_block_data(iBlockTo)
+    end if
 
   end subroutine recv_block_data
   !============================================================================
