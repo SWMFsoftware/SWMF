@@ -14,6 +14,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModPhysics
   use ModProject                                        !^CFG IF PROJECTION
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB       !^CFG IF CONSTRAINB
+  use ModBlockData, ONLY: clean_block_data
   use ModAMR
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
@@ -154,6 +155,9 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_raytrace                    !^CFG IF RAYTRACE
      if(UseConstrainB) call init_mod_ct        !^CFG IF CONSTRAINB
      if(UseImplicit)   call init_mod_implicit  !^CFG IF IMPLICIT
+
+     ! clean dynamic storage
+     call clean_block_data
 
      ! These logicals are always related like this !!!
      DoOneCoarserLayer = .not.UseTVDAtResChange
