@@ -7,11 +7,12 @@ subroutine advance_expl(DoCalcTimestep)
   use ModAdvance, ONLY : UseUpdateCheck
   use ModParallel, ONLY : neiLev
   use ModGeometry, ONLY: Body_BLK
+  use ModBlockData, ONLY: set_block_data
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
-  integer :: istage
+  integer :: iStage, iBlock
 
   real :: dtf, mdtf
 
@@ -191,6 +192,10 @@ subroutine advance_expl(DoCalcTimestep)
      if(iStage<nStage)call exchange_messages
 
      if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
+
+     do iBlock = 1, nBlock
+        if(.not.UnusedBlk(iBlock)) call set_block_data(iBlock)
+     end do
 
   end do STAGELOOP  ! Multi-stage solution update loop.
 
