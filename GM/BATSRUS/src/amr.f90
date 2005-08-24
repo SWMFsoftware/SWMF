@@ -6,6 +6,7 @@ subroutine amr(idepth)
   use ModGeometry, ONLY : minDXvalue,maxDXvalue,dx_BLK
   use ModAMR, ONLY : automatic_refinement
   use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP
+  use ModBlockData, ONLY: clean_block_data
   use ModIO, ONLY : write_prefix, iUnitOut
   use ModMpi
   implicit none
@@ -49,6 +50,9 @@ subroutine amr(idepth)
   ! Update the global advance info
   call MPI_allgather(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+
+  ! Clean all dynamically stored block data
+  call clean_block_data
 
   ! Load balance
   call load_balance(.true.,.true.,nBlockMoved)
