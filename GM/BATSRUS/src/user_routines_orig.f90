@@ -26,7 +26,7 @@
 !========================================================================
 
 !========================================================================
-!  MODULE MODUSERTD99
+!  MODULE ModUserTD99
 !========================================================================
 module ModUserTD99
   use ModConst
@@ -150,11 +150,7 @@ Contains
     !--------------------------------------------------------------------
     R1Face_D = matmul(RotateTD99_DD,RFace_D)
     if (DoTD99FluxRope) then
-       if (present(RhoFRope)) then
-          call compute_TD99_FluxRope(R1Face_D,B1FRope_D,RhoFRope)
-       else
-          call compute_TD99_FluxRope(R1Face_D,B1FRope_D)
-       endif
+       call compute_TD99_FluxRope(R1Face_D,B1FRope_D,RhoFRope)
        if (DoRevCurrent) then
           Itemp = Itube_TD99; Itube_TD99 = -Itemp
           atemp = atube_TD99; atube_TD99 = aratio_TD99*atemp
@@ -1541,6 +1537,8 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
        inv_gm1,OmegaBody,unitUSER_B
   use ModNumConst,   ONLY: cZero,cHalf,cOne,cTwo,cTolerance,cTiny
   use ModUser
+  
+  use ModBlockData, ONLY: use_block_data, put_block_data, get_block_data
   implicit none
   !\
   ! Variables required by this user subroutine
@@ -1619,8 +1617,26 @@ subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
      ! Compute the magnetic field of TD99 flux rope at RFace_D::
      !/
      if (DoTD99FluxRope.or.DoBqField) then
-        call get_transformed_TD99fluxrope(RFace_D,BFRope_D,&
-             UVorT_D,RhoFRope,time_now)
+        if(UseVariedCurrent .or. .not.use_block_data(iBlock))then
+           call get_transformed_TD99fluxrope(RFace_D,BFRope_D,&
+                UVorT_D,RhoFRope,time_now)
+           if(.not. UseVariedCurrent)then
+              ! Store calculated values
+              call put_block_data(iBlock, RhoFRope)
+              call put_block_data(iBlock, 3, BFRope_D)
+              if(DoBqField)call put_block_data(iBlock, 3, UVorT_D)
+           endif
+        else
+           ! Reuse calculated values
+           call get_block_data(iBlock, RhoFRope)
+           call get_block_data(iBlock, 3, BFRope_D)
+           if(DoBqField)then
+              call get_block_data(iBlock, 3, UVorT_D)
+           else
+              UVorT_D=0.0
+           endif
+        endif
+           
         !\
         ! Compute the normal, BFRn_D, and tangential, BFRt_D,
         ! field components of the flux rope::
