@@ -1,12 +1,12 @@
 module ModBlockData
 
-  use ModSize, ONLY: MaxBlock
+  use ModSize,   ONLY: MaxBlock
+  use ModMain,   ONLY: ProcTest, BlkTest
+  use ModProcMH, ONLY: iProc
 
   implicit none
 
   private ! except
-
-  logical, public :: UseBlockData = .false. ! True if any block data is used
 
   public put_block_data    ! store 1 or more values into storage
   interface put_block_data
@@ -15,7 +15,7 @@ module ModBlockData
 
   public set_block_data    ! indicate that all block data has been set
 
-  public is_set_block_data ! function to check if block data has been set
+  public use_block_data    ! function to check if block data has been set
 
   public get_block_data    ! get 1 or more values from storage
   interface get_block_data
@@ -35,9 +35,9 @@ module ModBlockData
   public test_block_data
 
   ! These arrays can be initialized
-  integer :: nData_B(MaxBlock) = -1      ! Number of data elements
-  integer :: iData_B(MaxBlock) = -1      ! Current position for put/get
-  logical :: IsSet_B(MaxBlock) = .false. ! Is all data set?
+  integer :: nData_B(MaxBlock) = -1        ! Number of data elements
+  integer :: iData_B(MaxBlock) = -1        ! Current position for put/get
+  logical :: UseData_B(MaxBlock) = .false. ! Is the data usable?
 
   ! Allocatable storage type for block data
   type BlockDataType
@@ -49,6 +49,8 @@ module ModBlockData
 
   character(len=*), parameter :: NameMod = 'ModBlockData'
 
+  logical, parameter :: DoDebug = .false.
+
 contains
 
   !===========================================================================
@@ -56,14 +58,18 @@ contains
   subroutine init_block(iBlock,nValue)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nValue
+    character (len=*), parameter :: NameSub = NameMod//'::init_block'
     !------------------------------------------------------------------------
     
     allocate(Data_B(iBlock) % Array_I(nValue))
-    iData_B(iBlock) = 0
-    nData_B(iBlock) = 0
-    IsSet_B(iBlock) = .false.
+    iData_B(iBlock)   = 0
+    nData_B(iBlock)   = 0
+    UseData_B(iBlock) = .false.
 
-    UseBlockData = .true.
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' finished'
+    endif
 
   end subroutine init_block
 
@@ -75,7 +81,13 @@ contains
 
     integer :: nSize
     real, pointer :: DataTemp_I(:)
+    character (len=*), parameter :: NameSub = NameMod//'::extend_array'
     !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nValue=',nValue
+    endif
+
     ! Figure out new size
     nSize = max(2*size(Data_B(iBlock) % Array_I), nData_B(iBlock) + nValue)
 
@@ -91,6 +103,11 @@ contains
     ! Set pointer to new storage
     Data_B(iBlock) % Array_I => DataTemp_I
 
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' allocated size=',size(DataTemp_I)
+    endif
+
   end subroutine extend_array
 
   !===========================================================================
@@ -100,9 +117,14 @@ contains
     real,    intent(in) :: Value
     character (len=*), parameter :: NameSub=NameMod//'::put_point'
     !------------------------------------------------------------------------
-    if(IsSet_B(iBlock)) then
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called'
+    endif
+
+    if(UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('IsSet_B=.true. in '//NameSub)
+       call CON_stop('UseData_B=.true. in '//NameSub)
     end if
 
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
@@ -112,6 +134,11 @@ contains
 
     iData_B(iBlock) = iData_B(iBlock)+1
     Data_B(iBlock) % Array_I(iData_B(iBlock)) = Value
+
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' returning Value=',Value
+    endif
 
   end subroutine put_point
 
@@ -125,9 +152,14 @@ contains
     integer :: i
     character (len=*), parameter :: NameSub=NameMod//'::put_array'
     !------------------------------------------------------------------------
-    if(IsSet_B(iBlock)) then
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nValue=',nValue
+    endif
+
+    if(UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('IsSet_B=.true. in '//NameSub)
+       call CON_stop('UseData_B=.true. in '//NameSub)
     end if
 
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
@@ -147,22 +179,24 @@ contains
     integer, intent(in) :: iBlock
     character(len=*), parameter :: NameSub = NameMod//'::set_block_data'
     !------------------------------------------------------------------------
-    if(nData_B(iBlock)<0) then
-       write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
-            ' nData_B(iBlock) =',nData_B(iBlock)
-       call CON_stop(NameSub//' ERROR: nData_B<0')
-    end if
-
-    IsSet_B(iBlock) = .true.
+    UseData_B(iBlock) = .true.
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) write(*,*)NameSub,' called'
+    endif
   end subroutine set_block_data
 
   !===========================================================================
 
-  logical function is_set_block_data(iBlock)
+  logical function use_block_data(iBlock)
     integer, intent(in) :: iBlock
+    character (len=*), parameter :: NameSub = NameMod//'::use_block_data'
     !------------------------------------------------------------------------
-    is_set_block_data = IsSet_B(iBlock)
-  end function is_set_block_data
+    use_block_data = UseData_B(iBlock)
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' returning ',UseData_B(iBlock)
+    endif
+  end function use_block_data
 
   !===========================================================================
 
@@ -172,15 +206,20 @@ contains
 
     character(len=*), parameter :: NameSub = NameMod//'::get_point'
     !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called'
+    endif
+
     if(nData_B(iBlock) < 1) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
             ' nData_B(iBlock) =',nData_B(iBlock)
        call CON_stop('nData_B(iBlock) < 1 in '//NameSub)
     end if
 
-    if(.not.IsSet_B(iBlock)) then
+    if(.not.UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('IsSet_B=.false. in '//NameSub)
+       call CON_stop('UseData_B=.false. in '//NameSub)
     end if
 
     ! wrap around
@@ -190,6 +229,10 @@ contains
     iData_B(iBlock) = iData_B(iBlock) + 1
     Value = Data_B(iBlock) % Array_I(iData_B(iBlock))
 
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' returning Value=',Value
+    endif
   end subroutine get_point
 
   !===========================================================================
@@ -203,6 +246,10 @@ contains
 
     character(len=*), parameter :: NameSub = NameMod//'::get_array'
     !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nValue=',nValue
+    endif
     ! wrap around
     if(iData_B(iBlock) >= nData_B(iBlock)) iData_B(iBlock) = 0
 
@@ -214,9 +261,9 @@ contains
        call CON_stop('nData_B(iBlock) < iData_B+nValue in '//NameSub)
     end if
 
-    if(.not.IsSet_B(iBlock)) then
+    if(.not.UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('IsSet_B=.false. in '//NameSub)
+       call CON_stop('UseData_B=.false. in '//NameSub)
     end if
 
     ! Read data
@@ -231,36 +278,55 @@ contains
 
   subroutine clean_block(iBlock)
     integer, intent(in) :: iBlock
+    character (len=*), parameter :: NameSub = NameMod//'::clean_block'
     !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) write(*,*)NameSub,' called'
+    endif
+    UseData_B(iBlock) = .false.
     if(nData_B(iBlock) < 0) RETURN
     deallocate(Data_B(iBlock) % Array_I)
     nData_B(iBlock) = -1
     iData_B(iBlock) = -1
-    IsSet_B(iBlock) = .false.
+
   end subroutine clean_block
 
   !===========================================================================
 
   subroutine clean_all
     integer :: iBlock
+    character (len=*), parameter :: NameSub = NameMod//'::clean_all'
     !------------------------------------------------------------------------
     do iBlock = 1, MaxBlock
        call clean_block(iBlock)
     end do
-    UseBlockData = .false.
+    if(DoDebug)then
+       if(iProc==ProcTest) write(*,*)NameSub,' finished'
+    endif
   end subroutine clean_all
 
   !===========================================================================
 
   integer function n_data(iBlock)
     integer, intent(in) :: iBlock
+    character (len=*), parameter :: NameSub = NameMod//'::n_data'
+    !------------------------------------------------------------------------
     n_data = nData_B(iBlock)
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' returning ',nData_B(iBlock)
+    endif
   end function n_data
 
   !===========================================================================
 
   integer function max_data()
+    character (len=*), parameter :: NameSub = NameMod//'::max_data'
+    !------------------------------------------------------------------------
     max_data = maxval(nData_B)
+    if(DoDebug)then
+       if(iProc==ProcTest)write(*,*)NameSub,' returning ',maxval(nData_B)
+    endif
   end function max_data
 
   !===========================================================================
@@ -269,16 +335,13 @@ contains
 
     real :: Value, Value_I(3)
     integer :: nData, i
+    character (len=*), parameter :: NameSub = NameMod//'::test_block_data'
     !--------------------------------------------------------------------------
-    if(UseBlockData) &
-         write(*,*)'test_block_data failed, UsedBlockData should be .false.'
     write(*,*)'Testing put_block_data and n_block_data()'
 
     ! Put 1 value
     call put_block_data(1,1.0)
 
-    if(.not.UseBlockData) &
-         write(*,*)'put_block_data failed, UsedBlockData should be .false.'
     nData = n_block_data(1)
     if(nData /= 1)write(*,*)'n_block_data(1) failed, n=',nData,' should be 1'
     nData = n_block_data(2)
@@ -313,12 +376,12 @@ contains
     ! This should fail with error message (get before set)
     ! call get_block_data(1,Value)
 
-    write(*,*)'Testing set_block_data/is_set_block_data'
-    if(is_set_block_data(1)) &
-         write(*,*)'is_set_block_data(1)failed, =.true., should be .false.'
+    write(*,*)'Testing set_block_data/use_block_data'
+    if(use_block_data(1)) &
+         write(*,*)'use_block_data(1)failed, =.true., should be .false.'
     call set_block_data(1)
-    if(.not.is_set_block_data(1)) &
-         write(*,*)'is_set_block_data(1)failed, =.false., should be .true.'
+    if(.not.use_block_data(1)) &
+         write(*,*)'use_block_data(1)failed, =.false., should be .true.'
 
     ! This should fail with error message (put after set)
     ! call put_block_data(1,1.0)
@@ -345,8 +408,6 @@ contains
 
     ! Clean storage for all blocks
     call clean_block_data
-    if(UseBlockData) &
-         write(*,*)'clean_block_data failed, UsedBlockData should be .false.'
     nData = n_block_data()
     if(nData /= -1)write(*,*) &
          'clean_block_data failed, n=',nData,' should be -1'
