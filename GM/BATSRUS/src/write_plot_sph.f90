@@ -7,6 +7,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
 
   use ModPhysics, ONLY : unitUSER_x
   use ModGeometry, ONLY: nI,nJ,nK, x_BLK,y_BLK,z_BLK, dx_BLK,dy_BLK,dz_BLK 
+  use ModMain,     ONLY: BlkTest
   use ModNumConst
   use ModIO
   implicit none
@@ -34,7 +35,11 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
 
-  call set_oktest('write_plot_sph',oktest,oktest_me)
+  if(iBLK == BlkTest)then
+     call set_oktest('write_plot_sph',oktest,oktest_me)
+  else
+     oktest=.false.; oktest_me=.false.
+  end if
 
   nBLKcellsN = 0
   nBLKcellsS = 0
