@@ -192,8 +192,8 @@ contains
 
     if(allocated(iTypeAdvance_BP)) RETURN
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
-    iTypeAdvance_B  = -1
-    iTypeAdvance_BP = -1
+    iTypeAdvance_B  = SkippedBlock_
+    iTypeAdvance_BP = SkippedBlock_
 
     if(IsDynamicAdvance .and. iProc==0)then
        call write_prefix
