@@ -7,12 +7,18 @@ module ModPartSteady
   ! scheme, it is sufficient to switch on blocks which neighbor the
   ! already evolving blocks. 
 
+  use ModProcMH
   use ModVarIndexes, ONLY: nVar
-  use ModSize,       ONLY: MaxBlock
-  use ModProcMH,     ONLY: nProc
-  use ModMain,       ONLY: nBlock
+  use ModSize,       ONLY: MaxBlock, nI, nJ, nK, nIJK
+  use ModMain,       ONLY: iNewDecomposition, nBlock, nBlockMax, UnusedBLK, &
+       East_, Top_, time_accurate,  n_step, lVerbose    
+  use ModAMR,        ONLY: UnusedBlock_BP
+  use ModGeometry,   ONLY: Dx_BLK, MinDxValue
+  use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
-       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_
+       SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
+       State_VGB, StateOld_VCB
+  use ModMpi
 
   implicit none
 
@@ -38,9 +44,6 @@ contains
   !===========================================================================
   subroutine part_steady_switch(IsOn)
 
-    use ModMain, ONLY: iNewDecomposition, nBlockMax, UnusedBLK
-    use ModAMR,  ONLY: UnusedBlock_BP
-
     ! If IsOn=.true., set used blocks to the evolving and boundary blocks
     ! If IsOn=.false., return to the original used blocks
 
@@ -50,32 +53,22 @@ contains
     if(DoDebug)write(*,*)'part_steady_switch called with IsOn=',IsOn
 
     if(IsOn)then
-       ! Store unused blocks
-       where(UnusedBLK(1:nBlockMax)) &
-            iTypeAdvance_B(1:nBlockMax) = SkippedBlock_ 
-
-       where(UnusedBlock_BP(1:nBlockMax,:)) &
-            iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
-
        ! Select UnusedBLK to be skipped or steady
-       UnusedBLK(1:nBlockMax) = &
-            iTypeAdvance_B(1:nBlockMax)    <= SteadyBlock_
        UnusedBlock_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) <= SteadyBlock_
 
        ! Change the decomposition index
        iNewDecomposition=mod(iNewDecomposition+1, 10000)
-
     else
        ! Restore the original unused blocks
-       UnusedBLK(1:nBlockMax)        = &
-            iTypeAdvance_B(1:nBlockMax)    == SkippedBlock_
        UnusedBlock_BP(1:nBlockMax,:) = &
             iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
 
        ! Restore the decomposition index
        iNewDecomposition = mod(iNewDecomposition-1, 10000)
     end if
+    ! Update local UnusedBLK array
+    UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
 
     if(DoDebug)write(*,*)'part_steady_switch nBlockMax, nUnused=',&
          nBlockMax, count(UnusedBLK(1:nBlockMax))
@@ -88,14 +81,6 @@ contains
 
     ! Select the blocks which are evolving and in the steady boundary
     ! Set IsNewSteadySelect = .true. if there is any change
-
-    use ModMain,     ONLY: East_, Top_, time_accurate, &
-         n_step, lVerbose, nBlockMax
-    use ModGeometry, ONLY: Dx_BLK, MinDxValue
-    use ModProcMH,   ONLY: iProc, iComm
-    use ModAdvance,  ONLY: State_VGB, StateOld_VCB, nI, nJ, nK, nIJK
-    use ModParallel, ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
-    use ModMpi
 
     logical :: DoPreserveExpl = .false. ! Preserve explicit blocks
     logical :: IsChanged
