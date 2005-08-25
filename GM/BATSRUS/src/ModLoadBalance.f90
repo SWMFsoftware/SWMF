@@ -5,6 +5,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
+  use ModGeometry, ONLY: True_Blk
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR, ONLY : availableBLKs
   use ModParallel
@@ -30,20 +31,25 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   logical, parameter :: DoMoveExtraData = .true.
 
   ! Maximum number of block types to be load balanced separately
-  integer, parameter :: MaxBlockType = 2
+  integer, parameter :: MaxType = 10
+
+  ! Actual number of block types
+  integer :: nType
 
   ! Index for block type
   integer :: iType
 
-  ! Global index for the various block types
-  integer :: iBlockALL_I(MaxBlockType)
+  ! Global block index for the various block types
+  integer :: iBlockALL_I(MaxType)
 
   ! Number of blocks for each type
-  integer :: nBlockALL_I(MaxBlockType)
+  integer :: nBlockALL_I(MaxType)
+
+  ! Conversion from iTypeAdvance (including body block info) to iType
+  integer :: iType_I(-ImplBlock_:ImplBlock_)
 
   integer :: iError
   integer :: iBlockALL, iBlock
-  integer :: iTypeAdvanceLimit
 
   integer :: iBlockFrom, iProcFrom, iBlockTo, iProcTo, iTry
 
@@ -68,33 +74,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
      if (.not.unusedBLK(iBlock)) EXIT
   end do
 
-  if(DoMoveData.and. .not.DoMoveCoord)call stop_mpi(&
+  if(DoMoveData .and. .not.DoMoveCoord)call stop_mpi(&
        'ERROR in load_balance: DoMoveData=T and DoMoveCoord=F !!!')
-
-  ! Set the separator between the block types to be load balanced separately
-  if(UsePartSteady)then
-     ! Type1 is steady boundary + explicit, Type2 is steady
-     iTypeAdvanceLimit = SteadyBlock_
-  elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
-     ! Type1 is implicit, type2 is explicit  !^CFG IF IMPLICIT
-     iTypeAdvanceLimit = ExplBlock_          !^CFG IF IMPLICIT
-  else
-     ! Type1 is explicit or implicit (for fully implicit), Type2 is empty
-     iTypeAdvanceLimit = SkippedBlock_
-  endif
-
-  ! Set initial block advance types here 
-  ! if data is not yet associated with the blocks.
-  if(.not. DoMoveData)then
-     where(unusedBLK)
-        iTypeAdvance_B = SkippedBlock_
-     elsewhere
-        iTypeAdvance_B = ExplBlock_
-     endwhere
-     ! Gather global information (note: UnusedBlock_BP is not set yet!!!)
-     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
-          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
-  end if
 
   !^CFG IF IMPLICIT BEGIN
   !\
@@ -106,29 +87,64 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   call select_stepping(DoMoveCoord)
   !^CFG END IMPLICIT
 
-  ! Number of blocks of type 1 and type 2
-  nBlockALL_I(1) = count(iTypeAdvance_BP(1:nBlockMax,:) >  iTypeAdvanceLimit)
-  nBlockALL_I(2) = count(iTypeAdvance_BP(1:nBlockMax,:) <= iTypeAdvanceLimit &
-       .and.             iTypeAdvance_BP(1:nBlockMax,:) >  SkippedBlock_ )
-
-
-  if(DoTestMe)write(*,*)'load_balance starting: nBlockMax=',nBlockMax
-  if(DoTestMe)then
-     write(*,*)'load_balance starting: me, nBlock, nBlockUsed=',&
-          iProc, nBlock, count(.not.unusedBLK(1:nBlock))
-     if(iTypeAdvanceLimit > SkippedBlock_) then
-        write(*,*)'load_balance iProc, MaxType, MinType=',iProc,&
-             maxval(iTypeAdvance_BP(1:nBlockMax,:)),&
-             minval(iTypeAdvance_BP(1:nBlockMax,:))
-        write(*,*)'load_balance starting iProc, nBlockALL_I=',iProc,nBlockALL_I
-        write(*,*)'load_balance starting iProc, nType1=',&
-             iProc,count(iTypeAdvance_B(1:nBlockMax) > iTypeAdvanceLimit)
-     end if
-  end if
-
   if (nProc==1) RETURN
 
   if (index(test_string,'NOLOADBALANCE')>0) RETURN
+
+  ! If the coordinates are known then include the body block info into
+  ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
+  if(DoMoveCoord)then
+!!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
+
+     where(.not. True_BLK) &
+          iTypeAdvance_B = -abs(iTypeAdvance_B)
+
+     ! Update iTypeAdvance_BP
+     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
+  end if
+
+  ! Set the transformation from iTypeAdvance to iType
+  iType_I = 1
+  iType_I(SkippedBlock_) = 0
+  if(UsePartSteady)then
+     iType_I(SteadyBoundBlock_) = 2
+     iType_I(ExplBlock_)        = 2
+
+     iType_I(-SteadyBoundBlock_) = 3
+     iType_I(-ExplBlock_)        = 3
+  elseif(UsePartImplicit)then                !^CFG IF IMPLICIT
+     iType_I( ImplBlock_) = 2                !^CFG IF IMPLICIT
+     iType_I(-ImplBlock_) = 2                !^CFG IF IMPLICIT
+  else
+     iType_I(-ExplBlock_) = 2
+  endif
+  nType = maxval(iType_I)
+
+  ! Count the number of blocks of various types
+  nBlockALL_I = 0
+  do iProcTo = 0, nProc-1; do iBlock = 1, nBlockMax
+     iType = iType_I(iTypeAdvance_BP(iBlock, iProcTo))
+     if(iType > 0) nBlockALL_I(iType) = nBlockALL_I(iType) + 1
+  end do; end do
+
+  if(DoTestMe)then
+     write(*,*)'load_balance starting: nBlockMax=',nBlockMax
+     write(*,*)'load_balance starting: me, nBlock, nBlockUsed=',&
+          iProc, nBlock, count(.not.unusedBLK(1:nBlock))
+     if(nType > 1) then
+        write(*,*)'load_balance starting: iProc, max, min(iTypeAdvance_BP)=',&
+             iProc,&
+             maxval(iTypeAdvance_BP(1:nBlockMax,:)),&
+             minval(iTypeAdvance_BP(1:nBlockMax,:))
+        write(*,*)'load_balance starting: iProc, nBlockALL_I=',&
+             iProc, nBlockALL_I
+        do iType = 1, nType
+           write(*,*)'load_balance starting: iProc, iType, count=',&
+                iProc, iType,count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
+        end do
+     end if
+  end if
 
   call timing_start('load_balance')
 
@@ -147,11 +163,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
         iProcTo = (nProc*iBlockALL-1)/nBlockALL
 
         ! Figure out the block type
-        if(iTypeAdvance_BP(iBlockFrom,iProcFrom) > iTypeAdvanceLimit)then
-           iType = 1
-        else
-           iType = 2
-        endif
+        iType = iType_I(iTypeAdvance_BP(iBlockFrom,iProcFrom))
 
         ! Increase the index for this block type and select target processor
         iBlockALL_I(iType) = iBlockALL_I(iType) + 1
@@ -216,24 +228,34 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
      !call timing_stop('load_fix_var')
   end if
 
-  call timing_stop('load_balance')
+  if(DoTestMe)then
+     write(*,*)'load_balance finished: ',&
+          'nTry, nBlockMax, nBlockMoved=',&
+          iTry, nBlockMax, nBlockMoved
 
-  if(DoTestMe)write(*,*)'load_balance finished: ',&
-       'nTry, nBlockMax, nBlockMoved=',&
-       iTry, nBlockMax, nBlockMoved
-
-  if(DoTestMe)write(*,*)&
+     write(*,*)&
        'load_balance finished: me, nBlock, nBlockUsed=',&
        iProc, nBlock, count(.not.unusedBLK(1:nBlock)), &
        count(iTypeAdvance_B /= SkippedBlock_)
 
-  if(DoTestMe .and. iTypeAdvanceLimit > SkippedBlock_) &
-       write(*,*)'load_balance finished: iProc, nType1=',&
-       iProc,count(iTypeAdvance_B(1:nBlockMax) > iTypeAdvanceLimit)
+     if(nType > 1) then
+        do iType = 1, nType
+           write(*,*)'load_balance finished: iProc, iType, count=',&
+                iProc, iType,count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
+        end do
+     end if
+  end if
+
+  ! restore iTypeAdvance_B and _BP to be positive
+  iTypeAdvance_B  = abs(iTypeAdvance_B)
+  iTypeAdvance_BP = abs(iTypeAdvance_BP)
+
+  call timing_stop('load_balance')
 
 end subroutine load_balance
 
 !=============================================================================
+
 subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
      iBlockFrom, iProcFrom, iBlockTo,iProcTo)
 
@@ -483,11 +505,13 @@ contains
     call MPI_SEND(BlockData_I, iData, MPI_REAL, iProcTo, &
          itag, iComm, iError)
 
-    if(DoTest)write(*,*)'send done, me,iBlockFrom,nDynamic=',iProc,iBlockFrom,nDynamicData
+    if(DoTest)write(*,*)'send done, me,iBlockFrom,nDynamic=', &
+         iProc,iBlockFrom,nDynamicData
 
   end subroutine send_block_data
 
   !============================================================================
+
   subroutine recv_block_data
 
     globalBLK = iBlockTo
@@ -519,7 +543,8 @@ contains
     neiLev(:,iBlockTo)         = nint(BlockData_I(8:13))
     nDynamicData               = nint(BlockData_I(14))
 
-    if(DoTest)write(*,*)'recv done, me,iBlockTo,nDynamic=',iProc,iBlockTo,nDynamicData
+    if(DoTest)write(*,*)'recv done, me,iBlockTo,nDynamic=', &
+         iProc,iBlockTo,nDynamicData
 
     ! Put neighbor info into other arrays 
     ! (used for B0 face restriction)
