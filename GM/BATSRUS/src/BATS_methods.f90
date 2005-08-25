@@ -25,6 +25,7 @@ subroutine BATS_setup
        dn_refine,initial_refine_levels,nRefineLevelIC,nRefineLevel,&
        automatic_refinement
   use ModPhysics, ONLY : unitSI_t
+  use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
 
   implicit none
@@ -94,6 +95,11 @@ contains
     end if
     ! number blocks and balance load
     call number_soln_blocks
+
+    ! Set initial block types
+    where(.not.UnusedBlk) iTypeAdvance_B = ExplBlock_
+    call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
+         iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
     ! Move coordinates around except for restart from new restart files 
     ! which have coordinate info in the .rst files and not in the octree.
