@@ -307,7 +307,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        nScalarBLK +                      & ! scalars
        nVar*nCellGhostBLK +              & ! State_VGB
        nExtraData +                      & ! B0, fbody, qheat
-       3*nWIJK                             ! max for dynamic data
+       3*nVar*nIJK                         ! max for data in ModBlockData
 
   ! Buffer for send and recieve
   real, dimension(nDataBLK) :: BlockData_I
