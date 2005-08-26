@@ -360,7 +360,6 @@ subroutine calc_db0_dt(dTime)
   use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, Db0Dt_CDB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModPhysics, ONLY: UnitSi_t
-  use ModCompatibility, ONLY: calculate_dipole_tilt
   implicit none
 
   real, intent(in) :: dTime
@@ -385,10 +384,6 @@ subroutine calc_db0_dt(dTime)
   TimeSimulationOrig = Time_Simulation
   Time_Simulation = Time_Simulation + dTime*UnitSi_t
 
-  ! The user may have decided to use the old algorithm (UseNewAxes=F). 
-  ! Then the dipole tilt will be approximate only. Enjoy ...
-  if(.not.UseNewAxes .and. NameThisComp=='GM') call calculate_dipole_tilt
-
   ! Calculate dB0dt
   do iBlock=1,nBlock
      if(unusedBLK(iBlock))CYCLE
@@ -402,8 +397,6 @@ subroutine calc_db0_dt(dTime)
   end do
   ! Reset time, date and dipole tilt
   Time_Simulation = TimeSimulationOrig
-  if(.not.UseNewAxes .and. NameThisComp=='GM') call calculate_dipole_tilt
-
 
 end subroutine calc_db0_dt
 !============================================================================
@@ -503,8 +496,7 @@ end subroutine set_b0_matrix
 subroutine get_b0(X0,Y0,Z0,B0)
 
   ! this interface allows use of various models for B0
-  use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem, &
-       UseNewAxes
+  use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem
   use ModPhysics,       ONLY : unitSI_B
   use CON_planet_field, ONLY : get_planet_field
   use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
@@ -514,7 +506,7 @@ subroutine get_b0(X0,Y0,Z0,B0)
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(3) :: B0
 
-  if(NameThisComp=='GM' .and. UseNewAxes)then
+  if(NameThisComp=='GM')then
      call get_planet_field(Time_Simulation,X0,Y0,Z0,TypeCoordSystem//' NORM',&
           B0)
      B0 = B0/unitSI_B
@@ -705,14 +697,13 @@ subroutine update_b0
 
   use ModProcMH,        ONLY: iProc
   use ModMain,          ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
-       time_simulation, lVerbose, UseNewAxes, NameThisComp
+       time_simulation, lVerbose, NameThisComp
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModGeometry,      ONLY: true_cell, body_BLK
   use CON_axes,         ONLY: get_axes
   use ModNumConst,      ONLY: cRadToDeg
   use ModIO,            ONLY: iUnitOut, write_prefix
-  use ModCompatibility, ONLY: calculate_dipole_tilt
 
   implicit none
 
@@ -721,7 +712,7 @@ subroutine update_b0
   !============================================================================
 
   if (iProc == 0.and.lVerbose>0) then
-     if(UseNewAxes .and. NameThisComp=='GM')then
+     if(NameThisComp=='GM')then
         call get_axes(Time_Simulation, MagAxisTiltGsmOut=MagAxisTiltGsm)
         call write_prefix; write(iUnitOut,*) &
           "update_b0 at tSimulation, TiltGsm=", &
@@ -732,8 +723,6 @@ subroutine update_b0
      end if
   end if
   call timing_start('update_B0')
-
-  if(.not.UseNewAxes .and. NameThisComp=='GM')call calculate_dipole_tilt
 
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE

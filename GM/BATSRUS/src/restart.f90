@@ -176,7 +176,7 @@ subroutine read_restart_file
   open(unit_tmp, file=filename, status='old', form='UNFORMATTED',&
        iostat = iError)
 
-  if(iError /= 0) call CON_stop(NameThisComp// &
+  if(iError /= 0) call stop_mpi(NameThisComp// &
        ' read_restart_file could not open: '//trim(filename))
 
   ! Do not overwrite time_simulation which is read from restart.H

@@ -25,16 +25,6 @@ Module ModMain
   character (len=2)   :: NameThisComp=''
 
   !\
-  ! Backward-compatibility parameters
-  !/
-  ! We can use the old algorithms to calculate axes or the new one
-  logical             :: UseNewAxes = .true.
-
-  ! We can use the old parameter format (parameters depend on time_accurate)
-  ! or the new format compatible with SWMF
-  logical             :: UseNewParam = .true.
-
-  !\
   ! Precision of reals
   !/
   ! Number of bytes in the default real number (precision)

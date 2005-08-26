@@ -9,9 +9,7 @@ subroutine set_physics_constants
   use ModPhysics
   use CON_axes,   ONLY: get_axes
   use CON_planet, ONLY: get_planet
-!  use ModUser                      !^CFG UNCOMMENT IF USERFILES
   use ModVarIndexes
-  use ModCompatibility, ONLY: calculate_dipole_tilt
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun
@@ -171,19 +169,20 @@ subroutine set_physics_constants
      Body_p  = Body_rho*Body_T_dim
      RhoBody2= RhoDimBody2                          !^CFG IF SECONDBODY
      pBody2  = RhoDimBody2*TDimBody2                !^CFG IF SECONDBODY
-!^CFG IF GLOBALHELIOSPHERE BEGIN
-!Correcting the problem of the pressure and density near the body
+
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
+     !Correcting the problem of the pressure and density near the body
   case(problem_globalhelio)
-!
-! setting Body_rho_dim to be like SW_rho_dim -look at write_plot_common.f90
-!
+     !
+     ! setting Body_rho_dim to be like SW_rho_dim, look at write_plot_common
+     !
      Body_rho_dim = SW_rho_dim
      Body_T_dim = SW_T_dim
      Body_rho = Body_rho_dim/unitUSER_rho
      Body_p = inv_g
      RhoBody2= Body_rho                            !^CFG IF SECONDBODY
      pBody2  = Body_p                              !^CFG IF SECONDBODY
-!^CFG END GLOBALHELIOSPHERE
+     !^CFG END GLOBALHELIOSPHERE
 
   case default
      Body_rho= Body_rho_dim/unitUSER_n
@@ -205,24 +204,24 @@ subroutine set_physics_constants
   FaceState_VI(rho_,body1_)=Body_rho
   FaceState_VI(P_,body1_)=Body_p
   
-  !The following part of the code is sensitive to a particular phisical
+  !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
-  !or featuring
+  !or features
 
   FaceState_VI(rho_,body2_)=RhoBody2                !^CFG IF SECONDBODY
-  FaceState_VI(P_,body2_)=pBody2            !^CFG IF SECONDBODY
+  FaceState_VI(P_,body2_)=pBody2                    !^CFG IF SECONDBODY
 
   
   !For Outer Boundaries
   do iBoundary=East_,Top_
-     FaceState_VI(rho_,iBoundary)= SW_rho
-     FaceState_VI(Ux_,iBoundary)= SW_Ux
-     FaceState_VI(Uy_,iBoundary)= SW_Uy
-     FaceState_VI(Uz_,iBoundary)= SW_Uz
-     FaceState_VI(Bx_,iBoundary)= SW_Bx
-     FaceState_VI(By_,iBoundary)= SW_By
-     FaceState_VI(Bz_,iBoundary)= SW_Bz
-     FaceState_VI(P_,iBoundary)= SW_p
+     FaceState_VI(rho_, iBoundary) = SW_rho
+     FaceState_VI(Ux_,  iBoundary) = SW_Ux
+     FaceState_VI(Uy_,  iBoundary) = SW_Uy
+     FaceState_VI(Uz_,  iBoundary) = SW_Uz
+     FaceState_VI(Bx_,  iBoundary) =  SW_Bx
+     FaceState_VI(By_,  iBoundary) = SW_By
+     FaceState_VI(Bz_,  iBoundary) = SW_Bz
+     FaceState_VI(P_,   iBoundary) = SW_p
   end do
 
   !Cell State is used for filling the ghostcells
@@ -233,7 +232,6 @@ subroutine set_physics_constants
           FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
   end do
 
-  
   !\
   ! Now do the magnetic field stuff
   !/
@@ -241,7 +239,7 @@ subroutine set_physics_constants
   ! for reporting them in write_progress.
 
   ! Nondimensionalize dipole strength.
-  if(NameThisComp == 'GM' .and. UseNewAxes) then
+  if(NameThisComp == 'GM') then
      call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
      call get_planet(DipoleStrengthOut = Bdp_dim)
      Bdp      = Bdp_dim/unitSI_B 
@@ -256,9 +254,6 @@ subroutine set_physics_constants
      ! But how is it going to rotate ?
      CosThetaTilt = cos(ThetaTilt)
      SinThetaTilt = sin(ThetaTilt)
-  elseif(.not.UseNewAxes) then
-     ! The user decided to use the old algorithm. Enjoy...
-     call calculate_dipole_tilt
   end if
 
   ! by default quadrupole and octupole terms are zero
@@ -409,9 +404,10 @@ subroutine set_physics_constants
      B0_scl  = 1.0E-4*BArcDim /sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
-  if( UseUserSetPhysConst)call user_set_physics_constants  !^CFG IF USERFILES 
-end subroutine set_physics_constants
 
+  if(UseUserSetPhysConst)call user_set_physics_constants  !^CFG IF USERFILES 
+
+end subroutine set_physics_constants
 
 !===========================================================================
 

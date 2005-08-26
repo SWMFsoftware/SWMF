@@ -19,7 +19,6 @@ subroutine MH_set_parameters(TypeAction)
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
-  use ModCompatibility, ONLY: read_compatible_command, SetDipoleTilt
   use CON_planet,       ONLY: read_planet_var, check_planet_var
   use CON_axes,         ONLY: init_axes
   use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case
@@ -121,20 +120,15 @@ subroutine MH_set_parameters(TypeAction)
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
      if(IsStandAlone .and. NameThisComp=='GM') then
-        if(UseNewAxes)then
-           ! Check and set some planet variables (e.g. DoUpdateB0)
-           call check_planet_var(iProc==0, time_accurate)
+        ! Check and set some planet variables (e.g. DoUpdateB0)
+        call check_planet_var(iProc==0, time_accurate)
 
-           ! Initialize axes
-           call init_axes(StartTime)
+        ! Initialize axes
+        call init_axes(StartTime)
 
-           ! Obtain some planet parameters
-           call get_planet(UseRotationOut = UseRotatingBc, &
-                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
-        else
-           DoUpdateB0 = time_accurate .and. Dt_updateB0 > 0.0 .and. &
-                UseRotatingBc .and. .not.SetDipoleTilt
-        endif
+        ! Obtain some planet parameters
+        call get_planet(UseRotationOut = UseRotatingBc, &
+             DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
      end if
 
      if(problem_type==-1) call stop_mpi(&
@@ -210,12 +204,6 @@ subroutine MH_set_parameters(TypeAction)
      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
-     case("#NEWPARAM")
-        call check_stand_alone
-        call read_var('UseNewParam',UseNewParam)
-        call read_var('UseNewAxes', UseNewAxes)
-        call read_var('DoTimeAccurate',time_accurate)
-        call read_var('UseRotatingBc',UseRotatingBc)
      case("#COMPONENT")
         call read_var('NameComp',NameCompRead)
         if(NameCompRead /= NameThisComp)&
@@ -240,8 +228,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#STOP")
         call check_stand_alone
         call read_var('MaxIteration',nIter)
-        if(UseNewParam .or. time_accurate) &
-             call read_var('tSimulationMax',t_max)
+        call read_var('tSimulationMax',t_max)
      case("#CPUTIMEMAX")
         call check_stand_alone
         call read_var('CpuTimeMax',cputime_max)
@@ -261,10 +248,6 @@ subroutine MH_set_parameters(TypeAction)
         if(iProc==0)call read_echo_set(DoEcho)
      case("#TEST")
         call read_var('StringTest',test_string)
-        if(.not.UseNewParam .and. index(test_string,'read_inputs')>0)then
-           DoEcho = .true.
-           if(iProc==0)call read_echo_set(DoEcho)
-        end if
      case("#TESTXYZ")
         coord_test=.true.
         UseTestCell=.true.
@@ -285,8 +268,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('iDimTest ',DIMtest)
      case("#TESTTIME")
         call read_var('nIterTest',ITERtest)
-        if(UseNewParam .or. time_accurate) &
-             call read_var('TimeTest',Ttest)
+        call read_var('TimeTest',Ttest)
      case("#STRICT")
         call read_var('UseStrict',UseStrict)
      case("#VERBOSE")
@@ -315,7 +297,6 @@ subroutine MH_set_parameters(TypeAction)
              call read_var('TypeBcBody2',TypeBc_I(body2_)) 
         !                                              ^CFG END SECONDBODY
      case("#TIMESTEPPING")
-        if(.not.UseNewParam)call read_var('DoTimeAccurate',time_accurate)
         call read_var('nStage',nSTAGE)
         call read_var('CflExpl',Cfl)
         ExplCfl = Cfl                                   !^CFG IF IMPLICIT
@@ -441,8 +422,7 @@ subroutine MH_set_parameters(TypeAction)
         if(save_restart_file)then
            if(iProc==0)call check_dir(NameRestartOutDir)
            call read_var('DnSaveRestart',dn_output(restart_))
-           if(UseNewParam .or. time_accurate) &
-                call read_var('dt_output(restart_)',dt_output(restart_))
+           call read_var('dt_output(restart_)',dt_output(restart_))
            nfile=max(nfile,restart_)
         end if
      case("#SAVELOGFILE")
@@ -452,8 +432,7 @@ subroutine MH_set_parameters(TypeAction)
            nfile=max(nfile,logfile_)
            call read_var('StringLog',log_string)
            call read_var('DnSaveLogfile',dn_output(logfile_))
-           if(UseNewParam .or. time_accurate) &
-                call read_var('DtSaveLogfile',dt_output(logfile_))
+           call read_var('DtSaveLogfile',dt_output(logfile_))
 
            ! Log variables
            if((index(log_string,'VAR')>0) .or. (index(log_string,'var')>0))then
@@ -515,8 +494,7 @@ subroutine MH_set_parameters(TypeAction)
 
            ! Plotting frequency
            call read_var('DnSavePlot',dn_output(ifile))
-           if(UseNewParam .or. time_accurate) &
-                call read_var('DtSavePlot',dt_output(ifile))
+           call read_var('DtSavePlot',dt_output(ifile))
 
            ! Plotting area
            if(index(plot_string,'cut')>0)then
@@ -1536,38 +1514,12 @@ subroutine MH_set_parameters(TypeAction)
         !                                           ^CFG END SECONDBODY
 
      case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-          '#ROTATION','#NONDIPOLE','#UPDATEB0')
+          '#ROTATION','#DIPOLE','#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone
         if(.not.is_first_session())CYCLE READPARAM
-
-        if(.not.UseNewAxes .and. iProc==0) &
-             call stop_mpi(NameSub//': ERROR command '// &
-             trim(NameCommand)//' cannot be used with UseNewAxes=F')
 
         call read_planet_var(NameCommand)
-
-     case("#COROTATION","#AXES")
-
-        call check_stand_alone
-        if(.not.is_first_session())CYCLE READPARAM
-
-        if(UseNewAxes .and. iProc==0) &
-             call stop_mpi(NameSub//': ERROR command '// &
-             trim(NameCommand)//' cannot be used with UseNewAxes=T')
-
-        call read_compatible_command(NameCommand)
-
-     case("#DIPOLE")
-
-        call check_stand_alone
-        if(.not.is_first_session())CYCLE READPARAM
-
-        if(UseNewAxes)then
-           call read_planet_var(NameCommand)
-        else
-           call read_compatible_command(NameCommand)
-        end if
 
      case("#COORDSYSTEM","#COORDINATESYSTEM")
         if(.not.is_first_session())CYCLE READPARAM

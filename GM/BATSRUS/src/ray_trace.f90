@@ -1056,19 +1056,13 @@ contains
     ! return false if the ray exited R_raytrace or too many integration 
     ! steps were done
 
-    use ModMain,     ONLY: UseNewAxes, Time_Simulation
+    use ModMain,     ONLY: Time_Simulation
     use ModPhysics,  ONLY: Bdp_dim     ! only the sign of dipole is needed
     use CON_planet_field, ONLY: map_planet_field
 
     integer :: iHemisphere
     real    :: x_D(3)
     !---------------------------------------------------------------------
-    if(.not.UseNewAxes)then
-       ! We cannot use the analytic mapping so continue with numerical ?!
-       follow_ray_iono = .false.
-       return
-    end if
-
     call map_planet_field(Time_Simulation, xx, TypeCoordSystem//' NORM', &
          rIonosphere, x_D, iHemisphere)
 

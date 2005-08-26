@@ -5,16 +5,12 @@ subroutine stand_alone
   ! This version behaves like the SC component of SWMF.
 
   use ModProcMH, ONLY: iProc
-  use ModMain,   ONLY: NameThisComp, UseNewParam, UseNewAxes, UseRotatingBc,&
-       time_accurate
+  use ModMain,   ONLY: NameThisComp, UseRotatingBc
   use ModIO,     ONLY: NamePlotDir, NameRestartInDir, NameRestartOutDir
 
   implicit none
 
   NameThisComp  = 'SC'
-  UseNewParam   = .true.
-  UseNewAxes    = .true.
-  time_accurate = .true.
   UseRotatingBc = .false.
 
   NamePlotDir       = 'SC/'//NamePlotDir

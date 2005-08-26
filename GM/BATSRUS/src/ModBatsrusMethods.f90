@@ -126,15 +126,11 @@ contains
     ! Set intial conditions for solution in each block.
     !/
 
-    use ModCompatibility, ONLY: calculate_dipole_tilt, SetDipoleTilt
-
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = &
          NameSub//'::set_initial_conditions'
     integer :: iLevel, iError
     integer :: nBlockMoved
-    logical :: restart_read = .false. ! This is needed for UseNewAxes=F only
-
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        do iLevel=1,nRefineLevelIC
@@ -170,13 +166,6 @@ contains
           call timing_stop('read_restart')
 
           call fix_block_geometry(globalBLK)
-
-          ! For sake of backwards compatibility
-          if(.not.UseNewAxes .and. .not.restart_read .and. DoUpdateB0)then
-             ! Now we have time_simulation read from the first restart file
-             restart_read = .true.
-             call calculate_dipole_tilt
-          end if
 
        end if
 

@@ -35,7 +35,6 @@ MODEL = ModVarIndexes.o
 
 MODULES = \
 	ModBlockData.o\
-	ModCompatibility.o\
 	ModInterface.o\
 	ModProcMH.o\
 	ModSize.o\

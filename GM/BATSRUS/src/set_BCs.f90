@@ -435,8 +435,8 @@ contains
     if (UseRotatingBcHere) then
 
        !\
-       ! The program is called which calculates the cartesian corotation velocity vector
-       ! v_phi as a function of the radius-vector "FaceCoords"
+       ! The program is called which calculates the cartesian corotation 
+       ! velocity vector v_phi as a function of the radius-vector "FaceCoords"
        !/
        call calc_corotation_velocities(iter,time_now,FaceCoords_D,v_phi)
 
@@ -445,7 +445,8 @@ contains
             'ionosphere','ionospherefloat')
           VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + cTwo*v_phi
        case default
-          call stop_mpi('UseRotatingBc is not compatible with TypeBc_I='//TypeBcHere) 
+          call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
+               //TypeBcHere) 
        end select
     end if 
   end subroutine set_body_BCs

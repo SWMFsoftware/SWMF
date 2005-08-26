@@ -8,10 +8,8 @@ subroutine calc_corotation_velocities(iter,time_now,Xyz_D,uRot_D)
   !-------------------------------------------------------------------------
 
   use CON_axes,          ONLY: get_axes
-  use ModCompatibility,  ONLY: &
-       compatible_rotation => calc_corotation_velocities
   use ModCoordTransform, ONLY: cross_product
-  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, UseNewAxes
+  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
   use ModPhysics,        ONLY: OmegaBody
   use ModNumConst
   implicit none
@@ -26,13 +24,6 @@ subroutine calc_corotation_velocities(iter,time_now,Xyz_D,uRot_D)
   logical :: IsUninitialized = .true.
 
   !------------------------------------------------------------------------
-  if(.not.UseNewAxes)then
-     ! The user decided to call an overcomplicated, incorrect and inefficient 
-     ! algorithm. Enjoy...
-     call compatible_rotation(iter,time_now,Xyz_D,uRot_D)
-     RETURN
-  end if
-
   select case(TypeCoordSystem)
   case('HGI')
      ! In the HGI system the Solar angular velocity vector points towards +Z
