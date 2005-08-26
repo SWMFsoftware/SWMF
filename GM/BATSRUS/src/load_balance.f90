@@ -95,9 +95,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
   if(DoMoveCoord)then
 !!! If there was a IsTrueBlock_BP array there was no need for MPI_ALLGATHER
-
-     where(.not. True_BLK) &
-          iTypeAdvance_B = -abs(iTypeAdvance_B)
+     where(.not. True_BLK(1:nBlock)) &
+          iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
 
      ! Update iTypeAdvance_BP
      call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
@@ -129,18 +128,21 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   end do; end do
 
   if(DoTestMe)then
-     write(*,*)'load_balance starting: nBlockMax=',nBlockMax
-     write(*,*)'load_balance starting: me, nBlock, nBlockUsed=',&
+     write(*,'(a,i6)') &
+          'load_balance starting: nBlockMax=',nBlockMax
+     write(*,'(a,i4,2i6)') &
+          'load_balance starting: me, nBlock, nBlockUsed=',&
           iProc, nBlock, count(.not.unusedBLK(1:nBlock))
      if(nType > 1) then
-        write(*,*)'load_balance starting: iProc, max, min(iTypeAdvance_BP)=',&
+        write(*,'(a,3i4)') &
+             'load_balance starting: iProc, max, min(iTypeAdvance_BP)=',&
              iProc,&
              maxval(iTypeAdvance_BP(1:nBlockMax,:)),&
              minval(iTypeAdvance_BP(1:nBlockMax,:))
-        write(*,*)'load_balance starting: iProc, nBlockALL_I=',&
-             iProc, nBlockALL_I
+        write(*,'(a,i4,10i7)')'load_balance starting: iProc, nBlockALL_I=',&
+             iProc, nBlockALL_I(1:nType)
         do iType = 1, nType
-           write(*,*)'load_balance starting: iProc, iType, count=',&
+           write(*,'(a,i4,i2,i6)')'load_balance starting: iProc, iType, count=',&
                 iProc, iType,count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
         end do
      end if
@@ -229,18 +231,19 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   end if
 
   if(DoTestMe)then
-     write(*,*)'load_balance finished: ',&
-          'nTry, nBlockMax, nBlockMoved=',&
+     write(*,'(a,i4,2i6)') &
+          'load_balance finished: nTry, nBlockMax, nBlockMoved=',&
           iTry, nBlockMax, nBlockMoved
 
-     write(*,*)&
+     write(*,'(a,i4,3i6)')&
        'load_balance finished: me, nBlock, nBlockUsed=',&
        iProc, nBlock, count(.not.unusedBLK(1:nBlock)), &
        count(iTypeAdvance_B /= SkippedBlock_)
 
      if(nType > 1) then
         do iType = 1, nType
-           write(*,*)'load_balance finished: iProc, iType, count=',&
+           write(*,'(a,i4,i2,i6)') &
+                'load_balance finished: iProc, iType, count=',&
                 iProc, iType,count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
         end do
      end if
