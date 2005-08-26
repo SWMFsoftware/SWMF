@@ -130,7 +130,6 @@ Module ModMain
   !\
   ! Parameters for the B0 field
   !/
-  real    :: ThetaTiltDeg = 0.0
   real    :: Dt_UpdateB0  = 0.0001
   logical :: DoUpdateB0   = .true.
   logical :: DoSplitDb0Dt = .true.
