@@ -124,7 +124,7 @@ contains
 
     if(UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('UseData_B=.true. in '//NameSub)
+       call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
@@ -159,7 +159,7 @@ contains
 
     if(UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('UseData_B=.true. in '//NameSub)
+       call stop_mpi('UseData_B=.true. in '//NameSub)
     end if
 
     if(nData_B(iBlock) < 0)call init_block(iBlock,1)
@@ -214,12 +214,12 @@ contains
     if(nData_B(iBlock) < 1) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
             ' nData_B(iBlock) =',nData_B(iBlock)
-       call CON_stop('nData_B(iBlock) < 1 in '//NameSub)
+       call stop_mpi('nData_B(iBlock) < 1 in '//NameSub)
     end if
 
     if(.not.UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('UseData_B=.false. in '//NameSub)
+       call stop_mpi('UseData_B=.false. in '//NameSub)
     end if
 
     ! wrap around
@@ -258,12 +258,12 @@ contains
        write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
             ' nData_B =',nData_B(iBlock),&
             ' less than iData_B=',i,' + nValue=',nValue
-       call CON_stop('nData_B(iBlock) < iData_B+nValue in '//NameSub)
+       call stop_mpi('nData_B(iBlock) < iData_B+nValue in '//NameSub)
     end if
 
     if(.not.UseData_B(iBlock)) then
        write(*,*)NameSub,' ERROR for iBlock=',iBlock
-       call CON_stop('UseData_B=.false. in '//NameSub)
+       call stop_mpi('UseData_B=.false. in '//NameSub)
     end if
 
     ! Read data
