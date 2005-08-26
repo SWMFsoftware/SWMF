@@ -188,6 +188,7 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
 
 end subroutine create_refined_soln_blocks
 
+!==============================================================================
 
 subroutine  cube_bcast_r(nPar,Par,var,isize)
   use ModProcMH
@@ -223,6 +224,7 @@ subroutine  cube_bcast_r(nPar,Par,var,isize)
 
 end subroutine cube_bcast_r
 
+!==============================================================================
 
 subroutine  cube_bcast_l(nPar,Par,var,isize)
   use ModProcMH
@@ -258,6 +260,7 @@ subroutine  cube_bcast_l(nPar,Par,var,isize)
 
 end subroutine cube_bcast_l
 
+!==============================================================================
 
 subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
   use ModMain
@@ -375,6 +378,8 @@ subroutine prolong_block(nOrderIn, IsTrueCellC_G, VarC_VG, iCube, VarF_VG)
   end do
 
 end subroutine prolong_block
+
+!==============================================================================
 
 subroutine set_refined_block_geometry
   use ModProcMH
@@ -651,6 +656,8 @@ contains
   end subroutine assign_coarse_blk_soln
 end subroutine create_coarse_soln_block
 
+!==============================================================================
+
 subroutine set_coarse_block_geometry(iBLK)
   use ModNumConst
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK
@@ -707,6 +714,8 @@ subroutine fix_soln_block(iBLK)
 
 end subroutine fix_soln_block
 
+!==============================================================================
+
 subroutine calc_other_soln_vars(iBLK)
   use ModMain
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK,qheat_BLK, &
@@ -749,6 +758,5 @@ subroutine calc_other_soln_vars(iBLK)
   qheat_BLK(:,:,:,iBLK) = 0.00
 
   if(UseUserHeating)     call user_heat_source      !^CFG IF USERFILES
-
 
 end subroutine calc_other_soln_vars
