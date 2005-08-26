@@ -698,6 +698,7 @@ subroutine update_b0
   use ModProcMH,        ONLY: iProc
   use ModMain,          ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
        time_simulation, lVerbose, NameThisComp
+  use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModGeometry,      ONLY: true_cell, body_BLK
@@ -707,16 +708,18 @@ subroutine update_b0
 
   implicit none
 
-  real    :: MagAxisTiltGsm
   integer :: iBlock
   !============================================================================
 
+  ! Update ThetaTilt
+  if(NameThisComp=='GM') &
+       call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
+
   if (iProc == 0.and.lVerbose>0) then
      if(NameThisComp=='GM')then
-        call get_axes(Time_Simulation, MagAxisTiltGsmOut=MagAxisTiltGsm)
         call write_prefix; write(iUnitOut,*) &
           "update_b0 at tSimulation, TiltGsm=", &
-          Time_Simulation, MagAxisTiltGsm*cRadToDeg
+          Time_Simulation, ThetaTilt*cRadToDeg
      else
         call write_prefix; write(iUnitOut,*) &
              "update_b0 at tSimulation=",Time_Simulation
