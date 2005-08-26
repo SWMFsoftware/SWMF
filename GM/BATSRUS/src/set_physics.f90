@@ -10,6 +10,7 @@ subroutine set_physics_constants
   use CON_axes,   ONLY: get_axes
   use CON_planet, ONLY: get_planet
   use ModVarIndexes
+  !use ModUser                      !^CFG UNCOMMENT IF USERFILES
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun
@@ -36,12 +37,12 @@ subroutine set_physics_constants
      unitSI_x       = Rsun                      ! Radius - MUST BE IN meters
      Mbody_dim      = Msun                      ! Mass of body in kg
      rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-!^CFG IF GLOBALHELIOSPHERE BEGIN
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
   case (problem_globalhelio)
      unitSI_x       = 215.0*Rsun                ! Radius - MUST BE IN meters
      Mbody_dim      = Msun                      ! Mass of body in kg
      rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-!^CFG END GLOBALHELIOSPHERE
+     !^CFG END GLOBALHELIOSPHERE
   case (problem_earth)
      unitSI_x       = Rearth        ! Radius - MUST BE IN meters
      Mbody_dim      = Mearth        ! Mass of body in kg
@@ -125,10 +126,10 @@ subroutine set_physics_constants
   end if
 
   Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
-  GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x)  !^CFG IF SECONDBODY
-!^CFG IF ALWAVES BEGIN
-!  Gbody  = Gbody/Tnot  !^CFG UNCOMMENT IF ALWAVES
-!^CFG END ALWAVES
+  GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x) !^CFG IF SECONDBODY
+  !^CFG IF ALWAVES BEGIN
+  !Gbody  = Gbody/Tnot  !^CFG UNCOMMENT IF ALWAVES
+  !^CFG END ALWAVES
 
   !\
   ! Nondimensionalize dimensional SW values - 
@@ -137,13 +138,12 @@ subroutine set_physics_constants
   SW_p_dim = unitUSER_p*inv_g
   SW_B_factor = unitUSER_B
 
-  !^CFG IF GLOBALHELIOSPHERE BEGIN
-  if(problem_type==problem_globalhelio)then
-! unitUSER_rho #/cm3
+  if(problem_type==problem_globalhelio)then !^CFG IF GLOBALHELIOSPHERE BEGIN
+     ! unitUSER_rho #/cm3
      SW_rho = SW_rho_dim/unitUSER_rho
-  else        !^CFG END GLOBALHELIOSPHERE
+  else                                      !^CFG END GLOBALHELIOSPHERE
      SW_rho = 1.0    
-  end if      !^CFG IF GLOBALHELIOSPHERE
+  end if                                    !^CFG IF GLOBALHELIOSPHERE
   SW_p   = inv_g
   SW_Ux  = SW_Ux_dim/unitUSER_U
   SW_Uy  = SW_Uy_dim/unitUSER_U
@@ -448,13 +448,13 @@ subroutine set_dimensions
      unitSI_x    = Rsun                                      ! m
      unitSI_rho  = cProtonMass*Body_rho_dim                  ! kg/m^3
      unitSI_U    = sqrt(g*cBoltzmann*Body_T_dim/cProtonMass) ! m/s  (SSPsun)
-!^CFG IF GLOBALHELIOSPHERE BEGIN
-! SW_rho_dim is in units of n/cc
+     !^CFG IF GLOBALHELIOSPHERE BEGIN
+     ! SW_rho_dim is in units of n/cc
     case(problem_globalhelio)
-       unitSI_x    = 215.0*Rsun                                        ! m
-       unitSI_rho  = cProtonMass*SW_rho_dim*1.0E+6                     ! kg/m^3
-       unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)           ! m/s  (SSPsun)
-!^CFG END GLOBALHELIOSPHERE
+       unitSI_x    = 215.0*Rsun                              ! m
+       unitSI_rho  = cProtonMass*SW_rho_dim*1.0E+6           ! kg/m^3
+       unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! m/s  (SSPsun)
+       !^CFG END GLOBALHELIOSPHERE
   case(problem_dissipation)
      if (.not.UseDefaultUnits) then
         unitSI_x    = Length0Diss                            ! m
