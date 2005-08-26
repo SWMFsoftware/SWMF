@@ -19,9 +19,7 @@ Module ModIO
 
   logical :: restart               ! Use a restart file
   logical :: restart_Bface=.false. ! Bface from restart file ^CFG IF CONSTRAINB
-  logical :: restart_ghost=.true.  ! ghost cells from restart file
-  logical :: restart_reals=.false. ! Real numbers only in restart file
-  logical :: RestartBlockLevels=.false. ! Load LEVmin and LEVmax in octree restart
+  logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
 
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.

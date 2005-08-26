@@ -1,43 +1,4 @@
 !^CFG COPYRIGHT UM
-! Read restart header file for some information
-subroutine read_restart_header
-  use ModProcMH
-  use ModMain, ONLY : n_step
-  use ModIO
-  use ModMpi
-  implicit none
-
-  logical :: file_exist
-
-  integer :: iError
-
-  !-------------------------------------------------------------------------
-
-  if(iProc==0)then
-     ! For backward compatibility assume no Bface and saved ghost cells
-     restart_Bface=.false.                         !^CFG IF CONSTRAINB
-     restart_ghost=.true.
-     inquire(file=trim(NameRestartInDir)//'restart.H',EXIST=file_exist)
-     if(file_exist)then
-        write(*,*)'Reading old (before v6.07) restart.H format...'
-        open(unit_tmp,file=trim(NameRestartInDir)//'restart.H',status='old')
-        read(unit_tmp,*,ERR=1,END=1)restart_Bface  !^CFG IF CONSTRAINB
-        read(unit_tmp,*,ERR=1,END=1)restart_ghost
-1       close(unit_tmp)
-     else
-        write(*,*)'WARNING: No restart.H file was found!'
-        write(*,*)'Assuming very old (before v5.54) restart file format'
-     endif
-     write(*,*)'restart_Bface=',restart_Bface      !^CFG IF CONSTRAINB
-     write(*,*)'restart_ghost=',restart_ghost
-  end if
-
-  call MPI_BCAST(restart_Bface,1,MPI_LOGICAL,0,iComm,iError) !^CFG IF CONSTRAINB
-  call MPI_BCAST(restart_ghost,1,MPI_LOGICAL,0,iComm,iError)
-  call MPI_BCAST(restart_reals,1,MPI_LOGICAL,0,iComm,iError)
-  call MPI_BCAST(n_step,       1,MPI_INTEGER,0,iComm,iError)
-end subroutine read_restart_header
-
 !==============================================================================
 subroutine write_restart_header
   use ModProcMH
@@ -187,16 +148,16 @@ subroutine read_restart_file
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB
-  use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
+  use ModAdvance,  ONLY: State_VGB
+  use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
   use ModParallel, ONLY: iBlockRestartALL_A
   use ModCT, ONLY : BxFace_BLK,ByFace_BLK,BzFace_BLK       !^CFG IF CONSTRAINB
   use ModImplicit, ONLY: n_prev, w_prev                    !^CFG IF IMPLICIT
   use ModIO
   implicit none
 
-  integer :: nIRead,nJRead,nKRead,iVar,i,j,k
-  real  ::   r_x1,r_x2,r_y1,r_y2,r_z1,r_z2, tSimulationRead
+  integer :: iVar, i, j, k, iError
+  real    :: tSimulationRead
   character (len=4), Parameter :: restart_ext=".rst"
 
   logical :: oktest, oktest_me
@@ -207,29 +168,22 @@ subroutine read_restart_file
      oktest=.false.; oktest_me=.false.
   end if
 
-
   write(filename,'(a,i5.5,a)') &
        trim(NameRestartInDir)//'blk',&
        iBlockRestartALL_A(global_block_number(globalBLK)),&
        restart_ext
 
-  open(unit_tmp, file=filename, status='old', form='UNFORMATTED',ERR=10)
+  open(unit_tmp, file=filename, status='old', form='UNFORMATTED',&
+       iostat = iError)
 
-  if(restart_reals)then
-     ! Do not overwrite time_simulation which is read from restart.H
-     read(unit_tmp) dt_BLK(globalBLK),tSimulationRead
-     read(unit_tmp) &
-          dx_BLK(globalBLK),dy_BLK(globalBLK),dz_BLK(globalBLK),&
-          xyzStart_BLK(:,globalBLK)
-  else
-!!! Backwards compatibility only !!!
-     read(unit_tmp)  nIRead,nJRead,nKRead, &
-          n_step, dt_BLK(globalBLK), time_Simulation
-     if (nIRead/=nI .or. nJRead/=nJ .or. nKRead/=nK) &
-          call stop_mpi("Error in read_restart_file: wrong nI, nJ, or nK")
+  if(iError /= 0) call CON_stop(NameThisComp// &
+       ' read_restart_file could not open: '//trim(filename))
 
-     read(Unit_tmp)  r_x1,r_x2,r_y1,r_y2,r_z1,r_z2
-  end if
+  ! Do not overwrite time_simulation which is read from restart.H
+  read(unit_tmp) dt_BLK(globalBLK),tSimulationRead
+  read(unit_tmp) &
+       dx_BLK(globalBLK),dy_BLK(globalBLK),dz_BLK(globalBLK),&
+       xyzStart_BLK(:,globalBLK)
 
   if(oktest_me)write(*,*)'RESTART dt,t,dx,dy,dz,x111,y111,z111_BLK,=',&
        dt_BLK(globalBLK),Time_Simulation,&
@@ -238,27 +192,19 @@ subroutine read_restart_file
   if(CodeVersion>5.60 .and. CodeVersion <7.00) &
        dt_BLK(globalBLK)=dt_BLK(globalBLK)/cfl
 
-  if(restart_ghost)then
-     read(Unit_tmp) &
-         ( State_VGB(iVar,:,:,:,globalBLK),iVar=1,nVar)
-     if(restart_Bface) read(Unit_tmp) &       !^CFG IF CONSTRAINB BEGIN
-          BxFace_BLK(:,:,:,globalBLK),&
-          ByFace_BLK(:,:,:,globalBLK),&
-          BzFace_BLK(:,:,:,globalBLK)         !^CFG END CONSTRAINB
-  else
-     do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
-        State_VGB(1:nVar,i,j,k,globalBLK)=&
-             DefaultState_V
-     end do;end do;end do
-     read(Unit_tmp) &
-           ( State_VGB(iVar,1:nI,1:nJ,1:nK,globalBLK),iVar=1,nVar)
-     if(restart_Bface) read(Unit_tmp) &               !^CFG IF CONSTRAINB BEGIN
-          BxFace_BLK(1:nI+1,1:nJ,1:nK,globalBLK),&
-          ByFace_BLK(1:nI,1:nJ+1,1:nK,globalBLK),&
-          BzFace_BLK(1:nI,1:nJ,1:nK+1,globalBLK)      !^CFG END CONSTRAINB
-     if(n_prev==n_step) read(Unit_tmp) &              !^CFG IF IMPLICIT
-          w_prev(:,:,:,:,globalBLK)                   !^CFG IF IMPLICIT
-  end if
+  do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
+     State_VGB(1:nVar, i, j, k, globalBLK) = DefaultState_V
+  end do;end do;end do
+
+  read(Unit_tmp) &
+       ( State_VGB(iVar,1:nI,1:nJ,1:nK,globalBLK),iVar=1,nVar)
+  if(restart_Bface) read(Unit_tmp) &               !^CFG IF CONSTRAINB BEGIN
+       BxFace_BLK(1:nI+1,1:nJ,1:nK,globalBLK),&
+       ByFace_BLK(1:nI,1:nJ+1,1:nK,globalBLK),&
+       BzFace_BLK(1:nI,1:nJ,1:nK+1,globalBLK)      !^CFG END CONSTRAINB
+  if(n_prev==n_step) read(Unit_tmp) &              !^CFG IF IMPLICIT
+       w_prev(:,:,:,:,globalBLK)                   !^CFG IF IMPLICIT
+
   close(unit_tmp)
   call correctE
 
@@ -271,9 +217,9 @@ subroutine read_restart_file
      write(*,*)'State_VGB   =',State_VGB(:,Itest,Jtest,Ktest,globalBLK)
   end if
 
-  return
-10 call CON_stop(NameThisComp//': '//filename//' is not available')
 end subroutine read_restart_file
+
+!=============================================================================
 
 subroutine write_restart_file
   use ModProcMH

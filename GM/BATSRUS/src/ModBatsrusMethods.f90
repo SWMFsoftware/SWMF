@@ -89,7 +89,6 @@ contains
        ! Read initial solution block geometry from octree restart file.
 
        ! Read restart header file only if old type.
-       if(.not.restart_reals)call read_restart_header  
        call read_octree_file     ! Read octree restart file.
 
     end if
@@ -101,9 +100,10 @@ contains
     call MPI_ALLGATHER(iTypeAdvance_B, MaxBlock, MPI_INTEGER, &
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
-    ! Move coordinates around except for restart from new restart files 
-    ! which have coordinate info in the .rst files and not in the octree.
-    call load_balance(.not.(restart .and. restart_reals),.false.,nBlockMoved)
+    ! Move coordinates around except for restart because the
+    ! coordinate info is in the .rst files and not in the octree.
+    ! Do not move the data, it is not yet set.
+    call load_balance(.not.restart, .false., nBlockMoved)
 
     call find_neighbors
 
@@ -169,7 +169,7 @@ contains
           call read_restart_file
           call timing_stop('read_restart')
 
-          if(restart_reals)call fix_block_geometry(globalBLK)
+          call fix_block_geometry(globalBLK)
 
           ! For sake of backwards compatibility
           if(.not.UseNewAxes .and. .not.restart_read .and. DoUpdateB0)then

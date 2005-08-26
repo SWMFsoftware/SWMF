@@ -1271,8 +1271,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#NEWRESTART")
         if(.not.is_first_session())CYCLE READPARAM
         restart=.true.
-        restart_reals=.true.
-        restart_ghost=.false.
         call read_var('DoRestartBFace',restart_Bface) !^CFG IF CONSTRAINB
      case("#BLOCKLEVELSRELOADED")
         if(.not.is_first_session())CYCLE READPARAM
