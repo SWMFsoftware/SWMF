@@ -187,18 +187,19 @@ contains
     !^CFG END USERFILES   
 
     if (restart) then
-       if(iProc==0)then
-          write(*,*)NameSub,' restarts at n_step,Time_Simulation=',&
-               n_step,Time_Simulation
-          !if(.not.IsStandAlone)then
-          !   call get_physics(tSimulationOut=tSimulation)
-          !   if(abs(tSimulation-Time_Simulation)>0.001) &
-          !        write(*,*)NameSub,' WARNING Time_Simulation differs from ',&
-          !        'tSimulation = ',tSimulation,' !!!'
-          !end if
+       ! Load balance for the inner blocks
+       call load_balance(.true.,.true.,nBlockMoved)
+       if(iProc == 0.and.lVerbose>0)then
+          call write_prefix; write(iUnitOut,*)&
+               NameSub,' load balanced inner blocks: nBlockMoved=',nBlockMoved
        end if
-       ! ???n_step is already known, BCAST maybe for backwards compatibility???
-       call MPI_BCAST(n_step,1,MPI_INTEGER,0,iComm,iError)
+       if(nBlockMoved > 0)then
+          call find_neighbors
+          call find_test_cell
+       end if
+       if(iProc==0)write(*,*)NameSub,' restarts at n_step,Time_Simulation=',&
+            n_step,Time_Simulation
+
        ! Overwrite time_simulation with binary value read from restart file
        call MPI_BCAST(Time_Simulation,1,MPI_REAL,0,iComm,iError)
     end if
