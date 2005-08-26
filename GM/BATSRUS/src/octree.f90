@@ -333,7 +333,7 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
   use ModMain, ONLY : nBlockMax, unusedBLK
   use ModGeometry, ONLY : xyzStart, dxyz
   use ModIoUnit, ONLY : UNITTMP_
-  use ModIO, ONLY : restart_reals,RestartBlockLevels
+  use ModIO, ONLY : RestartBlockLevels
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs
   use ModOctree
 ! use ModMpi
@@ -387,16 +387,6 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
      if (octree % ptr % used) then
         global_block_ptrs(iBLK, iPE+1) % ptr => octree % ptr
         nBlockMax =  max(nBlockMax, iBLK)
-
-!!! Backwards compatibility for old restart files !!!
-        if(.not.restart_reals)then
-!           if (iProc == 0) &
-           read(UNITTMP_) xyzends, dxyz
-           xyzStart(:)=xyzends(1,:)
-!           call MPI_BCAST(xyzStart(1), 3, MPI_REAL, 0, iComm, iError)
-!           call MPI_BCAST(dxyz(1),      3, MPI_REAL, 0, iComm, iError)
-           if (iProc == iPE) call set_block_geometry_obsolete(iBLK)
-        end if
 
         if (iProc == iPE) unusedBLK(iBLK) = .false.
 
