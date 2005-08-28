@@ -48,8 +48,6 @@ module ModAMR
   integer, dimension(:,:), allocatable :: SortP
   real, dimension(:,:), allocatable :: SortC
 
-  integer, dimension(:,:,:,:), allocatable :: neiPall
-  integer, dimension(:,:,:,:), allocatable :: neiBall
   logical, dimension(:,:),     allocatable :: unusedBlock_BP
 
   !\

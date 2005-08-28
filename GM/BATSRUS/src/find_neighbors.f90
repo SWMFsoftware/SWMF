@@ -115,12 +115,7 @@ subroutine find_neighbors
   neiPE(:,6,:) = neiPtop
   neiBLK(:,6,:) = neiBtop
 
-  call MPI_ALLGATHER(neiPE,   24*nBLK, MPI_INTEGER, &
-       neiPall, 24*nBLK, MPI_INTEGER, iComm, iError)
-
-  call MPI_ALLGATHER(neiBLK,  24*nBLK, MPI_INTEGER, &
-       neiBall, 24*nBLK, MPI_INTEGER, iComm, iError)
-
+  
   call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
        unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
 
