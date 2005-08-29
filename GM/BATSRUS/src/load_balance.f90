@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
+subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModProcMH
   use ModMain
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
@@ -7,18 +7,19 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY: True_Blk
   use ModPartSteady, ONLY: UsePartSteady
-  use ModAMR, ONLY : availableBLKs
+  use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
   use ModParallel
-  use ModIO
+  use ModIO, ONLY: write_prefix, iUnitOut
   use ModMpi
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
   ! Coordinates are moved if DoMoveCoord is true.
   ! Data is moved with the blocks if DoMoveData is true.
+  ! There are new blocks (due to initial refinement, restart or AMR)
+  ! when IsNewBlock is new (so update neighbors etc).
 
-  logical, intent(in) :: DoMoveCoord, DoMoveData
-  integer, intent(out):: nBlockMoved
+  logical, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
 
   ! Maximum number of attempts to accomplish the load balancing
   ! The algorithm needs multiple tries if the actual number of blocks
@@ -48,6 +49,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   ! Conversion from iTypeAdvance (including body block info) to iType
   integer :: iType_I(-ImplBlock_:ImplBlock_)
 
+  ! Number of blocks moved around
+  integer :: nBlockMoved
+
   integer :: iError
   integer :: iBlockALL, iBlock
 
@@ -62,8 +66,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   !---------------------------------------------------------------------------
   call set_oktest('load_balance',DoTest,DoTestMe)
 
-  if (DoTestMe) write(*,*)'load_balance: iProc, DoMoveCoord, DoMoveData=',&
-       iProc, DoMoveCoord, DoMoveData
+  if (DoTestMe) write(*,*)'load_balance: ',&
+       'iProc, DoMoveCoord, DoMoveData, IsNewBlock=',&
+       iProc, DoMoveCoord, DoMoveData, IsNewBlock
 
   ! starting value of number of blocks moved between processors
   nBlockMoved = 0
@@ -87,9 +92,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   call select_stepping(DoMoveCoord)
   !^CFG END IMPLICIT
 
-  if (nProc==1) RETURN
-
-  if (index(test_string,'NOLOADBALANCE')>0) RETURN
+  if (nProc==1 .or. index(test_string,'NOLOADBALANCE')>0) then
+     call finish_load_balance
+     RETURN
+  end if
 
   ! If the coordinates are known then include the body block info into
   ! iTypeAdvance_B and _BP by changing the sign to negative for body blocks
@@ -253,7 +259,38 @@ subroutine load_balance(DoMoveCoord, DoMoveData, nBlockMoved)
   iTypeAdvance_B  = abs(iTypeAdvance_B)
   iTypeAdvance_BP = abs(iTypeAdvance_BP)
 
+  call finish_load_balance
+
   call timing_stop('load_balance')
+
+contains
+  !===========================================================================
+  subroutine finish_load_balance
+
+    ! Update neighbor and test cell info if there are new and/or moved blocks
+    if(IsNewBlock .or. nBlockMoved > 0)then
+
+       call find_neighbors
+
+       ! Analyze only when new blocks are created   !^CFG IF DEBUGGING
+       if(IsNewBlock)call analyze_neighbors         !^CFG IF DEBUGGING 
+
+       ! If coordinates are known, find the test cell
+       if(DoMoveCoord)call find_test_cell
+
+       ! When load balancing is done Skipped and Unused blocks coincide
+       UnusedBlock_BP = iTypeAdvance_BP == SkippedBlock_
+
+       ! Report number of moved blocks due to redistribution,
+       ! i.e. when there are no new blocks due to AMR or initial startup.
+       if(.not.IsNewBlock .and. iProc==0 .and. lVerbose > 0)then
+          call write_prefix; write(iUnitOut,*)&
+               'load_balance finished: nBlockMoved=',nBlockMoved
+       end if
+
+    end if
+
+  end subroutine finish_load_balance
 
 end subroutine load_balance
 

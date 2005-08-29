@@ -62,7 +62,6 @@ contains
     !/
 
     !LOCAL VARIABLES:
-    integer :: nBlockMoved
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
     logical :: local_refine(nBLK)
 
@@ -101,11 +100,10 @@ contains
          iTypeAdvance_BP, MaxBlock, MPI_INTEGER, iComm, iError)
 
     ! Move coordinates around except for restart because the
-    ! coordinate info is in the .rst files and not in the octree.
-    ! Do not move the data, it is not yet set.
-    call load_balance(.not.restart, .false., nBlockMoved)
-
-    call find_neighbors
+    ! coordinate info is in the .rst files and not in the octree (1st).
+    ! Do not move the data, it is not yet set (2nd false).
+    ! There are new blocks (3rd true).
+    call load_balance(.not.restart, .false., .true.)
 
     if (iProc == 0.and.lVerbose>0)then
        call write_prefix; write (iUnitOut,*) '    total blocks = ',nBlockALL
@@ -114,8 +112,6 @@ contains
     nRefineLevel = initial_refine_levels
 
     if(DoSetLevels) call set_levels
-
-    call analyze_neighbors    !^CFG IF DEBUGGING 
 
   end subroutine grid_setup
   !===========================================================================
@@ -130,7 +126,6 @@ contains
     character(len=*), parameter :: NameSubSub = &
          NameSub//'::set_initial_conditions'
     integer :: iLevel, iError
-    integer :: nBlockMoved
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        do iLevel=1,nRefineLevelIC
@@ -149,10 +144,8 @@ contains
           call fixRefinementLevels
           call number_soln_blocks
        end do
-       call load_balance(.true.,.false.,nBlockMoved)
-       call find_neighbors
-       call analyze_neighbors      !^CFG IF DEBUGGING
-       call find_test_cell
+       ! Move coordinates, but not data (?), there are new blocks
+       call load_balance(.true.,.false.,.true.)
     end if
 
     do globalBLK = 1, nBlockMax
@@ -187,21 +180,14 @@ contains
     !^CFG END USERFILES   
 
     if (restart) then
-       ! Load balance for the inner blocks
-       call load_balance(.true.,.true.,nBlockMoved)
-       if(iProc == 0.and.lVerbose>0)then
+       if(iProc==0)then
           call write_prefix; write(iUnitOut,*)&
-               NameSub,' load balanced inner blocks: nBlockMoved=',nBlockMoved
+               NameSub,' restarts at n_step,Time_Simulation=',&
+               n_step,Time_Simulation
        end if
-       if(nBlockMoved > 0)then
-          call find_neighbors
-          call find_test_cell
-       end if
-       if(iProc==0)write(*,*)NameSub,' restarts at n_step,Time_Simulation=',&
-            n_step,Time_Simulation
-
-       ! Overwrite time_simulation with binary value read from restart file
-       call MPI_BCAST(Time_Simulation,1,MPI_REAL,0,iComm,iError)
+       ! Load balance for the inner blocks:
+       ! move coords, move data, there are no new blocks
+       call load_balance(.true.,.true.,.false.)
     end if
 
     !^CFG IF CONSTRAINB BEGIN
@@ -469,8 +455,6 @@ subroutine BATS_amr_refinement
   if(UseConstrainB)call b_face_fine_pass     !^CFG IF CONSTRAINB
 
   call amr(nRefineLevel)
-  call analyze_neighbors                     !^CFG IF DEBUGGING    
-  call find_test_cell
 
   !^CFG IF CONSTRAINB BEGIN
   if(UseConstrainB)then
@@ -582,14 +566,12 @@ subroutine BATS_select_blocks
   use ModMain, ONLY: UsePartLocal         !^CFG IF IMPLICIT
   use ModMain, ONLY: lVerbose
   use ModImplicit, ONLY : UsePartImplicit !^CFG IF IMPLICIT
-  use ModIO, ONLY: write_prefix, iUnitOut
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
   !LOCAL VARIABLES:
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   integer :: iError
-  integer :: nBlockMoved
   !----------------------------------------------------------------------------
 
   ! Select blocks for partially local time stepping
@@ -601,17 +583,9 @@ subroutine BATS_select_blocks
        .or. UsePartImplicit &                !^CFG IF IMPLICIT
        )then
 
-     ! Redo load balancing
-     call load_balance(.true.,.true.,nBlockMoved)
-     if(nBlockMoved>0)then
-        if(iProc == 0.and.lVerbose>0)then
-           call write_prefix; write(iUnitOut,*)&
-                'load_balance finished: nBlockMoved=',nBlockMoved
-        end if
-        call find_neighbors
-        call analyze_neighbors   !^CFG IF DEBUGGING
-        call find_test_cell
-     end if
+     ! Redo load balancing: move coordinates and data, there are no new blocks
+     call load_balance(.true.,.true.,.false.)
+
      IsNewSteadySelect = .false.
   end if
 

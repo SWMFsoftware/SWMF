@@ -13,7 +13,7 @@ subroutine amr(idepth)
 
   integer, intent(in) :: idepth
 
-  integer :: iBlock, nBlockMoved, iError
+  integer :: iBlock, iError
   real :: minDX,maxDX    
   logical :: local_refine(nBLK)
 
@@ -54,8 +54,8 @@ subroutine amr(idepth)
   ! Clean all dynamically stored block data
   call clean_block_data
 
-  ! Load balance
-  call load_balance(.true.,.true.,nBlockMoved)
+  ! Load balance: move coords, data, and there are new blocks
+  call load_balance(.true.,.true.,.true.)
   if(iProc==0.and.lVerbose>0)then
      ! Write block/cell summary after AMR
      call write_prefix; write(iUnitOut,*) '|'
@@ -70,9 +70,6 @@ subroutine amr(idepth)
           '  Largest cell dx: ',maxDXvalue
      call write_prefix; write(iUnitOut,*) '|'
   end if
-
-  ! Recalculate neighbor information
-  call find_neighbors
 
   ! Update ghost cells
   call exchange_messages
