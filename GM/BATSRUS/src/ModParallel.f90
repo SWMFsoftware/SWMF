@@ -48,8 +48,8 @@ module ModParallel
   integer, dimension(4,east_:top_,nBLK) :: neiPE, neiBLK
 
   integer, dimension( -1:1, -1:1, -1:1, 4, nBLK) :: &
-       BLKneighborPE, BLKneighborBLK, BLKneighborCHILD
-  integer, dimension( -1:1, -1:1, -1:1, nBLK) :: BLKneighborLEV
+       BLKneighborPE=NOBLK, BLKneighborBLK=NOBLK, BLKneighborCHILD=NOBLK
+  integer, dimension( -1:1, -1:1, -1:1, nBLK) :: BLKneighborLEV=NOBLK
 
   !\
   ! Variables for nonblocking sends used in fix_refine and fix_coarsen.
