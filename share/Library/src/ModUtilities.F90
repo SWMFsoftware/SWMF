@@ -133,7 +133,7 @@ contains
     integer, intent(in) :: iUnit
 
     !DESCRIPTION:
-    ! Do a flush in an operating system dependent manner if DoFlus is true.
+    ! Do a flush in an operating system dependent manner if DoFlush is true.
     !EOP
 
     integer :: iError
