@@ -882,6 +882,20 @@ The default value for DoEcho is .false., but it is a good idea to
 set it to true at the beginning of the PARAM.in file.
 </command>
 
+<command name="FLUSH">
+	<parameter name="DoFlush" type="logical" default="T"/>
+
+#FLUSH
+F			DoFlush
+
+If the DoFlush variable is true, the output is flushed when
+subroutine ModUtility::flush_unit is called. This is typically
+used in log files. The flush is useful to see the output immediately, 
+but on some systems it may be very slow. 
+
+The default is to flush the output, i.e. DoFlush=T.
+</command>
+
 <command name="STDOUT">
 	<parameter name="UseStdout" type="logical" default="T"/>
 

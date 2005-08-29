@@ -1821,8 +1821,6 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! The maximum number of lines of data allowed in the input file is 50,000.  
 ! However, this can be modified by changing the variable Max_Satellite_Npts 
 ! in the file GM/BATSRUS/ModIO.f90.
-
-
 </command>
 
 <command name="SAVEPLOT">
@@ -1934,7 +1932,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 				<parameter name="IsParallel" type="logical"/>
 			</for>
 		</if>
-		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
+		<parameter name="DxSavePlot" type="real" min="-1.0" 
+							default="-1.0"
 	if="($plotform=~/\bidl\b/ and $plotarea!~/\b(sph|los|lin)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
@@ -2162,6 +2161,21 @@ T			DoSaveBinary   used only for 'idl' plot file
 F			DoSavePlotsAmr
 
 ! Save plots before each AMR. Default is DoSavePlotsAMR=.false.
+</command>
+
+<command name="FLUSH">
+	<parameter name="DoFlush" type="logical" default="T"/>
+
+#FLUSH
+F			DoFlush
+
+If the DoFlush variable is true, the output is flushed when
+subroutine ModUtility::flush_unit is called. This is used in the 
+log and satellite files. The flush is useful to see the output immediately, 
+and to avoid truncated files when the code crashes,
+but on some systems the flush may be very slow. 
+
+The default is to flush the output, i.e. DoFlush=T.
 </command>
 </commandgroup>
 <commandgroup name="AMR PARAMETERS">
