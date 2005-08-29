@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!//////////////////////////////////////////////////////////////////////////////////
+!//////////////////////////////////////////////////////////////////////////////
 !
 !    North                      8--------------7
 !    y,j    Top               / |            / |
@@ -19,137 +19,79 @@
 !
 
 subroutine find_neighbors
-  use ModProcMH
-  use ModMain, ONLY : nBlockMax,unusedBLK
-  use ModAMR
+  use ModProcMH, ONLY: iProc
+  use ModMain,   ONLY: nBlock, UnusedBLK
   use ModParallel
-  use ModMpi
   implicit none
 
-  integer :: i,j,k, inBLK,inPE, returnedLEV, iError
-  integer, dimension(4) :: returnedPE,returnedBLK,returnedCHILD
-
-  !\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-  ! This block of code is done only for backward compatability with the
-  !   old find_neighbor routine and the old neighbor variables needed.
-  !/
-
-  neiLtop = NOBLK
-  neiPtop = NOBLK
-  neiBtop = NOBLK
-  neiLbot = NOBLK
-  neiPbot = NOBLK
-  neiBbot = NOBLK
-  neiLeast = NOBLK
-  neiPeast = NOBLK
-  neiBeast = NOBLK
-  neiLwest = NOBLK
-  neiPwest = NOBLK
-  neiBwest = NOBLK
-  neiLnorth = NOBLK
-  neiPnorth = NOBLK
-  neiBnorth = NOBLK
-  neiLsouth = NOBLK
-  neiPsouth = NOBLK
-  neiBsouth = NOBLK
-
-  inPE = iProc
-  do inBLK = 1, nBlockMax
-     if (.not.unusedBLK(inBLK)) then
-        !east
-        call treeNeighbor(inPE,inBLK,-1, 0, 0,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLeast(inBLK) = returnedLEV
-        neiPeast(:,inBLK) = returnedPE
-        neiBeast(:,inBLK) = returnedBLK
-
-        !west
-        call treeNeighbor(inPE,inBLK, 1, 0, 0,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLwest(inBLK) = returnedLEV
-        neiPwest(:,inBLK) = returnedPE
-        neiBwest(:,inBLK) = returnedBLK
-
-        !north
-        call treeNeighbor(inPE,inBLK, 0, 1, 0,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLnorth(inBLK) = returnedLEV
-        neiPnorth(:,inBLK) = returnedPE
-        neiBnorth(:,inBLK) = returnedBLK
-
-        !south
-        call treeNeighbor(inPE,inBLK, 0,-1, 0,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLsouth(inBLK) = returnedLEV
-        neiPsouth(:,inBLK) = returnedPE
-        neiBsouth(:,inBLK) = returnedBLK
-
-        !top
-        call treeNeighbor(inPE,inBLK, 0, 0, 1,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLtop(inBLK) = returnedLEV
-        neiPtop(:,inBLK) = returnedPE
-        neiBtop(:,inBLK) = returnedBLK
-
-        !bottom
-        call treeNeighbor(inPE,inBLK, 0, 0,-1,returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-        neiLbot(inBLK) = returnedLEV
-        neiPbot(:,inBLK) = returnedPE
-        neiBbot(:,inBLK) = returnedBLK
-
-     end if
-  end do
-
-  neiLEV(east_,:) = neiLeast
-  neiLEV(west_,:) = neiLwest
-  neiLEV(south_,:)= neiLsouth
-  neiLEV(north_,:)= neiLnorth
-  neiLEV(bot_,:)  = neiLbot
-  neiLEV(top_,:)  = neiLtop
-
-  neiPE(:,1,:) = neiPeast
-  neiBLK(:,1,:) = neiBeast
-  neiPE(:,2,:) = neiPwest
-  neiBLK(:,2,:) = neiBwest
-  neiPE(:,3,:) = neiPsouth
-  neiBLK(:,3,:) = neiBsouth
-  neiPE(:,4,:) = neiPnorth
-  neiBLK(:,4,:) = neiBnorth
-  neiPE(:,5,:) = neiPbot
-  neiBLK(:,5,:) = neiBbot
-  neiPE(:,6,:) = neiPtop
-  neiBLK(:,6,:) = neiBtop
-
-  
-  call MPI_ALLGATHER(unusedBLK,      nBLK, MPI_LOGICAL, &
-       unusedBlock_BP, nBLK, MPI_LOGICAL, iComm, iError)
-
-  call MPI_BARRIER(iComm, iError)
-
-  !\
-  ! This block of code is done only for backward compatability with the
-  !   old find_neighbor routine and the old neighbor variables needed.
-  !///////////////////////////////////////////////////////////////////////
-
+  integer :: i, j, k, iBlock, iLevelOut
+  integer, dimension(4) :: iProcOut_I, iBlockOut_I, iChildOut_I
+  !---------------------------------------------------------------------------
   !\
   ! Loop and fill variables with neighbor information for all blocks on this PE
   !/
-  inPE = iProc
-  do inBLK = 1,nBlockMax
-     if (.not.unusedBLK(inBLK)) then
-        do i=-1,1
-           do j=-1,1
-              do k=-1,1
-                 call treeNeighbor(inPE,inBLK,i,j,k, &
-                      returnedPE,returnedBLK,returnedCHILD,returnedLEV)
-                 BLKneighborPE   (i,j,k,:,inBLK) = returnedPE
-                 BLKneighborBLK  (i,j,k,:,inBLK) = returnedBLK
-                 BLKneighborCHILD(i,j,k,:,inBLK) = returnedCHILD
-                 BLKneighborLEV  (i,j,k,  inBLK) = returnedLEV
-              end do
-           end do
-        end do
-     end if
+  do iBlock = 1, nBlock
+     if (UnusedBLK(iBlock)) CYCLE
+
+     do k=-1,1; do j=-1,1; do i=-1,1
+        call treeNeighbor(iProc, iBlock, i, j, k, &
+             iProcOut_I, iBlockOut_I, iChildOut_I, iLevelOut)
+        BLKneighborPE   (i,j,k,:,iBlock) = iProcOut_I
+        BLKneighborBLK  (i,j,k,:,iBlock) = iBlockOut_I
+        BLKneighborCHILD(i,j,k,:,iBlock) = iChildOut_I
+        BLKneighborLEV  (i,j,k,  iBlock) = iLevelOut
+     end do; end do; end do
+
   end do
 
-end subroutine find_neighbors
+  ! Fill up arrays which contain information about face neighbors only
 
-subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, outPE, outBLK, outCHILD, outLEV)
+  neiLeast(1:nBlock)    = BLKneighborLEV(-1,0,0,1:nBlock)
+  neiLwest(1:nBlock)    = BLKneighborLEV(+1,0,0,1:nBlock)
+  neiLsouth(1:nBlock)   = BLKneighborLEV(0,-1,0,1:nBlock)
+  neiLnorth(1:nBlock)   = BLKneighborLEV(0,+1,0,1:nBlock)
+  neiLbot(1:nBlock)     = BLKneighborLEV(0,0,-1,1:nBlock)
+  neiLtop(1:nBlock)     = BLKneighborLEV(0,0,+1,1:nBlock)
+
+  neiPeast(:,1:nBlock)  = BLKneighborPE(-1,0,0,:,1:nBlock)
+  neiPwest(:,1:nBlock)  = BLKneighborPE(+1,0,0,:,1:nBlock)
+  neiPsouth(:,1:nBlock) = BLKneighborPE(0,-1,0,:,1:nBlock)
+  neiPnorth(:,1:nBlock) = BLKneighborPE(0,+1,0,:,1:nBlock)
+  neiPbot(:,1:nBlock)   = BLKneighborPE(0,0,-1,:,1:nBlock)
+  neiPtop(:,1:nBlock)   = BLKneighborPE(0,0,+1,:,1:nBlock)
+
+  neiBeast(:,1:nBlock)  = BLKneighborBLK(-1,0,0,:,1:nBlock)
+  neiBwest(:,1:nBlock)  = BLKneighborBLK(+1,0,0,:,1:nBlock)
+  neiBsouth(:,1:nBlock) = BLKneighborBLK(0,-1,0,:,1:nBlock)
+  neiBnorth(:,1:nBlock) = BLKneighborBLK(0,+1,0,:,1:nBlock)
+  neiBbot(:,1:nBlock)   = BLKneighborBLK(0,0,-1,:,1:nBlock)
+  neiBtop(:,1:nBlock)   = BLKneighborBLK(0,0,+1,:,1:nBlock)
+
+  neiLEV(1,:) = neiLeast
+  neiLEV(2,:) = neiLwest
+  neiLEV(3,:) = neiLsouth
+  neiLEV(4,:) = neiLnorth
+  neiLEV(5,:) = neiLbot
+  neiLEV(6,:) = neiLtop
+
+  neiPE(:,1,:) = neiPeast
+  neiPE(:,2,:) = neiPwest
+  neiPE(:,3,:) = neiPsouth
+  neiPE(:,4,:) = neiPnorth
+  neiPE(:,5,:) = neiPbot
+  neiPE(:,6,:) = neiPtop
+
+  neiBLK(:,2,:) = neiBwest
+  neiBLK(:,1,:) = neiBeast
+  neiBLK(:,3,:) = neiBsouth
+  neiBLK(:,4,:) = neiBnorth
+  neiBLK(:,5,:) = neiBbot
+  neiBLK(:,6,:) = neiBtop
+
+end subroutine find_neighbors
+!=============================================================================
+subroutine treeNeighbor(inPE, inBLK, ix, iy, iz, &
+     outPE, outBLK, outCHILD, outLEV)
   use ModParallel, ONLY : NOBLK
   use ModOctree
   implicit none
