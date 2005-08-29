@@ -20,6 +20,8 @@
 
 module ModUtilities
 
+  logical :: DoFlush = .true.
+
 contains
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
@@ -131,10 +133,12 @@ contains
     integer, intent(in) :: iUnit
 
     !DESCRIPTION:
-    ! Do a flush in an operating system dependent manner.
+    ! Do a flush in an operating system dependent manner if DoFlus is true.
     !EOP
 
     integer :: iError
+    !-------------------------------------------------------------------------
+    if(.not.DoFlush) RETURN
 
 #ifdef sysIRIX64
     call flush(iUnit,iError) 

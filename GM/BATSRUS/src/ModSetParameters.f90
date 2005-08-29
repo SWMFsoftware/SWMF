@@ -21,7 +21,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var
   use CON_axes,         ONLY: init_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case,&
+       DoFlush
 
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -246,6 +247,8 @@ subroutine MH_set_parameters(TypeAction)
         call check_stand_alone
         call read_var('DoEcho',DoEcho)
         if(iProc==0)call read_echo_set(DoEcho)
+     case("#FLUSH")
+        call read_var('DoFlush',DoFlush)
      case("#TEST")
         call read_var('StringTest',test_string)
      case("#TESTXYZ")

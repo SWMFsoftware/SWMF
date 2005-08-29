@@ -19,7 +19,7 @@ module CON_io
   use CON_axes
   use ModReadParam
   use CON_variables
-  use ModUtilities, ONLY: flush_unit, fix_dir_name, check_dir, &
+  use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, check_dir, &
        split_string, lower_case
 
   implicit none
@@ -163,6 +163,9 @@ contains
 
           call read_var('DoEcho',DoEcho)
           if(is_proc0())call read_echo_set(DoEcho)
+
+       case("#FLUSH")
+          call read_var('DoFlush', DoFlush)
 
        case("#STDOUT")
 
