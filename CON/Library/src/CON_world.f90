@@ -186,19 +186,27 @@ module  CON_world
 
 contains
 
-  subroutine world_init
+  subroutine world_init(iComm)
     !\  
     ! Initalize and start up MPI for the application.
+    ! If the optional argument is present, use it as the communicator
+    ! for the SWMF, and do not call MPI_init.
+    ! If the optional argument is not present, use MPI_COMM_WORLD
+    ! and call MPI_init.
     !/
-    ! currently we use only the single executable case, 
-    ! thus iCommWorld is MPI_COMM_WORLD
+    integer, intent(in), optional :: iComm 
+
     integer :: iError
 
     character(len=*), parameter :: NameSub = NameMod//'::world_init'
     !-----------------------------------------------------------------
 
-    call MPI_INIT(iError)
-    iCommWorld = MPI_COMM_WORLD
+    if(present(iComm))then
+       iCommWorld = iComm
+    else
+       call MPI_INIT(iError)
+       iCommWorld = MPI_COMM_WORLD
+    end if
     call MPI_COMM_RANK (iCommWorld, iProcWorld,  iError)
     call MPI_COMM_SIZE (iCommWorld, nProcWorld,  iError)
     call MPI_COMM_GROUP(iCommWorld, iGroupWorld, iError)
@@ -207,13 +215,19 @@ contains
 
   end subroutine world_init
   !============================================================================
-  subroutine world_clean
+  subroutine world_clean(DoStop)
+    logical, intent(in), optional :: DoStop
     character(len=*),parameter :: NameSub=NameMod//'::world_clean'
     integer :: iError
     !------------------------------------------------------------------------
     call io_unit_clean
+    if(present(DoStop))then
+       if(.not.DoStop) RETURN
+    end if
+
     call MPI_finalize(iError)
     stop
+
   end subroutine world_clean
   !===========================================================================
   logical function is_proc_world()
