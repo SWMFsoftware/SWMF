@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!^CMP COPYRIGHT UM
 !BOP
 !MODULE: CON_variables - The most basic variables for CON
 !INTERFACE:
@@ -14,6 +14,12 @@ module CON_variables
   !BOC
   ! Version number for SWMF
   real, parameter :: VersionSwmf = 2.1
+
+  ! Logical to decide if the SWMF running stand alone or as part of something
+  logical :: IsStandAlone = .true.
+
+  ! Error code for the SWMF when it runs as part of a larger application
+  integer :: iErrorSwmf = 0
 
   ! Description string for the problem being solved
   character (len=lStringLine) :: StringDescription='Please describe me!'
