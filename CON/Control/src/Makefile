@@ -1,4 +1,4 @@
-#^CFG COPYRIGHT UM
+#^CMP COPYRIGHT UM
 
 SHELL =/bin/sh
 
@@ -17,7 +17,7 @@ include Makefile.DEPEND
 LIBSHARE   = ${LIBDIR}/libSHARE.a
 
 #######################
-# Software libraries: #
+# Utility libraries:  #
 #######################
 
 LIBTIMING = ${LIBDIR}/libTIMING.a
@@ -46,13 +46,13 @@ LIBIH = ${LIBDIR}/libIH.a	#^CMP IF IH
 
 LIBIM = ${LIBDIR}/libIM.a	#^CMP IF IM
 
-LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
-
 LIBRB = ${LIBDIR}/libRB.a	#^CMP IF RB
 
 LIBSC = ${LIBDIR}/libSC.a       #^CMP IF SC
 
 LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
+
+LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
 
 #######################
 # Interface part of   #
@@ -66,17 +66,26 @@ LIBINTERFACE = ${LIBDIR}/libINTERFACE.a
 # superstructure:     #
 #######################
 
+LIBCONTROL = ${LIBDIR}/libCONTROL.a
+
+MY_LIB = ${LIBCONTROL}
+
 # Note: CON_methods is actually infrastructure, but it consists of
 #       external subroutines and functions only so it can be compiled here
 
-MODULES = \
+LIBOBJECTS = \
+	CON_main.o\
 	CON_variables.o\
 	CON_io.o\
-	CON_session.o
+	CON_session.o\
+	CON_methods.o\
+	swmf_interface.o
 
-OBJECTS = \
-	CON_main.o\
-	CON_methods.o
+#
+#	Main library
+#
+
+SWMFLIB = ${LIBDIR}/libSWMF.a
 
 #
 #	Main executable
@@ -84,127 +93,103 @@ OBJECTS = \
 
 SWMFEXE = ${BINDIR}/SWMF.exe
 
-# The order of compilation:
-# - TIMINGDIR : contains TIMING software library      --> libTIMING.a
-# - SHAREDIR  : contains shared library               --> libSHARE.a
-# - LIBRARYDIR: the CON "infrastructure"    --> libLIBRARY.a
-# - COUPLERDIR: the coupling toolkit        --> libCOUPLER.a
-# - GMDIR .. UADIR: the physics components   --> libGM.a ... libUA.a
-# - INTERFACEDIR: interface part of "superstructure"   --> libINTERFACE.a
-# - this directory contains control part of "superstructure" --> SWMF.exe
-
 SWMFEXE:
-	@cd ${SHAREDIR};     make LIB
-	@cd ${TIMINGDIR};    make LIB
-	@cd ${LIBRARYDIR};   make LIB
-	@cd ${COUPLERDIR};   make LIB
-	@cd ${RBDIR};        make LIB	#^CMP IF RB
-	@cd ${GMDIR};        make LIB	#^CMP IF GM
-	@cd ${IEDIR};        make LIB	#^CMP IF IE
-	@cd ${IHDIR};        make LIB	#^CMP IF IH
-	@cd ${IMDIR};        make LIB	#^CMP IF IM
-	@cd ${UADIR};        make LIB	#^CMP IF UA
-	@cd ${SCDIR};        make LIB   #^CMP IF SC
-	@cd ${SPDIR};        make LIB   #^CMP IF SP
-	@cd ${INTERFACEDIR}; make LIB
-	@make DEPEND
 	@make ${SWMFEXE}
 	@echo ' '
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo ' '
 
-# CON uses modules from ${SHAREDIR} and the Interface subdirectory as well
+EXEOBJECT = swmf.o
+
+# The order of compilation:
+# - SHAREDIR  : contains shared library               --> libSHARE.a
+# - TIMINGDIR : contains TIMING software library      --> libTIMING.a
+# - LIBRARYDIR: the CON "infrastructure"              --> libLIBRARY.a
+# - COUPLERDIR: the coupling toolkit                  --> libCOUPLER.a
+# - GMDIR .. UADIR: the physics components            --> libGM.a ... libUA.a
+# - INTERFACEDIR: interface part of "superstructure"  --> libINTERFACE.a
+# - this directory: control part of "superstructure"  --> libCONTROL.a
+# - make SWMFEXE or SWMFLIB
+
+LIB:
+	@cd ${SHAREDIR};     make LIB
+	@cd ${TIMINGDIR};    make LIB
+	@cd ${LIBRARYDIR};   make LIB
+	@cd ${COUPLERDIR};   make LIB
+	@cd ${GMDIR};        make LIB	#^CMP IF GM
+	@cd ${IEDIR};        make LIB	#^CMP IF IE
+	@cd ${IHDIR};        make LIB	#^CMP IF IH
+	@cd ${IMDIR};        make LIB	#^CMP IF IM
+	@cd ${RBDIR};        make LIB	#^CMP IF RB
+	@cd ${SCDIR};        make LIB   #^CMP IF SC
+	@cd ${SPDIR};        make LIB   #^CMP IF SP
+	@cd ${UADIR};        make LIB	#^CMP IF UA
+	@cd ${INTERFACEDIR}; make LIB
+	@make DEPEND
+	make ${MY_LIB}
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
+
+${MY_LIB}: ${LIBOBJECTS}
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${LIBOBJECTS}
+
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${LIBOBJECTS} ${EXEOBJECT}
 
-# The order of the objects and the libraries in the link phase:
-#
-# - MODULES and OBJECTS come first as they use all libraries
-# - LIBINTERFACE comes next as it uses all components and CON
-# - component libraries come next in arbitrary order, they use CON
-# - CON comes next as it uses general software libraries only
-# - general software libraries come last in the order of their interdependecies
+# SWMFLIB is a single library that contains all object files
+SWMFLIB:
+	make ${SWMFLIB}
+	@echo
+	@echo SWMF library ${SWMFLIB} has been brought up to date.
+	@echo
 
-LIB1  = ${LIBIH} #	^CMP IF IH
-lib1  = -lIH #		^CMP IF IH
+# For now the archive extract is defined here. Should be in Makefile.conf
+AR_X = ar -x
 
-LIB2 = ${LIBGM}	#	^CMP IF GM
-lib2 = -lGM #		^CMP IF GM
+# Extract object files from libraries and collect them into SWMFLIB
+${SWMFLIB}: LIB
+	@rm -rf ${SWMFLIB} Tmp_*
+	@mkdir Tmp_SHARE;     cd Tmp_SHARE;     ${AR_X} ${LIBSHARE}
+	@mkdir Tmp_TIMING;    cd Tmp_TIMING;    ${AR_X} ${LIBTIMING} 
+	@mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
+	@mkdir Tmp_COUPLER;   cd Tmp_COUPLER;   ${AR_X} ${LIBCOUPLER}
+	@mkdir Tmp_INTERFACE; cd Tmp_INTERFACE; ${AR_X} ${LIBINTERFACE}
+	@mkdir Tmp_CONTROL;   cd Tmp_CONTROL;   ${AR_X} ${LIBCONTROL}
+	@mkdir Tmp_LIBGM;     cd Tmp_LIBGM;     ${AR_X} ${LIBGM} #^CMP IF GM
+	@mkdir Tmp_LIBIE;     cd Tmp_LIBIE;     ${AR_X} ${LIBIE} #^CMP IF IE
+	@mkdir Tmp_LIBIH;     cd Tmp_LIBIH;     ${AR_X} ${LIBIH} #^CMP IF IH
+	@mkdir Tmp_LIBIM;     cd Tmp_LIBIM;     ${AR_X} ${LIBIM} #^CMP IF IM
+	@mkdir Tmp_LIBRB;     cd Tmp_LIBRB;     ${AR_X} ${LIBRB} #^CMP IF RB
+	@mkdir Tmp_LIBSC;     cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
+	@mkdir Tmp_LIBSP;     cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
+	@mkdir Tmp_LIBUA;     cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
+	@${AR} ${SWMFLIB} Tmp_*/*.o
+	@rm -rf Tmp_*
 
-LIB3 = ${LIBIM}	#	^CMP IF IM
-lib3 = -lIM #		^CMP IF IM
-
-LIB4 = ${LIBIE}	#	^CMP IF IE
-lib4 = -lIE #		^CMP IF IE
-
-LIB5 = ${LIBUA}	#	^CMP IF UA
-lib5 = -lUA #		^CMP IF UA
-
-LIB6 = ${LIBRB}	#	^CMP IF RB
-lib6 = -lRB #		^CMP IF RB
-
-LIB7 = ${LIBSC} #       ^CMP IF SC
-lib7 = -lSC #           ^CMP IF SC
-
-LIB8 = ${LIBSP} #       ^CMP IF SP
-lib8 = -lSP #           ^CMP IF SP
-
-
-${SWMFEXE}: ${MODULES} ${OBJECTS} \
-		${LIBCON} ${LIBTIMING} ${LIBINTERFACE} \
-		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
-		${LIB7} ${LIB8} \
-		${MAKEFILE_COMP_SELECT}
-	@(if [ "${COMPILE.f90}" = "xlf90" ]; then make SWMF_for_xlf; \
-	elif [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
+# Link the executable. The link procedure depends on the operating system.
+${SWMFEXE}: ${EXEOBJECT} SWMFLIB ${MAKEFILE_COMP_SELECT}
+	@(if [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
 	else                                      make SWMF_general; fi)
 
+# Link rule for all machines/compilers except for Darwin with NAG
 SWMF_general:
 	${LINK.f90} -o ${SWMFEXE} \
-		${MODULES} ${OBJECTS} \
-		-L${LIBDIR} -lINTERFACE \
-		${lib1} ${lib2} ${lib3} ${lib5} ${lib4} ${lib6} \
-		${lib7} ${lib8} \
-		-lCOUPLER -lLIBRARY -lTIMING -lSHARE ${LBLAS} \
-		${Lflag1}
+		${EXEOBJECT} -L${LIBDIR} -lSWMF ${LBLAS} ${Lflag1}
 
-# The following target is only needed to link SWMF on Darwin 
-# which has a problem with the ld linker.
+# Link rule for Darwin with the NAG compiler (and possibly other compilers)
+# Note: for the xlf compiler the above general rule works too.
+#
 # This work around creates a temporary object file from all the F90
 # libraries using the -all_load option of the linker.
 
-SWMF_for_Darwin: 
-	ld -all_load -r -o LIBRARIES.o \
-		${LIBSHARE} ${LIBTIMING} ${LIBLIBRARY} ${LIBCOUPLER} \
-		${LIB1} ${LIB2} ${LIB3} ${LIB4} ${LIB5} ${LIB6} \
-		${LIB7} ${LIB8} \
-		${LIBINTERFACE}
+SWMF_for_Darwin:
+	ld -all_load -r -o LIBRARIES.o ${SWMFLIB}
 	${LINK.f90} -o ${SWMFEXE} \
-		${MODULES} ${OBJECTS} \
-		LIBRARIES.o ${LBLAS} \
-		${Lflag1}
+		${EXEOBJECT} LIBRARIES.o ${LBLAS} ${Lflag1}
 	rm -f LIBRARIES.o
 
-SWMF_for_xlf:
-	rm -rf Tmp_*
-	mkdir Tmp_SHARE;     cd Tmp_SHARE;     ar -x ${LIBSHARE};
-	mkdir Tmp_TIMING;    cd Tmp_TIMING;    ar -x ${LIBTIMING}; 
-	mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ar -x ${LIBLIBRARY};
-	mkdir Tmp_COUPLER;   cd Tmp_COUPLER;   ar -x ${LIBCOUPLER}; 
-	mkdir Tmp_INTERFACE; cd Tmp_INTERFACE; ar -x ${LIBINTERFACE}
-	mkdir Tmp_LIB1;      cd Tmp_LIB1;      ar -x ${LIB1} #^CMP IF IH
-	mkdir Tmp_LIB2;      cd Tmp_LIB2;      ar -x ${LIB2} #^CMP IF GM
-	mkdir Tmp_LIB3;      cd Tmp_LIB3;      ar -x ${LIB3} #^CMP IF IM
-	mkdir Tmp_LIB4;      cd Tmp_LIB4;      ar -x ${LIB4} #^CMP IF IE
-	mkdir Tmp_LIB5;      cd Tmp_LIB5;      ar -x ${LIB5} #^CMP IF UA
-	mkdir Tmp_LIB6;      cd Tmp_LIB6;      ar -x ${LIB6} #^CMP IF RB
-	mkdir Tmp_LIB7;      cd Tmp_LIB7;      ar -x ${LIB7} #^CMP IF SC
-	mkdir Tmp_LIB8;      cd Tmp_LIB8;      ar -x ${LIB8} #^CMP IF SP
-
-	${LINK.f90} -o ${SWMFEXE} \
-		${MODULES} ${OBJECTS} Tmp_*/*.o ${LBLAS} \
-		${Lflag1}
-	rm -rf Tmp_*
 #
 #	cleaning
 #
