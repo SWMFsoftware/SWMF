@@ -36,6 +36,7 @@ help:
 	@echo '    PIDL        (bin/PostIDL.exe creates .out file from *.idl files)'
 	@echo '    PSPH        (bin/PostSPH.exe creates spherical tec file from sph*.tec files)'
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
+	@echo '    LIB         (lib/libSWMF.a the SWMF library)
 	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
 	@echo ' '
 	@echo '    help        (makefile option list)'
@@ -146,6 +147,13 @@ rmdir:
 
 SWMF:	ENV_CHECK
 	@cd ${CONTROLDIR}; make SWMFEXE  
+	@echo ' '
+
+#
+#       SWMF library
+#
+LIB:	ENV_CHECK
+	@cd ${CONTROLDIR}; make SWMFLIB
 	@echo ' '
 
 # NOMPI library for execution without MPI
