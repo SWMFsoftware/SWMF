@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!^CMP COPYRIGHT UM
 !===========================================================!
 !           SWMF: Space Weather Modeling Framework          |
 !                   University of Michigan                  |
@@ -49,7 +49,7 @@
 ! There is also some verbose information printed.
 !
 !INTERFACE:
-program SWMF
+module CON_main
 
   !USES:
   use CON_world
@@ -58,10 +58,19 @@ program SWMF
   use CON_io, ONLY : read_inputs, SaveRestart, save_restart
 
   use CON_time
-  use CON_variables, ONLY: lVerbose, DnTiming
+  use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
   use CON_session
   use ModMpi
   use ModIoUnit, ONLY: UNITTMP_
+
+  implicit none
+
+  private ! except
+
+  !PUBLIC MEMBER FUNCTIONS:
+  public :: initialize     ! initialize SWMF
+  public :: run            ! run        SWMF
+  public :: finalize       ! finalize   SWMF
 
   !REVISION HISTORY:
   !
@@ -72,9 +81,11 @@ program SWMF
   !
   ! The transformations were carried out by O.Volberg and G.Toth.
   !
+  ! To make the SWMF compatible with the ESMF, the main program is
+  ! transformed into a module contining three subroutines
+  ! for initialization, running and finalization.
+  !
   !EOP
-
-  implicit none
 
   character (len=*), parameter :: NameSub = 'CON_main'
 
@@ -87,192 +98,214 @@ program SWMF
   logical :: IsFound
 
   logical :: DoTest, DoTestMe
-  !---------------------------------------------------------------------------
-
-  !================================================================
-  ! INITIALIZATIONS INITIALIZATIONS INITIALIZATIONS INITIALIZATIONS
-  !================================================================
-
-  !\
-  ! Initialize control component (MPI)
-  !/
-  call world_init
-
-  !\
-  ! Delete SWMF.SUCCESS and SWMF.STOP files if found
-  !/
-  if(is_proc0())then
-
-     inquire(file='SWMF.SUCCESS',EXIST=IsFound)
-     if(IsFound)then
-        open(UNITTMP_, file = 'SWMF.SUCCESS')
-        close(UNITTMP_,STATUS = 'DELETE')
-     end if
-
-     inquire(file='SWMF.STOP',EXIST=IsFound)
-     if (IsFound) then 
-        open(UNITTMP_, file = 'SWMF.STOP')
-        close(UNITTMP_, STATUS = 'DELETE')
-     endif
-
-  end if
-
-  !\
-  ! Read component information from LAYOUT.in
-  !/
-  call world_setup
-
-  !\
-  ! Initialize CPU timing
-  !/
-  CpuTimeStart = MPI_WTIME()
-
-  !\
-  ! Read and store version name and number of registered components
-  ! initialize the MPI parameters for the registered components
-  !/
-  do lComp = 1, n_comp()
-     iComp=i_comp(lComp)
-     call set_param_comp(iComp,"VERSION")
-     if(.not.use_comp(iComp))then
-        if(is_proc0())then
-           write(*,'(a)')'CON_main SWMF_ERROR registered component '// &
-                NameComp_I(iComp)//' is OFF!'
-           write(*,'(a)')'Compile in a working component or remove it from '//&
-                NameMapFile
-        end if
-        ! stop in a clean fashion (without abort)
-        call world_clean
-     end if
-
-     call set_param_comp(iComp,'MPI')     ! Initialize MPI parameters
-     call set_param_comp(iComp,'STDOUT')  ! Set prefix string for STDOUT
-  end do
-
-  !\
-  ! Show framework and component information
-  !/
-  if(is_proc0())call show_all_comp
-
-  !\
-  ! Check for illegal overlap of components with shared source code
-  !/
-  call check_overlap_comp
-
-  !\
-  ! Initialize CON_time
-  !/
-  call init_time
-
-  SESSIONLOOP: do
-     !\
-     ! Read input parameters for this session
-     !/
-     call read_inputs(IsLastSession)
-
-     !\
-     ! StringTest is read, so set the test flags now
-     !/
-     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-     DoTestMe = DoTest .and. is_proc0()
-
-     !\
-     ! Time execution (timing parameters were read by read_inputs)
-     !/
-     if(iSession==1)then
-        call timing_start('SWMF')
-        call timing_start('SETUP')
-     end if
-
-     if(is_proc0().and.lVerbose>=0)&
-          write(*,*)'----- Starting Session ',iSession,' ------'
-     
-     !\
-     ! Initialize CON and all components for this session
-     !/
-     call init_session
-
-     if(iSession==1)then
-        call timing_stop('SETUP')
-        call timing_stop('SWMF')
-        CpuTimeSetup = MPI_WTIME()
-        if(DnTiming > -3)call timing_report_total
-        if(is_proc0())write(*,*)'Resetting timing counters after setup.'
-        call timing_reset('#all',3)
-        call timing_start('SWMF')
-     end if
-
-     !\
-     ! Execute the session
-     !/
-     call do_session(IsLastSession)
-
-     !\
-     ! Check if there is anything else to do
-     !/
-     if(IsLastSession)then
-        EXIT SESSIONLOOP
-     else
-        if(is_proc0().and.lVerbose>=0) &
-             write(*,*)'----- End of Session   ',iSession,' ------'
-        iSession=iSession+1
-        if (DnTiming > -2) call timing_report
-        call timing_reset_all
-     end if
-
-  end do SESSIONLOOP
-
-  if(is_proc0())then
-     if(lVerbose>=0)then
-        write(*,*)
-        write(*,'(a)')'    Finished Numerical Simulation'
-        write(*,'(a)')'    -----------------------------'
-        if (DoTimeAccurate)   write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
-             '   Simulated Time T = ',tSimulation, &
-             ' (',tSimulation/60.00, &
-             ' min, ',tSimulation/3600.00,' hrs)'
-     end if
-  end if
-  if (DnTiming > -2) call timing_report
-
-  !============================================================
-  ! DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT
-  !============================================================
-
-  if(SaveRestart % DoThis) call save_restart
-  do lComp = 1,n_comp()
-     iComp = i_comp(lComp)
-     call finalize_comp(iComp,tSimulation)
-  end do
-
-  if(is_proc0().and.lVerbose>0)then
-     write(*,*)
-     write(*,'(a)')'    Finished Finalizing SWMF'
-     write(*,'(a)')'    ------------------------'
-  end if
-
-  !============================================================
-  ! END END END END END END END END END END END END END END END
-  !============================================================
-
-  call timing_stop('SWMF')
-
-  if(DnTiming > -3)call timing_report_total
-
-  !\
-  ! Signal normal completion by writing an empty SWMF.SUCCESS file
-  !/
-  if(is_proc0())then
-     open(UNITTMP_, file = 'SWMF.SUCCESS')
-     close(UNITTMP_)
-  end if
-
-  !\
-  ! Stop running
-  !/
-  call world_clean
 
 contains
+  !===========================================================================
+  subroutine initialize(iComm)
+
+    integer, intent(in), optional :: iComm ! The MPI communicator for the SWMF
+    !-------------------------------------------------------------------------
+    !\
+    ! Initialize control component (MPI)
+    !/
+    call world_init(iComm)
+
+    !\
+    ! Set IsStandAlone variable: 
+    ! if the communicator is externally given, 
+    ! the SWMF is not running in stand alone mode.
+    !/
+    IsStandAlone = .not. present(iComm)
+
+    !\
+    ! Delete SWMF.SUCCESS and SWMF.STOP files if found
+    !/
+    if(is_proc0())then
+
+       inquire(file='SWMF.SUCCESS',EXIST=IsFound)
+       if(IsFound)then
+          open(UNITTMP_, file = 'SWMF.SUCCESS')
+          close(UNITTMP_,STATUS = 'DELETE')
+       end if
+
+       inquire(file='SWMF.STOP',EXIST=IsFound)
+       if (IsFound) then 
+          open(UNITTMP_, file = 'SWMF.STOP')
+          close(UNITTMP_, STATUS = 'DELETE')
+       endif
+
+    end if
+
+    !\
+    ! Read component information from LAYOUT.in
+    !/
+    call world_setup
+
+    !\
+    ! Initialize CPU timing
+    !/
+    CpuTimeStart = MPI_WTIME()
+
+    !\
+    ! Read and store version name and number of registered components
+    ! initialize the MPI parameters for the registered components
+    !/
+    do lComp = 1, n_comp()
+       iComp=i_comp(lComp)
+       call set_param_comp(iComp,"VERSION")
+       if(.not.use_comp(iComp))then
+          if(is_proc0())then
+             write(*,'(a)')'CON_main SWMF_ERROR registered component '// &
+                  NameComp_I(iComp)//' is OFF!'
+             write(*,'(a)')&
+                  'Compile in a working component or remove it from '//&
+                  NameMapFile
+          end if
+          ! stop in a clean fashion (without abort)
+          call world_clean(IsStandAlone)
+          iErrorSwmf = 3
+          RETURN
+       end if
+
+       call set_param_comp(iComp,'MPI')     ! Initialize MPI parameters
+       call set_param_comp(iComp,'STDOUT')  ! Set prefix string for STDOUT
+    end do
+
+    !\
+    ! Show framework and component information
+    !/
+    if(is_proc0())call show_all_comp
+
+    !\
+    ! Check for illegal overlap of components with shared source code
+    !/
+    call check_overlap_comp
+    if(iErrorSwmf /= 0) RETURN
+
+    !\
+    ! Initialize CON_time
+    !/
+    call init_time
+  end subroutine initialize
+
+  !===========================================================================
+
+  subroutine run
+
+    SESSIONLOOP: do
+       !\
+       ! Read input parameters for this session
+       !/
+       call read_inputs(IsLastSession)
+       if(iErrorSwmf /= 0) RETURN
+
+       !\
+       ! StringTest is read, so set the test flags now
+       !/
+       call CON_set_do_test(NameSub,DoTest,DoTestMe)
+       DoTestMe = DoTest .and. is_proc0()
+
+       !\
+       ! Time execution (timing parameters were read by read_inputs)
+       !/
+       if(iSession==1)then
+          call timing_start('SWMF')
+          call timing_start('SETUP')
+       end if
+
+       if(is_proc0().and.lVerbose>=0)&
+            write(*,*)'----- Starting Session ',iSession,' ------'
+
+       !\
+       ! Initialize CON and all components for this session
+       !/
+       call init_session
+
+       if(iSession==1)then
+          call timing_stop('SETUP')
+          call timing_stop('SWMF')
+          CpuTimeSetup = MPI_WTIME()
+          if(DnTiming > -3)call timing_report_total
+          if(is_proc0())write(*,*)'Resetting timing counters after setup.'
+          call timing_reset('#all',3)
+          call timing_start('SWMF')
+       end if
+
+       !\
+       ! Execute the session
+       !/
+       call do_session(IsLastSession)
+
+       !\
+       ! Check if there is anything else to do
+       !/
+       if(IsLastSession)then
+          EXIT SESSIONLOOP
+       else
+          if(is_proc0().and.lVerbose>=0) &
+               write(*,*)'----- End of Session   ',iSession,' ------'
+          iSession=iSession+1
+          if (DnTiming > -2) call timing_report
+          call timing_reset_all
+       end if
+
+    end do SESSIONLOOP
+
+  end subroutine run
+  !===========================================================================
+
+  subroutine finalize
+    if(is_proc0())then
+       if(lVerbose>=0)then
+          write(*,*)
+          write(*,'(a)')'    Finished Numerical Simulation'
+          write(*,'(a)')'    -----------------------------'
+          if (DoTimeAccurate)   write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
+               '   Simulated Time T = ',tSimulation, &
+               ' (',tSimulation/60.00, &
+               ' min, ',tSimulation/3600.00,' hrs)'
+       end if
+    end if
+    if (DnTiming > -2) call timing_report
+
+    !============================================================
+    ! DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT
+    !============================================================
+
+    if(SaveRestart % DoThis) call save_restart
+    do lComp = 1,n_comp()
+       iComp = i_comp(lComp)
+       call finalize_comp(iComp,tSimulation)
+    end do
+
+    if(is_proc0().and.lVerbose>0)then
+       write(*,*)
+       write(*,'(a)')'    Finished Finalizing SWMF'
+       write(*,'(a)')'    ------------------------'
+    end if
+
+    !============================================================
+    ! END END END END END END END END END END END END END END END
+    !============================================================
+
+    call timing_stop('SWMF')
+
+    if(DnTiming > -3)call timing_report_total
+
+    !\
+    ! Signal normal completion by writing an empty SWMF.SUCCESS file
+    !/
+    if(is_proc0())then
+       open(UNITTMP_, file = 'SWMF.SUCCESS')
+       close(UNITTMP_)
+    end if
+
+    !\
+    ! Stop running
+    !/
+    call world_clean(IsStandAlone)
+
+  end subroutine finalize
 
   !BOP ========================================================================
   !IROUTINE: show_all_comp - show version and layout information
@@ -377,7 +410,7 @@ contains
 
           ! Let all processors now if there was
           call MPI_allreduce(iProc,iProcMin,1,MPI_INTEGER,MPI_MIN,&
-             i_comm(),iError)
+               i_comm(),iError)
 
           if( iProcMin <= n_proc() )then
              if(is_proc0())then
@@ -390,15 +423,14 @@ contains
                 write(*,'(a)')'CON_main SWMF_ERROR:'// &
                      ' Remove overlap or use different/renamed versions!'
              end if
-             call world_clean
+             call world_clean(IsStandAlone)
+             iErrorSwmf = 4
           end if
        end do
     end do
 
   end subroutine check_overlap_comp
 
-end program SWMF
+end module CON_main
 
 !===========================================================================
-
-
