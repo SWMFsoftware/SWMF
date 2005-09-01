@@ -25,6 +25,7 @@ help:
 
 
 MODULES = \
+	ModSize.o\
 	IE_ModMain.o\
 	IE_ModIo.o\
 	ModIonosphere.o\
@@ -108,6 +109,6 @@ backup:
 	tar -cf IONO.`date +%m_%d_%y_%H%M.tar` Make* *.f90 *.h *.sub *.script *.llscript.* *.in mpi* perf_mjp.a BATio BATioPP* IOcat*
 
 distclean: clean
-	rm -f Makefile.DEPEND Makefile.RULES
+	rm -f Makefile.DEPEND Makefile.RULES ModSize.f90
 
 # keep this line
