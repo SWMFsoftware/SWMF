@@ -9,6 +9,7 @@ program SWMF
   !USES:
   use CON_main
   use CON_variables, ONLY: iErrorSwmf
+  use ModMpi
 
   !REVISION HISTORY:
   ! This main program is for the stand alone SWMF.
@@ -21,9 +22,9 @@ program SWMF
   !---------------------------------------------------------------------------
 
   call MPI_init(iError)
-  if(iError    ==0) call initialize
-  if(iErrorSwmf==0) call run
-  if(iErrorSwmf==0) call finalize
+  if(iError==MPI_SUCCESS) call initialize
+  if(iErrorSwmf==0)       call run
+  if(iErrorSwmf==0)       call finalize
   call MPI_finalize(iError)
 
 end program SWMF
