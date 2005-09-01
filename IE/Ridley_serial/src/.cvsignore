@@ -1,4 +1,5 @@
 *.mod
 *.o
+ModSize.f90
 Makefile.DEPEND
 Makefile.RULES
