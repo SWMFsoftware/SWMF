@@ -1,10 +1,8 @@
-This is an example layout to run the steady state startup with
-IH-GM-IE coupling test on arbitrary even number of PE-s.
-Every second PE is used by GM, and the other half by IH.
-IE runs on the first 2 PE-s.
+This is the layout for running GM and IE in serial mode.
 
+Name First Last Stride
+======================
 #COMPONENTMAP
-GM    0  999    2
-IE    0    1    1
-IH    1  999    2
+IE       0    1    1   ! IE runs on 1 or 2 PE-s
+GM       0 9999    1   ! GM runs on all PE-s
 #END
