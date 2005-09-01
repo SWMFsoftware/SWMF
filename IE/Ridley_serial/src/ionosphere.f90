@@ -249,9 +249,6 @@ subroutine ionosphere_init
   use ModIonosphere
   implicit none
 
-  mhd_flag = .true.
-  first_time = .true.
-
   IONO_NORTH_PHI = 0.00
   IONO_NORTH_JR = 0.00 
   IONO_NORTH_Jx = 0.00
@@ -296,8 +293,6 @@ subroutine ionosphere_init
 
   IONO_NORTH_TGCM_JR = 0.00                                            !^CFG  IF TIEGCM
   IONO_SOUTH_TGCM_JR = 0.00                                            !^CFG  IF TIEGCM
-
-  IONO_Old_Seconds = 0.00
 
 end subroutine ionosphere_init
 
@@ -891,15 +886,11 @@ subroutine ionosphere_read_restart_file(iter)
 
      close(iUnit)
 
-     skip_ionosphere_restart = .false.
-
   else
 
      write(6,*) "==================================================="
      write(6,*) "= Error in finding ionosphere restart file.       ="
      write(6,*) "==================================================="
-
-     skip_ionosphere_restart = .true.
 
   endif
 
