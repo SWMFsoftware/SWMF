@@ -101,22 +101,22 @@ contains
           call fix_dir_name(NameIonoDIr)
           if (iProc==0) call check_dir(NameIonoDir)
        case("#SAVEPLOT", "#IE_SAVEPLOT")
-          call read_var('nFile',nFile)
+          call read_var('nPlotFile',nFile)
           if (nFile > MaxFile)call CON_stop(NameSub//&
                ' IE_ERROR number of ouput files is too large in #IE_SAVEPLOT:'&
                //' nFile>MaxFile')
           if (nFile>0.and.iProc==0) call check_dir(NameIonoDir)
           do iFile=1,nFile
 
-             call read_var('plot_string',plot_string)
+             call read_var('StringPlot',plot_string)
              call lower_case(plot_string)
 
              ! Check to see if the ionosphere directory exists...
              if(iProc==0)call check_dir(NameIonoDir)
 
              ! Plotting frequency
-             call read_var('dn_output',dn_output(iFile))
-             call read_var('dt_output',dt_output(iFile))
+             call read_var('DnSavePlot',dn_output(iFile))
+             call read_var('DtSavePlot',dt_output(iFile))
 
              ! Plot file format
              if(index(plot_string,'idl')>0)then
@@ -143,7 +143,7 @@ contains
              end if
           end do
        case("#IONOSPHERE")
-          call read_var('conductance_model',conductance_model)
+          call read_var('iConductanceModel',conductance_model)
           call read_var('UseFullCurrent' ,UseFullCurrent)
           call read_var('UseFakeRegion2' ,UseFakeRegion2)
           call read_var('F10.7 Flux',f107_flux)
@@ -168,18 +168,18 @@ contains
           endif
 
        case("#AMIEFILES")
-          call read_var('AMIEFileNorth',AMIEFileNorth)
-          call read_var('AMIEFileSouth',AMIEFileSouth)
+          call read_var('NameAmieFileNorth',AMIEFileNorth)
+          call read_var('NameAmieFileSouth',AMIEFileSouth)
           IE_NameOfEFieldModel = "amie"
           UseGridBasedIE = .true.
           UseAMIE = .true.
 
        case("#BACKGROUND")
 
-          call read_var('IE_NameOfModelDir',IE_NameOfModelDir)
-          call read_var('IE_NameOfEFieldModel',IE_NameOfEFieldModel)
-          call read_var('IE_NameOfAuroralModel',IE_NameOfAuroralModel)
-          call read_var('IE_NameOfSolarModel',IE_NameOfSolarModel)
+          call read_var('NameOfModelDir',IE_NameOfModelDir)
+          call read_var('NameOfEFieldModel',IE_NameOfEFieldModel)
+          call read_var('NameOfAuroralModel',IE_NameOfAuroralModel)
+          call read_var('NameOfSolarModel',IE_NameOfSolarModel)
 
           if (index(IE_NameOfAuroralModel,'IHP') > 0) &
                IE_NameOfAuroralModel = 'ihp'
