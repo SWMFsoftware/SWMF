@@ -14,5 +14,8 @@ ${RUNDIR}/ESMF_SWMF.exe:
 	   ln -s ${BINDIR}/ESMF_SWMF.exe ${RUNDIR}/ESMF_SWMF.exe; \
 	fi)
 
+clean:
+	cd src; make clean
+
 distclean:
 	cd src; make clean
