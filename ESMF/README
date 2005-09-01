@@ -1,0 +1,3 @@
+This directory tree contains the ESMF related files inside the SWMF.
+The ESMF library most be installed and the ESMF environment variables 
+must be set. One could install the ESMF library in a subdirectory here.
