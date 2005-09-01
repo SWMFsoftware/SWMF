@@ -24,7 +24,7 @@ DOCHTML			OFF  NEEDS DOC		^CMP IF DOCHTML
 MAKEPDF			OFF NEEDS DOC
 MAKEHTML		OFF NEEDS DOCHTML  		^CMP IF DOCHTML
 #
-# Removing the source Doc/Tex files
+# Removing the source doc/Tex files
 #
 REMOVEDOCTEX		OFF NEEDS DOC
 #						^CMP END REMOVEDOCTEX
