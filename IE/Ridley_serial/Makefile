@@ -15,7 +15,7 @@ MAKEFILE_DEF:
 		echo include `pwd`/src/Makefile.def     >> Makefile.def; \
 	fi);
 
-install_cont:
+install_cont: src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 	else \
@@ -27,6 +27,9 @@ install_cont:
 		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
 	touch src/Makefile.DEPEND
+
+src/ModSize.f90:
+	cp -f src/ModSize_orig.f90 src/ModSize.f90
 
 LIB:
 	cd src; make LIB
