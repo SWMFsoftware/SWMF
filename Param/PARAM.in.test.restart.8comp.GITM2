@@ -398,7 +398,7 @@ T			DoRestart
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IONOSPHERE
-5			conductance_model
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 150.0			F10.7 Flux
@@ -406,10 +406,10 @@ F			UseFakeRegion2
 0.5			PolarCapPedConductance
 
 #SAVEPLOT
-1			nFile
-min idl			plot_string
--1			dn_output
-300.0			dt_output
+1			nPlotFile
+min idl			StringPlot
+-1			DnSavePlot
+300.0			DtSavePlot
 
 #SPS
 T			UseSps (this is the serial potential solver)
