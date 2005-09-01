@@ -1,4 +1,4 @@
-!^CFG COPYRIGHT UM
+!^CMP COPYRIGHT UM
 !======================================
 !                                     |
 !    Module for Ionosphere Model      |
@@ -7,36 +7,16 @@
 
 module ModIonosphere
   use ModNumConst
+  use IE_ModSize
+
   implicit none
   save
 
-  !\
-  ! Ionosphere array parameters
-  !/
-  integer, parameter :: IONO_nTheta = 90
-  integer, parameter :: IONO_nPsi = 180
-  integer, parameter :: IONO_nRadial = 21
   real, parameter    :: IONO_PI=cPi
-  !\
-  ! Some time dependent stuff
-  !/
-  real :: IONO_Old_Seconds
-
-  !\
-  ! IONOSPHERE RESTART ERROR stuff
-  !/
-  logical :: skip_ionosphere_restart
-
-  logical :: first_time, mhd_flag
-
   !\
   ! Ionosphere solution parameters
   !/
-  integer, parameter :: IONO_NPRE = 10, &
-       IONO_NPOST = 10, &
-       IONO_NEXACT = 25
-
-  real, parameter :: IONO_OMEGA = 1.00,         &
+  real, parameter ::                            &
        IONO_TOLER = 5.0e-05,                    &
        IONO_MU = 1.256637e-06,                  &
        IONO_Theta_0 = 0.0001,                   &
