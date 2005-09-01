@@ -10,10 +10,13 @@ EXE = ${BINDIR}/ESMF_SWMF.exe
 # A link to the executable in the run directory
 EXELINK = ./ESMF_SWMF.exe
 
-### LOCDIR	  = src/Superstructure/AppDriver/seq_pairwise_fdriver_spmd
-
 # The ESMF definitions
 include $(ESMF_DIR)/makefile
+
+# Overwrite the incorrect .f90.o rule:
+.f90.o:
+	$(FC) -c $(FC_MOD)$(ESMF_MODDIR) $(FOPTFLAGS) $(FFLAGS) \
+		$(F_FREENOCPP) $<
 
 DIRS = 
 
