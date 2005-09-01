@@ -72,7 +72,7 @@ module  CON_world
   !PUBLIC MEMBER FUNCTIONS:
   public :: MaxComp
   public :: world_init      ! constructor initializes registry for components
-  public :: world_clean     ! destructor stops running the code
+  public :: world_clean     ! destructor cleans up
   public :: world_setup     ! set registry values (reads from LAYOUT.in)
   public :: n_comp          ! return number of components
   public :: use_comp        ! return true if component is used
@@ -204,7 +204,6 @@ contains
     if(present(iComm))then
        iCommWorld = iComm
     else
-       call MPI_INIT(iError)
        iCommWorld = MPI_COMM_WORLD
     end if
     call MPI_COMM_RANK (iCommWorld, iProcWorld,  iError)
@@ -215,18 +214,11 @@ contains
 
   end subroutine world_init
   !============================================================================
-  subroutine world_clean(DoStop)
-    logical, intent(in), optional :: DoStop
+  subroutine world_clean
     character(len=*),parameter :: NameSub=NameMod//'::world_clean'
     integer :: iError
     !------------------------------------------------------------------------
     call io_unit_clean
-    if(present(DoStop))then
-       if(.not.DoStop) RETURN
-    end if
-
-    call MPI_finalize(iError)
-    stop
 
   end subroutine world_clean
   !===========================================================================
