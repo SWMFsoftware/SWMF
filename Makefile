@@ -36,7 +36,7 @@ help:
 	@echo '    PIDL        (bin/PostIDL.exe creates .out file from *.idl files)'
 	@echo '    PSPH        (bin/PostSPH.exe creates spherical tec file from sph*.tec files)'
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
-	@echo '    LIB         (lib/libSWMF.a the SWMF library)
+	@echo '    LIB         (lib/libSWMF.a the SWMF library)'
 	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
 	@echo ' '
 	@echo '    help        (makefile option list)'
@@ -54,7 +54,7 @@ help:
 	@echo '    rundir PLOT=TEC     (run directory with Tecplot postprocessing only)'
 	@echo '    rundir MACHINE=ames (run directory with job scripts for machines at NASA Ames)'
 	@echo ' '
-	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 8 PEs)'
+	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 2 PEs)'
 	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
 	@echo '    mprun  NP=5 (make SWMF and mprun  SWMF.exe on 5 PEs)'
 	@echo '    nompirun    (make SWMF and run it without MPI)'
@@ -69,6 +69,10 @@ help:
 	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
 	@#^CMP END SC
 	@echo ' '
+	@echo '    ESMF_SWMF          (bin/ESMF_SWMF.exe the ESMF compatible executable)'
+	@echo '    ESMF_SWMF_test     (build and run ESMF_SWMF.exe on 2 CPU-s)'
+	@echo '    ESMF_SWMF_rundir   (create run directory for ESMF_SWMF.exe)'
+	@echo '    ESMF_SWMF_run NP=4 (run ESMF_SWMF.exe on 4 CPU-s)'
 #EOC
 #
 # Check the variables SWMF_ROOT=`pwd` and OS = `uname`
@@ -160,16 +164,9 @@ LIB:	ENV_CHECK
 
 NOMPI: ENV_CHECK
 	cd ${NOMPIDIR}; make LIB
-#
-# STAND-ALONE EXECUTABLES FOR COMPONENTS
-#
-
-RBM:	ENV_CHECK                               #^CMP IF RB
-	@cd ${RBDIR}; make RBM                  #^CMP IF RB
-	@echo ' '                               #^CMP IF RB
 
 #
-#	Post processing
+#	Post processing codes for BATSRUS plot files
 #
 PSPH:	ENV_CHECK				#^CMP IF GM
 	cd GM/BATSRUS; make PSPH		#^CMP IF GM
@@ -179,6 +176,9 @@ PIDL:	ENV_CHECK				#^CMP IF GM
 	cd GM/BATSRUS; make PIDL		#^CMP IF GM
 	@echo ' '				#^CMP IF GM
 
+#
+#	Post processing code for IE/Ridley_serial plot files
+#
 PIONO:	ENV_CHECK				#^CMP IF IE
 	cd IE/Ridley_serial; make PIONO		#^CMP IF IE
 	@echo ' '				#^CMP IF IE
@@ -314,6 +314,9 @@ dist: distclean
 #			
 #	Create run directories
 #
+run:
+	make rundir
+
 rundir: ENV_CHECK
 	mkdir run
 	mkdir run/STDOUT
@@ -343,15 +346,15 @@ rundir: ENV_CHECK
 #
 #	Run the default code on NP processors
 #
-NP=8
+NP=2
 
-mpirun: ENV_CHECK SWMF
+mpirun: ENV_CHECK SWMF run
 	cd run; mpirun -np ${NP} ./SWMF.exe
 
-mprun: ENV_CHECK SWMF
+mprun: ENV_CHECK SWMF run
 	cd run; mprun -np ${NP} ./SWMF.exe
 
-nompirun: ENV_CHECK SWMF
+nompirun: ENV_CHECK SWMF run
 	cd run; ./SWMF.exe
 
 ETAGS = etags
@@ -421,5 +424,20 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
 
 #^CMP END SC
+
+#
+#       Targets for the ESMF compatible executable
+#
+ESMF_SWMF: LIB
+	@cd ESMF/ESMF_SWMF/src; make EXE
+
+ESMF_SWMF_test: ESMF_SWMF
+	@make ESMF_SWMF_run
+
+ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
+	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe
+
+ESMF_SWMF_rundir: run
+	@cd ESMF/ESMF_SWMF; make rundir
 
 # keep this line
