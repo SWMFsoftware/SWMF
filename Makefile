@@ -435,7 +435,8 @@ ESMF_SWMF_test: ESMF_SWMF
 	@make ESMF_SWMF_run
 
 ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
-	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe
+	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe; \
+	perl -ne 'print if /error/i' PET*.ESMF_LogFile
 
 ESMF_SWMF_rundir: run
 	@cd ESMF/ESMF_SWMF; make rundir
