@@ -37,6 +37,8 @@ module CON_io
   ! 08/20/03 G.Toth - added save_restart, Protex prolog, and made it private
   ! 08/25/03 G.Toth - save_restart calls save_restart_comp for all components
   ! 05/20/04 G.Toth - added #CYCLE command
+  ! 09/01/05 G.Toth - replaced call CON_stop with call world_clean and RETURN
+  !                   check first read condition for each command separately.
   !EOP
 
   character (len=*), parameter :: NameMod='CON_io'
@@ -178,21 +180,29 @@ contains
           call fix_dir_name(NameStdoutDir)
           if(is_proc0())call check_dir(NameStdoutDir)
 
+       case("#DESCRIPTION")
+          call read_var('StringDescription',StringDescription)
+
        case("#BEGIN_COMP")
 
-          ! Obtain and check module name followin #BEGIN_COMP ...
+          ! Obtain and check module name following #BEGIN_COMP ...
           NameComp=StringLine(13:14)
-          if(.not.use_comp(NameComp)) call CON_stop(&
-               NameSub//' SWMF_ERROR unregistered componet name '&
-               //trim(NameComp))
+          if(.not.use_comp(NameComp))then
+             if(is_proc0()) write(*,*) NameSub// &
+                  ' SWMF_ERROR unregistered componet name '//trim(NameComp)
+             iErrorSwmf = 11
+             RETURN
+          end if
 
           ! Find #END_COMP MODULENAME and read module parameters
           iLineModule = iLine
           MODULELINES: do
-             if(.not.read_line(StringLine, iLine)) &
-                  call CON_stop(NameSub// &
-                  ' SWMF_ERROR: could not find #END_COMP '//trim(NameComp))
-
+             if(.not.read_line(StringLine, iLine)) then
+                if(is_proc0()) write(*,*) NameSub// &
+                     ' SWMF_ERROR: could not find #END_COMP '//trim(NameComp)
+                iErrorSwmf = 12
+                RETURN
+             end if
              if( StringLine(1:12) == '#END_COMP '//NameComp ) then
                 nLineModule = iLine - iLineModule
 
@@ -318,27 +328,41 @@ contains
 
           call read_var('nCouple',nCouple)
           if(nCouple > MaxCouple)then
-             write(*,*)NameSub,' SWMF_WARNING: nCouple > MaxCouple=',MaxCouple
-             if(UseStrict)call CON_stop(NameSub//&
-                  ' SWMF_ERROR correct nCouple!')
+             if(is_proc0()) write(*,*)NameSub// &
+                  ' SWMF_ERROR: nCouple > MaxCouple=',MaxCouple
+             if(UseStrict)then
+                iErrorSwmf = 13
+                RETURN
+             end if
              nCouple = MaxCouple
           end if
           do iCouple = 1,nCouple
              ! Read in a string with the names of source and target components
-             call read_var('Source Target',NameSourceTarget)
+             call read_var('NameSource NameTarget',NameSourceTarget)
              ! Split the string
              call split_string(NameSourceTarget,2,&
                   NameSourceTarget_I,nName)
              ! Check the number of names
-             if(nName /= 2)call CON_stop(NameSub//' SWMF_ERROR: '// &
-                  ' cannot find 2 component IDs in NameSourceTarget='// &
-                  trim(NameSourceTarget))
-             if(.not.is_valid_comp_name(NameSourceTarget_I(1))) &
-                  call CON_stop(NameSub//' SWMF_ERROR: '// &
-                  ' invalid source component name='//NameSourceTarget_I(1))
-             if(.not.is_valid_comp_name(NameSourceTarget_I(2))) &
-                  call CON_stop(NameSub//' SWMF_ERROR: '// &
-                  ' invalid target component name='//NameSourceTarget_I(2))
+             if(nName /= 2)then
+                if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
+                     ' cannot find 2 component IDs in NameSourceTarget='// &
+                     trim(NameSourceTarget)
+                iErrorSwmf = 14
+                RETURN
+             end if
+             if(.not.is_valid_comp_name(NameSourceTarget_I(1))) then
+                if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
+                     ' invalid source component name='//NameSourceTarget_I(1)
+                iErrorSwmf = 15
+                RETURN
+             end if
+             if(.not.is_valid_comp_name(NameSourceTarget_I(2))) then
+                if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
+                     ' invalid target component name='//NameSourceTarget_I(2)
+                iErrorSwmf = 16
+                RETURN
+             end if
+
              ! Store source and target ID-s.
              iCompCoupleOrder_II(1,iCouple) = i_comp(NameSourceTarget_I(1))
              iCompCoupleOrder_II(2,iCouple) = i_comp(NameSourceTarget_I(2))
@@ -348,15 +372,20 @@ contains
 
           call read_var('NameSource',NameComp1)
           iComp1=i_comp(NameComp1)
-          if(.not.use_comp(iComp1))call CON_stop(NameSub// &
-               ' SWMF_ERROR: '//NameComp1//' is OFF or not registered in '// &
-               NameMapFile)
-
+          if(.not.use_comp(iComp1)) then
+             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
+                  NameComp1//' is OFF or not registered in '//NameMapFile
+             iErrorSwmf = 17
+             RETURN
+          end if
           call read_var('NameTarget',NameComp2)
           iComp2=i_comp(NameComp2)
-          if(.not.use_comp(iComp2))call CON_stop(NameSub// &
-               ' SWMF_ERROR: '//NameComp2//' is OFF or not registered in '// &
-               NameMapFile)
+          if(.not.use_comp(iComp2))then
+             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
+                  NameComp2//' is OFF or not registered in '//NameMapFile
+             iErrorSwmf = 18
+             RETURN
+          end if
 
           call read_var('DnCouple',Couple_CC(iComp1,iComp2) % Dn)
           call read_var('DtCouple',Couple_CC(iComp1,iComp2) % Dt)
@@ -385,83 +414,88 @@ contains
        case("#CYCLE")
           call read_var('NameComp',NameComp)
           call read_var('DnRun',DnRun_C(i_comp(NameComp)))
-       case default
-          if(IsFirstRead) then
-             !
-             ! These variables only make sense to input for the first session.
-             ! They will be ignored for any other session.
-             !
-             select case(NameCommand)
-             case("#VERSION")
-                VersionRead = VersionSwmf ! set default value
-                call read_var('Version',VersionRead)
-                if(abs(VersionRead-VersionSwmf)>0.005.and.is_proc0())&
-                     write(*,'(a,f6.3,a,f6.3)') &
-                     NameSub//': SWMF_WARNING version in file is ',&
-                     VersionRead,' but SWMF version is ',VersionSwmf
+       case("#VERSION")
+          VersionRead = VersionSwmf ! set default value
+          call read_var('Version',VersionRead)
+          if(abs(VersionRead-VersionSwmf)>0.005.and.is_proc0())&
+               write(*,'(a,f6.3,a,f6.3)') &
+               NameSub//': SWMF_WARNING version in file is ',&
+               VersionRead,' but SWMF version is ',VersionSwmf
 
-             case("#PRECISION")
-                call read_var('nByteReal',nByteRealRead)
-                if(nByteReal/=nByteRealRead.and.is_proc0())then
-                   write(*,'(a,i1,a)')NameSub//': BATSRUS was compiled with ',&
-                        nByteReal,' byte reals'
-                   call CON_stop(NameSub//&
-                        ' SWMF_ERROR: incorrect precision for reals')
-                end if
-
-             case("#NSTEP")
-
-                call read_var('nStep',nStep)
-
-             case("#TIMESIMULATION")
-
-                call read_var('tSimulation',tSimulation)
-
-             case("#STARTTIME", "#SETREALTIME")
-
-                call read_var('year'  ,TimeStart % iYear)
-                call read_var('month' ,TimeStart % iMonth)
-                call read_var('day'   ,TimeStart % iDay)
-                call read_var('hour'  ,TimeStart % iHour)
-                call read_var('minute',TimeStart % iMinute)
-                call read_var('second',TimeStart % iSecond)
-                FracSecond = TimeStart % FracSecond ! set default value
-                call read_var('FracSecond',FracSecond)
-                TimeStart % FracSecond = FracSecond
-                call time_int_to_real(TimeStart)
-
-             case("#DESCRIPTION")
-
-                call read_var('Description',StringDescription)
-
-             case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-                  '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
-
-                call read_planet_var(NameCommand)
-
-             case("#ROTATEHGR")
-                call read_var('dLongitudeHgr', dLongitudeHgrDeg)
-                dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
-
-             case("#ROTATEHGI")
-                call read_var('dLongitudeHgi', dLongitudeHgiDeg)
-                dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
-
-             case default
-                if(is_proc0()) then
-                   write(*,*) NameSub,' WARNING: Invalid #COMMAND ',&
-                        trim(NameCommand),' at line',iLine,' in PARAM.in'
-                   if(UseStrict)call CON_stop('Correct PARAM.in!')
-                end if
-             end select
-          else
+       case("#PRECISION")
+          call read_var('nByteReal',nByteRealRead)
+          if(nByteReal/=nByteRealRead.and.is_proc0())then
              if(is_proc0()) then
-                write(*,*) NameSub,' WARNING: Invalid #COMMAND ',&
-                     trim(NameCommand),&
-                     ' either unknown or first session only at line',&
-                     iLine,' in PARAM.in'
-                if(UseStrict)call CON_stop('Correct PARAM.in!')
+                write(*,'(a,i1,a)')NameSub//' ERROR: '//&
+                     'SWMF was compiled with ',nByteReal,' byte reals'
+                write(*,*) NameSub//&
+                     ' SWMF_ERROR: incorrect precision for reals'
              end if
+             iErrorSwmf = 19
+             RETURN                   
+          end if
+
+       case("#NSTEP")
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+          call read_var('nStep',nStep)
+
+       case("#TIMESIMULATION")
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+          call read_var('tSimulation',tSimulation)
+
+       case("#STARTTIME", "#SETREALTIME")
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+          call read_var('iYear'  ,TimeStart % iYear)
+          call read_var('iMonth' ,TimeStart % iMonth)
+          call read_var('iDay'   ,TimeStart % iDay)
+          call read_var('iHour'  ,TimeStart % iHour)
+          call read_var('iMinute',TimeStart % iMinute)
+          call read_var('iSecond',TimeStart % iSecond)
+          FracSecond = TimeStart % FracSecond ! set default value
+          call read_var('FracSecond',FracSecond)
+          TimeStart % FracSecond = FracSecond
+          call time_int_to_real(TimeStart)
+
+       case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
+            '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+
+          call read_planet_var(NameCommand)
+
+       case("#ROTATEHGR")
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+          call read_var('dLongitudeHgr', dLongitudeHgrDeg)
+          dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
+
+       case("#ROTATEHGI")
+          if(.not.is_first_read())then
+             if(UseStrict)RETURN
+             CYCLE
+          end if
+          call read_var('dLongitudeHgi', dLongitudeHgiDeg)
+          dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
+
+       case default
+          if(is_proc0()) write(*,*) NameSub,' ERROR: Invalid command ',&
+               trim(NameCommand),' at line',iLine,' in PARAM.in'
+          if(UseStrict)then
+             iErrorSwmf = 30
+             RETURN
           end if
        end select
     end do
@@ -473,16 +507,16 @@ contains
     if(use_comp(UA_) .and. .not. use_comp(IE_)) then
        write(*,*) NameSub//' SWMF_ERROR: '//&
             'UA is used without IE. This combination is not allowed!'
-       call world_clean(IsStandAlone)
-       iErrorSwmf = 1
+       call world_clean
+       iErrorSwmf = 31
        RETURN
     end if
     ! Check if UA and IE are coupled
     if(use_comp(UA_) .and. .not. Couple_CC(IE_,UA_) % DoThis) then
        write(*,*) NameSub//' SWMF_ERROR: '//&
             'UA is used without IE-->UA coupling! Not allowed!'
-       call world_clean(IsStandAlone)
-       iErrorSwmf = 2
+       call world_clean
+       iErrorSwmf = 32
        RETURN
     end if
 
@@ -517,11 +551,13 @@ contains
     if(UseTiming)then
        call timing_version(on,NameVersion,number)
        if(.not.on)then
-          if(is_proc0())then
-             write(*,'(a)')NameSub//' WARNING: TIMING module is OFF'
-             if(UseStrict)call CON_stop('Correct PARAM.in or switch TIMING on')
-             write(*,*)NameSub//': setting UseTiming=.false.'
+          if(is_proc0()) &
+               write(*,'(a)')NameSub//' WARNING: TIMING module is OFF'
+          if(UseStrict)then
+             iErrorSwmf = 33
+             RETURN
           end if
+          if(is_proc0()) write(*,*)NameSub//': setting UseTiming=.false.'
           UseTiming=.false.
        end if
     end if
@@ -547,6 +583,21 @@ contains
 
     IsFirstRead = .false.
 
+  contains
+    !==========================================================================
+    logical function is_first_read()
+
+      if(.not.IsFirstRead)then
+         if(is_proc0()) write(*,*) NameSub,' ERROR: command ',&
+                  trim(NameCommand),&
+                  ' can be used in first session only at line',&
+                  iLine,' in PARAM.in'
+         if(UseStrict) iErrorSwmf = 40
+      end if
+      is_first_read = IsFirstRead
+
+    end function is_first_read
+    !==========================================================================
   end subroutine read_inputs
 
   !BOP ========================================================================
