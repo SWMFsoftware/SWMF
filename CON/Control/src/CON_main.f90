@@ -162,7 +162,7 @@ contains
                   NameMapFile
           end if
           ! stop in a clean fashion (without abort)
-          call world_clean(IsStandAlone)
+          call world_clean
           iErrorSwmf = 3
           RETURN
        end if
@@ -303,7 +303,7 @@ contains
     !\
     ! Stop running
     !/
-    call world_clean(IsStandAlone)
+    call world_clean
 
   end subroutine finalize
 
@@ -423,7 +423,7 @@ contains
                 write(*,'(a)')'CON_main SWMF_ERROR:'// &
                      ' Remove overlap or use different/renamed versions!'
              end if
-             call world_clean(IsStandAlone)
+             call world_clean
              iErrorSwmf = 4
           end if
        end do
