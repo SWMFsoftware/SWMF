@@ -39,11 +39,10 @@ contains
     type(ESMF_Clock) :: externalclock
     integer          :: rc
 
+    logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: vm
     integer :: iComm, iProc
     !------------------------------------------------------------------------
-    call ESMF_LogWrite("Initialize_SWMF routine called", ESMF_LOG_INFO)
-
     ! Obtain the VM for the SWMF gridded component
     call ESMF_GridCompGet(gcomp,vm=vm)
 
@@ -51,12 +50,13 @@ contains
     call ESMF_VMGet(vm, mpiCommunicator=iComm)
 
     ! Initialze the SWMF with this MPI communicator
-    call initialize_swmf(iComm, rc)
-    call ESMF_LogWrite("Initialize_SWMF routine returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("SWMF_initialize routine called", ESMF_LOG_INFO)
+    call SWMF_initialize(iComm, IsLastSession, rc)
+    call ESMF_LogWrite("SWMF_initialize routine returned", ESMF_LOG_INFO)
     if(rc /= 0)then
-       call ESMF_LogWrite("Initialize SWMF FAILED", ESMF_LOG_ERROR)
+       call ESMF_LogWrite("SWMF_initialize FAILED", ESMF_LOG_ERROR)
        call ESMF_VMGet(vm, localPET=iProc)
-       if(iProc == 0)write(0, *) "Initialize SWMF FAILED"
+       if(iProc == 0)write(0, *) "SWMF_initialize FAILED"
        rc = ESMF_FAILURE
     endif
 
@@ -71,16 +71,17 @@ contains
     type(ESMF_Clock) :: externalclock
     integer :: rc
 
+    logical          :: DoStop ! true if SWMF requests a stop
     type(ESMF_VM)    :: vm
     integer          :: iProc
     !------------------------------------------------------------------------
-    call ESMF_LogWrite("Run_SWMF routine called", ESMF_LOG_INFO)
-    call run_swmf(rc)
-    call ESMF_LogWrite("Run_SWMF routine returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("SWMF_run routine called", ESMF_LOG_INFO)
+    call SWMF_run(DoStop, rc)
+    call ESMF_LogWrite("SWMF_run routine returned", ESMF_LOG_INFO)
     if(rc /= 0)then
-       call ESMF_LogWrite("Run SWMF FAILED", ESMF_LOG_ERROR)
+       call ESMF_LogWrite("SWMF_run FAILED", ESMF_LOG_ERROR)
        call ESMF_VMGet(vm, localPET=iProc)
-       if(iProc == 0)write(0, *) "Run SWMF FAILED"
+       if(iProc == 0)write(0, *) "SWMF_run FAILED"
        rc = ESMF_FAILURE
     endif
 
@@ -98,13 +99,13 @@ contains
     type(ESMF_VM)    :: vm
     integer          :: iProc
     !------------------------------------------------------------------------
-    call ESMF_LogWrite("Finalize_SWMF routine called", ESMF_LOG_INFO)
-    call finalize_swmf(rc)
-    call ESMF_LogWrite("Finalize_SWMF routine returned", ESMF_LOG_INFO)
+    call ESMF_LogWrite("SWMF_finalize routine called", ESMF_LOG_INFO)
+    call SWMF_finalize(rc)
+    call ESMF_LogWrite("SWMF_finalize routine returned", ESMF_LOG_INFO)
     if(rc /= 0)then
-       call ESMF_LogWrite("Finalize_SWMF FAILED", ESMF_LOG_ERROR)
+       call ESMF_LogWrite("SWMF_finalize FAILED", ESMF_LOG_ERROR)
        call ESMF_VMGet(vm, localPET=iProc)
-       if(iProc == 0)write(0, *) "Finalize SWMF FAILED"
+       if(iProc == 0)write(0, *) "SWMF_finalize FAILED"
        rc = ESMF_FAILURE
     endif
 
