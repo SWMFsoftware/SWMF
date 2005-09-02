@@ -16,7 +16,9 @@ ${RUNDIR}/ESMF_SWMF.exe:
 	fi)
 
 clean:
+	touch src/Makefile.DEPEND
 	cd src; make clean
 
 distclean:
+	touch src/Makefile.DEPEND
 	cd src; make distclean
