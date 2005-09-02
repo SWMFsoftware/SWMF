@@ -4,6 +4,9 @@ ALL:  EXE
 # Get the SWMF definitions
 include ../../../Makefile.def
 
+# Get the dependencies
+include Makefile.DEPEND
+
 # The executable
 EXE = ${BINDIR}/ESMF_SWMF.exe
 
@@ -26,10 +29,19 @@ CLEANFILES  = ${EXE}
 CLOBBERDIRS =
 
 # object files which need to be compiled into the executable.
-APPOBJS = ESMF_SWMF_Coupler.o SWMF_GridComp.o ESMF_GridComp.o \
-          ESMF_SWMF_GridComp.o ESMF_SWMF_Driver.o
+APPOBJS = \
+	ESMF_SWMF_Coupler.o \
+	SWMF_GridComp.o \
+	ESMF_GridComp.o \
+	ESMF_SWMF_GridComp.o \
+	ESMF_SWMF_Driver.o \
+	ModTimeArray.o
 
-EXE: ${EXE}
+# Dependencies:
+DEPEND:
+	perl ${SCRIPTDIR}/depend.pl ${APPOBJS}
+
+EXE: ${EXE} DEPEND
 	@echo ' '
 	@echo '${EXE} has been brought up to date'
 	@echo ' '
@@ -52,3 +64,6 @@ run:	${EXE}
 	@cd ../run; rm -f *.ESMF_LogFile; \
 	${MPIRUN} -np 1 ${EXELINK}; \
 	perl -ne 'print if /error/i' PET0.ESMF_LogFile
+
+distclean: clean
+	rm -f Makefile.DEPEND
