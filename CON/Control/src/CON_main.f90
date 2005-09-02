@@ -62,9 +62,11 @@ contains
   !INTERFACE:
   subroutine initialize(iComm)
     !INPUT ARGUMENTS:
-    integer, intent(in), optional :: iComm ! The MPI communicator for the SWMF
+    integer, intent(in), optional :: iComm ! the MPI communicator for the SWMF
 
     !DESCRIPTION:
+    ! The optional argument MPI communicator argument is present only
+    ! when the SWMF is not running in stand alone mode.
     ! This subroutine executes the following major steps shown in 
     ! pseudo F90 code
     ! \begin{itemize}
