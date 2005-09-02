@@ -251,7 +251,8 @@ foreach $base (@base){
 	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
 
         # Exclude dependency on itself and compiler provided modules
-        map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i}(@use);
+        map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i}
+	(@use);
 	    
         # Make string out of array
 	$use=' '.join(' ',@use);
