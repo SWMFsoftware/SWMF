@@ -3,51 +3,8 @@
 !           SWMF: Space Weather Modeling Framework          |
 !                   University of Michigan                  |
 !============================================================
-!BOP 
-!
-!QUOTE: \chapter{Control Module}
-!QUOTE: \section{CON/Control: Main Executable and Control}
-!
-!MODULE: CON_main - the main executable
-!
-!DESCRIPTION:
-!
-! This is the main program for the {\bf Space Weather Modeling Framework}.
-! It executes the following major steps shown in pseudo F90 code
-! \begin{itemize}
-! \item Initialize the framework: \begin{verbatim}
-!       call world_init           \end{verbatim}
-! \item Read the layout of the components from LAYOUT.in: \begin{verbatim}
-!       call world_setup                                  \end{verbatim}
-! \item Obtain version information from and provide MPI information to the
-!       components:                                       \begin{verbatim}
-!       do iComp = 1, nComp
-!           call set_param_comp(iComp,"VERSION")
-!           call set_param_comp(iComp,"MPI")
-!       end do                                            \end{verbatim}
-! \item Show the registered and unregistered components:  \begin{verbatim}
-!       call show_all_comp                                \end{verbatim}
-! \item Loop through sessions:                            \begin{verbatim}
-!       SESSIONLOOP: do
-!           call read_inputs(IsLastSession)
-!           call init_session
-!           call do_session(IsLastSession)
-!           if(IsLastSession) EXIT SESSIONLOOP
-!      end do SESSIONLOOP                                 \end{verbatim}
-! \item Save final restart files if required:             \begin{verbatim}
-!    if(SaveRestart % DoThis) call save_restart           \end{verbatim}
-! \item Finalize components:                              \begin{verbatim}
-!    do iComp=1,nComp
-!        call finalize_comp(iComp,tSimulation)
-!    end do                                               \end{verbatim}
-! \item Finish the execution:                             \begin{verbatim}
-!    call world_clean                                     \end{verbatim}
-! \end{itemize}
-! The actual code is somewhat longer, since the main code also
-! deals with timing, deleting the SWMF.STOP and SWMF.SUCCESS files
-! at the beginning of the run, and writing SWMF.SUCCESS at the end.
-! There is also some verbose information printed.
-!
+!BOP
+!MODULE: CON_main - the main methods to drive the SWMF
 !INTERFACE:
 module CON_main
 
@@ -55,7 +12,7 @@ module CON_main
   use CON_world
   use CON_comp_param
   use CON_wrapper
-  use CON_io, ONLY : read_inputs, SaveRestart, save_restart
+  use CON_io, ONLY : SaveRestart, save_restart
 
   use CON_time
   use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
@@ -68,13 +25,13 @@ module CON_main
   private ! except
 
   !PUBLIC MEMBER FUNCTIONS:
-  public :: initialize     ! initialize SWMF
-  public :: run            ! run        SWMF
-  public :: finalize       ! finalize   SWMF
+  public :: initialize         ! initialize SWMF
+  public :: run                ! run        SWMF
+  public :: finalize           ! finalize   SWMF
 
   !REVISION HISTORY:
   !
-  ! This main program was continuously transformed from the main 
+  ! This module is a result of a continuous transformation from the main 
   ! program of BATSRUS (developed at the University of Michigan)
   ! into what it is now. Probably not a single line is left untouched
   ! from the original code, but it originates from there.
@@ -100,10 +57,35 @@ module CON_main
   logical :: DoTest, DoTestMe
 
 contains
-  !===========================================================================
+  !BOP =======================================================================
+  !IROUTINE: initialize - initialize the SWMF
+  !INTERFACE:
   subroutine initialize(iComm)
-
+    !INPUT ARGUMENTS:
     integer, intent(in), optional :: iComm ! The MPI communicator for the SWMF
+
+    !DESCRIPTION:
+    ! This subroutine executes the following major steps shown in 
+    ! pseudo F90 code
+    ! \begin{itemize}
+    ! \item Initialize the framework:                         \begin{verbatim}
+    !       call world_init                                   \end{verbatim}
+    ! \item Read the layout of the components from LAYOUT.in: \begin{verbatim}
+    !       call world_setup                                  \end{verbatim}
+    ! \item Obtain version information from and provide MPI information to the
+    !       components:                                       \begin{verbatim}
+    !       do iComp = 1, nComp
+    !           call set_param_comp(iComp,"VERSION")
+    !           call set_param_comp(iComp,"MPI")
+    !       end do                                            \end{verbatim}
+    ! \item Show the registered and unregistered components:  \begin{verbatim}
+    !       call show_all_comp                                \end{verbatim}
+    ! \end{itemize}
+    ! The actual code is somewhat longer, since the main code also
+    ! deals with timing, deleting the SWMF.STOP and SWMF.SUCCESS files
+    ! at the beginning of the run.
+    ! There is also some verbose information printed.
+    !EOP
     !-------------------------------------------------------------------------
     !\
     ! Initialize control component (MPI)
@@ -186,54 +168,27 @@ contains
     ! Initialize CON_time
     !/
     call init_time
+
   end subroutine initialize
 
-  !===========================================================================
-
+  !BOP ========================================================================
+  !IROUTINE: run - run the SWMF in multi-session mode
+  !INTERFACE:
   subroutine run
-
+    !DESCRIPTION:
+    ! Run the SWMF in multi-session mode. The input parameters can be
+    ! modified at the beginning of each session. The number of sessions
+    ! is defined by the \#RUN commands in the PARAM.in file.
+    !EOP
+    !BOC
     SESSIONLOOP: do
+
        !\
-       ! Read input parameters for this session
+       ! Initialize and execute the session
        !/
-       call read_inputs(IsLastSession)
+       call init_session(IsLastSession)
        if(iErrorSwmf /= 0) RETURN
 
-       !\
-       ! StringTest is read, so set the test flags now
-       !/
-       call CON_set_do_test(NameSub,DoTest,DoTestMe)
-       DoTestMe = DoTest .and. is_proc0()
-
-       !\
-       ! Time execution (timing parameters were read by read_inputs)
-       !/
-       if(iSession==1)then
-          call timing_start('SWMF')
-          call timing_start('SETUP')
-       end if
-
-       if(is_proc0().and.lVerbose>=0)&
-            write(*,*)'----- Starting Session ',iSession,' ------'
-
-       !\
-       ! Initialize CON and all components for this session
-       !/
-       call init_session
-
-       if(iSession==1)then
-          call timing_stop('SETUP')
-          call timing_stop('SWMF')
-          CpuTimeSetup = MPI_WTIME()
-          if(DnTiming > -3)call timing_report_total
-          if(is_proc0())write(*,*)'Resetting timing counters after setup.'
-          call timing_reset('#all',3)
-          call timing_start('SWMF')
-       end if
-
-       !\
-       ! Execute the session
-       !/
        call do_session(IsLastSession)
 
        !\
@@ -250,11 +205,31 @@ contains
        end if
 
     end do SESSIONLOOP
+    !EOC
 
   end subroutine run
-  !===========================================================================
 
+  !BOP =======================================================================
+  !IROUTINE: finalize - finalize the SWMF run
+  !INTERFACE:
   subroutine finalize
+    !DESCRIPTION:
+    ! This subroutine executes the following major steps shown in 
+    ! pseudo F90 code
+    !\begin{itemize}
+    ! \item Save final restart files if required:             \begin{verbatim}
+    !    if(SaveRestart % DoThis) call save_restart           \end{verbatim}
+    ! \item Finalize components:                              \begin{verbatim}
+    !    do iComp=1,nComp
+    !        call finalize_comp(iComp,tSimulation)
+    !    end do                                               \end{verbatim}
+    ! \item Finish the execution:                             \begin{verbatim}
+    !    call world_clean                                     \end{verbatim}
+    !\end{itemize}
+    ! The actual code is longer: verbose information is printed, timing
+    ! report is shown and the SWMF.SUCCESS file is written.
+    !EOP ---------------------------------------------------------------------
+
     if(is_proc0())then
        if(lVerbose>=0)then
           write(*,*)
@@ -268,10 +243,6 @@ contains
     end if
     if (DnTiming > -2) call timing_report
 
-    !============================================================
-    ! DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT DATA OUTPUT
-    !============================================================
-
     if(SaveRestart % DoThis) call save_restart
     do lComp = 1,n_comp()
        iComp = i_comp(lComp)
@@ -283,10 +254,6 @@ contains
        write(*,'(a)')'    Finished Finalizing SWMF'
        write(*,'(a)')'    ------------------------'
     end if
-
-    !============================================================
-    ! END END END END END END END END END END END END END END END
-    !============================================================
 
     call timing_stop('SWMF')
 
@@ -384,6 +351,7 @@ contains
     ! by their NameVersion being the same. When the version names are the same
     ! no overlap is allowed. This suboutine stops with an appropriate error
     ! message if such an overlap occurs.
+    !
     !REVISION HISTORY:
     ! 09/10/03 - G.Toth <gtoth@umich.edu> - initial version and prolog
     !EOP
