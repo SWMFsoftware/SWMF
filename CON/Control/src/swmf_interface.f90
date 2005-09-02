@@ -1,45 +1,104 @@
 !^CMP COPYRIGHT UM
-
-!==============================================================================
+!BOP
+!MODULE: SWMF interface - a set of external subroutines to drive the SWMF
+!DESCRIPTION:
 ! The subroutines in this file provide an interface to the SWMF library, 
 ! when it does not run in stand alone mode.
 ! These are all external subroutines, so that the external application 
 ! does not have to compile any SWMF modules 
 ! (which avoids a lot of compilation problems).
 ! All subroutines return an error code, which is 0 on success.
-!==============================================================================
 
-subroutine initialize_swmf(iComm, iError)
+!REVISION HISTORY:
+! 09/01/05 G.Toth - initial version
+!EOP
+
+!BOP ==========================================================================
+!ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
+!INTERFACE:
+subroutine SWMF_initialize(iComm, IsLastSession, iError)
+  !USES:
   use CON_main,      ONLY: initialize
+  use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
   implicit none
-  integer, intent(in) :: iComm  ! The MPI communicator for the SWMF
-  integer, intent(out):: iError
-  !---------------------------------------------------------------------------
+  !INPUT ARGUMENTS:
+  integer, intent(in) :: iComm          ! The MPI communicator for the SWMF
+  !OUTPUT ARGUMENTS:
+  integer, intent(out):: iError         ! SWMF error code (0 on success)
+  logical, intent(out):: IsLastSession  ! True if there is only one session
+  !DESCRIPTION:
+  ! Obtains the MPI communicator for the whole SWMF.
+  ! Initializes the SWMF for the first session.
+  ! Indicates if there are more than one sessions according to the PARAM.in.
+  !EOP
+  !BOC ------------------------------------------------------------------------
   call initialize(iComm)
   iError = iErrorSwmf
-end subroutine initialize_swmf
+  if(iError /= 0) RETURN
 
-!==============================================================================
+  call init_session(IsLastSession)
+  iError = iErrorSwmf
+  !EOC
+end subroutine SWMF_initialize
 
-subroutine run_swmf(iError)
-  use CON_main,      ONLY: run
+!BOP ==========================================================================
+!ROUTINE: SWMF_initialize_session - initialize SWMF for 2nd, 3rd etc. sessions
+!INTERFACE:
+subroutine SWMF_initialize_session(IsLastSession, iError)
+  !USES:
+  use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
   implicit none
-  integer, intent(out):: iError
-  !---------------------------------------------------------------------------
-  call run
+  !OUTPUT ARGUMENTS:
+  logical, intent(out):: IsLastSession ! True if this is the last session
+  integer, intent(out):: iError        ! Error code, 0 on success
+  !DESCRIPTION:
+  ! Initialize for 2nd, 3rd etc. sessions in a multi-session run.
+  ! Indicates if this is the last session to run.
+  !EOP
+  !BOC ------------------------------------------------------------------------
+  call init_session(IsLastSession)
   iError = iErrorSwmf
-end subroutine run_swmf
+  !EOC
+end subroutine SWMF_initialize_session
 
-!==============================================================================
+!BOP ==========================================================================
+!ROUTINE: SWMF_run - run the SWMF
+!INTERFACE:
+subroutine SWMF_run(DoStop, iError)
+  !USES:
+  use CON_session,   ONLY: do_session
+  use CON_variables, ONLY: iErrorSwmf
+  implicit none
+  !OUTPUT ARGUMENTS:
+  logical, intent(out):: DoStop ! True if the SWMF requested a stop
+  integer, intent(out):: iError ! Error code, 0 on success
+  !DESCRIPTION:
+  ! Run the SWMF for a certain time. To be implemented !!!
+  ! Indicate if a stop has been requested.
+  !EOP
+  !BOC ------------------------------------------------------------------------
+  call do_session(DoStop)
+  iError = iErrorSwmf
+  !EOC
+end subroutine SWMF_run
 
-subroutine finalize_swmf(iError)
+!BOP ==========================================================================
+!ROUTINE: SWMF_finalize - finalize the SWMF
+!INTERFACE:
+subroutine SWMF_finalize(iError)
+  !USES:
   use CON_main,      ONLY: finalize
   use CON_variables, ONLY: iErrorSwmf
   implicit none
-  integer, intent(out):: iError
-  !---------------------------------------------------------------------------
+  !OUTPUT ARGUMENTS:
+  integer, intent(out):: iError ! Error code, 0 on success
+  !DESCRIPTION:
+  ! Finalize the SWMF after the last session is done.
+  !EOP
+  !BOC ------------------------------------------------------------------------
   call finalize
   iError = iErrorSwmf
-end subroutine finalize_swmf
+  !EOC
+end subroutine SWMF_finalize
