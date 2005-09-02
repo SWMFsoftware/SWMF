@@ -79,6 +79,8 @@ SWMFREF = \
 	${DIR}/share/build/Makefile.doc.protex \
 	${DIR}/doc/Tex/Makefile.protex \
 	${DIR}/CON/Makefile.protex \
+	${CONTROLDIR}/swmf.protex \
+	${CONTROLDIR}/swmf_interface.protex \
 	${CONTROLDIR}/CON_main.protex \
 	${CONTROLDIR}/CON_variables.protex \
 	${CONTROLDIR}/CON_session.protex \
