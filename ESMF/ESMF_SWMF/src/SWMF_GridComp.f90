@@ -10,6 +10,9 @@ module SwmfGridCompMod
   ! ESMF Framework module
   use ESMF_Mod
 
+  ! Named indexes for integer time arrays
+  use ModTimeArray
+
   implicit none
   private
 
@@ -41,7 +44,12 @@ contains
 
     logical          :: IsLastSession ! true if SWMF has a single session
     type(ESMF_VM)    :: vm
-    integer :: iComm, iProc
+    integer          :: iComm, iProc
+    type(ESMF_Time)  :: StartTime
+    integer          :: iStartTime_I(Year_:Millisec_)
+    type(ESMF_TimeInterval) :: SimTime
+    integer(ESMF_KIND_I4)   :: iSecond, iMilliSec
+    real(ESMF_KIND_R4)      :: TimeSimulation
     !------------------------------------------------------------------------
     ! Obtain the VM for the SWMF gridded component
     call ESMF_GridCompGet(gcomp,vm=vm)
@@ -49,9 +57,26 @@ contains
     ! Obtain the MPI communicator for the VM
     call ESMF_VMGet(vm, mpiCommunicator=iComm)
 
-    ! Initialze the SWMF with this MPI communicator
+    ! Obtain the start time from the clock 
+    call ESMF_ClockGet(externalclock, &
+         starttime=StarTtime, currSimTime=SimTime)
+    call ESMF_TimeGet(StartTime,   &
+         yy=iStartTime_I(Year_),   &
+         mm=iStartTime_I(Month_),  &
+         dd=iStartTime_I(Day_),    &
+         h =iStartTime_I(Hour_),   &
+         m =iStartTime_I(Minute_), &
+         s =iStartTime_I(Second_), &
+         ms=iStartTime_I(Millisec_))
+
+    ! Obtain the simulation time from the clock
+    call ESMF_TimeIntervalGet(SimTime, s=iSecond, ms=iMillisec)
+    TimeSimulation = iSecond + iMillisec/1000.0
+
+    ! Initialze the SWMF with this MPI communicator and start time
     call ESMF_LogWrite("SWMF_initialize routine called", ESMF_LOG_INFO)
-    call SWMF_initialize(iComm, IsLastSession, rc)
+    call SWMF_initialize(iComm, iStartTime_I, TimeSimulation, &
+         IsLastSession, rc)
     call ESMF_LogWrite("SWMF_initialize routine returned", ESMF_LOG_INFO)
     if(rc /= 0)then
        call ESMF_LogWrite("SWMF_initialize FAILED", ESMF_LOG_ERROR)
