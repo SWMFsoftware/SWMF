@@ -16,27 +16,47 @@
 !BOP ==========================================================================
 !ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
 !INTERFACE:
-subroutine SWMF_initialize(iComm, IsLastSession, iError)
+subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, IsLastSession, iError)
+
   !USES:
   use CON_main,      ONLY: initialize
   use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
+  use CON_time,      ONLY: TimeStart, tSimulation
+  use ModTimeConvert,ONLY: time_int_to_real, time_real_to_int
+  use ModKind,       ONLY: Real4_
+
   implicit none
+
   !INPUT ARGUMENTS:
-  integer, intent(in) :: iComm          ! The MPI communicator for the SWMF
+  integer, intent(in) :: iComm           ! The MPI communicator for the SWMF
+  integer, intent(in) :: iTimeStart_I(7) ! Start time (year ... millisec)
+  real(Real4_), intent(in) :: TimeSim    ! Simulation time (0.0 unless restart)
+
   !OUTPUT ARGUMENTS:
   integer, intent(out):: iError         ! SWMF error code (0 on success)
   logical, intent(out):: IsLastSession  ! True if there is only one session
+
   !DESCRIPTION:
   ! Obtains the MPI communicator for the whole SWMF.
   ! Initializes the SWMF for the first session.
   ! Indicates if there are more than one sessions according to the PARAM.in.
   !EOP
   !BOC ------------------------------------------------------------------------
+  ! Initialize SWMF
   call initialize(iComm)
   iError = iErrorSwmf
   if(iError /= 0) RETURN
 
+  ! Set the real*8 field of CON_time::StartTime
+  call time_int_to_real(iTimeStart_I, TimeStart % Time)
+  ! Set the integer and string parts of CON_time::StartTime
+  call time_real_to_int(TimeStart)
+
+  ! Set the simulation time CON_time::tSimulation
+  tSimulation = TimeSim
+
+  ! Initialize for first session
   call init_session(IsLastSession)
   iError = iErrorSwmf
   !EOC
