@@ -21,19 +21,22 @@ program ESMF_SWMF_Driver
   ! Top ESMF-SWMF Gridded Component registration routines
   use ESMF_SWMF_GridCompMod, only : SetServices => ESMF_SWMF_SetServices
 
+  ! Named indexes for integer time arrays
+  use ModTimeArray
+
   implicit none
 
   ! Local variables
-
   character (len=*), parameter :: NameParamFile = "ESMF_SWMF.input"
 
   ! Components
   type(ESMF_GridComp) :: compGridded
 
-  ! States, Virtual Machines, and Layouts
-  type(ESMF_VM) :: defaultvm
+  ! States, Virtual Machines, and Layouts and processor index
+  type(ESMF_VM)       :: defaultvm
   type(ESMF_DELayout) :: defaultlayout
-  type(ESMF_State) :: defaultstate
+  type(ESMF_State)    :: defaultstate
+  integer             :: iProc
 
   ! Configuration information
   type(ESMF_Config) :: config
@@ -52,9 +55,6 @@ program ESMF_SWMF_Driver
   type(ESMF_TimeInterval) :: timeStep
 
   ! Variables for the clock
-  ! Named indexes for date-time arrays:
-  integer, parameter :: &
-       Year_=1, Month_=2, Day_=3, Hour_=4, Minute_=5, Second_=6, MilliSec_=7
   integer :: iTime                              ! Index for date-time arrays
   integer :: iStartTime_I(Year_:MilliSec_)  = & ! Start date-time
        (/2000, 3, 21, 10, 45, 0, 0/)            !   with defaults
@@ -62,7 +62,7 @@ program ESMF_SWMF_Driver
        (/2000, 3, 21, 10, 45, 0, 0/)            !   with defaults
   integer :: iDefaultTmp                        ! Temporary for default value
 
-  integer :: iTimeStep = 1                      ! Time step in seconds
+  integer :: iCoupleFreq = 1                    ! Coupling frequency in seconds
 
   ! Labels used in the input file
   character (len=*), parameter :: StringStart  = 'Start '
@@ -76,7 +76,13 @@ program ESMF_SWMF_Driver
        'Second:  ',&
        'Millisec:' /)
 
-  ! Return codes for error checks
+  ! Simulation time (non-zero for restart)
+  type(ESMF_Time)         :: CurrentTime
+  type(ESMF_TimeInterval) :: SimTime
+  real(ESMF_KIND_R4)      :: TimeSimulation = 0.0
+  integer(ESMF_KIND_I4)   :: iSecond, iMillisec
+
+  ! Return code for error checks
   integer :: rc
 
   !----------------------------------------------------------------------------
@@ -89,6 +95,12 @@ program ESMF_SWMF_Driver
 
   call ESMF_LogWrite("ESMF-SWMF Driver start", ESMF_LOG_INFO)
 
+  ! Get the default VM which contains all PEs this job was started on.
+  call ESMF_VMGetGlobal(defaultvm, rc)
+
+  ! Get the processor number
+  call ESMF_VMGet(defaultvm, localPET=iProc)
+
   !
   ! Read in Configuration information from a default config file
   !
@@ -97,7 +109,8 @@ program ESMF_SWMF_Driver
 
   call ESMF_ConfigLoadFile(config, NameParamFile, rc = rc)
   if(rc /= ESMF_SUCCESS) then
-     write(*,*)'ESMF_ConfigLoadFile FAILED for file '//NameParamFile
+     if(iProc == 0)write(*,*) &
+          'ESMF_ConfigLoadFile FAILED for file '//NameParamFile
      call ESMF_Finalize
   endif
 
@@ -109,7 +122,8 @@ program ESMF_SWMF_Driver
      call ESMF_ConfigGetAttribute(config, iStartTime_I(iTime),&
           StringStart//trim(StringTime_I(iTime)), rc=rc)
      if(rc /= ESMF_SUCCESS) then
-        write(*,*)'Did not read ',StringStart//trim(StringTime_I(iTime)), &
+        if(iProc == 0) write(*,*) &
+             'Did not read ',StringStart//trim(StringTime_I(iTime)), &
              ' setting default value= ', iDefaultTmp
         iStartTime_I(iTime) = iDefaultTmp
      end if
@@ -119,25 +133,34 @@ program ESMF_SWMF_Driver
           StringFinish//trim(StringTime_I(iTime)), rc=rc)
 
      if(rc /= ESMF_SUCCESS) then
-        write(*,*)'Did not read ',StringFinish//trim(StringTime_I(iTime)), &
+        if(iProc == 0)write(*,*) &
+             'Did not read ',StringFinish//trim(StringTime_I(iTime)), &
              ' setting default value= ', iDefaultTmp
         iStartTime_I(iTime) = iDefaultTmp
      end if
   end do
 
-  iDefaultTmp = iTimeStep
-  call ESMF_ConfigGetAttribute(config, iTimeStep, 'Time Step:', rc=rc)
+  call ESMF_ConfigGetAttribute(config, &
+       TimeSimulation, 'Simulation Time:', rc=rc)
   if(rc /= ESMF_SUCCESS) then
-     write(*,*)'Did not read Time Step: setting default value= ', iDefaultTmp
-     iTimeStep = iDefaultTmp
+     if(iProc == 0)write(*,*) &
+          'Did not read Simulation Time: setting default value = 0.0'
+     TimeSimulation = 0.0
+  end if
+
+  iDefaultTmp = iCoupleFreq
+  call ESMF_ConfigGetAttribute(config, &
+       iCoupleFreq, 'Coupling Frequency:', rc=rc)
+  if(rc /= ESMF_SUCCESS) then
+     if(iProc == 0)write(*,*) &
+          'Did not read Coupling Frequency: setting default value= ', &
+          iDefaultTmp
+     iCoupleFreq = iDefaultTmp
   end if
 
   !----------------------------------------------------------------------------
   !    Create section
   !----------------------------------------------------------------------------
-
-  ! Get the default VM which contains all PEs this job was started on.
-  call ESMF_VMGetGlobal(defaultvm, rc)
 
   ! Create the top Gridded component, passing in the default layout.
   compGridded = ESMF_GridCompCreate(defaultvm, "ESMF Gridded Component", rc=rc)
@@ -156,13 +179,14 @@ program ESMF_SWMF_Driver
   !  Create and initialize a clock, and a grid.
   !----------------------------------------------------------------------------
 
-  ! Based on values from the Config file, create a default Grid
-  ! and Clock.  
+  ! Based on values from the Config file, create a Clock.  
 
-  call ESMF_TimeIntervalSet(timeStep, s=iTimeStep, rc=rc)
+  call ESMF_TimeIntervalSet(timeStep, s=iCoupleFreq, rc=rc)
 
-  if(rc /= ESMF_SUCCESS) &
-       write(*,*)'Setting time step failed:',iTimeStep
+  if(rc /= ESMF_SUCCESS) then
+     if(iProc == 0) write(*,*)'Setting coupling frequency failed:',iCoupleFreq
+     call ESMF_Finalize
+  end if
 
   call ESMF_TimeSet(startTime, &
        yy=iStartTime_I(Year_), &
@@ -174,8 +198,10 @@ program ESMF_SWMF_Driver
        ms=iStartTime_I(Millisec_),&
        rc=rc)
 
-  if(rc /= ESMF_SUCCESS) &
-       write(*,*)'Setting start time failed:',iStartTime_I
+  if(rc /= ESMF_SUCCESS) then
+     if(iProc == 0)write(*,*)'Setting start time failed:',iStartTime_I
+     call ESMF_Finalize
+  end if
 
   call ESMF_TimeSet(stopTime, &
        yy=iFinishTime_I(Year_), &
@@ -186,15 +212,41 @@ program ESMF_SWMF_Driver
        s =iFinishTime_I(Second_), &
        ms=iFinishTime_I(Millisec_))
 
-  if(rc /= ESMF_SUCCESS) &
-       write(*,*)'Setting finish time failed:',iFinishTime_I
+  if(rc /= ESMF_SUCCESS) then
+     if(iProc == 0)write(*,*)'Setting finish time failed:',iFinishTime_I
+     call ESMF_Finalize
+  end if
 
   clock = ESMF_ClockCreate("Application Clock", timeStep, startTime, &
        stopTime, rc=rc)
 
-  if(rc /= ESMF_SUCCESS) &
-       write(*,*)'Setting clock failed, start time=',iStartTime_I, &
-       ' finish time=',iFinishTime_I,' time step=',iTimeStep
+  if(rc /= ESMF_SUCCESS)then
+     if(iProc == 0)write(*,*)&
+          'Setting clock failed, start time=',iStartTime_I, &
+          ' finish time=',iFinishTime_I,' coupling freq=',iCoupleFreq
+     call ESMF_Finalize
+  end if
+
+  if(TimeSimulation /= 0.0)then
+     iSecond   = int(TimeSimulation)
+     iMillisec = nint(1000*(TimeSimulation-iSecond))
+     call ESMF_TimeIntervalSet(SimTime, s=iSecond, ms=iMillisec, rc=rc)
+     if(rc /= ESMF_SUCCESS)then
+        if(iProc == 0)write(*,*)&
+             'Setting time interval failed for simulation time=',&
+             TimeSimulation,' s=',iSecond,' ms=',iMillisec
+        call ESMF_Finalize
+     end if
+
+     CurrentTime = StartTime + SimTime
+     call ESMF_ClockSet(clock, currtime = CurrentTime, rc=rc)
+
+     if(rc /= ESMF_SUCCESS)then
+        if(iProc == 0)write(*,*)&
+             'Setting clock to Simulation time=',TimeSimulation,' failed'
+        call ESMF_Finalize
+     end if
+  end if
 
   ! Setup a grid. This is not used for any actual data transfer yet.
   ! Get a default layout based on the VM.
