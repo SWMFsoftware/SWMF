@@ -2,7 +2,8 @@
 *.aux
 *.dvi
 *.toc
+*.protex
+*.ps
 SWMF.tex
 SWMFREF.tex
 SWMFXML.tex
-Makefile.protex
