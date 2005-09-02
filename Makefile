@@ -120,6 +120,7 @@ install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd share;       	make install
 	cd CON;			make install
+	cd ESMF/ESMF_SWMF;	make install
 	cd GM/BATSRUS;		make install    #^CMP IF GM
 	cd IE/Ridley_serial;	make install    #^CMP IF IE
 	cd IH/BATSRUS_share;	make install    #^CMP IF IH
