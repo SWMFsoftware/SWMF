@@ -1,6 +1,7 @@
 include ../../Makefile.def
 
 install:
+	touch src/Makefile.DEPEND
 
 rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
 	cd ${RUNDIR}; 
@@ -18,4 +19,4 @@ clean:
 	cd src; make clean
 
 distclean:
-	cd src; make clean
+	cd src; make distclean
