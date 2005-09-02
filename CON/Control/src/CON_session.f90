@@ -9,9 +9,10 @@ module CON_session
   !USES:
   use CON_world
   use CON_comp_param
-  use CON_variables, ONLY: UseStrict, DnTiming
+  use CON_variables, ONLY: UseStrict, DnTiming, lVerbose, iErrorSwmf
   use CON_wrapper
   use CON_couple_all
+  use CON_io, ONLY : read_inputs
 
   use CON_coupler, ONLY: &
        check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
@@ -40,6 +41,7 @@ module CON_session
   ! 08/26/03 G.Toth - initial version
   ! 05/20/04 G.Toth - general steady state session model
   ! 08/11/04 G.Toth - removed 'old' and 'parallel' session models
+  ! 02/09/05 G.Toth - moved related code from CON_main into init_session.
   !EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
@@ -60,9 +62,13 @@ contains
   !BOP ======================================================================
   !IROUTINE: init_session - initialize run with a fixed set of input parameters
   !INTERFACE:
-  subroutine init_session
+  subroutine init_session(IsLastSession)
+
+    !OUTPUT ARGUMENTS:
+    logical, intent(out) :: IsLastSession ! set it to true if last session
 
     !DESCRIPTION:
+    ! Read input parameters for the current session. Do timings as needed.
     ! Initialize possibly overlapping components for the current session. 
     ! First figure out which components belong to this PE.
     ! Then couple the components in an appropriate order for the first time.
@@ -71,8 +77,28 @@ contains
 
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
     !--------------------------------------------------------------------------
+    !\
+    ! Read input parameters for this session
+    !/
+    call read_inputs(IsLastSession)
+    if(iErrorSwmf /= 0) RETURN
 
+    !\
+    ! StringTest is read, so set the test flags now
+    !/
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    DoTestMe = DoTest .and. is_proc0()
+
+    !\
+    ! Time execution (timing parameters were read by read_inputs)
+    !/
+    if(iSession==1)then
+       call timing_start('SWMF')
+       call timing_start('SETUP')
+    end if
+
+    if(is_proc0().and.lVerbose>=0)&
+         write(*,*)'----- Starting Session ',iSession,' ------'
 
     !BOC
     nComp = n_comp()
@@ -134,6 +160,16 @@ contains
 
     end do
     !EOC
+
+    if(iSession==1)then
+       call timing_stop('SETUP')
+       call timing_stop('SWMF')
+       CpuTimeSetup = MPI_WTIME()
+       if(DnTiming > -3)call timing_report_total
+       if(is_proc0())write(*,*)'Resetting timing counters after setup.'
+       call timing_reset('#all',3)
+       call timing_start('SWMF')
+    end if
 
   end subroutine init_session
 
