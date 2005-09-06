@@ -2,20 +2,20 @@
 # to create the default grid used by the example code.
 #
 # Lines starting with # are comments
-Start Year:  2003
-Start Month:   10
-Start Day:     28
-Start Hour:     9
+Start Year:  2000
+Start Month:   03
+Start Day:     21
+Start Hour:    10
 Start Minute:  45
 Start Second:   0
 Start Millisec: 0
 #
-Finish Year:  2003
-Finish Month:   10
-Finish Day:     28
-Finish Hour:     9
+Finish Year:  2000
+Finish Month:   03
+Finish Day:     21
+Finish Hour:    10
 Finish Minute:  45
-Finish Second:  30
+Finish Second:   5
 Finish Millisec: 0
 #
 Simulation Time: 0.0
