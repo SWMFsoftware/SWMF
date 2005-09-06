@@ -114,9 +114,7 @@ program ESMF_SWMF_Driver
      call ESMF_Finalize
   endif
 
-  ! Get the start time, stop time, and running intervals
-  ! for the main time loop.
-  !
+  ! Get start date/time
   do iTime = Year_, Millisec_
      iDefaultTmp = iStartTime_I(iTime)
      call ESMF_ConfigGetAttribute(config, iStartTime_I(iTime),&
@@ -128,6 +126,8 @@ program ESMF_SWMF_Driver
         iStartTime_I(iTime) = iDefaultTmp
      end if
   end do
+
+  ! Get stop date/time
   do iTime = Year_, Millisec_
      call ESMF_ConfigGetAttribute(config, iFinishTime_I(iTime),&
           StringFinish//trim(StringTime_I(iTime)), rc=rc)
@@ -140,6 +140,7 @@ program ESMF_SWMF_Driver
      end if
   end do
 
+  ! Get current simulation time (non-zero for restart)
   call ESMF_ConfigGetAttribute(config, &
        TimeSimulation, 'Simulation Time:', rc=rc)
   if(rc /= ESMF_SUCCESS) then
@@ -148,6 +149,7 @@ program ESMF_SWMF_Driver
      TimeSimulation = 0.0
   end if
 
+  ! Get coupling frequency
   iDefaultTmp = iCoupleFreq
   call ESMF_ConfigGetAttribute(config, &
        iCoupleFreq, 'Coupling Frequency:', rc=rc)
