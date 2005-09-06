@@ -174,8 +174,8 @@ sub check_methods{
 	return;
     }
 
-    # method: 'subroutine calc_flux' 'function heat_source'
-    if(/^(subroutine|function)\s+(\w+)/i){
+    # method: 'subroutine calc_flux' 'function heat_source' 'program swmf'
+    if(/^(program|subroutine|function)\s+(\w+)/i){
 	my $Method = $1;
 	my $Name   = $2;
 	if($Name !~ /^$ValidMethodName$/){
@@ -396,32 +396,36 @@ sub print_help{
     Check the file names, subroutine, function, module and variable names
     against the data naming standard. The script can check multiple files.
 
-
 Usage:
 
     CheckDataName.pl [-h] [-v] [-F] [-M] [-V] FILE1 [FILE2 ...]
 
-  -h   print help message and stop
+  -h       print help message and stop
 
-  -v   print verbose information
+  -v       print verbose information
 
-  -F   do NOT check file names
+  -F       file names are NOT checked
 
-  -M   do NOT check module and method names
+  -M       method and module names are NOT checked
 
-  -V   do NOT check variable names
+  -V       variable names are NOT checked
 
-FILE1  source code to be checked
+FILE1 ...  source code to be checked
 
 Examples:
 
    Check one file:
 
-CheckDataName.pl some_file.f90
+share/Scripts/CheckDataName.pl CON/Control/src/swmf.f90
 
    Check all .f90 and .F90 files and print verbose information:
 
-CheckDataName.pl -v *.f90 *.F90"
+share/Scripts/CheckDataName.pl -v CON/Control/src/*.f90
+
+   Check file names only:
+
+share/Scripts/CheckDataName.pl -M -V GM/BATSRUS/src*/*.[fF]90"
+
 #EOC
     ,"\n\n";
     exit 0;
