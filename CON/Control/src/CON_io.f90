@@ -252,8 +252,18 @@ contains
           EXIT
 
        case("#TIMEACCURATE")
-
           call read_var('DoTimeAccurate',DoTimeAccurate)
+          if(.not. IsStandAlone .and. .not. DoTimeAccurate)then
+             if(is_proc0())write(*,*)NameSub// &
+                  ' SWMF_ERROR: steady-state mode is available only'// &
+                  ' when the SWMF runs as stand-alone'
+             if(UseStrict)then
+                call world_clean
+                iErrorSwmf = 20
+                RETURN
+             end if
+             DoTimeAccurate = .true.
+          endif
 
        case("#SAVERESTART")
 
@@ -271,8 +281,15 @@ contains
 
        case("#STOP")
 
-          call read_var('MaxIteration'  ,MaxIteration)
-          call read_var('tSimulationMax',tSimulationMax)
+          if(IsStandAlone)then
+             call read_var('MaxIteration'  ,MaxIteration)
+             call read_var('tSimulationMax',tSimulationMax)
+          else if(is_proc0()) then
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: stop condition has been set externally'
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: tSimulationMax = ',tSimulationMax
+          end if
 
        case("#STRICT")
 
@@ -447,23 +464,37 @@ contains
              if(UseStrict)RETURN
              CYCLE
           end if
-          call read_var('tSimulation',tSimulation)
+          if(IsStandAlone)then
+             call read_var('tSimulation',tSimulation)
+          else
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: simulation time has been set externally'
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: tSimulation = ',TimeStart % String
+          end if
 
        case("#STARTTIME", "#SETREALTIME")
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
           end if
-          call read_var('iYear'  ,TimeStart % iYear)
-          call read_var('iMonth' ,TimeStart % iMonth)
-          call read_var('iDay'   ,TimeStart % iDay)
-          call read_var('iHour'  ,TimeStart % iHour)
-          call read_var('iMinute',TimeStart % iMinute)
-          call read_var('iSecond',TimeStart % iSecond)
-          FracSecond = TimeStart % FracSecond ! set default value
-          call read_var('FracSecond',FracSecond)
-          TimeStart % FracSecond = FracSecond
-          call time_int_to_real(TimeStart)
+          if(IsStandAlone)then
+             call read_var('iYear'  ,TimeStart % iYear)
+             call read_var('iMonth' ,TimeStart % iMonth)
+             call read_var('iDay'   ,TimeStart % iDay)
+             call read_var('iHour'  ,TimeStart % iHour)
+             call read_var('iMinute',TimeStart % iMinute)
+             call read_var('iSecond',TimeStart % iSecond)
+             FracSecond = TimeStart % FracSecond ! set default value
+             call read_var('FracSecond',FracSecond)
+             TimeStart % FracSecond = FracSecond
+             call time_int_to_real(TimeStart)
+          else
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: start time has been set externally'
+             write(*,*)NameSub// &
+                  ' SWMF_WARNING: TimeStart = ',TimeStart % String
+          end if
 
        case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
             '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
