@@ -487,7 +487,7 @@ contains
          use CON_grid_descriptor
          implicit none
          integer,intent(in)::nDim
-         real,dimension(nDim),intent(inout)::Xyz_D(nDim) 
+         real,intent(inout)::Xyz_D(nDim) 
          type(GridDescriptorType)::GridDescriptor     
          integer,intent(in)::nIndexes
          integer           ::Index_II(0:nIndexes,2**nDim)
