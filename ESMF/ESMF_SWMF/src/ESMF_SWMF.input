@@ -21,3 +21,8 @@ Finish Millisec: 0
 Simulation Time: 0.0
 #
 Coupling Frequency: 2
+#
+ESMF Root PE:   0
+ESMF Last PE:   0
+SWMF Root PE:   0
+SWMF Last PE: 999
