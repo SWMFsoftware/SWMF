@@ -16,22 +16,25 @@
 !BOP ==========================================================================
 !ROUTINE: SWMF_initialize - initialize the SWMF (for the first session)
 !INTERFACE:
-subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, IsLastSession, iError)
+subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
+     IsLastSession, iError)
 
   !USES:
   use CON_main,      ONLY: initialize
   use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
-  use CON_time,      ONLY: TimeStart, tSimulation
+  use CON_time,      ONLY: TimeStart, tSimulation, tSimulationMax, &
+       DoTimeAccurate, MaxIteration
   use ModTimeConvert,ONLY: time_int_to_real, time_real_to_int
-  use ModKind,       ONLY: Real4_
+  use ModKind,       ONLY: Real8_
 
   implicit none
 
   !INPUT ARGUMENTS:
   integer, intent(in) :: iComm           ! The MPI communicator for the SWMF
   integer, intent(in) :: iTimeStart_I(7) ! Start time (year ... millisec)
-  real(Real4_), intent(in) :: TimeSim    ! Simulation time (0.0 unless restart)
+  real(Real8_), intent(in) :: TimeSim    ! Simulation time (0.0 unless restart)
+  real(Real8_), intent(in) :: TimeStop   ! Final simulation time
 
   !OUTPUT ARGUMENTS:
   integer, intent(out):: iError         ! SWMF error code (0 on success)
@@ -41,6 +44,8 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, IsLastSession, iError)
   ! Obtains the MPI communicator for the whole SWMF.
   ! Initializes the SWMF for the first session.
   ! Indicates if there are more than one sessions according to the PARAM.in.
+  ! The current and final simulation times are passed as 8 byte reals,
+  ! because this is available on all platforms.
   !EOP
   !BOC ------------------------------------------------------------------------
   ! Initialize SWMF
@@ -53,8 +58,15 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, IsLastSession, iError)
   ! Set the integer and string parts of CON_time::StartTime
   call time_real_to_int(TimeStart)
 
-  ! Set the simulation time CON_time::tSimulation
+  ! Set the current simulation time
   tSimulation = TimeSim
+
+  ! Set the final simulation time
+  tSimulationMax = TimeStop
+
+  ! Set time accurate mode
+  DoTimeAccurate = .true.
+  MaxIteration   = -1
 
   ! Initialize for first session
   call init_session(IsLastSession)
