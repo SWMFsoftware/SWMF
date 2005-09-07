@@ -950,8 +950,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nRefineLevelInit',initial_refine_levels)
      case("#AMRCRITERIA")
         call read_var('nRefineCrit',nRefineCrit)
-        if(nRefineCrit<1 .or. nRefineCrit>3)&
-             call stop_mpi('nRefineCrit must be 1,2,or 3')
+        if(nRefineCrit<0 .or. nRefineCrit>3)&
+             call stop_mpi(NameSub//' ERROR: nRefineCrit must be 0, 1, 2 or 3')
         do i=1,nRefineCrit
            call read_var('TypeRefine',RefineCrit(i))
            if(RefineCrit(i)=='Transient'.or.RefineCrit(i)=='transient') then
