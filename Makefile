@@ -227,7 +227,7 @@ clean: ENV_CHECK
 	cd SP/Kota;             make clean    #^CMP IF SP
 	cd SP/FLAMPA;           make clean    #^CMP IF SP
 	cd SP/Empty;            make clean    #^CMP IF SP
-	cd ESMF/SWMF;		make clean
+	cd ESMF/ESMF_SWMF;	make clean
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
