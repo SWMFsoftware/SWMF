@@ -16,9 +16,12 @@ ${RUNDIR}/ESMF_SWMF.exe:
 	fi)
 
 clean:
-	touch src/Makefile.DEPEND
-	cd src; make clean
+	@(if([ "${ESMF_DIR}" != "" ]); then \
+		cd src; touch Makefile.DEPEND; make clean; \
+	fi)
 
 distclean:
-	touch src/Makefile.DEPEND
-	cd src; make distclean
+	@(if([ "${ESMF_DIR}" != "" ]); then \
+		cd src; touch Makefile.DEPEND; make distclean; \
+	fi)
+	@rm -f src/Makefile.DEPEND
