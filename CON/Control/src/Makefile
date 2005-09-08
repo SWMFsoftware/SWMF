@@ -93,7 +93,7 @@ SWMFLIB = ${LIBDIR}/libSWMF.a
 
 SWMFEXE = ${BINDIR}/SWMF.exe
 
-SWMFEXE:
+SWMFEXE: SWMFLIB
 	@make ${SWMFEXE}
 	@echo ' '
 	@echo Program ${SWMFEXE} has been brought up to date.
@@ -169,7 +169,7 @@ ${SWMFLIB}: LIB
 	@rm -rf Tmp_*
 
 # Link the executable. The link procedure depends on the operating system.
-${SWMFEXE}: ${EXEOBJECT} SWMFLIB ${MAKEFILE_COMP_SELECT}
+${SWMFEXE}: ${EXEOBJECT} ${MAKEFILE_COMP_SELECT}
 	@(if [ "${OS}" = "Darwin" ];         then make SWMF_for_Darwin;\
 	else                                      make SWMF_general; fi)
 
