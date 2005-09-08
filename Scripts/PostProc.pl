@@ -8,8 +8,12 @@ my $Output  = ($o or $output);
 
 use strict;
 
+my $INFO  = "PostProc.pl";
 my $ERROR = "ERROR in PostProc.pl";
 my $WARNING = "WARNING in PostProc.pl";
+
+my $ParamIn = "PARAM.in";
+my $RunLog  = "runlog";
 
 my $NameOutput;
 if($Output){
@@ -20,8 +24,8 @@ if($Output){
     $NameOutput = $ARGV[0];
     die "$ERROR: directory or file $NameOutput already exists!\n"
 	if -e $NameOutput;
-    mkdir ($NameOutput, 0777)
-	or die "$ERROR: could not mkdir $NameOutput\n";
+    `mkdir -p $NameOutput`;
+    die "$ERROR: could not mkdir -p $NameOutput\n" if $?;
 }
 
 &print_help if $Help;
@@ -30,12 +34,13 @@ my $Pwd = `pwd`; chop $Pwd;
 
 # Name of the plot directories for various components
 my %PlotDir = (
-    "GM" => "GM/IO2",
-    "IE" => "IE/ionosphere",
-    "IH" => "IH/IO2",
-    "IM" => "IM/plots",
-    "SC" => "SC/IO2",
-    "UA" => "UA/Output,UA/data"
+    "GM"     => "GM/IO2",
+    "IE"     => "IE/ionosphere",
+    "IH"     => "IH/IO2",
+    "IM"     => "IM/plots",
+    "SC"     => "SC/IO2",
+    "UA"     => "UA/Output,UA/data",
+    "STDOUT" => "STDOUT",
 	    );
 
 REPEAT:{
@@ -109,7 +114,7 @@ foreach $Dir (sort keys %PlotDir){
 	or die "$ERROR: could not read directory $PlotDir!\n";
     closedir(DIR);
     if($#Files > 1){
-	print "PostProc.pl: mv $PlotDir $NameOutput/$Dir with ",
+	print "$INFO: mv $PlotDir $NameOutput/$Dir with ",
 	       $#Files-1," file"; print "s" if $#Files > 2; print "\n";
 	rename $PlotDir, "$NameOutput/$Dir" or 
 	    die "$ERROR: could not rename $PlotDir $NameOutput/$Dir\n";
@@ -118,6 +123,20 @@ foreach $Dir (sort keys %PlotDir){
     }else{
 	warn "$WARNING: no files were found in $PlotDir\n";
     }
+}
+
+# Copy and move some input and output files if present
+if(-f $ParamIn){
+    print "$INFO: cp $ParamIn $NameOutput/\n";
+    `cp $ParamIn $NameOutput/`;
+}else{
+    warn "$WARNING: no $ParamIn file was found\n";
+}
+if(-f $RunLog){
+    print "$INFO: mv $RunLog $NameOutput/\n";
+    `mv $RunLog $NameOutput/`;
+}else{
+    warn "$WARNING: no $RunLog file was found\n";
 }
 
 exit 0;
@@ -150,7 +169,9 @@ sub print_help{
 #BOC
 'Purpose:
 
-   Post-process the plot files.
+   Post-process the plot files and/or collect them into an output tree.
+   The PARAM.in and runlog files (if present) are also copied/moved into 
+   the output tree.
 
 Usage:
 
