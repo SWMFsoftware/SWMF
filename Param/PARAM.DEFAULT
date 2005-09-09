@@ -1,6 +1,10 @@
 #ECHO
 T
 
+#PROGRESS
+1			DnShowProgressShort
+100			DnShowProgressLong
+
 #DESCRIPTION
 Run GM and IE in steady state mode
 
@@ -8,7 +12,7 @@ Run GM and IE in steady state mode
 F
 
 #TIMEACCURATE
-F			DoTimeAccurate
+T			DoTimeAccurate
 
 #STARTTIME
 2000			iYear
@@ -82,36 +86,27 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 Rusanov			TypeFlux
 
 #SAVEPLOT
-6                       nPlotFile
+3                       nPlotFile
 x=0 FUL idl             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
+-1                      DnSavePlot
+10.			DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 y=0 FUL idl             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
+-1                      DnSavePlot
+10.			DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 z=0 FUL idl             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
+-1                      DnSavePlot
+10.			DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-x=0 FUL tec             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
-y=0 FUL tec             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
-z=0 FUL tec             StringPlot
-1000                    DnSavePlot
--1.			DtSavePlot
 
 #END_COMP GM ###############################################################
 
 #COUPLE2
 IE			NameComp1
 GM			NameComp2
-20                      DnCouple
--1.0                    Dtcouple
+-1                      DnCouple
+1.0                     Dtcouple
 
 ! Allow GM to step through coupling time
 #COUPLETIME
@@ -131,23 +126,23 @@ F                       UseFakeRegion2
 #SAVEPLOT
 2			nPlotFile
 min idl                 StringPlot
-1			DnSavePlot
+2			DnSavePlot
 -1.0			DtSavePlot
 max tec                 StringPlot
-1			DnSavePlot
+2			DnSavePlot
 -1.0			DtSavePlot
 
 #END_COMP IE ###############################################################
 
 #STOP
-25			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+5.0			tSimulationMax
 
 #RUN ##########################################################################
 
 #STOP
-50			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+10.0			tSimulationMax
 
 #BEGIN_COMP GM ################################################################
 
