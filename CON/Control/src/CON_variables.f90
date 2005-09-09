@@ -13,7 +13,7 @@ module CON_variables
   !EOP
   !BOC
   ! Version number for SWMF
-  real, parameter :: VersionSwmf = 2.1
+  real, parameter :: VersionSwmf = 2.2
 
   ! Logical to decide if the SWMF running stand alone or as part of something
   logical :: IsStandAlone = .true.
