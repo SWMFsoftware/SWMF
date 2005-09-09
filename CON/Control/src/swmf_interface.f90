@@ -21,7 +21,6 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
 
   !USES:
   use CON_main,      ONLY: initialize
-  use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
   use CON_time,      ONLY: TimeStart, tSimulation, tSimulationMax, &
        DoTimeAccurate, MaxIteration
@@ -42,10 +41,12 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
 
   !DESCRIPTION:
   ! Obtains the MPI communicator for the whole SWMF.
-  ! Initializes the SWMF for the first session.
-  ! Indicates if there are more than one sessions according to the PARAM.in.
+  ! Initializes the SWMF for the first session with a start date and time,
+  ! current and final simulation time. The output arguments indicate
+  ! if there are more than one sessions according to the PARAM.in file.
   ! The current and final simulation times are passed as 8 byte reals,
   ! because this is available on all platforms.
+  ! \newpage
   !EOP
   !BOC ------------------------------------------------------------------------
   ! Initialize SWMF
@@ -68,17 +69,17 @@ subroutine SWMF_initialize(iComm, iTimeStart_I, TimeSim, TimeStop, &
   DoTimeAccurate = .true.
   MaxIteration   = -1
 
-  ! Initialize for first session
-  call init_session(IsLastSession)
-  iError = iErrorSwmf
+  ! Initialize first session
+  call SWMF_initialize_session(IsLastSession, iError)
   !EOC
 end subroutine SWMF_initialize
 
 !BOP ==========================================================================
-!ROUTINE: SWMF_initialize_session - initialize SWMF for 2nd, 3rd etc. sessions
+!ROUTINE: SWMF_initialize_session - read parameters and initialize session
 !INTERFACE:
 subroutine SWMF_initialize_session(IsLastSession, iError)
   !USES:
+  use CON_io,        ONLY: read_inputs
   use CON_session,   ONLY: init_session
   use CON_variables, ONLY: iErrorSwmf
   implicit none
@@ -86,11 +87,13 @@ subroutine SWMF_initialize_session(IsLastSession, iError)
   logical, intent(out):: IsLastSession ! True if this is the last session
   integer, intent(out):: iError        ! Error code, 0 on success
   !DESCRIPTION:
-  ! Initialize for 2nd, 3rd etc. sessions in a multi-session run.
-  ! Indicates if this is the last session to run.
+  ! Read input parameters and initialize a session.
+  ! The IsLastSession argument indicates if this is the last session to run
+  ! according to the PARAM.in file.
   !EOP
   !BOC ------------------------------------------------------------------------
-  call init_session(IsLastSession)
+  call read_inputs(IsLastSession)
+  if(iErrorSwmf == 0) call init_session
   iError = iErrorSwmf
   !EOC
 end subroutine SWMF_initialize_session
@@ -107,8 +110,9 @@ subroutine SWMF_run(DoStop, iError)
   logical, intent(out):: DoStop ! True if the SWMF requested a stop
   integer, intent(out):: iError ! Error code, 0 on success
   !DESCRIPTION:
-  ! Run the SWMF for a certain time. To be implemented !!!
-  ! Indicate if a stop has been requested.
+  ! Run the SWMF until a stop condition is reached.
+  ! The DoStop argument indicates if a final stop has been requested 
+  ! by the SWMF.
   !EOP
   !BOC ------------------------------------------------------------------------
   call do_session(DoStop)
