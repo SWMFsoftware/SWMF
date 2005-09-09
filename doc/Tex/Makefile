@@ -53,6 +53,7 @@ SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 SWMFREF = \
 	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
 	${DIR}/Scripts/TestParam.protex \
+	${DIR}/Scripts/PostProc.protex \
 	${DIR}/Scripts/Restart.protex \
 	${DIR}/Scripts/Performance.protex \
 	${BATSRUS_SCRIPTS} \
@@ -60,9 +61,10 @@ SWMFREF = \
 	${SCRIPTDIR}/ExpandParam.protex \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/FixMakefileDef.protex \
-	${SCRIPTDIR}/FixMpi.protex \
+	${SCRIPTDIR}/CheckDataName.protex \
 	${SCRIPTDIR}/Rename.protex \
 	${SCRIPTDIR}/Methods.protex \
+	${SCRIPTDIR}/FixMpi.protex \
 	${SCRIPTDIR}/StopToConStop.protex \
 	${SCRIPTDIR}/StaticToDynamic.protex \
 	${SCRIPTDIR}/ChangeIndexOrder.protex \
