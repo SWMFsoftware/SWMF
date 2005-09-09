@@ -7,26 +7,22 @@
 module CON_session
 
   !USES:
-  use CON_world
-  use CON_comp_param
+  use CON_comp_param, ONLY: MaxComp, NameComp_I
+  use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
+       i_comp, n_comp, use_comp
   use CON_variables, ONLY: UseStrict, DnTiming, lVerbose, iErrorSwmf
-  use CON_wrapper
-  use CON_couple_all
-  use CON_io, ONLY : read_inputs
-
+  use CON_wrapper, ONLY: set_param_comp, init_session_comp, run_comp
+  use CON_couple_all, ONLY: couple_two_comp, couple_all_init
   use CON_coupler, ONLY: &
        check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C
-
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart
-
-  use ModUtilities, ONLY: flush_unit
-
-  use CON_time
-  use ModFreq
-  use ModNumConst
-  use ModMpi
+  use CON_time, ONLY: iSession, DoTimeAccurate, &
+       nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
+       CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax
+  use ModFreq, ONLY: is_time_to
+  use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
 
   implicit none
 
@@ -42,6 +38,9 @@ module CON_session
   ! 05/20/04 G.Toth - general steady state session model
   ! 08/11/04 G.Toth - removed 'old' and 'parallel' session models
   ! 02/09/05 G.Toth - moved related code from CON_main into init_session.
+  ! 09/09/05 G.Toth - removed read_inputs from init_session 
+  !                   (to avoid ifort compiler bug)
+  !                   moved some code from CON_main into do_session.
   !EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
@@ -62,33 +61,20 @@ contains
   !BOP ======================================================================
   !IROUTINE: init_session - initialize run with a fixed set of input parameters
   !INTERFACE:
-  subroutine init_session(IsLastSession)
-
-    !OUTPUT ARGUMENTS:
-    logical, intent(out) :: IsLastSession ! set it to true if last session
+  subroutine init_session
 
     !DESCRIPTION:
-    ! Read input parameters for the current session. Do timings as needed.
     ! Initialize possibly overlapping components for the current session. 
     ! First figure out which components belong to this PE.
     ! Then couple the components in an appropriate order for the first time.
     ! The order is determined by the iCompCoupleOrder\_II array.
+    ! Do timings as needed.
     !EOP
 
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
     !--------------------------------------------------------------------------
-    !\
-    ! Read input parameters for this session
-    !/
-    call read_inputs(IsLastSession)
-    if(iErrorSwmf /= 0) RETURN
-
-    !\
-    ! StringTest is read, so set the test flags now
-    !/
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     DoTestMe = DoTest .and. is_proc0()
-
     !\
     ! Time execution (timing parameters were read by read_inputs)
     !/
@@ -103,38 +89,30 @@ contains
     !BOC
     nComp = n_comp()
     !\
-    ! Initialize components for this session except for IM
+    ! Initialize components for this session.
     !/
-    do lComp = 1,nComp
-       iComp = i_comp(lComp)
+    do lComp = 1, nComp; iComp = i_comp(lComp)
        call init_session_comp(iComp,iSession,tSimulation)
     end do
-
     !\
-    ! Initialize and broadcast grid descriptors for all the components
+    ! Initialize and broadcast grid descriptors to all the components.
     ! This must involve all PE-s.
     !/
-    do lComp = 1,nComp
-       iComp = i_comp(lComp)
+    do lComp = 1, nComp; iComp = i_comp(lComp)
        if(use_comp(iComp)) call set_param_comp(iComp,'GRID')
     end do
-
     !\
-    ! Initialize all couplers
-    ! This must involve all PE-s.
+    ! Initialize all couplers. This must involve all PE-s.
     !/
     call couple_all_init
-
     !\
     ! Figure out which components belong to this PE
     !/
     IsProc_C = .false.
-    do lComp = 1,nComp
-       iComp = i_comp(lComp)
+    do lComp = 1, nComp; iComp = i_comp(lComp)
        if(.not.use_comp(iComp)) CYCLE
        IsProc_C(iComp) = is_proc(iComp)
     end do
-
     !\
     ! Check for unused PE
     !/
@@ -144,11 +122,10 @@ contains
             'SWMF_ERROR: unused PE. Edit LAYOUT.in!')
        RETURN
     end if
-
     !\
     ! Couple for the first time
     !/
-    do iCouple = 1,nCouple
+    do iCouple = 1, nCouple
 
        iCompSource = iCompCoupleOrder_II(1,iCouple)
        iCompTarget = iCompCoupleOrder_II(2,iCouple)
@@ -157,7 +134,6 @@ contains
        if((IsProc_C(iCompSource) .or. IsProc_C(iCompTarget)) .and. &
             Couple_CC(iCompSource, iCompTarget) % DoThis) &
             call couple_two_comp(iCompSource, iCompTarget, tSimulation)
-
     end do
     !EOC
 
@@ -212,7 +188,7 @@ contains
     ! then set tSimulation to the final time and simply return
     !/
     if( .not.any(IsProc_C) ) then
-       if(DoTimeAccurate .and. tSimulationMax > cZero) &
+       if(DoTimeAccurate .and. tSimulationMax > 0.0) &
             tSimulation = tSimulationMax
        RETURN
     end if
@@ -234,7 +210,7 @@ contains
        ! Stop this session if stopping conditions are fulfilled
        !/
        if(MaxIteration >= 0 .and. nIteration >= MaxIteration) exit TIMELOOP
-       if(DoTimeAccurate .and. tSimulationMax > cZero &
+       if(DoTimeAccurate .and. tSimulationMax > 0.0 &
             .and. tSimulation >= tSimulationMax) &
             exit TIMELOOP
 
@@ -372,6 +348,14 @@ contains
 
     end do TIMELOOP
 
+    if(.not.IsLastSession)then
+       if(is_proc0().and.lVerbose>=0) &
+            write(*,*)'----- End of Session   ',iSession,' ------'
+       iSession=iSession+1
+       if (DnTiming > -2) call timing_report
+       call timing_reset_all
+    end if
+
     !EOC
 
   end subroutine do_session
@@ -394,7 +378,7 @@ contains
 
     DoStopNow=.false.
     if(is_proc0())then
-       if(CpuTimeMax > cZero .and. MPI_WTIME()-CpuTimeStart >= CpuTimeMax)&
+       if(CpuTimeMax > 0.0 .and. MPI_WTIME()-CpuTimeStart >= CpuTimeMax)&
             then
           write(*,*)'CPU time exceeded:',CpuTimeMax,&
                MPI_WTIME()-CpuTimeStart
