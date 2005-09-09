@@ -68,12 +68,12 @@ module  CON_world
 
   private ! except
 
-  !
   !PUBLIC MEMBER FUNCTIONS:
   public :: MaxComp
   public :: world_init      ! constructor initializes registry for components
-  public :: world_clean     ! destructor cleans up
   public :: world_setup     ! set registry values (reads from LAYOUT.in)
+  public :: world_clean     ! destructor cleans up
+  public :: world_abort     ! abort execution
   public :: n_comp          ! return number of components
   public :: use_comp        ! return true if component is used
   public :: i_comp          ! return component ID for list index
@@ -92,13 +92,10 @@ module  CON_world
   public :: i_comm          ! return communicator used by component
   public :: i_group         ! return group used by component
   public :: i_proc_stride   ! return the PE stride
-  public :: i_proc_last     ! return the maximal PE rank among those 
-                            ! used by comp
+  public :: i_proc_last     ! return the last PE rank used by comp
 
   public :: check_i_comp    ! stop with error if component ID is out of range
-                            ! this method is inherited from CON_comp_param
-  public :: CON_stop        ! abort execution
-  public :: global_barrier  ! barrier for all components
+  !                           this method is inherited from CON_comp_param
 
   !LOCAL VARIABLES:
   integer :: iProcWorld=-1  ! global PE rank
@@ -163,13 +160,7 @@ module  CON_world
      module procedure i_proc_last_name
      module procedure i_proc_last_id
   end interface
-  interface CON_stop
-     module procedure global_stop_
-     module procedure global_stop_i
-     module procedure global_stop_r
-  end interface
 
-  !
   !REVISION HISTORY: 
   !
   !  June 2003 - O. Volberg <volov@umich.edu> - initial version
@@ -221,6 +212,22 @@ contains
     call io_unit_clean
 
   end subroutine world_clean
+  !===============================================================!
+  subroutine world_abort(String, iValue, Value)
+    character (len=*), intent(in) :: String
+    integer, optional, intent(in) :: iValue
+    real,    optional, intent(in) :: Value
+    integer :: iError,nError
+    !-------------------------------------------------------------------------
+    write(*,'(a)',ADVANCE='NO') String
+    if(present(iValue)) write(*,*) iValue
+    if(present(Value))  write(*,*)  Value
+    write(*,*)
+    write(*,*)'!!! Stopping execution !!! requested by processor ', i_proc()
+    call io_unit_clean
+    call MPI_abort(i_comm(), nError, iError)
+    stop
+  end subroutine world_abort
   !===========================================================================
   logical function is_proc_world()
     is_proc_world = iProcWorld>=0
@@ -233,7 +240,7 @@ contains
   integer function i_proc_world()
     i_proc_world = iProcWorld
   end function i_proc_world
-!===========================================================================
+  !===========================================================================
   integer function i_proc0_world()
     i_proc0_world = iProc0World
   end function i_proc0_world
@@ -300,7 +307,7 @@ contains
     character (len=*), parameter  :: StringEnd   = "#END" 
 
     ! Current line number
-    integer :: nline 
+    integer :: nLine 
 
     ! Input fields in the line
     character(len=16) :: Name
@@ -322,13 +329,14 @@ contains
        if(.not. IsExisting) then
           write(*,'(4a)')  NameSub,' SWMF_ERROR: the map file ',NameMapFile, &
                ' does not exist in the current directory'
-          call CON_stop('Please create file '//NameMapFile)
+          call world_abort('Please create file '//NameMapFile)
        endif
 
        open(UNITTMP_,file=NameMapFile,iostat=iError,status="old",action="read")
        if(iError/=0) then
           write(*,'(3a)') NameSub,' SWMF_ERROR: can not open file ',NameMapFile
-          call CON_stop('Please check the file permissions of '//NameMapFile)
+          call world_abort('Please check the file permissions of ' &
+               //NameMapFile)
        endif
 
        nLine = 0
@@ -339,7 +347,7 @@ contains
              close (UNITTMP_)
              write(*,'(a)') NameSub//' SWMF_ERROR: could not find '// &
                   StringStart//' in file '//NameMapFile
-             call CON_stop('Please edit file '//NameMapFile)
+             call world_abort('Please edit file '//NameMapFile)
           end if
           if (String == StringStart) EXIT
        end do
@@ -352,8 +360,8 @@ contains
           if (iError/=0) then
              write(*,'(a,i2,a)')  NameSub// &
                   ' SWMF_ERROR: can not read line after',&
-                  nline,' lines from the file '//NameMapFile
-             call CON_stop('Please edit '//NameMapFile)
+                  nLine,' lines from the file '//NameMapFile
+             call world_abort('Please edit '//NameMapFile)
           end if
           nLine          = nLine + 1
        end if
@@ -361,7 +369,7 @@ contains
        call MPI_bcast(String,len(String),MPI_CHARACTER,0,iCommWorld,iError)
 
        if(String == StringEnd) then
-          if (nComp == 0) call CON_stop(NameSub // &
+          if (nComp == 0) call world_abort(NameSub // &
                'SWMF_ERROR: no components specified in the file='//NameMapFile)
           exit RECLOOP
        endif
@@ -373,7 +381,7 @@ contains
                ' SWMF_ERROR: can not read component name and PE range from "'&
                //trim(String)//'" at line ',nLine, &
                ' from the file '//NameMapFile
-          call CON_stop('Please edit '//NameMapFile)
+          call world_abort('Please edit '//NameMapFile)
        end if
 
        Name = adjustl(Name)
@@ -385,7 +393,7 @@ contains
              write(*,'(a,i2,a)')  NameSub// &
                   ' SWMF_ERROR: invalid component name '//trim(Name)// &
                   ' at line ',nLine,' in the file '//NameMapFile
-             call CON_stop('Please edit '//NameMapFile)
+             call world_abort('Please edit '//NameMapFile)
           endif
        endif
        nComp = nComp + 1
@@ -397,7 +405,7 @@ contains
                ' has been already registered as component ',&
                lComp_I(iComp),' and now again as component ',&
                nComp,' at line ',nLine,' in file '//NameMapFile
-          call CON_stop(NameSub//' SWMF_ERROR Please edit '//NameMapFile)
+          call world_abort(NameSub//' SWMF_ERROR Please edit '//NameMapFile)
           CYCLE RECLOOP
        end if
 
@@ -443,7 +451,7 @@ contains
                ' SWMF_ERROR: cannot produce layout for component '// &
                Name_C(lComp)//' using processor range ',&
                iProcRange_IC(:,lComp)
-          call CON_stop(&
+          call world_abort(&
                'Please edit '//NameMapFile//' or increase number of PEs')
        end if
     end do
@@ -479,7 +487,7 @@ contains
           write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR iComp '// &
                NameComp_I(iComp)//' is not found among the ',&
                nComp,' registered components, lComp=',lComp
-          call CON_stop('Error in the caller method')
+          call world_abort('Error in the caller method')
        end if
     end if
 
@@ -500,7 +508,7 @@ contains
     if(.not.is_valid_comp_name(NameComp))then
        write(*,'(a)')NameSub//' SWMF_ERROR name '//NameComp// &
             ' is not a valid component name'
-       call CON_stop('Error in the caller method')
+       call world_abort('Error in the caller method')
     end if
 
     lComp = lComp_I(i_comp(NameComp))
@@ -511,13 +519,13 @@ contains
           write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR component '// &
                NameComp//' is not found among the ',&
                nComp,' registered components, lComp=',lComp
-          call CON_stop('Error in the caller method')
+          call world_abort('Error in the caller method')
        end if
     end if
 
     l_comp_name = lComp
 
-  end function l_comp_name 
+  end function l_comp_name
   !============================================================================
   integer function i_comp_id(lComp)
     ! return named index for list index lComp
@@ -531,14 +539,14 @@ contains
     if(lComp<1.or.lComp>nComp)then
        write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR lComp=',lComp,&
             ' is out of range 1..nComp=',nComp
-       call CON_stop('Error in caller method')
+       call world_abort('Error in caller method')
     end if
     iComp=iComp_C(lComp)
     if(iComp<1.or.iComp>MaxComp)then
        write(*,'(a,i3,a,i3,a,i3)')NameSub//' SWMF_ERROR lComp=',lComp,&
             ' gives iComp=',iComp,&
             ' which is out of range 1..MaxComp=',MaxComp
-       call CON_stop(NameSub//'iComp_C array is not set correctly')
+       call world_abort(NameSub//'iComp_C array is not set correctly')
     end if
     i_comp_id = iComp
 
@@ -811,45 +819,5 @@ contains
     character(len=*),parameter :: NameSub=NameMod//'::i_proc_last_id'
     i_proc_last_id=CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcLast_)
   end function i_proc_last_id
-!===============================================================!
 
-  subroutine global_stop_(str,str1)
-    character (len=*), intent(in) :: str
-    character (len=*), intent(in),optional :: str1
-    integer :: iError,nError
-    write(*,*)str
-    if(present(str1))write(*,*)str1
-    write(*,*)'Stopping execution! me=',&
-         i_proc()
-    call MPI_abort(i_comm(), nError, iError)
-  end subroutine global_stop_
-!---------------------------------------------------------------!
-
-  subroutine global_stop_r(str,Value)
-    character (len=*), intent(in) :: str
-    real,intent(in)::Value
-    integer :: iError,nError
-    write(*,*)str,Value
-    write(*,*)'Stopping execution! me=',&
-         i_proc()
-    call MPI_abort(i_comm(), nError, iError)
-  end subroutine global_stop_r
-!---------------------------------------------------------------!
-
-  subroutine global_stop_i(str,iValue)
-    character (len=*), intent(in) :: str
-    integer,intent(in)::iValue
-    integer :: iError,nError
-    write(*,*)str,iValue
-    write(*,*)'Stopping execution! me=',&
-         i_proc()
-    call MPI_abort(i_comm(), nError, iError)
-  end subroutine global_stop_i
-!===============================================================!
-
-  subroutine global_barrier
-    integer :: iError
-    call MPI_barrier(i_comm(), iError)
-  end subroutine global_barrier
- !==================================================================!
 end module CON_world
