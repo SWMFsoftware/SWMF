@@ -37,7 +37,7 @@ if($NoFileCheck and $NoMethodCheck and $NoVariableCheck){
 # Global definitions #
 ######################	
 # Valid components:
-my $ValidComp = 'SC|IH|SP|GM|IM|RB|IE|UA|MH';
+my $ValidComp = '[A-Z][A-Z]+_';
 
 # Valid name part with small case: calc b0
 my $part = "[a-z][a-z0-9]*";
@@ -52,26 +52,26 @@ my $FirstPart = '([a-z]|[A-Z][a-z0-9]+)';
 my $method = "$part(_$part)*";
 
 # Valid subroutine name: read_parameters CON_stop IE_set_parameters
-my $ValidMethodName = "((CON|$ValidComp)_)?$method";
+my $ValidMethodName = "($ValidComp)?$method";
 
-# Valid module name:  CON_main IE_ModMain ModSize 
-my $ValidModuleName = "(CON_$method|(($ValidComp)_)?Mod($Part)+)";
+# Valid module name: CON_main IE_ModMain ModSize
+my $ValidModuleName = "(CON_$method|($ValidComp)?Mod($Part)+)";
 
-# Valid non-module file names: IE_set_param.F90 set_b0.f90
-my $ValidMethodFileName = "(($ValidComp)_)?$method\.[fF]90";
+# Valid non-module file names: CON_main.f90 IE_set_param.F90 set_b0.f90
+my $ValidMethodFileName = "$ValidMethodName\.[fF]90";
 
 # Valid module file names: 
 #     CON_main.f90 IE_ModMain.f90 ModUtil.F90 ModAdvance_static.f90
 my $ValidModuleFileName = "$ValidModuleName(_$part)*\.[fF]90";
 
-# Valid scalar variable names: VariableName IE_GridSize
-my $ValidScalarName = "(($ValidComp)_)?$FirstPart($Part)*";
+# Valid scalar variable names: VariableName IE_iGridSize
+my $ValidScalarName = "($ValidComp)?$FirstPart($Part)*";
 
-# Valid array variable names: VariableName IE_GridSize State_VGB
+# Valid array variable names: VariableName IE_GridSize_C State_VGB
 my $ValidArrayName = "${ValidScalarName}_[A-Z]+";
 
 # Valid named index name: Rho_ x_ AnyName_
-my $ValidNamedIndex = "$FirstPart($Part)*_";
+my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
 
 # Valid first name parts depending on variable/function type:
 my %ValidPart1 = ('integer'   => 'D?[i-n]|Max|Min',
@@ -117,10 +117,10 @@ foreach (@ARGV){
     $Name =~ s/.*\///;
 
     unless($NoFileCheck){
-	if($Name =~ /^$ValidMethodFileName$/){
-	    $TypeFile = "not module";
-	}elsif($Name =~ /^$ValidModuleFileName$/){
+	if($Name =~ /^$ValidModuleFileName$/){
 	    $TypeFile = "module";
+	}elsif($Name =~ /^$ValidMethodFileName$/){
+	    $TypeFile = "not module";
 	}else{
 	    $TypeFile = "wrong";
 	    warn "Invalid file name $File\n";
