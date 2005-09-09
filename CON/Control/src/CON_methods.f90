@@ -97,7 +97,7 @@ subroutine CON_stop(StringError)
 
   !USES:
   use ModMpi
-  use ModIoUnit, ONLY: io_unit_clean
+  use CON_world, ONLY: world_abort
   implicit none
 
   !INPUT ARGUMENTS:
@@ -105,24 +105,14 @@ subroutine CON_stop(StringError)
 
   !DESCRIPTION:
   ! This subroutine is used to abort the run with an error report.
-  ! It should not call any other subroutine or function
-  ! because that may result in an infinite loop.
-  ! The only call is to close open IO units and delete empty files.
-  ! Of course this will only happen on the aborting processor.
+  ! It provides an external subroutine interface to CON\_world::world\_abort.
+  ! Open IO units are closed and empty output files are deleted before abort.
+  ! This will only be done on the aborting processor(s).
   !EOP
-
-  !LOCAL VARIABLES:
-  integer :: iProc,iError,nError
-
   !----------------------------------------------------------------------------
-
-  write(*,'(a)')StringError
-  call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
-  write(*,'(a,i3)')'!!! SWMF_ABORT !!! requested by processor ',iProc
-  call io_unit_clean
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
-  stop
-
+  !BOC
+  call world_abort(StringError)
+  !EOC
 end subroutine CON_stop
 
 !BOP ==========================================================================
