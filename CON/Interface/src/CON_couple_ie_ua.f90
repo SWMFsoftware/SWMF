@@ -266,10 +266,10 @@ contains
       ! Buffer for the variables on the 2D IE grid
       real, dimension(:,:,:), allocatable :: Buffer_IIV
 
-      real, dimension(:,:), allocatable :: UAr2_Mlts, UAr2_Lats
-      real, dimension(:,:), allocatable :: UAr2_Hal, UAr2_Ped, UAr2_Fac
+      real, dimension(:,:), allocatable :: UA_Mlts_II, UA_Lats_II
+      real, dimension(:,:), allocatable :: UA_Hal_II, UA_Ped_II, UA_Fac_II
 
-      integer :: is, ie, UAi_nLats, UAi_nMlts, nVarsToPass
+      integer :: iStart, iEnd, UA_nLats, UA_nMlts, nVarsToPass
 
       ! MPI related variables
 
@@ -302,17 +302,17 @@ contains
 
          if(DoTest)write(*,*)NameSubSub,': call UA_calc_fac'
 
-         call UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
+         call UA_calc_electrodynamics(UA_nMlts, UA_nLats)
 
-         allocate(UAr2_Fac(UAi_nMLTs, UAi_nLats), &
-              UAr2_Ped(UAi_nMLTs, UAi_nLats), &
-              UAr2_Hal(UAi_nMLTs, UAi_nLats), &
-              UAr2_Lats(UAi_nMLTs, UAi_nLats), &
-              UAr2_Mlts(UAi_nMLTs, UAi_nLats), stat=iError)
+         allocate(UA_Fac_II(UA_nMlts, UA_nLats), &
+              UA_Ped_II(UA_nMlts, UA_nLats), &
+              UA_Hal_II(UA_nMlts, UA_nLats), &
+              UA_Lats_II(UA_nMlts, UA_nLats), &
+              UA_Mlts_II(UA_nMlts, UA_nLats), stat=iError)
          call check_allocate(iError,NameSubSub//': '//NameLoc_B(1))
 
-         call UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
-              UAr2_lats, UAr2_mlts)
+         call UA_fill_electrodynamics(UA_Fac_II, UA_Ped_II, UA_Hal_II, &
+              UA_Lats_II, UA_Mlts_II)
 
       end if
       if(DoTest)write(*,*)NameSubSub,': bcast'
@@ -321,13 +321,13 @@ contains
       ! Broadcast information about mapping points
       !/
 
-      call MPI_bcast(UAi_nMLTs,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
-      call MPI_bcast(UAi_nLats,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
+      call MPI_bcast(UA_nMlts,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
+      call MPI_bcast(UA_nLats,1,MPI_INTEGER,iProc0Ua,iCommIeUa,iError)
 
       nVarsToPass = 3
       if (IsFirstTime) nVarsToPass = 5 
 
-      allocate(Buffer_IIV(UAi_nMLTs, UAi_nLats/2, nVarsToPass), stat=iError)
+      allocate(Buffer_IIV(UA_nMlts, UA_nLats/2, nVarsToPass), stat=iError)
       call check_allocate(iError,NameSubSub//': '//'Buffer_IIV')
 
       ! Do Northern and then Southern hemispheres
@@ -347,18 +347,18 @@ contains
             ! be reversed, basically.
             !/
             if (iBlock == 1) then
-               is = UAi_nLats/2 + 1
-               ie = UAi_nLats
+               iStart = UA_nLats/2 + 1
+               iEnd   = UA_nLats
             else
-               is = 1
-               ie = UAi_nLats/2
+               iStart = 1
+               iEnd   = UA_nLats/2
             endif
-            Buffer_IIV(:,1:UAi_nLats/2,1) = UAr2_Fac(:,is:ie)
-            Buffer_IIV(:,1:UAi_nLats/2,2) = UAr2_Ped(:,is:ie)
-            Buffer_IIV(:,1:UAi_nLats/2,3) = UAr2_Hal(:,is:ie)
+            Buffer_IIV(:,1:UA_nLats/2,1) = UA_Fac_II(:,iStart:iEnd)
+            Buffer_IIV(:,1:UA_nLats/2,2) = UA_Ped_II(:,iStart:iEnd)
+            Buffer_IIV(:,1:UA_nLats/2,3) = UA_Hal_II(:,iStart:iEnd)
             if (IsFirstTime) then
-               Buffer_IIV(:,1:UAi_nLats/2,4) = UAr2_Lats(:,is:ie)
-               Buffer_IIV(:,1:UAi_nLats/2,5) = UAr2_Mlts(:,is:ie)
+               Buffer_IIV(:,1:UA_nLats/2,4) = UA_Lats_II(:,iStart:iEnd)
+               Buffer_IIV(:,1:UA_nLats/2,5) = UA_Mlts_II(:,iStart:iEnd)
             endif
          endif
 
@@ -369,7 +369,7 @@ contains
          !/
 
          if(iProcTo /= i_proc0(UA_))then
-            nSize = UAi_nMLTs * (UAi_nLats/2) * nVarsToPass
+            nSize = UA_nMlts * (UA_nLats/2) * nVarsToPass
             if(is_proc0(UA_)) &
                  call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProcTo,&
                  1,i_comm(),iError)
@@ -386,7 +386,7 @@ contains
          !/
          if(i_proc() == iProcTo )then
             call IE_put_from_ua(Buffer_IIV, iBlock, &
-                 UAi_nMLTs, UAi_nLats/2, nVarsToPass)
+                 UA_nMlts, UA_nLats/2, nVarsToPass)
          end if
 
       end do

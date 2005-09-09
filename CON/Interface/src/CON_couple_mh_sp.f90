@@ -27,10 +27,10 @@ Module CON_couple_mh_sp
   integer::nPoint=0
   integer::iPoint
   integer::iError
-  real::BAndDXyz_I(1:6)!The interpolated values of full B and DXyz
+  real::bDxyz_I(1:6)!The interpolated values of full B and DXyz
   real::DsResolution,XyzLine_D(3)
-  real,save::RBoundIH                !^CMP IF IH
-  real,save::RBoundSC                !^CMP IF SC
+  real,save::rBoundIh                !^CMP IF IH
+  real,save::rBoundSc                !^CMP IF SC
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real,dimension(3,3)::ScToIh_DD,ScToSp_DD,IhToSp_DD
@@ -87,16 +87,16 @@ contains
        DoneRestart=used_vector('SP_Xyz_DI')
        call SP_get_line_param(&
             DsResolution,XyzLine_D&
-            ,RBoundSC &              !^CMP IF SC
-            ,RBoundIH &              !^CMP IF IH
+            ,rBoundSc &              !^CMP IF SC
+            ,rBoundIh &              !^CMP IF IH
             ) 
     end if
     call MPI_BCAST(DoneRestart,1,MPI_LOGICAL,i_proc0(SP_),i_comm(),iError)
     if(use_comp(IH_))call MPI_bcast(&                     !^CMP IF IH
-         RBoundIH,1,MPI_REAL,i_proc0(SP_),i_comm(),iError)!^CMP IF IH
+         rBoundIh,1,MPI_REAL,i_proc0(SP_),i_comm(),iError)!^CMP IF IH
 
     if(use_comp(SC_))call MPI_bcast(&                     !^CMP IF SC
-         RBoundSC,1,MPI_REAL,i_proc0(SP_),i_comm(),iError)!^CMP IF SC
+         rBoundSc,1,MPI_REAL,i_proc0(SP_),i_comm(),iError)!^CMP IF SC
 
     if(.not.DoneRestart)then
        !Construct auxiliary SP_grid with ONE point per line
@@ -146,7 +146,7 @@ contains
           call IH_synchronize_refinement(i_proc0(IH_),i_comm())
   
           call trace_line(IH_,&
-               IH_GridDescriptor,RouterIhSp,RBoundIH**2,IH_get_a_line_point)
+               IH_GridDescriptor,RouterIhSp,rBoundIh**2,IH_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
 
@@ -155,7 +155,7 @@ contains
 
        if(use_comp(SC_))then       !^CMP IF SC BEGIN
           call SC_synchronize_refinement(i_proc0(SC_),i_comm())
-          call MPI_bcast(RBoundSC,1,MPI_REAL,&
+          call MPI_bcast(rBoundSc,1,MPI_REAL,&
                i_proc0(SP_),i_comm(),iError)
           if(Grid_C(SC_)%TypeCoord/=Grid_C(IH_)%TypeCoord& !^CMP IF IH BEGIN
                .and.is_proc0(SP_).and.use_comp(IH_))&
@@ -164,7 +164,7 @@ contains
                XyzTemp_DI(:,iPoint))                       !^CMP END IH
 
           call trace_line(SC_,&
-               SC_GridDescriptor,RouterScSp,RBoundSC**2,SC_get_a_line_point)
+               SC_GridDescriptor,RouterScSp,rBoundSc**2,SC_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
                i_proc0(SP_),i_comm(),iError)
           if(DoTest.and.is_proc0())write(*,*)'nPoint',nPoint
@@ -267,7 +267,7 @@ contains
 
   contains
     !==================================================================
-    subroutine trace_line(CompID_,GD,Router,R2,MH_get_a_line_point)
+    subroutine trace_line(iComp,Gd,Router,R2,MH_get_a_line_point)
       use CON_global_message_pass
       interface
          subroutine MH_get_a_line_point(nPartial,&
@@ -284,16 +284,16 @@ contains
          end subroutine MH_get_a_line_point
       end interface
       
-      integer,intent(in)::CompID_
-      type(GridDescriptorType),intent(out)::GD
+      integer,intent(in)::iComp
+      type(GridDescriptorType),intent(out)::Gd
       type(RouterType),intent(out)::Router
       real,intent(in)::R2
       
       integer::iPointStart
       real,save::SignBDotR
       !--------------------------------------------------------!
-      call set_standard_grid_descriptor(CompID_,GridDescriptor=GD)
-      call init_router(GD,SP_GridDescriptor,Router)
+      call set_standard_grid_descriptor(iComp,GridDescriptor=Gd)
+      call init_router(Gd,SP_GridDescriptor,Router)
       if(.not.Router%IsProc)return
       call MPI_bcast(iPoint,1,MPI_INTEGER,&
            Router%iProc0Target,Router%iCommUnion,iError)
@@ -323,7 +323,7 @@ contains
               'Insufficient number of points in couple_ih_sp =',iPoint)
          
          call set_router(& 
-              GridDescriptorSource=GD,&
+              GridDescriptorSource=Gd,&
               GridDescriptorTarget=SP_GridDescriptor,&
               Router=Router,&
               mapping=xyz_point_mapping,&
@@ -336,19 +336,19 @@ contains
             if(iPoint==iPointStart)then
                SignBDotR=cOne
                XyzTemp_DI(:,iPoint+1)=XyzTemp_DI(:,iPoint)-DsResolution*&
-                    cHalf*BAndDXyz_I(1:3)/sqrt(dot_product(&
-                    BAndDXyz_I(1:3),BAndDXyz_I(1:3)))*&
+                    cHalf*bDxyz_I(1:3)/sqrt(dot_product(&
+                    bDxyz_I(1:3),bDxyz_I(1:3)))*&
                     sqrt(dot_product(&
-                    BAndDXyz_I(4:6),BAndDXyz_I(4:6)))          
+                    bDxyz_I(4:6),bDxyz_I(4:6)))          
                if(dot_product(XyzTemp_DI(:,iPoint+1),XyzTemp_DI(:,iPoint+1))>&
                     dot_product(XyzTemp_DI(:,iPoint),XyzTemp_DI(:,iPoint)))&
                     SignBDotR=-cOne
             end if
             XyzTemp_DI(:,iPoint+1)=XyzTemp_DI(:,iPoint)-DsResolution*&
-                 cHalf*BAndDXyz_I(1:3)/sqrt(dot_product(&
-                 BAndDXyz_I(1:3),BAndDXyz_I(1:3)))*&
+                 cHalf*bDxyz_I(1:3)/sqrt(dot_product(&
+                 bDxyz_I(1:3),bDxyz_I(1:3)))*&
                  sqrt(dot_product(&
-                 BAndDXyz_I(4:6),BAndDXyz_I(4:6)))*&
+                 bDxyz_I(4:6),bDxyz_I(4:6)))*&
                  SignBDotR
             nPoint=iPoint
          end if
@@ -357,7 +357,7 @@ contains
               XyzTemp_DI(1,iPoint),3,MPI_REAL,&
               Router%iProc0Target,Router%iCommUnion,iError)
          call set_router(& 
-              GridDescriptorSource=GD,&
+              GridDescriptorSource=Gd,&
               GridDescriptorTarget=SP_GridDescriptor,&
               Router=Router,&
               mapping=xyz_point_mapping,&
@@ -368,10 +368,10 @@ contains
               apply_buffer=SP_put_a_line_point)
          if(is_proc0(SP_))then     
             XyzTemp_DI(:,iPoint)=XyzTemp_DI(:,iPoint-1)-DsResolution*&
-                 BAndDXyz_I(1:3)/sqrt(dot_product(&
-                 BAndDXyz_I(1:3),BAndDXyz_I(1:3)))*&
+                 bDxyz_I(1:3)/sqrt(dot_product(&
+                 bDxyz_I(1:3),bDxyz_I(1:3)))*&
                  sqrt(dot_product(&
-                 BAndDXyz_I(4:6),BAndDXyz_I(4:6)))*&
+                 bDxyz_I(4:6),bDxyz_I(4:6)))*&
                  SignBDotR
          end if
          call MPI_bcast(&
@@ -395,44 +395,44 @@ contains
   subroutine SP_put_a_line_point(nPartial,&
        iPutStart,&
        Put,&
-       W,&
+       w,&
        DoAdd,&
        Buff_I,nVar)
     implicit none
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
+    type(WeightPtrType),intent(in)::w
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
     integer::iCell
     real:: Weight
     !-------------------------------------------------------------------------
-    Weight=W%Weight_I(iPutStart)
+    Weight=w%Weight_I(iPutStart)
     if(DoAdd)then
-       BAndDXyz_I=BAndDXyz_I+Buff_I(:)*Weight
+       bDxyz_I = bDxyz_I + Buff_I*Weight
     else
-       BAndDXyz_I=Buff_I(:)*Weight
+       bDxyz_I = Buff_I*Weight
     end if
   end subroutine SP_put_a_line_point
   !==================================================================!
-  subroutine transform_to_sp_from(CompID_)
-    integer,intent(in)::CompID_
+  subroutine transform_to_sp_from(iComp)
+    integer,intent(in)::iComp
     real,pointer,dimension(:,:)::SP_LocalXyz_DI
     logical,pointer,dimension(:)::Is_I
     integer::nU_I(2),i
     real,dimension(3,3)::MhToSp_DD
     character(LEN=2)::NameComp
     real::LengthRatio
-    call get_comp_info(CompID_,Name=NameComp)
+    call get_comp_info(iComp,Name=NameComp)
     MhToSp_DD=transform_matrix(tNow,&
-            Grid_C(CompID_)%TypeCoord,&
+            Grid_C(iComp)%TypeCoord,&
             Grid_C(SP_)%TypeCoord)
     if(DoTest)write(*,*)'Transform SP coordinates from '//NameComp
     call associate_with_global_mask(Is_I,'SP_IsIn'//NameComp)
     call associate_with_global_vector(SP_LocalXyz_DI,'SP_XyzSP')
     nU_I=ubound(SP_LocalXyz_DI)
     if(DoTest)write(*,*)nU_I
-    LengthRatio=Grid_C(CompID_)%UnitX/Grid_C(SP_)%UnitX
+    LengthRatio=Grid_C(iComp)%UnitX/Grid_C(SP_)%UnitX
     do i=1,nU_I(2)
        if(.not.Is_I(i))CYCLE
        SP_LocalXyz_DI(:,i)=matmul(MhToSp_DD,&
@@ -528,23 +528,23 @@ contains
   !==================================================================
   logical function is_in_ih(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
-    is_in_ih=dot_product(Xyz_D,Xyz_D)>=RBoundIH**2.and.&
+    is_in_ih=dot_product(Xyz_D,Xyz_D)>=rBoundIh**2.and.&
          all(Xyz_D<=xyz_max_d(IH_)).and.all(Xyz_D>=xyz_min_d(IH_))
   end function is_in_ih
   !==================================================================!        
    subroutine IH_get_for_sp_and_transform(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
+       nPartial,iGetStart,Get,w,State_V,nVar)
     
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
+    type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
-    integer, parameter :: rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
+    integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
        BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call IH_get_for_sp(&
-         nPartial,iGetStart,Get,W,State3_V,nVar+3)
+         nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
     
     State_V(Ux_:Uz_)=&
@@ -610,26 +610,26 @@ contains
     real::R2
     R2=dot_product(Xyz_D,Xyz_D)
     if(use_comp(IH_))then            !^CMP IF IH BEGIN
-       is_in_sc=R2>=RBoundSC**2.and.R2<RBoundIH**2
+       is_in_sc=R2>=rBoundSc**2.and.R2<rBoundIh**2
     else                             !^CMP END IH
-       is_in_sc=R2>=RBoundSC**2.and.&
+       is_in_sc=R2>=rBoundSc**2.and.&
             all(Xyz_D<=xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
     end if                           !^CMP IF IH
   end function is_in_sc             
   !--------------------------------------------------------------------------
    subroutine SC_get_for_sp_and_transform(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
+       nPartial,iGetStart,Get,w,State_V,nVar)
     
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
+    type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
-    integer, parameter :: rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
+    integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
        BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call SC_get_for_sp(&
-         nPartial,iGetStart,Get,W,State3_V,nVar+3)
+         nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
     
     State_V(Ux_:Uz_)=&

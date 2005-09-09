@@ -64,11 +64,11 @@ contains
   !===============================================================!
   subroutine couple_ih_sc_init
     interface
-       subroutine IH_set_buffer_grid(DD)
+       subroutine IH_set_buffer_grid(Dd)
          use CON_domain_decomposition
          implicit none
          type(DomainDecompositionType),&
-              intent(out)::DD
+              intent(out)::Dd
        end subroutine IH_set_buffer_grid
     end interface
 
@@ -165,9 +165,9 @@ contains
             GridDescriptorSource=IH_Grid,&
             GridDescriptorTarget=SC_TargetGrid,&
             Router=RouterIhSc,&
-            is_interface_block=boundary_block,&
+            is_interface_block=is_boundary_block,&
             interface_point_coords=outer_cells, &
-            mapping=SC_IH_mapping, &
+            mapping=map_sc_ih, &
             interpolate=interpolation_fix_reschange)
 
        IH_iGridRealization = i_realization(IH_)
@@ -183,7 +183,7 @@ contains
 
   end subroutine couple_ih_sc
   !======================================================!
-  logical function boundary_block(lGlobalTreeNode)
+  logical function is_boundary_block(lGlobalTreeNode)
 
     integer,intent(in)::lGlobalTreeNode
     logical,dimension(3)::IsBoundary_D
@@ -192,9 +192,9 @@ contains
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode).or.&
          is_left_boundary_d(&
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
-    boundary_block=any(IsBoundary_D)
+    is_boundary_block=any(IsBoundary_D)
 
-  end function boundary_block
+  end function is_boundary_block
   !===============================================================!
   subroutine outer_cells(&
        GridDescriptor,&
@@ -202,7 +202,7 @@ contains
        nDim,&
        Xyz_D,&
        nIndexes,&
-       Index_I,&
+       i_D,&
        IsInterfacePoint)
 
     type(GridDescriptorType),intent(in):: GridDescriptor
@@ -210,20 +210,20 @@ contains
     logical,intent(out)::IsInterfacePoint
     integer,intent(in)::nDim
     real,intent(inout)::Xyz_D(nDim)
-    integer,intent(inout)::Index_I(nIndexes)
+    integer,intent(inout)::i_D(nIndexes)
 
     logical,dimension(3)::IsLeftFace_D,IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
-    IsLeftFace_D=Index_I(x_:z_)<1.and.is_left_boundary_d(&
+    IsLeftFace_D=i_D(x_:z_)<1.and.is_left_boundary_d(&
          SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
-    IsRightFace_D=Index_I(x_:z_)>&
+    IsRightFace_D=i_D(x_:z_)>&
          ncells_decomposition_d(SC_TargetGrid%DD%Ptr).and.&
          is_right_boundary_d(SC_TargetGrid%DD%Ptr,lGlobalTreeNode)
     IsInterfacePoint=any(IsRightFace_D.or.IsLeftFace_D)
   end subroutine outer_cells 
   !========================================================!
-  subroutine SC_IH_mapping(&
+  subroutine map_sc_ih(&
        SC_nDim,SC_Xyz_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
 
     integer,intent(in)::IH_nDim,SC_nDim
@@ -234,29 +234,29 @@ contains
     IH_Xyz_D = matmul(ScToIh_DD, SC_Xyz_D)
     IsInterfacePoint=.true.
 
-  end subroutine SC_IH_mapping
+  end subroutine map_sc_ih
   !=================================================================!
 
   subroutine IH_get_for_sc_and_transform(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
+       nPartial,iGetStart,Get,w,State_V,nVar)
 
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
+    type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
-    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7,&
+    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7,&
          BuffX_=9,BuffZ_=11
     !------------------------------------------------------------
     call IH_get_for_sc(&
-       nPartial,iGetStart,Get,W,State3_V,nVar+3)
+       nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
 
     !Transform velocity
-    State_V(rhoUx_:rhoUz_)=State_V(rho_)*&
+    State_V(RhoUx_:RhoUz_)=State_V(Rho_)*&
          transform_velocity(tNow,&
-         State_V(rhoUx_:rhoUz_)/State_V(rho_),&
-         State3_V(BuffX_:BuffZ_)/State_V(rho_),&
+         State_V(RhoUx_:RhoUz_)/State_V(Rho_),&
+         State3_V(BuffX_:BuffZ_)/State_V(Rho_),&
          Grid_C(IH_)%TypeCoord,Grid_C(SC_)%TypeCoord)
     
     State_V(Bx_:Bz_)=matmul(IhToSc_DD,State_V(Bx_:Bz_))
@@ -275,12 +275,12 @@ contains
     !INPUT ARGUMENTS:
     interface
        subroutine SC_get_for_ih(&
-            nPartial,iGetStart,Get,W,State_V,nVar)
+            nPartial,iGetStart,Get,w,State_V,nVar)
          use CON_router
          implicit none
          integer,intent(in)::nPartial,iGetStart,nVar
          type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::W
+         type(WeightPtrType),intent(in)::w
          real,dimension(nVar),intent(out)::State_V
        end subroutine SC_get_for_ih
     end interface
@@ -340,13 +340,13 @@ contains
 
     ! The order of spherical indexes as in BATSRUS
     ! This is a left handed system !!! should be replaced !!!
-    integer,parameter::R_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
+    integer,parameter::r_=1,Psi_=2,Theta_=3,x_=1,y_=2,z_=3
     real :: rSinTheta
     !-----------------------------------------------------------------------
-    RSinTheta    = Sph_D(R_)*sin(Sph_D(Theta_))!To be modified
+    RSinTheta    = Sph_D(r_)*sin(Sph_D(Theta_))!To be modified
     SC_Xyz_D(x_) = RSinTheta*cos(Sph_D(Psi_))  !\if SC grid
     SC_Xyz_D(y_) = RSinTheta*sin(Sph_D(Psi_))  !/is spherical
-    SC_Xyz_D(z_) = Sph_D(R_)*cos(Sph_D(Theta_))!To be modified
+    SC_Xyz_D(z_) = Sph_D(r_)*cos(Sph_D(Theta_))!To be modified
 
     IsInterfacePoint=.true.
   end subroutine buffer_grid_point

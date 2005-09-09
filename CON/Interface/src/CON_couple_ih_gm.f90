@@ -40,7 +40,7 @@ module CON_couple_ih_gm
   public:: couple_ih_gm_init
   public:: couple_ih_gm
 
-  real, public:: IH_GM_CouplingTime
+  real, public:: CouplingTimeIhGm
 
   !REVISION HISTORY:
   ! 7/23/03 Sokolov I.V. <igorsok@umich.edu> - initial prototype
@@ -129,7 +129,7 @@ contains
     call IH_synchronize_refinement(Router%iProc0Source,Router%iCommUnion)
     call GM_synchronize_refinement(Router%iProc0Target,Router%iCommUnion)
 
-    IH_GM_CouplingTime=TimeCoupling
+    CouplingTimeIhGm=TimeCoupling
 
     if(IH_iGridRealization/=i_realization(IH_).or.&     
          GM_iGridRealization/=i_realization(GM_).or.&
@@ -163,9 +163,9 @@ contains
             GridDescriptorSource=IH_Grid,&
             GridDescriptorTarget=GM_Grid,&
             Router=Router,&
-            is_interface_block=GM_west_block,&
+            is_interface_block=GM_is_west_block,&
             interface_point_coords=GM_west_cells, &
-            mapping=GM_IH_mapping,&
+            mapping=map_gm_ih,&
             interpolate=interpolation_fix_reschange)
 
        IH_iGridRealization = i_realization(IH_)
@@ -181,7 +181,7 @@ contains
 
   end subroutine couple_ih_gm
   !===============================================================!
-  logical function GM_west_block(lGlobalTreeNode)
+  logical function GM_is_west_block(lGlobalTreeNode)
 
     integer,intent(in)::lGlobalTreeNode
     logical,dimension(3)::IsRightBoundary_D
@@ -189,9 +189,9 @@ contains
 
     IsRightBoundary_D=is_right_boundary_d(&
          GM_Grid%DD%Ptr,lGlobalTreeNode)
-    GM_west_block=IsRightBoundary_D(x_)
+    GM_is_west_block=IsRightBoundary_D(x_)
 
-  end function GM_west_block
+  end function GM_is_west_block
   !===============================================================!
   subroutine GM_west_cells(&
        GridDescriptor,&
@@ -199,21 +199,21 @@ contains
        nDim,&
        Xyz_D,&
        nIndexes,&
-       Index_I,&
+       i_D,&
        IsInterfacePoint)
 
     type(GridDescriptorType),intent(in):: GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
     integer,intent(in)::nDim
     real,intent(inout)::Xyz_D(nDim)
-    integer,intent(inout)::Index_I(nIndexes)
+    integer,intent(inout)::i_D(nIndexes)
     logical,intent(out)::IsInterfacePoint
 
     logical,dimension(3)::IsLeftFace_D,IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
-    IsLeftFace_D=Index_I(x_:z_)<1
-    IsRightFace_D=Index_I(x_:z_)>&
+    IsLeftFace_D=i_D(x_:z_)<1
+    IsRightFace_D=i_D(x_:z_)>&
          ncells_decomposition_d(GridDescriptor%DD%Ptr)
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
@@ -222,7 +222,7 @@ contains
 
   !===============================================================!
 
-  subroutine GM_IH_mapping(&
+  subroutine map_gm_ih(&
        GM_nDim,GM_Xyz_D,IH_nDim,IH_Xyz_D,IsInterfacePoint)
 
     integer,intent(in)::GM_nDim,IH_nDim
@@ -234,26 +234,26 @@ contains
          Grid_C(GM_)%UnitX/Grid_C(IH_)%UnitX
     IsInterfacePoint=.true.
 
-  end subroutine GM_IH_Mapping
+  end subroutine map_gm_ih
 
   !===============================================================!
 
   subroutine IH_get_for_gm_and_transform(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
+       nPartial,iGetStart,Get,w,State_V,nVar)
 
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
+    type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
 
-    integer, parameter :: rho_=1, rhoUx_=2, rhoUz_=4, Bx_=5, Bz_=7
+    integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
     !------------------------------------------------------------
     call IH_get_for_gm(&
-       nPartial,iGetStart,Get,W,State_V,nVar,IH_GM_CouplingTime)
+       nPartial,iGetStart,Get,w,State_V,nVar,CouplingTimeIhGm)
 
-    State_V(rhoUx_:rhoUz_)=&
-         matmul(IhToGm_DD,State_V(rhoUx_:rhoUz_) &
-         - State_V(rho_)*vPlanetIh_D )
+    State_V(RhoUx_:RhoUz_)=&
+         matmul(IhToGm_DD,State_V(RhoUx_:RhoUz_) &
+         - State_V(Rho_)*vPlanetIh_D )
     State_V(Bx_:Bz_)=matmul(IhToGm_DD,State_V(Bx_:Bz_))
 
   end subroutine IH_get_for_gm_and_transform
