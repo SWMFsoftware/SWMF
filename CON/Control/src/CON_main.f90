@@ -26,7 +26,6 @@ module CON_main
 
   !PUBLIC MEMBER FUNCTIONS:
   public :: initialize         ! initialize SWMF
-  public :: run                ! run        SWMF
   public :: finalize           ! finalize   SWMF
 
   !REVISION HISTORY:
@@ -38,9 +37,10 @@ module CON_main
   !
   ! The transformations were carried out by O.Volberg and G.Toth.
   !
-  ! To make the SWMF compatible with the ESMF, the main program is
-  ! transformed into a module contining three subroutines
-  ! for initialization, running and finalization.
+  ! To allow an external program to call the SWMF, the main program
+  ! is broken into subroutines which are called from swmf.f90 or
+  ! swmf\_interface.f90. This module contains the subroutines
+  ! initialize anf finalize.
   !
   !EOP
 
@@ -51,7 +51,6 @@ module CON_main
   !/
   integer :: lComp, iComp
 
-  logical :: IsLastSession
   logical :: IsFound
 
   logical :: DoTest, DoTestMe
@@ -172,44 +171,6 @@ contains
     call init_time
 
   end subroutine initialize
-
-  !BOP ========================================================================
-  !IROUTINE: run - run the SWMF in multi-session mode
-  !INTERFACE:
-  subroutine run
-    !DESCRIPTION:
-    ! Run the SWMF in multi-session mode. The input parameters can be
-    ! modified at the beginning of each session. The number of sessions
-    ! is defined by the \#RUN commands in the PARAM.in file.
-    !EOP
-    !BOC
-    SESSIONLOOP: do
-
-       !\
-       ! Initialize and execute the session
-       !/
-       call init_session(IsLastSession)
-       if(iErrorSwmf /= 0) RETURN
-
-       call do_session(IsLastSession)
-
-       !\
-       ! Check if there is anything else to do
-       !/
-       if(IsLastSession)then
-          EXIT SESSIONLOOP
-       else
-          if(is_proc0().and.lVerbose>=0) &
-               write(*,*)'----- End of Session   ',iSession,' ------'
-          iSession=iSession+1
-          if (DnTiming > -2) call timing_report
-          call timing_reset_all
-       end if
-
-    end do SESSIONLOOP
-    !EOC
-
-  end subroutine run
 
   !BOP =======================================================================
   !IROUTINE: finalize - finalize the SWMF run
