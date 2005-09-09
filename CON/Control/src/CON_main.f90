@@ -320,7 +320,7 @@ contains
     !EOP
 
     integer :: lComp, iComp, lComp2, iComp2, iProc, iProcMin, iError
-    character (LEN=lNameVersion) :: NameVersion, Nameversion2
+    character (LEN=lNameVersion) :: NameVersion, NameVersion2
 
     !--------------------------------------------------------------------------
     do lComp=2,n_comp()

@@ -124,8 +124,8 @@ contains
 
     ! Timing parameters
     character (lNameVersion) :: NameVersion
-    real               :: number
-    logical            :: on
+    real               :: VersionNumber
+    logical            :: IsOn
 
     ! Beginning line number and number of lines for component parameters
     integer :: iLineModule, nLineModule
@@ -580,8 +580,8 @@ contains
     end do
 
     if(UseTiming)then
-       call timing_version(on,NameVersion,number)
-       if(.not.on)then
+       call timing_version(IsOn,NameVersion,VersionNumber)
+       if(.not.IsOn)then
           if(is_proc0()) &
                write(*,'(a)')NameSub//' WARNING: TIMING module is OFF'
           if(UseStrict)then

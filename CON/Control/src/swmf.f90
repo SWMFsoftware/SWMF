@@ -9,7 +9,7 @@
 !QUOTE: \section{CON/Control: Main Executable and Control}
 !MODULE: swmf - the main program for the stand-alone SWMF executable
 !INTERFACE:
-program SWMF
+program swmf
 
   !USES:
   use CON_main,      ONLY: initialize, finalize
@@ -87,4 +87,4 @@ program SWMF
 
   call MPI_finalize(iErrorMpi)
   !EOC
-end program SWMF
+end program swmf

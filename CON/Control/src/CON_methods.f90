@@ -54,7 +54,7 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   if(nIteration >= nIterStartTest .or. &
        (DoTimeAccurate .and. tSimulation>=tStartTest))then
 
-     DoTest   = index_mine(' '//StringTest,' '//String//' ')>0
+     DoTest   = i_sub_string(' '//StringTest,' '//String//' ')>0
      DoTestMe = DoTest .and. i_proc()==iProcTest
      if(DoTestMe)then
         write(*,*)String,' at iter=',nIteration
@@ -71,22 +71,22 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
 contains
   !===========================================================================
 
-  integer function index_mine(str1,str2)
+  integer function i_sub_string(StringA,StringB)
 
-    ! This is needed to avoid some compiler bug 
+    ! This is needed to avoid some SGI f90 compiler bug 
     ! (which results in a memory leak) if we use
     !
     ! index(' '//StringTest,' '//str//' ')
     !
-    ! directly
+    ! directly.
 
     implicit none
 
-    character (len=*), intent(in) :: str1, str2
+    character (len=*), intent(in) :: StringA, StringB
 
-    index_mine=index(str1,str2)
+    i_sub_string=index(StringA, StringB)
 
-  end function index_mine
+  end function i_sub_string
 
 end subroutine CON_set_do_test
 
