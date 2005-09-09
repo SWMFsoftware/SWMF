@@ -41,13 +41,26 @@ $Input="RenameList.pl" unless $Input;
 if($Help or not ($List or $Check or $Rename or $Undo) ){
     print 
 #BOC
-'Usage: Rename.pl [options...] file1 file2 ...
+'Purpose:
+
+   Replace multiple variable names in multiple files.
+
+Usage: 
+
+   Rename.pl [options...] file1 file2 ...
 
 Options (specify them separately as  -a -b  and not as  -ab !):
 
 -h             help (this message)
 
--i=inputfile   input file (default is RenameList.pl)
+-i=INPUTFILE   input file with the renaming rules. Default is RenameList.pl
+               The INPUTFILE contains a single Perl statement, which sets 
+               the associative array %newname:
+
+               %newname = (oldvar1 => newvar1,
+                           oldvar2 => newvar2,
+                           ...
+                          );
 
 -l             list names to be changed
 -c             check input file and source files, do not rename variables

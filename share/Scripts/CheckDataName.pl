@@ -1,4 +1,16 @@
 #!/usr/bin/perl -s
+#BOP
+#!ROUTINE: CheckDataName.pl
+#!DESCRIPTION:
+# The SWMF and some of it components are developed at the University of
+# Michigan. The developers agreed in a data naming standard. 
+# This scipt checks if the file, program, module, subroutine, function
+# and variable names conform with the standard.
+#
+#!REVISION HISTORY:
+# 09/06/2005 G. Toth - initial version
+#EOP
+
 
 # Read source code and check against data naming standard.
 

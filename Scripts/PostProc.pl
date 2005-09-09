@@ -153,15 +153,19 @@ sub shell{
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Post-process plot files with Scripts/PostProc.pl}
+#!QUOTE: \subsection{Post-Process Plot Files with Scripts/PostProc.pl}
 #!ROUTINE: PostProc.pl - post-process plot files of the components
 #!DESCRIPTION:
 # This script is copied into the run directory and it should be executed there.
 # The script post processes the plot files created by the components.
+# The script can run in the background and post process periodically.
+# It can also collect the plot files, the standard output, the run log and 
+# the PARAM.in file into an 'output directory tree'.
 #
 #!REVISION HISTORY:
 # 02/12/2005 G. Toth - initial version
 # 05/08/2005           added -o option to collect output into a directory tree
+# 09/08/2005           for -o option copy PARAM.in and move runlog inot tree.
 #EOP
 
 sub print_help{
