@@ -177,11 +177,6 @@ contains
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
 
-    !\
-    ! Map potential to inner BC of GM and calculate velocities
-    !/
-    !OBSOLETE CODE: if(is_proc(GM_))call GM_calc_iono_bcs
-
     if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
     if(DoTest.and.is_proc0(GM_)) call GM_print_variables('IE')
 
