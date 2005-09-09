@@ -132,16 +132,16 @@ contains
   !============================================================================
 
   subroutine map_im_to_ie(&
-       IM_nDim,  &
-       IM_Xyz_D,&
-       IE_nDim,&
-       IE_Xyz_D,&
+       IMi_nDim,  &
+       IMr1_Xyz_D,&
+       IEi_nDim,&
+       IEr1_Xyz_D,&
        IsInterfacePoint)
     
     ! Map IM generalized coordinates into IE generalized coordinates
-    integer, intent(in) :: IM_nDim,IE_nDim
-    real, intent(in)    :: IM_Xyz_D(IM_nDim)
-    real, intent(out)   :: IE_Xyz_D(IE_nDim)
+    integer, intent(in) :: IMi_nDim,IEi_nDim
+    real, intent(in)    :: IMr1_Xyz_D(IMi_nDim)
+    real, intent(out)   :: IEr1_Xyz_D(IEi_nDim)
     logical,intent(out) :: IsInterfacePoint
  
     real :: ColetLon_D(2)
@@ -149,19 +149,19 @@ contains
     !------------------------------------------------------------------------
     IsInterfacePoint=.true.
 
-    iColat = nint(IM_Xyz_D(1))
-    iLon = nint(IM_Xyz_D(2))
+    iColat = nint(IMr1_Xyz_D(1))
+    iLon = nint(IMr1_Xyz_D(2))
     
     if(  iColat<1 .or. iColat>Grid_C(IM_)% nCoord_D(1) .or. &
          iLon<1 .or. iLon>Grid_C(IM_)% nCoord_D(2)       )then
-       write(*,*)'map_im_to_ie: IM_Xyz_D=',IM_Xyz_D
+       write(*,*)'map_im_to_ie: IMr1_Xyz_D=',IMr1_Xyz_D
        write(*,*)'map_im_to_ie: iColat,iLon,nCoord_D=',&
             iColat,iLon,Grid_C(IM_) % nCoord_D
        call CON_stop('map_im_to_ie SWMF_ERROR: index out of range!')
     end if
     
     !For structured but non-uniform IM grid:
-    call gen_to_stretched(IM_Xyz_D, &!in:generalized IM coords(indexes) 
+    call gen_to_stretched(IMr1_Xyz_D, &!in:generalized IM coords(indexes) 
                           ColetLon_D, &!out:stretched coords (radians) 
                           2,          &!IM_grid dimension
                           IM_)         !IM_grid ID
@@ -169,7 +169,7 @@ contains
     !For structured but non-uniform ionosphere grid
                      
     call stretched_to_gen(ColetLon_D,&!in:stretched coords (radians)
-                          IE_Xyz_D,&!out:generalized IE cords(indexes)
+                          IEr1_Xyz_D,&!out:generalized IE cords(indexes)
                           2,         &!IE_grid dimension
                           IE_)        !IE_grid ID
                             
