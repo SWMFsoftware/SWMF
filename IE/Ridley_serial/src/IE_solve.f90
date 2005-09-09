@@ -31,7 +31,7 @@ subroutine IE_solve
      select case(iBlock)
      case(1) ! Northern hemisphere
         if(iProc /= 0) CYCLE
-        !OBSOLETE: if (IONO_NORTH_nMagBndPts < 8) CYCLE
+
         CurrentSum = sum(abs(IONO_NORTH_JR))
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=', CurrentSum
         if(CurrentSum < 1e-6)CYCLE
@@ -103,7 +103,6 @@ subroutine IE_solve
 
         if(iProc /= nProc-1) CYCLE
 
-        !OBSOLETE: if (IONO_SOUTH_nMagBndPts < 8) CYCLE
         CurrentSum = sum(abs(IONO_SOUTH_JR))
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=', CurrentSum
         if(CurrentSum < 1e-6)CYCLE
