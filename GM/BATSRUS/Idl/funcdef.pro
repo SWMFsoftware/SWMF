@@ -248,6 +248,9 @@ case f of
   ; pressure, plazma beta, temperature, entropy
   'pbeta'    : result=2*p/bb
   'T'        : result=p/rho
+  'T_SC'     : result=1.211E-8*p/rho   ; amu/kB* (dyne/cm^2) / (g/cm^3)
+  'T_IH'     : result=1.211E-8*p/rho   ; amu/kB* (dyne/cm^2) / (g/cm^3)
+  'T_GM'     : result=7.243E+7*p/rho   ; amu/kB * nPa / (amu/cm^3)
   's'        : result=p/rho^gamma
   ; sound speed, Mach number
   'csound'   :result=sqrt(gamma*p/rho)
