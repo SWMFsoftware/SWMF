@@ -700,7 +700,7 @@ contains
 
     character(len=*), parameter :: NameSub=NameMod//'::save_restart'
     
-    integer :: lComp, iComp
+    integer :: lComp, iComp, iError
     !------------------------------------------------------------------------
 
     if(lVerbose>0 .and. is_proc0()) &
@@ -711,6 +711,10 @@ contains
        iComp = i_comp(lComp)
        call save_restart_comp(iComp,tSimulation)
     end do
+
+    ! Ensure that all components have written restart state before 
+    ! writing the CON restart file (RESTART.out)
+    call MPI_barrier(i_comm(), iError)
 
     if(.not.is_proc0()) RETURN
 
