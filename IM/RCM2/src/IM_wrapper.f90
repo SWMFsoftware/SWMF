@@ -29,7 +29,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
      call put(CompInfo,                         &
           Use=.true.,                           &
           NameVersion='RCM (De Zeeuw-Sazykin)', &
-          Version=1.2)
+          Version=2.0)
   case('MPI')
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
      if(nProc>1)call CON_stop(&
