@@ -166,7 +166,13 @@
     IF (i_advect == 1) THEN
        CALL Move_plasma_grid  (dt, 1)
        CALL Move_plasma_grid  (dt, 2)
+       CALL Move_plasma_grid  (dt, 3)
     ELSE IF (i_advect == 2) THEN
+       CALL Move_plasma_grid_new (n_gc, isize,jsize,kcsize, iesize, i1, i2, &
+                                  j1, j2, imin_j, dt, vcorot, vpar, v, alamc,&
+                                  etac, eeta, vm, xmass, fudgec, ikflavc, sini,&
+                                  alpha,beta, bir, &
+                                  dlam, dpsi, signbe, Ri, 3)
        CALL Move_plasma_grid_new (n_gc, isize,jsize,kcsize, iesize, i1, i2, &
                                   j1, j2, imin_j, dt, vcorot, vpar, v, alamc,&
                                   etac, eeta, vm, xmass, fudgec, ikflavc, sini,&
@@ -174,6 +180,11 @@
                                   dlam, dpsi, signbe, Ri, 2)
        CALL Move_plasma_grid (dt, 1)
     ELSE IF (i_advect == 3) THEN
+       CALL Move_plasma_grid_new (n_gc,isize,jsize,kcsize,iesize, i1, i2, &
+                                  j1, j2, imin_j, dt, vcorot, vpar, v, alamc,&
+                                  etac, eeta, vm, xmass, fudgec, ikflavc, sini, &
+                                  alpha,beta, bir, &
+                                  dlam, dpsi, signbe, Ri, 3)
        CALL Move_plasma_grid_new (n_gc,isize,jsize,kcsize,iesize, i1, i2, &
                                   j1, j2, imin_j, dt, vcorot, vpar, v, alamc,&
                                   etac, eeta, vm, xmass, fudgec, ikflavc, sini, &
@@ -393,7 +404,7 @@
 !
 !
     SUBROUTINE Move_plasma_grid (dt, ie_ask)
-      USE Rcm_variables
+    USE Rcm_variables
     IMPLICIT NONE
     REAL (rprec), INTENT (IN) :: dt
     INTEGER (iprec), INTENT (IN) :: ie_ask
@@ -415,21 +426,18 @@
                     eeta2, veff, &
                     dvefdi, dvefdj
     REAL (rprec) :: &
-                    didt, djdt, biold, bjold, rate, mass_factor, &
+                    didt, djdt, biold, bjold, rate, mass_factor, r_dist,&
                     Bjmod_real, Intrp_2d_grid, Gntrp_2d, Bndy
+    REAL (rprec) :: Plasmasphere_refill_rate, cexrat
     INTEGER (iprec) :: i, j, kc, ie
 !
 !
 !
     DO kc = 1, kcsize
-!
-!
-       IF (alamc(kc) < 0.0_rprec) THEN
-          ie = 1
-       ELSE
-          ie = 2 ! but must change if O+ is added
-       END IF
+
+       ie = ikflavc (kc)
        IF (ie /= ie_ask) CYCLE
+
        veff = v + vcorot -vpar + alamc(kc)*vm
        mass_factor = SQRT (xmass(1) / xmass(ie))
 !
@@ -455,22 +463,47 @@
 !
        eeta2 (:,:) = eeta (:,:,kc)
        DO j = 1, jsize
-       DO i = 1, isize
-          IF (i < imin_j(j) ) CYCLE
+       DO i = 1, isize-1
+
+          IF (i <= imin_j(j) ) CYCLE
+
           didt   =   dvefdj (i,j) / fac (i,j)
           djdt   = - dvefdi (i,j) / fac (i,j)
 !         biold  = MAX (REAL(i,rprec) - didt * dt , REAL(imin_j(j)))
           biold  = REAL(i,rprec) - didt * dt 
           bjold  = Bjmod_real (REAL(j,rprec) - djdt * dt, jsize )
-          rate   = Ratefn (fudgec(kc), alamc(kc), sini (i,j), bir (i,j), &
-                           vm (i,j), mass_factor)
+
+!         rate   = Ratefn (fudgec(kc), alamc(kc), sini (i,j), bir (i,j), &
+!                          vm (i,j), mass_factor)
 !         eeta (i,j,kc) = Intrp_2d_grid (eeta2, biold, bjold, isize, jsize, jwrap, imin_j)*&
-          IF (biold > Bndy (bndloc, jsize, bjold) ) THEN
-          eeta (i,j,kc) = Gntrp_2d (eeta2, isize, jsize, biold, bjold)*&
-                          EXP(-rate*dt)
-          ELSE
-              eeta (i,j,kc) =  etac(kc)*EXP(-rate*dt)
+
+          r_dist = SQRT(xmin(i,j)**2+ymin(i,j)**2)
+          rate   = 0.0
+
+          IF (ie == 1) THEN
+              IF (kc ==1 ) THEN 
+!                Cold plasmaspheric electrons. Dont' do pitch angle scattering,
+!                but compute refilling rates for the plasmasphere
+                 rate = - Plasmasphere_refill_rate (r_dist, doy, &
+                                      sunspot_number, eeta(i,j,kc), vm(i,j))
+                 eeta(i,j,kc) = eeta(i,j,kc)-rate*dt
+                 rate = 0.0
+               ELSE
+!                 Plasmasheet electrons, pitch-angle scattering loss rate:
+                  rate = Ratefn (fudgec(kc), alamc(kc), sini(i,j),&
+                                         bir (i,j), vm(i,j), mass_factor)
+               END IF
+          ELSE 
+!            Positive ions, compute charge-exchange rate is it is on:
+             IF (L_dktime) THEN
+              rate = Cexrat (ie, ABS(alamc(kc))*vm(i,j), &
+                                         R_dist, &
+                                         sunspot_number, dktime, &
+                                         irdk,inrgdk,isodk,iondk)
+              END IF
           END IF
+
+          eeta(i,j,kc) = Gntrp_2d (eeta2, isize, jsize, biold, bjold)*EXP(-rate*dt)
        END DO
        END DO
 !
@@ -3048,7 +3081,8 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
                                  dt, vcorot, vpar, v, &
                                  alamc, etac, eeta, vm, xmass, fudgec, ikflavc, sini,&
                                  alpha, beta, bir, dlam, dpsi, signbe, Ri, ie_ask )
-  USE Rcm_variables, ONLY : rprec
+  USE Rcm_variables, ONLY : rprec, sunspot_number, doy, rmin, L_dktime, xmin, ymin, &
+                            irdk,inrgdk,isodk,iondk, dktime
   IMPLICIT NONE
   INTEGER, INTENT (IN) :: isize, jsize, kcsize, i1, i2, j1, j2, iesize,n_gc
   INTEGER, INTENT (IN) :: imin_j(1-n_gc:jsize+n_gc), ikflavc (kcsize)
@@ -3059,6 +3093,9 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
   REAL(rprec), INTENT (IN OUT) :: eeta (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)  
   REAL(rprec), INTENT (IN) :: dt
   INTEGER, INTENT (IN) :: ie_ask
+
+  REAL (rprec) :: Plasmasphere_refill_rate, Cexrat
+
 !_____________________________________________________________________________
 !   Subroutine to advance eta distribution for a time step
 !   by using new CLAWPACK advection routines
@@ -3074,7 +3111,8 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
                   loc_djdt (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc), &
                   loc_Eta  (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc), &
                   loc_rate (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc), &
-                  didt, djdt, rate, mass_factor, fac
+                  fac      (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc), &
+                  didt, djdt, rate, mass_factor, r_dist
   INTEGER :: i, j, kc, ie
 !
   INTEGER :: CLAWiter, icut
@@ -3094,7 +3132,9 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
 !
   DO kc = 1, kcsize
 !
-     IF (ikflavc(kc) /= ie_ask) CYCLE 
+     ie = ikflavc(kc)
+
+     IF (ie /= ie_ask) CYCLE 
      mass_factor = SQRT (xmass(1)/xmass(ikflavc(kc)))
 !
      veff = v + vcorot -vpar + vm*alamc(kc)
@@ -3128,30 +3168,74 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
      END DO
      icut = icut + 5
 !
+     fac = 1.0E-3*signbe*bir*alpha*beta*dlam*dpsi*ri**2
+
      DO j = 1, jsize
         DO i = 1, isize-1
-           IF (i < imin_j(j)) CYCLE
-           fac = 1.0E-3*signbe*bir(i,j)*alpha(i,j)*beta(i,j)*dlam*dpsi*ri**2
-           IF (dvefdj(i-1,j) > 0.0 .AND. dvefdj(i,j) > 0.0) THEN
-              loc_didt (i,j) = dvefdj (i-1,j) / fac
-           ELSE IF (dvefdj(i-1,j) < 0.0 .AND. dvefdj(i,j) < 0.0) THEN
-              loc_didt (i,j) = dvefdj (i,j) / fac
-           ELSE
-              loc_didt (i,j) = 0.5*(dvefdj(i-1,j)+dvefdj(i,j))/fac
-           END IF
-           IF (dvefdi(i,j-1) < 0.0 .AND. dvefdi(i,j) < 0.0) THEN
-              loc_djdt (i,j) = - dvefdi (i,j-1) / fac
-           ELSE IF (dvefdi(i,j-1) > 0.0 .AND. dvefdi(i,j) > 0.0) THEN
-              loc_djdt (i,j) = - dvefdi (i,j) / fac
-           ELSE
-              loc_djdt (i,j) = - 0.5*(dvefdi(i,j-1)+dvefdi(i,j))/fac
-           END IF
+
+           IF (i <= imin_j(j)) CYCLE
+
+
+           ! ss, 04/19/2005--comment this out
+!$         IF (dvefdj(i-1,j) > 0.0 .AND. dvefdj(i,j) > 0.0) THEN
+!$            loc_didt (i,j) = dvefdj (i-1,j) / fac
+!$         ELSE IF (dvefdj(i-1,j) < 0.0 .AND. dvefdj(i,j) < 0.0) THEN
+!$            loc_didt (i,j) = dvefdj (i,j) / fac
+!$         ELSE
+!$            loc_didt (i,j) = 0.5*(dvefdj(i-1,j)+dvefdj(i,j))/fac
+!$         END IF
+!$         IF (dvefdi(i,j-1) < 0.0 .AND. dvefdi(i,j) < 0.0) THEN
+!$            loc_djdt (i,j) = - dvefdi (i,j-1) / fac
+!$         ELSE IF (dvefdi(i,j-1) > 0.0 .AND. dvefdi(i,j) > 0.0) THEN
+!$            loc_djdt (i,j) = - dvefdi (i,j) / fac
+!$         ELSE
+!$            loc_djdt (i,j) = - 0.5*(dvefdi(i,j-1)+dvefdi(i,j))/fac
+!$         END IF
+           ! ss, 04/19/2005--end of comment this out
+
+           loc_didt (i,j) = dvefdj (i-1,j) / fac(i-1,j)
+           loc_djdt (i,j) = - dvefdi (i,j-1) / fac(i-1,j)
+
+
            IF (i > icut) THEN   
               loc_didt(i,j) = 0.0
               loc_djdt(i,j) = 0.0
            END IF
-           loc_rate (i,j) = Ratefn (fudgec(kc), alamc(kc), sini (i,j),&
-                                    bir (i,j), vm (i,j), mass_factor)
+
+!$         loc_rate (i,j) = Ratefn (fudgec(kc), alamc(kc), sini (i,j),&
+!$                                  bir (i,j), vm (i,j), mass_factor)
+!          Determine the rate of loss for a given species:
+!
+           r_dist = SQRT(xmin(i,j)**2+ymin(i,j)**2)
+
+           IF (ie == 1) THEN
+              IF (kc == 1) THEN
+!                Cold Electrons (plasmasphere). No pitch-angle scattering,
+!                but account for the refilling from the ionosphere 
+!                rate is > 0, so don't use is as a loss term!!!
+                 if (i >= imin_j(j)) then
+                 loc_rate(i,j) = &
+                    Plasmasphere_refill_rate (rmin(i,j), doy, sunspot_number,&
+                                              eeta(i,j,kc), vm(i,j))
+!                eeta (i,j,kc) = eeta(i,j,kc)+(loc_rate(i,j)/eta_scale)*dt
+                 eeta (i,j,kc) = eeta(i,j,kc)+(loc_rate(i,j))*dt
+                 end if
+                 loc_rate(i,j) = 0.0
+              ELSE
+!                Plasmasheet electrons, strong pitch-angle scattering loss:
+                 loc_rate(i,j) = Ratefn (fudgec(kc), alamc(kc), sini(i,j),&
+                                           bir (i,j), vm(i,j), mass_factor)
+              END IF
+           ELSE 
+!             Positive ions, compute charge-exchange rate if it is on:
+              IF (L_dktime) THEN
+              loc_rate(i,j) = Cexrat (ie, ABS(alamc(kc))*vm(i,j), &
+                                           R_dist, &
+                                           sunspot_number, dktime, &
+                                           irdk,inrgdk,isodk,iondk)
+              END IF
+           END IF
+
         END DO
 !       eeta (1:imin_j(j)-1,j,kc) = etac (kc)
         loc_didt(isize,j) = loc_didt(isize-1,j)
@@ -3228,7 +3312,8 @@ END SUBROUTINE Move_plasma_grid_NEW
       SUBROUTINE Rcm_plasma_bc (iflag, i_where)
       USE Rcm_variables, ONLY : n_gc, isize, jsize, kcsize, &
                                 alamc, etac, ikflavc, eeta, xmass, &
-                                vm, Re, pi, imin_j, density, temperature
+                                vm, Re, pi, imin_j, density, temperature,&
+                                kmin, kmax
       IMPLICIT NONE
       INTEGER, INTENT (IN) :: iflag, i_where
 !
@@ -3251,7 +3336,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
       REAL :: kappa_e, kappa_i, N_e, N_i, Eavg_e, Eavg_i, E0_e, E0_i, &
               E_i, E_e, eta_bnd, press_pt_old, press_pt_new
-      INTEGER :: k, k_beg, k_end, j, i, i_start, i_stop
+      INTEGER :: k, k_beg, k_end, j, i, i_start, i_stop, k_offset, ie
       REAL :: delta_e (kcsize), energy (kcsize)
 !
 !
@@ -3263,16 +3348,7 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
 !     Ion (proton) boundary condition first:
 !
-      k_beg = 1
-      DO k = k_beg, kcsize
-         IF (ikflavc(k) == ikflavc(k_beg)) CYCLE
-         IF (k /= kcsize) THEN
-            k_end = k-1
-         ELSE
-            k_end = kcsize
-         END IF
-         EXIT
-      END DO
+      ie = 2; k_beg = kmin(ie); k_end = kmax (ie)
 !
 !
       DO j = 1, jsize
@@ -3305,19 +3381,36 @@ END SUBROUTINE Move_plasma_grid_NEW
          END DO
       END DO
 !
-!
-!     Second, the same for the electrons:
-!
-      k_beg = k_end + 1
-      DO k = k_beg, kcsize
-         IF (ikflavc(k) == ikflavc(k_beg).AND. k /= kcsize) CYCLE
-         IF (k /= kcsize) THEN
-            k_end = k-1
+
+!     Oxygen: currently, set it to negligible percentage:
+
+      ie = 3; k_beg = kmin(ie); k_end = kmax (ie)
+      k_offset = k_end - k_beg + 1
+
+
+      DO j = 1, jsize
+         i_start = imin_j(j)
+         IF (i_where == 1) THEN
+            i_stop = i_start
          ELSE
-            k_end = kcsize
+            i_stop = isize
          END IF
-         EXIT
+         DO i = i_start, i_stop
+            DO k = k_beg, k_end
+               eeta (i,j,k) = eeta (i,j,k-k_offset)*1.E-4
+            END DO
+         END DO
       END DO
+      DO k = k_beg, k_end
+      DO j = 1, jsize
+         eeta (1:imin_j(j)-1,j,k) = eeta(imin_j(j),j,k)
+      END DO
+      END DO
+
+!
+!     Third, the electrons:
+!
+      ie = 1; k_beg = kmin(ie)+1; k_end = kmax (ie)
 !
 !
       DO j = 1, jsize
@@ -3335,7 +3428,6 @@ END SUBROUTINE Move_plasma_grid_NEW
             E0_e      = Convert_Eavg_to_E0 (Eavg_e, kappa_e) ! in eV
             N_e       = density (i,j)
             E_e       = energy (k)
-!print*,i,j,k,E_e,E0_e,n_e
             eeta (i,j,k) = Jflux_kappa (N_e, xmass(1), E0_e, E_e, kappa_e) * &
                                        4.0 * pi * SQRT(xmass(1) / 2.0 / &
                                        (E_e*1.6E-19)) * &
@@ -3350,6 +3442,8 @@ END SUBROUTINE Move_plasma_grid_NEW
          eeta (1:imin_j(j)-1,j,k) = eeta(imin_j(j),j,k)
       END DO
       END DO
+
+      eeta (:,:,1) = 1.E+10
 !
 !
 !   Cut off high-energy particle pressure and re-distribute it to lower-energy channels:
@@ -3358,21 +3452,21 @@ END SUBROUTINE Move_plasma_grid_NEW
          DO i = imin_j(j), isize
 !
             press_pt_old = 0.0
-            DO k = 1, kcsize
+            DO k = 2, kcsize
                press_pt_old = 2./3.*ABS(alamc(k))*eeta(i,j,k) + press_pt_old
             END DO
              IF (press_pt_old < 1.0E-30) CYCLE
 !
-            DO k = 1, kcsize
+            DO k = 2, kcsize
                IF (ABS(alamc(k))*vm(i,j) > 200000.0) eeta (i,j,k) = 0.0
             END DO
 !
             press_pt_new = 0.0
-            DO k = 1, kcsize
+            DO k = 2, kcsize
                press_pt_new = 2./3.*ABS(alamc(k))*eeta(i,j,k) + press_pt_new
             END DO
 !
-            DO k = 1, kcsize
+            DO k = 2, kcsize
                eeta(i,j,k) = eeta(i,j,k) * (press_pt_old/press_pt_new)
             END DO
          END DO
@@ -3518,3 +3612,254 @@ END SUBROUTINE Move_plasma_grid_NEW
       END DO
       RETURN
       END SUBROUTINE Get_delta_E
+
+
+
+
+      FUNCTION Plasmasphere_refill_rate (r, doy, sunspot_number, eta_pt, vm_pt)
+      USE Rcm_variables, ONLY : rprec, iprec, trf
+      IMPLICIT NONE
+      REAL (rprec), INTENT (IN) :: r, doy, sunspot_number, eta_pt, vm_pt
+      REAL (rprec) :: Plasmasphere_refill_rate
+      REAL (rprec) :: Plasmasphere_den_CA92_sat
+!
+!     Compute Lambour et al refill rate for a given point at radial
+!     distance R that has flux tube content ETA_PT. The rate is
+!     d(eta)/dt = (ETA_sat - Eta_pt) / tau, where ETA_sat is the 
+!     saturated plasmasphere density, Eta_pt is current density, and 
+!     tau is the refilling time constant interpolated to given radial
+!     distance for given conditions. Rate is positive, but in the rcm
+!     advection scheme must be negative since this is treated as a loss term.
+!
+      INTEGER (iprec) :: irf
+      REAL (rprec) :: taurf, eta_sat
+!
+      DO irf = 1, 18
+         IF (r >= trf(irf,1) .AND. r <= trf(irf+1,1)) THEN
+             taurf = trf(irf,5)+ ((trf(irf+1,5)-trf(irf,5))/&
+                     (trf(irf+1,1)-trf(irf,1))*(r-trf(irf,1)))
+         END IF
+      END DO
+      IF (r > trf(19,1)) THEN
+          taurf = trf(19,5)+((trf(19,5)-trf(18,5))/(trf(19,1)-&
+                  trf(18,1)))*(r-trf(19,1))
+      END IF
+      IF (r < trf(1,1)) taurf = trf (1,5)
+      taurf = taurf * 86400.0 ! convert from days to seconds
+      eta_sat = 6.38E+21*vm_pt**(-1.5)* &
+                Plasmasphere_den_CA92_sat(r,doy,sunspot_number)
+      Plasmasphere_refill_rate = (eta_sat - eta_pt)/taurf
+      RETURN
+      END FUNCTION Plasmasphere_refill_rate
+
+
+
+!
+      FUNCTION Cexrat (isp,enrg,rloc,ssn,dktime,irdk,inrgdk,isoldk, &
+                       iondk)
+      USE Rcm_variables, ONLY : rprec
+      IMPLICIT NONE
+      INTEGER, INTENT (IN) :: isp, irdk, inrgdk, isoldk, iondk
+      REAL (rprec), INTENT (IN) :: enrg, rloc, ssn, dktime (irdk,inrgdk,isoldk,iondk)
+      REAL (rprec) :: Cexrat
+!
+!-------------------------------------------------------------------------
+!  copyright rice university, 1993
+!
+!  version 1.00                                 05.09.90
+!          2.00                                 02.04.90
+!                                       msm delivery version
+!          2.10                                 06.11.93
+!               error output routed to unit 9
+!
+!  programmer: r. w. spiro
+!
+!  purpose:  function subprogram to return charge exchange loss rate
+!          (sec**(-1)) for ions of species isp, energy enrg (ev) at
+!          l=rloc (re) for sunspot number ssn.  this routine is based
+!          on a table generated by james bishop of u. of michigan.
+!
+!  calling parameters
+!        isp       species identifier
+!                    isp=2 for h+ ions
+!                    isp=3 for o+ ions
+!        enrg      energy in ev
+!        rloc      radial location (re)
+!        ssn       sunspot number
+!        dktime    table of ion decay times
+!        irdk      radial dimension of dktime array
+!        inrgdk    energy dimension of dktime array
+!        isoldk    sunspot number dimension of dktime array
+!        iondk     number of ion species in dktime array
+!--------------------------------------------------------------------------------
+!
+      INTEGER, PARAMETER ::irsiz=18,inrgsz=13,isolsz=2,ionsiz=2
+      REAL ::  elgvec(inrgsz), rvec(irsiz),ssnvec(2), &
+               enrglg, br, bnrg, ssnuse, bssn, decayt, G3ntrp
+      INTEGER :: ispndx, ir, inrg
+!
+      DATA elgvec /2.50,2.75,3.00,3.25,3.50,3.75,4.00, &
+                   4.25,4.50,4.75,5.00,5.25,5.50/
+!
+      DATA rvec /1.50,2.00,2.50,3.00, &
+                 3.50,4.00,4.50,5.00, &
+                 5.50,6.00,6.50,7.00, &
+                 7.50,8.00,8.50,9.00, &
+                 9.50,10.00/
+!
+      DATA ssnvec /0.0,100./
+!
+!
+      IF (irsiz /= irdk .OR. inrgsz /= inrgdk .OR. &
+          ionsiz /= iondk .OR. isolsz /= isoldk) THEN
+         write(*,*) 'dimension error in function cexrat'
+         write(*,*) 'irdk,inrgdk,iondk,isoldk',irdk,inrgdk,iondk,isoldk
+         write(*,*) 'irsiz,inrgsz,ionsiz,isolsz',irsiz,inrgsz,ionsiz,isolsz
+         write(*,*) 'stopping program in cexrat'
+         STOP
+      END IF
+!
+      enrglg = LOG10(enrg) !  work with log10 of particle energy
+      ispndx=isp-1
+!
+      if_1: IF (rloc <= rvec(1)) THEN !  find br for interpolation
+         br=1.0
+      ELSE IF (rloc > rvec(irdk)) THEN
+         br=irdk
+      ELSE
+         do_1: DO ir=1,irdk-1
+            IF (rloc <= rvec(ir+1)) THEN
+               br=ir+(rloc-rvec(ir))/(rvec(ir+1)-rvec(ir))
+               EXIT do_1
+            END IF
+         END DO do_1
+      END IF if_1
+!
+      if_2: IF (enrglg.le.elgvec(1)) THEN !  find bnrg for interpolation
+         bnrg = 1.0
+      ELSE IF (enrglg > elgvec(inrgdk)) THEN
+         bnrg = inrgdk
+      ELSE
+         do_2: DO inrg=1,inrgdk-1
+            IF (enrglg <= elgvec(inrg+1)) THEN
+               bnrg=inrg+(enrglg-elgvec(inrg))/(elgvec(inrg+1)-elgvec(inrg))
+               EXIT do_2
+            END IF
+         END DO do_2
+      END IF if_2
+!
+!**********  change 9/30/91  *****************************************
+!  if ssn.gt.ssnvec(2), then use ssnvec(2) for ssn
+      ssnuse=ssn
+      IF (ssnuse > ssnvec(2)) ssnuse=ssnvec(2)
+!
+!*********  end change  9/30/91  ************************************
+!
+!  find bssn for interpolation
+      bssn=1.0+(ssnuse-ssnvec(1))/(ssnvec(2)-ssnvec(1))
+!
+!  decayt is decay time in seconds
+      decayt = G3ntrp (dktime(1,1,1,ispndx),irdk,inrgdk,isoldk,br,bnrg,bssn)
+!
+      IF (ABS(decayt) < 1.0E-20) THEN
+         write(*,*) 'decayt is less than 1.e-20 sec in cexrat'
+         write(*,*) 'decayt=',decayt,'  br=',br,'  bnrg=',bnrg,'bssn=',bssn
+         write(*,*) 'isp=',isp,'  enrg=',enrg,' rloc=',rloc,' ssn=',ssn
+         write(*,*) 'ssnuse=',ssnuse
+      END IF
+!
+!  to get charge exchange rate (sec**9-1)) cexrat, invert decayt
+!
+      cexrat=1.0/decayt
+      RETURN
+      END FUNCTION Cexrat
+!
+!
+      FUNCTION G3ntrp (a,imax,jmax,kmax,bi,bj,bk)
+      IMPLICIT NONE
+      INTEGER, INTENT (IN) :: imax, jmax, kmax
+      REAL, INTENT (IN) :: a(imax,jmax,kmax), bi, bj, bk
+      REAL :: G3ntrp
+!
+!---------------------------------------------------------------------------
+!  copyright Rice University, 1993
+!
+!  VERSION 1.00                            DATE: 01.11.88
+!          1.01A                                 02.02.89
+!          2.00  MSM DELIVERY VERSION            01.28.93
+!
+!  PURPOSE: FUNCTION SUBPROGRAM TO PERFORM A GENERAL 3-D LINEAR
+!           INTERPOLATION OF ARRAY A(I,J,K) AT PT(BV(1),BV(2),BV(3))
+!
+!  INPUT:
+!       A          3-D ARRAY TO BE INTERPOLATED
+!       IMAX       I DIMENSION OF ARRAY A
+!       JMAX       J DIMENSION OF ARRAY A
+!       KMAX       K DIMENSION OF ARRAY A
+!       BI         FLOATING POINT VALUE TO INTERPOLATE IN I DIMENSION
+!       BJ         FLOATING POINT VALUE TO INTERPOLATE IN J DIMENSION
+!       BK         FLOATING POINT VALUE TO INTERPOLATE IN K DIMENSION
+!
+!
+!  OUTPUT:
+!       G3NTRP     INTERPOLATED VALUES OF ARRAY A
+!----------------------------------------------------------------------
+!
+!
+      INTEGER ::  ndx(3),ndim(3), kstop, jstop, L, i, j, k
+      REAL ::  BV(3),COEF(3,2), fndx
+!
+      NDIM(1)=IMAX
+      NDIM(2)=JMAX
+      NDIM(3)=KMAX
+      BV(1)=BI
+      BV(2)=BJ
+      BV(3)=BK
+      DO L=1,3
+         NDX(L)=BV(L)
+         IF(NDX(L).LT.1) NDX(L)=1
+         IF(NDX(L).GT.NDIM(L)-1) NDX(L)=NDIM(L)-1
+         IF(NDX(L).LE.0) NDX(L)=1
+         FNDX=REAL(NDX(L))
+         COEF(L,1)=1.-BV(L)+FNDX
+         COEF(L,2)=BV(L)-FNDX
+      END DO
+!
+      G3NTRP=0.
+      kstop = MIN(KMAX,2)
+      jstop = MIN(JMAX,2)
+      DO I=1,2
+      DO J=1,jstop
+      DO K=1,kstop
+         G3ntrp=G3ntrp+ &
+          coef(1,i)*coef(2,j)*coef(3,k)*a(ndx(1)+i-1,ndx(2)+j-1,ndx(3)+k-1)
+      END DO
+      END DO
+      END DO
+!
+      RETURN
+      END FUNCTION G3ntrp
+!
+!
+!
+      FUNCTION Plasmasphere_den_CA92_sat (r, doy, sunspot_number)
+      USE Rcm_variables, ONLY : rprec, pi
+!
+!     Carpenter_and_Anderson_JGR_1992 saturated plasmaspheric density in cm-3
+!     as a function of radial distance, day of year, and mean monthly sunspot
+!     number. Reduced by 5% following Lambour (accounting for ISEE-1 off-equat
+!     location?) 
+!     Valid earthward of the plasmaspheric trough.
+!
+      IMPLICIT NONE
+      REAL (rprec), INTENT (IN) :: r, doy, sunspot_number
+      REAL (rprec) :: Plasmasphere_den_CA92_sat
+!
+      Plasmasphere_den_CA92_sat = 10.0_rprec**( &
+        (-0.3145*r+3.9043) + ( &
+           0.15*COS(2*pi*(doy+9)/365.) - 0.075*COS(4*pi*(doy+9)/365.) + &
+           0.00127*sunspot_number-0.0635) *EXP((2.-r)/1.5) &
+                                               )
+      Plasmasphere_den_CA92_sat = Plasmasphere_den_CA92_sat*0.95
+      RETURN
+      END FUNCTION Plasmasphere_den_CA92_sat

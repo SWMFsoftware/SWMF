@@ -319,6 +319,11 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      READ (LUN,*) itype_bf  ! 1 is interpolate for HV, 2--friction code
      READ (LUN,*) i_advect 
      READ (LUN,*) i_eta_bc
+!    READ (LUN,*) L_dktime, sunspot_number, f107, doy !f107 is monthly mean!
+      L_dktime = .FALSE.
+      sunspot_number = 125
+      f107           = 169
+      doy            = 90
      !
      CLOSE (UNIT = LUN)
      !
@@ -334,6 +339,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      CALL Read_eta_on_bndy ()
      CALL Read_qtcond ()
      CALL Read_winds ()
+     CALL Read_dktime (L_dktime)
+     CALL Read_trf ()
      !
      !                                                                       
      IF (iProc == 0) THEN
@@ -575,7 +582,7 @@ CONTAINS
     WRITE (LUN_2,'(T10,A,T20,G9.2)') 'dpsi=',dpsi
     WRITE (LUN_2,'(T10,A,T20,G9.2)') 're=',re
     WRITE (LUN_2,'(T10,A,T20,G9.2)') 're=',re
-    WRITE (LUN_2,'(T10,A,T20,2G9.2)') 'xmass',xmass
+    WRITE (LUN_2,'(T10,A,T20,3G9.2)') 'xmass',xmass
     WRITE (LUN_2,'(/T5,A)' ) 'PLASMA EDGES PARAMETERS:'
     DO k = 1, ksize
        WRITE (LUN_2,'(T10,A,I3,T25,A,I3,T40,A,G9.2,T60,A,ES9.2)')&

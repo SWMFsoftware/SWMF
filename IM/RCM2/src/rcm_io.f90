@@ -1619,6 +1619,72 @@ CONTAINS
 !
       RETURN
       END SUBROUTINE Wrap_around_ghostcells
+
+
+
+
+    SUBROUTINE Read_dktime (L_dktime)
+    USE Rcm_variables, ONLY : NameRcmDir, dktime, LUN
+    IMPLICIT NONE
+    LOGICAL, INTENT (IN) :: L_dktime
 !
 !
+    IF (L_dktime) THEN
+       OPEN (UNIT=LUN, FILE=trim(NameRcmDir)//'input/dktable', STATUS='OLD', ACTION='READ')
+       READ (LUN,800) dktime
+ 800   FORMAT (8(1X,1PE9.3))
+       CLOSE (LUN)
+    ELSE
+        dktime = 0.0
+    END IF
+    RETURN
+    END SUBROUTINE Read_dktime
+
+
+      SUBROUTINE Read_trf ()
+      USE Rcm_variables
+      IMPLICIT NONE
+      INTEGER (iprec) :: i
+      REAL (rprec) :: dtau
+!
+      OPEN (LUN, FILE=trim(NameRcmDir)//'input/trf.dat', STATUS='OLD')
+      DO i = 1, SIZE(trf,1)
+          READ (LUN,*) trf(i,1), trf(i,2), trf(i,3), trf(i,4)
+      END DO
+      CLOSE (LUN)
+!
+!     Now interpolate for given DOY and sunspot_number
+!
+      IF (doy >= 172 .AND. doy <= 355) THEN
+         dtau = doy-172.0
+         DO i = 1, 19
+            trf(i,5) = trf(i,2) + &
+             ((trf(i,3)-trf(i,2))/(355.-172.0))*dtau
+         END DO
+      ELSE 
+         IF (DOY < 172) THEN
+             dtau = doy + 10.0
+         ELSE
+             dtau = doy - 355.
+         END IF
+         DO i = 1, 19
+            trf(i,5) = trf(i,3) + &
+               ((trf(i,2)-trf(i,3))/183.)*dtau
+         END DO
+      END IF
+!
+      IF (sunspot_number >= 15.0 .AND. sunspot_number <= 165.) THEN
+          DO i = 1, 19
+             trf(i,5) = trf (i,4) + ((trf(i,5)-trf(i,4))/150.)*(sunspot_number-15.0)
+          END DO
+      ELSE
+          IF (sunspot_number < 15.0) THEN
+              trf(:,5) = trf(:,4)
+          END IF
+      END IF
+!   
+      RETURN
+      END SUBROUTINE Read_trf
+
+
 END MODULE Rcm_io

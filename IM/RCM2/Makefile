@@ -14,18 +14,18 @@ LIB:
 rundir:
 	mkdir ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; mkdir restartIN restartOUT input plots
-	cd ${IMDIR}/input; cp rcm* *.dat ${RUNDIR}/IM/
+	cd ${IMDIR}/input; cp rcm* *.dat dktable ${RUNDIR}/IM/
 	cd ${RUNDIR}/IM; mv rcmpcp_inp rcmkp_inp input/
 	cd ${RUNDIR}/IM; rm -f *_inp*
-	cd ${RUNDIR}/IM; mv elecoef.dat rcmcond rcmcrd* rcmlas1 input/
+	cd ${RUNDIR}/IM; mv dktable trf.dat elecoef.dat rcmcond rcmcrd* rcmlas1 input/
 	cd ${RUNDIR}/IM; touch rcm.printout rcm.index
 
 rundirSA:
 	mkdir ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; mkdir restartIN restartOUT input plots
-	cd ${IMDIR}/input; cp rcm* *.dat ${RUNDIR}/IM/
+	cd ${IMDIR}/input; cp rcm* *.dat dktable ${RUNDIR}/IM/
 	cd ${RUNDIR}/IM; mv *_inp* input/
-	cd ${RUNDIR}/IM; mv elecoef.dat rcmcond rcmcrd* rcmlas1 input/
+	cd ${RUNDIR}/IM; mv dktable trf.dat elecoef.dat rcmcond rcmcrd* rcmlas1 input/
 	cd ${RUNDIR}/IM; touch rcm.printout rcm.index
 
 clean:	install

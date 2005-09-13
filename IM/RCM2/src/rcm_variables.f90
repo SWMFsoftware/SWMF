@@ -44,14 +44,16 @@ MODULE Rcm_variables
        n_gc  = 2,   n_blk = 1, &
        isize =  78, &
        jsize =  48, &
-       iesize =   2, &
-       ksize = 150, kcsize = ksize, &
+       iesize =   3, &
+       kmin (iesize) = (/1,31, 116/), &
+       kmax (iesize) = (/30,115, 200/), &
+       ksize = 200, kcsize = ksize, &
        nptmax = 50000, &
        ncoeff =   5
     LOGICAL :: asci_flag = .TRUE.
 !
     REAL (rprec), PARAMETER :: &
-         xmass (iesize) = (/ 9.1E-31_rprec, 1.67E-27_rprec /), &
+         xmass (iesize) = (/ 9.1E-31_rprec, 1.67E-27_rprec, 16*1.67E-27_rprec /), &
          besu           = 3.0584E+4_rprec, &
          signbe         = 1.0_rprec, &
          romeca         = 0.0_rprec, &
@@ -59,6 +61,8 @@ MODULE Rcm_variables
          sgn (ksize)    = 1.0_rprec
 !
     INTEGER (iprec), PARAMETER :: ie_ele = 1, ie_prt = 2, ie_oxg = 3
+    CHARACTER (LEN=2), DIMENSION(3), PARAMETER :: species_char = &
+                          (/ 'e-', 'H+', 'O+' /)
 !
     TYPE :: label_def    !   Definition of the label structure, for I/O:
        INTEGER (iprec)   :: intg (20)
@@ -74,7 +78,7 @@ MODULE Rcm_variables
     END TYPE ellipse_def
 !
 !
-!   Grid info:C-Gymnastics
+!   Grid info:
     REAL (rprec) :: dlam, dpsi, Ri, Re, &
                     alpha (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     beta  (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
@@ -106,6 +110,12 @@ MODULE Rcm_variables
                     density     (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
     INTEGER (iprec) :: ikflavc (kcsize), i_advect, i_eta_bc
+    LOGICAL :: L_dktime
+    INTEGER (iprec), PARAMETER :: irdk=18, inrgdk=13, isodk=2, iondk=2
+    REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk), sunspot_number, f107, doy
+!          comment: allow doy to be floating in case will want to use fractionals
+!                   later (stanislav, 6/15/2003).
+    REAL (rprec), DIMENSION (19,5) :: trf !plasmasphere refilling rates, cm-3/day
 !
 !
 !   Magnetic field:

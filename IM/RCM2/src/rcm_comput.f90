@@ -309,6 +309,7 @@ ELSE IF (itype_bf == 1) THEN ! interpolate HV
   RETURN
 ELSE IF (itype_bf == 3) THEN
 ! Get Bfield from somewhere
+
 ELSE
 print*,itype_bf
    call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:ILLEGAL BFIELD TYPE IN GET_BFIELD')
