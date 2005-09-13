@@ -1,0 +1,145 @@
+<!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
+
+<commandList name="Rice Concvection Model: IM Component">
+
+<commandgroup name="Testing">
+
+<command name="STRICT">
+	<parameter name="UseStrict" type="logical" default="T" />
+
+#STRICT
+T                       UseStrict
+
+If true then stop when parameters are incompatible. If false, try to
+correct parameters and continue. Default is true, ie. strict mode.
+</command>
+
+</commandgroup>
+
+<commandgroup name="Output">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="ASCII">
+	<parameter name="IsAscii" type="logical" default="T"/>
+
+#ASCII
+T			IsAscii
+
+The input and output files for RCM can be either ascii or binary.
+Default value is true for ascii.
+
+</command>
+
+<command name="RCMDIR">
+	<parameter name="NameRcmDir" type="string" length="100" 
+						default="IM"/>
+
+#RCMDIR
+IM/Plots		NameRcmDir
+
+The NameRcmDir variable contains the name of the directory to store
+output files. Default value is "IM".
+
+</command>
+
+<command name="SAVEPLOT">
+	<parameter name="nFilesPlot" type="integer" min="0" max="9"
+		default="0" />
+	<for from="1" to="$nFilesPlot">
+		<parameter name="StringPlot" type="strings" min="3" max="3">
+			<part name="plotarea" type="string" input="select" 
+							required="T">
+				<option name="2D vars." value="2d"/>
+				<option name="2D vars." value="2D"/>
+				<option name="3D vars." value="3d" />
+				<option name="3D vars." value="3D" />
+			</part>
+			<part name="plotvar" type="string" input="select"
+								required="T">
+				<option name="minimum variables" value="min"/>
+				<option name="minimum variables" value="MIN"/>
+				<option name="maximum variables" value="max"/>
+				<option name="maximum variables" value="MAX"/>
+				<option name="normal variables" value="rcm"/>
+				<option name="normal variables" value="RCM"/>
+			</part>
+			<part name="plotformat" type="string" input="select" 
+								required="T">
+				<option value="tec" name="TECPLOT"/>
+				<option value="idl" name="IDL"    />
+			</part>
+		</parameter>
+		<parameter name="DnSavePlot" type="integer" min="-1" />
+		<parameter name="DtSavePlot" type="integer" min="-1" />
+	</for>
+#SAVEPLOT
+2			nFilesPlot
+RCM 2d tec		StringPlot
+100			DnSavePlot
+-1			DtSavePlot
+RCM 3d idl		StringPlot
+-1			DnSavePlot
+60			DtSavePlot
+
+! Default is nFilesPlot=0. \\
+!
+! \noindent
+! StringPlot must contain the following 3 parts in arbitrary order
+!\begin{verbatim}
+! plotvar plotarea plotformat
+!
+! plotarea   = '2d', '3d'
+! plotvar    = 'min', 'max', 'rcm'
+! plotformat = 'tec', 'idl'
+!\end{verbatim}
+!
+!\noindent
+! The plotarea string defines the region for the plots, 2d or 3d.
+! The plotvar string specifies which variables to write, either a minimum,
+! maximum, or typical values.
+! The plotformat specifies whether to output files for processing in either
+! Tecplot or Idl.
+! The plot_string is always followed by the plotting frequency
+! DnSavePlot and DtSavePlot, whether the run it time accurate or not.\\
+!
+
+</command>
+
+</commandgroup>
+
+<commandgroup name="TIME INTEGRATION">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!  TIME INTEGRATION PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="RESTART">
+	<parameter name="DoRestart" type="logical" default="F"/>
+	<rule expr="-f 'IM/restartIN/RCMrestart.rst' or not $DoRestart">
+		File IM/restartIN/RCMrestart.rst should exist!
+	</rule>
+
+#RESTART
+T			DoRestart
+
+The DoRestart parameter determines if the RCM starts from the restart
+files saved from a previous run, or from scratch via the standard input files.
+The default is DoRestart = .false.
+</command>
+	
+<command name="TIMESTEP">
+	<parameter name="iDtRcm" type="integer" min="1" default="5"/>
+
+#TIMESTEP
+5			iDtRcm
+
+The iDtRcm parameter defines the time step in seconds. The default
+value is 5 seconds.
+</command>
+
+</commandgroup>
+
+<rule expr="-d 'IM/restartOUT' or not $_IsFirstSession">
+	Directory IM/restartOUT should exist!
+</rule>
+
+</commandList>
