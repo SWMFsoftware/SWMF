@@ -125,6 +125,7 @@ install: ENV_CHECK mkdir
 	cd IE/Ridley_serial;	make install    #^CMP IF IE
 	cd IH/BATSRUS_share;	make install    #^CMP IF IH
 	cd IM/RCM;		make install    #^CMP IF IM
+	cd IM/RCM2;		make install    #^CMP IF IM
 	cd RB/RiceV5;		make install    #^CMP IF RB
 	cd SP/Kota;		make install    #^CMP IF SP
 	cd SP/FLAMPA;           make install    #^CMP IF SP
@@ -215,6 +216,7 @@ clean: ENV_CHECK
 	cd IH/BATSRUS_share;	make clean    #^CMP IF IH
 	cd IH/Empty;		make clean    #^CMP IF IH
 	cd IM/RCM;		make clean    #^CMP IF IM
+	cd IM/RCM2;		make clean    #^CMP IF IM
 	cd IM/Empty;		make clean    #^CMP IF IM
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/GITM2;		make clean    #^CMP IF UA
@@ -253,6 +255,7 @@ distclean_comp: ENV_CHECK rmdir
 	cd IH/BATSRUS_share;	make distclean    #^CMP IF IH
 	cd IH/Empty;		make distclean    #^CMP IF IH
 	cd IM/RCM;		make distclean    #^CMP IF IM
+	cd IM/RCM2;		make distclean    #^CMP IF IM
 	cd IM/Empty;		make distclean    #^CMP IF IM
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/GITM2;		make distclean    #^CMP IF UA
