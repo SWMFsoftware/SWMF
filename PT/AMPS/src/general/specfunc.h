@@ -10,6 +10,7 @@ double gam(double);
 
 void PrintErrorLog(char*);
 void StampSignature(char*);
+void exit(long int,char*,char* =NULL);
 
 
 template<class TMesh>

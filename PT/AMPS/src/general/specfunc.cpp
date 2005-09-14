@@ -106,3 +106,22 @@ void StampSignature(char* message) {
   delete [] buffer;
 }
 
+//===================================================
+//use: exit(__LINE__,__FILE__, "mesage")
+void exit(long int nline, char* fname, char* msg) { 
+  char str[1000];
+
+  if (msg==NULL) sprintf(str," exit: line=%d, file=%s\n",nline,fname);
+  else sprintf(str," exit: line=%d, file=%s, message=%s\n",nline,fname,msg); 
+
+  PrintErrorLog(str);
+  exit(0);
+}
+
+
+
+
+
+
+
+
