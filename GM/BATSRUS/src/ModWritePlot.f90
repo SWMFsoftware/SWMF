@@ -1301,7 +1301,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
              // '", "Y ' // trim(unitstr_TEC_x) &
              // '", "Z ' // trim(unitstr_TEC_x)
      else
-   	StringVarTec = 'VARIABLES = "X", "Y", "Z"'
+   	StringVarTec = 'VARIABLES = "X", "Y", "Z'
      end if
 
   end if
