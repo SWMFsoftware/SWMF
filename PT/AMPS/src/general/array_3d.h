@@ -36,7 +36,7 @@ public:
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
       printf("Error: allocation of array_3d object\n");
       printf("with negative number of elemens\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     } 
 
    try {
@@ -44,7 +44,7 @@ public:
    }
    catch (bad_alloc) {
      printf("Memory Error: array_3d() cannot allocate %i bytes\n", n0*n1*n2*sizeof(T));
-     exit(0);
+     exit(__LINE__,__FILE__);
    }
 
    size_dim0=n0;
@@ -80,12 +80,12 @@ public:
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
       printf("Error: allocation of array_3d object\n");
       printf("with negative number of elemens\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
    
     if (size_dim0!=0) {
       printf("Error: initialization of allocated of array_3d object\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
    try {
@@ -111,7 +111,7 @@ public:
     if ((n0<=0)||(n1<=0)||(n2<=0)) {
       printf("Error: reallocation of array_3d object\n");
       printf("with negative number of elemens\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
    try {
@@ -165,7 +165,7 @@ public:
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
       printf("Error: add two array_3d<T> of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -182,7 +182,7 @@ public:
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
       printf("Error: add two array_3d<T> of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -209,7 +209,7 @@ public:
   friend array_3d<T> operator / (const array_3d<T> &v1, const T t) {
     if (t == 0) {
       printf("Error: divide vector by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -226,7 +226,7 @@ public:
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -242,7 +242,7 @@ public:
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -267,7 +267,7 @@ public:
   friend array_3d<T>& operator /= (array_3d<T> &v1,const T t) {
     if (t == 0) {
       printf("Error: divide array_3d<T> by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -283,7 +283,7 @@ public:
     if ((v1.size_dim0!=v2.size_dim0)||
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     T* t;

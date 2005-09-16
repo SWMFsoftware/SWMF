@@ -67,7 +67,7 @@ bool GetGradient(double* gradQ,double cellQ,double* Q,long int ncell,TMesh &grid
     break;
   default:
     printf("Error: GetGradient. DIM=%i is not implemented\n",DIM);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   return true;

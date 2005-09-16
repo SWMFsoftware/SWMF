@@ -122,7 +122,7 @@ public:
 //==================================================
   void error(long int line) {
     printf("Error in reading of grid's file (line=%i)\n",line);
-    exit(0);
+    exit(__LINE__,__FILE__);
   };
 
 //==================================================
@@ -211,7 +211,7 @@ public:
 
     if (access(file_name,R_OK)!=0) {
       printf("Cannnot find the grid file: %s\n",file_name);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     fd=fopen(file_name,"r");
@@ -312,7 +312,7 @@ public:
     default :
       printf("Error: Cgrid::InitGridData()\n");
       printf("value of variable DIM is out range (DIM=%i)\n",DIM);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }  
 
     InitInterpolationData();
@@ -423,7 +423,7 @@ public:
       printf("Cannot find cell which contain point x=");
       for (idim=0;idim<DIM;idim++) printf("   %d",x[idim]);
       printf("\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }  
 
     return ncell;     
@@ -573,7 +573,7 @@ public:
       break;
     default :
       printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -598,7 +598,7 @@ public:
       break;
     default :
       printf("Error: proc. Cdsmc::ChangeLocalVector2D\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }  
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -630,7 +630,7 @@ public:
     if ((dn!=1)&&(dn!=-1)) {
       printf("Error: proc. Cgrid::ChangeLocalVector1D\n");
       printf("dn=%i\n",dn);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     a[0]=-a[0];
@@ -644,7 +644,7 @@ public:
     if ((dn!=1)&&(dn!=-1)) {
       printf("Error: proc. Cgrid::ChangeLocalPositionVector1D\n");
       printf("dn=%i\n",dn);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     a[0]=1.0-a[0];
@@ -723,7 +723,7 @@ public:
     default :
       printf("Error: proc. Cdsmc::grid.h,ChangeLocalVector3D\n");
       printf("dn=%i\n",dn);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -761,7 +761,7 @@ public:
       printf("dn=%i\n",dn);
     } while (true); 
 
-      //exit(0);
+      //exit(__LINE__,__FILE__);
     }
 
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];

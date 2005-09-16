@@ -24,7 +24,7 @@ public:
     }
     else {
        printf("CExternalFunction: nfuncs!=0 <=> repeated initialization\n");
-       exit(0);
+       exit(__LINE__,__FILE__);
     }
   };
 
@@ -51,11 +51,11 @@ public:
       func[fnum]=newfunc;
     else if (func==NULL) {
       printf("CExternalFunction::SetFunc: func=NULL\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     else {
       printf("CExternalFunction::SetFunc: func buffer overflow\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
   };
 
@@ -67,11 +67,11 @@ public:
       func[nattachedfuncs++]=newfunc;
     else if (func==NULL) {
       printf("CExternalFunction::SetFunc: func=NULL\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     else {
       printf("CExternalFunction::SetFunc: func buffer overflow\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
   };
 
@@ -85,7 +85,7 @@ public:
        sprintf(str,"template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
        PrintErrorLog(str);
 
-       exit(0);
+       exit(__LINE__,__FILE__);
     }
 
     return res;

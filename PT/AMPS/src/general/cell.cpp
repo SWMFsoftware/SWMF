@@ -63,7 +63,7 @@ void Ccell::InitCellNormal() {
     default :
       printf("proc. Ccell::InitCellNormal()\n");
       printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(0);
+      exit(__LINE__,__FILE__);
     } 
   } 
 }
@@ -176,7 +176,7 @@ void Ccell::RandomPosition(float* x) {
   default :
     printf("proc. Cface::RandomPosition()\n");
     printf("wrong DIM value: DIM=%i\n",DIM);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 }
 

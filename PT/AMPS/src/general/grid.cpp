@@ -45,7 +45,7 @@ void cutstr(char* dest, char* src)
 //==================================================
 void error(long int line) {
   printf("Error in reading of grid's file (line=%i)\n",line);
-  exit(0);
+  exit(__LINE__,__FILE__);
 }
 
 //==================================================
@@ -241,7 +241,7 @@ void Cgrid::InitGridData() {
   default :
     printf("Error: Cgrid::InitGridData()\n");
     printf("value of variable DIM is out range (DIM=%i)\n",DIM);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }  
 
   InitInterpolationData();
@@ -343,7 +343,7 @@ long int Cgrid::GetNCell(float* x) {
     printf("Cannot find cell which contain point x=");
     for (idim=0;idim<DIM;idim++) printf("  %e",x[idim]);
     printf("\n");
-    exit(0);
+    exit(__LINE__,__FILE__);
   }  
 
   return ncell;     
@@ -493,7 +493,7 @@ void Cgrid::ChangeLocalVector2D(float* a,char nb1,char nb2) {
     break;
   default :
     printf("Error: proc. grid.cpp::Cdsmc::ChangeLocalVector2D\n");
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -518,7 +518,7 @@ void Cgrid::ChangeLocalPositionVector2D(float* a,char nb1, char nb2) {
     break;
   default :
     printf("Error: proc. grid.cpp::Cdsmc::ChangeLocalPositionVector2D\n");
-    exit(0);
+    exit(__LINE__,__FILE__);
   }  
 
   for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -550,7 +550,7 @@ void Cgrid::ChangeLocalVector1D(float* a,char nb1,char nb2) {
   if ((dn!=1)&&(dn!=-1)) {
     printf("Error: proc. Cgrid::ChangeLocalVector1D\n");
     printf("dn=%i\n",dn);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   a[0]=-a[0];
@@ -564,7 +564,7 @@ void Cgrid::ChangeLocalPositionVector1D(float* a,char nb1,char nb2) {
   if ((dn!=1)&&(dn!=-1)) {
     printf("Error: proc. Cgrid::ChangeLocalPositionVector1D\n");
     printf("dn=%i\n",dn);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   a[0]=1.0-a[0];
@@ -665,7 +665,7 @@ void Cgrid::ChangeLocalVector3D(float* a,char nb1,char nb2) {
   default :
     printf("Error: proc. grid.cpp,Cdsmc::ChangeLocalVector3D\n");
     printf("dn=%i\n",dn);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
@@ -699,7 +699,7 @@ void Cgrid::ChangeLocalPositionVector3D(float* a,char nb1,char nb2) {
   default :
     printf("Error: proc. grid.cpp,Cdsmc::ChangeLocalPositionVector3D\n");
     printf("dn=%i\n",dn);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   for (idim=0;idim<DIM;idim++) a[idim]=b[idim];

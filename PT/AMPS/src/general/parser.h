@@ -21,7 +21,7 @@ void parser(char* BlockName,char* InputFile,T& v) {
 
   if (access(InputFile,R_OK)!=0) {
     printf("Cannot find the input file:%s\n",InputFile);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   fd=ifile.openfile(InputFile);
@@ -38,7 +38,7 @@ void parser(char* BlockName,char* InputFile,T& v) {
   }
 
   printf("Error: parser(char* BlockName,char* InputFile,T& v), cannot find block \"%s\"\n",BlockName);
-  exit(0);
+  exit(__LINE__,__FILE__);
 }
 
 #endif

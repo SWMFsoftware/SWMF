@@ -29,7 +29,7 @@ public:
     }
     catch (bad_alloc) {
       printf("Error: CMPI_channel::CMPI_channel(long) cannot allocate buffer\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     for (int thread=0;thread<TotalThreadsNumber;thread++) recvBuffer[thread]=NULL,recvptr[thread]=0,RecvDataLength[thread]=0; 
@@ -51,7 +51,7 @@ public:
   void openSend(int send) {
     if (sendBuffer!=NULL) {
       printf("CMPI_channel::openSend reinitialization of the send buffer\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }  
 
     try {
@@ -59,7 +59,7 @@ public:
     }
     catch (bad_alloc) {
       printf("Error: CMPI_channel::openSend cannot allocate send buffer, need %i bytes\n", max_MPIbuffer_size);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     sendptr=0,sendThread=send; 
@@ -120,7 +120,7 @@ public:
   void openRecv(int thread) { 
     if (recvBuffer[thread]!=NULL) {  
       printf("CMPI_channel::openRecv reinitialization of the recv buffer\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     try {
@@ -128,7 +128,7 @@ public:
     }
     catch (bad_alloc) {
       printf("Error: CMPI_channel::openRecv cannot allocate recv buffer, need %i bytes\n", max_MPIbuffer_size);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     recvptr[thread]=0;
@@ -144,7 +144,7 @@ public:
   void closeRecv(int thread) {
     if (recvptr[thread]!=RecvDataLength[thread]) {
       printf("Error: closeRecv: (recvptr[thread]!=RecvDataLength[thread]) for thread=%i\n",thread);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     delete [] recvBuffer[thread];

@@ -73,7 +73,7 @@ void GetInputStr(char* str,int n){
 //===================================================
 void error() {
   printf("Error in input file (line=%i)\n",line);
-  exit(0);
+  exit(__LINE__,__FILE__);
 }
 
 //===================================================
@@ -177,7 +177,7 @@ void parser(char* InputFile) {
 
   if (access(InputFile,R_OK)!=0) {
     printf("Cannot find the input file:%s\n",InputFile);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   fd=fopen(InputFile,"r");
@@ -242,7 +242,7 @@ void parser_readGeneralBlock(char* InputFile) {
 
   if (access(InputFile,R_OK)!=0) {
     printf("Cannot find the input file:%s\n",InputFile);
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   fd=ifile.openfile(InputFile);
@@ -258,7 +258,7 @@ void parser_readGeneralBlock(char* InputFile) {
   }
 
   printf("Error: void parser_readGeneralBlock(char* InputFile), cannot find #GENERAL block \n");
-  exit(0);
+  exit(__LINE__,__FILE__);
 }
 
 

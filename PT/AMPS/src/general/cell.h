@@ -121,7 +121,7 @@ public:
       default :
         printf("proc. Ccell::InitCellNormal()\n");
         printf("wrong DIM value: DIM=%i\n",DIM);
-        exit(0);
+        exit(__LINE__,__FILE__);
       } 
     } 
   }; 
@@ -137,7 +137,7 @@ public:
     case 0 :
       printf("Error: Ccell::Measure()\n");
       printf("measure_value dor DIM=0 is not defined\n");
-      exit(0); 
+      exit(__LINE__,__FILE__); 
 
       break;
     case 1 :
@@ -242,7 +242,7 @@ public:
     default :
       printf("proc. Cface::RandomPosition()\n");
       printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
   }; 
 

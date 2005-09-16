@@ -29,7 +29,7 @@ public:
   void init(long int n) {
   if (data.size()!=0) {
     printf("Error: initialization of allocated array_1d object\n");
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
   data=vector<T>(n,0); 
   return;
@@ -87,7 +87,7 @@ public:
   friend array_1d<T> operator + (const array_1d<T> &v1,const array_1d<T> &v2) {
     if (v1.data.size()!=v2.data.size()) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     array_1d<T> v3(v1.data.size());
     for (long int i=0;i<v1.data.size();i++) v3.data[i]=v1.data[i]+v2.data[i];
@@ -98,7 +98,7 @@ public:
   friend array_1d<T> operator - (const array_1d<T> &v1,const array_1d<T> &v2) {
     if (v1.data.size()!=v2.data.size()) {
       printf("Error: subtract two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     array_1d<T> v3(v1.data.size());
     for (long int i=0;i<v1.data.size();i++) v3.data[i]=v1.data[i]-v2.data[i];
@@ -116,7 +116,7 @@ public:
   friend array_1d<T> operator / (const array_1d<T> &v1, const T t) {
     if (t == 0) {
       printf("Error: divide vector by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     array_1d<T> v3(v1.data.size());
     for (long int i=0;i<v1.data.size();i++) v3.data[i]=v1.data[i]/t;
@@ -127,7 +127,7 @@ public:
   friend array_1d<T>& operator += (array_1d<T> &v1,const array_1d<T> &v2) {
     if (v1.data.size()!=v2.data.size()) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     for (long int i=0;i<v1.data.size();i++) v1.data[i]+=v2.data[i];
     return v1;
@@ -137,7 +137,7 @@ public:
   friend array_1d<T>& operator -= (array_1d<T> &v1,const array_1d<T> &v2) {
     if (v1.data.size()!=v2.data.size()) {
       printf("Error: subtract two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     for (long int i=0;i<v1.data.size();i++) v1.data[i]-=v2.data[i];
     return v1;
@@ -153,7 +153,7 @@ public:
   friend array_1d<T>& operator /= (array_1d<T> &v1,const T t) {
     if (t == 0) {
       printf("Error: divide vector by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     for (long int i=0;i<v1.data.size();i++) v1.data[i]/=t;
     return v1;
@@ -162,7 +162,7 @@ public:
   friend T dot_product (const array_1d<T> &v1,const array_1d<T> &v2) {
     if (v1.data.size()!=v2.data.size()) {
       printf("Error: dot product of two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     T d=0;
     for (long int i=0;i<v1.data.size();i++) d+=v1.data[i]*v2.data[i];
@@ -174,7 +174,7 @@ public:
   const array_1d<T> &v2) {
     if ((v1.data.size()!=3)||(v2.data.size()!=3)) {
       printf("Error: cross product of non-3D vectors.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     array_1d<T> v3(3);
@@ -191,7 +191,7 @@ public:
 
     if ((v1.data.size()!=3)||(v2.data.size()!=3)||(v3.data.size()!=3)) {
       printf("Error: mix product of non-3D vectors.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     res=v1.data[0]*(v2.data[1]*v3.data[2]-v3.data[1]*v2.data[2]);
     res-=v1.data[1]*(v2.data[0]*v3.data[2]-v3.data[0]*v2.data[2]);

@@ -112,7 +112,7 @@ public:
     default : 
       printf("proc. Cface::Measure()\n"); 
       printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     return measure;
@@ -144,7 +144,7 @@ public:
     default :
       printf("proc. Cface::RandomPosition()\n");
       printf("wrong DIM value: DIM=%i\n",DIM);
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
   };

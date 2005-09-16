@@ -37,7 +37,7 @@ public:
     if ((n0<=0)||(n1<=0)||(n2<=0)||(n3<=0)) {
       printf("Error: allocation of array_4d object\n");
       printf("with negative number of elemens\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     } 
 
    data=new T[n0*n1*n2*n3];
@@ -55,12 +55,12 @@ public:
     if ((n0<=0)||(n1<=0)||(n2<=0)||(n3<=0)) {
       printf("Error: allocation of array_4d object\n");
       printf("with negative number of elemens\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
    
     if (size_dim0!=0) {
       printf("Error: initialization of allocated of array_4d object\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
    data=new T[n0*n1*n2*n3];
@@ -109,7 +109,7 @@ public:
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)
     ||(v1.size_dim3!=v2.size_dim3)) {
       printf("Error: add two array_4d<T> of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -127,7 +127,7 @@ public:
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)
     ||(v1.size_dim3!=v2.size_dim3)) {
       printf("Error: add two array_4d<T> of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax; 
@@ -154,7 +154,7 @@ public:
   friend array_4d<T> operator / (const array_4d<T> &v1, const T t) {
     if (t == 0) {
       printf("Error: divide vector by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
     long int i,imax;
     array_4d<T> v3(v1.size_dim0,v1.size_dim1,v1.size_dim2,v1.size_dim3);
@@ -171,7 +171,7 @@ public:
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2) 
     ||(v1.size_dim3!=v2.size_dim3)) {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -188,7 +188,7 @@ public:
     (v1.size_dim1!=v2.size_dim1)||(v1.size_dim2!=v2.size_dim2)
     ||(v1.size_dim3!=v2.size_dim3))  {
       printf("Error: add two vectors of different length.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
@@ -213,7 +213,7 @@ public:
   friend array_4d<T>& operator /= (array_4d<T> &v1,const T t) {
     if (t == 0) {
       printf("Error: divide array_4d<T> by 0.\n");
-      exit(0);
+      exit(__LINE__,__FILE__);
     }
 
     long int i,imax;
