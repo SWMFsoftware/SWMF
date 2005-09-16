@@ -206,10 +206,10 @@ endif
 ; Extract coordinate variables from xx to take derivatives:
 case ndim of
    1:begin
-      x=xx
+      x=xx & y=0 & z=0
    end
    2:begin
-      x=xx(*,*,0) & y=xx(*,*,1)
+      x=xx(*,*,0) & y=xx(*,*,1) & z=0
    end
    3:begin
       x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
@@ -248,9 +248,15 @@ case f of
   ; pressure, plazma beta, temperature, entropy
   'pbeta'    : result=2*p/bb
   'T'        : result=p/rho
-  'T_SC'     : result=1.211E-8*p/rho   ; amu/kB* (dyne/cm^2) / (g/cm^3)
-  'T_IH'     : result=1.211E-8*p/rho   ; amu/kB* (dyne/cm^2) / (g/cm^3)
-  'T_GM'     : result=7.243E+7*p/rho   ; amu/kB * nPa / (amu/cm^3)
+  'T_SC'     : result=1.211E-8*p/rho       ; amu/kB* (dyne/cm^2) / (g/cm^3)
+  'T_IH'     : result=1.211E-8*p/rho       ; amu/kB* (dyne/cm^2) / (g/cm^3)
+  'T_GM'     : result=7.243E+7*p/rho       ; amu/kB * nPa / (amu/cm^3)
+  'n_IH'     : begin
+      result = rho/1.67e-24          ; n = rho/amu in CGS
+      loc=where(x^2+y^2+z^2 le 400.,count) ; exclude r<20
+      if count gt 0 then result(loc)=0.0
+  end
+  'n_SC'     : result=rho/1.67e-27     ; n = rho/amu
   's'        : result=p/rho^gamma
   ; sound speed, Mach number
   'csound'   :result=sqrt(gamma*p/rho)
