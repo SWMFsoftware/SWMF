@@ -21,7 +21,7 @@ module CON_session
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax
-  use ModFreq, ONLY: is_time_to
+  use ModFreq, ONLY: is_time_to, FreqType
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
 
   implicit none
