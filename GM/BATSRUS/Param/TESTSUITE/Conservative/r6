@@ -1,8 +1,0 @@
-#NONCONSERVATIVE
-T			UseNonConservative
-
-#CONSERVATIVECRITERIA
-1			nConservCrit
-r			TypeConservCrit_I
-6.0			rConserv
-
