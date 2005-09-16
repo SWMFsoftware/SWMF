@@ -3,20 +3,25 @@
 !==========================================================================
 !==========================================================================
 module ModMPNodes
+
   use ModMain, ONLY : nI,nJ,nK, nBLK, iNewGrid, iNewDecomposition
+
+  implicit none
+
+  save
 
   integer :: numSendRecv, numSend, numRecv, numCopy
   integer :: numSendRecvMax=0, numSendMax=0, numRecvMax=0, numCopyMax=0
 
-  integer, dimension(:),   allocatable, save :: &
+  integer, dimension(:),   allocatable :: &
        nSend, nRecv, nSendStart, nRecvStart
-  integer, dimension(:,:), allocatable, save :: &
+  integer, dimension(:,:), allocatable :: &
        VSendI, VRecvI, VSendIlocal, VRecvIlocal
 
-  integer, dimension(0:nI,0:nJ,0:nK,nBLK), save :: NodeCount
-  real,    dimension(0:nI,0:nJ,0:nK,nBLK,8),save :: V
+  integer, dimension(0:nI,0:nJ,0:nK,nBLK) :: NodeCount
+  real,    dimension(0:nI,0:nJ,0:nK,nBLK,8) :: V
 
-  real,    dimension(:),   allocatable, save :: VSend, VRecv
+  real,    dimension(:),   allocatable :: VSend, VRecv
 
   integer :: iLastGrid = -1, iLastDecomposition = -1
   integer :: itag, lS(0:7), lR(5), nSends
@@ -48,7 +53,7 @@ subroutine message_pass_nodes
 
   !Local variables
   real :: Counter
-  integer :: i,j,k, iV,iBLK,iPE, iError
+  integer :: i,j,k, iV,iBLK, iPE, iError
   integer :: nSENDrequests, SENDrequests(maxMessages)
   integer :: nRECVrequests, RECVrequests(maxMessages)
   integer :: MESGstatus(MPI_STATUS_SIZE, maxMessages)
@@ -1093,18 +1098,19 @@ end subroutine set_block_hanging_nodes
 subroutine assign_node_numbers
   use ModProcMH
   use ModIO, ONLY: write_prefix, iUnitOut
-  use ModMain, ONLY : lVerbose, nBlockALL
+  use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL
   use ModOctree
-  use ModParallel, ONLY : iBlock_A, iProc_A
-  use ModImplicit, ONLY : UsePartImplicit   !^CFG IF IMPLICIT
+  use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
   use ModNodes
   use ModMPNodes
   use ModMpi
   implicit none
 
-  integer :: i,j,k, iNode, iBLK,iPE, iBlockALL, NodesPerBlock, iError
-  integer :: iNodeNumber
-  integer, allocatable, dimension(:) :: NodeOffset,NodeOffsetMax
+  integer, parameter :: NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
+  integer :: iBlockStart
+  integer :: i, j, k, iNode, iBLK, iError
+  integer :: nOffset, nOffsetPrevious
+  integer, allocatable, dimension(:) :: NodeOffset, NodeOffsetMax, nOffset_P
 
   !------------------------------------------
 
@@ -1115,35 +1121,33 @@ subroutine assign_node_numbers
 
   ! Initialize all node numbers to zero
   NodeNumberLocal_IIIB=0
-  NodeUniqueGlobal_IIIB = .false.
 
   ! Number of nodes on each block (maximum)
-  NodesPerBlock=(nI+1)*(nJ+1)*(nK+1)
   nNodeALL=nBlockALL*NodesPerBlock
 
+  ! Count number of used blocks on all processors with rank less than this one
+  iBlockStart = 0
+  if(iProc > 0) iBlockStart = &
+       count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+
+  iNode = iBlockStart*NodesPerBlock
+
   ! Loop to assign local and global node numbers
-  TREE1: do iBlockALL  = 1, nBlockALL
-     iBLK = iBlock_A(iBlockALL)
-     iPE  = iProc_A(iBlockALL)
-     if(iProc==iPE)then
-        iNode=0
-        do k=0,nK; do j=0,nJ; do i=0,nI
-           iNode = iNode+1
-           NodeNumberLocal_IIIB(i,j,k,iBLK)= (iBlockALL-1)*NodesPerBlock + iNode
-        end do; end do; end do
-     end if
+  TREE1: do iBlk  = 1, nBlock
+     if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+     do k=0,nK; do j=0,nJ; do i=0,nI
+        iNode = iNode+1
+        NodeNumberLocal_IIIB(i,j,k,iBlk)= iNode
+     end do; end do; end do
   end do TREE1
   NodeNumberGlobal_IIIB = NodeNumberLocal_IIIB
-  where(NodeNumberGlobal_IIIB>0)
-     NodeUniqueGlobal_IIIB=.true.
-  end where
 
-  ! Return without removing redundant nodes when using partial implicit  !^CFG IF IMPLICIT
-  if(UsePartImplicit) return                                             !^CFG IF IMPLICIT
+  ! Set logical array
+  NodeUniqueGlobal_IIIB = NodeNumberGlobal_IIIB>0
 
   ! Assign value to internal passing variable and do message pass
   !  NOTE: convert integer to real for message pass first
-  V(:,:,:,:,1) = real(NodeNumberGlobal_IIIB(:,:,:,:))+0.1
+  V(:,:,:,:,1) = real(NodeNumberGlobal_IIIB(:,:,:,:))
   call message_pass_nodes
 
   ! Put minimum value back into NodeNumberGlobal_IIIB
@@ -1153,60 +1157,82 @@ subroutine assign_node_numbers
      if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
      do i=0,nI; do j=0,nJ; do k=0,nK
         if(NodeCount(i,j,k,iBLK)>1) &
-             NodeNumberGlobal_IIIB(i,j,k,iBLK) = int(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
+             NodeNumberGlobal_IIIB(i,j,k,iBLK) = &
+             nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
      end do; end do; end do
   end do
 
   !Allocate memory for storing the node offsets
-  allocate( NodeOffset   (nBlockALL*NodesPerBlock), stat=iError ); call alloc_check(iError,"NodeOffset")
-  allocate( NodeOffsetMax(nBlockALL*NodesPerBlock), stat=iError ); call alloc_check(iError,"NodeOffsetMax")
+  allocate( NodeOffset   (nBlockALL*NodesPerBlock), stat=iError)
+  call alloc_check(iError,"NodeOffset")
+  allocate( NodeOffsetMax(nBlockALL*NodesPerBlock), stat=iError)
+  call alloc_check(iError,"NodeOffsetMax")
   NodeOffset=0
 
   ! Loop to compute node offsets
-  iNode=0
-  TREE2: do iBlockALL  = 1, nBlockALL
-     iBLK = iBlock_A(iBlockALL)
-     iPE  = iProc_A(iBlockALL)
-     if(iProc==iPE)then
-        do k=0,nK; do j=0,nJ; do i=0,nI
-           if(NodeNumberLocal_IIIB(i,j,k,iBLK) > NodeNumberGlobal_IIIB(i,j,k,iBLK))then
-              iNode = iNode+1
-              NodeUniqueGlobal_IIIB(i,j,k,iBLK) = .false.
-           end if
-           NodeOffset(NodeNumberLocal_IIIB(i,j,k,iBLK)) = iNode
-        end do; end do; end do
-     end if
-     ! Broadcast out updated iNode and NodeOffset
-     call MPI_Bcast(iNode,1,MPI_Integer,iPE,iComm,iError)
+  nOffset=0
+  TREE2: do iBLK  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=0,nK; do j=0,nJ; do i=0,nI
+        if(NodeNumberLocal_IIIB(i,j,k,iBLK) &
+             > NodeNumberGlobal_IIIB(i,j,k,iBLK))then
+           nOffset = nOffset+1
+           NodeUniqueGlobal_IIIB(i,j,k,iBLK) = .false.
+        end if
+        NodeOffset(NodeNumberLocal_IIIB(i,j,k,iBLK)) = nOffset
+     end do; end do; end do
   end do TREE2
-  call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock,MPI_INTEGER,MPI_MAX,iComm,iError)
-  NodeOffset=NodeOffsetMax
-  nNodeALL=nNodeALL-iNode
+
+  ! Collect offsets from all the PEs
+  allocate(nOffset_P(0:nProc-1))
+  call MPI_allgather(nOffset, 1, MPI_INTEGER, nOffset_P, 1, MPI_INTEGER, &
+       iComm, iError)
+
+  ! Add up the offsets on processors with lower rank
+  nOffsetPrevious = 0
+  if(iProc > 0) nOffsetPrevious = sum(nOffset_P(0:iProc-1))
+
+  ! Increase the offset on this processor by nOffsetPrevious
+  do iBLK  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=0,nK; do j=0,nJ; do i=0,nI
+        iNode = NodeNumberLocal_IIIB(i,j,k,iBLK)
+        NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
+     end do; end do; end do
+  end do
+
+  ! Gather offsets from all PE-s. NodeOffset is initialized to 0.
+  call MPI_allreduce(NodeOffset,NodeOffsetMax,nBlockALL*NodesPerBlock, &
+       MPI_INTEGER,MPI_MAX,iComm,iError)
+  NodeOffset = NodeOffsetMax
+  nNodeALL   = nNodeALL - sum(nOffset_P)
 
   ! Loop to fix NodeNumberGlobal_IIIB for offset
-  TREE3: do iBlockALL  = 1, nBlockALL
-     iBLK = iBlock_A(iBlockALL)
-     iPE  = iProc_A(iBlockALL)
-     if(iProc==iPE)then
-        do k=0,nK; do j=0,nJ; do i=0,nI
-           NodeNumberGlobal_IIIB(i,j,k,iBLK)= NodeNumberGlobal_IIIB(i,j,k,iBLK)- &
+  TREE3: do iBlk  = 1, nBlock
+     if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
+     do k=0,nK; do j=0,nJ; do i=0,nI
+        NodeNumberGlobal_IIIB(i,j,k,iBLK) = NodeNumberGlobal_IIIB(i,j,k,iBLK) &
+             - NodeOffset(NodeNumberGlobal_IIIB(i,j,k,iBLK))
+        if(NodeNumberGlobal_IIIB(i,j,k,iBLK)>nNodeALL &
+             .or. NodeNumberGlobal_IIIB(i,j,k,iBLK)<1)then
+           ! Error in numbering, report values and stop.
+           write(*,*)'ERROR: Global node numbering problem.', &
+                ' PE=',iProc,' BLK=',iBLK,' ijk=',i,j,k
+           write(*,*)'  NodeNumberGlobal_IIIB=',&
+                NodeNumberGlobal_IIIB(i,j,k,iBLK)
+           write(*,*)'  NodeOffset           =',&
                 NodeOffset(NodeNumberGlobal_IIIB(i,j,k,iBLK))
-           if(NodeNumberGlobal_IIIB(i,j,k,iBLK)>nNodeALL .or. NodeNumberGlobal_IIIB(i,j,k,iBLK)<1)then
-              ! Error in numbering, report values and stop.
-              write(*,*)'ERROR: Global node numbering problem.', &
-                   ' PE=',iPE,' BLK=',iBLK,' iBlockALL=',iBlockALL,' ijk=',i,j,k
-              write(*,*)'  NodeNumberGlobal_IIIB=',NodeNumberGlobal_IIIB(i,j,k,iBLK)
-              write(*,*)'  nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
-                   ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
-              call stop_mpi('message_pass_nodes: error in numbering')
-           end if
-        end do; end do; end do
-     end if
+           write(*,*)'  nBlockALL=',nBlockALL,&
+                ' NodesPerBlock=',NodesPerBlock,&
+                ' unreduced total=',nBlockALL*NodesPerBlock,&
+                ' nNodeALL=',nNodeALL
+           call stop_mpi('message_pass_nodes: error in numbering')
+        end if
+     end do; end do; end do
   end do TREE3
 
   ! Deallocate memory when done with it
-  deallocate(NodeOffset)
-  deallocate(NodeOffsetMax)
+  deallocate(NodeOffset, NodeOffsetMax, nOffset_P)
 
   ! Write information to the screen
   if(iProc==0)then

@@ -7,7 +7,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   !       etc.
   !
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, &
+  use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
        nOrder, limiter_type,betalimiter, UseRotatingBc, &
        TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
@@ -15,7 +15,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
        Body_rho_dim, g
-  use ModAdvance, ONLY : FluxType
+  use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModIO
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -74,42 +74,39 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
              ', F=FEPOINT, ET=BRICK'
         call write_auxdata
      end if
-     do iBlockALL  = 1, nBlockALL
-        iBLK = iBlock_A(iBlockALL)
-        iPE  = iProc_A(iBlockALL)
-        if(iProc==iPE)then
-           !================================= 3d ============================
-           ! Write point values
-           do k=0,nK; do j=0,nJ; do i=0,nI
-              if(NodeUniqueGlobal_IIIB(i,j,k,iBLK))then
-                 if (plot_dimensional(ifile)) then
-                    write(unit_tmp,fmt="(30(E14.6))") &
-                         NodeX_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                         NodeY_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                         NodeZ_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                         PlotVarNodes(i,j,k,iBLK,1:nplotvar)
-                 else
-                    write(unit_tmp,fmt="(30(E14.6))") &
-                         NodeX_IIIB(i,j,k,iBLK), &
-                         NodeY_IIIB(i,j,k,iBLK), &
-                         NodeZ_IIIB(i,j,k,iBLK), &
-                         PlotVarNodes(i,j,k,iBLK,1:nplotvar)
-                 end if
+     !================================= 3d ============================
+     do iBLK = 1, nBlock
+        if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+        ! Write point values
+        do k=0,nK; do j=0,nJ; do i=0,nI
+           if(NodeUniqueGlobal_IIIB(i,j,k,iBLK))then
+              if (plot_dimensional(ifile)) then
+                 write(unit_tmp,fmt="(30(E14.6))") &
+                      NodeX_IIIB(i,j,k,iBLK)*unitUSER_x, &
+                      NodeY_IIIB(i,j,k,iBLK)*unitUSER_x, &
+                      NodeZ_IIIB(i,j,k,iBLK)*unitUSER_x, &
+                      PlotVarNodes(i,j,k,iBLK,1:nplotvar)
+              else
+                 write(unit_tmp,fmt="(30(E14.6))") &
+                      NodeX_IIIB(i,j,k,iBLK), &
+                      NodeY_IIIB(i,j,k,iBLK), &
+                      NodeZ_IIIB(i,j,k,iBLK), &
+                      PlotVarNodes(i,j,k,iBLK,1:nplotvar)
               end if
-           end do; end do; end do
-           ! Write point connectivity
-           do k=1,nK; do j=1,nJ; do i=1,nI
-              write(unit_tmp2,'(8(i8,1x))') &
-                   NodeNumberGlobal_IIIB(i-1,j-1,k-1,iBLK), &
-                   NodeNumberGlobal_IIIB(i  ,j-1,k-1,iBLK), &
-                   NodeNumberGlobal_IIIB(i  ,j  ,k-1,iBLK), &
-                   NodeNumberGlobal_IIIB(i-1,j  ,k-1,iBLK), &
-                   NodeNumberGlobal_IIIB(i-1,j-1,k  ,iBLK), &
-                   NodeNumberGlobal_IIIB(i  ,j-1,k  ,iBLK), &
-                   NodeNumberGlobal_IIIB(i  ,j  ,k  ,iBLK), &
-                   NodeNumberGlobal_IIIB(i-1,j  ,k  ,iBLK)
-           end do; end do; end do
-        end if
+           end if
+        end do; end do; end do
+        ! Write point connectivity
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           write(unit_tmp2,'(8(i8,1x))') &
+                NodeNumberGlobal_IIIB(i-1,j-1,k-1,iBLK), &
+                NodeNumberGlobal_IIIB(i  ,j-1,k-1,iBLK), &
+                NodeNumberGlobal_IIIB(i  ,j  ,k-1,iBLK), &
+                NodeNumberGlobal_IIIB(i-1,j  ,k-1,iBLK), &
+                NodeNumberGlobal_IIIB(i-1,j-1,k  ,iBLK), &
+                NodeNumberGlobal_IIIB(i  ,j-1,k  ,iBLK), &
+                NodeNumberGlobal_IIIB(i  ,j  ,k  ,iBLK), &
+                NodeNumberGlobal_IIIB(i-1,j  ,k  ,iBLK)
+        end do; end do; end do
      end do
   case('cut','x=0','y=0','z=0')
      !================================ cut ============================
