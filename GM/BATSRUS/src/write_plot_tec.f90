@@ -165,18 +165,24 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                  do k=0,nK; do j=0,nJ
                     if (plot_dimensional(ifile)) then
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+factor2*NodeX_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+factor2*NodeY_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+factor2*NodeZ_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeX_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeY_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeZ_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
                             (factor1*PlotVarNodes(cut1,j,k,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
                     else
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+factor2*NodeX_IIIB(cut2,j,k,iBLK)), &
-                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+factor2*NodeY_IIIB(cut2,j,k,iBLK)), &
-                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+factor2*NodeZ_IIIB(cut2,j,k,iBLK)), &
+                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeX_IIIB(cut2,j,k,iBLK)), &
+                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeY_IIIB(cut2,j,k,iBLK)), &
+                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+ &
+                             factor2*NodeZ_IIIB(cut2,j,k,iBLK)), &
                             (factor1*PlotVarNodes(cut1,j,k,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
                     end if
                  end do; end do
                  ! Write point connectivity
@@ -240,18 +246,24 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                  do k=0,nK; do i=0,nI
                     if (plot_dimensional(ifile)) then
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+factor2*NodeX_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+factor2*NodeY_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+factor2*NodeZ_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeX_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeY_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
+                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeZ_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
                             (factor1*PlotVarNodes(i,cut1,k,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
                     else
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+factor2*NodeX_IIIB(i,cut2,k,iBLK)), &
-                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+factor2*NodeY_IIIB(i,cut2,k,iBLK)), &
-                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+factor2*NodeZ_IIIB(i,cut2,k,iBLK)), &
+                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeX_IIIB(i,cut2,k,iBLK)), &
+                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeY_IIIB(i,cut2,k,iBLK)), &
+                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+ &
+                             factor2*NodeZ_IIIB(i,cut2,k,iBLK)), &
                             (factor1*PlotVarNodes(i,cut1,k,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
                     end if
                  end do; end do
                  ! Write point connectivity
@@ -315,18 +327,24 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
                  do j=0,nJ; do i=0,nI
                     if (plot_dimensional(ifile)) then
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+factor2*NodeX_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+factor2*NodeY_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+factor2*NodeZ_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
+                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeX_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
+                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeY_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
+                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeZ_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
                             (factor1*PlotVarNodes(i,j,cut1,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
                     else
                        write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+factor2*NodeX_IIIB(i,j,cut2,iBLK)), &
-                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+factor2*NodeY_IIIB(i,j,cut2,iBLK)), &
-                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+factor2*NodeZ_IIIB(i,j,cut2,iBLK)), &
+                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeX_IIIB(i,j,cut2,iBLK)), &
+                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeY_IIIB(i,j,cut2,iBLK)), &
+                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+ &
+                             factor2*NodeZ_IIIB(i,j,cut2,iBLK)), &
                             (factor1*PlotVarNodes(i,j,cut1,iBLK,1:nplotvar)+ &
-                            factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
+                             factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
                     end if
                  end do; end do
                  ! Write point connectivity
@@ -341,6 +359,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            end if
         end do
      end if
+     deallocate(BlockCut)
   case default
      write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
   end select
@@ -358,7 +377,7 @@ contains
 
     !BODYDENSITY
     write(stmp,'(f12.2)')Body_rho_dim
-    write(unit_tmp,'(a,a,a)') 'AUXDATA RBODY="',trim(adjustl(stmp)),'"'
+    write(unit_tmp,'(a,a,a)') 'AUXDATA BODYDENSITY="',trim(adjustl(stmp)),'"'
 
     !^CFG IF BORISCORR BEGIN
     !BORIS
