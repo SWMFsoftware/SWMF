@@ -1963,6 +1963,9 @@ subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
   real:: Temp_Ratio,TempCell,DegFrmCell
   real:: DegF_Modulation,Dens_Modulation,Temp_Modulation
   !---------------------------------------------------------------------------
+  ! Set MaxB0 stuff
+  MaxB0_1 = Bnot/unitUSER_B
+  MaxB0_2 = 2.00E+01/unitUSER_B
   !\
   ! Get cell coordinates and radial distance from the Sun::
   !/
@@ -2119,7 +2122,6 @@ subroutine user_initial_perturbation
   real:: rho_GL98,p_GL98
   real:: Bx_GL98,By_GL98,Bz_GL98
   real:: Dens_BLK,Pres_BLK,Gamma_BLK
-  real, external:: maxval_BLK
   real, dimension(3):: R_GL98_D,B_GL98_D
   real, dimension(3):: R_TD99_D,B_TD99_D,U_TD99  ! To include TD99 flux rope.
   real:: Rho_TD99=cZero                          ! To include TD99 flux rope.
@@ -2142,32 +2144,7 @@ subroutine user_initial_perturbation
   !/
   Rbody  = cOne
   Mrope_GL98 = cZero
-  !\
-  ! Set the value of MaxB0_1 and MaxB0_2::
-  !/
-  if (UseUserB0) then
-     MaxB0_1 = Bnot/unitUSER_B
-     MaxB0_2 = 2.00E+01/unitUSER_B
-  else
-     !\
-     ! Find the maximum value of B0 at time zero::
-     !/
-     do iBLK=1,nBLK
-        if (unusedBLK(iBLK)) CYCLE
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           if (R_BLK(i,j,k,iBLK) >= cOne) then
-              tmp1_BLK(i,j,k,iBLK) = sqrt(    &
-                   B0xCell_BLK(i,j,k,iBLK)**2+&
-                   B0yCell_BLK(i,j,k,iBLK)**2+&
-                   B0zCell_BLK(i,j,k,iBLK)**2)
-           else
-              tmp1_BLK(i,j,k,iBLK) = cZero
-           endif
-        enddo; enddo; enddo
-     end do
-     MaxB0_1 = maxval_BLK(nProc,tmp1_BLK)
-     MaxB0_2 = MaxB0_1
-  endif
+ 
   InvH0 = cGravitation*Msun/Rsun/unitSI_U**2
   do iBLK=1,nBLK
      if (unusedBLK(iBLK)) CYCLE   
