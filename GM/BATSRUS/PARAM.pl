@@ -241,6 +241,32 @@ T               IsRotAxisPrimary
 F               IsMagAxisPrimary
 
 but much shorter.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'GEOMETRY COMMANDS'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! GEOMETRY COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+','type' => 't'},{'attrib' => {'if' => '$_IsFirstSession and $_IsStandAlone','name' => 'VERTEXBASEDGRID'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseVertexBasedGrid'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#VERTEXBASEDGRID
+F                         UseVertexBasedGrid
+
+For a vertex-based logically cartesian (spherical, cylindircal) grid 
+(UseVertexBasedGrid=.true.) the node coordinates are defined
+in terms of an arbitrary pointwide transformation of nodes of an 
+original cartesian (spherical,cylindrical) block adaptive grid.
+Advantage: the possiblity to use the arbitrary transformation.
+Disadvantages: the cell center coordinates can not be definied unambigously
+and the difference of the state variables across the face does not evaluate
+the gradient in the direction, normal to this face (stricly speaking).
+Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
+Advantage: for some particular geometries (spherical, cylindrical) the 
+control volumes are the Voronoy cells (any face is perpendicular to the line
+connecting the centers of the neighboring cells). 
+Disadvantages: even in these particular cases it is not easy to properly 
+define the face area vectors at the resolution change. More general 
+cell-centered grid either is not logically cartesian, or does not consist of 
+the Voronoy cells only.
+
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'USER DEFINED INPUT'},'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
