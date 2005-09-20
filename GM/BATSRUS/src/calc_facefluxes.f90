@@ -132,12 +132,12 @@ subroutine calc_electric_field(iBlock)
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
-
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK !^CFG IF CARTESIAN
+ 
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
-
+  !^CFG IF CARTESIAN BEGIN
   ! E_x=(fy+fy-fz-fz)/4
   Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
        ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
@@ -158,5 +158,5 @@ subroutine calc_electric_field(iBlock)
        + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
        ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
        + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
-
+  !^CFG END CARTESIAN
 end subroutine calc_electric_field
