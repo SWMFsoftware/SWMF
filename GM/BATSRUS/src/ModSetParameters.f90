@@ -508,6 +508,28 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('yMaxCut',plot_range(4,ifile))
               call read_var('zMinCut',plot_range(5,ifile))
               call read_var('zMaxCut',plot_range(6,ifile))
+           elseif(index(plot_string,'ptn')>0)then
+              plot_area='ptn'
+              call read_var('xMinCut',plot_range(1,ifile))
+              call read_var('xMaxCut',plot_range(2,ifile))
+              call read_var('yMinCut',plot_range(3,ifile))
+              call read_var('yMaxCut',plot_range(4,ifile))
+              call read_var('zMinCut',plot_range(5,ifile))
+              call read_var('zMaxCut',plot_range(6,ifile))
+              call read_var('xPoint',plot_point(1,ifile))
+              call read_var('yPoint',plot_point(2,ifile))
+              call read_var('zPoint',plot_point(3,ifile))
+              call read_var('xNormal',plot_normal(1,ifile))
+              call read_var('yNormal',plot_normal(2,ifile))
+              call read_var('zNormal',plot_normal(3,ifile))
+           elseif(index(plot_string,'dpl')>0)then
+              plot_area='dpl'
+              call read_var('xMinCut',plot_range(1,ifile))
+              call read_var('xMaxCut',plot_range(2,ifile))
+              call read_var('yMinCut',plot_range(3,ifile))
+              call read_var('yMaxCut',plot_range(4,ifile))
+              call read_var('zMinCut',plot_range(5,ifile))
+              call read_var('zMaxCut',plot_range(6,ifile))
            elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
               iPlotFile = iFile - Plot_
               plot_area='lin'

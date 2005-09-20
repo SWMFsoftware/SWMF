@@ -82,6 +82,12 @@ Module ModIO
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,maxfile) :: plot_range 
 
+  ! x, y, z point for arbitrary slice plotting
+  real, dimension(3,maxfile) :: plot_point
+
+  ! x, y, z normal vector for arbitrary slice plotting
+  real, dimension(3,maxfile) :: plot_normal
+
   ! dx resolution for equidistant plotting
   real, dimension(3,maxfile) :: plot_dx
 

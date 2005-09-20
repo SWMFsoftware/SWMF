@@ -1842,6 +1842,10 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 				<option value="sph" />
 				<option value="los" />
 				<option value="lin" />
+				<option value="ptn" 
+					if="$plotform =~ /\btec\b/"/>
+				<option value="dpl" 
+					if="$plotform =~ /\btec\b/"/>
 				<option value="cut" 
 					if="$plotform =~ /\bidl\b/"/>
 			</part>
@@ -1883,6 +1887,28 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" />
 		<parameter name="DtSavePlot" type="real"    min="-1" />
+		<if expr="$plotarea =~ /\bptn\b/">
+			<parameter name="xMinCut" type="real" />
+			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
+			<parameter name="yMinCut" type="real" />
+			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
+			<parameter name="zMinCut" type="real" />
+			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
+			<parameter name="xPoint"  type="real" />
+			<parameter name="yPoint"  type="real" />
+			<parameter name="zPoint"  type="real" />
+			<parameter name="xNormal" type="real" />
+			<parameter name="yNormal" type="real" />
+			<parameter name="zNormal" type="real" />
+		</if>
+		<if expr="$plotarea =~ /\bdpl\b/">
+			<parameter name="xMinCut" type="real" />
+			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
+			<parameter name="yMinCut" type="real" />
+			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
+			<parameter name="zMinCut" type="real" />
+			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
+		</if>
 		<if expr="$plotarea =~ /\bcut\b/">
 			<parameter name="xMinCut" type="real" />
 			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
@@ -1941,8 +1967,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		</if>
 	</for>
 #SAVEPLOT
-6			nPlotfile
-3d MHD tec		StringPlot ! 3d MHD data
+8			nPlotfile
+3d  MHD tec		StringPlot ! 3d MHD data
 100			DnSavePlot
 -1.			DtSavePlot
 y=0 VAR idl		StringPlot ! y=0 cut
@@ -1993,6 +2019,30 @@ F			IsParallel
 1.0			yStartLine
 -3.5			zStartLine
 T			IsParallel
+dpl MHD tec		StringPlot  ! dipole tilt cut plot, ONLY WORKS WITH tec
+-1			DnSavePlot
+10.			DtSavePlot
+-10.			xMinCut
+ 10.			xMaxCut
+-10.			yMinCut
+ 10.			yMaxCut
+-10.			zMinCut
+ 10.			zMaxCut
+ptn MHD tec		StringPlot  ! point-normal cut plot, ONLY WORKS WITH tec
+-1			DnSavePlot
+10.			DtSavePlot
+-10.			xMinCut
+ 10.			xMaxCut
+-10.			yMinCut
+ 10.			yMaxCut
+-10.			zMinCut
+ 10.			zMaxCut
+ 0.			xPoint
+ 0.			yPoint
+ 0.			zPoint
+  0.			xNormal
+  0.			yNormal
+  1.			zNormal
 
 ! Default is nPlotFile=0. \\
 !
@@ -2001,7 +2051,7 @@ T			IsParallel
 !\begin{verbatim}
 ! plotarea plotvar plotform
 !
-! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'sph', 'los', 'lin'
+! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'ptn', 'sph', 'los', 'lin'
 ! plotvar  = 'mhd', 'ful','raw', 'ray', 'flx', 'sol', 'var' - unitless output
 ! plotvar  = 'MHD', 'FUL','RAW', 'RAY', 'FLX', 'SOL', 'VAR' - dimensional
 ! plotform = 'tec', 'idl'
@@ -2016,6 +2066,8 @@ T			IsParallel
 ! z=0	- full z=0 plane: zmin=-0.001, zmax=0.001, average for symmetry plane
 ! 3d	- full 3D volume
 ! cut	- READ PLOTRANGE FROM PARAM.in, slightly different behavior for idl / Tec
+! dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
+! ptn   - cut plane given point and normal, uses PLOTRANGE to clip plot
 ! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
 ! los   - line of sight integrated plot
 ! lin   - one dimensional plot along a field or stream line
@@ -2049,7 +2101,8 @@ T			IsParallel
 ! Depending on StringPlot, further information is read from the parameter file
 ! in this order:
 !\begin{verbatim}
-! PlotRange		if plotarea is 'cut'
+! PlotRange		if plotarea is 'cut', 'dpl', or 'ptn'
+! Point,Normal		if plotarea is 'ptn'
 ! DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
 ! Radius		if plotarea is 'sph'
 ! NameVars		if plotform is 'var'
@@ -2062,7 +2115,7 @@ T			IsParallel
 ! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
 ! in the postprocessing.\\
 !
-! For Tecplot (tec) file, plot range is read but only 1 dimension is used.  
+! For Tecplot (tec) file and 'cut', Plotrange is read but only 1 dimension is used.  
 ! Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
 ! implemented.  For x=constant, for example, the y and z ranges 
 ! do not matter as long at they are "wider" than the x range.  The slice will be 
@@ -2076,6 +2129,21 @@ T			IsParallel
 !  10.			yMaxCut
 ! -10.			zMinCut
 !  10.			zMaxCut
+!\end{verbatim}
+!
+! The 'dpl' and 'ptn' Tecplot plots use Plotrange like the IDL plots, and will
+! clip the cut plane when it exits the defined box.
+!
+! \noindent
+! Point is described by the coordinate of any point on the cut plane, often the origin.
+! Normal is the coordinate of a vector normal to the plane.  If the normal in any given
+! coordinate direction is less than 0.01, then no cuts are computed for cell edges
+! parallel to that coordinate direction.  For example, the following would result in
+! only computing cuts on cell edges parallel to the Z axis.
+!\begin{verbatim}
+!  0.0			xNormal
+!  0.0			yNormal
+!  1.0			zNormal
 !\end{verbatim}
 !
 ! \noindent

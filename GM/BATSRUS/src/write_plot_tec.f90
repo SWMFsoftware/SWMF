@@ -38,6 +38,11 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   character (len=80) :: format
 
   integer :: iTime0_I(7),iTime_I(7)
+
+  integer ic,ic1,ic2, jc,jc1,jc2, kc,kc1,kc2, nCuts, nCutsTotal
+  real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
+  real, dimension(0:nI,0:nJ,0:nK,3) :: NodeXYZ_III
+  logical :: okdebug
   !----------------------------------------------------------------------------
 
   call set_oktest('write_plot_tec',oktest,oktest_me)
@@ -360,11 +365,206 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
         end do
      end if
      deallocate(BlockCut)
+  case('ptn','dpl')
+     !================================ arbitrary slices ===============
+     okdebug=.false.
+
+     ! XarbP,YarbP,ZarbP                    point on plane
+     ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
+     ! ic1,jc1,kc1,ic2,jc2,kc2              two opposite corner indices
+
+     if (plot_type1(1:3)=='ptn')then
+        !Point-Normal cut plot
+        XarbP=plot_point(1,ifile); XarbNormal=plot_normal(1,ifile)
+        YarbP=plot_point(2,ifile); YarbNormal=plot_normal(2,ifile)
+        ZarbP=plot_point(3,ifile); ZarbNormal=plot_normal(3,ifile)
+     else
+        !Dipole cut plot
+        XarbP=0.; XarbNormal=-sin(ThetaTilt)
+        YarbP=0.; YarbNormal=0.
+        ZarbP=0.; ZarbNormal= cos(ThetaTilt)
+     end if
+
+     ! First loop to count cuts
+     nBlockCuts=0
+     do iBLK = 1, nBlock
+        if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+        ic1=0; ic2=nI 
+        jc1=0; jc2=nJ
+        kc1=0; kc2=nK
+        call find_cuts(-1)
+        if ( nCuts>0 )then
+           !count up number of cuts
+           do i=1,nI; do j=1,nJ; do k=1,nK
+              ic1=i-1; ic2=i 
+              jc1=j-1; jc2=j
+              kc1=k-1; kc2=k
+              call find_cuts(0)
+              nBlockCuts=nBlockCuts+nCuts
+           end do; end do; end do
+        end if
+     end do
+     call MPI_reduce(nBlockCuts,nCutsTotal,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
+
+     ! Write file header
+     if(iProc==0)then
+        if (plot_type1(1:3)=='ptn')then
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Point-Normal Cut, '//textDateTime//'"'
+           write(unit_tmp,'(a)')trim(unitstr_TEC)
+           write(unit_tmp,'(a,i8,a)') &
+                'ZONE T="PT-N Cut '//textNandT//'", I=',nCutsTotal,', J=1, K=1, F=POINT'
+        else
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Dipole Cut, '//textDateTime//'"'
+           write(unit_tmp,'(a)')trim(unitstr_TEC)
+           write(unit_tmp,'(a,i8,a)') &
+                'ZONE T="Dipole Cut '//textNandT//'", I=',nCutsTotal,', J=1, K=1, F=POINT'
+        end if
+        call write_auxdata
+     end if
+
+     ! Now loop to write values
+     do iBLK = 1, nBlock
+        if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+        ic1=0; ic2=nI 
+        jc1=0; jc2=nJ
+        kc1=0; kc2=nK
+        call find_cuts(-1)
+        if ( nCuts>0 )then
+           if (plot_dimensional(ifile)) then
+              NodeXYZ_III(:,:,:,1)=NodeX_IIIB(:,:,:,iBLK)*unitUSER_x
+              NodeXYZ_III(:,:,:,2)=NodeY_IIIB(:,:,:,iBLK)*unitUSER_x
+              NodeXYZ_III(:,:,:,3)=NodeZ_IIIB(:,:,:,iBLK)*unitUSER_x
+           else
+              NodeXYZ_III(:,:,:,1)=NodeX_IIIB(:,:,:,iBLK)
+              NodeXYZ_III(:,:,:,2)=NodeY_IIIB(:,:,:,iBLK)
+              NodeXYZ_III(:,:,:,3)=NodeZ_IIIB(:,:,:,iBLK)
+           end if
+           ! write the cuts
+           do i=1,nI; do j=1,nJ; do k=1,nK
+              ic1=i-1; ic2=i 
+              jc1=j-1; jc2=j
+              kc1=k-1; kc2=k
+              call find_cuts(1)
+           end do; end do; end do
+        end if
+     end do
   case default
      write(*,*)'Error in write_plot_tec: Unknown plot_type='//plot_type1
   end select
 
 contains
+
+  ! iopt =-1 check all edges to see if cut
+  !      = 0 count cuts only
+  !      = 1 find cuts and write to disk
+  subroutine find_cuts(iopt)
+    integer, intent(in) :: iopt
+    integer :: ic,jc,kc
+
+    nCuts=0
+
+    !Check edges.
+    ! X edges
+    if (XarbNormal>0.01) then
+       ic=ic1; jc=jc1; kc=kc1
+       do jc=jc1,jc2,jc2-jc1; do kc=kc1,kc2,kc2-kc1
+          if(iopt>-1 .and. (jc==jc1 .or. kc==kc1) .and. (jc/=0 .and. kc/=0)) CYCLE
+          Yp=NodeY_IIIB(ic,jc,kc,iBLK)
+          Zp=NodeZ_IIIB(ic,jc,kc,iBLK)
+          Xp=XarbP-( YarbNormal*(Yp-YarbP) + ZarbNormal*(Zp-ZarbP) )/XarbNormal
+          if ( Xp> NodeX_IIIB(ic1,jc,kc,iBLK) .and. &
+               Xp<=NodeX_IIIB(ic2,jc,kc,iBLK) )then
+             if(okdebug)write(*,*)'x-cut:',iopt,Xp,Yp,Zp
+             if(iopt==-1)then
+                nCuts=1; RETURN
+             end if
+             ! Cycle if outside of clipping box
+             if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
+                  Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+             nCuts=nCuts+1
+             if (iopt>0) then
+                ! Write point values
+                factor2=(Xp-NodeX_IIIB(ic1,jc,kc,iBLK))/ &
+                     (NodeX_IIIB(ic2,jc,kc,iBLK)-NodeX_IIIB(ic1,jc,kc,iBLK))
+                factor1=1.-factor2
+                write(unit_tmp,fmt="(30(E14.6))") &
+                     (factor1*NodeXYZ_III( ic1,jc,kc,:)+ &
+                      factor2*NodeXYZ_III( ic2,jc,kc,:)), &
+                     (factor1*PlotVarNodes(ic1,jc,kc,iBLK,1:nplotvar)+ &
+                      factor2*PlotVarNodes(ic2,jc,kc,iBLK,1:nplotvar))
+                if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
+             end if
+          end if
+       end do; end do
+    end if
+    ! Y edges
+    if (YarbNormal>0.01) then
+       ic=ic1; jc=jc1; kc=kc1
+       do ic=ic1,ic2,ic2-ic1; do kc=kc1,kc2,kc2-kc1
+          if(iopt>-1 .and. (ic==ic1 .or. kc==kc1) .and. (ic/=0 .and. kc/=0)) CYCLE
+          Xp=NodeX_IIIB(ic,jc,kc,iBLK)
+          Zp=NodeZ_IIIB(ic,jc,kc,iBLK)
+          Yp=YarbP-( XarbNormal*(Xp-XarbP) + ZarbNormal*(Zp-ZarbP) )/YarbNormal
+          if ( Yp> NodeY_IIIB(ic,jc1,kc,iBLK) .and. &
+               Yp<=NodeY_IIIB(ic,jc2,kc,iBLK) )then
+             if(okdebug)write(*,*)'y-cut:',iopt,Xp,Yp,Zp
+             if(iopt==-1)then
+                nCuts=1; RETURN
+             end if
+             ! Cycle if outside of clipping box
+             if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
+                  Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+             nCuts=nCuts+1
+             if (iopt>0) then
+                ! Write point values
+                factor2=(Yp-NodeY_IIIB(ic,jc1,kc,iBLK))/ &
+                     (NodeY_IIIB(ic,jc2,kc,iBLK)-NodeY_IIIB(ic,jc1,kc,iBLK))
+                factor1=1.-factor2
+                write(unit_tmp,fmt="(30(E14.6))") &
+                     (factor1*NodeXYZ_III( ic,jc1,kc,:)+ &
+                      factor2*NodeXYZ_III( ic,jc2,kc,:)), &
+                     (factor1*PlotVarNodes(ic,jc1,kc,iBLK,1:nplotvar)+ &
+                      factor2*PlotVarNodes(ic,jc2,kc,iBLK,1:nplotvar))
+                if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
+             end if
+          end if
+       end do; end do
+    end if
+    ! Z edges
+    if (ZarbNormal>0.01) then
+       ic=ic1; jc=jc1; kc=kc1
+       do ic=ic1,ic2,ic2-ic1; do jc=jc1,jc2,jc2-jc1
+          if(iopt>-1 .and. (ic==ic1 .or. jc==jc1) .and. (ic/=0 .and. jc/=0)) CYCLE
+          Xp=NodeX_IIIB(ic,jc,kc,iBLK)
+          Yp=NodeY_IIIB(ic,jc,kc,iBLK)
+          Zp=ZarbP-( XarbNormal*(Xp-XarbP) + YarbNormal*(Yp-YarbP) )/ZarbNormal
+          if ( Zp> NodeZ_IIIB(ic,jc,kc1,iBLK) .and. &
+               Zp<=NodeZ_IIIB(ic,jc,kc2,iBLK) )then
+             if(okdebug)write(*,*)'z-cut:',iopt,Xp,Yp,Zp
+             if(iopt==-1)then
+                nCuts=1; RETURN
+             end if
+             ! Cycle if outside of clipping box
+             if ( Xp<xmin .or. Yp<ymin .or. Zp<zmin .or. &
+                  Xp>xmax .or. Yp>ymax .or. Zp>zmax) CYCLE
+             nCuts=nCuts+1
+             if (iopt>0) then
+                ! Write point values
+                factor2=(Zp-NodeZ_IIIB(ic,jc,kc1,iBLK))/ &
+                     (NodeZ_IIIB(ic,jc,kc2,iBLK)-NodeZ_IIIB(ic,jc,kc1,iBLK))
+                factor1=1.-factor2
+                write(unit_tmp,fmt="(30(E14.6))") &
+                     (factor1*NodeXYZ_III( ic,jc,kc1,:)+ &
+                      factor2*NodeXYZ_III( ic,jc,kc2,:)), &
+                     (factor1*PlotVarNodes(ic,jc,kc1,iBLK,1:nplotvar)+ &
+                      factor2*PlotVarNodes(ic,jc,kc2,iBLK,1:nplotvar))
+                if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
+             end if
+          end if
+       end do; end do
+    end if
+
+  end subroutine find_cuts
 
   subroutine write_auxdata
     character(len=8)  :: real_date
