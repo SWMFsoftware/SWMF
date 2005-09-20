@@ -151,6 +151,7 @@ of the included file or PARAM.in file is equivalent with an
 
 </commandgroup>
 
+
 <commandgroup name="PLANET COMMANDS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -344,6 +345,41 @@ but much shorter.
 </command>
 
 </commandgroup>
+
+<!-- ^CFG IF NOT CARTESIAN BEGIN -->
+
+<commandgroup name="GEOMETRY COMMANDS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! GEOMETRY COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
+
+#VERTEXBASEDGRID
+F                         UseVertexBasedGrid
+
+For a vertex-based logically cartesian (spherical, cylindircal) grid 
+(UseVertexBasedGrid=.true.) the node coordinates are defined
+in terms of an arbitrary pointwide transformation of nodes of an 
+original cartesian (spherical,cylindrical) block adaptive grid.
+Advantage: the possiblity to use the arbitrary transformation.
+Disadvantages: the cell center coordinates can not be definied unambigously
+and the difference of the state variables across the face does not evaluate
+the gradient in the direction, normal to this face (stricly speaking).
+Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
+Advantage: for some particular geometries (spherical, cylindrical) the 
+control volumes are the Voronoy cells (any face is perpendicular to the line
+connecting the centers of the neighboring cells). 
+Disadvantages: even in these particular cases it is not easy to properly 
+define the face area vectors at the resolution change. More general 
+cell-centered grid either is not logically cartesian, or does not consist of 
+the Voronoy cells only.
+
+</command>
+
+</commandgroup>
+
+<!-- ^CFG END CARTESIAN -->
 
 <!-- ^CFG IF USERFILES BEGIN -->
 <commandgroup name="USER DEFINED INPUT">

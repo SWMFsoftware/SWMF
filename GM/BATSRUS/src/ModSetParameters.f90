@@ -8,6 +8,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,iVolumeCounterBLK,iVolumeCounterI,& !^CFG IF NOT CARTESIAN
+       UseVertexBasedGrid,allocate_face_area_vectors, & !^CFG IF NOT CARTESIAN
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
@@ -1363,6 +1364,16 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
+     case('#VERTEXBASEDGRID')
+        !                                         ^CFG IF CARTESIAN BEGIN
+        call stop_mpi&
+             ('Configure BATSRUS with CARTESIAN=OFF to use the command'&
+             //NameCommand)
+        !                                         ^CFG END CARTESIAN 
+        !^CFG IF NOT CARTESIAN BEGIN
+        call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
+        if(UseVertexBasedGrid) call allocate_face_area_vectors
+       !^CFG END CARTESIAN
      case("#COVARIANTGEOMETRY")
         !                                         ^CFG IF CARTESIAN BEGIN
         call stop_mpi&
@@ -1381,7 +1392,7 @@ subroutine MH_set_parameters(TypeAction)
            if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
            DoFixOuterBoundary=.true.
-        case('cylindrical')
+        case('cylindrical','cylindrical_gen')
            automatic_refinement=.false.
            MaxBoundary = max(MaxBoundary,North_)
            if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)

@@ -6,7 +6,7 @@
 
 DCART =CARTESIAN
 cartesian_src:
-	./Configure.pl -keepall -exe=cartesian -d=${DCART}
+	./Configure.pl -keepall -exe=cartesian -d=${DCART} -u
 	cd CARTESIAN; make install
 
 cartesian_conf: cartesian_src
