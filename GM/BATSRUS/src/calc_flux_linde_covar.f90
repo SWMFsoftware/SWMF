@@ -74,12 +74,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1		  
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip-1,j,k,globalBLK))*FaceAreaI_FB(iStrip,j,k,globalBLK)
+              call calc_faceareaI(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
 
               ! GET PRIMITIVES
               !\
@@ -190,12 +185,7 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1
 
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j-1,k,globalBLK))*FaceAreaJ_FB(iStrip,j,k,globalBLK)
+              call calc_faceareaJ(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
 
               v_B0x(i) = B0xFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0y(i) = B0yFace_y_BLK(iStrip,j,k,globalBLK)
@@ -290,12 +280,8 @@ subroutine calc_flux_Linde(DoResChangeOnly)
            !/
            do i=1,nStrip
               iStrip=i+iStart-1
-              FaceArea_DI(x_,i) = (x_BLK(iStrip,j,k,globalBLK) - &
-                   x_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(y_,i) = (y_BLK(iStrip,j,k,globalBLK) - &
-                   y_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
-              FaceArea_DI(z_,i) = (z_BLK(iStrip,j,k,globalBLK) - &
-                   z_BLK(iStrip,j,k-1,globalBLK))*FaceAreaK_FB(iStrip,j,k,globalBLK)
+
+              call calc_faceareaK(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
 
               !\
               ! B0 on the face

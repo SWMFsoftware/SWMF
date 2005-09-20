@@ -54,13 +54,7 @@ subroutine calc_sources
      do k=1,nK; do j=1,nJ; do i=1,nI
         iVolumeCounter=iVolumeCounter+1
         VInvHalf=VolumeInverse_I(iVolumeCounter)*cHalf
-
-        FaceArea_D(1) = (x_BLK(i,j,k,globalBLK) - x_BLK(i-1,j,k,globalBLK))*&
-             FaceAreaI_FB(i,j,k,globalBLK)
-        FaceArea_D(2) = (y_BLK(i,j,k,globalBLK) - y_BLK(i-1,j,k,globalBLK))*&
-             FaceAreaI_FB(i,j,k,globalBLK)
-        FaceArea_D(3) = (z_BLK(i,j,k,globalBLK) - z_BLK(i-1,j,k,globalBLK))*&
-             FaceAreaI_FB(i,j,k,globalBLK)
+        call calc_faceareaI(i,j,k,globalBLK,FaceArea_D)
         B1nJump =VInvHalf*&
              (FaceArea_D(1)*(RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))+&
              FaceArea_D(2)*(RightState_VX(By_,i,j,k)-LeftState_VX(By_,i,j,k))+&
@@ -73,13 +67,7 @@ subroutine calc_sources
         Source_VC(rhoUy_,i,j,k) = -B0yFace_x_BLK(i,j,k,globalBLK)*B1nJump
         Source_VC(rhoUz_,i,j,k) = -B0zFace_x_BLK(i,j,k,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = B1nJump
-
-        FaceArea_D(1) = (x_BLK(i+1,j,k,globalBLK) - x_BLK(i,j,k,globalBLK))*&
-             FaceAreaI_FB(i+1,j,k,globalBLK)
-        FaceArea_D(2) = (y_BLK(i+1,j,k,globalBLK) - y_BLK(i,j,k,globalBLK))*&
-             FaceAreaI_FB(i+1,j,k,globalBLK)
-        FaceArea_D(3) = (z_BLK(i+1,j,k,globalBLK) - z_BLK(i,j,k,globalBLK))*&
-             FaceAreaI_FB(i+1,j,k,globalBLK)
+        call calc_faceareaI(i+1,j,k,globalBLK,FaceArea_D)
         B1nJump =  VInvHalf*&
              (FaceArea_D(1)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))+&
              FaceArea_D(2)*(RightState_VX(By_,i+1,j,k)-LeftState_VX(By_,i+1,j,k))+&
@@ -101,12 +89,7 @@ subroutine calc_sources
      do k=1,nK; do j=1,nJ; do i=1,nI 
         iVolumeCounter=iVolumeCounter+1
         VInvHalf=VolumeInverse_I(iVolumeCounter)*cHalf
-        FaceArea_D(1) = (x_BLK(i,j,k,globalBLK) - x_BLK(i,j-1,k,globalBLK))*&
-             FaceAreaJ_FB(i,j,k,globalBLK)
-        FaceArea_D(2) = (y_BLK(i,j,k,globalBLK) - y_BLK(i,j-1,k,globalBLK))*&
-             FaceAreaJ_FB(i,j,k,globalBLK)
-        FaceArea_D(3) = (z_BLK(i,j,k,globalBLK) - z_BLK(i,j-1,k,globalBLK))*&
-             FaceAreaJ_FB(i,j,k,globalBLK)
+        call calc_faceareaJ(i,j,k,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VY(Bx_,i,j,k)-LeftState_VY(Bx_,i,j,k))+&
              FaceArea_D(2)*(RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))+&
@@ -123,12 +106,7 @@ subroutine calc_sources
              -B0zFace_y_BLK(i,j,k,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 
-        FaceArea_D(1) = (x_BLK(i,j+1,k,globalBLK) - x_BLK(i,j,k,globalBLK))*&
-             FaceAreaJ_FB(i,j+1,k,globalBLK)
-        FaceArea_D(2) = (y_BLK(i,j+1,k,globalBLK) - y_BLK(i,j,k,globalBLK))*&
-             FaceAreaJ_FB(i,j+1,k,globalBLK)
-        FaceArea_D(3) = (z_BLK(i,j+1,k,globalBLK) - z_BLK(i,j,k,globalBLK))*&
-             FaceAreaJ_FB(i,j+1,k,globalBLK)
+        call calc_faceareaJ(i,j+1,k,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VY(Bx_,i,j+1,k)-LeftState_VY(Bx_,i,j+1,k))+&
              FaceArea_D(2)*(RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))+&
@@ -150,12 +128,7 @@ subroutine calc_sources
      do k=1,nK; do j=1,nJ; do i=1,nI 
         iVolumeCounter=iVolumeCounter+1
         VInvHalf=VolumeInverse_I(iVolumeCounter)*cHalf
-        FaceArea_D(1) = (x_BLK(i,j,k,globalBLK) - x_BLK(i,j,k-1,globalBLK))*&
-             FaceAreaK_FB(i,j,k,globalBLK)
-        FaceArea_D(2) = (y_BLK(i,j,k,globalBLK) - y_BLK(i,j,k-1,globalBLK))*&
-             FaceAreaK_FB(i,j,k,globalBLK)
-        FaceArea_D(3) = (z_BLK(i,j,k,globalBLK) - z_BLK(i,j,k-1,globalBLK))*&
-             FaceAreaK_FB(i,j,k,globalBLK)
+        call calc_faceareaK(i,j,k,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k)-LeftState_VZ(Bx_,i,j,k))+&
              FaceArea_D(2)*(RightState_VZ(By_,i,j,k)-LeftState_VZ(By_,i,j,k))+&
@@ -174,12 +147,7 @@ subroutine calc_sources
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 
 
-        FaceArea_D(1) = (x_BLK(i,j,k+1,globalBLK) - x_BLK(i,j,k,globalBLK))*&
-             FaceAreaK_FB(i,j,k+1,globalBLK)
-        FaceArea_D(2) = (y_BLK(i,j,k+1,globalBLK) - y_BLK(i,j,k,globalBLK))*&
-             FaceAreaK_FB(i,j,k+1,globalBLK)
-        FaceArea_D(3) = (z_BLK(i,j,k+1,globalBLK) - z_BLK(i,j,k,globalBLK))*&
-             FaceAreaK_FB(i,j,k+1,globalBLK)
+        call calc_faceareaK(i,j,k+1,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k+1)-LeftState_VZ(Bx_,i,j,k+1))+&
              FaceArea_D(2)*(RightState_VZ(By_,i,j,k+1)-LeftState_VZ(By_,i,j,k+1))+&
