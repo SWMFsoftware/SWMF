@@ -17,10 +17,13 @@ include ../Makefile.def
 # The clean and distclean targets do not need any variables.
 #EOP
 #BOC
-install: 
-	touch Library/src/Makefile.DEPEND
+
+Library/src/mpif.h:
 	cp include/mpif90_${OS}${MPIVERSION}.h Library/src/mpif90.h
 	cd Library/src; cat precision.h mpif90.h > mpif.h
+
+install: Library/src/mpif.h
+	touch Library/src/Makefile.DEPEND
 	cp build/Makefile.${OS}${COMPILER} ../Makefile.conf
 
 clean:
