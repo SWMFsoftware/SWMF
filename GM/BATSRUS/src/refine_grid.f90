@@ -30,6 +30,7 @@ subroutine parallel_refine
   use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,xyzStart_BLK
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs,refine_list
+  use ModAdvance, ONLY : iTypeAdvance_B, SkippedBlock_
   use ModOctree
   implicit none
 
@@ -171,6 +172,7 @@ subroutine parallel_refine
               z_BLK(:,:,:,iBLK) = -777777.
               R_BLK(:,:,:,iBLK) = -777777.
               unusedBLK(iBLK) = .true.
+              iTypeAdvance_B(iBLK) = SkippedBlock_
            end if
         end do
      end if
