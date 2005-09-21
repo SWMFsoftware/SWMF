@@ -25,12 +25,9 @@ Module ModGeometry
   real, dimension(nBLK) :: dx_BLK, dy_BLK, dz_BLK, Rmin_BLK
   real, dimension(nBLK) :: Rmin2_BLK                                       !^CFG IF SECONDBODY
   real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK               !^CFG IF CARTESIAN
-  integer,parameter:: iVolumeDimension=&
-!                          nIJK*   &                                       !^CFG IF NOT CARTESIAN
-                          nBLK
-  real,dimension(iVolumeDimension):: VolumeInverse_I         
-  integer,parameter:: iVolumeCounterBLK=iVolumeDimension/nBLK              !^CFG IF NOT CARTESIAN BEGIN
-  integer,parameter:: iVolumeCounterI=iVolumeCounterBLK/nIJK
+
+  real,dimension(nI,nJ,nK,nBLK):: VInv_CB         
+  !^CFG IF NOT CARTESIAN BEGIN
 
   !For a vertex-based logically cartesian (spherical, cylindircal) grid 
   !(UseVertexBasedGrid=.true.) the node coordinates are defined

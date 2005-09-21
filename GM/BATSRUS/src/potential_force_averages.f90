@@ -10,7 +10,6 @@ subroutine body_force_averages
   implicit none
 
   integer :: i,j,k
-  integer :: iVolumeCounter                           !^CFG IF NOT CARTESIAN
 
   real ::  DxInv,DyInv,DzInv                          !^CFG IF CARTESIAN
   real ::  Potential_S(6),x,y,z
@@ -27,9 +26,7 @@ subroutine body_force_averages
   DyInv=cOne/dy_BLK(globalBLK)
   DzInv=cOne/dz_BLK(globalBLK)                        !^CFG END CARTESIAN
 
-  iVolumeCounter=nIJK*(globalBLK-1)                   !^CFG IF NOT CARTESIAN
   do k=1,nK; do j=1,nJ;  do i=1,nI  
-     iVolumeCounter=iVolumeCounter+1                  !^CFG IF NOT CARTESIAN
      if(.not.true_cell(i,j,k,globalBLK))cycle
      x = cHalf*(x_BLK(i-1,j,k,globalBLK) + x_BLK(i,j,k,globalBLK))
      y = cHalf*(y_BLK(i-1,j,k,globalBLK) + y_BLK(i,j,k,globalBLK))
@@ -75,7 +72,7 @@ subroutine body_force_averages
      fbody_z_BLK(i,j,k,globalBLK) = &
           (Potential_S(bot_) + Potential_S(top_))*DzInv
      !^CFG END CARTESIAN
-     !call covariant_force_integral(iVolumeCounter,i,j,k,globalBLK,Potential_S)     !^CFG IF NOT CARTESIAN 
+     !call covariant_force_integral(i,j,k,globalBLK,Potential_S)     !^CFG IF NOT CARTESIAN 
 
   end do ; end do ;end do 
 end subroutine body_force_averages

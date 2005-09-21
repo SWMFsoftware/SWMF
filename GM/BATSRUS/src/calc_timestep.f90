@@ -5,12 +5,11 @@ subroutine calc_timestep
   use ModAdvance, ONLY : VdtFace_x,VdtFace_y,VdtFace_z,time_BLK
   use ModNumConst
   use ModGeometry, ONLY : true_cell,true_BLK,&
-       iVolumeCounterBLK,iVolumeCounterI,&               !^CFG IF NOT CARTESIAN
-       VolumeInverse_I
+       VInv_CB
   implicit none
 
   logical :: oktest, oktest_me
-  integer :: iVolumeCounter,i,j,k
+  integer :: i,j,k
   !--------------------------------------------------------------------------
 
   if(globalBLK==BLKtest)then
@@ -23,13 +22,11 @@ subroutine calc_timestep
   ! Compute the allowable local time step 
   ! for each cell based on local face values
   !/
-  iVolumeCounter=globalBLK
-  iVolumeCounter=iVolumeCounterBLK*(iVolumeCounter-iVolumeCounterI) !^CFG IF NOT CARTESIAN
+
   do k=1,nK
      do j=1,nJ
         do i=1,nI
-           iVolumeCounter=iVolumeCounter+iVolumeCounterI !^CFG IF NOT CARTESIAN
-           time_BLK(i,j,k,globalBLK) = cOne /(VolumeInverse_I(iVolumeCounter)&
+           time_BLK(i,j,k,globalBLK) = cOne /(VInv_CB(i,j,k,globalBLK)&
                 *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))+ &
                 max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k))+ &
                 max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1))))

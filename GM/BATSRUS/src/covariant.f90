@@ -15,7 +15,7 @@ subroutine set_covar_cartesian_geometry(iBLK)
   FaceAreaI_FB(0:nI+2,0:nJ+1,0:nK+1,iBLK)=dy*dz/dx                             
   FaceAreaJ_FB(0:nI+1,0:nJ+2,0:nK+1,iBLK)=dz*dx/dy                       
   FaceAreaK_FB(0:nI+1,0:nJ+1,0:nK+2,iBLK)=dx*dy/dz
-  VolumeInverse_I((iBLK-1)*nIJK+1:iBLK*nIJK)=cOne/(dx*dy*dz)
+  VInv_CB((iBLK-1)*nIJK+1:iBLK*nIJK)=cOne/(dx*dy*dz)
   FaceArea2MinI_B(iBLK)=cZero
   FaceArea2MinJ_B(iBLK)=cZero
   FaceArea2MinK_B(iBLK)=cZero
@@ -24,7 +24,7 @@ end subroutine set_covar_cartesian_geometry
 subroutine set_covar_spherical_geometry(iBLK)
   use ModMain
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,VolumeInverse_I
+       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,VInv_CB
   use ModCovariant
   use ModNumConst
   implicit none
@@ -80,7 +80,7 @@ subroutine set_covar_spherical_geometry(iBLK)
      do j=1,nJ
         do i=1,nI
            iVolumeCounter=iVolumeCounter+1
-           VolumeInverse_I(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&  
+           VInv_CB(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&  
                 cTwo*tan(cHalf*dTheta)*sin(Theta_G(i,j,k))*&                 
                 dR*(cThree*R_BLK(i,j,k,iBLK)**2+cQuarter*dR**2))
         end do
@@ -140,7 +140,7 @@ end function SpherFaceAreaK
 subroutine set_covar_spherical2_geometry(iBLK)
   use ModMain
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,VolumeInverse_I
+       DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,VInv_CB
   use ModCovariant
   use ModNumConst
   implicit none
@@ -197,7 +197,7 @@ subroutine set_covar_spherical2_geometry(iBLK)
      do j=1,nJ
         do i=1,nI
            iVolumeCounter=iVolumeCounter+1
-           VolumeInverse_I(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&
+           VInv_CB(iVolumeCounter) = cThree/(cTwo*tan(cHalf*dPhi)*&
                 cTwo*tan(cHalf*dTheta)*sin(Theta_G(i,j,k))*&                 
                 (R_BLK(i,j,k,iBLK)**3)*(&
                 0.75*(sinh(dr2)+sinh(2.0*dr2))+cQuarter*sinh(3.0*dr2)))
@@ -281,7 +281,7 @@ subroutine calc_b0source_covar(iBlock)
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
        B0SourceMatrix_DDCB
   use ModGeometry,ONLY: dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK,TypeGeometry,&
-       VolumeInverse_I
+       VInv_CB
   use ModNumConst
   implicit none
 
@@ -426,7 +426,7 @@ subroutine calc_b0source_covar(iBlock)
 
               B0SourceMatrix_DDCB(:,:,i,j,k,iBlock) = &
                    B0SourceMatrix_DDCB(:,:,i,j,k,iBlock)*&
-                   VolumeInverse_I(iVolumeCounter)
+                   VInv_CB(iVolumeCounter)
            end if
         end do
      end do
@@ -627,7 +627,7 @@ subroutine covariant_force_integral(iVolumeCounter,i,j,k,iBLK,Fai_S)
   use ModSize
   use ModCovariant
   use ModAdvance,ONLY: fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
-  use ModGeometry,ONLY: VolumeInverse_I
+  use ModGeometry,ONLY: VInv_CB
   implicit none
 
   integer,intent(in)::iVolumeCounter,i,j,k,iBLK
@@ -635,7 +635,7 @@ subroutine covariant_force_integral(iVolumeCounter,i,j,k,iBLK,Fai_S)
   real:: FaceArea_DS(3,east_:top_),VInv
 
 
-  VInv=VolumeInverse_I(iVolumeCounter)
+  VInv=VInv_CB(iVolumeCounter)
 
   call calc_faceareaI(i,j,k,iBLK,FaceArea_DS(:,East_))
   call calc_faceareaI(i+1,j,k,iBLK,FaceArea_DS(:,West_))
@@ -659,7 +659,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
   use ModMain, ONLY: x_, y_, z_
   use ModCovariant
   use ModGeometry,ONLY:body_blk, true_cell, &
-       VolumeInverse_I
+       VInv_CB
   use ModNumConst
   implicit none
 
@@ -688,7 +688,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
      iVolumeCounter=nIJK*(iBlock-1)
      do k=1,nK; do j=1,nJ; do i=1,nI
         iVolumeCounter=iVolumeCounter+1
-        VInvHalf=chalf*VolumeInverse_I(iVolumeCounter)
+        VInvHalf=chalf*VInv_CB(iVolumeCounter)
 
         call calc_faceareaI(i,j,k,iBlock,FaceArea_DS(:,East_))
         call calc_faceareaI(i+1,j,k,iBlock,FaceArea_DS(:,West_))
@@ -721,7 +721,7 @@ subroutine covariant_gradient(iBlock, Var_G,&
      do k=1,nK;  do j=1,nJ;  do i=1,nI
         iVolumeCounter=iVolumeCounter+1
         VInvHalf=&
-             chalf*VolumeInverse_I(iVolumeCounter)*OneTrue_G(i,j,k)
+             chalf*VInv_CB(iVolumeCounter)*OneTrue_G(i,j,k)
         
         call calc_faceareaI(i,j,k,iBlock,FaceArea_DS(:,East_))
         call calc_faceareaI(i+1,j,k,iBlock,FaceArea_DS(:,West_))
@@ -782,7 +782,7 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
   use ModVarIndexes,ONLY: Bx_,By_,Bz_
   use ModCovariant
   use ModNumConst
-  use Modgeometry,ONLY:VolumeInverse_I
+  use Modgeometry,ONLY:VInv_CB
   use ModAdvance,ONLY:State_VGB
   implicit none
   integer,intent(in)::i,j,k,iBLK
@@ -791,7 +791,7 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
   real,dimension(3,east_:top_)::MagneticField_DS, FaceArea_DS
   real::VInvHalf
 
-  VInvHalf=chalf*VolumeInverse_I((iBLK-1)*nIJK+i+nI*(j-1+ nJ*(k-1)))
+  VInvHalf=chalf*VInv_CB((iBLK-1)*nIJK+i+nI*(j-1+ nJ*(k-1)))
 
   call calc_faceareaI(i,j,k,iBLK,FaceArea_DS(:,East_))
   call calc_faceareaI(i+1,j,k,iBLK,FaceArea_DS(:,West_))
@@ -1139,7 +1139,7 @@ real function integrate_BLK(qnum,qa)
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nIJK,nBlockMax,unusedBLK
   use ModGeometry, ONLY :&
-                          VolumeInverse_I,&                   
+                          VInv_CB,&                   
                           true_BLK,true_cell
   use ModMpi
   implicit none 
@@ -1170,7 +1170,7 @@ real function integrate_BLK(qnum,qa)
                  do i=1,nI
                     iVolumeCounter=iVolumeCounter+1
                     qsum=qsum + qa(i,j,k,iBLK)/&
-                         VolumeInverse_I(iVolumeCounter)
+                         VInv_CB(iVolumeCounter)
                  end do
               end do
            end do
@@ -1181,7 +1181,7 @@ real function integrate_BLK(qnum,qa)
                     iVolumeCounter=iVolumeCounter+1
                     if(true_cell(i,j,k,iBLK))&
                     qsum=qsum + qa(i,j,k,iBLK)/&
-                         VolumeInverse_I(iVolumeCounter)
+                         VInv_CB(iVolumeCounter)
                  end do
               end do
            end do
@@ -1204,7 +1204,7 @@ end function integrate_BLK
 subroutine integrate_domain(Sum_V, Pressure_GB)
   use ModAdvance,   ONLY: State_VGB, tmp2_BLK, nVar
   use ModMain,      ONLY: nI, nJ, nK, nIJK, nBlock, MaxBlock, UnusedBLK
-  use ModGeometry,  ONLY: VolumeInverse_I, true_BLK, true_cell
+  use ModGeometry,  ONLY: VInv_CB, true_BLK, true_cell
   use ModVarIndexes,ONLY: P_
   use ModNumConst,  ONLY: cZero, cOne
   implicit none 
@@ -1229,7 +1229,7 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
      if(true_BLK(iBlock)) then
         do k=1,nK; do j=1,nJ; do i=1,nI
            iVolumeCounter=iVolumeCounter+1
-           CellVolume=cOne/VolumeInverse_I(iVolumeCounter)
+           CellVolume=cOne/VInv_CB(iVolumeCounter)
            do iVar=1,nVar
               Sum_V(iVar)=Sum_V(iVar) + State_VGB(iVar,i,j,k,iBlock)*CellVolume
            end do
@@ -1238,7 +1238,7 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
         do k=1,nK; do j=1,nJ; do i=1,nI
            iVolumeCounter=iVolumeCounter+1
            if(.not.true_cell(i,j,k,iBlock))CYCLE
-           CellVolume=cOne/VolumeInverse_I(iVolumeCounter)
+           CellVolume=cOne/VInv_CB(iVolumeCounter)
            do iVar = 1, nVar
               Sum_V(iVar)=Sum_V(iVar) + State_VGB(iVar,i,j,k,iBlock)*CellVolume
            end do

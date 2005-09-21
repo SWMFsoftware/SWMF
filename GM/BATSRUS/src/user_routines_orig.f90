@@ -1849,7 +1849,7 @@ subroutine user_sources
   use ModAdvance,    ONLY: State_VGB,StateOld_VCB,Source_VC,      &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,UDotFA_X,UDotFA_Y,    &
        UDotFA_Z,Flux_VX,Flux_VY,Flux_VZ,Theat0,qheat_BLK
-  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,VolumeInverse_I
+  use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,VInv_CB
   use ModConst,      ONLY: cZero,cHalf,cOne,cTwo,cTolerance
   use ModPhysics,    ONLY: g,OmegaBody,CosThetaTilt,SinThetaTilt,&
        Theat

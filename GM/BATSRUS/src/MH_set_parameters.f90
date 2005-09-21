@@ -7,7 +7,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,iVolumeCounterBLK,iVolumeCounterI,& !^CFG IF NOT CARTESIAN
+       TypeGeometry,& !^CFG IF NOT CARTESIAN
        UseVertexBasedGrid,allocate_face_area_vectors, & !^CFG IF NOT CARTESIAN
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes

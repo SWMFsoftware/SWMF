@@ -5,7 +5,7 @@ subroutine calc_sources
   use ModMain
   use ModVarIndexes
   use ModGeometry, ONLY : dx_BLK, dy_BLK, dz_BLK, R_BLK,&
-       body_BLK, Rmin_BLK, VolumeInverse_I
+       body_BLK, Rmin_BLK, VInv_CB
   use ModGeometry, ONLY : R2_BLK         !^CFG IF SECONDBODY
   use ModAdvance
   use ModParallel, ONLY : NOBLK, neiLEV, &
@@ -47,7 +47,7 @@ subroutine calc_sources
   if(UseNonconservative)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         Source_VC(P_,i,j,k) = -(g-1)*State_VGB(P_,i,j,k,globalBLK)*&
-             VolumeInverse_I(globalBLK)*&
+             VInv_CB(i,j,k,globalBLK)*&
              (UDotFA_X(i+1,j,k)-UDotFA_X(i,j,k)+&
              UDotFA_Y(i,j+1,k) -UDotFA_Y(i,j,k)+&
              UDotFA_Z(i,j,k+1) -UDotFA_Z(i,j,k))
@@ -133,13 +133,13 @@ subroutine calc_sources
 
 
      do k=1,nK; do j=1,nJ; do i=1,nI
-        B1nJump = cHalf* VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf* VInv_CB(i,j,k,globalBLK)*&
              fAx_BLK(globalBLK)*(RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
         Source_VC(rhoUx_,i,j,k) = -B0xFace_x_BLK(i,j,k,globalBLK)*B1nJump
         Source_VC(rhoUy_,i,j,k) = -B0yFace_x_BLK(i,j,k,globalBLK)*B1nJump
         Source_VC(rhoUz_,i,j,k) = -B0zFace_x_BLK(i,j,k,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = B1nJump
-        B1nJump = cHalf* VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf* VInv_CB(i,j,k,globalBLK)*&
              fAx_BLK(globalBLK)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
@@ -151,7 +151,7 @@ subroutine calc_sources
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 !     end do; end do; end do
 !     do k=1,nK; do j=1,nJ; do i=1,nI 
-        B1nJump = cHalf*VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf*VInv_CB(i,j,k,globalBLK)*&
              fAy_BLK(globalBLK)*(RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
@@ -162,7 +162,7 @@ subroutine calc_sources
              -B0zFace_y_BLK(i,j,k,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 
-        B1nJump = cHalf* VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf* VInv_CB(i,j,k,globalBLK)*&
              fAy_BLK(globalBLK)*(RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
@@ -174,7 +174,7 @@ subroutine calc_sources
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 !     end do; end do; end do
 !     do k=1,nK; do j=1,nJ; do i=1,nI
-        B1nJump = cHalf* VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf* VInv_CB(i,j,k,globalBLK)*&
              fAz_BLK(globalBLK)*(RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
@@ -185,7 +185,7 @@ subroutine calc_sources
              -B0zFace_z_BLK(i,j,k,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 
-        B1nJump = cHalf*VolumeInverse_I(globalBLK)*&
+        B1nJump = cHalf*VInv_CB(i,j,k,globalBLK)*&
              fAz_BLK(globalBLK)*(RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
@@ -197,7 +197,7 @@ subroutine calc_sources
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
 !     end do; end do; end do
 !     do k=1,nK; do j=1,nJ; do i=1,nI
-        DivBInternal = VolumeInverse_I(globalBLK) *(&
+        DivBInternal = VInv_CB(i,j,k,globalBLK) *(&
              fAx_BLK(globalBLK)*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))+&
              fAy_BLK(globalBLK)*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))+&
              fAz_BLK(globalBLK)*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k)))
@@ -256,7 +256,7 @@ subroutine calc_sources
         E_D(z_) = fullBx*Uy - fullBy*Ux
 
      ! Calculate divergence of electric field 
-        DivE = VolumeInverse_I(globalBLK)*&
+        DivE = VInv_CB(i,j,k,globalBLK)*&
              (EDotFA_X(i+1,j,k)-EDotFA_X(i,j,k)+&
              EDotFA_Y(i,j+1,k) -EDotFA_Y(i,j,k)+&
              EDotFA_Z(i,j,k+1) -EDotFA_Z(i,j,k))
@@ -322,7 +322,7 @@ subroutine calc_divb
        LeftState_VZ,RightState_VZ
   use ModNumConst
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,&
-       fAx_BLK,fAy_BLK,fAz_BLK,VolumeInverse_I 
+       fAx_BLK,fAy_BLK,fAz_BLK,VInv_CB 
   implicit none
 
   !\
@@ -355,7 +355,7 @@ subroutine calc_divb
         ! left and right values
 
         DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = &
-             cHalf * VolumeInverse_I(globalBLK) *( &
+             cHalf * VInv_CB(:,:,:,globalBLK) *( &
              fAx_BLK(globalBLK)*((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
              RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
              (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &

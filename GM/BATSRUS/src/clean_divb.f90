@@ -16,7 +16,7 @@ subroutine clean_divb
   use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, unusedblk,&
        PROCtest,BLKtest,iTest,jTest,kTest
   use ModAdvance,ONLY:State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK
-  use ModGeometry,ONLY:VolumeInverse_I,true_blk,&
+  use ModGeometry,ONLY:VInv_CB,true_blk,&
        FaX_BLK,FaY_BLK,FaZ_BLK,body_blk,true_cell,R_BLK,RMin_BLK
   use ModParallel, ONLY : NOBLK, neiLEV
   use ModPhysics,ONLY:gm1
@@ -79,7 +79,7 @@ subroutine clean_divb
         tmp1_blk(1:nI,1:nJ,1:nK,iBlock) = &
              DivBV_G(1:nI,1:nJ,1:nK)*Prec_CB(:,:,:,iBlock)
 
-        !DivBAbsMax=max(DivBAbsMax,VolumeInverse_I(iBlock)*abs(&
+        !DivBAbsMax=max(DivBAbsMax,VInv_CB(iBlock)*abs(&
         !               DivBV_G(1:nI,1:nJ,1:nK))))
         DivBInt(ResDotOne_)=DivBInt(ResDotOne_)&
              +sum(DivBV_G(1:nI,1:nJ,1:nK))
@@ -150,7 +150,7 @@ subroutine clean_divb
            call v_grad_phi(tmp2_blk,iBlock)
         end if
         DirDotDir=DirDotDir+&
-             sum(VolumeInverse_I(iBlock)*(GradX_C**2+GradY_C**2+GradZ_C**2))
+             sum(VInv_CB(iBlock)*(GradX_C**2+GradY_C**2+GradZ_C**2))
      end do
      if(nProc>1)then
         call MPI_allreduce(DirDotDir,DirDotDirInv, 1,  MPI_REAL, MPI_SUM, &
@@ -176,19 +176,19 @@ subroutine clean_divb
         end if
         State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradX_C*VolumeInverse_I(iBlock)*DirDotDirInv
+             GradX_C*VInv_CB(iBlock)*DirDotDirInv
         State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradY_C*VolumeInverse_I(iBlock)*DirDotDirInv
+             GradY_C*VInv_CB(iBlock)*DirDotDirInv
         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
              State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradZ_C*VolumeInverse_I(iBlock)*DirDotDirInv
+             GradZ_C*VInv_CB(iBlock)*DirDotDirInv
         !        if(DoConservative.and.divb_diffcoeff>cOne))&
         !             p_BLK(1:nI,1:nJ,1:nK,iBlock)=& 
         !                  p_BLK(1:nI,1:nJ,1:nK,iBlock)+&
         !                  cHalf*gm1*DirDotDirInv*DirDotDirInv*&
         !                  (GradX_C**2+GradY_C**2+GradZ_C**2)*&
-        !                  VolumeInverse_I(iBlock)**2
+        !                  VInv_CB(iBlock)**2
      end do
      Iteration=Iteration+1   
      if(Iteration>nCleanDivb)EXIT    
@@ -208,7 +208,7 @@ contains
     real:: divb_diffcoeff
     do iBlock=1,nBlock
        if(unusedBLK(iBlock))CYCLE
-       tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=VolumeInverse_I(iBlock)
+       tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=VInv_CB(iBlock)
     end do
 
     call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
@@ -221,32 +221,32 @@ contains
 
        if(any(NeiLev(:,iBlock)/=0))then
           if(NeiLev(East_,iBlock)==NoBLK)then
-             tmp1_blk(0,1:nJ,1:nK,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(0,1:nJ,1:nK,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(East_,iBlock))==1)then           
              Q_G(0,:,:)=cFour**NeiLev(East_,iBlock)
           end if
           if(NeiLev(West_,iBlock)==NoBLK)then
-             tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(West_,iBlock))==1)then
              Q_G(nI+1,:,:)=cFour**NeiLev(West_,iBlock)
           end if
           if(NeiLev(South_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,0,1:nK,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(1:nI,0,1:nK,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(South_,iBlock))==1)then
              Q_G(:,0,:)=cFour**NeiLev(South_,iBlock)
           end if
           if(NeiLev(North_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(North_,iBlock))==1)then
              Q_G(:,nJ+1,:)=cFour**NeiLev(North_,iBlock)
           end if
           if(NeiLev(Bot_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,0,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(1:nI,1:nJ,0,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(Bot_,iBlock))==1)then
              Q_G(:,:,0)=cFour**NeiLev(Bot_,iBlock)
           end if
           if(NeiLev(Top_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=VolumeInverse_I(iBlock)
+             tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=VInv_CB(iBlock)
           elseif(abs(NeiLev(Top_,iBlock))==1)then
              Q_G(:,:,nK+1)=cFour**NeiLev(Top_,iBlock)
           end if
@@ -323,15 +323,15 @@ contains
        DivB1_GB(:,:,:,iBlock)=cZero
        do k=1,nK;do j=1,nJ;do i=1,nI
           tmp1_BLK(i,j,k,iBlock)= &
-               cHalf*FaX_BLK(iBlock)*VolumeInverse_I(iBlock)*(&
+               cHalf*FaX_BLK(iBlock)*VInv_CB(iBlock)*(&
                Q_G(i+1,j,k)+&
                Q_G(i-1,j,k))
           tmp2_BLK(i,j,k,iBlock)=&
-               cHalf*FaY_BLK(iBlock)*VolumeInverse_I(iBlock)*(&
+               cHalf*FaY_BLK(iBlock)*VInv_CB(iBlock)*(&
                Q_G(i,j+1,k)+&
                Q_G(i,j-1,k))
           DivB1_GB(i,j,k,iBlock)=&
-               cHalf*FaZ_BLK(iBlock)*VolumeInverse_I(iBlock)*(&
+               cHalf*FaZ_BLK(iBlock)*VInv_CB(iBlock)*(&
                Q_G(i,j,k+1)+&
                Q_G(i,j,k-1))
        end do;end do; end do

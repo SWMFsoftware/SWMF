@@ -4,14 +4,13 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : &
-       iVolumeCounterBLK,iVolumeCounterI,&  !^CFG IF NOT CARTESIAN
-       R_BLK,VolumeInverse_I,RMin_BLK,body_BLK
+       R_BLK,VInv_CB,RMin_BLK,body_BLK
   use ModPhysics
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iStage,iBLK
-  integer :: iVolumeCounter,i,j,k, iVar
+  integer :: i,j,k, iVar
 
   real*8 :: fullBx, fullBy, fullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
        FullBxOld,FullByOld,FullBzOld,Ux,Uy,Uz,UxOld,UyOld,UzOld,&
@@ -19,7 +18,7 @@ subroutine update_states_MHD(iStage,iBLK)
        MBorisMinusRhoUxOld, MBorisMinusRhoUyOld, MBorisMinusRhoUzOld,&
        Rho,RhoInv,ECorr
   real::cfl_factor
-  real:: DtLocal,VInvLocal
+  real:: DtLocal
   !^CFG IF POINTIMPLICIT BEGIN
 
   real :: sigma_ptImplicit, &
@@ -63,15 +62,11 @@ subroutine update_states_MHD(iStage,iBLK)
   end if
 
   !Get Residual.
-  iVolumeCounter=iBLK
-  iVolumeCounter=iVolumeCounterBLK*(iVolumeCounter-iVolumeCounterI) !^CFG IF NOT CARTESIAN
-  do k = 1,nK; do j = 1,nJ; do i = 1,nI
-     iVolumeCounter=iVolumeCounter+iVolumeCounterI   !^CFG IF NOT CARTESIAN
+    do k = 1,nK; do j = 1,nJ; do i = 1,nI
      DtLocal=cfl_factor*time_BLK(i,j,k,iBLK)
-     VInvLocal=VolumeInverse_I(iVolumeCounter)
      Source_VC(:,i,j,k) = &
           DtLocal* (Source_VC(:,i,j,k) + &
-          VInvLocal * &
+          VInv_CB(i,j,k,iBLK) * &
           ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
           + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 
