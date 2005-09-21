@@ -26,7 +26,7 @@ Module ModGeometry
   real, dimension(nBLK) :: Rmin2_BLK                                       !^CFG IF SECONDBODY
   real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK               !^CFG IF CARTESIAN
 
-  real,dimension(nI,nJ,nK,nBLK):: VInv_CB         
+  real,dimension(nI,nJ,nK,nBLK):: vInv_CB         
   !^CFG IF NOT CARTESIAN BEGIN
 
   !For a vertex-based logically cartesian (spherical, cylindircal) grid 

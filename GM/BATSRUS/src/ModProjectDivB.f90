@@ -453,7 +453,7 @@ end subroutine proj_matvec
 ! Calculate gradient of phi in direction idim for real cells only
 subroutine proj_gradient(idim,phi,dphi)
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK,VInv_CB
+  use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK,vInv_CB
   implicit none
 
   ! Arguments
@@ -480,14 +480,14 @@ subroutine proj_gradient(idim,phi,dphi)
      if(unusedBLK(iBLK))CYCLE
      select case(idim)
      case(1)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*VInv_CB(:,:,:,iBLK)*fAx_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAx_BLK(iBLK)* &
              (phi(2:nI+1,1:nJ,1:nK,iBLK)-phi(0:nI-1,1:nJ,1:nK,iBLK))
      case(2)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*VInv_CB(:,:,:,iBLK)*fAy_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAy_BLK(iBLK)* &
              (phi(1:nI,2:nJ+1,1:nK,iBLK)-phi(1:nI,0:nJ-1,1:nK,iBLK))
 
      case(3)
-        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*VInv_CB(:,:,:,iBLK)*fAz_BLK(iBLK)* &
+        dphi(1:nI,1:nJ,1:nK,iBLK) = 0.5*vInv_CB(:,:,:,iBLK)*fAz_BLK(iBLK)* &
              (phi(1:nI,1:nJ,2:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK-1,iBLK))
      end select
   end do ! All blocks are done

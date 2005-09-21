@@ -152,7 +152,7 @@ end subroutine body_force_averages
 subroutine body_force_cell_average(i,j,k)
   use ModMain, ONLY : globalBLK,UseGravity
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,VInv_CB
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
 
   implicit none
 
@@ -177,7 +177,7 @@ subroutine body_force_cell_average(i,j,k)
   call body_force_GaussQuadXYZ(xmin,xmax,ymin,ymax,zmin,zmax,Fave)
 
   do ii=1,3
-     Fave(ii) = Fave(ii)*VInv_CB(i,j,k,globalBLK)
+     Fave(ii) = Fave(ii)*vInv_CB(i,j,k,globalBLK)
   end do
 
   fbody_x_BLK(i,j,k,globalBLK) = fbody_x_BLK(i,j,k,globalBLK) + Fave(1)
@@ -491,7 +491,7 @@ end subroutine heat_source_averages
 subroutine heat_source_cell_average(i,j,k)
   use ModMain, ONLY : globalBLK
   use ModAdvance, ONLY : qheat_BLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,VInv_CB
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,vInv_CB
   implicit none
 
   integer, intent(in) :: i,j,k
@@ -510,7 +510,7 @@ subroutine heat_source_cell_average(i,j,k)
 
   call heat_source_GaussQuadXYZ(xmin,xmax,ymin,ymax,zmin,zmax,q0ave)
 
-  q0ave = q0ave*VInv_CB(i,j,k,globalBLK)
+  q0ave = q0ave*vInv_CB(i,j,k,globalBLK)
 
   qheat_BLK(i,j,k,globalBLK) = qheat_BLK(i,j,k,globalBLK) + q0ave
 

@@ -4,7 +4,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : &
-       R_BLK,VInv_CB,RMin_BLK,body_BLK
+       R_BLK,vInv_CB,RMin_BLK,body_BLK
   use ModPhysics
   use ModNumConst
   implicit none
@@ -66,7 +66,7 @@ subroutine update_states_MHD(iStage,iBLK)
      DtLocal=cfl_factor*time_BLK(i,j,k,iBLK)
      Source_VC(:,i,j,k) = &
           DtLocal* (Source_VC(:,i,j,k) + &
-          VInv_CB(i,j,k,iBLK) * &
+          vInv_CB(i,j,k,iBLK) * &
           ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
           + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 

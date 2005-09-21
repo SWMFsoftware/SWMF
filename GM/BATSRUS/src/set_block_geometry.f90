@@ -128,7 +128,7 @@ subroutine fix_block_geometry(iBLK)
      fAy_BLK(iBLK) = fAy
      fAz_BLK(iBLK) = fAz
      cV_BLK(iBLK) = cV                                            
-     VInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END CARTESIAN
+     vInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END CARTESIAN
 !     call set_covar_cartesian_geometry(iBLK)     !^CFG IF NOT CARTESIAN 
   case('spherical')                               !^CFG IF NOT CARTESIAN 
 !     call set_covar_spherical_geometry(iBLK)     !^CFG IF NOT CARTESIAN 

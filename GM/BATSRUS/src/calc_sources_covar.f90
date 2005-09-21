@@ -5,7 +5,7 @@ subroutine calc_sources
   use ModMain
   use ModProcMH
   use ModCovariant
-  use ModGeometry, ONLY : VInv_CB, x_BLK, y_BLK, z_BLK,&
+  use ModGeometry, ONLY : vInv_CB, x_BLK, y_BLK, z_BLK,&
        body_BLK, RMin_BLK, TypeGeometry
   use ModAdvance
   use ModNumConst
@@ -38,7 +38,7 @@ subroutine calc_sources
   if(UseNonconservative)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         Source_VC(P_,i,j,k) = -gm1*State_VGB(P_,i,j,k,globalBLK)*&
-             VInv_CB(i,j,k,globalBLK)*&
+             vInv_CB(i,j,k,globalBLK)*&
              (UDotFA_X(i+1,j,k)-UDotFA_X(i,j,k)+&
              UDotFA_Y(i,j+1,k) -UDotFA_Y(i,j,k)+&
              UDotFA_Z(i,j,k+1) -UDotFA_Z(i,j,k))
@@ -48,7 +48,7 @@ subroutine calc_sources
   if(UseDivbSource)then
 
      do k=1,nK; do j=1,nJ; do i=1,nI
-        VInvHalf=VInv_CB(i,j,k,globalBLK)*cHalf
+        VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
         call calc_faceareaI(i,j,k,globalBLK,FaceArea_D)
         B1nJump =VInvHalf*&
              (FaceArea_D(1)*(RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))+&
@@ -81,7 +81,7 @@ subroutine calc_sources
      end do; end do; end do
 
      do k=1,nK; do j=1,nJ; do i=1,nI 
-        VInvHalf=VInv_CB(i,j,k,globalBLK)*cHalf
+        VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
         call calc_faceareaJ(i,j,k,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VY(Bx_,i,j,k)-LeftState_VY(Bx_,i,j,k))+&
@@ -118,7 +118,7 @@ subroutine calc_sources
      end do; end do; end do
 
      do k=1,nK; do j=1,nJ; do i=1,nI 
-        VInvHalf=VInv_CB(i,j,k,globalBLK)*cHalf
+        VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
         call calc_faceareaK(i,j,k,globalBLK,FaceArea_D)
         B1nJump = VInvHalf*&
              (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k)-LeftState_VZ(Bx_,i,j,k))+&
@@ -147,7 +147,7 @@ subroutine calc_sources
              (FaceArea_D(1)*LeftState_VZ(Bx_,i,j,k+1)+&
              FaceArea_D(2)*LeftState_VZ(By_,i,j,k+1)+&
              FaceArea_D(3)*LeftState_VZ(Bz_,i,j,k+1)))*&
-             VInv_CB(i,j,k,globalBLK)
+             vInv_CB(i,j,k,globalBLK)
 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
              -B0xFace_z_BLK(i,j,k+1,globalBLK)*B1nJump

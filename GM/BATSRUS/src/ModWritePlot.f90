@@ -965,7 +965,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              ))then
 
            ! Div B from central differences
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*VInv_CB(1,1,1,iBLK)*(  &
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*vInv_CB(1,1,1,iBLK)*(  &
                 fAx_BLK(iBLK)*(State_VGB(Bx_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-  &
                 State_VGB(Bx_,-1:nI,0:nJ+1,0:nK+1,iBLK))+ &
                 fAy_BLK(iBLK)*(State_VGB(By_,0:nI+1,1:nJ+2,0:nK+1,iBLK)-  &
