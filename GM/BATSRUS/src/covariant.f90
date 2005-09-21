@@ -310,7 +310,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_x_BLK(i+1,j,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,West_))*cQuarter
            else
-              call calc_faceareaI(i+1,j,k,iBlock,FaceArea_DIIS(:,0,0,West_))
+              call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DIIS(:,0,0,West_))
               B0_DIIS(x_,0,0,West_)= B0xFace_x_BLK(i+1,j,k,iBlock)
               B0_DIIS(y_,0,0,West_)= B0yFace_x_BLK(i+1,j,k,iBlock)
               B0_DIIS(z_,0,0,West_)= B0zFace_x_BLK(i+1,j,k,iBlock)
@@ -322,7 +322,7 @@ subroutine calc_b0source_covar(iBlock)
               B0yFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,East_))*cQuarter
               B0zFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,East_))*cQuarter
            else
-              call calc_faceareaI(i,j,k,iBlock,FaceArea_DIIS(:,0,0,East_))
+              call calc_face_area_i(i,j,k,iBlock,FaceArea_DIIS(:,0,0,East_))
               B0_DIIS(x_,0,0,East_)= B0xFace_x_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,East_)= B0yFace_x_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,East_)= B0zFace_x_BLK(i,j,k,iBlock)
@@ -337,7 +337,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_y_BLK(i,j+1,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,North_))*cQuarter
            else
-              call calc_faceareaJ(i,j+1,k,iBlock,FaceArea_DIIS(:,0,0,North_)) 
+              call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DIIS(:,0,0,North_)) 
               B0_DIIS(x_,0,0,North_)= B0xFace_y_BLK(i,j+1,k,iBlock)
               B0_DIIS(y_,0,0,North_)= B0yFace_y_BLK(i,j+1,k,iBlock)
               B0_DIIS(z_,0,0,North_)= B0zFace_y_BLK(i,j+1,k,iBlock)
@@ -349,7 +349,7 @@ subroutine calc_b0source_covar(iBlock)
               B0yFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,South_))*cQuarter
               B0zFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,South_))*cQuarter
            else
-              call calc_faceareaJ(i,j,k,iBlock,FaceArea_DIIS(:,0,0,South_))   
+              call calc_face_area_j(i,j,k,iBlock,FaceArea_DIIS(:,0,0,South_))   
               B0_DIIS(x_,0,0,South_)= B0xFace_y_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,South_)= B0yFace_y_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,South_)= B0zFace_y_BLK(i,j,k,iBlock)
@@ -364,7 +364,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_z_BLK(i,j,k+1,iBlock)=&
                    sum(B0_DIIS(z_,:,:,Top_))*cQuarter
            else
-              call calc_faceareaK(i,j,k+1,iBlock,FaceArea_DIIS(:,0,0,Top_))   
+              call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DIIS(:,0,0,Top_))   
               B0_DIIS(x_,0,0,Top_)= B0xFace_z_BLK(i,j,k+1,iBlock)
               B0_DIIS(y_,0,0,Top_)= B0yFace_z_BLK(i,j,k+1,iBlock)
               B0_DIIS(z_,0,0,Top_)= B0zFace_z_BLK(i,j,k+1,iBlock)
@@ -379,7 +379,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_z_BLK(i,j,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,Bot_))*cQuarter
            else
-              call calc_faceareaK(i,j,k,iBlock,FaceArea_DIIS(:,0,0,Bot_))  
+              call calc_face_area_k(i,j,k,iBlock,FaceArea_DIIS(:,0,0,Bot_))  
               B0_DIIS(x_,0,0,Bot_)= B0xFace_z_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,Bot_)= B0yFace_z_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,Bot_)= B0zFace_z_BLK(i,j,k,iBlock)
@@ -630,12 +630,12 @@ subroutine covariant_force_integral(i,j,k,iBLK,Fai_S)
 
   VInv=vInv_CB(i,j,k,iBLK)
 
-  call calc_faceareaI(i,j,k,iBLK,FaceArea_DS(:,East_))
-  call calc_faceareaI(i+1,j,k,iBLK,FaceArea_DS(:,West_))
-  call calc_faceareaJ(i,j,k,iBLK,FaceArea_DS(:,South_))
-  call calc_faceareaJ(i,j+1,k,iBLK,FaceArea_DS(:,North_))
-  call calc_faceareaK(i,j,k,iBLK,FaceArea_DS(:,Bot_))
-  call calc_faceareaK(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
+  call calc_face_area_i(i,j,k,iBLK,FaceArea_DS(:,East_))
+  call calc_face_area_i(i+1,j,k,iBLK,FaceArea_DS(:,West_))
+  call calc_face_area_j(i,j,k,iBLK,FaceArea_DS(:,South_))
+  call calc_face_area_j(i,j+1,k,iBLK,FaceArea_DS(:,North_))
+  call calc_face_area_k(i,j,k,iBLK,FaceArea_DS(:,Bot_))
+  call calc_face_area_k(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
 
   fbody_x_BLK(i,j,k,iBLK) = VInv*&              
        dot_product(FaceArea_DS(1,:),Fai_S(:))                     
@@ -681,12 +681,12 @@ subroutine covariant_gradient(iBlock, Var_G,&
      do k=1,nK; do j=1,nJ; do i=1,nI
         VInvHalf=chalf*vInv_CB(i,j,k,iBlock)
 
-        call calc_faceareaI(i,j,k,iBlock,FaceArea_DS(:,East_))
-        call calc_faceareaI(i+1,j,k,iBlock,FaceArea_DS(:,West_))
-        call calc_faceareaJ(i,j,k,iBlock,FaceArea_DS(:,South_))
-        call calc_faceareaJ(i,j+1,k,iBlock,FaceArea_DS(:,North_))
-        call calc_faceareaK(i,j,k,iBlock,FaceArea_DS(:,Bot_))
-        call calc_faceareaK(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
+        call calc_face_area_i(i,j,k,iBlock,FaceArea_DS(:,East_))
+        call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DS(:,West_))
+        call calc_face_area_j(i,j,k,iBlock,FaceArea_DS(:,South_))
+        call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DS(:,North_))
+        call calc_face_area_k(i,j,k,iBlock,FaceArea_DS(:,Bot_))
+        call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
 
         Difference_S(East_) = -Var_G(i-1,j,k)
         Difference_S(West_) = +Var_G(i+1,j,k)
@@ -712,12 +712,12 @@ subroutine covariant_gradient(iBlock, Var_G,&
         VInvHalf=&
              chalf*vInv_CB(i,j,k,iBlock)*OneTrue_G(i,j,k)
         
-        call calc_faceareaI(i,j,k,iBlock,FaceArea_DS(:,East_))
-        call calc_faceareaI(i+1,j,k,iBlock,FaceArea_DS(:,West_))
-        call calc_faceareaJ(i,j,k,iBlock,FaceArea_DS(:,South_))
-        call calc_faceareaJ(i,j+1,k,iBlock,FaceArea_DS(:,North_))
-        call calc_faceareaK(i,j,k,iBlock,FaceArea_DS(:,Bot_))
-        call calc_faceareaK(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
+        call calc_face_area_i(i,j,k,iBlock,FaceArea_DS(:,East_))
+        call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DS(:,West_))
+        call calc_face_area_j(i,j,k,iBlock,FaceArea_DS(:,South_))
+        call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DS(:,North_))
+        call calc_face_area_k(i,j,k,iBlock,FaceArea_DS(:,Bot_))
+        call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
 
         Difference_S(East_) =  OneTrue_G(i-1,j,k)*&
              (Var_G(i,j,k)-Var_G(i-1,j,k))+&
@@ -782,12 +782,12 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
 
   VInvHalf=chalf*vInv_CB(i,j,k,iBLK)
 
-  call calc_faceareaI(i,j,k,iBLK,FaceArea_DS(:,East_))
-  call calc_faceareaI(i+1,j,k,iBLK,FaceArea_DS(:,West_))
-  call calc_faceareaJ(i,j,k,iBLK,FaceArea_DS(:,South_))
-  call calc_faceareaJ(i,j+1,k,iBLK,FaceArea_DS(:,North_))
-  call calc_faceareaK(i,j,k,iBLK,FaceArea_DS(:,Bot_))
-  call calc_faceareaK(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
+  call calc_face_area_i(i,j,k,iBLK,FaceArea_DS(:,East_))
+  call calc_face_area_i(i+1,j,k,iBLK,FaceArea_DS(:,West_))
+  call calc_face_area_j(i,j,k,iBLK,FaceArea_DS(:,South_))
+  call calc_face_area_j(i,j+1,k,iBLK,FaceArea_DS(:,North_))
+  call calc_face_area_k(i,j,k,iBLK,FaceArea_DS(:,Bot_))
+  call calc_face_area_k(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
 
   MagneticField_DS(1,East_)=-State_VGB(Bx_,i-1,j,k,iBLK)
   MagneticField_DS(2,East_)=-State_VGB(By_,i-1,j,k,iBLK)
@@ -890,7 +890,7 @@ subroutine save_bn_faceI(iFaceOut,iFaceIn,iBlock)
 
 
   do k=1,nK; do j=1,nJ
-     call calc_faceareaI(iFaceIn,j,k,iBlock,FaceArea_D)
+     call calc_face_area_i(iFaceIn,j,k,iBlock,FaceArea_D)
      B_D(x_)=LeftState_VX(Bx_,iFaceIn,j,k)
      B_D(y_)=LeftState_VX(By_,iFaceIn,j,k)
      B_D(z_)=LeftState_VX(Bz_,iFaceIn,j,k)
@@ -921,7 +921,7 @@ subroutine save_bn_faceJ(jFaceOut,jFaceIn,iBlock)
 
 
   do k=1,nK; do i=1,nI
-     call calc_faceareaJ(i,jFaceIn,k,iBlock,FaceArea_D)
+     call calc_face_area_j(i,jFaceIn,k,iBlock,FaceArea_D)
      B_D(x_)=LeftState_VY(Bx_,i,jFaceIn,k)
      B_D(y_)=LeftState_VY(By_,i,jFaceIn,k)
      B_D(z_)=LeftState_VY(Bz_,i,jFaceIn,k)
@@ -951,7 +951,7 @@ subroutine save_bn_faceK(kFaceOut,kFaceIn,iBlock)
 
 
   do j=1,nJ; do i=1,nI
-     call calc_faceareaK(i,j,kFaceIn,iBlock,FaceArea_D)
+     call calc_face_area_k(i,j,kFaceIn,iBlock,FaceArea_D)
      B_D(x_)=LeftState_VZ(Bx_,i,j,kFaceIn)
      B_D(y_)=LeftState_VZ(By_,i,j,kFaceIn)
      B_D(z_)=LeftState_VZ(Bz_,i,j,kFaceIn)
@@ -984,7 +984,7 @@ subroutine apply_bn_faceI(iFaceIn,iFaceOut,iBlock)
 
   do k=1,nK; do j=1,nJ
      if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
-     call calc_faceareaI(iFaceOut,j,k,iBlock,FaceArea_D)
+     call calc_face_area_i(iFaceOut,j,k,iBlock,FaceArea_D)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
      B_D(x_)=LeftState_VX(Bx_,iFaceOut,j,k)
@@ -1031,7 +1031,7 @@ subroutine apply_bn_faceJ(jFaceIn,jFaceOut,iBlock)
 
   do k=1,nK; do i=1,nI
      if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
-     call calc_faceareaJ(i,jFaceOut,k,iBlock,FaceArea_D)
+     call calc_face_area_j(i,jFaceOut,k,iBlock,FaceArea_D)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
      B_D(x_)=LeftState_VY(Bx_,i,jFaceOut,k)
@@ -1079,7 +1079,7 @@ subroutine apply_bn_faceK(kFaceIn,kFaceOut,iBlock)
 
   do j=1,nJ; do i=1,nI
      if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
-     call calc_faceareaK(i,j,kFaceOut,iBlock,FaceArea_D)
+     call calc_face_area_k(i,j,kFaceOut,iBlock,FaceArea_D)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
      B_D(x_)=LeftState_VZ(Bx_,i,j,kFaceOut)

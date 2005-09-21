@@ -14,7 +14,7 @@ module ModCovariant
   real,dimension(nBLK) :: &
        FaceArea2MinI_B, FaceArea2MinJ_B,FaceArea2MinK_B
 contains
-  subroutine calc_faceareaI(i,j,k,iBLK,FaceAreaVector_D)
+  subroutine calc_face_area_i(i,j,k,iBLK,FaceAreaVector_D)
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
     integer,intent(in)::i,j,k,iBLK
     real,dimension(3),intent(out)::FaceAreaVector_D
@@ -24,8 +24,8 @@ contains
          *FaceAreaI_FB(i,j,k,iBLK)
     FaceAreaVector_D(3)=(z_BLK(i,j,k,iBLK)-z_BLK(i-1,j,k,iBLK))&
          *FaceAreaI_FB(i,j,k,iBLK)
-  end subroutine calc_faceareaI
-  subroutine calc_faceareaJ(i,j,k,iBLK,FaceAreaVector_D)
+  end subroutine calc_face_area_i
+  subroutine calc_face_area_j(i,j,k,iBLK,FaceAreaVector_D)
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
     integer,intent(in)::i,j,k,iBLK
     real,dimension(3),intent(out)::FaceAreaVector_D
@@ -35,8 +35,8 @@ contains
          *FaceAreaJ_FB(i,j,k,iBLK)
     FaceAreaVector_D(3)=(z_BLK(i,j,k,iBLK)-z_BLK(i,j-1,k,iBLK))&
          *FaceAreaJ_FB(i,j,k,iBLK)
-  end subroutine calc_faceareaJ
-  subroutine calc_faceareaK(i,j,k,iBLK,FaceAreaVector_D)
+  end subroutine calc_face_area_j
+  subroutine calc_face_area_k(i,j,k,iBLK,FaceAreaVector_D)
     use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
     integer,intent(in)::i,j,k,iBLK
     real,dimension(3),intent(out)::FaceAreaVector_D
@@ -46,7 +46,7 @@ contains
          *FaceAreaK_FB(i,j,k,iBLK)
     FaceAreaVector_D(3)=(z_BLK(i,j,k,iBLK)-z_BLK(i,j,k-1,iBLK))&
          *FaceAreaK_FB(i,j,k,iBLK)
-  end subroutine calc_faceareaK
+  end subroutine calc_face_area_k
 end module ModCovariant
 
 !=============End ModCovariant.f90=========================
