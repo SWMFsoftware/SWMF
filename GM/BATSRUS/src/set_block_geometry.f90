@@ -91,7 +91,7 @@ subroutine fix_block_geometry(iBLK)
 
   integer, intent(in) :: iBLK
 
-  integer :: i,j,k, iBoundary,MinVolumeCounter,MaxVolumeCounter,iVolumeCounter
+  integer :: i,j,k, iBoundary
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
   !---------------------------------------------------------------------------
   dx = dx_BLK(iBLK)

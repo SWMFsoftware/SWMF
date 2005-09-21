@@ -144,7 +144,7 @@ subroutine set_b0_face(iBlock)
 
   integer, intent(in) :: iBlock
 
-  integer :: i,j,k,iVolumeCounter
+  integer :: i,j,k
   real,dimension(3):: B0_D,RefXyzStart_D,RefDXyz_D
   real,dimension(nDim,0:1,0:1,0:1)::RefB0_DIII
   real ::x,y,z
