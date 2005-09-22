@@ -365,7 +365,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
         end do
      end if
      deallocate(BlockCut)
-  case('ptn','dpl')
+  case('slc','dpl')
      !================================ arbitrary slices ===============
      okdebug=.false.
 
@@ -373,7 +373,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
      ! XarbNormal,YarbNormal,ZarbNormal     normal for cut
      ! ic1,jc1,kc1,ic2,jc2,kc2              two opposite corner indices
 
-     if (plot_type1(1:3)=='ptn')then
+     if (plot_type1(1:3)=='slc')then
         !Point-Normal cut plot
         XarbP=plot_point(1,ifile); XarbNormal=plot_normal(1,ifile)
         YarbP=plot_point(2,ifile); YarbNormal=plot_normal(2,ifile)
@@ -404,12 +404,13 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            end do; end do; end do
         end if
      end do
-     call MPI_reduce(nBlockCuts,nCutsTotal,1,MPI_INTEGER,MPI_SUM,0,iComm,iError)
+     call MPI_reduce(nBlockCuts, nCutsTotal, 1, MPI_INTEGER, MPI_SUM, 0, &
+          iComm, iError)
 
      ! Write file header
      if(iProc==0)then
-        if (plot_type1(1:3)=='ptn')then
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Point-Normal Cut, '//textDateTime//'"'
+        if (plot_type1(1:3)=='slc')then
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
            write(unit_tmp,'(a)')trim(unitstr_TEC)
            write(unit_tmp,'(a,i8,a)') &
                 'ZONE T="PT-N Cut '//textNandT//'", I=',nCutsTotal,', J=1, K=1, F=POINT'

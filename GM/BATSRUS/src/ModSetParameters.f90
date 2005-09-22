@@ -509,8 +509,8 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('yMaxCut',plot_range(4,ifile))
               call read_var('zMinCut',plot_range(5,ifile))
               call read_var('zMaxCut',plot_range(6,ifile))
-           elseif(index(plot_string,'ptn')>0)then
-              plot_area='ptn'
+           elseif(index(plot_string,'slc')>0)then
+              plot_area='slc'
               call read_var('xMinCut',plot_range(1,ifile))
               call read_var('xMaxCut',plot_range(2,ifile))
               call read_var('yMinCut',plot_range(3,ifile))
@@ -707,23 +707,23 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='raw'
               plot_dimensional(ifile)=index(plot_string,'RAW')>0
               plot_vars(ifile)='rho mx my mz bx by bz e p b1x b1y b1z absdivB'
-              plot_pars(ifile)='g c'
+              plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
               plot_var='mhd'
               plot_dimensional(ifile) = index(plot_string,'MHD')>0
               plot_vars(ifile)='rho ux uy uz bx by bz p jx jy jz'
-              plot_pars(ifile)='g c'
+              plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
               plot_dimensional(ifile) = index(plot_string,'FUL')>0
               plot_vars(ifile)=&
                    'rho ux uy uz bx by bz b1x b1y b1z p e jx jy jz'
-              plot_pars(ifile)='g c'
+              plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
               plot_var='flx'
               plot_dimensional(ifile) = index(plot_string,'FLX')>0
               plot_vars(ifile)='rho mr br p jr pvecr'
-              plot_pars(ifile)='g c'
+              plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'SOL')>0.or.index(plot_string,'sol')>0)then
               plot_var='sol'
               plot_dimensional(ifile) = index(plot_string,'SOL')>0
