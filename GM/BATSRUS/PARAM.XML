@@ -1888,12 +1888,11 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 				<option value="sph" />
 				<option value="los" />
 				<option value="lin" />
+				<option value="cut" />
 				<option value="slc" 
 					if="$plotform =~ /\btec\b/"/>
 				<option value="dpl" 
 					if="$plotform =~ /\btec\b/"/>
-				<option value="cut" 
-					if="$plotform =~ /\bidl\b/"/>
 			</part>
 			<part name="plotvar" type="string" input="select" 
 							required="T">
