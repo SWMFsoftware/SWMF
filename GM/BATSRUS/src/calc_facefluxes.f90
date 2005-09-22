@@ -6,6 +6,7 @@ subroutine calc_facefluxes(DoResChangeOnly)
        boris_correction,&               !^CFG IF BORISCORR
        BlkTest,PROCtest,globalBLK
   use ModAdvance, ONLY : FluxType
+  use ModGeometry,ONLY : UseCovariant   !^CFG IF NOT CARTESIAN
 
   implicit none
 
@@ -26,16 +27,36 @@ subroutine calc_facefluxes(DoResChangeOnly)
   select case (FluxType)
   case ('Roe')                                  !^CFG IF ROEFLUX
      call calc_flux_Roe(DoResChangeOnly)        !^CFG IF ROEFLUX
-  case ('Rusanov')                              !^CFG IF RUSANOVFLUX
-     call calc_flux_Rusanov(DoResChangeOnly)    !^CFG IF RUSANOVFLUX
-  case('Linde')                                 !^CFG IF LINDEFLUX
-     call calc_flux_Linde(DoResChangeOnly)      !^CFG IF LINDEFLUX
+  case ('Rusanov')                              !^CFG IF RUSANOVFLUX BEGIN
+     if(.not.UseCovariant)then                  !^CFG IF NOT CARTESIAN
+        call calc_flux_Rusanov(DoResChangeOnly) !^CFG IF CARTESIAN
+ !      call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+        call calc_flux_Rusanov_covar(&
+             DoResChangeOnly)
+     end if                                     !^CFG END CARTESIAN         
+                                                !^CFG END  RUSANOVFLUX
+  case('Linde')                                 !^CFG IF LINDEFLUX BEGIN
+     if(.not.UseCovariant)then                  !^CFG IF NOT CARTESIAN
+        call calc_flux_Linde(DoResChangeOnly)   !^CFG IF CARTESIAN
+ !      call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+        call calc_flux_Linde_covar(&            
+              DoResChangeOnly)
+     end if                                     !^CFG END CARTESIAN
+                                                !^CFG END LINDEFLUX
   case ('Sokolov')                              !^CFG IF AWFLUX BEGIN
-     if(boris_correction)then                      !^CFG IF BORISCORR BEGIN
+     if(boris_correction)then                   !^CFG IF BORISCORR BEGIN
         call calc_flux_AWboris(DoResChangeOnly)
-     else                                          !^CFG END BORISCORR
-        call calc_flux_AW(DoResChangeOnly)
-     end if                                        !^CFG IF BORISCORR
+     else                                       !^CFG END BORISCORR
+        if(.not.UseCovariant)then               !^CFG IF NOT CARTESIAN
+           call calc_flux_AW(DoResChangeOnly)   !^CFG IF CARTESIAN
+!          call stop_mpi('Set UseCovariant=T') !^CFG UNCOMMENT IF NOT CARTESIAN
+     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+           call calc_flux_aw_covar(&            
+              DoResChangeOnly)
+        end if                                  !^CFG END CARTESIAN 
+     end if                                     !^CFG IF BORISCORR
                                                 !^CFG END AWFLUX
   case default
      call stop_mpi("Invalid flux function in calc_facefluxes")

@@ -8,6 +8,7 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   ! For using in amr_criteria only
 
   use ModMain, ONLY : nI,nJ,nK,gcn
+  use ModGeometry,ONLY: UseCovariant               !^CFG IF NOT CARTESIAN
   implicit none
 
   integer,           intent(in) :: iBlock
@@ -18,10 +19,14 @@ subroutine grad1D(iObsolete, iBlock, Var_G, &
   character (LEN=*), intent(in) :: TypeObsolete            !Obsolete
 
   !--------------------------------------------------------------------------
-!call covariant_gradient(iBlock, Var_G,&          !^CFG IF NOT CARTESIAN
-  call central_differences(iBlock, Var_G,&          !^CFG IF CARTESIAN
-       DifferenceX_G, DifferenceY_G, DifferenceZ_G)  
-
+  if(UseCovariant)then                                !^CFG IF NOT CARTESIAN BEGIN
+     call covariant_gradient(iBlock, Var_G,&  
+          DifferenceX_G, DifferenceY_G, DifferenceZ_G)  
+  else                                                !^CFG END CARTESIAN
+     call central_differences(iBlock, Var_G,&         !^CFG IF CARTESIAN
+          DifferenceX_G, DifferenceY_G, DifferenceZ_G)!^CFG IF CARTESIAN
+!     call stop_mpi('Set UseCovariant=T')             !^CFG UNCOMMENT IF NOT CARTESIAN
+  end if                                              !^CFG IF NOT CARTESIAN
 end subroutine grad1D
 
 !==============================================================================

@@ -20,7 +20,7 @@ MODFLCOV=ModFlux_covar.o
 #MODFLCOV=ModFlux_covar_mars.o         #^CFG UNCOMMENT IF MULTISP
 #MODFLCOV=ModFlux_modif_covar.o        #^CFG UNCOMMENT IF ALWAVES
 
-#MOD7 = ModCovariant.o ${MODFLCOV}   #^CFG IF NOT CARTESIAN
+MOD7 = ModCovariant.o ${MODFLCOV}   #^CFG IF NOT CARTESIAN
 
 #^CFG IF NOT GLOBALHELIOSPHERE BEGIN
 #^CFG IF NOT MULTISP BEGIN
@@ -72,38 +72,46 @@ OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
 #^CFG IF RUSANOVFLUX BEGIN
-OBJ5=calc_flux_Rusanov.o                    #^CFG IF CARTESIAN
-#OBJ5=calc_flux_rusanov_covar.o             #^CFG IF NOT CARTESIAN
+RUSCART=calc_flux_Rusanov.o                 #^CFG IF CARTESIAN
+RUSCOVAR=calc_flux_rusanov_covar.o          #^CFG IF NOT CARTESIAN
+OBJ5=${RUSCART} ${RUSCOVAR}
 #^CFG END RUSANOVFLUX
 
 #^CFG IF LINDEFLUX BEGIN  
+                                            #^CFG IF CARTESIAN BEGIN
 LINDECART=calc_flux_Linde.o                 #^CFG IF NOT GLOBALHELIOSPHERE
-#LINDECART=calc_flux_Linde_globhelio.o      #^CFG UNCOMMENT IF GLOBALHELIOSPHERE    
-OBJ6=${LINDECART}                           #^CFG IF CARTESIAN
-
+#LINDECART=calc_flux_Linde_globhelio.o      #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
+                                            #^CFG END CARTESIAN
+                                            #^CFG IF NOT CARTESIAN BEGIN
 #LINDECOVAR=calc_flux_linde_covar_mars.o    #^CFG UNCOMMENT IF MULTISP
 LINDECOVAR=calc_flux_linde_covar.o          #^CFG IF NOT MULTISP
-#OBJ6=${LINDECOVAR}                         #^CFG IF NOT CARTESIAN 
+                                            #^CFG END CARTESIAN 
+OBJ6=${LINDECOVAR} ${LINDECART}     
 #^CFG END LINDEFLUX                  
 
 #^CFG IF AWFLUX BEGIN
-#OBJ7=calc_flux_aw_covar.o                  #^CFG IF NOT CARTESIAN
-#OBJ7=calc_flux_aw_modif_covar.o            #^CFG UNCOMMENT IF ALWAVES
-#^CFG IF CARTESIAN BEGIN
-#OBJ7=calc_flux_aw_mars.o          #^CFG UNCOMMENT IF MULTISP
-#OBJ7=calc_flux_AW_modif.o         #^CFG UNCOMMENT IF ALWAVES
-#^CFG IF NOT MULTISP BEGIN
-OBJ7= calc_flux_AW.o                 	    #^CFG IF NOT ALWAVES
-#^CFG END MULTISP       
-#^CFG END CARTESIAN
+                                            #^CFG IF NOT CARTESIAN BEGIN
+AWCOVAR=calc_flux_aw_covar.o                #^CFG IF NOT ALWAVES
+#AWCOVAR=calc_flux_aw_modif_covar.o         #^CFG UNCOMMENT IF ALWAVES
+                                            #^CFG END CARTESIAN
+
+                                            #^CFG IF CARTESIAN BEGIN
+#AWCART=calc_flux_aw_mars.o                 #^CFG UNCOMMENT IF MULTISP
+#AWCART=calc_flux_AW_modif.o                #^CFG UNCOMMENT IF ALWAVES
+                                            #^CFG IF NOT MULTISP BEGIN
+AWCART = calc_flux_AW.o                     #^CFG IF NOT ALWAVES
+                                            #^CFG END MULTISP       
+                                            #^CFG END CARTESIAN
+OBJ7=${AWCOVAR} ${AWCART}   
 #^CFG END AWFLUX
 
 #^CFG IF ROEFLUX BEGIN
 OBJ8=calc_flux_Roe.o                        #^CFG IF CARTESIAN
 #^CFG END ROEFLUX
  
-OBJ9=calc_sources.o                        #^CFG IF CARTESIAN
-#OBJ9=calc_sources_covar.o covariant.o     #^CFG IF NOT CARTESIAN
+CARTSOURCES=calc_sources.o                  #^CFG IF CARTESIAN
+COVARCOURCES=calc_sources_covar.o           #^CFG IF NOT CARTESIAN
+OBJ9=${CARTSOURCES} ${COVARCOURCES}
 
 #^CFG IF DISSFLUX BEGIN
 OBJ10=\
@@ -122,6 +130,11 @@ OBJ13 = user_routines.o
 user_routines.f90:
 	cp user_routines_orig.f90 user_routines.f90
 #^CFG END USERFILES
+
+
+OBJ14=covariant.o                           #^CFG IF NOT CARTESIAN
+
+
 
 OBJECTS = \
 	BATS_methods.o \
@@ -171,7 +184,7 @@ OBJECTS = \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
-	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13}
+	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13} ${OBJ14}
 
 NAME = Advance
 

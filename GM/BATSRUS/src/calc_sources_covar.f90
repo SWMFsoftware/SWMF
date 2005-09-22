@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT CARTESIAN
 
-subroutine calc_sources
+subroutine calc_sources_covar
   use ModMain
   use ModProcMH
   use ModCovariant
@@ -214,5 +214,5 @@ subroutine calc_sources
 
   if(UseUserSource) call user_calc_sources
 
-end subroutine calc_sources
+end subroutine calc_sources_covar
 !=============================End covariant_calc_sources.f90

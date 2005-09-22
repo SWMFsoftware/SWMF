@@ -29,6 +29,9 @@ Module ModGeometry
   real,dimension(nI,nJ,nK,nBLK):: vInv_CB         
   !^CFG IF NOT CARTESIAN BEGIN
 
+  logical::UseCovariant=.false.
+
+
   !For a vertex-based logically cartesian (spherical, cylindircal) grid 
   !(UseVertexBasedGrid=.true.) the node coordinates are defined
   !in terms of an arbitrary pointwide transformation of nodes of an 

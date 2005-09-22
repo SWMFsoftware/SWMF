@@ -5,7 +5,8 @@ subroutine body_force_averages
   use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
   use ModGeometry, ONLY :&
        dx_BLK, dy_BLK, dz_BLK,&                       !^CFG IF CARTESIAN
-        x_BLK, y_BLK, z_BLK, true_cell
+       UseCovariant,          &                       !^CFG IF NOT CARTESIAN
+       x_BLK, y_BLK, z_BLK, true_cell
   use ModNumConst
   implicit none
 
@@ -63,16 +64,19 @@ subroutine body_force_averages
      z = cHalf*(z_BLK(i,j,k+1,globalBLK)+z_BLK(i,j,k,globalBLK))
      Potential_S(top_) = -GravityForcePotential(x,y,z) &
           - CentrifugalForcePotential(x,y,z)
-
-     !^CFG IF CARTESIAN BEGIN
-     fbody_x_BLK(i,j,k,globalBLK) = &
-          (Potential_S(east_)  + Potential_S(west_))*DxInv 
-     fbody_y_BLK(i,j,k,globalBLK) = &
-          (Potential_S(south_) + Potential_S(north_))*DyInv   
-     fbody_z_BLK(i,j,k,globalBLK) = &
-          (Potential_S(bot_) + Potential_S(top_))*DzInv
-     !^CFG END CARTESIAN
-     !call covariant_force_integral(i,j,k,globalBLK,Potential_S)     !^CFG IF NOT CARTESIAN 
+     if(.not.UseCovariant)then    !^CFG IF NOT CARTESIAN
+        !^CFG IF CARTESIAN BEGIN
+        fbody_x_BLK(i,j,k,globalBLK) = &
+             (Potential_S(east_)  + Potential_S(west_))*DxInv 
+        fbody_y_BLK(i,j,k,globalBLK) = &
+             (Potential_S(south_) + Potential_S(north_))*DyInv   
+        fbody_z_BLK(i,j,k,globalBLK) = &
+             (Potential_S(bot_) + Potential_S(top_))*DzInv
+        !^CFG END CARTESIAN
+!        call stop_mpi('Set UseCovariant=T') !^CFG UNCOMMENT IF NOT CARTESIAN
+     else                                    !^CFG IF NOT CARTESIAN BEGIN
+        call covariant_force_integral(i,j,k,globalBLK,Potential_S)     
+     end if                                  !^CFG END CARTESIAN 
 
   end do ; end do ;end do 
 end subroutine body_force_averages

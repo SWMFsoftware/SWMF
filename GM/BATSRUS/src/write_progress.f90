@@ -270,10 +270,18 @@ subroutine option_list
 
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-
-  call OPTION_RUSANOVFLUX(on,name);  call write_option     !^CFG IF RUSANOVFLUX
-  call OPTION_LINDEFLUX(on,name);    call write_option     !^CFG IF LINDEFLUX
-  call OPTION_AWFLUX(on,name);       call write_option     !^CFG IF AWFLUX
+  !^CFG IF RUSANOVFLUX BEGIN
+  call OPTION_RUSANOVFLUX(on,name);  call write_option     !^CFG IF CARTESIAN
+  call OPTION_RUSANOVFLUX_COVAR(on,name);call write_option !^CFG IF NOT CARTESIAN
+  !^CFG END RUSANOVFLUX
+  !^CFG IF LINDEFLUX BEGIN
+  call OPTION_LINDEFLUX(on,name);    call write_option     !^CFG IF CARTESIAN
+  call OPTION_LINDEFLUX_COVAR(on,name); call write_option  !^CFG IF NOT CARTESIAN
+  !^CFG END LINDEFLUX
+  !^CFG IF AWFLUX BEGIN
+  call OPTION_AWFLUX(on,name);       call write_option     !^CFG IF CARTESIAN
+  call OPTION_AWFLUX_COVAR(on,name); call write_option     !^CFG IF NOT CARTESIAN
+  !^CFG END AWFLUX 
   call OPTION_ROEFLUX(on,name);      call write_option     !^CFG IF ROEFLUX
   call OPTION_CONSTRAIN_B(on,name);  call write_option     !^CFG IF CONSTRAINB
   call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION

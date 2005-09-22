@@ -150,7 +150,7 @@ subroutine clean_divb
            call v_grad_phi(tmp2_blk,iBlock)
         end if
         DirDotDir=DirDotDir+&
-             sum(vInv_CB(iBlock)*(GradX_C**2+GradY_C**2+GradZ_C**2))
+             sum(vInv_CB(:,:,:,iBlock)*(GradX_C**2+GradY_C**2+GradZ_C**2))
      end do
      if(nProc>1)then
         call MPI_allreduce(DirDotDir,DirDotDirInv, 1,  MPI_REAL, MPI_SUM, &
@@ -176,13 +176,13 @@ subroutine clean_divb
         end if
         State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradX_C*vInv_CB(iBlock)*DirDotDirInv
+             GradX_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
         State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) = &
              State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradY_C*vInv_CB(iBlock)*DirDotDirInv
+             GradY_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
              State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)-&
-             GradZ_C*vInv_CB(iBlock)*DirDotDirInv
+             GradZ_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
         !        if(DoConservative.and.divb_diffcoeff>cOne))&
         !             p_BLK(1:nI,1:nJ,1:nK,iBlock)=& 
         !                  p_BLK(1:nI,1:nJ,1:nK,iBlock)+&
@@ -208,7 +208,7 @@ contains
     real:: divb_diffcoeff
     do iBlock=1,nBlock
        if(unusedBLK(iBlock))CYCLE
-       tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=vInv_CB(iBlock)
+       tmp1_blk(1:nI,1:nJ,1:nK,iBlock)=vInv_CB(:,:,:,iBlock)
     end do
 
     call message_pass_cells(.false.,.true.,.true.,tmp1_blk)
@@ -221,32 +221,32 @@ contains
 
        if(any(NeiLev(:,iBlock)/=0))then
           if(NeiLev(East_,iBlock)==NoBLK)then
-             tmp1_blk(0,1:nJ,1:nK,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(0,1:nJ,1:nK,iBlock)=vInv_CB(1,:,:,iBlock)
           elseif(abs(NeiLev(East_,iBlock))==1)then           
              Q_G(0,:,:)=cFour**NeiLev(East_,iBlock)
           end if
           if(NeiLev(West_,iBlock)==NoBLK)then
-             tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(nI+1,1:nJ,1:nK,iBlock)=vInv_CB(nI,:,:,iBlock)
           elseif(abs(NeiLev(West_,iBlock))==1)then
              Q_G(nI+1,:,:)=cFour**NeiLev(West_,iBlock)
           end if
           if(NeiLev(South_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,0,1:nK,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(1:nI,0,1:nK,iBlock)=vInv_CB(:,1,:,iBlock)
           elseif(abs(NeiLev(South_,iBlock))==1)then
              Q_G(:,0,:)=cFour**NeiLev(South_,iBlock)
           end if
           if(NeiLev(North_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(1:nI,nJ+1,1:nK,iBlock)=vInv_CB(:,nJ,:,iBlock)
           elseif(abs(NeiLev(North_,iBlock))==1)then
              Q_G(:,nJ+1,:)=cFour**NeiLev(North_,iBlock)
           end if
           if(NeiLev(Bot_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,0,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(1:nI,1:nJ,0,iBlock)=vInv_CB(:,:,1,iBlock)
           elseif(abs(NeiLev(Bot_,iBlock))==1)then
              Q_G(:,:,0)=cFour**NeiLev(Bot_,iBlock)
           end if
           if(NeiLev(Top_,iBlock)==NoBLK)then
-             tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=vInv_CB(iBlock)
+             tmp1_blk(1:nI,1:nJ,nK+1,iBlock)=vInv_CB(:,:,nK,iBlock)
           elseif(abs(NeiLev(Top_,iBlock))==1)then
              Q_G(:,:,nK+1)=cFour**NeiLev(Top_,iBlock)
           end if

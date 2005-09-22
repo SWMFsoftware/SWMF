@@ -354,7 +354,7 @@ real function sum_BLK(qnum,qa)
 end function sum_BLK
 !^CFG END PROJECTION
 !=============================================================================
-real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
+real function integrate_BLK(qnum,qa)              
 
   ! Return the volume integral of qa, ie. sum(qa*cV_BLK) 
   ! for all used blocks and true cells
@@ -362,9 +362,8 @@ real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlockMax,unusedBLK
-  use ModGeometry, ONLY :&
-                          cV_BLK,&                   
-                          true_BLK,true_cell
+  use ModGeometry, ONLY : cV_BLK,true_BLK,true_cell !^CFG IF CARTESIAN
+  use ModGeometry, ONLY : UseCovariant      !^CFG IF NOT CARTESIAN  
   use ModMpi
   implicit none 
 
@@ -378,9 +377,13 @@ real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
   integer :: iBLK, iError
 
   logical :: oktest, oktest_me
-
+  real,external:: integrate_BLK_covar  !^CFG IF NOT CARTESIAN BEGIN
   !---------------------------------------------------------------------------
-
+  if(UseCovariant)then
+     integrate_BLK=integrate_BLK_covar(qnum,qa)
+     return
+  end if                               !^CFG END CARTESIAN 
+                                       !^CFG IF CARTESIAN BEGIN
   call set_oktest('integrate_BLK',oktest, oktest_me)
 
   qsum=0.0
@@ -407,10 +410,10 @@ real function integrate_BLK(qnum,qa)               !^CFG IF CARTESIAN BEGIN
      integrate_BLK=qsum
      if(oktest)write(*,*)'me,qsum:',iProc,qsum
   end if
-
+!^CFG END CARTESIAN
 end function integrate_BLK    
 
-!^CFG END CARTESIAN
+
 
 !=============================================================================
 

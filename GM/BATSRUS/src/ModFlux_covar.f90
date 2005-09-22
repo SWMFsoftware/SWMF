@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT CARTESIAN
 
-Module ModFlux
+Module ModFlux_covar
   use ModVarIndexes,ONLY:Energy_
   implicit none
   integer, parameter :: nFlux=Energy_+2, MaxStrip=10
@@ -36,7 +36,7 @@ Module ModFlux
        Full_Flux,v_max_hf,&
        FaceArea_DI,FaceArea2Min
 
-end module ModFlux
+end module ModFlux_covar
 
 
 

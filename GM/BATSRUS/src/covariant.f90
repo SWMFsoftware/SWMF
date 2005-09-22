@@ -1,6 +1,5 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT CARTESIAN
-
 !=============To be left in src/covariant.f90=============
 subroutine set_covar_cartesian_geometry(iBLK)
   use ModCovariant
@@ -1119,7 +1118,7 @@ end subroutine apply_bn_faceK
 
 !=========End src/covariant_facefluxes.f90========================
 
-real function integrate_BLK(qnum,qa)             
+real function integrate_BLK_covar(qnum,qa)             
 
   ! Return the volume integral of qa, ie. sum(qa*cV_BLK) 
   ! for all used blocks and true cells
@@ -1178,16 +1177,16 @@ real function integrate_BLK(qnum,qa)
   if(qnum>1)then
      call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
           iComm, iError)
-     integrate_BLK=qsum_all
+     integrate_BLK_covar=qsum_all
      if(oktest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
   else
-     integrate_BLK=qsum
+     integrate_BLK_covar=qsum
      if(oktest)write(*,*)'me,qsum:',iProc,qsum
   end if
   
-end function integrate_BLK
+end function integrate_BLK_covar
 
-subroutine integrate_domain(Sum_V, Pressure_GB)
+subroutine integrate_domain_covar(Sum_V, Pressure_GB)
   use ModAdvance,   ONLY: State_VGB, tmp2_BLK, nVar
   use ModMain,      ONLY: nI, nJ, nK, nIJK, nBlock, MaxBlock, UnusedBLK
   use ModGeometry,  ONLY: vInv_CB, true_BLK, true_cell
@@ -1230,5 +1229,5 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
      Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
   end do
 
-end subroutine integrate_domain
+end subroutine integrate_domain_covar
 !==============End of library programms=================================
