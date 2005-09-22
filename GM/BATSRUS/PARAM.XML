@@ -152,9 +152,9 @@ of the included file or PARAM.in file is equivalent with an
 </commandgroup>
 
 
-<commandgroup name="PLANET COMMANDS">
+<commandgroup name="PLANET PARAETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!! PLANET PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 The planet commands can only be used in stand alone mode.
@@ -346,41 +346,6 @@ but much shorter.
 
 </commandgroup>
 
-<!-- ^CFG IF NOT CARTESIAN BEGIN -->
-
-<commandgroup name="GEOMETRY COMMANDS">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!! GEOMETRY COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
-	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
-
-#VERTEXBASEDGRID
-F                         UseVertexBasedGrid
-
-For a vertex-based logically cartesian (spherical, cylindircal) grid 
-(UseVertexBasedGrid=.true.) the node coordinates are defined
-in terms of an arbitrary pointwide transformation of nodes of an 
-original cartesian (spherical,cylindrical) block adaptive grid.
-Advantage: the possiblity to use the arbitrary transformation.
-Disadvantages: the cell center coordinates can not be definied unambigously
-and the difference of the state variables across the face does not evaluate
-the gradient in the direction, normal to this face (stricly speaking).
-Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
-Advantage: for some particular geometries (spherical, cylindrical) the 
-control volumes are the Voronoy cells (any face is perpendicular to the line
-connecting the centers of the neighboring cells). 
-Disadvantages: even in these particular cases it is not easy to properly 
-define the face area vectors at the resolution change. More general 
-cell-centered grid either is not logically cartesian, or does not consist of 
-the Voronoy cells only.
-
-</command>
-
-</commandgroup>
-
-<!-- ^CFG END CARTESIAN -->
-
 <!-- ^CFG IF USERFILES BEGIN -->
 <commandgroup name="USER DEFINED INPUT">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -546,7 +511,7 @@ read_inputs
 ! Index of dimension/direction to be tested. Default is X dimension.
 </command>
 
-<command name="STRICT">
+<command name="STRICT" multiple="T">
 	<parameter name="UseStrict" type="logical" default="T" />
 #STRICT
 T                       UseStrict
@@ -767,27 +732,6 @@ heat_test1		TypeProblemDiss
 !\end{verbatim}
 </command>
 
-<command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
-	<parameter name="TypeCoordSystem" type="string" input="select">
-		<option name="GSM" default="T"	if="$_NameComp eq 'GM'"/>
-		<option name="HGI" default="T"	if="$_NameComp eq 'IH'"/>
-		<option name="HGC" 		if="$_NameComp eq 'IH'"/>
-		<option name="HGR" default="T"	if="$_NameComp eq 'SC'"/>
-		<option name="HGI" 		if="$_NameComp eq 'SC'"/>
-	</parameter>
-
-#COORDSYSTEM
-GSM			TypeCoordSystem
-
-! TypeCoordSystem defines the coordinate system for the component.
-! Currently only one coordinate system is available for GM ("GSM")
-! and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
-! In the future "GSE" should be also an option for GM.
-! The coordinate systems are defined in share/Library/src/CON_axes.
-!
-! Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
-</command>
-
 <command name="RESTARTINDIR" if="$_IsFirstSession">
 	<parameter name="NameRestartInDir" type="string" length="100"
 				default="GM/restartIN" />
@@ -825,37 +769,6 @@ T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
 ! is saved into the restart files. These values are used by the 
 ! Constrained Transport scheme.
 <!-- ^CFG END CONSTRAINB -->
-</command>
-
-<command name="GRID" required="T" if="$_IsFirstSession">
-	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
-	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
-	<parameter name="nRootBlockZ" type="integer" min="1"  default="1" />
-	<parameter name="xMin"   type="real"             default="-192.0" />
-	<parameter name="xMax"   type="real" min="$xMin" default="  64.0" />
-	<parameter name="yMin"   type="real"             default=" -64.0" />
-	<parameter name="yMax"   type="real" min="$yMin" default="  64.0" />
-	<parameter name="zMin"   type="real"             default=" -64.0" />
-	<parameter name="zMax"   type="real" min="$zMin" default="  64.0" />
-#GRID
-2                       nRootBlockX
-1                       nRootBlockY
-1                       nRootBlockZ
--224.                   xMin
- 32.                    xMax
--64.                    yMin
- 64.                    yMax
--64.                    zMin
- 64.                    zMax
-
-! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
-! number of blocks of the base grid, i.e. the roots of the octree. 
-! By varying these parameters, one can setup a grid which is elongated
-! in some direction. The xMin, ..., zMax parameters define the physical
-! size of the grid.
-!
-! There is no default value, the grid size must always be given.
-! The #GRID command should be used before the #SAVEPLOT command.
 </command>
 
 <command name="OUTERBOUNDARY">
@@ -989,10 +902,20 @@ so the inner boundary must be set.
 <command name="EXTRABOUNDARY">
 	<parameter name="UseExtraBoundary" type="logical" default="F"/>
 	<if expr="$UseExtraBoundary">
-		<parameter name="TypeBcExtra" type="string"/>
-		<parameter name="DoFixExtraboundary" type="logical" 
+		<parameter name="TypeExtraBoundary" type="string"/>
+		<parameter name="DoFixExtraBoundary" type="logical" 
 							default="F"/>
 	</if>
+
+#EXTRABOUNDARY
+T		UseExtraBoundary
+user		TypeExtraBoundary
+F		DoFixExtraboundary
+
+It UseExtraBoundary is true, the user can define an extra boundary
+condition in the user files. The TypeExtraBoundary can be used
+to select a certain type. The DoFixExtraboundary controls
+if resolution change is allowed.
 </command>
 <!-- ^CFG END USERFILES -->
 
@@ -1006,13 +929,100 @@ so the inner boundary must be set.
 #FACEOUTERBC
 0              MaxBoundary            
 F              DoFixOuterBoundary)    !read only for MaxBoundary>=East_(=1).
-! If MaxBoundary is East_(=1) or more then the outer boundaries with
-! the number of boundary being between East_ and MaxBoundary
-! are treated using set_BCs.f90 subroutines instead of set_outerBCs.f90 
-! if DoFixOuterBoundary is .true., there is no resolution
-! change along the outer boundaries with the number of
-! of boundary being between East_ and MaxBoundary
+
+If MaxBoundary is East_(=1) or more then the outer boundaries indexed
+between East_ and MaxBoundary are treated using set_BCs.f90 subroutines 
+(face values are defined) instead of set_outerBCs.f90 (ghost cell values
+are defined).
+If DoFixOuterBoundary is .true., there is no resolution
+change along the outer boundaries indexed from East_ to MaxBoundary.
 </command>
+</commandgroup>
+
+<commandgroup name="GRID GEOMETRY">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!! GRID GEOMETRY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="GRID" required="T" if="$_IsFirstSession">
+	<parameter name="nRootBlockX" type="integer" min="1"  default="2" />
+	<parameter name="nRootBlockY" type="integer" min="1"  default="1" />
+	<parameter name="nRootBlockZ" type="integer" min="1"  default="1" />
+	<parameter name="xMin"   type="real"             default="-192.0" />
+	<parameter name="xMax"   type="real" min="$xMin" default="  64.0" />
+	<parameter name="yMin"   type="real"             default=" -64.0" />
+	<parameter name="yMax"   type="real" min="$yMin" default="  64.0" />
+	<parameter name="zMin"   type="real"             default=" -64.0" />
+	<parameter name="zMax"   type="real" min="$zMin" default="  64.0" />
+#GRID
+2                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-224.                   xMin
+ 32.                    xMax
+-64.                    yMin
+ 64.                    yMax
+-64.                    zMin
+ 64.                    zMax
+
+! The nRootBlockX, nRootBlockY and nRootBlockZ parameters define the 
+! number of blocks of the base grid, i.e. the roots of the octree. 
+! By varying these parameters, one can setup a grid which is elongated
+! in some direction. The xMin, ..., zMax parameters define the physical
+! size of the grid.
+!
+! There is no default value, the grid size must always be given.
+! The #GRID command should be used before the #SAVEPLOT command.
+</command>
+
+<command name="COORDSYSTEM" alias="COORDINATESYSTEM" multiple="T">
+	<parameter name="TypeCoordSystem" type="string" input="select">
+		<option name="GSM" default="T"	if="$_NameComp eq 'GM'"/>
+		<option name="HGI" default="T"	if="$_NameComp eq 'IH'"/>
+		<option name="HGC" 		if="$_NameComp eq 'IH'"/>
+		<option name="HGR" default="T"	if="$_NameComp eq 'SC'"/>
+		<option name="HGI" 		if="$_NameComp eq 'SC'"/>
+	</parameter>
+
+#COORDSYSTEM
+GSM			TypeCoordSystem
+
+! TypeCoordSystem defines the coordinate system for the component.
+! Currently only one coordinate system is available for GM ("GSM")
+! and two for IH ("HGI" or "HGC") and two for SC ("HGR" or "HGI"). 
+! In the future "GSE" should be also an option for GM.
+! The coordinate systems are defined in share/Library/src/CON_axes.
+!
+! Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
+</command>
+
+<!-- ^CFG IF NOT CARTESIAN BEGIN -->
+<command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
+
+#VERTEXBASEDGRID
+F                         UseVertexBasedGrid
+
+For a vertex-based logically cartesian (spherical, cylindircal) grid 
+(UseVertexBasedGrid=.true.) the node coordinates are defined
+in terms of an arbitrary pointwide transformation of nodes of an 
+original cartesian (spherical,cylindrical) block adaptive grid.
+Advantage: the possiblity to use the arbitrary transformation.
+Disadvantages: the cell center coordinates can not be definied unambigously
+and the difference of the state variables across the face does not evaluate
+the gradient in the direction, normal to this face (stricly speaking).
+Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
+Advantage: for some particular geometries (spherical, cylindrical) the 
+control volumes are the Voronoy cells (any face is perpendicular to the line
+connecting the centers of the neighboring cells). 
+Disadvantages: even in these particular cases it is not easy to properly 
+define the face area vectors at the resolution change. More general 
+cell-centered grid either is not logically cartesian, or does not consist of 
+the Voronoy cells only.
+
+</command>
+<!-- ^CFG END CARTESIAN -->
+
 </commandgroup>
 
 <commandgroup name="INITIAL TIME">
@@ -1878,7 +1888,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 				<option value="sph" />
 				<option value="los" />
 				<option value="lin" />
-				<option value="ptn" 
+				<option value="slc" 
 					if="$plotform =~ /\btec\b/"/>
 				<option value="dpl" 
 					if="$plotform =~ /\btec\b/"/>
@@ -1923,35 +1933,21 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" />
 		<parameter name="DtSavePlot" type="real"    min="-1" />
-		<if expr="$plotarea =~ /\bptn\b/">
+		<if expr="$plotarea =~ /\bdpl|cut|slc\b/">
 			<parameter name="xMinCut" type="real" />
 			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
 			<parameter name="yMinCut" type="real" />
 			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
 			<parameter name="zMinCut" type="real" />
 			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
+		</if>
+		<if expr="$plotarea =~ /\bslc\b/">
 			<parameter name="xPoint"  type="real" />
 			<parameter name="yPoint"  type="real" />
 			<parameter name="zPoint"  type="real" />
 			<parameter name="xNormal" type="real" />
 			<parameter name="yNormal" type="real" />
 			<parameter name="zNormal" type="real" />
-		</if>
-		<if expr="$plotarea =~ /\bdpl\b/">
-			<parameter name="xMinCut" type="real" />
-			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
-			<parameter name="yMinCut" type="real" />
-			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
-			<parameter name="zMinCut" type="real" />
-			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
-		</if>
-		<if expr="$plotarea =~ /\bcut\b/">
-			<parameter name="xMinCut" type="real" />
-			<parameter name="xMaxCut" type="real" min="$xMinCut"/>
-			<parameter name="yMinCut" type="real" />
-			<parameter name="yMaxCut" type="real" min="$yMinCut"/>
-			<parameter name="zMinCut" type="real" />
-			<parameter name="zMaxCut" type="real" min="$zMinCut"/>
 		</if>
 		<parameter name="Radius" type="real" min="0" default="10"
 			if="$plotarea =~ /\bsph\b/" />
@@ -2004,29 +2000,29 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 	</for>
 #SAVEPLOT
 8			nPlotfile
-3d  MHD tec		StringPlot ! 3d MHD data
+3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
-y=0 VAR idl		StringPlot ! y=0 cut
+y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 -1			DnSavePlot
 100.			DtSavePlot
-2.			DxSavePlot ! Read only for format 'idl'
-jx jy jz		NameVars   ! Read only for content 'var'
-g unitx unitv unitn	NamePars   ! Read only for content 'var'
-cut ray idl		StringPlot ! ray tracing plot
+2.			DxSavePlot ! resolution (for IDL plots)
+jx jy jz		NameVars
+g rbody			NamePars
+cut ray idl		StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
 1			DnSavePlot
 -1.			DtSavePlot
--10.			xMinCut    ! Read only for area 'cut'
-10.			xMaxCut    ! Read only for area 'cut'
--10.			yMinCut    ! Read only for area 'cut'
-10.			yMaxCut    ! Read only for area 'cut'
--10.			zMinCut    ! Read only for area 'cut'
-10.			zMaxCut    ! Read only for area 'cut'
-1.			DxSavePlot ! Read only for format 'idl'
+-10.			xMinCut    
+10.			xMaxCut    
+-10.			yMinCut    
+10.			yMaxCut    
+-10.			zMinCut    
+10.			zMaxCut    
+1.			DxSavePlot 
 sph flx idl		StringPlot ! spherical plot
 -1			DnSavePlot
 100.			DtSavePlot
-4.			Radius     ! of spherical cut, Read only for area 'sph'
+4.			Radius     ! of spherical surface
 los sol idl             StringPlot ! line of sight plot
 -1			DnSavePlot
 100.			DtSavePlot
@@ -2055,7 +2051,7 @@ F			IsParallel
 1.0			yStartLine
 -3.5			zStartLine
 T			IsParallel
-dpl MHD tec		StringPlot  ! dipole tilt cut plot, ONLY WORKS WITH tec
+dpl MHD tec		StringPlot  ! dipole slice Tecplot (ONLY!) plot
 -1			DnSavePlot
 10.			DtSavePlot
 -10.			xMinCut
@@ -2064,7 +2060,7 @@ dpl MHD tec		StringPlot  ! dipole tilt cut plot, ONLY WORKS WITH tec
  10.			yMaxCut
 -10.			zMinCut
  10.			zMaxCut
-ptn MHD tec		StringPlot  ! point-normal cut plot, ONLY WORKS WITH tec
+slc MHD tec		StringPlot  ! general slice Tecplot (ONLY!) plot
 -1			DnSavePlot
 10.			DtSavePlot
 -10.			xMinCut
@@ -2080,168 +2076,176 @@ ptn MHD tec		StringPlot  ! point-normal cut plot, ONLY WORKS WITH tec
   0.			yNormal
   1.			zNormal
 
-! Default is nPlotFile=0. \\
-!
-! \noindent
-! StringPlot must contain the following 3 parts in arbitrary order
-!\begin{verbatim}
-! plotarea plotvar plotform
-!
-! plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'ptn', 'sph', 'los', 'lin'
-! plotvar  = 'mhd', 'ful','raw', 'ray', 'flx', 'sol', 'var' - unitless output
-! plotvar  = 'MHD', 'FUL','RAW', 'RAY', 'FLX', 'SOL', 'VAR' - dimensional
-! plotform = 'tec', 'idl'
-!\end{verbatim}
-! NOTES: The plotvar option 'sol' is only valid for plotarea 'los'.\\
-!
-!\noindent
-! The plotarea string defines the 1, 2, or 3D volume of the plotting area:
-!\begin{verbatim}
-! x=0	- full x=0 plane: xmin=-0.001, xmax=0.001, average for symmetry plane
-! y=0	- full y=0 plane: ymin=-0.001, ymax=0.001, average for symmetry plane
-! z=0	- full z=0 plane: zmin=-0.001, zmax=0.001, average for symmetry plane
-! 3d	- full 3D volume
-! cut	- READ PLOTRANGE FROM PARAM.in, slightly different behavior for idl / Tec
-! dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
-! ptn   - cut plane given point and normal, uses PLOTRANGE to clip plot
-! sph   - spherical cut at radius R_plot, READ FROM PARAM.in
-! los   - line of sight integrated plot
-! lin   - one dimensional plot along a field or stream line
-!\end{verbatim}
-! The plotvar string defines the plot variables and the equation parameters.
-! It also controls whether or not the variables will be plotted in dimensional
-! values or as non-dimensional values:
-!\begin{verbatim}
-! ALL CAPS  - dimensional
-! all lower - dimensionless
-!
-! 'mhd' - vars: rho Ux Uy Uz E Bx By Bz P Jx Jy Jz
-!         pars: g eta
-! 'ful' - vars: rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz
-!         pars: g eta
-! 'raw' - vars: rho rhoUx rhoUy rhoUz E Bx By Bz P b1x b1y b1z divb
-!         pars: g eta
-! 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk
-!         pars: R_ray
-! 'flx' - vars: rho rhoUr Br jr pvecr
-!         pars: g eta
-! 'var' - vars: READ FROM PARAMETER FILE
-!         pars: READ FROM PARAMETER FILE
-! 'sol' - vars: wl pb
-!         pars: mu
-!\end{verbatim}
-! The plot_string is always followed by the plotting frequency
-! DnSavePlot and for time accurate runs by DtSavePlot.\\
-!
-!\noindent
-! Depending on StringPlot, further information is read from the parameter file
-! in this order:
-!\begin{verbatim}
-! PlotRange		if plotarea is 'cut', 'dpl', or 'ptn'
-! Point,Normal		if plotarea is 'ptn'
-! DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
-! Radius		if plotarea is 'sph'
-! NameVars		if plotform is 'var'
-! NamePars		if plotform is 'var'
-!\end{verbatim}
-! The PlotRange is described by 6 coordinates. For IDL plots, If the width in 
-! one or two 
-! dimensions is less than the smallest cell size within the plotarea, 
-! then the plot file will be 2 or 1 dimensional. If the range is thin but
-! symmetric about one of the x=0, y=0, or z=0 planes, data will be averaged
-! in the postprocessing.\\
-!
-! For Tecplot (tec) file and 'cut', Plotrange is read but only 1 dimension is used.  
-! Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
-! implemented.  For x=constant, for example, the y and z ranges 
-! do not matter as long at they are "wider" than the x range.  The slice will be 
-! located at the average of the two x ranges.  So, for example to save a plot in
-! a x=-5 constant plane 
-! cut in tec.  The following would work for the plot range:
-!\begin{verbatim}
-! -5.01			xMinCut
-! -4.99			xMaxCut
-! -10.			yMinCut
-!  10.			yMaxCut
-! -10.			zMinCut
-!  10.			zMaxCut
-!\end{verbatim}
-!
-! The 'dpl' and 'ptn' Tecplot plots use Plotrange like the IDL plots, and will
-! clip the cut plane when it exits the defined box.
-!
-! \noindent
-! Point is described by the coordinate of any point on the cut plane, often the origin.
-! Normal is the coordinate of a vector normal to the plane.  If the normal in any given
-! coordinate direction is less than 0.01, then no cuts are computed for cell edges
-! parallel to that coordinate direction.  For example, the following would result in
-! only computing cuts on cell edges parallel to the Z axis.
-!\begin{verbatim}
-!  0.0			xNormal
-!  0.0			yNormal
-!  1.0			zNormal
-!\end{verbatim}
-!
-! \noindent
-! Possible values for DxSavePlot (for IDL files):
-!\begin{verbatim}
-!  0.5	- fixed resolution (any positive value)
-!  0.	- fixed resolution based on the smallest cell in the plotting area
-! -1.	- unstructured grid will be produced by PostIDL.exe
-!\end{verbatim}
-! Radius is the radius of the spherical cut for plotarea='sph'
-!
-! With #SAVEPLOT it is possible to create plots which are the integral along
-! the line of site of some quantity.  The variables which control this are the 
-! following:
-!\begin{verbatim}
-!    LosVectorX,Y,Z define the direction of the line of sight integration
-!    xSizeImage, ySizeImage defines the size of the LOS image
-!    xOffset, yOffset defines the offset relative to the origin (Sun)
-!    rOccult defines the minimum distance of the line from the origin (Sun)
-!    MuLimbDarkening is the limb darkening parameter for the 'wl' (white light)
-!                 and 'pb' (polarization brightness) plot variables.
-!\end{verbatim}
-!
-!\noindent
-! The possible values for NameVars with plotarea 'los' 
-!       are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
-!
-! \noindent
-! The possible values for NameVars for other plot areas
-!       are listed in subroutine set_plotvar in write_plot_common.f90.\\
-!
-! \noindent
-! The possible values for NamePars 
-!       are listed in subroutine set_eqpar in write_plot_common.f90\\
-!
-! A plot file is produced by each processor.  This file is ASCII in 'tec'
-! format and can be either binary or ASCII in 'idl' format as chosen under
-! the #SAVEBINARY flag.  The name of the files are
-!\begin{verbatim}
-! IO2/plotarea_plotvar_plotnumber_timestep_PEnumber.extenstion
-!\end{verbatim}
-! where extension is 'tec' for the TEC and 'idl' for the IDL file formats.
-! The plotnumber goes from 1 to nplot in the order of the files in PARAM.in.
-! After all processors wrote their plot files, processor 0 writes a small 
-! ASCII header file named as
-!\begin{verbatim}
-! IO2/plotarea_plotvar_plotnumber_timestep.headextension
-!\end{verbatim}
-! where headextension is:
-!\begin{verbatim}
-!           'T' for TEC file format
-!           'S' for TEC and plot_area 'sph' 
-!           'h' for IDL file format       
-!\end{verbatim}
-!
-!\noindent
-! The line of sight integration produces TecPlot and IDL files directly:
-!\begin{verbatim}
-! IO2/los_plotvar_plotnumber_timestep.extension
+Default is nPlotFile=0. \\
+
+\noindent
+StringPlot must contain the following 3 parts in arbitrary order
+\begin{verbatim}
+plotarea plotvar plotform
+
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin'
+plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var' - normalized
+plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR' - dimensional
+plotform = 'tec', 'idl'
 \end{verbatim}
-! where extension is 'dat' for TecPlot and 'out' for IDL file formats.
-! The IDL output from line of sight integration is always in ASCII format.
+NOTES: The plotvar option 'sol' is only valid for plotarea 'los' and
+       the plotvar option 'pos' is only valid for plotarea 'lin'.\\
+
+\noindent
+The plotarea string defines the 1, 2, or 3D volume of the plotting area:
+\begin{verbatim}
+x=0   - full x=0 plane: average for symmetry plane
+y=0   - full y=0 plane: average for symmetry plane
+z=0   - full z=0 plane: average for symmetry plane
+3d    - full 3D volume
+cut   - 3D, 2D or 1D rectangular cut (IDL)/ a 2D rectangular cut (Tecplot)
+dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
+slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
+sph   - spherical surface cut at the given radius
+los   - line of sight integrated plot
+lin   - one dimensional plot along a field or stream line
+\end{verbatim}
+The plotvar string defines the plot variables and the equation parameters.
+It also controls whether or not the variables will be plotted in dimensional
+values or as non-dimensional values:
+\begin{verbatim}
+ ALL CAPS  - dimensional
+ all lower - dimensionless
+
+ 'mhd' - vars: rho Ux Uy Uz E Bx By Bz P Jx Jy Jz
+         pars: g eta
+ 'ful' - vars: rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz
+         pars: g eta
+ 'raw' - vars: rho rhoUx rhoUy rhoUz E Bx By Bz P b1x b1y b1z divb
+         pars: g eta
+ 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk
+         pars: R_ray
+ 'flx' - vars: rho rhoUr Br jr pvecr
+         pars: g eta
+ 'var' - vars: READ FROM PARAMETER FILE
+         pars: READ FROM PARAMETER FILE
+ 'sol' - vars: wl pb
+         pars: mu
+\end{verbatim}
+The plot_string is always followed by the plotting frequencies
+DnSavePlot and DtSavePlot.\\
+
+\noindent
+Depending on StringPlot, further information is read from the parameter file
+in this order:
+\begin{verbatim}
+ PlotRange		if plotarea is 'cut', 'dpl', or 'slc'
+ Point, Normal		if plotarea is 'slc'
+ DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
+ Radius                 if plotarea is 'sph'
+ NameVars		if plotform is 'var'
+ NamePars		if plotform is 'var'
+\end{verbatim}
+The PlotRange is described by 6 coordinates. 
+For IDL plots, if the width in one or two 
+dimensions is less than the smallest cell size within the plotarea, 
+then the plot file will be 2 or 1 dimensional, respectively.
+If the range is thin but symmetric about one of the x=0, y=0, or z=0 planes, 
+data will be averaged in the postprocessing.\\
+
+For Tecplot (tec) file and 'cut', Plotrange is read but 
+only 1 dimension is used.  
+Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
+implemented.  For x=constant, for example, the y and z ranges 
+do not matter as long at they are "wider" than the x range.  The slice will be 
+located at the average of the two x ranges.  So, for example to save a plot in
+a x=-5 constant plane cut in tec. The following would work for the plot range:
+\begin{verbatim}
+ -5.01			xMinCut
+ -4.99			xMaxCut
+ -10.			yMinCut
+  10.			yMaxCut
+ -10.			zMinCut
+  10.			zMaxCut
+\end{verbatim}
+The 'dpl' and 'slc' Tecplot plots use Plotrange like the IDL plots, and will
+clip the cut plane when it exits the defined box.
+
+\noindent
+Point is described by the coordinate of any point on the cut plane, 
+often the origin. Normal is the coordinate of a vector normal to the plane.  
+If the normal in any given coordinate direction is less than 0.01, 
+then no cuts are computed for cell edges parallel to that coordinate direction.
+For example, the following would result in only computing cuts on cell 
+edges parallel to the Z axis.
+\begin{verbatim}
+  0.0			xNormal
+  0.0			yNormal
+  1.0			zNormal
+\end{verbatim}
+
+\noindent
+Possible values for DxSavePlot (for IDL files):
+\begin{verbatim}
+  0.5	- fixed resolution (any positive value)
+  0.	- fixed resolution based on the smallest cell in the plotting area
+ -1.	- unstructured grid will be produced by PostIDL.exe
+\end{verbatim}
+Radius is the radius of the spherical cut for plotarea='sph'
+
+The line-of-sight (plotarea 'los') plots calculate integrals along
+the lines of site of some quantity and create a 2D grid of the
+integrated values. The variables which control the direction of the
+line of sight and the grid position and resolution are the following:
+\begin{verbatim}
+ LosVectorX,Y,Z         - the direction of the line of sight integration
+ xSizeImage, ySizeImage - the size of the LOS image
+ xOffset, yOffset       - the offset relative to the origin (Sun)
+ rOccult                - the minimum distance of the line from the origin
+ MuLimbDarkening        - the limb darkening parameter for the 'wl' 
+                          (white light) and 'pb' (polarization brightness) 
+                          plot variables.
+\end{verbatim}
+
+\noindent
+The possible values for NameVars with plotarea 'los' 
+are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
+
+\noindent
+The possible values for NameVars for other plot areas
+are listed in subroutine set_plotvar in write_plot_common.f90.\\
+
+\noindent
+The possible values for NamePars are listed in subroutine 
+set_eqpar in write_plot_common.f90\\
+
+A plot file is produced by each processor.  This file is ASCII in 'tec'
+format and can be either binary or ASCII in 'idl' format as chosen under
+the #SAVEBINARY flag.  The name of the files are
+\begin{verbatim}
+ IO2/plotarea_plotvar_plotnumber_timeinfo_PEnumber.extension
+\end{verbatim}
+where extension is 'tec' for the TEC and 'idl' for the IDL file formats.
+The plotnumber goes from 1 to nplot in the order of the files in PARAM.in.
+The 'timeinfo' contains simulation time as hours-minutes-seconds
+(for time accurate runs only), and time step number.
+Spherical plot area 'sph' creates two files per processor starting with
+'spN' and 'spS' for the northern and southern hemispheres, respectively.  
+
+After all processors wrote their plot files, processor 0 writes a small 
+ASCII header file named as
+\begin{verbatim}
+ IO2/plotarea_plotvar_plotnumber_timestep.headextension
+\end{verbatim}
+where headextension is:
+\begin{verbatim}
+           'T' for TEC file format
+           'S' for TEC and plot_area 'sph' 
+           'h' for IDL file format       
+\end{verbatim}
+
+\noindent
+The line of sight integration produces TecPlot and IDL files directly:
+\begin{verbatim}
+ IO2/los_plotvar_plotnumber_timestep.extension
+\end{verbatim}
+where extension is 'dat' for TecPlot and 'out' for IDL file formats.
+The IDL output from line of sight integration is always in ASCII format.
 
 </command>
 
@@ -2256,7 +2260,7 @@ T			DoSaveBinary   used only for 'idl' plot file
 ! that it can be processed on another machine or with a different 
 ! (lower) precision. For example PostIDL.exe may be compiled with 
 ! single precision to make IO2/*.out files smaller, while BATSRUS.exe is 
-! compiled in double precision, to make results more accurate.
+! compiled in double precision to make results more accurate.
 </command>
 
 <command name="SAVEPLOTSAMR">
