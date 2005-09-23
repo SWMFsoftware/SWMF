@@ -891,8 +891,22 @@ Module ModUser
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
   use ModUserTD99  ! To include TD99 flux rope.
 
-  use ModUserEmpty, ONLY: user_heat_source, user_set_outerbcs, user_set_ics, &
-       user_write_progress
+  use ModUserEmpty, ONLY:               &
+!!!       user_read_inputs,                &
+       user_set_ics,                    &
+!!!       user_initial_perturbation,       &
+!!!       set_extra_boundary_cells,        &
+!!!       user_face_bcs,                   &
+       user_set_outerbcs,               &
+!!!       user_specify_initial_refinement, &
+!!!       user_amr_criteria,               &
+       user_write_progress,             &
+!!!       user_get_log_var,                &
+!!!       user_calc_sources,               &
+       user_heat_source
+!!!       get_user_b0,                     &
+!!!       user_update_states
+
   include 'user_module.h' !list of public methods
 
   real, parameter :: VersionUserModule = 1.0
