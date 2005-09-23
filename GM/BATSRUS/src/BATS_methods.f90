@@ -117,6 +117,7 @@ contains
   !===========================================================================
 
   subroutine set_initial_conditions
+    !!use ModUser, ONLY: user_initial_perturbation
 
     !\
     ! Set intial conditions for solution in each block.

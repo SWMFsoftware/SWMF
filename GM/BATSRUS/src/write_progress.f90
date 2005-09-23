@@ -55,6 +55,7 @@ subroutine write_runtime_values()
   use ModParallel, ONLY : proc_dims
   use ModPhysics
   use ModMpi
+  !!use ModUser, ONLY: user_write_progress
   implicit none
 
   integer :: iError

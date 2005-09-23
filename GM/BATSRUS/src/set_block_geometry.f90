@@ -407,6 +407,7 @@ subroutine set_boundary_cells(iBLK)
   use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
   use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
   use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK !^CFG IF FACEOUTERBC
+  !!use ModUser, ONLY: set_extra_boundary_cells
 
   implicit none
   integer,intent(in)::iBLK

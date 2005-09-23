@@ -4,6 +4,7 @@ subroutine update_states(iStage,iBlock)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
+  !!use ModUser, ONLY: user_update_states
   implicit none
 
   integer, intent(in) :: iStage,iBlock

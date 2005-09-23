@@ -10,6 +10,7 @@ subroutine specify_initial_refinement(refb, lev)
   use ModPhysics, ONLY : Rbody,Rcurrents,Qprod
   use ModAMR, ONLY : InitialRefineType
   use ModNumConst
+  !!use ModUser, ONLY: user_specify_initial_refinement
   implicit none
 
   logical, intent(out) :: refb(nBLK)

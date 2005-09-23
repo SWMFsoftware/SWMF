@@ -330,6 +330,8 @@ contains
   !============================================================================
   subroutine set_log_var
 
+    !!use ModUser, ONLY: user_get_log_var
+
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU
 

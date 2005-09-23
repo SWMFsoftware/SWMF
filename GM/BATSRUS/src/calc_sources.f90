@@ -13,6 +13,7 @@ subroutine calc_sources
   use ModPhysics
   use ModNumConst
   use ModGeometry,ONLY :  fAx_BLK, fAy_BLK, fAz_BLK
+  !!use ModUser, ONLY: user_calc_sources
   implicit none
 
   real:: B1nJump,DivBInternal

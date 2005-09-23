@@ -19,6 +19,7 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
   use ModParallel, ONLY : NOBLK,neiLEV
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,far_field_BCs_BLK,MaxBoundary
   use ModPhysics
+  !!use ModUser, ONLY: user_set_outerBCs
   implicit none
 
   integer, intent(in) :: iBlock

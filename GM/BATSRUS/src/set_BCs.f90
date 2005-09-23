@@ -279,6 +279,7 @@ contains
   subroutine set_body_BCs(iSide)
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI
+    !!use ModUser, ONLY: user_face_bcs
     
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
