@@ -405,8 +405,6 @@ subroutine set_physics_constants
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
 
-  if(UseUserSetPhysConst)call user_set_physics_constants  !^CFG IF USERFILES 
-
 end subroutine set_physics_constants
 
 !===========================================================================
