@@ -127,8 +127,14 @@ OBJ12= write_plot_los.o write_plot_sph.o \
 
 #^CFG IF USERFILES BEGIN
 OBJ13 = user_routines.o 
+##OBJ13 = ModUserEmpty.o ModUser.o
+
 user_routines.f90:
 	cp user_routines_orig.f90 user_routines.f90
+
+ModUser.f90:
+	cp ModUserDefault.f90 ModUser.f90
+
 #^CFG END USERFILES
 
 
@@ -314,7 +320,7 @@ BATSRUS_for_xlf:
 #
 
 distclean: clean
-	rm -f Makefile.RULES Makefile.DEPEND ModSize.f90
+	rm -f Makefile.RULES Makefile.DEPEND ModSize.f90 ModUser.f90
 	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
 		ModNodes.f90 ModRaytrace.f90
 	rm -f stand_alone.f90
