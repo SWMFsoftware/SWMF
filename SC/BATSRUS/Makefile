@@ -43,6 +43,6 @@ distclean: clean
 		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
-	rm -rf src srcUser Makefile.* PARAM.XML GridSize.pl *~
+	rm -rf src srcUser Makefile.* PARAM.XML RenameList.pl GridSize.pl *~
 
 veryclean: distclean
