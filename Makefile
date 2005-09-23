@@ -374,60 +374,68 @@ tags:	ENV_CHECK
 #
 
 IH/BATSRUS/src/Makefile:
-	mkdir -p IH/BATSRUS/src
-	cd GM/BATSRUS/src; cp *.f90 *.f Makefile* ../../../IH/BATSRUS/src
+	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser
+	cd GM/BATSRUS/src; cp *.f90 *.f *.h Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
-	cp GM/BATSRUS/srcInterface/ModGridDescriptor.f90 IH/BATSRUS/src
-	cp GM/BATSRUS/srcInterface/update_lagrangian_grid.f90 IH/BATSRUS/src
-	cp GM/BATSRUS/srcInterface/ModBuffer.f90 IH/BATSRUS/src
-	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/src
+	cd GM/BATSRUS/srcInterface/; \
+		cp ModGridDescriptor.f90 ModBuffer.f90 \
+		update_lagrangian_grid.f90 \
+		../../../IH/BATSRUS/srcInterface
+	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
+	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cd GM/BATSRUS; \
-		cp Makefile.def PARAM.XML PARAM.pl GridSize.pl \
+		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl GridSize.pl \
 		../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
+# rename IH source files to avoid name conflicts
+IH_SRC = src/*.f90 src/*.h src/*.f srcInterface/*.f90 srcUser/*.f90
+
 IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
-	cd IH/BATSRUS/src; \
-		${SCRIPTDIR}/Methods.pl IH; \
-		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
-		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1IH_$$2]i' *.f90 *.f;\
-		mv ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 IH_*.f90 \
-			../srcInterface
+	cd IH/BATSRUS; \
+		${SCRIPTDIR}/Methods.pl IH ${IH_SRC}; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=IH ${IH_SRC}
 	cd IH/BATSRUS/srcInterface; \
 		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
+	cp -f IH/BATSRUS/srcUser/ModUserHeliosphere.f90 \
+		IH/BATSRUS/src/ModUser.f90
 
 #^CMP END IH
 #^CMP IF SC BEGIN
+#
+# configure and collect source files for SC/BATSRUS component
+#
 SC/BATSRUS/src/Makefile:
 	cd GM/BATSRUS; \
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
 	cd GM/BATSRUS/TMP; \
-		mv Makefile.def GridSize.pl PARAM.XML src ../../../SC/BATSRUS;\
-		mv srcInterface/*.f90 ../../../SC/BATSRUS/src
+		mv Makefile.def GridSize.pl PARAM.XML src srcUser \
+			../../../SC/BATSRUS;\
+		mv srcInterface/*.f90 ../../../SC/BATSRUS/srcInterface
 	rm -rf GM/BATSRUS/TMP
 	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
-		      SC/BATSRUS/src/SC_wrapper.f90
+		SC/BATSRUS/srcInterface/SC_wrapper.f90
 	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
-		      SC/BATSRUS/src/SC_get_for_sp.f90
-	cd SC/BATSRUS/src/; perl -i -pe \
+		SC/BATSRUS/srcInterface/SC_get_for_sp.f90
+	cd SC/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
 		SC_wrapper.f90 SC_get_for_sp.f90
 	cd SC/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 
+# rename SC source files to avoid name conflicts
+SC_SRC = src/*.f90 src/*.h src/*.f srcInterface/*.f90 srcUser/*.f90
+
 SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
-	cd SC/BATSRUS/src; \
-		${SCRIPTDIR}/Methods.pl SC; \
-		${SCRIPTDIR}/Rename.pl -r *.f90 *.f; \
-		perl -i -pe 's[^(\s*common\s*/)(\w+/)][$$1SC_$$2]i' *.f90 *.f;\
-		mv ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 SC_*.f90 \
-			../srcInterface
+	cd SC/BATSRUS; \
+		${SCRIPTDIR}/Methods.pl SC ${SC_SRC}; \
+		${SCRIPTDIR}/Rename.pl -w -r -common=SC ${SC_SRC}
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
+	cp -f SC/BATSRUS/srcUser/ModUserHeliosphere.f90 \
+		SC/BATSRUS/src/ModUser.f90
 
 #^CMP END SC
 
