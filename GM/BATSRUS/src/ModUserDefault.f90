@@ -8,7 +8,23 @@ module ModUser
   ! Please see the documentation, and the files ModUserEmpty.f90 and 
   ! srcUser/ModUserExamples.f90 for information about what the different user
   ! subroutines do and how to implement them for your specific problem.
-  use ModUserEmpty
+
+  use ModUserEmpty, ONLY:               &
+       user_read_inputs,                &
+       user_set_ics,                    &
+       user_initial_perturbation,       &
+       set_extra_boundary_cells,        &
+       user_face_bcs,                   &
+       user_set_outerbcs,               &
+       user_specify_initial_refinement, &
+       user_amr_criteria,               &
+       user_write_progress,             &
+       user_get_log_var,                &
+       user_calc_sources,               &
+       user_heat_source,                &
+       get_user_b0,                     &
+       user_update_states
+
   include 'user_module.h' !list of public methods
 
   !\
@@ -16,7 +32,7 @@ module ModUser
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: &
-       NameUserModule = 'DEFAULT USER ROUTINES, K.C. Hansen'
+  character (len=*), parameter :: NameUserModule = &
+       'DEFAULT USER ROUTINES, K.C. Hansen'
 
 end module ModUser
