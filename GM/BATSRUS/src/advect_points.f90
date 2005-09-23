@@ -169,7 +169,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF NOT CARTESIAN
   use ModParallel, ONLY : NeiLev
 
   implicit none
@@ -384,21 +384,27 @@ contains
     DyInv = 1/((jHi-jLo)*Dxyz_D(2))
     DzInv = 1/((kHi-kLo)*Dxyz_D(3))
 
-    !^CFG IF CARTESIAN BEGIN
-    Current_D(1) = &
-         (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
-         (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
+    if(UseCovariant)then                          !^CFG IF NOT CARTESIAN BEGIN
+       call covariant_curlb(i,j,k,iBlock,Current_D)
+    else                                          !^CFG END CARTESIAN
 
-    Current_D(2) = &
-         (State_VGB(Bx_,i,j,kHi,iBlock)-State_VGB(Bx_,i,j,kLo,iBlock))*DzInv- &
-         (State_VGB(Bz_,iHi,j,k,iBlock)-State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
+       !^CFG IF CARTESIAN BEGIN
+       Current_D(1) = &
+            (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
+            (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
 
-    Current_D(3) = &
-         (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
-         (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
+       Current_D(2) = &
+            (State_VGB(Bx_,i,j,kHi,iBlock)-State_VGB(Bx_,i,j,kLo,iBlock))*DzInv- &
+            (State_VGB(Bz_,iHi,j,k,iBlock)-State_VGB(Bz_,iLo,j,k,iBlock))*DxInv
 
-    !^CFG END CARTESIAN
-    !call covariant_curlb(i,j,k,iBlock,Current_D)   !^CFG IF NOT CARTESIAN
+       Current_D(3) = &
+            (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
+            (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
+
+       !^CFG END CARTESIAN
+!       call stop_mpi('Set UseCovariant=Y')       !^CFG UNCOMMENT IF NOT CARTESIAN
+    end if                                        !^CFG IF NOT CARTESIAN
+    
 
     StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &
          + WeightXyz * Current_D

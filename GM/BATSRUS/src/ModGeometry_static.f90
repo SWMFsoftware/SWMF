@@ -4,6 +4,7 @@ Module ModGeometry
   use ModMain,ONLY:body2_,ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
+  use ModCovariant                !^CFG IF NOT CARTESIAN
 
   implicit none
   SAVE
@@ -27,30 +28,6 @@ Module ModGeometry
   real, dimension(nBLK) :: fAx_BLK, fAy_BLK, fAz_BLK, cV_BLK               !^CFG IF CARTESIAN
 
   real,dimension(nI,nJ,nK,nBLK):: vInv_CB         
-  !^CFG IF NOT CARTESIAN BEGIN
-
-  logical::UseCovariant=.false.
-
-
-  !For a vertex-based logically cartesian (spherical, cylindircal) grid 
-  !(UseVertexBasedGrid=.true.) the node coordinates are defined
-  !in terms of an arbitrary pointwide transformation of nodes of an 
-  !original cartesian (spherical,cylindrical) block adaptive grid.
-  !Advantage: the possiblity to use the arbitrary transformation.
-  !Disadvantages: the cell center coordinates can not be definied unambigously
-  !and the difference of the state variables across the face does not evaluate
-  !the gradient in the direction, normal to this face (stricly speaking).
-  !Cell-centered grids are used if UseVertexBasedGrid=.false. (default value)
-  !Advantage: for some particular geometries (spherical, cylindrical) the 
-  !control volumes are the Voronoy cells (any face is perpendicular to the line
-  !connecting the centers of the neighboring cells). 
-  !Disadvantages: even in these particular cases it is not easy to properly define 
-  !the face area vectors at the resolution change. More general cell-centered grid 
-  !either is not logically cartesian, or does not consist of the Voronoy cells only.
-  !
-  logical :: UseVertexBasedGrid=.false.
-  character (len=20) ::TypeGeometry='cartesian'                            !^CFG END CARTESIAN
-
  
 
   ! Variables describing cells inside boundaries
@@ -78,8 +55,6 @@ Module ModGeometry
        x_BLK,y_BLK,z_BLK,R_BLK
   real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK) :: &   !^CFG IF SECONDBODY
        R2_BLK                                                            !^CFG IF SECONDBODY
-  real,allocatable,dimension(:,:,:,:,:):: &            !^CFG IF NOT CARTESIAN
-        FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB      !^CFG IF NOT CARTESIAN
 contains
   !============================================================================
   subroutine init_mod_geometry
@@ -99,12 +74,5 @@ contains
     end if
 
   end subroutine clean_mod_geometry
-  !^CFG IF NOT CARTESIAN BEGIN
-  subroutine allocate_face_area_vectors
-    allocate(FaceAreaI_DFB(nDim,2-gcn:nI+gcn,0:nJ+1,0:nK+1,nBLK))
-    allocate(FaceAreaJ_DFB(nDim,0:nI+1,2-gcn:nJ+gcn,0:nK+1,nBLK))
-    allocate(FaceAreaK_DFB(nDim,0:nI+1,0:nJ+1,2-gcn:nK+gcn,nBLK))
-  end subroutine allocate_face_area_vectors
-    !^CFG END CARTESIAN    
 
 end module ModGeometry

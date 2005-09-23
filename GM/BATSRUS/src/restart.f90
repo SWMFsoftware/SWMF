@@ -5,7 +5,8 @@ subroutine write_restart_header
   use ModMain
   use ModVarIndexes, ONLY: NameEquation, nVar
   use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2
-  use ModGeometry, ONLY: XyzMin_D,XyzMax_D   !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY: XyzMin_D,XyzMax_D,TypeGeometry,&!^CFG IF NOT CARTESIAN
+               UseCovariant,UseVertexBasedGrid           !^CFG IF NOT CARTESIAN
   use ModParallel, ONLY : proc_dims
   use ModImplicit, ONLY : n_prev, dt_prev                  !^CFG IF IMPLICIT
   use ModPhysics
@@ -83,10 +84,23 @@ subroutine write_restart_header
   write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
   write(unit_tmp,*)
   write(unit_tmp,*)
-!  write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   !^CFG IF NOT CARTESIAN
-!  write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' !^CFG IF NOT CARTESIAN
-!  write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' !^CFG IF NOT CARTESIAN
-!  write(unit_tmp,*)                                        !^CFG IF NOT CARTESIAN
+  if(UseCovariant)then                        !^CFG IF NOT CARTESIAN BEGIN
+     write(unit_tmp,'(a)')'#COVARIANTGEOMETRY'
+     write(unit_tmp,'(a)')trim(TypeGeometry)
+     write(unit_tmp,*)
+     write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
+     if(UseVertexBasedGrid)then
+        write(unit_tmp,'(a)')'T'
+     else
+        write(unit_tmp,'(a)')'F'
+     end if
+     write(unit_tmp,*)
+     write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
+     write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
+     write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
+     write(unit_tmp,*)
+  end if                                      !^CFG END CARTESIAN
+
   if(NameThisComp=='GM')then
      write(unit_tmp,'(a)')'#SOLARWIND'
      write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SwRhoDim'

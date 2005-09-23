@@ -1,6 +1,24 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT CARTESIAN
 !=============To be left in src/covariant.f90=============
+subroutine fix_cell_based_block(iBLK)
+  use ModCovariant, ONLY:TypeGeometry
+  implicit none
+  integer,intent(in)::iBLK
+  select case(TypeGeometry)
+  case('cartesian')                               
+     call set_covar_cartesian_geometry(iBLK)      
+  case('spherical')                               
+     call set_covar_spherical_geometry(iBLK)      
+  case('spherical_lnr')                           
+     call set_covar_spherical2_geometry(iBLK)     
+  case('cylindrical')                             
+     call set_covar_cylindrical_geometry(iBLK)   
+  case default                                    
+     call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
+  end select
+end subroutine fix_cell_based_block
+
 subroutine set_covar_cartesian_geometry(iBLK)
   use ModCovariant
   use ModGeometry
@@ -8,12 +26,19 @@ subroutine set_covar_cartesian_geometry(iBLK)
   implicit none
   integer, intent(in) :: iBLK
   real::dx,dy,dz
+  integer::i,j,k
   dx=dx_BLK(iBLK)
   dy=dy_BLK(iBLK)
   dz=dz_BLK(iBLK)
-  FaceAreaI_FB(0:nI+2,0:nJ+1,0:nK+1,iBLK)=dy*dz/dx                             
-  FaceAreaJ_FB(0:nI+1,0:nJ+2,0:nK+1,iBLK)=dz*dx/dy                       
-  FaceAreaK_FB(0:nI+1,0:nJ+1,0:nK+2,iBLK)=dx*dy/dz
+  do k=0,nK+1;do j=0,nJ+1;do i=0,nI+2
+     FaceAreaI_DFB(:,i,j,k,iBLK)=(/dy*dz,cZero,cZero/)
+  end do;end do;end do
+  do k=0,nK+1;do j=0,nJ+2;do i=0,nI+1
+     FaceAreaJ_DFB(:,i,j,k,iBLK)=(/cZero,dz*dx,cZero/)             
+  end do;end do;end do
+  do k=0,nK+2;do j=0,nJ+1;do i=0,nI+1      
+     FaceAreaK_DFB(:,i,j,k,iBLK)=(/cZero,cZero,dx*dy/)
+  end do;end do;end do
   vInv_CB(:,:,:,iBLK)=cOne/(dx*dy*dz)
   FaceArea2MinI_B(iBLK)=cZero
   FaceArea2MinJ_B(iBLK)=cZero
@@ -60,18 +85,27 @@ subroutine set_covar_spherical_geometry(iBLK)
   ! for the face between i and i-1 cells
 
   do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-     FaceAreaI_FB(i,j,k,iBLK) =SpherFaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)
+     FaceAreaI_DFB(:,i,j,k,iBLK) =SpherFaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i-1,j,k,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i-1,j,k,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i-1,j,k,iBLK)/)
   end do; end do;end do
 
   do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-     FaceAreaJ_FB(i,j,k,iBLK) =SpherFaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)
+     FaceAreaJ_DFB(:,i,j,k,iBLK) =SpherFaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j-1,k,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i,j-1,k,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i,j-1,k,iBLK)/)
   end do; end do;end do
 
   do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-     FaceAreaK_FB(i,j,k,iBLK) =SpherFaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)
+     FaceAreaK_DFB(:,i,j,k,iBLK) =SpherFaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j,k-1,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i,j,k-1,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i,j,k-1,iBLK)/)
   end do; end do;end do
 
   do k=1,nK
@@ -174,18 +208,27 @@ subroutine set_covar_spherical2_geometry(iBLK)
   ! for the face between i and i-1 cells
 
   do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-     FaceAreaI_FB(i,j,k,iBLK) =Spher2FaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)
+     FaceAreaI_DFB(:,i,j,k,iBLK) =Spher2FaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i-1,j,k,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i-1,j,k,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i-1,j,k,iBLK)/)
   end do; end do;end do
 
   do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-     FaceAreaJ_FB(i,j,k,iBLK) =Spher2FaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)
+     FaceAreaJ_DFB(:,i,j,k,iBLK) =Spher2FaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j-1,k,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i,j-1,k,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i,j-1,k,iBLK)/)
   end do; end do;end do
 
   do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-     FaceAreaK_FB(i,j,k,iBLK) =Spher2FaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)
+     FaceAreaK_DFB(:,i,j,k,iBLK) =Spher2FaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
+          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
+          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j,k-1,iBLK),&
+            y_BLK(i,j,k,iBLK)-y_BLK(i,j,k-1,iBLK),&
+            z_BLK(i,j,k,iBLK)-z_BLK(i,j,k-1,iBLK)/)
   end do; end do;end do
 
 

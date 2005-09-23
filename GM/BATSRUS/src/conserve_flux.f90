@@ -20,6 +20,7 @@ subroutine save_conservative_facefluxes
   use ModMain
   use ModNumConst
   use ModAdvance
+  use ModGeometry,ONLY: UseCovariant                   !^CFG IF NOT CARTESIAN
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
        neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
@@ -92,7 +93,8 @@ Contains
             RightState_VX(Bx_,     lFaceFrom,j,k)*cQuarter
        !^CFG END CARTESIAN
     end do;end do
-    !call save_bn_faceI(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceI(&   !^CFG IF NOT CARTESIAN
+         lFaceTo,lFaceFrom,globalBLK)      !^CFG IF NOT CARTESIAN
   end subroutine save_corrected_flux_x
 
   !===========================================================================
@@ -112,7 +114,8 @@ Contains
             RightState_VY(By_,i,lFaceFrom,k)*cQuarter
        !^CFG END CARTESIAN
     end do; end do
-    !call save_bn_faceJ(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceJ(&  !^CFG IF NOT CARTESIAN
+         lFaceTo,lFaceFrom,globalBLK)     !^CFG IF NOT CARTESIAN
   end subroutine save_corrected_flux_y
 
   !===========================================================================
@@ -133,7 +136,8 @@ Contains
             RightState_VZ(Bz_,i,j,lFaceFrom)*cQuarter
        !^CFG END CARTESIAN
     end do; end do
-    !call save_bn_faceK(lFaceTo,lFaceFrom,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call save_bn_faceK(& !^CFG IF NOT CARTESIAN
+         lFaceTo,lFaceFrom,globalBLK)    !^CFG IF NOT CARTESIAN
   end subroutine save_corrected_flux_z
 end subroutine save_conservative_facefluxes
 
@@ -145,6 +149,7 @@ subroutine apply_cons_face_flux
   use ModAdvance
   use ModVarIndexes
   use ModGeometry, ONLY: body_BLK, true_cell
+  use ModGeometry, ONLY: UseCovariant    !^CFG IF NOT CARTESIAN
   use ModAMR
   use ModParallel, ONLY : &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth, &
@@ -281,7 +286,8 @@ Contains
           end if
        end do; end do 
     end if
-    !call apply_bn_faceI(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceI(&      !^CFG IF NOT CARTESIAN
+         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF NOT CARTESIAN
   end subroutine apply_corrected_flux_x
 
   !============================================================================
@@ -320,7 +326,8 @@ Contains
           end if
        end do; end do 
     end if
-    !call apply_bn_faceJ(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceJ(&      !^CFG IF NOT CARTESIAN
+         lFaceFrom,lFaceTo,globalBLK)          !^CFG IF NOT CARTESIAN
   end subroutine apply_corrected_flux_y
 
   !============================================================================
@@ -359,7 +366,8 @@ Contains
           end if
        end do; end do 
     end if
-    !call apply_bn_faceK(lFaceFrom,lFaceTo,globalBLK)  !^CFG IF NOT CARTESIAN
+    if(UseCovariant)call apply_bn_faceK(&       !^CFG IF NOT CARTESIAN
+         lFaceFrom,lFaceTo,globalBLK)           !^CFG IF NOT CARTESIAN
   end subroutine apply_corrected_flux_z
 
 end subroutine apply_cons_face_flux

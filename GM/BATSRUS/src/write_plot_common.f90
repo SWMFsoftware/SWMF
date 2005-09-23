@@ -684,110 +684,117 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('B1z','b1z')
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)
      case('Jx','jx')
-!^CFG IF CARTESIAN BEGIN
-        if(true_BLK(iBLK))then
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
-                -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
-                (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
-        else
-           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
-
-              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-              if(.not.true_cell(im1,j,k,iBLK)) im1=i
-              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-              if(.not.true_cell(i,j,km1,iBLK)) km1=k
-              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
-
-              xfactor=1.; yfactor=1.; zfactor=1.
-              if((ip1-im1)==1) xfactor=2.
-              if((jp1-jm1)==1) yfactor=2.
-              if((kp1-km1)==1) zfactor=2.
-
-              PlotVar(i,j,k,iVar)=0.5*(&
-                   (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
-                   -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK) - &
-                   (State_VGB(By_,i  ,j  ,kp1,iBLK) &
-                   -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
-           end do; end do; end do
-        end if
-!^CFG END CARTESIAN
-!       call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN         
+        if(UseCovariant)then                                   !^CFG IF NOT CARTESIAN BEGIN
+           call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
+        else                                                   !^CFG END CARTESIAN
+           if(true_BLK(iBLK))then                              !^CFG IF CARTESIAN BEGIN
+              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                   (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
+                   -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                   (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                   -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
+           else
+              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 
+                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
+                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
+                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+                 
+                 xfactor=1.; yfactor=1.; zfactor=1.
+                 if((ip1-im1)==1) xfactor=2.
+                 if((jp1-jm1)==1) yfactor=2.
+                 if((kp1-km1)==1) zfactor=2.
+                 
+                 PlotVar(i,j,k,iVar)=0.5*(&
+                      (State_VGB(Bz_,i  ,jp1,k  ,iBLK) &
+                      -State_VGB(Bz_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK) - &
+                      (State_VGB(By_,i  ,j  ,kp1,iBLK) &
+                      -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
+              end do; end do; end do
+           end if                                                      !^CFG END CARTESIAN
+!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+        end if                                                         !^CFG IF NOT CARTESIAN
      case('Jy','jy')
-!^CFG IF CARTESIAN BEGIN
-        if(true_BLK(iBLK))then
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
-                (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
-                -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
-        else
-           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+        if(UseCovariant)then                                           !^CFG IF NOT CARTESIAN BEGIN 
+           call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
+        else                                                           !^CFG END CARTESIAN
+           if(true_BLK(iBLK))then                                      !^CFG IF CARTESIAN BEGIN
+              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                   (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                   -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                   (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
+                   -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
+           else
+              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 
+                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
+                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
+                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
+                 
+                 xfactor=1.; yfactor=1.; zfactor=1.
+                 if((ip1-im1)==1) xfactor=2.
+                 if((jp1-jm1)==1) yfactor=2.
+                 if((kp1-km1)==1) zfactor=2.
+                 
+                 PlotVar(i,j,k,iVar)=0.5*(&
+                      (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
+                      -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK) - &
+                      (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
+                      -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
+              end do; end do; end do
+           endif                                                   !^CFG END CARTESIAN
+!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+        end if                                                     !^CFG IF NOT CARTESIAN
 
-              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-              if(.not.true_cell(im1,j,k,iBLK)) im1=i
-              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-              if(.not.true_cell(i,j,km1,iBLK)) km1=k
-              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
-
-              xfactor=1.; yfactor=1.; zfactor=1.
-              if((ip1-im1)==1) xfactor=2.
-              if((jp1-jm1)==1) yfactor=2.
-              if((kp1-km1)==1) zfactor=2.
-
-              PlotVar(i,j,k,iVar)=0.5*(&
-                   (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
-                   -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK) - &
-                   (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
-                   -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
-           end do; end do; end do
-        endif
-!^CFG END CARTESIAN
-!       call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
      case('Jz','jz')
-!^CFG IF CARTESIAN BEGIN
-        if(true_BLK(iBLK))then
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
-                (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
-                -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
-                (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-                -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK))
-        else
-           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
-              if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+        if(UseCovariant)then                                       !^CFG IF NOT CARTESIAN BEGIN
+           call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
+        else                                                       !^CFG END CARTESIAN           
+           if(true_BLK(iBLK))then                            !^CFG IF CARTESIAN BEGIN
+              PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
+                   (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
+                   -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                   (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+                   -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK))
+           else
+              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+                 if( .not.true_cell(i,j,k,iBLK) ) CYCLE
+                 
+                 ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
+                 if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
+                 if(.not.true_cell(im1,j,k,iBLK)) im1=i
+                 if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
+                 if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
+                 if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
+                 if(.not.true_cell(i,j,km1,iBLK)) km1=k
+                 if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
 
-              ip1=i+1; im1=i-1; jp1=j+1; jm1=j-1; kp1=k+1; km1=k-1
-              if(.not.true_cell(ip1,j,k,iBLK)) ip1=i
-              if(.not.true_cell(im1,j,k,iBLK)) im1=i
-              if(.not.true_cell(i,jp1,k,iBLK)) jp1=j
-              if(.not.true_cell(i,jm1,k,iBLK)) jm1=j
-              if(.not.true_cell(i,j,kp1,iBLK)) kp1=k
-              if(.not.true_cell(i,j,km1,iBLK)) km1=k
-              if(ip1==im1 .or. jp1==jm1 .or. kp1==km1) CYCLE
-
-              xfactor=1.; yfactor=1.; zfactor=1.
-              if((ip1-im1)==1) xfactor=2.
-              if((jp1-jm1)==1) yfactor=2.
-              if((kp1-km1)==1) zfactor=2.
-
-              PlotVar(i,j,k,iVar)=0.5*(&
-                   (State_VGB(By_,ip1,j  ,k  ,iBLK) &
-                   -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK) - &
-                   (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
-                   -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
-           end do; end do; end do
-        end if
-!^CFG END CARTESIAN
-!       call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN  
+                 xfactor=1.; yfactor=1.; zfactor=1.
+                 if((ip1-im1)==1) xfactor=2.
+                 if((jp1-jm1)==1) yfactor=2.
+                 if((kp1-km1)==1) zfactor=2.
+                 
+                 PlotVar(i,j,k,iVar)=0.5*(&
+                      (State_VGB(By_,ip1,j  ,k  ,iBLK) &
+                      -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK) - &
+                      (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
+                      -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
+              end do; end do; end do
+           end if                                                  !^CFG END CARTESIAN
+!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+        end if                                                     !^CFG IF NOT CARTESIAN
      case('enumx')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
      case('enumy')
@@ -881,29 +888,31 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)                                 
      case('Jr','jr')
-!^CFG IF CARTESIAN BEGIN
-        PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
-             0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
-             ( ( &
-             ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
-             - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
-             ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-             - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK)   &
-             ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             + ( &
-             ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
-             - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
-             ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
-             - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK)   &
-             ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
-             + ( &
-             ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
-             - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
-             ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-             - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
-             ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )
-!^CFG END CARTESIAN
-!       call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  !^CFG IF NOT CARTESIAN
+        if(UseCovariant)then                                    !^CFG IF NOT CARTESIAN BEGIN
+           call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  
+        else                                                    !^CFG END CARTESIAN
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &               !^CFG IF CARTESIAN BEGIN
+                0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
+                ( ( &
+                ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
+                - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
+                - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK)   &
+                ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+                + ( &
+                ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
+                - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
+                - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK)   &
+                ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
+                + ( &
+                ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
+                - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
+                - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
+                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )             !^CFG END CARTESIAN
+!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
+        end if                                                     !^CFG IF NOT CARTESIAN           
      case('er','Er','ER')
         PlotVar(:,:,:,iVar)=( ( State_VGB(rhoUz_,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
@@ -957,13 +966,15 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              +tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK)* &
              Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
-!^CFG IF CARTESIAN BEGIN
      case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct')
+        if(UseCovariant)&                            !^CFG IF NOT CARTESIAN BEGIN
+             call stop_mpi('Do not plot divB, when UseCovariant=T. Use absdivB')
+                                                     !^CFG END CARTESIAN
+        !^CFG IF CARTESIAN BEGIN
         if(s.eq.'divb_CD' .or. s.eq.'divb_cd' .or. &
              ((s.eq.'divb' .or. s.eq.'divB' .or. s.eq.'DivB') &
              .and..not.UseConstrainB &                  !^CFG IF CONSTRAINB
              ))then
-
            ! Div B from central differences
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*vInv_CB(1,1,1,iBLK)*(  &
                 fAx_BLK(iBLK)*(State_VGB(Bx_,1:nI+2,0:nJ+1,0:nK+1,iBLK)-  &

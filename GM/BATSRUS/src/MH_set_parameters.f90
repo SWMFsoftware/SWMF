@@ -7,8 +7,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,& !^CFG IF NOT CARTESIAN
-       UseVertexBasedGrid,allocate_face_area_vectors, & !^CFG IF NOT CARTESIAN
+       TypeGeometry,UseCovariant,UseVertexBasedGrid,  & !^CFG IF NOT CARTESIAN
+       allocate_face_area_vectors,allocate_old_levels,& !^CFG IF NOT CARTESIAN
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
@@ -1364,24 +1364,14 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
-     case('#VERTEXBASEDGRID')
-        !                                         ^CFG IF CARTESIAN BEGIN
-        call stop_mpi&
-             ('Configure BATSRUS with CARTESIAN=OFF to use the command'&
-             //NameCommand)
-        !                                         ^CFG END CARTESIAN 
-        !^CFG IF NOT CARTESIAN BEGIN
-        call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
-        if(UseVertexBasedGrid) call allocate_face_area_vectors
-       !^CFG END CARTESIAN
-     case("#COVARIANTGEOMETRY")
-        !                                         ^CFG IF CARTESIAN BEGIN
-        call stop_mpi&
-             ('Configure BATSRUS with CARTESIAN=OFF to use the command'&
-             //NameCommand)
-        !                                         ^CFG END CARTESIAN 
-        !^CFG IF NOT CARTESIAN BEGIN
+     case('#VERTEXBASEDGRID')          !^CFG IF NOT CARTESIAN BEGIN
         if(.not.is_first_session())CYCLE READPARAM
+        call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
+        if(UseVertexBasedGrid) call allocate_old_levels
+     case("#COVARIANTGEOMETRY")          
+        if(.not.is_first_session())CYCLE READPARAM
+        UseCovariant=.true.
+        
         call read_var('TypeGeometry',TypeGeometry)      
         select case(TypeGeometry)                                   
         case('cartesian') 
@@ -1403,6 +1393,10 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
         end select
+    case("#LIMITGENCOORD1")                    
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('XyzMin_D(1)',XyzMin_D(1))
+        call read_var('XyzMax_D(1)',XyzMax_D(1))
         !^CFG END CARTESIAN 
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1446,10 +1440,6 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
         end select                  !^CFG END CARTESIAN
-
-        !case("#LIMITGENCOORD1")                   !^CFG IF NOT CARTESIAN
-        ! call read_var('XyzMin_D(1)',XyzMin_D(1)) !^CFG IF NOT CARTESIAN
-        ! call read_var('XyzMax_D(1)',XyzMax_D(1)) !^CFG IF NOT CARTESIAN
      case("#CHECKGRIDSIZE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))
@@ -1825,7 +1815,8 @@ contains
     nOrder = 2
     FluxType = 'Rusanov'               !^CFG IF RUSANOVFLUX
     !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
-
+    !UseCovariant = .true.             !^CFG UNCOMMENT IF NOT CARTESIAN
+  
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.              !^CFG IF POINTIMPLICIT
     UsePartImplicit  = .false.
@@ -2224,6 +2215,22 @@ contains
     real               :: Version
     logical            :: IsOn
 
+    if(UseCovariant)then   !^CFG IF NOT CARTESIAN BEGIN
+       call allocate_face_area_vectors
+       if(UseImplicit)call stop_mpi(&                  !^CFG IF IMPLICIT 
+            'Do not use covariant with implicit')      !^CFG IF IMPLICIT
+       if(UseProjection)call stop_mpi(&                !^CFG IF PROJECTION
+            'Do not use covariant with projection')    !^CFG IF PROJECTION
+       if(UseConstrainB)call stop_mpi(&                !^CFG IF CONSTRAINB
+            'Do not use covariant with constrain B')   !^CFG IF CONSTRAINB
+       if(UseRaytrace) call stop_mpi(&                 !^CFG IF RAYTRACE
+            'Do not use covariant with ray tracing')   !^CFG IF RAYTRACE
+       if(UseDivBDiffusion)call stop_mpi(&             !^CFG IF DIVBDIFFUSE
+            'Do not use covariant with divB diffusion')!^CFG IF DIVBDIFFUSE
+       if(boris_correction)call stop_mpi(&             !^CFG IF BORISCORR BEGIN
+            'Do not use covariant with the Boris correction')
+                                                       !^CFG END BORISCORR
+    end if                                             !^CFG END CARTESIAN
 
     if(UseImplicit)then                      !^CFG IF IMPLICIT BEGIN
        call OPTION_IMPLICIT(IsOn,Name)

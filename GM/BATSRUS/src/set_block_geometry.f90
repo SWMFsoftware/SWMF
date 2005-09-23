@@ -27,7 +27,7 @@ subroutine set_root_block_geometry
         periodic3D(1)=.false. 
         periodic3D(2)=.true.  
         periodic3D(3)=.false.
-     case('cylindrical')
+     case('cylindrical','cylindrical_gen')
         periodic3D(1)=.false. 
         periodic3D(2)=.true.  
         periodic3D(3)= any(TypeBc_I(bot_:top_)=='periodic')
@@ -93,16 +93,20 @@ subroutine fix_block_geometry(iBLK)
 
   integer :: i,j,k, iBoundary
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
+  real,dimension(nDim)::XyzOfNode111_D               !^CFG IF NOT CARTESIAN
   !---------------------------------------------------------------------------
   dx = dx_BLK(iBLK)
   dy = dy_BLK(iBLK)
   dz = dz_BLK(iBLK)
 
-  select case(TypeGeometry)                        !^CFG IF NOT CARTESIAN
-  case('cartesian')                                !^CFG IF NOT CARTESIAN
-     !\
-     ! Assign cell centered coordinates.
-     !/
+
+  !\--------------------------------
+  ! Assign cell centered coordinates.
+  !/--------------------------------
+
+
+  if(TypeGeometry=='cartesian')then                  !^CFG IF NOT CARTESIAN
+   
      ! This case is the normal one using a spherical Radius.
      do i = 1-gcn, nI+gcn
         do j = 1-gcn, nJ+gcn
@@ -129,16 +133,71 @@ subroutine fix_block_geometry(iBLK)
      fAz_BLK(iBLK) = fAz
      cV_BLK(iBLK) = cV                                            
      vInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END CARTESIAN
-!     call set_covar_cartesian_geometry(iBLK)     !^CFG IF NOT CARTESIAN 
-  case('spherical')                               !^CFG IF NOT CARTESIAN 
-!     call set_covar_spherical_geometry(iBLK)     !^CFG IF NOT CARTESIAN 
-  case('spherical_lnr')                           !^CFG IF NOT CARTESIAN 
-!     call set_covar_spherical2_geometry(iBLK)    !^CFG IF NOT CARTESIAN 
-  case('cylindrical')                             !^CFG IF NOT CARTESIAN 
-!     call set_covar_cylindrical_geometry(iBLK)   !^CFG IF NOT CARTESIAN
-  case default                                    !^CFG IF NOT CARTESIAN BEGIN
-     call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-  end select                                      !^CFG END CARTESIAN 
+  end if                                       !^CFG IF NOT CARTESIAN
+
+
+  if(.not.UseCovariant)then                    !^CFG IF NOT CARTESIAN
+
+     !Calculate the node coordinates
+                                             !^CFG IF CARTESIAN BEGIN
+     do i=0,nI; do j=0,nJ; do k=0,nK
+        NodeX_IIIB(i,j,k,iBLK) = cEighth*sum(x_BLK(i:i+1,j:j+1,k:k+1,iBLK))
+        NodeY_IIIB(i,j,k,iBLK) = cEighth*sum(y_BLK(i:i+1,j:j+1,k:k+1,iBLK))
+        NodeZ_IIIB(i,j,k,iBLK) = cEighth*sum(z_BLK(i:i+1,j:j+1,k:k+1,iBLK))
+     end do; end do; end do                  !^CFG END CARTESIAN
+  else                                       !^CFG IF NOT CARTESIAN BEGIN
+     !Cell center coordinates are calculated directly as the
+     !transformed generalized coordinates
+     !call gen_to_xyz_arr(XyzStart_BLK(:,iBLK), &
+     !                    dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+     !                    1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
+     !                    x_BLK(:,:,:,iBLK),&
+     !                    y_BLK(:,:,:,iBLK),&     
+     !                    z_BLK(:,:,:,iBLK))
+     
+     if(UseVertexBasedGrid)then
+        
+        !Node coordinates are calculated directly, not derived from
+        !the cell centered x,y,z_BLK. In general case there is no close 
+        !relation between the node coordinates and the "cell center" 
+        !coordinates
+
+        !!!!!!!!!!!plus or minus?????????
+        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)+dx_BLK(iBLK)
+        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)+dy_BLK(iBLK)
+        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)+dz_BLK(iBLK)
+
+        !
+        !call gen_to_xyz_arr(XyzOfNode111_D,&
+        !                    dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK)
+        !                    0,nI,0,nJ,0,nK,&
+        !                    NodeX_IIIB(:,:,:,iBLK),&
+        !                    NodeY_IIIB(:,:,:,iBLK),&
+        !                    NodeZ_IIIB(:,:,:,iBLK))
+        !
+        !Mark the block for fixing the covariant geometry afterwards
+        !(when the refinement level of the neighboring blocks are
+        !all known) 
+        !
+        !OldLevel_IIIB(0,0,0,iBLK)=+1
+
+     else
+
+        !Node coordinates are calculated as the for the point
+        !of the faces intersection
+ 
+        call calc_node_coords_covar
+
+        !Face area vectors and cell volumes are expressed 
+        !in terms of the node coordinates
+
+        call fix_cell_based_block(iBLK)
+
+     end if
+   
+  end if                                          !^CFG END CARTESIAN
+
+  Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
   if (.not. UseBody2) then                        !^CFG IF SECONDBODY BEGIN
      ! if no second body set R2 to zero
@@ -149,20 +208,11 @@ subroutine fix_block_geometry(iBLK)
           (x_BLK(:,:,:,iBLK)-xBody2)**2 + &
           (y_BLK(:,:,:,iBLK)-yBody2)**2 + &
           (z_BLK(:,:,:,iBLK)-zBody2)**2)
-  end if                                          !^CFG END SECONDBODY
+  end if                                          
 
-  Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
-  Rmin2_BLK(iBLK) = minval(R2_BLK(:,:,:,iBLK))    !^CFG IF SECONDBODY
+ 
+  Rmin2_BLK(iBLK) = minval(R2_BLK(:,:,:,iBLK))    !^CFG END SECONDBODY
 
-  ! Compute node geometry
-  !^CFG IF CARTESIAN BEGIN
-  do i=0,nI; do j=0,nJ; do k=0,nK
-     NodeX_IIIB(i,j,k,iBLK) = cEighth*sum(x_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-     NodeY_IIIB(i,j,k,iBLK) = cEighth*sum(y_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-     NodeZ_IIIB(i,j,k,iBLK) = cEighth*sum(z_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-  end do; end do; end do
-  !^CFG END CARTESIAN
-  !call calc_node_coords_covar            !^CFG IF NOT CARTESIAN
 
   far_field_BCs_BLK(iBLK) = &
        (((xyzStart_BLK(1,iBLK)-dx_BLK(iBLK))<XyzMin_D(1).or.&
