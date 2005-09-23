@@ -93,7 +93,7 @@ install_cont: src/ModSize.f90
 		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
-	cd src; make user_routines.f90 #^CFG IF USERFILES
+	cd src; make user_routines.f90 ModUser.f90 #^CFG IF USERFILES
 	cd src; make STATIC
 
 src/ModSize.f90:
