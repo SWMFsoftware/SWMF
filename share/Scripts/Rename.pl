@@ -14,6 +14,7 @@
 #!REVISION HISTORY:
 # 07/13/2001 G.Toth gtoth@umich.edu - initial version
 # 07/23/2004 G.Toth allow protecting some lines
+# 09/23/2005        added -common=XX option
 #EOP
 
 $Help=$h; 
@@ -25,6 +26,7 @@ $Undo=$u;
 $Debug=$d;
 $Quiet=$q;
 $Warning=$w;
+$Common=$common;
 
 if($Check and $Warning){
     print "Either check (-c) or no warnings (-w) \n\n";
@@ -43,7 +45,7 @@ if($Help or not ($List or $Check or $Rename or $Undo) ){
 #BOC
 'Purpose:
 
-   Replace multiple variable names in multiple files.
+   Replace multiple variable/method/module names in multiple files.
 
 Usage: 
 
@@ -66,6 +68,8 @@ Options (specify them separately as  -a -b  and not as  -ab !):
 -c             check input file and source files, do not rename variables
 -r             replace old names with new
 -u             undo replacements
+-common=XX     replace common/NAME/ blocks with common/XX_NAME/ blocks
+               Only works if -r or -u are present.
 
 -d             debug info is printed
 -q             quiet run, errors and warnings printed only
@@ -79,9 +83,10 @@ renaming by adding a "!do not rename" trailing comment.
 
 Typical usage:
 
-Rename.pl -c              #  check the replacement rules
-Rename.pl -c *.f90        #  check the source files
-Rename.pl -r *.f90        #  do replacements'
+Rename.pl -c                   #  check the replacement rules
+Rename.pl -c *.f90             #  check the source files
+Rename.pl -r *.f90             #  do replacements
+Rename.pl -r -common=SC *.f90  #  do replacements including common blocks'
 #EOC
 ,"\n";
 
@@ -174,7 +179,7 @@ sub rename{
 	# case(' or case(" statements.
 	$icase=0; @case=();
 	while($text =~ s/^(.*\!\s*do\ not\ rename.*|
-			   \s*case\s*\(\s*['"].*)/_\[CASE$icase\]_/imx){
+			   \s*case\s*\(\s*[\'\"].*)/_\[CASE$icase\]_/imx){
 	    print " replacing case $icase\n" if $Debug;
 	    $case[$icase++]=$1;
 	}
@@ -195,6 +200,23 @@ sub rename{
 
 	# Replace old names with tokens of the form _[NUMBER]_
         $count=0;
+
+        # Replace common block names if required
+        if($Common){
+	    if($Undo){
+		# Undo: common/XX_.../ --> common/.../
+		$count+=($text =~ s[^(\s*common\s*/)$Common\_(\w+/)][$1$2]mgi);
+	    }else{
+		# Replace: common/.../ --> common/XX_.../
+		$count +=
+		    ($text =~ s[^(\s*common\s*/)(\w+/)][$1$Common\_$2]mgi);
+		# Avoid double change: common/XX_XX_ --> common/XX_
+		$count -=
+		    ($text =~ 
+		     s[^(\s*common\s*/)$Common\_$Common\_][$1$Common\_]mgi);
+	    }
+	}
+
 	for($i=0;$i<=$#old;$i++){
             $oldname=$old[$i];
             if($Undo or $DANGER{uc($oldname)}){
