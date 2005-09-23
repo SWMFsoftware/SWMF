@@ -899,6 +899,10 @@ Module ModUser
   character (len=*), parameter :: &
        NameUserModule = 'HELIOSPHERE USER ROUTINES, Manchester, Roussev'
 
+  ! This variable is read from PARAM.in and it is used to reduce gravity 
+  ! in src/set_physics.f90 !!! 
+  public :: Tnot 
+
   !\
   ! PFSSM related variables::
   !/
