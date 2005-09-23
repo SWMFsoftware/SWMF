@@ -28,6 +28,7 @@ $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
 #
 #!REVISION HISTORY:
 # 08/03/2003 G.Toth gtoth@umich.edu - initial version
+# 09/22/2005        allow a list of files as an argument
 #EOP
 
 if($Help or $help){
@@ -38,11 +39,13 @@ and creates a renaming list which has the correct component prefix.
 The output list can be used by Rename.pl to do the actual renaming.
 
 For components IH, SC and GM method names starting with MH_ IH_ SC_ and GM_
-are handled intelligently.',
+are handled intelligently.
+
+',
 #BOC
 'Usage:
 
-       Methods.pl [-h] [-a] [-o=OUTFILE] ID
+       Methods.pl [-h] [-a] [-o=OUTFILE] ID [FILE1 FILE2 ...]
 
 -h    This help message
 
@@ -52,11 +55,15 @@ are handled intelligently.',
       "end module NAME", "end subroutine NAME", "end function NAME".
 
 -o=OUTFILE
-     Write the renaming list into OUTFILE. The default is RenameList.pl,
-     which is the default input file for Rename.pl.
+      Write the renaming list into OUTFILE. The default is RenameList.pl,
+      which is the default input file for Rename.pl.
 
 ID
-    The 2 character component ID for the prefix (e.g. GM or UA)
+      The 2 character component ID for the prefix (e.g. GM or UA).
+      This argument has to be present.
+
+FILE1 Source files to check. If no file is listed, the script checks
+      all files with extensions .f, .f90, .f95, .F, .F90, and .F95
 
 Example:
 
@@ -71,10 +78,10 @@ physics module with ID "PM" and version "VERSION":
     exit $Error;
 }
 
-if($#ARGV == 0){
-    $Comp = uc($ARGV[0]);
-    if(length($Comp) != 2){
-	print "Methods.pl ERROR: Component ID must be 2 characters!\n";
+if($#ARGV >= 0){
+    $Comp = uc(shift @ARGV);
+    if($Comp !~ /^[A-Z][A-Z]$/){
+	print "Methods.pl ERROR: Component ID must be 2 capital letters!\n";
 	die "Type Methods.pl -h for information on usage...\n";
     }
 }else{
@@ -82,7 +89,11 @@ if($#ARGV == 0){
     die "Type Methods.pl -h for information on usage...\n";
 }
 
-@source = glob("*.f90 *.f95 *.F90 *.F95 *.f *.F");
+if(@ARGV){
+    @source = @ARGV;
+}else{
+    @source = glob("*.f90 *.f95 *.F90 *.F95 *.f *.F");
+}
 
 foreach $source (@source){
 
