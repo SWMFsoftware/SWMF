@@ -112,7 +112,6 @@ contains
     nRefineLevel = initial_refine_levels
 
     if(DoSetLevels) call set_levels
-
   end subroutine grid_setup
   !===========================================================================
 
@@ -189,6 +188,10 @@ contains
        ! Load balance for the inner blocks:
        ! move coords, move data, there are no new blocks
        call load_balance(.true.,.true.,.false.)
+
+       ! Redo the AMR level constraints for fixed body level
+       ! The coordinates of the blocks are only known now
+       if(DoSetLevels) call set_levels
     end if
 
     !^CFG IF CONSTRAINB BEGIN
