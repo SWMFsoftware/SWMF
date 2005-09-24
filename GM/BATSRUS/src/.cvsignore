@@ -2,6 +2,7 @@
 *.o
 stand_alone.f90
 user_routines.f90
+ModUser.f90
 Makefile.RULES
 Makefile.DEPEND
 ModSize.f90
