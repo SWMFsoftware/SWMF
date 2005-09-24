@@ -56,6 +56,8 @@ GM, IH, SC  / BATSRUS:
            when told to do so.  The feature works within a run
            correctly but fails to perform correctly after a restart.
 
+	FIXED: 09/24/2005 G. Toth
+
         2. The user_routine structure seems to require a reformulation
            in order to avoid incompatibilities of the different
            routines and flags.
