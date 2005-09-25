@@ -413,12 +413,15 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            write(unit_tmp,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
            write(unit_tmp,'(a)')trim(unitstr_TEC)
            write(unit_tmp,'(a,i8,a)') &
-                'ZONE T="PT-N Cut '//textNandT//'", I=',nCutsTotal,', J=1, K=1, F=POINT'
+                'ZONE T="Slice '//textNandT//'", I=', nCutsTotal,&
+                ', J=1, K=1, F=POINT'
         else
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Dipole Cut, '//textDateTime//'"'
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: Dipole Cut, '// &
+                textDateTime//'"'
            write(unit_tmp,'(a)')trim(unitstr_TEC)
            write(unit_tmp,'(a,i8,a)') &
-                'ZONE T="Dipole Cut '//textNandT//'", I=',nCutsTotal,', J=1, K=1, F=POINT'
+                'ZONE T="Dipole Cut '//textNandT//'", I=', nCutsTotal,&
+                ', J=1, K=1, F=POINT'
         end if
         call write_auxdata
      end if
