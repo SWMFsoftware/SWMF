@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 
 subroutine calc_sources_covar
   use ModMain

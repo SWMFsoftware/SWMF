@@ -575,7 +575,7 @@ subroutine fixRefinementLevels
   use ModProcMH
   use ModMain, ONLY : nBLK,lVerbose
   use ModAMR, ONLY : refine_list
-  use ModGeometry,ONLY: TypeGeometry                !^CFG IF NOT CARTESIAN
+  use ModGeometry,ONLY: TypeGeometry                !^CFG IF COVARIANT
   use ModOctree
   implicit none
 
@@ -617,12 +617,12 @@ subroutine fixRefinementLevels
                              if ( (iLEV1-iLEV2 > 1) .or. &
                                   (iLEV1-iLEV2 > 0 .and. &
                                   ((inBlockPtr%ptr%body .and. outBlockPtr%ptr%body)&
-                                  .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    !^CFG IF FACEOUTERBC BEGIN
+                                  .or.(inBlockPtr%ptr%IsOuterBoundary .and. &    
                                   outBlockPtr%ptr%IsOuterBoundary)&
                                   .or.(inBlockPtr%ptr%IsExtraBoundary .and.& 
                                   outBlockPtr%ptr%IsExtraBoundary&
-                                  .and.( i==0.and.k==0.or.TypeGeometry=='cartesian')& !^CFG IF NOT CARTESIAN
-                                  )&           !^CFG END FACEOUTERBC
+                                  .and.( i==0.and.k==0.or.TypeGeometry=='cartesian')& !^CFG IF COVARIANT
+                                  )&          
                                   ))) then
                                 refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.
                                 iCount = iCount +1
@@ -643,7 +643,7 @@ subroutine fixRefinementLevels
   end do
 
 end subroutine fixRefinementLevels
-!^CFG IF NOT CARTESIAN BEGIN
+!^CFG IF COVARIANT BEGIN
 subroutine find_axial_neighbor(iPEIn,iBLKIn,iPEOut,iBLKout)
   use ModParallel, ONLY : proc_dims
   use ModOctree
@@ -687,4 +687,4 @@ subroutine find_axial_neighbor(iPEIn,iBLKIn,iPEOut,iBLKout)
      iPEOut  = outBlkPtr%ptr%PE
      iBlkOut = outBlkPtr%ptr%BLK
 end subroutine find_axial_neighbor
-!^CFG END CARTESIAN
+!^CFG END COVARIANT

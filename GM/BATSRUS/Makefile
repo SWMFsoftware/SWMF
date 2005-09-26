@@ -47,18 +47,18 @@ help:
 	@echo "    mprun NP=5  (make BATSRUS and mprun  BATSRUS.exe on 5 PEs)"
 	@echo ' '
 	@#^CFG IF CONFIGURE BEGIN
-	@#    ^CFG IF NOT CARTESIAN BEGIN
+	@#    ^CFG IF COVARIANT BEGIN
 	@echo "    spherical_src  (Make SPHERICAL directory with BATSRUS on spherical grid)"
 	@echo "    spherical_conf (Make SPHERICAL directory and link it to BATSRUS_conf)"
 	@echo "    covariant_src  (Make COVARIANT directory with BATSRUS on covariant grid)"
 	@echo "    corelax_src    (Make CORELAX directory for the covariant version "
 	@echo "                of the magnetogram-driven solar wind)"
-	@#    ^CFG END CARTESIAN
-	@#    ^CFG IF CARTESIAN BEGIN
+	@#    ^CFG END COVARIANT
+	@#    ^CFG IF NOT COVARIANT BEGIN
 	@echo "    cartesian_src  (removes source code for covariant grid)"
 	@echo "    relax_src      (Make RELAX directory for the Cartesian "
 	@echo "                    version of the magnetogram-driven solar wind)"
-	@#    ^CFG END CARTESIAN
+	@#    ^CFG END COVARIANT
 	@echo ' '
 	@#^CFG END CONFIGURE
 

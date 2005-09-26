@@ -8,7 +8,7 @@ subroutine write_plot_common(ifile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
-  use ModGeometry, ONLY : TypeGeometry                   !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF COVARIANT
   use ModPhysics, ONLY : unitUSER_x, thetaTilt,Rbody
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
@@ -418,7 +418,7 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
-           write(unit_tmp,'(a)')TypeGeometry             !^CFG IF NOT CARTESIAN
+           if(UseCovariant)write(unit_tmp,'(a)')TypeGeometry !^CFG IF COVARIANT
         end select
         if (index(plot_type1,'sph')>0) then
            write(unit_tmp,'(1pe13.5,a)')rplot,' rplot'
@@ -684,10 +684,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('B1z','b1z')
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)
      case('Jx','jx')
-        if(UseCovariant)then                                   !^CFG IF NOT CARTESIAN BEGIN
+        if(UseCovariant)then                                   !^CFG IF COVARIANT BEGIN
            call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                                   !^CFG END CARTESIAN
-           if(true_BLK(iBLK))then                              !^CFG IF CARTESIAN BEGIN
+        else                                                   !^CFG END COVARIANT
+           if(true_BLK(iBLK))then                              !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
                    -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
@@ -717,14 +717,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(By_,i  ,j  ,kp1,iBLK) &
                       -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
               end do; end do; end do
-           end if                                                      !^CFG END CARTESIAN
-!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-        end if                                                         !^CFG IF NOT CARTESIAN
+           end if                                                      !^CFG END COVARIANT
+           continue
+        end if                                                         !^CFG IF COVARIANT
      case('Jy','jy')
-        if(UseCovariant)then                                           !^CFG IF NOT CARTESIAN BEGIN 
+        if(UseCovariant)then                                           !^CFG IF COVARIANT BEGIN 
            call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
-        else                                                           !^CFG END CARTESIAN
-           if(true_BLK(iBLK))then                                      !^CFG IF CARTESIAN BEGIN
+        else                                                           !^CFG END COVARIANT
+           if(true_BLK(iBLK))then                                      !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
                    -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
@@ -754,15 +754,15 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
                       -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
               end do; end do; end do
-           endif                                                   !^CFG END CARTESIAN
-!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-        end if                                                     !^CFG IF NOT CARTESIAN
+           endif                                                   !^CFG END COVARIANT
+           continue
+        end if                                                     !^CFG IF COVARIANT
 
      case('Jz','jz')
-        if(UseCovariant)then                                       !^CFG IF NOT CARTESIAN BEGIN
+        if(UseCovariant)then                                       !^CFG IF COVARIANT BEGIN
            call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                                       !^CFG END CARTESIAN           
-           if(true_BLK(iBLK))then                            !^CFG IF CARTESIAN BEGIN
+        else                                                       !^CFG END COVARIANT           
+           if(true_BLK(iBLK))then                            !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
                    -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
@@ -792,9 +792,9 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
                       -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
               end do; end do; end do
-           end if                                                  !^CFG END CARTESIAN
-!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-        end if                                                     !^CFG IF NOT CARTESIAN
+           end if                                                  !^CFG END COVARIANT
+           continue
+        end if                                                     !^CFG IF COVARIANT
      case('enumx')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
      case('enumy')
@@ -888,10 +888,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)                                 
      case('Jr','jr')
-        if(UseCovariant)then                                    !^CFG IF NOT CARTESIAN BEGIN
+        if(UseCovariant)then                                    !^CFG IF COVARIANT BEGIN
            call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  
-        else                                                    !^CFG END CARTESIAN
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &               !^CFG IF CARTESIAN BEGIN
+        else                                                    !^CFG END COVARIANT
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &               !^CFG IF NOT COVARIANT BEGIN
                 0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
                 ( ( &
                 ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
@@ -910,9 +910,9 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
                 ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
                 - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
-                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )             !^CFG END CARTESIAN
-!           call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-        end if                                                     !^CFG IF NOT CARTESIAN           
+                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )             !^CFG END COVARIANT
+           continue
+        end if                                                     !^CFG IF COVARIANT           
      case('er','Er','ER')
         PlotVar(:,:,:,iVar)=( ( State_VGB(rhoUz_,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
@@ -967,10 +967,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct')
-        if(UseCovariant)&                            !^CFG IF NOT CARTESIAN BEGIN
+        if(UseCovariant)&                            !^CFG IF COVARIANT BEGIN
              call stop_mpi('Do not plot divB, when UseCovariant=T. Use absdivB')
-                                                     !^CFG END CARTESIAN
-        !^CFG IF CARTESIAN BEGIN
+                                                     !^CFG END COVARIANT
+        !^CFG IF NOT COVARIANT BEGIN
         if(s.eq.'divb_CD' .or. s.eq.'divb_cd' .or. &
              ((s.eq.'divb' .or. s.eq.'divB' .or. s.eq.'DivB') &
              .and..not.UseConstrainB &                  !^CFG IF CONSTRAINB
@@ -1024,7 +1024,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
         endif
-!^CFG END CARTESIAN
+!^CFG END COVARIANT
      case('absdivB','absdivb','ABSDIVB')
          PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = abs(DivB1_GB(:,:,:,iBLK))
          if(.not.true_BLK(iBLK))then

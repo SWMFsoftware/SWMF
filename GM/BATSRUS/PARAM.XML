@@ -996,7 +996,7 @@ GSM			TypeCoordSystem
 ! Default is component dependent: "GSM" for GM, "HGI" for IH, and "HGR" for SC.
 </command>
 
-<!-- ^CFG IF NOT CARTESIAN BEGIN -->
+<!-- ^CFG IF COVARIANT BEGIN -->
 <command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
 
@@ -1021,7 +1021,7 @@ cell-centered grid either is not logically cartesian, or does not consist of
 the Voronoy cells only.
 
 </command>
-<!-- ^CFG END CARTESIAN -->
+<!-- ^CFG END COVARIANT -->
 
 </commandgroup>
 

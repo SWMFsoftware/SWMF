@@ -1,5 +1,6 @@
 !^CFG FILE LINDEFLUX
 !^CFG COPYRIGHT UM
+!^CFG FILE NOT COVARIANT
 subroutine option_lindeflux(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption

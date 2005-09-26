@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 
 !^CFG FILE LINDEFLUX 
 subroutine option_lindeflux_covar(TrueOption,NameOption)

@@ -146,7 +146,7 @@ subroutine set_satellite_flags
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
   use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : TypeGeometry               !^CFG IF COVARIANT
   use ModIO, ONLY : iBLKsatellite,iPEsatellite,Xsatellite,&
        SatelliteInBLK,DoTrackSatellite_I,nSatellite
   use ModNumConst
@@ -169,12 +169,12 @@ subroutine set_satellite_flags
 
   do iSat=1, nSatellite
      if(.not.DoTrackSatellite_I(iSat))CYCLE !Position is not defined
-     select case(TypeGeometry)           !^CFG IF NOT CARTESIAN
-     case('cartesian')                   !^CFG IF NOT CARTESIAN
+     select case(TypeGeometry)           !^CFG IF COVARIANT
+     case('cartesian')                   !^CFG IF COVARIANT
         xSat=XSatellite(iSat,1)
         ySat=XSatellite(iSat,2)
         zSat=XSatellite(iSat,3)
-     case('spherical')                   !^CFG IF NOT CARTESIAN BEGIN
+     case('spherical')                   !^CFG IF COVARIANT BEGIN
         call xyz_to_spherical(XSatellite(iSat,1), XSatellite(iSat,2),&
              XSatellite(iSat,3), xSat, ySat, zSat)
      case('spherical_lnr')                   
@@ -183,7 +183,7 @@ subroutine set_satellite_flags
         xSat=log(max(xSat, cTiny))
      case default
         call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-     end select                          !^CFG END CARTESIAN
+     end select                          !^CFG END COVARIANT
 
      iPE = -1
      iBLKtemp = -1
@@ -229,7 +229,7 @@ subroutine set_satellite_positions
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,StartTime,time_simulation
   use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : TypeGeometry               !^CFG IF COVARIANT
   use ModNumConst
   use ModIO
   implicit none

@@ -7,8 +7,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,UseCovariant,UseVertexBasedGrid,  & !^CFG IF NOT CARTESIAN
-       allocate_face_area_vectors,allocate_old_levels,& !^CFG IF NOT CARTESIAN
+       TypeGeometry,UseCovariant,UseVertexBasedGrid,  & !^CFG IF COVARIANT
+       allocate_face_area_vectors,allocate_old_levels,& !^CFG IF COVARIANT
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
@@ -585,13 +585,13 @@ subroutine MH_set_parameters(TypeAction)
               end do
               if(index(plot_string,'x=0')>0)then
                  plot_area='x=0'
-                 select case(TypeGeometry)               !^CFG IF NOT CARTESIAN
-                 case('cartesian')                       !^CFG IF NOT CARTESIAN
+                 select case(TypeGeometry)               !^CFG IF COVARIANT
+                 case('cartesian')                       !^CFG IF COVARIANT
                     plot_range(1,ifile)=-cTiny*(XyzMax_D(1)-XyzMin_D(1))&
                          /(nCells(1)*proc_dims(1))
                     plot_range(2,ifile)=+cTiny*(XyzMax_D(1)-XyzMin_D(1))&
                          /(nCells(1)*proc_dims(1))
-                    !                               ^CFG IF NOT CARTESIAN BEGIN
+                    !                               ^CFG IF COVARIANT BEGIN
                  case('spherical','spherical_lnr','cylindrical')  
                     plot_range(3,ifile)=cHalfPi&                       
                          -cTiny*(XyzMax_D(2)-XyzMin_D(2))&
@@ -603,7 +603,7 @@ subroutine MH_set_parameters(TypeAction)
                     call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                          //TypeGeometry)
                  end select
-                 !                                  ^CFG END CARTESIAN
+                 !                                  ^CFG END COVARIANT
               elseif(index(plot_string,'y=0')>0)then
                  plot_area='y=0'
                  plot_range(3,ifile)=-cTiny*(XyzMax_D(2)-XyzMin_D(2))&
@@ -612,13 +612,13 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(2)*proc_dims(2)) 
               elseif(index(plot_string,'z=0')>0)then
                  plot_area='z=0'
-                 select case(TypeGeometry)               !^CFG IF NOT CARTESIAN
-                 case('cartesian','cylindrical')         !^CFG IF NOT CARTESIAN
+                 select case(TypeGeometry)               !^CFG IF COVARIANT
+                 case('cartesian','cylindrical')         !^CFG IF COVARIANT
                     plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
                          /(nCells(3)*proc_dims(3)) 
                     plot_range(6,ifile)=+cTiny*(XyzMax_D(3)-XyzMin_D(3))&
                          /(nCells(3)*proc_dims(3)) 
-                    !^CFG IF NOT CARTESIAN BEGIN
+                    !^CFG IF COVARIANT BEGIN
                  case('spherical','spherical_lnr')
                     plot_range(5,ifile)=cHalfPi&                        
                          -cTiny*(XyzMax_D(3)-XyzMin_D(3))&
@@ -630,7 +630,7 @@ subroutine MH_set_parameters(TypeAction)
                     call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                          //TypeGeometry)
                  end select
-                 !^CFG END CARTESIAN
+                 !^CFG END COVARIANT
               elseif(index(plot_string,'3d')>0)then
                  plot_area='3d_'
               else
@@ -647,10 +647,10 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              !                                     ^CFG IF NOT CARTESIAN BEGIN
+              !                                     ^CFG IF COVARIANT BEGIN
               if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
                    plot_dx(1,ifile)=-1.0 
-              !                                     ^CFG END CARTESIAN
+              !                                     ^CFG END COVARIANT
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.
@@ -659,8 +659,8 @@ subroutine MH_set_parameters(TypeAction)
                    //plot_string)
            end if
            if (plot_area == 'sph') then
-              select case(TypeGeometry)                !^CFG IF NOT CARTESIAN
-              case('cartesian')                        !^CFG IF NOT CARTESIAN
+              select case(TypeGeometry)                !^CFG IF COVARIANT
+              case('cartesian')                        !^CFG IF COVARIANT
                  plot_dx(1,ifile) = 1.0    ! set to match value in write_plot_sph
                  plot_dx(2:3,ifile) = 1.0  ! set to degrees desired in angular resolution
                  plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0
@@ -668,7 +668,7 @@ subroutine MH_set_parameters(TypeAction)
                  plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
                  plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
                  plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
-              case('spherical')                    !^CFG IF NOT CARTESIAN BEGIN
+              case('spherical')                    !^CFG IF COVARIANT BEGIN
                  plot_dx(1,ifile) = -1.0   
                  plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4   ! so that R/=0 
                  do i=Phi_,Theta_
@@ -688,7 +688,7 @@ subroutine MH_set_parameters(TypeAction)
               case default
                  call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                       //TypeGeometry)
-              end select                           !^CFG END CARTESIAN 
+              end select                           !^CFG END COVARIANT 
            end if
 
            ! Plot variables
@@ -1060,7 +1060,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrderProlong',prolong_order)
         call read_var('TypeProlong' ,prolong_type)
      case("#MESSAGEPASS","#OPTIMIZE")
-        if(TypeGeometry=='cartesian') then               !^CFG IF NOT CARTESIAN
+        if(TypeGeometry=='cartesian') then               !^CFG IF COVARIANT
            call read_var('TypeMessagePass',optimize_message_pass)
            if(optimize_message_pass=='allold' .or.&
                 optimize_message_pass=='oldopt')then
@@ -1070,7 +1070,7 @@ subroutine MH_set_parameters(TypeAction)
                    ' is not available any longer, allopt is set !!!'
               optimize_message_pass='allopt'
            end if
-        end if                                           !^CFG IF NOT CARTESIAN
+        end if                                           !^CFG IF COVARIANT
      case('#TVDRESCHANGE')
         call read_var('UseTVDAtResChange',UseTVDAtResChange)
      case("#BORIS")
@@ -1365,7 +1365,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
-     case('#VERTEXBASEDGRID')          !^CFG IF NOT CARTESIAN BEGIN
+     case('#VERTEXBASEDGRID')          !^CFG IF COVARIANT BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
         if(UseVertexBasedGrid) call allocate_old_levels
@@ -1376,7 +1376,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeGeometry',TypeGeometry)      
         select case(TypeGeometry)                                   
         case('cartesian') 
-           !^CFG IF FACEOUTERBC BEGIN
+           
         case('spherical','spherical_lnr')      
            automatic_refinement=.false.                  
            MaxBoundary = Top_
@@ -1389,7 +1389,7 @@ subroutine MH_set_parameters(TypeAction)
            if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
            DoFixOuterBoundary=.true.         
-           !^CFG END FACEOUTERBC
+  
         case default
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
@@ -1398,13 +1398,13 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('XyzMin_D(1)',XyzMin_D(1))
         call read_var('XyzMax_D(1)',XyzMax_D(1))
-        !^CFG END CARTESIAN 
+        !^CFG END COVARIANT 
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
-        !^CFG IF NOT CARTESIAN BEGIN
+        !^CFG IF COVARIANT BEGIN
         if( (TypeGeometry=='spherical'.or.TypeGeometry=='cylindrical'&
              .or.TypeGeometry=='spherical_lnr')&
              .and.mod(proc_dims(2),2)==1) then
@@ -1417,7 +1417,7 @@ subroutine MH_set_parameters(TypeAction)
                    proc_dims(2)
            end if
         end if
-        !^CFG END CARTESIAN
+        !^CFG END COVARIANT
         if(product(proc_dims)>nBLK.and.iProc==0)then
            write(*,*)'Root blocks will not fit on 1 processor, check nBLK'
            call stop_mpi('product(proc_dims) > nBLK!')
@@ -1428,10 +1428,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
         call read_var('zMax',z2)
-        select case(TypeGeometry)   !^CFG IF NOT CARTESIAN
-        case('cartesian')           !^CFG IF NOT CARTESIAN
+        select case(TypeGeometry)   !^CFG IF COVARIANT
+        case('cartesian')           !^CFG IF COVARIANT
            call set_xyzminmax_cart  
-        case('spherical')           !^CFG IF NOT CARTESIAN BEGIN
+        case('spherical')           !^CFG IF COVARIANT BEGIN
            call set_xyzminmax_sph  
         case('spherical_lnr')         
            call set_xyzminmax_sph2      
@@ -1440,7 +1440,7 @@ subroutine MH_set_parameters(TypeAction)
         case default
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
-        end select                  !^CFG END CARTESIAN
+        end select                  !^CFG END COVARIANT
      case("#CHECKGRIDSIZE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))
@@ -1476,26 +1476,25 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseExtraBoundary',UseExtraBoundary)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
              TypeBc_I(ExtraBc_))      
-        !                                      ^CFG IF FACEOUTERBC BEGIN
-        if(TypeGeometry=='cartesian')&             !^CFG IF NOT CARTESIAN
+        
+        if(TypeGeometry=='cartesian')&             !^CFG IF COVARIANT
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundary)  
-        !                                      ^CFG END FACEOUTERBC
         !                                      ^CFG END USERFILES
-     case('#FACEOUTERBC')                      !^CFG IF FACEOUTERBC BEGIN
+     case('#FACEOUTERBC')                      
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
-        !^CFG IF NOT CARTESIAN BEGIN
+        !^CFG IF COVARIANT BEGIN
         select case(TypeGeometry)
         case('spherical','spherical_lnr')
            MaxBoundary = Top_
         case('cylindrical')
            MaxBoundary = max(MaxBoundary,North_)
         end select
-        !^CFG END CARTESIAN
+        !^CFG END COVARIANT
         if(MaxBoundary>=East_)&
              call read_var('DoFixOuterBoundary',DoFixOuterBoundary) 
-        !                                       ^CFG END FACEOUTERBC 
+    
      case("#SOLARWIND")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SwRhoDim',SW_rho_dim)
@@ -1816,7 +1815,7 @@ contains
     nOrder = 2
     FluxType = 'Rusanov'               !^CFG IF RUSANOVFLUX
     !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
-    !UseCovariant = .true.             !^CFG UNCOMMENT IF NOT CARTESIAN
+    !UseCovariant = .true.             !^CFG UNCOMMENT IF COVARIANT
   
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
     UsePointImplicit = .false.              !^CFG IF POINTIMPLICIT
@@ -1990,7 +1989,7 @@ contains
 
     end select
 
-    select case(problem_type)                          !^CFG IF CARTESIAN BEGIN
+    select case(problem_type)                          !^CFG IF NOT COVARIANT BEGIN
     case(problem_earth,problem_saturn,problem_jupiter,problem_rotation)
        UseNonConservative   = .true.
        nConservCrit         = 1
@@ -1998,12 +1997,12 @@ contains
        allocate( TypeConservCrit_I(nConservCrit) )
        TypeConservCrit_I(1) = 'r'
        rConserv             = 2*rBody
-    case default                                       !^CFG END CARTESIAN
+    case default                                       !^CFG END COVARIANT
        UseNonConservative   = .false.
        if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
        nConservCrit         = 0
        rConserv             = -1.
-    end select                                         !^CFG IF CARTESIAN
+    end select                                         !^CFG IF NOT COVARIANT
 
     if(IsStandAlone)then
        select case(problem_type)
@@ -2216,7 +2215,7 @@ contains
     real               :: Version
     logical            :: IsOn
 
-    if(UseCovariant)then   !^CFG IF NOT CARTESIAN BEGIN
+    if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
        call allocate_face_area_vectors
        if(UseImplicit)call stop_mpi(&                  !^CFG IF IMPLICIT 
             'Do not use covariant with implicit')      !^CFG IF IMPLICIT
@@ -2231,7 +2230,7 @@ contains
        if(boris_correction)call stop_mpi(&             !^CFG IF BORISCORR BEGIN
             'Do not use covariant with the Boris correction')
                                                        !^CFG END BORISCORR
-    end if                                             !^CFG END CARTESIAN
+    end if                                             !^CFG END COVARIANT
 
     if(UseImplicit)then                      !^CFG IF IMPLICIT BEGIN
        call OPTION_IMPLICIT(IsOn,Name)
@@ -2614,7 +2613,6 @@ contains
     end if
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
-    !    MaxBoundary=max(MaxBoundary,Top_)           !^CFG IF NOT CELLOUTERBC
  
   end subroutine set_physics_parameters
 

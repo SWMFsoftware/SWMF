@@ -6,7 +6,7 @@ subroutine calc_facefluxes(DoResChangeOnly)
        boris_correction,&               !^CFG IF BORISCORR
        BlkTest,PROCtest,globalBLK
   use ModAdvance, ONLY : FluxType
-  use ModGeometry,ONLY : UseCovariant   !^CFG IF NOT CARTESIAN
+  use ModGeometry,ONLY : UseCovariant   !^CFG IF COVARIANT
 
   implicit none
 
@@ -28,34 +28,34 @@ subroutine calc_facefluxes(DoResChangeOnly)
   case ('Roe')                                  !^CFG IF ROEFLUX
      call calc_flux_Roe(DoResChangeOnly)        !^CFG IF ROEFLUX
   case ('Rusanov')                              !^CFG IF RUSANOVFLUX BEGIN
-     if(.not.UseCovariant)then                  !^CFG IF NOT CARTESIAN
-        call calc_flux_Rusanov(DoResChangeOnly) !^CFG IF CARTESIAN
- !      call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+     if(.not.UseCovariant)then                  !^CFG IF COVARIANT
+        call calc_flux_Rusanov(DoResChangeOnly) !^CFG IF NOT COVARIANT
+        continue
+     else                                       !^CFG IF COVARIANT BEGIN   
         call calc_flux_Rusanov_covar(&
              DoResChangeOnly)
-     end if                                     !^CFG END CARTESIAN         
+     end if                                     !^CFG END COVARIANT         
                                                 !^CFG END  RUSANOVFLUX
   case('Linde')                                 !^CFG IF LINDEFLUX BEGIN
-     if(.not.UseCovariant)then                  !^CFG IF NOT CARTESIAN
-        call calc_flux_Linde(DoResChangeOnly)   !^CFG IF CARTESIAN
- !      call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+     if(.not.UseCovariant)then                  !^CFG IF COVARIANT
+        call calc_flux_Linde(DoResChangeOnly)   !^CFG IF NOT COVARIANT
+        continue
+     else                                       !^CFG IF COVARIANT BEGIN   
         call calc_flux_Linde_covar(&            
               DoResChangeOnly)
-     end if                                     !^CFG END CARTESIAN
+     end if                                     !^CFG END COVARIANT
                                                 !^CFG END LINDEFLUX
   case ('Sokolov')                              !^CFG IF AWFLUX BEGIN
      if(boris_correction)then                   !^CFG IF BORISCORR BEGIN
         call calc_flux_AWboris(DoResChangeOnly)
      else                                       !^CFG END BORISCORR
-        if(.not.UseCovariant)then               !^CFG IF NOT CARTESIAN
-           call calc_flux_AW(DoResChangeOnly)   !^CFG IF CARTESIAN
-!          call stop_mpi('Set UseCovariant=T') !^CFG UNCOMMENT IF NOT CARTESIAN
-     else                                       !^CFG IF NOT CARTESIAN BEGIN   
+        if(.not.UseCovariant)then               !^CFG IF COVARIANT
+           call calc_flux_AW(DoResChangeOnly)   !^CFG IF NOT COVARIANT
+           continue
+     else                                       !^CFG IF COVARIANT BEGIN   
            call calc_flux_aw_covar(&            
               DoResChangeOnly)
-        end if                                  !^CFG END CARTESIAN 
+        end if                                  !^CFG END COVARIANT 
      end if                                     !^CFG IF BORISCORR
                                                 !^CFG END AWFLUX
   case default
@@ -153,12 +153,12 @@ subroutine calc_electric_field(iBlock)
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
   use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK !^CFG IF CARTESIAN
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK !^CFG IF NOT COVARIANT
  
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
-  !^CFG IF CARTESIAN BEGIN
+  !^CFG IF NOT COVARIANT BEGIN
   ! E_x=(fy+fy-fz-fz)/4
   Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
        ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
@@ -179,5 +179,5 @@ subroutine calc_electric_field(iBlock)
        + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
        ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
        + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
-  !^CFG END CARTESIAN
+  !^CFG END COVARIANT
 end subroutine calc_electric_field

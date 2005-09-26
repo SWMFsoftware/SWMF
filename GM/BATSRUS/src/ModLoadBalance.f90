@@ -6,7 +6,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY: True_Blk
-  use ModGeometry, ONLY: UseCovariant     !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY: UseCovariant     !^CFG IF COVARIANT
   use ModPartSteady, ONLY: UsePartSteady
   use ModAMR, ONLY : availableBLKs, UnusedBlock_BP
   use ModParallel
@@ -227,12 +227,12 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         call correctE
 
         if(DoMoveExtraData)then
-           if(UseCovariant)then                       !^CFG IF NOT CARTESIAN BEGIN
+           if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
               call calc_b0source_covar(iBlock)  
-           else                                       !^CFG END CARTESIAN
-              call set_b0_matrix(iBlock)              !^CFG IF CARTESIAN
-   !           call stop_mpi('Set UseCovariant=T')    !^CFG UNCOMMENT IF NOT CARTESIAN
-           end if                                     !^CFG IF NOT CARTESIAN
+           else                                       !^CFG END COVARIANT
+              call set_b0_matrix(iBlock)              !^CFG IF NOT COVARIANT
+              continue
+           end if                                     !^CFG IF COVARIANT
            call init_conservative_facefluxes(iBlock)
         else
            call calc_other_soln_vars(iBlock)

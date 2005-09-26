@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 !^CFG FILE RUSANOVFLUX 
 subroutine option_rusanovflux_covar(TrueOption,NameOption)
 

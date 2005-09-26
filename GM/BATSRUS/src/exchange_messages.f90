@@ -11,7 +11,7 @@ subroutine exchange_messages
        State_VGB
   use ModInterface
   use ModParallel, ONLY : UsePlotMessageOptions
-  use ModGeometry, ONLY : far_field_BCs_BLK            !^CFG IF CELLOUTERBC
+  use ModGeometry, ONLY : far_field_BCs_BLK            
   use ModMpi
   use ModMPCells, ONLY : DoOneCoarserLayer
   implicit none
@@ -44,8 +44,8 @@ subroutine exchange_messages
   !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
   do globalBLK = 1, nBlockMax
      if (unusedBLK(globalBLK)) CYCLE
-     if (far_field_BCs_BLK(globalBLK).and.prolong_order==2) &       !^CFG IF CELLOUTERBC
-          call set_outer_BCs(globalBLK,time_simulation,.false.)     !^CFG IF CELLOUTERBC
+     if (far_field_BCs_BLK(globalBLK).and.prolong_order==2)&
+          call set_outer_BCs(globalBLK,time_simulation,.false.)        
      if(UseConstrainB)call correctP   !^CFG IF CONSTRAINB
      if(UseProjection)call correctP   !^CFG IF PROJECTION
   end do
@@ -90,8 +90,8 @@ subroutine exchange_messages
 
   do globalBLK = 1, nBlockMax
      if (unusedBLK(globalBLK)) CYCLE
-     if (far_field_BCs_BLK(globalBLK)) &                        !^CFG IF CELLOUTERBC
-          call set_outer_BCs(globalBLK,time_simulation,.false.) !^CFG IF CELLOUTERBC
+     if (far_field_BCs_BLK(globalBLK)) &                        
+          call set_outer_BCs(globalBLK,time_simulation,.false.) 
      call correctE
   end do
 

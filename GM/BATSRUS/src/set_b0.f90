@@ -138,7 +138,7 @@ subroutine set_b0_face(iBlock)
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModGeometry, ONLY : &       
        dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK
-  use ModGeometry, ONLY : UseCovariant                !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : UseCovariant                !^CFG IF COVARIANT
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModNumConst
   implicit none
@@ -219,11 +219,11 @@ subroutine set_b0_face(iBlock)
           B0zCell_BLK(0:nI+1,0:nJ+1,1-gcn:nK+gcn-1,iBlock))
 
   end if
-  if(UseCovariant)then                   !^CFG IF NOT CARTESIAN BEGIN    
+  if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN    
      call calc_b0source_covar(iBlock)         
      return
-  end if                                 !^CFG END CARTESIAN
-  !^CFG IF CARTESIAN BEGIN
+  end if                                 !^CFG END COVARIANT
+  !^CFG IF NOT COVARIANT BEGIN
 
   if(.not. UseB0FaceRestriction)return
 
@@ -303,7 +303,7 @@ subroutine set_b0_face(iBlock)
 
   call set_b0_matrix(iBlock)
 
-  !^CFG END CARTESIAN   
+  !^CFG END COVARIANT   
 
  
 

@@ -10,7 +10,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,PROCtest,BLKtest,test_string,x_,y_,z_
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       TypeGeometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF NOT CARTESIAN
+       TypeGeometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
        XyzStart_BLK,XyzMin_D,XyzMax_D
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
@@ -97,14 +97,14 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   zmax1=zmax+cHalfMinusTiny*dz_BLK(iBLK)
 
   nBLKcells = 0
-  select case(TypeGeometry)                                    !^CFG IF NOT CARTESIAN
-  case('cartesian')                                            !^CFG IF NOT CARTESIAN
+  select case(TypeGeometry)                                    !^CFG IF COVARIANT
+  case('cartesian')                                            !^CFG IF COVARIANT
      ySqeezed = xyzStart_BLK(y_,iBLK)
-  case('spherical','spherical_lnr','cylindrical')                 !^CFG IF NOT CARTESIAN BEGIN
+  case('spherical','spherical_lnr','cylindrical')                 !^CFG IF COVARIANT BEGIN
      ySqeezed = mod(xyzStart_BLK(y_,iBLK),cPi)
   case default
      call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-  end select                                                   !^CFG END CARTESIAN
+  end select                                                   !^CFG END COVARIANT
   ! If block is fully outside of cut then cycle
   if(xyzStart_BLK(x_,iBLK)>xmax1.or.&
        xyzStart_BLK(x_,iBLK)+(nI-1)*dx_BLK(iBLK)<xmin1.or.&
@@ -146,8 +146,8 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
               y = y_BLK(i,j,k,iBLK)
               z = z_BLK(i,j,k,iBLK)
 
-              if(x<x1.or.x>x2.or.y<y1.or.y>y2.or.&                !^CFG IF NOT CARTESIAN
-                   z<z1.or.z>z2) CYCLE                            !^CFG IF NOT CARTESIAN
+              if(x<x1.or.x>x2.or.y<y1.or.y>y2.or.&                !^CFG IF COVARIANT
+                   z<z1.or.z>z2) CYCLE                            !^CFG IF COVARIANT
 
               if (plot_dimensional(ifile)) then
 		 x = x*unitUSER_x
@@ -198,8 +198,8 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
               y=0.5*(y_BLK(i,j,k,iBLK)+y_BLK(i2,j2,k2,iBLK))
               z=0.5*(z_BLK(i,j,k,iBLK)+z_BLK(i2,j2,k2,iBLK))
 
-              if(x<x1.or.x>x2.or.y<y1.or.y>y2.or.&                !^CFG IF NOT CARTESIAN
-                   z<z1.or.z>z2) CYCLE                            !^CFG IF NOT CARTESIAN 
+              if(x<x1.or.x>x2.or.y<y1.or.y>y2.or.&                !^CFG IF COVARIANT
+                   z<z1.or.z>z2) CYCLE                            !^CFG IF COVARIANT 
 
               if(plot_dimensional(ifile))then
                  x=x*unitUSER_x

@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 !subroutine gen_to_xyz_arr maps the piece of an equally spaced grid
 !in the space of GENERALIZED COORDINATES to the cartesian space xyz
 subroutine gen_to_xyz_arr(&

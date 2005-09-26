@@ -1,5 +1,6 @@
 !^CFG FILE RUSANOVFLUX
 !^CFG COPYRIGHT UM
+!^CFG FILE NOT COVARIANT
 subroutine option_rusanovflux(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption

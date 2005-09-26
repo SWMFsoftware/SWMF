@@ -77,12 +77,9 @@ AWFLUX			OFF			#^CFG IF AWFLUX
 ROEFLUX			OFF			#^CFG IF ROEFLUX
 DISSFLUX		OFF			#^CFG IF DISSFLUX
 
-CELLOUTERBC             ON                      #^CFG IF CELLOUTERBC
-FACEOUTERBC             OFF                     #^CFG IF FACEOUTERBC
-#						#^CFG IF CARTESIAN BEGIN
+#						#^CFG IF NOT COVARIANT BEGIN
 # Geometry
-#
-CARTESIAN               ON                      #^CFG END CARTESIAN
+COVARIANT               OFF                     #^CFG END COVARIANT
 #						#^CFG IF DYNAMIC BEGIN
 # Dynamic allocation of big arrays
 #

@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE CELLOUTERBC
+
 Module ModSetOuterBC
   ! Notation: 1g - first ghost cell,    2g - second ghost cell
   !           1p - first physical cell, 2p - second physical cell

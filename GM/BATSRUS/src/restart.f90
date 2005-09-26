@@ -5,8 +5,8 @@ subroutine write_restart_header
   use ModMain
   use ModVarIndexes, ONLY: NameEquation, nVar
   use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2
-  use ModGeometry, ONLY: XyzMin_D,XyzMax_D,TypeGeometry,&!^CFG IF NOT CARTESIAN
-               UseCovariant,UseVertexBasedGrid           !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY: XyzMin_D,XyzMax_D,TypeGeometry,&!^CFG IF COVARIANT
+               UseCovariant,UseVertexBasedGrid           !^CFG IF COVARIANT
   use ModParallel, ONLY : proc_dims
   use ModImplicit, ONLY : n_prev, dt_prev                  !^CFG IF IMPLICIT
   use ModPhysics
@@ -84,7 +84,7 @@ subroutine write_restart_header
   write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
   write(unit_tmp,*)
   write(unit_tmp,*)
-  if(UseCovariant)then                        !^CFG IF NOT CARTESIAN BEGIN
+  if(UseCovariant)then                        !^CFG IF COVARIANT BEGIN
      write(unit_tmp,'(a)')'#COVARIANTGEOMETRY'
      write(unit_tmp,'(a)')trim(TypeGeometry)
      write(unit_tmp,*)
@@ -99,7 +99,7 @@ subroutine write_restart_header
      write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
      write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
      write(unit_tmp,*)
-  end if                                      !^CFG END CARTESIAN
+  end if                                      !^CFG END COVARIANT
 
   if(NameThisComp=='GM')then
      write(unit_tmp,'(a)')'#SOLARWIND'

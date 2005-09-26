@@ -1,12 +1,12 @@
 #^CFG COPYRIGHT UM
 #^CFG FILE CONFIGURE
 
-#^CFG IF CARTESIAN BEGIN
+#^CFG IF NOT COVARIANT BEGIN
 ############################################################################
 
 DCART =CARTESIAN
 cartesian_src:
-	./Configure.pl -keepall -exe=cartesian -d=${DCART} -u
+	./Configure.pl -keepall -exe=covariant -d=${DCART} -u
 	cd CARTESIAN; make install
 
 cartesian_conf: cartesian_src
@@ -14,8 +14,8 @@ cartesian_conf: cartesian_src
 
 cartesian: cartesian_src
 
-#^CFG END CARTESIAN
-#^CFG IF NOT CARTESIAN BEGIN
+#^CFG END COVARIANT
+#^CFG IF COVARIANT BEGIN
 ############################################################################
 
 DSPHER =SPHERICAL
@@ -26,8 +26,8 @@ spherical_src:
 	cd srcPostProc;\
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	./Configure.pl -d=${DSPHER} \
-	-off=boriscorr,cartesian \
-	-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
+	-off=boriscorr \
+	-on=awflux,lindeflux,testing,userfiles,covariant -u
 	cd src; \
 		mv user_routines_tmp.f90 user_routines_orig.f90;
 	cd srcPostProc;\
@@ -52,8 +52,9 @@ DCOV =COVARIANT
 covariant_src:
 	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user_routines_empty.f90 user_routines_orig.f90
-	./Configure.pl -d=${DCOV} -off=boriscorr,cartesian \
-		-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
+	./Configure.pl -d=${DCOV} -off=boriscorr \
+		-on=awflux,lindeflux,testing,userfiles,covariant \
+	 -u
 	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
 	cd ${DCOV}; make install
 
@@ -67,7 +68,7 @@ covarcheck_src:
 	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user_routines_empty.f90 user_routines_orig.f90
 	./Configure.pl -d=COVARCHECK -off=boriscorr \
-		-on=awflux,lindeflux,faceouterbc,testing,userfiles -u
+		-on=awflux,lindeflux,testing,userfiles -u
 	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
 	cd COVARCHECK; make install
 
@@ -78,7 +79,7 @@ covarcheck: covarcheck_src
 	cd COVARCHECK; make
 
 
-#^CFG END CARTESIAN
+#^CFG END COVARIANT
 #^CFG IF GLOBALHELIOSPHERE BEGIN
 ############################################################################
 DGLOBALH=GLOBALHELIOSPHERE
@@ -87,8 +88,8 @@ globhelio_src:
 	cp user/user_routines.f90.globalhelio user_routines_orig.f90;\
 	cd ..;\
 	./Configure.pl -d=${DGLOBALH} -keepall \
-	-off=ionosphere,boriscorr,implicit,roeflux,rcm \
-	-on=globalheliosphere,cartesian \
+	-off=ionosphere,boriscorr,implicit,roeflux,rcm,covariant \
+	-on=globalheliosphere \
 	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
 	-u
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
@@ -135,8 +136,8 @@ relax_src:
 	cp user/user_routines.f90.heliosphere user_routines_orig.f90;\
 	cd ..;\
 	./Configure.pl -d=${DREL} \
-	-on=alwaves,awflux,userfiles,faceouterbc,cellouterbc,testing \
-	-off=rusanovflux,ionosphere,boriscorr -u;\
+	-on=alwaves,awflux,userfiles,testing \
+	-off=rusanovflux,ionosphere,boriscorr,covariant -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
@@ -158,16 +159,15 @@ corelax_src:
 	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
 	cp user/user_routines.f90.heliosphere.covariant user_routines_orig.f90
 	./Configure.pl -d=CORELAX -keepall \
-	-on=alwaves,awflux,faceouterbc,cellouterbc \
+	-on=alwaves,awflux \
 	-off=rusanovflux,ionosphere,boriscorr,implicit \
-	-exe=alwaves,awflux,faceouterbc,cellouterbc,rusanovflux,ionosphere,boriscorr,implicit -u;\
+	-exe=alwaves,awflux,rusanovflux,ionosphere,boriscorr,implicit -u;\
 	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	cd CORELAX;\
 	./Configure.pl -d=${DSPHER} \
-	-off=cartesian \
-	-on=alwaves,awflux,faceouterbc,cellouterbc,testing,userfiles -u
+	-on=alwaves,awflux,testing,userfiles,covariant -u
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
 	cd CORELAX/${DSPHER}/Param;\

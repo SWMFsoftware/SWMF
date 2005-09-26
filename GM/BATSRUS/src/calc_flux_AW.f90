@@ -1,5 +1,6 @@
 !^CFG FILE AWFLUX
 !^CFG COPYRIGHT UM
+!^CFG FILE NOT COVARIANT
 subroutine option_awflux(TrueOption,NameOption)
 
   logical, intent(out) :: TrueOption

@@ -1341,8 +1341,8 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   use ModAdvance,   ONLY: State_VGB, P_
   use ModMain,      ONLY: nI, nJ, nK, nBlock, MaxBlock, UnusedBLK
   use ModVarIndexes,ONLY: nVar
-  use ModGeometry,  ONLY: cV_BLK, true_BLK, true_cell !^CFG IF CARTESIAN
-  use ModGeometry,  ONLY: UseCovariant                !^CFG IF NOT CARTESIAN
+  use ModGeometry,  ONLY: cV_BLK, true_BLK, true_cell !^CFG IF NOT COVARIANT
+  use ModGeometry,  ONLY: UseCovariant                !^CFG IF COVARIANT
   use ModGeometry,  ONLY: 
   use ModNumConst
   implicit none 
@@ -1357,11 +1357,11 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
   logical :: DoTest, DoTestMe
 
   !---------------------------------------------------------------------------
-  if(UseCovariant)then                            !^CFG IF NOT CARTESIAN BEGIN
+  if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
      call integrate_domain_covar(Sum_V, Pressure_GB)
      return
-  end if                                          !^CFG END CARTESIAN
-  !^CFG IF CARTESIAN BEGIN
+  end if                                          !^CFG END COVARIANT
+  !^CFG IF NOT COVARIANT BEGIN
   call set_oktest('integrate_domain',DoTest, DoTestMe)
   call timing_start('int_domain')
   Sum_V = cZero
@@ -1383,6 +1383,6 @@ subroutine integrate_domain(Sum_V, Pressure_GB)
      Pressure_GB(1:nI,1:nJ,1:nK,iBlock) = State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
   end do
   call timing_stop('int_domain')
-!^CFG END CARTESIAN
+!^CFG END COVARIANT
 end subroutine integrate_domain
 

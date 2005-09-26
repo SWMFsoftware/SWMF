@@ -7,7 +7,7 @@ subroutine advance_expl(DoCalcTimestep)
   use ModAdvance, ONLY : UseUpdateCheck
   use ModParallel, ONLY : neiLev
   use ModGeometry, ONLY: Body_BLK
-  use ModGeometry,ONLY : UseCovariant              !^CFG IF NOT CARTESIAN
+  use ModGeometry,ONLY : UseCovariant              !^CFG IF COVARIANT
   use ModBlockData, ONLY: set_block_data
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   implicit none
@@ -130,12 +130,12 @@ subroutine advance_expl(DoCalcTimestep)
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')
-        if(.not.UseCovariant)then              !^CFG IF NOT CARTESIAN
-           call calc_sources                   !^CFG IF CARTESIAN
-!         call stop_mpi('Set UseCovariant=T')  !^CFG UNCOMMENT IF NOT CARTESIAN
-        else                                   !^CFG IF NOT CARTESIAN BEGIN   
+        if(.not.UseCovariant)then              !^CFG IF COVARIANT
+           call calc_sources                   !^CFG IF NOT COVARIANT
+           continue
+        else                                   !^CFG IF COVARIANT BEGIN   
            call calc_sources_covar            
-        end if                                 !^CFG END CARTESIAN        
+        end if                                 !^CFG END COVARIANT        
 
         call timing_stop('calc_sources')
 

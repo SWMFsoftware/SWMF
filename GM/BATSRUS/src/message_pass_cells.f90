@@ -848,8 +848,8 @@ subroutine mp_build_cell_indices(JustCount)
   use ModOctree
   use ModMPCells
   use ModAMR, ONLY : unusedBlock_BP
-  use ModGeometry,ONLY:TypeGeometry                !^CFG IF NOT CARTESIAN
-  use ModParallel,ONLY:NOBLK                       !^CFG IF NOT CARTESIAN
+  use ModGeometry,ONLY:TypeGeometry                !^CFG IF COVARIANT
+  use ModParallel,ONLY:NOBLK                       !^CFG IF COVARIANT
   implicit none
 
   !Subroutine arguements
@@ -939,12 +939,12 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF NOT CARTESIAN BEGIN
+              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
                       (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
-                 !^CFG END CARTESIAN  
+                 !^CFG END COVARIANT  
               end select
            end do
         else
@@ -966,12 +966,12 @@ subroutine mp_build_cell_indices(JustCount)
                  do sSubF=1,nsubF(idir)
                     call build_i
                  end do
-              case(NOBLK)                                  !^CFG IF NOT CARTESIAN BEGIN
+              case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
                       (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
                       (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
-                 !^CFG END CARTESIAN  
+                 !^CFG END COVARIANT  
               end select
            end do
         end if
@@ -1571,7 +1571,7 @@ contains
     end if
 
   end subroutine set_indices
-  subroutine build_i_axis                              !^CFG IF NOT CARTESIAN BEGIN
+  subroutine build_i_axis                              !^CFG IF COVARIANT BEGIN
     !Local variables
     integer :: i,j,k,n
     integer :: iStepR,kStepR
@@ -1630,7 +1630,7 @@ contains
        end do; end do; end do
     end if
 
-  end subroutine build_i_axis                                   !^CFG END CARTESIAN
+  end subroutine build_i_axis                                   !^CFG END COVARIANT
 
 end subroutine mp_build_cell_indices
 

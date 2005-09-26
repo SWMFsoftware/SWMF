@@ -6,7 +6,7 @@ subroutine set_root_block_geometry
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
        R2_BLK,&                !^CFG IF SECONDBODY
-       TypeGeometry,&          !^CFG IF NOT CARTESIAN
+       TypeGeometry,&          !^CFG IF COVARIANT
        R_BLK,x_BLK,y_BLK,z_BLK,Dxyz,XyzMin_D,XyzMax_D
   use ModNumConst
   use ModParallel, ONLY: proc_dims,periodic3D
@@ -18,12 +18,12 @@ subroutine set_root_block_geometry
 
   ! set the array periodic3D for the periodic boundary
 
-  select case(TypeGeometry)       !^CFG IF NOT CARTESIAN
-     case('cartesian')            !^CFG IF NOT CARTESIAN
+  select case(TypeGeometry)       !^CFG IF COVARIANT
+     case('cartesian')            !^CFG IF COVARIANT
         periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
         periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
         periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
-     case('spherical','spherical_lnr')        !^CFG IF NOT CARTESIAN BEGIN
+     case('spherical','spherical_lnr')        !^CFG IF COVARIANT BEGIN
         periodic3D(1)=.false. 
         periodic3D(2)=.true.  
         periodic3D(3)=.false.
@@ -33,7 +33,7 @@ subroutine set_root_block_geometry
         periodic3D(3)= any(TypeBc_I(bot_:top_)=='periodic')
      case default
         call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-     end select                   !^CFG END CARTESIAN
+     end select                   !^CFG END COVARIANT
 
   xyzStart_BLK = -777777.
   dx_BLK = -777777.
@@ -93,7 +93,7 @@ subroutine fix_block_geometry(iBLK)
 
   integer :: i,j,k, iBoundary
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
-  real,dimension(nDim)::XyzOfNode111_D               !^CFG IF NOT CARTESIAN
+  real,dimension(nDim)::XyzOfNode111_D               !^CFG IF COVARIANT
   !---------------------------------------------------------------------------
   dx = dx_BLK(iBLK)
   dy = dy_BLK(iBLK)
@@ -105,7 +105,7 @@ subroutine fix_block_geometry(iBLK)
   !/--------------------------------
 
 
-  if(TypeGeometry=='cartesian')then                  !^CFG IF NOT CARTESIAN
+  if(TypeGeometry=='cartesian')then                  !^CFG IF COVARIANT
    
      ! This case is the normal one using a spherical Radius.
      do i = 1-gcn, nI+gcn
@@ -121,7 +121,7 @@ subroutine fix_block_geometry(iBLK)
            end do
         end do
      end do
-     cV = dx*dy*dz                                  !^CFG IF CARTESIAN BEGIN
+     cV = dx*dy*dz                                  !^CFG IF NOT COVARIANT BEGIN
 
      fAx = dy*dz       !Cell face areas
      fAy = dz*dx 
@@ -132,20 +132,20 @@ subroutine fix_block_geometry(iBLK)
      fAy_BLK(iBLK) = fAy
      fAz_BLK(iBLK) = fAz
      cV_BLK(iBLK) = cV                                            
-     vInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END CARTESIAN
-  end if                                       !^CFG IF NOT CARTESIAN
+     vInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END COVARIANT
+  end if                                       !^CFG IF COVARIANT
 
 
-  if(.not.UseCovariant)then                    !^CFG IF NOT CARTESIAN
+  if(.not.UseCovariant)then                    !^CFG IF COVARIANT
 
      !Calculate the node coordinates
-                                             !^CFG IF CARTESIAN BEGIN
+                                             !^CFG IF NOT COVARIANT BEGIN
      do i=0,nI; do j=0,nJ; do k=0,nK
         NodeX_IIIB(i,j,k,iBLK) = cEighth*sum(x_BLK(i:i+1,j:j+1,k:k+1,iBLK))
         NodeY_IIIB(i,j,k,iBLK) = cEighth*sum(y_BLK(i:i+1,j:j+1,k:k+1,iBLK))
         NodeZ_IIIB(i,j,k,iBLK) = cEighth*sum(z_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-     end do; end do; end do                  !^CFG END CARTESIAN
-  else                                       !^CFG IF NOT CARTESIAN BEGIN
+     end do; end do; end do                  !^CFG END COVARIANT
+  else                                       !^CFG IF COVARIANT BEGIN
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
      call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
@@ -203,7 +203,7 @@ subroutine fix_block_geometry(iBLK)
 
      end if
    
-  end if                                          !^CFG END CARTESIAN
+  end if                                          !^CFG END COVARIANT
 
   Rmin_BLK(iBLK)  = minval(R_BLK(:,:,:,iBLK))
 
@@ -242,9 +242,9 @@ subroutine fix_block_geometry(iBLK)
      IsBoundaryBlock_IB(iBoundary,iBLK) = .true.
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBLK) = &
-       DoFixExtraBoundary &                         !^CFG IF FACEOUTERBC BEGIN
-       .and.TypeGeometry=='cartesian' &             !^CFG IF NOT CARTESIAN
-       .or. &                                       !^CFG END FACEOUTERBC
+       DoFixExtraBoundary &                         
+       .and.TypeGeometry=='cartesian' &             !^CFG IF COVARIANT
+       .or. &                                       
        UseExtraBoundary
 
   ! set true_cell array
@@ -257,11 +257,11 @@ subroutine fix_block_geometry(iBLK)
   end do
 
   BodyFlg_B(iBLK) = .not. all(true_cell(:,:,:,iBLK))
-                                                    !^CFG IF FACEOUTERBC BEGIN
-  if(TypeGeometry=='cartesian')     &               !^CFG IF NOT CARTESIAN
+                                                    
+  if(TypeGeometry=='cartesian')     &               !^CFG IF COVARIANT
        DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundary &
        .and.any(IsBoundaryCell_GI(:,:,:,ExtraBc_))
-                                                    !^CFG END FACEOUTERBC
+                                                    
   IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
        UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
 
@@ -358,7 +358,7 @@ subroutine set_xyzminmax_cart
   XyzMax_D(z_) = z2
 end subroutine set_xyzminmax_cart
 
-!^CFG IF NOT CARTESIAN BEGIN
+!^CFG IF COVARIANT BEGIN
 !=============================================================================
 subroutine set_xyzminmax_sph
   use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
@@ -403,7 +403,7 @@ subroutine set_xyzminmax_cyl
   XyzMax_D(z_)     = z2
 
 end subroutine set_xyzminmax_cyl
-!^CFG END CARTESIAN
+!^CFG END COVARIANT
 !==============================================================================
 subroutine set_boundary_cells(iBLK)
 
@@ -414,7 +414,7 @@ subroutine set_boundary_cells(iBLK)
        MinBoundary,MaxBoundary
   use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
   use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
-  use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK !^CFG IF FACEOUTERBC
+  use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK 
   !!use ModUser, ONLY: set_extra_boundary_cells
 
   implicit none
@@ -437,7 +437,7 @@ subroutine set_boundary_cells(iBLK)
        call set_extra_boundary_cells(iBLK)
   !^CFG END USERFILES
 
-  !^CFG IF FACEOUTERBC BEGIN
+
   if(IsBoundaryBlock_IB(East_,iBLK)) &
        IsBoundaryCell_GI(:,:,:,East_)=x_BLK(:,:,:,iBLK)<x1  
   if(IsBoundaryBlock_IB(West_,iBLK)) &
@@ -450,6 +450,6 @@ subroutine set_boundary_cells(iBLK)
        IsBoundaryCell_GI(:,:,:,Bot_)= z_BLK(:,:,:,iBLK)<z1
   if(IsBoundaryBlock_IB(Top_,iBLK)) &
        IsBoundaryCell_GI(:,:,:,Top_)= z_BLK(:,:,:,iBLK)>z2  
-  !^CFG END FACEOUTERBC
+ 
 
 end subroutine set_boundary_cells

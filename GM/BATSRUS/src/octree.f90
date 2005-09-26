@@ -88,8 +88,8 @@ subroutine initialize_octree_block(octree, iPE, iBLK, iLEV, iLEVmin, iLEVmax)
   octree % ptr % refine  = .false.
   octree % ptr % coarsen = .false.
   octree % ptr % body    = .false.
-  octree % ptr % IsExtraBoundary    = .false.   !^CFG IF FACEOUTERBC
-  octree % ptr % IsOuterBoundary    = .false.   !^CFG IF FACEOUTERBC
+  octree % ptr % IsExtraBoundary    = .false.   
+  octree % ptr % IsOuterBoundary    = .false.  
 
 end subroutine initialize_octree_block
 
@@ -162,8 +162,8 @@ subroutine refine_octree_block(octree, iPEs, iBLKs, fromPE, fromBLK)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false. !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false. !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false. 
+     octree % ptr % IsOuterBoundary = .false. 
      octree % ptr % number  = -1
      octree % ptr % PE      = -1
      octree % ptr % BLK     = -1
@@ -248,8 +248,8 @@ subroutine coarsen_octree_block(octree, iPEs, iBLKs)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false.   !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false.   !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false.   
+     octree % ptr % IsOuterBoundary = .false.  
 
      global_block_ptrs(iBLKs(1), iPEs(1)+1) % ptr => octree % ptr
 
@@ -368,8 +368,8 @@ recursive subroutine read_octree_soln_block(octree, BlksPerPE, isRoot)
      octree % ptr % refine  = .false.
      octree % ptr % coarsen = .false.
      octree % ptr % body    = .false.
-     octree % ptr % IsExtraBoundary = .false.  !^CFG IF FACEOUTERBC
-     octree % ptr % IsOuterBoundary = .false.  !^CFG IF FACEOUTERBC
+     octree % ptr % IsExtraBoundary = .false.  
+     octree % ptr % IsOuterBoundary = .false.  
      iPE = octree % ptr % PE
      iBLK = octree % ptr % BLK
 
@@ -726,11 +726,9 @@ end subroutine set_octree_body_level
 subroutine set_body_flag
   use ModProcMH
   use ModSize,ONLY:nBLK
-!^CFG IF FACEOUTERBC BEGIN
   use ModMain, ONLY : DoFixOuterBoundary,East_,Top_,&       
        ExtraBc_,DoFixExtraBoundary,TypeBC_I     
   use ModGeometry, ONLY :IsBoundaryBlock_IB,DoFixExtraBoundary_B
-!^CFG END FACEOUTERBC  
   use ModGeometry, ONLY : BodyFlg_B
   use ModOctree
   use ModMpi
@@ -758,7 +756,7 @@ subroutine set_body_flag
              inBlockPtr%ptr%body = tmp_logical_list(inBLK,inPE)
      end do
   end do
-!^CFG IF FACEOUTERBC BEGIN
+
   if(DoFixExtraBoundary)then
 
      tmp_logical_list = .false.
@@ -794,7 +792,7 @@ subroutine set_body_flag
         end do
      end do
   end if
-!^CFG END FACEOUTERBC
+
   deallocate(tmp_logical_list)
 
 end subroutine set_body_flag

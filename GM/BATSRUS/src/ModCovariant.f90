@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 module ModCovariant
   use ModSize
   use ModNumConst

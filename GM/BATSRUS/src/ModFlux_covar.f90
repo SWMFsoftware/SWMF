@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 
 Module ModFlux_covar
   use ModVarIndexes,ONLY:Energy_

@@ -325,7 +325,7 @@ Module ModMain
   logical:: UseUserSource            = .false.
   logical:: UseExtraBoundary         = .false.
   logical:: DoFixExtraBoundary       = .false.
-  logical:: DoFixOuterBoundary       = .false.  !^CFG IF FACEOUTERBC
+  logical:: DoFixOuterBoundary       = .false.  
   logical:: UseUserPerturbation      = .false.
   logical:: UseUserOuterBcs          = .false.
   logical:: UseUserICs               = .false.

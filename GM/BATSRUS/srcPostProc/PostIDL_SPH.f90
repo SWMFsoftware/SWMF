@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 !=============================================================================
 program PostIDL
 
@@ -143,7 +143,7 @@ program PostIDL
      dx2=dxyzmin(idim2)
      nx1=nint((xmax1-xmin1)/dx1)
      nx2=nint((xmax2-xmin2)/dx2)
-   !  if(idim0==2)nx2=2*nx2                             !^CFG IF NOT CARTESIAN
+   !  if(idim0==2)nx2=2*nx2                  !^CFG UNCOMMENT IF COVARIANT
      allocate(lookup(nx1,nx2))
      lookup=0
   endif
@@ -221,30 +221,30 @@ program PostIDL
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
         
-        XyzGen_D=XyzCart_D          !^CFG IF CARTESIAN
+        XyzGen_D=XyzCart_D          !^CFG IF NOT COVARIANT
 
-! call cart_to_spher(XyzCart_D,XyzGen_D)               !^CFG IF NOT CARTESIAN
+! call cart_to_spher(XyzCart_D,XyzGen_D)               !^CFG UNCOMMENT IF COVARIANT
 
         if(ndim==2)then
            ! Calculate indices for lookup table
            ix1=nint((XyzGen_D(idim1)-xmin1)/dx1+halfeps)
            ix2=nint((XyzGen_D(idim2)-xmin2)/dx2+halfeps)
-   !        select case(idim0)                                       !^CFG IF NOT CARTESIAN
-   !        case(1)                                                  !^CFG IF NOT CARTESIAN
-   !            XyzCart_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)      !^CFG IF NOT CARTESIAN
-   !            XyzCart_D(3)=90.0-XyzGen_D(3)*180./cPi               !^CFG IF NOT CARTESIAN
-   !        case(2)                                                  !^CFG IF NOT CARTESIAN
-   !            XyzCart_D(1)=&                                       !^CFG IF NOT CARTESIAN
-   !            sign(1.00,XyzCart_D(1)+XyzCart_D(2))*RCyl            !^CFG IF NOT CARTESIAN
-   !        case(3)                                                  !^CFG IF NOT CARTESIAN
-   !            if(UseLnr) then                                      !^CFG IF NOT CARTESIAN
-   !               XyzCart_D(1)=XyzCart_D(1)*exp(XyzGen_D(1))/Rcyl   !^CFG IF NOT CARTESIAN
-   !               XyzCart_D(2)=XyzCart_D(2)*exp(XyzGen_D(1))/Rcyl   !^CFG IF NOT CARTESIAN
-   !            else                                                 !^CFG IF NOT CARTESIAN
-   !               XyzCart_D(1)=XyzCart_D(1)*XyzGen_D(1)/Rcyl        !^CFG IF NOT CARTESIAN
-   !               XyzCart_D(2)=XyzCart_D(2)*XyzGen_D(1)/Rcyl        !^CFG IF NOT CARTESIAN
-   !            end if                                               !^CFG IF NOT CARTESIAN
-   !        end select                                               !^CFG IF NOT CARTESIAN
+   !        select case(idim0)                                       !^CFG UNCOMMENT IF COVARIANT
+   !        case(1)                                                  !^CFG UNCOMMENT IF COVARIANT
+   !            XyzCart_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)      !^CFG UNCOMMENT IF COVARIANT
+   !            XyzCart_D(3)=90.0-XyzGen_D(3)*180./cPi               !^CFG UNCOMMENT IF COVARIANT
+   !        case(2)                                                  !^CFG UNCOMMENT IF COVARIANT
+   !            XyzCart_D(1)=&                                       !^CFG UNCOMMENT IF COVARIANT
+   !            sign(1.00,XyzCart_D(1)+XyzCart_D(2))*RCyl            !^CFG UNCOMMENT IF COVARIANT
+   !        case(3)                                                  !^CFG UNCOMMENT IF COVARIANT
+   !            if(UseLnr) then                                      !^CFG UNCOMMENT IF COVARIANT
+   !               XyzCart_D(1)=XyzCart_D(1)*exp(XyzGen_D(1))/Rcyl   !^CFG UNCOMMENT IF COVARIANT
+   !               XyzCart_D(2)=XyzCart_D(2)*exp(XyzGen_D(1))/Rcyl   !^CFG UNCOMMENT IF COVARIANT
+   !            else                                                 !^CFG UNCOMMENT IF COVARIANT
+   !               XyzCart_D(1)=XyzCart_D(1)*XyzGen_D(1)/Rcyl        !^CFG UNCOMMENT IF COVARIANT
+   !               XyzCart_D(2)=XyzCart_D(2)*XyzGen_D(1)/Rcyl        !^CFG UNCOMMENT IF COVARIANT
+   !            end if                                               !^CFG UNCOMMENT IF COVARIANT
+   !        end select                                               !^CFG UNCOMMENT IF COVARIANT
         end if
 
         if(.not.structured)then

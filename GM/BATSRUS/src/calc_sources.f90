@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE CARTESIAN
+!^CFG FILE NOT COVARIANT
 subroutine calc_sources
   use ModProcMH
   use ModMain

@@ -169,7 +169,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF NOT CARTESIAN
+  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF COVARIANT
   use ModParallel, ONLY : NeiLev
 
   implicit none
@@ -227,16 +227,16 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   nState    = iStateMax - iVarMin + 1
 
   ! Convert to generalized coordinates if necessary
-  select case(TypeGeometry)           !^CFG IF NOT CARTESIAN
-  case('cartesian')                   !^CFG IF NOT CARTESIAN
+  select case(TypeGeometry)           !^CFG IF COVARIANT
+  case('cartesian')                   !^CFG IF COVARIANT
      Xyz_D = XyzIn_D
-  case('spherical','spherical_lnr')   !^CFG IF NOT CARTESIAN BEGIN
+  case('spherical','spherical_lnr')   !^CFG IF COVARIANT BEGIN
      call xyz_to_spherical(XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),&
           Xyz_D(1),Xyz_D(2),Xyz_D(3))
      if(TypeGeometry=='spherical_lnr')Xyz_D(1)=alog(max(Xyz_D(1),cTiny))
   case default
      call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-  end select                          !^CFG END CARTESIAN
+  end select                          !^CFG END COVARIANT
 
   ! Set state and weight to zero, so MPI_reduce will add it up right
   StateCurrent_V = cZero
@@ -384,11 +384,11 @@ contains
     DyInv = 1/((jHi-jLo)*Dxyz_D(2))
     DzInv = 1/((kHi-kLo)*Dxyz_D(3))
 
-    if(UseCovariant)then                          !^CFG IF NOT CARTESIAN BEGIN
+    if(UseCovariant)then                          !^CFG IF COVARIANT BEGIN
        call covariant_curlb(i,j,k,iBlock,Current_D)
-    else                                          !^CFG END CARTESIAN
+    else                                          !^CFG END COVARIANT
 
-       !^CFG IF CARTESIAN BEGIN
+       !^CFG IF NOT COVARIANT BEGIN
        Current_D(1) = &
             (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &
             (State_VGB(By_,i,j,kHi,iBlock)-State_VGB(By_,i,j,kLo,iBlock))*DzInv
@@ -401,9 +401,9 @@ contains
             (State_VGB(By_,iHi,j,k,iBlock)-State_VGB(By_,iLo,j,k,iBlock))*DxInv- &
             (State_VGB(Bx_,i,jHi,k,iBlock)-State_VGB(Bx_,i,jLo,k,iBlock))*DyInv
 
-       !^CFG END CARTESIAN
-!       call stop_mpi('Set UseCovariant=Y')       !^CFG UNCOMMENT IF NOT CARTESIAN
-    end if                                        !^CFG IF NOT CARTESIAN
+       !^CFG END COVARIANT
+       continue
+    end if                                        !^CFG IF COVARIANT
     
 
     StateCurrent_V(nState+1:nState+3) = StateCurrent_V(nState+1:nState+3) &

@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE NOT CARTESIAN
+!^CFG FILE COVARIANT
 
 Module ModFlux
   use ModVarIndexes,ONLY:Energy_, MaxSpecies
