@@ -176,7 +176,7 @@ subroutine IM_print_variables(NameSource)
   case('IE')
      NameVar='j i lon lat jr pot sigmaH sigmaP'
   case('GM')
-     NameVar='j i lon lat vm xmin ymin bmin density temperature'
+     NameVar='j i lon lat density pressure vm xmin ymin bmin temperature'
   case default
      write(*,*)NameSub,': incorrect NameSource=',NameSource
      RETURN
@@ -196,9 +196,8 @@ subroutine IM_print_variables(NameSource)
            write(UNITTMP_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
                 sigmaH_mhd(i,j),sigmaP_mhd(i,j)
         case('GM')
-           write(UNITTMP_,'(2i4,8G14.6)')j,i,Lon,Lat,&
-                vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),density(i,j),&
-                temperature(i,j)
+           write(UNITTMP_,'(2i4,9G14.6)')j,i,Lon,Lat,density(i,j),pressure(i,j),&
+                vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
         end select
      end do
   end do
@@ -296,6 +295,7 @@ subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
   ymin(1:isize,1:jsize) = Buffer_IIV(:,:,z0y_)
   bmin(1:isize,1:jsize) = Buffer_IIV(:,:,bmin_)
   density(1:isize,1:jsize) = Buffer_IIV(:,:,rho_)/xmass(2)/1.0E+6 ! in cm-3
+  pressure(1:isize,1:jsize) = Buffer_IIV(:,:,p_)
   where(Buffer_IIV(:,:,rho_) /= 0.0) 
      temperature (1:iSize,1:jSize) = &
           Buffer_IIV(:,:,p_)/(Buffer_IIV(:,:,rho_)/xmass(2))/1.6E-19 ! in K

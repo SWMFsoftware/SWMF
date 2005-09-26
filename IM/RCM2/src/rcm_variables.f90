@@ -108,6 +108,7 @@ MODULE Rcm_variables
                     eeta_cutoff, cmax, &
                     eeta_avg (1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize),&
                     density     (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
+                    pressure    (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
     INTEGER (iprec) :: ikflavc (kcsize), i_advect, i_eta_bc
     LOGICAL :: L_dktime
