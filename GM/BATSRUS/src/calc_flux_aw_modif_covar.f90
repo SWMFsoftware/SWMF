@@ -369,7 +369,7 @@ Contains
 
   end subroutine test_fluxes_wri
 
-end subroutine calc_flux_AW
+end subroutine calc_flux_AW_covar
 
 !==========================================================================
 subroutine get_flux_mhdLAW_covar(nStrip)
