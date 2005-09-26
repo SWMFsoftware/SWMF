@@ -1,7 +1,6 @@
 #!/usr/bin/perl -s
 
 $Help = $h;
-
 $All = $a;
 
 $Outfile = $o; $Outfile = "RenameList.pl" unless $Outfile;
@@ -101,7 +100,15 @@ foreach $source (@source){
 
     open(SRC,$source) or die "Could not open file $source\n";
 
+    print "processing file $source F77=$F77\n" if $Debug;
+
+    my $module;
+    my $subroutine;
+    my $function;
+
     while(<SRC>){
+
+	### print "processing line $_\n" if $Debug;
 
         # end module (modules cannot be nested, name is not required at end)
 	$module=0 if $module and /^\s*end\s+module/i; 
