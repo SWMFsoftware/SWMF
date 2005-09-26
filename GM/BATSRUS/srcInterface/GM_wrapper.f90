@@ -160,7 +160,7 @@ subroutine GM_print_variables(NameSource)
 
   select case(NameSource)
   case('IM')                        !^CFG IF RCM
-     NameVar='j i lon lat p'        !^CFG IF RCM
+     NameVar='j i lon lat density pressure' !^CFG IF RCM
   case('IE','IE_swmf')
      NameVar='i j theta phi pot'
   case default
@@ -177,8 +177,8 @@ subroutine GM_print_variables(NameSource)
   case('IM')                             !^CFG IF RCM BEGIN
      do i=1,iSize
         do j=1,jSize
-           write(UNITTMP_,'(2i4,3G14.6)')j,i,RCM_lon(j),RCM_lat(i), &
-                RCM_p(i,j),RCM_dens(i,j)
+           write(UNITTMP_,'(2i4,4G14.6)')j,i,RCM_lon(j),RCM_lat(i), &
+                RCM_dens(i,j),RCM_p(i,j)
         end do
      end do                              !^CFG END RCM
   case('IE')
