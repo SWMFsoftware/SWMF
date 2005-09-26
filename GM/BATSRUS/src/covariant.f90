@@ -1,122 +1,222 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE NOT CARTESIAN
-!=============To be left in src/covariant.f90=============
-subroutine fix_cell_based_block(iBLK)
-  use ModCovariant, ONLY:TypeGeometry
+!subroutine gen_to_xyz_arr maps the piece of an equally spaced grid
+!in the space of GENERALIZED COORDINATES to the cartesian space xyz
+subroutine gen_to_xyz_arr(&
+     GenCoord111_D,    &!(in)Gen.coords.of the point (1,1,1)
+     dGen1,dGen2,dGen3,&!(in)Mesh sizes in Gen coords.
+     iStart,iMax,      &!(in)The first and the last value of i index
+     jStart,jMax,      &!(in)The first and the last value of j index
+     kStart,kMax,      &!(in)The first and the last value of k index
+     X_C,              &!(out)Cartesian x-coord. of the mapped points
+     Y_C,              &!(out)Cartesian y-coord. of the mapped points    
+     Z_C)               !(out)Cartesian z-coord. of the mapped points
+  use ModNumConst
+  use ModCovariant,ONLY:TypeGeometry
+  use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
+  use ModUser           !^CFG IF USERFILES
+  implicit none
+  real,intent(in):: GenCoord111_D(nDim),dGen1,dGen2,dGen3
+  integer,intent(in)::  iStart,iMax,jStart,jMax,kStart,kMax
+  real,dimension(iStart:iMax,jStart:jMax,kStart:kMax),&
+       intent(out)::X_C,Y_C,Z_C
+!----------------------------------------------------------
+  integer::i,j,k
+  real::R,Theta,Phi,sinTheta,cosTheta,sinPhi,cosPhi
+!----------------------------------------------------------
+  
+  
+  select case(TypeGeometry)
+  case('cartesian')
+     !Gen1=x , Gen2=y, Gen3=z
+     do k = kStart, kMax
+        do j = jStart, jMax
+           do i = iStart, iMax
+              X_C(i,j,k) =  (i-1)*dGen1 + GenCoord111_D(x_)
+              Y_C(i,j,k) =  (j-1)*dGen2 + GenCoord111_D(y_)
+              Z_C(i,j,k) =  (k-1)*dGen3 + GenCoord111_D(z_)
+           end do
+        end do
+     end do
+  case('spherical')
+     ! Gen1=R, Gen2=Phi, Gen3=Theta
+     do k = kStart, kMax
+        Theta      =  (k-1)*dGen3 + GenCoord111_D(Theta_)
+        sinTheta   =  sin(Theta)
+        cosTheta   =  cos(Theta)
+        do j = jStart, jMax
+           Phi     =  (j-1)*dGen2 + GenCoord111_D(Phi_)
+           sinPhi  =  sin(Phi)
+           cosPhi  =  cos(Phi)
+           do i = iStart, iMax
+              R    =  (i-1)*dGen1 + GenCoord111_D(R_)
+             
+                        
+              X_C(i,j,k) = R*sinTheta*cosPhi                      
+              Y_C(i,j,k) = R*sinTheta*sinPhi                      
+              Z_C(i,j,k) = R*cosTheta
+           end do
+        end do
+     end do
+  case('spherical_lnr')
+     ! Gen1=log(R), Gen2=Phi, Gen3=Theta
+     do k = kStart, kMax
+        Theta      =      (k-1)*dGen3 + GenCoord111_D(Theta_)
+        sinTheta   =  sin(Theta)
+        cosTheta   =  cos(Theta)
+        do j = jStart, jMax
+           Phi     =      (j-1)*dGen2 + GenCoord111_D(Phi_)
+           sinPhi  =  sin(Phi)
+           cosPhi  =  cos(Phi)
+           do i = iStart, iMax
+              R    =   exp((i-1)*dGen1 + GenCoord111_D(R_))
+             
+              X_C(i,j,k) = R*sinTheta*cosPhi                      
+              Y_C(i,j,k) = R*sinTheta*sinPhi                      
+              Z_C(i,j,k) = R*cosTheta
+           end do
+        end do
+     end do
+  case('cylindrical')
+    ! Gen1=r, Gen2=Phi, Gen3=z
+     do k = kStart, kMax
+        Z_C(:,:,k) = (k-1)*dGen3 + GenCoord111_D(z_)
+        do j = jStart, jMax
+           Phi     =  (j-1)*dGen2 + GenCoord111_D(Phi_)
+           sinPhi  =  sin(Phi)
+           cosPhi  =  cos(Phi)
+           do i = iStart, iMax
+              R    =       (i-1)*dGen1 + GenCoord111_D(R_)
+             
+              X_C(i,j,k) = R*cosPhi                      
+              Y_C(i,j,k) = R*sinPhi                      
+           end do
+        end do
+     end do     
+  case default
+     call stop_mpi('Unknown geometry: '//TypeGeometry)
+  end select
+end subroutine gen_to_xyz_arr
+!-------------------------------------------------------------!
+subroutine fix_covariant_geometry(iBLK)
+  use ModCovariant
+  use ModNodes,ONLY:NodeX_IIIB,NodeY_IIIB,NodeZ_IIIB
+  use ModGeometry,ONLY: vInv_CB
+  use ModMain,ONLY:x_,y_,z_
   implicit none
   integer,intent(in)::iBLK
+  real,dimension(nDim,1:nI+1,1:nJ+1,1:nK+1)::XyzNode_DIII
+  !It is easy to see that volume can be represented as follows:
+  !\int{dV}=\int{{\bf r}\cdot d{\bf S}/nDim. The following array store
+  !the dot products of face area vectors by the raduis vector of
+  !the "face center"
+  real,dimension(1:nI+1,nJ,nK)::RDotFaceAreaI_F 
+  real,dimension(1:nI,nJ+1,nK)::RDotFaceAreaJ_F
+  real,dimension(1:nI,nJ,nK+1)::RDotFaceAreaK_F
+  
+  integer::i,j,k
+  !There is a definite inconsistency between the indexes of nodes
+  !and the indexes of faces, edges and so on. To be fixed:
+  !"-1"s  are irrelevant and should be eliminated
+  do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+     XyzNode_DIII(x_,i,j,k)=NodeX_IIIB(i-1,j-1,k-1,iBLK)
+     XyzNode_DIII(y_,i,j,k)=NodeY_IIIB(i-1,j-1,k-1,iBLK)
+     XyzNode_DIII(z_,i,j,k)=NodeZ_IIIB(i-1,j-1,k-1,iBLK)
+  end do; end do; end do
+  !\
+  ! Face area vector and its dot product by the face 
+  ! center radius-vector. FACE I
+  !/
+  call get_face_area_i(XyzNode_DIII,&
+                       1,nI+1,1,nJ,1,nK,&
+                       FaceAreaI_DFB(:,:,:,:,iBLK))
+
+  do k=1,nK; do j=1,nJ; do i=1,nI+1
+     RDotFaceAreaI_F(i,j,k)=cQuarter*dot_product(&
+          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i,j+1,k)+&
+          XyzNode_DIII(:,i,j+1,k+1)+XyzNode_DIII(:,i,j,k+1),&
+          FaceAreaI_DFB(:,i,j,k,iBLK))
+  end do; end do; end do 
+
+  !\
+  ! Face area vector and its dot product by the face 
+  ! center radius-vector. FACE J
+  !/
+  call get_face_area_j(XyzNode_DIII,&
+                       1,nI,1,nJ+1,1,nK,&
+                       FaceAreaJ_DFB(:,:,:,:,iBLK))
+
+  do k=1,nK; do j=1,nJ+1; do i=1,nI
+     RDotFaceAreaJ_F(i,j,k)=cQuarter*dot_product(&
+          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i,j,k+1)+&
+          XyzNode_DIII(:,i+1,j,k+1)+XyzNode_DIII(:,i+1,j,k),&
+          FaceAreaJ_DFB(:,i,j,k,iBLK))
+  end do; end do; end do 
+
+  !\
+  ! Face area vector and its dot product by the face 
+  ! center radius-vector. FACE K
+  !/
+  call get_face_area_k(XyzNode_DIII,&
+                       1,nI,1,nJ,1,nK+1,&
+                       FaceAreaK_DFB(:,:,:,:,iBLK))
+
+  do k=1,nK+1; do j=1,nJ; do i=1,nI
+     RDotFaceAreaK_F(i,j,k)=cQuarter*dot_product(&
+          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i+1,j,k)+&
+          XyzNode_DIII(:,i+1,j+1,k)+XyzNode_DIII(:,i,j+1,k),&
+          FaceAreaK_DFB(:,i,j,k,iBLK))
+  end do; end do; end do 
+  
+  !Calculate Volume (inverse)
+  vInv_CB(:,:,:,iBLK)=nDim/(&
+       RDotFaceAreaI_F(2:nI+1,:,:)-RDotFaceAreaI_F(1:nI,:,:)+&
+       RDotFaceAreaJ_F(:,2:nJ+1,:)-RDotFaceAreaJ_F(:,1:nJ,:)+&
+       RDotFaceAreaK_F(:,:,2:nK+1)-RDotFaceAreaK_F(:,:,1:nK) )
+
   select case(TypeGeometry)
   case('cartesian')                               
-     call set_covar_cartesian_geometry(iBLK)      
+     call fix_cartesian_geometry(iBLK)      
   case('spherical')                               
-     call set_covar_spherical_geometry(iBLK)      
+     call fix_spherical_geometry(iBLK)      
   case('spherical_lnr')                           
-     call set_covar_spherical2_geometry(iBLK)     
+     call fix_spherical2_geometry(iBLK)     
   case('cylindrical')                             
-     call set_covar_cylindrical_geometry(iBLK)   
+     call fix_cylindrical_geometry(iBLK)   
   case default                                    
      call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
   end select
-end subroutine fix_cell_based_block
-
-subroutine set_covar_cartesian_geometry(iBLK)
+end subroutine fix_covariant_geometry
+!-------------------------------------------------------------------
+subroutine fix_cartesian_geometry(iBLK)
   use ModCovariant
   use ModGeometry
   use ModNumConst
   implicit none
   integer, intent(in) :: iBLK
-  real::dx,dy,dz
-  integer::i,j,k
-  dx=dx_BLK(iBLK)
-  dy=dy_BLK(iBLK)
-  dz=dz_BLK(iBLK)
-  do k=0,nK+1;do j=0,nJ+1;do i=0,nI+2
-     FaceAreaI_DFB(:,i,j,k,iBLK)=(/dy*dz,cZero,cZero/)
-  end do;end do;end do
-  do k=0,nK+1;do j=0,nJ+2;do i=0,nI+1
-     FaceAreaJ_DFB(:,i,j,k,iBLK)=(/cZero,dz*dx,cZero/)             
-  end do;end do;end do
-  do k=0,nK+2;do j=0,nJ+1;do i=0,nI+1      
-     FaceAreaK_DFB(:,i,j,k,iBLK)=(/cZero,cZero,dx*dy/)
-  end do;end do;end do
-  vInv_CB(:,:,:,iBLK)=cOne/(dx*dy*dz)
+
   FaceArea2MinI_B(iBLK)=cZero
   FaceArea2MinJ_B(iBLK)=cZero
   FaceArea2MinK_B(iBLK)=cZero
-end subroutine set_covar_cartesian_geometry
+end subroutine fix_cartesian_geometry
 !---------------------------------------------------------------------
-subroutine set_covar_spherical_geometry(iBLK)
+subroutine fix_spherical_geometry(iBLK)
   use ModMain
-  use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+  use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
        DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,vInv_CB
   use ModCovariant
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iBLK
-  integer :: i,j,k
-  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn) ::&           
-       Phi_G,Theta_G
+  
   real::dR,dPhi,dTheta
-  real,external::SpherFaceAreaI,SpherFaceAreaJ,SpherFaceAreaK
-
+ 
   dR=dx_BLK(iBLK)
   dPhi=dy_BLK(iBLK)
   dTheta=dz_BLK(iBLK)
 
-  do k = 1-gcn, nK+gcn
-     do j = 1-gcn, nJ+gcn
-        do i = 1-gcn, nI+gcn
-           R_BLK(i,j,k,iBLK) = (i-1)*dR  + xyzStart_BLK(R_,iBLK)           
-           Phi_G(i,j,k) = (j-1)*dPhi  + xyzStart_BLK(Phi_,iBLK)            
-           Theta_G(i,j,k) = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBLK)      
-           x_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*&                         
-                sin(Theta_G(i,j,k))*cos(Phi_G(i,j,k))                      
-           y_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*&                         
-                sin(Theta_G(i,j,k))*sin(Phi_G(i,j,k))                      
-           z_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*cos(Theta_G(i,j,k))
-        end do
-     end do
-  end do
 
-  ! face scalar fAs are introduced in such a manner that the face area     
-  ! vector is equal to                                                     
-  ! ((x,y,z)_BLK(i,j,k,iBLK)-(x,y,z)_BLK(i-1,j,k,iBLK))*fA...(i,j,k,iBLK) 
-  ! for the face between i and i-1 cells
-
-  do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-     FaceAreaI_DFB(:,i,j,k,iBLK) =SpherFaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i-1,j,k,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i-1,j,k,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i-1,j,k,iBLK)/)
-  end do; end do;end do
-
-  do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-     FaceAreaJ_DFB(:,i,j,k,iBLK) =SpherFaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j-1,k,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i,j-1,k,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i,j-1,k,iBLK)/)
-  end do; end do;end do
-
-  do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-     FaceAreaK_DFB(:,i,j,k,iBLK) =SpherFaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j,k-1,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i,j,k-1,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i,j,k-1,iBLK)/)
-  end do; end do;end do
-
-  do k=1,nK
-     do j=1,nJ
-        do i=1,nI
-           vInv_CB(i,j,k,iBLK) = cThree/(cTwo*tan(cHalf*dPhi)*&  
-                cTwo*tan(cHalf*dTheta)*sin(Theta_G(i,j,k))*&                 
-                dR*(cThree*R_BLK(i,j,k,iBLK)**2+cQuarter*dR**2))
-        end do
-     end do
-  end do
 
   DoFixExtraBoundary_B(iBLK) = XyzStart_BLK(Theta_,iBLK)-dz_BLK(iBLK)&
        <XyzMin_D(Theta_).or.&
@@ -132,116 +232,36 @@ subroutine set_covar_spherical_geometry(iBLK)
   else
      FaceArea2MinK_B(iBLK)=cZero
   end if
-end subroutine set_covar_spherical_geometry
-!------------------------------------------------------------------
-!------------------------------------------------------------------
-real function SpherFaceAreaI(i,k,RStart,ThetaStart,dR,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR,dPhi,dTheta
-  SpherFaceAreaI=&
-       (RStart+(i-1-cHalf)*dR)**2 &                   
-       *sin(ThetaStart+(k-1)*dTheta)*&                              
-       (cTwo*tan(cHalf*dPhi))*(cTwo*tan(cHalf*dTheta))/dR                 
-end function SpherFaceAreaI
-!-----------------------------------------------------------------
-real function SpherFaceAreaJ(i,k,RStart,ThetaStart,dR,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR,dPhi,dTheta
-  SpherFaceAreaJ=&                                
-       dR*(cTwo*tan(cHalf*dTheta))/(sin(dPhi)*&                           
-       sin(ThetaStart+(k-1)*dTheta))
-end function SpherFaceAreaJ
-!-----------------------------------------------------------------
-real function SpherFaceAreaK(i,k,RStart,ThetaStart,dR,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR,dPhi,dTheta
-  SpherFaceAreaK= &                              
-       dR*sin(ThetaStart+(k-1-cHalf)*dTheta)*&               
-       (cTwo*tan(cHalf*dPhi))/(cos(cHalf*dTheta)*sin(dTheta))
-end function SpherFaceAreaK
+end subroutine fix_spherical_geometry
 
 !-----------------------------------------------------------------
+!real function SpherFaceAreaK(i,k,RStart,ThetaStart,dR,dPhi,dTheta)
+!  use ModNumConst
+!  implicit none
+!  integer, intent(in)::i,k
+!  real,intent(in)::RStart,ThetaStart,dR,dPhi,dTheta
+!  SpherFaceAreaK= &                              
+!       dR*sin(ThetaStart+(k-1-cHalf)*dTheta)*&               
+!       (cTwo*tan(cHalf*dPhi))/(cos(cHalf*dTheta)*sin(dTheta))
+!end function SpherFaceAreaK
+
 !---------------------------------------------------------------------
-subroutine set_covar_spherical2_geometry(iBLK)
+subroutine fix_spherical2_geometry(iBLK)
   use ModMain
-  use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
+  use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
        DoFixExtraBoundary_B,XyzStart_BLK,XyzMin_D,XyzMax_D,vInv_CB
   use ModCovariant
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iBLK
-  integer :: i,j,k
-  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn) ::&           
-       Phi_G,Theta_G
   real::dR2,dPhi,dTheta
-  real,external::Spher2FaceAreaI,Spher2FaceAreaJ,Spher2FaceAreaK
 
   dR2=dx_BLK(iBLK)
   dPhi=dy_BLK(iBLK)
   dTheta=dz_BLK(iBLK)
 
-  do k = 1-gcn, nK+gcn
-     do j = 1-gcn, nJ+gcn
-        do i = 1-gcn, nI+gcn
-           R_BLK(i,j,k,iBLK) = exp((i-1)*dR2  + xyzStart_BLK(R_,iBLK))   
-           Phi_G(i,j,k) = (j-1)*dPhi  + xyzStart_BLK(Phi_,iBLK)            
-           Theta_G(i,j,k) = (k-1)*dTheta  + xyzStart_BLK(Theta_,iBLK)     
-           x_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*&                         
-                sin(Theta_G(i,j,k))*cos(Phi_G(i,j,k))                      
-           y_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*&                         
-                sin(Theta_G(i,j,k))*sin(Phi_G(i,j,k))                      
-           z_BLK(i,j,k,iBLK) = R_BLK(i,j,k,iBLK)*cos(Theta_G(i,j,k))
-        end do
-     end do
-  end do
-
-  ! face scalar fAs are introduced in such a manner that the face area     
-  ! vector is equal to                                                     
-  ! ((x,y,z)_BLK(i,j,k,iBLK)-(x,y,z)_BLK(i-1,j,k,iBLK))*fA...(i,j,k,iBLK) 
-  ! for the face between i and i-1 cells
-
-  do k=0,nK+1; do j=0,nJ+1; do i=0,nI+2
-     FaceAreaI_DFB(:,i,j,k,iBLK) =Spher2FaceAreaI(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i-1,j,k,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i-1,j,k,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i-1,j,k,iBLK)/)
-  end do; end do;end do
-
-  do k=0,nK+1; do j=0,nJ+2; do i=0,nI+1
-     FaceAreaJ_DFB(:,i,j,k,iBLK) =Spher2FaceAreaJ(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j-1,k,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i,j-1,k,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i,j-1,k,iBLK)/)
-  end do; end do;end do
-
-  do k=0,nK+2; do j=0,nJ+1; do i=0,nI+1
-     FaceAreaK_DFB(:,i,j,k,iBLK) =Spher2FaceAreaK(i,k,XyzStart_BLK(R_,iBLK),&
-          XyzStart_BLK(Theta_,iBLK),dR2,dPhi,dTheta)*&
-          (/x_BLK(i,j,k,iBLK)-x_BLK(i,j,k-1,iBLK),&
-            y_BLK(i,j,k,iBLK)-y_BLK(i,j,k-1,iBLK),&
-            z_BLK(i,j,k,iBLK)-z_BLK(i,j,k-1,iBLK)/)
-  end do; end do;end do
-
-
-  do k=1,nK
-     do j=1,nJ
-        do i=1,nI
-           vInv_CB(i,j,k,iBLK) = cThree/(cTwo*tan(cHalf*dPhi)*&
-                cTwo*tan(cHalf*dTheta)*sin(Theta_G(i,j,k))*&                 
-                (R_BLK(i,j,k,iBLK)**3)*(&
-                0.75*(sinh(dr2)+sinh(2.0*dr2))+cQuarter*sinh(3.0*dr2)))
-        end do
-     end do
-  end do
+ 
 
   DoFixExtraBoundary_B(iBLK) = XyzStart_BLK(Theta_,iBLK)-dz_BLK(iBLK)&
        <XyzMin_D(Theta_).or.&
@@ -259,51 +279,20 @@ subroutine set_covar_spherical2_geometry(iBLK)
      FaceArea2MinK_B(iBLK)=cZero
   end if
 
-end subroutine set_covar_spherical2_geometry
+end subroutine fix_spherical2_geometry
 
-real function Spher2FaceAreaI(i,k,RStart,ThetaStart,dR2,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR2,dPhi,dTheta
-  Spher2FaceAreaI=&
-       cQuarter*exp(RStart+(i-1)*dR2)*((exp(-dR2)+cOne)**2) &
-       *sin(ThetaStart+(k-1)*dTheta)*&                              
-       (cTwo*tan(cHalf*dPhi))*(cTwo*tan(cHalf*dTheta))/(cOne-exp(-dR2))        
-end function Spher2FaceAreaI
-!-----------------------------------------------------------------
-real function Spher2FaceAreaJ(i,k,RStart,ThetaStart,dR2,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR2,dPhi,dTheta
-  Spher2FaceAreaJ=&                                
-      sinh(dR2)*exp(RStart+(i-1)*dR2)*&
-      (cOne+cosh(dr2))*cHalf*&
-      (cTwo*tan(cHalf*dTheta))/(sin(dPhi)*&                           
-       sin(ThetaStart+(k-1)*dTheta))
-end function Spher2FaceAreaJ
-!-----------------------------------------------------------------
-real function Spher2FaceAreaK(i,k,RStart,ThetaStart,dR2,dPhi,dTheta)
-  use ModNumConst
-  implicit none
-  integer, intent(in)::i,k
-  real,intent(in)::RStart,ThetaStart,dR2,dPhi,dTheta
-  Spher2FaceAreaK= &                              
-       sinh(dR2)*exp(RStart+(i-1)*dR2)*&
-      (cOne+cosh(dr2))*cHalf*&      
-       sin(ThetaStart+(k-1-cHalf)*dTheta)*&               
-       (cTwo*tan(cHalf*dPhi))/(cos(cHalf*dTheta)*sin(dTheta))
-end function Spher2FaceAreaK
 
 !-----------------------------------------------------------------
-subroutine set_covar_cylindrical_geometry(iBLK)
+subroutine fix_cylindrical_geometry(iBLK)
   use ModMain
   use ModGeometry
   implicit none
   integer,intent(in)::iBLK
   DoFixExtraBoundary_B(iBLK)= XyzStart_BLK(R_,iBLK)-dx_BLK(iBLK)<XyzMin_D(R_)
-end subroutine set_covar_cylindrical_geometry
+  FaceArea2MinI_B(iBLK)=cZero
+  FaceArea2MinJ_B(iBLK)=cZero
+  FaceArea2MinK_B(iBLK)=cZero
+end subroutine fix_cylindrical_geometry
 !-------------------------------------------------------------------
 
 subroutine calc_b0source_covar(iBlock)  
@@ -327,15 +316,16 @@ subroutine calc_b0source_covar(iBlock)
   integer::i,j,k,iFace,jFace,kFace,iDirB0,iDirFA,iSide
   integer::i2,j2
   real::divB0,x,y,z,R,Phi,Theta
-  real,dimension(3)::XyzStartFine_D,dXyzFine_D
+  real,dimension(3)::GenCoord111_D,dGenFine_D
   real,dimension(ndim,0:1,0:1,East_:Top_)::FaceArea_DIIS, B0_DIIS
-  real,dimension(nDim,0:1,0:1,0:1):: RefB0_DIII,RefXyz_DIII
+  real,dimension(nDim,0:1,0:1,0:1)   :: RefB0_DIII
+  real,dimension(nDim,-1:2,-1:2,-1:2):: RefXyz_DIII
+  real,dimension(nDim,0:2,0:2,0:2)   :: RefXyzNodes_DIII
+  real,dimension(nDim,0:1,0:1,0:1)   :: RefFaceArea_DIII
 
-  dXyzFine_D(1)=cHalf*dx_BLK(iBlock)
-  dXyzFine_D(2)=cHalf*dy_BLK(iBlock)
-  dXyzFine_D(3)=cHalf*dz_BLK(iBlock)
-
-  XyzStartFine_D(:)=XyzStart_BLK(:,iBlock)-cHalf*dXyzFine_D(:)
+  dGenFine_D(1)=cHalf*dx_BLK(iBlock)
+  dGenFine_D(2)=cHalf*dy_BLK(iBlock)
+  dGenFine_D(3)=cHalf*dz_BLK(iBlock)
 
   do k=1,nK
      do j=1,nJ
@@ -352,7 +342,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_x_BLK(i+1,j,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,West_))*cQuarter
            else
-              call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DIIS(:,0,0,West_))
+              FaceArea_DIIS(:,0,0,West_)=FaceAreaI_DFB(:,i+1,j,k,iBlock)
               B0_DIIS(x_,0,0,West_)= B0xFace_x_BLK(i+1,j,k,iBlock)
               B0_DIIS(y_,0,0,West_)= B0yFace_x_BLK(i+1,j,k,iBlock)
               B0_DIIS(z_,0,0,West_)= B0zFace_x_BLK(i+1,j,k,iBlock)
@@ -364,7 +354,7 @@ subroutine calc_b0source_covar(iBlock)
               B0yFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,East_))*cQuarter
               B0zFace_x_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,East_))*cQuarter
            else
-              call calc_face_area_i(i,j,k,iBlock,FaceArea_DIIS(:,0,0,East_))
+              FaceArea_DIIS(:,0,0,East_)=FaceAreaI_DFB(:,i,j,k,iBlock)
               B0_DIIS(x_,0,0,East_)= B0xFace_x_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,East_)= B0yFace_x_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,East_)= B0zFace_x_BLK(i,j,k,iBlock)
@@ -379,7 +369,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_y_BLK(i,j+1,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,North_))*cQuarter
            else
-              call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DIIS(:,0,0,North_)) 
+              FaceArea_DIIS(:,0,0,North_)=FaceAreaJ_DFB(:,i,j+1,k,iBlock) 
               B0_DIIS(x_,0,0,North_)= B0xFace_y_BLK(i,j+1,k,iBlock)
               B0_DIIS(y_,0,0,North_)= B0yFace_y_BLK(i,j+1,k,iBlock)
               B0_DIIS(z_,0,0,North_)= B0zFace_y_BLK(i,j+1,k,iBlock)
@@ -391,7 +381,7 @@ subroutine calc_b0source_covar(iBlock)
               B0yFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(y_,:,:,South_))*cQuarter
               B0zFace_y_BLK(i,j,k,iBlock)=sum(B0_DIIS(z_,:,:,South_))*cQuarter
            else
-              call calc_face_area_j(i,j,k,iBlock,FaceArea_DIIS(:,0,0,South_))   
+              FaceArea_DIIS(:,0,0,South_)=FaceAreaJ_DFB(:,i,j,k,iBlock)   
               B0_DIIS(x_,0,0,South_)= B0xFace_y_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,South_)= B0yFace_y_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,South_)= B0zFace_y_BLK(i,j,k,iBlock)
@@ -406,7 +396,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_z_BLK(i,j,k+1,iBlock)=&
                    sum(B0_DIIS(z_,:,:,Top_))*cQuarter
            else
-              call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DIIS(:,0,0,Top_))   
+              FaceArea_DIIS(:,0,0,Top_)=FaceAreaK_DFB(:,i,j,k+1,iBlock)   
               B0_DIIS(x_,0,0,Top_)= B0xFace_z_BLK(i,j,k+1,iBlock)
               B0_DIIS(y_,0,0,Top_)= B0yFace_z_BLK(i,j,k+1,iBlock)
               B0_DIIS(z_,0,0,Top_)= B0zFace_z_BLK(i,j,k+1,iBlock)
@@ -421,7 +411,7 @@ subroutine calc_b0source_covar(iBlock)
               B0zFace_z_BLK(i,j,k,iBlock)=&
                    sum(B0_DIIS(z_,:,:,Bot_))*cQuarter
            else
-              call calc_face_area_k(i,j,k,iBlock,FaceArea_DIIS(:,0,0,Bot_))  
+              FaceArea_DIIS(:,0,0,Bot_)=FaceAreaK_DFB(:,i,j,k,iBlock)  
               B0_DIIS(x_,0,0,Bot_)= B0xFace_z_BLK(i,j,k,iBlock)
               B0_DIIS(y_,0,0,Bot_)= B0yFace_z_BLK(i,j,k,iBlock)
               B0_DIIS(z_,0,0,Bot_)= B0zFace_z_BLK(i,j,k,iBlock)
@@ -470,192 +460,167 @@ contains
   subroutine correct_b0_face(iSide)
     implicit none
     integer,intent(in)::iSide
-    real,external::SpherFaceAreaI,SpherFaceAreaJ,SpherFaceAreaK
-    real,external::Spher2FaceAreaI,Spher2FaceAreaJ,Spher2FaceAreaK
-    select case(TypeGeometry)
-    case('spherical')
-       select case(iSide)
-       case(East_,West_)
-          iFace=1+nI*(iSide-East_)
-          call get_spher_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,0,i2,j2)+&
-                     RefB0_DIII(:,1,i2,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,1,i2,j2)-&
-                     RefXyz_DIII(:,0,i2,j2))*&
-                     SpherFaceAreaI(1+2*nI*(iSide-East_),2*k-1+j2,&
-                     XyzStartFine_D(R_),XyzStartFine_D(Theta_),&
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
+    select case(iSide)
+    case(East_,West_)
+       iFace=1+nI*(iSide-East_)
+       !Arguments of the get_nodes_and_ref_b0 are:
+       !the face center generalized coordinates 
+       !minus
+       !the generalized coordinates of the (1,1,1) cell center,
+       !divided by dGenRef_D
+       call get_nodes_and_ref_b0(2*iFace-3,2*j-2,2*k-2)
+       call get_face_area_i(RefXyzNodes_DIII(:,1:1,:,:),&
+                            1,1,0,1,0,1,&
+                            RefFaceArea_DIII(:,1:1,:,:))
+       do j2=0,1
+          do i2=0,1
+             B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,0,i2,j2)+&
+                  RefB0_DIII(:,1,i2,j2))*cHalf
+             FaceArea_DIIS(:,i2,j2,iSide)=RefFaceArea_DIII(:,1,i2,j2)
           end do
-       case(South_,North_)
-          jFace=1+nJ*(iSide-South_)
-          call get_spher_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,0,j2)+&
-                     RefB0_DIII(:,i2,1,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,1,j2)-&
-                     RefXyz_DIII(:,i2,0,j2))*&
-                     SpherFaceAreaJ(2*i-1+i2,2*k-1+j2,&
-                     XyzStartFine_D(R_),XyzStartFine_D(Theta_),&
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
+       end do
+    case(South_,North_)
+       jFace=1+nJ*(iSide-South_)
+       !Arguments of the get_nodes_and_ref_b0 are:
+       !the face center generalized coordinates 
+       !minus
+       !the generalized coordinates of the (1,1,1) cell center,
+       !divided by dXyzRef_D
+       call get_nodes_and_ref_b0(2*i-2,2*jFace-3,2*k-2)
+       call get_face_area_j(RefXyzNodes_DIII(:,:,1:1,:),&
+                            0,1,1,1,0,1,&
+                            RefFaceArea_DIII(:,:,1:1,:))
+       do j2=0,1
+          do i2=0,1
+             B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,0,j2)+&
+                  RefB0_DIII(:,i2,1,j2))*cHalf
+             FaceArea_DIIS(:,i2,j2,iSide)=RefFaceArea_DIII(:,i2,1,j2)
           end do
-       case(Bot_,Top_)
-          kFace=1+nK*(iSide-Bot_)
-          call get_spher_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,j2,0)+&
-                     RefB0_DIII(:,i2,j2,1))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,j2,1)-&
-                     RefXyz_DIII(:,i2,j2,0))*&
-                     SpherFaceAreaK(2*i-1+i2, 2*nK*(iSide-Bot_)+1, &
-                     XyzStartFine_D(R_), XyzStartFine_D(Theta_),   &
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
+       end do
+    case(Bot_,Top_)
+       kFace=1+nK*(iSide-Bot_)
+       !Arguments of the get_nodes_and_ref_b0 are:
+       !the face center generalized coordinates 
+       !minus
+       !the generalized coordinates of the (1,1,1) cell center,
+       !divided by dXyzRef_D
+       call get_nodes_and_ref_b0(2*i-2,2*j-2,2*kFace-3)
+       call get_face_area_k(RefXyzNodes_DIII(:,:,:,1:1),&
+                            0,1,0,1,1,1,&
+                            RefFaceArea_DIII(:,:,:,1:1))
+       do j2=0,1
+          do i2=0,1
+             B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,j2,0)+&
+                  RefB0_DIII(:,i2,j2,1))*cHalf
+             FaceArea_DIIS(:,i2,j2,iSide)=RefFaceArea_DIII(:,i2,j2,1)
           end do
-       end select
-    case('spherical_lnr')
-       select case(iSide)
-       case(East_,West_)
-          iFace=1+nI*(iSide-East_)
-          call get_spher2_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,0,i2,j2)+&
-                     RefB0_DIII(:,1,i2,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,1,i2,j2)-&
-                     RefXyz_DIII(:,0,i2,j2))*&
-                     Spher2FaceAreaI(1+2*nI*(iSide-East_),2*k-1+j2,&
-                     XyzStartFine_D(R_),XyzStartFine_D(Theta_),&
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
-          end do
-       case(South_,North_)
-          jFace=1+nJ*(iSide-South_)
-          call get_spher2_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,0,j2)+&
-                     RefB0_DIII(:,i2,1,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,1,j2)-&
-                     RefXyz_DIII(:,i2,0,j2))*&
-                     Spher2FaceAreaJ(2*i-1+i2,2*k-1+j2,&
-                     XyzStartFine_D(R_),XyzStartFine_D(Theta_),&
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
-          end do
-       case(Bot_,Top_)
-          kFace=1+nK*(iSide-Bot_)
-          call get_spher2_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,j2,0)+&
-                     RefB0_DIII(:,i2,j2,1))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,j2,1)-&
-                     RefXyz_DIII(:,i2,j2,0))*&
-                     Spher2FaceAreaK(2*i-1+i2, 2*nK*(iSide-Bot_)+1, &
-                     XyzStartFine_D(R_), XyzStartFine_D(Theta_),   &
-                     dXyzFine_D(R_),dXyzFine_D(Phi_),dXyzFine_D(Theta_))
-             end do
-          end do
-       end select
-    case('cartesian')
-       select case(iSide)
-       case(East_,West_)
-          iFace=1+nI*(iSide-East_)
-          call get_refined_b0(2*iFace-3,2*j-2,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,0,i2,j2)+&
-                     RefB0_DIII(:,1,i2,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,1,i2,j2)-&
-                     RefXyz_DIII(:,0,i2,j2))*&
-                     dXyzFine_D(y_)* dXyzFine_D(z_)/dXyzFine_D(x_)
-             end do
-          end do
-       case(South_,North_)
-          jFace=1+nJ*(iSide-South_)
-          call get_refined_b0(2*i-2,2*jFace-3,2*k-2)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,0,j2)+&
-                     RefB0_DIII(:,i2,1,j2))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,1,j2)-&
-                     RefXyz_DIII(:,i2,0,j2))*&
-                     dXyzFine_D(z_)* dXyzFine_D(x_)/dXyzFine_D(y_)
-             end do
-          end do
-       case(Bot_,Top_)
-          kFace=1+nK*(iSide-Bot_)
-          call get_refined_b0(2*i-2,2*j-2,2*kFace-3)
-          do j2=0,1
-             do i2=0,1
-                B0_DIIS(:,i2,j2,iSide)=(RefB0_DIII(:,i2,j2,0)+&
-                     RefB0_DIII(:,i2,j2,1))*cHalf
-                FaceArea_DIIS(:,i2,j2,iSide)=(RefXyz_DIII(:,i2,j2,1)-&
-                     RefXyz_DIII(:,i2,j2,0))*&
-                     dXyzFine_D(x_)* dXyzFine_D(y_)/dXyzFine_D(z_)
-             end do
-          end do
-       end select
-    case default
-       call stop_mpi('Unknown TypeGeometryB0 = '//TypeGeometry)
+       end do
     end select
   end subroutine correct_b0_face
-  subroutine get_refined_b0(iRef,jRef,kRef)
+
+  subroutine get_nodes_and_ref_b0(iRef,jRef,kRef)
     implicit none
     integer,intent(in)::iRef,jRef,kRef
     integer::k2         
+    !Get the face center generalized coordinates, which is also
+    !the generalized coordinates of the refined grid node (111),
+    !if UseVertexBasedGrid=.true.
+ 
+    GenCoord111_D=XyzStart_BLK(:,iBlock)+(/iRef,jRef,kRef/)*dGenFine_D
+    
+    !Get cell center coordinates of the refined grid
+    !and nodes coordinates
+    if(UseVertexBasedGrid)then
+       call gen_to_xyz_arr(GenCoord111_D+cHalf*dGenFine_D,&
+            DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
+            0,1,0,1,0,1,&
+            RefXyz_DIII(x_,0:1,0:1,0:1),&
+            RefXyz_DIII(y_,0:1,0:1,0:1),&
+            RefXyz_DIII(z_,0:1,0:1,0:1))       
+       call gen_to_xyz_arr(GenCoord111_D,&
+            DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
+            0,2,0,2,0,2,&
+            RefXyzNodes_DIII(x_,0:2,0:2,0:2),&
+            RefXyzNodes_DIII(y_,0:2,0:2,0:2),&
+            RefXyzNodes_DIII(z_,0:2,0:2,0:2))
+    else
+       !We need a wider stencil to construct the nodes
+       call gen_to_xyz_arr(GenCoord111_D+cHalf*dGenFine_D,&
+            DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
+            -1,2,-1,2,-1,2,&
+            RefXyz_DIII(x_,-1:2,-1:2,-1:2),&
+            RefXyz_DIII(y_,-1:2,-1:2,-1:2),&
+            RefXyz_DIII(z_,-1:2,-1:2,-1:2))
+!REDO!!!!!!!!!
+       call cell_centers_to_nodes
+    !  call gen_to_xyz_arr(GenCoord111_D,&
+    !        DGenFine_D(1),DGenFine_D(2),dGenFine_D(3),&
+    !        0,2,0,2,0,2,&
+    !        RefXyzNodes_DIII(x_,0:2,0:2,0:2),&
+    !        RefXyzNodes_DIII(y_,0:2,0:2,0:2),&
+    !        RefXyzNodes_DIII(z_,0:2,0:2,0:2))
+   end if
+     
     do k2=0,1; do j2=0,1; do i2=0,1
-       x=XyzStart_BLK(x_,iBlock)+(iRef-cHalf+i2)*cHalf*dx_BLK(iBlock)
-       y=XyzStart_BLK(y_,iBlock)+(jRef-cHalf+j2)*cHalf*dy_BLK(iBlock)
-       z=XyzStart_BLK(z_,iBlock)+(kRef-cHalf+k2)*cHalf*dz_BLK(iBlock)
-       call  get_B0(x,y,z,RefB0_DIII(:,i2,j2,k2))
-       RefXyz_DIII(x_,i2,j2,k2)=x
-       RefXyz_DIII(y_,i2,j2,k2)=y
-       RefXyz_DIII(z_,i2,j2,k2)=z
+       call  get_B0(&
+            RefXyz_DIII(x_,i2,j2,k2),&
+            RefXyz_DIII(y_,i2,j2,k2),&
+            RefXyz_DIII(z_,i2,j2,k2),&
+            RefB0_DIII(:,i2,j2,k2))
     end do; end do; end do	
-  end subroutine get_refined_b0
-  subroutine get_spher_refined_b0(iRef,jRef,kRef)
+  end subroutine get_nodes_and_ref_b0
+  subroutine cell_centers_to_nodes
+    real,dimension(3,3):: A_DD, A1_DD
+    real,dimension(3)  :: B_D
+    real               :: DetInv
+    integer::k2
+    real,dimension(-1:2,-1:2,-1:2)::R2_III
+    !------------------------------------------------------------------------
+    do k2=-1,2; do j2=-1,2; do i2=-1,2
+       R2_III(i2,j2,k2)=sum(RefXyz_DIII(:,i2,j2,k2)**2)
+    end do; end do; end do
+
+    do k2=0,2; do j2=0,2; do i2=0,2
+       
+       A_DD(1,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2-1,j2,k2)
+       A_DD(2,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2,j2-1,k2)
+       A_DD(3,:)=RefXyz_DIII(:,i2,j2,k2)-RefXyz_DIII(:,i2,j2,k2-1)
+
+       DetInv=cOne/det(A_DD)
+
+       B_D(1)=cHalf*(R2_III(i2,j2,k2)-R2_III(i2-1,j2,k2))
+       B_D(2)=cHalf*(R2_III(i2,j2,k2)-R2_III(i2,j2-1,k2))
+       B_D(3)=cHalf*(R2_III(i2,j2,k2)-R2_III(i2,j2,k2-1))
+
+       A1_DD(:,2:3)=A_DD(:,2:3)
+       A1_DD(:,1)=B_D
+
+       RefXyzNodes_DIII(x_,i2,j2,k2) = det(A1_DD)*DetInv
+
+       A1_DD(:,1)=A_DD(:,1)
+       A1_DD(:,3)=A_DD(:,3)
+       A1_DD(:,2)=B_D
+
+       RefXyzNodes_DIII(y_,i2,j2,k2) = det(A1_DD)*DetInv
+       
+       A1_DD(:,1:2)=A_DD(:,1:2)
+       A1_DD(:,3)=B_D
+
+       RefXyzNodes_DIII(z_,i2,j2,k2) = det(A1_DD)*DetInv
+    end do; end do; end do
+    
+  end subroutine cell_centers_to_nodes
+  !===========================================================================
+  real function det(A_DD)
     implicit none
-    integer,intent(in)::iRef,jRef,kRef
-    integer::k2         
-    do k2=0,1; do j2=0,1; do i2=0,1
-       R=XyzStart_BLK(x_,iBlock)+(iRef-cHalf+i2)*cHalf*dx_BLK(iBlock)
-       Phi=XyzStart_BLK(y_,iBlock)+(jRef-cHalf+j2)*cHalf*dy_BLK(iBlock)
-       Theta=XyzStart_BLK(z_,iBlock)+(kRef-cHalf+k2)*cHalf*dz_BLK(iBlock)
-       z=R*cos(Theta)
-       r=R*sin(Theta)
-       x=r*cos(Phi)
-       y=r*sin(Phi)
-       call  get_B0(x,y,z,RefB0_DIII(:,i2,j2,k2))
-       RefXyz_DIII(x_,i2,j2,k2)=x
-       RefXyz_DIII(y_,i2,j2,k2)=y
-       RefXyz_DIII(z_,i2,j2,k2)=z
-    end do; end do; end do	
-  end subroutine get_spher_refined_b0
-  subroutine get_spher2_refined_b0(iRef,jRef,kRef)
-    implicit none
-    integer,intent(in)::iRef,jRef,kRef
-    integer::k2         
-    do k2=0,1; do j2=0,1; do i2=0,1
-       R=exp(XyzStart_BLK(x_,iBlock)+(iRef-cHalf+i2)*cHalf*dx_BLK(iBlock))
-       Phi=XyzStart_BLK(y_,iBlock)+(jRef-cHalf+j2)*cHalf*dy_BLK(iBlock)
-       Theta=XyzStart_BLK(z_,iBlock)+(kRef-cHalf+k2)*cHalf*dz_BLK(iBlock)
-       z=R*cos(Theta)
-       r=R*sin(Theta)
-       x=r*cos(Phi)
-       y=r*sin(Phi)
-       call  get_B0(x,y,z,RefB0_DIII(:,i2,j2,k2))
-       RefXyz_DIII(x_,i2,j2,k2)=x
-       RefXyz_DIII(y_,i2,j2,k2)=y
-       RefXyz_DIII(z_,i2,j2,k2)=z
-    end do; end do; end do	
-  end subroutine get_spher2_refined_b0
+    real,dimension(3,3),intent(in)::A_DD
+    det=A_DD(1,1)*(A_DD(2,2)*A_DD(3,3)-&
+         A_DD(3,2)*A_DD(2,3))-&
+         A_DD(1,2)*(A_DD(2,1)*A_DD(3,3)-&
+         A_DD(2,3)*A_DD(3,1))+&
+         A_DD(1,3)*(A_DD(2,1)*A_DD(3,2)-&
+         A_DD(2,2)*A_DD(3,1))
+  end function det
 end subroutine calc_b0source_covar
 
 subroutine covariant_force_integral(i,j,k,iBLK,Fai_S)
@@ -672,13 +637,10 @@ subroutine covariant_force_integral(i,j,k,iBLK,Fai_S)
 
   VInv=vInv_CB(i,j,k,iBLK)
 
-  call calc_face_area_i(i,j,k,iBLK,FaceArea_DS(:,East_))
-  call calc_face_area_i(i+1,j,k,iBLK,FaceArea_DS(:,West_))
-  call calc_face_area_j(i,j,k,iBLK,FaceArea_DS(:,South_))
-  call calc_face_area_j(i,j+1,k,iBLK,FaceArea_DS(:,North_))
-  call calc_face_area_k(i,j,k,iBLK,FaceArea_DS(:,Bot_))
-  call calc_face_area_k(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
-
+  FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBLK)
+  FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBLK)
+  FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBLK)
+ 
   fbody_x_BLK(i,j,k,iBLK) = VInv*&              
        dot_product(FaceArea_DS(1,:),Fai_S(:))                     
   fbody_y_BLK(i,j,k,iBLK) = VInv*&              
@@ -723,12 +685,9 @@ subroutine covariant_gradient(iBlock, Var_G,&
      do k=1,nK; do j=1,nJ; do i=1,nI
         VInvHalf=chalf*vInv_CB(i,j,k,iBlock)
 
-        call calc_face_area_i(i,j,k,iBlock,FaceArea_DS(:,East_))
-        call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DS(:,West_))
-        call calc_face_area_j(i,j,k,iBlock,FaceArea_DS(:,South_))
-        call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DS(:,North_))
-        call calc_face_area_k(i,j,k,iBlock,FaceArea_DS(:,Bot_))
-        call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
+        FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBlock)
+        FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBlock)
+        FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBlock)
 
         Difference_S(East_) = -Var_G(i-1,j,k)
         Difference_S(West_) = +Var_G(i+1,j,k)
@@ -754,12 +713,9 @@ subroutine covariant_gradient(iBlock, Var_G,&
         VInvHalf=&
              chalf*vInv_CB(i,j,k,iBlock)*OneTrue_G(i,j,k)
         
-        call calc_face_area_i(i,j,k,iBlock,FaceArea_DS(:,East_))
-        call calc_face_area_i(i+1,j,k,iBlock,FaceArea_DS(:,West_))
-        call calc_face_area_j(i,j,k,iBlock,FaceArea_DS(:,South_))
-        call calc_face_area_j(i,j+1,k,iBlock,FaceArea_DS(:,North_))
-        call calc_face_area_k(i,j,k,iBlock,FaceArea_DS(:,Bot_))
-        call calc_face_area_k(i,j,k+1,iBlock,FaceArea_DS(:,Top_))
+        FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBlock)
+        FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBlock)
+        FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBlock)        
 
         Difference_S(East_) =  OneTrue_G(i-1,j,k)*&
              (Var_G(i,j,k)-Var_G(i-1,j,k))+&
@@ -824,37 +780,17 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
 
   VInvHalf=chalf*vInv_CB(i,j,k,iBLK)
 
-  call calc_face_area_i(i,j,k,iBLK,FaceArea_DS(:,East_))
-  call calc_face_area_i(i+1,j,k,iBLK,FaceArea_DS(:,West_))
-  call calc_face_area_j(i,j,k,iBLK,FaceArea_DS(:,South_))
-  call calc_face_area_j(i,j+1,k,iBLK,FaceArea_DS(:,North_))
-  call calc_face_area_k(i,j,k,iBLK,FaceArea_DS(:,Bot_))
-  call calc_face_area_k(i,j,k+1,iBLK,FaceArea_DS(:,Top_))
+  FaceArea_DS(:,East_ :West_ )=FaceAreaI_DFB(:,i:i+1,j,k,iBLK)
+  FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBLK)
+  FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBLK)   
 
-  MagneticField_DS(1,East_)=-State_VGB(Bx_,i-1,j,k,iBLK)
-  MagneticField_DS(2,East_)=-State_VGB(By_,i-1,j,k,iBLK)
-  MagneticField_DS(3,East_)=-State_VGB(Bz_,i-1,j,k,iBLK)
-
-  MagneticField_DS(1,West_)=State_VGB(Bx_,i+1,j,k,iBLK)
-  MagneticField_DS(2,West_)=State_VGB(By_,i+1,j,k,iBLK)
-  MagneticField_DS(3,West_)=State_VGB(Bz_,i+1,j,k,iBLK)
-
-  MagneticField_DS(1,South_)=-State_VGB(Bx_,i,j-1,k,iBLK)
-  MagneticField_DS(2,South_)=-State_VGB(By_,i,j-1,k,iBLK)
-  MagneticField_DS(3,South_)=-State_VGB(Bz_,i,j-1,k,iBLK)
-
-  MagneticField_DS(1,North_)=State_VGB(Bx_,i,j+1,k,iBLK)
-  MagneticField_DS(2,North_)=State_VGB(By_,i,j+1,k,iBLK)
-  MagneticField_DS(3,North_)=State_VGB(Bz_,i,j+1,k,iBLK)
-
-  MagneticField_DS(1,Bot_)=-State_VGB(Bx_,i,j,k-1,iBLK)
-  MagneticField_DS(2,Bot_)=-State_VGB(By_,i,j,k-1,iBLK)
-  MagneticField_DS(3,Bot_)=-State_VGB(Bz_,i,j,k-1,iBLK)
-
-  MagneticField_DS(1,Top_)=State_VGB(Bx_,i,j,k+1,iBLK)
-  MagneticField_DS(2,Top_)=State_VGB(By_,i,j,k+1,iBLK)
-  MagneticField_DS(3,Top_)=State_VGB(Bz_,i,j,k+1,iBLK)
-
+  MagneticField_DS(:,East_ )=-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)
+  MagneticField_DS(:,West_ )= State_VGB(Bx_:Bz_,i+1,j,k,iBLK)
+  MagneticField_DS(:,South_)=-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)
+  MagneticField_DS(:,North_)= State_VGB(Bx_:Bz_,i,j+1,k,iBLK)
+  MagneticField_DS(:,Bot_)  =-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)
+  MagneticField_DS(:,Top_)  = State_VGB(Bx_:Bz_,i,j,k+1,iBLK)
+ 
   CurlB_D(1)=dot_product(FaceArea_DS(2,:),MagneticField_DS(3,:))-&
        dot_product(FaceArea_DS(3,:),MagneticField_DS(2,:))
   CurlB_D(2)=dot_product(FaceArea_DS(3,:),MagneticField_DS(1,:))-&
@@ -928,21 +864,16 @@ subroutine save_bn_faceI(iFaceOut,iFaceIn,iBlock)
   integer,intent(in) :: iFaceOut,iFaceIn,iBlock
 
   integer :: j,k
-  real,dimension(nDim) :: B_D,FaceArea_D
+
 
 
   do k=1,nK; do j=1,nJ
-     call calc_face_area_i(iFaceIn,j,k,iBlock,FaceArea_D)
-     B_D(x_)=LeftState_VX(Bx_,iFaceIn,j,k)
-     B_D(y_)=LeftState_VX(By_,iFaceIn,j,k)
-     B_D(z_)=LeftState_VX(Bz_,iFaceIn,j,k)
      CorrectedFlux_VXB(BnL_,j,k,iFaceOut,iBlock) = &
-          dot_product(B_D,FaceArea_D)
-     B_D(x_)=RightState_VX(Bx_,iFaceIn,j,k)
-     B_D(y_)=RightState_VX(By_,iFaceIn,j,k)
-     B_D(z_)=RightState_VX(Bz_,iFaceIn,j,k)
+          dot_product(LeftState_VX(Bx_:Bz_,iFaceIn,j,k),&
+          FaceAreaI_DFB(:,iFaceIn,j,k,iBlock))
      CorrectedFlux_VXB(BnR_,j,k,iFaceOut,iBlock) = &
-          dot_product(B_D,FaceArea_D)
+          dot_product(RightState_VX(Bx_:Bz_,iFaceIn,j,k),&
+          FaceAreaI_DFB(:,iFaceIn,j,k,iBlock))
   end do; end do
 
 end subroutine save_bn_faceI
@@ -959,20 +890,14 @@ subroutine save_bn_faceJ(jFaceOut,jFaceIn,iBlock)
   integer,intent(in) :: jFaceOut,jFaceIn,iBlock
 
   integer :: i,k
-  real,dimension(nDim) :: B_D,FaceArea_D
-
 
   do k=1,nK; do i=1,nI
-     call calc_face_area_j(i,jFaceIn,k,iBlock,FaceArea_D)
-     B_D(x_)=LeftState_VY(Bx_,i,jFaceIn,k)
-     B_D(y_)=LeftState_VY(By_,i,jFaceIn,k)
-     B_D(z_)=LeftState_VY(Bz_,i,jFaceIn,k)
      CorrectedFlux_VYB(BnL_,i,k,jFaceOut,iBlock) = &
-          dot_product(B_D,FaceArea_D)
-     B_D(x_)=RightState_VY(Bx_,i,jFaceIn,k)
-     B_D(y_)=RightState_VY(By_,i,jFaceIn,k)
-     B_D(z_)=RightState_VY(Bz_,i,jFaceIn,k)
-     CorrectedFlux_VYB(BnR_,i,k,jFaceOut,iBlock) = dot_product(B_D,FaceArea_D)
+          dot_product(LeftState_VY(Bx_:Bz_,i,jFaceIn,k),&
+          FaceAreaJ_DFB(:,i,jFaceIn,k,iBlock))
+     CorrectedFlux_VYB(BnR_,i,k,jFaceOut,iBlock) = &
+          dot_product(RightState_VY(Bx_:Bz_,i,jFaceIn,k),&
+          FaceAreaJ_DFB(:,i,jFaceIn,k,iBlock))
   end do; end do
 
 end subroutine save_bn_faceJ
@@ -989,21 +914,16 @@ subroutine save_bn_faceK(kFaceOut,kFaceIn,iBlock)
   integer,intent(in) :: kFaceOut,kFaceIn,iBlock
 
   integer :: i,j
-  real,dimension(nDim) :: B_D, FaceArea_D
+ 
 
 
   do j=1,nJ; do i=1,nI
-     call calc_face_area_k(i,j,kFaceIn,iBlock,FaceArea_D)
-     B_D(x_)=LeftState_VZ(Bx_,i,j,kFaceIn)
-     B_D(y_)=LeftState_VZ(By_,i,j,kFaceIn)
-     B_D(z_)=LeftState_VZ(Bz_,i,j,kFaceIn)
      CorrectedFlux_VZB(BnL_,i,j,kFaceOut,iBlock) = &
-          dot_product(B_D,FaceArea_D)
-     B_D(x_)=RightState_VZ(Bx_,i,j,kFaceIn)
-     B_D(y_)=RightState_VZ(By_,i,j,kFaceIn)
-     B_D(z_)=RightState_VZ(Bz_,i,j,kFaceIn)
+          dot_product(LeftState_VZ(Bx_:Bz_,i,j,kFaceIn),&
+          FaceAreaK_DFB(:,i,j,kFaceIn,iBlock))
      CorrectedFlux_VZB(BnR_,i,j,kFaceOut,iBlock) =&
-           dot_product(B_D,FaceArea_D)
+          dot_product(RightState_VZ(Bx_:Bz_,i,j,kFaceIn),&
+          FaceAreaK_DFB(:,i,j,kFaceIn,iBlock))
   end do; end do
 
 end subroutine save_bn_faceK
@@ -1026,30 +946,22 @@ subroutine apply_bn_faceI(iFaceIn,iFaceOut,iBlock)
 
   do k=1,nK; do j=1,nJ
      if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
-     call calc_face_area_i(iFaceOut,j,k,iBlock,FaceArea_D)
+     FaceArea_D=FaceAreaI_DFB(:,iFaceOut,j,k,iBlock)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
-     B_D(x_)=LeftState_VX(Bx_,iFaceOut,j,k)
-     B_D(y_)=LeftState_VX(By_,iFaceOut,j,k)
-     B_D(z_)=LeftState_VX(Bz_,iFaceOut,j,k)
+     B_D=LeftState_VX(Bx_:Bz_,iFaceOut,j,k)
 
      DeltaBDotFA = (CorrectedFlux_VXB(BnL_,j,k,iFaceIn,iBlock) -&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     LeftState_VX(Bx_,iFaceOut,j,k)=B_D(x_)+DeltaBDotFA*FaceArea_D(x_)
-     LeftState_VX(By_,iFaceOut,j,k)=B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     LeftState_VX(Bz_,iFaceOut,j,k)=B_D(z_)+DeltaBDotFA*FaceArea_D(z_)
-
-     B_D(x_)=RightState_VX(Bx_,iFaceOut,j,k)
-     B_D(y_)=RightState_VX(By_,iFaceOut,j,k)
-     B_D(z_)=RightState_VX(Bz_,iFaceOut,j,k)
+     LeftState_VX(Bx_:Bz_,iFaceOut,j,k)=B_D(x_)+DeltaBDotFA*FaceArea_D
+  
+     B_D=RightState_VX(Bx_:Bz_,iFaceOut,j,k)
 
      DeltaBDotFA = (CorrectedFlux_VXB(BnR_,j,k,iFaceIn,iBlock) -&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     RightState_VX(Bx_,iFaceOut,j,k)=B_D(x_)+DeltaBDotFA*FaceArea_D(x_)
-     RightState_VX(By_,iFaceOut,j,k)=B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     RightState_VX(Bz_,iFaceOut,j,k)=B_D(z_)+DeltaBDotFA*FaceArea_D(z_)
+     RightState_VX(Bx_:Bz_,iFaceOut,j,k)=B_D+DeltaBDotFA*FaceArea_D
   end do; end do
 
 end subroutine apply_bn_faceI
@@ -1073,30 +985,22 @@ subroutine apply_bn_faceJ(jFaceIn,jFaceOut,iBlock)
 
   do k=1,nK; do i=1,nI
      if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
-     call calc_face_area_j(i,jFaceOut,k,iBlock,FaceArea_D)
+     FaceArea_D=FaceAreaJ_DFB(:,i,jFaceOut,k,iBlock)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
-     B_D(x_)=LeftState_VY(Bx_,i,jFaceOut,k)
-     B_D(y_)=LeftState_VY(By_,i,jFaceOut,k)
-     B_D(z_)=LeftState_VY(Bz_,i,jFaceOut,k)
+     B_D=LeftState_VY(Bx_:Bz_,i,jFaceOut,k)
 
      DeltaBDotFA = (CorrectedFlux_VYB(BnL_,i,k,jFaceIn,iBlock)-&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     LeftState_VY(Bx_,i,jFaceOut,k)=B_D(x_)+DeltaBDotFA*FaceArea_D(x_)
-     LeftState_VY(By_,i,jFaceOut,k)=B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     LeftState_VY(Bz_,i,jFaceOut,k)=B_D(z_)+DeltaBDotFA*FaceArea_D(z_)
+     LeftState_VY(Bx_:Bz_,i,jFaceOut,k)=B_D+DeltaBDotFA*FaceArea_D
 
-     B_D(x_)=RightState_VY(Bx_,i,jFaceOut,k)
-     B_D(y_)=RightState_VY(By_,i,jFaceOut,k)
-     B_D(z_)=RightState_VY(Bz_,i,jFaceOut,k)
+     B_D=RightState_VY(Bx_:Bz_,i,jFaceOut,k)
 
      DeltaBDotFA = (CorrectedFlux_VYB(BnR_,i,k,jFaceIn,iBlock)-&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     RightState_VY(Bx_,i,jFaceOut,k)=B_D(x_)+DeltaBDotFA*FaceArea_D(x_)
-     RightState_VY(By_,i,jFaceOut,k)=B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     RightState_VY(Bz_,i,jFaceOut,k)=B_D(z_)+DeltaBDotFA*FaceArea_D(z_)
+     RightState_VY(Bx_:Bz_,i,jFaceOut,k)=B_D+DeltaBDotFA*FaceArea_D
 
   end do; end do
 
@@ -1121,30 +1025,22 @@ subroutine apply_bn_faceK(kFaceIn,kFaceOut,iBlock)
 
   do j=1,nJ; do i=1,nI
      if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
-     call calc_face_area_k(i,j,kFaceOut,iBlock,FaceArea_D)
+     FaceArea_D=FaceAreaK_DFB(:,i,j,kFaceOut,iBlock)
      FaceArea2=dot_product(FaceArea_D,FaceArea_D)
 
-     B_D(x_)=LeftState_VZ(Bx_,i,j,kFaceOut)
-     B_D(y_)=LeftState_VZ(By_,i,j,kFaceOut)
-     B_D(z_)=LeftState_VZ(Bz_,i,j,kFaceOut)
+     B_D=LeftState_VZ(Bx_:Bz_,i,j,kFaceOut)
 
      DeltaBDotFA = ( CorrectedFlux_VZB(BnL_,i,j,kFaceIn,iBlock) -&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     LeftState_VZ(Bx_,i,j,kFaceOut) = B_D(x_)+DeltaBDotFA*FaceArea_D(x_) 
-     LeftState_VZ(By_,i,j,kFaceOut) = B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     LeftState_VZ(Bz_,i,j,kFaceOut) = B_D(z_)+DeltaBDotFA*FaceArea_D(z_) 
+     LeftState_VZ(Bx_:Bz_,i,j,kFaceOut) = B_D+DeltaBDotFA*FaceArea_D  
 
-     B_D(x_)=RightState_VZ(Bx_,i,j,kFaceOut)
-     B_D(y_)=RightState_VZ(By_,i,j,kFaceOut)
-     B_D(z_)=RightState_VZ(Bz_,i,j,kFaceOut)
+     B_D=RightState_VZ(Bx_:Bz_,i,j,kFaceOut)
      
      DeltaBDotFA = (CorrectedFlux_VZB(BnR_,i,j,kFaceIn,iBlock) -&
           dot_product(B_D,FaceArea_D))/FaceArea2
 
-     RightState_VZ(Bx_,i,j,kFaceOut) = B_D(x_)+DeltaBDotFA*FaceArea_D(x_) 
-     RightState_VZ(By_,i,j,kFaceOut) = B_D(y_)+DeltaBDotFA*FaceArea_D(y_)
-     RightState_VZ(Bz_,i,j,kFaceOut) = B_D(z_)+DeltaBDotFA*FaceArea_D(z_) 
+     RightState_VZ(Bx_:Bz_,i,j,kFaceOut) = B_D+DeltaBDotFA*FaceArea_D  
   end do; end do
 
 end subroutine apply_bn_faceK

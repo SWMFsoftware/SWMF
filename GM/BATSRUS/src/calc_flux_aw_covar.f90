@@ -76,7 +76,7 @@ subroutine calc_flux_AW_covar(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1		  
 
-              call calc_face_area_i(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
+              FaceArea_DI(:,i)=FaceAreaI_DFB(:,iStrip,j,k,globalBLK)
          
               ! GET PRIMITIVES
               !\
@@ -187,7 +187,7 @@ subroutine calc_flux_AW_covar(DoResChangeOnly)
            do i=1,nStrip
               iStrip=i+iStart-1
 
-              call calc_face_area_j(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
+              FaceArea_DI(:,i)=FaceAreaJ_DFB(:,iStrip,j,k,globalBLK)
 
               v_B0x(i) = B0xFace_y_BLK(iStrip,j,k,globalBLK)
               v_B0y(i) = B0yFace_y_BLK(iStrip,j,k,globalBLK)
@@ -282,7 +282,7 @@ subroutine calc_flux_AW_covar(DoResChangeOnly)
            !/
            do i=1,nStrip
               iStrip=i+iStart-1
-              call calc_face_area_k(iStrip,j,k,globalBLK,FaceArea_DI(:,i))
+              FaceArea_DI(:,i)=FaceAreaK_DFB(:,iStrip,j,k,globalBLK)
 
               !\
               ! B0 on the face

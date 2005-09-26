@@ -148,13 +148,16 @@ subroutine fix_block_geometry(iBLK)
   else                                       !^CFG IF NOT CARTESIAN BEGIN
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
-     !call gen_to_xyz_arr(XyzStart_BLK(:,iBLK), &
-     !                    dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-     !                    1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
-     !                    x_BLK(:,:,:,iBLK),&
-     !                    y_BLK(:,:,:,iBLK),&     
-     !                    z_BLK(:,:,:,iBLK))
-     
+     call gen_to_xyz_arr(XyzStart_BLK(:,iBLK),&
+                         dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+                         1-gcn,nI+gcn,1-gcn,nJ+gcn,1-gcn,nK+gcn,&
+                         x_BLK(:,:,:,iBLK),&
+                         y_BLK(:,:,:,iBLK),&     
+                         z_BLK(:,:,:,iBLK))
+
+     R_BLK(:,:,:,iBLK)=sqrt(&
+          x_BLK(:,:,:,iBLK)**2+y_BLK(:,:,:,iBLK)**2+z_BLK(:,:,:,iBLK)**2)
+
      if(UseVertexBasedGrid)then
         
         !Node coordinates are calculated directly, not derived from
@@ -163,23 +166,28 @@ subroutine fix_block_geometry(iBLK)
         !coordinates
 
         !!!!!!!!!!!plus or minus?????????
-        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)+dx_BLK(iBLK)
-        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)+dy_BLK(iBLK)
-        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)+dz_BLK(iBLK)
+        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)+dx_BLK(iBLK)*cHalf
+        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)+dy_BLK(iBLK)*cHalf
+        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)+dz_BLK(iBLK)*cHalf
 
-        !
-        !call gen_to_xyz_arr(XyzOfNode111_D,&
-        !                    dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK)
-        !                    0,nI,0,nJ,0,nK,&
-        !                    NodeX_IIIB(:,:,:,iBLK),&
-        !                    NodeY_IIIB(:,:,:,iBLK),&
-        !                    NodeZ_IIIB(:,:,:,iBLK))
+        
+        call gen_to_xyz_arr(XyzOfNode111_D,&
+                            dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
+                            0,nI,0,nJ,0,nK,&
+                            NodeX_IIIB(:,:,:,iBLK),&
+                            NodeY_IIIB(:,:,:,iBLK),&
+                            NodeZ_IIIB(:,:,:,iBLK))
+
+        call fix_covariant_geometry(iBLK)
         !
         !Mark the block for fixing the covariant geometry afterwards
         !(when the refinement level of the neighboring blocks are
-        !all known) 
-        !
-        !OldLevel_IIIB(0,0,0,iBLK)=+1
+        !all known). The condition for fixing the block is
+        !any(OldLevel_IIIB(:,:,:,iBLK)/=NeiLev_BLK(:,:,:,iBLK).and.
+        !(OldLevel_IIIB(:,:,:,iBLK)==-1.or.NeiLev_BLK(:,:,:,iBLK).  
+        !To force the fix procedure for the given block set
+        
+        OldLevel_IIIB(0,0,0,iBLK)=-1
 
      else
 
@@ -191,7 +199,7 @@ subroutine fix_block_geometry(iBLK)
         !Face area vectors and cell volumes are expressed 
         !in terms of the node coordinates
 
-        call fix_cell_based_block(iBLK)
+        call fix_covariant_geometry(iBLK)
 
      end if
    
