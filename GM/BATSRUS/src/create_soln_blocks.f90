@@ -436,7 +436,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK        !^CFG IF CONSTRAINB
   use ModAMR, ONLY : local_cube,local_cubeBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK, &
-       dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK
+       dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart_BLK,true_cell,true_BLK
   use ModGeometry, ONLY :  R2_BLK                           !^CFG IF SECONDBODY
   use ModNumConst
   use ModMpi
@@ -451,6 +451,8 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
   real    :: DtToReduce, DtBuff(8)
   integer :: MaxTypeAdvance, iTypeAdvance_I(8)
+
+  logical :: IsTrueCellF_C(nI,nJ,nK)
   !--------------------------------------------------------------------------
 
   ! Return if processor is not needed here
@@ -475,12 +477,17 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
   ! blocks involved in forming the coarse block.
   !/
   do icube = 1, 8
+     iBLK = local_cubeBLK(icube)
      if (icube == 1 .and. &
           iProc == remaining_PE) then
         !\
         ! Set the geometry parameters for the newly 
         ! created coarse block.
         !/
+
+        ! Save true_cell for this fine block !!!
+        IsTrueCellF_C = true_cell(1:nI,1:nJ,1:nK,iBLK)
+
         call set_coarse_block_geometry(remaining_BLK)
 
         unusedBLK(remaining_BLK) = .false.
@@ -490,7 +497,6 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
         ! Reset the geometry parameters to the default values
         ! for the other seven blocks that are no longer used.
         !/
-        iBLK = local_cubeBLK(icube)
         Dx_BLK(iBLK)         = -777777.
         Dy_BLK(iBLK)         = -777777.
         Dz_BLK(iBLK)         = -777777.
@@ -576,18 +582,22 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 contains
 
   subroutine assign_coarse_blk_soln
+
     real, dimension(nVar,1:nI/2, 1:nJ/2, 1:nK/2, 8) ::&
          restricted_soln_blks
 
     integer,parameter :: isize=(nI/2)*(nJ/2)*(nK/2)*nVar
     integer :: number_send_requests, send_requests(7) 
     integer :: iBLK, iShift,jShift,kShift
+    integer :: i, j, k, iF, jF, kF, iVar
+    logical :: IsTrue_III(2,2,2)
 
     number_send_requests = 0
 
     do icube = 1, 8
-       if (iProc == local_cube(icube)) then
-          iBLK = local_cubeBLK(icube)
+       if (iProc /= local_cube(icube)) CYCLE
+       iBLK = local_cubeBLK(icube)
+       if(true_BLK(iBLK))then
           restricted_soln_blks(&
                1:nVar,1:nI/2,1:nJ/2,1:nK/2,icube)=cEighth*(&
                State_VGB(1:nVar,1:nI:2, 1:nJ:2, 1:nK:2,iBLK)+  &
@@ -598,13 +608,44 @@ contains
                State_VGB(1:nVar,2:nI:2, 1:nJ:2, 2:nK:2,iBLK)+  &
                State_VGB(1:nVar,1:nI:2, 2:nJ:2, 2:nK:2,iBLK)+  &
                State_VGB(1:nVar,2:nI:2, 2:nJ:2, 2:nK:2,iBLK))
-          if (icube > 1 .and. iProc /= remaining_PE) then
-             itag = iBLK
-             number_send_requests = number_send_requests + 1
-             call MPI_isend(restricted_soln_blks(1,1,1,1,icube), &
-                  isize, MPI_REAL, remaining_PE,itag, iComm,&
-                  send_requests(number_send_requests), iError)
-          end if
+       else
+          ! Exclude non-true (body) cells from the restriction 
+          ! if there are any true cells
+          do      k=1,nK/2; kF = 2*k-1; &
+               do j=1,nJ/2; jF = 2*j-1; &
+               do i=1,nI/2; iF = 2*i-1
+
+             ! Set the true cell info for the fine cells to be restricted
+             if(iCube == 1)then
+                ! For the remaining fine block use the saved array
+                IsTrue_III = IsTrueCellF_C(iF:iF+1,jF:jF+1,kF:kF+1)
+             else
+                ! For the other fine blocks use the original array
+                IsTrue_III = true_cell(iF:iF+1,jF:jF+1,kF:kF+1,iBLK)
+             end if
+
+             if(all(IsTrue_III) .or. .not. any(IsTrue_III)) then
+                do iVar = 1, nVar
+                   restricted_soln_blks(iVar,i,j,k,iCube) = cEighth * &
+                        sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK))
+                end do
+             else
+                do iVar = 1, nVar
+                   restricted_soln_blks(iVar,i,j,k,iCube) = &
+                        sum(State_VGB(iVar,iF:iF+1,jF:jF+1,kF:kF+1,iBLK), &
+                        MASK = IsTrue_III)/count(IsTrue_III)
+                end do
+             end if
+          end do; &
+               end do; &
+               end do
+       end if
+       if (icube > 1 .and. iProc /= remaining_PE) then
+          itag = iBLK
+          number_send_requests = number_send_requests + 1
+          call MPI_isend(restricted_soln_blks(1,1,1,1,icube), &
+               isize, MPI_REAL, remaining_PE,itag, iComm,&
+               send_requests(number_send_requests), iError)
        end if
     end do
 
