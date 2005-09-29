@@ -8,9 +8,11 @@ subroutine amr_physics
   use ModMpi
   implicit none
 
+  integer :: nDesiredMax
   integer :: idir, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
   integer :: i,j,k,n, iBLK, nSort, nRefineMax, nCoarsenMax, Itmp
   integer :: iError, SortIndex(4)
+  real :: percentCoarsenMax=100.
   real :: refine_criteria(4, nBLK), Rtmp
   logical :: unique, noNeighbor, stopRefinement, done
   logical :: oktest=.false., oktest_me=.false.
@@ -198,6 +200,7 @@ subroutine amr_physics
   !--------------------------------------------------------------------
   ! Create list of possible coarsened blocks
   !
+  nDesiredMax = int((percentCoarsenMax/100.)*nBlockALL)
   SortIndex=0
   ListToCoarsen=-1
   k=0
@@ -206,10 +209,13 @@ subroutine amr_physics
      if(SortIndex(1)>=i) CYCLE
      SortIndex(1)=max(i,SortIndex(1))
 
+     if(i>nDesiredMax)then
+        EXIT    !Stop if passing nDesiredMax
+     end if
+
      !Check to see if block locked for coarsening
      BlockPtr%ptr => global_block_ptrs(SortB(n,i),SortP(n,i)+1)%ptr
      if(BlockPtr%ptr%LEV <= BlockPtr%ptr%LEVmin) CYCLE
-
 
      unique=.true.
      do j=1,k
@@ -217,7 +223,6 @@ subroutine amr_physics
              ListToCoarsen(2,j)==SortP(n,i)) unique=.false.
      end do
      if(unique) then
-
         !Remove if part of multilevel block
         if(associated(BlockPtr%ptr%parent)) then ! ensure parent exists
            if  (BlockPtr%ptr%parent%child1%used .and. &
@@ -328,7 +333,7 @@ subroutine amr_physics
   nDesired = int((percentCoarsen/100.)*nBlockALL)
   if(oktest .and. iProc == 0) then
      call write_myname; write(*,*) &
-          '| Coarsening:',percentCoarsen,nDesired,nBlockALL
+          '| Coarsening:',percentCoarsen,nDesired,nBlockALL,'(',percentCoarsenMax,')'
   end if
   if(nDesired>0)then
      do i=1,nCoarsenMax
