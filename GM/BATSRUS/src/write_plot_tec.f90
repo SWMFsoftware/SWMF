@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
+subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
      xmin,xmax,ymin,ymax,zmin,zmax)
   !
   !NOTE: This routine assumes that the blocks are sorted on PEs by their global
@@ -25,7 +25,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   ! Arguments  
   integer, intent(in) :: ifile, nplotvar
   character (LEN=500), intent(in) :: unitstr_TEC
-  real, intent(in) :: PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax)
+  real, intent(in) :: Plotvarnodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
 
   ! Local Variables
@@ -41,7 +41,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
 
   integer ic,ic1,ic2, jc,jc1,jc2, kc,kc1,kc2, nCuts, nCutsTotal
   real :: XarbP,YarbP,ZarbP, XarbNormal,YarbNormal,ZarbNormal, Xp,Yp,Zp
-  real, dimension(0:nI,0:nJ,0:nK,3) :: NodeXYZ_III
+  real, dimension(1:nI+1,1:nJ+1,1:nK+1,3) :: NodeXYZ_N
   logical :: okdebug
   !----------------------------------------------------------------------------
 
@@ -83,34 +83,24 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
      do iBLK = 1, nBlock
         if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
         ! Write point values
-        do k=0,nK; do j=0,nJ; do i=0,nI
-           if(NodeUniqueGlobal_IIIB(i,j,k,iBLK))then
-              if (plot_dimensional(ifile)) then
-                 write(unit_tmp,fmt="(30(E14.6))") &
-                      NodeX_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                      NodeY_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                      NodeZ_IIIB(i,j,k,iBLK)*unitUSER_x, &
-                      PlotVarNodes(i,j,k,iBLK,1:nplotvar)
-              else
-                 write(unit_tmp,fmt="(30(E14.6))") &
-                      NodeX_IIIB(i,j,k,iBLK), &
-                      NodeY_IIIB(i,j,k,iBLK), &
-                      NodeZ_IIIB(i,j,k,iBLK), &
-                      PlotVarNodes(i,j,k,iBLK,1:nplotvar)
-              end if
+        call fill_NodeXYZ
+        do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+           if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
+              write(unit_tmp,fmt="(30(E14.6))") &
+                   NodeXYZ_N(i,j,k,1:3),Plotvarnodes_NBI(i,j,k,iBLK,1:nplotvar)
            end if
         end do; end do; end do
         ! Write point connectivity
         do k=1,nK; do j=1,nJ; do i=1,nI
            write(unit_tmp2,'(8(i8,1x))') &
-                NodeNumberGlobal_IIIB(i-1,j-1,k-1,iBLK), &
-                NodeNumberGlobal_IIIB(i  ,j-1,k-1,iBLK), &
-                NodeNumberGlobal_IIIB(i  ,j  ,k-1,iBLK), &
-                NodeNumberGlobal_IIIB(i-1,j  ,k-1,iBLK), &
-                NodeNumberGlobal_IIIB(i-1,j-1,k  ,iBLK), &
-                NodeNumberGlobal_IIIB(i  ,j-1,k  ,iBLK), &
-                NodeNumberGlobal_IIIB(i  ,j  ,k  ,iBLK), &
-                NodeNumberGlobal_IIIB(i-1,j  ,k  ,iBLK)
+                NodeNumberGlobal_NB(i  ,j  ,k  ,iBLK), &
+                NodeNumberGlobal_NB(i+1,j  ,k  ,iBLK), &
+                NodeNumberGlobal_NB(i+1,j+1,k  ,iBLK), &
+                NodeNumberGlobal_NB(i  ,j+1,k  ,iBLK), &
+                NodeNumberGlobal_NB(i  ,j  ,k+1,iBLK), &
+                NodeNumberGlobal_NB(i+1,j  ,k+1,iBLK), &
+                NodeNumberGlobal_NB(i+1,j+1,k+1,iBLK), &
+                NodeNumberGlobal_NB(i  ,j+1,k+1,iBLK)
         end do; end do; end do
      end do
   case('cut','x=0','y=0','z=0')
@@ -128,8 +118,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeX_IIIB(0 ,0,0,iBLK) .and. &
-                   CutValue<=NodeX_IIIB(nI,0,0,iBLK) )then
+              if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
+                   CutValue<=NodeX_NB(1+nI,1,1,iBLK)  )then
                  nBlockCuts=nBlockCuts+1
                  BlockCut(iBlockALL)=nBlockCuts
               end if
@@ -152,43 +142,28 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeX_IIIB(0 ,0,0,iBLK) .and. &
-                   CutValue<=NodeX_IIIB(nI,0,0,iBLK) )then
+              if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
+                   CutValue<=NodeX_NB(1+nI,1,1,iBLK) )then
                  ! Find cut interpolation factors
                  do i=1,nI
-                    if ( CutValue> NodeX_IIIB(i-1,0,0,iBLK) .and. &
-                         CutValue<=NodeX_IIIB(i  ,0,0,iBLK)  )then
-                       cut1=i-1
-                       cut2=i
-                       factor2=(CutValue-NodeX_IIIB(i-1,0,0,iBLK))/ &
-                            (NodeX_IIIB(i,0,0,iBLK)-NodeX_IIIB(i-1,0,0,iBLK))
+                    if ( CutValue> NodeX_NB(i  ,1,1,iBLK) .and. &
+                         CutValue<=NodeX_NB(i+1,1,1,iBLK)  )then
+                       cut1=i
+                       cut2=i+1
+                       factor2=(CutValue-NodeX_NB(i,1,1,iBLK))/ &
+                            (NodeX_NB(i+1,1,1,iBLK)-NodeX_NB(i,1,1,iBLK))
                        factor1=1.-factor2
                        EXIT
                     end if
                  end do
                  ! Write point values
-                 do k=0,nK; do j=0,nJ
-                    if (plot_dimensional(ifile)) then
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeX_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeY_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeZ_IIIB(cut2,j,k,iBLK))*unitUSER_x, &
-                            (factor1*PlotVarNodes(cut1,j,k,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
-                    else
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeX_IIIB(cut2,j,k,iBLK)), &
-                            (factor1*NodeY_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeY_IIIB(cut2,j,k,iBLK)), &
-                            (factor1*NodeZ_IIIB(cut1,j,k,iBLK)+ &
-                             factor2*NodeZ_IIIB(cut2,j,k,iBLK)), &
-                            (factor1*PlotVarNodes(cut1,j,k,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(cut2,j,k,iBLK,1:nplotvar))
-                    end if
+                 call fill_NodeXYZ
+                 do k=1,1+nK; do j=1,1+nJ
+                    write(unit_tmp,fmt="(30(E14.6))") &
+                         (factor1*NodeXYZ_N(cut1,j,k,1:3)+ &
+                          factor2*NodeXYZ_N(cut2,j,k,1:3)), &
+                         (factor1*Plotvarnodes_NBI(cut1,j,k,iBLK,1:nplotvar)+ &
+                          factor2*Plotvarnodes_NBI(cut2,j,k,iBLK,1:nplotvar))
                  end do; end do
                  ! Write point connectivity
                  do k=1,nK; do j=1,nJ
@@ -209,8 +184,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeY_IIIB(0,0 ,0,iBLK) .and. &
-                   CutValue<=NodeY_IIIB(0,nJ,0,iBLK) )then
+              if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
+                   CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
                  nBlockCuts=nBlockCuts+1
                  BlockCut(iBlockALL)=nBlockCuts
               end if
@@ -233,43 +208,28 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeY_IIIB(0,0 ,0,iBLK) .and. &
-                   CutValue<=NodeY_IIIB(0,nJ,0,iBLK) )then
+              if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
+                   CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
                  ! Find cut interpolation factors
                  do j=1,nJ
-                    if ( CutValue> NodeY_IIIB(0,j-1,0,iBLK) .and. &
-                         CutValue<=NodeY_IIIB(0,j  ,0,iBLK)  )then
-                       cut1=j-1
-                       cut2=j
-                       factor2=(CutValue-NodeY_IIIB(0,j-1,0,iBLK))/ &
-                            (NodeY_IIIB(0,j,0,iBLK)-NodeY_IIIB(0,j-1,0,iBLK))
+                    if ( CutValue> NodeY_NB(1,j  ,1,iBLK) .and. &
+                         CutValue<=NodeY_NB(1,j+1,1,iBLK)  )then
+                       cut1=j
+                       cut2=j+1
+                       factor2=(CutValue-NodeY_NB(1,j,1,iBLK))/ &
+                            (NodeY_NB(1,j+1,1,iBLK)-NodeY_NB(1,j,1,iBLK))
                        factor1=1.-factor2
                        EXIT
                     end if
                  end do
                  ! Write point values
-                 do k=0,nK; do i=0,nI
-                    if (plot_dimensional(ifile)) then
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeX_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeY_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeZ_IIIB(i,cut2,k,iBLK))*unitUSER_x, &
-                            (factor1*PlotVarNodes(i,cut1,k,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
-                    else
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeX_IIIB(i,cut2,k,iBLK)), &
-                            (factor1*NodeY_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeY_IIIB(i,cut2,k,iBLK)), &
-                            (factor1*NodeZ_IIIB(i,cut1,k,iBLK)+ &
-                             factor2*NodeZ_IIIB(i,cut2,k,iBLK)), &
-                            (factor1*PlotVarNodes(i,cut1,k,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(i,cut2,k,iBLK,1:nplotvar))
-                    end if
+                 call fill_NodeXYZ
+                 do k=1,1+nK; do i=1,1+nI
+                    write(unit_tmp,fmt="(30(E14.6))") &
+                         (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
+                          factor2*NodeXYZ_N(i,cut2,k,1:3)), &
+                         (factor1*Plotvarnodes_NBI(i,cut1,k,iBLK,1:nplotvar)+ &
+                          factor2*Plotvarnodes_NBI(i,cut2,k,iBLK,1:nplotvar))
                  end do; end do
                  ! Write point connectivity
                  do k=1,nK; do i=1,nI
@@ -290,8 +250,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeZ_IIIB(0,0, 0,iBLK) .and. &
-                   CutValue<=NodeZ_IIIB(0,0,nK,iBLK) )then
+              if ( CutValue> NodeZ_NB(1,1,1   ,iBLK) .and. &
+                   CutValue<=NodeZ_NB(1,1,1+nK,iBLK)  )then
                  nBlockCuts=nBlockCuts+1
                  BlockCut(iBlockALL)=nBlockCuts
               end if
@@ -314,43 +274,28 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
            iBLK = iBlock_A(iBlockALL)
            iPE  = iProc_A(iBlockALL)
            if(iProc==iPE)then
-              if ( CutValue> NodeZ_IIIB(0,0, 0,iBLK) .and. &
-                   CutValue<=NodeZ_IIIB(0,0,nK,iBLK) )then
+              if ( CutValue> NodeZ_NB(1,1,1   ,iBLK) .and. &
+                   CutValue<=NodeZ_NB(1,1,1+nK,iBLK)  )then
                  ! Find cut interpolation factors
                  do k=1,nK
-                    if ( CutValue> NodeZ_IIIB(0,0,k-1,iBLK) .and. &
-                         CutValue<=NodeZ_IIIB(0,0,k  ,iBLK)  )then
-                       cut1=k-1
-                       cut2=k
-                       factor2=(CutValue-NodeZ_IIIB(0,0,k-1,iBLK))/ &
-                            (NodeZ_IIIB(0,0,k,iBLK)-NodeZ_IIIB(0,0,k-1,iBLK))
+                    if ( CutValue> NodeZ_NB(1,1,k  ,iBLK) .and. &
+                         CutValue<=NodeZ_NB(1,1,k+1,iBLK)  )then
+                       cut1=k
+                       cut2=k+1
+                       factor2=(CutValue-NodeZ_NB(1,1,k,iBLK))/ &
+                            (NodeZ_NB(1,1,k+1,iBLK)-NodeZ_NB(1,1,k,iBLK))
                        factor1=1.-factor2
                        EXIT
                     end if
                  end do
                  ! Write point values
-                 do j=0,nJ; do i=0,nI
-                    if (plot_dimensional(ifile)) then
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeX_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
-                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeY_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
-                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeZ_IIIB(i,j,cut2,iBLK))*unitUSER_x, &
-                            (factor1*PlotVarNodes(i,j,cut1,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
-                    else
-                       write(unit_tmp,fmt="(30(E14.6))") &
-                            (factor1*NodeX_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeX_IIIB(i,j,cut2,iBLK)), &
-                            (factor1*NodeY_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeY_IIIB(i,j,cut2,iBLK)), &
-                            (factor1*NodeZ_IIIB(i,j,cut1,iBLK)+ &
-                             factor2*NodeZ_IIIB(i,j,cut2,iBLK)), &
-                            (factor1*PlotVarNodes(i,j,cut1,iBLK,1:nplotvar)+ &
-                             factor2*PlotVarNodes(i,j,cut2,iBLK,1:nplotvar))
-                    end if
+                 call fill_NodeXYZ
+                 do j=1,1+nJ; do i=1,1+nI
+                    write(unit_tmp,fmt="(30(E14.6))") &
+                         (factor1*NodeXYZ_N(i,j,cut1,1:3)+ &
+                          factor2*NodeXYZ_N(i,j,cut2,1:3)), &
+                         (factor1*Plotvarnodes_NBI(i,j,cut1,iBLK,1:nplotvar)+ &
+                          factor2*Plotvarnodes_NBI(i,j,cut2,iBLK,1:nplotvar))
                  end do; end do
                  ! Write point connectivity
                  do j=1,nJ; do i=1,nI
@@ -396,9 +341,9 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
         if ( nCuts>0 )then
            !count up number of cuts
            do i=1,nI; do j=1,nJ; do k=1,nK
-              ic1=i-1; ic2=i 
-              jc1=j-1; jc2=j
-              kc1=k-1; kc2=k
+              ic1=i; ic2=i+1 
+              jc1=j; jc2=j+1
+              kc1=k; kc2=k+1
               call find_cuts(0)
               nBlockCuts=nBlockCuts+nCuts
            end do; end do; end do
@@ -434,20 +379,12 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
         kc1=0; kc2=nK
         call find_cuts(-1)
         if ( nCuts>0 )then
-           if (plot_dimensional(ifile)) then
-              NodeXYZ_III(:,:,:,1)=NodeX_IIIB(:,:,:,iBLK)*unitUSER_x
-              NodeXYZ_III(:,:,:,2)=NodeY_IIIB(:,:,:,iBLK)*unitUSER_x
-              NodeXYZ_III(:,:,:,3)=NodeZ_IIIB(:,:,:,iBLK)*unitUSER_x
-           else
-              NodeXYZ_III(:,:,:,1)=NodeX_IIIB(:,:,:,iBLK)
-              NodeXYZ_III(:,:,:,2)=NodeY_IIIB(:,:,:,iBLK)
-              NodeXYZ_III(:,:,:,3)=NodeZ_IIIB(:,:,:,iBLK)
-           end if
            ! write the cuts
+           call fill_NodeXYZ
            do i=1,nI; do j=1,nJ; do k=1,nK
-              ic1=i-1; ic2=i 
-              jc1=j-1; jc2=j
-              kc1=k-1; kc2=k
+              ic1=i; ic2=i+1 
+              jc1=j; jc2=j+1
+              kc1=k; kc2=k+1
               call find_cuts(1)
            end do; end do; end do
         end if
@@ -457,6 +394,20 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes,unitstr_TEC,&
   end select
 
 contains
+
+  ! Assumes iBLK value is correct
+  subroutine fill_nodeXYZ
+    ! Fill array with position (optionally dimensioned)
+    if (plot_dimensional(ifile)) then
+       NodeXYZ_N(:,:,:,1)=NodeX_NB(:,:,:,iBLK)*unitUSER_x
+       NodeXYZ_N(:,:,:,2)=NodeY_NB(:,:,:,iBLK)*unitUSER_x
+       NodeXYZ_N(:,:,:,3)=NodeZ_NB(:,:,:,iBLK)*unitUSER_x
+    else
+       NodeXYZ_N(:,:,:,1)=NodeX_NB(:,:,:,iBLK)
+       NodeXYZ_N(:,:,:,2)=NodeY_NB(:,:,:,iBLK)
+       NodeXYZ_N(:,:,:,3)=NodeZ_NB(:,:,:,iBLK)
+    end if
+  end subroutine fill_nodeXYZ
 
   ! iopt =-1 check all edges to see if cut
   !      = 0 count cuts only
@@ -473,11 +424,11 @@ contains
        ic=ic1; jc=jc1; kc=kc1
        do jc=jc1,jc2,jc2-jc1; do kc=kc1,kc2,kc2-kc1
           if(iopt>-1 .and. (jc==jc1 .or. kc==kc1) .and. (jc/=0 .and. kc/=0)) CYCLE
-          Yp=NodeY_IIIB(ic,jc,kc,iBLK)
-          Zp=NodeZ_IIIB(ic,jc,kc,iBLK)
+          Yp=NodeY_NB(ic,jc,kc,iBLK)
+          Zp=NodeZ_NB(ic,jc,kc,iBLK)
           Xp=XarbP-( YarbNormal*(Yp-YarbP) + ZarbNormal*(Zp-ZarbP) )/XarbNormal
-          if ( Xp> NodeX_IIIB(ic1,jc,kc,iBLK) .and. &
-               Xp<=NodeX_IIIB(ic2,jc,kc,iBLK) )then
+          if ( Xp> NodeX_NB(ic1,jc,kc,iBLK) .and. &
+               Xp<=NodeX_NB(ic2,jc,kc,iBLK) )then
              if(okdebug)write(*,*)'x-cut:',iopt,Xp,Yp,Zp
              if(iopt==-1)then
                 nCuts=1; RETURN
@@ -488,14 +439,14 @@ contains
              nCuts=nCuts+1
              if (iopt>0) then
                 ! Write point values
-                factor2=(Xp-NodeX_IIIB(ic1,jc,kc,iBLK))/ &
-                     (NodeX_IIIB(ic2,jc,kc,iBLK)-NodeX_IIIB(ic1,jc,kc,iBLK))
+                factor2=(Xp-NodeX_NB(ic1,jc,kc,iBLK))/ &
+                     (NodeX_NB(ic2,jc,kc,iBLK)-NodeX_NB(ic1,jc,kc,iBLK))
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
-                     (factor1*NodeXYZ_III( ic1,jc,kc,:)+ &
-                      factor2*NodeXYZ_III( ic2,jc,kc,:)), &
-                     (factor1*PlotVarNodes(ic1,jc,kc,iBLK,1:nplotvar)+ &
-                      factor2*PlotVarNodes(ic2,jc,kc,iBLK,1:nplotvar))
+                     (factor1*NodeXYZ_N( ic1,jc,kc,:)+ &
+                      factor2*NodeXYZ_N( ic2,jc,kc,:)), &
+                     (factor1*Plotvarnodes_NBI(ic1,jc,kc,iBLK,1:nplotvar)+ &
+                      factor2*Plotvarnodes_NBI(ic2,jc,kc,iBLK,1:nplotvar))
                 if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
              end if
           end if
@@ -506,11 +457,11 @@ contains
        ic=ic1; jc=jc1; kc=kc1
        do ic=ic1,ic2,ic2-ic1; do kc=kc1,kc2,kc2-kc1
           if(iopt>-1 .and. (ic==ic1 .or. kc==kc1) .and. (ic/=0 .and. kc/=0)) CYCLE
-          Xp=NodeX_IIIB(ic,jc,kc,iBLK)
-          Zp=NodeZ_IIIB(ic,jc,kc,iBLK)
+          Xp=NodeX_NB(ic,jc,kc,iBLK)
+          Zp=NodeZ_NB(ic,jc,kc,iBLK)
           Yp=YarbP-( XarbNormal*(Xp-XarbP) + ZarbNormal*(Zp-ZarbP) )/YarbNormal
-          if ( Yp> NodeY_IIIB(ic,jc1,kc,iBLK) .and. &
-               Yp<=NodeY_IIIB(ic,jc2,kc,iBLK) )then
+          if ( Yp> NodeY_NB(ic,jc1,kc,iBLK) .and. &
+               Yp<=NodeY_NB(ic,jc2,kc,iBLK) )then
              if(okdebug)write(*,*)'y-cut:',iopt,Xp,Yp,Zp
              if(iopt==-1)then
                 nCuts=1; RETURN
@@ -521,14 +472,14 @@ contains
              nCuts=nCuts+1
              if (iopt>0) then
                 ! Write point values
-                factor2=(Yp-NodeY_IIIB(ic,jc1,kc,iBLK))/ &
-                     (NodeY_IIIB(ic,jc2,kc,iBLK)-NodeY_IIIB(ic,jc1,kc,iBLK))
+                factor2=(Yp-NodeY_NB(ic,jc1,kc,iBLK))/ &
+                     (NodeY_NB(ic,jc2,kc,iBLK)-NodeY_NB(ic,jc1,kc,iBLK))
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
-                     (factor1*NodeXYZ_III( ic,jc1,kc,:)+ &
-                      factor2*NodeXYZ_III( ic,jc2,kc,:)), &
-                     (factor1*PlotVarNodes(ic,jc1,kc,iBLK,1:nplotvar)+ &
-                      factor2*PlotVarNodes(ic,jc2,kc,iBLK,1:nplotvar))
+                     (factor1*NodeXYZ_N( ic,jc1,kc,:)+ &
+                      factor2*NodeXYZ_N( ic,jc2,kc,:)), &
+                     (factor1*Plotvarnodes_NBI(ic,jc1,kc,iBLK,1:nplotvar)+ &
+                      factor2*Plotvarnodes_NBI(ic,jc2,kc,iBLK,1:nplotvar))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
              end if
           end if
@@ -539,11 +490,11 @@ contains
        ic=ic1; jc=jc1; kc=kc1
        do ic=ic1,ic2,ic2-ic1; do jc=jc1,jc2,jc2-jc1
           if(iopt>-1 .and. (ic==ic1 .or. jc==jc1) .and. (ic/=0 .and. jc/=0)) CYCLE
-          Xp=NodeX_IIIB(ic,jc,kc,iBLK)
-          Yp=NodeY_IIIB(ic,jc,kc,iBLK)
+          Xp=NodeX_NB(ic,jc,kc,iBLK)
+          Yp=NodeY_NB(ic,jc,kc,iBLK)
           Zp=ZarbP-( XarbNormal*(Xp-XarbP) + YarbNormal*(Yp-YarbP) )/ZarbNormal
-          if ( Zp> NodeZ_IIIB(ic,jc,kc1,iBLK) .and. &
-               Zp<=NodeZ_IIIB(ic,jc,kc2,iBLK) )then
+          if ( Zp> NodeZ_NB(ic,jc,kc1,iBLK) .and. &
+               Zp<=NodeZ_NB(ic,jc,kc2,iBLK) )then
              if(okdebug)write(*,*)'z-cut:',iopt,Xp,Yp,Zp
              if(iopt==-1)then
                 nCuts=1; RETURN
@@ -554,14 +505,14 @@ contains
              nCuts=nCuts+1
              if (iopt>0) then
                 ! Write point values
-                factor2=(Zp-NodeZ_IIIB(ic,jc,kc1,iBLK))/ &
-                     (NodeZ_IIIB(ic,jc,kc2,iBLK)-NodeZ_IIIB(ic,jc,kc1,iBLK))
+                factor2=(Zp-NodeZ_NB(ic,jc,kc1,iBLK))/ &
+                     (NodeZ_NB(ic,jc,kc2,iBLK)-NodeZ_NB(ic,jc,kc1,iBLK))
                 factor1=1.-factor2
                 write(unit_tmp,fmt="(30(E14.6))") &
-                     (factor1*NodeXYZ_III( ic,jc,kc1,:)+ &
-                      factor2*NodeXYZ_III( ic,jc,kc2,:)), &
-                     (factor1*PlotVarNodes(ic,jc,kc1,iBLK,1:nplotvar)+ &
-                      factor2*PlotVarNodes(ic,jc,kc2,iBLK,1:nplotvar))
+                     (factor1*NodeXYZ_N( ic,jc,kc1,:)+ &
+                      factor2*NodeXYZ_N( ic,jc,kc2,:)), &
+                     (factor1*Plotvarnodes_NBI(ic,jc,kc1,iBLK,1:nplotvar)+ &
+                      factor2*Plotvarnodes_NBI(ic,jc,kc2,iBLK,1:nplotvar))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
              end if
           end if

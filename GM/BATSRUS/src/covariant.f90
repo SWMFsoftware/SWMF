@@ -100,12 +100,12 @@ end subroutine gen_to_xyz_arr
 !-------------------------------------------------------------!
 subroutine fix_covariant_geometry(iBLK)
   use ModCovariant
-  use ModNodes,ONLY:NodeX_IIIB,NodeY_IIIB,NodeZ_IIIB
+  use ModNodes,ONLY:NodeX_NB,NodeY_NB,NodeZ_NB
   use ModGeometry,ONLY: vInv_CB
   use ModMain,ONLY:x_,y_,z_
   implicit none
   integer,intent(in)::iBLK
-  real,dimension(nDim,1:nI+1,1:nJ+1,1:nK+1)::XyzNode_DIII
+  real,dimension(nDim,1:nI+1,1:nJ+1,1:nK+1)::XyzNode_DN
   !It is easy to see that volume can be represented as follows:
   !\int{dV}=\int{{\bf r}\cdot d{\bf S}/nDim. The following array store
   !the dot products of face area vectors by the raduis vector of
@@ -115,41 +115,43 @@ subroutine fix_covariant_geometry(iBLK)
   real,dimension(1:nI,nJ,nK+1)::RDotFaceAreaK_F
   
   integer::i,j,k
-  !There is a definite inconsistency between the indexes of nodes
-  !and the indexes of faces, edges and so on. To be fixed:
-  !"-1"s  are irrelevant and should be eliminated
+
   do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
-     XyzNode_DIII(x_,i,j,k)=NodeX_IIIB(i-1,j-1,k-1,iBLK)
-     XyzNode_DIII(y_,i,j,k)=NodeY_IIIB(i-1,j-1,k-1,iBLK)
-     XyzNode_DIII(z_,i,j,k)=NodeZ_IIIB(i-1,j-1,k-1,iBLK)
+     XyzNode_DN(x_,i,j,k)=NodeX_NB(i,j,k,iBLK)
+     XyzNode_DN(y_,i,j,k)=NodeY_NB(i,j,k,iBLK)
+     XyzNode_DN(z_,i,j,k)=NodeZ_NB(i,j,k,iBLK)
   end do; end do; end do
   !\
   ! Face area vector and its dot product by the face 
   ! center radius-vector. FACE I
   !/
-  call get_face_area_i(XyzNode_DIII,&
+  call get_face_area_i(XyzNode_DN,&
                        1,nI+1,1,nJ,1,nK,&
                        FaceAreaI_DFB(:,:,:,:,iBLK))
 
   do k=1,nK; do j=1,nJ; do i=1,nI+1
      RDotFaceAreaI_F(i,j,k)=cQuarter*dot_product(&
-          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i,j+1,k)+&
-          XyzNode_DIII(:,i,j+1,k+1)+XyzNode_DIII(:,i,j,k+1),&
+          XyzNode_DN(:,i,j  ,k  )+ &
+          XyzNode_DN(:,i,j+1,k  )+ &
+          XyzNode_DN(:,i,j+1,k+1)+ &
+          XyzNode_DN(:,i,j  ,k+1), &
           FaceAreaI_DFB(:,i,j,k,iBLK))
-  end do; end do; end do 
+  end do; end do; end do
 
   !\
   ! Face area vector and its dot product by the face 
   ! center radius-vector. FACE J
   !/
-  call get_face_area_j(XyzNode_DIII,&
+  call get_face_area_j(XyzNode_DN,&
                        1,nI,1,nJ+1,1,nK,&
                        FaceAreaJ_DFB(:,:,:,:,iBLK))
 
   do k=1,nK; do j=1,nJ+1; do i=1,nI
      RDotFaceAreaJ_F(i,j,k)=cQuarter*dot_product(&
-          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i,j,k+1)+&
-          XyzNode_DIII(:,i+1,j,k+1)+XyzNode_DIII(:,i+1,j,k),&
+          XyzNode_DN(:,i  ,j,k  )+ &
+          XyzNode_DN(:,i  ,j,k+1)+ &
+          XyzNode_DN(:,i+1,j,k+1)+ &
+          XyzNode_DN(:,i+1,j,k  ), &
           FaceAreaJ_DFB(:,i,j,k,iBLK))
   end do; end do; end do 
 
@@ -157,14 +159,16 @@ subroutine fix_covariant_geometry(iBLK)
   ! Face area vector and its dot product by the face 
   ! center radius-vector. FACE K
   !/
-  call get_face_area_k(XyzNode_DIII,&
+  call get_face_area_k(XyzNode_DN,&
                        1,nI,1,nJ,1,nK+1,&
                        FaceAreaK_DFB(:,:,:,:,iBLK))
 
   do k=1,nK+1; do j=1,nJ; do i=1,nI
      RDotFaceAreaK_F(i,j,k)=cQuarter*dot_product(&
-          XyzNode_DIII(:,i,j,k)+XyzNode_DIII(:,i+1,j,k)+&
-          XyzNode_DIII(:,i+1,j+1,k)+XyzNode_DIII(:,i,j+1,k),&
+          XyzNode_DN(:,i  ,j  ,k)+ &
+          XyzNode_DN(:,i+1,j  ,k)+ &
+          XyzNode_DN(:,i+1,j+1,k)+ &
+          XyzNode_DN(:,i  ,j+1,k), &
           FaceAreaK_DFB(:,i,j,k,iBLK))
   end do; end do; end do 
   

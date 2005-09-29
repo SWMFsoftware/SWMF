@@ -15,15 +15,15 @@ Module ModNodes
   ! Block node-centered MHD numberings
   !/
   integer :: nNodeALL
-  integer, dimension(0:nI,0:nJ,0:nK,nBLK) :: NodeNumberLocal_IIIB
-  integer, dimension(0:nI,0:nJ,0:nK,nBLK) :: NodeNumberGlobal_IIIB
-  logical, dimension(0:nI,0:nJ,0:nK,nBLK) :: NodeUniqueGlobal_IIIB
+  integer, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: NodeNumberLocal_NB
+  integer, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: NodeNumberGlobal_NB
+  logical, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: NodeUniqueGlobal_NB
 
   !\
   ! Block node-centered MHD solution and location
   !/
-  real, dimension(0:nI,0:nJ,0:nK,nBLK) :: &
-       NodeX_IIIB,NodeY_IIIB,NodeZ_IIIB, NodeValue_IIIB
+  real, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: &
+       NodeX_NB,NodeY_NB,NodeZ_NB, NodeValue_NB
 
 contains
   !============================================================================

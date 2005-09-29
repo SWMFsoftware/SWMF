@@ -30,7 +30,7 @@ subroutine write_plot_common(ifile)
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
-  real, allocatable :: PlotVarNodes(:,:,:,:,:)
+  real, allocatable :: Plotvarnodes_NBI(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)
   integer :: nplotvar
@@ -272,13 +272,13 @@ subroutine write_plot_common(ifile)
   ! Write files for new tecplot format
   if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
      do i=1,nplotvar
-        NodeValue_IIIB=plotvarnodes(:,:,:,:,i)
-        call pass_and_average_nodes(.true.,NodeValue_IIIB)
-        plotvarnodes(:,:,:,:,i)=NodeValue_IIIB
+        NodeValue_NB=plotvarnodes_NBI(:,:,:,:,i)
+        call pass_and_average_nodes(.true.,NodeValue_NB)
+        plotvarnodes_NBI(:,:,:,:,i)=NodeValue_NB
      end do
-     call write_plot_tec(ifile,nplotvar,PlotVarNodes,unitstr_TEC, &
+     call write_plot_tec(ifile,nplotvar,Plotvarnodes_NBI,unitstr_TEC, &
           xmin,xmax,ymin,ymax,zmin,zmax)
-     deallocate(PlotVarNodes)
+     deallocate(Plotvarnodes_NBI)
   end if
 
   close(unit_tmp)
@@ -445,21 +445,21 @@ Contains
 
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
-    integer, dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeCount
-    real,    dimension(-1:nI+1, -1:nJ+1, -1:nK+1, nplotvarmax) :: nodeV
+    integer, dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeCount
+    real,    dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeV
     real :: rr
 
-    if(.not.allocated(PlotVarNodes)) allocate(&
-         PlotVarNodes(0:nI,0:nJ,0:nK,nBLK,nplotvarmax),stat=iError)
-    call alloc_check(iError,'write_plot_common:PlotVarNodes')
+    if(.not.allocated(Plotvarnodes_NBI)) allocate(&
+         Plotvarnodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax),stat=iError)
+    call alloc_check(iError,'write_plot_common:Plotvarnodes_NBI')
 
     ! Initialize values
-    nodeCount = 0; nodeV(:,:,:,:) = 0.00
+    nodeCount = 0; nodeV = 0.00
 
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
        do iVar=1,nplotvar
           if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
-             do kk=-1,0; do jj=-1,0; do ii=-1,0
+             do kk=0,1; do jj=0,1; do ii=0,1
                 nodeCount(i+ii,j+jj,k+kk,iVar) = nodeCount(i+ii,j+jj,k+kk,iVar) +1
                 nodeV(i+ii,j+jj,k+kk,iVar) = nodeV(i+ii,j+jj,k+kk,iVar)+ &
                      plotvar(i,j,k,iVar)
@@ -468,14 +468,14 @@ Contains
        end do
     end do; end do; end do
 
-    do k=0,nK; do j=0,nJ; do i=0,nI  ! Node loop
+    do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1  ! Node loop
        rr=sqrt( &
-            NodeX_IIIB(i,j,k,iBLK)**2+ &
-            NodeY_IIIB(i,j,k,iBLK)**2+ &
-            NodeZ_IIIB(i,j,k,iBLK)**2)
+            NodeX_NB(i,j,k,iBLK)**2+ &
+            NodeY_NB(i,j,k,iBLK)**2+ &
+            NodeZ_NB(i,j,k,iBLK)**2)
        do iVar=1,nplotvar
           if (nodeCount(i,j,k,iVar) > 0) then
-             PlotVarNodes(i,j,k,iBLK,iVar) = &
+             Plotvarnodes_NBI(i,j,k,iBLK,iVar) = &
                   nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
              ! This will zero out values otherwise true with plotvar_useBody
              ! The intent of plotvar_useBody is to fill nodes inside of the body
@@ -484,11 +484,11 @@ Contains
              !   body and out.  Setting the values to zero inside of 0.51 fixes it.
              if(plotvar_useBody(iVar))then
                 if(rr < 0.51*Rbody .and. rr < 0.51) then
-                   PlotVarNodes(i,j,k,iBLK,iVar) = 0.00
+                   Plotvarnodes_NBI(i,j,k,iBLK,iVar) = 0.00
                 end if
              end if
           else
-             PlotVarNodes(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
+             Plotvarnodes_NBI(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
           end if
        end do
     end do; end do; end do

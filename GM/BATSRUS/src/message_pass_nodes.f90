@@ -18,8 +18,8 @@ module ModMPNodes
   integer, dimension(:,:), allocatable :: &
        VSendI, VRecvI, VSendIlocal, VRecvIlocal
 
-  integer, dimension(0:nI,0:nJ,0:nK,nBLK) :: NodeCount
-  real,    dimension(0:nI,0:nJ,0:nK,nBLK,8) :: V
+  integer, dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: NodeCount
+  real,    dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK,8) :: V
 
   real,    dimension(:),   allocatable :: VSend, VRecv
 
@@ -560,40 +560,40 @@ contains
        !i
        select case(dLOOP(idir,1))
        case(1)
-          i1S=nI   ; i1R= 0
-          i2S=nI   ; i2R= 0
+          i1S=1+nI ; i1R=1
+          i2S=1+nI ; i2R=1
        case(-1)
-          i1S= 0   ; i1R=nI
-          i2S= 0   ; i2R=nI
+          i1S=1    ; i1R=1+nI
+          i2S=1    ; i2R=1+nI
        case(0)
-          i1S= 0   ; i1R= 0
-          i2S=nI   ; i2R=nI
+          i1S=1    ; i1R=1
+          i2S=1+nI ; i2R=1+nI
        end select
 
        !j
        select case(dLOOP(idir,2))
        case(1)
-          j1S=nJ   ; j1R= 0
-          j2S=nJ   ; j2R= 0
+          j1S=1+nJ ; j1R=1
+          j2S=1+nJ ; j2R=1
        case(-1)
-          j1S= 0   ; j1R=nJ
-          j2S= 0   ; j2R=nJ
+          j1S=1    ; j1R=1+nJ
+          j2S=1    ; j2R=1+nJ
        case(0)
-          j1S= 0   ; j1R= 0
-          j2S=nJ   ; j2R=nJ
+          j1S=1    ; j1R=1
+          j2S=1+nJ ; j2R=1+nJ
        end select
 
        !k
        select case(dLOOP(idir,3))
        case(1)
-          k1S=nK   ; k1R= 0
-          k2S=nK   ; k2R= 0
+          k1S=1+nK ; k1R=1
+          k2S=1+nK ; k2R=1
        case(-1)
-          k1S= 0   ; k1R=nK
-          k2S= 0   ; k2R=nK
+          k1S=1    ; k1R=1+nK
+          k2S=1    ; k2R=1+nK
        case(0)
-          k1S= 0   ; k1R= 0
-          k2S=nK   ; k2R=nK
+          k1S=1    ; k1R=1
+          k2S=1+nK ; k2R=1+nK
        end select
 
        RETURN
@@ -605,93 +605,93 @@ contains
        !i
        select case(dLOOP(idir,1))
        case(1)
-          i1S=nI ; i1R= 0
-          i2S=nI ; i2R= 0
+          i1S=1+nI ; i1R=1
+          i2S=1+nI ; i2R=1
        case(-1)
-          i1S= 0 ; i1R=nI
-          i2S= 0 ; i2R=nI
+          i1S=1    ; i1R=1+nI
+          i2S=1    ; i2R=1+nI
        case(0)
           select case(sSubF)
           case(1)
-             i1S= 0        ; i1R= 0
-             i2S=nI/2      ; i2R=nI
+             i1S=1      ; i1R=1
+             i2S=1+nI/2 ; i2R=1+nI
           case(2)
              select case(idir)
              case(3,4)
-                i1S= 0        ; i1R= 0
-                i2S=nI/2      ; i2R=nI
+                i1S=1      ; i1R=1
+                i2S=1+nI/2 ; i2R=1+nI
              case default
-                i1S=nI/2      ; i1R= 0
-                i2S=nI        ; i2R=nI
+                i1S=1+nI/2 ; i1R=1
+                i2S=1+nI   ; i2R=1+nI
              end select
           case(3)
              select case(idir)
              case(3,4)
-                i1S=nI/2      ; i1R= 0
-                i2S=nI        ; i2R=nI
+                i1S=1+nI/2 ; i1R=1
+                i2S=1+nI   ; i2R=1+nI
              case default
-                i1S= 0        ; i1R= 0
-                i2S=nI/2      ; i2R=nI
+                i1S=1      ; i1R=1
+                i2S=1+nI/2 ; i2R=1+nI
              end select
           case(4)
-             i1S=nI/2      ; i1R= 0
-             i2S=nI        ; i2R=nI
+             i1S=1+nI/2    ; i1R=1
+             i2S=1+nI      ; i2R=1+nI
           end select
        end select
 
        !j
        select case(dLOOP(idir,2))
        case(1)
-          j1S=nJ ; j1R= 0
-          j2S=nJ ; j2R= 0
+          j1S=1+nJ ; j1R=1
+          j2S=1+nJ ; j2R=1
        case(-1)
-          j1S= 0 ; j1R=nJ
-          j2S= 0 ; j2R=nJ
+          j1S=1    ; j1R=1+nJ
+          j2S=1    ; j2R=1+nJ
        case(0)
           select case(sSubF)
           case(1)
-             j1S= 0        ; j1R= 0
-             j2S=nJ/2      ; j2R=nJ
+             j1S=1      ; j1R=1
+             j2S=1+nJ/2 ; j2R=1+nJ
           case(2)
              select case(idir)
              case(1,2,3,4,5,6)
-                j1S= 0        ; j1R= 0
-                j2S=nJ/2      ; j2R=nJ
+                j1S=1      ; j1R=1
+                j2S=1+nJ/2 ; j2R=1+nJ
              case default
-                j1S=nJ/2      ; j1R= 0
-                j2S=nJ        ; j2R=nJ
+                j1S=1+nJ/2 ; j1R=1
+                j2S=1+nJ   ; j2R=1+nJ
              end select
           case(3)
-             j1S=nJ/2      ; j1R= 0
-             j2S=nJ        ; j2R=nJ
+             j1S=1+nJ/2    ; j1R=1
+             j2S=1+nJ      ; j2R=1+nJ
           case(4)
-             j1S=nJ/2      ; j1R= 0
-             j2S=nJ        ; j2R=nJ
+             j1S=1+nJ/2    ; j1R=1
+             j2S=1+nJ      ; j2R=1+nJ
           end select
        end select
 
        !k
        select case(dLOOP(idir,3))
        case(1)
-          k1S=nK ; k1R= 0
-          k2S=nK ; k2R= 0
+          k1S=1+nK ; k1R=1
+          k2S=1+nK ; k2R=1
        case(-1)
-          k1S= 0 ; k1R=nK
-          k2S= 0 ; k2R=nK
+          k1S=1    ; k1R=1+nK
+          k2S=1    ; k2R=1+nK
        case(0)
           select case(sSubF)
           case(1)
-             k1S= 0        ; k1R= 0
-             k2S=nK/2      ; k2R=nK
+             k1S=1      ; k1R=1
+             k2S=1+nK/2 ; k2R=1+nK
           case(2)
-             k1S=nK/2      ; k1R= 0
-             k2S=nK        ; k2R=nK
+             k1S=1+nK/2 ; k1R=1
+             k2S=1+nK   ; k2R=1+nK
           case(3)
-             k1S= 0        ; k1R= 0
-             k2S=nK/2      ; k2R=nK
+             k1S=1      ; k1R=1
+             k2S=1+nK/2 ; k2R=1+nK
           case(4)
-             k1S=nK/2      ; k1R= 0
-             k2S=nK        ; k2R=nK
+             k1S=1+nK/2 ; k1R=1
+             k2S=1+nK   ; k2R=1+nK
           end select
        end select
 
@@ -707,93 +707,93 @@ contains
        !i
        select case(dLOOP(idir,1))
        case(1)
-          i1S=nI   ; i1R= 0
-          i2S=nI   ; i2R= 0
+          i1S=1+nI ; i1R=1
+          i2S=1+nI ; i2R=1
        case(-1)
-          i1S= 0   ; i1R=nI
-          i2S= 0   ; i2R=nI
+          i1S=1    ; i1R=1+nI
+          i2S=1    ; i2R=1+nI
        case(0)
           select case(rSubF)
           case(1)
-             i1S= 0 ; i1R= 0
-             i2S=nI ; i2R=nI/2
+             i1S=1    ; i1R=1
+             i2S=1+nI ; i2R=1+nI/2
           case(2)
              select case(idir)
              case(3,4)
-                i1S= 0 ; i1R= 0
-                i2S=nI ; i2R=nI/2
+                i1S=1    ; i1R=1
+                i2S=1+nI ; i2R=1+nI/2
              case default
-                i1S= 0 ; i1R=nI/2
-                i2S=nI ; i2R=nI
+                i1S=1    ; i1R=1+nI/2
+                i2S=1+nI ; i2R=1+nI
              end select
           case(3)
              select case(idir)
              case(3,4)
-                i1S= 0 ; i1R=nI/2
-                i2S=nI ; i2R=nI
+                i1S=1    ; i1R=1+nI/2
+                i2S=1+nI ; i2R=1+nI
              case default
-                i1S= 0 ; i1R= 0
-                i2S=nI ; i2R=nI/2
+                i1S=1    ; i1R=1
+                i2S=1+nI ; i2R=1+nI/2
              end select
           case(4)
-             i1S= 0 ; i1R=nI/2
-             i2S=nI ; i2R=nI
+             i1S=1    ; i1R=1+nI/2
+             i2S=1+nI ; i2R=1+nI
           end select
        end select
 
        !j
        select case(dLOOP(idir,2))
        case(1)
-          j1S=nJ   ; j1R= 0
-          j2S=nJ   ; j2R= 0
+          j1S=1+nJ ; j1R=1
+          j2S=1+nJ ; j2R=1
        case(-1)
-          j1S= 0   ; j1R=nJ
-          j2S= 0   ; j2R=nJ
+          j1S=1    ; j1R=1+nJ
+          j2S=1    ; j2R=1+nJ
        case(0)
           select case(rSubF)
           case(1)
-             j1S= 0 ; j1R= 0
-             j2S=nJ ; j2R=nJ/2
+             j1S=1    ; j1R=1
+             j2S=1+nJ ; j2R=1+nJ/2
           case(2)
              select case(idir)
              case(1,2,3,4,5,6)
-                j1S= 0 ; j1R= 0
-                j2S=nJ ; j2R=nJ/2
+                j1S=1    ; j1R=1
+                j2S=1+nJ ; j2R=1+nJ/2
              case default
-                j1S= 0 ; j1R=nJ/2
-                j2S=nJ ; j2R=nJ
+                j1S=1    ; j1R=1+nJ/2
+                j2S=1+nJ ; j2R=1+nJ
              end select
           case(3)
-             j1S= 0 ; j1R=nJ/2
-             j2S=nJ ; j2R=nJ
+             j1S=1    ; j1R=1+nJ/2
+             j2S=1+nJ ; j2R=1+nJ
           case(4)
-             j1S= 0 ; j1R=nJ/2
-             j2S=nJ ; j2R=nJ
+             j1S=1    ; j1R=1+nJ/2
+             j2S=1+nJ ; j2R=1+nJ
           end select
        end select
 
        !k
        select case(dLOOP(idir,3))
        case(1)
-          k1S=nK   ; k1R= 0
-          k2S=nK   ; k2R= 0
+          k1S=1+nK ; k1R=1
+          k2S=1+nK ; k2R=1
        case(-1)
-          k1S= 0   ; k1R=nK
-          k2S= 0   ; k2R=nK
+          k1S=1    ; k1R=1+nK
+          k2S=1    ; k2R=1+nK
        case(0)
           select case(rSubF)
           case(1)
-             k1S= 0 ; k1R= 0
-             k2S=nK ; k2R=nK/2
+             k1S=1    ; k1R=1
+             k2S=1+nK ; k2R=1+nK/2
           case(2)
-             k1S= 0 ; k1R=nK/2
-             k2S=nK ; k2R=nK
+             k1S=1    ; k1R=1+nK/2
+             k2S=1+nK ; k2R=1+nK
           case(3)
-             k1S= 0 ; k1R= 0
-             k2S=nK ; k2R=nK/2
+             k1S=1    ; k1R=1
+             k2S=1+nK ; k2R=1+nK/2
           case(4)
-             k1S= 0 ; k1R=nK/2
-             k2S=nK ; k2R=nK
+             k1S=1    ; k1R=1+nK/2
+             k2S=1+nK ; k2R=1+nK
           end select
        end select
 
@@ -858,14 +858,14 @@ subroutine testmessage_pass_nodes
   write(*,*)' '
   write(*,*)'Testing message_pass_nodes, PE=',iProc,'  Starting tests ...'
 
-  allocate( V0(0:nI,0:nJ,0:nK,nBLK), stat=iError ); call alloc_check(iError,"V0")
-  allocate( V1(0:nI,0:nJ,0:nK,nBLK), stat=iError ); call alloc_check(iError,"V1")
+  allocate( V0(1:nI+1,1:nJ+1,1:nK+1,nBLK), stat=iError ); call alloc_check(iError,"V0")
+  allocate( V1(1:nI+1,1:nJ+1,1:nK+1,nBLK), stat=iError ); call alloc_check(iError,"V1")
 
   V0=-999999.
   V1=V0
   do iBLK=1,nBLK
      if(unusedBLK(iBLK)) CYCLE
-     V0= NodeX_IIIB + f1*NodeY_IIIB + f2*NodeZ_IIIB
+     V0= NodeX_NB + f1*NodeY_NB + f2*NodeZ_NB
   end do
   V1=V0
 
@@ -890,11 +890,11 @@ subroutine testmessage_pass_nodes
      do iBLK=1,nBLK
         if(unusedBLK(iBLK)) CYCLE
         n=0
-        do i=0,nI; do j=0,nJ; do k=0,nK
+        do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
            if(abs(V0(i,j,k,iBLK)-V1(i,j,k,iBLK))>.01) n=n+1
         end do; end do; end do
         if(n/=0) write(*,*)' PE=',iProc,' BLK=',iBLK,' has bad values ...'
-        do i=0,nI; do j=0,nJ; do k=0,nK
+        do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
            if(abs(V0(i,j,k,iBLK)-V1(i,j,k,iBLK))>.01)then
               write(*,*)' PE=',iProc,' BLK=',iBLK,' IJK=',i,j,k,&
                    ' Diff=',abs(V0(i,j,k,iBLK)-V1(i,j,k,iBLK)), &
@@ -912,9 +912,9 @@ subroutine testmessage_pass_nodes
   write(*,*)'Testing message_pass_nodes, PE=',iProc,'  All tests passed.'
   write(*,*)' '
 
-  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
-  call MPI_Finalize(iError)
-  stop
+!!$  call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+!!$  call MPI_Finalize(iError)
+!!$  stop
 
 end subroutine testmessage_pass_nodes
 !^CFG END DEBUGGING
@@ -934,7 +934,7 @@ subroutine pass_and_average_nodes(DoFixHangingNodes,Vin)
 
   !Subroutine arguements
   logical, intent(in) :: DoFixHangingNodes
-  real, intent(inout), dimension(0:nI,0:nJ,0:nK,nBLK) :: Vin
+  real, intent(inout), dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: Vin
 
   !Local variables
   integer :: i,j,k, iBLK,iPE
@@ -949,7 +949,7 @@ subroutine pass_and_average_nodes(DoFixHangingNodes,Vin)
   do iBLK=1,nBLK
      if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
      if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
-     do i=0,nI; do j=0,nJ; do k=0,nK
+     do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
         if(NodeCount(i,j,k,iBLK)>1) &
              Vin(i,j,k,iBLK) = sum(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK)))/real(NodeCount(i,j,k,iBLK))
      end do; end do; end do
@@ -975,7 +975,7 @@ subroutine pass_and_max_nodes(DoFixHangingNodes,Vin)
 
   !Subroutine arguements
   logical, intent(in) :: DoFixHangingNodes
-  real, intent(inout), dimension(0:nI,0:nJ,0:nK,nBLK) :: Vin
+  real, intent(inout), dimension(1:nI+1,1:nJ+1,1:nK+1,nBLK) :: Vin
 
   !Local variables
   integer :: i,j,k, iBLK
@@ -990,7 +990,7 @@ subroutine pass_and_max_nodes(DoFixHangingNodes,Vin)
   do iBLK=1,nBLK
      if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
      if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
-     do i=0,nI; do j=0,nJ; do k=0,nK
+     do i=1,nI+1; do j=1,nJ+1; do k=1,nK+1
         if(NodeCount(i,j,k,iBLK)>1) &
              Vin(i,j,k,iBLK) = maxval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK)))
      end do; end do; end do
@@ -1014,7 +1014,7 @@ subroutine set_block_hanging_nodes(Vin)
   implicit none
 
   !Subroutine arguements
-  real, intent(inout), dimension(0:nI,0:nJ,0:nK,nBLK) :: Vin
+  real, intent(inout), dimension(1:1+nI,1:1+nJ,1:1+nK,nBLK) :: Vin
 
   !Local variables
   integer :: i,j,k, iBLK,iPE
@@ -1049,29 +1049,29 @@ subroutine set_block_hanging_nodes(Vin)
 
            select case(dLOOP(idir,1))
            case( 1)
-              i1=nI; i2=nI;   iOffset=0
+              i1=1+nI; i2=1+nI; iOffset=0
            case(-1)
-              i1=0;  i2=0;    iOffset=0
+              i1=1;    i2=1;    iOffset=0
            case( 0)
-              i1=1;  i2=nI-1; iOffset=1
+              i1=2;    i2=nI;   iOffset=1
            end select
 
            select case(dLOOP(idir,2))
            case( 1)
-              j1=nJ; j2=nJ;   jOffset=0
+              j1=1+nJ; j2=1+nJ; jOffset=0
            case(-1)
-              j1=0;  j2=0;    jOffset=0
+              j1=1;    j2=1;    jOffset=0
            case( 0)
-              j1=1;  j2=nJ-1; jOffset=1
+              j1=2;    j2=nJ;   jOffset=1
            end select
 
            select case(dLOOP(idir,3))
            case( 1)
-              k1=nK; k2=nK;   kOffset=0
+              k1=1+nK; k2=1+nK; kOffset=0
            case(-1)
-              k1=0;  k2=0;    kOffset=0
+              k1=1;    k2=1;    kOffset=0
            case( 0)
-              k1=1;  k2=nK-1; kOffset=1
+              k1=2;    k2=nK;   kOffset=1
            end select
 
            do i=i1,i2,2; do j=j1,j2,2; do k=k1,k2,2
@@ -1120,7 +1120,7 @@ subroutine assign_node_numbers
   end if
 
   ! Initialize all node numbers to zero
-  NodeNumberLocal_IIIB=0
+  NodeNumberLocal_NB=0
 
   ! Number of nodes on each block (maximum)
   nNodeALL=nBlockALL*NodesPerBlock
@@ -1135,29 +1135,29 @@ subroutine assign_node_numbers
   ! Loop to assign local and global node numbers
   TREE1: do iBlk  = 1, nBlock
      if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
-     do k=0,nK; do j=0,nJ; do i=0,nI
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
         iNode = iNode+1
-        NodeNumberLocal_IIIB(i,j,k,iBlk)= iNode
+        NodeNumberLocal_NB(i,j,k,iBlk)= iNode
      end do; end do; end do
   end do TREE1
-  NodeNumberGlobal_IIIB = NodeNumberLocal_IIIB
+  NodeNumberGlobal_NB = NodeNumberLocal_NB
 
   ! Set logical array
-  NodeUniqueGlobal_IIIB = NodeNumberGlobal_IIIB>0
+  NodeUniqueGlobal_NB = NodeNumberGlobal_NB>0
 
   ! Assign value to internal passing variable and do message pass
   !  NOTE: convert integer to real for message pass first
-  V(:,:,:,:,1) = real(NodeNumberGlobal_IIIB(:,:,:,:))
+  V(:,:,:,:,1) = real(NodeNumberGlobal_NB(:,:,:,:))
   call message_pass_nodes
 
-  ! Put minimum value back into NodeNumberGlobal_IIIB
+  ! Put minimum value back into NodeNumberGlobal_NB
   !  NOTE: convert message passed real back to integer
   do iBLK=1,nBLK
      if (.not.associated(global_block_ptrs(iBLK, iProc+1) % ptr)) CYCLE
      if (.not.global_block_ptrs(iBLK, iProc+1) % ptr % used) CYCLE
-     do i=0,nI; do j=0,nJ; do k=0,nK
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
         if(NodeCount(i,j,k,iBLK)>1) &
-             NodeNumberGlobal_IIIB(i,j,k,iBLK) = &
+             NodeNumberGlobal_NB(i,j,k,iBLK) = &
              nint(minval(V(i,j,k,iBLK,1:NodeCount(i,j,k,iBLK))))
      end do; end do; end do
   end do
@@ -1173,13 +1173,13 @@ subroutine assign_node_numbers
   nOffset=0
   TREE2: do iBLK  = 1, nBlock
      if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
-     do k=0,nK; do j=0,nJ; do i=0,nI
-        if(NodeNumberLocal_IIIB(i,j,k,iBLK) &
-             > NodeNumberGlobal_IIIB(i,j,k,iBLK))then
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        if(NodeNumberLocal_NB(i,j,k,iBLK) &
+             > NodeNumberGlobal_NB(i,j,k,iBLK))then
            nOffset = nOffset+1
-           NodeUniqueGlobal_IIIB(i,j,k,iBLK) = .false.
+           NodeUniqueGlobal_NB(i,j,k,iBLK) = .false.
         end if
-        NodeOffset(NodeNumberLocal_IIIB(i,j,k,iBLK)) = nOffset
+        NodeOffset(NodeNumberLocal_NB(i,j,k,iBLK)) = nOffset
      end do; end do; end do
   end do TREE2
 
@@ -1195,8 +1195,8 @@ subroutine assign_node_numbers
   ! Increase the offset on this processor by nOffsetPrevious
   do iBLK  = 1, nBlock
      if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
-     do k=0,nK; do j=0,nJ; do i=0,nI
-        iNode = NodeNumberLocal_IIIB(i,j,k,iBLK)
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        iNode = NodeNumberLocal_NB(i,j,k,iBLK)
         NodeOffset(iNode) = NodeOffset(iNode) + nOffsetPrevious
      end do; end do; end do
   end do
@@ -1207,21 +1207,21 @@ subroutine assign_node_numbers
   NodeOffset = NodeOffsetMax
   nNodeALL   = nNodeALL - sum(nOffset_P)
 
-  ! Loop to fix NodeNumberGlobal_IIIB for offset
+  ! Loop to fix NodeNumberGlobal_NB for offset
   TREE3: do iBlk  = 1, nBlock
      if(iTypeAdvance_B(iBLK) == SkippedBlock_) CYCLE
-     do k=0,nK; do j=0,nJ; do i=0,nI
-        NodeNumberGlobal_IIIB(i,j,k,iBLK) = NodeNumberGlobal_IIIB(i,j,k,iBLK) &
-             - NodeOffset(NodeNumberGlobal_IIIB(i,j,k,iBLK))
-        if(NodeNumberGlobal_IIIB(i,j,k,iBLK)>nNodeALL &
-             .or. NodeNumberGlobal_IIIB(i,j,k,iBLK)<1)then
+     do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+        NodeNumberGlobal_NB(i,j,k,iBLK) = NodeNumberGlobal_NB(i,j,k,iBLK) &
+             - NodeOffset(NodeNumberGlobal_NB(i,j,k,iBLK))
+        if(NodeNumberGlobal_NB(i,j,k,iBLK)>nNodeALL &
+             .or. NodeNumberGlobal_NB(i,j,k,iBLK)<1)then
            ! Error in numbering, report values and stop.
            write(*,*)'ERROR: Global node numbering problem.', &
                 ' PE=',iProc,' BLK=',iBLK,' ijk=',i,j,k
-           write(*,*)'  NodeNumberGlobal_IIIB=',&
-                NodeNumberGlobal_IIIB(i,j,k,iBLK)
+           write(*,*)'  NodeNumberGlobal_NB=',&
+                NodeNumberGlobal_NB(i,j,k,iBLK)
            write(*,*)'  NodeOffset           =',&
-                NodeOffset(NodeNumberGlobal_IIIB(i,j,k,iBLK))
+                NodeOffset(NodeNumberGlobal_NB(i,j,k,iBLK))
            write(*,*)'  nBlockALL=',nBlockALL,&
                 ' NodesPerBlock=',NodesPerBlock,&
                 ' unreduced total=',nBlockALL*NodesPerBlock,&
@@ -1240,5 +1240,8 @@ subroutine assign_node_numbers
           ' nBlockALL=',nBlockALL,' NodesPerBlock=',NodesPerBlock, &
           ' unreduced total=',nBlockALL*NodesPerBlock,' nNodeALL=',nNodeALL
   end if
+
+!!$  ! Test
+!!$  call testmessage_pass_nodes
 
 end subroutine assign_node_numbers

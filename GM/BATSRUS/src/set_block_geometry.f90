@@ -140,10 +140,10 @@ subroutine fix_block_geometry(iBLK)
 
      !Calculate the node coordinates
                                              !^CFG IF NOT COVARIANT BEGIN
-     do i=0,nI; do j=0,nJ; do k=0,nK
-        NodeX_IIIB(i,j,k,iBLK) = cEighth*sum(x_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-        NodeY_IIIB(i,j,k,iBLK) = cEighth*sum(y_BLK(i:i+1,j:j+1,k:k+1,iBLK))
-        NodeZ_IIIB(i,j,k,iBLK) = cEighth*sum(z_BLK(i:i+1,j:j+1,k:k+1,iBLK))
+     do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
+        NodeX_NB(i,j,k,iBLK) = cEighth*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        NodeY_NB(i,j,k,iBLK) = cEighth*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
+        NodeZ_NB(i,j,k,iBLK) = cEighth*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
      end do; end do; end do                  !^CFG END COVARIANT
   else                                       !^CFG IF COVARIANT BEGIN
      !Cell center coordinates are calculated directly as the
@@ -173,10 +173,10 @@ subroutine fix_block_geometry(iBLK)
         
         call gen_to_xyz_arr(XyzOfNode111_D,&
                             dx_BLK(iBLK),dy_BLK(iBLK),dz_BLK(iBLK),&
-                            0,nI,0,nJ,0,nK,&
-                            NodeX_IIIB(:,:,:,iBLK),&
-                            NodeY_IIIB(:,:,:,iBLK),&
-                            NodeZ_IIIB(:,:,:,iBLK))
+                            1,1+nI,1,1+nJ,1,1+nK,&
+                            NodeX_NB(:,:,:,iBLK),&
+                            NodeY_NB(:,:,:,iBLK),&
+                            NodeZ_NB(:,:,:,iBLK))
 
         call fix_covariant_geometry(iBLK)
         !
@@ -316,18 +316,18 @@ contains
        A1_DD(:,2:3)=A_DD(:,2:3)
        A1_DD(:,1)=B_D
 
-       NodeX_IIIB(i,j,k,iBLK) = det(A1_DD)*DetInv
+       NodeX_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
 
        A1_DD(:,1)=A_DD(:,1)
        A1_DD(:,3)=A_DD(:,3)
        A1_DD(:,2)=B_D
 
-       NodeY_IIIB(i,j,k,iBLK) = det(A1_DD)*DetInv
+       NodeY_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
        
        A1_DD(:,1:2)=A_DD(:,1:2)
        A1_DD(:,3)=B_D
 
-       NodeZ_IIIB(i,j,k,iBLK) = det(A1_DD)*DetInv
+       NodeZ_NB(i+1,j+1,k+1,iBLK) = det(A1_DD)*DetInv
     end do; end do; end do
     
   end subroutine calc_node_coords_covar
