@@ -27,14 +27,14 @@ module ModUserEmpty
 contains
 
   !=====================================================================
-  subroutine set_extra_boundary_cells(iBLK)
+  subroutine user_set_boundary_cells(iBLK)
 
     integer,intent(in)::iBLK
 
-    character (len=*), parameter :: Name='set_extra_boundary_cells'
+    character (len=*), parameter :: Name='user_set_boundary_cells'
     !-------------------------------------------------------------------
     call stop_user(Name)
-  end subroutine set_extra_boundary_cells
+  end subroutine user_set_boundary_cells
 
   !=====================================================================
   subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
@@ -159,15 +159,15 @@ contains
   end subroutine user_heat_source
 
   !=====================================================================
-  subroutine get_user_b0(xx,yy,zz,B0)
+  subroutine user_get_b0(xx,yy,zz,B0)
 
     real, intent(in):: xx,yy,zz
     real, intent(out), dimension(3):: B0
 
-    character (len=*), parameter :: Name='get_user_b0'
+    character (len=*), parameter :: Name='user_get_b0'
     !-------------------------------------------------------------------
     call stop_user(Name)
-  end subroutine get_user_b0
+  end subroutine user_get_b0
 
   !=====================================================================
   subroutine user_update_states(iStage,iBlock)

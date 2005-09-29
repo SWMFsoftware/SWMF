@@ -160,7 +160,7 @@ subroutine user_heat_source
 ! Define your own heating function here
 end subroutine user_heat_source
 
-subroutine set_extra_boundary_cells(iBLK)
+subroutine user_set_boundary_cells(iBLK)
   use ModGeometry	
   implicit none
   integer,intent(in)::iBLK
@@ -168,7 +168,7 @@ subroutine set_extra_boundary_cells(iBLK)
 !  a boundary condition for iBLK block
 !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
 !  IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<100.
-end subroutine set_extra_boundary_cells
+end subroutine user_set_boundary_cells
 
 !========================================================================
 !========================================================================
@@ -651,11 +651,11 @@ subroutine user_initial_perturbation
 
 end subroutine user_initial_perturbation
 !==================================================
-subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
+subroutine user_get_b0(xx,yy,zz,B0_PFSSM)
   implicit none
   real, intent(in):: xx,yy,zz
   real, intent(out), dimension(3):: B0_PFSSM
-end subroutine get_user_b0
+end subroutine user_get_b0
 !==================================================
 subroutine user_set_physics_constants
   use ModPhysics,ONLY:FaceState_VI,CellState_VI

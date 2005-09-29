@@ -13,7 +13,7 @@ module ModUser
        user_read_inputs,                &
        user_set_ics,                    &
        user_initial_perturbation,       &
-       set_extra_boundary_cells,        &
+       user_set_boundary_cells,        &
        user_face_bcs,                   &
        user_set_outerbcs,               &
        user_specify_initial_refinement, &
@@ -22,7 +22,7 @@ module ModUser
        user_get_log_var,                &
        user_calc_sources,               &
        user_heat_source,                &
-       get_user_b0,                     &
+       user_get_b0,                     &
        user_update_states
 
   include 'user_module.h' !list of public methods

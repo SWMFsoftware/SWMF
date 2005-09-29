@@ -1,3 +1,4 @@
+  !^CFG FILE USERFILES
   implicit none  
 
   SAVE ! save all module variables
@@ -5,7 +6,7 @@
   private ! except  
   public :: VersionUserModule  
   public :: NameUserModule  
-  public :: set_extra_boundary_cells
+  public :: user_set_boundary_cells
   public :: user_face_bcs
   public :: user_set_outerbcs
   public :: user_initial_perturbation
@@ -17,5 +18,5 @@
   public :: user_get_log_var
   public :: user_calc_sources
   public :: user_heat_source
-  public :: get_user_b0
+  public :: user_get_b0
   public :: user_update_states

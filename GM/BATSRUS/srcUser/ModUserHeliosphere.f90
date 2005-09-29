@@ -895,7 +895,7 @@ Module ModUser
 !!!       user_read_inputs,                &
        user_set_ics,                    &
 !!!       user_initial_perturbation,       &
-!!!       set_extra_boundary_cells,        &
+!!!       user_set_boundary_cells,        &
 !!!       user_face_bcs,                   &
        user_set_outerbcs,               &
 !!!       user_specify_initial_refinement, &
@@ -904,7 +904,7 @@ Module ModUser
 !!!       user_get_log_var,                &
 !!!       user_calc_sources,               &
        user_heat_source
-!!!       get_user_b0,                     &
+!!!       user_get_b0,                     &
 !!!       user_update_states
 
   include 'user_module.h' !list of public methods
@@ -1116,13 +1116,13 @@ contains
   end subroutine user_read_inputs
 
   !========================================================================
-  !  set_extra_boundary_cells::
+  !  user_set_boundary_cells::
   !  Allows to define boundary conditions at the user defined boundary.
   !  SHOULD define IsBoundaryCell_GI(:,:,:,ExtraBc_) using a boundary
   !  condition for iBLK block.
   !  EXAMPLE: OUTER SPHERICAL BOUNDARY of radius of 100.
   !========================================================================
-  subroutine set_extra_boundary_cells(iBLK)
+  subroutine user_set_boundary_cells(iBLK)
     use ModGeometry
     use ModNumConst
     use ModParallel, ONLY: neiLEV,neiLtop, neiLbot,&
@@ -1250,7 +1250,7 @@ contains
        end do
     end if
 
-    if(neiLnorth(iBLK)==+1)then
+    if(neiLsouth(iBLK)==+1)then
        !Make all the ghostcells covered by a coarser cell become body cells,
        !if the coarser cell center is inside the body::
        j2=0
@@ -1277,7 +1277,7 @@ contains
              end do
           end do
        end if
-    elseif(neiLnorth(iBLK)==-1)then
+    elseif(neiLsouth(iBLK)==-1)then
        !Make any ghostcell covered by finer cell become a body cell, if
        !any of the finer cell centers is inside the body::
 
@@ -1306,7 +1306,7 @@ contains
           end do
        end do
     end if
-    if(neiLsouth(iBLK)==+1)then
+    if(neiLnorth(iBLK)==+1)then
        !Make all the ghostcells covered by a coarser cell become body cells,
        !if the coarser cell center is inside the body::
        if(DoOneCoarserLayer)then
@@ -1334,7 +1334,7 @@ contains
              end do
           end do
        end if
-    elseif(neiLsouth(iBLK)==-1)then
+    elseif(neiLnorth(iBLK)==-1)then
        !Make all the ghostcell covered by finer cell to be body cells, if
        !any of the finer cell centers is inside the body
        j=nJ+1
@@ -1469,7 +1469,7 @@ contains
        end do
     end if
 
-  end subroutine set_extra_boundary_cells
+  end subroutine user_set_boundary_cells
 
   !========================================================================
   subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
@@ -2673,7 +2673,7 @@ contains
   end subroutine get_hlcmm
 
   !============================================================================
-  subroutine get_user_b0(xx,yy,zz,B0_PFSSM)
+  subroutine user_get_b0(xx,yy,zz,B0_PFSSM)
     !
     !---------------------------------------------------------------------------
     ! This subroutine computes PFSS (Potential Field Source Surface)
@@ -3022,7 +3022,7 @@ contains
     !/
     B0_PFSSM(1:3) = B0_PFSSM(1:3)*(UnitB/unitUSER_B)
 
-  end subroutine get_user_b0
+  end subroutine user_get_b0
 
   !========================================================================
   !========================================================================
