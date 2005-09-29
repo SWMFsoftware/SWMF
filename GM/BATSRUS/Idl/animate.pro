@@ -144,8 +144,8 @@
    endelse
    print,'npict=',npict
    if npict eq 0 then begin
-      print,'There are no frames to animate!'
-      print,'   Check firstpict=',firstpict,' and dpict=',dpict
+      print,'There are no frames to animate! Check the following settings:'
+      print,'   firstpict=',firstpict,' dpict=',dpict,' npictmax=',npictmax
       if min(npictinfiles) lt firstpict then $
       print,'   The value of firstpict is larger than the minimum of' 
       print,'   npictinfiles=',npictinfiles
