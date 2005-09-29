@@ -34,7 +34,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  use ModUser, ONLY: user_read_inputs !^CFG IF USERFILES
+  use ModUser,          ONLY: user_read_inputs, &       !^CFG IF USERFILES
+       NameUserModule, VersionUserModule                !^CFG IF USERFILES
 
   implicit none
 
@@ -82,6 +83,10 @@ subroutine MH_set_parameters(TypeAction)
   logical                     :: DoReadAreaCenter
   real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
   real                        :: xRotateArea, yRotateArea, zRotateArea
+
+  ! Variables for checking the user module             !^CFG IF USERFILES BEGIN
+  character (len=lStringLine) :: NameUserModuleRead
+  real                        :: VersionUserModuleRead !^CFG END USERFILES
 
   integer :: iSession, iPlotFile, iVar
   !-------------------------------------------------------------------------
@@ -1428,10 +1433,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
         call read_var('zMax',z2)
-        select case(TypeGeometry)   !^CFG IF COVARIANT
-        case('cartesian')           !^CFG IF COVARIANT
+        select case(TypeGeometry)                      !^CFG IF COVARIANT
+        case('cartesian')                              !^CFG IF COVARIANT
            call set_xyzminmax_cart  
-        case('spherical')           !^CFG IF COVARIANT BEGIN
+        case('spherical')                              !^CFG IF COVARIANT BEGIN
            call set_xyzminmax_sph  
         case('spherical_lnr')         
            call set_xyzminmax_sph2      
@@ -1440,7 +1445,18 @@ subroutine MH_set_parameters(TypeAction)
         case default
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
-        end select                  !^CFG END COVARIANT
+        end select                                     !^CFG END COVARIANT
+     case("#USERMODULE")                               !^CFG IF USERFILES BEGIN
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('NameUserModule',NameUserModuleRead)
+        call read_var('VersionUserModule',VersionUserModuleRead)
+        if(NameUserModuleRead /= NameUserModule .or. &
+             abs(VersionUserModule-VersionUserModuleRead)>0.001) then
+           if(iProc==0)write(*,'(4a,f5.2)') NameSub, &
+                ' WARNING: code is compiled with user module ',NameUserModule,&
+                ' version',VersionUserModule
+           if(UseStrict)call stop_mpi('Select the correct user module!')
+        end if                                         !^CFG END USERFILES
      case("#CHECKGRIDSIZE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))

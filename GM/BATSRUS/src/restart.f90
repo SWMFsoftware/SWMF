@@ -4,11 +4,12 @@ subroutine write_restart_header
   use ModProcMH
   use ModMain
   use ModVarIndexes, ONLY: NameEquation, nVar
-  use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2
-  use ModGeometry, ONLY: XyzMin_D,XyzMax_D,TypeGeometry,&!^CFG IF COVARIANT
-               UseCovariant,UseVertexBasedGrid           !^CFG IF COVARIANT
-  use ModParallel, ONLY : proc_dims
-  use ModImplicit, ONLY : n_prev, dt_prev                  !^CFG IF IMPLICIT
+  use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             !^CFG IF COVARIANT
+       TypeGeometry, UseCovariant, UseVertexBasedGrid      !^CFG IF COVARIANT
+  use ModParallel, ONLY: proc_dims
+  use ModImplicit, ONLY: n_prev, dt_prev                   !^CFG IF IMPLICIT
+  use ModUser,     ONLY: NameUserModule, VersionUserModule !^CFG IF USERFILES
   use ModPhysics
   use ModIO
 
@@ -24,6 +25,12 @@ subroutine write_restart_header
 
   write(unit_tmp,'(a)')'#CODEVERSION'
   write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
+  write(unit_tmp,*)
+  !^CFG IF USERFILES BEGIN
+  write(unit_tmp,'(a)')'#USERMODULE'
+  write(unit_tmp,'(a)')       NameUserModule
+  write(unit_tmp,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
+  !^CFG END USERFILES
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#COMPONENT'
   write(unit_tmp,'(a2,a38)')NameThisComp,'NameComp'
@@ -83,17 +90,12 @@ subroutine write_restart_header
   write(unit_tmp,'(a)')'#COORDSYSTEM'
   write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
   write(unit_tmp,*)
-  write(unit_tmp,*)
   if(UseCovariant)then                        !^CFG IF COVARIANT BEGIN
      write(unit_tmp,'(a)')'#COVARIANTGEOMETRY'
      write(unit_tmp,'(a)')trim(TypeGeometry)
      write(unit_tmp,*)
      write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
-     if(UseVertexBasedGrid)then
-        write(unit_tmp,'(a)')'T'
-     else
-        write(unit_tmp,'(a)')'F'
-     end if
+     write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
      write(unit_tmp,*)
      write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
      write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 

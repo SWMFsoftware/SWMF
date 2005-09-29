@@ -561,6 +561,25 @@ F                       DoDebugGhost    (parameter for show_BLK in library.f90)
 ! which do not have version info in the header file.
 </command>
 
+<command name="USERMODULE" if="$_IsFirstSession">
+	<parameter name="NameUserModule" type="string" length="100"
+						default="EMPTY" />
+	<parameter name="VersionUserModule" type="real" min="0" 
+						default="1.0" />
+
+#USERMODULE
+TEST PROBLEM Smith
+1.3			VersionUserModule
+
+Checks the selected user module. If the name or the version number
+differs from that of the compiled user module, a warning is written,
+and the code stops in strict mode (see #STRICT command). 
+This command and its parameters are written into the restart header file too,
+so the user module is checked when a restart is done. 
+There are no default values. If the command is not present, the user 
+module is not checked.
+</command>
+
 <command name="EQUATION" if="$_IsFirstSession">
 	<parameter name="NameEquation" type="string" length="100" 
 						default="MHD" />

@@ -263,12 +263,13 @@ end subroutine write_timeaccurate
 subroutine option_list
 
   use ModIO, ONLY: iUnitOut, write_prefix
+  use ModUser, ONLY: NameUserModule, VersionUserModule !^CFG IF USERFILES
   implicit none
 
   logical            :: on
   character (len=40) :: name
   real               :: number
-
+  !---------------------------------------------------------------------------
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
   !^CFG IF RUSANOVFLUX BEGIN
@@ -288,9 +289,15 @@ subroutine option_list
   call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION
   call OPTION_RAYTRACING(on,name);   call write_option     !^CFG IF RAYTRACE
   call OPTION_IMPLICIT(on,name);     call write_option     !^CFG IF IMPLICIT
-
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
+  !^CFG IF USERFILES BEGIN
+  call write_prefix; write(iUnitOut,'(a,f5.2)') &
+       '# USER MODULE: '//NameUserModule,VersionUserModule
+  call write_prefix; write(iUnitOut,'(a)') &
+       '#=================================================================#'
+  !^CFG END USERFILES
+
   call write_prefix; write(iUnitOut,*)
 
 contains
