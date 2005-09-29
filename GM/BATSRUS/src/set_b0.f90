@@ -505,7 +505,7 @@ subroutine get_b0(X0,Y0,Z0,B0)
   use CON_planet_field, ONLY : get_planet_field
   use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
   use ModMain,          ONLY : UseUserB0            !^CFG IF USERFILES
-  !!use ModUser, ONLY: get_user_B0
+  use ModUser, ONLY: get_user_B0 !^CFG IF USERFILES
   implicit none
 
   real, intent(in) :: X0,Y0,Z0

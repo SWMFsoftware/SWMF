@@ -765,7 +765,7 @@ subroutine calc_other_soln_vars(iBLK)
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
-  !!use ModUser, ONLY: user_heat_source
+  use ModUser, ONLY: user_heat_source !^CFG IF USERFILES
   implicit none
 
   integer, intent(in) :: iBLK

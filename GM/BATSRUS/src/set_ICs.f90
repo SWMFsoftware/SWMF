@@ -7,7 +7,7 @@ subroutine set_ICs
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
   use ModNumConst
-  !!use ModUser, ONLY: user_heat_source, user_set_ICs
+  use ModUser, ONLY: user_heat_source, user_set_ICs !^CFG IF USERFILES
   implicit none
 
   real :: Rmax, SinSlope, CosSlope

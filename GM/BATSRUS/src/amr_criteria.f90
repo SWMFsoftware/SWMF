@@ -7,7 +7,7 @@ subroutine amr_criteria(ref_criteria)
   use ModPhysics,  ONLY:cosTHETAtilt,sinTHETAtilt,Rcurrents
   use ModPhysics,  ONLY:UseSunEarth
   use ModConst
-  !!use ModUser, ONLY: user_amr_criteria
+  use ModUser, ONLY: user_amr_criteria !^CFG IF USERFILES
   implicit none
 
   real, intent(out) :: ref_criteria(4,nBLK)

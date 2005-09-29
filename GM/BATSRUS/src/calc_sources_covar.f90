@@ -10,7 +10,7 @@ subroutine calc_sources_covar
   use ModAdvance
   use ModNumConst
   use ModPhysics, ONLY:gm1
-  !!use ModUser, ONLY: user_calc_sources
+  use ModUser, ONLY: user_calc_sources !^CFG IF USERFILES
   implicit none
 
   integer :: i,j,k

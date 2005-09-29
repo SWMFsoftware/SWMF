@@ -146,8 +146,8 @@ OBJ12= write_plot_los.o write_plot_sph.o \
 		     set_ICs_arc.o set_ICs_cme.o      
 
 #^CFG IF USERFILES BEGIN
-OBJ13 = user_routines.o 
-##OBJ13 = ModUserEmpty.o ModUser.o
+##OBJ13 = user_routines.o 
+OBJ13 = ModUserEmpty.o ModUser.o
 
 user_routines.f90:
 	cp user_routines_orig.f90 user_routines.f90

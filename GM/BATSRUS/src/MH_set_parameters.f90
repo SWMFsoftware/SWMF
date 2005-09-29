@@ -34,7 +34,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  !!use ModUser, ONLY: user_read_inputs
+  use ModUser, ONLY: user_read_inputs !^CFG IF USERFILES
 
   implicit none
 
