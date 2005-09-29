@@ -911,7 +911,7 @@ Module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
-       NameUserModule = 'HELIOSPHERE USER ROUTINES, Manchester, Roussev'
+       NameUserModule = 'HELIOSPHERE, Manchester, Roussev'
 
   ! This variable is read from PARAM.in and it is used to reduce gravity 
   ! in src/set_physics.f90 !!! 

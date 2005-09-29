@@ -21,7 +21,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'USER ROUTINES FOR IMPLICIT PAPER, G. Toth'
+       'WAVE REFLECTION, G. Toth'
 
   real :: xLeft, xRight
 

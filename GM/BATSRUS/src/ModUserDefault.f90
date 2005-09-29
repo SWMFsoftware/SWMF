@@ -33,6 +33,6 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'DEFAULT USER ROUTINES, K.C. Hansen'
+       'EMPTY ROUTINES, K.C. Hansen'
 
 end module ModUser
