@@ -7,27 +7,6 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-# Temporary rules to convert from user routines to user modules and back
-SRCUSER = amr_criteria.f90 BATS_methods.f90 calc_sources_covar.f90 \
-	calc_sources.f90 create_soln_blocks.f90 MH_set_parameters.f90 \
-	set_b0.f90 set_BCs.f90 set_block_geometry.f90 set_ICs.f90 \
-	specify_refinement.f90 set_outer_BCs.f90 specify_refinement.f90 \
-	update_states.f90 write_logfile.f90 write_progress.f90
-
-USEUSER = use ModUser, ONLY:
-
-USEUSERMODULE:
-	perl -pi -e 's/ \!\!${USEUSER}/ ${USEUSER}/' ${SRCUSER}
-	perl -pi -e 's/^OBJ13 = user/##OBJ13 = user/' Makefile
-	perl -pi -e 's/^##OBJ13 = ModUser/OBJ13 = ModUser/' Makefile
-
-USEUSERFILE:
-	perl -pi -e 's/ ${USEUSER}/ \!\!${USEUSER}/' ${SRCUSER}
-	perl -pi -e 's/^##OBJ13 = user/OBJ13 = user/' Makefile
-	perl -pi -e 's/^OBJ13 = ModUser/##OBJ13 = ModUser/' Makefile
-
-# end of temporary rules
-
 # CONFIGURABLE MODULES
 
 MOD1 = ModCT.o       #^CFG IF CONSTRAINB
@@ -146,11 +125,7 @@ OBJ12= write_plot_los.o write_plot_sph.o \
 		     set_ICs_arc.o set_ICs_cme.o      
 
 #^CFG IF USERFILES BEGIN
-##OBJ13 = user_routines.o 
 OBJ13 = ModUserEmpty.o ModUser.o
-
-user_routines.f90:
-	cp user_routines_orig.f90 user_routines.f90
 
 ModUser.f90:
 	cp ModUserDefault.f90 ModUser.f90
