@@ -72,7 +72,6 @@ covarcheck: covarcheck_src
 ############################################################################
 DGLOBALH=GLOBALHELIOSPHERE
 globhelio_src:
-	cd ..;\
 	./Configure.pl -d=${DGLOBALH} -keepall -u \
 	-off=ionosphere,boriscorr,implicit,roeflux,rcm,covariant \
 	-on=globalheliosphere \
@@ -91,7 +90,7 @@ globhelio: globhelio_src
 ############################################################################
 
 multisp_src:
-	./Configure.pl -d=MULTISP -keepall -u \
+	./Configure.pl -d=MULTISP -keepall \
 	-off=implicit,ionosphere,rusanovflux,roeflux,awflux \
 	-on=multisp \
 	-exe=implicit,ionosphere,rusanovflux,roeflux,awflux,multisp
