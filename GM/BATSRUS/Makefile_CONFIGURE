@@ -20,16 +20,11 @@ cartesian: cartesian_src
 
 DSPHER =SPHERICAL
 spherical_src:
-	cd src;\
-		mv user_routines_orig.f90 user_routines_tmp.f90;\
-		cp user_routines_empty.f90 user_routines_orig.f90
 	cd srcPostProc;\
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
-	./Configure.pl -d=${DSPHER} \
+	./Configure.pl -d=${DSPHER} -u \
 	-off=boriscorr \
-	-on=awflux,lindeflux,testing,userfiles,covariant -u
-	cd src; \
-		mv user_routines_tmp.f90 user_routines_orig.f90;
+	-on=awflux,lindeflux,testing,userfiles,covariant
 	cd srcPostProc;\
 		mv PostIDL.f90 PostIDL_SPH.f90; mv PostIDL.tmp PostIDL.f90
 	cd ${DSPHER}/Param;\
@@ -50,12 +45,8 @@ spherical: spherical_src
 DCOV =COVARIANT
 
 covariant_src:
-	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user_routines_empty.f90 user_routines_orig.f90
-	./Configure.pl -d=${DCOV} -off=boriscorr \
-		-on=awflux,lindeflux,testing,userfiles,covariant \
-	 -u
-	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
+	./Configure.pl -d=${DCOV} -u -off=boriscorr \
+		-on=awflux,lindeflux,testing,userfiles,covariant
 	cd ${DCOV}; make install
 
 covariant_conf: covariant_src
@@ -65,11 +56,8 @@ covariant: covariant_src
 	cd ${DCOV}; make
 
 covarcheck_src:
-	cd src; mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user_routines_empty.f90 user_routines_orig.f90
-	./Configure.pl -d=COVARCHECK -off=boriscorr \
-		-on=awflux,lindeflux,testing,userfiles -u
-	cd src; mv user_routines_tmp.f90 user_routines_orig.f90
+	./Configure.pl -d=COVARCHECK -u -off=boriscorr \
+		-on=awflux,lindeflux,testing,userfiles
 	cd COVARCHECK; make install
 
 covarcheck_conf: covarcheck_src
@@ -84,15 +72,11 @@ covarcheck: covarcheck_src
 ############################################################################
 DGLOBALH=GLOBALHELIOSPHERE
 globhelio_src:
-	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user/user_routines.f90.globalhelio user_routines_orig.f90;\
 	cd ..;\
-	./Configure.pl -d=${DGLOBALH} -keepall \
+	./Configure.pl -d=${DGLOBALH} -keepall -u \
 	-off=ionosphere,boriscorr,implicit,roeflux,rcm,covariant \
 	-on=globalheliosphere \
-	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere,cartesian \
-	-u
-	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
+	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere
 	cd ${DGLOBALH}; make install
 
 globhelio_conf: globhelio_src
@@ -107,17 +91,13 @@ globhelio: globhelio_src
 ############################################################################
 
 multisp_src:
-	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user/user_routines.f90.mars user_routines_orig.f90;\
-	cd ..;\
-	./Configure.pl -d=MULTISP -keepall \
+	./Configure.pl -d=MULTISP -keepall -u \
 	-off=implicit,ionosphere,rusanovflux,roeflux,awflux \
 	-on=multisp \
-	-exe=implicit,ionosphere,rusanovflux,roeflux,awflux,multisp \
-	-u;\
-	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
+	-exe=implicit,ionosphere,rusanovflux,roeflux,awflux,multisp
 	cd MULTISP; make install; make spherical_src
-	cd MULTISP/${DSPHER}; make install
+	cd MULTISP/${DSPHER}; make install; \
+	cp -f srcUser/ModUserMars.f90 src/ModUser.f90
 
 multisp_conf: multisp_src
 	cd ..; rm -rf BATSRUS_conf; \
@@ -132,18 +112,15 @@ multisp: multisp_src
 DREL=RELAX
 COMP=IH
 relax_src:
-	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user/user_routines.f90.heliosphere user_routines_orig.f90;\
-	cd ..;\
-	./Configure.pl -d=${DREL} \
-	-on=alwaves,awflux,userfiles,testing \
-	-off=rusanovflux,ionosphere,boriscorr,covariant -u;\
-	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
+	./Configure.pl -d=${DREL} -u \
+		-on=alwaves,awflux,userfiles,testing \
+		-off=rusanovflux,ionosphere,boriscorr,covariant
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
 		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90
 	cd ${DREL}; make install; \
-	perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
+		cp -f srcUser/ModUserHeliosphere.f90 src/ModUser.f90; \
+		perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
 
 relax_conf: relax_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DREL} BATSRUS_conf
@@ -156,25 +133,22 @@ relax: relax_src
 ############################################################################
 
 corelax_src:
-	cd src;mv user_routines_orig.f90 user_routines_tmp.f90;\
-	cp user/user_routines.f90.heliosphere.covariant user_routines_orig.f90
 	./Configure.pl -d=CORELAX -keepall \
-	-on=alwaves,awflux \
-	-off=rusanovflux,ionosphere,boriscorr,implicit \
-	-exe=alwaves,awflux,rusanovflux,ionosphere,boriscorr,implicit -u;\
-	cd src; mv -f user_routines_tmp.f90 user_routines_orig.f90
+		-on=alwaves,awflux \
+		-off=rusanovflux,ionosphere,boriscorr,implicit \
+		-exe=alwaves,awflux,rusanovflux,ionosphere,boriscorr,implicit
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
 	cd CORELAX;\
-	./Configure.pl -d=${DSPHER} \
-	-on=alwaves,awflux,testing,userfiles,covariant -u
+		./Configure.pl -d=${DSPHER} -u \
+			-on=alwaves,awflux,testing,userfiles,covariant
 	cd CORELAX/srcPostProc; \
 		mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
 	cd CORELAX/${DSPHER}/Param;\
-	mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
-	mv EARTH/SSSSPH EARTH/SSSS;\
-	cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
-	mv PARAM.TEST.SPH PARAM.TEST
+		mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
+		mv EARTH/SSSSPH EARTH/SSSS;\
+		cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
+		mv PARAM.TEST.SPH PARAM.TEST
 	cd CORELAX/${DSPHER}; make install
 
 corelax_conf: corelax_src
