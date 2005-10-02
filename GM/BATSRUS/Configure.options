@@ -46,7 +46,6 @@ DEBUGGING		OFF		^CFG END DEBUGGING
 #
 IONOSPHERE		ON			#^CFG IF IONOSPHERE
 RCM			OFF NEEDS RAYTRACE	#^CFG IF RCM
-USERFILES               OFF                     #^CFG IF USERFILES
 
 #
 # Extra physics
@@ -79,7 +78,9 @@ DISSFLUX		OFF			#^CFG IF DISSFLUX
 
 #						#^CFG IF NOT COVARIANT BEGIN
 # Geometry
+#
 COVARIANT               OFF                     #^CFG END COVARIANT
+
 #						#^CFG IF DYNAMIC BEGIN
 # Dynamic allocation of big arrays
 #
