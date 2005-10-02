@@ -313,7 +313,7 @@ program PostIDL
         w=0.5*w
         write(*,*)'Averaged 2D structured file everywhere'
      elseif(abs(total/volume-1.0)>0.0001)then
-        write(*,*)'!!! Discrepancy in averaging 2D structured file:',&
+        write(*,*)'!!! Discrepancy in structured file:',&
              'filled total=',total,' volume=',volume,' !!!'
      end if
   else
