@@ -2,7 +2,7 @@
 subroutine specify_initial_refinement(refb, lev)
   use ModSize
   use ModMain, ONLY : &
-       UseUserSpecifyRefinement,&           !^CFG IF USERFILES
+       UseUserSpecifyRefinement,&
        body1,UseRotatingBc,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF COVARIANT
@@ -10,7 +10,7 @@ subroutine specify_initial_refinement(refb, lev)
   use ModPhysics, ONLY : Rbody,Rcurrents,Qprod
   use ModAMR, ONLY : InitialRefineType
   use ModNumConst
-  use ModUser, ONLY: user_specify_initial_refinement !^CFG IF USERFILES
+  use ModUser, ONLY: user_specify_initial_refinement
   implicit none
 
   logical, intent(out) :: refb(nBLK)
@@ -985,11 +985,11 @@ subroutine specify_initial_refinement(refb, lev)
               endif
            endif
         case default
-           IsFound=.false.                       !^CFG IF USERFILES BEGIN
+           IsFound=.false.
            if (UseUserSpecifyRefinement) &
                 call user_specify_initial_refinement(iBLK,refb(iBLK),lev,dx_BLK(iBLK), &
                 xxx,yyy,zzz,RR,minx,miny,minz,minRblk,maxx,maxy,maxz,maxRblk,IsFound)
-           if(.not.IsFound) &                    !^CFG IF USERFILES END
+           if(.not.IsFound) &
            call stop_mpi(NameSub//' ERROR: unknown InitialRefineType='// &
                 trim(InitialRefineType)//'!!!')
         end select

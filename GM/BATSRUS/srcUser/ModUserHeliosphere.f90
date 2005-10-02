@@ -1,6 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE USERFILES
-
 !========================================================================
 module ModUserTD99
   use ModConst

@@ -346,7 +346,6 @@ but much shorter.
 
 </commandgroup>
 
-<!-- ^CFG IF USERFILES BEGIN -->
 <commandgroup name="USER DEFINED INPUT">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -404,7 +403,6 @@ checking in the user section.
 </command>
 
 </commandgroup>
-<!-- ^CFG END USERFILES -->
 
 <commandgroup name="TESTING AND TIMING">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -917,7 +915,6 @@ For all other problems with an inner boundary the default is 'unknown',
 so the inner boundary must be set.
 </command>
 
-<!-- ^CFG IF USERFILES BEGIN -->
 <command name="EXTRABOUNDARY">
 	<parameter name="UseExtraBoundary" type="logical" default="F"/>
 	<if expr="$UseExtraBoundary">
@@ -936,7 +933,6 @@ condition in the user files. The TypeExtraBoundary can be used
 to select a certain type. The DoFixExtraboundary controls
 if resolution change is allowed.
 </command>
-<!-- ^CFG END USERFILES -->
 
 <command name="FACEOUTERBC">
 	<parameter name="MaxBoundary" type="integer" min="0" max="6"

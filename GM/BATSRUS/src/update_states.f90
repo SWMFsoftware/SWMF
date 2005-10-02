@@ -4,7 +4,7 @@ subroutine update_states(iStage,iBlock)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
-  use ModUser, ONLY: user_update_states !^CFG IF USERFILES
+  use ModUser, ONLY: user_update_states
   implicit none
 
   integer, intent(in) :: iStage,iBlock
@@ -38,11 +38,11 @@ subroutine update_states(iStage,iBlock)
      write(*,*)'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
   end if
 
-  if(UseUserUpdateStates)then              !^CFG IF USERFILES BEGIN
+  if(UseUserUpdateStates)then
      call user_update_states(iStage,iBlock)
-  else                                     !^CFG END USERFILES 
+  else
      call update_states_MHD(iStage,iBlock)
-  end if                                   !^CFG IF USERFILES 
+  end if
 
   !^CFG IF DEBUGGING BEGIN
   if(index(test_string,'fixrho ')>0) then

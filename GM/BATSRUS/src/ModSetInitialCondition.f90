@@ -7,7 +7,7 @@ subroutine set_ICs
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
   use ModNumConst
-  use ModUser, ONLY: user_heat_source, user_set_ICs !^CFG IF USERFILES
+  use ModUser, ONLY: user_heat_source, user_set_ICs
   implicit none
 
   real :: Rmax, SinSlope, CosSlope
@@ -147,7 +147,7 @@ subroutine set_ICs
         ! Calculate the volume averaged heating sources
         ! (Heliosphere).
         !/
-        if(UseUserHeating)     call user_heat_source           !^CFG IF USERFILES
+        if(UseUserHeating)     call user_heat_source
         if(.not.restart)then
            !\
            ! Initialize solution quantities (Heliosphere).
@@ -456,7 +456,7 @@ subroutine set_ICs
         end if
 
      end select
-     if(UseUserICs) call user_set_ICs       !^CFG IF USERFILES
+     if(UseUserICs) call user_set_ICs
   end if ! unusedBLK
   ! Eliminate B1 around body if necessary
   if(.not.restart)then

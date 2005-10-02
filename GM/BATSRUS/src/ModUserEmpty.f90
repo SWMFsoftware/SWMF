@@ -1,25 +1,11 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE USERFILES
-!========================================================================
-!========================================================================
-!
-! User routines let the user make customizations to BATSRUS without 
-! having to make changes in the "kernel" of the code.
-!
-! This file contains empty user routines.  They should be "used" 
-! (included) in the srcUser/ModUser*.f90 files for routines that the user 
-! does not wish to implement.
-!
-! Please see the documentation, and the files ModUserDefault.f90 and 
-! srcUser/ModUserExamples.f90 for information about what the different user
-! subroutines do and how to implement them for your specific problem.
-!
-!========================================================================
-!========================================================================
-
-
-!========================================================================
+!==============================================================================
 module ModUserEmpty
+
+  ! This module contains empty user routines.  They should be "used" 
+  ! (included) in the srcUser/ModUser*.f90 files for routines that the user 
+  ! does not wish to implement.
+
   implicit none
 
   private :: stop_user
@@ -37,19 +23,19 @@ contains
   end subroutine user_set_boundary_cells
 
   !=====================================================================
-  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary,&
-       iter,time_now, FaceCoords_D,&
-       VarsTrueFace_V,VarsGhostFace_V,&
+  subroutine user_face_bcs(iFace, jFace, kFace, iBlock, iSide, iBoundary,&
+       iter, time_now, FaceCoords_D, &
+       VarsTrueFace_V, VarsGhostFace_V, &
        B0Face_D,  UseIonosphereHere, UseCorotationHere)
     use ModSize, ONLY: nDim
     use ModAdvance, ONLY: nFaceValueVars
 
     integer,intent(in)::iFace,jFace,kFace,iBlock,iSide,iBoundary,iter
-    real,intent(in)::time_now
-    real,dimension(nDim),intent(in)::FaceCoords_D,B0Face_D
-    real,dimension(nFaceValueVars),intent(in)::VarsTrueFace_V
-    real,dimension(nFaceValueVars),intent(out)::VarsGhostFace_V
-    logical,intent(in)::UseIonosphereHere,UseCorotationHere
+    real, intent(in):: time_now
+    real, dimension(nDim), intent(in) :: FaceCoords_D, B0Face_D
+    real, dimension(nFaceValueVars), intent(in) :: VarsTrueFace_V
+    real, dimension(nFaceValueVars), intent(out):: VarsGhostFace_V
+    logical, intent(in):: UseIonosphereHere, UseCorotationHere
 
     character (len=*), parameter :: Name='user_face_bcs' 
     !-------------------------------------------------------------------
@@ -57,16 +43,16 @@ contains
   end subroutine user_face_bcs
 
   !=====================================================================
-  subroutine user_set_outerBCs(iBlock,iSide, TypeBc,found)
+  subroutine user_set_outerbcs(iBlock,iSide, TypeBc,found)
 
     integer,intent(in)::iBlock, iSide
     logical,intent(out) :: found
     character (len=20),intent(in) :: TypeBc
 
-    character (len=*), parameter :: Name='user_set_outerBCs'
+    character (len=*), parameter :: Name='user_set_outerbcs'
     !-------------------------------------------------------------------
     call stop_user(Name)
-  end subroutine user_set_outerBCs
+  end subroutine user_set_outerbcs
 
   !=====================================================================
   subroutine user_initial_perturbation
@@ -77,25 +63,25 @@ contains
   end subroutine user_initial_perturbation
 
   !=====================================================================
-  subroutine user_set_ICs
+  subroutine user_set_ics
 
-    character (len=*), parameter :: Name='user_set_ICs'
+    character (len=*), parameter :: Name='user_set_ics'
     !-------------------------------------------------------------------
     call stop_user(Name)
-  end subroutine user_set_ICs
+  end subroutine user_set_ics
 
   !=====================================================================
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,dxBlock,   &
+  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
 
     logical,intent(out) :: refineBlock, found
     integer, intent(in) :: lev
-    real, intent(in) :: dxBlock
-    real, intent(in) :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in) :: minx,miny,minz,minR
-    real, intent(in) :: maxx,maxy,maxz,maxR
-    integer,intent(in) :: iBLK
+    real, intent(in)    :: DxBlock
+    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
+    real, intent(in)    :: minx,miny,minz,minR
+    real, intent(in)    :: maxx,maxy,maxz,maxR
+    integer, intent(in) :: iBLK
 
     character (len=*), parameter :: Name='user_specify_initial_refinement'
     !-------------------------------------------------------------------
@@ -103,12 +89,12 @@ contains
   end subroutine user_specify_initial_refinement
 
   !=====================================================================
-  subroutine user_amr_criteria(iBLK, userCriteria, TypeCriteria, found)
+  subroutine user_amr_criteria(iBLK, UserCriteria, TypeCriteria, IsFound)
 
-    logical ,intent(inout):: found
-    integer, intent(in) :: iBLK
-    real, intent(out) :: userCriteria
-    character (len=20),intent(in) :: TypeCriteria
+    integer, intent(in)          :: iBLK
+    real, intent(out)            :: userCriteria
+    character (len=*),intent(in) :: TypeCriteria
+    logical, intent(inout)       :: IsFound
 
     character (len=*), parameter :: Name='user_amr_criteria'
     !-------------------------------------------------------------------
@@ -132,10 +118,10 @@ contains
   end subroutine user_write_progress
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue,TypeVar)
+  subroutine user_get_log_var(VarValue, TypeVar)
 
-    real, intent(out):: VarValue
-    character (LEN=10), intent(in):: TypeVar
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
 
     character (len=*), parameter :: Name='user_get_log_var'
     !-------------------------------------------------------------------
@@ -186,10 +172,9 @@ contains
 
     character (len=*), intent(in) :: Name
     !-------------------------------------------------------------------
-    call stop_mpi('You are trying to call a user supplied version of '//   &
-         'the routine '//name//'but you have implmented only the '//       &
-         'empty version. Please implement the routine in your user file'// &
-         'located in srcUser/ModUser*.f90')
+    call stop_mpi('You are trying to call the empty user routine '//   &
+         Name//'. Please implement the routine in src/ModUser.f90')
   end subroutine stop_user
 
 end module ModUserEmpty
+!==============================================================================

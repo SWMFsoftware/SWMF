@@ -1,4 +1,3 @@
-  !^CFG FILE USERFILES
   implicit none  
 
   SAVE ! save all module variables

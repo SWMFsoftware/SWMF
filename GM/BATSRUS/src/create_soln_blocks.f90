@@ -765,7 +765,7 @@ subroutine calc_other_soln_vars(iBLK)
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
-  use ModUser, ONLY: user_heat_source !^CFG IF USERFILES
+  use ModUser, ONLY: user_heat_source
   implicit none
 
   integer, intent(in) :: iBLK
@@ -799,6 +799,6 @@ subroutine calc_other_soln_vars(iBLK)
 
   qheat_BLK(:,:,:,iBLK) = 0.00
 
-  if(UseUserHeating)     call user_heat_source      !^CFG IF USERFILES
+  if(UseUserHeating)     call user_heat_source
 
 end subroutine calc_other_soln_vars

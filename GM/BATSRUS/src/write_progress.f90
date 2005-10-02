@@ -55,7 +55,7 @@ subroutine write_runtime_values()
   use ModParallel, ONLY : proc_dims
   use ModPhysics
   use ModMpi
-  use ModUser, ONLY: user_write_progress !^CFG IF USERFILES
+  use ModUser, ONLY: user_write_progress
   implicit none
 
   integer :: iError
@@ -241,7 +241,7 @@ subroutine write_runtime_values()
   call write_prefix
   write(iUnitOut,'(1x,a,4f16.8)') 'gamma:       ',g,gm1,gm2,gp1
   call write_prefix; write(iUnitOut,*)
-  if(UseUserEchoInput) call user_write_progress !^CFG IF USERFILES
+  if(UseUserEchoInput) call user_write_progress
 end subroutine write_runtime_values
 
 !==============================================================================
@@ -263,7 +263,7 @@ end subroutine write_timeaccurate
 subroutine option_list
 
   use ModIO, ONLY: iUnitOut, write_prefix
-  use ModUser, ONLY: NameUserModule, VersionUserModule !^CFG IF USERFILES
+  use ModUser, ONLY: NameUserModule, VersionUserModule
   implicit none
 
   logical            :: on
@@ -291,12 +291,12 @@ subroutine option_list
   call OPTION_IMPLICIT(on,name);     call write_option     !^CFG IF IMPLICIT
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-  !^CFG IF USERFILES BEGIN
+
   call write_prefix; write(iUnitOut,'(a,f5.2)') &
        '# USER MODULE: '//NameUserModule,VersionUserModule
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-  !^CFG END USERFILES
+
 
   call write_prefix; write(iUnitOut,*)
 

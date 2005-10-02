@@ -10,7 +10,7 @@ subroutine set_physics_constants
   use CON_axes,   ONLY: get_axes
   use CON_planet, ONLY: get_planet
   use ModVarIndexes
-  !use ModUser                      !^CFG UNCOMMENT IF USERFILES
+  use ModUser !!! This should not be here. Only needed for Tnot parameter !!!
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun

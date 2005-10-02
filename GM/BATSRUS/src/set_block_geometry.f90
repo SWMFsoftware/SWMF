@@ -415,7 +415,7 @@ subroutine set_boundary_cells(iBLK)
   use ModPhysics,  ONLY: Rbody2                            !^CFG IF SECONDBODY
   use ModGeometry, ONLY: R2_BLK                            !^CFG IF SECONDBODY
   use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2,x_BLK,y_BLK,z_BLK 
-  use ModUser, ONLY: user_set_boundary_cells !^CFG IF USERFILES
+  use ModUser, ONLY: user_set_boundary_cells
 
   implicit none
   integer,intent(in)::iBLK
@@ -432,10 +432,10 @@ subroutine set_boundary_cells(iBLK)
        IsBoundaryCell_GI(:,:,:,Body1_) = &
        body1    .and. R_BLK(:,:,:,iBLK) < Rbody
 
-  !^CFG IF USERFILES BEGIN
+
   if(IsBoundaryBlock_IB(ExtraBc_,iBLK))&             
        call user_set_boundary_cells(iBLK)
-  !^CFG END USERFILES
+
 
 
   if(IsBoundaryBlock_IB(East_,iBLK)) &

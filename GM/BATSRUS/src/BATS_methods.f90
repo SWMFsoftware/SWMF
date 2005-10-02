@@ -116,7 +116,7 @@ contains
   !===========================================================================
 
   subroutine set_initial_conditions
-    use ModUser, ONLY: user_initial_perturbation !^CFG IF USERFILES
+    use ModUser, ONLY: user_initial_perturbation
 
     !\
     ! Set intial conditions for solution in each block.
@@ -132,14 +132,14 @@ contains
           do globalBLK = 1, nBlockMax
              call set_ICs
           end do
-          !^CFG IF USERFILES BEGIN
+
           !\
           ! Allow the user to add a perturbation and use that for
           ! physical refinement.
           !/
           if (UseUserPerturbation) &
                call user_initial_perturbation
-          !^CFG END USERFILES
+
           call amr_physics
           call fixRefinementLevels
           call number_soln_blocks
@@ -169,7 +169,7 @@ contains
 
     end do ! Multi-block initialization loop.
 
-    !^CFG IF USERFILES BEGIN
+
     !\
     ! Allow the user to add a perturbation to the initial condition.
     !/
@@ -177,7 +177,7 @@ contains
        call user_initial_perturbation
        UseUserPerturbation=.false.
     end if
-    !^CFG END USERFILES   
+
 
     if (restart) then
        if(iProc==0)then

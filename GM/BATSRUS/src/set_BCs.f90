@@ -279,7 +279,7 @@ contains
   subroutine set_body_BCs(iSide)
     use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
     use ModPhysics, ONLY : FaceState_VI
-    use ModUser, ONLY: user_face_bcs !^CFG IF USERFILES
+    use ModUser, ONLY: user_face_bcs
     
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
@@ -291,7 +291,7 @@ contains
     real:: BdotU,RInv
     real:: cosTheta,sinTheta,cosPhi,sinPhi
     real:: UrTrue,UtTrue,BpTrue,BrGhost,BtGhost,BpGhost
-!^CFG IF USERFILES BEGIN
+
 !    For new ionosphere, multispecies, multifluids 
     if(  index(TypeBcHere,'user')>0 .or. &
          (UseUserInnerBCs .and. iBoundary <= body1_) .or. &
@@ -302,7 +302,7 @@ contains
             B0Face_D,  UseIonosphereHere,UseRotatingBcHere)
        return
     end if
-!^CFG END USERFILES
+
 
     !^CFG IF SECONDBODY BEGIN
     if(iBoundary==body2_)then

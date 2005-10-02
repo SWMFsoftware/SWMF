@@ -14,7 +14,7 @@ subroutine gen_to_xyz_arr(&
   use ModNumConst
   use ModCovariant,ONLY:TypeGeometry
   use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
-  use ModUser           !^CFG IF USERFILES
+  use ModUser
   implicit none
   real,intent(in):: GenCoord111_D(nDim),dGen1,dGen2,dGen3
   integer,intent(in)::  iStart,iMax,jStart,jMax,kStart,kMax

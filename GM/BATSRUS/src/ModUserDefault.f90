@@ -1,5 +1,4 @@
 !^CFG COPYRIGHT UM
-!^CFG FILE USERFILES
 !========================================================================
 module ModUser
   ! This is the default user module which contains empty methods defined

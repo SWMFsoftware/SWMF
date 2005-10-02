@@ -19,7 +19,7 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
   use ModParallel, ONLY : NOBLK,neiLEV
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,far_field_BCs_BLK,MaxBoundary
   use ModPhysics
-  use ModUser, ONLY: user_set_outerBCs !^CFG IF USERFILES
+  use ModUser, ONLY: user_set_outerBCs
   implicit none
 
   integer, intent(in) :: iBlock
@@ -181,9 +181,9 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
         end do
      case default
         IsFound=.false.
-        if(UseUserOuterBcs)&                    !^CFG IF USERFILES BEGIN
+        if(UseUserOuterBcs)&
            call user_set_outerBCs(iBLK,iside,TypeBc_I(iside),IsFound)
-                                                !^CFG END USERFILES   
+
         if(.not. IsFound) call stop_mpi('Error in set_outer_BCs: unknown TypeBc_I=' &
                 //TypeBc_I(iside))
      end select

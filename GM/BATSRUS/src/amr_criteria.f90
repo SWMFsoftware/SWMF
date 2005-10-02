@@ -7,7 +7,7 @@ subroutine amr_criteria(ref_criteria)
   use ModPhysics,  ONLY:cosTHETAtilt,sinTHETAtilt,Rcurrents
   use ModPhysics,  ONLY:UseSunEarth
   use ModConst
-  use ModUser, ONLY: user_amr_criteria !^CFG IF USERFILES
+  use ModUser, ONLY: user_amr_criteria
   implicit none
 
   real, intent(out) :: ref_criteria(4,nBLK)
@@ -258,7 +258,7 @@ subroutine amr_criteria(ref_criteria)
               ref_criteria(iCrit,iBLK) = AMRsort_2*ref_criteria(iCrit,iBLK)
            end if
         case default
-           if (UseUserAMR) then !^CFG IF USERFILES BEGIN
+           if (UseUserAMR) then
               IsFound=.false.
               call user_amr_criteria(iBLK, userCriteria, RefineCrit(iCrit), IsFound)
               if (IsFound) then
@@ -268,9 +268,9 @@ subroutine amr_criteria(ref_criteria)
                             RefineCrit(iCrit)
                  call stop_mpi('Fix user_amr_criteria or PARAM.in!')
               end if
-           else               !^CFG END USERFILES
+           else
               call stop_mpi('Unknown RefineCrit='//RefineCrit(iCrit))
-           end if             !^CFG IF USERFILES
+           end if
         end select
      end do ! iCrit
   end do ! iBLK

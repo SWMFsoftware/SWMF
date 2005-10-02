@@ -9,7 +9,7 @@ subroutine write_restart_header
        TypeGeometry, UseCovariant, UseVertexBasedGrid      !^CFG IF COVARIANT
   use ModParallel, ONLY: proc_dims
   use ModImplicit, ONLY: n_prev, dt_prev                   !^CFG IF IMPLICIT
-  use ModUser,     ONLY: NameUserModule, VersionUserModule !^CFG IF USERFILES
+  use ModUser,     ONLY: NameUserModule, VersionUserModule
   use ModPhysics
   use ModIO
 
@@ -26,11 +26,11 @@ subroutine write_restart_header
   write(unit_tmp,'(a)')'#CODEVERSION'
   write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
   write(unit_tmp,*)
-  !^CFG IF USERFILES BEGIN
+
   write(unit_tmp,'(a)')'#USERMODULE'
   write(unit_tmp,'(a)')       NameUserModule
   write(unit_tmp,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
-  !^CFG END USERFILES
+
   write(unit_tmp,*)
   write(unit_tmp,'(a)')'#COMPONENT'
   write(unit_tmp,'(a2,a38)')NameThisComp,'NameComp'

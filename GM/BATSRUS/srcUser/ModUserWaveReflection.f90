@@ -1,4 +1,3 @@
-!^CFG FILE USERFILES
 module ModUser
 
   use ModUserEmpty, ONLY:               &

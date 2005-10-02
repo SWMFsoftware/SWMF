@@ -34,20 +34,22 @@ MODEL = ModVarIndexes.o
 #MODEL = ModVarIndexes_globhelio.o #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
 
 MODULES = \
+	ModAdvance.o\
+	ModAMR.o\
 	ModBlockData.o\
+	ModGeometry.o\
 	ModInterface.o\
+	ModIO.o\
+	ModMain.o\
+	ModNodes.o\
+	ModOctree.o\
+	ModParallel.o\
+	ModPartSteady.o\
+	ModPhysics.o\
 	ModProcMH.o\
 	ModSize.o\
-	ModMain.o\
-	ModAdvance.o\
-	ModGeometry.o\
-	ModIO.o\
-	ModPhysics.o\
-	ModAMR.o\
-	ModPartSteady.o\
-	ModParallel.o\
-	ModOctree.o\
-	ModNodes.o\
+	ModUserEmpty.o \
+	ModUser.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD7} ${MODEL}
 
 # OBJECT FILES FOR MAIN EXECUTABLE
@@ -124,15 +126,6 @@ OBJ10=\
 OBJ12= write_plot_los.o write_plot_sph.o \
 		     set_ICs_arc.o set_ICs_cme.o      
 
-#^CFG IF USERFILES BEGIN
-OBJ13 = ModUserEmpty.o ModUser.o
-
-ModUser.f90:
-	cp ModUserDefault.f90 ModUser.f90
-
-#^CFG END USERFILES
-
-
 OBJ14=covariant.o                           #^CFG IF COVARIANT
 
 
@@ -186,7 +179,11 @@ OBJECTS = \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
-	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ13} ${OBJ14}
+	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14}
+
+# Default user module
+ModUser.f90:
+	cp ModUserDefault.f90 ModUser.f90
 
 NAME = Advance
 

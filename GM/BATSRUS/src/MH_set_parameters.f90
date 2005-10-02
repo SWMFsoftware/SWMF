@@ -34,8 +34,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  use ModUser,          ONLY: user_read_inputs, &       !^CFG IF USERFILES
-       NameUserModule, VersionUserModule                !^CFG IF USERFILES
+  use ModUser,          ONLY: user_read_inputs, &
+       NameUserModule, VersionUserModule
 
   implicit none
 
@@ -84,9 +84,9 @@ subroutine MH_set_parameters(TypeAction)
   real, dimension(3)          :: XyzStartArea_D, XyzEndArea_D
   real                        :: xRotateArea, yRotateArea, zRotateArea
 
-  ! Variables for checking the user module             !^CFG IF USERFILES BEGIN
+  ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead
-  real                        :: VersionUserModuleRead !^CFG END USERFILES
+  real                        :: VersionUserModuleRead
 
   integer :: iSession, iPlotFile, iVar
   !-------------------------------------------------------------------------
@@ -1202,7 +1202,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#MASSLOADING")
         call read_var('UseMassLoading',UseMassLoading)
         call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
-     case("#USER_FLAGS")             !^CFG IF USERFILES BEGIN
+     case("#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
         call read_var('UseUserSource'           ,UseUserSource)
         call read_var('UseUserPerturbation'     ,UseUserPerturbation)
@@ -1217,7 +1217,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUserSetPhysConst'     ,UseUserSetPhysConst)
         call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
      case("#USERINPUTBEGIN")        
-        call user_read_inputs        !^CFG END USERFILES
+        call user_read_inputs
      case("#CODEVERSION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('CodeVersion',CodeVersionRead)
@@ -1446,7 +1446,7 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
                 //TypeGeometry)
         end select                                     !^CFG END COVARIANT
-     case("#USERMODULE")                               !^CFG IF USERFILES BEGIN
+     case("#USERMODULE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameUserModule',NameUserModuleRead)
         call read_var('VersionUserModule',VersionUserModuleRead)
@@ -1456,7 +1456,7 @@ subroutine MH_set_parameters(TypeAction)
                 ' WARNING: code is compiled with user module ',NameUserModule,&
                 ' version',VersionUserModule
            if(UseStrict)call stop_mpi('Select the correct user module!')
-        end if                                         !^CFG END USERFILES
+        end if
      case("#CHECKGRIDSIZE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nI',nIJKRead_D(1))
@@ -1487,7 +1487,7 @@ subroutine MH_set_parameters(TypeAction)
         inv_g   = cOne/g
         inv_gm1 = cOne/gm1
         g_half  = cHalf*g
-     case('#EXTRABOUNDARY')                   !^CFG IF USERFILES BEGIN
+     case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
@@ -1496,7 +1496,7 @@ subroutine MH_set_parameters(TypeAction)
         if(TypeGeometry=='cartesian')&             !^CFG IF COVARIANT
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundary)  
-        !                                      ^CFG END USERFILES
+
      case('#FACEOUTERBC')                      
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('MaxBoundary',MaxBoundary)
@@ -1909,8 +1909,8 @@ contains
 
     UseUpstreamInputFile = .false.
 
-    UseMassLoading        = .false.        !^CFG IF USERFILES
-    AccelerateMassLoading = .false.        !^CFG IF USERFILES
+    UseMassLoading        = .false.
+    AccelerateMassLoading = .false.
 
     plot_dimensional      = .true.
     save_satellite_data   = .false.

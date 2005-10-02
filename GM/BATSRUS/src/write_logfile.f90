@@ -330,7 +330,7 @@ contains
   !============================================================================
   subroutine set_log_var
 
-    use ModUser, ONLY: user_get_log_var !^CFG IF USERFILES
+    use ModUser, ONLY: user_get_log_var
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU
@@ -715,15 +715,15 @@ contains
 
        ! DEFAULT
     case default
-       if (UseUserLogFiles) then                 !^CFG IF USERFILES BEGIN
+       if (UseUserLogFiles) then
           call user_get_log_var( LogVar_I(iVarTot), NameLogVar )
-       else                                      !^CFG END USERFILES
+       else
           if(iProc == 0)then
              LogVar_I(iVarTot) = -7777.
              call write_myname;
              write(*,*) 'WARNING in set_logvar: unknown logvarname=',NameLogVar
           end if
-       end if                                    !^CFG IF USERFILES
+       end if
     end select
   end subroutine set_log_var
 

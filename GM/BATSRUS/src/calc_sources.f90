@@ -13,7 +13,7 @@ subroutine calc_sources
   use ModPhysics
   use ModNumConst
   use ModGeometry,ONLY :  fAx_BLK, fAy_BLK, fAz_BLK
-  use ModUser, ONLY: user_calc_sources !^CFG IF USERFILES
+  use ModUser, ONLY: user_calc_sources
   implicit none
 
   real:: B1nJump,DivBInternal
@@ -303,7 +303,7 @@ subroutine calc_sources
      end select
   end if
   
-  if(UseUserSource) call user_calc_sources          !^CFG IF USERFILES
+  if(UseUserSource) call user_calc_sources
 Contains
  
   subroutine write_source(String)
