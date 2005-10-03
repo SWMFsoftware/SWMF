@@ -10,7 +10,7 @@ module ModSources
 
   real, dimension(nLons, nLats, nAlts) :: &
        Conduction, NOCooling, OCooling, &
-       AuroralHeating, JouleHeating
+       AuroralHeating, JouleHeating, IonPrecipHeating
 
   real, dimension(nLons, nLats, nAlts,nBlocksMax) :: &
        EuvHeating,eEuvHeating
@@ -27,6 +27,8 @@ module ModSources
 
   real :: AuroralIonRateS(nLons, nLats, nAlts, nSpecies, nBlocksMax)
   real :: AuroralHeatingRate(nLons, nLats, nAlts, nBlocksMax)
+  real :: IonPrecipIonRateS(nLons, nLats, nAlts, nSpecies, nBlocksMax)
+  real :: IonPrecipHeatingRate(nLons, nLats, nAlts, nBlocksMax)
   real :: ChemicalHeatingRate(nLons, nLats, nAlts)
 
   real :: VerticalTempSource(nLons, nLats, nAlts)

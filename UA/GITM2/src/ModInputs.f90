@@ -94,6 +94,14 @@ module ModInputs
   real    :: DtStatisticalModels = 3600.0
 
   !\
+  ! These are things for the ion precipitation for the April 2002 storm:
+  !/
+
+  logical :: UseIonPrecipitation = .false.
+  character (len=iCharLen_) :: IonIonizationFilename
+  character (len=iCharLen_) :: IonHeatingRateFilename
+
+  !\
   ! These are logicals to turn off and on forcing terms:
   !/
 

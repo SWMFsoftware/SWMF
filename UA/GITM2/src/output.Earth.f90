@@ -16,6 +16,7 @@ integer function bad_outputtype()
 
      IsFound = .false.
 
+     if (OutputType(iOutputType) == '3DAUR')     IsFound = .true.
      if (OutputType(iOutputType) == '3DSRC')     IsFound = .true.
      if (OutputType(iOutputType) == '3DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
@@ -239,6 +240,7 @@ subroutine output(dir, iBlock, iOutputType)
 
      call write_head_blocks
      call write_head_time
+     call write_head_version
      call output_3dall
 
      !! close file
@@ -253,7 +255,23 @@ subroutine output(dir, iBlock, iOutputType)
 
      call write_head_blocks
      call write_head_time
+     call write_head_version
      call output_3dsrc
+
+     !! close file
+     close(unit=iOutputUnit_)
+
+  case ('3DAUR')
+
+     !! open file
+     open(unit=iOutputUnit_, &
+          file=dir//"/"//blk_str//"_"//cTime//"."//OutputType(iOutputType),&
+          status="unknown")
+
+     call write_head_blocks
+     call write_head_time
+     call write_head_version
+     call output_3daur
 
      !! close file
      close(unit=iOutputUnit_)
@@ -267,6 +285,7 @@ subroutine output(dir, iBlock, iOutputType)
 
      call write_head_blocks
      call write_head_time
+     call write_head_version
      call output_2d
 
      !! close file
@@ -282,6 +301,7 @@ subroutine output(dir, iBlock, iOutputType)
              status="unknown")
 
         call write_head_time
+        call write_head_version
         call output_2delectro
 
         !! close file
@@ -297,6 +317,7 @@ subroutine output(dir, iBlock, iOutputType)
           status="unknown")
 
      call write_head_time
+     call write_head_version
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
      !! close file
@@ -311,6 +332,7 @@ subroutine output(dir, iBlock, iOutputType)
 
      call write_head_blocks
      call write_head_time
+     call write_head_version
      call output_3dion
 
      !! close file
@@ -351,6 +373,18 @@ contains
     write(iOutputUnit_,*) ""
 
   end subroutine write_head_time
+
+  !----------------------------------------------------------------
+  !
+  !----------------------------------------------------------------
+
+  subroutine write_head_version
+
+    write(iOutputUnit_,*) "VERSION"
+    write(iOutputUnit_,*) 2.4
+    write(iOutputUnit_,*) ""
+
+  end subroutine write_head_version
 
   !----------------------------------------------------------------
   !
@@ -589,7 +623,7 @@ contains
 
   subroutine output_3dsrc
 
-    nvars_to_write = 13
+    nvars_to_write = 15
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
     if (Is1D) then
@@ -614,11 +648,13 @@ contains
     write(iOutputUnit_,"(I7,A1,a)")  6, " ", "NO Cooling"
     write(iOutputUnit_,"(I7,A1,a)")  7, " ", "O Cooling"
     write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Auroral Heating"
-    write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Joule Heating"
-    write(iOutputUnit_,"(I7,A1,a)") 10, " ", "Conduction"
-    write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Chemical Heating"
-    write(iOutputUnit_,"(I7,A1,a)") 12, " ", "Vertical Advection"
-    write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Horizontal Advection"
+    write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Ion Precipitation Heating"
+    write(iOutputUnit_,"(I7,A1,a)") 10, " ", "Joule Heating"
+    write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Conduction"
+    write(iOutputUnit_,"(I7,A1,a)") 12, " ", "Chemical Heating"
+    write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Vertical Advection"
+    write(iOutputUnit_,"(I7,A1,a)") 14, " ", "Horizontal Advection"
+    write(iOutputUnit_,"(I7,A1,a)") 15, " ", "TempUnit"
 
     write(iOutputUnit_,*) ""
 
@@ -639,17 +675,78 @@ contains
                   -NOCooling(iiLon, iiLat, iiAlt)*dt, &
                   -OCooling(iiLon, iiLat, iiAlt)*dt, &
                   AuroralHeating(iiLon, iiLat, iiAlt)*dt, &
+                  IonPrecipHeating(iiLon, iiLat, iiAlt)*dt, &
                   JouleHeating(iiLon, iiLat, iiAlt)*dt, &
                   Conduction(iiLon, iiLat, iiAlt), &
                   ChemicalHeatingRate(iiLon, iiLat, iiAlt), & 
                   VerticalTempSource(iiLon, iiLat, iiAlt), &
-                  HorizontalTempSource(iiLon, iiLat, iiAlt)
+                  HorizontalTempSource(iiLon, iiLat, iiAlt), &
+                  TempUnit(iLon, iLat, iAlt)
 
           enddo
        enddo
     enddo
 
   end subroutine output_3dsrc
+
+  !----------------------------------------------------------------
+  !
+  !----------------------------------------------------------------
+
+  subroutine output_3daur
+
+    nvars_to_write = 9
+    write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
+
+    if (Is1D) then
+       nGCs = 0
+    else
+       nGCs = 2
+    endif
+
+    write(iOutputUnit_,*) "NUMERICAL VALUES"
+    write(iOutputUnit_,"(I7,6A)") nvars_to_write, " nvars"
+    write(iOutputUnit_,"(I7,7A)") nAlts, " nAltitudes"
+    write(iOutputUnit_,"(I7,7A)") nLats+nGCs*2, " nLatitude"
+    write(iOutputUnit_,"(I7,7A)") nLons+nGCs*2, " nLongitudes"
+    write(iOutputUnit_,*) ""
+
+    write(iOutputUnit_,*) "VARIABLE LIST"
+    write(iOutputUnit_,"(I7,A1,a)")  1, " ", "Longitude"
+    write(iOutputUnit_,"(I7,A1,a)")  2, " ", "Latitude"
+    write(iOutputUnit_,"(I7,A1,a)")  3, " ", "Altitude"
+    write(iOutputUnit_,"(I7,A1,a)")  4, " ", "Auroral Ion Rate O"
+    write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Auroral Ion Rate O2"
+    write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Auroral Ion Rate N2"
+    write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Ion Precip Ion Rate O"
+    write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Ion Precip Ion Rate O2"
+    write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Ion Precip Ion Rate N2"
+
+    write(iOutputUnit_,*) ""
+
+    write(iOutputUnit_,*) "BEGIN"
+
+    do iAlt=1,nAlts
+       do iLat=1-nGCs,nLats+nGCs
+          iiLat = min(max(iLat,1),nLats)
+          do iLon=1-nGCs,nLons+nGCs
+             iiLon = min(max(iLon,1),nLons)
+             write(iOutputUnit_,output_format)       &
+                  Longitude(iLon,iBlock), &
+                  Latitude(iLat,iBlock), &
+                  altitude(iAlt),&
+                  AuroralIonRateS(iLon,iLat,iAlt,iO_,iBlock),&
+                  AuroralIonRateS(iLon,iLat,iAlt,iO2_,iBlock),&
+                  AuroralIonRateS(iLon,iLat,iAlt,iN2_,iBlock),&
+                  IonPrecipIonRateS(iLon,iLat,iAlt,iO_,iBlock),&
+                  IonPrecipIonRateS(iLon,iLat,iAlt,iO2_,iBlock),&
+                  IonPrecipIonRateS(iLon,iLat,iAlt,iN2_,iBlock)
+
+          enddo
+       enddo
+    enddo
+
+  end subroutine output_3daur
 
   !----------------------------------------------------------------
   !

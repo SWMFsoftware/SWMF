@@ -607,6 +607,19 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#IONPRECIPITATION")
+           call read_in_logical(UseIonPrecipitation, iError)
+           call read_in_string(IonIonizationFilename, iError)
+           call read_in_string(IonHeatingRateFilename, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #IONPRECIPITATION'
+              write(*,*) '#IONPRECIPITATION'
+              write(*,*) 'UseIonPrecipitation     (logical)'
+              write(*,*) 'IonIonizationFilename   (string)'
+              write(*,*) 'IonHeatingRateFilename  (string)'
+              IsDone = .true.
+           endif
+
         case ("#LOGFILE")
            call read_in_real(dTLogFile, iError)
            if (iError /= 0) then

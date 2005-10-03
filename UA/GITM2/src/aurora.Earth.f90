@@ -6,7 +6,7 @@ subroutine aurora(iBlock)
   use ModGITM
   use ModSources
   use ModTime, only : tSimulation
-  use ModInputs, only : dTAurora
+  use ModInputs
   use ModConstants
 
   implicit none
@@ -17,12 +17,19 @@ subroutine aurora(iBlock)
   real :: Factor,temp_ED, avee, eflux
   integer :: i, j, k, n, iError
 
-  real, dimension(nLons,nLats,nAlts) :: temp, AuroralBulkIonRate
+  real, dimension(nLons,nLats,nAlts) :: temp, AuroralBulkIonRate, &
+       IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate
 
   logical :: IsFirstTime(nBlocksMax) = .true.
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
+
+     if (iBlock == 1 .and. UseIonPrecipitation) then
+        call ReadIonHeat(IonIonizationFilename,  .true.) 
+        call ReadIonHeat(IonHeatingRateFilename, .false.) 
+     endif
+
   else
      if (floor((tSimulation - dT)/dTAurora) == &
           floor(tSimulation/dTAurora)) return
@@ -33,6 +40,11 @@ subroutine aurora(iBlock)
 
   call report("Aurora",1)
   call start_timing("Aurora")
+
+  if (UseIonPrecipitation) call interpolate_ions( &
+       nLons, nLats, nAlts, &
+       Longitude(1:nLons,iBlock), Latitude(1:nLats,iBlock), Altitude(1:nAlts),&
+       IonPrecipitationBulkIonRate, IonPrecipitationHeatingRate)
 
   do i=1,nLats
      do j=1,nLons
@@ -70,16 +82,32 @@ subroutine aurora(iBlock)
      enddo
   enddo
 
-  Factor = 1.0
-
-  AuroralBulkIonRate = AuroralBulkIonRate * Factor
-  AuroralHeatingRate(:,:,:,iBlock) = AuroralHeatingRate(:,:,:,iBlock) * Factor
-
   ! From Rees's book:
 
   temp = 0.92 * NDensityS(1:nLons,1:nLats,1:nAlts,iN2_,iBlock) + &
          1.00 * NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock) + &
          0.56 * NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)
+
+  if (UseIonPrecipitation) then
+
+     IonPrecipIonRateS(:,:,:,iO_,iBlock)  = &
+          0.56*IonPrecipitationBulkIonRate*&
+          NDensityS(1:nLons,1:nLats,1:nAlts,iO_,iBlock)/temp
+     IonPrecipIonRateS(:,:,:,iO2_,iBlock) = &
+          1.00*IonPrecipitationBulkIonRate*&
+          NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock)/temp
+     IonPrecipIonRateS(:,:,:,iN2_,iBlock) = &
+          0.92*IonPrecipitationBulkIonRate*&
+          NDensityS(1:nLons,1:nLats,1:nAlts,iN2_,iBlock)/temp
+
+     IonPrecipHeatingRate(:,:,:,iBlock) = IonPrecipitationHeatingRate
+
+  else
+
+     IonPrecipIonRateS(:,:,:,:,iBlock) = 0.0
+     IonPrecipHeatingRate(:,:,:,iBlock) = 0.0
+
+  endif
 
   AuroralIonRateS(:,:,:,iO_,iBlock)  = &
        0.56*AuroralBulkIonRate*&
