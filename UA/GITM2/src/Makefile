@@ -94,7 +94,7 @@ GITM:	DEPEND
 GITM.exe:	${OBJECTS} ${MODULES} main.o
 	${LINK.f90} ${Lflag1} -o GITM.exe main.o ${OBJECTS} ${MODULES}\
 	-L${ABDIR} -lSphere -L${IODIR} -lindices -L${IEDIR} -lIE\
-	-L${EDDIR} -lED -L. -lSHARE ${IEDIR}/ModConductance.o
+	-L${EDDIR} -lED -L. -lSHARE ${IEDIR}/ModConductance.o ${EDDIR}/ModIons.o
 
 STATIC:
 	cp -f ModGITM_static.f90    ModGITM.f90
