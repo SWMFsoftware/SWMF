@@ -332,7 +332,7 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
   do i=1,nAlts+1
      VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt(i-1) 
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt(i) 
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt(i-1) 
   end do
 
 end subroutine calc_facevalues_alts

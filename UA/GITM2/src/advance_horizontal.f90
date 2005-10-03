@@ -496,7 +496,7 @@ subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
 
   do i=1,nLats+1
      VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLatDist_GB(i-1,iAlt,iBlock)
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_GB(i,iAlt,iBlock)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_GB(i-1,iAlt,iBlock)
   end do
 
 end subroutine calc_facevalues_lats
