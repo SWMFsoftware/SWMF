@@ -42,7 +42,7 @@ subroutine write_output
      if (floor((tSimulation-dt)/DtPlot(i)) /= &
           floor((tsimulation)/DtPlot(i)) .or. tSimulation == 0.0) then
         if (.not. IsDone) then
-           if (.not.UseApex) call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
+           if (.not.UseApex .and. .not.Is1D) call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
            IsDone = .true.
         endif
         do iBlock = 1, nBlocks
