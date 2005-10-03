@@ -89,7 +89,8 @@ distclean: clean
 rundir:
 	mkdir -p ${RUNDIR}/UA
 	cd ${RUNDIR}/UA; \
-		mkdir restartIN restartOUT data; \
+		mkdir restartOUT data; \
+		ln -s restartOUT restartIN; \
 		ln -s ${UADIR}/srcData DataIn
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
