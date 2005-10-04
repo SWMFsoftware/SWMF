@@ -1,6 +1,6 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,xx,w,func,physics,eqpar,variables
+function funcdef,xx,w,func,physics,eqpar,variables,rcut
 ;
 ; Originally developed for the Versatile Advection Code by G. Toth (1996-99).
 ; Rewritten for the BATSRUS code by G. Toth (2000).
@@ -62,7 +62,24 @@ siz=size(w)
 if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 
 ; Number of equation parameters
-neqpar = n_elements(eqpar)
+nEqpar = n_elements(eqpar)
+
+; Extract equation parameters
+gamma  =  5./3.
+clight =  1.0
+rbody  = -1.0
+if nEqpar gt 0 then begin
+    for i=nDim+nW,n_elements(variables)-1 do begin
+        iEqpar = i-nDim-nW
+        case variables(i) of
+            'g'     : gamma  = eqpar(iEqpar)
+            'gamma' : gamma  = eqpar(iEqpar)
+            'c'     : clight = eqpar(iEqpar)
+            'rbody' : rbody  = eqpar(iEqpar)
+            else:
+        endcase
+    endfor
+endif
 
 ; Variable names
 if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
@@ -79,14 +96,35 @@ endelse
 
 ; Check if f is among the variable names listed in wnames or if it is a number
 for iw=0,nw-1 do $
-   if f eq strtrim(string(iw),2) or strlowcase(f) eq wnames(iw) then $
-   case ndim of
-      1:result=w(*,iw)
-      2:result=w(*,*,iw)
-      3:result=w(*,*,*,iw)
-   endcase
+  if f eq strtrim(string(iw),2) or strlowcase(f) eq wnames(iw) then $
+  case ndim of
+    1:result = w(*,iw)
+    2:result = w(*,*,iw)
+    3:result = w(*,*,*,iw)
+endcase
 
-if n_elements(result) gt 0 then return,sign*result
+if n_elements(result) gt 0 and rcut le 0 then return, sign*result
+
+; Extract coordinate variables from xx:
+case ndim of
+   1:begin
+      x=xx & y=0 & z=0
+   end
+   2:begin
+      x=xx(*,*,0) & y=xx(*,*,1) & z=0
+   end
+   3:begin
+      x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
+   end
+endcase
+r = sqrt(x^2+y^2+z^2)
+
+; Return result after cutting out the body
+if n_elements(result) gt 0 then begin
+    loc = where(r le rcut, count) 
+    if count gt 0 then result(loc)=min(result)
+    return, sign*result
+endif
 
 ; Extract variables from w based on name
 if not keyword_set(physics) then begin
@@ -102,22 +140,6 @@ if ndim ne long(strmid(physics,l-2,1)) then begin
    print,'Error in funcdef: physics=',physics,$
          ' is inconsistent with ndim=',ndim
    retall
-endif
-
-; Find gamma for calculating pressure and 
-; clight for functions for Boris correction
-gamma = 5./3.
-clight = 1.0
-if nEqpar gt 0 then begin
-    for i=nDim+nW,n_elements(variables)-1 do begin
-        iEqpar = i-nDim-nW
-        case variables(i) of
-            'g'     : gamma  = eqpar(iEqpar)
-            'gamma' : gamma  = eqpar(iEqpar)
-            'c'     : clight = eqpar(iEqpar)
-            else:
-        endcase
-    endfor
 endif
 
 ; Extract primitive variables for calculating MHD type functions
@@ -203,29 +225,14 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
    if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then cc=gamma*p+bb
 endif
 
-; Extract coordinate variables from xx to take derivatives:
-case ndim of
-   1:begin
-      x=xx & y=0 & z=0
-   end
-   2:begin
-      x=xx(*,*,0) & y=xx(*,*,1) & z=0
-   end
-   3:begin
-      x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
-   end
-endcase
-
 ;==== Put your function definition(s) below using the variables and eq. params
 ;     extracted from x, w and eqpar, and select cases by the function name "f"
 ;     and the "phys, ndim, ndir" variables extracted from "physics".
 
 case f of
   'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
-  ; Electric field
-  'Ex'       : result=(by*uz-uy*bz)
-  'Ey'       : result=(bz*ux-uz*bx)
-  'Ez'       : result=(bx*uy-ux*by)
+  ; velocity
+  'u'        : result=sqrt(uu)
   ; momenta
   'mx'       : result=rho*ux
   'my'       : result=rho*uy
@@ -234,6 +241,12 @@ case f of
   'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
   'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
   'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
+  ; Magnetic field
+  'b'        : result=sqrt(bb)
+  ; Electric field
+  'Ex'       : result=(by*uz-uy*bz)
+  'Ey'       : result=(bz*ux-uz*bx)
+  'Ez'       : result=(bx*uy-ux*by)
   ; Total energy
   'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
   ; Alfven speed and Mach number
@@ -245,19 +258,15 @@ case f of
   'Malfveny' : result=uy/by*sqrt(rho)
   'Malfvenz' : result=uz/bz*sqrt(rho)
   'Malfven'  : result=sqrt(uu/bb*rho)
-  ; pressure, plazma beta, temperature, entropy
+  ; pressure, plasma beta, temperature, entropy
   'pbeta'    : result=2*p/bb
-  'T'        : result=p/rho
-  'T_SC'     : result=1.211E-8*p/rho       ; amu/kB* (dyne/cm^2) / (g/cm^3)
-  'T_IH'     : result=1.211E-8*p/rho       ; amu/kB* (dyne/cm^2) / (g/cm^3)
-  'T_GM'     : result=7.243E+7*p/rho       ; amu/kB * nPa / (amu/cm^3)
-  'n_IH'     : begin
-      result = rho/1.67e-24          ; n = rho/amu in CGS
-      loc=where(x^2+y^2+z^2 le 400.,count) ; exclude r<20
-      if count gt 0 then result(loc)=0.0
-  end
-  'n_SC'     : result=rho/1.67e-27     ; n = rho/amu
   's'        : result=p/rho^gamma
+  'T'        : result=p/rho
+  'T_SC'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+  'T_IH'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
+  'T_GM'     : result=7.243E+7*p/rho       ; [K] amu/kB*nPa / (amu/cm^3)
+  'n_IH'     : result=rho/1.67e-24         ; [/cc] n = rho/amu in CGS
+  'n_SC'     : result=rho/1.67e-24         ; [/cc] n = rho/amu in CGS
   ; sound speed, Mach number
   'csound'   :result=sqrt(gamma*p/rho)
   'mach'  :result=sqrt(uu/(gamma*p/rho))
@@ -392,7 +401,11 @@ case f of
 endcase
 
 if n_elements(result) gt 0 then begin
-   return,sign*result
+    ; exclude r < rcut
+    loc=where(r le rcut, count) 
+    if count gt 0 then result(loc)=min(result)
+
+    return,sign*result
 endif else begin
    print,'Error in funcdef: function=',func,' was not calculated ?!'
    retall
