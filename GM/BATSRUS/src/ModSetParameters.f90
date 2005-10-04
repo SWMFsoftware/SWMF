@@ -537,6 +537,11 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('yMaxCut',plot_range(4,ifile))
               call read_var('zMinCut',plot_range(5,ifile))
               call read_var('zMaxCut',plot_range(6,ifile))
+           elseif (index(plot_string,'blk')>0) then
+              plot_area='blk'
+              call read_var('xPoint',plot_point(1,ifile))
+              call read_var('yPoint',plot_point(2,ifile))
+              call read_var('zPoint',plot_point(3,ifile))
            elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
               iPlotFile = iFile - Plot_
               plot_area='lin'

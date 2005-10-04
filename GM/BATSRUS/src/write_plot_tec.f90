@@ -1,5 +1,5 @@
 !^CFG COPYRIGHT UM
-subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
+subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC,&
      xmin,xmax,ymin,ymax,zmin,zmax)
   !
   !NOTE: This routine assumes that the blocks are sorted on PEs by their global
@@ -9,13 +9,14 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
-       nOrder, limiter_type,betalimiter, UseRotatingBc, &
+       nOrder, limiter_type,betalimiter, UseRotatingBc, BlkTest, ProcTest, &
        TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
        Body_rho_dim, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModIO
   use ModNodes
   use ModNumConst, ONLY : cRadToDeg
@@ -23,9 +24,10 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
   implicit none
 
   ! Arguments  
-  integer, intent(in) :: ifile, nplotvar
+  integer, intent(in) :: ifile, nPlotVar
   character (LEN=500), intent(in) :: unitstr_TEC
-  real, intent(in) :: Plotvarnodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax)
+  real, intent(in) :: PlotVarBLK(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVarMax)
+  real, intent(in) :: PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nPlotVarMax)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
 
   ! Local Variables
@@ -36,6 +38,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
   character (len=22) :: textNandT
   character (len=23) :: textDateTime0,textDateTime
   character (len=80) :: format
+  character(len=80) :: stmp
 
   integer :: iTime0_I(7),iTime_I(7)
 
@@ -67,6 +70,45 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
   write(textDateTime ,format) iTime_I
 
   select case(plot_type1(1:3))
+  case('blk')
+     do iBLK = 1, nBlock
+        if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
+        if ( plot_point(1,ifile)> NodeX_NB(1   ,1   ,1   ,iBLK) .and. &
+             plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+             plot_point(2,ifile)> NodeY_NB(1   ,1   ,1   ,iBLK) .and. &
+             plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+             plot_point(3,ifile)> NodeZ_NB(1   ,1   ,1   ,iBLK) .and. &
+             plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK) )then
+           write(unit_tmp,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
+           write(unit_tmp,'(a)')trim(unitstr_TEC)
+           write(unit_tmp,'(a,i8,a,i8,a,i8,a)') &
+                'ZONE T="BLK Only '//textNandT//'", I=',nI+4,&
+                ', J=',nJ+4,', K=',nK+4,', F=POINT'
+           call write_auxdata
+           !DEBUGBLK
+           write(stmp,'(i12)')iBLK
+           write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
+           !DEBUGPROC
+           write(stmp,'(i12)')iProc
+           write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
+           ! Write cell values
+           do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+              if (plot_dimensional(ifile)) then
+                 write(unit_tmp,fmt="(30(E14.6))") &
+                      x_BLK(i,j,k,iBLK)*unitUSER_x, &
+                      y_BLK(i,j,k,iBLK)*unitUSER_x, &
+                      z_BLK(i,j,k,iBLK)*unitUSER_x, &
+                      PlotVarBlk(i,j,k,1:nPlotVar)
+              else
+                 write(unit_tmp,fmt="(30(E14.6))") &
+                      x_BLK(i,j,k,iBLK), &
+                      y_BLK(i,j,k,iBLK), &
+                      z_BLK(i,j,k,iBLK), &
+                      PlotVarBlk(i,j,k,1:nPlotVar)
+              end if
+           end do; end do; end do
+        end if
+     end do
   case('3d_')
      if(iProc==0)then
         ! Write file header
@@ -87,7 +129,7 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
         do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
            if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
               write(unit_tmp,fmt="(30(E14.6))") &
-                   NodeXYZ_N(i,j,k,1:3),Plotvarnodes_NBI(i,j,k,iBLK,1:nplotvar)
+                   NodeXYZ_N(i,j,k,1:3),PlotVarNodes_NBI(i,j,k,iBLK,1:nPlotVar)
            end if
         end do; end do; end do
         ! Write point connectivity
@@ -162,8 +204,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
                     write(unit_tmp,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_N(cut1,j,k,1:3)+ &
                           factor2*NodeXYZ_N(cut2,j,k,1:3)), &
-                         (factor1*Plotvarnodes_NBI(cut1,j,k,iBLK,1:nplotvar)+ &
-                          factor2*Plotvarnodes_NBI(cut2,j,k,iBLK,1:nplotvar))
+                         (factor1*PlotVarNodes_NBI(cut1,j,k,iBLK,1:nPlotVar)+ &
+                          factor2*PlotVarNodes_NBI(cut2,j,k,iBLK,1:nPlotVar))
                  end do; end do
                  ! Write point connectivity
                  do k=1,nK; do j=1,nJ
@@ -228,8 +270,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
                     write(unit_tmp,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
                           factor2*NodeXYZ_N(i,cut2,k,1:3)), &
-                         (factor1*Plotvarnodes_NBI(i,cut1,k,iBLK,1:nplotvar)+ &
-                          factor2*Plotvarnodes_NBI(i,cut2,k,iBLK,1:nplotvar))
+                         (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
+                          factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
                  end do; end do
                  ! Write point connectivity
                  do k=1,nK; do i=1,nI
@@ -294,8 +336,8 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
                     write(unit_tmp,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_N(i,j,cut1,1:3)+ &
                           factor2*NodeXYZ_N(i,j,cut2,1:3)), &
-                         (factor1*Plotvarnodes_NBI(i,j,cut1,iBLK,1:nplotvar)+ &
-                          factor2*Plotvarnodes_NBI(i,j,cut2,iBLK,1:nplotvar))
+                         (factor1*PlotVarNodes_NBI(i,j,cut1,iBLK,1:nPlotVar)+ &
+                          factor2*PlotVarNodes_NBI(i,j,cut2,iBLK,1:nPlotVar))
                  end do; end do
                  ! Write point connectivity
                  do j=1,nJ; do i=1,nI
@@ -334,9 +376,9 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
      nBlockCuts=0
      do iBLK = 1, nBlock
         if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
-        ic1=0; ic2=nI 
-        jc1=0; jc2=nJ
-        kc1=0; kc2=nK
+        ic1=1; ic2=1+nI 
+        jc1=1; jc2=1+nJ
+        kc1=1; kc2=1+nK
         call find_cuts(-1)
         if ( nCuts>0 )then
            !count up number of cuts
@@ -374,9 +416,9 @@ subroutine write_plot_tec(ifile,nplotvar,plotvarnodes_NBI,unitstr_TEC,&
      ! Now loop to write values
      do iBLK = 1, nBlock
         if(iTypeAdvance_B(iBlk) == SkippedBlock_) CYCLE
-        ic1=0; ic2=nI 
-        jc1=0; jc2=nJ
-        kc1=0; kc2=nK
+        ic1=1; ic2=1+nI 
+        jc1=1; jc2=1+nJ
+        kc1=1; kc2=1+nK
         call find_cuts(-1)
         if ( nCuts>0 )then
            ! write the cuts
@@ -445,8 +487,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic1,jc,kc,:)+ &
                       factor2*NodeXYZ_N( ic2,jc,kc,:)), &
-                     (factor1*Plotvarnodes_NBI(ic1,jc,kc,iBLK,1:nplotvar)+ &
-                      factor2*Plotvarnodes_NBI(ic2,jc,kc,iBLK,1:nplotvar))
+                     (factor1*PlotVarNodes_NBI(ic1,jc,kc,iBLK,1:nPlotVar)+ &
+                      factor2*PlotVarNodes_NBI(ic2,jc,kc,iBLK,1:nPlotVar))
                 if(okdebug)write(*,*)'  i=',ic1,'-',ic2,' j=',jc,' k=',kc
              end if
           end if
@@ -478,8 +520,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic,jc1,kc,:)+ &
                       factor2*NodeXYZ_N( ic,jc2,kc,:)), &
-                     (factor1*Plotvarnodes_NBI(ic,jc1,kc,iBLK,1:nplotvar)+ &
-                      factor2*Plotvarnodes_NBI(ic,jc2,kc,iBLK,1:nplotvar))
+                     (factor1*PlotVarNodes_NBI(ic,jc1,kc,iBLK,1:nPlotVar)+ &
+                      factor2*PlotVarNodes_NBI(ic,jc2,kc,iBLK,1:nPlotVar))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc1,'-',jc2,' k=',kc
              end if
           end if
@@ -511,8 +553,8 @@ contains
                 write(unit_tmp,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_N( ic,jc,kc1,:)+ &
                       factor2*NodeXYZ_N( ic,jc,kc2,:)), &
-                     (factor1*Plotvarnodes_NBI(ic,jc,kc1,iBLK,1:nplotvar)+ &
-                      factor2*Plotvarnodes_NBI(ic,jc,kc2,iBLK,1:nplotvar))
+                     (factor1*PlotVarNodes_NBI(ic,jc,kc1,iBLK,1:nPlotVar)+ &
+                      factor2*PlotVarNodes_NBI(ic,jc,kc2,iBLK,1:nPlotVar))
                 if(okdebug)write(*,*)'  i=',ic,' j=',jc,' k=',kc1,'-',kc2
              end if
           end if
@@ -524,7 +566,6 @@ contains
   subroutine write_auxdata
     character(len=8)  :: real_date
     character(len=10) :: real_time
-    character(len=80) :: stmp
 
     !BLOCKS
     write(stmp,'(i12,3(a,i2))')nBlockALL,'  ',nI,' x',nJ,' x',nK

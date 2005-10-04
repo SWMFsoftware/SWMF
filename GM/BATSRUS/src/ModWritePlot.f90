@@ -28,9 +28,10 @@ subroutine write_plot_common(ifile)
 
   ! Plot variables
   real :: PlotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
+  real :: PlotVarBlk(-1:nI+2,-1:nJ+2,-1:nK+2,nplotvarmax)
   real :: PlotVar_inBody(nplotvarmax)
   logical :: PlotVar_useBody(nplotvarmax)
-  real, allocatable :: Plotvarnodes_NBI(:,:,:,:,:)
+  real, allocatable :: PlotVarNodes_NBI(:,:,:,:,:)
 
   character (len=10) :: plotvarnames(nplotvarmax)
   integer :: nplotvar
@@ -227,6 +228,7 @@ subroutine write_plot_common(ifile)
   end select
 
   ! Compute the plot variables and write them to the disk
+  PlotVarBlk=0.
   do iBLK=1,nBlockMax
      if(unusedBLK(iBLK))CYCLE
 
@@ -245,6 +247,14 @@ subroutine write_plot_common(ifile)
         select case(plot_form(ifile))
         case('tec')
            call plotvar_to_plotvarnodes
+           if ( plot_point(1,ifile)> NodeX_NB(1   ,1   ,1   ,iBLK) .and. &
+                plot_point(1,ifile)<=NodeX_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                plot_point(2,ifile)> NodeY_NB(1   ,1   ,1   ,iBLK) .and. &
+                plot_point(2,ifile)<=NodeY_NB(1+nI,1+nJ,1+nK,iBLK) .and. &
+                plot_point(3,ifile)> NodeZ_NB(1   ,1   ,1   ,iBLK) .and. &
+                plot_point(3,ifile)<=NodeZ_NB(1+nI,1+nJ,1+nK,iBLK) )then
+              PlotVarBlk=PlotVar
+           end if
         case('idl')
            call write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                 xmin,xmax,ymin,ymax,zmin,zmax, &
@@ -272,13 +282,13 @@ subroutine write_plot_common(ifile)
   ! Write files for new tecplot format
   if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
      do i=1,nplotvar
-        NodeValue_NB=plotvarnodes_NBI(:,:,:,:,i)
+        NodeValue_NB=PlotVarNodes_NBI(:,:,:,:,i)
         call pass_and_average_nodes(.true.,NodeValue_NB)
-        plotvarnodes_NBI(:,:,:,:,i)=NodeValue_NB
+        PlotVarNodes_NBI(:,:,:,:,i)=NodeValue_NB
      end do
-     call write_plot_tec(ifile,nplotvar,Plotvarnodes_NBI,unitstr_TEC, &
+     call write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC, &
           xmin,xmax,ymin,ymax,zmin,zmax)
-     deallocate(Plotvarnodes_NBI)
+     deallocate(PlotVarNodes_NBI)
   end if
 
   close(unit_tmp)
@@ -449,9 +459,9 @@ Contains
     real,    dimension(0:nI+2, 0:nJ+2, 0:nK+2, nplotvarmax) :: nodeV
     real :: rr
 
-    if(.not.allocated(Plotvarnodes_NBI)) allocate(&
-         Plotvarnodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax),stat=iError)
-    call alloc_check(iError,'write_plot_common:Plotvarnodes_NBI')
+    if(.not.allocated(PlotVarNodes_NBI)) allocate(&
+         PlotVarNodes_NBI(1:1+nI,1:1+nJ,1:1+nK,nBLK,nplotvarmax),stat=iError)
+    call alloc_check(iError,'write_plot_common:PlotVarNodes_NBI')
 
     ! Initialize values
     nodeCount = 0; nodeV = 0.00
@@ -476,7 +486,7 @@ Contains
             NodeZ_NB(i,j,k,iBLK)**2)
        do iVar=1,nplotvar
           if (nodeCount(i,j,k,iVar) > 0) then
-             Plotvarnodes_NBI(i,j,k,iBLK,iVar) = &
+             PlotVarNodes_NBI(i,j,k,iBLK,iVar) = &
                   nodeV(i,j,k,iVar)/real(nodeCount(i,j,k,iVar))
              ! This will zero out values otherwise true with plotvar_useBody
              ! The intent of plotvar_useBody is to fill nodes inside of the body
@@ -485,11 +495,11 @@ Contains
              !   body and out.  Setting the values to zero inside of 0.51 fixes it.
              if(plotvar_useBody(iVar))then
                 if(rr < 0.51*Rbody .and. rr < 0.51) then
-                   Plotvarnodes_NBI(i,j,k,iBLK,iVar) = 0.00
+                   PlotVarNodes_NBI(i,j,k,iBLK,iVar) = 0.00
                 end if
              end if
           else
-             Plotvarnodes_NBI(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
+             PlotVarNodes_NBI(i,j,k,iBLK,iVar) = plotvar_inBody(iVar)
           end if
        end do
     end do; end do; end do

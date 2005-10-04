@@ -1908,6 +1908,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					if="$plotform =~ /\btec\b/"/>
 				<option value="dpl" 
 					if="$plotform =~ /\btec\b/"/>
+				<option value="blk" 
+					if="$plotform =~ /\btec\b/"/>
 			</part>
 			<part name="plotvar" type="string" input="select" 
 							required="T">
@@ -1963,6 +1965,11 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 			<parameter name="yNormal" type="real" />
 			<parameter name="zNormal" type="real" />
 		</if>
+		<if expr="$plotarea =~ /\bblk\b/">
+			<parameter name="xPoint"  type="real" />
+			<parameter name="yPoint"  type="real" />
+			<parameter name="zPoint"  type="real" />
+		</if>
 		<parameter name="Radius" type="real" min="0" default="10"
 			if="$plotarea =~ /\bsph\b/" />
                 <if expr="$plotarea =~ /\blos\b/">
@@ -2013,7 +2020,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		</if>
 	</for>
 #SAVEPLOT
-8			nPlotfile
+9			nPlotfile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -2089,6 +2096,12 @@ slc MHD tec		StringPlot  ! general slice Tecplot (ONLY!) plot
   0.			xNormal
   0.			yNormal
   1.			zNormal
+blk MHD tec		StringPlot  ! general block Tecplot (ONLY!) plot
+-1			DnSavePlot
+10.			DtSavePlot
+ 5.			xPoint
+ 1.			yPoint
+ 1.			zPoint
 
 Default is nPlotFile=0. \\
 
@@ -2097,7 +2110,7 @@ StringPlot must contain the following 3 parts in arbitrary order
 \begin{verbatim}
 plotarea plotvar plotform
 
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin'
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk'
 plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var' - normalized
 plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR' - dimensional
 plotform = 'tec', 'idl'
@@ -2118,6 +2131,7 @@ slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream line
+blk   - 3D single block cell centered data, block specified point location
 \end{verbatim}
 The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
@@ -2149,7 +2163,8 @@ Depending on StringPlot, further information is read from the parameter file
 in this order:
 \begin{verbatim}
  PlotRange		if plotarea is 'cut', 'dpl', or 'slc'
- Point, Normal		if plotarea is 'slc'
+ Point			if plotarea is 'slc', or 'blk'
+ Normal			if plotarea is 'slc'
  DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
  Radius                 if plotarea is 'sph'
  NameVars		if plotform is 'var'
@@ -2181,8 +2196,8 @@ The 'dpl' and 'slc' Tecplot plots use Plotrange like the IDL plots, and will
 clip the cut plane when it exits the defined box.
 
 \noindent
-Point is described by the coordinate of any point on the cut plane, 
-often the origin. Normal is the coordinate of a vector normal to the plane.  
+Point is described by the coordinate of any point on the cut plane, often the origin,
+or inside of a 3D block. Normal is the coordinate of a vector normal to the plane.  
 If the normal in any given coordinate direction is less than 0.01, 
 then no cuts are computed for cell edges parallel to that coordinate direction.
 For example, the following would result in only computing cuts on cell 
