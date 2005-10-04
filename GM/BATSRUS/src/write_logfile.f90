@@ -153,8 +153,13 @@ subroutine write_logfile(iSatIn,iFile)
      if (iSatIn==0) then
         if(unit_log<0)then
            unit_log = io_unit_new()
-           write(filename,'(a,i6.6,a)')&
-                trim(NamePlotDir)//'log_n',n_step,'.log'
+           if(n_step < 1000000)then
+              write(filename,'(a,i6.6,a)')&
+                   trim(NamePlotDir)//'log_n',n_step,'.log'
+           else
+              write(filename,'(a,i8.8,a)')&
+                   trim(NamePlotDir)//'log_n',n_step,'.log'
+           end if
            open(unit_log,file=filename,status="replace")
            if (index(NameAll,'pnt')>0 .or. index(NameAll,'test')>0) then
    	      if (coord_test) then
