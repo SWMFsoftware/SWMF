@@ -85,4 +85,7 @@ vectors=0
 cut=0
 grid=0
 
+; Radius of cutting out inner part
+rcut=-1.0
+
 end
