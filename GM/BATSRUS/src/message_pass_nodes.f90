@@ -1074,6 +1074,7 @@ subroutine set_block_hanging_nodes(Vin)
               k1=2;    k2=nK;   kOffset=1
            end select
 
+           ! Correct edge nodes and some interior face nodes
            do i=i1,i2,2; do j=j1,j2,2; do k=k1,k2,2
               Vin(i,j,k,iBLK) = 0.125 * ( &
                    Vin(i-iOffset,j-jOffset,k-kOffset,iBLK) + &
@@ -1085,6 +1086,37 @@ subroutine set_block_hanging_nodes(Vin)
                    Vin(i+iOffset,j+jOffset,k-kOffset,iBLK) + &
                    Vin(i+iOffset,j+jOffset,k+kOffset,iBLK) )
            end do; end do; end do
+
+           ! Add correction of additional interior face nodes
+           if(idir<=6)then
+              if(iOffset==1)then
+                 do i=i1-1,i2+1,2; do j=j1,j2,2; do k=k1,k2,2
+                    Vin(i,j,k,iBLK) = 0.25 * ( &
+                         Vin(i,j-jOffset,k-kOffset,iBLK) + &
+                         Vin(i,j-jOffset,k+kOffset,iBLK) + &
+                         Vin(i,j+jOffset,k-kOffset,iBLK) + &
+                         Vin(i,j+jOffset,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(jOffset==1)then
+                 do i=i1,i2,2; do j=j1-1,j2+1,2; do k=k1,k2,2
+                    Vin(i,j,k,iBLK) = 0.25 * ( &
+                         Vin(i-iOffset,j,k-kOffset,iBLK) + &
+                         Vin(i-iOffset,j,k+kOffset,iBLK) + &
+                         Vin(i+iOffset,j,k-kOffset,iBLK) + &
+                         Vin(i+iOffset,j,k+kOffset,iBLK) )
+                 end do; end do; end do
+              end if
+              if(kOffset==1)then
+                 do i=i1,i2,2; do j=j1,j2,2; do k=k1-1,k2+1,2
+                    Vin(i,j,k,iBLK) = 0.25 * ( &
+                         Vin(i-iOffset,j-jOffset,k,iBLK) + &
+                         Vin(i-iOffset,j+jOffset,k,iBLK) + &
+                         Vin(i+iOffset,j-jOffset,k,iBLK) + &
+                         Vin(i+iOffset,j+jOffset,k,iBLK) )
+                 end do; end do; end do
+              end if
+           end if
 
         end if
      end do
