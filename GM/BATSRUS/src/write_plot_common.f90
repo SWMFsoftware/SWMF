@@ -456,7 +456,8 @@ Contains
     ! Initialize values
     nodeCount = 0; nodeV = 0.00
 
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
+    ! Cell loop now skips ghost cells.  message_pass_nodes does average.
+    do k=1,nK; do j=1,nJ; do i=1,nI  ! Cell loop
        do iVar=1,nplotvar
           if ( true_cell(i,j,k,iBLK) .or. plotvar_useBody(iVar) )then
              do kk=0,1; do jj=0,1; do ii=0,1
