@@ -127,7 +127,7 @@
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
                  doask,x,w,xreg,wreg,usereg,physicss(ifile),eqpar,variables,$
-                 cut0
+                 cut0,rcut
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'
@@ -250,7 +250,7 @@
               variables,wnames,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
 	      velvector,velspeed,velseed,velpos,velx,vely,veltri,$
-              cut,cut0,plotdim,$
+              cut,cut0,rcut,plotdim,$
               nfunc,multix,multiy,fixaspect,plotix,plotiy,$
               funcs,funcs1,funcs2,fmin,fmax,f
 

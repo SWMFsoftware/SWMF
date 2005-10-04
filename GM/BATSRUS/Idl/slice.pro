@@ -150,7 +150,7 @@
     
     first= islice eq 1
     getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,var2d,cut0
+        x2d,w2d,xreg,wreg,usereg,physics2d,eqpar,var2d,cut0,rcut
 
    endfor
 
@@ -209,7 +209,7 @@
         var2d,wnames,axistype,plotmodes,plottitles,$
         ax,az,contourlevel,0,$
         velvector,0,velseed,velpos,velx,vely,veltri,$
-        cut,cut0,plotdim,$
+        cut,cut0,rcut,plotdim,$
         nfunc,multix,multiy,fixaspect,$
         plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
 

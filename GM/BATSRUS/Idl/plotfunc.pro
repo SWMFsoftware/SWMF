@@ -113,7 +113,7 @@
 
    if noautorange eq 0 then begin
       getlimits,1,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                x,w,xreg,wreg,usereg,physics,eqpar,variables,cut0
+                x,w,xreg,wreg,usereg,physics,eqpar,variables,cut0,rcut
 
       print
       for ifunc=0,nfunc-1 do $
@@ -142,7 +142,7 @@
      variables,wnames,axistype,plotmodes,plottitles,$
      ax,az,contourlevel,0,$
      velvector,0,velseed,velpos,velx,vely,veltri,$
-     cut,cut0,plotdim,$
+     cut,cut0,rcut,plotdim,$
      nfunc,multix,multiy,fixaspect,plotix,plotiy,$
      funcs,funcs1,funcs2,fmin,fmax,f
 
