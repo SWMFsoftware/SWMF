@@ -261,6 +261,7 @@ Contains
                CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
           VdtFace_x(lFaceTo,j,k) = &
                CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
+          if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
           !^CFG IF NOT COVARIANT BEGIN
           LeftState_VX(Bx_,lFaceTo,j,k) = &
                CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
@@ -277,6 +278,7 @@ Contains
                   CorrectedFlux_VXB(nVar,j,k,lFaceFrom,globalBLK)
              VdtFace_x(lFaceTo,j,k) = &
                   CorrectedFlux_VXB(Vdt_,j,k,lFaceFrom,globalBLK)
+             if(UseCovariant)CYCLE       !^CFG IF COVARIANT 
              !^CFG IF NOT COVARIANT BEGIN
              LeftState_VX(Bx_,lFaceTo,j,k) = &
                   CorrectedFlux_VXB(BnL_,j,k,lFaceFrom,globalBLK)
@@ -301,6 +303,7 @@ Contains
                CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
           VdtFace_y(i,lFaceTo,k)= &
                CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
+          if(UseCovariant)CYCLE          !^CFG IF COVARIANT 
           !^CFG IF NOT COVARIANT BEGIN
           LeftState_VY(By_,i,lFaceTo,k) = &
                CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
@@ -317,6 +320,7 @@ Contains
                   CorrectedFlux_VYB(nVar,i,k,lFaceFrom,globalBLK)
              VdtFace_y(i,lFaceTo,k)= &
                   CorrectedFlux_VYB(Vdt_,i,k,lFaceFrom,globalBLK)
+             if(UseCovariant)CYCLE     !^CFG IF COVARIANT 
              !^CFG IF NOT COVARIANT BEGIN
              LeftState_VY(By_,i,lFaceTo,k) = &
                   CorrectedFlux_VYB(BnL_,i,k,lFaceFrom,globalBLK)
@@ -341,6 +345,7 @@ Contains
                CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
           VdtFace_z(i,j,lFaceTo) = &
                CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
+          if(UseCovariant)CYCLE      !^CFG IF COVARIANT 
           !^CFG IF NOT COVARIANT BEGIN
           LeftState_VZ(Bz_,i,j,lFaceTo) = &
                CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
@@ -357,6 +362,7 @@ Contains
                   CorrectedFlux_VZB(nVar,i,j,lFaceFrom,globalBLK)
              VdtFace_z(i,j,lFaceTo) = &
                   CorrectedFlux_VZB(Vdt_,i,j,lFaceFrom,globalBLK)
+             if(UseCovariant)CYCLE    !^CFG IF COVARIANT 
              !^CFG IF NOT COVARIANT BEGIN
              LeftState_VZ(Bz_,i,j,lFaceTo) = &
                   CorrectedFlux_VZB(BnL_,i,j,lFaceFrom,globalBLK)
