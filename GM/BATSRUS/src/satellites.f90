@@ -144,9 +144,9 @@ end subroutine read_satellite_input_files
 
 subroutine set_satellite_flags
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
+  use ModMain, ONLY : nDim,nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
   use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModGeometry, ONLY : TypeGeometry               !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant               !^CFG IF COVARIANT
   use ModIO, ONLY : iBLKsatellite,iPEsatellite,Xsatellite,&
        SatelliteInBLK,DoTrackSatellite_I,nSatellite
   use ModNumConst
@@ -156,6 +156,7 @@ subroutine set_satellite_flags
   integer :: isat, iPE,iPEtmp, iBLK, iBLKtemp
   real    :: XSat,YSat,ZSat
   integer :: i,j,k, iError
+  real,dimension(nDim)::GenOut_D
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
@@ -169,21 +170,17 @@ subroutine set_satellite_flags
 
   do iSat=1, nSatellite
      if(.not.DoTrackSatellite_I(iSat))CYCLE !Position is not defined
-     select case(TypeGeometry)           !^CFG IF COVARIANT
-     case('cartesian')                   !^CFG IF COVARIANT
+
+     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+        call xyz_to_gen(XSatellite(iSat,:),GenOut_D)
+        xSat=GenOut_D(1)
+        ySat=GenOut_D(2)
+        zSat=GenOut_D(3)
+     else                                   !^CFG END COVARIANT
         xSat=XSatellite(iSat,1)
         ySat=XSatellite(iSat,2)
         zSat=XSatellite(iSat,3)
-     case('spherical')                   !^CFG IF COVARIANT BEGIN
-        call xyz_to_spherical(XSatellite(iSat,1), XSatellite(iSat,2),&
-             XSatellite(iSat,3), xSat, ySat, zSat)
-     case('spherical_lnr')                   
-        call xyz_to_spherical(XSatellite(iSat,1), XSatellite(iSat,2),&
-             XSatellite(iSat,3), XSat, YSat, ZSat)
-        xSat=log(max(xSat, cTiny))
-     case default
-        call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-     end select                          !^CFG END COVARIANT
+     end if                                 !^CFG IF COVARIANT             
 
      iPE = -1
      iBLKtemp = -1

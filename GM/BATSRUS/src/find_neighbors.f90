@@ -575,7 +575,7 @@ subroutine fixRefinementLevels
   use ModProcMH
   use ModMain, ONLY : nBLK,lVerbose
   use ModAMR, ONLY : refine_list
-  use ModGeometry,ONLY: TypeGeometry                !^CFG IF COVARIANT
+  use ModGeometry,ONLY: is_axial_geometry                !^CFG IF COVARIANT
   use ModOctree
   implicit none
 
@@ -621,7 +621,7 @@ subroutine fixRefinementLevels
                                   outBlockPtr%ptr%IsOuterBoundary)&
                                   .or.(inBlockPtr%ptr%IsExtraBoundary .and.& 
                                   outBlockPtr%ptr%IsExtraBoundary&
-                                  .and.( i==0.and.k==0.or.TypeGeometry=='cartesian')& !^CFG IF COVARIANT
+                                  .and.( i==0.and.k==0.or..not.is_axial_geometry())& !^CFG IF COVARIANT
                                   )&          
                                   ))) then
                                 refine_list(outBlockPtr%ptr%BLK,outBlockPtr%ptr%PE+1) = .true.

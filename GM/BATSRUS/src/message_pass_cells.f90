@@ -941,9 +941,9 @@ subroutine mp_build_cell_indices(JustCount)
                  end do
               case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
-                      (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
+                      ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
+                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_))) call build_i_axis
                  !^CFG END COVARIANT  
               end select
            end do
@@ -968,9 +968,9 @@ subroutine mp_build_cell_indices(JustCount)
                  end do
               case(NOBLK)                                  !^CFG IF COVARIANT BEGIN
                  if(DoFixExtraBoundary.and.&
-                      (((TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
+                      ((index(TypeGeometry,'spherical')>0&
                       .and.(idir==Top_.or.idir==Bot_)).or.& 
-                      (TypeGeometry=='cylindrical'.and.idir==West_))) call build_i_axis
+                      (index(TypeGeometry,'cylindrical')>0.and.idir==West_)))  call build_i_axis
                  !^CFG END COVARIANT  
               end select
            end do

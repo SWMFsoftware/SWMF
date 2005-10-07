@@ -1499,7 +1499,7 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   use ModParallel,ONLY : proc_dims
   use ModOctree, ONLY: adaptive_block_ptr, octree_roots
   use ModSize, ONLY: nCells
-  use ModGeometry, ONLY : TypeGeometry         !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant         !^CFG IF COVARIANT
   use ModGeometry, ONLY : XyzMin_D, XyzMax_D
   use ModNumConst
   implicit none
@@ -1519,19 +1519,14 @@ subroutine xyz_to_peblk(x,y,z,iPe,iBlock,DoFindCell,iCell,jCell,kCell)
   nullify(Octree % ptr)
 
   ! Perform the coordinate transformation, if needed
-  select case(TypeGeometry)           !^CFG IF COVARIANT
-  case('cartesian')                   !^CFG IF COVARIANT
+                     
+  if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
+     call xyz_to_gen((/x,y,z/),Xyz_D)
+  else                                       !^CFG END COVARIANT
      Xyz_D(1)=x
      Xyz_D(2)=y
      Xyz_D(3)=z
-  case('spherical')                   !^CFG IF COVARIANT BEGIN
-     call xyz_to_spherical(x,y,z,Xyz_D(1),Xyz_D(2),Xyz_D(3))
-  case('spherical_lnr')                   
-     call xyz_to_spherical(x,y,z,Xyz_D(1),Xyz_D(2),Xyz_D(3))
-     Xyz_D(1)=log(Xyz_D(1))
-  case default
-     call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-  end select                          !^CFG END COVARIANT
+  end if                                     !^CFG IF COVARIANT
 
   !Check, if we are within the Octree:
   if(any(Xyz_D(1:3)<XyzMin_D(1:3)).or.any(Xyz_D(1:3)>XyzMax_D(1:3)-cTiny))&

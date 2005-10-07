@@ -7,7 +7,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
-       TypeGeometry,UseCovariant,UseVertexBasedGrid,  & !^CFG IF COVARIANT
+       TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & !^CFG IF COVARIANT
        allocate_face_area_vectors,allocate_old_levels,& !^CFG IF COVARIANT
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
@@ -595,25 +595,20 @@ subroutine MH_set_parameters(TypeAction)
               end do
               if(index(plot_string,'x=0')>0)then
                  plot_area='x=0'
-                 select case(TypeGeometry)               !^CFG IF COVARIANT
-                 case('cartesian')                       !^CFG IF COVARIANT
-                    plot_range(1,ifile)=-cTiny*(XyzMax_D(1)-XyzMin_D(1))&
+                 if(.not.is_axial_geometry())then      !^CFG IF COVARIANT
+
+                    plot_range(1,ifile)=-cTiny*(XyzMax_D(x_)-XyzMin_D(x_))&
                          /(nCells(1)*proc_dims(1))
-                    plot_range(2,ifile)=+cTiny*(XyzMax_D(1)-XyzMin_D(1))&
+                    plot_range(2,ifile)=+cTiny*(XyzMax_D(x_)-XyzMin_D(x_))&
                          /(nCells(1)*proc_dims(1))
-                    !                               ^CFG IF COVARIANT BEGIN
-                 case('spherical','spherical_lnr','cylindrical')  
+                 else                               !^CFG IF COVARIANT BEGIN
                     plot_range(3,ifile)=cHalfPi&                       
-                         -cTiny*(XyzMax_D(2)-XyzMin_D(2))&
-                         /(nCells(2)*proc_dims(2))            
+                         -cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
+                         /(nCells(Phi_)*proc_dims(Phi_))            
                     plot_range(4,ifile)=cHalfPi&                        
-                         +cTiny*(XyzMax_D(2)-XyzMin_D(2))&
-                         /(nCells(2)*proc_dims(2)) 
-                 case default
-                    call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
-                         //TypeGeometry)
-                 end select
-                 !                                  ^CFG END COVARIANT
+                         +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
+                         /(nCells(Phi_)*proc_dims(Phi_)) 
+                 end if                             !^CFG END COVARIANT
               elseif(index(plot_string,'y=0')>0)then
                  plot_area='y=0'
                  plot_range(3,ifile)=-cTiny*(XyzMax_D(2)-XyzMin_D(2))&
@@ -622,25 +617,10 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(2)*proc_dims(2)) 
               elseif(index(plot_string,'z=0')>0)then
                  plot_area='z=0'
-                 select case(TypeGeometry)               !^CFG IF COVARIANT
-                 case('cartesian','cylindrical')         !^CFG IF COVARIANT
-                    plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                         /(nCells(3)*proc_dims(3)) 
-                    plot_range(6,ifile)=+cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                         /(nCells(3)*proc_dims(3)) 
-                    !^CFG IF COVARIANT BEGIN
-                 case('spherical','spherical_lnr')
-                    plot_range(5,ifile)=cHalfPi&                        
-                         -cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                         /(nCells(3)*proc_dims(3))               
-                    plot_range(6,ifile)=cHalfPi&                        
-                         +cTiny*(XyzMax_D(3)-XyzMin_D(3))&
-                         /(nCells(3)*proc_dims(3)) 
-                 case default
-                    call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
-                         //TypeGeometry)
-                 end select
-                 !^CFG END COVARIANT
+                 plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
+                      /(nCells(3)*proc_dims(3)) 
+                 plot_range(6,ifile)=+cTiny*(XyzMax_D(3)-XyzMin_D(3))&
+                      /(nCells(3)*proc_dims(3)) 
               elseif(index(plot_string,'3d')>0)then
                  plot_area='3d_'
               else
@@ -657,10 +637,8 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'lin' &        !^CFG IF RAYTRACE
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
-              !                                     ^CFG IF COVARIANT BEGIN
-              if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr')&
-                   plot_dx(1,ifile)=-1.0 
-              !                                     ^CFG END COVARIANT
+              if(is_axial_geometry())plot_dx(1,ifile)=-1.0 !^CFG IF COVARIANT 
+   
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
               plot_dx(1,ifile)=0.
@@ -696,7 +674,7 @@ subroutine MH_set_parameters(TypeAction)
                  end do
                  plot_area='R=0'           ! to disable the write_plot_sph routine
               case default
-                 call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
+                 call stop_mpi(NameSub//' Sph-plot is not implemented for geometry= '&
                       //TypeGeometry)
               end select                           !^CFG END COVARIANT 
            end if
@@ -1070,7 +1048,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrderProlong',prolong_order)
         call read_var('TypeProlong' ,prolong_type)
      case("#MESSAGEPASS","#OPTIMIZE")
-        if(TypeGeometry=='cartesian') then               !^CFG IF COVARIANT
+        if(.not.is_axial_geometry()) then               !^CFG IF COVARIANT
            call read_var('TypeMessagePass',optimize_message_pass)
            if(optimize_message_pass=='allold' .or.&
                 optimize_message_pass=='oldopt')then
@@ -1415,10 +1393,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nRootBlockY',proc_dims(2))
         call read_var('nRootBlockZ',proc_dims(3))
         !^CFG IF COVARIANT BEGIN
-        if( (TypeGeometry=='spherical'.or.TypeGeometry=='cylindrical'&
-             .or.TypeGeometry=='spherical_lnr')&
-             .and.mod(proc_dims(2),2)==1) then
-           proc_dims(2)=2*proc_dims(3)
+        if( is_axial_geometry()&
+             .and.mod(proc_dims(Phi_),2)==1) then
+           proc_dims(Phi_)=2*proc_dims(3)
            if(iProc==0)then
               write(*,*)&
                    'Original number of blocks for the polar angle Phi must be even'
@@ -1438,19 +1415,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('yMax',y2)
         call read_var('zMin',z1)
         call read_var('zMax',z2)
-        select case(TypeGeometry)                      !^CFG IF COVARIANT
-        case('cartesian')                              !^CFG IF COVARIANT
-           call set_xyzminmax_cart  
-        case('spherical')                              !^CFG IF COVARIANT BEGIN
-           call set_xyzminmax_sph  
-        case('spherical_lnr')         
-           call set_xyzminmax_sph2      
-        case('cylindrical')         
-           call set_xyzminmax_cyl
-        case default
-           call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
-                //TypeGeometry)
-        end select                                     !^CFG END COVARIANT
+        
+        call set_xyzminmax  
+        
+
      case("#USERMODULE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameUserModule',NameUserModuleRead)
@@ -1498,7 +1466,7 @@ subroutine MH_set_parameters(TypeAction)
         if(UseExtraBoundary) call read_var('TypeBc_I(ExtraBc_)',&
              TypeBc_I(ExtraBc_))      
         
-        if(TypeGeometry=='cartesian')&             !^CFG IF COVARIANT
+        if(.not.is_axial_geometry())&             !^CFG IF COVARIANT
              call read_var('DoFixExtraBoundary',&  
              DoFixExtraBoundary)  
 
@@ -1908,7 +1876,7 @@ contains
     z1 = -10.
     z2 =  10.
 
-    call set_xyzminmax_cart
+    call set_xyzminmax
 
     optimize_message_pass = 'allopt'
 

@@ -3,10 +3,11 @@ subroutine set_root_block_geometry
   use ModProcMH
   use ModSize
   use ModMain, ONLY : TypeBc_I,unusedBLK,nBlock,nBlockMax
+  use ModMain,ONLY  : Phi_,Theta_,z_             !^CFG IF COVARIANT
   use ModAMR, ONLY : availableBLKs
   use ModGeometry,ONLY: xyzStart_BLK,dx_BLK,dy_BLK,dz_BLK,&
        R2_BLK,&                !^CFG IF SECONDBODY
-       TypeGeometry,&          !^CFG IF COVARIANT
+       TypeGeometry,is_axial_geometry,&          !^CFG IF COVARIANT
        R_BLK,x_BLK,y_BLK,z_BLK,Dxyz,XyzMin_D,XyzMax_D
   use ModNumConst
   use ModParallel, ONLY: proc_dims,periodic3D
@@ -18,23 +19,19 @@ subroutine set_root_block_geometry
 
   ! set the array periodic3D for the periodic boundary
 
-  select case(TypeGeometry)       !^CFG IF COVARIANT
-     case('cartesian')            !^CFG IF COVARIANT
-        periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
-        periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
-        periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
-     case('spherical','spherical_lnr')        !^CFG IF COVARIANT BEGIN
-        periodic3D(1)=.false. 
-        periodic3D(2)=.true.  
-        periodic3D(3)=.false.
-     case('cylindrical','cylindrical_gen')
-        periodic3D(1)=.false. 
-        periodic3D(2)=.true.  
-        periodic3D(3)= any(TypeBc_I(bot_:top_)=='periodic')
-     case default
-        call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-     end select                   !^CFG END COVARIANT
-
+  if(is_axial_geometry())then                     !^CFG IF COVARIANT BEGIN
+     Periodic3D(Phi_)=.true.
+     if(index(TypeGeometry,'spherical')>0)then
+        Periodic3D(Theta_)=.false.
+     else
+        periodic3D(z_)=any(TypeBc_I(bot_:top_)=='periodic')
+     end if
+  else                                           !^CFG END COVARIANT
+     periodic3D(1)=any(TypeBc_I(east_:west_)=='periodic')
+     periodic3D(2)=any(TypeBc_I(south_:north_)=='periodic')
+     periodic3D(3)=any(TypeBc_I(bot_:top_)=='periodic')
+  end if                                                !^CFG IF COVARIANT
+ 
   xyzStart_BLK = -777777.
   dx_BLK = -777777.
   dy_BLK = -777777.
@@ -95,22 +92,21 @@ subroutine fix_block_geometry(iBLK)
   real :: dx,dy,dz,fAx,fAy,fAz,cV,VInv
   real,dimension(nDim)::XyzOfNode111_D               !^CFG IF COVARIANT
   !---------------------------------------------------------------------------
-  dx = dx_BLK(iBLK)
-  dy = dy_BLK(iBLK)
-  dz = dz_BLK(iBLK)
-
 
   !\--------------------------------
   ! Assign cell centered coordinates.
   !/--------------------------------
 
 
-  if(TypeGeometry=='cartesian')then                  !^CFG IF COVARIANT
-   
+  if(.not.UseCovariant)then                  !^CFG IF COVARIANT
+     dx = dx_BLK(iBLK)
+     dy = dy_BLK(iBLK)
+     dz = dz_BLK(iBLK)
+
      ! This case is the normal one using a spherical Radius.
-     do i = 1-gcn, nI+gcn
+     do k = 1-gcn, nK+gcn
         do j = 1-gcn, nJ+gcn
-           do k = 1-gcn, nK+gcn
+           do i = 1-gcn, nI+gcn
               x_BLK(i,j,k,iBLK) =  (i-1)*dx + xyzStart_BLK(1,iBLK)
               y_BLK(i,j,k,iBLK) =  (j-1)*dy + xyzStart_BLK(2,iBLK)
               z_BLK(i,j,k,iBLK) =  (k-1)*dz + xyzStart_BLK(3,iBLK)     
@@ -121,30 +117,24 @@ subroutine fix_block_geometry(iBLK)
            end do
         end do
      end do
-     cV = dx*dy*dz                                  !^CFG IF NOT COVARIANT BEGIN
+     cV = dx*dy*dz                                  
 
      fAx = dy*dz       !Cell face areas
      fAy = dz*dx 
      fAz = dx*dy 
 
-
-     fAx_BLK(iBLK) = fAx                                       
+     fAx_BLK(iBLK) = fAx                         !^CFG IF NOT COVARIANT BEGIN  
      fAy_BLK(iBLK) = fAy
      fAz_BLK(iBLK) = fAz
-     cV_BLK(iBLK) = cV                                            
-     vInv_CB(:,:,:,iBLK) = cOne/cV                !^CFG END COVARIANT
-  end if                                       !^CFG IF COVARIANT
-
-
-  if(.not.UseCovariant)then                    !^CFG IF COVARIANT
+     cV_BLK(iBLK) = cV                           !^CFG END COVARIANT        
+     vInv_CB(:,:,:,iBLK) = cOne/cV                
 
      !Calculate the node coordinates
-                                             !^CFG IF NOT COVARIANT BEGIN
      do i=1,1+nI; do j=1,1+nJ; do k=1,1+nK
         NodeX_NB(i,j,k,iBLK) = cEighth*sum(x_BLK(i-1:i,j-1:j,k-1:k,iBLK))
         NodeY_NB(i,j,k,iBLK) = cEighth*sum(y_BLK(i-1:i,j-1:j,k-1:k,iBLK))
         NodeZ_NB(i,j,k,iBLK) = cEighth*sum(z_BLK(i-1:i,j-1:j,k-1:k,iBLK))
-     end do; end do; end do                  !^CFG END COVARIANT
+     end do; end do; end do                  
   else                                       !^CFG IF COVARIANT BEGIN
      !Cell center coordinates are calculated directly as the
      !transformed generalized coordinates
@@ -165,10 +155,10 @@ subroutine fix_block_geometry(iBLK)
         !relation between the node coordinates and the "cell center" 
         !coordinates
 
-        !!!!!!!!!!!plus or minus?????????
-        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)+dx_BLK(iBLK)*cHalf
-        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)+dy_BLK(iBLK)*cHalf
-        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)+dz_BLK(iBLK)*cHalf
+        
+        XyzOfNode111_D(1)=XyzStart_BLK(1,iBLK)-dx_BLK(iBLK)*cHalf
+        XyzOfNode111_D(2)=XyzStart_BLK(2,iBLK)-dy_BLK(iBLK)*cHalf
+        XyzOfNode111_D(3)=XyzStart_BLK(3,iBLK)-dz_BLK(iBLK)*cHalf
 
         
         call gen_to_xyz_arr(XyzOfNode111_D,&
@@ -243,7 +233,7 @@ subroutine fix_block_geometry(iBLK)
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBLK) = &
        DoFixExtraBoundary &                         
-       .and.TypeGeometry=='cartesian' &             !^CFG IF COVARIANT
+       .and..not.is_axial_geometry() &             !^CFG IF COVARIANT
        .or. &                                       
        UseExtraBoundary
 
@@ -258,7 +248,7 @@ subroutine fix_block_geometry(iBLK)
 
   BodyFlg_B(iBLK) = .not. all(true_cell(:,:,:,iBLK))
                                                     
-  if(TypeGeometry=='cartesian')     &               !^CFG IF COVARIANT
+  if(.not.is_axial_geometry())     &               !^CFG IF COVARIANT
        DoFixExtraBoundary_B(iBLK) = DoFixExtraBoundary &
        .and.any(IsBoundaryCell_GI(:,:,:,ExtraBc_))
                                                     
@@ -345,66 +335,24 @@ contains
 
 end subroutine fix_block_geometry
 !=============================================================================
-subroutine set_xyzminmax_cart
+subroutine set_xyzminmax
   use ModGeometry, ONLY:x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
+  use ModGeometry,ONLY:UseCovariant                   !^CFG IF COVARIANT
   use ModMain,ONLY:x_,y_,z_
   implicit none
-
+  if(UseCovariant)then                          !^CFG IF COVARIANT BEGIN
+     call set_xyz_minmax_covar
+     return
+  end if                                        !^CFG END COVARIANT
   XyzMin_D(x_) = x1
   XyzMin_D(y_) = y1
   XyzMin_D(z_) = z1
   XyzMax_D(x_) = x2
   XyzMax_D(y_) = y2
   XyzMax_D(z_) = z2
-end subroutine set_xyzminmax_cart
+end subroutine set_xyzminmax
 
-!^CFG IF COVARIANT BEGIN
-!=============================================================================
-subroutine set_xyzminmax_sph
-  use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
-  use ModNumConst, ONLY: cZero,cTwoPI,cPi
-  use ModMain, ONLY: R_,Phi_,Theta_
-  implicit none
 
-  XyzMin_D(R_)     = cZero
-  XyzMin_D(Phi_)   = cZero
-  XyzMin_D(Theta_) = cZero
-  XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
-  XyzMax_D(Phi_)   = cTwoPi
-  XyzMax_D(Theta_) = cPi
-end subroutine set_xyzminmax_sph
-!=============================================================================
-subroutine set_xyzminmax_sph2
-  use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
-  use ModNumConst, ONLY: cZero,cTwoPI,cPi,cHalf
-  use ModMain, ONLY: R_,Phi_,Theta_
-  implicit none
-
-  XyzMin_D(R_)     = cZero
-  XyzMin_D(Phi_)   = cZero
-  XyzMin_D(Theta_) = cZero
-  XyzMax_D(R_)     = cHalf*alog(&
-       max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
-  XyzMax_D(Phi_)   = cTwoPi
-  XyzMax_D(Theta_) = cPi
-end subroutine set_xyzminmax_sph2
-!=============================================================================
-subroutine set_xyzminmax_cyl
-  use ModGeometry, ONLY:x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D
-  use ModNumConst, ONLY:cZero,cTwoPI
-  use ModMain, ONLY:R_,Phi_,z_
-  implicit none
-
-  XyzMin_D(R_)     = cZero
-  XyzMin_D(Phi_)   = cZero
-  XyzMin_D(z_)     = z1
-  XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2))
-  XyzMax_D(Phi_)   = cTwoPi
-  XyzMax_D(z_)     = z2
-
-end subroutine set_xyzminmax_cyl
-!^CFG END COVARIANT
-!==============================================================================
 subroutine set_boundary_cells(iBLK)
 
   use ModProcMH

@@ -169,7 +169,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModMain, ONLY : nI, nJ, nK, nCells, nBlock, unusedBLK
   use ModAdvance, ONLY : State_VGB, StateOld_VCB
   use ModGeometry, ONLY : XyzStart_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF COVARIANT
+  use ModGeometry, ONLY : UseCovariant     !^CFG IF COVARIANT
   use ModParallel, ONLY : NeiLev
 
   implicit none
@@ -227,16 +227,13 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   nState    = iStateMax - iVarMin + 1
 
   ! Convert to generalized coordinates if necessary
-  select case(TypeGeometry)           !^CFG IF COVARIANT
-  case('cartesian')                   !^CFG IF COVARIANT
+
+  if(UseCovariant)then                !^CFG IF COVARIANT BEGIN
+     call xyz_to_gen(XyzIn_D,Xyz_D)
+  else                                !^CFG END COVARIANT
      Xyz_D = XyzIn_D
-  case('spherical','spherical_lnr')   !^CFG IF COVARIANT BEGIN
-     call xyz_to_spherical(XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),&
-          Xyz_D(1),Xyz_D(2),Xyz_D(3))
-     if(TypeGeometry=='spherical_lnr')Xyz_D(1)=alog(max(Xyz_D(1),cTiny))
-  case default
-     call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
-  end select                          !^CFG END COVARIANT
+  end if                              !^CFG IF COVARIANT
+ 
 
   ! Set state and weight to zero, so MPI_reduce will add it up right
   StateCurrent_V = cZero
@@ -364,6 +361,7 @@ contains
 
     ! Add current to the current part of StateCurrent
     use ModMain, ONLY: prolong_order
+    use ModGeometry,ONLY:body_BLK
     real :: Current_D(3)
     real :: DxInv, DyInv, DzInv
     integer :: iLo,iHi,jLo,jHi,kLo,kHi
@@ -385,9 +383,8 @@ contains
     DzInv = 1/((kHi-kLo)*Dxyz_D(3))
 
     if(UseCovariant)then                          !^CFG IF COVARIANT BEGIN
-       call covariant_curlb(i,j,k,iBlock,Current_D)
+       call covariant_curlb(i,j,k,iBlock,Current_D,.not.body_BLK(iBlock))
     else                                          !^CFG END COVARIANT
-
        !^CFG IF NOT COVARIANT BEGIN
        Current_D(1) = &
             (State_VGB(Bz_,i,jHi,k,iBlock)-State_VGB(Bz_,i,jLo,k,iBlock))*DyInv- &

@@ -8,9 +8,9 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
 
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,PROCtest,BLKtest,test_string,x_,y_,z_
+  use ModMain, ONLY : nI,nJ,nK,PROCtest,BLKtest,test_string,x_,y_,z_,Phi_
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       TypeGeometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
+       is_axial_geometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
        XyzStart_BLK,XyzMin_D,XyzMax_D
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
@@ -97,14 +97,12 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   zmax1=zmax+cHalfMinusTiny*dz_BLK(iBLK)
 
   nBLKcells = 0
-  select case(TypeGeometry)                                    !^CFG IF COVARIANT
-  case('cartesian')                                            !^CFG IF COVARIANT
+  if(is_axial_geometry())then                   !^CFG IF COVARIANT BEGIN
+     ySqeezed = mod(xyzStart_BLK(Phi_,iBLK),cPi)
+  else                                          !^CFG END COVARIANT
      ySqeezed = xyzStart_BLK(y_,iBLK)
-  case('spherical','spherical_lnr','cylindrical')                 !^CFG IF COVARIANT BEGIN
-     ySqeezed = mod(xyzStart_BLK(y_,iBLK),cPi)
-  case default
-     call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
-  end select                                                   !^CFG END COVARIANT
+  end if                                        !^CFG IF COVARIANT 
+
   ! If block is fully outside of cut then cycle
   if(xyzStart_BLK(x_,iBLK)>xmax1.or.&
        xyzStart_BLK(x_,iBLK)+(nI-1)*dx_BLK(iBLK)<xmin1.or.&

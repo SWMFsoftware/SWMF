@@ -112,7 +112,11 @@ contains
     end do; end do; end do
   end subroutine get_face_area_k
 !-------------------------------------------------------------!
-  
+  logical function is_axial_geometry()
+    is_axial_geometry=index(TypeGeometry,'spherical')  >0.or.&
+                      index(TypeGeometry,'cylindrical')>0.or.&
+                      index(TypeGeometry,'axial')>0 
+  end function is_axial_geometry
 end module ModCovariant
 
 

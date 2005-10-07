@@ -52,9 +52,9 @@ subroutine gen_to_xyz_arr(&
               R    =  (i-1)*dGen1 + GenCoord111_D(R_)
              
                         
-              X_C(i,j,k) = R*sinTheta*cosPhi                      
-              Y_C(i,j,k) = R*sinTheta*sinPhi                      
-              Z_C(i,j,k) = R*cosTheta
+              X_C(i,j,k) = R*cosTheta*cosPhi                      
+              Y_C(i,j,k) = R*cosTheta*sinPhi                      
+              Z_C(i,j,k) = R*sinTheta
            end do
         end do
      end do
@@ -71,9 +71,9 @@ subroutine gen_to_xyz_arr(&
            do i = iStart, iMax
               R    =   exp((i-1)*dGen1 + GenCoord111_D(R_))
              
-              X_C(i,j,k) = R*sinTheta*cosPhi                      
-              Y_C(i,j,k) = R*sinTheta*sinPhi                      
-              Z_C(i,j,k) = R*cosTheta
+              X_C(i,j,k) = R*cosTheta*cosPhi                      
+              Y_C(i,j,k) = R*cosTheta*sinPhi                      
+              Z_C(i,j,k) = R*sinTheta
            end do
         end do
      end do
@@ -98,6 +98,69 @@ subroutine gen_to_xyz_arr(&
   end select
 end subroutine gen_to_xyz_arr
 !-------------------------------------------------------------!
+subroutine xyz_to_gen(XyzIn_D,GenOut_D)
+  use ModNumConst
+  use ModCovariant
+  use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
+  implicit none
+  real,dimension(nDim),intent(in) ::XyzIn_D
+  real,dimension(nDim),intent(out)::GenOut_D
+  select case(TypeGeometry)           
+  case('cartesian')                   
+    GenOut_D=XyzIn_D
+  case('spherical','spherical_lnr')   
+     call xyz_to_spherical(XyzIn_D(x_),XyzIn_D(y_),XyzIn_D(z_),&
+          GenOut_D(R_),GenOut_D(Phi_),GenOut_D(Theta_))
+     !From colatitude to latitude:
+     GenOut_D(Theta_)=cHalfPi-GenOut_D(Theta_)
+     if(TypeGeometry=='spherical_lnr')&
+          GenOut_D(R_)=alog(max(GenOut_D(R_),cTiny))
+  case default
+     call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
+  end select                          
+end subroutine xyz_to_gen
+!=============================================================================
+subroutine set_xyz_minmax_covar
+  use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,TypeGeometry
+  use ModMain, ONLY: R_,Phi_,Theta_,x_,y_,z_
+  use ModNumConst
+  implicit none
+  select case(TypeGeometry)
+  case('cartesian')
+     XyzMin_D(x_) = x1
+     XyzMin_D(y_) = y1
+     XyzMin_D(z_) = z1
+     XyzMax_D(x_) = x2
+     XyzMax_D(y_) = y2
+     XyzMax_D(z_) = z2
+  case('spherical')
+     XyzMin_D(R_)     = cZero
+     XyzMin_D(Phi_)   = cZero
+     XyzMin_D(Theta_) = -cHalfPi
+     XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
+     XyzMax_D(Phi_)   = cTwoPi
+     XyzMax_D(Theta_) = +cHalfPi
+  case('spherical_lnr')
+     XyzMin_D(R_)     = cZero
+     XyzMin_D(Phi_)   = cZero
+     XyzMin_D(Theta_) = -cHalfPi
+     XyzMax_D(R_)     = cHalf*alog(&
+          max(x1*x1,x2*x2)+max(y1*y1,y2*y2)+max(z1*z1,z2*z2))
+     XyzMax_D(Phi_)   = cTwoPi
+     XyzMax_D(Theta_) = cHalfPi
+  case('cylindrical')
+     XyzMin_D(R_)     = cZero
+     XyzMin_D(Phi_)   = cZero
+     XyzMin_D(z_)     = z1
+     XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2))
+     XyzMax_D(Phi_)   = cTwoPi
+     XyzMax_D(z_)     = z2
+  case default
+     call stop_mpi('Unknown geometry: '//TypeGeometry)
+  end select
+end subroutine set_xyz_minmax_covar
+
+!=======================================================================
 subroutine fix_covariant_geometry(iBLK)
   use ModCovariant
   use ModNodes,ONLY:NodeX_NB,NodeY_NB,NodeZ_NB
@@ -768,19 +831,22 @@ subroutine covariant_gradient(iBlock, Var_G,&
 
 end subroutine covariant_gradient
 !-----------------------------------------------------------------------------
-subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
+subroutine covariant_curlb(i,j,k,iBLK,CurlB_D,IsTrueBlock)
   use ModSize
   use ModVarIndexes,ONLY: Bx_,By_,Bz_
   use ModCovariant
   use ModNumConst
-  use Modgeometry,ONLY:vInv_CB
+  use ModGeometry,ONLY:vInv_CB,true_cell
   use ModAdvance,ONLY:State_VGB
   implicit none
   integer,intent(in)::i,j,k,iBLK
+  logical,intent(in)::IsTrueBlock
   real,dimension(3),intent(out)::CurlB_D
 
+  real,dimension(3)::B_D
   real,dimension(3,east_:top_)::MagneticField_DS, FaceArea_DS
   real::VInvHalf
+
 
   VInvHalf=chalf*vInv_CB(i,j,k,iBLK)
 
@@ -788,13 +854,69 @@ subroutine covariant_curlb(i,j,k,iBLK,CurlB_D)
   FaceArea_DS(:,South_:North_)=FaceAreaJ_DFB(:,i,j:j+1,k,iBLK)
   FaceArea_DS(:,Bot_  :Top_  )=FaceAreaK_DFB(:,i,j,k:k+1,iBLK)   
 
-  MagneticField_DS(:,East_ )=-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)
-  MagneticField_DS(:,West_ )= State_VGB(Bx_:Bz_,i+1,j,k,iBLK)
-  MagneticField_DS(:,South_)=-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)
-  MagneticField_DS(:,North_)= State_VGB(Bx_:Bz_,i,j+1,k,iBLK)
-  MagneticField_DS(:,Bot_)  =-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)
-  MagneticField_DS(:,Top_)  = State_VGB(Bx_:Bz_,i,j,k+1,iBLK)
- 
+  if(IsTrueBlock)then
+     MagneticField_DS(:,East_ )=-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)
+     MagneticField_DS(:,West_ )=+State_VGB(Bx_:Bz_,i+1,j,k,iBLK)
+     MagneticField_DS(:,South_)=-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)
+     MagneticField_DS(:,North_)=+State_VGB(Bx_:Bz_,i,j+1,k,iBLK)
+     MagneticField_DS(:,Bot_)  =-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)
+     MagneticField_DS(:,Top_)  =+State_VGB(Bx_:Bz_,i,j,k+1,iBLK)
+  else
+     if(.not.true_cell(i,j,k,iBLK))then
+        CurlB_D=cZero
+        return
+     end if
+     B_D=State_VGB(Bx_:Bz_,i,j,k,iBLK)
+     !Input from I faces
+     if(.not.true_cell(i-1,j,k,iBLK).and.(.not.true_cell(i+1,j,k,iBLK)))then
+        CurlB_D=cZero
+        return
+     end if
+     if(true_cell(i-1,j,k,iBLK))then
+        MagneticField_DS(:,East_ )=-(+State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+B_D)
+     else
+        MagneticField_DS(:,East_ )=-(-State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+cTwo*B_D)
+     end if
+     if(true_cell(i+1,j,k,iBLK))then
+        MagneticField_DS(:,West_ )=+(+State_VGB(Bx_:Bz_,i+1,j,k,iBLK)+B_D)
+     else
+        MagneticField_DS(:,West_ )=+(-State_VGB(Bx_:Bz_,i-1,j,k,iBLK)+cTwo*B_D)
+     end if
+
+     !Input from J faces
+     if(.not.true_cell(i,j-1,k,iBLK).and.(.not.true_cell(i,j+1,k,iBLK)))then
+        CurlB_D=cZero
+        return
+     end if
+     
+     if(true_cell(i,j-1,k,iBLK))then
+        MagneticField_DS(:,South_ )=-(+State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+B_D)
+     else
+        MagneticField_DS(:,South_ )=-(-State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+cTwo*B_D)
+     end if
+     if(true_cell(i,j+1,k,iBLK))then
+        MagneticField_DS(:,North_ )=+(+State_VGB(Bx_:Bz_,i,j+1,k,iBLK)+B_D)
+     else
+        MagneticField_DS(:,North_ )=+(-State_VGB(Bx_:Bz_,i,j-1,k,iBLK)+cTwo*B_D)
+     end if
+     
+     !Input from K faces
+     if(.not.true_cell(i,j,k-1,iBLK).and.(.not.true_cell(i,j,k+1,iBLK)))then
+        CurlB_D=cZero
+        return
+     end if
+     
+     if(true_cell(i,j,k-1,iBLK))then
+        MagneticField_DS(:,Bot_ )=-(+State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+B_D)
+     else
+        MagneticField_DS(:,Bot_ )=-(-State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+cTwo*B_D)
+     end if
+     if(true_cell(i,j,k+1,iBLK))then
+        MagneticField_DS(:,Top_ )=+(+State_VGB(Bx_:Bz_,i,j,k+1,iBLK)+B_D)
+     else
+        MagneticField_DS(:,Top_ )=+(-State_VGB(Bx_:Bz_,i,j,k-1,iBLK)+cTwo*B_D)
+     end if
+  end if
   CurlB_D(1)=dot_product(FaceArea_DS(2,:),MagneticField_DS(3,:))-&
        dot_product(FaceArea_DS(3,:),MagneticField_DS(2,:))
   CurlB_D(2)=dot_product(FaceArea_DS(3,:),MagneticField_DS(1,:))-&
@@ -808,6 +930,7 @@ end subroutine covariant_curlb
 subroutine covar_curlb_plotvar(iDir,iBLK,PlotVar_G)
   use ModSize
   use ModNumConst
+  use ModGeometry,ONLY:true_BLK
   implicit none
 
   integer,intent(in):: iDir
@@ -819,7 +942,7 @@ subroutine covar_curlb_plotvar(iDir,iBLK,PlotVar_G)
   do k=1,nK
      do j=1,nJ
         do i=1,nI
-           call covariant_curlb(i,j,k,iBLK,CurlB_D)
+           call covariant_curlb(i,j,k,iBLK,CurlB_D,true_BLK(iBLK))
            PlotVar_G(i,j,k)=CurlB_D(iDir)
         end do
      end do
@@ -844,7 +967,7 @@ subroutine covar_curlbr_plotvar(iBLK,PlotVar_G)
   do k=1,nK
      do j=1,nJ
         do i=1,nI
-           call covariant_curlb(i,j,k,iBLK,CurlB_D)
+           call covariant_curlb(i,j,k,iBLK,CurlB_D,.true.)
            PlotVar_G(i,j,k)=(CurlB_D(x_)*x_BLK(i,j,k,iBLK)+&
                 CurlB_D(y_)*y_BLK(i,j,k,iBLK)+&
                 CurlB_D(z_)*z_BLK(i,j,k,iBLK))/&
