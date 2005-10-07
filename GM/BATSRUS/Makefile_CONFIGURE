@@ -18,30 +18,6 @@ cartesian: cartesian_src
 #^CFG IF COVARIANT BEGIN
 ############################################################################
 
-DSPHER =SPHERICAL
-spherical_src:
-	cd srcPostProc;\
-		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
-	./Configure.pl -d=${DSPHER} -u \
-	-off=boriscorr \
-	-on=awflux,lindeflux,testing,userfiles,covariant
-	cd srcPostProc;\
-		mv PostIDL.f90 PostIDL_SPH.f90; mv PostIDL.tmp PostIDL.f90
-	cd ${DSPHER}/Param;\
-		mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
-		mv EARTH/SSSSPH EARTH/SSSS;\
-		mv PARAM.TEST.SPH PARAM.TEST
-	cd ${DSPHER}/Param/TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT
-	cd ${DSPHER}; make install
-
-spherical_conf: spherical_src
-	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DSPHER} BATSRUS_conf
-
-spherical: spherical_src
-	cd ${DSPHER}; make
-
-############################################################################
-
 DCOV =COVARIANT
 
 covariant_src:
@@ -90,20 +66,18 @@ globhelio: globhelio_src
 ############################################################################
 
 multisp_src:
-	./Configure.pl -d=MULTISP -keepall \
-	-off=implicit,ionosphere,rusanovflux,roeflux,awflux \
-	-on=multisp \
-	-exe=implicit,ionosphere,rusanovflux,roeflux,awflux,multisp
-	cd MULTISP; make install; make spherical_src
-	cd MULTISP/${DSPHER}; make install; \
+	./Configure.pl -d=MULTISP 
+	-off=implicit,ionosphere,rusanovflux,roeflux,awflux,boriscorr \
+	-on=multisp,lindeflux,testing,userfiles,covariant \
+	cd MULTISP; make install; \
 	cp -f srcUser/ModUserMars.f90 src/ModUser.f90
 
 multisp_conf: multisp_src
 	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/MULTISP/${DSPHER} BATSRUS_conf
+	ln -s BATSRUS/MULTISP BATSRUS_conf
 
 multisp: multisp_src
-	cd MULTISP/${DSPHER}; make
+	cd MULTISP; make
 
 #^CFG END MULTISP
 #^CFG IF ALWAVES BEGIN
@@ -130,31 +104,17 @@ relax: relax_src
 #^CFG END ALWAVES
 #^CFG IF ALWAVES BEGIN
 ############################################################################
-
 corelax_src:
-	./Configure.pl -d=CORELAX -keepall \
-		-on=alwaves,awflux \
+	./Configure.pl -d=CORELAX \
 		-off=rusanovflux,ionosphere,boriscorr,implicit \
-		-exe=alwaves,awflux,rusanovflux,ionosphere,boriscorr,implicit
-	cd CORELAX/srcPostProc; \
-		mv PostIDL.f90 PostIDL.tmp; mv PostIDL_SPH.f90 PostIDL.f90
-	cd CORELAX;\
-		./Configure.pl -d=${DSPHER} -u \
-			-on=alwaves,awflux,testing,userfiles,covariant
-	cd CORELAX/srcPostProc; \
-		mv PostIDL.f90 PostIDL_SPH.f90;mv PostIDL.tmp PostIDL.f90
-	cd CORELAX/${DSPHER}/Param;\
-		mv PARAM.DEFAULT.SPH PARAM.DEFAULT;\
-		mv EARTH/SSSSPH EARTH/SSSS;\
-		cd TESTSUITE/Res/; mv DEFAULT.SPH DEFAULT; cd ../.. ;\
-		mv PARAM.TEST.SPH PARAM.TEST
-	cd CORELAX/${DSPHER}; make install
+		-on=alwaves,awflux,testing,userfiles,covariant
+	cd CORELAX; make install
 
 corelax_conf: corelax_src
 	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/CORELAX/${DSPHER} BATSRUS_conf
+	ln -s BATSRUS/CORELAX BATSRUS_conf
 
 corelax: corelax_src
-	cd CORELAX/${DSPHER}; make
+	cd CORELAX; make
 
 #^CFG END ALWAVES
