@@ -19,7 +19,8 @@ program PostIDL
   real, dimension(:), allocatable :: w1, eqpar, dxdoubled
 
   ! Coordinates, sizes, indices
-  real, dimension(3) :: xyz, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
+  real, dimension(3) :: XyzInOut_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
+  real, dimension(3) :: XyzGen_D
   real ::    x, y, z, xmin, xmax, ymin, ymax, zmin, zmax
   real ::    dx, dy, dz, dyperdx, dzperdx, dxcell, dycell, dzcell
   real ::    frac
@@ -31,7 +32,8 @@ program PostIDL
   character (LEN=5), dimension(3)            :: coord
   character (LEN=5), dimension(3), parameter :: &
        coord_xyz=(/'x    ','y    ','z    '/), &
-       coord_sph=(/'r    ','theta','phi  '/)
+       NameCoordSph_D=(/'r    ','phi  ','theta'/),& !Theta is latitude
+       coord_sph=(/'r    ','theta','phi  '/)        !Theta is colatitude
 
   logical :: fileopen, structured, read_binary=.false., UseLookup=.false.
   character (len=79) :: fileheadout, varnames, filename, filenamehead, &
@@ -48,6 +50,13 @@ program PostIDL
   ! Variables for checking binary compatibility
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
   integer            :: nByteRealRead
+
+  character (len=79) :: TypeGeometry
+  logical :: UseSpherical=.false., UseLnr=.false.
+  integer :: idim0
+  real    :: RCyl
+  !Pi:
+  real,parameter::cPi= 3.1415926535897932384626433832795
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-2002) starting'
@@ -106,6 +115,13 @@ program PostIDL
         stop '!!! Change PRECISION in Makefile.${OS} and make PIDL !!!'
      end if
   end if
+  !Read TypeGeometry, if possible
+
+  read(*,'(a)',err=3,end=3)TypeGeometry
+  write(*,*)'Geometry is '//TypeGeometry
+  UseSpherical=index(TypeGeometry,'spherical')>0
+  UseLnr=UseSpherical.and.index(TypeGeometry,'lnr')>0
+3 continue
 
   ! Unstructured grid has dx=-1.
   structured = dxyz(1) > -0.9
@@ -121,11 +137,13 @@ program PostIDL
   ! Calculate dimensionality of the cut and add specialparameters if needed
   ndim=0
   nspecialpar=0
+  icutdim=0
   do i=1,3
      if(nxyz(i)>1)then
         ndim=ndim+1
         icutdim(ndim)=i
      else
+        icutdim(3)=i
         nspecialpar=nspecialpar+1
         specialpar(nspecialpar)=0.5*(xyzmax(i)+xyzmin(i))
         varnames=trim(varnames)//' cut'//trim(coord(i))
@@ -136,6 +154,7 @@ program PostIDL
      !Make a lookup table to check coinciding cells
      idim1=icutdim(1)
      idim2=icutdim(2)
+     idim0=icutdim(3)
      xmin1=xyzmin(idim1)
      xmin2=xyzmin(idim2)
      xmax1=xyzmax(idim1)
@@ -144,6 +163,7 @@ program PostIDL
      dx2=dxyzmin(idim2)
      nx1=nint((xmax1-xmin1)/dx1)
      nx2=nint((xmax2-xmin2)/dx2)
+     if(UseSpherical.and.idim0==2)nx2=2*nx2                  
      if(.not.structured)then
         if(real(nx1)*real(nx2) > 1e8)then
            write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
@@ -228,16 +248,42 @@ program PostIDL
         !Debug
         !write(*,*)'START READING'
         if(read_binary)then
-           read(unit_tmp,ERR=999,END=999)dxcell,xyz,w1
+           read(unit_tmp,ERR=999,END=999)dxcell,XyzInOut_D,w1
         else
-           read(unit_tmp,*,ERR=999,END=999)dxcell,xyz,w1
+           read(unit_tmp,*,ERR=999,END=999)dxcell,XyzInOut_D,w1
         end if
-        !Debug
-        !write(*,*)'dxcell=',dxcell,' x,y,z=',xyz,' w1=',w1
         
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
+        if(.not.UseSpherical)then
+           XyzGen_D=XyzInOut_D
+        else
+           call cart_to_spher(XyzInOut_D,XyzGen_D)               
+
+           if(ndim==2)then
+              select case(idim0)                                       
+              case(1)         !This ia R=const slice
+                 !Latitude in hours
+                 XyzInOut_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)
+                 !Longitude in degrees
+                 XyzInOut_D(3)=XyzGen_D(3)*180./cPi
+
+              
+              case(2)         !This is x=0 or y=0 plane                                  
+                 XyzInOut_D(1)=&                                       
+                      sign(1.00,XyzInOut_D(1)+XyzInOut_D(2))*RCyl            
+              case(3)         !This is z=0 plane                
+                 if(UseLnr) then                                      
+                    XyzInOut_D(1)=XyzInOut_D(1)*exp(XyzGen_D(1))/Rcyl   
+                    XyzInOut_D(2)=XyzInOut_D(2)*exp(XyzGen_D(1))/Rcyl   
+                 else                                                 
+                    XyzInOut_D(1)=XyzInOut_D(1)*XyzGen_D(1)/Rcyl        
+                    XyzInOut_D(2)=XyzInOut_D(2)*XyzGen_D(1)/Rcyl        
+                 end if
+              end select
+           end if
+        end if
         if(.not.structured)then
 
            if(.not.UseLookup)then
@@ -249,16 +295,17 @@ program PostIDL
            endif
 
            ! Calculate indices for lookup table
-           ix1=nint((xyz(idim1)-xmin1)/dx1+halfeps)
-           ix2=nint((xyz(idim2)-xmin2)/dx2+halfeps)
-
+           ix1=nint((XyzGen_D(idim1)-xmin1)/dx1+halfeps)
+           ix2=nint((XyzGen_D(idim2)-xmin2)/dx2+halfeps)
+ 
            call unstructured_2D
 
            ! We are finished with unstructured
            CYCLE
         endif
-
-        x=xyz(1); y=xyz(2); z=xyz(3)
+        
+        x=XyzGen_D(1); y=XyzGen_D(2); z=XyzGen_D(3)
+        
 
         if(dxcell<dx+1.e-6)then
            ! Cell has the correct size or finer
@@ -301,9 +348,6 @@ program PostIDL
      close(unit_tmp)
   end do ! me
 
-  !Debug
-  !write(*,*)'before average w(98,1,58,:)=',w(98,1,58,:)
-
   if(countcell/=ncell)&
        write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
 
@@ -317,7 +361,7 @@ program PostIDL
              'filled total=',total,' volume=',volume,' !!!'
      end if
   else
-     if(UseLookup)then
+     if(UseLookup.and..not.UseSpherical)then
         volume=(xmax1-xmin1)*(xmax2-xmin2)
         if(abs(total/volume-1.0)<0.0001)then
            write(*,*)'Averaged 2D unstructured file'
@@ -326,7 +370,7 @@ program PostIDL
                 'filled total=',total,' volume=',volume,' !!!'
         end if
      else
-        if(icell /= ncell) &
+        if(ndim/=2.and.icell /= ncell) &
            write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
      end if
      nx=icell
@@ -358,17 +402,11 @@ contains
 
     if(dx1cell>1.9*dx1)then
        ! Lookup indices of possible finer pairs
-       ixmin1=nint((xyz(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps)
-       ixmax1=nint((xyz(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps)
-       ixmin2=nint((xyz(idim2)-0.25*dx2cell-xmin2)/dx2+halfeps)
-       ixmax2=nint((xyz(idim2)+0.25*dx2cell-xmin2)/dx2+halfeps)
+       ixmin1=nint((XyzGen_D(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps)
+       ixmax1=nint((XyzGen_D(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps)
+       ixmin2=nint((XyzGen_D(idim2)-0.25*dx2cell-xmin2)/dx2+halfeps)
+       ixmax2=nint((XyzGen_D(idim2)+0.25*dx2cell-xmin2)/dx2+halfeps)
 
-       !DEBUG
-       !if(ix1==1378.and.ix2==370)write(*,*)'xmin1,xmax1,xmin2,xmax2=',&
-       !        (xyz(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps,&
-       !        (xyz(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps,&
-       !        (xyz(idim2)-0.25*dx2cell-xmin2)/dx2+halfeps,&
-       !        (xyz(idim2)+0.25*dx2cell-xmin2)/dx2+halfeps
     endif
 
     jcell=lookup(ix1,ix2)
@@ -392,7 +430,7 @@ contains
           icell=icell+1
           call weighted_average(2./3.,1./3.,jcell,icell)
 
-          ! Increase dxdoubled by another factor of 2 to count fine neigbors
+          ! Increase dxdoubled by another factor of 2 to count fine neighbors
           dxdoubled(jcell)=dxdoubled(jcell)*2
  
           ! Negate lookup for safety check
@@ -408,7 +446,7 @@ contains
           lookup(ix1,ix2)=-lookup(ix1,ix2)
        case default
           write(*,*)''!!! Error: Impossible dx ratio !!!'
-          write(*,*)'ix1,ix2,icell,dxcell,xyz=',ix1,ix2,icell,dxcell,xyz
+          write(*,*)'ix1,ix2,icell,dxcell,xyz=',ix1,ix2,icell,dxcell,XyzGen_D
           write(*,*)'jcell,dxdoubled,xx=',jcell,dxdoubled(jcell),&
                xx(jcell,1,1,:)
           stop
@@ -418,15 +456,11 @@ contains
        ! No same size pair found yet
        ! Check the corners for finer neighbors
 
-       ! Debug
-       !if(ix1==1378.and.ix2==370)&
-       !     write(*,*)'No same size pair found yet, check corners',&
-       !     'ixmin1,ixmax1,ixmin2,ixmax2=',ixmin1,ixmax1,ixmin2,ixmax2
        call check_corners
     else
        ! Negative lookup value means an error
        write(*,*)'!!! Error: 3rd data for same projected position in ',filename
-       write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',ix1,ix2,icell,jcell,dxcell,xyz
+       write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',ix1,ix2,icell,jcell,dxcell,XyzGen_D
        stop
     end if
 
@@ -451,14 +485,14 @@ contains
              if(jcell<0)then
                 write(*,*) '!!! Error: negative jcell when looking for finer'
                 write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',&
-                     ix1,ix2,icell,jcell,dxcell,xyz
+                     ix1,ix2,icell,jcell,dxcell,XyzGen_D
                 stop
              endif
 
              count=count+1
              if(nint(dxdoubled(jcell)/dxcell)/=1)then
                 write(*,*) '!!! Error: incorrect finer cell size !!!'
-                write(*,*)'ix1,ix2,icell,xyz=',ix1,ix2,icell,xyz
+                write(*,*)'ix1,ix2,icell,xyz=',ix1,ix2,icell,XyzGen_D
                 write(*,*)'i1,i2,jcell,xx(j)=',i1,i2,jcell,xx(jcell,1,1,:)
                 write(*,*)'dxdoubled, dxcell=',dxdoubled(jcell),dxcell
                 stop
@@ -494,20 +528,18 @@ contains
 
     real,    intent(in) :: new_weight, from_weight
     integer, intent(in) :: from_cell,to_cell
-
     if(from_cell<0)then
        w(to_cell,1,1,:)=w1
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=xyz(icutdim(idim))
+          xx(to_cell,1,1,idim)=XyzInOut_D(icutdim(idim))
        end do
     else
        w(to_cell,1,1,:)=new_weight*w1+from_weight*w(from_cell,1,1,:)
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=new_weight*xyz(icutdim(idim)) + &
+          xx(to_cell,1,1,idim)=new_weight*XyzInOut_D(icutdim(idim)) + &
                from_weight*xx(from_cell,1,1,idim)
        enddo
     end if
-
     if(to_cell/=from_cell)total=total+dx1cell*dx2cell
 
   end subroutine weighted_average
@@ -524,14 +556,22 @@ contains
     do ll=1,l
        if(fileheadout(ll:ll)=='_')fileheadout(ll:ll)='-'
     enddo
-    ! Add _xxx13, _xxx23 or _xxx33 to fileheadout based on ndim
-    ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var)
-    write(fileheadout,'(a,i1,i1)') &
-         fileheadout(1:l)//filenamehead(4:7),ndim,3
+    ! Add _mhd13, _mhd23 or _mhd33 to fileheadout based on ndim
+    write(fileheadout,'(a,i1,i1)') fileheadout(1:l)//filenamehead(4:7),ndim,3
 
-    ! Produce coordinate names 
-    !         ('x y z ', 'x y ', 'x z ', 'y z ' or 'theta','phi')
-    coordnames=coord(icutdim(1))
+    ! Produce coordinate names ('x y z ', 'x y ', 'x z ', 'y z ' or 'theta','phi')
+    if(.not.UseSpherical)then
+       coordnames=coord(icutdim(1))
+    else       
+       if(index(filenamehead,'x=0')>0) then
+          coordnames=coord(2)      !y -z plane, but icutdim(1)/=2
+       elseif(index(filenamehead,'x=y')>0)then
+          coordnames=NameCoordSph_D(1) !r-z plane
+       else
+          if(index(filenamehead,'R=0')>0)coord=NameCoordSph_D !Phi-Theta plane
+          coordnames=coord(icutdim(1)) !x-z, x-y planes
+       end if
+    end if
     do idim=2,ndim
        coordnames=trim(coordnames)//' '//trim(coord(icutdim(idim)))
     end do
@@ -583,16 +623,31 @@ contains
     endif
     write(unit_tmp)eqpar,specialpar(1:nspecialpar)
     write(unit_tmp)varnames
-    !write(unit_tmp)xx(1:nx,1:ny,1:nz,1:ndim)
     write(unit_tmp)((((xx(i,j,k,idim),i=1,nx),j=1,ny),k=1,nz),idim=1,ndim)
     do iw=1,nw
        write(unit_tmp)(((w(i,j,k,iw),i=1,nx),j=1,ny),k=1,nz)
     end do
 
-    !Debug
-    !write(*,*)'save_vacfile_bin end w(98,1,58,:)=',w(98,1,58,:)
-
   end subroutine save_vacfile_bin
-
+  subroutine cart_to_spher(Cart_D,Spher_D)
+    implicit none
+    real,dimension(3),intent(in)::Cart_D
+    real,dimension(3),intent(out)::Spher_D
+    RCyl=sqrt(Cart_D(1)**2+Cart_D(2)**2)
+    Spher_D(1)= sqrt(Rcyl**2+Cart_D(3)**2)
+    if (Cart_D(1) == 0.00 .and. Cart_D(2) == 0.00) then
+       Spher_D(2) = 0.00
+    else
+       Spher_D(2) = atan2(Cart_D(2), Cart_D(1))
+    end if
+    if (Spher_D(2) < 0.00) Spher_D(2) = Spher_D(2) + cPi*2
+    if(ndim==2.and.idim0==2) then
+       Spher_D(3) = cPi/2-atan2(Cart_D(3),sign(1.00,Cart_D(1)+Cart_D(2))*RCyl)
+       if (Spher_D(3) < -cPi/2) Spher_D(3) = Spher_D(3) + cPi*2
+    else
+       Spher_D(3) = cPi/2-acos(Cart_D(3)/Spher_D(1))
+    end if
+    if(UseLnr)Spher_D(1)=log(Spher_D(1))
+  end subroutine cart_to_spher
 end program PostIDL
 
