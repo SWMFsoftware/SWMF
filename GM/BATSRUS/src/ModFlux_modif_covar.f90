@@ -1,4 +1,6 @@
-
+!^CFG COPYRIGHT UM
+!^CFG FILE COVARIANT
+!^CFG FILE ALWAVES
 Module ModFlux
   use ModVarIndexes,ONLY:Energy_
   implicit none
