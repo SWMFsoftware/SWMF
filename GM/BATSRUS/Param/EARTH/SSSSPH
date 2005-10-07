@@ -7,9 +7,6 @@ F			time_accurate
 1			nSTAGE
 0.80			cfl
 
-#AMRINIT
-default			InitialRefineType
-2			initial_refine_levels
 
 #SCHEME
 1			nORDER
