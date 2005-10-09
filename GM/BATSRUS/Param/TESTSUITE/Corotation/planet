@@ -1,9 +1,0 @@
-
-#UPDATEB0
-4.5836623610465858E+02		DtUpdateB0 
-
-! The value of UpdateB0 is the same as taken by BATSRUS. 
-! In short tests ( < 458 sec) there is no update of B0.
-
-#END
-
