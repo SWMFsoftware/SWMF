@@ -2,7 +2,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <iostream.h>
 
 #ifdef MPI_ON
   #include "mpi.h"
@@ -99,8 +98,8 @@ void StampSignature(char* message) {
 
   if (ThisThread==0) {
     for (thread=0;thread<TotalThreadsNumber;thread++) sign+=buffer[thread];
-
-    cout << "Signature=" << sign << " (msg: " <<  message  << ")" << endl;
+     
+    printf("Signature=%e (msg: %s)\n",sign,message); 
   }
 
   delete [] buffer;
@@ -118,7 +117,14 @@ void exit(long int nline, char* fname, char* msg) {
   exit(0);
 }
 
+void PrintLineMark(long int nline ,char* fname ,char* msg) {
+  MPI_Barrier(MPI_COMM_WORLD);
 
+  if (ThisThread==0) {
+    if (msg==NULL) printf("linemark: line=%d, file=%s\n",nline,fname);
+    else printf("linemark: line=%d, file=%s, message=%s\n",nline,fname,msg);
+  }
+}
 
 
 

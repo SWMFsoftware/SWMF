@@ -1,6 +1,14 @@
 #ifndef SPECFUNC
 #define SPECFUNC
 
+#include <math.h>
+#include <iostream>
+#include "mpi.h"
+
+extern int DIM;
+extern int ThisThread;
+extern int TotalThreadsNumber;
+
 long int nint(double);
 
 void rnd_seed();
@@ -11,6 +19,25 @@ double gam(double);
 void PrintErrorLog(char*);
 void StampSignature(char*);
 void exit(long int,char*,char* =NULL);
+void PrintLineMark(long int,char*,char* =NULL);
+
+template<class T>
+void PrintLineMark(long int nline ,char* fname ,T code) {
+  long thread;
+  char *buffer=new char[sizeof(T)*TotalThreadsNumber];
+
+  MPI_Gather((char*)&code,sizeof(T),MPI_CHAR,buffer,sizeof(T),MPI_CHAR,0,MPI_COMM_WORLD);
+
+  if (ThisThread==0) {
+    std::cout << "linemark: line=" << nline << ", file=" << fname, " << code="; 
+    for (thread=0;thread<TotalThreadsNumber;thread++) std::cout << "  " << ((T*)buffer)[thread]; 
+
+    std::cout << std::endl;
+  }
+
+  delete [] buffer;
+}
+
 
 
 template<class TMesh>

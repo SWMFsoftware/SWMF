@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include "specfunc.h"
 
 template <class T>
 class array_2d {

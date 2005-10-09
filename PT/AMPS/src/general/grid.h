@@ -139,7 +139,7 @@ public:
     fprintf(fout,"node's coordinates\n");
     for (n=0;n<nnodes;n++) fprintf(fout,(node[n]).X()); 
 
-    printf(fout,"faces: nodes, faceat\n");
+    fprintf(fout,"faces: nodes, faceat\n");
     for (f=0;f<nfaces;f++) {
       fprintf(fout,"face=%i nodes:  ",f);
       for (idim=0;idim<DIM+1;idim++) {

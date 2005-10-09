@@ -6,6 +6,7 @@
 #define _PARSER_ 
 
 #include "ifileopr.h"
+#include "specfunc.h" 
 
 void parser(char*);
 void parser_readGeneralBlock(FILE*,long int&);

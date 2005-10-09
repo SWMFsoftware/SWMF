@@ -67,7 +67,7 @@ public:
 
   void GetCellCenter(float* x) {
     int i;
-    float center[3];
+    double center[3];
 
    GetCellCenter(center);
    for (i=0;i<DIM;i++) x[i]=center[i]; 
