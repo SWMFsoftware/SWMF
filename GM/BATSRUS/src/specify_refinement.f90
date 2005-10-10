@@ -64,21 +64,21 @@ subroutine specify_initial_refinement(refb, lev)
            minRblk = XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK)            
            maxRblk = minRblk+nI*dx_BLK(iBLK)                            
            RR=cHalf*(minRblk+maxRblk)                                   
-           xxx=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           xxx=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 cos(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           yyy=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           yyy=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           zzz=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
+           zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case('spherical_lnr')                                          
            SizeMax=max(dx_BLK(iBLK)*maxRblk,dy_BLK(iBLK)*maxRblk)
            minRblk =exp( XyzStart_BLK(1,iBLK)-cHalf*dx_BLK(iBLK))            
            maxRblk =exp(nI*dx_BLK(iBLK))*minRblk                            
            RR=cHalf*(minRblk+maxRblk)                                   
-           xxx=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           xxx=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 cos(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           yyy=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
+           yyy=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))*& 
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
-           zzz=RR*cos(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
+           zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case default
            call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
         end select                                                 !^CFG END COVARIANT
@@ -382,8 +382,8 @@ subroutine specify_initial_refinement(refb, lev)
                     case('cartesian')                                             !^CFG IF COVARIANT
                        if (min(abs(zz1),abs(zz2)) < Rcurrents) refb(iBLK) = .true.   
                     case('spherical','spherical_lnr')                               !^CFG IF COVARIANT BEGIN  
-                       if(minRblk*min(abs(cos(XyzStart_BLK(3,iBLK)-cHalf*&           
-                            dz_BLK(iBLK))),abs(cos(XyzStart_BLK(3,iBLK)+(nK-cHalf)&  
+                       if(minRblk*min(abs(sin(XyzStart_BLK(3,iBLK)-cHalf*&           
+                            dz_BLK(iBLK))),abs(sin(XyzStart_BLK(3,iBLK)+(nK-cHalf)&  
                             *dz_BLK(iBLK)))) < Rcurrents)refb(iBLK) = .true.         
                     case default
                        call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
@@ -426,8 +426,8 @@ subroutine specify_initial_refinement(refb, lev)
                           tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                                25.*((min(abs(zz1),abs(zz2)))**2))
                        case('spherical','spherical_lnr')                             !^CFG IF COVARIANT BEGIN
-                          tmpminRblk=min(cos(XyzStart_BLK(3,iBLK)-cHalf*&          
-                               dz_BLK(iBLK))**2,cos(XyzStart_BLK(3,iBLK)+&          
+                          tmpminRblk=min(sin(XyzStart_BLK(3,iBLK)-cHalf*&          
+                               dz_BLK(iBLK))**2,sin(XyzStart_BLK(3,iBLK)+&          
                                (nK-cHalf)*dz_BLK(iBLK))**2)                         
                           tmpminRblk=min(sin(XyzStart_BLK(2,iBLK)-cHalf*&          
                                dy_BLK(iBLK))**2,sin(XyzStart_BLK(2,iBLK)+&          
@@ -594,8 +594,8 @@ subroutine specify_initial_refinement(refb, lev)
                           tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                                25.*((min(abs(zz1),abs(zz2)))**2))
                        case('spherical')                             !^CFG IF COVARIANT BEGIN
-                          tmpminRblk=min(cos(XyzStart_BLK(3,iBLK)-cHalf*&          
-                               dz_BLK(iBLK))**2,cos(XyzStart_BLK(3,iBLK)+&          
+                          tmpminRblk=min(sin(XyzStart_BLK(3,iBLK)-cHalf*&          
+                               dz_BLK(iBLK))**2,sin(XyzStart_BLK(3,iBLK)+&          
                                (nK-cHalf)*dz_BLK(iBLK))**2)                         
                           tmpminRblk=min(sin(XyzStart_BLK(2,iBLK)-cHalf*&          
                                dy_BLK(iBLK))**2,sin(XyzStart_BLK(2,iBLK)+&          
