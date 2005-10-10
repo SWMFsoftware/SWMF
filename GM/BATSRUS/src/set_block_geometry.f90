@@ -84,6 +84,7 @@ subroutine fix_block_geometry(iBLK)
   use ModPhysics, ONLY : Rbody
   use ModPhysics, ONLY : xBody2,yBody2,zBody2 !^CFG IF SECONDBODY
   use ModParallel, ONLY : periodic3D
+  use ModBoundaryCells
   implicit none
 
   integer, intent(in) :: iBLK
@@ -168,7 +169,7 @@ subroutine fix_block_geometry(iBLK)
                             NodeY_NB(:,:,:,iBLK),&
                             NodeZ_NB(:,:,:,iBLK))
 
-        call fix_covariant_geometry(iBLK)
+
         !
         !Mark the block for fixing the covariant geometry afterwards
         !(when the refinement level of the neighboring blocks are
@@ -177,7 +178,7 @@ subroutine fix_block_geometry(iBLK)
         !(OldLevel_IIIB(:,:,:,iBLK)==-1.or.NeiLev_BLK(:,:,:,iBLK).  
         !To force the fix procedure for the given block set
         
-        OldLevel_IIIB(0,0,0,iBLK)=-1
+        OldLevel_IIIB(:,:,:,iBLK)=0
 
      else
 
@@ -186,12 +187,11 @@ subroutine fix_block_geometry(iBLK)
  
         call calc_node_coords_covar
 
-        !Face area vectors and cell volumes are expressed 
-        !in terms of the node coordinates
-
-        call fix_covariant_geometry(iBLK)
-
      end if
+     !Face area vectors and cell volumes are expressed 
+     !in terms of the node coordinates
+     
+     call fix_covariant_geometry(iBLK)
    
   end if                                          !^CFG END COVARIANT
 
@@ -256,9 +256,17 @@ subroutine fix_block_geometry(iBLK)
        UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
 
   do iBoundary=ExtraBc_,MaxBoundary
-     IsBoundaryBlock_IB(iBoundary,iBLK)=any(IsBoundaryCell_GI(:,:,:,iBoundary))
-     true_cell(:,:,:,iBLK) = true_cell(:,:,:,iBLK) &
-          .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
+     if(SaveBoundaryCells.and.iBoundary>=MinBoundarySaved)then
+        IsBoundaryCell_IGB(iBoundary,:,:,:,iBLK)=&
+             IsBoundaryCell_GI(:,:,:,iBoundary)
+        true_cell(1:nI,1:nJ,1:nK,iBLK) = true_cell(1:nI,1:nJ,1:nK,iBLK) &
+          .and. .not.IsBoundaryCell_GI(1:nI,1:nJ,1:nK,iBoundary)
+     else
+        true_cell(:,:,:,iBLK) = true_cell(:,:,:,iBLK) &
+             .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
+        IsBoundaryBlock_IB(iBoundary,iBLK)=&
+             any(IsBoundaryCell_GI(:,:,:,iBoundary))
+     end if
   end do
   
   BodyFlg_B(iBLK)= BodyFlg_B(iBLK) .and. any(true_cell(:,:,:,iBLK))

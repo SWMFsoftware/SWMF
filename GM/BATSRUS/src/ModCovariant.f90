@@ -3,6 +3,8 @@
 module ModCovariant
   use ModSize
   use ModNumConst
+  use ModMain,ONLY:unusedBLK
+  use ModParallel,ONLY:BLKneighborLEV,NOBLK
   implicit none
   save
  
@@ -28,11 +30,12 @@ module ModCovariant
   !the face area vectors at the resolution change. More general cell-centered grid 
   !either is not logically cartesian, or does not consist of the Voronoy cells only.
   !
-  logical :: UseVertexBasedGrid=.false.
+  logical :: UseVertexBasedGrid=.true.
   character (len=20) ::TypeGeometry='cartesian'                            
   real,allocatable,dimension(:,:,:,:,:):: &            
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB
   integer,allocatable,dimension(:,:,:,:)::OldLevel_IIIB
+  logical,dimension(-1:1,-1:1,-1:1)::IsNotCorner_III
 contains
   subroutine allocate_face_area_vectors
     if(allocated(FaceAreaI_DFB))return
@@ -45,7 +48,39 @@ contains
   subroutine allocate_old_levels
     if(allocated(OldLevel_IIIB))return
     allocate(OldLevel_IIIB(-1:1,-1:1,-1:1,nBLK))
+    OldLevel_IIIB=NOBLK
+    IsNotCorner_III=.true.
+    IsNotCorner_III(-1,-1,-1)=.false.
+    IsNotCorner_III(+1,-1,-1)=.false.
+    IsNotCorner_III(-1,+1,-1)=.false.
+    IsNotCorner_III(+1,+1,-1)=.false.
+    IsNotCorner_III(-1,-1,+1)=.false.
+    IsNotCorner_III(+1,-1,+1)=.false.
+    IsNotCorner_III(-1,+1,+1)=.false.
+    IsNotCorner_III(+1,+1,+1)=.false.
+!    write(*,*)IsNotCorner_III
   end subroutine allocate_old_levels
+!---------------------------------------------------------------------------------
+  subroutine save_old_levels
+    integer::iBlock
+    if(.not.UseCovariant)return
+    if(.not.UseVertexBasedGrid)return
+    do iBlock=1,nBLK
+       if(unusedBLK(iBlock))CYCLE
+       OldLevel_IIIB(:,:,:,iBlock)=BLKneighborLEV(:,:,:,iBlock)
+    end do
+  end subroutine save_old_levels
+!---------------------------------------------------------------------------------
+  logical function do_fix_geometry_at_reschange(iBlock)
+    integer,intent(in)::iBlock
+    if(unusedBLK(iBlock).or.(.not.UseCovariant).or.(.not.UseVertexBasedGrid))then
+       do_fix_geometry_at_reschange=.false.
+       return
+    end if
+    do_fix_geometry_at_reschange=any(IsNotCorner_III(:,:,:).and.&
+         OldLevel_IIIB(:,:,:,iBlock)/=BLKneighborLEV(:,:,:,iBlock).and.&
+         (OldLevel_IIIB(:,:,:,iBlock)==-1.or.BLKneighborLEV(:,:,:,iBlock)==-1))
+  end function do_fix_geometry_at_reschange
 !---------------------------------------------------------------------------------
   function cross_product(A_D,B_D)
     real,dimension(nDim)::cross_product

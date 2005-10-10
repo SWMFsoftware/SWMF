@@ -37,6 +37,7 @@ MODULES = \
 	ModAdvance.o\
 	ModAMR.o\
 	ModBlockData.o\
+	ModBoundaryCells.o\
 	ModGeometry.o\
 	ModInterface.o\
 	ModIO.o\
