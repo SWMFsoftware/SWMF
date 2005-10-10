@@ -36,6 +36,7 @@ subroutine MH_set_parameters(TypeAction)
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, &
        NameUserModule, VersionUserModule
+  use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
 
   implicit none
 
@@ -1353,10 +1354,12 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
+     case('#RESCHANGEBOUNDARY')
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('SaveBoundaryCells',SaveBoundaryCells)
      case('#VERTEXBASEDGRID')          !^CFG IF COVARIANT BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
-        if(UseVertexBasedGrid) call allocate_old_levels
      case("#COVARIANTGEOMETRY")          
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
@@ -1370,13 +1373,13 @@ subroutine MH_set_parameters(TypeAction)
            MaxBoundary = Top_
            if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
-           DoFixOuterBoundary=.true.
+           SaveBoundaryCells=.true.
         case('cylindrical','cylindrical_gen')
            automatic_refinement=.false.
            MaxBoundary = max(MaxBoundary,North_)
            if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
-           DoFixOuterBoundary=.true.         
+           SaveBoundaryCells=.true.         
   
         case default
            call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
@@ -2206,6 +2209,7 @@ contains
 
     if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
        call allocate_face_area_vectors
+       if(UseVertexBasedGrid) call allocate_old_levels
        if(UseImplicit)call stop_mpi(&                  !^CFG IF IMPLICIT 
             'Do not use covariant with implicit')      !^CFG IF IMPLICIT
        if(UseProjection)call stop_mpi(&                !^CFG IF PROJECTION
@@ -2220,7 +2224,18 @@ contains
             'Do not use covariant with the Boris correction')
                                                        !^CFG END BORISCORR
     end if                                             !^CFG END COVARIANT
-
+    if(SaveBoundaryCells)then
+       if(index(optimize_message_pass,'all')>0)then
+          call allocate_boundary_cells
+       else
+          if(iProc==0)&
+               write(*,'(a)')NameSub//&
+               'SaveBoundaryCells does not work '&
+               //'with message_pass option='//optimize_message_pass//&
+               ', set SaveBoundaryCells to F'
+          SaveBoundaryCells=.false.
+       end if
+    end if
     if(UseImplicit)then                      !^CFG IF IMPLICIT BEGIN
        call OPTION_IMPLICIT(IsOn,Name)
        if(.not.IsOn)then

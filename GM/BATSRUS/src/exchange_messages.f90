@@ -14,6 +14,7 @@ subroutine exchange_messages
   use ModGeometry, ONLY : far_field_BCs_BLK            
   use ModMpi
   use ModMPCells, ONLY : DoOneCoarserLayer
+  use ModBoundaryCells,ONLY:SaveBoundaryCells
   implicit none
 
   logical :: oktest, oktest_me, oktime, oktime_me
@@ -64,6 +65,7 @@ subroutine exchange_messages
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
      call message_pass_cells_8state(DoOneLayer,.false.,DoRestrictFace)
+     if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
           iProc,optimize_message_pass
@@ -81,6 +83,7 @@ subroutine exchange_messages
              restrictface=DoRestrictFace)
      case('allopt')
         call message_pass_cells_8state(DoOneLayer,.true.,DoRestrictFace)
+        if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
       case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
      end select

@@ -1125,6 +1125,7 @@ contains
     use ModParallel, ONLY: neiLEV,neiLtop, neiLbot,&
          neiLeast,neiLwest,neiLnorth,neiLsouth
     use ModMPCells,ONLY:DoOneCoarserLayer
+    use ModBoundaryCells,ONLY:SaveBoundaryCells
     implicit none
     integer, intent(in):: iBLK
 
@@ -1136,7 +1137,7 @@ contains
 
     !--------------------------------------------------------------------------
     IsBoundaryCell_GI(:,:,:,ExtraBc_) = R_BLK(:,:,:,iBLK)<R
-
+    if(SaveBoundaryCells)return
     !\
     ! Neighbor solution block refinement levels::
     ! ( 0=neighbors at same level, 

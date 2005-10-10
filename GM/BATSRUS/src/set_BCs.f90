@@ -6,6 +6,7 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
   use ModNumConst
   use ModGeometry, ONLY:&
        IsBoundaryCell_GI , IsBoundaryBlock_IB,true_cell,MinBoundary,MaxBoundary
+  use ModBoundaryCells
   implicit none
 
   integer, intent(in) :: iter
@@ -27,6 +28,13 @@ subroutine set_BCs(iter,time_now,DoResChangeOnly)
        LeftState_VX(Ux_,Itest,Jtest,Ktest),LeftState_VX(Uy_,Itest,Jtest,Ktest)
 
   call set_boundary_cells(globalBLK)
+  if(SaveBoundaryCells)then
+     do iBoundary=MinBoundarySaved,MaxBoundarySaved
+        IsBoundaryCell_GI(:,:,:,iBoundary)=&
+             IsBoundaryCell_IGB(iBoundary,:,:,:,globalBLK)
+     end do
+  end if
+  
   !\
   ! Apply boundary conditions
   !/

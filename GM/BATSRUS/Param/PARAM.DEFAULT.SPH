@@ -16,7 +16,7 @@ spherical
 
 
 #GRID
-2			proc_dims(1)
+4			proc_dims(1)
 2			proc_dims(2)
 1			proc_dims(3), (default/unchanged)
 -224.0			x1 (default/unchanged)
@@ -60,6 +60,8 @@ g c
 default
 2
 
+#TVDRESCHANGE
+T
 
 #INCLUDE
 Param/EARTH/SSSSPH

@@ -631,6 +631,190 @@ subroutine message_pass_cells_8state(DoOneLayer,DoFacesOnly,UseMonotoneRestrict)
   end if
 
 end subroutine message_pass_cells_8state
+!==========================================================================
+subroutine message_pass_boundary_cells(UseMonotoneRestrict)
+  !
+  ! This routine will complete a messagepass of boundary cell flags.
+  !
+  use ModProcMH
+  use ModBoundaryCells
+  use ModMPCells
+  use ModNumConst
+  use ModMpi
+  implicit none
+
+  !Subroutine arguements
+  logical, intent(in) :: UseMonotoneRestrict
+
+  !Local variables
+  integer :: iBoundary,i,j,k, iV,iPE, iError
+  integer :: nSENDrequests, SENDrequests(maxMessages)
+  integer :: nRECVrequests, RECVrequests(maxMessages)
+  integer :: MESGstatus(MPI_STATUS_SIZE, maxMessages)
+
+  !logical buffers
+  logical, dimension(:,:), allocatable, save :: IsBuffSend_II,IsBuffRecv_II
+  !------------------------------------------
+
+  if(.not.SaveBoundaryCells)return
+  if(numsend>0)&
+       allocate( IsBuffSend_II(MinBoundarySaved:MaxBoundarySaved,numSend),&
+       stat=iError );   call alloc_check(iError,"IsBuffSend_II")
+
+  if(numrecv>0)&
+       allocate( IsBuffRecv_II(MinBoundarySaved:MaxBoundarySaved,numRecv),&
+       stat=iError );   call alloc_check(iError,"IsBuffRecv_II")
+  
+
+
+  ! When neighbor is on the same processor, Collect/Send/Assign are all
+  !    done in one step, without intermediate memory use.
+  iPE=iProc
+  do iV=1,nSend(iPE)
+     lS(:)=VSendIlocal(:,iV)
+     lR(:)=VRecvIlocal(:,iV)
+     if(lS(0)==0)then
+        do k=0,lR(6)-lR(5); do j=0,lR(4)-lR(3); do i=0,lR(2)-lR(1)
+           IsBoundaryCell_IGB(     :,lR(1)+i,lR(3)+j,lR(5)+k,lR(7)) = &
+                IsBoundaryCell_IGB(:,lS(1)+i,lS(3)+j,lS(5)+k,lS(7))
+        end do; end do; end do
+     elseif(lS(0)==1)then
+        IsBoundaryCell_IGB(     :,lR(1),lR(3),lR(5),lR(7)) = &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+     elseif(lS(0)==2)then
+        do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
+           IsBoundaryCell_IGB(:,i,j,k,lR(7)) = IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+        end do; end do; end do
+     elseif(lS(0)==3)then
+        IsBoundaryCell_IGB(:,lR(1),lR(3),lR(5),lR(7)) = &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(2),lS(3),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(1),lS(4),lS(5),lS(7)).or. &
+             IsBoundaryCell_IGB(:,lS(1),lS(3),lS(6),lS(7))
+     else
+        if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
+        do iBoundary=MinBoundarySaved,MaxBoundarySaved
+           IsBoundaryCell_IGB(iBoundary,lR(1),lR(3),lR(5),lR(7)) = any( &
+                IsBoundaryCell_IGB(iBoundary,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
+        end do
+     end if
+  end do
+
+  ! Collect values into VSend that need to be passed to other processors
+  do iPE=0,nProc-1
+     if(iPE==iProc) CYCLE
+     if(nSend(iPE)==0) CYCLE
+     do iV=nSendStart(iPE)+1,nSendStart(iPE)+nSend(iPE)
+        lS(:)=VSendI(:,iV)
+        if(lS(0)==0 .or. lS(0)==1)then
+           IsBuffSend_II(:,iV) = IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7))
+        elseif(lS(0)==3)then
+           IsBuffSend_II(:,iV) =                      &
+                IsBoundaryCell_IGB(:,lS(1),lS(3),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(2),lS(3),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(1),lS(4),lS(5),lS(7)).or. &
+                IsBoundaryCell_IGB(:,lS(1),lS(3),lS(6),lS(7))
+        else
+           if(UseMonotoneRestrict) call monotone_restrict_indexes(lS)
+           do iBoundary=MinBoundarySaved,MaxBoundarySaved
+              IsBuffSend_II(iBoundary,iV) = any( &
+                   IsBoundaryCell_IGB(iBoundary,lS(1):lS(2),lS(3):lS(4),lS(5):lS(6),lS(7)))
+           end do
+        end if
+     end do
+  end do
+
+  ! Post receives first so that they are ready
+  nRECVrequests = 0  
+  do iPE=0,nProc-1
+     if(iPE == iProc) CYCLE
+     if(nRecv(iPE)==0) CYCLE
+     if(DoBreakUpMessages)then
+        nSends=1+((nRecv(iPE)-1)/MessageSize)
+        do i=1,nSends
+           itag = nProc*(i-1)+iPE
+           nRECVrequests = nRECVrequests + 1
+           if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
+           call MPI_irecv(IsBuffRecv_II(MinBoundarySaved,nRecvStart(iPE)+1+((i-1)*MessageSize)),&
+                nBoundarySaved*min(MessageSize,nRecv(iPE)-((i-1)*MessageSize)), &
+                MPI_LOGICAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
+        end do
+     else
+        itag = iPE
+        nRECVrequests = nRECVrequests + 1
+        if(nRECVrequests>maxMessages) call stop_mpi("Too many RECVs in mp_SendValues")
+        call MPI_irecv(IsBuffRecv_II(MinBoundarySaved,nRecvStart(iPE)+1),nBoundarySaved*nRecv(iPE), &
+             MPI_LOGICAL,iPE,itag,iComm,RECVrequests(nRECVrequests),iError)
+     end if
+  end do
+
+  ! Make sure all recv's are posted before using an rsend
+  if(DoRSend)then
+     call MPI_BARRIER(iComm,iError) ! ----------- BARRIER ------
+  end if
+
+  ! VSend array sent to VRecv array on other PEs
+  nSENDrequests = 0
+  do iPE=0,nProc-1
+     if(iPE == iProc) CYCLE
+     if(nSend(iPE)==0) CYCLE
+     if(DoBreakUpMessages)then
+        nSends=1+((nSend(iPE)-1)/MessageSize)
+        do i=1,nSends
+           itag = nProc*(i-1)+iProc
+           if(DoRSend)then
+              call MPI_rsend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1+((i-1)*MessageSize)),&
+                   nBoundarySaved*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   MPI_LOGICAL,iPE,itag,iComm,iError)
+           else
+              nSENDrequests = nSENDrequests + 1
+              call MPI_isend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1+((i-1)*MessageSize)),&
+                   nBoundarySaved*min(MessageSize,nSend(iPE)-((i-1)*MessageSize)), &
+                   MPI_LOGICAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
+           end if
+        end do
+     else
+        itag = iProc
+        nSENDrequests = nSENDrequests + 1
+        if(DoRSend)then
+           call MPI_rsend(IsBuffSend_II(MinBoundarySaved ,nSendStart(iPE)+1),&
+                nBoundarySaved*nSend(iPE), &
+                MPI_LOGICAL,iPE,itag,iComm,iError)
+        else
+           call MPI_isend(IsBuffSend_II(MinBoundarySaved,nSendStart(iPE)+1),&
+                nBoundarySaved*nSend(iPE), &
+                MPI_LOGICAL,iPE,itag,iComm,SENDrequests(nSENDrequests),iError)
+        end if
+     end if
+  end do
+
+  ! Wait for messages to be received before continuing.
+  call MPI_waitall(nRECVrequests, RECVrequests(1), MESGstatus(1,1), iError)
+
+  ! This loop copies the values from VRecv to their destination
+  do iPE=0,nProc-1
+     if(iPE==iProc) CYCLE
+     if(nRecv(iPE)==0) CYCLE
+     do iV=nRecvStart(iPE)+1,nRecvStart(iPE)+nRecv(iPE)
+        lR(:)=VRecvI(:,iV)
+        if(lR(0)==2)then
+           do k=lR(5),lR(6); do j=lR(3),lR(4); do i=lR(1),lR(2)
+              IsBoundaryCell_IGB(:,i,j,k,lR(7)) = IsBuffRecv_II(:,iV)
+           end do; end do; end do
+        else
+           IsBoundaryCell_IGB(:,lR(1),lR(3),lR(5),lR(7)) = IsBuffRecv_II(:,iV)
+        end if
+     end do
+  end do
+
+  ! Wait for sent messages to be received before exiting
+  if(.not.DoRSend)then
+     call MPI_waitall(nSENDrequests, SENDrequests(1), MESGstatus(1,1), iError)
+  end if
+  if(allocated(IsBuffSend_II)) deallocate(IsBuffSend_II)
+  if(allocated(IsBuffRecv_II)) deallocate(IsBuffRecv_II)
+end subroutine message_pass_boundary_cells
+
 !========================================================================
 !========================================================================
 !========================================================================
