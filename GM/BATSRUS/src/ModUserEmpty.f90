@@ -71,6 +71,12 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
+  subroutine user_set_physics
+    character (len=*), parameter :: Name='user_set_physics'
+    !-------------------------------------------------------------------
+    call stop_user(Name)
+  end subroutine user_set_physics
+  !=====================================================================
   subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)

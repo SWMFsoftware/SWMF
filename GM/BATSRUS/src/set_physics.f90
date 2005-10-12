@@ -10,7 +10,7 @@ subroutine set_physics_constants
   use CON_axes,   ONLY: get_axes
   use CON_planet, ONLY: get_planet
   use ModVarIndexes
-  use ModUser !!! This should not be here. Only needed for Tnot parameter !!!
+  use ModUser
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun
@@ -404,6 +404,7 @@ subroutine set_physics_constants
      B0_scl  = 1.0E-4*BArcDim /sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
+  if( UseUserSetPhysConst)call user_set_physics
 
 end subroutine set_physics_constants
 
@@ -483,10 +484,17 @@ subroutine set_dimensions
   unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
   unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
   unitSI_DivB        = unitSI_B/unitSI_x                     ! T/m
-  ! set temperature - note that the below is  only strictly true for a
-  ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-  ! be off in temperature by as much as a factor of #.  There is no way around
-  ! this in MHD.
+  ! set temperature - note that the below is only strictly true for a
+  ! limited number of cases.  If the only ion is proton then 
+  ! Tcode = Te+Ti.
+  !
+  ! If the ions are "heavy" (m = A * mp) then n above is not really a 
+  ! number density but is a nucleon density (#nucleons/m^3).  In this 
+  ! case the temperature code using unitSI_temperature is really
+  ! Tcode = (Ti+Te)/A.
+  !
+  ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
+  ! we assume Ti=Te then Tcode=Ti=Te.
   unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) ! Kelvin 
 
   !\
@@ -514,10 +522,17 @@ subroutine set_dimensions
      unitUSER_J           = 1.0E+6*unitSI_J                  ! uA/m^2
      unitUSER_electric    = 1.0E+3*unitSI_electric           ! mV/m
      unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x      ! nT/planetary radii
-     ! set temperature - note that the below is  only strictly true for a
-     ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  There is no way around
-     ! this in MHD.
+     ! set temperature - note that the below is only strictly true for a
+     ! limited number of cases.  If the only ion is proton then 
+     ! Tcode = Te+Ti.
+     !
+     ! If the ions are "heavy" (m = A * mp) then n above is not really a 
+     ! number density but is a nucleon density (#nucleons/m^3).  In this 
+     ! case the temperature code using unitSI_temperature is really
+     ! Tcode = (Ti+Te)/A.
+     !
+     ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
+     ! we assume Ti=Te then Tcode=Ti=Te..
      unitUSER_temperature = unitSI_temperature               ! Kelvin 
 
      !\

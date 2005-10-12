@@ -10,9 +10,10 @@ module ModUser
 
   use ModUserEmpty, ONLY:               &
        user_read_inputs,                &
+       user_set_physics,                &
        user_set_ics,                    &
        user_initial_perturbation,       &
-       user_set_boundary_cells,        &
+       user_set_boundary_cells,         &
        user_face_bcs,                   &
        user_set_outerbcs,               &
        user_specify_initial_refinement, &

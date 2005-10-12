@@ -10,6 +10,7 @@
   public :: user_set_outerbcs
   public :: user_initial_perturbation
   public :: user_set_ics
+  public :: user_set_physics
   public :: user_specify_initial_refinement
   public :: user_amr_criteria
   public :: user_read_inputs

@@ -4,6 +4,7 @@ module ModUser
   use ModUserEmpty, ONLY:               &
        user_read_inputs,                &
        user_set_ics,                    &
+       user_set_physics,                &
 !!!       user_initial_perturbation,       &
        user_set_boundary_cells,        &
        user_face_bcs,                   &
