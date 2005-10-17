@@ -367,7 +367,8 @@ public:
 
     for (nnode=0;nnode<nnodes;nnode++) node[nnode].InterpolationMask[nnn[nnode]]=-1; 
 
-    delete [] nnn,sum;
+    delete [] nnn;
+    delete [] sum;
   }; 
        
 //==================================================
