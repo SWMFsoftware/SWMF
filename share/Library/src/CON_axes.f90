@@ -117,7 +117,7 @@ module CON_axes
   !     initial time of the simulation.
   !   Y axis completes the right handed coordinate system.
   !
-  !   HGI is a truly inertial system.
+  !   Inertial forces should be taken into account. 
 
   ! HGR (HelioGraphic Rotating coordinates)
   !   
@@ -130,7 +130,7 @@ module CON_axes
   !     around the Z axis.
   !   Y axis completes the right handed coordinate system.
   !
-  ! HGR is a rotating system, inertial forces should be taken into account. 
+  !   Inertial forces should be taken into account. 
   !
   !\end{verbatim}
   !TODO:
@@ -479,7 +479,7 @@ contains
       end if
 
       ! A negative dLongitudeHgr means that the planet should be in 
-      ! in the -X,Z plane of the rotated HGI system.
+      ! in the -X,Z plane of the rotated HGR system.
       if(dLongitudeHgr < 0.0)then
 
          ! The offset angle for HGR
