@@ -1052,101 +1052,107 @@ subroutine correct_monotone_restrict(iBLK)
   !---------------------------------------------------------------------------
 
   if(all(neiLEV(:,iBLK) /= -1))RETURN
-  if(neiLnorth(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
+  if(neiLnorth(iBLK) == -1)then
+     if(     .not.unusedBlock_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
        .and. .not.unusedBlock_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
        .and. .not.unusedBlock_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
        .and. .not.unusedBlock_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK))) then
-     do k=1,nK;do i=1,nI
-        State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
-             State_VGB(1:nVar,i,nJ+1,k,iBLK)+ cThird*(&
-             State_VGB(1:nVar,i,nJ+1,k,iBLK)-&
-             State_VGB(1:nVar,i,nJ,k,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,i,nJ+1,k,iBLK) = max(&
-                State_VGB(1:nVar,i,nJ+1,k,iBLK),cTiny)
-        end where
-     end do;end do
+        do k=1,nK;do i=1,nI
+           State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
+                State_VGB(1:nVar,i,nJ+1,k,iBLK)+ cThird*(&
+                State_VGB(1:nVar,i,nJ+1,k,iBLK)-&
+                State_VGB(1:nVar,i,nJ,k,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,i,nJ+1,k,iBLK) = max(&
+                   State_VGB(1:nVar,i,nJ+1,k,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
-  if(neiLsouth(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
-       .and. .not.unusedBlock_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
-       .and. .not.unusedBlock_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
-       .and. .not.unusedBlock_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK))) then
-     do k=1,nK;do i=1,nI
-        State_VGB(1:nVar,i,0,k,iBLK) = &
-             State_VGB(1:nVar,i,0,k,iBLK)+ cThird*(&
-             State_VGB(1:nVar,i,0,k,iBLK)- &
-             State_VGB(1:nVar,i,1,k,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,i,0,k,iBLK) =max(&
-                State_VGB(1:nVar,i,0,k,iBLK),cTiny)
-        end where
-     end do;end do
+  if(neiLsouth(iBLK) == -1)then
+     if(        .not.unusedBlock_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
+          .and. .not.unusedBlock_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
+          .and. .not.unusedBlock_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
+          .and. .not.unusedBlock_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK))) then
+        do k=1,nK;do i=1,nI
+           State_VGB(1:nVar,i,0,k,iBLK) = &
+                State_VGB(1:nVar,i,0,k,iBLK)+ cThird*(&
+                State_VGB(1:nVar,i,0,k,iBLK)- &
+                State_VGB(1:nVar,i,1,k,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,i,0,k,iBLK) =max(&
+                   State_VGB(1:nVar,i,0,k,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
-  if(neiLeast(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
+  if(neiLeast(iBLK) == -1)then
+     if(     .not.unusedBlock_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
        .and. .not.unusedBlock_BP(neiBeast(2,iBLK),neiPeast(2,iBLK)) &
        .and. .not.unusedBlock_BP(neiBeast(3,iBLK),neiPeast(3,iBLK)) &
        .and. .not.unusedBlock_BP(neiBeast(4,iBLK),neiPeast(4,iBLK))) then
-     do k=1,nK;do j=1,nJ
-        State_VGB(1:nVar,0,j,k,iBLK) = &
-             State_VGB(1:nVar,0,j,k,iBLK)+ cThird*(&
-             State_VGB(1:nVar,0,j,k,iBLK)- &
-             State_VGB(1:nVar,1,j,k,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,0,j,k,iBLK) =max(&
-                State_VGB(1:nVar,0,j,k,iBLK),cTiny)
-        end where
-     end do;end do
+        do k=1,nK;do j=1,nJ
+           State_VGB(1:nVar,0,j,k,iBLK) = &
+                State_VGB(1:nVar,0,j,k,iBLK)+ cThird*(&
+                State_VGB(1:nVar,0,j,k,iBLK)- &
+                State_VGB(1:nVar,1,j,k,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,0,j,k,iBLK) =max(&
+                   State_VGB(1:nVar,0,j,k,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
-  if(neiLwest(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBwest(1,iBLK),neiPwest(1,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBwest(2,iBLK),neiPwest(2,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBwest(3,iBLK),neiPwest(3,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBwest(4,iBLK),neiPwest(4,iBLK))) then
-     do k=1,nK;do j=1,nJ
-        State_VGB(1:nVar,nI+1,j,k,iBLK) = &
-             State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*(&
-             State_VGB(1:nVar,nI+1,j,k,iBLK) - &
-             State_VGB(1:nVar,nI,  j,k,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,nI+1,j,k,iBLK) = max(&
-                State_VGB(1:nVar,nI+1,j,k,iBLK),cTiny)
-        end where
-     end do;end do
+  if(neiLwest(iBLK) == -1)then
+     if(        .not.unusedBlock_BP(neiBwest(1,iBLK),neiPwest(1,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBwest(2,iBLK),neiPwest(2,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBwest(3,iBLK),neiPwest(3,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBwest(4,iBLK),neiPwest(4,iBLK))) then
+        do k=1,nK;do j=1,nJ
+           State_VGB(1:nVar,nI+1,j,k,iBLK) = &
+                State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*(&
+                State_VGB(1:nVar,nI+1,j,k,iBLK) - &
+                State_VGB(1:nVar,nI,  j,k,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,nI+1,j,k,iBLK) = max(&
+                   State_VGB(1:nVar,nI+1,j,k,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
-  if(neiLtop(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBtop(4,iBLK),neiPtop(4,iBLK))) then
-     do j=1,nJ;do i=1,nI
-        State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-             State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
-             State_VGB(1:nVar,i,j,nK+1,iBLK) - &
-             State_VGB(1:nVar,i,j,nK,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,i,j,nK+1,iBLK) =max( &
-                State_VGB(1:nVar,i,j,nK+1,iBLK),cTiny)
-        end where
-     end do;end do
+  if(neiLtop(iBLK) == -1)then
+     if(        .not.unusedBlock_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBtop(4,iBLK),neiPtop(4,iBLK))) then
+        do j=1,nJ;do i=1,nI
+           State_VGB(1:nVar,i,j,nK+1,iBLK) = &
+                State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
+                State_VGB(1:nVar,i,j,nK+1,iBLK) - &
+                State_VGB(1:nVar,i,j,nK,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,i,j,nK+1,iBLK) =max( &
+                   State_VGB(1:nVar,i,j,nK+1,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
-  if(neiLbot(iBLK) == -1 &
-       .and. .not.unusedBlock_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
-       .and. .not.unusedBlock_BP(neiBbot(4,iBLK),neiPbot(4,iBLK))) then
-     do j=1,nJ;do i=1,nI
-        State_VGB(1:nVar,i,j,0,iBLK) = &
-             State_VGB(1:nVar,i,j,0,iBLK) + cThird*(&
-             State_VGB(1:nVar,i,j,0,iBLK) - &
-             State_VGB(1:nVar,i,j,1,iBLK))
-        where(DefaultState_V(1:nVar)>cTiny)
-           State_VGB(1:nVar,i,j,0,iBLK) =max( &
-                State_VGB(1:nVar,i,j,0,iBLK),cTiny)
-        end where
-     end do;end do
+  if(neiLbot(iBLK) == -1)then
+     if(        .not.unusedBlock_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
+          .and. .not.unusedBlock_BP(neiBbot(4,iBLK),neiPbot(4,iBLK))) then
+        do j=1,nJ;do i=1,nI
+           State_VGB(1:nVar,i,j,0,iBLK) = &
+                State_VGB(1:nVar,i,j,0,iBLK) + cThird*(&
+                State_VGB(1:nVar,i,j,0,iBLK) - &
+                State_VGB(1:nVar,i,j,1,iBLK))
+           where(DefaultState_V(1:nVar)>cTiny)
+              State_VGB(1:nVar,i,j,0,iBLK) =max( &
+                   State_VGB(1:nVar,i,j,0,iBLK),cTiny)
+           end where
+        end do;end do
+     end if
   end if
 
 end subroutine correct_monotone_restrict
