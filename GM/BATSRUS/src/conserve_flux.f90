@@ -159,7 +159,7 @@ subroutine apply_cons_face_flux
   use ModNumConst
   implicit none
 
-  integer :: i,j,k
+  integer :: i,j,k,iBlock
   logical :: oktest, oktest_me, oktest_row
   integer :: lFaceFrom, lFaceTo
   !--------------------------------------------------------------------------
@@ -170,85 +170,75 @@ subroutine apply_cons_face_flux
      oktest=.false.; oktest_me=.false.
   end if
 
-  if (neiLeast(globalBLK)==-1)then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBeast(1,globalBLK),neiPeast(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(2,globalBLK),neiPeast(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(3,globalBLK),neiPeast(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBeast(4,globalBLK),neiPeast(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  iBlock = globalBLK
+
+  if (neiLeast(iBlock)==-1)then
+     if ( .not.unusedBlock_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_x
-     end if                                 !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLwest(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBwest(1,globalBLK),neiPwest(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(2,globalBLK),neiPwest(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(3,globalBLK),neiPwest(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBwest(4,globalBLK),neiPwest(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLwest(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
         lFaceTo=nI+1
         lFaceFrom=2
         call apply_corrected_flux_x
-     end if                                                     !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLsouth(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBsouth(1,globalBLK),neiPsouth(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(2,globalBLK),neiPsouth(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(3,globalBLK),neiPsouth(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBsouth(4,globalBLK),neiPsouth(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLsouth(iBlock)==-1) then
+     if(.not.unusedBlock_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_y
-     end if                                         !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLnorth(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBnorth(1,globalBLK),neiPnorth(1,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(2,globalBLK),neiPnorth(2,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(3,globalBLK),neiPnorth(3,globalBLK)).and.&
-          .not.unusedBlock_BP(neiBnorth(4,globalBLK),neiPnorth(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLnorth(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)).and.&
+          .not.unusedBlock_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
         lFaceTo=nJ+1
         lFaceFrom=2
         call apply_corrected_flux_y
-     end if                                          !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLbot(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBbot(1,globalBLK),neiPbot(1,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(2,globalBLK),neiPbot(2,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(3,globalBLK),neiPbot(3,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBbot(4,globalBLK),neiPbot(4,globalBLK)))then
-        !^CFG END IMPLICIT
+  if (neiLbot(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)).and. &
+          .not.unusedBlock_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
         lFaceTo=1
         lFaceFrom=1
         call apply_corrected_flux_z
-     end if                                            !^CFG IF IMPLICIT
+     end if
   end if
 
-  if (neiLtop(globalBLK)==-1) then
-     !^CFG IF IMPLICIT BEGIN
-     if ( .not.unusedBlock_BP(neiBtop(1,globalBLK),neiPtop(1,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(2,globalBLK),neiPtop(2,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(3,globalBLK),neiPtop(3,globalBLK)).and. &
-          .not.unusedBlock_BP(neiBtop(4,globalBLK),neiPtop(4,globalBLK))) then
-        !^CFG END IMPLICIT
+  if (neiLtop(iBlock)==-1) then
+     if ( .not.unusedBlock_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)).and. &
+          .not.unusedBlock_BP(neiBtop(4,iBlock),neiPtop(4,iBlock))) then
         lFaceTo=nK+1
         lFaceFrom=2
         call apply_corrected_flux_z
-     end if                                   !^CFG IF IMPLICIT
+     end if
   end if
 
-Contains
+contains
 
   !============================================================================
 
