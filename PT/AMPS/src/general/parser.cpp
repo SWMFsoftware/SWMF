@@ -173,7 +173,7 @@ void parser(char* InputFile) {
 
   char str1[100],str[100];
 
-  printf("InputFile: %s\n",InputFile);
+  if (ThisThread==0) printf("InputFile: %s\n",InputFile);
 
   if (access(InputFile,R_OK)!=0) {
     printf("Cannot find the input file:%s\n",InputFile);
