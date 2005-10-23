@@ -1,3 +1,7 @@
+//==================================================
+//$Id$
+//==================================================
+
 #ifndef NODE 
 #define NODE
 
@@ -18,10 +22,12 @@ public:
     InterpolationMask=NULL;
   };
 
+/*
   ~Cnode () {
     if (InterpolationWeight!=NULL) delete [] InterpolationWeight;
     if (InterpolationMask!=NULL) delete [] InterpolationMask;
   };
+*/
 
   array_1d<T> X() {
     int idim;
