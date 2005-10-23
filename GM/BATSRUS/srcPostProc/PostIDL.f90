@@ -19,7 +19,7 @@ program PostIDL
   real, dimension(:), allocatable :: w1, eqpar, dxdoubled
 
   ! Coordinates, sizes, indices
-  real, dimension(3) :: XyzInOut_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
+  real, dimension(3) :: Xyz_D, xyzmin, xyzmax, dxyz, dxyzmin, dxyzcell
   real, dimension(3) :: XyzGen_D
   real ::    x, y, z, xmin, xmax, ymin, ymax, zmin, zmax
   real ::    dx, dy, dz, dyperdx, dzperdx, dxcell, dycell, dzcell
@@ -54,7 +54,7 @@ program PostIDL
   character (len=79) :: TypeGeometry
   logical :: UseSpherical=.false., UseLnr=.false.
   integer :: idim0
-  real    :: RCyl
+  real    :: rCyl
   !Pi:
   real,parameter::cPi= 3.1415926535897932384626433832795
   !---------------------------------------------------------------------------
@@ -248,38 +248,38 @@ program PostIDL
         !Debug
         !write(*,*)'START READING'
         if(read_binary)then
-           read(unit_tmp,ERR=999,END=999)dxcell,XyzInOut_D,w1
+           read(unit_tmp,ERR=999,END=999)   dxcell, Xyz_D, w1
         else
-           read(unit_tmp,*,ERR=999,END=999)dxcell,XyzInOut_D,w1
+           read(unit_tmp,*,ERR=999,END=999) dxcell, Xyz_D, w1
         end if
         
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
         if(.not.UseSpherical)then
-           XyzGen_D=XyzInOut_D
+           XyzGen_D = Xyz_D
         else
-           call cart_to_spher(XyzInOut_D,XyzGen_D)               
+           call cart_to_spher(Xyz_D, XyzGen_D)
 
            if(ndim==2)then
-              select case(idim0)                                       
-              case(1)         !This ia R=const slice
-                 !Latitude in hours
-                 XyzInOut_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)
-                 !Longitude in degrees
-                 XyzInOut_D(3)=XyzGen_D(3)*180./cPi
-
-              
-              case(2)         !This is x=0 or y=0 plane                                  
-                 XyzInOut_D(1)=&                                       
-                      sign(1.00,XyzInOut_D(1)+XyzInOut_D(2))*RCyl            
-              case(3)         !This is z=0 plane                
-                 if(UseLnr) then                                      
-                    XyzInOut_D(1)=XyzInOut_D(1)*exp(XyzGen_D(1))/Rcyl   
-                    XyzInOut_D(2)=XyzInOut_D(2)*exp(XyzGen_D(1))/Rcyl   
+              select case(idim0)
+              case(1)
+                 ! This is R=const slice
+                 ! Latitude in hours
+                 Xyz_D(2)=mod(XyzGen_D(2)*12./cPi+12.0,24.0)
+                 ! Longitude in degrees
+                 Xyz_D(3)=XyzGen_D(3)*180./cPi
+              case(2)
+                 ! This is x=0 or y=0 plane
+                 Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
+              case(3)
+                 ! This is z=0 plane
+                 if(UseLnr) then
+                    Xyz_D(1)=Xyz_D(1)*exp(XyzGen_D(1))/rCyl   
+                    Xyz_D(2)=Xyz_D(2)*exp(XyzGen_D(1))/rCyl   
                  else                                                 
-                    XyzInOut_D(1)=XyzInOut_D(1)*XyzGen_D(1)/Rcyl        
-                    XyzInOut_D(2)=XyzInOut_D(2)*XyzGen_D(1)/Rcyl        
+                    Xyz_D(1)=Xyz_D(1)*XyzGen_D(1)/rCyl        
+                    Xyz_D(2)=Xyz_D(2)*XyzGen_D(1)/rCyl        
                  end if
               end select
            end if
@@ -304,8 +304,7 @@ program PostIDL
            CYCLE
         endif
         
-        x=XyzGen_D(1); y=XyzGen_D(2); z=XyzGen_D(3)
-        
+        x = XyzGen_D(1); y = XyzGen_D(2); z = XyzGen_D(3)
 
         if(dxcell<dx+1.e-6)then
            ! Cell has the correct size or finer
@@ -393,6 +392,7 @@ program PostIDL
   write(*,'(a)')'PostIDL finished'
 
 contains
+  !===========================================================================
 
   subroutine unstructured_2D
 
@@ -460,11 +460,14 @@ contains
     else
        ! Negative lookup value means an error
        write(*,*)'!!! Error: 3rd data for same projected position in ',filename
-       write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',ix1,ix2,icell,jcell,dxcell,XyzGen_D
+       write(*,*)'ix1,ix2,icell,jcell,dx,xyz=', &
+            ix1,ix2,icell,jcell,dxcell,XyzGen_D
        stop
     end if
 
   end subroutine unstructured_2D
+
+  !===========================================================================
 
   subroutine check_corners
 
@@ -520,6 +523,8 @@ contains
 
   end subroutine check_corners
 
+  !===========================================================================
+
   subroutine weighted_average(new_weight,from_weight,from_cell,to_cell)
 
     ! Average current cell coordinates and cell values with 
@@ -531,18 +536,20 @@ contains
     if(from_cell<0)then
        w(to_cell,1,1,:)=w1
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=XyzInOut_D(icutdim(idim))
+          xx(to_cell,1,1,idim)=Xyz_D(icutdim(idim))
        end do
     else
        w(to_cell,1,1,:)=new_weight*w1+from_weight*w(from_cell,1,1,:)
        do idim=1,ndim
-          xx(to_cell,1,1,idim)=new_weight*XyzInOut_D(icutdim(idim)) + &
+          xx(to_cell,1,1,idim)=new_weight*Xyz_D(icutdim(idim)) + &
                from_weight*xx(from_cell,1,1,idim)
        enddo
     end if
     if(to_cell/=from_cell)total=total+dx1cell*dx2cell
 
   end subroutine weighted_average
+
+  !===========================================================================
 
   subroutine set_strings
 
@@ -556,10 +563,12 @@ contains
     do ll=1,l
        if(fileheadout(ll:ll)=='_')fileheadout(ll:ll)='-'
     enddo
-    ! Add _mhd13, _mhd23 or _mhd33 to fileheadout based on ndim
+    ! Add _xxx13, _xxx23 or _xxx33 to fileheadout based on ndim
+    ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var)
     write(fileheadout,'(a,i1,i1)') fileheadout(1:l)//filenamehead(4:7),ndim,3
 
-    ! Produce coordinate names ('x y z ', 'x y ', 'x z ', 'y z ' or 'theta','phi')
+    ! Produce coordinate names 
+    !         ('x y z', 'x y', 'x z', 'y z' or 'r theta', 'r phi' ...)
     if(.not.UseSpherical)then
        coordnames=coord(icutdim(1))
     else       
@@ -580,6 +589,7 @@ contains
   end subroutine set_strings
 
   !==========================================================================
+
   subroutine save_vacfile_ascii
 
     write(unit_tmp,"(a)")fileheadout
@@ -604,13 +614,10 @@ contains
   end subroutine save_vacfile_ascii
 
   !==========================================================================
+
   subroutine save_vacfile_bin
 
     integer :: iw, i, j, k, idim
-
-    !Debug
-    !write(*,*)'save_vacfile_bin start nx,ny,nz,nw w(98,1,58,:)=',&
-    !     nx,ny,nz,nw,w(98,1,58,:)
 
     write(unit_tmp)fileheadout
 
@@ -629,25 +636,35 @@ contains
     end do
 
   end subroutine save_vacfile_bin
-  subroutine cart_to_spher(Cart_D,Spher_D)
-    implicit none
-    real,dimension(3),intent(in)::Cart_D
-    real,dimension(3),intent(out)::Spher_D
-    RCyl=sqrt(Cart_D(1)**2+Cart_D(2)**2)
-    Spher_D(1)= sqrt(Rcyl**2+Cart_D(3)**2)
-    if (Cart_D(1) == 0.00 .and. Cart_D(2) == 0.00) then
-       Spher_D(2) = 0.00
+
+  !===========================================================================
+
+  subroutine cart_to_spher(Cart_D, Spher_D)
+
+    ! Convert cartesian coordinates to spherical coordinates
+    ! Also set the rCyl = sqrt(x^2+y^2) variable
+
+    real, intent(in)  :: Cart_D(3)
+    real, intent(out) :: Spher_D(3)
+
+    rCyl       = sqrt(Cart_D(1)**2 + Cart_D(2)**2)
+    Spher_D(1) = sqrt(rCyl**2 + Cart_D(3)**2)
+
+    if (Cart_D(1) == 0.0 .and. Cart_D(2) == 0.0) then
+       Spher_D(2) = 0.0
     else
        Spher_D(2) = atan2(Cart_D(2), Cart_D(1))
     end if
     if (Spher_D(2) < 0.00) Spher_D(2) = Spher_D(2) + cPi*2
-    if(ndim==2.and.idim0==2) then
-       Spher_D(3) = cPi/2-atan2(Cart_D(3),sign(1.00,Cart_D(1)+Cart_D(2))*RCyl)
+
+    if(ndim==2 .and. idim0==2) then
+       Spher_D(3) = cPi/2-atan2(Cart_D(3),sign(1.00,Cart_D(1)+Cart_D(2))*rCyl)
        if (Spher_D(3) < -cPi/2) Spher_D(3) = Spher_D(3) + cPi*2
     else
-       Spher_D(3) = cPi/2-acos(Cart_D(3)/Spher_D(1))
+       Spher_D(3) = cPi/2 - acos(Cart_D(3)/Spher_D(1))
     end if
-    if(UseLnr)Spher_D(1)=log(Spher_D(1))
-  end subroutine cart_to_spher
-end program PostIDL
+    if(UseLnr) Spher_D(1) = log(Spher_D(1))
 
+  end subroutine cart_to_spher
+
+end program PostIDL
