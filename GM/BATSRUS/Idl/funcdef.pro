@@ -65,6 +65,7 @@ if siz(0) eq ndim then nw=1 else nw=siz(ndim+1)
 nEqpar = n_elements(eqpar)
 
 ; Extract equation parameters
+amu    =  1.67e-24 ;[g]
 gamma  =  5./3.
 clight =  1.0
 rbody  = -1.0
@@ -216,6 +217,8 @@ if phys eq 'mhd' or phys eq 'raw' or phys eq 'ful' or phys eq 'var' then begin
    ; Some extra variables
    uu=ux^2+uy^2+uz^2
    bb=bx^2+by^2+bz^2
+   u =sqrt(uu)
+   b =sqrt(bb)
 
    ; Change energy into pressure
    if n_elements(p) eq 0 and n_elements(e) gt 0 then $
@@ -231,8 +234,6 @@ endif
 
 case f of
   'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
-  ; velocity
-  'u'        : result=sqrt(uu)
   ; momenta
   'mx'       : result=rho*ux
   'my'       : result=rho*uy
@@ -241,8 +242,6 @@ case f of
   'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
   'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
   'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
-  ; Magnetic field
-  'b'        : result=sqrt(bb)
   ; Electric field
   'Ex'       : result=(by*uz-uy*bz)
   'Ey'       : result=(bz*ux-uz*bx)
@@ -253,11 +252,11 @@ case f of
   'calfvenx' : result=bx/sqrt(rho)
   'calfveny' : result=by/sqrt(rho)
   'calfvenz' : result=bz/sqrt(rho)
-  'calfven'  : result=sqrt(bb/rho)
+  'calfven'  : result=b /sqrt(rho)
   'Malfvenx' : result=ux/bx*sqrt(rho)
   'Malfveny' : result=uy/by*sqrt(rho)
   'Malfvenz' : result=uz/bz*sqrt(rho)
-  'Malfven'  : result=sqrt(uu/bb*rho)
+  'Malfven'  : result=u /b *sqrt(rho)
   ; pressure, plasma beta, temperature, entropy
   'pbeta'    : result=2*p/bb
   's'        : result=p/rho^gamma
@@ -265,11 +264,11 @@ case f of
   'T_SC'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
   'T_IH'     : result=1.211E-8*p/rho       ; [K] amu/kB*(dyne/cm^2) / (g/cm^3)
   'T_GM'     : result=7.243E+7*p/rho       ; [K] amu/kB*nPa / (amu/cm^3)
-  'n_IH'     : result=rho/1.67e-24         ; [/cc] n = rho/amu in CGS
-  'n_SC'     : result=rho/1.67e-24         ; [/cc] n = rho/amu in CGS
+  'n_IH'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
+  'n_SC'     : result=rho/amu              ; [/cc] n = rho/amu in CGS
   ; sound speed, Mach number
   'csound'   :result=sqrt(gamma*p/rho)
-  'mach'  :result=sqrt(uu/(gamma*p/rho))
+  'mach'  :result=u /sqrt(gamma*p/rho)
   'machx' :result=ux/sqrt(gamma*p/rho)
   'machy' :result=uy/sqrt(gamma*p/rho)
   'machz' :result=uz/sqrt(gamma*p/rho)
