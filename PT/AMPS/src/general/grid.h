@@ -77,6 +77,7 @@ public:
     InterpolationWeight=NULL,InterpolationMask=NULL;
   };
 
+/*
   ~Cgrid() {
 
      if (nnodes>0) {
@@ -96,6 +97,7 @@ public:
        delete [] InterpolationMask;
      }
   };
+*/
 
 //==================================================
   void cutstr(char* dest, char* src)
