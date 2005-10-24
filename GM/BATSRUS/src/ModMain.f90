@@ -336,7 +336,7 @@ Module ModMain
   logical:: UseUserEchoInput         = .false.
   logical:: UseUserB0                = .false.
   logical:: UseUserHeating           = .false.
-  logical:: UseUserSetPhysConst      = .false.
+  logical:: UseUserInitSession       = .false.
   logical:: UseUserUpdateStates      = .false.
 
 end module ModMain
