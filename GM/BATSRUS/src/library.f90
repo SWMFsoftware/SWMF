@@ -1384,9 +1384,9 @@ subroutine find_test_cell
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,r_BLK,dx_BLK
   use ModParallel, ONLY : NOBLK, neiLEV,neiPE,neiBLK
-  use ModAdvance, ONLY : tmp1_BLK
+  use ModAdvance,  ONLY : tmp1_BLK
   use ModMpi
   implicit none
 
@@ -1464,6 +1464,7 @@ subroutine find_test_cell
              'x=',x_BLK(Itest,Jtest,Ktest,BLKtest),&
              ' y=',y_BLK(Itest,Jtest,Ktest,BLKtest),&
              ' z=',z_BLK(Itest,Jtest,Ktest,BLKtest),&
+             ' r=',r_BLK(iTest,jTest,kTest,BLKtest),&
              ' dx=',dx_BLK(BLKtest)
 
   	do idir=1,6
