@@ -174,35 +174,22 @@ public:
   }; 
 
   double CharacteristicSize() {
-    double res;
-    static array_1d<DataType> x_1d(1);
-    static array_1d<DataType> x1_2d(2),x2_2d(2);
-    static array_1d<DataType> x1_3d(3),x2_3d(3),x3_3d(3);
+    double nfaces,l,nd0[3],nd1[3],res=0.0;
+    int i,j,idim;
 
+    for (i=0;i<DIM+1;i++) {
+      node[i]->GetX(nd0);
 
-    switch (DIM) {
-    case 0 :
-      res=1.0;
-      break;
-    case 1 :
-      x_1d=node[1]->X()-node[0]->X();
-      res=x_1d.abs();  
+      for (j=i+1;j<DIM+1;j++) {
+        node[j]->GetX(nd1);
+        for (l=0.0,idim=0;idim<DIM;idim++) l+=pow(nd0[idim]-nd1[idim],2);
 
-      break;
-    case 2 :
-      x1_2d=node[1]->X()-node[0]->X();
-      x2_2d=node[2]->X()-node[0]->X();
-      res=sqrt(0.5*fabs(x1_2d(0)*x2_2d(1)-x1_2d(1)*x2_2d(0))/Pi);
-
-      break;
-    case 3 :
-      x1_3d=node[1]->X()-node[0]->X();
-      x2_3d=node[2]->X()-node[0]->X();
-      x3_3d=node[3]->X()-node[0]->X();
-      res=pow(fabs(mix_product(x1_3d,x2_3d,x3_3d))/8.0/Pi,0.3333333);
-
-      break;
+        res+=sqrt(l);
+      }
     }
+
+    nfaces=DIM*(1+DIM)/2.0;
+    if (DIM!=0) res/=nfaces;
 
     return res;
   }; 
