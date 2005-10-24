@@ -385,9 +385,6 @@ min idl			StringPlot
 -1			DnSavePlot
 300.0			DtSavePlot
 
-#SPS
-T			UseSps (this is the serial potential solver)
-
 #END_COMP IE -----------------------------------------------------------------
 
 #BEGIN_COMP UA ---------------------------------------------------------------

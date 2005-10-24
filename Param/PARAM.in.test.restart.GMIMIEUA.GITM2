@@ -117,9 +117,6 @@ min idl			StringPlot
 20			DnOutput
 -1.0			DtOutput
 
-#SPS
-T			UseSps (this is the serial potential solver)
-
 #END_COMP IE -----------------------------------------------------------------
 
 #BEGIN_COMP UA ---------------------------------------------------------------
