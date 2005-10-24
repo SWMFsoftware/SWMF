@@ -891,7 +891,7 @@ Module ModUser
 
   use ModUserEmpty, ONLY:               &
 !!!       user_read_inputs,                &
-       user_set_physics,                &
+!!!       user_init_session,               &
        user_set_ics,                    &
 !!!       user_initial_perturbation,       &
 !!!       user_set_boundary_cells,        &
@@ -911,10 +911,6 @@ Module ModUser
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'HELIOSPHERE, Manchester, Roussev'
-
-  ! This variable is read from PARAM.in and it is used to reduce gravity 
-  ! in src/set_physics.f90 !!! 
-  public :: Tnot 
 
   !\
   ! PFSSM related variables::
@@ -1031,7 +1027,7 @@ contains
 
     integer:: i
     character (len=100) :: NameCommand
-    !---------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input HELIOSPHERE starts'
@@ -1052,7 +1048,7 @@ contains
           call read_var('UseUserAMR'              ,UseUserAMR)
           call read_var('UseUserEchoInput'        ,UseUserEchoInput)
           call read_var('UseUserB0'               ,UseUserB0)
-          call read_var('UseUserSetPhysConst'     ,UseUserSetPhysConst)
+          call read_var('UseUserInitSession'     ,UseUserInitSession)
           call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
        case("#USEUSERHEATING")
           call read_var('UseUserHeating'          ,UseUserHeating)
@@ -1113,6 +1109,19 @@ contains
        end select
     end do
   end subroutine user_read_inputs
+
+  !=====================================================================
+  subroutine user_init_session
+
+    ! Modify gravity to get better temperature !!! Do this only once
+
+    use ModPhysics, ONLY: gBody
+    character (len=*), parameter :: Name='user_init_session'
+    !-------------------------------------------------------------------
+
+    gBody  = gBody/Tnot
+
+  end subroutine user_init_session
 
   !========================================================================
   subroutine user_set_boundary_cells(iBLK)
