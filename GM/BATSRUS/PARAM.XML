@@ -351,7 +351,7 @@ but much shorter.
 !!!!!!!!!!!!!!!!!!!!!!  USER DEFINED INPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="USER_FLAGS">
+<command name="USERFLAGS" alias="USER_FLAGS">
 	<parameter name="UseUserInnerBcs"          type="logical" default="F"/>
 	<parameter name="UseUserSource"	           type="logical" default="F"/>
 	<parameter name="UseUserPerturbation"      type="logical" default="F"/>
@@ -363,10 +363,10 @@ but much shorter.
 	<parameter name="UseUserAMR"               type="logical" default="F"/>
 	<parameter name="UseUserEchoInput"         type="logical" default="F"/>
 	<parameter name="UseUserB0"                type="logical" default="F"/>
-	<parameter name="UseUserSetPhysConst"      type="logical" default="F"/>
+	<parameter name="UseUserInitSession"       type="logical" default="F"/>
 	<parameter name="UseUserUpdateStates"      type="logical" default="F"/>
 
-#USER_FLAGS
+#USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
@@ -378,28 +378,32 @@ F                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserSetPhysConst
+F                       UseUserInitSession
 F                       UseUserUpdateStates
 
-This command controls the use of user defined routines in user_routines.f90.
+This command controls the use of user defined routines in ModUser.f90.
 For each flag that is set, an associated routine will be called in 
-user_routines.f90.  Default is .false. for all flags.
+the user module.  Default is .false. for all flags.
 </command>
 
 <command name="USERINPUTBEGIN">
 
+#USERINPUTBEGIN
+
 This command signals the beginning of the section of the file which 
-is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
-The section ends with the #USERINPUTEND command. There is no XML based parameter
-checking in the user section.
+is read by the subroutine user\_read\_inputs in the ModUser.f90 file.
+The section ends with the #USERINPUTEND command. 
+There is no XML based parameter checking in the user section.
 </command>
 
 <command name="USERINPUTEND">
 
+#USERINPUTEND
+
 This command signals the end of the section of the file which 
-is read by the subroutine user\_read\_inputs in the user\_routines.f90 file.
-The section begins with the #USERINPUTBEGIN command. There is no XML based parameter
-checking in the user section.
+is read by the subroutine user\_read\_inputs in the ModUser.f90 file.
+The section begins with the #USERINPUTBEGIN command. 
+There is no XML based parameter checking in the user section.
 </command>
 
 </commandgroup>
@@ -1871,7 +1875,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! The #COOR command is optional.  It indicates which coordinate system the data
 ! represents.  The default is GSM, but others are possible.
 
-! The file containing the upstream conditions should include data in the 
+! The file containing the satellite trajectory should include data in the 
 ! following order:
 !\begin{verbatim}
 ! yr mn dy hr min sec msec x y z
@@ -3387,33 +3391,34 @@ tested.
 ! This command defines the solar wind parameters for the GM component.
 ! It also defines the normalization for all the variables therefore
 ! it is saved into the restart header file.
-! One of the #SOLARWIND command and the #UPSTREAM_INPUT_FILE command
-! (with UseUpstreamInputFile = .true.) is required by the GM component.
+! One of the #SOLARWIND command and the #SOLARWINDFILE command
+! (with UseSolarWindFile = .true.) is required by the GM component.
 </command>
 
-<command name="UPSTREAM_INPUT_FILE">
-	<parameter name="UseUpstreamInputFile" type="logical" default="F"/>
-	<if expr="$UseUpstreamInputFile">
-		<parameter name="NameUpstreamFile" type="string" length="100"/>
+<command name="SOLARWINDFILE" alias="UPSTREAM_INPUT_FILE">
+	<parameter name="UseSolarWindFile" type="logical" default="F"/>
+	<if expr="$UseSolarWindFile">
+		<parameter name="NameSolarWindFile" type="string" 	
+			length="100"/>
 	</if>
-	<rule expr="-f $NameUpstreamFile">
-		Upstream file $NameUpstreamFile must exist
+	<rule expr="-f $NameSolarWindFile">
+		Solar wind file $NameSolarWindFile must exist
 	</rule>
-#UPSTREAM_INPUT_FILE
-T			UseUpstreamInputFile (rest of parameters read if true)
-IMF.dat                 NameUpstreamFile
+#SOLARWINDFILE
+T			UseSolarWindFile (rest of parameters read if true)
+IMF.dat                 NameSolarWindFile
 
-! Default is UseUpstreamInputFile = .false.
+! Default is UseSolarWindFile = .false.
 !
-! Read IMF data from file NameUpstreamFile if UseUpstreamInputFile is true.
+! Read IMF data from file NameSolarWindFile if UseSolarWindFile is true.
 ! The data file contains all information required for setting the upstream
 ! boundary conditions. Parameter TypeBcEast should be set to 'vary' for
 ! the time dependent boundary condition.
 !
 ! If the #SOLARWIND command is not provided then the first time read from
-! the upstream input file will set the normalization of all variables
+! the solar wind file will set the normalization of all variables
 ! in the GM component. Consequently either the #SOLARWIND command or
-! the #UPSTREAM_INPUT_FILE command with UseUpstreamInputFile=.true.
+! the #SOLARWINDFILE command with UseSolarWindFile=.true.
 ! is required by the GM component.
 !
 ! The input files are strutured similar to the PARAM.in file.  There are 
@@ -3452,7 +3457,7 @@ IMF.dat                 NameUpstreamFile
 ! \end{verbatim}
 !
 ! Finally, the data should be preceded by a {\tt #START}.  The beginning of 
-! a typical upstream input file might look like:
+! a typical solar wind input file might look like:
 ! \begin{verbatim}
 ! #COOR
 ! GSM
@@ -3990,8 +3995,8 @@ Param/SSS_3000		NameIncludeFile
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($SwRhoDim > 0) or $UseUpstreamInputFile or $_NameComp ne 'GM'">
-	Either command #SOLARWIND or #UPSTREAM_INPUT_FILE must be used!
+<rule expr="($SwRhoDim > 0) or $UseSolarWindFile or $_NameComp ne 'GM'">
+	Either command #SOLARWIND or #SOLARWINDFILE must be used!
 </rule>
 
 <rule expr="$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock">
