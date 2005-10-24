@@ -10,7 +10,7 @@ subroutine set_physics_constants
   use CON_axes,   ONLY: get_axes
   use CON_planet, ONLY: get_planet
   use ModVarIndexes
-  use ModUser
+
   implicit none
 
   real :: Qqpmag, Oopmag, Gsun
@@ -127,9 +127,6 @@ subroutine set_physics_constants
 
   Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
   GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x) !^CFG IF SECONDBODY
-  !^CFG IF ALWAVES BEGIN
-  !Gbody  = Gbody/Tnot  !^CFG UNCOMMENT IF ALWAVES
-  !^CFG END ALWAVES
 
   !\
   ! Nondimensionalize dimensional SW values - 
@@ -404,7 +401,6 @@ subroutine set_physics_constants
      B0_scl  = 1.0E-4*BArcDim /sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
      B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
   end select
-  if( UseUserSetPhysConst)call user_set_physics
 
 end subroutine set_physics_constants
 
