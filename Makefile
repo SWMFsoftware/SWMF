@@ -328,7 +328,6 @@ rundir: ENV_CHECK
 	mkdir run/STDOUT
 	cp Param/LAYOUT.DEFAULT run/LAYOUT.in
 	cp Param/PARAM.DEFAULT  run/PARAM.in
-	cp Param/IMF.DEFAULT    run/IMF.dat
 	cp Scripts/Restart.pl   run/Restart.pl
 	cp Scripts/PostProc.pl  run/PostProc.pl
 	touch run/core
