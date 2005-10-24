@@ -34,7 +34,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  use ModUser,          ONLY: user_read_inputs, &
+  use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
 
@@ -162,26 +162,15 @@ subroutine MH_set_parameters(TypeAction)
      ! clean dynamic storage
      call clean_block_data
 
-     ! These logicals are always related like this !!!
-     DoOneCoarserLayer = .not.UseTVDAtResChange
-     DoLimitMomentum = &                                  !^CFG IF BORISCORR
-          boris_correction .and. (.not.UseTVDAtResChange) !^CFG IF BORISCORR
-
-     if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
-        jMinFaceX=0; jMaxFaceX=nJ+1
-        kMinFaceX=0; kMaxFaceX=nK+1
-        iMinFaceY=0; iMaxFaceY=nI+1
-        kMinFaceY=0; kMaxFaceY=nK+1
-        iMinFaceZ=0; iMaxFaceZ=nI+1
-        jMinFaceZ=0; jMaxFaceZ=nJ+1
-     end if                          !^CFG END CONSTRAINB
-
      if (read_new_upstream) &
           call read_upstream_input_file(UpstreamFileName)
 
      call set_physics_constants
 
-     call set_physics_parameters
+     call set_extra_parameters
+
+     ! Initialize user module and allow user to modify things
+     if(UseUserInitSession)call user_init_session
 
      if(iProc==0 .and. IsStandAlone)then
         call timing_active(UseTiming)
@@ -1147,11 +1136,11 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RightState',shock_Rstate(i))
         end do
         call read_var('ShockSlope',ShockSlope)
-     case("#UPSTREAM_INPUT_FILE")
-        call read_var('UseUpstreamInputFile',UseUpstreamInputFile)
+     case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
+        call read_var('UseSolarWindFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
            read_new_upstream = .true.
-           call read_var('NameUpstreamFile',UpstreamFileName)
+           call read_var('NameSolarWindFile', UpstreamFileName)
         end if
         !                                               ^CFG IF RAYTRACE BEGIN
      case("#RAYTRACE")
@@ -1186,7 +1175,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#MASSLOADING")
         call read_var('UseMassLoading',UseMassLoading)
         call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
-     case("#USER_FLAGS")
+     case("#USERFLAGS", "#USER_FLAGS")
         call read_var('UseUserInnerBcs'         ,UseUserInnerBcs)
         call read_var('UseUserSource'           ,UseUserSource)
         call read_var('UseUserPerturbation'     ,UseUserPerturbation)
@@ -1198,9 +1187,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseUserAMR'              ,UseUserAMR)
         call read_var('UseUserEchoInput'        ,UseUserEchoInput)
         call read_var('UseUserB0'               ,UseUserB0) 
-        call read_var('UseUserSetPhysConst'     ,UseUserSetPhysConst)
+        call read_var('UseUserInitSession'      ,UseUserInitSession)
         call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
-     case("#USERINPUTBEGIN")        
+     case("#USERINPUTBEGIN")
         call user_read_inputs
      case("#CODEVERSION")
         if(.not.is_first_session())CYCLE READPARAM
@@ -2582,7 +2571,7 @@ contains
   end subroutine check_parameters
 
   !===========================================================================
-  subroutine set_physics_parameters
+  subroutine set_extra_parameters
 
     ! We need normalization for dt
     if(UseDtFixed)then
@@ -2605,7 +2594,8 @@ contains
 
     ! You have to have the normalizations first
     if (read_new_upstream)  call normalize_upstream_data
-
+    
+    ! Set MinBoundary and MaxBoundary
     if(UseBody2) MinBoundary=min(Body2_,MinBoundary)   !^CFG IF SECONDBODY
     if(body1) then   
        MinBoundary=min(Body1_,MinBoundary)
@@ -2617,8 +2607,22 @@ contains
     end if
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
+
+    ! These logicals are always related like this !!!
+    DoOneCoarserLayer = .not.UseTVDAtResChange
+    DoLimitMomentum = &                                  !^CFG IF BORISCORR
+         boris_correction .and. (.not.UseTVDAtResChange) !^CFG IF BORISCORR
+
+    if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
+       jMinFaceX=0; jMaxFaceX=nJ+1
+       kMinFaceX=0; kMaxFaceX=nK+1
+       iMinFaceY=0; iMaxFaceY=nI+1
+       kMinFaceY=0; kMaxFaceY=nK+1
+       iMinFaceZ=0; iMaxFaceZ=nI+1
+       jMinFaceZ=0; jMaxFaceZ=nJ+1
+    end if                          !^CFG END CONSTRAINB
  
-  end subroutine set_physics_parameters
+  end subroutine set_extra_parameters
 
   !==========================================================================
   subroutine read_area_radii
