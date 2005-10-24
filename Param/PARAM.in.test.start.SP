@@ -1,17 +1,14 @@
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Uses flat files for MHD data and starts SP
-
 
 #TIMEACCURATE
 T			DoTimeAccurate
 
 
-#BEGIN_COMP SP
-
-
+#BEGIN_COMP SP	-------------------------------------------------------------
 
 #RTRANSIENT
 2.0
@@ -26,17 +23,13 @@ T
 T
 
 #VERBOSE
-1
+1			lVerbose
 
 #PLOT
-1                     DnPlot
+1			DnPlot
 
-#END_COMP SP
-
-
+#END_COMP SP ---------------------------------------------------------------
 
 #STOP
 -1                    MaxIteration
 5999.9                tSimulationMax
-
-#END

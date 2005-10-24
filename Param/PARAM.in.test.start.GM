@@ -22,9 +22,6 @@ EARTH			NamePlanet
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#RESTARTFILE
-RESTART.GM
-
 #SAVERESTART
 T			DoSaveRestart
 1000			DnSaveRestart
@@ -44,10 +41,6 @@ T			DoSaveRestart
 8			nJ
 8			nK
 2500			MinBlockALL
-
-! For sake of simpler continuation save restart into GM/restartIN
-#RESTARTOUTDIR
-GM/restartIN
 
 #GRID
 2			nRootBlockX
@@ -130,7 +123,7 @@ z=0 MHD idl             StringPlot
 
 #RUN   ########################################################################
 
-! Continue with 2nd order scheme and do 1 more AMR-s at the 600th iteration
+! Continue with 2nd order scheme and do 1 more AMR at the 600th iteration
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 

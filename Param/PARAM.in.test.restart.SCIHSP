@@ -1,11 +1,11 @@
 #ECHO
 T
 
-#DESCRIPTION
-Restart SC-IH in time accurate mode and start SP. Run for 4 hours.
-
 #INCLUDE
-RESTART.SCIH
+RESTART.in
+
+#DESCRIPTION
+Restart SC-IH, erupt CME and run in time accurate mode together with SP.
 
 #IDEALAXES
 ! align both the rotational and the magnetic axes of Earth with ecliptic North
@@ -23,7 +23,7 @@ T			DoSaveRestart
 #INCLUDE
 SC/restartIN/restart.H
 
-#USER_FLAGS
+#USERFLAGS
 T			UseUserInnerBCs
 F			UseUserSource
 T			UseUserPerturbation
@@ -35,7 +35,7 @@ F			UseUserWritePlot
 F			UseUserAMR
 F			UseUserEchoInput
 T			UseUserB0
-F			UseUserSetPhysConst
+T			UseUserInitSession
 T			UseUserUpdateStates
 
 #USERINPUTBEGIN ------------------------
@@ -147,6 +147,9 @@ IH			NameTarget
 #INCLUDE
 IH/restartIN/restart.H
 
+#COORDSYSTEM
+HGI			TypeCoordSystem
+
 #INNERBOUNDARY
 coronatoih		TypeBcInner
 
@@ -159,24 +162,13 @@ coronatoih		TypeBcInner
 4.50			SigmaHeat
 F                       UseUserPerturbation
 
-#HELIODIPOLE
-0.0			HelioDipoleStrength(equatorial field strength in Gauss)
-0.0			HelioDipoleTilt
-
-#HELIOUPDATEB0
--1.0			DtUpdateB0
-
 #OUTERBOUNDARY
-heliofloat		TypeBcEast
-heliofloat		TypeBcWest
-heliofloat		TypeBcSouth
-heliofloat		TypeBcNorth
-heliofloat		TypeBcBottom
-heliofloat		TypeBcTop 
-
-#FACEOUTERBC
-6			MaxBoundary
-F			DoFixOuterBoundary
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop 
 
 #AMRINIT
 coupledhelio    	TypeRefineInit
@@ -216,13 +208,11 @@ z=0 MHD idl             StringPlot
 600.			DtSavePlot
 -1.			DxSavePlot
 
-#GAMMA
-1.50000E+00		Gamma
-
 #SCHEME
 2			nOrder
 Sokolov			TypeFlux
-minmod                  TypeLimiter
+mc			TypeLimiter
+1.2			BetaLimiter
 
 #END_COMP IH -----------------------------------------------------------------
 
@@ -270,5 +260,3 @@ T			DoSaveMhData
 #STOP
 -1                    MaxIteration
 14400.0               tSimulationMax
-
-#END
