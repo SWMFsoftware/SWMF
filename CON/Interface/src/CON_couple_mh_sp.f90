@@ -225,7 +225,7 @@ contains
           call set_standard_grid_descriptor(SC_,GridDescriptor=&
                SC_GridDescriptor)
           call init_router(SC_GridDescriptor,SP_GridDescriptor,&
-               RouterScSp)    !^CMP IF SC BEGIN
+               RouterScSp)    !^CMP END SC
        end if
        if(use_comp(IH_))then  !^CMP IF IH BEGIN
           call set_standard_grid_descriptor(IH_,GridDescriptor=&
@@ -442,7 +442,8 @@ contains
   end subroutine transform_to_sp_from
     
   !==================================================================
-  subroutine couple_ih_sp(DataInputTime)     !^CMP IF IH BEGIN
+  !^CMP IF IH BEGIN
+  subroutine couple_ih_sp(DataInputTime)     
     use CON_global_message_pass
     interface
        subroutine SP_put_from_mh(nPartial,&
@@ -557,7 +558,8 @@ contains
   end subroutine IH_get_for_sp_and_transform
   !^CMP END IH
   !=========================================================================
-  subroutine couple_sc_sp(DataInputTime)     !^CMP IF SC BEGIN
+  !^CMP IF SC BEGIN
+  subroutine couple_sc_sp(DataInputTime)
     use CON_global_message_pass
     interface
        subroutine SP_put_from_mh(nPartial,&
@@ -641,4 +643,5 @@ contains
     State_V(Bx_:Bz_)=matmul(ScToSp_DD,State_V(Bx_:Bz_))
   end subroutine SC_get_for_sp_and_transform
   !=========================================================================
+  !^CMP END SC
 end Module CON_couple_mh_sp
