@@ -22,21 +22,8 @@ T			DoTimeAccurate
 #SAVERESTART
 F			DoSaveRestart
 
-#COUPLEORDER
-13			nCouple
-SC IH			NameSourceTarget
-IH SC			NameSourceTarget
-SC SP			NameSourceTarget
-IH SP			NameSourceTarget
-IH GM			NameSourceTarget
-IE GM			NameSourceTarget
-IE IM                   NameSourceTarget
-IE UA			NameSourceTarget
-UA IE			NameSourceTarget
-GM IE                   NameSourceTarget
-GM IM                   NameSourceTarget
-GM RB                   NameSourceTarget
-IM GM                   NameSourceTarget
+#INCLUDE
+Param/CoupleOrderFast
 
 #STOP
 -1                    MaxIteration

@@ -30,17 +30,8 @@ IM                      NameComp
 UA                      NameComp
 10                      DnRun
 
-! This coupling order allows IE to run concurrently with the others
-! since it provides data before it would receive it
-#COUPLEORDER
-7                       nCouple
-IE GM                   NameSourceTarget
-IE IM                   NameSourceTarget
-IE UA			NameSourceTarget
-UA IE			NameSourceTarget
-GM IE                   NameSourceTarget
-GM IM                   NameSourceTarget
-IM GM                   NameSourceTarget
+#INCLUDE
+Param/CoupleOrderFast
 
 #COUPLE2
 GM			NameComp1
