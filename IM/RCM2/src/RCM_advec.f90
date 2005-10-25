@@ -893,7 +893,9 @@ CONTAINS
        case('idl')
           ! Make sure that lon-lat grid is structured
           ! Save LON-LAT coordinates as a single record
-          write(LUN) ((aloct(i,j)*rtd,   j=1,jsize+1), i=isize,1,-1), &
+          write(LUN) &
+               ((aloct(i,j)*rtd,j=1,jsize) &
+               , aloct(i,jsize+1)*rtd+360,             i=isize,1,-1), &
                ((90.0 - colat(i,j)*rtd,  j=1,jsize+1), i=isize,1,-1)
 
           ! Save common plot variables. Each variable is a new record
