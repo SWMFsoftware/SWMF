@@ -321,8 +321,8 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
   do i=0,nAlts+1
 
-     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i)
-     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i-1)
+     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i+1)
+     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
 
      if (UseMinMod) dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
 
@@ -331,8 +331,8 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
   end do
 
   do i=1,nAlts+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt_F(i-1) 
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt_F(i-1) 
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt_F(i)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt_F(i)
   end do
 
 end subroutine calc_facevalues_alts

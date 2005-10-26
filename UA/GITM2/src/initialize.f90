@@ -75,6 +75,9 @@ subroutine initialize_gitm
   else
 
      do iAlt = 0,nAlts+1
+        ! Cell interface is taken to be half way between cell centers
+        ! so the cell size is half of the cell center distance
+        ! between cells i-1 and i+1: 
         dAlt(iAlt) = (Altitude(iAlt+1) - Altitude(iAlt-1))/2.0
      enddo
      dAlt(-1) = dAlt(0)
@@ -82,12 +85,14 @@ subroutine initialize_gitm
 
   endif
 
+  ! This is the cell size and its inverse
   InvDAlt   = 1.0/dAlt
 
-  ! This is a one-sided gradient for the solver...
-  dAlt_F(-1:nAlts+1) =  Altitude(0:nAlts+2) - Altitude(-1:nAlts+1)
-  dAlt_F(nAlts)      = dAlt_F(nAlts-1)
-  InvDAlt_F          = 1.0/dAlt_F
+  ! This is the distance between cell centers. 
+  ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
+  dAlt_F(0:nAlts+2) = Altitude(0:nAlts+2) - Altitude(-1:nAlts+1)
+  dAlt_F(-1)        = dAlt_F(0)
+  InvDAlt_F         = 1.0/dAlt_F
 
   RadialDistance = RBody + Altitude
   InvRadialDistance = 1.0/RadialDistance
@@ -135,20 +140,24 @@ subroutine initialize_gitm
      do iAlt = -1, nAlts+2
         do iBlock = 1, nBlocks
 
-           ! This is at the cell centers
+           ! This is the cell size assuming that cell interface is half way
            dLatDist_GB(iLat, iAlt, iBlock) = 0.5 * &
                 (Latitude(iLat+1, iBlock) - Latitude(iLat-1, iBlock)) * &
                 RadialDistance(iAlt)           
-           ! This is a one-sided gradient for the solver
+           ! This is the distance between neighboring cells
+           ! Note that face(i) is between cells i and i-1 (like in BATSRUS)
            dLatDist_FB(iLat, iAlt, iBlock) = &
                 (Latitude(iLat, iBlock) - Latitude(iLat-1, iBlock)) * &
                 RadialDistance(iAlt)           
+
+           ! The longitude grid is uniform in angle
            dLonDist_GB(iLat, iAlt, iBlock) = &
                 (Longitude(2,iBlock) - Longitude(1,iBlock)) * &
                 RadialDistance(iAlt)*max(abs(cos(Latitude(iLat,iBlock))),0.01)
         enddo
      enddo
   enddo
+  ! Fill in 2nd ghost cells
   dLatDist_GB(-1, :, 1:nBlocks)      = dLatDist_GB(0, :, 1:nBlocks)
   dLatDist_GB(nLats+2, :, 1:nBlocks) = dLatDist_GB(nLats+1, :, 1:nBlocks)
 
@@ -158,9 +167,9 @@ subroutine initialize_gitm
   dLonDist_GB(-1, :, 1:nBlocks)      = dLonDist_GB(0, :, 1:nBlocks)
   dLonDist_GB(nLats+2, :, 1:nBlocks) = dLonDist_GB(nLats+1, :, 1:nBlocks)
 
-  InvDLatDist_GB = 1/dLatDist_GB
-  InvDLatDist_FB = 1/dLatDist_FB
-  InvDLonDist_GB = 1/dLonDist_GB
+  InvDLatDist_GB = 1.0/dLatDist_GB
+  InvDLatDist_FB = 1.0/dLatDist_FB
+  InvDLonDist_GB = 1.0/dLonDist_GB
 
   ! Precalculate the tangent of the latitude
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
