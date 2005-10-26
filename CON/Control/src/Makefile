@@ -139,7 +139,7 @@ DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${LIBOBJECTS} ${EXEOBJECT}
 
 # SWMFLIB is a single library that contains all object files
-SWMFLIB:
+SWMFLIB: LIB
 	make ${SWMFLIB}
 	@echo
 	@echo SWMF library ${SWMFLIB} has been brought up to date.
@@ -149,8 +149,21 @@ SWMFLIB:
 AR_X = ar -x
 
 # Extract object files from libraries and collect them into SWMFLIB
-${SWMFLIB}: LIB
-	@rm -rf ${SWMFLIB} Tmp_*
+${SWMFLIB}:	${LIBSHARE} \
+		${LIBTIMING} \
+		${LIBLIBRARY} \
+		${LIBCOUPLER} \
+		${LIBINTERFACE} \
+		${LIBCONTROL} \
+		${LIBGM} \
+		${LIBIE} \
+		${LIBIH} \
+		${LIBIM} \
+		${LIBRB} \
+		${LIBSC} \
+		${LIBSP} \
+		${LIBUA}
+	@rm -rf Tmp_*
 	@mkdir Tmp_SHARE;     cd Tmp_SHARE;     ${AR_X} ${LIBSHARE}
 	@mkdir Tmp_TIMING;    cd Tmp_TIMING;    ${AR_X} ${LIBTIMING} 
 	@mkdir Tmp_LIBRARY;   cd Tmp_LIBRARY;   ${AR_X} ${LIBLIBRARY}
@@ -165,6 +178,8 @@ ${SWMFLIB}: LIB
 	@mkdir Tmp_LIBSC;     cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	@mkdir Tmp_LIBSP;     cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	@mkdir Tmp_LIBUA;     cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
+	rm -f ${SWMFLIB}
+	@echo '${AR} ${SWMFLIB} Tmp_*/*.o'
 	@${AR} ${SWMFLIB} Tmp_*/*.o
 	@rm -rf Tmp_*
 
