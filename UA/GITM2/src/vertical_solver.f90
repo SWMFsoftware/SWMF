@@ -305,7 +305,7 @@ end subroutine calc_rusanov_alts
 
 subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
-  use ModGitm, only: dAlt, InvDAlt
+  use ModGitm, only: dAlt_F, InvDAlt_F
   use ModSizeGITM, only: nAlts
   use ModInputs, only: UseMinMod, UseMC
   use ModLimiterGitm
@@ -321,8 +321,8 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
 
   do i=0,nAlts+1
 
-     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt(i)
-     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt(i-1)
+     dVarUp            = (Var(i+1) - Var(i))   * InvDAlt_F(i)
+     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i-1)
 
      if (UseMinMod) dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
 
@@ -331,8 +331,8 @@ subroutine calc_facevalues_alts(Var, VarLeft, VarRight)
   end do
 
   do i=1,nAlts+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt(i-1) 
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt(i-1) 
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1) * dAlt_F(i-1) 
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)   * dAlt_F(i-1) 
   end do
 
 end subroutine calc_facevalues_alts

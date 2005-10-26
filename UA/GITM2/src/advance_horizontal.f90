@@ -463,7 +463,7 @@ end subroutine advance_horizontal
 subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
 
   use ModSizeGITM, only: nLats
-  use ModGITM, only: dLatDist_GB, InvDLatDist_GB
+  use ModGITM, only: dLatDist_FB, InvDLatDist_FB
   use ModInputs, only: TypeLimiter, UseMinMod, UseMC
   use ModLimiterGitm
 
@@ -480,23 +480,23 @@ subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
 
   if (UseMinMod) then 
      do i=0,nLats+1
-        dVarUp         = (Var(i+1) - Var(i))  *InvDLatDist_GB(i,iAlt,iBlock)
-        dVarDown       = (Var(i)   - Var(i-1))*InvDLatDist_GB(i-1,iAlt,iBlock)
+        dVarUp         = (Var(i+1) - Var(i))  *InvDLatDist_FB(i,iAlt,iBlock)
+        dVarDown       = (Var(i)   - Var(i-1))*InvDLatDist_FB(i-1,iAlt,iBlock)
         dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
      end do
   endif
 
   if (UseMC) then
      do i=0,nLats+1
-        dVarUp        = (Var(i+1) - Var(i))   * InvDLatDist_GB(i,iAlt,iBlock)
-        dVarDown      = (Var(i)   - Var(i-1)) * InvDLatDist_GB(i-1,iAlt,iBlock)
+        dVarUp        = (Var(i+1) - Var(i))   * InvDLatDist_FB(i,iAlt,iBlock)
+        dVarDown      = (Var(i)   - Var(i-1)) * InvDLatDist_FB(i-1,iAlt,iBlock)
         dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
      end do
   endif
 
   do i=1,nLats+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLatDist_GB(i-1,iAlt,iBlock)
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_GB(i-1,iAlt,iBlock)
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLatDist_FB(i-1,iAlt,iBlock)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLatDist_FB(i-1,iAlt,iBlock)
   end do
 
 end subroutine calc_facevalues_lats

@@ -82,7 +82,12 @@ subroutine initialize_gitm
 
   endif
 
-  InvDAlt = 1.0/dAlt
+  InvDAlt   = 1.0/dAlt
+
+  ! This is a one-sided gradient for the solver...
+  dAlt_F(-1:nAlts+1) =  Altitude(0:nAlts+2) - Altitude(-1:nAlts+1)
+  dAlt_F(nAlts)      = dAlt_F(nAlts-1)
+  InvDAlt_F          = 1.0/dAlt_F
 
   RadialDistance = RBody + Altitude
   InvRadialDistance = 1.0/RadialDistance
@@ -129,8 +134,14 @@ subroutine initialize_gitm
   do iLat = 0, nLats+1
      do iAlt = -1, nAlts+2
         do iBlock = 1, nBlocks
+
+           ! This is at the cell centers
            dLatDist_GB(iLat, iAlt, iBlock) = 0.5 * &
                 (Latitude(iLat+1, iBlock) - Latitude(iLat-1, iBlock)) * &
+                RadialDistance(iAlt)           
+           ! This is a one-sided gradient for the solver
+           dLatDist_FB(iLat, iAlt, iBlock) = &
+                (Latitude(iLat, iBlock) - Latitude(iLat-1, iBlock)) * &
                 RadialDistance(iAlt)           
            dLonDist_GB(iLat, iAlt, iBlock) = &
                 (Longitude(2,iBlock) - Longitude(1,iBlock)) * &
@@ -141,10 +152,14 @@ subroutine initialize_gitm
   dLatDist_GB(-1, :, 1:nBlocks)      = dLatDist_GB(0, :, 1:nBlocks)
   dLatDist_GB(nLats+2, :, 1:nBlocks) = dLatDist_GB(nLats+1, :, 1:nBlocks)
 
+  dLatDist_FB(-1, :, 1:nBlocks)      = dLatDist_FB(0, :, 1:nBlocks)
+  dLatDist_FB(nLats+2, :, 1:nBlocks) = dLatDist_FB(nLats+1, :, 1:nBlocks)
+
   dLonDist_GB(-1, :, 1:nBlocks)      = dLonDist_GB(0, :, 1:nBlocks)
   dLonDist_GB(nLats+2, :, 1:nBlocks) = dLonDist_GB(nLats+1, :, 1:nBlocks)
 
   InvDLatDist_GB = 1/dLatDist_GB
+  InvDLatDist_FB = 1/dLatDist_FB
   InvDLonDist_GB = 1/dLonDist_GB
 
   ! Precalculate the tangent of the latitude
