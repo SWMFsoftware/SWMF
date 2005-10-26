@@ -746,6 +746,7 @@ subroutine select_stepping(DoPartSelect)
   use ModGeometry, ONLY : Rmin_BLK
   use ModImplicit, ONLY : UseFullImplicit,UsePartImplicit, &
        ImplCritType, ExplCFL,rImplicit
+  use ModIO,       ONLY : write_prefix, iUnitOut
   use ModMpi
   implicit none
 
@@ -794,10 +795,6 @@ subroutine select_stepping(DoPartSelect)
           iTypeAdvance_BP(1:nBlockMax,:) = ImplBlock_
      iTypeAdvance_B(1:nBlockMax) = iTypeAdvance_BP(1:nBlockMax,iProc)
   else
-
-     if(iProc==0.and.lVerbose>0)&
-          write(*,*)'select_stepping: ImplCritType=',ImplCritType
-
      ! First set all blocks to be explicit
      where(iTypeAdvance_B(1:nBlockMax) /= SkippedBlock_) &
           iTypeAdvance_B(1:nBlockMax) = ExplBlock_
@@ -853,7 +850,12 @@ subroutine select_stepping(DoPartSelect)
      nBlockImplALL = count(iTypeAdvance_BP == ImplBlock_)
      nBlockExplALL = count(iTypeAdvance_BP == ExplBlock_)
 
-     if(iProc==0.and.lVerbose>0)oktest_me=.true. ! report for part implicit
+     if(iProc==0.and.lVerbose>0)then
+        call write_prefix; 
+        write(iUnitOut,*)'select_stepping: nBlockExplALL, nBlockImplALL=',&
+             nBlockExplALL,nBlockImplALL
+     end if
+
   end if
   if(oktest)then
      write(*,*)'select_stepping finished with ',&
