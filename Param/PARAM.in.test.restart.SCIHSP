@@ -170,10 +170,6 @@ float			TypeBcNorth
 float			TypeBcBottom
 float			TypeBcTop 
 
-#AMRINIT
-coupledhelio    	TypeRefineInit
-6			nLevelRefineInit
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
