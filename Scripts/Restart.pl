@@ -437,11 +437,11 @@ Restart.pl -c
 
 Restart.pl
 
-    Create restart trees every 10 minutes, wait one minute before 
-    moving newly written restart information and use hours as the 
-    time unit for the simulation time in the restart tree names:
+    Create restart trees every 10 minutes, use hours as the 
+    time unit for the simulation time in the restart tree names,
+    and save output and error messages (if any) into Restart.log:
 
-Restart.pl -o -r=600 -w=60 -t=h &
+Restart.pl -o -r=600 -t=h >& Restart.log &
 
     Check linking to the existing RESTART_t002.00h tree:
 
