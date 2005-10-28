@@ -511,7 +511,7 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
         if (iBlock == 1) t = 90.0 - Iono_North_Theta(i,1)*cRadToDeg
         if (iBlock == 2) t = 90.0 - Iono_South_Theta(i,1)*cRadToDeg
 
-        if (t > maxval(UA_Lats(1,:,iBlock))) then
+        if (t >= maxval(UA_Lats(1,:,iBlock))) then
            ii = nLats-1
            iLat(i,iBlock) = ii
            rLat(i,iBlock) = 1.0 - (t - UA_Lats(1,ii,iBlock)) / &
@@ -564,7 +564,18 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
      enddo
 
+     !write(*,*)NameSub,' iBlock=',iBlock,&
+     !     ' iLat(1:5)=',iLat(1:5,iBlock), &
+     !     ' rLat(1:5)=',rLat(1:5,iBlock)
+     !
+     !write(*,*)NameSub,' iBlock=',iBlock,&
+     !     ' iLat(Iono_nTheta-5:Iono_nTheta)=',&
+     !     iLat(Iono_nTheta-5:Iono_nTheta,iBlock), &
+     !     ' rLat(Iono_nTheta-5:Iono_nTheta)=',&
+     !     rLat(Iono_nTheta-5:Iono_nTheta,iBlock)
+
   end if
+
 
   if (iBlock == 1) then ! iBlock == 1: Northern Hemisphere
 
@@ -660,6 +671,7 @@ subroutine IE_put_from_ua(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
      ! Limit the conductance with the StarLightConductance
      IONO_SOUTH_SigmaP = max(IONO_SOUTH_SigmaP,   StarLightPedConductance)
      IONO_SOUTH_SigmaH = max(IONO_SOUTH_SigmaH, 2*StarLightPedConductance)
+
   end if
 
 end subroutine IE_put_from_ua
