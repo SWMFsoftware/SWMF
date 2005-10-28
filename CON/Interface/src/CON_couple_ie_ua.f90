@@ -314,6 +314,9 @@ contains
          call UA_fill_electrodynamics(UAr2_Fac, UAr2_Ped, UAr2_Hal, &
               UAr2_Lats, UAr2_Mlts)
 
+         if(DoTest)write(*,*)i_proc(),':',NameSubSub,&
+              ' nMlts,nLats=',UAi_nMlts, UAi_nLats
+
       end if
       if(DoTest)write(*,*)NameSubSub,': bcast'
 
@@ -360,10 +363,14 @@ contains
                Buffer_IIV(:,1:UAi_nLats/2,4) = UAr2_Lats(:,iStart:iEnd)
                Buffer_IIV(:,1:UAi_nLats/2,5) = UAr2_Mlts(:,iStart:iEnd)
             endif
+
+            if(DoTest)write(*,*)i_proc(),':',NameSubSub,': transfer ',NameVar,&
+                 ' ',NameLoc_B(iBlock),&
+                 ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
+                 ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
+            
          endif
 
-         if(DoTest)write(*,*)NameSubSub,': transfer ',NameVar, &
-              ' ',NameLoc_B(iBlock)
          !\
          ! Transfer values from UA to IE
          !/
@@ -378,8 +385,11 @@ contains
                  1,i_comm(),iStatus_I,iError)
          end if
 
-         if(DoTest)write(*,*)NameSubSub,': put ',NameVar, &
-              ' ',NameLoc_B(iBlock)
+         if(DoTest .and. i_proc() == iProcTo) &
+              write(*,*)i_proc(),':',NameSubSub,': put ',NameVar, &
+              ' ',NameLoc_B(iBlock), &
+              ' maxval(Hall)=',maxval(Buffer_IIV(:,40:UAi_nLats/2,3)),&
+              ' maxloc(Hall)=',maxloc(Buffer_IIV(:,40:UAi_nLats/2,3))
 
          !\
          ! Put values into IE
@@ -395,6 +405,9 @@ contains
       ! Deallocate buffer to save memory
       !/
       deallocate(Buffer_IIV)
+
+      if(is_proc(UA_)) &
+           deallocate(UAr2_Fac, UAr2_Ped, UAr2_Hal, UAr2_Lats, UAr2_Mlts)
 
       IsFirstTime = .false.
 
