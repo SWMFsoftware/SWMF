@@ -545,11 +545,11 @@ T			Stretched grid in altitude
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="SAVEPLOTS">
-	<parameter name="DtRestart" type="real" default="3600.0" />
-	<parameter name="nOutputTypes"  type="integer" default="1" />
-	<for from="1" to="$nOutputTypes">
-		<parameter name="Outputtype" type="string" input="select">
+<command name="SAVEPLOT" alias="SAVEPLOTS">
+	<parameter name="DtRestart" type="real"    min="-1" default="3600"/>
+	<parameter name="nPlotFile" type="integer" min="0"  default="1"/>
+	<for from="1" to="$nPlotFile">
+		<parameter name="TypePlotFile" type="string" input="select">
 			<option name="3DALL" default="T"/>
 			<option name="1DALL"/>
 			<option name="2DGEO"/>
@@ -557,15 +557,24 @@ T			Stretched grid in altitude
 			<option name="3DNEUTRAL"/>
 			<option name="3DION"/>
 		</parameter>
-		<parameter name="DtPlot"    type="real" default="3600.0" />
+		<parameter name="DtPlotFile" type="real" min="0" 
+							default="3600"/>
 	</for>
 
-#SAVEPLOTS
-1800.0
-1
-3DALL
-900.0
+#SAVEPLOT
+3600.0			DtRestart [s]
+1			nPlotFile
+3DALL			TypePlotFile
+900.0			DtPlotFile [s]
 
+The DtRestart determines the frequency of saving restart files. 
+If negative, no restart files are saved by GITM itself (but the SWMF can
+still make GITM save its restart files). The number of plot files is
+given by nPlotFile. For each plot file the type and the saving
+frequency are given by the parameters TypePlotFile and DtPlotFile, 
+respectively.
+
+The default is DtRestart=-1 and nPlotFile=0
 </command>
 
 <command name="SATELLITES">
