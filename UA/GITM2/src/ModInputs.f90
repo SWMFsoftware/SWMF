@@ -44,7 +44,7 @@ module ModInputs
 
   real :: CFL = 0.25
 
-  integer :: nOutputTypes
+  integer :: nOutputTypes = 0
   integer, parameter :: nMaxOutputTypes = 50
   character (len=iCharLen_), dimension(nMaxOutputTypes) :: OutputType
 
@@ -200,8 +200,9 @@ contains
 
     call time_int_to_real(iStartTime, CurrentTime)
 
-    DtPlot    = -1.0
-    DtRestart = -1.0
+    nOutputTypes = 0
+    DtPlot       = -1.0
+    DtRestart    = -1.0
 
     ! Initiate Neutral Variables From MSIS90
 
@@ -210,7 +211,7 @@ contains
 
     iModelSolar = 0
 
-    UseApex = .false.
+    UseApex   = .false.
     DoRestart = .false.
 
   end subroutine set_defaults
