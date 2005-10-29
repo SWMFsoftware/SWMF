@@ -53,9 +53,10 @@ subroutine write_output
 
   call move_satellites
 
-  if (floor((tSimulation-dt)/DtRestart) /= &
-       floor((tsimulation)/DtRestart)) then
-     call write_restart("UA/restartOUT/")
+  if (DtRestart > 0.0) then
+     if(  floor((tSimulation-Dt) / DtRestart) /= &
+          floor( tSimulation     / DtRestart)) &
+          call write_restart("UA/restartOUT/")
   endif
 
 end subroutine write_output
