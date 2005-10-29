@@ -544,7 +544,7 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
-        case ("#SAVEPLOTS")
+        case ("#SAVEPLOTS", "#SAVEPLOT")
            call read_in_real(DtRestart, iError)
            call read_in_int(nOutputTypes, iError)
            if (nOutputTypes > nMaxOutputTypes) then
@@ -562,8 +562,8 @@ subroutine set_inputs
               endif
            endif
            if (iError /= 0) then
-              write(*,*) 'Incorrect format for #SAVEPLOTS'
-              write(*,*) '#SAVEPLOTS'
+              write(*,*) 'Incorrect format for #SAVEPLOT'
+              write(*,*) '#SAVEPLOT'
               write(*,*) 'DtRestart (real, seconds)'
               write(*,*) 'nOutputTypes  (integer)'
               write(*,*) 'Outputtype (string, 3D, 2D, ION, NEUTRAL, ...)'
