@@ -41,7 +41,8 @@ APPOBJS = \
 DEPEND:
 	perl ${SCRIPTDIR}/depend.pl ${APPOBJS}
 
-EXE: ${EXE} DEPEND
+EXE: DEPEND
+	make ${EXE}
 	@echo ' '
 	@echo '${EXE} has been brought up to date'
 	@echo ' '
