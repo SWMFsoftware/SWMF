@@ -1859,8 +1859,18 @@ info=''
 if ninfo gt 2 then info='nx='+string(nx,format='(i6,2(",",i4))')+' '
 if ninfo gt 1 then info=info+'it='+string(it,format='(i8)')+', '
 
-info=info+'time='+string(time,format='(g12.5)')
+if(time gt 3600)then begin
+    t    = round(time)
+    sec  = t mod 60
+    t    = t/60
+    min  = t mod 60
+    hour = t/60
+    info=info+'time='+string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")')
+endif else $
+  info=info+'time='+string(time,format='(g12.5)')
 xyouts,5+(ix*!d.x_size)/multix,8+(iy*!d.y_size)/multiy,/DEV,info
+
+;;xyouts,5,3000,/DEV,info
 
 ;info='time ='+string(time/(17.24*3600),format='(f6.2)')+' Uday'
 ;xyouts,3000+(0.9*ix*!d.x_size)/multix,3000+(0.82*(iy+1)*!d.y_size)/multiy,/DEV,info,charsize=1.2
