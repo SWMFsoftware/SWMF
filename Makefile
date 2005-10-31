@@ -12,7 +12,7 @@
 SHELL=/bin/sh
 
 #BOC
-VERSION = 2.1
+VERSION = 2.2
 
 #
 # The default target is SWMF so it is listed first
