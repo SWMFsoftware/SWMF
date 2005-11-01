@@ -303,6 +303,7 @@ dist: distclean
 	tar -rf tmp.tar  share
 	tar -rf tmp.tar  util
 	tar -rf tmp.tar  CON
+	tar -rf tmp.tar  ESMF
 	tar -rf tmp.tar  GM			#^CMP IF GM
 	tar -rf tmp.tar  IE			#^CMP IF IE
 	tar -rf tmp.tar  IH			#^CMP IF IH
