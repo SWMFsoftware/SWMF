@@ -5,6 +5,7 @@ module ModCovariant
   use ModNumConst
   use ModMain,ONLY:unusedBLK
   use ModParallel,ONLY:BLKneighborLEV,NOBLK
+  use ModUtilities,ONLY: check_allocate
   implicit none
   save
  
@@ -36,12 +37,23 @@ module ModCovariant
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB
   integer,allocatable,dimension(:,:,:,:)::OldLevel_IIIB
   logical,dimension(-1:1,-1:1,-1:1)::IsNotCorner_III
+  
+  !Parameters of 
+  real::rTorusLarge=6.0,rTorusSmall=0.50
+  integer,parameter::nToroidalBoundaryPoints=1024
+  !
+  real,dimension(0:nToroidalBoundaryPoints)::TorusSurface_I
+  logical::IsInitializedTorusGeometry=.false.
 contains
   subroutine allocate_face_area_vectors
+    integer::iError
     if(allocated(FaceAreaI_DFB))return
-    allocate(FaceAreaI_DFB(nDim,1:nI+1,1:nJ,1:nK,nBLK))
-    allocate(FaceAreaJ_DFB(nDim,1:nI,1:nJ+1,1:nK,nBLK))
-    allocate(FaceAreaK_DFB(nDim,1:nI,1:nJ,1:nK+1,nBLK))
+    allocate(FaceAreaI_DFB(nDim,1:nI+1,1:nJ,1:nK,nBLK),stat=iError)
+    call check_allocate(iError,'Face Areas are not allocated')
+    allocate(FaceAreaJ_DFB(nDim,1:nI,1:nJ+1,1:nK,nBLK),stat=iError)
+    call check_allocate(iError,'Face Areas are not allocated')
+    allocate(FaceAreaK_DFB(nDim,1:nI,1:nJ,1:nK+1,nBLK),stat=iError)
+    call check_allocate(iError,'Face Areas are not allocated')
     FaceAreaI_DFB=cOne; FaceAreaJ_DFB=cOne; FaceAreaK_DFB=cOne
   end subroutine allocate_face_area_vectors
 !---------------------------------------------------------------------------------
@@ -58,7 +70,6 @@ contains
     IsNotCorner_III(+1,-1,+1)=.false.
     IsNotCorner_III(-1,+1,+1)=.false.
     IsNotCorner_III(+1,+1,+1)=.false.
-!    write(*,*)IsNotCorner_III
   end subroutine allocate_old_levels
 !---------------------------------------------------------------------------------
   subroutine save_old_levels

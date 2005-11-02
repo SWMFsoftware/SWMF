@@ -10,7 +10,7 @@ program PostIDL
   ! Global variables
 
   integer, parameter :: unit_tmp=99
-  logical, parameter :: write_binary=.true.
+  logical, parameter :: write_binary=.false.
   real, parameter :: halfeps=0.6
 
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
@@ -57,6 +57,12 @@ program PostIDL
   real    :: rCyl
   !Pi:
   real,parameter::cPi= 3.1415926535897932384626433832795
+
+  !Toroidal geometry
+  logical::UseToroidal=.false.
+  integer::iPoint,nPoint
+  real,allocatable,dimension(:)::TorusSurface_I
+  real::rTorusSmall,rTorusLarge
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-2002) starting'
@@ -121,8 +127,16 @@ program PostIDL
   write(*,*)'Geometry is '//TypeGeometry
   UseSpherical=index(TypeGeometry,'spherical')>0
   UseLnr=UseSpherical.and.index(TypeGeometry,'lnr')>0
+  UseToroidal=index(TypeGeometry,'torus')>0
 3 continue
-
+  if(UseToroidal)then
+     open(unit_tmp,file='torus.dat',status='old')
+     read(unit_tmp,*)nPoint,rTorusSmall,rTorusLarge
+     allocate(TorusSurface_I(0:nPoint))
+     do i=0,nPoint
+        read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
+     end do
+  end if
   ! Unstructured grid has dx=-1.
   structured = dxyz(1) > -0.9
 
@@ -256,9 +270,9 @@ program PostIDL
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
-        if(.not.UseSpherical)then
-           XyzGen_D = Xyz_D
-        else
+        if(.not.(UseSpherical.or.UseToroidal))then
+           XyzGen_D=Xyz_D
+        elseif(UseSpherical)then
            call cart_to_spher(Xyz_D, XyzGen_D)
 
            if(ndim==2)then
@@ -281,6 +295,20 @@ program PostIDL
                     Xyz_D(1)=Xyz_D(1)*XyzGen_D(1)/rCyl        
                     Xyz_D(2)=Xyz_D(2)*XyzGen_D(1)/rCyl        
                  end if
+              end select
+           end if
+        else
+            call cart_to_toroid(Xyz_D,XyzGen_D)               
+
+           if(ndim==2)then
+              select case(idim0)                                       
+              
+              case(2)         !This is x=0 or y=0 plane                                  
+                 Xyz_D(1)=&                                       
+                      RCyl            
+              case(3)         !This is z=0 plane 
+                 Xyz_D(1)=Xyz_D(1)!*XyzGen_D(1)/Rcyl        
+                 Xyz_D(2)=Xyz_D(2)!*XyzGen_D(1)/Rcyl        
               end select
            end if
         end if
@@ -360,7 +388,7 @@ program PostIDL
              'filled total=',total,' volume=',volume,' !!!'
      end if
   else
-     if(UseLookup.and..not.UseSpherical)then
+     if(UseLookup.and..not.(UseSpherical.or.UseToroidal))then
         volume=(xmax1-xmin1)*(xmax2-xmin2)
         if(abs(total/volume-1.0)<0.0001)then
            write(*,*)'Averaged 2D unstructured file'
@@ -569,7 +597,7 @@ contains
 
     ! Produce coordinate names 
     !         ('x y z', 'x y', 'x z', 'y z' or 'r theta', 'r phi' ...)
-    if(.not.UseSpherical)then
+    if(.not.(UseSpherical.or.UseToroidal))then
        coordnames=coord(icutdim(1))
     else       
        if(index(filenamehead,'x=0')>0) then
@@ -666,5 +694,42 @@ contains
     if(UseLnr) Spher_D(1) = log(Spher_D(1))
 
   end subroutine cart_to_spher
-
+!=======================================================================
+  subroutine cart_to_toroid(Cart_D,Toroid_D)
+    implicit none
+    real,dimension(3),intent(in)::Cart_D
+    real,dimension(3),intent(out)::Toroid_D
+    real::PoloidalAngle,R,Z,StretchCoef
+    RCyl=sqrt(Cart_D(1)**2+Cart_D(2)**2)
+    Toroid_D(2)=atan2(Cart_D(2),Cart_D(1))
+    if (Toroid_D(2) < 0.00) Toroid_D(2) = Toroid_D(2) + cPi*2
+    R=rCyl-rTorusLarge
+    Z=Cart_D(3)
+    if(.not.(Z==0.00.and.R==0.00))then
+       PoloidalAngle=atan2(Z,R)
+       if(PoloidalAngle<0.00)&
+            PoloidalAngle= PoloidalAngle+cPi*2
+       StretchCoef=rTorusSmall/&
+            (max(abs(cos(PoloidalAngle)),abs(sin(PoloidalAngle)))*&
+            wall_radius(PoloidalAngle))
+       R=R*StretchCoef
+       Z=Z*StretchCoef
+    end if
+    Toroid_D(3)=Z
+    Toroid_D(1)=R+rTorusLarge
+   end subroutine cart_to_toroid
+   real function wall_radius(PoloidalAngle)
+     !This functions calculates the poloidal radius of the vacuum chamber wall
+     !as a function of the poloidal angle
+     implicit none
+     real::Residual,PoloidalAngle
+     real::dAngle
+     dAngle=(2*cPi)/nPoint
+     iPoint=int(PoloidalAngle/dAngle)
+     if(iPoint==nPoint)iPoint=0
+     !Use linear interpolation:
+     Residual=PoloidalAngle-iPoint*dAngle
+     wall_radius=TorusSurface_I(iPoint)*(1-Residual)+&
+                 TorusSurface_I(iPoint+1)*Residual
+   end function wall_radius
 end program PostIDL

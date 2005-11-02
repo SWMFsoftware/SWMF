@@ -12,9 +12,8 @@ subroutine gen_to_xyz_arr(&
      Y_C,              &!(out)Cartesian y-coord. of the mapped points    
      Z_C)               !(out)Cartesian z-coord. of the mapped points
   use ModNumConst
-  use ModCovariant,ONLY:TypeGeometry
+  use ModCovariant,ONLY:TypeGeometry,rTorusLarge,rTorusSmall
   use ModMain,     ONLY:nDim,R_,Phi_,Theta_,x_,y_,z_
-  use ModUser
   implicit none
   real,intent(in):: GenCoord111_D(nDim),dGen1,dGen2,dGen3
   integer,intent(in)::  iStart,iMax,jStart,jMax,kStart,kMax
@@ -23,6 +22,8 @@ subroutine gen_to_xyz_arr(&
 !----------------------------------------------------------
   integer::i,j,k
   real::R,Theta,Phi,sinTheta,cosTheta,sinPhi,cosPhi
+  real::PoloidalAngle,Z,StretchCoef
+  real,external::wall_radius
 !----------------------------------------------------------
   
   
@@ -92,7 +93,34 @@ subroutine gen_to_xyz_arr(&
               Y_C(i,j,k) = R*sinPhi                      
            end do
         end do
-     end do     
+     end do
+  case('axial_torus')
+     ! Gen1=r, Gen2=Phi, Gen3=z
+     do k = kStart, kMax
+        do j = jStart, jMax
+           Phi     =  (j-1)*dGen2 + GenCoord111_D(Phi_)
+           sinPhi  =  sin(Phi)
+           cosPhi  =  cos(Phi)
+           do i = iStart, iMax
+              Z = (k-1)*dGen3 + GenCoord111_D(z_)
+              R    =  (i-1)*dGen1 + GenCoord111_D(R_)-rTorusLarge
+              if(.not.(R==cZero.and.Z==cZero))then
+                 PoloidalAngle=atan2(Z,R)
+                 if(PoloidalAngle<cZero)&
+                      PoloidalAngle=PoloidalAngle+cTwoPi
+                 StretchCoef = wall_radius(PoloidalAngle)/rTorusSmall*&
+                      max(abs(cos(PoloidalAngle)),&
+                      abs(sin(PoloidalAngle)))
+                 Z = Z*StretchCoef
+                 R=R*StretchCoef
+              end if
+              Z_C(i,j,k)=Z
+              R=R+rTorusLarge
+              X_C(i,j,k) = R*cosPhi                      
+              Y_C(i,j,k) = R*sinPhi                      
+           end do
+        end do
+     end do
   case default
      call stop_mpi('Unknown geometry: '//TypeGeometry)
   end select
@@ -105,6 +133,9 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
   implicit none
   real,dimension(nDim),intent(in) ::XyzIn_D
   real,dimension(nDim),intent(out)::GenOut_D
+  real::PoloidalAngle,R,Z,StretchCoef
+  real,external::wall_radius
+  
   select case(TypeGeometry)           
   case('cartesian')                   
     GenOut_D=XyzIn_D
@@ -115,10 +146,51 @@ subroutine xyz_to_gen(XyzIn_D,GenOut_D)
      GenOut_D(Theta_)=cHalfPi-GenOut_D(Theta_)
      if(TypeGeometry=='spherical_lnr')&
           GenOut_D(R_)=alog(max(GenOut_D(R_),cTiny))
+  case('axial_torus')
+     if(all(XyzIn_D(x_:y_)==cZero))&
+          call stop_mpi(&
+          'axil_torus geometry does not work for points at the pole')
+     GenOut_D(Phi_)=atan2(XyzIn_D(y_),XyzIn_D(x_))
+     if(GenOut_D(Phi_)<cZero)GenOut_D(Phi_)=GenOut_D(Phi_)+cTwoPi
+     R=sqrt(sum(XyzIn_D(x_:y_)**2))-rTorusLarge
+     Z=XyzIn_D(z_)
+     if(.not.(Z==cZero.and.R==cZero))then
+        PoloidalAngle=atan2(Z,R)
+        if(PoloidalAngle<cZero)&
+             PoloidalAngle= PoloidalAngle+cTwoPi
+        StretchCoef=rTorusSmall/&
+             (max(abs(cos(PoloidalAngle)),abs(sin(PoloidalAngle)))*&
+             wall_radius(PoloidalAngle))
+        R=R*StretchCoef
+        Z=Z*StretchCoef
+     end if
+     GenOut_D(z_)=Z
+     GenOut_D(R_)=R+rTorusLarge
   case default
      call stop_mpi('Unknown TypeGeometry='//TypeGeometry)
   end select                          
 end subroutine xyz_to_gen
+!=============================================================================
+real function wall_radius(PoloidalAngle)
+  !This functions calculates the poloidal radius of the vacuum chamber wall
+  !as a function of the poloidal angle
+  use ModCovariant
+  implicit none
+  real::Residual,PoloidalAngle
+  integer::iPoint
+  real,parameter::dAngle=cTwoPi/nToroidalBoundaryPoints
+  if(.not.IsInitializedTorusGeometry)then
+     wall_radius=rTorusSmall
+  else
+     iPoint=int(PoloidalAngle/dAngle)
+     if(iPoint==nToroidalBoundaryPoints)iPoint=0
+     !Use linear interpolation:
+     Residual=PoloidalAngle-iPoint*dAngle
+     wall_radius=TorusSurface_I(iPoint)*(cOne-Residual)+&
+                 TorusSurface_I(iPoint+1)*Residual
+  end if
+end function wall_radius
+  
 !=============================================================================
 subroutine set_xyz_minmax_covar
   use ModGeometry, ONLY: x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,TypeGeometry
@@ -153,6 +225,13 @@ subroutine set_xyz_minmax_covar
      XyzMin_D(Phi_)   = cZero
      XyzMin_D(z_)     = z1
      XyzMax_D(R_)     = sqrt(max(x1*x1,x2*x2)+max(y1*y1,y2*y2))
+     XyzMax_D(Phi_)   = cTwoPi
+     XyzMax_D(z_)     = z2
+  case('axial_torus')
+     XyzMin_D(R_)     = x2-(z2-z1) 
+     XyzMin_D(Phi_)   = cZero
+     XyzMin_D(z_)     = z1
+     XyzMax_D(R_)     = x2
      XyzMax_D(Phi_)   = cTwoPi
      XyzMax_D(z_)     = z2
   case default
@@ -908,18 +987,18 @@ subroutine fix_covariant_geometry(iBLK)
        RDotFaceAreaI_F(2:nI+1,:,:)-RDotFaceAreaI_F(1:nI,:,:)+&
        RDotFaceAreaJ_F(:,2:nJ+1,:)-RDotFaceAreaJ_F(:,1:nJ,:)+&
        RDotFaceAreaK_F(:,:,2:nK+1)-RDotFaceAreaK_F(:,:,1:nK) )
+  
+  FaceArea2MinI_B(iBLK)=cZero
+  FaceArea2MinJ_B(iBLK)=cZero
+  FaceArea2MinK_B(iBLK)=cZero
 
-  select case(TypeGeometry)
-  case('cartesian')                               
-     call fix_cartesian_geometry(iBLK)      
+  select case(TypeGeometry)      
   case('spherical')                               
      call fix_spherical_geometry(iBLK)      
   case('spherical_lnr')                           
      call fix_spherical2_geometry(iBLK)     
   case('cylindrical')                             
-     call fix_cylindrical_geometry(iBLK)   
-  case default                                    
-     call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
+     call fix_cylindrical_geometry(iBLK)                        
   end select
   call test_fix_geometry_reschange
 contains
@@ -950,18 +1029,6 @@ contains
     end do;end do;end do
   end subroutine test_fix_geometry_reschange
 end subroutine fix_covariant_geometry
-!-------------------------------------------------------------------
-subroutine fix_cartesian_geometry(iBLK)
-  use ModCovariant
-  use ModGeometry
-  use ModNumConst
-  implicit none
-  integer, intent(in) :: iBLK
-
-  FaceArea2MinI_B(iBLK)=cZero
-  FaceArea2MinJ_B(iBLK)=cZero
-  FaceArea2MinK_B(iBLK)=cZero
-end subroutine fix_cartesian_geometry
 !---------------------------------------------------------------------
 subroutine fix_spherical_geometry(iBLK)
   use ModMain
@@ -985,30 +1052,14 @@ subroutine fix_spherical_geometry(iBLK)
        <XyzMin_D(Theta_).or.&
        XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>XyzMax_D(Theta_)
 
-  FaceArea2MinI_B(iBLK)=cZero
-  FaceArea2MinJ_B(iBLK)=cZero
   if(DoFixExtraBoundary_B(iBLK)) then
      FaceArea2MinK_B(iBLK)=dR*XyzStart_BLK(1,iBLK)*&
           (cTwo*tan(cHalf*dPhi))*&       
           (cTwo*tan(cHalf*dTheta))
      FaceArea2MinK_B(iBLK)=FaceArea2MinK_B(iBLK)**2
-  else
-     FaceArea2MinK_B(iBLK)=cZero
   end if
 end subroutine fix_spherical_geometry
-
-!-----------------------------------------------------------------
-!real function SpherFaceAreaK(i,k,RStart,ThetaStart,dR,dPhi,dTheta)
-!  use ModNumConst
-!  implicit none
-!  integer, intent(in)::i,k
-!  real,intent(in)::RStart,ThetaStart,dR,dPhi,dTheta
-!  SpherFaceAreaK= &                              
-!       dR*sin(ThetaStart+(k-1-cHalf)*dTheta)*&               
-!       (cTwo*tan(cHalf*dPhi))/(cos(cHalf*dTheta)*sin(dTheta))
-!end function SpherFaceAreaK
-
-!---------------------------------------------------------------------
+!-----------------------------------------------------------
 subroutine fix_spherical2_geometry(iBLK)
   use ModMain
   use ModGeometry,ONLY:dx_BLK,dy_BLK,dz_BLK,&
@@ -1030,16 +1081,12 @@ subroutine fix_spherical2_geometry(iBLK)
        <XyzMin_D(Theta_).or.&
        XyzStart_BLK(Theta_,iBLK)+nK*dz_BLK(iBLK)>XyzMax_D(Theta_)
   
-  FaceArea2MinI_B(iBLK)=cZero
-  FaceArea2MinJ_B(iBLK)=cZero
   if(DoFixExtraBoundary_B(iBLK)) then
      FaceArea2MinK_B(iBLK)=exp(cTwo*XyzStart_BLK(1,iBLK))*&
           sinh(dR2)*(cOne+cosh(dR2))*cHalf*&
           (cTwo*tan(cHalf*dPhi))*&       
           (cTwo*tan(cHalf*dTheta))
      FaceArea2MinK_B(iBLK)=FaceArea2MinK_B(iBLK)**2
-  else
-     FaceArea2MinK_B(iBLK)=cZero
   end if
 
 end subroutine fix_spherical2_geometry
@@ -1052,9 +1099,6 @@ subroutine fix_cylindrical_geometry(iBLK)
   implicit none
   integer,intent(in)::iBLK
   DoFixExtraBoundary_B(iBLK)= XyzStart_BLK(R_,iBLK)-dx_BLK(iBLK)<XyzMin_D(R_)
-  FaceArea2MinI_B(iBLK)=cZero
-  FaceArea2MinJ_B(iBLK)=cZero
-  FaceArea2MinK_B(iBLK)=cZero
 end subroutine fix_cylindrical_geometry
 !-------------------------------------------------------------------
 
