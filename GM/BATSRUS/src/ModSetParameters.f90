@@ -8,7 +8,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModAdvance
   use ModGeometry, ONLY : init_mod_geometry, &
        TypeGeometry,UseCovariant,UseVertexBasedGrid,is_axial_geometry,  & !^CFG IF COVARIANT
-       allocate_face_area_vectors,allocate_old_levels,& !^CFG IF COVARIANT
+       allocate_face_area_vectors,allocate_old_levels,rTorusLarge,rTorusSmall,& !^CFG IF COVARIANT
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,MinBoundary,MaxBoundary
   use ModNodes, ONLY : init_mod_nodes
   use ModImplicit                                       !^CFG IF IMPLICIT
@@ -37,7 +37,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
-
+  
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1354,30 +1354,27 @@ subroutine MH_set_parameters(TypeAction)
         UseCovariant=.true.
         
         call read_var('TypeGeometry',TypeGeometry)      
-        select case(TypeGeometry)                                   
-        case('cartesian') 
-           
-        case('spherical','spherical_lnr')      
+        if(is_axial_geometry().and.mod(proc_dims(2),2)==1)&
+             proc_dims(2)=2*proc_dims(2)
+        if(index(TypeGeometry,'spherical')>0)then      
            automatic_refinement=.false.                  
            MaxBoundary = Top_
-           if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
-        case('cylindrical','cylindrical_gen')
+        end if
+        if(index(TypeGeometry,'cylindrical')>0)then
            automatic_refinement=.false.
            MaxBoundary = max(MaxBoundary,North_)
-           if(mod(proc_dims(2),2)==1)proc_dims(2)=2*proc_dims(3)
            DoFixExtraBoundary=.true.
-           SaveBoundaryCells=.true.         
-  
-        case default
-           call stop_mpi(NameSub//' ERROR: unknown geometry type = '&
-                //TypeGeometry)
-        end select
+           SaveBoundaryCells=.true.
+        end if
     case("#LIMITGENCOORD1")                    
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('XyzMin_D(1)',XyzMin_D(1))
         call read_var('XyzMax_D(1)',XyzMax_D(1))
+     case('#TORUSSIZE')
+        call read_var('rTorusLarge',rTorusLarge)
+        call read_var('rTorusSmall',rTorusSmall)
         !^CFG END COVARIANT 
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
