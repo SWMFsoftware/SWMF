@@ -6,7 +6,7 @@ subroutine specify_initial_refinement(refb, lev)
        body1,UseRotatingBc,UseMassLoading,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF COVARIANT
-       x_BLK,y_BLK,z_BLK,dx_BLK
+       x_BLK,y_BLK,z_BLK,dx_BLK,far_field_BCs_BLK
   use ModPhysics, ONLY : Rbody,Rcurrents,Qprod
   use ModAMR, ONLY : InitialRefineType
   use ModNumConst
@@ -80,7 +80,15 @@ subroutine specify_initial_refinement(refb, lev)
                 sin(XyzStart_BLK(2,iBLK)+cHalf*(nJ-1)*dy_BLK(iBLK))       
            zzz=RR*sin(XyzStart_BLK(3,iBLK)+cHalf*(nK-1)*dz_BLK(iBLK))
         case default
-           call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
+           SizeMax=-cOne
+           minRblk=-cOne
+           maxRblk=-cOne
+           RR=-cOne
+           xxx=-cOne
+           yyy=-cOne
+           zzz=-cOne
+           !In case of an arbitrary geometry the variables above
+           !are initialized but they are meaningless
         end select                                                 !^CFG END COVARIANT
 
         select case (InitialRefineType)
@@ -89,6 +97,8 @@ subroutine specify_initial_refinement(refb, lev)
         case ('all')
            ! Refine all used blocks
            refb(iBLK) = .true.
+        case('outerboundary')
+           refb(iBLK) =  far_field_BCs_BLK(iBLK)
 
         case ('2Dbodyfocus')
            ! 
