@@ -10,7 +10,7 @@ program PostIDL
   ! Global variables
 
   integer, parameter :: unit_tmp=99
-  logical, parameter :: write_binary=.false.
+  logical, parameter :: write_binary=.true.
   real, parameter :: halfeps=0.6
 
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
