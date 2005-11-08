@@ -45,6 +45,7 @@ subroutine ionosphere_solver(PHI, &
   !/
 
   use ModIonosphere
+  use IE_ModMain, ONLY: DoCoupleUaCurrent, LatBoundary
   use IE_ModIo, ONLY: write_prefix, iUnitOut
 
   USE MSR_Module
@@ -82,9 +83,8 @@ subroutine ionosphere_solver(PHI, &
   REAL(prec), DIMENSION(1:1)            :: row1
   INTEGER, DIMENSION(1:1)               :: cols1
 
-  REAL :: ave, lat_boundary, min_pot, max_pot, cpcp
+  REAL :: ave, min_pot, max_pot, cpcp
   LOGICAL :: north
-  LOGICAL, PARAMETER :: IsManualLatBoundary = .true.
   
   logical :: oktest, oktest_me
   
@@ -94,32 +94,33 @@ subroutine ionosphere_solver(PHI, &
   call timing_start('iono_solve')
   if(oktest)write(*,*)'iono_solve starting'
 
-  lat_boundary = 45.0 * cDegToRad
-
   north = .false.
 
   if (Theta(1,1) < cPi/4.0) north = .true.
 
   if(oktest)write(*,*)'North=',north
 
-  if (IsManualLatBoundary) then
-     lat_boundary = 60.0 * cDegToRad
-  else
+  if (.not. DoCoupleUaCurrent) then
+     ! Set the latitude boundary 5 degrees below lowest non-zero FAC
+
+     ! Set a value just in case there are no currents at all
+     LatBoundary = 45.0 * cDegToRad
+
      if (north) then
         do i=1,nTheta
-           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(cHalfPi-Theta(i,1))
+           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
         enddo
      else
         do i=nTheta,1,-1
-           if (PHI(i,nPsi/4).ne.0.0) lat_boundary = abs(cHalfPi-Theta(i,1))
+           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
         enddo
      endif
-     lat_boundary = max(lat_boundary - 5.0*cDegToRad,0.0)
+     LatBoundary = max(LatBoundary - 5.0*cDegToRad,0.0)
   endif
 
-  !!! write(*,*)'PHI(:,nPsi/4), lat_boundary=',PHI(:,nPsi/4), lat_boundary !!!
+  !!! write(*,*)'PHI(:,nPsi/4), LatBoundary=',PHI(:,nPsi/4), LatBoundary !!!
 
-  if(oktest)write(*,*)'sum(abs(PHI),lat_boundary=',sum(abs(PHI)),lat_boundary
+  if(oktest)write(*,*)'sum(abs(PHI),LatBoundary=',sum(abs(PHI)),LatBoundary
 
   do j = 1, nPsi
      dPsi2(j) = (dPsi(j)/2.0)*(dPsi(j)/2.0)
@@ -147,16 +148,14 @@ subroutine ionosphere_solver(PHI, &
   do j = 1, nPsi
      do i = 1, nTheta
         if (north) then
-           if (abs(cHalfPi-Theta(i,j)).gt.lat_boundary+5.0*cDegToRad) then
-              PHI(i,j) = PHI(i,j)*Radius*Radius* &
-                   sin(Theta(i,j))*sin(Theta(i,j))
+           if (abs(cHalfPi-Theta(i,j)) > LatBoundary+5.0*cDegToRad) then
+              PHI(i,j) = PHI(i,j)*(Radius*sin(Theta(i,j)))**2
            else
               PHI(i,j) = 0.0
            endif
         else
-           if (abs(Theta(i,j)-cHalfPi).gt.lat_boundary+5.0*cDegToRad) then
-              PHI(i,j) = PHI(i,j)*Radius*Radius* &
-                   sin(Theta(i,j))*sin(Theta(i,j))
+           if (abs(Theta(i,j)-cHalfPi) > LatBoundary+5.0*cDegToRad) then
+              PHI(i,j) = PHI(i,j)*(Radius*sin(Theta(i,j)))**2
            else
               PHI(i,j) = 0.0
            endif
@@ -191,7 +190,7 @@ subroutine ionosphere_solver(PHI, &
 ! Add the Central Points
 
      do i=2,nTheta-1
-        if (abs(cHalfPi-Theta(i,j)).gt.lat_boundary) then
+        if (abs(cHalfPi-Theta(i,j)) > LatBoundary) then
            npts = npts + 5
            if (j.eq.1) npts_Theta = npts_Theta + 1
         endif
@@ -295,7 +294,7 @@ subroutine ionosphere_solver(PHI, &
         cols(1) = (j2-1)*npts_Theta + i2
         
         i2 = i+1
-        j2 = j+(nPsi-1)/2 ; if (j2.gt.nPsi) j2 = j2 - nPsi
+        j2 = j+(nPsi-1)/2 ; if (j2 > nPsi) j2 = j2 - nPsi
         cols(2) = (j2-1)*npts_Theta + i2
 
         i2 = i
@@ -320,7 +319,7 @@ subroutine ionosphere_solver(PHI, &
 
         i = 2
 
-        do while (abs(cHalfPi-Theta(i,j)).gt.lat_boundary)
+        do while (abs(cHalfPi-Theta(i,j)) > LatBoundary)
 
            ind_i = (j-1)*npts_Theta + i
            b(ind_i) = phi(i,j)
@@ -443,7 +442,7 @@ subroutine ionosphere_solver(PHI, &
         cols(3) = (j2-1)*npts_Theta + i2
         
         j2 = j+(nPsi-1)/2
-        if (j2.gt.nPsi) j2 = j2 - nPsi
+        if (j2 > nPsi) j2 = j2 - nPsi
         i2 = i-1 - n + 1
         cols(4) = (j2-1)*npts_Theta + i2
 

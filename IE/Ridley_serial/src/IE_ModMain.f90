@@ -39,9 +39,10 @@ module IE_ModMain
   character (len=7) :: TypeImCouple = 'north   '
 
   !\
-  ! Logical for coupling the UA current
+  ! Parameters for coupling the UA current and latitude boundary
   !/
   logical :: DoCoupleUaCurrent = .false.
+  real    :: LatBoundary       = 0.785398 ! 45 degrees in radians
 
   !\
   ! Dipole parameters obtained from CON_physics

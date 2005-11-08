@@ -153,8 +153,12 @@ contains
        case("#IM")
           call read_var('TypeImCouple',TypeImCouple)
           call lower_case(TypeImCouple)
-       case("UA")
+       case("#UA")
           call read_var('DoCoupleUaCurrent',DoCoupleUaCurrent)
+          if(DoCoupleUaCurrent)then
+             call read_var('LatBoundary',LatBoundary)
+             LatBoundary = LatBoundary * cDegToRad
+          endif
        case("#SPS")
           call read_var('UseSPS',UseSPS)
           IE_NameOfEFieldModel = "SPS"

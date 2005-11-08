@@ -173,15 +173,22 @@ and it requires no communication between the IE processors.
 
 <command name="UA">
 	<parameter name="DoCoupleUaCurrent" type="logical" default="F"/>
+	<parameter name="LatBoundary" type="real" min="0" max="60"
+				default="45" if="$DoCoupleUaCurrent" />
 
 #UA
 T		DoCoupleUaCurrent
+45.0		LatBoundary [deg] (only read if DoCoupleUaCurrent is true)
 
 The DoCoupleUaCurrent parameter determines if the field aligned current
 calculated by the UA component should be used. Usually the currents are
 dominated by the field aligned currents provided by the GM component.
 The coupling with the UA currents is still experimental.
-The default value is false, i.e. the UA currents are not included.
+If DoCoupleUaCurrent is set to true, the lower latitude boundary for
+the potential solver should be given with the LatBoundary paramter.
+
+The default value is DoCoupleUaCurrent=.false, i.e. the UA currents 
+are not included.
 </command>
 
 <command name="AMIEFILES">
