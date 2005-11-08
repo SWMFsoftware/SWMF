@@ -340,13 +340,16 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
                    exp(-1.0*(distance/Width_of_Oval(j))**2)
 
-              hall=hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2)
-              ped =ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2)
+              ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
+              hall=1.7*( &
+                   hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
+              ped =1.7*( &
+                   ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
 
               if ((hall.gt.1.0).and.(ped.gt.0.5)) then
 
                  IONO_NORTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
-                 IONO_NORTH_EFlux(i,j) = (ped*(16.0+IONO_NORTH_Ave_E(i,j)**2)/ &
+                 IONO_NORTH_EFlux(i,j) = (ped*(16.0+IONO_NORTH_Ave_E(i,j)**2)/&
                       (40.0*IONO_NORTH_Ave_E(i,j)))**2/1000.0
 
               else
@@ -483,13 +486,16 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
                    exp(-1.0*(distance/Width_of_Oval(j))**2)
 
-              hall=hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2)
-              ped =ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2)
+              ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
+              hall=1.7*( &
+                   hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2))
+              ped =1.7*( &
+                   ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2))
 
               if ((hall.gt.1.0).and.(ped.gt.0.5)) then
 
                  IONO_SOUTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
-                 IONO_SOUTH_EFlux(i,j) = (ped*(16.0+IONO_SOUTH_Ave_E(i,j)**2)/ &
+                 IONO_SOUTH_EFlux(i,j) = (ped*(16.0+IONO_SOUTH_Ave_E(i,j)**2)/&
                       (40.0*IONO_SOUTH_Ave_E(i,j)))**2/1000.0
 
               else
