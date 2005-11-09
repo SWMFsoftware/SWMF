@@ -39,6 +39,7 @@ Preplot.pl -g *.dat.gz
 my $file;
 foreach $file (@ARGV){
     my $datfile = $file;
+
     # Uncompress file if necessary
     `gunzip -c $file > $datfile` if $datfile =~ s/\.dat\.gz$/.dat/;
 
@@ -48,15 +49,21 @@ foreach $file (@ARGV){
 	    "$file\n";
 	next;
     }
+
+    # Run preplot
     `preplot $datfile`;
-    if($Gzip){
-	# Compress .plt file
-	my $pltfile = $datfile;
-	$pltfile =~ s/.dat/.plt/;
-	`gzip $pltfile`;
-    }
+
+    # Check if plt file is produced
+    my $pltfile = $datfile;
+    $pltfile =~ s/.dat/.plt/;
+    die "ERROR in Preplot.pl: no $pltfile was produced\n" unless -s $pltfile;
+
+    # Compress .plt file if required
+    `gzip $pltfile` if $Gzip;
+
     # Remove uncompressed data file if any
     unlink $datfile if $file =~ /\.dat\.gz$/;
+
     # Remove original file
     unlink $file unless $Keep;
 }
