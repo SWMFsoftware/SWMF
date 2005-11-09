@@ -10,12 +10,12 @@ if($Help or not @ARGV){
     print "
 Purpose:
 
-   Preplot (and compress) multiple Tecplot data files.
+   Run preplot (and compress) for multiple Tecplot data files.
    If the data file is compressed, use gunzip before preplot.
 
 Usage: 
 
-   preplot.pl [-h] [-k] [-g] FILE1 [FILE2 FILE3 ...] 
+   Preplot.pl [-h] [-k] [-g] FILE1 [FILE2 FILE3 ...] 
 
    -h    Print this help message
    -k    Keep original files
@@ -25,27 +25,32 @@ Examples:
 
    Preplot .dat files and keep the originals:
 
-preplot.pl -k *.dat
+Preplot.pl -k *.dat
 
    Preplot compressed .dat files and compress results too:
 
-preplot.pl -g *.dat.gz
+Preplot.pl -g *.dat.gz
 
 ";
     exit;
 }
+
+# Loop over all files
 my $file;
 foreach $file (@ARGV){
     my $datfile = $file;
+    # Uncompress file if necessary
     `gunzip -c $file > $datfile` if $datfile =~ s/\.dat\.gz$/.dat/;
 
+    # Check extension
     if($datfile !~ /\.dat$/){
-	warn "WARNING in preplot.pl: extension should be .dat or .dat.gz: ".
+	warn "WARNING in Preplot.pl: extension should be .dat or .dat.gz: ".
 	    "$file\n";
 	next;
     }
     `preplot $datfile`;
     if($Gzip){
+	# Compress .plt file
 	my $pltfile = $datfile;
 	$pltfile =~ s/.dat/.plt/;
 	`gzip $pltfile`;
