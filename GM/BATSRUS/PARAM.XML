@@ -2655,9 +2655,10 @@ T			DoAutoRefine   ! read if DnRefine is positive
 
 <command name="AMRCRITERIA">
 	<parameter name="nRefineCrit" type="integer" input="select">
+		<option name="0" />
 		<option name="1" />
 		<option name="2" />
-		<option name="3" default="1" />
+		<option name="3" default="T" />
 	</parameter>
 	<for from="1" to="$nRefineCrit">
 		<parameter name="TypeRefine" type="string" 	input="select">
@@ -2715,46 +2716,51 @@ T			UseSunEarth   ! Only if 'Transient'
 0.00E+00		zEarth        ! Only if UseSunEarth
 5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
-! The default values depend on problem_type.\\ 
-! At most three criteria can be given. Possible criteria:
-!\begin{verbatim}
-! 'gradT'		- gradient of temperature
-! 'gradP'		- gradient of pressure
-! 'gradlogrho'		- gradient of log(rho)
-! 'gradlogP'		- gradient of log(P)
-! 'gradE'		- gradient of electric field magnitude
-! 'curlV','curlU' 	- magnitude of curl of velocity
-! 'curlB'		- magnitude of current
-! 'divU', 'divV'	- divergence of velocity
-! 'divB'		- div B
-! 'vAlfven','Valfven'	- Alfven speed
-! 'heliobeta' 		- special function for heliosphere $R^2 B^2/rho$
-! 'flux'		- radial mass flux
-! 'heliocurrentsheet'	- refinement in the currentsheet of the heliosphere
-! 'Rcurrents'		- refinement near Rcurrents value
-!\end{verbatim}
-! All the names can also be spelled with all small case letters.\\
-!
-!\noindent
-! The possible choices for TypeTransient:
-!\begin{verbatim}
-! 'P_dot' (same as 'p_dot')
-! 'T_dot' (same as 't_dot')
-! 'Rho_dot' (same as 'rho_dot')
-! 'RhoU_dot' (same as 'rhou_dot')
-! 'B_dot' (same as 'b_dot')
-! 'Rho_2nd_1' (same as 'rho_2nd_1')
-! 'Rho_2nd_2' (same as 'rho_2nd_2')
-!\end{verbatim}
-!
-! Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
-! a factor that defines how close to the ray Sun-Earth to refine the grid.
-! Note that the AMR occurs in a cylinder around the ray.
-! Example for InvD2Ray =
+The default values depend on problem_type.
+
+At most three criteria can be given. If nRefineCrit is set to zero,
+the blocks are not ordered. This can be used to refine or coarsen
+all the blocks limited by the minimum and maximum levels only
+(see commands #AMRLEVELS and #AMRRESOLUTION). If nRefineCrit is 1, 2, or 3
+then the criteria can be chosen from the following list:
 \begin{verbatim}
-!   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
-!   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
-!   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
+  'gradT'		- gradient of temperature
+  'gradP'		- gradient of pressure
+  'gradlogrho'		- gradient of log(rho)
+  'gradlogP'		- gradient of log(P)
+  'gradE'		- gradient of electric field magnitude
+  'curlV','curlU' 	- magnitude of curl of velocity
+  'curlB'		- magnitude of current
+  'divU', 'divV'	- divergence of velocity
+  'divB'		- div B
+  'vAlfven','Valfven'	- Alfven speed
+  'heliobeta' 		- special function for heliosphere $R^2 B^2/rho$
+  'flux'		- radial mass flux
+  'heliocurrentsheet'	- refinement in the currentsheet of the heliosphere
+  'Rcurrents'		- refinement near Rcurrents value
+\end{verbatim}
+All the names can also be spelled with all small case letters.\\
+
+\noindent
+The possible choices for TypeTransient:
+\begin{verbatim}
+  'P_dot' (same as 'p_dot')
+  'T_dot' (same as 't_dot')
+  'Rho_dot' (same as 'rho_dot')
+  'RhoU_dot' (same as 'rhou_dot')
+  'B_dot' (same as 'b_dot')
+  'Rho_2nd_1' (same as 'rho_2nd_1')
+  'Rho_2nd_2' (same as 'rho_2nd_2')
+\end{verbatim}
+
+Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
+a factor that defines how close to the ray Sun-Earth to refine the grid.
+Note that the AMR occurs in a cylinder around the ray.
+Example for InvD2Ray =
+\begin{verbatim}
+   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
+   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
+   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
 \end{verbatim}
 </command>
 </commandgroup>
