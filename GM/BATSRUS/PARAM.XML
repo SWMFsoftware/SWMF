@@ -3595,8 +3595,8 @@ F		UseSpitzerForm
 						default="1.93991E+09"	/>
 		<parameter name="EtaAnomMaxResist" type="real"
 						default="1.93991E+10"	/>
-		<parameter name="ThresholdFactorResist" type="real"
-						default="1"		/>
+		<parameter name="jCritResist" type="real" min="0"
+						default="1.0E-9"	/>
 	</if>
 #RESISTIVEFLUX
 T		UseResistFlux
@@ -3608,18 +3608,26 @@ Localized	TypeResist		! Only if not UseSpitzerForm
 5.00000E-02	TimeInitRise [-]	! Only if TypeResist=='Localized'
 1.00000E+00	TimeConstLev [-]	! Only if TypeResist=='Localized'
 T		UseAnomResist
-1.93991E+09	Eta0AnomResist [m^2/s]		! Only if UseAnomResist
-1.93991E+10	EtaAnomMaxResist [m^2/s]	! Only if UseAnomResist
-1.00000E+00	ThresholdFactorResist [-]	! Only if UseAnomResist
+1.93991E+09	Eta0AnomResist [m^2/s]	! Only if UseAnomResist
+1.93991E+10	EtaAnomMaxResist [m^2/s]! Only if UseAnomResist
+1.00000E-09	jCritResist [A/m^2]	! Only if UseAnomResist
 
-! Note: ResistType = `Constant'  (the same as `constant')
-!		     'Localized' (the same as 'localized')
-!
-! The first choice results in a uniform resistivity of value Eta0Resist.
-! The second choice represents localized in space magnetic diffusion 
-! with a peak value Eta0Resist. The enhanced resistivity has a Gaussian 
-! shape with HWHM of 1/sqrt(Alpha0Resist), shifted along the y-axis on 
-! -yShistResist*y2.
+If UseResistFlux is false, no resistivity is included.
+If UseResistFlux is true, then one can select the Spitzer resistivity with
+UseSpitzerForm=.true., which results in very low resistivity in space plasma.
+If UseSpitzerForm=.false., the resistivity can be set by hand.
+For TypeResist='constant' the resistivity is uniformly set to Eta0Resist.
+For TypeResist='localized' the resistivity has a peak value Eta0Resist
+The enhanced resistivity has a Gaussian shape with a half width of 
+1/sqrt(Alpha0Resist), and the position is shifted along the y-axis 
+to -yShistResist*y2. 
+
+A current dependent anomalous resistivity can be added both to
+the constant and localized resistivities. 
+If UseAnomResist is true, the anomalous resistivity is 
+Eta0AnomResist*(j/jCritResist-1) limited by 0 and EtaAnomMaxResist.
+
+The default is UseResistFlux=F, i.e. ideal MHD.
 </command>
 
 <command name="TESTDISSMHD" if="$_IsFirstSession">
