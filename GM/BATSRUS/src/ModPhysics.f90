@@ -150,8 +150,8 @@ module ModPhysics
   character (len=20) :: TypeResist
   real :: TimeInitRise,TimeConstLev
   real :: Eta0Resist,Alpha0Resist,yShiftResist
-  real :: Eta0AnomResist,EtaAnomMaxResist,ThresholdFactorResist
-  
+  real :: Eta0AnomResist,EtaAnomMaxResist,jCritResist
+
   !\
   ! Ilia's reconnection & test problems
   !/

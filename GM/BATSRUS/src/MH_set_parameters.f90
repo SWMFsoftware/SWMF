@@ -412,9 +412,9 @@ subroutine MH_set_parameters(TypeAction)
         end if
         call read_var('UseAnomResist',UseAnomResist)
         if (UseAnomResist) then
-           call read_var('Eta0AnomResist'       ,Eta0AnomResist)
-           call read_var('EtaAnomMaxResist'     ,EtaAnomMaxResist)
-           call read_var('ThresholdFactorResist',ThresholdFactorResist)
+           call read_var('Eta0AnomResist',   Eta0AnomResist)
+           call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
+           call read_var('jCritResist',      jCritResist)
         end if
         !                                               ^CFG END DISSFLUX
      case("#SAVERESTART")
