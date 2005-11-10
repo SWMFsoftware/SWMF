@@ -11,9 +11,13 @@ Module ModResist
   integer, parameter :: MaxGhostPE=(nI+2*gcn)*(nJ+2*gcn)*(nK+2*gcn)*nBLK
   data IsNotIgnitedYetResist_GB /MaxGhostPE*.true./
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK):: &
-       EtaLocResist_GB,JcritInvResist_GB
-  
+       EtaLocResist_GB
+  real :: EtaResist_G(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
+!!!  real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
+
 end module ModResist
+
+!==============================================================================
 
 subroutine add_resistive_flux(DoResChangeOnly)
   use ModSize,     ONLY:nI,nJ,nK,gcn,nBLK
@@ -35,6 +39,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
        cZero,cTiny,cHundred,cHundredth,cPi
   use ModPhysics,  ONLY: gm1
+  use ModResist,   ONLY: EtaResist_G !!!, Eta_GB
   use ModMpi
   implicit none
   
@@ -43,7 +48,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   real:: CristophCoefficient,EtaFluxCoefficient
   real:: DBXFace,DBYFace,DBZFace,DB2Face
   real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-       BX,BY,BZ,B2,EtaPerpResist
+       BX,BY,BZ,B2
   !
   BX(:,:,:) = State_VGB(Bx_,:,:,:,globalBLK)+B0xCell_BLK(:,:,:,globalBLK)
   BY(:,:,:) = State_VGB(By_,:,:,:,globalBLK)+B0yCell_BLK(:,:,:,globalBLK)
@@ -52,7 +57,11 @@ subroutine add_resistive_flux(DoResChangeOnly)
   !\
   ! Compute the resistivity
   !/
-  call compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
+  call compute_eta_coefficient(BX,BY,BZ,EtaResist_G)
+
+  !!! Store it for plotting
+  !!! Eta_GB(:,:,:,GlobalBlk) = EtaResist_G
+
   !\
   ! Compute and add the x_resistive_flux to the x-face fluxes 
   !/
@@ -134,13 +143,14 @@ subroutine add_resistive_flux(DoResChangeOnly)
         end do
      end do
   end if
-Contains
-  
+
+contains
+  !============================================================================
   subroutine add_resistive_flux_x
     implicit none
     EtaFluxCoefficient = CristophCoefficient* &
-      cHalf*(EtaPerpResist(i-1,j,k)         + &
-             EtaPerpResist(i  ,j,k))
+      cHalf*(EtaResist_G(i-1,j,k)         + &
+             EtaResist_G(i  ,j,k))
     DBXFace = BX(i,j,k)-BX(i-1,j,k)
     DBYFace = BY(i,j,k)-BY(i-1,j,k)
     DBZFace = BZ(i,j,k)-BZ(i-1,j,k)
@@ -172,12 +182,14 @@ Contains
     VdtFace_x(i,j,k) = VdtFace_x(i,j,k)+cTwo* &
          EtaFluxCoefficient
   end subroutine add_resistive_flux_x
-  
+
+  !============================================================================
+
   subroutine add_resistive_flux_y
     implicit none
     EtaFluxCoefficient = CristophCoefficient* &
-      cHalf*(EtaPerpResist(i,j-1,k)         + &
-             EtaPerpResist(i,j  ,k))
+      cHalf*(EtaResist_G(i,j-1,k)         + &
+             EtaResist_G(i,j  ,k))
     DBXFace = BX(i,j,k)-BX(i,j-1,k)
     DBYFace = BY(i,j,k)-BY(i,j-1,k)
     DBZFace = BZ(i,j,k)-BZ(i,j-1,k)
@@ -210,11 +222,13 @@ Contains
          EtaFluxCoefficient
   end subroutine add_resistive_flux_y
 
+  !============================================================================
+
   subroutine add_resistive_flux_z
     implicit none
     EtaFluxCoefficient = CristophCoefficient* &
-      cHalf*(EtaPerpResist(i,j,k-1)         + &
-             EtaPerpResist(i,j,k  ))
+      cHalf*(EtaResist_G(i,j,k-1)         + &
+             EtaResist_G(i,j,k  ))
     DBXFace = BX(i,j,k)-BX(i,j,k-1)
     DBYFace = BY(i,j,k)-BY(i,j,k-1)
     DBZFace = BZ(i,j,k)-BZ(i,j,k-1)
@@ -249,7 +263,9 @@ Contains
 
 end subroutine add_resistive_flux
 
-subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
+!==============================================================================
+
+subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   use ModSize,     ONLY:nI,nJ,nK,gcn
   use ModProcMH,   ONLY:iProc
   use ModMain,     ONLY:globalBLK,BLKtest,UseSpitzerForm, &
@@ -263,9 +279,10 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf,cZero,cTiny, &
        cHundred,cHundredth,cPi
   use ModPhysics,  ONLY:TypeResist,Eta0Resist,Eta0AnomResist, &
-       EtaAnomMaxResist,unitSI_t,unitSI_x,unitSI_rho,unitSI_B, &
-       unitSI_temperature,Alpha0Resist,yShiftResist,TimeInitRise, &
-       TimeConstLev,ThresholdFactorResist
+       EtaAnomMaxResist,jCritResist,&
+       unitSI_t,unitSI_x,unitSI_rho,unitSI_B,unitSI_J,unitSI_temperature,&
+       Alpha0Resist,yShiftResist,TimeInitRise, &
+       TimeConstLev
   use ModResist
   use ModMpi
   implicit none
@@ -277,12 +294,11 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
   real:: xxx,yyy,scr1,scr2
   real:: LogLambdaResist,EtaPerpConstResist
   real:: ElapsedTimeResist,TimeFactorResist
-  real:: UdriftResist,UthresholdResist
-  real:: Eta0Resist_ND,Eta0AnomResist_ND,EtaAnomMaxResist_ND
+  real:: Eta0Resist_ND,Eta0AnomResist_ND,EtaAnomMaxResist_ND,jCritInv_ND
   real, intent(in), dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
        BX,BY,BZ
   real, intent(out), dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-       EtaPerpResist
+       Eta_G
   !  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
   !       EtaHallResist
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
@@ -299,13 +315,14 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
   Eta0Resist_ND       = Eta0Resist*CU_t/CU_x**2
   Eta0AnomResist_ND   = Eta0AnomResist*CU_t/CU_x**2
   EtaAnomMaxResist_ND = EtaAnomMaxResist*CU_t/CU_x**2
+  jCritInv_ND         = cOne/(jCritResist/UnitSi_j)
   !\
   ! Select type of resistivity
   !/
   if (UseSpitzerForm) then
      !\
      ! Compute Spitzer-type, classical resistivity::
-     ! EtaPerpResist = EtaPerpConstResist*LogLambdaResist/Te^1.5, 
+     ! Eta_G = EtaPerpConstResist*LogLambdaResist/Te^1.5, 
      ! where EtaPerpConstResist = 5.237943200000000000E+07
      !/ 
      ! Compute EtaPerpConstResist::
@@ -324,30 +341,30 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
      !/
      EtaPerpConstResist = EtaPerpConstResist*LogLambdaResist
      !\
-     ! Finally, compute EtaPerpResist::
-     ! EtaPerpResist = EtaPerpConstResist/Te^1.5
+     ! Finally, compute Eta_G::
+     ! Eta_G = EtaPerpConstResist/Te^1.5
      !/
-     EtaPerpResist(:,:,:) = EtaPerpConstResist/(unitSI_temperature* &
+     Eta_G(:,:,:) = EtaPerpConstResist/(unitSI_temperature* &
           State_VGB(P_,:,:,:,globalBLK)/State_VGB(rho_,:,:,:,globalBLK))**(cOne+cHalf)
      !\
      ! Take into account the dependance of the B field::
-     ! EtaPerpResist = EtaPerpResist*(1+Omega_eTau_ei2Resist), where
-     ! Omega_eTau_ei2Resist = [B*mp/(rho*e*EtaPerpResist)]^2
+     ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist), where
+     ! Omega_eTau_ei2Resist = [B*mp/(rho*e*Eta_G)]^2
      !/
      Omega_eTau_ei2Resist(:,:,:) = (cProtonMass/cElectronCharge)**2* &
           (unitSI_B**2*(BX(:,:,:)**2+BY(:,:,:)**2+BZ(:,:,:)**2))   / &
-          (unitSI_rho*State_VGB(rho_,:,:,:,globalBLK)*EtaPerpResist(:,:,:))**2
-     ! EtaPerpResist = EtaPerpResist*(1+Omega_eTau_ei2Resist)
-     EtaPerpResist(:,:,:) = EtaPerpResist(:,:,:)* &
+          (unitSI_rho*State_VGB(rho_,:,:,:,globalBLK)*Eta_G(:,:,:))**2
+     ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist)
+     Eta_G(:,:,:) = Eta_G(:,:,:)* &
           (cOne+Omega_eTau_ei2Resist(:,:,:))
-     ! Dimensionalize EtaPerpResist::
-     EtaPerpResist(:,:,:) = EtaPerpResist(:,:,:)*CU_t/CU_x**2
+     ! Dimensionalize Eta_G::
+     Eta_G(:,:,:) = Eta_G(:,:,:)*CU_t/CU_x**2
      !\
      ! Compute the Hall resistivity, for whatever needed::
-     ! EtaHallResist = EtaPerpResist/sqrt( &
+     ! EtaHallResist = Eta_G/sqrt( &
      ! max(Omega_eTau_ei2Resist,cTiny**2))
      !/
-     !     EtaHallResist(:,:,:) = EtaPerpResist(:,:,:)/ &
+     !     EtaHallResist(:,:,:) = Eta_G(:,:,:)/ &
      !          sqrt(max(Omega_eTau_ei2Resist(:,:,:),cTiny**2))
      !\
      ! Add anomalous resistivity, if UseAnomResist == .true.
@@ -360,7 +377,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
         !\
         ! Set uniform resistivity everywhere
         !/
-        EtaPerpResist(:,:,:) = Eta0Resist_ND
+        Eta_G(:,:,:) = Eta0Resist_ND
         !\
         ! Add anomalous resistivity, if UseAnomResist == .true.
         !/
@@ -424,7 +441,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
                        minval(TimeFactorResist*EtaLocResist_GB(:,:,:,:)),       &
                        maxval(TimeFactorResist*EtaLocResist_GB(:,:,:,:))
         end if
-        EtaPerpResist(:,:,:) = TimeFactorResist*EtaLocResist_GB(:,:,:,globalBLK)
+        Eta_G(:,:,:) = TimeFactorResist*EtaLocResist_GB(:,:,:,globalBLK)
         !\
         ! Add anomalous resistivity, if UseAnomResist == .true.
         !/
@@ -435,76 +452,41 @@ subroutine compute_eta_coefficient(BX,BY,BZ,EtaPerpResist)
         call stop_mpi('Unknown TypeResist::'//TypeResist)
      end select
   end if
-Contains
-  
+
+contains
+  !============================================================================
   subroutine add_anomalous_resistivity
     implicit none
+    real :: current_D(3)
+
     !\
-    ! Compute the magnitude of the current density:: |J|
+    ! Compute the magnitude of the current density |J| and eta_anomalous
     !/
-    JmagResist(0:nI+1,0:nJ+1,0:nK+1) = sqrt((cHalf*(                                &
-         (BZ(0:nI+1,1:nJ+2,0:nK+1)-BZ(0:nI+1,-1:nJ,0:nK+1))/dy_BLK(globalBLK)     - &
-         (BY(0:nI+1,0:nJ+1,1:nK+2)-BY(0:nI+1,0:nJ+1,-1:nK))/dz_BLK(globalBLK)))**2+ &
-         (cHalf*(                                                                   &
-         (BX(0:nI+1,0:nJ+1,1:nK+2)-BX(0:nI+1,0:nJ+1,-1:nK))/dz_BLK(globalBLK)     - &
-         (BZ(1:nI+2,0:nJ+1,0:nK+1)-BZ(-1:nI,0:nJ+1,0:nK+1))/dx_BLK(globalBLK)))**2+ &
-         (cHalf*(                                                                   &
-         (BY(1:nI+2,0:nJ+1,0:nK+1)-BY(-1:nI,0:nJ+1,0:nK+1))/dx_BLK(globalBLK)     - &
-         (BX(0:nI+1,1:nJ+2,0:nK+1)-BX(0:nI+1,-1:nJ,0:nK+1))/dy_BLK(globalBLK)))**2)
-    !\
-    ! Loop over to see where the anomalous resistivity ignites::
-    !/
-    do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
-       !\
-       ! Compute the threshold velocity:: 
-       ! UthresholdResist = sqrt(cProtonMass/cElectronMass*ThresholdFactorResist*Te)
-       !/
-       UthresholdResist = sqrt(cProtonMass/cElectronMass*ThresholdFactorResist* &
-            State_VGB(P_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK))
-       !\
-       ! Compute the drift velocity:: UdriftResist = |J|/rho
-       !/
-       UdriftResist = JmagResist(i,j,k)/State_VGB(rho_,i,j,k,globalBLK) 
-       if (UdriftResist.ge.UthresholdResist.and. &
-          IsNotIgnitedYetResist_GB(i,j,k,globalBLK)) then
-          IsNotIgnitedYetResist_GB(i,j,k,globalBLK) = .false.
-          JcritInvResist_GB(i,j,k,globalBLK) = cOne/JmagResist(i,j,k)
-       end if
-       if (UdriftResist.lt.UthresholdResist) then
-          IsNotIgnitedYetResist_GB(i,j,k,globalBLK) = .true.
-          JcritInvResist_GB(i,j,k,globalBLK) = cZero
-       end if
+    do i=0,nI+1; do j=0,nJ+1; do k=0,nK+1
+
+       call get_current(i,j,k,GlobalBlk,current_D)
+       JmagResist(i,j,k) = sqrt(sum(current_D**2))
        !\
        ! Compute the anomalous resistivity:: 
        ! EtaAnomLocResist(i,j,k) = Eta0AnomResist_ND*(|J|/Jcrit-1) 
        !/
-       EtaAnomLocResist(i,j,k) = Eta0AnomResist_ND* &
-            (JcritInvResist_GB(i,j,k,globalBLK)*JmagResist(i,j,k)-cOne)
-       !\
-       ! If EtaAnomLocResist(i,j,k)<0, then EtaAnomLocResist(i,j,k)=0
-       !/
-       if (EtaAnomLocResist(i,j,k).lt.cZero) &
-           EtaAnomLocResist(i,j,k) = cZero
-       !\
-       ! If EtaAnomLocResist(i,j,k)>EtaAnomMaxResist_ND, then 
-       ! EtaAnomLocResist(i,j,k)=EtaAnomMaxResist_ND 
-       !/
-       if (EtaAnomLocResist(i,j,k).ge.EtaAnomMaxResist_ND) &
-           EtaAnomLocResist(i,j,k) = EtaAnomMaxResist_ND
+       EtaAnomLocResist(i,j,k) = &
+            min(EtaAnomMaxResist_ND,max(cZero, &
+            Eta0AnomResist_ND*(JcritInv_ND*JmagResist(i,j,k)-cOne)))
+
        !\
        ! Add the anomalous to the background resistivity
        !/
-       EtaPerpResist(i,j,k) = EtaPerpResist(i,j,k)+EtaAnomLocResist(i,j,k)
+       Eta_G(i,j,k) = Eta_G(i,j,k)+EtaAnomLocResist(i,j,k)
+
     end do; end do; end do
     if (UseEtaAnomDebug.and.iProc==0.and.globalBLK==BLKtest) then
-       write(6,*) ''
-       write(6,*) 'min(EtaAnomLocResist) ,max(EtaAnomLocResist) :: ', &
-                   minval(EtaAnomLocResist(:,:,:)),    &
-                   maxval(EtaAnomLocResist(:,:,:))
-       write(6,*) 'min(JcritInvResist_GB),max(JcritInvResist_GB):: ', &
-                   minval(JcritInvResist_GB(:,:,:,:)), &
-                   maxval(JcritInvResist_GB(:,:,:,:))
-       write(6,*) ''
+       write(*,*) ''
+       write(*,*) 'min(EtaAnomLocResist) ,max(EtaAnomLocResist) :: ', &
+                   minval(EtaAnomLocResist), maxval(EtaAnomLocResist)
+       write(*,*) 'min(jMagResist) ,max(jMagResist) :: ', &
+                   minval(jMagResist), maxval(jMagResist)
+       write(*,*) ''
     end if
   end subroutine add_anomalous_resistivity
   
