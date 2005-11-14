@@ -1,6 +1,6 @@
 ;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
-function funcdef,x,w,func,physics,eqpar,variables
+function funcdef,x,w,func,physics,eqpar,variables,rbody
 ;
 ; Written by G. Toth for the Versatile Advection Code
 ;
