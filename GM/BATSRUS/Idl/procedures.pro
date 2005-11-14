@@ -2639,28 +2639,30 @@ if max(abs(sizew0(1:ndim)-sizew1(1:ndim))) gt 0 then begin
 endif
 
 if keyword_set(wnames) then $
-   print,'var max(|A-B|)/max(|A|+|B|) sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)' $
+  print,$
+  'var 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2' $
 else $
-   print,'ind max(|A-B|)/max(|A|+|B|) sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)'
+  print, $
+  'ind 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2'
 
 for iw=0,nw-1 do begin
    case ndim of
    1: begin
-      wsum=max(abs(w0(*,iw))+abs(w1(*,iw)))
+      wsum=max(abs(w0(*,iw))+abs(w1(*,iw)))/2
       wdif=max(abs(w0(*,iw)-w1(*,iw)))
-      wsum1=total(abs(w0(*,iw))+abs(w1(*,iw)))
+      wsum1=total(abs(w0(*,iw))+abs(w1(*,iw)))/2
       wdif1=total(abs(w0(*,iw)-w1(*,iw)))
       end
    2: begin
-      wsum=max(abs(w0(*,*,iw))+abs(w1(*,*,iw)))
+      wsum=max(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
       wdif=max(abs(w0(*,*,iw)-w1(*,*,iw)))
-      wsum1=total(abs(w0(*,*,iw))+abs(w1(*,*,iw)))
+      wsum1=total(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
       wdif1=total(abs(w0(*,*,iw)-w1(*,*,iw)))
       end
    3: begin
-      wsum=max(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))
+      wsum=max(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
       wdif=max(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
-      wsum1=total(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))
+      wsum1=total(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
       wdif1=total(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
       end
    endcase
