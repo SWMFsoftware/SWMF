@@ -9,9 +9,9 @@ my $ValidComp = 'IH|GM|IE|IM|RB|SC|SP|UA';
 # Directories and files used
 my $MakefileConf     = 'Makefile.conf';
 my $MakefileConfOrig = 'share/build/Makefile.';
-my $MakefileComp     = 'Makefile.def';
-my $MakefileCompOrig = 'CON/Makefile.def';
-my $MakefileCompCvs  = 'Makefile.def.orig';
+my $MakefileDef     = 'Makefile.def';
+my $MakefileDefOrig = 'CON/Makefile.def';
+my $MakefileDefCvs  = 'Makefile.def.orig';
 my $GridSizeScript   = 'GridSize.pl';
 
 # Default precision for installation
@@ -23,12 +23,12 @@ my $ERROR   = "!!! SetSWMF_ERROR:";
 
 # Global variables for the settings
 my $Installed;             # true if SWMF is installed ($MakefileConf exists)
-my $OS='unknown';          # operating system in $MakefileComp
-my $DIR='unknown';         # main directory for SWMF in $MakefileComp
+my $OS='unknown';          # operating system in $MakefileDef
+my $DIR='unknown';         # main directory for SWMF in $MakefileDef
 my $Compiler='unknown';    # Non default F90 compiler in $MakefileConf
 my $MpiVersion='';         # Non default MPI version for mpif90.h
 my $Precision='unknown';   # Precision set in $MakefileConf
-my @Version;               # Component versions selected in $MakefileComp
+my @Version;               # Component versions selected in $MakefileDef
 @Version = ('unknown');
 my %Version;               # Hash table to get version for a component
 
@@ -70,6 +70,9 @@ foreach (@switch){
     print "$WARNING Unknown switch: $_\n";
 }
 
+# Make sure that all the $Version/$MakefileDef files are correct
+&set_version_makefile_comp if $Installed;
+
 if($Uninstall){
     if(not $Installed){
 	die "$ERROR SWMF is not installed.\n";
@@ -105,9 +108,9 @@ exit 0;
 
 sub list_versions{
 
-    # Read information from $MakefileComp
-    open(MAKEFILE, $MakefileComp)
-	or die "$ERROR could not open $MakefileComp\n";
+    # Read information from $MakefileDef
+    open(MAKEFILE, $MakefileDef)
+	or die "$ERROR could not open $MakefileDef\n";
 
     my %Versions;
     while(<MAKEFILE>){
@@ -148,9 +151,9 @@ sub get_settings{
     $Precision   = 'single';
     @Version = ();
 
-    # Read information from $MakefileComp
-    open(MAKEFILE, $MakefileComp)
-	or die "$ERROR could not open $MakefileComp\n";
+    # Read information from $MakefileDef
+    open(MAKEFILE, $MakefileDef)
+	or die "$ERROR could not open $MakefileDef\n";
 
     while(<MAKEFILE>){
 	$OS  = $1 if /^\s*OS\s*=\s*(\w+)/;
@@ -228,16 +231,16 @@ sub install_swmf{
     $DIR = `/bin/pwd` or die "$ERROR Could not obtain DIR\n";
     chomp $DIR;
 
-    print "Creating $MakefileComp with OS=$OS, SWMF_ROOT=$DIR\n";
+    print "Creating $MakefileDef with OS=$OS, SWMF_ROOT=$DIR\n";
     if(not $DryRun){
-	open(MAKEFILE,">$MakefileComp")
-	    or die "$ERROR Could not open $MakefileComp for writing\n";
+	open(MAKEFILE,">$MakefileDef")
+	    or die "$ERROR Could not open $MakefileDef for writing\n";
 
 	print MAKEFILE "OS = $OS\nSWMF_ROOT = $DIR\n";
 	close(MAKEFILE);
     }
 
-    &shell_command("cat $MakefileCompOrig >> $MakefileComp");
+    &shell_command("cat $MakefileDefOrig >> $MakefileDef");
 
     # Create $MakefileConf
     my $makefile = $MakefileConfOrig.$OS;
@@ -248,7 +251,7 @@ sub install_swmf{
     # Read version and other info from main Makefile.def
     &get_settings;
 
-    # set Makefile.COMP in versions to point to SWMF
+    # Make sure that all the $Version/$MakefileDef files are correct
     &set_version_makefile_comp;
 
     # Initialize CON and the components
@@ -339,15 +342,13 @@ sub set_versions{
     die "$ERROR non Empty UA version requires non Empty IE version\n"
         if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
 
-    if(not $change){
-	&set_version_makefile_comp; return;
-    }
+    return unless $change;
 
-    print "Modifying versions in $MakefileComp\n";
+    print "Modifying versions in $MakefileDef\n";
     return if $DryRun;
 
-    # Set component versions in $MakefileComp
-    @ARGV = ($MakefileComp);
+    # Set component versions in $MakefileDef
+    @ARGV = ($MakefileDef);
     my %Found;
     while(<>){
 	# Skip uninteresting lines
@@ -372,7 +373,7 @@ sub set_versions{
 
     # Check if all new versions have been found
     foreach $compversion (@NewVersion){
-	die "$ERROR could not find version $compversion in $MakefileComp\n"
+	die "$ERROR could not find version $compversion in $MakefileDef\n"
 	    unless $Found{$compversion}
     }
 
@@ -385,8 +386,6 @@ sub set_versions{
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
 
     @Version = @NewVersion;
-
-    &set_version_makefile_comp;
 
 }
 
@@ -424,19 +423,27 @@ sub set_grid_size{
 
 sub set_version_makefile_comp{
 
-    # Set Makefile.COMP (if it exists) in the share/ directories
-    # of the selected versions to include the global SWMF Makefile.COMP. 
+    # Set $MakefileDef (if it exists) in all component versions
 
-    my $Version;
+    # Only echo shell commands in debug mode
     my $QuietOrig = $Quiet; $Quiet = not $Debug;
-    foreach $Version (sort @Version){
-	my $file = "$Version/$MakefileComp";
-	next unless -f $file;
-	&shell_command("mv $Version/$MakefileComp $Version/$MakefileCompCvs")
-	    unless -f "$Version/$MakefileCompCvs";
-	&shell_command("echo include $DIR/$MakefileComp > $file");
-	$file    = "$Version/$MakefileConf";
-	&shell_command("echo include $DIR/$MakefileConf > $file");
+
+    # Collect all $MakefileDef files in all component versions
+    my @File;
+    @File = glob("[A-Z][A-Z]/*/$MakefileDef");
+
+    my $File;
+    foreach $File (@File){
+	# Set the version based on the file name
+	$File =~ m|^([A-Z][A-Z]/[^/]+)|;
+	my $Version = $1;
+	# Save original file if not yet saved
+	&shell_command("mv $File $Version/$MakefileDefCvs")
+	    unless -f "$Version/$MakefileDefCvs";
+	# Put the proper include command into $MakefileDef and $MakefileConf
+	&shell_command("echo include $DIR/$MakefileDef > $File");
+	&shell_command("echo include $DIR/$MakefileConf > ".
+		       "$Version/$MakefileConf");
     }
     $Quiet = $QuietOrig;
 }
