@@ -61,13 +61,13 @@ BLAS  = lapack.o blas.o
 	rm -f $*.f95
 
 .f.o:
-	${COMPILE.f77} ${Cflag1} -132 $<
+	${COMPILE.f77} ${Cflag2} -132 $<
 
 .for.o:
-	${COMPILE.f77} ${Cflag1} -132 $<
+	${COMPILE.f77} ${Cflag2} -132 $<
 
 .ftn.o:
-	${COMPILE.f77} ${Cflag1} -132 $<
+	${COMPILE.f77} ${Cflag2} -132 $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
