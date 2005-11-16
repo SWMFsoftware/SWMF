@@ -32,8 +32,6 @@ Scripts/                   Contains scripts to run the code on
       IRIX64/                    -SGI Origin
       Linux/                     -Linux (Beowulf clusters, SGI Altix)
       OSF1/                      -Compaq
-      pp_IDL/			 -Scripts for processing IDL files
-      pp_TEC/			 -Scripts for processing TEC files	
    TEC/                       Scripts used to process TECPLOT files
 share/                     Scripts and source code shared with SWMF
 src/                       Source code for BATSRUS
@@ -357,19 +355,19 @@ will read files from and write files into the
 \begin{verbatim}
 run/SC
 \end{verbatim}
-directory. The following directories are created in {\tt run/SC}:
+directory. The following directories links and files 
+are created in {\tt run/SC}:
 \begin{verbatim}
 IO2/
-Param       -> /home/USER/bats/Param/
-pIDL        -> /home/USER/bats/Scripts/Run/pp_IDL/pIDL*
-PostIDL.exe -> /home/USER/bats/Scripts/Run/pp_IDL/PostIDL.exe
-PostSPH.exe -> /home/USER/bats/Scripts/Run/pp_TEC/PostSPH.exe
-pTEC        -> /home/USER/bats/Scripts/Run/pp_TEC/pTEC*
 restartIN/
 restartOUT/
+PostIDL.exe -> /home/USER/SWMFDIR/bin/PostIDL.exe
+PostSPH.exe -> /home/USER/SWMFDIR/bin/PostSPH.exe
+pIDL
+pTEC
 \end{verbatim}
 In the stand alone mode of \BATSRUS\ the subdirectory name
-is always GM (independent of the valuse of the STANDALONE variable
+is always GM (independent of the value of the STANDALONE variable
 in Makefile.def). To facilitate access to the subdirectories and
 scripts, a symbolic link is provided
 in the {\tt run} directory to all the items in {\tt run/GM}.
@@ -378,7 +376,6 @@ In SWMF the run directory itself contains all the component
 subdirectories, and the following files, links and subdirectories
 \begin{verbatim}
 core
-IMF.dat
 job.MACHINE
 LAYOUT.in
 Param       -> ../Param
@@ -405,9 +402,9 @@ normally modified or replaced before running the code.
 This directory is now setup to run the code.  Links have been made to 
 {\tt BATSRUS.exe} which is the main MHD executable, as well as the 
 IDL post processing executable {\tt PostIDL.exe} and the Tecplot post 
-processing executable {\tt ProcessIO.exe}.  The scripts {\tt pIOXXX}
-are for processing the Tecplot IO files while {\tt pIDL} is for
-processing the IDL IO files.  The scripts {\tt job.XXXXX} contain
+processing executable {\tt ProcessIO.exe}.  The script {\tt pTEC}
+is for processing the Tecplot files while {\tt pIDL} is for
+processing the IDL plot files.  The scripts {\tt job.XXXXX} contain
 sample scripts for submitting jobs to the various machines that we
 have run the code on.  
 
