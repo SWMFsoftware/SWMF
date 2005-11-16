@@ -50,8 +50,6 @@ help:
 	@#^CMP END  REMOVEDOCTEX
 	@echo ' '
 	@echo '    rundir      (create run directory with subdirectories scripts and links)'
-	@echo '    rundir PLOT=IDL     (run directory with IDL     postprocessing only)'
-	@echo '    rundir PLOT=TEC     (run directory with Tecplot postprocessing only)'
 	@echo '    rundir MACHINE=ames (run directory with job scripts for machines at NASA Ames)'
 	@echo ' '
 	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 2 PEs)'
@@ -89,18 +87,7 @@ ENV_CHECK:
 	fi);
 
 #
-# POSTPROCESSING SCRIPTS TO COPY TO RUN/GM OR RUN/IH
-#
-# this variable (PLOT) holds the names of types of scripts to copy to the run 
-# directory when it is created.  The options are below. Uncomment only one
-# of them.  The "???" option will copy all type of postprocessing scripts.
-#
-#PLOT = IDL
-#PLOT = TEC
-PLOT = ???
-
-#
-# RUN SCRIPTS TO COPY TO RUN
+# JOB SUBMISSION SCRIPTS TO COPY TO RUN
 #
 # The MACHINE variable holds the machine name for which scripts should
 # be copied to the run directory when it is created.  This is used mostly
@@ -334,9 +321,9 @@ rundir: ENV_CHECK
 	touch run/core
 	chmod 444 run/core
 	cd run; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
-	cd ${GMDIR}; make rundir PLOT=${PLOT}    #^CMP IF GM
+	cd ${GMDIR}; make rundir                 #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
-	cd ${IHDIR}; make rundir PLOT=${PLOT}    #^CMP IF IH
+	cd ${IHDIR}; make rundir                 #^CMP IF IH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
