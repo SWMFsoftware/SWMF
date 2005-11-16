@@ -1,0 +1,98 @@
+#!/usr/bin/perl -s
+#^CFG COPYRIGHT UM
+
+my $Help = ($h or $help or $H or $HELP);
+my $Keep = ($k or $keep or $K or $KEEP);
+my $Verbose = ($v or $V or $verbose or $VERBOSE);
+my $Quiet = ($q or $quiet or $Q or $QUIET);
+use strict;
+
+my $ERROR = "ERROR in pIDL";
+my $WARNING = "WARNING in pIDL";
+
+&print_help if $Help;
+
+my $Pwd     = `pwd`; chop $Pwd;
+my $PostIdl = "$Pwd/PostIDL.exe";
+die "$ERROR: $PostIdl is not available, please make PIDL\n" unless -x $PostIdl;
+
+my $Pattern = "IO2/";
+$Pattern = $ARGV[0] if $ARGV[0];
+
+# Split $Pattern into a directory and the basename for the files
+my $Dir;
+if($Pattern =~ /\/([^\/]*)$/){
+    $Dir = $`;
+    $Pattern = $1;
+}else{
+    $Dir = $Pattern;
+    $Pattern = '';
+}
+print "Dir = $Dir Pattern = $Pattern\n" if $Verbose;
+
+die "$ERROR: no plot directory found in argument $ARGV[0]\n" unless $Dir;
+die "$ERROR: plot directory $Dir does not exist\n" unless -d $Dir;
+
+# Change into the plot directory
+print "chdir $Dir\n" if $Verbose;
+chdir $Dir or die "$ERROR: could not change directory into $Dir\n";
+
+# Collect header files
+opendir(DIR,'.');
+my @HeaderFiles = grep /^$Pattern.*\.h$/, readdir(DIR);
+closedir(DIR);
+
+die "$WARNING: no header files were found\n" unless @HeaderFiles;
+print "Number of header files=",$#HeaderFiles+1,"\n" unless $Quiet;
+
+# Success, go ahead and process files
+my $HeaderFile;
+foreach $HeaderFile (@HeaderFiles){
+    my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
+    print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
+    my $Output= `$PostIdl < $HeaderFile 2>&1`;
+    my $Error = ($Output =~ /error/i or $?);
+    my $Warning = join("\n",grep /warning/i, split("\n",$Output));
+    print "$Warning\n" if $Warning and not ($Quiet or $Error);
+    print $Output if $Verbose or $Error;
+    die "$ERROR: error found in the output of $PostIdl\n" if $Error;
+    my $OutFile = "$BaseFile.out"; 
+    die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
+    unless($Keep){
+	unlink $HeaderFile, glob("$BaseFile*.idl");
+	print "unlink ",join(" ",glob("$BaseFile*.idl")),"\n" if $Verbose;
+    }
+}
+exit 0;
+
+##############################################################################
+
+sub print_help{
+    print "
+Purpose: 
+   Combine *.idl files written out separately by the processors 
+   into .out files using the PostIDL.exe code. 
+
+Usage:
+   pIDL [-h] [-v] [-k] [BASENAME]
+
+   -h -help    - print this help message
+   -v -verbose - print verbose information
+   -q -quiet   - do not print any information
+   -k -keep    - keep the .h and .idl files. Default is to delete them.
+   BASENAME    - the beginning of the filenames to be processed.
+                 Default value is BASENAME='IO2/'
+
+Examples:
+   Process all files in the IO2/ directory and remove .idl files:
+pIDL
+
+   Process all files in the Plots/ directory and keep .idl files:
+pIDL -k Plots/
+
+   Process files starting with Plots/y=0 and print verbose information:
+pIDL -v Plots/y=0
+";
+   exit 0;
+}
+
