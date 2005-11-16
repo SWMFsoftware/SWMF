@@ -127,23 +127,6 @@ PSPH:
 	@echo Program PostSPH has been brought up to date.
 	@echo ' '
 
-checklink:
-	@(if perl -e 'exit(-l "Scripts/Run/pp_IDL/PostIDL.exe")' ; then \
-	   echo "Creating link to PostIDL.exe in Scripts/Run/pp_IDL/"; \
-	   cd Scripts/Run/pp_IDL/; \
-	   rm -rf PostIDL.exe; \
-	   ln -s ${BINDIR}/PostIDL.exe .; \
-	fi)
-	@(if perl -e 'exit(-l "Scripts/Run/pp_TEC/PostSPH.exe")' ; then \
-	   echo "Creating link to PostSPH.exe in Scripts/Run/pp_TEC/"; \
-	   cd Scripts/Run/pp_TEC/; \
-	   rm -rf PostSPH.exe; \
-	   ln -s ${BINDIR}/PostSPH.exe .; \
-	fi)
-
-# Ths PLOT=??? will copy both IDL and TEC scripts into the run directory
-PLOT = ???
-
 # The MACHINE variable holds the machine name for which scripts should
 # be copied to the run directory when it is created.  This is used mostly
 # when several different machines have the same operating system,
@@ -154,12 +137,14 @@ PLOT = ???
 # The default is the short name of the current machine
 MACHINE = `hostname | sed -e 's/\..*//'`
 
-rundir: checklink
+rundir:
 	mkdir -p ${RUNDIR}/GM
 	cd ${RUNDIR}/GM; \
 		mkdir restartIN restartOUT IO2; \
-		ln -s ${GMDIR}/Scripts/Run/pp_${PLOT}/P*.exe .; \
-		cp    ${GMDIR}/Scripts/Run/pp_${PLOT}/p??? .; \
+		ln -s ${BINDIR}/PostIDL.exe .; \
+		ln -s ${BINDIR}/PostSPH.exe .; \
+		cp    ${GMDIR}/Scripts/IDL/pIDL .; \
+		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f Param/PARAM.DEFAULT run/PARAM.in; \
