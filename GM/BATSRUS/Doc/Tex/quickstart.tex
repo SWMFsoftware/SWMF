@@ -316,13 +316,13 @@ The next step is to create a run directory with appropriate links
 \begin{verbatim}
   make rundir
 \end{verbatim}
-You can specify which post-processing and job scripts should be
-included with the PLOT and MACHINE environment variables, e.g.
+You can specify which job scripts should be
+included with the MACHINE environment variable, e.g.
 \begin{verbatim}
-  make rundir PLOT=IDL MACHINE=grendel
+  make rundir MACHINE=grendel
 \end{verbatim}
-will only copy and link the IDL postprocessing codes and scripts,
-and it will copy the job scripts containing the name 'grendel'.
+will copy the job scripts containing the name 'grendel'.
+The default MACHINE is set by the Unix hostname command.
 Before running the code you need to create/edit the input
 parameter file
 \begin{verbatim}
