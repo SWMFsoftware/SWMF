@@ -21,6 +21,8 @@ Module ModIO
   logical :: restart_Bface=.false. ! Bface from restart file ^CFG IF CONSTRAINB
   logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
 
+  integer :: nByteRealRead = 8     ! Real precision in restart files
+
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
 
