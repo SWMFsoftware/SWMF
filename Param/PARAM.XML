@@ -73,7 +73,7 @@ of the included file or PARAM.in file is equivalent with an
 #END command in the last line.
 </command>
 
-<command name="STRICT">
+<command name="STRICT" multiple="T">
 	<parameter name="UseStrict" type="logical" default="T" />
 #STRICT
 T                       UseStrict
@@ -438,8 +438,8 @@ The default values are DnShowProgressShort=10 and DnShowProgressLong=100.
 		<option name="double precision (8)" value="8"
 			default="$nByteReal==8"	/>
 	</parameter>
-	<rule expr="$nByteReal==$_nByteReal">
-		nByteReal in file must agree with _nByteReal.
+	<rule expr="$nByteReal==$_nByteReal or not $UseStrict">
+		nByteReal in file must agree with _nByteReal in strict mode.
 	</rule>
 
 #PRECISION
