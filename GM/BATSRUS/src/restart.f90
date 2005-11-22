@@ -161,27 +161,44 @@ end subroutine write_restart_header
 !==============================================================================
 
 subroutine read_restart_file
-  use ModProcMH
-  use ModMain
-  use ModVarIndexes
-  use ModAdvance,  ONLY: State_VGB
-  use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
-  use ModParallel, ONLY: iBlockRestartALL_A
-  use ModCT, ONLY : BxFace_BLK,ByFace_BLK,BzFace_BLK       !^CFG IF CONSTRAINB
-  use ModImplicit, ONLY: n_prev, w_prev                    !^CFG IF IMPLICIT
-  use ModIO
+  use ModProcMH,     ONLY: iProc
+  use ModIO,         ONLY: NameRestartInDir, FileName, Unit_Tmp, nByteRealRead
+  use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
+       ProcTest, BlkTest, iTest, jTest, kTest, &
+       n_step, dt_BLK, Cfl, CodeVersion
+  use ModVarIndexes, ONLY: nVar, DefaultState_V
+  use ModAdvance,    ONLY: State_VGB
+  use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
+  use ModParallel,   ONLY: iBlockRestartALL_A
+  use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
+  use ModIO,         ONLY: Restart_BFace                    !^CFG IF CONSTRAINB
+  use ModImplicit,   ONLY: n_prev, w_prev                   !^CFG IF IMPLICIT
+  use ModKind,       ONLY: Real4_, Real8_
   implicit none
 
   integer :: iVar, i, j, k, iError
   real    :: tSimulationRead
   character (len=4), Parameter :: restart_ext=".rst"
 
-  logical :: oktest, oktest_me
+  ! Temporaray variables to read arbitrary precision data files
+  real (Real8_) :: Dt8, Time8, Dxyz8_D(3), Xyz8_D(3)
+  real (Real4_) :: Dt4, Time4, Dxyz4_D(3), Xyz4_D(3)
+  real (Real8_) :: State8_CV(1:nI,1:nJ,1:nK,nVar)
+  real (Real4_) :: State4_CV(1:nI,1:nJ,1:nK,nVar)
+  !^CFG IF CONSTRAINB BEGIN
+  real (Real8_) :: b8_X(1:nI+1,1:nJ,1:nK), b8_Y(1:nI,1:nJ+1,1:nK), &
+       b8_Z(1:nI,1:nJ,1:nK+1)
+  real (Real4_) :: b4_X(1:nI+1,1:nJ,1:nK), b4_Y(1:nI,1:nJ+1,1:nK), &
+       b4_Z(1:nI,1:nJ,1:nK+1)
+  !^CFG END CONSTRAINB
+
+  character (len=*), parameter :: NameSub='read_restart_file'
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------
   if(iProc==PROCtest.and.globalBLK==BLKtest)then
-     call set_oktest('read_restart_file',oktest,oktest_me)
+     call set_oktest(NameSub, DoTest, DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   end if
 
   write(filename,'(a,i5.5,a)') &
@@ -192,45 +209,88 @@ subroutine read_restart_file
   open(unit_tmp, file=filename, status='old', form='UNFORMATTED',&
        iostat = iError)
 
-  if(iError /= 0) call stop_mpi(NameThisComp// &
+  if(iError /= 0) call stop_mpi(NameSub// &
        ' read_restart_file could not open: '//trim(filename))
 
-  ! Do not overwrite time_simulation which is read from restart.H
-  read(unit_tmp) dt_BLK(globalBLK),tSimulationRead
-  read(unit_tmp) &
-       dx_BLK(globalBLK),dy_BLK(globalBLK),dz_BLK(globalBLK),&
-       xyzStart_BLK(:,globalBLK)
-
-  if(oktest_me)write(*,*)'RESTART dt,t,dx,dy,dz,x111,y111,z111_BLK,=',&
-       dt_BLK(globalBLK),Time_Simulation,&
-       dx_BLK(globalBLK),dy_BLK(globalBLK),dz_BLK(globalBLK),&
-       xyzStart_BLK(:,globalBLK)
-  if(CodeVersion>5.60 .and. CodeVersion <7.00) &
-       dt_BLK(globalBLK)=dt_BLK(globalBLK)/cfl
-
+  ! Fill in ghost cells
   do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
      State_VGB(1:nVar, i, j, k, globalBLK) = DefaultState_V
   end do;end do;end do
 
-  read(Unit_tmp) &
-       ( State_VGB(iVar,1:nI,1:nJ,1:nK,globalBLK),iVar=1,nVar)
-  if(restart_Bface) read(Unit_tmp) &               !^CFG IF CONSTRAINB BEGIN
-       BxFace_BLK(1:nI+1,1:nJ,1:nK,globalBLK),&
-       ByFace_BLK(1:nI,1:nJ+1,1:nK,globalBLK),&
-       BzFace_BLK(1:nI,1:nJ,1:nK+1,globalBLK)      !^CFG END CONSTRAINB
-  if(n_prev==n_step) read(Unit_tmp) &              !^CFG IF IMPLICIT
-       w_prev(:,:,:,:,globalBLK)                   !^CFG IF IMPLICIT
+  ! Do not overwrite time_simulation which is read from restart.H
+  if(nByteRealRead == 8)then
+     read(unit_tmp, iostat = iError) Dt8, Time8
+     dt_BLK(globalBLK) = Dt8
+     tSimulationRead   = Time8
+
+     read(unit_tmp, iostat = iError) Dxyz8_D, Xyz8_D
+     Dx_BLK(globalBLK) = Dxyz8_D(1)
+     Dy_BLK(globalBLK) = Dxyz8_D(2)
+     Dz_BLK(globalBLK) = Dxyz8_D(3)
+     XyzStart_BLK(:,globalBLK) = Xyz8_D
+
+     read(Unit_tmp, iostat = iError) State8_CV
+     do iVar = 1, nVar
+        State_VGB(iVar,1:nI,1:nJ,1:nK,globalBLK) = State8_CV(:,:,:,iVar)
+     end do
+
+     if(Restart_Bface)then                            !^CFG IF CONSTRAINB BEGIN
+        read(Unit_tmp, iostat = iError) b8_X, b8_Y, b8_Z               
+        BxFace_BLK(1:nI+1,1:nJ,1:nK,globalBLK) = b8_X
+        ByFace_BLK(1:nI,1:nJ+1,1:nK,globalBLK) = b8_Y
+        BzFace_BLK(1:nI,1:nJ,1:nK+1,globalBLK) = b8_Z
+     end if                                           !^CFG END CONSTRAINB
+     if(n_prev==n_step) then                          !^CFG IF IMPLICIT BEGIN
+        read(Unit_tmp, iostat = iError) State8_CV
+        w_prev(:,:,:,:,globalBLK) = State8_CV
+     end if                                           !^CFG END IMPLICIT
+  else
+     read(unit_tmp, iostat = iError) Dt4, Time4
+     dt_BLK(globalBLK) = Dt4
+     tSimulationRead   = Time4
+
+     read(unit_tmp, iostat = iError) Dxyz4_D, Xyz4_D
+     Dx_BLK(globalBLK) = Dxyz4_D(1)
+     Dy_BLK(globalBLK) = Dxyz4_D(2)
+     Dz_BLK(globalBLK) = Dxyz4_D(3)
+     XyzStart_BLK(:,globalBLK) = Xyz4_D
+
+     read(Unit_tmp, iostat = iError) State4_CV
+     do iVar = 1, nVar
+        State_VGB(iVar,1:nI,1:nJ,1:nK,globalBLK) = State4_CV(:,:,:,iVar)
+     end do
+
+     if(Restart_Bface)then                            !^CFG IF CONSTRAINB BEGIN
+        read(Unit_tmp, iostat = iError) b4_X, b4_Y, b4_Z               
+        BxFace_BLK(1:nI+1,1:nJ,1:nK,globalBLK) = b4_X
+        ByFace_BLK(1:nI,1:nJ+1,1:nK,globalBLK) = b4_Y
+        BzFace_BLK(1:nI,1:nJ,1:nK+1,globalBLK) = b4_Z
+     end if                                           !^CFG END CONSTRAINB
+     if(n_prev==n_step) then                          !^CFG IF IMPLICIT BEGIN
+        read(Unit_tmp, iostat = iError) State4_CV
+        w_prev(:,:,:,:,globalBLK) = State4_CV
+     end if                                           !^CFG END IMPLICIT
+  endif
+
+  if(iError /= 0) call stop_mpi(NameSub// &
+       ' could not read data from '//trim(filename))
 
   close(unit_tmp)
+
+  if(CodeVersion>5.60 .and. CodeVersion <7.00) &
+       dt_BLK(globalBLK)=dt_BLK(globalBLK)/cfl
+
   call correctE
 
-  if(oktest_me)then
-     write(*,*)'iProc,globalBLK,oktest_me=',iProc,globalBLK,oktest_me
-     write(*,*)'read_restart finished'
-     write(*,*)'dx,dy,dz_BLK=',dx_BLK(globalBLK),dy_BLK(globalBLK),&
+  if(DoTestMe)then
+     write(*,*)NameSub,': iProc, globalBLK =',iProc, globalBLK
+     write(*,*)NameSub,': dt,tSimRead =',dt_BLK(globalBLK),tSimulationRead
+     write(*,*)NameSub,': dx,dy,dz_BLK=',dx_BLK(globalBLK),dy_BLK(globalBLK),&
           dz_BLK(globalBLK)
-     write(*,*)'xyzStart_BLK=',xyzStart_BLK(:,globalBLK)
-     write(*,*)'State_VGB   =',State_VGB(:,Itest,Jtest,Ktest,globalBLK)
+     write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,globalBLK)
+     write(*,*)NameSub,': State_VGB   =', &
+          State_VGB(:,Itest,Jtest,Ktest,globalBLK)
+     write(*,*)NameSub,' finished'
   end if
 
 end subroutine read_restart_file
