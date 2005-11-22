@@ -441,15 +441,19 @@ contains
 
        case("#PRECISION")
           call read_var('nByteReal',nByteRealRead)
-          if(nByteReal/=nByteRealRead.and.is_proc0())then
+          if(nByteReal/=nByteRealRead)then
              if(is_proc0()) then
-                write(*,'(a,i1,a)')NameSub//' ERROR: '//&
+                write(*,'(a,i1,a)') NameSub//' WARNING: '//&
                      'SWMF was compiled with ',nByteReal,' byte reals'
-                write(*,*) NameSub//&
-                     ' SWMF_ERROR: incorrect precision for reals'
+                write(*,'(a,i1,a)') NameSub//' WARNING: '// &
+                     'requested precision is ',nByteRealRead,' byte reals'
              end if
-             iErrorSwmf = 19
-             RETURN                   
+             if(UseStrict)then
+                if(is_proc0())write(*,*) &
+                     'Change precision and recompile or set #STRICT .false.'
+                iErrorSwmf = 19
+                RETURN
+             end if
           end if
 
        case("#NSTEP")

@@ -63,7 +63,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Temporary variables
   logical :: DoEcho
-  integer :: nByteRealRead, nVarRead
+  integer :: nVarRead
   character (len=lStringLine) :: NameEquationRead
 
   character (len=50) :: plot_string,log_string,satellite_string
@@ -1201,10 +1201,12 @@ subroutine MH_set_parameters(TypeAction)
      case("#PRECISION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nByteReal',nByteRealRead)
-        if(nByteReal/=nByteRealRead.and.iProc==0)then
-           write(*,'(a,i1,a)')'BATSRUS was compiled with ',nByteReal,&
-                ' byte reals'
-           call stop_mpi(NameSub//' ERROR: incorrect precision for reals')
+        if(nByteReal/=nByteRealRead)then
+           if(iProc==0) write(*,'(a,i1,a,i1)') NameSub// &
+                ' WARNING: BATSRUS was compiled with ',nByteReal,&
+                ' byte reals, requested precision is ',nByteRealRead
+           if(UseStrict)call stop_mpi(NameSub// &
+                ' ERROR: differing precisions for reals')
         end if
      case("#EQUATION")
         if(.not.is_first_session())CYCLE READPARAM
