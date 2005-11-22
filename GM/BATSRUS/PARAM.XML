@@ -604,18 +604,21 @@ MHD			NameEquation
 		<option name="double precision (8)" value="8"
 			default="$_nByteReal==8" />
 	</parameter>
-	<rule expr="$nByteReal==$_nByteReal">
-		nByteReal in file must agree with _nByteReal.
+	<rule expr="$nByteReal==$_nByteReal or not $UseStrict">
+		nByteReal in file must agree with _nByteReal in strict mode.
 	</rule>
 
 #PRECISION
 8                       nByteReal
 
-! Define the number of bytes in a real number. If it does not agree
-! with the value determined by the code, BATSRUS stops with an error.
-! This is used in latest restart header files to check binary 
-! compatibility between the restart file and the compiled code
-! The command may also be given in PARAM.in to enforce a certain precision.
+Define the number of bytes in a real number. If it does not agree
+with the value determined by the code, BATSRUS stops with an error
+unless the strict mode is switched off.
+This is used in restart header files to store (and check) the precision
+of the restart files. It is now possible to read restart files with
+a precision that differs from the precision the code is compiled with,
+but strict mode has to be switched off with the #STRICT command.
+The #PRECISION command may also be used to enforce a certain precision.
 </command>
 
 <command name="CHECKGRIDSIZE" if="$_IsFirstSession">
