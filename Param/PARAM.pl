@@ -1,5 +1,5 @@
 #^CFG FILE _FALSE_
-$tree = [{'content' => [{'content' => '
+$tree = [{'type' => 'e','content' => [{'type' => 't','content' => '
 
 CON reads input parameters from the PARAM.in file and the files
 included into PARAM.in. All commands interpreted by CON start
@@ -39,12 +39,12 @@ The only restriction is that the length of the lines cannot exceed
 100 characters (extra characters will be ignored).
 
 
-','type' => 't'},{'content' => [],'name' => 'set','attrib' => {'name' => 'DoTimeAccurate','value' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => '
+'},{'type' => 'e','content' => [],'attrib' => {'type' => 'logical','name' => 'DoTimeAccurate','value' => 'T'},'name' => 'set'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! GENERAL COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NameIncludeFile','type' => 'string'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '100','name' => 'NameIncludeFile'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #INCLUDE
 run/GM/restartIN/restart.H		NameIncludeFile
@@ -56,7 +56,7 @@ The #INCLUDE command can be used anywhere in the parameter file,
 even in the sections which contain the component specific parameters.
 For example the information in the run/GM/restartIN/restart.H 
 file or parameters specific to a component can be included.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'INCLUDE'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'INCLUDE'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 't','content' => '
 
 #END
 
@@ -65,7 +65,7 @@ end of the PARAM.in file. Lines following the #END command are
 ignored. It is not required to use the #END command. The end
 of the included file or PARAM.in file is equivalent with an 
 #END command in the last line.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'END'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseStrict','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'END'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'name' => 'parameter'},{'type' => 't','content' => '
 #STRICT
 T                       UseStrict
 
@@ -74,7 +74,7 @@ but it stops after the warning message. If it is set to false, SWMF
 attempts to correct the problems after the warning message is issued.
 It is possible to switch back and forth between strict and non-strict mode. 
 The default is strict mode.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'STRICT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'StringDescription','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'STRICT','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '100','name' => 'StringDescription'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #DESCRIPTION
 This is a test run for GM-IE-UA coupling.
@@ -85,7 +85,7 @@ the StringDescription string are saved into the restart file,
 which helps in identifying the restart files.
 
 The default value is "Please describe me!", which is self explanatory.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'DESCRIPTION'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'GENERAL COMMANDS'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'DESCRIPTION','multiple' => 'T'},'name' => 'command'}],'attrib' => {'name' => 'GENERAL COMMANDS'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! TIME AND SESSION CONTROL  !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -96,7 +96,7 @@ After the session is finished, CON reads and distributes the parameters for
 the next session. Parameters from previous sessions are carried over,
 so only the changes relative to the previous session need to be given.
 
-','type' => 't'},{'content' => [{'content' => '
+'},{'type' => 'e','content' => [{'type' => 't','content' => '
 
 #RUN
 
@@ -106,7 +106,7 @@ the current set of parameters. The parameters for the next session
 start after the #RUN command. For the last session there is no
 need to use the #RUN command, since the #END command or simply
 the end of the PARAM.in file makes CON execute the last session.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RUN'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoTimeAccurate','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'RUN'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoTimeAccurate'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #TIMEACCURATE
 F		DoTimeAccurate
@@ -131,7 +131,7 @@ of iterations per global iteration, thus they can converge to steady state
 at the same rate and an optimal global convergence can be achieved.
 
 The default value is the time accurate mode.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'TIMEACCURATE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'iYear','default' => '2000','type' => 'integer'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '12','name' => 'iMonth','default' => '3','type' => 'integer','min' => '1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '31','name' => 'iDay','default' => '21','type' => 'integer','min' => '1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '23','name' => 'iHour','default' => '0','type' => 'integer','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '59','name' => 'iMinute','default' => '0','type' => 'integer','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '59','name' => 'iSecond','default' => '0','type' => 'integer','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '1','name' => 'FracSecond','default' => '0','type' => 'real','min' => '0'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'TIMEACCURATE'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '2000','type' => 'integer','name' => 'iYear'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '3','type' => 'integer','max' => '12','min' => '1','name' => 'iMonth'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '21','type' => 'integer','max' => '31','min' => '1','name' => 'iDay'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'integer','max' => '23','min' => '0','name' => 'iHour'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'integer','max' => '59','min' => '0','name' => 'iMinute'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'integer','max' => '59','min' => '0','name' => 'iSecond'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'real','max' => '1','min' => '0','name' => 'FracSecond'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #STARTTIME
 2000			iYear
@@ -149,7 +149,7 @@ This time is stored in the restart files.
 The default values are shown above.
 This is a date and time when, for the Earth, both the rotational and the magnetic axes
 have approximately zero tilt towards the Sun.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'STARTTIME'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'tSimulation','default' => '0.0','type' => 'real','min' => '0'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'STARTTIME'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'real','min' => '0','name' => 'tSimulation'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #TIMESIMULATION
 3600.0			tSimulation [sec]
@@ -160,7 +160,7 @@ The #TIMESIMULATION command and tSimulation are saved into the restart file,
 so that the simulation can continue from the same time when the 
 restart was saved.  
 The default value is tSimulation=0.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'TIMESIMULATION'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'nStep','default' => '0','type' => 'integer','min' => '0'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'TIMESIMULATION'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'integer','min' => '0','name' => 'nStep'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #NSTEP
 100                     nStep
@@ -171,7 +171,7 @@ The #NSTEP command and the nStep variable  are saved into the restart file,
 so that the simulation can continue from the same time step when
 the restart was saved.
 The default value is nStep=0.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'NSTEP'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'MaxIter','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'TimeMax','default' => '-1','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'NSTEP'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'MaxIter'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'real','min' => '-1','name' => 'TimeMax'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #STOP
 100			MaxIteration
@@ -189,7 +189,7 @@ Using a negative value for either variables means that the
 corresponding condition is  not checked. The default values
 are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
 must be used in every session.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STOP','required' => 'T'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoCheckStop','default' => 'F','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnCheckStop','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCheckStop','default' => '-1','type' => 'real','min' => '-1'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$DoCheckStop'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'required' => 'T','name' => 'STOP'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoCheckStop'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnCheckStop'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'real','min' => '-1','name' => 'DtCheckStop'},'name' => 'parameter'}],'attrib' => {'expr' => '$DoCheckStop'},'name' => 'if'},{'type' => 't','content' => '
 
 #CHECKSTOP
 T			DoCheckStop
@@ -213,7 +213,7 @@ synchronization of the components. The more frequent the checks
 are the less efficient the execution.  On the other hand the
 less frequent the checks are, the less control the user has to stop
 the code at a given time.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'CHECKSTOP'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoCheckStopFile','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'CHECKSTOP'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoCheckStopFile'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #CHECKSTOPFILE
 T			DoCheckStopFile
@@ -230,7 +230,7 @@ appropriate parameters.
 
 The default is DoCheckStopFile=.true. (but the default for DoCheckStop
 is .false.).
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'CHECKSTOPFILE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'CpuTimeMax','default' => '-1','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'CHECKSTOPFILE'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'real','min' => '-1','name' => 'CpuTimeMax'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #CPUTIMEMAX
 3600                    CpuTimeMax [sec]
@@ -247,11 +247,11 @@ The default value is -1.0, which means that the CPU time is not checked.
 To do the check the CpuTimeMax variable has to be set to a positive
 value and the DoCheckStop variable also must be set to .true. 
 in the #CHECKSTOP command.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'CPUTIMEMAX'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'TIME AND SESSION CONTROL'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'CPUTIMEMAX'},'name' => 'command'}],'attrib' => {'name' => 'TIME AND SESSION CONTROL'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!  TESTING AND TIMING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'StringTest','type' => 'string'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '100','name' => 'StringTest'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #TEST
 CON_session::do_session		StringTest
@@ -261,7 +261,7 @@ Only subroutines containing the \'call CON_set_do_test(...)\' statement
 can be tested. The first argument is the name of the subroutine,
 usually defined as the string parameter \'NameSub\'.
 Default is an empty string.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'TEST'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'errors and warnings only','value' => '0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'normal','default' => 'T','value' => '1'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'calls on test processor','value' => '10'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'calls on all processors','value' => '100'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'iVarTest','type' => 'integer'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'TEST'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'name' => 'errors and warnings only','value' => '0'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'normal','value' => '1'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'calls on test processor','value' => '10'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'calls on all processors','value' => '100'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'integer','name' => 'iVarTest'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #VERBOSE
 100			lVerbose
@@ -277,7 +277,7 @@ If lVerbose=100, all processors and all subroutines which call CON_set_do_test
     will produce a line on the standard output with the 
     name of the subroutine, the iteration number and the processor number.\\\\
 The default value is lVerbose=1.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'VERBOSE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseTiming','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'none','value' => '-3'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'final only','default' => 'T','value' => '-2'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'end of sessions','value' => '-1'},'type' => 'e'},{'content' => [],'name' => 'optioninput','attrib' => {'name' => 'every X steps','default' => '100','min' => '1'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'Frequency','type' => 'integer'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'nDepthTiming','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'cumulative','default' => 'T','value' => 'cumu'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'list'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'tree'},'type' => 'e'}],'name' => 'part','attrib' => {'input' => 'select','name' => 'TypeTimingStyle','type' => 'string','required' => 'T'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'all'},'type' => 'e'}],'name' => 'part','attrib' => {'input' => 'select','name' => 'UseTimingAll','type' => 'string','required' => 'F'},'type' => 'e'}],'name' => 'parameter','attrib' => {'max' => '2','name' => 'TypeTimingReport','type' => 'strings','min' => '1'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$UseTiming'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'VERBOSE'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseTiming'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'name' => 'none','value' => '-3'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'final only','value' => '-2'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'end of sessions','value' => '-1'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '100','min' => '1','name' => 'every X steps'},'name' => 'optioninput'}],'attrib' => {'input' => 'select','type' => 'integer','name' => 'Frequency'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'nDepthTiming'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'cumulative','value' => 'cumu'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'list'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'tree'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'string','required' => 'T','name' => 'TypeTimingStyle'},'name' => 'part'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'name' => 'all'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'string','required' => 'F','name' => 'UseTimingAll'},'name' => 'part'}],'attrib' => {'type' => 'strings','max' => '2','min' => '1','name' => 'TypeTimingReport'},'name' => 'parameter'}],'attrib' => {'expr' => '$UseTiming'},'name' => 'if'},{'type' => 't','content' => '
 
 #TIMING
 T                       UseTiming        rest of parameters read if true
@@ -314,7 +314,7 @@ direct the output into separate files (see the #STDOUT command).
 
 The default values are shown above, except for the 
 TimingReportStyle, which is \'cumu\' by default without the \'all\'.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'TIMING'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnProgressShort','default' => '10','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnProgressLong','default' => '100','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'TIMING'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '10','type' => 'integer','min' => '-1','name' => 'DnProgressShort'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '100','type' => 'integer','min' => '-1','name' => 'DnProgressLong'},'name' => 'parameter'},{'type' => 't','content' => '
 #PROGRESS
 10			DnProgressShort
 100			DnProgressLong
@@ -328,9 +328,9 @@ a small timing report on the root processor.
 Negative values indicate that no report is requested.
 
 The default values are DnShowProgressShort=10 and DnShowProgressLong=100.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'PROGRESS'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'single precision (4)','default' => '$nByteReal==4','value' => '4'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'double precision (8)','default' => '$nByteReal==8','value' => '8'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'nByteReal','type' => 'integer'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'PROGRESS'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '$nByteReal==4','name' => 'single precision (4)','value' => '4'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$nByteReal==8','name' => 'double precision (8)','value' => '8'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'integer','name' => 'nByteReal'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		nByteReal in file must agree with _nByteReal in strict mode.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$nByteReal==$_nByteReal or not $UseStrict'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$nByteReal==$_nByteReal or not $UseStrict'},'name' => 'rule'},{'type' => 't','content' => '
 
 #PRECISION
 8			nByteReal
@@ -339,11 +339,14 @@ The nByteReal variable gives the number of bytes in the default real variable.
 Possible values are 4 and 8. This command serves to check consistency with 
 binary data, such as binary restart files. 
 The #PRECISION command and the nByteReal variable
-are saved into the restart file. 
+are saved into the restart file. If the compiled precision differs from
+the one defined by nByteReal, the code stops with an error message
+in strict mode. If the strict mode is switched off with the #STRICT
+command, only a warning is printed.
 
 There is no default value. If the command is not used, the precision of 
 the real numbers is not checked.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'PRECISION'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'CodeVersion','type' => 'real','default' => '1.0','min' => '0'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'PRECISION'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','default' => '1.0','min' => '0','name' => 'CodeVersion'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #VERSION
 1.0                    Version
@@ -354,7 +357,7 @@ and the Version variable are saved into the restart file.
 
 There is no default value. If the command is not used, the version
 number is not checked.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'VERSION'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'TESTING AND TIMING'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'VERSION'},'name' => 'command'}],'attrib' => {'name' => 'TESTING AND TIMING'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!! COMPONENT CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -369,9 +372,9 @@ time. In steady state mode there is no limit on the time step, and
 components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
-','type' => 't'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'SC'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'SP'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'RB'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'UA'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'options','name' => 'NameComp','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseComp','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'name' => 'SC'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'IH'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'SP'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'GM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'RB'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'UA'},'name' => 'option'}],'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseComp'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Component must be registered.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_Registered{$NameComp} or not $_Components'},'type' => 'e'},{'content' => [],'name' => 'set','attrib' => {'name' => '_UsedComp{$NameComp}','value' => '$UseComp','type' => 'logical'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$_Registered{$NameComp} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [],'attrib' => {'type' => 'logical','name' => '_UsedComp{$NameComp}','value' => '$UseComp'},'name' => 'set'},{'type' => 't','content' => '
 
 #COMPONENT
 IE			NameComp
@@ -386,7 +389,7 @@ be given any parameters.
 
 The default is that all the components registered in the LAYOUT.in
 file are used.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COMPONENT'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'SC','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'SP'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'RB'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'UA'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'options','name' => 'NameComp','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnRun','default' => '1','type' => 'integer','min' => '1'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'COMPONENT','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'SC'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IH'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'SP'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'GM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'RB'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'UA'},'name' => 'option'}],'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '1','type' => 'integer','min' => '1','name' => 'DnRun'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #CYCLE
 IH			NameComp
@@ -396,12 +399,12 @@ The DnRun variable defines the frequency of calling component NameComp
 during a steady state run. In the example IH will be called for 
 nStep = 10, 20, 30, ... For time accurate runs this command has no effect.
 The default is DnRun = 1 for all the active components.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'CYCLE'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'COMPONENT CONTROL'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'CYCLE','multiple' => 'T'},'name' => 'command'}],'attrib' => {'name' => 'COMPONENT CONTROL'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!! COUPLING CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '13','name' => 'nCouple','default' => '13','type' => 'integer','min' => '0'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'SC IH','default' => '$iCouple==1'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH SC','default' => '$iCouple==2'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'SC SP','default' => '$iCouple==3'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH SP','default' => '$iCouple==4'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH GM','default' => '$iCouple==5'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM IE','default' => '$iCouple==6'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM IM','default' => '$iCouple==7'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM RB','default' => '$iCouple==8'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'UA IE','default' => '$iCouple==9'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE IM','default' => '$iCouple==10'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IM GM','default' => '$iCouple==11'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE UA','default' => '$iCouple==12'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE GM','default' => '$iCouple==13'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'NameSourceTarget','type' => 'string'},'type' => 'e'}],'name' => 'for','attrib' => {'from' => '1','to' => '$nCouple','name' => 'iCouple'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '13','type' => 'integer','max' => '13','min' => '0','name' => 'nCouple'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==1','name' => 'SC IH'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==2','name' => 'IH SC'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==3','name' => 'SC SP'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==4','name' => 'IH SP'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==5','name' => 'IH GM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==6','name' => 'GM IE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==7','name' => 'GM IM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==8','name' => 'GM RB'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==9','name' => 'UA IE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==10','name' => 'IE IM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==11','name' => 'IM GM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==12','name' => 'IE UA'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => '$iCouple==13','name' => 'IE GM'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'string','name' => 'NameSourceTarget'},'name' => 'parameter'}],'attrib' => {'to' => '$nCouple','name' => 'iCouple','from' => '1'},'name' => 'for'},{'type' => 't','content' => '
 
 #COUPLEORDER
 13                nCouple
@@ -430,13 +433,13 @@ The default coupling order is shown above. It is based on the propagation
 of information from component to component.
 
 NOTE: The order of the \'SC SP\' and \'IH SP\' couplings should not be reversed!
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'COUPLEORDER'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameSource','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameTarget','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnCouple','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCouple','default' => '-1.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'COUPLEORDER'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameSource'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameTarget'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1.0','type' => 'real','min' => '-1','name' => 'DtCouple'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Source component must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameSource} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameSource} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Target component must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameTarget} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameTarget} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Source and target components must be different.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$NameSource ne $NameTarget'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$NameSource ne $NameTarget'},'name' => 'rule'},{'type' => 't','content' => '
 
 #COUPLE1
 IE			NameSource
@@ -453,13 +456,13 @@ time tSimulation in seconds for time-accurate runs. Setting both
 frequencies to a negative value means that there is no coupling.
 
 The default is no coupling between the components.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COUPLE1'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameComp1','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameComp2','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnCouple','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCouple','default' => '-1.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'COUPLE1','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameComp1'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameComp2'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1.0','type' => 'real','min' => '-1','name' => 'DtCouple'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Component 1 must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameComp1} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameComp1} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Component 2 must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameComp2} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameComp2} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Components 1 and 2 must be different.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$NameComp1 ne $NameComp2'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$NameComp1 ne $NameComp2'},'name' => 'rule'},{'type' => 't','content' => '
 
 #COUPLE2
 GM			NameComp1
@@ -477,13 +480,13 @@ time tSimulation in seconds for time-accurate runs. Setting both
 frequencies to a negative value means that there is no coupling.
 
 The default is no coupling between the components.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COUPLE2'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameSource','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameTarget','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnCouple','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCouple','default' => '-1.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DnCouple','name' => 'nNext12','default' => '0.0','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DtCouple','name' => 'tNext12','default' => '0.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'COUPLE2','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameSource'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameTarget'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1.0','type' => 'real','min' => '-1','name' => 'DtCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'integer','max' => '$DnCouple','min' => '-1','name' => 'nNext12'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'real','max' => '$DtCouple','min' => '-1','name' => 'tNext12'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Source component must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameSource} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameSource} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Target component must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameTarget} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameTarget} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Source and target components must be different.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$NameSource ne $NameTarget'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$NameSource ne $NameTarget'},'name' => 'rule'},{'type' => 't','content' => '
 
 #COUPLE1SHIFT
 IH			NameSource
@@ -510,13 +513,13 @@ when mod(tSimulation,DtCouple) equals tNext12.
 The above example will couple IH to GM at simulation times 3, 13, 23, etc.
 
 The default is no shifting.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COUPLE1SHIFT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameComp1','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'length' => '2','name' => 'NameComp2','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnCouple','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCouple','default' => '-1.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DnCouple','name' => 'nNext12','default' => '0.0','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DtCouple','name' => 'tNext12','default' => '0.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DnCouple','name' => 'nNext21','default' => '0.0','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '$DtCouple','name' => 'tNext21','default' => '0.0','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'COUPLE1SHIFT','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameComp1'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '2','name' => 'NameComp2'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1.0','type' => 'real','min' => '-1','name' => 'DtCouple'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'integer','max' => '$DnCouple','min' => '-1','name' => 'nNext12'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'real','max' => '$DtCouple','min' => '-1','name' => 'tNext12'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'integer','max' => '$DnCouple','min' => '-1','name' => 'nNext21'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '0.0','type' => 'real','max' => '$DtCouple','min' => '-1','name' => 'tNext21'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Component 1 must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameComp1} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameComp1} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Component 2 must be registered and ON.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$_UsedComp{$NameComp2} or not $_Components'},'type' => 'e'},{'content' => [{'content' => '
+	'}],'attrib' => {'expr' => '$_UsedComp{$NameComp2} or not $_Components'},'name' => 'rule'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		Components 1 and 2 must be different.
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$NameComp1 ne $NameComp2'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => '$NameComp1 ne $NameComp2'},'name' => 'rule'},{'type' => 't','content' => '
 
 #COUPLE2SHIFT
 GM                 NameComp1
@@ -557,7 +560,7 @@ This way IE can solve the potential problem while GM advances by 3 seconds.
 That can improve the parallelization and efficiency.
 
 The default is no shifting.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COUPLE2SHIFT'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'SC','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IH'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'SP'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'GM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IM'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'RB'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'IE'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'UA'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'options','name' => 'NameComp','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoCoupleOnTime','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'COUPLE2SHIFT','multiple' => 'T'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'SC'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IH'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'SP'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'GM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IM'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'RB'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'IE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'UA'},'name' => 'option'}],'attrib' => {'input' => 'options','type' => 'string','name' => 'NameComp'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoCoupleOnTime'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #COUPLETIME
 GM			NameComp
@@ -573,7 +576,7 @@ stop conditions.
 
 The default is that all components limit their time steps to match
 the coupling time.
-','type' => 't'}],'name' => 'command','attrib' => {'multiple' => 'T','name' => 'COUPLETIME'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'COUPLING CONTROL'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'COUPLETIME','multiple' => 'T'},'name' => 'command'}],'attrib' => {'name' => 'COUPLING CONTROL'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! RESTART CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -582,7 +585,7 @@ CON needs to coordinate the saving of restart information for itself
 and all the components. It is important that all components save
 the necessary information at the same simulation time.
 
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoSaveRestart','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnSaveRestart','default' => '-1','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtSaveRestart','default' => '-1','type' => 'real','min' => '-1'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$SaveRestart'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoSaveRestart'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'integer','min' => '-1','name' => 'DnSaveRestart'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'default' => '-1','type' => 'real','min' => '-1','name' => 'DtSaveRestart'},'name' => 'parameter'}],'attrib' => {'expr' => '$SaveRestart'},'name' => 'if'},{'type' => 't','content' => '
 
 #SAVERESTART
 T			DoSaveRestart (Rest of parameters read if true)
@@ -602,7 +605,7 @@ the very end.
 
 The default is given above, which means that restart information
 is saved at the end of the run.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SAVERESTART'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NameRestartFile','default' => 'RESTART.out','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'SAVERESTART'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'RESTART.out','type' => 'string','length' => '100','name' => 'NameRestartFile'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #RESTARTFILE
 RESTART_test.in
@@ -616,11 +619,11 @@ with the #INCLUDE command. To avoid unpleasant surprises,
 do not include the file which is being written.
 
 The default value for NameRestartFile is "RESTART.out".
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'RESTARTFILE'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'RESTART CONTROL'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'RESTARTFILE'},'name' => 'command'}],'attrib' => {'name' => 'RESTART CONTROL'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT CONTROL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoEcho','default' => 'F','type' => 'logical'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoEcho'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #ECHO
 T			DoEcho
@@ -632,7 +635,7 @@ depending on the UseStdout variable, which can be set in the
 
 The default value for DoEcho is .false., but it is a good idea to
 set it to true at the beginning of the PARAM.in file.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'ECHO'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoFlush','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'ECHO'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'DoFlush'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #FLUSH
 F			DoFlush
@@ -643,7 +646,7 @@ used in log files. The flush is useful to see the output immediately,
 but on some systems it may be very slow. 
 
 The default is to flush the output, i.e. DoFlush=T.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'FLUSH'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseStdout','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'FLUSH'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStdout'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #STDOUT
 F			UseStdout
@@ -678,7 +681,7 @@ CON itself always writes to the standard output and it does not
 use a string prefix.
 
 The default value for UseStdout is true.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STDOUT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'length' => '100','name' => 'NameStdoutDir','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'STDOUT'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','length' => '100','name' => 'NameStdoutDir'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #STDOUTDIR
 STDOUT/Test		NameStdoutDir
@@ -689,7 +692,7 @@ are written if UseStdout is set to .false. in the #STDOUT command.
 The directory must exist before the run is started.
 
 The default value of NameStdoutDir is "STDOUT".
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STDOUTDIR'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'OUTPUT CONTROL'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'name' => 'STDOUTDIR'},'name' => 'command'}],'attrib' => {'name' => 'OUTPUT CONTROL'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! SOLAR COORDINATE COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -699,7 +702,7 @@ interesting features are aligned with the primary axis.
 One common option is to have the planet in the -X,Z plane.
 Another option would be to move an active region into an appropriate plane.
 
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '360','name' => 'dLongitudeHgr','default' => '0','type' => 'real','min' => '-360'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'real','max' => '360','min' => '-360','name' => 'dLongitudeHgr'},'name' => 'parameter'},{'type' => 't','content' => '
 #ROTATEHGR
 145.6			dLongitudeHgr [deg]
 
@@ -707,7 +710,7 @@ Rotate the HGR system by dLongitudeHgr degrees around the Z axis.
 A negative value is interpreted as an offset angle which moves the
 planet into the -X, Z plane (so roughly towards the -X axis).
 Default value is 0, i.e. the true HGR system is used.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATEHGR'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '360','name' => 'dLongitudeHgi','default' => '0','type' => 'real','min' => '-360'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATEHGR'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '0','type' => 'real','max' => '360','min' => '-360','name' => 'dLongitudeHgi'},'name' => 'parameter'},{'type' => 't','content' => '
 #ROTATEHGI
 -1.0			dLongitudeHgi [deg]
 
@@ -716,7 +719,7 @@ dLongitudeHgr degrees around the Z axis.
 A negative value is interpreted as an offset angle which moves the
 planet into the -X, Z plane (so roughly towards the -X axis).
 Default value is 0, i.e. the true HGI system is used.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATEHGI'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'SOLAR COORDINATE COMMANDS'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATEHGI'},'name' => 'command'}],'attrib' => {'name' => 'SOLAR COORDINATE COMMANDS'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!! PLANET COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -736,9 +739,9 @@ The real planet parameters can be modified and simplified
 with the other planet commands listed in this subsection.
 These modifier commands cannot proceed the #PLANET command!
 
-','type' => 't'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'Earth','default' => 'T','value' => 'EARTH/Earth/earth'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'Saturn','value' => 'SATURN/Saturn/saturn'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'New'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'NamePlanet','type' => 'string'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'RadiusPlanet','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'MassPlanet','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'OmegaPlanet','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'TiltRotation','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'NONE'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'DIPOLE','default' => 'T'},'type' => 'e'}],'name' => 'parameter','attrib' => {'input' => 'select','name' => 'TypeBField','type' => 'string'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$NamePlanet eq \'New\''},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '180','name' => 'MagAxisThetaGeo','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '360','name' => 'MagAxisPhiGeo','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DipoleStrength','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'type' => 'e'},{'content' => [{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'Earth','value' => 'EARTH/Earth/earth'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'Saturn','value' => 'SATURN/Saturn/saturn'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'name' => 'New'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'string','name' => 'NamePlanet'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'RadiusPlanet'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'MassPlanet'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'OmegaPlanet'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'TiltRotation'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'name' => 'NONE'},'name' => 'option'},{'type' => 'e','content' => [],'attrib' => {'default' => 'T','name' => 'DIPOLE'},'name' => 'option'}],'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeBField'},'name' => 'parameter'}],'attrib' => {'expr' => '$NamePlanet eq \'New\''},'name' => 'if'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '180','min' => '0','name' => 'MagAxisThetaGeo'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '360','min' => '0','name' => 'MagAxisPhiGeo'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'name' => 'parameter'}],'attrib' => {'expr' => '$TyepBField eq \'DIPOLE\''},'name' => 'if'},{'type' => 'e','content' => [{'type' => 't','content' => '
 		PLANET should precede $PlanetCommand
-	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => 'not $PlanetCommand'},'type' => 'e'},{'content' => '
+	'}],'attrib' => {'expr' => 'not $PlanetCommand'},'name' => 'rule'},{'type' => 't','content' => '
 
 #PLANET
 New			NamePlanet (rest of parameters read for unknown planet)
@@ -769,7 +772,7 @@ Earth values approximately.
 
 The default value is NamePlanet="Earth", which is currently
 the only recognized planet.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'PLANET'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsRotAxisPrimary','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '180','name' => 'RotAxisTheta','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '360','name' => 'RotAxisPhi','type' => 'real','min' => '0'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$IsRotAxisPrimary'},'type' => 'e'},{'content' => [],'name' => 'set','attrib' => {'name' => 'PlanetCommand','value' => 'ROTATIONAXIS','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'PLANET'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsRotAxisPrimary'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '180','min' => '0','name' => 'RotAxisTheta'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '360','min' => '0','name' => 'RotAxisPhi'},'name' => 'parameter'}],'attrib' => {'expr' => '$IsRotAxisPrimary'},'name' => 'if'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'ROTATIONAXIS'},'name' => 'set'},{'type' => 't','content' => '
 
 #ROTATIONAXIS
 T			IsRotAxisPrimary (rest of parameters read if true)
@@ -784,7 +787,7 @@ and stored internally in radians.
 
 The default is to use the true rotational axis determined by the
 date and time given by #STARTTIME.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATIONAXIS'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseRotation','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'RotationPeriod','type' => 'real'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$UseRotation'},'type' => 'e'},{'content' => [],'name' => 'set','attrib' => {'name' => 'PlanetCommand','value' => 'ROTATION','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATIONAXIS'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseRotation'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','name' => 'RotationPeriod'},'name' => 'parameter'}],'attrib' => {'expr' => '$UseRotation'},'name' => 'if'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'ROTATION'},'name' => 'set'},{'type' => 't','content' => '
 
 #ROTATION
 T			UseRotation
@@ -799,7 +802,7 @@ so the RotationPeriod is not 24 hours for the Earth, but the
 length of the astronomical day.
 
 The default is to use rotation with the real rotation period of the planet.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATION'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'IsMagAxisPrimary','default' => 'T','type' => 'logical'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'max' => '180','name' => 'MagAxisTheta','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'max' => '360','name' => 'MagAxisPhi','type' => 'real','min' => '0'},'type' => 'e'}],'name' => 'if','attrib' => {'expr' => '$IsMagAxisPrimary'},'type' => 'e'},{'content' => [],'name' => 'set','attrib' => {'name' => 'PlanetCommand','value' => 'MAGNETICAXIS','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'ROTATION'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => 'T','type' => 'logical','name' => 'IsMagAxisPrimary'},'name' => 'parameter'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '180','min' => '0','name' => 'MagAxisTheta'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','max' => '360','min' => '0','name' => 'MagAxisPhi'},'name' => 'parameter'}],'attrib' => {'expr' => '$IsMagAxisPrimary'},'name' => 'if'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'MAGNETICAXIS'},'name' => 'set'},{'type' => 't','content' => '
 
 #MAGNETICAXIS
 T			IsMagAxisPrimary (rest of parameters read if true)
@@ -814,7 +817,7 @@ and stored internally in radians.
 
 The default is to use the true magnetic axis determined by the
 date and time given by #STARTTIME.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'MAGNETICAXIS'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DipoleStrength','type' => 'real'},'type' => 'e'},{'content' => [],'name' => 'set','attrib' => {'name' => 'PlanetCommand','value' => 'DIPOLE','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'MAGNETICAXIS'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','name' => 'DipoleStrength'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'DIPOLE'},'name' => 'set'},{'type' => 't','content' => '
 
 #DIPOLE
 -3.11e-4		DipoleStrength [Tesla]
@@ -826,7 +829,7 @@ The default value is the real dipole strength for the planet.
 For the Earth the default is taken to be -31100 nT.
 The sign is taken to be negative so that the magnetic axis can
 point northward as usual.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'DIPOLE'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtUpdateB0','default' => '0.0001','type' => 'real','min' => '-1'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'DIPOLE'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'default' => '0.0001','type' => 'real','min' => '-1','name' => 'DtUpdateB0'},'name' => 'parameter'},{'type' => 't','content' => '
 
 The DtUpdateB0 variable determines how often the position of
 the magnetic axis is recalculated. A negative value indicates that
@@ -839,7 +842,7 @@ to continuously update the magnetic field orientation.
 
 The default value is 0.0001, which means that the magnetic axis
 is continuously followed.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'UPDATEB0'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'set','attrib' => {'name' => 'PlanetCommand','value' => 'IDEALAXES','type' => 'string'},'type' => 'e'},{'content' => '
+'}],'attrib' => {'name' => 'UPDATEB0'},'name' => 'command'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'string','name' => 'PlanetCommand','value' => 'IDEALAXES'},'name' => 'set'},{'type' => 't','content' => '
 
 #IDEALAXES
 
@@ -856,14 +859,14 @@ T               IsRotAxisPrimary
 F               IsMagAxisPrimary
 
 but much shorter.
-','type' => 't'}],'name' => 'command','attrib' => {'if' => '$_IsFirstSession','name' => 'IDEALAXES'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'PLANET COMMANDS'},'type' => 'e'},{'content' => [{'content' => '
+'}],'attrib' => {'if' => '$_IsFirstSession','name' => 'IDEALAXES'},'name' => 'command'}],'attrib' => {'name' => 'PLANET COMMANDS'},'name' => 'commandgroup'},{'type' => 'e','content' => [{'type' => 't','content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! STUB COMPONENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 If SWMF is compiled with the interface in srcCON/Stubs,
 the stub components recognize only one command #TIMESTEP.
 
-','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtRun','type' => 'real','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtCpu','type' => 'real','min' => '0'},'type' => 'e'},{'content' => '
+'},{'type' => 'e','content' => [{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'DtRun'},'name' => 'parameter'},{'type' => 'e','content' => [],'attrib' => {'type' => 'real','min' => '0','name' => 'DtCpu'},'name' => 'parameter'},{'type' => 't','content' => '
 
 #TIMESTEP
 0.01       DtRun (the typical time step of the component)
@@ -877,4 +880,4 @@ Both variables are given in seconds.
 Of course it is not necessary to put in the actual CPU times.
 One can take the same fraction for all components to accelerate
 the run.
-','type' => 't'}],'name' => 'command','attrib' => {'name' => 'TIMESTEP'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'STUB COMPONENTS'},'type' => 'e'}],'name' => 'commandList','attrib' => {'name' => 'Control Module'},'type' => 'e'}];
+'}],'attrib' => {'name' => 'TIMESTEP'},'name' => 'command'}],'attrib' => {'name' => 'STUB COMPONENTS'},'name' => 'commandgroup'}],'attrib' => {'name' => 'Control Module'},'name' => 'commandList'}];

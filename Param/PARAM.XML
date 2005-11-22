@@ -449,7 +449,10 @@ The nByteReal variable gives the number of bytes in the default real variable.
 Possible values are 4 and 8. This command serves to check consistency with 
 binary data, such as binary restart files. 
 The #PRECISION command and the nByteReal variable
-are saved into the restart file. 
+are saved into the restart file. If the compiled precision differs from
+the one defined by nByteReal, the code stops with an error message
+in strict mode. If the strict mode is switched off with the #STRICT
+command, only a warning is printed.
 
 There is no default value. If the command is not used, the precision of 
 the real numbers is not checked.
