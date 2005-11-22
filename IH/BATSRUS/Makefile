@@ -22,8 +22,8 @@ rundir: check_src
 		mkdir restartIN restartOUT IO2; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
-		cp    ${GMDIR}/Scripts/IDL/pIDL .; \
-		cp    ${GMDIR}/Scripts/TEC/pTEC .
+		cp    ${DIR}/GM/BATSRUS/Scripts/IDL/pIDL .; \
+		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
