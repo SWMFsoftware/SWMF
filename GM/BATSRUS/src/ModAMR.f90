@@ -23,13 +23,13 @@ module ModAMR
        0,0,2,1,1,2,0,0, &     !Bot face   X edges
        1,2,0,0,0,0,2,1/       !Top face   X edges
   
- !The shift of the child corner with respect to the parent corner
+  !The shift of the child corner with respect to the parent corner
   integer, parameter, dimension(8,3):: iShiftChild_ID = reshape(&
-       !children           1     2     3     4    5     6     7     8 
-                        (/0,  nI/2, nI/2,   0,   0,  nI/2, nI/2,   0,   & !i
-                          0,    0,    0,    0, nJ/2, nJ/2, nJ/2, nJ/2,  & !j
-                        nK/2, nK/2,   0,    0,   0,    0,  nK/2, nK/2/),& !k
-                                                                      (/8,3/))
+       !1    2     3     4    5     6     7     8        child index
+       (/0,  nI/2, nI/2, 0,   0,    nI/2, nI/2, 0,     & !i shift
+       0,    0,    0,    0,   nJ/2, nJ/2, nJ/2, nJ/2,  & !j shift
+       nK/2, nK/2, 0,    0,   0,    0,    nK/2, nK/2/),& !k shift
+       (/8,3/))
   !\
   ! Local and global refinement/coarsening and neighbor parameters.
   !/
@@ -53,9 +53,14 @@ module ModAMR
   !\
   ! Refinement criteria parameters
   !/
-  integer :: nRefineCrit, maxTotalBlocks
-  real :: percentCoarsen, percentRefine
+  integer            :: nRefineCrit, MaxTotalBlocks
+  real               :: PercentCoarsen, PercentRefine
   character (len=20) :: RefineCrit(3),TypeTransient_I(3),InitialRefineType
+
+  ! Refine for criterion n only if it is above RefineCritMin_I(n)
+  real               :: RefineCritMin_I(3) = (/-1.0,-1.0,-1.0/)
+  ! Coarsen only if the rescaled (0.0 to 1.0) criterion is below CoarsenCritMax
+  real               :: CoarsenCritMax     = 2.0
 
   !\
   ! Refinement parameters.
@@ -63,7 +68,7 @@ module ModAMR
   integer :: initial_refine_levels, nRefineLevelIC, nRefineLevel
   integer :: dn_refine
   integer :: min_block_level, max_block_level
-  real :: min_cell_dx, max_cell_dx
+  real    :: min_cell_dx, max_cell_dx
   logical :: automatic_refinement, fix_body_level
 
 

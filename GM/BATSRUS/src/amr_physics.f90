@@ -12,7 +12,7 @@ subroutine amr_physics
   integer :: idir, i1,i2, nDesired, nRefined, nCoarsened, currentBlocks
   integer :: i,j,k,n, iBLK, nSort, nRefineMax, nCoarsenMax, Itmp
   integer :: iError, SortIndex(4)
-  real :: percentCoarsenMax=100.
+  real :: percentCoarsenMax=100.0
   real :: refine_criteria(4, nBLK), Rtmp
   logical :: unique, noNeighbor, stopRefinement, done
   logical :: oktest=.false., oktest_me=.false.
@@ -109,6 +109,8 @@ subroutine amr_physics
         BlockPtr%ptr => global_block_ptrs(SortB(n,i),SortP(n,i)+1)%ptr
         if(BlockPtr%ptr%LEV >= BlockPtr%ptr%LEVmax) CYCLE
 
+        ! Do not refine blocks with criterion below the minimum
+        if(SortC(n,i) < RefineCritMin_I(n)) CYCLE 
        
         unique=.true.
         do j=1,k
@@ -121,7 +123,6 @@ subroutine amr_physics
            ListToRefine(2,k) = SortP(n,i)
         else
         end if
-
 
         !check to see if next is symmetric point and add
         do i1=1,i-1
@@ -208,6 +209,9 @@ subroutine amr_physics
   do i=1,nSort
      if(SortIndex(1)>=i) CYCLE
      SortIndex(1)=max(i,SortIndex(1))
+
+     ! Do not coarsen blocks with criterion above maximum
+     if(SortC(n,i) > CoarsenCritMax) CYCLE
 
      if(i>nDesiredMax)then
         EXIT    !Stop if passing nDesiredMax
