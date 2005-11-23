@@ -1,7 +1,7 @@
 module ModUser
 
   use ModUserEmpty, ONLY:               &
-       user_read_inputs,                &
+!!!       user_read_inputs,                &
        user_init_session,                &
 !!!       user_set_ics,                    &
        user_initial_perturbation,       &
@@ -23,15 +23,42 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'WAVE REFLECTION, G. Toth'
 
-  real :: xLeft, xRight
+  real :: xLeft0 = 25.0, xRight0 = 30.0, cSoundX0 = 1.0
+  real :: DistanceMin = 1.0
+  real :: xLeft, xRight, cSoundX
 
 contains
+
+  subroutine user_read_inputs
+    use ModMain
+    use ModProcMH,    ONLY: iProc
+    use ModReadParam
+
+    character (len=100) :: NameCommand
+    !-------------------------------------------------------------------------
+
+    do
+       if(.not.read_line() ) EXIT
+       if(.not.read_command(NameCommand)) CYCLE
+       select case(NameCommand)
+       case("#DISTANCE")
+          call read_var('DistanceMin',DistanceMin)
+       case('#USERINPUTEND')
+          EXIT
+       case default
+          if(iProc==0) call stop_mpi( &
+               'read_inputs: unrecognized command: '//NameCommand)
+       end select
+    end do
+  end subroutine user_read_inputs
+
+  !=====================================================================
 
   subroutine user_set_ics
     use ModMain,     ONLY: nI, nJ, nK, globalBLK, nBlock
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, P_, Bx_, By_
-    use ModPhysics,  ONLY: ShockSlope, g
+    use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, g
 
     real :: Potential_G(-1:nI+2,-1:nJ+2)
     real, parameter :: pPerturb = 1.1
@@ -47,13 +74,10 @@ contains
 
     !  RETURN
 
-    xLeft  = 25.0
-    xRight = 30.0
-
     if(ShockSlope == 0.0)then
        ! Perturb pressure and return
-       where(     x_BLK(:,:,:,iBlock) >= xLeft &
-            .and. x_BLK(:,:,:,iBlock) <= xRight) &
+       where(     x_BLK(:,:,:,iBlock) >= xLeft0 &
+            .and. x_BLK(:,:,:,iBlock) <= xRight0) &
             State_VGB(P_,:,:,:,iBlock)=pPerturb*State_VGB(P_,:,:,:,iBlock)
        RETURN
     endif
@@ -71,8 +95,9 @@ contains
     SinSlope = sin(atan(ShockSlope))
 
     Potential_G = &
-         0.1*(CosSlope*Y_BLK(:,:,1,iBlock)-SinSlope*x_BLK(:,:,1,iBlock)) &
-         -100*min(0., &
+         Shock_Lstate(Bx_)* &
+         (CosSlope*Y_BLK(:,:,1,iBlock)-SinSlope*x_BLK(:,:,1,iBlock)) &
+         -Shock_Lstate(By_)*min(0., &
          CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock))
 
     ! B = curl A so Bx = dA_z/dy and By = -dAz/dx
@@ -99,8 +124,11 @@ contains
 
     ! Rotate pressure perturbation parameters
     CosSlope = cos(atan(ShockSlope))
-    xLeft  = xLeft /CosSlope
-    xRight = xRight/CosSlope
+    xLeft   = xLeft0 /CosSlope
+    xRight  = xRight0/CosSlope
+
+    ! Also fix the sound speed projected to the X axis
+    cSoundX = cSoundX0/CosSlope
 
     ! Perturb pressure
     where(     x_BLK(:,:,:,iBlock) >= xLeft -ShockSlope*Y_BLK(:,:,:,iBlock) &
@@ -113,10 +141,12 @@ contains
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
-    use ModSize, ONLY     : nI, nJ, nK
+    use ModSize,     ONLY : nI, nJ, nK
     use ModGeometry, ONLY : x_BLK, y_BLK, dx_BLK
-    use ModPhysics,  ONLY : ShockSlope
-    use ModMain, ONLY     : time_simulation
+    use ModPhysics,  ONLY : ShockSlope, Shock_Lstate
+    use ModMain,     ONLY : time_simulation
+    use ModAdvance,  ONLY : Ux_
+    use ModAMR,      ONLY : RefineCritMin_I, CoarsenCritMax
 
     ! Variables required by this user subroutine
     character (len=*),intent(in) :: TypeCriteria
@@ -124,29 +154,40 @@ contains
     real, intent(out)            :: UserCriteria
     logical ,intent(inout)       :: IsFound
 
-    real :: xCenter, yCenter, xShifted, x_I(5), Distance
+    real :: xCenter, yCenter, xShifted, Ux, x_I(5), Distance
     !------------------------------------------------------------------
     xCenter = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
     yCenter = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
     xShifted = xCenter + ShockSlope*yCenter
 
-    x_I(1) = xLeft  - 0.9*time_simulation
-    x_I(2) = xLeft  + 1.1*time_simulation
-    x_I(3) = xRight - 0.9*time_simulation
-    x_I(4) = xRight + 1.1*time_simulation
+    Ux = Shock_Lstate(Ux_)/cos(ShockSlope)
+
+    !write(*,*)'xLeft,xRight,Ux,cSoundX=',xLeft,xRight,Ux,cSoundX
+    !call stop_mpi('Debug')
+
+    ! Location of sound wave edges and the tangential discontinuity
+    x_I(1) = xLeft  + (Ux-cSoundX)*time_simulation
+    x_I(2) = xLeft  + (Ux+cSoundx)*time_simulation
+    x_I(3) = xRight + (Ux-cSoundX)*time_simulation
+    x_I(4) = xRight + (Ux+cSoundX)*time_simulation
     x_I(5) = -0.1*time_simulation
 
-    Distance = minval(abs(x_I - xShifted)) / dx_BLK(iBlock)
+    ! Reflect left going sound wave edges
+    if(x_I(1) < x_I(5)) x_I(1) = 2*x_I(5) - x_I(1)
+    if(x_I(3) < x_I(5)) x_I(3) = 2*x_I(5) - x_I(3)
 
-    if(Distance <= nI/2+2)then
-       ! Block cuts one of the discontinuities
-       ! The larger the cell size the more important to refine it
-       UserCriteria = 10000.0*dx_BLK(iBlock)
+    Distance = minval(abs(x_I - xShifted))
+
+    if(Distance <= nI/2*dx_BLK(iBlock) + DistanceMin)then
+       UserCriteria = 1.0
     else
-       ! The block does not cut through. The closer it is the more
-       ! useful a refinement is.
-       UserCriteria = 1./Distance
+       UserCriteria = 0.0
     endif
+
+    ! Do not refine blocks far from discontinuity (crit=0.0)
+    ! Do not coarsen blocks near discontinuity    (crit=1.0)
+    RefineCritMin_I = 0.5
+    CoarsenCritMax  = 0.5
 
     IsFound = .true.
 
