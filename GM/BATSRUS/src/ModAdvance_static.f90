@@ -80,7 +80,7 @@ Module ModAdvance
   !/
   real, dimension(Energy_,1:nI,1:nJ,1:nK)::Source_VC
   real, dimension(1:nI,1:nJ,1:nK) :: Theat0
-  real,dimension(0:nI+1,0:nJ+1,0:nK+1,nBLK):: DivB1_GB
+  real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK):: DivB1_GB
   real, dimension( 0:nI+1, 0:nJ+1, 0:nK+1) :: &
        gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
        gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
