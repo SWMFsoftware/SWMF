@@ -264,16 +264,14 @@ subroutine getsource(iBLK,w,s)
   real, intent(out)   :: s(nI,nJ,nK,nw)
 
   logical :: qUseDivbSource
-  logical :: qUseDivbDiffusion        !^CFG IF DIVBDIFFUSE
-  integer::iVar
+    integer::iVar
   !--------------------------------------------------------------------------
 
   call timing_start('getsource')
 
   qUseDivbSource   =UseDivbSource
-  qUseDivbDiffusion=UseDivbDiffusion  !^CFG IF DIVBDIFFUSE
   UseDivbSource    =.false.
-  UseDivbDiffusion =.false.           !^CFG IF DIVBDIFFUSE
+  
 
   call impl2expl(w,iBLK)
   globalBLK = iBLK
@@ -289,8 +287,6 @@ subroutine getsource(iBLK,w,s)
   s(:,:,:,E_)    =Source_VC(Energy_,1:nI,1:nJ,1:nK)
 
   UseDivbSource   =qUseDivbSource
-  UseDivbDiffusion=qUseDivbDiffusion  !^CFG IF DIVBDIFFUSE
-
   call timing_stop('getsource')
 
 end subroutine getsource

@@ -67,82 +67,7 @@ subroutine calc_sources
         end do; end do; end do
      end if                                      !^CFG END DISSFLUX
   end if
-  ! No source terms should be calculated before DivbDiffusion (except SP)!
 
-
-
-  if(UseDivbDiffusion)then               !^CFG IF DIVBDIFFUSE BEGIN
-     ! Apply Timur Linde's diffusive source terms
-     call calc_divB 
-     ! S[B]=coef_i*grad(div B)), where coef_i=divb_diffcoeff*(dx_i)^2/dt       
-     Source_VC(Bx_,:,:,:) =(dx_BLK(globalBLK)*divb_diffcoeff*0.5)*&
-          (DivB1_GB(2:nI+1,1:nJ  ,1:nK,globalBLK  )-&
-          DivB1_GB(0:nI-1,1:nJ  ,1:nK,globalBLK  ))
-
-     Source_VC(By_,:,:,:) =(dy_BLK(globalBLK)*divb_diffcoeff*0.5)*&
-          (DivB1_GB(1:nI  ,2:nJ+1,1:nK,globalBLK  )-&
-          DivB1_GB(1:nI  ,0:nJ-1,1:nK,globalBLK  ))
-
-     Source_VC(Bz_,:,:,:) =(dz_BLK(globalBLK)*divb_diffcoeff*0.5)*&
-          (DivB1_GB(1:nI  ,1:nJ  ,2:nK+1,globalBLK)-&
-          DivB1_GB(1:nI  ,1:nJ  ,0:nK-1,globalBLK))
-
-
-     ! Set diffusive source to zero at far field BC-s
-     if(any(neiLEV(:,globalBLK)==NOBLK))then
-        if(neiLeast(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,1,:,:)=cZero
-        endif
-        if(neiLwest(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,nI,:,:)=cZero
-        endif
-        if(neiLsouth(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,:,1,:)=cZero
-        endif
-        if(neiLnorth(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,:,nJ,:)=0.
-        endif
-        if(neiLbot(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,:,:,1)=cZero
-        endif
-        if(neiLtop(globalBLK)==NOBLK)then
-           Source_VC(Bx_:Bz_,:,:,nK)=cZero
-        endif
-     end if
-
-     if(body_BLK(globalBLK))then
-        dr=sqrt(dx_BLK(globalBLK)**2+dy_BLK(globalBLK)**2+dz_BLK(globalBLK)**2)
-        where(R_BLK(1:nI,1:nJ,1:nK,globalBLK)<Rbody+dr)
-           Source_VC(Bx_,:,:,:)=0.0
-           Source_VC(By_,:,:,:)=0.0
-           Source_VC(Bz_,:,:,:)=0.0
-        end where
-        !^CFG IF SECONDBODY BEGIN
-        if(UseBody2)then
-           where(R2_BLK(1:nI,1:nJ,1:nK,globalBLK)<RBody2+dr)
-              Source_VC(Bx_,:,:,:)=0.0
-              Source_VC(By_,:,:,:)=0.0
-              Source_VC(Bz_,:,:,:)=0.0
-           end where
-        end if
-        !^CFG END SECONDBODY
-     endif
-
-     ! Divide by dt where possible
-
-     where(time_BLK(1:nI,1:nJ,1:nK,globalBLK)>0.)
-        Source_VC(Bx_,:,:,:)=Source_VC(Bx_,:,:,:)/cfl/time_BLK(1:nI,1:nJ,1:nK,globalBLK)
-        Source_VC(By_,:,:,:)=Source_VC(By_,:,:,:)/cfl/time_BLK(1:nI,1:nJ,1:nK,globalBLK)
-        Source_VC(Bz_,:,:,:)=Source_VC(Bz_,:,:,:)/cfl/time_BLK(1:nI,1:nJ,1:nK,globalBLK)
-     endwhere
-
-     ! S[E] = B.(coef_i.grad(div B)))
-
-     Source_VC(Energy_,:,:,:) = &
-          Source_VC(Bx_,:,:,:)*State_VGB(Bx_,1:nI,1:nJ,1:nK,globalBLK)+ &
-          Source_VC(By_,:,:,:)*State_VGB(By_,1:nI,1:nJ,1:nK,globalBLK)+ &
-          Source_VC(Bz_,:,:,:)*State_VGB(Bz_,1:nI,1:nJ,1:nK,globalBLK)
-  end if                                     !^CFG END DIVBDIFFUSE
 
   if(UseDivbSource)then
 
@@ -351,48 +276,34 @@ subroutine calc_divb
   !\
   ! Calculate div B for a block and store result into SdivB
   !/
-  if(UseDivBDiffusion)then           !^CFG IF DIVBDIFFUSE BEGIN 
-     ! Compute divB using central differencing because
-     ! SdivB is needed in the first layer of ghost cells 
-     !for diffusive div B control.
-
-     DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,globalBLK) = cHalf*(&
-          (State_VGB(Bx_, 1:nI+2, 0:nJ+1, 0:nK+1,globalBLK)- &
-          State_VGB(Bx_,-1:nI  , 0:nJ+1, 0:nK+1,globalBLK))/dx_BLK(globalBLK)+&
-          (State_VGB(By_, 0:nI+1, 1:nJ+2, 0:nK+1,globalBLK)- &
-          State_VGB(By_, 0:nI+1,-1:nJ  , 0:nK+1,globalBLK))/dy_BLK(globalBLK)+&
-          (State_VGB(Bz_, 0:nI+1, 0:nJ+1, 1:nK+2,globalBLK)- &
-          State_VGB(Bz_, 0:nI+1, 0:nJ+1,-1:nK  ,globalBLK))/dz_BLK(globalBLK))
-  else                               !^CFG END DIVBDIFFUSE
-     if(index(test_string,'DIVB_CD')>0)then
-        ! Use central differencing if test string contains DIVB_CD
-        DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = cHalf*(&
-             (State_VGB(Bx_, 2:nI+1, 1:nJ  , 1:nK  ,globalBLK)- &
-             State_VGB(Bx_, 0:nI-1, 1:nJ  , 1:nK  ,globalBLK))/dx_BLK(globalBLK)+&
-             (State_VGB(By_, 1:nI  , 2:nJ+1, 1:nK  ,globalBLK)- &
-             State_VGB(By_, 1:nI  , 0:nJ-1, 1:nK  ,globalBLK))/dy_BLK(globalBLK)+&
-             (State_VGB(Bz_, 1:nI  , 1:nJ  , 2:nK+1,globalBLK)- &
-             State_VGB(Bz_, 1:nI  , 1:nJ  , 0:nK-1,globalBLK))/dz_BLK(globalBLK))
-     else
-        ! Compute divB using averaged and conservatively corrected 
-        ! left and right values
-
-        DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = &
-             cHalf * vInv_CB(:,:,:,globalBLK) *( &
-             fAx_BLK(globalBLK)*((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
-             RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
-             (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &
-             RightState_VX(Bx_,1:nI,1:nJ,1:nK)))+  &
-             fAy_BLK(globalBLK)*((LeftState_VY(By_,1:nI,2:nJ+1,1:nK)+    &
-             RightState_VY(By_,1:nI,2:nJ+1,1:nK))-   &
-             (LeftState_VY(By_,1:nI,1:nJ,1:nK)+    &
-             RightState_VY(By_,1:nI,1:nJ,1:nK)))+  &
-             fAz_BLK(globalBLK)*((LeftState_VZ(Bz_,1:nI,1:nJ,2:nK+1)+    &
-             RightState_VZ(Bz_,1:nI,1:nJ,2:nK+1))-   &
-             (LeftState_VZ(Bz_,1:nI,1:nJ,1:nK)+    &
-             RightState_VZ(Bz_,1:nI,1:nJ,1:nK))))
-     endif
-  end if   !^CFG IF DIVBDIFFUSE
+  if(index(test_string,'DIVB_CD')>0)then
+     ! Use central differencing if test string contains DIVB_CD
+     DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = cHalf*(&
+          (State_VGB(Bx_, 2:nI+1, 1:nJ  , 1:nK  ,globalBLK)- &
+          State_VGB(Bx_, 0:nI-1, 1:nJ  , 1:nK  ,globalBLK))/dx_BLK(globalBLK)+&
+          (State_VGB(By_, 1:nI  , 2:nJ+1, 1:nK  ,globalBLK)- &
+          State_VGB(By_, 1:nI  , 0:nJ-1, 1:nK  ,globalBLK))/dy_BLK(globalBLK)+&
+          (State_VGB(Bz_, 1:nI  , 1:nJ  , 2:nK+1,globalBLK)- &
+          State_VGB(Bz_, 1:nI  , 1:nJ  , 0:nK-1,globalBLK))/dz_BLK(globalBLK))
+  else
+     ! Compute divB using averaged and conservatively corrected 
+     ! left and right values
+     
+     DivB1_GB(1:nI,1:nJ,1:nK,globalBLK) = &
+          cHalf * vInv_CB(:,:,:,globalBLK) *( &
+          fAx_BLK(globalBLK)*((LeftState_VX(Bx_,2:nI+1,1:nJ,1:nK)+    &
+          RightState_VX(Bx_,2:nI+1,1:nJ,1:nK))-   &
+          (LeftState_VX(Bx_,1:nI,1:nJ,1:nK)+    &
+          RightState_VX(Bx_,1:nI,1:nJ,1:nK)))+  &
+          fAy_BLK(globalBLK)*((LeftState_VY(By_,1:nI,2:nJ+1,1:nK)+    &
+          RightState_VY(By_,1:nI,2:nJ+1,1:nK))-   &
+          (LeftState_VY(By_,1:nI,1:nJ,1:nK)+    &
+          RightState_VY(By_,1:nI,1:nJ,1:nK)))+  &
+          fAz_BLK(globalBLK)*((LeftState_VZ(Bz_,1:nI,1:nJ,2:nK+1)+    &
+          RightState_VZ(Bz_,1:nI,1:nJ,2:nK+1))-   &
+          (LeftState_VZ(Bz_,1:nI,1:nJ,1:nK)+    &
+          RightState_VZ(Bz_,1:nI,1:nJ,1:nK))))
+  endif
 end subroutine calc_divb
 
 !==============================================================================

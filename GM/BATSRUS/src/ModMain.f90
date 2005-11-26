@@ -213,11 +213,7 @@ Module ModMain
   logical :: UseConstrainB    = .false. !^CFG IF CONSTRAINB
   logical :: UseB0Source
 
-  !^CFG IF DIVBDIFFUSE BEGIN
-  ! Default value for unsplit div B diffusion coefficient.
-  real :: Divb_DiffCoeff=1.0/6.0
-  !^CFG END DIVBDIFFUSE
-
+  
   !\
   ! More numerical scheme parameters
   !/

@@ -1120,8 +1120,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('MaxMatvec'       ,proj_matvecmax)
         ! Make sure that DivbMax is recalculated
         DivbMax = -1.0                                !^CFG END PROJECTION
-     case("#DIVBDIFFUSION")                           !^CFG IF DIVBDIFFUSE
-        call read_var('DivbDiffCoeff',divb_diffcoeff)!^CFG IF DIVBDIFFUSE
      case("#CORRECTP")                                !^CFG IF PROJECTION BEGIN
         call read_var('pRatioLow',Pratio_lo)
         call read_var('pRatioHigh',Pratio_hi)
@@ -2392,18 +2390,7 @@ contains
        optimize_message_pass = 'all'
     endif                                            !^CFG END CONSTRAINB
 
-    !^CFG IF DIVBDIFFUSE BEGIN    
-    if (UseDivbDiffusion .and. index(optimize_message_pass,'opt') > 0) then
-       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
-          write(*,'(a)')NameSub//&
-               ' WARNING: div B diffusion does not work with'// &
-               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting optimize_message_pass = all'
-       end if
-       optimize_message_pass = 'all'
-    endif
-    !^CFG END DIVBDIFFUSE
+    
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &

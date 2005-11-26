@@ -8,7 +8,7 @@ subroutine exchange_messages
        time_simulation,nOrder,prolong_order,optimize_message_pass
   use ModVarIndexes
   use ModAdvance, ONLY : &
-       State_VGB
+       State_VGB,divB1_GB
   use ModInterface
   use ModParallel, ONLY : UsePlotMessageOptions
   use ModGeometry, ONLY : far_field_BCs_BLK            
@@ -29,7 +29,7 @@ subroutine exchange_messages
 
   ! For first order, message pass cells can pass only one layer of ghost cells.
   DoOneLayer = nOrder==1
-  if(UseDivbDiffusion)DoOneLayer=.false.     !^CFG IF DIVBDIFFUSE
+  
 
   DoRestrictFace = prolong_order==1
   if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
@@ -60,7 +60,7 @@ subroutine exchange_messages
      ! Don't do the monotone restriction
      ! Don't send just one layer
      call message_pass_cells_8state(.false.,.false.,.false.)
-
+     call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
@@ -113,7 +113,6 @@ subroutine time_message_passing
   use ModMain, ONLY : nI,nJ,nK,gcn,globalBLK,nBlockMax,unusedBLK, &
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
-       UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
        time_simulation,nOrder,prolong_order,optimize_message_pass
   use ModVarIndexes
   use ModAdvance, ONLY : &
@@ -130,7 +129,6 @@ subroutine time_message_passing
 
   ! For first order, message pass cells can pass only one layer of ghost cells.
   DoOneLayer = nOrder==1
-  if(UseDivbDiffusion)DoOneLayer=.false.     !^CFG IF DIVBDIFFUSE
 
   DoRestrictFace = prolong_order==1
   if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
