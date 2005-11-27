@@ -138,6 +138,11 @@ public:
     }
   };
 
+  template <class T>
+  void add(T t) {
+    add(&t,1);
+  };
+
   void clear() {
     crc_accum=0;
   };
