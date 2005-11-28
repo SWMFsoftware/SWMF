@@ -3,41 +3,49 @@
 # Convert or test the endianness of a VAC binary/real*4 data file
 # Also convert from Cray format (8 byte integer)
 
-undef $/;
-
 # Store input flags in long variable names
-$Test=$t;
-$Convert=$c;
-$Inplace=$i;
-$Keep=$k;
-$tocray=$C;
-$Quiet=$q;
-$NARG = @ARGV;
+my $Test=$t;
+my $Convert=$c;
+my $Inplace=$i;
+my $Keep=$k;
+my $tocray=$C;
+my $Quiet=$q;
 
-$zero=pack('L',0);
+### use strict;
 
-if($Convert && $Inplace){
+my $nArg = @ARGV;
+
+my $zero=pack('L',0);
+
+undef $/; # ignore end of line
+
+if($Convert and $Inplace){
     print STDERR "You cannot use the -i and -c flags at the same time!\n\n";
-    &helpmsg;
+    &print_help;
 }
 
-&testmachine;
+# Global variables
+my $M=79;                         # Machine value
+my $B=unpack 'N', pack('L',79);   # Big endian value
+my $L=&convint($B);               # Little endian value
+my $machine=&test_machine;        # endianness of this computer
 
 if($Convert){
-    unless($NARG==2){
+    unless($nArg == 2){
 	print STDERR "The -c flag requires two filenames!\n\n";
-	&helpmsg; 
+	&print_help; 
     }
     &converttofile($ARGV[1]) if &readhead($ARGV[0]);
-}elsif($Test || $Inplace){
-    unless($NARG>0){
+}elsif($Test or $Inplace){
+    if($Inplace and $nArg == 0){
 	print STDERR "Provide at least one file name!\n\n";
-	&helpmsg; 
+	&print_help; 
     }
+    my $file;
     while($file=shift(@ARGV)){
-	if(&readhead($file) && $Inplace){
+	if(&readhead($file) and $Inplace){
 	    if(&converttofile("$file~")){
-		rename("$file~",$file) ||
+		rename("$file~",$file) or
 		    die "Could not move $file~ to $file: $!\n";
 		print "\nMoved $file~ to $file\n\n" unless $Quiet;
 	    }
@@ -45,48 +53,65 @@ if($Convert){
     }
 }else{
     if(@ARGV){print STDERR "Use one of the -t -i or -c flags!\n\n";}
-    &helpmsg; 
+    &print_help; 
 }
 
 print "\nScript endian finished running\n\n" 
-   if $NARG>1 && !$Quiet && !$Convert;
+   if $nArg > 1 and not $Quiet and not $Convert;
 
 exit;
 
 ##############################################################################
-sub helpmsg{
+sub print_help{
 
-print STDERR <<HELPMSG;
-Usage: endian [-q] [-t] [-k] [-C] -[c|i] filename1 [filename2...]
+print "
+Purpose:
 
-TEST the endianness (and Cray) format of one or more files:
-   FixEndian.pl -t data/example22.out
+   Show or convert the endianness of binary VAC type plot files 
+   and/or convert from 4 to 8 byte integers.
+
+Usage: 
+
+   FixEndian.pl [-q] [-t] [-k] [-C] -[c|i] filename1 [filename2...]
+
+-t     Test and show endianness of the machine and listed file(s) if any
+       Also show header information for the file(s)
+
+-k     Keep endianness the same (but convert integers)
+       Default is to convert the endianness
+
+-C     Convert integers to Cray format (8-byte)
+
+-c     Convert filename1 to filename2
+       Cannot be used with the -i switch
+
+-i     Convert file(s) in-place (uses FILENAME~ as a temporary file)
+       Cannot be used with the -c switch
+
+Examples:
+
+Test the endianness (and Cray format) of multiple files:
+
    FixEndian.pl -t data/*.out
-CONVERT a file to another file with opposite endianness
-(note that the output file will be overwritten!):
+
+Convert a file to another file with opposite endianness:
+
    FixEndian.pl -c data/oldfilename data/newfilename
-IN-PLACE conversion of the endiannes for one or more files
-(FILENAME~ will be used for temporary storage):
-   FixEndian.pl -i newdata/*.out
-CRAY format (8-byte integers) for the output file:
-   FixEndian.pl -C -c data/oldfilename data/crayfilename
-KEEP the endiannes if only converting between Cray and normal integer formats: 
-   FixEndian.pl -k -c data/crayfilename data/newfilename
-   FixEndian.pl -k -C -i craydata/*.ini
-QUIET mode, e.g. to convert many files in place:
-   FixEndian.pl -q -i data/*.out
 
-HELPMSG
+In-place conversion of the endiannes for multiple files in quiet mode:
 
+   FixEndian.pl -i -q newdata/*.out
+
+Keep the endiannes and convert between Cray and normal integer formats: 
+
+   FixEndian.pl -k -C -c data/oldfilename data/crayfilename
+   FixEndian.pl -k -c    data/crayfilename data/newfilename
+";
 exit;
 }
 
 ##############################################################################
-sub testmachine{
-
-    $M=79;                         # Machine value
-    $B=unpack 'N', pack('L',79);   # Big endian value
-    $L=&convint($B);               # Little endian value
+sub test_machine{
 
     if($M == $B){
 	$machine='big';
@@ -96,158 +121,165 @@ sub testmachine{
 	die "Machine is neither little nor big endian type!\n";
     }
     print "\nThis is a $machine endian machine.\n\n" unless $Quiet;
+    return $machine;
 
 }
 
 ##############################################################################
 sub readhead{
 
-local($file)=@_;
+    my $file = shift;
 
-open(FROM,"$file") || die "Could not open $file: $!\n";
+    open(FROM,"$file") or die "Could not open $file: $!\n";
 
-if(-T $file){
-    print "$file seems to be an ASCII file!\n"; return(0);
-}
+    if(-T $file){
+	print "$file seems to be an ASCII file!\n"; return(0);
+    }
 
-if(200 > -s $file){
-   print "$file is too small to be a binary VAC data file!\n";
-   return(0);
-}
+    if(200 > -s $file){
+	print "$file is too small to be a binary VAC data file!\n";
+	return(0);
+    }
 
-read FROM, $line1, 91;  # read len1,headline,len1,len2
+###    my $line1;
+    read FROM, $line1, 91;  # read len1,headline,len1,len2
 
-($l1,$headline,$l1,$l2)=unpack 'La79LL', $line1;
+###    my $l1;
+###    my $headline;
+###    my $l2;
+    ($l1,$headline,$l1,$l2)=unpack 'La79LL', $line1;
 
-if($l1 == $B){
-   $from='big';    $to= $Keep ? 'big' : 'little';
-}elsif($l1 == $L){
-   $from='little'; $to= $Keep ? 'little': 'big';
-}else{
-    print "$file is not a VAC binary data file in UNIX F77 format!\n";
-    return(0);
-}
+    if($l1 == $B){
+	$from='big';    $to= $Keep ? 'big' : 'little';
+    }elsif($l1 == $L){
+	$from='little'; $to= $Keep ? 'little': 'big';
+    }else{
+	print "$file is not a VAC binary data file in UNIX F77 format!\n";
+	return(0);
+    }
 
-$convertfrom=$from ne $machine;
-$convertto  =$to   ne $machine;
+    $convertfrom = $from ne $machine;
+    $convertto   = $to   ne $machine;
 
-$len1=pack("L",79);
-$len1=&convstr($len1) if $convertto;        # length of line1 for output
+    $len1=pack("L",79);
+    $len1=&convstr($len1) if $convertto;        # length of line1 for output
 
-$ll2= $convertfrom ? &convint($l2) : $l2;   # length of line2 from input
+    $ll2= $convertfrom ? &convint($l2) : $l2;   # length of line2 from input
 
-# Decide file type based on the length of the 2nd input line
-if($ll2 == 24){
-    $precision="double"; $r='d'; $rbyte=8; $ibyte=4; $double=1; $cray=0
-}elsif($ll2 == 20){
-    $precision="single"; $r='f'; $rbyte=4; $ibyte=4; $double=0; $cray=0;
-}elsif($ll2 == 40){
-    $precision="double"; $r='d'; $rbyte=8; $ibyte=8; $double=1; $cray=1;
-    $type="Cray ";
-}elsif($ll2 == 36){
-    $precision="single"; $r='f'; $rbyte=4; $ibyte=8; $double=0; $cray=1;
-    $type="Cray ";
-}else{
-    print "$file is not a VAC binary data file in UNIX F77 format!\n";
-    return(0);
-}
+    # Decide file type based on the length of the 2nd input line
+    if($ll2 == 24){
+	$precision="double"; $r='d'; $rbyte=8; $ibyte=4; $double=1; $cray=0;
+    }elsif($ll2 == 20){
+	$precision="single"; $r='f'; $rbyte=4; $ibyte=4; $double=0; $cray=0;
+    }elsif($ll2 == 40){
+	$precision="double"; $r='d'; $rbyte=8; $ibyte=8; $double=1; $cray=1;
+	$type="Cray ";
+    }elsif($ll2 == 36){
+	$precision="single"; $r='f'; $rbyte=4; $ibyte=8; $double=0; $cray=1;
+	$type="Cray ";
+    }else{
+	print "$file is not a VAC binary data file in UNIX F77 format!\n";
+	return(0);
+    }
 
-if($Keep && ($cray == $tocray)){
-    if($cray){print "$file is already in Cray format,\n"}
-    else{     print "$file is not in Cray format,\n"}
-    print "thus -k option means no transformation at all!\n";
-    return(0);
-}
+    if($Keep and ($cray == $tocray)){
+	if($cray){print "$file is already in Cray format,\n"}
+	else{     print "$file is not in Cray format,\n"}
+	print "thus -k option means no transformation at all!\n";
+	return(0);
+    }
 
-$ibyteout= $tocray ? 8 : 4;
-$typeout=  $tocray ? "Cray " : "";
+    $ibyteout= $tocray ? 8 : 4;
+    $typeout=  $tocray ? "Cray " : "";
 
-read FROM, $line2, $ll2;           # read line2 
-read FROM, $l2, 4;                 # read closing length
+###    my $line2;
+    read FROM, $line2, $ll2;           # read line2 
+    read FROM, $l2, 4;                 # read closing length
 
-$len2=pack("L",4*$ibyteout+$rbyte);# calculate length of line 2 for output
-$len2=&convstr($len2) if $convertto;
+    $len2=pack("L",4*$ibyteout+$rbyte); # calculate length of line 2 for output
+    $len2=&convstr($len2) if $convertto;
 
-&line2fromcray if $cray;           # Remove extra bytes for Cray input file
-$line2conv=&convstr($line2);       # Convert endiannes
-&swaptbytes if $double;            # Swap bytes of time variable "T" if needed
-$line2_= $Keep ? $line2 : $line2conv; # Line 2 for output
-&line2tocray if $tocray;           # Insert extra bytes for Cray output file
+    &line2fromcray if $cray;        # Remove extra bytes for Cray input file
+    $line2conv=&convstr($line2);    # Convert endiannes
+    &swaptbytes if $double;         # Swap bytes of time variable "T" if needed
+    $line2_= $Keep ? $line2 : $line2conv; # Line 2 for output
+    &line2tocray if $tocray;        # Insert extra bytes for Cray output file
 
-# Read values from line 2
+    # Read values from line 2
 
-($it,$t,$ndimini,$neqpar,$nw)=unpack "l${r}lll",
+    ($it,$t,$ndimini,$neqpar,$nw)=unpack "l${r}lll",
     $convertfrom ? $line2conv : $line2; 
 
-$ndim=abs($ndimini);
+    $ndim=abs($ndimini);
 
-$ll3=$ibyte*$ndim;
-read FROM, $l3, 4;                 # len3
-read FROM, $line3, $ll3;           # line3: n1, n2..
-read FROM, $l3, 4;                 # len3
+    $ll3=$ibyte*$ndim;
+    read FROM, $l3, 4;                 # len3
+    read FROM, $line3, $ll3;           # line3: n1, n2..
+    read FROM, $l3, 4;                 # len3
 
-$len3=pack("L",$ibyteout*$ndim);   # calculate length of line 3 for output
-$len3=&convstr($len3) if $convertto;
+    $len3=pack("L",$ibyteout*$ndim);   # calculate length of line 3 for output
+    $len3=&convstr($len3) if $convertto;
 
-&line3fromcray if $cray;                              # remove extra Cray bytes
-$line3conv=&convstr($line3);                          # convert endiannes
-$line3_= $Keep ? $line3 : $line3conv;                 # line 3 for output
-&line3tocray if $tocray;                              # insert extra Cray bytes
+    &line3fromcray if $cray;              # remove extra Cray bytes
+    $line3conv=&convstr($line3);          # convert endiannes
+    $line3_= $Keep ? $line3 : $line3conv; # line 3 for output
+    &line3tocray if $tocray;              # insert extra Cray bytes
 
-@nx= unpack "l*", $convertfrom ? $line3conv : $line3; # Read nx from line 3
-$nxs=1; foreach $nx (@nx){$nxs*=$nx};
+    @nx= unpack "l*", $convertfrom ? $line3conv : $line3; # Read nx from line 3
+    $nxs=1; foreach $nx (@nx){$nxs*=$nx};
 
-$ll4=$rbyte*$neqpar;               # length of line4 from input
-read FROM, $l4, 4;
-read FROM, $line4, $ll4;           # line4: eqpar
-read FROM, $l4, 4;
+    $ll4=$rbyte*$neqpar;               # length of line4 from input
+    read FROM, $l4, 4;
+    read FROM, $line4, $ll4;           # line4: eqpar
+    read FROM, $l4, 4;
 
-$len4=pack("L",$ll4);    # calculate length of line 4 for output
-$len4=&convstr($len4) if $convertto;
+    $len4=pack("L",$ll4);    # calculate length of line 4 for output
+    $len4=&convstr($len4) if $convertto;
 
-$line4conv=$double ? &convdble($line4) : &convstr($line4); # convert endianness
-$line4_= $Keep ? $line4 : $line4conv;                      # line 4 for output
-@eqpar= unpack "$r*", $convertfrom ? $line4conv : $line4;  # read eqpar
+    $line4conv =
+	$double ? &convdble($line4) : &convstr($line4); # convert endianness
+    $line4_= $Keep ? $line4 : $line4conv;               # line 4 for output
+    @eqpar= unpack "$r*", $convertfrom ? $line4conv : $line4;  # read eqpar
 
-read FROM, $l5, 4;
-read FROM, $varnames, 79;                   # line5: varnames
-read FROM, $l5, 4;
+    read FROM, $l5, 4;
+    read FROM, $varnames, 79;                   # line5: varnames
+    read FROM, $l5, 4;
 
-$len5=$len1;                                # length of line 5 
+    $len5=$len1;                                # length of line 5 
 
-$llx=$rbyte*$nxs*$ndim;                      # length of the X array
-$lenx=pack("L",$llx);                        # length of X for output
-$lenx=&convstr($lenx) if $convertto;
+    $llx=$rbyte*$nxs*$ndim;                      # length of the X array
+    $lenx=pack("L",$llx);                        # length of X for output
+    $lenx=&convstr($lenx) if $convertto;
 
-$llw=$rbyte*$nxs;                            # length of W(*,*..,iw)
-$lenw=pack("L",$llw);                        # length of W for output
-$lenw=&convstr($lenw) if $convertto;
+    $llw=$rbyte*$nxs;                            # length of W(*,*..,iw)
+    $lenw=pack("L",$llw);                        # length of W for output
+    $lenw=&convstr($lenw) if $convertto;
 
-print "$file is a $from endian $type$precision precision file.\n"
-   if $Test || !$Quiet;
+    print "$file is a $from endian $type$precision precision file.\n"
+	if $Test or not $Quiet;
 
-unless($Quiet){
-    print "\nheadline=",substr($headline,0,70),"\n";
-    print "it=$it t=$t ndim=$ndimini neqpar=$neqpar nw=$nw\n";
-    print "nx=",join(',',@nx),"\n";
-    print "eqpar=",join(',',@eqpar),"\n";
-    print "names=",substr($varnames,0,70),"\n\n";
+    unless($Quiet){
+	print "\nheadline=",substr($headline,0,70),"\n";
+	print "it=$it t=$t ndim=$ndimini neqpar=$neqpar nw=$nw\n";
+	print "nx=",join(',',@nx),"\n";
+	print "eqpar=",join(',',@eqpar),"\n";
+	print "names=",substr($varnames,0,70),"\n\n";
 
-    $pictsize=(6+$nw)*8+2*79+(4+$ndim)*$ibyte+
-	(1+$neqpar+$nxs*($ndim+$nw))*$rbyte;
-    $filesize= -s $file;
-    print "file=$filesize bytes / snapshot=$pictsize bytes = ",
-          $filesize/$pictsize," snapshot(s)\n\n";
-}
+	$pictsize=(6+$nw)*8+2*79+(4+$ndim)*$ibyte+
+	    (1+$neqpar+$nxs*($ndim+$nw))*$rbyte;
+	$filesize= -s $file;
+	print "file=$filesize bytes / snapshot=$pictsize bytes = ",
+	$filesize/$pictsize," snapshot(s)\n\n";
+    }
 
-return(1);
+    return(1);
 }
 
 ##############################################################################
 sub converttofile{
 
     local($file)=$_[0];
-    open(TO,">$file") || print STDERR "Could not open $file: $!\n", return(0);
+    open(TO,">$file") or print STDERR "Could not open $file: $!\n", return(0);
 
     print "$file will be a $to endian $typeout$precision precision file...\n\n"
 	    unless $Quiet;
@@ -264,11 +296,11 @@ sub converttofile{
 ##############################################################################
 sub printhead{
 
-print TO   $len1,$headline,$len1;
-print TO   $len2,$line2_,$len2;
-print TO   $len3,$line3_,$len3;
-print TO   $len4,$line4_,$len4;
-print TO   $len5,$varnames,$len5;
+    print TO   $len1,$headline,$len1;
+    print TO   $len2,$line2_,$len2;
+    print TO   $len3,$line3_,$len3;
+    print TO   $len4,$line4_,$len4;
+    print TO   $len5,$varnames,$len5;
 
 }
 
@@ -276,25 +308,36 @@ print TO   $len5,$varnames,$len5;
 sub dobody{
 
     read FROM, $lx, 4;
+    $llx = unpack("L",$lx);
+    $llx = &convint($llx) if $convertfrom;
+
     read FROM, $xx, $llx;             # read x(*,*..)
     read FROM, $lx, 4;
-    print TO   $lenx, 
-           $Keep ? $xx : ($double ? &convdble($xx) : &convstr($xx)), $lenx;
+    $lenx=pack("L",$llx);
+    $lenx = &convstr($lenx) if $convertto;
+    print TO $lenx;
+    print TO $Keep ? $xx : ($double ? &convdble($xx) : &convstr($xx));
+    print TO $lenx;
 
     for($iw=0; $iw<$nw; $iw++){
 	read FROM, $lw, 4;
+	$llw = unpack("L",$lw);
+	$llw = &convint($llw) if $convertfrom;
+
 	read FROM, $ww, $llw;         # read len,w(*,*..,iw),len
 	read FROM, $lw, 4;
-	print TO   $lenw, 
-	   $Keep ? $ww : ($double ? &convdble($ww): &convstr($ww)), $lenw;
+	$lenw = pack("L",$llw);
+	$lenw = &convstr($lenw) if $convertto;
+	print TO $lenw;
+	print TO $Keep ? $ww : ($double ? &convdble($ww): &convstr($ww));
+	print TO $lenw;
     }
-
 }
 
 ##############################################################################
 sub dorest{
 
-# Read rest of snapshots using the header info
+    # Read rest of snapshots using the header info
 
     $ipict=0;
     print "Converted snapshot ",++$ipict,"\n" unless $Quiet;
@@ -323,7 +366,11 @@ sub dorest{
 	    $line2_= $line2conv;
 	}
 
-	# line 3 contains the grid size, it is the same for all snapshots
+	# Convert line 3
+
+	&line3fromcray if $cray;                    # remove extra Cray bytes
+	$line3_= $Keep ? $line3 : &convstr($line3); # convert endiannes
+	&line3tocray if $tocray;                    # insert extra Cray bytes
 
 	# Convert line 4
 
