@@ -3081,18 +3081,6 @@ T			UseB0Source
 ! Default is true.
 </command>
 
-<!-- ^CFG IF DIVBDIFFUSE BEGIN -->
-<command name="DIVBDIFFUSION">
-	<parameter name="DivbDiffCoeff" type="real" min="0" max="1"
-							default="0.1666667"/>
-#DIVBDIFFUSION
-0.1666667		DivbDiffCoeff
-
-! Default value is shown above. 1.0/6.0
-! If divb_diffcoeff .gt. 0.5 then cfl .lt. 0.5/DivbDiffCoeff is required!
-</command>
-<!-- ^CFG END DIVBDIFFUSE -->
-
 <!-- ^CFG IF PROJECTION BEGIN -->
 <command name="PROJECTION">
 	<parameter name="TypeProjectIter" type="string" input="select">
