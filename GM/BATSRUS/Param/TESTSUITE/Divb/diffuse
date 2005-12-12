@@ -6,7 +6,6 @@ T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
 
-#DIVBDIFFUSION
-0.1666667		divbDiffCoeff
+
 
 #END

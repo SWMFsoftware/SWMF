@@ -129,7 +129,7 @@ OBJ12= write_plot_los.o write_plot_sph.o \
 
 OBJ14=covariant.o                           #^CFG IF COVARIANT
 
-
+OBJ15=clean_divb.o                          #^CFG IF DIVBDIFFUSE
 
 OBJECTS = \
 	BATS_methods.o \
@@ -180,7 +180,7 @@ OBJECTS = \
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
 	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
-	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14}
+	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
 
 # Default user module
 ModUser.f90:
