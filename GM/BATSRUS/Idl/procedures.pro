@@ -1902,13 +1902,20 @@ function diff2,direction,a,x
 on_error,2
 
 siz=size(a)
-if siz(0) ne 2 then begin
-   print,'Function diff2 is intended for 2D arrays only'
+ndim=siz(0)
+if ndim ne 2 and ndim ne 3 then begin
+   print,'Function diff2 is intended for 2D and 3D arrays only'
+   retall
+endif
+
+if direction lt 1 or direction gt ndim then begin
+   print,'Direction=',direction,' should be between 1 and ndim=',ndim,'!'
    retall
 endif
 
 n1=siz(1)
 n2=siz(2)
+if ndim eq 3 then n3=siz(3)
 
 if direction eq 1 then begin
    ind1=indgen(n1)
@@ -1916,7 +1923,10 @@ if direction eq 1 then begin
    jnd1(n1-1)=n1
    hnd1=ind1-1
    hnd1(0)=0
-   dadx=(a(jnd1,*)-a(hnd1,*))/(x(jnd1,*)-x(hnd1,*))
+   if ndim eq 2 then $
+     dadx=(a(jnd1,*)-a(hnd1,*))/(x(jnd1,*)-x(hnd1,*)) $
+   else $
+     dadx=(a(jnd1,*,*)-a(hnd1,*,*))/(x(jnd1,*,*)-x(hnd1,*,*))
 endif
 if direction eq 2 then begin
    ind2=indgen(n2)
@@ -1924,7 +1934,18 @@ if direction eq 2 then begin
    jnd2(n2-1)=n2
    hnd2=ind2-1
    hnd2(0)=0
-   dadx=(a(*,jnd2)-a(*,hnd2))/(x(*,jnd2)-x(*,hnd2))
+   if ndim eq 2 then $
+     dadx=(a(*,jnd2)-a(*,hnd2))/(x(*,jnd2)-x(*,hnd2)) $
+   else $
+     dadx=(a(*,jnd2,*)-a(*,hnd2,*))/(x(*,jnd2,*)-x(*,hnd2,*))
+endif
+if direction eq 3 then begin
+   ind3=indgen(n3)
+   jnd3=ind3+1
+   jnd3(n2-1)=n3
+   hnd3=ind3-1
+   hnd3(0)=0
+   dadx=(a(*,*,jnd3)-a(*,*,hnd3))/(x(*,*,jnd3)-x(*,*,hnd3))
 endif
 
 return,dadx
