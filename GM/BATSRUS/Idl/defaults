@@ -65,7 +65,7 @@ dslice=1
 nslicemax=50
 slicedir=0
 
-; Parameters for saving the movie into GIF or PS files
+; Parameters for saving the movie into TIF/PNG/JPG or PS files
 nplotmax=200
 savemovie='n'
 printmovie='n'
