@@ -2,7 +2,7 @@ module ModUser
 
   use ModUserEmpty, ONLY:               &
 !!!       user_read_inputs,                &
-       user_init_session,                &
+!!!       user_init_session,               &
 !!!       user_set_ics,                    &
        user_initial_perturbation,       &
        user_set_boundary_cells,        &
@@ -25,7 +25,7 @@ module ModUser
 
   real :: xLeft0 = 25.0, xRight0 = 30.0, cSoundX0 = 1.0
   real :: DistanceMin = 1.0
-  real :: xLeft, xRight, cSoundX
+  real :: xLeft, xRight, cSoundX, Ux
 
 contains
 
@@ -54,6 +54,34 @@ contains
 
   !=====================================================================
 
+  subroutine user_init_session
+
+    use ModProcMH,  ONLY: iProc
+    use ModAdvance, ONLY: Ux_
+    use ModPhysics, ONLY: ShockSlope, Shock_Lstate
+
+    real :: CosSlope
+
+    ! Rotate pressure perturbation parameters
+    CosSlope = cos(atan(ShockSlope))
+    xLeft   = xLeft0 /CosSlope
+    xRight  = xRight0/CosSlope
+
+    ! Also fix the sound speed projected to the X axis
+    cSoundX = cSoundX0/CosSlope
+
+    Ux = Shock_Lstate(Ux_)/CosSlope
+
+    if(iProc==0)then
+       write(*,*)'user_init_session: ShockSlope  =',ShockSlope
+       write(*,*)'user_init_session: xLeft,xRight=',xLeft,xRight
+       write(*,*)'user_init_session: cSoundX,  Ux=',cSoundX,Ux
+    endif
+
+  end subroutine user_init_session
+
+  !=====================================================================
+
   subroutine user_set_ics
     use ModMain,     ONLY: nI, nJ, nK, globalBLK, nBlock
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
@@ -66,13 +94,6 @@ contains
     integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
     iBlock = globalBLK
-
-    !  if(iBlock==nBlock)write(*,*)' !!! Setting Rho=1000-2x-y !!!'
-
-    !  State_VGB(Rho_,:,:,:,iBlock) = 1000.0 &
-    !  -2*x_BLK(:,:,:,iBlock) -y_BLK(:,:,:,iBlock) !!! + 3*z_BLK(:,:,:,iBlock)
-
-    !  RETURN
 
     if(ShockSlope == 0.0)then
        ! Perturb pressure and return
@@ -122,20 +143,12 @@ contains
        State_VGB(Rho_,i,j,k,iBlock) = g * State_VGB(P_,i,j,k,iBlock)
     end do; end do; end do
 
-    ! Rotate pressure perturbation parameters
-    CosSlope = cos(atan(ShockSlope))
-    xLeft   = xLeft0 /CosSlope
-    xRight  = xRight0/CosSlope
-
-    ! Also fix the sound speed projected to the X axis
-    cSoundX = cSoundX0/CosSlope
-
     ! Perturb pressure
     where(     x_BLK(:,:,:,iBlock) >= xLeft -ShockSlope*Y_BLK(:,:,:,iBlock) &
          .and. x_BLK(:,:,:,iBlock) <= xRight-ShockSlope*Y_BLK(:,:,:,iBlock)) &
          State_VGB(P_,:,:,:,iBlock) = pPerturb*State_VGB(P_,:,:,:,iBlock)
 
-  end subroutine user_set_ICs
+  end subroutine user_set_ics
 
   !========================================================================
 
@@ -143,9 +156,8 @@ contains
 
     use ModSize,     ONLY : nI, nJ, nK
     use ModGeometry, ONLY : x_BLK, y_BLK, dx_BLK
-    use ModPhysics,  ONLY : ShockSlope, Shock_Lstate
+    use ModPhysics,  ONLY : ShockSlope
     use ModMain,     ONLY : time_simulation
-    use ModAdvance,  ONLY : Ux_
     use ModAMR,      ONLY : RefineCritMin_I, CoarsenCritMax
 
     ! Variables required by this user subroutine
@@ -154,13 +166,11 @@ contains
     real, intent(out)            :: UserCriteria
     logical ,intent(inout)       :: IsFound
 
-    real :: xCenter, yCenter, xShifted, Ux, x_I(5), Distance
+    real :: xCenter, yCenter, xShifted, x_I(5), Distance
     !------------------------------------------------------------------
     xCenter = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(1,1,1,iBlock))
     yCenter = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(1,1,1,iBlock))
     xShifted = xCenter + ShockSlope*yCenter
-
-    Ux = Shock_Lstate(Ux_)/cos(ShockSlope)
 
     !write(*,*)'xLeft,xRight,Ux,cSoundX=',xLeft,xRight,Ux,cSoundX
     !call stop_mpi('Debug')
@@ -170,7 +180,7 @@ contains
     x_I(2) = xLeft  + (Ux+cSoundx)*time_simulation
     x_I(3) = xRight + (Ux-cSoundX)*time_simulation
     x_I(4) = xRight + (Ux+cSoundX)*time_simulation
-    x_I(5) = -0.1*time_simulation
+    x_I(5) =           Ux         *time_simulation
 
     ! Reflect left going sound wave edges
     if(x_I(1) < x_I(5)) x_I(1) = 2*x_I(5) - x_I(1)
