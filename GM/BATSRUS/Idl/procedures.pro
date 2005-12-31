@@ -2894,7 +2894,7 @@ erase
 if DoXrange or DoYrange then iter0 = 1 else iter0 = 2
 
 for iter = iter0, 2 do begin
-    for ilog = nlog-1, 0, -1 do begin
+    for ilog = 0, nlog-1 do begin
         case ilog of 
             0: begin
                 wlog=wlog0
@@ -2941,7 +2941,11 @@ for iter = iter0, 2 do begin
                     title1  = ''
                     xtitle1 = ''
                     xtickname1 = strarr(60)+' '
+                    xstyle=5
+                    ystyle=5
                     if ilog eq 0 then begin
+                        xstyle=1
+                        ystyle=1
                         if ifunc eq 0       then title1  = title0
                         if ifunc eq nfunc-1 then begin
                             xtitle1    = xtitle0
@@ -2951,7 +2955,8 @@ for iter = iter0, 2 do begin
                     plot, hour, field, pos = posm, $
                       xrange = xrange, $
                       yrange = yranges(*,ifunc), $
-                      xstyle = 1, $
+                      xstyle = xstyle, $
+                      ystyle = ystyle, $
                       title  = title1, $
                       xtitle = xtitle1, $
                       xtickname = xtickname1, $
@@ -2960,7 +2965,6 @@ for iter = iter0, 2 do begin
                       psym  = symbols(ilog), $
                       linestyle = linestyles(ilog), $
                       thick = thick, $
-                      ystyle=1, $
                       /noerase
 
                     if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
