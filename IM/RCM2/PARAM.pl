@@ -79,6 +79,27 @@ The default is DoRestart = .false.
 
 The iDtRcm parameter defines the time step in seconds. The default
 value is 5 seconds.
+','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'CONTROL PARAMETERS'},'content' => [{'content' => '
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!  CONTROL PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+','type' => 't'},{'attrib' => {'name' => 'COMPOSITION'},'content' => [{'attrib' => {'default' => '0.7','type' => 'real','name' => 'FractionH'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '0.3','type' => 'real','name' => 'FractionO'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#COMPOSITION
+FractionH		FractionH
+FractionO		FractionO
+
+Fractional composition in RCM of H+ and O+.  The two need to add up to 1.0
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'CHARGEEXCHANGE'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'L_dktime'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => '$L_dktime'},'content' => [{'attrib' => {'default' => '125.','type' => 'real','name' => 'SunspotNumber'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '169.','type' => 'real','name' => 'F107MonthlyMean'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => '90.','type' => 'real','name' => 'DayOfYear'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'if'},{'content' => '
+
+
+#CHARGEEXCHANGE
+T			L_dktime
+125.			SunspotNumber
+169.			F107MonthlyMean
+90.			DayOfYear
+
+Activate charge exchange in RCM and specify solar conditions.
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'expr' => '-d \'IM/restartOUT\' or not $_IsFirstSession'},'content' => [{'content' => '
 	Directory IM/restartOUT should exist!
 ','type' => 't'}],'type' => 'e','name' => 'rule'}],'type' => 'e','name' => 'commandList'}];
