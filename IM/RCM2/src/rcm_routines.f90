@@ -3132,6 +3132,21 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
 !
   DO kc = 1, kcsize
 !
+do i = 1, isize
+do j = 1, jsize
+  if (eeta(i,j,kc) < 0.) then
+  !  print*,'eeta error_i: ',i,imin_j(j),j,kc,eeta(i,j,kc)
+!!$     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
+!!$     print*,eeta(i,:,kc)
+!!$     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
+!!$     print*,eeta(:,j,kc)
+!!$     call CON_STOP('abort')
+!!$     eeta(i,j,kc) = 0.0
+     eeta(i,j,kc) = 0.5*(eeta(max(1,i-1),j,kc)+eeta(min(isize,i+1),j,kc))
+  end if
+end do
+end do
+!
      ie = ikflavc(kc)
 
      IF (ie /= ie_ask) CYCLE 
@@ -3274,7 +3289,7 @@ SUBROUTINE Move_plasma_grid_NEW (n_gc,isize, jsize, kcsize, iesize, i1, i2, j1, 
 do i = 1, isize
 do j = 1, jsize
   if (eeta(i,j,kc) < 0.) then
-     print*,'eeta error: ',i,j,kc,eeta(i,j,kc)
+     print*,'eeta error: ',i,imin_j(j),j,kc,eeta(i,j,kc)
 !!$     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
 !!$     print*,eeta(i,:,kc)
 !!$     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
@@ -3310,12 +3325,14 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
 !
       SUBROUTINE Rcm_plasma_bc (iflag, i_where)
-      USE Rcm_variables, ONLY : n_gc, isize, jsize, kcsize, &
+      USE Rcm_variables, ONLY : n_gc, isize, jsize, kcsize, iesize, &
                                 alamc, etac, ikflavc, eeta, xmass, &
                                 vm, Re, pi, imin_j, density, temperature,&
-                                kmin, kmax
+                                kmin, kmax, &
+                                iprec, rprec, &
+                                x_h, x_o
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: iflag, i_where
+      INTEGER(iprec), INTENT (IN) :: iflag, i_where
 !
 !------------------------------------------------------------------------
 ! Given density and temperature on the rcm grid, ALAM channels, and the 
@@ -3331,43 +3348,108 @@ END SUBROUTINE Move_plasma_grid_NEW
 ! Above the boundary, EETA is extended using boundary values along J-lines.
 ! If I_WHERE is 1, do conversion only along the boundary (boundary condition),
 ! If I_WHERE is 2, do conversion everywhere in the region (initial condition).
+!
+! At the moment (10/31/2005), the MHD moments passed into this subroutine are:
+! density--mass density in amu (rho/m_p)/m3
+! temperature--P/(rho/m_p) in [eV], so temperature is essentially 
+!   energy density without 1.5 factor
 !------------------------------------------------------------------------
 !
 !
-      REAL :: kappa_e, kappa_i, N_e, N_i, Eavg_e, Eavg_i, E0_e, E0_i, &
+      INTEGER (iprec) :: kappa_e, kappa_i
+      REAL (rprec) :: N_e, N_i, Eavg_e, Eavg_i, E0_e, E0_i, &
               E_i, E_e, eta_bnd, press_pt_old, press_pt_new
-      INTEGER :: k, k_beg, k_end, j, i, i_start, i_stop, k_offset, ie
-      REAL :: delta_e (kcsize), energy (kcsize)
+      INTEGER (iprec) :: k, k_beg, k_end, k_local, j, i, i_start, i_stop, ie, kc
+      REAL (rprec) :: delta_e (kcsize), energy (kcsize)
+
+      REAL (rprec) :: n_species (isize,jsize,iesize), temp_species (isize,jsize,iesize)
 !
+      REAL (rprec), PARAMETER :: a_conv = 6.371E+6/1.0E-9/1.0E-6
+      REAL (rprec) :: a_factor, b_factor, s1, s2, s3, denom, pressure_rcm, density_rcm
+      INTEGER (iprec) :: unit_debug=59
+      LOGICAL :: Flag_found_kuse, Flag_correct_ok (isize,jsize,iesize)=.TRUE.
 !
+
       IF (iflag /= 2 .AND. iflag /= 3) call CON_STOP('IFLAG IN PLASMA_BC')
       IF (i_where /= 1 .AND. i_where /= 2) call CON_STOP('I_WHERE IN PLASMA_BC')
-      kappa_e   = 6.0
-      kappa_i   = 6.0
+      kappa_e   = 6
+      kappa_i   = 6
 !
+!     
+      ! Using "density" from MHD, set partial number densities for species
+      ! and their "temperatures" (average energies):
+
+      DO j = 1, jsize
+
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
+         DO i = i_start, i_stop
+
+            n_species (i,j,2) = density(i,j) * &
+                                xmass(2) * x_h / (xmass(2)*x_h+xmass(3)*x_o)
+            n_species (i,j,3) = density(i,j) * &
+                                xmass(2) * x_o / (xmass(2)*x_h+xmass(3)*x_o)
+            n_species (i,j,1) = n_species(i,j,2) + n_species(i,j,3)
+
+            temp_species (i,j,2) = temperature (i,j) * &
+                                   (xmass(2)*x_h+xmass(3)*x_o) / xmass(2) / & 
+                                   (1.0+1.0/7.8)
+            temp_species (i,j,3) = temp_species (i,j,2)
+            temp_species (i,j,1) = temp_species (i,j,2) / 7.8
+
+         END DO
+      END DO
+
+
 !
-!     Ion (proton) boundary condition first:
-!
+!     H+
       ie = 2; k_beg = kmin(ie); k_end = kmax (ie)
 !
-!
       DO j = 1, jsize
-         i_start = imin_j(j)
-         IF (i_where == 1) THEN
-            i_stop = i_start
-         ELSE
-            i_stop = isize
-         END IF
+
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
+         DO i = i_start, i_stop
+         energy = ABS(alamc(:)) * vm(i,j)
+         CALL Get_delta_e (kcsize, k_beg, k_end, energy, delta_e)
+         Eavg_i    = 1.5 * temp_species(i,j,ie) ! in eV
+         E0_i      = Convert_Eavg_to_E0 (Eavg_i, kappa_i) ! in eV
+         N_i       = n_species (i,j,ie)
+         DO k = k_beg, k_end
+            E_i       = energy (k)
+            eeta (i,j,k) = Jflux_kappa (N_i, xmass(ie), E0_i, E_i, kappa_i) * &
+                                       4.0 * pi * SQRT(xmass(ie) / 2.0 / &
+                                       (E_i*1.6E-19)) * &
+                                       (delta_e(k)*1.6E-19)    ! number density in SI units
+!           Convert to the ETA in program units ([ETA]=1/Weber=1/([B][L][L])):
+            eeta (i,j,k) = eeta (i,j,k) * (vm(i,j)**(-1.5) / 1.0E-9 * Re * 1.0E+3)
+         END DO
+         END DO
+      END DO
+      DO k = k_beg, k_end
+         DO j = 1, jsize
+            eeta (1:imin_j(j)-1,j,k) = eeta(imin_j(j),j,k)
+         END DO
+      END DO
+!
+
+!     O+
+      ie = 3; k_beg = kmin(ie); k_end = kmax (ie)
+
+      DO j = 1, jsize
+
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
          DO i = i_start, i_stop
          energy = ABS(alamc(:)) * vm(i,j)
          CALL Get_delta_e (kcsize, k_beg, k_end, energy, delta_e)
          DO k = k_beg, k_end
-            Eavg_i    = 1.5 * temperature(i,j)*7.8/8.8 ! in eV
+            Eavg_i    = 1.5 * temp_species(i,j,ie) ! in eV
             E0_i      = Convert_Eavg_to_E0 (Eavg_i, kappa_i) ! in eV
-            N_i       = density (i,j)
+            N_i       = n_species (i,j,ie)
             E_i       = energy (k)
-            eeta (i,j,k) = Jflux_kappa (N_i, xmass(2), E0_i, E_i, kappa_i) * &
-                                       4.0 * pi * SQRT(xmass(2) / 2.0 / &
+            eeta (i,j,k) = Jflux_kappa (N_i, xmass(ie), E0_i, E_i, kappa_i) * &
+                                       4.0 * pi * SQRT(xmass(ie) / 2.0 / &
                                        (E_i*1.6E-19)) * &
                                        (delta_e(k)*1.6E-19)    ! number density in SI units
 !           Convert to the ETA in program units ([ETA]=1/Weber=1/([B][L][L])):
@@ -3380,56 +3462,30 @@ END SUBROUTINE Move_plasma_grid_NEW
             eeta (1:imin_j(j)-1,j,k) = eeta(imin_j(j),j,k)
          END DO
       END DO
-!
-
-!     Oxygen: currently, set it to negligible percentage:
-
-      ie = 3; k_beg = kmin(ie); k_end = kmax (ie)
-      k_offset = k_end - k_beg + 1
-
-
-      DO j = 1, jsize
-         i_start = imin_j(j)
-         IF (i_where == 1) THEN
-            i_stop = i_start
-         ELSE
-            i_stop = isize
-         END IF
-         DO i = i_start, i_stop
-            DO k = k_beg, k_end
-               eeta (i,j,k) = eeta (i,j,k-k_offset)*1.E-4
-            END DO
-         END DO
-      END DO
-      DO k = k_beg, k_end
-      DO j = 1, jsize
-         eeta (1:imin_j(j)-1,j,k) = eeta(imin_j(j),j,k)
-      END DO
-      END DO
 
 !
-!     Third, the electrons:
+!     Electrons:
 !
       ie = 1; k_beg = kmin(ie)+1; k_end = kmax (ie)
+      ! SS: "+1" in the above line is to avoid counting k=1 (lowest) 
+      !     electron energy channel, which is now reserved for the plasmasphere
+      !     population.
 !
 !
       DO j = 1, jsize
-         i_start = imin_j(j)
-         IF (i_where == 1) THEN
-            i_stop = i_start
-         ELSE
-            i_stop = isize
-         END IF
+
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
          DO i = i_start, i_stop
          energy = ABS(alamc(:)) * vm(i,j)
          CALL Get_delta_e (kcsize, k_beg, k_end, energy, delta_e)
          DO k = k_beg, k_end
-            Eavg_e    = 1.5 * temperature(i,j) / 8.8 ! in eV
+            Eavg_e    = 1.5 * temp_species(i,j,ie) ! in eV
             E0_e      = Convert_Eavg_to_E0 (Eavg_e, kappa_e) ! in eV
-            N_e       = density (i,j)
+            N_e       = n_species (i,j,ie)
             E_e       = energy (k)
-            eeta (i,j,k) = Jflux_kappa (N_e, xmass(1), E0_e, E_e, kappa_e) * &
-                                       4.0 * pi * SQRT(xmass(1) / 2.0 / &
+            eeta (i,j,k) = Jflux_kappa (N_e, xmass(ie), E0_e, E_e, kappa_e) * &
+                                       4.0 * pi * SQRT(xmass(ie) / 2.0 / &
                                        (E_e*1.6E-19)) * &
                                        (delta_e(k)*1.6E-19)    ! number density in SI units
 !           Convert to the ETA in program units ([ETA]=1/Weber=1/([B][L][L])):
@@ -3443,36 +3499,323 @@ END SUBROUTINE Move_plasma_grid_NEW
       END DO
       END DO
 
-      eeta (:,:,1) = 1.E+10
-!
-!
-!   Cut off high-energy particle pressure and re-distribute it to lower-energy channels:
-!
-      DO j = 1, jsize
-         DO i = imin_j(j), isize
-!
-            press_pt_old = 0.0
-            DO k = 2, kcsize
-               press_pt_old = 2./3.*ABS(alamc(k))*eeta(i,j,k) + press_pt_old
-            END DO
-             IF (press_pt_old < 1.0E-30) CYCLE
-!
-            DO k = 2, kcsize
-               IF (ABS(alamc(k))*vm(i,j) > 200000.0) eeta (i,j,k) = 0.0
-            END DO
-!
-            press_pt_new = 0.0
-            DO k = 2, kcsize
-               press_pt_new = 2./3.*ABS(alamc(k))*eeta(i,j,k) + press_pt_new
-            END DO
-!
-            DO k = 2, kcsize
-               eeta(i,j,k) = eeta(i,j,k) * (press_pt_old/press_pt_new)
-            END DO
-         END DO
+      eeta (:,:,1) = 1.E+10  ! hack to keep plasmasphere in the code--will need to change later
+
+      ! Check for negative eta's:
+      DO j=1,jsize
+      DO i=1,isize
+      DO k=1,kcsize
+         IF (eeta(i,j,k) < 0.0) THEN
+             OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+             WRITE (UNIT_DEBUG,'(/////)')
+             WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, ERROR:'
+             WRITE (UNIT_DEBUG,*) 'NEGATIVE ETA VALUE AFTER FIRST PASS TO ASSIGN ETAS'
+             WRITE (UNIT_DEBUG,*) 'I=',i,' J=',j,' K=',k,' IKFLAVC=',IKFLAVC(k),&
+                                  ' ETA=', eeta(i,j,k)
+             WRITE (UNIT_DEBUG,*) imin_j
+             WRITE (UNIT_DEBUG,*) imin_j
+             WRITE (UNIT_DEBUG,*) imin_j
+             CLOSE (UNIT_DEBUG)
+             CALL CON_STOP ('RCM_ERROR, SEE FILE RCM_DEBUG')
+         END IF
+      END DO
+      END DO
       END DO
 !
+! Debugging code, not needed for regular runs:
+   !  DO j = 1, jsize
+   !  CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+   !  DO i = i_start, i_stop
+   !  density_rcm = 0.0
+   !  pressure_rcm=0.0
+   !  DO k = 2, kcsize
+   !      density_rcm = density_rcm + (xmass(ikflavc(k))/xmass(2)) * (eeta(i,j,k)/6.37E+21) * vm(i,j)**1.5
+   !      pressure_rcm= pressure_rcm+ ((ABS(alamc(k))*eeta(i,j,k))*1.67E-20) * ((vm(i,j)**2.5)*1.0E-6) ! nPa
+   !  END DO
+   !        IF (temperature(i,j) /= 0.0) THEN
+   !            IF (ABS((temperature(i,j)-pressure_rcm/density(i,j)/1.6E-4)/temperature(i,j)) > 0.01) THEN
+   !             WRITE (UNIT_DEBUG+1,'(/////)')
+   !             WRITE (UNIT_DEBUG+1,*) 'RCM_D: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
+   !             WRITE (UNIT_DEBUG+1,*) 'MHD SENT: ',' N=',density(i,j),' T=',temperature(i,j)
+   !             WRITE (UNIT_DEBUG+1,*) 'RCM  HAS: ',' N=',density_rcm ,' T=',pressure_rcm/density(i,j)/1.6E-4
+   !             WRITE (UNIT_DEBUG+1,*) 'P RCM vs MHD: ',  pressure_rcm, temperature(i,j)*1.6E-4*density(i,j)
+   !             WRITE (UNIT_DEBUG+1,*) 'LOCATION: ','I=',i,' J=',j
+   !             DO k = 1, kcsize
+   !                WRITE (UNIT_DEBUG+1,*) k,eeta(i,j,k) 
+   !             END DO
+   !            END IF
+   !        END IF
+   !  END DO
+   !  END DO
 !
+!---------------------------------------------------------------------------
+!   Cut off high-energy particle pressure (run this and the correction below
+!   for any value of I_WHERE):
+!
+   !  DO j = 1, jsize
+   !     DO i = imin_j(j), isize
+   !        DO k = 2, kcsize
+   !           IF (ABS(alamc(k))*vm(i,j) > 900000.0) eeta (i,j,k) = 0.0
+   !        END DO
+   !     END DO
+   !  END DO
+      !
+      !
+      ! Now adjust particle content so that the final distribution of EETA
+      ! at each grid point yields the original moments (p and T) that came
+      ! out of MHD. This will also correct for possible errors in the nume-
+      ! rical procedure that splits the distribution function into discrete
+      ! energy channels. For the second reason, this procedure should be run
+      ! over all grid points, even if this routine is used for boundary 
+      ! conditions only.
+
+      Flag_correct_ok = .TRUE.
+
+      DO j = 1, jsize
+
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
+         DO i = i_start, i_stop
+
+         Loop_check_species: DO ie = 1, iesize
+           IF (ie == 1) THEN
+              k_beg = kmin(ie)+1
+           ELSE
+              k_beg = kmin(ie)
+           END IF
+
+           ! Before we start with this, a quick check if the original MHD
+           ! density that RCM got is zero. If this is the case, temperature
+           ! is irrelevant and there should be nothing to correct, so skip 
+           ! the rest of the loop:
+
+           IF (density(i,j) == 0.) THEN
+              CYCLE Loop_check_species
+           END IF
+
+           ! Here start iterative process. We would like to apply the correction
+           ! procedure to all energy channels. However, because the correction 
+           ! factor is linear in energy, it is possible for it to become negative at high energies.
+           ! It seems to happen for channels with flux-tube content of negligible (1.0E-9) fraction
+           ! of the peak value. It is safe to zero out those energy channels, but to do so and 
+           ! preserve the algorithm, we need to iterate. We start with the whole distribution function
+           ! (k_end = kmax) and if that includes problematic channels, we descend in energy while
+           ! repeating procedure, until it works.
+
+           Loop_find_kuse: DO k_end = kmax(ie), k_beg+1, -1
+
+              Flag_found_kuse = .TRUE.
+
+              s1 = SUM(eeta(i,j,k_beg:k_end))/ a_conv
+              s2 = SUM(eeta(i,j,k_beg:k_end)*ABS(alamc(k_beg:k_end))) / a_conv
+              s3 = SUM(eeta(i,j,k_beg:k_end)*ABS(alamc(k_beg:k_end))*ABS(alamc(k_beg:k_end)))/a_conv
+              denom = s1*s3 - s2*s2
+
+              a_factor = ((n_species(i,j,ie)/vm(i,j)**1.5)*s3 - &
+                (1.5*n_species(i,j,ie)*temp_species(i,j,ie) /vm(i,j)**2.5)*s2) / denom
+              b_factor = (-(n_species(i,j,ie)/vm(i,j)**1.5)*s2 + &
+                (1.5*n_species(i,j,ie)*temp_species(i,j,ie) /vm(i,j)**2.5)*s1) / denom
+
+              DO k_local = k_beg, k_end
+                 IF (a_factor + b_factor*ABS(alamc(k_local)) < 0.0) Flag_found_kuse = .FALSE.
+              END DO
+
+              IF (Flag_found_kuse) EXIT Loop_find_kuse
+
+           END DO Loop_find_kuse
+
+           ! It is possible that even for k_end=k_beg+1, the correction factor
+           ! is still negative. Thus, add a check for it:
+           IF (.NOT.Flag_found_kuse) THEN
+               OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+               WRITE (UNIT_DEBUG,'(/////)')
+               WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, ERROR OCCURED:'
+               WRITE (UNIT_DEBUG,*) 'CORRECTION FACTOR IS NEGATIVE AT SOME ENERGIES'
+               WRITE (UNIT_DEBUG,*) 'CORRECTION WILL NOT BE MADE FOR THIS SPECIES' 
+               WRITE (UNIT_DEBUG,*) 'THIS HAPPENED AT I=',i,' J=',j,'IE=',ie
+               WRITE (UNIT_DEBUG,*) 'S1*S3-S2**2=',s1*s3-s2*s2
+               WRITE (UNIT_DEBUG,*) 'a_factor=', a_factor
+               WRITE (UNIT_DEBUG,*) 'B_FACTOR=', b_factor
+               WRITE(UNIT_DEBUG,*)' '
+               WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
+               write(unit_debug,*)'all species: n=',n_species(i,j,:)
+               WRITE(UNIT_DEBUG,*)''
+               WRITE (UNIT_DEBUG,*) imin_j
+               WRITE (UNIT_DEBUG,*) imin_j
+               CLOSE (UNIT_DEBUG)
+!              CALL CON_STOP ('RCM: ERROR IN RCM_PLASMA_BC, SEE FILE RCM_DEBUG')
+               ! Force no correction (what else?)
+
+               a_factor=1.0
+               b_factor=0.0
+               k_end = kmax(ie)
+               Flag_correct_ok (i,j,ie) = .FALSE.
+           END IF
+
+
+           IF (s1*s3-s2*s2 < 0.01*s1*s3 .OR. &
+               ABS(a_factor-1.0) > 0.2  .OR. &
+               (s2 > 0.0 .AND. ABS(b_factor) > 0.2*s1/s2)) THEN
+
+               ! Write out error message:
+               OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+               WRITE (UNIT_DEBUG,'(/////)')
+               WRITE (UNIT_DEBUG,*) 'RCM, RCM_PLASMA_BC, POSSIBLE PROBLEM OCCURED:'
+               WRITE (UNIT_DEBUG,*) 'S1*S3-S2**2 IS CLOSE TO BEING NEGATIVE?'
+               WRITE (UNIT_DEBUG,*) 'S1*S3-S2**2=',s1*s3-s2*s2
+               WRITE (UNIT_DEBUG,*) 'A_FACTOR IS TOO BIG?'
+               WRITE (UNIT_DEBUG,*) 'a_factor=', a_factor
+               WRITE (UNIT_DEBUG,*) 'b_factor is too big?'
+               WRITE (UNIT_DEBUG,*) 'B_FACTOR=', b_factor
+               WRITE (UNIT_DEBUG,*) 'CORRECTION WILL NOT BE MADE FOR THIS SPECIES' 
+               WRITE (UNIT_DEBUG,*) 'THIS HAPPENED AT I=',i,' J=',j,'IE=',ie
+               WRITE(UNIT_DEBUG,*)'FOR THIS SPECIES, ENERGY RANGES ARE:',alamc(k_beg)*vm(i,j), alamc(kmax(ie))*vm(i,j),' eV'
+               WRITE(UNIT_DEBUG,*)' '
+               WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+               WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
+               write(unit_debug,*)'all species: n=',n_species(i,j,:)
+               WRITE(UNIT_DEBUG,*)''
+               WRITE(UNIT_DEBUG,*)'RESULTS OF CORRECTION PROCEDURE:'
+               WRITE(UNIT_DEBUG,*)'     S1=',s1
+               WRITE(UNIT_DEBUG,*)'     S2=',s2
+               WRITE(UNIT_DEBUG,*)'     S3=',s3
+               WRITE(UNIT_DEBUG,*)'     A_FACTOR=',a_factor
+               WRITE(UNIT_DEBUG,*)'     B_FACTOR=',b_factor
+               WRITE (UNIT_DEBUG,'(/////)')
+               WRITE (UNIT_DEBUG,*) 'HERE IS INFORMATION FOR ALL CHANNELS OF THIS SPECIES:'
+                   DO kc=k_beg,kmax(ie)
+                      WRITE(UNIT_DEBUG,*) &
+                           'K=',kc,' ALAM(K)=',alamc(kc), &
+                           ' EETA=',eeta(i,j,kc)/(a_factor+b_factor*ABS(ALAMC(kc))),&
+                           ' EETA_NEW=',eeta(i,j,kc)
+                   END DO
+               WRITE (UNIT_DEBUG,*) imin_j
+               WRITE (UNIT_DEBUG,*) imin_j
+               CLOSE (UNIT_DEBUG)
+
+               IF (s1*s3-s2*s2 < 0.01*s1*s3) THEN 
+                  ! Force no correction:
+                  a_factor = 1.0
+                  b_factor = 0.0
+                  Flag_correct_ok (i,j,ie) = .FALSE.
+               END IF
+
+!              CALL CON_STOP ('RCM: ERROR IN RCM_PLASMA_BC, SEE FILE RCM_DEBUG')
+           END IF
+
+           DO k = k_beg, k_end
+              eeta (i,j,k) = eeta (i,j,k)*(a_factor+b_factor*ABS(alamc(k)))
+           END DO
+           DO k = k_end+1, kmax(ie)
+              eeta (i,j,k) = 0.0
+           END DO
+
+           ! another check for negative etas:
+           DO k = k_beg, k_end
+              if (eeta(i,j,k) < 0.0) then
+                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 WRITE (UNIT_DEBUG,'(/////)')
+                 WRITE(UNIT_DEBUG,*)'NEGATIVE EETA VALUE FOUND IN RCM_PLASMA_BC'
+                 WRITE(UNIT_DEBUG,*)'AFTER THE CORRECTION PROCEDURE'
+                 WRITE(UNIT_DEBUG,*)'THE FOLLOWING DETAILS SHOULD HELP:'
+                 WRITE(UNIT_DEBUG,*)'SPATIAL GRID LOCATION: ', 'I=',I, ' J=',J, ' VM=',vm(i,j),' BND_I=',imin_j(j)
+                 WRITE(UNIT_DEBUG,*)' '
+                 WRITE(UNIT_DEBUG,*)'PARTICLE DETAILS: ','K=',K, ' IKFLAV=', Ie,' ALAM=',alamc(k)
+                 WRITE(UNIT_DEBUG,*)'FOR THIS SPECIES, ENERGY RANGES ARE:',alamc(k_beg)*vm(i,j), alamc(k_end)*vm(i,j),' eV'
+                 WRITE(UNIT_DEBUG,*)' '
+                 WRITE(UNIT_DEBUG,*)'MHD PASSED TO RCM: ','N=',density(i,j), ' T=',temperature(i,j)
+                 WRITE(UNIT_DEBUG,*)'MHD ADAPTED FOR THIS SPECIES: ', 'N=',n_species(i,j,ie), ' T=',temp_species(i,j,ie)
+                 write(unit_debug,*)'all species: n=',n_species(i,j,:)
+                 WRITE(UNIT_DEBUG,*)'EETA VALUE DERIVED INITIALLY:', eeta(i,j,k)/(a_factor+b_factor*ABS(alamc(k)))
+                 WRITE(UNIT_DEBUG,*)''
+                 WRITE(UNIT_DEBUG,*)'RESULTS OF CORRECTION PROCEDURE:'
+                 WRITE(UNIT_DEBUG,*)'     S1=',s1
+                 WRITE(UNIT_DEBUG,*)'     S2=',s2
+                 WRITE(UNIT_DEBUG,*)'     S3=',s3
+                 WRITE(UNIT_DEBUG,*)'     A_FACTOR=',a_factor
+                 WRITE(UNIT_DEBUG,*)'     B_FACTOR=',b_factor
+                 WRITE(UNIT_DEBUG,*)'     NEW EETA=',eeta(i,j,k)
+                 WRITE (UNIT_DEBUG,'(/////)')
+                 WRITE (UNIT_DEBUG,*) 'HERE IS INFORMATION FOR ALL CHANNELS OF THIS SPECIES:'
+                     DO kc=k_beg,k_end
+                        WRITE(UNIT_DEBUG,*) &
+                             'K=',kc,' ALAM(K)=',alamc(kc), &
+                             ' EETA=',eeta(i,j,kc)/(a_factor+b_factor*ABS(ALAMC(kc))),&
+                             ' EETA_NEW=',eeta(i,j,kc)
+                     END DO
+                 CLOSE (UNIT_DEBUG)
+                 CALL CON_STOP ('RCM DEBUG: STOPPING')
+              END IF
+           END DO
+
+         END DO Loop_check_species
+
+      END DO
+      END DO
+!
+!---------------------------------------------------------------------------
+!
+
+      ! Final check: the RCM moments must match the MHD-supplied moments
+      ! exactly within given accuracy since we distorted the shape of the
+      ! initial distribution function. Verify this:
+
+      DO j = 1, jsize
+      
+         CALL Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+
+         DO i = i_start, i_stop
+
+            IF (ANY (.NOT.Flag_correct_ok (i,j,:))) CYCLE
+
+            density_rcm = 0.0
+            pressure_rcm = 0.0
+
+            DO k = 2, kcsize
+            density_rcm = density_rcm + (xmass(ikflavc(k))/xmass(2)) * (eeta(i,j,k)/6.37E+21) * vm(i,j)**1.5
+            pressure_rcm= pressure_rcm+ ((ABS(alamc(k))*eeta(i,j,k))*1.67E-20) * ((vm(i,j)**2.5)*1.0E-6) ! nPa
+            END DO
+
+            IF (density(i,j) /= 0.0 ) THEN
+                IF (ABS(density_rcm-density(i,j))/density(i,j) > 0.01) THEN
+                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 WRITE (UNIT_DEBUG,'(/////)')
+                 WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN MASS DENSITY MOMENTS:'
+                 WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N=',density(i,j),' T=', temperature(i,j)
+                 WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N=',density_rcm, ' T=', pressure_rcm/density(i,j)/1.6E-4
+                 WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j, ' IMIN_J(J)=',imin_j(J)
+                 WRITE (UNIT_DEBUG,*) ' '
+                 DO k = 1, kcsize
+                    WRITE (UNIT_DEBUG,*) k,eeta(i,j,k) 
+                 END DO
+                 CLOSE (UNIT_DEBUG)
+                 CALL CON_STOP ('RCM DEBUG: STOPPING')
+                END IF
+            END IF
+
+            IF (temperature(i,j) /= 0.0) THEN
+                IF (ABS((temperature(i,j)-pressure_rcm/density(i,j)/1.6E-4)/temperature(i,j)) > 0.01) THEN
+                 OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
+                 WRITE (UNIT_DEBUG,'(/////)')
+                 WRITE (UNIT_DEBUG,*) 'RCM: IN RCM_PLASMA_BC THERE IS A MISMATCH IN ENERGY DENSITY MOMENTS:'
+                 WRITE (UNIT_DEBUG,*) 'MHD SENT: ',' N=',density(i,j),' T=',temperature(i,j)
+                 WRITE (UNIT_DEBUG,*) 'RCM  HAS: ',' N=',density_rcm ,' T=',pressure_rcm/density(i,j)/1.6E-4
+                 WRITE (UNIT_DEBUG,*) 'P RCM vs MHD: ',  pressure_rcm, temperature(i,j)*1.6E-4*density(i,j)
+                 WRITE (UNIT_DEBUG,*) 'LOCATION: ','I=',i,' J=',j
+                 DO k = 1, kcsize
+                       WRITE (UNIT_DEBUG,*) k, alamc(k), ikflavc(k), eeta(i,j,k)
+                 END DO
+                 CLOSE (UNIT_DEBUG)
+                 CALL CON_STOP ('RCM DEBUG: STOPPING')
+                END IF
+            END IF
+
+         END DO
+
+      END DO
+
+
       DO k = 1, kcsize
          CALL Wrap_around_ghostcells (eeta(:,:,k), isize, jsize, n_gc)
       END DO
@@ -3497,6 +3840,24 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
       RETURN
       CONTAINS
+
+
+      SUBROUTINE Rcm_plasma_bc_get_i_range (i_where, j, i_start, i_stop)
+      IMPLICIT NONE
+      INTEGER(iprec), INTENT (IN) :: i_where, j
+      INTEGER(iprec), INTENT (OUT) :: i_start, i_stop
+
+      i_start = imin_j(j)
+      IF (i_where == 1) THEN
+         i_stop = i_start
+      ELSE
+         i_stop = isize
+      END IF
+      RETURN
+      END SUBROUTINE Rcm_plasma_bc_get_i_range
+
+
+
       FUNCTION Fdist_kappa_dflux (N, mass, E0, E, kappa)
 !
 !     Generic kappa distribution function that returns differential
@@ -3511,19 +3872,26 @@ END SUBROUTINE Move_plasma_grid_NEW
 !            OUTPUT in particles/m2/sec/srad
 !
       IMPLICIT NONE
-      REAL, INTENT (IN) :: N, mass, E0, E, kappa
-      REAL              :: Fdist_kappa_dflux
+      INTEGER (iprec), INTENT (IN) :: kappa
+      REAL(rprec), INTENT (IN) :: N, mass, E0, E
+      REAL(rprec)              :: Fdist_kappa_dflux
       DOUBLE PRECISION ::  DGamma
       EXTERNAL             DGamma
 !
       DOUBLE PRECISION :: c1, c2, c3, c4
-      c1 = N / SQRT (2.0*mass) / SQRT (E0)    ! to avoid under/overflows
-      c2 = DGamma (DBLE(kappa+1)) / DGamma (DBLE(kappa-0.5)) / (pi*kappa)**1.5
-      c3 = E/E0
-!     c4 = (1.0 + E / E0 / kappa)**(-kappa-1)
-      c4 = EXP(LOG(1.0 + E / E0 / kappa)*(-kappa-1))
-      Fdist_kappa_dflux = c1 * c2 * c3 * c4
-      RETURN
+      
+      IF (N == 0.0) THEN
+         Fdist_kappa_dflux = 0.0
+         RETURN
+      ELSE
+         c1 = N / SQRT (2.0*mass) / SQRT (E0)    ! to avoid under/overflows
+         c2 = DGamma (DBLE(kappa+1)) / DGamma (DBLE(kappa-0.5)) / (pi*kappa)**1.5
+         c3 = E/E0
+         c4 = (1.0 + E / E0 / kappa)**(-kappa-1)
+!        c4 = EXP(LOG(1.0 + E / E0 / kappa)*(-kappa-1))
+         Fdist_kappa_dflux = c1 * c2 * c3 * c4
+         RETURN
+      END IF
       END FUNCTION Fdist_kappa_dflux
 !
 !
@@ -3532,12 +3900,16 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
       FUNCTION Jflux_kappa (N, mass, E0, E, kappa)
       IMPLICIT NONE
-      REAL :: Jflux_kappa
-      REAL, INTENT (IN) :: N, mass, E0, E, kappa
+      REAL(rprec), INTENT (IN) :: N, mass, E0, E
+      INTEGER (iprec), INTENT(IN) ::  kappa
+      REAL(rprec) :: Jflux_kappa
 !-------------------------------------------------------------------------------------
 !     Kappa energy distribution function. Energy is in eV, mass in kg, density in cm-3
 !     Returns differential (directional) flux is in SI units.
 !-------------------------------------------------------------------------------------
+
+      IF (E0 == 0.0) CALL CON_STOP ('E0 IS ZERO IN RCM[JFLUX_KAPPA]')
+
       Jflux_kappa = Fdist_kappa_dflux (N*1.0E+6, mass, E0*1.6E-19, E*1.6E-19, kappa)
       RETURN
       END FUNCTION Jflux_kappa
@@ -3563,8 +3935,9 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
       FUNCTION Convert_Eavg_to_E0 (Eavg, kappa)
       IMPLICIT NONE
-      REAL, INTENT (IN) :: Eavg, kappa
-      REAL              :: Convert_Eavg_to_E0
+      INTEGER (iprec), INTENT (IN) :: kappa
+      REAL(rprec), INTENT (IN) :: Eavg
+      REAL(rprec)              :: Convert_Eavg_to_E0
 !
 !     Compute E0 from Eavg for a kappa distribution
 !
@@ -3577,10 +3950,11 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
 !
       SUBROUTINE Get_delta_E (kcsize, k_beg, k_end, energy, delta_E)
+      USE Rcm_variables, ONLY : rprec, iprec
       IMPLICIT NONE
-      INTEGER, INTENT (IN) :: kcsize, k_beg, k_end
-      REAL, INTENT (IN)    :: energy (kcsize)
-      REAL, INTENT (IN OUT)   :: delta_e (kcsize)
+      INTEGER(iprec), INTENT (IN) :: kcsize, k_beg, k_end
+      REAL(rprec), INTENT (IN)    :: energy (kcsize)
+      REAL(rprec), INTENT (IN OUT)   :: delta_e (kcsize)
 !
 !  Compute widths of energy channels numbered by index K running
 !  from KBEG to KEND (KEND > KBEG).

@@ -31,6 +31,13 @@ MODULE Rcm_variables
     ! SWMF: added logical to check for initialized grid
     logical :: IsUninitialized = .true., DoneGmCoupling = .false.
 
+    ! SWMF: set initial values for composition and charge exchange information
+    real(rprec) :: x_h=0.70, x_o=1.00-0.70
+    logical     :: L_dktime = .TRUE.
+    real(rprec) :: sunspot_number=125., f107=169., doy=90.
+!          comment: allow doy to be floating in case will want to use fractionals
+!                   later (stanislav, 6/15/2003).
+
     REAL (rprec), PARAMETER ::     &
          pi           = 3.141592654_rprec, &
          pi_two       = 2.0_rprec * pi, &
@@ -111,11 +118,8 @@ MODULE Rcm_variables
                     pressure    (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc), &
                     temperature (1-n_gc:isize+n_gc, 1-n_gc:jsize+n_gc)
     INTEGER (iprec) :: ikflavc (kcsize), i_advect, i_eta_bc
-    LOGICAL :: L_dktime
     INTEGER (iprec), PARAMETER :: irdk=18, inrgdk=13, isodk=2, iondk=2
-    REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk), sunspot_number, f107, doy
-!          comment: allow doy to be floating in case will want to use fractionals
-!                   later (stanislav, 6/15/2003).
+    REAL (rprec) :: dktime (irdk, inrgdk, isodk, iondk)
     REAL (rprec), DIMENSION (19,5) :: trf !plasmasphere refilling rates, cm-3/day
 !
 !

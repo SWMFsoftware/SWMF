@@ -6,7 +6,8 @@ subroutine IM_set_param(CompInfo, TypeAction)
   use ModProcIM
   use RCM_variables, ONLY: NameRcmDir, iUnitOut, StringPrefix, STDOUT_, &
        DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
-       plot_area, plot_var, plot_format
+       plot_area, plot_var, plot_format, &
+       x_h, x_o, L_dktime, sunspot_number, f107, doy
   use ModReadParam
   use ModUtilities, ONLY: fix_dir_name, check_dir
 
@@ -23,6 +24,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.
   integer :: iFile
+  real :: FractionH,FractionO, SunspotNumber,F107MonthlyMean,DayOfYear
   !-------------------------------------------------------------------------
   select case(TypeAction)
   case('VERSION')
@@ -96,6 +98,16 @@ subroutine IM_set_param(CompInfo, TypeAction)
               end if
 
            end do
+        case("#COMPOSITION")
+           call read_var('FractionH',FractionH)
+           call read_var('FractionO',FractionO)
+           x_h=FractionH; x_o=FractionO
+        case("#CHARGEEXCHANGE")
+           call read_var('UseChargeExchange',L_dktime)
+           call read_var('SunspotNumber',SunspotNumber)
+           call read_var('F107MonthlyMean',F107MonthlyMean)
+           call read_var('DayOfYear',DayOfYear)
+           sunspot_number=SunspotNumber; f107=F107MonthlyMean; doy=DayOfYear
 
         case default
            if(iProc==0) then

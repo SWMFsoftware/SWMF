@@ -292,7 +292,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      READ (LUN,*) irdw     ! 4.  record # to write out
      READ (LUN, '(a80)') label%char! 5.  text label
      READ (LUN,*) idebug   ! 6.  0 <=> do disk printout
-     READ (LUN,*) !  READ (LUN,*) idt   !  1.  basic time step in program
+     READ (LUN,*) !     READ (LUN,*) idt          !  1.  basic time step in program
      READ (LUN,*) !     READ (LUN,*) iDtPlot_old  !  2.  t-step for changing disk write rcds
      READ (LUN,*) idt2  !  3.  t-step for writing formatted output
      READ (LUN,*) idt3  !  4.  t-step for invoking ADD & ZAP
@@ -320,7 +320,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      READ (LUN,*) i_advect 
      READ (LUN,*) i_eta_bc
 !    READ (LUN,*) L_dktime, sunspot_number, f107, doy !f107 is monthly mean!
-      L_dktime = .FALSE.
+!      L_dktime = .FALSE.
+      L_dktime = .TRUE.
       sunspot_number = 125
       f107           = 169
       doy            = 90
