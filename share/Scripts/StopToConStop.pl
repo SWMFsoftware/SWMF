@@ -21,13 +21,18 @@
 #\end{verbatim}
 #
 # Limitations: 
-#     "if(...) stop", "command; stop" and 
+#     "command; stop" and 
 #     stop statements with continuation lines are not recognized.
 #
 #!REVISION HISTORY:
 # 08/18/2004: G. Toth - initial version
+# 01/05/2006;           added code to handle if(condition) stop...
 #EOP
 #BOC
+
+# remove initial if statement if any
+my $if;
+$if=$1 if s/^(\s*if\s*\(.*\))\s*stop/ stop/i;
 
 # Plain stop statement with an optional semi-colon
 s/^(\s*)stop\s*;?\s*$/$1call CON_stop('ERROR in $ARGV')\n/i;
@@ -46,12 +51,15 @@ s/^(\s*)stop\s*'([^']*)'/$1call CON_stop('ERROR in $ARGV:$2')/i;
 # Stop statement with double quoted string
 s/^(\s*)stop\s*"([^"]*)"/$1call CON_stop("ERROR in $ARGV:$2")/i;
 
+# Put back the initial if(...) if present
+$_ = "$if$_" if $if;
+
 # Shorten F90 line if necessary
-s|^(\s*)(call CON_stop\()(["'])(ERROR in $ARGV:)|$1$2$3$4$3// &\n    $1$3|
+s|^(\s*)(.*call CON_stop\()(["'])(ERROR in $ARGV:)|$1$2$3$4$3// &\n    $1$3|
     if length($_) > 79 and $ARGV =~ /\.(f90|f95)$/i;
 
 # Shorten F77 line if necessary
-s{^      (\s*)(call CON_stop\()(["'])(ERROR in $ARGV:)}
+s{^      (\s*)(.*call CON_stop\()(["'])(ERROR in $ARGV:)}
  {      $1$2$3$4$3//\n     &    $1$3}
     if length($_) > 72 and $ARGV =~ /\.(f|f77|for)$/i;
 
