@@ -2148,7 +2148,7 @@ print*,npoint
 !
     IF (bi < 1.0_rprec .OR. bi > imax_array .OR. bj < 1.0_rprec .OR. bj > jmax_array) THEN
        WRITE (*,*) 'OUT OF BOUNDS IN INTERP_2D_OF_3D'
-       call CON_stop('ERROR in IM/RCM/src/rcm_routines.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_routines.f90')
     END IF
 !
 !
@@ -2829,7 +2829,7 @@ print*,npoint
     kdim  = SIZE (alam)
     IF (k_init < 1 .OR. k_final > kdim) THEN
        WRITE (*,'(T2,A)') 'OUTBIJ: K VALUES ARE OUT OF RANGE, STOPPING'
-       call CON_stop('ERROR in IM/RCM/src/rcm_routines.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_routines.f90')
     END IF
 !
     DO k = k_init, k_final
@@ -2873,7 +2873,7 @@ print*,npoint
 !
      IF (phi < 0.0_rprec .OR. phi > pi_two) THEN
         WRITE (*,*) 'IN LT_FROM_ALOCT, PHI IS OUT OF BOUNDS'
-        call CON_stop('ERROR in IM/RCM/src/rcm_routines.f90')
+        call CON_stop('ERROR in IM/RCM2/src/rcm_routines.f90')
      ELSE
         Lt_from_aloct = MODULO((phi-pi)*RTH, 24.0_rprec)
         Lt_from_aloct = MODULO(Lt_from_aloct, 24.0_rprec)
@@ -4090,7 +4090,7 @@ END SUBROUTINE Move_plasma_grid_NEW
          write(*,*) 'irdk,inrgdk,iondk,isoldk',irdk,inrgdk,iondk,isoldk
          write(*,*) 'irsiz,inrgsz,ionsiz,isolsz',irsiz,inrgsz,ionsiz,isolsz
          write(*,*) 'stopping program in cexrat'
-         STOP
+         call CON_stop('ERROR in IM/RCM2/src/rcm_routines.f90')
       END IF
 !
       enrglg = LOG10(enrg) !  work with log10 of particle energy

@@ -377,7 +377,7 @@ contains
   INTEGER :: erno, ira
   WRITE (*,*) str
   CALL MPI_abort (iComm, erno, ira)
-  call CON_stop('ERROR in IM/RCM/src/impl_bicgstab.f90')
+  call CON_stop('ERROR in IM/RCM2/src/impl_bicgstab.f90')
   END SUBROUTINE Stop_mpi
 !
 !

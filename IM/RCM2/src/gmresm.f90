@@ -178,7 +178,8 @@
 !   or because maximum number of iterations was exceeded. Check for this:
 !     
     IF (relerr >= TOL) THEN
-       call CON_stop('ERROR in IM/RCM/src/gmresm.f90:convergence in GMRES(m) not achieved, stopping')
+       call CON_stop('ERROR in IM/RCM2/src/gmresm.f90: '// &
+            'no convergence in GMRES(m)')
     END IF
 !
     RETURN

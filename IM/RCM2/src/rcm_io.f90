@@ -59,14 +59,14 @@ CONTAINS
     IF (flag) THEN
        WRITE (*,'(T2,A)') 'UNIT ALREADY OPEN, IN READ_REAL_1D_ARRAY'
        WRITE (*,'(T2,A)') 'FILE NAME: '//filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//filename, STATUS = 'OLD', ACCESS = 'DIRECT',&
           RECL = length, FORM = form_type_char, IOSTAT = istat, ACTION = 'READ')
     IF (istat /= 0) THEN       
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::read_real_1d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::read_real_1d_array')
     END IF
 !
     IF (asci_format) THEN
@@ -84,7 +84,7 @@ CONTAINS
     ELSE
        WRITE (*,*) 'ERROR READING, file ', filename, rec_num, Istat
        write (*,*) label
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_real_1d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_real_1d_array')
     END IF
 !
     CLOSE (UNIT=LUN)
@@ -133,14 +133,14 @@ CONTAINS
     IF (flag) THEN
        WRITE (*,'(T2,A)') 'UNIT ALREADY OPEN, IN READ_REAL_2D_ARRAY'
        WRITE (*,'(T2,A)') 'FILE NAME: '//filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//filename, STATUS = 'OLD', ACCESS = 'DIRECT',&
           RECL = length, FORM = form_type_char, IOSTAT = istat, ACTION = 'READ')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_real_2d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_real_2d_array')
     END IF
 !
     IF (asci_format) THEN
@@ -156,7 +156,7 @@ CONTAINS
        error_flag = .TRUE.
     ELSE
        WRITE (*,*) 'ERROR READING, file is: ', filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_real_2d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_real_2d_array')
     END IF
 !
     CLOSE (UNIT=LUN)
@@ -235,14 +235,14 @@ CONTAINS
     IF (flag) THEN
        WRITE (*,'(T2,A)') 'UNIT ALREADY OPEN, IN READ_INTG_1D_ARRAY'
        WRITE (*,'(T2,A)') 'FILE NAME: '//filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//filename, STATUS = 'OLD', ACCESS = 'DIRECT',&
           RECL = length, FORM = form_type_char, IOSTAT = istat, ACTION = 'READ')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_intg_1d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_intg_1d_array')
     END IF
 !
     IF (asci_format) THEN
@@ -258,7 +258,7 @@ CONTAINS
        error_flag = .TRUE.
     ELSE
        WRITE (*,*) 'ERROR READING, file is: ', filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_intg_1d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_intg_1d_array')
     END IF
 !
     CLOSE (UNIT=LUN)
@@ -307,14 +307,14 @@ CONTAINS
     IF (flag) THEN
        WRITE (*,'(T2,A)') 'UNIT ALREADY OPEN, IN READ_INTG_2D_ARRAY'
        WRITE (*,'(T2,A)') 'FILE NAME: '//filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//filename, STATUS = 'OLD', ACCESS = 'DIRECT',&
           RECL = length, FORM = form_type_char, IOSTAT = istat, ACTION = 'READ')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_intg_2d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_intg_2d_array')
     END IF
 !
     IF (asci_format) THEN
@@ -330,7 +330,7 @@ CONTAINS
        error_flag = .TRUE.
     ELSE
        WRITE (*,*) 'ERROR READING, file is: ', filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Read_intg_2d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Read_intg_2d_array')
     END IF
 !
     CLOSE (UNIT=LUN)
@@ -393,7 +393,7 @@ CONTAINS
     IF (flag) THEN
        write(*,'(T2,A)')  'ERROR in Write_real_1D array'
        WRITE (*,'(T2,A)') 'FILE NAME: '//filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:UNIT ALREADY OPEN')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:UNIT ALREADY OPEN')
     END IF
     status_char = 'OLD    '
     IF (PRESENT(setup) ) THEN
@@ -418,7 +418,7 @@ CONTAINS
           IOSTAT = istat, ACTION = 'WRITE')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90::Write_real_1d_array')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_1d_array')
     END IF
 
     IF (asci_format) THEN
@@ -428,12 +428,12 @@ CONTAINS
     END IF
     IF (istat /= 0) then
        write(*,*) 'ERROR READING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_1d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_1d_array')
     END IF
     CLOSE (UNIT=LUN, IOSTAT = istat)
     IF (istat /= 0) THEN
        write(*,*) 'ERROR CLOSING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_1d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_1d_array')
     END IF
     RETURN
     END SUBROUTINE Write_real_1d_array
@@ -467,7 +467,7 @@ CONTAINS
     IF (flag) THEN
        write(*,'(T2,A)')  'ERROR in Write_real_2D array'
        write(*,*)'FILENAME=',filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:UNIT ALREADY OPEN')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:UNIT ALREADY OPEN')
     END IF
     status_char = 'OLD    '
     IF (PRESENT(setup) ) THEN
@@ -491,7 +491,7 @@ CONTAINS
           IOSTAT = istat, ACTION = 'WRITE')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 
     IF (asci_format) THEN
@@ -501,13 +501,13 @@ CONTAINS
     END IF
     IF (istat /= 0) THEN
        write(*,*) 'ERROR READING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_2d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_2d_array')
     END IF
 
     CLOSE (UNIT=LUN, IOSTAT = istat)
     IF (istat /= 0) THEN
        write(*,*) 'ERROR CLOSING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_2d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_2d_array')
     END IF
 
     RETURN
@@ -576,7 +576,7 @@ CONTAINS
     INQUIRE (UNIT = LUN, OPENED = flag)
     IF (flag) THEN
        write(*,*)'ERROR in Write_intg_1D array, filename=',filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:UNIT ALREADY OPEN')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:UNIT ALREADY OPEN')
     END IF
     status_char = 'OLD    '
     IF (PRESENT(setup) ) THEN
@@ -601,7 +601,7 @@ CONTAINS
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE in write_intg_1d_array: ',&
             trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 
     IF (asci_format) THEN
@@ -611,13 +611,13 @@ CONTAINS
     END IF
     IF (istat /= 0) THEN
        write(*,*) 'ERROR WRITING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_intg_1d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_intg_1d_array')
     END IF
 
     CLOSE (UNIT=LUN, IOSTAT = istat)
     IF (istat /= 0) THEN
        write(*,*) 'ERROR CLOSING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_intg_1d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_intg_1d_array')
     END IF
 
     RETURN
@@ -650,7 +650,7 @@ CONTAINS
     INQUIRE (UNIT = LUN, OPENED = flag)
     IF (flag) THEN
        write(*,*)'ERROR in Write_intg_2D array, filename=',filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:UNIT ALREADY OPEN')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:UNIT ALREADY OPEN')
     END IF
     status_char = 'OLD    '
     IF (PRESENT(setup) ) THEN
@@ -673,7 +673,7 @@ CONTAINS
           IOSTAT = istat, ACTION = 'WRITE')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 
     IF (asci_format) THEN
@@ -683,13 +683,13 @@ CONTAINS
     END IF
     IF (istat /= 0) THEN
        write(*,*) 'ERROR WRITING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_intg_2d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_intg_2d_array')
     END IF
 
     CLOSE (UNIT=LUN, IOSTAT = istat)
     IF (istat /= 0) THEN
        write(*,*) 'ERROR CLOSING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_intg_2d_array')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_intg_2d_array')
     END IF
 
     RETURN
@@ -784,7 +784,7 @@ CONTAINS
     IF (ibeg > isize+n_gc .OR. iend > isize+n_gc .OR. &
         jbeg > jsize+n_gc .OR. jend > jsize+n_gc .OR. &
         ibeg < 1-n_gc .OR. iend < 1-n_gc .OR. jbeg < 1-n_gc .OR. jend < 1-n_gc) THEN
-        call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:INDICES WRONG IN OUTP')
+        call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:INDICES WRONG IN OUTP')
     END IF
 !                                                                       
 !   if scale=0. then compute auto scale factor
@@ -956,7 +956,7 @@ CONTAINS
     IF (ibeg > isize .OR. iend > isize .OR. &
         jbeg > jsize .OR. jend > jsize .OR. &
         ibeg < 1 .OR. iend < 1 .OR. jbeg < 1 .OR. jend < 1) THEN
-        call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:INDICES WRONG IN OUTP')
+        call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:INDICES WRONG IN OUTP')
     END IF
 !
 !   if scale=0. then compute auto scale factor
@@ -1128,13 +1128,13 @@ CONTAINS
     scale_tmp = xscale
     ipower = 0
     IF (ABS(scale_tmp) > TINY(1.0_rprec)) THEN
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:'// &
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:'// &
             'IF CALL OUTP_LOGICAL, SET SCALE = 0')
     END IF
     IF (ibeg > isize .OR. iend > isize .OR. &
         jbeg > jsize .OR. jend > jsize .OR. &
         ibeg < 1 .OR. iend < 1 .OR. jbeg < 1 .OR. jend < 1) THEN
-        call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:INDICES WRONG IN OUTP')
+        call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:INDICES WRONG IN OUTP')
     END IF
 !
 !
@@ -1222,7 +1222,7 @@ CONTAINS
 !
     INQUIRE (UNIT = LUN, OPENED = flag)
     IF (flag) THEN
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90:UNIT ALREADY OPEN')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90:UNIT ALREADY OPEN')
     END IF
     status_char = 'OLD    '
     IF (PRESENT(setup) ) THEN
@@ -1235,19 +1235,19 @@ CONTAINS
           IOSTAT = istat, ACTION = 'WRITE')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 
     WRITE (UNIT = LUN, REC=rec_num, IOSTAT=istat) label, array_3d
     IF (istat /= 0) THEN
        write(*,*) 'ERROR WRITING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_3d_array_old')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_3d_array_old')
     END IF
 
     CLOSE (UNIT=LUN, IOSTAT = istat)
     IF (istat /= 0) THEN
        write(*,*) 'ERROR CLOSING FILE: ',trim(NameRcmDir),filename
-       call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Write_real_3d_array_old')
+       call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Write_real_3d_array_old')
     END IF
 
     RETURN
@@ -1287,14 +1287,14 @@ CONTAINS
     INQUIRE (UNIT = LUN, OPENED = flag)
     IF (flag) THEN
        WRITE (*,'(T2,A)') 'UNIT ALREADY OPEN, IN READ_REAL_3D_ARRAY'
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//filename, STATUS = 'OLD', ACCESS = 'DIRECT',&
           RECL = length, FORM = form_type_char, IOSTAT = istat, ACTION = 'READ')
     IF (istat /= 0) THEN
        WRITE (*,*) 'ERROR OPENING FILE: ',trim(NameRcmDir),filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     IF (asci_format) THEN
@@ -1310,7 +1310,7 @@ CONTAINS
        error_flag = .TRUE.
     ELSE
        WRITE (*,*) 'ERROR READING, file is: ', filename
-       call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+       call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
     END IF
 !
     CLOSE (UNIT=LUN)
@@ -1367,7 +1367,7 @@ CONTAINS
             FILE = trim(NameRcmDir)//'input/rcmcrd11', IOSTAT = istat)
       IF (istat /= 0) THEN
          write(*,*) 'ERROR OPENING RCMCRD11'
-         call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Read_grid')
+         call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Read_grid')
       END IF
       READ (LUN, '(A80)') form_length
       READ (UNIT = LUN, FMT = form_length) isize_pr, jsize_pr, dlam, dpsi, ri, re
@@ -1376,7 +1376,7 @@ CONTAINS
 !
       IF (isize /= isize_pr .OR. jsize /= jsize_pr ) THEN
          WRITE (*,*) ' GRID SIZES IN rcmcrd11 DO NOT MATCH THOSE IN THE CODE'
-         call CON_stop('ERROR in IM/RCM/src/rcm_io.f90')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_io.f90')
       END IF
 !
 !
@@ -1384,7 +1384,7 @@ CONTAINS
             FILE = trim(NameRcmDir)//'input/rcmcrd21', IOSTAT = istat)
       IF (istat /= 0) THEN
          WRITE (*,*)  'ERROR OPENING RCMCRD21'
-         call CON_STOP('ERROR in IM/RCM/src/rcm_io.f90::Read_grid')            
+         call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90::Read_grid')            
       END IF
       READ (LUN, '(A80)') form_length
       READ (UNIT=LUN, FMT = form_length) alpha
@@ -1408,16 +1408,16 @@ CONTAINS
       CHARACTER (LEN=80) :: form_string
 !
       IF (isize_pr /= isize) call CON_stop( &
-           'Error in IM/RCM/rcm_io::Write_grid: isizes do not match')
+           'Error in IM/RCM2/rcm_io::Write_grid: isizes do not match')
 
       IF (jsize_pr /= jsize) call CON_stop( &
-           'Error in IM/RCM/rcm_io::Write_grid: jsizes do not match')
+           'Error in IM/RCM2/rcm_io::Write_grid: jsizes do not match')
 
 !
       OPEN (UNIT = LUN, STATUS = 'REPLACE', FORM = 'FORMATTED', &
             FILE = trim(NameRcmDir)//'input/rcmcrd11', IOSTAT = istat)
       IF (istat /= 0) call  CON_stop( &
-           'Error in IM/RCM/rcm_io::Write_grid: ERROR OPENING RCMCRD11')
+           'Error in IM/RCM2/rcm_io::Write_grid: ERROR OPENING RCMCRD11')
       form_string = '(2(TR2,I10),4(TR2,ES23.15))'
       WRITE (UNIT = LUN, FMT = '(A80)') form_string
       WRITE (UNIT = LUN, FMT=form_string) &
@@ -1428,7 +1428,7 @@ CONTAINS
       OPEN (UNIT = LUN, STATUS = 'REPLACE', FORM = 'FORMATTED', &
             FILE = trim(NameRcmDir)//'input/rcmcrd21', IOSTAT = istat)
       IF (istat /= 0) call  CON_stop( &
-           'Error in IM/RCM/rcm_io::Write_grid: ERROR OPENING RCMCRD21')
+           'Error in IM/RCM2/rcm_io::Write_grid: ERROR OPENING RCMCRD21')
 
       form_string = '(3(TR2,ES23.15))'
       WRITE (LUN, '(A80)') form_string
@@ -1454,14 +1454,16 @@ CONTAINS
            FILE = trim(NameRcmDir)//'input/rcmlas1')
 !
          READ (LUN,'(TR2,I10.10)') n
-         IF (n /= ksize) STOP 'problem with rcmlas1'
+         IF (n /= ksize) call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90: '// &
+              'Incorrect ksize in IM/inputrcmlas1')
          READ (LUN,'(A80)') form_string
          DO k = 1, n
             READ (LUN, form_string) alam(k), eta(k), ikflav(k), fudge(k)
          END DO
 !
          READ (LUN,'(TR2,I10.10)') n
-         IF (n /= kcsize) STOP 'problem with rcmlas1, grid-based'
+         IF (n /= kcsize) call CON_STOP('ERROR in IM/RCM2/src/rcm_io.f90: '//&
+              'Incorrect kcsize in IM/inputrcmlas1')
          READ (LUN,'(A80)') form_string
          DO k = 1, n
             READ (LUN, form_string) alamc(k), etac(k), ikflavc(k), fudgec(k)
@@ -1530,11 +1532,12 @@ CONTAINS
       OPEN (UNIT = LUN, STATUS = 'OLD', FORM = 'FORMATTED', &
             FILE = trim(NameRcmDir)//'input/rcmcond', ACTION = 'READ', IOSTAT=istat) 
       IF (istat /= 0) call CON_STOP( &
-           'ERROR in IM/RCM/rcm_io::read_Qtcond: ERROR OPENING rcmcond')
+           'ERROR in IM/RCM2/rcm_io::read_qtcond: ERROR OPENING rcmcond')
 !
       READ (LUN, '(I10.10)') n
-      IF (n /= isize*jsize) STOP 'sizes do not match in qtcond'
-      !       IF (n /= (isize)*(jsize+3)) STOP 'sizes do not match in qtcond'
+      IF (n /= isize*jsize) call CON_STOP( &
+           'ERROR in IM/RCM2/rcm_io::read_qtcond: sizes do not match')
+      ! IF(n/=(isize)*(jsize+3)) ...
       READ (LUN,'(A80)') form_string
       DO j = 1, jsize
          DO i = 1, isize
@@ -1544,7 +1547,8 @@ CONTAINS
 !
 !
      READ (LUN, '(I10.10)') n
-     IF (n /= (jsize)) STOP 'sizes do not match in qtcond'
+     IF (n /= (jsize)) call CON_STOP(&
+          'ERROR in IM/RCM2/rcm_io::read_qtcond: jsize does not match')
      READ (LUN,'(A80)') form_string
      DO j = 1, jsize
         READ (LUN,form_string) ss(j)
@@ -1578,7 +1582,7 @@ CONTAINS
       OPEN (UNIT = LUN, STATUS = 'REPLACE', FORM = 'FORMATTED', &
             FILE = trim(NameRcmDir)//'input/rcmcond', ACTION = 'WRITE', IOSTAT=istat) 
       IF (istat /= 0) call CON_STOP( &
-           'ERROR in IM/RCM/rcm_io::Write_Qtcond: ERROR OPENING rcmcond')
+           'ERROR in IM/RCM2/rcm_io::Write_qtcond: ERROR OPENING rcmcond')
 !
         WRITE (LUN, '(I10.10)') isize*jsize
         form_string = '(3(TR2,ES23.15))'

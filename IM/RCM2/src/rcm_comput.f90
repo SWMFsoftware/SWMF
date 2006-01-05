@@ -20,7 +20,8 @@
       ELSE IF (i_eta_bc == 3) THEN
          CALL Rcm_plasma_bc (i_eta_bc, 1)
       ELSE 
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:ILLEGAL VALUE OF I_eta_bc')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'ILLEGAL VALUE OF I_eta_bc')
       END IF
       CALL Get_jbirk (jtime)
       CALL Get_vparallel ()
@@ -39,19 +40,22 @@
          CALL Wrap_around_ghostcells (pedpsi, isize, jsize, n_gc)
          CALL Wrap_around_ghostcells (hall, isize, jsize, n_gc)
       CASE DEFAULT
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:COMPUT: ILLEGAL icond')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'COMPUT: ILLEGAL icond')
       END SELECT
 !
 !
       SELECT CASE (ibnd_type)  ! set VBND
       CASE (1)
-         IF (ipcp_type < 11) STOP 'IPCP NOT RIGHT'
+         IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'IPCP NOT RIGHT')
          CALL Get_potential_on_bndy ()
          DO j = 1, jsize
             v (1:imin_j(j)-1, j) = vbnd (j)
          END DO
       CASE (5)
-       IF (ipcp_type < 11) STOP 'IPCP NOT RIGHT'
+       IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+           'IPCP NOT RIGHT')
        IF (ipot == 6) THEN ! DO NOT SET BNDY CONDITION ON V !!!
 !        DO j = 1, jsize
 !           v (1:imin_j(j)-1, j) = vbnd (j)
@@ -67,7 +71,8 @@
          END DO
        END IF
       CASE (2)
-        IF (ipcp_type > 0 .AND. ipcp_type < 8) STOP 'IPCP_TYPE IS ONLY FOR HMR'
+        IF (ipcp_type > 0 .AND. ipcp_type < 8) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+            'IPCP_TYPE IS ONLY FOR HMR')
          deqdt = 0.0_rprec
          a (2) = boundary(2)%aa
          b (2) = boundary(2)%bb
@@ -76,7 +81,8 @@
          CALL Efield (ipcp_type, vdrop*1000, deqdt, a, b, dx, dy, colat,&
                      aloct, 0_iprec, -2_iprec, 1_iprec, v, vbnd)
       CASE (3)
-         IF (ipcp_type < 11) STOP 'IPCP NOT RIGHT'
+         IF (ipcp_type < 11) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'IPCP NOT RIGHT')
          CALL Get_potential_on_bndy ()
          DO j = 1, jsize
             v (1:imin_j(j)-1, j) = vbnd (j)
@@ -84,7 +90,8 @@
       CASE (4)
 !        DO NOTHING, VBND IS ALREADY SET
       CASE DEFAULT
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:COMPUT: ibnd_type not implemented')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'COMPUT: ibnd_type not implemented')
       END SELECT
 !
 !
@@ -253,7 +260,8 @@ ELSE IF (itype_bf == 1) THEN ! interpolate HV
            EXIT find_loop
         END IF
      END DO find_loop
-     IF (nn == -999) STOP 'ibtime screwed up, stop in bfield'
+     IF (nn == -999) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+         'ibtime screwed up, stop in bfield')
 !
      IF (nn /= nold_bf) THEN
 !
@@ -312,7 +320,8 @@ ELSE IF (itype_bf == 3) THEN
 
 ELSE
 print*,itype_bf
-   call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:ILLEGAL BFIELD TYPE IN GET_BFIELD')
+   call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+       'ILLEGAL BFIELD TYPE IN GET_BFIELD')
 END IF
       END SUBROUTINE Get_bfield
 !
@@ -353,7 +362,8 @@ END IF
                EXIT find_loop
             END IF
          END DO find_loop
-         IF (nn == -999) STOP 'ibtime screwed up, stop in get_eta_on_bndy'
+         IF (nn == -999) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'ibtime screwed up, stop in get_eta_on_bndy')
 !
          f = REAL(jtime-itime_etac(nn-1), rprec) / &
              REAL(itime_etac(nn)-itime_etac(nn-1), rprec)
@@ -419,7 +429,8 @@ END IF
 !
     IF (ibnd_type /= 1 .AND. ibnd_type /= 2 .AND. &
         ibnd_type /= 3 .AND. ibnd_type /=4 .AND. ibnd_type /= 5) &
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:ILLEGAL VALUE FOR IBND_TYPE')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'ILLEGAL VALUE FOR IBND_TYPE')
 !
 !
 !   I. Setting boundary in equatorial plane (also needed for IMODE=2).
@@ -449,7 +460,7 @@ END IF
           write(*,*)'R_24=',R_24,' R_12=',R_12
           write(*,*)'vm(:,1)=',vm(:,1)
           write(*,*)'xmin(:,1)=',xmin(:,1)
-          call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:WRONG R_12')
+          call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:WRONG R_12')
        END IF
 !
        boundary(1)%aa =  (R_12+R_24)/2.0
@@ -471,7 +482,7 @@ END IF
                          write(*,*)' Point=',xmin(i,j),ymin(i,j),vm(i,j)
                          write(*,*)' Ellipse:', &
                               boundary(1)%xx,boundary(1)%yy,boundary(1)%aa,boundary(1)%bb
-                         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90')
+                         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90')
                       end if
                       if(xmin(i,j)>0.)then
                          r_12=0.95*r_12
@@ -502,9 +513,11 @@ END IF
 !
     ELSE IF (ibnd_type == 4) THEN
        OPEN (LUN, FILE=trim(NameRcmDir)//'vext.dat', STATUS='OLD', IOSTAT=ierr)
-          IF (ierr /= 0) STOP 'ERROR READING BNDY IN RCM'
+          IF (ierr /= 0) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+              'ERROR READING BNDY IN RCM')
           READ (LUN,*) ierr
-          IF (ierr /= jsize) STOP 'jsize in vext.dat wrong'
+          IF (ierr /= jsize) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+              'jsize in vext.dat wrong')
           DO j = 1-n_gc, jsize+n_gc
              READ (LUN,*) n, bndloc(j), vbnd(j)
           END DO
@@ -512,7 +525,8 @@ END IF
        imin_j = CEILING (bndloc) 
        RETURN  
     ELSE
-       call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:ILLEGAL VALUE OF IBND_TYPE') 
+       call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+           'ILLEGAL VALUE OF IBND_TYPE') 
     END IF
 !
 !
@@ -585,7 +599,8 @@ END IF
               jind (n) = j
           END IF
        END DO
-       IF (jind(n) == -1) STOP 'UNABLE TO LOCATE ONE OF PNTS IN GETBND'
+       IF (jind(n) == -1) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+           'UNABLE TO LOCATE ONE OF PNTS IN GETBND')
 !
        a = REAL (isize,rprec)
        b = REAL (1.0_rprec, rprec)
@@ -781,7 +796,7 @@ END IF
             ig = ig + 1 
             IF (ig > SIZE(gkl)) THEN
                WRITE (*,'(T2,A)') 'JBIRK: ig.gt.igdim'
-               call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90')
+               call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90')
             END IF
 !
 !           Consider straight line  bi=a1*bj+a2
@@ -1157,12 +1172,14 @@ END IF
                END DO
             ELSE IF (eflux_int == 0.0) THEN
                IF (ANY(eflux(imin_j(j):isize,j,1) /=0.0)) THEN
-                  call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:EFLUX_INT = ZERO BUT EFLUX IS NOT')
+                  call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+                      'EFLUX_INT = ZERO BUT EFLUX IS NOT')
                ELSE
                   eflux (imin_j(j):isize,j,1) = eflux (imin_j(j):isize,j,1)
                END IF
             ELSE
-               call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:EFLUX_INT IS NEGATIVE')
+               call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+                   'EFLUX_INT IS NEGATIVE')
             END IF
 !
       END DO
@@ -1260,7 +1277,7 @@ END IF
         IF (eflux(i,j,ie_ele) > 1.0E-6 .AND. eavg(i,j,ie_ele) < 1.E-5) THEN
            WRITE (*,*) 'stopping in cond, see the code'
            WRITE (*,*) i,j,eflux(i,j,1),eavg(i,j,1), imin_j(j)
-           call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90')
+           call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90')
         END IF 
         ezero = eavg (i, j, ie_ele) / 1.0E3
         sigp  = SQRT(eflux(i,j,ie_ele)) * 40.0 * ezero / (16.0 + ezero**2)
@@ -1395,7 +1412,8 @@ END IF
         END DO
 !
       ELSE
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:VBOUND: IPCP_TYPE NOT IMPLEMENTED')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'VBOUND: IPCP_TYPE NOT IMPLEMENTED')
       END IF
       vbnd (0) = vbnd (jsize)
       vbnd (-1) = vbnd (jsize-1)
@@ -1585,7 +1603,8 @@ END IF
          c5w (:,:) = 0.0_rprec
          RETURN
       ELSE
-         call CON_stop('ERROR in IM/RCM/src/rcm_comput.f90:wind is not implemented yet')
+         call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+             'wind is not implemented yet')
       END IF
 !
 !                                                                       
@@ -1849,7 +1868,8 @@ END IF
 !
       N_calls = N_calls + 1
 !
-      IF (isize < 3) STOP 'idim must be larger than 2 in NEW_COEFF'
+      IF (isize < 3) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+          'idim must be larger than 2 in NEW_COEFF')
 !
 !
 !     1. Run over ALL grid points and flag them as being 
@@ -2245,7 +2265,8 @@ WRITE (*,*) 'anorm',n,anorm
 !                                                                       
       END DO iterate_loop
 !
-      IF (n >= maxits) STOP 'maxits exceeded'
+      IF (n >= maxits) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'//&
+          'maxits exceeded')
 !
       RETURN
       END SUBROUTINE Comput_V_Potnt3
@@ -2351,7 +2372,8 @@ WRITE (*,*) 'anorm',n,anorm
 !
       value = 0.0
 !
-      IF (ikp > 6) STOP 'ELEMOD: KP > 6 !'  ! stanislav
+      IF (ikp > 6) call CON_stop('ERROR in IM/RCM2/src/rcm_comput.f90:'// &
+          'ELEMOD: KP > 6 !')  ! stanislav
 !
 !
       IF (iread_hardy_first == 0) THEN
