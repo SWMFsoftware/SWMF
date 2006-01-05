@@ -1,5 +1,5 @@
 #^CFG FILE _FALSE_
-$tree = [{'attrib' => {'name' => 'Rice Concvection Model: IM Component'},'content' => [{'attrib' => {'name' => 'Testing'},'content' => [{'attrib' => {'name' => 'STRICT'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+$tree = [{'attrib' => {'name' => 'Rice Convection Model 2: IM Component'},'content' => [{'attrib' => {'name' => 'Testing'},'content' => [{'attrib' => {'name' => 'STRICT'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
 
 #STRICT
 T                       UseStrict
