@@ -104,11 +104,15 @@ subroutine IM_set_param(CompInfo, TypeAction)
            x_h=FractionH; x_o=FractionO
         case("#CHARGEEXCHANGE")
            call read_var('UseChargeExchange',L_dktime)
-           call read_var('SunspotNumber',SunspotNumber)
-           call read_var('F107MonthlyMean',F107MonthlyMean)
-           call read_var('DayOfYear',DayOfYear)
-           sunspot_number=SunspotNumber; f107=F107MonthlyMean; doy=DayOfYear
-
+           if(L_dktime)then
+              call read_var('SunspotNumber',SunspotNumber)
+              call read_var('F107MonthlyMean',F107MonthlyMean)
+              call read_var('DayOfYear',DayOfYear)
+              ! Convert from default real to real(r_prec)
+              sunspot_number= SunspotNumber
+              f107          = F107MonthlyMean
+              doy           = DayOfYear
+           end if
         case default
            if(iProc==0) then
               write(*,'(a,i4,a)')NameSub//' IM_ERROR at line ',i_line_read(),&
