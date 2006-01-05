@@ -147,8 +147,8 @@ value is 5 seconds.
 	<parameter name="FractionO" type="real" default="0.3"/>
 
 #COMPOSITION
-FractionH		FractionH
-FractionO		FractionO
+0.7      		FractionH
+0.3      		FractionO
 
 Fractional composition in RCM of H+ and O+.  The two need to add up to 1.0
 </command>
