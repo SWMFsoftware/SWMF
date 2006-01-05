@@ -138,9 +138,9 @@ value is 5 seconds.
 
 </commandgroup>
 
-<commandgroup name="CONTROL PARAMETERS">
+<commandgroup name="PHYSICS PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!  CONTROL PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!! PHYSICS PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="COMPOSITION">
 	<parameter name="FractionH" type="real" default="0.7"/>
@@ -154,16 +154,18 @@ Fractional composition in RCM of H+ and O+.  The two need to add up to 1.0
 </command>
 	
 <command name="CHARGEEXCHANGE">
-	<parameter name="L_dktime" type="logical" default="T"/>
-	<if expr="$L_dktime">
-		<parameter name="SunspotNumber" type="real" default="125."/>
-		<parameter name="F107MonthlyMean" type="real" default="169."/>
-		<parameter name="DayOfYear" type="real" default="90."/>
+	<parameter name="UseChargeExchange" type="logical" default="T"/>
+	<if expr="$UseChargeExchange">
+		<parameter name="SunspotNumber"   type="real" min="0"
+							default="125."/>
+		<parameter name="F107MonthlyMean" type="real" min="0"
+							default="169."/>
+		<parameter name="DayOfYear" type="real" min="0" max="366"
+							default="90." />
 	</if>
 
-
 #CHARGEEXCHANGE
-T			L_dktime
+T			UseChargeExchange
 125.			SunspotNumber
 169.			F107MonthlyMean
 90.			DayOfYear
