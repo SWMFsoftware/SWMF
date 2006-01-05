@@ -191,7 +191,7 @@ SWMFREF.tex: ${SWMFREF}
 	cat ${SWMFREF} > SWMFREF.tex
 
 GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #			  ^CMP IF GM
-IMXML = ${DIR}/IM/RCM/PARAM.xmltex #				  ^CMP IF IM
+IMXML = ${DIR}/IM/RCM/PARAM.xmltex ${DIR}/IM/RCM2/PARAM.xmltex #  ^CMP IF IM
 RBXML = ${DIR}/RB/RiceV5/PARAM.xmltex #				  ^CMP IF RB
 IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #			  ^CMP IF IE
 SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           		  ^CMP IF SP
