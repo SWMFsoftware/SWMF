@@ -49,25 +49,24 @@ output files. Default value is "IM".
 	<for from="1" to="$nFilesPlot">
 		<parameter name="StringPlot" type="strings" min="3" max="3">
 			<part name="plotarea" type="string" input="select" 
-							required="T">
-				<option name="2D vars." value="2d"/>
-				<option name="2D vars." value="2D"/>
-				<option name="3D vars." value="3d" />
-				<option name="3D vars." value="3D" />
+								required="T">
+				<option name="2D vars." value="2d/2D" 
+								default="T"/>
+				<option name="3D vars." value="3d/2D"/>
 			</part>
 			<part name="plotvar" type="string" input="select"
 								required="T">
-				<option name="minimum variables" value="min"/>
-				<option name="minimum variables" value="MIN"/>
-				<option name="maximum variables" value="max"/>
-				<option name="maximum variables" value="MAX"/>
-				<option name="normal variables" value="rcm"/>
-				<option name="normal variables" value="RCM"/>
+				<option name="minimum set" 
+					value="min/MIN" default="T"/>
+				<option name="maximum set" 
+					value="max/MAX/rcm/RCM"/>
 			</part>
 			<part name="plotformat" type="string" input="select" 
 								required="T">
-				<option value="tec" name="TECPLOT"/>
-				<option value="idl" name="IDL"    />
+				<option name="TECPLOT" value="tec/TEC" 
+								default="T"/>
+				<option name="IDL"     value="idl/IDL"
+						if="$plotarea =~ /2d/i" />
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" />
@@ -75,35 +74,48 @@ output files. Default value is "IM".
 	</for>
 #SAVEPLOT
 2			nFilesPlot
-RCM 2d tec		StringPlot
+2d min idl		StringPlot
 100			DnSavePlot
--1			DtSavePlot
-RCM 3d idl		StringPlot
+-1			DtSavePlot [sec]
+3d max tec		StringPlot
 -1			DnSavePlot
-60			DtSavePlot
+60			DtSavePlot [sec]
 
-! Default is nFilesPlot=0. \\
-!
-! \noindent
-! StringPlot must contain the following 3 parts in arbitrary order
-!\begin{verbatim}
-! plotvar plotarea plotformat
-!
-! plotarea   = '2d', '3d'
-! plotvar    = 'min', 'max', 'rcm'
-! plotformat = 'tec', 'idl'
-!\end{verbatim}
-!
-!\noindent
-! The plotarea string defines the region for the plots, 2d or 3d.
-! The plotvar string specifies which variables to write, either a minimum,
-! maximum, or typical values.
-! The plotformat specifies whether to output files for processing in either
-! Tecplot or Idl.
-! The plot_string is always followed by the plotting frequency
-! DnSavePlot and DtSavePlot, whether the run it time accurate or not.\\
-!
+Default is nFilesPlot=0. \\
 
+\noindent
+StringPlot must contain the following 3 parts (separated with space)
+in arbitrary order:
+\begin{verbatim}
+plotarea   = '2d', '3d'
+plotvar    = 'min', 'max', 'rcm'
+plotformat = 'tec', 'idl'
+\end{verbatim}
+
+\noindent
+The plotformat specifies whether to output files for processing in either
+Tecplot or Idl.
+
+The plotarea string defines the region for the plots, 2d or 3d.
+Currently the 3D output is implemented for Tecplot format only.
+
+The plotvar string specifies which variables to write, either a minimum set,
+or a maximum set (the 'rcm' string is preserved for backwards
+compatibility only, and it is the same as the 'max' string).
+The 'min' value corresponds to the variables 
+'rho T P rho(MHD) T(MHD) P(MHD' in 2D and to 'eeta veff' in 3D.
+
+The 'max' value corresponds to a lot of variables in 2D. For Tecplot format
+they include the 'min' variables, but for IDL format the 'max' and
+'min' variables are distinct, so you need to specify two IDL plot files
+to get all the variables. In 3D only the Tecplot format is available,
+and the 'max' variable set contains 'bndloc Vm |B| V birk alam eeta veff w'.
+
+The DnSavePlot and DtSavePlot integers define the plotting frequency
+in number of time steps and number of seconds, respectively.
+A negative value -1 means that the frequency parameter is ignored.
+Note that DtSavePlot must be a multiple of the time step iDtRcm
+(see the #TIMESTEP command).
 </command>
 
 </commandgroup>
