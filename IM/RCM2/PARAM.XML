@@ -183,6 +183,7 @@ T			UseChargeExchange
 90.			DayOfYear
 
 Activate charge exchange in RCM and specify solar conditions.
+Default values are shown.
 </command>
 
 </commandgroup>
