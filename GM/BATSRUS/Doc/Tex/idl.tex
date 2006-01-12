@@ -10,12 +10,13 @@ These macros were originally developed for the Versatile Advection Code,
 and modified and improved for \BATSRUS. 
 All the IDL macros provided for \BATSRUS\ are in the {\bf Idl} directory.
 
-\subsection{IDL Path and Startup File \label{s-idl-path}}
+\subsection{IDL path and startup file \label{s-idl-path}}
 
    It is necessary to let IDL know about the existence of the macros in the 
    Idl directory.  You can define the search path for IDL, for example
 \begin{verbatim}
-setenv IDL_PATH /home/gtoth/bats/Idl:/usr/local/rsi/idl/lib
+setenv IDL_PATH \
+ /home/gtoth/bats/Idl:/usr/local/rsi/idl/lib:/usr/local/rsi/idl/lib/utilities
 \end{verbatim}
    for the csh or tcsh shell. Modify the above setting for
    your \BATSRUS\ and IDL libraries as needed. You can also make IDL to read 
@@ -28,7 +29,8 @@ setenv IDL_STARTUP idlrc
 
    For other UNIX shells (bash, ksh), use
 \begin{verbatim}
-IDL_PATH=/home/gtoth/bats/Idl:/usr/local/rsi/idl/lib
+IDL_PATH=\
+ /home/gtoth/bats/Idl:/usr/local/rsi/idl/lib:/usr/local/rsi/idl/lib/utilities
 export IDL_PATH
 IDL_STARTUP=idlrc
 export IDL_STARTUP
@@ -69,7 +71,7 @@ exit
 \end{verbatim}
    The alternative 'quit' command is also defined for convenience.
 
-\subsection{Reading a Snapshot with getpict \label{s-getpict}}
+\subsection{Reading a snapshot with getpict \label{s-getpict}}
 
    To read a single frame from a file, type at the "IDL$>$" prompt of IDL
 \begin{verbatim}
@@ -138,7 +140,7 @@ plotgrid,x
 plotgrid,x,/lines
 \end{verbatim}
 
-\subsection{Transformation of Non-Regular Grid \label{s-transform}}
+\subsection{Transformation of non-regular grid \label{s-transform}}
 
    The file may contain data on a generalized or unstructured 2D grid.
    This is signaled by a negative {\bf ndim} in the plotfile 
@@ -222,7 +224,7 @@ dotransform='y'
    After that you can return to dotransform='n' to save the time of
    transformation.
 
-\subsection{Comparison of Data \label{s-compare}}
+\subsection{Comparison of data \label{s-compare}}
 
    You can read snapshots from 2 or at most 3 files for purposes of
    comparison. Simply give the filenames separated by spaces.
@@ -301,7 +303,7 @@ print,total(abs(rholow-rhohigh))/100/50
    with the use of the {\bf triplet} function (see section \ref{s-plot-part}).
 
 
-\subsection{Plotting the Data with plotfunc \label{s-plotfunc}}
+\subsection{Plotting data with plotfunc \label{s-plotfunc}}
 
    Once the data is read by {\bf getpict} or {\bf animate} you can plot 
    functions of {\bf w} with
@@ -661,7 +663,7 @@ plotmode='contfill ovelovect'
    you would like. In 1D plots, the line style is varied for the different 
    functions, so the curves can be distinguished.
 
-\subsection{Plotting another Snapshot \label{s-plot-another}}
+\subsection{Plotting another snapshot \label{s-plot-another}}
 
    If you type
 \begin{verbatim}
@@ -700,7 +702,7 @@ noerase=1
 .r defaults
 \end{verbatim}
 
-\subsection{Plotting and Animation with animate \label{s-animate}}
+\subsection{Animation and plotting with animate \label{s-animate}}
 
    This general procedure can plot, save into file(s), or animate 
    (using IDL's Xinteranimate) different functions of data 
@@ -732,10 +734,19 @@ noerase=1
    The number of snapshots to be animated is limited by the end of 
    file(s) and/or by the {\bf npictmax} parameter. With a formula
 \begin{verbatim}
-npict=min( npictmax, (min(npictinfiles)-firstpict)/dpict + 1 )
+npict=min( npictmax, min( 1 + (npictinfiles-firstpict)/dpict ) )
 \end{verbatim}
    The animation runs from {\bf firstpict}, every {\bf dpict}-th picture is
    plotted and the total number of animated frames is at most {\bf npictmax}. 
+   If {\bf firstpict} and {\bf dpict} are scalars, the same values are
+   applied for all the files, but it is also possible to use different
+   values for each file by setting array values, e.g. for two files
+\begin{verbatim}
+firstpict=[5,9]
+dpict    =[1,2]
+\end{verbatim}
+   will plot every frame starting from the 5th in the first file,
+   and every second frame from the 9th in the second file.
 
    The {\bf multiplot} array can be used to get some really interesting
    effects in {\bf animate}. Besides overplotting different functions,
@@ -756,7 +767,6 @@ multiplot=2
    the different line styles. Overplotting two data sets is
    especially useful when the two results are supposed to be identical.
 
-
    Timeseries can also be produced easily with {\bf multiplot}. 
 \begin{verbatim}
 filename='example2.out'
@@ -770,7 +780,15 @@ bottomline=1
    will show the first 6 snapshots of density in a single plot. 
    Now the time is shown for each plot individually, and setting
    {\bf bottomline=1} limits the time stamp to the most essential
-   information, time. If {\bf npict*nfile*nfunc} is greater than the number 
+   information, time. An alternative approach is to set the 
+   {\bf timetitle} string to format the time and show it as the plot title.
+   For example
+\begin{verbatim}
+timetitle='("t=",f8.1,"s")'
+\end{verbatim}
+   will show the time as {\bf t=240000.0s}. Set timetitle to an empty string 
+   to return to the default behaviour.
+   If {\bf npict*nfile*nfunc} is greater than the number 
    of subplots defined by {\bf multiplot}, an animation is done. 
    Type 
 \begin{verbatim}
@@ -778,13 +796,11 @@ multiplot=0
 \end{verbatim}
    to return to default behavior, which is one snapshot per plot.
 
-
    Even after exiting from Xinteranimate, the animation can be repeated
    again without rereading the data file(s) by typing
 \begin{verbatim}
 xinteranimate,/keep_pixmaps
 \end{verbatim}
-
 
    Sometimes it is interesting to visualize the difference of two runs, e.g.
    to visualize deviations from the initial state, or from a steady state.
@@ -796,7 +812,7 @@ xinteranimate,/keep_pixmaps
    Note that this feature is only used by ".r animate", since a single 
    snapshot can be easily manipulated explicitly, e.g. {\bf w=w1-w0}.
 
-\subsection{Slicing Structured 3D data \label{s-slice}}
+\subsection{Slicing structured 3D data \label{s-slice}}
 
    For visualizing 3D data, .r plotfunc or .r animate can be used after a
    1 or 2D {\bf cut} array has been defined. Alternatively slices of a single
@@ -829,7 +845,7 @@ velvector=25*50 & velpos=fltarr(velvector,2)
 velpos(*,*)=x2d(triplet(0,49,2, 0,99,1, 0,1,1))
 \end{verbatim}
 
-\subsection{Function Definitions in funcdef \label{s-funcdef}}
+\subsection{Function definitions in funcdef \label{s-funcdef}}
 
    Any function of the variables in {\bf w}, the coordinates in
    {\bf x}, and the equation parameters in {\bf eqpar} can be defined in the 
@@ -880,7 +896,7 @@ Mfastz          fast Mach number along z dimension: uz/cfastz
 Mfast           maximum fast Mach number: |u|/cfast
 \end{verbatim}
 
-\subsection{Reading the Logfile with getlog \label{s-getlog}}
+\subsection{Reading the logfile with getlog \label{s-getlog}}
 
 One or more (at most three) logfiles can be read by
 \begin{verbatim}
@@ -889,33 +905,99 @@ One or more (at most three) logfiles can be read by
    which reads data from the file(s) determined by the {\bf logfilename} 
    parameter. An initial guess for the name is made if the 
    {\bf filename} parameter has already been given. The data in the
-   logfile(s) is put into the {\bf wlog} array in case of 
-   a single file, and into {\bf wlog0, wlog1} in case of two files.
-   The {\bf wlog(nt,nwlog)} array contains the nt rows and nwlog columns of the
-   logfile. A simple example is 
+   logfile(s) is put into the {\bf wlog} ({\bf wlog1, wlog2}) real arrays,
+   while the name of the variables is put into the {\bf wlognames} 
+   ({\bf wlognames1, wlognames2}) string arrays. Based on the
+   the variable names (e.g. 't' or 'time', 'hour' or 'hours',
+   'yr mo dy hr mn sc ms' or 'year month day hour min sec msec') 
+   and the associated time data the time in hours is calculated 
+   and stored in the {\bf logtime} ({\bf logtime1, logtime2}) 1D real arrays. 
+   If no time variables are found, the {\bf logtime} array is set to the
+   row index.
+
+   The {\bf wlog(nrow,ncol)} real array contains the rows and columns of the
+   logfile, the {\bf wlognames(ncol)} string array the names and the
+   {\bf logtime(nrow)} array the time in hour. A simple example is 
 \begin{verbatim}
 .r getlog
-logfilename(s) ? log_n000001.log
-headline       =Volume Averages, Fluxes, or point values
-Reading array wlog:
+logfilename(s) =log_n020001.log
+logfile  =log_n020001.log
+headline =Volume averages, fluxes, etc
   wlog(*, 0)= it
-  wlog(*, 1)= dt
-  wlog(*, 2)= rho
-  wlog(*, 3)= mx
-  wlog(*, 4)= my
-  wlog(*, 5)= mz
-  wlog(*, 6)= bx
-  wlog(*, 7)= by
-  wlog(*, 8)= bz
-  wlog(*, 9)= e
-  wlog(*,10)= Pmin
-  wlog(*,11)= Pmax
+  wlog(*, 1)= t
+  wlog(*, 2)= dt
+  wlog(*, 3)= rho
+  wlog(*, 4)= mx
+  wlog(*, 5)= my
+  wlog(*, 6)= mz
+  wlog(*, 7)= p
+  wlog(*, 8)= bx
+  wlog(*, 9)= by
+  wlog(*,10)= bz
+  wlog(*,11)= pmin
+  wlog(*,12)= pmax
 Number of recorded timesteps: nt=      1000
-plot,wlog(*,0),wlog(*,2),xtitle='step',ytitle='rho_mean'
+Setting logtime
 \end{verbatim}
-which checks the global mass conservation.
+You can use the IDL plotting procedures directly to visualize the data, e.g.
+\begin{verbatim}
+plot,logtime,wlog(*,3),xtitle='hour',ytitle='rho_mean'
+\end{verbatim}
+checks the global mass conservation. 
+Use the {\bf plotlog} script to get more sophisticated plots,
 
-\subsection{Saving Plots into Postscript and GIF Files \label{s-postscript}}
+\subsection{Plotting the logfile with plotlog \label{s-getlog}}
+
+Once the data in the logfile(s) have been read with {\bf getlog},
+it can be easily visualized with the {\bf plotlog} script.
+Simply run
+\begin{verbatim}
+.r plotlog
+logfunc(s)     ? mx pmin pmax
+\end{verbatim}
+and the script will prompt for the names of the log functions that is
+a space separated list of a subset of the strings in the wlognames array. 
+To change the list of functions simply change the {\bf logfunc} string.
+The time range of the plot can be set with the 2 element
+{\bf xrange} array, while the vertical plot range for the individual functions 
+can be set by the 2 by nfunc element {\bf yranges} array. For example
+\begin{verbatim}
+xrange=[10,20]
+yranges=[[-10,10],[0,0.1],[0,100]]
+\end{verbatim}
+The default plot title, the X title (time) and the Y titles (log functions)
+can be modified by setting the {\bf title} and {\bf xtitle} strings
+and the {\bf ytitles} string array, respectively. For example
+\begin{verbatim}
+title='Simulation Results'
+xtitle='Hours from October 29, 2003'
+ytitles=['m!DX!N','P!Dmin!N','P!Dmax!N']
+\end{verbatim}
+To have no title at all, set these variables to empty strings.
+For the default titles, set the variables to 0.
+
+For multiple logfiles the plotlog script will overplot the data.
+By default the lines belonging to the different data files are distinguished
+by color, but it is possible to use different line styles or symbols
+by setting the {\bf linestyles} or {\bf symbols} arrays. For example
+\begin{verbatim}
+colors=[255,255]
+linestyles=[1,2]
+\end{verbatim}
+will show a dotted and a dashed line with the same default color
+(usually white or black). 
+
+Finally the data can be smoothed with the {\bf smooths} array. 
+The smoothing width can be defined for each logfile separately. 
+A value less than 2 means that the data is not smoothed for that file.
+For example
+\begin{verbatim}
+smooths=[100,0]
+\end{verbatim}
+will smooth the data from the first file only with a 100 point wide stencil.
+
+\subsection{Saving plots into postscript and graphics files 
+                \label{s-postscript}}
 
 In IDL printing a plot is possible through Postscript files.
 After the plot looks fine on the screen, use for example
@@ -956,21 +1038,20 @@ for time series) in combination with {\tt set\_device} and
 To save all frames of an animation into a series of Postscript files, 
 do not use {\bf set\_device} but set
 \begin{verbatim}
-printmovie='y'
+savemovie='ps'
 \end{verbatim}
-This will produce files 
-{\bf Movie/1.ps,Movie/2.ps,...} in the Movie directory, which should
-exist. You can also save the frames into a series of GIF files 
-{\bf Movie/1.gif,Movie/2.gif,...} with
+This will produce files {\bf Movie/0001.ps,Movie/0002.ps,...} 
+in the Movie directory, which should exist. The PostScript files 
+are best suited for printing.
+You can also save the frames in PNG, TIFF, JPEG or BMP formats, e.g.
+by setting 
 \begin{verbatim}
-savemovie='y'
+savemovie='png'
 \end{verbatim}
-The number of frames saved into files is limited by {\bf nplotmax}.
-The GIF files can be put together into a movie by some program like
-{\bf mpeg\_encode} or {\bf convert}, 
-while the PostScript files are best suited for printing. 
+The frames can be put together into a movie by some program like
+{\bf mpeg\_encode} or ImageMagick's {\bf convert}. 
 
-\subsection{IDL Scripts and Procedures \label{s-idl-script}}
+\subsection{IDL scripts and procedures \label{s-idl-script}}
 
 All the IDL commands can be collected into a script file, for example 
 \begin{verbatim}
