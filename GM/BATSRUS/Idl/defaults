@@ -25,7 +25,7 @@ func=''
 logfunc=''
 plotmode=''
 plottitle='default'
-timetitle=0          ; if set to 1, plots time as the title for time series
+timetitle='' ;if set to a format string plots time as the title for time series
 autorange='y'
 axistype='coord'
 
