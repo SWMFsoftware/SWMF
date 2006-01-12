@@ -47,24 +47,6 @@ function ask, what, orig_ans, set_orig = set_orig
 
 end
 
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
-function mklower, string
-
-  temp = byte(string)
-
-  loc = where((temp ge 65) and (temp le 90), count)
-
-  if count ne 0 then temp(loc) = temp(loc)+32
-
-  return, string(temp)
-
-end
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
 ;*****************************************************************************
  
 pro readct, ncolors, ctname
@@ -965,7 +947,7 @@ mr = float(ask('maximum range','40'))
 
 if (nfiles gt 1) then begin
 
-  relative = mklower(ask('universal time (U), or relative time (R)','R'))
+  relative = strlowcase(ask('universal time (U), or relative time (R)','R'))
 
   dt = 0.0
   if (strpos(relative,'r') eq 0) then begin
@@ -983,12 +965,12 @@ endif else begin
 
 endelse
 
-plotsouth = mklower(ask('whether to plot southern hemisphere (y or n)','n'))
+plotsouth = strlowcase(ask('whether to plot southern hemisphere (y or n)','n'))
 isouth = 1
 if (strpos(plotsouth,'n') eq 0) then isouth = 0
 
 savefiles = 'n'
-savefiles = mklower(ask('y to save indices',savefiles))
+savefiles = strlowcase(ask('y to save indices',savefiles))
 
 time = dblarr(nfiles/nskip + 1)
 itime = intarr(6)
@@ -1022,7 +1004,7 @@ for n = 0, nfiles-1,nskip do begin
 
           readf,1, line
 
-          if (strpos(mklower(line),"numerical") gt -1) then begin
+          if (strpos(strlowcase(line),"numerical") gt -1) then begin
 
               readf,1, nvars
               readf,1, nlats
@@ -1033,7 +1015,7 @@ for n = 0, nfiles-1,nskip do begin
 
           endif
 
-          if (strpos(mklower(line),"variable") gt -1) then begin
+          if (strpos(strlowcase(line),"variable") gt -1) then begin
 
               for i=0,nvars-1 do begin
                   readf,1,line
@@ -1043,8 +1025,8 @@ for n = 0, nfiles-1,nskip do begin
 
           endif
 
-          if (strpos(mklower(line),"time") gt -1 and $
-              strpos(mklower(line),"simulation") lt 0) then begin
+          if (strpos(strlowcase(line),"time") gt -1 and $
+              strpos(strlowcase(line),"simulation") lt 0) then begin
 
               int_tmp = 0
               for i=0,5 do begin
@@ -1057,7 +1039,7 @@ for n = 0, nfiles-1,nskip do begin
 
           endif
 
-          if (strpos(mklower(line),"northern") gt -1) then begin
+          if (strpos(strlowcase(line),"northern") gt -1) then begin
 
               data = fltarr(2,nvars,nlons,nlats)
               for j=0,nlons-1 do for i=0,nlats-1 do begin
@@ -1067,7 +1049,7 @@ for n = 0, nfiles-1,nskip do begin
 
           endif
 
-          if (strpos(mklower(line),"all") gt -1) then begin
+          if (strpos(strlowcase(line),"all") gt -1) then begin
 
               nlons = nlons+1
               nlats = nlats/2
@@ -1088,7 +1070,7 @@ for n = 0, nfiles-1,nskip do begin
 
           endif
 
-          if (strpos(mklower(line),"southern") gt -1) then begin
+          if (strpos(strlowcase(line),"southern") gt -1) then begin
 
               for j=0,nlons-1 do for i=0,nlats-1 do begin
                   readf,1,tmp
@@ -1106,9 +1088,9 @@ for n = 0, nfiles-1,nskip do begin
       if (n eq 0) then begin
           nt = -1
           for i=0,nvars-1 do $
-            if strpos(mklower(vars(i)),'theta') gt -1 then nt = i
+            if strpos(strlowcase(vars(i)),'theta') gt -1 then nt = i
           np = -1
-          for i=0,5 do if strpos(mklower(vars(i)),'psi') gt -1 then np = i
+          for i=0,5 do if strpos(strlowcase(vars(i)),'psi') gt -1 then np = i
           if (nt eq -1) or (np eq -1) then begin
               print, "Can't file Theta or Psi variable. Please check file."
               stop
@@ -1272,7 +1254,7 @@ for hem = 0, isouth do begin
         if (Idl_loc lt 0) then begin
             ct_path = '.'
         endif else begin
-            list = str_sep(path,':')
+            list = strsplit(path,':',/extract)
             nlist_eles = n_elements(list)
             for nl = 0,nlist_eles-1 do begin
                 if (strpos(list(nl),'Idl') gt -1) then ct_path = list(nl)

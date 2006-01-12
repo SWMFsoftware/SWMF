@@ -12,7 +12,6 @@
 .r procedures
 .r vector
 .r funcdef
-.r str_sep
 .r defaults
 spawn,'uname',uname
 if strpos(uname[0],'IRIX')  ge 0 then device,retain=2,pseudo_color=8

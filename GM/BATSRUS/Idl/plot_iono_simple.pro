@@ -47,24 +47,6 @@ function ask, what, orig_ans, set_orig = set_orig
 
 end
 
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
-function mklower, string
-
-  temp = byte(string)
-
-  loc = where((temp ge 65) and (temp le 90), count)
-
-  if count ne 0 then temp(loc) = temp(loc)+32
-
-  return, string(temp)
-
-end
-
-;------------------------------------------------------------------------
-;------------------------------------------------------------------------
-
 ;*****************************************************************************
  
 pro readct, ncolors, ctname
@@ -977,7 +959,7 @@ for n = 0, nfiles-1 do begin
 
       readf,1, line
 
-      if (strpos(mklower(line),"numerical") gt -1) then begin
+      if (strpos(strlowcase(line),"numerical") gt -1) then begin
 
         readf,1, nvars
         readf,1, nlats
@@ -990,7 +972,7 @@ for n = 0, nfiles-1 do begin
 
       endif
 
-      if (strpos(mklower(line),"variable") gt -1) then begin
+      if (strpos(strlowcase(line),"variable") gt -1) then begin
 
         for i=0,nvars-1 do begin
           readf,1,line
@@ -1013,7 +995,7 @@ for n = 0, nfiles-1 do begin
 
       endif
 
-      if (strpos(mklower(line),"northern") gt -1) then begin
+      if (strpos(strlowcase(line),"northern") gt -1) then begin
 
         for j=0,nlons-1 do for i=0,nlats-1 do begin
           readf,1,tmp
@@ -1022,7 +1004,7 @@ for n = 0, nfiles-1 do begin
 
       endif
 
-      if (strpos(mklower(line),"southern") gt -1) then begin
+      if (strpos(strlowcase(line),"southern") gt -1) then begin
 
         for j=0,nlons-1 do for i=0,nlats-1 do begin
           readf,1,tmp
@@ -1063,11 +1045,11 @@ for n = 0, nfiles-1 do begin
       phi   = fltarr(2,nlons,nlats)
 
       nt = -1
-      for i=0,nvars-1 do if strpos(mklower(vars(i)),'theta') gt -1 then nt = i
+      for i=0,nvars-1 do if strpos(strlowcase(vars(i)),'theta') gt -1 then nt = i
       np = -1
-      for i=0,2 do if strpos(mklower(vars(i)),'psi') gt -1 then np = i
+      for i=0,2 do if strpos(strlowcase(vars(i)),'psi') gt -1 then np = i
 ;I have it named wrong for a number of runs...
-      for i=0,2 do if strpos(mklower(vars(i)),'phi') gt -1 then np = i
+      for i=0,2 do if strpos(strlowcase(vars(i)),'phi') gt -1 then np = i
       if (nt eq -1) or (np eq -1) then begin
         print, "Can't file Theta or Phi variable. Please check file."
         stop
@@ -1185,7 +1167,7 @@ for hem = 0, 1 do begin
       if (Idl_loc lt 0) then begin
         ct_path = '.'
       endif else begin
-	list = str_sep(path,':')
+	list = strsplit(path,':',/extract)
         nlist_eles = n_elements(list)
 	for nl = 0,nlist_eles-1 do begin
           if (strpos(list(nl),'Idl') gt -1) then ct_path = list(nl)

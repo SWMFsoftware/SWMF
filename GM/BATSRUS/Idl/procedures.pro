@@ -226,7 +226,7 @@ case filetype of
         readf,unit,headline
         headline=headline+'_mhd13'
         readf,unit,varname
-        nw=n_elements(str_sep(varname,' '))-2
+        nw=n_elements(strsplit(varname))-2
         varname ='hour '+varname
         ; reset pointer
         point_lun,unit,pointer0
@@ -298,8 +298,8 @@ if keyword_set(pictsize) then begin
     endcase
 endif else begin
                                 ; Get variables and physics
-    variables=str_sep(strtrim(strcompress(varname),2),' ')
-    tmp=str_sep(strtrim(headline,2),'_')
+    variables=strsplit(varname,/extract)
+    tmp=strsplit(strtrim(headline,2),'_',/extract)
     if n_elements(tmp) eq 2 then begin
         headline=tmp(0)
         physics=tmp(1)
@@ -586,12 +586,12 @@ pro str2arr,s,a,n,sep
 
 on_error,2
 
-if n_elements(s) gt 1 then    $
-    a0 = s                    $
-else if keyword_set(sep) then $
-   a0=str_sep(s,sep)          $
-else                          $
-   a0=str_sep(strtrim(strcompress(s),2),' ')
+if n_elements(s) gt 1 then     $
+    a0 = s                     $
+else if keyword_set(sep) then  $
+   a0=strsplit(s,sep,/extract) $
+else                           $
+   a0=strsplit(s,/extract)
 
 n0=n_elements(a0)
 
@@ -665,7 +665,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    funcs1=strarr(nfunc)
    funcs2=strarr(nfunc)
    for ifunc=0,nfunc-1 do begin
-      func12=str_sep(funcs(ifunc),';')
+      func12=strsplit(funcs(ifunc),';',/extract)
       funcs1(ifunc)=func12(0)
       if n_elements(func12) eq 2 then funcs2(ifunc)=func12(1)
    endfor
