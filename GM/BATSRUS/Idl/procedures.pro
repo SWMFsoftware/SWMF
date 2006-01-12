@@ -620,15 +620,8 @@ pro arr2arr,a,n
 on_error,2
 
 k = n_elements(a)
-
-if k eq n then return
-
-if k gt n then begin
-   a = a(0:n-1)
-   return
-endif
-
-a = [a, a(k-1)+intarr(n-k) ]
+if      k gt n then a = a(0:n-1) $                 ; truncate array
+else if k lt n then a = [a, a(k-1)+intarr(n-k) ]   ; extend array
 
 end
 ;===========================================================================
