@@ -8,7 +8,7 @@
 ;    openfile, gettype, gethead, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
 ; reading numbers and strings from input:
-;    asknum, askstr, str2arr, readplotpar, readlimits
+;    asknum, askstr, str2arr, arr2arr, readplotpar, readlimits
 ; transforming initial data:
 ;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
 ;    interpol_logfiles, interpol_log
@@ -608,6 +608,27 @@ endif else begin
    print,'Warning: more than',n,' values defined by string: ',s,$
        FORMAT='(a,i3,a,a)'
 endelse
+
+end
+;=============================================================================
+pro arr2arr,a,n
+
+; If a is a scalar or has fewer elements than n then 
+; extend it to an array of n elements.
+; If a has more elements than n, reduce the number of elements to n.
+
+on_error,2
+
+k = n_elements(a)
+
+if k eq n then return
+
+if k gt n then begin
+   a = a(0:n-1)
+   return
+endif
+
+a = [a, a(k-1)+intarr(n-k) ]
 
 end
 ;===========================================================================
