@@ -20,12 +20,13 @@
 ;===========================================================================
 
    print,'======= CURRENT ANIMATION PARAMETERS ================'
-   print,'firstpict=',firstpict,', dpict=',dpict,$
-        ', npictmax=',npictmax,', savemovie (n/png/tiff/bmp/jpeg)=',savemovie,$
-        FORMAT='(a,i4,a,i4,a,i4,a,a)'
+   print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
+     FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
+     +string(n_elements(dpict))+'i4,a,i4)'
+   print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
    print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
-         ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
-        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+     ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
+     FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
    if keyword_set(multiplot) then begin
         siz=size(multiplot)
         if siz(0) eq 0 then multiplot=[multiplot,1,1]
@@ -59,6 +60,10 @@
    print,'filetype(s)   =',filetypes
    print,'npictinfile(s)=',npictinfiles
 
+   ; Extend firstpict and dpict into arrays of size nfile
+   arr2arr,firstpict,nfile
+   arr2arr,dpict,nfile
+
    ;====== OPEN FILE(S) AND READ AND PRINT HEADER(S)
 
    str2arr,physics,physicss,nfile
@@ -90,7 +95,7 @@
    readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
 
    if noautorange then begin
-      npict=(min(npictinfiles)-firstpict)/dpict+1
+      npict = min( (npictinfiles-firstpict)/dpict + 1 )
       if npict gt npictmax then npict=npictmax
       if npict lt 0 then npict=0
    endif else begin
@@ -100,8 +105,11 @@
       error=0
       while npict lt npictmax and not error do begin
 
-         if npict eq 0 then nextpict=firstpict else nextpict=dpict
          for ifile=0,nfile-1 do begin
+
+            if npict eq 0 then nextpict=firstpict(ifile) $
+            else               nextpict=dpict(ifile)
+
             get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
                 headline, phys, it, time, gencoord, ndim, neqpar, nw, nx,$
                 eqpar, variables, rBody, err
@@ -131,8 +139,8 @@
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'
-                  print,FORMAT='(i4,$)',firstpict+npict*dpict
                   npict=npict+1
+                  print,FORMAT='(i4,$)',npict
                endif
             endif
          endfor
@@ -145,10 +153,12 @@
    print,'npict=',npict
    if npict eq 0 then begin
       print,'There are no frames to animate! Check the following settings:'
-      print,'   firstpict=',firstpict,' dpict=',dpict,' npictmax=',npictmax
-      if min(npictinfiles) lt firstpict then $
-      print,'   The value of firstpict is larger than the minimum of' 
       print,'   npictinfiles=',npictinfiles
+      print,'   firstpict   =',firstpict
+      print,'   dpict       =',dpict
+      print,'   npictmax    =',npictmax
+      if min(npictinfiles - firstpict) lt 0 then $
+        print,'   firstpict is larger than npictinfiles for some files!' 
       retall
    endif
 
@@ -172,14 +182,7 @@
       npict1=1
    endelse
 
-   if printmovie eq 'y' then set_plot,'PS',/INTERPOLATE
-
-   if (printmovie eq 'y') and $
-      (npict-1)/npict1+1 gt nplotmax then begin
-      print,'For printing npict is too much :',npict
-      print,'Reducing npict back to nplotmax:',nplotmax
-      npict=nplotmax*npict1
-   endif
+   if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
 
    doanimate= npict gt npict1 and !d.name eq 'X'
    if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,(npict-1)/npict1+1]
@@ -194,15 +197,18 @@
       if ipict1 eq 0 then begin
          if not keyword_set(noerase) then erase
          !p.multi=[0,multix,multiy,0,multidir]
-         if printmovie eq 'y' then $
+         if savemovie eq 'ps' then $
             device,filename='Movie/'+string(FORMAT='(i4.4)',iplot+1)+'.ps',$
 		   XSIZE=24,YSIZE=18,/LANDSCAPE,/COLOR,BITS=8
       endif
 
       if ipict eq 0 then print,FORMAT='("ipict:    ",$)'
-      print,FORMAT='(i4,$)',firstpict+ipict*dpict
-      if ipict eq 0 then nextpict=firstpict else nextpict=dpict
+      print,FORMAT='(i4,$)',ipict+1
+
       for ifile=0,nfile-1 do begin
+
+         if ipict eq 0 then nextpict=firstpict(ifile) $
+         else               nextpict=dpict(ifile)
 
          if npict gt 1 or nfile gt 1 or noautorange then begin
             get_pict,ifile+10,filetypes(ifile),nextpict,x,w,$
@@ -269,11 +275,10 @@
       if ipict1 eq npict1-1 or ipict eq npict-1 then begin
          if doanimate then $
             xinteranimate,frame=iplot,window=!d.window
-         if printmovie eq 'y' then begin
+         if savemovie eq 'ps' then begin
             print,FORMAT='(" (Movie/",i4.4,".ps)",$)',iplot+1
             device,/close
-         endif 
-         if savemovie ne 'n' and !d.name eq 'X' then begin
+         endif else if savemovie ne 'n' and !d.name eq 'X' then begin
             imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
             print,FORMAT='("(",a,")",$)',imagefile
             common colors,  r_curr, g_curr, b_curr
@@ -297,7 +302,7 @@
    !x.title=''
    !y.title=''
    !z.title=''
-   if printmovie eq 'y' then set_plot,'X'
+   if savemovie eq 'ps' then set_plot,'X'
    ; Restore velpos array
    velpos=velpos0 & velpos0=0
    if doanimate then xinteranimate,5,/keep_pixmaps
