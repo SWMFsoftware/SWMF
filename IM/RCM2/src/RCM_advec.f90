@@ -488,10 +488,17 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         !Save current time for use in Disk_write_arrays
         iCurrentTime = i_time+idt
         !
-        do ifile=1,nFilesPlot
-           IF (iDtPlot(ifile)/idt*idt /= iDtPlot(ifile)) &
-                call CON_stop('IM_ERROR: iDtPlot--idt')
-           IF (((iCurrentTime/iDtPlot(ifile))*iDtPlot(ifile)) == iCurrentTime) THEN
+        do iFile=1,nFilesPlot
+           IF ( mod(iDtPlot(ifile), iDt) /=0 *idt ) then
+              write(*,*)'iFile, iDtPlot(ifile), iDt=',&
+                   iFile, iDtPlot(ifile), iDt
+              call CON_stop('ERROR in IM/RCM2/RCM_advec.f90: '// &
+                   'iDtPlot should be a multiple of iDt')
+           end IF
+           IF ( iDtPlot(ifile) > 0 .and. &
+                mod(iCurrentTime,     iDtPlot(ifile)) == 0 .or. &
+                iDnPlot(ifile) > 0 .and. &
+                mod(iCurrentTime/iDt, iDnPlot(ifile)) == 0) then
               !
               IF (iProc == 0) CALL Disk_write_arrays ( ifile )
               !
@@ -501,7 +508,8 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         time1=MPI_Wtime()
         if(iProc == 0) then
            call IM_write_prefix
-           write(iUnitOut,*)' Time ',i_time,'-',i_time+idt,': CPUT =',time1-time0
+           write(iUnitOut,*)' Time ',i_time,'-',i_time+idt, &
+                ': CPUT =', time1-time0
         end if
         !
      END DO
@@ -745,13 +753,6 @@ CONTAINS
              WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]",&
                   &"N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
                   &"N(MHD) [cm-3]","T(MHD) [eV]","P(MHD) [nPa]"'
-          case('rcm')
-             WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","I","J",&
-                  &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]","V",&
-                  &"BIRK(NH)","PEDLAM [S]","PEDPSI [S]","HALL [S]","EFLUX",&
-                  &"EAVG","N(RCM) [cm-3]","T(RCM) [eV]","P(RCM) [nPa]",&
-                  &"PV_gamma","Birk_mhd(NH)","N(MHD) [cm-3]","T(MHD) [eV]",&
-                  &"P(MHD) [nPa]"'
           case('max')
              WRITE (LUN,'(A)')'VARIABLES="X [R]","Y [R]","I","J",&
                   &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]","V",&
@@ -784,7 +785,7 @@ CONTAINS
              ! Name of coordinates, variables and equation parameters
              StringLine = 'lon lat x y rho T p rho_mhd T_mhd p_mhd'
              write(LUN) StringLine
-          case('rcm','max')
+          case('max')
              ! Header string containing units for coordinates and variables
              StringLine='deg deg R R hr - - nT - - S S S - - - - - -_var22'
              write(LUN) StringLine
@@ -866,18 +867,6 @@ CONTAINS
                      RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), &
                      density(i,j), temperature(i,j), MHD_p(i,j)
              end do; end do
-          case('rcm')
-             do j=1,jsize+1; do i=1,isize
-                write(LUN,'(2ES12.3,2I4,23ES12.3)') &
-                     xmin(i,j), ymin(i,j), i, j, colat(i,j)*rtd, aloct(i,j), &
-                     MODULO(aloct(i,j)*rth+12.0,24.01), bndloc(j), vm(i,j), &
-                     bmin(i,j), &
-                     v(i,j), 0.5*birk(i,j), pedlam(i,j), pedpsi(i,j),&
-                     hall(i,j), eflux(i,j,1), eavg(i,j,1), &
-                     RCM_n(i,j), RCM_T(i,j), RCM_P(i,j), RCM_pvgamma(i,j),&
-                     -birk_mhd(i,j)/1.0E-6, density(i,j), temperature(i,j), &
-                     MHD_p(i,j)
-             end do; end do
           case('max')
              do j=1,jsize+1; do i=1,isize
                 write(LUN,'(2ES12.3,2I4,23ES12.3)') &
@@ -913,7 +902,7 @@ CONTAINS
              write(LUN) ((temperature(i,j), j=1,jsize+1), i=isize,1,-1)
              write(LUN) ((MHD_P(i,j),       j=1,jsize+1), i=isize,1,-1)
 
-          case('rcm','max')
+          case('max')
              write(LUN) ((MODULO(aloct(i,j)*rth+12.0,24.01) &
                   ,                         j=1,jsize+1), i=isize,1,-1)
              write(LUN) ((bndloc(j),        j=1,jsize+1), i=isize,1,-1)
@@ -954,7 +943,7 @@ CONTAINS
           select case(plot_var(iFN))
           case('min')
              WRITE (LUN,'(A)')'VARIABLES="I","J","K","EETA","VEFF"'
-          case('rcm','max')
+          case('max')
              WRITE (LUN,'(A)')'VARIABLES="I","J","K","X [R]","Y [R]",&
                   &"COLAT","ALOCT","MLT","BNDLOC","VM","|B| [nT]",&
                   &"V", "BIRK(NH)","ALAM", "EETA", "VEFF","W [eV]"'
@@ -983,13 +972,13 @@ CONTAINS
                      i, j, k, eeta(i,j,k), veff(i,j)
              end do; end do
           end do
-       case('rcm','max')
+       case('max')
           do k=1,kcsize
              veff = v + vcorot + vm*alamc(k)
              CALL Wrap_around_ghostcells (veff, isize,jsize,n_gc)
              do j=1,jsize+1; do i=1,isize
                 write(LUN,'(3i4,14ES12.3)') &
-                     i, j, k, xmin(i,j), ymin(i,j), colat(i,j)*rtd, aloct(i,j), &
+                     i, j, k, xmin(i,j), ymin(i,j), colat(i,j)*rtd,aloct(i,j),&
                      MODULO(aloct(i,j)*rth+12.0,24.01),&
                      bndloc(j), vm(i,j), bmin(i,j), &
                      v(i,j), birk(i,j)/2.0, alamc(k),eeta(i,j,k), veff(i,j), &
