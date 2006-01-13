@@ -9,7 +9,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
        plot_area, plot_var, plot_format, &
        x_h, x_o, L_dktime, sunspot_number, f107, doy
   use ModReadParam
-  use ModUtilities, ONLY: fix_dir_name, check_dir
+  use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
 
   implicit none
 
@@ -20,7 +20,7 @@ subroutine IM_set_param(CompInfo, TypeAction)
   character (len=*), intent(in)     :: TypeAction ! What to do
 
   !LOCAL VARIABLES:
-  character (len=100) :: NameCommand, plot_string
+  character (len=100) :: NameCommand, StringPlot
   logical             :: DoEcho=.false.
   logical             :: UseStrict=.true.
   integer :: iFile
@@ -63,38 +63,42 @@ subroutine IM_set_param(CompInfo, TypeAction)
         case("#SAVEPLOT")
            call read_var('nPlotFile',nFilesPlot)
            do iFile=1,nFilesPlot
-              call read_var('StringPlot',plot_string)
+              call read_var('StringPlot',StringPlot)
+              call lower_case(StringPlot)
+
               ! Plotting frequency
               call read_var('DnSavePlot',iDnPlot(iFile))
               call read_var('DtSavePlot',iDtPlot(iFile))
 
-              ! 1st value:
-              if(index(plot_string,'2D')>0.or.index(plot_string,'2d')>0)then
+              ! Extract geometry string value:
+              if(index(StringPlot,'2d')>0)then
                  plot_area(ifile)='2d_'
-              elseif(index(plot_string,'3D')>0.or.index(plot_string,'3d')>0)then
+              elseif(index(StringPlot,'3d')>0)then
                  plot_area(ifile)='3d_'
               else
-                 call stop_mpi('#SAVEPLOT value 1 not valid')
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#SAVEPLOT geometry string (2d/3d) is missing')
               end if
 
-              ! 2nd value:
-              if(index(plot_string,'rcm')>0.or.index(plot_string,'RCM')>0)then
-                 plot_var(ifile)='rcm'
-              elseif(index(plot_string,'min')>0.or.index(plot_string,'MIN')>0)then
+              ! Extract variable string value:
+              if(index(StringPlot,'min')>0)then
                  plot_var(ifile)='min'
-              elseif(index(plot_string,'max')>0.or.index(plot_string,'MAX')>0)then
+              elseif(   index(StringPlot,'max')>0 &
+                   .or. index(StringPlot,'rcm')>0 )then
                  plot_var(ifile)='max'
               else
-                 call stop_mpi('#SAVEPLOT value 2 not valid')
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#SAVEPLOT variable string (min/max/rcm) is missing')
               end if
 
-              ! 3rd value: plot file format
-              if(index(plot_string,'idl')>0)then
+              ! Extract format string value:
+              if(index(StringPlot,'idl')>0)then
                  plot_format(ifile)='idl'
-              elseif(index(plot_string,'tec')>0)then 
+              elseif(index(StringPlot,'tec')>0)then 
                  plot_format(ifile)='tec'
               else
-                 call stop_mpi('#SAVEPLOT value 3 not valid')
+                 call CON_stop('ERROR in IM/RCM2/src/IM_wrapper.f90: '// &
+                      '#SAVEPLOT file format (idl/tec) is missing')
               end if
 
            end do
