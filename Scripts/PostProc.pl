@@ -85,6 +85,13 @@ REPEAT:{
 	    }else{
 		&shell("./pTEC p r");
 	    }
+	}elsif( $Dir =~ /^IM/ ){
+	    my @files=glob("plots/*.dat");
+	    if($Gzip){
+		&shell("gzip",@files) if @files;
+	    }else{
+		&shell("./Preplot.pl",@files) if @files;
+	    }
 	}
 	chdir $Pwd;
     }
