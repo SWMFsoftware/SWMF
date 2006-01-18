@@ -2850,7 +2850,7 @@ if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
 ; Do not smooth data unless defined
 if n_elements(smooths) lt nlog then smooths = intarr(nlog)
 
-; Calculat the xrange from the data unless defined
+; Calculate the xrange from the data unless defined
 if n_elements(xrange) ne 2 then begin
     DoXrange = 1
     xrange   = [1e30, -1e30]
@@ -2888,7 +2888,7 @@ if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then $
   xtitle0=xtitle else xtitle0='Time [hour]'
 
 ; Define default ytitles
-if n_elements(ytitles) eq nfunc then $
+if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
   ytitles0=ytitles else ytitles0=funcs
 
 if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
