@@ -172,27 +172,18 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   CALL GTD6(iJulianDay,utime,Alt,Lat,Lon,LST, &
        F107A,F107,AP,48,msis_dens,msis_temp)
 
-  fac = 50.0/sqrt(f107)
-  fac = 4.75
-!  LogNS(iO_)  = alog(3.0*msis_dens(2))
-!  LogNS(iO2_) = alog(msis_dens(4)/2.0)
-!  LogNS(iN2_) = alog(msis_dens(3)/2.0)
   LogNS(iO_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
-  if (nSpecies > 2) then
-     ! This tricks the compiler...
-     iSpecies = iN2_
-     LogNS(max(nSpecies,iSpecies)) = alog(msis_dens(3))
-  endif
+  LogNS(iN2_) = alog(msis_dens(3))
   if (nSpecies > 3) then
      ! This tricks the compiler...
      iSpecies = iN_4S_
-     LogNS(max(nSpecies,iSpecies)) = alog(msis_dens(8))
+     LogNS(min(nSpecies,iSpecies)) = alog(msis_dens(8))
   endif
   if (nSpecies > 4) then
      ! This tricks the compiler...
      iSpecies = iNO_
-     LogNS(max(nSpecies,iSpecies)) = alog(8.0e12)
+     LogNS(min(nSpecies,iSpecies)) = alog(8.0e12)
   endif
 
   Temp        = msis_temp(2) ! /TempUnit(1,1,1)
