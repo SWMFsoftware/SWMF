@@ -970,11 +970,6 @@ Module ModUser
   !/
   logical:: DoFirst_GL=.true.
   real:: Mrope_GL98
-  !\
-  ! The following are needed in user_sources::
-  !/
-  real, dimension(1:nI,1:nJ,1:nK):: &
-       Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SEr,SE
 
 contains
 
@@ -1366,11 +1361,11 @@ contains
     !---------------------------------------------------------------------
     real:: BFRdotR,RhoFRope=cZero
     real, dimension(3):: BFRope_D,BFRn_D,BFRt_D,UVorT_D
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !\
     ! Calculation of boundary conditions should start here::
     !/
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1575,90 +1570,35 @@ contains
   end subroutine user_face_bcs
 
   !========================================================================
-  subroutine user_calc_sources
-    use ModVarIndexes, ONLY:&
-         !EnergyRL_,& !^CFG UNCOMMENT IF ALWAVES
-    rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
-    use ModAdvance,    ONLY: Source_VC,Energy_,     &
-         Flux_VX,Flux_VY,Flux_VZ
-    use ModNumConst,   ONLY: cZero
-    implicit none
 
-    Srho   = cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SEr    = cZero
-    SE     = cZero
-    call user_sources
-    Source_VC(rho_       ,:,:,:) = Srho  +Source_VC(rho_,:,:,:)
-    Source_VC(rhoUx_     ,:,:,:) = SrhoUx+Source_VC(rhoUx_,:,:,:)
-    Source_VC(rhoUy_     ,:,:,:) = SrhoUy+Source_VC(rhoUy_,:,:,:)
-    Source_VC(rhoUz_     ,:,:,:) = SrhoUz+Source_VC(rhoUz_,:,:,:)
-    Source_VC(Bx_        ,:,:,:) = SBx   +Source_VC(Bx_,:,:,:)
-    Source_VC(By_        ,:,:,:) = SBy   +Source_VC(By_,:,:,:)
-    Source_VC(Bz_        ,:,:,:) = SBz   +Source_VC(Bz_,:,:,:)
-    Source_VC(P_     ,:,:,:) = SP        +Source_VC(P_,:,:,:)
-    Source_VC(Energy_,:,:,:) = SE    +Source_VC(Energy_,:,:,:)
-    ! Source_VC(EnergyRL_  ,:,:,:) = SEr   +Source_VC(EnergyRL_  ,:,:,:) !^CFG UNCOMMENT IF ALWAVES
-  end subroutine user_calc_sources
-  !========================================================================
-  !  SUBROUTINE user_sources
-  !========================================================================
-  !\
-  ! This subroutine is used to calculate sources for the MHD equations.  The
-  ! routine is called for each block separately so that the user would typically
-  ! need only to code the source term calculation for a single block (in other
-  ! words inside the the k,j,i loop below).  As with all user subroutines, the
-  ! variables declared in ModUser are available here.  Again, as with other
-  ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
-  ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEr
-  !
-  ! Note that SE (energy) and SP (pressure) must both be loaded if the code is 
-  ! going to use both the primitive and the conservative MHD equation advance  
-  ! (see the USER MANUAL and the DESIGN document).  If using only primitive SP 
-  ! must be loaded.  If using only conservative SE must be loaded.  The safe
-  ! approach is to load both.
-  !/
-  subroutine user_sources
-    use ModMain,       ONLY: nI,nJ,nK,globalBLK,PROCtest,BLKtest,  &
-         UseUserHeating,UseRotatingFrame,gcn
-    use ModVarIndexes, ONLY: &
-         !EnergyRL_, &    !^CFG UNCOMMENT IF ALWAVES
-    rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
-    use ModAdvance,    ONLY: State_VGB,StateOld_VCB,Source_VC,      &
-         B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,UDotFA_X,UDotFA_Y,    &
-         UDotFA_Z,Flux_VX,Flux_VY,Flux_VZ,Theat0,qheat_BLK
-    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,vInv_CB
-    use ModConst,      ONLY: cZero,cHalf,cOne,cTwo,cTolerance
-    use ModPhysics,    ONLY: g,OmegaBody,CosThetaTilt,SinThetaTilt,&
-         Theat
+  subroutine user_calc_sources
+
+    !\
+    ! This subroutine is used to calculate sources for the MHD equations.  
+    ! The routine is called for each block separately, indexed by GlobalBlk
+    ! Note that SE (energy) and SP (pressure) must both be loaded. 
+    !
+    ! Calculates a location based heating if UseUserHeating is true. 
+    ! Also fills in ModAdvance::tHeat0 for point implicit source term,
+    ! but this is not used any longer.
+    !/
+
+    use ModMain,       ONLY: nI, nJ, nK, globalBLK, PROCtest, BLKtest, &
+         UseUserHeating
+    use ModAdvance,    ONLY: State_VGB, Source_VC, rho_, P_, Energy_, tHeat0, &
+         qHeat_BLK
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
+    use ModPhysics,    ONLY: g, CosThetaTilt, SinThetaTilt, tHeat
     use ModProcMH,     ONLY: iProc 
     !\
-    ! Variables required by this user subroutine::
+    ! Local variables
     !/
     integer:: i,j,k
+    real   :: CosTheta, SinTheta, CosPhi, SinPhi, Sin2Theta_coronal_hole
+    real   :: xT,yT,zT
+    real   :: Heating
     logical:: oktest,oktest_me
-    !
-    !---------------------------------------------------------------------------
-    !\
-    ! Variable meanings:
-    !   Srho: Source terms for the continuity equation
-    !   SE,SP: Source terms for the energy (conservative) and presure
-    !          (primative) equations
-    !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
-    !   SBx,SBy,SBz:  Souce terms for the magnetic field equations
-    !   SEr: Source terms for the relaxation energy equation
-    !/
-    !---------------------------------------------------------------------------
-    !
+    !--------------------------------------------------------------------------
     if (.not.UseUserHeating) RETURN
 
     if (iProc==PROCtest.and.globalBLK==BLKtest) then
@@ -1668,66 +1608,48 @@ contains
     end if
     do k=1,nK; do j=1,nJ; do i=1,nI
        !\
-       ! User coding of the source terms should be inside this loop
-       ! Note that user source terms should be added to the the
-       ! values already loaded in the arrays. For example::
-       ! Srho(i,j,k) = Srho(i,j,k) + user source term for rho
+       ! Colatitude dependent heating source term
        !/
-       call calc_OLD_heating
+       XT =  CosThetaTilt*x_BLK(i,j,k,globalBLK)+&
+            SinThetaTilt*z_BLK(i,j,k,globalBLK)
+       YT =  y_BLK(i,j,k,globalBLK)
+       ZT = -SinThetaTilt*x_BLK(i,j,k,globalBLK)+&
+            CosThetaTilt*z_BLK(i,j,k,globalBLK)
+       CosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
+       SinTheta = sqrt(XT**2+YT**2)             /&
+            (R_BLK(i,j,k,globalBLK)+cTolerance)
+       CosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
+       SinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
+       call coronal_hole_boundary(R_BLK(i,j,k,globalBLK),&
+            sin2Theta_coronal_hole)
+       if (SinTheta**2 < sin2Theta_coronal_hole) then
+          Theat0(i,j,k) = Theat
+       else
+          Theat0(i,j,k) = cOne
+       end if
+       Heating = State_VGB(rho_,i,j,k,globalBLK)     *&
+            qheat_BLK(i,j,k,globalBLK)*(Theat0(i,j,k) &
+            -g*State_VGB(P_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK))
+
+       Source_VC(P_     ,i,j,k) = Source_VC(P_,i,j,k) + (g-1)*Heating
+       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Heating
+
     end do; end do; end do
 
-  Contains
-
-    subroutine calc_OLD_heating
-      implicit none
-      real:: CosTheta,SinTheta,CosPhi,SinPhi,&
-           sin2Theta_coronal_hole,XT,YT,ZT
-      !\
-      ! Compute Heliosphere source terms::
-      !/
-      XT =  CosThetaTilt*x_BLK(i,j,k,globalBLK)+&
-           SinThetaTilt*z_BLK(i,j,k,globalBLK)
-      YT =  y_BLK(i,j,k,globalBLK)
-      ZT = -SinThetaTilt*x_BLK(i,j,k,globalBLK)+&
-           CosThetaTilt*z_BLK(i,j,k,globalBLK)
-      CosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
-      SinTheta = sqrt(XT**2+YT**2)             /&
-           (R_BLK(i,j,k,globalBLK)+cTolerance)
-      CosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
-      SinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
-      call coronal_hole_boundary(R_BLK(i,j,k,globalBLK),&
-           sin2Theta_coronal_hole)
-      if (SinTheta*SinTheta < sin2Theta_coronal_hole) then
-         Theat0(i,j,k) = Theat
-      else
-         Theat0(i,j,k) = cOne
-      end if
-      SP(i,j,k)  = SP(i,j,k)+&
-           (g-cOne)*State_VGB(rho_,i,j,k,globalBLK)     *&
-           qheat_BLK(i,j,k,globalBLK)*(Theat0(i,j,k)-g *&
-           State_VGB(P_,i,j,k,globalBLK)           /&
-           State_VGB(rho_,i,j,k,globalBLK))
-      SE(i,j,k)  = SE(i,j,k)+&
-           State_VGB(rho_,i,j,k,globalBLK)             *&
-           qheat_BLK(i,j,k,globalBLK)*(Theat0(i,j,k)-g *&
-           State_VGB(P_,i,j,k,globalBLK)           /&
-           State_VGB(rho_,i,j,k,globalBLK))
-    end subroutine calc_OLD_heating
-
-  end subroutine user_sources
+  end subroutine user_calc_sources
 
   !========================================================================
 
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell,GammaCell)
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !
     ! This module computes the cell values for density and pressure assuming
     ! a politropic equation of state with variable gamma = [2+n(T)]/n(T),
     ! where n(T)=n0+n1*T^2.
     ! This subroutine is written by ILR on May 29, 2003.
     ! Last updated is made by IVS and ILR on Nov 2, 2004.
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !
     use ModVarIndexes, ONLY: Bx_,By_,Bz_,P_
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK
@@ -1736,10 +1658,10 @@ contains
          State_VGB
     use ModPhysics,    ONLY: g,inv_g,unitUSER_B
     implicit none
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     integer, intent(in):: iCell,jCell,kCell,iBlock
     real, intent(out):: DensCell,PresCell,GammaCell
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     real, parameter:: n0=cFour
     real:: AAc,BBc,Fn1,Fg1
     real:: BrCell,B2Cell
@@ -1747,7 +1669,7 @@ contains
     real:: XCell,YCell,ZCell,RCell
     real:: Temp_Ratio,TempCell,DegFrmCell
     real:: DegF_Modulation,Dens_Modulation,Temp_Modulation
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Set MaxB0 stuff
     MaxB0_1 = Bnot/unitUSER_B
     MaxB0_2 = 2.00E+01/unitUSER_B
