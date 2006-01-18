@@ -142,7 +142,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   do iSpecies=1,nIonsAdvect
      dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
-     if (dn > 0.0) dn = -dn*1.0
+!     if (dn > 0.0) dn = -dn*1.0
+     if (dn > -0.1*LogINS(nAlts,iSpecies)) dn = -0.1*LogINS(nAlts,iSpecies)
 !     LogINS(nAlts+1,iSpecies) = max( &
 !          LogINS(nAlts,iSpecies) + dn, LogINS(nAlts,iSpecies) / 2.0)
 !     LogINS(nAlts+2,iSpecies) = max( &
