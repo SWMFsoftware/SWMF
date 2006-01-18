@@ -154,39 +154,26 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
              F107A,F107,AP,LogNS, Temp, LogRho)
 
   use ModPlanet
-  use ModGITM, only: TempUnit
 
   implicit none
 
   real, dimension(1:2) :: msis_temp
   real, dimension(1:8) :: msis_dens
 
-  integer, dimension(25) :: sw
-
   integer, intent(in) :: iJulianDay
   real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107, ap
   real, intent(out) :: LogNS(nSpecies), Temp, LogRho
-  real :: fac
-  integer :: iSpecies
-
-  CALL GTD6(iJulianDay,utime,Alt,Lat,Lon,LST, &
+  !----------------------------------------------------------------------------
+  CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
        F107A,F107,AP,48,msis_dens,msis_temp)
 
   LogNS(iO_)  = alog(msis_dens(2))
   LogNS(iO2_) = alog(msis_dens(4))
   LogNS(iN2_) = alog(msis_dens(3))
-  if (nSpecies > 3) then
-     ! This tricks the compiler...
-     iSpecies = iN_4S_
-     LogNS(min(nSpecies,iSpecies)) = alog(msis_dens(8))
-  endif
-  if (nSpecies > 4) then
-     ! This tricks the compiler...
-     iSpecies = iNO_
-     LogNS(min(nSpecies,iSpecies)) = alog(8.0e12)
-  endif
+  if (nSpecies >= iN_4S_) LogNS(min(nSpecies,iN_4S_)) = alog(msis_dens(8))
+  if (nSpecies >= iNO_)   LogNS(min(nSpecies,iNO_))   = alog(8.0e12)
 
-  Temp        = msis_temp(2) ! /TempUnit(1,1,1)
+  Temp        = msis_temp(2)
   LogRho      = alog(msis_dens(6))
 
 end subroutine msis_bcs
