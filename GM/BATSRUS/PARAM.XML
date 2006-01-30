@@ -1980,23 +1980,20 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		<parameter name="Radius" type="real" min="0" default="10"
 			if="$plotarea =~ /\bsph\b/" />
                 <if expr="$plotarea =~ /\blos\b/">
-			<parameter name="LosVectorX" type="real" default="0"/>
-			<parameter name="LosVectorY" type="real" 
-							default="0.0001"/>
-			<parameter name="LosVectorZ" type="real" default="1"/>
-			<parameter name="xSizeImage" type="real" min="0"
-								default="20"/>
-			<parameter name="ySizeImage" type="real" min="0"
-								default="20"/>
-			<parameter name="xOffset" type="real" default="10"/>
-			<parameter name="yOffset" type="real" default="10"/>
-			<parameter name="rOccult" type="real" min="1" 
-								default="2.5"/>
+			<parameter name="ObsPosX" type="real" default="-215"/>
+			<parameter name="ObsPosY" type="real" default="0"/>
+			<parameter name="ObsPosZ" type="real" default="0"/>
+			<parameter name="OffsetAngle" type="real" 
+					min="-89" max="89" default="0"/>
+			<parameter name="rSizeImage" type="real" min="0"
+								default="32"/>
+			<parameter name="xOffset" type="real" default="0"/>
+			<parameter name="yOffset" type="real" default="0"/>
+			<parameter name="rOccult" type="real" min="0" 
+								default="2"/>
 			<parameter name="MuLimbDarkening" type="real" 
-				min="0" max="1" default="0.5"/>
-			<parameter name="nPixX" type="integer" min="2"
-								default="200"/>
-			<parameter name="nPixY" type="integer" min="2"
+						min="0" max="1" default="0.5"/>
+			<parameter name="nPix" type="integer" min="2"
 								default="200"/>
                 </if>
 		<if expr="$plotarea =~ /\blin\b/">
@@ -2054,17 +2051,16 @@ sph flx idl		StringPlot ! spherical plot
 los sol idl             StringPlot ! line of sight plot
 -1			DnSavePlot
 100.			DtSavePlot
-1.			xLosVector
-0.			yLosVector
-0.			zLosVector
-30.			xSizeImage
-50.			ySizeImage
-10.			xOffset
-20.			yOffset
-5.			rOccult
+-215.			ObsPosX
+0.			ObsPosY
+0.			ObsPosZ
+0.                      OffsetAngle
+32.			rSizeImage
+0.			xOffset
+0.			yOffset
+3.			rOccult
 0.5			MuLimbDarkening
-256			nPixX
-256			nPixY
+300			nPix
 lin mhd idl		StringPlot  ! field line plot
 -1			DnSavePlot
 10.			DtSavePlot
@@ -2224,18 +2220,33 @@ Possible values for DxSavePlot (for IDL files):
 \end{verbatim}
 Radius is the radius of the spherical cut for plotarea='sph'
 
-The line-of-sight (plotarea 'los') plots calculate integrals along
-the lines of site of some quantity and create a 2D grid of the
-integrated values. The variables which control the direction of the
-line of sight and the grid position and resolution are the following:
+The line-of-sight (plotarea 'los') plots calculate integrals along the
+lines of sight of some quantity and create a 2D Cartesian square
+shaped grid of the integrated values. Only the circle enclosed in the
+square is actually calculated and the corners are filled in with
+zeros.  The image plane always contains the origin of the
+computational domain (usually the center of the Sun).  By default the
+image plane is orthogonal to the observers position relative to the
+origin. The image plane can be rotated around the Z axis with an
+offset angle. By default the center of the image is the observer
+projected onto the image plane, but the center of the image can be
+offset.  Since the central object (the Sun) contains extremely large
+values, an occultational disk is used to block the lines of sight
+going through the Sun.  The variables which control the direction of
+the lines of sight and the grid position and resolution are the
+following:
 \begin{verbatim}
- LosVectorX,Y,Z         - the direction of the line of sight integration
- xSizeImage, ySizeImage - the size of the LOS image
- xOffset, yOffset       - the offset relative to the origin (Sun)
- rOccult                - the minimum distance of the line from the origin
+ ObsPosX,ObsPosY,ObsPosZ- the position of the observer
+ OffsetAngle            - the angle between the image plane normal direction
+                          and the Sun's direction from the observer position
+ rSizeImage             - the radius of the LOS image
+ xOffset, yOffset       - offset relative to the observer projected onto 
+                          the image plane 
+ rOccult                - the radius of the occulting disk
  MuLimbDarkening        - the limb darkening parameter for the 'wl' 
                           (white light) and 'pb' (polarization brightness) 
                           plot variables.
+ nPix                   - the number of pixels in each direction
 \end{verbatim}
 
 \noindent
