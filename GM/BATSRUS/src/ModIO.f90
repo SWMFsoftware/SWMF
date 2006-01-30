@@ -47,11 +47,11 @@ Module ModIO
   ! variables for the line of sight integration plots
   character (LEN=2) :: TypeLosImage
   integer, parameter :: nplotvarlosmax=10
-  integer :: n_pix_X, n_pix_Y
-  real :: x_size_image, y_size_image, xoffset, yoffset
-  real :: radius_occult, mu_los
-  real, dimension(3,maxfile) :: los_vector
-  real, dimension(3,maxfile) :: los_corner 
+  integer :: n_pix_r(maxfile)
+  real :: r_size_image(maxfile), xoffset(maxfile), yoffset(maxfile)
+  real :: radius_occult(maxfile), mu_los
+  real :: offset_angle(maxfile)
+  real, dimension(3,maxfile) :: ObsPos_DI
 
   ! Maximum number of plot variables
   integer, parameter :: nPlotvarMax=20

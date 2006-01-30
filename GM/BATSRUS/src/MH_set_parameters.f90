@@ -560,22 +560,24 @@ subroutine MH_set_parameters(TypeAction)
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
               ! Line of sight vector
-              call read_var('LosVectorX',los_vector(1,ifile))
-              call read_var('LosVectorY',los_vector(2,ifile))
-              call read_var('LosVectorZ',los_vector(3,ifile))
+              ! Satellite position
+              call read_var('ObsPosX',ObsPos_DI(1,ifile))
+              call read_var('ObsPosY',ObsPos_DI(2,ifile))
+              call read_var('ObsPosZ',ObsPos_DI(3,ifile))
+              ! Offset angle
+              call read_var('OffsetAngle',offset_angle(ifile))
+              offset_angle(ifile) = offset_angle(ifile)*cDegToRad
               ! read max dimensions of the 2d image plane
-              call read_var('xSizeImage',x_size_image)
-              call read_var('ySizeImage',y_size_image)
+              call read_var('rSizeImage',r_size_image(ifile))
               ! read the position of image origin relative to grid origin
-              call read_var('xOffset',xoffset)
-              call read_var('yOffset',yoffset)
+              call read_var('xOffset',xoffset(ifile))
+              call read_var('yOffset',yoffset(ifile))
               ! read the occulting radius
-              call read_var('rOccult',radius_occult)
+              call read_var('rOccult',radius_occult(ifile))
               ! read the limb darkening parameter
               call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
-              call read_var('nPixX',n_pix_X)
-              call read_var('nPixY',n_pix_Y)
+              call read_var('nPix',n_pix_r(ifile))            
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
            else

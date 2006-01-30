@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !=============================================================================
-subroutine write_plot_los(ifile)
+subroutine write_plot_los(iFile)
   ! Purpose:  creates a synthic coronagraph image of Thomson scattered 
   !           white light by inegrating light scattered in the line of sight.
   !           This is accomplished by looping over all blocks per processor 
@@ -8,6 +8,7 @@ subroutine write_plot_los(ifile)
   !           lines.
   !           Written by Chip Manchester, KC Hansen
   !                   some improvements by Gabor Toth
+  !                   some changes by Noe Lugaz
   !           July     2001
   !           January  2002 modified for improved image plane
   !           December 2003 fixed sign error in scattering coefficient b_los
@@ -25,16 +26,27 @@ subroutine write_plot_los(ifile)
   !                         simplify body-line distance calculation
   !                         moved plot variable loop inside line integration
   !                         dimensionalize some of the plot variables
+  !           January 2006  compatibility with framework
+  !                         rotation of the coordinates to HGI
+  !                         wide-angle line-of-sight (for STEREO)
+  !                         change in the parameters: satellite_position, 
+  !                         offset_angle   
+  !                         Cartesian grid and circular image centered
+  !                         at the Sun (no offset anle)
 
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,n_step,time_simulation,unusedBLK, &
-       time_accurate,StringTimeH4M2S2
+       time_accurate,StringTimeH4M2S2,nBlock, NameThisComp,   &
+       rBuffMax,TypeCoordSystem
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
   use ModAdvance, ONLY : rho_,rhoUx_,State_VGB
-  use ModNumConst, ONLY : cTiny
+  use ModNumConst, ONLY : cTiny,cTwo,cPi,cHalf,cDegtoRad, &
+       cUnit_DD,cOne,cTolerance
   use ModMpi
+  use CON_axes, ONLY : transform_matrix
+  use ModCoordTransform, ONLY : rot_matrix_z
   implicit none
 
   ! Arguments
@@ -45,6 +57,12 @@ subroutine write_plot_los(ifile)
 
   integer :: iError
 
+  ! File specific parameters
+  integer :: nPix
+  real    :: aOffset, bOffset, rSizeImage, rSizeImage2, rOccult, rOccult2,&
+       OffsetAngle
+
+
   ! Plot variables
   integer, parameter :: neqparmax=10
   real, allocatable :: PlotVar(:,:,:), PlotBLK(:,:,:), los_image(:,:,:)
@@ -53,16 +71,24 @@ subroutine write_plot_los(ifile)
   character (len=10) :: eqparnames(neqparmax)
   character (len=10) :: plotvarnames(nplotvarlosmax)
 
-  integer :: neqpar, nplotvar
+  integer :: nEqpar, nPlotvar
   integer :: iPix, jPix
-  real    :: dx_Pix, x_Pix, dy_Pix, y_Pix 
-  real    :: norm_los(3), pos(3), a_Pix(3), b_Pix(3), r_Pix(3)
-  real    :: x_los_blk, y_los_blk, z_los_blk, los_to_blk
-  real    :: x_los_org, y_los_org, z_los_org, los_to_org 
-  real    :: radius_of_block
+  real    ::  x_Pix, y_Pix 
+  real    :: ImageCenter_D(3), a_Pix(3), b_Pix(3), r_Pix(3),LosPix_D(3)
+  real    :: rBlockSize, rBlockCenter
   real    :: a_mag, b_mag
-
+  real    :: SizePix, r2Pix    
+  real    :: BlockDistance, ObsDistance, Ratio
   real    :: XyzBlockCenter_D(3), xLosBlock, yLosBlock
+
+  real, dimension(3,3) :: FromHgi_DD
+  real, dimension(3) :: Los_D, ObsPos_D
+
+  ! rInner in IH and rOuter in SC should be identical!
+  ! rInner in SC should be smaller than the occulting radius
+  ! rInner in IH should be larger than the inner boundary radius
+  ! rOuter in SC should be smaller than the size of the domain
+  real :: rInner, rInner2, rOuter, rOuter2
 
   character (LEN=79) :: allnames, StringHeadLine
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
@@ -72,7 +98,7 @@ subroutine write_plot_los(ifile)
   ! block and variable Indices
   integer :: iBLK,iVar
 
-  logical :: oktest,oktest_me,DoTiming,DoTimingMe
+  logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
@@ -81,21 +107,62 @@ subroutine write_plot_los(ifile)
 
   call timing_start('write_plot_los')
 
-  where(los_vector(:,ifile)==0.0) los_vector(:,ifile)=cTiny
-  norm_los = los_vector(:,ifile)/sqrt(sum(los_vector(:,ifile)**2))
+  ! Set rInner and rOuter depending on component
+  select case(NameThisComp)
+  case('SC')
+     rInner = 0.5 
+     rOuter = rBuffMax
+  case('IH')
+     rInner = rBuffMax
+     rOuter = 1000.0
+  case('GM')
+     rInner = 0.5
+     rOuter = 1000.0
+  end select
+  rInner2 = rInner**2
+  rOuter2 = rOuter**2
 
-  dx_Pix = x_size_image/real(n_pix_X -1) 
-  dy_Pix = y_size_image/real(n_pix_Y -1)
+  if(NameThisComp == 'GM')then
+     ! Do not convert to HGI
+     FromHgi_DD = cUnit_DD
+  else
+     ! Convert to HGI
+     FromHgi_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+  end if
+
+  ! Set file specific parameters
+  nPix       = n_pix_r(iFile)
+  aOffset    = xOffset(iFile)
+  bOffset    = yOffset(iFile)
+  rSizeImage = r_size_image(iFile)
+  rSizeImage2= rSizeImage**2
+  rOccult    = radius_occult(iFile)
+  rOccult2   = rOccult**2
+  OffsetAngle= offset_angle(iFile)
+
+  ! Rotate observation point into the HGI system
+  ObsPos_D    = matmul(FromHgi_DD, ObsPos_DI(:,ifile))
+  ObsDistance = sqrt(sum(ObsPos_D**2))
+  ! Normalize line of sight vector pointing towards the origin
+  Los_D       = -ObsPos_D/ObsDistance
+  ! Rotation with offset angle
+  Los_D =matmul( rot_matrix_z(OffsetAngle), Los_D)
+  ! Observer distance from image plane
+  ObsDistance = abs(sum(ObsPos_D*Los_D))
+
+  ! Make zero components slightly different from zero
+  where(Los_D == 0.0) Los_D = cTiny
+
+  SizePix = 2*rSizeImage/(nPix - 1)
 
   if(oktest .and. iProc==0) then
-     write(*,*) 'vector',los_vector(:,ifile)
-     write(*,*) 'norm_los', norm_los
-     write(*,*) 'x_size_image ',x_size_image
-     write(*,*) 'y_size_image ',y_size_image
-     write(*,*) 'xoffset,yoffset',xoffset,yoffset 
-     write(*,*) 'pos',pos
-     write(*,*) 'dx,dy',dx_Pix,dy_Pix
-     write(*,*) 'nx,ny',n_pix_X,n_pix_Y
+     write(*,*) 'ObsPos         =',ObsPos_DI(:,ifile)
+     write(*,*) 'Los_D          =', Los_D
+     write(*,*) 'rSizeImage     =',rSizeImage
+     write(*,*) 'aOffset,bOffset=', aOffset, bOffset
+     write(*,*) 'ImageCenter_D  =',ImageCenter_D
+     write(*,*) 'SizePix        =',SizePix
+     write(*,*) 'nPix           =',nPix
   end if
 
   unitstr_TEC = ''
@@ -128,35 +195,40 @@ subroutine write_plot_los(ifile)
      call get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
-  a_mag = sqrt(norm_los(1)**2 + norm_los(2)**2)
-  a_Pix(1) =  norm_los(2)/a_mag
-  a_Pix(2) = -norm_los(1)/a_mag
+  a_mag = sqrt(Los_D(1)**2 + Los_D(2)**2)
+  a_Pix(1) =  Los_D(2)/a_mag
+  a_Pix(2) = -Los_D(1)/a_mag
   a_Pix(3) =  0.0
-  b_mag = sqrt((norm_los(1)*norm_los(3))**2 + (norm_los(2)*norm_los(3))**2 &
-       + (norm_los(1)**2 + norm_los(2)**2)**2)
-  b_Pix(1) = -norm_los(1)*norm_los(3)/b_mag
-  b_Pix(2) = -norm_los(2)*norm_los(3)/b_mag
-  b_Pix(3) = (norm_los(1)**2 + norm_los(2)**2)/b_mag
+  b_mag = sqrt((Los_D(1)*Los_D(3))**2 + (Los_D(2)*Los_D(3))**2 &
+       + (Los_D(1)**2 + Los_D(2)**2)**2)
+  b_Pix(1) = -Los_D(1)*Los_D(3)/b_mag
+  b_Pix(2) = -Los_D(2)*Los_D(3)/b_mag
+  b_Pix(3) = (Los_D(1)**2 + Los_D(2)**2)/b_mag
 
-  pos(1) = -xoffset*a_Pix(1) -yoffset*b_Pix(1) 
-  pos(2) = -xoffset*a_Pix(2) -yoffset*b_Pix(2)
-  pos(3) = -xoffset*a_Pix(3) -yoffset*b_Pix(3)
+  ! 3D vector pointing from the Sun to the image center
+  ImageCenter_D = ObsPos_D + ObsDistance*Los_D + aOffset*a_Pix + bOffset*b_Pix
+
+  ! Make offset to be relative to the Sun (and not the projected observer)
+  aOffset = dot_product(ImageCenter_D, a_Pix)
+  bOffset = dot_product(ImageCenter_D, b_Pix)
+
+  !!!aOffset = aOffset + dot_product(ObsPos_D, a_Pix)
 
   allocate( &
-       PlotVar(n_pix_X,n_pix_Y,nplotvar), &
-       PlotBLK(n_pix_X,n_pix_Y,nplotvar), &
-       los_image(n_pix_X,n_pix_Y,nplotvar))
-
+       PlotVar(nPix,nPix,nplotvar), &
+       PlotBLK(nPix,nPix,nplotvar), &
+       los_image(nPix,nPix,nplotvar))
+  
   PlotVar = 0.0
 
   if(DoTiming)call timing_start('los_block_loop')
 
   ! loop over blocks
-  do iBLK = 1,nBLK
+  do iBLK = 1,nBlock
 
      if (unusedBLK(iBLK)) CYCLE
 
-     radius_of_block = 0.5*sqrt(&
+     rBlockSize = 0.5*sqrt(&
           ((nI+1)*dx_BLK(iBLK))**2 + &
           ((nJ+1)*dy_BLK(iBLK))**2 + &
           ((nK+1)*dz_BLK(iBLK))**2)
@@ -165,44 +237,66 @@ subroutine write_plot_los(ifile)
      XyzBlockCenter_D(1) = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
      XyzBlockCenter_D(2) = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
      XyzBlockCenter_D(3) = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
+     rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
+
+     if(rBlockCenter < rInner-rBlockSize) CYCLE
+
+     if(rBlockCenter > rOuter+rBlockSize) CYCLE
 
      ! calculate position of block center on the los image
-     XyzBlockCenter_D = XyzBlockCenter_D - Pos
-     xLosBlock = dot_product(XyzBlockCenter_D,a_pix)
-     yLosBlock = dot_product(XyzBlockCenter_D,b_pix)
+     BlockDistance = dot_product(Los_D, XyzBlockCenter_D - ObsPos_D)
 
-     ! Check if block is inside the LOS image
-     if(xLosBlock < -radius_of_block) CYCLE
-     if(xLosBlock > +radius_of_block + x_size_image) CYCLE
-     if(yLosBlock < -radius_of_block) CYCLE
-     if(yLosBlock > +radius_of_block + y_size_image) CYCLE
+     DoCheckBlock = BlockDistance > 0
 
+     if(DoCheckBlock)then
+        Ratio = ObsDistance/BlockDistance
+        ! 3D vector from the image center to the projected block center
+        XyzBlockCenter_D = Ratio*(XyzBlockCenter_D -  ObsPos_D) + ObsPos_D &
+             - ImageCenter_D
+        xLosBlock = dot_product(XyzBlockCenter_D,a_pix)
+        yLosBlock = dot_product(XyzBlockCenter_D,b_pix)
+  
+        ! Project block size
+        rBlockSize = rBlockSize*Ratio
+
+        ! Check if block is inside the LOS image
+        if(rSizeImage < sqrt(xLosBlock**2+yLosBlock**2) - rBlockSize) CYCLE
+     end if
      ! Initialize plot variable for this block
      PlotBLK = 0.0
 
      ! Loop over pixels
-     do jPix=1,n_pix_Y
+     do jPix=1,nPix
+
         ! Y position of the pixel on the image plane
-        y_Pix = real(jPix -1)*dy_Pix
+        y_Pix = (jPix -1) * SizePix -rSizeImage
 
         ! Check if block can intersect this pixel
-        if(abs(y_Pix-yLosBlock)>radius_of_block)CYCLE
+        if(DoCheckBlock)then
+           if(abs(y_Pix-yLosBlock)>rBlockSize)CYCLE
+        end if
 
-        do iPix=1,n_pix_X
+        do iPix=1,nPix
 
            ! X position of the pixel on the image plane
-           x_Pix = real(iPix -1)*dx_Pix
+           x_Pix = (iPix - 1) * SizePix - rSizeImage
 
-           ! Check if block can intersects this pixel
-           if( (x_Pix-xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
-                radius_of_block**2 ) CYCLE
+           ! Check if block can intersect this pixel
+           if(DoCheckBlock)then
+              if( (x_Pix-xLosBlock)**2 + (y_Pix-yLosBlock)**2 > &
+                rBlockSize**2 ) CYCLE 
+           end if
 
+           r2Pix = (x_Pix + aOffset)**2 + (y_Pix + bOffset)**2
            ! Check if pixel is within occultation radius
-           if((x_Pix - xOffset)**2 + (y_Pix - yOffset)**2 <= radius_occult**2)&
-                CYCLE
+           if( r2Pix  <= rOccult2 ) CYCLE
+
+           r2Pix = x_Pix**2 + y_Pix**2
+           ! Check if pixel is outside the circular region
+           if( r2Pix > rSizeImage2 ) CYCLE 
 
            ! Calculate contribution of this block to this pixel
-           call set_plotvar_los(ifile-plot_)
+           call set_plotvar_los(iFile-plot_)
 
         end do ! jPix loop
      end do ! iPix loop
@@ -216,8 +310,8 @@ subroutine write_plot_los(ifile)
   if (plot_dimensional(ifile)) call dimensionalize_plotvar_los(ifile-plot_)
 
   ! collect the pixels on one node and then write out the file 
-  if(nProc>1)then 
-     call MPI_REDUCE(PlotVar,los_image,n_pix_x*n_pix_y*nplotvar, &
+  if(nProc>1)then
+     call MPI_REDUCE(PlotVar,los_image,nPix*nPix*nplotvar, &
           MPI_REAL,MPI_SUM,0,iComm,iError)
   else
      los_image=PlotVar
@@ -258,13 +352,12 @@ subroutine write_plot_los(ifile)
         write(unit_tmp,*) 'TITLE="BATSRUS: Synthetic Image"'
         write(unit_tmp,'(a)')trim(unitstr_TEC)
         write(unit_tmp,*) 'ZONE T="LOS Image"', &
-             ', I=',n_pix_X,', J=',n_Pix_Y,', K=1, F=POINT'
+             ', I=',nPix,', J=',nPix,', K=1, F=POINT'
         ! Write point values
-
-        do iPix=1,n_pix_X
-           do jPix=1,n_pix_Y
-              x_Pix = real(iPix-1)*dx_Pix
-              y_Pix = real(jPix-1)*dy_Pix
+        do iPix=1,nPix
+           x_Pix = (iPix - 1) * SizePix - rSizeImage
+           do jPix=1,nPix
+              y_Pix = (jPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
                  write(unit_tmp,fmt="(30(E14.6))") x_Pix*unitUSER_x, &
@@ -288,7 +381,7 @@ subroutine write_plot_los(ifile)
              n_step,time_simulation,2,neqpar,nplotvar
 
         ! Grid size
-        write(unit_tmp,"(2i4)") n_pix_X, n_pix_Y
+        write(unit_tmp,"(2i4)") nPix, nPix
 
         ! Equation parameters
         write(unit_tmp,"(100(1pe13.5))") eqpar(1:neqpar)
@@ -297,11 +390,10 @@ subroutine write_plot_los(ifile)
         write(unit_tmp,"(a)")allnames
 
         ! Data
-        do jPix=1,n_pix_Y
-           y_Pix = real(jPix-1)*dy_Pix
-
-           do iPix=1,n_pix_X
-              x_Pix = real(iPix-1)*dx_Pix
+        do jPix=1,nPix
+           y_Pix = (jPix - 1) * SizePix - rSizeImage
+           do iPix=1,nPix
+              x_Pix = (iPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
                  x_Pix = x_Pix * unitUSER_x
@@ -334,7 +426,7 @@ subroutine write_plot_los(ifile)
 contains
   !===========================================================================
 
-  subroutine set_plotvar_los(iplotfile)
+  subroutine set_plotvar_los(iPlotfile)
 
     use ModProcMH
     use ModIO
@@ -345,29 +437,26 @@ contains
     integer, intent(in) :: iPlotFile
 
     ! Local variables
-    integer :: iVar
-    integer :: i, j, k, i_los, nline_seg, counter 
-    real :: x_los, y_los, z_los, r_los  
-    real :: x_q, y_q, z_q, q_mag
-    real :: a_los, b_los, c_los, d_los
-    real :: sin_omega, cos_omega, cos_theta
-    real :: rho_los, s_los_sqrd, ds_los, direction
-    real :: point_in(3), point_1(3), point_2(3), point_los(3) 
-    real :: intrsct(2,3,3), face_location(2,3) 
-    real :: xx1, xx2, yy1, yy2, zz1, zz2 
-
+    integer :: i, j, k, counter
+    real :: intrsct(2,3,3), face_location(2,3)
+    real :: xx1, xx2, yy1, yy2, zz1, zz2
+    real :: point_1(3), point_2(3)
+    real :: R2Point1, R2Point2,rLine_D(3),rLine2
+    real :: coeff1,coeff2,coeff3
+    real :: Discr
+    real :: Solution1, Solution1_D(3), Solution2, Solution2_D(3)
+    logical :: IsOuter, IsGoodSolution1, IsGoodSolution2  
+ 
     !-------------------------------------------------------------------------
     !if(DoTiming)call timing_start('los_set_plotvar')
 
     ! Get the 3D location of the pixel
-    r_Pix = pos + x_Pix*a_Pix + y_Pix*b_Pix
+    r_Pix = ImageCenter_D + x_Pix*a_Pix + y_Pix*b_Pix
 
     !x_los, y_los, z_los, r_los give the position of the point on the los
     !mu_los parameter related to the limb darkening
     !face_location give the locations of the faces of the block
-    !face_location(2,3) = x1, y1, z1---x2, y2, z2
-
-    nline_seg = (nI + nJ + nK)
+    !face_location(2,3) = x1, y1, z1---x2, y2, z2 
 
     !Determine the location of the block faces
     xx1 = 0.50*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
@@ -383,6 +472,9 @@ contains
     face_location(2,1) = xx2
     face_location(2,2) = yy2
     face_location(2,3) = zz2
+    LosPix_D = ObsPos_D - r_Pix
+    LosPix_D = LosPix_D/sqrt(sum(LosPix_D**2))
+    where(LosPix_D ==0.0) LosPix_D = cTiny
 
     !Determine where the line of sight enters and exits the block
     !loop over the number of block face pairs, face directions and coordinates
@@ -395,7 +487,7 @@ contains
           do k=1,3   !coordinate loop
              if (j /= k) then  
                 intrsct(i,j,k) = r_Pix(k) + &
-                     (norm_los(k)/norm_los(j))*(face_location(i,j) - r_Pix(j))
+                     (LosPix_D(k)/LosPix_D(j))*(face_location(i,j) - r_Pix(j))
              end if
           end do
        end do
@@ -403,75 +495,206 @@ contains
 
     !which of the 6 points are on the block?
     counter = 0
-    do i=1,2 
+    CHECK: do i=1,2 
        do j=1,3 
           if( (intrsct(i,j,1) >= xx1) .and. (intrsct(i,j,1) <= xx2)) then
              if( (intrsct(i,j,2) >= yy1) .and. (intrsct(i,j,2) <= yy2)) then
                 if( (intrsct(i,j,3) >= zz1) .and. (intrsct(i,j,3) <= zz2)) then
                    counter = counter + 1
-                   do k=1,3  !fixed..do loop was misplaced
-                      if(counter == 1) point_1(k) = intrsct(i,j,k)
-                      if(counter == 2) point_2(k) = intrsct(i,j,k)
-                   end do
+                   if(counter == 1) point_1 = intrsct(i,j,:)
+                   if(counter == 2) then
+                           point_2 = intrsct(i,j,:)
+                      ! If point 2 is different from point 1, we are done
+                      if(sum(abs(point_1 - point_2))>cTolerance) EXIT CHECK
+                      ! Ignore the second point, keep checking
+                      counter = 1
+                   end if
                 end if
              end if
           end if
        end do
-    end do
+    end do CHECK
 
     ! Check if the los cuts through the block 
-    if(counter == 2) then           !integrate
-       s_los_sqrd    = 0.0
-       direction     = 0.0
+    if(counter /= 2) RETURN 
 
-       do i=1,3 
-          direction  = direction + (point_1(i) - point_2(i))*norm_los(i)
-          s_los_sqrd = s_los_sqrd + (point_1(i) - point_2(i))**2 
-       end do
+    R2Point1 = sum(point_1**2)
+    R2Point2 = sum(point_2**2)
 
-       if(direction > 0) then 
-          point_in = point_2
-       else 
-          point_in = point_1
-       endif
+    ! Check if the whole segment is inside rInner
+    if( R2Point1 <= rInner2 .and. R2Point2 <= rInner2) RETURN
 
-       ds_los = sqrt(s_los_sqrd)/real(nline_seg)
+    ! Check if the whole segment is outside rOuter
+    rLine_D = r_Pix - LosPix_D*dot_product(LosPix_D, r_Pix)
+    rLine2  = sum(rLine_D**2)
+    if( rLine2 > rOuter2 ) RETURN
 
-       !if(DoTiming)call timing_start('los_integral')
-       do i_los=1,nline_seg
-          x_los = point_in(1) + (i_los-0.5)*ds_los*norm_los(1)
-          y_los = point_in(2) + (i_los-0.5)*ds_los*norm_los(2)
-          z_los = point_in(3) + (i_los-0.5)*ds_los*norm_los(3)
-          r_los = sqrt(x_los**2 + y_los**2 + z_los**2)
+    ! Check if there is a need to calculate an intersection
 
-          point_los(1) = x_los
-          point_los(2) = y_los
-          point_los(3) = z_los
+    ! Do we intersect the outer sphere
+    IsOuter = R2Point1 > rOuter2 .or. R2Point2 > rOuter2
 
-          sin_omega = 1.0/r_los
-          cos_omega = sqrt(1.0 - sin_omega**2)
+    ! Do we intersect the inner or outer spheres
+    if( IsOuter .or. &
+         (rLine2 < rInner2 .and. rBlockCenter < rInner+rBlockSize) ) then
 
-          !omega and functions of omega are unique to a given line of sight
-          a_los = cos_omega*sin_omega**2
-          b_los = -0.125*( 1.0 - 3.0*sin_omega**2 - (cos_omega**2/sin_omega)* &
-               (1.0 + 3.0*sin_omega**2)*log((1.0 + sin_omega)/cos_omega) )
-          c_los = 4.0/3.0 - cos_omega - (1.0/3.0)*cos_omega**3
-          d_los = 0.125*( 5.0 + sin_omega**2 - (cos_omega**2/sin_omega) * &
-               (5.0 - sin_omega**2)*log((1.0 + sin_omega)/cos_omega) )
+       coeff1 = sum((point_2 - point_1)**2)
+       coeff2 = 2*dot_product(point_1, point_2 - point_1)
 
-          z_q =   (norm_los(1)**2 + norm_los(2)**2)*z_los            &
-               - norm_los(3)*(norm_los(1)*x_los + norm_los(2)*y_los)  
-          x_q = x_los + (norm_los(1)/norm_los(3)) * (z_q - z_los)
-          y_q = y_los + (norm_los(2)/norm_los(3)) * (z_q - z_los)
-          q_mag = sqrt(x_q**2 + y_q**2 + z_q**2)
+       if( IsOuter ) then
+          coeff3 = R2Point1 - rOuter2
+       else
+          coeff3 = R2Point1 - rInner2
+       end if
 
-          cos_theta = q_mag/r_los
+       Discr = coeff2**2-4*coeff1*coeff3
 
-          ! interpolate density at this point with bilinear interpolation
-          rho_los = point_value_los(point_los,iBLK)
+       if(Discr < 0.0)then
+          write(*,*)'Warning: Discr=',Discr
+       !   call stop_mpi("Negative discriminant")
+           RETURN
+       end if
+
+       ! Line of sight tangent to the outer sphere
+       if(IsOuter.AND.Discr==0.0)RETURN
+
+       ! Find the two intersections (distance from point1 towards point2)
+       Discr = sqrt(Discr)
+       Solution1 = (-coeff2-Discr)/(2*coeff1)
+       Solution2 = (-coeff2+Discr)/(2*coeff1)
+     
+       Solution1_D = point_1 + (point_2 - point_1) * Solution1
+       Solution2_D = point_1 + (point_2 - point_1) * Solution2
+
+ 
+       ! Check if the solutions are within the segment
+       IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
+       IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
+
+       if(IsOuter)then
+          ! For outer sphere replace
+          ! outlying point1 with solution1 and
+          ! outlying point2 with solution2
+          if(R2Point1 > rOuter2) then
+             if(IsGoodSolution1)then
+                 point_1 = Solution1_D
+             else
+                 RETURN
+             end if
+          end if
+          if(R2Point2 > rOuter2) then
+             if(IsGoodSolution2)then
+                 point_2 = Solution2_D
+             else
+                 RETURN
+             end if
+          end if
+       else
+          ! For inner sphere replace 
+          ! internal point1 with solution2 and 
+          ! internal point2 with solution1
+          if(R2Point1 < rInner2) point_1 = Solution2_D
+          if(R2Point2 < rInner2) point_2 = Solution1_D
+          ! Weird case: the segment cuts the inner sphere
+          if(IsGoodSolution1 .and. IsGoodSolution2)then
+             ! Need to do two integrals:
+             ! from point1 to solution1 and
+             ! from point2 to solution2
+             if(Discr > 0.0)then
+                if(Solution1>cTiny) &
+                     call integrate_segment(point_1, Solution1_D)
+                if(solution2<cOne-cTiny) &
+                     call integrate_segment(point_2, Solution2_D)
+             RETURN
+             end if
+          end if
+
+       end if
+    end if
+
+    call integrate_segment(point_1, point_2)
+
+  end subroutine set_plotvar_los 
+     
+  !===========================================================================
+
+  subroutine integrate_segment(Point_1, Point_2)
+
+    real, intent(in) :: Point_1(3), Point_2(3)
+    integer, parameter ::  nline_seg = nI + nJ + nK
+
+    real :: Direction, s_los_sqrd
+    integer :: iVar
+    integer :: i, j, k, i_los
+    real :: x_los, y_los, z_los, r_los
+    real :: x_q, y_q, z_q, q_mag
+    real :: a_los, b_los, c_los, d_los
+    real :: sin_omega, cos_omega, cos_theta,Sin2Omega,Cos2Omega, Logarithm
+    real :: rho_los, ds_los
+    real :: point_in(3), point_los(3)
+    !------------------------------------------------------------------------
+    Direction  = dot_product((Point_1 - Point_2), LosPix_D)
+    s_los_sqrd = sum((Point_2 - Point_1)**2)
+
+    if(direction > 0) then 
+        point_in = point_2
+    else 
+        point_in = point_1
+    endif
+    ds_los = sqrt(s_los_sqrd) / nline_seg
+
+    !if(DoTiming)call timing_start('los_integral')
+    do i_los=1,nline_seg
+       x_los = point_in(1) + (i_los-0.5)*ds_los*LosPix_D(1)
+       y_los = point_in(2) + (i_los-0.5)*ds_los*LosPix_D(2)
+       z_los = point_in(3) + (i_los-0.5)*ds_los*LosPix_D(3)
+       r_los = sqrt(x_los**2 + y_los**2 + z_los**2)
+       point_los(1) = x_los
+       point_los(2) = y_los
+       point_los(3) = z_los
+
+       sin_omega = 1.0/r_los
+       Sin2Omega = sin_omega**2
+       Cos2Omega = 1 - Sin2Omega
+
+       if(Cos2Omega < 0)then
+          write(*,*)'ERROR!!!!'
+          write(*,*)'iPix, jPix, iBLK=',iPix, jPix, iBLK
+          write(*,*)'aOffset,bOffset=',aOffset, bOffset
+          write(*,*)'X_pix, Y_pix   =',x_pix,y_pix
+          write(*,*)'r2Pix, rOccult2=',r2Pix,rOccult2
+          
+          write(*,*)'point_1 =',point_1
+          write(*,*)'point_2 =',point_2
+          write(*,*)'point_in=',point_in
+          write(*,*)'LosPix_D=',LosPix_D
+          write(*,*)'point_los=',point_los
+          write(*,*)'r_los=',r_los
+       end if
+       cos_omega = sqrt(Cos2Omega)
+       Logarithm = log((1.0 + sin_omega)/cos_omega)  
+
+       !omega and functions of omega are unique to a given line of sight
+       a_los = cos_omega*Sin2Omega
+       b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/sin_omega)* &
+            (1.0 + 3.0*Sin2Omega)*Logarithm )
+       c_los = 4.0/3.0 - cos_omega - (1.0/3.0)*cos_omega*Cos2Omega
+       d_los = 0.125*( 5.0 + sin_omega**2 - (Cos2omega/sin_omega) * &
+            (5.0 - Sin2Omega)*Logarithm )
+
+       z_q =   (LosPix_D(1)**2 + LosPix_D(2)**2)*z_los            &
+            - LosPix_D(3)*(LosPix_D(1)*x_los + LosPix_D(2)*y_los)
+       x_q = x_los + (LosPix_D(1)/LosPix_D(3)) * (z_q - z_los)
+       y_q = y_los + (LosPix_D(2)/LosPix_D(3)) * (z_q - z_los)
+       q_mag = sqrt(x_q**2 + y_q**2 + z_q**2)
+
+       cos_theta = q_mag/r_los       
+       
+       ! interpolate density at this point with bilinear interpolation
+       rho_los = point_value_los(point_los,iBLK)
 
 
-          do iVar=1,nplotvar
+        do iVar=1,nplotvar
              TypeLosImage = plotvarnames(iVar)
              select case(TypeLosImage)
              case ('len')
@@ -504,16 +727,11 @@ contains
              case default
                 PlotBLK(iPix,jPix,iVar)=-7777.
              end select
-          end do ! iVar
+        end do ! iVar
 
-       end do !line segment interation loop
-       !if(DoTiming)call timing_stop('los_integral')
+    end do !line segment interation loop 
 
-    end if !if counter = 2
-
-    !if(DoTiming)call timing_stop('los_set_plotvar')
-
-  end subroutine set_plotvar_los
+  end subroutine integrate_segment
 
   !============================================================================
 
@@ -533,9 +751,9 @@ contains
     point_value_los = 0.0
 
     ! Convert to normalized coordinates (index and position are the same)
-    x(1)=(Xpnt(1)-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)+1.
-    x(2)=(Xpnt(2)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-    x(3)=(Xpnt(3)-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)+1.
+    x(1)=(Xpnt(1)-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)+1./2.
+    x(2)=(Xpnt(2)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1./2.
+    x(3)=(Xpnt(3)-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)+1./2.
 
     ! Determine cell indices corresponding to location qx
     i1=floor(x(1)); i2=i1+1
@@ -543,9 +761,9 @@ contains
     k1=floor(x(3)); k2=k1+1
 
     ! Distance relative to the cell centers
-    dx1=x(1)-real(i1); dx2=1.-dx1
-    dy1=x(2)-real(j1); dy2=1.-dy1
-    dz1=x(3)-real(k1); dz2=1.-dz1
+    dx1=x(1)-i1; dx2=1.-dx1
+    dy1=x(2)-j1; dy2=1.-dy1
+    dz1=x(3)-k1; dz2=1.-dz1
 
     ! Bilinear interpolation in 3D
     point_value_los = &
