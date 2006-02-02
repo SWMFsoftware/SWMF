@@ -44,34 +44,29 @@ module ModUserTD99
   !----------------------------------------------------------------------
   ! Declare the rotational matrix of coordinate transformation::
   real, dimension(3,3):: RotateTD99_DD
-  !----------------------------------------------------------------------
-Contains
+
+contains
+
   !=====================================================================!
-  !  FUNCTION VARIED_CURRENT                                            !
-  !=====================================================================!
+
   real function varied_current(Time)
-    !--------------------------------------------------------------------
     real, intent(in):: Time
     varied_current = min(&
          max(Time-CurrentStartTime,cZero)/CurrentRiseTime,cOne)*&
          ItubeSaved
   end function varied_current
-  !----------------------------------------------------------------------
 
   !=====================================================================!
-  !  FUNCTION TIME_INCREMENT                                            !
-  !=====================================================================!
+
   real function time_increment(Time)
     !--------------------------------------------------------------------
     real, intent(in):: Time
     time_increment = min(&
          max(Time-CurrentStartTime,cZero)/CurrentRiseTime,cOne)
   end function time_increment
-  !----------------------------------------------------------------------
 
   !=====================================================================!
-  !  SUBROUTINE GET_TRANSFORMED_TD99FLUXROPE                            !
-  !=====================================================================!
+
   subroutine get_transformed_TD99fluxrope(RFace_D,BFRope_D,UVorT_D,&
        RhoFRope,Time)
     use ModCoordTransform, ONLY: rot_matrix_x,rot_matrix_y,&
@@ -158,11 +153,9 @@ Contains
     UVorT_D(x_:z_) = UVorC_D-RFace_D(x_:z_)*UVorR
     !--------------------------------------------------------------------
   end subroutine get_transformed_TD99fluxrope
-  !----------------------------------------------------------------------
 
   !=====================================================================!
-  !  SUBROUTINE INIT_TD99_PARAMETERS                                    !
-  !=====================================================================!
+
   subroutine init_TD99_parameters
     use ModProcMH,         ONLY: iProc
     use ModCoordTransform, ONLY: rot_matrix_x,rot_matrix_y,&
@@ -317,11 +310,9 @@ Contains
     endif
     !--------------------------------------------------------------------
   end subroutine init_TD99_parameters
-  !----------------------------------------------------------------------
 
   !=====================================================================!
-  !  SUBROUTINE COMPUTE_TD99_BQFIELD                                    !
-  !=====================================================================!
+
   subroutine compute_TD99_BqField(RFace_D,BqField_D,UVorC_D,&
        DoMaintainEpot,TimeNow)
     use ModMain,    ONLY: n_step,iteration_number
@@ -475,11 +466,9 @@ Contains
     endif
     !--------------------------------------------------------------------
   end subroutine compute_TD99_BqField
-  !----------------------------------------------------------------------
 
   !=====================================================================!
-  !  SUBROUTINE COMPUTE_TD99_FLUXROPE                                   !
-  !=====================================================================!
+
   subroutine compute_TD99_FluxRope(RFace_D,BFRope_D,RhoFRope)
     !-------------------------------------------------------------------!
     !\__                                                             __/!
@@ -715,8 +704,8 @@ Contains
     BFRope_D(y_) = BFRope_D(y_)+BIphiy_TD99
     BFRope_D(z_) = BFRope_D(z_)+BIphiz_TD99
     !--------------------------------------------------------------------
-  Contains
-    !--------------------------------------------------------------------
+  contains
+    !====================================================================
     subroutine calc_elliptic_int_1kind(Kappa,K_elliptic)
       !------------------------------------------------------------------
       real, intent(in):: Kappa
@@ -794,9 +783,9 @@ Contains
       K_elliptic = K_ell_sum
       !------------------------------------------------------------------
     end subroutine calc_elliptic_int_1kind
-    !--------------------------------------------------------------------
 
-    !--------------------------------------------------------------------
+    !====================================================================
+
     subroutine calc_elliptic_int_2kind(Kappa,E_elliptic)
       !------------------------------------------------------------------
       real, intent(in):: Kappa
@@ -881,7 +870,8 @@ Contains
 end module ModUserTD99
 
 !========================================================================
-Module ModUser
+
+module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne
@@ -911,6 +901,11 @@ Module ModUser
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'HELIOSPHERE, Manchester, Roussev'
+
+  ! Cooling related parameters
+  logical :: UseCooling   = .true.
+  real    :: Temp0Cooling = 5.0e+7   ! [K]      target temperature
+  real    :: TauCooling   = 100.0    ! [second] relaxation time
 
   !\
   ! PFSSM related variables::
@@ -1045,6 +1040,12 @@ contains
           call read_var('UseUserB0'               ,UseUserB0)
           call read_var('UseUserInitSession'     ,UseUserInitSession)
           call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
+       case("#COOLING")
+          call read_var('UseCooling', UseCooling)
+          if(UseCooling)then
+             call read_var('Temp0Cooling',Temp0Cooling)
+             call read_var('TauCooling',  TauCooling)
+          end if
        case("#USEUSERHEATING")
           call read_var('UseUserHeating'          ,UseUserHeating)
        case("#PFSSM")
@@ -1576,65 +1577,95 @@ contains
     !\
     ! This subroutine is used to calculate sources for the MHD equations.  
     ! The routine is called for each block separately, indexed by GlobalBlk
-    ! Note that SE (energy) and SP (pressure) must both be loaded. 
+    ! Note that Source_VC(Energy_) and Source_VC(p_) must both be loaded. 
     !
     ! Calculates a location based heating if UseUserHeating is true. 
     ! Also fills in ModAdvance::tHeat0 for point implicit source term,
     ! but this is not used any longer.
     !/
 
-    use ModMain,       ONLY: nI, nJ, nK, globalBLK, PROCtest, BLKtest, &
+    use ModMain,       ONLY: nI, nJ, nK, GlobalBlk, PROCtest, BLKtest, &
          UseUserHeating
-    use ModAdvance,    ONLY: State_VGB, Source_VC, rho_, P_, Energy_, tHeat0, &
+    use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, p_, Energy_, tHeat0, &
          qHeat_BLK
-    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK
-    use ModPhysics,    ONLY: g, CosThetaTilt, SinThetaTilt, tHeat
+    use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, R_BLK, true_cell
+    use ModPhysics,    ONLY: g, CosThetaTilt, SinThetaTilt, tHeat, &
+         UnitSi_Temperature, UnitSi_T
     use ModProcMH,     ONLY: iProc 
     !\
     ! Local variables
     !/
-    integer:: i,j,k
+    integer:: i, j, k, iBlock
     real   :: CosTheta, SinTheta, CosPhi, SinPhi, Sin2Theta_coronal_hole
-    real   :: xT,yT,zT
-    real   :: Heating
-    logical:: oktest,oktest_me
+    real   :: xT, yT, zT
+    real   :: Heating, Cooling, Temp, Temp0, Tau
+    logical:: DoTest, DoTestMe
     !--------------------------------------------------------------------------
-    if (.not.UseUserHeating) RETURN
+    if (.not.(UseUserHeating .or. UseCooling)) RETURN
 
     if (iProc==PROCtest.and.globalBLK==BLKtest) then
-       call set_oktest('user_sources',oktest,oktest_me)
+       call set_oktest('user_calc_sources', DoTest, DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       !\
-       ! Colatitude dependent heating source term
-       !/
-       XT =  CosThetaTilt*x_BLK(i,j,k,globalBLK)+&
-            SinThetaTilt*z_BLK(i,j,k,globalBLK)
-       YT =  y_BLK(i,j,k,globalBLK)
-       ZT = -SinThetaTilt*x_BLK(i,j,k,globalBLK)+&
-            CosThetaTilt*z_BLK(i,j,k,globalBLK)
-       CosTheta = ZT/(R_BLK(i,j,k,globalBLK)+cTolerance)
-       SinTheta = sqrt(XT**2+YT**2)             /&
-            (R_BLK(i,j,k,globalBLK)+cTolerance)
-       CosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
-       SinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
-       call coronal_hole_boundary(R_BLK(i,j,k,globalBLK),&
-            sin2Theta_coronal_hole)
-       if (SinTheta**2 < sin2Theta_coronal_hole) then
-          Theat0(i,j,k) = Theat
-       else
-          Theat0(i,j,k) = cOne
-       end if
-       Heating = State_VGB(rho_,i,j,k,globalBLK)     *&
-            qheat_BLK(i,j,k,globalBLK)*(Theat0(i,j,k) &
-            -g*State_VGB(P_,i,j,k,globalBLK)/State_VGB(rho_,i,j,k,globalBLK))
 
-       Source_VC(P_     ,i,j,k) = Source_VC(P_,i,j,k) + (g-1)*Heating
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Heating
+    iBlock = GlobalBlk
 
-    end do; end do; end do
+    if(UseUserHeating)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          !\
+          ! Colatitude dependent heating source term
+          !/
+          XT =  CosThetaTilt*x_BLK(i,j,k,iBlock)+&
+               SinThetaTilt*z_BLK(i,j,k,iBlock)
+          YT =  y_BLK(i,j,k,iBlock)
+          ZT = -SinThetaTilt*x_BLK(i,j,k,iBlock)+&
+               CosThetaTilt*z_BLK(i,j,k,iBlock)
+          CosTheta = ZT/(R_BLK(i,j,k,iBlock)+cTolerance)
+          SinTheta = sqrt(XT**2+YT**2)             /&
+               (R_BLK(i,j,k,iBlock)+cTolerance)
+          CosPhi = XT/sqrt(XT**2+YT**2+cTolerance**2)
+          SinPhi = YT/sqrt(XT**2+YT**2+cTolerance**2)
+          call coronal_hole_boundary(R_BLK(i,j,k,iBlock),&
+               sin2Theta_coronal_hole)
+          if (SinTheta**2 < sin2Theta_coronal_hole) then
+             Theat0(i,j,k) = Theat
+          else
+             Theat0(i,j,k) = cOne
+          end if
+          Heating = State_VGB(rho_,i,j,k,iBlock)     *&
+               qheat_BLK(i,j,k,iBlock)*(Theat0(i,j,k) &
+               -g*State_VGB(P_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock))
+
+          Source_VC(P_     ,i,j,k) = Source_VC(P_,i,j,k) + (g-1)*Heating
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Heating
+       end do; end do; end do
+    end if
+
+    if(UseCooling)then
+       ! Apply exponential cooling for tempretures T > T0 
+       ! with time constant tau:
+       ! dE/dt = -rho*max(0,T-T0)/tau 
+
+       ! Convert to normalized units
+       Temp0 = Temp0Cooling / UnitSi_Temperature
+       Tau   = TauCooling   / UnitSi_T
+
+       do k=1,nK; do j=1,nJ; do i=1,nI
+
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          Temp = State_VGB(P_,i,j,k,iBlock)/ State_VGB(Rho_,i,j,k,iBlock)
+
+          if (Temp < Temp0) CYCLE
+
+          Cooling = State_VGB(Rho_,i,j,k,iBlock)*(Temp - Temp0) / Tau
+
+          Source_VC(P_     ,i,j,k) = Source_VC(P_,i,j,k)      - Cooling * (g-1)
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) - Cooling
+
+       end do; end do; end do
+    end if
 
   end subroutine user_calc_sources
 
