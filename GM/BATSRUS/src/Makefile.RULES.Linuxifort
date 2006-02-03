@@ -1,0 +1,53 @@
+#^CFG COPYRIGHT UM
+#
+#       Linux Operating System, ifort 9.?? compiler
+#       Specific Rules
+#
+
+MOD1 = ModCT.o       #^CFG IF CONSTRAINB
+MOD2 = ModImplicit.o #^CFG IF IMPLICIT
+MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
+
+create_soln_blocks.o: create_soln_blocks.f90 \
+        ModAMR.o \
+        ModProcMH.o \
+        ModMain.o \
+        ModVarIndexes.o \
+        ${MOD1} \
+        ModAdvance.o \
+        ModParallel.o \
+        ModGeometry.o \
+        ${SHAREDIR}/ModMpi.o \
+        ${SHAREDIR}/ModNumConst.o \
+        ModPhysics.o \
+        ${MOD2} \
+        ModUser.o
+	${COMPILE.f90} ${Cflag1} create_soln_blocks.f90
+
+set_ICs.o: set_ICs.f90 \
+        ModMain.o \
+        ModAdvance.o \
+        ModGeometry.o \
+        ModIO.o \
+        ${MOD2} \
+        ModPhysics.o \
+        ${SHAREDIR}/ModNumConst.o \
+        ModUser.o
+	${COMPILE.f90} ${Cflag1} set_ICs.f90
+
+write_logfile.o: write_logfile.f90 \
+        ModProcMH.o \
+        ModMain.o \
+        ModVarIndexes.o \
+        ModAdvance.o \
+        ModGeometry.o \
+        ModPhysics.o \
+        ModIO.o \
+        ${SHAREDIR}/ModIoUnit.o \
+        ${SHAREDIR}/ModUtilities.o \
+        ${SHAREDIR}/ModMpi.o \
+        ${SHAREDIR}/ModNumConst.o \
+        ${MOD3} \
+        ModUser.o \
+        ${SHAREDIR}/ModCoordTransform.o
+	${COMPILE.f90} ${Cflag1} write_logfile.f90
