@@ -151,7 +151,7 @@ max tec                 StringPlot
 T                       DoAutoRefine 
 10.                     PercentCoarsen
 30.                     PercentRefine
-99999                   MaxTotalBlocks
+800                     MaxTotalBlocks
 
 #SCHEME
 2			nOrder
