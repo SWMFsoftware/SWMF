@@ -11,6 +11,8 @@
 
 !REVISION HISTORY:
 ! 09/01/05 G.Toth - initial version
+! 02/06/06          modified SWMF_run to pass coupling time
+!                   added SWMF_couple to transfer 2D grid data
 !EOP
 
 !BOP ==========================================================================
@@ -101,21 +103,43 @@ end subroutine SWMF_initialize_session
 !BOP ==========================================================================
 !ROUTINE: SWMF_run - run the SWMF
 !INTERFACE:
-subroutine SWMF_run(DoStop, iError)
+subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
   !USES:
-  use CON_session,   ONLY: do_session
-  use CON_variables, ONLY: iErrorSwmf
+  use CON_session,    ONLY: do_session
+  use CON_variables,  ONLY: iErrorSwmf
+  use CON_time,       ONLY: tSimulation
+  use CON_comp_param, ONLY: MaxComp, lNameComp, i_comp_name
+  use ModKind,        ONLY: Real8_
   implicit none
+  !INPUT ARGUMENTS:
+  character(len=lNameComp), intent(in):: NameComp ! Component to couple with
+  real(Real8_),             intent(in):: tCouple  ! Next coupling time
   !OUTPUT ARGUMENTS:
+  real(Real8_),     intent(out):: tSimulationOut ! Current SWMF sim. time
   logical, intent(out):: DoStop ! True if the SWMF requested a stop
   integer, intent(out):: iError ! Error code, 0 on success
   !DESCRIPTION:
-  ! Run the SWMF until a stop condition is reached.
+  ! Run the SWMF until the coupling time or a stop condition is reached.
   ! The DoStop argument indicates if a final stop has been requested 
   ! by the SWMF.
   !EOP
+  !LOCAL VARIABLES:
+  real    :: tCouple_C(MaxComp)
   !BOC ------------------------------------------------------------------------
-  call do_session(DoStop)
+  tCouple_C = -1.0
+  if(tCouple >= 0.0)then
+     if(NameComp == '**')then
+        ! couple with all the components
+        tCouple_C = tCouple
+     else
+        ! couple with a single component
+        tCouple_C(i_comp_name(NameComp)) = tCouple
+     end if
+  end if
+
+  call do_session(DoStop, tCouple_C)
+
+  tSimulationOut = tSimulation
   iError = iErrorSwmf
   !EOC
 end subroutine SWMF_run
@@ -138,3 +162,83 @@ subroutine SWMF_finalize(iError)
   iError = iErrorSwmf
   !EOC
 end subroutine SWMF_finalize
+
+!BOP ==========================================================================
+!ROUTINE: SWMF_couple - SWMF coupling with an external code
+!INTERFACE:
+subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
+     nVar, nX, nY, xMin, xMax, yMin, yMax, Data_VII, iError)
+
+  !USES:
+  use ModKind, ONLY: Real8_
+  use CON_comp_param, ONLY: lNameComp, i_comp_name
+  use CON_world,      ONLY: i_comm
+  use ModMpi
+
+  implicit none
+  !INPUT ARGUMENTS:
+  character(len=*), intent(in) :: NameFrom   ! Provider component
+  character(len=*), intent(in) :: NameTo     ! Receiver component
+  character(len=3), intent(in) :: NameCoord  ! Coordinate system description
+  integer,          intent(in) :: nVar       ! Number of variables
+  integer,          intent(in) :: nX, nY     ! Grid size
+  real(Real8_),     intent(in) :: xMin, xMax ! X range
+  real(Real8_),     intent(in) :: yMin, yMax ! Y range
+
+  !INPUT/OUTPUT ARGUMENTS:
+  real(Real8_),  intent(inout) :: Data_VII(nVar, nX, nY) ! grid data pointer
+
+  !OUTPUT ARGUMENTS:
+  integer, intent(out):: iError ! Error code, 0 on success
+  !DESCRIPTION:
+  ! The coupling interface of the SWMF when coupled to an external code.
+  ! The data is transferred on a uniform 2D grid. The grid dimension and
+  ! coordinate system and coordinate ranges are determined by the external
+  ! code. The data array is passed to/from the appropriate SWMF component.
+  !EOP
+  integer :: iComm
+  character(len=*), parameter :: NameSub='SWMF_receive'
+  !BOC ------------------------------------------------------------------------
+  iError = 1
+
+  ! Do the appropriate coupling depending on the NameFrom-NameTo pair
+  select case(NameFrom)
+  case('ESMF_IH')
+     select case(NameTo)
+     case('GM')
+        if(nVar /= 8)then
+           write(*,*)NameSub//' ERROR: '// &
+                'coupling to GM requires 8 variables, not nVar=',nVar
+           return
+        end if
+
+        ! Broadcast information from the root processor 
+        ! to the rest of the component
+        iComm = i_comm(NameTo)
+        call MPI_bcast(Data_VII, nVar*nX*nY, MPI_DOUBLE_PRECISION, 0, &
+             iComm, iError)
+        if(iError /= 0)then
+           write(*,*)NameSub//' ERROR: '// &
+                'MPI_bcast failed for component '//NameTo
+           return
+        end if
+
+        ! Put data into GM
+        call GM_put_from_ih_buffer(NameCoord, nX, nY, &
+             real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))
+     case default
+        write(*,*)NameSub//' ERROR: '// &
+             'coupling to '//NameTo//' is not implemented'
+        return
+     end select
+  case default
+     write(*,*)NameSub//' ERROR: '// &
+          'coupling from '//NameFrom//' is not implemented'
+     return
+  end select
+
+  iError = 0
+  !EOC
+
+end subroutine SWMF_couple
+
