@@ -35,7 +35,7 @@ APPOBJS = \
 	ESMF_GridComp.o \
 	ESMF_SWMF_GridComp.o \
 	ESMF_SWMF_Driver.o \
-	ModTimeArray.o
+	ESMF_SWMF_Mod.o
 
 # Dependencies:
 DEPEND:
@@ -51,6 +51,29 @@ EXE: DEPEND
 ${EXE}: $(APPOBJS) ${LIBDIR}/libSWMF.a ${ESMFLIB}
 	$(FLINKER) $(LINKOPTS) -o ${EXE} $(APPOBJS) $(FLINKLIBS) \
 		-L${LIBDIR} -lSWMF
+
+TESTOBJS = \
+	test.o
+
+test.exe: ${TESTOBJS} ${ESMFLIB}
+	$(FLINKER) $(LINKOPTS) -o test.exe ${TESTOBJS} $(FLINKLIBS) \
+		-L${LIBDIR}
+
+test: test.exe
+	mpirun -np ${NP} test.exe
+
+ESMFTESTOBJS = \
+	user_model1.o \
+	user_model2.o \
+	user_coupler.o \
+	ESMFTEST.o
+
+esmftest.exe: ${ESMFTESTOBJS} ${ESMFLIB}
+	$(FLINKER) $(LINKOPTS) -o esmftest.exe ${ESMFTESTOBJS} $(FLINKLIBS) \
+		-L${LIBDIR}
+
+esmftest: esmftest.exe
+	mpirun -np ${NP} esmftest.exe
 
 # run the executable in parallel. 
 NP = 2
