@@ -170,10 +170,10 @@ contains
     end if
 
     ! Send MHD data to the GM processors in the SWMF
-    !write(*,*)'!!! SWMF_GridComp SWMF_receive Mhd=',Mhd_VII(:,1,1)
-    call SWMF_receive('ESMF_IH', NameSwmfComp, 'GSM', &
+    !write(*,*)'!!! SWMF_GridComp SWMF_couple Mhd=',Mhd_VII(:,1,1)
+    call SWMF_couple('ESMF_IH', NameSwmfComp, 'GSM', &
          nVar, iMax, jMax, yMin, yMax, zMin, zMax, Mhd_VII, rc)
-    if(rc /= 0)call my_error('SWMF_receive failed')
+    if(rc /= 0)call my_error('SWMF_couple failed')
 
     deallocate(Mhd_VII)
 
