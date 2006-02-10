@@ -1,16 +1,20 @@
 !^CFG COPYRIGHT UM
 
-Module ModSetOuterBC
+module ModSetOuterBC
   ! Notation: 1g - first ghost cell,    2g - second ghost cell
   !           1p - first physical cell, 2p - second physical cell
   integer :: imin1g,imax1g,imin2g,imax2g,imin1p,imax1p,imin2p,imax2p
   integer :: jmin1g,jmax1g,jmin2g,jmax2g,jmin1p,jmax1p,jmin2p,jmax2p
   integer :: kmin1g,kmax1g,kmin2g,kmax2g,kmin1p,kmax1p,kmin2p,kmax2p
   integer :: iBLK
-end Module ModSetOuterBC
-subroutine set_outer_BCs(iBlock, time_now, set_energy)
+end module ModSetOuterBC
 
-  ! Set ghost cells values rho,U,B, and Pfor iBLK. Set E is set_energy is true.
+!=============================================================================
+
+subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
+
+  ! Set ghost cells values rho, U, B, and P for iBLK. 
+  ! Set E if DoSetEnergy is true.
   use ModSetOuterBC
   use ModProcMH
   use ModMain
@@ -24,13 +28,13 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
 
   integer, intent(in) :: iBlock
   real,    intent(in) :: time_now
-  logical, intent(in) :: set_energy
+  logical, intent(in) :: DoSetEnergy
 
-  integer :: iside,iStart,iVar
+  integer :: iSide, iStart, iVar
 
-  integer :: Ighost, Jghost, Kghost
+  integer :: iGhost, jGhost, kGhost
 
-  logical :: oktest, oktest_me,IsFound
+  logical :: oktest, oktest_me, IsFound
   !--------------------------------------------------------------------------
   iBLK=iBlock
   if(iBLK==BLKtest.and.iProc==PROCtest)then
@@ -45,7 +49,7 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
   end if
 
   if(oktest_me)write(*,*)'set_outer_BCs iBLK, set_E, neiLEV=',&
-       iBLK,set_energy,neiLEV(:,iBLK)
+       iBLK,DoSetEnergy,neiLEV(:,iBLK)
 
   if(oktest_me)then
      Ighost=Itest; Jghost=Jtest; Kghost=Ktest
@@ -166,9 +170,11 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
         call BC_cont(rhoUy_,rhoUy_)
         call BC_asymm(rhoUz_,rhoUz_)
         call BC_cont(Bx_,P_)
-     case('fixed','inflow','vary')
+     case('fixed','inflow','vary','ihbuffer')
         if(TypeBc_I(iside)=='vary'.and.time_accurate)then
            call BC_solar_wind(time_now)
+        else if(TypeBc_I(iside)=='ihbuffer'.and.time_loop)then
+           call BC_solar_wind_buffer
         else
            call BC_fixed(1,nVar,CellState_VI(:,iSide))
            call BC_fixed_B
@@ -188,7 +194,7 @@ subroutine set_outer_BCs(iBlock, time_now, set_energy)
                 //TypeBc_I(iside))
      end select
 
-     if(set_energy)then
+     if(DoSetEnergy)then
         E_BLK(imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)=inv_gm1&
              *State_VGB(P_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)+0.5*(&
              (State_VGB(rhoUx_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2 &
@@ -408,12 +414,13 @@ subroutine BC_fixed_B
 end subroutine BC_fixed_B
 
 !==========================================================================  
+
 subroutine BC_solar_wind(time_now)
   use ModGeometry,ONLY:z_BLK,y_BLK
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB,E_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
-  use ModMain
+
   implicit none
 
   ! Current simulation time in seconds
@@ -423,33 +430,65 @@ subroutine BC_solar_wind(time_now)
   integer :: i,j,k
   real :: y,z
   ! Varying solar wind parameters
-  real :: current_SW_rho, current_SW_Ux, current_SW_Uy, current_SW_Uz, &
-       current_SW_p,   current_SW_Bx, current_SW_By, current_SW_Bz
+  real :: rho, Ux, Uy, Uz, p, Bx, By, Bz
   !-----------------------------------------------------------------------
   do k=kmin1g,kmax1g 
      z = z_BLK(1,1,k,iBLK)
      do j=jmin1g,jmax2g
         y = y_BLK(1,j,1,iBLK)
         do i=imin1g,imax2g,sign(1,imax2g-imin1g)
-           call get_solar_wind_point(time_now,y,z,&
-                current_SW_rho, current_SW_Ux, current_SW_Uy, current_SW_Uz, &
-                current_SW_Bx, current_SW_By, current_SW_Bz,  current_SW_p)
-           State_VGB(P_,i,j,k,iBLK)     = current_SW_p
-           State_VGB(rho_,i,j,k,iBLK)   = current_SW_rho
-           State_VGB(rhoUx_,i,j,k,iBLK) = current_SW_rho*current_SW_Ux
-           State_VGB(rhoUy_,i,j,k,iBLK) = current_SW_rho*current_SW_Uy
-           State_VGB(rhoUz_,i,j,k,iBLK) = current_SW_rho*current_SW_Uz
-           State_VGB(Bx_,i,j,k,iBLK)    = current_SW_Bx - B0xCell_BLK(i,j,k,iBLK)
-           State_VGB(By_,i,j,k,iBLK)    = current_SW_By - B0yCell_BLK(i,j,k,iBLK)
-           State_VGB(Bz_,i,j,k,iBLK)    = current_SW_Bz - B0zCell_BLK(i,j,k,iBLK)
+           call get_solar_wind_point(time_now, y, z, &
+                Rho, Ux, Uy, Uz, Bx, By, Bz, p)
+           State_VGB(P_,i,j,k,iBLK)     = p
+           State_VGB(rho_,i,j,k,iBLK)   = Rho
+           State_VGB(rhoUx_,i,j,k,iBLK) = Rho*Ux
+           State_VGB(rhoUy_,i,j,k,iBLK) = Rho*Uy
+           State_VGB(rhoUz_,i,j,k,iBLK) = Rho*Uz
+           State_VGB(Bx_,i,j,k,iBLK)    = Bx - B0xCell_BLK(i,j,k,iBLK)
+           State_VGB(By_,i,j,k,iBLK)    = By - B0yCell_BLK(i,j,k,iBLK)
+           State_VGB(Bz_,i,j,k,iBLK)    = Bz - B0zCell_BLK(i,j,k,iBLK)
         end do
      end do
   end do
 
 end subroutine BC_solar_wind
 
+!==========================================================================  
+
+subroutine BC_solar_wind_buffer
+
+  use ModGeometry, ONLY: z_BLK, y_BLK
+  use ModVarIndexes, ONLY: Bx_, By_, Bz_
+  use ModAdvance, ONLY : State_VGB, B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+  use ModSetOuterBC
+
+  implicit none
+
+  ! index and location of a single point
+  integer :: i, j, k
+  real    :: y, z
+  !-----------------------------------------------------------------------
+  do k=kmin1g,kmax1g 
+     z = z_BLK(1,1,k,iBLK)
+     do j=jmin1g,jmax2g
+        y = y_BLK(1,j,1,iBLK)
+        do i=imin1g,imax2g,sign(1,imax2g-imin1g)
+           call read_ih_buffer(y,z,State_VGB(:,i,j,k,iBlk))
+           ! Subtract B0
+           State_VGB(Bx_,i,j,k,iBLK) = State_VGB(Bx_,i,j,k,iBLK) &
+                - B0xCell_BLK(i,j,k,iBLK)
+           State_VGB(By_,i,j,k,iBLK) = State_VGB(By_,i,j,k,iBLK) &
+                - B0yCell_BLK(i,j,k,iBLK)
+           State_VGB(Bz_,i,j,k,iBLK) = State_VGB(Bz_,i,j,k,iBLK) &
+                - B0zCell_BLK(i,j,k,iBLK)
+        end do
+     end do
+  end do
+
+end subroutine BC_solar_wind_buffer
 
 !==========================================================================  
+
 subroutine BC_arcade_bottom
 
   ! Set q_P to analytic values in ghost cells at bottom outer boundary
