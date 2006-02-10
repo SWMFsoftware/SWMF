@@ -305,6 +305,8 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   call set_oktest(String,DoTest,DoTestMe)
 end subroutine CON_set_do_test
 !============================================================================
+! The subroutines and functions below are defined in srcInterface for SWMF. 
+!============================================================================
 subroutine calc_inner_bc_velocity
   call stop_mpi( &
        'ERROR: calc_inner_bc_velocity should be called in SWMF only');
@@ -325,13 +327,13 @@ real function logvar_ionosphere(NameLogvar)
 
 end function logvar_ionosphere
 !============================================================================
-!============interface to BATS_methods====================
+!============ interface to BATS_methods====================
 subroutine update_lagrangian_grid(tStart,tFinal)
   implicit none
   real,intent(in)::tStart,tFinal
   return
 end subroutine update_lagrangian_grid
-!=========================================================
+!============================================================================
 subroutine save_advected_points
   implicit none
   return
@@ -345,3 +347,8 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   call stop_mpi( &
        'ERROR: get_from_spher_buffer_grid is for SWMF')
 end subroutine get_from_spher_buffer_grid
+!=============================================================================
+subroutine read_ih_buffer(y,z,State_V)
+  real :: y, z, State_V(8)
+  call stop_mpi('ERROR: read_ih_buffer is for SWMF')
+end subroutine read_ih_buffer
