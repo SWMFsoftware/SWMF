@@ -41,6 +41,7 @@ module CON_session
   ! 09/09/05 G.Toth - removed read_inputs from init_session 
   !                   (to avoid ifort compiler bug)
   !                   moved some code from CON_main into do_session.
+  ! 01/20/06 G.Toth - added optional tCoupleExtra_C parameter to do_session
   !EOP
 
   character (len=*), parameter :: NameMod = 'CON_session'
@@ -152,10 +153,13 @@ contains
   !BOP ======================================================================
   !IROUTINE: do_session - time loop with a fixed set of input parameters
   !INTERFACE:
-  subroutine do_session(IsLastSession)
+  subroutine do_session(IsLastSession, tCoupleExtra_C)
 
     !INPUT/OUTPUT ARGUMENTS:
     logical, intent(inout) :: IsLastSession ! set it to true if run should stop
+
+    !OPTIONAL INPUT ARGUMENTS:
+    real, optional, intent(in) :: tCoupleExtra_C(MaxComp) ! external coupling
 
     !DESCRIPTION:
     ! This subroutine executes one session.
@@ -198,7 +202,7 @@ contains
     ! For steady state mode do this only for the first time,
     ! because the SWMF time does not advance but the component time might.
     !/
-    if(DoTimeAccurate)then
+    if(DoTimeAccurate .and. .not.present(tCoupleExtra_C))then
        tSimulation_C = tSimulation
     else
        where(tSimulation_C < 0.0 .and. IsProc_C) tSimulation_C = tSimulation
@@ -213,6 +217,15 @@ contains
        if(DoTimeAccurate .and. tSimulationMax > 0.0 &
             .and. tSimulation >= tSimulationMax) &
             exit TIMELOOP
+
+       !\
+       ! Exit from time loop and return if an external coupling should be done
+       ! Return is used so that iSession is not modified.
+       !/
+       if(present(tCoupleExtra_C))then
+          if(any(IsProc_C .and. tCoupleExtra_C >= 0.0 &
+               .and. tSimulation >= tCoupleExtra_C)) RETURN
+       end if
 
        !\
        ! Check periodically for stop file and cpu time
@@ -246,6 +259,13 @@ contains
                   MASK  =Couple_CC(iComp,:) % DoThis), &
                   minval(Couple_CC(:,iComp) % tNext, &
                   MASK  =Couple_CC(:,iComp) % DoThis))
+             
+             ! Check for external coupling if present
+             if(present(tCoupleExtra_C))then
+                if(tCoupleExtra_C(iComp) > 0.0) &
+                     tSimulationCouple = &
+                     min(tSimulationCouple, tCoupleExtra_C(iComp))
+             end if
 
              ! Find the time of next save restart, stop check or end of session
              tSimulationLimit = huge(1.0)
@@ -327,7 +347,7 @@ contains
        !\
        ! Couple components as scheduled
        !/
-       do iCouple = 1,nCouple
+       do iCouple = 1, nCouple
 
           iCompSource = iCompCoupleOrder_II(1,iCouple)
           iCompTarget = iCompCoupleOrder_II(2,iCouple)
