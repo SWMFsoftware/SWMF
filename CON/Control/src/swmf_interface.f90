@@ -195,6 +195,10 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   ! The data is transferred on a uniform 2D grid. The grid dimension and
   ! coordinate system and coordinate ranges are determined by the external
   ! code. The data array is passed to/from the appropriate SWMF component.
+  ! The coordinate ranges and the variables must be in SI units.
+  ! The coordinate system description is a 3 character string (e.g. GSM)
+  ! which is used to do the coordinate transformation between the SWMF
+  ! component and the buffer grid.
   !EOP
   integer :: iComm
   character(len=*), parameter :: NameSub='SWMF_receive'
@@ -223,7 +227,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
            return
         end if
 
-        ! Put data into GM
+        ! Put data into GM. Convert to the default real used by SWMF.
         call GM_put_from_ih_buffer(NameCoord, nX, nY, &
              real(xMin), real(xMax), real(yMin), real(yMax), real(Data_VII))
      case default
