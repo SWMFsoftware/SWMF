@@ -115,13 +115,17 @@ subroutine SWMF_run(NameComp, tCouple, tSimulationOut, DoStop, iError)
   character(len=lNameComp), intent(in):: NameComp ! Component to couple with
   real(Real8_),             intent(in):: tCouple  ! Next coupling time
   !OUTPUT ARGUMENTS:
-  real(Real8_),     intent(out):: tSimulationOut ! Current SWMF sim. time
-  logical, intent(out):: DoStop ! True if the SWMF requested a stop
-  integer, intent(out):: iError ! Error code, 0 on success
+  real(Real8_), intent(out):: tSimulationOut ! Current SWMF simulation time
+  logical,      intent(out):: DoStop         ! True if SWMF requested a stop
+  integer,      intent(out):: iError         ! Error code, 0 on success
   !DESCRIPTION:
   ! Run the SWMF until the coupling time or a stop condition is reached.
-  ! The DoStop argument indicates if a final stop has been requested 
-  ! by the SWMF.
+  ! If NameComp is the name of one of the SWMF components then the coupling 
+  ! time tCouple affects only the processors that run component NameComp.
+  ! If NameComp is set to ** then all the SWMF processors synchronize
+  ! and return at the coupling time. The tSimulationOut contains the 
+  ! simulation time at return. The DoStop argument indicates if a 
+  ! final stop has been requested by the SWMF.
   !EOP
   !LOCAL VARIABLES:
   real    :: tCouple_C(MaxComp)
@@ -192,13 +196,18 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   integer, intent(out):: iError ! Error code, 0 on success
   !DESCRIPTION:
   ! The coupling interface of the SWMF when coupled to an external code.
-  ! The data is transferred on a uniform 2D grid. The grid dimension and
+  ! This subroutine can be used to couple with various components. 
+  ! The couplings are identified by the NameFrom and NameTo strings.
+  ! One of the strings must be the name of an SWMF component, the
+  ! other string identifies the external component and it should not
+  ! coincide with any of the SWMF component names.
+  ! The data is transferred on a uniform 2D grid. The grid dimension,
   ! coordinate system and coordinate ranges are determined by the external
   ! code. The data array is passed to/from the appropriate SWMF component.
-  ! The coordinate ranges and the variables must be in SI units.
+  ! The coordinate ranges and the data must be in SI units.
   ! The coordinate system description is a 3 character string (e.g. GSM)
   ! which is used to do the coordinate transformation between the SWMF
-  ! component and the buffer grid.
+  ! component and the buffer grid. 
   !EOP
   integer :: iComm
   character(len=*), parameter :: NameSub='SWMF_receive'
