@@ -215,3 +215,18 @@ subroutine GM_put_from_ih(nPartial,iPutStart,Put,Weight,DoAdd,StateSI_V,&
 
 end subroutine GM_put_from_ih
 
+!==============================================================================
+
+subroutine GM_put_from_ih_buffer( &
+     NameCoord, nY, nZ, yMin, yMax, zMin, zMax, Buffer_VII)
+
+  character(len=*), intent(in) :: NameCoord
+  integer,          intent(in) :: nY, nZ
+  real,             intent(in) :: yMin, yMax, zMin, zMax
+  real,             intent(in) :: Buffer_VII(8, nY, nZ)
+
+  character(len=*), parameter :: NameSub='GM_put_from_ih_buffer'
+  
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine GM_put_from_ih_buffer
