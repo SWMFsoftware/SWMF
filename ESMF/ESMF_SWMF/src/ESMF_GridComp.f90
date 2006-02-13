@@ -81,7 +81,7 @@ contains
           rc = ESMF_FAILURE; return
        end select
 
-       ! Add coordinate dependence (5% in X, 10% in Y)
+       ! Add coordinate dependence (5% in Y, 10% in Z)
        if(iMax > 1 .and. jMax > 1)then
           do j=1, jMax; do i = 1, iMax
              Ptr(i, j) = Ptr(i,j) &
