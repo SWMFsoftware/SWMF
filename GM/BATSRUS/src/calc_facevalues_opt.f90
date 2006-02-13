@@ -715,7 +715,7 @@ contains
        end do; end do
     case(north_)
        do k=1,nK,2; do i=1,nI,2
-          if(.not.all(true_cell(i:i+1,nI-1:nI+2,k:k+1,iBlock)))then
+          if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
              call tvd_reschange_body(& 
                   Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
                   Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
