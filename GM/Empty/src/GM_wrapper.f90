@@ -230,3 +230,16 @@ subroutine GM_put_from_ih_buffer( &
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
 end subroutine GM_put_from_ih_buffer
+
+!==============================================================================
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
+subroutine read_ih_buffer(y, z, State_V)
+
+  real, intent(in) :: y, z
+  real, intent(out):: State_V(8)
+  character(len=*), parameter :: NameSub='read_ih_buffer'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine read_ih_buffer
