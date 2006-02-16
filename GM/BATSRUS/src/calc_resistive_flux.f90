@@ -303,19 +303,23 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   !       EtaHallResist
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
        Omega_eTau_ei2Resist,EtaAnomLocResist,JmagResist
+
   !\
   ! Introduce some units for dimensionalization:: 
   ! This is not necessary, but makes things more clear!
   !/
   CU_x = unitSI_x ! in [m]
   CU_t = unitSI_t ! in [s]
+
   !\
   ! Dimensionalize:: Eta* is in units of [m^2/s]
   !/
   Eta0Resist_ND       = Eta0Resist*CU_t/CU_x**2
-  Eta0AnomResist_ND   = Eta0AnomResist*CU_t/CU_x**2
-  EtaAnomMaxResist_ND = EtaAnomMaxResist*CU_t/CU_x**2
-  jCritInv_ND         = cOne/(jCritResist/UnitSi_j)
+  if(UseAnomResist)then
+     Eta0AnomResist_ND   = Eta0AnomResist*CU_t/CU_x**2
+     EtaAnomMaxResist_ND = EtaAnomMaxResist*CU_t/CU_x**2
+     jCritInv_ND         = cOne/(jCritResist/UnitSi_j)
+  end if
   !\
   ! Select type of resistivity
   !/
