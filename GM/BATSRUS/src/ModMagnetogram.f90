@@ -15,15 +15,10 @@ module ModMagnetogram
   save
 
   private !Except
-
-  public::read_magnetogram_file
-  public::get_magnetogram_field
-
- !Dependecies to be removed
-  public::Rs_PFSSM
   !\
-  ! PFSSM related variables::
+  ! PFSSM related control parameters
   !/
+
   ! Maximum order of spherical harmonics
   integer:: N_PFSSM=90
 
@@ -33,10 +28,6 @@ module ModMagnetogram
 
   ! Name of the input file
   character (LEN=32):: File_PFSSM='mf.dat'
-
-  ! Header string in the input file
-  character (LEN=80):: Head_PFSSM=''
-
 
   ! Rs - radius of outer source surface where field is taken to be 0.
   ! Ro - radius of inner boundary for the potential
@@ -60,12 +51,145 @@ module ModMagnetogram
   !
   real:: Phi_Shift=-1.0
 
+
+  public::read_magnetogram_file
+  !Reads the control parameters from PARAM.in file 
+  !in the following format
+ 
+  !Ro_PFSSM   
+  !Rs_PFSSM   
+  !H_PFSSM   
+  !File_PFSSM 
+  !iHead_PFSSM 
+  !Phi_Shift
+  !UnitB
+  
+  !Then, calls set_magnetogram
+  
+  public::set_magnetogram
+  !Reads the file of magnetic field harmonics  
+  !and recovers the spatial distribution of the 
+  !potential mganetic field at the spherical grid 
+  !N_PFSSM*N_PFSSM*N_PFSSM
+
+
+  public::get_hlcmm
+  ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
+  ! the M(ap) from the file headre. Assign Phi_Shift=HLCMM-180
+ 
+  public::get_magnetogram_field
+  !Gives the interpolated values of the Cartesian components of
+  !the macnetic vector in HGR system, input parameters
+  !being the cartesian coordinates in the HGR system
+
+  !Dependecies to be removed
+  public::Rs_PFSSM
+  
+
   !Global arrays at the magnetogram grid
   integer,parameter::nDim=3,x_=1,y_=2,z_=3,R_=1,Phi_=2,Theta_=3
 
-  real,allocatable,private,dimension(:,:,:,:)::B_DN
+  real,allocatable,dimension(:,:,:,:)::B_DN
   real::dR=cOne,dPhi=cOne,dTheta=cOne,dInv_D(nDim)=cOne
+  !Distribution of the solar wind model parameters: 
+
+  real,allocatable,dimension(:,:,:)::FiskFactor_N
+  !The Fisk factor. The value of this factor at a given grid point
+  ! is equal to the value of |B_R|/B_{max}, where B_R is taken at the 
+  !"photospheric footpoint" of the magnetic field line, passing through 
+  !this point:
+  !\               Grid point
+  ! \R_Sun       iR,iPhi,iTheta   !R_surface
+  !  -------------+---------------!
+  ! /                             !
+  !/  Field line predicted by 
+  !   the source surface model 
+  !   (this is a real curved magnetic 
+  !   field, not a ray Theta=const
+  !   The value of the Fisk factor at 
+  !   the considered grid point is defined as
+  ! 
+  !   FiskFactor_N(iR,iPhi,iTheta)=|B_R(R=R_Sun)/B_Max|, 
+  !
+  !   if the magnetic field line is open, 
+  !   zero otherwise.
+
+  real,allocatable,dimension(:,:,:)::ExpansionFactorInv_N
+  ! The expansion factor. !!!INVERTED!!!!
+  ! The value of this factor at a given grid point
+  ! is equal to the value of 
+  ! B(R=R_{SourceSurface}/B(R=R_{Sun})*(R_SourceSurface/R_Sun)^2
+  ! where the ratio of the magnetic field intensities is taken at the 
+  ! two marginal point of the magnetic field line, passing through 
+  ! the considered grid point:
+  !
+  !\               Grid point
+  ! \R_Sun       iR,iPhi,iTheta   !R_SourceSurface
+  !  -------------+---------------!
+  ! /                             !
+  !/  Field line predicted by 
+  !   the source surface model 
+  !   (this is a real curved magnetic 
+  !   field, not a ray Theta=const
+  !   The value of the expansion factor at 
+  !   the considered grid point is defined as
+  ! 
+  !   ExpansionFactor_N(iR,iPhi,iTheta)= &
+  ! B(R=R_{SourceSurface}/B(R=R_{Sun})*(R_SourceSurface/R_Sun)^2
+  !
+  !   if the magnetic field line is open, 
+  !   zero otherwise.
+
+
 contains
+ !=================================================================
+  ! SUBROUTINE get_hlcmm
+  ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
+  ! the M(ap) from the header line. Assign Phi_Shift=HLCMM-180
+  subroutine get_hlcmm(Head_PFSSM,Shift)
+    character (LEN=80),intent(inout):: Head_PFSSM
+    real,intent(inout)::Shift
+    real::HLCMM     !Heliographic Longitudee of the central meridian of map
+    integer::iHLCMM !The same, but HLCMM is integer at WSO magnetograms
+    integer::iErrorRead,iPosition
+    iPosition=index(Head_PFSSM,'Centered')	
+    if (iPosition>0.and.Shift<cZero)then	
+       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+            Head_PFSSM(iPosition+1:len(Head_PFSSM))
+       iPosition=index(Head_PFSSM,':')
+       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+            Head_PFSSM(iPosition+1:len(Head_PFSSM))
+       iPosition=index(Head_PFSSM,':')
+       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+            Head_PFSSM(iPosition+1:len(Head_PFSSM))
+       read(Head_PFSSM,'(i3)',iostat=iErrorRead)iHLCMM
+       if(iErrorRead>0)call stop_mpi(&
+            'Can nod find HLCMM, '//File_PFSSM//&
+            ' is not a true WSO magnetogram')
+       Shift=modulo(iHLCMM-180-dLongitudeHgrDeg, 360.0) 
+       if(iProc==0)then
+          call write_prefix;write(iUnitOut,*)'Phi_Shift=',Shift
+       end if
+       return
+    end if
+    iPosition=index(Head_PFSSM,'Central')
+    if(iPosition>0.and.Shift<cZero)then
+       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+            Head_PFSSM(iPosition+1:len(Head_PFSSM))
+       iPosition=index(Head_PFSSM,':')
+       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
+            Head_PFSSM(iPosition+1:len(Head_PFSSM))
+       read(Head_PFSSM,*,iostat=iErrorRead)HLCMM
+       if(iErrorRead>0)call stop_mpi(&
+            'Can nod find HLCMM, '//File_PFSSM//&
+            ' is not a true MDI magnetogram')
+       Shift=modulo(HLCMM-180-dLongitudeHgrDeg, 360.0) 
+       if(iProc==0)then
+          call write_prefix;write(iUnitOut,*)'Phi_Shift=',Shift
+       end if
+    end if
+  end subroutine get_hlcmm
+  !==========================================================================
   !===========================================================================
   subroutine read_magnetogram_file
     call read_var('Ro_PFSSM'   ,Ro_PFSSM)
@@ -142,9 +266,7 @@ contains
     ! correction.
     !---------------------------------------------------------------------------
 
-    integer:: iError
     integer:: i,n,m,iTheta,iPhi,iR
-    real:: gtemp,htemp
     real:: c_n
     real:: SinPhi,CosPhi
     real:: SinPhi_I(0:N_PFSSM),CosPhi_I(0:N_PFSSM)
@@ -153,14 +275,14 @@ contains
     real:: SumR,SumT,SumP,SumPsi
     real:: Theta,Phi,R_PFSSM
     real:: Psi_PFSSM
-    integer::iBcast, iStart, nSize
+    integer::iBcast, iStart, nSize, iError
 
     ! Weights of the spherical harmonics
     real, dimension(N_PFSSM+1,N_PFSSM+1):: g_nm,h_nm
     ! Temporary variable
     real, dimension(N_PFSSM+1):: FactRatio1
     real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
-    integer :: iUnit
+
 
     !\
     ! Optimization by G. Toth::
@@ -170,47 +292,17 @@ contains
     !\
     !
     !/
-
-
-    real:: Xy
-    real:: SinThetaM, SinThetaM1
-    integer:: delta_m0
+ 
     integer::nThetaPerProc
-    real, dimension(-1:N_PFSSM+2):: RoRsPower_I, RoRPower_I, rRsPower_I
+    real, dimension(-1:N_PFSSM+2,-10:N_PFSSM):: &
+         RoRsPower_I, RoRPower_I, rRsPower_I
 
     !\
     ! Initialize once g(n+1,m+1) & h(n+1,m+1) by reading a file
     ! created from Web data::
     !/ 
 
-    !\
-    ! Formats adjusted for wso CR rad coeffs::
-    !/
-    iUnit = io_unit_new()
-    open(iUnit,file=File_PFSSM,status='old',iostat=iError)
-    if (iHead_PFSSM /= 0) then
-       do i=1,iHead_PFSSM
-          read(iUnit,'(a)') Head_PFSSM
-          if(Phi_Shift<-cTiny)call get_hlcmm	
-       enddo
-    endif
-
-    !\
-    ! Initialize all coefficient arrays::
-    !/
-    g_nm(:,:) = cZero; h_nm(:,:)  = cZero
-    p_nm(:,:) = cZero; dp_nm(:,:) = cZero
-    !\
-    ! Read file with coefficients, g_nm and h_nm::
-    !/
-    do
-       read(iUnit,*,iostat=iError) n,m,gtemp,htemp
-       if (iError /= 0) EXIT
-       if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
-       g_nm(n+1,m+1) = gtemp
-       h_nm(n+1,m+1) = htemp
-    enddo
-    close(iUnit)
+    call read_harmonics
 
     !\
     ! Add correction factor for radial, not LOS, coefficients::
@@ -225,150 +317,64 @@ contains
        enddo
     enddo
 
+    !\
+    ! Leave out monopole (n=0) term::
+    !/
+    g_nm(1,1) = cZero
 
-
-
-    if(.not.allocated(B_DN))&
-         allocate(B_DN(R_:Theta_,-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
-
-    B_DN=cZero
-
+ 
+    !Introduce a spherical grid with the resolution, depending on the
+    !magnetogram resolution (N_PFSSM)
     dR=(Rs_PFSSM-Ro_PFSSM)/real(N_PFSSM)
     dPhi=cTwoPi/real(N_PFSSM)
     dTheta=cPi/real(N_PFSSM)
+    
+    !Calculate the radial part of spherical functions
+    call calc_radial_functions
 
 
-    !\
-    ! Calculate sqrt(integer) from 1 to 10000::
-    !/
-    do m=1,MaxInt
-       Sqrt_I(m) = sqrt(real(m))
-    end do
-    !\
-    ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
-    !/
-    factRatio1(:) = cZero; factRatio1(1) = cOne
-    do m=1,N_PFSSM
-       factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
-    enddo
+    call set_auxiliary_arrays
 
+    !Allocate the magnetic field array, at the spherical grid.
+    if(allocated(B_DN))deallocate(B_DN)
+    allocate(B_DN(R_:Theta_,-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
 
+    B_DN=cZero
 
+    !Parallel computation of the magnetic field at the grid
+    nThetaPerProc=N_PFSSM/nProc+1 
+    !
 
-
-    nThetaPerProc=N_PFSSM/nProc+1
-
+    !Loop by theta, each processor treats a separate part of the grid
     do iTheta=iProc*nThetaPerProc,(iProc+1)*nThetaPerProc-1
-
-       if(iTheta>N_PFSSM)EXIT
+       
+       if(iTheta>N_PFSSM)EXIT !Some processors may have less amount of work
        Theta=iTheta*dTheta
        CosTheta=cos(Theta)
        SinTheta=max(sin(Theta), cOne/(cE9*cE1))
 
-       !\
-       ! Calculate polynomials with appropriate normalization
-       ! for Theta_PFSSMa::
-       !/
-       SinThetaM  = cOne
-       SinThetaM1 = cOne
+       !Calculate the set of Legandre polynoms, for given CosTheta,SinTheta
+       call calc_Legandre_polynoms
 
-       do m=0,N_PFSSM
-          if (m == 0) then
-             delta_m0 = 1
-          else
-             delta_m0 = 0
-          endif
-          !\
-          ! Eq.(27) from Altschuler et al. 1976::
-          !/
-          p_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))* &
-               SinThetaM
-          !\
-          ! Eq.(28) from Altschuler et al. 1976::
-          !/
-          if (m < N_PFSSM) p_nm(m+2,m+1) = p_nm(m+1,m+1)*Sqrt_I(2*m+3)* &
-               CosTheta
-          !\
-          ! Eq.(30) from Altschuler et al. 1976::
-          !/
-          dp_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))*&
-               m*CosTheta*SinThetaM1
-          !\
-          ! Eq.(31) from Altschuler et al. 1976::
-          !/
-          if (m < N_PFSSM) &
-               dp_nm(m+2,m+1) = Sqrt_I(2*m+3)*(CosTheta*&
-               dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
-
-          SinThetaM1 = SinThetaM
-          SinThetaM  = SinThetaM*SinTheta
-
-       enddo
-       do m=0,N_PFSSM-2; do n=m+2,N_PFSSM
-          !\
-          ! Eq.(29) from Altschuler et al. 1976::
-          !/
-          stuff1         = Sqrt_I(2*n+1)/Sqrt_I(n**2-m**2)
-          stuff2         = Sqrt_I(2*n-1)
-          stuff3         = Sqrt_I((n-1)**2-m**2)/Sqrt_I(2*n-3)
-          p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)-  &
-               stuff3*p_nm(n-1,m+1))
-          !\
-          ! Eq.(32) from Altschuler et al. 1976::
-          !/
-          dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)-&
-               SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
-       enddo; enddo
-       !\
-       ! Apply Schmidt normalization::
-       !/
-       do m=0,N_PFSSM; do n=m,N_PFSSM
-          !\
-          ! Eq.(33) from Altschuler et al. 1976::
-          !/
-          stuff1 = cOne/Sqrt_I(2*n+1)
-          !\
-          ! Eq.(34) from Altschuler et al. 1976::
-          !/
-          p_nm(n+1,m+1)  = p_nm(n+1,m+1)*stuff1
-          dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
-       enddo; enddo
-
-
-
+       !Start loop by Phi
        do iPhi=0,N_PFSSM
           Phi=real(iPhi)*dPhi
+          
+          !Calculate azymuthal harmonics, for a given Phi
           do m=0,N_PFSSM
              CosPhi_I(m)=cos(m*Phi)
              SinPhi_I(m)=sin(m*phi)
           end do
 
-
+          !Loop by radius
           do iR=-10,N_PFSSM
-             !\
-             ! Calculate powers of the ratios of radii
-             !/
              R_PFSSM=Ro_PFSSM+dR*iR
-             rRsPower_I(-1) = Rs_PFSSM/R_PFSSM 
-             ! This one can have negative power.
-             rRsPower_I(0)  = cOne
-             RoRsPower_I(0) = cOne
-             RoRPower_I(0)  = cOne
-             do m=1,N_PFSSM+2
-                RoRsPower_I(m) = RoRsPower_I(m-1) * (Ro_PFSSM/Rs_PFSSM)
-                RoRPower_I(m)  = RoRPower_I(m-1)  * (Ro_PFSSM/R_PFSSM)
-                rRsPower_I(m)  = rRsPower_I(m-1)  * (R_PFSSM /Rs_PFSSM)
-             end do
-
              !\
              ! Initialize the values of SumR,SumT,SumP, and SumPsi::
              !/
              SumR = cZero; SumT   = cZero
              SumP = cZero; SumPsi = cZero
-             !\
-             ! Leave out monopole (n=0) term::
-             !/
-             g_nm(1,1) = cZero
+             
              !\
              ! Calculate B for (R_PFSSM,Phi_PFSSM)::
              ! Also calculate magnetic potential Psi_PFSSM
@@ -378,17 +384,17 @@ contains
                    !\
                    ! c_n corresponds to Todd's c_l::
                    !/
-                   c_n    = -RoRsPower_I(n+2)
+                   c_n    = -RoRsPower_I(n+2,iR)
                    !\
                    ! Br_PFSSM = -d(Psi_PFSSM)/dR_PFSSM::
                    !/
-                   stuff1 = (n+1)*RoRPower_I(n+2)-c_n*n*rRsPower_I(n-1)
+                   stuff1 = (n+1)*RoRPower_I(n+2,iR)-c_n*n*rRsPower_I(n-1,iR)
                    stuff2 = g_nm(n+1,m+1)*CosPhi_I(m)+h_nm(n+1,m+1)*SinPhi_I(m)
                    SumR   = SumR + p_nm(n+1,m+1)*stuff1*stuff2
                    !\
                    ! Bt_PFSSM = -(1/R_PFSSM)*d(Psi_PFSSM)/dTheta_PFSSM::
                    !/
-                   stuff1 = RoRPower_I(n+2)+c_n*rRsPower_I(n-1)
+                   stuff1 = RoRPower_I(n+2,iR)+c_n*rRsPower_I(n-1,iR)
                    SumT   = SumT-dp_nm(n+1,m+1)*stuff1*stuff2
                    !\
                    ! Psi_PFSSM::
@@ -419,52 +425,147 @@ contains
           call MPI_bcast(B_DN(1,-10,0,iStart),nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
+  contains
+    subroutine set_auxiliary_arrays
+      !\
+      ! Calculate sqrt(integer) from 1 to 10000::
+      !/
+      do m=1,MaxInt
+         Sqrt_I(m) = sqrt(real(m))
+      end do
+      !\
+      ! Calculate the ratio sqrt(2m!)/(2^m*m!)::
+      !/
+      factRatio1(:) = cZero; factRatio1(1) = cOne
+      do m=1,N_PFSSM
+         factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
+      enddo
+    end subroutine set_auxiliary_arrays
+   subroutine read_harmonics
+      integer :: iUnit
+      character (LEN=80):: Head_PFSSM=''
+      real::gtemp,htemp
+      !\
+      ! Formats adjusted for wso CR rad coeffs::
+      !/
+      iUnit = io_unit_new()
+      open(iUnit,file=File_PFSSM,status='old',iostat=iError)
+      if (iHead_PFSSM /= 0) then
+         do i=1,iHead_PFSSM
+            read(iUnit,'(a)') Head_PFSSM
+            if(Phi_Shift<-cTiny)call get_hlcmm(Head_PFSSM,Phi_Shift)	
+         enddo
+      endif
+
+      !\
+      ! Initialize all coefficient arrays::
+      !/
+      g_nm(:,:) = cZero; h_nm(:,:)  = cZero
+      p_nm(:,:) = cZero; dp_nm(:,:) = cZero
+      !\
+      ! Read file with coefficients, g_nm and h_nm::
+      !/
+      do
+         read(iUnit,*,iostat=iError) n,m,gtemp,htemp
+         if (iError /= 0) EXIT
+         if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
+         g_nm(n+1,m+1) = gtemp
+         h_nm(n+1,m+1) = htemp
+      enddo
+      close(iUnit)
+    end subroutine read_harmonics
+    subroutine calc_Legandre_polynoms
+      real:: SinThetaM, SinThetaM1
+      integer:: delta_m0
+      !\
+      ! Calculate polynomials with appropriate normalization
+      ! for Theta_PFSSMa::
+      !/
+      SinThetaM  = cOne
+      SinThetaM1 = cOne
+
+      do m=0,N_PFSSM
+         if (m == 0) then
+            delta_m0 = 1
+         else
+            delta_m0 = 0
+         endif
+         !\
+         ! Eq.(27) from Altschuler et al. 1976::
+         !/
+         p_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))* &
+              SinThetaM
+         !\
+         ! Eq.(28) from Altschuler et al. 1976::
+         !/
+         if (m < N_PFSSM) p_nm(m+2,m+1) = p_nm(m+1,m+1)*Sqrt_I(2*m+3)* &
+              CosTheta
+         !\
+         ! Eq.(30) from Altschuler et al. 1976::
+         !/
+         dp_nm(m+1,m+1) = factRatio1(m+1)*Sqrt_I((2-delta_m0)*(2*m+1))*&
+              m*CosTheta*SinThetaM1
+         !\
+         ! Eq.(31) from Altschuler et al. 1976::
+         !/
+         if (m < N_PFSSM) &
+              dp_nm(m+2,m+1) = Sqrt_I(2*m+3)*(CosTheta*&
+              dp_nm(m+1,m+1)-SinTheta*p_nm(m+1,m+1))
+
+         SinThetaM1 = SinThetaM
+         SinThetaM  = SinThetaM*SinTheta
+
+      enddo
+      do m=0,N_PFSSM-2; do n=m+2,N_PFSSM
+         !\
+         ! Eq.(29) from Altschuler et al. 1976::
+         !/
+         stuff1         = Sqrt_I(2*n+1)/Sqrt_I(n**2-m**2)
+         stuff2         = Sqrt_I(2*n-1)
+         stuff3         = Sqrt_I((n-1)**2-m**2)/Sqrt_I(2*n-3)
+         p_nm(n+1,m+1)  = stuff1*(stuff2*CosTheta*p_nm(n,m+1)-  &
+              stuff3*p_nm(n-1,m+1))
+         !\
+         ! Eq.(32) from Altschuler et al. 1976::
+         !/
+         dp_nm(n+1,m+1) = stuff1*(stuff2*(CosTheta*dp_nm(n,m+1)-&
+              SinTheta*p_nm(n,m+1))-stuff3*dp_nm(n-1,m+1))
+      enddo; enddo
+      !\
+      ! Apply Schmidt normalization::
+      !/
+      do m=0,N_PFSSM; do n=m,N_PFSSM
+         !\
+         ! Eq.(33) from Altschuler et al. 1976::
+         !/
+         stuff1 = cOne/Sqrt_I(2*n+1)
+         !\
+         ! Eq.(34) from Altschuler et al. 1976::
+         !/
+         p_nm(n+1,m+1)  = p_nm(n+1,m+1)*stuff1
+         dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
+      enddo; enddo
+    end subroutine calc_Legandre_polynoms
+    subroutine calc_radial_functions
+      do iR=-10,N_PFSSM
+         !\ 
+         ! Calculate powers of the ratios of radii
+         !/
+         R_PFSSM=Ro_PFSSM+dR*iR
+         rRsPower_I(-1,iR) = Rs_PFSSM/R_PFSSM 
+         ! This one can have negative power.
+         rRsPower_I(0,iR)  = cOne
+         RoRsPower_I(0,iR) = cOne
+         RoRPower_I(0,iR)  = cOne
+         do m=1,N_PFSSM+2
+            RoRsPower_I(m,iR) = RoRsPower_I(m-1,iR) * (Ro_PFSSM/Rs_PFSSM)
+            RoRPower_I(m,iR)  = RoRPower_I(m-1,iR)  * (Ro_PFSSM/R_PFSSM)
+            rRsPower_I(m,iR)  = rRsPower_I(m-1,iR)  * (R_PFSSM /Rs_PFSSM)
+         end do
+      end do
+    end subroutine calc_radial_functions
   end subroutine set_magnetogram
-  !=================================================================
-  ! SUBROUTINE get_hlcmm
-  ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
-  ! the M(ap). Assign Phi_Shift=HLCMM-180
-  subroutine get_hlcmm
-    real::HLCMM     !Heliographic Longitudee of the central meridian of map
-    integer::iHLCMM !The same, but HLCMM is integer at WSO magnetograms
-    integer::iErrorRead,iPosition
-    iPosition=index(Head_PFSSM,'Centered')	
-    if (iPosition>0.and.Phi_Shift<cZero)then	
-       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
-            Head_PFSSM(iPosition+1:len(Head_PFSSM))
-       iPosition=index(Head_PFSSM,':')
-       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
-            Head_PFSSM(iPosition+1:len(Head_PFSSM))
-       iPosition=index(Head_PFSSM,':')
-       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
-            Head_PFSSM(iPosition+1:len(Head_PFSSM))
-       read(Head_PFSSM,'(i3)',iostat=iErrorRead)iHLCMM
-       if(iErrorRead>0)call stop_mpi(&
-            'Can nod find HLCMM, '//File_PFSSM//&
-            ' is not a true WSO magnetogram')
-       Phi_Shift=modulo(iHLCMM-180-dLongitudeHgrDeg, 360.0) 
-       if(iProc==0)then
-          call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
-       end if
-       return
-    end if
-    iPosition=index(Head_PFSSM,'Central')
-    if(iPosition>0.and.Phi_Shift<cZero)then
-       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
-            Head_PFSSM(iPosition+1:len(Head_PFSSM))
-       iPosition=index(Head_PFSSM,':')
-       Head_PFSSM(1:len(Head_PFSSM)-iPosition)=&
-            Head_PFSSM(iPosition+1:len(Head_PFSSM))
-       read(Head_PFSSM,*,iostat=iErrorRead)HLCMM
-       if(iErrorRead>0)call stop_mpi(&
-            'Can nod find HLCMM, '//File_PFSSM//&
-            ' is not a true MDI magnetogram')
-       Phi_Shift=modulo(HLCMM-180-dLongitudeHgrDeg, 360.0) 
-       if(iProc==0)then
-          call write_prefix;write(iUnitOut,*)'Phi_Shift=',Phi_Shift
-       end if
-    end if
-  end subroutine get_hlcmm
+  
   !==========================================================================
   subroutine interpolate_field(R_D,BMap_D)
     real,intent(in)::R_D(nDim)
