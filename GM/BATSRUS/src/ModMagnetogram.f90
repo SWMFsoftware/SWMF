@@ -14,13 +14,17 @@ module ModMagnetogram
 
   save
 
-  private !Except
+!  private !Except
   !\
   ! PFSSM related control parameters
   !/
 
   ! Maximum order of spherical harmonics
-  integer:: N_PFSSM=90
+  integer,parameter::nHarmonicsMax=90
+  ! Weights of the spherical harmonics
+  real, dimension(nHarmonicsMax+1,nHarmonicsMax+1):: g_nm,h_nm
+  
+  integer:: N_PFSSM=nHarmonicsMax
 
   ! Number of header lines in the file
   integer:: iHead_PFSSM
@@ -90,57 +94,10 @@ module ModMagnetogram
   integer,parameter::nDim=3,x_=1,y_=2,z_=3,R_=1,Phi_=2,Theta_=3
 
   real,allocatable,dimension(:,:,:,:)::B_DN
+
   real::dR=cOne,dPhi=cOne,dTheta=cOne,dInv_D(nDim)=cOne
-  !Distribution of the solar wind model parameters: 
-
-  real,allocatable,dimension(:,:,:)::FiskFactor_N
-  !The Fisk factor. The value of this factor at a given grid point
-  ! is equal to the value of |B_R|/B_{max}, where B_R is taken at the 
-  !"photospheric footpoint" of the magnetic field line, passing through 
-  !this point:
-  !\               Grid point
-  ! \R_Sun       iR,iPhi,iTheta   !R_surface
-  !  -------------+---------------!
-  ! /                             !
-  !/  Field line predicted by 
-  !   the source surface model 
-  !   (this is a real curved magnetic 
-  !   field, not a ray Theta=const
-  !   The value of the Fisk factor at 
-  !   the considered grid point is defined as
-  ! 
-  !   FiskFactor_N(iR,iPhi,iTheta)=|B_R(R=R_Sun)/B_Max|, 
-  !
-  !   if the magnetic field line is open, 
-  !   zero otherwise.
-
-  real,allocatable,dimension(:,:,:)::ExpansionFactorInv_N
-  ! The expansion factor. !!!INVERTED!!!!
-  ! The value of this factor at a given grid point
-  ! is equal to the value of 
-  ! B(R=R_{SourceSurface}/B(R=R_{Sun})*(R_SourceSurface/R_Sun)^2
-  ! where the ratio of the magnetic field intensities is taken at the 
-  ! two marginal point of the magnetic field line, passing through 
-  ! the considered grid point:
-  !
-  !\               Grid point
-  ! \R_Sun       iR,iPhi,iTheta   !R_SourceSurface
-  !  -------------+---------------!
-  ! /                             !
-  !/  Field line predicted by 
-  !   the source surface model 
-  !   (this is a real curved magnetic 
-  !   field, not a ray Theta=const
-  !   The value of the expansion factor at 
-  !   the considered grid point is defined as
-  ! 
-  !   ExpansionFactor_N(iR,iPhi,iTheta)= &
-  ! B(R=R_{SourceSurface}/B(R=R_{Sun})*(R_SourceSurface/R_Sun)^2
-  !
-  !   if the magnetic field line is open, 
-  !   zero otherwise.
-
-
+  integer::nThetaPerProc
+ 
 contains
  !=================================================================
   ! SUBROUTINE get_hlcmm
@@ -208,11 +165,83 @@ contains
        call write_prefix
        write(iUnitOut,*) 'Entered number of header lines:: ',iHead_PFSSM
     endif
+    !\
+    ! Initialize once g(n+1,m+1) & h(n+1,m+1) by reading a file
+    ! created from Web data::
+    !/ 
 
+    call read_harmonics
 
     call set_magnetogram
 
   end subroutine read_magnetogram_file
+
+  subroutine read_harmonics
+    integer :: iUnit,nOrderIn,iPosition,iPosition1,n,m,i,iError
+    character (LEN=80):: Head_PFSSM=''
+    real::gtemp,htemp,stuff1
+    !\
+    ! Formats adjusted for wso CR rad coeffs::
+    !/
+    iUnit = io_unit_new()
+    open(iUnit,file=File_PFSSM,status='old',iostat=iError)
+    if (iHead_PFSSM /= 0) then
+       do i=1,iHead_PFSSM
+          read(iUnit,'(a)') Head_PFSSM
+          iPosition=index(Head_PFSSM,'rder')
+          iPosition1=0
+          if(iPosition>0)&
+               iPosition1=max(&
+               index(Head_PFSSM(iPosition+4:iPosition+9),'='),&
+               index(Head_PFSSM(iPosition+4:iPosition+9),':'))
+          if(iPosition1>0)then
+             read(Head_PFSSM(iPosition+4+iPosition1:len(Head_PFSSM)),&
+                  '(i3)',iostat=iError)nOrderIn
+             if(iError>0)call stop_mpi(&
+                  'Cannot figure out nOrder')
+             if(nOrderIn<N_PFSSM)then
+                if(iProc==0)then
+                   call write_prefix;write(iUnitOut,*)'Reset N_PFSSM=',&
+                        nOrderIn
+                end if
+                N_PFSSM=nOrderIn
+             end if
+          end if
+       enddo
+    endif
+
+    !\
+    ! Initialize all coefficient arrays::
+    !/
+    g_nm(:,:) = cZero; h_nm(:,:)  = cZero
+    !\
+    ! Read file with coefficients, g_nm and h_nm::
+    !/
+    do
+       read(iUnit,*,iostat=iError) n,m,gtemp,htemp
+       if (iError /= 0) EXIT
+       if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
+       g_nm(n+1,m+1) = gtemp
+       h_nm(n+1,m+1) = htemp
+    enddo
+    close(iUnit)
+    !\
+    ! Add correction factor for radial, not LOS, coefficients::
+    ! Note old "coefficients" file are LOS, all new coeffs and 
+    ! files are radial)
+    !/
+    do n=0,N_PFSSM
+       stuff1 = cOne/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
+       do m=0,n
+          g_nm(n+1,m+1) = g_nm(n+1,m+1)*stuff1
+          h_nm(n+1,m+1) = h_nm(n+1,m+1)*stuff1
+       enddo
+    enddo
+    !\
+    ! Leave out monopole (n=0) term::
+    !/
+    g_nm(1,1) = cZero
+  end subroutine read_harmonics
   !===========================================================================
   subroutine set_magnetogram
     !
@@ -277,50 +306,18 @@ contains
     real:: Psi_PFSSM
     integer::iBcast, iStart, nSize, iError
 
-    ! Weights of the spherical harmonics
-    real, dimension(N_PFSSM+1,N_PFSSM+1):: g_nm,h_nm
     ! Temporary variable
     real, dimension(N_PFSSM+1):: FactRatio1
     real, dimension(N_PFSSM+1,N_PFSSM+1):: p_nm,dp_nm
 
-
-    !\
-    ! Optimization by G. Toth::
-    !/
     integer, parameter:: MaxInt=10000
-    real, save:: Sqrt_I(MaxInt)
+    real:: Sqrt_I(MaxInt)
     !\
     !
     !/
  
-    integer::nThetaPerProc
     real, dimension(-1:N_PFSSM+2,-10:N_PFSSM):: &
          RoRsPower_I, RoRPower_I, rRsPower_I
-
-    !\
-    ! Initialize once g(n+1,m+1) & h(n+1,m+1) by reading a file
-    ! created from Web data::
-    !/ 
-
-    call read_harmonics
-
-    !\
-    ! Add correction factor for radial, not LOS, coefficients::
-    ! Note old "coefficients" file are LOS, all new coeffs and 
-    ! files are radial)
-    !/
-    do n=0,N_PFSSM
-       stuff1 = cOne/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
-       do m=0,n
-          g_nm(n+1,m+1) = g_nm(n+1,m+1)*stuff1
-          h_nm(n+1,m+1) = h_nm(n+1,m+1)*stuff1
-       enddo
-    enddo
-
-    !\
-    ! Leave out monopole (n=0) term::
-    !/
-    g_nm(1,1) = cZero
 
  
     !Introduce a spherical grid with the resolution, depending on the
@@ -425,8 +422,15 @@ contains
           call MPI_bcast(B_DN(1,-10,0,iStart),nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
+    !Set expansion factors:
+  !  call set_expansion_factors
+  !  if(nProc == 0)call write_plot_tec
   contains
     subroutine set_auxiliary_arrays
+
+      !\
+      ! Optimization by G. Toth::
+      !/
       !\
       ! Calculate sqrt(integer) from 1 to 10000::
       !/
@@ -441,39 +445,7 @@ contains
          factRatio1(m+1) = factRatio1(m)*Sqrt_I(2*m-1)/Sqrt_I(2*m)
       enddo
     end subroutine set_auxiliary_arrays
-   subroutine read_harmonics
-      integer :: iUnit
-      character (LEN=80):: Head_PFSSM=''
-      real::gtemp,htemp
-      !\
-      ! Formats adjusted for wso CR rad coeffs::
-      !/
-      iUnit = io_unit_new()
-      open(iUnit,file=File_PFSSM,status='old',iostat=iError)
-      if (iHead_PFSSM /= 0) then
-         do i=1,iHead_PFSSM
-            read(iUnit,'(a)') Head_PFSSM
-            if(Phi_Shift<-cTiny)call get_hlcmm(Head_PFSSM,Phi_Shift)	
-         enddo
-      endif
-
-      !\
-      ! Initialize all coefficient arrays::
-      !/
-      g_nm(:,:) = cZero; h_nm(:,:)  = cZero
-      p_nm(:,:) = cZero; dp_nm(:,:) = cZero
-      !\
-      ! Read file with coefficients, g_nm and h_nm::
-      !/
-      do
-         read(iUnit,*,iostat=iError) n,m,gtemp,htemp
-         if (iError /= 0) EXIT
-         if (n > N_PFSSM .or. m > N_PFSSM) CYCLE
-         g_nm(n+1,m+1) = gtemp
-         h_nm(n+1,m+1) = htemp
-      enddo
-      close(iUnit)
-    end subroutine read_harmonics
+   
     subroutine calc_Legandre_polynoms
       real:: SinThetaM, SinThetaM1
       integer:: delta_m0
@@ -483,6 +455,7 @@ contains
       !/
       SinThetaM  = cOne
       SinThetaM1 = cOne
+      p_nm(:,:) = cZero; dp_nm(:,:) = cZero
 
       do m=0,N_PFSSM
          if (m == 0) then
@@ -565,7 +538,26 @@ contains
       end do
     end subroutine calc_radial_functions
   end subroutine set_magnetogram
-  
+  !==========================================================================
+  ! This subroutine corrects the angles Phi and Theta after every 
+  ! step of the field-alligned integration 
+  subroutine correct_angles(TR_D)
+    real,dimension(nDim),intent(inout) :: TR_D
+      
+    if(TR_D(Theta_) < cZero)then
+       TR_D(Theta_) = -TR_D(Theta_)
+       TR_D(Phi_)=TR_D(Phi_)+cPi
+    end if
+    if(TR_D(Theta_) > cPi)then
+       TR_D(Theta_)=cPi-TR_D(Theta_)
+       TR_D(Phi_)=TR_D(Phi_)+cPi
+    end if
+    if(TR_D(Phi_) >= cTwoPi)&
+         TR_D(Phi_)=TR_D(Phi_)-cTwoPi 
+    if(TR_D(Phi_) < cZero)&
+         TR_D(Phi_) = TR_D(Phi_)+cTwoPi
+    
+  end subroutine correct_angles
   !==========================================================================
   subroutine interpolate_field(R_D,BMap_D)
     real,intent(in)::R_D(nDim)
@@ -574,8 +566,16 @@ contains
     real::Res_D(nDim)
     integer::iDim,i,j,k  
     real::Weight_III(0:1,0:1,0:1)
+    logical::DoCorrection
     Res_D=R_D
+    !Limit a value of R:
+    Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-10*dR+cTiny)
+
     Res_D(R_)=Res_D(R_)-Ro_PFSSM
+    
+    call correct_angles(Res_D)
+    DoCorrection=Res_D(Phi_)/=R_D(Phi_)
+
     Res_D=Res_D*dInv_D
     Node_D=floor(Res_D*dInv_D)
     if(Node_D(R_)==N_PFSSM)Node_D(R_)=Node_D(R_)-1
@@ -594,7 +594,8 @@ contains
             Node_D(R_):Node_D(R_)+1,&
             Node_D(Phi_):Node_D(Phi_)+1,&
             Node_D(Theta_):Node_D(Theta_)+1))
-    end do  
+    end do
+    if(DoCorrection)BMap_D(Phi_:Theta_)=-BMap_D(Phi_:Theta_)
   end subroutine interpolate_field
   !==========================================================================
   subroutine get_magnetogram_field(xInput,yInput,zInput,B0_D)
@@ -613,7 +614,7 @@ contains
     !\
     ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
     !/
-    if (Rin_PFSSM <cOne-dR*cE1) then
+    if (Rin_PFSSM <Ro_PFSSM-dR*cE1) then
        B0_D= cZero
        RETURN
     end if
