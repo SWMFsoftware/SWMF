@@ -9,7 +9,7 @@ ModPrecond.o:	ModPrecond.f90
 project_B.o: project_B.f90 \
 	ModProcMH.o \
 	ModMain.o \
-	ModVarIndexes.o \
+	ModEquation.o \
 	ModAdvance.o \
 	ModGeometry.o \
 	ModProject.o \

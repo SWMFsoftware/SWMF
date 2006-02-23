@@ -12,7 +12,7 @@ create_soln_blocks.o: create_soln_blocks.f90 \
         ModAMR.o \
         ModProcMH.o \
         ModMain.o \
-        ModVarIndexes.o \
+        ModEquation.o \
         ${MOD1} \
         ModAdvance.o \
         ModParallel.o \
@@ -38,7 +38,7 @@ set_ICs.o: set_ICs.f90 \
 write_logfile.o: write_logfile.f90 \
         ModProcMH.o \
         ModMain.o \
-        ModVarIndexes.o \
+        ModEquation.o \
         ModAdvance.o \
         ModGeometry.o \
         ModPhysics.o \
