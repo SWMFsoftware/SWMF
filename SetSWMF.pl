@@ -9,10 +9,11 @@ my $ValidComp = 'IH|GM|IE|IM|RB|SC|SP|UA';
 # Directories and files used
 my $MakefileConf     = 'Makefile.conf';
 my $MakefileConfOrig = 'share/build/Makefile.';
-my $MakefileDef     = 'Makefile.def';
-my $MakefileDefOrig = 'CON/Makefile.def';
-my $MakefileDefCvs  = 'Makefile.def.orig';
+my $MakefileDef      = 'Makefile.def';
+my $MakefileDefOrig  = 'CON/Makefile.def';
+my $MakefileDefCvs   = 'Makefile.def.orig';
 my $GridSizeScript   = 'GridSize.pl';
+my $OptionScript     = 'Options.pl';
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -45,6 +46,7 @@ my $NewPrecision;
 my $DryRun;
 my @NewVersion;
 my $GridSize;
+my $Options;
 my $Uninstall;
 my $IsCompilerSet;
 my $Quiet;
@@ -66,6 +68,7 @@ foreach (@switch){
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
     if(/^-uninstall$/)        {$Uninstall=1;                    next};
     if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
+    if(/^-o=(.*)/)            {$Options.=",$1";                 next};
 
     print "$WARNING Unknown switch: $_\n";
 }
@@ -97,6 +100,8 @@ if($ListVersions){
 &set_versions if @NewVersion;
 
 &set_grid_size if $GridSize;
+
+&set_options if $Options;
 
 if($Show){
     &get_settings;
@@ -201,6 +206,8 @@ sub show_settings{
 	    if($ShowLong){
 		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript -s`;
 		print ":\n$Grid" if $Grid;
+		print `cd $Comp/$Version{$Comp}; ./$OptionScript -s`
+		    if -x "$Comp/$Version{$Comp}/$OptionScript";
 	    }else{
 		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript`;
 		$Grid =~ s/$GridSizeScript(\s*-g=)?//;
@@ -421,6 +428,39 @@ sub set_grid_size{
 
 ##############################################################################
 
+sub set_options{
+
+    # Create a %Options{CompID} hash from the Options string
+    my %Options;
+    my @Options = split( /,($ValidComp):/, $Options);
+
+    die "$ERROR -o=...$Options has incorrect format\n" unless @Options;
+
+    my $i;
+    for ($i=1; $i<=$#Options; $i+=2){
+	my $Comp = $Options[$i];
+	my $Option = $Options[$i+1];
+	$Option =~ s/,/ \-/g;   # Replace comma with ' -' for multiple options
+	$Options{$Comp}=$Option;
+    }
+
+    # Set the options for all the components listed in %Options
+    my $Comp;
+    foreach $Comp (sort keys %Options){
+	die "$ERROR -o=..$Comp:.. version is not known for this component\n"
+	    unless $Version{$Comp};
+
+	my $Script = "$Comp/$Version{$Comp}/$OptionScript";
+	die "$ERROR -o=..$Comp:.. no executable $Script was found\n"
+	    unless -x $Script;
+
+	&shell_command("cd $Comp/$Version{$Comp}; ".
+		       "./$OptionScript -$Options{$Comp}");
+    }
+}
+
+##############################################################################
+
 sub set_version_makefile_comp{
 
     # Set $MakefileDef (if it exists) in all component versions
@@ -490,6 +530,7 @@ Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-l] [-s]
                   [-p=PRECISION] 
                   [-v=VERSION[,VERSION2,...] 
                   [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
+                  [-o=ID:OPTIONS[,ID:OPTIONS,...]
                   [-uninstall]
 
 Options:
@@ -504,6 +545,10 @@ Options:
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
                multiple grid sizes can be given in a comma separated list.
+
+-o=ID:OPTIONS  set options OPTIONS for the component identified with ID.
+               This flag can occur multiple times and/or options for
+               multiple components can be given in a comma separated list.
 
 -h  -help      show this help message
 
@@ -559,7 +604,19 @@ Select IH/BATSRUS, IM/Empty and UA/Empty component versions:
 
 Set the grid size for GM and IH:
 
-    SetSWMF.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1"
+    SetSWMF.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
+
+Show the currently set for the GM and SC component:
+
+    SetSWMF.pl -o=GM:show,SC:show
+
+Show the available user modules and equations for GM and IH
+
+    SetSWMF.pl -o=GM:equation,usermodule -o=IH:equation,usermodule
+
+Set equation and user module for GM:
+
+    SetSWMF.pl -o=GM:e=Mhd,u=Default"
 #EOC
     ,"\n\n";
     exit 0;
