@@ -5,6 +5,7 @@ my $Help         = $h or $H or $help or $Help;
 my $Equation     = $e or $equation;
 my $UserModule   = $u or $user or $usermod;
 my $Show         = $s or $show;
+my $Verbose      = $v or $verbose;
 
 use strict;
 
@@ -15,11 +16,10 @@ use strict;
 my $ERROR = 'Options.pl ERROR:';
 
 # Define the main directories and files
-my $Src='src';
-my $SrcUser='srcUser';
-my $UserMod="$Src/ModUser.f90";
-
-my $EquationMod="$Src/ModVarIndexes.f90";
+my $Src         = 'src';
+my $SrcUser     = 'srcUser';
+my $UserMod     = "$Src/ModUser.f90";
+my $EquationMod = "$Src/ModEquation.f90";
 
 # Set or list the equations
 &set_equation if $Equation;
@@ -37,11 +37,17 @@ sub set_equation{
     if($Equation eq '1'){
 	my @EquationModules;
 	chdir $Src;
-	@EquationModules = sort(glob("ModVarIndexes_*.f90"));
-	for (@EquationModules){s/^ModVarIndexes_//; s/\.f90$//;}
+	@EquationModules = sort(glob("ModEquation?*.f90"));
+	for (@EquationModules){s/^ModEquation//; s/\.f90$//;}
 	print "Available Equations:\n   ",join("\n   ",@EquationModules),"\n";
 	chdir "..";
+	return;
     }
+
+    my $File = "$Src/ModEquation$Equation.f90";
+    die "$ERROR File $File does not exist!\n" unless -f $File;
+    print "cp $File $EquationMod\n" if $Verbose;
+    `cp $File $EquationMod`; # die "$ERROR Could not cp $File $UserMod\n";
 }
 
 #############################################################################
@@ -65,6 +71,7 @@ sub set_user_module{
 	$File = "$SrcUser/ModUser$UserModule.f90";
     }
     die "$ERROR File $File does not exist!\n" unless -f $File;
+    print "cp $File $UserMod\n" if $Verbose;
     `cp $File $UserMod`; # die "$ERROR Could not cp $File $UserMod\n";
 }
 
@@ -109,9 +116,11 @@ Purpose:
 
 Usage:
 
-    Options.pl [-h] [-s] [-e[=EQUATION]] [-u[=USERMODULE]]
+    Options.pl [-h] [-v] [-s] [-e[=EQUATION]] [-u[=USERMODULE]]
 
-  -h              Print help message and stop
+  -h              Print help message and stop.
+
+  -v              Print verbose information.
 
   -e              List all available equations.
 
@@ -133,9 +142,9 @@ Options.pl -s
 
 Options.pl -e=? -u=?
 
-  Select the MHD equations and the Default user module:
+  Select the MHD equations, the Default user module and print verbose info:
 
-Options.pl -e=MHD -u=Default",
+Options.pl -v -e=MHD -u=Default",
 "\n\n";
     exit 0;
 }
