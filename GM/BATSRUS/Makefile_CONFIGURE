@@ -52,7 +52,7 @@ globhelio_src:
 	-off=ionosphere,boriscorr,implicit,roeflux,rcm,covariant \
 	-on=globalheliosphere \
 	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere
-	cd ${DGLOBALH}; make install
+	cd ${DGLOBALH}; make install; ./Options.pl -e=MhdGlobalHelio
 
 globhelio_conf: globhelio_src
 	cd ..; rm -rf BATSRUS_conf; \
@@ -69,8 +69,7 @@ multisp_src:
 	./Configure.pl -d=MULTISP 
 	-off=implicit,ionosphere,rusanovflux,roeflux,awflux,boriscorr \
 	-on=multisp,lindeflux,testing,userfiles,covariant \
-	cd MULTISP; make install; \
-	cp -f srcUser/ModUserMars.f90 src/ModUser.f90
+	cd MULTISP; make install; ./Options.pl -u=Mars -e=MhdMars
 
 multisp_conf: multisp_src
 	cd ..; rm -rf BATSRUS_conf; \
@@ -91,8 +90,7 @@ relax_src:
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
 		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90
-	cd ${DREL}; make install; \
-		cp -f srcUser/ModUserHeliosphere.f90 src/ModUser.f90; \
+	cd ${DREL}; make install; ./Options.pl -e=MhdCorona -u=Heliosphere; \
 		perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
 
 relax_conf: relax_src
