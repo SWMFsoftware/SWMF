@@ -1,11 +1,11 @@
 #!/usr/bin/perl -s
 
 # Put switches into properly named variables
-my $Help         = $h or $H or $help or $Help;
-my $Equation     = $e or $equation;
-my $UserModule   = $u or $user or $usermod;
-my $Show         = $s or $show;
-my $Verbose      = $v or $verbose;
+my $Help         = ($h or $H or $help);
+my $Equation     = ($e or $equation);
+my $UserModule   = ($u or $user or $usermod);
+my $Show         = ($s or $show);
+my $Verbose      = ($v or $verbose);
 
 use strict;
 
