@@ -22,22 +22,12 @@ MODFLCOV=ModFlux_covar.o
 
 MOD7 = ModCovariant.o ${MODFLCOV}   #^CFG IF COVARIANT
 
-#^CFG IF NOT GLOBALHELIOSPHERE BEGIN
-#^CFG IF NOT MULTISP BEGIN
-#^CFG IF NOT ALWAVES BEGIN
-MODEL = ModVarIndexes.o 
-#^CFG END ALWAVES
-#^CFG END MULTISP
-#^CFG END GLOBALHELIOSPHERE
-#MODEL = ModVarIndexes_modif.o    #^CFG UNCOMMENT IF ALWAVES 
-#MODEL = ModVarIndexes_mars.o     #^CFG UNCOMMENT IF MULTISP
-#MODEL = ModVarIndexes_globhelio.o #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
-
 MODULES = \
 	ModAdvance.o\
 	ModAMR.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
+	ModEquation.o\
 	ModGeometry.o\
 	ModInterface.o\
 	ModIO.o\
@@ -51,7 +41,7 @@ MODULES = \
 	ModSize.o\
 	ModUserEmpty.o \
 	ModUser.o \
-	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD7} ${MODEL}
+	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD7}
 
 # OBJECT FILES FOR MAIN EXECUTABLE
 
@@ -314,7 +304,8 @@ BATSRUS_for_xlf:
 #
 
 distclean: clean
-	rm -f Makefile.RULES Makefile.DEPEND ModSize.f90 ModUser.f90
+	rm -f Makefile.RULES Makefile.DEPEND 
+	rm -f ModSize.f90 ModUser.f90 ModEquation.f90
 	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
 		ModNodes.f90 ModRaytrace.f90
 	rm -f stand_alone.f90
