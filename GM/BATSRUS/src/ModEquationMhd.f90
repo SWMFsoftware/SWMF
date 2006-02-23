@@ -1,4 +1,3 @@
-!^FILE NOT ALWAVES
 Module ModVarIndexes
   use ModNumConst
 
