@@ -26,7 +26,7 @@ Module ModUser
 !!!       user_update_states
 
   include 'user_module.h' !list of public methods
-
+ 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'HELIOSPHERE, Manchester, Roussev'
@@ -278,7 +278,8 @@ contains
     call get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
          DensCell,PresCell,GammaCell)
     VarsGhostFace_V(rho_     ) = max(-VarsTrueFace_V(rho_     )+ &
-         cTwo*(DensCell+RhoFRope),VarsTrueFace_V(rho_))
+         cTwo*(DensCell),&!+RhoFRope)
+         VarsTrueFace_V(rho_))
     VarsGhostFace_V(P_       ) = max(-VarsTrueFace_V(P_       )+ &
          cTwo*PresCell,VarsTrueFace_V(P_  ))
     !  VarsGhostFace_V(EnergyRL_) = max(-VarsTrueFace_V(EnergyRL_)+ &  !^CFG UNCOMMENT IF ALWAVES
@@ -514,7 +515,7 @@ contains
     do iBLK=1,nBLK
        if ((.not.UseUserHeating).and.(.not.restart)) then
           if (unusedBLK(iBLK)) CYCLE   
-          do k=1,nK;do j=1,nJ; do i=1,nI;then
+          do k=1,nK;do j=1,nJ; do i=1,nI
              xx = x_BLK(i,j,k,iBLK)
              yy = y_BLK(i,j,k,iBLK)
              zz = z_BLK(i,j,k,iBLK)

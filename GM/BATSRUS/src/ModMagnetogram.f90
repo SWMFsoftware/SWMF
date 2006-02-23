@@ -207,6 +207,7 @@ contains
                 N_PFSSM=nOrderIn
              end if
           end if
+          if(Phi_Shift<cZero)call get_hlcmm(Head_PFSSM,Phi_Shift)
        enddo
     endif
 
