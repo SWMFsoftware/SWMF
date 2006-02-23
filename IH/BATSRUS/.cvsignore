@@ -1,6 +1,7 @@
 GridSize.pl
 Makefile.def
 Makefile.conf
+Options.pl
 PARAM.XML
 PARAM.pl
 RenameList.pl
