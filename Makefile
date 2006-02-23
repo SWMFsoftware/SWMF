@@ -371,8 +371,8 @@ IH/BATSRUS/src/Makefile:
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cd GM/BATSRUS; \
-		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl GridSize.pl \
-		../../IH/BATSRUS/
+		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl \
+			GridSize.pl Options.pl ../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
 # rename IH source files to avoid name conflicts
@@ -386,8 +386,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 	cd IH/BATSRUS/srcInterface; \
 		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
-	cp -f IH/BATSRUS/srcUser/ModUserHeliosphere.f90 \
-		IH/BATSRUS/src/ModUser.f90
+	cd IH/BATSRUS/; ./Options.pl -u=Heliosphere
 
 #^CMP END IH
 #^CMP IF SC BEGIN
@@ -399,7 +398,7 @@ SC/BATSRUS/src/Makefile:
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
 	cd GM/BATSRUS/TMP; \
-		mv Makefile.def GridSize.pl PARAM.XML src srcUser \
+		mv Makefile.def GridSize.pl Options.pl PARAM.XML src srcUser \
 			../../../SC/BATSRUS;\
 		mv srcInterface/*.f90 ../../../SC/BATSRUS/srcInterface
 	rm -rf GM/BATSRUS/TMP
@@ -421,8 +420,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl SC ${SC_SRC}; \
 		${SCRIPTDIR}/Rename.pl -w -r -common=SC ${SC_SRC}
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
-	cp -f SC/BATSRUS/srcUser/ModUserHeliosphere.f90 \
-		SC/BATSRUS/src/ModUser.f90
+	cd SC/BATSRUS; ./Options.pl -e=MhdCorona -u=Heliosphere
 
 #^CMP END SC
 
