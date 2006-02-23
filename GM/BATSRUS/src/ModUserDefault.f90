@@ -32,7 +32,6 @@ module ModUser
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: NameUserModule = &
-       'EMPTY ROUTINES, K.C. Hansen'
+  character (len=*), parameter :: NameUserModule = 'DEFAULT EMPTY ROUTINES'
 
 end module ModUser
