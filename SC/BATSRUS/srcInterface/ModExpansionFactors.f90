@@ -1,5 +1,5 @@
-module ModExpansionFactors
-  use ModMagnetogram
+module SC_ModExpansionFactors
+  use SC_ModMagnetogram
   implicit none
   save
  !Distribution of the solar wind model parameters: 
@@ -52,43 +52,46 @@ module ModExpansionFactors
   ! model (Arge et al. 2006):
   real,allocatable,dimension(:,:,:)::WSAspeed_N
 contains
-  subroutine write_plot_tec
+  subroutine SC_write_plot_tec
 
-    integer :: ios,iPhi,iTheta
-      
-      call write_prefix;write(iUnitOut,*)'Writing PFSSM factors  output file'
-      open ( unit = 1, file = 'SC/IO2/PFSSM_Factors.dat', form = 'formatted', &
-           access = 'sequential', status = 'replace', iostat = ios )
-      
-      if ( ios /= 0 ) then
-         write ( *, '(a)' ) ' '
-         write ( *, '(a)' ) 'TECPLOT_WRITE_OPEN - Fatal error!'
-         write ( *, '(a)' ) '  Could not open the output file.'
-         stop
-      end if
-      
-      write ( 1, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
-      write ( 1, '(a)' ) &
-           'Variables = ' // trim (&
-           '"Longitude [Deg]", "Latitude [Deg]",  "f_s",&
-           &"Fisk_factor","Theta_b","WSAspeed [Km/s]"')
-      write ( 1, '(a)' ) ' '
-      write ( 1, '(a,i6,a,i6,a)' ) 'Zone I = ', N_PFSSM+1, ', J=', N_PFSSM+1,&
-           ', F=point' 
-      
-      do iTheta=0,N_PFSSM
-         do iPhi=0,N_PFSSM
-            write ( 1, '(6f10.3)' )real(iPhi)*dPhi/cDegToRad,&
-                 (cPi*cHalf-real(iTheta)*dTheta)/cDegToRad,&
-                 ExpansionFactorInv_N(N_PFSSM,iPhi,iTheta),&
-                 FiskFactor_N(N_PFSSM,iPhi,iTheta),&
-                 ThetaB_N(N_PFSSM,iPhi,iTheta),&
-                 WSAspeed_N(N_PFSSM,iPhi,iTheta)
-         end do
-      end do
-      close(1)
+    integer :: iError,iPhi,iTheta,iUnit
+    iUnit=io_unit_new()
+    call write_prefix;write(iUnitOut,*)'Writing PFSSM factors  output file'
+    open(unit = iUnit, file = 'SC/IO2/PFSSM_Factors.dat', form = 'formatted', &
+         access = 'sequential', status = 'replace', iostat = iError )
 
-  end subroutine Write_plot_tec
+    if ( iError /= 0 ) then
+       call write_prefix;write(iUnitOut, '(a)' ) ' '
+       call write_prefix;write(iUnitOut, '(a)' )&
+            'TECPLOT_WRITE_OPEN - Fatal error!'
+       call write_prefix;write(iUnitOut, '(a)' )&
+            '  Could not open the output file.'
+       call SC_stop_mpi('')
+    end if
+
+    write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
+    write ( iUnit, '(a)' ) &
+         'Variables = ' // trim (&
+         '"Longitude [Deg]", "Latitude [Deg]",  "f_s",&
+         &"Fisk_factor","Theta_b","WSAspeed [Km/s]"')
+    write ( iUnit, '(a)' ) ' '
+    write ( iUnit, '(a,i6,a,i6,a)' )&
+         'Zone I = ', N_PFSSM+1, ', J=', N_PFSSM+1,&
+         ', F=point' 
+
+    do iTheta=0,N_PFSSM
+       do iPhi=0,N_PFSSM
+          write ( iUnit, '(6f10.3)' )real(iPhi)*dPhi/cDegToRad,&
+               (cPi*cHalf-real(iTheta)*dTheta)/cDegToRad,&
+               ExpansionFactorInv_N(N_PFSSM,iPhi,iTheta),&
+               FiskFactor_N(N_PFSSM,iPhi,iTheta),&
+               ThetaB_N(N_PFSSM,iPhi,iTheta),&
+               WSAspeed_N(N_PFSSM,iPhi,iTheta)/cE3 !Output in km/s'
+       end do
+    end do
+    close(iUnit)
+
+  end subroutine SC_write_plot_tec
    !==========================================================================
   subroutine set_expansion_factors
     real :: dS,dSMax
@@ -99,15 +102,15 @@ contains
     integer :: iBcast, iStart, nSize, iError,iIteration
     integer :: iNorth, iSouth
     real,allocatable,dimension(:,:) :: Phi_IJ,Theta_IJ
-    real :: WSA_pow=2.0/7.0
+    real :: WSAPowerIndex=2.0/7.0
 
     ! Allocte factors arrays
     if(allocated(ExpansionFactorInv_N))deallocate(ExpansionFactorInv_N)
-    allocate(ExpansionFactorInv_N(-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
+    allocate(ExpansionFactorInv_N(-nRExt:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
     if(allocated(FiskFactor_N))deallocate(FiskFactor_N)
-    allocate(FiskFactor_N(-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
+    allocate(FiskFactor_N(-nRExt:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
     if(allocated(ThetaB_N))deallocate(ThetaB_N)
-    allocate(ThetaB_N(-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
+    allocate(ThetaB_N(-nRExt:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
 
     !Initalize arrays:
     ExpansionFactorInv_N=cZero
@@ -206,10 +209,11 @@ contains
        do iBcast=0,nProc-1
           iStart=iBcast*nThetaPerProc
           if(iStart>N_PFSSM)EXIT
-          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*(N_PFSSM+11)
-          call MPI_bcast(ExpansionFactorInv_N(-10,0,iStart)&
+          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*&
+               (N_PFSSM+1+nRExt)
+          call MPI_bcast(ExpansionFactorInv_N(-nRExt,0,iStart)&
                ,nSize,MPI_REAL,iBcast,iComm,iError)
-          call MPI_bcast(FiskFactor_N(-10,0,iStart)&
+          call MPI_bcast(FiskFactor_N(-nRExt,0,iStart)&
                ,nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
@@ -282,8 +286,9 @@ contains
        do iBcast=0,nProc-1
           iStart=iBcast*nThetaPerProc
           if(iStart>N_PFSSM)EXIT
-          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*(N_PFSSM+11)
-          call MPI_bcast(ThetaB_N(-10,0,iStart)&
+          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*&
+               (N_PFSSM+1+nRExt)
+          call MPI_bcast(ThetaB_N(-nRExt,0,iStart)&
                ,nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
@@ -298,24 +303,16 @@ contains
 
     ! Get WSA speed
     if(allocated(WSAspeed_N))deallocate(WSAspeed_N)
-    allocate(WSAspeed_N(-10:N_PFSSM,0:N_PFSSM,0:N_PFSSM)) 
+    allocate(WSAspeed_N(-nRExt:N_PFSSM,0:N_PFSSM,0:N_PFSSM)) 
     WSAspeed_N=cZero
 
     ! Calculate WSA speed distribution using eq. 2 in Arge et al. 2006:
-    WSAspeed_N(:,:,:)=265.0+25.0*ExpansionFactorInv_N(:,:,:)**WSA_pow*&
-         (5.0-1.1*exp(1.0-(ThetaB_N(:,:,:)/4.0)**2))**2
+    WSAspeed_N(:,:,:)=(265.0+25.0*&
+         (ExpansionFactorInv_N(:,:,:)+cTiny)**WSAPowerIndex*&
+         (5.0-1.1*exp(1.0-(ThetaB_N(:,:,:)/4.0)**2))**2)& !km/s so far
+         *cE3         !To get the result in SI
 
-    if(nProc>1)then
-       do iBcast=0,nProc-1
-          iStart=iBcast*nThetaPerProc
-          if(iStart>N_PFSSM)EXIT
-          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*(N_PFSSM+11)
-          call MPI_bcast(WSAspeed_N(-10,0,iStart)&
-               ,nSize,MPI_REAL,iBcast,iComm,iError)
-       end do
-    end if
-
-    call write_plot_tec
+    if(iProc==0)call SC_write_plot_tec
 
   contains
     !--------------------------------------------------------------------------
@@ -371,10 +368,10 @@ contains
     end function theta_b
 
   end subroutine set_expansion_factors
-end module ModExpansionFactors
+end module SC_ModExpansionFactors
 !=================================INTERFACE==================================
 subroutine SC_set_expansion_factors
-  use ModExpansionFactors
+  use SC_ModExpansionFactors
   implicit none
   call set_expansion_factors
 end subroutine SC_set_expansion_factors

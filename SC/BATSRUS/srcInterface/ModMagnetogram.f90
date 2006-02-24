@@ -1,4 +1,4 @@
-module ModMagnetogram
+module SC_ModMagnetogram
   use ModNumConst
   use ModReadParam
   use ModMpi
@@ -422,7 +422,8 @@ contains
        do iBcast=0,nProc-1
           iStart=iBcast*nThetaPerProc
           if(iStart>N_PFSSM)EXIT
-          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*(N_PFSSM+11)*3
+          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*&
+               (N_PFSSM+1+nRExt)*3
           call MPI_bcast(B_DN(1,-nRExt,0,iStart),nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
@@ -541,36 +542,44 @@ contains
     end subroutine calc_radial_functions
     subroutine write_Br_plot
 
-      integer :: ios,iPhi,iTheta
+      integer :: iError,iPhi,iTheta,iUnit
 
-      call write_prefix;write(iUnitOut,*)'Writing PFSSM_Br output file'
-      open ( unit = 1, file = 'SC/IO2/PFSSM_Br.dat', form = 'formatted', &
-           access = 'sequential', status = 'replace', iostat = ios )
+      call write_prefix;write(iUnitOut,*)'Writing PFSSM_Br output file, named'
+      iUnit = io_unit_new()
+      call write_prefix;write(iUnitOut,*)&
+           'SC/IO2/PFSSM_Br.dat'
+      open ( unit = iUnit, &
+           file = 'SC/IO2/PFSSM_Br.dat', &
+           form = 'formatted', &
+           access = 'sequential', &
+           status = 'replace', iostat = iError )
 
-      if ( ios /= 0 ) then
-         write ( *, '(a)' ) ' '
-         write ( *, '(a)' ) 'TECPLOT_WRITE_OPEN - Fatal error!'
-         write ( *, '(a)' ) '  Could not open the output file.'
-         stop
+      if ( iError /= 0 ) then
+         call write_prefix;write (iUnitOut, '(a)' ) ' '
+         call write_prefix;write (iUnitOut, '(a)' )&
+              'TECPLOT_WRITE_OPEN - Fatal error!'
+         call write_prefix;write (iUnitOut, '(a)' )&
+              '  Could not open the PFSSM_Br output file.'
+         call SC_stop_mpi('')
       end if
 
-      write ( 1, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
-      write ( 1, '(a)' ) &
+      write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
+      write ( iUnit, '(a)' ) &
            'Variables = ' // trim (&
            '"Longitude [Deg]", "Latitude [Deg]",  "Br_0 [G]","Br_SS [G]"')
-      write ( 1, '(a)' ) ' '
-      write ( 1, '(a,i6,a,i6,a)' ) 'Zone I = ', N_PFSSM+1, ', J=', N_PFSSM+1,&
+      write ( iUnit, '(a)' ) ' '
+      write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', N_PFSSM+1, ', J=', N_PFSSM+1,&
            ', F=point' 
 
       do iTheta=0,N_PFSSM
          do iPhi=0,N_PFSSM
-            write ( 1, '(4f10.3)' )real(iPhi)*dPhi/cDegToRad,&
+            write ( iUnit, '(4f10.3)' )real(iPhi)*dPhi/cDegToRad,&
                  real(iTheta)*dTheta/cDegToRad,&
                  0.01*B_DN(R_,0,iPhi,iTheta),&
                  0.01*B_DN(R_,N_PFSSM,iPhi,iTheta)
          end do
       end do
-      close(1)
+      close(iUnit)
 
     end subroutine Write_Br_plot
   end subroutine set_magnetogram
@@ -704,16 +713,16 @@ contains
     if (Rin_PFSSM > Rs_PFSSM) &
          B0_D  =  B0_D*(Rs_PFSSM/Rin_PFSSM)**2
   end subroutine get_magnetogram_field
-end module ModMagnetogram
+end module SC_ModMagnetogram
 !======================INTERFACE===============================================
 subroutine SC_read_magnetogram_file
-  use ModMagnetogram
+  use SC_ModMagnetogram
   implicit none
   call read_magnetogram_file
 end subroutine SC_read_magnetogram_file
 !------------------------------------------------------------------------------
 subroutine SC_get_magnetogram_field(xInput,yInput,zInput,B0_D)
-  use ModMagnetogram
+  use SC_ModMagnetogram
   real, intent(in):: xInput,yInput,zInput
   real, intent(out), dimension(3):: B0_D
   call get_magnetogram_field(xInput,yInput,zInput,B0_D)
