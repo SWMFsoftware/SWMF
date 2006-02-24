@@ -7,7 +7,6 @@ Module ModUser
   use ModMain,     ONLY: UseUserB0,UseUserHeating
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
   !  use ModUserTD99  ! To include TD99 flux rope.
-  use ModMagnetogram, ONLY:read_magnetogram_file
   use ModUserEmpty, ONLY:               &
 !!!       user_read_inputs,                &
 !!!       user_init_session,               &
@@ -123,6 +122,7 @@ contains
           call read_var('UseUserB0'  ,UseUserB0)
           if (UseUserB0)then
              call read_magnetogram_file
+             call set_expansion_factors
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
@@ -633,11 +633,10 @@ contains
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
     use ModPhysics,  ONLY: unitUSER_B
-    use ModMagnetogram,ONLY:get_magnetogram_field
     implicit none
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
-    call get_magnetogram_field(xInput,yInput,zInput,B0_D)
+    call SC_get_magnetogram_field(xInput,yInput,zInput,B0_D)
     B0_D = B0_D/unitUSER_B
   end subroutine user_get_b0
 
@@ -934,7 +933,7 @@ contains
          dx_BLK,dy_BLK,dz_BLK,true_cell
     use ModPhysics
     use ModConst
-    use ModMagnetogram,ONLY:Rs_PFSSM
+    real::Rs_PFSSM
     !\ 
     ! Variables required by this user subroutine::
     !/
