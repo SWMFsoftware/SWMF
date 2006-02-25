@@ -375,3 +375,78 @@ subroutine SC_set_expansion_factors
   implicit none
   call set_expansion_factors
 end subroutine SC_set_expansion_factors
+
+subroutine SC_get_bernoulli_integral(xInput,yInput,zInput,Output)
+  use SC_ModExpansionFactors
+  implicit none
+  real, intent(in):: xInput,yInput,zInput
+  real, intent(out):: Output
+  real:: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
+
+  integer::Node_D(nDim)
+  real::Res_D(nDim)
+
+  real::Weight_III(0:1,0:1,0:1)
+  real:: R_PFSSM
+
+  !--------------------------------------------------------------------------
+  !\
+  ! Calculate cell-centered spherical coordinates::
+  !/
+  Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
+  !\
+  ! Avoid calculating inside a critical radius = 0.5*Rsun
+  !/
+  if (Rin_PFSSM <max(Ro_PFSSM-dR*cE1,0.90*Ro_PFSSM)) then
+     Output= cZero
+     RETURN
+  end if
+  Theta_PFSSM = acos(zInput/Rin_PFSSM)
+  Phi_PFSSM   = atan2(yInput,xInput)
+
+  !\
+  ! Set the source surface radius::
+  ! The inner boundary in the simulations starts at a height
+  ! H_PFSSM above that of the magnetic field measurements!
+  !/
+
+  R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
+
+
+  !\
+  ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame.
+  !/
+
+  Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
+
+  !\
+  ! Take a residual for the bi-linear interpolation
+  !/
+  Res_D=(/R_PFSSM,Phi_PFSSM,Theta_PFSSM/)
+
+  !Limit a value of R:
+  Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
+
+  Res_D(R_)=Res_D(R_)-Ro_PFSSM
+
+  call correct_angles(Res_D)
+  Res_D=Res_D*dInv_D
+  Node_D=floor(Res_D)
+  if(Node_D(R_)==N_PFSSM)Node_D(R_)=Node_D(R_)-1
+  if(Node_D(Theta_)==N_PFSSM)Node_D(Theta_)=Node_D(Theta_)-1
+  Res_D=Res_D-real(Node_D)
+  if(Node_D(Phi_)==N_PFSSM)Node_D(Phi_)=0
+
+  Weight_III(0,:,:)=cOne-Res_D(R_)
+  Weight_III(1,:,:)=Res_D(R_)
+  Weight_III(:,0,:)=Weight_III(:,0,:)*(cOne-Res_D(Phi_))
+  Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
+  Weight_III(:,:,0)=Weight_III(:,:,0)*(cOne-Res_D(Theta_))
+  Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
+
+  Output=&
+       sum(Weight_III*WSASpeed_N(&
+       Node_D(R_):Node_D(R_)+1,&
+       Node_D(Phi_):Node_D(Phi_)+1,&
+       Node_D(Theta_):Node_D(Theta_)+1))
+end subroutine SC_get_bernoulli_integral

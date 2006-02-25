@@ -5,9 +5,12 @@ subroutine SC_get_for_ih(&
   !USES:
   use SC_ModAdvance,ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
        rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
-       
 
-  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B
+
+  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B,inv_g
+  use SC_ModMain,ONLY:DoSendMHD, x_,y_,z_,nDim
+  use SC_ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
+ 
   use CON_router
 
   implicit none
@@ -19,7 +22,7 @@ subroutine SC_get_for_ih(&
   real,dimension(nVar),intent(out)::State_V
 
   integer::iGet, i, j, k, iBlock
-  real :: Weight
+  real :: Weight,X_D(nDim),BernoulliIntegral,SumWeight,Rho,P
 
   character (len=*), parameter :: NameSub='SC_get_for_ih'
   !The meaning of state intdex in buffer and in model can be 
@@ -32,60 +35,110 @@ subroutine SC_get_for_ih(&
        BuffBy_   =6,&
        BuffBz_   =7,&
        BuffP_    =8
-       
+
 
   !----------------------------------------------------------
- 
-  i      = Get%iCB_II(1,iGetStart)
-  j      = Get%iCB_II(2,iGetStart)
-  k      = Get%iCB_II(3,iGetStart)
-  iBlock = Get%iCB_II(4,iGetStart)
-  Weight = W%Weight_I(iGetStart)
-  
-  State_V(BuffRho_)          = &
-       State_VGB(rho_,         i,j,k,iBlock) *Weight
-  State_V(BuffRhoUx_:BuffRhoUz_) = &
-       State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-  State_V(BuffBx_)           = &
-       (State_VGB(Bx_,          i,j,k,iBlock) + &
-       B0xCell_BLK(i,j,k,iBlock))*Weight
-  State_V(BuffBy_)           = &
-       (State_VGB(By_,          i,j,k,iBlock) + &
-       B0yCell_BLK(i,j,k,iBlock))*Weight
-  State_V(BuffBz_)           = &
-       (State_VGB(Bz_,          i,j,k,iBlock) + &
-       B0zCell_BLK(i,j,k,iBlock))*Weight
-  State_V(BuffP_)            = &
-       State_VGB(P_,       i,j,k,iBlock) *Weight
-  
-  do iGet=iGetStart+1,iGetStart+nPartial-1
-     i      = Get%iCB_II(1,iGet)
-     j      = Get%iCB_II(2,iGet)
-     k      = Get%iCB_II(3,iGet)
-     iBlock = Get%iCB_II(4,iGet)
-     Weight = W%Weight_I(iGet)
-     State_V(BuffRho_)             =State_V(BuffRho_)             +&
-          State_VGB(rho_,        i,j,k,iBlock) *Weight 
-     State_V(BuffRhoUx_:BuffRhoUz_)=State_V(BuffRhoUx_:BuffRhoUz_)+&
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-     State_V(BuffBx_)              =State_V(BuffBx_)              +&
-          (State_VGB(Bx_,         i,j,k,iBlock) + &
-          B0xCell_BLK(i,j,k,iBlock))*Weight
-     State_V(BuffBy_)              =State_V(BuffBy_)              +&
-          (State_VGB(By_,         i,j,k,iBlock) + &
-          B0yCell_BLK(i,j,k,iBlock))*Weight
-     State_V(BuffBz_)              =State_V(BuffBz_)              +&
-          (State_VGB(Bz_,         i,j,k,iBlock) + &
-          B0zCell_BLK(i,j,k,iBlock))*Weight
-     State_V(BuffP_)               =State_V(BuffP_)               +&
-          State_VGB(P_,      i,j,k,iBlock) *Weight
-  end do
+  if(DoSendMHD)then
+     i      = Get%iCB_II(1,iGetStart)
+     j      = Get%iCB_II(2,iGetStart)
+     k      = Get%iCB_II(3,iGetStart)
+     iBlock = Get%iCB_II(4,iGetStart)
+     Weight = W%Weight_I(iGetStart)
 
-  ! Convert to SI units
-  State_V(BuffRho_)             = State_V(BuffRho_)     *UnitSI_rho
-  State_V(BuffRhoUx_:BuffRhoUz_)= &
-       State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
-  State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
-  State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
+     State_V(BuffRho_)          = &
+          State_VGB(rho_,         i,j,k,iBlock) *Weight
+     State_V(BuffRhoUx_:BuffRhoUz_) = &
+          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
+     State_V(BuffBx_)           = &
+          (State_VGB(Bx_,          i,j,k,iBlock) + &
+          B0xCell_BLK(i,j,k,iBlock))*Weight
+     State_V(BuffBy_)           = &
+          (State_VGB(By_,          i,j,k,iBlock) + &
+          B0yCell_BLK(i,j,k,iBlock))*Weight
+     State_V(BuffBz_)           = &
+          (State_VGB(Bz_,          i,j,k,iBlock) + &
+          B0zCell_BLK(i,j,k,iBlock))*Weight
+     State_V(BuffP_)            = &
+          State_VGB(P_,       i,j,k,iBlock) *Weight
+
+     do iGet=iGetStart+1,iGetStart+nPartial-1
+        i      = Get%iCB_II(1,iGet)
+        j      = Get%iCB_II(2,iGet)
+        k      = Get%iCB_II(3,iGet)
+        iBlock = Get%iCB_II(4,iGet)
+        Weight = W%Weight_I(iGet)
+        State_V(BuffRho_)             =State_V(BuffRho_)             +&
+             State_VGB(rho_,        i,j,k,iBlock) *Weight 
+        State_V(BuffRhoUx_:BuffRhoUz_)=State_V(BuffRhoUx_:BuffRhoUz_)+&
+             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
+        State_V(BuffBx_)              =State_V(BuffBx_)              +&
+             (State_VGB(Bx_,         i,j,k,iBlock) + &
+             B0xCell_BLK(i,j,k,iBlock))*Weight
+        State_V(BuffBy_)              =State_V(BuffBy_)              +&
+             (State_VGB(By_,         i,j,k,iBlock) + &
+             B0yCell_BLK(i,j,k,iBlock))*Weight
+        State_V(BuffBz_)              =State_V(BuffBz_)              +&
+             (State_VGB(Bz_,         i,j,k,iBlock) + &
+             B0zCell_BLK(i,j,k,iBlock))*Weight
+        State_V(BuffP_)               =State_V(BuffP_)               +&
+             State_VGB(P_,      i,j,k,iBlock) *Weight
+     end do
+
+
+     ! Convert to SI units
+     State_V(BuffRho_)             = State_V(BuffRho_)     *UnitSI_rho
+     State_V(BuffRhoUx_:BuffRhoUz_)= &
+          State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
+     State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
+     State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
+  else
+     i      = Get%iCB_II(1,iGetStart)
+     j      = Get%iCB_II(2,iGetStart)
+     k      = Get%iCB_II(3,iGetStart)
+     iBlock = Get%iCB_II(4,iGetStart)
+     Weight = W%Weight_I(iGetStart)
+     X_D(x_)=x_BLK(i,j,k,iBlock)*Weight
+     X_D(y_)=y_BLK(i,j,k,iBlock)*Weight
+     X_D(z_)=z_BLK(i,j,k,iBlock)*Weight
+     SumWeight=Weight
+
+
+     do iGet=iGetStart+1,iGetStart+nPartial-1
+        i      = Get%iCB_II(1,iGet)
+        j      = Get%iCB_II(2,iGet)
+        k      = Get%iCB_II(3,iGet)
+        iBlock = Get%iCB_II(4,iGet)
+        Weight = W%Weight_I(iGet)
+        X_D(x_)= X_D(x_)+x_BLK(i,j,k,iBlock)*Weight
+        X_D(y_)= X_D(y_)+y_BLK(i,j,k,iBlock)*Weight
+        X_D(z_)= X_D(z_)+z_BLK(i,j,k,iBlock)*Weight
+        SumWeight=SumWeight+Weight
+     end do
+     X_D=X_D/SumWeight   !This is a weighted radius vector of the point,at 
+                         !which we take the solar wind parameters
+   
+     call SC_get_magnetogram_field(X_D(x_),X_D(y_),X_D(z_),&
+          State_V(BuffBx_:BuffBz_)) !Magnetogram field
+     !Transfrom from Gauss to Tesla, multiply by weight
+     State_V(BuffBx_:BuffBz_)= State_V(BuffBx_:BuffBz_)*SumWeight/(cE1*cE3)
+
+     !\Get atmosphere 
+     !/parameters
+
+     State_V(BuffRho_)=cOne/sum(X_D**2)
+     State_V(BuffP_) = State_V(BuffRho_)*inv_g
+
+     call SC_get_bernoulli_integral(X_D(x_),X_D(y_),X_D(z_),&
+          BernoulliIntegral)
+     !Direction of the solar wind speed:
+     X_D=X_D*sqrt(State_V(BuffRho_)) !X_D/sqrt(sum(X_D**2))
+
+     !Transform to SI, multiply by weight:
+     State_V(BuffRho_) = State_V(BuffRho_)*UnitSI_rho*SumWeight
+     State_V(BuffP_  ) = State_V(BuffP_)  *UnitSI_p  *SumWeight
+     
+     State_V(BuffRhoUx_:BuffRhoUz_)= &
+          State_V(BuffRho_)*BernoulliIntegral*X_D
+  end if
 
 end subroutine SC_get_for_ih
