@@ -6,7 +6,7 @@ T			UseDtFixed
 0.5			DtFixedDim
 
 #IMPLICIT
-F			UsePointImplicit	^CFG IF POINTIMPLICIT
+F			UsePointImplicit
 T			UsePartImplicit
 F			UseFullImplicit
 100.0			CflImpl
