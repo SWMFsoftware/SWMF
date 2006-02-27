@@ -37,6 +37,7 @@ MODULES = \
 	ModParallel.o\
 	ModPartSteady.o\
 	ModPhysics.o\
+	ModPointImplicit.o\
 	ModProcMH.o\
 	ModSize.o\
 	ModUserEmpty.o \
