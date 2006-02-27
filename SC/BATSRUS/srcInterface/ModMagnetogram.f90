@@ -211,8 +211,10 @@ contains
        enddo
     endif
     nRExt=min(10,floor(real(N_PFSSM)*(0.9*Ro_PFSSM)/(Rs_PFSSM-Ro_PFSSM)))
-    if(iProc==0)call write_prefix;write(iUnitOut,*)&
+    if(iProc==0)then
+       call write_prefix;write(iUnitOut,*)&
          'Magnetogram is extended by ',nRExt,' nodes towards the Sun'
+    end if
     !\
     ! Initialize all coefficient arrays::
     !/
