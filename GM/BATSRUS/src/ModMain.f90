@@ -104,7 +104,6 @@ Module ModMain
        time_loop=.false.
 
   logical :: UseDtFixed
-  logical :: UsePointImplicit                !^CFG IF POINTIMPLICIT
   logical :: UseImplicit,  UsePartLocal      !^CFG IF IMPLICIT
 
   !\
