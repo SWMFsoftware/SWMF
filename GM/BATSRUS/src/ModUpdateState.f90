@@ -3,39 +3,26 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : &
-       R_BLK,vInv_CB,RMin_BLK,body_BLK
+  use ModGeometry, ONLY : R_BLK,vInv_CB,RMin_BLK,body_BLK
   use ModPhysics
   use ModNumConst
+  use ModKind, ONLY: Real8_
+  use ModPointImplicit, ONLY: UsePointImplicit, update_point_implicit
+  use ModUser, ONLY: user_calc_sources
+
   implicit none
 
   integer, intent(in) :: iStage,iBLK
   integer :: i,j,k, iVar
 
-  real*8 :: fullBx, fullBy, fullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
+  real(Real8_) :: fullBx, fullBy, fullBz, fullBB, rhoc2, UdotBc2, gA2_Boris,&
        FullBxOld,FullByOld,FullBzOld,Ux,Uy,Uz,UxOld,UyOld,UzOld,&
        Bx,By,Bz,BxOld,ByOld,BzOld,B0x,B0y,B0z,RhoUx,RhoUy,RhoUz,&
        MBorisMinusRhoUxOld, MBorisMinusRhoUyOld, MBorisMinusRhoUzOld,&
        Rho,RhoInv,ECorr
-  real::cfl_factor
+  real:: DtFactor
   real:: DtLocal
-  !^CFG IF POINTIMPLICIT BEGIN
 
-  real :: sigma_ptImplicit, &
-       TimeCell, ResidCell, &
-       ResidualCell(1:NVar), LHSCell(1:Nvar,1:Nvar)
-  real :: inv_rho, inv_rho2
-  real :: LHSMAX, LHSTEMP, TOTALSUM, SCALING(NVar)
-
-  common /timestepping/ cfl_factor, sigma_ptImplicit, &
-       TimeCell, ResidCell, &
-       ResidualCell, LHSCell
-  common /localvars/ inv_rho, inv_rho2, &
-       LHSMAX, LHSTEMP, TOTALSUM, SCALING
-
-  !T3E! !dir$ cache_align /timestepping/
-  !T3E! !dir$ cache_align /localvars/
-  !^CFG END POINTIMPLICIT
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
   if(iBLK==BLKtest .and. iProc==PROCtest)then
@@ -48,7 +35,7 @@ subroutine update_states_MHD(iStage,iBLK)
   ! Set variables depending on stage number
   !/
 
-  cfl_factor = iStage*(cfl/nStage)
+  DtFactor = iStage*(Cfl/nStage)
 
   !\
   ! Update the new solution state and calc residuals for the mth stage.
@@ -62,8 +49,8 @@ subroutine update_states_MHD(iStage,iBLK)
   end if
 
   !Get Residual.
-    do k = 1,nK; do j = 1,nJ; do i = 1,nI
-     DtLocal=cfl_factor*time_BLK(i,j,k,iBLK)
+  do k = 1,nK; do j = 1,nJ; do i = 1,nI
+     DtLocal=DtFactor*time_BLK(i,j,k,iBLK)
      Source_VC(:,i,j,k) = &
           DtLocal* (Source_VC(:,i,j,k) + &
           vInv_CB(i,j,k,iBLK) * &
@@ -71,11 +58,12 @@ subroutine update_states_MHD(iStage,iBLK)
           + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) )) 
   end do; end do; end do
-  if (UsePointImplicit) then   !^CFG IF POINTIMPLICIT BEGIN
-     call update_point_implicit
-  else                         !^CFG END POINTIMPLICIT
-     call update_explicit
-  end if                       !^CFG IF POINTIMPLICIT
+
+  call update_explicit
+
+  ! Add point implicit user source terms
+  if (UsePointImplicit .and. UseUserSource) &
+       call update_point_implicit(iStage, iBLK, user_calc_sources)
 
 contains
 
@@ -282,225 +270,5 @@ contains
             State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2) )
     end if
   end subroutine update_explicit
-
-  !^CFG IF POINTIMPLICIT BEGIN
-  !================================================ 
-  subroutine update_point_implicit
-    sigma_ptImplicit = cOne
-    do k=1,nK; do j=1,nJ; do i=1,nI 
-       TimeCell = cfl_factor*time_BLK(i,j,k,iBLK)*sigma_ptImplicit
-       inv_rho = 1.00/State_VGB(rho_,i,j,k,iBLK)
-       inv_rho2 = inv_rho*inv_rho
-       LHSCell = 0.00
-
-       ResidualCell(1:7) = Source_VC(1:7,i,j,k)
-       ResidualCell(8)   = Source_VC(Energy_,i,j,k)
-
-       do iVar=1,7
-          LHSCell(iVar,iVar) = 1.00
-       end do
-
-       LHSCell(2,1) = -TimeCell*fbody_x_BLK(i,j,k,iBLK)
-
-       if (problem_type == problem_heliosphere) &
-            LHSCell(2,3) = -2.00*TimeCell*OMEGAbody
-       LHSCell(2,5) = TimeCell*DivB1_GB(i,j,k,iBLK)
-
-       LHSCell(3,1) = -TimeCell*fbody_y_BLK(i,j,k,iBLK)
-       if (problem_type == problem_heliosphere) &
-            LHSCell(3,2) = 2.00*TimeCell*OMEGAbody
-       LHSCell(3,6) = sigma_ptImplicit*TimeCell*DivB1_GB(i,j,k,iBLK)
-
-       LHSCell(4,1) = -TimeCell*fbody_z_BLK(i,j,k,iBLK)
-       LHSCell(4,7) = TimeCell*DivB1_GB(i,j,k,iBLK)
-
-       LHSCell(5,1) = -TimeCell*DivB1_GB(i,j,k,iBLK)* &
-            State_VGB(rhoUx_,i,j,k,iBLK)*inv_rho2
-       LHSCell(5,2) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
-
-
-       LHSCell(6,1) = -TimeCell*DivB1_GB(i,j,k,iBLK)* &
-            State_VGB(rhoUy_,i,j,k,iBLK)*inv_rho2
-       LHSCell(6,3) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
-
-
-
-       LHSCell(7,1) = -TimeCell*DivB1_GB(i,j,k,iBLK)* &
-            State_VGB(rhoUz_,i,j,k,iBLK)*inv_rho2
-       LHSCell(7,4) = TimeCell*DivB1_GB(i,j,k,iBLK)*inv_rho
-
-       LHSCell(8,1) = -TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)* &
-            (State_VGB(Bx_,i,j,k,iBLK)* &
-            State_VGB(rhoUx_,i,j,k,iBLK) + &
-            State_VGB(By_,i,j,k,iBLK)* &
-            State_VGB(rhoUy_,i,j,k,iBLK) + &
-            State_VGB(Bz_,i,j,k,iBLK)* &
-            State_VGB(rhoUz_,i,j,k,iBLK))*inv_rho2+ &
-            (Theat0(i,j,k)-0.50*g*gm1* &
-            (State_VGB(rhoUx_,i,j,k,iBLK)* &
-            State_VGB(rhoUx_,i,j,k,iBLK) + &
-            State_VGB(rhoUy_,i,j,k,iBLK)* &
-            State_VGB(rhoUy_,i,j,k,iBLK) + &
-            State_VGB(rhoUz_,i,j,k,iBLK)* &
-            State_VGB(rhoUz_,i,j,k,iBLK))* &
-            inv_rho2)*qheat_BLK(i,j,k,iBLK))
-       LHSCell(8,2) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(Bx_,i,j,k,iBLK)*inv_rho - &
-            fbody_x_BLK(i,j,k,iBLK) - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(rhoUx_,i,j,k,iBLK)*inv_rho)
-       LHSCell(8,3) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(By_,i,j,k,iBLK)*inv_rho - &
-            fbody_y_BLK(i,j,k,iBLK) - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(rhoUy_,i,j,k,iBLK)*inv_rho)
-       LHSCell(8,4) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(Bz_,i,j,k,iBLK)*inv_rho - &
-            fbody_z_BLK(i,j,k,iBLK) - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(rhoUz_,i,j,k,iBLK)*inv_rho)
-       LHSCell(8,5) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(rhoUx_,i,j,k,iBLK)*inv_rho - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(Bx_,i,j,k,iBLK))
-       LHSCell(8,6) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(rhoUy_,i,j,k,iBLK)*inv_rho - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(By_,i,j,k,iBLK))
-       LHSCell(8,7) = TimeCell*( &
-            DivB1_GB(i,j,k,iBLK)*State_VGB(rhoUz_,i,j,k,iBLK)*inv_rho - &
-            g*gm1*qheat_BLK(i,j,k,iBLK)* &
-            State_VGB(Bz_,i,j,k,iBLK))
-       LHSCell(8,8) = 1.00+TimeCell*( &
-            g*gm1*qheat_BLK(i,j,k,iBLK))
-
-       call linear_equation_solver
-
-       State_VGB(rho_:Bz_,i,j,k,iBLK) =  &
-            StateOld_VCB(rho_:Bz_,i,j,k,iBLK) &
-            + ResidualCell(rho_:Bz_)
-
-       E_BLK(i,j,k,iBLK) =   E_o_BLK(i,j,k,iBLK) &
-            + ResidualCell(8)
-
-       State_VGB(P_,i,j,k,iBLK) = &
-            gm1*(E_BLK(i,j,k,iBLK) &
-            - 0.5*((State_VGB(rhoUx_,i,j,k,iBLK)*&
-            State_VGB(rhoUx_,i,j,k,iBLK) + &
-            State_VGB(rhoUy_,i,j,k,iBLK)*&
-            State_VGB(rhoUy_,i,j,k,iBLK) + &
-            State_VGB(rhoUz_,i,j,k,iBLK)*&
-            State_VGB(rhoUz_,i,j,k,iBLK)) &
-            /State_VGB(rho_,i,j,k,iBLK))  &
-            - 0.5*(State_VGB(Bx_,i,j,k,iBLK)*&
-            State_VGB(Bx_,i,j,k,iBLK) + &
-            State_VGB(By_,i,j,k,iBLK)*&
-            State_VGB(By_,i,j,k,iBLK) + &
-            State_VGB(Bz_,i,j,k,iBLK)*&
-            State_VGB(Bz_,i,j,k,iBLK)))
-
-    end do; end do; end do
-
-  end subroutine update_point_implicit
-
-
-  subroutine linear_equation_solver
-    ! This routine solves the system of Nvar linear equations:
-    ! 
-    !               LHSCell*dUCell = ResidualCell.
-    ! 
-    ! The routine performs a lower-upper (LU) decomposition of the 
-    ! square matrix LHSCell of rank Nvar and then uses forward and
-    ! backward substitution to obtain the solution vector dUCell.
-    ! Crout's method with partial implicit pivoting is used to perform
-    ! the decompostion.
-    integer :: IL, II, ILMAX, JL, KL, LL, INDX(1:Nvar)
-    real, parameter :: TINY=1.0E-20
-
-
-    !\
-    ! Loop through each row to get implicit scaling
-    ! information.
-    !/
-    DO IL=1,Nvar
-       LHSMAX=0.00
-       DO JL=1,Nvar
-          IF (ABS(LHSCell(IL,JL)).GT.LHSMAX) LHSMAX=ABS(LHSCell(IL,JL))
-       END DO
-       SCALING(IL)=1.00/LHSMAX
-    END DO
-
-    !\
-    ! Peform the LU decompostion using Crout's method.
-    !/
-    DO JL=1,Nvar
-       DO IL=1,JL-1
-          TOTALSUM=LHSCell(IL,JL)
-          DO KL=1,IL-1
-             TOTALSUM=TOTALSUM-LHSCell(IL,KL)*LHSCell(KL,JL)
-          END DO
-          LHSCell(IL,JL)=TOTALSUM
-       END DO
-       LHSMAX=0.00
-       DO IL=JL,Nvar
-          TOTALSUM=LHSCell(IL,JL)
-          DO KL=1,JL-1
-             TOTALSUM=TOTALSUM-LHSCell(IL,KL)*LHSCell(KL,JL)
-          END DO
-          LHSCell(IL,JL)=TOTALSUM
-          LHSTEMP=SCALING(IL)*ABS(TOTALSUM)
-          IF (LHSTEMP.GE.LHSMAX) THEN
-             ILMAX=IL
-             LHSMAX=LHSTEMP
-          END IF
-       END DO
-       IF (JL.NE.ILMAX) THEN
-          DO KL=1,Nvar
-             LHSTEMP=LHSCell(ILMAX,KL)
-             LHSCell(ILMAX,KL)=LHSCell(JL,KL)
-             LHSCell(JL,KL)=LHSTEMP
-          END DO
-          SCALING(ILMAX)=SCALING(JL)
-       END IF
-       INDX(JL)=ILMAX
-       IF (abs(LHSCell(JL,JL)).EQ.0.00) LHSCell(JL,JL)=TINY
-       IF (JL.NE.Nvar) THEN
-          LHSTEMP=1.00/LHSCell(JL,JL)
-          DO IL=JL+1,Nvar
-             LHSCell(IL,JL)=LHSCell(IL,JL)*LHSTEMP
-          END DO
-       END IF
-    END DO
-
-    !\
-    ! Peform the forward and back substitution to obtain
-    ! the solution vector.
-    !/
-    II=0
-    DO IL=1,Nvar
-       LL=INDX(IL)
-       TOTALSUM=ResidualCell(LL)
-       ResidualCell(LL)=ResidualCell(IL)
-       IF (II.NE.0) THEN
-          DO JL=II,IL-1
-             TOTALSUM=TOTALSUM-LHSCell(IL,JL)*ResidualCell(JL)
-          END DO
-       ELSE IF (TOTALSUM.NE.0.00) THEN
-          II=IL
-       END IF
-       ResidualCell(IL)=TOTALSUM
-    END DO
-    DO IL=Nvar,1,-1
-       TOTALSUM=ResidualCell(IL)
-       DO JL=IL+1,Nvar
-          TOTALSUM=TOTALSUM-LHSCell(IL,JL)*ResidualCell(JL)
-       END DO
-       ResidualCell(IL)=TOTALSUM/LHSCell(IL,IL)
-    END DO
-
-  end subroutine linear_equation_solver
-
-  !^CFG END POINTIMPLICIT
 
 end subroutine update_states_mhd
