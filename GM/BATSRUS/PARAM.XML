@@ -1267,7 +1267,7 @@ T               UsePartLocal
 	</rule>
 
 #IMPLICIT
-F               UsePointImplicit   <!-- ^CFG IF POINTIMPLICIT -->
+F               UsePointImplicit
 F               UsePartImplicit
 F               UseFullImplicit
 100.0           CflImpl (read if UsePartImplicit or UseFullImplicit is true)
