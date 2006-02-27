@@ -37,7 +37,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
-  
+  use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -312,12 +313,21 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RelativeEps',RelativeEps_V(iVar))
            call read_var('AbsoluteEps',AbsoluteEps_V(iVar))
         end do
-     case("#PARTLOCAL")                                 !^CFG IF IMPLICIT BEGIN
+
+     case("#POINTIMPLICIT")
+        call read_var('UsePointImplicit', UsePointImplicit)
+        if(UsePointImplicit)then
+           call read_var('BetaPointImplicit',BetaPointImpl)
+           UsePartImplicit = .false.                   !^CFG IF IMPLICIT
+           UseFullImplicit = .false.                   !^CFG IF IMPLICIT
+        end if
+     case("#PARTLOCAL")                                !^CFG IF IMPLICIT BEGIN 
         call read_var('UsePartLocal',UsePartLocal)
-     case("#IMPLICIT")
-        call read_var('UsePointImplicit', UsePointImplicit) !^CFG IF POINTIMPLICIT
-        call read_var('UsePartImplicit',  UsePartImplicit)
-        call read_var('UseFullImplicit',  UseFullImplicit)
+
+     case("#IMPLICIT")                                 
+        call read_var('UsePointImplicit', UsePointImplicit)
+        call read_var('UsePartImplicit', UsePartImplicit)
+        call read_var('UseFullImplicit', UseFullImplicit)
 
         UseImplicit = UseFullImplicit .or. UsePartImplicit
 
@@ -327,10 +337,8 @@ subroutine MH_set_parameters(TypeAction)
         if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
              'Only one of UsePartImplicit and UseFullImplicit can be true')
 
-        !                                           ^CFG IF POINTIMPLICIT BEGIN
         if(UsePointImplicit .and. UseImplicit) call stop_mpi(&
              'Only one of Point-/Full-/Partimmplicit can be true')
-        !                                           ^CFG END POINTIMPLICIT
 
         if(UseImplicit)call read_var('ImplCFL',ImplCFL)
 
@@ -1798,7 +1806,7 @@ contains
     !UseCovariant = .true.             !^CFG UNCOMMENT IF COVARIANT
   
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
-    UsePointImplicit = .false.              !^CFG IF POINTIMPLICIT
+    UsePointImplicit = .false.
     UsePartImplicit  = .false.
     UseFullImplicit  = .false.
     UseImplicit      = .false.
@@ -1851,7 +1859,6 @@ contains
     percent_max_p(1)   = 40.
     percent_max_p(2)   = 400.
 
-    UsePointImplicit = .false.        !^CFG IF POINTIMPLICIT
     UseBorisSimple = .false.          !^CFG IF SIMPLEBORIS
     boris_correction = .false.        !^CFG IF BORISCORR
     boris_cLIGHT_factor = 1.0         
@@ -1997,7 +2004,6 @@ contains
        case default
           Bdp_dim = 0.0
        end select
-
     end if
 
     select case(problem_type)
@@ -2454,15 +2460,6 @@ contains
        boris_correction = .false.
        boris_cLIGHT_factor = 1.00
     end if                                             !^CFG END ROEFLUX
-
-    if(UsePointImplicit.and.boris_correction) then     !^CFG IF POINTIMPLICIT BEGIN
-       if (iProc == 0)  write(*,'(a)')NameSub// &
-            ' WARNING: Point implicit not available for Boris, '// &
-            'turning point implicit off !!!'
-       if(UseStrict)call stop_mpi('Correct PARAM.in!')
-       UsePointImplicit = .false.
-    end if                                              !^CFG END POINTIMPLICIT
-
     ! Finish checks for boris                       !^CFG END BORISCORR
 
     ! Check parameters for implicit                 !^CFG IF IMPLICIT BEGIN
