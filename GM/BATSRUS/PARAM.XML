@@ -1321,6 +1321,12 @@ r		TypeImplCrit (dt or r or test)
 	<parameter name="ImplCoeff" type="real" min="0" max="1" default="1"/>
 	<parameter name="UseBdf2"   type="logical" default="T" />
 	<parameter name="UseSourceImpl" type="logical" default="F" />
+
+#IMPLSTEP
+0.5			ImplCoeff
+F			UseBdf2
+F			UseSourceImpl
+
 ! For steady state run the default values are shown. For second order
 ! time accurate run the default is UseBdf2=T, since
 ! BDF2 is a 3 level second order stable implicit scheme.
