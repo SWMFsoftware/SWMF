@@ -406,23 +406,25 @@ subroutine MH_set_parameters(TypeAction)
         end if
      case("#RESISTIVEFLUX")
         call read_var('UseResistFlux' ,UseResistFlux)
-        call read_var('UseSpitzerForm',UseSpitzerForm)
-        if (.not.UseSpitzerForm) then
-           call read_var('TypeResist',TypeResist)
-           call read_var('Eta0Resist',Eta0Resist)
-           if (TypeResist=='Localized'.or. &
-                TypeResist=='localized') then
-              call read_var('Alpha0Resist',Alpha0Resist)
-              call read_var('yShiftResist',yShiftResist)
-              call read_var('TimeInitRise',TimeInitRise)
-              call read_var('TimeConstLev',TimeConstLev)
+        if(UseResistFlux)then
+           call read_var('UseSpitzerForm',UseSpitzerForm)
+           if (.not.UseSpitzerForm) then
+              call read_var('TypeResist',TypeResist)
+              call read_var('Eta0Resist',Eta0Resist)
+              if (TypeResist=='Localized'.or. &
+                   TypeResist=='localized') then
+                 call read_var('Alpha0Resist',Alpha0Resist)
+                 call read_var('yShiftResist',yShiftResist)
+                 call read_var('TimeInitRise',TimeInitRise)
+                 call read_var('TimeConstLev',TimeConstLev)
+              end if
            end if
-        end if
-        call read_var('UseAnomResist',UseAnomResist)
-        if (UseAnomResist) then
-           call read_var('Eta0AnomResist',   Eta0AnomResist)
-           call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
-           call read_var('jCritResist',      jCritResist)
+           call read_var('UseAnomResist',UseAnomResist)
+           if (UseAnomResist) then
+              call read_var('Eta0AnomResist',   Eta0AnomResist)
+              call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
+              call read_var('jCritResist',      jCritResist)
+           end if
         end if
         !                                               ^CFG END DISSFLUX
      case("#SAVERESTART")
