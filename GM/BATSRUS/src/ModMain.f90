@@ -13,7 +13,7 @@ Module ModMain
   !\
   ! Version of BATSRUS
   !/
-  real :: CodeVersion = 7.73, CodeVersionRead = -1.0
+  real :: CodeVersion = 7.80, CodeVersionRead = -1.0
 
   !\
   ! Standalone and component information

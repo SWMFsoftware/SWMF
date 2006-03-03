@@ -205,6 +205,23 @@ subroutine read_restart_file
        trim(NameRestartInDir)//'blk',&
        iBlockRestartALL_A(global_block_number(globalBLK)),&
        restart_ext
+  if(CodeVersion >= 7.80 .and. &
+             iBlockRestartALL_A(global_block_number(globalBLK)) > 99999)then
+     if     (iBlockRestartALL_A(global_block_number(globalBLK)) < 1000000 )then
+        write(filename,'(a,i6.6,a)') &
+             trim(NameRestartInDir)//'blk',&
+             iBlockRestartALL_A(global_block_number(globalBLK)),&
+             restart_ext
+     elseif (iBlockRestartALL_A(global_block_number(globalBLK)) < 10000000)then
+        write(filename,'(a,i7.7,a)') &
+             trim(NameRestartInDir)//'blk',&
+             iBlockRestartALL_A(global_block_number(globalBLK)),&
+             restart_ext
+     else
+        call stop_mpi(NameSub// &
+             ' not able to read more than 9,999,999 blocks')
+     end if
+  end if
 
   open(unit_tmp, file=filename, status='old', form='UNFORMATTED',&
        iostat = iError)
@@ -308,6 +325,7 @@ subroutine write_restart_file
   use ModIO
   implicit none
 
+  character (len=*), parameter :: NameSub='write_restart_file'
   character (len=4), Parameter :: restart_ext=".rst"
   integer::iVar
   !--------------------------------------------------------------------
@@ -319,6 +337,21 @@ subroutine write_restart_file
      write(filename,'(a,i5.5,a)') &
           trim(NameRestartOutDir)//'blk',&
           global_block_number(globalBLK),restart_ext
+     if(CodeVersion >= 7.80 .and. &
+                global_block_number(globalBLK) > 99999)then
+        if     (global_block_number(globalBLK) < 1000000 )then
+           write(filename,'(a,i6.6,a)') &
+                trim(NameRestartOutDir)//'blk',&
+                global_block_number(globalBLK),restart_ext
+        elseif (global_block_number(globalBLK) < 10000000)then
+           write(filename,'(a,i7.7,a)') &
+                trim(NameRestartOutDir)//'blk',&
+                global_block_number(globalBLK),restart_ext
+        else
+           call stop_mpi(NameSub// &
+                ' not able to write more than 9,999,999 blocks')
+        end if
+     end if
   end if
 
   open(unit_tmp, file=filename, status="replace", form='UNFORMATTED')
