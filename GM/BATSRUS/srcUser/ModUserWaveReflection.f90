@@ -19,13 +19,15 @@ module ModUser
 
   include 'user_module.h'
 
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: NameUserModule = &
        'WAVE REFLECTION, G. Toth'
 
+  logical :: IsSmooth = .false.
   real :: xLeft0 = 25.0, xRight0 = 30.0, cSoundX0 = 1.0
+  real :: pPerturb = 1.1, bPerturb = 0.0
   real :: DistanceMin = 1.0
-  real :: xLeft, xRight, cSoundX, Ux
+  real :: xLeft, xRight, cSoundX, Ux, CosSlope, SinSlope
 
 contains
 
@@ -43,11 +45,17 @@ contains
        select case(NameCommand)
        case("#DISTANCE")
           call read_var('DistanceMin',DistanceMin)
+       case("#PERTURBATION")
+          call read_var('xLeft0'  ,xLeft0)
+          call read_var('xRight0' ,xRight0)
+          call read_var('pPerturb',pPerturb)
+          call read_var('bPerturb',bPerturb)
+          call read_var('IsSmooth',IsSmooth)
        case('#USERINPUTEND')
           EXIT
        case default
           if(iProc==0) call stop_mpi( &
-               'read_inputs: unrecognized command: '//NameCommand)
+               'user_read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
   end subroutine user_read_inputs
@@ -59,18 +67,18 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModAdvance, ONLY: Ux_
     use ModPhysics, ONLY: ShockSlope, Shock_Lstate
-
-    real :: CosSlope
+    !--------------------------------------------------------------------------
+    ! Calculate and store the cos and sin of the shock slope
+    CosSlope = cos(atan(ShockSlope))
+    SinSlope = sin(atan(ShockSlope))
 
     ! Rotate pressure perturbation parameters
-    CosSlope = cos(atan(ShockSlope))
     xLeft   = xLeft0 /CosSlope
     xRight  = xRight0/CosSlope
 
-    ! Also fix the sound speed projected to the X axis
+    ! Project the sound and bulk speeds to the X axis
     cSoundX = cSoundX0/CosSlope
-
-    Ux = Shock_Lstate(Ux_)/CosSlope
+    Ux      = Shock_Lstate(Ux_)/CosSlope
 
     if(iProc==0)then
        write(*,*)'user_init_session: ShockSlope  =',ShockSlope
@@ -83,70 +91,107 @@ contains
   !=====================================================================
 
   subroutine user_set_ics
+
     use ModMain,     ONLY: nI, nJ, nK, globalBLK, nBlock
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
-    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, P_, Bx_, By_
-    use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, g
+    use ModAdvance,  ONLY: State_VGB, &
+         Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
+    use ModPhysics,  ONLY: ShockSlope, Shock_Lstate, Shock_Rstate, g
+    use ModNumConst, ONLY: cPi
 
     real :: Potential_G(-1:nI+2,-1:nJ+2)
-    real, parameter :: pPerturb = 1.1
-    real :: SinSlope, CosSlope, pTotal
+    real :: xRot_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: Perturb_G(-1:nI+2,-1:nJ+2,-1:nK+2)
+    real :: pTotal
     integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
     iBlock = globalBLK
 
-    if(ShockSlope == 0.0)then
-       ! Perturb pressure and return
-       where(     x_BLK(:,:,:,iBlock) >= xLeft0 &
-            .and. x_BLK(:,:,:,iBlock) <= xRight0) &
-            State_VGB(P_,:,:,:,iBlock)=pPerturb*State_VGB(P_,:,:,:,iBlock)
-       RETURN
-    endif
+    ! Redo rotated state so that div B = 0 if necessary
+    if(ShockSlope /= 0.0 .and. .not. IsSmooth)then
+       ! Store total pressure
+       pTotal = State_VGB(P_,1,1,1,iBlock) + &
+            0.5*(State_VGB(Bx_,1,1,1,iBlock)**2 &
+            +    State_VGB(By_,1,1,1,iBlock)**2 )
 
-    ! Store total pressure
-    pTotal = State_VGB(P_,1,1,1,iBlock) + &
-         0.5*(State_VGB(Bx_,1,1,1,iBlock)**2 &
-         +    State_VGB(By_,1,1,1,iBlock)**2 )
+       ! Calculate rotated magnetic field from rotated vector potential
+       ! Original vector potential: A_z = Bx*y - By*x (both for x<0 and x>0)
+       ! Rotated  vector potential: A_z = Bx*(Cos*y-Sin*x)-By*(Cos*x+Sin*y)
 
-    ! Calculate rotated magnetic field
-    ! Original vector potential: A_z = 0.1*y - 100*min(0,x)
-    ! Rotated  vector potential: A_z = 0.1*(Cos*y-Sin*x)-100*min(0,Cos*x+Sin*y)
+       Potential_G = &
+            Shock_Lstate(Bx_)* &
+            (CosSlope*Y_BLK(:,:,1,iBlock)-SinSlope*x_BLK(:,:,1,iBlock)) &
+            -Shock_Lstate(By_)*min(0., &
+            CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock)) &
+            -Shock_Rstate(By_)*max(0., &
+            CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock))
 
-    CosSlope = cos(atan(ShockSlope))
-    SinSlope = sin(atan(ShockSlope))
+       ! B = curl A so Bx = dA_z/dy and By = -dAz/dx
+       do j=1,nJ; do i=1,nI
+          State_VGB(Bx_,i,j,:,iBlock) = &
+               +(Potential_G(i,j+1)-Potential_G(i,j-1)) / (2*Dy_BLK(iBlock))
+          State_VGB(By_,i,j,:,iBlock) = &
+               -(Potential_G(i+1,j)-Potential_G(i-1,j)) / (2*Dx_BLK(iBlock))
+       end do; end do
 
-    Potential_G = &
-         Shock_Lstate(Bx_)* &
-         (CosSlope*Y_BLK(:,:,1,iBlock)-SinSlope*x_BLK(:,:,1,iBlock)) &
-         -Shock_Lstate(By_)*min(0., &
-         CosSlope*x_BLK(:,:,1,iBlock) + SinSlope*Y_BLK(:,:,1,iBlock))
+       ! Recalculate pressure
+       State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = pTotal - &
+            0.5*(State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
+            +    State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 )
 
-    ! B = curl A so Bx = dA_z/dy and By = -dAz/dx
-    do j=1,nJ; do i=1,nI
-       State_VGB(Bx_,i,j,:,iBlock) = &
-            +(Potential_G(i,j+1)-Potential_G(i,j-1)) / (2*Dy_BLK(iBlock))
-       State_VGB(By_,i,j,:,iBlock) = &
-            -(Potential_G(i+1,j)-Potential_G(i-1,j)) / (2*Dx_BLK(iBlock))
-    end do; end do
+       ! Recalculate momentum and density
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) * &
+               g * State_VGB(P_,i,j,k,iBlock) / State_VGB(Rho_,i,j,k,iBlock)
 
-    ! Recalculate pressure
-    State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = pTotal - &
-         0.5*(State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 &
-         +    State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 )
+          State_VGB(Rho_,i,j,k,iBlock) = g * State_VGB(P_,i,j,k,iBlock)
+       end do; end do; end do
+    end if
 
-    ! Recalculate momentum and density
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) * &
-            g * State_VGB(P_,i,j,k,iBlock) / State_VGB(Rho_,i,j,k,iBlock)
+    ! Apply perturbation
+    xRot_G = x_BLK(:,:,:,iBlock)+ShockSlope*Y_BLK(:,:,:,iBlock)
 
-       State_VGB(Rho_,i,j,k,iBlock) = g * State_VGB(P_,i,j,k,iBlock)
-    end do; end do; end do
+    if(IsSmooth)then
+       ! Smooth perturbation with sin^2 profile starting at xRot = xLeft
+       Perturb_G = sin( cPi*(xRot_G - xLeft) / (xRight-xLeft))**2
 
-    ! Perturb pressure
-    where(     x_BLK(:,:,:,iBlock) >= xLeft -ShockSlope*Y_BLK(:,:,:,iBlock) &
-         .and. x_BLK(:,:,:,iBlock) <= xRight-ShockSlope*Y_BLK(:,:,:,iBlock)) &
-         State_VGB(P_,:,:,:,iBlock) = pPerturb*State_VGB(P_,:,:,:,iBlock)
+       where(xRot_G  >= xLeft .and. xRot_G <= xRight)
+
+          ! Perturb By, Bz and P with a smooth perturbation
+          State_VGB(By_,:,:,:,iBlock) = State_VGB(By_,:,:,:,iBlock) &
+               + bPerturb * Perturb_G
+
+          State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
+               + bPerturb * Perturb_G
+
+          State_VGB(P_,:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock) &
+               + pPerturb * Perturb_G
+
+          ! Compress density adiabatically. Keep velocities constant.
+          State_VGB(Ux_,:,:,:,iBlock)= &
+                  State_VGB(RhoUx_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+          State_VGB(Uy_,:,:,:,iBlock)= &
+                  State_VGB(RhoUy_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+          State_VGB(Uz_,:,:,:,iBlock)= &
+                  State_VGB(RhoUz_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
+
+          State_VGB(Rho_,:,:,:,iBlock)=Shock_Rstate(Rho_)* &
+                  (State_VGB(P_,:,:,:,iBlock)/Shock_Rstate(p_))**(1./g)
+
+          State_VGB(RhoUx_,:,:,:,iBlock)= &
+               State_VGB(Ux_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
+          State_VGB(RhoUy_,:,:,:,iBlock)= &
+               State_VGB(Uy_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
+          State_VGB(RhoUz_,:,:,:,iBlock)= &
+               State_VGB(Uz_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
+       end where
+    else
+       ! Apply a discontinuous perturbation to pressure
+       where(xRot_G  >= xLeft .and. xRot_G <= xRight)
+          State_VGB(P_,:,:,:,iBlock) = pPerturb*State_VGB(P_,:,:,:,iBlock)
+       end where
+    end if
 
   end subroutine user_set_ics
 
