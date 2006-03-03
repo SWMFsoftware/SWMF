@@ -23,7 +23,14 @@ module ModImplicit
   ! Logical determining if the scheme is part or full implicit (spatially)
   ! and whether we make it fully conservative
   !/
-  logical :: UsePartImplicit, UseFullImplicit, UseConservativeImplicit
+  logical :: UseFullImplicit          ! Use fully implicit scheme (all blocks)
+  logical :: UsePartImplicit          ! Use part implicit scheme (some blocks)
+  logical :: UsePartImplicit2=.false. ! Use temporally 2nd order part implicit
+  !                                     by doing explicit predictor step
+  !                                     in all the blocks to get expl/impl flux
+  logical :: UseConservativeImplicit  ! Do a conservative update at the end
+  !                                     of the iterative solver 
+  !                                     (not recommended)
 
   !\
   ! Parameters for selecting implicit blocks
