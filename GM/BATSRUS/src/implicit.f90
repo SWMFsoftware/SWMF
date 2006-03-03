@@ -115,6 +115,28 @@ subroutine advance_impl
   call set_oktest('implicit',oktest,oktest_me) 
   if(oktest_me) write(*,*)NameSub,' starting at step=',n_step
 
+  ! Initialize some variables in ModImplicit
+  call implicit_init
+
+  ! Get initial iterate from current state
+  call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,w_k)
+  if(oktest_me)write(*,*)NameSub,': nImplBLK=',nImplBLK
+  if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,': w_k=',&
+       w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
+
+  wnrm(1:nw)=-1.0
+  ! Global norm of current w_(k=0) = w_n
+  do iw=1,nw
+     local_wnrm(iw)=sum(w_k(1:nI,1:nJ,1:nK,iw,1:nImplBLK)**2)
+  end do
+  call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
+
+  call MPI_allreduce(nimpl,nimpl_total, 1,MPI_INTEGER,MPI_SUM,iComm,iError)
+  wnrm=sqrt(wnrm/(nimpl_total/nw))
+  where(wnrm < smalldouble) wnrm =1.0
+
+  if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm(bat2vac)
+
 
   UseUpdateCheckOrig = UseUpdateCheck
   UseUpdateCheck = .false.
@@ -142,22 +164,25 @@ subroutine advance_impl
         end do
      end if
 
-     ! Select unusedBLK = not explicit blocks
-     iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     UnusedBlock_BP(1:nBlockMax,:) = &
-          iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
-     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     if(.not.UsePartImplicit2)then
+        ! Select unusedBLK = not explicit blocks
+        iNewDecomposition=mod(iNewDecomposition+1, 10000)
+        UnusedBlock_BP(1:nBlockMax,:) = &
+             iTypeAdvance_BP(1:nBlockMax,:) /= ExplBlock_
+        UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     end if
 
-     ! advance explicit blocks, calc timestep but do not exchange messages
-     ! after the last stage (it may exchange messages in the first stage)
-     if(.not.UseDtFixed)cfl=explCFL
+     ! advance explicit blocks, calc timestep 
+     if(.not.UseDtFixed)cfl=ExplCfl
      call advance_expl(.true.) 
 
-     ! update ghost cells for the implicit blocks to time level n+1
-     iNewDecomposition=mod(iNewDecomposition+1, 10000)
-     UnusedBlock_BP(1:nBlockMax,:) = &
-          iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
-     UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     if(.not.UsePartImplicit2)then
+        ! update ghost cells for the implicit blocks to time level n+1
+        iNewDecomposition=mod(iNewDecomposition+1, 10000)
+        UnusedBlock_BP(1:nBlockMax,:) = &
+             iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
+        UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
+     end if
 
      call exchange_messages
 
@@ -174,28 +199,6 @@ subroutine advance_impl
 
   ! Use implicit time step
   if(.not.UseDtFixed)cfl=implCFL
-
-  ! Initialize some variables in ModImplicit
-  call implicit_init
-
-  ! Get initial iterate from current state
-  call explicit2implicit(0,nI+1,0,nJ+1,0,nK+1,w_k)
-  if(oktest_me)write(*,*)NameSub,': nImplBLK=',nImplBLK
-  if(oktest_me.and.nImplBLK>0)write(*,*)NameSub,': w_k=',&
-       w_k(Itest,Jtest,Ktest,VARtest,implBLKtest)
-
-  wnrm(1:nw)=-1.0
-  ! Global norm of current w_(k=0) = w_n
-  do iw=1,nw
-     local_wnrm(iw)=sum(w_k(1:nI,1:nJ,1:nK,iw,1:nImplBLK)**2)
-  end do
-  call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
-
-  call MPI_allreduce(nimpl,nimpl_total, 1,MPI_INTEGER,MPI_SUM,iComm,iError)
-  wnrm=sqrt(wnrm/(nimpl_total/nw))
-  where(wnrm < smalldouble) wnrm =1.0
-
-  if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm(bat2vac)
 
   if(UseDtFixed)then
      if(oktest_me)write(*,*)NameSub,': call getdt_courant'
@@ -427,7 +430,11 @@ subroutine advance_impl
   ! Make explicit part available again for partially explicit scheme
   if(UsePartImplicit)then
      ! Restore unusedBLK
-     iNewDecomposition=mod(iNewDecomposition-3, 10000)
+     if(.not.UsePartImplicit2)then
+        iNewDecomposition=mod(iNewDecomposition-3, 10000)
+     else
+        iNewDecomposition=mod(iNewDecomposition-1, 10000)
+     end if
      UnusedBlock_BP(1:nBlockMax,:) = &
           iTypeAdvance_BP(1:nBlockMax,:) == SkippedBlock_
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
