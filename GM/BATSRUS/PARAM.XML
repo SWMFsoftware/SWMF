@@ -1317,6 +1317,27 @@ r		TypeImplCrit (dt or r or test)
 ! DtFixed must be defined in the #FIXEDTIMESTEP command.
 </command>
 
+<command name="PARTIMPL" alias="PARTIMPLICIT">
+	<parameter name="UsePartImplicit2" type="logical" default="F" />
+
+#PARTIMPLICIT
+T		UsePartImplicit2
+
+If UsePartImplicit2 is set to true, the explicit scheme is executed in all
+blocks before the implicit scheme is applied in the implicit blocks. This way
+the fluxes at the explicit/implicit interface are second order accurate,
+and the overall part implicit scheme will be fully second order in time.
+When this switch is false, the explicit/implicit interface fluxes are only
+first order accurate in time.
+A potential drawback of the second order scheme is that the explicit scheme 
+may crash in the implicit blocks. This could be avoided with a more 
+sophisticated implementation. There may also be a slight speed penalty, 
+because the explicit scheme is applied in more blocks. 
+
+The default is UsePartImplicit2 = false for now, which is safe and 
+backward compatible.
+</command>
+
 <command name="IMPLSTEP" alias="IMPLICITSTEP">
 	<parameter name="ImplCoeff" type="real" min="0" max="1" default="1"/>
 	<parameter name="UseBdf2"   type="logical" default="T" />
@@ -1327,16 +1348,26 @@ r		TypeImplCrit (dt or r or test)
 F			UseBdf2
 F			UseSourceImpl
 
-! For steady state run the default values are shown. For second order
-! time accurate run the default is UseBdf2=T, since
-! BDF2 is a 3 level second order stable implicit scheme.
-! This can be overwritten with #IMPLSTEP after the #TIMESTEPPING command.
-! For example one could use the 2-level trapezoid scheme with
-! ImplCoeff=0.5 and UseBDF2=F. ImplCoeff is the coefficient for $R^{n+1}$.
-! For BDF2 scheme ImplCoeff is used in the first time step only, later on it
-! is overwritten by the BDF2 scheme.
-! UseSourceImpl true means that the preconditioner should take point
-! source terms into account. Default is false.
+The ImplCoeff is the beta coefficient in front of the implicit terms
+for the two-level implicit scheme.
+The UseBdf2 parameter decides if the 3 level BDF2 scheme is used or 
+a 2 level scheme.
+UseSourceImpl true means that the preconditioner should take point
+source terms into account. 
+
+For steady state run the default is the backward Euler scheme, which 
+corresponds to ImplCoeff=1.0 and UsedBdf2=F.
+For second order time accurate run the default is UseBdf2=T, since
+BDF2 is a 3 level second order in time and stable implicit scheme.
+In both cases the default value for UseSourceImpl is false.
+
+The default values can be overwritten with #IMPLSTEP, but only
+after the #TIMESTEPPING command!
+For example one could use the 2-level trapezoid scheme with
+ImplCoeff=0.5 and UseBDF2=F as shown in the example above. 
+The BDF2 scheme determines the coefficient for the implicit terms itself, 
+but ImplCoeff is still used in the first time step and after AMR-s, when
+the code switches back to the two-level scheme for one time step.
 </command>
 
 <command name="IMPLSCHEME" alias="IMPLICITSCHEME">
