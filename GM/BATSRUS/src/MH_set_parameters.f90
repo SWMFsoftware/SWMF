@@ -358,6 +358,8 @@ subroutine MH_set_parameters(TypeAction)
            end if
            ImplCritType='R'
         end select
+     case("#PARTIMPL", "#PARTIMPLICIT")
+        call read_var('UsePartImplicit2',UsePartImplicit2)
      case("#IMPLSCHEME", "#IMPLICITSCHEME")
         call read_var('nOrderImpl',nORDER_impl)
         call read_var('TypeFluxImpl',FluxTypeImpl)
