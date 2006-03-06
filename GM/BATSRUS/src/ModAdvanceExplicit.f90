@@ -154,8 +154,8 @@ subroutine advance_expl(DoCalcTimestep)
 
         if(UseConstrainB .and. iStage==nStage)then    !^CFG IF CONSTRAINB BEGIN
            call timing_start('constrain_B')
-           call get_VxB
-           call bound_VxB
+           call get_VxB(GlobalBlk)
+           call bound_VxB(GlobalBlk)
            call timing_stop('constrain_B')
         end if                                        !^CFG END CONSTRAINB
 
@@ -186,11 +186,11 @@ subroutine advance_expl(DoCalcTimestep)
         call correct_VxB
 
         ! Update face centered and cell centered magnetic fields
-        do globalBLK=1,nBlockMax
-           if(unusedBLK(globalBLK))CYCLE
-           call constrain_B
-           call Bface2Bcenter
-!!$           call correctP
+        do iBlock = 1, nBlock
+           if(unusedBLK(iBlock))CYCLE
+           call constrain_B(iBlock)
+           call Bface2Bcenter(iBlock)
+!!$           call correctP(iBlock)
         end do
         call timing_stop('constrain_B')
         if(DoTestMe)write(*,*)NameSub,' done constrain B'
