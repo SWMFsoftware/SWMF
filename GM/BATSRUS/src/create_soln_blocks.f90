@@ -167,15 +167,15 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
      do icube = 1, 8
         if (iProc == local_cube(icube)) then
 
-           globalBLK=local_cubeBLK(icube)
+           iBLK=local_cubeBLK(icube)
 
-           if(UseConstrainB)call Bface2Bcenter !^CFG IF CONSTRAINB
+           if(UseConstrainB)call Bface2Bcenter(iBLK) !^CFG IF CONSTRAINB
 
-           call fix_soln_block(globalBLK)
+           call fix_soln_block(iBLK)
 
-           call correctE
+           call calc_energy(iBLK)
 
-           call calc_other_soln_vars(globalBLK)
+           call calc_other_soln_vars(iBLK)
         end if
      end do
   else
@@ -566,13 +566,11 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
      if (iProc == remaining_PE) then
 
-        globalBLK=remaining_BLK
-
-        if(UseConstrainB)call Bface2Bcenter  !^CFG IF CONSTRAINB
+        if(UseConstrainB)call Bface2Bcenter(remaining_BLK)  !^CFG IF CONSTRAINB
 
         call fix_soln_block(remaining_BLK)
 
-        call correctE
+        call calc_energy(remaining_BLK)
 
         call calc_other_soln_vars(remaining_BLK)
      end if
@@ -799,6 +797,6 @@ subroutine calc_other_soln_vars(iBLK)
 
   qheat_BLK(:,:,:,iBLK) = 0.00
 
-  if(UseUserHeating)     call user_heat_source
+  if(UseUserHeating) call user_heat_source
 
 end subroutine calc_other_soln_vars
