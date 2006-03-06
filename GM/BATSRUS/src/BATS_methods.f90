@@ -119,8 +119,9 @@ contains
   !===========================================================================
 
   subroutine set_initial_conditions
-    use ModUser, ONLY: user_initial_perturbation
-    use ModIO,   ONLY: restart, restart_Bface
+    use ModUser,        ONLY: user_initial_perturbation
+    use ModIO,          ONLY: restart
+    use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
 
     !\
