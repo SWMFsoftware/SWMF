@@ -461,8 +461,8 @@ contains
   ! Note that in most cases E (energy) and P (pressure) should both be loaded.
   !/
   subroutine user_initial_perturbation
-    use ModMain,      ONLY: nI,nJ,nK,nBLK,globalBLK,PROCtest,        &
-         BLKtest,unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
+    use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
+         unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
     use ModVarIndexes,ONLY:&
                                 !EnergyRL_ ,&  !^CFG UNCOMMENT IF ALWAVES
@@ -500,11 +500,7 @@ contains
     !/
     !---------------------------------------------------------------------------
     !
-    if (iProc==PROCtest.and.globalBLK==BLKtest) then
-       call set_oktest('user_initial_perturbation',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    call set_oktest('user_initial_perturbation',oktest,oktest_me)
     !\
     ! Initialize some auxilary variables::
     !/
@@ -544,8 +540,7 @@ contains
        !\
        ! Update the total energy::
        !/
-       globalBLK=iBLK
-       call correctE
+       call calc_energy(iBLK)
     end do
     !\
     ! Write out some statistics::
@@ -1045,7 +1040,7 @@ contains
        !      State_VGB(P_,i,j,k,iBlock)*(cOne   /&    !^CFG UNCOMMENT IF ALWAVES
        !      (GammaCell-cOne)-inv_gm1)                !^CFG UNCOMMENT IF ALWAVES
     end do; end do; end do
-    call correctE
+    call calc_energy(iBlock)
     !\
     ! End update of pressure and relaxation energy::
     !/
