@@ -4,8 +4,8 @@ subroutine GM_set_param(CompInfo, TypeAction)
 
   use CON_comp_info
   use ModProcMH
-  use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, &
-       NamePlotDir, NameRestartInDir, NameRestartOutDir
+  use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
+  use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
   use ModMain, ONLY : CodeVersion, NameThisComp, &
        time_accurate, StartTime, iStartTime_I, &
        dt_UpdateB0, DoUpdateB0, UseRotatingBc
