@@ -11,45 +11,47 @@ subroutine OPTION_CONSTRAIN_B(on,name)
 
 end subroutine OPTION_CONSTRAIN_B
 
-subroutine get_VxB
+subroutine get_VxB(iBlock)
 
   ! Calculate VxB from fluxes following Balsara and Spicer
 
-  use ModMain, ONLY : nI,nJ,nK,globalBLK,test_string,iTest,jTest,kTest,BLKtest
+  use ModMain, ONLY : nI,nJ,nK,test_string,iTest,jTest,kTest,BLKtest
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
   use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK
   use ModCT, ONLY : VxB_x,VxB_y,VxB_z
   implicit none
 
+  integer, intent(in) :: iBlock
+
   logical :: oktest, oktest_me
   !-------------------------------------------------------------------------
-  if(globalBLK==BLKtest)then
+  if(iBlock==BLKtest)then
      call set_oktest('get_vxb',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   end if
 
   ! VxB_x=(fy+fy-fz-fz)/4
-  VxB_x(1:nI,1:nJ+1,1:nK+1,globalBLK)= 0.25*(                &
+  VxB_x(1:nI,1:nJ+1,1:nK+1,iBlock)= 0.25*(                &
           (Flux_VY(Bz_,1:nI,1:nJ+1,0:nK  )                     &
-          +Flux_VY(Bz_,1:nI,1:nJ+1,1:nK+1))/fAy_BLK(globalBLK) &
+          +Flux_VY(Bz_,1:nI,1:nJ+1,1:nK+1))/fAy_BLK(iBlock) &
          -(Flux_VZ(By_,1:nI,0:nJ  ,1:nK+1)                     &
-          +Flux_VZ(By_,1:nI,1:nJ+1,1:nK+1))/fAz_BLK(globalBLK))
+          +Flux_VZ(By_,1:nI,1:nJ+1,1:nK+1))/fAz_BLK(iBlock))
 
   ! VxB_y=(fz+fz-fx-fx)/4
-  VxB_y(1:nI+1,1:nJ,1:nK+1,globalBLK)= 0.25*(                &
+  VxB_y(1:nI+1,1:nJ,1:nK+1,iBlock)= 0.25*(                &
           (Flux_VZ(Bx_,0:nI  ,1:nJ,1:nK+1)                     &
-          +Flux_VZ(Bx_,1:nI+1,1:nJ,1:nK+1))/fAz_BLK(globalBLK) &
+          +Flux_VZ(Bx_,1:nI+1,1:nJ,1:nK+1))/fAz_BLK(iBlock) &
          -(Flux_VX(Bz_,1:nI+1,1:nJ,0:nK  )                     &
-          +Flux_VX(Bz_,1:nI+1,1:nJ,1:nK+1))/fAx_BLK(globalBLK)) 
+          +Flux_VX(Bz_,1:nI+1,1:nJ,1:nK+1))/fAx_BLK(iBlock)) 
      
   ! VxB_z=(fx+fx-fy-fy)/4
-  VxB_z(1:nI+1,1:nJ+1,1:nK,globalBLK)= 0.25*(                &
+  VxB_z(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                &
           (Flux_VX(By_,1:nI+1,0:nJ  ,1:nK)                     &
-          +Flux_VX(By_,1:nI+1,1:nJ+1,1:nK))/fAx_BLK(globalBLK) &
+          +Flux_VX(By_,1:nI+1,1:nJ+1,1:nK))/fAx_BLK(iBlock) &
          -(Flux_VY(Bx_,0:nI  ,1:nJ+1,1:nK)                     &
-          +Flux_VY(Bx_,1:nI+1,1:nJ+1,1:nK))/fAy_BLK(globalBLK))
+          +Flux_VY(Bx_,1:nI+1,1:nJ+1,1:nK))/fAy_BLK(iBlock))
 
   if(oktest_me)then
      write(*,*)'get_vxb: final VxB (edge centered)'
@@ -65,12 +67,12 @@ end subroutine get_VxB
 
 !=============================================================================
 
-subroutine bound_VxB
+subroutine bound_VxB(iBlock)
 
   ! Apply boundary conditions on VxB 
 
   use ModSize
-  use ModMain, ONLY : globalBLK,TypeBc_I
+  use ModMain, ONLY : TypeBc_I
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
   use ModParallel, ONLY : NOBLK,&
@@ -80,79 +82,81 @@ subroutine bound_VxB
   use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
   implicit none
 
+  integer, intent(in) :: iBlock
+
   integer, parameter :: VxB_BC_order=1
 
   integer:: i,j,k
   !-------------------------------------------------------------------------
 
   ! Apply continuous or fixed boundary conditions at outer boundaries
-  if(neiLeast(globalBLK)==NOBLK)then
+  if(neiLeast(iBlock)==NOBLK)then
      do k=1,nK+1; do j=1,nJ
-        VxB_y(1,j,k,globalBLK) = +Flux_VZ(Bx_,1,j,k)/fAz_BLK(globalBLK)
+        VxB_y(1,j,k,iBlock) = +Flux_VZ(Bx_,1,j,k)/fAz_BLK(iBlock)
      end do; end do
      do k=1,nK; do j=1,nJ+1
-        VxB_z(1,j,k,globalBLK) = -Flux_VY(Bx_,1,j,k)/fAy_BLK(globalBLK)
+        VxB_z(1,j,k,iBlock) = -Flux_VY(Bx_,1,j,k)/fAy_BLK(iBlock)
      end do; end do
   end if
-  if(neiLwest(globalBLK)==NOBLK)then
+  if(neiLwest(iBlock)==NOBLK)then
      ! fixed inflow!
-     !VxB_x(nI  ,:,:,globalBLK)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
+     !VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
      select case(TypeBc_I(west_))
      case('inflow','vary','fixed')
-        VxB_y(nI+1,:,:,globalBLK)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
-        VxB_z(nI+1,:,:,globalBLK)=SW_Ux*SW_By-SW_Uy*SW_Bx
+        VxB_y(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
+        VxB_z(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx
      case default
         ! continuous
         do k=1,nK+1; do j=1,nJ
-           VxB_y(nI+1,j,k,globalBLK) = +Flux_VZ(Bx_,nI,j,k)/fAz_BLK(globalBLK)
+           VxB_y(nI+1,j,k,iBlock) = +Flux_VZ(Bx_,nI,j,k)/fAz_BLK(iBlock)
         end do; end do
         do k=1,nK; do j=1,nJ+1
-           VxB_z(nI+1,j,k,globalBLK) = -Flux_VY(Bx_,nI,j,k)/fAy_BLK(globalBLK)
+           VxB_z(nI+1,j,k,iBlock) = -Flux_VY(Bx_,nI,j,k)/fAy_BLK(iBlock)
         end do; end do
      end select
   end if
-  if(neiLsouth(globalBLK)==NOBLK)then
+  if(neiLsouth(iBlock)==NOBLK)then
      do k=1,nK+1; do i=1,nI
-        VxB_x(i,1,k,globalBLK) = -Flux_VZ(By_,i,1,k)/fAz_BLK(globalBLK)
+        VxB_x(i,1,k,iBlock) = -Flux_VZ(By_,i,1,k)/fAz_BLK(iBlock)
      end do; end do
      do k=1,nK; do i=1,nI+1
-        VxB_z(i,1,k,globalBLK) = +Flux_VX(By_,i,1,k)/fAx_BLK(globalBLK)
+        VxB_z(i,1,k,iBlock) = +Flux_VX(By_,i,1,k)/fAx_BLK(iBlock)
      end do; end do
   end if
-  if(neiLnorth(globalBLK)==NOBLK)then
+  if(neiLnorth(iBlock)==NOBLK)then
      do k=1,nK+1; do i=1,nI
-        VxB_x(i,nJ+1,k,globalBLK) = -Flux_VZ(By_,i,nJ,k)/fAz_BLK(globalBLK)
+        VxB_x(i,nJ+1,k,iBlock) = -Flux_VZ(By_,i,nJ,k)/fAz_BLK(iBlock)
      end do; end do
      do k=1,nK; do i=1,nI+1
-        VxB_z(i,nJ+1,k,globalBLK) = +Flux_VX(By_,i,nJ,k)/fAx_BLK(globalBLK)
+        VxB_z(i,nJ+1,k,iBlock) = +Flux_VX(By_,i,nJ,k)/fAx_BLK(iBlock)
      end do; end do
   end if
-  if(neiLbot(globalBLK)==NOBLK)then
+  if(neiLbot(iBlock)==NOBLK)then
      do j=1,nJ+1; do i=1,nI
-        VxB_x(i,j,1,globalBLK) = +Flux_VY(Bz_,i,j,1)/fAy_BLK(globalBLK)
+        VxB_x(i,j,1,iBlock) = +Flux_VY(Bz_,i,j,1)/fAy_BLK(iBlock)
      end do; end do
      do j=1,nJ; do i=1,nI+1
-        VxB_y(i,j,1,globalBLK) = -Flux_VX(Bz_,i,j,1)/fAx_BLK(globalBLK)
+        VxB_y(i,j,1,iBlock) = -Flux_VX(Bz_,i,j,1)/fAx_BLK(iBlock)
      end do; end do
   end if
-  if(neiLtop(globalBLK)==NOBLK)then
+  if(neiLtop(iBlock)==NOBLK)then
      do j=1,nJ+1; do i=1,nI
-        VxB_x(i,j,nK+1,globalBLK) = +Flux_VY(Bz_,i,j,nK)/fAy_BLK(globalBLK)
+        VxB_x(i,j,nK+1,iBlock) = +Flux_VY(Bz_,i,j,nK)/fAy_BLK(iBlock)
      end do; end do
      do j=1,nJ; do i=1,nI+1
-        VxB_y(i,j,nK+1,globalBLK) = -Flux_VX(Bz_,i,j,nK)/fAx_BLK(globalBLK)
+        VxB_y(i,j,nK+1,iBlock) = -Flux_VX(Bz_,i,j,nK)/fAx_BLK(iBlock)
      end do; end do
   end if
 
   !!! Set VxB to zero on the cell edges of the body cells !!!
-  if(body_BLK(globalBLK))then
+  if(body_BLK(iBlock))then
      ! Apply inner boundary condition on the electric field
      ! Make sure that edges belonging to body ghost cells are also corrected
      do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-        if(.not.true_cell(i,j,k,globalBLK))then
-           VxB_x(i,j:j+1,k:k+1,globalBLK)=0.0
-           VxB_y(i:i+1,j,k:k+1,globalBLK)=0.0
-           VxB_z(i:i+1,j:j+1,k,globalBLK)=0.0
+        if(.not.true_cell(i,j,k,iBlock))then
+           VxB_x(i,j:j+1,k:k+1,iBlock)=0.0
+           VxB_y(i:i+1,j,k:k+1,iBlock)=0.0
+           VxB_z(i:i+1,j:j+1,k,iBlock)=0.0
         end if
      end do; end do; end do
   end if
@@ -161,20 +165,22 @@ end subroutine bound_VxB
 
 !=============================================================================
 
-subroutine constrain_B
+subroutine constrain_B(iBlock)
 
   ! Use CT scheme for updating the B field so that div B is conserved
 
   use ModSize
-  use ModMain, ONLY : globalBLK,dt,BLKtest,iTest,jTest,kTest
+  use ModMain, ONLY : Dt,BLKtest,iTest,jTest,kTest
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK
   use ModCT, ONLY : VxB_x,VxB_y,VxB_z,Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
 
+  integer, intent(in) :: iBlock
+
   real :: qdt
   logical :: oktest,oktest_me
   !-------------------------------------------------------------------------
-  if(globalBLK==BLKtest)then
+  if(iBlock==BLKtest)then
      call set_oktest('constrain_b',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
@@ -194,33 +200,33 @@ subroutine constrain_B
   end if
 
   ! dBx/dt=d(VxB_z)/dy-d(VxB_y)/dz
-  Bxface_BLK(1:nI+1,1:nJ,1:nK,globalBLK)=                &
-       Bxface_BLK(1:nI+1,1:nJ,1:nK,globalBLK) + qdt*(    &
-       +(VxB_z(1:nI+1,2:nJ+1,1:nK  ,globalBLK)           &
-        -VxB_z(1:nI+1,1:nJ  ,1:nK  ,globalBLK))          &
-                                                    /dy_BLK(globalBLK)  &
-       -(VxB_y(1:nI+1,1:nJ  ,2:nK+1,globalBLK)           &
-        -VxB_y(1:nI+1,1:nJ  ,1:nK  ,globalBLK))          &
-                                                    /dz_BLK(globalBLK))
+  Bxface_BLK(1:nI+1,1:nJ,1:nK,iBlock)=                &
+       Bxface_BLK(1:nI+1,1:nJ,1:nK,iBlock) + qdt*(    &
+       +(VxB_z(1:nI+1,2:nJ+1,1:nK  ,iBlock)           &
+        -VxB_z(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
+                                                    /dy_BLK(iBlock)  &
+       -(VxB_y(1:nI+1,1:nJ  ,2:nK+1,iBlock)           &
+        -VxB_y(1:nI+1,1:nJ  ,1:nK  ,iBlock))          &
+                                                    /dz_BLK(iBlock))
   ! dBy/dt=d(VxB_x)/dz-d(VxB_z)/dx
-  Byface_BLK(1:nI,1:nJ+1,1:nK,globalBLK)=                &
-       Byface_BLK(1:nI,1:nJ+1,1:nK,globalBLK) + qdt*(    &
-       +(VxB_x(1:nI  ,1:nJ+1,2:nK+1,globalBLK)           &
-        -VxB_x(1:nI  ,1:nJ+1,1:nK  ,globalBLK))          &
-                                                    /dz_BLK(globalBLK)  &
-       -(VxB_z(2:nI+1,1:nJ+1,1:nK  ,globalBLK)           &
-        -VxB_z(1:nI  ,1:nJ+1,1:nK  ,globalBLK))          &
-                                                    /dx_BLK(globalBLK))
+  Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock)=                &
+       Byface_BLK(1:nI,1:nJ+1,1:nK,iBlock) + qdt*(    &
+       +(VxB_x(1:nI  ,1:nJ+1,2:nK+1,iBlock)           &
+        -VxB_x(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
+                                                    /dz_BLK(iBlock)  &
+       -(VxB_z(2:nI+1,1:nJ+1,1:nK  ,iBlock)           &
+        -VxB_z(1:nI  ,1:nJ+1,1:nK  ,iBlock))          &
+                                                    /dx_BLK(iBlock))
 
   ! dBz/dt=d(VxB_y)/dx-d(VxB_x)/dy
-  Bzface_BLK(1:nI,1:nJ,1:nK+1,globalBLK)=                &
-       Bzface_BLK(1:nI,1:nJ,1:nK+1,globalBLK) + qdt*(    &
-       +(VxB_y(2:nI+1,1:nJ  ,1:nK+1,globalBLK)           &
-        -VxB_y(1:nI  ,1:nJ  ,1:nK+1,globalBLK))          &
-                                                    /dx_BLK(globalBLK)  &
-       -(VxB_x(1:nI  ,2:nJ+1,1:nK+1,globalBLK)           &
-        -VxB_x(1:nI  ,1:nJ  ,1:nK+1,globalBLK))          &
-                                                    /dy_BLK(globalBLK))
+  Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock)=                &
+       Bzface_BLK(1:nI,1:nJ,1:nK+1,iBlock) + qdt*(    &
+       +(VxB_y(2:nI+1,1:nJ  ,1:nK+1,iBlock)           &
+        -VxB_y(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
+                                                    /dx_BLK(iBlock)  &
+       -(VxB_x(1:nI  ,2:nJ+1,1:nK+1,iBlock)           &
+        -VxB_x(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
+                                                    /dy_BLK(iBlock))
   if(oktest_me)then
      write(*,*)'constrain_b: final face centered B'
      write(*,*)'BxfaceL,R=',&
@@ -235,38 +241,39 @@ end subroutine constrain_B
 
 !==============================================================================
 
-subroutine Bface2Bcenter
+subroutine Bface2Bcenter(iBlock)
 
   use ModSize
-  use ModMain, ONLY : globalBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell,body_BLK
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
 
+  integer, intent(in) :: iBlock
+
   !---------------------------------------------------------------------------
 
   ! average in direction x (b->B)
-  State_VGB(Bx_,1:nI,1:nJ,1:nK,globalBLK)= 0.5*(      &
-       Bxface_BLK(1:nI  ,1:nJ,1:nK,globalBLK)+ &
-       Bxface_BLK(2:nI+1,1:nJ,1:nK,globalBLK))
+  State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
+       Bxface_BLK(1:nI  ,1:nJ,1:nK,iBlock)+ &
+       Bxface_BLK(2:nI+1,1:nJ,1:nK,iBlock))
 
   ! average in direction y (b->B)
-  State_VGB(By_,1:nI,1:nJ,1:nK,globalBLK)= 0.5*(      &
-       Byface_BLK(1:nI,1:nJ  ,1:nK,globalBLK)+ &
-       Byface_BLK(1:nI,2:nJ+1,1:nK,globalBLK))
+  State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
+       Byface_BLK(1:nI,1:nJ  ,1:nK,iBlock)+ &
+       Byface_BLK(1:nI,2:nJ+1,1:nK,iBlock))
 
   ! average in direction z (b->B)
-  State_VGB(Bz_,1:nI,1:nJ,1:nK,globalBLK)= 0.5*(      &
-       Bzface_BLK(1:nI,1:nJ,1:nK  ,globalBLK)+ &
-       Bzface_BLK(1:nI,1:nJ,2:nK+1,globalBLK))
+  State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)= 0.5*(      &
+       Bzface_BLK(1:nI,1:nJ,1:nK  ,iBlock)+ &
+       Bzface_BLK(1:nI,1:nJ,2:nK+1,iBlock))
 
-  if(body_BLK(globalBLK))then
-     where(.not.true_cell(:,:,:,globalBLK))
-        State_VGB(Bx_,:,:,:,globalBLK)=0.0
-        State_VGB(By_,:,:,:,globalBLK)=0.0
-        State_VGB(Bz_,:,:,:,globalBLK)=0.0
+  if(body_BLK(iBlock))then
+     where(.not.true_cell(:,:,:,iBlock))
+        State_VGB(Bx_,:,:,:,iBlock)=0.0
+        State_VGB(By_,:,:,:,iBlock)=0.0
+        State_VGB(Bz_,:,:,:,iBlock)=0.0
      end where
   end if
 
@@ -274,14 +281,15 @@ end subroutine Bface2Bcenter
 
 !==============================================================================
 
-subroutine Bcenter2Bface
+subroutine Bcenter2Bface(iBlock)
 
   use ModSize
-  use ModMain, ONLY : globalBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
+
+  integer, intent(in) :: iBlock
 
   integer:: i,j,k
   !---------------------------------------------------------------------------
@@ -289,58 +297,59 @@ subroutine Bcenter2Bface
   ! Estimate BFace from Bcenter
 
   do k=1,nK; do j=1,nJ; do i=1,nI+1
-     BxFace_BLK(i,j,k,globalBLK)= 0.5*( &
-          State_VGB(Bx_,i-1,j,k,globalBLK)+ &
-          State_VGB(Bx_,i  ,j,k,globalBLK))
+     BxFace_BLK(i,j,k,iBlock)= 0.5*( &
+          State_VGB(Bx_,i-1,j,k,iBlock)+ &
+          State_VGB(Bx_,i  ,j,k,iBlock))
   end do; end do; end do
   do k=1,nK; do j=1,nJ+1; do i=1,nI
-     ByFace_BLK(i,j,k,globalBLK)= 0.5*( &
-          State_VGB(By_,i,j-1,k,globalBLK)+ &
-          State_VGB(By_,i,j  ,k,globalBLK))
+     ByFace_BLK(i,j,k,iBlock)= 0.5*( &
+          State_VGB(By_,i,j-1,k,iBlock)+ &
+          State_VGB(By_,i,j  ,k,iBlock))
   end do; end do; end do
   do k=1,nK+1; do j=1,nJ; do i=1,nI
-     BzFace_BLK(i,j,k,globalBLK)= 0.5*( &
-          State_VGB(Bz_,i,j,k-1,globalBLK)+ &
-          State_VGB(Bz_,i,j,k  ,globalBLK))
+     BzFace_BLK(i,j,k,iBlock)= 0.5*( &
+          State_VGB(Bz_,i,j,k-1,iBlock)+ &
+          State_VGB(Bz_,i,j,k  ,iBlock))
   end do; end do; end do
 
-
-  call bound_Bface
+  call bound_Bface(iBlock)
 
 end subroutine Bcenter2Bface
 
 !==============================================================================
-subroutine bound_Bface
+subroutine bound_Bface(iBlock)
 
   !!! Set Bface to zero on the cell faces of the body cells !!!
   ! Make sure that ghost cells inside the body are taken into account
   ! This may have to be generalized later
 
   use ModSize
-  use ModMain, ONLY : globalBLK,BLKtest
-  use ModGeometry, ONLY : true_cell,body_BLK
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
+  use ModMain,     ONLY: BLKtest
+  use ModGeometry, ONLY: true_cell,body_BLK
+  use ModCT,       ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
+
+  integer, intent(in) :: iBlock
 
   integer :: i,j,k
 
   logical :: oktest, oktest_me
   !---------------------------------------------------------------------------
 
-  if(globalBLK==BLKtest)then
+  if(iBlock==BLKtest)then
      call set_oktest('bound_Bface',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   end if
 
-  if(oktest_me)write(*,*)'bound_Bface, body_BLK=',body_BLK(globalBLK)
+  if(oktest_me)write(*,*)'bound_Bface, body_BLK=',body_BLK(iBlock)
 
-  if(body_BLK(globalBLK))then
+  if(body_BLK(iBlock))then
      do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-        if(.not.true_cell(i,j,k,globalBLK))then
-           BxFace_BLK(i:i+1,j,k,globalBLK)=0.0
-           ByFace_BLK(i,j:j+1,k,globalBLK)=0.0
-           BzFace_BLK(i,j,k:k+1,globalBLK)=0.0
+        if(.not.true_cell(i,j,k,iBlock))then
+           BxFace_BLK(i:i+1,j,k,iBlock)=0.0
+           ByFace_BLK(i,j:j+1,k,iBlock)=0.0
+           BzFace_BLK(i,j,k:k+1,iBlock)=0.0
         end if
      end do; end do; end do
   end if
@@ -992,7 +1001,7 @@ subroutine assign_restricted_Bface(r_sol,iVar,coarse_sol)
 end subroutine assign_restricted_Bface
 !==============================================================================
 
-subroutine constrain_ICs
+subroutine constrain_ICs(iBlock)
 
   ! Initialize B field, Bface, and Bcenter for Constrained Transport
 
@@ -1004,42 +1013,44 @@ subroutine constrain_ICs
   use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   implicit none
+
+  integer, intent(in) :: iBlock
   !---------------------------------------------------------------------------
 
-  if(unusedBLK(globalBLK))then
-     BxFace_BLK(:,:,:,globalBLK)=0.0
-     ByFace_BLK(:,:,:,globalBLK)=0.0
-     BzFace_BLK(:,:,:,globalBLK)=0.0
+  if(unusedBLK(iBlock))then
+     BxFace_BLK(:,:,:,iBlock)=0.0
+     ByFace_BLK(:,:,:,iBlock)=0.0
+     BzFace_BLK(:,:,:,iBlock)=0.0
   else
      if(problem_type==problem_earth .and. .not.restart)then
-        where(x_BLK(:,:,:,globalBLK)<16.)
+        where(x_BLK(:,:,:,iBlock)<16.)
            ! Cancel B field at x<16Re to avoid non-zero initial divB
            ! x=16 is a good choice because it is a power of 2 so it is 
            ! a block boundary for all block sizes. 
            ! x=16 is larger than typical rBody.
-           State_VGB(Bx_,:,:,:,globalBLK)=0.0
-           State_VGB(By_,:,:,:,globalBLK)=0.0
-           State_VGB(Bz_,:,:,:,globalBLK)=0.0
+           State_VGB(Bx_,:,:,:,iBlock)=0.0
+           State_VGB(By_,:,:,:,iBlock)=0.0
+           State_VGB(Bz_,:,:,:,iBlock)=0.0
            ! Balance total pressure
-           State_VGB(P_,:,:,:,globalBLK)=State_VGB(P_,:,:,:,globalBLK)+ &
+           State_VGB(P_,:,:,:,iBlock)=State_VGB(P_,:,:,:,iBlock)+ &
                 0.5*(SW_Bx**2+SW_By**2+SW_Bz**2)
         elsewhere
            ! Use solar wind values ahead of the Earth
-           State_VGB(Bx_,:,:,:,globalBLK)=SW_Bx
-           State_VGB(By_,:,:,:,globalBLK)=SW_By
-           State_VGB(Bz_,:,:,:,globalBLK)=SW_Bz
+           State_VGB(Bx_,:,:,:,iBlock)=SW_Bx
+           State_VGB(By_,:,:,:,iBlock)=SW_By
+           State_VGB(Bz_,:,:,:,iBlock)=SW_Bz
         end where
      end if
 
      if(index(test_string,'testCTcoarse')>0)then
-        State_VGB(Bx_,:,:,:,globalBLK)=   x_BLK(:,:,:,globalBLK)
-        State_VGB(By_,:,:,:,globalBLK)=   y_BLK(:,:,:,globalBLK)
-        State_VGB(Bz_,:,:,:,globalBLK)=-2*z_BLK(:,:,:,globalBLK)
-        if(body_BLK(globalBLK))then
-           where(.not.true_cell(:,:,:,globalBLK))
-              State_VGB(Bx_,:,:,:,globalBLK)=0.
-              State_VGB(By_,:,:,:,globalBLK)=0.
-              State_VGB(Bz_,:,:,:,globalBLK)=0.
+        State_VGB(Bx_,:,:,:,iBlock)=   x_BLK(:,:,:,iBlock)
+        State_VGB(By_,:,:,:,iBlock)=   y_BLK(:,:,:,iBlock)
+        State_VGB(Bz_,:,:,:,iBlock)=-2*z_BLK(:,:,:,iBlock)
+        if(body_BLK(iBlock))then
+           where(.not.true_cell(:,:,:,iBlock))
+              State_VGB(Bx_,:,:,:,iBlock)=0.
+              State_VGB(By_,:,:,:,iBlock)=0.
+              State_VGB(Bz_,:,:,:,iBlock)=0.
            end where
         end if
      end if
