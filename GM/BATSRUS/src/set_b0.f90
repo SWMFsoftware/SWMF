@@ -701,7 +701,7 @@ end subroutine add_b0_body2
 subroutine update_b0
 
   use ModProcMH,        ONLY: iProc
-  use ModMain,          ONLY: DoSplitDb0Dt, nBlock, globalBLK, unusedBLK, &
+  use ModMain,          ONLY: DoSplitDb0Dt, nBlock, unusedBLK, &
        time_simulation, lVerbose, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
@@ -766,8 +766,7 @@ subroutine update_b0
         end if
 
         ! Recalculate energy
-        globalBLK=iBlock
-        call correctE
+        call calc_energy(iBlock)
      end if
   end do
   call timing_stop('update_B0')
