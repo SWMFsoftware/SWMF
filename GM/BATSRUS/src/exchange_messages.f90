@@ -1,7 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine exchange_messages
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,gcn,globalBLK,nBlockMax,unusedBLK, &
+  use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
        UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
@@ -17,6 +17,7 @@ subroutine exchange_messages
   use ModBoundaryCells,ONLY:SaveBoundaryCells
   implicit none
 
+  integer :: iBlock
   logical :: oktest, oktest_me, oktime, oktime_me
   logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
 
@@ -43,12 +44,12 @@ subroutine exchange_messages
   call timing_start('exch_msgs')
   ! Ensure that energy and pressure are consistent and positive in real cells
   !if(prolong_order==2)then     !^CFG IF NOT PROJECTION
-  do globalBLK = 1, nBlockMax
-     if (unusedBLK(globalBLK)) CYCLE
-     if (far_field_BCs_BLK(globalBLK).and.prolong_order==2)&
-          call set_outer_BCs(globalBLK,time_simulation,.false.)        
-     if(UseConstrainB)call correctP   !^CFG IF CONSTRAINB
-     if(UseProjection)call correctP   !^CFG IF PROJECTION
+  do iBlock = 1, nBlockMax
+     if (unusedBLK(iBlock)) CYCLE
+     if (far_field_BCs_BLK(iBlock).and.prolong_order==2)&
+          call set_outer_BCs(iBlock,time_simulation,.false.)        
+     if(UseConstrainB)call correctP(iBlock)   !^CFG IF CONSTRAINB
+     if(UseProjection)call correctP(iBlock)   !^CFG IF PROJECTION
   end do
   !end if                       !^CFG IF NOT PROJECTION
   if(oktest)write(*,*)'Checked negative P, me=',iProc
@@ -91,11 +92,11 @@ subroutine exchange_messages
 
   if(oktest)write(*,*)'Ensure that E and P consistent, me=',iProc
 
-  do globalBLK = 1, nBlockMax
-     if (unusedBLK(globalBLK)) CYCLE
-     if (far_field_BCs_BLK(globalBLK)) &                        
-          call set_outer_BCs(globalBLK,time_simulation,.false.) 
-     call correctE
+  do iBlock = 1, nBlockMax
+     if (unusedBLK(iBlock)) CYCLE
+     if (far_field_BCs_BLK(iBlock)) &                        
+          call set_outer_BCs(iBlock,time_simulation,.false.) 
+     call calc_energy(iBlock)
   end do
 
   call timing_stop('exch_msgs')
@@ -110,7 +111,7 @@ end subroutine exchange_messages
 ! Test timing of various message passing options
 subroutine time_message_passing
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,gcn,globalBLK,nBlockMax,unusedBLK, &
+  use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
        time_simulation,nOrder,prolong_order,optimize_message_pass
@@ -198,13 +199,13 @@ end subroutine time_message_passing
 
 !^CFG IF PROJECTION BEGIN
 !============================================================================
-subroutine correctP
+subroutine correctP(iBlock)
 
   ! Make pressure and energy consistent and maintain thermal energy ratio 
   ! at a reasonable value (this also excludes negative pressure)
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest,globalBLK
+  use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
   use ModVarIndexes,ONLY:&
        rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,nVar
   use ModAdvance, ONLY : &
@@ -212,6 +213,8 @@ subroutine correctP
   use ModPhysics, ONLY : gm1, inv_gm1, Pratio_hi, Pratio_lo
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
   implicit none
+
+  integer, intent(in) :: iBlock
 
   integer :: i,j,k
   real :: inv_dratio, qp, qe, qth, qratio, qd, qde, qpmin, &
@@ -224,7 +227,7 @@ subroutine correctP
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
 
-  if(globalBLK==BLKtest)then
+  if(iBlock==BLKtest)then
      call set_oktest('correctP',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
@@ -235,17 +238,17 @@ subroutine correctP
   qdesumabs=0.
   qderelmax=0.
 
-  P_old=State_VGB(P_,1:nI,1:nJ,1:nK,globalBLK)
+  P_old=State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)
 
   inv_dratio=1./(Pratio_hi-Pratio_lo)
 
   do k=1,nK; do j=1,nJ; do i=1,nI
 
-     if(.not.true_cell(i,j,k,globalBLK))CYCLE
+     if(.not.true_cell(i,j,k,iBlock))CYCLE
 
      ! Pressure and total energy
      qp=P_old(i,j,k)
-     qe=E_BLK(i,j,k,globalBLK)
+     qe=E_BLK(i,j,k,iBlock)
 
      if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)&
           write(*,*)'CorrectP at me,BLK,i,j,k=',&
@@ -260,12 +263,12 @@ subroutine correctP
 
      ! Deviation=extra total energy=qe-inv_gm1*qp-(rhoU**2/rho+B**2)/2
      qd=qE-qth                                                         &
-          -0.5*(State_VGB(rhoUx_,i,j,k,globalBLK)**2+                         &
-          State_VGB(rhoUy_,i,j,k,globalBLK)**2+                               &
-          State_VGB(rhoUz_,i,j,k,globalBLK)**2)/State_VGB(rho_,i,j,k,globalBLK)      &
-          -0.5*(State_VGB(Bx_,i,j,k,globalBLK)**2+                            &
-          State_VGB(By_,i,j,k,globalBLK)**2+                                  &
-          State_VGB(Bz_,i,j,k,globalBLK)**2)
+          -0.5*(State_VGB(rhoUx_,i,j,k,iBlock)**2+                         &
+          State_VGB(rhoUy_,i,j,k,iBlock)**2+                               &
+          State_VGB(rhoUz_,i,j,k,iBlock)**2)/State_VGB(rho_,i,j,k,iBlock)      &
+          -0.5*(State_VGB(Bx_,i,j,k,iBlock)**2+                            &
+          State_VGB(By_,i,j,k,iBlock)**2+                                  &
+          State_VGB(Bz_,i,j,k,iBlock)**2)
 
      ! Limited thermal/total energy ratio for correction
      qratio=min(Pratio_hi,max(Pratio_lo,min(qth,qth+qd)/qe))
@@ -279,7 +282,7 @@ subroutine correctP
      qderelmax=max(qderelmax,qde/qe)
 
      ! Pressure is modified
-     State_VGB(P_,i,j,k,globalBLK)=gm1*(qth+qd-qde)
+     State_VGB(P_,i,j,k,iBlock)=gm1*(qth+qd-qde)
 
      ! We should now have E=inv_gm1*P+(rhoU**2/rho+B**2)/2:
      !
@@ -289,7 +292,7 @@ subroutine correctP
 
      if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)then
         write(*,*)'qp,qth,qe,qd,qratio,qde=',qp,qth,qe,qd,qratio,qde
-        write(*,*)'CorrectP, final P=',State_VGB(P_,i,j,k,globalBLK)
+        write(*,*)'CorrectP, final P=',State_VGB(P_,i,j,k,iBlock)
      end if
 
   end do; end do; end do
@@ -298,10 +301,10 @@ subroutine correctP
      if(ierror1==-1)then
         loc=minloc(P_old)
         write(*,*)'Negative P at me,iBLK,I,J,K,x,y,z,val',&
-             iProc,globalBLK,loc,&
-             x_BLK(loc(1),loc(2),loc(3),globalBLK),&
-             y_BLK(loc(1),loc(2),loc(3),globalBLK),&
-             z_BLK(loc(1),loc(2),loc(3),globalBLK),&
+             iProc,iBlock,loc,&
+             x_BLK(loc(1),loc(2),loc(3),iBlock),&
+             y_BLK(loc(1),loc(2),loc(3),iBlock),&
+             z_BLK(loc(1),loc(2),loc(3),iBlock),&
              P_old(loc(1),loc(2),loc(3))
      end if
      call error_report('Negative P in exchange msgs, min(P)', &
@@ -319,24 +322,36 @@ end subroutine correctP
 !^CFG END PROJECTION
 
 !==============================================================================
-subroutine correctE
 
-  ! Correct total energy
-  use ModVarIndexes
-  use ModMain, ONLY : globalBLK,ndim,&
-       nI,nJ,nK, gcn
-  use ModAdvance, ONLY : State_VGB,E_BLK
-  use ModPhysics, ONLY : inv_gm1
+subroutine calc_energy(iBlock)
+
+  ! Calculate total energy (excluding B0):
+  !
+  !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
+
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoU_, Bx_, B_, P_
+  use ModMain,       ONLY: nDim, nI, nJ, nK, gcn
+  use ModAdvance,    ONLY: State_VGB,E_BLK
+  use ModPhysics,    ONLY: inv_gm1
   implicit none
 
+  integer, intent(in) :: iBlock
   integer::i,j,k
-
+  !---------------------------------------------------------------------------
   do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-     if(State_VGB(rho_,i,j,k,globalBLK)<=0.0)cycle
-     E_BLK(i,j,k,globalBLK)=inv_gm1*State_VGB(P_,i,j,k,globalBLK) &
-          +0.5*(sum(State_VGB(rhoUx_:rhoU_+ndim,i,j,k,globalBLK)**2)/&
-          State_VGB(rho_,i,j,k,globalBLK)    &
-          +sum(State_VGB(Bx_:B_+ndim,i,j,k,globalBLK)**2) )
+     if(State_VGB(rho_,i,j,k,iBlock)<=0.0)cycle
+     E_BLK(i,j,k,iBlock) = inv_gm1*State_VGB(P_,i,j,k,iBlock) &
+          +0.5*(sum(State_VGB(rhoUx_:rhoU_+ndim,i,j,k,iBlock)**2)/&
+          State_VGB(rho_,i,j,k,iBlock)    &
+          +sum(State_VGB(Bx_:B_+ndim,i,j,k,iBlock)**2) )
   end do; end do; end do
 
+end subroutine calc_energy
+
+!==============================================================================
+
+subroutine correctE
+  use ModMain, ONLY: GlobalBlk
+  implicit none
+  call calc_energy(GlobalBlk)
 end subroutine correctE
