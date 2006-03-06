@@ -562,7 +562,7 @@ end subroutine proj_boundphi
 ! Correct B field by gradient of phi
 subroutine proj_correction(phi)
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest, &
-       nBlock,globalBLK,unusedBLK
+       nBlock,unusedBLK
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance,    ONLY : State_VGB, tmp1_BLK
   use ModGeometry,   ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
@@ -607,18 +607,16 @@ subroutine proj_correction(phi)
              -(phi(1:nI,1:nJ,1:nK+1,iBLK)-phi(1:nI,1:nJ,0:nK,iBLK)) &
              /dz_BLK(iBLK)
 
-        globalBLK=iBLK
-
         if(oktest_me.and.BLKtest==iBLK)write(*,*)'before bound_Bface Bzface=',&
              BzFace_BLK(Itest,Jtest,Ktest,BLKtest), &
              BzFace_BLK(Itest,Jtest,Ktest+1,BLKtest)
 
         ! Make sure that the correction is NOT applied to the body boundaries
-        call bound_Bface
+        call bound_Bface(iBLK)
         ! Recalculate the cell centered B
-        call Bface2Bcenter
+        call Bface2Bcenter(iBLK)
         ! Keep pressure and modify energy for sake of positivity
-        call correctE
+        call calc_energy(iBLK)
      end do
 
      if(oktest_me)write(*,*)'proj_correction new Bzface=',&
