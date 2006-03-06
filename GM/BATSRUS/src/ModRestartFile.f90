@@ -4,7 +4,7 @@ module ModRestartFile
 
   use ModProcMH,     ONLY: iProc
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
-       restart, restart_Bface, save_restart_file
+       restart, save_restart_file
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion
@@ -12,6 +12,7 @@ module ModRestartFile
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
   use ModParallel,   ONLY: iBlockRestartALL_A
+  use ModIO,         ONLY: Restart_Bface                    !^CFG IF CONSTRAINB
   use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK !^CFG IF CONSTRAINB
   use ModMain,       ONLY: UseConstrainB                    !^CFG IF CONSTRAINB
   use ModImplicit,   ONLY: n_prev, w_prev, dt_prev          !^CFG IF IMPLICIT
