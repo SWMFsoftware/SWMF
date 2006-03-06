@@ -39,6 +39,7 @@ MODULES = \
 	ModPhysics.o\
 	ModPointImplicit.o\
 	ModProcMH.o\
+	ModRestartFile.o\
 	ModSize.o\
 	ModUserEmpty.o \
 	ModUser.o \
@@ -152,7 +153,6 @@ OBJECTS = \
 	octree.o\
 	potential_force_averages.o\
 	refine_grid.o\
-	restart.o\
 	rotate.o\
 	satellites.o\
 	set_b0.o\
