@@ -348,7 +348,7 @@ contains
     end if
 
     iBlockRestart = iBlockRestartALL_A(global_block_number(iBlock))
-    write(StringDigit,'(i1)') max(5,int(alog10(real(iBlockRestart))))
+    write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartInDir)//'blk',iBlockRestart,StringRestartExt
@@ -454,7 +454,7 @@ contains
     !--------------------------------------------------------------------
 
     iBlockRestart = global_block_number(iBlock)
-    write(StringDigit,'(i1)') max(5,int(alog10(real(iBlockRestart))))
+    write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
          trim(NameRestartOutDir)//'blk',iBlockRestart,StringRestartExt
