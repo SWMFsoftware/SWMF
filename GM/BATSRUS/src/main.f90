@@ -11,12 +11,14 @@ program BATSRUS
   use ModIoUnit, ONLY: UNITTMP_
   use ModMain, ONLY: &
        IsStandAlone, &
+       NameThisComp, &
        time_accurate, time_loop, time_simulation, t_max, &
        n_step, nIter, iteration_number, &
        IsLastRead, &
        lVerbose, &
        dn_timing, UseTiming
-  use ModIO, ONLY: NameRestartInDir
+  use ModIO,          ONLY: NamePlotDir
+  use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
 
   use ModReadParam
 
@@ -43,6 +45,13 @@ program BATSRUS
   !/
   IsStandAlone      = .true.
   call stand_alone
+  !\
+  ! Default plot and restart directories depend on NameThisComp
+  !/
+  NamePlotDir       = NameThisComp//'/'//NamePlotDir
+  NameRestartInDir  = NameThisComp//'/'//NameRestartInDir
+  NameRestartOutDir = NameThisComp//'/'//NameRestartOutDir
+
 
   !\
   ! Not yet doing the computation
