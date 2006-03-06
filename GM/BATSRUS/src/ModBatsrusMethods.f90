@@ -57,6 +57,9 @@ contains
   !===========================================================================
 
   subroutine grid_setup
+
+    use ModIO, ONLY: restart
+    use ModRestartFile, ONLY: read_octree_file
     !\
     ! Set up problem geometry, blocks, and grid structure.
     !/
@@ -117,6 +120,8 @@ contains
 
   subroutine set_initial_conditions
     use ModUser, ONLY: user_initial_perturbation
+    use ModIO,   ONLY: restart, restart_Bface
+    use ModRestartFile, ONLY: read_restart_files
 
     !\
     ! Set intial conditions for solution in each block.
@@ -148,26 +153,18 @@ contains
        call load_balance(.true.,.false.,.true.)
     end if
 
+    !\
+    ! Read initial data for solution blocks
+    ! from restart files as necessary.
+    !/
+    if(restart)call read_restart_files
+
     do globalBLK = 1, nBlockMax
-       !\
-       ! Read initial data for solution block
-       ! from restart file as necessary.
-       !/
-       if (restart .and. .not.unusedBLK(globalBLK)) then
-          call timing_start('read_restart')
-          call read_restart_file
-          call timing_stop('read_restart')
-
-          call fix_block_geometry(globalBLK)
-
-       end if
-
        !\
        ! Initialize solution block.
        !/
        call set_ICs
-
-    end do ! Multi-block initialization loop.
+    end do
 
 
     !\
@@ -487,7 +484,7 @@ end subroutine BATS_amr_refinement
 
 subroutine BATS_init_constrain_b
   use ModProcMH
-  use ModMain, ONLY: lVerbose, x_, y_, z_, globalBLK, nBlockMax
+  use ModMain, ONLY: lVerbose, x_, y_, z_, nBlock
   use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
   use ModCT, ONLY : DoInitConstrainB
   use ModNumConst, ONLY: cTiny
@@ -499,6 +496,7 @@ subroutine BATS_init_constrain_b
   ! Local variables
   character(len=*), parameter :: NameSub ='BATS_init_constrain_b '
   real, external :: maxval_loc_abs_BLK
+  integer :: iBlock
   integer :: iLoc_I(5)  ! full location index
   real    :: divbmax_now
   !---------------------------------------------------------------------------
@@ -507,12 +505,12 @@ subroutine BATS_init_constrain_b
   call message_pass_dir(1,3,1,.false.,1,3,Sol_VGB=State_VGB(Bx_:Bz_,:,:,:,:), &
        restrictface=.true.)
 
-  do globalBLK=1,nBlockMax
+  do iBlock=1, nBlock
      ! Estimate Bface from the centered B values
-     call Bcenter2Bface
+     call Bcenter2Bface(iBlock)
      ! Calculate energy (it is not set in set_ICs)
      ! because the projection scheme will need it
-     call correctE
+     call calc_energy(iBlock)
   end do
 
   call proj_get_divb(tmp1_BLK)
@@ -699,6 +697,7 @@ contains
   !===========================================================================
 
   subroutine save_file
+    use ModRestartFile, ONLY: write_restart_files
     use ModParallel, ONLY : UsePlotMessageOptions
     integer :: iFileLoop, iSat
 
@@ -707,14 +706,7 @@ contains
     if(ifile==restart_) then
        ! Case for restart file
        if(.not.save_restart_file)return
-       call timing_start('save_restart')
-       call write_octree_file
-       if(iProc==0)call write_restart_header
-       do globalBLK = 1,nBlockMax
-          if (.not.unusedBLK(globalBLK)) call write_restart_file
-       end do
-       if(iProc==0)call save_advected_points
-       call timing_stop('save_restart')
+       call write_restart_files
 
     elseif(ifile==logfile_) then
        ! Case for logfile 
