@@ -12,16 +12,11 @@ Module ModIO
   integer             :: iUnitOut = STDOUT_
   character (len=7)   :: StringPrefix=''
   character (len=100) :: NamePlotDir="IO2/"
-  character (len=100) :: NameRestartInDir="restartIN/"
-  character (len=100) :: NameRestartOutDir="restartOUT/"
 
   character (len=80) :: filename
 
-  logical :: restart               ! Use a restart file
-  logical :: restart_Bface=.false. ! Bface from restart file ^CFG IF CONSTRAINB
-  logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
-
-  integer :: nByteRealRead = 8     ! Real precision in restart files
+  logical :: restart=.false.        ! read restart file
+  logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
 
   logical :: save_restart_file=.true., save_satellite_data=.false., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
