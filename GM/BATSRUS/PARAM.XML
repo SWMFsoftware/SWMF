@@ -774,6 +774,22 @@ GM/restart_n5000	NameRestartInDir
 ! Default value is "GM/restartIN".
 </command>
 
+<command name="RESTARTINFILE" if="$_IsFirstSession">
+	<parameter name="TypeRestartInFile" type="string" input="select">
+		<option name="block" default="T"/>
+		<option name="one" />
+	</parameter>
+
+#RESTARTINFILE
+one			TypeRestartInFile
+
+This command is normally saved in the restart header file, and it describes
+how the restart data was saved: 
+into separate files for each grid block ('block') 
+or into a single direct access file ('one').
+The default value is 'block'.
+</command>
+
 <command name="NEWRESTART" if="$_IsFirstSession">
 	<parameter name="DoRestartBFace" type="logical" default="F" /> <!-- ^CFG IF CONSTRAINB -->
 
@@ -1630,6 +1646,20 @@ GM/restart_n5000	NameRestartOutDir
 ! of the component.
 !
 ! Default value is "GM/restartOUT".
+</command>
+
+<command name="RESTARTOUTFILE">
+	<parameter name="TypeRestartOutFile" type="string" input="select">
+		<option name="block" default="T"/>
+		<option name="one" />
+	</parameter>
+
+#RESTARTOUTFILE
+one			TypeRestartOutFile
+
+This command determines if the restart information is saved into files
+block by block into a single direct access file.
+The default value is 'block'.
 </command>
 
 <command name="SAVERESTART">
