@@ -38,6 +38,7 @@ subroutine MH_set_parameters(TypeAction)
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
+  use ModrestartFile,   ONLY: read_restart_parameters
 
   implicit none
 
@@ -429,14 +430,6 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
         !                                               ^CFG END DISSFLUX
-     case("#SAVERESTART")
-        call read_var('DoSaveRestart',save_restart_file)
-        if(save_restart_file)then
-           if(iProc==0)call check_dir(NameRestartOutDir)
-           call read_var('DnSaveRestart',dn_output(restart_))
-           call read_var('dt_output(restart_)',dt_output(restart_))
-           nfile=max(nfile,restart_)
-        end if
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
@@ -1210,16 +1203,6 @@ subroutine MH_set_parameters(TypeAction)
              write(*,'(a,f6.3,a,f6.3,a)')NameSub//&
              ' WARNING: CodeVersion in file=',CodeVersionRead,&
              ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
-     case("#PRECISION")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('nByteReal',nByteRealRead)
-        if(nByteReal/=nByteRealRead)then
-           if(iProc==0) write(*,'(a,i1,a,i1)') NameSub// &
-                ' WARNING: BATSRUS was compiled with ',nByteReal,&
-                ' byte reals, requested precision is ',nByteRealRead
-           if(UseStrict)call stop_mpi(NameSub// &
-                ' ERROR: differing precisions for reals')
-        end if
      case("#EQUATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameEquation',NameEquationRead)
@@ -1252,28 +1235,16 @@ subroutine MH_set_parameters(TypeAction)
            if(iProc==0)write(*,'(a)')NameSub // &
                 ' WARNING: problem type set twice !!!'
         end if
-     case("#RESTARTINDIR")
+     case("#NEWRESTART","#RESTARTINDIR","#RESTARTINFILE",&
+          "#PRECISION","#BLOCKLEVELSRELOADED")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var("NameRestartInDir",NameRestartInDir)
-        call fix_dir_name(NameRestartInDir)
-        if (iProc==0) call check_dir(NameRestartInDir)
-     case("#RESTARTOUTDIR")
-        call read_var("NameRestartOutDir",NameRestartOutDir)
-        call fix_dir_name(NameRestartOutDir)
-        if (iProc==0) call check_dir(NameRestartOutDir)
+        call read_restart_parameters(NameCommand)
+     case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
+        call read_restart_parameters(NameCommand)
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)
         call fix_dir_name(NamePlotDir)
         if (iProc==0) call check_dir(NamePlotDir)
-     case("#NEWRESTART")
-        if(.not.is_first_session())CYCLE READPARAM
-        restart=.true.
-        call read_var('DoRestartBFace',restart_Bface) !^CFG IF CONSTRAINB
-     case("#BLOCKLEVELSRELOADED")
-        if(.not.is_first_session())CYCLE READPARAM
-        ! Sets logical for upgrade of restart files 
-        ! to include LEVmin and LEVmax
-        RestartBlockLevels=.true.
      case("#SATELLITE")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nSatellite',nsatellite)
