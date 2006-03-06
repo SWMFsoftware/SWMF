@@ -461,7 +461,7 @@ subroutine set_ICs
   ! Eliminate B1 around body if necessary
   if(.not.restart)then
      if(UseConstrainB)then  !^CFG IF CONSTRAINB BEGIN
-        call constrain_ICs
+        call constrain_ICs(globalBLK)
      else                   !^CFG END CONSTRAINB
         if(index(test_string,'DriftIn')>0)then
            where(x_BLK(:,:,:,globalBLK)<10.)
@@ -482,9 +482,11 @@ subroutine set_ICs
   !\
   ! Compute energy from set values above.
   !/
-  call correctE
+  call calc_energy(globalBLK)
+
 end subroutine set_ICs
 
+!==============================================================================
 
 subroutine coronal_hole_boundary(RadiusSun, sin2Theta_coronal_hole)
   implicit none

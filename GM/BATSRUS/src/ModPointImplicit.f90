@@ -272,7 +272,7 @@ contains
     end do; end do; end do
 
     ! Make sure that energy is consistent
-    call correctE
+    call calc_energy(iBlock)
 
     if(DoTestMe)then
        write(*,*) NameSub, ': StateOld=',&

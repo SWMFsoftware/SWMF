@@ -222,9 +222,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      !call timing_start('load_fix_var')
      do iBlock = 1,nBlock
         if(.not.DoFixVar_B(iBlock)) CYCLE
-        globalBLK = iBlock
-        if(useConstrainB) call Bface2Bcenter          !^CFG IF CONSTRAINB
-        call correctE
+        if(useConstrainB) call Bface2Bcenter(iBlock)  !^CFG IF CONSTRAINB
+        call calc_energy(iBlock)
 
         if(DoMoveExtraData)then
            if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
