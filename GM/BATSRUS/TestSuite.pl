@@ -86,7 +86,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-ta -Stage=2 -partimpl05");    #^CFG IF IMPLICIT
 
     &execute($testbatsrus,"-Limiter=beta",
-		"-Restart=save -Length=restartsave");
+		"-Restart=saveone -Length=restartsave");
 
     &execute($testbatsrus,"-Limiter=beta",
 		"-Restart=read -Length=restartread");
