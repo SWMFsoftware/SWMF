@@ -29,6 +29,7 @@ MODULES = \
 	ModBoundaryCells.o\
 	ModEquation.o\
 	ModGeometry.o\
+	ModHallResist.o\
 	ModInterface.o\
 	ModIO.o\
 	ModMain.o\
