@@ -15,7 +15,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK
+  use ModGeometry, ONLY : fAx_BLK,fAy_BLK,fAz_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModAdvance, ONLY:&
        LeftState_VX,LeftState_VY,LeftState_VZ, &
        RightState_VX,RightState_VY,RightState_VZ, &
@@ -33,6 +33,8 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics, ONLY : g,inv_gm1,cLIGHT,inv_c2LIGHT
   use ModNumConst
+  use ModHallResist, ONLY: IonMassPerCharge, UseHallCmax
+
   implicit none
 
   logical, intent (in) :: DoResChangeOnly
@@ -88,7 +90,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
 
 
   ! Misc and temporary 
-  real :: inv_c, B1dotB0, UdotB1, Vdt, fA, v_diffusion
+  real :: inv_c, B1dotB0, UdotB1, Vdt, fA, Dxyz, v_diffusion
 
   logical :: oktest, oktest_me, oktest_row
   !--------------------------------------------------------------------------
@@ -106,6 +108,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
   !/
   iDir = 1
   fA = fAx_BLK(globalBLK)
+  Dxyz = dx_BLK(globalBLK)
   if (.not.DoResChangeOnly) then
      do k=kMinFaceX,kMaxFaceX
         do j=jMinFaceX,jMaxFaceX
@@ -135,6 +138,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
 
   ! y-face fluxes --- y-face fluxes --- y-face fluxes
   iDir = 2
+  Dxyz = dy_BLK(globalBLK)
   fA = fAy_BLK(globalBLK)
   if (.not.DoResChangeOnly) then
      do k=kMinFaceY,kMaxFaceY
@@ -165,6 +169,7 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
 
   ! z-face fluxes --- z-face fluxes --- z-face fluxes 
   iDir = 3
+  Dxyz = dz_BLK(globalBLK)
   fA = fAz_BLK(globalBLK)
   if (.not.DoResChangeOnly) then
      do k=1,nKFace
@@ -521,7 +526,12 @@ Contains
 
     end do
 
-
+    if(UseHallCmax)then
+       do i=1,nStrip
+          v_max_hf(i)=v_max_hf(i)+ &
+               cPi*abs(v_Bn_hf(i))*IonMassPerCharge/(Dxyz*v_rho_hf(i))
+       end do
+    end if
 
     !\
     ! Left state physical fluxes
