@@ -486,9 +486,8 @@ contains
 
     logical, intent(in) :: DoRead
 
-    character (len=3) :: StringStatus
-    integer :: lRecord, l
-
+    integer :: lRecord, l, iError
+    character(len=*), parameter :: NameSub='open_one_restart_file'
     !-------------------------------------------------------------------------
 
     ! Calculate the record length for the first block
@@ -512,7 +511,10 @@ contains
 
     if(DoRead)then
        NameFile = trim(NameRestartInDir)//'data'//StringRestartExt
-       StringStatus = 'Old'
+
+       open(Unit_Tmp, file=NameFile, &
+            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
+            status = 'old', iostat=iError)
     else
        NameFile = trim(NameRestartOutDir)//'data'//StringRestartExt
        ! Delete file from proc 0
@@ -522,11 +524,15 @@ contains
        end if
        ! Make sure that all processors wait until the file is deleted
        call barrier_mpi
-       StringStatus = 'New'
+
+       open(Unit_Tmp, file=NameFile, &
+            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
+            status = 'unknown', iostat=iError)
     end if
-    open(Unit_Tmp, file=NameFile, &
-         RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-         status=StringStatus)
+    if(iError /= 0)then
+       write(*,*) NameSub,': ERROR for DoRead=',DoRead
+       call stop_mpi(NameSub,': could not open file='//NameFile)
+    end if
 
   end subroutine open_one_restart_file
 
