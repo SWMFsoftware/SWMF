@@ -137,9 +137,21 @@ subroutine MH_set_parameters(TypeAction)
         ! Initialize axes
         call init_axes(StartTime)
 
+        if(body1)then
+           call get_planet(UseRotationOut = UseRotatingBc)
+        else
+           UseRotatingBc = .false.
+        end if
+
         ! Obtain some planet parameters
-        call get_planet(UseRotationOut = UseRotatingBc, &
-             DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+        if(Bdp_dim == 0.0)then
+           DoUpdateB0 = .false.
+           Dt_UpdateB0 = -1.0
+        else
+           call get_planet( &
+                DoUpdateB0Out = DoUpdateB0, DtUpdateB0Out = Dt_UpdateB0)
+        end if
+
      end if
 
      if(problem_type==-1) call stop_mpi(&
@@ -1974,8 +1986,6 @@ contains
           Bdp_dim = 20800.0
        case(problem_jupiter)
           Bdp_dim = 426000.0
-       case(problem_comet)
-          Bdp_dim = 0.0
        case default
           Bdp_dim = 0.0
        end select

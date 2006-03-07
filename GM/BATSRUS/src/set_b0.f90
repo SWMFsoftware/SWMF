@@ -500,23 +500,27 @@ end subroutine set_b0_matrix
 subroutine get_b0(X0,Y0,Z0,B0)
 
   ! this interface allows use of various models for B0
-  use ModMain,     ONLY : Time_Simulation, NameThisComp, TypeCoordSystem
-  use ModPhysics,       ONLY : unitSI_B
+  use ModMain,          ONLY : Time_Simulation, NameThisComp, &
+       TypeCoordSystem, IsStandAlone
+  use ModPhysics,       ONLY : unitSI_B, Bdp_dim
   use CON_planet_field, ONLY : get_planet_field
   use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
   use ModMain,          ONLY : UseUserB0
-  use ModUser, ONLY: user_get_b0
+  use ModUser,          ONLY: user_get_b0
   implicit none
 
   real, intent(in) :: X0,Y0,Z0
   real, intent(out), dimension(3) :: B0
 
-  if(NameThisComp=='GM')then
+  if(UseUserB0)then
+     call user_get_b0(X0,Y0,Z0,B0)
+  elseif(IsStandAlone .and. Bdp_dim==0.0)then
+     B0 = 0.0
+     RETURN
+  elseif(NameThisComp=='GM')then
      call get_planet_field(Time_Simulation,X0,Y0,Z0,TypeCoordSystem//' NORM',&
           B0)
      B0 = B0/unitSI_B
-  else if (UseUserB0) then
-     call user_get_b0(X0,Y0,Z0,B0)
   else
      call get_b0_multipole(X0,Y0,Z0,B0) 
   end if
