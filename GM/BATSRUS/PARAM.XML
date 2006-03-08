@@ -3633,6 +3633,35 @@ T			UseGravity (rest of parameters read if true)
 <!-- ^CFG IF SECONDBODY END -->
 </command>
 
+<command name="HALLRESISTIVITY">
+	<parameter name="UseHallResist" type="logical" default="F"/>
+	<if expr="$UseHallResist">
+		<parameter name="UseHallCmax" type="logical" default="F"/>
+		<parameter name="ResistDiag" type="real" min="0" default="0"/>
+		<parameter name="HallFactor" type="real" min="0" default="1"/>
+	</if>
+
+#HALLRESISTIVITY
+T		UseHallResist (rest of parameters read only if true)
+F		UseHallCmax
+0.0		ResistDiag [m^2/s]
+3e12		HallFactor			
+
+If UseHallResist is true the Hall resistivity is used.
+If UseHallCmax is true the maximum propagation speed takes into
+account the whistler wave speed. This is needed for stability
+of the explicit scheme (unless the whistler speed is very small
+and/or the diagonal part of the resistivity tensor is dominant).
+For the implicit scheme it is better to have UseHallCmax set to false,
+otherwise there is significant phase error due to the first order scheme
+used in the implicit part. This error reduces with time step.
+The diagonal elements of the resistivity tensor are given by ResistDiag
+in SI units. The off-diagonal elements are multiplied by HallFactor.
+If HallFactor is one then the physical Hall resistivity is used.
+
+Default is UseHallResist false.
+</command>
+
 <command name="MASSLOADING">
 	<parameter name="UseMassLoading" type="logical" default="F"/>	
 	<parameter name="DoAccelerateMassLoading" type="logical" default="F"/>
