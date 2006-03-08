@@ -2,19 +2,23 @@
 !^CFG COPYRIGHT UM
 module ModHallResist
 
-  use ModPhysics,  ONLY: Eta0Resist 
   implicit none
 
-  real, allocatable :: HallJ_CD(:,:,:,:)
-  real, allocatable :: BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
-  real              :: HallFactor
-  real              :: Eta0Resist_ND,  IonMassPerCharge 
-
   ! Logical for adding hall resistivity
-  logical:: UseHallResistFlux=.false.
+  logical:: UseHallResist=.false.
 
   ! Logical for taking whistler wave speed into account
   logical:: UseHallCmax=.true.
+
+  ! Diagonal part of resistivity (a uniform scalar for now)
+  real:: ResistDiagDim, ResistDiag 
+
+  ! Non-diagonal part (Hall) resistivity with an arbitrary factor
+  real:: IonMassPerCharge, HallFactor
+
+  ! Arrays for the implicit preconditioning
+  real, allocatable :: HallJ_CD(:,:,:,:)
+  real, allocatable :: BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
 
 contains
   !============================================================================
@@ -36,16 +40,16 @@ contains
          BzPerRho_G(0:nI+1,0:nJ+1,0:nK+1) )
     IonMassPerCharge =HallFactor*(cProtonMass/cElectronCharge) &
          * (UnitSI_B*UnitSI_T/UnitSI_X**2)
-    Eta0Resist_ND =Eta0Resist*(UnitSI_T/UnitSI_X**2) 
+    ResistDiag =ResistDiagDim*(UnitSI_T/UnitSI_X**2) 
     if (DoTestMe) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
-       write(*,*) 'Eta0             = ',Eta0Resist
-       write(*,*) 'Eta0_ND          = ',Eta0Resist_ND
+       write(*,*) 'ResistDiagDim    = ',ResistDiagDim
+       write(*,*) 'ResistDiag       = ',ResistDiag
        write(*,*) 'Hallfactor       = ',Hallfactor
        write(*,*) 'IonMassPerCharge = ',IonMassPerCharge
-       write(*,*) 'Omega_Bi=B0/IonMassPerCharge'
+       ! Omega_Bi=B0/IonMassPerCharge'
        write(*,*)
        write(*,*) '>>>>>>>>>>>>>>>>>                       <<<<<<<<<<<<<<<<<'
        write(*,*) ''
@@ -90,6 +94,8 @@ contains
     character(len=*), parameter :: NameSub = 'add_hall_resist_flux'
     logical :: DoTest, DoTestMe
     !---------------------------------------------------------------------------
+    call timing_start(NameSub)
+
     if(globalBLK == BlkTest .and. iProc == ProcTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
@@ -112,7 +118,7 @@ contains
     ! Compute and add the x_resistive_flux to the x-face fluxes 
     !/
     AreaHalf = cHalf*fAx_BLK(globalBLK)
-    DiffVDt  = ctwo*Eta0Resist_ND*fAx_BLK(globalBLK)/dx_BLK(globalBLK) 
+    DiffVDt  = ctwo*ResistDiag*fAx_BLK(globalBLK)/dx_BLK(globalBLK) 
     if (.not.DoResChangeOnly) then
        do k=kMinFaceX,kMaxFaceX
           do j=jMinFaceX,jMaxFaceX
@@ -140,7 +146,7 @@ contains
     ! Compute and add the y_resistive_flux to the y-face fluxes 
     !/
     AreaHalf = cHalf*fAy_BLK(globalBLK)
-    DiffVDt  = ctwo*Eta0Resist_ND*fAy_BLK(globalBLK)/dy_BLK(globalBLK) 
+    DiffVDt  = ctwo*ResistDiag*fAy_BLK(globalBLK)/dy_BLK(globalBLK) 
     if (.not.DoResChangeOnly) then
        do k=kMinFaceY,kMaxFaceY
           do j=1,nJFace
@@ -168,7 +174,7 @@ contains
     ! Compute and add the z_resistive_flux to the z-face fluxes  
     !/
     AreaHalf = cHalf*fAz_BLK(globalBLK)
-    DiffVDt  = ctwo*Eta0Resist_ND*fAz_BLK(globalBLK)/dz_BLK(globalBLK) 
+    DiffVDt  = ctwo*ResistDiag*fAz_BLK(globalBLK)/dz_BLK(globalBLK) 
     if (.not.DoResChangeOnly) then
        do k=1,nKFace
           do j=jMinFaceZ,jMaxFaceZ
@@ -199,6 +205,8 @@ contains
        write(*,*)NameSub,': Right Flux_VX=',Flux_VX(VarTest,iTest+1,jTest,kTest)
     end if
 
+    call timing_stop(NameSub)
+
   contains
     !==========================================================================
     subroutine add_hallresistive_flux_x
@@ -211,11 +219,11 @@ contains
 
       call get_face_current(x_,i,j,k,globalBLK, Jx, Jy, Jz)
 
-      EtaJy = fAx_BLK(globalBLK)*( Eta0Resist_ND*Jy + HallCoeff* &
+      EtaJy = fAx_BLK(globalBLK)*( ResistDiag*Jy + HallCoeff* &
            ((Bx_G(i,j,k)+Bx_G(i-1,j,k))*Jz  &
            -(Bz_G(i,j,k)+Bz_G(i-1,j,k))*Jx))
 
-      EtaJz = fAx_BLK(globalBLK)*( Eta0Resist_ND*Jz + HallCoeff* &
+      EtaJz = fAx_BLK(globalBLK)*( ResistDiag*Jz + HallCoeff* &
            ((By_G(i,j,k)+By_G(i-1,j,k))*Jx  &
            -(Bx_G(i,j,k)+Bx_G(i-1,j,k))*Jy ))
 
@@ -256,11 +264,11 @@ contains
 
       call get_face_current(y_,i,j,k,globalBLK, Jx, Jy, Jz)
 
-      EtaJx = fAy_BLK(globalBLK)*( Eta0Resist_ND*Jx + HallCoeff* &
+      EtaJx = fAy_BLK(globalBLK)*( ResistDiag*Jx + HallCoeff* &
            ((Bz_G(i,j,k)+Bz_G(i,j-1,k))*Jy  &
            -(By_G(i,j,k)+By_G(i,j-1,k))*Jz))
 
-      EtaJz = fAy_BLK(globalBLK)*( Eta0Resist_ND*Jz + HallCoeff* &
+      EtaJz = fAy_BLK(globalBLK)*( ResistDiag*Jz + HallCoeff* &
            ((By_G(i,j,k)+By_G(i,j-1,k))*Jx  &
            -(Bx_G(i,j,k)+Bx_G(i,j-1,k))*Jy ))
 
@@ -297,11 +305,11 @@ contains
 
       call get_face_current(z_,i,j,k,globalBLK, Jx, Jy, Jz)
 
-      EtaJx = fAz_BLK(globalBLK)*( Eta0Resist_ND*Jx + HallCoeff* &
+      EtaJx = fAz_BLK(globalBLK)*( ResistDiag*Jx + HallCoeff* &
            ((Bz_G(i,j,k)+Bz_G(i,j,k-1))*Jy  &
            -(By_G(i,j,k)+By_G(i,j,k-1))*Jz))
 
-      EtaJy = fAz_BLK(globalBLK)*( Eta0Resist_ND*Jy + HallCoeff* &
+      EtaJy = fAz_BLK(globalBLK)*( ResistDiag*Jy + HallCoeff* &
            ((Bx_G(i,j,k)+Bx_G(i,j,k-1))*Jz  &
            -(Bz_G(i,j,k)+Bz_G(i,j,k-1))*Jx ))
 
