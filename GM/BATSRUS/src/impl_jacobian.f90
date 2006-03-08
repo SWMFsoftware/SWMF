@@ -62,6 +62,7 @@ subroutine impl_jacobian(implBLK,JAC)
        time_BLK
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell
   use ModImplicit
+  use ModHallResist, ONLY: UseHallResist
   implicit none
 
   integer, intent(in) :: implBLK
@@ -73,8 +74,8 @@ subroutine impl_jacobian(implBLK,JAC)
   real, dimension(nI+1,nJ+1,nK+1)             :: fepsLface, fepsRface, &
        dfdwLface, dfdwRface
   real, dimension(nI,nJ,nK,nw)                :: qS, qSeps, Qpowell
-  real :: divb(nI,nJ,nK)
-  real :: B0face(nI+1,nJ+1,nK+1,ndim,ndim), cmaxFace(nI+1,nJ+1,nK+1,ndim)
+  real :: DivB(nI,nJ,nK), Current_D(nDim)
+  real :: B0face(nI+1,nJ+1,nK+1,nDim,nDim), cmaxFace(nI+1,nJ+1,nK+1,nDim)
 
   real   :: qeps, coeff
   logical:: divbsrc, UseDivbSource0
@@ -108,6 +109,8 @@ subroutine impl_jacobian(implBLK,JAC)
   B0face(1:nI  ,1:nJ  ,1:nK+1,y_,z_)=B0yFace_z_BLK(1:nI,1:nJ,1:nK+1,iBLK)
   B0face(1:nI  ,1:nJ  ,1:nK+1,z_,z_)=B0zFace_z_BLK(1:nI,1:nJ,1:nK+1,iBLK)
 
+  if(UseHallResist)call impl_init_hall
+
   ! Initialize matrix to zero (to be safe)
   JAC=0.0
 
@@ -137,6 +140,7 @@ subroutine impl_jacobian(implBLK,JAC)
           0.5*(w_k( 1:i2, 1:j2, 1:k2,1:nw,implBLK)+ &
           w_k(i1:nI,j1:nJ,k1:nK,1:nw,implBLK)),     &
           B0face(1:i2,1:j2,1:k2,1:ndim,idim),       &
+          dxyz,                                     &
           i2,j2,k2,idim,implBLK,cmaxFace(1:i2,1:j2,1:k2,idim))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
@@ -290,6 +294,8 @@ subroutine impl_jacobian(implBLK,JAC)
      end if
   end if
 
+  if(UseHallResist)call impl_hall_resist
+
   ! Multiply JAC by the implicit timestep dt
   if(time_accurate)then
      do k=1,nK; do j=1,nJ; do i=1,nI
@@ -429,5 +435,144 @@ contains
          +ImplCoeff*wnrm(Bz_)/wnrm(E_)*divb*qwk(:,:,:,rhoUz_)/qwk(:,:,:,rho_) 
 
   end subroutine impl_divbsrc_middle
+
+  !===========================================================================
+  subroutine impl_init_hall
+
+    use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge, &
+         BxPerRho_G, ByPerRho_G, BzPerRho_G
+
+    real :: InvDx2, InvDy2, InvDz2
+    ! Calculate cell centered currents to be used by getflux
+
+    InvDx2 = 0.5/Dxyz(x_); InvDx2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       HallJ_CD(i,j,k,x_) = &
+            +InvDy2*(w_k(i,j+1,k,Bz_,implBLK)-w_k(i,j-1,k,Bz_,implBLK)) &
+            -InvDz2*(w_k(i,j,k+1,By_,implBLK)-w_k(i,j,k-1,By_,implBLK))
+    end do; end do; end do
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       HallJ_CD(i,j,k,y_) = &
+            +InvDz2*(w_k(i,j,k+1,Bx_,implBLK)-w_k(i,j,k-1,Bx_,implBLK)) &
+            -InvDx2*(w_k(i+1,j,k,Bz_,implBLK)-w_k(i-1,j,k,Bz_,implBLK))
+    end do; end do; end do
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       HallJ_CD(i,j,k,z_) = &
+            +InvDx2*(w_k(i+1,j,k,By_,implBLK)-w_k(i-1,j,k,By_,implBLK)) &
+            -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
+    end do; end do; end do
+    HallJ_CD = IonMassPerCharge*HallJ_CD
+
+    BxPerRho_G = w_k(:,:,:,Bx_,implBLK)/w_k(:,:,:,Rho_,implBLK)
+    ByPerRho_G = w_k(:,:,:,By_,implBLK)/w_k(:,:,:,Rho_,implBLK)
+    BzPerRho_G = w_k(:,:,:,Bz_,implBLK)/w_k(:,:,:,Rho_,implBLK)
+
+  end subroutine impl_init_hall
+  !===========================================================================
+  subroutine impl_hall_resist
+
+    use ModHallResist, ONLY: IonMassPerCharge, &
+         BxPerRho_G, ByPerRho_G, BzPerRho_G
+
+    real :: Coeff
+
+    ! dR(Bx)/dBy
+    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(z_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(Bx_,By_,i,j,k,1)= JAC(Bx_,By_,i,j,k,1) &
+            + Coeff*(BzPerRho_G(i,j,k-1)+BzPerRho_G(i,j,k+1))
+    end do; end do; end do
+    !J+1
+    do k=1,nK-1; do j=1,nJ; do i=1,nI
+       JAC(Bx_,By_,i,j,k,7)=JAC(Bx_,By_,i,j,k,7) - Coeff*BzPerRho_G(i,j,k+1)
+    end do; end do; end do
+    !J-1
+    do k=2,nK; do j=1,nJ; do i=1,nI
+       JAC(Bx_,By_,i,j,k,6)=JAC(Bx_,By_,i,j,k,6) - Coeff*BzPerRho_G(i,j,k-1)
+    end do; end do; end do
+
+    ! dR(Bx)/dBz
+    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(y_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(Bx_,Bz_,i,j,k,1)= JAC(Bx_,Bz_,i,j,k,1) &
+            - Coeff*(ByPerRho_G(i,j-1,k)+ByPerRho_G(i,j+1,k))
+    end do; end do; end do
+    !J+1
+    do k=1,nK; do j=1,nJ-1; do i=1,nI
+       JAC(Bx_,Bz_,i,j,k,5)= JAC(Bx_,Bz_,i,j,k,5) + Coeff*ByPerRho_G(i,j+1,k)
+    end do; end do; end do
+    !J-1
+    do k=1,nK; do j=2,nJ; do i=1,nI
+       JAC(Bx_,Bz_,i,j,k,4)= JAC(Bx_,Bz_,i,j,k,4) + Coeff*ByPerRho_G(i,j-1,k)
+    end do; end do; end do
+
+    ! dR(By)/dBz
+    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(By_)*IonMassPerCharge/Dxyz(x_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(By_,Bz_,i,j,k,1)= JAC(By_,Bz_,i,j,k,1) &
+            + Coeff*(BxPerRho_G(i-1,j,k)+BxPerRho_G(i+1,j,k))
+    end do; end do; end do
+    !I+1
+    do k=1,nK; do j=1,nJ; do i=1,nI-1
+       JAC(By_,Bz_,i,j,k,3)= JAC(By_,Bz_,i,j,k,3) - Coeff*BxPerRho_G(i+1,j,k)
+    end do; end do; end do
+    !I-1
+    do k=1,nK; do j=1,nJ; do i=2,nI
+       JAC(By_,Bz_,i,j,k,2)= JAC(By_,Bz_,i,j,k,2) - Coeff*BxPerRho_G(i-1,j,k)
+    end do; end do; end do
+
+    ! dR(By)/dBx
+    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(By_)*IonMassPerCharge/Dxyz(z_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(By_,Bx_,i,j,k,1)= JAC(By_,Bx_,i,j,k,1) &
+            - Coeff*(BzPerRho_G(i,j,k-1)+BzPerRho_G(i,j,k+1))
+    end do; end do; end do
+    !K+1
+    do k=1,nK-1; do j=1,nJ; do i=1,nI
+       JAC(By_,Bx_,i,j,k,7)=JAC(By_,Bx_,i,j,k,7) + Coeff*BzPerRho_G(i,j,k+1)
+    end do; end do; end do
+    !K-1
+    do k=2,nK; do j=1,nJ; do i=1,nI
+       JAC(By_,Bx_,i,j,k,6)=JAC(By_,Bx_,i,j,k,6) + Coeff*BzPerRho_G(i,j,k-1)
+    end do; end do; end do
+
+    ! dR(Bz)/dBx
+    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(Bz_)*IonMassPerCharge/Dxyz(y_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(Bz_,Bx_,i,j,k,1)= JAC(Bz_,Bx_,i,j,k,1) &
+            + Coeff*(ByPerRho_G(i,j-1,k)+ByPerRho_G(i,j+1,k))
+    end do; end do; end do
+    !J+1
+    do k=1,nK; do j=1,nJ-1; do i=1,nI
+       JAC(Bz_,Bx_,i,j,k,5)=JAC(Bz_,Bx_,i,j,k,5) - Coeff*ByPerRho_G(i,j+1,k)
+    end do; end do; end do
+    !J-1
+    do k=1,nK; do j=2,nJ; do i=1,nI
+       JAC(Bz_,Bx_,i,j,k,4)=JAC(Bz_,Bx_,i,j,k,4) - Coeff*ByPerRho_G(i,j-1,k)
+    end do; end do; end do
+
+    ! dR(Bz)/dBy
+    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bz_)*IonMassPerCharge/Dxyz(x_)**2
+    ! Main diagonal
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       JAC(Bz_,By_,i,j,k,1)= JAC(Bz_,By_,i,j,k,1) &
+            - Coeff*(BxPerRho_G(i-1,j,k)+BxPerRho_G(i+1,j,k))
+    end do; end do; end do
+    !I+1
+    do k=1,nK; do j=1,nJ; do i=1,nI-1
+       JAC(Bz_,By_,i,j,k,3)= JAC(Bz_,By_,i,j,k,3) + Coeff*BxPerRho_G(i+1,j,k)
+    end do; end do; end do
+    !I-1
+    do k=1,nK; do j=1,nJ; do i=2,nI
+       JAC(Bz_,By_,i,j,k,2)= JAC(Bz_,By_,i,j,k,2) + Coeff*BxPerRho_G(i-1,j,k)
+    end do; end do; end do
+
+  end subroutine impl_hall_resist
 
 end subroutine impl_jacobian
