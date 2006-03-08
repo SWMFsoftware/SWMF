@@ -1,5 +1,7 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 #^CFG COPYRIGHT UM
+
+use strict;
 
 #!QUOTE: \clearpage
 #BOP
@@ -9,102 +11,106 @@
 # When moving restart files from one machine to another, it may be
 # necessary to change the endianness of the binary files.
 # This script is specifically written to convert all the binary restart
-# files produced by BATSRUS, as well as copy the ASCII header file.
+# files produced by BATSRUS, as well as to copy the ASCII header file.
 #
 #!REVISION HISTORY:
 # 07/03/2001 G. Toth - initial revision
 # 03/11/2003 G. Toth - generalized to work on a machine with 
 #                      arbitrary endianness
+# 03/08/2006 G. Toth - converts new restart file format and added use strict.
 #EOP
-if($#ARGV != 1){
-    print 
-#BOC
-"Purpose: change the endianness of blk*.rst and octree.rst files, 
-         and copy restart.H.
+&print_help if $#ARGV != 1;
 
-This perl script can be run on a machine with arbitrary endianness,
-however do not run this on the Cray, because the Perl interpreter 
-does not interpret long integers correctly on the Cray. 
+my $indir =$ARGV[0];
+my $outdir=$ARGV[1];
 
-The typical usage is
+my $headerfile="restart.H";
+my $datafile  ="data.rst";
+my $octreefile="octree.rst";
 
-    mkdir restart_export
-    ConvertRestart.pl restartOUT restart_export
-    tar cf restart_export.tar restart_export
-    scp restart_export.tar OTHERMACHINE:BATSRUS/run
-
-The files are read from the 'inputdir' (restartOUT) and the restult is 
-saved into the 'outputdir' (restart_export).
-
-If the files are moved to the Cray or from the Cray, the octree file needs
-to be fixed for the 4 vs. 8 byte integers using FixI4toI8.pl or FixI8toI4.pl.
-The endianness can be changed with ConvertRestart both after or before the 
-8-byte-integer-fix."
-#EOC
-    ,"\n\n";
-    exit;
-}
-
-$indir=$ARGV[0];
-$outdir=$ARGV[1];
+my $ERROR = "ERROR in ConvertRestart.pl";
 
 # Check things
-opendir(INDIR,  $indir)  or die "Cannot open input directory $indir!\n";
-opendir(OUTDIR, $outdir) or die "Cannot open output directory $outdir!\n";
-closedir OUTDIR;
+opendir(INDIR, $indir) or die "$ERROR: cannot open input directory $indir!\n";
 
-die "Input and output directories must be different!\n" if $indir eq $outdir;
+-d $outdir or mkdir($outdir,0777) or 
+    die "$ERROR: cannot find/create output directory $outdir!\n";
 
-# There is 1 octree.rst file and many blk files
-@rstfiles = grep /^(blk\d*|octree)\.rst$/, readdir INDIR;
-print "Number of blocks in $indir is ",$#rstfiles,"\n";
+$indir ne $outdir or 
+    die "$ERROR: input and output directories must be different!\n";
 
 # No end of line in files
 undef $/;
 
+# Copy restart.H from indir to outdir and obtain real precision
+my $file = "$indir/$headerfile";
+open(INFILE, $file) or die "$ERROR: cannot open $file\n"; 
+$_=<INFILE>; 
+close INFILE;
+
+# Obtain the real precision
+/([48])\s*nByteReal/i or die "$ERROR: could not find nByteReal in $file\n";
+my $nByteReal = $1;
+
+$file="$outdir/$headerfile";
+open(OUTFILE, ">$file") or die "$ERROR: cannot open $file\n"; 
+print OUTFILE $_;
+close OUTFILE;
+
+# There is 1 octree.rst file and many blk files
+my @rstfiles = grep /^(blk\d*|octree|data)\.rst$/, readdir INDIR;
+print "Number of files in $indir is ",1+$#rstfiles,"\n";
+
 # Default integer format is VAX (little-endian, e.g. Linux PC)
-$intform='V';
+my $intform='V';
 
 print "Converting indir=$indir to outdir=$outdir...\n";
+my $rstfile;
 foreach $rstfile (@rstfiles){
 
-    open(INFILE, "$indir/$rstfile") or die "Cannot open $rstfile!\n";
+    my $file="$indir/$rstfile";
+    open(INFILE, $file) or die "$ERROR: cannot open $file!\n";
     $_=<INFILE>;
     close INFILE;
-    
-  ENDIAN:{
-      $len = unpack $intform,substr($_,0,4);
 
-      if($len == 8 or $len == 12){
-	  &convert4;
-      }elsif($len == 16 or $len == 24){
-	  &convert8;
-      }elsif($intform eq 'V'){
-	  # Try Network integer format (big-endian, e.g. SGI, IBM, Cray)
-	  print "Reading big-endian binary files...\n";
-	  $intform='N';
-	  redo ENDIAN;
-      }else{
-	  die "Length of first record is $len instead of 8, 12, 16 or 24\n";
+    # The $datafile is a binary direct access file with fixed record length.
+    # Since there are no record markers it is trivial to swap the byte order.
+    if($rstfile eq $datafile){
+	if($nByteReal == 4){
+	    &convert4;
+	}else{
+	    &convert8;
+	}
+    }else{
+      ENDIAN:{
+	  my $len = unpack $intform,substr($_,0,4);
+
+	  if($len == 8 or $len == 12){
+	      &convert4;
+	  }elsif($len == 16 or $len == 24){
+	      &convert_dbl;
+	  }elsif($intform eq 'V'){
+	      # Try Network integer format (big-endian, e.g. SGI, IBM, Cray)
+	      print "Reading big-endian binary files...\n";
+	      $intform='N';
+	      redo ENDIAN;
+	  }else{
+	      die "$ERROR: Length of first record is $len ".
+		  "instead of 8, 12, 16 or 24 in $file\n";
+	  }
       }
-  }
-    open OUTFILE, ">$outdir/$rstfile";
+    }
+    my $file = "$outdir/$rstfile";
+    open OUTFILE, ">$file" or die "$ERROR: cannot open $file\n";
     print OUTFILE $_;
     close OUTFILE;
 }
-
-open(INFILE, "$indir/restart.H") or die "cannot open $indir/restart.H\n";
-$_=<INFILE>;
-close INFILE;
-
-open(OUTFILE, ">$outdir/restart.H") or die "cannot open $outdir/restart.H\n";
-print OUTFILE $_;
-close OUTFILE;
 
 exit 0;
 
 ###############################################################################
 sub convert4{
+    my $i;
     for($i=0; $i<length(); $i+=4){
 	substr($_,$i,4)=reverse substr($_,$i,4);
     }
@@ -112,23 +118,32 @@ sub convert4{
 
 ###############################################################################
 sub convert8{
+    my $i;
+    for($i=0; $i<length(); $i+=8){
+	substr($_,$i,8)=reverse substr($_,$i,8);
+    }
+}
+
+###############################################################################
+sub convert_dbl{
 
     # initialize pointer for the string
-    $i=0;
+    my $i=0;
 
     while ( $i < length() ){
 	# Get length of record
-	$len = unpack($intform,substr($_,$i,4));
+	my $len = unpack($intform,substr($_,$i,4));
 	
 	# Check if length is reasonable
 	die "At position $i record length $len is too large?!\n" 
 	    if $i+$len > length();
 
 	# Reverse leading 4 byte length marker
-	$lenfixed = reverse(substr($_,$i,4));
+	my $lenfixed = reverse(substr($_,$i,4));
 	substr($_,$i,4)=$lenfixed;
 	
 	# Reverse 8 byte reals/integers
+	my $j;
 	for($j=$i+4; $j<$i+$len; $j+=8){
 	    substr($_,$j,8)=reverse(substr($_,$j,8));
 	}
@@ -141,4 +156,28 @@ sub convert8{
     }
 }
 
+##############################################################################
+sub print_help{
 
+    print 
+#BOC
+"Purpose: change the endianness of *.rst files and copy restart.H.
+
+Usage:
+
+ConvertRestart.pl INPUTDIR OUTPUTDIR
+
+This perl script can be run on a machine with arbitrary endianness.
+The files are read from the INPUTDIR (e.g. restartOUT) and the result is 
+saved into the OUTPUTDIR (e.g. restart_export). If the OUTPUTDIR does not
+exist, it is created.
+
+If the files are moved to/from a machine that uses 8 byte reals 
+(some older Crays) then the octree file needs to be fixed for the 
+4 vs. 8 byte integers using share/Scripts/FixI4toI8.pl or FixI8toI4.pl.
+The endianness can be changed with ConvertRestart.pl both after or before the 
+8-byte-integer-fix."
+#EOC
+    ,"\n\n";
+    exit;
+}
