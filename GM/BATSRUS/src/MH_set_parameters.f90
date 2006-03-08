@@ -39,6 +39,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters
+  use ModHallResist,    ONLY: UseHallResist, UseHallCmax, ResistDiagDim, &
+       HallFactor
 
   implicit none
 
@@ -442,6 +444,13 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
         !                                               ^CFG END DISSFLUX
+     case("#HALLRESISTIVITY")
+        call read_var('UseHallResist',  UseHallResist)
+        if(UseHallResist)then
+           call read_var('UseHallCmax', UseHallCmax)
+           call read_var('ResistDiag',  ResistDiagDim)
+           call read_var('Hallfactor',  Hallfactor)
+        end if
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
@@ -2383,6 +2392,16 @@ contains
        optimize_message_pass = 'all'
     endif                                            !^CFG END CONSTRAINB
 
+    if (UseHallResist .and. index(optimize_message_pass,'opt') > 0) then
+       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
+          write(*,'(a)')NameSub//&
+               ' WARNING: Hall resistivity does not work for'// &
+               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting optimize_message_pass = all'
+       end if
+       optimize_message_pass = 'all'
+    endif                                     
     
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
