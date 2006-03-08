@@ -10,6 +10,7 @@ subroutine advance_expl(DoCalcTimestep)
   use ModGeometry,ONLY : UseCovariant              !^CFG IF COVARIANT
   use ModBlockData, ONLY: set_block_data
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
+  use ModHallResist, ONLY: UseHallResist, add_hall_resist_flux
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -52,23 +53,19 @@ subroutine advance_expl(DoCalcTimestep)
 
         call timing_start('calc_fluxes_bfo')
         call calc_facefluxes(.true.)
-        call timing_stop('calc_fluxes_bfo')
 
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 
-        if (UseHeatFlux) then            
-           call timing_start('calc_fluxes')
-           call add_heat_flux(.true.)
-           call timing_stop('calc_fluxes')
-        end if
+        if (UseHeatFlux) call add_heat_flux(.true.)
 
         ! Update the faceflux values for resistive flux 
-        if (UseResistFlux) then
-           call timing_start('calc_fluxes')
-           call add_resistive_flux(.true.)
-           call timing_stop('calc_fluxes')
-        end if
+        if (UseResistFlux) call add_resistive_flux(.true.)
         !^CFG END DISSFLUX
+
+        ! Update the faceflux values for hall resistive flux 
+        if (UseHallResist) call add_hall_resist_flux(.true.)
+
+        call timing_stop('calc_fluxes_bfo')
 
         ! Save conservative flux correction for this solution
         ! block as required.
@@ -105,23 +102,19 @@ subroutine advance_expl(DoCalcTimestep)
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')
         call calc_facefluxes(.false.)
-        call timing_stop('calc_fluxes')
 
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 
-        if (UseHeatFlux) then
-           call timing_start('calc_fluxes')
-           call add_heat_flux(.false.)
-           call timing_stop('calc_fluxes')
-        end if
+        if (UseHeatFlux) call add_heat_flux(.false.)
 
         ! Update the faceflux values for resistive flux 
-        if (UseResistFlux) then
-           call timing_start('calc_fluxes')
-           call add_resistive_flux(.false.)
-           call timing_stop('calc_fluxes')
-        end if
+        if (UseResistFlux) call add_resistive_flux(.false.)
         !^CFG END DISSFLUX
+
+        ! Update the faceflux values for hall resistive flux 
+        if (UseHallResist) call add_hall_resist_flux(.false.)
+
+        call timing_stop('calc_fluxes')
 
         ! Enforce flux conservation by applying corrected fluxes
         ! to each coarse grid cell face at block edges with 
