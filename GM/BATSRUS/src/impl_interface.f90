@@ -332,18 +332,20 @@ subroutine getptotal(w,qnI,qnJ,qnK,p)
 end subroutine getptotal
 
 !==============================================================================
-subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
+subroutine getcmax(w,B0,Dxyz_D,qnI,qnJ,qnK,idim,implBLK,cmax)
 
   use ModProcMH
   use ModMain
   use ModVarIndexes
   use ModImplicit
   use ModPhysics, ONLY : g
+  use ModHallResist, ONLY: IonMassPerCharge, UseHallCmax
   implicit none
 
   integer, intent(in):: qnI,qnJ,qnK,idim,implBLK
   real, intent(in)   :: w(qnI,qnJ,qnK,nw)
   real, intent(in)   :: B0(qnI,qnJ,qnK,ndim)
+  real, intent(in)   :: Dxyz_D(ndim)
   real, intent(out)  :: cmax(qnI,qnJ,qnK)
 
   ! used to be automatic arrays
@@ -412,6 +414,10 @@ subroutine getcmax(w,B0,qnI,qnJ,qnK,idim,implBLK,cmax)
        sqrt(0.5*(cfast2+ sqrt(max(0.0,cfast2**2          &
        -4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/w(:,:,:,rho_)))))
 
+  if(UseHallCmax) cmax = cmax + &
+          cPi*abs(w(:,:,:,B_+idim)+B0(:,:,:,idim))*IonMassPerCharge &
+          /(w(:,:,:,rho_)*Dxyz_D(iDim))
+
   if(oktest_me)write(*,*)'Finished getcmax: cmax=',cmax(Itest,Jtest,Ktest)
 
   ! Deallocate arrays that used to be automatic
@@ -451,7 +457,7 @@ subroutine getdt_courant(qdt)
 
      do idim=1,ndim
 
-        call getcmax(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,&
+        call getcmax(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,dxyz,&
              nI,nJ,nK,idim,implBLK,cmax)
 
         if(.not.true_BLK(iBLK))then
@@ -486,6 +492,7 @@ subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
   use ModMain
   use ModVarIndexes
   use ModImplicit
+  use ModHallResist, ONLY: UseHallResist, HallJ_CD
   implicit none
 
   integer, intent(in) :: qnI,qnJ,qnK,iw,idim,implBLK
@@ -493,15 +500,18 @@ subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
   real,    intent(in) :: B0(qnI,qnJ,qnK,ndim)
   real,    intent(out):: f(qnI,qnJ,qnK)
 
-  integer :: kdim
+  integer :: kdim, iBLK
   logical :: oktest, oktest_me
   !--------------------------------------------------------------------------
-  if(iProc==PROCtest.and.implBLK==implBLKtest.and.iw==VARtest)then
+  if(iProc==PROCtest.and.implBLK==implBLKtest.and.iw==VARtest &
+       .and.iDim==DimTest)then
      call set_oktest('getflux',oktest,oktest_me)
   else
      oktest=.false.; oktest_me=.false.
   endif
   if(oktest_me)write(*,*)'Getflux idim,w:',idim,w(Itest,Jtest,Ktest,VARtest)
+
+  iBLK = impl2iBLK(implBLK)
 
   select case(iw)
   case(rho_)
@@ -548,10 +558,25 @@ subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
         ! f_i[b_i] should be exactly 0
         f = 0.0
      else
-        ! f_i[b_k]=(m_i*(b_k+B0_k) - m_k*(b_i+B0_i))/rho
-        f =  (w(:,:,:,rhoU_+idim)*(w(:,:,:,iw)      + B0(:,:,:,kdim)) &
-             -w(:,:,:,rhoU_+kdim)*(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
-             )/w(:,:,:,rho_)
+        if(UseHallResist)then
+           ! Take Hall effect into account. The off-diagonal part of 
+           ! Eta.J = H*(J x B)/rho where H = HallFactor*IonMassPerCharge
+           ! so the electric field (ignoring the diagonal part of J) becomes 
+           ! E = -u x B + eta.J = -(rho U - H*J)xB/rho
+           ! In effect the momentum rhoU is preplaced with (rhoU - H*J)
+           !
+           ! f_i[b_k]=( (m_i-H*J_i)*(b_k+B0_k) - (m_k-H*J_k)*(b_i+B0_i))/rho
+           f =  ( (w(:,:,:,rhoU_+idim)-HallJ_CD(:,:,:,idim)) &
+                *(w(:,:,:,iw)+ B0(:,:,:,kdim)) &
+                -(w(:,:,:,rhoU_+kdim)-HallJ_CD(:,:,:,kdim)) &
+                *(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
+                )/w(:,:,:,rho_)
+        else
+           ! f_i[b_k]=(m_i*(b_k+B0_k) - m_k*(b_i+B0_i))/rho
+           f =  (w(:,:,:,rhoU_+idim)*(w(:,:,:,iw)      + B0(:,:,:,kdim)) &
+                -w(:,:,:,rhoU_+kdim)*(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
+                )/w(:,:,:,rho_)
+        end if
      endif
   case default
      ! We assume that all other variables behave like advected scalars !!!
