@@ -14,6 +14,7 @@ subroutine calc_sources
   use ModNumConst
   use ModResist,   ONLY : EtaResist_G                    !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
+  use ModHallResist,ONLY: UseHallResist
   implicit none
 
   integer :: i, j, k, iDim
@@ -55,17 +56,19 @@ subroutine calc_sources
              UDotFA_Z(i,j,k+1) -UDotFA_Z(i,j,k))
      end do; end do; end do
 
-     if(UseResistFlux)then                       !^CFG IF DISSFLUX BEGIN
+     if(UseHallResist &
+          .or. UseResistFlux &  !^CFG IF DISSFLUX BEGIN
+          )then
         ! Joule heating: dP/dt += (gamma-1)*eta*j**2
         do k=1,nK; do j=1,nJ; do i=1,nI
-
+           
            call get_current(i,j,k,GlobalBlk,Current_D)
-
+           
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + &
                 (g-1) * EtaResist_G(i,j,k) * sum(Current_D**2)
-
+           
         end do; end do; end do
-     end if                                      !^CFG END DISSFLUX
+     end if
   end if
 
 
