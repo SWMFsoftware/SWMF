@@ -405,7 +405,8 @@ subroutine advance_impl
         if(oktest_me.and.nImplBLK>0)&
              write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
      end if
-     if(oktest_me)write(*,*)NameSub,': After KrylovMatVec,info,KrylovError=',&
+     if(oktest_me.or.DoTestKrylovMe)write(*,*)NameSub,&
+          ': After KrylovMatVec,info,KrylovError=',&
           KrylovMatVec,info,KrylovError
 
      if(oktest_me.and.info/=0)write(*,*) NameSub, &
