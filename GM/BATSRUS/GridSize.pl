@@ -15,6 +15,7 @@ use strict;
 
 # Set error string for error messages
 my $ERROR = 'GridSize_ERROR:';
+my $WARNING = 'GridSize_WARNING:';
 
 # Set the name of the file that contains the grid size
 my $NameFile="src/ModSize.f90";
@@ -53,13 +54,15 @@ my $IsNewGrid;
 &read_grid_size;
 
 # Check the grid size (to be set)
-die "$ERROR nI=$nI must be 4 or more\n" if $nI < 4;
-die "$ERROR nJ=$nJ must be 4 or more\n" if $nJ < 4;
-die "$ERROR nK=$nK must be 4 or more\n" if $nK < 4;
+die "$ERROR nI=$nI must be 4 or more\n" if $nI < 2;
+die "$ERROR nJ=$nJ must be 4 or more\n" if $nJ < 2;
+die "$ERROR nK=$nK must be 4 or more\n" if $nK < 2;
 
 die "$ERROR nI=$nI must be an even integer\n" if $nI!=int($nI) or $nI%2!=0; 
 die "$ERROR nJ=$nJ must be an even integer\n" if $nJ!=int($nJ) or $nJ%2!=0; 
 die "$ERROR nK=$nK must be an even integer\n" if $nK!=int($nK) or $nK%2!=0; 
+
+warn "$WARNING nI=$nI nJ=$nJ nK=$nK does not allow AMR\n" if $nI == 2 or $nJ == 2 or $nK==2;
 
 die "$ERROR MaxBlock=$MaxBlock must be a positive integer\n" 
     if $MaxBlock<1 or $MaxBlock != int($MaxBlock);
