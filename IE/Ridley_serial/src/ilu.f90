@@ -388,7 +388,7 @@ CONTAINS
        CALL Sort_Sorter
        k = COUNT (S % JA (S % JA (i):S % JA (i+1)-1) > i)
 !\\\
-       if (k>1) then
+       if (k>=1) then
           k3 = LU % U % JA (i)
           do k2 = S % JA (i), S % JA (i+1) - 1
              if (S % JA (k2) > i ) then
