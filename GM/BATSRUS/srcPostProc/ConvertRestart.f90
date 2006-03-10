@@ -33,7 +33,20 @@ program convert_restart_file
 
   !----------------------------------------------------------------------------
 
+  write(*,*)'ConvertRestart v1.0 (G. Toth, 2006) starting'
+
   call read_restart_header
+
+  write(*,*)'Converting from TypeRestart =',trim(TypeRestartInFile)
+  write(*,*)'Precision or reals          =',nByteReal
+  write(*,*)'Number of state variables   =',nVar
+  write(*,*)'Number of cells in a block  =',nI,'x',nJ,'x',nK
+  write(*,*)'Number of blocks            =',nBlock
+  write(*,*)'Simulation time             =',TimeSimulation
+  if(IsBfaceSaved)write(*,*)'Face centered magnetic field was saved'
+  if(IsPrevStateSaved)write(*,*)'Previous state was saved'
+  write(*,*)'Conversion starting ...'
+
   select case(TypeRestartInFile)
   case('block')
      call write_one_restart_file
@@ -42,6 +55,8 @@ program convert_restart_file
   case default
      call my_stop('Unknown TypeRestartInFile='//TypeRestartInFile)
   end select
+
+  write(*,*)'ConvertRestart finished'
 
 contains
 
@@ -235,7 +250,7 @@ contains
     end if
     if(iError /= 0)then
        write(*,*) NameSub,': ERROR for DoRead=',DoRead
-       call my_stop(NameSub//': could not open file='//NameFile)
+       call my_stop(NameSub//': could not open file='//NameDataFile)
     end if
 
   end subroutine open_one_restart_file
