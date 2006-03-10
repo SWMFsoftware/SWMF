@@ -15,6 +15,8 @@ PIDL:	PostIDL.o
 PSPH:	PostSPH.o
 	${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
 
+CRST:	ConvertRestart.o
+	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
 #
 #	cleaning
 #
