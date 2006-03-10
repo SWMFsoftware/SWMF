@@ -75,7 +75,10 @@ contains
        case("#TIMESIMULATION")
           read(iUnitTmp,*) TimeSimulation
        case("#NEWRESTART")
-          read(iUnitTmp,*) IsBfaceSaved
+          read(iUnitTmp,*,iostat=iError) IsBfaceSaved
+          ! If constrained transport is configured out 
+          ! the logical parameter is not present
+          if(iError /= 0) IsBfaceSaved = .false.
        case("#PRECISION")
           read(iUnitTmp,*) nByteReal
        case("#RESTARTINFILE")
