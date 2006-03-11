@@ -7,7 +7,7 @@ module ModRestartFile
        restart, save_restart_file
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
-       n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion
+       n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal
   use ModVarIndexes, ONLY: nVar, DefaultState_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
@@ -18,30 +18,43 @@ module ModRestartFile
   use ModImplicit,   ONLY: n_prev, w_prev, dt_prev          !^CFG IF IMPLICIT
   use ModKind,       ONLY: Real4_, Real8_
 
-implicit none
+  implicit none
 
-private ! except
+  private ! except
 
-public read_restart_parameters
-public write_restart_files 
-public read_restart_files
-public read_octree_file
+  public read_restart_parameters
+  public write_restart_files 
+  public read_restart_files
+  public read_octree_file
 
-! Directories for input and output restart files
-character(len=100), public :: NameRestartInDir ="restartIN/"
-character(len=100), public :: NameRestartOutDir="restartOUT/"
+  ! Directories for input and output restart files
+  character(len=100), public :: NameRestartInDir ="restartIN/"
+  character(len=100), public :: NameRestartOutDir="restartOUT/"
 
-! Local variables
+  ! Local variables
+  character(len=*), parameter :: StringRestartExt=".rst"
+  character(len=*), parameter :: NameHeaderFile  ="restart.H"
+  character(len=*), parameter :: NameDataFile    ="data.rst"
+  character(len=*), parameter :: NameBlkFile     ="blk"
 
-logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
-integer :: nByteRealRead = 8     ! Real precision in restart files
+  logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
+  integer :: nByteRealRead = 8     ! Real precision in restart files
 
-! One can use 'block' or 'direct' format for input and output restart files
-character (len=10)  :: TypeRestartInFile ='block'
-character (len=10)  :: TypeRestartOutFile='block'  
+  ! One can use 'block' or 'direct' format for input and output restart files
+  character (len=10)  :: TypeRestartInFile ='block'
+  character (len=10)  :: TypeRestartOutFile='block'  
 
-character(len=*), parameter :: StringRestartExt=".rst"
-character(len=100) :: NameFile
+  character(len=100) :: NameFile
+
+  ! Temporaray variables to read arbitrary precision data files
+  real (Real8_) :: Dt8, Time8, Dxyz8_D(3), Xyz8_D(3)
+  real (Real4_) :: Dt4, Time4, Dxyz4_D(3), Xyz4_D(3)
+  real (Real8_) :: State8_CV(nI,nJ,nK,nVar), State8_VC(nVar,nI,nJ,nK)
+  real (Real4_) :: State4_CV(nI,nJ,nK,nVar), State4_VC(nVar,nI,nJ,nK)
+  !^CFG IF CONSTRAINB BEGIN
+  real (Real8_) :: B8_X(nI+1,nJ,nK), B8_Y(nI,nJ+1,nK), B8_Z(nI,nJ,nK+1)
+  real (Real4_) :: B4_X(nI+1,nJ,nK), B4_Y(nI,nJ+1,nK), B4_Z(nI,nJ,nK+1)
+  !^CFG END CONSTRAINB
 
 contains
 
@@ -49,7 +62,7 @@ contains
 
     use ModReadParam, ONLY: read_var
     use ModUtilities, ONLY: fix_dir_name, check_dir
-    use ModMain,      ONLY: nByteReal, UseStrict
+    use ModMain,      ONLY: UseStrict
 
     character(len=*), intent(in) :: NameCommand
     character(len=*), parameter:: NameSub = 'read_restart_parameters'
@@ -157,7 +170,7 @@ contains
   subroutine write_restart_header
 
     use ModMain,       ONLY: Dt, Problem_Type, NameThisComp, TypeCoordSystem,&
-         nBlockAll, nByteReal, Body1, Time_Accurate, iStartTime_I
+         nBlockAll, Body1, Time_Accurate, iStartTime_I
     use ModMain,       ONLY: UseBody2                     !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
@@ -175,7 +188,7 @@ contains
     if (iProc/=0) RETURN
     iProblemType = problem_type
 
-    open(unit_tmp,file=trim(NameRestartOutDir)//'restart.H')
+    open(unit_tmp,file=trim(NameRestartOutDir)//NameHeaderFile)
 
     write(unit_tmp,'(a)')'#CODEVERSION'
     write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
@@ -327,18 +340,6 @@ contains
     character :: StringDigit
     real      :: tSimulationRead
 
-    ! Temporaray variables to read arbitrary precision data files
-    real (Real8_) :: Dt8, Time8, Dxyz8_D(3), Xyz8_D(3)
-    real (Real4_) :: Dt4, Time4, Dxyz4_D(3), Xyz4_D(3)
-    real (Real8_) :: State8_CV(1:nI,1:nJ,1:nK,nVar)
-    real (Real4_) :: State4_CV(1:nI,1:nJ,1:nK,nVar)
-    !^CFG IF CONSTRAINB BEGIN
-    real (Real8_) :: b8_X(1:nI+1,1:nJ,1:nK), b8_Y(1:nI,1:nJ+1,1:nK), &
-         b8_Z(1:nI,1:nJ,1:nK+1)
-    real (Real4_) :: b4_X(1:nI+1,1:nJ,1:nK), b4_Y(1:nI,1:nJ+1,1:nK), &
-         b4_Z(1:nI,1:nJ,1:nK+1)
-    !^CFG END CONSTRAINB
-
     character (len=*), parameter :: NameSub='read_restart_file'
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------
@@ -352,7 +353,7 @@ contains
     write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
-         trim(NameRestartInDir)//'blk',iBlockRestart,StringRestartExt
+         trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
 
     open(unit_tmp, file=NameFile, status='old', form='UNFORMATTED',&
          iostat = iError)
@@ -365,7 +366,7 @@ contains
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V
     end do;end do;end do
 
-    ! Do not overwrite time_simulation which is read from restart.H
+    ! Do not overwrite time_simulation which is read from header file
     if(nByteRealRead == 8)then
        read(unit_tmp, iostat = iError) Dt8, Time8
        dt_BLK(iBlock) = Dt8
@@ -458,7 +459,7 @@ contains
     write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
 
     write(NameFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
-         trim(NameRestartOutDir)//'blk',iBlockRestart,StringRestartExt
+         trim(NameRestartOutDir)//NameBlkFile,iBlockRestart,StringRestartExt
 
     open(unit_tmp, file=NameFile, status="replace", form='UNFORMATTED')
 
@@ -488,7 +489,11 @@ contains
 
     integer :: lRecord, l, iError
     character(len=*), parameter :: NameSub='open_one_restart_file'
+    logical :: DoTest, DoTestme
     !-------------------------------------------------------------------------
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' starting with DoRead=',DoRead
 
     ! Calculate the record length for the first block
     inquire (IOLENGTH = lRecord ) &
@@ -497,7 +502,7 @@ contains
          State_VGB(1:nVar,1:nI,1:nJ,1:nK,1)
 
     if(DoRead .and. Restart_Bface .or. &         !^CFG iF CONSTRAINB BEGIN
-       .not.DoRead .and. UseConstrainB)then       
+         .not.DoRead .and. UseConstrainB)then       
        inquire (IOLENGTH = l) &
             BxFace_BLK(1:nI+1,1:nJ,1:nK,1),&
             ByFace_BLK(1:nI,1:nJ+1,1:nK,1),&
@@ -509,14 +514,20 @@ contains
        lRecord = lRecord + l
     end if                                       !^CFG END IMPLICIT
 
+    if(DoTestMe)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
+          nByteReal, nByteRealRead, lRecord
+
     if(DoRead)then
-       NameFile = trim(NameRestartInDir)//'data'//StringRestartExt
+       if(nByteReal /= nByteRealRead) &
+            lRecord = (lRecord * nByteRealRead)/nByteReal
+
+       NameFile = trim(NameRestartInDir)//NameDataFile
 
        open(Unit_Tmp, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
             status = 'old', iostat=iError)
     else
-       NameFile = trim(NameRestartOutDir)//'data'//StringRestartExt
+       NameFile = trim(NameRestartOutDir)//NameDataFile
        ! Delete file from proc 0
        if(iProc==0)then
           open(Unit_Tmp, file=NameFile, status='unknown')
@@ -531,7 +542,7 @@ contains
     end if
     if(iError /= 0)then
        write(*,*) NameSub,': ERROR for DoRead=',DoRead
-       call stop_mpi(NameSub,': could not open file='//NameFile)
+       call stop_mpi(NameSub//': could not open file='//NameFile)
     end if
 
   end subroutine open_one_restart_file
@@ -542,50 +553,85 @@ contains
 
     character (len=*), parameter :: NameSub='read_one_restart_file'
     integer :: i, j, k, iBlock, iRec
+    logical :: IsRead, DoTest, DoTestMe
     !-------------------------------------------------------------------------
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     call open_one_restart_file(DoRead = .true.)
 
+    if(DoTestMe)write(*,*) NameSub,' starting with nBlock=', nBlock
 
     do iBlock = 1, nBlock
 
        if(UnusedBlk(iBlock)) CYCLE
        ! Use the global block index as the record number
-       iRec = global_block_number(iBlock)
+       iRec = iBlockRestartALL_A(global_block_number(iBlock))
+
+       if(DoTestMe) write(*,*) NameSub,' iBlock,iBlockGlobal, iRec=',&
+            iBlock, global_block_number(iBlock), iRec
 
        ! Fill in ghost cells
        do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
           State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V
        end do; end do; end do
 
-       if(Restart_Bface)then                          !^CFG IF CONSTRAINB BEGIN
-          ! Read face centered magnetic field 
-          read(Unit_tmp, rec=iRec)  &
-               Dt_BLK(iBlock), &
-               Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
-               XyzStart_BLK(:,iBlock), &
-               State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
-               BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
-               ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
-               BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
-          CYCLE
-       endif                                          !^CFG END CONSTRAINB
-       if(n_prev==n_step)then                         !^CFG IF IMPLICIT BEGIN
-          ! Read previous time step for sake of BDF2 scheme
-          read(Unit_tmp, rec=iRec) &
-               Dt_BLK(iBlock), &
-               Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
-               XyzStart_BLK(:,iBlock), &
-               State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
-               w_prev(:,:,:,:,iBlock)
-          CYCLE
-       endif                                          !^CFG END IMPLICIT
+       IsRead = .false.
+       if(nByteRealRead == 4)then
+          if(Restart_Bface)then                       !^CFG IF CONSTRAINB BEGIN
+             ! Read with face centered magnetic field for constrained transport
+             read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
+                  B4_X, B4_Y, B4_Z
+             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
+             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B4_Y
+             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B4_Z
+             IsRead = .true.
+          endif                                       !^CFG END CONSTRAINB
+          if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
+             ! Read with previous state for sake of implicit BDF2 scheme
+             read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
+                  State4_CV
+             w_prev(:,:,:,:,iBlock) = State4_CV
+             IsRead = .true.
+          end if                                       !^CFG END IMPLICIT
+          if(.not.IsRead) &
+               read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
 
-       read(Unit_tmp, rec=iRec) &
-            Dt_BLK(iBlock), &
-            Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock), &
-            XyzStart_BLK(:,iBlock), &
-            State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
+          Dt_BLK(iBlock) = Dt4
+          Dx_BLK(iBlock) = Dxyz4_D(1)
+          Dy_BLK(iBlock) = Dxyz4_D(2)
+          Dz_BLK(iBlock) = Dxyz4_D(3)
+          XyzStart_BLK(:,iBlock) = Xyz4_D
+          State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State4_VC
+
+       else
+          if(Restart_Bface)then                       !^CFG IF CONSTRAINB BEGIN
+             ! Read with face centered magnetic field for constrained transport
+             read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
+                  B8_X, B8_Y, B8_Z
+             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
+             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = B8_Y
+             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = B8_Z
+             IsRead = .true.
+          endif                                       !^CFG END CONSTRAINB
+          if(n_prev==n_step)then                      !^CFG IF IMPLICIT BEGIN
+             ! Read with previous state for sake of implicit BDF2 scheme
+             read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
+                  State8_CV
+             w_prev(:,:,:,:,iBlock) = State8_CV
+             IsRead = .true.
+          end if                                       !^CFG END IMPLICIT
+          if(.not.IsRead) &
+               read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
+
+          Dt_BLK(iBlock) = Dt8
+          Dx_BLK(iBlock) = Dxyz8_D(1)
+          Dy_BLK(iBlock) = Dxyz8_D(2)
+          Dz_BLK(iBlock) = Dxyz8_D(3)
+          XyzStart_BLK(:,iBlock) = Xyz8_D
+          State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State8_VC
+
+       end if
     end do
 
     close(Unit_Tmp)
