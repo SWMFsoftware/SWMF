@@ -1000,8 +1000,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter',limiter_type)
-        if(limiter_type/='minmod') call read_var('LimiterBeta',&  
-             BetaLimiter)
+        if(limiter_type == 'minmod') then
+           BetaLimiter = 1.0
+        else
+           call read_var('LimiterBeta',BetaLimiter)
+        end if
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)
      case("#CONSERVATIVECRITERIA")
