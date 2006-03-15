@@ -218,7 +218,7 @@ Module ModMain
   !/
   ! Choice of limiter
   character (len=6) :: Limiter_Type = 'minmod'
-  real              :: BetaLimiter
+  real              :: BetaLimiter  = 1.0
 
   ! Prolongation order (1 or 2) and type ('central','lr','minmod','central2'..)
   integer           :: prolong_order = 1
