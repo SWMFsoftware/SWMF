@@ -54,9 +54,9 @@ my $IsNewGrid;
 &read_grid_size;
 
 # Check the grid size (to be set)
-die "$ERROR nI=$nI must be 4 or more\n" if $nI < 2;
-die "$ERROR nJ=$nJ must be 4 or more\n" if $nJ < 2;
-die "$ERROR nK=$nK must be 4 or more\n" if $nK < 2;
+die "$ERROR nI=$nI must be 2 or more\n" if $nI < 2;
+die "$ERROR nJ=$nJ must be 2 or more\n" if $nJ < 2;
+die "$ERROR nK=$nK must be 2 or more\n" if $nK < 2;
 
 die "$ERROR nI=$nI must be an even integer\n" if $nI!=int($nI) or $nI%2!=0; 
 die "$ERROR nJ=$nJ must be an even integer\n" if $nJ!=int($nJ) or $nJ%2!=0; 
