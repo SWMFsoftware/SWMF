@@ -341,70 +341,246 @@ contains
   subroutine get_face_current(iDir, i, j, k, iBlock, Jx, Jy, Jz)
 
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
-    use ModMain,    ONLY: x_, y_, z_
+    use ModMain,    ONLY: nI, nJ, nK, x_, y_, z_
     use ModGeometry,ONLY: Dx_BLK, Dy_BLK, Dz_BLK
+    use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
+         neiLnorth,neiLtop,neiLbot
 
     implicit none
+
+    real, parameter :: cTwoThird = 2.0/3.0, cFourThird = 4.0/3.0
+
+    ! Coefficients for 2nd order current at res. change
+    ! that has the same 3rd order error term as the 
+    ! second order current taken on the uniform grid
+    real, parameter :: a = 1.0/7.0, b=0.6, c=16.0/35.0
+
     !  logical, intent(in):: DoTest
     integer, intent(in):: iDir, i, j, k, iBlock
     real, intent(out)  :: Jx, Jy, Jz
 
-    real :: InvDx, InvDy, InvDz, InvDx4, InvDy4, InvDz4
-
-
+    integer :: iL, iR, jL, jR, kL, kR
+    real :: InvDx, InvDy, InvDz
+    real :: InvDx1, InvDy1, InvDz1  ! Coarse side (if any)
+    real :: InvDx2, InvDy2, InvDz2  ! Fine side (if any)
+    !-------------------------------------------------------------------------
+       
     InvDx = 1.0/dx_Blk(iBlock)
     InvDy = 1.0/dy_Blk(iBlock)
     InvDz = 1.0/dz_Blk(iBlock)
-    InvDx4 = 0.25*InvDx
-    InvDy4 = 0.25*InvDy
-    InvDz4 = 0.25*InvDz
+
+    if(i==1 .and. NeiLeast(iBlock)==-1)then
+       iL = i; iR = i+1; InvDx1 = 0.5*InvDx
+    elseif(i==nI .and. NeiLwest(iBlock)==-1)then
+       iR = i; iL = i-1; InvDx1 = 0.5*InvDx
+    else
+       iR = i+1; iL = i-1; InvDx1 = 0.25*InvDx
+    end if
+
+    if(j==1 .and. NeiLsouth(iBlock)==-1)then
+       jL = j; jR = j+1; InvDy1 = 0.5*InvDy
+    elseif(j==nJ .and. NeiLnorth(iBlock)==-1)then
+       jR = j; jL = j-1; InvDy1 = 0.5*InvDy
+    else
+       jR = j+1; jL = j-1; InvDy1 = 0.25*InvDy
+    end if
+
+    if(k==1 .and. NeiLbot(iBlock)==-1)then
+       kL = k; kR = k+1; InvDz1 = 0.5*InvDz
+    elseif(k==nK .and. NeiLtop(iBlock)==-1)then
+       kR = k; kL = k-1; InvDz1 = 0.5*InvDz
+    else
+       kR = k+1; kL = k-1; InvDz1 = 0.25*InvDz
+    end if
+
+    InvDx2 = InvDx1
+    InvDy2 = InvDy1
+    InvDz2 = InvDz1
 
     select case(iDir)
     case(x_)
-       Jx = +InvDy4*(State_VGB(Bz_,i,j+1,k  ,iBlock)+State_VGB(Bz_,i-1,j+1,k  ,iBlock)  &
-            -        State_VGB(Bz_,i,j-1,k  ,iBlock)-State_VGB(Bz_,i-1,j-1,k  ,iBlock)) &
-            -InvDz4*(State_VGB(By_,i,j  ,k+1,iBlock)+State_VGB(By_,i-1,j  ,k+1,iBlock)  &
-            -        State_VGB(By_,i,j  ,k-1,iBlock)-State_VGB(By_,i-1,j  ,k-1,iBlock))
+       if(i==1 .and. NeiLeast(iBlock)==1)then
+          InvDy1 = cTwoThird *InvDy1
+          InvDy2 = cFourThird*InvDy2
+          InvDz1 = cTwoThird *InvDz1
+          InvDz2 = cFourThird*InvDz2
 
-       Jy = +InvDz4*(State_VGB(Bx_,i,j,k+1,iBlock)+State_VGB(Bx_,i-1,j,k+1,iBlock)  &
-            -        State_VGB(Bx_,i,j,k-1,iBlock)-State_VGB(Bx_,i-1,j,k-1,iBlock)) &
-            -InvDx* (State_VGB(Bz_,i,j,k  ,iBlock)-State_VGB(Bz_,i-1,j,k  ,iBlock))
+          Jy = -InvDx* (-a*State_VGB(Bz_,i+2,j,k,iBlock) &
+               +         b*State_VGB(Bz_,i+1,j,k,iBlock) &
+               -         c*State_VGB(Bz_,i-1,j,k,iBlock))
+          Jz = +InvDx* (-a*State_VGB(By_,i+2,j,k,iBlock) &
+               +         b*State_VGB(By_,i+1,j,k,iBlock) &
+               -         c*State_VGB(By_,i-1,j,k,iBlock))
+       elseif(i==nI+1 .and. NeiLwest(iBlock)==1)then
+          InvDy1 = cFourThird*InvDy1
+          InvDy2 = cTwoThird *InvDy2
+          InvDz1 = cFourThird*InvDz1
+          InvDz2 = cTwoThird *InvDz2
 
-       Jz = +InvDx* (State_VGB(By_,i,j  ,k,iBlock)-State_VGB(By_,i-1,j  ,k,iBlock)) &
-            -InvDy4*(State_VGB(Bx_,i,j+1,k,iBlock)+State_VGB(Bx_,i-1,j+1,k,iBlock)  &
-            -        State_VGB(Bx_,i,j-1,k,iBlock)-State_VGB(Bx_,i-1,j-1,k,iBlock))
+          Jy = -InvDx* (c*State_VGB(Bz_,i  ,j,k,iBlock) &
+               -        b*State_VGB(Bz_,i-2,j,k,iBlock) &
+               +        a*State_VGB(Bz_,i-3,j,k,iBlock))
+          Jz = +InvDx* (c*State_VGB(By_,i  ,j,k,iBlock) &
+               -        b*State_VGB(By_,i-2,j,k,iBlock) &
+               +        a*State_VGB(By_,i-3,j,k,iBlock))
+       else
+          Jy = -InvDx* (State_VGB(Bz_,i  ,j,k,iBlock) &
+               -        State_VGB(Bz_,i-1,j,k,iBlock))
+          Jz = +InvDx* (State_VGB(By_,i  ,j,k,iBlock) &
+               -        State_VGB(By_,i-1,j,k,iBlock))
+       end if
+       Jx = +InvDy1*(State_VGB(Bz_,i-1,jR,k,iBlock)  &
+            -        State_VGB(Bz_,i-1,jL,k,iBlock)) &
+            +InvDy2*(State_VGB(Bz_,i  ,jR,k,iBlock)  &
+            -        State_VGB(Bz_,i  ,jL,k,iBlock)) &
+            -InvDz1*(State_VGB(By_,i-1,j,kR,iBlock)  &
+            -        State_VGB(By_,i-1,j,kL,iBlock)) &
+            -InvDz2*(State_VGB(By_,i  ,j,kR,iBlock)  &
+            -        State_VGB(By_,i  ,j,kL,iBlock))
+
+       Jy = Jy &
+            + InvDz1*(State_VGB(Bx_,i-1,j,kR,iBlock)  &
+            -         State_VGB(Bx_,i-1,j,kL,iBlock)) &
+            + InvDz2*(State_VGB(Bx_,i  ,j,kR,iBlock)  &
+            -         State_VGB(Bx_,i  ,j,kL,iBlock))
+
+       Jz = Jz &
+            - InvDy1*(State_VGB(Bx_,i-1,jR,k,iBlock)  &
+            -         State_VGB(Bx_,i-1,jL,k,iBlock)) &
+            - InvDy2*(State_VGB(Bx_,i  ,jR,k,iBlock)  &
+            -         State_VGB(Bx_,i  ,jL,k,iBlock))
 
     case(y_)
-       Jx = +InvDy* (State_VGB(Bz_,i,j,k  ,iBlock)-State_VGB(Bz_,i,j-1,k  ,iBlock)) &
-            -InvDz4*(State_VGB(By_,i,j,k+1,iBlock)+State_VGB(By_,i,j-1,k+1,iBlock)  &
-            -        State_VGB(By_,i,j,k-1,iBlock)-State_VGB(By_,i,j-1,k-1,iBlock))
+       if(j==1   .and. NeiLsouth(iBlock)==1)then
+          InvDx1 = cTwoThird *InvDx1
+          InvDx2 = cFourThird*InvDx2
+          InvDz1 = cTwoThird *InvDz1
+          InvDz2 = cFourThird*InvDz2
 
-       Jy = +InvDz4*(State_VGB(Bx_,i  ,j,k+1,iBlock)+State_VGB(Bx_,i  ,j-1,k+1,iBlock)  &
-            -        State_VGB(Bx_,i  ,j,k-1,iBlock)-State_VGB(Bx_,i  ,j-1,k-1,iBlock)) &
-            -InvDx4*(State_VGB(Bz_,i+1,j,k  ,iBlock)+State_VGB(Bz_,i+1,j-1,k  ,iBlock)  &
-            -        State_VGB(Bz_,i-1,j,k  ,iBlock)-State_VGB(Bz_,i-1,j-1,k  ,iBlock))
+          Jx = +InvDy* (-a*State_VGB(Bz_,i,j+2,k,iBlock) &
+               +         b*State_VGB(Bz_,i,j+1,k,iBlock) &
+               -         c*State_VGB(Bz_,i,j-1,k,iBlock))
+          Jz = -InvDy* (-a*State_VGB(Bx_,i,j+2,k,iBlock) &
+               +         b*State_VGB(Bx_,i,j+1,k,iBlock) &
+               -         c*State_VGB(Bx_,i,j-1,k,iBlock))
+       elseif(j==nJ+1.and. NeiLnorth(iBlock)==1)then
+          InvDx1 = cFourThird*InvDx1
+          InvDx2 = cTwoThird *InvDx2
+          InvDz1 = cFourThird*InvDz1
+          InvDz2 = cTwoThird *InvDz2
 
-       Jz = +InvDx4*(State_VGB(By_,i+1,j,k,iBlock)+State_VGB(By_,i+1,j-1,k,iBlock)  &
-            -        State_VGB(By_,i-1,j,k,iBlock)-State_VGB(By_,i-1,j-1,k,iBlock)) &
-            -InvDy* (State_VGB(Bx_,i  ,j,k,iBlock)-State_VGB(Bx_,i  ,j-1,k,iBlock)) 
+          Jx = +InvDy* (c*State_VGB(Bz_,i,j  ,k,iBlock) &
+               -        b*State_VGB(Bz_,i,j-2,k,iBlock) &
+               +        a*State_VGB(Bz_,i,j-3,k,iBlock))
+          Jz = -InvDy* (c*State_VGB(Bx_,i,j  ,k,iBlock) &
+               -        b*State_VGB(Bx_,i,j-2,k,iBlock) &
+               +        a*State_VGB(Bx_,i,j-3,k,iBlock))
+       else
+          Jx = +    InvDy* (State_VGB(Bz_,i,j,  k, iBlock) & 
+               -            State_VGB(Bz_,i,j-1,k, iBlock))
+          Jz = -    InvDy *(State_VGB(Bx_,i ,j  ,k,iBlock) &
+               -            State_VGB(Bx_,i ,j-1,k,iBlock)) 
+       end if
+
+       Jx = Jx &
+            - InvDz1*(State_VGB(By_,i,j-1,kR,iBlock) &
+            -         State_VGB(By_,i,j-1,kL,iBlock))&
+            - InvDz2*(State_VGB(By_,i,j  ,kR,iBlock) &
+            -         State_VGB(By_,i,j  ,kL,iBlock))
+            
+
+       Jy = + InvDz1*(State_VGB(Bx_,i ,j-1,kR,iBlock) &
+            -         State_VGB(Bx_,i ,j-1,kL,iBlock))&
+            + InvDz2*(State_VGB(Bx_,i ,j  ,kR,iBlock) &
+            -         State_VGB(Bx_,i ,j  ,kL,iBlock))&
+            - InvDx1*(State_VGB(Bz_,iR,j-1,k ,iBlock) &
+            -         State_VGB(Bz_,iL,j-1,k ,iBlock))&
+            - InvDx2*(State_VGB(Bz_,iR,j  ,k ,iBlock) &
+            -         State_VGB(Bz_,iL,j  ,k ,iBlock)) 
+
+
+
+       Jz = Jz &
+            + InvDx1*(State_VGB(By_,iR,j-1,k,iBlock) &
+            -         State_VGB(By_,iL,j-1,k,iBlock))&
+            + InvDx2*(State_VGB(By_,iR,j  ,k,iBlock) &
+            -         State_VGB(By_,iL,j  ,k,iBlock))
+
 
     case(z_)
-       Jx = +InvDy4*(State_VGB(Bz_,i,j+1,k,iBlock)+State_VGB(Bz_,i,j+1,k-1,iBlock)  &
-            -        State_VGB(Bz_,i,j-1,k,iBlock)-State_VGB(Bz_,i,j-1,k-1,iBlock)) &
-            -InvDz* (State_VGB(By_,i,j  ,k,iBlock)-State_VGB(By_,i,j  ,k-1,iBlock))  
+       
+       if(k==1   .and. NeiLBot(iBlock)==1)then
+          InvDx1 = cTwoThird *InvDx1
+          InvDx2 = cFourThird*InvDx2
+          InvDy1 = cTwoThird *InvDy1
+          InvDy2 = cFourThird*InvDy2
+          
+          Jx = -InvDz* (-a*State_VGB(By_,i,j  ,k+2,iBlock) &
+               +         b*State_VGB(By_,i,j  ,k+1,iBlock) &
+               -         c*State_VGB(By_,i,j  ,k-1,iBlock))
+!               -InvDz* (3*State_VGB(By_,i,j  ,k+1,iBlock) &
+!               +        5*State_VGB(By_,i,j  ,k,iBlock) &
+!               -        8*State_VGB(By_,i,j  ,k-1,iBlock))/15.0
 
-       Jy = +InvDz* (State_VGB(Bx_,i  ,j,k,iBlock)-State_VGB(Bx_,i  ,j,k-1,iBlock)) &
-            -InvDx4*(State_VGB(Bz_,i+1,j,k,iBlock)+State_VGB(Bz_,i+1,j,k-1,iBlock)  &
-            -        State_VGB(Bz_,i-1,j,k,iBlock)-State_VGB(Bz_,i-1,j,k-1,iBlock))
+          Jy = +InvDz* (-a*State_VGB(Bx_,i,j  ,k+2,iBlock) &
+               +         b*State_VGB(Bx_,i,j  ,k+1,iBlock) &
+               -         c*State_VGB(Bx_,i,j  ,k-1,iBlock))
+!          Jy = +InvDz* (3*State_VGB(Bx_,i,j  ,k+1,iBlock) &
+!               +        5*State_VGB(Bx_,i,j  ,k,iBlock) &
+!               -        8*State_VGB(Bx_,i,j  ,k-1,iBlock))/15.0 &
 
-       Jz = +InvDx4*(State_VGB(By_,i+1,j  ,k,iBlock)+State_VGB(By_,i+1,j  ,k-1,iBlock)  &
-            -        State_VGB(By_,i-1,j  ,k,iBlock)-State_VGB(By_,i-1,j  ,k-1,iBlock)) &
-            -InvDy4*(State_VGB(Bx_,i  ,j+1,k,iBlock)+State_VGB(Bx_,i  ,j+1,k-1,iBlock)  &
-            -        State_VGB(Bx_,i  ,j-1,k,iBlock)-State_VGB(Bx_,i  ,j-1,k-1,iBlock))
+       elseif(k==nK+1.and. NeiLTop(iBlock)==1)then
+          InvDx1 = cFourThird*InvDx1
+          InvDx2 = cTwoThird *InvDx2
+          InvDy1 = cFourThird*InvDy1         
+          InvDy2 = cTwoThird *InvDy2         
+
+          Jx = -InvDz* (c*State_VGB(By_,i,j  ,k  ,iBlock) &
+               -        b*State_VGB(By_,i,j  ,k-2,iBlock) &
+               +        a*State_VGB(By_,i,j  ,k-3,iBlock))
+!               -InvDz* (8*State_VGB(By_,i,j  ,k  ,iBlock) &
+!               -        5*State_VGB(By_,i,j  ,k-1,iBlock) &
+!               -        3*State_VGB(By_,i,j  ,k-2,iBlock))/15.0
+
+          Jy = +InvDz* (c*State_VGB(Bx_,i,j  ,k  ,iBlock) &
+               -        b*State_VGB(Bx_,i,j  ,k-2,iBlock) &
+               +        a*State_VGB(Bx_,i,j  ,k-3,iBlock))
+!           Jy = +InvDz*(8*State_VGB(Bx_,i,j  ,k  ,iBlock) &
+!               -        5*State_VGB(Bx_,i,j  ,k-1,iBlock) &
+!               -        3*State_VGB(Bx_,i,j  ,k-2,iBlock))/15.0 &
+
+       else
+          Jx = -InvDz* (State_VGB(By_,i,j  ,k  ,iBlock) &
+               -        State_VGB(By_,i,j  ,k-1,iBlock))  
+
+          Jy = +InvDz* (State_VGB(Bx_,i  ,j,k  ,iBlock) &
+               -        State_VGB(Bx_,i  ,j,k-1,iBlock))
+       end if
+
+       Jx = Jx &
+            + InvDy1*(State_VGB(Bz_,i,jR,k-1,iBlock) &
+            -         State_VGB(Bz_,i,jL,k-1,iBlock))&
+            + InvDy2*(State_VGB(Bz_,i,jR,k  ,iBlock) &
+            -         State_VGB(Bz_,i,jL,k  ,iBlock))
+
+       Jy = Jy &
+            -InvDx1*(State_VGB(Bz_,iR,j,k-1,iBlock) &
+            -        State_VGB(Bz_,iL,j,k-1,iBlock))&
+            -InvDx2*(State_VGB(Bz_,iR,j,k  ,iBlock) &
+            -        State_VGB(Bz_,iL,j,k  ,iBlock))
+
+       Jz = +InvDx1*(State_VGB(By_,iR,j ,k-1,iBlock) &
+            -        State_VGB(By_,iL,j ,k-1,iBlock))&
+            +InvDx2*(State_VGB(By_,iR,j ,k  ,iBlock) &
+            -        State_VGB(By_,iL,j ,k  ,iBlock))&
+            -InvDy1*(State_VGB(Bx_,i ,jR,k-1,iBlock) &
+            -        State_VGB(Bx_,i ,jL,k-1,iBlock))&
+            -InvDy2*(State_VGB(Bx_,i ,jR,k  ,iBlock) &
+            -        State_VGB(Bx_,i ,jL,k  ,iBlock))
 
        !if(DoTest)then
        !   write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-       !   write(*,*)'InvDx4,InvDy4,InvDz4=',InvDx4,InvDy4,InvDz4
+       !   write(*,*)'InvDx1,InvDy1,InvDz1=',InvDx1,InvDy1,InvDz1
        !   write(*,*)'State_VGB(Bz)=',State_VGB(Bz_,i,j+1,k,iBlock),
        !end if
     case default
