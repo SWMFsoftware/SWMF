@@ -1,10 +1,13 @@
 !^CFG COPYRIGHT UM
 module ModLimiter
+  use ModMain, ONLY: VarTest, BetaLimiter
   use ModSize
   use ModVarIndexes,ONLY:nVar
   use ModNumConst
 
   implicit none
+
+  real, parameter :: cFifth = 0.2, cTwoSeventh = 2.0/7.0
 
   ! Maximum length of the stencil in 1D
   integer,parameter:: MaxIJK= max(nI,nJ,nK)
@@ -20,9 +23,14 @@ module ModLimiter
   logical:: DoLimitMomentum   = .false.  !^CFG IF BORISCORR
 
   ! Locally set variables
-  real   :: dVarLim_VI(1:nVar,0:MaxIJK+1)
+  real   :: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
+  real   :: dVarLimL_VI(1:nVar,0:MaxIJK+1) ! limited slope for left state
   real   :: Primitive_VI(1:nVar,-1:MaxIJK+2)
   logical:: IsTrueCell_I(-1:MaxIJK+2)
+
+
+  !logical :: DoTestLimiter = .false.
+
 contains
   !===========================================================================
   subroutine tvd_reschange_body(& 
@@ -50,7 +58,7 @@ contains
     logical,intent(in)::IsTrueCoarse2,IsTrueCoarse1,IsTrueFine1
     logical,dimension(2,2),intent(in)::IsTrusFine2_II
     integer::iVar,i2,j2
-    real,dimension(nVar)::AveragedFine1_V,GradNormal_V,GradNormal2_V
+    real,dimension(nVar)::AveragedFine1_V,GradNormal_V,SignGradNormal_V
     real,dimension(nVar)::GradNormalLtd_V  !Ltd stands for "Limited"
     !-------------------------------------------------------------------------
     !Calculate averaged Fine1_VII 
@@ -59,22 +67,24 @@ contains
     end do
     GradNormal_V= AveragedFine1_V-Coarse1_V
     !Save gradients squared
-    GradNormal2_V=GradNormal_V**2
+    SignGradNormal_V=sign(1.0,GradNormal_V)
     if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
        !Limit gradient in the first coarser cell
-       GradNormalLtd_V= GradNormal_V*&
+       GradNormalLtd_V= SignGradNormal_V*&
             max(cZero,&
-            min(cTwoThird*GradNormal2_V,&
-            cHalf*GradNormal_V*(Coarse1_V-Coarse2_V)))/&
-            max(GradNormal2_V,cTiny)
+            min(cTwoThird*abs(GradNormal_V),&
+            cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
+
        do j2=1,2;do i2=1,2
-          !Limit tranversal gradients, if they are larger than the normal one
-          !Before limiting the transversal gradients are equal to
-          !Fine1_VII-AveragedFine1_V
+          ! ??? This seems to be an unnecessary/first order limiting ???
+          ! ??? What about the normal gradient=0 and a constant gradient in
+          ! ??? the transverse direction ???
+          !Limit transverse gradients, if they are larger than the normal one
+          !The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
           CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-               sign(min(abs(GradNormalLtd_V), &
-               abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
-               Fine1_VII(:,i2,j2)-AveragedFine1_V)
+               !sign(min(abs(GradNormalLtd_V), &
+               !abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+               Fine1_VII(:,i2,j2)-AveragedFine1_V !!!)
        end do;end do
     else
        do j2=1,2;do i2=1,2
@@ -92,13 +102,12 @@ contains
        do j2=1,2;do i2=1,2
           if(IsTrusFine2_II(i2,j2))then
              !Limit gradient in the first layer of finer cells
-             GradNormalLtd_V=GradNormal_V*&
+             GradNormalLtd_V = SignGradNormal_V*&
                   max(cZero,&
-                  min(cThird*GradNormal2_V,&
-                  GradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-                  cHalf*GradNormal_V*&
-                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))/&
-                  max(GradNormal2_V,cTiny)
+                  min(cThird*abs(GradNormal_V),&
+                  SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
+                  cHalf*SignGradNormal_V*&
+                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
              !First order scheme
              GradNormalLtd_V=cZero
@@ -132,44 +141,62 @@ contains
     real,dimension(nVar,2,2),intent(inout)::&
          CoarseToFineF_VII ,FineToCoarseF_VII , FineF_VII
     integer::iVar,i2,j2
-    real,dimension(nVar)::AveragedFine1_V,GradNormal_V,GradNormal2_V
-    real,dimension(nVar)::GradNormalLtd_V  !Ltd stands for "Limited"
+    real,dimension(nVar):: AveragedFine1_V,AveragedFine2_V
+    real,dimension(nVar):: GradNormal_V,SignGradNormal_V
+    real,dimension(nVar):: GradNormalLtd_V  !Ltd stands for "Limited"
     !-------------------------------------------------------------------------
 
     !Calculate averaged Fine1_VII 
     do iVar=1,nVar
        AveragedFine1_V(iVar)=cQuarter*sum(Fine1_VII(iVar,:,:))
+       AveragedFine2_V(iVar)=cQuarter*sum(Fine2_VII(iVar,:,:))
     end do
     GradNormal_V= AveragedFine1_V-Coarse1_V
+
+    !if(DoTestLimiter)then
+    !   write(*,*)'AveragedFine1=',AveragedFine1_V(VarTest)
+    !   write(*,*)'GradNormal_V =',GradNormal_V(VarTest)
+    !end if
+
     !Save gradients squared
-    GradNormal2_V=GradNormal_V**2
+    SignGradNormal_V=sign(1.0,GradNormal_V)
     !Limit gradient in the first coarser cell
-    GradNormalLtd_V= GradNormal_V*&
-         max(cZero,&
-         min(cTwoThird*GradNormal2_V,&
-         cHalf*GradNormal_V*(Coarse1_V-Coarse2_V)))/&
-         max(GradNormal2_V,cTiny)
+    GradNormalLtd_V= SignGradNormal_V*max(cZero,min( &
+         BetaLimiter*cTwoThird*abs(GradNormal_V),&
+         BetaLimiter*cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V), &
+         cTwoSeventh*SignGradNormal_V*(AveragedFine1_V-Coarse2_V) ))
 
     do j2=1,2;do i2=1,2
-       !Limit tranversal gradients, if they are larger than the normal one
-       !Before limiting the transversal gradients are equal to
+       !??? This limiting seems to be an incorrect part of the algorithm ???
+       !Limit transverse gradients, if they are larger than the normal one
+       !Before limiting the transverse gradients are equal to
        !Fine1_VII-AveragedFine1V
        CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-            sign(min(abs(GradNormalLtd_V),&
-            abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
-            Fine1_VII(:,i2,j2)-AveragedFine1_V)
+            !sign(min(abs(GradNormalLtd_V),&
+            !abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+            Fine1_VII(:,i2,j2)-AveragedFine1_V!)
     end do;end do
 
     do j2=1,2;do i2=1,2
        !Limit gradient in the first layer of finer cells
-       GradNormalLtd_V=GradNormal_V*&
-         max(cZero,&
-         min(cThird*GradNormal2_V,&
-         GradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-         cHalf*GradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))/&
-         max(GradNormal2_V,cTiny)
+       GradNormalLtd_V = SignGradNormal_V*max(cZero,min( &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
+            BetaLimiter*cThird*abs(GradNormal_V),&
+            BetaLimiter*cHalf*SignGradNormal_V &
+            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)), &
+            cFifth*SignGradNormal_V*(AveragedFine2_V-Coarse1_V) &
+            ))
        FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
        FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)+GradNormalLtd_V
+
+       !if(DoTestLimiter)then
+       !   write(*,*)'GradNormal_V   =',GradNormal_V(VarTest)
+       !   write(*,*)'SignGradNormal =',SignGradNormal_V(VarTest)
+       !   write(*,*)'Fine1-Coarse1  =',Fine1_VII(VarTest,i2,j2)-Coarse1_V(VarTest)
+       !   write(*,*)'Fine2-Fine1    =',Fine2_VII(VarTest,i2,j2)-Fine1_VII(VarTest,i2,j2)
+       !   write(*,*)'GradNormalLtd_V=',GradNormalLtd_V(VarTest)
+       !end if
+
     end do;end do
 
   end subroutine tvd_reschange
@@ -224,7 +251,7 @@ subroutine calc_facevalues(DoResChangeOnly)
 
   iBlock=globalBLK
 
-  if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
+  if(iBlock==BLKtest)then !!! .and. .not. DoResChangeOnly )then
      call set_oktest('calc_facevalues',DoTest,DoTestMe)
   else
      DoTest=.false.; DoTestMe=.false.
@@ -233,6 +260,7 @@ subroutine calc_facevalues(DoResChangeOnly)
   if(.not.DoResChangeOnly & !In order not to call it twice
        .and.nOrder==2     & !Is not needed for nOrder=1
        .and.UseTVDAtResChange)call correct_monotone_restrict(iBlock)
+
   ! first, calculate the CELL values for the variables to be limited
   ! for non-boris corrections they are: density, velocity, pressure
   ! for boris correction momentum is used instead of the velocity
@@ -329,14 +357,17 @@ subroutine calc_facevalues(DoResChangeOnly)
      ! However, constrained transport requires facevalues !^CFG IF CONSTRAINB
      ! to be independent of the resolution changes.       !^CFG IF CONSTRAINB
 
+
      if (.not.DoResChangeOnly)then
         call get_faceX_second(1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
         call get_faceY_second(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
         call get_faceZ_second(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
      end if
+
      if(prolong_order==1 &
           .and..not.UseConstrainB & !^CFG IF CONSTRAINB
         )then
+
         if(.not.UseTVDAtResChange)then
            ! First order facevalues at resolution change
            if(neiLeast(iBlock)==+1)&
@@ -634,6 +665,7 @@ contains
   !=======================================================================
   subroutine get_face_tvd(iSideIn)
     integer,intent(in)::iSideIn
+
     select case(iSideIn)
     case(east_)
        do k=1,nK,2; do j=1,nJ,2
@@ -808,8 +840,8 @@ contains
        end if
        do i=iMin,iMax
           i1=i-1
-          LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLim_VI(:,i1)
-          RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLim_VI(:,i )
+          LeftState_VX(:,i,j,k)  = Primitive_VI(:,i1) + dVarLimL_VI(:,i1)
+          RightState_VX(:,i,j,k) = Primitive_VI(:,i ) - dVarLimR_VI(:,i )
 
        end do
     end do; end do
@@ -831,8 +863,8 @@ contains
        end if
        do j=jMin, jMax
           j1=j-1
-          LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLim_VI(:,j1)
-          RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLim_VI(:,j )
+          LeftState_VY(:,i,j,k)  = Primitive_VI(:,j1) + dVarLimL_VI(:,j1)
+          RightState_VY(:,i,j,k) = Primitive_VI(:,j ) - dVarLimR_VI(:,j )
        end do
     end do; end do
     if(DoLimitMomentum) &                                    !^CFG IF BORISCORR
@@ -853,8 +885,8 @@ contains
        end if
        do k=kMin,kMax
           k1=k-1
-          LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLim_VI(:,k1)
-          RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLim_VI(:,k )
+          LeftState_VZ(:,i,j,k)  = Primitive_VI(:,k1) + dVarLimL_VI(:,k1)
+          RightState_VZ(:,i,j,k) = Primitive_VI(:,k ) - dVarLimR_VI(:,k )
        end do
     end do; end do
     if(DoLimitMomentum)&                                     !^CFG IF BORISCORR
@@ -918,10 +950,11 @@ subroutine limiter_body(lMin,lMax)
            dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
            dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
            dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-           dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+           dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
         else
-           dVarLim_VI(:,l) = cZero
+           dVarLimR_VI(:,l) = cZero
         end if
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
      end do
   case('minmod')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
@@ -935,10 +968,11 @@ subroutine limiter_body(lMin,lMax)
         if(all(IsTrueCell_I(l-1:l+1)))then
            dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
            dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
-           dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+           dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
         else
-           dVarLim_VI(:,l) = cZero
+           dVarLimR_VI(:,l) = cZero
         end if
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
      end do
   case('mc')
      dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
@@ -946,11 +980,29 @@ subroutine limiter_body(lMin,lMax)
         dVar2_V = dVar1_V
         dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
         if(all(IsTrueCell_I(l-1:l+1)))then
-           dVarLim_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+           dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
                 min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
                 cHalf*abs(dVar1_V+dVar2_V))
         else
-           dVarLim_VI(:,l) = cZero
+           dVarLimR_VI(:,l) = cZero
+        end if
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
+     end do
+  case('mc3')
+     dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+     do l=lMax,lMin-1,-1
+        dVar2_V = dVar1_V
+        dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+        if(all(IsTrueCell_I(l-1:l+1)))then
+           dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+                cThird*abs(2*dVar1_V+dVar2_V))
+           dVarLimL_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+                min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+                cThird*abs(dVar1_V+2*dVar2_V))
+        else
+           dVarLimR_VI(:,l) = cZero
+           dVarLimL_VI(:,l) = cZero
         end if
      end do
   case default
@@ -988,7 +1040,9 @@ subroutine limiter(lMin,lMax)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo3_:Hi3_))
         dVar2_I(Lo3_:Hi3_)=min(dVar1_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
         dVar2_I(Lo2_:Hi2_)=max(dVar2_I(Lo2_:Hi2_),dVar2_I(Lo3_:Hi3_))
-        dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+        dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
      end do
   case('minmod')
      dVar1_I(1:nVar)=Primitive_VI(:,lMax+1)-Primitive_VI(:,lMax)
@@ -1001,7 +1055,9 @@ subroutine limiter(lMin,lMax)
         dVar1_I(1:nVar)=sign(cQuarter,dVar1_I(1:nVar))
         dVar2_I(1:nVar)=dVar2_I(1:nVar)+dVar1_I(1:nVar)
         dVar2_I(Lo2_:Hi2_)=min(dVar2_I(Lo2_:Hi2_),dVar1_I(Lo2_:Hi2_))
-        dVarLim_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+        dVarLimR_VI(:,l) = dVar2_I(1:nVar)*dVar2_I(Lo2_:Hi2_)
+
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
      end do
   case('mc')
      ! Calculate right most unlimited slope
@@ -1012,9 +1068,27 @@ subroutine limiter(lMin,lMax)
         ! Calculate left slope
         dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
         ! Calculate the limited slope
-        dVarLim_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V)) * &
+        dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V)) * &
              min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
              cHalf*abs(dVar1_V+dVar2_V))
+
+        dVarLimL_VI(:,l) = dVarLimR_VI(:,l)
+     end do
+  case('mc3')
+     ! Calculate right most unlimited slope
+     dVar1_V = Primitive_VI(:,lMax+1) - Primitive_VI(:,lMax)
+     do l=lMax,lMin-1,-1
+        ! Propagate old left slope to become the right slope
+        dVar2_V = dVar1_V
+        ! Calculate left slope
+        dVar1_V = Primitive_VI(:,l) - Primitive_VI(:,l-1)
+        ! Calculate the limited slopes
+        dVarLimR_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+             min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+             cThird*abs(2*dVar1_V+dVar2_V))
+        dVarLimL_VI(:,l) = (sign(cQuarter,dVar1_V)+sign(cQuarter,dVar2_V))* &
+             min(BetaLimiter*abs(dVar1_V), BetaLimiter*abs(dVar2_V), &
+             cThird*abs(dVar1_V+2*dVar2_V))
      end do
   case default
      call stop_mpi('limiter: unknown TypeLimiter='//limiter_type)
