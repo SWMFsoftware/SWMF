@@ -449,7 +449,7 @@ subroutine MH_set_parameters(TypeAction)
         if(UseHallResist)then
            call read_var('UseHallCmax', UseHallCmax)
            call read_var('ResistDiag',  ResistDiagDim)
-           call read_var('Hallfactor',  Hallfactor)
+           call read_var('HallFactor',  HallFactor)
         end if
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
