@@ -1,4 +1,4 @@
-program convert_restart_file
+program convert_restart_file_format
 
   implicit none
 
@@ -67,7 +67,8 @@ contains
     character(len=*), parameter:: NameSub = 'read_restart_header'
     !--------------------------------------------------------------------------
 
-    open(iUnitTmp,file='restart.H')
+    open(iUnitTmp,file=NameHeaderFile,status='old',iostat=iError)
+    if(iError /= 0) call my_stop('Could not open '//NameHeaderFile)
     do
        read(iUnitTmp,'(a)',iostat=iError) NameCommand
        if(iError /= 0) EXIT
@@ -369,9 +370,9 @@ contains
   !===========================================================================
   subroutine my_stop(String)
     character(len=*), intent(in) :: String
-    write(*,*)'ERROR in convert_restart_file:'
+    write(*,*)'ERROR in convert_restart_file_format:'
     write(*,*) String
     stop
   end subroutine my_stop
 
-end program convert_restart_file
+end program convert_restart_file_format
