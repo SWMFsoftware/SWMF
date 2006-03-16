@@ -445,23 +445,26 @@ contains
     real :: InvDx2, InvDy2, InvDz2
     ! Calculate cell centered currents to be used by getflux
 
-    InvDx2 = 0.5/Dxyz(x_); InvDx2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
+    InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        HallJ_CD(i,j,k,x_) = &
             +InvDy2*(w_k(i,j+1,k,Bz_,implBLK)-w_k(i,j-1,k,Bz_,implBLK)) &
             -InvDz2*(w_k(i,j,k+1,By_,implBLK)-w_k(i,j,k-1,By_,implBLK))
     end do; end do; end do
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        HallJ_CD(i,j,k,y_) = &
             +InvDz2*(w_k(i,j,k+1,Bx_,implBLK)-w_k(i,j,k-1,Bx_,implBLK)) &
             -InvDx2*(w_k(i+1,j,k,Bz_,implBLK)-w_k(i-1,j,k,Bz_,implBLK))
     end do; end do; end do
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        HallJ_CD(i,j,k,z_) = &
             +InvDx2*(w_k(i+1,j,k,By_,implBLK)-w_k(i-1,j,k,By_,implBLK)) &
             -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
     end do; end do; end do
+
     HallJ_CD = IonMassPerCharge*HallJ_CD
 
     BxPerRho_G = w_k(:,:,:,Bx_,implBLK)/w_k(:,:,:,Rho_,implBLK)
@@ -473,10 +476,36 @@ contains
   subroutine impl_hall_resist
 
     use ModHallResist, ONLY: IonMassPerCharge, &
-         BxPerRho_G, ByPerRho_G, BzPerRho_G
+         BxPerRho_G, ByPerRho_G, BzPerRho_G,ResistDiag
 
     real :: Coeff
+    integer:: iVar
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! For diffusion term
+    ! R(Bi) = d^2(Bi)/dx^2 + d^2(Bi)/dy^2 + d^2(Bi)/dz^2 
+    ! dR(Bx)/dBx, dR(By)/dBy, dR(Bz)/dBz 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    do iDim = 1, nDim
+       Coeff= - ImplCoeff*ResistDiag/Dxyz(iDim)**2
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iVar=Bx_, Bz_
+             JAC(iVar,iVar,i,j,k,1)= &
+                  JAC(iVar,iVar,i,j,k,1)         - 2.0*Coeff
+             JAC(iVar,iVar,i,j,k,2*nDim)= &
+                  JAC(iVar,iVar,i,j,k,2*nDim)    + Coeff
+             JAC(iVar,iVar,i,j,k,2*nDim+1)= & 
+                  JAC(iVar,iVar,i,j,k,2*nDim+1)  + Coeff
+          end do
+       end do; end do; end do
+    end do
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! For Hall term
+    ! the signs should be reversed and the coeff should have a minus sign
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! dR(Bx)/dBy
     Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(z_)**2
     ! Main diagonal
