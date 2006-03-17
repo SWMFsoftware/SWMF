@@ -1,4 +1,5 @@
 *.mod
 *.o
 Makefile.DEPEND
+Makefile.RULES
 *.protex
