@@ -1,0 +1,12 @@
+CON_session.o: CON_session.f90 \
+	${LIBRARYDIR}/CON_comp_param.o \
+	${LIBRARYDIR}/CON_world.o \
+	CON_variables.o \
+	${INTERFACEDIR}/CON_wrapper.o \
+	${INTERFACEDIR}/CON_couple_all.o \
+	${COUPLERDIR}/CON_coupler.o \
+	CON_io.o \
+	${LIBRARYDIR}/CON_time.o \
+	${SHAREDIR}/ModFreq.o \
+	${SHAREDIR}/ModMpi.o
+	${COMPILE.f90} ${Cflag2} ${SuffixMapf90} CON_session.f90
