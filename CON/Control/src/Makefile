@@ -8,6 +8,7 @@ SEARCH_EXTRA = -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 include ../../../Makefile.def
 include ../../../Makefile.conf
 include Makefile.DEPEND
+include Makefile.RULES
 
 #######################
 # Shared libraries by #
