@@ -7,7 +7,7 @@ module ModLimiter
 
   implicit none
 
-  real, parameter :: cFifth = 0.2, cTwoSeventh = 2.0/7.0
+  real, parameter :: cSixth=cHalf*cThird
 
   ! Maximum length of the stencil in 1D
   integer,parameter:: MaxIJK= max(nI,nJ,nK)
@@ -72,19 +72,18 @@ contains
        !Limit gradient in the first coarser cell
        GradNormalLtd_V= SignGradNormal_V*&
             max(cZero,&
-            min(cTwoThird*abs(GradNormal_V),&
-            cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
+            min(BetaLimiter*cTwoThird*abs(GradNormal_V),&
+            BetaLimiter*cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V),&
+            cThird*abs(GradNormal_V)+&
+            cQuarter*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
 
        do j2=1,2;do i2=1,2
-          ! ??? This seems to be an unnecessary/first order limiting ???
-          ! ??? What about the normal gradient=0 and a constant gradient in
-          ! ??? the transverse direction ???
           !Limit transverse gradients, if they are larger than the normal one
           !The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
           CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-               !sign(min(abs(GradNormalLtd_V), &
-               !abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
-               Fine1_VII(:,i2,j2)-AveragedFine1_V !!!)
+               sign(min(abs(GradNormalLtd_V), &
+               abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+               Fine1_VII(:,i2,j2)-AveragedFine1_V)
        end do;end do
     else
        do j2=1,2;do i2=1,2
@@ -104,9 +103,11 @@ contains
              !Limit gradient in the first layer of finer cells
              GradNormalLtd_V = SignGradNormal_V*&
                   max(cZero,&
-                  min(cThird*abs(GradNormal_V),&
+                  min(BetaLimiter*cThird*abs(GradNormal_V),&
                   SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
-                  cHalf*SignGradNormal_V*&
+                  BetaLimiter*cHalf*SignGradNormal_V*&
+                  (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)),&
+                  cSixth*abs(GradNormal_V)+cQuarter*SignGradNormal_V*&
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
              !First order scheme
@@ -125,9 +126,9 @@ contains
        Fine2_VII         ,& !States in 4 fine physical cells,2nd layer
        CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& !Facevalues in the physical cell,
-                            !   looking at the coarser cell 
-       FineF_VII)           !Facevalues in the physical cell,
-                            !   looking at another physical cell
+       !   looking at the coarser cell 
+    FineF_VII)           !Facevalues in the physical cell,
+    !   looking at another physical cell
 
     !_____________!_____________!_______!_______!_
     !             !         CToF!FToC FF!
@@ -164,17 +165,17 @@ contains
     GradNormalLtd_V= SignGradNormal_V*max(cZero,min( &
          BetaLimiter*cTwoThird*abs(GradNormal_V),&
          BetaLimiter*cHalf*SignGradNormal_V*(Coarse1_V-Coarse2_V), &
-         cTwoSeventh*SignGradNormal_V*(AveragedFine1_V-Coarse2_V) ))
+         cThird*abs(GradNormal_V)+cQuarter*&
+         SignGradNormal_V*(Coarse1_V-Coarse2_V)))
 
     do j2=1,2;do i2=1,2
-       !??? This limiting seems to be an incorrect part of the algorithm ???
        !Limit transverse gradients, if they are larger than the normal one
        !Before limiting the transverse gradients are equal to
        !Fine1_VII-AveragedFine1V
        CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
-            !sign(min(abs(GradNormalLtd_V),&
-            !abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
-            Fine1_VII(:,i2,j2)-AveragedFine1_V!)
+            sign(min(abs(GradNormalLtd_V),&
+            abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
+            Fine1_VII(:,i2,j2)-AveragedFine1_V)
     end do;end do
 
     do j2=1,2;do i2=1,2
@@ -184,7 +185,8 @@ contains
             BetaLimiter*cThird*abs(GradNormal_V),&
             BetaLimiter*cHalf*SignGradNormal_V &
             *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)), &
-            cFifth*SignGradNormal_V*(AveragedFine2_V-Coarse1_V) &
+            cSixth*abs(GradNormal_V)+cQuarter*SignGradNormal_V&
+            *(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2)) &
             ))
        FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
        FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)+GradNormalLtd_V
@@ -242,7 +244,7 @@ subroutine calc_facevalues(DoResChangeOnly)
   real:: RhoInv
 
   real:: RhoC2Inv, BxFull, ByFull, BzFull, B2Full,& !^CFG IF BORISCORR
-         uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
+       uBC2Inv,Ga2Boris                           !^CFG IF BORISCORR
 
   !primitive variables
   real, dimension(nVar,&
@@ -366,7 +368,7 @@ subroutine calc_facevalues(DoResChangeOnly)
 
      if(prolong_order==1 &
           .and..not.UseConstrainB & !^CFG IF CONSTRAINB
-        )then
+          )then
 
         if(.not.UseTVDAtResChange)then
            ! First order facevalues at resolution change
@@ -433,8 +435,8 @@ contains
     B2Full = BxFull**2 + ByFull**2 + BzFull**2
     RhoC2Inv  =cOne/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
     uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
-         Primitive_VG(rhoUy_,i,j,k)*ByFull + &
-         Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
+              Primitive_VG(rhoUy_,i,j,k)*ByFull + &
+              Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
     Ga2Boris=cOne+B2Full*RhoC2Inv
 
     Primitive_VG(Ux_,i,j,k)= Primitive_VG(rhoUx_,i,j,k)*&
@@ -566,12 +568,12 @@ contains
        ! gammaA^2 = 1/[1+BB/(rho c^2)]
        Ga2Boris=cOne/(cOne+ B2Full*RhoC2Inv)
 
-        LeftState_VY(Ux_,i,j,k) = &
-             Ga2Boris * (LeftState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
-        LeftState_VY(Uy_,i,j,k) = &
-             Ga2Boris * (LeftState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
-        LeftState_VY(Uz_,i,j,k) = &
-             Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
+       LeftState_VY(Ux_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
+       LeftState_VY(Uy_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
+       LeftState_VY(Uz_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
 
        ! Right face values
        RhoInv=cOne/RightState_VY(rho_,i,j,k) 
