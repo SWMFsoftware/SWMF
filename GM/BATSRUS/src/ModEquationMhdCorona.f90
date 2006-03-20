@@ -132,4 +132,7 @@ Module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_=rhoU_, Ux_=rhoUx_, Uy_=rhoUy_, Uz_=rhoUz_
 
+  ! Scalars to be advected. Only the relaxed energy.
+  integer, parameter :: ScalarFirst_=EnergyRL_, ScalarLast_=EnergyRL_
+
 end Module ModVarIndexes

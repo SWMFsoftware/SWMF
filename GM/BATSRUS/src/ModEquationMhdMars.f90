@@ -142,4 +142,7 @@ Module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_=rhoU_, Ux_=rhoUx_, Uy_=rhoUy_, Uz_=rhoUz_
 
+  ! Scalars to be advected. 
+  integer, parameter :: ScalarFirst_=rhoHp_, ScalarLast_=rhoCO2p_
+
 end Module ModVarIndexes
