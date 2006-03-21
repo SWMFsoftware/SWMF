@@ -179,7 +179,7 @@ contains
   subroutine read_harmonics
     integer :: iUnit,nOrderIn,iPosition,iPosition1,n,m,i,iError
     character (LEN=80):: Head_PFSSM=''
-    real::gtemp,htemp,stuff1
+    real::gtemp,htemp,stuff1,stuff
     !\
     ! Formats adjusted for wso CR rad coeffs::
     !/
@@ -218,7 +218,7 @@ contains
     !\
     ! Initialize all coefficient arrays::
     !/
-    g_nm(:,:) = cZero; h_nm(:,:)  = cZero
+    g_nm = cZero; h_nm = cZero
     !\
     ! Read file with coefficients, g_nm and h_nm::
     !/
@@ -235,12 +235,13 @@ contains
     ! Note old "coefficients" file are LOS, all new coeffs and 
     ! files are radial)
     !/
+    stuff=Rs_PFSSM
     do n=0,N_PFSSM
-       stuff1 = cOne/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
-       do m=0,n
-          g_nm(n+1,m+1) = g_nm(n+1,m+1)*stuff1
-          h_nm(n+1,m+1) = h_nm(n+1,m+1)*stuff1
-       enddo
+       stuff=stuff/Rs_PFSSM**2
+       stuff1 = cOne/(real(n+1)+real(n)*stuff)
+!       stuff1 = cOne/real(n+1+(n/(Rs_PFSSM**(2*n+1))))
+       g_nm(n+1,1:n+1) = g_nm(n+1,1:n+1)*stuff1
+       h_nm(n+1,1:n+1) = h_nm(n+1,1:n+1)*stuff1
     enddo
     !\
     ! Leave out monopole (n=0) term::
