@@ -15,6 +15,7 @@ subroutine calc_sources
   use ModResist,   ONLY : EtaResist_G                    !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
   use ModHallResist,ONLY: UseHallResist, ResistDiag
+  use ModCoordTransform
   implicit none
 
   integer :: i, j, k, iDim
@@ -178,11 +179,13 @@ subroutine calc_sources
      end do;end do;end do
 
      if (UseB0Source) then
-        do k=1,nK; do j=1,nJ; do i=1,nI;do iDim=1,nDim
-           Source_VC(rhoU_+iDim,i,j,k)=Source_VC(rhoU_+iDim,i,j,k) + &
-                sum(State_VGB(Bx_:Bz_,i,j,k,globalBLK)*&
-                B0SourceMatrix_DDCB(:,iDim,i,j,k,globalBLK)) 
-        end do; end do; end do;end do
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
+                State_VGB(Bx_:Bz_,i,j,k,globalBLK)*DivB0_CB(i,j,k,globalBLK)+&
+                cross_product(&
+                State_VGB(Bx_:Bz_,i,j,k,globalBLK),&
+                CurlB0_DCB(:,i,j,k,globalBLK))
+        end do; end do; end do
      end if
   else
      call calc_divB
