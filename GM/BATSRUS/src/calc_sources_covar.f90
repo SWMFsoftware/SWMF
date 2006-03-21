@@ -11,6 +11,7 @@ subroutine calc_sources_covar
   use ModNumConst
   use ModPhysics, ONLY:gm1
   use ModUser, ONLY: user_calc_sources
+  use ModCoordTransform
   implicit none
 
   integer :: i,j,k
@@ -185,9 +186,11 @@ subroutine calc_sources_covar
 
      if (UseB0Source) then
         do k=1,nK; do j=1,nJ; do i=1,nI
-           Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) + &
-                matmul( State_VGB(Bx_:Bz_,i,j,k,globalBLK),&
-                B0SourceMatrix_DDCB(:,:,i,j,k,globalBLK)) 
+           Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
+                State_VGB(Bx_:Bz_,i,j,k,globalBLK)*DivB0_CB(i,j,k,globalBLK)+&
+                cross_product(&
+                State_VGB(Bx_:Bz_,i,j,k,globalBLK),&
+                CurlB0_DCB(:,i,j,k,globalBLK))
         end do; end do; end do
      end if
 
