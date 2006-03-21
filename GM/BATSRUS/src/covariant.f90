@@ -1113,7 +1113,7 @@ subroutine calc_b0source_covar(iBlock)
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
-       B0SourceMatrix_DDCB
+       CurlB0_DCB,DivB0_CB
   use ModGeometry,ONLY: dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK,&!TypeGeometry,&
        vInv_CB
   use ModNumConst
@@ -1122,13 +1122,14 @@ subroutine calc_b0source_covar(iBlock)
   integer, intent(in) :: iBlock
   integer::i,j,k,iFace,jFace,kFace,iDirB0,iDirFA,iSide
   integer::i2,j2
-  real::divB0!,x,y,z,R,Phi,Theta
+  !real::divB0!,x,y,z,R,Phi,Theta
   real,dimension(3)::GenCoord111_D,dGenFine_D
   real,dimension(ndim,0:1,0:1,East_:Top_)::FaceArea_DIIS, B0_DIIS
   real,dimension(nDim,0:1,0:1,0:1)   :: RefB0_DIII
   real,dimension(nDim,-1:2,-1:2,-1:2):: RefXyz_DIII
   real,dimension(nDim,0:2,0:2,0:2)   :: RefXyzNodes_DIII
   real,dimension(nDim,0:1,0:1,0:1)   :: RefFaceArea_DIII
+  real,dimension(nDim,nDim,nI,nJ,nK) :: B0SourceMatrix_DDC
 
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
@@ -1225,8 +1226,8 @@ subroutine calc_b0source_covar(iBlock)
            end if
 
            if(UseB0Source)then
-              DivB0 = cZero
-              B0SourceMatrix_DDCB(:,:,i,j,k,iBlock)=cZero
+              DivB0_CB(i,j,k,iBlock) = cZero
+              B0SourceMatrix_DDC(:,:,i,j,k)=cZero
 
               do iSide=East_,Bot_,2
                  FaceArea_DIIS(:,:,:,iSide)=-FaceArea_DIIS(:,:,:,iSide)
@@ -1235,13 +1236,13 @@ subroutine calc_b0source_covar(iBlock)
               do iSide=East_,Top_
                  do j2=0,1
                     do i2=0,1
-                       DivB0= DivB0+&
+                       DivB0_CB(i,j,k,iBlock)= DivB0_CB(i,j,k,iBlock)+&
                             dot_product(B0_DIIS(:,i2,j2,iSide),&
                             FaceArea_DIIS(:,i2,j2,iSide))    
                        do iDirB0=x_,z_
                           do iDirFA=x_,z_
-                             B0SourceMatrix_DDCB(iDirFA,iDirB0,i,j,k,iBlock)= & 
-                                  B0SourceMatrix_DDCB(iDirFA,iDirB0,i,j,k,iBlock)&
+                             B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)= & 
+                                  B0SourceMatrix_DDC(iDirFA,iDirB0,i,j,k)&
                                   +FaceArea_DIIS(iDirB0,i2,j2,iSide)*&
                                   B0_DIIS(iDirFA,i2,j2,iSide)&  
                                   -FaceArea_DIIS(iDirFA,i2,j2,iSide)*&
@@ -1252,12 +1253,17 @@ subroutine calc_b0source_covar(iBlock)
                  end do
               end do
 
-              B0SourceMatrix_DDCB(1,1,i,j,k,iBlock) = -DivB0           
-              B0SourceMatrix_DDCB(2,2,i,j,k,iBlock) = -DivB0
-              B0SourceMatrix_DDCB(3,3,i,j,k,iBlock) = -DivB0    
+              DivB0_CB(i,j,k,iBlock)=DivB0_CB(i,j,k,iBlock)*vInv_CB(i,j,k,iBlock)        
+              
 
-              B0SourceMatrix_DDCB(:,:,i,j,k,iBlock) = &
-                   B0SourceMatrix_DDCB(:,:,i,j,k,iBlock)*&
+              CurlB0_DCB(z_,i,j,k,iBlock) = &
+                   B0SourceMatrix_DDC(2,1,i,j,k)*&
+                   vInv_CB(i,j,k,iBlock)
+              CurlB0_DCB(y_,i,j,k,iBlock) = -&
+                   B0SourceMatrix_DDC(3,1,i,j,k)*&
+                   vInv_CB(i,j,k,iBlock)
+              CurlB0_DCB(x_,i,j,k,iBlock) = &
+                   B0SourceMatrix_DDC(3,2,i,j,k)*&
                    vInv_CB(i,j,k,iBlock)
            end if
         end do
