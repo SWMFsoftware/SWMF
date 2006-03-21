@@ -149,8 +149,8 @@ subroutine set_b0_face(iBlock)
   real,dimension(3):: B0_D,RefXyzStart_D,RefDXyz_D
   real,dimension(nDim,0:1,0:1,0:1)::RefB0_DIII
   real ::x,y,z
-  ! inverse of Dx, Dy, Dz, divergence B0                               
-  real:: DxInv, DyInv, DzInv, DivB0                                   
+  ! inverse of Dx, Dy, Dz                              
+  real:: DxInv, DyInv, DzInv                                   
 
 
   logical :: oktest, oktest_me
@@ -407,7 +407,7 @@ end subroutine calc_db0_dt
 
 subroutine set_b0_matrix(iBlock)
 
-  ! Calculate the elements of the B0SourceMatrix
+  ! Calculate the elements of the B0 Source term
 
   use ModProcMH
   use ModMain
@@ -416,7 +416,7 @@ subroutine set_b0_matrix(iBlock)
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
-       B0SourceMatrix_DDCB                      
+       CurlB0_DCB,DivB0_CB                      
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK
   use ModNumConst
   implicit none
@@ -425,18 +425,13 @@ subroutine set_b0_matrix(iBlock)
 
   integer :: i,j,k
 
-  ! inverse of Dx, Dy, Dz, divergence B0
-  real :: DxInv, DyInv, DzInv, DivB0
+  ! inverse of Dx, Dy, Dz
+  real :: DxInv, DyInv, DzInv
 
   logical :: oktest, oktest_me
 
-  !these two lines are to make this disabled subroutine to be compilable
-
-!  logical::UseB0SourceMatrix=.false.
-
 
   !--------------------------------------------------------------------------
-!  if(.not.UseB0SourceMatrix) RETURN
 
   if(iProc==PROCtest.and.iBlock==BLKtest)then
      call set_oktest('set_b0_matrix',oktest,oktest_me)
@@ -444,8 +439,10 @@ subroutine set_b0_matrix(iBlock)
      oktest=.false.; oktest_me=.false.
   endif
 
-!  if(.not.allocated(B0SourceMatrix_DDCB))&                   !^CFG UNCOMMENT IF DYNAMIC
-!       allocate(B0SourceMatrix_DDCB(3,3,nI,nJ,nK,MaxBlock))  !^CFG UNCOMMENT IF DYNAMIC
+!  if(.not.allocated(CurlB0_DCB))&                   !^CFG UNCOMMENT IF DYNAMIC
+!       allocate(CurlB0_DCB(3,nI,nJ,nK,MaxBlock),&   !^CFG UNCOMMENT IF DYNAMIC
+!                DivB0_CB(nI,nJ,nK,MaxBlock))        !^CFG UNCOMMENT IF DYNAMIC
+
 
   DxInv = cOne/dx_BLK(iBlock)
   DyInv = cOne/dy_BLK(iBlock)
@@ -453,43 +450,30 @@ subroutine set_b0_matrix(iBlock)
 
   ! face areas
   do k=1,nK; do j=1,nJ; do i=1,nI
-     DivB0= &
+     DivB0_CB(i,j,k,iBlock)= &
           DxInv*(B0xFace_x_BLK(i+1,j,k,iBlock)-&
           B0xFace_x_BLK(i,j,k,iBlock))+&
           DyInv*(B0yFace_y_BLK(i,j+1,k,iBlock)-&
           B0yFace_y_BLK(i,j,k,iBlock))+&
           DzInv*(B0zFace_z_BLK(i,j,k+1,iBlock)-&
-          B0zFace_z_BLK(i,j,k,iBlock))
-
-     B0SourceMatrix_DDCB(1,1,i,j,k,iBlock) = -DivB0           
-     B0SourceMatrix_DDCB(2,2,i,j,k,iBlock) = -DivB0
-     B0SourceMatrix_DDCB(3,3,i,j,k,iBlock) = -DivB0    
-
-     B0SourceMatrix_DDCB(2,1,i,j,k,iBlock) = &  
+          B0zFace_z_BLK(i,j,k,iBlock))   
+  
+     CurlB0_DCB(z_,i,j,k,iBlock) = &
           DxInv*(B0yFace_x_BLK(i+1,j,k,iBlock)-&
           B0yFace_x_BLK(i,j,k,iBlock))-&
           DyInv*(B0xFace_y_BLK(i,j+1,k,iBlock)-&
           B0xFace_y_BLK(i,j,k,iBlock))
 
-     B0SourceMatrix_DDCB(3,1,i,j,k,iBlock) = &
-          DxInv*(B0zFace_x_BLK(i+1,j,k,iBlock)-&
-          B0zFace_x_BLK(i,j,k,iBlock))-&
+     CurlB0_DCB(y_,i,j,k,iBlock) = &
+          -DxInv*(B0zFace_x_BLK(i+1,j,k,iBlock)-&
+          B0zFace_x_BLK(i,j,k,iBlock))+&
           DzInv*(B0xFace_z_BLK(i,j,k+1,iBlock)-&
           B0xFace_z_BLK(i,j,k,iBlock))
-
-     B0SourceMatrix_DDCB(3,2,i,j,k,iBlock) = &
+     CurlB0_DCB(x_,i,j,k,iBlock) = & 
           DyInv*(B0zFace_y_BLK(i,j+1,k,iBlock)-&
           B0zFace_y_BLK(i,j,k,iBlock))-&
           DzInv*(B0yFace_z_BLK(i,j,k+1,iBlock)-&
           B0yFace_z_BLK(i,j,k,iBlock))
-
-
-     B0SourceMatrix_DDCB(1,2,i,j,k,iBlock) = &
-          -B0SourceMatrix_DDCB(2,1,i,j,k,iBlock)
-     B0SourceMatrix_DDCB(1,3,i,j,k,iBlock) = &
-          -B0SourceMatrix_DDCB(3,1,i,j,k,iBlock)
-     B0SourceMatrix_DDCB(2,3,i,j,k,iBlock) = &
-          -B0SourceMatrix_DDCB(3,2,i,j,k,iBlock)
 
   end do; end do; end do
 
