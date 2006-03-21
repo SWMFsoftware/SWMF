@@ -4,6 +4,7 @@ module ModCovariant
   use ModSize
   use ModNumConst
   use ModMain,ONLY:unusedBLK
+  use ModCoordTransform
   use ModParallel,ONLY:BLKneighborLEV,NOBLK
   use ModUtilities,ONLY: check_allocate
   implicit none
@@ -93,13 +94,13 @@ contains
          (OldLevel_IIIB(:,:,:,iBlock)==-1.or.BLKneighborLEV(:,:,:,iBlock)==-1))
   end function do_fix_geometry_at_reschange
 !---------------------------------------------------------------------------------
-  function cross_product(A_D,B_D)
-    real,dimension(nDim)::cross_product
-    real,dimension(nDim),intent(in)::A_D,B_D
-    cross_product(1)=A_D(2)*B_D(3)-A_D(3)*B_D(2)
-    cross_product(2)=A_D(3)*B_D(1)-A_D(1)*B_D(3)
-    cross_product(3)=A_D(1)*B_D(2)-A_D(2)*B_D(1)
-  end function cross_product
+!  function cross_product(A_D,B_D)
+!    real,dimension(nDim)::cross_product
+!    real,dimension(nDim),intent(in)::A_D,B_D
+!    cross_product(1)=A_D(2)*B_D(3)-A_D(3)*B_D(2)
+!    cross_product(2)=A_D(3)*B_D(1)-A_D(1)*B_D(3)
+!    cross_product(3)=A_D(1)*B_D(2)-A_D(2)*B_D(1)
+!  end function cross_product
 !---------------------------------------------------------------------------------
   subroutine get_face_area_i(&
        XyzNodes_DIII,&                      !(in) Cartesian coordinates of nodes
