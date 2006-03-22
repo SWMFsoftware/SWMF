@@ -28,6 +28,7 @@ MODULES = \
 	ModBlockData.o\
 	ModBoundaryCells.o\
 	ModEquation.o\
+	ModFaceFlux.o\
 	ModGeometry.o\
 	ModHallResist.o\
 	ModInterface.o\
