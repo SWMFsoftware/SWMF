@@ -100,11 +100,12 @@ subroutine set_physics_constants
   end if
 
   !\
-  ! set the speed of light and get normalization
+  ! set the (corrected) speed of light and get normalization
   !/
-  cLIGHT = boris_cLIGHT_factor * cLightSpeed/unitSI_U
-  c2LIGHT = cLIGHT**2
-  inv_c2LIGHT = cOne/c2LIGHT
+  Clight      = Boris_Clight_Factor * cLightSpeed/unitSI_U
+  C2light     = cLIGHT**2
+  InvClight   = cOne/cLight
+  Inv_C2light = cOne/c2LIGHT
 
   !\
   ! Convert rotation, and gravity to non-dimensional values

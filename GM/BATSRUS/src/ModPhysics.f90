@@ -17,7 +17,8 @@ module ModPhysics
   ! thermal/total energy ratio limits for correctP  !^CFG IF PROJECTION
   real    :: Pratio_lo=0.01, Pratio_hi=0.1          !^CFG IF PROJECTION
 
-  real :: cLIGHT,c2LIGHT,inv_c2LIGHT,boris_cLIGHT_factor   ! speed of light
+  ! speed of light, inverse, square, inverse of square, boris correction
+  real :: Clight, InvClight, C2light, Inv_C2light, Boris_Clight_Factor   
 
   ! the dipole moment for body2           !^CFG IF SECONDBODY
   real :: BdpBody2_D(3),BdpDimBody2_D(3)  !^CFG IF SECONDBODY
