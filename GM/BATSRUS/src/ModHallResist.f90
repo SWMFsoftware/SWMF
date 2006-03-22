@@ -1,4 +1,3 @@
-!^CFG FILE HALLRESFLUX
 !^CFG COPYRIGHT UM
 module ModHallResist
 
