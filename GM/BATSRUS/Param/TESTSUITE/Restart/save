@@ -1,2 +1,8 @@
-! Save restart at the end (default)
+#BEGIN_COMP GM
+
+! Save block restart files at the end
+#RESTARTOUTFILE
+block			TypeRestartOutFile
+
+#END_COMP GM
 
