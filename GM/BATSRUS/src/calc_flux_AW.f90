@@ -70,7 +70,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
   logical :: oktest,oktest_me,oktest_row
   real, dimension(MaxStrip)::v_diffrB1n
 
-
+  integer :: iDir
+  !--------------------------------------------------------------------------
 
   if(iProc==PROCtest .and. globalBLK==BLKtest)then
      call set_oktest('calc_facefluxes',oktest,oktest_me)
@@ -83,6 +84,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
   !\
   ! x-face fluxes --- x-face fluxes --- x-face fluxes
   !/
+
+  iDir = x_
 
   if (.not.DoResChangeOnly) then
      kBegin=kMinFaceX ; kEnd=kMaxFaceX
@@ -213,6 +216,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
 
   ! y-face fluxes --- y-face fluxes --- y-face fluxes
 
+  iDir = y_
+
   if (.not.DoResChangeOnly) then
      kBegin = kMinFaceY ; kEnd = kMaxFaceY
      jBegin = 1 ;             jEnd = nJFace
@@ -334,6 +339,8 @@ subroutine calc_flux_AW(DoResChangeOnly)
   end do
 
   ! z-face fluxes --- z-face fluxes --- z-face fluxes 
+
+  iDir = z_
 
   if (.not.DoResChangeOnly) then
      kBegin = 1 ;             kEnd = nKFace
@@ -467,7 +474,8 @@ Contains
     v_p_hf     = cHalf*(v_p_lf(iStrip)   + v_p_rf(iStrip))
     write(*,*)'rho=',v_rho_hf
     write(*,*)'P  =', v_p_hf
-    write(*,*)'Eigenvalue_maxabs*fA=',v_max_hf(iStrip)
+    write(*,*)'Eigenvalue_maxabs=',v_max_hf(iStrip)/fA(iDir)
+    write(*,*)'Area = ',fA(iDir)
     do n=1,nFlux
        write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
             n,Full_Flux(n,iStrip)
