@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 subroutine calc_facefluxes(DoResChangeOnly)
 
+  use ModFaceFlux, ONLY: UseModFaceFlux, calc_face_flux
   use ModProcMH
   use ModMain, ONLY : &
        boris_correction,&               !^CFG IF BORISCORR
@@ -24,6 +25,11 @@ subroutine calc_facefluxes(DoResChangeOnly)
 
   if(oktest_me) call print_values
 
+  if(UseModFaceFlux)then
+     call calc_face_flux(DoResChangeOnly, GlobalBlk)
+     RETURN
+  end if
+
   select case (FluxType)
   case ('Roe')                                  !^CFG IF ROEFLUX
      call calc_flux_Roe(DoResChangeOnly)        !^CFG IF ROEFLUX
@@ -32,8 +38,7 @@ subroutine calc_facefluxes(DoResChangeOnly)
         call calc_flux_Rusanov(DoResChangeOnly) !^CFG IF NOT COVARIANT
         continue
      else                                       !^CFG IF COVARIANT BEGIN   
-        call calc_flux_Rusanov_covar(&
-             DoResChangeOnly)
+        call calc_flux_Rusanov_covar(DoResChangeOnly)
      end if                                     !^CFG END COVARIANT         
                                                 !^CFG END  RUSANOVFLUX
   case('Linde')                                 !^CFG IF LINDEFLUX BEGIN
@@ -41,8 +46,8 @@ subroutine calc_facefluxes(DoResChangeOnly)
         call calc_flux_Linde(DoResChangeOnly)   !^CFG IF NOT COVARIANT
         continue
      else                                       !^CFG IF COVARIANT BEGIN   
-        call calc_flux_Linde_covar(&            
-              DoResChangeOnly)
+        call calc_flux_Linde_covar(DoResChangeOnly)
+        
      end if                                     !^CFG END COVARIANT
                                                 !^CFG END LINDEFLUX
   case ('Sokolov')                              !^CFG IF AWFLUX BEGIN
@@ -53,8 +58,7 @@ subroutine calc_facefluxes(DoResChangeOnly)
            call calc_flux_AW(DoResChangeOnly)   !^CFG IF NOT COVARIANT
            continue
      else                                       !^CFG IF COVARIANT BEGIN   
-           call calc_flux_aw_covar(&            
-              DoResChangeOnly)
+           call calc_flux_aw_covar(DoResChangeOnly)
         end if                                  !^CFG END COVARIANT 
      end if                                     !^CFG IF BORISCORR
                                                 !^CFG END AWFLUX
