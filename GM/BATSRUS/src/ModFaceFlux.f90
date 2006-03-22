@@ -387,6 +387,7 @@ contains
        call get_boris_flux
     else
        call get_mhd_flux
+       En = 0.0
     end if
 
   contains
