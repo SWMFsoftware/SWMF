@@ -21,7 +21,7 @@ module ModFaceFlux
 
   implicit none
 
-  logical :: UseModFaceFlux = .true.
+  logical :: UseModFaceFlux = .false.
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
