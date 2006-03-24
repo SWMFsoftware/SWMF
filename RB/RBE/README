@@ -1,0 +1,4 @@
+tar xzf RBE.tgz
+make install COMPILER=ifort
+make rundir
+make test
