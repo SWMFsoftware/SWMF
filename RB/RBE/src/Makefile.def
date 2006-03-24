@@ -1,0 +1,11 @@
+# Local Makefile.def
+
+localdefault: help # default target
+
+SCRIPTDIR = ${RBDIR}/share/Scripts
+LIBDIR    = ${RBDIR}/src
+RUNDIR    = ${RBDIR}/run
+BINDIR    = ${RBDIR}/src
+SHAREDIR  = ${RBDIR}/share/Library/src
+
+TIMINGDIR = ${RBDIR}/util/TIMING/src

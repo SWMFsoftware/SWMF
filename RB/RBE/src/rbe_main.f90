@@ -1,0 +1,66 @@
+!*******************************************************************************
+!
+!                               rbe_main.f90
+! 
+!  The code is created to be integrated into the Space Weather
+!  Modeling Framework.
+!
+!  Created on 21 March 2006 by Mei-Ching Fok, Code 612.2, NASA GSFC.
+!
+!  Radiation Belt-Ring Current Forecasting Model, Version 02.
+!
+!  Contact: Mei-Ching Fok at mei-ching.h.fok@nasa.gov, 301-286-1083.
+!
+!  This code is designed to model radiation belt electrons and ions with 
+!  energy ranges 10 keV - 4 MeV for e-, 10 keV - 1 MeV for H+.
+!
+!  A program calculates temporal evolutions of radiation belt particle fluxes,
+!  considering drift, losscone loss, radial, pitch-angle and energy diffusions.
+!
+!  Model limit:
+!       r:    r < rb        rb is set at 12 RE
+!      LT:    0 - 24 
+!       M:    corresponding to 10 keV - 4 MeV for e-, 10 keV - 1 MeV for H+.
+!       K:    corresponding to sine of equatorial pitch angle from 0 - 1.
+!
+!  Magnetic field model: Tsyganenko 96, 04 model (t96_01.f or t04_s.f) or MHD.
+!
+!  Electric field model: Weimer 2k model (w2k.f, w2k.dat) or MHD.
+!
+!  Plasmasphere model: Dan Ober's model (pbo_2.f)
+!
+!  Input files: rbe_swmf.dat
+!               storm.SWIMF
+!               storm.symH 
+!               w2k.dat
+!               rbe_*.fin for initial run
+!               outname_*_c.f2 for continuous run
+!
+!  Output files: outname_*.fls (* can be e or h for electrons or protons)
+!******************************************************************************
+
+program rbe
+
+  use rbe_cread2, ONLY: nstept, nstep
+  use rbe_time,   ONLY: istep
+  implicit none
+
+  ! Initial setup for the rbe model
+  call readInputData
+  call rbe_init
+  write(*,*)'RBE initialized'
+
+  ! start the calculation, the time loop
+  do istep = 1, nstept+nstep 
+     call rbe_run
+  end do
+
+end program rbe
+!============================================================================
+subroutine CON_stop(String)
+
+  character(len=*), intent(in) :: String
+  write(*,*)'ERROR in RBE:',String
+  stop
+
+end subroutine CON_stop
