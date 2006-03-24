@@ -15,7 +15,7 @@ contains
     integer, intent(out) :: indx(n)
     real, intent(in)     :: arr(n)
 
-    integer, parameter   :: M=7, NSTACK=50
+    integer, parameter   :: M=7, NSTACK=1000
 
     integer :: i,indxt,ir,itemp,j,jstack,k,l,istack(NSTACK)
     real    :: a
@@ -81,7 +81,7 @@ contains
        indx(j)=indxt
        jstack=jstack+2
        if(jstack > NSTACK) &
-            stop 'ERROR in ModSort::sort_quick: NSTACK too small'
+            call CON_stop('ERROR in ModSort::sort_quick: NSTACK too small')
        if(ir-i+1.ge.j-l)then
           istack(jstack)=ir
           istack(jstack-1)=i
