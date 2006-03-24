@@ -15,6 +15,7 @@ subroutine exchange_messages
   use ModMpi
   use ModMPCells, ONLY : DoOneCoarserLayer
   use ModBoundaryCells,ONLY:SaveBoundaryCells
+  use ModPhysics, ONLY : ShockSlope
   implicit none
 
   integer :: iBlock
@@ -27,10 +28,6 @@ subroutine exchange_messages
 !!$  call testmessage_pass_nodes
 !!$  call time_message_passing
 !!$  !^CFG END DEBUGGING
-
-  ! For first order, message pass cells can pass only one layer of ghost cells.
-  DoOneLayer = nOrder==1
-  
 
   DoRestrictFace = prolong_order==1
   if(UseConstrainB) DoRestrictFace = .false.   !^CFG IF CONSTRAINB
@@ -65,7 +62,11 @@ subroutine exchange_messages
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
-     call message_pass_cells_8state(DoOneLayer,.false.,DoRestrictFace)
+     ! If ShockSlope is not zero then even the first order needs 
+     ! two ghost cell layers to fill in the corner cells at the sheared BCs.
+     DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
+
+     call message_pass_cells_8state(DoOneLayer, .false., DoRestrictFace)
      if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
   else
      if(oktest)write(*,*)'calling message_pass: me,type=',&
@@ -83,6 +84,7 @@ subroutine exchange_messages
              Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
              restrictface=DoRestrictFace)
      case('allopt')
+        DoOneLayer = nOrder == 1
         call message_pass_cells_8state(DoOneLayer,.true.,DoRestrictFace)
         if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
       case default
