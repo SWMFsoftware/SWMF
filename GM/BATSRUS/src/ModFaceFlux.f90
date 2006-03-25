@@ -777,8 +777,6 @@ subroutine roe_solver(iDir, Flux_V)
   integer, intent(in) :: iDir
   real,    intent(out):: Flux_V(nVar+1)
 
-
-
   integer, parameter :: nFlux=nVar+1, nWave=nVar
   integer, parameter :: RhoUn_=RhoUx_, RhoUt1_=RhoUy_, RhoUt2_=RhoUz_, &
        B1n_=Bx_, B1t1_=By_, B1t2_=Bz_
@@ -799,7 +797,7 @@ subroutine roe_solver(iDir, Flux_V)
   ! Right face
   real :: RhoR,UnR,Ut1R,Ut2R
   real :: BnR,Bt1R,Bt2R,BbR
-  real :: B1nR,B1t1R,B1t2R,Bb1R
+  real :: B1nR,B1t1R,B1t2R
   real :: pR,eR,aR,CsR,CfR
 
   ! Average (hat)
@@ -822,14 +820,14 @@ subroutine roe_solver(iDir, Flux_V)
   real, dimension(nWave) :: dCons_V
 
   ! Eigenvalues and jumps in characteristic variable
-  real, dimension(nWave) :: Eigenvalue_V,DeltaWave_V 
+  real, dimension(nWave) :: Eigenvalue_V, DeltaWave_V 
 
   ! Eigenvectors
   real, dimension(nVar ,nWave):: EigenvectorL_VV       ! Left Eigenvectors
   real, dimension(nWave,nFlux):: EigenvectorR_VV       ! Right Eigenvector
 
   ! Fluxes
-  real, dimension(nFlux)      :: FluxFull_V !!! temporary
+  real, dimension(nFlux)      :: Diffusion_V !!! temporary
 
   ! Logical to use Rusanov flux at inner boundary
   logical :: UseFluxRusanov
@@ -988,7 +986,6 @@ subroutine roe_solver(iDir, Flux_V)
   Bt1L = B0t1+B1t1L
   Bt2L = B0t2+B1t2L
   BbL  = BnL**2 + Bt1L**2 + Bt2L**2
-  Bb1L = B1nL**2 + B1t1L**2 + B1t2L**2
   aL   = g*pL*RhoInvL
 
   RhoInvR = 1./RhoR
@@ -996,7 +993,6 @@ subroutine roe_solver(iDir, Flux_V)
   Bt1R = B0t1+B1t1R
   Bt2R = B0t2+B1t2R
   BbR  = BnR**2 + Bt1R**2 + Bt2R**2
-  Bb1R = B1nR**2 + B1t1R**2 + B1t2R**2
   aR   = g*pR*RhoInvR
 
   !\
@@ -1031,14 +1027,11 @@ subroutine roe_solver(iDir, Flux_V)
   aH=sqrt(aH)
 
   eL = aL*aL + BbL*RhoInvL
-  CfL = max(0.,                                &
-       (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
+  CfL = max(0., (eL**2 - 4.*aL**2 * BnL**2 * RhoInvL))
   eR = aR**2 + BbR*RhoInvR
-  CfR = max(0.,                                &
-       (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
+  CfR = max(0., (eR**2 - 4.*aR**2 * BnR**2 * RhoInvR))
   eH = aH**2 + BbH*RhoInvH
-  CfH = max(0.,                                &
-       (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
+  CfH = max(0., (eH**2 - 4.*aH**2 * BnH**2 * RhoInvH))
 
   CfL=sqrt(CfL)
   CfR=sqrt(CfR)
@@ -1046,12 +1039,10 @@ subroutine roe_solver(iDir, Flux_V)
 
   CsL  = max(0.,0.5*(eL-CfL))
   CfL  = 0.5*(eL+CfL)
-  eL = pL*inv_gm1 + 0.5*RhoL*          &
-       (UnL**2 + Ut1L**2 + Ut2L**2) + 0.5*Bb1L
+
   CsR  = max(0.,0.5*(eR-CfR))
   CfR  = 0.5*(eR+CfR)
-  eR   = pR*inv_gm1 + 0.5*RhoR*      &
-       (UnR**2 + Ut1R**2 + Ut2R**2) + 0.5*Bb1R
+
   CsH  = max(0.,0.5*(eH-CfH))
   CfH  = 0.5*(eH+CfH)
   UuH  = UnH**2 + Ut1H**2 + Ut2H**2
@@ -1472,54 +1463,58 @@ subroutine roe_solver(iDir, Flux_V)
   !\
   ! Alphas (elemental wave strengths)
   !/
-  DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
-
+  ! matmul is slower than the loop for the NAG F95 compiler
+  ! DeltaWave_V = matmul(dCons_V, EigenvectorL_VV)
+  do iWave = 1, nWave
+     DeltaWave_V(iWave) = sum(dCons_V*EigenvectorL_VV(:,iWave))
+  end do
   !\
   ! Calculate the Roe Interface fluxes 
   ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
   !/
-  do iFlux=1,nFlux
-     FluxFull_V(iFlux) = &
-          sum(abs(Eigenvalue_V(1:nWave))*DeltaWave_V(1:nWave)* &
-          EigenvectorR_VV(1:nWave,iFlux))
+  ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
+  !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
+  do iFlux = 1, nFlux
+     Diffusion_V(iFlux) = &
+          sum(abs(Eigenvalue_V)*DeltaWave_V*EigenvectorR_VV(:,iFlux))
   end do
 
   ! Rotate n,t1,t2 components back to x,y,z components
   select case (iDir)
   case (x_)
-     Flux_V(rho_   ) = FluxFull_V(1)
-     Flux_V(rhoUx_ ) = FluxFull_V(2)
-     Flux_V(rhoUy_ ) = FluxFull_V(3)
-     Flux_V(rhoUz_ ) = FluxFull_V(4)
-     Flux_V(Bx_    ) = FluxFull_V(5)
-     Flux_V(By_    ) = FluxFull_V(6)
-     Flux_V(Bz_    ) = FluxFull_V(7)
-     Flux_V(P_     ) = FluxFull_V(8)
-     Flux_V(Energy_) = FluxFull_V(9)
+     Flux_V(rho_   ) = Diffusion_V(1)
+     Flux_V(rhoUx_ ) = Diffusion_V(2)
+     Flux_V(rhoUy_ ) = Diffusion_V(3)
+     Flux_V(rhoUz_ ) = Diffusion_V(4)
+     Flux_V(Bx_    ) = Diffusion_V(5)
+     Flux_V(By_    ) = Diffusion_V(6)
+     Flux_V(Bz_    ) = Diffusion_V(7)
+     Flux_V(P_     ) = Diffusion_V(8)
+     Flux_V(Energy_) = Diffusion_V(9)
 
   case (y_)
 
-     Flux_V(rho_   ) = FluxFull_V(1)
-     Flux_V(rhoUx_ ) = FluxFull_V(4)
-     Flux_V(rhoUy_ ) = FluxFull_V(2)
-     Flux_V(rhoUz_ ) = FluxFull_V(3)
-     Flux_V(Bx_    ) = FluxFull_V(7)
-     Flux_V(By_    ) = FluxFull_V(5)
-     Flux_V(Bz_    ) = FluxFull_V(6)
-     Flux_V(P_     ) = FluxFull_V(8)
-     Flux_V(Energy_) = FluxFull_V(9)
+     Flux_V(rho_   ) = Diffusion_V(1)
+     Flux_V(rhoUx_ ) = Diffusion_V(4)
+     Flux_V(rhoUy_ ) = Diffusion_V(2)
+     Flux_V(rhoUz_ ) = Diffusion_V(3)
+     Flux_V(Bx_    ) = Diffusion_V(7)
+     Flux_V(By_    ) = Diffusion_V(5)
+     Flux_V(Bz_    ) = Diffusion_V(6)
+     Flux_V(P_     ) = Diffusion_V(8)
+     Flux_V(Energy_) = Diffusion_V(9)
 
   case (z_)
 
-     Flux_V(rho_   ) = FluxFull_V(1)
-     Flux_V(rhoUx_ ) = FluxFull_V(3)
-     Flux_V(rhoUy_ ) = FluxFull_V(4)
-     Flux_V(rhoUz_ ) = FluxFull_V(2)
-     Flux_V(Bx_    ) = FluxFull_V(6)
-     Flux_V(By_    ) = FluxFull_V(7)
-     Flux_V(Bz_    ) = FluxFull_V(5)
-     Flux_V(P_     ) = FluxFull_V(8)
-     Flux_V(Energy_) = FluxFull_V(9)
+     Flux_V(rho_   ) = Diffusion_V(1)
+     Flux_V(rhoUx_ ) = Diffusion_V(3)
+     Flux_V(rhoUy_ ) = Diffusion_V(4)
+     Flux_V(rhoUz_ ) = Diffusion_V(2)
+     Flux_V(Bx_    ) = Diffusion_V(6)
+     Flux_V(By_    ) = Diffusion_V(7)
+     Flux_V(Bz_    ) = Diffusion_V(5)
+     Flux_V(P_     ) = Diffusion_V(8)
+     Flux_V(Energy_) = Diffusion_V(9)
 
   end select
 
