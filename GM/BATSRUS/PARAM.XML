@@ -2453,6 +2453,12 @@ The default is to flush the output, i.e. DoFlush=T.
 default			TypeRefineInit
 4			nRefineLevelInit
 
+! This command defines the geometry based refinement type and
+! the number of initial refinement levels. The exact meaning
+! of the various refinement types can be figured out from the
+! source code in specify_refinement.f90. It is probably preferable 
+! to use the #GRIDRESOLUTION and #GRIDLEVEL commands.
+!
 ! These are the default values for the initial refinement.\\
 ! Possible values for InitialRefineType:\\
 ! Default depends on problem_type. 
@@ -2625,10 +2631,28 @@ refers to the size of the cell in the X direction (Dx).
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
-The next parameter NameArea defines the shape of the area. 
 If NameArea is set to 'initial' or 'init', the highest initial resolution
-or level is set by the command. This is similar to the #AMRINIT command.
-For other values of NameArea, the command specifies the blocks to be refined.
+or level is set by the command. This is similar to the #AMRINIT command,
+but there is no 'TypeRefineInit' parameter, because all refinement areas 
+are defined with the additional #GRIDLEVEL and #GRIDRESOLUTION commands.
+Do not use #AMRINIT if the #GRIDLEVEL or #GRIDRESOLUTION command is used 
+with the 'initial' area! The #AMRINIT command may be combined with
+the #GRIDLEVEL and #GRIDRESOLUTION commands (these add additional areas
+of refinement to the areas defined by TypeRefineInit), but in general 
+the use of #AMRINIT is not recommended, because the refinement definitions
+are defined in the source code which is difficult to understand and may
+change from version to version.
+
+For other values of NameArea, the command specifies the shape of the area. 
+where the blocks are to be refined. If the desired grid resolution is finer
+than the initial resolution, then initially the grid will be refined
+to the initial resolution only, but the area will be further refined 
+in subsequent pre-specified adaptive mesh refinements (AMRs) during the run 
+(see the #AMR command). Once the resolution reaches the
+desired level, the AMR-s will not do further refinement. If a grid block
+is covered by more than one areas, the area with the finest resolution
+determines the desired grid resolution.
+
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
 There are the following basic shapes: 
@@ -2652,9 +2676,9 @@ The area 'ringx', 'ringy' and 'ringz' are the volumes between
 two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
 The ring area is given with the center, the height and the two radii.
 
-If the area name contains a zero, the center is taken to be at the origin.
-If the word rotated is added, the area can be rotated by 3 angles around
-the X, Y and Z axes in this order.
+If the area name contains the number '0', the center is taken to be at the 
+origin. If the word 'rotated' is added, the area can be rotated by 3 angles 
+around the X, Y and Z axes in this order.
 </command>
 
 <command name="AMRLEVELS">
@@ -2735,7 +2759,9 @@ T			DoAutoRefine   ! read if DnRefine is positive
 ! in terms of total steps nStep.
 !
 ! When DoAutoRefine is false, the grid is refined by one more level
-! based on the TypeRefineInit parameter given in the #AMRINIT command. 
+! based on the TypeRefineInit parameter given in the #AMRINIT command
+! and/or the areas and resolutions defined by the 
+! #GRIDLEVEL and #GRIDRESOLUTION commands.
 ! If the number of blocks is not sufficient for this pre-specified refinement, 
 ! the code stops with an error.
 !
@@ -2883,6 +2909,7 @@ Example for InvD2Ray =
 		<parameter name="TypeLimiter" type="string" input="select">
 			<option name="minmod" default="T" 	/>
 			<option name="mc"			/>
+			<option name="mc3"			/>
 			<option name="beta"			/>
 		</parameter>
 		<parameter name="LimiterBeta" type="real" min="1" max="2"
@@ -2891,34 +2918,33 @@ Example for InvD2Ray =
 #SCHEME
 2			nOrder (1 or 2)
 Rusanov			TypeFlux
-mc			TypeLimiter ! Only for nOrder=2
+mc3			TypeLimiter ! Only for nOrder=2
 1.2			LimiterBeta ! Only if LimiterType is NOT 'minmod'
 
-! Default values are shown above.\\
-!
-!\noindent
-! Possible values for TypeFlux:
-!\begin{verbatim}
-! 'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
-! 'Linde        - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
-! 'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
-! 'Roe'         - Roe's approximate Riemann flux       <!--^CFG IF ROEFLUX  -->
-!\end{verbatim}
-! Possible values for TypeLimiter:
-!\begin{verbatim}
-! 'minmod'	- minmod limiter is the most robust limiter
-! 'mc'          - monotonized central limiter with a beta parameter
-! 'beta'        - beta limiter is less robust than the mc limiter for 
-!                 the same beta value
-!\end{verbatim}
-! Possible values for LimiterBeta (for 'beta' and 'mc' limiters only)
-! are between 1.0 and 2.0 : 
-!\begin{verbatim}
-!  LimiterBeta = 1.0 is the same as the minmod limiter
-!  LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
-!  LimiterBeta = 1.5 is a typical value for the mc limiter
-!  LimiterBeta = 1.2 is the recommended value for the beta limiter
-!\end{verbatim}
+\noindent
+Possible values for TypeFlux:
+\begin{verbatim}
+ 'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
+ 'Linde        - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
+ 'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
+ 'Roe'         - Roe's approximate Riemann flux       <!--^CFG IF ROEFLUX  -->
+\end{verbatim}
+Possible values for TypeLimiter:
+\begin{verbatim}
+ 'minmod'      - minmod limiter is the most robust and diffusive limiter
+ 'mc'          - monotonized central limiter with a beta parameter
+ 'mc3'         - third order (in the linear sense) limiter with beta parameter
+ 'beta'        - beta limiter is less robust than the mc limiter for 
+                 the same beta value
+\end{verbatim}
+Possible values for LimiterBeta (for limiters othen than minmod)
+are between 1.0 and 2.0 : 
+\begin{verbatim}
+  LimiterBeta = 1.0 is the same as the minmod limiter
+  LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
+  LimiterBeta = 1.5 is a typical value for the mc/mc3 limiters
+  LimiterBeta = 1.2 is the recommended value for the beta limiter
+\end{verbatim}
 </command>
 
 <command name="NONCONSERVATIVE">
