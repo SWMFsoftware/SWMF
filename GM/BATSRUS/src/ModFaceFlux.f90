@@ -36,8 +36,8 @@ module ModFaceFlux
   real :: FluxLeft_V(nVar+1), FluxRight_V(nVar+1)
   real :: StateLeftCons_V(nVar+1), StateRightCons_V(nVar+1)
   real :: B0x, B0y, B0z
-  real :: Area, AreaHalf
-  real :: Cmax, Unormal
+  real :: Area, AreaHalf, Area2, AreaX, AreaY, AreaZ
+  real :: Cmax, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
 
 contains
@@ -93,7 +93,9 @@ contains
     subroutine get_flux_x(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
       integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      Area = fAx_BLK(iBlock)
+      Area  = fAx_BLK(iBlock)
+      Area2 = Area**2
+      AreaX = Area; AreaY = 0.0; AreaZ = 0.0
       AreaHalf = 0.5*Area
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -109,9 +111,9 @@ contains
 
          call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
 
-         VdtFace_x(iFace, jFace, kFace) = Area*Cmax
-         UDotFA_X(iFace, jFace, kFace)  = Area*Unormal
-         EDotFA_X(iFace, jFace, kFace)  = Area*Enormal !^CFG IF BORISCORR
+         VdtFace_x(iFace, jFace, kFace) = Cmax
+         UDotFA_X(iFace, jFace, kFace)  = Unormal
+         EDotFA_X(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
     end subroutine get_flux_x
@@ -121,7 +123,9 @@ contains
     subroutine get_flux_y(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
       integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
-      Area = fAy_BLK(iBlock)
+      Area  = fAy_BLK(iBlock)
+      Area2 = Area**2
+      AreaX = 0.0; AreaY = Area; AreaZ = 0.0
       AreaHalf = 0.5*Area
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -136,9 +140,9 @@ contains
 
          call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
 
-         VdtFace_y(iFace, jFace, kFace) = Area*Cmax
-         UDotFA_Y( iFace, jFace, kFace) = Area*Unormal
-         EDotFA_Y(iFace, jFace, kFace)  = Area*Enormal !^CFG IF BORISCORR
+         VdtFace_y(iFace, jFace, kFace) = Cmax
+         UDotFA_Y( iFace, jFace, kFace) = Unormal
+         EDotFA_Y(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
 
@@ -149,7 +153,9 @@ contains
     subroutine get_flux_z(iBlock, iMin, iMax, jMin, jMax, kMin, kMax)
       integer, intent(in):: iBlock, iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
-      Area = fAz_BLK(iBlock)
+      Area  = fAz_BLK(iBlock)
+      Area2 = Area**2
+      AreaX = 0.0; AreaY = 0.0; AreaZ = Area
       AreaHalf = 0.5*Area
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -164,9 +170,9 @@ contains
 
          call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
 
-         VdtFace_z(iFace, jFace, kFace) = Area*Cmax
-         UDotFA_Z( iFace, jFace, kFace) = Area*Unormal
-         EDotFA_Z(iFace, jFace, kFace)  = Area*Enormal !^CFG IF BORISCORR
+         VdtFace_z(iFace, jFace, kFace) = Cmax
+         UDotFA_Z( iFace, jFace, kFace) = Unormal
+         EDotFA_Z(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
     end subroutine get_flux_z
@@ -177,35 +183,55 @@ contains
 
   subroutine get_numerical_flux(iDir, Flux_V)
 
-    use ModVarIndexes, ONLY: U_, B_
+    use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_
 
     integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nVar+1)
 
     real :: State_V(nVar)
 
-    real :: BnLeft, BnRight, BnAverage, DiffBn, EnLeft, EnRight
+    real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
+    real :: EnLeft, EnRight
     !-----------------------------------------------------------------------
 
     if(.false. &
          .or. DoHll &               !^CFG IF LINDEFLUX
          .or. DoAw  &               !^CFG IF AWFLUX
          )then
-       ! Sokolov's algorithm !!!
-       ! Average the normal magnetic field
-       BnLeft    = StateLeft_V(B_+iDir)
-       BnRight   = StateRight_V(B_+iDir)
-       DiffBn    = 0.5*(BnRight - BnLeft)
-       BnAverage = 0.5*(BnRight + BnLeft)
-       StateLeft_V(B_+iDir)  = BnAverage
-       StateRight_V(B_+iDir) = BnAverage
+       ! Sokolov's algorithm
+       ! Calculate and store the jump in the normal magnetic field
+       DiffBn    = 0.5* &
+            ( (StateRight_V(Bx_) - StateLeft_V(Bx_))*AreaX &
+            + (StateRight_V(By_) - StateLeft_V(By_))*AreaY &
+            + (StateRight_V(Bz_) - StateLeft_V(Bz_))*AreaZ ) / Area2
+
+       ! Calculate the Cartesian components
+       DiffBx    = AreaX*DiffBn
+       DiffBy    = AreaY*DiffBn
+       DiffBz    = AreaZ*DiffBn
+
+       ! Remove the jump in the normal magnetic field
+       StateLeft_V(Bx_)  =  StateLeft_V(Bx_)  + DiffBx
+       StateLeft_V(By_)  =  StateLeft_V(By_)  + DiffBy
+       StateLeft_V(Bz_)  =  StateLeft_V(Bz_)  + DiffBz
+       StateRight_V(Bx_) =  StateRight_V(Bx_) - DiffBx
+       StateRight_V(By_) =  StateRight_V(By_) - DiffBy
+       StateRight_V(Bz_) =  StateRight_V(Bz_) - DiffBz
+
+       ! The energy jump is also modified by 
+       ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
+       ! We store half of this in DiffE
+       DiffE = 0.5*( &
+            (StateRight_V(Bx_) + StateLeft_V(Bx_))*DiffBx + &
+            (StateRight_V(By_) + StateLeft_V(By_))*DiffBy + &
+            (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
     call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
-         StateLeftCons_V, FluxLeft_V, EnLeft)
+         StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft)
 
     call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
-         StateRightCons_V, FluxRight_V, EnRight)
+         StateRightCons_V, FluxRight_V, UnRight, EnRight)
 
     ! All the solvers below use the average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
@@ -225,10 +251,10 @@ contains
 
       call get_speed_max(iDir, State_V, B0x, B0y, B0z, Cmax = Cmax)
 
-      Flux_V = AreaHalf*(FluxLeft_V + FluxRight_V &
+      Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
            - Cmax*(StateRightCons_V - StateLeftCons_V))
 
-      Unormal = 0.5*(StateLeft_V(U_+iDir) + StateRight_V(U_+iDir))
+      Unormal = 0.5*(UnLeft + UnRight)
       Enormal = 0.5*(EnLeft + EnRight)                  !^CFG IF BORISCORR
 
     end subroutine lax_friedrichs_flux
@@ -258,21 +284,20 @@ contains
       WeightRight = 1.0 - WeightLeft
       Diffusion   = Cright*WeightRight
 
-      Flux_V = Area* &
+      Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
 
       ! Linde's idea: use Lax-Friedrichs flux for Bn
-      Flux_V(B_+iDir) = Flux_V(B_+iDir) - Area*cMax*DiffBn
+      Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
+      Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
+      Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
 
-      ! Sokolov's algorithm !!!
       ! Fix the energy diffusion
-      Flux_V(Energy_) = Flux_V(Energy_) - Area*cMax*DiffBn*BnAverage
+      Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
 
       ! Average the normal speed
-      Unormal = WeightRight*StateRight_V(U_+iDir) &
-           +    WeightLeft *StateLeft_V(U_+iDir)
-
+      Unormal = WeightRight*UnRight + WeightLeft*UnLeft
       Enormal = WeightRight*EnRight + WeightLeft*EnLeft !^CFG IF BORISCORR
 
     end subroutine harten_lax_vanleer_flux
@@ -297,23 +322,21 @@ contains
       WeightRight = 1.0 - WeightLeft
       Diffusion   = Cright*WeightRight
 
-      Flux_V = Area* &
+      Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
 
       ! Linde's idea: use Lax-Friedrichs flux for Bn
-      Flux_V(B_+iDir) = Flux_V(B_+iDir) - Area*cMax*DiffBn
+      Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
+      Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
+      Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
 
       ! Sokolov's algorithm !!!
       ! Fix the energy diffusion
-      Flux_V(Energy_) = Flux_V(Energy_) - Area*cMax*DiffBn*BnAverage
+      Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
 
-      ! Weighted average of the normal speed
-      Unormal = &
-           WeightRight*StateRight_V(U_+iDir) + &
-           WeightLeft *StateLeft_V( U_+iDir)
-
-      ! Weighted average of the normal electric field
+      ! Weighted average of the normal speed and electric field
+      Unormal = WeightRight*UnRight + WeightLeft*UnLeft
       Enormal = WeightRight*EnRight + WeightLeft*EnLeft !^CFG IF BORISCORR
 
     end subroutine artificial_wind
@@ -336,10 +359,13 @@ contains
            + (/B0x,B0y,B0z/))**2)
 
       write(*,*)'Fluxes for dir=',iDir,' at I=',iFace,' J=',jFace,' K=',kFace
-      write(*,*)'Eigenvalue_maxabs=', Cmax
+      write(*,*)'Eigenvalue_maxabs=', Cmax/Area
       do iVar = 1, nVar + 1
          write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
-              iVar ,Flux_V(iVar),FluxLeft_V(iVar),FluxRight_V(iVar),&
+              iVar ,&
+              Flux_V(iVar), &
+              FluxLeft_V(iVar)/Area, &
+              FluxRight_V(iVar)/Area,&
               StateRightCons_V(iVar)-StateLeftCons_V(iVar)
       end do
 
@@ -350,13 +376,14 @@ contains
   !===========================================================================
 
   subroutine get_physical_flux(iDir, State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, En)
+       StateCons_V, Flux_V, Un, En)
 
     integer, intent(in) :: iDir               ! direction of flux
     real,    intent(in) :: State_V(nVar)      ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z      ! B0
     real,    intent(out):: StateCons_V(nVar+1)! conservative states with energy
     real,    intent(out):: Flux_V(nVar+1)     ! fluxes for all states
+    real,    intent(out):: Un                 ! normal velocity
     real,    intent(out):: En                 ! normal electric field
 
     if(UseBoris)then           !^CFG IF BORISCORR BEGIN
@@ -377,9 +404,9 @@ contains
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
-      real :: B2, FullB2, pTotal, B0DotB1, UDotB
+      real :: B2, FullB2, pTotal, pTotal2, UDotB
       real :: Ex, Ey, Ez, E2Half
-      real :: Un, Bn, B0n
+      real :: Bn, B0n
       integer :: iVar
       !-----------------------------------------------------------------------
 
@@ -426,41 +453,24 @@ contains
       StateCons_V(Energy_) = e + E2Half
 
       ! Calculate some intermediate values for flux calculations
-      pTotal  = p + 0.5*B2
-      B0DotB1 = B0x*Bx + B0y*By + B0z*Bz
+      pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
+      pTotal2 = pTotal + E2Half
 
       ! Normal direction
-      select case(iDir)
-      case(x_)
-         Un     = Ux
-         B0n    = B0x
-         Bn     = Bx
-         FullBn = FullBx
-         En     = Ex
-      case(y_)
-         Un     = Uy
-         B0n    = B0y
-         Bn     = By
-         FullBn = FullBy
-         En     = Ey
-      case(z_)
-         Un     = Uz
-         B0n    = B0z
-         Bn     = Bz
-         FullBn = FullBz
-         En     = Ez
-      end select
+      Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
+      B0n    = B0x*AreaX + B0y*AreaY + B0z*AreaZ
+      Bn     = Bx*AreaX  + By*AreaY  + Bz*AreaZ
+      FullBn = B0n + Bn
+      En     = Ex*AreaX + Ey*AreaY + Ez*AreaZ
 
       ! f_i[rho]=m_i
       Flux_V(Rho_)   = Rho*Un
 
       ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k - E_i*E_k
-      Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx - En*Ex
-      Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By - En*Ey
-      Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz - En*Ez
-
-      ! Add extra terms for f_i[m_i]: p + 0.5*(b_k*b_k + E_k*E_k) + B0_k*b_k
-      Flux_V(RhoU_+iDir) = Flux_V(RhoU_+iDir) + pTotal + E2Half + B0dotB1
+      !          +n_i*[p + B0_j*b_j + 0.5*(b_j*b_j + E_j*E_j)]
+      Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx - En*Ex + pTotal2*Areax
+      Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By - En*Ey + pTotal2*Areay
+      Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz - En*Ez + pTotal2*Areaz
 
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
       Flux_V(Bx_) = Un*FullBx - Ux*FullBn
@@ -472,7 +482,7 @@ contains
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       Flux_V(Energy_) = &
-           Un*(pTotal + e + B0dotB1) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
+           Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
@@ -492,8 +502,8 @@ contains
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
-      real :: Un, Bn, B0n
-      real :: B2, pTotal, B0DotB1
+      real :: Bn, B0n
+      real :: B2, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
       !-----------------------------------------------------------------------
@@ -525,41 +535,21 @@ contains
       FullBx  = Bx + B0x
       FullBy  = By + B0y
       FullBz  = Bz + B0z
-      pTotal  = p + 0.5*B2
-      B0DotB1 = B0x*Bx + B0y*By + B0z*Bz
+      pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
 
       ! Normal direction
-      select case(iDir)
-      case(x_)
-         Un     = Ux
-         B0n    = B0x
-         Bn     = Bx
-         FullBn = FullBx
-      case(y_)
-         Un     = Uy
-         B0n    = B0y
-         Bn     = By
-         FullBn = FullBy
-      case(z_)
-         Un     = Uz
-         B0n    = B0z
-         Bn     = Bz
-         FullBn = FullBz
-      end select
+      Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
+      B0n    = B0x*AreaX + B0y*AreaY + B0z*AreaZ
+      Bn     = Bx*AreaX  + By*AreaY  + Bz*AreaZ
+      FullBn = B0n + Bn
 
       ! f_i[rho]=m_i
       Flux_V(Rho_)   = Rho*Un
 
-      ! f_i[m_k]=m_i*m_k/rho - b_k*b_i [+ptotal if i==k]
-      !         -B0_k*b_i - B0_i*b_k [+B0_j*b_j if i==k]
-
-      ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k
-      Flux_V(RhoUx_) = Un*StateCons_V(RhoUx_) - Bn*FullBx - B0n*Bx
-      Flux_V(RhoUy_) = Un*StateCons_V(RhoUy_) - Bn*FullBy - B0n*By
-      Flux_V(RhoUz_) = Un*StateCons_V(RhoUz_) - Bn*FullBz - B0n*Bz
-
-      ! Add extra terms for f_i[m_i]
-      Flux_V(RhoU_+iDir) = Flux_V(RhoU_+iDir) + pTotal + B0dotB1
+      ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k + n_i*[ptotal]
+      Flux_V(RhoUx_) = Un*Rho*Ux - Bn*FullBx - B0n*Bx + pTotal*AreaX
+      Flux_V(RhoUy_) = Un*Rho*Uy - Bn*FullBy - B0n*By + pTotal*AreaY
+      Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*AreaZ
 
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
       Flux_V(Bx_) = Un*FullBx - Ux*FullBn
@@ -571,7 +561,7 @@ contains
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
       Flux_V(Energy_) = &
-           Un*(pTotal + e + B0dotB1) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
+           Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
@@ -608,6 +598,7 @@ contains
     endif                                        !^CFG IF BORISCORR
 
   contains
+
     !^CFG IF BORISCORR BEGIN
     !========================================================================
     subroutine get_boris_speed
@@ -616,33 +607,27 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, inv_c2LIGHT
 
-      real :: InvRho, Sound2, B2x, B2y, B2z
+      real :: InvRho, Sound2, FullBx, FullBy, FullBz
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, Slow
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
-      real :: UnLeft, UnRight ! For artificial wind scheme only
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
       Sound2 = g*State_V(p_)*InvRho
-      B2x    = (State_V(Bx_)+B0x)**2
-      B2y    = (State_V(By_)+B0y)**2
-      B2z    = (State_V(Bz_)+B0z)**2
-      Alfven2= (B2x + B2y + B2z)*InvRho
+      FullBx = State_V(Bx_) + B0x
+      FullBy = State_V(By_) + B0y
+      FullBz = State_V(Bz_) + B0z
+      Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
 
-      select case(iDir)
-      case(x_)
-         Un = State_V(Ux_)
-         Alfven2Normal = B2x*InvRho
-      case(y_)
-         Un = State_V(Uy_)
-         Alfven2Normal = B2y*InvRho
-      case(z_)
-         Un = State_V(Uz_)
-         Alfven2Normal = B2z*InvRho
-      end select
+      Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
+      Alfven2Normal = &
+           InvRho*(AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz)**2/Area2
 
-      GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT) ! "Alfven Lorentz" factor
-      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*inv_c2LIGHT) ! 1-gA^2*Un^2/c^2
+      ! "Alfven Lorentz" factor
+      GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT) 
+
+      ! 1-gA^2*Un^2/c^2
+      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2/Area2*inv_c2LIGHT) 
 
       ! Modified speeds
       Sound2Boris        = Sound2        *GammaA2*(1+Alfven2Normal*inv_c2LIGHT)
@@ -653,15 +638,14 @@ contains
       Fast2  = Sound2Boris + Alfven2Boris
       Discr  = sqrt(max(0.0, Fast2**2 - 4.0*Sound2*Alfven2NormalBoris))
 
-      Fast = sqrt( 0.5*(          Fast2 + Discr) )
-      Slow = sqrt( 0.5*( max(0.0, Fast2 - Discr) ) )
+      ! Get fast and slow speeds multiplied with the face area
+      Fast = sqrt( Area2*0.5*(          Fast2 + Discr) )
+      Slow = sqrt( Area2*0.5*( max(0.0, Fast2 - Discr) ) )
 
       ! In extreme cases "slow" wave can be faster than "fast" wave
       ! so take the maximum of the two
 
       if(DoAw)then                                        !^CFG IF AWFLUX BEGIN
-         UnRight = StateRight_V(U_+iDir)
-         UnLeft  = StateLeft_V(U_+iDir)
          Un      = min(UnRight, UnLeft)
          Cleft   = min(Un*GammaA2 - Fast, Un - Slow)
          Un      = max(UnLeft, UnRight)
@@ -684,16 +668,15 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, inv_c2LIGHT
 
-      real :: InvRho, Sound2, B2x, B2y, B2z
+      real :: InvRho, Sound2, FullBx, FullBy, FullBz
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast
       real :: dB1dB1 ! For AW scheme only
-      real :: UnLeft, UnRight ! For artificial wind scheme only
       !------------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
       Sound2 = g*State_V(p_)*InvRho
-      B2x    = (State_V(Bx_)+B0x)**2
-      B2y    = (State_V(By_)+B0y)**2
-      B2z    = (State_V(Bz_)+B0z)**2
+      FullBx = State_V(Bx_) + B0x
+      FullBy = State_V(By_) + B0y
+      FullBz = State_V(Bz_) + B0z
       if(DoAw)then                                       !^CFG IF AWFLUX BEGIN
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results in 
@@ -704,36 +687,27 @@ contains
          ! this is clearly not true.
          !
          dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_)-StateLeft_V(Bx_:Bz_))**2)
-         Alfven2 = (B2x + B2y + B2z + dB1dB1)*InvRho
+         Alfven2= (FullBx**2 + FullBy**2 + FullBz**2 + dB1dB1)*InvRho
       else                                               !^CFG END AWFLUX
-         Alfven2= (B2x + B2y + B2z)*InvRho
+         Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if                                             !^CFG IF AWFLUX
 
-      select case(iDir)
-      case(x_)
-         Un = State_V(Ux_)
-         Alfven2Normal = B2x*InvRho
-      case(y_)
-         Un = State_V(Uy_)
-         Alfven2Normal = B2y*InvRho
-      case(z_)
-         Un = State_V(Uz_)
-         Alfven2Normal = B2z*InvRho
-      end select
+      Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
+      Alfven2Normal = &
+           InvRho*(AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz)**2/Area2
 
       Fast2  = Sound2 + Alfven2
       Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
 
+      ! Fast speed multiploed with the face area
       if(UseBorisSimple)then                         !^CFG IF SIMPLEBORIS BEGIN
-         Fast = sqrt( 0.5*(Fast2 + Discr) &
+         Fast = sqrt( Area2*0.5*(Fast2 + Discr) &
               /       (1.0 + Alfven2*Inv_C2light) )
       else                                           !^CFG END SIMPLEBORIS
-         Fast = sqrt( 0.5*(Fast2 + Discr) )
+         Fast = sqrt( Area2*0.5*(Fast2 + Discr) )
       end if                                         !^CFG IF SIMPLEBORIS
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
-         UnRight = StateRight_V(U_+iDir)
-         UnLeft  = StateLeft_V(U_+iDir)
          Cleft   = min(UnLeft, UnRight) - Fast
          Cright  = max(UnLeft, UnRight) + Fast
          Cmax    = max(Cright, -Cleft)
@@ -756,7 +730,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModVarIndexes, ONLY: U_, B_
 
   use ModFaceFlux, ONLY: &
-       iFace, jFace, kFace, AreaHalf, DoTestCell, &
+       iFace, jFace, kFace, Area, AreaHalf, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, Cmax, Unormal
 
@@ -1518,10 +1492,10 @@ subroutine roe_solver(iDir, Flux_V)
 
   end select
 
-  Flux_V = AreaHalf*(FluxLeft_V + FluxRight_V - Flux_V)
+  Flux_V  = 0.5*(FluxLeft_V + FluxRight_V) - AreaHalf*Flux_V
 
-  Unormal = UnH
-  Cmax    = abs(UnH) + CfH
+  Unormal = Area*UnH
+  Cmax    = Area*(abs(UnH) + CfH)
 
 end subroutine roe_solver
 !^CFG END ROEFLUX
