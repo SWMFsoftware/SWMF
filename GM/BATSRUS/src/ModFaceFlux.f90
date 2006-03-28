@@ -6,6 +6,10 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+  
+  use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
+       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     !^CFG IF COVARIANT 
+       FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  !^CFG IF COVARIANT 
 
   use ModAdvance, ONLY:&
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, & ! input: face X B0
@@ -18,10 +22,9 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
-
   implicit none
 
-  logical :: UseModFaceFlux = .false.
+  logical :: UseModFaceFlux = .true.
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
@@ -36,7 +39,7 @@ module ModFaceFlux
   real :: FluxLeft_V(nVar+1), FluxRight_V(nVar+1)
   real :: StateLeftCons_V(nVar+1), StateRightCons_V(nVar+1)
   real :: B0x, B0y, B0z
-  real :: Area, AreaHalf, Area2, AreaX, AreaY, AreaZ
+  real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: Cmax, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
 
@@ -93,11 +96,21 @@ contains
     subroutine get_flux_x(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
       integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      Area  = fAx_BLK(iBlock)
-      Area2 = Area**2
-      AreaX = Area; AreaY = 0.0; AreaZ = 0.0
-      AreaHalf = 0.5*Area
+      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
+         Area  = fAx_BLK(iBlock)
+         Area2 = Area**2
+         AreaX = Area; AreaY = 0.0; AreaZ = 0.0
+      end if                                    !^CFG IF COVARIANT
+
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+            AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlock)
+            AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlock)
+            AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlock)
+            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+                 FaceArea2MinI_B(iBlock))
+         end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
@@ -123,11 +136,21 @@ contains
     subroutine get_flux_y(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
       integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
-      Area  = fAy_BLK(iBlock)
-      Area2 = Area**2
-      AreaX = 0.0; AreaY = Area; AreaZ = 0.0
-      AreaHalf = 0.5*Area
+      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
+         Area  = fAy_BLK(iBlock)
+         Area2 = Area**2
+         AreaX = 0.0; AreaY = Area; AreaZ = 0.0
+      end if                                    !^CFG IF COVARIANT
+
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+            AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlock)
+            AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlock)
+            AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlock)
+            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+                 FaceArea2MinJ_B(iBlock))
+         end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
@@ -153,11 +176,21 @@ contains
     subroutine get_flux_z(iBlock, iMin, iMax, jMin, jMax, kMin, kMax)
       integer, intent(in):: iBlock, iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
-      Area  = fAz_BLK(iBlock)
-      Area2 = Area**2
-      AreaX = 0.0; AreaY = 0.0; AreaZ = Area
-      AreaHalf = 0.5*Area
+      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
+         Area  = fAz_BLK(iBlock)
+         Area2 = Area**2
+         AreaX = 0.0; AreaY = 0.0; AreaZ = Area
+      end if                                    !^CFG IF COVARIANT
+
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+            AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlock)
+            AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlock)
+            AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlock)
+            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+                 FaceArea2MinK_B(iBlock))
+         end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
@@ -730,21 +763,17 @@ subroutine roe_solver(iDir, Flux_V)
   use ModVarIndexes, ONLY: U_, B_
 
   use ModFaceFlux, ONLY: &
-       iFace, jFace, kFace, Area, AreaHalf, DoTestCell, &
+       iFace, jFace, kFace, Area, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, Cmax, Unormal
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_
 
-  use ModMain, ONLY: x_, y_, z_, GlobalBlk
-
-  !  use ModProcMH
-  !  use ModMain
+  use ModMain,     ONLY: x_, y_, z_, GlobalBlk
   use ModGeometry, ONLY: true_cell
-  use ModPhysics, ONLY : g,gm1,inv_gm1
+  use ModPhysics,  ONLY: g,gm1,inv_gm1
   use ModNumConst
-  !  use ModAdvance
 
   implicit none
 
@@ -758,9 +787,7 @@ subroutine roe_solver(iDir, Flux_V)
   integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
        SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8 
 
-  real :: cSqrt2, cSqrt2Inv
-
-  integer :: i, j, k, iFlux, iVar, iWave
+  integer :: iFlux, iVar, iWave
 
   ! Left face
   real :: RhoL,UnL,Ut1L,Ut2L
@@ -809,14 +836,6 @@ subroutine roe_solver(iDir, Flux_V)
   ! Misc. scalar variables
   real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
   !---------------------------------------------------------------------------
-  i = iFace
-  j = jFace
-  k = kFace
-
-  cSqrt2 = sqrt(2.)
-  cSqrt2Inv = 1./cSqrt2
-
-  !-------------------------
   select case (iDir)
   case (x_)
      !\
@@ -858,8 +877,8 @@ subroutine roe_solver(iDir, Flux_V)
      ! Put the conservative energy difference in place of the pressure
      dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
 
-     UseFluxRusanov=true_cell(i-1,j,k,globalBLK).neqv.&
-          true_cell(i,j,k,globalBLK)
+     UseFluxRusanov= true_cell(iFace-1, jFace, kFace, globalBLK) &
+          .neqv.     true_cell(iFace  , jFace, kFace, globalBLK)
 
   case (y_)
      !\
@@ -904,8 +923,8 @@ subroutine roe_solver(iDir, Flux_V)
      ! Put the conservative energy difference in place of the pressure
      dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
 
-     UseFluxRusanov=true_cell(i,j-1,k,globalBLK).neqv.&
-          true_cell(i,j  ,k,globalBLK)
+     UseFluxRusanov= true_cell(iFace, jFace-1, kFace, globalBLK) &
+          .neqv.     true_cell(iFace, jFace  , kFace, globalBLK)
 
   case (z_)
      !\
@@ -950,8 +969,8 @@ subroutine roe_solver(iDir, Flux_V)
      ! Put the conservative energy difference in place of the pressure
      dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
 
-     UseFluxRusanov = &
-          true_cell(i,j,k-1,globalBLK).neqv.true_cell(i,j,k,globalBLK)
+     UseFluxRusanov= true_cell(iFace, jFace, kFace-1, globalBLK) &
+          .neqv.     true_cell(iFace, jFace, kFace  , globalBLK)
 
   end select
 
@@ -1045,8 +1064,8 @@ subroutine roe_solver(iDir, Flux_V)
      BetaY = Bt1H*Tmp1
      BetaZ = Bt2H*Tmp1
   else
-     BetaY = cSqrt2Inv
-     BetaZ = cSqrt2Inv
+     BetaY = cSqrtHalf
+     BetaZ = cSqrtHalf
   end if
 
   Tmp1 = CfH**2 - CsH**2
@@ -1175,8 +1194,8 @@ subroutine roe_solver(iDir, Flux_V)
   ! Eigenvectors
   !/
   Tmp1=1./(2.*RhoH*aH**2)
-  Tmp2=RhoInvH*cSqrt2Inv
-  Tmp3=RhoInvSqrtH*cSqrt2Inv
+  Tmp2=RhoInvH*cSqrtHalf
+  Tmp3=RhoInvSqrtH*cSqrtHalf
 
   ! Left eigenvector for Entropy wave
   EigenvectorL_VV(1,1) = 1.-0.5*Gamma1A2Inv*UuH
@@ -1328,29 +1347,29 @@ subroutine roe_solver(iDir, Flux_V)
   ! Right eigenvector for Alfven wave +
   EigenvectorR_VV(2,1) = 0.
   EigenvectorR_VV(2,2) = 0.
-  EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrt2Inv
-  EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrt2Inv
+  EigenvectorR_VV(2,3) = -BetaZ*RhoH*cSqrtHalf
+  EigenvectorR_VV(2,4) = BetaY*RhoH*cSqrtHalf
   EigenvectorR_VV(2,5) = 0.
-  EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrt2Inv
-  EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrt2Inv
+  EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
+  EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(2,Energy_) = (BetaY*Ut2H - &
-       BetaZ*Ut1H)*RhoH*cSqrt2Inv &
+       BetaZ*Ut1H)*RhoH*cSqrtHalf &
        +(B1t1H*BetaZ-B1t2H*BetaY)* &
-       RhoSqrtH*cSqrt2Inv
+       RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(2,P_)=cZero
 
   ! Right eigenvector for Alfven wave -
   EigenvectorR_VV(3,1) = 0.
   EigenvectorR_VV(3,2) = 0.
-  EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrt2Inv
-  EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrt2Inv
+  EigenvectorR_VV(3,3) = -BetaZ*RhoH*cSqrtHalf
+  EigenvectorR_VV(3,4) = BetaY*RhoH*cSqrtHalf
   EigenvectorR_VV(3,5) = 0.
-  EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrt2Inv
-  EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrt2Inv
+  EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
+  EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(3,Energy_) = (BetaY*Ut2H - &
-       BetaZ*Ut1H)*RhoH*cSqrt2Inv &
+       BetaZ*Ut1H)*RhoH*cSqrtHalf &
        -(B1t1H*BetaZ-B1t2H*BetaY)* &
-       RhoSqrtH*cSqrt2Inv
+       RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(3,P_)=cZero
 
   ! Right eigenvector for Slow magnetosonic wave +
@@ -1492,7 +1511,7 @@ subroutine roe_solver(iDir, Flux_V)
 
   end select
 
-  Flux_V  = 0.5*(FluxLeft_V + FluxRight_V) - AreaHalf*Flux_V
+  Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Area*Flux_V)
 
   Unormal = Area*UnH
   Cmax    = Area*(abs(UnH) + CfH)
