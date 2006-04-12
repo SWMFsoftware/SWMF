@@ -438,6 +438,7 @@ contains
     endif
 
     jcell=lookup(ix1,ix2)
+
     if(jcell>0)then
        ! A cell has already been found for this projected location
 
@@ -503,7 +504,7 @@ contains
 
     ! Check four corners for finer neighbors
     count=0
-    if(dx1cell>dx1)then
+    if(dx1cell>1.9*dx1)then
        do i1=ixmin1,ixmax1,ixmax1-ixmin1
           do i2=ixmin2,ixmax2,ixmax2-ixmin2
              jcell=lookup(i1,i2)
