@@ -35,7 +35,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
 
   real :: ySqeezed
 
-  real,parameter:: cHalfMinusTiny=cHalf-cTiny
+  real,parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
