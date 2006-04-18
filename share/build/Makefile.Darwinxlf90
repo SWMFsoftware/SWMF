@@ -8,9 +8,9 @@ SHELL=/bin/sh
 #       Mac OS (Darwin) specific part of Makefile
 #
 
-COMPILE.f77     = xlf
-COMPILE.f90     = xlf90
-LINK.f90        = mpif90xlf
+COMPILE.f77     = ${CUSTOMPATH_F}xlf
+COMPILE.f90     = ${CUSTOMPATH_F}xlf90
+LINK.f90        = ${CUSTOMPATH_MPI}mpif90xlf
 AR = ar -rs
 
 PRECISION = -qautodbl=dbl4

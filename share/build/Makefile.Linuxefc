@@ -8,9 +8,9 @@ SHELL=/bin/sh
 #       Linux specific part of Makefile
 #
 
-COMPILE.f77     = efc
-COMPILE.f90     = efc
-LINK.f90	= efc
+COMPILE.f77     = ${CUSTOMPATH_F}efc
+COMPILE.f90     = ${CUSTOMPATH_F}efc
+LINK.f90	= ${CUSTOMPATH_F}efc
 AR = ar -rs
 
 PRECISION = -r8

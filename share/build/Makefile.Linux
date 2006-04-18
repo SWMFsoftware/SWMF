@@ -8,9 +8,9 @@ SHELL=/bin/sh
 #       Linux specific part of Makefile
 #
 
-COMPILE.f77     = f95
-COMPILE.f90     = f95
-LINK.f90	= mpif90
+COMPILE.f77     = ${CUSTOMPATH_F}f95
+COMPILE.f90     = ${CUSTOMPATH_F}f95
+LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 AR = ar -rs
 
 PRECISION = -r8

@@ -38,17 +38,17 @@ SHELL=/bin/sh
 #
 # The F77 compiler
 #
-COMPILE.f77     = pgf90
+COMPILE.f77     = ${CUSTOMPATH_F}pgf90
 
 #
 # The F90 compiler
 #
-COMPILE.f90     = pgf90
+COMPILE.f90     = ${CUSTOMPATH_F}pgf90
 
 #
 # The compiler used for linking the executables
 #
-LINK.f90	= mpif90
+LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 
 # 
 # The archive program to build lib*.a libraries
