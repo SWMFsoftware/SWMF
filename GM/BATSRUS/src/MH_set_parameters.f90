@@ -39,8 +39,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters
-  use ModHallResist,    ONLY: UseHallResist, UseHallCmax, ResistDiagDim, &
-       HallFactor
+  use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor
 
   use ModFaceFlux, ONLY: UseModFaceFlux
 
@@ -451,9 +450,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLRESISTIVITY")
         call read_var('UseHallResist',  UseHallResist)
         if(UseHallResist)then
-           call read_var('UseHallCmax', UseHallCmax)
-           call read_var('ResistDiag',  ResistDiagDim)
            call read_var('HallFactor',  HallFactor)
+           call read_var('HallCmaxFactor', HallCmaxFactor)
         end if
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
