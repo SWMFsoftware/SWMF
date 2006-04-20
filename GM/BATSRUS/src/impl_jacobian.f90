@@ -476,36 +476,35 @@ contains
   subroutine impl_hall_resist
 
     use ModHallResist, ONLY: IonMassPerCharge, &
-         BxPerRho_G, ByPerRho_G, BzPerRho_G,ResistDiag
+         BxPerRho_G, ByPerRho_G, BzPerRho_G
+    !real :: ResistDiag should be Eta0Resist_ND from calc_resistive_flux
 
     real :: Coeff
     integer:: iVar
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! For diffusion term
     ! R(Bi) = d^2(Bi)/dx^2 + d^2(Bi)/dy^2 + d^2(Bi)/dz^2 
     ! dR(Bx)/dBx, dR(By)/dBy, dR(Bz)/dBz 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    do iDim = 1, nDim
-       Coeff= - ImplCoeff*ResistDiag/Dxyz(iDim)**2
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          do iVar=Bx_, Bz_
-             JAC(iVar,iVar,i,j,k,1)= &
-                  JAC(iVar,iVar,i,j,k,1)         - 2.0*Coeff
-             JAC(iVar,iVar,i,j,k,2*nDim)= &
-                  JAC(iVar,iVar,i,j,k,2*nDim)    + Coeff
-             JAC(iVar,iVar,i,j,k,2*nDim+1)= & 
-                  JAC(iVar,iVar,i,j,k,2*nDim+1)  + Coeff
-          end do
-       end do; end do; end do
-    end do
+    
+    !do iDim = 1, nDim
+    !   Coeff= - ImplCoeff*ResistDiag/Dxyz(iDim)**2
+    !   do k=1,nK; do j=1,nJ; do i=1,nI
+    !      do iVar=Bx_, Bz_
+    !         JAC(iVar,iVar,i,j,k,1)= &
+    !              JAC(iVar,iVar,i,j,k,1)         - 2.0*Coeff
+    !         JAC(iVar,iVar,i,j,k,2*nDim)= &
+    !              JAC(iVar,iVar,i,j,k,2*nDim)    + Coeff
+    !         JAC(iVar,iVar,i,j,k,2*nDim+1)= & 
+    !              JAC(iVar,iVar,i,j,k,2*nDim+1)  + Coeff
+    !      end do
+    !   end do; end do; end do
+    !end do
 
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! For Hall term
     ! the signs should be reversed and the coeff should have a minus sign
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     ! dR(Bx)/dBy
     Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(z_)**2
     ! Main diagonal
