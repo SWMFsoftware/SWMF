@@ -5,7 +5,7 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar
-  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     !^CFG IF COVARIANT 
@@ -22,9 +22,13 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
+  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, &
+       get_face_current
+
   implicit none
 
   logical :: UseModFaceFlux = .true.
+!  logical :: UseModFaceFlux = .false.
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
@@ -42,6 +46,8 @@ module ModFaceFlux
   real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: Cmax, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
+
+  real :: Dxyz
 
 contains
   !===========================================================================
@@ -61,7 +67,7 @@ contains
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
-
+    
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
@@ -100,7 +106,9 @@ contains
          Area  = fAx_BLK(iBlock)
          Area2 = Area**2
          AreaX = Area; AreaY = 0.0; AreaZ = 0.0
-      end if                                    !^CFG IF COVARIANT
+         Dxyz  = dx_BLK(iBlock)
+      end if     
+                               !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -122,7 +130,7 @@ contains
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
+         call get_numerical_flux(iBlock, x_, Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace) = Cmax
          UDotFA_X(iFace, jFace, kFace)  = Unormal
@@ -140,6 +148,7 @@ contains
          Area  = fAy_BLK(iBlock)
          Area2 = Area**2
          AreaX = 0.0; AreaY = Area; AreaZ = 0.0
+         Dxyz  = dy_BLK(iBlock)
       end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -161,7 +170,7 @@ contains
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
          StateRight_V = RightState_VY(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
+         call get_numerical_flux(iBlock, y_, Flux_VY(:, iFace, jFace, kFace))
 
          VdtFace_y(iFace, jFace, kFace) = Cmax
          UDotFA_Y( iFace, jFace, kFace) = Unormal
@@ -180,8 +189,9 @@ contains
          Area  = fAz_BLK(iBlock)
          Area2 = Area**2
          AreaX = 0.0; AreaY = 0.0; AreaZ = Area
-      end if                                    !^CFG IF COVARIANT
-
+         Dxyz  = dz_BLK(iBlock)
+      end if 
+                                   !^CFG IF COVARIANT
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
          if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
@@ -201,7 +211,7 @@ contains
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
          StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
+         call get_numerical_flux(iBlock, z_, Flux_VZ(:, iFace, jFace, kFace))
 
          VdtFace_z(iFace, jFace, kFace) = Cmax
          UDotFA_Z( iFace, jFace, kFace) = Unormal
@@ -214,10 +224,11 @@ contains
 
   !===========================================================================
 
-  subroutine get_numerical_flux(iDir, Flux_V)
+  subroutine get_numerical_flux(iBlock, iDir, Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_
 
+    integer, intent(in) :: iBlock
     integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nVar+1)
 
@@ -260,10 +271,10 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
-    call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
+    call get_physical_flux(iBlock, iDir, StateLeft_V, B0x, B0y, B0z,&
          StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft)
 
-    call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
+    call get_physical_flux(iBlock, iDir, StateRight_V, B0x, B0y, B0z,&
          StateRightCons_V, FluxRight_V, UnRight, EnRight)
 
     ! All the solvers below use the average state
@@ -408,9 +419,10 @@ contains
 
   !===========================================================================
 
-  subroutine get_physical_flux(iDir, State_V, B0x, B0y, B0z, &
+  subroutine get_physical_flux(iBlock, iDir, State_V, B0x, B0y, B0z, &
        StateCons_V, Flux_V, Un, En)
 
+    integer, intent(in) :: iBlock             ! block index
     integer, intent(in) :: iDir               ! direction of flux
     real,    intent(in) :: State_V(nVar)      ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z      ! B0
@@ -532,9 +544,9 @@ contains
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
       use ModMain,    ONLY: x_, y_, z_
       use ModVarIndexes
-
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
+      real :: HallUx, HallUy, HallUz, HallUn, Jx, Jy, Jz
       real :: Bn, B0n
       real :: B2, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
@@ -585,9 +597,22 @@ contains
       Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*AreaZ
 
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
-      Flux_V(Bx_) = Un*FullBx - Ux*FullBn
-      Flux_V(By_) = Un*FullBy - Uy*FullBn
-      Flux_V(Bz_) = Un*FullBz - Uz*FullBn
+      if(UseHallResist)then
+         call get_face_current(iDir, iFace, jFace, kFace, iBlock, Jx, Jy, Jz)
+         HallUx = Ux - Jx*IonMassPerCharge/Rho
+         HallUy = Uy - Jy*IonMassPerCharge/Rho
+         HallUz = Uz - Jz*IonMassPerCharge/Rho
+
+         HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
+
+         Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
+         Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
+         Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
+      else
+         Flux_V(Bx_) = Un*FullBx - Ux*FullBn
+         Flux_V(By_) = Un*FullBy - Uy*FullBn
+         Flux_V(Bz_) = Un*FullBz - Uz*FullBn
+      end if
 
       ! f_i[p]=u_i*p
       Flux_V(p_)  = Un*p
@@ -701,7 +726,7 @@ contains
       use ModVarIndexes
       use ModPhysics, ONLY: g, inv_c2LIGHT
 
-      real :: InvRho, Sound2, FullBx, FullBy, FullBz
+      real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast
       real :: dB1dB1 ! For AW scheme only
       !------------------------------------------------------------------------
@@ -726,8 +751,8 @@ contains
       end if                                             !^CFG IF AWFLUX
 
       Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
-      Alfven2Normal = &
-           InvRho*(AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz)**2/Area2
+      FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
+      Alfven2Normal = InvRho*FullBn**2/Area2
 
       Fast2  = Sound2 + Alfven2
       Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
@@ -739,6 +764,10 @@ contains
       else                                           !^CFG END SIMPLEBORIS
          Fast = sqrt( Area2*0.5*(Fast2 + Discr) )
       end if                                         !^CFG IF SIMPLEBORIS
+
+      ! Add whistler wave speed for the shortest wavelength 2 dx
+      if(HallCmaxFactor > 0.0)Fast = Fast + &
+           HallCmaxFactor*cPi*abs(FullBn)*IonMassPerCharge*InvRho/Dxyz
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          Cleft   = min(UnLeft, UnRight) - Fast
