@@ -339,7 +339,7 @@ subroutine getcmax(w,B0,Dxyz_D,qnI,qnJ,qnK,idim,implBLK,cmax)
   use ModVarIndexes
   use ModImplicit
   use ModPhysics, ONLY : g
-  use ModHallResist, ONLY: IonMassPerCharge, UseHallCmax
+  use ModHallResist, ONLY: IonMassPerCharge, HallCmaxFactor
   implicit none
 
   integer, intent(in):: qnI,qnJ,qnK,idim,implBLK
@@ -414,7 +414,7 @@ subroutine getcmax(w,B0,Dxyz_D,qnI,qnJ,qnK,idim,implBLK,cmax)
        sqrt(0.5*(cfast2+ sqrt(max(0.0,cfast2**2          &
        -4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/w(:,:,:,rho_)))))
 
-  if(UseHallCmax) cmax = cmax + &
+  if(HallCmaxFactor>0.0) cmax = cmax + HallCmaxFactor* &
           cPi*abs(w(:,:,:,B_+idim)+B0(:,:,:,idim))*IonMassPerCharge &
           /(w(:,:,:,rho_)*Dxyz_D(iDim))
 
