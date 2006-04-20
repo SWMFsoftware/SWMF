@@ -6,11 +6,8 @@ module ModHallResist
   ! Logical for adding hall resistivity
   logical:: UseHallResist=.false.
 
-  ! Logical for taking whistler wave speed into account
-  logical:: UseHallCmax=.true.
-
-  ! Diagonal part of resistivity (a uniform scalar for now)
-  real:: ResistDiagDim, ResistDiag 
+  ! Coefficient for taking whistler wave speed into account
+  real:: HallCmaxFactor = 1.0
 
   ! Non-diagonal part (Hall) resistivity with an arbitrary factor
   real:: IonMassPerCharge, HallFactor
@@ -18,6 +15,8 @@ module ModHallResist
   ! Arrays for the implicit preconditioning
   real, allocatable :: HallJ_CD(:,:,:,:)
   real, allocatable :: BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
+
+  save
 
 contains
   !============================================================================
@@ -39,14 +38,12 @@ contains
          BzPerRho_G(0:nI+1,0:nJ+1,0:nK+1) )
     IonMassPerCharge =HallFactor*(cProtonMass/cElectronCharge) &
          * (UnitSI_B*UnitSI_T/UnitSI_X**2)
-    ResistDiag =ResistDiagDim*(UnitSI_T/UnitSI_X**2) 
     if (DoTestMe) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
-       write(*,*) 'ResistDiagDim    = ',ResistDiagDim
-       write(*,*) 'ResistDiag       = ',ResistDiag
-       write(*,*) 'Hallfactor       = ',Hallfactor
+       write(*,*) 'HallFactor       = ',HallFactor
+       write(*,*) 'HallCmaxFactor   = ',HallCmaxFactor
        write(*,*) 'IonMassPerCharge = ',IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
        write(*,*)
@@ -58,535 +55,556 @@ contains
 
   !============================================================================
 
-  subroutine add_hall_resist_flux(DoResChangeOnly)
-    use ModProcMH,   ONLY:iProc
-    use ModSize,     ONLY:nI,nJ,nK,gcn,nBLK
-    use ModMain,     ONLY:nIFace,nJFace,nKFace,&
-         iMinFaceY,iMaxFaceY,iMinFaceZ,iMaxFaceZ, &
-         jMinFaceX,jMaxFaceX,jMinFaceZ,jMaxFaceZ, &
-         kMinFaceX,kMaxFaceX,kMinFaceY,kMaxFaceY, &
-         globalBLK, &
-         x_, y_, z_, &
-         iTest,jTest,kTest,VarTest,BlkTest,ProcTest
-    use ModVarIndexes,ONLY:Bx_,By_,Bz_,&
-         rho_,Energy_
-    use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,dx_BLK, &
-         dy_BLK,dz_BLK,fAx_BLK,fAy_BLK,fAz_BLK
-    use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
-         neiLnorth,neiLtop,neiLbot
-    use ModAdvance,  ONLY:State_VGB, &
-         B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, & 
-         VdtFace_x,VdtFace_y,VdtFace_z, &
-         Flux_VX,Flux_VY,Flux_VZ
-    use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
-         cZero,cTiny,cHundred,cHundredth,cPi
-    use ModPhysics,  ONLY: gm1
-    use ModMpi
-
-    logical, intent(in):: DoResChangeOnly
-    integer:: i,j,k
-    real:: AreaHalf
-    real:: Jx, Jy, Jz, HallCoeff, EtaJx, EtaJy, EtaJz, DiffVDt
-    real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-         Bx_G,By_G,Bz_G,EtaJx_G,EtaJy_G,EtaJz_G
-
-    character(len=*), parameter :: NameSub = 'add_hall_resist_flux'
-    logical :: DoTest, DoTestMe
-    !---------------------------------------------------------------------------
-    call timing_start(NameSub)
-
-    if(globalBLK == BlkTest .and. iProc == ProcTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    if(.not.allocated(HallJ_CD)) call init_hall_resist
-
-    if(DoTestMe)then
-       write(*,*)NameSub,' starting'
-       write(*,*)NameSub,':Left  Flux_VX=',Flux_VX(VarTest,iTest,jTest,kTest)
-       write(*,*)NameSub,':Right Flux_VX=',Flux_VX(VarTest,iTest+1,jTest,kTest)
-    end if
-
-    Bx_G = State_VGB(Bx_,:,:,:,globalBLK)+B0xCell_BLK(:,:,:,globalBLK)
-    By_G = State_VGB(By_,:,:,:,globalBLK)+B0yCell_BLK(:,:,:,globalBLK)
-    Bz_G = State_VGB(Bz_,:,:,:,globalBLK)+B0zCell_BLK(:,:,:,globalBLK)
-
-    !\
-    ! Compute and add the x_resistive_flux to the x-face fluxes 
-    !/
-    AreaHalf = cHalf*fAx_BLK(globalBLK)
-    DiffVDt  = ctwo*ResistDiag*fAx_BLK(globalBLK)/dx_BLK(globalBLK) 
-    if (.not.DoResChangeOnly) then
-       do k=kMinFaceX,kMaxFaceX
-          do j=jMinFaceX,jMaxFaceX
-             do i=1,nIFace
-                call add_hallresistive_flux_x
-             end do
-          end do
-       end do
-    else if (neiLeast(globalBLK)==+1) then
-       i=1
-       do k=1,nK
-          do j=1,nJ
-             call add_hallresistive_flux_x
-          end do
-       end do
-    else if ( neiLwest(globalBLK)==+1) then
-       i=nIFace
-       do k=1,nK
-          do j=1,nJ
-             call add_hallresistive_flux_x
-          end do
-       end do
-    end if
-    !\  
-    ! Compute and add the y_resistive_flux to the y-face fluxes 
-    !/
-    AreaHalf = cHalf*fAy_BLK(globalBLK)
-    DiffVDt  = ctwo*ResistDiag*fAy_BLK(globalBLK)/dy_BLK(globalBLK) 
-    if (.not.DoResChangeOnly) then
-       do k=kMinFaceY,kMaxFaceY
-          do j=1,nJFace
-             do i=iMinFaceY,iMaxFaceY
-                call add_hallresistive_flux_y
-             end do
-          end do
-       end do
-    else if(neiLsouth(globalBLK)==+1)then
-       j=1
-       do k=1,nK
-          do i=1,nI
-             call add_hallresistive_flux_y
-          end do
-       end do
-    else if (neiLnorth(globalBLK)==+1) then
-       j=nJFace 
-       do k=1,nK
-          do i=1,nI
-             call add_hallresistive_flux_y
-          end do
-       end do
-    end if
-    !\
-    ! Compute and add the z_resistive_flux to the z-face fluxes  
-    !/
-    AreaHalf = cHalf*fAz_BLK(globalBLK)
-    DiffVDt  = ctwo*ResistDiag*fAz_BLK(globalBLK)/dz_BLK(globalBLK) 
-    if (.not.DoResChangeOnly) then
-       do k=1,nKFace
-          do j=jMinFaceZ,jMaxFaceZ
-             do i=iMinFaceZ,iMaxFaceZ
-                call add_hallresistive_flux_z
-             end do
-          end do
-       end do
-    else if (neiLbot(globalBLK)==+1) then
-       k=1
-       do j=1,nJ
-          do i=1,nI
-             call add_hallresistive_flux_z
-          end do
-       end do
-    else if ( neiLtop(globalBLK)==+1) then
-       k=nKFace            
-       do j=1,nJ
-          do i=1,nI
-             call add_hallresistive_flux_z
-          end do
-       end do
-    end if
-
-    if(DoTestMe)then
-       write(*,*)NameSub,' finished'
-       write(*,*)NameSub,': Left  Flux_VX=',Flux_VX(VarTest,iTest,jTest,kTest)
-       write(*,*)NameSub,': Right Flux_VX=',Flux_VX(VarTest,iTest+1,jTest,kTest)
-    end if
-
-    call timing_stop(NameSub)
-
-  contains
-    !==========================================================================
-    subroutine add_hallresistive_flux_x
-
-      real :: EtaJXBx
-
-      ! curl E = curl (Eta.J) = curl(Eta0*J + HallFactor*J x B/(n*e))
-      HallCoeff = IonMassPerCharge/&
-           (State_VGB(Rho_,i,j,k,globalBLK)+State_VGB(Rho_,i-1,j,k,globalBLK))
-
-      call get_face_current(x_,i,j,k,globalBLK, Jx, Jy, Jz)
-
-      EtaJy = fAx_BLK(globalBLK)*( ResistDiag*Jy + HallCoeff* &
-           ((Bx_G(i,j,k)+Bx_G(i-1,j,k))*Jz  &
-           -(Bz_G(i,j,k)+Bz_G(i-1,j,k))*Jx))
-
-      EtaJz = fAx_BLK(globalBLK)*( ResistDiag*Jz + HallCoeff* &
-           ((By_G(i,j,k)+By_G(i-1,j,k))*Jx  &
-           -(Bx_G(i,j,k)+Bx_G(i-1,j,k))*Jy ))
-
-      ! Poynting flux: (Eta.J x B)_x
-      EtaJXBx = cHalf * &
-           (EtaJy * (Bz_G(i,j,k) + Bz_G(i-1,j,k))   &  
-           -EtaJz * (By_G(i,j,k) + By_G(i-1,j,k)))
-      !\
-      ! Update the `resistive flux' in the induction equation
-      !/
-      ! Flux_x(By) = -(eta.J)_z
-      Flux_VX(By_,i,j,k) = Flux_VX(By_,i,j,k) - EtaJz
-
-      ! Flux_x(Bz) =  (eta.J)_y
-      Flux_VX(Bz_,i,j,k) = Flux_VX(Bz_,i,j,k) + EtaJy
-
-      ! Update the `resistive flux' in the energy equation
-      Flux_VX(Energy_,i,j,k) = Flux_VX(Energy_,i,j,k) + EtaJXBx
-
-      ! Update the CFL condition
-      VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + DiffVDt
-
-    end subroutine add_hallresistive_flux_x
-
-    !==========================================================================
-
-    subroutine add_hallresistive_flux_y
-      implicit none
-      real :: EtaJXBy
-
-      logical :: DoTestCell
-
-      DoTestCell = DoTestMe .and. i==iTest.and.j==jTest .and. k==kTest
-
-      ! curl E = curl (Eta.J) = curl(Eta0*J + HallFactor*J x B/(n*e))
-      HallCoeff = IonMassPerCharge/&
-           (State_VGB(Rho_,i,j,k,globalBLK)+State_VGB(Rho_,i,j-1,k,globalBLK))
-
-      call get_face_current(y_,i,j,k,globalBLK, Jx, Jy, Jz)
-
-      EtaJx = fAy_BLK(globalBLK)*( ResistDiag*Jx + HallCoeff* &
-           ((Bz_G(i,j,k)+Bz_G(i,j-1,k))*Jy  &
-           -(By_G(i,j,k)+By_G(i,j-1,k))*Jz))
-
-      EtaJz = fAy_BLK(globalBLK)*( ResistDiag*Jz + HallCoeff* &
-           ((By_G(i,j,k)+By_G(i,j-1,k))*Jx  &
-           -(Bx_G(i,j,k)+Bx_G(i,j-1,k))*Jy ))
-
-      ! Poynting flux: (Eta.J x B)_y
-      EtaJXBy = cHalf * &
-           (EtaJz * (Bx_G(i,j,k) + Bx_G(i,j-1,k))   &  
-           -EtaJx * (Bz_G(i,j,k) + Bz_G(i,j-1,k)))
-      !\
-      ! Update the `resistive flux' in the induction equation
-      !/
-      ! Flux_x(Bx) =  (eta.J)_z
-      Flux_VY(Bx_,i,j,k) = Flux_VY(Bx_,i,j,k) + EtaJz
-
-      ! Flux_x(Bz) = -(eta.J)_x
-      Flux_VY(Bz_,i,j,k) = Flux_VY(Bz_,i,j,k) - EtaJx
-
-      ! Update the `resistive flux' in the energy equation
-      Flux_VY(Energy_,i,j,k) = Flux_VY(Energy_,i,j,k) + EtaJXBy
-
-      ! Update the CFL condition
-      VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + DiffVDt
-
-    end subroutine add_hallresistive_flux_y
-
-    !==========================================================================
-
-    subroutine add_hallresistive_flux_z
-      implicit none
-      real :: EtaJXBz
-
-      ! curl E = curl (Eta.J) = curl(Eta0*J + HallFactor*J x B/(n*e))
-      HallCoeff = IonMassPerCharge/&
-           (State_VGB(Rho_,i,j,k,globalBLK)+State_VGB(Rho_,i,j,k-1,globalBLK))
-
-      call get_face_current(z_,i,j,k,globalBLK, Jx, Jy, Jz)
-
-      EtaJx = fAz_BLK(globalBLK)*( ResistDiag*Jx + HallCoeff* &
-           ((Bz_G(i,j,k)+Bz_G(i,j,k-1))*Jy  &
-           -(By_G(i,j,k)+By_G(i,j,k-1))*Jz))
-
-      EtaJy = fAz_BLK(globalBLK)*( ResistDiag*Jy + HallCoeff* &
-           ((Bx_G(i,j,k)+Bx_G(i,j,k-1))*Jz  &
-           -(Bz_G(i,j,k)+Bz_G(i,j,k-1))*Jx ))
-
-      ! Poynting flux: (Eta.J x B)_z
-      EtaJXBz = cHalf * &
-           (EtaJx * (By_G(i,j,k) + By_G(i,j,k-1))   &  
-           -EtaJy * (Bx_G(i,j,k) + Bx_G(i,j,k-1)))
-      !\
-      ! Update the `resistive flux' in the induction equation
-      !/
-      ! Flux_z(Bx) =  -(eta.J)_y
-      Flux_VZ(Bx_,i,j,k) = Flux_VZ(Bx_,i,j,k) - EtaJy
-
-      ! Flux_x(By) =  (eta.J)_x
-      Flux_VZ(By_,i,j,k) = Flux_VZ(By_,i,j,k) + EtaJx
-
-      ! Update the `resistive flux' in the energy equation
-      Flux_VZ(Energy_,i,j,k) = Flux_VZ(Energy_,i,j,k) + EtaJXBz
-
-      ! Update the CFL condition
-      VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + DiffVDt
-
-    end subroutine add_hallresistive_flux_z
-
-  end subroutine add_hall_resist_flux
-
-  !============================================================================
-
   subroutine get_face_current(iDir, i, j, k, iBlock, Jx, Jy, Jz)
 
-    use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_
-    use ModMain,    ONLY: nI, nJ, nK, x_, y_, z_
-    use ModGeometry,ONLY: Dx_BLK, Dy_BLK, Dz_BLK
+    use ModProcMH,  ONLY: iProc
+    use ModAdvance, ONLY: State_VGB, B_, Bx_, By_, Bz_
+    use ModMain,    ONLY: nBlock, nI, nJ, nK, x_, y_, z_, &
+         iTest,jTest,kTest,VarTest,BlkTest,ProcTest
+    use ModGeometry,ONLY: Dx_BLK, Dy_BLK, Dz_BLK, &
+         X_BLK, y_BLK, z_BLK
     use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
-         neiLnorth,neiLtop,neiLbot
-
+         neiLnorth,neiLtop,neiLbot,BlkNeighborLev
     implicit none
 
     real, parameter :: cTwoThird = 2.0/3.0, cFourThird = 4.0/3.0
 
-    ! Coefficients for 2nd order current at res. change
-    ! that has the same 3rd order error term as the 
-    ! second order current taken on the uniform grid
-    real, parameter :: a = 1.0/7.0, b=0.6, c=16.0/35.0
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='get_face_current'
 
-    !  logical, intent(in):: DoTest
     integer, intent(in):: iDir, i, j, k, iBlock
     real, intent(out)  :: Jx, Jy, Jz
 
     integer :: iL, iR, jL, jR, kL, kR
     real :: InvDx, InvDy, InvDz
-    real :: InvDx1, InvDy1, InvDz1  ! Coarse side (if any)
-    real :: InvDx2, InvDy2, InvDz2  ! Fine side (if any)
+
+    integer :: iBlockLast = -1
+
+    integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
+    real, save :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+    real       :: B1_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
+
+    real :: Bc_D(3) ! interpolated coarse cell B field
+
+    real,parameter :: C1 = 8./15., F1 = 2./3., F2 = -1./5.
+    real,parameter :: p0 = 5./32., m0 =-3./32., c0= 15./16.
+    real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    integer:: ip, im, jp, jm, kp, km, iDim
     !-------------------------------------------------------------------------
-       
+    if(iProc==ProcTest.and.iBlock==BlkTest.and. &
+             (i==iTest.or.i==iTest+1.and.iDir==x_) .and. &
+             (j==jTest.or.j==jTest+1.and.iDir==y_) .and. &
+             (k==kTest.or.k==kTest+1.and.iDir==z_))then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTestMe = .false.; DoTest =.false.
+    end if
+
+    if(iBlock /= iBlockLast .or. nBlock == 1)then
+
+       iBlockLast = iBlock
+
+       ! Copy State_VGB into local array and overwrite ghost cells
+       B1_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+       b_DG  = b1_DG
+
+       ! Fix ghost edge and corner ghost cells
+       do kSide = -1,1; do jSide = -1,1; do iSide = -1,1
+          ! If the corner or edge is not coarser but the face is
+          ! then average out the 8 fine cells so that the
+          ! general interpolation formulas remain 2nd order
+          ! accurate
+          if( BlkNeighborLev(iSide,jSide,kSide,iBlock) /= 1 .and. ( &
+               BlkNeighborLev(iSide,0,0,iBlock) == 1 .or. &
+               BlkNeighborLev(0,jSide,0,iBlock) == 1 .or. &
+               BlkNeighborLev(0,0,kSide,iBlock) == 1)) then
+
+             if(iSide==0)then
+                iL = 1; iR = nI
+             elseif(iSide==1)then
+                iL = nI+1; iR=nI+2
+             else
+                iL = -1; iR = 0
+             end if
+             if(jSide==0)then
+                jL = 1; jR = nJ
+             elseif(jSide==1)then
+                jL = nJ+1; jR=nJ+2
+             else
+                jL = -1; jR = 0
+             end if
+             if(kSide==0)then
+                kL = 1; kR = nK
+             elseif(kSide==1)then
+                kL = nK+1; kR=nK+2
+             else
+                kL = -1; kR = 0
+             end if
+
+             if(iBlock==13)then
+                write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
+                write(*,*)'iL,iR,jL,jR,kL,kR=',iL,iR,jL,jR,kL,kR
+             end if
+
+             do k1=kL,kR,2; do j1=jL,jR,2; do i1=iL,iR,2; do iDim=1,3
+                B1_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1)= &
+                     0.125*sum(b_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1))
+             end do; end do; end do; end do
+
+          end if
+       end do; end do; end do
+
+       ! Do six faces
+       if(NeiLeast(iBlock) == 1)then
+          do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
+             jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             Bc_D = c0*B1_DG(:,0,j2,k2) &
+                  + p0*B1_DG(:,0,jp,kp) &
+                  + m0*B1_DG(:,0,jm,km)
+             b_DG(:,0,j2,k2) = &
+                  C1*Bc_D + F1*b_DG(:,1,j2,k2) + F2*b_DG(:,2,j2,k2)
+             b_DG(:,0,j2,k2) = min( max( b_DG(:,0,j2,k2), &
+                  min(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2))), &
+                  max(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2)))
+          end do; end do; end do; end do
+       end if
+
+       if(NeiLwest(iBlock) == 1)then
+          do k1=1, nK, 2; do j1=1, nJ, 2; do k2 = k1,k1+1; do j2 = j1,j1+1
+             jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             Bc_D = c0*B1_DG(:,nI+1,j2,k2) &
+                  + p0*B1_DG(:,nI+1,jp,kp) &
+                  + m0*B1_DG(:,nI+1,jm,km)
+             b_DG(:,nI+1,j2,k2)= &
+                  C1*Bc_D + F1*b_DG(:,nI,j2,k2) + F2*b_DG(:,nI-1,j2,k2)
+             b_DG(:,nI+1,j2,k2) = min( max( b_DG(:,nI+1,j2,k2), &
+                  min(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2))), &
+                  max(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2)))
+          end do; end do; end do; end do
+       end if
+
+       if(NeiLsouth(iBlock) == 1)then
+          do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             Bc_D = c0*B1_DG(:,i2,0,k2) &
+                  + p0*B1_DG(:,ip,0,kp) &
+                  + m0*B1_DG(:,im,0,km)
+             b_DG(:,i2,0,k2) = &
+                  C1*Bc_D + F1*b_DG(:,i2,1,k2) + F2*b_DG(:,i2,2,k2)
+             b_DG(:,i2,0,k2) = min(max( b_DG(:,i2,0,k2), &
+                  min(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2))), &
+                  max(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2)))
+          end do; end do; end do; end do
+       end if
+
+       if(NeiLnorth(iBlock) == 1)then
+          do k1=1, nK, 2; do i1=1, nI, 2; do k2 = k1,k1+1; do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             Bc_D = c0*B1_DG(:,i2,nJ+1,k2) &
+                  + p0*B1_DG(:,ip,nJ+1,kp) &
+                  + m0*B1_DG(:,im,nJ+1,km)
+             b_DG(:,i2,nJ+1,k2) = &
+                  C1*Bc_D + F1*b_DG(:,i2,nJ,k2) + F2*b_DG(:,i2,nJ-1,k2)
+             b_DG(:,i2,nJ+1,k2) = min(max( b_DG(:,i2,nJ+1,k2), &
+                  min(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2))), &
+                  max(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2)))
+          end do; end do; end do; end do
+       end if
+
+       if(NeiLbot(iBlock) == 1)then
+          do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+             Bc_D = c0*B1_DG(:,i2,j2,0) &
+                  + p0*B1_DG(:,ip,jp,0) &
+                  + m0*B1_DG(:,im,jm,0)
+             b_DG(:,i2,j2,0) = &
+                  C1*Bc_D + F1*b_DG(:,i2,j2,1) + F2*b_DG(:,i2,j2,2)
+             b_DG(:,i2,j2,0) = min(max( b_DG(:,i2,j2,0), &
+                  min(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2))), &
+                  max(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2)))
+          end do; end do; end do; end do
+       end if
+
+       if(NeiLtop(iBlock) == 1)then
+          do j1=1, nJ, 2; do i1=1, nI, 2; do j2 = j1,j1+1; do i2 = i1,i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+             Bc_D = c0*B1_DG(:,i2,j2,nK+1) &
+                  + p0*B1_DG(:,ip,jp,nK+1) &
+                  + m0*B1_DG(:,im,jm,nK+1)
+             b_DG(:,i2,j2,nK+1) = &
+                  C1*Bc_D + F1*b_DG(:,i2,j2,nK) + F2*b_DG(:,i2,j2,nK-1)
+             b_DG(:,i2,j2,nK+1) = min(max( b_DG(:,i2,j2,nK+1), &
+                  min(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1))), &
+                  max(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1)))
+          end do; end do; end do; end do
+       end if
+
+       ! Do 12 edges
+       ! 4 X edges
+       do kSide = -1,1,2; do jSide = -1,1,2
+          if(BlkNeighborLev(0, jSide, kSide, iBlock) /= 1)CYCLE
+          j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
+          k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
+          do i1 = 1,nI,2; do i2 = i1, i1+1
+             ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
+             Bc_D = c0*B1_DG(:,i2,jC,kC) &
+                  + p0*B1_DG(:,ip,jC,kC) &
+                  + m0*B1_DG(:,im,jC,kC)
+             b_DG(:,i2,jC,kC) = &
+                  C1* Bc_D + F1*b_DG(:,i2,j1,k1) + F2*b_DG(:,i2,j2,k2)
+             !b_DG(:,i2,jC,kC) = min(max( b_DG(:,i2,jC,kC), &
+             !     min(Bc_D, b_DG(:,i2,j1,k1), b_DG(:,i2,j2,k2))), &
+             !     max(Bc_D, b_DG(:,i2,j1,k1), b_DG(:,i2,j2,k2)))
+          end do;end do
+       end do;end do
+       ! 4 Y edges
+       do kSide = -1,1,2; do iSide = -1,1,2
+          if(BlkNeighborLev(iSide, 0, kSide, iBlock) /= 1)CYCLE
+          i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
+          k1=1; if(kSide==1) k1=nK; k2 = k1-kSide; kC = k1+kSide
+          do j1 = 1, nJ, 2; do j2 = j1, j1+1
+             jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
+             Bc_D = c0*B1_DG(:,iC,j2,kC) &
+                  + p0*B1_DG(:,iC,jp,kC) &
+                  + m0*B1_DG(:,iC,jm,kC)
+             b_DG(:,iC,j2,kC) = &
+                  C1*Bc_D + F1*b_DG(:,i1,j2,k1) + F2*b_DG(:,i2,j2,k2)
+             !b_DG(:,iC,j2,kC) = min(max( b_DG(:,iC,j2,kC), &
+             !     min(Bc_D, b_DG(:,i1,j2,k1), b_DG(:,i2,j2,k2))), &
+             !     max(Bc_D, b_DG(:,i1,j2,k1), b_DG(:,i2,j2,k2)))
+          end do;end do
+       end do;end do
+       ! 4 Z edges
+       do jSide = -1,1,2; do iSide = -1,1,2
+          if(BlkNeighborLev(iSide, jSide, 0, iBlock) /= 1)CYCLE
+          i1=1; if(iSide==1) i1=nI; i2 = i1-iSide; iC = i1+iSide
+          j1=1; if(jSide==1) j1=nJ; j2 = j1-jSide; jC = j1+jSide
+          do k1 = 1, nK, 2 ; do k2 = k1, k1 + 1
+             kp = 3*k2 - 2*k1 -1 ; km = 4*k1 -3*k2 +2
+             Bc_D = c0*B1_DG(:,iC,jC,k2) &
+                  + p0*B1_DG(:,iC,jC,kp) &
+                  + m0*B1_DG(:,iC,jC,km)
+             b_DG(:,iC,jC,k2) = &
+                  C1*Bc_D + F1*b_DG(:,i1,j1,k2) + F2*b_DG(:,i2,j2,k2)
+             !b_DG(:,iC,jC,k2) = min(max( b_DG(:,iC,jC,k2), &
+             !     min(Bc_D, b_DG(:,i1,j1,k2), b_DG(:,i2,j2,k2))), &
+             !     max(Bc_D, b_DG(:,i1,j1,k2), b_DG(:,i2,j2,k2)))
+          end do;end do         
+       end do;end do
+
+    end if
+
     InvDx = 1.0/dx_Blk(iBlock)
     InvDy = 1.0/dy_Blk(iBlock)
     InvDz = 1.0/dz_Blk(iBlock)
 
-    if(i==1 .and. NeiLeast(iBlock)==-1)then
-       iL = i; iR = i+1; InvDx1 = 0.5*InvDx
-    elseif(i==nI .and. NeiLwest(iBlock)==-1)then
-       iR = i; iL = i-1; InvDx1 = 0.5*InvDx
-    else
-       iR = i+1; iL = i-1; InvDx1 = 0.25*InvDx
+    ! Central difference with averaging in orthogonal direction
+    iR = i+1; iL = i-1; 
+    jR = j+1; jL = j-1; 
+    kR = k+1; kL = k-1; 
+
+    Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
+    Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
+    Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
+
+    if(i==1)then
+       if(NeiLeast(iBlock)==-1 &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev(-1, 1,0, iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev(-1, 0,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev(-1, 0, 1, iBlock)==-1))&
+            ) then
+          iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
+       end if
+    elseif(i==nI)then
+       if(NeiLwest(iBlock)==-1 &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 1,-1, 0, iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 1, 1, 0, iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 1, 0,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 1, 0, 1, iBlock)==-1))&
+            ) then
+          iL = i-1; iR = i-2; Ax=-InvDx; Bx=0.75*InvDx; Cx=0.25*InvDx
+       end if
     end if
 
-    if(j==1 .and. NeiLsouth(iBlock)==-1)then
-       jL = j; jR = j+1; InvDy1 = 0.5*InvDy
-    elseif(j==nJ .and. NeiLnorth(iBlock)==-1)then
-       jR = j; jL = j-1; InvDy1 = 0.5*InvDy
-    else
-       jR = j+1; jL = j-1; InvDy1 = 0.25*InvDy
+    if(j==1)then
+       if(NeiLsouth(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1,-1,0, iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1,-1,0, iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 0,-1, 1, iBlock)==-1))&
+            )then
+          jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
+       end if
+    elseif(j==nJ)then
+       if(NeiLnorth(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1, 1,0, iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1, 1,0, iBlock)==-1)) &
+            .or. (iDir==z_ .and. &
+            (k==1    .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1) .or. &
+            (k==nK+1 .and. BlkNeighborLev( 0, 1, 1, iBlock)==-1))&
+            )then
+          jL = j-1; jR = j-2; Ay=-InvDy; By=0.75*InvDy; Cy=0.25*InvDy
+       end if
     end if
 
-    if(k==1 .and. NeiLbot(iBlock)==-1)then
-       kL = k; kR = k+1; InvDz1 = 0.5*InvDz
-    elseif(k==nK .and. NeiLtop(iBlock)==-1)then
-       kR = k; kL = k-1; InvDz1 = 0.5*InvDz
-    else
-       kR = k+1; kL = k-1; InvDz1 = 0.25*InvDz
+    if(k==1)then
+       if(NeiLbot(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1,0,-1, iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1,0,-1, iBlock)==-1)) &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 0,-1,-1, iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 0, 1,-1, iBlock)==-1))&
+            )then
+          kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
+       end if
+    elseif(k==nK)then
+       if(NeiLtop(iBlock)==-1 &
+            .or. (iDir==x_ .and. &
+            (i==1    .and. BlkNeighborLev(-1,0, 1, iBlock)==-1) .or. &
+            (i==nI+1 .and. BlkNeighborLev( 1,0, 1, iBlock)==-1)) &
+            .or. (iDir==y_ .and. &
+            (j==1    .and. BlkNeighborLev( 0,-1,1, iBlock)==-1) .or. &
+            (j==nJ+1 .and. BlkNeighborLev( 0, 1,1, iBlock)==-1))&
+            )then
+          kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
+       end if
     end if
-
-    InvDx2 = InvDx1
-    InvDy2 = InvDy1
-    InvDz2 = InvDz1
 
     select case(iDir)
     case(x_)
-       if(i==1 .and. NeiLeast(iBlock)==1)then
-          InvDy1 = cTwoThird *InvDy1
-          InvDy2 = cFourThird*InvDy2
-          InvDz1 = cTwoThird *InvDz1
-          InvDz2 = cFourThird*InvDz2
+       Jy = -InvDx* (b_DG(z_,i  ,j,k) - b_DG(z_,i-1,j,k)) &
+            + Az*(b_DG(x_,i-1,j,kL)+b_DG(x_,i,j ,kL))     &
+            + Bz*(b_DG(x_,i-1,j,k )+b_DG(x_,i,j ,k ))     &
+            + Cz*(b_DG(x_,i-1,j,kR)+b_DG(x_,i,j ,kR))
 
-          Jy = -InvDx* (-a*State_VGB(Bz_,i+2,j,k,iBlock) &
-               +         b*State_VGB(Bz_,i+1,j,k,iBlock) &
-               -         c*State_VGB(Bz_,i-1,j,k,iBlock))
-          Jz = +InvDx* (-a*State_VGB(By_,i+2,j,k,iBlock) &
-               +         b*State_VGB(By_,i+1,j,k,iBlock) &
-               -         c*State_VGB(By_,i-1,j,k,iBlock))
-       elseif(i==nI+1 .and. NeiLwest(iBlock)==1)then
-          InvDy1 = cFourThird*InvDy1
-          InvDy2 = cTwoThird *InvDy2
-          InvDz1 = cFourThird*InvDz1
-          InvDz2 = cTwoThird *InvDz2
+       Jz = +InvDx* (b_DG(y_,i,j,k) - b_DG(y_,i-1,j,k)) &
+            - Ay*(b_DG(x_,i-1,jL,k)+b_DG(x_,i,jL,k)) &
+            - By*(b_DG(x_,i-1,j ,k)+b_DG(x_,i,j ,k)) &
+            - Cy*(b_DG(x_,i-1,jR,k)+b_DG(x_,i,jR,k)) 
 
-          Jy = -InvDx* (c*State_VGB(Bz_,i  ,j,k,iBlock) &
-               -        b*State_VGB(Bz_,i-2,j,k,iBlock) &
-               +        a*State_VGB(Bz_,i-3,j,k,iBlock))
-          Jz = +InvDx* (c*State_VGB(By_,i  ,j,k,iBlock) &
-               -        b*State_VGB(By_,i-2,j,k,iBlock) &
-               +        a*State_VGB(By_,i-3,j,k,iBlock))
-       else
-          Jy = -InvDx* (State_VGB(Bz_,i  ,j,k,iBlock) &
-               -        State_VGB(Bz_,i-1,j,k,iBlock))
-          Jz = +InvDx* (State_VGB(By_,i  ,j,k,iBlock) &
-               -        State_VGB(By_,i-1,j,k,iBlock))
-       end if
-       Jx = +InvDy1*(State_VGB(Bz_,i-1,jR,k,iBlock)  &
-            -        State_VGB(Bz_,i-1,jL,k,iBlock)) &
-            +InvDy2*(State_VGB(Bz_,i  ,jR,k,iBlock)  &
-            -        State_VGB(Bz_,i  ,jL,k,iBlock)) &
-            -InvDz1*(State_VGB(By_,i-1,j,kR,iBlock)  &
-            -        State_VGB(By_,i-1,j,kL,iBlock)) &
-            -InvDz2*(State_VGB(By_,i  ,j,kR,iBlock)  &
-            -        State_VGB(By_,i  ,j,kL,iBlock))
-
-       Jy = Jy &
-            + InvDz1*(State_VGB(Bx_,i-1,j,kR,iBlock)  &
-            -         State_VGB(Bx_,i-1,j,kL,iBlock)) &
-            + InvDz2*(State_VGB(Bx_,i  ,j,kR,iBlock)  &
-            -         State_VGB(Bx_,i  ,j,kL,iBlock))
-
-       Jz = Jz &
-            - InvDy1*(State_VGB(Bx_,i-1,jR,k,iBlock)  &
-            -         State_VGB(Bx_,i-1,jL,k,iBlock)) &
-            - InvDy2*(State_VGB(Bx_,i  ,jR,k,iBlock)  &
-            -         State_VGB(Bx_,i  ,jL,k,iBlock))
+       Jx = + Ay*(b_DG(z_,i-1,jL,k)+b_DG(z_,i,jL,k )) &
+            + By*(b_DG(z_,i-1,j ,k)+b_DG(z_,i,j ,k )) &
+            + Cy*(b_DG(z_,i-1,jR,k)+b_DG(z_,i,jR,k )) &
+            - Az*(b_DG(y_,i-1,j,kL)+b_DG(y_,i,j ,kL)) &
+            - Bz*(b_DG(y_,i-1,j,k )+b_DG(y_,i,j ,k )) &
+            - Cz*(b_DG(y_,i-1,j,kR)+b_DG(y_,i,j ,kR))
 
     case(y_)
-       if(j==1   .and. NeiLsouth(iBlock)==1)then
-          InvDx1 = cTwoThird *InvDx1
-          InvDx2 = cFourThird*InvDx2
-          InvDz1 = cTwoThird *InvDz1
-          InvDz2 = cFourThird*InvDz2
+       Jx = + InvDy*(b_DG(z_,i,j,k) - b_DG(z_,i,j-1,k)) &
+            - Az*(b_DG(y_,i,j-1,kL) + b_DG(y_,i,j ,kL)) &
+            - Bz*(b_DG(y_,i,j-1,k ) + b_DG(y_,i,j ,k )) &
+            - Cz*(b_DG(y_,i,j-1,kR) + b_DG(y_,i,j ,kR))
 
-          Jx = +InvDy* (-a*State_VGB(Bz_,i,j+2,k,iBlock) &
-               +         b*State_VGB(Bz_,i,j+1,k,iBlock) &
-               -         c*State_VGB(Bz_,i,j-1,k,iBlock))
-          Jz = -InvDy* (-a*State_VGB(Bx_,i,j+2,k,iBlock) &
-               +         b*State_VGB(Bx_,i,j+1,k,iBlock) &
-               -         c*State_VGB(Bx_,i,j-1,k,iBlock))
-       elseif(j==nJ+1.and. NeiLnorth(iBlock)==1)then
-          InvDx1 = cFourThird*InvDx1
-          InvDx2 = cTwoThird *InvDx2
-          InvDz1 = cFourThird*InvDz1
-          InvDz2 = cTwoThird *InvDz2
+       Jz = - InvDy*(b_DG(x_,i,j,k) - b_DG(x_,i,j-1,k)) &
+            + Ax*(b_DG(y_,iL,j-1,k) + b_DG(y_,iL,j ,k)) &
+            + Bx*(b_DG(y_,i ,j-1,k) + b_DG(y_,i ,j ,k)) &
+            + Cx*(b_DG(y_,iR,j-1,k) + b_DG(y_,iR,j ,k))
 
-          Jx = +InvDy* (c*State_VGB(Bz_,i,j  ,k,iBlock) &
-               -        b*State_VGB(Bz_,i,j-2,k,iBlock) &
-               +        a*State_VGB(Bz_,i,j-3,k,iBlock))
-          Jz = -InvDy* (c*State_VGB(Bx_,i,j  ,k,iBlock) &
-               -        b*State_VGB(Bx_,i,j-2,k,iBlock) &
-               +        a*State_VGB(Bx_,i,j-3,k,iBlock))
-       else
-          Jx = +    InvDy* (State_VGB(Bz_,i,j,  k, iBlock) & 
-               -            State_VGB(Bz_,i,j-1,k, iBlock))
-          Jz = -    InvDy *(State_VGB(Bx_,i ,j  ,k,iBlock) &
-               -            State_VGB(Bx_,i ,j-1,k,iBlock)) 
-       end if
-
-       Jx = Jx &
-            - InvDz1*(State_VGB(By_,i,j-1,kR,iBlock) &
-            -         State_VGB(By_,i,j-1,kL,iBlock))&
-            - InvDz2*(State_VGB(By_,i,j  ,kR,iBlock) &
-            -         State_VGB(By_,i,j  ,kL,iBlock))
-            
-
-       Jy = + InvDz1*(State_VGB(Bx_,i ,j-1,kR,iBlock) &
-            -         State_VGB(Bx_,i ,j-1,kL,iBlock))&
-            + InvDz2*(State_VGB(Bx_,i ,j  ,kR,iBlock) &
-            -         State_VGB(Bx_,i ,j  ,kL,iBlock))&
-            - InvDx1*(State_VGB(Bz_,iR,j-1,k ,iBlock) &
-            -         State_VGB(Bz_,iL,j-1,k ,iBlock))&
-            - InvDx2*(State_VGB(Bz_,iR,j  ,k ,iBlock) &
-            -         State_VGB(Bz_,iL,j  ,k ,iBlock)) 
-
-
-
-       Jz = Jz &
-            + InvDx1*(State_VGB(By_,iR,j-1,k,iBlock) &
-            -         State_VGB(By_,iL,j-1,k,iBlock))&
-            + InvDx2*(State_VGB(By_,iR,j  ,k,iBlock) &
-            -         State_VGB(By_,iL,j  ,k,iBlock))
-
+       Jy = + Az*(b_DG(x_,i,j-1,kL) + b_DG(x_,i,j ,kL)) &
+            + Bz*(b_DG(x_,i,j-1,k ) + b_DG(x_,i,j ,k )) &
+            + Cz*(b_DG(x_,i,j-1,kR) + b_DG(x_,i,j ,kR)) &
+            - Ax*(b_DG(z_,iL,j-1,k) + b_DG(z_,iL,j ,k)) &
+            - Bx*(b_DG(z_,i ,j-1,k) + b_DG(z_,i ,j ,k)) &
+            - Cx*(b_DG(z_,iR,j-1,k) + b_DG(z_,iR,j ,k))
 
     case(z_)
-       
-       if(k==1   .and. NeiLBot(iBlock)==1)then
-          InvDx1 = cTwoThird *InvDx1
-          InvDx2 = cFourThird*InvDx2
-          InvDy1 = cTwoThird *InvDy1
-          InvDy2 = cFourThird*InvDy2
-          
-          Jx = -InvDz* (-a*State_VGB(By_,i,j  ,k+2,iBlock) &
-               +         b*State_VGB(By_,i,j  ,k+1,iBlock) &
-               -         c*State_VGB(By_,i,j  ,k-1,iBlock))
-!               -InvDz* (3*State_VGB(By_,i,j  ,k+1,iBlock) &
-!               +        5*State_VGB(By_,i,j  ,k,iBlock) &
-!               -        8*State_VGB(By_,i,j  ,k-1,iBlock))/15.0
 
-          Jy = +InvDz* (-a*State_VGB(Bx_,i,j  ,k+2,iBlock) &
-               +         b*State_VGB(Bx_,i,j  ,k+1,iBlock) &
-               -         c*State_VGB(Bx_,i,j  ,k-1,iBlock))
-!          Jy = +InvDz* (3*State_VGB(Bx_,i,j  ,k+1,iBlock) &
-!               +        5*State_VGB(Bx_,i,j  ,k,iBlock) &
-!               -        8*State_VGB(Bx_,i,j  ,k-1,iBlock))/15.0 &
+       Jx = -InvDz* (b_DG(y_,i,j,k) - b_DG(y_,i,j,k-1)) & 
+            + Ay*(b_DG(z_,i,jL,k-1) + b_DG(z_,i,jL,k))  &
+            + By*(b_DG(z_,i,j ,k-1) + b_DG(z_,i,j ,k))  &
+            + Cy*(b_DG(z_,i,jR,k-1) + b_DG(z_,i,jR,k)) 
 
-       elseif(k==nK+1.and. NeiLTop(iBlock)==1)then
-          InvDx1 = cFourThird*InvDx1
-          InvDx2 = cTwoThird *InvDx2
-          InvDy1 = cFourThird*InvDy1         
-          InvDy2 = cTwoThird *InvDy2         
+       Jy = +InvDz* (b_DG(x_,i,j,k) - b_DG(x_,i,j,k-1)) &
+            - Ax*(b_DG(z_,iL,j,k-1) + b_DG(z_,iL,j,k))  &
+            - Bx*(b_DG(z_,i ,j,k-1) + b_DG(z_,i ,j,k))  &
+            - Cx*(b_DG(z_,iR,j,k-1) + b_DG(z_,iR,j,k)) 
 
-          Jx = -InvDz* (c*State_VGB(By_,i,j  ,k  ,iBlock) &
-               -        b*State_VGB(By_,i,j  ,k-2,iBlock) &
-               +        a*State_VGB(By_,i,j  ,k-3,iBlock))
-!               -InvDz* (8*State_VGB(By_,i,j  ,k  ,iBlock) &
-!               -        5*State_VGB(By_,i,j  ,k-1,iBlock) &
-!               -        3*State_VGB(By_,i,j  ,k-2,iBlock))/15.0
+       Jz = + Ax*(b_DG(y_,iL,j,k-1) + b_DG(y_,iL,j,k))  &
+            + Bx*(b_DG(y_,i ,j,k-1) + b_DG(y_,i ,j,k))  &
+            + Cx*(b_DG(y_,iR,j,k-1) + b_DG(y_,iR,j,k))  &
+            - Ay*(b_DG(x_,i,jL,k-1) + b_DG(x_,i,jL,k))  &
+            - By*(b_DG(x_,i,j ,k-1) + b_DG(x_,i,j ,k))  &
+            - Cy*(b_DG(x_,i,jR,k-1) + b_DG(x_,i,jR,k)) 
 
-          Jy = +InvDz* (c*State_VGB(Bx_,i,j  ,k  ,iBlock) &
-               -        b*State_VGB(Bx_,i,j  ,k-2,iBlock) &
-               +        a*State_VGB(Bx_,i,j  ,k-3,iBlock))
-!           Jy = +InvDz*(8*State_VGB(Bx_,i,j  ,k  ,iBlock) &
-!               -        5*State_VGB(Bx_,i,j  ,k-1,iBlock) &
-!               -        3*State_VGB(Bx_,i,j  ,k-2,iBlock))/15.0 &
-
-       else
-          Jx = -InvDz* (State_VGB(By_,i,j  ,k  ,iBlock) &
-               -        State_VGB(By_,i,j  ,k-1,iBlock))  
-
-          Jy = +InvDz* (State_VGB(Bx_,i  ,j,k  ,iBlock) &
-               -        State_VGB(Bx_,i  ,j,k-1,iBlock))
-       end if
-
-       Jx = Jx &
-            + InvDy1*(State_VGB(Bz_,i,jR,k-1,iBlock) &
-            -         State_VGB(Bz_,i,jL,k-1,iBlock))&
-            + InvDy2*(State_VGB(Bz_,i,jR,k  ,iBlock) &
-            -         State_VGB(Bz_,i,jL,k  ,iBlock))
-
-       Jy = Jy &
-            -InvDx1*(State_VGB(Bz_,iR,j,k-1,iBlock) &
-            -        State_VGB(Bz_,iL,j,k-1,iBlock))&
-            -InvDx2*(State_VGB(Bz_,iR,j,k  ,iBlock) &
-            -        State_VGB(Bz_,iL,j,k  ,iBlock))
-
-       Jz = +InvDx1*(State_VGB(By_,iR,j ,k-1,iBlock) &
-            -        State_VGB(By_,iL,j ,k-1,iBlock))&
-            +InvDx2*(State_VGB(By_,iR,j ,k  ,iBlock) &
-            -        State_VGB(By_,iL,j ,k  ,iBlock))&
-            -InvDy1*(State_VGB(Bx_,i ,jR,k-1,iBlock) &
-            -        State_VGB(Bx_,i ,jL,k-1,iBlock))&
-            -InvDy2*(State_VGB(Bx_,i ,jR,k  ,iBlock) &
-            -        State_VGB(Bx_,i ,jL,k  ,iBlock))
-
-       !if(DoTest)then
-       !   write(*,*)'i,j,k,iBlock=',i,j,k,iBlock
-       !   write(*,*)'InvDx1,InvDy1,InvDz1=',InvDx1,InvDy1,InvDz1
-       !   write(*,*)'State_VGB(Bz)=',State_VGB(Bz_,i,j+1,k,iBlock),
-       !end if
     case default
        write(*,*)'Error in get_face_current: iDir=',iDir
        call stop_mpi('DEBUG')
     end select
 
+    if(DoTestMe)then
+       write(*,*)NameSub,': Jx=',Jx
+       write(*,*)NameSub,': Jy=',Jy
+       write(*,*)NameSub,': Jz=',Jz
+    end if
+
   end subroutine get_face_current
+
+  !==========================================================================
+  subroutine test_face_current
+
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk, x_, y_, z_, &
+         east_, west_, south_, north_, bot_, top_
+    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
+    use ModParallel, ONLY: NeiLev
+
+    integer, parameter :: nTest = 2
+    integer :: i,j,k,iBlock,iTest
+    real :: Jx, Jy, Jz
+    !------------------------------------------------------------------------
+
+    write(*,*)'test_face_current starting !!!'
+
+    do iTest = 1, nTest
+
+       do iBlock = 1, nBlock
+          if(UnusedBlk(iBlock)) CYCLE
+
+          select case(iTest)
+          case(1)
+             State_VGB(Bx_,:,:,:,iBlock) = &
+                  + 1*x_BLK(:,:,:,iBlock) &
+                  + 2*y_BLK(:,:,:,iBlock) &
+                  + 3*z_BLK(:,:,:,iBlock) &
+                  + 4*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
+                  + 5*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
+                  + 6*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+             State_VGB(By_,:,:,:,iBlock) = &
+                  + 10*x_BLK(:,:,:,iBlock) &
+                  + 20*y_BLK(:,:,:,iBlock) &
+                  + 30*z_BLK(:,:,:,iBlock) &
+                  + 40*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
+                  + 50*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
+                  + 60*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+             State_VGB(Bz_,:,:,:,iBlock) = &
+                  + 100*x_BLK(:,:,:,iBlock) &
+                  + 200*y_BLK(:,:,:,iBlock) &
+                  + 300*z_BLK(:,:,:,iBlock) &
+                  + 400*x_BLK(:,:,:,iBlock)*y_BLK(:,:,:,iBlock) &
+                  + 500*x_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock) &
+                  + 600*y_BLK(:,:,:,iBlock)*z_BLK(:,:,:,iBlock)
+          case(2)
+             State_VGB(Bx_,:,:,:,iBlock) = 1.0 + &
+                  0.01*x_BLK(:,:,:,iBlock)**2 + &
+                  0.02*y_BLK(:,:,:,iBlock)**2 + &
+                  0.03*z_BLK(:,:,:,iBlock)**2
+             State_VGB(By_,:,:,:,iBlock) = 10.0 + &
+                  0.1*x_BLK(:,:,:,iBlock)**2 + &
+                  0.2*y_BLK(:,:,:,iBlock)**2 + &
+                  0.3*z_BLK(:,:,:,iBlock)**2
+             State_VGB(Bz_,:,:,:,iBlock) = 100.0 + &
+                  1.0*x_BLK(:,:,:,iBlock)**2 + &
+                  2.0*y_BLK(:,:,:,iBlock)**2 + &
+                  3.0*z_BLK(:,:,:,iBlock)**2
+          end select
+
+       end do
+
+       call message_pass_cells_8state(.false., .false., .true.)
+
+       do iBlock = 1, nBlock
+          if(UnusedBlk(iBlock)) CYCLE
+
+          call correct_monotone_restrict(iBlock)
+
+          do k=1, nK; do j=1,nJ; do i=1,nI+1
+             call get_face_current(x_, i, j, k, iBlock, Jx, Jy, Jz)
+             call check_error('x')
+          end do; end do; end do
+
+          do k=1, nK; do j=1,nJ+1; do i=1,nI
+             call get_face_current(y_, i, j, k, iBlock, Jx, Jy, Jz)
+             call check_error('y')
+          end do; end do; end do
+
+          do k=1, nK+1; do j=1,nJ; do i=1,nI
+             call get_face_current(z_, i, j, k, iBlock, Jx, Jy, Jz)
+             call check_error('z')
+          end do; end do; end do
+
+       end do
+
+       write(*,*)'test_face_current: test ',iTest,' passed !!!'
+
+    end do
+
+    call stop_mpi('test_face_current succeeded !!! ')
+
+  contains
+
+    subroutine check_error(NameDir)
+      character, intent(in):: NameDir
+      real :: x, y, z, JxGood, JyGood, JzGood, Tolerance
+
+      !--------------------------------------------------------------------
+      ! Face center coordinates
+      x = x_BLK(i,j,k,iBlock)
+      y = y_BLK(i,j,k,iBlock)
+      z = z_BLK(i,j,k,iBlock)
+
+      select case(NameDir)
+      case('x')
+         if(i==1.and.neiLEV(east_,iBlock)==-1) RETURN
+         if(i==5.and.neiLEV(west_,iBlock)==-1) RETURN
+         x = x - 0.5*dx_BLK(iBlock)
+      case('y')
+         if(j==1.and.neiLEV(south_,iBlock)==-1) RETURN
+         if(j==5.and.neiLEV(north_,iBlock)==-1) RETURN
+         y = y - 0.5*dy_BLK(iBlock)
+      case('z')
+         if(k==1.and.neiLEV(bot_,iBlock)==-1) RETURN
+         if(k==5.and.neiLEV(top_,iBlock)==-1) RETURN
+         z = z - 0.5*dz_BLK(iBlock)
+      end select
+
+      select case(iTest)
+      case(1)
+         JxGood = 200 + 400*x + 600*z -  30 -  50*x -  60*y
+         JyGood =   3 +   5*x +   6*y - 100 - 400*y - 500*z
+         JzGood =  10 +  40*y +  50*z -   2 -   4*x -   6*z
+
+         Tolerance = 1e-6
+      case(2)
+         JxGood = 4.0 *y - 0.6 *z
+         JyGood = 0.06*z - 2.0 *x
+         JzGood = 0.2 *x - 0.04*y
+
+         Tolerance = 5e-2
+      end select
+
+      if(       abs(Jx-JxGood) > Tolerance*abs(JxGood) + 1e-6  &
+           .or. abs(Jy-JyGood) > Tolerance*abs(JyGood) + 1e-6  &
+           .or. abs(Jz-JzGood) > Tolerance*abs(JzGood) + 1e-6) then
+
+         write(*,*)'Face=',NameDir
+         write(*,*)'iTest, i,j,k,iBlock=',iTest, i,j,k,iBlock
+         write(*,*)'x,y,z=', &
+              x_BLK(i,j,k,iBlock), y_BLK(i,j,k,iBlock), z_BLK(i,j,k,iBlock)
+         write(*,*)'dx,dy,dz=',&
+              dx_BLK(iBlock), dy_BLK(iBlock), dz_BLK(iBlock)
+         write(*,*)'Bad  Jx,Jy,Jz =',Jx,Jy,Jz
+         write(*,*)'Good Jx,Jy,Jz =',JxGood,JyGood,JzGood
+         write(*,*)'NeiLev=',NeiLev(:,iBlock)
+         call stop_mpi('Error')
+      end if
+
+    end subroutine check_error
+
+  end subroutine test_face_current
 
 end module ModHallResist
