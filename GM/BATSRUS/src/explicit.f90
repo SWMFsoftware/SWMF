@@ -10,7 +10,6 @@ subroutine advance_expl(DoCalcTimestep)
   use ModGeometry,ONLY : UseCovariant              !^CFG IF COVARIANT
   use ModBlockData, ONLY: set_block_data
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
-  use ModHallResist, ONLY: UseHallResist, add_hall_resist_flux
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -62,9 +61,6 @@ subroutine advance_expl(DoCalcTimestep)
         if (UseResistFlux) call add_resistive_flux(.true.)
         !^CFG END DISSFLUX
 
-        ! Update the faceflux values for hall resistive flux 
-        if (UseHallResist) call add_hall_resist_flux(.true.)
-
         call timing_stop('calc_fluxes_bfo')
 
         ! Save conservative flux correction for this solution
@@ -110,9 +106,6 @@ subroutine advance_expl(DoCalcTimestep)
         ! Update the faceflux values for resistive flux 
         if (UseResistFlux) call add_resistive_flux(.false.)
         !^CFG END DISSFLUX
-
-        ! Update the faceflux values for hall resistive flux 
-        if (UseHallResist) call add_hall_resist_flux(.false.)
 
         call timing_stop('calc_fluxes')
 
