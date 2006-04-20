@@ -33,7 +33,6 @@ subroutine calc_flux_Rusanov(DoResChangeOnly)
   use ModParallel, ONLY : neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics, ONLY : g,inv_gm1,cLIGHT,inv_c2LIGHT
   use ModNumConst
-  use ModHallResist, ONLY: IonMassPerCharge, UseHallCmax
 
   implicit none
 
@@ -525,13 +524,6 @@ Contains
        v_max_hf(i)   =  discr_fast+abs(v_Un_hf(i))
 
     end do
-
-    if(UseHallCmax)then
-       do i=1,nStrip
-          v_max_hf(i)=v_max_hf(i)+ &
-               cPi*abs(v_Bn_hf(i))*IonMassPerCharge/(Dxyz*v_rho_hf(i))
-       end do
-    end if
 
     !\
     ! Left state physical fluxes
