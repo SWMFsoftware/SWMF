@@ -14,7 +14,6 @@ subroutine calc_sources
   use ModNumConst
   use ModResist,   ONLY : EtaResist_G                    !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
-  use ModHallResist,ONLY: UseHallResist, ResistDiag
   use ModCoordTransform
   implicit none
 
@@ -65,13 +64,6 @@ subroutine calc_sources
                 (g-1) * EtaResist_G(i,j,k) * sum(Current_D**2)
         end do; end do; end do
      end if                 !^CFG END DISSFLUX
-     if(UseHallResist)then
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           call get_current(i,j,k,GlobalBlk,Current_D)
-           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + &
-                (g-1) * ResistDiag * sum(Current_D**2)
-        end do; end do; end do
-     end if
   end if
 
 
