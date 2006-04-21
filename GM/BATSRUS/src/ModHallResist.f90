@@ -559,16 +559,16 @@ contains
 
       select case(NameDir)
       case('x')
-         if(i==1.and.neiLEV(east_,iBlock)==-1) RETURN
-         if(i==5.and.neiLEV(west_,iBlock)==-1) RETURN
+         if(i==1   .and.neiLEV(east_,iBlock)==-1) RETURN
+         if(i==nI+1.and.neiLEV(west_,iBlock)==-1) RETURN
          x = x - 0.5*dx_BLK(iBlock)
       case('y')
-         if(j==1.and.neiLEV(south_,iBlock)==-1) RETURN
-         if(j==5.and.neiLEV(north_,iBlock)==-1) RETURN
+         if(j==1   .and.neiLEV(south_,iBlock)==-1) RETURN
+         if(j==nJ+1.and.neiLEV(north_,iBlock)==-1) RETURN
          y = y - 0.5*dy_BLK(iBlock)
       case('z')
-         if(k==1.and.neiLEV(bot_,iBlock)==-1) RETURN
-         if(k==5.and.neiLEV(top_,iBlock)==-1) RETURN
+         if(k==1   .and.neiLEV(bot_,iBlock)==-1) RETURN
+         if(k==nK+1.and.neiLEV(top_,iBlock)==-1) RETURN
          z = z - 0.5*dz_BLK(iBlock)
       end select
 
