@@ -42,7 +42,7 @@ module ModRestartFile
 
   ! One can use 'block' or 'direct' format for input and output restart files
   character (len=10)  :: TypeRestartInFile ='block'
-  character (len=10)  :: TypeRestartOutFile='block'  
+  character (len=10)  :: TypeRestartOutFile='one'  
 
   character(len=100) :: NameFile
 
