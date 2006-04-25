@@ -4,7 +4,7 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar
+  use ModVarIndexes, ONLY: nVar, NameVar_V
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
@@ -26,9 +26,6 @@ module ModFaceFlux
        get_face_current
 
   implicit none
-
-  logical :: UseModFaceFlux = .true.
-!  logical :: UseModFaceFlux = .false.
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
@@ -60,7 +57,7 @@ contains
          jMinFaceX, jMaxFaceX, kMinFaceX, kMaxFaceX, &
          iMinFaceY, iMaxFaceY, kMinFaceY,kMaxFaceY, &
          iMinFaceZ,iMaxFaceZ, jMinFaceZ, jMaxFaceZ, &
-         iTest, jTest, kTest, ProcTest, BlkTest
+         iTest, jTest, kTest, ProcTest, BlkTest, DimTest
     use ModPhysics,  ONLY: Clight
 
     implicit none
@@ -72,10 +69,12 @@ contains
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('calc_facefluxes', DoTest, DoTestMe)
+       call set_oktest('calc_face_flux', DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     end if
+
+    if(DoTestMe)call print_values
 
     DoLf  = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
     DoHLL = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
@@ -96,6 +95,79 @@ contains
     end if
 
   contains
+    !=========================================================================
+    subroutine print_values
+      integer :: iVar
+      !---------------------------------------------------------------------
+      if(DoResChangeOnly)then
+         write(*,*)'calc_facefluxes for DoResChangeOnly'
+         RETURN
+      end if
+
+      if(DimTest==x_ .or. DimTest==0)then
+         write(*,*)&
+              'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
+
+         do iVar=1,nVar
+            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+                 LeftState_VX(iVar,iTest,jTest,kTest),&
+                 RightState_VX(iVar,iTest,  jTest,kTest),&
+                 LeftState_VX(iVar,iTest+1,jTest,kTest),&
+                 RightState_VX(iVar,iTest+1,jTest,kTest)
+         end do
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+              B0xFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0xFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+              B0yFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0yFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+              B0zFace_x_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0zFace_x_BLK(iTest+1,jTest,kTest,BlkTest)
+      end if
+
+      if(DimTest==y_ .or. DimTest==0)then
+         write(*,*)&
+              'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
+
+         do iVar=1,nVar
+            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+                 LeftState_VY(iVar,iTest,jTest,kTest),&
+                 RightState_VY(iVar,iTest,  jTest,kTest),&
+                 LeftState_VY(iVar,iTest,jTest+1,kTest),&
+                 RightState_VY(iVar,iTest,jTest+1,kTest)
+         end do
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+              B0xFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0xFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+              B0yFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0yFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+              B0zFace_y_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0zFace_y_BLK(iTest,jTest+1,kTest,BlkTest)
+      end if
+
+      if(DimTest==z_ .or. DimTest==0)then
+         do iVar=1,nVar
+            write(*,'(2a,4(1pe13.5))')NameVar_V(iVar),'=',&
+                 LeftState_VZ(iVar,iTest,jTest,kTest),&
+                 RightState_VZ(iVar,iTest,  jTest,kTest),&
+                 LeftState_VZ(iVar,iTest,jTest,kTest+1),&
+                 RightState_VZ(iVar,iTest,jTest,kTest+1)
+         end do
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0x:',&
+              B0xFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0xFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0y:',&
+              B0yFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0yFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+         write(*,'(a,1pe13.5,a13,1pe13.5)')'B0z:',&
+              B0zFace_z_BLK(iTest,jTest,kTest,BlkTest),' ',&
+              B0zFace_z_BLK(iTest,jTest,kTest+1,BlkTest)
+      end if
+
+    end subroutine print_values
 
     !==========================================================================
 
@@ -1547,3 +1619,43 @@ subroutine roe_solver(iDir, Flux_V)
 
 end subroutine roe_solver
 !^CFG END ROEFLUX
+
+!===========================================================================
+
+subroutine calc_electric_field(iBlock)
+
+  ! Calculate the total electric field which includes numerical resistivity
+  ! This estimate averages the numerical fluxes to the cell centers 
+  ! for sake of simplicity.
+
+  use ModSize,       ONLY: nI, nJ, nK
+  use ModVarIndexes, ONLY: Bx_,By_,Bz_
+  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
+  use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK !^CFG IF NOT COVARIANT
+ 
+  implicit none
+  integer, intent(in) :: iBlock
+  !------------------------------------------------------------------------
+  !^CFG IF NOT COVARIANT BEGIN
+  ! E_x=(fy+fy-fz-fz)/4
+  Ex_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                      &
+       + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / fAy_BLK(iBlock) - &
+       ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                      &
+       + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / fAz_BLK(iBlock) )
+
+  ! E_y=(fz+fz-fx-fx)/4
+  Ey_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                      &
+       + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / fAz_BLK(iBlock) - &
+       ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                      &
+       + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / fAx_BLK(iBlock) )
+
+  ! E_z=(fx+fx-fy-fy)/4
+  Ez_CB(:,:,:,iBlock) = - 0.25*(                              &
+       ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                      &
+       + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / fAx_BLK(iBlock) - &
+       ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                      &
+       + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
+  !^CFG END COVARIANT
+end subroutine calc_electric_field
