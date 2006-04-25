@@ -87,6 +87,22 @@ void PrintErrorLog(char* message) {
   fclose(errorlog);
 }
 
+//use: PrintErrorLog(__LINE__,__FILE__, "mesage")
+void PrintErrorLog(long int nline, char* fname, char* message) {
+
+  FILE* errorlog=fopen("error.log","a+");
+
+  time_t TimeValue=time(0);
+  tm *ct=localtime(&TimeValue);
+
+  fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+  fprintf(errorlog,"file=%s, line=%i\n",fname,nline);
+  fprintf(errorlog,"%s\n\n",message);
+
+  fclose(errorlog);
+}
+
+
 //===================================================
 void StampSignature(char* message) {
   double *buffer=new double[TotalThreadsNumber];

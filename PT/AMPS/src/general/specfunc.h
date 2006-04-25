@@ -17,6 +17,8 @@ double erf(double);
 double gam(double);
 
 void PrintErrorLog(char*);
+void PrintErrorLog(long int,char*,char*);
+
 void StampSignature(char*);
 void exit(long int,char*,char* =NULL);
 void PrintLineMark(long int,char*,char* =NULL);
@@ -136,12 +138,12 @@ public:
       i=((int)(crc_accum>>24)^ *data_blk_ptr++)&0xff;
       crc_accum=(crc_accum<<8)^crc_table[i]; 
     }
-  };
+  } 
 
   template <class T>
   void add(T t) {
     add(&t,1);
-  };
+  } 
 
   void clear() {
     crc_accum=0;
