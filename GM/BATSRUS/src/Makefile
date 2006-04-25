@@ -13,14 +13,7 @@ MOD1 = ModCT.o       #^CFG IF CONSTRAINB
 MOD2 = ModImplicit.o #^CFG IF IMPLICIT
 MOD3 = ModRaytrace.o #^CFG IF RAYTRACE
 MOD4 = ModProject.o  #^CFG IF PROJECTION
-
-#^CFG IF NOT MULTISP BEGIN
-MODFLCOV=ModFlux_covar.o
-#^CFG END MULTISP
-#MODFLCOV=ModFlux_covar_mars.o         #^CFG UNCOMMENT IF MULTISP
-#MODFLCOV=ModFlux_modif_covar.o        #^CFG UNCOMMENT IF ALWAVES
-
-MOD7 = ModCovariant.o ${MODFLCOV}   #^CFG IF COVARIANT
+MOD7 = ModCovariant.o#^CFG IF COVARIANT
 
 MODULES = \
 	ModAdvance.o\
@@ -68,51 +61,12 @@ OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
 OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
-#^CFG IF RUSANOVFLUX BEGIN
-RUSCART=calc_flux_Rusanov.o                 #^CFG IF NOT COVARIANT
-RUSCOVAR=calc_flux_rusanov_covar.o          #^CFG IF COVARIANT
-OBJ5=${RUSCART} ${RUSCOVAR}
-#^CFG END RUSANOVFLUX
-
-#^CFG IF LINDEFLUX BEGIN  
-                                            #^CFG IF NOT COVARIANT BEGIN
-LINDECART=calc_flux_Linde.o                 #^CFG IF NOT GLOBALHELIOSPHERE
-#LINDECART=calc_flux_Linde_globhelio.o      #^CFG UNCOMMENT IF GLOBALHELIOSPHERE
-                                            #^CFG END COVARIANT
-                                            #^CFG IF COVARIANT BEGIN
-#LINDECOVAR=calc_flux_linde_covar_mars.o    #^CFG UNCOMMENT IF MULTISP
-LINDECOVAR=calc_flux_linde_covar.o          #^CFG IF NOT MULTISP
-                                            #^CFG END COVARIANT 
-OBJ6=${LINDECOVAR} ${LINDECART}     
-#^CFG END LINDEFLUX                  
-
-#^CFG IF AWFLUX BEGIN
-                                            #^CFG IF COVARIANT BEGIN
-AWCOVAR=calc_flux_aw_covar.o                #^CFG IF NOT ALWAVES
-#AWCOVAR=calc_flux_aw_modif_covar.o         #^CFG UNCOMMENT IF ALWAVES
-                                            #^CFG END COVARIANT
-
-                                            #^CFG IF NOT COVARIANT BEGIN
-#AWCART=calc_flux_aw_mars.o                 #^CFG UNCOMMENT IF MULTISP
-#AWCART=calc_flux_AW_modif.o                #^CFG UNCOMMENT IF ALWAVES
-                                            #^CFG IF NOT MULTISP BEGIN
-AWCART = calc_flux_AW.o                     #^CFG IF NOT ALWAVES
-                                            #^CFG END MULTISP       
-                                            #^CFG END COVARIANT
-OBJ7=${AWCOVAR} ${AWCART}   
-#^CFG END AWFLUX
-
-#^CFG IF ROEFLUX BEGIN
-OBJ8=calc_flux_Roe.o                        #^CFG IF NOT COVARIANT
-#^CFG END ROEFLUX
- 
 CARTSOURCES=calc_sources.o                  #^CFG IF NOT COVARIANT
 COVARCOURCES=calc_sources_covar.o           #^CFG IF COVARIANT
 OBJ9=${CARTSOURCES} ${COVARCOURCES}
 
 #^CFG IF DISSFLUX BEGIN
-OBJ10=\
-	calc_heat_flux.o\
+OBJ10=  calc_heat_flux.o\
 	calc_resistive_flux.o\
 	set_ICs_diss_test.o
 #^CFG END DISSFLUX
@@ -133,7 +87,6 @@ OBJECTS = \
 	amr.o\
 	amr_criteria.o\
 	amr_physics.o\
-	calc_facefluxes.o\
 	calc_facevalues_opt.o\
 	calc_gradients.o\
 	calc_timestep.o\
@@ -172,8 +125,7 @@ OBJECTS = \
 	write_plot_tec.o\
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
-	${OBJ5} ${OBJ6} ${OBJ7} ${OBJ8} ${OBJ9}\
-	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
+	${OBJ9} ${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
 
 # Default user module
 ModUser.f90:
