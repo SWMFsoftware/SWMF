@@ -4,11 +4,12 @@
 subroutine advance_expl(DoCalcTimestep)
 
   use ModMain
-  use ModAdvance, ONLY : UseUpdateCheck
-  use ModParallel, ONLY : neiLev
+  use ModFaceFlux, ONLY: calc_face_flux
+  use ModAdvance,  ONLY: UseUpdateCheck
+  use ModParallel, ONLY: neiLev
   use ModGeometry, ONLY: Body_BLK
-  use ModGeometry,ONLY : UseCovariant              !^CFG IF COVARIANT
-  use ModBlockData, ONLY: set_block_data
+  use ModGeometry, ONLY: UseCovariant              !^CFG IF COVARIANT
+  use ModBlockData,ONLY: set_block_data
   use ModImplicit, ONLY: UsePartImplicit           !^CFG IF IMPLICIT
   implicit none
 
@@ -51,7 +52,7 @@ subroutine advance_expl(DoCalcTimestep)
         ! block edges with resolution changes.
 
         call timing_start('calc_fluxes_bfo')
-        call calc_facefluxes(.true.)
+        call calc_face_flux(.true., GlobalBlk)
 
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 
@@ -97,7 +98,7 @@ subroutine advance_expl(DoCalcTimestep)
 
         ! Compute interface fluxes for each cell.
         call timing_start('calc_fluxes')
-        call calc_facefluxes(.false.)
+        call calc_face_flux(.false., GlobalBlk)
 
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 

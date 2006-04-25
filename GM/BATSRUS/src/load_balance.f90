@@ -740,6 +740,7 @@ subroutine select_stepping(DoPartSelect)
 
   use ModProcMH
   use ModMain
+  use ModFaceFlux, ONLY : calc_face_flux
   use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY : Rmin_BLK
@@ -819,7 +820,7 @@ subroutine select_stepping(DoPartSelect)
               ! For first iteration in the time loop
               ! calculate stable time step
               call calc_facevalues(.false.)
-              call calc_facefluxes(.false.)
+              call calc_face_flux(.false., GlobalBlk)
               call calc_timestep
            end if
 
