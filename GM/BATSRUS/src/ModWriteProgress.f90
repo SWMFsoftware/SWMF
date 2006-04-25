@@ -272,19 +272,6 @@ subroutine option_list
   !---------------------------------------------------------------------------
   call write_prefix; write(iUnitOut,'(a)') &
        '#=================================================================#'
-  !^CFG IF RUSANOVFLUX BEGIN
-  call OPTION_RUSANOVFLUX(on,name);  call write_option     !^CFG IF NOT COVARIANT
-  call OPTION_RUSANOVFLUX_COVAR(on,name);call write_option !^CFG IF COVARIANT
-  !^CFG END RUSANOVFLUX
-  !^CFG IF LINDEFLUX BEGIN
-  call OPTION_LINDEFLUX(on,name);    call write_option     !^CFG IF NOT COVARIANT
-  call OPTION_LINDEFLUX_COVAR(on,name); call write_option  !^CFG IF COVARIANT
-  !^CFG END LINDEFLUX
-  !^CFG IF AWFLUX BEGIN
-  call OPTION_AWFLUX(on,name);       call write_option     !^CFG IF NOT COVARIANT
-  call OPTION_AWFLUX_COVAR(on,name); call write_option     !^CFG IF COVARIANT
-  !^CFG END AWFLUX 
-  call OPTION_ROEFLUX(on,name);      call write_option     !^CFG IF ROEFLUX
   call OPTION_CONSTRAIN_B(on,name);  call write_option     !^CFG IF CONSTRAINB
   call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION
   call OPTION_RAYTRACING(on,name);   call write_option     !^CFG IF RAYTRACE
