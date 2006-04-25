@@ -1,7 +1,0 @@
-bin
-lib
-Makefile.def
-Makefile.conf
-run*
-*.protex
-*.log

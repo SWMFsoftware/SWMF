@@ -1,7 +1,0 @@
-#BEGIN_COMP GM
-
-! Save one restart file (data.rst) at the end
-#RESTARTOUTFILE
-one			TypeRestartOutFile
-
-#END_COMP GM
