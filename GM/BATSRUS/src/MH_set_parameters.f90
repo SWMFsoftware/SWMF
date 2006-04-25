@@ -41,8 +41,6 @@ subroutine MH_set_parameters(TypeAction)
   use ModrestartFile,   ONLY: read_restart_parameters
   use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor
 
-  use ModFaceFlux, ONLY: UseModFaceFlux
-
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -219,8 +217,6 @@ subroutine MH_set_parameters(TypeAction)
      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
-     case("#FACEFLUX")
-        call read_var('UseModFaceFlux', UseModFaceFlux)
      case("#COMPONENT")
         call read_var('NameComp',NameCompRead)
         if(NameCompRead /= NameThisComp)&
