@@ -22,7 +22,7 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
-  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, &
+  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, hall_factor, &
        get_face_current
 
   implicit none
@@ -44,7 +44,8 @@ module ModFaceFlux
   real :: Cmax, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
 
-  real :: Dxyz
+  ! Variables needed for Hall resistivity
+  real :: Dxyz, HallCoeff
 
 contains
   !===========================================================================
@@ -342,6 +343,9 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
+    if(UseHallResist) HallCoeff = &
+         IonMassPerCharge * hall_factor(iDir, iFace, jFace, kFace, iBlock)
+
     call get_physical_flux(iBlock, iDir, StateLeft_V, B0x, B0y, B0z,&
          StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft)
 
@@ -617,7 +621,7 @@ contains
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
-      real :: HallUx, HallUy, HallUz, HallUn, Jx, Jy, Jz
+      real :: HallUx, HallUy, HallUz, HallUn, Jx, Jy, Jz, HallCoeffInvRho
       real :: Bn, B0n
       real :: B2, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
@@ -670,9 +674,10 @@ contains
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
       if(UseHallResist)then
          call get_face_current(iDir, iFace, jFace, kFace, iBlock, Jx, Jy, Jz)
-         HallUx = Ux - Jx*IonMassPerCharge/Rho
-         HallUy = Uy - Jy*IonMassPerCharge/Rho
-         HallUz = Uz - Jz*IonMassPerCharge/Rho
+         HallCoeffInvRho = HallCoeff/Rho
+         HallUx = Ux - Jx*HallCoeffInvRho
+         HallUy = Uy - Jy*HallCoeffInvRho
+         HallUz = Uz - Jz*HallCoeffInvRho
 
          HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
 
@@ -837,8 +842,8 @@ contains
       end if                                         !^CFG IF SIMPLEBORIS
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(HallCmaxFactor > 0.0)Fast = Fast + &
-           HallCmaxFactor*cPi*abs(FullBn)*IonMassPerCharge*InvRho/Dxyz
+      if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0) Fast = Fast + &
+           HallCmaxFactor*HallCoeff*cPi*abs(FullBn)*InvRho/Dxyz
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          Cleft   = min(UnLeft, UnRight) - Fast
