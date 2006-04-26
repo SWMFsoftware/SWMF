@@ -62,7 +62,7 @@ subroutine impl_jacobian(implBLK,JAC)
        time_BLK
   use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell
   use ModImplicit
-  use ModHallResist, ONLY: UseHallResist
+  use ModHallResist, ONLY: UseHallResist, hall_factor
   implicit none
 
   integer, intent(in) :: implBLK
@@ -465,7 +465,10 @@ contains
             -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
     end do; end do; end do
 
-    HallJ_CD = IonMassPerCharge*HallJ_CD
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       HallJ_CD(i,j,k,:) = &
+            IonMassPerCharge*hall_factor(0,i,j,k,iBlk)*HallJ_CD(i,j,k,:)
+    end do; end do; end do
 
     BxPerRho_G = w_k(:,:,:,Bx_,implBLK)/w_k(:,:,:,Rho_,implBLK)
     ByPerRho_G = w_k(:,:,:,By_,implBLK)/w_k(:,:,:,Rho_,implBLK)
