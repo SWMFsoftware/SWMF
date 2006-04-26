@@ -16,6 +16,9 @@ module ModHallResist
   real, allocatable :: HallJ_CD(:,:,:,:)
   real, allocatable :: BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
 
+  character(len=20) :: HallRegion ='all'
+  real :: R1Hall=0.0, R2Hall=1000.0, HallWidth=10.0 
+
   save
 
 contains
@@ -31,13 +34,9 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    allocate(&
-         HallJ_CD(nI,nJ,nK,nDim), &
-         BxPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
-         ByPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
-         BzPerRho_G(0:nI+1,0:nJ+1,0:nK+1) )
     IonMassPerCharge =HallFactor*(cProtonMass/cElectronCharge) &
          * (UnitSI_B*UnitSI_T/UnitSI_X**2)
+
     if (DoTestMe) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
@@ -50,6 +49,12 @@ contains
        write(*,*) '>>>>>>>>>>>>>>>>>                       <<<<<<<<<<<<<<<<<'
        write(*,*) ''
     end if
+
+    if(.not.allocated(HallJ_CD)) allocate(&
+         HallJ_CD(nI,nJ,nK,nDim), &
+         BxPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
+         ByPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
+         BzPerRho_G(0:nI+1,0:nJ+1,0:nK+1) )
 
   end subroutine init_hall_resist
 
@@ -90,6 +95,8 @@ contains
     real,parameter :: p0 = 5./32., m0 =-3./32., c0= 15./16.
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     integer:: ip, im, jp, jm, kp, km, iDim
+
+    real :: jLeft_D(3), jRight_D(3)
     !-------------------------------------------------------------------------
     if(iProc==ProcTest.and.iBlock==BlkTest.and. &
              (i==iTest.or.i==iTest+1.and.iDir==x_) .and. &
@@ -164,9 +171,9 @@ contains
                   + m0*B1_DG(:,0,jm,km)
              b_DG(:,0,j2,k2) = &
                   C1*Bc_D + F1*b_DG(:,1,j2,k2) + F2*b_DG(:,2,j2,k2)
-             b_DG(:,0,j2,k2) = min( max( b_DG(:,0,j2,k2), &
-                  min(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2))), &
-                  max(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2)))
+             !b_DG(:,0,j2,k2) = min( max( b_DG(:,0,j2,k2), &
+             !     min(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2))), &
+             !     max(Bc_D, b_DG(:,1,j2,k2),b_DG(:,2,j2,k2)))
           end do; end do; end do; end do
        end if
 
@@ -179,9 +186,9 @@ contains
                   + m0*B1_DG(:,nI+1,jm,km)
              b_DG(:,nI+1,j2,k2)= &
                   C1*Bc_D + F1*b_DG(:,nI,j2,k2) + F2*b_DG(:,nI-1,j2,k2)
-             b_DG(:,nI+1,j2,k2) = min( max( b_DG(:,nI+1,j2,k2), &
-                  min(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2))), &
-                  max(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2)))
+             !b_DG(:,nI+1,j2,k2) = min( max( b_DG(:,nI+1,j2,k2), &
+             !     min(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2))), &
+             !     max(Bc_D, b_DG(:,nI,j2,k2),b_DG(:,nI-1,j2,k2)))
           end do; end do; end do; end do
        end if
 
@@ -194,9 +201,9 @@ contains
                   + m0*B1_DG(:,im,0,km)
              b_DG(:,i2,0,k2) = &
                   C1*Bc_D + F1*b_DG(:,i2,1,k2) + F2*b_DG(:,i2,2,k2)
-             b_DG(:,i2,0,k2) = min(max( b_DG(:,i2,0,k2), &
-                  min(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2))), &
-                  max(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2)))
+             !b_DG(:,i2,0,k2) = min(max( b_DG(:,i2,0,k2), &
+             !     min(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2))), &
+             !     max(Bc_D, b_DG(:,i2,1,k2),b_DG(:,i2,2,k2)))
           end do; end do; end do; end do
        end if
 
@@ -209,9 +216,9 @@ contains
                   + m0*B1_DG(:,im,nJ+1,km)
              b_DG(:,i2,nJ+1,k2) = &
                   C1*Bc_D + F1*b_DG(:,i2,nJ,k2) + F2*b_DG(:,i2,nJ-1,k2)
-             b_DG(:,i2,nJ+1,k2) = min(max( b_DG(:,i2,nJ+1,k2), &
-                  min(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2))), &
-                  max(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2)))
+             !b_DG(:,i2,nJ+1,k2) = min(max( b_DG(:,i2,nJ+1,k2), &
+             !     min(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2))), &
+             !     max(Bc_D, b_DG(:,i2,nJ,k2),b_DG(:,i2,nJ-1,k2)))
           end do; end do; end do; end do
        end if
 
@@ -224,9 +231,9 @@ contains
                   + m0*B1_DG(:,im,jm,0)
              b_DG(:,i2,j2,0) = &
                   C1*Bc_D + F1*b_DG(:,i2,j2,1) + F2*b_DG(:,i2,j2,2)
-             b_DG(:,i2,j2,0) = min(max( b_DG(:,i2,j2,0), &
-                  min(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2))), &
-                  max(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2)))
+             !b_DG(:,i2,j2,0) = min(max( b_DG(:,i2,j2,0), &
+             !     min(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2))), &
+             !     max(Bc_D, b_DG(:,i2,j2,1), b_DG(:,i2,j2,2)))
           end do; end do; end do; end do
        end if
 
@@ -239,9 +246,9 @@ contains
                   + m0*B1_DG(:,im,jm,nK+1)
              b_DG(:,i2,j2,nK+1) = &
                   C1*Bc_D + F1*b_DG(:,i2,j2,nK) + F2*b_DG(:,i2,j2,nK-1)
-             b_DG(:,i2,j2,nK+1) = min(max( b_DG(:,i2,j2,nK+1), &
-                  min(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1))), &
-                  max(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1)))
+             !b_DG(:,i2,j2,nK+1) = min(max( b_DG(:,i2,j2,nK+1), &
+             !     min(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1))), &
+             !     max(Bc_D, b_DG(:,i2,j2,nK), b_DG(:,i2,j2,nK-1)))
           end do; end do; end do; end do
        end if
 
@@ -404,6 +411,8 @@ contains
             - Bz*(b_DG(y_,i-1,j,k )+b_DG(y_,i,j ,k )) &
             - Cz*(b_DG(y_,i-1,j,kR)+b_DG(y_,i,j ,kR))
 
+       !call get_current(i-1,j,k,iBlock,jLeft_D)
+
     case(y_)
        Jx = + InvDy*(b_DG(z_,i,j,k) - b_DG(z_,i,j-1,k)) &
             - Az*(b_DG(y_,i,j-1,kL) + b_DG(y_,i,j ,kL)) &
@@ -421,6 +430,8 @@ contains
             - Ax*(b_DG(z_,iL,j-1,k) + b_DG(z_,iL,j ,k)) &
             - Bx*(b_DG(z_,i ,j-1,k) + b_DG(z_,i ,j ,k)) &
             - Cx*(b_DG(z_,iR,j-1,k) + b_DG(z_,iR,j ,k))
+
+       !call get_current(i,j-1,k,iBlock,jLeft_D)
 
     case(z_)
 
@@ -441,10 +452,22 @@ contains
             - By*(b_DG(x_,i,j ,k-1) + b_DG(x_,i,j ,k))  &
             - Cy*(b_DG(x_,i,jR,k-1) + b_DG(x_,i,jR,k)) 
 
+       !call get_current(i,j,k-1,iBlock,jLeft_D)
+
     case default
        write(*,*)'Error in get_face_current: iDir=',iDir
        call stop_mpi('DEBUG')
     end select
+
+    !call get_current(i,j,k,iBlock,jRight_D)
+    !
+    !Jx = min(Jx, max(jLeft_D(x_),jRight_D(x_)))
+    !Jy = min(Jy, max(jLeft_D(y_),jRight_D(y_)))
+    !Jz = min(Jz, max(jLeft_D(z_),jRight_D(z_)))
+    !
+    !Jx = max(Jx, min(jLeft_D(x_),jRight_D(x_)))
+    !Jy = max(Jy, min(jLeft_D(y_),jRight_D(y_)))
+    !Jz = max(Jz, min(jLeft_D(z_),jRight_D(z_)))
 
     if(DoTestMe)then
        write(*,*)NameSub,': Jx=',Jx
@@ -606,5 +629,52 @@ contains
     end subroutine check_error
 
   end subroutine test_face_current
+  
+  real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
+    use ModMain,     ONLY: nI, nJ, nK, nBlock
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
+    use ModPhysics, ONLY : Rbody
+    integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
+    real :: r,x,y,z
+
+    !--------------------------------------------------------------
+    select case(iDir)
+    case(0)  !for cell center
+       x = x_BLK(iFace,jFace,kFace,iBlock)
+       y = y_BLK(iFace,jFace,kFace,iBlock)
+       z = z_BLK(iFace,jFace,kFace,iBlock)       
+    case(1)
+       x = 0.5*sum(x_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       y = 0.5*sum(y_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+       z = 0.5*sum(z_BLK(iFace-1:iFace,jFace,kFace,iBlock))
+    case(2)
+       x = 0.5*sum(x_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       y = 0.5*sum(y_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+       z = 0.5*sum(z_BLK(iFace,jFace-1:jFace,kFace,iBlock))
+    case(3)
+       x = 0.5*sum(x_BLK(iFace,jFace,kFace-1:KFace,iBlock))
+       y = 0.5*sum(y_BLK(iFace,jFace,kFace-1:KFace,iBlock))
+       z = 0.5*sum(z_BLK(iFace,jFace,kFace-1:KFace,iBlock))
+    end select
+    
+    select case(HallRegion)
+    case("all")
+       hall_factor = 1.0
+    case("user")
+       ! hall_factor= &
+       !   user_hall_factor(x, y, z, iDir, iFace, jFace, kFace, iBlock)
+    case("shell")
+       hall_factor = 1.0
+       r=sqrt(x*x+y*y+z*z)       
+       if(r < R1Hall .or. r > R2Hall)then
+          hall_factor=0.0
+       else if(r > R2Hall-HallWidth)then
+          hall_factor = (R2Hall-r)/HallWidth
+       else if(r < R1Hall+HallWidth)then       
+          hall_factor = (r-R1Hall)/HallWidth
+       end if
+    case default
+    end select
+  end function hall_factor
 
 end module ModHallResist
