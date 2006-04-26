@@ -16,7 +16,7 @@ module ModHallResist
   real, allocatable :: HallJ_CD(:,:,:,:)
   real, allocatable :: BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
 
-  character(len=20) :: HallRegion ='all'
+  character(len=20) :: NameHallRegion ='all'
   real :: R1Hall=0.0, R2Hall=1000.0, HallWidth=10.0 
 
   save
@@ -657,7 +657,7 @@ contains
        z = 0.5*sum(z_BLK(iFace,jFace,kFace-1:KFace,iBlock))
     end select
     
-    select case(HallRegion)
+    select case(NameHallRegion)
     case("all")
        hall_factor = 1.0
     case("user")
