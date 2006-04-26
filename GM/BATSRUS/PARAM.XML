@@ -3662,30 +3662,55 @@ T			UseGravity (rest of parameters read if true)
 <command name="HALLRESISTIVITY">
 	<parameter name="UseHallResist" type="logical" default="F"/>
 	<if expr="$UseHallResist">
-		<parameter name="UseHallCmax" type="logical" default="F"/>
-		<parameter name="ResistDiag" type="real" min="0" default="0"/>
 		<parameter name="HallFactor" type="real" min="0" default="1"/>
+		<parameter name="HallCmaxFactor" type="real" min="0" max="1" default="1"/>
 	</if>
 
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
-F		UseHallCmax
-0.0		ResistDiag [m^2/s]
-3e12		HallFactor			
+3e12		HallFactor
+0.5		HallCmaxFactor
 
 If UseHallResist is true the Hall resistivity is used.
-If UseHallCmax is true the maximum propagation speed takes into
-account the whistler wave speed. This is needed for stability
+The off-diagonal Hall elements of the resistivity tensor
+are multiplied by HallFactor. If HallFactor is 1 then the 
+physical Hall resistivity is used.
+If HallCmaxFactor is 1.0 the maximum propagation speed takes into
+account the full whistler wave speed. If it is 0, the wave speed
+is not midified. For values betwen 1 and 0 a fraction of the whistler
+wave speed is added. The full speed is needed for the stability
 of the explicit scheme (unless the whistler speed is very small
 and/or the diagonal part of the resistivity tensor is dominant).
-For the implicit scheme it is better to have UseHallCmax set to false,
+For the implicit scheme it is better to have HallCmaxFactor=0,
 otherwise there is significant phase error due to the first order scheme
 used in the implicit part. This error reduces with time step.
-The diagonal elements of the resistivity tensor are given by ResistDiag
-in SI units. The off-diagonal elements are multiplied by HallFactor.
-If HallFactor is one then the physical Hall resistivity is used.
 
 Default is UseHallResist false.
+</command>
+
+<command name="HALLREGION">
+	<parameter name="NameHallRegion" type="string" input="select">
+		<option name="all"  default="T"/>
+		<option name="shell"/>
+	</parameter>
+	<if expr="$NameHallRegion eq 'shell'">
+		<parameter name="R1Hall" type="real" min="0" default="0"/>
+		<parameter name="R2Hall" type="real" min="$R1Hall" default="0"/>
+		<parameter name="HallWidth" type="real" min="0" default="0"/>
+	</if>
+
+#HALLREGION
+shell			NameHallRegion
+ 3.5			R1Hall
+20.0			R2Hall
+ 2.0			HallWidth
+
+The NameHallRegion parameter determines the region where the Hall effect
+is taken into account. For value "all" the Hall effect is used everywhere
+in the computational domain. For "shell" the region is between radii
+R1Hall and R2Hall. The edge of the shell is smoothed to avoid a sharp
+discontinuity. The width of the smoothing is given by HallWidth.
+
 </command>
 
 <command name="MASSLOADING">
