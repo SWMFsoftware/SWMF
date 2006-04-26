@@ -179,8 +179,7 @@ contains
          Area2 = Area**2
          AreaX = Area; AreaY = 0.0; AreaZ = 0.0
          Dxyz  = dx_BLK(iBlock)
-      end if     
-                               !^CFG IF COVARIANT
+      end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -262,8 +261,8 @@ contains
          Area2 = Area**2
          AreaX = 0.0; AreaY = 0.0; AreaZ = Area
          Dxyz  = dz_BLK(iBlock)
-      end if 
-                                   !^CFG IF COVARIANT
+      end if                                    !^CFG IF COVARIANT
+
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
          if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
