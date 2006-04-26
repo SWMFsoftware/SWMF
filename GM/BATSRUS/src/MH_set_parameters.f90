@@ -39,7 +39,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters
-  use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor
+  use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor,&
+       NameHallRegion, R1Hall, R2Hall, HallWidth
 
   implicit none
 
@@ -449,6 +450,20 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('HallFactor',  HallFactor)
            call read_var('HallCmaxFactor', HallCmaxFactor)
         end if
+     case("#HALLREGION")
+        call read_var('NameHallRegion', NameHallRegion)
+
+        select case(NameHallRegion)
+        case("all", "user")
+        case("shell")
+           call read_var("R1Hall",R1Hall)
+           call read_var("R2Hall",R2Hall)
+           call read_var("HallWidth",HallWidth)
+        case default
+           call stop_mpi(NameSub//': unknown NameHallRegion='&
+                //NameHallRegion)
+        end select
+
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
