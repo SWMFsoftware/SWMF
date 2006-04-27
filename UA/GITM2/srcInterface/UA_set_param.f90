@@ -67,14 +67,6 @@ subroutine UA_set_param(CompInfo, TypeAction)
 
   case('CHECK')
 
-     ! Set time related variables for UA
-     call get_time(tStartOut = StartTime, tSimulationOut = tSimulation)
-
-     CurrentTime = StartTime + tSimulation
-     call time_real_to_int(StartTime, iStartTime)
-
-     call fix_vernal_time
-
      call check_param(iError)
 
   case('STDOUT')
