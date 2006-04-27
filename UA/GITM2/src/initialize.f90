@@ -1,5 +1,5 @@
 
-subroutine initialize_gitm
+subroutine initialize_gitm(TimeIn)
 
   use ModGITM
   use ModInputs
@@ -13,6 +13,7 @@ subroutine initialize_gitm
 
   type (UAM_ITER) :: r_iter
 
+  real(Real8_), intent(in) :: TimeIn
   integer :: iLat, iAlt, iBlock, iSpecies, iLon
 
   real :: TempAve
@@ -35,6 +36,12 @@ subroutine initialize_gitm
   ! ------------------------------------------------------------------------
   ! initialize stuff
   ! ------------------------------------------------------------------------
+
+  if (TimeIn /= CurrentTime) then
+     CurrentTime = TimeIn
+     call time_real_to_int(CurrentTime, iTimeArray)
+     call fix_vernal_time
+  endif
 
   call init_grid
 

@@ -23,7 +23,7 @@ program GITM
   call read_inputs(cInputFile)
   call set_inputs
 
-  call initialize_gitm
+  call initialize_gitm(CurrentTime)
 
   call write_output
 
