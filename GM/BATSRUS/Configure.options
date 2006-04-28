@@ -51,7 +51,6 @@ RCM			OFF NEEDS RAYTRACE	#^CFG IF RCM
 # Extra physics
 #
 SECONDBODY		OFF			#^CFG IF SECONDBODY
-MULTISP                 OFF                     #^CFG IF MULTISP
 ALWAVES                 OFF                     #^CFG IF ALWAVES
 GLOBALHELIOSPHERE       OFF                     #^CFG IF GLOBALHELIOSPHERE
 
