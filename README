@@ -16,13 +16,13 @@ the SWMF and create the user manual please follow the instructions below.
 setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/FRAMEWORK
 setenv CVS_RSH ssh
 
-# Check out the SWMF_NEW distribution
-cvs checkout SWMF_NEW  
-cd SWMF_NEW
+# Check out the SWMF distribution
+cvs checkout SWMF
+cd SWMF
 
 # !!! Opening the tar ball !!!
-mkdir SWMF_NEW
-cd SWMF_NEW
+mkdir SWMF
+cd SWMF
 tar -xzf {path_to_file}/SWMF_v2.1.tgz
 
 
