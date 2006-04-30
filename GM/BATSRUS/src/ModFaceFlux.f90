@@ -22,8 +22,8 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
-  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, hall_factor, &
-       get_face_current
+  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, &
+       hall_factor, get_face_current
 
   implicit none
 
@@ -478,13 +478,13 @@ contains
            + (/B0x,B0y,B0z/))**2)
 
       write(*,*)'Fluxes for dir=',iDir,' at I=',iFace,' J=',jFace,' K=',kFace
-      write(*,*)'Eigenvalue_maxabs=', Cmax/Area
+      write(*,*)'Eigenvalue_maxabs=', Cmax/sqrt(Area2)
       do iVar = 1, nVar + 1
          write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
               iVar ,&
               Flux_V(iVar), &
-              FluxLeft_V(iVar)/Area, &
-              FluxRight_V(iVar)/Area,&
+              FluxLeft_V(iVar)/sqrt(Area2), &
+              FluxRight_V(iVar)/sqrt(Area2),&
               StateRightCons_V(iVar)-StateLeftCons_V(iVar)
       end do
 
@@ -868,7 +868,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModVarIndexes, ONLY: U_, B_
 
   use ModFaceFlux, ONLY: &
-       iFace, jFace, kFace, Area, DoTestCell, &
+       iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, Cmax, Unormal
 
@@ -880,6 +880,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModPhysics,  ONLY: g,gm1,inv_gm1
   use ModNumConst
 
+  use ModGeometry,   ONLY: UseCovariant                      !^CFG IF COVARIANT
   implicit none
 
   integer, intent(in) :: iDir
@@ -940,145 +941,172 @@ subroutine roe_solver(iDir, Flux_V)
 
   ! Misc. scalar variables
   real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
+
+  real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   !^CFG IF COVARIANT 
+  real :: dRhoU_D(3), dB1_D(3)                        !^CFG IF COVARIANT
+
   !---------------------------------------------------------------------------
-  select case (iDir)
-  case (x_)
-     !\
+  if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
+     ! Obtain the base vectors of the face aligned coordinate system
+     Area = sqrt(Area2)
+     Normal_D(x_) = AreaX / Area
+     Normal_D(y_) = AreaY / Area
+     Normal_D(z_) = AreaZ / Area
+     if(Normal_D(z_) < 0.5)then
+        ! Tangent1 = Normal x (0,0,1)
+        Tangent1_D(x_) =  Normal_D(y_)
+        Tangent1_D(y_) = -Normal_D(x_)
+        Tangent1_D(z_) = 0.0
+        ! Tangent2 = Normal x Tangent1
+        Tangent2_D(x_) =  Normal_D(z_)*Normal_D(x_)
+        Tangent2_D(y_) =  Normal_D(z_)*Normal_D(y_)
+        Tangent2_D(z_) = -Normal_D(x_)**2 - Normal_D(y_)**2
+     else
+        ! Tangent1 = Normal x (1,0,0)
+        Tangent1_D(x_) = 0.0
+        Tangent1_D(y_) =  Normal_D(z_)
+        Tangent1_D(z_) = -Normal_D(y_)
+        ! Tangent2 = Normal x Tangent1
+        Tangent2_D(x_) = -Normal_D(y_)**2 - Normal_D(z_)**2
+        Tangent2_D(y_) =  Normal_D(x_)*Normal_D(y_)
+        Tangent2_D(z_) =  Normal_D(x_)*Normal_D(z_)
+     end if
      ! B0 on the face
-     !/
-     B0n  = B0x
-     B0t1 = B0y
-     B0t2 = B0z
-     !\
+     B0n   = sum(Normal_D  *(/B0x, B0y, B0z/))
+     B0t1  = sum(Tangent1_D*(/B0x, B0y, B0z/))
+     B0t2  = sum(Tangent2_D*(/B0x, B0y, B0z/))
      ! Left face
-     !/
-     RhoL  =  StateLeft_V(rho_)
-     UnL   =  StateLeft_V(Ux_)
-     Ut1L  =  StateLeft_V(Uy_)
-     Ut2L  =  StateLeft_V(Uz_)
-     B1nL  =  StateLeft_V(Bx_)
-     B1t1L =  StateLeft_V(By_)
-     B1t2L =  StateLeft_V(Bz_)
-     pL    =  StateLeft_V(P_ )
-     !\
+     UnL   = sum(Normal_D  *StateLeft_V(Ux_:Uz_))
+     Ut1L  = sum(Tangent1_D*StateLeft_V(Ux_:Uz_))
+     Ut2L  = sum(Tangent2_D*StateLeft_V(Ux_:Uz_))
+     B1nL  = sum(Normal_D  *StateLeft_V(Bx_:Bz_))
+     B1t1L = sum(Tangent1_D*StateLeft_V(Bx_:Bz_))
+     B1t2L = sum(Tangent2_D*StateLeft_V(Bx_:Bz_))
      ! Right face
-     !/
-     RhoR  =  StateRight_V(rho_)
-     UnR   =  StateRight_V(Ux_ )
-     Ut1R  =  StateRight_V(Uy_ )
-     Ut2R  =  StateRight_V(Uz_ )
-     B1nR  =  StateRight_V(Bx_ )
-     B1t1R =  StateRight_V(By_ )
-     B1t2R =  StateRight_V(Bz_ )
-     pR    =  StateRight_V(P_  )
+     UnR   = sum(Normal_D  *StateRight_V(Ux_:Uz_))
+     Ut1R  = sum(Tangent1_D*StateRight_V(Ux_:Uz_))
+     Ut2R  = sum(Tangent2_D*StateRight_V(Ux_:Uz_))
+     B1nR  = sum(Normal_D  *StateRight_V(Bx_:Bz_))
+     B1t1R = sum(Tangent1_D*StateRight_V(Bx_:Bz_))
+     B1t2R = sum(Tangent2_D*StateRight_V(Bx_:Bz_))
+     ! Jump
+     dRhoU_D = StateRightCons_V(RhoUx_:RhoUz_) - StateLeftCons_V(RhoUx_:RhoUz_)
+     dCons_V(RhoUn_)  = sum(Normal_D  *dRhoU_D)
+     dCons_V(RhoUt1_) = sum(Tangent1_D*dRhoU_D)
+     dCons_V(RhoUt2_) = sum(Tangent2_D*dRhoU_D)
+     dB1_D   = StateRightCons_V(Bx_:Bz_) - StateLeftCons_V(Bx_:Bz_)
+     dCons_V(B1n_)    = sum(Normal_D  *dB1_D)
+     dCons_V(B1t1_)   = sum(Tangent1_D*dB1_D)
+     dCons_V(B1t2_)   = sum(Tangent2_D*dB1_D)
 
-     dCons_V(Rho_)    = StateRightCons_V(Rho_)   - StateLeftCons_V(Rho_)
-     dCons_V(RhoUn_)  = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-     dCons_V(RhoUt1_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-     dCons_V(RhoUt2_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-     dCons_V(B1n_)    = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-     dCons_V(B1t1_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-     dCons_V(B1t2_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-     ! Put the conservative energy difference in place of the pressure
-     dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
+  else                                                !^CFG END COVARIANT
+     select case (iDir)
+     case (x_) ! x face
+        ! B0 on the face
+        B0n  = B0x
+        B0t1 = B0y
+        B0t2 = B0z
+        ! Left face
+        UnL   =  StateLeft_V(Ux_)
+        Ut1L  =  StateLeft_V(Uy_)
+        Ut2L  =  StateLeft_V(Uz_)
+        B1nL  =  StateLeft_V(Bx_)
+        B1t1L =  StateLeft_V(By_)
+        B1t2L =  StateLeft_V(Bz_)
+        ! Right face
+        UnR   =  StateRight_V(Ux_ )
+        Ut1R  =  StateRight_V(Uy_ )
+        Ut2R  =  StateRight_V(Uz_ )
+        B1nR  =  StateRight_V(Bx_ )
+        B1t1R =  StateRight_V(By_ )
+        B1t2R =  StateRight_V(Bz_ )
+        ! Jump
+        dCons_V(RhoUn_)  = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
+        dCons_V(RhoUt1_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
+        dCons_V(RhoUt2_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
+        dCons_V(B1n_)    = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
+        dCons_V(B1t1_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
+        dCons_V(B1t2_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
+     case (y_) ! y face
+        ! B0 on the face
+        B0n  = B0y
+        B0t1 = B0z
+        B0t2 = B0x
+        ! Left face
+        UnL   =  StateLeft_V(Uy_ )
+        Ut1L  =  StateLeft_V(Uz_ )
+        Ut2L  =  StateLeft_V(Ux_ )
+        B1nL  =  StateLeft_V(By_ )
+        B1t1L =  StateLeft_V(Bz_ )
+        B1t2L =  StateLeft_V(Bx_ )
+        ! Right face
+        UnR   =  StateRight_V(Uy_ )
+        Ut1R  =  StateRight_V(Uz_ )
+        Ut2R  =  StateRight_V(Ux_ )
+        B1nR  =  StateRight_V(By_ )
+        B1t1R =  StateRight_V(Bz_ )
+        B1t2R =  StateRight_V(Bx_ )
+        ! Jump
+        dCons_V(RhoUn_)  = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
+        dCons_V(RhoUt1_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
+        dCons_V(RhoUt2_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
+        dCons_V(B1n_)    = StateRightCons_V(By_)    - StateLeftCons_V(By_)
+        dCons_V(B1t1_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
+        dCons_V(B1t2_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
+     case (z_) ! z face
+        ! B0 on the face
+        B0n  = B0z
+        B0t1 = B0x
+        B0t2 = B0y
+        ! Left face
+        UnL   =  StateLeft_V(Uz_ )
+        Ut1L  =  StateLeft_V(Ux_ )
+        Ut2L  =  StateLeft_V(Uy_ )
+        B1nL  =  StateLeft_V(Bz_ )
+        B1t1L =  StateLeft_V(Bx_ )
+        B1t2L =  StateLeft_V(By_ )
+        ! Right face
+        UnR   =  StateRight_V(Uz_ )
+        Ut1R  =  StateRight_V(Ux_ )
+        Ut2R  =  StateRight_V(Uy_ )
+        B1nR  =  StateRight_V(Bz_ )
+        B1t1R =  StateRight_V(Bx_ )
+        B1t2R =  StateRight_V(By_ )
+        ! Jump
+        dCons_V(RhoUn_ ) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
+        dCons_V(RhoUt1_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
+        dCons_V(RhoUt2_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
+        dCons_V(B1n_)    = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
+        dCons_V(B1t1_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
+        dCons_V(B1t2_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
+     end select
+  end if                                           !^CFG IF COVARIANT
 
+  ! Check if the cell is next to a boundary
+  select case(iDir)
+  case(x_)
      UseFluxRusanov= true_cell(iFace-1, jFace, kFace, globalBLK) &
           .neqv.     true_cell(iFace  , jFace, kFace, globalBLK)
-
-  case (y_)
-     !\
-     ! y face
-     !/
-     !\
-     ! B0 on the face
-     !/
-     B0n  = B0y
-     B0t1 = B0z
-     B0t2 = B0x
-     !\
-     ! Left face
-     !/
-     RhoL  =  StateLeft_V(rho_)
-     UnL   =  StateLeft_V(Uy_ )
-     Ut1L  =  StateLeft_V(Uz_ )
-     Ut2L  =  StateLeft_V(Ux_ )
-     B1nL  =  StateLeft_V(By_ )
-     B1t1L =  StateLeft_V(Bz_ )
-     B1t2L =  StateLeft_V(Bx_ )
-     pL    =  StateLeft_V(P_  )
-     !\
-     ! Right face
-     !/
-     RhoR  =  StateRight_V(rho_)
-     UnR   =  StateRight_V(Uy_ )
-     Ut1R  =  StateRight_V(Uz_ )
-     Ut2R  =  StateRight_V(Ux_ )
-     B1nR  =  StateRight_V(By_ )
-     B1t1R =  StateRight_V(Bz_ )
-     B1t2R =  StateRight_V(Bx_ )
-     pR    =  StateRight_V(P_  )
-
-     dCons_V(Rho_)    = StateRightCons_V(Rho_)   - StateLeftCons_V(Rho_)
-     dCons_V(RhoUn_)  = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-     dCons_V(RhoUt1_) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-     dCons_V(RhoUt2_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-     dCons_V(B1n_)    = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-     dCons_V(B1t1_)   = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-     dCons_V(B1t2_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-     ! Put the conservative energy difference in place of the pressure
-     dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
-
+  case(y_)
      UseFluxRusanov= true_cell(iFace, jFace-1, kFace, globalBLK) &
           .neqv.     true_cell(iFace, jFace  , kFace, globalBLK)
-
-  case (z_)
-     !\
-     ! z face
-     !/
-     !\
-     ! B0 on the face
-     !/
-     B0n  = B0z
-     B0t1 = B0x
-     B0t2 = B0y
-     !\
-     ! Left face
-     !/
-     RhoL  =  StateLeft_V(rho_)
-     UnL   =  StateLeft_V(Uz_ )
-     Ut1L  =  StateLeft_V(Ux_ )
-     Ut2L  =  StateLeft_V(Uy_ )
-     B1nL  =  StateLeft_V(Bz_ )
-     B1t1L =  StateLeft_V(Bx_ )
-     B1t2L =  StateLeft_V(By_ )
-     pL    =  StateLeft_V(P_  )
-     !\
-     ! Right face
-     !/
-     RhoR  =  StateRight_V(rho_)
-     UnR   =  StateRight_V(Uz_ )
-     Ut1R  =  StateRight_V(Ux_ )
-     Ut2R  =  StateRight_V(Uy_ )
-     B1nR  =  StateRight_V(Bz_ )
-     B1t1R =  StateRight_V(Bx_ )
-     B1t2R =  StateRight_V(By_ )
-     pR    =  StateRight_V(P_  )
-
-     dCons_V(Rho_)    = StateRightCons_V(Rho_)   - StateLeftCons_V(Rho_)
-     dCons_V(RhoUn_ ) = StateRightCons_V(RhoUz_) - StateLeftCons_V(RhoUz_)
-     dCons_V(RhoUt1_) = StateRightCons_V(RhoUx_) - StateLeftCons_V(RhoUx_)
-     dCons_V(RhoUt2_) = StateRightCons_V(RhoUy_) - StateLeftCons_V(RhoUy_)
-     dCons_V(B1n_)    = StateRightCons_V(Bz_)    - StateLeftCons_V(Bz_)
-     dCons_V(B1t1_)   = StateRightCons_V(Bx_)    - StateLeftCons_V(Bx_)
-     dCons_V(B1t2_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
-     ! Put the conservative energy difference in place of the pressure
-     dCons_V(p_)      = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
-
+  case(z_)
      UseFluxRusanov= true_cell(iFace, jFace, kFace-1, globalBLK) &
           .neqv.     true_cell(iFace, jFace, kFace  , globalBLK)
-
   end select
 
+  ! Scalar variables
+  RhoL  =  StateLeft_V(rho_)
+  pL    =  StateLeft_V(P_ )
+  RhoR  =  StateRight_V(rho_)
+  pR    =  StateRight_V(P_  )
+
+  ! Jump in scalar conservative variables
+  dCons_V(Rho_) = StateRightCons_V(Rho_)   - StateLeftCons_V(Rho_)
+  ! Put the conservative energy difference in place of the pressure
+  dCons_V(p_)   = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
+
+  ! Derived variables
   RhoInvL = 1./RhoL
   BnL  = B0n+B1nL
   Bt1L = B0t1+B1t1L
@@ -1109,6 +1137,7 @@ subroutine roe_solver(iDir, Flux_V)
   B1t2H= 0.5*(B1t2L + B1t2R)
   pH   = 0.5*(   pL +    pR)
   BbH  = BnH**2  + Bt1H**2  + Bt2H**2
+
   Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
   aH   = g*pH*RhoInvH
 
@@ -1143,6 +1172,7 @@ subroutine roe_solver(iDir, Flux_V)
 
   CsH  = max(0.,0.5*(eH-CfH))
   CfH  = 0.5*(eH+CfH)
+
   UuH  = UnH**2 + Ut1H**2 + Ut2H**2
   eH   = pH*inv_gm1 + 0.5*RhoH*UuH + 0.5*Bb1H
 
@@ -1577,44 +1607,57 @@ subroutine roe_solver(iDir, Flux_V)
           sum(abs(Eigenvalue_V)*DeltaWave_V*EigenvectorR_VV(:,iFlux))
   end do
 
+  ! Scalar variables
+  Flux_V(Rho_   ) = Diffusion_V(1)
+  Flux_V(P_     ) = Diffusion_V(8)
+  Flux_V(Energy_) = Diffusion_V(9)
+
   ! Rotate n,t1,t2 components back to x,y,z components
-  select case (iDir)
-  case (x_)
-     Flux_V(rho_   ) = Diffusion_V(1)
-     Flux_V(rhoUx_ ) = Diffusion_V(2)
-     Flux_V(rhoUy_ ) = Diffusion_V(3)
-     Flux_V(rhoUz_ ) = Diffusion_V(4)
-     Flux_V(Bx_    ) = Diffusion_V(5)
-     Flux_V(By_    ) = Diffusion_V(6)
-     Flux_V(Bz_    ) = Diffusion_V(7)
-     Flux_V(P_     ) = Diffusion_V(8)
-     Flux_V(Energy_) = Diffusion_V(9)
+  if(UseCovariant)then                                 !^CFG IF COVARIANT BEGIN
+     Flux_V(RhoUx_) = Normal_D(x_)  *Diffusion_V(2) &
+          +           Tangent1_D(x_)*Diffusion_V(3) &
+          +           Tangent2_D(x_)*Diffusion_V(4)
+     Flux_V(RhoUy_) = Normal_D(y_)  *Diffusion_V(2) &
+          +           Tangent1_D(y_)*Diffusion_V(3) &
+          +           Tangent2_D(y_)*Diffusion_V(4)
+     Flux_V(RhoUz_) = Normal_D(z_)  *Diffusion_V(2) &
+          +           Tangent1_D(z_)*Diffusion_V(3) &
+          +           Tangent2_D(z_)*Diffusion_V(4)
 
-  case (y_)
-
-     Flux_V(rho_   ) = Diffusion_V(1)
-     Flux_V(rhoUx_ ) = Diffusion_V(4)
-     Flux_V(rhoUy_ ) = Diffusion_V(2)
-     Flux_V(rhoUz_ ) = Diffusion_V(3)
-     Flux_V(Bx_    ) = Diffusion_V(7)
-     Flux_V(By_    ) = Diffusion_V(5)
-     Flux_V(Bz_    ) = Diffusion_V(6)
-     Flux_V(P_     ) = Diffusion_V(8)
-     Flux_V(Energy_) = Diffusion_V(9)
-
-  case (z_)
-
-     Flux_V(rho_   ) = Diffusion_V(1)
-     Flux_V(rhoUx_ ) = Diffusion_V(3)
-     Flux_V(rhoUy_ ) = Diffusion_V(4)
-     Flux_V(rhoUz_ ) = Diffusion_V(2)
-     Flux_V(Bx_    ) = Diffusion_V(6)
-     Flux_V(By_    ) = Diffusion_V(7)
-     Flux_V(Bz_    ) = Diffusion_V(5)
-     Flux_V(P_     ) = Diffusion_V(8)
-     Flux_V(Energy_) = Diffusion_V(9)
-
-  end select
+     Flux_V(Bx_   ) = Normal_D(x_)  *Diffusion_V(5) &
+          +           Tangent1_D(x_)*Diffusion_V(6) &
+          +           Tangent2_D(x_)*Diffusion_V(7)
+     Flux_V(By_   ) = Normal_D(y_)  *Diffusion_V(5) &
+          +           Tangent1_D(y_)*Diffusion_V(6) &
+          +           Tangent2_D(y_)*Diffusion_V(7)
+     Flux_V(Bz_   ) = Normal_D(z_)  *Diffusion_V(5) &
+          +           Tangent1_D(z_)*Diffusion_V(6) &
+          +           Tangent2_D(z_)*Diffusion_V(7)
+  else                                                 !^CFG END COVARIANT
+     select case (iDir)
+     case (x_)
+        Flux_V(RhoUx_ ) = Diffusion_V(2)
+        Flux_V(RhoUy_ ) = Diffusion_V(3)
+        Flux_V(RhoUz_ ) = Diffusion_V(4)
+        Flux_V(Bx_    ) = Diffusion_V(5)
+        Flux_V(By_    ) = Diffusion_V(6)
+        Flux_V(Bz_    ) = Diffusion_V(7)
+     case (y_)
+        Flux_V(RhoUx_ ) = Diffusion_V(4)
+        Flux_V(RhoUy_ ) = Diffusion_V(2)
+        Flux_V(RhoUz_ ) = Diffusion_V(3)
+        Flux_V(Bx_    ) = Diffusion_V(7)
+        Flux_V(By_    ) = Diffusion_V(5)
+        Flux_V(Bz_    ) = Diffusion_V(6)
+     case (z_)
+        Flux_V(RhoUx_ ) = Diffusion_V(3)
+        Flux_V(RhoUy_ ) = Diffusion_V(4)
+        Flux_V(RhoUz_ ) = Diffusion_V(2)
+        Flux_V(Bx_    ) = Diffusion_V(6)
+        Flux_V(By_    ) = Diffusion_V(7)
+        Flux_V(Bz_    ) = Diffusion_V(5)
+     end select
+  end if                                               !^CFG IF COVARIANT
 
   Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Area*Flux_V)
 
