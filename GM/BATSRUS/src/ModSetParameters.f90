@@ -185,6 +185,9 @@ subroutine MH_set_parameters(TypeAction)
 
      call set_extra_parameters
 
+     ! initialize ModEqution (e.g. variable units)
+     call init_mod_equation
+
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
 
@@ -474,18 +477,18 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DtSaveLogfile',dt_output(logfile_))
 
            ! Log variables
-           if((index(log_string,'VAR')>0) .or. (index(log_string,'var')>0))then
+           if(index(log_string,'VAR')>0 .or. index(log_string,'var')>0)then
               plot_dimensional(logfile_) = index(log_string,'VAR')>0
               log_time='step time'
               call read_var('log_vars',log_vars)
-           elseif((index(log_string,'RAW')>0) .or.(index(log_string,'raw')>0) )then
+           elseif(index(log_string,'RAW')>0 .or. index(log_string,'raw')>0)then
               plot_dimensional(logfile_) = index(log_string,'RAW')>0
               log_time='step time'
-              log_vars='dt rho mx my mz bx by bz e Pmin Pmax'
-           elseif(index(log_string,'MHD')>0 .or. index(log_string,'mhd')>0 )then
+              log_vars='dt '//NameConservativeVar//' Pmin Pmax'
+           elseif(index(log_string,'MHD')>0 .or. index(log_string,'mhd')>0)then
               plot_dimensional(logfile_) = index(log_string,'MHD')>0
               log_time='step date time'
-              log_vars='rho mx my mz bx by bz e Pmin Pmax'
+              log_vars=NameConservativeVar//' Pmin Pmax'
            elseif(index(log_string,'FLX')>0 .or. index(log_string,'flx')>0)then
               plot_dimensional(logfile_) = index(log_string,'FLX')>0
               log_time='step date time'
@@ -726,18 +729,17 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
               plot_dimensional(ifile)=index(plot_string,'RAW')>0
-              plot_vars(ifile)='rho mx my mz bx by bz e p b1x b1y b1z absdivB'
+              plot_vars(ifile)=NameConservativeVar//' p b1x b1y b1z absdivB'
               plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
               plot_var='mhd'
               plot_dimensional(ifile) = index(plot_string,'MHD')>0
-              plot_vars(ifile)='rho ux uy uz bx by bz p jx jy jz'
+              plot_vars(ifile) = NamePrimitiveVar//' jx jy jz'
               plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
               plot_dimensional(ifile) = index(plot_string,'FUL')>0
-              plot_vars(ifile)=&
-                   'rho ux uy uz bx by bz b1x b1y b1z p e jx jy jz'
+              plot_vars(ifile) = NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
               plot_pars(ifile)='g rbody'
            elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
               plot_var='flx'
