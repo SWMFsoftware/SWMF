@@ -575,14 +575,16 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModPhysics, ONLY : Body_rho,Body_p,OMEGAbody,CellState_VI
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
   use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
+  use ModUtilities, ONLY: lower_case
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
   real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
   real, intent(out)   :: plotvar_inBody(nPlotVar)
-  logical, intent(out) :: plotvar_useBody(nPlotVar)
-  character (len=10)  :: s
+  logical, intent(out):: plotvar_useBody(nPlotVar)
+
+  character (len=10)  :: s, NameVar
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
@@ -593,12 +595,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
 
   do iVar = 1, nPlotVar
      s = plotvarnames(iVar)
-!!! call lower_case(s)
+     call lower_case(s)
 
      ! Set plotvar_inBody to something reasonable for inside the body.
-     ! Load zeros (0) for most values - load something better for rho, p, and T.
+     ! Load zeros (0) for most values - load something better for rho, p, and T
      ! We know that U,B,J are okay with zeroes, others should be changed if
-     ! necessary.  Note that all variables not set to 0 should be loaded below.  
+     ! necessary.  Note that all variables not set to 0 should be loaded below.
      ! Note that this is used for tecplot corner extrapolation and for nothing
      ! else.
      plotvar_inBody(iVar) = 0.0
@@ -613,46 +615,46 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('rho')
         PlotVar(:,:,:,iVar)=State_VGB(rho_,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_rho
-     case('rhoUx','rhoux','mx')
+     case('rhoux','mx')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK) &
                 - State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*y_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)
         end if
-     case('rhoUy','rhouy','my')
+     case('rhouy','my')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK) &
                 + State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*x_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)
         end if
-     case('rhoUz','rhouz','mz')
+     case('rhouz','mz')
         PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)
-     case('Bx','bx')
+     case('bx')
         plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
-     case('By','by')
+     case('by')
         plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)
-     case('Bz','bz')
+     case('bz')
         plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)
 
-     case('BxL','bxl')                           !^CFG IF CONSTRAINB BEGIN
+     case('bxl')                                 !^CFG IF CONSTRAINB BEGIN
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BxFace_BLK(1:nI,1:nJ,1:nK,iBLK)
-     case('BxR','bxr')
+     case('bxr')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BxFace_BLK(2:nI+1,1:nJ,1:nK,iBLK)
-     case('ByL','byl')
+     case('byl')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=ByFace_BLK(1:nI,1:nJ,1:nK,iBLK)
-     case('ByR','byr')
+     case('byr')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=ByFace_BLK(1:nI,2:nJ+1,1:nK,iBLK)
-     case('BzL','bzl')
+     case('bzl')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BzFace_BLK(1:nI,1:nJ,1:nK,iBLK)
-     case('BzR','bzr')
+     case('bzr')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BzFace_BLK(1:nI,1:nJ,2:nK+1,iBLK)
         !                                        !^CFG END CONSTRAINB
-     case('E','e')
+     case('e')
         PlotVar(:,:,:,iVar)=E_BLK(:,:,:,iBLK)+0.5*(&
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2+&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2+&
@@ -660,50 +662,49 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(Bx_,:,:,:,iBLK)**2 &
              -State_VGB(By_,:,:,:,iBLK)**2 &
              -State_VGB(Bz_,:,:,:,iBLK)**2)
-     case('P','p','Pth','pth')
+     case('p','pth')
         PlotVar(:,:,:,iVar) = State_VGB(P_,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_p
-!^CFG IF ALWAVES BEGIN
-     case('Ew','ew')
-!        PlotVar(:,:,:,iVar)=State_VGB(EnergyRL_,:,:,:,iBLK) !^CFG UNCOMMENT IF ALWAVES
-!^CFG END ALWAVES
 
         ! EXTRA MHD variables
 
-     case('Ux','ux')
+     case('ux')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 - OMEGAbody*y_BLK(:,:,:,iBLK)
         else
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
         end if
-     case('Uy','uy')
+     case('uy')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
                 + OMEGAbody*x_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar) = &
                 State_VGB(rhoUy_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
         end if
-     case('Uz','uz')
+     case('uz')
         PlotVar(:,:,:,iVar) = &
              State_VGB(rhoUz_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
-     case('B1x','b1x')
-        PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)
-     case('B1y','b1y')
-        PlotVar(:,:,:,iVar)=State_VGB(By_,:,:,:,iBLK)
-     case('B1z','b1z')
-        PlotVar(:,:,:,iVar)=State_VGB(Bz_,:,:,:,iBLK)
-     case('Jx','jx')
-        if(UseCovariant)then                                   !^CFG IF COVARIANT BEGIN
+     case('b1x')
+        PlotVar(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBLK)
+     case('b1y')
+        PlotVar(:,:,:,iVar) = State_VGB(By_,:,:,:,iBLK)
+     case('b1z')
+        PlotVar(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBLK)
+     case('jx')
+        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
            call covar_curlb_plotvar(x_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                                   !^CFG END COVARIANT
-           if(true_BLK(iBLK))then                              !^CFG IF NOT COVARIANT BEGIN
+        else                                       !^CFG END COVARIANT
+           if(true_BLK(iBLK))then                  !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bz_, 0:nI+1, 1:nJ+2, 0:nK+1,iBLK) &
-                   -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                   -State_VGB(Bz_, 0:nI+1,-1:nJ  , 0:nK+1,iBLK))/dy_BLK(iBLK)-&
                    (State_VGB(By_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                   -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK))
+                   -State_VGB(By_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
                  if( .not.true_cell(i,j,k,iBLK) ) CYCLE
@@ -728,19 +729,19 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                       (State_VGB(By_,i  ,j  ,kp1,iBLK) &
                       -State_VGB(By_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK))
               end do; end do; end do
-           end if                                                      !^CFG END COVARIANT
+           end if                            !^CFG END COVARIANT
            continue
-        end if                                                         !^CFG IF COVARIANT
-     case('Jy','jy')
-        if(UseCovariant)then                                           !^CFG IF COVARIANT BEGIN 
+        end if                               !^CFG IF COVARIANT
+     case('jy')
+        if(UseCovariant)then                 !^CFG IF COVARIANT BEGIN 
            call covar_curlb_plotvar(y_,iBLK,PlotVar(:,:,:,iVar))   
-        else                                                           !^CFG END COVARIANT
-           if(true_BLK(iBLK))then                                      !^CFG IF NOT COVARIANT BEGIN
+        else                                 !^CFG END COVARIANT
+           if(true_BLK(iBLK))then            !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(Bx_, 0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                   -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                   -State_VGB(Bx_, 0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK)-&
                    (State_VGB(Bz_, 1:nI+2, 0:nJ+1, 0:nK+1,iBLK) &
-                   -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK))
+                   -State_VGB(Bz_,-1:nI  , 0:nJ+1, 0:nK+1,iBLK))/dx_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
                  if( .not.true_cell(i,j,k,iBLK) ) CYCLE
@@ -761,24 +762,24 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                  
                  PlotVar(i,j,k,iVar)=0.5*(&
                       (State_VGB(Bx_,i  ,j  ,kp1,iBLK) &
-                      -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor / dz_BLK(iBLK) - &
+                      -State_VGB(Bx_,i  ,j  ,km1,iBLK))*zfactor/dz_BLK(iBLK)-&
                       (State_VGB(Bz_,ip1,j  ,k  ,iBLK) &
-                      -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK))
+                      -State_VGB(Bz_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK))
               end do; end do; end do
-           endif                                                   !^CFG END COVARIANT
+           endif                                   !^CFG END COVARIANT
            continue
-        end if                                                     !^CFG IF COVARIANT
+        end if                                     !^CFG IF COVARIANT
 
-     case('Jz','jz')
-        if(UseCovariant)then                                       !^CFG IF COVARIANT BEGIN
+     case('jz')
+        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
            call covar_curlb_plotvar(z_,iBLK,PlotVar(:,:,:,iVar))  
-        else                                                       !^CFG END COVARIANT           
-           if(true_BLK(iBLK))then                            !^CFG IF NOT COVARIANT BEGIN
+        else                                       !^CFG END COVARIANT
+           if(true_BLK(iBLK))then                  !^CFG IF NOT COVARIANT BEGIN
               PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*(&
                    (State_VGB(By_, 1:nI+2,0:nJ+1,0:nK+1,iBLK) &
-                   -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                   -State_VGB(By_,-1:nI  ,0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
                    (State_VGB(Bx_,0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-                   -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK))
+                   -State_VGB(Bx_,0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK))
            else
               do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1  ! Cell loop
                  if( .not.true_cell(i,j,k,iBLK) ) CYCLE
@@ -799,39 +800,39 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                  
                  PlotVar(i,j,k,iVar)=0.5*(&
                       (State_VGB(By_,ip1,j  ,k  ,iBLK) &
-                      -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor / dx_BLK(iBLK) - &
+                      -State_VGB(By_,im1,j  ,k  ,iBLK))*xfactor/dx_BLK(iBLK)-&
                       (State_VGB(Bx_,i  ,jp1,k  ,iBLK) &
-                      -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor / dy_BLK(iBLK))
+                      -State_VGB(Bx_,i  ,jm1,k  ,iBLK))*yfactor/dy_BLK(iBLK))
               end do; end do; end do
-           end if                                                  !^CFG END COVARIANT
+           end if                                  !^CFG END COVARIANT
            continue
-        end if                                                     !^CFG IF COVARIANT
+        end if                                     !^CFG IF COVARIANT
      case('enumx')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
      case('enumy')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ey_CB(:,:,:,iBLK)
      case('enumz')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
-     case('ex','Ex','EX')
+     case('ex')
         PlotVar(:,:,:,iVar)= &
              ( State_VGB(rhoUz_,:,:,:,iBLK) &
              * ( State_VGB(By_,:,:,:,iBLK) + B0yCell_BLK(:,:,:,iBLK)) &
              - State_VGB(rhoUy_,:,:,:,iBLK) &
              * ( State_VGB(Bz_,:,:,:,iBLK) + B0zCell_BLK(:,:,:,iBLK)) &
              ) / State_VGB(rho_,:,:,:,iBLK) 
-     case('ey','Ey','EY')
+     case('ey')
         PlotVar(:,:,:,iVar)= ( State_VGB(rhoUx_,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
              -State_VGB(rhoUz_,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)))/ &
              State_VGB(rho_,:,:,:,iBLK) 
-     case('ez','Ez','EZ')
+     case('ez')
         PlotVar(:,:,:,iVar)= ( State_VGB(rhoUy_,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
              -State_VGB(rhoUx_,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)))/ &
              State_VGB(rho_,:,:,:,iBLK) 
-     case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX')
+     case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
              ( (State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2  &
              + (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2  &
@@ -843,9 +844,11 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              State_VGB(rhoUy_,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUz_,:,:,:,iBLK)) * &
-             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK) ) )/State_VGB(rho_,:,:,:,iBLK)
-     case('pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY')
-        PlotVar(:,:,:,iVar) = ( ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
+             (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK) ) ) &
+             / State_VGB(rho_,:,:,:,iBLK)
+     case('pvecy')
+        PlotVar(:,:,:,iVar) = ( &
+             ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
              State_VGB(rhoUy_,:,:,:,iBLK) &
@@ -855,9 +858,11 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              State_VGB(rhoUy_,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUz_,:,:,:,iBLK)) * &
-             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK) ) )/State_VGB(rho_,:,:,:,iBLK)
-     case('pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ')
-        PlotVar(:,:,:,iVar) = ( ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
+             (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK) ) ) &
+             / State_VGB(rho_,:,:,:,iBLK)
+     case('pvecz')
+        PlotVar(:,:,:,iVar) = ( &
+             ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
              State_VGB(rhoUz_,:,:,:,iBLK) &
@@ -867,23 +872,24 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              State_VGB(rhoUy_,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
              State_VGB(rhoUz_,:,:,:,iBLK)) * &
-             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK) ) )/State_VGB(rho_,:,:,:,iBLK)
+             (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK) ) ) &
+             / State_VGB(rho_,:,:,:,iBLK)
 
         ! Radial component variables
 
-     case('Ur','ur')
+     case('ur')
         PlotVar(:,:,:,iVar) = &
              ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
              + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
              + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
-     case('rhoUr','rhour','mr')
+     case('rhour','mr')
         PlotVar(:,:,:,iVar) = &
              ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
              + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
              + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)
-     case('Br','br')
+     case('br')
         plotvar_useBody(iVar) = .true.
         PlotVar(:,:,:,iVar)=( &
              ( State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
@@ -892,39 +898,39 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              *Y_BLK(:,:,:,iBLK)                         &
              +(State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
              *Z_BLK(:,:,:,iBLK) ) / R_BLK(:,:,:,iBLK) 
-     case('B1r','b1r')
+     case('b1r')
         PlotVar(:,:,:,iVar)= &
              ( State_VGB(Bx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) &
              + State_VGB(By_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) &
              + State_VGB(Bz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)                                 
-     case('Jr','jr')
-        if(UseCovariant)then                                    !^CFG IF COVARIANT BEGIN
+     case('jr')
+        if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN
            call covar_curlbr_plotvar(iBLK,PlotVar(:,:,:,iVar))  
-        else                                                    !^CFG END COVARIANT
-           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &               !^CFG IF NOT COVARIANT BEGIN
+        else                                       !^CFG END COVARIANT
+           PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &  !^CFG IF NOT COVARIANT BEGIN
                 0.5 / R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) * &
                 ( ( &
                 ( State_VGB(Bz_,0:nI+1, 1:nJ+2, 0:nK+1,iBLK) & 
-                - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK)) / dy_BLK(iBLK) - &
+                - State_VGB(Bz_,0:nI+1,-1:nJ  , 0:nK+1,iBLK))/dy_BLK(iBLK) - &
                 ( State_VGB(By_,0:nI+1, 0:nJ+1, 1:nK+2,iBLK) &
-                - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK)   &
+                - State_VGB(By_,0:nI+1, 0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK)   &
                 ) * x_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
                 + ( &
                 ( State_VGB(Bx_, 0:nI+1,0:nJ+1, 1:nK+2,iBLK) &
-                - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK)) / dz_BLK(iBLK) - &
+                - State_VGB(Bx_, 0:nI+1,0:nJ+1,-1:nK  ,iBLK))/dz_BLK(iBLK) - &
                 ( State_VGB(Bz_, 1:nI+2,0:nJ+1, 0:nK+1,iBLK) &
-                - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK)) / dx_BLK(iBLK)   &
+                - State_VGB(Bz_,-1:nI  ,0:nJ+1, 0:nK+1,iBLK))/dx_BLK(iBLK)   &
                 ) * y_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) &
                 + ( &
                 ( State_VGB(By_, 1:nI+2, 0:nJ+1,0:nK+1,iBLK) &
-                - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK)) / dx_BLK(iBLK) - &
+                - State_VGB(By_,-1:nI  , 0:nJ+1,0:nK+1,iBLK))/dx_BLK(iBLK) - &
                 ( State_VGB(Bx_, 0:nI+1, 1:nJ+2,0:nK+1,iBLK) &
-                - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK)) / dy_BLK(iBLK)   &
-                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )             !^CFG END COVARIANT
+                - State_VGB(Bx_, 0:nI+1,-1:nJ  ,0:nK+1,iBLK))/dy_BLK(iBLK)   &
+                ) * z_BLK(0:nI+1,0:nJ+1,0:nK+1,iBLK) )     !^CFG END COVARIANT
            continue
-        end if                                                     !^CFG IF COVARIANT           
-     case('er','Er','ER')
+        end if                                             !^CFG IF COVARIANT
+     case('er')
         PlotVar(:,:,:,iVar)=( ( State_VGB(rhoUz_,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
              -State_VGB(rhoUy_,:,:,:,iBLK)* &
@@ -940,7 +946,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(rhoUx_,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))) &
              *z_BLK(:,:,:,iBLK) )/State_VGB(rho_,:,:,:,iBLK) 
-     case('pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
+     case('pvecr')
         tmp1Var = &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
@@ -954,37 +960,31 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              State_VGB(rhoUz_,:,:,:,iBLK) 
         PlotVar(:,:,:,iVar)=( ( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK) &
              -tmp2Var*(State_VGB(Bx_,:,:,:,iBLK)+ &
-             B0xCell_BLK(:,:,:,iBLK)))* &
-             X_BLK(:,:,:,iBLK) &
+             B0xCell_BLK(:,:,:,iBLK)))*X_BLK(:,:,:,iBLK) &
              +( tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK) &
-             -tmp2Var*(State_VGB(By_,:,:,:,iBLK)+ &
-             B0yCell_BLK(:,:,:,iBLK)))* &
-             Y_BLK(:,:,:,iBLK) &  
+             -  tmp2Var*(State_VGB(By_,:,:,:,iBLK)+ &
+             B0yCell_BLK(:,:,:,iBLK)))*Y_BLK(:,:,:,iBLK) &  
              +( tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK) &
-             -tmp2Var*(State_VGB(Bz_,:,:,:,iBLK)+ &
-             B0zCell_BLK(:,:,:,iBLK)))* &
-             Z_BLK(:,:,:,iBLK) )&   
+             -  tmp2Var*(State_VGB(Bz_,:,:,:,iBLK)+ &
+             B0zCell_BLK(:,:,:,iBLK)))*Z_BLK(:,:,:,iBLK) )&   
              /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
-     case('B2ur','B2Ur','b2ur')
+     case('b2ur')
         tmp1Var = &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2  
-        PlotVar(:,:,:,iVar)=0.5*( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK)* &
-             X_BLK(:,:,:,iBLK) &
-             +tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK)* &
-             Y_BLK(:,:,:,iBLK) &  
-             +tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK)* &
-             Z_BLK(:,:,:,iBLK) )&   
-             /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
-     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct')
+        PlotVar(:,:,:,iVar)=0.5* &
+             ( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK)*X_BLK(:,:,:,iBLK) &
+             + tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK)*Y_BLK(:,:,:,iBLK) &  
+             + tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
+             )/(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+     case('divb','divb_cd','divb_ct')
         if(UseCovariant)&                            !^CFG IF COVARIANT BEGIN
-             call stop_mpi('Do not plot divB, when UseCovariant=T. Use absdivB')
+             call stop_mpi('When UseCovariant=T use absdivb indstead of divb')
                                                      !^CFG END COVARIANT
         !^CFG IF NOT COVARIANT BEGIN
-        if(s.eq.'divb_CD' .or. s.eq.'divb_cd' .or. &
-             ((s.eq.'divb' .or. s.eq.'divB' .or. s.eq.'DivB') &
-             .and..not.UseConstrainB &                  !^CFG IF CONSTRAINB
+        if(s == 'divb_cd' .or. (s == 'divb' &
+             .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
              ))then
            ! Div B from central differences
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)=0.5*vInv_CB(1,1,1,iBLK)*(  &
@@ -994,7 +994,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 State_VGB(By_,0:nI+1,-1:nJ,0:nK+1,iBLK))+ &
                 fAz_BLK(iBLK)*(State_VGB(Bz_,0:nI+1,0:nJ+1,1:nk+2,iBLK)-  &
                 State_VGB(Bz_,0:nI+1,0:nJ+1,-1:nK,iBLK)))
-        else if(UseConstrainB)then                    !^CFG IF CONSTRAINB BEGIN
+        else if(UseConstrainB)then                   !^CFG IF CONSTRAINB BEGIN
            ! Div B from face fluxes
            PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar)= &
                 (Bxface_BLK(1:nI+2  ,0:nJ+1  ,0:nK+1  ,iBLK)              &
@@ -1003,7 +1003,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 -Byface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/dy_BLK(iBLK)&
                 +(Bzface_BLK(0:nI+1  ,0:nJ+1  ,1:nk+2  ,iBLK)              &
                 -Bzface_BLK(0:nI+1  ,0:nJ+1  ,0:nK+1  ,iBLK))/dz_BLK(iBLK)
-           !^CFG END CONSTRAINB
+           !                                         !^CFG END CONSTRAINB
         else
            ! Cell corner centered div B from cell centers
            PlotVar(0:nI+1  ,0:nJ+1  ,0:nK+1,iVar)= 0.25*(&
@@ -1036,8 +1036,9 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            where(.not.true_cell(:,:,:,iBLK))PlotVar(:,:,:,iVar)=0.0
         endif
 !^CFG END COVARIANT
-     case('absdivB','absdivb','ABSDIVB')
-         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
+     case('absdivb')
+         PlotVar(0:nI+1,0:nJ+1,0:nK+1,iVar) = &
+              abs(DivB1_GB(0:nI+1,0:nJ+1,0:nK+1,iBLK))
          if(.not.true_BLK(iBLK))then
             where(.not.true_cell(:,:,:,iBLK)) PlotVar(:,:,:,iVar)=0.0
          endif
@@ -1112,13 +1113,13 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=dx_BLK(iBLK)
      case('dt')
         PlotVar(1:nI,1:nJ,1:nK,iVar)=time_BLK(1:nI,1:nJ,1:nK,iBLK)
-     case('dtBLK','dtblk')
+     case('dtblk')
         PlotVar(:,:,:,iVar)=dt_BLK(iBLK)
         if(.not.true_BLK(iBLK))then
            if(.not.any(true_cell(1:nI,1:nJ,1:nK,iBLK)))&
                 PlotVar(:,:,:,iVar)=0.0
         end if
-     case('cons','CONS')
+     case('cons')
         if(allocated(IsConserv_CB))then
            where(IsConserv_CB(:,:,:,iBLK))
               PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
@@ -1132,24 +1133,26 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         end if
      case('evolve','impl')
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
-     case('PE','pe','proc')
+     case('pe','proc')
         PlotVar(:,:,:,iVar)=iProc
-     case('blk','BLK')
+     case('blk','block')
         PlotVar(:,:,:,iVar)=iBLK
-     case('blkall','BLKALL')
+     case('blkall')
         PlotVar(:,:,:,iVar)=global_block_number(iBLK)
      case('child')
         PlotVar(:,:,:,iVar)=BLKneighborCHILD(0,0,0,1,iBLK)
      case default
-        jVar = 1
-        do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)) )
-           jVar=jVar+1
+        ! Check if the name is one of the state variable names
+        do jVar = 1, nVar
+           NameVar = NameVar_V(jVar)
+           call lower_case(NameVar)
+           if(s /= NameVar) CYCLE
+           PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
+           if(DefaultState_V(jVar) > cTiny)&
+                plotvar_inBody(iVar) = CellState_VI(jVar,body1_)
+           EXIT
         end do
-        if(trim(s).eq.trim(NameVar_V(jVar))) then
-           PlotVar(:,:,:,iVar)=State_VGB(jVar,:,:,:,iBLK)
-           if(DefaultState_V(jVar)>cTiny)&
-                plotvar_inBody(iVar)=CellState_VI(jVar,body1_)
-        else
+        if( jVar > nVar ) then
            PlotVar(:,:,:,iVar)=-7777.
            if(iProc==0.and.iBLK==1)write(*,*) &
                 'Warning in set_plotvar: unknown plotvarname=',&
@@ -1161,20 +1164,22 @@ end subroutine set_plotvar
 
 
 !==============================================================================
-subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
-     plotvar,plotvar_inBody)
+subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
+     plotvar, plotvar_inBody)
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK, BlkTest, ProcTest
+  use ModMain, ONLY : nI, nJ, nK, BlkTest, ProcTest
   use ModPhysics
-  use ModVarIndexes, ONLY : NameVar_V, DefaultState_V   
+  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V   
+  use ModUtilities,  ONLY: lower_case
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
   real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
   real, intent(inout) :: plotVar_inBody(nPlotVar)
-  character (len=10)  :: s
+
+  character (len=10)  :: s, NameVar
 
   integer :: iVar,i,j,k, jVar
   logical :: oktest,oktest_me
@@ -1187,14 +1192,15 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
 
   do iVar=1,nPlotVar
      s=plotvarnames(iVar)
-
+     call lower_case(s)
      if (oktest_me)  write(*,*) 'iProc,plotvarnames,iVar,unitUSER_J', &
           iProc,plotvarnames(iVar),iVar,unitUSER_J
 
      ! Set plotvar_inBody to something reasonable for inside the body.
-     ! Load zeros (0) for most values - load something better for rho, p, and T.
+     ! Load zeros (0) for most values - load something better for rho, p, and T
      ! We know that U,B,J are okay with zeroes, others should be changed if
-     ! necessary.  Note that all variables not set to 0 in set_plotvar should be 
+     ! necessary.  
+     ! Note that all variables not set to 0 in set_plotvar should be 
      ! loaded below. Note that this is used for tecplot corner extrapolation 
      ! and for nothing else.
 
@@ -1205,76 +1211,48 @@ subroutine dimensionalize_plotvar(iBLK,iplotfile,nplotvar,plotvarnames, &
      case('rho')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_rho
         plotvar_inBody(iVar)=plotvar_inBody(iVar)*unitUSER_rho
-     case('rhoUx','rhoux','mx','rhoUy','rhouy','my','rhoUz','rhouz','mz', &
-          'rhoUr','rhour','mr' )
+     case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_rhoU
-     case('Bx','bx','By','by','Bz','bz','Br','br'&
-          ,'BxL','bxl','BxR','bxr'               &         !^CFG IF CONSTRAINB
-          ,'ByL','byl','ByR','byr'               &         !^CFG IF CONSTRAINB
-          ,'BzL','bzl','BzR','bzr'               &         !^CFG IF CONSTRAINB
+     case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
+          ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
           )
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_B
-     case('E','e','E1','e1')
+     case('e','e1')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_energydens
-     case('P','p','Pth','pth')
+     case('p','pth')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_p
         plotvar_inBody(iVar)=plotvar_inBody(iVar)*unitUSER_p
-!^CFG IF ALWAVES BEGIN
-     case('Ew','ew')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_energydens
-!^CFG END ALWAVES
 
         ! EXTRA MHD variables
 
-     case('Ux','ux','Uy','uy','Uz','uz')
+     case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_U
-     case('B1x','b1x','B1y','b1y','B1z','b1z','B1r','b1r')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_B
-     case('Jx','jx','Jy','jy','Jz','jz','Jr','jr')
+     case('jx','jy','jz','jr')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_J   
-     case('ex','Ex','ey','Ey','ez','Ez','er','Er','enumx','enumy','enumz')
+     case('ex','ey','ez','er','enumx','enumy','enumz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_electric   
-     case('pvecx','Pvecx','PvecX','pvecX','PVecX','PVECX', &
-          'pvecy','Pvecy','PvecY','pvecY','PVecY','PVECY', &
-          'pvecz','Pvecz','PvecZ','pvecZ','PVecZ','PVECZ', &
-          'pvecr','Pvecr','PvecR','pvecR','PVecR','PVECR')
+     case('pvecx','pvecy','pvecz','pvecr','b2ur')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
-     case('B2ur','B2Ur','b2ur')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
-     case('DivB','divB','divb','divb_CD','divb_cd','divb_CT','divb_ct',&
-          'absdivB','absdivb','ABSDIVB')
+     case('divb','divb_cd','divb_ct','absdivb')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_DivB
 
-        ! BASIC RAYTRACE variables
-
-     case('theta1','phi1','theta2','phi2')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)
-     case('status')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)
-
-        ! EXTRA RAYTRACE variables
-     case('f1x','f1y','f1z','f2x','f2y','f2z')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)
-
         ! GRID INFORMATION
-     case('dt','dtBLK','dtblk')
+     case('dt','dtBLK')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_t
      case('dx')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_x
 
         ! DEFAULT CASE
      case default
-        jVar = 1
-        do while (jVar < nVar .and.trim(s).ne.trim(NameVar_V(jVar)) )
-           jVar=jVar+1
-        end do
-        if(trim(s).eq.trim(NameVar_V(jVar))) then
-           PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*&
-                unitUSERVars_V(jVar)
+        do jVar = 1, nVar
+           NameVar = NameVar_V(jVar)
+           call lower_case(NameVar)
+           if(s /= NameVar) CYCLE
+           PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
            if(DefaultState_V(jVar)>cTiny)&
-                plotvar_inBody(iVar)=plotvar_inBody(iVar)*&
-                unitUSERVars_V(jVar)
-        end if
+                plotvar_inBody(iVar)=plotvar_inBody(iVar)*UnitUser_V(jVar)
+           EXIT
+        end do
         ! no normalization
      end select
   end do ! iVar
@@ -1287,7 +1265,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type,plot_dimensional
-  use ModVarIndexes, ONLY: NameVar_V
+  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
   implicit none
 
   ! Arguments
@@ -1384,9 +1362,6 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('p','pth')
         NameTecVar = 'p'
         NameUnit   = unitstr_TEC_p
-     case('ew')                                  !^CFG IF ALWAVES BEGIN
-        NameTecVar = 'Ew'
-        NameUnit   = unitstr_TEC_energydens      !^CFG END ALWAVES
      case('ux') 
         NameTecVar = 'U_x'
         NameUnit   = unitstr_TEC_U
@@ -1503,7 +1478,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
            NameVar = NameVar_V(iVar)
            call lower_case(NameVar)
            if(NameVar == NamePlotVar)then
-              NameUnit = TypeUnitVarsTec_V(iVar)
+              NameUnit = NameUnitUserTec_V(iVar)
               EXIT
            end if
         end do
@@ -1528,7 +1503,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type, plot_dimensional
-  use ModVarIndexes, ONLY: NameVar_V
+  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserIdl_V
   implicit none
 
   ! Arguments
@@ -1574,8 +1549,6 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = unitstr_IDL_energydens
      case('p','pth')
         NameUnit = unitstr_IDL_p
-     case('ew')                                  !^CFG IF ALWAVES
-        NameUnit = unitstr_IDL_energydens        !^CFG IF ALWAVES
      case('ux','uy','uz','ur')
         NameUnit = unitstr_IDL_U
      case('jx','jy','jz','jr') 
@@ -1605,7 +1578,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
            NameVar = NameVar_V(iVar)
            call lower_case(NameVar)
            if(NameVar == NamePlotVar)then
-              NameUnit = TypeUnitVarsIdl_V(iVar)
+              NameUnit = NameUnitUserIdl_V(iVar)
               EXIT
            end if
         end do
