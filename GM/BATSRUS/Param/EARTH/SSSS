@@ -15,8 +15,7 @@ default			TypeInitialRefine
 
 #SCHEME
 1			nORDER
-Rusanov			TypeFlux                        !^CFG IF NOT ALWAVES
-!AW                                               !^CFG UNCOMMENT IF ALWAVES
+Rusanov			TypeFlux
 
 #NONCONSERVATIVE
 T			UseNonConervative
@@ -55,10 +54,9 @@ F			DoSavePlotsAmr
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux                        !^CFG IF NOT ALWAVES
-minmod                  TypeLimiter                     !^CFG IF NOT ALWAVES
-!AW                                               !^CFG UNCOMMENT IF ALWAVES
-!minmod                  TypeLimiter              !^CFG UNCOMMENT IF ALWAVES
+Rusanov			TypeFlux
+minmod                  TypeLimiter
+
 #END_COMP GM ===============================================================
 
 #STOP
