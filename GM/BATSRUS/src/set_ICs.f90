@@ -73,30 +73,44 @@ subroutine set_ICs
         if(.not.restart)then
            SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
            CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+           do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+              if(x_BLK(i,j,k,globalBLK)<-ShockSlope*y_BLK(i,j,k,globalBLK))then
+                 ! Set all variables first
+                 State_VGB(:,i,j,k,globalBLK)   = shock_Lstate
+                 ! Set vector variables
+                 State_VGB(Ux_,i,j,k,globalBLK) = &
+                      (CosSlope*shock_Lstate(ux_)-SinSlope*shock_Lstate(uy_))
+                 State_VGB(Uy_,i,j,k,globalBLK) = &
+                      (SinSlope*shock_Lstate(ux_)+CosSlope*shock_Lstate(uy_))
+                 State_VGB(Bx_,i,j,k,globalBLK) = &
+                      CosSlope*shock_Lstate(bx_)-SinSlope*shock_Lstate(by_)
+                 State_VGB(By_,i,j,k,globalBLK) = &
+                      SinSlope*shock_Lstate(bx_)+CosSlope*shock_Lstate(by_)
+              else
+                 ! Set all variables first
+                 State_VGB(:,i,j,k,globalBLK)   = shock_Rstate
+                 ! Set vector variables
+                 State_VGB(Ux_,i,j,k,globalBLK) = &
+                      (CosSlope*shock_Rstate(ux_)-SinSlope*shock_Rstate(uy_))
+                 State_VGB(Uy_,i,j,k,globalBLK) = &
+                      (SinSlope*shock_Rstate(ux_)+CosSlope*shock_Rstate(uy_))
+                 State_VGB(Bx_,i,j,k,globalBLK) = &
+                      CosSlope*shock_Rstate(bx_)-SinSlope*shock_Rstate(by_)
+                 State_VGB(By_,i,j,k,globalBLK) = &
+                      SinSlope*shock_Rstate(bx_)+CosSlope*shock_Rstate(by_)
+              end if
+              ! Convert velocity to momentum
+              State_VGB(RhoUx_:RhoUz_,i,j,k,globalBLK) = &
+                   State_VGB(Rho_,i,j,k,globalBLK) &
+                   *State_VGB(Ux_:Uz_,i,j,k,globalBLK)
+
+           end do; end do; end do
            where (X_BLK(:,:,:,globalBLK) < -ShockSlope*Y_BLK(:,:,:,globalBLK))
               State_VGB(rho_,:,:,:,globalBLK)   =  shock_Lstate(rho_)
-              State_VGB(rhoUx_,:,:,:,globalBLK) =  shock_Lstate(rho_)* &
-                   (CosSlope*shock_Lstate(ux_)-SinSlope*shock_Lstate(uy_))
-              State_VGB(rhoUy_,:,:,:,globalBLK) =  shock_Lstate(rho_)* &
-                   (SinSlope*shock_Lstate(ux_)+CosSlope*shock_Lstate(uy_))
-              State_VGB(rhoUz_,:,:,:,globalBLK) = shock_Lstate(rho_)*shock_Lstate(uz_)
-              State_VGB(Bx_,:,:,:,globalBLK) = &
-                   CosSlope*shock_Lstate(bx_)-SinSlope*shock_Lstate(by_)
-              State_VGB(By_,:,:,:,globalBLK) = &
-                   SinSlope*shock_Lstate(bx_)+CosSlope*shock_Lstate(by_)
               State_VGB(Bz_,:,:,:,globalBLK) =  shock_Lstate(bz_)
               State_VGB(P_,:,:,:,globalBLK)  =  shock_Lstate(P_)
            elsewhere
               State_VGB(rho_,:,:,:,globalBLK)   =  shock_Rstate(rho_)
-              State_VGB(rhoUx_,:,:,:,globalBLK) =  shock_Rstate(rho_)* &
-                   (CosSlope*shock_Rstate(ux_)-SinSlope*shock_Rstate(uy_))
-              State_VGB(rhoUy_,:,:,:,globalBLK) =  shock_Rstate(rho_)* &
-                   (SinSlope*shock_Rstate(ux_)+CosSlope*shock_Rstate(uy_))
-              State_VGB(rhoUz_,:,:,:,globalBLK) = shock_Rstate(rho_)*shock_Rstate(uz_)
-              State_VGB(Bx_,:,:,:,globalBLK) = &
-                   CosSlope*shock_Rstate(bx_)-SinSlope*shock_Rstate(by_)
-              State_VGB(By_,:,:,:,globalBLK) = &
-                   SinSlope*shock_Rstate(bx_)+CosSlope*shock_Rstate(by_)
               State_VGB(Bz_,:,:,:,globalBLK) =  shock_Rstate(bz_)
               State_VGB(P_,:,:,:,globalBLK)  =  shock_Rstate(P_)
            end where
@@ -104,7 +118,7 @@ subroutine set_ICs
 
         if(index(test_string,'testBsplit')>0)then
            write(*,*)'Splitting B between B0 and B1 to test the code!!!'
-           State_VGB(Bx_,:,:,:,globalBLK)        = State_VGB(Bx_,:,:,:,globalBLK) &
+           State_VGB(Bx_,:,:,:,globalBLK) = State_VGB(Bx_,:,:,:,globalBLK) &
                 -shock_Lstate(bx_)*0.7
            B0xCell_BLK(:,:,:,globalBLK)   = shock_Lstate(bx_)*0.7
            B0xFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(bx_)*0.7
@@ -112,14 +126,14 @@ subroutine set_ICs
            B0xFace_z_BLK(:,:,:,globalBLK) = shock_Lstate(bx_)*0.7
 
 
-           State_VGB(By_,:,:,:,globalBLK)        = State_VGB(By_,:,:,:,globalBLK) &
+           State_VGB(By_,:,:,:,globalBLK) = State_VGB(By_,:,:,:,globalBLK) &
                 -shock_Lstate(by_)*0.4
            B0yCell_BLK(:,:,:,globalBLK)   = shock_Lstate(by_)*0.4
            B0yFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
            B0yFace_y_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
            B0yFace_z_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
 
-           State_VGB(Bz_,:,:,:,globalBLK)        = State_VGB(Bz_,:,:,:,globalBLK) &
+           State_VGB(Bz_,:,:,:,globalBLK) = State_VGB(Bz_,:,:,:,globalBLK) &
                 -shock_Lstate(bz_)*0.2
            B0zCell_BLK(:,:,:,globalBLK)   = shock_Lstate(bz_)*0.2
            B0zFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(bz_)*0.2
