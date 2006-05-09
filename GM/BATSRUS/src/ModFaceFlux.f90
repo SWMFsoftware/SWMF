@@ -800,11 +800,12 @@ contains
 
       use ModMain,    ONLY: x_, y_, z_
       use ModVarIndexes
-      use ModPhysics, ONLY: g, inv_c2LIGHT
+      use ModPhysics, ONLY: g, Inv_C2Light
+      use ModNumConst, ONLY: cPi
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast
-      real :: dB1dB1 ! For AW scheme only
+      real :: dB1dB1                                     !^CFG IF AWFLUX
       !------------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
       Sound2 = g*State_V(p_)*InvRho
@@ -865,15 +866,13 @@ end module ModFaceFlux
 !==============================================================================
 subroutine roe_solver(iDir, Flux_V)
 
-  use ModVarIndexes, ONLY: U_, B_
-
   use ModFaceFlux, ONLY: &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, Cmax, Unormal
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
-       Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_
+       Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
 
   use ModMain,     ONLY: x_, y_, z_, GlobalBlk
   use ModGeometry, ONLY: true_cell
@@ -883,16 +882,27 @@ subroutine roe_solver(iDir, Flux_V)
   use ModGeometry,   ONLY: UseCovariant                      !^CFG IF COVARIANT
   implicit none
 
+  ! Number of fluxes including pressure and energy fluxes
+  integer, parameter :: nFlux=nVar+1   
+
   integer, intent(in) :: iDir
-  real,    intent(out):: Flux_V(nVar+1)
+  real,    intent(out):: Flux_V(nFlux)
 
-  integer, parameter :: nFlux=nVar+1, nWave=nVar
-  integer, parameter :: RhoUn_=RhoUx_, RhoUt1_=RhoUy_, RhoUt2_=RhoUz_, &
-       B1n_=Bx_, B1t1_=By_, B1t2_=Bz_
+  ! Number of MHD fluxes including the pressure and energy fluxes
+  integer, parameter :: nFluxMhd = 9
 
+  ! Named conservative MHD variable indexes + pressure
+  integer, parameter :: RhoMhd_=1, RhoUn_=2, RhoUt1_=3, RhoUt2_=4, &
+       B1n_=5, B1t1_=6, B1t2_=7, eMhd_=8, pMhd_=9
+
+  ! Number of MHD waves including the divB wave
+  integer, parameter :: nWave=8
+
+  ! Named MHD wave indexes
   integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
        SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8 
 
+  ! Loop variables
   integer :: iFlux, iVar, iWave
 
   ! Left face
@@ -930,11 +940,11 @@ subroutine roe_solver(iDir, Flux_V)
   real, dimension(nWave) :: Eigenvalue_V, DeltaWave_V 
 
   ! Eigenvectors
-  real, dimension(nVar ,nWave):: EigenvectorL_VV       ! Left Eigenvectors
-  real, dimension(nWave,nFlux):: EigenvectorR_VV       ! Right Eigenvector
+  real, dimension(nWave, nWave)   :: EigenvectorL_VV  ! Left  eigenvectors
+  real, dimension(nWave, nFluxMhd):: EigenvectorR_VV  ! Right eigenvectors
 
   ! Fluxes
-  real, dimension(nFlux)      :: Diffusion_V !!! temporary
+  real, dimension(nFluxMhd)       :: Diffusion_V      ! Diffusive fluxes
 
   ! Logical to use Rusanov flux at inner boundary
   logical :: UseFluxRusanov
@@ -1102,9 +1112,8 @@ subroutine roe_solver(iDir, Flux_V)
   pR    =  StateRight_V(P_  )
 
   ! Jump in scalar conservative variables
-  dCons_V(Rho_) = StateRightCons_V(Rho_)   - StateLeftCons_V(Rho_)
-  ! Put the conservative energy difference in place of the pressure
-  dCons_V(p_)   = StateRightCons_V(Energy_)- StateLeftCons_V(Energy_)
+  dCons_V(RhoMhd_) = StateRightCons_V(Rho_)    - StateLeftCons_V(Rho_)
+  dCons_V(eMhd_)   = StateRightCons_V(Energy_) - StateLeftCons_V(Energy_)
 
   ! Derived variables
   RhoInvL = 1./RhoL
@@ -1313,8 +1322,7 @@ subroutine roe_solver(iDir, Flux_V)
   !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
   !
   !Enhanced diffusion, the maximum eigenvalue
-  Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), &
-       -Eigenvalue_V(FastLW_))
+  Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
 
   ! The original version was proposed by Timur Linde for heliosphere
   ! simulations. Enhanced version was found to be more robust on 8/20/01
@@ -1343,8 +1351,7 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorL_VV(8,1) = -Gamma1A2Inv
 
   ! Left eigenvector for Alfven wave +
-  EigenvectorL_VV(1,2) = (Ut1H*BetaZ-  &
-       Ut2H*BetaY)*Tmp2
+  EigenvectorL_VV(1,2) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
   EigenvectorL_VV(2,2) = 0.
   EigenvectorL_VV(3,2) = -(BetaZ*Tmp2)
   EigenvectorL_VV(4,2) = (BetaY*Tmp2)
@@ -1354,8 +1361,7 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorL_VV(8,2) = 0.
 
   ! Left eigenvector for Alfven wave -
-  EigenvectorL_VV(1,3) = (Ut1H*BetaZ-  &
-       Ut2H*BetaY)*Tmp2
+  EigenvectorL_VV(1,3) = (Ut1H*BetaZ-Ut2H*BetaY)*Tmp2
   EigenvectorL_VV(2,3) = 0.
   EigenvectorL_VV(3,3) = -(BetaZ*Tmp2)
   EigenvectorL_VV(4,3) = (BetaY*Tmp2)
@@ -1366,63 +1372,32 @@ subroutine roe_solver(iDir, Flux_V)
 
   ! Left eigenvector for Slow magnetosonic wave +
   EigenvectorL_VV(1,4) = Tmp1* &
-       (AlphaS*(gm1*UuH/2. - &
-       UnH*CsH) - &
-       AlphaF*CfH*SignBnH* &
-       (Ut1H*BetaY+ &
-       Ut2H*BetaZ))
-  EigenvectorL_VV(2,4) = Tmp1* &
-       (AlphaS*(-UnH*gm1+CsH))
-  EigenvectorL_VV(3,4) = Tmp1* &
-       (-gm1*AlphaS*Ut1H + &
-       AlphaF*CfH*BetaY*SignBnH)
-  EigenvectorL_VV(4,4) = Tmp1* &
-       (-gm1*AlphaS*Ut2H + &
-       AlphaF*CfH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,4) = Tmp1* &
-       (-gm1*B1nH*AlphaS)
-  EigenvectorL_VV(6,4) = Tmp1* &
-       (-AlphaF*BetaY*aH* &
-       RhoSqrtH-gm1*B1t1H*AlphaS)
-  EigenvectorL_VV(7,4) = Tmp1* &
-       (-AlphaF*BetaZ*aH* &
-       RhoSqrtH-gm1*B1t2H*AlphaS)
-  EigenvectorL_VV(8,4) = Tmp1* &
-       (gm1*AlphaS)
+       (AlphaS*(gm1*UuH/2. - UnH*CsH) - &
+       AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorL_VV(2,4) = Tmp1*(AlphaS*(-UnH*gm1+CsH))
+  EigenvectorL_VV(3,4) = Tmp1*(-gm1*AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
+  EigenvectorL_VV(4,4) = Tmp1*(-gm1*AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,4) = Tmp1*(-gm1*B1nH*AlphaS)
+  EigenvectorL_VV(6,4) = Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-gm1*B1t1H*AlphaS)
+  EigenvectorL_VV(7,4) = Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH - gm1*B1t2H*AlphaS)
+  EigenvectorL_VV(8,4) = Tmp1*(gm1*AlphaS)
 
   ! Left eigenvector for Fast magnetosonic wave +
   EigenvectorL_VV(1,5) = Tmp1* &
-       (AlphaF*(gm1*UuH/2. - &
-       UnH*CfH)+AlphaS* &
-       CsH*SignBnH* &
-       (Ut1H*BetaY + &
-       Ut2H*BetaZ))
-  EigenvectorL_VV(2,5) = Tmp1* &
-       (AlphaF*(-UnH*gm1+CfH))
-  EigenvectorL_VV(3,5) = Tmp1* &
-       (-gm1*AlphaF*Ut1H - &
-       AlphaS*CsH*BetaY*SignBnH)
-  EigenvectorL_VV(4,5) = Tmp1* &
-       (-gm1*AlphaF*Ut2H - &
-       AlphaS*CsH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,5) = Tmp1* &
-       (-gm1*B1nH*AlphaF)
-  EigenvectorL_VV(6,5) = Tmp1* &
-       (AlphaS*BetaY*aH* &
-       RhoSqrtH-gm1*B1t1H*AlphaF)
-  EigenvectorL_VV(7,5) = Tmp1*                   &
-       (AlphaS*BetaZ*aH* &
-       RhoSqrtH-gm1*B1t2H*AlphaF)
-  EigenvectorL_VV(8,5) = Tmp1* &
-       (gm1*AlphaF)
+       (AlphaF*(gm1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
+       (Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorL_VV(2,5) = Tmp1*(AlphaF*(-UnH*gm1+CfH))
+  EigenvectorL_VV(3,5) = Tmp1*(-gm1*AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
+  EigenvectorL_VV(4,5) = Tmp1*(-gm1*AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,5) = Tmp1*(-gm1*B1nH*AlphaF)
+  EigenvectorL_VV(6,5) = Tmp1*(AlphaS*BetaY*aH*RhoSqrtH - gm1*B1t1H*AlphaF)
+  EigenvectorL_VV(7,5) = Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH - gm1*B1t2H*AlphaF)
+  EigenvectorL_VV(8,5) = Tmp1*(gm1*AlphaF)
 
   ! Left eigenvector for Slow magnetosonic wave -
   EigenvectorL_VV(1,6) = Tmp1* &
-       (AlphaS*(gm1*UuH/2. + &
-       UnH*CsH) + &
-       AlphaF*CfH*SignBnH* &
-       (Ut1H*BetaY + &
-       Ut2H*BetaZ))
+       (AlphaS*(gm1*UuH/2. + UnH*CsH) + &
+       AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorL_VV(2,6) = Tmp1*(AlphaS*(-UnH*gm1-CsH))
   EigenvectorL_VV(3,6) = Tmp1*(-gm1*AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
   EigenvectorL_VV(4,6) = Tmp1*(-gm1*AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
@@ -1434,8 +1409,7 @@ subroutine roe_solver(iDir, Flux_V)
   ! Left eigenvector for Fast magnetosonic wave -
   EigenvectorL_VV(1,7) = Tmp1* &
        (AlphaF*(gm1*UuH/2. + UnH*CfH) - &
-       AlphaS*CsH*SignBnH* &
-       (Ut1H*BetaY + Ut2H*BetaZ))
+       AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorL_VV(2,7) = Tmp1*(AlphaF*(-UnH*gm1-CfH))
   EigenvectorL_VV(3,7) = Tmp1*(-gm1*AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
   EigenvectorL_VV(4,7) = Tmp1*(-gm1*AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
@@ -1476,8 +1450,8 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(1,5) = 0.
   EigenvectorR_VV(1,6) = 0.
   EigenvectorR_VV(1,7) = 0.
-  EigenvectorR_VV(1,Energy_) = 0.5*UuH
-  EigenvectorR_VV(1,P_)=cZero
+  EigenvectorR_VV(1,eMhd_) = 0.5*UuH
+  EigenvectorR_VV(1,pMhd_)=cZero
 
   ! Right eigenvector for Alfven wave +
   EigenvectorR_VV(2,1) = 0.
@@ -1487,11 +1461,9 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(2,5) = 0.
   EigenvectorR_VV(2,6) = BetaZ*RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
-  EigenvectorR_VV(2,Energy_) = (BetaY*Ut2H - &
-       BetaZ*Ut1H)*RhoH*cSqrtHalf &
-       +(B1t1H*BetaZ-B1t2H*BetaY)* &
-       RhoSqrtH*cSqrtHalf
-  EigenvectorR_VV(2,P_)=cZero
+  EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+       + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+  EigenvectorR_VV(2,pMhd_)=cZero
 
   ! Right eigenvector for Alfven wave -
   EigenvectorR_VV(3,1) = 0.
@@ -1501,11 +1473,9 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(3,5) = 0.
   EigenvectorR_VV(3,6) = -BetaZ*RhoSqrtH*cSqrtHalf
   EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
-  EigenvectorR_VV(3,Energy_) = (BetaY*Ut2H - &
-       BetaZ*Ut1H)*RhoH*cSqrtHalf &
-       -(B1t1H*BetaZ-B1t2H*BetaY)* &
-       RhoSqrtH*cSqrtHalf
-  EigenvectorR_VV(3,P_)=cZero
+  EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
+       - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
+  EigenvectorR_VV(3,pMhd_)=cZero
 
   ! Right eigenvector for Slow magnetosonic wave +
   EigenvectorR_VV(4,1) = RhoH*AlphaS
@@ -1515,14 +1485,11 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(4,5) = 0.
   EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
-  EigenvectorR_VV(4,Energy_) = AlphaS*(RhoH*UuH*0.5 + &
-       g*pH*inv_gm1+RhoH*UnH* &
-       CsH)-AlphaF*(aH* &
-       RhoSqrtH*(BetaY*B1t1H + &
-       BetaZ*B1t2H)-RhoH* &
-       CfH*SignBnH* &
-       (Ut1H*BetaY+Ut2H*BetaZ))
-  EigenvectorR_VV(4,P_)=Tmp1*AlphaS
+  EigenvectorR_VV(4,eMhd_) = &
+       AlphaS*(RhoH*UuH*0.5 + g*pH*inv_gm1+RhoH*UnH*CsH) &
+       - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+       - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorR_VV(4,pMhd_)=Tmp1*AlphaS
 
   ! Right eigenvector for Fast magnetosonic wave +
   EigenvectorR_VV(5,1) = RhoH*AlphaF
@@ -1532,14 +1499,11 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(5,5) = 0.
   EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
-  EigenvectorR_VV(5,Energy_) = AlphaF*(RhoH*UuH*0.5 + &
-       g*pH*inv_gm1+RhoH*UnH* &
-       CfH)+AlphaS*(aH* &
-       RhoSqrtH*(BetaY*B1t1H+ &
-       BetaZ*B1t2H)-RhoH* &
-       CsH*SignBnH* &
-       (Ut1H*BetaY+Ut2H*BetaZ))
-  EigenvectorR_VV(5,P_)=Tmp1*AlphaF
+  EigenvectorR_VV(5,eMhd_) = &
+       AlphaF*(RhoH*UuH*0.5 + g*pH*inv_gm1+RhoH*UnH*CfH) &
+       + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+       - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorR_VV(5,pMhd_)=Tmp1*AlphaF
 
   ! Right eigenvector for Slow magnetosonic wave -
   EigenvectorR_VV(6,1) = RhoH*AlphaS
@@ -1549,33 +1513,25 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(6,5) = 0.
   EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
-  EigenvectorR_VV(6,Energy_) = AlphaS*(RhoH*UuH*0.5 + &
-       g*pH*inv_gm1-RhoH*UnH* &
-       CsH)-AlphaF*(aH* &
-       RhoSqrtH*(BetaY*B1t1H+ &
-       BetaZ*B1t2H)+RhoH* &
-       CfH*SignBnH* &
-       (Ut1H*BetaY+Ut2H*BetaZ))
-  EigenvectorR_VV(6,P_)=Tmp1*AlphaS
+  EigenvectorR_VV(6,eMhd_) = &
+       AlphaS*(RhoH*UuH*0.5 + g*pH*inv_gm1-RhoH*UnH*CsH) &
+       - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+       + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorR_VV(6,pMhd_)=Tmp1*AlphaS
 
   ! Right eigenvector for Fast magnetosonic wave -
   EigenvectorR_VV(7,1) = RhoH*AlphaF
   EigenvectorR_VV(7,2) = RhoH*AlphaF* (UnH-CfH)
-  EigenvectorR_VV(7,3) = RhoH* &
-       (AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
-  EigenvectorR_VV(7,4) = RhoH* &
-       (AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
+  EigenvectorR_VV(7,3) = RhoH*(AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
+  EigenvectorR_VV(7,4) = RhoH*(AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
   EigenvectorR_VV(7,5) = 0.
   EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
-  EigenvectorR_VV(7,Energy_) = AlphaF*(RhoH*UuH*0.5 + &
-       g*pH*inv_gm1-RhoH*UnH* &
-       CfH)+AlphaS*(aH* &
-       RhoSqrtH*(BetaY*B1t1H + &
-       BetaZ*B1t2H)+RhoH* &
-       CsH*SignBnH* &
-       (Ut1H*BetaY+Ut2H*BetaZ))
-  EigenvectorR_VV(7,P_)=Tmp1*AlphaF
+  EigenvectorR_VV(7,eMhd_) = &
+       AlphaF*(RhoH*UuH*0.5 + g*pH*inv_gm1-RhoH*UnH*CfH) &
+       + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
+       + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
+  EigenvectorR_VV(7,pMhd_)=Tmp1*AlphaF
 
   ! Right eigenvector for Divergence wave
   EigenvectorR_VV(8,1) = 0.
@@ -1585,8 +1541,8 @@ subroutine roe_solver(iDir, Flux_V)
   EigenvectorR_VV(8,5) = 1.
   EigenvectorR_VV(8,6) = 0.
   EigenvectorR_VV(8,7) = 0.
-  EigenvectorR_VV(8,Energy_) = B1nH
-  EigenvectorR_VV(8,P_) = cZero
+  EigenvectorR_VV(8,eMhd_) = B1nH
+  EigenvectorR_VV(8,pMhd_) = cZero
 
   !\
   ! Alphas (elemental wave strengths)
@@ -1602,65 +1558,73 @@ subroutine roe_solver(iDir, Flux_V)
   !/
   ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
   !  Diffusion_V = matmul(abs(Eigenvalue_V)*DeltaWave_V, EigenvectorR_VV)
-  do iFlux = 1, nFlux
+  do iFlux = 1, nFluxMhd
      Diffusion_V(iFlux) = &
           sum(abs(Eigenvalue_V)*DeltaWave_V*EigenvectorR_VV(:,iFlux))
   end do
 
   ! Scalar variables
-  Flux_V(Rho_   ) = Diffusion_V(1)
-  Flux_V(P_     ) = Diffusion_V(8)
-  Flux_V(Energy_) = Diffusion_V(9)
+  Flux_V(Rho_   ) = Diffusion_V(RhoMhd_)
+  Flux_V(P_     ) = Diffusion_V(pMhd_)
+  Flux_V(Energy_) = Diffusion_V(eMhd_)
 
   ! Rotate n,t1,t2 components back to x,y,z components
   if(UseCovariant)then                                 !^CFG IF COVARIANT BEGIN
-     Flux_V(RhoUx_) = Normal_D(x_)  *Diffusion_V(2) &
-          +           Tangent1_D(x_)*Diffusion_V(3) &
-          +           Tangent2_D(x_)*Diffusion_V(4)
-     Flux_V(RhoUy_) = Normal_D(y_)  *Diffusion_V(2) &
-          +           Tangent1_D(y_)*Diffusion_V(3) &
-          +           Tangent2_D(y_)*Diffusion_V(4)
-     Flux_V(RhoUz_) = Normal_D(z_)  *Diffusion_V(2) &
-          +           Tangent1_D(z_)*Diffusion_V(3) &
-          +           Tangent2_D(z_)*Diffusion_V(4)
+     Flux_V(RhoUx_) = Normal_D(x_)  *Diffusion_V(RhoUn_)  &
+          +           Tangent1_D(x_)*Diffusion_V(RhoUt1_) &
+          +           Tangent2_D(x_)*Diffusion_V(RhoUt2_)
+     Flux_V(RhoUy_) = Normal_D(y_)  *Diffusion_V(RhoUn_)  &
+          +           Tangent1_D(y_)*Diffusion_V(RhoUt1_) &
+          +           Tangent2_D(y_)*Diffusion_V(RhoUt2_)
+     Flux_V(RhoUz_) = Normal_D(z_)  *Diffusion_V(RhoUn_)  &
+          +           Tangent1_D(z_)*Diffusion_V(RhoUt1_) &
+          +           Tangent2_D(z_)*Diffusion_V(RhoUt2_)
 
-     Flux_V(Bx_   ) = Normal_D(x_)  *Diffusion_V(5) &
-          +           Tangent1_D(x_)*Diffusion_V(6) &
-          +           Tangent2_D(x_)*Diffusion_V(7)
-     Flux_V(By_   ) = Normal_D(y_)  *Diffusion_V(5) &
-          +           Tangent1_D(y_)*Diffusion_V(6) &
-          +           Tangent2_D(y_)*Diffusion_V(7)
-     Flux_V(Bz_   ) = Normal_D(z_)  *Diffusion_V(5) &
-          +           Tangent1_D(z_)*Diffusion_V(6) &
-          +           Tangent2_D(z_)*Diffusion_V(7)
+     Flux_V(Bx_   ) = Normal_D(x_)  *Diffusion_V(B1n_)  &
+          +           Tangent1_D(x_)*Diffusion_V(B1t1_) &
+          +           Tangent2_D(x_)*Diffusion_V(B1t2_)
+     Flux_V(By_   ) = Normal_D(y_)  *Diffusion_V(B1n_)  &
+          +           Tangent1_D(y_)*Diffusion_V(B1t1_) &
+          +           Tangent2_D(y_)*Diffusion_V(B1t2_)
+     Flux_V(Bz_   ) = Normal_D(z_)  *Diffusion_V(B1n_)  &
+          +           Tangent1_D(z_)*Diffusion_V(B1t1_) &
+          +           Tangent2_D(z_)*Diffusion_V(B1t2_)
   else                                                 !^CFG END COVARIANT
      select case (iDir)
      case (x_)
-        Flux_V(RhoUx_ ) = Diffusion_V(2)
-        Flux_V(RhoUy_ ) = Diffusion_V(3)
-        Flux_V(RhoUz_ ) = Diffusion_V(4)
-        Flux_V(Bx_    ) = Diffusion_V(5)
-        Flux_V(By_    ) = Diffusion_V(6)
-        Flux_V(Bz_    ) = Diffusion_V(7)
+        Flux_V(RhoUx_ ) = Diffusion_V(RhoUn_)
+        Flux_V(RhoUy_ ) = Diffusion_V(RhoUt1_)
+        Flux_V(RhoUz_ ) = Diffusion_V(RhoUt2_)
+        Flux_V(Bx_    ) = Diffusion_V(B1n_)
+        Flux_V(By_    ) = Diffusion_V(B1t1_)
+        Flux_V(Bz_    ) = Diffusion_V(B1t2_)
      case (y_)
-        Flux_V(RhoUx_ ) = Diffusion_V(4)
-        Flux_V(RhoUy_ ) = Diffusion_V(2)
-        Flux_V(RhoUz_ ) = Diffusion_V(3)
-        Flux_V(Bx_    ) = Diffusion_V(7)
-        Flux_V(By_    ) = Diffusion_V(5)
-        Flux_V(Bz_    ) = Diffusion_V(6)
+        Flux_V(RhoUx_ ) = Diffusion_V(RhoUt2_)
+        Flux_V(RhoUy_ ) = Diffusion_V(RhoUn_)
+        Flux_V(RhoUz_ ) = Diffusion_V(RhoUt1_)
+        Flux_V(Bx_    ) = Diffusion_V(B1t2_)
+        Flux_V(By_    ) = Diffusion_V(B1n_)
+        Flux_V(Bz_    ) = Diffusion_V(B1t1_)
      case (z_)
-        Flux_V(RhoUx_ ) = Diffusion_V(3)
-        Flux_V(RhoUy_ ) = Diffusion_V(4)
-        Flux_V(RhoUz_ ) = Diffusion_V(2)
-        Flux_V(Bx_    ) = Diffusion_V(6)
-        Flux_V(By_    ) = Diffusion_V(7)
-        Flux_V(Bz_    ) = Diffusion_V(5)
+        Flux_V(RhoUx_ ) = Diffusion_V(RhoUt1_)
+        Flux_V(RhoUy_ ) = Diffusion_V(RhoUt2_)
+        Flux_V(RhoUz_ ) = Diffusion_V(RhoUn_)
+        Flux_V(Bx_    ) = Diffusion_V(B1t1_)
+        Flux_V(By_    ) = Diffusion_V(B1t2_)
+        Flux_V(Bz_    ) = Diffusion_V(B1n_)
      end select
   end if                                               !^CFG IF COVARIANT
 
+  ! The diffusive flux for the advected scalar variables is simply
+  ! 0.5*|Velocity|*(U_R - U_L)
+  do iVar = ScalarFirst_, ScalarLast_
+     Flux_V(iVar) = abs(UnH)*(StateRightCons_V(iVar) - StateLeftCons_V(iVar))
+  end do
+
+  ! Roe flux = average of left and right flux plus the diffusive flux
   Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Area*Flux_V)
 
+  ! Normal velocity and maximum wave speed
   Unormal = Area*UnH
   Cmax    = Area*(abs(UnH) + CfH)
 
