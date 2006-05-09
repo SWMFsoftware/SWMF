@@ -1247,6 +1247,24 @@ subroutine test_error_report
 end subroutine test_error_report
 
 !==============================================================================
+subroutine join_str(n, String_I, String)
+
+  ! Append the n strings in the string array String_I to the end of String
+  ! separated by spaces.
+  implicit none
+
+  integer, intent(in)            :: n
+  character(len=*), intent(in)   :: String_I(n)
+  character(len=*), intent(inout):: String
+
+  integer :: i
+  !---------------------------------------------------------------------------
+  do i = 1, n
+     String = trim(String) // ' ' // String_I(i)
+  end do
+
+end subroutine join_str
+!==============================================================================
 subroutine split_str(str,nmax,strarr,n)
 
   implicit none
