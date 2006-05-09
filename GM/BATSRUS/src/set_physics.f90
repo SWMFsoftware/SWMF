@@ -194,7 +194,7 @@ subroutine set_physics_constants
   !Here the arrays of the FACE VALUE are formed
   !Initialization
   do iBoundary=body2_,Top_
-     FaceState_VI(:,iBoundary)=DefaultState_V
+     FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
   end do
 
   !For bodies:
@@ -415,7 +415,7 @@ subroutine set_dimensions
   implicit none
 
   logical :: oktest, oktest_me
-
+  !-----------------------------------------------------------------------
   call set_oktest('set_dimensions',oktest, oktest_me)
 
   !\
@@ -699,8 +699,8 @@ subroutine set_dimensions
      unitUSER_DivB        = unitSI_DivB                     
      ! set temperature - note that the below is  only strictly true for a
      ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  There is no way around
-     ! this in MHD.
+     ! be off in temperature by as much as a factor of #.  
+     ! There is no way around this in MHD.
      unitUSER_temperature = unitSI_temperature  ! dimensionless
      !\
      ! set string variables used for writing output - TECPLOT
@@ -738,30 +738,53 @@ subroutine set_dimensions
      unitstr_IDL_temperature = ''           
 
   end select
-  unitUSERVars_V(rho_)     = unitUSER_rho
-  unitUSERVars_V(rhoUx_)   = unitUSER_rhoU
-  unitUSERVars_V(rhoUy_)   = unitUSER_rhoU
-  unitUSERVars_V(rhoUz_)   = unitUSER_rhoU
-  unitUSERVars_V(Bx_)      = unitUSER_B
-  unitUSERVars_V(By_)      = unitUSER_B
-  unitUSERVars_V(Bz_)      = unitUSER_B
-  unitUSERVars_V(P_)   = unitUSER_p
-
-  TypeUnitVarsTec_V(rho_)    = unitstr_TEC_rho
-  TypeUnitVarsTec_V(rhoUx_)  = unitstr_TEC_rhoU
-  TypeUnitVarsTec_V(rhoUy_)  = unitstr_TEC_rhoU
-  TypeUnitVarsTec_V(rhoUz_)  = unitstr_TEC_rhoU
-  TypeUnitVarsTec_V(Bx_)     = unitstr_TEC_B
-  TypeUnitVarsTec_V(By_)     = unitstr_TEC_B
-  TypeUnitVarsTec_V(Bz_)     = unitstr_TEC_B
-  TypeUnitVarsTec_V(P_)  = unitstr_TEC_p
-
-  TypeUnitVarsIdl_V(rho_)    = unitstr_IDL_rho
-  TypeUnitVarsIdl_V(rhoUx_)  = unitstr_IDL_rhoU
-  TypeUnitVarsIdl_V(rhoUy_)  = unitstr_IDL_rhoU
-  TypeUnitVarsIdl_V(rhoUz_)  = unitstr_IDL_rhoU
-  TypeUnitVarsIdl_V(Bx_)     = unitstr_IDL_B
-  TypeUnitVarsIdl_V(By_)     = unitstr_IDL_B
-  TypeUnitVarsIdl_V(Bz_)     = unitstr_IDL_B
-  TypeUnitVarsIdl_V(P_)  = unitstr_IDL_p
 end subroutine set_dimensions
+
+subroutine init_mhd_variables
+
+  use ModVarIndexes
+  use ModPhysics
+
+  implicit none
+
+  integer :: iVar
+  !--------------------------------------------------------------------------
+
+  UnitUser_V(Rho_)     = UnitUser_Rho
+  UnitUser_V(RhoUx_)   = UnitUser_RhoU
+  UnitUser_V(RhoUy_)   = UnitUser_RhoU
+  UnitUser_V(RhoUz_)   = UnitUser_RhoU
+  UnitUser_V(Bx_)      = UnitUser_B
+  UnitUser_V(By_)      = UnitUser_B
+  UnitUser_V(Bz_)      = UnitUser_B
+  UnitUser_V(p_)       = UnitUser_p
+  UnitUser_V(Energy_)  = UnitUser_EnergyDens
+
+  NameUnitUserTec_V(rho_)    = UnitStr_Tec_Rho
+  NameUnitUserTec_V(rhoUx_)  = UnitStr_Tec_RhoU
+  NameUnitUserTec_V(rhoUy_)  = UnitStr_Tec_RhoU
+  NameUnitUserTec_V(rhoUz_)  = UnitStr_Tec_RhoU
+  NameUnitUserTec_V(Bx_)     = UnitStr_Tec_B
+  NameUnitUserTec_V(By_)     = UnitStr_Tec_B
+  NameUnitUserTec_V(Bz_)     = UnitStr_Tec_B
+  NameUnitUserTec_V(P_)      = UnitStr_Tec_p
+  NameUnitUserTec_V(Energy_) = UnitStr_Tec_EnergyDens
+
+  NameUnitUserIdl_V(rho_)    = UnitStr_Idl_Rho
+  NameUnitUserIdl_V(rhoUx_)  = UnitStr_Idl_RhoU
+  NameUnitUserIdl_V(rhoUy_)  = UnitStr_Idl_RhoU
+  NameUnitUserIdl_V(rhoUz_)  = UnitStr_Idl_RhoU
+  NameUnitUserIdl_V(Bx_)     = UnitStr_Idl_B
+  NameUnitUserIdl_V(By_)     = UnitStr_Idl_B
+  NameUnitUserIdl_V(Bz_)     = UnitStr_Idl_B
+  NameUnitUserIdl_V(P_)      = UnitStr_Idl_p
+  NameUnitUserIdl_V(Energy_) = UnitStr_Idl_EnergyDens
+
+  ! By default the scalar advected variables are assumed to behave like density
+  do iVar = ScalarFirst_, ScalarLast_
+     UnitUser_V(iVar)        = UnitUser_Rho
+     NameUnitUserTec_V(iVar) = UnitStr_Tec_Rho
+     NameUnitUserIdl_V(iVar) = UnitStr_Idl_Rho
+  end do
+
+end subroutine init_mhd_variables
