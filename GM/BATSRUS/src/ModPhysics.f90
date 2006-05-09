@@ -106,23 +106,21 @@ module ModPhysics
   real, dimension(1:nVar) :: shock_Lstate, shock_Rstate
   real :: ShockSlope
 
-  real,dimension(nVar,body2_:Top_)::FaceState_VI,&
-       CellState_VI
-
-
+  ! State for the boundary conditions
+  real,dimension(nVar,body2_:Top_):: FaceState_VI, CellState_VI
 
   !\
   ! Heliosphere terms.
   !/
-  real ::  Presun, RHOsun, SSPsun
-  real ::  Velsun
-  real ::  Qsun, Theat, Rheat, SIGMAheat
+  real ::  PreSun, RhoSun, SspSun
+  real ::  VelSun
+  real ::  qSun, tHeat, rHeat, SigmaHeat
 
   !\
   ! CME and Arcade parameters
   !/
   logical:: UseFluxRope=.false.
-  character*10 :: cme_type
+  character(len=10) :: cme_type
   real :: cme_a, cme_r1, cme_r0, cme_a1, cme_alpha 
   real :: cme_rho1, cme_rho2, cme_B1_dim, cme_v_erupt
   real :: Rscl, RHOscl, rho1scl, rho2scl, SSPscl, Vscl 
@@ -132,7 +130,8 @@ module ModPhysics
   real :: widthArc, phi0Arc, muArc
   real :: RhoArcDim, TArcDim, UzArcDim, BArcDim, ByArcDim
   real :: B0_scl, B0y_scl, Phtscl
-  integer :: expArc
+  integer :: ExpArc
+
   !\
   ! Position of Earth for Dynamic AMR purposes, including
   ! a parameter that specifies the opening angle of the ray
@@ -214,12 +213,5 @@ module ModPhysics
        unitstr_TEC_J, unitstr_TEC_electric,             & ! derived quantities
        unitstr_TEC_DivB, unitstr_TEC_temperature,       & ! derived quantities
        unitstr_TEC_Poynting                               ! Poynting vector
-
-  real, dimension(nVar) ::unitUSERVars_V= cOne
-
-  ! String representation of the units above of the variables user defined
-  !- used for output - IDL and TEC
-  character (len=20), dimension(nVar) ::  &
-       TypeUnitVarsIdl_V='',TypeUnitVarsTec_V=''
 
 end module ModPhysics
