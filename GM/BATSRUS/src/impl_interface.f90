@@ -340,6 +340,7 @@ subroutine getcmax(w,B0,Dxyz_D,qnI,qnJ,qnK,idim,implBLK,cmax)
   use ModImplicit
   use ModPhysics, ONLY : g
   use ModHallResist, ONLY: IonMassPerCharge, HallCmaxFactor
+  use ModNumConst,   ONLY: cPi
   implicit none
 
   integer, intent(in):: qnI,qnJ,qnK,idim,implBLK
