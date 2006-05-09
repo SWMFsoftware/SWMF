@@ -173,9 +173,7 @@ contains
          Top_
     use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
          UseRotatingFrame
-    use ModVarIndexes, ONLY: & 
-                                !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
-         rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
+    use ModVarIndexes, ONLY: rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_,Ew_ 
 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nFaceValueVars,State_VGB
@@ -282,9 +280,9 @@ contains
          VarsTrueFace_V(rho_))
     VarsGhostFace_V(P_       ) = max(-VarsTrueFace_V(P_       )+ &
          cTwo*PresCell,VarsTrueFace_V(P_  ))
-    !  VarsGhostFace_V(EnergyRL_) = max(-VarsTrueFace_V(EnergyRL_)+ &  !^CFG UNCOMMENT IF ALWAVES
-    !       cTwo*PresCell*(cOne/(GammaCell-cOne)-inv_gm1),          &  !^CFG UNCOMMENT IF ALWAVES
-    !       VarsTrueFace_V(EnergyRL_))                                 !^CFG UNCOMMENT IF ALWAVES
+    VarsGhostFace_V(Ew_) = max(-VarsTrueFace_V(Ew_)+ &  
+         cTwo*PresCell*(cOne/(GammaCell-cOne)-inv_gm1),&
+         VarsTrueFace_V(Ew_))
 
     !\
     ! Apply corotation:: Currently works only for the first body.
@@ -464,9 +462,7 @@ contains
     use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
          unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
-    use ModVarIndexes,ONLY:&
-                                !EnergyRL_ ,&  !^CFG UNCOMMENT IF ALWAVES
-         rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
+    use ModVarIndexes,ONLY: rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,Ew_
     use ModAdvance,   ONLY: State_VGB,B0xCell_BLK,B0yCell_BLK,       &
          B0zCell_BLK,tmp1_BLK,tmp2_BLK
     use ModProcMH,    ONLY: iProc,nProc,iComm
@@ -531,8 +527,8 @@ contains
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*yy/RR
              State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*zz/RR
-             ! State_VGB(EnergyRL_,i,j,k,iBLK) = Pres_BLK   *& !^CFG UNCOMMENT IF ALWAVES
-             !      (cOne/(Gamma_BLK-cOne)-inv_gm1)            !^CFG UNCOMMENT IF ALWAVES
+             State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK   *& 
+                  (cOne/(Gamma_BLK-cOne)-inv_gm1)
           end do;end do; end do
 
        endif
@@ -1031,14 +1027,10 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
        call get_plasma_parameters_cell(i,j,k,iBlock,&
             DensCell,PresCell,GammaCell)
-       State_VGB(P_   ,i,j,k,iBlock)=           &
-            (GammaCell-cOne)*                   &
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock)&
-                                !+State_VGB(EnergyRL_,i,j,k,iBlock)&  !^CFG UNCOMMENT IF ALWAVES
-            )
-       ! State_VGB(EnergyRL_,i,j,k,iBlock)=           &!^CFG UNCOMMENT IF ALWAVES
-       !      State_VGB(P_,i,j,k,iBlock)*(cOne   /&    !^CFG UNCOMMENT IF ALWAVES
-       !      (GammaCell-cOne)-inv_gm1)                !^CFG UNCOMMENT IF ALWAVES
+       State_VGB(P_ ,i,j,k,iBlock) = (GammaCell-cOne)* &
+            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+       State_VGB(Ew_,i,j,k,iBlock) = &
+            State_VGB(P_,i,j,k,iBlock)*(cOne/(GammaCell - cOne) - inv_gm1)
     end do; end do; end do
     call calc_energy(iBlock)
     !\
@@ -1062,9 +1054,7 @@ contains
     use ModIO,         ONLY: dn_output,logfile_,write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
          x_,y_,z_
-    use ModVarIndexes, ONLY: &
-                                !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
-         Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_,Ew_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
          B0yCell_BLK,B0zCell_BLK
@@ -1111,9 +1101,8 @@ contains
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
-          ! tmp1_BLK(:,:,:,iBLK) = & !^CFG UNCOMMENT IF ALWAVES
-          !      State_VGB(EnergyRL_,:,:,:,iBLK) !^CFG UNCOMMENT IF ALWAVES
+          if (unusedBLK(iBLK)) CYCLE
+          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')

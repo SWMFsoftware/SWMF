@@ -1312,9 +1312,8 @@ contains
          Top_
     use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
          UseRotatingFrame
-    use ModVarIndexes, ONLY: & 
-         !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
-    rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
+    use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_, Bx_, By_, Bz_, P_, &
+         Ew_ => ScalarFirst_
 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nFaceValueVars,State_VGB
@@ -1436,8 +1435,7 @@ contains
                BFRn_D(x_:z_)!*cTwo
        endif
        !\
-       ! Update BCs for the mass density, EnergyRL,
-       ! and pressure::
+       ! Update BCs for the mass density, pressure and wave energy
        !/
        iCell = iFace; jCell = jFace; kCell = kFace
        select case(iSide)
@@ -1458,13 +1456,13 @@ contains
        end select
        call get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
             DensCell,PresCell,GammaCell)
-       VarsGhostFace_V(rho_     ) = max(-VarsTrueFace_V(rho_     )+ &
+       VarsGhostFace_V(Rho_) = max(-VarsTrueFace_V(rho_     )+ &
             cTwo*(DensCell+RhoFRope),VarsTrueFace_V(rho_))
-       VarsGhostFace_V(P_       ) = max(-VarsTrueFace_V(P_       )+ &
+       VarsGhostFace_V(P_  ) = max(-VarsTrueFace_V(P_       )+ &
             cTwo*PresCell,VarsTrueFace_V(P_  ))
-       !  VarsGhostFace_V(EnergyRL_) = max(-VarsTrueFace_V(EnergyRL_)+ &  !^CFG UNCOMMENT IF ALWAVES
-       !       cTwo*PresCell*(cOne/(GammaCell-cOne)-inv_gm1),          &  !^CFG UNCOMMENT IF ALWAVES
-       !       VarsTrueFace_V(EnergyRL_))                                 !^CFG UNCOMMENT IF ALWAVES
+       VarsGhostFace_V(Ew_) = max(-VarsTrueFace_V(Ew_)+             & 
+            cTwo*PresCell*(cOne/(GammaCell-cOne)-inv_gm1),          &
+            VarsTrueFace_V(Ew_))
     else
        !\
        ! Rotate to spherical coordinates
@@ -1520,7 +1518,7 @@ contains
           BphiFaceInside   =  BphiFaceOutside
           VarsGhostFace_V(rho_     ) = VarsTrueFace_V(rho_     )
           VarsGhostFace_V(P_       ) = VarsTrueFace_V(P_       )
-          ! VarsGhostFace_V(EnergyRL_) = VarsTrueFace_V(EnergyRL_)!^CFG UNCOMMENT IF ALWAVES
+          VarsGhostFace_V(Ew_) = VarsTrueFace_V(Ew_)
        else
           !\
           ! At the base of open field regions::
@@ -1531,9 +1529,9 @@ contains
           BrFaceInside     = cZero
           BthetaFaceInside = cZero 
           BphiFaceInside   = cZero
-          VarsGhostFace_V(rho_     ) = cOne
-          VarsGhostFace_V(P_       ) = inv_g
-          ! VarsGhostFace_V(EnergyRL_) = VarsTrueFace_V(EnergyRL_)!^CFG UNCOMMENT IF ALWAVES
+          VarsGhostFace_V(Rho_) = cOne
+          VarsGhostFace_V(P_  ) = inv_g
+          VarsGhostFace_V(Ew_ ) = VarsTrueFace_V(Ew_)
        endif
        !\
        ! Rotate back to cartesian coordinates::
@@ -1834,9 +1832,8 @@ contains
     use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
          unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
-    use ModVarIndexes,ONLY:&
-         !EnergyRL_ ,&  !^CFG UNCOMMENT IF ALWAVES
-    rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_
+    use ModVarIndexes,ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_, &
+         Ew_ => ScalarFirst_ 
     use ModAdvance,   ONLY: State_VGB,B0xCell_BLK,B0yCell_BLK,       &
          B0zCell_BLK,tmp1_BLK,tmp2_BLK
     use ModProcMH,    ONLY: iProc,nProc,iComm
@@ -1899,8 +1896,8 @@ contains
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*yy/RR
              State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
                   4.0E+01*((ROne-cOne)/(Rmax-cOne))*zz/RR
-             ! State_VGB(EnergyRL_,i,j,k,iBLK) = Pres_BLK   *& !^CFG UNCOMMENT IF ALWAVES
-             !      (cOne/(Gamma_BLK-cOne)-inv_gm1)            !^CFG UNCOMMENT IF ALWAVES
+             State_VGB(Ew_,i,j,k,iBLK) = &
+                  Pres_BLK*(cOne/(Gamma_BLK-cOne)-inv_gm1)
           endif
           !----------------------------------------------------------------
           !\
@@ -3205,11 +3202,10 @@ contains
        State_VGB(P_   ,i,j,k,iBlock)=           &
             (GammaCell-cOne)*                   &
             (inv_gm1*State_VGB(P_,i,j,k,iBlock)&
-            !+State_VGB(EnergyRL_,i,j,k,iBlock)&  !^CFG UNCOMMENT IF ALWAVES
+            + State_VGB(Ew_,i,j,k,iBlock)& 
        )
-       !State_VGB(EnergyRL_,i,j,k,iBlock)=       & !^CFG UNCOMMENT IF ALWAVES
-       !      State_VGB(P_,i,j,k,iBlock)*(cOne/  & !^CFG UNCOMMENT IF ALWAVES
-       !      (GammaCell-cOne)-inv_gm1)            !^CFG UNCOMMENT IF ALWAVES
+       State_VGB(Ew_,i,j,k,iBlock)=       & 
+            State_VGB(P_,i,j,k,iBlock)*(cOne/(GammaCell - cOne) - inv_gm1)
     end do; end do; end do
     call calc_energy(iBlock)
     !\
@@ -3233,9 +3229,8 @@ contains
     use ModIO,         ONLY: dn_output,logfile_,write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
          x_,y_,z_
-    use ModVarIndexes, ONLY: &
-         !       EnergyRL_,&     !^CFG UNCOMMENT IF ALWAVES
-    Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, rho_, rhoUx_, rhoUy_, rhoUz_, P_, &
+         Ew_ => ScalarFirst_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
          B0yCell_BLK,B0zCell_BLK
@@ -3244,7 +3239,7 @@ contains
     use ModNumConst,   ONLY: cOne,cHalf,cE1,cE3,cE6
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar 
-    !
+
     integer:: iBLK
     real:: unit_energy,unit_mass
     real, external:: integrate_BLK
@@ -3282,9 +3277,8 @@ contains
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
-          ! tmp1_BLK(:,:,:,iBLK) = & !^CFG UNCOMMENT IF ALWAVES
-          !      State_VGB(EnergyRL_,:,:,:,iBLK) !^CFG UNCOMMENT IF ALWAVES
+          if (unusedBLK(iBLK)) CYCLE
+          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')
@@ -3300,10 +3294,9 @@ contains
     case default
        VarValue = -7777.
        call write_myname;
-       write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
+       write(*,*) 'Warning in user_get_log_var: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
-
 
 end module ModUser
 
