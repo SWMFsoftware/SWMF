@@ -78,9 +78,6 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      ! Check if this side of the block is indeed an outer boundary
      if(neiLEV(iside,iBLK)/=NOBLK) CYCLE
 
-     ! If boundary is coupled do not overwrite the ghost cells
-     if(TypeBc_I(iside)=='coupled')CYCLE !^CFG IF NOT ALWAVES
- 
      ! Set index limits
      imin1g=-1; imax1g=nI+2; imin2g=-1; imax2g=nI+2
      jmin1g=-1; jmax1g=nJ+2; jmin2g=-1; jmax2g=nJ+2
@@ -113,7 +110,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
      select case(TypeBc_I(iside))
      case('coupled')
-!        call BC_cont(EnergyRL_,EnergyRL_) !^CFG UNCOMMENT IF ALWAVES   
+        ! For SC-IH coupling the extra wave energy variable needs a BC
+        if(NameThisComp == 'SC') call BC_cont(ScalarFirst_, ScalarLast_)
      case('periodic')
         call stop_mpi('The neighbors are not deifned at the periodic boundary')
      case('float','outflow')       
