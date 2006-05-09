@@ -336,32 +336,20 @@ contains
   subroutine set_log_var
 
     use ModUser, ONLY: user_get_log_var
+    use ModUtilities, ONLY: lower_case
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU
 
+    integer :: jVar
+    character(len=10) :: NameVar
+
     ! External function for ionosphere    !^CFG IF IONOSPHERE
     real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
-
+    !------------------------------------------------------------------------
     select case(NameLogVar)
 
 !!$! MHD variables averaged over the computational domain
-    case('rho')
-       LogVar_I(iVarTot) = StateIntegral_V(rho_)/volume
-    case('rhoux')
-       LogVar_I(iVarTot) = StateIntegral_V(rhoUx_)/volume
-    case('rhouy')
-       LogVar_I(iVarTot) = StateIntegral_V(rhoUy_)/volume
-    case('rhouz')
-       LogVar_I(iVarTot) = StateIntegral_V(rhoUz_)/volume
-    case('bx')
-       LogVar_I(iVarTot) = StateIntegral_V(Bx_)/volume
-    case('by')
-       LogVar_I(iVarTot) = StateIntegral_V(By_)/volume
-    case('bz')
-       LogVar_I(iVarTot) = StateIntegral_V(Bz_)/volume
-    case('p')
-       LogVar_I(iVarTot) = StateIntegral_V(P_)/volume
     case('e')
        LogVar_I(iVarTot) = integrate_BLK(1,E_BLK)/volume
     case('pmin')
@@ -720,6 +708,14 @@ contains
 
        ! DEFAULT
     case default
+       ! Check if the variable name is one of the state variables
+       do jVar = 1, nVar
+          NameVar = NameVar_V(jVar)
+          call lower_case(NameVar)
+          if(NameVar /= NameLogVar) CYCLE
+          LogVar_I(iVarTot) = StateIntegral_V(jVar)/volume
+          RETURN
+       end do
        if (UseUserLogFiles) then
           call user_get_log_var( LogVar_I(iVarTot), NameLogVar )
        else
