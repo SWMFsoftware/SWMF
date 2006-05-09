@@ -1545,6 +1545,7 @@ subroutine write_plot_line(iFile)
 
   use ModProcMH,   ONLY: iComm, iProc
   use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
+  use ModVarIndexes,ONLY: nVar, NamePrimitiveVar, NamePrimitiveVarTec
   use ModIO,       ONLY: &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
@@ -1590,7 +1591,7 @@ subroutine write_plot_line(iFile)
   ! Set the number lines and variables to be extracted
   nLine     = nLine_I(iPlotFile)
   nStateVar = 4
-  if(DoExtractState) nStateVar = nStateVar + 8
+  if(DoExtractState) nStateVar = nStateVar + nVar
 
   ! Initialize CON_line_extract
   call line_init(nStateVar)
@@ -1613,7 +1614,7 @@ subroutine write_plot_line(iFile)
 
   ! Only iProc 0 works on writing the plot files
   if(iProc /= 0) RETURN
-  !------------------------------------------------------------------------
+
   ! Write the result into 1 or more plot files from processor 0
 
   IsSingleLine = IsSingleLine_I(iPlotFile)
@@ -1659,7 +1660,7 @@ subroutine write_plot_line(iFile)
   case('idl')
      IsIdl = .true.
      NameVar = 'Length x y z'
-     if(DoExtractState)NameVar = trim(NameVar)//' rho ux uy uz bx by bz p'
+     if(DoExtractState)NameVar = trim(NameVar)//' '//NamePrimitiveVar
      if(IsSingleLine)then
         NameVar = trim(NameVar)//' iLine'
      else
@@ -1668,8 +1669,7 @@ subroutine write_plot_line(iFile)
   case('tec')
      IsIdl = .false.
      NameVar = '"X", "Y", "Z"'
-     if(DoExtractState)NameVar = trim(NameVar)// &
-          ',"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p"'
+     if(DoExtractState)NameVar = trim(NameVar)//' ,'//NamePrimitiveVarTec
      if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
      NameVar = trim(NameVar)//', "Length"'
   case default
