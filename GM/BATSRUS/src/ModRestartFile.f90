@@ -363,7 +363,7 @@ contains
 
     ! Fill in ghost cells
     do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
-       State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V
+       State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
     end do;end do;end do
 
     ! Do not overwrite time_simulation which is read from header file
@@ -573,7 +573,7 @@ contains
 
        ! Fill in ghost cells
        do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
-          State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V
+          State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
        end do; end do; end do
 
        IsRead = .false.
