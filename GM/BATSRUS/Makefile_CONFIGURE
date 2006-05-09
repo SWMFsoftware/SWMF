@@ -79,14 +79,13 @@ multisp: multisp_src
 	cd MULTISP; make
 
 #^CFG END MULTISP
-#^CFG IF ALWAVES BEGIN
 ############################################################################
 DREL=RELAX
 COMP=IH
 relax_src:
 	./Configure.pl -d=${DREL} -u \
-		-on=alwaves,awflux,userfiles,testing \
-		-off=rusanovflux,ionosphere,boriscorr,covariant
+		-on=roeflux,awflux,lindeflux,userfiles,testing \
+		-off=ionosphere,boriscorr,covariant
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
 		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90
@@ -99,13 +98,11 @@ relax_conf: relax_src
 relax: relax_src
 	cd ${DREL}; make
 
-#^CFG END ALWAVES
-#^CFG IF ALWAVES BEGIN
 ############################################################################
 corelax_src:
 	./Configure.pl -d=CORELAX \
 		-off=rusanovflux,ionosphere,boriscorr,implicit \
-		-on=alwaves,awflux,testing,userfiles,covariant
+		-on=awflux,testing,userfiles,covariant
 	cd CORELAX; make install
 
 corelax_conf: corelax_src
@@ -115,4 +112,3 @@ corelax_conf: corelax_src
 corelax: corelax_src
 	cd CORELAX; make
 
-#^CFG END ALWAVES
