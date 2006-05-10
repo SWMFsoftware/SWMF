@@ -9,9 +9,9 @@ module ModUser
   ! subroutines do and how to implement them for your specific problem.
 
   use ModUserEmpty, ONLY:               &
-!!!       user_read_inputs,                &
+       !!!       user_read_inputs,                &
        user_init_session,               &
-!!!       user_set_ics,                    &
+       !!!       user_set_ics,                    &
        user_initial_perturbation,       &
        user_set_boundary_cells,         &
        user_face_bcs,                   &
@@ -19,11 +19,13 @@ module ModUser
        user_specify_initial_refinement, &
        user_amr_criteria,               &
        user_write_progress,             &
-       user_get_log_var,                &
+       !!! user_get_log_var,                &
        user_calc_sources,               &
        user_heat_source,                &
        user_get_b0,                     &
        user_update_states
+
+  use ModVarIndexes, ONLY: nVar
 
   include 'user_module.h' !list of public methods
 
@@ -35,51 +37,50 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Hall MHD test, Yingjuan Ma'
 
-  real :: &
-       AmplBx=0., AmplBy=0., AmplBz=0., &
-       AmplUx=0., AmplUy=0., AmplUz=0., &
-       WidthB=1,  lamdax=4.0,kwave
-  integer :: iDim             
-       
+  character (len=20) :: UserProblem='wave'
+
+  real :: Width, Amplitude, Phase, Lamdax, Lamday, Lamdaz
+  real,dimension(nVar):: Width_I=0.0, Ampl_I=0.0, Phase_I=0.0, &
+       KxWave_I=0.0, KyWave_I=0.0,KzWave_I=0.0
+  integer :: iVar             
+  logical:: DoInitialize=.true.
+  real :: Lx=25.6, Lz=12.8, lamda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+  
 contains
 
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
     use ModReadParam
-    use ModNumConst, ONLY : cTwo,cPi
+    use ModNumConst, ONLY : cTwoPi,cDegToRad
+    implicit none
+
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------
-
+    
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case("#PERTUBATION")
-          call read_var('iDim',iDim)
-          call read_var('WidthB',WidthB)
-          call read_var('lamdax',lamdax)
-          kwave = cTwo*cPi/lamdax 
-          write(*,*)'lamda,k=',lamdax, kwave
-          select case(iDim)
-             case(x_)
-                call read_var('AmplBy',AmplBy)
-                call read_var('AmplBz',AmplBz)
-                call read_var('AmplUy',AmplUy)                            
-                call read_var('AmplUz',AmplUz)
-             case(y_)
-                call read_var('AmplBz',AmplBz)
-                call read_var('AmplBx',AmplBx)
-                call read_var('AmplUz',AmplUz)                            
-                call read_var('AmplUx',AmplUx)
-             case(z_)
-                call read_var('AmplBx',AmplBx)
-                call read_var('AmplBy',AmplBy)
-                call read_var('AmplUx',AmplUx)                            
-                call read_var('AmplUy',AmplUy)
-             case default
-                write(*,*)'wrong direction'
-             end select
+       case('#USERPROBLEM')
+          call read_var('UserProblem',UserProblem)
+       case('#WAVE')
+          call read_var('iVar',iVar)
+          call read_var('Width',Width)
+          call read_var('Amplitude',Amplitude)
+          call read_var('Lamdax',Lamdax)          
+          call read_var('Lamday',Lamday)
+          call read_var('Lamdaz',Lamdaz)
+          call read_var('Phase',Phase)
+          Width_I(iVar)=Width
+          Ampl_I(iVar)=Amplitude
+          Phase_I(iVar)=Phase*cDegToRad
+          !if the wavelength is smaller than 0.0, 
+          !then the wave number is set to0
+          KxWave_I(iVar) = max(0.0, cTwoPi/Lamdax)          
+          KyWave_I(iVar) = max(0.0, cTwoPi/Lamday)          
+          KzWave_I(iVar) = max(0.0, cTwoPi/Lamdaz)
+
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
@@ -90,69 +91,122 @@ contains
     end do
   end subroutine user_read_inputs
 
-  subroutine user_set_ics
-    use ModMain,     ONLY: nI, nJ, nK, globalBLK, nBlock, ProcTest,x_,y_,z_
-    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK
-    use ModAdvance,  ONLY: State_VGB, Rho_,  RhoUx_, RhoUy_, RhoUz_, P_, Bx_, By_, Bz_
-    use ModProcMH,   ONLY: iProc
+  !=============================================================================
 
-    real, parameter :: pPerturb = 1.1
+  subroutine user_set_ics
+    use ModMain,     ONLY: globalBLK
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, rho_, p_
+    use ModProcMH,   ONLY: iProc
+    use ModPhysics,  ONLY: ShockSlope
+    use ModNumconst, ONLY: cOne,cPi, cTwoPi
+    implicit none
+
+    real,dimension(nVar):: state_I,KxTemp_I,KyTemp_I
+    real :: SinSlope, CosSlope
     integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
     iBlock = globalBLK
-    
-    if(iProc==PROCtest .and. iBlock == 1)then
-       write(*,*)'Initializing HALL MHD TEST problem'
-       write(*,*)'Parameters:'
-       write(*,*)'WidthB=',WidthB,'lamda=',lamdax, 'kwave =',kwave
-       write(*,*)'AmplBx =',AmplBx, 'AmplBy =',AmplBy,'AmplBz =',AmplBz
-       write(*,*)'AmplUx =',AmplUx, 'AmplUy =',AmplUy,'AmplUz =',AmplUz
-    end if
 
-    select case(iDim)
-    case(x_)    
-       where(abs(x_BLK(:,:,:,iBlock))<WidthB)          
-          State_VGB(By_,:,:,:,iBlock)=                    &
-               AmplBy*cos(kwave*x_BLK(:,:,:,iBlock))          
-          State_VGB(Bz_,:,:,:,iBlock)=                    &
-               AmplBz*sin(kwave*x_BLK(:,:,:,iBlock))
-          State_VGB(RhoUy_,:,:,:,iBlock)=                 &
-               AmplUy*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *cos(kwave*x_BLK(:,:,:,iBlock))
-          State_VGB(RhoUz_,:,:,:,iBlock)=                 &
-               AmplUz*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *sin(kwave*x_BLK(:,:,:,iBlock))
-       end where
-    case(y_)    
-       where(abs(y_BLK(:,:,:,iBlock))<WidthB)          
-          State_VGB(Bz_,:,:,:,iBlock)=                    &
-               AmplBz*cos(kwave*y_BLK(:,:,:,iBlock))          
-          State_VGB(Bx_,:,:,:,iBlock)=                    &
-               AmplBx*sin(kwave*y_BLK(:,:,:,iBlock))
-          State_VGB(RhoUz_,:,:,:,iBlock)=                 &
-               AmplUz*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *cos(kwave*y_BLK(:,:,:,iBlock))
-          State_VGB(RhoUx_,:,:,:,iBlock)=                 &
-               AmplUx*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *sin(kwave*y_BLK(:,:,:,iBlock))
-       end where
-    case(z_)    
-       where(abs(z_BLK(:,:,:,iBlock))<WidthB)          
-          State_VGB(Bx_,:,:,:,iBlock)=                    &
-               AmplBx*cos(kwave*z_BLK(:,:,:,iBlock))          
-          State_VGB(By_,:,:,:,iBlock)=                    &
-               AmplBy*sin(kwave*z_BLK(:,:,:,iBlock))
-          State_VGB(RhoUx_,:,:,:,iBlock)=                 &
-               AmplUx*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *cos(kwave*z_BLK(:,:,:,iBlock))
-          State_VGB(RhoUy_,:,:,:,iBlock)=                 &
-               AmplUy*State_VGB(Rho_,:,:,:,iBlock)        & 
-               *sin(kwave*z_BLK(:,:,:,iBlock))
-       end where
+    select case(UserProblem)
+    case('wave')
+       if(ShockSlope.ne.0.0.and.DoInitialize)then
+          SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
+          CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+          state_I(:)=Ampl_I(:)
+          Ampl_I(rhoUx_) = &
+               (CosSlope*state_I(rhoUx_)-SinSlope*state_I(rhoUy_))
+          Ampl_I(rhoUy_) =  &
+               (SinSlope*state_I(rhoUx_)+CosSlope*state_I(rhoUy_))
+          Ampl_I(Bx_) = &
+               CosSlope*state_I(Bx_)-SinSlope*state_I(By_)
+          Ampl_I(By_) = &
+               SinSlope*state_I(Bx_)+CosSlope*state_I(By_)
+
+          KxTemp_I= KxWave_I
+          KyTemp_I= KyWave_I
+          KxWave_I= CosSlope*KxTemp_I-SinSlope*KyTemp_I
+          KyWave_I= SinSlope*KxTemp_I+CosSlope*KyTemp_I
+
+          !       if(UseHallResist) call init_hall_resist
+
+          DoInitialize=.false.
+
+          !       write(*,*)'KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)=',&
+          !            KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)
+          !       write(*,*)'       Ampl_I(Bx_:Bz_) =',       Ampl_I(Bx_:Bz_) 
+          !       write(*,*)'      Phase_I(Bx_:Bz_) =',       Phase_I(Bx_:Bz_)
+
+       end if
+
+       do iVar=1,nVar
+          where(abs(x_BLK(:,:,:,iBlock))<Width_I(iVar))   &          
+               State_VGB(iVar,:,:,:,iBlock)=              &
+               State_VGB(iVar,:,:,:,iBlock)               &
+               + Ampl_I(iVar)*cos(Phase_I(iVar)           &
+               + KxWave_I(iVar)*x_BLK(:,:,:,iBlock)       &
+               + KyWave_I(iVar)*y_BLK(:,:,:,iBlock)       &
+               + KzWave_I(iVar)*z_BLK(:,:,:,iBlock))
+       end do
+
+    case('GEM')
+!       write(*,*)'GEM problem set up'
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/lamda0)
+       State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
+            +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
+       State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
+       !!!set intial perturbation
+       State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)-  Ay* cPi/ Lz &
+            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*z_BLK(:,:,:,iBlock)/Lz)
+       State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)+ Ay* cTwoPi/ Lx &
+            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
+       
     case default
-       write(*,*)'wrong direction'                       
+       if(iProc==0) call stop_mpi( &
+            'user_set_ics: undefined user problem='//UserProblem)
+       
     end select
-
   end subroutine user_set_ics
+
+  !=====================================================================
+  subroutine user_get_log_var(VarValue, TypeVar)
+
+    use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
+    use ModAdvance,  ONLY: Bz_, State_VGB
+    use ModGeometry, ONLY: y2, y1, dx_BLK, dz_BLK, faz_BLK, z_BLK
+
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+
+    character (len=*), parameter :: Name='user_get_log_var'
+
+    integer :: k1, k2, iBlock
+    real:: z1, z2, dz1, dz2, HalfInvWidth, Flux
+    !-------------------------------------------------------------------
+    HalfInvWidth = 0.5/(y2-y1)
+    VarValue=0.0
+    select case(TypeVar)
+    case('bzflux')
+       do iBlock = 1, nBlock
+          if(unusedBlk(iBlock)) CYCLE
+          z1 = z_BLK(1,1,0,iBlock)
+          z2 = z_BLK(1,1,nK+1,iBlock)
+
+          if(z1*z2 > 0) CYCLE
+          k1 = -z1/dz_BLK(iBlock)
+          k2 = k1 + 1
+          dz1 = abs(z_BLK(1,1,k1,iBlock))/dz_BLK(iBlock)
+          dz2 = 1.0 - dz1
+          Flux = faz_BLK(iBlock)*HalfInvWidth* &
+               ( dz2*sum(abs(State_VGB(Bz_,1:nI,1:nJ,k1,iBlock))) &
+               + dz1*sum(abs(State_VGB(Bz_,1:nI,1:nJ,k2,iBlock))))
+          if(k1==0 .or. k2==nK+1) Flux = 0.5*Flux
+          VarValue = VarValue + Flux
+       end do
+    case default
+       call stop_mpi('Unknown user logvar='//TypeVar)
+    end select
+  end subroutine user_get_log_var
+
 
 end module ModUser
