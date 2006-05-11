@@ -148,11 +148,6 @@ contains
                 kL = -1; kR = 0
              end if
 
-             if(iBlock==13)then
-                write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
-                write(*,*)'iL,iR,jL,jR,kL,kR=',iL,iR,jL,jR,kL,kR
-             end if
-
              do k1=kL,kR,2; do j1=jL,jR,2; do i1=iL,iR,2; do iDim=1,3
                 B1_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1)= &
                      0.125*sum(b_DG(iDim,i1:i1+1,j1:j1+1,k1:k1+1))
