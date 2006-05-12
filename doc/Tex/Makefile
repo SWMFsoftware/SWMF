@@ -121,8 +121,6 @@ SWMFREF = \
 
 #^CMP IF DOCHTML BEGIN
 .tex.html:
-	mv HEADER.tex HEADERorig.tex
-	perl -pe 's/\\tableofcontents/\%\\tableofcontents/' HEADERorig.tex > HEADER.tex
 	touch $*.ind $*.idx
 	latex $*
 	latex $*
@@ -133,20 +131,13 @@ SWMFREF = \
 		  -up_url     "../../index.html" \
 		  -up_title   "SWMF Documents" \
 		  -prev_title "SWMF Documents" \
+		  -noauto_navigation \
+		  -top_navigation \
 		  $*
 	cd $*; \
-	perl -pi -e 's/<BODY >/<BODY bgcolor="#CECFCE">/' \
-		$*.html node*.html index.html; \
 	perl -pi -e 's/^\[\]//' $*.html index.html; \
-	perl -pi -e 's/SRC="prev.png"\>\<\/A\>/SRC="prev.png"\>\<\/A\>\n \
-		\<A HREF="http:\/\/csem.engin.umich.edu\/"\>\n \
-		\<IMG WIDTH="100" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" \
-		ALT="CSEM Home" SRC="csem_home.png"\>\<\/A\>/' \
-		$*.html node*.html index.html; \
-	cp ../../HTML/csem_home.png ./ 
+	cp ../../HTML/*.png ./ ; \
 	rm -f $*.ind $*.idx $*.ilg
-	rm -f HEADER.tex
-	mv HEADERorig.tex HEADER.tex
 	rm -rf ../HTML/$*
 	mv $* ../HTML
 #^CMP END DOCHTML
