@@ -129,7 +129,6 @@ subroutine initialize_gitm(TimeIn)
 !!!  Mass = 22.5 * AMU
 !!!!!!
 
-
   if (Is1D) then
      Latitude(0,1)  = Latitude(1,1) - 1.0 * pi/180.0
      Latitude(-1,1) = Latitude(0,1) - 1.0 * pi/180.0
@@ -141,6 +140,12 @@ subroutine initialize_gitm(TimeIn)
      Longitude(2,1)  = Longitude(1,1) + 1.0 * pi/180.0
      Longitude(3,1)  = Longitude(2,1) + 1.0 * pi/180.0
   endif
+
+  ! This is done so we don't get a /0 below.
+
+  dLatDist_GB = 1.0
+  dLatDist_FB = 1.0
+  dLonDist_GB = 1.0
 
   ! Precalculate the physical size of cells in the Lat and Lon directions
   do iLat = 0, nLats+1
@@ -177,6 +182,7 @@ subroutine initialize_gitm(TimeIn)
   InvDLatDist_GB = 1.0/dLatDist_GB
   InvDLatDist_FB = 1.0/dLatDist_FB
   InvDLonDist_GB = 1.0/dLonDist_GB
+
 
   ! Precalculate the tangent of the latitude
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
