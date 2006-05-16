@@ -137,7 +137,7 @@ subroutine set_physics_constants
   SW_B_factor = unitUSER_B
 
   if(problem_type==problem_globalhelio)then !^CFG IF GLOBALHELIOSPHERE BEGIN
-     ! unitUSER_rho #/cm3
+     ! unitUSER_rho amu/cm3
      SW_rho = SW_rho_dim/unitUSER_rho
   else                                      !^CFG END GLOBALHELIOSPHERE
      SW_rho = 1.0    
@@ -472,11 +472,11 @@ subroutine set_dimensions
   ! set other normalizing SI variables from the independent ones
   !/
   unitSI_t           = unitSI_x/unitSI_U                     ! s
-  unitSI_n           = unitSI_rho/cProtonMass                     ! (#/m^3) (amu/m^3)
+  unitSI_n           = unitSI_rho/cProtonMass                ! #/m^3
   unitSI_p           = unitSI_rho*unitSI_U**2                ! Pa
   unitSI_B           = unitSI_U*sqrt(cMu*unitSI_rho)         ! T
   unitSI_rhoU        = unitSI_rho*unitSI_U                   ! kg/m^2/s
-  unitSI_energydens  = unitSI_p                              ! J/m^3 - energy density
+  unitSI_energydens  = unitSI_p                              ! J/m^3
   unitSI_Poynting    = unitSI_energydens*unitSI_U            ! J/m^2/s
   unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
   unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
@@ -506,19 +506,19 @@ subroutine set_dimensions
   case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
        problem_venus,problem_comet,problem_mars)
      ! load units
-     unitUSER_x           = unitSI_x/unitSI_x                ! planetary radii
-     unitUSER_rho         = 1.0E-6*unitSI_n                  ! (#/cm^3) (amu/cm^3)
-     unitUSER_U           = 1.0E-3*unitSI_U                  ! km/s
-     unitUSER_t           = unitSI_t                         ! s
-     unitUSER_n           = 1.0E-6*unitSI_n                  ! (#/cm^3) (amu/cm^3)
-     unitUSER_p           = 1.0E+9*unitSI_p                  ! nPa
-     unitUSER_B           = 1.0E+9*unitSI_B                  ! nT
-     unitUSER_rhoU        = unitSI_rhoU                      ! kg/m^2/s
-     unitUSER_energydens  = unitSI_energydens                ! J/m^3 - energy density
-     unitUSER_Poynting    = unitSI_Poynting                  ! J/m^2/s
-     unitUSER_J           = 1.0E+6*unitSI_J                  ! uA/m^2
-     unitUSER_electric    = 1.0E+3*unitSI_electric           ! mV/m
-     unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x      ! nT/planetary radii
+     unitUSER_x           = unitSI_x/unitSI_x           ! planetary radii
+     unitUSER_rho         = 1.0E-6*unitSI_n             ! amu/cm^3
+     unitUSER_n           = 1.0E-6*unitSI_n             ! #/cm^3
+     unitUSER_U           = 1.0E-3*unitSI_U             ! km/s
+     unitUSER_t           = unitSI_t                    ! s
+     unitUSER_p           = 1.0E+9*unitSI_p             ! nPa
+     unitUSER_B           = 1.0E+9*unitSI_B             ! nT
+     unitUSER_rhoU        = unitSI_rhoU                 ! kg/m^2/s
+     unitUSER_energydens  = unitSI_energydens           ! J/m^3 
+     unitUSER_Poynting    = unitSI_Poynting             ! J/m^2/s
+     unitUSER_J           = 1.0E+6*unitSI_J             ! uA/m^2
+     unitUSER_electric    = 1.0E+3*unitSI_electric      ! mV/m
+     unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x ! nT/planetary radii
      ! set temperature - note that the below is only strictly true for a
      ! limited number of cases.  If the only ion is proton then 
      ! Tcode = Te+Ti.
@@ -570,9 +570,9 @@ subroutine set_dimensions
   case(problem_heliosphere,problem_cme)
      unitUSER_x           = unitSI_x/unitSI_x                ! R
      unitUSER_rho         = 1.0e-3*unitSI_rho                ! g/cm^3
+     unitUSER_n           = 1.0E-6*unitSI_n                  ! #/cm^3
      unitUSER_U           = 1.0E-3*unitSI_U                  ! km/s
      unitUSER_t           = unitSI_t                         ! s
-     unitUSER_n           = 1.0E-6*unitSI_n                  ! (#/cm^3) (amu/cm^3)
      unitUSER_p           = 1.0E+1*unitSI_p                  ! dyne/cm^2
      unitUSER_B           = 1.0E+4*unitSI_B                  ! Gauss
      unitUSER_rhoU        = 1.0E-1*unitSI_rhoU               ! g/cm^2/s
@@ -625,18 +625,18 @@ subroutine set_dimensions
      unitUSER_rho         = unitSI_rho            ! dimensionless
      unitUSER_U           = unitSI_U              ! dimensionless
      unitUSER_t           = unitSI_t              ! dimensionless   
-     unitUSER_n           = unitSI_n              ! dimensionless                
-     unitUSER_p           = unitSI_p              ! dimensionless                 
-     unitUSER_B           = unitSI_B              ! dimensionless                
-     unitUSER_rhoU        = unitSI_rhoU           ! dimensionless                
-     unitUSER_energydens  = unitSI_energydens     ! dimensionless                
-     unitUSER_J           = unitSI_J              ! dimensionless                
-     unitUSER_electric    = unitSI_electric       ! dimensionless                
-     unitUSER_DivB        = unitSI_DivB           ! dimensionless                
+     unitUSER_n           = unitSI_n              ! dimensionless
+     unitUSER_p           = unitSI_p              ! dimensionless 
+     unitUSER_B           = unitSI_B              ! dimensionless
+     unitUSER_rhoU        = unitSI_rhoU           ! dimensionless
+     unitUSER_energydens  = unitSI_energydens     ! dimensionless
+     unitUSER_J           = unitSI_J              ! dimensionless
+     unitUSER_electric    = unitSI_electric       ! dimensionless
+     unitUSER_DivB        = unitSI_DivB           ! dimensionless
      ! set temperature - note that the below is  only strictly true for a
      ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  There is no way around
-     ! this in MHD.
+     ! be off in temperature by as much as a factor of #.  
+     ! There is no way around this in MHD.
      unitUSER_temperature = unitSI_temperature    ! dimensionless
      !\
      ! set string variables used for writing output - TECPLOT
@@ -739,6 +739,8 @@ subroutine set_dimensions
 
   end select
 end subroutine set_dimensions
+
+!==============================================================================
 
 subroutine init_mhd_variables
 
