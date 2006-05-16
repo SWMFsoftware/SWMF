@@ -829,8 +829,8 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      select case(NameLogVar)
 
 !!$! BASIC MHD variables
-     case('rho','rhopnt') 
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_n
+     case('rho','rhopnt')
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rho
      case('rhoux','rhouy','rhouz', 'rhouxpnt','rhouypnt','rhouzpnt')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rhoU
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
