@@ -954,8 +954,8 @@ subroutine roe_solver(iDir, Flux_V)
 
   real :: Normal_D(3), Tangent1_D(3), Tangent2_D(3)   !^CFG IF COVARIANT 
   real :: dRhoU_D(3), dB1_D(3)                        !^CFG IF COVARIANT
-
   !---------------------------------------------------------------------------
+
   if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
      ! Obtain the base vectors of the face aligned coordinate system
      Area = sqrt(Area2)
@@ -1257,61 +1257,59 @@ subroutine roe_solver(iDir, Flux_V)
   !\
   ! Entropy fix for Eigenvalues
   !/
-  Tmp1 = (UnR) - (UnL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = UnR - UnL
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(1)) < Tmp1*0.5) then
      Eigenvalue_V(1) = sign(1.,Eigenvalue_V(1))*   &
           ((Eigenvalue_V(1)*Eigenvalue_V(1)/Tmp1) + Tmp1*0.25)
   end if
 
-  Tmp1 = (UnR+BnR*RhoInvSqrtR) - &
-       (UnL+BnL*RhoInvSqrtL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = (UnR + BnR*RhoInvSqrtR) - (UnL + BnL*RhoInvSqrtL)
+  Tmp1 = max(cTiny,4.*Tmp1)
   if (abs(Eigenvalue_V(2)) < Tmp1*0.5) then
      Eigenvalue_V(2) = sign(1.,Eigenvalue_V(2))*   &
           ((Eigenvalue_V(2)*Eigenvalue_V(2)/Tmp1) + Tmp1*0.25)
   end if
 
-  Tmp1 = (UnR-BnR*RhoInvSqrtR) - &
-       (UnL-BnL*RhoInvSqrtL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = (UnR - BnR*RhoInvSqrtR) - (UnL - BnL*RhoInvSqrtL)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(3)) < Tmp1*0.5) then
      Eigenvalue_V(3) = sign(1.,Eigenvalue_V(3))*   &
           ((Eigenvalue_V(3)*Eigenvalue_V(3)/Tmp1) + Tmp1*0.25)
   end if
 
-  Tmp1 = (UnR+CsR) - (UnL+CsL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = (UnR + CsR) - (UnL + CsL)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(4)) < Tmp1*0.5) then
      Eigenvalue_V(4) = sign(1.,Eigenvalue_V(4))*   &
           ((Eigenvalue_V(4)*Eigenvalue_V(4)/Tmp1) + Tmp1*0.25)
   end if
 
   Tmp1 = (UnR+CfR) - (UnL+CfL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(5)) < Tmp1*0.5) then
      Eigenvalue_V(5) = sign(1.,Eigenvalue_V(5))*   &
           ((Eigenvalue_V(5)*Eigenvalue_V(5)/Tmp1) + Tmp1*0.25)
   end if
 
   Tmp1 = (UnR-CsR) - (UnL-CsL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(6)) < Tmp1*0.5) then
      Eigenvalue_V(6) = sign(1.,Eigenvalue_V(6))*   &
           ((Eigenvalue_V(6)*Eigenvalue_V(6)/Tmp1) + Tmp1*0.25)
   end if
 
   Tmp1 = (UnR-CfR) - (UnL-CfL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(7)) < Tmp1*0.5) then
      Eigenvalue_V(7) = sign(1.,Eigenvalue_V(7))*   &
           ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
   end if
 
   Tmp1 = (UnR) - (UnL)
-  Tmp1 = max(0.,4.*Tmp1)
+  Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
-     Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))*   &
+     Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
           ((Eigenvalue_V(8)*Eigenvalue_V(8)/Tmp1) + Tmp1*0.25)
   end if
 
