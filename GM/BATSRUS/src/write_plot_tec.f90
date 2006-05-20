@@ -9,8 +9,9 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
-       nOrder, limiter_type,betalimiter, UseRotatingBc, BlkTest, ProcTest, &
+       nOrder, UseRotatingBc, BlkTest, ProcTest, &
        TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
+  use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
@@ -627,11 +628,8 @@ contains
 
     !ORDER
     if(nORDER==2)then
-       if(limiter_type=='beta')then
-          write(stmp,'(i12,a,e13.5)')nOrder,', beta=',BetaLimiter
-       else
-          write(stmp,'(i12,a)')nORDER,' '//trim(limiter_type)
-       end if
+       write(stmp,'(i12,a,f8.5)') &
+            nOrder,' '//trim(TypeLimiter)//', beta=',BetaLimiter
     else
        write(stmp,'(i12)')nORDER
     end if
