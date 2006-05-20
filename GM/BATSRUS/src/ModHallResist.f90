@@ -480,6 +480,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
     use ModParallel, ONLY: NeiLev
+    use ModFaceValue,ONLY: correct_monotone_restrict
 
     integer, parameter :: nTest = 2
     integer :: i,j,k,iBlock,iTest
