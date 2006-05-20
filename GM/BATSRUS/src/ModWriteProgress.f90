@@ -50,7 +50,8 @@ subroutine write_runtime_values()
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : FluxType
+  use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
+  use ModAdvance,  ONLY : FluxType
   use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue,dx_BLK
   use ModParallel, ONLY : proc_dims
   use ModPhysics
@@ -179,8 +180,8 @@ subroutine write_runtime_values()
      call write_prefix
      write(iUnitOut,'(10X,''2nd-Order Scheme'')')
      call write_prefix
-     write(iUnitOut,'(10x,a,a)')'with limiter ',limiter_type
-     if(limiter_type=='beta') then
+     write(iUnitOut,'(10x,a,a)')'with limiter ',TypeLimiter
+     if(TypeLimiter /= 'minmod') then
         call write_prefix
         write(iUnitOut,'(10x,a,e13.5)')'beta=',BetaLimiter
      end if
