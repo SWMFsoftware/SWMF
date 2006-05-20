@@ -30,8 +30,9 @@ subroutine MH_set_parameters(TypeAction)
   use ModCoordTransform,ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
   use ModReadParam
   use ModMPCells,       ONLY: iCFExchangeType,DoOneCoarserLayer
-  use ModLimiter,       ONLY: UseTVDAtResChange
-  use ModLimiter,       ONLY: DoLimitMomentum           !^CFG IF BORISCORR
+  use ModFaceValue,     ONLY: UseTvdResChange, UseAccurateResChange, &
+       DoLimitMomentum, &                              !^CFG IF BORISCORR
+       BetaLimiter, TypeLimiter
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
@@ -1014,11 +1015,11 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nOrder'  ,nOrder)
         call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
-             call read_var('TypeLimiter',limiter_type)
-        if(limiter_type == 'minmod') then
+             call read_var('TypeLimiter', TypeLimiter)
+        if(TypeLimiter == 'minmod') then
            BetaLimiter = 1.0
         else
-           call read_var('LimiterBeta',BetaLimiter)
+           call read_var('LimiterBeta', BetaLimiter)
         end if
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)
@@ -1095,8 +1096,12 @@ subroutine MH_set_parameters(TypeAction)
               optimize_message_pass='allopt'
            end if
         end if                                           !^CFG IF COVARIANT
+     case('#RESCHANGE','#RESOLUTIONCHANGE')
+        call read_var('UseAccurateResChange',UseAccurateResChange)
+        if(UseAccurateResChange) UseTvdResChange=.false.
      case('#TVDRESCHANGE')
-        call read_var('UseTVDAtResChange',UseTVDAtResChange)
+        call read_var('UseTvdResChange',UseTvdResChange)
+        if(UseTvdResChange) UseAccurateResChange=.false.
      case("#BORIS")
         !                                              ^CFG IF BORISCORR BEGIN
         call read_var('UseBorisCorrection',boris_correction)   
@@ -2392,12 +2397,15 @@ contains
        UseConstrainB=.false.
        UseDivbSource=.true.
     end if
-    if(UseConstrainB .and. UseTVDAtReschange)then
+    if(UseConstrainB .and. (UseTvdReschange .or. UseAccurateResChange))then
        if(iProc==0)write(*,'(a)')NameSub//&
-            ' WARNING: do not use TVD at resolution changes with ConstrainB'
+            ' WARNING: cannot use TVD or accurate schemes at res. change' // &
+            ' with ConstrainB'
        if(UseStrict)call stop_mpi('Correct PARAM.in!')
-       if(iProc==0)write(*,*)NameSub//' setting UseTVDAtReschange=F'
-       UseTVDAtReschange = .false.
+       if(iProc==0)write(*,*)NameSub// &
+            ' setting UseTvdReschange=F UseAccurateResChange=F'
+       UseTvdReschange      = .false.
+       UseAccurateResChange = .false.
     end if
     if (UseConstrainB .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
@@ -2420,26 +2428,21 @@ contains
        end if
        optimize_message_pass = 'all'
     endif                                     
-    
 
     if(prolong_order/=1 .and. optimize_message_pass(1:3)=='all')&
          call stop_mpi(NameSub// &
          'The prolongation order=2 requires message_pass_dir')
 
-    if(UseTVDAtResChange .and. &
+    if(UseTvdResChange .and. &
          optimize_message_pass(1:3)=='all' .and. iCFExchangeType/=2)then
-       if(iProc==0)then
-          write(*,'(a)') NameSub// &
-               ' WARNING: TVD limiter at the resolution change' //&
-               ' requires iCFExchangeType=2 in message_pass_cells'
-          if(UseStrict)call stop_mpi('Correct PARAM.in or message_pass_cells')
-          write(*,*)NameSub//' setting UseTVDAtResChange = F'
-       end if
-       UseTVDAtResChange = .false.
+       if(iProc==0) write(*,'(a)') NameSub// &
+            ' WARNING: TVD limiter at the resolution change' //&
+            ' requires iCFExchangeType=2 in message_pass_cells'
+       call stop_mpi('Correct PARAM.in or message_pass_cells')
     end if
 
     ! Check test processor
-    if(procTEST>nProc)then
+    if(ProcTest > nProc)then
        if(iProc==0) write(*,'(a)')NameSub//&
             ' WARNING: procTEST > nProc, setting procTEST=0 !!!'
        procTEST=0
@@ -2615,10 +2618,9 @@ contains
     MaxBoundary=min(MaxBoundary,Top_)
     MinBoundary=max(MinBoundary,body2_)
 
-    ! These logicals are always related like this !!!
-    DoOneCoarserLayer = .not.UseTVDAtResChange
-    DoLimitMomentum = &                                  !^CFG IF BORISCORR
-         boris_correction .and. (.not.UseTVDAtResChange) !^CFG IF BORISCORR
+    DoOneCoarserLayer = .not. (UseTvdResChange .or. UseAccurateResChange)
+    DoLimitMomentum = &                                !^CFG IF BORISCORR
+         boris_correction .and. DoOneCoarserLayer      !^CFG IF BORISCORR
 
     if(UseConstrainB) then          !^CFG IF CONSTRAINB BEGIN
        jMinFaceX=0; jMaxFaceX=nJ+1
