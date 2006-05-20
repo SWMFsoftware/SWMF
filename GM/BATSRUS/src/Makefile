@@ -22,6 +22,7 @@ MODULES = \
 	ModBoundaryCells.o\
 	ModEquation.o\
 	ModFaceFlux.o\
+	ModFaceValue.o\
 	ModGeometry.o\
 	ModHallResist.o\
 	ModInterface.o\
@@ -87,7 +88,6 @@ OBJECTS = \
 	amr.o\
 	amr_criteria.o\
 	amr_physics.o\
-	calc_facevalues_opt.o\
 	calc_gradients.o\
 	calc_timestep.o\
 	coarsen_grid.o\
