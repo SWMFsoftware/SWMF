@@ -3114,13 +3114,25 @@ allopt			TypeMessagePass
 ! Projection uses message_pass_dir for efficiency!\\<!--^CFG IF PROJECTION-->
 </command>
 
-<command name="TVDRESCHANGE">
-	<parameter name="UseTvdAtReschange" type="logical" default="F" />
+<command name="RESCHANGE" alias="RESOLUTIONCHANGE">
+	<parameter name="UseAccurateReschange" type="logical" default="F" />
 #TVDRESCHANGE
-T		UseTvdAtResChange
+T		UseAccurateResChange
 
-! For UseTvdAtResChange=T a second order TVD limited scheme is used 
-! at the resolution changes. 
+! For UseAccurateResChange=T a second order accurate, upwind and oscillation 
+! free scheme is used at the resolution changes. 
+!
+! Default value is false, which results in first order 
+! prolongation and restriction operators at the resolution changes.
+</command>
+
+<command name="TVDRESCHANGE">
+	<parameter name="UseTvdReschange" type="logical" default="F" />
+#TVDRESCHANGE
+T		UseTvdResChange
+
+! For UseTvdResChange=T an almost second order and partially downwinded 
+! TVD limited scheme is used at the resolution changes. 
 !
 ! Default value is false, which results in first order 
 ! prolongation and restriction operators at the resolution changes.
