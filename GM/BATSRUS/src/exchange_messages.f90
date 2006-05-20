@@ -16,11 +16,14 @@ subroutine exchange_messages
   use ModMPCells, ONLY : DoOneCoarserLayer
   use ModBoundaryCells,ONLY:SaveBoundaryCells
   use ModPhysics, ONLY : ShockSlope
+  use ModFaceValue,ONLY: UseAccurateResChange
+
   implicit none
 
   integer :: iBlock
   logical :: oktest, oktest_me, oktime, oktime_me
   logical :: DoRestrictFace, DoOneLayer, DoTwoCoarseLayers
+  logical :: DoCorners, DoFaces
 
   !---------------------------------------------------------------------------
 
@@ -53,16 +56,15 @@ subroutine exchange_messages
 
   if (UsePlotMessageOptions) then
      if(oktest)write(*,*)'calling message_pass with plot options'
-
-     ! Send all faces, edges, and corners
-     ! Don't do the monotone restriction
-     ! Don't send just one layer
+     !                              Don't send just one layer
+     !                                      Don't send faces only
+     !                                               Don't monotone restrict
      call message_pass_cells_8state(.false.,.false.,.false.)
      call message_pass_cells(.false.,.false.,.false.,DivB1_GB)
   elseif (optimize_message_pass=='all') then
      if(oktest)write(*,*)'calling message_pass with corners: me,type=',&
           iProc,optimize_message_pass
-     ! If ShockSlope is not zero then even the first order needs 
+     ! If ShockSlope is not zero then even the first order scheme needs 
      ! two ghost cell layers to fill in the corner cells at the sheared BCs.
      DoOneLayer = nOrder == 1 .and. ShockSlope == 0.0
 
@@ -79,15 +81,20 @@ subroutine exchange_messages
              Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
              restrictface=DoRestrictFace)
      case('opt')
-        ! Do not pass corners
-        call message_pass_dir(1,3,nORDER,.false.,prolong_order,nVar,&
+        ! Do not pass corners if not necessary
+        DoCorners = nOrder == 2 .and. UseAccurateResChange
+        call message_pass_dir(1,3,nOrder,DoCorners,prolong_order,nVar,&
              Sol_VGB=State_VGB, DoTwoCoarseLayers=DoTwoCoarseLayers, &
              restrictface=DoRestrictFace)
      case('allopt')
+        ! Do not pass corners if not necessary
+        DoFaces = .not.(nOrder == 2 .and. UseAccurateResChange)
+        ! Pass one layer if possible
         DoOneLayer = nOrder == 1
-        call message_pass_cells_8state(DoOneLayer,.true.,DoRestrictFace)
+
+        call message_pass_cells_8state(DoOneLayer,DoFaces,DoRestrictFace)
         if(SaveBoundaryCells)call fix_boundary_ghost_cells(DoRestrictFace)
-      case default
+     case default
         call stop_mpi('Unknown optimize_message_pass='//optimize_message_pass)
      end select
   end if
