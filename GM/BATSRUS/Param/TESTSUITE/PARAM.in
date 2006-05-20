@@ -65,6 +65,9 @@ Divb
 Length
 
 #INCLUDE
+Reschange
+
+#INCLUDE
 Plottype
 
 ^CFG IF IMPLICIT BEGIN
