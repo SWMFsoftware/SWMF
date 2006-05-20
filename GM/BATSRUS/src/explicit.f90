@@ -5,6 +5,7 @@ subroutine advance_expl(DoCalcTimestep)
 
   use ModMain
   use ModFaceFlux, ONLY: calc_face_flux
+  use ModFaceValue,ONLY: calc_face_value
   use ModAdvance,  ONLY: UseUpdateCheck
   use ModParallel, ONLY: neiLev
   use ModGeometry, ONLY: Body_BLK
@@ -43,7 +44,7 @@ subroutine advance_expl(DoCalcTimestep)
         !   and apply BCs for interface states as needed.
 
         call timing_start('calc_face_bfo')
-        call calc_facevalues(.true.)
+        call calc_face_value(.true.,GlobalBlk)
         call timing_stop('calc_face_bfo')
 
         if(body_BLK(globalBLK))call set_BCs(n_step,Time_Simulation,.true.)
@@ -91,7 +92,7 @@ subroutine advance_expl(DoCalcTimestep)
         !   and apply BCs for interface states as needed.
 
         call timing_start('calc_facevalues')
-        call calc_facevalues(.false.)
+        call calc_face_value(.false., GlobalBlk)
         call timing_stop('calc_facevalues')
 
         if(body_BLK(globalBLK))call set_BCs(n_step,Time_Simulation,.false.)
