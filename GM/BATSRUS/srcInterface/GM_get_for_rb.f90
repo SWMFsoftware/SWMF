@@ -18,7 +18,7 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        RB_lat, RB_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p
 
-  use ModRaytrace, ONLY: UseAccurateIntegral, RayResult_VII, RayIntegral_VII, &
+  use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
   implicit none

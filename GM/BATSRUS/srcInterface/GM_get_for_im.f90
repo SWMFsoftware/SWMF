@@ -11,14 +11,14 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use ModProcMH, ONLY: iProc
 
   use ModGmImCoupling, ONLY: &
-       allocate_gm_im, MHD_compute_from_raytrace, &
+       allocate_gm_im, &
        process_integrated_data, DoTestTec, DoTestIdl, &
        write_integrated_data_tec, write_integrated_data_idl, &
        RCM_lat, RCM_lon, &
        MHD_SUM_vol, MHD_Xeq, MHD_Yeq, MHD_Beq, MHD_SUM_rho, MHD_SUM_p, &
        NoValue
 
-  use ModRaytrace, ONLY: UseAccurateIntegral, RayResult_VII, RayIntegral_VII, &
+  use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
   implicit none
@@ -43,41 +43,31 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   ! Allocate arrays
   call allocate_gm_im(iSizeIn, jSizeIn)
 
-  if(UseAccurateIntegral)then
-     ! The RCM ionosphere radius in normalized units
-     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
-     call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius)
+  ! The RCM ionosphere radius in normalized units
+  Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+  call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius)
 
-     if(iProc==0)then
-        ! Copy RayResult into small arrays
-        MHD_SUM_vol = RayResult_VII(InvB_   ,:,:)
-        MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
-        MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
-        MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
-        MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-        MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
+  if(iProc==0)then
+     ! Copy RayResult into small arrays
+     MHD_SUM_vol = RayResult_VII(InvB_   ,:,:)
+     MHD_Xeq     = RayResult_VII(Z0x_    ,:,:)
+     MHD_Yeq     = RayResult_VII(Z0y_    ,:,:)
+     MHD_Beq     = RayResult_VII(Z0b_    ,:,:)
+     MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
+     MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
 
-        ! Put impossible values if the ray is not closed
-        where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
-           MHD_Xeq     = NoValue
-           MHD_Yeq     = NoValue
-           MHD_SUM_vol = 0.0
-           MHD_SUM_rho = 0.0
-           MHD_SUM_p   = 0.0
-           MHD_Beq     = NoValue
-        end where
-
-     end if
-
-     deallocate(RayIntegral_VII, RayResult_VII)
-
-  else
-     ! Make sure that we have ray tracing
-     call ray_trace
-
-     !compute various values
-     call MHD_compute_from_raytrace
+     ! Put impossible values if the ray is not closed
+     where(RayResult_VII(xEnd_,:,:) <= CLOSEDRAY)
+        MHD_Xeq     = NoValue
+        MHD_Yeq     = NoValue
+        MHD_SUM_vol = 0.0
+        MHD_SUM_rho = 0.0
+        MHD_SUM_p   = 0.0
+        MHD_Beq     = NoValue
+     end where
   end if
+
+  deallocate(RayIntegral_VII, RayResult_VII)
 
   if (iProc == 0) then
      ! Output before processing
