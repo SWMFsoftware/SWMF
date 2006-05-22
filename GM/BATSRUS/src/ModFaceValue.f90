@@ -137,7 +137,7 @@ contains
        Fine2_VII         ,& !States in 4 fine physical cells,2nd layer
        CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
        FineToCoarseF_VII ,& !Facevalues in the physical cell,
-                                !   looking at the coarser cell 
+       !                        looking at the coarser cell 
        FineF_VII)           !Facevalues in the physical cell,
     !   looking at another physical cell
 
@@ -818,8 +818,18 @@ contains
       select case(iSideIn)
       case(east_)
          do k=1,nK,2; do j=1,nJ,2
-            if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
-               call tvd_reschange_body(& 
+            if(  all(true_cell(-1:2,j:j+1,k:k+1,iBlock)) .and. &
+                 all(true_cell(0,j-2:j+3,k-2:k+3,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
+                    Coarse1_VII  =    Primitive_VG(:, 0,j-2:j+3,k-2:k+3),&
+                    Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
+                    Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
+                    CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
+                    FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
+                    FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
+            else
+               call tvd_reschange_body(                                 & 
                     Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
                     Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
                     Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
@@ -830,21 +840,22 @@ contains
                     IsTrueCoarse2    = true_cell(-1,j,k,iBlock)        ,&
                     IsTrueCoarse1    = true_cell( 0,j,k,iBlock)        ,&
                     IsTrueFine1  =all(true_cell( 1,j:j+1,k:k+1,iBlock)),&
-                    IsTrueFine2_II      =true_cell( 2,j:j+1,k:k+1,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
-                    Coarse1_VII  =    Primitive_VG(:, 0,j-2:j+3,k-2:k+3) ,&
-                    Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
-                    Fine2_VII    =    Primitive_VG(:, 2,j:j+1,k:k+1)   ,&
-                    CoarseToFineF_VII= LeftState_VX(:,1,j:j+1,k:k+1)   ,&
-                    FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
-                    FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
+                    IsTrueFine2_II   = true_cell( 2,j:j+1,k:k+1,iBlock))
             end if
          end do; end do
       case(west_)
          do k=1,nK,2; do j=1,nJ,2
-            if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
+            if(  all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)).and. &
+                 all(true_cell(nI+1,j-2:j+3,k-2:k+3,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:, nI+2,j,k)         ,&
+                    Coarse1_VII  =    Primitive_VG(:, nI+1,j-2:j+3,k-2:k+3) ,&
+                    Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
+                    Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
+                    CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
+                    FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
+                    FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
+            else
                call tvd_reschange_body(& 
                     Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
                     Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
@@ -857,20 +868,21 @@ contains
                     IsTrueCoarse1    = true_cell(nI+1,j,k,iBlock)      ,&
                     IsTrueFine1  =all(true_cell(nI,j:j+1,k:k+1,iBlock)),&
                     IsTrueFine2_II      =true_cell(nI-1,j:j+1,k:k+1,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:, nI+2,j,k)         ,&
-                    Coarse1_VII  =    Primitive_VG(:, nI+1,j-2:j+3,k-2:k+3) ,&
-                    Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
-                    Fine2_VII    =    Primitive_VG(:, nI-1,j:j+1,k:k+1),&
-                    CoarseToFineF_VII=RightState_VX(:,nI+1,j:j+1,k:k+1),&
-                    FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
-                    FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
             end if
          end do; end do
       case(south_)
          do k=1,nK,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
+            if(  all(true_cell(i:i+1,-1:2,k:k+1,iBlock)) .and. &
+                 all(true_cell(i-2:i+3,0,k-2:k+3,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
+                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,0,k-2:k+3),&
+                    Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
+                    Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
+                    CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
+                    FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
+                    FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
+            else
                call tvd_reschange_body(& 
                     Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
                     Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
@@ -883,20 +895,21 @@ contains
                     IsTrueCoarse1    = true_cell(i, 0,k,iBlock)        ,&
                     IsTrueFine1  =all(true_cell(i:i+1, 1,k:k+1,iBlock)),&
                     IsTrueFine2_II      =true_cell(i:i+1, 2,k:k+1,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
-                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,0,k-2:k+3),&
-                    Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
-                    Fine2_VII    =    Primitive_VG(:,i:i+1, 2,k:k+1)   ,&
-                    CoarseToFineF_VII= LeftState_VY(:,i:i+1,1,k:k+1)   ,&
-                    FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
-                    FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
             end if
          end do; end do
       case(north_)
          do k=1,nK,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
+            if(  all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)) .and. &
+                 all(true_cell(i-2:i+3,nJ+1,k-2:k+3,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
+                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,nJ+1,k-2:k+3),&
+                    Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
+                    Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
+                    CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
+                    FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
+                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
+            else
                call tvd_reschange_body(& 
                     Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
@@ -909,20 +922,21 @@ contains
                     IsTrueCoarse1    = true_cell(i,nJ+1,k,iBlock)      ,&
                     IsTrueFine1  =all(true_cell(i:i+1,nJ,k:k+1,iBlock)),&
                     IsTrueFine2_II      =true_cell(i:i+1,nJ-1,k:k+1,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
-                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,nJ+1,k-2:k+3),&
-                    Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
-                    Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
-                    CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
-                    FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
             end if
          end do; end do
       case(bot_)
          do j=1,nJ,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
+            if(  all(true_cell(i:i+1,j:j+1,-1:2,iBlock)) .and. &
+                 all(true_cell(i-2:i+3,j-2:j+3,0,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
+                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,0),&
+                    Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
+                    Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
+                    CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
+                    FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
+                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
+            else
                call tvd_reschange_body(& 
                     Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
                     Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
@@ -935,20 +949,21 @@ contains
                     IsTrueCoarse1    = true_cell(i,j, 0,iBlock)        ,&
                     IsTrueFine1 =all(true_cell(i:i+1,j:j+1, 1,iBlock)),&
                     IsTrueFine2_II      =true_cell(i:i+1,j:j+1, 2,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
-                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,0),&
-                    Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
-                    Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
-                    CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
-                    FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
             end if
          end do; end do
       case(top_)
          do j=1,nJ,2; do i=1,nI,2
-            if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
+            if(  all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)) .and. &
+                 all(true_cell(i-2:i+3,j-2:j+3,nK+1,iBlock)) ) then
+               call accurate_reschange(&
+                    Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
+                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,nK+1),&
+                    Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
+                    Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
+                    CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
+                    FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
+                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
+            else
                call tvd_reschange_body(& 
                     Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
@@ -961,15 +976,6 @@ contains
                     IsTrueCoarse1    =true_cell(i,j,nK+1,iBlock)       ,&
                     IsTrueFine1  =all(true_cell(i:i+1,j:j+1,nK,iBlock)),&
                     IsTrueFine2_II  =true_cell(i:i+1,j:j+1,nK-1,iBlock))
-            else
-               call accurate_reschange(&
-                    Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
-                    Coarse1_VII  =    Primitive_VG(:,i-2:i+3,j-2:j+3,nK+1),&
-                    Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
-                    Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
-                    CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
-                    FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
             end if
          end do; end do
       end select
