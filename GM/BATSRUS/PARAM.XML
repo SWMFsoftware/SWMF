@@ -3327,16 +3327,14 @@ T			UseAccurateTrace
 0.1			DtExchangeRay [sec]
 1			DnRaytrace
 
-Raytracing (field-line tracing) is needed to couple the GM and IM components.
-It can also be used to create plot files with open-closed field line 
-information. There are two algorithms implemented for integrating rays
-and for tracing rays.
+Raytracing (field-line tracing) is needed to couple the GM with the IM or RB 
+components. It can also be used to create plot files with open-closed 
+field line information. There are two algorithms implemented for integrating 
+rays and for tracing rays.
 
-If UseAccurateIntegral is true (default), the field line integrals
-are calculated with the accurate algorithm, which follows the lines
-all the way. If UseAccurateIntegral is false, the block-wise algorithm
-is used, which actually needs the face values computed by the 
-block-wise tracing algorithm (UseAccurateTrace must be false).
+The UseAccurateIntegral parameter is kept for backwards compatibility
+only, it is ignored. The field line integrals are always calculated with 
+the accurate algorithm, which follows the lines all the way. 
 
 If UseAccurateTrace is false (default), the block-wise algorithm is used,
 which interpolates at block faces. This algorithm is fast, but less 
