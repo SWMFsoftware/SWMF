@@ -1101,9 +1101,9 @@ GM/restart_n5000	NameRestartOutDir
 #RESTARTOUTFILE
 one			TypeRestartOutFile
 
-This command determines if the restart information is saved into files
-block by block into a single direct access file.
-The default value is \'block\'.
+This command determines if the restart information is saved as an individual 
+file for each block (block) or into a single direct access file containing all
+blocks (one).  The default value is \'one\'.
 ','type' => 't'}],'type' => 'e'},{'attrib' => {'name' => 'SAVERESTART'},'name' => 'command','content' => [{'attrib' => {'name' => 'DoSaveRestart','default' => 'T','type' => 'logical'},'name' => 'parameter','content' => [],'type' => 'e'},{'attrib' => {'expr' => '$DoSaveRestart'},'name' => 'if','content' => [{'attrib' => {'name' => 'DnSaveRestart','default' => '-1','type' => 'integer','min' => '-1'},'name' => 'parameter','content' => [],'type' => 'e'},{'attrib' => {'name' => 'DtSaveRestart','default' => '-1','type' => 'real','min' => '-1'},'name' => 'parameter','content' => [],'type' => 'e'}],'type' => 'e'},{'content' => '
 #SAVERESTART
 T			DoSaveRestart Rest of parameters read if true

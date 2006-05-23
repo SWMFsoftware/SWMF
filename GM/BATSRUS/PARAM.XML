@@ -1657,9 +1657,9 @@ GM/restart_n5000	NameRestartOutDir
 #RESTARTOUTFILE
 one			TypeRestartOutFile
 
-This command determines if the restart information is saved into files
-block by block into a single direct access file.
-The default value is 'block'.
+This command determines if the restart information is saved as an individual 
+file for each block (block) or into a single direct access file containing all
+blocks (one).  The default value is 'one'.
 </command>
 
 <command name="SAVERESTART">
