@@ -20,9 +20,6 @@ module ModFaceValue
   public :: calc_face_value, correct_monotone_restrict
 
   ! Local variables:
-  ! For now this logical is fixed
-  logical, parameter :: UseFullSecondOrder = .true.
-
   real, parameter :: cSixth=cHalf*cThird
 
   ! Maximum length of the stencil in 1D
@@ -233,10 +230,11 @@ contains
     real, dimension(nVar):: AveragedFine1_V, Slope1_V, Slope2_V
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V
     real, dimension(nVar):: GradNormalLtd_V, FaceMiddle_V, Transverse_V
-    real, dimension(nVar):: Coarse1Max_V, Coarse1Min_V
+    real, dimension(nVar, 2, 2):: Coarse1Max_VII, Coarse1Min_VII
 
     real :: AverageOrig_V(nVar), AverageOrig
-    real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha
+    real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha, Beta
+    real :: BetaLimiter1
     !-------------------------------------------------------------------------
 
     !Calculate averaged Fine1_VII 
@@ -252,8 +250,10 @@ contains
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,1,1) - Coarse2_V)
 
+    BetaLimiter1 = min(BetaLimiter, 1.5)
+
     GradNormalLtd_V= SignGradNormal_V*max(cZero,min( &
-         BetaLimiter*Slope1_V, BetaLimiter*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
+         BetaLimiter1*Slope1_V, BetaLimiter*Slope2_V, 0.5*(Slope1_V+Slope2_V)))
 
     ! Add limited normal gradient to obtain the middle value for the fine face
     FaceMiddle_V = Coarse1_VII(:,1,1) + GradNormalLtd_V
@@ -268,29 +268,19 @@ contains
                ) - 0.5*Coarse1_VII(iVar,1,1)
        end do
 
-       ! Add transverse gradient
-       CoarseToFineF_VII(:,i2,j2) = FaceMiddle_V + Transverse_V
+       ! Bound the face value by Coarse1, Coarse1+Transverse and Fine1
+       Coarse1Max_VII(:,i2,j2) = Coarse1_VII(:,1,1) + max(0.0, Transverse_V)
+       Coarse1Min_VII(:,i2,j2) = Coarse1_VII(:,1,1) + min(0.0, Transverse_V)
 
-       if(UseFullSecondOrder)then
-          ! Limit face values to be between Coarse1(+Transverse) and Fine1
-          Coarse1Max_V = Coarse1_VII(:,1,1) + max(0.0, Transverse_V)
-          Coarse1Min_V = Coarse1_VII(:,1,1) + min(0.0, Transverse_V)
-       else
-          ! Limit face values to be between Coarse1 and Fine1
-          Coarse1Max_V = Coarse1_VII(:,1,1)
-          Coarse1Min_V = Coarse1Max_V
-       end if
-
+       ! Add transverse gradient and limit it
        CoarseToFineF_VII(:,i2,j2) = &
-            max( &
-            min( CoarseToFineF_VII(:,i2,j2) &
-            ,    max( Coarse1Max_V, Fine1_VII(:,i2,j2) ) &
-            ),   min( Coarse1Min_V, Fine1_VII(:,i2,j2) ) )
+            max( min(Coarse1Min_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
+            min( max(Coarse1Max_VII(:,i2,j2), Fine1_VII(:,i2,j2)), &
+            FaceMiddle_V + Transverse_V) )
 
     end do; end do
 
-
-    ! Check if the average fine face satisfies some condition
+    ! The average face value
     AverageOrig_V = 0.25* &
          ( CoarseToFineF_VII(:,1,1) + CoarseToFineF_VII(:,1,2) &
          + CoarseToFineF_VII(:,2,1) + CoarseToFineF_VII(:,2,2) )
@@ -303,7 +293,7 @@ contains
        Middle      = FaceMiddle_V(iVar)
 
        ! Check if the |L-M| <= |M-C| condition is satisfied 
-       if(  abs(AverageOrig   - Middle) <=  abs(Coarse - Middle) ) CYCLE
+       if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
 
        ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
        FaceAverage = Middle + &
@@ -311,28 +301,34 @@ contains
 
        ! Correct face values either upward or downward
        if(AverageOrig < FaceAverage)then
-          FaceTmp_II = max( Coarse, CoarseToFineF_VII(iVar,:,:) )
+          FaceTmp_II = &
+               max(Coarse1Max_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
        else
-          FaceTmp_II = min( Coarse, CoarseToFineF_VII(iVar,:,:) )
+          FaceTmp_II = &
+               min(Coarse1Min_VII(iVar,:,:), CoarseToFineF_VII(iVar,:,:))
        end if
-       ! Calculate Alpha
+
+       ! Calculate interpolation coefficient needed to satisfy the condition
        Alpha = (FaceAverage - AverageOrig) / &
             ( 0.25*sum( FaceTmp_II ) - AverageOrig)
-       CoarseToFineF_VII(iVar,:,:) = CoarseToFineF_VII(iVar,:,:) &
-            + Alpha*(FaceTmp_II - CoarseToFineF_VII(iVar,:,:))
+       Beta = 1.0 - Alpha
+
+       ! Interpolate
+       CoarseToFineF_VII(iVar,:,:) = &
+            Alpha*FaceTmp_II + Beta*CoarseToFineF_VII(iVar,:,:)
 
     end do
 
     ! The face is half the distance in the fine cell
     Slope1_V = 0.5*Slope1_V
-    do j2=1,2;do i2=1,2
+    do j2=1,2; do i2=1,2
        !Limit gradient in the first layer of finer cells
        Slope2_V = 0.5*SignGradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))
 
        ! The first limiting ensures that the FineToCoarse face value
        ! remains between the Fine1 and Coarse values
        GradNormalLtd_V = SignGradNormal_V*max(cZero,min( &
-            SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_VII(:,1,1)), &
+            SignGradNormal_V*(Fine1_VII(:,i2,j2) - Coarse1_VII(:,1,1)), &
             BetaLimiter*Slope1_V, &
             BetaLimiter*Slope2_V, &
             0.5*(Slope1_V + Slope2_V)))
@@ -340,7 +336,7 @@ contains
        FineToCoarseF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) - GradNormalLtd_V
        FineF_VII(:,i2,j2) = Fine1_VII(:,i2,j2) + GradNormalLtd_V
 
-    end do;end do
+    end do; end do
 
   end subroutine accurate_reschange
   !===========================================================================
