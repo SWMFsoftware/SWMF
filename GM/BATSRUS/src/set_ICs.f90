@@ -470,7 +470,7 @@ subroutine set_ICs
         end if
 
      end select
-     if(UseUserICs) call user_set_ICs
+     if(UseUserICs .and. .not.restart) call user_set_ICs
   end if ! unusedBLK
   ! Eliminate B1 around body if necessary
   if(.not.restart)then
