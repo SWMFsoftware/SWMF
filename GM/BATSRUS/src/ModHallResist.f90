@@ -26,7 +26,7 @@ contains
   subroutine init_hall_resist
     use ModSize,    ONLY: nI, nJ, nK, nDim
     use ModConst,   ONLY: cProtonMass, cElectronCharge
-    use ModPhysics, ONLY: UnitSI_B, UnitSI_T, UnitSI_X
+    use ModPhysics, ONLY: UnitSI_B, UnitSI_T, UnitSI_X, UnitSI_Rho
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -35,7 +35,7 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     IonMassPerCharge =HallFactor*(cProtonMass/cElectronCharge) &
-         * (UnitSI_B*UnitSI_T/UnitSI_X**2)
+         * UnitSI_B*UnitSI_T/(UnitSI_X**2 * UnitSI_Rho)
 
     if (DoTestMe) then
        write(*,*) ''
