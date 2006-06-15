@@ -23,7 +23,7 @@ module ModFaceFlux
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, &
-       hall_factor, get_face_current
+       IsNewBlockHall, hall_factor, get_face_current
 
   implicit none
 
@@ -81,6 +81,10 @@ contains
     DoHLL = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
     DoAw  = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
     DoRoe = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+
+    ! Make sure that Hall MHD recalculates the magnetic field 
+    ! in the current block that will be used for the Hall term
+    IsNewBlockHall = .true.
 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(iBlock,1,1,1,nJ,1,nK)
