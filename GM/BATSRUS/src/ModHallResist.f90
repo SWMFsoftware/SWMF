@@ -5,7 +5,7 @@ module ModHallResist
 
   ! Logical for adding hall resistivity
   logical:: UseHallResist=.false.
-
+  logical:: IsNewBlockHall=.true.
   ! Coefficient for taking whistler wave speed into account
   real:: HallCmaxFactor = 1.0
 
@@ -65,7 +65,8 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModAdvance, ONLY: State_VGB, B_, Bx_, By_, Bz_
     use ModMain,    ONLY: nBlock, nI, nJ, nK, x_, y_, z_, &
-         iTest,jTest,kTest,VarTest,BlkTest,ProcTest
+         iTest,jTest,kTest,VarTest,BlkTest,ProcTest, &
+         n_step, nStage
     use ModGeometry,ONLY: Dx_BLK, Dy_BLK, Dz_BLK, &
          X_BLK, y_BLK, z_BLK
     use ModParallel, ONLY:neiLeast,neiLwest,neiLsouth, &
@@ -83,7 +84,6 @@ contains
     integer :: iL, iR, jL, jR, kL, kR
     real :: InvDx, InvDy, InvDz
 
-    integer :: iBlockLast = -1
 
     integer :: i1, j1, k1, i2, j2, k2, iC, jC, kC, iSide, jSide, kSide
     real, save :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -107,9 +107,8 @@ contains
        DoTestMe = .false.; DoTest =.false.
     end if
 
-    if(iBlock /= iBlockLast .or. nBlock == 1)then
-
-       iBlockLast = iBlock
+    if( IsNewBlockHall ) then
+       IsNewBlockHall = .false.
 
        ! Copy State_VGB into local array and overwrite ghost cells
        B1_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
