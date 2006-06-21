@@ -160,3 +160,9 @@ subroutine IH_get_a_line_point(&
   call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 end subroutine IH_get_a_line_point
 !===================================================================!
+subroutine IH_match_ibc
+  implicit none
+  character(len=*), parameter :: NameSub='IH_match_ibc'
+
+  call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+end subroutine IH_match_ibc

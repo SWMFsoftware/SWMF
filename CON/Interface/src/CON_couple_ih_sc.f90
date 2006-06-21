@@ -22,7 +22,6 @@ module CON_couple_ih_sc
 
   implicit none
   private !except
-
   !
   !PUBLIC MEMBER FUNCTIONS:
   public:: couple_ih_sc_init
@@ -289,6 +288,7 @@ contains
     integer,save::iCoupling=0
     integer::iFile
     character(LEN=21)::NameFile
+    logical::DoneMatchIBC=.false.
 !EOP
     if(.not.RouterScBuff%IsProc)return
     call CON_set_do_test(NameMod,DoTest,DoTestMe)
@@ -313,7 +313,10 @@ contains
          fill_buffer=SC_get_for_ih,&
          NameBuffer='IH_from_sc',&
          TargetID_=IH_)
-
+    if(.not.DoneMatchIBC)then
+       DoneMatchIBC=.true.
+       if(is_proc(IH_))call IH_match_ibc
+    end if
     if(DoTest.and.is_proc0(compid_grid(BuffGD%DD%Ptr)))then
        nU_I=ubound_vector('IH_from_sc')
        iCoupling=iCoupling+1
