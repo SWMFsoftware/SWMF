@@ -353,8 +353,8 @@ contains
             sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
        BdotU    = dot_product(VarsTrueFace_V(Bx_:Bz_),        &
                               VarsTrueFace_V(Ux_:Uz_))/       &
-                  dot_product(VarsTrueFace_V(Ux_:Uz_),        &
-                              VarsTrueFace_V(Ux_:Uz_))
+                  (dot_product(VarsTrueFace_V(Ux_:Uz_),        &
+                              VarsTrueFace_V(Ux_:Uz_))+cTolerance**2)
        UrTrue   = dot_product(VarsTrueFace_V(Ux_:Uz_),        &
                     FaceCoords_D(x_:z_))*RInv
        UtTrue   = ((VarsTrueFace_V(Ux_)*FaceCoords_D(x_)+     &
