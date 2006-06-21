@@ -176,12 +176,12 @@ subroutine clean_divb
         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
              State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)-&
              vDotGradZ_C*vInv_CB(:,:,:,iBlock)*DirDotDirInv
-        !        if(DoConservative.and.divb_diffcoeff>cOne))&
-        !             p_BLK(1:nI,1:nJ,1:nK,iBlock)=& 
-        !                  p_BLK(1:nI,1:nJ,1:nK,iBlock)+&
-        !                  cHalf*gm1*DirDotDirInv*DirDotDirInv*&
-        !                  (GradX_C**2+GradY_C**2+GradZ_C**2)*&
-        !                  vInv_CB(iBlock)**2
+        if(DoConservative)&
+             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)=& 
+             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)+&
+             cHalf*gm1*DirDotDirInv*DirDotDirInv*&
+             (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2)*&
+             vInv_CB(:,:,:,iBlock)**2
      end do
      Iteration=Iteration+1   
      if(Iteration>nCleanDivb)EXIT    
