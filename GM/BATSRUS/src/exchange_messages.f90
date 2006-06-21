@@ -2,6 +2,7 @@
 subroutine exchange_messages
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,gcn,nBlockMax,unusedBLK, &
+       TypeBc_I,time_loop,&
        UseConstrainB,&              !^CFG IF CONSTRAINB 
        UseProjection,&              !^CFG IF PROJECTION
        UseDivbDiffusion,&           !^CFG IF DIVBDIFFUSE
@@ -11,7 +12,7 @@ subroutine exchange_messages
        State_VGB,divB1_GB
   use ModInterface
   use ModParallel, ONLY : UsePlotMessageOptions
-  use ModGeometry, ONLY : far_field_BCs_BLK            
+  use ModGeometry, ONLY : far_field_BCs_BLK        
   use ModMpi
   use ModMPCells, ONLY : DoOneCoarserLayer
   use ModBoundaryCells,ONLY:SaveBoundaryCells
@@ -105,6 +106,8 @@ subroutine exchange_messages
      if (unusedBLK(iBlock)) CYCLE
      if (far_field_BCs_BLK(iBlock)) &                        
           call set_outer_BCs(iBlock,time_simulation,.false.) 
+     if(time_loop.and.any(TypeBc_I=='coronatoih'))&
+          call fill_in_from_buffer(iBlock)
      call calc_energy(iBlock)
   end do
 
@@ -114,7 +117,43 @@ subroutine exchange_messages
   if(oktest)write(*,*)'exchange_messages finished, me=',iProc
 
 end subroutine exchange_messages
-
+!============================================================================!
+subroutine fill_in_from_buffer(iBlock)
+  use ModGeometry,ONLY:R_BLK,x_BLK,y_BLK,z_BLK
+  use ModMain,ONLY:nI,nJ,nK,gcn,rBuffMin,rBuffMax,nDim,x_,y_,z_
+  use ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
+  use ModProcMH,ONLY:iProc
+  implicit none
+  integer,intent(in)::iBlock
+  integer::i,j,k
+  real::X_D(nDim)
+  logical::DoWrite=.true.
+  if(DoWrite)then
+     DoWrite=.false.
+     if(iProc==0)then
+        write(*,*)'Fill in the cells near the iner boundary from the buffer'
+     end if
+  end if
+  
+  do k=1-gcn,nK+gcn
+     do j=1-gcn,nJ+gcn
+        do i=1-gcn,nI+gcn
+           if(R_BLK(i,j,k,iBlock)>rBuffMax.or.R_BLK(i,j,k,iBlock)<rBuffMin)&
+                CYCLE
+           X_D(x_)=x_BLK(i,j,k,iBlock)
+           X_D(y_)=y_BLK(i,j,k,iBlock)
+           X_D(z_)=z_BLK(i,j,k,iBlock)
+           !Get interpolated values from buffer grid:
+           call get_from_spher_buffer_grid(&
+                X_D,nVar,State_VGB(:,i,j,k,iBlock))
+           !Transform primitive variables to conservative ones:
+           State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)=&
+                State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+                State_VGB(rho_   ,i,j,k,iBlock)
+        end do
+     end do
+  end do
+end subroutine fill_in_from_buffer
 !^CFG IF DEBUGGING BEGIN
 !============================================================================
 ! Test timing of various message passing options
