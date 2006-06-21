@@ -139,6 +139,12 @@ Module ModConst
 
   real,parameter :: tSunRot = 25.38    !Rotation period in days
   real,parameter :: RotationPeriodSun = Tsunrot * RotationPeriodEarth
+  
+  !Gravity potential, m^2/s^2
+  real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun 
+  
+  !Gravity potential of a proton, in K
+  real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
 
   ! Astronomical Unit (1AU)
 
@@ -183,7 +189,7 @@ Module ModConst
   real,parameter :: mMars =  0.6436*cE24
   ! Mass of the Mars 6.436*cE23  [kg]
 
-  real,parameter :: RotationPeriodMars = 1.026*24*3600.0
+  real,parameter :: RotationPeriodMars = 1.026*24*3600
   ! rotation period in hours
 
 end module ModConst
