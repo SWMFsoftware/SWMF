@@ -331,11 +331,14 @@ contains
   !==========================================================================
 
   subroutine get_planet( &
-       NamePlanetOut, RadiusPlanetOut, IonosphereHeightOut, &
+       NamePlanetOut, RadiusPlanetOut, MassPlanetOut, OmegaPlanetout, &
+       IonosphereHeightOut, &
        UseRotationOut, DipoleStrengthOut, DoUpdateB0Out, DtUpdateB0Out)
 
     character(len=*), optional, intent(out) :: NamePlanetOut
     real,             optional, intent(out) :: RadiusPlanetOut
+    real,             optional, intent(out) :: MassPlanetOut
+    real,             optional, intent(out) :: OmegaPlanetOut
     real,             optional, intent(out) :: IonosphereHeightOut
     logical,          optional, intent(out) :: UseRotationOut
     real,             optional, intent(out) :: DipoleStrengthOut
@@ -344,6 +347,8 @@ contains
     !-----------------------------------------------------------------------
     if(present(NamePlanetOut))      NamePlanetOut       = NamePlanet
     if(present(RadiusPlanetOut))    RadiusPlanetOut     = RadiusPlanet
+    if(present(MassPlanetOut))      MassPlanetOut       = MassPlanet
+    if(present(OmegaPlanetOut))     OmegaPlanetOut      = OmegaPlanet
     if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
     if(present(UseRotationOut))     UseRotationOut      = UseRotation
     if(present(DipoleStrengthOut))  DipoleStrengthOut   = DipoleStrength
