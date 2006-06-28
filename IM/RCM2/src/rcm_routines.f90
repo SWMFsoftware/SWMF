@@ -3794,7 +3794,7 @@ END SUBROUTINE Move_plasma_grid_NEW
                 END IF
             END IF
 
-            IF (temperature(i,j) /= 0.0) THEN
+            IF (temperature(i,j) /= 0.0 .and. density(i,j) /= 0.0) THEN
                 IF (ABS((temperature(i,j)-pressure_rcm/density(i,j)/1.6E-4)/temperature(i,j)) > 0.01) THEN
                  OPEN (unit=UNIT_DEBUG,FILE='RCM_DEBUG')
                  WRITE (UNIT_DEBUG,'(/////)')
