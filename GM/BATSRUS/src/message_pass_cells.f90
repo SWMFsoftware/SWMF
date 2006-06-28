@@ -657,15 +657,17 @@ subroutine message_pass_boundary_cells(UseMonotoneRestrict)
   !------------------------------------------
 
   if(.not.SaveBoundaryCells)return
-  if(numsend>0)&
-       allocate( IsBuffSend_II(MinBoundarySaved:MaxBoundarySaved,numSend),&
-       stat=iError );   call alloc_check(iError,"IsBuffSend_II")
+  if(numsend>0)then
+     allocate( IsBuffSend_II(MinBoundarySaved:MaxBoundarySaved,numSend),&
+          stat=iError )
+     call alloc_check(iError,"IsBuffSend_II")
+  end if
 
-  if(numrecv>0)&
-       allocate( IsBuffRecv_II(MinBoundarySaved:MaxBoundarySaved,numRecv),&
-       stat=iError );   call alloc_check(iError,"IsBuffRecv_II")
-  
-
+  if(numrecv>0)then
+     allocate( IsBuffRecv_II(MinBoundarySaved:MaxBoundarySaved,numRecv),&
+          stat=iError );   
+     call alloc_check(iError,"IsBuffRecv_II")
+  end if
 
   ! When neighbor is on the same processor, Collect/Send/Assign are all
   !    done in one step, without intermediate memory use.
@@ -889,22 +891,26 @@ contains
     ! Allocate new memory only if not already allocated, then initialize
 
     if(.not.allocated(nSend))then
-       allocate( nSend(0:nProc-1), stat=iError ); call alloc_check(iError,"nSend")
+       allocate( nSend(0:nProc-1), stat=iError )
+       call alloc_check(iError,"nSend")
     end if
     nSend=0
 
     if(.not.allocated(nRecv))then
-       allocate( nRecv(0:nProc-1), stat=iError ); call alloc_check(iError,"nRecv")
+       allocate( nRecv(0:nProc-1), stat=iError )
+       call alloc_check(iError,"nRecv")
     end if
     nRecv=0
 
     if(.not.allocated(nSendStart))then
-       allocate( nSendStart(0:nProc-1), stat=iError ); call alloc_check(iError,"nSendStart")
+       allocate( nSendStart(0:nProc-1), stat=iError )
+       call alloc_check(iError,"nSendStart")
     end if
     nSendStart=0
 
     if(.not.allocated(nRecvStart))then
-       allocate( nRecvStart(0:nProc-1), stat=iError ); call alloc_check(iError,"nRecvStart")
+       allocate( nRecvStart(0:nProc-1), stat=iError )
+       call alloc_check(iError,"nRecvStart")
     end if
     nRecvStart=0
 
@@ -951,32 +957,41 @@ contains
        ! Deallocate old memory and allocate new memory
 
        if(allocated(VSendI)) deallocate(VSendI)
-       allocate( VSendI(0:7,numSendRecv), stat=iError ); call alloc_check(iError,"VSendI")
+       allocate( VSendI(0:7,numSendRecv), stat=iError )
+       call alloc_check(iError,"VSendI")
 
        if(allocated(VRecvI)) deallocate(VRecvI)
-       allocate( VRecvI(0:7,numSendRecv), stat=iError ); call alloc_check(iError,"VRecvI")
+       allocate( VRecvI(0:7,numSendRecv), stat=iError )
+       call alloc_check(iError,"VRecvI")
 
        if(allocated(VSendIlocal)) deallocate(VSendIlocal)
-       allocate( VSendIlocal(0:7,numCopy), stat=iError ); call alloc_check(iError,"VSendIlocal")
+       allocate( VSendIlocal(0:7,numCopy), stat=iError )
+       call alloc_check(iError,"VSendIlocal")
 
        if(allocated(VRecvIlocal)) deallocate(VRecvIlocal)
-       allocate( VRecvIlocal(0:7,numCopy), stat=iError ); call alloc_check(iError,"VRecvIlocal")
+       allocate( VRecvIlocal(0:7,numCopy), stat=iError )
+       call alloc_check(iError,"VRecvIlocal")
 
        if(allocated(VSend )) deallocate(VSend )
-       allocate( VSend(numSend), stat=iError ); call alloc_check(iError,"VSend")
+       allocate( VSend(numSend), stat=iError )
+       call alloc_check(iError,"VSend")
 
        if(allocated(VRecv )) deallocate(VRecv )
-       allocate( VRecv(numRecv), stat=iError ); call alloc_check(iError,"VRecv")
+       allocate( VRecv(numRecv), stat=iError )
+       call alloc_check(iError,"VRecv")
 
        ! If sending corners and you want to limit the amount of memory needed,
        !    then send values one at a time to limit memory use
        !    and don't allocate this memory.
        if(.not.(DoLimitCornerMemory .and. .not.DoFacesOnly)) then
           if(allocated(VSend8)) deallocate(VSend8)
-          allocate( VSend8(nVar,numSend), stat=iError ); call alloc_check(iError,"VSend8")
+          allocate( VSend8(nVar,numSend), stat=iError )
+          call alloc_check(iError,"VSend8")
 
           if(allocated(VRecv8)) deallocate(VRecv8)
-          allocate( VRecv8(nVar,numRecv), stat=iError ); call alloc_check(iError,"VRecv8")
+          allocate( VRecv8(nVar,numRecv), stat=iError )
+          call alloc_check(iError,"VRecv8")
+
           numSendMax8=numSend
           numRecvMax8=numRecv
        end if
@@ -1006,12 +1021,14 @@ contains
     !    allocated the memory but may be enough for other message passing.
     if(.not.(DoLimitCornerMemory .and. .not.DoFacesOnly)) then
        if(.not.allocated(VSend8))then
-          allocate( VSend8(8,numSend), stat=iError ); call alloc_check(iError,"VSend8")
+          allocate( VSend8(8,numSend), stat=iError )
+          call alloc_check(iError,"VSend8")
           numSendMax8=numSend
        end if
        VSend8=0
        if(.not.allocated(VRecv8))then
-          allocate( VRecv8(8,numRecv), stat=iError ); call alloc_check(iError,"VRecv8")
+          allocate( VRecv8(8,numRecv), stat=iError )
+          call alloc_check(iError,"VRecv8")
           numRecvMax8=numRecv
        end if
        VRecv8=0
@@ -1871,9 +1888,12 @@ subroutine testmessage_pass_cells
   write(*,*)' '
   write(*,*)'Testing message_pass_cells, PE=',iProc,'  Starting tests ...'
 
-  allocate( V0(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError ); call alloc_check(iError,"V0")
-  allocate( V1(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError ); call alloc_check(iError,"V1")
-  allocate( V2(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError ); call alloc_check(iError,"V2")
+  allocate( V0(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError )
+  call alloc_check(iError,"V0")
+  allocate( V1(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError )
+  call alloc_check(iError,"V1")
+  allocate( V2(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError )
+  call alloc_check(iError,"V2")
   allocate(State_VGB(8,-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), stat=iError )
   call alloc_check(iError,"State_VGB")
 
