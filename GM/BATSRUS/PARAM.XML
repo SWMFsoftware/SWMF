@@ -1650,8 +1650,8 @@ GM/restart_n5000	NameRestartOutDir
 
 <command name="RESTARTOUTFILE">
 	<parameter name="TypeRestartOutFile" type="string" input="select">
-		<option name="block" default="T"/>
-		<option name="one" />
+		<option name="block"/>
+		<option name="one" default="T"/>
 	</parameter>
 
 #RESTARTOUTFILE
