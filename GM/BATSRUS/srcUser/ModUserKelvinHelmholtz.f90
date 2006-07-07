@@ -13,6 +13,7 @@ module ModUser
        user_amr_criteria,               &
        user_write_progress,             &
        user_get_log_var,                &
+       user_set_plot_var,               &
        user_calc_sources,               &
        user_heat_source,                &
        user_get_b0,                     &
