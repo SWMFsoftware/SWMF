@@ -217,16 +217,6 @@ subroutine write_plot_common(ifile)
   nBLKcells=0; nBLKcellsN=0; nBLKcellsS=0
   !! END IDL
 
-  ! Get the headers that contain variables names and units
-  select case(plot_form(ifile))
-  case('tec')
-     call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
-     if(oktest .and. iProc==0) write(*,*)unitstr_TEC
-  case('idl')
-     call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
-     if(oktest .and. iProc==0) write(*,*)unitstr_IDL
-  end select
-
   ! Compute the plot variables and write them to the disk
   PlotVarBlk=0.
   do iBLK=1,nBlockMax
@@ -278,6 +268,16 @@ subroutine write_plot_common(ifile)
      end if
 
   end do ! iBLK
+
+  ! Get the headers that contain variables names and units
+  select case(plot_form(ifile))
+  case('tec')
+     call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
+     if(oktest .and. iProc==0) write(*,*)unitstr_TEC
+  case('idl')
+     call get_idl_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
+     if(oktest .and. iProc==0) write(*,*)unitstr_IDL
+  end select
 
   ! Write files for new tecplot format
   if(plot_form(ifile)=='tec' .and. .NOT.(index(plot_type1,'sph')>0) )then
@@ -576,6 +576,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
   use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
   use ModUtilities, ONLY: lower_case
+  use ModUser, ONLY: user_set_plot_var
+  use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
+       plot_dimensional, Plot_
+
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -591,6 +595,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   integer :: iVar,itmp,jtmp, jVar
   integer :: i,j,k, ip1,im1,jp1,jm1,kp1,km1
   real :: xfactor,yfactor,zfactor
+
+  logical :: IsFound
   !-------------------------------------------------------------------------
 
   do iVar = 1, nPlotVar
@@ -1152,11 +1158,18 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                 plotvar_inBody(iVar) = CellState_VI(jVar,body1_)
            EXIT
         end do
-        if( jVar > nVar ) then
-           PlotVar(:,:,:,iVar)=-7777.
-           if(iProc==0.and.iBLK==1)write(*,*) &
-                'Warning in set_plotvar: unknown plotvarname=',&
-                plotvarnames(iVar),' for iplotfile=',iplotfile
+        if(jVar > nVar) then
+           call user_set_plot_var(iBLK, s, plot_dimensional(Plot_+iPlotFile), &
+                PlotVar(:,:,:,iVar), &                
+                plotvar_inBody(iVar), plotvar_useBody(iVar), &
+                NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
+                NameUnitUserIdl_I(iVar), IsFound)
+           if(.not. IsFound) then
+              PlotVar(:,:,:,iVar)=-7777.
+              if(iProc==0.and.iBLK==1)write(*,*) &
+                   'Warning in set_plotvar: unknown plotvarname=',&
+                   plotvarnames(iVar),' for iplotfile=',iplotfile
+           end if
         end if
      end select
   end do ! iVar
@@ -1172,6 +1185,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   use ModPhysics
   use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V   
   use ModUtilities,  ONLY: lower_case
+
   implicit none
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
@@ -1266,6 +1280,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type,plot_dimensional
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
+  use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
+
   implicit none
 
   ! Arguments
@@ -1482,6 +1498,10 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
               EXIT
            end if
         end do
+        if(iVar > nVar) then
+           NameTecVar = NameVarUserTec_I(iPlotVar)
+           NameUnit   = NameUnitUserTec_I(iPlotVar)
+        end if
      end select
 
      StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
@@ -1502,7 +1522,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
-  use ModIO,         ONLY: plot_type, plot_dimensional
+  use ModIO,         ONLY: plot_type, plot_dimensional, NameUnitUserIdl_I
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserIdl_V
   implicit none
 
@@ -1582,6 +1602,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
               EXIT
            end if
         end do
+        if(iVar > nVar) NameUnit = NameUnitUserIdl_I(iPlotVar)
      end select
      ! Append the unit string for this variable to the output string
      StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
