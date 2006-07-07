@@ -120,6 +120,10 @@ Module ModIO
   character (len=50)                                          :: Satellite_name(maxsatellitefile)
   character(len=3), dimension(maxsatellitefile) :: TypeSatCoord_I
 
+  ! Plot variable names and units defined in the user module
+  character(len=10), dimension(nPlotVarMax) :: &
+       NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I
+
 contains
 
   !===========================================================================
