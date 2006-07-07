@@ -136,7 +136,33 @@ contains
     call stop_user(Name)
   end subroutine user_get_log_var
 
-  !=====================================================================
+  !====================================================================
+
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModSize, ONLY: nI, nJ, nK
+
+    integer,          intent(in) :: iBlock
+    character(len=*), intent(in) :: NameVar
+    logical,          intent(in) :: IsDimensional
+    real,             intent(out):: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out):: PlotVarBody
+    logical,          intent(out):: UsePlotVarBody
+    character(len=*), intent(out):: NameTecVar
+    character(len=*), intent(out):: NameTecUnit
+    character(len=*), intent(out):: NameIdlUnit
+    logical,          intent(out):: IsFound
+
+    character (len=*), parameter :: Name='user_set_plot_var'
+    !-------------------------------------------------------------------
+    call stop_user(Name)
+
+  end subroutine user_set_plot_var
+
+  !====================================================================
+
   subroutine user_calc_sources
 
     character (len=*), parameter :: Name='user_calc_sources'

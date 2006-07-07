@@ -16,6 +16,7 @@
   public :: user_read_inputs
   public :: user_write_progress
   public :: user_get_log_var
+  public :: user_set_plot_var
   public :: user_calc_sources
   public :: user_heat_source
   public :: user_get_b0
