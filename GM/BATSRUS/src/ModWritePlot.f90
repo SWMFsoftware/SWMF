@@ -579,6 +579,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModUser, ONLY: user_set_plot_var
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
+  use ModNumConst, ONLY: cTiny
 
   implicit none
 
@@ -1154,7 +1155,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            call lower_case(NameVar)
            if(s /= NameVar) CYCLE
            PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
-           if(DefaultState_V(jVar) > cTiny)&
+           if(DefaultState_V(jVar) > cTiny) &
                 plotvar_inBody(iVar) = CellState_VI(jVar,body1_)
            EXIT
         end do
@@ -1609,3 +1610,4 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   end do
 
 end subroutine get_idl_units
+
