@@ -6,7 +6,8 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
-  
+  use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     !^CFG IF COVARIANT 
        FaceArea2MinI_B, FaceArea2MinJ_B, FaceArea2MinK_B  !^CFG IF COVARIANT 
@@ -45,7 +46,7 @@ module ModFaceFlux
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables needed for Hall resistivity
-  real :: Dxyz, HallCoeff
+  real :: InvDxyz, HallCoeff
 
 contains
   !===========================================================================
@@ -183,7 +184,7 @@ contains
          Area  = fAx_BLK(iBlock)
          Area2 = Area**2
          AreaX = Area; AreaY = 0.0; AreaZ = 0.0
-         Dxyz  = dx_BLK(iBlock)
+         InvDxyz = 1./dx_BLK(iBlock)
       end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -194,6 +195,15 @@ contains
             AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlock)
             Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
                  FaceArea2MinI_B(iBlock))
+            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
+                 InvDxyz  = 1.0/sqrt(&
+                 ( x_BLK(iFace  , jFace, kFace, iBlock)       &
+                 - x_BLK(iFace-1, jFace, kFace, iBlock))**2 + &
+                 ( y_BLK(iFace  , jFace, kFace, iBlock)       &
+                 - y_BLK(iFace-1, jFace, kFace, iBlock))**2 + &
+                 ( z_BLK(iFace  , jFace, kFace, iBlock)       &
+                 - z_BLK(iFace-1, jFace, kFace, iBlock))**2 )
+
          end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe &
@@ -224,7 +234,7 @@ contains
          Area  = fAy_BLK(iBlock)
          Area2 = Area**2
          AreaX = 0.0; AreaY = Area; AreaZ = 0.0
-         Dxyz  = dy_BLK(iBlock)
+         InvDxyz  = 1./dy_BLK(iBlock)
       end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -235,6 +245,15 @@ contains
             AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlock)
             Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
                  FaceArea2MinJ_B(iBlock))
+            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
+                 InvDxyz  = 1.0/sqrt(&
+                 ( x_BLK(iFace, jFace  , kFace, iBlock)       &
+                 - x_BLK(iFace, jFace-1, kFace, iBlock))**2 + &
+                 ( y_BLK(iFace, jFace  , kFace, iBlock)       &
+                 - y_BLK(iFace, jFace-1, kFace, iBlock))**2 + &
+                 ( z_BLK(iFace, jFace  , kFace, iBlock)       &
+                 - z_BLK(iFace, jFace-1, kFace, iBlock))**2 )
+
          end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
@@ -265,7 +284,7 @@ contains
          Area  = fAz_BLK(iBlock)
          Area2 = Area**2
          AreaX = 0.0; AreaY = 0.0; AreaZ = Area
-         Dxyz  = dz_BLK(iBlock)
+         InvDxyz = 1./dz_BLK(iBlock)
       end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -276,6 +295,15 @@ contains
             AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlock)
             Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
                  FaceArea2MinK_B(iBlock))
+            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
+                 InvDxyz  = 1.0/sqrt(&
+                 ( x_BLK(iFace, jFace, kFace  , iBlock)       &
+                 - x_BLK(iFace, jFace, kFace-1, iBlock))**2 + &
+                 ( y_BLK(iFace, jFace, kFace  , iBlock)       &
+                 - y_BLK(iFace, jFace, kFace-1, iBlock))**2 + &
+                 ( z_BLK(iFace, jFace, kFace  , iBlock)       &
+                 - z_BLK(iFace, jFace, kFace-1, iBlock))**2 )
+
          end if                                 !^CFG END COVARIANT
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
@@ -848,7 +876,7 @@ contains
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
       if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0) Fast = Fast + &
-           HallCmaxFactor*HallCoeff*cPi*abs(FullBn)*InvRho/Dxyz
+           HallCmaxFactor*HallCoeff*cPi*abs(FullBn)*InvRho*InvDxyz
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          Cleft   = min(UnLeft, UnRight) - Fast
