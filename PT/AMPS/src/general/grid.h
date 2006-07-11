@@ -380,7 +380,7 @@ public:
     long int nnode,ncell;
     DataType xmin[3],xmax[3],locx[3],summ;
     array_1d<DataType> x_node(DIM);
-    bool flag;
+    bool flag=false;
 
     for (ncell=0;ncell<ncells;ncell++) {
       x_node=cell[ncell].node[0]->X();
