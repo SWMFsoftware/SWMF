@@ -64,6 +64,7 @@ module ModCoordTransform
   public :: xyz_to_dir     ! convert Cartesian vector to spherical direction
   public :: dir_to_xyz     ! convert spher. direction to Cartesian unit vector
   public :: cross_product  ! return the cross product of two vectors
+  public :: inverse_matrix ! return the inverse of a 3 by 3 matrix
 
   public :: show_rot_matrix      ! write out matrix elements in a nice format
   public :: atan2_check          ! compute atan2 even if both x and y are zero
@@ -71,6 +72,7 @@ module ModCoordTransform
 
   !REVISION HISTORY:
   ! 08Aug03 - Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
+  ! 29Jun06 - YingJuan - added inverse_matrix function
   !EOP ___________________________________________________________________
 
   integer, parameter :: x_=1, y_=2, z_=3
@@ -639,6 +641,40 @@ contains
     c_D(y_) = az*bx - ax*bz
     c_D(z_) = ax*by - ay*bx
   end function cross_product33
+
+  !============================================================================
+  function inverse_matrix(a_DD) result(b_DD)
+    real, intent(in) :: a_DD(3,3)
+    real             :: b_DD(3,3)
+
+    real :: DetA
+
+    character (len=*), parameter :: NameSub = NameMod//':inverse_matrix'
+    !-------------------------------------------------------------------------
+    ! Invert the 3x3 matrix:
+    b_DD(1,1)=a_DD(2,2)*a_DD(3,3)-a_DD(2,3)*a_DD(3,2)
+    b_DD(2,1)=a_DD(2,3)*a_DD(3,1)-a_DD(2,1)*a_DD(3,3)
+    b_DD(3,1)=a_DD(2,1)*a_DD(3,2)-a_DD(2,2)*a_DD(3,1)
+
+    b_DD(1,2)=a_DD(1,3)*a_DD(3,2)-a_DD(1,2)*a_DD(3,3)
+    b_DD(2,2)=a_DD(1,1)*a_DD(3,3)-a_DD(1,3)*a_DD(3,1)
+    b_DD(3,2)=a_DD(1,2)*a_DD(3,1)-a_DD(1,1)*a_DD(3,2)
+
+    b_DD(1,3)=a_DD(1,2)*a_DD(2,3)-a_DD(1,3)*a_DD(2,2)
+    b_DD(2,3)=a_DD(1,3)*a_DD(2,1)-a_DD(1,1)*a_DD(2,3)
+    b_DD(3,3)=a_DD(1,1)*a_DD(2,2)-a_DD(1,2)*a_DD(2,1)
+
+    DetA= a_DD(1,1)*b_DD(1,1)+a_DD(1,2)*b_DD(2,1)+a_DD(1,3)*b_DD(3,1)
+
+    if(abs(detA) > 1.0e-16)then
+       b_DD = b_DD/DetA
+    else
+       write(*,*)'Error in ',NameSub,' for matrix:'
+       call show_rot_matrix(a_DD)
+       call CON_stop('Singular matrix in '//NameSub)
+    end if
+
+  end function inverse_matrix
 
   !============================================================================
 
