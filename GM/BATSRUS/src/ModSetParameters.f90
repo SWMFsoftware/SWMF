@@ -630,13 +630,20 @@ subroutine MH_set_parameters(TypeAction)
               end do
               if(index(plot_string,'x=0')>0)then
                  plot_area='x=0'
-                 if(.not.is_axial_geometry())then      !^CFG IF COVARIANT
-
+                 if(.not.is_axial_geometry() & !^CFG IF COVARIANT
+                      .or.index(plot_string,'tec')>0)then     
                     plot_range(1,ifile)=-cTiny*(XyzMax_D(x_)-XyzMin_D(x_))&
                          /(nCells(1)*proc_dims(1))
                     plot_range(2,ifile)=+cTiny*(XyzMax_D(x_)-XyzMin_D(x_))&
                          /(nCells(1)*proc_dims(1))
-                 else                               !^CFG IF COVARIANT BEGIN
+                 else if(index(plot_string,'tec')>0) then
+                    plot_range(1,ifile)= &                       
+                         -cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
+                         /(nCells(Phi_)*proc_dims(Phi_))            
+                    plot_range(2,ifile)= &                        
+                         +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
+                         /(nCells(Phi_)*proc_dims(Phi_)) 
+                 else
                     plot_range(3,ifile)=cHalfPi&                       
                          -cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
                          /(nCells(Phi_)*proc_dims(Phi_))            
@@ -644,6 +651,8 @@ subroutine MH_set_parameters(TypeAction)
                          +cTiny*(XyzMax_D(Phi_)-XyzMin_D(Phi_))&
                          /(nCells(Phi_)*proc_dims(Phi_)) 
                  end if                             !^CFG END COVARIANT
+                 write(*,*)'plot_range(:,ifile)=',plot_range(:,ifile)
+
               elseif(index(plot_string,'y=0')>0)then
                  plot_area='y=0'
                  plot_range(3,ifile)=-cTiny*(XyzMax_D(2)-XyzMin_D(2))&

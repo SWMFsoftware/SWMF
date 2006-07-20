@@ -13,6 +13,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
        TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
+  use ModCovariant, ONLY: UseCovariant, TypeGeometry      !^CFG IF COVARIANT
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
        Body_rho_dim, g
@@ -156,135 +157,271 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
      if((xmax-xmin)<(ymax-ymin) .and. (xmax-xmin)<(zmax-zmin))then
         !X Slice
         CutValue = 0.5*(xmin+xmax)
-        ! First loop to count nodes and cells
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
-           if(iProc==iPE)then
-              if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
-                   CutValue<=NodeX_NB(1+nI,1,1,iBLK)  )then
-                 nBlockCuts=nBlockCuts+1
-                 BlockCut(iBlockALL)=nBlockCuts
+        if(.not.UseCovariant)then        !^CFG IF COVARIANT           
+           ! First loop to count nodes and cells        
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
+                      CutValue<=NodeX_NB(1+nI,1,1,iBLK)  )then
+                    nBlockCuts=nBlockCuts+1
+                    BlockCut(iBlockALL)=nBlockCuts
+                 end if
               end if
+              call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+           end do
+           if(iProc==0)then
+              ! Write file header
+              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
+              write(unit_tmp,'(a)')trim(unitstr_TEC)
+              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                   'ZONE T="2D X '//textNandT//'"', &
+                   ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
+                   ', E=',nBlockCuts*((nJ  )*(nK  )), &
+                   ', F=FEPOINT, ET=QUADRILATERAL'
+              call write_auxdata
            end if
-           call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
-        end do
-        if(iProc==0)then
-           ! Write file header
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
-           write(unit_tmp,'(a)')trim(unitstr_TEC)
-           write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                'ZONE T="2D X '//textNandT//'"', &
-                ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
-                ', E=',nBlockCuts*((nJ  )*(nK  )), &
-                ', F=FEPOINT, ET=QUADRILATERAL'
-           call write_auxdata
-        end if
-        ! Now loop to write values
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
-           if(iProc==iPE)then
-              if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
-                   CutValue<=NodeX_NB(1+nI,1,1,iBLK) )then
-                 ! Find cut interpolation factors
-                 do i=1,nI
-                    if ( CutValue> NodeX_NB(i  ,1,1,iBLK) .and. &
-                         CutValue<=NodeX_NB(i+1,1,1,iBLK)  )then
-                       cut1=i
-                       cut2=i+1
-                       factor2=(CutValue-NodeX_NB(i,1,1,iBLK))/ &
-                            (NodeX_NB(i+1,1,1,iBLK)-NodeX_NB(i,1,1,iBLK))
-                       factor1=1.-factor2
-                       EXIT
-                    end if
-                 end do
-                 ! Write point values
-                 call fill_NodeXYZ
-                 do k=1,1+nK; do j=1,1+nJ
-                    write(unit_tmp,fmt="(30(E14.6))") &
-                         (factor1*NodeXYZ_N(cut1,j,k,1:3)+ &
-                          factor2*NodeXYZ_N(cut2,j,k,1:3)), &
-                         (factor1*PlotVarNodes_NBI(cut1,j,k,iBLK,1:nPlotVar)+ &
-                          factor2*PlotVarNodes_NBI(cut2,j,k,iBLK,1:nPlotVar))
-                 end do; end do
-                 ! Write point connectivity
-                 do k=1,nK; do j=1,nJ
-                    write(unit_tmp2,'(4(i8,1x))') &
-                         ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j, &
-                         ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j+1, &
-                         ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k  )*(nJ+1)+j+1, &
-                         ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k  )*(nJ+1)+j
-                 end do; end do
+           ! Now loop to write values
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( CutValue> NodeX_NB(1   ,1,1,iBLK) .and. &
+                      CutValue<=NodeX_NB(1+nI,1,1,iBLK) )then
+                    ! Find cut interpolation factors
+                    do i=1,nI
+                       if ( CutValue> NodeX_NB(i  ,1,1,iBLK) .and. &
+                            CutValue<=NodeX_NB(i+1,1,1,iBLK)  )then
+                          cut1=i
+                          cut2=i+1
+                          factor2=(CutValue-NodeX_NB(i,1,1,iBLK))/ &
+                               (NodeX_NB(i+1,1,1,iBLK)-NodeX_NB(i,1,1,iBLK))
+                          factor1=1.-factor2
+                          EXIT
+                       end if
+                    end do
+                    ! Write point values
+                    call fill_NodeXYZ
+                    do k=1,1+nK; do j=1,1+nJ
+                       write(unit_tmp,fmt="(30(E14.6))") &
+                            (factor1*NodeXYZ_N(cut1,j,k,1:3)+ &
+                            factor2*NodeXYZ_N(cut2,j,k,1:3)), &
+                            (factor1*PlotVarNodes_NBI(cut1,j,k,iBLK,1:nPlotVar)+ &
+                            factor2*PlotVarNodes_NBI(cut2,j,k,iBLK,1:nPlotVar))
+                    end do; end do
+                    ! Write point connectivity
+                    do k=1,nK; do j=1,nJ
+                       write(unit_tmp2,'(4(i8,1x))') &
+                            ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j, &
+                            ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j+1, &
+                            ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k  )*(nJ+1)+j+1, &
+                            ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k  )*(nJ+1)+j
+                    end do; end do
+                 end if
               end if
+           end do
+        else if(TypeGeometry == 'spherical_lnr' .or. & !^CFG IF COVARIANT BEGIN
+             TypeGeometry == 'spherical') then 
+           ! First loop to count nodes and cells        
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( (CutValue - NodeX_NB(1,1   ,2,iBLK))* &
+                      (CutValue - NodeX_NB(1,1+nJ,2,iBLK)) <= 0.0  )then
+                    nBlockCuts=nBlockCuts+1
+                    BlockCut(iBlockALL)=nBlockCuts
+                 end if
+              end if
+              call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+           end do
+           if(iProc==0)then
+              ! Write file header
+              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
+              write(unit_tmp,'(a)')trim(unitstr_TEC)
+              write(unit_tmp,'(a,a,i8,a,i8,a)')       &
+                   'ZONE T="2D X '//textNandT//'"',   &
+                   ', N=',nBlockCuts*((nI+1)*(nK+1)), &
+                   ', E=',nBlockCuts*((nI  )*(nK  )), &
+                   ', F=FEPOINT, ET=QUADRILATERAL'
+              call write_auxdata
            end if
-        end do
+           ! Now loop to write values
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( (CutValue - NodeX_NB(1,1   ,2,iBLK))* &
+                      (CutValue - NodeX_NB(1,1+nJ,2,iBLK)) <= 0.0  )then
+                    ! Find cut interpolation factors
+                    do j=1, nJ
+                       if ( (CutValue - NodeX_NB(1,j  ,2,iBLK))* &
+                            (CutValue - NodeX_NB(1,j+1,2,iBLK)) <= 0.0  )then
+                          cut1=j
+                          cut2=j+1
+                          factor2=(CutValue-NodeX_NB(1,j,2,iBLK))/ &
+                               (NodeX_NB(1,j+1,2,iBLK)-NodeX_NB(1,j,2,iBLK))
+                          factor1=1.-factor2
+                          EXIT
+                       end if
+                    end do
+                    ! Write point values
+                    call fill_NodeXYZ                    
+                    do k=1,1+nK; do i=1,1+nI
+                       write(unit_tmp,fmt="(30(E14.6))") &
+                            (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
+                            factor2*NodeXYZ_N(i,cut2,k,1:3)), &
+                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
+                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                    end do; end do
+                    ! Write point connectivity
+                    do k=1,nK; do i=1,nI
+                       write(unit_tmp2,'(4(i8,1x))') &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i
+                    end do; end do
+                 end if
+              end if
+           end do
+        end if                         !^CFG IF COVARIANT END
+
      elseif((ymax-ymin)<(zmax-zmin))then
         !Y Slice
         CutValue = 0.5*(ymin+ymax)
-        ! First loop to count nodes and cells
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
-           if(iProc==iPE)then
-              if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
-                   CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
-                 nBlockCuts=nBlockCuts+1
-                 BlockCut(iBlockALL)=nBlockCuts
+        if(.not.UseCovariant)then        !^CFG IF COVARIANT           
+           ! First loop to count nodes and cells
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
+                      CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
+                    nBlockCuts=nBlockCuts+1
+                    BlockCut(iBlockALL)=nBlockCuts
+                 end if
               end if
+              call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+           end do
+           if(iProc==0)then
+              ! Write file header
+              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
+              write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                   'ZONE T="2D Y '//textNandT//'"', &
+                   ', N=',nBlockCuts*((nI+1)*(nK+1)), &
+                   ', E=',nBlockCuts*((nI  )*(nK  )), &
+                   ', F=FEPOINT, ET=QUADRILATERAL'
+              call write_auxdata
            end if
-           call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
-        end do
-        if(iProc==0)then
-           ! Write file header
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
-           write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-           write(unit_tmp,'(a,a,i8,a,i8,a)') &
-                'ZONE T="2D Y '//textNandT//'"', &
-                ', N=',nBlockCuts*((nI+1)*(nK+1)), &
-                ', E=',nBlockCuts*((nI  )*(nK  )), &
-                ', F=FEPOINT, ET=QUADRILATERAL'
-           call write_auxdata
-        end if
-        ! Now loop to write values
-        do iBlockALL  = 1, nBlockALL
-           iBLK = iBlock_A(iBlockALL)
-           iPE  = iProc_A(iBlockALL)
-           if(iProc==iPE)then
-              if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
-                   CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
-                 ! Find cut interpolation factors
-                 do j=1,nJ
-                    if ( CutValue> NodeY_NB(1,j  ,1,iBLK) .and. &
-                         CutValue<=NodeY_NB(1,j+1,1,iBLK)  )then
-                       cut1=j
-                       cut2=j+1
-                       factor2=(CutValue-NodeY_NB(1,j,1,iBLK))/ &
-                            (NodeY_NB(1,j+1,1,iBLK)-NodeY_NB(1,j,1,iBLK))
-                       factor1=1.-factor2
-                       EXIT
-                    end if
-                 end do
-                 ! Write point values
-                 call fill_NodeXYZ
-                 do k=1,1+nK; do i=1,1+nI
-                    write(unit_tmp,fmt="(30(E14.6))") &
-                         (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
-                          factor2*NodeXYZ_N(i,cut2,k,1:3)), &
-                         (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
-                          factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
-                 end do; end do
-                 ! Write point connectivity
-                 do k=1,nK; do i=1,nI
-                    write(unit_tmp2,'(4(i8,1x))') &
-                         ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
-                         ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
-                         ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
-                         ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i
-                 end do; end do
+           ! Now loop to write values
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( CutValue> NodeY_NB(1,1   ,1,iBLK) .and. &
+                      CutValue<=NodeY_NB(1,1+nJ,1,iBLK)  )then
+                    ! Find cut interpolation factors
+                    do j=1,nJ
+                       if ( CutValue> NodeY_NB(1,j  ,1,iBLK) .and. &
+                            CutValue<=NodeY_NB(1,j+1,1,iBLK)  )then
+                          cut1=j
+                          cut2=j+1
+                          factor2=(CutValue-NodeY_NB(1,j,1,iBLK))/ &
+                               (NodeY_NB(1,j+1,1,iBLK)-NodeY_NB(1,j,1,iBLK))
+                          factor1=1.-factor2
+                          EXIT
+                       end if
+                    end do
+                    ! Write point values
+                    call fill_NodeXYZ
+                    do k=1,1+nK; do i=1,1+nI
+                       write(unit_tmp,fmt="(30(E14.6))") &
+                            (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
+                            factor2*NodeXYZ_N(i,cut2,k,1:3)), &
+                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
+                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                    end do; end do
+                    ! Write point connectivity
+                    do k=1,nK; do i=1,nI
+                       write(unit_tmp2,'(4(i8,1x))') &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i
+                    end do; end do
+                 end if
               end if
+           end do
+        else if(TypeGeometry == 'spherical_lnr' .or. & !^CFG IF COVARIANT BEGIN
+             TypeGeometry == 'spherical') then 
+           ! First loop to count nodes and cells
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( (CutValue - NodeY_NB(1,1   ,2,iBLK))* &
+                      (CutValue - NodeY_NB(1,1+nJ,2,iBLK)) <= 0.0  )then
+                    nBlockCuts=nBlockCuts+1
+                    BlockCut(iBlockALL)=nBlockCuts
+                 end if              
+              end if
+              call MPI_Bcast(nBlockCuts,1,MPI_Integer,iPE,iComm,iError)
+           end do
+           if(iProc==0)then
+              ! Write file header
+              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
+              write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+                   'ZONE T="2D Y '//textNandT//'"', &
+                   ', N=',nBlockCuts*((nI+1)*(nK+1)), &
+                   ', E=',nBlockCuts*((nI  )*(nK  )), &
+                   ', F=FEPOINT, ET=QUADRILATERAL'
+              call write_auxdata
            end if
-        end do
+           ! Now loop to write values
+           do iBlockALL  = 1, nBlockALL
+              iBLK = iBlock_A(iBlockALL)
+              iPE  = iProc_A(iBlockALL)
+              if(iProc==iPE)then
+                 if ( (CutValue - NodeY_NB(1,1   ,2,iBLK))* &
+                      (CutValue - NodeY_NB(1,1+nJ,2,iBLK)) <= 0.0  )then
+                    ! Find cut interpolation factors
+                    do j=1,nJ
+                       if ( (CutValue - NodeY_NB(1,j  ,2,iBLK))* &
+                            (CutValue - NodeY_NB(1,j+1,2,iBLK)) <= 0.0  )then
+                          cut1=j
+                          cut2=j+1
+                          factor2=(CutValue-NodeY_NB(1,j,2,iBLK))/ &
+                               (NodeY_NB(1,j+1,2,iBLK)-NodeY_NB(1,j,2,iBLK))
+                          factor1=1.-factor2
+                          EXIT
+                       end if
+                    end do
+                    ! Write point values
+                    call fill_NodeXYZ
+                    do k=1,1+nK; do i=1,1+nI
+                       write(unit_tmp,fmt="(30(E14.6))") &
+                            (factor1*NodeXYZ_N(i,cut1,k,1:3)+ &
+                            factor2*NodeXYZ_N(i,cut2,k,1:3)), &
+                            (factor1*PlotVarNodes_NBI(i,cut1,k,iBLK,1:nPlotVar)+ &
+                            factor2*PlotVarNodes_NBI(i,cut2,k,iBLK,1:nPlotVar))
+                    end do; end do
+                    ! Write point connectivity
+                    do k=1,nK; do i=1,nI
+                       write(unit_tmp2,'(4(i8,1x))') &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
+                            ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i
+                    end do; end do
+                 end if
+              end if
+           end do
+        end if               !^CFG IF COVARIANT END
+
      else
         !Z Slice
         CutValue = 0.5*(zmin+zmax)
