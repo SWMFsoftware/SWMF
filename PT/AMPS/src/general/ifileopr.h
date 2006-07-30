@@ -76,7 +76,7 @@ public:
   }; 
 
   void error() {
-    printf("Error in file %s, line=%i\n",fname,line);
+    printf("Error in file %s, line=%ld\n",fname,line);
     printf("%s\n",init_str);
     exit(0);
   }; 

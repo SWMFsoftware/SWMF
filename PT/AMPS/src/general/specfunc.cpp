@@ -36,6 +36,7 @@ double rnd() {
 }
 
 //===================================================
+/*
 double erf(double s) { 
   double b,d,c,t;
 
@@ -52,8 +53,10 @@ double erf(double s) {
   if (s<0.0) d=-d;
   return d;
 }  
+*/
 
 //===================================================
+/*
 double gam(double x) {
   double a,y;
 
@@ -73,7 +76,7 @@ double gam(double x) {
   return a*(1.0-0.5748646*y+0.9512363*y*y-0.6998588*y*y*y+
     0.4245549*y*y*y*y-0.1010678*y*y*y*y*y); 
 }
-
+*/
 //===================================================
 void PrintErrorLog(char* message) {
   FILE* errorlog=fopen("error.log","a+");
@@ -96,7 +99,7 @@ void PrintErrorLog(long int nline, char* fname, char* message) {
   tm *ct=localtime(&TimeValue);
 
   fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  fprintf(errorlog,"file=%s, line=%i\n",fname,nline);
+  fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
   fprintf(errorlog,"%s\n\n",message);
 
   fclose(errorlog);
@@ -126,8 +129,8 @@ void StampSignature(char* message) {
 void exit(long int nline, char* fname, char* msg) { 
   char str[1000];
 
-  if (msg==NULL) sprintf(str," exit: line=%d, file=%s\n",nline,fname);
-  else sprintf(str," exit: line=%d, file=%s, message=%s\n",nline,fname,msg); 
+  if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
+  else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg); 
 
   PrintErrorLog(str);
   exit(0);
@@ -137,8 +140,8 @@ void PrintLineMark(long int nline ,char* fname ,char* msg) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (ThisThread==0) {
-    if (msg==NULL) printf("linemark: line=%d, file=%s\n",nline,fname);
-    else printf("linemark: line=%d, file=%s, message=%s\n",nline,fname,msg);
+    if (msg==NULL) printf("linemark: line=%ld, file=%s\n",nline,fname);
+    else printf("linemark: line=%ld, file=%s, message=%s\n",nline,fname,msg);
   }
 }
 

@@ -13,8 +13,11 @@ long int nint(double);
 
 void rnd_seed();
 double rnd();
+
+/* gamma and error functions used from g++ math library
 double erf(double);
 double gam(double);
+*/
 
 void PrintErrorLog(char*);
 void PrintErrorLog(long int,char*,char*);

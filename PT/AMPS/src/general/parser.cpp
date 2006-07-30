@@ -72,7 +72,7 @@ void GetInputStr(char* str,int n){
 
 //===================================================
 void error() {
-  printf("Error in input file (line=%i)\n",line);
+  printf("Error in input file (line=%ld)\n",line);
   exit(__LINE__,__FILE__);
 }
 

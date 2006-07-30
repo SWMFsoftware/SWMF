@@ -58,7 +58,7 @@ public:
       sendBuffer=new char[max_MPIbuffer_size];
     }
     catch (bad_alloc) {
-      printf("Error: CMPI_channel::openSend cannot allocate send buffer, need %i bytes\n", max_MPIbuffer_size);
+      printf("Error: CMPI_channel::openSend cannot allocate send buffer, need %ld bytes\n", max_MPIbuffer_size);
       exit(__LINE__,__FILE__);
     }
 
@@ -127,7 +127,7 @@ public:
       recvBuffer[thread]=new char[max_MPIbuffer_size];
     }
     catch (bad_alloc) {
-      printf("Error: CMPI_channel::openRecv cannot allocate recv buffer, need %i bytes\n", max_MPIbuffer_size);
+      printf("Error: CMPI_channel::openRecv cannot allocate recv buffer, need %ld bytes\n", max_MPIbuffer_size);
       exit(__LINE__,__FILE__);
     }
 
