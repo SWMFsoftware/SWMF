@@ -1,4 +1,0 @@
-# Using -O2 for this routine causes run time error on turing (SGI) in test.018
-
-LUCSRMSR.o:		CSR.o MSR.o LUCSRMSR.f90
-			${COMPILE.f90} ${Cflag1} LUCSRMSR.f90
