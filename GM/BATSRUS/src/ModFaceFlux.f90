@@ -42,7 +42,7 @@ module ModFaceFlux
   real :: StateLeftCons_V(nVar+1), StateRightCons_V(nVar+1)
   real :: B0x, B0y, B0z
   real :: Area, Area2, AreaX, AreaY, AreaZ
-  real :: Cmax, Unormal, UnLeft, UnRight
+  real :: CmaxDt, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables needed for Hall resistivity
@@ -218,7 +218,7 @@ contains
 
          call get_numerical_flux(iBlock, x_, Flux_VX(:,iFace, jFace, kFace))
 
-         VdtFace_x(iFace, jFace, kFace) = Cmax
+         VdtFace_x(iFace, jFace, kFace) = CmaxDt
          UDotFA_X(iFace, jFace, kFace)  = Unormal
          EDotFA_X(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
@@ -267,7 +267,7 @@ contains
 
          call get_numerical_flux(iBlock, y_, Flux_VY(:, iFace, jFace, kFace))
 
-         VdtFace_y(iFace, jFace, kFace) = Cmax
+         VdtFace_y(iFace, jFace, kFace) = CmaxDt
          UDotFA_Y( iFace, jFace, kFace) = Unormal
          EDotFA_Y(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
@@ -317,7 +317,7 @@ contains
 
          call get_numerical_flux(iBlock, z_, Flux_VZ(:, iFace, jFace, kFace))
 
-         VdtFace_z(iFace, jFace, kFace) = Cmax
+         VdtFace_z(iFace, jFace, kFace) = CmaxDt
          UDotFA_Z( iFace, jFace, kFace) = Unormal
          EDotFA_Z(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
@@ -338,6 +338,7 @@ contains
 
     real :: State_V(nVar)
 
+    real :: Cmax
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight
     !-----------------------------------------------------------------------
@@ -375,6 +376,7 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
+    HallCoeff = -1.0
     if(UseHallResist) HallCoeff = &
          IonMassPerCharge * hall_factor(iDir, iFace, jFace, kFace, iBlock)
 
@@ -510,7 +512,9 @@ contains
            + (/B0x,B0y,B0z/))**2)
 
       write(*,*)'Fluxes for dir=',iDir,' at I=',iFace,' J=',jFace,' K=',kFace
+
       write(*,*)'Eigenvalue_maxabs=', Cmax/sqrt(Area2)
+      write(*,*)'CmaxDt/Area      =', CmaxDt/Area
       do iVar = 1, nVar + 1
          write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
               iVar ,&
@@ -816,10 +820,14 @@ contains
          Cleft   = min(Un*GammaA2 - Fast, Un - Slow)
          Un      = max(UnLeft, UnRight)
          Cright  = max(Un*GammaA2 + Fast, Un + Slow)
-         Cmax    = max(Cright, -Cleft)
+         CmaxDt  = max(Cright, -Cleft)
+         Cmax    = CmaxDt
       else                                                !^CFG END AWFLUX
          UnBoris            = Un*GammaA2
-         if(present(Cmax))   Cmax   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
+         if(present(Cmax))then
+            Cmax   = max(abs(UnBoris) + Fast, abs(Un) + Slow)
+            CmaxDt = Cmax
+         end if
          if(present(Cleft))  Cleft  = min(UnBoris - Fast, Un - Slow)
          if(present(Cright)) Cright = max(UnBoris + Fast, Un + Slow)
       end if                                              !^CFG IF AWFLUX
@@ -836,7 +844,7 @@ contains
       use ModNumConst, ONLY: cPi
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
-      real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast
+      real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
       !------------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
@@ -875,15 +883,31 @@ contains
       end if                                         !^CFG IF SIMPLEBORIS
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0) Fast = Fast + &
-           HallCmaxFactor*HallCoeff*cPi*abs(FullBn)*InvRho*InvDxyz
+      if(HallCmaxFactor > 0.0 .and.HallCoeff > 0.0) then
+         cWhistler = HallCoeff*cPi*abs(FullBn)*InvRho*InvDxyz
+         FastDt = Fast + cWhistler
+         Fast   = Fast + HallCmaxFactor*cWhistler
+      end if
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          Cleft   = min(UnLeft, UnRight) - Fast
          Cright  = max(UnLeft, UnRight) + Fast
          Cmax    = max(Cright, -Cleft)
+         if(HallCoeff > 0.0)then
+            CmaxDt = max(max(UnLeft, UnRight) + FastDt, &
+                 -       min(UnLeft, UnRight) - FastDt)
+         else
+            CmaxDt = Cmax
+         end if
       else                                           !^CFG END AWFLUX
-         if(present(Cmax))   Cmax   = abs(Un) + Fast
+         if(present(Cmax))then
+            Cmax   = abs(Un) + Fast
+            if(HallCoeff > 0.0)then
+               CmaxDt = abs(Un) + FastDt
+            else
+               CmaxDt = Cmax
+            end if
+         end if
          if(present(Cleft))  Cleft  = Un - Fast
          if(present(Cright)) Cright = Un + Fast
       end if                                         !^CFG IF AWFLUX
@@ -901,7 +925,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModFaceFlux, ONLY: &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
-       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, Cmax, Unormal
+       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
@@ -1656,7 +1680,7 @@ subroutine roe_solver(iDir, Flux_V)
 
   ! Normal velocity and maximum wave speed
   Unormal = Area*UnH
-  Cmax    = Area*(abs(UnH) + CfH)
+  CmaxDt  = Area*(abs(UnH) + CfH)
 
 end subroutine roe_solver
 !^CFG END ROEFLUX
