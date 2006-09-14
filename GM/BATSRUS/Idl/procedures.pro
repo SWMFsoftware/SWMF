@@ -79,7 +79,11 @@ if nwlog gt 0 then begin
         print,'Could not find year, time or hour in wlognames=',wlognames
         return,findgen(n_elements(wlog(*,0)))
     end
-    if itime gt -1 then return,wlog(*,itime)/3600.0
+    if itime gt -1 then begin
+        if max(wlog(*,itime)) eq min(wlog(*,itime)) then $
+            return,findgen(n_elements(wlog(*,0)))
+        return,wlog(*,itime)/3600.0
+    end
     if iyear eq -1 and ihour gt -1 then begin
         hours = wlog(*,ihour)
         for i=1, n_elements(hours)-1 do $
