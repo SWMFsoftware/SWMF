@@ -282,7 +282,8 @@
             imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
             print,FORMAT='("(",a,")",$)',imagefile
             common colors,  r_curr, g_curr, b_curr
-	    write_image,imagefile,savemovie,tvrd(),r_curr, g_curr, b_curr
+	    write_image,imagefile,savemovie, $
+              tvrd( order=(savemovie eq 'tiff'), true=1),r_curr, g_curr, b_curr
          endif
       endif
 
