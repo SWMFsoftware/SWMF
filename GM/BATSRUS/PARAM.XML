@@ -3116,7 +3116,7 @@ allopt			TypeMessagePass
 
 <command name="RESCHANGE" alias="RESOLUTIONCHANGE">
 	<parameter name="UseAccurateReschange" type="logical" default="F" />
-#TVDRESCHANGE
+#RESCHANGE
 T		UseAccurateResChange
 
 ! For UseAccurateResChange=T a second order accurate, upwind and oscillation 
