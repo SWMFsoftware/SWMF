@@ -116,6 +116,8 @@ subroutine initialize_gitm(TimeIn)
      enddo
   endif
 
+!   Gravity =  -Gravitational_Constant
+
   if (iDebugLevel > 2) then
      do iAlt=-1,nAlts+2
         write(*,*) "===>Altitude : ", &

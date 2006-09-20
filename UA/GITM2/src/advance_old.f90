@@ -65,7 +65,7 @@ subroutine advance
                    - Dt * &
                    (Velocity(iLon,iLat,iAlt,iUp_,iBlock)*&
                    GradTemp(iLon,iLat,iAlt) &
-                   + (Gamma - 1.0) * Temperature(iLon,iLat,iAlt,iBlock)* &
+                   + (Gamma(iLon,iLat,iAlt,iBlock) - 1.0) * Temperature(iLon,iLat,iAlt,iBlock)* &
                    DivVel(iLon,iLat,iAlt)) &
                    + Dt * DiffTemp(iLon,iLat,iAlt)
 

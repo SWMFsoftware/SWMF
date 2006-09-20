@@ -13,7 +13,7 @@ contains
   real function Limiter_mc(dUp, dDown)
 
     real :: dUp, dDown
-    real :: beta = 1.2
+    real :: beta = 1.6
 
     if (dUp > 0.0) then
        if (dDown > 0.0) then

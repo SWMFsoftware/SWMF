@@ -22,7 +22,6 @@ subroutine euv_ionization_heat(iBlock)
   real :: photoion(Num_WaveLengths_High, nIons-1)
   real :: photoabs(Num_WaveLengths_High, nSpecies)
   real :: photodis(Num_WaveLengths_High, nSpecies)
-
   real :: NeutralDensity(nLons, nLats, nSpecies)
   real :: ChapmanLittle(nLons, nLats, nSpecies)
   real :: EHeat(nLons, nLats)
@@ -183,10 +182,11 @@ subroutine calc_euv
 
      FLXFAC=(1.0 + AFAC(I) * (0.5*(F107+F107A) - 80.0))
      IF(FLXFAC.LT.0.8) FLXFAC=0.8
-     EUV_Flux(i) = F74113(I) * FLXFAC * 1.0E9 * 10000.0
-
-  enddo
-
+     EUV_Flux(i) = F74113(I) * FLXFAC * 1.0E9 * 10000.
+!Open(Unit=1, file='datafile')
+!Write(1,*) EUV_Flux(i) 
+ enddo
+!Write(1,*) "New"
 end subroutine calc_euv
 
 !-------------------------------------------------------------------
@@ -197,6 +197,7 @@ subroutine calc_scaled_euv
 
   use ModEUV
   use ModInputs
+  use ModTime
 
   implicit none
 
@@ -209,12 +210,17 @@ subroutine calc_scaled_euv
   integer :: N, NN
   real    :: f107_Ratio, r1, r2, hlybr, fexvir, hlya, heiew
   real    :: xuvfac, hlymod, heimod, xuvf, wavelength_ave
-
+  real (Real8_) :: rtime
+  integer, dimension(7) :: Time_Array
+ !DAVES:
+  real :: wvavg(Num_WaveLengths_High)
+  character (len=2) :: dday, dhour, dminute 
+  character (len=7) :: dtime
   ! regression coefficients which reduce to solar min. spectrum:
   ! for Hinteregger_Contrast_Ratio model:
 
   real, dimension(1:3) :: B1, B2
-
+  real, dimension(Num_WaveLengths_High) :: Timed_Flux
   data B1/1.0, 0.0138, 0.005/
   data B2/1.0, 0.59425, 0.3811/
 
@@ -341,6 +347,7 @@ subroutine calc_scaled_euv
      ! Convert to eV/m^2/s
      !
 
+
      wavelength_ave = (WAVEL(N) + WAVES(N))/2.0
      PhotonEnergy(N)= 6.626e-34*2.998e8/(wavelength_ave*1.0e-10)
 
@@ -364,9 +371,65 @@ subroutine calc_scaled_euv
      Flux_of_EUV(NN) = 0.5*(EUV_Flux(N)+Solar_Flux(NN))
 !!!     Flux_of_EUV(NN) = EUV_Flux(N)
   enddo
-
   Flux_of_EUV = Flux_of_EUV/(SunOrbitEccentricity**2)
+  do N=1,Num_WaveLengths_High
+     wvavg(N)=(WAVEL(N)+WAVES(N))/2.
+  enddo
 
+
+!
+!  TIMED TEST
+!
+!Open(unit=60,file='/home/')
+!read(60,*) Flux_of_EUV
+!Close(60)
+!print *, Flux_of_EUV
+
+
+! call start_timing("new_euv")
+!open(unit=10,file='../SEE/fluxbindata2003290.310')
+!rtime=0
+!do while(rtime < CurrentTime)
+!read(10,*) Time_Array(1:6),Timed_Flux
+!Time_Array(7)=0
+!call time_int_to_real(Time_Array,rtime)
+!enddo
+!close(10)
+!!!need to convert from W/m^2 to photons/m^2/s
+!do N=1,Num_WaveLengths_High 
+!  Flux_of_EUV(N) = Timed_Flux(N)*wvavg(N)*1.0e-10/(6.626e-34*2.998e8)
+!enddo
+!call end_timing("new_euv")
+!!call i2s(Time_Array(3),dday,2)
+!call i2s(Time_Array(4),dhour,2)
+!call i2s(Time_Array(5),dminute,2)
+!dtime="d"//dday//dhour//dminute
+!close(90)
+!open(unit=90,file=dtime)
+!write(90,*) Flux_of_EUV
+
+
+!Open(unit=1,file='GITMFLUX31')
+!Write(1,*) Flux_of_EUV
+!!Write(1,*) 'Timed_Flux'
+!!Write(1,*) Timed_Flux
+!Close(1)
+!stop
+
+!Open(Unit=55,file='wavedata')
+!Write(55,*) wvavg
+!Close(55)
+!stop
+!DAVES STUFF
+
+!Open(unit=2,file='wavelow')
+!Write(2,*) "Wavelow = "
+!Write(2,*) WAVES
+!Write(2,*) "Wavehigh ="
+!Write(2,*) WAVEL
+!Write(1,*) "WAVELENGTH"
+!Write(1,*) wvavg
+   
   ! Second Spectra, provided by Steve Bougher....
 
 !  do n = 1, nS2WaveLengths

@@ -227,6 +227,7 @@ subroutine output(dir, iBlock, iOutputType)
   call i2s(iTimeArray(5), cMinute, 2)
   call i2s(iTimeArray(6), cSecond, 2)
 
+csecond="00"
   cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
 
   select case (OutputType(iOutputType))
@@ -501,7 +502,7 @@ contains
 
   subroutine output_3dall
 
-    nvars_to_write = 26+nSpecies
+    nvars_to_write = 26+nSpecies+2+4+2
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
     if (Is1D) then
@@ -544,12 +545,22 @@ contains
     write(iOutputUnit_,"(I7,A1,a)") 24, " ", "Vi (north)"
     write(iOutputUnit_,"(I7,A1,a)") 25, " ", "Vi (up)"
     write(iOutputUnit_,"(I7,A1,a)") 26, " ", "Potential (kV)"
-    write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Vn (up,O)"
-    write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Vn (up,O2)"
+    write(iOutputUnit_,"(I7,A1,a)") 27, " ", "ExB(east)"
+    write(iOutputUnit_,"(I7,A1,a)") 28, " ", "ExB (north)"   
+    write(iOutputUnit_,"(I7,A1,a)") 29, " ", "ExB (up)" 
+    write(iOutputUnit_,"(I7,A1,a)") 30, " ", "ExB (magnitude)"                           
+   write(iOutputUnit_,"(I7,A1,a)") 31, " ", "EUV_IonRate (O+)" 
+   write(iOutputUnit_,"(I7,A1,a)") 32, " ", "Aurora_IonRate (O+)" 
+   write(iOutputUnit_,"(I7,A1,a)") 33, " ", "Joule heating (W/m3)" 
+   write(iOutputUnit_,"(I7,A1,a)") 34, " ", "Heating rate (K/s)" 
+
+    write(iOutputUnit_,"(I7,A1,a)") 35, " ", "Vn (up,O)"
+    write(iOutputUnit_,"(I7,A1,a)") 36, " ", "Vn (up,O2)"
+
     if (nSpecies >= iN2_) &
-         write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Vn (up,N2)"
+         write(iOutputUnit_,"(I7,A1,a)") 37, " ", "Vn (up,N2)"
     if (nSpecies >= iN_4S_) &
-         write(iOutputUnit_,"(I7,A1,a)") 30, " ", "Vn (up,N)"
+         write(iOutputUnit_,"(I7,A1,a)") 38, " ", "Vn (up,N)"
 !  write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Source_O"
 !  write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Source_O2"
 !  write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Source_N2"
@@ -594,7 +605,21 @@ contains
                   Ivelocity(iLon,iLat,iAlt,iNorth_,iBlock), &
                   Ivelocity(iLon,iLat,iAlt,iUp_,iBlock), &
                   Potential(iiLon,iiLat,iiAlt,iBlock), &
-                  VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) !,&
+                  ExB(iLon,iLat,iAlt,iEast_),& 
+                  ExB(iLon,iLat,iAlt,iNorth_),& 
+                  ExB(iLon,iLat,iAlt,iUp_),& 
+             sqrt(ExB(iLon,iLat,iAlt,iEast_)**2 + & 
+                  ExB(iLon,iLat,iAlt,iNorth_)**2),&  
+                  EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock)+&
+                  EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock)+&
+                  EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock),&
+                  AuroralIonRateS(iLon,iLat,iAlt,iO_,iBlock),& 
+                  JouleHeating(iiLon,iilat,iiAlt) * 1.38e-23 *1.5 * &
+                  ( NDensityS(iLon,iLat,iAlt,iO_,iBlock) + &
+                    NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
+                    NDensityS(iLon,iLat,iAlt,iN2_,iBlock) ), &
+                  JouleHeating(iiLon,iilat,iiAlt) , &
+                    VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) !,&
 !!$                  O_sources(iiLon,iiLat,iiAlt),&
 !!$                  O2_sources(iiLon,iiLat,iiAlt),&
 !!$                  N2_sources(iiLon,iiLat,iiAlt),&
@@ -827,13 +852,13 @@ end subroutine output
 subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 
   use ModGITM
-
+  use ModSources, only: JouleHeating
   implicit none
 
   integer, intent(in) :: iiLat, iiLon, iBlock, iUnit
   real, intent(in)    :: rLon, rLat
 
-  integer, parameter :: nVars = 26
+  integer, parameter :: nVars = 28
   real :: Vars(nVars)
   character (len=100) :: output_format
   integer :: iAlt, iiAlt
@@ -879,8 +904,8 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
   write(iUnit,"(I7,A1,a)") 24, " ", "Vi (north)"
   write(iUnit,"(I7,A1,a)") 25, " ", "Vi (up)"
   write(iUnit,"(I7,A1,a)") 26, " ", "Potential (kV)"
-
-
+  write(iUnit,"(I7,A1,a)") 27, " ", "Heating rate (K/s)" 
+  write(iUnit,"(I7,A1,a)") 28, " ", "Heating rate (K/s)"
 
   write(iUnit,*) ""
   write(iUnit,*) "BEGIN"
@@ -1010,6 +1035,18 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
           (  rLon)*(1-rLat)*Potential(iiLon,iiLat+1,iiAlt,iBlock) + &
           (1-rLon)*(1-rLat)*Potential(iiLon+1,iiLat+1,iiAlt,iBlock)
 
+
+   Vars(27) = &  
+          (  rLon)*(  rLat)*JouleHeating(iiLon,iiLat,iiAlt) + &                    
+          (1-rLon)*(  rLat)*JouleHeating(iiLon+1,iiLat,iiAlt) + &                  
+          (  rLon)*(1-rLat)*JouleHeating(iiLon,iiLat+1,iiAlt) + &                  
+          (1-rLon)*(1-rLat)*JouleHeating(iiLon+1,iiLat+1,iiAlt)                    
+
+   Vars(28) = &  
+          (  rLon)*(  rLat)*JouleHeating(iiLon,iiLat,iiAlt) + &                    
+          (1-rLon)*(  rLat)*JouleHeating(iiLon+1,iiLat,iiAlt) + &                  
+          (  rLon)*(1-rLat)*JouleHeating(iiLon,iiLat+1,iiAlt) + &                  
+          (1-rLon)*(1-rLat)*JouleHeating(iiLon+1,iiLat+1,iiAlt)                    
 
 
 

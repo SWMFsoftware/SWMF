@@ -9,7 +9,7 @@ module ModVertical
 
   implicit none
 
-  real, dimension(-1:nAlts+2)   :: LogRho, Temp,MeanMajorMass_1d
+  real, dimension(-1:nAlts+2)   :: LogRho, Temp,MeanMajorMass_1d,Gamma_1d
   real, dimension(-1:nAlts+2,3) :: Vel_GD
   real, dimension(-1:nAlts+2,3) :: IVel
 

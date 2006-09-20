@@ -67,15 +67,34 @@ subroutine calc_rates(iBlock)
      ! pressure based system.
 
      cp(:,:,iAlt,iBlock) = 0.0
+     Gamma(:,:,iAlt,iBlock) = 0.0  
+
+
      do iSpecies = 1, nSpecies
         cp(:,:,iAlt,iBlock) = cp(:,:,iAlt,iBlock) + &
              (Vibration(iSpecies)-2) * &
              NDensityS(1:nLons,1:nLats,iAlt,iSpecies,iBlock) * &
              (Boltzmanns_Constant / Mass(iSpecies))
+
+!!! Gamma -1 = sum(n_i * (gamma_i -1))/n_total
+!!! where gamma_i -1 = 2 / (Vibration -2) 
+
+        Gamma(1:nLons,1:nLats,iAlt,iBlock) = gamma(1:nLons,1:nLats,iAlt,iBlock) + &
+             NDensityS(1:nLons,1:nLats,iAlt,iSpecies,iBlock) / & 
+             (Vibration(iSpecies)-2)    
+
      enddo
+
+
 
      cp(:,:,iAlt,iBlock) = cp(:,:,iAlt,iBlock) / &
           (2.0 * NDensity(1:nLons,1:nLats,iAlt,iBlock))
+
+    gamma(1:nLons,1:nLats,iAlt,iBlock) = gamma(1:nLons,1:nLats,iAlt,iBlock) *2.0/ &   
+           NDensity(1:nLons,1:nLats,iAlt,iBlock) + 1 
+
+
+
 
      KappaTemp(:,:,iAlt,iBlock) = KappaTemp0 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
@@ -91,15 +110,27 @@ subroutine calc_rates(iBlock)
           Boltzmanns_Constant / ( &
           Gravity(iAlt) * MeanMajorMass(1:nLons,1:nLats,iiAlt))
 
-     if (altitude(iAlt)/1000.0 < 150.0) then
-        ! Add in an eddy diffusion term:
-        KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
-             KappaEddy * (Pressure(1:nLons,1:nLats,iAlt,iBlock) / &
-             3.1e-2)
-!Pressure(1:nLons,1:nLats,1,iBlock))
-     endif
+!     if (altitude(iAlt)/1000.0 < 150.0) then
+!        ! Add in an eddy diffusion term:
+!        KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
+!             KappaEddy * (Pressure(1:nLons,1:nLats,iAlt,iBlock) / &
+!             3.1e-2)
+!!Pressure(1:nLons,1:nLats,1,iBlock))
+!     endif
+!
+!!write(*,*) "p: ",Pressure(1,1,1,iBlock)
 
-!write(*,*) "p: ",Pressure(1,1,1,iBlock)
+
+     if (altitude(ialt) < 110e3) then
+        KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
+            1 * EddyDiffusionCoef * cp(:,:,iAlt,iBlock) * Rho(:,:,iAlt,iBlock)
+      else if (altitude(ialt) < 120e3) then
+         KappaTemp(:,:,iAlt,iBlock) = KappaTemp(:,:,iAlt,iBlock) + &
+              1 * EddyDiffusionCoef * cp(:,:,iAlt,iBlock) * Rho(:,:,iAlt,iBlock) &
+              * 1e-4 * (120e3-altitude(ialt))
+      endif
+
+
 
      ViscCoef(:,:,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)

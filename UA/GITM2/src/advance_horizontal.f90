@@ -1,6 +1,6 @@
 subroutine advance_horizontal(iBlock)
 
-  use ModConstants, only : Gamma, pi
+  use ModConstants, only : pi
   use ModSizeGitm
   use ModPlanet, only : nSpecies, nIonsAdvect, OmegaBody
   use ModGITM
@@ -19,6 +19,7 @@ subroutine advance_horizontal(iBlock)
   real :: cp_C(1:nLons,1:nLats)
   real :: Rho_C(-1:nLons+2,-1:nLats+2)
   real :: Temp_C(-1:nLons+2,-1:nLats+2)
+  real :: gamma_C(-1:nLons+2,-1:nLats+2)
   real :: Vel_CD(-1:nLons+2,-1:nLats+2,3)
   real :: IVel_CD(-1:nLons+2,-1:nLats+2,3)
   real :: Num_CV(-1:nLons+2,-1:nLats+2,nSpecies)
@@ -39,6 +40,7 @@ subroutine advance_horizontal(iBlock)
   do iAlt=1,nAlts
 
      cp_c       = cp(:,:,iAlt,iBlock)
+     gamma_c    = gamma(:,:,iAlt,iBlock) 
      Rho_C      = Rho(:,:,iAlt,iBlock)
      Vel_CD     = Velocity(:,:,iAlt,:,iBlock)
      VertVel_CV = VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)
@@ -352,7 +354,7 @@ contains
           ! dT/dt = -(V.grad T + (gamma - 1) T div V
 
           NewTemp_C(iLon,iLat) = NewTemp_C(iLon,iLat) - Dt * ( &
-               (gamma-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat) &
+               (gamma_c(iLon,iLat)-1) * Temp_C(iLon,iLat) * DivVel_C(iLon,iLat) &
                + GradLatTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iNorth_) & 
                + GradLonTemp_C(iLon,iLat)*Vel_CD(iLon,iLat,iEast_)) & 
                + Dt * (DiffLonTemp_C(iLon,iLat)+DiffLatTemp_C(iLon,iLat))

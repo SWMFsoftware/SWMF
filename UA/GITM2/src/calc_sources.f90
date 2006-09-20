@@ -137,7 +137,9 @@ subroutine calc_GITM_sources(iBlock)
           tmp2, &
           Conduction)
      Conduction = Conduction/TempUnit(1:nLons, 1:nLats,1:nAlts)
-  else
+     
+
+ else
      Conduction = 0.0
   end if
 
@@ -156,11 +158,12 @@ subroutine calc_GITM_sources(iBlock)
      do iAlt = -1, nAlts+2
 
        if (altitude(ialt) < 110e3) then
-          KappaEddyDiffusion(:,:,iAlt) = 1.0e2
+          KappaEddyDiffusion(:,:,iAlt) = EddyDiffusionCoef
        else if (altitude(ialt) < 120e3) then
-          KappaEddyDiffusion(:,:,iAlt) =1e-3*(120e3-altitude(ialt))
+          KappaEddyDiffusion(:,:,iAlt) = EddyDiffusionCoef *1e-5*(120e3-altitude(ialt))
        endif
      enddo
+
      LogNum(:,:,:) = log(NDensity(:,:,:,iblock))
      do iSpecies = 1, nSpecies
         do iAlt = 1, nAlts
@@ -597,23 +600,45 @@ subroutine calc_GITM_sources(iBlock)
              Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock))
      enddo
 
-     do iSpecies = 1, nSpecies
-!        tmp2 = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
-!             RhoI / &
-!             (Mass(iSpecies) * &
-!             NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock))
+!!! F_iondrag = rho_i/rho * Vis * (Ui-Un)
+!!! where Vis = Vin *(Ns/N)  
 
+     do iSpecies = 1, nSpecies
+        tmp2 = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)*&
+             RhoI / &
+             (Mass(iSpecies) * &
+             NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock)) * &
+            (NDensityS(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) / &
+             NDensity(1:nLons,1:nLats,1:nAlts,iBlock))
+             
         VerticalIonDrag(:,:,:,iSpecies) = tmp2 * &
              (IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) - &
              VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock))
 
+     enddo
+
+!  do iLon = 1, nLons
+!     do iLat = 1, nLats
+!        do iAlt = 1, nAlts
+!           do iSpecies=1, nSpecies
+!              if (VerticalIonDrag(iLon,iLat,iAlt,iSpecies) > &
+!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock)/dt) then  
+!!                 VerticalIonDrag(iLon,iLat,iAlt,iSpecies) =  &
+!!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock)/dt
+! !                write(*,*) iLon,iLat,iAlt,iSpecies, &
+! !                     'Fdrag_ver=',VerticalIonDrag(iLon,iLat,iAlt,iSpecies), &
+! !                     'Vi_ver=',IVelocity(iLon,iLat,iAlt,iUp_,iBlock)
+!              endif
+!           enddo
+!        enddo
+!     enddo
+!  enddo
 !        VerticalIonDrag(:,:,:,iSpecies) = max( &
 !             -0.5, VerticalIonDrag(:,:,:,iSpecies))
 !        VerticalIonDrag(:,:,:,iSpecies) = min( &
 !              0.5, VerticalIonDrag(:,:,:,iSpecies))
 
 
-     enddo
 
   else
 

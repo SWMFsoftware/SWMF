@@ -51,9 +51,44 @@ subroutine calc_neutral_friction(iBlock)
 
            call calc_friction
 
-        enddo
+
+!----------ion_drag force----------------------------------
+! F=Rho_i/rho_s*V_in*N_s/N_n*(V_i-V_n) 
+!
+!           do ispecies=1,nspecies
+!              IonNeutralFriction(iLon,iLat,iAlt,ispecies) = &
+!                 (IDensityS(iLon,iLat,iAlt,ie_,iBlock) * &     
+!                  MeanIonMass(iLon,iLat,iAlt))/           &
+!                  (NDensityS(iLon,iLat,iAlt,ispecies,iBlock)* &
+!                  mass(ispecies)) *                &
+!                  (Collisions(iLon,iLat,iAlt,iVIN_) * &
+!                  NDensityS(iLon,iLat,iAlt,ispecies,iBlock)/ &
+!                  NDensity(iLon,iLat,iAlt,iBlock)) *     &
+!                  (Velocity(iLon,iLat,iAlt,iUp_,iBlock) - & 
+!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock))
+!
+!              if (IonNeutralFriction(iLon,iLat,iAlt,ispecies)*dt > &
+!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock)) then
+!                 IonNeutralFriction(iLon,iLat,iAlt,ispecies) = &
+!                      IVelocity(iLon,iLat,iAlt,iUp_,iBlock)/dt
+!              endif
+!
+!        enddo
+
+
+     enddo
      enddo
   enddo
+
+
+
+
+
+
+
+
+
+
 
 contains
 
@@ -86,7 +121,7 @@ contains
        enddo
     enddo
 
-    Fraction = 1.0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Fraction = 1.4 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     CoefMatrix = Fraction * CoefMatrix
 
 !    if (iAlt == 1) write(*,*) "low : ",CoefMatrix
@@ -112,6 +147,8 @@ contains
 
     NeutralFriction(iLon, iLat, iAlt, :) = &
          Vel - VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
+
+
 
   end subroutine calc_friction
 

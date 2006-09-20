@@ -38,6 +38,9 @@ module ModGITM
        nIons, nBlocksMax) :: &
        IDensityS, IRIDensity
 
+  real :: Gamma(-1:nLons+2, -1:nLats+2, -1:nAlts+2,nBlocksMax)
+
+
   real, dimension(nLons, nLats, 0:nAlts+1, nBlocksMax) :: &
        KappaTemp, Ke,dKe
 

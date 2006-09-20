@@ -23,7 +23,7 @@ module ModConstants
 
   real, parameter :: SpecificHeatVolume     = 3./2.
   real, parameter :: SpecificHeatPressure   = SpecificHeatVolume + 1.0
-  real, parameter :: Gamma                  = &
+  real, parameter :: Gamma_const                  = &
        SpecificHeatPressure/SpecificHeatVolume
 
 end module ModConstants

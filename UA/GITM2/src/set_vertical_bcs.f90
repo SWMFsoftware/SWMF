@@ -9,12 +9,14 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   ! Fill in ghost cells at the top and bottom
 
   use ModSizeGitm, only: nAlts
-  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth
+  use ModPlanet, only: nSpecies, nIonsAdvect, Mass, nIons, IsEarth,iN2_
   use ModGITM, only: gravity, TempUnit, dAlt, iEast_, iNorth_, iUp_, Altitude
   use ModInputs
   use ModConstants
-  use ModTime, only: UTime, iJulianDay
+  use ModTime, only: UTime, iJulianDay,currenttime
   use ModVertical, only: Lat, Lon
+  use ModIndicesInterfaces, only: get_HPI
+
   implicit none
 
   real, intent(inout) :: &
@@ -29,6 +31,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   integer :: iSpecies, iAlt
   real    :: InvScaleHeightS, InvScaleHgt, Alt, Lst, Ap = 4.0, dn
   logical :: IsFirstTime = .true., UseMsisBCs = .false.
+  real    :: HP
+  integer :: ierror
 
   integer, dimension(25) :: sw
 
@@ -41,12 +45,25 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   endif
 
   if (UseMsisBCs) then
+
+
+    call get_HPI(CurrentTime, HP, iError)  
+!    Ap = log(HP)/log(4.2) *30.
+     Ap = min(200.,max(-40.72 + 1.3 * HP, 10.))
      do iAlt = -1, 0
         Alt = Altitude(iAlt)/1000.0
         Lst = mod(UTime/3600.0+Lon/15.0,24.0)
+
         call msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
              F107A,F107,AP,LogNS(iAlt,:), Temp(iAlt), &
              LogRho(iAlt))
+!       logNS(ialt,:)=logNS(ialt+1,:) - &                                    
+!            dalt(ialt+1) * Boltzmanns_Constant * temp(ialt+1)/ &                                            
+!            mass(iN2_)/gravity(ialt+1)                                                                      
+!       logRho(ialt)=logRho(ialt+1) - &                                                                      
+!            dalt(ialt+1) * Boltzmanns_Constant * temp(ialt+1)/ &                                            
+!            mass(iN2_)/gravity(ialt+1)              
+!
      enddo
   else
 

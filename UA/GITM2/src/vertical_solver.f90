@@ -85,7 +85,7 @@ subroutine advance_vertical_1stage( &
   use ModSizeGitm
   use ModVertical, only : &
        Heating, KappaNS, nDensityS, KappaTemp, Centrifugal, Coriolis, &
-       MeanMajorMass_1d
+       MeanMajorMass_1d, gamma_1d
   use ModTime
   use ModInputs
   use ModConstants
@@ -223,11 +223,13 @@ subroutine advance_vertical_1stage( &
              - Gravity(iAlt)) &
              + Dt * DiffVertVel(iAlt,iSpecies)
 
+
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
                 Centrifugal * RadialDistance(iAlt) + &
                 Coriolis * Vel_GD(iAlt,iEast_))
         endif
+
 
         NewVertVel(iAlt, iSpecies) = max(-500.0, NewVertVel(iAlt, iSpecies))
         NewVertVel(iAlt, iSpecies) = min( 500.0, NewVertVel(iAlt, iSpecies))
@@ -248,12 +250,39 @@ subroutine advance_vertical_1stage( &
           Vel_GD(iAlt,iUp_)*GradVel_CD(iAlt,iNorth_) &
           + Dt * DiffVel_CD(iAlt,iNorth_)
 
-     ! dT/dt = -(V.grad T + (gamma - 1) T div V
+     ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
+     !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
+
+
+
+     if (altitude(ialt) < 110e3) then
+   NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+        (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+        (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+       + Dt * (Gamma_1d(iAlt) - 1.0) * (- gravity(iAlt)) * &
+        EddyDiffusionCoef * GradLogRho(iAlt) * 0.8 &
+       + Dt * DiffTemp(iAlt)
+
+   else
 
      NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
           (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-          (Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+          (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
           + Dt * DiffTemp(iAlt)
+
+
+
+!     else if (altitude(ialt) < 120e3) then
+!
+!   NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+!        (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+!        (Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt)) &
+!       + Dt *  (Gamma - 1.0) * (-gravity(iAlt)) * &
+!       (EddyDiffusionCoef *1e-4 * &
+!       (120e3-altitude(ialt)) * GradLogRho(iAlt) &
+!        + (-EddyDiffusionCoef *1e-4)) &
+!       + Dt * DiffTemp(iAlt)
+   endif
 
   end do
 

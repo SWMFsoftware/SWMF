@@ -30,7 +30,8 @@ subroutine calc_timestep_horizontal
      do iAlt = 1,nAlts
 
         ! Calculate maximum propagation speeds for the horizontal directions
-        cSound_H = sqrt(Gamma * Temperature(0:nLons+1,0:nLats+1,iAlt,iBlock))
+        cSound_H = sqrt(Gamma(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
+                   Temperature(0:nLons+1,0:nLats+1,iAlt,iBlock))
 
         cMax_GDB(:,:,iAlt,iNorth_,iBlock) = &
              abs(Velocity(0:nLons+1,0:nLats+1,iAlt,iNorth_,iBlock)) + cSound_H
@@ -113,7 +114,7 @@ subroutine calc_timestep_vertical
            do iAlt = 0, nAlts+1
               cMax_GDB(iLon,iLat,iAlt,iUp_,iBlock) = &
                    maxval(abs(VerticalVelocity(iLon,iLat,iAlt,:,iBlock))) + &
-                   sqrt(Gamma * Temperature(iLon,iLat,iAlt,iBlock))
+                   sqrt(Gamma(iLon,iLat,iAlt,iBlock) * Temperature(iLon,iLat,iAlt,iBlock))
            enddo
 
            DtLocal = min(DtLocal, &
@@ -123,7 +124,7 @@ subroutine calc_timestep_vertical
            if (UseIonAdvection) then
 
               cm = abs(IVelocity(iLon,iLat,1:nAlts,iUp_,iBlock)) + &
-                sqrt(Gamma * Temperature(iLon,iLat,1:nAlts,iBlock))
+                sqrt(Gamma(iLon,iLat,1:nAlts,iBlock) * Temperature(iLon,iLat,1:nAlts,iBlock))
 
               DtLocal = min(DtLocal, &
                    Cfl / &

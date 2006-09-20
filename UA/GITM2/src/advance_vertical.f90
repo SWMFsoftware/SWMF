@@ -17,7 +17,9 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        LogINS, &
        IVel, Lat, Lon, &
        VertVel, &
-       MeanMajorMass_1d
+       MeanMajorMass_1d, &
+       gamma_1d
+
   implicit none
 
   integer, intent(in) :: iLon, iLat, iBlock
@@ -62,6 +64,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   enddo
 
   MeanMajorMass_1d = MeanMajorMass(iLon,iLat,:)
+  gamma_1d=gamma(ilon,ilat,:,iBlock)     
 
 !!!!  LogINS  = IDensityS(iLon,iLat,:,1:nIonsAdvect,iBlock)
 

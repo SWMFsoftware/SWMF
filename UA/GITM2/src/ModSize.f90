@@ -5,7 +5,7 @@ module ModSizeGitm
   integer, parameter :: nLats = 9
   integer, parameter :: nAlts = 40
 
-  integer, parameter :: nBlocksMax = 4
+  integer, parameter :: nBlocksMax = 2
 
   integer :: nBlocks
 

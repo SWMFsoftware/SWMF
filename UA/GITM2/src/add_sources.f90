@@ -74,7 +74,7 @@ iAlt = 10
      do iSpecies = 1, nSpecies
         VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) = &
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
-             Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
+            Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
              NeutralFriction(:,:,:,iSpecies) 
      enddo
 

@@ -97,8 +97,8 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
         do iAlt = 2,nAlts
            gam(iAlt) = c(iAlt-1)/bet
            bet = b(iAlt)-a(iAlt)*gam(iAlt)
-           If (bet.eq.0.0) then
-              call stop_gitm("Error in tridiaginal solver in calc_cond")
+          If (bet.eq.0.0) then
+                call stop_gitm("Error in tridiaginal solver in calc_cond")
            endif
            u(iAlt) = (r(iAlt)-a(iAlt)*u(iAlt-1))/bet
         enddo
