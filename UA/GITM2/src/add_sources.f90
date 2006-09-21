@@ -74,11 +74,14 @@ iAlt = 10
      do iSpecies = 1, nSpecies
         VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) = &
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
-            Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
+             Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
              NeutralFriction(:,:,:,iSpecies) 
      enddo
 
 !     call calc_electron_temperature(iBlock)
+
+  eTemperature(:,:,:,iBlock)= Temperature(:,:,:,iBlock) * 2.0
+  ITemperature(:,:,:,iBlock)= Temperature(:,:,:,iBlock) * 1.5
 
      do iSpecies = 1, nSpecies
         NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &
