@@ -152,6 +152,7 @@ rundir:
 		touch Scripts/Run/${OS}/TMP_${MACHINE}; \
 		cp Scripts/Run/${OS}/*${MACHINE}* run/; \
 		rm -f run/TMP_${MACHINE} Scripts/Run/${OS}/TMP_${MACHINE}; \
+		cp share/Scripts/PostProc.pl run/; \
 		cd run; ln -s ${BINDIR}/BATSRUS.exe .; \
 		ln -s GM/* .;                          \
 	fi);
