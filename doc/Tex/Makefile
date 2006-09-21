@@ -53,12 +53,12 @@ SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 SWMFREF = \
 	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
 	${DIR}/Scripts/TestParam.protex \
-	${DIR}/Scripts/PostProc.protex \
 	${DIR}/Scripts/Restart.protex \
 	${DIR}/Scripts/Performance.protex \
 	${BATSRUS_SCRIPTS} \
 	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/ExpandParam.protex \
+	${SCRIPTDIR}/PostProc.protex \
 	${SCRIPTDIR}/depend.protex \
 	${SCRIPTDIR}/FixMakefileDef.protex \
 	${SCRIPTDIR}/CheckDataName.protex \
