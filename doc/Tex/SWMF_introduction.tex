@@ -646,6 +646,54 @@ before recompiling the executables. It is possible to recompile
 only a component or just one subdirectory if the {\tt make clean}
 command is issued in the appropriate directory.
 
+\section{Post-Processing the Output Files}
+
+Several components produce output files (plot files) that require
+some post-processing before they can be visualized. The post-processing
+collects data written out by different processors, and it can also
+process and transform the data. 
+
+The share/Scripts/PostProc.pl script greatly simplifies the post-processing and
+it also helps to collect the run results in a well contained directory tree.
+The script can also be used to do post-processing while the code is running.
+Usually the processed output files are much smaller than the raw output file,
+so post-processing during the run can limit the amount of disk space used
+by the raw data files. It also avoids the need to wait for a long time 
+for the post-processing after the run is done. 
+
+To demonstrate the use of the script, here are a few simple examples.
+After or during a run, you may simply type
+\begin{verbatim}
+cd run
+./PostProc.pl
+\end{verbatim}
+to post-process the available output files. The series of individual 
+IDL plot files can be concatenated into single movie files with
+\begin{verbatim}
+./PostProc.pl -M
+\end{verbatim}
+Repeat the post-processing every 360 seconds during the run,
+gzip large ASCII files and create IDL movie files
+\begin{verbatim}
+./PostProc.pl -r=360 -g -M >& PostProc.log &
+\end{verbatim}
+After the run is finished, create a directory tree with the output
+of all the components, the input parameter file and the 'runlog' file
+(if present)
+\begin{verbatim}
+./PostProc.pl -o RESULTS/NewRun
+\end{verbatim}
+The RESULTS/NewRun directory will contain the PARAM.in file, the
+runlog file (the standard output should be piped into that file),
+and the output files for each component in a subdirectory named
+accordingly (eg. RESULTS/NewRun/GM/). The output directories of
+the components (e.g. GM/IO2/) will be empty.
+
+To see all the options of the script type
+\begin{verbatim}
+./PostProc.pl -h
+\end{verbatim}
+
 \section{Restarting a Run}
 
 There are several reasons for restarting a run. A run may fail
