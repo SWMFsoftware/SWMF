@@ -130,6 +130,22 @@ contains
     end if
 
     ! Add implicit source here
+
+    ! NOTE: If IsPointImplMatrixSet = .false., then the energy 
+    ! should not be used in the calculation of the point implicit
+    ! source terms, because it is not an independent variable, 
+    ! and the perturbations of the other variables
+    ! (used for the evaluation of the numerical derivatives)
+    ! do not affect the energy. In general, only the independent
+    ! variables can be used. For example if the total density
+    ! is the sum of the species densities and any of the species densities
+    ! is handled implicitly, then the total density should not be used here,
+    ! instead the sum of the species densities should be used.
+    !
+    ! An exception is when the implicit source term does not affect the total
+    ! density/energy due to conservation of mass/energy. In that case the 
+    ! total density/energy can be used.
+
     ! In this example a simple friction term is added to the momentum and 
     ! energy equtaions.
     Coef = 1.0/TauFriction
