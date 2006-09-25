@@ -66,44 +66,53 @@ function log_time,wlog,wlognames
 ; This algorithm works only if the whole file is in the same month.
 
 nwlog = n_elements(wlognames)
-if nwlog gt 0 then begin
-    iyear = -1
-    itime = -1
-    ihour = -1
-    for i = 0, nwlog-1 do begin
-        if wlognames(i) eq 'year' or wlognames(i) eq 'yr' then iyear=i
-        if wlognames(i) eq 'time' or wlognames(i) eq 't'  then itime=i
-        if wlognames(i) eq 'hour' or wlognames(i) eq 'hours'  then ihour=i
-    end
-    if iyear eq -1 and itime eq -1 and ihour eq -1 then begin
-        print,'Could not find year, time or hour in wlognames=',wlognames
-        return,findgen(n_elements(wlog(*,0)))
-    end
-    if itime gt -1 then begin
-        if max(wlog(*,itime)) eq min(wlog(*,itime)) then $
-            return,findgen(n_elements(wlog(*,0)))
-        return,wlog(*,itime)/3600.0
-    end
-    if iyear eq -1 and ihour gt -1 then begin
-        hours = wlog(*,ihour)
-        for i=1, n_elements(hours)-1 do $
-          while hours(i) lt hours(i-1) do $
-          hours(i) = hours(i) + 24.0
-        return, hours
-    endif
+hours = 0.0*wlog(*,0)
+
+if nwlog lt 0 then return, hours
+
+istep = -1
+iyear = -1
+itime = -1
+ihour = -1
+for i = 0, nwlog-1 do begin
+    if wlognames(i) eq 'step' or wlognames(i) eq 'it' then istep=i
+    if wlognames(i) eq 'year' or wlognames(i) eq 'yr' then iyear=i
+    if wlognames(i) eq 'time' or wlognames(i) eq 't'  then itime=i
+    if wlognames(i) eq 'hour' or wlognames(i) eq 'hours'  then ihour=i
+endfor
+
+if itime gt -1 then begin
+    hours = wlog(*,itime)/3600.0
 endif else begin
-    iyear = 0
+    if iyear eq -1 then begin
+        if ihour gt -1 then begin
+            hours = wlog(*,ihour)
+            for i=1, n_elements(hours)-1 do $
+              while hours(i) lt hours(i-1) do $
+              hours(i) = hours(i) + 24.0
+        endif
+    endif else begin
+        iday  = iyear+2
+        ihour = iday+1
+        imin  = iday+2
+        isec  = iday+3
+        imsc  = iday+4
+        hours = (wlog(*,iday)-wlog(0,iday))*24.0 + $
+          wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
+          wlog(*,imsc)/3.6e6
+    endelse
 endelse
+if max(hours) eq min(hours) then begin
+    if istep gt -1 then begin
+        print, 'Could not find time information, using steps'
+        hours = wlog(*,istep)
+    endif else begin
+        print, 'Could not find time information, using line number'
+        hours = findgen(n_elements(wlog(*,0)))
+    endelse
+endif
 
-iday  = iyear+2
-ihour = iday+1
-imin  = iday+2
-isec  = iday+3
-imsc  = iday+4
-
-return,(wlog(*,iday)-wlog(0,iday))*24.0 + $
-  wlog(*,ihour) + wlog(*,imin)/60.0 + wlog(*,isec)/3600.0 + $
-  wlog(*,imsc)/3.6e6
+return, hours
 
 end
 
