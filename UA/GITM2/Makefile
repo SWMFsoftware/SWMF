@@ -41,7 +41,7 @@ install_cont:
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
-	./config.pl -${PLANET}
+	./config.pl -${PLANET} -compiler=${COMPILER}
 
 #
 #       General Housekeeping
@@ -81,6 +81,7 @@ clean:
 distclean: clean
 	@(if [ -d share ]; then cd share; make distclean; fi);
 	@cd $(MAINDIR); make distclean
+	@(if [ -e src/Makefile.orig ]; then mv src/Makefile.orig src/Makefile; fi);
 	@cd srcInterface; make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def

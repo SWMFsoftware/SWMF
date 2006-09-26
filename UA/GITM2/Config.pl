@@ -11,8 +11,34 @@ if (!$mars && !$earth) {
     $h = 1;
 }
 
-if ($h) { print "Help!!\n"; }
+if ($h) { 
+    print "Help!!\n"; 
+    exit(1);
+}
 
+if ($compiler =~ /ifort/) {
+
+    $command = "cd src ; cp Makefile Makefile.orig";
+    if ($v) { print " -> $command,\n";}
+    system $command;
+
+    open(MAKEFILE,"<src/Makefile");
+    open(NEWMAKEFILE,">src/Makefile.ifort");
+    while (<MAKEFILE>) {
+	$out = $_;
+	if ($out =~ /(.*SHARE)(.*)ModConductance.o(.*)ModIons.o/) {
+	    $out = $1,"\n";
+	}
+	printf NEWMAKEFILE $out;
+    }
+    close(MAKEFILE);
+    close(MAKEFILENEW);
+
+    $command = "cd src ; cp Makefile.ifort Makefile";
+    if ($v) { print " -> $command,\n";}
+    system $command;
+
+}
 
 if ($earth) { 
 
