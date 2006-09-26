@@ -103,3 +103,21 @@ rundir:
 		ln -s UA/* .; \
 	fi);
 
+test:
+	mkdir -p ${UADIR}/test/UA
+	cd ${UADIR}/test/UA; \
+		mkdir restartOUT data; \
+		ln -s restartOUT restartIN; \
+		ln -s ${UADIR}/srcData DataIn
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		./GridSize.pl -g=9,9,50,4 ; make ; \
+		cd ${UADIR}/test ; \
+		ln -s ${BINDIR}/GITM.exe . ; \
+		cp UA/DataIn/UAM.in.test ./UAM.in ; \
+		touch core ; chmod 444 core ; \
+		ln -s UA/* .; \
+		mpirun -np 2 GITM.exe ; \
+		cd UA/data ; idl < ../../../srcData/idl_input_for_test ; cd ../.. ; echo "Done making plots!!"; \
+		echo "Looking for Differences in logfile..." ; cd UA/data ; diff log00000002.dat ../../../srcData/log00000002.dat ; cd ../../.. ; echo "Do you see differences??" ; \
+	fi);
+
