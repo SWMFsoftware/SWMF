@@ -44,5 +44,10 @@ subroutine write_output
      call write_restart("UA/restartOUT/")
   endif
 
+  if (floor((tSimulation-dt)/DtLogfile) /= &
+       floor((tsimulation)/DtLogfile)) then
+     call logfile("UA/data/")
+  endif
+
 end subroutine write_output
 
