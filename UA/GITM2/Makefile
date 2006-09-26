@@ -19,6 +19,8 @@ MAKEFILE_DEF:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		echo UADIR=`pwd`                        >  Makefile.def; \
 		echo OS=`uname`                         >> Makefile.def; \
+		echo COMPILER=`./get_info.pl -c`        >> Makefile.def; \
+		echo MPIVERSION=`./get_info.pl -m`      >> Makefile.def; \
 		echo STANDALONE=${STANDALONE}           >> Makefile.def; \
 		cat srcMake/Makefile.def                >> Makefile.def; \
 	fi);
@@ -27,11 +29,8 @@ PLANET=earth
 
 install_cont: 
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		COMPILER=`./get_info.pl -c`; \
-		OS=`./get_info.pl -o`; \
-		MPIVERSION=`./get_info.pl -m`; \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
-		cd share; make install;\
+		cd share; make COMPILER=${COMPILER} MPIVERSION=${MPIVERSION} install;\
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
@@ -42,7 +41,7 @@ install_cont:
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
-	./config.pl -${PLANET} -compiler=${COMPILER} -os=${OS} -alone=$(STANDALONE)
+	./config.pl -${PLANET}
 
 #
 #       General Housekeeping
