@@ -27,6 +27,9 @@ PLANET=earth
 
 install_cont: 
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		COMPILER=`./get_info.pl -c`; \
+		OS=`./get_info.pl -o`; \
+		MPIVERSION=`./get_info.pl -m`; \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cd share; make install;\
 	else \
@@ -39,7 +42,7 @@ install_cont:
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
-	./config.pl -${PLANET}
+	./config.pl -${PLANET} -compiler=${COMPILER} -os=${OS} -alone=$(STANDALONE)
 
 #
 #       General Housekeeping
