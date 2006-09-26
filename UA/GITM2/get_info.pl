@@ -1,7 +1,5 @@
 #!/usr/bin/perl -s
 
-$compiler = 'f95';
-
 if (!$type) { $type = $ENV{'HOSTTYPE'} }
 if (!$host) { $host = $ENV{'HOST'} }
 
