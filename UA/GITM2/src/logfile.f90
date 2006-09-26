@@ -25,7 +25,7 @@ subroutine logfile(dir)
           file=dir//"/log"//cIter//".dat",status="unknown")
 
      write(iLogFileUnit_,'(a)') &
-          "   iStep yyyy mm dd hh mm ss  ms  min(t) min(t)"
+          "   iStep yyyy mm dd hh mm ss  ms  min(t) max(t)"
 
   endif
 
