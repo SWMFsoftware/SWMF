@@ -6,7 +6,7 @@ if (!$type) { $type = $ENV{'HOSTTYPE'} }
 if (!$host) { $host = $ENV{'HOST'} }
 
 if ($type =~ /powermac/) { 
-    $compiler = 'f95'; 
+    $compiler = ''; 
     $mpiversion = '';
 }
 
