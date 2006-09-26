@@ -502,7 +502,7 @@ contains
 
   subroutine output_3dall
 
-    nvars_to_write = 26+nSpecies+2+4+2
+    nvars_to_write = 33+nSpecies
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
     if (Is1D) then
@@ -548,17 +548,17 @@ contains
     write(iOutputUnit_,"(I7,A1,a)") 27, " ", "ExB(east)"
     write(iOutputUnit_,"(I7,A1,a)") 28, " ", "ExB (north)"   
     write(iOutputUnit_,"(I7,A1,a)") 29, " ", "ExB (up)" 
-    write(iOutputUnit_,"(I7,A1,a)") 31, " ", "EUV_IonRate (O+)" 
-    write(iOutputUnit_,"(I7,A1,a)") 32, " ", "Aurora_IonRate (O+)" 
-    write(iOutputUnit_,"(I7,A1,a)") 33, " ", "Joule heating (W/m3)" 
-    write(iOutputUnit_,"(I7,A1,a)") 34, " ", "Heating rate (K/s)" 
+    write(iOutputUnit_,"(I7,A1,a)") 30, " ", "EUV_IonRate (O+)" 
+    write(iOutputUnit_,"(I7,A1,a)") 31, " ", "Aurora_IonRate (O+)" 
+    write(iOutputUnit_,"(I7,A1,a)") 32, " ", "Joule heating (W/m3)" 
+    write(iOutputUnit_,"(I7,A1,a)") 33, " ", "Heating rate (K/s)" 
 
-    write(iOutputUnit_,"(I7,A1,a)") 35, " ", "Vn (up,O)"
-    write(iOutputUnit_,"(I7,A1,a)") 36, " ", "Vn (up,O2)"
+    write(iOutputUnit_,"(I7,A1,a)") 34, " ", "Vn (up,O)"
+    write(iOutputUnit_,"(I7,A1,a)") 35, " ", "Vn (up,O2)"
     if (nSpecies >= iN2_) &
-         write(iOutputUnit_,"(I7,A1,a)") 37, " ", "Vn (up,N2)"
+         write(iOutputUnit_,"(I7,A1,a)") 36, " ", "Vn (up,N2)"
     if (nSpecies >= iN_4S_) &
-         write(iOutputUnit_,"(I7,A1,a)") 38, " ", "Vn (up,N)"
+         write(iOutputUnit_,"(I7,A1,a)") 37, " ", "Vn (up,N)"
 
     write(iOutputUnit_,*) ""
 
