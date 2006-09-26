@@ -118,7 +118,7 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
        GradVertVel, DiffVertVel, DivVertVel
   real, dimension(1:nAlts,nIonsAdvect) :: GradLogINS, DiffLogINS
-  real :: NewSumRho, NewLogSumRho, rat
+  real :: NewSumRho, NewLogSumRho, rat, ed
 
   integer :: iAlt, iSpecies, jSpecies, iDim
   !--------------------------------------------------------------------------
@@ -254,35 +254,21 @@ subroutine advance_vertical_1stage( &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
 
-
      if (altitude(ialt) < 110e3) then
-   NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-        (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-        (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-       + Dt * (Gamma_1d(iAlt) - 1.0) * (- gravity(iAlt)) * &
-        EddyDiffusionCoef * GradLogRho(iAlt) * 0.8 &
-       + Dt * DiffTemp(iAlt)
 
-   else
-
-     NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-          (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-          (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-          + Dt * DiffTemp(iAlt)
-
-
-
-!     else if (altitude(ialt) < 120e3) then
-!
-!   NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-!        (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-!        (Gamma - 1.0) * Temp(iAlt)*DivVel(iAlt)) &
-!       + Dt *  (Gamma - 1.0) * (-gravity(iAlt)) * &
-!       (EddyDiffusionCoef *1e-4 * &
-!       (120e3-altitude(ialt)) * GradLogRho(iAlt) &
-!        + (-EddyDiffusionCoef *1e-4)) &
-!       + Dt * DiffTemp(iAlt)
-   endif
+        ed = EddyDiffusionCoef * 0.8
+        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+             + Dt * (Gamma_1d(iAlt) - 1.0) * (- gravity(iAlt)) * &
+             ed * GradLogRho(iAlt) &
+             + Dt * DiffTemp(iAlt)
+     else
+        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
+             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
+             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
+             + Dt * DiffTemp(iAlt)
+     endif
 
   end do
 
