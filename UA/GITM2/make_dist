@@ -3,7 +3,8 @@
 make clean
 /bin/rm -f Makefile.def
 mv Makefile.def.orig Makefile.def
-tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* config.pl make_dist share\
-	src srcData srcIDL srcIE srcIO srcInterface srcMake srcRudy srcSphereAB
+tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* config.pl get_info.pl make_dist \
+    share src srcData srcIDL srcIE srcIO srcInterface \
+    srcMake srcRudy srcSphereAB
 make install
 #make
