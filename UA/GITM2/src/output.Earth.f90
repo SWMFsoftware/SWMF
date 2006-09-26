@@ -548,25 +548,17 @@ contains
     write(iOutputUnit_,"(I7,A1,a)") 27, " ", "ExB(east)"
     write(iOutputUnit_,"(I7,A1,a)") 28, " ", "ExB (north)"   
     write(iOutputUnit_,"(I7,A1,a)") 29, " ", "ExB (up)" 
-    write(iOutputUnit_,"(I7,A1,a)") 30, " ", "ExB (magnitude)"                           
-   write(iOutputUnit_,"(I7,A1,a)") 31, " ", "EUV_IonRate (O+)" 
-   write(iOutputUnit_,"(I7,A1,a)") 32, " ", "Aurora_IonRate (O+)" 
-   write(iOutputUnit_,"(I7,A1,a)") 33, " ", "Joule heating (W/m3)" 
-   write(iOutputUnit_,"(I7,A1,a)") 34, " ", "Heating rate (K/s)" 
+    write(iOutputUnit_,"(I7,A1,a)") 31, " ", "EUV_IonRate (O+)" 
+    write(iOutputUnit_,"(I7,A1,a)") 32, " ", "Aurora_IonRate (O+)" 
+    write(iOutputUnit_,"(I7,A1,a)") 33, " ", "Joule heating (W/m3)" 
+    write(iOutputUnit_,"(I7,A1,a)") 34, " ", "Heating rate (K/s)" 
 
     write(iOutputUnit_,"(I7,A1,a)") 35, " ", "Vn (up,O)"
     write(iOutputUnit_,"(I7,A1,a)") 36, " ", "Vn (up,O2)"
-
     if (nSpecies >= iN2_) &
          write(iOutputUnit_,"(I7,A1,a)") 37, " ", "Vn (up,N2)"
     if (nSpecies >= iN_4S_) &
          write(iOutputUnit_,"(I7,A1,a)") 38, " ", "Vn (up,N)"
-!  write(iOutputUnit_,"(I7,A1,a)") 27, " ", "Source_O"
-!  write(iOutputUnit_,"(I7,A1,a)") 28, " ", "Source_O2"
-!  write(iOutputUnit_,"(I7,A1,a)") 29, " ", "Source_N2"
-!  write(iOutputUnit_,"(I7,A1,a)") 30, " ", "advance_O"
-!  write(iOutputUnit_,"(I7,A1,a)") 31, " ", "advance_O2"
-!  write(iOutputUnit_,"(I7,A1,a)") 32, " ", "advance_N2"
 
     write(iOutputUnit_,*) ""
 
@@ -601,15 +593,9 @@ contains
                   IDensityS(iLon,iLat,iAlt,ie_,iBlock), &
                   eTemperature(iLon,iLat,iAlt,iBlock)  ,&
                   ITemperature(iLon,iLat,iAlt,iBlock)  ,&
-                  Ivelocity(iLon,iLat,iAlt,iEast_,iBlock), &
-                  Ivelocity(iLon,iLat,iAlt,iNorth_,iBlock), &
-                  Ivelocity(iLon,iLat,iAlt,iUp_,iBlock), &
+                  Ivelocity(iLon,iLat,iAlt,iEast_:iUp_,iBlock), &
                   Potential(iiLon,iiLat,iiAlt,iBlock), &
-                  ExB(iLon,iLat,iAlt,iEast_),& 
-                  ExB(iLon,iLat,iAlt,iNorth_),& 
-                  ExB(iLon,iLat,iAlt,iUp_),& 
-             sqrt(ExB(iLon,iLat,iAlt,iEast_)**2 + & 
-                  ExB(iLon,iLat,iAlt,iNorth_)**2),&  
+                  ExB(iLon,iLat,iAlt,iEast_:iUp_),& 
                   EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock)+&
                   EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock)+&
                   EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock),&
@@ -619,23 +605,7 @@ contains
                     NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
                     NDensityS(iLon,iLat,iAlt,iN2_,iBlock) ), &
                   JouleHeating(iiLon,iilat,iiAlt) , &
-                    VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) !,&
-!!$                  O_sources(iiLon,iiLat,iiAlt),&
-!!$                  O2_sources(iiLon,iiLat,iiAlt),&
-!!$                  N2_sources(iiLon,iiLat,iiAlt),&
-!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iO_,iBlock)/ &
-!!$                  NDensityS(iLon,iLat,iAlt,iO_,iBlock), &
-!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iO2_,iBlock)/ &
-!!$                  NDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
-!!$                  Incre_NDensityS_source(iLon,iLat,iAlt,iN2_,iBlock)/&
-!!$                  NDensityS(iLon,iLat,iAlt,iN2_,iBlock), &
-!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iO_,iBlock)/ &
-!!$                  NDensityS(iLon,iLat,iAlt,iO_,iBlock), &
-!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iO2_,iBlock)/ &
-!!$                  NDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
-!!$                  Incre_NDensityS_vert(iLon,iLat,iAlt,iN2_,iBlock)/ &
-!!$                  NDensityS(iLon,iLat,iAlt,iN2_,iBlock)
-!!$                  
+                    VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) 
           enddo
        enddo
     enddo
