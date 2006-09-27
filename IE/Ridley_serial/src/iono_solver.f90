@@ -72,7 +72,7 @@ subroutine ionosphere_solver(PHI, &
 
   integer :: nThetaC, nPsiC, nThetaF, nPsiF
   integer :: i, j, i2, j2, ind_i, ind_j, k, jj, n, npts, npts_Theta
-  integer, save :: saved_npts_Theta=-1
+  integer :: saved_npts_Theta=-1
 
   TYPE(MSR)                             :: S
   TYPE(LU_CSR_MSR)                      :: PC
