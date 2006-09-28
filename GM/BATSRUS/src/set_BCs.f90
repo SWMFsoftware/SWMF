@@ -321,7 +321,8 @@ contains
     !^CFG END SECONDBODY
 
     FaceState_V=FaceState_VI(:,iBoundary)  
-    if(iBoundary==west_.and.TypeBcHere=='vary') then                          
+    if(iBoundary==west_.and. &
+         (TypeBcHere=='vary'.or.TypeBcHere=='inflow') ) then                          
        call get_solar_wind_point(&
             time_now,         &
             FaceCoords_D(y_), &

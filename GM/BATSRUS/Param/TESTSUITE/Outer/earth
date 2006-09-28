@@ -1,7 +1,7 @@
 
 #OUTERBOUNDARY
-outflow                 outerBCtype(east_)  ('inflow','outflow','float')
-vary                    outerBCtype(west_)
+outflow                 outerBCtype(east_)
+inflow                  outerBCtype(west_)
 float                   outerBCtype(south_)
 float                   outerBCtype(north_)
 float                   outerBCtype(bot_)

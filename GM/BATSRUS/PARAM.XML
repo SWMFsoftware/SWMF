@@ -816,14 +816,14 @@ T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
 	"TypeBcEast,TypeBcWest,TypeBcSouth,TypeBcNorth,TypeBcBot,TypeBcTop">
 		<parameter name="$Side" type="string" input="select">
 			<option name="coupled" />
-			<option name="fixed/inflow" 
-					default="$Side ne 'TypeBcEast'" />
-			<option name="float/outflow" 
+			<option name="vary/inflow"
 					default="$Side eq 'TypeBcEast'" />
+			<option name="float/outflow"
+					default="$Side ne 'TypeBcEast'" />
 			<option name="heliofloat"/>
 			<option name="reflect"/>
 			<option name="periodic"/>
-			<option name="vary"/>
+			<option name="fixed"/>
 			<option name="shear"/>
 			<option name="linetied"/>
 			<option name="raeder"/>
@@ -857,7 +857,7 @@ float                   TypeBcTop
 ! Possible values:
 !\begin{verbatim}
 ! coupled       - GM coupled to the IH component (at the 'west' boundary)
-! fixed/inflow  - fixed solarwind values
+! fixed         - fixed solarwind values
 ! fixedB1       - fixed solarwind values without correction for the dipole B0
 ! float/outflow - zero gradient
 ! heliofloat    - floating for the SC component (requires #FACEOUTERBC)
@@ -865,7 +865,7 @@ float                   TypeBcTop
 ! raeder        - Jimmy Raeder's BC
 ! reflect       - reflective
 ! periodic      - periodic
-! vary          - time dependent BC (same as fixed for non time_accurate)
+! vary/inflow   - time dependent BC (same as fixed for non time_accurate)
 ! shear         - sheared (intended for shock tube problem only)
 ! arcadetop     - intended for arcade problem only
 ! arcadebot     - intended for arcade problem only

@@ -169,7 +169,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_asymm(rhoUz_,rhoUz_)
         call BC_cont(Bx_,P_)
      case('fixed','inflow','vary','ihbuffer')
-        if(TypeBc_I(iside)=='vary'.and.time_accurate)then
+        if(time_accurate &
+             .and. (TypeBc_I(iside)=='vary'.or.TypeBc_I(iside)=='inflow'))then
            call BC_solar_wind(time_now)
         else if(TypeBc_I(iside)=='ihbuffer'.and.time_loop)then
            call BC_solar_wind_buffer
