@@ -397,7 +397,7 @@ sub link_tree{
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Restarting Runs with Scripts/Restart.pl}
+#!QUOTE: \subsection{Restarting Runs with Restart.pl}
 #!ROUTINE: Restart.pl - create and link restart file trees in SWMF
 #!DESCRIPTION:
 # This script is copied into the run directory and it should be executed there.

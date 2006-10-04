@@ -5,7 +5,7 @@ use strict;
 
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Change Endianness of BATSRUS Restart Files with Scripts/ConvertRestart.pl}
+#!QUOTE: \subsection{Change Endianness of BATSRUS Restart Files with ConvertRestart.pl}
 #!ROUTINE: ConvertRestart.pl - change the endianness of BATSRUS restart files
 #!DESCRIPTION:
 # When moving restart files from one machine to another, it may be

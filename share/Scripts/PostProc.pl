@@ -170,7 +170,7 @@ sub shell{
 ##############################################################################
 #!QUOTE: \clearpage
 #BOP
-#!QUOTE: \subsection{Post-Process Plot Files with Scripts/PostProc.pl}
+#!QUOTE: \subsection{Post-Process Plot Files with PostProc.pl}
 #!ROUTINE: PostProc.pl - post-process plot files of the components
 #!DESCRIPTION:
 # This script is copied into the run directory and it should be executed there.
