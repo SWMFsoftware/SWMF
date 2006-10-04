@@ -106,7 +106,7 @@ version 2.0. Here is a partial list of improvements:
 \begin{itemize}
 \item The documentation has been improved and split into smaller parts.
 \item The SWMF contains a new version for the UA component: GITM2.
-\item Restarting SWMF is made easier with the Scripts/Restart.pl script.
+\item Restarting SWMF is made easier with the Restart.pl script.
 \item The Solar Corona can be solved in a corotating frame.
 \item The coupling between the GM and IE components has been rewritten
       with simpler and more accurate algorithms.
@@ -653,7 +653,7 @@ some post-processing before they can be visualized. The post-processing
 collects data written out by different processors, and it can also
 process and transform the data. 
 
-The share/Scripts/PostProc.pl script greatly simplifies the post-processing and
+The PostProc.pl script greatly simplifies the post-processing and
 it also helps to collect the run results in a well contained directory tree.
 The script can also be used to do post-processing while the code is running.
 Usually the processed output files are much smaller than the raw output file,
@@ -661,6 +661,8 @@ so post-processing during the run can limit the amount of disk space used
 by the raw data files. It also avoids the need to wait for a long time 
 for the post-processing after the run is done. 
 
+The PostProc.pl script is copied into the run directory and it should
+be executed from the run directory.
 To demonstrate the use of the script, here are a few simple examples.
 After or during a run, you may simply type
 \begin{verbatim}
@@ -716,8 +718,7 @@ of the individual components and subsequent saves overwrite the previous ones
 of the PARAM.in file: one needs to include the restart file for the
 control module of SWMF as well as ask for restart by all the components.
 
-The Scripts/Restart.pl script simplifies the work of the restart in
-several ways:
+The Restart.pl script simplifies the work of the restart in several ways:
 \begin{enumerate}
 \item The SWMF restart file and the individual output restart 
 directories of the components are collected into a single directory tree, 
