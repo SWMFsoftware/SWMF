@@ -314,10 +314,10 @@ run:
 rundir: ENV_CHECK
 	mkdir run
 	mkdir run/STDOUT
-	cp Param/LAYOUT.DEFAULT run/LAYOUT.in
-	cp Param/PARAM.DEFAULT  run/PARAM.in
-	cp Scripts/Restart.pl   run/Restart.pl
-	cp Scripts/PostProc.pl  run/PostProc.pl
+	cp Param/LAYOUT.DEFAULT       run/LAYOUT.in
+	cp Param/PARAM.DEFAULT        run/PARAM.in
+	cp share/Scripts/Restart.pl   run/Restart.pl
+	cp share/Scripts/PostProc.pl  run/PostProc.pl
 	touch run/core
 	chmod 444 run/core
 	cd run; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
