@@ -98,6 +98,13 @@ module ModVarIndexes
   ! The only scalar to be advected is the wave energy
   integer, parameter :: ScalarFirst_ = Ew_, ScalarLast_ = Ew_
 
+  ! There are no multi-species
+  logical, parameter :: UseMultiSpecies = .false.
+
+  ! Declare the following variables to satisfy the compiler
+  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
+  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
+
 contains
 
   subroutine init_mod_equation

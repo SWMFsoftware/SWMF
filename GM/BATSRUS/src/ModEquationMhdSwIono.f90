@@ -6,7 +6,8 @@ module ModVarIndexes
 
   ! This equation module contains the standard MHD equations with
   ! two species for Earth.  1 - solar wind protons, 2 - ionospheric plasma
-  character (len=*), parameter :: NameEquation='MHD 2 Species (SwIono), Hansen, May, 2006'
+  character (len=*), parameter :: NameEquation= &
+       'MHD 2 Species (SwIono), Hansen, May, 2006'
 
   ! The variables numbered from 1 to nVar are:
   !
@@ -98,8 +99,16 @@ module ModVarIndexes
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
-  ! There are no extra scalars
+  ! There are two extra scalars
   integer, parameter :: ScalarFirst_ = RhoSw_, ScalarLast_ = RhoIon_
+
+  ! Species
+  logical, parameter :: UseMultiSpecies = .true.
+  integer, parameter :: SpeciesFirst_   = ScalarFirst_
+  integer, parameter :: SpeciesLast_    = ScalarLast_
+
+  ! Molecular mass of solarwind and ionosphere species in AMU:
+  real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = (/ 1.0, 1.0 /)
 
 contains
 
@@ -110,5 +119,3 @@ contains
   end subroutine init_mod_equation
 
 end module ModVarIndexes
-
-

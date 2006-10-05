@@ -106,6 +106,14 @@ module ModVarIndexes
   ! Scalars to be advected.
   integer, parameter :: ScalarFirst_ = Hp_, ScalarLast_ = CO2p_
 
+  ! Species
+  logical, parameter :: UseMultiSpecies = .true.
+  integer, parameter :: SpeciesFirst_   = ScalarFirst_
+  integer, parameter :: SpeciesLast_    = ScalarLast_
+
+  ! Molecular mass of species H, O2, O, CO2 in AMU:
+  real:: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = (/1.0, 32.0, 16.0, 44.0/)
+
 contains
 
   subroutine init_mod_equation
