@@ -1,0 +1,191 @@
+      SUBROUTINE CLTEMPW
+
+      use ModCommonVariables
+
+      REAL C1(MaxGrid),C2(MaxGrid),C3(MaxGrid),C4(MaxGrid),
+     $     D1(MaxGrid),D2(MaxGrid),
+     $     D3(MaxGrid),D4(MaxGrid)
+      REAL YL(MaxGrid),YK(MaxGrid)
+C     
+C
+C     OXYGEN
+C
+      C2(1)=H0*(TCONO(2)-TCSFO)
+      C2(NDIM)=H0*(TCBGO-TCONO(NDIM2))
+      DO 8815 K=2,NDIM2
+8815  C2(K)=H0*(TCONO(K+1)-TCONO(K-1))
+      DO 8820 K=1,NDIM
+      C1(K)=TCONO(K)/DOXYG(K)
+      C2(K)=C2(K)/DOXYG(K)
+      C2(K)=C2(K)+DAREA(K)*C1(K)
+8820  CONTINUE
+C
+C
+C     C3(1)=H0*(UOXYG(2)-USURFO)
+C     C3(NDIM)=H0*(UBGNDO-UOXYG(NDIM2))
+C     DO 8825 K=2,NDIM2
+C8825 C3(K)=H0*(UOXYG(K+1)-UOXYG(K-1))
+C     DO 8830 K=1,NDIM
+C     C2(K)=C2(K)-UOXYG(K)
+C8830 C3(K)=-GMIN1*(DAREA(K)*UOXYG(K)+C3(K))
+C
+C
+C      DO 8838 K=1,NCL
+C      XX1=H3*C1(K)
+C      XX2=H4*C2(K)
+C      XX3=H2*C1(K)
+C      XX4=-XX3
+C      D1(K)=-XX1-XX2
+C      D2(K)=H1O1-XX4
+C      D3(K)=-XX1+XX2
+C8838  D4(K)=H1O1+XX4
+C      DO 8840 K=NCL+1,NDIM
+      DO 8840 K=1,NDIM
+      XX1=H3*C1(K)
+      XX2=H4*C2(K)
+      XX3=H2*C1(K)
+      XX4=-XX3
+      D1(K)=-XX1-XX2
+      D2(K)=H1O2-XX4
+      D3(K)=-XX1+XX2
+8840  D4(K)=H1O2+XX4
+      D4(1)=-D3(1)*TSURFO+D4(1)*TOXYG(1)-D1(1)*TOXYG(2)
+      D4(NDIM)=-D3(NDIM)*TOXYG(NDIM2)+
+     $D4(NDIM)*TOXYG(NDIM)-D1(NDIM)*TBGNDO
+      DO 8850 K=2,NDIM2
+      D4(K)=-D3(K)*TOXYG(K-1)+D4(K)*TOXYG(K)-
+     $D1(K)*TOXYG(K+1)
+8850  CONTINUE
+      YL(1)=D1(1)/D2(1)
+      YK(1)=(D4(1)-D3(1)*TSURFO)/D2(1)
+      DO 8860 K=2,NDIM
+      XX1=D2(K)-D3(K)*YL(K-1)
+      YK(K)=(D4(K)-D3(K)*YK(K-1))/XX1
+8860  YL(K)=D1(K)/XX1
+      TOXYG(NDIM)=YK(NDIM)-YL(NDIM)*TBGNDO
+      POXYG(NDIM)=RGASO*DOXYG(NDIM)*TOXYG(NDIM)
+      DO 8870 K=NDIM2,1,-1
+      TOXYG(K)=YK(K)-YL(K)*TOXYG(K+1)
+8870  POXYG(K)=RGASO*DOXYG(K)*TOXYG(K)
+C
+C     HELIUM
+C
+      C2(1)=H0*(TCONHE(2)-TCSFHE)
+      C2(NDIM)=H0*(TCBGHE-TCONHE(NDIM2))
+      DO 8715 K=2,NDIM2
+8715  C2(K)=H0*(TCONHE(K+1)-TCONHE(K-1))
+      DO 8720 K=1,NDIM
+      C1(K)=TCONHE(K)/DHEL(K)
+      C2(K)=C2(K)/DHEL(K)
+      C2(K)=C2(K)+DAREA(K)*C1(K)
+8720  CONTINUE
+C
+C
+C     C3(1)=H0*(UHEL(2)-USURHE)
+C     C3(NDIM)=H0*(UBGNHE-UHEL(NDIM2))
+C     DO 8725 K=2,NDIM2
+C8725 C3(K)=H0*(UHEL(K+1)-UHEL(K-1))
+C     DO 8730 K=1,NDIM
+C     C2(K)=C2(K)-UHEL(K)
+C8730 C3(K)=-GMIN1*(DAREA(K)*UHEL(K)+C3(K))
+C
+C
+C      DO 8738 K=1,NCL
+C      XX1=H3*C1(K)
+C      XX2=H4*C2(K)
+C      XX3=H2*C1(K)
+C      XX4=-XX3
+C      D1(K)=-XX1-XX2
+C      D2(K)=H1O1-XX4
+C      D3(K)=-XX1+XX2
+C8738  D4(K)=H1O1+XX4
+C      DO 8740 K=NCL+1,NDIM
+      DO 8740 K=1,NDIM
+      XX1=H3*C1(K)
+      XX2=H4*C2(K)
+      XX3=H2*C1(K)
+      XX4=-XX3
+      D1(K)=-XX1-XX2
+      D2(K)=H1O2-XX4
+      D3(K)=-XX1+XX2
+8740  D4(K)=H1O2+XX4
+      D4(1)=-D3(1)*TSURHE+D4(1)*THEL(1)-D1(1)*THEL(2)
+      D4(NDIM)=-D3(NDIM)*THEL(NDIM2)+
+     $D4(NDIM)*THEL(NDIM)-D1(NDIM)*TBGNHE
+      DO 8750 K=2,NDIM2
+      D4(K)=-D3(K)*THEL(K-1)+D4(K)*THEL(K)-
+     $D1(K)*THEL(K+1)
+8750  CONTINUE
+      YL(1)=D1(1)/D2(1)
+      YK(1)=(D4(1)-D3(1)*TSURHE)/D2(1)
+      DO 8760 K=2,NDIM
+      XX1=D2(K)-D3(K)*YL(K-1)
+      YK(K)=(D4(K)-D3(K)*YK(K-1))/XX1
+8760  YL(K)=D1(K)/XX1
+      THEL(NDIM)=YK(NDIM)-YL(NDIM)*TBGNHE
+      PHEL(NDIM)=RGASHE*DHEL(NDIM)*THEL(NDIM)
+      DO 8770 K=NDIM2,1,-1
+      THEL(K)=YK(K)-YL(K)*THEL(K+1)
+8770  PHEL(K)=RGASHE*DHEL(K)*THEL(K)
+C
+C     HYDROGEN
+C
+      C2(1)=H0*(TCONH(2)-TCSFH)
+      C2(NDIM)=H0*(TCBGH-TCONH(NDIM2))
+      DO 8915 K=2,NDIM2
+8915  C2(K)=H0*(TCONH(K+1)-TCONH(K-1))
+      DO 8920 K=1,NDIM
+      C1(K)=TCONH(K)/DHYD(K)
+      C2(K)=C2(K)/DHYD(K)
+      C2(K)=C2(K)+DAREA(K)*C1(K)
+8920  CONTINUE
+C
+C
+C     C3(1)=H0*(UHYD(1)-USURFH)
+C     C3(NDIM)=H0*(UBGNDH-UHYD(NDIM2))
+C     DO 8925 K=2,NDIM2
+C8925 C3(K)=H0*(UHYD(K+1)-UHYD(K-1))
+C     DO 8930 K=1,NDIM
+C     C2(K)=C2(K)-UHYD(K)
+C8930 C3(K)=-GMIN1*(DAREA(K)*UHYD(K)+C3(K))
+C
+C
+C      DO 8938 K=1,NCL
+C      XX1=H3*C1(K)
+C      XX2=H4*C2(K)
+C      XX3=H2*C1(K)
+C      XX4=-XX3
+C      D1(K)=-XX1-XX2
+C      D2(K)=H1H1-XX4
+C      D3(K)=-XX1+XX2
+C8938  D4(K)=H1H1+XX4
+C      DO 8940 K=NCL+1,NDIM
+      DO 8940 K=1,NDIM
+      XX1=H3*C1(K)
+      XX2=H4*C2(K)
+      XX3=H2*C1(K)
+      XX4=-XX3
+      D1(K)=-XX1-XX2
+      D2(K)=H1H2-XX4
+      D3(K)=-XX1+XX2
+8940  D4(K)=H1H2+XX4
+      D4(1)=-D3(1)*TSURFH+D4(1)*THYD(1)-D1(1)*THYD(2)
+      D4(NDIM)=-D3(NDIM)*THYD(NDIM2)+
+     $D4(NDIM)*THYD(NDIM)-D1(NDIM)*TBGNDH
+      DO 8950 K=2,NDIM2
+      D4(K)=-D3(K)*THYD(K-1)+D4(K)*THYD(K)-
+     $D1(K)*THYD(K+1)
+8950  CONTINUE
+      YL(1)=D1(1)/D2(1)
+      YK(1)=(D4(1)-D3(1)*TSURFH)/D2(1)
+      DO 8960 K=2,NDIM
+      XX1=D2(K)-D3(K)*YL(K-1)
+      YK(K)=(D4(K)-D3(K)*YK(K-1))/XX1
+8960  YL(K)=D1(K)/XX1
+      THYD(NDIM)=YK(NDIM)-YL(NDIM)*TBGNDH
+      PHYD(NDIM)=RGASH*DHYD(NDIM)*THYD(NDIM)
+      DO 8970 K=NDIM2,1,-1
+      THYD(K)=YK(K)-YL(K)*THYD(K+1)
+8970  PHYD(K)=RGASH*DHYD(K)*THYD(K)
+      RETURN
+      END

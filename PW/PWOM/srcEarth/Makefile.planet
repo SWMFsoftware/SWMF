@@ -1,0 +1,25 @@
+OBJECTS_PLANET = \
+	blkdta000_planet.o\
+	ephoto_planet.o\
+	glowex_planet.o\
+	prnthe_planet.o\
+	prntCollision_planet.o\
+	rcolum_planet.o\
+	strt_planet.o\
+	boxnum_planet.o\
+	fieldm_planet.o\
+	precip_planet.o\
+	solzen_planet.o\
+	suncor_planet.o\
+	clfmhe_planet.o\
+	ggm_planet.o\
+	sperfc_planet.o\
+	chap_planet.o\
+	cltempw_planet.o\
+	modatm_planet.o\
+	ssflux_planet.o\
+	vcd_planet.o\
+	collis_planet.o\
+	newbgd_planet.o\
+	msis90_planet.o\
+	strt1_planet.o

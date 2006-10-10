@@ -1,0 +1,12 @@
+OBJECTS_PLANET = \
+	getcfeh2_planet.o\
+	clfmhe_planet.o\
+	strt_planet.o\
+	cltempw_planet.o\
+	modatm_planet.o\
+	prnthe_planet.o\
+	collis_planet.o\
+	newbgd_planet.o\
+	prntCollision_planet.o\
+	strt1_planet.o\
+	calc_chemical_equilibrium.o
