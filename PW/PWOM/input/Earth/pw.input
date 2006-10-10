@@ -1,0 +1,10 @@
+     100.0 	tMax
+      10.0 	DtOutput
+  'Godunov'     TypeSolver
+	F	IsImplicit
+        T   	IsRestart
+	T	IsVariableDt
+	.05	Dt
+	T 	IsMoveFluxTube
+	T	IsUseJr
+	F	IsCentrifugal

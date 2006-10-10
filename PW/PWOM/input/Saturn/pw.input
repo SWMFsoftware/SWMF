@@ -1,0 +1,8 @@
+       1.0		tMax
+       0.5		DtOutput		
+	'Rusanov'	TypeSolver
+	 T		IsImplicit
+         0		nOutput
+ 	 T		IsRestart
+	 T		Is VariableDt
+         .1		Dt
