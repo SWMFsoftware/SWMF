@@ -64,10 +64,22 @@ LIB:
 
 test:	run PWOM
 	cd run; PWOM.exe
-	diff -b run/PW/restartOUT/restart_iline0001.dat \
+	@make test_compare
+
+test_compare:
+	echo 'diff1'
+	-@(diff run/PW/restartOUT/restart_iline0001.dat \
+		output/${PLANET}/restart_iline0001.dat > diff.restart)
+	echo 'diff2'
+	-@(diff run/PW/plots/plots_iline0001.out output/${PLANET}/plots_iline0001.out \
+		> diff.plots)
+	echo 'diff3'
+	-@(diff run/log.out output/${PLANET}/log.out \
+		> diff.log)
+	tail -3 run/PW/plots/plots_iline0001.out output/${PLANET}/plots_iline0001.out
+	tail -2 run/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat
-	diff -b run/PW/plots/plots_iline0001.dat output/${PLANET}/plots_iline0001.dat
-	diff -b run/log.out output/${PLANET}/log.out
+	ls -l diff.restart diff.plots diff.log
 
 testrun: PWOM
 	cd run; PWOM.exe
