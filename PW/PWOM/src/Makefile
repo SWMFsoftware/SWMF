@@ -1,20 +1,8 @@
-#FTN = g77
-#DEBUG = -g -C -O3 -ffixed-line-length-132
+include ../Makefile.def
+include ../Makefile.conf
+include Makefile.DEPEND
+# include Makefile.RULES
 
-#FTN = f95
-#DEBUG = -w -gline -nan -C=all -O0 -r8
-#DEBUG = -w -O3 -nan -r8 -ieee=nonstd
-#DEBUG = -w -nan -C=all -O3 -r8
-#DEBUG = -w -nan -C=all -O3 -r8 -ieee=stop
-
-FTN = mpif90
-DEBUG = -w -gline -nan -C=all -O0 -r8
-#DEBUG = -w -nan -C=all -O3 -r8 -ieee=stop
-#FTN = ifort
-#DEBUG = -132
-
-Cflag = -c ${DEBUG}
-Lflag = ${DEBUG}
 
 EXE = ../bin/pw3.exe
 
@@ -29,8 +17,8 @@ MODULES = \
 	Mod_PW.o\
 	ModNeutralPW.o\
 	ModPass.o
+
 METHODS = \
-	pw.o\
 	polar_wind.o\
 	solver.o\
 	cvmgp.o\
@@ -50,33 +38,23 @@ METHODS = \
 	Get_Neutral.o\
 	${OBJECTS_PLANET}
 
-ModCommonPlanet.o: ModParameters.o
+LIBOBJECTS = ${MODULES} ${METHODS}
 
-ModCommonVariables.o: ModParameters.o ModCommonPlanet.o
+EXEOBJECTS = pw.o ${LIBOBJECTS}
 
-${METHODS}: ${MODULES}
+DEPEND:
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
 
-OBJECTS = ${MODULES} ${METHODS}
+EXE = ${BINDIR}/PWOM.exe
 
-${EXE}: ${OBJECTS}
-	${FTN} ${Lflag} -o ${EXE} ${OBJECTS}
+PWOM:
+	@make ${EXE}
+	@echo "PWOM.exe has been created"
 
-UNSPLIT: pw3.o
-	${FTN} ${Lflag} -o ../bin/pw3.exe pw3.o
-
-pw3.o: common_variables.f Makefile
-
-.SUFFIXES:
-.SUFFIXES: .f .f90 .o
-
-.f.o:
-	${FTN} ${Cflag} -132 $<
-
-.f90.o:
-	${FTN} ${Cflag} $<
-
-clean:
-	rm -f *.o *~ *.mod  
+${EXE}: ${EXEOBJECTS}
+	${LINK.f90} ${Lflag} -o ${EXE} ${EXEOBJECTS}
 
 distclean: clean
-	rm -f *_planet.f Makefile.planet PLANET *.exe fort.*
+	rm -f PLANET *_planet.f ModCommonPlanet.f90 Makefile.planet 
+	rm -f Makefile.DEPEND Makefile.RULES
+
