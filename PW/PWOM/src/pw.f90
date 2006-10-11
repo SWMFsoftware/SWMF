@@ -65,13 +65,12 @@ program pw
      write(*,*) 'iLineGlobal',iLineGlobal(iLine)
      
      write(NameRestartIn(iLine),"(a,i4.4,a)") &
-          'restart/restart_iline',iLineGlobal(iLine),'.in'
+          'PW/restartIN/restart_iline',iLineGlobal(iLine),'.dat'
      write(NameRestart(iLine),"(a,i4.4,a)") &
-          'restart/restart_iline',iLineGlobal(iLine),'.out'
+          'PW/restartOUT/restart_iline',iLineGlobal(iLine),'.dat'
 
      write(NameGraphics(iLine),"(a,i4.4,a)") &
-          'plots/plots_iline',iLineGlobal(iLine),'.out'
-     
+          'PW/plots/plots_iline',iLineGlobal(iLine),'.out'
 
      iUnitRestartIn(iLine) = 200+iLineGlobal(iLine)
      iUnitRestart(iLine)   = 300+iLineGlobal(iLine)
