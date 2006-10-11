@@ -2,12 +2,21 @@ program pw
 
   use Mod_PW
   use ModPass
+  use ModMpi
+
+  implicit none
 
 !******************************************************************************
 ! Initiallize MPI and get number of processors and rank of given processor
 !******************************************************************************
-  include 'mpif.h'
-  integer errcode,comm,iProc,nProc
+  integer:: errcode,comm,iProc,nProc
+
+  ! Temporary variables
+  real:: ddt1, xxx
+  integer:: ns
+
+
+  !---------------------------------------------------------------------------
   call MPI_INIT(errcode)
   comm = MPI_COMM_WORLD
   
@@ -128,7 +137,7 @@ program pw
 !******************************************************************************
   nDim= 390
   if(IsRestart)then
-         
+
      do iLine=1,nLine
         OPEN(UNIT=iUnitRestartIn(iLine),FILE=NameRestartIn(iLine),STATUS='OLD')
         READ (iUnitRestartIn(iLine),2001) TIME,DDT1,NS
