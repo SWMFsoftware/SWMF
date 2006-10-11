@@ -45,14 +45,32 @@ EXEOBJECTS = pw.o ${LIBOBJECTS}
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
 
+MY_LIB = libPWOM.a
+
+LIB:    DEPEND
+	make ${MY_LIB}
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
+
+${MY_LIB}: ${LIBOBJECTS} ${MAKEFILE_COMP_SELECT}
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${LIBOBJECTS}
+
+pw.o: ${LIBSHARE} ${MY_LIB}
+
 EXE = ${BINDIR}/PWOM.exe
 
-PWOM: DEPEND
+PWOM:
+	@make ${MY_LIB}
 	@make ${EXE}
 	@echo "PWOM.exe has been created"
 
 ${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag} -o ${EXE} ${EXEOBJECTS}
+	${LINK.f90} ${Lflag} -o ${EXE} pw.o -L. -lPWOM -L${LIBDIR} -lSHARE
+
+EXESIMPLE: ${EXEOBJECTS}
+	${LINK.f90} ${Lflag} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
 
 distclean: clean
 	rm -f PLANET *_planet.f ModCommonPlanet.f90 Makefile.planet 
