@@ -47,7 +47,7 @@ DEPEND:
 
 EXE = ${BINDIR}/PWOM.exe
 
-PWOM:
+PWOM: DEPEND
 	@make ${EXE}
 	@echo "PWOM.exe has been created"
 
