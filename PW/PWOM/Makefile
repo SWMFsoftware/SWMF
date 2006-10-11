@@ -6,7 +6,11 @@ include Makefile.planet
 help:
 	@echo Makefile targets:
 	@echo
-	@echo 'make install PLANET=Saturn  - installs PWOM for Saturn (or default Earth)'
+	@echo 'make install PLANET=Saturn COMPILER=g95 MPIVERSION=Altix'
+	@echo
+	@echo '      installs PWOM for Saturn with g95 compiler and MPI for Altix'
+	@echo '      defaults are Earth, the default compiler for the OS and MPICH'
+	@echo
 	@echo 'make                        - compile PWOM.exe'
 	@echo 'make LIB                    - compile libPW.a for SWMF'
 	@echo 'make run                    - create run directory'
