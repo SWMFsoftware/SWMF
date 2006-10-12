@@ -139,6 +139,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      ! with east-west (geographic) component.  Since this is not true
      ! for us, we need to come up with a more complicated formulation.
 
+     call report("Starting Conductances",2)
      do k=1,nAlts
         do j=-1,nLats+2
            do i=-1,nLons+2
@@ -222,6 +223,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      HallFieldLine     = 0.0
      LengthFieldLine   = 0.0
      DivJuFieldLine    = 0.0
+
+     call report("Starting Magfield Traces",2)
 
      do iLon = -1, nLons+2
         do iLat = -1, nLats+2
@@ -319,6 +322,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
               call find_mag_point(jul, shl, spl, length)
 
+!              write(*,*) "find_mag_points : ", i,j,mLatMC, mltMC, length
               if (length > 0) then
                  DivJuAltMC(i,j)      = jul
                  SigmaHallMC(i,j)     = shl
@@ -366,7 +370,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   ! We may have missed some points in MLT, so let's check
 
-  do j=5, nMagLats-5
+  do j=3, nMagLats-3
 
      i = 1
      if (LengthMC(i,j) < 0.0) then
@@ -378,44 +382,69 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         do while (im > 2 .and. LengthMC(im,j) < 0.0) 
            im = im-1
         enddo
+
         if (ip >= nMagLons .or. im <= 2 .or. &
              LengthMC(ip,j) < 0.0 .or. LengthMC(im,j) < 0.0) then
            if (iDebugLevel > -1) then
+              write(*,*) "j=5,nMagLats-5 loop"
               write(*,*) "Problem with electrodynamics. A field-line length"
               write(*,*) "is less than 0.0. ip, im, j, LengthMC(i,j) :",&
                    ip,im,j,LengthMC(i,j)
            endif
            call stop_gitm("Can't continue")
         else
+
+           ! These are the first MLTs (i.e. MLT = 0)
            SigmaHallMC(i,j) = (SigmaHallMC(ip,j)+SigmaHallMC(im,j))/2.0
            SigmaPedersenMC(i,j) = &
                 (SigmaPedersenMC(ip,j)+SigmaPedersenMC(im,j))/2.0
            LengthMC(i,j) = (LengthMC(ip,j)+LengthMC(im,j))/2.0
            DivJuAltMC(i,j) = (DivJuAltMC(ip,j)+DivJuAltMC(im,j))/2.0
+
+           ! These are the Lats MLTs (i.e. MLT = 24 = 0)
+           SigmaHallMC(nMagLons,j)     = SigmaHallMC(i,j)
+           SigmaPedersenMC(nMagLons,j) = SigmaPedersenMC(i,j)
+           LengthMC(nMagLons,j)        = LengthMC(i,j)
+           DivJuAltMC(nMagLons,j)      = DivJuAltMC(i,j)
+
            if (iDebugLevel > 2) then
               write(*,*) "Bad Field line length found in calc_electrodynamics."
               write(*,*) "Correcting.  This is because of a bad MLT.", i,j
            endif
+
         endif
      endif
 
      do i=2,nMagLons+1
         if (LengthMC(i,j) < 0.0) then
+
+           ! Set im (i-minus) to be the last cell, since we are moving from
+           ! minus to plus.  We don't need to search backwards since we 
+           ! have filled all of those.
+           im = i-1
+
+           ! Set ip (i-plus) to be the next cell, and search forward to
+           ! find the next point in which there is a good value
            ip = i+1
-           if (ip > nMagLons) ip = 1
-           do while (ip < nMagLons .and. LengthMC(ip,j) < 0.0) 
+           if (ip >= nMagLons+1) ip = 1
+           do while (ip <= nMagLons .and. LengthMC(ip,j) < 0.0) 
               ip = ip+1
            enddo
-           im = i-1
-           if (ip >= nMagLons .or. im <= 2 .or. &
-                LengthMC(ip,j) < 0.0 .or. LengthMC(im,j) < 0.0) then
+
+           ! We either found a good point or didn't.... Let's check...
+           if (LengthMC(ip,j) < 0.0 .or. LengthMC(im,j) < 0.0) then
               if (iDebugLevel > -1) then
+                 write(*,*) "i=2,nMagLons+1 loop"
                  write(*,*) "Problem with electrodynamics. A field-line length"
                  write(*,*) "is less than 0.0. ip, im, j, LengthMC(i,j) :",&
-                      ip,im,j,LengthMC(i,j)
+                      im,i,ip,j,nMagLons, &
+                      LengthMC(i,j), LengthMC(im,j), LengthMC(ip,j)
               endif
               call stop_gitm("Can't continue")
            else
+
+              ! if we did find a good point, average to get a good value.
+
               SigmaHallMC(i,j) = (SigmaHallMC(ip,j)+SigmaHallMC(im,j))/2.0
               SigmaPedersenMC(i,j) = &
                    (SigmaPedersenMC(ip,j)+SigmaPedersenMC(im,j))/2.0
@@ -467,6 +496,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   do iLat = 1, nMagLats
      if (LengthMC(10,iLat) < 1.0) then
+        write(*,*) "iLat=1,nMagLats loop"
         write(*,*) iLat, &
              LengthMC(10,iLat),MagLatMC(10,iLat)
         write(*,*) "Problem with electrodynamics. A field-line length"
