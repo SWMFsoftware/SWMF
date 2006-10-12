@@ -17,8 +17,6 @@ subroutine advance
   call report("advance",1)
   call start_timing("advance")
 
-  ! Godunov Splitting reverses the hor and ver each time step
-
   if (.not. UseStatisticalModelsOnly) then
 
         call add_sources
@@ -68,6 +66,8 @@ contains
 
     do iBlock = 1, nBlocks
 
+       call calc_rates(iBlock)
+
        do iLon = 1, nLons ; do iLat = 1, nLats
           call advance_vertical(iLon,iLat,iBlock)
        end do; end do
@@ -88,8 +88,8 @@ contains
 
     do iBlock = 1, nBlocks
 
-       call calc_physics(iBlock)
        call calc_rates(iBlock)
+       call calc_physics(iBlock)
 
        call advance_horizontal(iBlock)
 
