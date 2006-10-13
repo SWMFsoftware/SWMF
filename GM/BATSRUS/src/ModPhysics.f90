@@ -14,6 +14,11 @@ module ModPhysics
        inv_gm1 = cThree/cTwo,&
        g_half = cHalf + cOne/cThree       ! gamma and derived values
 
+  ! plasma parameters
+  real:: AverageIonMass           = 1.0   ! only used if not UseMultiSpecies 
+  real:: AverageIonCharge         = 1.0
+  real:: ElectronTemperatureRatio = 1.0
+
   ! thermal/total energy ratio limits for correctP  !^CFG IF PROJECTION
   real    :: Pratio_lo=0.01, Pratio_hi=0.1          !^CFG IF PROJECTION
 
