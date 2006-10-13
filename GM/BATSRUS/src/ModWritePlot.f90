@@ -558,7 +558,7 @@ subroutine set_eqpar(iplotfile,neqpar,eqparnames,eqpar)
      end select
   end do
 
-end subroutine set_EqPar
+end subroutine set_eqpar
 
 !==============================================================================
 subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
@@ -572,7 +572,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
-  use ModPhysics, ONLY : Body_rho,Body_p,OMEGAbody,CellState_VI
+  use ModPhysics, ONLY : Body_rho, Body_p, OmegaBody, CellState_VI, &
+       AverageIonMass, AverageIonCharge, ElectronTemperatureRatio
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
   use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
   use ModUtilities, ONLY: lower_case
@@ -675,6 +676,21 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
 
         ! EXTRA MHD variables
 
+     case('n','t','temp')
+        ! Calculate the number density
+        if(UseMultiSpecies)then
+           do jVar = SpeciesFirst_, SpeciesLast_
+              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
+                   State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
+           end do
+        else
+           PlotVar(:,:,:,iVar) = State_VGB(Rho_,:,:,:,iBLK)/AverageIonMass
+        end if
+
+        ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
+        if(s /= 'n') PlotVar(:,:,:,iVar) = &
+             State_VGB(P_,:,:,:,iBLK) / PlotVar(:,:,:,iVar) &
+             /(1+AverageIonCharge*ElectronTemperatureRatio)
      case('ux')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar) = &
@@ -1239,7 +1255,10 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         plotvar_inBody(iVar)=plotvar_inBody(iVar)*unitUSER_p
 
         ! EXTRA MHD variables
-
+     case('n')
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_n
+     case('t','temp')
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_temperature
      case('ux','uy','uz')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_U
      case('jx','jy','jz','jr')
