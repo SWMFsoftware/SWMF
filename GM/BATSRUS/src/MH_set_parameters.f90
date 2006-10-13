@@ -1480,6 +1480,10 @@ subroutine MH_set_parameters(TypeAction)
         inv_g   = cOne/g
         inv_gm1 = cOne/gm1
         g_half  = cHalf*g
+     case("#PLASMA")
+        call read_var('AverageIonMass          ', AverageIonMass)
+        call read_var('AverageIonCharge        ', AverageIonCharge)
+        call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
      case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
