@@ -111,9 +111,11 @@ install: ENV_CHECK mkdir
 	cd GM/BATSRUS;		make install    #^CMP IF GM
 	cd IE/Ridley_serial;	make install    #^CMP IF IE
 	cd IH/BATSRUS_share;	make install    #^CMP IF IH
+	cd PW/PWOM;		make install	#^CMP IF PW
 	cd IM/RCM;		make install    #^CMP IF IM
 	cd IM/RCM2;		make install    #^CMP IF IM
 	cd RB/RiceV5;		make install    #^CMP IF RB
+	cd RB/RBE;		make install	#^CMP IF RB
 	cd SP/Kota;		make install    #^CMP IF SP
 	cd SP/FLAMPA;           make install    #^CMP IF SP
 	cd UA/GITM;		make install	#^CMP IF UA
@@ -208,8 +210,10 @@ clean: ENV_CHECK
 	cd UA/GITM;		make clean    #^CMP IF UA
 	cd UA/GITM2;		make clean    #^CMP IF UA
 	cd UA/Empty;		make clean    #^CMP IF UA
+	cd PW/PWOM;		make clean    #^CMP IF PW
 	cd RB/Rice;		make clean    #^CMP IF RB
 	cd RB/RiceV5;		make clean    #^CMP IF RB
+	cd RB/RBE;		make clean    #^CMP IF RB
 	cd RB/Empty;		make clean    #^CMP IF RB
 	cd SC/BATSRUS;          make clean    #^CMP IF SC
 	cd SC/Empty;            make clean    #^CMP IF SC
@@ -247,8 +251,10 @@ distclean_comp: ENV_CHECK rmdir
 	cd UA/GITM;		make distclean    #^CMP IF UA
 	cd UA/GITM2;		make distclean    #^CMP IF UA
 	cd UA/Empty;		make distclean    #^CMP IF UA
+	cd PW/PWOM;		make distclean    #^CMP IF PW
 	cd RB/Rice;		make distclean    #^CMP IF RB
 	cd RB/RiceV5;		make distclean    #^CMP IF RB
+	cd RB/RBE;		make distclean	  #^CMP IF RB
 	cd RB/Empty;		make distclean    #^CMP IF RB
 	cd SP/FLAMPA;           make distclean    #^CMP IF SP
 	cd SP/Kota;             make distclean    #^CMP IF SP
