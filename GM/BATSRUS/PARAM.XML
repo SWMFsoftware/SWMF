@@ -3435,9 +3435,49 @@ tested.
 #GAMMA
 1.6666666667		Gamma
 
-! The adiabatic index (ratio of the specific heats for fixed pressure
-! and volume. The default value is 5.0/3.0, which is valid for
-! monoatomic gas or plasma.
+The adiabatic index (ratio of the specific heats for fixed pressure
+and volume. The default value is 5.0/3.0, which is valid for
+monoatomic gas or plasma.
+</command>
+
+<command name="PLASMA">
+	<parameter name="AverageIonMass"   type="real" min="0" default="1"/>
+	<parameter name="AverageIonCharge" type="real" min="0" default="1"/>
+	<parameter name="ElectronTemperatureRatio" type="real" min="0" 
+								default="1"/>
+#PLASMA
+1.0		AverageIonMass [amu]
+1.0		AverageIonCharge [e]
+1.0		ElectronTemperatureRatio
+
+The AverageIonMass determines the average mass of ions (and strongly
+coupled neutrals) in atomic mass units (amu).
+This parameter is only used if there are no species (UseMultiSpecies=.false.
+in ModEquation). The number density is n=rho/AverageIonMass.
+For a pure hydrogene plasma AverageIonMass=1.0, while
+for a mix of 90 per cent hydrogene and 10 per cent helium AverageIonMass=1.4.
+
+The AverageIonCharge determines the average charge of ions (and strongly
+coupled neutrals) in electron charge units.
+The electron density is ne=n*AverageIonCharge. 
+For a fully ionized hydrogene plasma AverageIonCharge=1.0,
+for a fully ionized helium plasma AverageIonCharge=2.0, while
+for a 10 per cent ionized hydrogene plasma AverageIonCharge=0.1.
+
+The ElectronTemperatureRatio determines the ratio of electron
+and ion temperatures. The ion temperature Te = T * ElectronTemperatureRatio
+where T is the ion temperature. The total pressure p = n*k*T + ne*k*Te,
+so T = p/(n*k+ne*k*ElectronTemperatureRatio). If the electrons and ions are
+in temperature equilibrium, ElectronTemperatureRatio=1.0.
+
+In a real plasma all these values can vary in space and time,
+but in a single fluid/species MHD description using these constants is
+the best one can do. In multispecies MHD the number density can
+be determined accurately as n = sum(RhoSpecies_V/(ProtonMass*MassSpecies_V)).
+
+The default values are 1.0 for all 3 parameters, which corresponds to
+a fully ionized hydrogene plasma where the ions and electrons are 
+in thermal equilibrium.
 </command>
 
 <command name="SHOCKTUBE">
