@@ -1398,6 +1398,12 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('p','pth')
         NameTecVar = 'p'
         NameUnit   = unitstr_TEC_p
+     case('n')
+        NameTecVar = 'n'
+        NameUnit   = unitstr_TEC_n
+     case('t','temp')
+        NameTecVar = 'T'
+        NameUnit   = unitstr_TEC_temperature
      case('ux') 
         NameTecVar = 'U_x'
         NameUnit   = unitstr_TEC_U
@@ -1589,6 +1595,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
         NameUnit = unitstr_IDL_energydens
      case('p','pth')
         NameUnit = unitstr_IDL_p
+     case('n')
+        NameUnit = unitstr_IDL_n
+     case('t','temp')
+        NameUnit = unitstr_IDL_temperature
      case('ux','uy','uz','ur')
         NameUnit = unitstr_IDL_U
      case('jx','jy','jz','jr') 
