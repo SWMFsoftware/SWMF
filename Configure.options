@@ -50,6 +50,7 @@ GM			ON			#^CMP IF GM
 IM			ON			#^CMP IF IM
 IE			ON			#^CMP IF IE
 UA			ON NEEDS IE		#^CMP IF UA
+PW			ON			#^CMP IF PW
 RB                      ON                      #^CMP IF RB
 SP			ON			#^CMP IF SP
 
