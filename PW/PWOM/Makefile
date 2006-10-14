@@ -108,7 +108,6 @@ distclean: uninstall
 uninstall:
 	@(if [ -d share ]; then cd share; make distclean; fi);
 	@cd src; make distclean
-	rm -f Makefile.conf Makefile.def Makefile.planet *~
+	rm -rf Makefile.conf Makefile.def Makefile.planet *~ bin
 	mv Makefile.planet.orig Makefile.planet
 	mv Makefile.def.orig Makefile.def
-	@(if [ "$(STANDALONE)" != "NO" ]; then rm -rf bin; fi)
