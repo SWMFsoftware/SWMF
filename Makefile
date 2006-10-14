@@ -108,18 +108,8 @@ install: ENV_CHECK mkdir
 	cd share;       	make install
 	cd CON;			make install
 	cd ESMF/ESMF_SWMF;	make install
-	cd GM/BATSRUS;		make install    #^CMP IF GM
-	cd IE/Ridley_serial;	make install    #^CMP IF IE
-	cd IH/BATSRUS_share;	make install    #^CMP IF IH
-	cd PW/PWOM;		make install	#^CMP IF PW
-	cd IM/RCM;		make install    #^CMP IF IM
-	cd IM/RCM2;		make install    #^CMP IF IM
-	cd RB/RiceV5;		make install    #^CMP IF RB
-	cd RB/RBE;		make install	#^CMP IF RB
-	cd SP/Kota;		make install    #^CMP IF SP
-	cd SP/FLAMPA;           make install    #^CMP IF SP
-	cd UA/GITM;		make install	#^CMP IF UA
-	cd UA/GITM2;		make install	#^CMP IF UA
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+		do (cd $$i; make install); done
 	@echo
 	@echo Installation succeeded
 	@echo
@@ -197,29 +187,8 @@ CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd GM/BATSRUS;		make clean    #^CMP IF GM
-	cd GM/Empty;		make clean    #^CMP IF GM
-	cd IE/Ridley_serial;	make clean    #^CMP IF IE
-	cd IE/Empty;		make clean    #^CMP IF IE
-	cd IH/BATSRUS;		make clean    #^CMP IF IH
-	cd IH/BATSRUS_share;	make clean    #^CMP IF IH
-	cd IH/Empty;		make clean    #^CMP IF IH
-	cd IM/RCM;		make clean    #^CMP IF IM
-	cd IM/RCM2;		make clean    #^CMP IF IM
-	cd IM/Empty;		make clean    #^CMP IF IM
-	cd UA/GITM;		make clean    #^CMP IF UA
-	cd UA/GITM2;		make clean    #^CMP IF UA
-	cd UA/Empty;		make clean    #^CMP IF UA
-	cd PW/PWOM;		make clean    #^CMP IF PW
-	cd RB/Rice;		make clean    #^CMP IF RB
-	cd RB/RiceV5;		make clean    #^CMP IF RB
-	cd RB/RBE;		make clean    #^CMP IF RB
-	cd RB/Empty;		make clean    #^CMP IF RB
-	cd SC/BATSRUS;          make clean    #^CMP IF SC
-	cd SC/Empty;            make clean    #^CMP IF SC
-	cd SP/Kota;             make clean    #^CMP IF SP
-	cd SP/FLAMPA;           make clean    #^CMP IF SP
-	cd SP/Empty;            make clean    #^CMP IF SP
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+		do (cd $$i; make clean); done
 	cd ESMF/ESMF_SWMF;	make clean
 	cd CON;			make clean
 	cd share;		make clean
@@ -238,29 +207,8 @@ clean: ENV_CHECK
 distclean_comp: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	cd GM/BATSRUS;		make distclean    #^CMP IF GM
-	cd GM/Empty;		make distclean    #^CMP IF GM
-	cd IE/Ridley_serial;	make distclean    #^CMP IF IE
-	cd IE/Empty;		make distclean    #^CMP IF IE
-	cd IH/BATSRUS;		make distclean    #^CMP IF IH
-	cd IH/BATSRUS_share;	make distclean    #^CMP IF IH
-	cd IH/Empty;		make distclean    #^CMP IF IH
-	cd IM/RCM;		make distclean    #^CMP IF IM
-	cd IM/RCM2;		make distclean    #^CMP IF IM
-	cd IM/Empty;		make distclean    #^CMP IF IM
-	cd UA/GITM;		make distclean    #^CMP IF UA
-	cd UA/GITM2;		make distclean    #^CMP IF UA
-	cd UA/Empty;		make distclean    #^CMP IF UA
-	cd PW/PWOM;		make distclean    #^CMP IF PW
-	cd RB/Rice;		make distclean    #^CMP IF RB
-	cd RB/RiceV5;		make distclean    #^CMP IF RB
-	cd RB/RBE;		make distclean	  #^CMP IF RB
-	cd RB/Empty;		make distclean    #^CMP IF RB
-	cd SP/FLAMPA;           make distclean    #^CMP IF SP
-	cd SP/Kota;             make distclean    #^CMP IF SP
-	cd SP/Empty;            make distclean    #^CMP IF SP
-	cd SC/BATSRUS;          make distclean    #^CMP IF SC
-	cd SC/Empty;            make distclean    #^CMP IF SC
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+		do (cd $$i; make distclean); done
 	cd ESMF/ESMF_SWMF;	make distclean
 	cd CON;			make distclean
 	cd util;		make distclean
@@ -287,6 +235,7 @@ dist: distclean
 	tar -rf tmp.tar  Makefile
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
+	tar -rf tmp.tar  .cvsignore
 	tar -rf tmp.tar  Configure.options
 	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
 	tar -rf tmp.tar  doc			#^CMP IF DOC
@@ -297,14 +246,8 @@ dist: distclean
 	tar -rf tmp.tar  util
 	tar -rf tmp.tar  CON
 	tar -rf tmp.tar  ESMF
-	tar -rf tmp.tar  GM			#^CMP IF GM
-	tar -rf tmp.tar  IE			#^CMP IF IE
-	tar -rf tmp.tar  IH			#^CMP IF IH
-	tar -rf tmp.tar  IM			#^CMP IF IM
-	tar -rf tmp.tar  UA			#^CMP IF UA
-	tar -rf tmp.tar  RB                     #^CMP IF RB
-	tar -rf tmp.tar  SP                     #^CMP IF SP
-	tar -rf tmp.tar  SC                     #^CMP IF SC
+	for i in `ls -d [A-Z][A-Z]`; \
+		do (tar -rf tmp.tar $$i); done
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
