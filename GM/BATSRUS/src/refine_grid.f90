@@ -48,7 +48,7 @@ subroutine parallel_refine
   call set_oktest('refine',oktest,oktest_me)
 
   if (.not. any(refine_list)) RETURN
-
+  if(iProc==0)write(*,*)'Start to refine ',count(refine_list),' blocks'
   ! Change grid identification number
   iNewGrid = mod( iNewGrid+1, 10000)
 
