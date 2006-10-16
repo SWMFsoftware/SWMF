@@ -1577,12 +1577,12 @@ subroutine MH_set_parameters(TypeAction)
            case('HGC')
               UseRotatingFrame = .true.
            case('HGR')
-              if(iProc==0)then
-                 write(*,*) NameSub, &
-                      ' WARNING: corotating IH does not fully work'
-                 if(UseStrict)call stop_mpi('Correct PARAM.in!')
-                 write(*,*)NameSub//' setting .UseRotatingFrame = T'
-              end if
+            !  if(iProc==0)then
+            !     write(*,*) NameSub, &
+            !          ' WARNING: corotating IH does not fully work'
+            !     if(UseStrict)call stop_mpi('Correct PARAM.in!')
+            !     write(*,*)NameSub//' setting .UseRotatingFrame = T'
+            !  end if
               UseRotatingFrame = .true.
            case default
               call stop_mpi(NameSub// &
