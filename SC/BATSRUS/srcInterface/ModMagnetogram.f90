@@ -74,7 +74,7 @@ module SC_ModMagnetogram
   !Reads the file of magnetic field harmonics  
   !and recovers the spatial distribution of the 
   !potential mganetic field at the spherical grid 
-  !N_PFSSM*N_PFSSM*N_PFSSM
+  !nR*nPhi*nTheta
 
 
   public::get_hlcmm
@@ -95,11 +95,26 @@ module SC_ModMagnetogram
 
   real,allocatable,dimension(:,:,:,:)::B_DN
 
-  real::dR=cOne,dPhi=cOne,dTheta=cOne,dInv_D(nDim)=cOne
-  integer::nThetaPerProc,nRExt=10
- 
+  real::dR=cOne,dPhi=cOne,dSinTheta=cOne,dInv_D(nDim)=cOne
+  integer::nThetaPerProc,nRExt=2
+  integer:: nR=29, nPhi=72, nTheta=29
 contains
- !=================================================================
+  !=================================================================
+  real function sin_latitude(iTheta)
+    integer,intent(in)::iTheta
+    sin_latitude=(real(iTheta)+cHalf)*dSinTheta-cOne
+  end function sin_latitude
+  !=================================================================
+  real function r_latitude(iTheta)
+    integer,intent(in)::iTheta
+    r_latitude=asin(sin_latitude(iTheta))
+  end function r_latitude
+  !=================================================================
+  real function colatitude(iTheta)
+    integer,intent(in)::iTheta
+    colatitude=cPi*cHalf-r_latitude(iTheta)
+  end function colatitude
+  !=================================================================
   ! SUBROUTINE get_hlcmm
   ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
   ! the M(ap) from the header line. Assign Phi_Shift=HLCMM-180
@@ -210,7 +225,10 @@ contains
           if(Phi_Shift<cZero)call get_hlcmm(Head_PFSSM,Phi_Shift)
        enddo
     endif
-    nRExt=min(10,floor(real(N_PFSSM)*(0.9*Ro_PFSSM)/(Rs_PFSSM-Ro_PFSSM)))
+    nR=max(nR,N_PFSSM)
+    nPhi=max(nPhi,N_PFSSM)
+    nTheta=max(nTheta,N_PFSSM)
+    nRExt=min(10,1+floor(real(nR)*(0.1*Ro_PFSSM)/(Rs_PFSSM-Ro_PFSSM)))
     if(iProc==0)then
        call write_prefix;write(iUnitOut,*)&
          'Magnetogram is extended by ',nRExt,' nodes towards the Sun'
@@ -311,6 +329,7 @@ contains
     real:: Theta,Phi,R_PFSSM
     real:: Psi_PFSSM
     integer::iBcast, iStart, nSize, iError
+    integer::iNorth,isouth
 
     ! Temporary variable
     real, dimension(N_PFSSM+1):: FactRatio1
@@ -322,38 +341,39 @@ contains
     !
     !/
  
-    real, dimension(-1:N_PFSSM+2,-nRExt:N_PFSSM):: &
+    real, dimension(-1:N_PFSSM+2,-nRExt:nR):: &
          RoRsPower_I, RoRPower_I, rRsPower_I
 
- 
+  
     !Introduce a spherical grid with the resolution, depending on the
     !magnetogram resolution (N_PFSSM)
-    dR=(Rs_PFSSM-Ro_PFSSM)/real(N_PFSSM)
-    dPhi=cTwoPi/real(N_PFSSM)
-    dTheta=cPi/real(N_PFSSM)
-    dInv_D=cOne/(/dR,dPhi,dTheta/)
+    dR=(Rs_PFSSM-Ro_PFSSM)/real(nR)
+    dPhi=cTwoPi/real(nPhi)
+    dSinTheta=cTwo/real(nTheta+1) 
+    !sin of latitude is taken in 29+1 points in the MWO file
+    dInv_D=cOne/(/dR,dPhi,dSinTheta/)
 
     !Calculate the radial part of spherical functions
     call calc_radial_functions
-
-
+ 
     call set_auxiliary_arrays
 
     !Allocate the magnetic field array, at the spherical grid.
     if(allocated(B_DN))deallocate(B_DN)
-    allocate(B_DN(R_:Theta_,-nRExt:N_PFSSM,0:N_PFSSM,0:N_PFSSM))
+    allocate(B_DN(R_:Theta_,-nRExt:nR,0:nPhi,0:nTheta))
 
     B_DN=cZero
 
+
     !Parallel computation of the magnetic field at the grid
-    nThetaPerProc=N_PFSSM/nProc+1 
-    !
+    nThetaPerProc=nTheta/nProc+1 
+    
 
     !Loop by theta, each processor treats a separate part of the grid
     do iTheta=iProc*nThetaPerProc,(iProc+1)*nThetaPerProc-1
        
-       if(iTheta>N_PFSSM)EXIT !Some processors may have less amount of work
-       Theta=iTheta*dTheta
+       if(iTheta>nTheta)EXIT !Some processors may have less amount of work
+       Theta=colatitude(iTheta)
        CosTheta=cos(Theta)
        SinTheta=max(sin(Theta), cOne/(cE9*cE1))
 
@@ -361,7 +381,7 @@ contains
        call calc_Legandre_polynoms
 
        !Start loop by Phi
-       do iPhi=0,N_PFSSM
+       do iPhi=0,nPhi
           Phi=real(iPhi)*dPhi
           
           !Calculate azymuthal harmonics, for a given Phi
@@ -371,7 +391,7 @@ contains
           end do
 
           !Loop by radius
-          do iR=-nRExt,N_PFSSM
+          do iR=-nRExt,nR
              R_PFSSM=Ro_PFSSM+dR*iR
              !\
              ! Initialize the values of SumR,SumT,SumP, and SumPsi::
@@ -416,22 +436,24 @@ contains
              !/
              Psi_PFSSM    = SumPsi
              B_DN(R_,iR,iPhi,iTheta)     = SumR
-             B_DN(Phi_,iR,iPhi,iTheta) = SumP
-             B_DN(Theta_,iR,iPhi,iTheta)= SumT
+             B_DN(Phi_,iR,iPhi,iTheta)   = SumP 
+             B_DN(Theta_,iR,iPhi,iTheta) = SumT
           end do
        end do
     end do
+    
     if(nProc>1)then
        do iBcast=0,nProc-1
           iStart=iBcast*nThetaPerProc
-          if(iStart>N_PFSSM)EXIT
-          nSize=min(nThetaPerProc,N_PFSSM+1-iStart)*(N_PFSSM+1)*&
-               (N_PFSSM+1+nRExt)*3
+          if(iStart>nTheta)EXIT
+          nSize=min(nThetaPerProc,nTheta+1-iStart)*(nPhi+1)*&
+               (nR+1+nRExt)*3
           call MPI_bcast(B_DN(1,-nRExt,0,iStart),nSize,MPI_REAL,iBcast,iComm,iError)
        end do
     end if
+
     if(iProc==0)call write_Br_plot
-  contains
+contains
     subroutine set_auxiliary_arrays
 
       !\
@@ -526,7 +548,7 @@ contains
       enddo; enddo
     end subroutine calc_Legandre_polynoms
     subroutine calc_radial_functions
-      do iR=-nRExt,N_PFSSM
+      do iR=-nRExt,nR
          !\ 
          ! Calculate powers of the ratios of radii
          !/
@@ -569,17 +591,17 @@ contains
       write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
       write ( iUnit, '(a)' ) &
            'Variables = ' // trim (&
-           '"Longitude [Deg]", "Latitude [Deg]",  "Br_0 [G]","Br_SS [G]"')
+           '"Longitude [Deg]", "Latitude [Deg]", "Br_0 [G]","Br_SS [G]"')
       write ( iUnit, '(a)' ) ' '
-      write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', N_PFSSM+1, ', J=', N_PFSSM+1,&
+      write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=', nTheta+1,&
            ', F=point' 
 
-      do iTheta=0,N_PFSSM
-         do iPhi=0,N_PFSSM
+      do iTheta=0,nTheta
+         do iPhi=0,nPhi
             write ( iUnit, '(4f10.3)' )real(iPhi)*dPhi/cDegToRad,&
-                 real(iTheta)*dTheta/cDegToRad,&
-                 0.01*B_DN(R_,0,iPhi,iTheta),&
-                 0.01*B_DN(R_,N_PFSSM,iPhi,iTheta)
+                 r_latitude(iTheta)/cDegToRad,&
+                 UnitB*B_DN(R_,0,iPhi,iTheta),&
+                 UnitB*B_DN(R_,nR,iPhi,iTheta)
          end do
       end do
       close(iUnit)
@@ -600,10 +622,7 @@ contains
        TR_D(Theta_)=cPi-TR_D(Theta_)
        TR_D(Phi_)=TR_D(Phi_)+cPi
     end if
-    if(TR_D(Phi_) >= cTwoPi)&
-         TR_D(Phi_)=TR_D(Phi_)-cTwoPi 
-    if(TR_D(Phi_) < cZero)&
-         TR_D(Phi_) = TR_D(Phi_)+cTwoPi
+    TR_D(Phi_)=modulo(TR_D(Phi_),cTwoPi)
     
   end subroutine correct_angles
   !==========================================================================
@@ -615,6 +634,7 @@ contains
     integer::iDim,i,j,k  
     real::Weight_III(0:1,0:1,0:1)
     logical::DoCorrection
+    real::ReductionCoeff
     Res_D=R_D
     !Limit a value of R:
     Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
@@ -623,12 +643,27 @@ contains
     
     call correct_angles(Res_D)
     DoCorrection=Res_D(Theta_)/=R_D(Theta_)
+    Res_D(Theta_)=cos(Res_D(Theta_)) & !This is sin(latitude)
+          -sin_latitude(0)             !This is sin(latitude) for iTheta=0 
     Res_D=Res_D*dInv_D
     Node_D=floor(Res_D)
-    if(Node_D(R_)==N_PFSSM)Node_D(R_)=Node_D(R_)-1
-    if(Node_D(Theta_)==N_PFSSM)Node_D(Theta_)=Node_D(Theta_)-1
+    if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
     Res_D=Res_D-real(Node_D)
-    if(Node_D(Phi_)==N_PFSSM)Node_D(Phi_)=0
+    ReductionCoeff=cOne
+    !Near poles reduce the Phi and Theta components of the field and
+    !take the R component from the last grid node 
+    !(iTheta=0 or iTheta=nTheta)
+    if(Node_D(Theta_)==nTheta)then
+       Node_D(Theta_)=Node_D(Theta_)-1
+       ReductionCoeff=max(cOne-cTwo*Res_D(Theta_),cZero)
+       Res_D(Theta_)=cOne
+    elseif(Node_D(Theta_)==-1)then
+       Node_D(Theta_)= Node_D(Theta_)+1
+       ReductionCoeff=max(cZero,cTwo*Res_D(Theta_)-cOne)
+       Res_D(Theta_) = cZero
+    end if
+
+    if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
 
     Weight_III(0,:,:)=cOne-Res_D(R_)
     Weight_III(1,:,:)=Res_D(R_)
@@ -643,7 +678,11 @@ contains
             Node_D(Phi_):Node_D(Phi_)+1,&
             Node_D(Theta_):Node_D(Theta_)+1))
     end do
-    if(DoCorrection)BMap_D(Phi_:Theta_)=-BMap_D(Phi_:Theta_)
+    if(DoCorrection)then
+       BMap_D(Phi_:Theta_)=-ReductionCoeff*BMap_D(Phi_:Theta_)
+    else
+       BMap_D(Phi_:Theta_)=ReductionCoeff*BMap_D(Phi_:Theta_)
+    end if
   end subroutine interpolate_field
   !==========================================================================
   subroutine get_magnetogram_field(xInput,yInput,zInput,B0_D)
@@ -662,7 +701,7 @@ contains
     !\
     ! Avoid calculating B0 inside a critical radius = 0.5*Rsun
     !/
-    if (Rin_PFSSM <max(Ro_PFSSM-dR*cE1,0.90*Ro_PFSSM)) then
+    if (Rin_PFSSM <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then
        B0_D= cZero
        RETURN
     end if
@@ -726,8 +765,15 @@ end subroutine SC_read_magnetogram_file
 !------------------------------------------------------------------------------
 subroutine SC_get_magnetogram_field(xInput,yInput,zInput,B0_D)
   use SC_ModMagnetogram
+  implicit none
   real, intent(in):: xInput,yInput,zInput
   real, intent(out), dimension(3):: B0_D
   call get_magnetogram_field(xInput,yInput,zInput,B0_D)
 end subroutine SC_get_magnetogram_field
 !------------------------------------------------------------------------------
+subroutine SC_get_r_source_surface(rSSOut)
+  use SC_ModMagnetogram,ONLY:Rs_PFSSM
+  implicit none
+  real,intent(out)::rSSOut
+  rSSOut=Rs_PFSSM
+end subroutine SC_get_r_source_surface
