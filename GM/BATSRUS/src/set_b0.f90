@@ -690,7 +690,7 @@ subroutine update_b0
 
   use ModProcMH,        ONLY: iProc
   use ModMain,          ONLY: DoSplitDb0Dt, nBlock, unusedBLK, &
-       time_simulation, lVerbose, NameThisComp,globalBLK
+       time_simulation, lVerbose, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
@@ -752,9 +752,9 @@ subroutine update_b0
               State_VGB(Bz_,:,:,:,iBlock)=0.0
            end where
         end if
-        globalBLK=iBlock
+
         ! Recalculate energy
-        call correctE
+        call calc_energy(iBlock)
      end if
   end do
   call timing_stop('update_B0')
