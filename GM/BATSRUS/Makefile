@@ -219,4 +219,29 @@ distclean:
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
 
+dist:	distclean
+	@echo ' '
+	@echo ' NOTE: All "run" or other created directories not included!'
+	@echo ' '
+	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.def
+	tar -rf tmp.tar  Copyrights
+	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
+	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
+	tar -rf tmp.tar  Configure.pl		#^CFG IF CONFIGURE
+	tar -rf tmp.tar  Test*.pl TestCovariant	#^CFG IF TESTING
+	tar -rf tmp.tar  Doc			#^CFG IF DOC
+	tar -rf tmp.tar  PARAM.XML PARAM.pl
+	tar -rf tmp.tar  Options.pl GridSize.pl
+	tar -rf tmp.tar  Idl
+	tar -rf tmp.tar  Param
+	tar -rf tmp.tar  Scripts
+	tar -rf tmp.tar  src srcInterface srcPostProc srcUser
+	@(if [ -d util  ]; then tar -rf tmp.tar util; fi);
+	@(if [ -d share ]; then tar -rf tmp.tar share; fi);
+	@echo ' '
+	gzip tmp.tar
+	mv tmp.tar.gz BATSRUS_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
+	@echo ' '
+	@ls -l BATSRUS_v*.tgz
+
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
