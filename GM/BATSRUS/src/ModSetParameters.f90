@@ -1572,17 +1572,12 @@ subroutine MH_set_parameters(TypeAction)
         case('IH')
            select case(TypeCoordSystem)
            case('HGI')
+              ! Note: transformation from HGR to HGI does not work properly
+              !       unless HGR happens to be the same as HGC 
+              !       (ie. aligned with HGI at the initial time)
               DoTransformToHgi = UseRotatingFrame
               UseRotatingFrame = .false.
-           case('HGC')
-              UseRotatingFrame = .true.
-           case('HGR')
-            !  if(iProc==0)then
-            !     write(*,*) NameSub, &
-            !          ' WARNING: corotating IH does not fully work'
-            !     if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            !     write(*,*)NameSub//' setting .UseRotatingFrame = T'
-            !  end if
+           case('HGC','HGR')
               UseRotatingFrame = .true.
            case default
               call stop_mpi(NameSub// &
