@@ -23,31 +23,31 @@ STANDALONE=NO
 # Select the physics components by commenting out exactly one version for each
 # This is normally done by the perl script SetSWMF.pl
 
-GM_VERSION = BATSRUS#			^CMP IF GM
+#GM_VERSION = BATSRUS#			^CMP IF GM
 #GM_VERSION = BATSRUS_conf#		^CMP IF GM
-#GM_VERSION = Empty#			^CMP IF GM
+GM_VERSION = Empty#			^CMP IF GM
 
-IH_VERSION = BATSRUS_share#		^CMP IF IH
+#IH_VERSION = BATSRUS_share#		^CMP IF IH
 #IH_VERSION = BATSRUS#			^CMP IF IH
-#IH_VERSION = Empty#			^CMP IF IH
+IH_VERSION = Empty#			^CMP IF IH
 
-IE_VERSION = Ridley_serial#		^CMP IF IE
-#IE_VERSION = Empty#			^CMP IF IE
+#IE_VERSION = Ridley_serial#		^CMP IF IE
+IE_VERSION = Empty#			^CMP IF IE
 
-UA_VERSION = GITM2#			^CMP IF UA
+#UA_VERSION = GITM2#			^CMP IF UA
 #UA_VERSION = GITM#			^CMP IF UA
-#UA_VERSION = Empty#			^CMP IF UA
+UA_VERSION = Empty#			^CMP IF UA
 
-IM_VERSION = RCM#			^CMP IF IM
+#IM_VERSION = RCM#			^CMP IF IM
 #IM_VERSION = RCM2#			^CMP IF IM
-#IM_VERSION = Empty#			^CMP IF IM
+IM_VERSION = Empty#			^CMP IF IM
 
-RB_VERSION = RiceV5#			^CMP IF RB
-#RB_VERSION = Empty#			^CMP IF RB
+#RB_VERSION = RiceV5#			^CMP IF RB
+RB_VERSION = Empty#			^CMP IF RB
 
 #SP_VERSION = FLAMPA#                   ^CMP IF SP
-SP_VERSION = Kota#                      ^CMP IF SP
-#SP_VERSION = Empty#                    ^CMP IF SP
+#SP_VERSION = Kota#                      ^CMP IF SP
+SP_VERSION = Empty#                    ^CMP IF SP
 
 #SC_VERSION = BATSRUS#                  ^CMP IF SC
 SC_VERSION = Empty#                     ^CMP IF SC
