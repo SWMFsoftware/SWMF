@@ -3444,11 +3444,11 @@ monoatomic gas or plasma.
 	<parameter name="AverageIonMass"   type="real" min="0" default="1"/>
 	<parameter name="AverageIonCharge" type="real" min="0" default="1"/>
 	<parameter name="ElectronTemperatureRatio" type="real" min="0" 
-								default="1"/>
+								default="0"/>
 #PLASMA
 1.0		AverageIonMass [amu]
 1.0		AverageIonCharge [e]
-1.0		ElectronTemperatureRatio
+0.0		ElectronTemperatureRatio
 
 The AverageIonMass determines the average mass of ions (and strongly
 coupled neutrals) in atomic mass units (amu).
@@ -3475,9 +3475,10 @@ but in a single fluid/species MHD description using these constants is
 the best one can do. In multispecies MHD the number density can
 be determined accurately as n = sum(RhoSpecies_V/(ProtonMass*MassSpecies_V)).
 
-The default values are 1.0 for all 3 parameters, which corresponds to
-a fully ionized hydrogene plasma where the ions and electrons are 
-in thermal equilibrium.
+The default values are shown above, which corresponds to
+a fully ionized hydrogen plasma where the electron temperature is
+negligible relative to the ion temperature. This default is 
+backwards compatible with previous versions of the code.
 </command>
 
 <command name="SHOCKTUBE">
