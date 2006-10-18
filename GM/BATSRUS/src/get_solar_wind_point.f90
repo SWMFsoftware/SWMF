@@ -1,14 +1,22 @@
-Module ModUpstreamData
-  integer, parameter :: Max_Upstream_Npts = 50000
-  integer :: Upstream_Npts
+module ModUpstreamData
+  use ModKind
+  implicit none
 
-  real, dimension(Max_Upstream_Npts, 8)   :: Upstream_Data
-  real*8, dimension(Max_Upstream_Npts)    :: Upstream_Time
+  integer, parameter :: MaxVarTime=7
+  integer, parameter :: MaxVarImf =8
+  integer, parameter :: Max_Upstream_Npts = 50000
+  integer :: Upstream_Npts=0
+
+  real         :: Upstream_Data(Max_Upstream_Npts, MaxVarImf)
+  real(Real8_) :: Upstream_Time(Max_Upstream_Npts)
 
   ! Solar Wind Input Variables
   character(len=3) :: TypeInputCoordSystem = 'GSM'
-  real :: Propagation_Plane_XY, Propagation_Plane_XZ
+  real :: Propagation_Plane_XY=0.0, Propagation_Plane_XZ=0.0
+
 end Module ModUpstreamData
+
+!============================================================================
 
 subroutine read_upstream_input_file(upstreamfilename)
   use ModProcMH
@@ -27,46 +35,49 @@ subroutine read_upstream_input_file(upstreamfilename)
   character (len=100), intent(in) :: upstreamfilename
 
   integer :: iError, i 
-  logical :: done, zerobx
+  logical :: UseZeroBx
 
   ! One line of input
   character (len=100) :: line
 
-  integer, dimension(1:7) :: Tmp_Time
-  integer, dimension(Max_Upstream_Npts,7) :: Upstream_integer_time
+  real :: TmpData_V(MaxVarImf)
+  integer :: Tmp_Time(MaxVarTime)
+  integer :: Upstream_integer_time(Max_Upstream_Npts,MaxVarTime)
 
-  real :: timedelay
-  real :: dt_min
+
+  real :: TimeDelay
   real(Real8_) :: dtData1, dtData2
-  real,save::HgiGsm_DD(3,3)
-  logical,save::DoSetMatrix=.true.
+  real, save:: HgiGsm_DD(3,3)
+  logical   :: DoSetMatrix=.true.
+
+  character (len=*), parameter:: NameSub='read_upstream_input_file'
 
   !--------------------------------------------------------------------------
-  zerobx = .false.
-  timedelay = cZero
+  UseZeroBx = .false.
+  TimeDelay = cZero
 
+  ! Read and convert IMF data on processor 0 then broadcast to others
   if (iProc == 0) then
 
      open(UNITTMP_, file=upstreamfilename, status="old", iostat = iError)
 
-     if (iError /= 0) &
-          call stop_mpi("Unable to open file "//trim(upstreamfilename))
+     if (iError /= 0) call stop_mpi(NameSub// &
+          ": Unable to open file "//trim(upstreamfilename))
 
-     done = .false.
      Upstream_Npts = 0
      Propagation_Plane_XY = 0.0
      Propagation_Plane_XZ = 0.0
 
      if(lVerbose>0)then
-        call write_prefix; write(iUnitOut,*) &
-             "=> Reading Upstream Solar Wind Conditions File."
+        call write_prefix; write(iUnitOut,*) NameSub, &
+             ' reading ',trim(upstreamfilename)
      end if
 
-     do while (.not.done)
-
+     ! Read header information
+     do
         read(UNITTMP_,'(a)', iostat = iError ) line
-
-        if (iError.ne.0) done = .true.
+        if (iError /= 0) call stop_mpi(NameSub// &
+             ': could not find #START in '//trim(upstreamfilename))
 
         if(index(line,'#COOR')>0)then
            read(UNITTMP_,'(a)') TypeInputCoordSystem
@@ -76,8 +87,8 @@ subroutine read_upstream_input_file(upstreamfilename)
         if(index(line,'#PLANE')>0)then
            read(UNITTMP_,*) Propagation_Plane_XY
            read(UNITTMP_,*) Propagation_Plane_XZ
-           Propagation_Plane_XY = Propagation_Plane_XY * cPi / 180.0
-           Propagation_Plane_XZ = Propagation_Plane_XZ * cPi / 180.0
+           Propagation_Plane_XY = Propagation_Plane_XY * cDegToRad
+           Propagation_Plane_XZ = Propagation_Plane_XZ * cDegToRad
         endif
 
         if(index(line,'#POSITION')>0)then
@@ -86,117 +97,109 @@ subroutine read_upstream_input_file(upstreamfilename)
         endif
 
         if(index(line,'#ZEROBX')>0)then
-           read(UNITTMP_,*) zerobx
+           read(UNITTMP_,*) UseZeroBx
         endif
 
         if(index(line,'#TIMEDELAY')>0)then
-           read(UNITTMP_,*) timedelay
+           read(UNITTMP_,*) TimeDelay
         endif
 
+        if(index(line,'#START')>0) EXIT
+     end do
 
-        if(index(line,'#START')>0)then
+     ! Read the data
+     do
+        read(UNITTMP_,*,iostat=iError) &
+             Tmp_Time, TmpData_V
 
-           do while (.not.done)
+        if (iError /= 0) EXIT
 
-              Upstream_Npts = Upstream_Npts + 1
+        if (Upstream_Npts >= Max_Upstream_Npts) then
+           write(*,*) "=> This upstream boundary condition file"
+           write(*,*) "   contains too many lines! (Max lines ="
+           write(*,*) Max_Upstream_Npts,"). One method for getting"
+           write(*,*) "   around this limitation is to have multiple"
+           write(*,*) "   files which are read in at different times"
+           write(*,*) "   during the run.  These files can overlap"
+           write(*,*) "   in time."
+           EXIT
+        end if
 
-              read(UNITTMP_,*,iostat=iError) &
-                   (Tmp_Time(i),i=1,7), &
-                   (Upstream_Data(Upstream_Npts,i),i=1,8)
+        Upstream_Npts = Upstream_Npts + 1
 
-              if (iError.ne.0) then
-                 done = .true.
-                 Upstream_Npts = Upstream_Npts - 1
-              else
-                 if (Upstream_Npts >= Max_Upstream_Npts) then
-                    done = .true.
-                    write(*,*) "=> This upstream boundary condition file"
-                    write(*,*) "   contains too many lines! (Max lines ="
-                    write(*,*) Max_Upstream_Npts,"). One method for getting"
-                    write(*,*) "   around this limitation is to have multiple"
-                    write(*,*) "   files which are read in at different times"
-                    write(*,*) "   during the run.  These files can overlap"
-                    write(*,*) "   in time."
-                 else
+        Upstream_Data(Upstream_Npts,:)         = TmpData_V
+        Upstream_integer_time(Upstream_Npts,:) = Tmp_Time
 
-                    Upstream_integer_time(Upstream_Npts,:) = Tmp_Time(:)
+        if (Upstream_integer_time(Upstream_Npts,1) >= 65 .and. &
+             Upstream_integer_time(Upstream_Npts,1) < 100)      &
+             Upstream_integer_time(Upstream_Npts,1) =            &
+             Upstream_integer_time(Upstream_Npts,1) + 1900
 
-                    if (Upstream_integer_time(Upstream_Npts,1) >= 65 .and. &
-                         Upstream_integer_time(Upstream_Npts,1) < 100)      &
-                         Upstream_integer_time(Upstream_Npts,1) =            &
-                         Upstream_integer_time(Upstream_Npts,1) + 1900
+        if (Upstream_integer_time(Upstream_Npts,1) < 65)      &
+             Upstream_integer_time(Upstream_Npts,1) =           &
+             Upstream_integer_time(Upstream_Npts,1) + 2000
+        
+        if (UseZeroBx) Upstream_Data(Upstream_Npts,1) = 0.0
 
-                    if (Upstream_integer_time(Upstream_Npts,1) < 65)      &
-                         Upstream_integer_time(Upstream_Npts,1) =           &
-                         Upstream_integer_time(Upstream_Npts,1) + 2000
+        if (TypeInputCoordSystem /= TypeCoordSystem) then 
 
-                    if (zerobx) Upstream_Data(Upstream_Npts,1) = 0.0
+           if (TypeCoordSystem == 'GSM' .and. &
+                TypeInputCoordSystem == 'GSE') then 
 
-                    if (TypeInputCoordSystem /= TypeCoordSystem) then 
-
-                       if (TypeCoordSystem == 'GSM' .and. &
-                            TypeInputCoordSystem == 'GSE') then 
-
-                          call CON_recalc(&
-                               Upstream_integer_time(Upstream_Npts,1),&
-                               Upstream_integer_time(Upstream_Npts,2),&
-                               Upstream_integer_time(Upstream_Npts,3),&
-                               Upstream_integer_time(Upstream_Npts,4),&
-                               Upstream_integer_time(Upstream_Npts,5),&
-                               Upstream_integer_time(Upstream_Npts,6))
-
-                          Upstream_Data(Upstream_Npts,1:3)=&
-                               matmul(GsmGse_DD,&
-                               Upstream_Data(Upstream_Npts,1:3))
-                          Upstream_Data(Upstream_Npts,4:6)=&
-                               matmul(GsmGse_DD,&
-                               Upstream_Data(Upstream_Npts,4:6))
-                       elseif(TypeCoordSystem == 'HGI' .and. &
-                            TypeInputCoordSystem == 'GSM') then
-                          if(DoSetMatrix)then
-                             DoSetMatrix=.false.
-                             call CON_recalc( &
-                                  iStartTime_I(1),& ! year
-                                  iStartTime_I(2),& ! month
-                                  iStartTime_I(3),& ! day
-                                  iStartTime_I(4),& ! hour
-                                  iStartTime_I(5),& ! minute
-                                  iStartTime_I(6))  ! second
-                             HgiGsm_DD=&
-                                  matmul(HgiGse_DD,transpose(GsmGse_DD))
-                          end if
-                          Upstream_Data(Upstream_Npts,1:3)=&
-                               matmul(HgiGsm_DD,&
-                               Upstream_Data(Upstream_Npts,1:3))
-                          Upstream_Data(Upstream_Npts,4:6)=&
-                               matmul(HgiGsm_DD,&
-                               Upstream_Data(Upstream_Npts,4:6))
-                       else
-                          write(*,*) 'Transformation between input ',&
-                               ' coordinate system=',TypeInputCoordSystem,&
-                               ' and code system=',TypeCoordSystem,&
-                               ' is not implemented'
-                          call stop_mpi('GM_ERROR')
-                       endif
-                    endif
-                 endif
-              endif
-           enddo
+              call CON_recalc(&
+                   Upstream_integer_time(Upstream_Npts,1),&
+                   Upstream_integer_time(Upstream_Npts,2),&
+                   Upstream_integer_time(Upstream_Npts,3),&
+                   Upstream_integer_time(Upstream_Npts,4),&
+                   Upstream_integer_time(Upstream_Npts,5),&
+                   Upstream_integer_time(Upstream_Npts,6))
+              
+              Upstream_Data(Upstream_Npts,1:3)=&
+                   matmul(GsmGse_DD,&
+                   Upstream_Data(Upstream_Npts,1:3))
+              Upstream_Data(Upstream_Npts,4:6)=&
+                   matmul(GsmGse_DD,&
+                   Upstream_Data(Upstream_Npts,4:6))
+           elseif(TypeCoordSystem == 'HGI' .and. &
+                TypeInputCoordSystem == 'GSM') then
+              if(DoSetMatrix)then
+                 DoSetMatrix=.false.
+                 call CON_recalc( &
+                      iStartTime_I(1),& ! year
+                      iStartTime_I(2),& ! month
+                      iStartTime_I(3),& ! day
+                      iStartTime_I(4),& ! hour
+                      iStartTime_I(5),& ! minute
+                      iStartTime_I(6))  ! second
+                 HgiGsm_DD=&
+                      matmul(HgiGse_DD,transpose(GsmGse_DD))
+              end if
+              Upstream_Data(Upstream_Npts,1:3)=&
+                   matmul(HgiGsm_DD,&
+                   Upstream_Data(Upstream_Npts,1:3))
+              Upstream_Data(Upstream_Npts,4:6)=&
+                   matmul(HgiGsm_DD,&
+                   Upstream_Data(Upstream_Npts,4:6))
+           else
+              write(*,*) 'Transformation between input ',&
+                   ' coordinate system=',TypeInputCoordSystem,&
+                   ' and code system=',TypeCoordSystem,&
+                   ' is not implemented'
+              call stop_mpi('GM_ERROR')
+           endif
         endif
      enddo
 
      close(UNITTMP_)
 
-     dt_min = 366.0*24.0*3600.0
      do i=1,Upstream_Npts
         call time_int_to_real(Upstream_integer_Time(i,:),Upstream_Time(i))
-        Upstream_Time(i) = Upstream_Time(i) + timedelay
-        if (dt_min > abs(Upstream_Time(i) - StartTime)) then
-           dt_min = abs(Upstream_Time(i) - StartTime)
-        endif
+        Upstream_Time(i) = Upstream_Time(i) + TimeDelay
      end do
 
-     if (dt_min > 24.0*3600.0) then
+     ! Check if the IMF data is within 1 day of the start time.
+     if (minval(abs(Upstream_Time(1:Upstream_Npts)-StartTime)) &
+          > 24.0*3600.0) then
         write(*,*) "**********************************************************"
         write(*,*) "*                                                        *"
         write(*,*) "*         Warning! Warning! Warning! Warning! Warning!   *"
@@ -215,50 +218,45 @@ subroutine read_upstream_input_file(upstreamfilename)
         write(*,*) "**********************************************************"
      endif
 
+     if(lVerbose>0)then
+        call write_prefix; write(iUnitOut,*) NameSub, &
+             ' read ',Upstream_Npts,' points from ',trim(upstreamfilename)
+     end if
+
   endif
 
   call MPI_Bcast(Upstream_Npts,1,MPI_Integer,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Upstream_Npts could not be broadcast by read_upstream_input_file")
+  if(iError>0)call stop_mpi( NameSub//": Upstream_Npts could not be broadcast")
 
   call MPI_Bcast(Upstream_Time,Max_Upstream_Npts,MPI_DOUBLE_PRECISION, &
        0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Upstream_Time could not be broadcast by "// &
-       "read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub//": Upstream_Time could not be broadcast")
 
-  call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*8,MPI_Real, &
+  call MPI_Bcast(Upstream_Data,Max_Upstream_Npts*MaxVarImf,MPI_Real, &
        0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Upstream_Data could not be broadcast by read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub//": Upstream_Data could not be broadcast")
 
   call MPI_Bcast(TypeInputCoordSystem,3,MPI_CHARACTER,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "TypeInputCoordSystem could not be broadcast by "//&
-       "read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub// &
+       ": TypeInputCoordSystem could not be broadcast")
 
   call MPI_Bcast(Propagation_Plane_XY,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XY could not be broadcast by "//&
-       "read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub// &
+       ": Propagation_Plane_XY could not be broadcast")
 
   call MPI_Bcast(Propagation_Plane_XZ,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Propagation_Plane_XZ could not be broadcast by "//&
-       "read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub// &
+       ": Propagation_Plane_XZ could not be broadcast")
 
   call MPI_Bcast(Satellite_Y_Pos,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Satellite_Y_Pos could not be broadcast by read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub// &
+       ": Satellite_Y_Pos could not be broadcast")
 
   call MPI_Bcast(Satellite_Z_Pos,1,MPI_Real,0,iComm,iError)
-  if(iError>0)call stop_mpi(&
-       "Satellite_Z_Pos could not be broadcast by read_upstream_input_file")
+  if(iError>0)call stop_mpi(NameSub// &
+       ": Satellite_Z_Pos could not be broadcast")
 
-  !call MPI_Bcast(Time_Array,7,MPI_Integer, 0,iComm,iError)
-  !if(iError>0)call stop_mpi(&
-  !     "Time_Array could not be broadcast by read_upstream_input_file")
-
+  ! This part will be removed by KC.
   if (SW_T_dim <= 0.0) then
 
      if (Upstream_Npts == 1) then
@@ -276,6 +274,7 @@ subroutine read_upstream_input_file(upstreamfilename)
 
      else
 
+        ! Find the index with time before start time
         i = 1
 
         do while ((i < Upstream_Npts).and.   &
@@ -332,7 +331,8 @@ end subroutine read_upstream_input_file
 !INTERFACE
 subroutine normalize_upstream_data
   !USES:
-  use ModPhysics,ONLY:unitSI_rho,unitSI_p,unitSI_U,unitSI_B
+  use ModPhysics,ONLY:unitSI_rho,unitSI_p,unitSI_U,unitSI_B,&
+       AverageIonMass, AverageIonCharge, ElectronTemperatureRatio
   use ModUpstreamData, ONLY: Upstream_Data
   use ModConst
 !EOP
@@ -361,7 +361,17 @@ subroutine normalize_upstream_data
   ! Normalize rho
   Upstream_Data(:,7) = Upstream_Data(:,7)*&
        ConcentrationToDensitySI/unitSI_rho
-  
+
+  ! So far we assumed pure hydrogen plasma: RhoIon = nIon*MassProton
+  ! Fix: RhoIon = nIon*MassProton*AverageIonMass
+  Upstream_Data(:,7) = Upstream_Data(:,7) * AverageIonMass
+
+  ! So far we assumed a fully ionized pure hydrogen plasma with
+  ! negligible electron pressure: Pion = Nion*k*Tion
+  ! Fix: P = Pion + Pe = Nion*k*Tion + Ne*k*Te = Pion*(1+Ne/Nion*Te/Tion)
+  Upstream_Data(:,8) = Upstream_Data(:,8) * &
+       (1.0 + AverageIonCharge*ElectronTemperatureRatio)
+
 end subroutine normalize_upstream_data
 !======================================================================
 subroutine get_solar_wind_point(TimeSimulation,y,z,&
@@ -431,13 +441,13 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
            endif
 
            time_now = time_now + &
-                ((Y - Satellite_Y_Pos) * sin(Propagation_Plane_XY) + &
-                (Z - Satellite_Z_Pos) * sin(Propagation_Plane_XZ)) &
+                ((Y - Satellite_Y_Pos) * sin(Propagation_Plane_XY)  &
+                +(Z - Satellite_Z_Pos) * sin(Propagation_Plane_XZ)) &
                 * unitSI_x / Ux
 
            iData = 1
 
-           do while ((iData < Upstream_Npts).and.   &
+           do while ((iData < Upstream_Npts).and. &
                 (Upstream_Time(iData) < time_now))
               iData = iData + 1
            enddo
