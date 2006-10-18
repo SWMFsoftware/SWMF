@@ -1,3 +1,7 @@
 *_planet.f
+ModCommonPlanet.f90
 PLANET
 Makefile.planet
+Makefile.DEPEND
+Makefile.RULES
+*.mod
