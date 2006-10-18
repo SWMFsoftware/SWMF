@@ -27,7 +27,7 @@ end subroutine refine_grid
 !------------------------------------------------------------------------
 subroutine parallel_refine
   use ModProcMH
-  use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK
+  use ModMain, ONLY : iNewGrid,nBlock,nBlockMax,unusedBLK,nBLK,lVerbose
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
        XyzStart_BLK
   use ModAMR, ONLY : local_cube,local_cubeBLK,availableBLKs,refine_list
@@ -50,7 +50,7 @@ subroutine parallel_refine
   call set_oktest('refine',oktest,oktest_me)
 
   if (.not. any(refine_list)) RETURN
-  if(iProc==0)then
+  if(iProc==0 .and. lVerbose>0)then
      call write_prefix; write (iUnitOut,*) 'parallel_refine', &
           ' starting to refine ',count(refine_list),' block(s) on PE 0'
   end if
