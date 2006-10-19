@@ -3,6 +3,7 @@ use strict;
 
 # Pattern to match component ID-s
 my $ValidComp = 'IH|GM|IE|IM|RB|SC|SP|UA';
+#my $ValidComp = '[A-Z][A-Z]'; # this would be more permissive and general
 
 &print_help if not @ARGV;
 
@@ -113,21 +114,32 @@ exit 0;
 
 sub list_versions{
 
-    # Read information from $MakefileDef
+    # Find all components from the directory structure
+    my @Components;
+    @Components = grep {-d and /$ValidComp/} glob("[A-Z][A-Z]");
+
+    # Find all component versions from the directory structure
+    my %Versions;
+    my $Comp;
+    foreach $Comp (@Components){
+	$Versions{$Comp}=join(' ',grep {-d and not /\/CVS$/} glob("$Comp/*"));
+    }
+
+    # Read selected versions from $MakefileDef
     open(MAKEFILE, $MakefileDef)
 	or die "$ERROR could not open $MakefileDef\n";
 
-    my %Versions;
     while(<MAKEFILE>){
-	if(/^(\#)?\s*([A-Z][A-Z])_VERSION\s*=\s*(\w+)/){
-	    # Store version in both the array and the hash table
-	    if(not $1 and $Versions{$2}){
-		# Put the selected version to the front
-		$Versions{$2} ="$3,$Versions{$2}";
-	    }else{
-		# Append the version
-		$Versions{$2}.=$3.",";
-	    }
+	if(/^\s*([A-Z][A-Z])_VERSION\s*=\s*(\w+)/){
+
+	    my $Comp = $1;
+	    my $Version = $2;
+
+	    # Put the selected version to the front
+	    $Versions{$Comp} =~ s/\b$Comp\/$Version\b// or
+		warn "$WARNING there is no directory correspoding ".
+		"to the selected version $Version\n";
+	    $Versions{$Comp} = "$Comp/$Version $Versions{$Comp}";
 	}
     }
     close(MAKEFILE);
@@ -136,8 +148,8 @@ sub list_versions{
     print "\nSelected version    Other versions\n","-" x 79,"\n";
     foreach $Comp (sort keys %Versions){
 	my $Version;
-	foreach $Version (split(',',$Versions{$Comp})){
-	    printf "%-20s","$Comp/$Version";
+	foreach $Version (split(' ',$Versions{$Comp})){
+	    printf "%-20s","$Version";
 	}
 	print "\n";
     }
@@ -359,30 +371,15 @@ sub set_versions{
     @ARGV = ($MakefileDef);
     my %Found;
     while(<>){
-	# Skip uninteresting lines
-	if(not /_VERSION/){print; next};
-
-	# Check line against all the new versions
-	foreach $compversion (@NewVersion){
-
-	    ($comp,$version) = split(/\//,$compversion);
-	    $comp.='_VERSION';
-
-	    # Comment out all versions for this component
-	    $_="#".$_ if /^\s*$comp/;
-	    # Uncomment the good version
-	    if(/^\s*#\s*$comp\s*=\s$version\b/){
-	       s/#//;
-	       $Found{$compversion}=1;
-	   }
-	}
+	$Found{$2} = 1 if
+	    s/^\s*(($ValidComp)_VERSION)\s*=\s*\w+/$1 = $Version{$2}/;
 	print;
     }
 
-    # Check if all new versions have been found
-    foreach $compversion (@NewVersion){
-	die "$ERROR could not find version $compversion in $MakefileDef\n"
-	    unless $Found{$compversion}
+    # Check if all components have been found
+    foreach $comp (keys %Version){
+	die "$ERROR could not find ${comp}_VERSION line in $MakefileDef\n"
+	    unless $Found{$comp}
     }
 
     # Create IH/BATSRUS if needed
