@@ -219,6 +219,33 @@ for ifile=0,n_elements(filenames)-1 do begin
 end
 
 ;=============================================================================
+pro show_head,filename
+
+on_error,2
+if n_elements(filename) eq 0 then filename='file.out'
+gettype,filename,filetype
+openfile,1,filename,filetype
+gethead,1,filetype,$
+  headline,phys,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+close,1
+print,'filename  = ',filename, format="(a,a)"
+print,'filetype  = ',filetype, format="(a,a)"
+print,'headline  = ',headline, format="(a,a)"
+print,'phys      = ',phys,     format="(a,a)"
+print,'it        = ',it,       format="(a,i8)"
+print,'time      = ',time,     format="(a,g15.8)"
+print,'gencoord  = ',gencoord, format="(a,i8)"
+print,'ndim      = ',ndim,     format="(a,i8)"
+print,'neqpar    = ',neqpar,   format="(a,i8)"
+print,'nw        = ',nw,       format="(a,i8)"
+print,'nx        = ',nx,       format="(a,3i8)"
+print,'eqpar     = ',eqpar,    format="(a,100g15.8)"
+print,'coords    =',variables(0:ndim-1)
+print,'plotvars  =',variables(ndim:ndim+nw-1)
+print,'eqpars    =',variables(ndim+nw:*)
+
+end
+;=============================================================================
 pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
             ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
 
