@@ -32,12 +32,6 @@ help:
 #EOC
 
 #^CMP IF GM BEGIN
-BATSRUS_SCRIPTS = \
-	${DIR}/GM/BATSRUS/TestBatsrus.protex \
-	${DIR}/GM/BATSRUS/TestSuite.protex \
-	${DIR}/GM/BATSRUS/TestCompare.protex \
-	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
-
 COUPLE_IHGM = ${CONDIR}/Interface/src/CON_couple_ih_gm.protex #     ^CMP IF IH
 COUPLE_GMIE = ${CONDIR}/Interface/src/CON_couple_gm_ie.protex #     ^CMP IF IE
 COUPLE_GMIM = ${CONDIR}/Interface/src/CON_couple_gm_im.protex #     ^CMP IF IM
@@ -50,11 +44,27 @@ COUPLE_IEUA = ${CONDIR}/Interface/src/CON_couple_ie_ua.protex #     ^CMP IF UA
 
 SCRIPT_CONF = ${SCRIPTDIR}/Configure.protex #^CMP IF CONFIGURE
 
+BATSRUS_SCRIPTS = \
+	${DIR}/GM/BATSRUS/TestBatsrus.protex \
+	${DIR}/GM/BATSRUS/TestSuite.protex \
+	${DIR}/GM/BATSRUS/TestCompare.protex \
+	${DIR}/GM/BATSRUS/Scripts/ConvertRestart.protex
+
+BATSRUS_SCRIPTS:
+	@rm -f BATSRUS_SCRIPTS.tex
+	@touch BATSRUS_SCRIPTS.tex
+	@(if [ -d ${DIR}/GM/BATSRUS ]; then \
+		echo "make GM/BATSRUS/*.protex"; \
+		make ${BATSRUS_SCRIPTS}; \
+		echo "cat GM/BATSRUS/*.protex > BATSRUS_SCRIPTS.tex"; \
+		cat ${BATSRUS_SCRIPTS} > BATSRUS_SCRIPTS.tex; \
+	fi)
+
 SWMFREF = \
 	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
 	${DIR}/Scripts/TestParam.protex \
 	${DIR}/Scripts/Performance.protex \
-	${BATSRUS_SCRIPTS} \
+	BATSRUS_SCRIPTS.tex \
 	${SCRIPTDIR}/CheckParam.protex \
 	${SCRIPTDIR}/ExpandParam.protex \
 	${SCRIPTDIR}/PostProc.protex \
@@ -178,23 +188,14 @@ ${SCRIPTDIR}/CompareDirs.protex: ${SCRIPTDIR}/CompareDirs
 
 ${SWMFREF} : ${SCRIPTDIR}/protex.pl
 
-SWMFREF.tex: ${SWMFREF}
+SWMFREF.tex: ${SWMFREF} BATSRUS_SCRIPTS
 	cat ${SWMFREF} > SWMFREF.tex
 
-GMXML = ${DIR}/GM/BATSRUS/PARAM.xmltex #			  ^CMP IF GM
-IMXML = ${DIR}/IM/RCM/PARAM.xmltex ${DIR}/IM/RCM2/PARAM.xmltex #  ^CMP IF IM
-RBXML = ${DIR}/RB/RiceV5/PARAM.xmltex #				  ^CMP IF RB
-IEXML = ${DIR}/IE/Ridley_serial/PARAM.xmltex #			  ^CMP IF IE
-SPXML = ${DIR}/SP/Kota/PARAM.xmltex #           		  ^CMP IF SP
-UAXML = ${DIR}/UA/GITM/PARAM.xmltex ${DIR}/UA/GITM2/PARAM.xmltex #^CMP IF UA
-
-SWMFXML = ${DIR}/Param/PARAM.xmltex \
-	${GMXML} ${IEXML} ${UAXML} ${IMXML} ${RBXML} ${SPXML}
-
-${SWMFXML}: ${SCRIPTDIR}/XmlToTex.pl
-
-SWMFXML.tex: ${SWMFXML}
-	cat ${SWMFXML} > SWMFXML.tex
+SWMFXML:
+	@rm -f SWMFXML.tex
+	@touch SWMFXML.tex
+	@perl -e 'for $$i (glob("../../Param/PARAM.XML ../../[A-Z][A-Z]/*/PARAM.XML")){`${SCRIPTDIR}/XmlToTex.pl $$i >> SWMFXML.tex`}'
+	@echo "${SCRIPTDIR}/XmlToTex.pl */PARAM.XML > SWMFXML.tex"
 
 SWMF.dvi: \
 	SWMF.tex \
@@ -204,7 +205,7 @@ SWMF.dvi: \
 	SWMF_param.tex \
 	SWMF_control.tex \
 	SWMF_example_runs.tex \
-	SWMFXML.tex
+	SWMFXML
 
 REFERENCE.dvi:\
 	SWMFREF.tex
@@ -220,7 +221,7 @@ PDF: ${PDF_FILES}
 HTML_FILES = SWMF.html REFERENCE.html
 HTML_DIRS  = SWMF REFERENCE
 
-SWMF.html: SWMFXML.tex
+SWMF.html: SWMFXML
 REFERENCE.html: SWMFREF.tex
 HTML: cleanhtml
 	make ${HTML_FILES}
@@ -228,7 +229,7 @@ HTML: cleanhtml
 
 clean:
 	rm -f *.aux *.log *.toc *.dvi *.ps *~ *.protex
-	rm -f SWMFREF.tex SWMFXML.tex
+	rm -f SWMFREF.tex SWMFXML.tex BATSRUS_SCRIPTS.tex
 	@echo 'rm -f SWMFREF SWMFXML'
 	@rm -f ${SWMFREF} ${SWMFXML}
 
