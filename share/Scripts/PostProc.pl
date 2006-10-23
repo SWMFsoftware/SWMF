@@ -7,6 +7,7 @@ my $Repeat  = ($r or $repeat);
 my $Output  = ($o or $output);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
+my $Rsync   = ($rsync or $sync);
 
 use strict;
 
@@ -29,6 +30,9 @@ if($Output){
     `mkdir -p $NameOutput`;
     die "$ERROR: could not mkdir -p $NameOutput\n" if $?;
 }
+
+die "$ERROR: option -rsync requires a target directory: rsync=TARGETDIR\n"
+    if $Rsync eq "1";
 
 &print_help if $Help;
 
@@ -106,7 +110,16 @@ REPEAT:{
 	chdir $Pwd;
     }
 
+    if($Rsync and not $Output){
+	my $Dir;
+	foreach $Dir (keys %PlotDir){
+	    my $PlotDir = $PlotDir{$Dir};
+	    &shell("rsync -avz $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
+	}
+    }
+
     if($Repeat){
+
 	sleep $Repeat;
 	redo REPEAT;
     }
@@ -154,6 +167,12 @@ if(-f $RunLog){
     `mv $RunLog $NameOutput/`;
 }else{
     warn "$WARNING: no $RunLog file was found\n";
+}
+
+if($Rsync){
+    print "$INFO: rsync -avz $NameOutput $Rsync\n";
+    &shell("rsync -avz $NameOutput/ $Rsync");
+    print "$INFO: rsync is complete\n";
 }
 
 exit 0;
@@ -211,6 +230,15 @@ Usage:
    -r=REPEAT   Repeat post processing every REPEAT seconds.
                Cannot be used with the -o option.
 
+   -rsync=TARGET Copy processed plot files into an other directory 
+               (possibly on another machine) using rsync. The TARGET
+               is the name of the target directory (with host machine). 
+               When -rsync is used without the -o option, the original
+               plot directories are synchronized. When -rsync is used with the
+               -o option, the output directory is synchronized.
+               rsync must be installed on the local and target machines,
+               and no password should be required to execute rsync.
+
    -o -output  Output should be collected into a directory tree
                Cannot be used with the -r option. Requires DIR argument.
 
@@ -227,18 +255,20 @@ PostProc.pl
 
 PostProc.pl -M
 
-   Post-process the plot files, compress them and print verbose info:
+   Post-process the plot files, compress them, rsync to another machine
+   and print verbose info:
 
-PostProc.pl -g -v
+PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
 
    Repeat post-processing every 360 seconds, gzip files and pipe 
    standard output and error into a log file:
 
 PostProc.pl -r=360 -g >& PostProc.log &
 
-   Collect processed output into a directory tree named OUTPUT/New:
+   Collect processed output into a directory tree named OUTPUT/New
+   and rsync it into the run/OUTPUT/New directory on another machine:
 
-PostProc.pl -o OUTPUT/New'
+PostProc.pl -o OUTPUT/New -rsync=ME@OTHERMACHINE:run/OUTPUT/New'
 
 #EOC
     ,"\n\n";
