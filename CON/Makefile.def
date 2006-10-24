@@ -24,10 +24,11 @@ STANDALONE=NO
 # This is normally done by the perl script SetSWMF.pl
 
 GM_VERSION = Empty#			^CMP IF GM
-IH_VERSION = Empty#		^CMP IF IH
-IE_VERSION = Empty#		^CMP IF IE
+IH_VERSION = Empty#			^CMP IF IH
+IE_VERSION = Empty#			^CMP IF IE
 UA_VERSION = Empty#			^CMP IF UA
 IM_VERSION = Empty#			^CMP IF IM
+PW_VERSION = Empty#			^CMP IF PW
 RB_VERSION = Empty#			^CMP IF RB
 SP_VERSION = Empty#			^CMP IF SP
 SC_VERSION = Empty#			^CMP IF SC
@@ -59,6 +60,7 @@ GMDIR = ${DIR}/GM/${GM_VERSION}
 IEDIR = ${DIR}/IE/${IE_VERSION}
 UADIR = ${DIR}/UA/${UA_VERSION}
 IMDIR = ${DIR}/IM/${IM_VERSION}
+PWDIR = ${DIR}/PW/${PW_VERSION}
 RBDIR = ${DIR}/RB/${RB_VERSION}
 SPDIR = ${DIR}/SP/${SP_VERSION}
 SCDIR = ${DIR}/SC/${SC_VERSION}

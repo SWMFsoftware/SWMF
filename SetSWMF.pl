@@ -2,7 +2,7 @@
 use strict;
 
 # Pattern to match component ID-s
-my $ValidComp = 'IH|GM|IE|IM|RB|SC|SP|UA';
+my $ValidComp = 'IH|GM|IE|IM|PW|RB|SC|SP|UA';
 #my $ValidComp = '[A-Z][A-Z]'; # this would be more permissive and general
 
 &print_help if not @ARGV;
