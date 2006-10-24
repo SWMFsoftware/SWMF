@@ -32,9 +32,6 @@ program pw
   else
      nLine=int(floor(real(maxline)/real(nproc)))
   endif
-  nLine=int(nLine)
-  
-  
 
 !******************************************************************************
 !  Define file names and unit numbers, and open for reading and writing.
