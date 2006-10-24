@@ -53,7 +53,7 @@ install_cont:
 	else \
 		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
-	touch src/Makefile.DEPEND
+	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 PWOM:
 	@cd ${SHAREDIR}; make LIB
@@ -61,6 +61,7 @@ PWOM:
 
 LIB:
 	cd src; make LIB
+	cd srcInterface; make LIB
 
 test:	run PWOM
 	cd run; PWOM.exe
@@ -97,13 +98,20 @@ run:
 	fi)
 
 clean:
+	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make clean
+	@touch srcInterface/Makefile.DEPEND
+	cd srcInterface; make clean
+	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean: uninstall
 
 uninstall:
+	@touch src/Makefile.DEPEND src/Makefile.RULES
+	cd src; make distclean
+	@touch srcInterface/Makefile.DEPEND
+	cd srcInterface; make distclean
 	@(if [ -d share ]; then cd share; make distclean; fi);
-	@cd src; make distclean
 	rm -rf Makefile.conf Makefile.def Makefile.planet *~ bin
 	mv Makefile.planet.orig Makefile.planet
 	mv Makefile.def.orig Makefile.def
