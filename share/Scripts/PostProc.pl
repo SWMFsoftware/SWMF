@@ -116,6 +116,8 @@ REPEAT:{
 	    my $PlotDir = $PlotDir{$Dir};
 	    &shell("rsync -avz $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
+	&shell("rsync -avz $ParamIn $Rsync/$ParamIn") if -f $ParamIn;
+	&shell("rsync -avz $RunLog $Rsync/$RunLog")   if -f $RunLog;
     }
 
     if($Repeat){
