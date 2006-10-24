@@ -15,6 +15,7 @@ MODULES = \
 
 METHODS = \
 	polar_wind.o\
+	set_parameters.o\
 	solver.o\
 	cvmgp.o\
 	prntel.o\
