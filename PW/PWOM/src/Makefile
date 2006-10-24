@@ -3,11 +3,6 @@ include ../Makefile.conf
 include Makefile.DEPEND
 # include Makefile.RULES
 
-
-EXE = ../bin/pw3.exe
-
-default: ${EXE}
-
 include Makefile.planet
 
 MODULES = \
@@ -61,15 +56,11 @@ pw.o: ${LIBSHARE} ${MY_LIB}
 
 EXE = ${BINDIR}/PWOM.exe
 
-PWOM:
-	@make ${MY_LIB}
+PWOM: DEPEND
 	@make ${EXE}
 	@echo "PWOM.exe has been created"
 
 ${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag} -o ${EXE} pw.o -L. -lPWOM -L${LIBDIR} -lSHARE
-
-EXESIMPLE: ${EXEOBJECTS}
 	${LINK.f90} ${Lflag} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
 
 distclean: clean
