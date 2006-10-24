@@ -1,12 +1,21 @@
 Module Mod_PW
   use ModParameters
+  implicit none
+
+  logical :: IsFramework = .false.
+
+  integer :: iUnitOut
+  character (len=7) :: StringPrefix=''
+
+  integer :: iProc, nProc, iComm
+
   integer ::   nTheta, nPhi,maxLine
-  Parameter (nTheta     = 65 )
-  Parameter (nPhi       = 257)
-  Parameter (maxLine    = 1  )
-  
+  parameter (nTheta     = 65 )
+  parameter (nPhi       = 257)
+  parameter (MaxLine    = 1  )
+
   integer ::   iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine
-  integer, dimension(maxLine)::iLineGlobal
+  integer, dimension(MaxLine)::iLineGlobal
 
   real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary,nLine
 
