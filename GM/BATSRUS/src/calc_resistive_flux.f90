@@ -13,7 +13,7 @@ Module ModResist
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK):: &
        EtaLocResist_GB
   real :: EtaResist_G(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
-!!!  real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
+  real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
 
 end module ModResist
 
@@ -39,7 +39,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
        cZero,cTiny,cHundred,cHundredth,cPi
   use ModPhysics,  ONLY: gm1
-  use ModResist,   ONLY: EtaResist_G !!!, Eta_GB
+  use ModResist,   ONLY: EtaResist_G ,Eta_GB
   use ModMpi
   implicit none
   
@@ -60,7 +60,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   call compute_eta_coefficient(BX,BY,BZ,EtaResist_G)
 
   !!! Store it for plotting
-  !!! Eta_GB(:,:,:,GlobalBlk) = EtaResist_G
+   Eta_GB(:,:,:,GlobalBLK) = EtaResist_G
 
   !\
   ! Compute and add the x_resistive_flux to the x-face fluxes 
@@ -291,7 +291,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   logical:: UseEtaAnomDebug = .false.
   integer:: i,j,k
   real:: CU_x,CU_t
-  real:: xxx,yyy,scr1,scr2
+  real:: xxx,yyy,zzz,scr,scr1,scr2
   real:: LogLambdaResist,EtaPerpConstResist
   real:: ElapsedTimeResist,TimeFactorResist
   real:: Eta0Resist_ND,Eta0AnomResist_ND,EtaAnomMaxResist_ND,jCritInv_ND
@@ -303,6 +303,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   !       EtaHallResist
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
        Omega_eTau_ei2Resist,EtaAnomLocResist,JmagResist
+  real :: current_D(3), Jmag2
 
   !\
   ! Introduce some units for dimensionalization:: 
@@ -451,6 +452,56 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
         !/
         if (UseAnomResist) &
              call add_anomalous_resistivity
+        
+     case('Hall_localized')
+        !\
+        ! Compute localized in space, time-dependant resistivity
+        !/
+        if (DoInitEtaLocResist_B(globalBLK)) then
+           DoInitEtaLocResist_B(globalBLK) = .false.
+           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+              call get_current(i,j,k,GlobalBlk,current_D)
+              Jmag2 = sum(current_D**2)
+              if(Jmag2 > 4.0 )then
+                 xxx  = x_BLK(i,j,k,globalBLK)
+                 zzz  = z_BLK(i,j,k,globalBLK)
+                 scr  = sqrt(xxx**2/2.0+zzz**2)
+                 if (scr < 150.0) then
+                    scr = 1.0/ cosh(scr)
+                 else
+                    scr = 0.0
+                 end if
+                 EtaLocResist_GB(i,j,k,globalBLK) = Eta0Resist_ND*(1+Alpha0Resist*scr)
+              else
+                 EtaLocResist_GB(i,j,k,globalBLK) = Eta0Resist_ND
+              end if
+           end do; end do; end do
+           if (iProc==0.and.globalBLK==1) then
+              write(*,*) ''
+              write(*,*) '>>>>>>>>>>>>>>>>> Localized Resistivity <<<<<<<<<<<<<<<<<'
+              write(*,*) '>>>>>>>>>>>>>>>>>       Parameters      <<<<<<<<<<<<<<<<<'
+              write(*,*) ''
+              write(*,*) 'Eta0    = ',Eta0Resist
+              write(*,*) 'Eta0_ND = ',Eta0Resist_ND
+              write(*,*) ''
+              write(*,*) 'TimeInitRise,TimeConstLev:: ', &
+                   TimeInitRise,TimeConstLev
+              write(*,*) 'Alpha0Resist,yShiftResist:: ', &
+                   Alpha0Resist,yShiftResist
+              write(*,*) 'minval(EtaLoc),maxval(EtaLoc):: ', &
+                   minval(EtaLocResist_GB(:,:,:,:)),  &
+                   maxval(EtaLocResist_GB(:,:,:,:))
+              write(*,*) ''
+              write(*,*) '>>>>>>>>>>>>>>>>>                       <<<<<<<<<<<<<<<<<'
+              write(*,*) ''
+           end if
+        end if
+        TimeFactorResist = cOne
+        Eta_G(:,:,:) = EtaLocResist_GB(:,:,:,globalBLK)
+        !\
+        ! Add anomalous resistivity, if UseAnomResist == .true.
+        !/
+        if (UseAnomResist) call add_anomalous_resistivity
         
      case default
         call stop_mpi('Unknown TypeResist::'//TypeResist)
