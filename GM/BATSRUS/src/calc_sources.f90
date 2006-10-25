@@ -15,6 +15,7 @@ subroutine calc_sources
   use ModResist,   ONLY : EtaResist_G                    !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
   use ModCoordTransform
+  use ModHallResist, ONLY: UseHallResist,  calc_hyper_resistivity 
   implicit none
 
   integer :: i, j, k, iDim
@@ -245,6 +246,8 @@ subroutine calc_sources
              'TypeCoordSystem=',TypeCoordSystem)
      end select
   end if
+
+  if(UseHallResist) call calc_hyper_resistivity(globalBLK)
 
   if(UseUserSource) call user_calc_sources
 
