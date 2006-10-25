@@ -46,7 +46,7 @@ module ModFaceFlux
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff
+  real :: InvDxyz, HallCoeff, HallUn
 
 contains
   !===========================================================================
@@ -657,9 +657,9 @@ contains
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
-      real :: HallUx, HallUy, HallUz, HallUn, Jx, Jy, Jz, HallCoeffInvRho
+      real :: HallUx, HallUy, HallUz, Jx, Jy, Jz, HallCoeffInvRho
       real :: Bn, B0n
-      real :: B2, pTotal
+      real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
       !-----------------------------------------------------------------------
@@ -691,7 +691,9 @@ contains
       FullBx  = Bx + B0x
       FullBy  = By + B0y
       FullBz  = Bz + B0z
-      pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
+
+      B0B1    = B0x*Bx + B0y*By + B0z*Bz
+      pTotal  = p + 0.5*B2 + B0B1
 
       ! Normal direction
       Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
@@ -730,8 +732,15 @@ contains
       Flux_V(p_)  = Un*p
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
-      Flux_V(Energy_) = &
-           Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
+      if(UseHallResist)then
+         Flux_V(Energy_) = &
+              Un*(pTotal + e) &
+              - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
+              + (HallUn-Un)*(B2 + B0B1)
+      else
+         Flux_V(Energy_) = &
+              Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
+      end if
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
@@ -838,14 +847,17 @@ contains
 
     subroutine get_mhd_speed
 
-      use ModMain,    ONLY: x_, y_, z_
+      use ModMain,    ONLY: x_, y_, z_, GlobalBlk
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light
       use ModNumConst, ONLY: cPi
+      use ModAdvance, ONLY: State_VGB
 
-      real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn
+      real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
+
+      real :: FullBt, Rho1, Rho, cDrift, cHall
       !------------------------------------------------------------------------
       InvRho = 1.0/State_V(Rho_)
       Sound2 = g*State_V(p_)*InvRho
@@ -884,9 +896,27 @@ contains
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
       if(HallCmaxFactor > 0.0 .and.HallCoeff > 0.0) then
-         cWhistler = HallCoeff*cPi*abs(FullBn)*InvRho*InvDxyz
-         FastDt = Fast + cWhistler
-         Fast   = Fast + HallCmaxFactor*cWhistler
+         ! Tangential component of B (*Area)
+         FullBt = sqrt(max(0.0, &
+              Area2*(FullBx**2+FullBy**2+FullBz**2) - FullBn**2))
+         ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
+         Rho = State_V(Rho_)
+         select case(iDir)
+         case(1)
+            Rho1 = State_VGB(Rho_,iFace-1,jFace,kFace,GlobalBlk)
+         case(2)
+            Rho1 = State_VGB(Rho_,iFace,jFace-1,kFace,GlobalBlk)
+         case(3)
+            Rho1 = State_VGB(Rho_,iFace,jFace,kFace-1,GlobalBlk)
+         end select
+         ! Calculate drift speed and whistler speed
+         cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
+         cWhistler = cPi*abs(FullBn)
+         ! Take the faster speed
+         cHall     = HallCoeff*InvDxyz*InvRho*max(cWhistler, cDrift)
+         !cHall     = HallCoeff*InvDxyz*InvRho*cWhistler
+         FastDt = Fast + cHall
+         Fast   = Fast + HallCmaxFactor*cHall
       end if
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
@@ -903,7 +933,7 @@ contains
          if(present(Cmax))then
             Cmax   = abs(Un) + Fast
             if(HallCoeff > 0.0)then
-               CmaxDt = abs(Un) + FastDt
+               CmaxDt = max(abs(Un), abs(HallUn)) + FastDt
             else
                CmaxDt = Cmax
             end if
