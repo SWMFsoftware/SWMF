@@ -41,7 +41,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters
   use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor,&
-       NameHallRegion, R1Hall, R2Hall, HallWidth
+       NameHallRegion, R1Hall, R2Hall, HallWidth, HallHyperFactor
 
   implicit none
 
@@ -433,7 +433,8 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('TypeResist',TypeResist)
               call read_var('Eta0Resist',Eta0Resist)
               if (TypeResist=='Localized'.or. &
-                   TypeResist=='localized') then
+                   TypeResist=='localized'.or. &
+                   TypeResist=='Hall_localized') then
                  call read_var('Alpha0Resist',Alpha0Resist)
                  call read_var('yShiftResist',yShiftResist)
                  call read_var('TimeInitRise',TimeInitRise)
@@ -453,6 +454,7 @@ subroutine MH_set_parameters(TypeAction)
         if(UseHallResist)then
            call read_var('HallFactor',  HallFactor)
            call read_var('HallCmaxFactor', HallCmaxFactor)
+           call read_var('HallHyperFactor', HallHyperFactor)         
         end if
      case("#HALLREGION")
         call read_var('NameHallRegion', NameHallRegion)
@@ -630,9 +632,9 @@ subroutine MH_set_parameters(TypeAction)
               end do
               if(index(plot_string,'x=0')>0)then
                  plot_area='x=0'
-                 if(.false.&
-                      .or.(.not.is_axial_geometry()) & !^CFG IF COVARIANT
-                      .or.index(plot_string,'tec')>0)then     
+                 if(index(plot_string,'tec')>0 &
+                      .or. .not.is_axial_geometry() & !^CFG IF COVARIANT
+                      )then     
                     plot_range(1,ifile)=-cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
                          /(nCells(1)*proc_dims(1))
                     plot_range(2,ifile)=+cTiny*(XyzMax_D(x_)-XyzMin_D(x_)) &
