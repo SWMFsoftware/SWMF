@@ -3714,27 +3714,35 @@ T			UseGravity (rest of parameters read if true)
 	<parameter name="UseHallResist" type="logical" default="F"/>
 	<if expr="$UseHallResist">
 		<parameter name="HallFactor" type="real" min="0" default="1"/>
-		<parameter name="HallCmaxFactor" type="real" min="0" max="1" default="1"/>
+		<parameter name="HallCmaxFactor" type="real" min="0" max="1" 
+			default="1"/>
+		<parameter name="HallHyperFactor" type="real" min="0" max="1"
+			default="0"/>
 	</if>
 
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
 3e12		HallFactor
 0.5		HallCmaxFactor
+0.2		HallHyperFactor
 
 If UseHallResist is true the Hall resistivity is used.
 The off-diagonal Hall elements of the resistivity tensor
 are multiplied by HallFactor. If HallFactor is 1 then the 
 physical Hall resistivity is used.
+
 If HallCmaxFactor is 1.0 the maximum propagation speed takes into
 account the full whistler wave speed. If it is 0, the wave speed
 is not midified. For values betwen 1 and 0 a fraction of the whistler
 wave speed is added. The full speed is needed for the stability
 of the explicit scheme (unless the whistler speed is very small
 and/or the diagonal part of the resistivity tensor is dominant).
-For the implicit scheme it is better to have HallCmaxFactor=0,
-otherwise there is significant phase error due to the first order scheme
-used in the implicit part. This error reduces with time step.
+For the implicit scheme it is better to have HallCmaxFactor=dtexpl/dt,
+otherwise there is a significant phase error.
+
+If HallHyperFactor is larger than zero, a 2nd order hyper resistivity
+is added: proportional to Delta $x^2 d^4 B/\Delta x^4$. The 0.1 to 0.2
+is a good range to suppress the island formation in the GEM challenge.
 
 Default is UseHallResist false.
 </command>
