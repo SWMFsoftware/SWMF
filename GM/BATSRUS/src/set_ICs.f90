@@ -119,26 +119,26 @@ subroutine set_ICs
         if(index(test_string,'testBsplit')>0)then
            write(*,*)'Splitting B between B0 and B1 to test the code!!!'
            State_VGB(Bx_,:,:,:,globalBLK) = State_VGB(Bx_,:,:,:,globalBLK) &
-                -shock_Lstate(bx_)*0.7
-           B0xCell_BLK(:,:,:,globalBLK)   = shock_Lstate(bx_)*0.7
-           B0xFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(bx_)*0.7
-           B0xFace_y_BLK(:,:,:,globalBLK) = shock_Lstate(bx_)*0.7
-           B0xFace_z_BLK(:,:,:,globalBLK) = shock_Lstate(bx_)*0.7
+                -100.0*0.7
+           B0xCell_BLK(:,:,:,globalBLK)   = 100.0*0.7
+           B0xFace_x_BLK(:,:,:,globalBLK) = 100.0*0.7
+           B0xFace_y_BLK(:,:,:,globalBLK) = 100.0*0.7
+           B0xFace_z_BLK(:,:,:,globalBLK) = 100.0*0.7
 
 
            State_VGB(By_,:,:,:,globalBLK) = State_VGB(By_,:,:,:,globalBLK) &
-                -shock_Lstate(by_)*0.4
-           B0yCell_BLK(:,:,:,globalBLK)   = shock_Lstate(by_)*0.4
-           B0yFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
-           B0yFace_y_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
-           B0yFace_z_BLK(:,:,:,globalBLK) = shock_Lstate(by_)*0.4
+                -100.0*0.4
+           B0yCell_BLK(:,:,:,globalBLK)   = 100.0*0.4
+           B0yFace_x_BLK(:,:,:,globalBLK) = 100.0*0.4
+           B0yFace_y_BLK(:,:,:,globalBLK) = 100.0*0.4
+           B0yFace_z_BLK(:,:,:,globalBLK) = 100.0*0.4
 
            State_VGB(Bz_,:,:,:,globalBLK) = State_VGB(Bz_,:,:,:,globalBLK) &
-                -shock_Lstate(bz_)*0.2
-           B0zCell_BLK(:,:,:,globalBLK)   = shock_Lstate(bz_)*0.2
-           B0zFace_x_BLK(:,:,:,globalBLK) = shock_Lstate(bz_)*0.2
-           B0zFace_y_BLK(:,:,:,globalBLK) = shock_Lstate(bz_)*0.2
-           B0zFace_z_BLK(:,:,:,globalBLK) = shock_Lstate(bz_)*0.2
+                -100.0*0.2
+           B0zCell_BLK(:,:,:,globalBLK)   = 100.0*0.2
+           B0zFace_x_BLK(:,:,:,globalBLK) = 100.0*0.2
+           B0zFace_y_BLK(:,:,:,globalBLK) = 100.0*0.2
+           B0zFace_z_BLK(:,:,:,globalBLK) = 100.0*0.2
         endif
      case (problem_heliosphere)
         !\
