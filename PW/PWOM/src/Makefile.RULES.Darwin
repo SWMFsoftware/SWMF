@@ -1,0 +1,2 @@
+ephoto_planet.o: ephoto_planet.f
+	${COMPILE.f77} ${Cflag0} -132 ephoto_planet.f

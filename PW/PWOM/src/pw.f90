@@ -9,7 +9,7 @@ program pw
 !******************************************************************************
 ! Initiallize MPI and get number of processors and rank of given processor
 !******************************************************************************
-  integer:: errcode,comm,iProc,nProc
+  
 
   ! Temporary variables
   real:: ddt1, xxx
@@ -18,10 +18,10 @@ program pw
 
   !---------------------------------------------------------------------------
   call MPI_INIT(errcode)
-  comm = MPI_COMM_WORLD
+  iComm = MPI_COMM_WORLD
   
-  call MPI_COMM_RANK(comm,iProc,errcode)
-  call MPI_COMM_SIZE(comm,nProc,errcode)
+  call MPI_COMM_RANK(iComm,iProc,errcode)
+  call MPI_COMM_SIZE(iComm,nProc,errcode)
   write(*,*) iProc,nProc
 
 !******************************************************************************

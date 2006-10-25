@@ -7,7 +7,7 @@ Module Mod_PW
   integer :: iUnitOut
   character (len=7) :: StringPrefix=''
 
-  integer :: iProc, nProc, iComm
+  integer :: iProc, nProc, iComm,errcode
 
   integer ::   nTheta, nPhi,maxLine
   parameter (nTheta     = 65 )
