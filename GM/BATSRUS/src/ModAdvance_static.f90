@@ -11,13 +11,18 @@ Module ModAdvance
   ! Logical parameter indicating static vs. dynamic allocation
   logical, parameter :: IsDynamicAdvance = .false.
 
+  ! Numerical flux type
+  character (len=10) :: FluxType
+
   ! Update check parameters
   logical :: UseUpdateCheck
   real :: percent_max_rho(2), percent_max_p(2)
 
+  ! The percentage limit for species to be checked in update check
+  real :: SpeciesPercentCheck = 1.0
 
-  ! Numerical flux type
-  character (len=10) :: FluxType
+  ! Replace density with sum of species densities (in multi-species plasma)
+  logical :: DoReplaceDensity = .true.
 
   !\
   ! Conservative/Non-conservative parameters
