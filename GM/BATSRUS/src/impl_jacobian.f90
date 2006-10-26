@@ -439,10 +439,10 @@ contains
   !===========================================================================
   subroutine impl_init_hall
 
-    use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge, &
-         BxPerRho_G, ByPerRho_G, BzPerRho_G
+    use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
+         BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
-    real :: InvDx2, InvDy2, InvDz2
+    real :: InvDx2, InvDy2, InvDz2, InvN_G(0:nI+1,0:nJ+1,0:nK+1)
     ! Calculate cell centered currents to be used by getflux
 
     InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
@@ -465,21 +465,24 @@ contains
             -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
     end do; end do; end do
 
+    call set_ion_mass_per_charge(impl2iBLK(implBlk))
+
     do k=1,nK; do j=1,nJ; do i=1,nI
-       HallJ_CD(i,j,k,:) = &
-            IonMassPerCharge*hall_factor(0,i,j,k,iBlk)*HallJ_CD(i,j,k,:)
+       HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &
+            *hall_factor(0,i,j,k,iBlk)*HallJ_CD(i,j,k,:)
     end do; end do; end do
 
-    BxPerRho_G = w_k(:,:,:,Bx_,implBLK)/w_k(:,:,:,Rho_,implBLK)
-    ByPerRho_G = w_k(:,:,:,By_,implBLK)/w_k(:,:,:,Rho_,implBLK)
-    BzPerRho_G = w_k(:,:,:,Bz_,implBLK)/w_k(:,:,:,Rho_,implBLK)
+    InvN_G = IonMassPerCharge_G / w_k(:,:,:,Rho_,implBLK)
+
+    BxPerN_G = w_k(:,:,:,Bx_,implBLK)*InvN_G 
+    ByPerN_G = w_k(:,:,:,By_,implBLK)*InvN_G 
+    BzPerN_G = w_k(:,:,:,Bz_,implBLK)*InvN_G
 
   end subroutine impl_init_hall
   !===========================================================================
   subroutine impl_hall_resist
 
-    use ModHallResist, ONLY: IonMassPerCharge, &
-         BxPerRho_G, ByPerRho_G, BzPerRho_G
+    use ModHallResist, ONLY: BxPerN_G, ByPerN_G, BzPerN_G
     !real :: ResistDiag should be Eta0Resist_ND from calc_resistive_flux
 
     real :: Coeff
@@ -509,99 +512,99 @@ contains
     ! the signs should be reversed and the coeff should have a minus sign
 
     ! dR(Bx)/dBy
-    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(z_)**2
+    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bx_)/Dxyz(z_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bx_,By_,i,j,k,1)= JAC(Bx_,By_,i,j,k,1) &
-            + Coeff*(BzPerRho_G(i,j,k-1)+BzPerRho_G(i,j,k+1))
+            + Coeff*(BzPerN_G(i,j,k-1)+BzPerN_G(i,j,k+1))
     end do; end do; end do
     !J+1
     do k=1,nK-1; do j=1,nJ; do i=1,nI
-       JAC(Bx_,By_,i,j,k,7)=JAC(Bx_,By_,i,j,k,7) - Coeff*BzPerRho_G(i,j,k+1)
+       JAC(Bx_,By_,i,j,k,7)=JAC(Bx_,By_,i,j,k,7) - Coeff*BzPerN_G(i,j,k+1)
     end do; end do; end do
     !J-1
     do k=2,nK; do j=1,nJ; do i=1,nI
-       JAC(Bx_,By_,i,j,k,6)=JAC(Bx_,By_,i,j,k,6) - Coeff*BzPerRho_G(i,j,k-1)
+       JAC(Bx_,By_,i,j,k,6)=JAC(Bx_,By_,i,j,k,6) - Coeff*BzPerN_G(i,j,k-1)
     end do; end do; end do
 
     ! dR(Bx)/dBz
-    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(Bx_)*IonMassPerCharge/Dxyz(y_)**2
+    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(Bx_)/Dxyz(y_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bx_,Bz_,i,j,k,1)= JAC(Bx_,Bz_,i,j,k,1) &
-            - Coeff*(ByPerRho_G(i,j-1,k)+ByPerRho_G(i,j+1,k))
+            - Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
     end do; end do; end do
     !J+1
     do k=1,nK; do j=1,nJ-1; do i=1,nI
-       JAC(Bx_,Bz_,i,j,k,5)= JAC(Bx_,Bz_,i,j,k,5) + Coeff*ByPerRho_G(i,j+1,k)
+       JAC(Bx_,Bz_,i,j,k,5)= JAC(Bx_,Bz_,i,j,k,5) + Coeff*ByPerN_G(i,j+1,k)
     end do; end do; end do
     !J-1
     do k=1,nK; do j=2,nJ; do i=1,nI
-       JAC(Bx_,Bz_,i,j,k,4)= JAC(Bx_,Bz_,i,j,k,4) + Coeff*ByPerRho_G(i,j-1,k)
+       JAC(Bx_,Bz_,i,j,k,4)= JAC(Bx_,Bz_,i,j,k,4) + Coeff*ByPerN_G(i,j-1,k)
     end do; end do; end do
 
     ! dR(By)/dBz
-    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(By_)*IonMassPerCharge/Dxyz(x_)**2
+    Coeff = ImplCoeff*wnrm(Bz_)/wnrm(By_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(By_,Bz_,i,j,k,1)= JAC(By_,Bz_,i,j,k,1) &
-            + Coeff*(BxPerRho_G(i-1,j,k)+BxPerRho_G(i+1,j,k))
+            + Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
     end do; end do; end do
     !I+1
     do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(By_,Bz_,i,j,k,3)= JAC(By_,Bz_,i,j,k,3) - Coeff*BxPerRho_G(i+1,j,k)
+       JAC(By_,Bz_,i,j,k,3)= JAC(By_,Bz_,i,j,k,3) - Coeff*BxPerN_G(i+1,j,k)
     end do; end do; end do
     !I-1
     do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(By_,Bz_,i,j,k,2)= JAC(By_,Bz_,i,j,k,2) - Coeff*BxPerRho_G(i-1,j,k)
+       JAC(By_,Bz_,i,j,k,2)= JAC(By_,Bz_,i,j,k,2) - Coeff*BxPerN_G(i-1,j,k)
     end do; end do; end do
 
     ! dR(By)/dBx
-    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(By_)*IonMassPerCharge/Dxyz(z_)**2
+    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(By_)/Dxyz(z_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(By_,Bx_,i,j,k,1)= JAC(By_,Bx_,i,j,k,1) &
-            - Coeff*(BzPerRho_G(i,j,k-1)+BzPerRho_G(i,j,k+1))
+            - Coeff*(BzPerN_G(i,j,k-1)+BzPerN_G(i,j,k+1))
     end do; end do; end do
     !K+1
     do k=1,nK-1; do j=1,nJ; do i=1,nI
-       JAC(By_,Bx_,i,j,k,7)=JAC(By_,Bx_,i,j,k,7) + Coeff*BzPerRho_G(i,j,k+1)
+       JAC(By_,Bx_,i,j,k,7)=JAC(By_,Bx_,i,j,k,7) + Coeff*BzPerN_G(i,j,k+1)
     end do; end do; end do
     !K-1
     do k=2,nK; do j=1,nJ; do i=1,nI
-       JAC(By_,Bx_,i,j,k,6)=JAC(By_,Bx_,i,j,k,6) + Coeff*BzPerRho_G(i,j,k-1)
+       JAC(By_,Bx_,i,j,k,6)=JAC(By_,Bx_,i,j,k,6) + Coeff*BzPerN_G(i,j,k-1)
     end do; end do; end do
 
     ! dR(Bz)/dBx
-    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(Bz_)*IonMassPerCharge/Dxyz(y_)**2
+    Coeff = ImplCoeff*wnrm(Bx_)/wnrm(Bz_)/Dxyz(y_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bz_,Bx_,i,j,k,1)= JAC(Bz_,Bx_,i,j,k,1) &
-            + Coeff*(ByPerRho_G(i,j-1,k)+ByPerRho_G(i,j+1,k))
+            + Coeff*(ByPerN_G(i,j-1,k)+ByPerN_G(i,j+1,k))
     end do; end do; end do
     !J+1
     do k=1,nK; do j=1,nJ-1; do i=1,nI
-       JAC(Bz_,Bx_,i,j,k,5)=JAC(Bz_,Bx_,i,j,k,5) - Coeff*ByPerRho_G(i,j+1,k)
+       JAC(Bz_,Bx_,i,j,k,5)=JAC(Bz_,Bx_,i,j,k,5) - Coeff*ByPerN_G(i,j+1,k)
     end do; end do; end do
     !J-1
     do k=1,nK; do j=2,nJ; do i=1,nI
-       JAC(Bz_,Bx_,i,j,k,4)=JAC(Bz_,Bx_,i,j,k,4) - Coeff*ByPerRho_G(i,j-1,k)
+       JAC(Bz_,Bx_,i,j,k,4)=JAC(Bz_,Bx_,i,j,k,4) - Coeff*ByPerN_G(i,j-1,k)
     end do; end do; end do
 
     ! dR(Bz)/dBy
-    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bz_)*IonMassPerCharge/Dxyz(x_)**2
+    Coeff = ImplCoeff*wnrm(By_)/wnrm(Bz_)/Dxyz(x_)**2
     ! Main diagonal
     do k=1,nK; do j=1,nJ; do i=1,nI
        JAC(Bz_,By_,i,j,k,1)= JAC(Bz_,By_,i,j,k,1) &
-            - Coeff*(BxPerRho_G(i-1,j,k)+BxPerRho_G(i+1,j,k))
+            - Coeff*(BxPerN_G(i-1,j,k)+BxPerN_G(i+1,j,k))
     end do; end do; end do
     !I+1
     do k=1,nK; do j=1,nJ; do i=1,nI-1
-       JAC(Bz_,By_,i,j,k,3)= JAC(Bz_,By_,i,j,k,3) + Coeff*BxPerRho_G(i+1,j,k)
+       JAC(Bz_,By_,i,j,k,3)= JAC(Bz_,By_,i,j,k,3) + Coeff*BxPerN_G(i+1,j,k)
     end do; end do; end do
     !I-1
     do k=1,nK; do j=1,nJ; do i=2,nI
-       JAC(Bz_,By_,i,j,k,2)= JAC(Bz_,By_,i,j,k,2) + Coeff*BxPerRho_G(i-1,j,k)
+       JAC(Bz_,By_,i,j,k,2)= JAC(Bz_,By_,i,j,k,2) + Coeff*BxPerN_G(i-1,j,k)
     end do; end do; end do
 
   end subroutine impl_hall_resist
