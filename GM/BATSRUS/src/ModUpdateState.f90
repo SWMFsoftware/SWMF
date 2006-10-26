@@ -78,6 +78,20 @@ contains
        E_BLK(i,j,k,iBLK) = E_o_BLK(i,j,k,iBLK) + Source_VC(Energy_,i,j,k)
     end do; end do; end do
 
+    if(UseMultispecies)then
+       ! Fix negative species densities
+       State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBLK) = &
+            max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBLK))
+
+       if(DoReplaceDensity)then
+          ! Add up species densities to total density
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             State_VGB(Rho_,i,j,k,iBLK) = &
+                  sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBLK))
+          end do; end do; end do
+       end if
+    end if
+
     if((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK) + cHalf*( &
