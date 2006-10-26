@@ -43,9 +43,6 @@ program pw
   NamePhiNorth  = 'North.dat'
   NamePhiSouth  = 'South.dat'
 
-
-
-
   iUnitInput         = 11 
   iUnitOutput        = 16  
   iUnitSourceGraphics= 18
@@ -132,7 +129,6 @@ program pw
 !******************************************************************************
   
   !initialize field line locations
-!  FieldLineTheta (1) = 10.0 * 3.141592653589/180.0
 
   call Initial_Line_Location
  
@@ -143,7 +139,10 @@ program pw
   !write(14,*) 'VARIABLES = "X", "Y", "Z", "Time", "Jr"'
   !write(14,*) 'Zone I=', int(maxTime/DtOutput),' ,',' DATAPACKING=POINT'  
   
-  
+
+!******************************************************************************
+! Move the flux tube, solve each fieldline, and advance the time
+!******************************************************************************
   
   TIMELOOP:do
      if (Time .ge. Tmax) exit TIMELOOP
@@ -153,11 +152,8 @@ program pw
         !position to get the lat and lon
         
         call MoveFluxTube
-
-   !***************************************************************************
-   !  Call the flux tube to be solved
-   !***************************************************************************
-
+        
+        !  Call the flux tube to be solved
         
         call AdvancePWline
 
