@@ -23,7 +23,7 @@ module ModFaceFlux
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
-  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge, &
+  use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current
 
   implicit none
@@ -189,12 +189,19 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
+         HallCoeff = -1.0
+         if(UseHallResist) HallCoeff =                           &
+              0.5*hall_factor(x_, iFace, jFace, kFace, iBlock)* &
+              ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
+              + IonMassPerCharge_G(iFace-1,jFace,kFace) )
+
          if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
             AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlock)
             AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlock)
             AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlock)
             Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
                  FaceArea2MinI_B(iBlock))
+
             if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
                  InvDxyz  = 1.0/sqrt(&
                  ( x_BLK(iFace  , jFace, kFace, iBlock)       &
@@ -238,6 +245,12 @@ contains
       end if                                    !^CFG IF COVARIANT
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
+
+         HallCoeff = -1.0
+         if(UseHallResist) HallCoeff =                           &
+              0.5*hall_factor(y_, iFace, jFace, kFace, iBlock)* &
+              ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
+              + IonMassPerCharge_G(iFace,jFace-1,kFace) )
 
          if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
             AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlock)
@@ -289,6 +302,12 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
+         HallCoeff = -1.0
+         if(UseHallResist) HallCoeff =                           &
+              0.5*hall_factor(z_, iFace, jFace, kFace, iBlock)* &
+              ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
+              + IonMassPerCharge_G(iFace,jFace,kFace-1) )
+
          if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
             AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlock)
             AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlock)
@@ -330,7 +349,9 @@ contains
 
   subroutine get_numerical_flux(iBlock, iDir, Flux_V)
 
-    use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_
+    use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
+    use ModAdvance, ONLY: DoReplaceDensity
 
     integer, intent(in) :: iBlock
     integer, intent(in) :: iDir
@@ -342,6 +363,11 @@ contains
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight
     !-----------------------------------------------------------------------
+
+    if(UseMultiSpecies .and. DoReplaceDensity)then
+       StateLeft_V (Rho_)=sum( StateLeft_V(SpeciesFirst_:SpeciesLast_) )
+       StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
+    end if
 
     if(.false. &
          .or. DoHll &               !^CFG IF LINDEFLUX
@@ -375,10 +401,6 @@ contains
             (StateRight_V(By_) + StateLeft_V(By_))*DiffBy + &
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
-
-    HallCoeff = -1.0
-    if(UseHallResist) HallCoeff = &
-         IonMassPerCharge * hall_factor(iDir, iFace, jFace, kFace, iBlock)
 
     call get_physical_flux(iBlock, iDir, StateLeft_V, B0x, B0y, B0z,&
          StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft)
@@ -710,7 +732,7 @@ contains
       Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*AreaZ
 
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
-      if(UseHallResist)then
+      if(UseHallResist.and. HallCoeff > 0.0)then
          call get_face_current(iDir, iFace, jFace, kFace, iBlock, Jx, Jy, Jz)
          HallCoeffInvRho = HallCoeff/Rho
          HallUx = Ux - Jx*HallCoeffInvRho
@@ -732,7 +754,7 @@ contains
       Flux_V(p_)  = Un*p
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
-      if(UseHallResist)then
+      if(UseHallResist .and. HallCoeff > 0.0) then
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
