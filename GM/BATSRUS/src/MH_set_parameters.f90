@@ -2436,6 +2436,17 @@ contains
          call stop_mpi(NameSub// &
          'The prolongation order=2 requires message_pass_dir')
 
+    if (UseAccurateResChange .and. index(optimize_message_pass,'opt') > 0) then
+       if(iProc==0 .and. optimize_message_pass /= 'allopt') then
+          write(*,'(a)')NameSub//&
+               ' WARNING: Accurate res. change does not work for'// &
+               ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' setting optimize_message_pass = all'
+       end if
+       optimize_message_pass = 'all'
+    endif                                     
+
     if(UseTvdResChange .and. &
          optimize_message_pass(1:3)=='all' .and. iCFExchangeType/=2)then
        if(iProc==0) write(*,'(a)') NameSub// &
