@@ -1,2 +1,12 @@
 ephoto_planet.o: ephoto_planet.f
 	${COMPILE.f77} ${Cflag0} -132 ephoto_planet.f
+cltempw_planet.o: cltempw_planet.f
+	${COMPILE.f77} ${Cflag0} -132 cltempw_planet.f
+collis_planet.o: collis_planet.f
+	${COMPILE.f77} ${Cflag0} -132 collis_planet.f
+precip_planet.o: precip_planet.f
+	${COMPILE.f77} ${Cflag0} -132 precip_planet.f
+glowex_planet.o: glowex_planet.f
+	${COMPILE.f77} ${Cflag0} -132 glowex_planet.f
+clfme2w.o: clfme2w.f
+	${COMPILE.f77} ${Cflag0} -132 clfme2w.f
