@@ -40,8 +40,13 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters
-  use ModHallResist,    ONLY: UseHallResist, HallFactor, HallCmaxFactor,&
-       NameHallRegion, R1Hall, R2Hall, HallWidth, HallHyperFactor
+  use ModHallResist,    ONLY: &
+       UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
+       PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
+       NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
+       xSizeBoxHall, DxSizeBoxHall, &
+       ySizeBoxHall, DySizeBoxHall, &
+       zSizeBoxHall, DzSizeBoxHall
 
   implicit none
 
@@ -459,16 +464,40 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLREGION")
         call read_var('NameHallRegion', NameHallRegion)
 
+        if(index(NameHallRegion, '0') < 1)then
+           call read_var("x0Hall", x0Hall)
+           call read_var("y0Hall", y0Hall)
+           call read_var("z0Hall", z0Hall)
+        else
+           x0Hall = 0.0; y0Hall = 0.0; z0Hall = 0.0
+        end if
+
         select case(NameHallRegion)
         case("all", "user")
-        case("shell")
-           call read_var("R1Hall",R1Hall)
-           call read_var("R2Hall",R2Hall)
-           call read_var("HallWidth",HallWidth)
+        case("sphere0")
+           call read_var("rSphereHall",rSphereHall)
+           call read_var("DrSphereHall",DrSphereHall)
+        case("box0", "box")
+           call read_var("xSizeBoxHall ",xSizeBoxHall)
+           call read_var("DxSizeBoxHall",DxSizeBoxHall)
+           call read_var("ySizeBoxHall ",ySizeBoxHall)
+           call read_var("DySizeBoxHall",DySizeBoxHall)
+           call read_var("zSizeBoxHall ",zSizeBoxHall)
+           call read_var("DzSizeBoxHall",DzSizeBoxHall)
         case default
            call stop_mpi(NameSub//': unknown NameHallRegion='&
                 //NameHallRegion)
         end select
+
+     case("#HALLPOLEREGION")
+        call read_var("PoleAngleHall ", PoleAngleHall)
+        call read_var("dPoleAngleHall", dPoleAngleHall)
+        PoleAngleHall  =  PoleAngleHall*cDegToRad
+        dPoleAngleHall = dPoleAngleHall*cDegToRad
+
+     case("#HALLINNERREGION")
+        call read_var("rInnerHall ", rInnerHall)
+        call read_var("DrInnerHall", DrInnerHall)
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
@@ -1486,6 +1515,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('AverageIonMass          ', AverageIonMass)
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
+     case("#MULTISPECIES")
+        call read_var('DoReplaceDensity', DoReplaceDensity)
+        call read_var('SpeciesPercentCheck',SpeciesPercentCheck) 
      case('#USERBOUNDARY', '#EXTRABOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary',UseExtraBoundary)
