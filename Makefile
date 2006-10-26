@@ -20,6 +20,11 @@ VERSION = 2.2
 default : SWMF
 
 #
+# Make all common used executables.
+#
+ALL : SWMF PIDL PSPH
+
+#
 #       Definition of OS, component versions and directory structure
 #
 include Makefile.def
@@ -28,7 +33,9 @@ help:
 	@echo ' '
 	@echo '  You can "make" the following:'
 	@echo ' '
-	@echo '    <default>   SWMF'
+	@echo '    [default]   SWMF'
+	@echo ' '
+	@echo '    ALL         SWMF PIDL PSPH'
 	@echo ' '
 	@echo '    install     (to be used via SetSWMF.pl only)'
 	@echo ' '
