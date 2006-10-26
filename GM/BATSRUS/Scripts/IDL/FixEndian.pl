@@ -1,15 +1,16 @@
 #!/usr/bin/perl -s
 #^CFG COPYRIGHT UM
-# Convert or test the endianness of a VAC binary/real*4 data file
-# Also convert from Cray format (8 byte integer)
+# Convert/test the endianness of VAC/BATSRUS binary data/plot file(s).
+# Convert from or to Cray format (8-byte) integers.
 
 # Store input flags in long variable names
-my $Test=$t;
-my $Convert=$c;
-my $Inplace=$i;
-my $Keep=$k;
-my $tocray=$C;
-my $Quiet=$q;
+my $Help    = ($h or $help);
+my $Test    = ($t or $test);
+my $Convert = ($c or $convert);
+my $Inplace = ($i or $inplace);
+my $Endian  = ($e or $endian);
+my $tocray  = ($C or $cray);
+my $Quiet   = ($q or $quiet);
 
 ### use strict;
 
@@ -19,10 +20,19 @@ my $zero=pack('L',0);
 
 undef $/; # ignore end of line
 
-if($Convert and $Inplace){
-    print STDERR "You cannot use the -i and -c flags at the same time!\n\n";
-    &print_help;
-}
+my $HELP="\nType 'FixEndian.pl -h' for help!\n";
+my $ERROR="ERROR in FixEndian.pl";
+
+&print_help if $Help;
+
+die "$ERROR: use exactly one of the -t(est), -i(nplace) or -c(onvert) flags!".
+    $HELP unless $Convert + $Inplace + $Test == 1;
+
+die "$ERROR: the -i(nplace) flag requires at least one file name!$HELP"
+    if $Inplace and $nArg == 0;
+
+die "$ERROR: the -c(onvert) flag requires exactly two filenames!$HELP"
+    if $Convert and $nArg != 2;
 
 # Global variables
 my $M=79;                         # Machine value
@@ -31,16 +41,8 @@ my $L=&convint($B);               # Little endian value
 my $machine=&test_machine;        # endianness of this computer
 
 if($Convert){
-    unless($nArg == 2){
-	print STDERR "The -c flag requires two filenames!\n\n";
-	&print_help; 
-    }
     &converttofile($ARGV[1]) if &readhead($ARGV[0]);
-}elsif($Test or $Inplace){
-    if($Inplace and $nArg == 0){
-	print STDERR "Provide at least one file name!\n\n";
-	&print_help; 
-    }
+}else{
     my $file;
     while($file=shift(@ARGV)){
 	if(&readhead($file) and $Inplace){
@@ -51,12 +53,9 @@ if($Convert){
 	    }
 	}
     }
-}else{
-    if(@ARGV){print STDERR "Use one of the -t -i or -c flags!\n\n";}
-    &print_help; 
 }
 
-print "\nScript endian finished running\n\n" 
+print "\nScript FixEndian.pl finished running\n\n" 
    if $nArg > 1 and not $Quiet and not $Convert;
 
 exit;
@@ -67,45 +66,57 @@ sub print_help{
 print "
 Purpose:
 
-   Show or convert the endianness of binary VAC type plot files 
-   and/or convert from 4 to 8 byte integers.
+   Show or convert the endianness of binary VAC/BATSRUS type data/plot files 
+   and/or convert between 4 and 8-byte integer formats.
 
 Usage: 
 
-   FixEndian.pl [-q] [-t] [-k] [-C] -[c|i] filename1 [filename2...]
+   FixEndian.pl -t [-q] [filename1 filename2...]
+   FixEndian.pl -i [-q] [-e=ENDIAN] [-C] filename1 [filename2...]
+   FixEndian.pl -c [-q] [-e=ENDIAN] [-C] filefrom fileto
 
--t     Test and show endianness of the machine and listed file(s) if any
-       Also show header information for the file(s)
+-t -test     Test and show endianness of the machine and listed file(s) if any.
+             Also show header information for the file(s) unless in quiet mode.
 
--k     Keep endianness the same (but convert integers)
-       Default is to convert the endianness
+-i -inplace  Convert file(s) in-place (uses FILENAME~ as a temporary file)
 
--C     Convert integers to Cray format (8-byte)
+-c -convert  Convert filefrom to fileto.
 
--c     Convert filename1 to filename2
-       Cannot be used with the -i switch
+-q -quiet    Suppress printing file header and other verbose information.
 
--i     Convert file(s) in-place (uses FILENAME~ as a temporary file)
-       Cannot be used with the -c switch
+-e=ENDIAN    Convert to the endianness defined by ENDIAN. Possible values are:
+             'big', 'little', 'machine', 'not-machine', 'keep', 'swap'
+             Only the first character is significant. The value 'machine'
+             means that the file is converted to the endianness of the 
+             machine the script is running on, while 'not-machine' converts
+             to the opposite endianness of the machine. The value 'keep'
+             keeps the endianness of the file (but may convert the
+             integers from 4 to 8 bytes or vice-versa), while the value 'swap'
+             changes the endianness of the file.
+             Default is to 'swap' the endianness.
+
+-C -cray     Convert integers to Cray format (8-byte).
 
 Examples:
 
 Test the endianness (and Cray format) of multiple files:
 
-   FixEndian.pl -t data/*.out
+   FixEndian.pl -t *.out
 
 Convert a file to another file with opposite endianness:
 
-   FixEndian.pl -c data/oldfilename data/newfilename
+   FixEndian.pl -c oldfilename newfilename
 
-In-place conversion of the endiannes for multiple files in quiet mode:
+In-place conversion of the endiannes to the machine's endianness 
+for multiple files in quiet mode:
 
-   FixEndian.pl -i -q newdata/*.out
+   FixEndian.pl -i -q -e=m *.out
 
-Keep the endiannes and convert between Cray and normal integer formats: 
+Keep the endiannes and convert between Cray (8-byte) and normal (4-byte)
+integer formats: 
 
-   FixEndian.pl -k -C -c data/oldfilename data/crayfilename
-   FixEndian.pl -k -c    data/crayfilename data/newfilename
+   FixEndian.pl -e=k -cray -c oldfilename crayfilename
+   FixEndian.pl -e=k -c       crayfilename newfilename
 ";
 exit;
 }
@@ -137,7 +148,7 @@ sub readhead{
     }
 
     if(200 > -s $file){
-	print "$file is too small to be a binary VAC data file!\n";
+	print "$file is too small to be a binary VAC/BATSRUS data/plot file!\n";
 	return(0);
     }
 
@@ -150,13 +161,31 @@ sub readhead{
     ($l1,$headline,$l1,$l2)=unpack 'La79LL', $line1;
 
     if($l1 == $B){
-	$from='big';    $to= $Keep ? 'big' : 'little';
+	$from='big';
     }elsif($l1 == $L){
-	$from='little'; $to= $Keep ? 'little': 'big';
+	$from='little';
     }else{
-	print "$file is not a VAC binary data file in UNIX F77 format!\n";
+	print "$file is not a VAC/BATSRUS binary data/plot file in ".
+	    "UNIX F77 format!\n";
 	return(0);
     }
+
+    if($Endian =~ /^b/){
+	$to = 'big';
+    }elsif($Endian =~ /^l/){
+	$to = 'little'
+    }elsif($Endian =~ /^m/){
+	$to = $machine;
+    }elsif($Endian =~ /^n/){
+	$to = ($machine eq 'big') ? 'little' : 'big';
+    }elsif($Endian =~ /^k/){
+	$to = $from;
+    }else{
+	$to = ($from eq 'big') ? 'little' : 'big';
+    }
+
+    # Keep endianness?
+    $Keep = ($from eq $to);
 
     $convertfrom = $from ne $machine;
     $convertto   = $to   ne $machine;
@@ -178,14 +207,8 @@ sub readhead{
 	$precision="single"; $r='f'; $rbyte=4; $ibyte=8; $double=0; $cray=1;
 	$type="Cray ";
     }else{
-	print "$file is not a VAC binary data file in UNIX F77 format!\n";
-	return(0);
-    }
-
-    if($Keep and ($cray == $tocray)){
-	if($cray){print "$file is already in Cray format,\n"}
-	else{     print "$file is not in Cray format,\n"}
-	print "thus -k option means no transformation at all!\n";
+	print "$file is not a VAC/BATSRUS binary data/plot file ".
+	    "in UNIX F77 format!\n";
 	return(0);
     }
 
@@ -271,6 +294,9 @@ sub readhead{
 	print "file=$filesize bytes / snapshot=$pictsize bytes = ",
 	$filesize/$pictsize," snapshot(s)\n\n";
     }
+
+    # Check if there is anything to do
+    return(0) if $Keep and $cray == $tocray;
 
     return(1);
 }
