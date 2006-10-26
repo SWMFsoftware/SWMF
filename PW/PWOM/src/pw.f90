@@ -38,11 +38,8 @@ program pw
 !******************************************************************************
   NameInput          = 'pw.input'
   NameOutput         = 'log.out'
-  !NameGraphics       = 'plots.out'
   NameSourceGraphics = 'plot_sources.out'
-!  NameRestart        = 'restart.out'
   NameCollision      = 'plots_collision.out'
-!  NameRestartIn      = 'restart.in'
   NamePhiNorth  = 'North.dat'
   NamePhiSouth  = 'South.dat'
 
@@ -52,9 +49,7 @@ program pw
   iUnitInput         = 11 
   iUnitOutput        = 16  
   iUnitSourceGraphics= 18
-!  iUnitRestart       = 7
   iUnitCollision     = 17  
-!  iUnitRestartIn     = 8
   iUnitSouth         = 101
   iUnitNorth         = 102
 
@@ -101,66 +96,8 @@ program pw
 !******************************************************************************
 ! Read the input file
 !******************************************************************************
- 
-  READ(iUnitInput,*) TMAX
-  WRITE(iUnitOutput,*) TMAX
-  
-  READ(iUnitInput,*) DToutput
-  WRITE(iUnitOutput,*) DToutput
-  
-  READ(iUnitInput,*) TypeSolver
-  WRITE(iUnitOutput,*) TypeSolver
-  
-  READ(iUnitInput,*) IsImplicit
-  WRITE(iUnitOutput,*) IsImplicit
-  
-  read(iUnitInput,*) IsRestart
-  if (IsRestart) then
-     write(*,*) 'Is Restart', IsRestart
-  endif
-  read(iUnitInput,*) IsVariableDt
-  if (IsVariableDt) then
-     write(*,*) 'IsVariableDT', IsVariableDt
-  endif
-  READ(iUnitInput,*)   DTpolarwind
-  WRITE(iUnitOutput,*) DTpolarwind
-  
-  READ(iUnitInput,*)   IsMoveFluxTube 
-  READ(iUnitInput,*)   IsUseJr
-  READ(iUnitInput,*)   IsCentrifugal
+  call Get_InputPW
 
-!******************************************************************************
-!  Read the restart file
-!******************************************************************************
-  nDim= 390
-  if(IsRestart)then
-
-     do iLine=1,nLine
-        OPEN(UNIT=iUnitRestartIn(iLine),FILE=NameRestartIn(iLine),STATUS='OLD')
-        READ (iUnitRestartIn(iLine),2001) TIME,DDT1,NS
-        READ (iUnitRestartIn(iLine),*)    GeoMagLat(iLine),GeoMagLon(iLine)
-        
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uOxyg(i,iLine),pOxyg(i,iLine),dOxyg(i,iLine),TOxyg(i,iLine),&
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uHel(i,iLine),pHel(i,iLine),dHel(i,iLine),THel(i,iLine),    &
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uHyd(i,iLine),pHyd(i,iLine),dHyd(i,iLine),THyd(i,iLine),    &
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uElect(i,iLine),pElect(i,iLine),dElect(i,iLine),            &
-             TElect(i,iLine),i=1,NDIM)
-        CLOSE(UNIT=iUnitRestartIn(iLine))
-     enddo
-
-2001 FORMAT(2(1PE16.6),I10)
-     ! 2002    FORMAT(5(1PE16.6))
-2002 FORMAT(5(1PE25.16))
-  Else
-     Time=0.0
-  endif
   
 !****************************************************************************
 ! Use Get_GITM to bring in neutral atmosphere from GITM
@@ -170,13 +107,6 @@ program pw
 !******************************************************************************
 !  Set parameters for reading in potential and time of simulation
 !******************************************************************************
-
-!  IsMoveFluxTube = .false.
-
-
-!  IsUseJr = .false.
-
-!  IsCentrifugal =.true.
 
 
   Dtheta  = 0.0242
@@ -189,133 +119,12 @@ program pw
   maxTime = Tmax
   Time    =     0.0
 
-  
-  do iPhi=1,nPhi
-     do iTheta=1,nTheta
-        read(unit=iUnitNorth,fmt='(6(1PE13.5))') &
-             Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
-             SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
-
-     enddo
-  enddo
-
-  
 
 !******************************************************************************
-!  Change angles to radians
+! Read information from IE file, and get the velocities
 !******************************************************************************
-  Theta_G(:,:) = Theta_G(:,:)*3.1416/180.0
-  Phi_G  (:,:) = Phi_G  (:,:)*3.1416/180.0
 
-!******************************************************************************
-!  Convert potential from kilovolts to Volts
-!******************************************************************************
-  Potential_G(:,:) = Potential_G(:,:)*1.0e3
-!******************************************************************************
-!  Calc Bfield components
-!******************************************************************************
-  rPlanet        = 6378000.0
-  rLowerBoundary = rPlanet+110.0e3
-  MagMoment      = 7.84e15
-  Bcoef          = MagMoment/(rLowerBoundary)**3 
-  do iPhi=1,nPhi
-     do iTheta=1,nTheta
-        Br_G(iPhi,iTheta)     = -Bcoef*2.0*sin(Theta_G(iPhi,iTheta))
-        Btheta_G(iPhi,iTheta) = Bcoef*cos(Theta_G(iPhi,iTheta))
-     enddo
-  enddo
-  
-  BmagnitudeSquared_G(:,:) = Br_G(:,:)**2 + Btheta_G(:,:)**2
-!******************************************************************************
-!  Fill Ghost cells
-!******************************************************************************
-  Theta_G    (nPhi+1,:) = Theta_G    (2,:) 
-  Phi_G      (nPhi+1,:) = Phi_G      (2,:)
-  SigmaH_G   (nPhi+1,:) = SigmaH_G   (2,:)
-  SigmaP_G   (nPhi+1,:) = SigmaP_G   (2,:) 
-  Jr_G       (nPhi+1,:) = Jr_G       (2,:)
-  Potential_G(nPhi+1,:) = Potential_G(2,:)
-
-  Theta_G    (0,:) = Theta_G    (nPhi-1,:) 
-  Phi_G      (0,:) = Phi_G      (nPhi-1,:)
-  SigmaH_G   (0,:) = SigmaH_G   (nPhi-1,:)
-  SigmaP_G   (0,:) = SigmaP_G   (nPhi-1,:) 
-  Jr_G       (0,:) = Jr_G       (nPhi-1,:)
-  Potential_G(0,:) = Potential_G(nPhi-1,:)
-
-  Theta_G    (:,nTheta+1) = Theta_G    (:,nTheta) 
-  Phi_G      (:,nTheta+1) = Phi_G      (:,nTheta)
-  SigmaH_G   (:,nTheta+1) = SigmaH_G   (:,nTheta)
-  SigmaP_G   (:,nTheta+1) = SigmaP_G   (:,nTheta) 
-  Jr_G       (:,nTheta+1) = Jr_G       (:,nTheta)
-  Potential_G(:,nTheta+1) = Potential_G(:,nTheta)
-
-  do iPhi=1,nPhi
-     Theta_G    (iPhi,0) = Theta_G    (mod(iPhi+128,nPhi-1),2) 
-     Phi_G      (iPhi,0) = Phi_G      (mod(iPhi+128,nPhi-1),2)
-     SigmaH_G   (iPhi,0) = SigmaH_G   (mod(iPhi+128,nPhi-1),2)
-     SigmaP_G   (iPhi,0) = SigmaP_G   (mod(iPhi+128,nPhi-1),2) 
-     Jr_G       (iPhi,0) = Jr_G       (mod(iPhi+128,nPhi-1),2)
-     Potential_G(iPhi,0) = Potential_G(mod(iPhi+128,nPhi-1),2)
-  enddo
-
-
-
-!******************************************************************************
-!  Calc electric field from E=-grad Potential
-!******************************************************************************
- 
-  
-  do iPhi=1,nPhi
-     do iTheta=1,nTheta
-        Etheta(iPhi,iTheta) = &
-             (Potential_G(iPhi,iTheta)-Potential_G(iPhi,iTheta+1))&
-             /((rLowerBoundary)*Dtheta)
-        if (iTheta == 1) then
-           Ephi(iPhi,iTheta) = 0.0
-        else
-           Ephi(iPhi,iTheta)   = &
-                (Potential_G(iPhi-1,iTheta)-Potential_G(iPhi+1,iTheta))&
-                / ((rLowerBoundary)*2.0*Dphi  &
-                * sin(Theta_G(iPhi,iTheta)))
-        endif
-    enddo
-  enddo
-  Er(:,:) = 0.0
-!******************************************************************************
-!  Calc VelocityExB drift from E and B
-!******************************************************************************
-  
-
-  do iPhi=1,nPhi
-     do iTheta=1,nTheta
-        VelocityExBtheta(iPhi,iTheta) = &
-             (Ephi(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
-             / BmagnitudeSquared_G(iPhi,iTheta)
-        
-        VelocityExBphi(iPhi,iTheta)   = &
-             (-Etheta(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
-             / BmagnitudeSquared_G(iPhi,iTheta)
-        
-        VelocityExBr(iPhi,iTheta)     = &
-             (-Ephi(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
-             / BmagnitudeSquared_G(iPhi,iTheta)
-
-
-     enddo
-  enddo
-  VelocityExBtheta(:,1) = VelocityExBtheta(:,2)
-  VelocityExBphi  (:,1) = VelocityExBphi  (:,2)
-  
-  if (.not.IsMoveFluxTube) Then 
-     VelocityExBtheta(:,:) = 0.0
-     VelocityExBPhi  (:,:) = 0.0
-     VelocityExBr    (:,:) = 0.0
-  endif
-
-  if (.not.IsUseJr) Then 
-     Jr_G(:,:) = 0.0
-  endif
+  call Get_ElectrodynamicPW  
 
 
 !******************************************************************************
@@ -324,54 +133,9 @@ program pw
   
   !initialize field line locations
 !  FieldLineTheta (1) = 10.0 * 3.141592653589/180.0
-  do iLine=1,nLine
-     if (.not. IsRestart) then
-        FieldLineTheta (iLine) = 10.0 * 3.141592653589/180.0
-        FieldLinePhi   (iLine) = 0.0  * 3.141592653589/180.0
-     else
-        FieldLineTheta (iLine) = 1.57079632679-GeoMagLat(iLine)&
-             * 3.141592653589/180.0
-        FieldLinePhi   (iLine) = GeoMagLon(iLine)              &
-             * 3.141592653589/180.0
-     endif
-     
-     iFieldLineTheta(iLine) = &
-          ceiling(  FieldLineTheta(iLine)  / Dtheta)
-     
-     iFieldLinePhi(iLine)   = &
-          mod(ceiling(FieldLinePhi(iLine)  / Dphi),nPhi-1)
-     
-     if (FieldLinePhi(iLine) .eq. 0.0)  iFieldLinePhi(iLine) = 1
-     
-     
-     FieldLineX(iLine)      = &
-          rLowerBoundary*sin(FieldLineTheta(iLine))*cos(FieldLinePhi(iLine))
-     
-     FieldLineY(iLine)      = &
-          rLowerBoundary*sin(FieldLineTheta(iLine))*sin(FieldLinePhi(iLine))
-     
-     FieldLineZ(iLine)      = &
-          rLowerBoundary*cos(FieldLineTheta(iLine))
-     
-     OldFieldLineX(iLine)   = FieldLineX(iLine)
-     OldFieldLineY(iLine)   = FieldLineY(iLine)
-     OldFieldLineZ(iLine)   = FieldLineZ(iLine)
-  enddo
 
-!Call New_Interpolate_Velocity( &
-!              Theta_G(iFieldLinePhi(1),iFieldLineTheta(1)),           &
-!              Theta_G(iFieldLinePhi(1),iFieldLineTheta(1)-1),         &
-!              FieldLineTheta(1),                                          &
-!              VelocityExBTheta(iFieldLinePhi(1),iFieldLineTheta(1)),  &
-!              VelocityExBTheta(iFieldLinePhi(1),iFieldLineTheta(1)-1),&
-!              VelocityExBPhi(iFieldLinePhi(1),iFieldLineTheta(1)),    &
-!              VelocityExBPhi(iFieldLinePhi(1),iFieldLineTheta(1)-1),  &
-!              FieldLineVelTheta(1),FieldLineVelPhi(1))
-
-  AccelerationTheta(:)=0.0
-  AccelerationPhi  (:)=0.0
-  
-
+  call Initial_Line_Location
+ 
 
   !write(13,*) 'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz"'
   !write(13,*) 'Zone I=', int(maxTime/DtOutput),' ,',' DATAPACKING=POINT'  
@@ -379,251 +143,26 @@ program pw
   !write(14,*) 'VARIABLES = "X", "Y", "Z", "Time", "Jr"'
   !write(14,*) 'Zone I=', int(maxTime/DtOutput),' ,',' DATAPACKING=POINT'  
   
-  do
-     if (Time .ge. Tmax) exit
-     !if (GeoMagLon(1) .ge. 170.0 .and. GeoMagLon(1) .le. 172) exit
+  
+  
+  TIMELOOP:do
+     if (Time .ge. Tmax) exit TIMELOOP
      do iLine=1,nLine
+      
+        ! MoveFluxTube moves the flux tube, then we can use the angular
+        !position to get the lat and lon
         
-
-
-
-
-
-        ! if the field line is in the polar circle then set velocity equal
-        ! to that of the nearest point. Otherwise, get the velocity from an
-        !interpolation.
- 
-        if (iFieldLineTheta(iLine) .le. 1) then
-           write(*,*) 'TT',FieldLineTheta(iLine)/Dtheta,FieldLineZ(iLine),OldFieldLineZ(iLine)
-           
-
-
-           !stop
-           FieldLineVelTheta(iLine)= &
-                VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
-           FieldLineVelPhi(iLine)= &
-                VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
-           
-           FieldLineJr(iLine)    = &
-                Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
-           write(*,*) iFieldLineTheta(iline),time,FieldLineVelX(iLine),FieldLineX(iLine)
-        else
-           Call New_Interpolate_Velocity( &
-              Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),           &
-              Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),         &
-              FieldLineTheta(iLine),                                          &
-              VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),  &
-              VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),&
-              VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),    &
-              VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),  &
-              FieldLineVelTheta(iLine),FieldLineVelPhi(iLine))
-
-           Call New_Interpolate_Jr( &
-              Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),           &
-              Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),         &
-              FieldLineTheta(iLine),                                          &
-              Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),  &
-              Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),&
-              FieldLineJr(iLine))
-        endif
-
-
-        
-        OldFieldLineTheta(iLine) = FieldLineTheta(iLine)
-        OldFieldLinePhi(iLine)   = FieldLinePhi(iLine)
-        
-        
-        OldFieldLineX(iLine) = FieldLineX(iLine)
-        OldFieldLineY(iLine) = FieldLineY(iLine)
-        OldFieldLineZ(iLine) = FieldLineZ(iLine)
-
-        
-        FieldLineVelx(iLine)   = &
-             FieldLineVelTheta(iLine)*cos(OldFieldLineTheta(iLine)) &
-             * cos(OldFieldLinePhi(iLine)) &
-             - FieldLineVelPhi(iLine)*sin(OldFieldLinePhi(iLine)) 
-        
-        FieldLineVely(iLine)   = &
-             FieldLineVelTheta(iLine)*cos(OldFieldLineTheta(iLine)) &
-             * sin(OldFieldLinePhi(iLine)) & 
-            + FieldLineVelPhi(iLine)*cos(OldFieldLinePhi(iLine))
-        
-        FieldLineVelz(iLine)   = &
-             -FieldLineVelTheta(iLine)*sin(OldFieldLineTheta(iLine))
-        
-        FieldLineX(iLine) =  &
-             (FieldLineVelx(iLine)) *Dt     &
-             + OldFieldLineX(iLine)                                   
-        
-        FieldLineY(iLine) =  &
-             (FieldLineVely(iLine)) *Dt     &
-             + OldFieldLineY(iLine)                                   
-
-        FieldLineZ(iLine) =  &
-             (FieldLineVelz(iLine)) *Dt     &
-             + OldFieldLineZ(iLine) 
-        
-        if (iFieldLineTheta(iLine) .le. 1) write(*,*) FieldLineZ(iLine)/rLowerBoundary,Time
-
-        ! Get new angles from new XYZ positions.Use Theta=arccos(Z/R) and
-        ! use Phi = arctan(y/x). make sure to use case statements for phi
-        ! depending on what quadrant the position lies in. 
-
-        if (FieldLineZ(iLine)/rLowerBoundary .ge.1) then
-           FieldLineTheta(iLine) = 1.57079632679 &
-                - acos(sqrt(FieldLineX(iLine)**2+FieldLineY(iLine)**2) & 
-                / rLowerBoundary)
-        else
-           FieldLineTheta(iLine) = &
-                abs(acos(FieldLineZ(iLine)/rLowerBoundary))
-        endif
-
-
-
-
-        if (FieldLineX(iLine) .gt. 0.0 .and. FieldLineY(iLine) .ge. 0.0) then
-           
-           FieldLinePhi(iLine)   = &
-                (atan(FieldLineY(iLine)/FieldLineX(iLine)))
-        else if(FieldLineX(iLine) .lt. 0.0 .and. FieldLineY(iLine).ge.0.0) then
-           FieldLinePhi(iLine)   = &
-                3.14159-(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
-        else if(FieldLineX(iLine) .lt.0.0.and. FieldLineY(iLine) .le. 0.0) then
-            FieldLinePhi(iLine)   = &
-                 3.14159+(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
-        else if(FieldLineX(iLine) .gt.0.0.and. FieldLineY(iLine) .le. 0.0) then
-           FieldLinePhi(iLine)   = &
-                 6.283185-(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
-        else if(FieldLineX(iLine) .eq.0.0.and. FieldLineY(iLine) .ge.0.0) then
-           FieldLinePhi(iLine)   = &
-                3.14159/2.0
-        else if(FieldLineX(iLine) .eq.0.0.and. FieldLineY(iLine) .le.0.0) then
-           FieldLinePhi(iLine)   = &
-                3.0*3.14159/2.0
-        endif
-
-
-        ! Deal with posibility that phi is negative
-        if (FieldLinePhi(iLine) .lt. 0.0) then
-           write(*,*) 'TTT',FieldLinePhi(iLine)
-           FieldLinePhi(iLine) = FieldLinePhi(iLine) + 6.283185
-           write(*,*) 'TTTT',FieldLinePhi(iLine)
-           write(*,*) FieldLineX(iLine),FieldLineY(iLine),FieldLineZ(iLine)
-           stop
-        endif
-
-             
-
-        ! Extract the nearest grid point greater then or equal to the 
-        ! actual location. The result is used to get the velocity. 
-        iFieldLineTheta(iLine) = &
-             ceiling(  FieldLineTheta(iLine)  / Dtheta)
-        
-        iFieldLinePhi(iLine)   = &
-             mod(ceiling(FieldLinePhi(iLine)  / Dphi),nPhi-1)
-        if (iFieldLinePhi(iLine) .eq. 0)  iFieldLinePhi(iLine) = 1
-        if (iFieldLineTheta(iLine) .eq. 0)  iFieldLineTheta(iLine) = 1
-        
-        ! Put field line locations back on the sphere
-
-        if (FieldLineTheta(iLine) .ne.0.0 ) then
-           FieldLineX(iLine)      = &
-                rLowerBoundary*sin(FieldLineTheta(iLine))     &
-                * cos(FieldLinePhi(iLine))
-           
-           FieldLineY(iLine)      = &
-                rLowerBoundary*sin(FieldLineTheta(iLine))     &
-                * sin(FieldLinePhi(iLine))
-    
-           FieldLineZ(iLine)      = &
-                rLowerBoundary*cos(FieldLineTheta(iLine))
-           
-        endif
-
-!        if (floor(Time/DToutput).NE.floor((Time-DT)/DToutput) ) Then
-!           write(13,*) &
-!              OldFieldLineX(iLine),OldFieldLineY(iLine),OldFieldLineZ(iLine), &
-!              FieldLineVelx(iLine),FieldLineVely(iLine),FieldLineVelz(iLine)
-!           
-!           write(14,*) FieldLineX(iLine),FieldLineY(iLine),FieldLineZ(iLine), &
-!              Time,FieldLineJr(iLine)
-!        endif
-
+        call MoveFluxTube
 
    !***************************************************************************
    !  Call the flux tube to be solved
    !***************************************************************************
-        ! Get the GeoMagnetic latitude and longitude 
-        GeoMagLat(iLine) = (1.57079632679 - OldFieldLineTheta(iLine)) &
-             * 180.0 / 3.141592653589
-        
-        GeoMagLon(iLine) = (OldFieldLinePhi(iLine)) &
-             * 180.0 / 3.141592653589
-        
-!        write(*,*) 'lat',GeoMagLat(iLine),'lon',GeoMagLon(iLine),&
-!             'theta',FieldLineTheta(iLine)* 180.0 / 3.141592653589,&
-!             'phi',FieldLinePhi(iLine)* 180.0 / 3.141592653589
-        
-        
-        !GeoMagLat(iLine) = 80.0
-        !GeoMagLon(iLine) = 0.0
-        
-        !Calculate the horizontal fieldline velocity in cm/s to be used for 
-        !centrifugal force in model
-        if (IsCentrifugal) then
-           OmegaHorFieldLine(iLine)= sqrt(( &
-                FieldLineVelTheta(iLine)**2.0+FieldLineVelPhi(iLine)**2.0) &
-                /rLowerBoundary**2.0)
-        else
-           OmegaHorFieldLine(iLine) = 0.0
-        endif
-
-
-        Call Put_Mod_PW(&
-          dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
-          dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
-          dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
-          dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine), &
-          IsRestart,IsVariableDt, Time,DT,DToutput,DTpolarwind,TypeSolver,    &
-          GeoMagLat(iLine),GeoMagLon(iLine),FieldLineJr(iLine),               &
-          OmegaHorFieldLine(iLine),iUnitInput,iUnitOutput,                    &
-          iUnitGraphics(iLine),                                               &
-          iUnitSourceGraphics,iUnitRestart(iLine),iUnitCollision,             &
-          iUnitRestartIn(iLine),iLine,int(nLine))   
-        
-        write(*,*) nLine
-        
-
-        Call polar_wind
-
-        if (iLine == nLine) then
-           Call Get_Mod_PW( &
-           dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
-           dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
-           dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
-           dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
-           IsRestart,IsVariableDt,Time,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
-           XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
-        else
-           Call Get_Mod_PW( &
-           dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
-           dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
-           dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
-           dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
-           IsRestart,IsVariableDt,XXX,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
-           XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
-        endif
-        
-
-
-
-
 
         
-        
+        call AdvancePWline
+
      enddo
-!     Time = Time + Dt
-  enddo
+  enddo TIMELOOP
 
   
 
@@ -1004,3 +543,493 @@ end Subroutine Get_Mod_PW
 !            VelocityExBPhi(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)),&
 !            VelocityExBPhi(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)+1),&
 !            FieldLineVelTheta(iLine),FieldLineVelPhi(iLine))
+
+
+!******************************************************************************
+
+
+!******************************************************************************
+! This subroutine gets the inputs for PWOM
+!******************************************************************************
+
+Subroutine Get_InputPW
+  use Mod_PW
+  implicit none
+
+  real:: ddt1, xxx
+  integer:: ns
+  
+  READ(iUnitInput,*) TMAX
+  WRITE(iUnitOutput,*) TMAX
+  
+  READ(iUnitInput,*) DToutput
+  WRITE(iUnitOutput,*) DToutput
+  
+  READ(iUnitInput,*) TypeSolver
+  WRITE(iUnitOutput,*) TypeSolver
+  
+  READ(iUnitInput,*) IsImplicit
+  WRITE(iUnitOutput,*) IsImplicit
+  
+  read(iUnitInput,*) IsRestart
+  if (IsRestart) then
+     write(*,*) 'Is Restart', IsRestart
+  endif
+  read(iUnitInput,*) IsVariableDt
+  if (IsVariableDt) then
+     write(*,*) 'IsVariableDT', IsVariableDt
+  endif
+  READ(iUnitInput,*)   DTpolarwind
+  WRITE(iUnitOutput,*) DTpolarwind
+  
+  READ(iUnitInput,*)   IsMoveFluxTube 
+  READ(iUnitInput,*)   IsUseJr
+  READ(iUnitInput,*)   IsCentrifugal
+
+!******************************************************************************
+!  Read the restart file
+!******************************************************************************
+  nDim= 390
+  if(IsRestart)then
+
+     do iLine=1,nLine
+        OPEN(UNIT=iUnitRestartIn(iLine),FILE=NameRestartIn(iLine),STATUS='OLD')
+        READ (iUnitRestartIn(iLine),2001) TIME,DDT1,NS
+        READ (iUnitRestartIn(iLine),*)    GeoMagLat(iLine),GeoMagLon(iLine)
+        
+        READ (iUnitRestartIn(iLine),2002) &
+             (XXX,uOxyg(i,iLine),pOxyg(i,iLine),dOxyg(i,iLine),TOxyg(i,iLine),&
+             i=1,NDIM)
+        READ (iUnitRestartIn(iLine),2002) &
+             (XXX,uHel(i,iLine),pHel(i,iLine),dHel(i,iLine),THel(i,iLine),    &
+             i=1,NDIM)
+        READ (iUnitRestartIn(iLine),2002) &
+             (XXX,uHyd(i,iLine),pHyd(i,iLine),dHyd(i,iLine),THyd(i,iLine),    &
+             i=1,NDIM)
+        READ (iUnitRestartIn(iLine),2002) &
+             (XXX,uElect(i,iLine),pElect(i,iLine),dElect(i,iLine),            &
+             TElect(i,iLine),i=1,NDIM)
+        CLOSE(UNIT=iUnitRestartIn(iLine))
+     enddo
+
+2001 FORMAT(2(1PE16.6),I10)
+     ! 2002    FORMAT(5(1PE16.6))
+2002 FORMAT(5(1PE25.16))
+  Else
+     Time=0.0
+  endif
+end Subroutine Get_InputPW
+
+!******************************************************************************
+
+!******************************************************************************
+!  This subroutine gets the electrodynamic parameters, and gets the convection
+!  velocity. 
+!******************************************************************************
+Subroutine Get_ElectrodynamicPW
+  
+  use Mod_PW
+  implicit none
+  
+  do iPhi=1,nPhi
+     do iTheta=1,nTheta
+        read(unit=iUnitNorth,fmt='(6(1PE13.5))') &
+             Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
+             SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
+
+     enddo
+  enddo
+
+  
+
+!******************************************************************************
+!  Change angles to radians
+!******************************************************************************
+  Theta_G(:,:) = Theta_G(:,:)*3.1416/180.0
+  Phi_G  (:,:) = Phi_G  (:,:)*3.1416/180.0
+
+!******************************************************************************
+!  Convert potential from kilovolts to Volts
+!******************************************************************************
+  Potential_G(:,:) = Potential_G(:,:)*1.0e3
+!******************************************************************************
+!  Calc Bfield components
+!******************************************************************************
+  rPlanet        = 6378000.0
+  rLowerBoundary = rPlanet+110.0e3
+  MagMoment      = 7.84e15
+  Bcoef          = MagMoment/(rLowerBoundary)**3 
+  do iPhi=1,nPhi
+     do iTheta=1,nTheta
+        Br_G(iPhi,iTheta)     = -Bcoef*2.0*sin(Theta_G(iPhi,iTheta))
+        Btheta_G(iPhi,iTheta) = Bcoef*cos(Theta_G(iPhi,iTheta))
+     enddo
+  enddo
+  
+  BmagnitudeSquared_G(:,:) = Br_G(:,:)**2 + Btheta_G(:,:)**2
+!******************************************************************************
+!  Fill Ghost cells
+!******************************************************************************
+  Theta_G    (nPhi+1,:) = Theta_G    (2,:) 
+  Phi_G      (nPhi+1,:) = Phi_G      (2,:)
+  SigmaH_G   (nPhi+1,:) = SigmaH_G   (2,:)
+  SigmaP_G   (nPhi+1,:) = SigmaP_G   (2,:) 
+  Jr_G       (nPhi+1,:) = Jr_G       (2,:)
+  Potential_G(nPhi+1,:) = Potential_G(2,:)
+
+  Theta_G    (0,:) = Theta_G    (nPhi-1,:) 
+  Phi_G      (0,:) = Phi_G      (nPhi-1,:)
+  SigmaH_G   (0,:) = SigmaH_G   (nPhi-1,:)
+  SigmaP_G   (0,:) = SigmaP_G   (nPhi-1,:) 
+  Jr_G       (0,:) = Jr_G       (nPhi-1,:)
+  Potential_G(0,:) = Potential_G(nPhi-1,:)
+
+  Theta_G    (:,nTheta+1) = Theta_G    (:,nTheta) 
+  Phi_G      (:,nTheta+1) = Phi_G      (:,nTheta)
+  SigmaH_G   (:,nTheta+1) = SigmaH_G   (:,nTheta)
+  SigmaP_G   (:,nTheta+1) = SigmaP_G   (:,nTheta) 
+  Jr_G       (:,nTheta+1) = Jr_G       (:,nTheta)
+  Potential_G(:,nTheta+1) = Potential_G(:,nTheta)
+
+  do iPhi=1,nPhi
+     Theta_G    (iPhi,0) = Theta_G    (mod(iPhi+128,nPhi-1),2) 
+     Phi_G      (iPhi,0) = Phi_G      (mod(iPhi+128,nPhi-1),2)
+     SigmaH_G   (iPhi,0) = SigmaH_G   (mod(iPhi+128,nPhi-1),2)
+     SigmaP_G   (iPhi,0) = SigmaP_G   (mod(iPhi+128,nPhi-1),2) 
+     Jr_G       (iPhi,0) = Jr_G       (mod(iPhi+128,nPhi-1),2)
+     Potential_G(iPhi,0) = Potential_G(mod(iPhi+128,nPhi-1),2)
+  enddo
+
+
+
+!******************************************************************************
+!  Calc electric field from E=-grad Potential
+!******************************************************************************
+ 
+  
+  do iPhi=1,nPhi
+     do iTheta=1,nTheta
+        Etheta(iPhi,iTheta) = &
+             (Potential_G(iPhi,iTheta)-Potential_G(iPhi,iTheta+1))&
+             /((rLowerBoundary)*Dtheta)
+        if (iTheta == 1) then
+           Ephi(iPhi,iTheta) = 0.0
+        else
+           Ephi(iPhi,iTheta)   = &
+                (Potential_G(iPhi-1,iTheta)-Potential_G(iPhi+1,iTheta))&
+                / ((rLowerBoundary)*2.0*Dphi  &
+                * sin(Theta_G(iPhi,iTheta)))
+        endif
+    enddo
+  enddo
+  Er(:,:) = 0.0
+!******************************************************************************
+!  Calc VelocityExB drift from E and B
+!******************************************************************************
+  
+
+  do iPhi=1,nPhi
+     do iTheta=1,nTheta
+        VelocityExBtheta(iPhi,iTheta) = &
+             (Ephi(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
+             / BmagnitudeSquared_G(iPhi,iTheta)
+        
+        VelocityExBphi(iPhi,iTheta)   = &
+             (-Etheta(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
+             / BmagnitudeSquared_G(iPhi,iTheta)
+        
+        VelocityExBr(iPhi,iTheta)     = &
+             (-Ephi(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
+             / BmagnitudeSquared_G(iPhi,iTheta)
+
+
+     enddo
+  enddo
+  VelocityExBtheta(:,1) = VelocityExBtheta(:,2)
+  VelocityExBphi  (:,1) = VelocityExBphi  (:,2)
+  
+  if (.not.IsMoveFluxTube) Then 
+     VelocityExBtheta(:,:) = 0.0
+     VelocityExBPhi  (:,:) = 0.0
+     VelocityExBr    (:,:) = 0.0
+  endif
+
+  if (.not.IsUseJr) Then 
+     Jr_G(:,:) = 0.0
+  endif
+
+
+end Subroutine Get_ElectrodynamicPW
+
+
+
+!******************************************************************************
+
+Subroutine Initial_Line_Location
+  
+  use Mod_PW
+  implicit none
+  
+  do iLine=1,nLine
+     if (.not. IsRestart) then
+        FieldLineTheta (iLine) = 10.0 * 3.141592653589/180.0
+        FieldLinePhi   (iLine) = 0.0  * 3.141592653589/180.0
+     else
+        FieldLineTheta (iLine) = 1.57079632679-GeoMagLat(iLine)&
+             * 3.141592653589/180.0
+        FieldLinePhi   (iLine) = GeoMagLon(iLine)              &
+             * 3.141592653589/180.0
+     endif
+     
+     iFieldLineTheta(iLine) = &
+          ceiling(  FieldLineTheta(iLine)  / Dtheta)
+     
+     iFieldLinePhi(iLine)   = &
+          mod(ceiling(FieldLinePhi(iLine)  / Dphi),nPhi-1)
+     
+     if (FieldLinePhi(iLine) .eq. 0.0)  iFieldLinePhi(iLine) = 1
+     
+     
+     FieldLineX(iLine)      = &
+          rLowerBoundary*sin(FieldLineTheta(iLine))*cos(FieldLinePhi(iLine))
+     
+     FieldLineY(iLine)      = &
+          rLowerBoundary*sin(FieldLineTheta(iLine))*sin(FieldLinePhi(iLine))
+     
+     FieldLineZ(iLine)      = &
+          rLowerBoundary*cos(FieldLineTheta(iLine))
+     
+     OldFieldLineX(iLine)   = FieldLineX(iLine)
+     OldFieldLineY(iLine)   = FieldLineY(iLine)
+     OldFieldLineZ(iLine)   = FieldLineZ(iLine)
+  enddo
+  
+end Subroutine Initial_Line_Location
+
+
+!******************************************************************************
+
+Subroutine MoveFluxTube
+  use Mod_PW
+  implicit none
+  
+
+  ! if the field line is in the polar circle then set velocity equal
+  ! to that of the nearest point. Otherwise, get the velocity from an
+  !interpolation.
+  
+  if (iFieldLineTheta(iLine) .le. 1) then
+     write(*,*) 'TT',FieldLineTheta(iLine)/Dtheta,FieldLineZ(iLine),OldFieldLineZ(iLine)
+     
+     
+     
+     !stop
+     FieldLineVelTheta(iLine)= &
+          VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
+     FieldLineVelPhi(iLine)= &
+          VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
+     
+     FieldLineJr(iLine)    = &
+          Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
+     write(*,*) iFieldLineTheta(iline),time,FieldLineVelX(iLine),FieldLineX(iLine)
+  else
+     Call New_Interpolate_Velocity( &
+          Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),           &
+          Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),         &
+          FieldLineTheta(iLine),                                          &
+          VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),  &
+          VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),&
+          VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),    &
+          VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),  &
+          FieldLineVelTheta(iLine),FieldLineVelPhi(iLine))
+     
+     Call New_Interpolate_Jr( &
+          Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),           &
+          Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),         &
+          FieldLineTheta(iLine),                                          &
+          Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),  &
+          Jr_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)-1),&
+          FieldLineJr(iLine))
+  endif
+  
+  
+  
+  OldFieldLineTheta(iLine) = FieldLineTheta(iLine)
+  OldFieldLinePhi(iLine)   = FieldLinePhi(iLine)
+  
+  
+  OldFieldLineX(iLine) = FieldLineX(iLine)
+  OldFieldLineY(iLine) = FieldLineY(iLine)
+  OldFieldLineZ(iLine) = FieldLineZ(iLine)
+  
+  
+  FieldLineVelx(iLine)   = &
+       FieldLineVelTheta(iLine)*cos(OldFieldLineTheta(iLine)) &
+       * cos(OldFieldLinePhi(iLine)) &
+       - FieldLineVelPhi(iLine)*sin(OldFieldLinePhi(iLine)) 
+  
+  FieldLineVely(iLine)   = &
+       FieldLineVelTheta(iLine)*cos(OldFieldLineTheta(iLine)) &
+       * sin(OldFieldLinePhi(iLine)) & 
+       + FieldLineVelPhi(iLine)*cos(OldFieldLinePhi(iLine))
+  
+  FieldLineVelz(iLine)   = &
+       -FieldLineVelTheta(iLine)*sin(OldFieldLineTheta(iLine))
+  
+  FieldLineX(iLine) =  &
+       (FieldLineVelx(iLine)) *Dt     &
+       + OldFieldLineX(iLine)                                   
+  
+  FieldLineY(iLine) =  &
+       (FieldLineVely(iLine)) *Dt     &
+       + OldFieldLineY(iLine)                                   
+  
+  FieldLineZ(iLine) =  &
+       (FieldLineVelz(iLine)) *Dt     &
+       + OldFieldLineZ(iLine) 
+  
+  if (iFieldLineTheta(iLine) .le. 1) write(*,*) FieldLineZ(iLine)/rLowerBoundary,Time
+  
+  ! Get new angles from new XYZ positions.Use Theta=arccos(Z/R) and
+  ! use Phi = arctan(y/x). make sure to use case statements for phi
+  ! depending on what quadrant the position lies in. 
+  
+  if (FieldLineZ(iLine)/rLowerBoundary .ge.1) then
+     FieldLineTheta(iLine) = 1.57079632679 &
+          - acos(sqrt(FieldLineX(iLine)**2+FieldLineY(iLine)**2) & 
+          / rLowerBoundary)
+  else
+     FieldLineTheta(iLine) = &
+          abs(acos(FieldLineZ(iLine)/rLowerBoundary))
+  endif
+  
+  
+  
+  
+  if (FieldLineX(iLine) .gt. 0.0 .and. FieldLineY(iLine) .ge. 0.0) then
+     
+     FieldLinePhi(iLine)   = &
+          (atan(FieldLineY(iLine)/FieldLineX(iLine)))
+  else if(FieldLineX(iLine) .lt. 0.0 .and. FieldLineY(iLine).ge.0.0) then
+     FieldLinePhi(iLine)   = &
+          3.14159-(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
+  else if(FieldLineX(iLine) .lt.0.0.and. FieldLineY(iLine) .le. 0.0) then
+     FieldLinePhi(iLine)   = &
+          3.14159+(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
+  else if(FieldLineX(iLine) .gt.0.0.and. FieldLineY(iLine) .le. 0.0) then
+     FieldLinePhi(iLine)   = &
+          6.283185-(atan(abs(FieldLineY(iLine)/FieldLineX(iLine))))
+  else if(FieldLineX(iLine) .eq.0.0.and. FieldLineY(iLine) .ge.0.0) then
+     FieldLinePhi(iLine)   = &
+          3.14159/2.0
+  else if(FieldLineX(iLine) .eq.0.0.and. FieldLineY(iLine) .le.0.0) then
+     FieldLinePhi(iLine)   = &
+          3.0*3.14159/2.0
+  endif
+  
+  
+  ! Deal with posibility that phi is negative
+  if (FieldLinePhi(iLine) .lt. 0.0) then
+     write(*,*) 'TTT',FieldLinePhi(iLine)
+     FieldLinePhi(iLine) = FieldLinePhi(iLine) + 6.283185
+     write(*,*) 'TTTT',FieldLinePhi(iLine)
+     write(*,*) FieldLineX(iLine),FieldLineY(iLine),FieldLineZ(iLine)
+     stop
+  endif
+  
+  
+  
+  ! Extract the nearest grid point greater then or equal to the 
+  ! actual location. The result is used to get the velocity. 
+  iFieldLineTheta(iLine) = &
+       ceiling(  FieldLineTheta(iLine)  / Dtheta)
+  
+  iFieldLinePhi(iLine)   = &
+       mod(ceiling(FieldLinePhi(iLine)  / Dphi),nPhi-1)
+  if (iFieldLinePhi(iLine) .eq. 0)  iFieldLinePhi(iLine) = 1
+  if (iFieldLineTheta(iLine) .eq. 0)  iFieldLineTheta(iLine) = 1
+  
+  ! Put field line locations back on the sphere
+  
+  if (FieldLineTheta(iLine) .ne.0.0 ) then
+     FieldLineX(iLine)      = &
+          rLowerBoundary*sin(FieldLineTheta(iLine))     &
+          * cos(FieldLinePhi(iLine))
+     
+     FieldLineY(iLine)      = &
+          rLowerBoundary*sin(FieldLineTheta(iLine))     &
+          * sin(FieldLinePhi(iLine))
+     
+     FieldLineZ(iLine)      = &
+          rLowerBoundary*cos(FieldLineTheta(iLine))
+     
+  endif
+  
+end Subroutine MoveFluxTube
+
+
+!******************************************************************************
+
+
+!******************************************************************************
+!  This routine advances a single field line
+!******************************************************************************
+
+Subroutine AdvancePWline
+  use Mod_PW
+  implicit none
+
+  real XXX
+
+  ! Get the GeoMagnetic latitude and longitude 
+  GeoMagLat(iLine) = (1.57079632679 - OldFieldLineTheta(iLine)) &
+       * 180.0 / 3.141592653589
+  
+  GeoMagLon(iLine) = (OldFieldLinePhi(iLine)) &
+       * 180.0 / 3.141592653589
+  
+  !Calculate the horizontal fieldline velocity in cm/s to be used for 
+  !centrifugal force in model
+  if (IsCentrifugal) then
+     OmegaHorFieldLine(iLine)= sqrt(( &
+          FieldLineVelTheta(iLine)**2.0+FieldLineVelPhi(iLine)**2.0) &
+          /rLowerBoundary**2.0)
+  else
+     OmegaHorFieldLine(iLine) = 0.0
+  endif
+  
+  
+  Call Put_Mod_PW(&
+       dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
+       dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
+       dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
+       dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine), &
+       IsRestart,IsVariableDt, Time,DT,DToutput,DTpolarwind,TypeSolver,    &
+       GeoMagLat(iLine),GeoMagLon(iLine),FieldLineJr(iLine),               &
+       OmegaHorFieldLine(iLine),iUnitInput,iUnitOutput,                    &
+       iUnitGraphics(iLine),                                               &
+       iUnitSourceGraphics,iUnitRestart(iLine),iUnitCollision,             &
+       iUnitRestartIn(iLine),iLine,int(nLine))   
+  
+  
+  Call polar_wind
+  
+  if (iLine == nLine) then
+     Call Get_Mod_PW( &
+          dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
+          dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
+          dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
+          dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
+          IsRestart,IsVariableDt,Time,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
+          XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
+  else
+     Call Get_Mod_PW( &
+          dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
+          dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
+          dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
+          dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
+          IsRestart,IsVariableDt,XXX,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
+          XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
+  endif
+  
+end Subroutine AdvancePWline
