@@ -9,7 +9,7 @@ MODULES = \
 	ModParameters.o\
 	ModCommonPlanet.o\
 	ModCommonVariables.o\
-	Mod_PW.o\
+	ModPW.o\
 	ModNeutralPW.o\
 	ModPass.o
 
