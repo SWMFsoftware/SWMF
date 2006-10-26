@@ -14,26 +14,50 @@ module ModHallResist
   real, public:: HallCmaxFactor = 1.0
 
   ! Non-diagonal part (Hall) resistivity with an arbitrary factor
-  real, public:: IonMassPerCharge, HallFactor, HallHyperFactor=0.0
+  real, public:: IonMassPerCharge, HallFactor,HallHyperFactor=0.
+
+  ! Ion mass per charge may depend on space and time for multispecies
+  real, public, allocatable:: IonMassPerCharge_G(:,:,:)
 
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:), &
-       BxPerRho_G(:,:,:),ByPerRho_G(:,:,:),BzPerRho_G(:,:,:)
+       BxPerN_G(:,:,:),ByPerN_G(:,:,:),BzPerN_G(:,:,:)
 
   ! Name/shape of the region where Hall effect is used
   character(len=20), public :: NameHallRegion ='all'
 
-  ! Parameters for this region
-  real, public :: R1Hall=0.0, R2Hall=1000.0, HallWidth=10.0 
+  ! Parameters for exclusion of pole region in spherical grids
+  real, public :: PoleAngleHall=-1.0, dPoleAngleHall=-1.0
+
+  ! Parameters for exclusion of inner boundary (if present)
+  real, public :: rInnerHall=-1.0, DrInnerHall=0.0
+
+  ! Parameters for the center location of Hall region
+  real, public :: X0Hall=0.0, Y0Hall=0.0, Z0Hall=0.0
+
+  ! Parameters for spherical Hall region
+  real, public :: rSphereHall=-1.0, DrSphereHall=-1.0
+
+  ! Parameters for box Hall region
+  real, public :: xSizeBoxHall=-1.0, ySizeBoxHall=-1.0, zSizeBoxHall=-1.0
+  real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
 
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
-  public :: calc_hyper_resistivity
+  public :: calc_hyper_resistivity, set_ion_mass_per_charge
+
   ! Local variables
   real :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
 
   ! Inverse of cell size
   real :: InvDx, InvDy, InvDz
+
+  ! Local variables for Hall regions
+  real :: TanSqr1 = -1.0, TanSqr2 = -1.0                  ! pole
+  real :: rSqrInner1 = -1.0, rSqrInner2 = -1.0            ! inner body
+  real :: rSqrSphere1 = -1.0, rSqrSphere2 = -1.0          ! spherical region
+  real :: xSizeBox1=-1.0, ySizeBox1=-1.0, zSizeBox1=-1.0  ! box region
+  real :: xSizeBox2=-1.0, ySizeBox2=-1.0, zSizeBox2=-1.0  ! box region
 
   !^CFG IF COVARIANT BEGIN
   ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
@@ -47,7 +71,9 @@ contains
   subroutine init_hall_resist
     use ModSize,    ONLY: nI, nJ, nK, nDim
     use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
-    use ModPhysics, ONLY: UnitSI_B, UnitSI_T, UnitSI_X, UnitSI_Rho
+    use ModPhysics, ONLY: UnitSI_B, UnitSI_T, UnitSI_X, UnitSI_Rho, &
+         AverageIonMass, AverageIonCharge
+    use ModVarIndexes, ONLY: UseMultiSpecies
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -55,8 +81,13 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    IonMassPerCharge =HallFactor/cMu*(cProtonMass/cElectronCharge) &
-         * UnitSI_B*UnitSI_T/(UnitSI_X**2 * UnitSI_Rho)
+    IonMassPerCharge =HallFactor/cMu &
+         * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
+         *  UnitSI_B*UnitSI_T/(UnitSI_X**2 * UnitSI_Rho)
+
+    ! If not multispecies, multiply with average ion mass
+    if(.not.UseMultiSpecies) &
+         IonMassPerCharge = IonMassPerCharge * AverageIonMass
 
     if (DoTestMe) then
        write(*,*) ''
@@ -64,7 +95,7 @@ contains
        write(*,*)
        write(*,*) 'HallFactor       = ',HallFactor
        write(*,*) 'HallCmaxFactor   = ',HallCmaxFactor
-       write(*,*) 'HallHyperFactor   = ',HallHyperFactor
+       write(*,*) 'HallHyperFactor  = ',HallHyperFactor
        write(*,*) 'IonMassPerCharge = ',IonMassPerCharge
        ! Omega_Bi=B0/IonMassPerCharge'
        write(*,*)
@@ -74,12 +105,72 @@ contains
 
     if(.not.allocated(HallJ_CD)) allocate(&
          HallJ_CD(nI,nJ,nK,nDim), &
-         BxPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
-         ByPerRho_G(0:nI+1,0:nJ+1,0:nK+1),&
-         BzPerRho_G(0:nI+1,0:nJ+1,0:nK+1) )
+         BxPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
+         ByPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
+         BzPerN_G(0:nI+1,0:nJ+1,0:nK+1),&
+         IonMassPerCharge_G(0:nI+1,0:nJ+1,0:nK+1) )
+
+    IonMassPerCharge_G = IonMassPerCharge
+
+    rSqrInner1 = -1.0
+    rSqrInner2 = -1.0
+    TanSqr1 = -1.0
+    TanSqr2 = -1.0
+
+    if(PoleAngleHall > 0.0)then
+       TanSqr1 = tan(PoleAngleHall)**2
+       TanSqr2 = tan(PoleAngleHall+dPoleAngleHall)**2
+    end if
+
+    if(rInnerHall > 0.0)then
+       rSqrInner1 = rInnerHall**2
+       rSqrInner2 = (rInnerHall + DrInnerHall)**2
+    endif
+
+    select case(NameHallRegion)
+    case('sphere0')
+       rSqrSphere1 = rSphereHall**2
+       rSqrSphere2 = (rSphereHall+DrSphereHall)**2
+    case('box')
+       xSizeBox1 = xSizeBoxHall
+       ySizeBox1 = ySizeBoxHall
+       zSizeBox1 = zSizeBoxHall
+       xSizeBox2 = xSizeBoxHall + 2*DxSizeBoxHall
+       ySizeBox2 = ySizeBoxHall + 2*DySizeBoxHall
+       zSizeBox2 = zSizeBoxHall + 2*DzSizeBoxHall
+    case('all')
+       ! Do nothing
+    case default
+       call stop_mpi('ERROR in init_hall_resist: NameHallRegion=' &
+            //NameHallRegion)
+    end select
 
   end subroutine init_hall_resist
 
+  !=========================================================================
+  subroutine set_ion_mass_per_charge(iBlock)
+
+    use ModAdvance, ONLY: State_VGB, Rho_
+    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
+         MassSpecies_V
+
+    ! Set IonMassPerCharge_G based on average mass
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    !-------------------------------------------------------------------------
+
+    ! For single species the array is already set in init_hall_resist
+    if(.not.UseMultiSpecies)RETURN
+
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+            State_VGB(Rho_,i,j,k,iBlock) / &
+            sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
+            /MassSpecies_V)
+    end do; end do; end do
+
+  end subroutine set_ion_mass_per_charge
   !===========================================================================
 
   subroutine set_block_field(iBlock)
@@ -599,6 +690,8 @@ contains
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
 
     real :: jLeft_D(3), jRight_D(3)
+
+    real :: AverageMassFace
     !-------------------------------------------------------------------------
     if(iProc==ProcTest.and.iBlock==BlkTest.and. &
              (i==iTest.or.i==iTest+1.and.iDir==x_) .and. &
@@ -615,6 +708,7 @@ contains
 
     if( IsNewBlockHall ) then
        call set_block_field(iBlock)
+       call set_ion_mass_per_charge(iBlock)
        if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
@@ -1066,7 +1160,7 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       Coeff = -Coeff0* IonMassPerCharge* &
+       Coeff = -Coeff0* IonMassPerCharge_G(i,j,k) * &
             sqrt(sum(FullB_DG(:,i,j,k)**2)) / State_VGB(Rho_,i,j,k,iBlock)
 
        HyperSource_D =Coeff*  &
@@ -1085,13 +1179,13 @@ contains
     end do; end do; end do
 
   end subroutine calc_hyper_resistivity
-!=========================================================================
+  !=========================================================================
   real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
     use ModMain,     ONLY: nI, nJ, nK, nBlock
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, dx_BLK, dy_BLK, dz_BLK
     use ModPhysics, ONLY : Rbody
     integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
-    real :: r,x,y,z
+    real :: x,y,z,rSqr,TanSqr,Distance1,Distance2
 
     !--------------------------------------------------------------
     select case(iDir)
@@ -1112,25 +1206,53 @@ contains
        y = 0.5*sum(y_BLK(iFace,jFace,kFace-1:KFace,iBlock))
        z = 0.5*sum(z_BLK(iFace,jFace,kFace-1:KFace,iBlock))
     end select
-    
+    rSqr = (x**2 + y**2 + z**2)
+
+    hall_factor = 1.0
     select case(NameHallRegion)
     case("all")
-       hall_factor = 1.0
+       ! Do nothing
     case("user")
        ! hall_factor= &
        !   user_hall_factor(x, y, z, iDir, iFace, jFace, kFace, iBlock)
-    case("shell")
-       hall_factor = 1.0
-       r=sqrt(x*x+y*y+z*z)       
-       if(r < R1Hall .or. r > R2Hall)then
+    case("sphere0")
+       if(rSqr > rSqrSphere2)then
           hall_factor=0.0
-       else if(r > R2Hall-HallWidth)then
-          hall_factor = (R2Hall-r)/HallWidth
-       else if(r < R1Hall+HallWidth)then       
-          hall_factor = (r-R1Hall)/HallWidth
+       else if(rSqr > rSqrSphere1)then
+          hall_factor = (rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
+       end if
+    case("box")
+       Distance2 = max( &
+            abs(x-x0Hall)/xSizeBox2, &
+            abs(y-y0Hall)/ySizeBox2, &
+            abs(z-z0Hall)/zSizeBox2 )
+       Distance1 = max( &
+            abs(x-x0Hall)/xSizeBox1, &
+            abs(y-y0Hall)/ySizeBox1, &
+            abs(z-z0Hall)/zSizeBox1 )
+       if(Distance2 > 0.5)then
+          hall_factor=0.0
+       else if(Distance1 > 0.5)then
+          hall_factor = (0.5-Distance2)/(Distance1-Distance2)
        end if
     case default
     end select
+
+    if(rSqr < rSqrInner1)then
+       hall_factor=0.0
+    else if(rSqr < rSqrInner2)then
+       hall_factor = (rSqr-rSqrInner1)/(rSqrInner2 - rSqrInner1)
+    endif
+
+    if(TanSqr1 > 0.0 .and. abs(z)>0.0)then
+       TanSqr = (x**2+y**2)/z**2
+       if(TanSqr < TanSqr1)then
+          hall_factor=0.0
+       else if(TanSqr < TanSqr2)then
+          hall_factor = (TanSqr-TanSqr1)/(TanSqr2-TanSqr1)
+       end if
+    end if
+
   end function hall_factor
 
 end module ModHallResist
