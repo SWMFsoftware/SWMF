@@ -5,7 +5,6 @@ OBJECTS_PLANET = \
 	prntCollision_planet.o\
 	rcolum_planet.o\
 	startupPW_planet.o\
-	boxnum_planet.o\
 	fieldm_planet.o\
 	precipitationPW_planet.o\
 	solzen_planet.o\
