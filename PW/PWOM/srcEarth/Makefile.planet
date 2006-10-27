@@ -5,21 +5,21 @@ OBJECTS_PLANET = \
 	prnthe_planet.o\
 	prntCollision_planet.o\
 	rcolum_planet.o\
-	strt_planet.o\
+	startupPW_planet.o\
 	boxnum_planet.o\
 	fieldm_planet.o\
-	precip_planet.o\
+	precipitationPW_planet.o\
 	solzen_planet.o\
 	suncor_planet.o\
 	clfmhe_planet.o\
 	ggm_planet.o\
 	sperfc_planet.o\
 	chap_planet.o\
-	cltempw_planet.o\
+	IonHeatFluxPW_planet.o\
 	modatm_planet.o\
 	ssflux_planet.o\
 	vcd_planet.o\
-	collis_planet.o\
-	newbgd_planet.o\
-	msis90_planet.o\
-	strt1_planet.o
+	collisionPW_planet.o\
+	newboundaryPW_planet.o\
+	msis90_planet.o
+	
