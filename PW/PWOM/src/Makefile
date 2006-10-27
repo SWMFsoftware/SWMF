@@ -23,7 +23,7 @@ METHODS = \
 	prnthp.o\
 	prntop.o\
 	prntsm.o\
-	elfldw.o\
+	EfieldPW.o\
 	clfme2w.o\
 	calcdt.o\
 	diffusion.o\
