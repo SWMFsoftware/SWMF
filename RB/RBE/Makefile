@@ -20,8 +20,7 @@ MAKEFILE_DEF:
 install_cont: 
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
-		cd share; make install;\
-		cd util;  make install;\
+		cd share; make install; \
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
