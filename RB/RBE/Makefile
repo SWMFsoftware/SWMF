@@ -21,6 +21,7 @@ install_cont:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cd share; make install;\
+		cd util;  make install;\
 	else \
 		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
@@ -36,21 +37,30 @@ install_cont:
 #
 
 RBE:
-	@cd ${SHAREDIR}; make LIB
-	@cd src;         make RBE
+	@cd ${SHAREDIR};  make LIB
+	@cd ${TIMINGDIR}; make LIB
+	@cd src;          make RBE
 
 LIB:
 	cd src; make LIB
 
 test:	RBE
 	cd run; ./rbe.exe
+	make test_compare
+
+test_compare:
+	gunzip -c test/2000f223_e.fls.gz > test/2000f223_e.fls
+	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		test/2000f223_e.fls run/2000f223_e.fls
 
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	@cd src; make clean
+	@(if [ -d util ];  then cd util;  make clean; fi);
 	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean: clean
+	@(if [ -d util  ]; then cd util;  make distclean; fi);
 	@(if [ -d share ]; then cd share; make distclean; fi);
 	@cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
