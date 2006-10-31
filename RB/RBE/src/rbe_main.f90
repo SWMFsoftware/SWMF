@@ -44,16 +44,28 @@ program rbe
   use rbe_cread2, ONLY: nstept, nstep
   use rbe_time,   ONLY: istep
   implicit none
-
+  !---------------------------------------------------------------------------
   ! Initial setup for the rbe model
   call readInputData
+  call timing_active(.true.)
+  call timing_step(0)
+  call timing_start('RBE')
+  call timing_start('rbe_init')
   call rbe_init
-  write(*,*)'RBE initialized'
+  call timing_stop('rbe_init')
+  call timing_report_total
+  call timing_reset('#all',3)
 
   ! start the calculation, the time loop
   do istep = 1, nstept+nstep 
+     call timing_step(istep)
+     call timing_start('rbe_run')
      call rbe_run
+     call timing_stop('rbe_run')
   end do
+
+  call timing_stop('RBE')
+  call timing_report
 
 end program rbe
 !============================================================================
@@ -64,3 +76,9 @@ subroutine CON_stop(String)
   stop
 
 end subroutine CON_stop
+!============================================================================
+real*8 function MPI_WTIME()
+  integer:: clock,clockrate,count_max
+  call system_clock(clock,clockrate,count_max)
+  MPI_WTIME=dble(clock)/clockrate
+end function MPI_WTIME
