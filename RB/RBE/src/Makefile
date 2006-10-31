@@ -18,7 +18,7 @@ RBE:
 	@make rbe.exe
 	@echo "rbe.exe has been created"
 
-rbe_main.o: rbe_subs.o
+rbe_main.o: rbe_subs.o ${LIBDIR}/libSHARE.a ${LIBDIR}/libTIMING.a
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
@@ -26,16 +26,11 @@ rbe_main.o: rbe_subs.o
 .f90.o:
 	${COMPILE.f90} ${CFLAGS} ${PRECISION} $<
 
-rbe.exe: rbe_main.f90 ${OBJECTS}
-	${LINK.f90} ${Lflag2} -o rbe.exe rbe_main.f90 ${OBJECTS} \
-	-L. -lSHARE
+rbe.exe: rbe_main.o ${OBJECTS}
+	${COMPILE.f90} ${Lflag2} -o rbe.exe rbe_main.f90 ${OBJECTS} \
+	-L${LIBDIR} -lTIMING -lSHARE
 
-#rbe.exe: rbe_main.f90 ${MY_LIB}
-#	${LINK.f90} ${Lflag2} -o rbe.exe rbe_main.f90 -L. -lRBE
-
-# -L. -lSHARE
-
-MY_LIB = libRBE.a
+MY_LIB = ${LIBDIR}/libRB.a
 
 LIB:
 	make ${MY_LIB}
@@ -43,9 +38,9 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJECTS}
+${MY_LIB}: ${OBJECTS} RB_wrapper.o
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${OBJECTS}
+	${AR} ${MY_LIB} ${OBJECTS} RB_wrapper.o
 
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
