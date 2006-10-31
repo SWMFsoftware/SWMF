@@ -20,7 +20,8 @@ program pw
   !****************************************************************************
   ! Read the input file
   !****************************************************************************
-  call PW_set_parameters
+  call PW_set_parameters('READ')
+  ! call PW_set_parameters('CHECK')
 
   call PW_initialize
 
