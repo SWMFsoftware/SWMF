@@ -1,4 +1,5 @@
-Module Mod_PW
+module ModPWOM
+
   use ModParameters
   implicit none
 
@@ -68,5 +69,6 @@ Module Mod_PW
 
   logical:: IsImplicit, IsRestart, IsVariableDt
 
-  CHARACTER(7) :: TypeSolver
-end Module Mod_PW
+  character(7) :: TypeSolver
+
+end module ModPWOM

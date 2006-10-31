@@ -1,252 +1,96 @@
 program pw
 
-  use Mod_PW
+  use ModPwom
   use ModPass
   use ModMpi
 
   implicit none
 
-!******************************************************************************
-! Initiallize MPI and get number of processors and rank of given processor
-!******************************************************************************
-  
-
-  ! Temporary variables
-  real:: ddt1, xxx
-  integer:: ns
-
+  !****************************************************************************
+  ! Initiallize MPI and get number of processors and rank of given processor
+  !****************************************************************************
 
   !---------------------------------------------------------------------------
   call MPI_INIT(errcode)
   iComm = MPI_COMM_WORLD
-  
+
   call MPI_COMM_RANK(iComm,iProc,errcode)
   call MPI_COMM_SIZE(iComm,nProc,errcode)
-  write(*,*) iProc,nProc
 
-!******************************************************************************
-!  Set the number of fieldlines that each processor solves for
-!******************************************************************************
-  if (iproc .lt. mod(maxLine,nproc)) then
-     nLine=int(ceiling(real(maxline)/real(nproc)))
-  else
-     nLine=int(floor(real(maxline)/real(nproc)))
-  endif
+  !****************************************************************************
+  ! Read the input file
+  !****************************************************************************
+  call PW_set_parameters
 
-!******************************************************************************
-!  Define file names and unit numbers, and open for reading and writing.
-!******************************************************************************
-  NameInput          = 'pw.input'
-  NameOutput         = 'log.out'
-  NameSourceGraphics = 'plot_sources.out'
-  NameCollision      = 'plots_collision.out'
-  NamePhiNorth  = 'North.dat'
-  NamePhiSouth  = 'South.dat'
+  call PW_initialize
 
-  iUnitInput         = 11 
-  iUnitOutput        = 16  
-  iUnitSourceGraphics= 18
-  iUnitCollision     = 17  
-  iUnitSouth         = 101
-  iUnitNorth         = 102
-
-  do iLine=1,nLine
-     if (iproc .lt. mod(maxLine,nproc)) then
-        iLineGlobal(iLine)=&
-             iproc*ceiling(real(maxline)/real(nproc))+iLine
-     else
-        iLineGlobal(iLine)=&
-             (mod(maxLine,nproc))*ceiling(real(maxline)/real(nproc)) &
-             + ((iproc)-mod(maxLine,nproc))                        &
-             *floor(real(maxline)/real(nproc))+iLine
-     endif
-     write(*,*) 'iLineGlobal',iLineGlobal(iLine)
-     
-     write(NameRestartIn(iLine),"(a,i4.4,a)") &
-          'PW/restartIN/restart_iline',iLineGlobal(iLine),'.dat'
-     write(NameRestart(iLine),"(a,i4.4,a)") &
-          'PW/restartOUT/restart_iline',iLineGlobal(iLine),'.dat'
-
-     write(NameGraphics(iLine),"(a,i4.4,a)") &
-          'PW/plots/plots_iline',iLineGlobal(iLine),'.out'
-
-     iUnitRestartIn(iLine) = 200+iLineGlobal(iLine)
-     iUnitRestart(iLine)   = 300+iLineGlobal(iLine)
-     iUnitGraphics(iLine)  = 400+iLineGlobal(iLine)
-
-     OPEN(iUnitRestart(iLine) ,FILE=NameRestart(iLine))
-     OPEN(iUnitGraphics(iLine),FILE=NameGraphics(iLine))
-  enddo
-  
-   
-
-  
-  OPEN(iUnitInput,         FILE=NameInput)
-  OPEN(UNIT=iUnitOutput,   FILE=NameOutput)
-
-!  OPEN(iUnitSourceGraphics,FILE=NameSourceGraphics)
-
-!  OPEN(iUnitCollision,     FILE=NameCollision)
-  open(iUnitNorth,file=NamePhiNorth)  
-
-
-!******************************************************************************
-! Read the input file
-!******************************************************************************
-  call Get_InputPW
-
-  
-!****************************************************************************
-! Use Get_GITM to bring in neutral atmosphere from GITM
-!****************************************************************************  
+  !****************************************************************************
+  ! Use Get_GITM to bring in neutral atmosphere from GITM
+  !****************************************************************************
   !call GetNeutralData
 
-!******************************************************************************
-!  Set parameters for reading in potential and time of simulation
-!******************************************************************************
+  !****************************************************************************
+  !  Set parameters for reading in potential and time of simulation
+  !****************************************************************************
 
 
   Dtheta  = 0.0242
   Dphi    = 0.0245
-  
+
   Dt      =    50.0
-!  Dt      =    0.2
-!  Dt      =    Tmax
+  !  Dt      =    0.2
+  !  Dt      =    Tmax
   !maxTime = 10000.0
   maxTime = Tmax
   Time    =     0.0
 
 
-!******************************************************************************
-! Read information from IE file, and get the velocities
-!******************************************************************************
+  !******************************************************************************
+  ! Read information from IE file, and get the velocities
+  !******************************************************************************
 
   call Get_ElectrodynamicPW  
 
 
-!******************************************************************************
-!  Move flux tube around
-!******************************************************************************
-  
+  !******************************************************************************
+  !  Move flux tube around
+  !******************************************************************************
+
   !initialize field line locations
 
   call Initial_Line_Location
- 
 
-  !write(13,*) 'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz"'
-  !write(13,*) 'Zone I=', int(maxTime/DtOutput),' ,',' DATAPACKING=POINT'  
-  !
-  !write(14,*) 'VARIABLES = "X", "Y", "Z", "Time", "Jr"'
-  !write(14,*) 'Zone I=', int(maxTime/DtOutput),' ,',' DATAPACKING=POINT'  
-  
+  !******************************************************************************
+  ! Move the flux tube, solve each fieldline, and advance the time
+  !******************************************************************************
 
-!******************************************************************************
-! Move the flux tube, solve each fieldline, and advance the time
-!******************************************************************************
-  
   TIMELOOP:do
-     if (Time .ge. Tmax) exit TIMELOOP
+     if (Time >= Tmax) exit TIMELOOP
      do iLine=1,nLine
-      
+
         ! MoveFluxTube moves the flux tube, then we can use the angular
         !position to get the lat and lon
-        
+
         call MoveFluxTube
-        
+
         !  Call the flux tube to be solved
-        
+
         call AdvancePWline
 
      enddo
   enddo TIMELOOP
 
-  
+  !******************************************************************************
+  !  Write output, use cartesian coords for output
+  !******************************************************************************
 
-!******************************************************************************
-!  Write output, use cartesian coords for output
-!******************************************************************************
- 
-! do iPhi=1,nPhi
-!     do iTheta=1,nTheta
-!        ux(iPhi,iTheta) =  & 
-!             VelocityExBtheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
-!             * cos(Phi_G(iPhi,iTheta)) &
-!             - VelocityExBphi(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
-!             + VelocityExBr(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
-!             * cos(Phi_G(iPhi,iTheta))
-!        
-!        uy(iPhi,iTheta) =  &
-!             VelocityExBtheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
-!             * sin(Phi_G(iPhi,iTheta)) &
-!             + VelocityExBphi(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
-!             + VelocityExBr(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
-!             * sin(Phi_G(iPhi,iTheta))
-!        
-!        uz(iPhi,iTheta) =  &
-!             -VelocityExBtheta(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta)) &
-!             + VelocityExBr(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
-!        
-!        x(iPhi,iTheta)  =  &
-!             rLowerBoundary*sin(Theta_G(iPhi,iTheta))*cos(Phi_G(iPhi,iTheta))
-!        
-!        y(iPhi,iTheta)  =  &
-!             rLowerBoundary*sin(Theta_G(iPhi,iTheta))*sin(Phi_G(iPhi,iTheta))
-!        
-!        z(iPhi,iTheta)  =  &
-!             rLowerBoundary*cos(Theta_G(iPhi,iTheta))
-!        
-!        Ex(iPhi,iTheta) =  & 
-!             Etheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
-!             * cos(Phi_G(iPhi,iTheta))                     &
-!             - Ephi(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
-!             + Er(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
-!             * cos(Phi_G(iPhi,iTheta))
-!        
-!        Ey(iPhi,iTheta) =  &
-!             Etheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
-!             * sin(Phi_G(iPhi,iTheta))                     &
-!             + Ephi(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
-!             + Er(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
-!             * sin(Phi_G(iPhi,iTheta))
-!        
-!        Ez(iPhi,iTheta) =  &
-!             -Etheta(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta))&
-!             + Er(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
-!     enddo
-!  enddo
-!  
-!  
-!  write(12,*) &
-!     'VARIABLES = "X", "Y", "Z", "Ux", "Uy", "Uz", "V", "Ex", "Ey", "Ez", "Jr"'
-!
-!  write(12,*) 'Zone I=', nPhi, ', J=', nTheta,', DATAPACKING=POINT'
-!
-!  do iTheta=1,nTheta
-!     do iPhi=1,nPhi
-!        write(12,*) &
-!             x(iPhi,iTheta),y(iPhi,iTheta),z(iPhi,iTheta),     &
-!             ux(iPhi,iTheta),uy(iPhi,iTheta),uz(iPhi,iTheta),  &
-!             Potential_G(iPhi,iTheta),                         &
-!             Ex(iPhi,iTheta), Ey(iPhi,iTheta), Ez(iPhi,iTheta),&
-!             Jr_G(iPhi,iTheta)
-!        
-!     enddo
-!  enddo
-  
+
   do iLine=1,nLine
-     CLOSE(UNIT=iUnitRestart(iLine))
      CLOSE(UNIT=iUnitGraphics(iLine))
-
   enddo
-  close(iUnitNorth)
 
-  CLOSE(UNIT=iUnitOutput)
-  CLOSE(UNIT=iUnitInput)
-  !CLOSE(UNIT=iUnitCollision)
-  !CLOSE(UNIT=iUnitSourceGraphics)
-  
   call MPI_FINALIZE(errcode)
-  
+
 end program pw
 
 
@@ -258,7 +102,7 @@ end program pw
 !******************************************************************************
 
 
-Subroutine interpolate_velocity(  Theta1,Theta2,Theta3, &
+subroutine interpolate_velocity(  Theta1,Theta2,Theta3, &
                                   Phi1,  Phi2,  Phi3,   &
                                   VelocityTheta11, VelocityTheta12, &
                                   VelocityTheta21, VelocityTheta22, &
@@ -329,10 +173,10 @@ Subroutine interpolate_velocity(  Theta1,Theta2,Theta3, &
      
   enddo
      
-end Subroutine interpolate_velocity
+end subroutine interpolate_velocity
 
 
-Subroutine New_Interpolate_Velocity(Theta1,Theta2,Theta3,uTheta1,&
+subroutine New_Interpolate_Velocity(Theta1,Theta2,Theta3,uTheta1,&
                                     uTheta2,uPhi1,uPhi2,uTheta3,uPhi3)
 
 real, intent(in)            ::   Theta1,Theta2,Theta3,uTheta1,&
@@ -346,10 +190,10 @@ uTheta3 = (uTheta2 - uTheta1) / (Theta2-Theta1) * (Theta3-Theta1) + uTheta1
 uPhi3   = (uPhi2   - uPhi1)   / (Theta2-Theta1) * (Theta3-Theta1) + uPhi1
   
   
-end Subroutine New_Interpolate_Velocity
+end subroutine New_Interpolate_Velocity
 
 
-Subroutine New_Interpolate_Jr(Theta1,Theta2,Theta3,Jr1,&
+subroutine New_Interpolate_Jr(Theta1,Theta2,Theta3,Jr1,&
                                     Jr2,Jr3)
 
 real, intent(in)            ::   Theta1,Theta2,Theta3,Jr1,&
@@ -363,270 +207,22 @@ Jr3 = (Jr2 - Jr1) / (Theta2-Theta1) * (Theta3-Theta1) + Jr1
 
   
   
-end Subroutine New_Interpolate_Jr
+end subroutine New_Interpolate_Jr
 
 
-
-!******************************************************************************
-!  Put polarwind variables into Mod_PW for passing 
-!*****************************************************************************
-
-
-Subroutine Put_Mod_PW(dOxyg, uOxyg, pOxyg, TOxyg,     &
-                      dHel, uHel, pHel, THel,         &
-                      dHyd, uHyd, pHyd, THyd,         &
-                      dElect, uElect, pElect, TElect, &
-                      IsRestart,IsVariableDt,Time,DT,DToutput,DTpolarwind,&
-                      TypeSolver,GeoMagLat,GeoMagLon,Jr,wHorizontal,      &
-                      iUnitInput,iUnitOutput,iUnitGraphics,               &
-                      iUnitSourceGraphics,iUnitRestart,iUnitCollision,    &
-                      iUnitRestartIn,iLine,nLine     )
-
-  use ModParameters
-  use ModPass
-  
-  real, intent(in),dimension(maxGrid):: dOxyg, uOxyg, pOxyg, TOxyg,     &
-                                        dHel, uHel, pHel, THel,         &
-                                        dHyd, uHyd, pHyd, THyd,         &
-                                        dElect, uElect, pElect, TElect
- 
-  real,    intent(in)     :: Time, DT, DToutput, DTpolarwind,GeoMagLat, &
-                             GeoMagLon,Jr, wHorizontal                  
-  integer, intent(in)     :: iUnitInput,iUnitOutput,iUnitGraphics,      &
-                             iUnitSourceGraphics,iUnitRestart,          &
-                             iUnitCollision,iUnitRestartIn,iLine,nLine     
-  logical, intent(in)     :: IsRestart,IsVariableDt
-  CHARACTER(7), intent(in):: TypeSolver
-
-  dOxygPW (:) = dOxyg(:)
-  uOxygPW (:) = uOxyg(:)
-  pOxygPW (:) = pOxyg(:)
-  TOxygPW (:) = TOxyg(:)
-  dHelPW  (:) = dHel(:)
-  uHelPW  (:) = uHel(:)
-  pHelPW  (:) = pHel(:)
-  THelPW  (:) = THel(:)
-  dHydPW  (:) = dHyd(:)
-  uHydPW  (:) = uHyd(:)
-  pHydPW  (:) = pHyd(:)
-  THydPW  (:) = THyd(:)
-  dElectPW(:) = dElect(:)
-  uElectPW(:) = uElect(:)
-  pElectPW(:) = pElect(:)
-  TElectPW(:) = TElect(:) 
-  IsRestartPW = IsRestart
-  IsVariableDtPW=IsVariableDT
-  TimePW      = Time
-  TmaxPW      = Time+DT
-  DToutputPW  = DToutput
-  DTpolarwindPW = DTpolarwind
-  TypeSolverPW  = TypeSolver
-  GeoMagLatPW = GeoMagLat
-  GeoMagLonPW = GeoMagLon
-  JrPW        = Jr
-  wHorizontalPW   = wHorizontal
-  iUnitInputPW    =iUnitInput
-  iUnitOutputPW   =iUnitOutput
-  iUnitGraphicsPW =iUnitGraphics
-  iUnitSourceGraphicsPW=iUnitSourceGraphics
-  iUnitRestartPW  =iUnitRestart
-  iUnitCollisionPW=iUnitCollision
-  iUnitRestartInPW=iUnitRestartIn
-  iLinePW = iLine
-  nLinePW = nLine
-end Subroutine Put_Mod_PW
-
-
-
-
-!******************************************************************************
-!  Get polarwind variables from Mod_PW 
-!*****************************************************************************
-
-
-Subroutine Get_Mod_PW(dOxyg, uOxyg, pOxyg, TOxyg,     &
-                      dHel, uHel, pHel, THel,         &
-                      dHyd, uHyd, pHyd, THyd,         &
-                      dElect, uElect, pElect, TElect, &
-                      IsRestart,IsVariableDt,Time,Tmax,DToutput,DTpolarwind,&
-                      TypeSolver,GeoMagLat,GeoMagLon,Jr,wHorizontal,        &
-                      iUnitInput,iUnitOutput,iUnitGraphics,               &
-                      iUnitSourceGraphics,iUnitRestart,iUnitCollision,    &
-                      iUnitRestartIn,iLine,nLine     )
-
-  use ModParameters
-  use ModPass
-  
-  real, intent(out),dimension(maxGrid):: dOxyg, uOxyg, pOxyg, TOxyg,     &
-                                        dHel, uHel, pHel, THel,         &
-                                        dHyd, uHyd, pHyd, THyd,         &
-                                        dElect, uElect, pElect, TElect
- 
-  real,    intent(out)     :: Time,DToutput, DTpolarwind,Tmax,&
-                              GeoMagLat,GeoMagLon, Jr, wHorizontal
-
-  integer,intent(out)      :: iUnitInput,iUnitOutput,iUnitGraphics,      &
-                              iUnitSourceGraphics,iUnitRestart,          &
-                              iUnitCollision,iUnitRestartIn,iLine,nLine
-  logical, intent(out)     :: IsRestart,IsVariableDt
-  CHARACTER(7),intent(out) :: TypeSolver
-  
-
-  dOxyg (:) = dOxygPW(:)
-  uOxyg (:) = uOxygPW(:)
-  pOxyg (:) = pOxygPW(:)
-  TOxyg (:) = TOxygPW(:)
-  dHel  (:) = dHelPW(:)
-  uHel  (:) = uHelPW(:)
-  pHel  (:) = pHelPW(:)
-  THel  (:) = THelPW(:)
-  dHyd  (:) = dHydPW(:)
-  uHyd  (:) = uHydPW(:)
-  pHyd  (:) = pHydPW(:)
-  THyd  (:) = THydPW(:)
-  dElect(:) = dElectPW(:)
-  uElect(:) = uElectPW(:)
-  pElect(:) = pElectPW(:)
-  TElect(:) = TElectPW(:) 
-  IsRestart = IsRestartPW
-  IsVariableDT = IsVariableDtPW
-  Time      = TimePW
-  Tmax      = TmaxPW
-  DToutput  = DToutputPW
-  DTpolarwind = DTpolarwindPW
-  TypeSolver  = TypeSolverPW
-  GeoMagLat = GeoMagLatPW
-  GeoMagLon = GeoMagLonPW
-  Jr        = JrPW
-  wHorizontal = wHorizontalPW
-  iUnitInput    =iUnitInputPW
-  iUnitOutput   =iUnitOutputPW
-  iUnitGraphics =iUnitGraphicsPW
-  iUnitSourceGraphics=iUnitSourceGraphicsPW
-  iUnitRestart  =iUnitRestartPW
-  iUnitCollision=iUnitCollisionPW
-  iUnitRestartIn=iUnitRestartInPW
-  iLine=iLinePW
-  nLine=nLinePW
-end Subroutine Get_Mod_PW
-
-
-
-
-
-
-
-!        FieldLineVelTheta(iLine) = & 
-!             VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
-
-!        FieldLineVelPhi(iLine) = & 
-!             VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine))
-
-
-!        Call interpolate_velocity(  &
-!            Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)), &
-!            Theta_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)+1),&
-!            FieldLineTheta(iLine),           &
-!            Phi_G(iFieldLinePhi(iLine),iFieldLineTheta(iLine)), &
-!            Phi_G(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)),&
-!            FieldLinePhi(iLine), &
-!            VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),&
-!            VelocityExBTheta(iFieldLinePhi(iLine),iFieldLineTheta(iLine)+1),&
-!            VelocityExBTheta(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)),&
-!            VelocityExBTheta(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)+1),&
-!            VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)),&
-!            VelocityExBPhi(iFieldLinePhi(iLine),iFieldLineTheta(iLine)+1),&
-!            VelocityExBPhi(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)),&
-!            VelocityExBPhi(iFieldLinePhi(iLine)+1,iFieldLineTheta(iLine)+1),&
-!            FieldLineVelTheta(iLine),FieldLineVelPhi(iLine))
-
-
-!******************************************************************************
-
-
-!******************************************************************************
-! This subroutine gets the inputs for PWOM
-!******************************************************************************
-
-Subroutine Get_InputPW
-  use Mod_PW
-  implicit none
-
-  real:: ddt1, xxx
-  integer:: ns
-  
-  READ(iUnitInput,*) TMAX
-  WRITE(iUnitOutput,*) TMAX
-  
-  READ(iUnitInput,*) DToutput
-  WRITE(iUnitOutput,*) DToutput
-  
-  READ(iUnitInput,*) TypeSolver
-  WRITE(iUnitOutput,*) TypeSolver
-  
-  READ(iUnitInput,*) IsImplicit
-  WRITE(iUnitOutput,*) IsImplicit
-  
-  read(iUnitInput,*) IsRestart
-  if (IsRestart) then
-     write(*,*) 'Is Restart', IsRestart
-  endif
-  read(iUnitInput,*) IsVariableDt
-  if (IsVariableDt) then
-     write(*,*) 'IsVariableDT', IsVariableDt
-  endif
-  READ(iUnitInput,*)   DTpolarwind
-  WRITE(iUnitOutput,*) DTpolarwind
-  
-  READ(iUnitInput,*)   IsMoveFluxTube 
-  READ(iUnitInput,*)   IsUseJr
-  READ(iUnitInput,*)   IsCentrifugal
-
-!******************************************************************************
-!  Read the restart file
-!******************************************************************************
-  nDim= 390
-  if(IsRestart)then
-
-     do iLine=1,nLine
-        OPEN(UNIT=iUnitRestartIn(iLine),FILE=NameRestartIn(iLine),STATUS='OLD')
-        READ (iUnitRestartIn(iLine),2001) TIME,DDT1,NS
-        READ (iUnitRestartIn(iLine),*)    GeoMagLat(iLine),GeoMagLon(iLine)
-        
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uOxyg(i,iLine),pOxyg(i,iLine),dOxyg(i,iLine),TOxyg(i,iLine),&
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uHel(i,iLine),pHel(i,iLine),dHel(i,iLine),THel(i,iLine),    &
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uHyd(i,iLine),pHyd(i,iLine),dHyd(i,iLine),THyd(i,iLine),    &
-             i=1,NDIM)
-        READ (iUnitRestartIn(iLine),2002) &
-             (XXX,uElect(i,iLine),pElect(i,iLine),dElect(i,iLine),            &
-             TElect(i,iLine),i=1,NDIM)
-        CLOSE(UNIT=iUnitRestartIn(iLine))
-     enddo
-
-2001 FORMAT(2(1PE16.6),I10)
-     ! 2002    FORMAT(5(1PE16.6))
-2002 FORMAT(5(1PE25.16))
-  Else
-     Time=0.0
-  endif
-end Subroutine Get_InputPW
-
-!******************************************************************************
 
 !******************************************************************************
 !  This subroutine gets the electrodynamic parameters, and gets the convection
 !  velocity. 
 !******************************************************************************
-Subroutine Get_ElectrodynamicPW
-  
-  use Mod_PW
+subroutine Get_ElectrodynamicPW
+
+  use ModIoUnit, ONLY: UnitTmp_
+  use ModPWOM
   implicit none
-  
+  !---------------------------------------------------------------------------
+  open(UnitTmp_, FILE=NamePhiNorth)  
+
   do iPhi=1,nPhi
      do iTheta=1,nTheta
         read(unit=iUnitNorth,fmt='(6(1PE13.5))') &
@@ -636,7 +232,8 @@ Subroutine Get_ElectrodynamicPW
      enddo
   enddo
 
-  
+  close(UnitTmp_)
+
 
 !******************************************************************************
 !  Change angles to radians
@@ -755,15 +352,15 @@ Subroutine Get_ElectrodynamicPW
   endif
 
 
-end Subroutine Get_ElectrodynamicPW
+end subroutine Get_ElectrodynamicPW
 
 
 
 !******************************************************************************
 
-Subroutine Initial_Line_Location
+subroutine Initial_Line_Location
   
-  use Mod_PW
+  use ModPWOM
   implicit none
   
   do iLine=1,nLine
@@ -800,13 +397,13 @@ Subroutine Initial_Line_Location
      OldFieldLineZ(iLine)   = FieldLineZ(iLine)
   enddo
   
-end Subroutine Initial_Line_Location
+end subroutine Initial_Line_Location
 
 
 !******************************************************************************
 
-Subroutine MoveFluxTube
-  use Mod_PW
+subroutine MoveFluxTube
+  use ModPWOM
   implicit none
   
 
@@ -961,7 +558,7 @@ Subroutine MoveFluxTube
      
   endif
   
-end Subroutine MoveFluxTube
+end subroutine MoveFluxTube
 
 
 !******************************************************************************
@@ -971,8 +568,8 @@ end Subroutine MoveFluxTube
 !  This routine advances a single field line
 !******************************************************************************
 
-Subroutine AdvancePWline
-  use Mod_PW
+subroutine AdvancePWline
+  use ModPWOM
   implicit none
 
   real XXX
@@ -995,7 +592,7 @@ Subroutine AdvancePWline
   endif
   
   
-  Call Put_Mod_PW(&
+  call put_field_line(&
        dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
        dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
        dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
@@ -1005,13 +602,13 @@ Subroutine AdvancePWline
        OmegaHorFieldLine(iLine),iUnitInput,iUnitOutput,                    &
        iUnitGraphics(iLine),                                               &
        iUnitSourceGraphics,iUnitRestart(iLine),iUnitCollision,             &
-       iUnitRestartIn(iLine),iLine,int(nLine))   
+       iUnitRestartIn(iLine),iLine,int(nLine))
   
   
-  Call polar_wind
+  call polar_wind
   
   if (iLine == nLine) then
-     Call Get_Mod_PW( &
+     call get_field_line( &
           dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
           dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
           dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
@@ -1019,7 +616,7 @@ Subroutine AdvancePWline
           IsRestart,IsVariableDt,Time,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
           XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
   else
-     Call Get_Mod_PW( &
+     call get_field_line( &
           dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
           dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
           dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
@@ -1028,4 +625,4 @@ Subroutine AdvancePWline
           XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
   endif
   
-end Subroutine AdvancePWline
+end subroutine AdvancePWline

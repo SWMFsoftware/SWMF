@@ -1,13 +1,3 @@
-C# QSUB -q econ -lT 03:00:00 -lM 2Mw
-Cset echo
-Cja
-Cmkdir /usr/tmp/tamas/
-Ccd /usr/tmp/tamas/
-Cendif
-Cmkdir /usr/tmp/tamas/PW.1
-Ccd /usr/tmp/tamas/PW.1
-Ccat > code.f << 'EOF'
-C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C     THIS PROGRAM SOLVES THE SIMPLE HYDRODYNAMIC EQUATIONS WITH       C
@@ -42,7 +32,7 @@ C Variable time step option implemented 8/05 A. Glocer
 
       Subroutine POLAR_WIND
 
-      
+      use ModIoUnit, ONLY: UnitTmp_
       use ModCommonVariables
       use ModPass
       INTEGER NOTP(100)
@@ -60,7 +50,7 @@ C     define the output files and attaching units
      &                 IsRestart,IsVariableDt,Time,Tmax,DToutput,DT,
      &                 TypeSolver,GMLAT,GMLONG,Jr,wHorizontal,
      &                 iUnitInput,iUnitOutput,iUnitGraphics,               
-     &                 iUnitSourceGraphics,iUnitRestart,iUnitCollision,    
+     &                 iUnitSourceGraphics,NameRestart,iUnitCollision,    
      &                 XXX,iLine,nLine     )
       
       
@@ -103,26 +93,8 @@ C
       NCL = 60
 
 
-!!!!      READ(iUnitInput,*) TMAX
-!!!!      WRITE(iUnitOutput,*) TMAX
-
-!!!!      READ(iUnitInput,*) DToutput
-!!!!      WRITE(iUnitOutput,*) DToutput
-
-!!!!      READ(iUnitInput,*) TypeSolver
-!!!!      WRITE(iUnitOutput,*) TypeSolver
-
-!!!!      READ(iUnitInput,*) IsImplicit
-!!!!      WRITE(iUnitOutput,*) IsImplicit
-       
-!!!!      READ(iUnitInput,*) NPT
-!!!!      WRITE(iUnitOutput,21) NPT
-
 21    FORMAT(2X,I8)
-!!!!      do k=1,nPt
-!!!!         READ (iUnitInput,*) NOTP(K)
-!!!!      enddo
-!!!!      WRITE (iUnitOutput,21) (NOTP(K),K=1,NPT)
+
       KSTEP=1
       NSTEP=1
       MSTEP=1
@@ -452,7 +424,7 @@ c            CALL PRNTEF
             CALL PRNTSM
             !CALL prntCollision
             !CALL PRNT_Sources
-            REWIND iUnitRestart
+            open(UnitTmp_, NameRestart)
 
             WRITE (iUnitRestart,2001) TIME,DT,NSTEP
             Write (iUnitRestart,*) GMLAT, GMLONG
@@ -462,6 +434,7 @@ c            CALL PRNTEF
             WRITE (iUnitRestart,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
             WRITE (iUnitRestart,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
      ;           K=1,NDIM)
+            close(UnitTmp_)
          endif
       endif
 
@@ -794,7 +767,6 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &                   IsRestart,IsVariableDt,Time,DT,DToutput,DT,
      &                   TypeSolver,GMLAT,GMLONG,Jr,wHorizontal,
      &                   XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX ) 
-         
 
          RETURN
       endif
@@ -809,12 +781,4 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       GO TO 1
       
-CALEX close the output files      
-
-!!!!  CLOSE(UNIT=iUnitRestart)
-!!!!  CLOSE(UNIT=iUnitOutput)
-!!!!  CLOSE(UNIT=9)
-!!!!  CLOSE(UNIT=11)
-!!!!  CLOSE(UNIT=iUnitCollision)
-!!!!  CLOSE(UNIT=iUnitSourceGraphics)
       END
