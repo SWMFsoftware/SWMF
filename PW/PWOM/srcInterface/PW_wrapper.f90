@@ -72,6 +72,8 @@ end subroutine PW_init_session
 
 subroutine PW_finalize(TimeSimulation)
 
+  use ModPwom, ONLY: nLine, iUnitGraphics
+
   implicit none
 
   !INPUT PARAMETERS:
@@ -79,7 +81,11 @@ subroutine PW_finalize(TimeSimulation)
 
   character(len=*), parameter :: NameSub='PW_finalize'
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  integer :: iLine
+
+  do iLine=1,nLine
+     CLOSE(UNIT=iUnitGraphics(iLine))
+  enddo
 
 end subroutine PW_finalize
 
