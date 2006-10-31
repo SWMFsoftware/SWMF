@@ -1,4 +1,4 @@
-!*******************************************************************************
+!******************************************************************************
 !
 !                               rbe_swmf.f
 ! 
@@ -50,6 +50,11 @@
 !
 !  Output files: outname_*.fls (* can be e or h for electrons or protons)
 !******************************************************************************
+
+! 13 September 2006, Mei-Ching Fok note:
+! This file was modified from rbe_sub_old.f90:
+! (1) In subroutine fieldpara, integration along field line uses Taylor 
+!     expansion method.
 
 !=============================================================================
 module rbe_constant
@@ -192,37 +197,63 @@ subroutine rbe_init
 
   dt=dtmax
   t=tstart-trans
+
+  call timing_start('rbe_grids')
   call grids(re,rc,xme,xmp,q,c,js)
+  call timing_stop('rbe_grids')
+  call timing_start('rbe_field')
   call fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,&
        phi,w,si,xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,&
        tsw,ndst,nimf,nsw,js,iyear,iday,imod)
-
+  call timing_stop('rbe_field')
+  call timing_start('rbe_initial')
   call initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
        iba,init,il,ie,outname,st2)
+  call timing_stop('rbe_initial')
   if (js.eq.2) call cepara(dt,ekev,have,v,irm,iw1,iw2)
 
+  call timing_start('rbe_convection')
   call convection(t,tstart,ps,xlati,phi,dphi,re,&
        rc,xme,xnsw0,vsw0,Bx0,By0,Bz0,nimf,timf,&
        bxw,byw,bzw,nsw,tsw,xnswa,vswa,iconvect,itype)
+  call timing_stop('rbe_convection')
+  call timing_start('rbe_vdrift')
   call Vdrift(re,rc,xme,dphi,xlati,ekev,potent,js,irm,iw1,iw2)
+  call timing_stop('rbe_vdrift')
+  call timing_start('rbe_boundary')
   call boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
        vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+  call timing_stop('rbe_boundary')
 
   ! Setup for the plasmasphere model
   par(1)=-1.0              ! disable the model's internal E field model
   par(2)=-1.0              !
 
   if (iplsp.eq.1) then
+     call timing_start('rbe_initmain')
      call initmain(colat(ir),colat(1)) 
+     call timing_stop('rbe_initmain')
+     call timing_start('rbe_set_flux_tube')
      call setfluxtubevol(colat,ir,xmltd,ip+1,volume)
+     call timing_stop('rbe_set_flux_tube')
+     call timing_start('rbe_set_xy_grid')
      call setxygrid(colat,ir,xmltd,ip+1,xo,yo,gridoc)
+     call timing_stop('rbe_set_xy_grid')
+     call timing_start('rbe_init_density')
      call initdensity(outname,itype)  ! saturated plasmasphere when itype=1
+     call timing_stop('rbe_init_density')
      if (itype.eq.1) then     ! initial warm up of the plasmasphere
+        call timing_start('rbe_set_pot')
         call setpot(colat,ir,xmltd,ip+1,potent)
+        call timing_stop('rbe_set_pot')
         delt=86400.              
+        call timing_start('rbe_plasmasphere')
         call plasmasphere(delt,par)
+        call timing_stop('rbe_plasmasphere')
      endif
+     call timing_start('rbe_get_density')
      call getdensity(colat,ir,xmltd,ip+1,density)
+     call timing_stop('rbe_get_density')
   endif
 
 end subroutine rbe_init
@@ -383,21 +414,21 @@ subroutine readInputData
   !.....open a file to read parameters which control the speices, dt and
   !     so on
   open(unit=4,file='rbe_swmf.dat',status='old')
-  read(4,*) itype                ! 1=initial run,  2=continuous run
+  read(4,*) itype              ! 1=initial run,  2=continuous run
   read(4,*) tstart
   read(4,*) tmax
-  read(4,*) js	             ! species: 1=RB e-, 2=RB H+  
-  read(4,*) trans                ! startup time in sec when itype=1
-  read(4,*) imod                 ! 1=t96_01, 2=t04_s, 3=MHD
-  read(4,*) iconvect             ! 1=Weimer, 2=MHD
-  read(4,*) ires                 ! 0=fixed B config or 1=changing B config
-  read(4,*) tint                 ! output results every tint seconds
+  read(4,*) dt                 ! time step in s. Summer 2006: read dt from *.dat
+  read(4,*) js   	       ! species: 1=RB e-, 2=RB H+  
+  read(4,*) trans              ! startup time in sec when itype=1
+  read(4,*) imod               ! 1=t96_01, 2=t04_s, 3=MHD
+  read(4,*) iconvect           ! 1=Weimer, 2=MHD
+  read(4,*) ires               ! 0=fixed B config or 1=changing B config
+  read(4,*) tint               ! output results every tint seconds
   read(4,'(1x,a8)') storm   
   read(4,'(1x,a8)') outname
-  read(4,*) iplsp                ! 0=no plasmasphere, 1=plasmasphere
+  read(4,*) iplsp              ! 0=no plasmasphere, 1=plasmasphere
   close(4)
 
-  dt=3.                          ! time step in second
   iprint=2                       ! 1=print result @ tmax, 2=print every tint
   ntime=ifix((tmax-tstart)/tint)+1
   if (iprint.eq.1) then
@@ -655,6 +686,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
   external tsyndipoleSM,MHD_B
   parameter (np=1000,nd=3)
+  real time1,time2
   real xlati(0:ir+1),phi(ip),w(0:iw+1),si(0:ik+1),xmass(ns),&
        si3(np),bm1(np),rm(np),rs(np),xa(np),ya(np),za(np),aza(np),dss(np),&
        yint(np),yint1(np),yint2(np),h3(np),bs(np),bba(np),dsth(ndst),&
@@ -662,7 +694,18 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
        tsw(nsw),x1(ir),xmlt(ip),bme(0:ir,ip,ik),xli(0:ir),x0(nd),xend(nd),&
        f(nd),xwrk(4,nd),ra(np),dssa(np),tya3(np)
   integer ind(np)
+  ! coeff and integrals in Taylor expansion
+  parameter (nTaylor=10)
+  real a_I(0:nTaylor),b_I(0:nTaylor),sumBn(0:nTaylor),sumhBn(0:nTaylor), &
+       BnI(0:nTaylor,np),hBnI(0:nTaylor,np)
+  !--------------------------------------------------------------------------
 
+  a_I(0)=1.
+  b_I(0)=1.
+  do iTaylor=1,nTaylor
+     a_I(iTaylor)=a_I(iTaylor-1)*(2.*iTaylor-3.)/(2.*iTaylor)
+     b_I(iTaylor)=b_I(iTaylor-1)*(2.*iTaylor-1.)/(2.*iTaylor)
+  enddo
 
   pi=acos(-1.)
   rb=10.               ! nightside outer boundary in RE
@@ -695,6 +738,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
   endif
 
   !  Start field line tracing.  
+  call timing_start('rbe_trace')
   do j=1,ip
      irm(j)=ir
      do i=0,ir
@@ -708,8 +752,12 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         t0=0.
         npf1=1
 
+        call timing_start('tsyndipole')
+
         if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,x0(1),&
              x0(2),x0(3),f(1),f(2),f(3))
+
+        call timing_stop('tsyndipole')
 
         !              if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,x0(1),
         !    *                                   x0(2),x0(3),f(1),f(2),f(3))
@@ -723,8 +771,13 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
 2       h=pas*dir
 
+        call timing_start('rk4_tsyndipole')
+
         if (imod.le.2) call rk4(tsyndipoleSM,imod,iopt,parmod,ps,t,t0,&
              h,x0,xend,xwrk,nd,f,tend)
+
+        call timing_stop('rk4_tsyndipole')
+
 
         !              if (imod.eq.3) call rk4(MHD_B,imod,iopt,parmod,ps,t,t0,
         !    *                                 h,x0,xend,xwrk,nd,f,tend)
@@ -753,8 +806,8 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            aza(npf1)=abs(za(npf1))
            if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,&
                 xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
-           !           if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,
-           !    *                               xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
+           !   if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,&
+           !                         xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
            bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9   ! B in T
            dssa(npf1)=dssa(npf1-1)+abs(h)*h1
 
@@ -776,7 +829,9 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         t0=tend
         goto 2
 
-1       call sort_quick(npf1,aza,ind)    ! find the equatorial crossing point
+1       call timing_start('rbe_sort')
+        call sort_quick(npf1,aza,ind)    ! find the equatorial crossing point
+        call timing_stop('rbe_sort')
 
         ieq=ind(1)
         xmlt_1=atan2(-ya(ieq),-xa(ieq))*12./pi   ! mlt in hr
@@ -849,60 +904,88 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            endif
         enddo
 
-        !                                <--dss(m)-->
-        !      rs(1)                         rs(m)                     rs(n)
-        !      bs(1)                         bs(m)                     bs(n)
-        !    |-------|-----|......|------|----------|----|.......|---|-------|
-        !  rm(1)                       rm(m)                               rm(n+1)
-        !  bm(1)                       bm(m)                               bm(n+1)
+      !                                <--dss(m)-->
+      !      rs(1)                         rs(m)                     rs(n)
+      !      bs(1)                         bs(m)                     bs(n)
+      !    |-------|-----|......|------|----------|----|.......|---|-------|
+      !  rm(1)                       rm(m)                               rm(n+1)
+      !  bm(1)                       bm(m)                               bm(n+1)
 
-        !..............Set up arrarys at trace grids
-        si3(im2)=0.               ! equatorially mirroring
-        tya3(im2)=0.
-        h3(im2)=hden(rm(im2))
-        SEARCH: do mir=1,im2-1 ! Set up arrarys at trace grids
-           sqrtb=sqrt(bm1(mir))
+      ! Field line integration using Taylor expansion method
+        call timing_start('rbe_taylor')
+        sumBn(0:nTaylor)=0.
+        sumhBn(0:nTaylor)=0.
+        do m=im2-1,1,-1
+           ! search for the southern conjugate point
            n8=npf
-           INTEGRATE: do ii=mir,n
-              bsi=bs(ii)
-              if (bm1(ii+1).ge.bm1(mir)) bsi=0.5*(bm1(mir)+bm1(ii))
-              if (bsi.ge.bm1(mir)) then
-                 write(6,*) 'Error: bsi.ge.bm1(mir) '
-                 write(*,*) 'i, j, im2, n=',i,j,im2,n
-                 write(*,*) 'mir, bsi, bm1=', mir, bsi, bm1(mir)
-                 write(*,*) 'bs=',bs(1:n)
-                 write(*,*) 'bm1=',bm1(1:n+1)
-                 stop
-              endif
-              yint(ii)=sqrt(bm1(mir)-bsi)
-              x=sqrt(1.-bsi/bm1(mir))
-              yint1(ii)=1./x
-              yint2(ii)=hden(rs(ii))/x
-              if (bm1(ii+1).ge.bm1(mir)) then
+           SEARCH: do ii=m,n
+              if (bm1(ii+1).ge.bm1(m)) then
                  n8=ii+1
-                 EXIT INTEGRATE
+                 EXIT SEARCH
               endif
-           enddo INTEGRATE
+           enddo SEARCH
            n7=n8-1
-           n6=n7-1
-           if (n6.lt.mir) then
-              write(6,*) ' Error: n6.lt.mir'
-              stop
-           endif
-           dssp=dss(n7)*(bm1(mir)-bm1(n7))/(bm1(n8)-bm1(n7)) !partial ds
-           call closed(mir,n6,yint,dss,ss)  ! use closed form
-           ss=ss+yint(n7)*dssp
-           si3(mir)=ss*re  
-           call closed(mir,n6,yint1,dss,ss1)
-           ss1=ss1+yint1(n7)*dssp
-           tya3(mir)=ss1
-           call closed(mir,n6,yint2,dss,ss2)
-           ss2=ss2+yint2(n7)*dssp
-           h3(mir)=ss2/ss1
-        enddo SEARCH
 
-        !..............Calculate y, rmir (dist. of the mirror point), T(y), bounced
-        !              average H density
+           ! field line integration at the northern hemisphere
+           bs_n=1.
+           do iTaylor=0,nTaylor
+              bsndss=bs_n*dss(m)
+              sumBn(iTaylor)=sumBn(iTaylor)+bsndss
+              sumhBn(iTaylor)=sumhBn(iTaylor)+hden(rs(m))*bsndss
+              bs_n=bs_n*bs(m)
+           enddo
+
+           ! field line integration at the southern hemisphere
+           m0=m+1
+           if (m.lt.(im2-1)) m0=n70
+           do mir=m0,n7-1
+              bs_n=1.
+              do iTaylor=0,nTaylor
+                 bsndss=bs_n*dss(mir)
+                 sumBn(iTaylor)=sumBn(iTaylor)+bsndss
+                 sumhBn(iTaylor)=sumhBn(iTaylor)+hden(rs(mir))*bsndss
+                 bs_n=bs_n*bs(mir)
+              enddo
+           enddo
+
+           ! add the partial segment near the southern conjugate point
+           dssp=dss(n7)*(bm1(m)-bm1(n7))/(bm1(n8)-bm1(n7)) ! partial ds
+           bs_n=1.
+           do iTaylor=0,nTaylor
+              bsndss=bs_n*dssp
+              BnI(iTaylor,m)=sumBn(iTaylor)+bsndss
+              hBnI(iTaylor,m)=sumhBn(iTaylor)+hden(rs(n7))*bsndss
+              bs_n=bs_n*bs(n7)
+           enddo
+
+           n70=n7
+        enddo 
+           
+        ! Set up arrarys: si3, tya3, h3
+        do m=1,im2-1
+           ss=0.
+           ss1=0.
+           ss2=0.
+           bm_n=1.
+           do iTaylor=0,nTaylor
+              BnIbm_n=BnI(iTaylor,m)/bm_n
+              ss=ss+a_I(iTaylor)*BnIbm_n
+              ss1=ss1+b_I(iTaylor)*BnIbm_n
+              ss2=ss2+b_I(iTaylor)*hBnI(iTaylor,m)/bm_n
+              bm_n=bm_n*bm1(m)
+           enddo
+           si3(m)=re*sqrt(bm1(m))*ss
+           tya3(m)=ss1/ra(ieq)/2.
+           h3(m)=ss2/ss1
+        enddo
+
+        call timing_stop('rbe_taylor')
+
+        si3(im2)=0.               ! equatorially mirroring
+        tya3(im2)=tya3(im2-1)
+        h3(im2)=hden(rm(im2))
+
+        ! Calculate y, rmir (dist. of mirror point), T(y), bounced average [H]
         do m=0,ik+1
            sim=si(m)                 ! get Bm @ given K & location
            call lintp(si3,bm1,im2,sim,bmmx)
@@ -928,6 +1011,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         yo(i,j)=yo(irm(j),j)
      enddo
   enddo                              ! end of j loop
+  call timing_stop('rbe_trace')
 
   ! Peridic boundary condition
   do i=1,ir        
@@ -1747,15 +1831,14 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
      stop
   endif
 
-  !  Assume a Maxwellian at nightside boundary when ibset=3 and Kappa when ibset=4
+  !  Assume a Maxwellian at nightside when ibset=3 and Kappa when ibset=4
   if (ibset.eq.3) factorn=xnn/(2.*pi*xmass(js)*xktn*1.6e-16)**1.5  
   if (ibset.eq.4) factorn=xnn*exp(gammln(xk1))/exp(gammln(xk2))/&
        (2.*pi*xkappa*xmass(js)*xktn*1.6e-16)**1.5
 
   !  Assume a Maxwellian at the dayside magnetopause
   xktd=0.3                  ! temperature in keV at dayside magnetopause
-  xnd=5.                    ! density in cm-3 at dayside magnetopause
-  xnd=0.
+  xnd=xnswb           ! density in cm-3. Summer 2006: it was set to 0 by mistake
   xktd1=xktd*1000.          ! kT in eV  
   xnd1=xnd*1.e6             ! n in m^-3
   factord=xnd1/(2.*pi*xmass(js)*xktd1*1.6e-19)**1.5   
@@ -1898,7 +1981,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
 
   ! Calculate and write fluxes at fixed E and y grides. 
   call fluxes(f,y,p,gridp,ekev,gride,gridy,irm,iw1,iw2,flx) 
-  write(26,'(1x,7hhour = ,f6.2,10f9.2,"   parmod(1:10)")') hour,parmod
+  write(26,'(f7.2,10f9.2,"   hour,parmod(1:10)")') hour,parmod         
   !     write(13,'(1x,7hhour = ,f6.2,10f9.2,"   parmod(1:10)")') hour,parmod
   do i=1,ir             ! Write fluxes @ fixed E & y grids
      do j=1,ip
@@ -2072,9 +2155,9 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
 
         ! new Courant numbers
         do j=1,ip
-           do i=1,iba(j)
-              cl(i,j)=dt1/dlati(i)*vl(i,j,k,m)   
-              cp(i,j)=dt1/dphi*vp(i,j,k,m)
+           do i=1,ir               ! summer 2006: change from do i=1,iba(j) to
+              cl(i,j)=dt1/dlati(i)*vl(i,j,k,m)   ! make sure all "velocities"
+              cp(i,j)=dt1/dphi*vp(i,j,k,m)       ! are reduced.
            enddo
         enddo
 
@@ -2540,6 +2623,7 @@ subroutine lintp(xx,yy,n,x,y)
      endif
      if (xx(n).lt.xx(1).and.xx(i).gt.xx(i-1)) then
         write(6,*) ' lintp: xx is not decreasing monotonically '
+        write(*,*) 'i,xx(i),xx(i-1) ',i,xx(i-1),xx(i)
         write(6,*) n,(xx(j),j=1,n)
         stop
      endif
@@ -2894,6 +2978,7 @@ subroutine rk4(Bfield,imod,iopt,parmod,ps,t,t0,h,x0,xend,xwrk,nd,f,tend)
   tend=t0+h
 
 end subroutine rk4
+
 !-----------------------------------------------------------------------------
 function gammln(xx)
   !---------------------------------------------------------------------------
@@ -2930,5 +3015,3 @@ function derivative_3pt(x0,x1,x2,f0,f1,f2,xj)
  derivative_3pt=der0+der1+der2
 
 end function derivative_3pt
-
-
