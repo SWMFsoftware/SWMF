@@ -24,7 +24,7 @@ METHODS = \
 	prntop.o\
 	prntsm.o\
 	EfieldPW.o\
-	clfme2w.o\
+	eHeatFluxPW.o\
 	calcdt.o\
 	diffusion.o\
 	PRNT_Sources.o\
