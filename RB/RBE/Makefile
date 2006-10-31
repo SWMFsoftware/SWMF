@@ -44,7 +44,7 @@ RBE:
 LIB:
 	cd src; make LIB
 
-test:	RBE
+test:	RBE run
 	cd run; ./rbe.exe
 	make test_compare
 
@@ -69,6 +69,9 @@ distclean: clean
 #
 #       Create run directories
 #
+run:
+	make rundir
+
 rundir:
 	mkdir -p ${RUNDIR}/RB
 	cd ${RUNDIR}/RB; \
