@@ -1,6 +1,7 @@
  1                  ! itype:  1=initial run, 2=continuous run
  0.                 ! tstart: Universal Time (UT) in second
- 60.                ! tmax: Universal Time (UT) in secnd
+ 60.                ! tmax: Universal Time (UT) in secnd (60.)
+ 3.0                ! dt: time step in secnd
  1                  ! js: species, 1=RBe-, 2=RBion
  0.                 ! trans: startup time in sec when itype=1
  1                  ! imod: 1=t96_01, 2=t04_s, 3=MHD
