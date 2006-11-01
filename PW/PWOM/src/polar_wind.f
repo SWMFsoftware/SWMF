@@ -32,32 +32,32 @@ C Variable time step option implemented 8/05 A. Glocer
 
       Subroutine POLAR_WIND
 
+      Use ModPWOM, only: DTpolarwind,nLine
       use ModIoUnit, ONLY: UnitTmp_
       use ModCommonVariables
-      use ModPass
+      use ModFieldLine
       INTEGER NOTP(100)
 
 C     define the output files and attaching units
-      CHARACTER*100 NameInput, NameOutput, NameGraphics, NameRestart,
-     $ NameCollision,NameSourceGraphics
+      character*100 :: NameRestart
       Logical IsFirstCall
       Data IsFirstCall / .true./
       Real Jr
-      Call Get_Mod_PW(dOxyg(:), uOxyg(:), pOxyg(:), TOxyg(:),     
+      !-----------------------------------------------------------------------
+
+      Call get_field_line(dOxyg(:), uOxyg(:), pOxyg(:), TOxyg(:),     
      &                 dHel(:), uHel(:), pHel(:), THel(:),         
      &                 dHyd(:), uHyd(:), pHyd(:), THyd(:),         
      &                 dElect(:), uElect(:), pElect(:), TElect(:), 
-     &                 IsRestart,IsVariableDt,Time,Tmax,DToutput,DT,
-     &                 TypeSolver,GMLAT,GMLONG,Jr,wHorizontal,
-     &                 iUnitInput,iUnitOutput,iUnitGraphics,               
-     &                 iUnitSourceGraphics,NameRestart,iUnitCollision,    
-     &                 XXX,iLine,nLine     )
+     &                 GMLAT,GMLONG,Jr,wHorizontal,
+     &                 iUnitOutput=iUnitOutput, iUnitGraphics=iUnitGraphics,   
+     &                 NameRestart=NameRestart,    
+     &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
+     &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
+     &                 IsRestart=IsRestart,DToutput=DToutput)
       
-      
-      !write(*,*) 'Polarwind',nLine
-
-      
-!      write(*,*) Jr
+      DT=DTpolarwind
+     
 
       CURR(1)      = Jr
       !NameInput    = 'pw.input'
@@ -67,27 +67,7 @@ C     define the output files and attaching units
       !NameRestart  = 'restart.out'
       !NameCollision= 'plots_collision.out'
 
-c      iUnitInput = 11
-C      call CON_get_io_new(iUnitInput)
-c      OPEN(iUnitInput, FILE=NameInput)
 
-c      iUnitOutput = 16
-C      call CON_get_io_new(iUnitOutput)
-c      OPEN(UNIT=iUnitOutput, FILE=NameOutput)
-
-c      iUnitGraphics = 9
-C      call CON_get_io_new(iUnitGraphics)
-c      OPEN(iUnitGraphics, FILE=NameGraphics)
-
-c      iUnitSourceGraphics=18
-c      OPEN(iUnitSourceGraphics,FILE=NameSourceGraphics)
-      
-c      iUnitRestart = 7
-C      call CON_get_io_new(iUnitRestart)
-c      OPEN(iUnitRestart, FILE=NameRestart)
-
-c      iUnitCollision = 17
-c      OPEN(iUnitCollision,FILE=NameCollision)
 C
       NTS = 1
       NCL = 60
@@ -424,15 +404,15 @@ c            CALL PRNTEF
             CALL PRNTSM
             !CALL prntCollision
             !CALL PRNT_Sources
-            open(UnitTmp_, NameRestart)
+            open(UnitTmp_, FILE=NameRestart)
 
-            WRITE (iUnitRestart,2001) TIME,DT,NSTEP
-            Write (iUnitRestart,*) GMLAT, GMLONG
+            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
+            Write (UnitTmp_,*) GMLAT, GMLONG
 
-            WRITE (iUnitRestart,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
+            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
      ;           K=1,NDIM)
             close(UnitTmp_)
          endif
@@ -451,15 +431,17 @@ c            CALL PRNTEF
             CALL PRNTSM
             !CALL prntCollision
             !CALL PRNT_Sources
-            REWIND iUnitRestart
 
-            WRITE (iUnitRestart,2001) TIME,DT,NSTEP
-            Write (iUnitRestart,*) GMLAT, GMLONG
-            WRITE (iUnitRestart,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
+
+            open(UnitTmp_, FILE=NameRestart)
+            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
+            Write (UnitTmp_,*) GMLAT, GMLONG
+            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
      ;           K=1,NDIM)
+            close(UnitTmp_)
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -721,16 +703,17 @@ c            CALL PRNTEF
             CALL PRNTSM
             !CALL prntCollision
             !CALL PRNT_Sources
-            REWIND iUnitRestart
+            
+            open(UnitTmp_, FILE=NameRestart)
+            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
+            Write (UnitTmp_,*) GMLAT, GMLONG
 
-            WRITE (iUnitRestart,2001) TIME,DT,NSTEP
-            Write (iUnitRestart,*) GMLAT, GMLONG
-
-            WRITE (iUnitRestart,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
+            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
      ;           K=1,NDIM)
+            close(UnitTmp_)
          endif
       endif
       IF (IsVariableDt) then
@@ -745,28 +728,28 @@ c            CALL PRNTEF
             CALL PRNTSM
             !CALL prntCollision
             !CALL PRNT_Sources
-            REWIND iUnitRestart
+            
+            open(UnitTmp_, FILE=NameRestart)
+            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
+            Write (UnitTmp_,*) GMLAT, GMLONG
 
-            WRITE (iUnitRestart,2001) TIME,DT,NSTEP
-            Write (iUnitRestart,*) GMLAT, GMLONG
-
-            WRITE (iUnitRestart,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (iUnitRestart,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
+            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
+            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
      ;           K=1,NDIM)
+            close(UnitTmp_)
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       IF (TIME.GT.TMAX) Then 
-         Call Put_Mod_PW(dOxyg, uOxyg, pOxyg, TOxyg,     
-     &                   dHel, uHel, pHel, THel,         
-     &                   dHyd, uHyd, pHyd, THyd,         
-     &                   dElect, uElect, pElect, TElect, 
-     &                   IsRestart,IsVariableDt,Time,DT,DToutput,DT,
-     &                   TypeSolver,GMLAT,GMLONG,Jr,wHorizontal,
-     &                   XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX ) 
+         Call put_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     
+     &                       dHel, uHel, pHel, THel,         
+     &                       dHyd, uHyd, pHyd, THyd,         
+     &                       dElect, uElect, pElect, TElect, 
+     &                       GMLAT,GMLONG,Jr,wHorizontal,
+     &                       Time=Time ) 
 
          RETURN
       endif
