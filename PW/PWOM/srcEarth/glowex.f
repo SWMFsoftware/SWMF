@@ -178,7 +178,7 @@ C
       CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
       SZA = SZA * PI/180.
       SZAD = SZA*360./6.283185
-      WRITE(16,9996)SZAD
+      WRITE(iUnitOutput,9996)SZAD
  9996 FORMAT(26X,'SOLAR ZENITH ANGLE:',1F8.2,' DEGREES')
 C Calculate slant path column densities in the direction of sun of major
 C species:
@@ -191,14 +191,14 @@ C spectrum and photoionization rates as a function of altitude:
 C
         CALL EPHOTO
 C
-      WRITE(16,9997)
+      WRITE(iUnitOutput,9997)
 CALEX note IDATE HERE is IYD in the rest of the subroutine
  9997 FORMAT('   IDATE ','  UTG   ','   SEC   ','    GLAT    ',
      $' GLONG    ',' STL   ',' F107A   ','  F107   ',
      $'   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
      $'   SZAD    ')
 C
-      WRITE(16,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
+      WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
      $,IART,GMLAT,GMLONG,SZAD
  9995 FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C
@@ -210,7 +210,7 @@ C       PHOTOTP(J)=PHOTOTP(290)
        DO 109 J=14,391
        PHOTOTP(J)=PHOTOTP(14)
 C      IF (J .LE. 16)THEN 
-C      WRITE(16,9999)PHOTOTP(J-1),PHOTOTP(14)
+C      WRITE(iUnitOutput,9999)PHOTOTP(J-1),PHOTOTP(14)
 C 9999 FORMAT(10X,'PHOTOTP(J-1) VALUE/PHOTOTP(J) VALUE',2(1PE15.4))
 C      ENDIF
   109  CONTINUE
@@ -219,7 +219,7 @@ C   NOW ADD EUV AND PARTICLE IONIZATIONS!!!!!!1
       PHOTOTT(I) = PHOTOTF(I) + PHOTOTP(I)
      
       IF (I .LE. 20) THEN
-C      WRITE(16,9993)PHOTOTF(I),PHOTOTP(I),PHOTOTT(I),
+C      WRITE(iUnitOutput,9993)PHOTOTF(I),PHOTOTP(I),PHOTOTT(I),
 C     $(ZZ(I))
 C 9993 FORMAT('EUVF PRECF TOTF ALT ',4(1X,1PE12.4))
       ENDIF
