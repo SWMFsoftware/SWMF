@@ -1,7 +1,7 @@
 program pw
 
   use ModPwom
-  use ModPass
+  use ModFieldLine
   use ModMpi
 
   implicit none
@@ -89,6 +89,7 @@ program pw
   do iLine=1,nLine
      CLOSE(UNIT=iUnitGraphics(iLine))
   enddo
+  close(UNIT=iUnitOutput)
 
   call MPI_FINALIZE(errcode)
 
@@ -226,7 +227,7 @@ subroutine Get_ElectrodynamicPW
 
   do iPhi=1,nPhi
      do iTheta=1,nTheta
-        read(unit=iUnitNorth,fmt='(6(1PE13.5))') &
+        read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
              Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
              SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
 
@@ -571,9 +572,10 @@ end subroutine MoveFluxTube
 
 subroutine AdvancePWline
   use ModPWOM
+  use ModFieldLine
   implicit none
 
-  real XXX
+  real XXX,MaxLineTime
 
   ! Get the GeoMagnetic latitude and longitude 
   GeoMagLat(iLine) = (1.57079632679 - OldFieldLineTheta(iLine)) &
@@ -592,38 +594,40 @@ subroutine AdvancePWline
      OmegaHorFieldLine(iLine) = 0.0
   endif
   
+  MaxLineTime=Time+DT
   
   call put_field_line(&
        dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
        dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
        dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
        dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine), &
-       IsRestart,IsVariableDt, Time,DT,DToutput,DTpolarwind,TypeSolver,    &
        GeoMagLat(iLine),GeoMagLon(iLine),FieldLineJr(iLine),               &
-       OmegaHorFieldLine(iLine),iUnitInput,iUnitOutput,                    &
-       iUnitGraphics(iLine),                                               &
-       iUnitSourceGraphics,iUnitRestart(iLine),iUnitCollision,             &
-       iUnitRestartIn(iLine),iLine,int(nLine))
+       OmegaHorFieldLine(iLine), iUnitOutput=iUnitOutput,                  &
+       iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
+       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
+       IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput)
   
   
   call polar_wind
   
   if (iLine == nLine) then
      call get_field_line( &
-          dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
-          dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
-          dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
-          dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
-          IsRestart,IsVariableDt,Time,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
-          XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
+       dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
+       dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
+       dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
+       dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine), &
+       GeoMagLat(iLine),GeoMagLon(iLine),FieldLineJr(iLine),               &
+       OmegaHorFieldLine(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
+       iUnitOutput=iUnitOutput,iLine=iLine,Time=Time,MaxLineTime=MaxLineTime)
   else
      call get_field_line( &
-          dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),    &
-          dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),        &
-          dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),        &
-          dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine),&
-          IsRestart,IsVariableDt,XXX,XXX,XXX,XXX,TypeSolver,XXX,XXX,XXX,XXX,&
-          XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX )
+       dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
+       dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
+       dHyd(:,iLine), uHyd(:,iLine), pHyd(:,iLine), THyd(:,iLine),         &
+       dElect(:,iLine), uElect(:,iLine), pElect(:,iLine), TElect(:,iLine), &
+       GeoMagLat(iLine),GeoMagLon(iLine),FieldLineJr(iLine),               &
+       OmegaHorFieldLine(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
+       iUnitOutput=iUnitOutput,iLine=iLine,MaxLineTime=MaxLineTime)
   endif
   
 end subroutine AdvancePWline

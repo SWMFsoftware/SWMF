@@ -14,13 +14,18 @@ subroutine PW_set_parameters(NameAction)
   real:: ddt1, xxx
   integer:: ns
   !---------------------------------------------------------------------------
+  
   write(iUnitOut,*) NameSub,': called with action=',NameAction
 
+  NameInput          = 'pw.input'
+  NameOutput         = 'log.out'
+  
   iUnitInput = UnitTmp_
   open(iUnitInput,       FILE=NameInput)
-
+  
   iUnitOutput = io_unit_new()
   open(UNIT=iUnitOutput, FILE=NameOutput)
+
 
   READ(iUnitInput,*) TMAX
   WRITE(iUnitOutput,*) TMAX
@@ -50,7 +55,7 @@ subroutine PW_set_parameters(NameAction)
   READ(iUnitInput,*)   IsUseJr
   READ(iUnitInput,*)   IsCentrifugal
 
-  CLOSE(UNIT=iUnitOutput)
+  
   CLOSE(UNIT=iUnitInput)
 
 end subroutine PW_set_parameters

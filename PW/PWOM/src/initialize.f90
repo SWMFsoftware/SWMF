@@ -1,6 +1,6 @@
 subroutine PW_initialize
 
-  use ModIoUnit, ONLY: io_unit_new
+  use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
   implicit none
 
@@ -20,8 +20,6 @@ subroutine PW_initialize
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
   !***************************************************************************
-  NameInput          = 'pw.input'
-  NameOutput         = 'log.out'
   NameSourceGraphics = 'plot_sources.out'
   NameCollision      = 'plots_collision.out'
   NamePhiNorth       = 'North.dat'

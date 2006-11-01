@@ -9,10 +9,10 @@ module ModFieldLine
   real, Dimension(maxGrid)  ::  dOxygPW,uOxygPW,pOxygPW,TOxygPW, &
        dHelPW,uHelPW,pHelPW,THelPW,     &
        dHydPW,uHydPW,pHydPW,THydPW,     &
-       dElectPW,uElectPW,pElectPW,TElectPW 
+       dElectPW,uElectPW,pElectPW,TElectPW
 
   logical :: IsRestartPW, IsVariableDtPW 
-  real    :: TimePW,TmaxPW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
+  real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
        GeoMagLonPW,JrPW
   real    :: wHorizontalPW
   integer :: iUnitInputPW,      &
@@ -20,20 +20,21 @@ module ModFieldLine
        iUnitSourceGraphicsPW,iUnitRestartPW,          &
        iUnitCollisionPW,iUnitRestartInPW,iLinePW,nLinePW
   CHARACTER(7) :: TypeSolverPW
+  character*100 :: NameRestartPW
 
 contains
 
-  !******************************************************************************
+  !***************************************************************************
   !  Put polarwind variables into Mod_PW for passing 
-  !******************************************************************************
+  !***************************************************************************
 
   subroutine put_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     &
-       dHel, uHel, pHel, THel,         &
-       dHyd, uHyd, pHyd, THyd,         &
-       dElect, uElect, pElect, TElect, &
-       IsRestart,IsVariableDt,Time,DT,DToutput,DTpolarwind,&
-       TypeSolver,GeoMagLat,GeoMagLon,Jr,wHorizontal,      &
-       iUnitOutput,iUnitGraphics,NameRestart,iLine,nLine )
+       dHel, uHel, pHel, THel,                              &
+       dHyd, uHyd, pHyd, THyd,                              &
+       dElect, uElect, pElect, TElect,                      &
+       GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
+       iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput )
 
     use ModParameters
 
@@ -41,14 +42,14 @@ contains
          dHel, uHel, pHel, THel,         &
          dHyd, uHyd, pHyd, THyd,         &
          dElect, uElect, pElect, TElect
+    real, optional, intent(in) :: Time,MaxLineTime,DToutput
 
-    real,    intent(in)     :: Time, DT, DToutput, DTpolarwind,GeoMagLat, &
-         GeoMagLon,Jr, wHorizontal                  
-    integer, intent(in)     :: iUnitInput,iUnitOutput,iUnitGraphics,      &
-         iUnitSourceGraphics,iUnitRestart,          &
-         iUnitCollision,iUnitRestartIn,iLine,nLine     
-    logical, intent(in)     :: IsRestart,IsVariableDt
-    CHARACTER(7), intent(in):: TypeSolver
+    real,    intent(in)     :: GeoMagLat,GeoMagLon,Jr,wHorizontal              
+    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine
+    character*100,optional,intent(in):: NameRestart
+    character(7),optional,intent(in)::TypeSolver
+    logical,optional,intent(in) :: IsVariableDt,IsRestart
+    !-------------------------------------------------------------------------
 
     dOxygPW (:) = dOxyg(:)
     uOxygPW (:) = uOxyg(:)
@@ -66,58 +67,52 @@ contains
     uElectPW(:) = uElect(:)
     pElectPW(:) = pElect(:)
     TElectPW(:) = TElect(:) 
-    IsRestartPW = IsRestart
-    IsVariableDtPW=IsVariableDT
-    TimePW      = Time
-    TmaxPW      = Time+DT
-    DToutputPW  = DToutput
-    DTpolarwindPW = DTpolarwind
-    TypeSolverPW  = TypeSolver
     GeoMagLatPW = GeoMagLat
     GeoMagLonPW = GeoMagLon
     JrPW        = Jr
     wHorizontalPW   = wHorizontal
-    iUnitOutputPW   =iUnitOutput
-    iUnitGraphicsPW =iUnitGraphics
-    iUnitSourceGraphicsPW=iUnitSourceGraphics
-    iUnitCollisionPW=iUnitCollision
-    NameRestartPW=NameRestart
-    iLinePW = iLine
-    nLinePW = nLine
-
+    
+    
+    if (present(Time))          TimePW = Time
+    if (present(MaxLineTime))   MaxLineTimePW = MaxLineTime
+    if (present(iUnitGraphics)) iUnitGraphicsPW =iUnitGraphics
+    if (present(NameRestart))   NameRestartPW=NameRestart
+    if (present(iLine))         iLinePW = iLine
+    if (present(iUnitOutput))   iUnitOutputPW=iUnitOutput
+    if (present(TypeSolver))    TypeSolverPW =TypeSolver
+    if (present(IsVariableDt))  IsVariableDtPW=IsVariableDt
+    if (present(IsRestart))     IsRestartPW=IsRestart
+    if (present(DToutput))      DToutputPW=DToutput
   end subroutine put_field_line
 
-  !******************************************************************************
+  !***************************************************************************
   !  Get polarwind variables from Mod_PW 
-  !*****************************************************************************
-
+  !***************************************************************************
 
   subroutine get_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     &
-       dHel, uHel, pHel, THel,         &
-       dHyd, uHyd, pHyd, THyd,         &
-       dElect, uElect, pElect, TElect, &
-       IsRestart,IsVariableDt,Time,Tmax,DToutput,DTpolarwind,&
-       TypeSolver,GeoMagLat,GeoMagLon,Jr,wHorizontal,      &
-       iUnitOutput,iUnitGraphics,NameRestart,iLine,nLine )
+       dHel, uHel, pHel, THel,                              &
+       dHyd, uHyd, pHyd, THyd,                              &
+       dElect, uElect, pElect, TElect,                      &
+       GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
+       iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput)
 
     use ModParameters
-    use ModPass
 
     real, intent(out),dimension(maxGrid):: dOxyg, uOxyg, pOxyg, TOxyg,     &
          dHel, uHel, pHel, THel,         &
          dHyd, uHyd, pHyd, THyd,         &
          dElect, uElect, pElect, TElect
 
-    real,    intent(out)     :: Time,DToutput, DTpolarwind,Tmax,&
-         GeoMagLat,GeoMagLon, Jr, wHorizontal
 
-    integer,intent(out)      :: iUnitInput,iUnitOutput,iUnitGraphics,      &
-         iUnitSourceGraphics,iUnitRestart,          &
-         iUnitCollision,iUnitRestartIn,iLine,nLine
-    logical, intent(out)     :: IsRestart,IsVariableDt
-    CHARACTER(7),intent(out) :: TypeSolver
-
-
+    real,    intent(out)     :: GeoMagLat, GeoMagLon,Jr, wHorizontal           
+    
+    character*100,optional,intent(out):: NameRestart
+    character(7),optional,intent(out):: TypeSolver
+    logical,optional,intent(out)      :: IsVariableDt,IsRestart
+    real, optional, intent(out)       :: Time,MaxLineTime,DToutput
+    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine
+    
     dOxyg (:) = dOxygPW(:)
     uOxyg (:) = uOxygPW(:)
     pOxyg (:) = pOxygPW(:)
@@ -134,26 +129,26 @@ contains
     uElect(:) = uElectPW(:)
     pElect(:) = pElectPW(:)
     TElect(:) = TElectPW(:) 
-    IsRestart = IsRestartPW
-    IsVariableDT = IsVariableDtPW
-    Time      = TimePW
-    Tmax      = TmaxPW
-    DToutput  = DToutputPW
-    DTpolarwind = DTpolarwindPW
-    TypeSolver  = TypeSolverPW
     GeoMagLat = GeoMagLatPW
     GeoMagLon = GeoMagLonPW
     Jr        = JrPW
     wHorizontal = wHorizontalPW
-    iUnitInput    =iUnitInputPW
-    iUnitOutput   =iUnitOutputPW
-    iUnitGraphics =iUnitGraphicsPW
-    iUnitSourceGraphics=iUnitSourceGraphicsPW
-    iUnitRestart  =iUnitRestartPW
-    iUnitCollision=iUnitCollisionPW
-    iUnitRestartIn=iUnitRestartInPW
-    iLine=iLinePW
-    nLine=nLinePW
+   
+
+    
+
+    
+    if (present(Time))          Time = TimePW
+    if (present(MaxLineTime))   MaxLineTime = MaxLineTimePW
+    if (present(iUnitGraphics)) iUnitGraphics =iUnitGraphicsPW
+    if (present(NameRestart))   NameRestart=NameRestartPW
+    if (present(iLine))         iLine = iLinePW
+    if (present(iUnitOutput))   iUnitOutput=iUnitOutputPW
+    if (present(TypeSolver))    TypeSolver =TypeSolverPW
+    if (present(IsVariableDt))  IsVariableDt=IsVariableDtPW
+    if (present(IsRestart))     IsRestart=IsRestartPW
+    if (present(DToutput))      DToutput=DToutputPW
+
   end subroutine get_field_line
 
 end module ModFieldLine
