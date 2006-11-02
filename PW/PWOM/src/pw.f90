@@ -537,7 +537,7 @@ subroutine MoveFluxTube
      FieldLinePhi(iLine) = FieldLinePhi(iLine) + 6.283185
      write(*,*) 'TTTT',FieldLinePhi(iLine)
      write(*,*) FieldLineX(iLine),FieldLineY(iLine),FieldLineZ(iLine)
-     stop
+     call con_stop('Error: Phi is negative')
   endif
   
   
