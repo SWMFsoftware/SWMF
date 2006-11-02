@@ -9,7 +9,9 @@ module ModReadParam
 
   !DESCRIPTION:
   ! This is a library for reading parameters and distribute them between
-  ! the components.
+  ! the components. It can also be used by a stand-alone mode.
+  ! In the latter case the 'control component' corresponds to the main program
+  ! of the stand-alone code.
   !
   ! {\bf Subroutine read\_file(NameFile)} reads the text from file NameFile
   ! which may include further files. The files can be included with the
@@ -23,7 +25,8 @@ module ModReadParam
   ! \begin{verbatim}
   ! #END
   ! \end{verbatim}
-  ! command. After reading, the text is broadcast to all processors.
+  ! command. After reading, the text is broadcast to all processors that
+  ! belong to the MPI communicatore iComm. 
   ! The text buffer contains at most MaxLine=1000 lines, which are at most
   ! lStringLine=100 character long. Normally only the control component
   ! calls {\bf read\_file}.
@@ -42,7 +45,7 @@ module ModReadParam
   !
   ! \bigskip
   ! For the control component as well as for many physical components 
-  ! the parameters are given in from of command lines followed by parameter 
+  ! the parameters are given in form of command lines followed by parameter 
   ! lines. The commands start with a \# character, which is usually 
   ! followed by upper case letters and numbers. Anything after a space
   ! or TAB (char(9)) is ignored. The number of parameter lines is determined 
@@ -85,11 +88,11 @@ module ModReadParam
   !       if(.not.read_command(NameCommand)) CYCLE
   !       select case(NameCommand)
   !       case("#IONODIR")
-  !           call read_var("NameIonoDir",NameIonoDir)
+  !           call read_var("NameIonoDir", NameIonoDir)
   !       case("#IONOSPHERE")
-  !             call read_var('iConductanceModel',iConductanceModel)
-  !             call read_var('UseFullCurrent' ,UseFullCurrent)
-  !             call read_var('F10.7 Flux',Flux107)
+  !           call read_var('iConductanceModel', iConductanceModel)
+  !           call read_var('UseFullCurrent', UseFullCurrent)
+  !           call read_var('F10.7 Flux', Flux107)
   !       ...
   !       end select
   !   end do
