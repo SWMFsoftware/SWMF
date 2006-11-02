@@ -1,10 +1,11 @@
-     100.0 	tMax
+#POLARWIND 
+    100.0 	tMax
       10.0 	DtOutput
-  'Godunov'     TypeSolver
+  Godunov	TypeSolver
 	F	IsImplicit
         T   	IsRestart
 	T	IsVariableDt
-	.05	Dt
+	.05	DtPolarWind
 	T 	IsMoveFluxTube
 	T	IsUseJr
 	F	IsCentrifugal
