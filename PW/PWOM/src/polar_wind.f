@@ -57,7 +57,9 @@ C     define the output files and attaching units
      &                 IsRestart=IsRestart,DToutput=DToutput)
       
       DT=DTpolarwind
-     
+
+      
+
 
       CURR(1)      = Jr
       !NameInput    = 'pw.input'
@@ -99,6 +101,7 @@ c      nDim=1500
 c      nDim=1180
 c      nDim=750
       WRITE (iUnitOutput,21) NDIM
+      
       NDIM2=NDIM-1
       NDIM1=NDIM+1
       NDIMM=NDIM+2
@@ -141,11 +144,11 @@ C                                                                      C
 !!!!! 2002    FORMAT(5(1PE16.6))
  2002    FORMAT(5(1PE25.16))
 !!!!      endif
-
+         
 
 111   CALL STRT
 
-
+      
 
       write(iUnitOutput,*) 'time:',time
 

@@ -3,7 +3,8 @@ module ModPWOM
   use ModParameters
   implicit none
 
-  logical :: IsFramework = .false.
+  logical :: IsFramework = .false., IsStandAlone
+  Character (len=2) :: NameThisComp
 
   integer :: iUnitOut
   character (len=7) :: StringPrefix=''

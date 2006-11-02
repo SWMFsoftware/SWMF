@@ -3,7 +3,7 @@ program pw
   use ModPwom
   use ModFieldLine
   use ModMpi
-
+  use ModReadParam
   implicit none
 
   !****************************************************************************
@@ -20,6 +20,13 @@ program pw
   !****************************************************************************
   ! Read the input file
   !****************************************************************************
+  IsStandAlone      = .true.
+  NameThisComp = 'PW'
+  NameInput          = 'pw.input'
+
+  call read_file('pw.input',iComm)
+  call read_init('  ',iSessionIn=1,iLineIn=0)
+
   call PW_set_parameters('READ')
   ! call PW_set_parameters('CHECK')
 
@@ -46,24 +53,25 @@ program pw
   Time    =     0.0
 
 
-  !******************************************************************************
+  !****************************************************************************
   ! Read information from IE file, and get the velocities
-  !******************************************************************************
+  !****************************************************************************
 
   call Get_ElectrodynamicPW  
 
 
-  !******************************************************************************
+
+  !****************************************************************************
   !  Move flux tube around
-  !******************************************************************************
+  !****************************************************************************
 
   !initialize field line locations
 
   call Initial_Line_Location
 
-  !******************************************************************************
+  !****************************************************************************
   ! Move the flux tube, solve each fieldline, and advance the time
-  !******************************************************************************
+  !****************************************************************************
 
   TIMELOOP:do
      if (Time >= Tmax) exit TIMELOOP
@@ -77,13 +85,13 @@ program pw
         !  Call the flux tube to be solved
 
         call AdvancePWline
-
      enddo
   enddo TIMELOOP
 
-  !******************************************************************************
+
+  !****************************************************************************
   !  Write output, use cartesian coords for output
-  !******************************************************************************
+  !****************************************************************************
 
 
   do iLine=1,nLine
@@ -606,8 +614,7 @@ subroutine AdvancePWline
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput)
-  
-  
+    
   call polar_wind
   
   if (iLine == nLine) then
@@ -631,3 +638,41 @@ subroutine AdvancePWline
   endif
   
 end subroutine AdvancePWline
+
+!============================================================================
+! The following subroutines are here so that we can use SWMF library routines
+! Also some features available in SWMF mode only require empty subroutines
+! for compilation of the stand alone code.
+!============================================================================
+subroutine CON_stop(StringError)
+  implicit none
+  character (len=*), intent(in) :: StringError
+  call stop_mpi(StringError)
+end subroutine CON_stop
+
+subroutine stop_mpi(str)
+
+  use ModPWOM, ONLY : NameThisComp,IsStandAlone,iProc,iComm
+  use ModMpi
+  implicit none
+
+  character (len=*), intent(in) :: str
+
+  ! Local variables:
+  integer :: iError,nError
+
+  !----------------------------------------------------------------------------
+
+  if(IsStandAlone)then
+     write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
+          ' with msg:'
+     write(*,*)str
+     call MPI_abort(iComm, nError, iError)
+     stop
+  else
+     write(*,*)NameThisComp,': stopping execution! me=',iProc
+     call CON_stop(NameThisComp//':'//str)
+  end if
+
+end subroutine stop_mpi
+
