@@ -27,10 +27,10 @@ subroutine write_output
   do i = 1, nOutputTypes
      if (floor((tSimulation-dt)/DtPlot(i)) /= &
           floor((tsimulation)/DtPlot(i)) .or. tSimulation == 0.0) then
-!        if (.not. IsDone) then
-!           call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
-!           IsDone = .true.
-!        endif
+        if (.not. IsDone .and. .not. Is1D) then
+           call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
+           IsDone = .true.
+        endif
         do iBlock = 1, nBlocks
            call output("UA/data/",iBlock, i)
         enddo
