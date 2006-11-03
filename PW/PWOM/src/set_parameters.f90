@@ -16,8 +16,6 @@ subroutine PW_set_parameters(NameAction)
   real:: ddt1, xxx
   integer:: ns
   !---------------------------------------------------------------------------
-  write(iUnitOut,*) NameSub,': called with action=',NameAction  
-
   NameOutput  = 'log.out'
   iUnitOutput = io_unit_new()
   open(UNIT=iUnitOutput, FILE=NameOutput)
@@ -40,20 +38,11 @@ subroutine PW_set_parameters(NameAction)
      endselect
   enddo
 
-  WRITE(iUnitOutput,*) TMAX
-  WRITE(iUnitOutput,*) DToutput
-  WRITE(iUnitOutput,*) TypeSolver
-  WRITE(iUnitOutput,*) IsImplicit
-  if (IsRestart) then
-     write(*,*) 'Is Restart', IsRestart
-  endif
-  if (IsVariableDt) then
-     write(*,*) 'IsVariableDT', IsVariableDt
-  endif
-  WRITE(iUnitOutput,*) DTpolarwind
-
-  write(*,*) TypeSolver
-    
-  CLOSE(UNIT=iUnitInput)
+  write(iUnitOutput,*) TMAX
+  write(iUnitOutput,*) DToutput
+  write(iUnitOutput,*) TypeSolver
+  write(iUnitOutput,*) IsImplicit
+  write(iUnitOutput,*) DTpolarwind
+  write(iUnitOutput,*) TypeSolver
 
 end subroutine PW_set_parameters
