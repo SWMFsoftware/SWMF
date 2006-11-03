@@ -368,13 +368,27 @@ subroutine set_inputs
 
         case ("#DIFFUSION")
            call read_in_logical(UseDiffusion, iError)
-            if (UseDiffusion) &
-                call read_in_real(EddyDiffusionCoef, iError)
-            if (iError /= 0) then
+           if (UseDiffusion .and. iError == 0) then
+              call read_in_real(EddyDiffusionCoef,iError)
+              call read_in_real(EddyDiffusionPressure0,iError)
+              call read_in_real(EddyDiffusionPressure1,iError)
+           endif
+
+           if (EddyDiffusionPressure0 < EddyDiffusionPressure1) then
+              write(*,*) "If you use eddy diffusion, you must specify two pressure"
+              write(*,*) "levels - under the first, the eddy diffusion is constant."
+              write(*,*) "Between the first and the second, there is a linear drop-off."
+              write(*,*) "Therefore The first pressure must be larger than the second!"
+              iError = 1
+           endif
+             
+           if (iError /= 0) then
               write(*,*) 'Incorrect format for #DIFFUSION:'
               write(*,*) '#DIFFUSION'
               write(*,*) "UseDiffusion (logical)"
               write(*,*) "EddyDiffusionCoef (real)"
+              write(*,*) "EddyDiffusionPressure0 (real)"
+              write(*,*) "EddyDiffusionPressure1 (real)"
            endif
 
         case ("#FORCING")
@@ -701,6 +715,8 @@ subroutine set_inputs
 
         end select
 
+        if (iError /= 0) IsDone = .true.
+
     endif
 
     iLine = iLine + 1
@@ -723,33 +739,41 @@ contains
 
   subroutine read_in_int(variable, iError)
     integer, intent(out) :: variable
-    integer, intent(out) :: iError
-    iline = iline + 1
-    read(cInputText(iline),*) variable
+    integer :: iError
+    if (iError == 0) then 
+       iline = iline + 1
+       read(cInputText(iline),*,iostat=iError) variable
+    endif
   end subroutine read_in_int
 
   subroutine read_in_logical(variable, iError)
     logical, intent(out) :: variable
-    integer, intent(out) :: iError
-    iline = iline + 1
-    read(cInputText(iline),*) variable
+    integer :: iError
+    if (iError == 0) then
+       iline = iline + 1
+       read(cInputText(iline),*,iostat=iError) variable
+    endif
   end subroutine read_in_logical
 
   subroutine read_in_string(variable, iError)
     character (len=iCharLen_), intent(out) :: variable
-    integer, intent(out) :: iError
-    iline = iline + 1
-    variable = cInputText(iline)
-    ! Remove anything after a space or TAB
-    i=index(variable,' '); if(i>0)variable(i:len(cLine))=' '
-    i=index(variable,char(9)); if(i>0)variable(i:len(cLine))=' '
+    integer :: iError
+    if (iError == 0) then 
+       iline = iline + 1
+       variable = cInputText(iline)
+       ! Remove anything after a space or TAB
+       i=index(variable,' '); if(i>0)variable(i:len(cLine))=' '
+       i=index(variable,char(9)); if(i>0)variable(i:len(cLine))=' '
+    endif
   end subroutine read_in_string
 
   subroutine read_in_real(variable, iError)
     real, intent(out) :: variable
-    integer, intent(out) :: iError
-    iline = iline + 1
-    read(cInputText(iline),*) variable
+    integer :: iError
+    if (iError == 0) then
+       iline = iline + 1
+       read(cInputText(iline),*, iostat=iError) variable
+    endif
   end subroutine read_in_real
 
 end subroutine set_inputs
