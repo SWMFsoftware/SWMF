@@ -17,13 +17,15 @@ subroutine PW_initialize
      nLine=int(floor(real(MaxLine)/real(nProc)))
   endif
 
+  write(*,*)'!!! iProc, nProc, nLine=',iProc, nProc, nLine
+
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
   !***************************************************************************
-  NameSourceGraphics = 'plot_sources.out'
-  NameCollision      = 'plots_collision.out'
-  NamePhiNorth       = 'North.dat'
-  NamePhiSouth       = 'South.dat'
+  NameSourceGraphics = 'PW/plot_sources.out'
+  NameCollision      = 'PW/plots_collision.out'
+  NamePhiNorth       = 'PW/North.dat'
+  NamePhiSouth       = 'PW/South.dat'
 
   do iLine=1,nLine
      if (iproc .lt. mod(MaxLine,nProc)) then
