@@ -3182,7 +3182,7 @@ contains
 
   !========================================================================
   subroutine user_update_states(iStage,iBlock)
-    use ModVarIndexes
+    use ModVarIndexes, Ew_ => ScalarFirst_
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModMain,    ONLY: nStage
