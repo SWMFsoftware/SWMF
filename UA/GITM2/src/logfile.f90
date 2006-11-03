@@ -71,9 +71,6 @@ subroutine logfile(dir)
 
   call get_log_info(MinTemp, MaxTemp, MinVertVel, MaxVertVel)
 
-write(*,*) MinTemp, MaxTemp, MinVertVel, MaxVertVel
-
-
   localVar = MinTemp
   call MPI_AllREDUCE(localVar, minTemp, 1, MPI_REAL, MPI_MIN, &
        iCommGITM, iError)
