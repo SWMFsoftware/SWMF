@@ -18,7 +18,9 @@ module ModPWOM
   integer ::   iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine
   integer, dimension(MaxLine)::iLineGlobal
 
-  real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary,nLine
+  real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary
+
+  integer :: nLine
 
   real, dimension(0:nPhi+1,0:nTheta+1)::  Theta_G,Phi_G,SigmaH_G, SigmaP_G,&
                                           Jr_G,Potential_G,Br_G,Btheta_G,  &
