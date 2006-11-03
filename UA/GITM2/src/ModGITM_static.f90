@@ -61,6 +61,15 @@ module ModGITM
   real :: MLongitude(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
   real :: DipAngle(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
   real :: DecAngle(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
+
+  real :: b0_d1(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_d2(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_d3(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_e1(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_e2(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_e3(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocksMax)
+  real :: b0_cD(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocksMax)
+
   real :: cMax_GDB(0:nLons+1, 0:nLats+1, 0:nAlts+1, 3, nBlocksMax)
 
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) :: &

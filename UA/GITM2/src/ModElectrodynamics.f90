@@ -13,12 +13,27 @@ module ModElectrodynamics
   real, dimension(-1:nLons+2,-1:nLats+2) :: &
        HallFieldLine, PedersenFieldLine, DivJuFieldLine, LengthFieldLine
 
+  ! This is the field-line integral of the conductance and divergence
+  real, dimension(-1:nLons+2,-1:nLats+2) :: &
+       SigmaPP, SigmaLL, SigmaHH, SigmaCC, SigmaPL, SigmaLP, &
+       KDmp, KDml
+
   ! This is the field aligned integral in magnetic coordinates
   real, dimension(:,:), allocatable :: DivJuAltMC
 
   ! These are the conductances in magnetic coordinates
   real, dimension(:,:), allocatable :: SigmaHallMC
   real, dimension(:,:), allocatable :: SigmaPedersenMC
+
+  real, dimension(:,:), allocatable :: SigmaPPMC
+  real, dimension(:,:), allocatable :: SigmaLLMC
+  real, dimension(:,:), allocatable :: SigmaHHMC
+  real, dimension(:,:), allocatable :: SigmaCCMC
+  real, dimension(:,:), allocatable :: SigmaPLMC
+  real, dimension(:,:), allocatable :: SigmaLPMC
+
+  real, dimension(:,:), allocatable :: KDmpMC
+  real, dimension(:,:), allocatable :: KDmlMC
 
   ! These are the magnetic coordinates
   real, dimension(:,:), allocatable :: MagLatMC
