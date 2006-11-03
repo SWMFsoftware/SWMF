@@ -74,7 +74,7 @@ test_compare:
 	-@(share/Scripts/DiffNum.pl -r=1e-10 \
 		run/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out > diff.plots)
-	-@(share/Scripts/DiffNum.pl run/log.out output/${PLANET}/log.out \
+	-@(share/Scripts/DiffNum.pl run/PW/log.out output/${PLANET}/log.out \
 		> diff.log)
 	ls -l diff.restart diff.plots diff.log
 
