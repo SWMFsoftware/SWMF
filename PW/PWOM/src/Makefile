@@ -55,7 +55,7 @@ ${MY_LIB}: ${LIBOBJECTS} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${LIBOBJECTS}
 
-pw.o: ${LIBSHARE} ${MY_LIB}
+main.o: ${LIBSHARE}
 
 EXE = ${BINDIR}/PWOM.exe
 
