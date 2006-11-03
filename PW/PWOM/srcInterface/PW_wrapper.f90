@@ -5,7 +5,7 @@ subroutine PW_set_param(CompInfo, TypeAction)
 
   use CON_comp_info
   use ModIoUnit, only: STDOUT_
-  use Mod_PW, only: IsFramework, iUnitOut, iProc, nProc, iComm, StringPrefix
+  use ModPWOM, only: iUnitOut, iProc, nProc, iComm, StringPrefix
 
   implicit none
 
@@ -23,12 +23,12 @@ subroutine PW_set_param(CompInfo, TypeAction)
           Version    =1.0)
   case('MPI')
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-     IsFramework = .true.
+
   case('READ')
      call PW_set_parameters('READ')
 
   case('CHECK')
-     call PW_set_parameters('CHECK')
+     ! call PW_set_parameters('CHECK')
 
   case('STDOUT')
 
@@ -64,7 +64,10 @@ subroutine PW_init_session(iSession, TimeSimulation)
 
   character(len=*), parameter :: NameSub='PW_init_session'
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  logical :: DoInitialize = .true.
+  !----------------------------------------------------------------------------
+  if(DoInitialize) call PW_initialize
+  DoInitialize = .false.
 
 end subroutine PW_init_session
 
@@ -72,7 +75,7 @@ end subroutine PW_init_session
 
 subroutine PW_finalize(TimeSimulation)
 
-  use ModPwom, ONLY: nLine, iUnitGraphics
+  use ModPWOM, ONLY: nLine, iUnitGraphics, iUnitOutput
 
   implicit none
 
@@ -84,8 +87,9 @@ subroutine PW_finalize(TimeSimulation)
   integer :: iLine
 
   do iLine=1,nLine
-     CLOSE(UNIT=iUnitGraphics(iLine))
+     close(UNIT=iUnitGraphics(iLine))
   enddo
+  close(UNIT=iUnitOutput)
 
 end subroutine PW_finalize
 
@@ -100,13 +104,15 @@ subroutine PW_save_restart(TimeSimulation)
 
   character(len=*), parameter :: NameSub='PW_save_restart'
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  call CON_stop(NameSub//': PW_ERROR: not yet implemented!')
 
 end subroutine PW_save_restart
 
 !==============================================================================
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
+
+  use ModPWOM, ONLY: Time, nLine, DtMax, Dt
 
   implicit none
 
@@ -117,8 +123,15 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   character(len=*), parameter :: NameSub='PW_run'
+  integer:: iLine
+  !---------------------------------------------------------------------------
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  Dt = min(DtMax, TimeSimulationLimit - Time)
+  do iLine=1,nLine
+     call MoveFluxTube
+     call AdvancePWline
+  end do
+  TimeSimulation = Time
 
 end subroutine PW_run
 
