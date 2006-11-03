@@ -14,6 +14,7 @@ MODULES = \
 	ModPass.o
 
 METHODS = \
+	pw.o\
 	polar_wind.o\
 	set_parameters.o\
 	initialize.o\
@@ -37,7 +38,7 @@ METHODS = \
 
 LIBOBJECTS = ${MODULES} ${METHODS}
 
-EXEOBJECTS = pw.o ${LIBOBJECTS}
+EXEOBJECTS = main.o ${LIBOBJECTS}
 
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
