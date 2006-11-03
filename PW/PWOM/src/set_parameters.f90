@@ -16,7 +16,7 @@ subroutine PW_set_parameters(NameAction)
   real:: ddt1, xxx
   integer:: ns
   !---------------------------------------------------------------------------
-  NameOutput  = 'log.out'
+  NameOutput  = 'PW/log.out'
   iUnitOutput = io_unit_new()
   open(UNIT=iUnitOutput, FILE=NameOutput)
   
