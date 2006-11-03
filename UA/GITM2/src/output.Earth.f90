@@ -227,7 +227,6 @@ subroutine output(dir, iBlock, iOutputType)
   call i2s(iTimeArray(5), cMinute, 2)
   call i2s(iTimeArray(6), cSecond, 2)
 
-csecond="00"
   cTime = "t"//cYear//cMonth//cDay//"_"//cHour//cMinute//cSecond
 
   select case (OutputType(iOutputType))
@@ -452,7 +451,7 @@ contains
     use ModElectrodynamics
     use ModConstants, only:Pi
 
-    nvars_to_write = 7
+    nvars_to_write = 15
     write(output_format,"('(1p,',I2,'E11.3)')") nvars_to_write
 
     write(iOutputUnit_,*) "BLOCKS"
@@ -476,7 +475,15 @@ contains
     write(iOutputUnit_,"(I7,A1,a)")  4, " ", "Pedersen Conductance"
     write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Hall Conductance"
     write(iOutputUnit_,"(I7,A1,a)")  6, " ", "DivJuAlt"
-    write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Field Line Length"
+    write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Field Line Length"
+    write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Sigma PP"
+    write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Sigma LL"
+    write(iOutputUnit_,"(I7,A1,a)") 10, " ", "Sigma H"
+    write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Sigma C"
+    write(iOutputUnit_,"(I7,A1,a)") 12, " ", "Sigma PL"
+    write(iOutputUnit_,"(I7,A1,a)") 13, " ", "Sigma LP"
+    write(iOutputUnit_,"(I7,A1,a)") 14, " ", "K^D_{m\phi}"
+    write(iOutputUnit_,"(I7,A1,a)") 15, " ", "K^D_{m\lamda}"
     write(iOutputUnit_,*) ""
     write(iOutputUnit_,*) "BEGIN"
 
@@ -489,8 +496,15 @@ contains
                SigmaPedersenMC(iLon,iLat), &
                SigmaHallMC(iLon,iLat), &
                DivJuAltMC(iLon,iLat), &
-               LengthMC(iLon,iLat)
-
+               LengthMC(iLon,iLat), &
+               SigmaHHMC(iLon,iLat), &
+               SigmaLLMC(iLon,iLat), &
+               SigmaHHMC(iLon,iLat), &
+               SigmaCCMC(iLon,iLat), &
+               SigmaLPMC(iLon,iLat), &
+               SigmaPLMC(iLon,iLat), &
+               KDmpMC(iLon,iLat), &
+               KdmlMC(iLon,iLat)
        enddo
     enddo
 
@@ -596,10 +610,10 @@ contains
                   Ivelocity(iLon,iLat,iAlt,iEast_:iUp_,iBlock), &
                   Potential(iiLon,iiLat,iiAlt,iBlock), &
                   ExB(iLon,iLat,iAlt,iEast_:iUp_),& 
-                  EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock)+&
-                  EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock)+&
-                  EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock),&
-                  AuroralIonRateS(iLon,iLat,iAlt,iO_,iBlock),& 
+                  EuvIonRateS(iiLon,iiLat,iiAlt,iO_4SP_,iBlock)+&
+                  EuvIonRateS(iiLon,iiLat,iiAlt,iO_2PP_,iBlock)+&
+                  EuvIonRateS(iiLon,iiLat,iiAlt,iO_2DP_,iBlock),&
+                  AuroralIonRateS(iiLon,iiLat,iiAlt,iO_,iBlock),& 
                   JouleHeating(iiLon,iilat,iiAlt) * 1.38e-23 *1.5 * &
                   ( NDensityS(iLon,iLat,iAlt,iO_,iBlock) + &
                     NDensityS(iLon,iLat,iAlt,iO2_,iBlock) + &
