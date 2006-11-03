@@ -75,7 +75,7 @@ end subroutine PW_init_session
 
 subroutine PW_finalize(TimeSimulation)
 
-  use ModPWOM, ONLY: nLine, iUnitGraphics, iUnitOutput
+  use ModPWOM, ONLY: iLine, nLine, iUnitGraphics, iUnitOutput
 
   implicit none
 
@@ -83,9 +83,7 @@ subroutine PW_finalize(TimeSimulation)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
 
   character(len=*), parameter :: NameSub='PW_finalize'
-
-  integer :: iLine
-
+  !-------------------------------------------------------------------------
   do iLine=1,nLine
      close(UNIT=iUnitGraphics(iLine))
   enddo
@@ -112,7 +110,7 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: Time, nLine, DtMax, Dt
+  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, Dt
 
   implicit none
 
@@ -123,7 +121,6 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   character(len=*), parameter :: NameSub='PW_run'
-  integer:: iLine
   !---------------------------------------------------------------------------
 
   Dt = min(DtMax, TimeSimulationLimit - Time)
