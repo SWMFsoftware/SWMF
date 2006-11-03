@@ -17,8 +17,6 @@ subroutine PW_initialize
      nLine=int(floor(real(MaxLine)/real(nProc)))
   endif
 
-  write(*,*)'!!! iProc, nProc, nLine=',iProc, nProc, nLine
-
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
   !***************************************************************************
