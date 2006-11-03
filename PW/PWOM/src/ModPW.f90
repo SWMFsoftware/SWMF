@@ -45,16 +45,17 @@ module ModPWOM
   
   
   integer, dimension(maxLine)        ::  iFieldLineTheta,iFieldLinePhi
-  real                               ::  Dt, Time, maxTime
+  real                               ::  DtMax=50.0, Dt, Time, maxTime
 
-  Logical                            ::  IsMoveFluxTube,IsUseJr,IsCentrifugal
-  
-  Character*100 :: NamePhiNorth, NamePhiSouth
+  logical::  IsMoveFluxTube=.true., IsUseJr=.true., IsCentrifugal=.true.
 
-  CHARACTER*100 :: NameInput, NameOutput, &
+  character(len=100) :: NamePhiNorth, NamePhiSouth
+
+  character(len=100) :: NameInput, NameOutput, &
                    NameCollision,NameSourceGraphics
 
-  CHARACTER*100,dimension(maxline) ::NameRestartIn, NameRestart,NameGraphics
+  character(len=100),dimension(MaxLine):: &
+       NameRestartIn, NameRestart, NameGraphics
 
   integer       :: iUnitInput,iUnitOutput,iUnitSourceGraphics,&
                    iUnitCollision,nDim
@@ -65,10 +66,10 @@ module ModPWOM
                                           dHel, uHel, pHel, THel,         &
                                           dHyd, uHyd, pHyd, THyd,         &
                                           dElect, uElect, pElect, TElect
-  real   :: DToutput,DTpolarwind, Tmax
+  real   :: DToutput=10.0, DTpolarwind=0.05, Tmax=100.0
 
-  logical:: IsImplicit, IsRestart, IsVariableDt
+  logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
-  character(7) :: TypeSolver
+  character(7) :: TypeSolver='Godunov'
 
 end module ModPWOM
