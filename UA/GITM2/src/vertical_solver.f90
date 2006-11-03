@@ -106,7 +106,7 @@ subroutine advance_vertical_1stage( &
   real :: NewVel2_G(-1:nAlts+2)
   real, intent(inout) :: NewTemp(-1:nAlts+2)
   real, intent(out) :: NewVertVel(-1:nAlts+2,nSpecies)
-  real :: NS(-1:nAlts+2,nSpecies)
+  real :: NS(-1:nAlts+2,nSpecies), Pressure1D(-1:nAlts+2)
   real :: Rho(-1:nAlts+2)
 
   real :: TempKoM(-1:nAlts+2), AveMass(-1:nAlts+2), LogNum(-1:nAlts+2)
@@ -128,6 +128,7 @@ subroutine advance_vertical_1stage( &
   LogNum = alog(sum(NS,dim=2))
   AveMass = Rho/sum(NS,dim=2)
   TempKoM = Temp
+  Pressure1D = sum(NS,dim=2) * Temp * Boltzmanns_Constant
 
   call calc_rusanov_alts(LogRho ,GradLogRho,  DiffLogRho)
   call calc_rusanov_alts(LogNum ,GradLogNum,  DiffLogNum)
@@ -193,26 +194,7 @@ subroutine advance_vertical_1stage( &
 
      do iSpecies=1,nSpecies
 
-!        NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) - Dt * &
-!             (exp(LogNS(iAlt,iSpecies)) / (exp(LogRho(iAlt)) / Mass(1))) * &
-!             (GradTemp(iAlt) + Temp(iAlt)*GradLogNS(iAlt,iSpecies))
-
-!        NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
-!             (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
-!             - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-!             / RadialDistance(iAlt)) &
-!             + Dt * DiffVertVel(iAlt,iSpecies)
-
-!! Version of vertical velocity with grad(p) and g in neutral friction:
-!        NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
-!             (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
-!             - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-!             / RadialDistance(iAlt)) &
-!             + Dt * DiffVertVel(iAlt,iSpecies)
-
-!if (iAlt == 30) write(*,*) "NewVertVel : ",iSpecies, NewVertVel(iAlt, iSpecies)
-
-! Version of vertical velocity with grad(p) and g here :
+        ! Version of vertical velocity with grad(p) and g here :
         NewVertVel(iAlt, iSpecies) = VertVel(iAlt, iSpecies) - Dt * &
              (VertVel(iAlt,iSpecies)*GradVertVel(iAlt,iSpecies) &
              - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
@@ -223,16 +205,14 @@ subroutine advance_vertical_1stage( &
              - Gravity(iAlt)) &
              + Dt * DiffVertVel(iAlt,iSpecies)
 
-
         if (UseCoriolis) then
            NewVertVel(iAlt,ispecies) = NewVertVel(iAlt,ispecies) + Dt * ( &
                 Centrifugal * RadialDistance(iAlt) + &
                 Coriolis * Vel_GD(iAlt,iEast_))
         endif
 
-
-        NewVertVel(iAlt, iSpecies) = max(-500.0, NewVertVel(iAlt, iSpecies))
-        NewVertVel(iAlt, iSpecies) = min( 500.0, NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = max(-1000.0, NewVertVel(iAlt, iSpecies))
+        NewVertVel(iAlt, iSpecies) = min( 1000.0, NewVertVel(iAlt, iSpecies))
 
         NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) + &
              NewVertVel(iAlt, iSpecies) * &
@@ -253,9 +233,7 @@ subroutine advance_vertical_1stage( &
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
 
-
-     if (altitude(ialt) < 110e3) then
-
+     if (Pressure1D(ialt) > EddyDiffusionPressure0) then
         ed = EddyDiffusionCoef * 0.8
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
