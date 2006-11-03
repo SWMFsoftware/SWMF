@@ -10,7 +10,7 @@ subroutine finalize_gitm
   integer :: iError, iBlock, iOutputType
   integer :: nMLTsTmp,nLatsTmp
 
-  if (.not. Is1D .and. .not. UseApex) &
+  if (.not. Is1D) &
        call UA_calc_electrodynamics(nMLTsTmp, nLatsTmp)
 
   do iOutputType = 1, nOutputTypes
