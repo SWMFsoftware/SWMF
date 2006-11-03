@@ -35,8 +35,6 @@ subroutine PW_initialize
              + ((iproc)-mod(MaxLine,nProc))                        &
              *floor(real(MaxLine)/real(nProc))+iLine
      endif
-     write(*,*) 'iLineGlobal',iLineGlobal(iLine)
-
      write(NameRestartIn(iLine),"(a,i4.4,a)") &
           'PW/restartIN/restart_iline',iLineGlobal(iLine),'.dat'
      write(NameRestart(iLine),"(a,i4.4,a)") &
@@ -77,5 +75,37 @@ subroutine PW_initialize
   else
      Time=0.0
   endif
+
+  !****************************************************************************
+  ! Use Get_GITM to bring in neutral atmosphere from GITM
+  !****************************************************************************
+  !call GetNeutralData
+
+  !****************************************************************************
+  !  Set parameters for reading in potential and time of simulation
+  !****************************************************************************
+  Dtheta  = 0.0242
+  Dphi    = 0.0245
+
+  Dt      =    50.0
+  !  Dt      =    0.2
+  !  Dt      =    Tmax
+  !maxTime = 10000.0
+  maxTime = Tmax
+  Time    =     0.0
+
+  !****************************************************************************
+  ! Read information from IE file, and get the velocities
+  !****************************************************************************
+
+  call get_electrodynamicPW
+
+  !****************************************************************************
+  !  Move flux tube around
+  !****************************************************************************
+
+  !initialize field line locations
+
+  call initial_line_location
 
 end subroutine PW_initialize
