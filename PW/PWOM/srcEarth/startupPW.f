@@ -1200,7 +1200,6 @@ CALEX similar to nagy p95 but I cant find the connection???
  20   CONTINUE
 cAlex
       NEXP=3
-      WRITE(*,*) CURR(1),RAD(1),NEXP
 cendAlex      
 !      CRRX=CURR(1)*RAD(1)**NEXP
 !      DO 25 I=1,NDIM
