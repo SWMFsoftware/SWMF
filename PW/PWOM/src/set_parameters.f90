@@ -24,21 +24,34 @@ subroutine PW_set_parameters(NameAction)
      if(.not.read_line() ) EXIT
      if(.not.read_command(NameCommand)) CYCLE
      select case(NameCommand)
-     case('#POLARWIND')
-        call read_var('Tmax',Tmax)
-        call read_var('DToutput',DToutput)
+     case('#STOP')
+        if(IsStandAlone)then
+           call read_var('Tmax',Tmax)
+        else
+           write(*,*)'PWOM WARNING: #STOP command is ignored in the framework'
+        end if
+     case('#SAVEPLOT')
+        call read_var('DtSavePlot',DtOutput)
+     case('#SCHEME')
         call read_var('TypeSolver',TypeSolver)
         call read_var('IsImplicit',IsImplicit)
+        call read_var('DtVertical',DtPolarwind)
+        
+     case('#RESTART')
         call read_var('IsRestart',IsRestart)
-        call read_var('IsVariableDt',IsVariableDt)
-        call read_var('DtPolarWind',DTpolarwind)
+     case('#MOTION')
         call read_var('IsMoveFluxTube',IsMoveFluxTube)
+     case('#FAC')
         call read_var('IsUseJr',IsUseJr)
+     case('#ROTATION')
         call read_var('IsCentrifugal',IsCentrifugal)
+     case('#TIMESTEP')
+        call read_var('DtMax',DtMax)
      endselect
   enddo
 
-  write(iUnitOutput,*) TMAX
+  Dt = DtMax
+  write(iUnitOutput,*) tMax
   write(iUnitOutput,*) DToutput
   write(iUnitOutput,*) TypeSolver
   write(iUnitOutput,*) IsImplicit
