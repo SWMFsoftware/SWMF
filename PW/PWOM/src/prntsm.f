@@ -119,7 +119,7 @@ C     ========================================================================
 
       if(x < 0.0) then
          write(*,*)'negative argument for alog10_check:',x
-         stop
+         call CON_stop('PWOM ERROR: negative argument for alog10')
       endif
       alog10_check=alog10(x)
 
