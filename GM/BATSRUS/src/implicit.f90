@@ -230,14 +230,13 @@ subroutine advance_impl
      n_prev  = n_step
      dt_prev = dt
   endif
-  ! Save the current state into w_prev for BDF2 scheme and/or update check
-  if(UseBDF2 .or. UseUpdateCheckOrig)then
-     ! The implicit blocks haven't been updated, so save current state
-     do implBLK=1,nImplBlk
-        iBLK=impl2iBLK(implBLK)
-        w_prev(:,:,:,1:nw,iBLK) = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
-     end do
-  endif
+
+  ! Save the current state into w_prev so that StateOld_VCB can be restored
+  ! The implicit blocks haven't been updated, so save current state
+  do implBLK=1,nImplBlk
+     iBLK=impl2iBLK(implBLK)
+     w_prev(:,:,:,1:nw,iBLK) = w_k(1:nI,1:nJ,1:nK,1:nw,implBLK)
+  end do
 
   ! Newton-Raphson iteration and iterative linear solver
   dwnrm=bigdouble
