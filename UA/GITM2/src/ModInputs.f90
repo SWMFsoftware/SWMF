@@ -129,7 +129,6 @@ module ModInputs
   logical :: UseVerAdvectionT  = .true.
 
   real :: KappaTemp0 = 5.6e-4
-  real :: KappaEddy  = 2.5
   real :: EddyDiffusionCoef = 0.0
   real :: EddyDiffusionPressure0 = 0.0
   real :: EddyDiffusionPressure1 = 0.0

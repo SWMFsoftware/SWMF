@@ -358,12 +358,10 @@ subroutine set_inputs
 
         case ("#THERMALDIFFUSION")
            call read_in_real(KappaTemp0, iError)
-           call read_in_real(KappaEddy, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #THERMALDIFFUSION:'
               write(*,*) '#THERMALDIFFUSION'
               write(*,*) "KappaTemp0    (thermal conductivity, real)"
-              write(*,*) "KappaEddy     (eddy diffusion, real)"
            endif
 
         case ("#DIFFUSION")
