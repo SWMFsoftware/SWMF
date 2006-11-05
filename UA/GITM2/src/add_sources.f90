@@ -78,10 +78,7 @@ iAlt = 10
              NeutralFriction(:,:,:,iSpecies) 
      enddo
 
-!     call calc_electron_temperature(iBlock)
-
-  eTemperature(:,:,:,iBlock)= Temperature(:,:,:,iBlock) * tempUnit(:,:,:) * 2.0
-  ITemperature(:,:,:,iBlock)= Temperature(:,:,:,iBlock) * tempUnit(:,:,:) * 1.5
+     call calc_electron_temperature(iBlock)
 
      do iSpecies = 1, nSpecies
         NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &
