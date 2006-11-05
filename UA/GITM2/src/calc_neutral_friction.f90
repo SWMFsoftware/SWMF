@@ -3,39 +3,12 @@ subroutine calc_neutral_friction(iBlock)
 
   use ModGITM
   use ModSources
+  use ModPlanet, only: Diff0, DiffExp
   use ModInputs, only:f107a
 
   implicit none
 
   integer, intent(in) :: iBlock
-
-  ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
-       ! 0      02     N2      N     NO
-       !---------------------------------+
-       0.00,  0.260, 0.260, 0.300, &            ! O
-       0.26,  0.000, 0.181, 0.220, &            ! O2
-       0.26,  0.181, 0.000, 0.220, &            ! N2
-       0.30,  0.220, 0.220, 0.000 /), (/4,4/) )  ! N
-
-!  ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
-!  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
-!       ! 0      02     N2      N     NO
-!       !---------------------------------+
-!       0.00,  0.260, 0.260, 0.260, &            ! O
-!       0.26,  0.000, 0.181, 0.181, &            ! O2
-!       0.26,  0.181, 0.000, 0.181, &            ! N2
-!       0.26,  0.181, 0.181, 0.000 /), (/4,4/) )  ! N
-
-  ! These are the exponents
-  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
-       ! 0      02     N2
-       !---------------------------------+
-       0.00,  0.75,  0.75, 0.75, &             ! O
-       0.75,  0.00,  0.75, 0.75, &             ! O2
-       0.75,  0.75,  0.00, 0.75, &             ! N2
-       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
-
   integer :: iAlt, iLat, iLon
   real :: RealTemp(-1:nAlts+2), de(4,4)
 
@@ -45,50 +18,17 @@ subroutine calc_neutral_friction(iBlock)
 
   do iLon = 1, nLons
      do iLat = 1, nLats
+
         RealTemp = Temperature(iLon, iLat, :, iBlock) * &
              TempUnit(iLon, iLat, :)
+
         do iAlt = 1, nAlts
 
            call calc_friction
 
-
-!----------ion_drag force----------------------------------
-! F=Rho_i/rho_s*V_in*N_s/N_n*(V_i-V_n) 
-!
-!           do ispecies=1,nspecies
-!              IonNeutralFriction(iLon,iLat,iAlt,ispecies) = &
-!                 (IDensityS(iLon,iLat,iAlt,ie_,iBlock) * &     
-!                  MeanIonMass(iLon,iLat,iAlt))/           &
-!                  (NDensityS(iLon,iLat,iAlt,ispecies,iBlock)* &
-!                  mass(ispecies)) *                &
-!                  (Collisions(iLon,iLat,iAlt,iVIN_) * &
-!                  NDensityS(iLon,iLat,iAlt,ispecies,iBlock)/ &
-!                  NDensity(iLon,iLat,iAlt,iBlock)) *     &
-!                  (Velocity(iLon,iLat,iAlt,iUp_,iBlock) - & 
-!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock))
-!
-!              if (IonNeutralFriction(iLon,iLat,iAlt,ispecies)*dt > &
-!                   IVelocity(iLon,iLat,iAlt,iUp_,iBlock)) then
-!                 IonNeutralFriction(iLon,iLat,iAlt,ispecies) = &
-!                      IVelocity(iLon,iLat,iAlt,iUp_,iBlock)/dt
-!              endif
-!
-!        enddo
-
-
-     enddo
+        enddo
      enddo
   enddo
-
-
-
-
-
-
-
-
-
-
 
 contains
 
@@ -118,22 +58,12 @@ contains
                * (RealTemp(iAlt) / RealTemp(1)) &
                ** DiffExp(iSpecies, jSpecies) &
                * N0)
+
        enddo
     enddo
 
     Fraction = 1.4 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     CoefMatrix = Fraction * CoefMatrix
-
-!    if (iAlt == 1) write(*,*) "low : ",CoefMatrix
-!    if (iAlt == 30) write(*,*) "high : ",CoefMatrix
-!    if (iAlt == 30) stop
-
-!    Matrix = -dt*CoefMatrix
-!
-!    do iSpecies = 1, nSpecies
-!       Matrix(iSpecies,iSpecies) = &
-!            1.0 + dt*sum(CoefMatrix(iSpecies,:))
-!    enddo
 
     Matrix = -dt*CoefMatrix
 
@@ -147,8 +77,6 @@ contains
 
     NeutralFriction(iLon, iLat, iAlt, :) = &
          Vel - VerticalVelocity(iLon,iLat,iAlt,:,iBlock)
-
-
 
   end subroutine calc_friction
 
