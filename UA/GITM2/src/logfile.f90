@@ -88,7 +88,7 @@ subroutine logfile(dir)
        iCommGITM, iError)
 
   if (iProc == 0) then
-     write(iLogFileUnit_,"(i8,i5,5i3,i4,f7.4,2f7.1,2f8.2)") &
+     write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,4f13.5)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, minVertVel, maxVertVel
   endif
 
