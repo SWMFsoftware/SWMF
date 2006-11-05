@@ -78,6 +78,26 @@ module ModPlanet
   logical :: IsEarth = .true.
   character (len=10) :: cPlanet = "Earth"
 
+  ! These are for the neutral friction routine...
+
+  ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
+  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
+       ! 0      02     N2      N     NO
+       !---------------------------------+
+       0.00,  0.260, 0.260, 0.300, &            ! O
+       0.26,  0.000, 0.181, 0.220, &            ! O2
+       0.26,  0.181, 0.000, 0.220, &            ! N2
+       0.30,  0.220, 0.220, 0.000 /), (/4,4/) )  ! N
+
+  ! These are the exponents
+  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
+       ! 0      02     N2
+       !---------------------------------+
+       0.00,  0.75,  0.75, 0.75, &             ! O
+       0.75,  0.00,  0.75, 0.75, &             ! O2
+       0.75,  0.75,  0.00, 0.75, &             ! N2
+       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
+
 contains
 
   subroutine init_planet
