@@ -6,12 +6,13 @@ subroutine advance
   use ModTime
   use ModEUV
   use ModInputs
+  use ModIndicesInterfaces
 
   implicit none
 
   integer, external :: jday
 
-  integer :: iBlock, iAlt, iLat, iLon,ispecies
+  integer :: iBlock, iAlt, iLat, iLon,ispecies, iError
   real*8 :: DTime
 
   call report("advance",1)
@@ -29,7 +30,8 @@ subroutine advance
 
   endif
 
-  if (iDebugLevel > 0) write(*,*) "=> MaxTemp : ",maxval(temperature)*TempUnit(1,1,nalts)
+  if (iDebugLevel > 0) &
+       write(*,*) "=> MaxTemp : ",maxval(temperature)*TempUnit(1,1,nalts)
 
   tSimulation = tSimulation + dt
   CurrentTime = StartTime + tSimulation
@@ -45,13 +47,29 @@ subroutine advance
   uTime = (DTime / Rotation_Period - iDay) * Rotation_Period
 
   iJulianDay = jday(iTimeArray(1), iTimeArray(2), iTimeArray(3)) 
-!  utime = iTimeArray(4)*3600.0 + iTimeArray(5)*60.0 + &
-!       iTimeArray(6) + iTimeArray(7)/1000.0
 
   if (UseStatisticalModelsOnly) then
+
+     iError = 0
+     call get_f107(CurrentTime, f107, iError)
+     if (iError /= 0) then
+        write(*,*) "Error in getting F107 value.  Is this set?"
+        write(*,*) "Code : ",iError
+        call stop_gitm("Stopping in advance")
+     endif
+
+     call get_f107a(CurrentTime, f107a, iError)
+     if (iError /= 0) then
+        write(*,*) "Error in getting F107a value.  Is this set?"
+        write(*,*) "Code : ",iError
+        call stop_gitm("Stopping in advance")
+     endif
+
+     write(*,*) "F10.7 = ", f107, f107a
      call init_msis
      call init_iri
      call init_b0
+
   endif
 
   call end_timing("advance")
