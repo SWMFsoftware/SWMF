@@ -157,6 +157,10 @@ module ModInputs
 
   real :: LogNS0(nSpecies)
 
+  logical                   :: UseEUVData =.false.
+  character (len=iCharLen_) :: cEUVFile
+  
+
 contains
 
   ! -------------------------------------------------------------

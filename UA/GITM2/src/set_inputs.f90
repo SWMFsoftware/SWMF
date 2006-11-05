@@ -656,6 +656,17 @@ subroutine set_inputs
               AltMax = AltMax * 1000.0
            endif
 
+        case ("#EUV_DATA")
+           call read_in_logical(UseEUVData, iError)
+           call read_in_string(cEUVFile, iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #EUV_DATA'
+              write(*,*) '#EUV_DATA'
+              write(*,*) 'UseEUVData            (logical)'
+              write(*,*) 'cEUVFile              (string)'
+           endif
+
         case ("#MHD_INDICES")
 
            cTempLines(1) = cLine
