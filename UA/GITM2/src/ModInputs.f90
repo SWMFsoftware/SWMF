@@ -126,11 +126,16 @@ module ModInputs
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
   logical :: UseDiffusion      = .false.
-  real    :: EddyDiffusionCoef = 0.0
   logical :: UseVerAdvectionT  = .true.
 
   real :: KappaTemp0 = 5.6e-4
   real :: KappaEddy  = 2.5
+  real :: EddyDiffusionCoef = 0.0
+  real :: EddyDiffusionPressure0 = 0.0
+  real :: EddyDiffusionPressure1 = 0.0
+  real :: Kappa1DCorrectionFactor = 45.0
+  real :: Kappa1DCorrectionPower  = 1.75
+  logical :: UseKappa1DCorrection = .true.
 
   logical :: UseIonChemistry     = .true.
   logical :: UseNeutralChemistry = .true.
