@@ -117,7 +117,13 @@ test:
 		touch core ; chmod 444 core ; \
 		ln -s UA/* .; \
 		mpirun -np 2 GITM.exe ; \
-		cd UA/data ; idl < ../../../srcData/idl_input_for_test ; cd ../.. ; echo "Done making plots!!"; \
 		echo "Looking for Differences in logfile..." ; cd UA/data ; diff log00000002.dat ../../../srcData/log00000002.dat ; cd ../../.. ; echo "Do you see differences??" ; \
 	fi);
+
+dist:
+	make distclean
+	tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* config.pl get_info.pl \
+	    share src srcData srcIDL srcIE srcIO srcInterface \
+	    srcMake srcRudy srcSphereAB
+	make install
 
