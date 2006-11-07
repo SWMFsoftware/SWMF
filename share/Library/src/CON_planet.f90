@@ -83,13 +83,13 @@ module CON_planet
 contains
 
   !BOP ========================================================================
-  !IROUTINE: set_planet_defaults - set Earth to be defaults if no #PLANET
+  !IROUTINE: set_planet_defaults - set Earth to be defaults
   !INTERFACE:
   subroutine set_planet_defaults
 
     !DESCRIPTION:
     ! Initialize parameters for Earth as the default planet.  This is in case
-    ! there is no #PLANET command.
+    ! there is no \#PLANET command.
     !EOP
     character (len=*), parameter :: NameSub = NameMod//'::set_planet_defaults'
 
