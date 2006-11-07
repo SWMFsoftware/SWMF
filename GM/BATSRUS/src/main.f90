@@ -19,6 +19,7 @@ program BATSRUS
        dn_timing, UseTiming
   use ModIO,          ONLY: NamePlotDir
   use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
+  use CON_planet, ONLY: init_planet_const, set_planet_defaults
 
   use ModReadParam
 
