@@ -169,8 +169,8 @@ contains
 
   subroutine write_restart_header
 
-    use ModMain,       ONLY: Dt, Problem_Type, NameThisComp, TypeCoordSystem,&
-         nBlockAll, Body1, Time_Accurate, iStartTime_I
+    use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
+         nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
     use ModMain,       ONLY: UseBody2                     !^CFG IF SECONDBODY
     use ModVarIndexes, ONLY: NameEquation, nVar
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
@@ -179,14 +179,13 @@ contains
     use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
+    use CON_planet,  ONLY: NamePlanet
 
     implicit none
 
-    integer:: iProblemType=11
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
-    iProblemType = problem_type
 
     open(unit_tmp,file=trim(NameRestartOutDir)//NameHeaderFile)
 
@@ -214,9 +213,11 @@ contains
     write(unit_tmp,'(i8,a32)') nJ,'nJ'
     write(unit_tmp,'(i8,a32)') nK,'nK'
     write(unit_tmp,'(i8,a32)') nBlockALL,'MinBlockALL'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#PROBLEMTYPE'
-    write(unit_tmp,'(i8,a32)') iProblemType,'iProblemType'
+    if (IsStandAlone .and. NameThisComp == 'GM') then
+       write(unit_tmp,*)
+       write(unit_tmp,'(a)')'#PLANET'
+       write(unit_tmp,'(a,a32)') NamePlanet,'NamePlanet'
+    end if
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NEWRESTART'
     write(unit_tmp,'(l1,a39)')UseConstrainB,'DoRestartBFace'!^CFG IF CONSTRAINB
@@ -274,27 +275,29 @@ contains
        write(unit_tmp,*)
     end if                                      !^CFG END COVARIANT
 
-    if(NameThisComp=='GM')then
-       write(unit_tmp,'(a)')'#SOLARWIND'
-       write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SwRhoDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,  'SwTDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim, 'SwUxDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim, 'SwUyDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_Uz_dim, 'SwUzDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_Bx_dim, 'SwBxDdim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_By_dim, 'SwByDim'
-       write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
-       write(unit_tmp,*)
-    end if
+    write(unit_tmp,'(a)')'#SOLARWIND'
+    write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SwRhoDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,  'SwTDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim, 'SwUxDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim, 'SwUyDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_Uz_dim, 'SwUzDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_Bx_dim, 'SwBxDdim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_By_dim, 'SwByDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
+    write(unit_tmp,*)
+
+    write(unit_tmp,'(a)')'#IOUNITS'
+    write(unit_tmp,'(a20,a32)')IoUnits,'IoUnitType'
+
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
        write(unit_tmp,'(l1,a39)')body1,'UseBody'
        write(unit_tmp,'(1pe13.5,a27)')Rbody,'rBody'
        if(NameThisComp=='GM')then
           write(unit_tmp,'(1pe13.5,a27)')Rcurrents,   'rCurrents'
-          write(unit_tmp,'(1pe13.5,a27)')Body_rho_dim,'BodyRhoDim'
-          write(unit_tmp,'(1pe13.5,a27)')Body_T_dim,  'BodyTDim'
        end if
+       write(unit_tmp,'(1pe13.5,a27)')Body_rho_dim,'BodyRhoDim'
+       write(unit_tmp,'(1pe13.5,a27)')Body_T_dim,  'BodyTDim'
        write(unit_tmp,*)
     end if
     !^CFG IF SECONDBODY BEGIN

@@ -11,6 +11,9 @@ T               UseTiming
 tree            TimingStyle
 
 #INCLUDE
+Planet
+
+#INCLUDE
 Restart
 
 #INCLUDE
@@ -25,7 +28,7 @@ Corotation
 #BEGIN_COMP GM #############################################################
 
 #INCLUDE
-Problem
+Grid
 
 ^CFG IF SECONDBODY BEGIN
 #INCLUDE

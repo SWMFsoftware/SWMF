@@ -1,19 +1,18 @@
 !^CFG COPYRIGHT UM
 !\
 ! set_physics_constants set normalizations, physical constants, 
-! problem_type dependent physical parameters
+! module (GM/IH/SC) dependent physical parameters
 !/
 subroutine set_physics_constants
   use ModProcMH
   use ModMain
   use ModPhysics
   use CON_axes,   ONLY: get_axes
-  use CON_planet, ONLY: get_planet
+  use CON_planet, ONLY: get_planet, RadiusPlanet, MassPlanet, OmegaPlanet
   use ModVarIndexes
 
   implicit none
 
-  real :: Qqpmag, Oopmag, Gsun
   real :: Mbody_dim
   real :: MBody2Dim                 !^CFG IF SECONDBODY
   real :: cosTheta, sinTheta, cosPhi, sinPhi, & 
@@ -26,52 +25,27 @@ subroutine set_physics_constants
   call set_oktest('set_physics_constants',oktest, oktest_me)
 
   !\
-  ! Load body rotation rates, masses, and radii by problem type
+  ! Load body rotation rates, masses, and radii by module (GM/IH/SC)
   !/
-  select case(problem_type)
-  case (problem_rotation,problem_saturn)
-     unitSI_x       = Rsaturn       ! Radius - NOTE - MUST BE IN meters
-     Mbody_dim      = Msaturn       ! Mass of body in kg
-     rot_period_dim = RotationPeriodSaturn/3600.0
-  case (problem_heliosphere, problem_cme)
-     unitSI_x       = Rsun                      ! Radius - MUST BE IN meters
-     Mbody_dim      = Msun                      ! Mass of body in kg
-     rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-     !^CFG IF GLOBALHELIOSPHERE BEGIN
-  case (problem_globalhelio)
-     unitSI_x       = 215.0*Rsun                ! Radius - MUST BE IN meters
-     Mbody_dim      = Msun                      ! Mass of body in kg
-     rot_period_dim = RotationPeriodSun/3600.0  ! rotation period in hours
-     !^CFG END GLOBALHELIOSPHERE
-  case (problem_earth)
-     unitSI_x       = Rearth        ! Radius - MUST BE IN meters
-     Mbody_dim      = Mearth        ! Mass of body in kg
-     rot_period_dim = RotationPeriodEarth/3600.0
-  case (problem_jupiter)
-     unitSI_x       = Rjupiter      ! Radius - NOTE - MUST BE IN meters
-     Mbody_dim      = Mjupiter      ! Mass of body in kg
-     rot_period_dim = RotationPeriodJupiter/3600.0
-  case (problem_venus)
-     unitSI_x       = Rvenus        ! Radius - NOTE - MUST BE IN meters
-     Mbody_dim      = Mvenus        ! Mass of body in kg
-     rot_period_dim = RotationPeriodVenus/3600.0
- case (problem_mars)
-     unitSI_x       = Rmars        ! Radius - NOTE - MUST BE IN meters
-     Mbody_dim      = Mmars        ! Mass of body in kg
-     rot_period_dim = RotationPeriodMars/3600.0
-  case (problem_arcade)
-     Gsun           = -cGravitation*Msun/(Rsun*Rsun)
-     unitSI_x       = SSPsun**2/abs(Gsun)
-     SSPsun         = sqrt( cBoltzmann*TArcDim/(muArc*cProtonMass) )
-  case (problem_comet)
-     unitSI_x       = cE9           ! 1 million km=1E+9 m
-     Mbody_dim      = 1.0           ! Mass of body in kg
-     rot_period_dim = 1.0           ! rotation period in hours
-  case default
-     unitSI_x       = 1.0           ! Radius - NOTE - MUST BE IN meters
-     Mbody_dim      = 0.00          ! Mass of body in kg
-     rot_period_dim = 0.00          ! rotation period in hours
-  end select
+  if (NameThisComp == 'GM') then
+     call get_planet( &
+       RadiusPlanetOut = UnitSi_x, &
+       MassPlanetOut = mBody_Dim, &
+       RotationPeriodOut = rot_period_dim)
+  else
+     select case(NameThisComp)
+     case("SC")
+        UnitSi_x = rSun
+     case("IH")
+        UnitSi_x = cAu
+     end select
+     mBody_Dim = mSun
+     rot_period_dim = RotationPeriodSun
+  end if
+
+  ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
+  ! and it is DIFFERENT from SWMF's inertial OmegaPlanet defined in CON_planet !!!
+  OmegaBody = cTwoPi/rot_period_dim
 
   ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
   MBody2Dim = 0.0                                !^CFG IF SECONDBODY
@@ -112,8 +86,8 @@ subroutine set_physics_constants
   !/
   ! if the rotation period is less than 1 second then you made
   ! a mistake - the period is to fast
-  if (abs(rot_period_dim) > 1./3600.) then
-     OmegaBody = (cTwoPi/(rot_period_dim*3600.00)) / (1.0/unitSI_t)
+  if (abs(rot_period_dim) > 1.) then
+     OmegaBody = OmegaBody / (1.0/unitSI_t)
   else
      if(UseRotatingFrame)then
         write(*,*) "--------------------------------------------------"
@@ -136,12 +110,8 @@ subroutine set_physics_constants
   SW_p_dim = unitUSER_p*inv_g
   SW_B_factor = unitUSER_B
 
-  if(problem_type==problem_globalhelio)then !^CFG IF GLOBALHELIOSPHERE BEGIN
-     ! unitUSER_rho amu/cm3
-     SW_rho = SW_rho_dim/unitUSER_rho
-  else                                      !^CFG END GLOBALHELIOSPHERE
-     SW_rho = 1.0    
-  end if                                    !^CFG IF GLOBALHELIOSPHERE
+!  SW_rho = SW_rho_dim/unitUSER_rho
+  SW_rho = 1.0    
   SW_p   = inv_g
   SW_Ux  = SW_Ux_dim/unitUSER_U
   SW_Uy  = SW_Uy_dim/unitUSER_U
@@ -150,46 +120,12 @@ subroutine set_physics_constants
   SW_By  = SW_By_dim/unitUSER_B
   SW_Bz  = SW_Bz_dim/unitUSER_B
 
-  !\
-  ! Convert comet input parameters to SI
-  !/
-  kin=kin_in*1E-6
-  Unr=Unr_in*1E3
-
-  !\
-  ! Nondimensionalize body pressure and density
-  ! Note that the Body_rho_dim is not really a rho, but rather an n
-  ! so the correct normalizing factor is unitUSER_n
-  !/
-  select case(problem_type)
-  case(problem_shocktube, problem_uniform)
-     Body_rho= Body_rho_dim
-     Body_p  = Body_rho*Body_T_dim
-     RhoBody2= RhoDimBody2                          !^CFG IF SECONDBODY
-     pBody2  = RhoDimBody2*TDimBody2                !^CFG IF SECONDBODY
-
-     !^CFG IF GLOBALHELIOSPHERE BEGIN
-     !Correcting the problem of the pressure and density near the body
-  case(problem_globalhelio)
-     !
-     ! setting Body_rho_dim to be like SW_rho_dim, look at write_plot_common
-     !
-     Body_rho_dim = SW_rho_dim
-     Body_T_dim = SW_T_dim
-     Body_rho = Body_rho_dim/unitUSER_rho
-     Body_p = inv_g
-     RhoBody2= Body_rho                            !^CFG IF SECONDBODY
-     pBody2  = Body_p                              !^CFG IF SECONDBODY
-     !^CFG END GLOBALHELIOSPHERE
-
-  case default
-     Body_rho= Body_rho_dim/unitUSER_n
-     Body_p  = cBoltzmann*Body_rho_dim*&
-               1.0E6*Body_T_dim/unitSI_p
-     RhoBody2= RhoDimBody2/unitUSER_n               !^CFG IF SECONDBODY
-     pBody2  = cBoltzmann*RhoDimBody2*&             !^CFG IF SECONDBODY
-               1.0E6*TDimBody2/unitSI_p             !^CFG IF SECONDBODY
-  end select
+  Body_rho= Body_rho_dim/unitUSER_n
+  Body_p  = cBoltzmann*Body_rho_dim*&
+            1.0E6*Body_T_dim/unitSI_p
+  RhoBody2= RhoDimBody2/unitUSER_n               !^CFG IF SECONDBODY
+  pBody2  = cBoltzmann*RhoDimBody2*&             !^CFG IF SECONDBODY
+            1.0E6*TDimBody2/unitSI_p             !^CFG IF SECONDBODY
 
   !Here the arrays of the FACE VALUE are formed
   !Initialization
@@ -216,7 +152,7 @@ subroutine set_physics_constants
      FaceState_VI(Ux_,  iBoundary) = SW_Ux
      FaceState_VI(Uy_,  iBoundary) = SW_Uy
      FaceState_VI(Uz_,  iBoundary) = SW_Uz
-     FaceState_VI(Bx_,  iBoundary) =  SW_Bx
+     FaceState_VI(Bx_,  iBoundary) = SW_Bx
      FaceState_VI(By_,  iBoundary) = SW_By
      FaceState_VI(Bz_,  iBoundary) = SW_Bz
      FaceState_VI(P_,   iBoundary) = SW_p
@@ -258,151 +194,6 @@ subroutine set_physics_constants
   Qqp(1:3,1:3) = 0.00
   Oop(1:3,1:3,1:3) = 0.00
 
-  !\
-  ! Now do extra varibles that are problem dependent.
-  ! As well as case by case exceptions to the above.
-  !/
-  select case (problem_type)
-  case (problem_earth)
-     !     !\
-     !     ! Temporary for the paleo earth case
-     !     !/
-     !
-     !     WARNING: CHECK IF SWMF CAN HANDLE NON-DIPOLE PLANET FIELD ALREADY
-     !
-     !     ! set dipole to zero
-     !     Bdpx = 0.0
-     !     Bdpy = 0.0
-     !     Bdpz = .1*Bdp
-     !
-     !     ! Quadrupole strength     
-     !     Qqpmag = .1*Bdp
-     !     
-     !     Qqp(1,1) = 1.00*Qqpmag         ! 1
-     !     Qqp(1,2) = 0.00                ! 2
-     !     Qqp(1,3) = 0.00                ! 3
-     !     Qqp(2,1) = 0.0
-     !     Qqp(2,2) = 1.00*Qqpmag         ! 4 
-     !     Qqp(2,3) = 0.00                ! 5
-     !     Qqp(3,1) = 0.00
-     !     Qqp(3,2) = 0.00
-     !     Qqp(3,3) = -(Qqp(1,1)+Qqp(2,2))
-
-  case (problem_saturn)
-
-  case (problem_jupiter)
-
-  case (problem_heliosphere)
-     !\
-     ! Heliospheric flow problem.
-     !/
-     RHOsun = cProtonMass*Body_rho_dim
-     Presun = cBoltzmann*RHOsun*Body_T_dim/cProtonMass
-     SSPsun = sqrt(g*cBoltzmann*Body_T_dim/cProtonMass)
-     Velsun = 0.75
-
-     !\
-     ! Chip's Flux Rope scaling
-     !/
-     B1scl   = 1.0E-4*cme_B1_dim/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-     a1scl   = 1.0E-4*cme_a1/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-     rho1scl = cme_rho1/RHOsun
-     rho2scl = cme_rho2/RHOsun
-
-     ! Dipole strength
-     Bdp = 1.0E-4*Bdp_dim/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-
-     Bdpx = -sinTHETAtilt*Bdp       ! 1
-     Bdpy = 0.00                    ! 2
-     Bdpz = cosTHETAtilt*Bdp        ! 3 
-
-     ! Quadrapole strength     
-     Qqpmag = 0.00
-
-     Qqp(1,1) = 1.00*Qqpmag         ! 1
-     Qqp(1,2) = 0.00                ! 2
-     Qqp(1,3) = 0.00                ! 3
-     Qqp(2,1) = Qqp(1,2)
-     Qqp(2,2) = 0.00*Qqpmag         ! 4 
-     Qqp(2,3) = 0.00                ! 5
-     Qqp(3,1) = Qqp(1,3)
-     Qqp(3,2) = Qqp(2,3)
-     Qqp(3,3) = -(Qqp(1,1)+Qqp(2,2))
-
-     ! Octupole strength
-     !====== Milestone 2 Octupole strength ==========
-     !Oopmag = 0.00
-     !===============================================
-
-     !====== Milestone 3 Octupole strength ==========
-     Oopmag = Bdp/9.00
-     !===============================================
-
-     Oop(1,1,1) = 0.00*Oopmag              ! 1
-     Oop(1,1,2) = 0.00*Oopmag              ! 2
-     Oop(1,1,3) = -1.00*Oopmag             ! 3
-     Oop(1,2,1) = Oop(1,1,2)
-     Oop(1,2,2) = 0.00*Oopmag              ! 4
-     Oop(1,2,3) = 0.00                     ! 5
-     Oop(1,3,1) = Oop(1,1,3) 
-     Oop(1,3,2) = Oop(1,2,3)
-     Oop(1,3,3) = -(Oop(1,1,1)+Oop(1,2,2))
-
-     Oop(2,1,1) = Oop(1,1,2)
-     Oop(2,1,2) = Oop(1,2,2)
-     Oop(2,1,3) = Oop(1,2,3)
-     Oop(2,2,1) = Oop(1,2,2)
-     Oop(2,2,2) = 0.00*Oopmag              ! 6
-     Oop(2,2,3) = -1.00*Oopmag             ! 7
-     Oop(2,3,1) = Oop(1,2,3)
-     Oop(2,3,2) = Oop(2,2,3)
-     Oop(2,3,3) = -(Oop(2,1,1)+Oop(2,2,2))
-
-     Oop(3,1,1) = Oop(1,1,3)
-     Oop(3,1,2) = Oop(1,2,3)
-     Oop(3,1,3) = Oop(1,3,3)
-     Oop(3,2,1) = Oop(1,2,3)
-     Oop(3,2,2) = Oop(2,2,3)
-     Oop(3,2,3) = Oop(2,3,3)
-     Oop(3,3,1) = Oop(1,3,3)
-     Oop(3,3,2) = Oop(2,3,3)
-     Oop(3,3,3) = -(Oop(3,1,1)+Oop(3,2,2))
-
-     ! Speed of light used in Boris correction
-     cLIGHT = boris_cLIGHT_factor * cLightSpeed/SSPsun
-     c2LIGHT = cLIGHT**2
-     inv_c2LIGHT = cOne/c2LIGHT
-
-  case (problem_cme)
-     !\
-     ! CME flux rope problem.
-     !/
-     RHOsun = Body_rho_dim*1.0E+6*cProtonMass
-     Presun = cBoltzmann/cProtonMass*RHOsun*Body_T_dim
-     SSPsun = sqrt(g*cBoltzmann*Body_T_dim/cProtonMass)
-     Velsun = 0.75
-     !\
-     ! put solution variables in nondimensional form
-     !/
-     Rscl    = 1.0
-     RHOscl  = 1.0
-     SSPscl  = 1.0
-     Vscl    = cme_v_erupt/SSPsun
-     Bdp     = 1.0E-4*Bdp_dim/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-     B1scl   = 1.0E-4*cme_B1_dim/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-     a1scl   = 1.0E-4*cme_a1/sqrt(cMu*RHOsun*SSPsun*SSPsun)
-     rho1scl = cme_rho1/RHOsun
-     rho2scl = cme_rho2/RHOsun
-  case (problem_arcade)
-     Phtscl  = 1.0
-     RHOscl  = 1.0
-     SSPscl  = 1.0
-     Vscl    = UzArcDim/SSPsun
-     Gbody   = Gsun*(UnitSI_x/(SSPsun*SSPsun))
-     B0_scl  = 1.0E-4*BArcDim /sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
-     B0y_scl = 1.0E-4*ByArcDim/sqrt(cMu*RhoArcDim*SSPsun*SSPsun)
-  end select
-
 end subroutine set_physics_constants
 
 !===========================================================================
@@ -412,6 +203,7 @@ subroutine set_dimensions
   use ModMain
   use ModPhysics
   use ModVarIndexes
+  use ModUser, ONLY: user_io_units
   implicit none
 
   logical :: oktest, oktest_me
@@ -430,44 +222,15 @@ subroutine set_dimensions
   unitstr_IDL_angle = '--'            
 
   !\
-  ! set independent normalizing SI variables first - on a case by case basis
+  ! set variables for converting from unitless to SI units and back.
+  ! unitless*unitSI = SI, SI/UnitSI = unitless
+  !
+  ! Note there are three independent variables, position(x), velocity(u)
+  ! and density(rho).  All others are built from these three.
   !/
-  select case(problem_type)
-  case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet, problem_mars)
-     unitSI_rho  = cProtonMass*(cMillion*SW_rho_dim)         ! kg/m^3
-     unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)   ! m/s
-  case(problem_arcade)
-     unitSI_rho  = RHOsun                                    ! kg/m^3
-     unitSI_U    = SSPsun                                    ! m/s
-  case(problem_heliosphere,problem_cme)
-     unitSI_x    = Rsun                                      ! m
-     unitSI_rho  = cProtonMass*Body_rho_dim                  ! kg/m^3
-     unitSI_U    = sqrt(g*cBoltzmann*Body_T_dim/cProtonMass) ! m/s  (SSPsun)
-     !^CFG IF GLOBALHELIOSPHERE BEGIN
-     ! SW_rho_dim is in units of n/cc
-    case(problem_globalhelio)
-       unitSI_x    = 215.0*Rsun                              ! m
-       unitSI_rho  = cProtonMass*SW_rho_dim*1.0E+6           ! kg/m^3
-       unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! m/s  (SSPsun)
-       !^CFG END GLOBALHELIOSPHERE
-  case(problem_dissipation)
-     if (.not.UseDefaultUnits) then
-        unitSI_x    = Length0Diss                            ! m
-        unitSI_t    = Time0Diss                              ! s
-        unitSI_U    = unitSI_x/unitSI_t                      ! m/s
-        unitSI_rho  = Rho0Diss                               ! kg/m3
-     else
-        unitSI_x    = 1.0                                    ! m
-        unitSI_t    = 1.0                                    ! s
-        unitSI_U    = 1.0                                    ! m/s
-        unitSI_rho  = 1.0                                    ! kg/m3
-     end if
-  case default
-     unitSI_x    = 1.0                                       ! dimensionless
-     unitSI_rho  = 1.0                                       ! dimensionless
-     unitSI_U    = 1.0                                       ! dimensionless
-  end select
+  unitSI_rho  = cProtonMass*(cMillion*SW_rho_dim)         ! kg/m^3
+  unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)   ! m/s
+
   !\
   ! set other normalizing SI variables from the independent ones
   !/
@@ -487,25 +250,79 @@ subroutine set_dimensions
   !
   ! If the ions are "heavy" (m = A * mp) then n above is not really a 
   ! number density but is a nucleon density (#nucleons/m^3).  In this 
-  ! case the temperature code using unitSI_temperature is really
+  ! case the temperature in the code using unitSI_temperature is really
   ! Tcode = (Ti+Te)/A.
   !
   ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
   ! we assume Ti=Te then Tcode=Ti=Te.
+  !
+  ! Also note that if the are heavy ions of mass #*mp then you could
+  ! be off in temperature by as much as a factor of #.  
+  ! There is no way around this in MHD.
   unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) ! Kelvin 
 
   !\
-  ! set USER variables used for normalization, input, and output
-  ! They all have user defined coordinates and are not consistant in a unit sense.
-  ! Every variable is case dependent.
+  ! set variables to go from a limited set of units to normalized units
+  ! and back
+  ! unitless*unitUSER = User units,    User Units/unitUSER = unitless
+  !
+  ! Note that the user units are not consistant in a unit sense.
   ! 
   ! Also load the string variables associated with the USER variables - 
   ! note that they are loaded differently for IDL and TEC output
   !/
-  select case(problem_type)
-  case(problem_earth,problem_saturn,problem_jupiter,problem_rotation, &
-       problem_venus,problem_comet,problem_mars)
-     ! load units
+  select case(IoUnits)
+  case("SI")
+     unitUSER_x           = unitSI_X              ! m
+     unitUSER_rho         = unitSI_rho            ! amu/m^3          
+     unitUSER_U           = unitSI_U              ! #/m^3            
+     unitUSER_t           = unitSI_t              ! m/s              
+     unitUSER_n           = unitSI_n              ! s                           
+     unitUSER_p           = unitSI_p              ! Pa                          
+     unitUSER_B           = unitSI_B              ! T                          
+     unitUSER_rhoU        = unitSI_rhoU           ! kg/m^2/s                    
+     unitUSER_energydens  = unitSI_energydens     ! J/m^3                       
+     unitUSER_Poynting    = unitSI_Poynting       ! J/m^2/s           
+     unitUSER_J           = unitSI_J              ! A/m^2                      
+     unitUSER_electric    = unitSI_electric       ! V/m                        
+     unitUSER_DivB        = unitSI_DivB           ! T/m
+     unitUSER_temperature = unitSI_temperature    ! dimensionless
+     !\
+     ! set string variables used for writing output - TECPLOT
+     !/
+     unitstr_TEC_x           = '[m]'            
+     unitstr_TEC_rho         = '[amu/m^3]'       
+     unitstr_TEC_U           = '[m/s]'          
+     unitstr_TEC_t           = '[s]'             
+     unitstr_TEC_n           = '[m^-^3]'        
+     unitstr_TEC_p           = '[Pa]'           
+     unitstr_TEC_B           = '[T]'            
+     unitstr_TEC_rhoU        = '[kg m^-^2 s^-^2]'
+     unitstr_TEC_energydens  = '[J/m^3]'             
+     unitstr_TEC_Poynting    = '[J m^-^2 s^-^1]'
+     unitstr_TEC_J           = '[A/m^2]'       
+     unitstr_TEC_electric    = '[V/m]'          
+     unitstr_TEC_DivB        = '[T/m]'           
+     unitstr_TEC_temperature = '[K]'             
+     !\
+     ! set string variables used for writing output - IDL
+     !/
+     unitstr_IDL_x           = 'm'            
+     unitstr_IDL_rho         = 'amu/m3'       
+     unitstr_IDL_U           = 'm/s'          
+     unitstr_IDL_t           = 's'             
+     unitstr_IDL_n           = '/m3'        
+     unitstr_IDL_p           = 'Pa'           
+     unitstr_IDL_B           = 'T'            
+     unitstr_IDL_rhoU        = 'kg/m2s2'
+     unitstr_IDL_energydens  = 'J/m3'           
+     unitstr_IDL_Poynting    = 'J/m^2s'
+     unitstr_IDL_J           = 'A/m2'       
+     unitstr_IDL_electric    = 'V/m'          
+     unitstr_IDL_DivB        = 'T/m'           
+     unitstr_IDL_temperature = 'K'             
+
+  case("PLANETARY")
      unitUSER_x           = unitSI_x/unitSI_x           ! planetary radii
      unitUSER_rho         = 1.0E-6*unitSI_n             ! amu/cm^3
      unitUSER_n           = 1.0E-6*unitSI_n             ! #/cm^3
@@ -519,19 +336,7 @@ subroutine set_dimensions
      unitUSER_J           = 1.0E+6*unitSI_J             ! uA/m^2
      unitUSER_electric    = 1.0E+3*unitSI_electric      ! mV/m
      unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x ! nT/planetary radii
-     ! set temperature - note that the below is only strictly true for a
-     ! limited number of cases.  If the only ion is proton then 
-     ! Tcode = Te+Ti.
-     !
-     ! If the ions are "heavy" (m = A * mp) then n above is not really a 
-     ! number density but is a nucleon density (#nucleons/m^3).  In this 
-     ! case the temperature code using unitSI_temperature is really
-     ! Tcode = (Ti+Te)/A.
-     !
-     ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
-     ! we assume Ti=Te then Tcode=Ti=Te..
-     unitUSER_temperature = unitSI_temperature               ! Kelvin 
-
+     unitUSER_temperature = unitSI_temperature          ! Kelvin 
      !\
      ! set string variables used for writing output - TECPLOT
      !/
@@ -567,7 +372,7 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = 'nT/R'           
      unitstr_IDL_temperature = 'K'             
 
-  case(problem_heliosphere,problem_cme)
+  case("HELIOSPHERIC")
      unitUSER_x           = unitSI_x/unitSI_x                ! R
      unitUSER_rho         = 1.0e-3*unitSI_rho                ! g/cm^3
      unitUSER_n           = 1.0E-6*unitSI_n                  ! #/cm^3
@@ -616,92 +421,22 @@ subroutine set_dimensions
      unitstr_IDL_electric    = 'V/m'
      unitstr_IDL_DivB        = 'Gauss/cm'
      unitstr_IDL_temperature = 'K'
-     
-  case(problem_dissipation)
-     ! define the correct temperature::
-     unitSI_temperature = (unitSI_p/unitSI_rho)   ! Kelvin 
-     ! defalut case - same as the SI default above
-     unitUSER_x           = unitSI_X              ! dimensionless
-     unitUSER_rho         = unitSI_rho            ! dimensionless
-     unitUSER_U           = unitSI_U              ! dimensionless
-     unitUSER_t           = unitSI_t              ! dimensionless   
-     unitUSER_n           = unitSI_n              ! dimensionless
-     unitUSER_p           = unitSI_p              ! dimensionless 
-     unitUSER_B           = unitSI_B              ! dimensionless
-     unitUSER_rhoU        = unitSI_rhoU           ! dimensionless
-     unitUSER_energydens  = unitSI_energydens     ! dimensionless
-     unitUSER_J           = unitSI_J              ! dimensionless
-     unitUSER_electric    = unitSI_electric       ! dimensionless
-     unitUSER_DivB        = unitSI_DivB           ! dimensionless
-     ! set temperature - note that the below is  only strictly true for a
-     ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  
-     ! There is no way around this in MHD.
-     unitUSER_temperature = unitSI_temperature    ! dimensionless
-     !\
-     ! set string variables used for writing output - TECPLOT
-     !/
-     unitstr_TEC_x           = 'm'
-     unitstr_TEC_rho         = 'kg/m^3'
-     unitstr_TEC_U           = 'm/s'
-     unitstr_TEC_t           = 's'
-     unitstr_TEC_n           = '1/m^3'
-     unitstr_TEC_p           = 'Pa'
-     unitstr_TEC_B           = 'T'
-     unitstr_TEC_rhoU        = 'kg/m^2/s'
-     unitstr_TEC_Poynting    = 'J/m^2/s'
-     unitstr_TEC_energydens  = 'J/m^3'
-     unitstr_TEC_J           = 'A/m^2'
-     unitstr_TEC_electric    = 'V/m'
-     unitstr_TEC_DivB        = 'T/m'
-     unitstr_TEC_temperature = 'K'
-     !\
-     ! set string variables used for writing output - IDL
-     !/
-     unitstr_IDL_x           = 'm'
-     unitstr_IDL_rho         = 'kg/m^3'
-     unitstr_IDL_U           = 'm/s'
-     unitstr_IDL_t           = 's'
-     unitstr_IDL_n           = '1/m^3'
-     unitstr_IDL_p           = 'Pa'
-     unitstr_IDL_B           = 'T'
-     unitstr_IDL_rhoU        = 'kg/m^2/s'
-     unitstr_IDL_Poynting    = 'J/m^2/s'
-     unitstr_IDL_energydens  = 'J/m^3'
-     unitstr_IDL_J           = 'A/m^2'
-     unitstr_IDL_electric    = 'V/m'
-     unitstr_IDL_DivB        = 'T/m'
-     unitstr_IDL_temperature = 'K'
-     if(oktest.and.iProc==0) then
-        write(*,*) 'unitSI_t           = ',unitSI_t
-        write(*,*) 'unitSI_x           = ',unitSI_x
-        write(*,*) 'unitSI_U           = ',unitSI_U
-        write(*,*) 'unitSI_rho         = ',unitSI_rho
-        write(*,*) 'unitSI_p           = ',unitSI_p
-        write(*,*) 'unitSI_energydens  = ',unitSI_energydens
-        write(*,*) 'unitSI_temperature = ',unitSI_temperature
-     end if
-     
-  case default
-     ! defalut case - same as the SI default above
-     unitUSER_x           = unitSI_X              
-     unitUSER_rho         = unitSI_rho            
-     unitUSER_U           = unitSI_U              
-     unitUSER_t           = unitSI_t              
-     unitUSER_n           = unitSI_n                        
-     unitUSER_p           = unitSI_p                         
-     unitUSER_B           = unitSI_B                        
-     unitUSER_rhoU        = unitSI_rhoU                     
-     unitUSER_energydens  = unitSI_energydens               
-     unitUSER_Poynting    = unitSI_Poynting       
-     unitUSER_J           = unitSI_J                        
-     unitUSER_electric    = unitSI_electric                 
-     unitUSER_DivB        = unitSI_DivB                     
-     ! set temperature - note that the below is  only strictly true for a
-     ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-     ! be off in temperature by as much as a factor of #.  
-     ! There is no way around this in MHD.
-     unitUSER_temperature = unitSI_temperature  ! dimensionless
+
+  case("NONE")
+     unitUSER_x           = 1.0
+     unitUSER_rho         = 1.0
+     unitUSER_U           = 1.0
+     unitUSER_t           = 1.0
+     unitUSER_n           = 1.0
+     unitUSER_p           = 1.0
+     unitUSER_B           = 1.0
+     unitUSER_rhoU        = 1.0
+     unitUSER_energydens  = 1.0
+     unitUSER_Poynting    = 1.0
+     unitUSER_J           = 1.0
+     unitUSER_electric    = 1.0
+     unitUSER_DivB        = 1.0
+     unitUSER_temperature = 1.0
      !\
      ! set string variables used for writing output - TECPLOT
      !/
@@ -737,7 +472,61 @@ subroutine set_dimensions
      unitstr_IDL_DivB        = ''    
      unitstr_IDL_temperature = ''           
 
+  case("USER")
+     call user_io_units
+     ! Users provide the conversion from SI units to their IO 
+     ! units.  Since we don't use the units this way, we have to 
+     ! multiply by unitSI_ to set the unitUSER variables.
+     unitUSER_x           = Si2User(UnitX_)           *unitSI_rho          
+     unitUSER_rho         = Si2User(UnitRho_)         *unitSI_U            
+     unitUSER_n           = Si2User(UnitN_)           *unitSI_t            
+     unitUSER_U           = Si2User(UnitU_)           *unitSI_n            
+     unitUSER_t           = Si2User(UnitT_)           *unitSI_p            
+     unitUSER_p           = Si2User(UnitP_)           *unitSI_B            
+     unitUSER_B           = Si2User(UnitB_)           *unitSI_rhoU         
+     unitUSER_rhoU        = Si2User(UnitRhoU_)        *unitSI_energydens   
+     unitUSER_energydens  = Si2User(UnitEnergyDens_)  *unitSI_Poynting     
+     unitUSER_Poynting    = Si2User(UnitPoynting_)    *unitSI_J            
+     unitUSER_J           = Si2User(UnitJ_)           *unitSI_electric     
+     unitUSER_electric    = Si2User(UnitElectric_)    *unitSI_DivB         
+     unitUSER_temperature = Si2User(UnitTemperature_) *unitSI_temperature  
+     unitUSER_DivB        = unitSI_DivB  ! Users don't need to know this
+     
+     unitstr_TEC_x           = IoUnitStr(UnitX_)           
+     unitstr_TEC_rho         = IoUnitStr(UnitRho_)         
+     unitstr_TEC_n           = IoUnitStr(UnitN_)           
+     unitstr_TEC_U           = IoUnitStr(UnitU_)           
+     unitstr_TEC_t           = IoUnitStr(UnitT_)           
+     unitstr_TEC_p           = IoUnitStr(UnitP_)           
+     unitstr_TEC_B           = IoUnitStr(UnitB_)           
+     unitstr_TEC_rhoU        = IoUnitStr(UnitRhoU_)        
+     unitstr_TEC_energydens  = IoUnitStr(UnitEnergyDens_)  
+     unitstr_TEC_Poynting    = IoUnitStr(UnitPoynting_)    
+     unitstr_TEC_J           = IoUnitStr(UnitJ_)           
+     unitstr_TEC_electric    = IoUnitStr(UnitElectric_)    
+     unitstr_TEC_temperature = IoUnitStr(UnitTemperature_) 
+     unitstr_TEC_DivB        = '[T/m]'
+
+     unitstr_IDL_x           = IoUnitStr(UnitX_)           
+     unitstr_IDL_rho         = IoUnitStr(UnitRho_)         
+     unitstr_IDL_n           = IoUnitStr(UnitN_)           
+     unitstr_IDL_U           = IoUnitStr(UnitU_)           
+     unitstr_IDL_t           = IoUnitStr(UnitT_)           
+     unitstr_IDL_p           = IoUnitStr(UnitP_)           
+     unitstr_IDL_B           = IoUnitStr(UnitB_)           
+     unitstr_IDL_rhoU        = IoUnitStr(UnitRhoU_)        
+     unitstr_IDL_energydens  = IoUnitStr(UnitEnergyDens_)  
+     unitstr_IDL_Poynting    = IoUnitStr(UnitPoynting_)    
+     unitstr_IDL_J           = IoUnitStr(UnitJ_)           
+     unitstr_IDL_electric    = IoUnitStr(UnitElectric_)    
+     unitstr_IDL_temperature = IoUnitStr(UnitTemperature_) 
+     unitstr_IDL_DivB        = 'T/m'
+
+  case default
+     call stop_mpi(NameThisComp//': IoUnitType='//IoUnits// ' is invalid.')
+
   end select
+
 end subroutine set_dimensions
 
 !==============================================================================

@@ -150,6 +150,8 @@ module CON_axes
        HgiGse_DD, dLongitudeHgiDeg, dLongitudeHgi, &
        CON_recalc, CON_sun, SunEMBDistance, JulianDay
 
+  use ModPlanetConst
+
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version
   ! 14Aug03 - Gabor Toth <gtoth@umich.edu> - major revision and extension
@@ -391,8 +393,8 @@ contains
             asin(XyzPlanetHgi_D(3)/sqrt(sum(XyzPlanetHgi_D**2)))*cRadToDeg, &
             atan2(XyzPlanetHgr_D(2),XyzPlanetHgr_D(1))*cRadToDeg,&
             atan2(XyzPlanetHgi_D(2),XyzPlanetHgi_D(1))*cRadToDeg
-       write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
-       write(*,*)'XyzPlanetHgr_D/rSun = ',XyzPlanetHgr_D/rSun
+!       write(*,*)'XyzPlanetHgi_D/rSun = ',XyzPlanetHgi_D/rSun
+!       write(*,*)'XyzPlanetHgr_D/rSun = ',XyzPlanetHgr_D/rSun
        write(*,*)'vPlanetHgi_D/(km/s) = ',vPlanetHgi_D/1000.0
     end if
 
@@ -1071,6 +1073,7 @@ contains
     if(.not.DoInitializeAxes) write(*,*)'test failed: DoInitializeAxes=',&
          DoInitializeAxes,' should be true'
 
+write(*,*) "+++++++++++++++++++ CON_axes.f90 +++++ test_axese"
     call time_int_to_real(TimeEquinox)
     if(TimeEquinox % Time <= 0.0) write(*,*)'test failed: TimeEquinox =',&
          TimeEquinox,' should have a large positive double in the %Time field'
@@ -1078,6 +1081,7 @@ contains
     write(*,'(a)')'Testing init_axes'
     dLongitudeHgi = -1.0
     dLongitudeHgr = 0.0
+write(*,*) '****** call from CON_axes.f90 : init_axes ************'
     call init_axes(TimeEquinox % Time)
 
     if(tStart /= TimeEquinox % Time)write(*,*)'test init_axes failed: ',&

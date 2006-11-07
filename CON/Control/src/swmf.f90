@@ -12,11 +12,13 @@
 program swmf
 
   !USES:
-  use CON_main,      ONLY: initialize, finalize
-  use CON_session,   ONLY: init_session, do_session
-  use CON_io,        ONLY: read_inputs
-  use CON_variables, ONLY: iErrorSwmf
-  use ModMpi,        ONLY: MPI_SUCCESS
+  use CON_main,       ONLY: initialize, finalize
+  use CON_session,    ONLY: init_session, do_session
+  use CON_io,         ONLY: read_inputs
+  use CON_variables,  ONLY: iErrorSwmf
+  use ModPlanetConst, ONLY: init_planet_const
+  use CON_planet,     ONLY: set_planet_defaults
+  use ModMpi,         ONLY: MPI_SUCCESS
 
   implicit none
 
@@ -61,6 +63,14 @@ program swmf
      call MPI_Finalize(iErrorMpi)
      stop
   end if
+  
+  !\
+  ! Initialize the planetary constant library and set Earth
+  ! as the default planet.
+  !/
+  call init_planet_const
+  call set_planet_defaults
+
   !\
   ! Execute sessions. Each session can use different input parameters.
   !/

@@ -52,6 +52,12 @@ program BATSRUS
   NameRestartInDir  = NameThisComp//'/'//NameRestartInDir
   NameRestartOutDir = NameThisComp//'/'//NameRestartOutDir
 
+  !\
+  ! Initialize the planetary constant library and set Earth
+  ! as the default planet.
+  !/
+  call init_planet_const
+  call set_planet_defaults
 
   !\
   ! Not yet doing the computation

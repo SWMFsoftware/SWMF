@@ -171,14 +171,6 @@ contains
   end subroutine user_calc_sources
 
   !=====================================================================
-  subroutine user_heat_source
-
-    character (len=*), parameter :: Name='user_heat_source'
-    !-------------------------------------------------------------------
-    call stop_user(Name)
-  end subroutine user_heat_source
-
-  !=====================================================================
   subroutine user_get_b0(xx,yy,zz,B0)
 
     real, intent(in):: xx,yy,zz
@@ -198,6 +190,15 @@ contains
     !-------------------------------------------------------------------
     call stop_user(Name)
   end subroutine user_update_states
+
+  !=====================================================================
+  subroutine user_io_units
+    use ModPhysics 
+    
+    character (len=*), parameter :: Name='user_io_units'
+    !-------------------------------------------------------------------
+    call stop_user(Name)
+  end subroutine user_io_units
 
   !=====================================================================
   subroutine stop_user(Name)

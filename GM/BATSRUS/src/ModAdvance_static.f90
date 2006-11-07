@@ -75,10 +75,10 @@ Module ModAdvance
   real, dimension(1:nI,1:nJ,1:nK,nBLK) :: Ex_CB, Ey_CB, Ez_CB
 
   !\
-  ! Block cell-centered body forces & heat sources
+  ! Block cell-centered body forces
   !/
   real, dimension(1:nI, 1:nJ, 1:nK,nBLK) :: &
-       fbody_x_BLK,fbody_y_BLK,fbody_z_BLK,qheat_BLK
+       fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
 
   !\
   ! Local cell-centered source terms and divB.

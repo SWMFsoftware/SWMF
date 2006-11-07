@@ -32,60 +32,6 @@ Module ModMain
   ! This is a standard F90 initialization expression but may give warnings:
   integer, parameter :: nByteReal = 4 + (1.00000000041 - 1.0)*10000000000.0
 
-  !\
-  ! Problem definition.
-  !/
-  integer :: problem_type
-  integer, parameter :: &
-       problem_uniform    =1, &
-       problem_shocktube  =2, &
-       problem_heliosphere=3, &
-       problem_comet      =5, &
-       problem_rotation   =6, &
-       problem_diffusion  =7, &
-       problem_earth      =11,&
-       problem_saturn     =12,&
-       problem_jupiter    =13,&
-       problem_venus      =14,&
-       problem_mars       =15,&
-       problem_cylinder   =21,&
-       problem_sphere     =22,&
-       problem_arcade     =25,&
-       problem_cme        =26,&
-       problem_globalhelio=28,&
-       problem_dissipation=30
-  character (len=80) :: StringProblemType_I(30)
-  data StringProblemType_I / &
-       'MHD Uniform Flow Problem', &
-       'Shock Tube Initial Value Problem', &
-       'Solar Wind and Inner Heliosphere Problem', &
-       ' 4-Nameless Problem', &
-       'Mass-Loaded Comet Problem', &
-       'Rotation Test Case Problem', &
-       'Magnetic Diffusion Test Case Problem', &
-       ' 8-Nameless Problem', &
-       ' 9-Nameless Problem', &
-       '10-Nameless Problem', &
-       'Earth Magnetosphere Problem', &
-       'Saturn Magnetosphere Problem', &
-       'Jupiter Magnetosphere Problem', &
-       'Venus Ionosphere Problem', &
-       'Mars Ionosphere Problem', &
-       '16-Nameless Problem', &
-       '17-Nameless Problem', &
-       '18-Nameless Problem', &
-       '19-Nameless Problem', &
-       '20-Nameless Problem', &
-       'Conducting Cylinder (2-D), MHD Shock Problem', &
-       'Conducting Sphere (3-D), MHD Shock Problem', &
-       '23-Nameless Problem', &
-       '24-Nameless Problem', &
-       'Arcade Eruption', &
-       'CME Initiated by Magnetic Flux Rope', &
-       '27-Nameless Problem', &
-       'globalhelio', &
-       '29-Nameless Problem', &
-       'dissipation' /
 
   !\
   ! Named indexes for directions
@@ -326,7 +272,6 @@ Module ModMain
   logical:: UseUserAMR               = .false.
   logical:: UseUserEchoInput         = .false.
   logical:: UseUserB0                = .false.
-  logical:: UseUserHeating           = .false.
   logical:: UseUserInitSession       = .false.
   logical:: UseUserUpdateStates      = .false.
 

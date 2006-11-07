@@ -115,29 +115,6 @@ module ModPhysics
   real,dimension(nVar,body2_:Top_):: FaceState_VI, CellState_VI
 
   !\
-  ! Heliosphere terms.
-  !/
-  real ::  PreSun, RhoSun, SspSun
-  real ::  VelSun
-  real ::  qSun, tHeat, rHeat, SigmaHeat
-
-  !\
-  ! CME and Arcade parameters
-  !/
-  logical:: UseFluxRope=.false.
-  character(len=10) :: cme_type
-  real :: cme_a, cme_r1, cme_r0, cme_a1, cme_alpha 
-  real :: cme_rho1, cme_rho2, cme_B1_dim, cme_v_erupt
-  real :: Rscl, RHOscl, rho1scl, rho2scl, SSPscl, Vscl 
-  real :: B1scl, a1scl
-  real :: ModulationRho,ModulationP
-  real :: OrientationGL98, LatitudeGL98, LongitudeGL98
-  real :: widthArc, phi0Arc, muArc
-  real :: RhoArcDim, TArcDim, UzArcDim, BArcDim, ByArcDim
-  real :: B0_scl, B0y_scl, Phtscl
-  integer :: ExpArc
-
-  !\
   ! Position of Earth for Dynamic AMR purposes, including
   ! a parameter that specifies the opening angle of the ray
   !/
@@ -170,10 +147,11 @@ module ModPhysics
   logical :: UseDefaultUnits = .false.
   real :: Grav0Diss,Beta0Diss,Length0Diss
   real :: Time0Diss,Rho0Diss,Tem0Diss
+
   !\
-  ! Comet terms.
+  ! Type of Units the user is using - for doing I/O
   !/
-  real ::  kin,kin_in,mbar,Unr,Unr_in,ionization_rate, Qprod
+  character (len=20) :: IoUnits
 
   !\
   ! Units for normalization
@@ -218,5 +196,25 @@ module ModPhysics
        unitstr_TEC_J, unitstr_TEC_electric,             & ! derived quantities
        unitstr_TEC_DivB, unitstr_TEC_temperature,       & ! derived quantities
        unitstr_TEC_Poynting                               ! Poynting vector
+
+  ! IO unit type and string for standard variables and plots types.  These are
+  ! used by the user to set the values.
+  integer, parameter :: nIoUnit = 13
+  real, dimension(nIoUnit) :: Si2User
+  character(len=20), dimension(nIoUnit) :: IoUnitStr
+  integer, parameter :: UnitX_           = 1
+  integer, parameter :: UnitRho_         = 2
+  integer, parameter :: UnitN_           = 3
+  integer, parameter :: UnitU_           = 4
+  integer, parameter :: UnitT_           = 5
+  integer, parameter :: UnitP_           = 6
+  integer, parameter :: UnitB_           = 7
+  integer, parameter :: UnitRhoU_        = 8
+  integer, parameter :: UnitEnergyDens_  = 9
+  integer, parameter :: UnitPoynting_    = 10
+  integer, parameter :: UnitJ_           = 11
+  integer, parameter :: UnitElectric_    = 12
+  integer, parameter :: UnitTemperature_ = 13
+
 
 end module ModPhysics

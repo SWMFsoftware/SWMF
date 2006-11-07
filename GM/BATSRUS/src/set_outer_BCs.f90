@@ -153,21 +153,6 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         call BC_symm(rho_,rho_)
         call BC_asymm(rhoUx_,rhoUz_)
         call BC_cont(rhoUz_+1,nVar)
-     case('arcadetop')
-        call BC_cont(rho_,Bz_)
-        call BC_arcade_top
-     case('arcadebot')
-        call BC_symm(rho_,rho_)
-        call BC_asymm(rhoUx_,rhoUx_)
-        call BC_cont(rhoUy_,rhoUy_)
-        call BC_asymm(rhoUz_,rhoUz_)
-        call BC_arcade_bottom
-     case('arcadebotcont')
-        call BC_symm(rho_,rho_)
-        call BC_asymm(rhoUx_,rhoUx_)
-        call BC_cont(rhoUy_,rhoUy_)
-        call BC_asymm(rhoUz_,rhoUz_)
-        call BC_cont(Bx_,P_)
      case('fixed','inflow','vary','ihbuffer')
         if(time_accurate &
              .and. (TypeBc_I(iside)=='vary'.or.TypeBc_I(iside)=='inflow'))then
@@ -485,72 +470,6 @@ subroutine BC_solar_wind_buffer
   end do
 
 end subroutine BC_solar_wind_buffer
-
-!==========================================================================  
-
-subroutine BC_arcade_bottom
-
-  ! Set q_P to analytic values in ghost cells at bottom outer boundary
-  use ModSetOuterBC
-  use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB
-  use ModGeometry
-  use ModMain
-  use ModPhysics
-  implicit none
-  integer :: i, j, k
-  real :: x, y, z, phi
-
-  do i=-1,nI+2; do j=-1,nJ+2; do k=-1,0
-     x = x_BLK(i,j,k,iBLK)
-     y = y_BLK(i,j,k,iBLK)
-     z = z_BLK(i,j,k,iBLK)
-     phi = exp(-z/Phtscl)*( 1.0 + cos(x/(widthArc*Phtscl)) )
-
-     if ( (phi .gt. phi0Arc) .and. (abs(x) < cPi*widthArc*Phtscl) ) then 
-        ! Magnetized Region
-        State_VGB( P_,i,j,k,iBLK) = exp(-z/Phtscl)*( RHOscl*SSPscl**2  -  &
-             phi*((B0_scl/widthArc)*(phi -phi0Arc))**2 / phi**(2*expArc) )
-
-        State_VGB( Bx_,i,j,k,iBLK)  = -B0_scl*phi*(phi - phi0Arc)/(phi**expArc)
-        State_VGB(By_,i,j,k,iBLK)  =  sqrt( B0y_scl**2 + &
-             ((1.0/(widthArc**2)) - 1.0) * &
-             (B0_scl*phi*(phi-phi0Arc)/phi**expArc)**2 )
-        State_VGB(Bz_,i,j,k,iBLK)  = (B0_scl/widthArc)*((phi-phi0Arc)/phi**expArc)*&
-             exp(-z/Phtscl)*sin(x/(widthArc*Phtscl))
-     else
-        !Field-Free Region
-        State_VGB( P_,i,j,k,iBLK) = exp(-z/Phtscl)*RHOscl*SSPscl**2
-        State_VGB(Bx_,i,j,k,iBLK) = 0.0
-        State_VGB(By_,i,j,k,iBLK) = B0y_scl
-        State_VGB(Bz_,i,j,k,iBLK) = 0.0
-
-     endif
-
-     if(State_VGB(P_,i,j,k,iBLK) .lt. 0.0) then
-        write(*,*) 'negative pressure at', i,j,k,iBLK
-        call stop_mpi('ERROR in set_outer_BCs::BC_arcade_bottom')
-     end if
-  end do; end do; end do
-end subroutine BC_arcade_bottom
-!==========================================================================  
-subroutine BC_arcade_top
-  ! Set q_P to analytic values in ghost cells at top outer boundary
-  use ModSetOuterBC
-  use ModMain
-  use ModPhysics
-  use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB
-  use ModGeometry
-  implicit none
-
-  State_VGB( P_,:,:,kmin1g:kmax1g,iBLK) = RHOscl*SSPscl**2 * &
-       exp(-z_BLK(:,:,kmin1g:kmax1g,iBLK)/Phtscl)
-
-  State_VGB( P_,:,:,kmin2g:kmax2g,iBLK) = RHOscl*SSPscl**2 * &
-       exp(-z_BLK(:,:,kmin2g:kmax2g,iBLK)/Phtscl)
-
-end subroutine BC_arcade_top
 !==========================================================================
 
 

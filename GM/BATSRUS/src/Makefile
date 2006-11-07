@@ -74,8 +74,7 @@ OBJ10=  calc_heat_flux.o\
 #^CFG END DISSFLUX
 
 
-OBJ12= write_plot_los.o write_plot_sph.o \
-		     set_ICs_arc.o set_ICs_cme.o      
+OBJ12= write_plot_los.o write_plot_sph.o
 
 OBJ14=covariant.o                           #^CFG IF COVARIANT
 

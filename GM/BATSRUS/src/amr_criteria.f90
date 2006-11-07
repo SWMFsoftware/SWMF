@@ -139,91 +139,9 @@ subroutine amr_criteria(ref_criteria)
                 gradY_Uy(1:nI,1:nJ,1:nK) + &
                 gradZ_Uz(1:nI,1:nJ,1:nK)))
         case('divB','divb')
-!           ! Divergence of magnetic field.
+           ! Divergence of magnetic field.
            ref_criteria(iCrit,iBLK) = maxval(abs(DivB1_GB(1:nI,1:nJ,1:nK,iBLK)),&
                 MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('Valfven','vAlfven','valfven')
-           ! Alfven speed (specifically designed for heliosphere/CME problems)
-           outVAR(1:nI,1:nJ,1:nK) = &
-                (cOne-(cOne/cHundredth)*min(cHundredth,(sqrt((R_BLK(1:nI,1:nJ,1:nK,iBLK)**2)* &
-                ((Bx_G(1:nI,1:nJ,1:nK)+B0xCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2+ &
-                (By_G(1:nI,1:nJ,1:nK)+B0yCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2+ &
-                (Bz_G(1:nI,1:nJ,1:nK)+B0zCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2 )/ &
-                (((cAU/Rsun)**2)*Rho_G(1:nI,1:nJ,1:nK))))**1))
-           ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('heliobeta')
-           ! beta (specifically designed for heliosphere/CME problems)
-           outVAR(1:nI,1:nJ,1:nK) = &
-                cOne-min(cQuarter,((R_BLK(1:nI,1:nJ,1:nK,iBLK)/(cHundred/(cOne+cFour)))**2)* &
-                ((Bx_G(1:nI,1:nJ,1:nK)+B0xCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2+ &
-                (By_G(1:nI,1:nJ,1:nK)+B0yCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2+ &
-                (Bz_G(1:nI,1:nJ,1:nK)+B0zCell_BLK(1:nI,1:nJ,1:nK,iBLK))**2 )/ &
-                Rho_G(1:nI,1:nJ,1:nK))/cQuarter
-           ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('flux')
-           ! mass flux factor (specifically designed for heliosphere/CME problems)
-           outVAR(1:nI,1:nJ,1:nK) = &
-                cTen*((cHundred*(min(cTwo*cTiny,abs( &
-                RhoUx_G(1:nI,1:nJ,1:nK)*(x_BLK(1:nI,1:nJ,1:nK,iBLK)/ &
-                R_BLK(1:nI,1:nJ,1:nK,iBLK)) + &
-                RhoUy_G(1:nI,1:nJ,1:nK)*(y_BLK(1:nI,1:nJ,1:nK,iBLK)/ &
-                R_BLK(1:nI,1:nJ,1:nK,iBLK)) + &
-                RhoUz_G(1:nI,1:nJ,1:nK)*(z_BLK(1:nI,1:nJ,1:nK,iBLK)/ &
-                R_BLK(1:nI,1:nJ,1:nK,iBLK)))* &
-                ((R_BLK(1:nI,1:nJ,1:nK,iBLK)*Rsun/cAU)**2))/(cTwo*cTiny)))**2)
-           ref_criteria(iCrit,iBLK) = maxval(outVAR(1:nI,1:nJ,1:nK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
-        case('heliocurrentsheet')
-           ! current sheet factor (specifically designed for heliosphere/CME problems)
-           Zmax = cZero
-           xxx = cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK))
-           yyy = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-           zzz = cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-           RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
-           
-           XTilt = cosTHETAtilt*cHalf*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(1,1,1,iBLK)) + &
-                   sinTHETAtilt*cHalf*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(1,1,1,iBLK))
-           YTilt = cHalf*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(1,1,1,iBLK))
-           ZTiltmin = min( &
-                (-sinTHETAtilt*x_BLK(   0,   0,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,   0,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,   0,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,   0,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,nJ+1,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,nJ+1,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,nJ+1,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,nJ+1,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,   0,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,   0,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,   0,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,   0,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,nJ+1,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,nJ+1,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,nJ+1,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,nJ+1,nK+1,iBLK)))
-           ZTiltmax = max( &
-                (-sinTHETAtilt*x_BLK(   0,   0,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,   0,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,   0,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,   0,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,nJ+1,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,nJ+1,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(   0,nJ+1,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(   0,nJ+1,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,   0,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,   0,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,   0,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,   0,nK+1,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,nJ+1,   0,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,nJ+1,   0,iBLK)), &
-                (-sinTHETAtilt*x_BLK(nI+1,nJ+1,nK+1,iBLK) + &
-                  cosTHETAtilt*z_BLK(nI+1,nJ+1,nK+1,iBLK)))
-           ZTilt = cZero
-           if (ZTiltmin < cZero .and. ZTiltmax > cZero) ZTilt = cOne
-           Zmax = Ztilt*(cHundred*(cOne + cFour) - sqrt(XTilt*XTilt + YTilt*YTilt))
-           ref_criteria(iCrit,iBLK) = Zmax
         case('Rcurrents','rcurrents')	
            ! Inverse distance from Rcurrents, squared
            outVAR(1:nI,1:nJ,1:nK) = cOne/((max(cTiny, &

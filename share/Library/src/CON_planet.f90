@@ -17,6 +17,7 @@ module CON_planet
   ! via the {\bf CON\_physics} class.
 
   !USES:
+  use ModPlanetConst
   use ModConst
   use ModTimeConvert, ONLY: TimeType
 
@@ -34,32 +35,24 @@ module CON_planet
 
   character(len=*), parameter, private :: NameMod='CON_planet'
 
-  integer, parameter    :: lNamePlanet = 40
-  character (len=lNamePlanet) :: NamePlanet = 'EARTH'
+  character (len=lNamePlanet) :: NamePlanet = ''
 
-  real               :: RadiusPlanet     = rEarth
-  real               ::   MassPlanet     = mEarth
-  real               ::  OmegaPlanet     = OmegaEarth
-  real               :: TiltRotation     = TiltEarth
-  real               :: IonosphereHeight = IonoHeightEarth
-  ! Orbital data
-  real           :: OmegaOrbit   = cTwoPi/OrbitalPeriodEarth
-
-  ! Default values are for Earth
-  type(TimeType) :: TimeEquinox  = TimeType(&
-       iYearEquinoxEarth, iMonthEquinoxEarth, iDayEquinoxEarth, &
-       iHourEquinoxEarth, iMinuteEquinoxEarth, iSecondEquinoxEarth, &
-       FracSecondEquinoxEarth, &
-       0.0_Real8_, '20000320073500')
-
-  real           :: AngleEquinox = AngleEquinoxEarth
+  ! Define variables
+  real           :: RadiusPlanet
+  real           :: MassPlanet
+  real           :: TiltRotation
+  real           :: IonosphereHeight
+  real           :: OmegaPlanet  ! Rotation
+  real           :: OmegaOrbit   ! Orbit
+  real           :: AngleEquinox
+  type(TimeType) :: TimeEquinox = TimeType(2000, 1, 1, 0, 0, 0, &
+       0.0, 0.0_REAL8_, '20000101000000')
 
   ! Magnetic field type and strength in teslas
-  integer, parameter          :: lTypeBField = 40
   character (len=lTypeBField) :: TypeBField = 'DIPOLE'
-  real                        :: DipoleStrength = DipoleStrengthEarth
-  real    :: MagAxisThetaGeo   = bAxisThetaEarth     ! Permanent theta  in GEO
-  real    :: MagAxisPhiGeo     = bAxisPhiEarth       ! Permanent phi    in GEO
+  real                        :: DipoleStrength
+  real    :: MagAxisThetaGeo  ! Permanent theta  in GEO
+  real    :: MagAxisPhiGeo    ! Permanent phi    in GEO
 
   ! Orientation of the axes
   real    :: RotAxisTheta      ! Permanent theta angle in GSE
@@ -83,12 +76,56 @@ module CON_planet
   ! a secondary axis is aligned with the primary axis
   logical :: IsRotAxisPrimary = .true., IsMagAxisPrimary = .true.
 
+  ! A logical to indicate it the default parameters have been
+  ! modified for this planet
+  logical :: IsPlanetModified = .false.
+
 contains
+
+  !BOP ========================================================================
+  !IROUTINE: set_planet_defaults - set Earth to be defaults if no #PLANET
+  !INTERFACE:
+  subroutine set_planet_defaults
+
+    !DESCRIPTION:
+    ! Initialize parameters for Earth as the default planet.  This is in case
+    ! there is no #PLANET command.
+    !EOP
+    character (len=*), parameter :: NameSub = NameMod//'::set_planet_defaults'
+
+    !-------------------------------------------------------------------------
+    Planet_          = Earth_
+    NamePlanet       = namePlanet_I(Earth_)
+    RadiusPlanet     = rPlanet_I(Earth_)
+    MassPlanet       = mPlanet_I(Earth_)
+    TiltRotation     = TiltPlanet_I(Earth_)
+    IonosphereHeight = IonoHeightPlanet_I(Earth_)
+    OmegaPlanet      = &
+                       cTwoPi/RotationPeriodPlanet_I(Earth_)   &
+                       + cTwoPi/OrbitalPeriodPlanet_I(Earth_)  
+    OmegaOrbit       = cTwoPi/OrbitalPeriodPlanet_I(Earth_)
+    AngleEquinox     =  &
+                        cTwoPi * ( iHourEquinoxPlanet_I(Earth_) * 3600 &
+                                 + iMinuteEquinoxPlanet_I(Earth_) * 60 &
+                                 + iSecondEquinoxPlanet_I(Earth_) &
+                                 + FracSecondEquinoxPlanet_I(Earth_)) / (24 * 3600)
+    TimeEquinox      = TimeType(&
+                       iYearEquinoxPlanet_I(Earth_), iMonthEquinoxPlanet_I(Earth_), &
+                       iDayEquinoxPlanet_I(Earth_), iHourEquinoxPlanet_I(Earth_),   &
+                       iMinuteEquinoxPlanet_I(Earth_), iSecondEquinoxPlanet_I(Earth_), &
+                       FracSecondEquinoxPlanet_I(Earth_), 0.0_Real8_, '20000320073500')
+    TypeBField       = TypeBFieldPlanet_I(Earth_)
+    DipoleStrength   = DipoleStrengthPlanet_I(Earth_)
+    MagAxisThetaGeo  = bAxisThetaPlanet_I(Earth_)     
+    MagAxisPhiGeo    = bAxisPhiPlanet_I(Earth_)       
+    
+  end subroutine set_planet_defaults
 
   !BOP ========================================================================
   !IROUTINE: is_planet_init - initialize parameters if planet is known
   !INTERFACE:
   function is_planet_init(NamePlanetIn) result(IsKnown)
+
 
     !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NamePlanetIn
@@ -103,10 +140,11 @@ contains
     ! once.
     !EOP
     character (len=*), parameter :: NameSub = NameMod//'::is_planet_init'
+    integer :: i
 
     logical :: IsInitialized = .false.
     !-------------------------------------------------------------------------
-    IsKnown = .true.
+    IsKnown = .false.
 
     if(IsInitialized)then
        if(NamePlanet == NamePlanetIn) RETURN
@@ -118,20 +156,47 @@ contains
     NamePlanet    = NamePlanetIn
     IsInitialized = .true.
 
-    select case(NamePlanet)
-    case('EARTH')
-       ! This is the default so everything is already set
-    case('SATURN')
-       RadiusPlanet     = rSaturn
-       MassPlanet       = mSaturn
-       OmegaPlanet      = cTwoPi/RotationPeriodSaturn 
-       DipoleStrength   = DipoleStrengthSaturn
-       IonosphereHeight = IonoHeightSaturn
-    case default
-       IsKnown = .false.
-       RETURN
-    end select
+    if (NamePlanet .eq. 'NONE') then
+       IsKnown = .true.
+       return
+    end if
 
+    do i=1, maxPlanet
+      if (NamePlanet .eq. NamePlanet_I(i)) then
+         IsKnown = .true.
+         Planet_ = i
+      end if
+    end do
+
+    if (.not. IsKnown)  return
+    
+    ! Set all values for the selected planet
+    RadiusPlanet     = rPlanet_I(Planet_)
+    MassPlanet     = mPlanet_I(Planet_)
+    TiltRotation     = TiltPlanet_I(Planet_)
+    IonosphereHeight = IonoHeightPlanet_I(Planet_)
+    OmegaPlanet     = &
+         cTwoPi/RotationPeriodPlanet_I(Planet_) + cTwoPi/OrbitalPeriodPlanet_I(Planet_)
+    OmegaOrbit   = cTwoPi/OrbitalPeriodPlanet_I(Planet_)
+    AngleEquinox =  &
+         cTwoPi * ( iHourEquinoxPlanet_I(Planet_) * 3600 + iMinuteEquinoxPlanet_I(Planet_) * 60 &
+         + iSecondEquinoxPlanet_I(Planet_) + FracSecondEquinoxPlanet_I(Planet_)) / (24 * 3600)
+    TimeEquinox  = TimeType(&
+         iYearEquinoxPlanet_I(Planet_), &
+         iMonthEquinoxPlanet_I(Planet_), &
+         iDayEquinoxPlanet_I(Planet_), &
+         iHourEquinoxPlanet_I(Planet_), &
+         iMinuteEquinoxPlanet_I(Planet_), &
+         iSecondEquinoxPlanet_I(Planet_), &
+         FracSecondEquinoxPlanet_I(Planet_), &
+         0.0_Real8_, '')
+
+    ! Magnetic field type and strength in teslas
+    TypeBField = TypeBFieldPlanet_I(Planet_)
+    DipoleStrength = DipoleStrengthPlanet_I(Planet_)
+    MagAxisThetaGeo   = bAxisThetaPlanet_I(Planet_)     ! Permanent theta  in GEO
+    MagAxisPhiGeo     = bAxisPhiPlanet_I(Planet_)       ! Permanent phi    in GEO
+    
   end function is_planet_init
 
   !===========================================================================
@@ -163,6 +228,7 @@ contains
 
        call upper_case(NamePlanetIn)
        if ( .not. is_planet_init(NamePlanetIn) ) then
+          Planet_ = 0
 
           call read_var('RadiusPlanet', RadiusPlanet)
           call read_var('MassPlanet',   MassPlanet)
@@ -213,6 +279,7 @@ contains
        ! and the other one aligned with it
 
        NamePlanetCommands = '#IDEALAXES ' // NamePlanetCommands
+       IsPlanetModified = .true.
 
        UseRealRotAxis   = .false.
        IsRotAxisPrimary = .true.
@@ -226,6 +293,7 @@ contains
     case('#ROTATIONAXIS')
 
        NamePlanetCommands = '#ROTATIONAXIS ' // NamePlanetCommands
+       IsPlanetModified = .true.
        UseRealRotAxis = .false.
 
        call read_var('IsRotAxisPrimary', IsRotAxisPrimary)
@@ -248,6 +316,7 @@ contains
     case('#MAGNETICAXIS')
 
        NamePlanetCommands = '#MAGNETICAXIS ' // NamePlanetCommands
+       IsPlanetModified = .true.
        UseRealMagAxis = .false.
 
        call read_var('IsMagAxisPrimary', IsMagAxisPrimary)
@@ -270,6 +339,7 @@ contains
     case('#ROTATION')
 
        NamePlanetCommands = '#ROTATION ' // NamePlanetCommands
+       IsPlanetModified = .true.
 
        call read_var('UseRotation', UseRotation)
        if (.not.UseRotation) then
@@ -282,6 +352,7 @@ contains
     case('#NONDIPOLE')
 
        NamePlanetCommands = '#NONDIPOLE ' // NamePlanetCommands
+       IsPlanetModified = .true.
 
        call read_var('UseNonDipole',UseNonDipole)
        if (.not.UseNonDipole) then
@@ -294,6 +365,7 @@ contains
     case('#DIPOLE')
 
        NamePlanetCommands = '#DIPOLE ' // NamePlanetCommands
+       IsPlanetModified = .true.
 
        call read_var('DipoleStrength',DipoleStrength)
 
@@ -331,7 +403,7 @@ contains
   !==========================================================================
 
   subroutine get_planet( &
-       NamePlanetOut, RadiusPlanetOut, MassPlanetOut, OmegaPlanetout, &
+       NamePlanetOut, RadiusPlanetOut, MassPlanetOut, OmegaPlanetOut, RotationPeriodOut, &
        IonosphereHeightOut, &
        UseRotationOut, DipoleStrengthOut, DoUpdateB0Out, DtUpdateB0Out)
 
@@ -339,6 +411,7 @@ contains
     real,             optional, intent(out) :: RadiusPlanetOut
     real,             optional, intent(out) :: MassPlanetOut
     real,             optional, intent(out) :: OmegaPlanetOut
+    real,             optional, intent(out) :: RotationPeriodOut
     real,             optional, intent(out) :: IonosphereHeightOut
     logical,          optional, intent(out) :: UseRotationOut
     real,             optional, intent(out) :: DipoleStrengthOut
@@ -349,6 +422,7 @@ contains
     if(present(RadiusPlanetOut))    RadiusPlanetOut     = RadiusPlanet
     if(present(MassPlanetOut))      MassPlanetOut       = MassPlanet
     if(present(OmegaPlanetOut))     OmegaPlanetOut      = OmegaPlanet
+    if(present(RotationPeriodOut))  RotationPeriodOut   = RotationPeriodPlanet_I(Planet_)
     if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
     if(present(UseRotationOut))     UseRotationOut      = UseRotation
     if(present(DipoleStrengthOut))  DipoleStrengthOut   = DipoleStrength

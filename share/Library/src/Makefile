@@ -15,6 +15,7 @@ MODULES = \
 	ModCoordTransform.o\
 	ModSort.o\
         ModNumConst.o\
+	ModPlanetConst.o\
 	ModConst.o\
 	ModIoUnit.o\
 	ModMpi.o\

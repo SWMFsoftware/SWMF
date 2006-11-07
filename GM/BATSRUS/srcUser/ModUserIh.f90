@@ -26,7 +26,8 @@ module ModUser
        user_calc_sources,               &
        user_heat_source,                &
        user_get_b0,                     &
-       user_update_states
+       user_update_states,              &
+       user_io_units
 
   include 'user_module.h' !list of public methods
 

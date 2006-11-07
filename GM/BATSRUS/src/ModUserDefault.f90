@@ -22,9 +22,9 @@ module ModUser
        user_get_log_var,                &
        user_set_plot_var,               &
        user_calc_sources,               &
-       user_heat_source,                &
        user_get_b0,                     &
-       user_update_states
+       user_update_states,              &
+       user_io_units
 
   include 'user_module.h' !list of public methods
 

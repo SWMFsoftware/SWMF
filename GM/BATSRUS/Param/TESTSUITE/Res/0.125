@@ -1,6 +1,5 @@
-
-#AMRINIT
-mag_new			InitialRefineType
-8			InitialRefineLevel
+#GRIDRESOLUTION
+1/8                     Resolution
+initial                 NameArea
 
 #END

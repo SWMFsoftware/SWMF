@@ -21,6 +21,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var
+  use ModPlanetConst
   use CON_axes,         ONLY: init_axes
   use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case,&
        DoFlush
@@ -79,7 +80,7 @@ subroutine MH_set_parameters(TypeAction)
   character (len=50) :: plot_string,log_string,satellite_string
   character (len=3)  :: plot_area, plot_var, satellite_var, satellite_form
   character (len=2)  :: NameCompRead
-  integer :: problem_type_r, qtotal, nIJKRead_D(3)
+  integer :: qtotal, nIJKRead_D(3)
 
   integer            :: TimingDepth=-1
   character (len=10) :: TimingStyle='cumm'
@@ -161,9 +162,6 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      end if
-
-     if(problem_type==-1) call stop_mpi(&
-          NameSub//': ERROR problem type must be set in PARAM.in')
 
      call correct_parameters
 
@@ -1210,14 +1208,10 @@ subroutine MH_set_parameters(TypeAction)
         if(Pratio_lo>=Pratio_hi)&
              call stop_mpi(NameSub//' ERROR: Pratio_lo>=Pratio_hi')
         !                                              ^CFG END PROJECTION
-     case("#SHOCKTUBE")
-        do i=1,nVar
-           call read_var('LeftState',shock_Lstate(i))
-        end do
-        do i=1,nVar
-           call read_var('RightState',shock_Rstate(i))
-        end do
-        call read_var('ShockSlope',ShockSlope)
+     case("#IOUNITS")
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('IoUnitType',IoUnits)
+        call upper_case(IoUnits)
      case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
         call read_var('UseSolarWindFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
@@ -1297,20 +1291,14 @@ subroutine MH_set_parameters(TypeAction)
            call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
         end if
      case("#PROBLEMTYPE")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('iProblemType',problem_type_r) 
-        if(problem_type<0)then
-           problem_type=problem_type_r
-           if (problem_type==problem_dissipation) &
-                call read_var('TypeProblemDiss',TypeProblemDiss)
-           call set_problem_defaults
-        else if(problem_type/=problem_type_r) then
-           if(iProc==0)write(*,*)'problem type already set to',&
-                problem_type,' /=',problem_type_r
-           call stop_mpi('PROBLEM TYPE CANNOT BE OVERWRITTEN !')
-        else
-           if(iProc==0)write(*,'(a)')NameSub // &
-                ' WARNING: problem type set twice !!!'
+        if(iProc==0) then
+           write(*,'(a)')NameSub // &
+                   'WARNING: problem_type is and obsolete command !!!'
+           write(*,'(a)')NameSub // &
+                   '         Please use #PLANET and make sure '
+           write(*,'(a)')NameSub // &
+                   '         all parameters are set correctly!'
+           if(UseStrict)call stop_mpi('Problem_type is obsolete!!')
         end if
      case("#NEWRESTART","#RESTARTINDIR","#RESTARTINFILE",&
           "#PRECISION","#BLOCKLEVELSRELOADED")
@@ -1559,9 +1547,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rBody'     ,Rbody)
            if(NameThisComp=='GM')then
               call read_var('rCurrents' ,Rcurrents)
+           end if
               call read_var('BodyRhoDim',Body_Rho_Dim)
               call read_var('BodyTDim'  ,Body_T_dim)
-           end if
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1660,29 +1648,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('tSimulation',time_simulation)
-     case("#HELIOSPHERE")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('BodyTDim' ,Body_T_dim)
-        call read_var('BodyRhoDim',Body_rho_dim)
-        call read_var('qSun' ,Qsun)
-        call read_var('tHeat',Theat)
-        call read_var('rHeat',Rheat)
-        call read_var('SigmaHeat',SIGMAheat)
-        call read_var('UseFluxRope',UseFluxRope)
-        if(UseFluxRope)then
-           call read_var('CmeA' ,cme_a)
-           call read_var('CmeR1',cme_r1)
-           call read_var('CmeR0',cme_r0)
-           call read_var('CmeA1',cme_a1)
-           call read_var('CmeAlpha',cme_alpha)
-           call read_var('CmeRho1',cme_rho1)
-           call read_var('CmeRho2',cme_rho2)
-           call read_var('ModulationRho',ModulationRho)
-           call read_var('ModulationP',ModulationP)
-           call read_var('OrientationGl98',OrientationGL98)
-           call read_var('LatitudeGl98   ',LatitudeGL98)
-           call read_var('LongitudeGl98  ',LongitudeGL98)
-        end if
      case("#HELIOUPDATEB0")
         call read_var('DtUpdateB0',dt_updateb0)
         DoUpdateB0 = dt_updateb0 > 0.0
@@ -1704,29 +1669,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
-     case("#ARCADE")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('TArcDim'  ,TArcDim)
-        call read_var('RhoArcDim',RhoArcDim)
-        call read_var('BArcDim'  ,BArcDim)
-        call read_var('ByArcDim' ,ByArcDim)
-        call read_var('UzArcDim' ,UzArcDim)
-        call read_var('phi0Arc'  ,phi0Arc)
-        call read_var('muArc'    ,muArc)
-        call read_var('expArc'   ,expArc)
-        call read_var('widthArc' ,widthArc)
-     case("#CME")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Cmetype',cme_type)
-        call read_var('Cmea' ,cme_a)
-        call read_var('Cmer1',cme_r1)
-        call read_var('Cmer0',cme_r0)
-        call read_var('Cmea1',cme_a1)
-        call read_var('Cmealpha',cme_alpha)
-        call read_var('Cmerho1',cme_rho1)
-        call read_var('Cmerho2',cme_rho2)
-        call read_var('CmeB1_dim',cme_B1_dim)
-        call read_var('Cmev_erupt',cme_v_erupt)
      case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseDefaultUnits',UseDefaultUnits)
@@ -1745,13 +1687,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('scaleFactorDiss',scaleFactorDiss)
         call read_var('BZ0Diss'        ,BZ0Diss)
         !                                             ^CFG END DISSFLUX
-     case("#COMET")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Qprod' ,Qprod)
-        call read_var('Unr_in' ,Unr_in)
-        call read_var('mbar',mbar)
-        call read_var('ionization_rate',ionization_rate)
-        call read_var('kin_in',kin_in)
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
@@ -1795,8 +1730,6 @@ contains
   subroutine set_defaults
 
     CodeVersionRead = -1.
-
-    problem_type = -1
 
     ! Default coordinate systems
     select case(NameThisComp)
@@ -1943,222 +1876,11 @@ contains
     restart           = .false.
     read_new_upstream = .false.
 
-  end subroutine set_defaults
-
-  !===========================================================================
-  subroutine set_problem_defaults
-
-
     !\
     ! Give some "reasonable" default values
     !/
 
-    UseGravity=.false.
-    GravityDir=0
-    select case(problem_type)
-    case( problem_cme, problem_saturn, problem_jupiter, &
-         problem_venus, problem_mars)
-       UseGravity=.true.
-    case(problem_heliosphere)
-       UseGravity=.true.    
-    case(problem_arcade)
-       UseGravity=.true.
-       GravityDir=z_
-    end select
-
-    select case(problem_type)
-    case(problem_earth)
-       body1      =.true.
-       Rbody      = 3.00
-       Rcurrents  = 4.00
-
-    case(problem_saturn, problem_jupiter)
-       body1      =.true.
-       Rbody      = 3.00
-       Rcurrents  = 4.00
-
-    case(problem_rotation)
-       body1      =.false.
-       Rbody      = 3.00
-       Rcurrents  = 0.00
-
-    case(problem_comet)
-       body1      =.false.
-       Rbody      = -1.00
-       Rcurrents  = -1.00
-
-    case(problem_heliosphere, problem_venus, &
-         problem_cylinder, problem_sphere)
-       body1      =.true.
-       Rbody      = 1.00
-       Rcurrents  =-1.00
-
-    case(problem_mars)
-       body1      =.true.
-       Rbody      = 1.041225
-       Rcurrents  =-1.00
-
-    case(problem_globalhelio)
-       body1= .true.
-       Rbody = 30.00
-       Rcurrents= -1.0
-
-    case(problem_cme)
-       body1      =.true.
-       UseBody2      =.false.           !^CFG IF SECONDBODY
-       Rbody      = 1.0
-       Rcurrents  = -1.0
-
-    case(problem_shocktube)
-       shock_Lstate(rho_)   =1.
-       shock_Lstate(ux_:uz_)=0.
-       shock_Lstate(Bx_)    =0.75
-       shock_Lstate(By_)    =1.
-       shock_Lstate(Bz_)    =0.
-       shock_Lstate(P_)     =1.
-       shock_Rstate(rho_)   =0.125
-       shock_Rstate(ux_:uz_)=0.
-       shock_Rstate(Bx_)    =0.75
-       shock_Rstate(By_)    =-1.
-       shock_Rstate(Bz_)    =0.
-       shock_Rstate(P_)     =0.1
-       ShockSlope           =0.0
-    case default
-       body1      =.false.
-       Rbody      = -1.0
-       Rcurrents  = -1.0
-
-    end select
-
-    select case(problem_type)                          !^CFG IF NOT COVARIANT BEGIN
-    case(problem_earth,problem_saturn,problem_jupiter,problem_rotation)
-       UseNonConservative   = .true.
-       nConservCrit         = 1
-       if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-       allocate( TypeConservCrit_I(nConservCrit) )
-       TypeConservCrit_I(1) = 'r'
-       rConserv             = 2*rBody
-    case default                                       !^CFG END COVARIANT
-       UseNonConservative   = .false.
-       if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
-       nConservCrit         = 0
-       rConserv             = -1.
-    end select                                         !^CFG IF NOT COVARIANT
-
-    if(IsStandAlone)then
-       select case(problem_type)
-       case(problem_earth)
-          Bdp_dim = -31100.0
-       case(problem_saturn)
-          Bdp_dim = 20800.0
-       case(problem_jupiter)
-          Bdp_dim = 426000.0
-       case default
-          Bdp_dim = 0.0
-       end select
-    end if
-
-    select case(problem_type)
-    case(problem_earth, problem_saturn, problem_jupiter, problem_venus, &
-         problem_mars, problem_sphere,problem_comet)
-       TypeBc_I(east_)        ='outflow'
-       TypeBc_I(west_)        ='inflow'
-!!$     TypeBc_I(south_:top_)  ='float'
-       TypeBc_I(south_:top_)  ='fixed'
-    case(problem_rotation)
-       TypeBc_I(east_:top_)   ='fixedB1'
-    case(problem_diffusion)
-       TypeBc_I(east_:top_)   ='float'
-    case(problem_cylinder)
-       TypeBc_I(east_)        ='float'
-       TypeBc_I(west_)        ='inflow'
-       TypeBc_I(south_:north_)='fixed'
-       TypeBc_I(bot_:top_)    ='float'
-    case(problem_shocktube)
-       TypeBc_I(east_:north_) ='shear'
-       TypeBc_I(bot_:top_)    ='float'
-    case default
-       TypeBc_I(east_:top_)   ='float'
-    end select
-
-    select case(problem_type)
-    case(problem_earth, problem_saturn, problem_jupiter, problem_rotation)
-       TypeBc_I(body1_)='ionosphere'
-    case default
-       TypeBc_I(body1_)='unknown'
-    end select
-
-    ! These are used for problem_heliosphere only
-    Qsun  = 25.00
-    Theat = 1.75
-    Rheat = 1.00
-    SIGMAheat = 4.50
-
-    ! These are used by problem_cme only
-    cme_type    = 'Low'
-    cme_a       = 0.7
-    cme_r1      = 1.2
-    cme_r0      = 1.0
-    cme_a1      = 0.23
-    cme_alpha   = 0.0
-    cme_rho1    = 2.5E-12
-    cme_rho2    = 2.0E-13
-    cme_B1_dim  = 1.0 
-    cme_v_erupt = 4.0E5
-
-
-    ! These are used for problem_arcade
-    TArcDim  = 1.0E6
-    RhoArcDim= 1.0E-12
-    BArcDim  = 0.71814
-    ByArcDim = 0.0
-    UzArcDim = 5.0E3
-    phi0Arc  = 0.5
-    muArc    = 1.3
-    expArc   = 3
-    widthArc = 0.5
-
-    ! These are used for problem_comet
-    Qprod = 1.0E28           ! 1/s 
-    Unr   = 1.0              ! km/s
-    mbar  = 17.0             ! AMU
-    ionization_rate = 1.0E-6 ! 1/s
-    kin   = 1.7E-9           ! cm^3/s
-
-    SW_rho_dim =     -1.0    ! n/cc
-    SW_T_dim   =     -1.0    ! K
-    SW_Ux_dim  =      0.0    ! km/s
-    SW_Uy_dim  =      0.0    ! km/s
-    SW_Uz_dim  =      0.0    ! km/s
-    SW_Bx_dim  =      0.0    ! nT
-    SW_By_dim  =      0.0    ! nT
-    SW_Bz_dim  =      0.0    ! nT
-
-    select case (problem_type)
-    case (problem_heliosphere, problem_cme)
-       Body_rho_dim = 1.50E8
-       Body_T_dim   = 2.85E06
-    case (problem_earth)
-       Body_rho_dim = 5.0    ! n/cc
-       Body_T_dim   = 25000.0! K
-    case (problem_saturn)
-       Body_rho_dim = 0.1    ! n/cc
-       Body_T_dim   = 35000.0! K
-    case (problem_jupiter)
-       Body_rho_dim = 0.4    ! n/cc
-       Body_T_dim   = 35000.0! K
-    case (problem_rotation)
-       Body_rho_dim = 25.0    ! n/cc
-       Body_T_dim   = 181712.175   ! K
-       !^CFG IF GLOBALHELIOSPHERE BEGIN
-    case(problem_globalhelio)
-       Body_rho_dim = SW_rho*unitUSER_rho*1.E6
-       Body_T_dim = SW_T_dim
-       !^CFG END GLOBALHELIOSPHERE
-    case default
-       Body_rho_dim = 1.0    ! n/cc
-       Body_T_dim   = 10000.0! K
-    end select
+    Bdp_dim = 0.0
 
     UseBody2 = .false.                                !^CFG IF SECONDBODY BEGIN
     RBody2 =-1.0
@@ -2167,83 +1889,81 @@ contains
     zBody2 = 0.0			
     BdpBody2_D  = 0.0
     rCurrentsBody2 = 0.0
-    RhoDimBody2 = 5.0    ! n/cc
-    TDimBody2   = 25000.0! K                          !^CFG END SECONDBODY
+    RhoDimBody2 = 1.0    ! n/cc
+    TDimBody2   = 10000.0! K                          !^CFG END SECONDBODY
 
-    call set_InitialRefineType
+    InitialRefineType = 'none'
 
-    !
-    ! Available criteria values to choose from: (SELECT UP TO 3)
-    !    dTempmax drhomax dPmax dP2max dEmax curlUmax curlBmax
-    !    divUmax divBmax Vamax betamax fluxmax Zmax
-    !
-    select case (problem_type)
-    case (problem_heliosphere)
+    !\
+    ! Set component dependent defaults
+    !/
+
+    GravityDir=0
+    if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
+
+
+    select case(NameThisComp)
+    case('IH','SC')
+       ! Body parameters
+       UseGravity=.true.
+       body1      =.true.
+       Rbody      = 1.00
+       Rcurrents  =-1.00
+
+       IoUnits = "HELIOSPHERIC"
+
+       ! Non Conservative Parameters
+       UseNonConservative   = .false.
+       nConservCrit         = 0
+       rConserv             = -1.
+
+       ! Boundary Conditions
+       TypeBc_I(east_:top_)   ='float'
+       TypeBc_I(body1_)='unknown'
+       Body_rho_dim = 1.50E8
+       Body_T_dim   = 2.85E06
+
+       ! Refinement criteria
        nRefineCrit    = 3
        RefineCrit(1)  = 'geometry'
        RefineCrit(2)  = 'Va'
        RefineCrit(3)  = 'flux'
-       !^CFG IF GLOBALHELIOSPHERE BEGIN
-    case (problem_globalhelio)
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'geometry'
-       RefineCrit(2)  = 'Va'
-       RefineCrit(3)  = 'flux'
-       !^CFG END GLOBALHELIOSPHERE
-    case (problem_earth,problem_saturn,problem_jupiter)
+
+    case('GM')
+       ! Body Parameters
+       UseGravity=.false.
+       body1      =.true.
+       Rbody      = 3.00
+       Rcurrents  = 4.00
+
+       IoUnits = "PLANETARY"
+
+       ! Non Conservative Parameters
+       UseNonConservative   = .true.
+       nConservCrit         = 1
+       allocate( TypeConservCrit_I(nConservCrit) )
+       TypeConservCrit_I(1) = 'r'
+       rConserv             = 2*rBody
+       
+       ! Boundary Conditions
+       TypeBc_I(east_)        ='outflow'
+       TypeBc_I(west_)        ='inflow'
+       TypeBc_I(south_:top_)  ='fixed'
+       TypeBc_I(body1_)='ionosphere'
+       Body_rho_dim = 5.0    ! n/cc
+       Body_T_dim   = 25000.0! K
+
+       ! Refinement Criteria
        nRefineCrit    = 3
        RefineCrit(1)  = 'gradlogP'
        RefineCrit(2)  = 'curlB'
        RefineCrit(3)  = 'Rcurrents'
-    case (problem_comet)
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'gradlogP'
-       RefineCrit(2)  = 'divU'
-       RefineCrit(3)  = 'curlB'
-    case default
-       nRefineCrit    = 3
-       RefineCrit(1)  = 'gradlogP'
-       RefineCrit(2)  = 'divB'
-       RefineCrit(3)  = 'curlB'
+
     end select
 
-  end subroutine set_problem_defaults
 
-  !==========================================================================
-  subroutine set_InitialRefineType
 
-    select case (problem_type)
-    case (problem_uniform)
-       InitialRefineType = 'none'
-    case (problem_shocktube)
-       InitialRefineType = 'all'
-    case (problem_rotation)
-       InitialRefineType = '3Dbodyfocus'
-    case (problem_heliosphere)
-       InitialRefineType = 'all_then_focus'
-    case (problem_cme)
-       InitialRefineType = 'cme'
-    case (problem_earth)
-       InitialRefineType = 'magnetosphere'
-    case (problem_saturn)
-       InitialRefineType = 'magnetosaturn'
-    case (problem_jupiter)
-       InitialRefineType = 'magnetojupiter'
-    case (problem_venus)
-       InitialRefineType = 'magnetosphere'
-    case (problem_mars)
-       InitialRefineType = 'magnetosphere'
-    case (problem_cylinder)
-       InitialRefineType = 'all'
-    case (problem_sphere)
-       InitialRefineType = 'none'
-    case (problem_comet)
-       InitialRefineType = 'comet'
-    case default
-       InitialRefineType = 'none'
-    end select
-
-  end subroutine set_InitialRefineType
+  end subroutine set_defaults
 
   !=========================================================================
   subroutine check_options
@@ -2420,7 +2140,7 @@ contains
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
 
     ! Reset initial refine type if it is set to 'default'
-    if(InitialRefineType=='default') call set_InitialRefineType
+    if(InitialRefineType=='default') InitialRefineType='none'
  
     if(UseConstrainB .and. .not.time_accurate)then  !^CFG IF CONSTRAINB BEGIN
        if(iProc==0)then

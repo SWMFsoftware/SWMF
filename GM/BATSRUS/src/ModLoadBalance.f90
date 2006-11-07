@@ -28,7 +28,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   integer, parameter :: MaxTry = 100
   
   ! Set this logical to .false. to return to the previous version,
-  ! which did not move the B0, body force and heating variables.
+  ! which did not move the B0 and body force variables.
   ! There is another declaration in subroutine move_block! Change together!!!
   logical, parameter :: DoMoveExtraData = .true.
 
@@ -312,7 +312,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, &
-       fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, qheat_BLK, &
+       fbody_x_BLK, fbody_y_BLK, fbody_z_BLK, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, &
        B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, &
@@ -332,7 +332,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
   integer, intent(in) :: iBlockALL, iBlockFrom, iProcFrom, iBlockTo,iProcTo
 
   ! Set this logical to .false. to return to the previous version,
-  ! which did not move the B0, body force and heating variables.
+  ! which did not move the B0 and body force variables.
   ! There is another declaration in subroutine load_balance! Change together!!!
   logical, parameter :: DoMoveExtraData = .true.
 
@@ -343,14 +343,14 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        3*((nI+3)*(nJ+2)*(nK+2)           & ! B0*Face_x
        +  (nI+2)*(nJ+3)*(nK+2)           & ! B0*Face_y
        +  (nI+2)*(nJ+2)*(nK+3)) +        & ! B0*Face_x
-       4*nIJK                              ! fbody_* and qheat
+       4*nIJK                              ! fbody_* 
        
   integer, parameter :: nDataBLK= &
        nwIJK +                           & !^CFG IF IMPLICIT
        3*2*nIJK +                        & !^CFG IF RCM
        nScalarBLK +                      & ! scalars
        nVar*nCellGhostBLK +              & ! State_VGB
-       nExtraData +                      & ! B0, fbody, qheat
+       nExtraData +                      & ! B0, fbody
        3*nVar*nIJK                         ! max for data in ModBlockData
 
   ! Buffer for send and recieve
@@ -506,13 +506,6 @@ contains
              end do; end do; end do
           end if
 
-          ! heating
-          if(UseUserHeating)then
-             do k=1,nK; do j=1,nJ; do i=1,nI
-                iData = iData+1
-                BlockData_I(iData) = qHeat_BLK(i,j,k,iBlockFrom)
-             end do; end do; end do
-          end if
        end if ! DoMoveExtraData
 
        if(UseBDF2 .and. n_prev > 0)then             !^CFG IF IMPLICIT BEGIN
@@ -695,15 +688,6 @@ contains
           fbody_z_BLK(:,:,:,iBlockTo) = 0.0
        end if
 
-       ! heating
-       if(UseUserHeating)then
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             iData = iData+1
-             qHeat_BLK(i,j,k,iBlockTo) = BlockData_I(iData)
-          end do; end do; end do
-       else
-          qheat_BLK(:,:,:,iBlockTo) = 0.0
-       end if
     end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then            !^CFG IF IMPLICIT BEGIN

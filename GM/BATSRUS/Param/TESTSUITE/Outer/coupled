@@ -2,9 +2,6 @@
 
 #BEGIN_COMP IH ---------------------------------------------------------------
 
-#PROBLEMTYPE
-3		problem_type: 3=Solar Wind and Inner Heliosphere
-                              
 #HELIOSPHERE
 2.850D+06		Tsun    [K]      1.0E6 
 1.500D+14		NDsun [n/m-3]

@@ -56,9 +56,13 @@ subroutine write_runtime_values()
   use ModParallel, ONLY : proc_dims
   use ModPhysics
   use ModMpi
+  use CON_planet
+  use ModPlanetConst, ONLY: Planet_
   use ModUser, ONLY: user_write_progress
   implicit none
-
+  
+  character (len=35) :: TextPlanetMod = ''
+  character (len=15) :: PeriodOut=''
   integer :: iError
   real :: minDX,maxDX    
   !------------------------------------------------------------------------
@@ -76,29 +80,33 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   --------------------------'
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,*)'   Problem Type'
-  call write_prefix; write(iUnitOut,*)'   ------------'
+  call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
+  call write_prefix; write(iUnitOut,*)'   --------------------'
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,'(10X,A14,I8)') 'problem_type: ',problem_type
-  call write_prefix; write(iUnitOut,'(10X,A)') trim(StringProblemType_I(problem_type))
+  if (IsPlanetModified) TextPlanetMod = '(---!---Defaults Modified---!---)'
+  if ((Planet_ .gt. 0) .and. body1) then
+    call write_prefix; write(iUnitOUT,'(10X,A16,A,2X,A)')  &
+         'Planet:         ', NamePlanet(1:len_trim(NamePlanet)),TextPlanetMod
+    call write_prefix; write(iUnitOUT,'(10X,A16,E13.5)')'Radius:         ', RadiusPlanet
+    call write_prefix; write(iUnitOUT,'(10X,A16,E13.5)')'Mass:           ', MassPlanet
+    call write_prefix; write(iUnitOUT,'(10X,A16,E13.5)')'Rotation Tilt:  ', TiltRotation
+    call write_prefix; write(iUnitOUT,'(10X,A16,E13.5)')'Iono Height:    ', IonosphereHeight
+    PeriodOut = 'Not Rotating'
+    if (OmegaPlanet .ne. 0.0) write(PeriodOut,'(E13.5)') cTwoPi/OmegaPlanet
+    call write_prefix; write(iUnitOUT,'(10X,A16,A13)')'Rotation Period:', &
+         PeriodOut(1:len_trim(PeriodOut))
+    PeriodOut = 'Not Orbiting'
+    if (OmegaOrbit .ne. 0.0) write(PeriodOut,'(E13.5)') cTwoPi/OmegaOrbit
+    call write_prefix; write(iUnitOUT,'(10X,A16,A)')'Orbit Period:   ', &
+         PeriodOut(1:len_trim(PeriodOut))
+  else
+    call write_prefix; write(iUnitOUT,*)'Planet:         NONE'
+  end if
+
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,*) '   Physical Model Input Solution Parameters'
-  call write_prefix; write(iUnitOut,*) '   ----------------------------------------'
+  call write_prefix; write(iUnitOut,*) '   Physical Parameters'
+  call write_prefix; write(iUnitOut,*) '   -------------------'
   call write_prefix; write(iUnitOut,*)
-  if(problem_type==problem_heliosphere .or. problem_type==problem_cme)then
-     call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
-          'Rhosun:      ',Rhosun,   ', Presun:    ',Presun
-     call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
-          'SSPsun:      ',SSPsun,   ', Velsun:    ',Velsun
-     call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
-          'Tsunrot:     ',Tsunrot
-  endif
-  if(problem_type==problem_heliosphere)then
-     call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
-          'Qsun:        ',Qsun     ,', Theat:     ',Theat
-     call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
-          'SIGMAheat:   ',SIGMAheat,', Rheat:     ',Rheat
-  endif
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))') &
           'rBody:       ', rBody,      ', rPlanet:   ',unitSI_x
@@ -142,32 +150,30 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,'(10X,2(A13,E13.5))')&
        'cLIGHTfactor:',boris_cLIGHT_factor,', cLIGHT:    ',cLIGHT
   call write_prefix; write(iUnitOut,*)
-  select case(problem_type)
-  case(problem_shocktube, problem_uniform, problem_heliosphere, problem_cme)
-     call write_prefix; write(iUnitOut,*)
-  case default
-     call write_prefix; write(iUnitOut,*)
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_rho_dim [n/cc]: ',SW_rho_dim,',  SW_rho: ',SW_rho
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Ux_dim  [km/s]: ',SW_Ux_dim ,',  SW_Ux:  ',SW_Ux 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Uy_dim  [km/s]: ',SW_Uy_dim ,',  SW_Uy:  ',SW_Uy 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Uz_dim  [km/s]: ',SW_Uz_dim ,',  SW_Uz:  ',SW_Uz 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_p_dim   [ nPa]: ',SW_p_dim  ,',  SW_p:   ',SW_p  
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Bx_dim  [  nT]: ',SW_Bx_dim ,',  SW_Bx:  ',SW_Bx 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_By_dim  [  nT]: ',SW_By_dim ,',  SW_By:  ',SW_By 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Bz_dim  [  nT]: ',SW_Bz_dim ,',  SW_Bz:  ',SW_Bz 
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6)')           'SW_a_dim   [km/s]: ',SW_a_dim
-     call write_prefix
-     write(iUnitOut,'(10X,A19,F15.6)')           'SW_T_dim   [   K]: ',SW_T_dim
-  end select
+  call write_prefix; write(iUnitOut,*)
+  call write_prefix; write(iUnitOUT,*) 'Unit Type:  ',IoUnits(1:len_trim(IoUnits))
+  call write_prefix; write(iUnitOut,*)
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_rho_dim [n/cc]: ',SW_rho_dim,',  SW_rho: ',SW_rho
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Ux_dim  [km/s]: ',SW_Ux_dim ,',  SW_Ux:  ',SW_Ux 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Uy_dim  [km/s]: ',SW_Uy_dim ,',  SW_Uy:  ',SW_Uy 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Uz_dim  [km/s]: ',SW_Uz_dim ,',  SW_Uz:  ',SW_Uz 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_p_dim   [ nPa]: ',SW_p_dim  ,',  SW_p:   ',SW_p  
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Bx_dim  [  nT]: ',SW_Bx_dim ,',  SW_Bx:  ',SW_Bx 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_By_dim  [  nT]: ',SW_By_dim ,',  SW_By:  ',SW_By 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6,A11,F15.6)') 'SW_Bz_dim  [  nT]: ',SW_Bz_dim ,',  SW_Bz:  ',SW_Bz 
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6)')           'SW_a_dim   [km/s]: ',SW_a_dim
+  call write_prefix
+  write(iUnitOut,'(10X,A19,F15.6)')           'SW_T_dim   [   K]: ',SW_T_dim
+
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
   call write_prefix; write(iUnitOut,*)'   ---------------------------------'

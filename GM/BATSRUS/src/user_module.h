@@ -18,6 +18,6 @@
   public :: user_get_log_var
   public :: user_set_plot_var
   public :: user_calc_sources
-  public :: user_heat_source
   public :: user_get_b0
   public :: user_update_states
+  public :: user_io_units

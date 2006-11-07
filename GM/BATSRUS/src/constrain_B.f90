@@ -1022,7 +1022,8 @@ subroutine constrain_ICs(iBlock)
      ByFace_BLK(:,:,:,iBlock)=0.0
      BzFace_BLK(:,:,:,iBlock)=0.0
   else
-     if(problem_type==problem_earth .and. .not.restart)then
+
+     if(.not.restart)then
         where(x_BLK(:,:,:,iBlock)<16.)
            ! Cancel B field at x<16Re to avoid non-zero initial divB
            ! x=16 is a good choice because it is a power of 2 so it is 
@@ -1041,6 +1042,7 @@ subroutine constrain_ICs(iBlock)
            State_VGB(Bz_,:,:,:,iBlock)=SW_Bz
         end where
      end if
+
 
      if(index(test_string,'testCTcoarse')>0)then
         State_VGB(Bx_,:,:,:,iBlock)=   x_BLK(:,:,:,iBlock)

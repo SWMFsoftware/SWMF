@@ -34,7 +34,7 @@ if($Table =~ /test/i){
 ###########################################################################
 
     &execute($testbatsrus,
-	     "-Problem=earth_simple -Length=tiny_simple",
+             "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple",
 	     "-B0source=empty -Cfl=empty -Conservative=empty",
 	     "-Corotation=empty -Divb=empty",
 	     "-Implicit=empty",                           #^CFG IF IMPLICIT
@@ -106,7 +106,7 @@ if($Table =~ /test/i){
     &execute($testbatsrus,"-Plottype=los");
 
     &execute($testbatsrus,
-	     "-Problem=earth_simple -Length=tiny_simple",
+	     "-Planet=earth_simple -Grid=earth_211 -Length=tiny_simple",
 	     "-B0source=empty -Cfl=empty -Conservative=empty",
 	     "-Corotation=empty -Divb=empty",
 	     "-Implicit=empty",                           #^CFG IF IMPLICIT

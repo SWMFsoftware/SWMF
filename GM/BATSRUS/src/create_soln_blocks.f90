@@ -757,13 +757,12 @@ end subroutine fix_soln_block
 
 subroutine calc_other_soln_vars(iBLK)
   use ModMain
-  use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK,qheat_BLK, &
+  use ModAdvance, ONLY : fbody_x_BLK,fbody_y_BLK,fbody_z_BLK, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
-  use ModUser, ONLY: user_heat_source
   implicit none
 
   integer, intent(in) :: iBLK
@@ -794,9 +793,5 @@ subroutine calc_other_soln_vars(iBLK)
   globalBLK = iBLK
 
   if(UseGravity.or.UseRotatingFrame) call body_force_averages
-
-  qheat_BLK(:,:,:,iBLK) = 0.00
-
-  if(UseUserHeating) call user_heat_source
 
 end subroutine calc_other_soln_vars

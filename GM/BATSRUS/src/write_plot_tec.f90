@@ -10,7 +10,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   use ModMain, ONLY : nI,nJ,nK,globalBLK,global_block_number, nBlock, &
        nBlockALL,nBlockMax, StringTimeH4M2S2,time_accurate,n_step,&
        nOrder, UseRotatingBc, BlkTest, ProcTest, &
-       TypeCoordSystem, problem_type, StringProblemType_I, CodeVersion
+       TypeCoordSystem, CodeVersion
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModCovariant, ONLY: UseCovariant, TypeGeometry      !^CFG IF COVARIANT
@@ -771,10 +771,6 @@ contains
        write(stmp,'(i12)')nORDER
     end if
     write(unit_tmp,'(a,a,a)') 'AUXDATA ORDER="',trim(adjustl(stmp)),'"'
-
-    !PROBLEMTYPE
-    write(stmp,'(i12,a)')problem_type,' '//trim(StringProblemType_I(problem_type))
-    write(unit_tmp,'(a,a,a)') 'AUXDATA PROBLEMTYPE="',trim(adjustl(stmp)),'"'
 
     !RBODY
     write(stmp,'(f12.2)')rBody
