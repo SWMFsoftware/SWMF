@@ -5,7 +5,7 @@ module ModVarIndexes
   save
 
   ! This equation module contains the MHD equations with species for Mars
-  character (len=*), parameter :: NameEquation='Titan MHD'
+  character (len=*), parameter :: NameEquation='titan MHD'
 
   ! The variables numbered from 1 to nVar are:
   !
@@ -122,7 +122,7 @@ module ModVarIndexes
 
   ! Molecular mass of species H, O2, O, CO2 in AMU:
   real:: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = &
-       (/1.0, 14.0, 29.0, 28.0 44.0 70.0 74.0/)
+       (/1.0,14.0,29.0,28.0,44.0,70.0,74.0/)
 
 contains
 
