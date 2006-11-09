@@ -131,7 +131,7 @@ Module ModUser
        em_=-1 ,&
        hv_=-2   
 
-  real:: XiT0 !dimensionless temperature of new created ions
+  real:: kT0 !dimensionless temperature of new created ions
   real :: body_Ti_dim  !ion temperature at the body
   real,  dimension(1:nI,1:nJ,1:nK,nBLK) :: nu_BLK
   real :: nu0_dim,nu0
@@ -514,14 +514,15 @@ contains
          vInv_CB
     use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody, inv_gm1
+    use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies
-    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate
+    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTn
     real :: alt, Te_dim = 300.0
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
+    real :: RhoUTimesSrhoU
     !
     !---------------------------------------------------------------------------
     !\
@@ -559,7 +560,7 @@ contains
        SrhoUz(i,j,k) = SrhoUz(i,j,k)  &
             -nu_BLK(i,j,k,globalBLK)*State_VGB(Uz_,i,j,k,globalBLK)
        SE(i,j,k) = SE(i,j,k)  &
-            -State_VGB(rho_,i,j,k,globalBLK)*uu2*nu_BLK(i,j,k,globalBLK) 
+            -0.5*State_VGB(rho_,i,j,k,globalBLK)*uu2*nu_BLK(i,j,k,globalBLK) 
 
        ReactionRate_I=0.0
        CoeffSpecies_II(:,:)=0.0
@@ -748,31 +749,57 @@ contains
                -State_VGB(Uz_,i,j,k,globalBLK)*totalLossx 
 
           !           SE(i,j,k) = SE(i,j,k)  &
-               !                +inv_gm1*totalSourceNumRho*XiT0 &
+               !                +inv_gm1*totalSourceNumRho*KTn &
           !                -0.50*uu2*(totalLossRho) &
                !                -inv_gm1*totalLossNumx*State_VGB(P_,i,j,k,globalBLK) 
 
+          kTi = State_VGB(p_,i,j,k,globalBLK)/totalNumRho
+          kTn = KT0
           SE(i,j,k) = SE(i,j,k)  &
-               +inv_gm1*totalSourceNumRho*XiT0 &
-               -0.50*uu2*(totalLossRho) &
-               -inv_gm1*totalLossNumx*State_VGB(p_,i,j,k,globalBLK)
+               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+               -0.50*uu2*(totalLossRho)
 
           SP(i,j,k) = SP(i,j,k)  &
-               -0.5*State_VGB(rho_,i,j,k,globalBLK)*uu2*&
+               +0.5*gm1*State_VGB(rho_,i,j,k,globalBLK)*uu2*&
                nu_BLK(i,j,k,globalBLK)  &
-               +inv_gm1*totalSourceNumRho*XiT0 &
-               +0.50*uu2*(totalSourceRho) &
-               -inv_gm1*totalLossNumx*State_VGB(p_,i,j,k,globalBLK)
-
+               +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+               +0.50*(gm1)*uu2*(totalSourceRho) 
+          
        endif !R_BLK(i,j,k,globalBLK) >= Rbody?
-    end do; end do; end do     ! end of the i,j,k loop
+       end do; end do; end do     ! end of the i,j,k loop
        if(oktest_me)then
-          write(*,*)'rhosp=',State_VGB(rho_:8,itest,jtest,ktest,globalBLK)
+          RhoUTimesSrhoU = State_VGB(Ux_,itest,jtest,ktest,globalBLK)*&
+               SrhoUx(itest,jtest,ktest)&
+               +State_VGB(Uy_,itest,jtest,ktest,globalBLK)*&
+               SrhoUy(itest,jtest,ktest)&
+               +State_VGB(Uz_,itest,jtest,ktest,globalBLK)*&
+               SrhoUz(itest,jtest,ktest)
+
+          uu2 = sum(State_VGB(Ux_:Uz_,itest,jtest,ktest,globalBLK)&
+               *State_VGB(Ux_:Uz_,itest,jtest,ktest,globalBLK))/&
+               State_VGB(rho_,itest,jtest,ktest,globalBLK)/&
+               State_VGB(rho_,itest,jtest,ktest,globalBLK)
+
+          write(*,*)'rhosp=        ',State_VGB(rho_:8,itest,jtest,ktest,globalBLK)
+
+          write(*,*)'srho=         ',Srho(itest,jtest,ktest)
+          write(*,*)'state_VGB(u2)=',uu2
+          write(*,*)'srho*uu2/2=   ',Srho(itest,jtest,ktest)*uu2/2
+
           write(*,*)'srhoUx=', SrhoUx(itest,jtest,ktest), &
                'srhoUy=', SrhoUy(itest,jtest,ktest),&
                'srhoUz=', SrhoUz(itest,jtest,ktest)
-          write(*,*)'state_VGB(u)=',&
-               State_VGB(Ux_:Uz_,itest,jtest,ktest,globalBLK) 
+
+          write(*,*)'u.srhoU=',&
+               RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,globalBLK)
+
+          write(*,*)'se=        ',SE(itest,jtest,ktest)
+          write(*,*)'inv_gm1*sp=',inv_gm1*SP(itest,jtest,ktest)
+          write(*,*)'inv_gm1*sp+u.srhoU-srho*uu2/2 =',&
+               inv_gm1*SP(itest,jtest,ktest) &
+               +RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,globalBLK)&
+               -Srho(itest,jtest,ktest)*uu2/2
+               
           write(*,*)'state_VGB(B)=',&
                State_VGB(Bx_:Bz_,itest,jtest,ktest,globalBLK) 
           write(*,*)'state_VGB(P)=',&
@@ -922,7 +949,7 @@ contains
 !               *State_VGB(rho_,i,j,k,globalBLK)
           State_VGB(P_,i,j,k,globalBLK)= &
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
-               /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*XiT0          
+               /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KT0          
           if(R_BLK(i,j,k,globalBLK).gt.2.0)&
                State_VGB(P_,i,j,k,globalBLK)= &
                max(SW_p, State_VGB(P_,i,j,k,globalBLK))
@@ -950,7 +977,7 @@ contains
 
     cos_ISZA=cos(SZATitan*cPi/180.0)
     body_Ti_dim = 350
-    XiT0 = SW_p*body_Ti_dim/SW_T_dim
+    KT0 = SW_p*body_Ti_dim/SW_T_dim
     nu0_dim =  1.0e-10
     nu0=nu0_dim*unitUSER_n*unitUSER_t
 
@@ -1017,8 +1044,10 @@ contains
     !/
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+!       State_VGB(rho_+1:rho_+maxspecies,i,j,k,iBlock)=           &
+!            max(cTiny8/1.0e5, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
        State_VGB(rho_+1:rho_+maxspecies,i,j,k,iBlock)=           &
-            max(cTiny8/1.0e5, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
+            max(0.0, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
 
        State_VGB(rho_   ,i,j,k,iBlock)=           &
             sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
