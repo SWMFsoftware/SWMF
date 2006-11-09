@@ -239,9 +239,9 @@ contains
      NamePlanet_I(Titan_)                = 'TITAN'
 
      rPlanet_I(Titan_)                   = 2575.00*cE3                    ! [ m]
-     mPlanet_I(Titan_)                   = 0.0                            ! [kg]
-     OrbitalPeriodPlanet_I(Titan_)       = 0.0                            ! [ s]
-     RotationPeriodPlanet_I(Titan_)      = 0.0                               ! [ s]
+     mPlanet_I(Titan_)                   = 0.1346*cE24                    ! [kg]
+     OrbitalPeriodPlanet_I(Titan_)       = 383.0*60.0                     ! [ s]
+     RotationPeriodPlanet_I(Titan_)      = 383.0*60.0                     ! [ s]
                                        
      IonoHeightPlanet_I(Titan_)          =   0.0                          ! [ m]
 
