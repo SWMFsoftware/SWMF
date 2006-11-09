@@ -1,6 +1,7 @@
 !^CFG COPYRIGHT UM
 Module ModPlanetConst
   use ModNumConst
+  use ModConst, ONLY: cAU
   use ModKind
 
   implicit none
@@ -146,6 +147,7 @@ contains
 
      rPlanet_I(Earth_)                   = 6378.00*cThousand              ! [ m]
      mPlanet_I(Earth_)                   = 5.976*cE24                     ! [kg]
+     rOrbitPlanet_I(Earth_)              = cAU                            ! [ m]
      OrbitalPeriodPlanet_I(Earth_)       = 365.24218967 * 24.0 * 3600.0   ! [ s]
      RotationPeriodPlanet_I(Earth_)      = 24.0 * 3600.0                  ! [ s]
                                        
@@ -201,7 +203,7 @@ contains
 
      rPlanet_I(Saturn_)                  = 60268.00*cE3                   ! [ m]
      mPlanet_I(Saturn_)                  = 0.5685*cE27                    ! [kg]
-     OrbitalPeriodPlanet_I(Saturn_)      = 0.0                            ! [ s]
+     OrbitalPeriodPlanet_I(Saturn_)      = 10746.94 * 24.0 * 3600.0       ! [ s]
      RotationPeriodPlanet_I(Saturn_)     = 10.5 * 3600.0                  ! [ s]
                                        
      TypeBFieldPlanet_I(:)               = "DIPOLE"                
@@ -240,8 +242,9 @@ contains
 
      rPlanet_I(Titan_)                   = 2575.00*cE3                    ! [ m]
      mPlanet_I(Titan_)                   = 0.1346*cE24                    ! [kg]
-     OrbitalPeriodPlanet_I(Titan_)       = 383.0*60.0                     ! [ s]
-     RotationPeriodPlanet_I(Titan_)      = 383.0*60.0                     ! [ s]
+     rOrbitPlanet_I(Titan_)              = 1.222E9                        ! [ m]
+     OrbitalPeriodPlanet_I(Titan_)       = 15.945 * 24.0 * 3600.0         ! [ s]
+     RotationPeriodPlanet_I(Titan_)      = 15.945 * 24.0 * 3600.0         ! [ s]
                                        
      IonoHeightPlanet_I(Titan_)          =   0.0                          ! [ m]
 
