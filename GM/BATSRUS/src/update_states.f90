@@ -389,6 +389,13 @@ subroutine update_check(iStage)
      if (unusedBLK(iBlock)) CYCLE
      minRho=1.00
      do iVar = 1,nVar-1
+
+        ! Do not check species densities if check threshold is positive
+        ! (i.e. minor species densities are allowed to go negative,
+        !       and they are fixed to be zero in update_states)
+        if(UseMultiSpecies .and. SpeciesPercentCheck > 0.0 .and. &
+             iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ )CYCLE
+
         if (DefaultState_V(iVar)>cTiny)&
              minRho =min(minRho, minval(State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock)))
      end do
@@ -409,6 +416,7 @@ subroutine update_check(iStage)
         write(*,'(a,i4,a,i5,2(a8,1pe12.4))') 'Negative updated value: PE=',iProc, &
              ' BLK=',iBlock,' minRho=',minRho,' minP=',minP
         do iVar = 1, nVar
+
            if (DefaultState_V(iVar)<=cTiny)cycle
            do k=1,nK;do j=1,nJ;do i=1,nI
               if (State_VGB(iVar,i,j,k,iBlock) <= 0.00 )&
