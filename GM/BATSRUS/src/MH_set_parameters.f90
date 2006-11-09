@@ -1864,9 +1864,6 @@ contains
 
     UseUpstreamInputFile = .false.
 
-    UseMassLoading        = .false.
-    AccelerateMassLoading = .false.
-
     plot_dimensional      = .true.
     save_satellite_data   = .false.
 
