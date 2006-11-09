@@ -3,7 +3,7 @@ subroutine specify_initial_refinement(refb, lev)
   use ModSize
   use ModMain, ONLY : &
        UseUserSpecifyRefinement,&
-       body1,UseRotatingBc,UseMassLoading,unusedBLK
+       body1,UseRotatingBc,unusedBLK
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,XyzStart_BLK,&
        dy_BLK,dz_BLK,TypeGeometry,x1,x2,&                !^CFG IF COVARIANT
        x_BLK,y_BLK,z_BLK,dx_BLK,far_field_BCs_BLK

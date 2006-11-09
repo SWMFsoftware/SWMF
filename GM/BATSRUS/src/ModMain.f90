@@ -173,10 +173,6 @@ Module ModMain
   ! Source terms
   !/
 
-  ! Logical for mass loading
-  logical :: UseMassLoading=.false.
-  logical :: AccelerateMassLoading=.false.
-
   !^CFG IF DISSFLUX BEGIN
   ! Logical for adding heat conduction
   logical:: UseHeatFlux=.false.
