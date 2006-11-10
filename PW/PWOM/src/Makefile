@@ -20,10 +20,7 @@ METHODS = \
 	initialize.o\
 	solver.o\
 	cvmgp.o\
-	prntel.o\
-	prntef.o\
-	prnthp.o\
-	prntop.o\
+	print_log.o\
 	prntsm.o\
 	EfieldPW.o\
 	eHeatFluxPW.o\
