@@ -70,6 +70,20 @@ Module ModIO
   integer, dimension(maxfile) :: dn_output=-1, &
        n_output_last=-1, t_output_last=-1
 
+  !
+  ! Time limits (in seconds) for satellite trajectory cut 
+  ! for .not. time_accurate session.
+  ! If a steady-state simulation is run for a specific moment of time
+  ! (set in  StartTime), the TimeSatStart_I determines the starting point of the 
+  ! satellite trajectory, while TimeSatEnd_I determines the trajectory ending point.
+  ! Both determine the considered trajectory cut.
+  ! Unlike in time_accurate sessions, after each dn_output simulation 
+  ! steps the satellite variables for ALL the trajectory cut are 
+  ! saved in file.
+  !
+  real,    dimension(maxsatellitefile) :: TimeSatStart_I = 0., TimeSatEnd_I = 0.
+  
+
   integer :: dn_progress1=10, dn_progress2=100
 
   character (LEN=10) :: plot_type(maxfile), plot_type1
@@ -123,6 +137,7 @@ Module ModIO
   ! Plot variable names and units defined in the user module
   character(len=10), dimension(nPlotVarMax) :: &
        NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I
+
 
 contains
 

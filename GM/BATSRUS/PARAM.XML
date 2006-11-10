@@ -1977,6 +1977,45 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 ! in the file GM/BATSRUS/ModIO.f90.
 </command>
 
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+<command name="STEADYSTATESATELLITE" if="$_IsFirstSession">
+	<parameter name="SatelliteTimeStart" type="real" default="0" />
+	<parameter name="SatelliteTimeEnd" type="real" default="0" />
+#STEADYSTATESATELLITE
+-86400.0                     SatelliteTimeStart [sec]
+86400.0                      SatelliteTimeEnd   [sec]
+-3600.0                      SatelliteTimeStart [sec]
+3600.0                       SatelliteTimeEnd   [sec]
+
+! In the non-time-accurate mode the numerical simulation result converges
+! to a steady-state solution. In the course of this simulation mode, the 
+! progress in the iteration number is not associated with an increase in the physical 
+! time, and the ultimate solution is a  "snapshot" of the parameter distribution at the 
+! time instant set by the  #STARTTIME command. Since time does not run, a satellite 
+! position cannot be determined in terms of the simulation time. Instead, the parameters 
+! along a cut of the satellite trajectory can be saved on file for a given iteration number. 
+! The trajectory points can be naturally parameterized by time, so that the cut can be 
+! specified with the choice of the start time, end time, and time interval.
+! 
+! The command #STEADYSTATESATELLITE is required for a steady-state simulation.
+! For each of the satellites, the SatelliteTimeStart is a real value that sets the start of 
+! trajectory cut,  while SatelliteTimeEnd sets the end of the trajectory cut. Both are in
+! seconds with respect to to the time given in #STARTTIME. A negative value means the time 
+! prior to  the #STARTTIME. 
+
+! The DtOutput from the #SATELLITE command specifies the frequency of the points along the 
+! satellite trajectory for the non-time-accurate mode, while DnOutput keeps to control the
+! iteration number at which the data at the trajectory cut are written to the satellite 
+! output file.
+!
+! For more than one satellite (two satellites in the above given example), the start and 
+! end times should be set for all of them. 
+</command>
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 <command name="SAVEPLOT">
 	<parameter name="nPlotFile" type="integer" min="0" max="100"
 		default="0" />

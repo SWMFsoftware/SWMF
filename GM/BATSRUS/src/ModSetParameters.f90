@@ -1322,13 +1322,13 @@ subroutine MH_set_parameters(TypeAction)
 
         do iFile = satellite_+1, satellite_ + nSatellite
            call read_var('StringSatellite',satellite_string)
-
            ! Satellite output frequency
            ! Note that we broke with tradition here so that the
            ! dt_output will always we read!  This may be changed
            ! in later distributions
            call read_var('DnOutput',dn_output(ifile))
            call read_var('DtOutput',dt_output(ifile))
+           
 
            ! Satellite inputfile name or the satellite name
            call read_var('NameTrajectoryFile',&
@@ -1390,6 +1390,14 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
         end do
+     case('#STEADYSTATESATELLITE')
+        do iFile = 1, nSatellite
+           if (.not. time_accurate) then
+              call read_var('SatelliteTimeStart', TimeSatStart_I(ifile))
+              call read_var('SatelliteTimeEnd',   TimeSatEnd_I(ifile))
+           end if
+        end do
+           
      case('#RESCHANGEBOUNDARY')
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('SaveBoundaryCells',SaveBoundaryCells)

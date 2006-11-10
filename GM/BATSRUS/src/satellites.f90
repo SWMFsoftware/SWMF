@@ -21,7 +21,7 @@ subroutine read_satellite_input_files
   real(Real8_) :: DateTime
   real         :: Time_I(Max_Satellite_Npts)
   real         :: Xyz_DI(nDim, Max_Satellite_Npts)
-
+ 
   character(len=*), parameter :: NameSub = 'read_satellite_input_files'
 
   logical :: DoTest, DoTestMe
@@ -62,7 +62,7 @@ subroutine read_satellite_input_files
 
            if(index(line,'#COOR')>0) &
                 read(unit_tmp,'(a)') TypeSatCoord_I(iSat)
-           
+
            if(index(line,'#START')>0)then
 
               READPOINTS: do
@@ -128,6 +128,7 @@ subroutine read_satellite_input_files
         xSatellite_traj(iSat, i, :) = Xyz_DI(:, i)
      end do
 
+
      if(DoTest)then
         nPoint = min(10,nPoint)
         write(*,*) NameSub,': tSat=', Satellite_Time( iSat, 1:nPoint)
@@ -142,7 +143,7 @@ end subroutine read_satellite_input_files
 
 !==========================================================================
 
-subroutine set_satellite_flags
+subroutine set_satellite_flags(iSat)
   use ModProcMH
   use ModMain, ONLY : nDim,nI,nJ,nK,nBlockMax,PROCtest,unusedBLK
   use ModGeometry, ONLY : XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
@@ -153,7 +154,8 @@ subroutine set_satellite_flags
   use ModMpi
   implicit none
 
-  integer :: isat, iPE,iPEtmp, iBLK, iBLKtemp
+  integer, intent(in) :: iSat
+  integer :: iPE,iPEtmp, iBLK, iBLKtemp
   real    :: XSat,YSat,ZSat
   integer :: i,j,k, iError
   real,dimension(nDim)::GenOut_D
@@ -166,10 +168,8 @@ subroutine set_satellite_flags
        write(*,*)'Starting set_satellite_flags',&
        nSatellite,', call set_satellite_positions'
 
-  call set_satellite_positions
-
-  do iSat=1, nSatellite
-     if(.not.DoTrackSatellite_I(iSat))CYCLE !Position is not defined
+  call set_satellite_positions(iSat)
+     if(.not.DoTrackSatellite_I(iSat)) return !Position is not defined
 
      if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
         call xyz_to_gen(XSatellite(iSat,:),GenOut_D)
@@ -195,9 +195,9 @@ subroutine set_satellite_flags
              ZSat >  XyzStart_BLK(3,iBLK) - cHalf*dz_BLK(iBLK) .and. &
              ZSat <= XyzStart_BLK(3,iBLK) + (nK-cHalf)*dz_BLK(iBLK)
 
-   	if(SatelliteInBLK(isat,iBLK))then 
+        if(SatelliteInBLK(isat,iBLK))then 
            iPE = iProc
-	   iBLKtemp = iBLK
+           iBLKtemp = iBLK
         end if
 
      end do
@@ -214,25 +214,23 @@ subroutine set_satellite_flags
      if (oktest_me) write(*,*)'set_satellite_flags (Proc',PROCtest,')(isat=', &
           isat,'): iPE,iBLK,TrackSatellite:', &
           iPEsatellite(isat),iBLKsatellite(isat),DoTrackSatellite_I(isat) 
-
-  end do
-
 end subroutine set_satellite_flags
 
 
 !=============================================================================
 
-subroutine set_satellite_positions
+subroutine set_satellite_positions(iSat)
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,StartTime,time_simulation
+  use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,StartTime,time_simulation, &
+       time_accurate
   use ModGeometry, ONLY : x1,x2,y1,y2,z1,z2,XyzStart_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModGeometry, ONLY : TypeGeometry               !^CFG IF COVARIANT
   use ModNumConst
   use ModIO
   implicit none
 
-
-  integer :: i, iSat, iBLK
+  integer, intent(in) :: iSat
+  integer :: i, iBLK
   real    :: XSat,YSat,ZSat
   real    :: dtime
 
@@ -241,9 +239,6 @@ subroutine set_satellite_positions
   !---------------------------------------------------------------------------
   if (iProc==0) &
        call set_oktest('set_satellite_positions',oktest, oktest_me)
-
-  do iSat = 1, nSatellite
-
      if (UseSatelliteFile(iSat)) then
 
         if (Satellite_Npts(iSat) > 0) then
@@ -281,9 +276,6 @@ subroutine set_satellite_positions
         call satellite_trajectory_formula(iSat)
 
      end if
-
-  end do
-
 end subroutine set_satellite_positions
 
 
@@ -332,54 +324,50 @@ end subroutine satellite_trajectory_formula
 
 !=============================================================================
 
-subroutine open_satellite_output_files
+subroutine open_satellite_output_files(iSat)
 
   use ModMain,   ONLY: n_step
   use ModIoUnit, ONLY: io_unit_new
   use ModIO,     ONLY: nSatellite, Satellite_name, filename,&
        NamePlotDir, iUnitSat_I
   implicit none
-
-  integer :: iSat, l1, l2
+  integer, intent(in) :: iSat
+  integer :: l1, l2
   logical :: oktest, oktest_me
 
   !---------------------------------------------------------------------------
   call set_oktest('open_satellite_output_files', oktest, oktest_me)
 
-  do iSat = 1, nSatellite
-     l1 = index(Satellite_name(iSat), '/', back=.true.) + 1
-     l2 = index(Satellite_name(iSat), '.') - 1
-     if (l1-1<=0) l1=1
-     if (l2+1<=0) l2=len_trim(Satellite_name(iSat))
+  l1 = index(Satellite_name(iSat), '/', back=.true.) + 1
+  l2 = index(Satellite_name(iSat), '.') - 1
+  if (l1-1<=0) l1=1
+  if (l2+1<=0) l2=len_trim(Satellite_name(iSat))
 
-     write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
-          'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
+  write(filename,'(a,i6.6,a)')trim(NamePlotDir)//&
+       'sat_'//Satellite_Name(iSat)(l1:l2)//'_n',n_step,'.sat'
 
-     if(oktest) then
-        write(*,*) 'open_satellite_output_files: satellitename:', &
+  if(oktest) then
+     write(*,*) 'open_satellite_output_files: satellitename:', &
           Satellite_name(iSat)
-        write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
-        write(*,*) 'open_satellite_output_files: filename:', filename
-     end if
+     write(*,*) 'iSat,l1,l2: ',iSat,l1,l2
+     write(*,*) 'open_satellite_output_files: filename:', filename
+  end if
 
-     iUnitSat_I(iSat)=io_unit_new()
-     open(iUnitSat_I(iSat), file=filename, status="replace")
-  end do
+  iUnitSat_I(iSat)=io_unit_new()
+  open(iUnitSat_I(iSat), file=filename, status="replace")
 
 end subroutine open_satellite_output_files
 
 !=============================================================================
 
-subroutine close_satellite_output_files
+subroutine close_satellite_output_files(iSat)
 
   use ModIO, ONLY : nSatellite,iUnitSat_I
   implicit none
 
-  integer :: iSat
+  integer, intent(in) :: iSat
 
-  do iSat = 1, nSatellite
-     close(iUnitSat_I(iSat))
-  end do
+  close(iUnitSat_I(iSat))
 
 end subroutine close_satellite_output_files
 !=============================================================================

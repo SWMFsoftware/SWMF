@@ -34,6 +34,8 @@ subroutine BATS_setup
 
   character(len=*), parameter :: NameSub = 'BATS_setup'
   integer :: iError 
+
+
   !---------------------------------------------------------------------------
 
   ! Allocate and initialize variables dependent on number of PEs
@@ -67,6 +69,7 @@ contains
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
     logical :: local_refine(nBLK)
+
 
     !--------------------------------------------------------------------------
 
@@ -212,9 +215,13 @@ contains
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
     logical :: delete_file
+    integer :: iSat
 
-    if (save_satellite_data .and. iProc == 0) &
-         call open_satellite_output_files
+    if (save_satellite_data .and. iProc == 0) then
+       do iSat = 1, nSatellite
+          call open_satellite_output_files(iSat)
+       end do
+    end if
 
     plot_type(restart_)='restart'
     plot_type(logfile_)='logfile'
@@ -705,6 +712,17 @@ contains
     use ModParallel, ONLY : UsePlotMessageOptions
     integer :: iFileLoop, iSat
 
+    !
+    ! Backup location for the Time_Simulation variable.
+    ! Time_Simulation is used in steady-state runs as a loop parameter
+    ! in the save_files subroutine, where set_satellite_flags and 
+    ! write_logfile are called with different Time_Simulation values
+    ! spanning all the satellite trajectory cut. Old Time_Simulation value
+    ! is saved here before and it is restored after the loop.
+    !
+    real :: tSimulationBackup = 0.0
+
+
     if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0) return
 
     if(ifile==restart_) then
@@ -779,9 +797,24 @@ contains
        if(.not.save_satellite_data)return
        iSat=ifile-satellite_
        call timing_start('save_satellite')
-       if(iSat==1)call set_satellite_flags
-
-       call write_logfile(iSat,ifile)
+       !
+       ! Distinguish between time_accurate and .not. time_accurate:
+       !
+       if (time_accurate) then
+          call set_satellite_flags(iSat)
+          call write_logfile(iSat,ifile)! write one line for a single trajectory point
+       else
+          tSimulationBackup = Time_Simulation    ! Save ...
+          Time_Simulation = TimeSatStart_I(iSat)
+          if (iProc == 0) call close_satellite_output_files(iSat)
+          if (iProc == 0) call open_satellite_output_files(iSat)
+          do while (Time_Simulation .le. TimeSatEnd_I(iSat))
+             call set_satellite_flags(iSat)
+             call write_logfile(iSat,ifile)           ! write for ALL the points of trajectory cut
+             Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
+          end do
+          Time_Simulation = tSimulationBackup    ! ... Restore
+       end if
        call timing_stop('save_satellite')
     end if
 
@@ -812,6 +845,10 @@ contains
 
   subroutine save_files_final
 
+    implicit none
+
+    integer :: iSat
+
     do ifile=1,plot_+nplotfile
        call save_file
     end do
@@ -819,8 +856,11 @@ contains
     !\
     ! Close files
     !/
-    if (save_satellite_data .and. iProc==0) &
-         call close_satellite_output_files
+    if (save_satellite_data .and. iProc==0) then
+       do iSat = 1, nSatellite
+          call close_satellite_output_files(iSat)
+       end do
+    end if
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 
