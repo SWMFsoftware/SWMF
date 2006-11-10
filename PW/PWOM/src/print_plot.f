@@ -1,6 +1,6 @@
 C ============================================================================
 
-      SUBROUTINE PRNTSM
+      SUBROUTINE PW_print_plot
       use ModCommonVariables
       real MO,MH,MHe,Me
 

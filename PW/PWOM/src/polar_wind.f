@@ -153,7 +153,7 @@ C                                                                      C
       write(iUnitOutput,*) 'time:',time
 
       if (IsFirstCall) then
-         CALL PRNTSM
+         CALL PW_print_plot
          !CALL prntCollision
          !CALL PRNT_Sources
          IsFirstCall = .false.
@@ -404,7 +404,7 @@ c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
             write(iUnitOutput,*) 'time:',time
-            CALL PRNTSM
+            CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
             open(UnitTmp_, FILE=NameRestart)
@@ -431,7 +431,7 @@ c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
             write(iUnitOutput,*) 'time:',time
-            CALL PRNTSM
+            CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
 
@@ -703,7 +703,7 @@ c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
             write(iUnitOutput,*) 'time:',time
-            CALL PRNTSM
+            CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
             
@@ -728,7 +728,7 @@ c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
             write(iUnitOutput,*) 'time:',time
-            CALL PRNTSM
+            CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
             

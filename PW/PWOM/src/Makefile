@@ -21,7 +21,7 @@ METHODS = \
 	solver.o\
 	cvmgp.o\
 	print_log.o\
-	prntsm.o\
+	print_plot.o\
 	EfieldPW.o\
 	eHeatFluxPW.o\
 	calcdt.o\
