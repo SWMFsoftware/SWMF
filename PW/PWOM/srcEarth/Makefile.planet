@@ -14,7 +14,7 @@ OBJECTS_PLANET = \
 	sperfc_planet.o\
 	chap_planet.o\
 	IonHeatFluxPW_planet.o\
-	NeutralAtmospherePW_planet.o\
+	neutral_atmosphere_planet.o\
 	ssflux_planet.o\
 	vcd_planet.o\
 	collisionPW_planet.o\
