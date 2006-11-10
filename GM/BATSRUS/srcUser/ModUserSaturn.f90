@@ -213,8 +213,8 @@ contains
     	         vGSE = matmul(vSMG,SMG_GSE_mat)
   
   		 unx = vGSE(1)
-  		 unx = vGSE(2)
-  		 unx = vGSE(3)
+  		 uny = vGSE(2)
+  		 unz = vGSE(3)
                    urelsq = (unx-Ux)**2 + (uny-Uy)**2 + (unz-Uz)**2
   
   
