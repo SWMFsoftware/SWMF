@@ -10,7 +10,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,PROCtest,BLKtest,test_string,x_,y_,z_,Phi_
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
-       TypeGeometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
+       is_axial_geometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
        XyzStart_BLK,XyzMin_D,XyzMax_D
   use ModPhysics, ONLY : unitUSER_x
   use ModIO
@@ -97,10 +97,10 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   zmax1=zmax+cHalfMinusTiny*dz_BLK(iBLK)
 
   nBLKcells = 0
-  if(index(TypeGeometry,'spherical')>0&         !^CFG IF COVARIANT BEGIN
-       .or.index(TypeGeometry,'cylindrical')>0)then 
+  if(is_axial_geometry())then                  !^CFG IF COVARIANT BEGIN
+     ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
      ySqueezed = mod(xyzStart_BLK(Phi_,iBLK),cPi)
-     ! Make sure that small angles are moved to 180 degrees for y=0 cut
+     ! Make sure that small angles are moved to Pi degrees for y=0 cut
      if(ySqueezed < 0.25*cPi) ySqueezed = ySqueezed + cPi
   else                                          !^CFG END COVARIANT
      ySqueezed = xyzStart_BLK(y_,iBLK)
