@@ -1,0 +1,103 @@
+\section{Input Commands for the PWOM: PW Component}
+
+
+List of commands used in the PARAM.in file
+
+
+
+
+
+
+\subsection{Stand alone mode}
+
+
+\subsubsection{\#SAVEPLOT command}\index{../..!\#SAVEPLOT}
+
+
+\begin{verbatim}
+#SAVEPLOT
+10.0                      DtSavePlot
+\end{verbatim}
+This command is only used in the stand alone mode.
+
+The frequency which plot files are written out are defined here. The 
+default value is given.
+
+\subsubsection{\#SCHEME command}\index{../..!\#SCHEME}
+
+
+\begin{verbatim}
+#SCHEME
+Godunov			TypeSolver
+F			IsImplicit
+0.05			DtVertical
+\end{verbatim}
+
+TypeSolver sets the type of solver which is to be used. Currently only two
+options are available: Godunov and Rusanov. IsImplicit determines whether
+collision terms are handled implicitly or not. DtVertical sets the time step
+for plasma propagating along the field line.
+
+The default values are shown.
+\subsubsection{\#RESTART command}\index{../..!\#RESTART}
+
+
+\begin{verbatim}
+#RESTART
+T                       IsRestart
+\end{verbatim}
+
+If the IsRestart variable is true, then the PWOM uses a restart file.
+Otherwise, the PWOM uses a cold start routine. The default is shown.
+
+\subsubsection{\#MOTION command}\index{../..!\#MOTION}
+
+\begin{verbatim}
+#MOTION
+T                       IsMoveFluxTube
+\end{verbatim}
+This Command determines which to move the field lines as determined by
+the horizontal convection, or to hold them in their initial locations. The 
+default value is shown.
+
+\subsubsection{\#FAC command}\index{../..!\#FAC}
+
+
+\begin{verbatim}
+#FAC
+F               IsUseJr
+\end{verbatim}
+
+IsUseJr determines whether to use field aligned currents to affect the ion
+outflow. The default is set.
+
+\subsubsection{\#ROTATION command}\index{../..!\#ROTATION}
+\begin{verbatim}
+#IsCentrifugal
+T               IsCentrifugal
+\end{verbatim}
+
+This command determines whether centrifugal forces should be included. The
+default is shown. 
+
+\subsubsection{\#TIMESTEP command}\index{../..!\#TIMESTEP}
+#TIMESTEP
+50               DtMax
+\end{verbatim}
+
+DtMax is the maximum timestep for horizontal motion of the field line.
+
+\subsubsection{\#FIELDLINE command}\index{../..!\#FIELDLINE}
+
+
+\begin{verbatim}
+#FIELDLINE
+1		nTotalLine
+\end{verbatim}
+
+nTotalLine sets the number of field lines included in the simulation.
+The default is shown.
+
+
+
+\clearpage
