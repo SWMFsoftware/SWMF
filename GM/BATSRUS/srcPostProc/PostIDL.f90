@@ -388,8 +388,12 @@ program PostIDL
              'filled total=',total,' volume=',volume,' !!!'
      end if
   else
-     if(UseLookup.and..not.(UseSpherical.or.UseToroidal))then
+     if(UseLookup)then
         volume=(xmax1-xmin1)*(xmax2-xmin2)
+        ! For axysimmetric cut planes with phi being the negligible coordinate
+        ! we plot both phi=cut and phi=cut+pi, so the volume is doubled
+        if((UseSpherical .or. UseToroidal).and. idim0 == 2) volume = 2*volume
+
         if(abs(total/volume-1.0)<0.0001)then
            write(*,*)'Averaged 2D unstructured file'
         else
