@@ -94,8 +94,8 @@ contains
     real,intent(in)::B0x,B0y,B0z
     real,intent(out),dimension(nVar,nVar)::Eigenvector_VV
     real,intent(out),dimension(nVar)     ::DeltaWave_V
-    real,intent(out),dimension(nVar-1)   :: Eigenvalue_V
-    real,intent(out),dimension(nVar)     ::   EigenvalueL_V,  &
+    real,optional,intent(out),dimension(nVar-1)   :: Eigenvalue_V
+    real,optional,intent(out),dimension(nVar-1)   :: EigenvalueL_V,  &
                                          EigenvalueR_V
     real,intent(out)::RhoH,UH_D(3),B1H_D(3),XH
     !-------------------------------------------
@@ -128,8 +128,8 @@ contains
     real,intent(in)::B0x,B0y,B0z
     real,intent(out),dimension(nVar,nVar)::Eigenvector_VV !Rho, RhoU, B, P+XH*Rho
     real,intent(out),dimension(nVar)::DeltaWave_V         !Dimensionless
-    real,intent(out),dimension(nVar-1):: Eigenvalue_V
-    real,intent(out),dimension(nVar)::   EigenvalueL_V,  &
+    real,optional,intent(out),dimension(nVar-1):: Eigenvalue_V
+    real,optional,intent(out),dimension(nVar-1)::   EigenvalueL_V,  &
                                          EigenvalueR_V
     real,intent(out)::RhoH,UH_D(3),B1H_D(3),XH
     !---------------------------------------------------------------
@@ -231,10 +231,17 @@ contains
 
     XnH =cQuarter*RhoInvH*(BnR-BnL)**2 
     XH  =cHalf*WeightInv**2*sum((BL_D-BR_D)**2)
+    
+    !Correct sppeds of sound
    
+    Tmp = g * XH
+    aL=aL!+Tmp
+    aR=aR!+Tmp
+
+
     !Average the speed of sound
-    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) +&
-         g * XH + (g-cOne) * (XnH + cHalf * sum(dState_V(Ux_:Uz_)**2)*&
+    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) +Tmp&
+         +(g-cOne) * (XnH + cHalf * sum(dState_V(Ux_:Uz_)**2)*&
                                     RhoH  * WeightInv**2)
  
     !Below B1H is used only in the transformation matrix for the 
@@ -372,12 +379,15 @@ contains
     end do
 
 
-
-    !Calculate eigenvalues:add the normal velocity first
+    if(.not.present(Eigenvalue_V))return
+       !Calculate eigenvalues:add the normal velocity first
     Eigenvalue_V =sum(UH_D*Normal_D)
+    call set_eigenvalues(Eigenvalue_V,CsH,CaH,CfH)
+ 
+    if(.not.present(EigenvalueL_V))return
     EigenvalueL_V=sum(UL_D*Normal_D)
     EigenvalueR_V=sum(UR_D*Normal_D)
-    call set_eigenvalues(Eigenvalue_V,CsH,CaH,CfH)
+    
 
     !For left and right stetes we need first to add the B0 field
     !Split it for normal and tangential components:
@@ -387,14 +397,14 @@ contains
 
     BnL=BnL+B0n;BL_D=BL_D+B0_D
     call get_characteristic_speeds(aL,RhoInvL,RhoSqrtL,&
-         BnL,BL_D,CsL,CaL,CfL)
-    CaL=CaL*sign(cOne,BnL)*SignBnH
-    call set_eigenvalues(EigenvalueL_V(1:nVar-1),CsL,CaL,CfL)
+         BnH,BL_D,CsL,CaL,CfL)
+    !CaL=CaL*sign(cOne,BnL)*SignBnH
+    call set_eigenvalues(EigenvalueL_V,CsL,CaL,CfL)
     BnR=BnR+B0n;BR_D=BR_D+B0_D
     call get_characteristic_speeds(aR,RhoInvR,RhoSqrtR,&
-                                   BnR,BR_D,CsR,CaR,CfR)
-    CaR=CaR*sign(cOne,BnR)*SignBnH
-    call set_eigenvalues(EigenvalueR_V(1:nVar-1),CsR,CaR,CfR)
+                                   BnH,BR_D,CsR,CaR,CfR)
+    !CaR=CaR*sign(cOne,BnR)*SignBnH
+    call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
   contains
     !-------------------------------------------------------------------------!
@@ -442,45 +452,48 @@ contains
                                       EigenvalueR_V,&
                                       EigenvalueFixed_V,CMax,IsBoundary)
     real,intent(in) ,dimension(nVar-1)::Eigenvalue_V
-    real,intent(in) ,dimension(nVar)  ::EigenvalueL_V,EigenvalueR_V
-    real,intent(out),dimension(nVar)  ::EigenvalueFixed_V
+    real,intent(in) ,dimension(nVar-1)  ::EigenvalueL_V,EigenvalueR_V
+    real,intent(out),dimension(nVar-1)  ::EigenvalueFixed_V
     real,intent(out)::cMax
     logical,intent(in)::IsBoundary
     integer::iWave
-    real::Eps,Lambda
+    real::Eps_V(nVar-1),Lambda
+  
+    Eps_V=abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
-       Eps=max(cTolerance2,EigenvalueR_V(iWave)-Lambda,&
-                             Lambda -EigenvalueL_V(iWave))
-       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps)+&
-                          cHalf*min(Lambda**2/Eps-Eps,cZero)
+       Eps_V(iWave)=max(abs(EigenvalueR_V(iWave)-Lambda),&
+                             abs(Lambda -EigenvalueL_V(iWave)),Eps_V(iWave))
+       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))
     end do
-    EigenvalueFixed_V(DivBW_)=max(abs(EigenvalueL_V(DivBW_)),&
-                                  abs(EigenvalueR_V(DivBW_)))
+ 
     cMax=max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
-    if(IsBoundary)EigenvalueFixed_V=cMax
+
   end subroutine get_fixed_abs_eigenvalue
   !===========================================================================!
   subroutine dissipation_matrix_idir(iDir,&
                                    StateL_V,&
                                    StateR_V,&
                                    B0x,B0y,B0z,&
+                                   uL_D,uR_D,DeltaBnL,DeltaBnR,&
                                    DissipationFlux_V,&
-                                   cMax,Un,IsBoundary)
+                                   cMax,Un,IsBoundary,DoTest)
     integer,intent(in)::iDir
-    real,dimension(nVar)::StateL_V, StateR_V
+    real,dimension(nVar),intent(in)::StateL_V, StateR_V
     real,intent(in)::B0x,B0y,B0z
+    real,intent(in),dimension(3)::uL_D,uR_D
+    real,intent(in)::DeltaBnL,DeltaBnR
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
-    logical,intent(in)::IsBoundary
+    logical,intent(in)::IsBoundary,DoTest
     
     real,dimension(nVar,nVar)::Eigenvector_VV
     real,dimension(nVar)     ::DeltaWave_V
     real,dimension(nVar-1)   :: Eigenvalue_V
-    real,dimension(nVar)     ::   EigenvalueL_V,  &
+    real,dimension(nVar-1)     ::   EigenvalueL_V,  &
                                          EigenvalueR_V
-    real::RhoH,UH_D(3),B1H_D(3),XH
-    real,dimension(nVar)  ::EigenvalueFixed_V
+    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR
+    real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
     integer::iWave
     
     
@@ -498,16 +511,26 @@ contains
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
                                       EigenvalueR_V,&
-                                      EigenvalueFixed_V,CMax,IsBoundary)
-    DissipationFlux_V=cZero
-    do iWave=1,nVar
-       DissipationFlux_V(1:nVar)= DissipationFlux_V(1:nVar)+&
+                                      EigenvalueFixed_V(1:nVar-1),&
+                                      CMax,IsBoundary)
+    UnL= uL_D(iDir); UnR=uR_D(iDir)
+    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
+    cMax=max(cMax,EigenvalueFixed_V(DivBW_))
+    if(IsBoundary)EigenvalueFixed_V=cMax
+    FluxPseudoChar_V=cZero
+    do iWave=1,nVar-1
+       FluxPseudoChar_V = FluxPseudoChar_V + &
             Eigenvector_VV(:,iWave)*EigenvalueFixed_V(iWave)*&
             DeltaWave_V(iWave)
             
     end do
+    FluxPseudoChar_V = FluxPseudoChar_V+&
+            Eigenvector_VV(:,DivBW_)*&
+            (UnL*DeltaBnR+UnR*DeltaBnL+&
+            EigenvalueFixed_V(DivBW_)*(&
+            DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
     DissipationFlux_V=cHalf*&
-         flux_from_pseudochar(DissipationFlux_V(1:nVar),UH_D,B1H_D,XH)
+         flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
     Un=UH_D(iDir)
   end subroutine dissipation_matrix_idir
  !===========================================================================!
@@ -515,10 +538,13 @@ contains
                                    StateL_V,&
                                    StateR_V,&
                                    B0x,B0y,B0z,&
+                                   uL_D,uR_D,DeltaBnL,DeltaBnR, &
                                    DissipationFlux_V,&
                                    cMax,Un,IsBoundary)
     real,dimension(3),intent(in)::Dir_D
-    real,dimension(nVar)::StateL_V, StateR_V
+    real,dimension(nVar),intent(in)::StateL_V, StateR_V
+    real,dimension(3),intent(in)::uL_D,uR_D
+    real,intent(in)::DeltaBnL,DeltaBnR
     real,intent(in)::B0x,B0y,B0z
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
@@ -526,11 +552,11 @@ contains
     
     real,dimension(nVar,nVar)::Eigenvector_VV
     real,dimension(nVar)     ::DeltaWave_V
-    real,dimension(nVar-1)   :: Eigenvalue_V
+    real,dimension(nVar)   :: Eigenvalue_V
     real,dimension(nVar)     ::   EigenvalueL_V,  &
                                   EigenvalueR_V
-    real::RhoH,UH_D(3),B1H_D(3),XH
-    real,dimension(nVar)  ::EigenvalueFixed_V
+    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR
+    real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
     integer::iWave
     
     call decompose_state_dir(&
@@ -547,15 +573,24 @@ contains
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
                                       EigenvalueR_V,&
-                                      EigenvalueFixed_V,CMax,IsBoundary)
-    DissipationFlux_V=cZero
-    do iWave=1,nVar
-       DissipationFlux_V(1:nVar)= DissipationFlux_V(1:nVar)+&
+                                      EigenvalueFixed_V(1:nVar-1),&
+                                      CMax,IsBoundary)
+    UnL=sum(uL_D*Dir_D);UnR=sum(uR_D*Dir_D)
+    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR),cMax)
+    cMax=max(cMax,EigenvalueFixed_V(DivBW_))
+    FluxPseudoChar_V=cZero
+    do iWave=1,nVar-1
+       FluxPseudoChar_V = FluxPseudoChar_V+&
             Eigenvector_VV(:,iWave)*EigenvalueFixed_V(iWave)*&
             DeltaWave_V(iWave)
     end do
+    FluxPseudoChar_V = FluxPseudoChar_V+&
+            Eigenvector_VV(:,DivBW_)*&
+            (UnL*DeltaBnR+UnR*DeltaBnL+&
+            EigenvalueFixed_V(DivBW_)*(&
+            DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
     DissipationFlux_V=cHalf*&
-         flux_from_pseudochar(DissipationFlux_V(1:nVar),UH_D,B1H_D,XH)
+         flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
     Un=sum(UH_D*Dir_D)
   end subroutine dissipation_matrix_dir
 end Module ModCharacteristicMhd
