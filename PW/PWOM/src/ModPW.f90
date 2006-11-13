@@ -10,11 +10,12 @@ module ModPWOM
 
   integer :: iProc, nProc, iComm,errcode
 
-  integer ::   nTheta, nPhi,maxLine
+  integer ::   nTheta, nPhi, maxLine
   parameter (nTheta     = 65 )
   parameter (nPhi       = 257)
-  parameter (MaxLine    = 1  )
-
+  parameter (maxLine    = 500)
+  
+  integer :: nTotalLine=1
   integer ::   iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine
   integer, dimension(MaxLine)::iLineGlobal
 

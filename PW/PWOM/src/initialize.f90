@@ -11,10 +11,10 @@ subroutine PW_initialize
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
   !***************************************************************************
-  if (iproc < mod(MaxLine,nProc)) then
-     nLine=int(ceiling(real(MaxLine)/real(nProc)))
+  if (iproc < mod(NTotalLine,nProc)) then
+     nLine=int(ceiling(real(nTotalLine)/real(nProc)))
   else
-     nLine=int(floor(real(MaxLine)/real(nProc)))
+     nLine=int(floor(real(nTotalLine)/real(nProc)))
   endif
 
   !**************************************************************************
@@ -26,14 +26,14 @@ subroutine PW_initialize
   NamePhiSouth       = 'PW/South.dat'
 
   do iLine=1,nLine
-     if (iproc .lt. mod(MaxLine,nProc)) then
+     if (iproc .lt. mod(nTotalLine,nProc)) then
         iLineGlobal(iLine)=&
-             iproc*ceiling(real(MaxLine)/real(nProc))+iLine
+             iproc*ceiling(real(nTotalLine)/real(nProc))+iLine
      else
         iLineGlobal(iLine)=&
-             (mod(MaxLine,nProc))*ceiling(real(MaxLine)/real(nProc)) &
-             + ((iproc)-mod(MaxLine,nProc))                        &
-             *floor(real(MaxLine)/real(nProc))+iLine
+             (mod(NTotalLine,nProc))*ceiling(real(nTotalLine)/real(nProc)) &
+             + ((iproc)-mod(nTotalLine,nProc))                        &
+             *floor(real(nTotalLine)/real(nProc))+iLine
      endif
      write(NameRestartIn(iLine),"(a,i4.4,a)") &
           'PW/restartIN/restart_iline',iLineGlobal(iLine),'.dat'

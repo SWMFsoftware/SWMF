@@ -47,6 +47,8 @@ subroutine PW_set_parameters(NameAction)
         call read_var('IsCentrifugal',IsCentrifugal)
      case('#TIMESTEP')
         call read_var('DtMax',DtMax)
+     case('#FIELDLINE')
+        call read_var('nTotalLine',nTotalLine)
      endselect
   enddo
 
