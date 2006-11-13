@@ -33,7 +33,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   real :: xmin1,xmax1,ymin1,ymax1,zmin1,zmax1
   real :: dxblk_out
 
-  real :: ySqeezed
+  real :: ySqueezed
 
   real,parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
@@ -99,16 +99,18 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   nBLKcells = 0
   if(index(TypeGeometry,'spherical')>0&         !^CFG IF COVARIANT BEGIN
        .or.index(TypeGeometry,'cylindrical')>0)then 
-     ySqeezed = mod(xyzStart_BLK(Phi_,iBLK),cPi)
+     ySqueezed = mod(xyzStart_BLK(Phi_,iBLK),cPi)
+     ! Make sure that small angles are moved to 180 degrees for y=0 cut
+     if(ySqueezed < 0.25*cPi) ySqueezed = ySqueezed + cPi
   else                                          !^CFG END COVARIANT
-     ySqeezed = xyzStart_BLK(y_,iBLK)
+     ySqueezed = xyzStart_BLK(y_,iBLK)
   end if                                        !^CFG IF COVARIANT 
 
   ! If block is fully outside of cut then cycle
   if(xyzStart_BLK(x_,iBLK)>xmax1.or.&
        xyzStart_BLK(x_,iBLK)+(nI-1)*dx_BLK(iBLK)<xmin1.or.&
-       ySqeezed>ymax1.or.&
-       ySqeezed+(nJ-1)*dy_BLK(iBLK)<ymin1.or.&  
+       ySqueezed>ymax1.or.&
+       ySqueezed+(nJ-1)*dy_BLK(iBLK)<ymin1.or.&  
        xyzStart_BLK(z_,iBLK)>zmax1.or.&
        xyzStart_BLK(z_,iBLK)+(nK-1)*dz_BLK(iBLK)<zmin1)&
        return
@@ -120,8 +122,8 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   imin=max(1 ,floor((xmin1-xyzStart_BLK(x_,iBLK))/dxblk)+2)
   imax=min(nI,floor((xmax1-xyzStart_BLK(x_,iBLK))/dxblk)+1)
 
-  jmin=max(1 ,floor((ymin1-ySqeezed)/dyblk)+2)
-  jmax=min(nJ,floor((ymax1-ySqeezed)/dyblk)+1)
+  jmin=max(1 ,floor((ymin1-ySqueezed)/dyblk)+2)
+  jmax=min(nJ,floor((ymax1-ySqueezed)/dyblk)+1)
 
   kmin=max(1 ,floor((zmin1-xyzStart_BLK(z_,iBLK))/dzblk)+2)
   kmax=min(nK,floor((zmax1-xyzStart_BLK(z_,iBLK))/dzblk)+1)
@@ -130,8 +132,11 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   if(oktest_me.and.iBLK==BLKtest)then
      write(*,*)'imin,imax,jmin,jmax,kmin,kmax=',&
           imin,imax,jmin,jmax,kmin,kmax
-     write(*,*)'dxblk,x1,y1,z1',dxblk,&
-          xyzStart_BLK(:,iBLK)
+     write(*,*)'dxblk,x1,y1,z1',dxblk,xyzStart_BLK(:,iBLK)
+     write(*,*)'ySqueezed  =',ySqueezed
+     write(*,*)'xmin1,xmax1=',xmin1,xmax1
+     write(*,*)'ymin1,ymax1=',ymin1,ymax1
+     write(*,*)'zmin1,zmax1=',zmin1,zmax1
   end if
 
   if(dxblk>=dx)then
