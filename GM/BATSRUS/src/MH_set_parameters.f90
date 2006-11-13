@@ -681,6 +681,10 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(2)*proc_dims(2)) 
                  plot_range(4,ifile)=+cTiny*(XyzMax_D(2)-XyzMin_D(2))&
                       /(nCells(2)*proc_dims(2)) 
+                 !^CFG IF COVARIANT BEGIN
+                 if(index(plot_string,'idl')>0 .and. is_axial_geometry()) &
+                    plot_range(3:4,ifile)=plot_range(3:4,ifile)+cPi
+                 !^CFG END COVARIANT
               elseif(index(plot_string,'z=0')>0)then
                  plot_area='z=0'
                  plot_range(5,ifile)=-cTiny*(XyzMax_D(3)-XyzMin_D(3))&
