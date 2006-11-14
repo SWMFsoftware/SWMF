@@ -1583,8 +1583,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('BdpDimBody2z',BdpDimBody2_D(3))
         !                                           ^CFG END SECONDBODY
 
-     case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
-          '#ROTATION','#DIPOLE','#NONDIPOLE','#UPDATEB0')
+     case('#PLANET','#MOON','#COMMET','#IDEALAXES','#ROTATIONAXIS',&
+          '#MAGNETICAXIS','#ROTATION','#DIPOLE','#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone
         if(.not.is_first_session())CYCLE READPARAM
