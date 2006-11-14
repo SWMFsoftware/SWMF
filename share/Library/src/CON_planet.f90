@@ -104,16 +104,21 @@ contains
                        cTwoPi/RotationPeriodPlanet_I(Earth_)   &
                        + cTwoPi/OrbitalPeriodPlanet_I(Earth_)  
     OmegaOrbit       = cTwoPi/OrbitalPeriodPlanet_I(Earth_)
-    AngleEquinox     =  &
-                        cTwoPi * ( iHourEquinoxPlanet_I(Earth_) * 3600 &
-                                 + iMinuteEquinoxPlanet_I(Earth_) * 60 &
-                                 + iSecondEquinoxPlanet_I(Earth_) &
-                                 + FracSecondEquinoxPlanet_I(Earth_)) / (24 * 3600)
+    AngleEquinox     = cTwoPi * &
+         ( iHourEquinoxPlanet_I(Earth_) * 3600 &
+         + iMinuteEquinoxPlanet_I(Earth_) * 60 &
+         + iSecondEquinoxPlanet_I(Earth_) &
+         + FracSecondEquinoxPlanet_I(Earth_) &
+         ) / (24 * 3600)
     TimeEquinox      = TimeType(&
-                       iYearEquinoxPlanet_I(Earth_), iMonthEquinoxPlanet_I(Earth_), &
-                       iDayEquinoxPlanet_I(Earth_), iHourEquinoxPlanet_I(Earth_),   &
-                       iMinuteEquinoxPlanet_I(Earth_), iSecondEquinoxPlanet_I(Earth_), &
-                       FracSecondEquinoxPlanet_I(Earth_), 0.0_Real8_, '20000320073500')
+         iYearEquinoxPlanet_I(Earth_), &
+         iMonthEquinoxPlanet_I(Earth_), &
+         iDayEquinoxPlanet_I(Earth_), &
+         iHourEquinoxPlanet_I(Earth_),   &
+         iMinuteEquinoxPlanet_I(Earth_), &
+         iSecondEquinoxPlanet_I(Earth_), &
+         FracSecondEquinoxPlanet_I(Earth_), &
+         0.0_Real8_, '20000320073500')
     TypeBField       = TypeBFieldPlanet_I(Earth_)
     DipoleStrength   = DipoleStrengthPlanet_I(Earth_)
     MagAxisThetaGeo  = bAxisThetaPlanet_I(Earth_)     
@@ -144,8 +149,8 @@ contains
 
     logical :: IsInitialized = .false.
     !-------------------------------------------------------------------------
-    IsKnown = .false.
 
+    IsKnown = .true.
     if(IsInitialized)then
        if(NamePlanet == NamePlanetIn) RETURN
        call CON_stop(NameSub//&
@@ -156,19 +161,17 @@ contains
     NamePlanet    = NamePlanetIn
     IsInitialized = .true.
 
-    if (NamePlanet .eq. 'NONE') then
-       IsKnown = .true.
-       return
-    end if
+    if (NamePlanet == 'NONE') RETURN
 
-    do i=1, maxPlanet
-      if (NamePlanet .eq. NamePlanet_I(i)) then
+    IsKnown       = .false.
+    do i=1, MaxPlanet
+      if (NamePlanet == NamePlanet_I(i)) then
          IsKnown = .true.
          Planet_ = i
       end if
     end do
 
-    if (.not. IsKnown)  return
+    if (.not. IsKnown)  RETURN
     
     ! Set all values for the selected planet
     RadiusPlanet     = rPlanet_I(Planet_)
@@ -217,16 +220,19 @@ contains
     !-------------------------------------------------------------------------
 
     select case(NameCommand)
-    case("#PLANET")
+    case("#PLANET", "#MOON", "#COMMET")
+
+       call read_var('NamePlanet',NamePlanetIn)
+       call upper_case(NamePlanetIn)
+
+       ! Check if planet has been already initialized
+       if(NamePlanet == NamePlanetIn) RETURN
 
        if (NamePlanetCommands /= '') &
             call CON_stop(NameSub// &
             ' ERROR: #PLANET should precede '// &
             NamePlanetCommands)
 
-       call read_var('NamePlanet',NamePlanetIn)
-
-       call upper_case(NamePlanetIn)
        if ( .not. is_planet_init(NamePlanetIn) ) then
           Planet_ = 0
 
