@@ -274,7 +274,7 @@ test_titan_check:
 	-(share/Scripts/DiffNum.pl \
 		Param/TITAN/TestOutput/log_n000001.log \
 		run/TitanTest/GM/log_n000001.log > titan_diff.log)
-	ls -l titan_diff.log titan_diff.runlog
+	ls -l titan_diff.log
 
 test_titan_restart:
 	make test_titan_restart_save
@@ -291,14 +291,14 @@ test_titan_restart_save:
 test_titan_restart_read:
 	cd run; \
 		cp GM/Param/TITAN/PARAM.in.restartread PARAM.in; \
-		Restart.pl -i RESTART_titan; 
+		Restart.pl -i RESTART_titan; \
 		./BATSRUS.exe > runlog; \
 		PostProc.pl -M -o TitanTest/RestartRead; \
 
 test_titan_restart_check:
 	cd run/TitanTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
-		tail -25 RestartRead/GM/log_n000001.log >> log_all.log
+		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
 	-(share/Scripts/DiffNum.pl \
 		Param/TITAN/TestOutput/log_n000001.log \
 		run/TitanTest/log_all.log > titan_diff.log)
