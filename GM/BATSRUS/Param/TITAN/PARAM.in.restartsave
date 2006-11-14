@@ -25,9 +25,6 @@ F
 T
 0
 
-PROBLEMTYPE
-16                      problem_type: 16 = Titan Ionosphere
-
 #GRID
 4                       nRootBlockX
 2                       nRootBlockY
@@ -148,6 +145,11 @@ T			DoReplaceDensity
 ! For nyx or dc only
 #RESTARTOUTFILE
 block			TypeRestartInFile
+
+#SAVERESTART
+T
+100
+-1.0
 
 #SAVEPLOT
 6			nPlotFiles

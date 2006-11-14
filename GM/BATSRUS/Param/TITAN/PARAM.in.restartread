@@ -187,6 +187,6 @@ cut MHD idl             StringPlot
 0.			DxSavePlot
 
 #STOP
-50			MaxIteration
+25			MaxIteration
 -1.0			tSimulationMax
 
