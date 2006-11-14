@@ -29,9 +29,9 @@ PROBLEMTYPE
 16                      problem_type: 16 = Titan Ionosphere
 
 #GRID
-20                     proc_dims(1)
-6                       proc_dims(2)
-3                       proc_dims(3),
+4                       nRootBlockX
+2                       nRootBlockY
+1                       nRootBlockZ
 -32.                    x1
  96.                    x2
 -64.                    y1
@@ -45,7 +45,7 @@ PROBLEMTYPE
 
 #AMRINIT
 3Dbodyfocus             InitialRefineType
-2                      InitialRefineLevel
+3                      InitialRefineLevel
 
 #BODY
 T			body1
@@ -91,7 +91,7 @@ update_states calc_sources calc_facefluxes calc_timestep
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
 RAW step time	        StringLog
-10	                DnSaveLogfile
+1	                DnSaveLogfile
 -1.                     DtSaveLogfile [sec]
 
 #INNERBOUNDARY
@@ -150,12 +150,10 @@ T			DoReplaceDensity
 block			TypeRestartInFile
 
 #SAVERESTART
-T			DoSaveRestart
-40000			DnSaveRestart
--1.0			DtSaveRestart
+F			DoSaveRestart
 
 #SAVEPLOT
-7			nPlotFiles
+6			nPlotFiles
 x=0 MHD tec             StringPlot
 5000			DnSavePlot
 -1.0			DtSavePlot
@@ -189,6 +187,6 @@ cut MHD idl             StringPlot
 0.			DxSavePlot
 
 #STOP
-40000			MaxIteration
+50			MaxIteration
 -1.0			tSimulationMax
 
