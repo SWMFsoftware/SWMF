@@ -248,7 +248,7 @@ include Makefile_CONFIGURE #^CFG IF CONFIGURE
 
 
 test_titan:
-	#make test_titan_compile
+	make test_titan_compile
 	make test_titan_rundir
 	make test_titan_run
 	make test_titan_check
