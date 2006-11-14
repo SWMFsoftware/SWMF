@@ -1,0 +1,189 @@
+!- PARAM.in:  Example input file for BATSRUS --
+
+#ECHO
+T                       DoEcho
+
+#DESCRIPTION
+Titan test save restart
+
+#VERTEXBASEDGRID
+F
+
+#COVARIANTGEOMETRY
+spherical_lnr
+
+#PLANET
+Titan
+
+#DIPOLE
+0.0			DipoleStrength
+
+#ROTATION 
+F
+
+#GRAVITY
+T
+0
+
+PROBLEMTYPE
+16                      problem_type: 16 = Titan Ionosphere
+
+#GRID
+4                       nRootBlockX
+2                       nRootBlockY
+1                       nRootBlockZ
+-32.                    x1
+ 96.                    x2
+-64.                    y1
+ 64.                    y2
+-64.                    z1
+ 64.                    z2
+
+#LIMITGENCOORD1
+0.248073                rMin = alog(1.281553)
+4.88234			rMax = alog(sqrt(64^2+96^2+64^2))
+
+#AMRINIT
+3Dbodyfocus             InitialRefineType
+3                      InitialRefineLevel
+
+#BODY
+T			body1
+1.281553		Rbody
+1.0        		Rcurrents
+1.0e6                 	Body_Rho_Dim
+300                 	Body_T_dim
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SCHEME
+2                       nOrder (1 or 2)
+Linde                   FluxType
+minmod                  LimiterType
+
+#USERFLAGS
+T			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#NONCONSERVATIVE
+F
+
+#TEST
+init_hall_resist
+update_states calc_sources calc_facefluxes calc_timestep
+
+#SAVELOGFILE
+T                       DoSaveLogfile, rest of parameters read if true
+RAW step time	        StringLog
+1	                DnSaveLogfile
+-1.                     DtSaveLogfile [sec]
+
+#INNERBOUNDARY
+user
+
+#OUTERBOUNDARY
+inflow                 TypeBcEast
+outflow                TypeBcWest
+fixed                   TypeBcSouth
+fixed                   TypeBcNorth
+fixed                   TypeBcBottom
+fixed                   TypeBcTop
+
+#SOLARWIND
+2.90                     SW_rho_dim [n/cc] \  corresponding to mass density of (0.1 H^+ and 0.2 N^+)
+3.1114E5                SW_T_dim [K]        | (260ev)
+120.0                     SW_Ux_dim [km/s]  | (120km/s)
+0.0                     SW_Uy_dim [km/s]    |
+0.0                     SW_Uz_dim [km/s]    |
+0.0                     SW_Bx_dim [nT]      |(-1.0, -0.05, -4.99)
+0.0                     SW_By_dim [nT]      |
+-5.00                    SW_Bz_dim [nT]    /
+
+#USERINPUTBEGIN -----------------------------------------------------
+
+! for T9 flyby
+SUBSOLARLOC
+0.303654    	SX0
+-0.85936	SY0		
+-0.39071	SZ0
+
+!for symmetric cases
+#SUBSOLARLOC
+1.0
+0.0
+0.0
+
+#USETITANINPUT
+T			UseTitaninput
+CassiniTA		Solarmax: CassiniTA:Solarmin
+T                       Including impact ionization
+
+#UPSTREAM
+0.1                     Proton density(cm^-3)
+0.05                     N^+ density(cm^-3)
+500.0                   plasma temperature(eV) 200+50
+
+#USERINPUTEND ---------------------------------------------------------
+
+#MULTISPECIES
+T			DoReplaceDensity
+5.0			SpeciesPercentCheck
+
+! For nyx or dc only
+#RESTARTOUTFILE
+block			TypeRestartInFile
+
+#SAVEPLOT
+6			nPlotFiles
+x=0 MHD tec             StringPlot
+5000			DnSavePlot
+-1.0			DtSavePlot
+y=0 MHD tec             StringPlot
+5000			DnSavePlot
+-1.0			DtSavePlot
+z=0 MHD tec             StringPlot
+5000			DnSavePlot
+-1.0			DxSavePlot
+x=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSavePlot
+y=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSavePlot
+z=0 MHD idl             StringPlot
+2000			DnSaveplot
+-1.0			DtSaveplot
+0.0			DxSaveplot
+cut MHD idl             StringPlot
+1000			DnSavePlot
+-1.0			DtSavePlot
+-10.0			xMin
+20.0			xMax
+0.0001			yMin
+0.00011			yMax
+0.0001			zMin
+0.00011                 zmax
+0.			DxSavePlot
+
+#STOP
+25			MaxIteration
+-1.0			tSimulationMax
+
