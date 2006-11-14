@@ -245,3 +245,35 @@ dist:	distclean
 	@ls -l BATSRUS_v*.tgz
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
+
+
+test_titan:
+	#make test_titan_compile
+	make test_titan_rundir
+	make test_titan_run
+	make test_titan_check
+
+test_titan_compile:
+	make clean
+	Options.pl -u=Titan -e=MhdTitan
+	GridSize.pl -g=4,4,4,2000,200
+	make
+	make PIDL
+
+test_titan_rundir:
+	make rundir
+	cd run; \
+		cp GM/Param/TITAN/PARAM.in .; \
+		tar xzf GM/Param/TITAN/TitanInput.tgz
+
+test_titan_run:
+	cd run; ./BATSRUS.exe > runlog; PostProc.pl -M -o TitanTest
+
+test_titan_check:
+	share/Scripts/DiffNum.pl \
+		Param/TITAN/TestOutput/log_n000001.log \
+		run/TitanTest/GM/log_n000001.log > titan_diff.log
+	diff Param/TITAN/TestOutput/runlog \
+		run/TitanTest/runlog > titan_diff.runlog
+	ls -l titan_diff.log titan_diff.runlog
+
