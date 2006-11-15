@@ -147,14 +147,15 @@ rundir:
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f Param/PARAM.DEFAULT run/PARAM.in; \
-		touch run/core; chmod 444 run/core; \
+		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
+		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
 		touch Scripts/Run/${OS}/TMP_${MACHINE}; \
-		cp Scripts/Run/${OS}/*${MACHINE}* run/; \
-		rm -f run/TMP_${MACHINE} Scripts/Run/${OS}/TMP_${MACHINE}; \
-		cp share/Scripts/PostProc.pl run/; \
-		cp share/Scripts/Restart.pl run/; \
-		cd run; ln -s ${BINDIR}/BATSRUS.exe .; \
+		cp Scripts/Run/${OS}/*${MACHINE}* ${RUNDIR}/; \
+		rm -f ${RUNDIR}/TMP_${MACHINE}; \
+		rm -f Scripts/Run/${OS}/TMP_${MACHINE}; \
+		cp share/Scripts/PostProc.pl ${RUNDIR}/; \
+		cp share/Scripts/Restart.pl ${RUNDIR}/; \
+		cd ${RUNDIR}; ln -s ${BINDIR}/BATSRUS.exe .; \
 		ln -s GM/* .;                          \
 	fi);
 
@@ -246,59 +247,4 @@ dist:	distclean
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
 
-
-test_titan:
-	make test_titan_compile
-	make test_titan_rundir
-	make test_titan_run
-	make test_titan_check
-	make test_titan_restart
-
-test_titan_compile:
-	make clean
-	Options.pl -u=Titan -e=MhdTitan
-	GridSize.pl -g=4,4,4,2000,200
-	make
-	make PIDL
-
-test_titan_rundir:
-	make rundir
-	cd run; \
-		cp GM/Param/TITAN/PARAM.in .; \
-		tar xzf GM/Param/TITAN/TitanInput.tgz
-
-test_titan_run:
-	cd run; ./BATSRUS.exe > runlog; PostProc.pl -M -o TitanTest
-
-test_titan_check:
-	-(share/Scripts/DiffNum.pl \
-		Param/TITAN/TestOutput/log_n000001.log \
-		run/TitanTest/GM/log_n000001.log > titan_diff.log)
-	ls -l titan_diff.log
-
-test_titan_restart:
-	make test_titan_restart_save
-	make test_titan_restart_read
-	make test_titan_restart_check
-
-test_titan_restart_save:
-	cd run; \
-		cp GM/Param/TITAN/PARAM.in.restartsave PARAM.in; \
-		./BATSRUS.exe > runlog; \
-		PostProc.pl -M -o TitanTest/RestartSave; \
-		Restart.pl -o RESTART_titan; 
-
-test_titan_restart_read:
-	cd run; \
-		cp GM/Param/TITAN/PARAM.in.restartread PARAM.in; \
-		Restart.pl -i RESTART_titan; \
-		./BATSRUS.exe > runlog; \
-		PostProc.pl -M -o TitanTest/RestartRead; \
-
-test_titan_restart_check:
-	cd run/TitanTest; \
-		cp RestartSave/GM/log_n000001.log log_all.log; \
-		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	-(share/Scripts/DiffNum.pl \
-		Param/TITAN/TestOutput/log_n000001.log \
-		run/TitanTest/log_all.log > titan_diff.log)
+include Makefile_TEST #^CFG IF TEST
