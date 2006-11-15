@@ -1,0 +1,63 @@
+#^CFG FILE TEST
+
+test_titan:
+	make test_titan_compile
+	make test_titan_rundir
+	make test_titan_run
+	make test_titan_check
+	make test_titan_restart
+
+test_titan_compile:
+	make clean
+	Options.pl -u=Titan -e=MhdTitan
+	GridSize.pl -g=4,4,4,2000,200
+	make
+	make PIDL
+
+TESTDIR = run_test
+
+test_titan_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cd ${TESTDIR}; \
+		cp GM/Param/TITAN/PARAM.in .; \
+		tar xzf GM/Param/TITAN/TitanInput.tgz
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_titan_run:
+	cd ${TESTDIR}; ./BATSRUS.exe > runlog; PostProc.pl -M -o TitanTest
+
+test_titan_check:
+	share/Scripts/DiffNum.pl -t -a=1e-15 -r=1e-6 \
+		Param/TITAN/TestOutput/log_n000001.log \
+		${TESTDIR}/TitanTest/GM/log_n000001.log > titan_diff.log
+	ls -l titan_diff.log
+
+test_titan_restart:
+	make test_titan_restart_save
+	make test_titan_restart_read
+	make test_titan_restart_check
+
+test_titan_restart_save:
+	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartsave PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR};	./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf TitanTest/RestartSave RESTART_titan
+	cd ${TESTDIR}; PostProc.pl -M -o TitanTest/RestartSave
+	cd ${TESTDIR}; Restart.pl -o RESTART_titan; 
+
+test_titan_restart_read:
+	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartread PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; Restart.pl -i RESTART_titan
+	cd ${TESTDIR}; ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf TitanTest/RestartRead
+	cd ${TESTDIR}; PostProc.pl -M -o TitanTest/RestartRead
+
+test_titan_restart_check:
+	cd ${TESTDIR}/TitanTest; \
+		cp RestartSave/GM/log_n000001.log log_all.log; \
+		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
+	share/Scripts/DiffNum.pl -t -a=1e-15 -r=1e-6 \
+		Param/TITAN/TestOutput/log_n000001.log \
+		${TESTDIR}/TitanTest/log_all.log > titan_diff.log
