@@ -19,7 +19,9 @@ Module ModUser
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_set_plot_var      
+       IMPLEMENTED8 => user_set_plot_var,               &      
+       IMPLEMENTED9 => user_initial_perturbation,       &
+       IMPLEMENTED10 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -225,6 +227,8 @@ contains
           write(*,*)'SW_rho_dim=',SW_rho_dim,SW_T_dim
           case('#USETITANINPUT')
           call read_var('UseTitanInput',UseTitanInput)
+          if(.not.UseTitanInput) &
+               call stop_mpi('Wrong input,UseTitanInput needs to be true')
           call read_var('SolarCnd',SolarCnd)
           call read_var('UseImpact',UseImpact)
 
@@ -883,10 +887,6 @@ contains
     integer:: iBoundary
     !-------------------------------------------------------------------------
 
-    if(UseMultiSpecies) then
-       if(UseTitaninput)call Titan_input
-    end if
-
     if(.not.restart)then
        !\
        ! Initialize solution quantities.
@@ -1421,7 +1421,7 @@ contains
   end function neutral_density
   !=============================================================================
   subroutine Titan_Input
-    use ModMain, ONLY: GLOBALBLK
+    use ModMain, ONLY: nBlock
     use ModPhysics
     use ModGeometry
 
@@ -1434,7 +1434,7 @@ contains
     real, dimension(1:nI,1:nJ,1:nK,nBLK) :: Te_BLK, nL_BLK, nM_BLK, nH_BLK, &
          RM0_BLK, RH0_BLK, RL0_BLK 
     real :: hh, cosS0, dhn,dhnp1, dtm, dtmp1
-    integer :: i,j,k,n, m
+    integer :: i,j,k,n, m, iBlock
 
     !------ Interpolation/Expolation for Te,nL,nM,nH,RM0,RH0 ----- 
     !------ Original data units are as follows -----------------
@@ -1456,69 +1456,65 @@ contains
     !     open(1,file="T_e.dat",status="old")
     !     read(1,*) (tmp_hT(i),tmp_Te(i),i=1,num_Te)
     !     close(1)
-    Te_BLK(:,:,:,globalBLK) = 0.00
-    Recb_I(:,:,:,globalBLK,:)= 0.00
-    !     do globalBLK = 1,nBlockMax
-    do k=1,nK
-       do j=1,nJ
-          do i=1,nI
-             if (R_BLK(i,j,k,globalBLK) >= Rbody) then
-                hh = (R_BLK(i,j,k,globalBLK)-1.00)*2575.0
+    do iBlock = 1, nBlock
+       if(UnUsedBlk(iBlock)) CYCLE
+
+    Te_BLK(:,:,:,iBlock) = 0.00
+    Recb_I(:,:,:,iBlock,:)= 0.00
+    !     do iBlock = 1,nBlockMax
+    do k=1,nK;do j=1,nJ; do i=1,nI
+             if (R_BLK(i,j,k,iBlock) >= Rbody) then
+                hh = (R_BLK(i,j,k,iBlock)-1.00)*2575.0
                 do n=1,num_Te-1
                    if ((hh <= tmp_hT(n+1)) .and. (hh >= tmp_hT(n))) then
-                      Te_BLK(i,j,k,globalBLK) = tmp_Te(n) + (tmp_Te(n+1)-tmp_Te(n))*(hh-tmp_hT(n))/ &
+                      Te_BLK(i,j,k,iBlock) = tmp_Te(n) + (tmp_Te(n+1)-tmp_Te(n))*(hh-tmp_hT(n))/ &
                            (tmp_hT(n+1)-tmp_hT(n))
                    end if
                 end do
                 if (hh < tmp_hT(1)) then
-                   Te_BLK(i,j,k,globalBLK) = tmp_Te(1) + (tmp_Te(1)-tmp_Te(2))* &
+                   Te_BLK(i,j,k,iBlock) = tmp_Te(1) + (tmp_Te(1)-tmp_Te(2))* &
                         (tmp_hT(1)-hh)/(tmp_hT(2)-tmp_hT(1))
                 end if
                 if (hh > tmp_hT(num_Te)) then
-                   Te_BLK(i,j,k,globalBLK) = tmp_Te(num_Te) 
+                   Te_BLK(i,j,k,iBlock) = tmp_Te(num_Te) 
                 end if
-                if (Te_BLK(i,j,k,globalBLK) < 0.00)&
-                     Te_BLK(i,j,k,globalBLK) = 200.0
+                if (Te_BLK(i,j,k,iBlock) < 0.00)&
+                     Te_BLK(i,j,k,iBlock) = 200.0
 
-                Recb_I(i,j,k,globalBLK,Lp_)=Rate_I(Lp_em__L_ )
+                Recb_I(i,j,k,iBlock,Lp_)=Rate_I(Lp_em__L_ )
 
-                Recb_I(i,j,k,globalBLK,Mp_)=Rate_I(Mp_em__M_ )
+                Recb_I(i,j,k,iBlock,Mp_)=Rate_I(Mp_em__M_ )
 
-                Recb_I(i,j,k,globalBLK,H1p_)=Rate_I(H1p_em__H1_ )
+                Recb_I(i,j,k,iBlock,H1p_)=Rate_I(H1p_em__H1_ )
 
-                Recb_I(i,j,k,globalBLK,H2p_)=Rate_I(H2p_em__H2_ )
+                Recb_I(i,j,k,iBlock,H2p_)=Rate_I(H2p_em__H2_ )
 
-                Recb_I(i,j,k,globalBLK,MHCp_)=Rate_I(MHCp_em__MHC_ )
+                Recb_I(i,j,k,iBlock,MHCp_)=Rate_I(MHCp_em__MHC_ )
 
-                Recb_I(i,j,k,globalBLK,HHCp_)=Rate_I(HHCp_em__HHC_ )
+                Recb_I(i,j,k,iBlock,HHCp_)=Rate_I(HHCp_em__HHC_ )
 
-                Recb_I(i,j,k,globalBLK,HNIp_)=Rate_I(HNIp_em__HNI_ )
+                Recb_I(i,j,k,iBlock,HNIp_)=Rate_I(HNIp_em__HNI_ )
 
-                Recb_I(i,j,k,globalBLK,:)=Recb_I(i,j,k,globalBLK,:)&
-                     *sqrt(300.0/Te_BLK(i,j,k,globalBLK))
+                Recb_I(i,j,k,iBlock,:)=Recb_I(i,j,k,iBlock,:)&
+                     *sqrt(300.0/Te_BLK(i,j,k,iBlock))
 
-                !                    write(*,*)'i,j,k,globalBLK=',i,j,k,globalBLK,Rate_I(mep_em__me_),Rate_I(hap_em__ha_),&
-                     !                         'recb=',Recb_I(i,j,k,globalBLK,mep_), Recb_I(i,j,k,globalBLK,hap_)
+                !                    write(*,*)'i,j,k,iBlock=',i,j,k,iBlock,Rate_I(mep_em__me_),Rate_I(hap_em__ha_),&
+                     !                         'recb=',Recb_I(i,j,k,iBlock,mep_), Recb_I(i,j,k,iBlock,hap_)
              end if
-          end do
-       end do
-       !        end do
-    end do ! Multi-block loop
+          end do;end do; end do
 
 !!!!!----------------- Interpolation/Expolation for ionization rates ---------------------
     !     open(1,file="ion_prod_rate.dat",status="old")
     !     read(1,*) (tmp_hR(i),tmp_RL0(i),tmp_RM0(i),tmp_RH0(i),i=1,num_Ri)
     !     close(1)
-    RL0_BLK(:,:,:,globalBLK) = 0.00
-    RM0_BLK(:,:,:,globalBLK) = 0.00
-    RH0_BLK(:,:,:,globalBLK) = 0.00
-    PhoIon_I(:,:,:,globalBLK,:) = 0.00
+    RL0_BLK(:,:,:,iBlock) = 0.00
+    RM0_BLK(:,:,:,iBlock) = 0.00
+    RH0_BLK(:,:,:,iBlock) = 0.00
+    PhoIon_I(:,:,:,iBlock,:) = 0.00
 
-    do k=1,nK
-       do j=1,nJ
-          do i=1,nI
-             if (R_BLK(i,j,k,globalBLK) >= Rbody) then
-                hh = (R_BLK(i,j,k,globalBLK)-1.00)*2575.0
+    do k=1,nK;do j=1,nJ; do i=1,nI
+             if (R_BLK(i,j,k,iBlock) >= Rbody) then
+                hh = (R_BLK(i,j,k,iBlock)-1.00)*2575.0
                 n= int((hh -725.0)/10.0+1.0)
                 if(n<1) then 
                    n=1
@@ -1531,8 +1527,8 @@ contains
 
                 !                 write(*,*)'hh=', hh, 'n=', n
                 !                cos_ISZA=cos(SZATitan*cPi/180.0)
-                cosS0=(x_BLK(i,j,k,globalBLK)*SX0+y_BLK(i,j,k,globalBLK)*SY0)&
-                     /max(R_BLK(i,j,k,globalBLK),1.0e-3)
+                cosS0=(x_BLK(i,j,k,iBlock)*SX0+y_BLK(i,j,k,iBlock)*SY0)&
+                     /max(R_BLK(i,j,k,iBlock),1.0e-3)
                 !                 if (cosS0 < cos_ISZA(9)) cosS0 = cos_ISZA(9)
                 if (cosS0 < cos_ISZA(maxSZAm)) then
                    m=maxSZAm
@@ -1540,11 +1536,11 @@ contains
                    !                    dhnp1 = tmp_hR(n+1) - hh
                    dtm = cos_ISZA(m)- cosS0
                    dtmp1 = cosS0+1.001
-                   RL0_BLK(i,j,k,globalBLK) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1)&
+                   RL0_BLK(i,j,k,iBlock) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)
-                   RM0_BLK(i,j,k,globalBLK) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1)&
+                   RM0_BLK(i,j,k,iBlock) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)
-                   RH0_BLK(i,j,k,globalBLK) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1)&
+                   RH0_BLK(i,j,k,iBlock) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)                    
 
                 else if (cosS0 > cos_ISZA(1)) then                    
@@ -1553,13 +1549,13 @@ contains
                    !                    dhnp1 = tmp_hR(n+1) - hh
                    dtm = cos_ISZA(m)- cosS0
                    dtmp1 = cosS0 - cos_ISZA(m+1)
-                   RL0_BLK(i,j,k,globalBLK) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
+                   RL0_BLK(i,j,k,iBlock) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
                         tmp_RL0(m+1,n)*dhnp1*dtm+tmp_RL0(m+1,n+1)*dhn*dtm)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                   RM0_BLK(i,j,k,globalBLK) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
+                   RM0_BLK(i,j,k,iBlock) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
                         tmp_RM0(m+1,n)*dhnp1*dtm+tmp_RM0(m+1,n+1)*dhn*dtm)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                   RH0_BLK(i,j,k,globalBLK) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
+                   RH0_BLK(i,j,k,iBlock) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
                         tmp_RH0(m+1,n)*dhnp1*dtm+tmp_RH0(m+1,n+1)*dhn*dtm)&
                         /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
 
@@ -1570,13 +1566,13 @@ contains
                          !                          dhnp1 = tmp_hR(n+1) - hh
                          dtm = cos_ISZA(m)- cosS0
                          dtmp1 = cosS0 - cos_ISZA(m+1)
-                         RL0_BLK(i,j,k,globalBLK) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
+                         RL0_BLK(i,j,k,iBlock) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
                               tmp_RL0(m+1,n)*dhnp1*dtm+tmp_RL0(m+1,n+1)*dhn*dtm)&
                               /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                         RM0_BLK(i,j,k,globalBLK) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
+                         RM0_BLK(i,j,k,iBlock) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
                               tmp_RM0(m+1,n)*dhnp1*dtm+tmp_RM0(m+1,n+1)*dhn*dtm)&
                               /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                         RH0_BLK(i,j,k,globalBLK) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
+                         RH0_BLK(i,j,k,iBlock) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
                               tmp_RH0(m+1,n)*dhnp1*dtm+tmp_RH0(m+1,n+1)*dhn*dtm)&
                               /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
 
@@ -1585,84 +1581,81 @@ contains
                 end if
 
 
-                RL0_BLK(i,j,k,globalBLK)=RL0_BLK(i,j,k,globalBLK)+ &
+                RL0_BLK(i,j,k,iBlock)=RL0_BLK(i,j,k,iBlock)+ &
                      (IMPACT_L(n)*dhnp1+IMPACT_L(n+1)*dhn)/(tmp_hR(n+1)-tmp_hR(n))
-                RM0_BLK(i,j,k,globalBLK)=RM0_BLK(i,j,k,globalBLK)+ &
+                RM0_BLK(i,j,k,iBlock)=RM0_BLK(i,j,k,iBlock)+ &
                      (IMPACT_M(n)*dhnp1+IMPACT_M(n+1)*dhn)/(tmp_hR(n+1)-tmp_hR(n))
-                RH0_BLK(i,j,k,globalBLK)=RH0_BLK(i,j,k,globalBLK)+ &
+                RH0_BLK(i,j,k,iBlock)=RH0_BLK(i,j,k,iBlock)+ &
                      (IMPACT_H(n)*dhnp1+IMPACT_H(n+1)*dhn)/(tmp_hR(n+1)-tmp_hR(n))
 
-                if (RL0_BLK(i,j,k,globalBLK) < 0.00) RL0_BLK(i,j,k,globalBLK) = 0.00
-                if (RM0_BLK(i,j,k,globalBLK) < 0.00) RM0_BLK(i,j,k,globalBLK) = 0.00
-                if (RH0_BLK(i,j,k,globalBLK) < 0.00) RH0_BLK(i,j,k,globalBLK) = 0.00
+                if (RL0_BLK(i,j,k,iBlock) < 0.00) RL0_BLK(i,j,k,iBlock) = 0.00
+                if (RM0_BLK(i,j,k,iBlock) < 0.00) RM0_BLK(i,j,k,iBlock) = 0.00
+                if (RH0_BLK(i,j,k,iBlock) < 0.00) RH0_BLK(i,j,k,iBlock) = 0.00
 
-                PhoIon_I(i,j,k,globalBLK,Lp_) = &
-                     RL0_BLK(i,j,k,globalBLK)&
+                PhoIon_I(i,j,k,iBlock,Lp_) = &
+                     RL0_BLK(i,j,k,iBlock)&
                      *unitUSER_t/unitUSER_n
-                PhoIon_I(i,j,k,globalBLK,Mp_) = &
-                     RM0_BLK(i,j,k,globalBLK)&
+                PhoIon_I(i,j,k,iBlock,Mp_) = &
+                     RM0_BLK(i,j,k,iBlock)&
                      *unitUSER_t/unitUSER_n
-                PhoIon_I(i,j,k,globalBLK,H1p_) = &
-                     RH0_BLK(i,j,k,globalBLK)&
+                PhoIon_I(i,j,k,iBlock,H1p_) = &
+                     RH0_BLK(i,j,k,iBlock)&
                      *unitUSER_t/unitUSER_n
                 !                 if(hh.lt.1500.0.and.cosS0.gt.0.998)then
-                !                    write(*,*)hh, RH0_BLK(i,j,k,globalBLK), cosS0
+                !                    write(*,*)hh, RH0_BLK(i,j,k,iBlock), cosS0
                 !                 end if
              end if
-          end do
-       end do
-
-    end do ! Multi-block loop
+          end do; end do; end do
 
 !!!!!----------------- Interpolation/Expolation for neutral densities ---------------------
     !  open(1,file="n.dat",status="old")
     !    read(1,*) (tmp_rn(i),tmp_nL(i),tmp_nM(i),tmp_nH(i),i=1,num_n)
     !  close(1)
-    !nL_BLK(:,:,:,globalBLK) = 0.00
-    !nM_BLK(:,:,:,globalBLK) = 0.00
-    !nH_BLK(:,:,:,globalBLK) = 0.00
+    !nL_BLK(:,:,:,iBlock) = 0.00
+    !nM_BLK(:,:,:,iBlock) = 0.00
+    !nH_BLK(:,:,:,iBlock) = 0.00
 
     !  tmp_n(15,:)=tmp_n(C4H2_,:)  !5
     !  tmp_n(HC3N_,:)=tmp_n(11,:) !10
     !  tmp_n(C3H4_,:)= tmp_n(12,:) !4
     !  tmp_n(C4H2_,:)=tmp_n(15,:)  !5
 
-    nu_BLK(:,:,:,globalBLK) = 0.00
-    nDenNuSpecies_CBI(:,:,:,globalBLK,:)=0.00
+    nu_BLK(:,:,:,iBlock) = 0.00
+    nDenNuSpecies_CBI(:,:,:,iBlock,:)=0.00
     !  tmp_hn = tmp_rn-2575.0
-    !  do globalBLK = 1,nBlockMax
-    do k=1,nK
-       do j=1,nJ
-          do i=1,nI
-             if (R_BLK(i,j,k,globalBLK) >= Rbody) then
-                hh = (R_BLK(i,j,k,globalBLK)-1.00)*2575.0
+    !  do iBlock = 1,nBlockMax
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+
+             if (R_BLK(i,j,k,iBlock) >= Rbody) then
+                hh = (R_BLK(i,j,k,iBlock)-1.00)*2575.0
                 n= int((hh -725.0)/10.0+1.0)
 !!!!!------------ Interpolation/Expolation for nL_BLK, nM_BLK, nH_BLK--------------
                 if (hh < tmp_hn(1)) then
-                   nDenNuSpecies_CBI(i,j,k,globalBLK,:) = tmp_n(1:nNuSpecies,1) + &
+                   nDenNuSpecies_CBI(i,j,k,iBlock,:) = tmp_n(1:nNuSpecies,1) + &
                         (tmp_n(1:nNuSpecies,1)-tmp_n(1:nNuSpecies,2))*(tmp_hn(1)-hh)/(tmp_hn(2)-tmp_hn(1))
                 else if(hh > tmp_hn(num_nu-1)) then
-                   nDenNuSpecies_CBI(i,j,k,globalBLK,:) = tmp_n(1:nNuSpecies,num_nu) + &
+                   nDenNuSpecies_CBI(i,j,k,iBlock,:) = tmp_n(1:nNuSpecies,num_nu) + &
                         (tmp_n(1:nNuSpecies,num_nu)-tmp_n(1:nNuSpecies,num_nu-1))*&
                         (hh-tmp_hn(num_nu))/(tmp_hn(num_nu)-tmp_hn(num_nu-1))
                 else                                  
-                   nDenNuSpecies_CBI(i,j,k,globalBLK,:) = tmp_n(1:nNuSpecies,n) + &
+                   nDenNuSpecies_CBI(i,j,k,iBlock,:) = tmp_n(1:nNuSpecies,n) + &
                         (tmp_n(1:nNuSpecies,n+1)-tmp_n(1:nNuSpecies,n))*(hh-tmp_hn(n))/(tmp_hn(n+1)-tmp_hn(n))
                 end if
                 
-                nDenNuSpecies_CBI(i,j,k,globalBLK,:)=max(0.00, nDenNuSpecies_CBI(i,j,k,globalBLK,:))
+                nDenNuSpecies_CBI(i,j,k,iBlock,:)=max(0.00, nDenNuSpecies_CBI(i,j,k,iBlock,:))
 
-                nDenNuSpecies_CBI(i,j,k,globalBLK,:) = &
-                     nDenNuSpecies_CBI(i,j,k,globalBLK,:)/unitUSER_n
-                nu_BLK(i,j,k,globalBLK) = nu0*sum(nDenNuSpecies_CBI(i,j,k,globalBLK,1:nNuSpecies))              
+                nDenNuSpecies_CBI(i,j,k,iBlock,:) = &
+                     nDenNuSpecies_CBI(i,j,k,iBlock,:)/unitUSER_n
+                nu_BLK(i,j,k,iBlock) = nu0*sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:nNuSpecies))              
              end if
-          end do
-       end do
-       !  end do
-    end do ! Multi-block loop
+          end do; end do; end do
 
-    ! if(globalBLK.gt.43.and.globalBLK.lt.50) write(*,*)'globalBLK=',globalBLK,&
-    !      'R,nu=',R_BLK(3,1,4,globalBLK),nu_BLK(3,1,4,globalBLK)
+    ! if(iBlock.gt.43.and.iBlock.lt.50) write(*,*)'iBlock=',iBlock,&
+    !      'R,nu=',R_BLK(3,1,4,iBlock),nu_BLK(3,1,4,iBlock)
+
+       end do  !nBlock
+
   end subroutine Titan_Input
 
   !====================================================================
@@ -1776,5 +1769,46 @@ contains
 
   end subroutine user_set_plot_var
 
+  !=====================================================================
+  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
+       xCenter,yCenter,zCenter,rCenter,                        &
+       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+
+    use ModPhysics, ONLY: Rbody
+
+    logical,intent(out) :: refineBlock, found
+    integer, intent(in) :: lev
+    real, intent(in)    :: DxBlock
+    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
+    real, intent(in)    :: minx,miny,minz,minR
+    real, intent(in)    :: maxx,maxy,maxz,maxR
+    integer, intent(in) :: iBLK
+
+    character (len=*), parameter :: Name='user_specify_initial_refinement'
+
+    !-------------------------------------------------------------------
+!    select case (InitialRefineType)
+!    case ('Titan3Dboyyfocus')
+       ! Refine, focusing on body
+    found=.true.
+    refineBlock=.false.
+    if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.5*Rbody))&
+         refineBlock = .true.
+    
+!    case default
+       
+!   end select
+    
+  end subroutine user_specify_initial_refinement
+
+  !=====================================================================
+  subroutine user_initial_perturbation
+
+    character (len=*), parameter :: Name='user_initial_perturbation'
+    !-------------------------------------------------------------------
+
+    call Titan_input
+
+  end subroutine user_initial_perturbation
 
 end Module ModUser

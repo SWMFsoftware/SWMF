@@ -28,7 +28,7 @@ test_titan_run:
 	cd ${TESTDIR}; ./BATSRUS.exe > runlog; PostProc.pl -M -o TitanTest
 
 test_titan_check:
-	share/Scripts/DiffNum.pl -t -a=1e-15 -r=1e-6 \
+	share/Scripts/DiffNum.pl -t -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/GM/log_n000001.log > titan_diff.log
 	ls -l titan_diff.log
@@ -58,6 +58,7 @@ test_titan_restart_check:
 	cd ${TESTDIR}/TitanTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	share/Scripts/DiffNum.pl -t -a=1e-15 -r=1e-6 \
+	share/Scripts/DiffNum.pl -t -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/log_all.log > titan_diff.log
+	ls -l titan_diff.log

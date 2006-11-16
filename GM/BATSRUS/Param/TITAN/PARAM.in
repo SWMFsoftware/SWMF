@@ -41,7 +41,7 @@ T
 4.88234			rMax = alog(sqrt(64^2+96^2+64^2))
 
 #AMRINIT
-3Dbodyfocus             InitialRefineType
+Titan3Dbodyfocus             InitialRefineType
 3                      InitialRefineLevel
 
 #BODY
@@ -66,10 +66,10 @@ minmod                  LimiterType
 #USERFLAGS
 T			UseUserInnerBcs
 T			UseUserSource
-F			UseUserPerturbation
+T			UseUserPerturbation
 F                       UseUserOuterBcs
 T                       UseUserICs
-F                       UseUserSpecifyRefinement
+T                       UseUserSpecifyRefinement
 F                       UseUserLogFiles
 F                       UseUserWritePlot
 F                       UseUserAMR
