@@ -2,16 +2,27 @@
 !^CFG FILE COVARIANT
 
 subroutine calc_sources_covar
-  use ModMain
+  use ModMain, ONLY: UseDivbSource, UseB0Source, UseGravity, UseUserSource, UseRotatingFrame,&
+       ProcTest, BlkTest, GlobalBlk, nI, nJ, nK
   use ModProcMH
-  use ModCovariant
+  use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModGeometry, ONLY : vInv_CB, x_BLK, y_BLK, z_BLK,&
        body_BLK, RMin_BLK
-  use ModAdvance
-  use ModNumConst
+  use ModAdvance, ONLY: State_VGB, Source_VC, UseNonConservative,&
+       Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_, Energy_, &
+       RightState_VX, RightState_VY, RightState_VZ, &
+       LeftState_VX, LeftState_VY, LeftState_VZ, &
+       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,&
+       B0XFace_X_BLK,B0XFace_Y_BLK,B0XFace_Z_BLK, &
+       B0YFace_X_BLK,B0YFace_Y_BLK,B0YFace_Z_BLK, &
+       B0ZFace_X_BLK,B0ZFace_Y_BLK,B0ZFace_Z_BLK, &
+       UdotFa_X, UdotFa_Y, UdotFa_Z, &
+       DivB1_GB, DivB0_CB, CurlB0_DCB, &
+       fBody_X_BLK,fBody_Y_BLK,fBody_Z_BLK
+  use ModNumConst, ONLY: cOne, cZero, cHalf
   use ModPhysics, ONLY:gm1
   use ModUser, ONLY: user_calc_sources
-  use ModCoordTransform
+  use ModCoordTransform, ONLY: cross_product
   implicit none
 
   integer :: i,j,k
@@ -159,6 +170,7 @@ subroutine calc_sources_covar
              -B0zFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
         DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
      end do; end do; end do
+
      do k=1,nK; do j=1,nJ; do i=1,nI 
         Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)-DivBInternal_C(i,j,k)*&
              B0xCell_BLK(i,j,k,globalBLK)
@@ -217,6 +229,6 @@ subroutine calc_sources_covar
   end if
 
   if(UseUserSource) call user_calc_sources
-
+  
 end subroutine calc_sources_covar
 !=============================End covariant_calc_sources.f90
