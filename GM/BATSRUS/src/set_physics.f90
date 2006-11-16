@@ -477,18 +477,18 @@ subroutine set_dimensions
      ! Users provide the conversion from SI units to their IO 
      ! units.  Since we don't use the units this way, we have to 
      ! multiply by unitSI_ to set the unitUSER variables.
-     unitUSER_x           = Si2User(UnitX_)           *unitSI_rho          
-     unitUSER_rho         = Si2User(UnitRho_)         *unitSI_U            
-     unitUSER_n           = Si2User(UnitN_)           *unitSI_t            
-     unitUSER_U           = Si2User(UnitU_)           *unitSI_n            
-     unitUSER_t           = Si2User(UnitT_)           *unitSI_p            
-     unitUSER_p           = Si2User(UnitP_)           *unitSI_B            
-     unitUSER_B           = Si2User(UnitB_)           *unitSI_rhoU         
-     unitUSER_rhoU        = Si2User(UnitRhoU_)        *unitSI_energydens   
-     unitUSER_energydens  = Si2User(UnitEnergyDens_)  *unitSI_Poynting     
-     unitUSER_Poynting    = Si2User(UnitPoynting_)    *unitSI_J            
-     unitUSER_J           = Si2User(UnitJ_)           *unitSI_electric     
-     unitUSER_electric    = Si2User(UnitElectric_)    *unitSI_DivB         
+     unitUSER_x           = Si2User(UnitX_)           *unitSI_x  
+     unitUSER_rho         = Si2User(UnitRho_)         *unitSI_rho          
+     unitUSER_n           = Si2User(UnitN_)           *unitSI_U            
+     unitUSER_U           = Si2User(UnitU_)           *unitSI_t            
+     unitUSER_t           = Si2User(UnitT_)           *unitSI_n            
+     unitUSER_p           = Si2User(UnitP_)           *unitSI_p            
+     unitUSER_B           = Si2User(UnitB_)           *unitSI_B            
+     unitUSER_rhoU        = Si2User(UnitRhoU_)        *unitSI_rhoU         
+     unitUSER_energydens  = Si2User(UnitEnergyDens_)  *unitSI_energydens   
+     unitUSER_Poynting    = Si2User(UnitPoynting_)    *unitSI_Poynting     
+     unitUSER_J           = Si2User(UnitJ_)           *unitSI_J               
+     unitUSER_electric    = Si2User(UnitElectric_)    *unitSI_electric
      unitUSER_temperature = Si2User(UnitTemperature_) *unitSI_temperature  
      unitUSER_DivB        = unitSI_DivB  ! Users don't need to know this
      
