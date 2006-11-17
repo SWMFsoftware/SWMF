@@ -271,7 +271,8 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   real :: volume
   real,dimension(nVar) :: StateIntegral_V
   real, external :: integrate_BLK, maxval_BLK, minval_BLK
-  real, external :: integrate_sphere, integrate_flux_circ,test_cell_value
+  real, external :: integrate_sphere,integrate_flux_circ,test_cell_value
+  real, external :: minmax_sphere
 
   integer :: iVar,iR,iVarTot,itmp,jtmp, iBLK
   integer :: i,j,k
@@ -335,11 +336,13 @@ contains
   !============================================================================
   subroutine set_log_var
 
+    use ModMPI
     use ModUser, ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
 
     ! Local variables
-    real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU
+    integer :: iError
+    real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
 
     integer :: jVar
     character(len=10) :: NameVar
@@ -413,6 +416,82 @@ contains
                /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
+
+    case('jin','Jin','jout','Jout','jinmax','Jinmax','joutmax','Joutmax')
+       !calculate the total current either into or out of the body
+       ! Calculate
+       do iBLK=1,nBlock
+          if(unusedBLK(iBLK))cycle
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
+                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
+                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
+                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
+                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
+                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
+                  z_BLK(i,j,k-1,iBLK) < z1 ) then
+                tmp1_BLK(i,j,k,iBLK)=0.0
+                CYCLE
+             end if
+             ! jx.x + jy.y + jz.z
+             tmp1_BLK(i,j,k,iBLK) = (                               &
+                  ( (State_VGB(Bz_,i,j+1,k,iBLK)                    &
+                   - State_VGB(Bz_,i,j-1,k,iBLK)) / dy_BLK(iBLK) -  &
+                    (State_VGB(By_,i,j,k+1,iBLK)                    &
+                   - State_VGB(By_,i,j,k-1,iBLK)) / dz_BLK(iBLK)    &
+                  ) * x_BLK(i,j,k,iBLK)                             &
+                 +                                                  &
+                  ( (State_VGB(Bx_,i,j,k+1,iBLK)                    &
+                   - State_VGB(Bx_,i,j,k-1,iBLK)) / dz_BLK(iBLK) -  &
+                    (State_VGB(Bz_,i+1,j,k,iBLK)                    &
+                   - State_VGB(Bz_,i-1,j,k,iBLK)) / dx_BLK(iBLK)    &
+                  ) * y_BLK(i,j,k,iBLK)                             &
+                 +                                                  &
+                  ( (State_VGB(By_,i+1,j,k,iBLK)                    &
+                   - State_VGB(By_,i-1,j,k,iBLK)) / dx_BLK(iBLK) -  &
+                    (State_VGB(Bx_,i,j+1,k,iBLK)                    &
+                   - State_VGB(Bx_,i,j-1,k,iBLK)) / dy_BLK(iBLK)    &
+                  ) * z_BLK(i,j,k,iBLK)                             &
+                  ) / r_BLK(i,j,k,iBLK)
+          end do; end do; end do
+          !now modify tmp1 according to the case we want
+          select case(NameLogVar)
+          case('jin','Jin')
+             where (tmp1_BLK(:,:,:,iBLK) > 0.0)
+                tmp1_BLK(:,:,:,iBLK) = 0.0
+             end where
+          case('jout','Jout')
+             where (tmp1_BLK(:,:,:,iBLK) < 0.0)
+                tmp1_BLK(:,:,:,iBLK) = 0.0
+             end where
+          end select
+       end do
+       ! the 0.5 used below is because the centered difference formulae above used
+       ! (1/Dx) instead of the correct 1/(2Dx),
+       select case(NameLogVar)
+       case('jin','Jin','jout','Jout')
+          LogVar_I(iVarTot) = 0.5 * integrate_sphere(180,rCurrents,tmp1_BLK)/(4.0*cPi*rCurrents**2)
+       case('jinmax','Jinmax')
+          qval = 0.5 * minmax_sphere(-1,180,rCurrents,tmp1_BLK)
+          if(nProc>1)then
+             call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MIN, &
+             iComm, iError)
+             ! Divide by nProc so that adding up the processors can work
+             LogVar_I(iVarTot) = qval_all/nProc
+          else
+             LogVar_I(iVarTot) = qval/nProc
+          endif
+       case('joutmax','Joutmax')
+          qval = 0.5 * minmax_sphere(1,180,rCurrents,tmp1_BLK)
+          if(nProc>1)then
+             call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MAX, &
+             iComm, iError)
+             ! Divide by nProc so that adding up the processors can work
+             LogVar_I(iVarTot) = qval_all/nProc
+          else
+             LogVar_I(iVarTot) = qval/nProc
+          endif
+       end select
 
     case('dst')
        ! Calculate the Biot-Savart formula for the center of the Earth:
@@ -844,7 +923,8 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_U
      case('ekinx','ekiny','ekinz','ekin')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rho*unitUSER_U**2
-     case('jx','jy','jz','jxpnt','jypnt','jzpnt')
+     case('jx','jy','jz','jxpnt','jypnt','jzpnt','jin', &
+          'Jin','jout','Jout','jinmax','Jinmax','joutmax','Joutmax')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_J
 
 !!$! Ionosphere values                                !^CFG IF IONOSPHERE BEGIN
@@ -1206,6 +1286,171 @@ real function integrate_flux_circ(qrad,qz,qa)
   integrate_flux_circ = integral_sum*qrad*dphi_circ
 
 end function integrate_flux_circ
+
+!==============================================================================
+
+real function minmax_sphere(iminmax,nTheta,Radius,Array)
+
+  ! This function calculates the maximum or minimum value of the incomming
+  ! variable Array over the surface of a sphere centered at the origin radius
+  ! Radius.  The resolution in the colatitude is determined by the nTheta
+  ! parameter. The variable iminmax indicates whether to take a maximum (1) or
+  ! a minimum (-1).
+
+  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModNumConst
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModMPI
+  implicit none
+
+  ! Arguments
+
+  integer, intent(in) :: iminmax, nTheta
+  real, intent(in)    :: Array(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
+  real, intent(in)    :: Radius
+
+  ! Local variables
+  real :: minmax, Average
+
+  ! Indices and coordinates
+  integer :: iBlock,i,j,i1,i2,j1,j2,k1,k2
+  integer :: MaxPhi, nPhi
+  real    :: x, y, z, DxInv, DyInv, DzInv, xNorm, yNorm, zNorm, Dx, Dy, Dz
+  real    :: xMin, xMax, yMin, yMax, zMin, zMax
+  real    :: dTheta, dPhi, Theta, Phi, SinTheta, CosTheta
+
+  ! Store cartesian coordinates for sake of efficiency
+  ! The x and y depend on iPhi,iTheta while z only depends on iTheta
+  !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
+
+  logical :: DoTest,DoTestMe
+  !---------------------------------------------------------------------------
+
+  call set_oktest('minmax_sphere',DoTest,DoTestMe)
+  call timing_start('minmax_sphere')
+
+  ! Get the angular resolution from the input parameter nTheta
+  MaxPhi = 2*nTheta
+  dTheta = cPi/nTheta
+
+  if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
+       dTheta*cRadToDeg
+
+  ! find the maximum or minimum of all the points on the sphere
+
+  if (iminmax > 0.0) then
+     minmax = -1.0e30
+  else
+     minmax = 1.0e30
+  end if
+  do iBlock = 1, nBlock
+
+     if (unusedBLK(iBlock)) CYCLE
+
+     ! get the max and min radial distance for this block so that we can check
+     ! whether or not this block contibutes to the sum.
+
+     xMin = cHalf*(x_BLK( 0, 0, 0,iBlock) + x_BLK(   1,   1  , 1,iBlock))
+     xMax = cHalf*(x_BLK(nI,nJ,nK,iBlock) + x_BLK(nI+1,nJ+1,nK+1,iBlock))
+     yMin = cHalf*(y_BLK( 0, 0, 0,iBlock) + y_BLK(   1,   1,   1,iBlock))
+     yMax = cHalf*(y_BLK(nI,nJ,nK,iBlock) + y_BLK(nI+1,nJ+1,nK+1,iBlock))
+     zMin = cHalf*(z_BLK( 0, 0, 0,iBlock) + z_BLK(   1,   1,   1,iBlock))
+     zMax = cHalf*(z_BLK(nI,nJ,nK,iBlock) + z_BLK(nI+1,nJ+1,nK+1,iBlock))
+
+     if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 + minmod(zMin,zMax)**2 &
+          > Radius**2) &
+          CYCLE
+     if ( max(abs(xMin),abs(xMax))**2 + max(abs(yMin),abs(yMax))**2 + &
+          max(abs(zMin),abs(zMax))**2 < Radius**2 ) &
+          CYCLE
+
+     DxInv = cOne/dx_BLK(iBlock)
+     DyInv = cOne/dy_BLK(iBlock)
+     DzInv = cOne/dz_BLK(iBlock)
+
+     do i = 1, nTheta
+        ! Check if z is inside the block
+        Theta = dTheta*(i-cHalf)
+        z     = Radius*cos(Theta)
+        if(z <  zMin) CYCLE
+        if(z >= zMax) CYCLE
+
+        SinTheta = sin(Theta)
+
+        ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
+        nPhi = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
+        dPhi = cTwoPi/nPhi
+
+        do j = 1, nPhi
+           Phi = j*dPhi
+
+           ! Check if x and y are inside the block
+           x = Radius * SinTheta * cos(Phi)
+           if(x <  xMin) CYCLE
+           if(x >= xMax) CYCLE
+
+           y = Radius * SinTheta * sin(Phi)
+           if(y <  yMin) CYCLE
+           if(y >= yMax) CYCLE
+
+           ! Compute the interpolated values at the current location.
+
+           ! Convert to normalized coordinates
+           ! (in cell centers the nomalized coordinate equals the index)
+           xNorm = DxInv*(x - x_BLK(1,1,1,iBlock)) + cOne
+           yNorm = DyInv*(y - y_BLK(1,1,1,iBlock)) + cOne
+           zNorm = DzInv*(z - z_BLK(1,1,1,iBlock)) + cOne
+
+           ! Determine cell indices corresponding to location
+           i1 = nint(xNorm)
+           j1 = nint(yNorm)
+           k1 = nint(zNorm)
+
+           ! Distance relative to the cell centers
+           Dx = xNorm-i1
+           Dy = yNorm-j1
+           Dz = zNorm-k1
+
+           ! The indexes of the cells in the direction of the point
+           i2 = i1 + sign(1.0, Dx)
+           j2 = j1 + sign(1.0, Dy)
+           k2 = k1 + sign(1.0, Dz)
+
+           ! In the interpolation formula only the abs(distance) occurs
+           Dx = abs(Dx)
+           Dy = abs(Dy)
+           Dz = abs(Dz)
+
+           ! Second order interpolation in 3 directions
+           Average = &
+                Array(i1,j1,k1,iBlock)*(1-Dx-Dy-Dz) + &
+                Array(i2,j1,k1,iBlock)*Dx             + &
+                Array(i1,j2,k1,iBlock)*Dy             + &
+                Array(i1,j1,k2,iBlock)*Dz
+
+           if(iminmax>0) then
+              minmax = max(minmax,Average)
+           else
+              minmax = min(minmax,Average)
+           end if
+        end do
+     end do
+  end do
+  ! deallocate(x_II, y_II, z_I, SinTheta_I)
+
+  minmax_sphere = minmax
+  call timing_stop('minmax_sphere')
+
+  contains
+  
+    real function minmod(x,y)
+      real, intent(in) :: x,y
+      minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+    end function minmod
+
+end function minmax_sphere
+
 
 !==============================================================================
 
