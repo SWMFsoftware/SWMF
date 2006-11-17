@@ -185,16 +185,16 @@ contains
      NamePlanet_I(Jupiter_)              = 'JUPITER'
 
      rPlanet_I(Jupiter_)                 = 71492.00*cE3                   ! [ m]
-     mPlanet_I(Jupiter_)                 = 1.8990*cE27                    ! [kg]
-     OrbitalPeriodPlanet_I(Jupiter_)     = 0.0                            ! [ s]
+     mPlanet_I(Jupiter_)                 = 1.8980*cE27                    ! [kg]
+     OrbitalPeriodPlanet_I(Jupiter_)     = 4330.60 * 24.0 * 3600.0        ! [ s]
      RotationPeriodPlanet_I(Jupiter_)    = 9.925 * 3600.0                 ! [ s]
 
      TypeBFieldPlanet_I(:)               = "DIPOLE"                
-     DipoleStrengthPlanet_I(Jupiter_)    =   0.0 * 1.0e-9                 ! [ T]
+     DipoleStrengthPlanet_I(Jupiter_)    =   428000.0 * 1.0e-9                 ! [ T]
      bAxisThetaPlanet_I(Jupiter_)        =   0.0 * cDegToRad              ! [rad]
      bAxisPhiPlanet_I(Jupiter_)          =   0.0 * cDegToRad              ! [rad]
                                        
-     IonoHeightPlanet_I(Jupiter_)        =   0.0 *1.0e3                   ! [ m]
+     IonoHeightPlanet_I(Jupiter_)        = 1000.0 *1.0e3                  ! [ m]
    
      !\                               
      ! Saturn (60)                        
