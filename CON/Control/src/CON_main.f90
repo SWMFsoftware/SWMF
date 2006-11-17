@@ -19,6 +19,8 @@ module CON_main
   use CON_session
   use ModMpi
   use ModIoUnit, ONLY: UNITTMP_
+  use ModPlanetConst, ONLY: init_planet_const
+  use CON_planet,     ONLY: set_planet_defaults
 
   implicit none
 
@@ -84,7 +86,7 @@ contains
     ! \end{itemize}
     ! The actual code is somewhat longer, since the main code also
     ! deals with timing, deleting the SWMF.STOP and SWMF.SUCCESS files
-    ! at the beginning of the run.
+    ! at the beginning of the run, and initializing the planet information.
     ! There is also some verbose information printed.
     !EOP
     !-------------------------------------------------------------------------
@@ -169,6 +171,13 @@ contains
     ! Initialize CON_time
     !/
     call init_time
+
+    !\
+    ! Initialize the planetary constant library and 
+    ! set the default planet (Earth)
+    !/
+    call init_planet_const
+    call set_planet_defaults
 
   end subroutine initialize
 
