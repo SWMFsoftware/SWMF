@@ -231,27 +231,35 @@ LIBTIMING = ${LIBDIR}/libTIMING.a
 # Libraries should be compiled first, because modules are used in main.
 ${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
-BATSRUS.exe: ${OBJECTS_EXE}
+EXE = ${BINDIR}/BATSRUS.exe
+
+BATSRUS:
+	make ${EXE}
+	@echo ' '
+	@echo Program BATSRUS has been brought up to date.
+	@echo ' '	
+
+${EXE}: ${OBJECTS_EXE}
 	@(if [ ${COMPILE.f90} = "xlf90" ]; then make BATSRUS_for_xlf; \
 	elif [ ${OS} = "Darwin" ];         then make BATSRUS_for_Darwin; \
 	else                                    make BATSRUS_general; fi)
 
 BATSRUS_general:
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
 		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
 		${Lflag1}
 
 BATSRUS_for_Darwin:
 	ld -all_load -r -o LIBRARIES.o \
 		${LIBSHARE} ${LIBTIMING} ${MY_LIB}
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} \
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
 		LIBRARIES.o ${LBLAS} ${Lflag1}
 	rm -f LIBRARIES.o
 
 BATSRUS_for_xlf:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
-	${LINK.f90} -o BATSRUS.exe ${OBJECTS_EXE} Tmp_/*.o \
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 #
