@@ -97,8 +97,8 @@ contains
     ! If the file ends or an \#END command is found, the last session
     ! is executed.
     ! The ordering of the commands is more or less arbitrary
-    ! with the exception of \#PLANET, which must preceed 
-    ! commands which idealize or overwrite the real parameters of the planet.
+    ! with the exception of \#PLANET (\#MOON, \#COMET) that must preceed 
+    ! commands that idealize or overwrite the real parameters of the planet.
     !EOP
 
     ! True if first session will be read
@@ -500,7 +500,8 @@ contains
                   ' SWMF_WARNING: TimeStart = ',TimeStart % String
           end if
 
-       case('#PLANET','#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
+       case('#PLANET','#MOON','#COMET', &
+            '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS',&
             '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
