@@ -727,6 +727,9 @@ contains
     write(UNITTMP_,'(a)')'#DESCRIPTION'
     write(UNITTMP_,'(a)')trim(StringDescription)
     write(UNITTMP_,*)
+    write(UNITTMP_,'(a)')'#PLANET'
+    write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
+    write(UNITTMP_,*)
     write(UNITTMP_,'(a)')'#STARTTIME'
     write(UNITTMP_,'(i8,a32)')TimeStart % iYear,         'iYear      '
     write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
