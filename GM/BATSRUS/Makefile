@@ -107,10 +107,7 @@ BATSRUS:
 	cd ${SHAREDIR}; make LIB
 	cd ${TIMINGDIR}; make LIB
 	cd src; make LIB
-	cd src; make BATSRUS.exe
-	@echo ' '
-	@echo Program BATSRUS has been brought up to date.
-	@echo ' '	
+	cd src; make BATSRUS
 
 NOMPI:
 	cd util/NOMPI/src; make LIB
@@ -153,8 +150,8 @@ rundir:
 		cp Scripts/Run/${OS}/*${MACHINE}* ${RUNDIR}/; \
 		rm -f ${RUNDIR}/TMP_${MACHINE}; \
 		rm -f Scripts/Run/${OS}/TMP_${MACHINE}; \
-		cp share/Scripts/PostProc.pl ${RUNDIR}/; \
-		cp share/Scripts/Restart.pl ${RUNDIR}/; \
+		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
+		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/BATSRUS.exe .; \
 		ln -s GM/* .;                          \
 	fi);
