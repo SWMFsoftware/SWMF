@@ -163,12 +163,12 @@ It is also possible to change some parameters of the planet relative
 to the real values.
 
 By default Earth is assumed with its real parameters.
-Another planet (moon, commet) can be selected with the #PLANET
-(#MOON, #COMMET) command. The real planet parameters can be modified 
+Another planet (moon, comet) can be selected with the #PLANET
+(#MOON, #COMET) command. The real planet parameters can be modified 
 and simplified with the other planet commands listed in this subsection.
 These modified commands cannot precede the #PLANET command!
 
-<command name="PLANET" alias="MOON,COMMET"
+<command name="PLANET" alias="MOON,COMET"
 	if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="NamePlanet" type="string" input="select">
 		<option name="Earth" value="EARTH/Earth/earth" default="T" />

@@ -1583,7 +1583,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('BdpDimBody2z',BdpDimBody2_D(3))
         !                                           ^CFG END SECONDBODY
 
-     case('#PLANET','#MOON','#IDEALAXES','#ROTATIONAXIS',&
+     case('#PLANET','#MOON','#COMET','#IDEALAXES','#ROTATIONAXIS',&
           '#MAGNETICAXIS','#ROTATION','#DIPOLE','#NONDIPOLE','#UPDATEB0')
 
         call check_stand_alone

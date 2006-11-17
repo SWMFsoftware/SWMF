@@ -220,7 +220,7 @@ contains
     !-------------------------------------------------------------------------
 
     select case(NameCommand)
-    case("#PLANET", "#MOON", "#COMMET")
+    case("#PLANET", "#MOON", "#COMET")
 
        call read_var('NamePlanet',NamePlanetIn)
        call upper_case(NamePlanetIn)
