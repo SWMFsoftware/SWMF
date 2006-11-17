@@ -21,6 +21,7 @@ MOD09 = CON_couple_gm_rb.o	#^CMP IF RB
 #^CMP IF IE BEGIN
 MOD05 = CON_couple_ie_im.o	#^CMP IF IM
 MOD06 = CON_couple_ie_ua.o	#^CMP IF UA
+MOD10 = CON_couple_ie_pw.o	#^CMP IF PW
 #^CMP END IE
 #^CMP IF IH BEGIN
 MOD07 = CON_couple_ih_sc.o       #^CMP IF SC
@@ -30,7 +31,7 @@ MOD08 = CON_couple_mh_sp.o       #^CMP IF SP
 
 
 MODULES = ${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} \
-	${MOD07} ${MOD08} ${MOD09} \
+	${MOD07} ${MOD08} ${MOD09} ${MOD10} \
 	CON_wrapper.o \
 	CON_couple_all.o
 
