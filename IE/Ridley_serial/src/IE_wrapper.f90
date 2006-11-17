@@ -343,6 +343,73 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 end subroutine IE_get_for_gm
 !==============================================================================
 
+subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
+     tSimulation)
+
+  use ModProcIE
+  use ModIonosphere
+
+  implicit none
+  character (len=*),parameter :: NameSub='IE_get_for_pw'
+
+  integer, intent(in)           :: iSize, jSize, nVar
+  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  character (len=*),intent(in)  :: NameHem
+  character (len=*),intent(in)  :: Name_V(nVar)
+  real,             intent(in)  :: tSimulation
+
+  integer :: iVar
+  real    :: tSimulationTmp
+  !--------------------------------------------------------------------------
+  if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
+     write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+          ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
+     call CON_stop(NameSub//' SWMF_ERROR')
+  end if
+
+  ! Make sure that the most recent result is provided
+  tSimulationTmp = tSimulation
+  call IE_run(tSimulationTmp,tSimulation)
+
+  select case(NameHem)
+
+  case('North')
+
+     if(iProc /= 0) RETURN
+     do iVar = 1, nVar
+        select case(Name_V(iVar))
+        case('Pot')
+           Buffer_IIV(:,:,iVar) = IONO_NORTH_Phi
+        case('Jr')
+           Buffer_IIV(:,:,iVar) = IONO_NORTH_Jr
+        case default
+           call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+        end select
+     end do
+
+  case('South')
+
+     if(iProc /= nProc - 1) RETURN
+     do iVar = 1, nVar
+        select case(Name_V(iVar))
+        case('Pot')
+           Buffer_IIV(:,:,iVar) = IONO_SOUTH_Phi
+        case('Jr')
+           Buffer_IIV(:,:,iVar) = IONO_SOUTH_Jr
+        case default
+           call CON_stop(NameSub//' invalid NameVar='//Name_V(iVar))
+        end select
+     end do
+
+  case default
+
+     call CON_stop(NameSub//' invalid NameHem='//NameHem)
+
+  end select
+
+end subroutine IE_get_for_pw
+!==============================================================================
+
 subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 
   use ModProcIE
