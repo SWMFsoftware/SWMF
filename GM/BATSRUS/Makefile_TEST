@@ -1,11 +1,23 @@
 #^CFG FILE TEST
 
+### TESTS FOR STAND-ALONE BATSRUS ###
+
+test:	test_titan_all
+	ls -l *.diff
+	
+TESTDIR = run_test
+
+### TESTS FOR MODELING TITAN ###
+
+test_titan_all:
+	make test_titan
+	make test_titan_restart
+
 test_titan:
 	make test_titan_compile
 	make test_titan_rundir
 	make test_titan_run
 	make test_titan_check
-	make test_titan_restart
 
 test_titan_compile:
 	make clean
@@ -14,24 +26,24 @@ test_titan_compile:
 	make
 	make PIDL
 
-TESTDIR = run_test
-
 test_titan_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=GM
 	cd ${TESTDIR}; \
 		cp GM/Param/TITAN/PARAM.in .; \
 		tar xzf GM/Param/TITAN/TitanInput.tgz
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_titan_run:
-	cd ${TESTDIR}; ./BATSRUS.exe > runlog; PostProc.pl -M -o TitanTest
+	cd ${TESTDIR}; ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf TitanTest
+	cd ${TESTDIR}; PostProc.pl -M -o TitanTest
 
 test_titan_check:
-	share/Scripts/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/GM/log_n000001.log > titan_diff.log
-	ls -l titan_diff.log
+		${TESTDIR}/TitanTest/GM/log_n000001.log > test_titan.diff
+	ls -l test_titan.diff
 
 test_titan_restart:
 	make test_titan_restart_save
@@ -58,7 +70,7 @@ test_titan_restart_check:
 	cd ${TESTDIR}/TitanTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	share/Scripts/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
-		${TESTDIR}/TitanTest/log_all.log > titan_diff.log
-	ls -l titan_diff.log
+		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff
+	ls -l test_titan_restart.diff
