@@ -90,3 +90,19 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
 end subroutine PW_run
 
+!==============================================================================
+
+subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVar, &
+                 Name_V, iBlock)
+  implicit none
+
+  character(len=*), parameter :: NameSub='PW_put_from_ie'
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: iSize, jSize, nVar, iBlock
+  real, intent(in) :: Buffer_IIV(iSize, jSize, nVar)
+  character(len=*), intent(in) :: Name_V(nVar)
+
+  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+
+end subroutine PW_put_from_ie
