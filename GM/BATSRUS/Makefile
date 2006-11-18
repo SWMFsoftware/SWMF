@@ -244,4 +244,4 @@ dist:	distclean
 
 include Makefile_CONFIGURE #^CFG IF CONFIGURE
 
-include Makefile_TEST #^CFG IF TEST
+include Makefile_TEST #^CFG IF TESTING
