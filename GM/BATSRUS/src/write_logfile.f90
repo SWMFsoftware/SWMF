@@ -417,7 +417,7 @@ contains
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
 
-    case('jin','Jin','jout','Jout','jinmax','Jinmax','joutmax','Joutmax')
+    case('jin','jout','jinmax','joutmax')
        !calculate the total current either into or out of the body
        ! Calculate
        do iBLK=1,nBlock
@@ -456,22 +456,23 @@ contains
           end do; end do; end do
           !now modify tmp1 according to the case we want
           select case(NameLogVar)
-          case('jin','Jin')
+          case('jin')
              where (tmp1_BLK(:,:,:,iBLK) > 0.0)
                 tmp1_BLK(:,:,:,iBLK) = 0.0
              end where
-          case('jout','Jout')
+          case('jout')
              where (tmp1_BLK(:,:,:,iBLK) < 0.0)
                 tmp1_BLK(:,:,:,iBLK) = 0.0
              end where
           end select
        end do
-       ! the 0.5 used below is because the centered difference formulae above used
-       ! (1/Dx) instead of the correct 1/(2Dx),
+       ! the 0.5 used below is because the centered difference formulae 
+       ! above used (1/Dx) instead of the correct 1/(2Dx),
        select case(NameLogVar)
-       case('jin','Jin','jout','Jout')
-          LogVar_I(iVarTot) = 0.5 * integrate_sphere(180,rCurrents,tmp1_BLK)/(4.0*cPi*rCurrents**2)
-       case('jinmax','Jinmax')
+       case('jin','jout')
+          LogVar_I(iVarTot) = 0.5 * &
+               integrate_sphere(180,rCurrents,tmp1_BLK)/(4.0*cPi*rCurrents**2)
+       case('jinmax')
           qval = 0.5 * minmax_sphere(-1,180,rCurrents,tmp1_BLK)
           if(nProc>1)then
              call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MIN, &
@@ -481,7 +482,7 @@ contains
           else
              LogVar_I(iVarTot) = qval/nProc
           endif
-       case('joutmax','Joutmax')
+       case('joutmax')
           qval = 0.5 * minmax_sphere(1,180,rCurrents,tmp1_BLK)
           if(nProc>1)then
              call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MAX, &
@@ -923,8 +924,8 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_U
      case('ekinx','ekiny','ekinz','ekin')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rho*unitUSER_U**2
-     case('jx','jy','jz','jxpnt','jypnt','jzpnt','jin', &
-          'Jin','jout','Jout','jinmax','Jinmax','joutmax','Joutmax')
+     case('jx','jy','jz','jxpnt','jypnt','jzpnt',&
+          'jin','jout','jinmax','joutmax')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_J
 
 !!$! Ionosphere values                                !^CFG IF IONOSPHERE BEGIN
