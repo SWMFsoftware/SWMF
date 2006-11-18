@@ -20,9 +20,9 @@ if($Tar){
     &print_help if $#ARGV != 0;
     my $dir = $ARGV[0];
     my $list = 'test.*/log.* test.*/error.* test.*/SWITCHES test.*/PARAM.expand '.
-	' test.*/IO2/*.log test.*/IO2/*.sat test.*/ionosphere';
-    print "cd $dir;\ntar -cf ../TEST.tar $list\n";
-    print `cd $dir;  tar -cf ../TEST.tar $list`;
+	' test.*/IO2/*.log test.*/IO2/*.sat';
+    print "cd $dir;\ntar -czf ../TEST.tgz $list\n";
+    print `cd $dir;  tar -czf ../TEST.tgz $list`;
     exit 0;
 }
 
