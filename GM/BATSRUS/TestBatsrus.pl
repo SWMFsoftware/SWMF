@@ -117,6 +117,8 @@ foreach my $arg (@ARGV){
 
     if($arg =~ /^-s=(.*)/     ){$Sleep=$1  ; next}
 
+    if($arg =~ /^-d=(.*)/     ){$rundir=$1 ; next}
+
     if( ($switch,$value) = ($arg=~/-([A-Z]\w*)=(.*)$/) ){
 	# -Switch=value
 	if(not $choice{$switch} ){
@@ -468,7 +470,7 @@ Purpose:
 #BOC
 "Usage:
 
-    TestBatsrus.pl [-h] [-l] [-v] [-norun]
+    TestBatsrus.pl [-h] [-l] [-v] [-norun] [-d=DIR]
            [-r=RUNCOMMAND] [-x=EXECUTABLE] [-f=FLAGS]
            [-value1] [-Switch2=value2] [-Switch3=value3,value4]...
 
@@ -476,6 +478,7 @@ Purpose:
   -l             list switches and possible values and stop
   -v             verbose
   -norun         produce test.*/ directories with parameter files but no run.
+  -d=DIR         set the name of the run directory. DEFAULT is -d='run'
   -r=RUNCOMMAND  run command. DEFAULT is -r='$run_default'
   -x=EXECUTABLE  executable.  DEFAULT is -x=$exe_default
   -f=FLAGS       flags for the executables. DEFAULT is empty string.

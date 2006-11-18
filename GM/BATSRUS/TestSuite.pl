@@ -2,26 +2,26 @@
 #^CFG COPYRIGHT UM
 #^CFG FILE TESTING
 
-$DefaultExe = "BATSRUS.exe";
-$Help   =$h;
-$Verbose=$v+0;
-$Norun  =$norun+0;
-$Execute=$x; $Execute=$DefaultExe unless $x;
-$Run=$r;     $Run="mpirun -np 2" unless $r;
-$Flags  =$f;
-$Sleep=$s+0;
+my $DefaultExe = "BATSRUS.exe";
+my $Help   = $h;
+my $Verbose= $v+0;
+my $RunDir = ($d or "run");
+my $Norun  = $norun+0;
+my $Execute= ($x or $DefaultExe);
+my $Run    = ($r or $Run="mpirun -np 2");
+my $Flags  = $f;
+my $Sleep  = $s+0;
 
 &print_help if $Help or $#ARGV != 0;
 
 # Figure out directory for TestBatsrus.pl
-$Dir = $0; $Dir =~ s/TestSuite\.pl//; $Dir = './' unless $Dir;
+my $Dir = $0; $Dir =~ s/TestSuite\.pl//; $Dir = './' unless $Dir;
 
-$testbatsrus = "$Dir"."TestBatsrus.pl ".
-    "-v=$Verbose -norun=$Norun -r='$Run' -x=$Execute -f='$Flags' -s=$Sleep";
+my $testbatsrus = "$Dir"."TestBatsrus.pl ".
+    "-v=$Verbose -norun=$Norun -d=$RunDir -r='$Run' -x=$Execute -f='$Flags' ".
+    "-s=$Sleep";
 
-$Table  =$ARGV[0];
-
-# first half of Table 1
+my $Table  =$ARGV[0];
 
 ###########################################################################
 if($Table =~ /test/i){
@@ -181,10 +181,6 @@ if($Table =~ /test/i){
                                                   #^CFG END ROEFLUX
                                                #^CFG END IONOSPHERE
 
-}elsif($Table=~/^full$/i){
-
-    die "Full test is to be implemented!\n";
-
 }else{
     print "ERROR: unknown option for testsuite!\n";
     print_help;
@@ -223,9 +219,9 @@ sub print_help{
 #BOC
 "
 
-TestSuite.pl [-h] [-v] [-norun] [-s=SLEEP]              \\
+TestSuite.pl [-h] [-v] [-norun] [-d=DIR] [-s=SLEEP]     \\
              [-r=RUNCOMMAND] [-x=EXECUTABLE] [-f=FLAGS] \\
-             test | func | robust | full
+             test | func | robust
 
 -h     print this help message
 
@@ -235,6 +231,9 @@ TestSuite.pl [-h] [-v] [-norun] [-s=SLEEP]              \\
 
 -s=SLEEP
        sleep SLEEP seconds between tests, e.g. use -s=10 for 10 seconds.
+
+-d=DIR
+       define the run directory. The default is -d=run.
 
 -r=RUNCOMMAND
        define the runcommand to be executed. The default runcommand is 
@@ -247,16 +246,14 @@ TestSuite.pl [-h] [-v] [-norun] [-s=SLEEP]              \\
 -f=FLAGS
        command line flags for the executable. The default is no flags.
 
-
 test   just do a single run
 
 empty  test the default settings (almost empty PARAM.in file)
 
 func   test the functionality (after syntactic change)
 
-robust test robustness (of new algorithm)
+robust test robustness (of new algorithm)"
 
-full   test everything (before release)"
 #EOC
 ,"\n\n";
 
