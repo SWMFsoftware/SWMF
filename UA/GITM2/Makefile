@@ -104,6 +104,33 @@ rundir:
 	fi);
 
 test:
+	make test_compile
+	make test_rundir
+	make test_run
+	make test_check
+
+test_compile:
+	make clean
+	./GridSize.pl -g=9,9,50,4
+	make GITM IEDIR=`pwd`/srcIE
+
+TESTDIR = run_test
+
+test_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
+	cd ${TESTDIR}; cp UA/DataIn/UAM.in.test UAM.in
+
+test_run:
+	cd ${TESTDIR}; mpirun -np 2 ./GITM.exe > runlog
+
+test_check:
+	-@(${SCRIPTDIR}/DiffNum.pl \
+		${TESTDIR}/UA/data/log00000002.dat \
+		srcData/log00000002.dat > test.diff)
+	ls -l test.diff
+
+test_orig:
 	mkdir -p ${UADIR}/test/UA
 	cd ${UADIR}/test/UA; \
 		mkdir restartOUT data; \
