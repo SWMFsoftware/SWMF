@@ -16,6 +16,9 @@ LIB: check_src
 	cd src; make LIB
 	cd srcInterface; make LIB
 
+test:
+	touch see_gm_batsrus.diff
+
 rundir: check_src
 	mkdir ${RUNDIR}/IH
 	cd ${RUNDIR}/IH; \

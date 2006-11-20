@@ -51,3 +51,6 @@ distclean:
 	cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
 	mv Makefile.def.orig Makefile.def
+
+test:
+	echo "IE/Ridley_serial test is incomplete" > notest.diff

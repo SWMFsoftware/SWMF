@@ -12,6 +12,9 @@ LIB:
 	cd src; make LIB
 	cd srcInterface; make LIB
 
+test:
+	echo "SP/Kota test is incomplete" > notest.diff
+
 rundir: 
 	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN
 	@(if [ "${STANDALONE}" != 'NO' ]; then 	\

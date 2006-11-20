@@ -11,6 +11,9 @@ install:
 LIB:
 	cd src; make LIB
 
+test:
+	@echo "There is no test for RCM2" > notest.diff
+
 rundir:
 	mkdir ${RUNDIR}/IM
 	cd ${RUNDIR}/IM; mkdir restartIN restartOUT input plots

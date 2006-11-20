@@ -12,6 +12,9 @@ LIB:    install
 	cd src;          make LIB
 	cd srcInterface; make LIB
 
+test:
+	echo "SP/FLAMPA test is incomplete" > notest.diff
+
 rundir: 
 	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN
 
