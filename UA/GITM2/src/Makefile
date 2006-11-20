@@ -87,14 +87,16 @@ OBJECTS = \
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
 
-GITM:	DEPEND
-	@make GITM.exe
-	@echo "GITM.exe has been created"
+EXE = ${BINDIR}/GITM.exe
 
-GITM.exe:	${OBJECTS} ${MODULES} main.o
-	${LINK.f90} ${Lflag1} -o GITM.exe main.o ${OBJECTS} ${MODULES}\
+GITM:	DEPEND
+	@make ${EXE}
+	@echo "${EXE} has been created"
+
+${EXE}:	${OBJECTS} ${MODULES} main.o
+	${LINK.f90} ${Lflag1} -o ${EXE} main.o ${OBJECTS} ${MODULES}\
 	-L${ABDIR} -lSphere -L${IODIR} -lindices -L${IEDIR} -lIE\
-	-L${EDDIR} -lED -L. -lSHARE ${IEDIR}/ModConductance.o ${EDDIR}/ModIons.o
+	-L${EDDIR} -lED -L${LIBDIR} -lSHARE ${IEDIR}/ModConductance.o ${EDDIR}/ModIons.o
 
 STATIC:
 	cp -f ModGITM_static.f90    ModGITM.f90
