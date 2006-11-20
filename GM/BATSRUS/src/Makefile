@@ -221,6 +221,9 @@ ${MY_LIB}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 # Stand alone executable
 #
 
+stand_alone.f90:
+	cp stand_alone_gm.f90 stand_alone.f90
+
 # Object files not included into the library
 OBJECTS_EXE = main.o stand_alone.o
 
