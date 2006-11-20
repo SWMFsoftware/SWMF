@@ -26,7 +26,7 @@ test_func_compile:
 
 test_func_run:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=GM
+	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
 	./TestSuite.pl -d=${TESTDIR} func
 
 test_func_check:
@@ -57,7 +57,7 @@ test_titan_compile:
 
 test_titan_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=GM
+	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
 	cd ${TESTDIR}; \
 		cp GM/Param/TITAN/PARAM.in .; \
 		tar xzf GM/Param/TITAN/TitanInput.tgz
