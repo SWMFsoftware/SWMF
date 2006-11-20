@@ -1150,17 +1150,39 @@ The default value is tSimulation=0.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="TIMESTEPPING">
 	<parameter name="nStage" type="integer" input="select">
-		<option value="1" default="T" />
-		<option value="2" />
+		<option value="1" />
+		<option value="2" default="T" />
 	</parameter>
 	<parameter name="CflExpl" type="real" min="0" max="1" default="0.8" />
 
 #TIMESTEPPING
-2                       nStage
+2                       nStage (1 or 2)
 0.80                    CflExpl
 
-! Parameters for explicit time integration.
-! Default is 1 stage and CflExpl=0.8
+Parameters for time integration. For explicit time integration nStage
+is the number of stages in the Runge-Kutta scheme. For implicit time
+stepping nStage=2 corresponds to the BDF2 scheme that
+uses the previous time step to make the scheme 2nd order accurate in time.
+For explicit time stepping the CPU time is proportional to the number of 
+stages. In time accurate runs the 1-stage explicit time stepping scheme 
+may work reasonably well with second order spatial discretization, 
+especially if the time step is limited to a very small value. 
+Using a one stage scheme can speed up the code by a factor of two with 
+little compromise in accuracy.
+
+For local time stepping (steady state mode) one should always use the 
+2-stage scheme with 2-nd order spatial accuracy to avoid oscillations
+(or make the CFL number small, about 0.4). 
+
+For implicit scheme the second order BDF2 scheme is more accurate 
+but not more expensive than the first order backward Euler scheme, 
+so it is a good idea to use nStage=nOrder. 
+
+To achieve consistency between the spatial and temporal orders of accuracy,
+the #SCHEME command always sets nStage to be the same as nOrder. 
+The #TIMESTEPPING command can be used to reset nStage if required.
+
+Default is 2-stage scheme with CflExpl=0.8
 </command>
 
 <command name="FIXEDTIMESTEP">
@@ -2936,8 +2958,8 @@ Example for InvD2Ray =
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="SCHEME">
 	<parameter name="nOrder" type="integer" input="select">
-		<option name="1" default="T"	/>
-		<option name="2"		/>
+		<option name="1" />
+		<option name="2" default="T" />
 	</parameter>
 	<parameter name="TypeFlux" type="string" input="select">
 	    <option name="Roe"     value="Roe/roe/1"/>   							<!--^CFG IF ROEFLUX-->
@@ -2959,7 +2981,12 @@ Example for InvD2Ray =
 2			nOrder (1 or 2)
 Rusanov			TypeFlux
 mc3			TypeLimiter ! Only for nOrder=2
-1.2			LimiterBeta ! Only if LimiterType is NOT 'minmod'
+1.2			LimiterBeta ! Only if TypeLimiter is NOT 'minmod'
+
+The nOrder parameter determines the spatial and temporal accuracy of
+the scheme. The spatially first order scheme uses a one-stage time integration,
+while the spatially second order scheme either uses a two-stage Runge-Kutta 
+explicit or a BDF2 three-level implicit time discretization. 
 
 \noindent
 Possible values for TypeFlux:
@@ -2969,7 +2996,7 @@ Possible values for TypeFlux:
  'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
  'Roe'         - Roe's approximate Riemann flux       <!--^CFG IF ROEFLUX  -->
 \end{verbatim}
-Possible values for TypeLimiter:
+Possible values for TypeLimiter for spatially second order schemes:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
  'mc'          - monotonized central limiter with a beta parameter
@@ -2985,6 +3012,8 @@ are between 1.0 and 2.0 :
   LimiterBeta = 1.5 is a typical value for the mc/mc3 limiters
   LimiterBeta = 1.2 is the recommended value for the beta limiter
 \end{verbatim}
+The default is the second order Rusanov scheme with the minmod limiter.
+
 </command>
 
 <command name="NONCONSERVATIVE">
