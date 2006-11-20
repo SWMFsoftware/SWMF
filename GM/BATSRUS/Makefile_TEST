@@ -2,18 +2,47 @@
 
 ### TESTS FOR STAND-ALONE BATSRUS ###
 
-test:	test_titan_all
+test:	test_func test_titan
 	ls -l *.diff
-	
+
+# All tests are done in this directory:
 TESTDIR = run_test
+
+# Reference solution is put into this directory when needed:
+REFDIR = run_test_ref
+
+### FUNCTIONALITY TEST SUITE ###
+
+test_func:
+	make test_func_compile
+	make test_func_run
+	make test_func_check
+
+test_func_compile:
+	make clean
+	Options.pl -u=Default -e=Mhd
+	GridSize.pl -g=8,8,8,400,100
+	make BATSRUS PIDL PSPH
+
+test_func_run:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=GM
+	./TestSuite.pl -d=${TESTDIR} func
+
+test_func_check: ${REFDIR}
+	rm -rf ${REFDIR}; mkdir ${REFDIR}
+	cd ${REFDIR}; tar -xzf ../Param/TESTSUITE/TEST.tgz
+	./TestCompare.pl -q -v -o=1e-12 ${TESTDIR} ${REFDIR} > test_func.diff
+	./TestCompare.pl -speed ${TESTDIR} ${REFDIR} > test_func.speed
+	ls -l test_func.diff test_func.speed
 
 ### TESTS FOR MODELING TITAN ###
 
-test_titan_all:
-	make test_titan
+test_titan:
+	make test_titan_start
 	make test_titan_restart
 
-test_titan:
+test_titan_start:
 	make test_titan_compile
 	make test_titan_rundir
 	make test_titan_run
