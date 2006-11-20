@@ -14,9 +14,11 @@ OBJECTS = \
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} rbe_main.o ${OBJECTS}
 
+EXE = ${BINDIR}/rbe.exe
+
 RBE:
-	@make rbe.exe
-	@echo "rbe.exe has been created"
+	@make ${EXE}
+	@echo "${EXE} has been updated"
 
 rbe_main.o: rbe_subs.o ${LIBDIR}/libSHARE.a ${LIBDIR}/libTIMING.a
 
@@ -26,8 +28,8 @@ rbe_main.o: rbe_subs.o ${LIBDIR}/libSHARE.a ${LIBDIR}/libTIMING.a
 .f90.o:
 	${COMPILE.f90} ${CFLAGS} ${PRECISION} $<
 
-rbe.exe: rbe_main.o ${OBJECTS}
-	${COMPILE.f90} ${Lflag2} -o rbe.exe rbe_main.f90 ${OBJECTS} \
+${EXE}: rbe_main.o ${OBJECTS}
+	${COMPILE.f90} ${Lflag2} -o ${EXE} rbe_main.f90 ${OBJECTS} \
 	-L${LIBDIR} -lTIMING -lSHARE
 
 MY_LIB = ${LIBDIR}/libRB.a
