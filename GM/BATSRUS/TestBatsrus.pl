@@ -171,7 +171,7 @@ if(-f "Makefile"){
 	if($exe ne $exe_default and $exe ne "SWMF.exe"){
 	    die "ERROR: No executable $rundir/$exe was found!\n" 
 		unless -x "$rundir/$exe";
-	}elsif(not -f "bin/$exe" and not -f "src/$exe"){
+	}elsif(not -f not -f "src/$exe" and not "bin/$exe" and not -f "../../bin/$exe"){
 	    print "Compiling $exe...\n";
 	    &execute("make");
 	    die "ERROR: $exe could not be compiled with make\n"
@@ -180,7 +180,9 @@ if(-f "Makefile"){
 	# Compile postprocessing executables if necessary
 	my @plottype=@{$select{"Plottype"}};
 	foreach my $PLT ("IDL","SPH"){
-	    if(not -f "src/Post$PLT.exe" and not -f "bin/Post$PLT.exe"){
+	    if(not -f "src/Post$PLT.exe" and 
+	       not -f "bin/Post$PLT.exe" and 
+	       not "../../bin/Post$PLT.exe"){
 		print "Compiling Post$PLT.exe...\n";
 		&execute("make P$PLT");
 		warn "WARNING: Post$PLT.exe could not be compiled".
