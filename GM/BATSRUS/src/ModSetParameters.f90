@@ -1048,6 +1048,7 @@ subroutine MH_set_parameters(TypeAction)
         end do
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
+        nStage = nOrder
         call read_var('TypeFlux',FluxType)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter', TypeLimiter)
