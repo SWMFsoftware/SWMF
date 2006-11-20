@@ -167,7 +167,7 @@ Module ModMain
   character(len=10) :: prolong_type  = 'lr'
 
   ! Message passing mode ('dir', 'opt', 'all', 'allopt' ...)
-  character(len=10) :: optimize_message_pass = 'dir'
+  character(len=10) :: optimize_message_pass = 'allopt'
 
   !\
   ! Source terms
