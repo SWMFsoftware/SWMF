@@ -43,14 +43,25 @@ RBE:
 LIB:
 	cd src; make LIB
 
-test:	RBE run
-	cd run; ./rbe.exe
-	make test_compare
+TESTDIR = run_test
 
-test_compare:
+test:	RBE
+	make test_rundir
+	make test_run
+	make test_check
+
+test_run:
+	cd ${TESTDIR}; ./rbe.exe > runlog
+
+test_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=YES RBDIR=`pwd`
+
+test_check:
 	gunzip -c test/2000f223_e.fls.gz > test/2000f223_e.fls
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		test/2000f223_e.fls run/2000f223_e.fls
+		test/2000f223_e.fls ${TESTDIR}/2000f223_e.fls > test.diff
+	ls -l test.diff
 
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES

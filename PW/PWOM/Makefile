@@ -63,23 +63,31 @@ LIB:
 	cd src; make LIB
 	cd srcInterface; make LIB
 
-test:	run PWOM
-	cd run; PWOM.exe
-	@make test_compare
+TESTDIR = run_test
+
+test:	PWOM
+	make test_rundir
+	make test_run
+	make test_compare
+
+test_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
+
+test_run: PWOM
+	cd ${TESTDIR}; ./PWOM.exe
 
 test_compare:
-	-@(share/Scripts/DiffNum.pl -r=1e-10 \
-		run/PW/restartOUT/restart_iline0001.dat \
-		output/${PLANET}/restart_iline0001.dat > diff.restart)
-	-@(share/Scripts/DiffNum.pl -r=1e-10 \
-		run/PW/plots/plots_iline0001.out \
-		output/${PLANET}/plots_iline0001.out > diff.plots)
-	-@(share/Scripts/DiffNum.pl run/PW/log.out output/${PLANET}/log.out \
-		> diff.log)
-	ls -l diff.restart diff.plots diff.log
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
+		output/${PLANET}/restart_iline0001.dat > test_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+		${TESTDIR}/PW/plots/plots_iline0001.out \
+		output/${PLANET}/plots_iline0001.out > test_plots.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out output/${PLANET}/log.out \
+		> test_log.diff)
+	ls -l *.diff
 
-testrun: PWOM
-	cd run; PWOM.exe
 
 rundir: run
 
