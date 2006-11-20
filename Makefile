@@ -396,4 +396,10 @@ ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
 ESMF_SWMF_rundir: run
 	@cd ESMF/ESMF_SWMF; make rundir
 
-# keep this line
+
+test: test_comp
+
+test_comp:
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+		do ( cd $$i; make test; ); done
+	ls -l [A-Z][A-Z]/*/*.diff
