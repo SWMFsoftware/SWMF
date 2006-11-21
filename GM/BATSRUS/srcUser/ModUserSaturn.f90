@@ -3,23 +3,9 @@ Module ModUser
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
-  use ModUserEmpty, ONLY:               &
-!!!       user_read_inputs,                &
-       user_init_session,               &
-       user_set_ics,                    &
-       user_initial_perturbation,       &
-       user_set_boundary_cells,         &
-       user_face_bcs,                   &
-       user_set_outerbcs,               &
-       user_specify_initial_refinement, &
-       user_amr_criteria,               &
-       user_write_progress,             &
-       user_get_log_var,                &
-       user_set_plot_var,               &
-!!!       user_calc_sources,               &
-       user_get_b0,                     &
-       user_update_states,              &
-       user_io_units
+  use ModUserEmpty,               &
+       IMPLEMENTED1 => user_read_inputs,                &
+       IMPLEMENTED2 => user_calc_sources
 
   include 'user_module.h' !list of public methods
  

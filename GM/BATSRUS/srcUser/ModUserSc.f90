@@ -1,29 +1,21 @@
-
 !========================================================================
-Module ModUser
+module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne
   use ModMain,     ONLY: UseUserB0,UseUserHeating
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
   !  use ModUserTD99  ! To include TD99 flux rope.
-  use ModUserEmpty, ONLY:               &
-!!!       user_read_inputs,                &
-!!!       user_init_session,               &
-       user_set_ics,                    &
-!!!       user_initial_perturbation,       &
-       user_set_boundary_cells,         &
-!!!       user_face_bcs,                   &
-       user_set_outerbcs,               &
-!!!       user_specify_initial_refinement, &
-!!!       user_amr_criteria,               &
-       user_write_progress,             &
-!!!       user_get_log_var,                &
-       user_set_plot_var,               &
-       user_calc_sources,               &
-!!!       user_get_b0,                     &
-!!!       user_update_states,              &
-       user_io_units
+  use ModUserEmpty,               &
+       IMPLEMENTED1 => user_read_inputs,                &
+       IMPLEMENTED2 => user_init_session,               &
+       IMPLEMENTED3 => user_initial_perturbation,       &
+       IMPLEMENTED4 => user_face_bcs,                   &
+       IMPLEMENTED5 => user_specify_initial_refinement, &
+       IMPLEMENTED6 => user_amr_criteria,               &
+       IMPLEMENTED7 => user_get_log_var,                &
+       IMPLEMENTED8 => user_get_b0,                     &
+       IMPLEMENTED9 => user_update_states
 
   include 'user_module.h' !list of public methods
  

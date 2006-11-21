@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !========================================================================
-Module ModUser
+module ModUser
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
   !
@@ -9,22 +9,15 @@ Module ModUser
   ! subroutines do and how to implement them for your specific problem.
 
   use ModSize
-  use ModUserEmpty, ONLY:               &
-       !!!user_read_inputs,                &
-       !!!user_init_session,               &
-       !!!user_set_ics,                    &
-       user_initial_perturbation,       &
-       !!!user_set_boundary_cells,         &
-       !!!user_face_bcs,                   &
-       user_set_outerbcs,                &
-       user_specify_initial_refinement,  &
-       user_amr_criteria,                &
-       user_write_progress,              &
-       user_get_log_var,                 &
-       !!!user_calc_sources,             &
-       !!!user_update_states ,           &
-       !!! user_set_plot_var ,           &
-       user_get_b0
+  use ModUserEmpty,               &
+       IMPLEMENTED1 => user_read_inputs,                &
+       IMPLEMENTED2 => user_init_session,               &
+       IMPLEMENTED3 => user_set_ics,                    &
+       IMPLEMENTED4 => user_set_boundary_cells,         &
+       IMPLEMENTED5 => user_face_bcs,                   &
+       IMPLEMENTED6 => user_calc_sources,               &
+       IMPLEMENTED7 => user_update_states,              &
+       IMPLEMENTED8 => user_set_plot_var
 
   include 'user_module.h' !list of public methods
 
@@ -1276,6 +1269,6 @@ contains
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 
   end function neutral_density
-  !=============================================================================
+  !============================================================================
 
-end Module ModUser
+end module ModUser

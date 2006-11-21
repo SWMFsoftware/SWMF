@@ -7,23 +7,10 @@ Module ModUser
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne,cTiny
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
-  use ModUserEmpty, ONLY:               &
-       user_read_inputs,                &
-!!!       user_init_session,               &
-!!!       user_set_ics,                    &
-       user_initial_perturbation,       &
-       user_set_boundary_cells,         &
-       user_face_bcs,                   &
-!!!       user_set_outerbcs,               &
-       user_specify_initial_refinement, &
-       user_amr_criteria,               &
-       user_write_progress,             &
-       user_get_log_var,                &
-       user_set_plot_var,               &
-       user_calc_sources,               &
-       user_get_b0,                     &
-       user_update_states,              &
-       user_io_units
+  use ModUserEmpty,               &
+       IMPLEMENTED1 => user_init_session,               &
+       IMPLEMENTED2 => user_set_ics,                    &
+       IMPLEMENTED3 => user_set_outerbcs
 
   include 'user_module.h' !list of public methods
  
