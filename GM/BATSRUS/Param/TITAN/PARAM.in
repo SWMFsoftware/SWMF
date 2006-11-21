@@ -66,7 +66,7 @@ minmod                  LimiterType
 #USERFLAGS
 T			UseUserInnerBcs
 T			UseUserSource
-T			UseUserPerturbation
+F			UseUserPerturbation
 F                       UseUserOuterBcs
 T                       UseUserICs
 T                       UseUserSpecifyRefinement
