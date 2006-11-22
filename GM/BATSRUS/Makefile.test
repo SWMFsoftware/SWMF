@@ -11,6 +11,19 @@ TESTDIR = run_test
 # Reference solution is put into this directory when needed:
 REFDIR = run_test_ref
 
+# Tests are done either parallel or serial. Default:
+MPIRUN = mpirun -np 2
+
+test_help:
+	@echo "    test                       (run all tests with ${MPIRUN})"
+	@echo "    test MPIRUN=               (run all tests serially)"
+	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
+	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
+	@echo "    test_func                  (run functionality tests only)"
+	@echo "    test_titan                 (run titan tests only)"
+	@echo "    test_titan_start           (run first titan test only)"
+	@echo "    test_titan_restart         (run titan restart test only)"
+
 ### FUNCTIONALITY TEST SUITE ###
 
 test_func:
@@ -27,7 +40,7 @@ test_func_compile:
 test_func_run:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
-	./TestSuite.pl -d=${TESTDIR} func
+	./TestSuite.pl -r='${MPIRUN}' -d=${TESTDIR} func
 
 test_func_check:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
@@ -64,9 +77,9 @@ test_titan_rundir:
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_titan_run:
-	cd ${TESTDIR}; ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest
-	cd ${TESTDIR}; PostProc.pl -M -o TitanTest
+	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest
 
 test_titan_check:
 	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
@@ -82,7 +95,7 @@ test_titan_restart:
 test_titan_restart_save:
 	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
-	cd ${TESTDIR};	./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest/RestartSave RESTART_titan
 	cd ${TESTDIR}; PostProc.pl -M -o TitanTest/RestartSave
 	cd ${TESTDIR}; Restart.pl -o RESTART_titan; 
@@ -91,7 +104,7 @@ test_titan_restart_read:
 	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; Restart.pl -i RESTART_titan
-	cd ${TESTDIR}; ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest/RestartRead
 	cd ${TESTDIR}; PostProc.pl -M -o TitanTest/RestartRead
 
