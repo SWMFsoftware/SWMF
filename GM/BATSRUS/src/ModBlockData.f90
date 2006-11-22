@@ -10,7 +10,7 @@ module ModBlockData
 
   public put_block_data    ! store 1 or more values into storage
   interface put_block_data
-     module procedure put_point, put_array
+     module procedure put_point, put_array, put_array2, put_array3, put_array4
   end interface
 
   public set_block_data    ! indicate that all block data has been set
@@ -19,7 +19,7 @@ module ModBlockData
 
   public get_block_data    ! get 1 or more values from storage
   interface get_block_data
-     module procedure get_point, get_array
+     module procedure get_point, get_array, get_array2, get_array3, get_array4
   end interface
 
   public n_block_data      ! function for number of data values stored
@@ -175,6 +175,114 @@ contains
   end subroutine put_array
 
   !===========================================================================
+
+  subroutine put_array2(iBlock, nI, nJ, Value_II)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ
+    real,    intent(in) :: Value_II(nI, nJ)
+
+    integer :: i, j, nValue
+    character (len=*), parameter :: NameSub=NameMod//'::put_array2'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ=',nI, nJ
+    endif
+
+    if(UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.true. in '//NameSub)
+    end if
+
+    nValue = nI*nJ
+    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+         call extend_array(iBlock, nValue)
+    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    i = iData_B(iBlock)
+    do j = 1, nJ
+       Data_B(iBlock) % Array_I(i+1:i+nI) = Value_II(:,j)
+       i = i+nI
+    end do
+
+    iData_B(iBlock) = i
+
+  end subroutine put_array2
+
+  !===========================================================================
+
+  subroutine put_array3(iBlock, nI, nJ, nK, Value_III)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ, nK
+    real,    intent(in) :: Value_III(nI, nJ, nK)
+
+    integer :: i, j, k, nValue
+    character (len=*), parameter :: NameSub=NameMod//'::put_array3'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK
+    endif
+
+    if(UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.true. in '//NameSub)
+    end if
+
+    nValue = nI*nJ*nK
+    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+         call extend_array(iBlock, nValue)
+    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    i = iData_B(iBlock)
+    do k = 1, nK; do j = 1, nJ
+       Data_B(iBlock) % Array_I(i+1:i+nI) = Value_III(:,j,k)
+       i = i+nI
+    end do; end do
+
+    iData_B(iBlock) = i
+
+  end subroutine put_array3
+
+  !===========================================================================
+
+  subroutine put_array4(iBlock, nI, nJ, nK, nL, Value_IIII)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ, nK, nL
+    real,    intent(in) :: Value_IIII(nI, nJ, nK, nL)
+
+    integer :: i, j, k, l, nValue
+    character (len=*), parameter :: NameSub=NameMod//'::put_array4'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK, nL
+    endif
+
+    if(UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.true. in '//NameSub)
+    end if
+
+    nValue = nI*nJ*nK*nL
+    if(nData_B(iBlock) < 0)call init_block(iBlock,1)
+    if(nData_B(iBlock)+nValue > size(Data_B(iBlock) % Array_I)) &
+         call extend_array(iBlock, nValue)
+    nData_B(iBlock) = nData_B(iBlock)+nValue
+
+    i = iData_B(iBlock)
+    do l = 1, nL; do k = 1, nK; do j = 1, nJ
+       Data_B(iBlock) % Array_I(i+1:i+nI) = Value_IIII(:,j,k,l)
+       i = i+nI
+    end do; end do; end do
+
+    iData_B(iBlock) = i
+
+  end subroutine put_array4
+
+  !===========================================================================
   subroutine set_block_data(iBlock)
     integer, intent(in) :: iBlock
     character(len=*), parameter :: NameSub = NameMod//'::set_block_data'
@@ -276,6 +384,135 @@ contains
 
   !===========================================================================
 
+  subroutine get_array2(iBlock, nI, nJ, Value_II)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ
+    real,    intent(out):: Value_II(nI, nJ)
+
+    integer :: i, j, nValue
+
+    character(len=*), parameter :: NameSub = NameMod//'::get_array2'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ=',nI, nJ
+    endif
+    ! wrap around
+    if(iData_B(iBlock) >= nData_B(iBlock)) iData_B(iBlock) = 0
+
+    i = iData_B(iBlock)
+    nValue = nI*nJ
+    if(i + nValue > nData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
+            ' nData_B =',nData_B(iBlock),&
+            ' less than iData_B=',i,' + nValue=',nValue
+       call stop_mpi('nData_B(iBlock) < iData_B+nValue in '//NameSub)
+    end if
+
+    if(.not.UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.false. in '//NameSub)
+    end if
+
+    ! Read data
+    do j=1, nJ
+       Value_II(:,j) = Data_B(iBlock) % Array_I(i+1:i+nI)
+       i = i+nI
+    end do
+
+    ! Adjust index
+    iData_B(iBlock) = i
+
+  end subroutine get_array2
+
+  !===========================================================================
+
+  subroutine get_array3(iBlock, nI, nJ, nK, Value_III)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ, nK
+    real,    intent(out):: Value_III(nI, nJ, nK)
+
+    integer :: i, j, k, nValue
+
+    character(len=*), parameter :: NameSub = NameMod//'::get_array3'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK
+    endif
+    ! wrap around
+    if(iData_B(iBlock) >= nData_B(iBlock)) iData_B(iBlock) = 0
+
+    i = iData_B(iBlock)
+    nValue = nI*nJ*nK
+    if(i + nValue > nData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
+            ' nData_B =',nData_B(iBlock),&
+            ' less than iData_B=',i,' + nValue=',nValue
+       call stop_mpi('nData_B(iBlock) < iData_B+nValue in '//NameSub)
+    end if
+
+    if(.not.UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.false. in '//NameSub)
+    end if
+
+    ! Read data
+    do k=1, nK; do j=1, nJ
+       Value_III(:,j,k) = Data_B(iBlock) % Array_I(i+1:i+nI)
+       i = i+nI
+    end do; end do
+
+    ! Adjust index
+    iData_B(iBlock) = i
+
+  end subroutine get_array3
+  
+  !===========================================================================
+
+  subroutine get_array4(iBlock, nI, nJ, nK, nL, Value_IIII)
+    integer, intent(in) :: iBlock
+    integer, intent(in) :: nI, nJ, nK, nL
+    real,    intent(out):: Value_IIII(nI, nJ, nK, nL)
+
+    integer :: i, j, k, l, nValue
+
+    character(len=*), parameter :: NameSub = NameMod//'::get_array4'
+    !------------------------------------------------------------------------
+    if(DoDebug)then
+       if(iProc==ProcTest .and. iBlock==BlkTest) &
+            write(*,*)NameSub,' called with nI, nJ, nK, nL=',nI, nJ, nK, nL
+    endif
+    ! wrap around
+    if(iData_B(iBlock) >= nData_B(iBlock)) iData_B(iBlock) = 0
+
+    i = iData_B(iBlock)
+    nValue = nI*nJ*nK*nL
+    if(i + nValue > nData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock, &
+            ' nData_B =',nData_B(iBlock),&
+            ' less than iData_B=',i,' + nValue=',nValue
+       call stop_mpi('nData_B(iBlock) < iData_B+nValue in '//NameSub)
+    end if
+
+    if(.not.UseData_B(iBlock)) then
+       write(*,*)NameSub,' ERROR for iBlock=',iBlock
+       call stop_mpi('UseData_B=.false. in '//NameSub)
+    end if
+
+    ! Read data
+    do l=1, nL; do k=1, nK; do j=1, nJ
+       Value_IIII(:,j,k,l) = Data_B(iBlock) % Array_I(i+1:i+nI)
+       i = i+nI
+    end do; end do; end do
+
+    ! Adjust index
+    iData_B(iBlock) = i
+
+  end subroutine get_array4
+  
+  !===========================================================================
+
   subroutine clean_block(iBlock)
     integer, intent(in) :: iBlock
     character (len=*), parameter :: NameSub = NameMod//'::clean_block'
@@ -333,7 +570,7 @@ contains
 
   subroutine test_block_data
 
-    real :: Value, Value_I(3)
+    real :: Value, Value_I(3), Value_II(2,3)
     integer :: nData, i
     character (len=*), parameter :: NameSub = NameMod//'::test_block_data'
     !--------------------------------------------------------------------------
@@ -361,17 +598,18 @@ contains
     i = size(Data_B(1) % Array_I)
     if(i /= 4)write(*,*)'put_block_data failed, size(Array)=',i,' should be 4'
 
-    ! Put another 3 values as an array
-    call put_block_data(1,3,(/5.0, 6.0, 7.0/))
+    ! Put another 6 values as a 2d array
+    call put_block_data(1,2,3,reshape((/1.0,2.0,3.0,4.0,5.0,6.0/), (/2,3/)))
 
     nData = n_block_data(1)
-    if(nData /= 7)write(*,*)'n_block_data(1) failed, n=',nData,' should be 7'
+    if(nData /= 10)write(*,*)'n_block_data(1) failed, n=',nData,' should be 10'
     nData = n_block_data()
-    if(nData /= 7)write(*,*)'n_block_data() failed, n=',nData,' should be 7'
+    if(nData /= 10)write(*,*)'n_block_data() failed, n=',nData,' should be 10'
     i = iData_B(1)
-    if(i /= 7)write(*,*)'put_block_data failed, iData=',i,' should be 7'
+    if(i /= 10)write(*,*)'put_block_data failed, iData=',i,' should be 10'
     i = size(Data_B(1) % Array_I)
-    if(i /= 8)write(*,*)'put_block_data failed, size(Array)=',i,' should be 8'
+    if(i /= 10)write(*,*)'put_block_data failed, size(Array)=',i,&
+         ' should be 10'
 
     ! This should fail with error message (get before set)
     ! call get_block_data(1,Value)
@@ -397,6 +635,12 @@ contains
     call get_block_data(1,3,Value_I)
     if(any(Value_I /= (/2.0, 3.0, 4.0/))) &
          write(*,*)'get_block_data failed, value_I=',Value_I,' should be 2,3,4'
+
+    ! Get back next 6 values as a 2D array
+    call get_block_data(1,2,3,Value_II)
+    if(any(Value_II /= reshape( (/1.0, 2.0, 3.0, 4.0, 5.0, 6.0/), (/2,3/)))) &
+         write(*,*)'get_block_data failed, value_II=',Value_II, &
+         ' should be ((2,3),(4,5),(6,7))'
 
     write(*,*)'Testing clean_block_data'
     ! Clean storage for block 1
