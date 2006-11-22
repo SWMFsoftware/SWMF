@@ -285,10 +285,9 @@ contains
     write(unit_tmp,'(1pe15.7,a25)')SW_By_dim, 'SwByDim'
     write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
     write(unit_tmp,*)
-
     write(unit_tmp,'(a)')'#IOUNITS'
     write(unit_tmp,'(a20,a32)')IoUnits,'IoUnitType'
-
+    write(unit_tmp,*)
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
        write(unit_tmp,'(l1,a39)')body1,'UseBody'
