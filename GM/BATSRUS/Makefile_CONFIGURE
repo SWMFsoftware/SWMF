@@ -1,6 +1,20 @@
 #^CFG COPYRIGHT UM
 #^CFG FILE CONFIGURE
 
+config_help:
+	@#^CFG IF COVARIANT BEGIN
+	@echo "    covariant_src  (Make COVARIANT directory with BATSRUS on covariant grid)"
+	@echo "    corelax_src    (Make CORELAX directory for the covariant version "
+	@echo "                of the magnetogram-driven solar wind)"
+	@#^CFG END COVARIANT
+	@#^CFG IF NOT COVARIANT BEGIN
+	@echo "    cartesian_src  (removes source code for covariant grid)"
+	@echo "    relax_src      (Make RELAX directory for the Cartesian "
+	@echo "                    version of the magnetogram-driven solar wind)"
+	@#^CFG END COVARIANT
+	@echo ' '
+
+
 #^CFG IF NOT COVARIANT BEGIN
 ############################################################################
 
@@ -44,41 +58,6 @@ covarcheck: covarcheck_src
 
 
 #^CFG END COVARIANT
-#^CFG IF GLOBALHELIOSPHERE BEGIN
-############################################################################
-DGLOBALH=GLOBALHELIOSPHERE
-globhelio_src:
-	./Configure.pl -d=${DGLOBALH} -keepall -u \
-	-off=ionosphere,boriscorr,implicit,roeflux,rcm,covariant \
-	-on=globalheliosphere \
-	-exe=ionosphere,boriscorr,implicit,roeflux,rcm,globalheliosphere
-	cd ${DGLOBALH}; make install; ./Options.pl -e=MhdGlobalHelio
-
-globhelio_conf: globhelio_src
-	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/${DGLOBALH} BATSRUS_conf
-
-globhelio: globhelio_src
-	cd ${DGLOBALH}; make
-
-#^CFG END GLOBALHELIOSPHERE 
-#^CFG IF MULTISP BEGIN
-############################################################################
-
-multisp_src:
-	./Configure.pl -d=MULTISP 
-	-off=implicit,ionosphere,rusanovflux,roeflux,awflux,boriscorr \
-	-on=multisp,lindeflux,testing,userfiles,covariant \
-	cd MULTISP; make install; ./Options.pl -u=Mars -e=MhdMars
-
-multisp_conf: multisp_src
-	cd ..; rm -rf BATSRUS_conf; \
-	ln -s BATSRUS/MULTISP BATSRUS_conf
-
-multisp: multisp_src
-	cd MULTISP; make
-
-#^CFG END MULTISP
 ############################################################################
 DREL=RELAX
 COMP=IH
