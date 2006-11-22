@@ -17,8 +17,24 @@ help:
 	@echo ' '
 	@echo '    <default> BATSRUS in stand alone mode, help in SWMF'
 	@echo ' '
-	@echo '    install   (create MAKEFILES, src/ModSize.f90, src/mpif90.h)'	
-	@echo '    MAKEFILE_DEF (create/correct Makefile.def)'
+	@echo '    help         (makefile option list)'
+	@echo '    install      (install BATSRUS)'
+	@#^CFG IF DOC BEGIN
+	@#	^CFG IF NOT REMOVEDOCTEX BEGIN
+	@echo ' '
+	@echo '    PDF          (Make PDF version of the documentation)'
+	@#		^CFG IF DOCHTML BEGIN
+	@echo '    HTML         (Make HTML version of the documentation)'
+	@#		^CFG END DOCHTML
+	@#	^CFG END REMOVEDOCTEX
+	@#^CFG END DOC
+	@#^CFG IF TESTING BEGIN
+	@echo '    test         (run all tests for BATSRUS)'
+	@echo '    test_help    (show all options for running the tests)'
+	@#^CFG END TESTING
+	@#^CFG IF CONFIGURE BEGIN
+	@echo '    config_help  (show all targets in Makefile_CONFIGURE'
+	@#^CFG END CONFIGURE
 	@echo ' '
 	@echo '    LIB     (Component library libGM for SWMF)'
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
@@ -26,42 +42,17 @@ help:
 	@echo '    PIDL    (PostIDL program creates 1 .out file from local .idl files)'
 	@echo '    PSPH    (PostSPH program creates spherical tec file from sph*.tec files)'
 	@echo ' '
-	@echo '    help      (makefile option list)'
+	@echo '    rundir      (create run directory for standalone or SWMF)'
+	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
+	@echo ' '
+	@echo "    nompirun    (make BATSRUS and run BATSRUS.exe on 1 PE)"
+	@echo "    mpirun      (make BATSRUS and mpirun BATSRUS.exe on 8 PEs)"
+	@echo "    mpirun NP=7 RUNDIR=run_test (run on 7 PEs in run_test)"
+	@echo "    mprun NP=5  (make BATSRUS and mprun BATSRUS.exe on 5 PEs)"
+	@echo ' '	
 	@echo '    clean     (rm -f *~ *.o *.kmo *.mod *.T *.lst core)'
 	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND)'
 	@echo '    dist      (create source distribution tar file)'
-	@#^CFG IF DOC BEGIN
-	@#	^CFG IF NOT REMOVEDOCTEX BEGIN
-	@echo ' '
-	@echo '    PDF       (Make PDF version of the documentation)'
-	@#		^CFG IF DOCHTML BEGIN
-	@echo '    HTML      (Make HTML version of the documentation)'
-	@#		^CFG END DOCHTML
-	@#	^CFG END REMOVEDOCTEX
-	@#^CFG END DOC
-	@echo ' '
-	@echo '    rundir      (create run directory for standalone or SWMF)'
-	@echo ' '
-	@echo "    mpirun      (make BATSRUS and mpirun BATSRUS.exe on 8 PEs)"
-	@echo "    mpirun NP=7 (make BATSRUS and mpirun BATSRUS.exe on 7 PEs)"
-	@echo "    mprun NP=5  (make BATSRUS and mprun  BATSRUS.exe on 5 PEs)"
-	@echo ' '
-	@#^CFG IF CONFIGURE BEGIN
-	@#    ^CFG IF COVARIANT BEGIN
-	@echo "    spherical_src  (Make SPHERICAL directory with BATSRUS on spherical grid)"
-	@echo "    spherical_conf (Make SPHERICAL directory and link it to BATSRUS_conf)"
-	@echo "    covariant_src  (Make COVARIANT directory with BATSRUS on covariant grid)"
-	@echo "    corelax_src    (Make CORELAX directory for the covariant version "
-	@echo "                of the magnetogram-driven solar wind)"
-	@#    ^CFG END COVARIANT
-	@#    ^CFG IF NOT COVARIANT BEGIN
-	@echo "    cartesian_src  (removes source code for covariant grid)"
-	@echo "    relax_src      (Make RELAX directory for the Cartesian "
-	@echo "                    version of the magnetogram-driven solar wind)"
-	@#    ^CFG END COVARIANT
-	@echo ' '
-	@#^CFG END CONFIGURE
-
 
 install: Makefile.def.orig MAKEFILE_DEF
 	@make install_cont;
@@ -163,13 +154,13 @@ rundir:
 NP=8
 
 mpirun: ${DEFAULT_TARGET}
-	cd run; mpirun -np ${NP} ./${DEFAULT_EXE}
+	cd ${RUNDIR}; mpirun -np ${NP} ./${DEFAULT_EXE}
 
 mprun: ${DEFAULT_TARGET}
-	cd run; mprun -np ${NP} ./${DEFAULT_EXE}
+	cd ${RUNDIR}; mprun -np ${NP} ./${DEFAULT_EXE}
 
 nompirun: ${DEFAULT_TARGET}
-	cd run; ./${DEFAULT_EXE}
+	cd ${RUNDIR}; ./${DEFAULT_EXE}
 
 #					^CFG IF DOC BEGIN
 #	Create the documentation files      ^CFG IF NOT REMOVEDOCTEX BEGIN
