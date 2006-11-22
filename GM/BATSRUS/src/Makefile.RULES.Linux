@@ -7,5 +7,6 @@ calc_sources_covar.o: calc_sources_covar.f90 \
 	ModAdvance.o \
 	${SHAREDIR}/ModNumConst.o \
 	ModPhysics.o \
+	ModUser.o \
 	${SHAREDIR}/ModCoordTransform.o
 	${COMPILE.f90} ${Cflag1} calc_sources_covar.f90
