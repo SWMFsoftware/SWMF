@@ -10,3 +10,5 @@ glowex_planet.o: glowex_planet.f
 	${COMPILE.f77} ${Cflag0} -132 glowex_planet.f
 eHeatFluxPW.o: eHeatFluxPW.f
 	${COMPILE.f77} ${Cflag0} -132 eHeatFluxPW.f
+startupPW_planet.o: startupPW_planet.f
+	${COMPILE.f77} ${Cflag0} -132 startupPW_planet.f
