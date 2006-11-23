@@ -60,9 +60,11 @@ subroutine impl_jacobian(implBLK,JAC)
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
        time_BLK
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell
+  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell, &
+       FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
   use ModImplicit
   use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModGeometry, ONLY: vInv_CB, UseCovariant
   implicit none
 
   integer, intent(in) :: implBLK
@@ -82,6 +84,14 @@ subroutine impl_jacobian(implBLK,JAC)
   integer:: i,j,k,i1,i2,i3,j1,j2,j3,k1,k2,k3,istencil,iw,jw,idim,qj
 
   logical :: oktest, oktest_me
+
+  real :: FluxLeft_FVD(nI+1,nJ+1,nK+1,nW,nDim) ! Unperturbed left flux
+  real :: FluxRight_FVD(nI,nJ,nK,nW,nDim)      ! Unperturbed right flux
+  real :: FluxEpsLeft_FV(nI+1,nJ+1,nK+1,nW)    ! Perturbed left flux
+  real :: FluxEpsRight_FV(nI,nJ,nK,nW)         ! Perturbed right flux
+  real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
+
+  integer :: i_D(3), ii, jj, kk
   !----------------------------------------------------------------------------
 
   if(iProc==PROCtest.and.implBLK==implBLKtest)then
@@ -120,31 +130,24 @@ subroutine impl_jacobian(implBLK,JAC)
      i1 = 1+kr(1,idim); j1= 1+kr(2,idim); k1= 1+kr(3,idim)
      i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
 
-     do iw=1,nw
-        call getflux(qwk,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
-             nI,nJ,nK,iw,idim,implBLK,fLface(i1:i2,j1:j2,k1:k2,iw,idim))
+     call get_face_flux(qwk,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
+          nI,nJ,nK,iDim,iBLK,FluxLeft_FVD(i1:i2,j1:j2,k1:k2,:,iDim))
 
-        call getflux(qwk,B0face(1:nI,1:nJ,1:nK,:,idim),&
-             nI,nJ,nK,iw,idim,implBLK,fRface(1:nI,1:nJ,1:nK,iw,idim))
-
-        if(oktest_me)write(*,*)'idim,iw,f0L,f0R:',idim,iw,&
-             fLface(Itest,Jtest,Ktest,iw,idim),&
-             fRface(Itest,Jtest,Ktest,iw,idim)
-     enddo
+     call get_face_flux(qwk,B0face(1:nI,1:nJ,1:nK,:,iDim),&
+          nI,nJ,nK,iDim,iBLK,FluxRight_FVD(:,:,:,:,iDim))
 
      ! Average w for each cell interface into weps
      i1 = 1-kr(1,idim); j1= 1-kr(2,idim); k1= 1-kr(3,idim)
 
      ! Calculate orthogonal cmax for each interface in advance
-     call getcmax(                                  &
+     call get_cmax_face(                            &
           0.5*(w_k( 1:i2, 1:j2, 1:k2,1:nw,implBLK)+ &
           w_k(i1:nI,j1:nJ,k1:nK,1:nw,implBLK)),     &
           B0face(1:i2,1:j2,1:k2,1:ndim,idim),       &
-          dxyz,                                     &
-          i2,j2,k2,idim,implBLK,cmaxFace(1:i2,1:j2,1:k2,idim))
+          i2,j2,k2,idim,iBlk,cmaxFace(1:i2,1:j2,1:k2,idim))
 
      ! cmax always occurs as -ImplCoeff*0.5/dx*cmax
-     coeff = -ImplCoeff*0.5/dxyz(idim)
+     coeff = -ImplCoeff*0.5 
      cmaxFace(1:i2,1:j2,1:k2,idim)=coeff*cmaxFace(1:i2,1:j2,1:k2,idim)
   enddo
 
@@ -178,33 +181,42 @@ subroutine impl_jacobian(implBLK,JAC)
         i2 =nI+kr(1,idim); j2=nJ+kr(2,idim); k2=nK+kr(3,idim);
         i3 =nI-kr(1,idim); j3=nJ-kr(2,idim); k3=nK-kr(3,idim);
 
+        call get_face_flux(weps,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
+             nI,nJ,nK,iDim,iBLK,FluxEpsLeft_FV(i1:i2,j1:j2,k1:k2,:))
+
+        call get_face_flux(weps,B0face(1:nI,1:nJ,1:nK,:,iDim),&
+             nI,nJ,nK,iDim,iBLK,FluxEpsRight_FV)
+
         ! Calculate dfdw=(feps-f0)/eps for each iw variable and both
         ! left and right sides
         do iw=1,nw
 
-           call getflux(weps,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
-                nI,nJ,nK,iw,idim,implBLK,fepsLface(i1:i2,j1:j2,k1:k2))
+           !call getflux(weps,B0face(i1:i2,j1:j2,k1:k2,:,idim),&
+           !     nI,nJ,nK,iw,idim,implBLK,fepsLface(i1:i2,j1:j2,k1:k2))
 
-           call getflux(weps,B0face(1:nI,1:nJ,1:nK,:,idim),&
-                nI,nJ,nK,iw,idim,implBLK,fepsRface(1:nI,1:nJ,1:nK))
+           !call getflux(weps,B0face(1:nI,1:nJ,1:nK,:,idim),&
+           !     nI,nJ,nK,iw,idim,implBLK,fepsRface(1:nI,1:nJ,1:nK))
 
            ! dfdw = F_iw(W + eps*W_jw) - F_iw(W)] / eps is multiplied by 
            ! -ImplCoeff/2/dx*wnrm(jw)/wnrm(iw) in all formulae
-           coeff=-ImplCoeff*0.5/dxyz(idim)/qeps/wnrm(iw)
+           coeff=-ImplCoeff*0.5/qeps/wnrm(iw) 
 
            dfdwLface(i1:i2,j1:j2,k1:k2)=coeff*&
-                (fepsLface(i1:i2,j1:j2,k1:k2) &
-                -fLface(   i1:i2,j1:j2,k1:k2,iw,idim))
+                (FluxEpsLeft_FV(i1:i2,j1:j2,k1:k2,iw) &
+                -FluxLeft_FVD(   i1:i2,j1:j2,k1:k2,iw,iDim)) 
            dfdwRface( 1:nI, 1:nJ, 1:nK)=coeff*&
-                (fepsRface( 1:nI, 1:nJ, 1:nK) &
-                -fRface(    1:nI, 1:nJ, 1:nK,iw,idim))
+                (FluxEpsRight_FV( 1:nI, 1:nJ, 1:nK, iW) &
+                -FluxRight_FVD(   1:nI, 1:nJ, 1:nK, iW, iDim))
 
            if(oktest_me)write(*,'(a,i1,i2,6(f15.8))') &
                 'iw,jw,f0L,fepsL,dfdwL,R:', &
-                iw,bat2vac(jw),fLface(Itest,Jtest,Ktest,iw,idim),&
-                fepsLface(Itest,Jtest,Ktest),dfdwLface(Itest,Jtest,Ktest),&
-                fRface(Itest,Jtest,Ktest,iw,idim),&
-                fepsRface(Itest,Jtest,Ktest),dfdwRface(Itest,Jtest,Ktest)
+                iw,bat2vac(jw),&
+                FluxLeft_FVD(Itest,Jtest,Ktest,iw,idim),&
+                FluxEpsLeft_FV(Itest,Jtest,Ktest,iW),&
+                dfdwLface(Itest,Jtest,Ktest),&
+                FluxRight_FVD(Itest,Jtest,Ktest,iw,idim),&
+                FluxEpsRight_FV(Itest,Jtest,Ktest,iW),&
+                dfdwRface(Itest,Jtest,Ktest)
 
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
@@ -221,6 +233,12 @@ subroutine impl_jacobian(implBLK,JAC)
                    -cmaxFace( 1:nI, 1:nJ, 1:nK,idim)
            endif
 
+           ! Divide flux*area by volume
+           dfdwLface(i1:i2,j1:j2,k1:k2) = dfdwLface(i1:i2,j1:j2,k1:k2) &
+                *vInv_CB(1:nI, 1:nJ, 1:nK, iBlk)
+           dfdwRface( 1:nI, 1:nJ, 1:nK) = dfdwRface( 1:nI, 1:nJ, 1:nK) &
+                *vInv_CB(1:nI, 1:nJ, 1:nK, iBlk)
+
            !DEBUG
            !if(idim==3.and.iw==4.and.jw==2)&
            !write(*,*)'AFTER  addcmax dfdwL(iih)=',&
@@ -233,21 +251,53 @@ subroutine impl_jacobian(implBLK,JAC)
                 +dfdwRface( 1:nI, 1:nJ, 1:nK)                      &
                 -dfdwLface(i1:i2,j1:j2,k1:k2)
 
+
            ! Add Q*dB/dw to dfdwL and dfdwR for upper and lower diagonals
            ! These diagonals are non-zero for the inside interfaces only
            ! which corresponds to the range i1:nI,j1:nJ,k1:nK.
-           if(divbsrc.and.iw/=rho_.and.jw==B_+idim)then
-              ! The source terms are always multiplied by coeff
-              coeff=-ImplCoeff*0.5/dxyz(idim)*wnrm(jw)/wnrm(iw)
+           if(divbsrc .and. &
+                (iw>=RhoUx_.and.iw<=RhoUz_) .or. &
+                (iW>=Bx_.and.iW<=Bz_) .or. &
+                iw==E_)then
+              if(UseCovariant .and. jw>=Bx_ .and. jw<=Bz_)then
+                 ! The source terms are always multiplied by coeff
+                 coeff=-ImplCoeff*0.5*wnrm(jw)/wnrm(iw)
+                 ! Get the corresponding face area
+                 select case(iDim)
+                 case(x_)
+                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
+                         FaceAreaI_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBLK)
+                 case(y_)
+                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
+                         FaceAreaJ_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBLK)
+                 case(z_)
+                    FaceArea_F(1:i3,1:j3,1:k3) = &
+                         FaceAreaK_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBlk)
+                 end select
 
-              ! Relative to the right face flux Q is shifted to the left
-              dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
-                   coeff*Qpowell(i1:nI,j1:nJ,k1:nK,iw)
+                 ! Relative to the right face flux Q is shifted to the left
+                 dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
+                      coeff*Qpowell(i1:nI,j1:nJ,k1:nK,iw) &
+                      *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
+                      *vInv_CB(i1:nI,j1:nJ,k1:nK,iBlk)
 
-              dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
-                   coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw) 
+                 dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
+                      coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw) &
+                      *FaceArea_F(i1:nI,j1:nJ,k1:nK) &
+                      *vInv_CB(1:i3,1:j3,1:k3,iBlk)
+
+              elseif(jw==B_+idim)then
+                 ! The source terms are always multiplied by coeff
+                 coeff=-ImplCoeff*0.5/dxyz(idim)*wnrm(jw)/wnrm(iw)
+
+                 ! Relative to the right face flux Q is shifted to the left
+                 dfdwLface(i1:nI,j1:nJ,k1:nK)=dfdwLface(i1:nI,j1:nJ,k1:nK)+ &
+                      coeff*Qpowell(i1:nI,j1:nJ,k1:nK,iw)
+
+                 dfdwRface(i1:nI,j1:nJ,k1:nK)=dfdwRface(i1:nI,j1:nJ,k1:nK)+ &
+                      coeff*Qpowell( 1:i3, 1:j3, 1:k3,iw)
+              end if
            end if
-
            JAC(iw,jw,i1:nI,j1:nJ,k1:nK,2*idim  )=  dfdwLface(i1:nI,j1:nJ,k1:nK)
            JAC(iw,jw, 1:i3, 1:j3, 1:k3,2*idim+1)= -dfdwRface(i1:nI,j1:nJ,k1:nK)
         enddo ! iw
@@ -348,21 +398,33 @@ contains
     UseDivbSource=.false.
 
     ! Calculate div B for middle cell contribution to Powell's source terms
-    divb=0.5*&
-         ((w_k(2:nI+1,1:nJ,1:nK,Bx_,implBLK)           &
-         -w_k(0:nI-1,1:nJ,1:nK,Bx_,implBLK))/dxyz(x_) &
-         +(w_k(1:nI,2:nJ+1,1:nK,By_,implBLK)           &
-         -w_k(1:nI,0:nJ-1,1:nK,By_,implBLK))/dxyz(y_) &
-         +(w_k(1:nI,1:nJ,2:nK+1,Bz_,implBLK)           &
-         -w_k(1:nI,1:nJ,0:nK-1,Bz_,implBLK))/dxyz(z_))
+    if(UseCovariant)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          divb(i,j,k) = 0.5*vInv_CB(i,j,k,iBlk)*( &
+               sum(w_k(i+1,j,k,Bx_:Bz_,implBLK)*FaceAreaI_DFB(:,i+1,j,k,iBlk))&
+               -sum(w_k(i-1,j,k,Bx_:Bz_,implBLK)*FaceAreaI_DFB(:,i,j,k,iBlk))+&
+               sum(w_k(i,j+1,k,Bx_:Bz_,implBLK)*FaceAreaJ_DFB(:,i,j+1,k,iBlk))&
+               -sum(w_k(i,j-1,k,Bx_:Bz_,implBLK)*FaceAreaJ_DFB(:,i,j,k,iBlk))+&
+               sum(w_k(i,j,k+1,Bx_:Bz_,implBLK)*FaceAreaK_DFB(:,i,j,k+1,iBlk))&
+               -sum(w_k(i,j,k-1,Bx_:Bz_,implBLK)*FaceAreaK_DFB(:,i,j,k,iBlk)))
+       end do; end do; end do
+    else
+       divb=0.5*&
+            ((w_k(2:nI+1,1:nJ,1:nK,Bx_,implBLK)           &
+            -w_k(0:nI-1,1:nJ,1:nK,Bx_,implBLK))/dxyz(x_) &
+            +(w_k(1:nI,2:nJ+1,1:nK,By_,implBLK)           &
+            -w_k(1:nI,0:nJ-1,1:nK,By_,implBLK))/dxyz(y_) &
+            +(w_k(1:nI,1:nJ,2:nK+1,Bz_,implBLK)           &
+            -w_k(1:nI,1:nJ,0:nK-1,Bz_,implBLK))/dxyz(z_))
+    end if
 
     ! Make sure that Qpowell is defined for all indexes
-    if(nw > 8)Qpowell = 0.0
+    Qpowell = 0.0
 
     ! Calculate the coefficients Q that multiply div B in Powell Source terms
     ! Q(rhoU)= B
-    Qpowell(:,:,:,rhoUx_)=qwk(:,:,:,Bx_) 
-    Qpowell(:,:,:,rhoUy_)=qwk(:,:,:,By_) 
+    Qpowell(:,:,:,rhoUx_)=qwk(:,:,:,Bx_)
+    Qpowell(:,:,:,rhoUy_)=qwk(:,:,:,By_)
     Qpowell(:,:,:,rhoUz_)=qwk(:,:,:,Bz_) 
 
     ! Q(B)   = U
