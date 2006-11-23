@@ -7,6 +7,11 @@ Boris
 #INCLUDE
 Solver
 
+#INCLUDE
+Stage
+#INCLUDE
+Cfl
+
 #END_COMP GM ##################################################################
 
 #STOP
