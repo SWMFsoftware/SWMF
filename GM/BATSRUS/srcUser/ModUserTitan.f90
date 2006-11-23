@@ -545,20 +545,16 @@ contains
     ! Compute Titan ionospheric source terms.
     !/
     if(use_block_data(iBlock))then
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          call get_block_data(iBlock, Nu_C(i,j,k))
-          call get_block_data(iBlock, MaxNuSpecies, NumDenNeutral_VC(:,i,j,k))
-          call get_block_data(iBlock, MaxSpecies, PhotoIonRate_VC(:,i,j,k))
-          call get_block_data(iBlock, MaxSpecies, RecombRate_VC(:,i,j,k))
-       end do; end do; end do
+       call get_block_data(iBlock, nI, nJ, nK, Nu_C)
+       call get_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+       call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
+       call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
     else
        call titan_input(iBlock)
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          call put_block_data(iBlock, Nu_C(i,j,k))
-          call put_block_data(iBlock, MaxNuSpecies, NumDenNeutral_VC(:,i,j,k))
-          call put_block_data(iBlock, MaxSpecies, PhotoIonRate_VC(:,i,j,k))
-          call put_block_data(iBlock, MaxSpecies, RecombRate_VC(:,i,j,k))
-       end do; end do; end do
+       call put_block_data(iBlock, nI, nJ, nK, Nu_C)
+       call put_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+       call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
+       call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
     end if
 
     do k = 1, nK ;   do j = 1, nJ ;  do i = 1, nI
