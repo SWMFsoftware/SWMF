@@ -94,7 +94,7 @@ c      DrBnd=3.0e7
 c      DrBnd=1.5e7
       DrBnd=0.75e7
 
-      WRITE (16,2) DRBND
+      WRITE (iUnitOutput,2) DRBND
 CALEX RN=lower boundary of the simulation? 
 CALEX RAD=radial distance of cell centers?      
 CALEX RBOUND=radial distance of lower boundary of cell     
@@ -123,7 +123,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,1) NEXP
       NEXP=3
-      WRITE (16,1) NEXP
+      WRITE (iUnitOutput,1) NEXP
 CAlex      write(*,*) NEXP
 
 CALEX AR stands for area function. 12 is the lower boundary of the cell
@@ -164,13 +164,20 @@ C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,2) CURR(1)
-      CURR(1)=0.E-6
-      WRITE(16,2) CURR(1)
-      CURR(1)=2.998E5*CURR(1)
-      CURTIM=150.
-      CURTIM0=500.
+
+      WRITE(iUnitOutput,2) CURR(1)
+      CURR(1)=2.998E2*CURR(1)
+!      CURTIM=150.
+!      CURTIM0=500.
       CURRMN=CURR(1)*(RAD(1)/(RAD(1)-DRBND))**NEXP
       CURRMX=CURR(1)*(RAD(1)/(RAD(NDIM)+DRBND))**NEXP
+      
+      do k=2,nDim
+         CURR(k)=CURR(1)*(RAD(1)/(RAD(k)))**NEXP
+      enddo
+
+
+
 C      SGN1=1.
 C      IF (CURR(1).LT.0.) SGN1=-1.
 C      IF (ABS(CURR(1)).LT.1.E-4) SGN1=0.
@@ -242,7 +249,7 @@ CALEX I am not calling glowex now but in the future
 CALEX we might need to use this for radiative transfer etc      
 CALEX      CALL GLOWEX
 CALEX      DO 1099 J = 1,40
-CALEX         WRITE (16,9999) ALTD(J),PHOTOTF(J+1) 
+CALEX         WRITE (iUnitOutput,9999) ALTD(J),PHOTOTF(J+1) 
 CALEX 9999    FORMAT(2X,1PE15.3,2X,1PE15.3)
 CALEX 1099 CONTINUE
 C
@@ -267,7 +274,7 @@ C
 C      ELFXIN=9.
 C
 2     FORMAT(6X,1PE15.4)
-      WRITE (16,2) ETOP,ELFXIN
+      WRITE (iUnitOutput,2) ETOP,ELFXIN
 C      READ (5,2) HEATI1,HEATI2,ELHEAT
       HEATI1=0.
       HEATI2=0.
@@ -279,7 +286,7 @@ calex looking at.
 c      HEATI2=2.5E-11
 C
       ELHEAT=0.
-      WRITE(16,2) HEATI1,HEATI2,ELHEAT
+      WRITE(iUnitOutput,2) HEATI1,HEATI2,ELHEAT
       HEATA1=3.5E7
       HEATA2=2.0E8
       HEATA3=1.5E8
@@ -306,7 +313,7 @@ C
       QELECT(K)=ELHEAT*HEATX3
 53    CONTINUE
       DO 54 K=1,NDIM,10
-      WRITE (16,52) ALTD(K),QOXYG(K),QHYD(K),QHEL(K),QELECT(K)
+      WRITE (iUnitOutput,52) ALTD(K),QOXYG(K),QHYD(K),QHEL(K),QELECT(K)
 52    FORMAT(5(1PE15.4))
 54    CONTINUE
 C                                                                      C
@@ -320,18 +327,17 @@ C      READ (5,4) TIME,TMAX
 CCC      TIME=0.
 CCC      TMAX=1.E6
       
-      WRITE (16,4) TIME,TMAX
+      WRITE (iUnitOutput,4) TIME,TMAX
 4     FORMAT(6X,2(1PE15.4))
 C      READ (5,2) DT   1/20.0 is a good value
 C     Read in the time step
-      READ (iUnitInput,*) DT
       write(*,*) dt
 c      DT=1./1.
       DTX1=DT
       DTR1=DTX1/DRBND
       DTX2=DT*NTS
       DTR2=DTX2/DRBND
-      WRITE (16,2) DT
+      WRITE (iUnitOutput,2) DT
       H0=0.5/DRBND
       H1E1=1./DTX1
       H1O1=1./DTX1
@@ -386,7 +392,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ(5,3) NCNPRT
       NCNPRT=0
-      WRITE (16,3) NCNPRT
+      WRITE (iUnitOutput,3) NCNPRT
       CALL MODATM(ALTMIN,XNH2,XNH,XNH2O,XNCH4,XNT)
       CALL MODATM(ALTMAX,YNH2,YNH,YNH2O,YNCH4,YNT)
       DO 60 I=1,NDIM
@@ -398,11 +404,11 @@ C      READ(5,3) NCNPRT
       CALL COLLIS(NDIM)
       CALL ELFLDW
       IF (NCNPRT.NE.0) GO TO 999
-      WRITE(16,1005) NDIM
+      WRITE(iUnitOutput,1005) NDIM
 1005  FORMAT(1H1,5X,'NUMBER OF CELLS=',I4)
-      WRITE(16,1020) NEXP
+      WRITE(iUnitOutput,1020) NEXP
 1020  FORMAT(5X,'NEXP=',I1)
-      WRITE (16,1008) GAMMA,RGASO,CPO,CVO,RGASHE,CPHE,CVHE,
+      WRITE (iUnitOutput,1008) GAMMA,RGASO,CPO,CVO,RGASHE,CPHE,CVHE,
      ;RGASH,CPH,CVH,RGASE,CPE,CVE
 1008  FORMAT(5X,'GAMMA=',F4.2,/5X,'RGAS(OXYGEN)=',1PE10.4,7X,
      ;'CP(OXYGEN)=',1PE10.4,7X,'CV(OXYGEN)=',1PE10.4
@@ -411,53 +417,53 @@ C      READ(5,3) NCNPRT
      ;'RGAS(HYDROGEN)=',1PE10.4,5X,'CP(HYDROGEN)=',1PE10.4,5X,
      ;'CV(HYDROGEN)=',1PE10.4,/5X,'RGAS(ELECTRON)=',1PE10.4,5X
      ;,'CP(ELECTRON)=',1PE10.4,5X,'CV(ELECTRON)=',1PE10.4)
-      WRITE (16,1023)
+      WRITE (iUnitOutput,1023)
 1023  FORMAT(1H0,5X,'LOWER BOUNDARY PLASMA PARAMETERS:')
-      WRITE(16,1001)
+      WRITE(iUnitOutput,1001)
 1001  FORMAT(1H ,4X,'OXYGEN:')
-      WRITE (16,1009) USURFO,PSURFO,DSURFO,TSURFO,WSURFO
+      WRITE (iUnitOutput,1009) USURFO,PSURFO,DSURFO,TSURFO,WSURFO
 1009  FORMAT(5X,'VELOCITY=',1PE11.4,3X,'PRESSURE=',1PE10.4,3X,
      ;'MASS DENSITY=',1PE10.4,3X,'TEMPERATURE=',1PE10.4,3X,
      ;'SOUND VELOCITY=',1PE10.4)
-      WRITE(16,10021)
+      WRITE(iUnitOutput,10021)
 10021 FORMAT(1H ,4X,'HELIUM:')
-      WRITE (16,1009) USURHE,PSURHE,DSURHE,TSURHE,WSURHE
-      WRITE(16,1002)
+      WRITE (iUnitOutput,1009) USURHE,PSURHE,DSURHE,TSURHE,WSURHE
+      WRITE(iUnitOutput,1002)
 1002  FORMAT(1H ,4X,'HYDROGEN:')
-      WRITE (16,1009) USURFH,PSURFH,DSURFH,TSURFH,WSURFH
-      WRITE(16,1003)
+      WRITE (iUnitOutput,1009) USURFH,PSURFH,DSURFH,TSURFH,WSURFH
+      WRITE(iUnitOutput,1003)
 1003  FORMAT(1H ,4X,'ELECTRONS:')
-      WRITE (16,1009) USURFE,PSURFE,DSURFE,TSURFE,WSURFE
-      WRITE (16,1027)
+      WRITE (iUnitOutput,1009) USURFE,PSURFE,DSURFE,TSURFE,WSURFE
+      WRITE (iUnitOutput,1027)
 1027  FORMAT(1H0,5X,'UPPER BOUNDARY INITIAL PLASMA PARAMETERS:')
-      WRITE (16,1004)
+      WRITE (iUnitOutput,1004)
 1004  FORMAT(1H ,4X,'OXYGEN:')
-      WRITE (16,1009) UBGNDO,PBGNDO,DBGNDO,TBGNDO,WBGNDO
-      WRITE (16,1088)
+      WRITE (iUnitOutput,1009) UBGNDO,PBGNDO,DBGNDO,TBGNDO,WBGNDO
+      WRITE (iUnitOutput,1088)
 1088  FORMAT(1H ,4X,'HELIUM:')
-      WRITE (16,1009) UBGNHE,PBGNHE,DBGNHE,TBGNHE,WBGNHE
-      WRITE (16,1006)
+      WRITE (iUnitOutput,1009) UBGNHE,PBGNHE,DBGNHE,TBGNHE,WBGNHE
+      WRITE (iUnitOutput,1006)
 1006  FORMAT(1H ,4X,'HYDROGEN:')
-      WRITE (16,1009) UBGNDH,PBGNDH,DBGNDH,TBGNDH,WBGNDH
-      WRITE(16,1007)
+      WRITE (iUnitOutput,1009) UBGNDH,PBGNDH,DBGNDH,TBGNDH,WBGNDH
+      WRITE(iUnitOutput,1007)
 1007  FORMAT(1H ,4X,'ELECTRONS:')
-      WRITE (16,1009) UBGNDE,PBGNDE,DBGNDE,TBGNDE,WBGNDE
-      WRITE (16,1029) ETOP1
+      WRITE (iUnitOutput,1009) UBGNDE,PBGNDE,DBGNDE,TBGNDE,WBGNDE
+      WRITE (iUnitOutput,1029) ETOP1
 1029  FORMAT(1H0,5X,'TOPSIDE ELECTRON HEATING RATE:',1PE10.4,
      ;' ERGS/CM**3/SEC')
 
-      write(16,*) 'CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL'
-      write(16,*) CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL
+      write(iUnitOutput,*) 'CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL'
+      write(iUnitOutput,*) CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL
      
-      write(16,*) 'CMHpH,CMHpH2,CMHpH3p,CMHpEL'
-      write(16,*) CMHpH,CMHpH2,CMHpH3p,CMHpEL
+      write(iUnitOutput,*) 'CMHpH,CMHpH2,CMHpH3p,CMHpEL'
+      write(iUnitOutput,*) CMHpH,CMHpH2,CMHpH3p,CMHpEL
       
-      write(16,*) 'CMELH,CMELH2,CMELHp,CMELH3p'
-      write(16,*) CMELH,CMELH2,CMELHp,CMELH3p
+      write(iUnitOutput,*) 'CMELH,CMELH2,CMELHp,CMELH3p'
+      write(iUnitOutput,*) CMELH,CMELH2,CMELHp,CMELH3p
 
-      WRITE (16,1050) 
+      WRITE (iUnitOutput,1050) 
 1050  FORMAT(1H0,5X,'ENERGY COLLISION TERM COEFFICIENTS')
-      WRITE (16,1051)CTHpH,CTHpH2,CTHpH3p,CTHpEL,CTH3pH,CTH3pH2,CTH3pHp,
+      WRITE (iUnitOutput,1051)CTHpH,CTHpH2,CTHpH3p,CTHpEL,CTH3pH,CTH3pH2,CTH3pHp,
      $ CTH3pEL,CTELH,CTELH2,CTELHp,CTELH3p
 
 1051  FORMAT(1H0,5X,'CTHpH=',1PE10.4,5X,'CTHpH2=',1PE10.4,4X,
@@ -466,7 +472,7 @@ C      READ(5,3) NCNPRT
      $5X,'CTELH=',1PE10.4,5X,'CTELH2=',1PE10.4,4X,
      $'CTELHp=',1PE10.4/5X,'CTELH3p=',1PE10.4,5X)
 
-      WRITE (16,1052) CMHpH,CMHpH2,CMHpH3p,CMHpEL,CMH3pH,CMH3pH2,CMH3pHp,
+      WRITE (iUnitOutput,1052) CMHpH,CMHpH2,CMHpH3p,CMHpEL,CMH3pH,CMH3pH2,CMH3pHp,
      $ CMH3pEL,CMELH,CMELH2,CMELHp,CMELH3p
 
 1052  FORMAT(1H0,5X,'CMHpH=',1PE10.4,5X,'CMHpH2=',1PE10.4,4X,
@@ -475,11 +481,11 @@ C      READ(5,3) NCNPRT
      $5X,'CMELH=',1PE10.4,5X,'CMELH2=',1PE10.4,4X,
      $'CMELHp=',1PE10.4/5X,'CMELH3p=',1PE10.4,5X)
 
-      WRITE (16,1053)
+      WRITE (iUnitOutput,1053)
 
 1053  FORMAT(1H0,5X,'HEAT CONDUCTION COEFFICIENTS AT UPPER BOUNDARY')
 
-C!      WRITE (16,1054) CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,
+C!      WRITE (iUnitOutput,1054) CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,
 C!     $CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
 C!1054  FORMAT(1H0,5X,'CZHN2=',1PE10.4,6X,'CZHO2=',1PE10.4,6X,
 C!     $'CZHO=',1PE10.4,7X,'CZHOX=',1PE10.4/5X,'CZHEN2=',1PE10.4,5X,
@@ -487,25 +493,25 @@ C!     $'CZHEO2=',1PE10.4,5X,'CZHEHE=',1PE10.4,5X,'CZHEO=',1PE10.4/
 C!     $5X,'CZHEH=',1PE10.4,6X,'CZHEOX=',1PE10.4,5X,'CZHEHD=',
 C!     $1PE10.4/5X,'XTNMAX=',1PE10.4)
 
-      WRITE (16,1012)
+      WRITE (iUnitOutput,1012)
 
 1012  FORMAT(1H1,45X,'NEUTRAL ATMOSPHERE NUMBER DENSITIES')
 
-      WRITE(16,1014)
+      WRITE(iUnitOutput,1014)
 
 1014  FORMAT(16X,'ALT',13X,'H2',13X,'H',15X,'H2O',14X,'CH4',
      $     15X,'T')
 
       K=0
 
-      WRITE (16,1022) K, ALTMIN,XNH2,XNH,XNH2O,XNCH4,XNT
+      WRITE (iUnitOutput,1022) K, ALTMIN,XNH2,XNH,XNH2O,XNCH4,XNT
 
       NDMQ=NPT1
 
       IF (NDIM.LT.NPT2) NDMQ=NDIM
 
       do K=1,NDMQ
-         WRITE(16,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
+         WRITE(iUnitOutput,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
      $        XTN(K)
       enddo
 
@@ -517,7 +523,7 @@ C!     $1PE10.4/5X,'XTNMAX=',1PE10.4)
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       
       do K=NPT2,NDMQ,2
-         WRITE(16,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
+         WRITE(iUnitOutput,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
      $        XTN(K)
       enddo
 
@@ -527,26 +533,26 @@ C!     $1PE10.4/5X,'XTNMAX=',1PE10.4)
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       
       do K=NPT4,NDMQ,5
-         WRITE(16,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
+         WRITE(iUnitOutput,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
      $        XTN(K)
       enddo
       IF (NDIM.LT.NPT6) GO TO 290
       do K=NPT6,NDIM,10
-         WRITE(16,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
+         WRITE(iUnitOutput,1022) K,ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),
      $        XTN(K)
       enddo
  290  CONTINUE
       
       K=NDIM+1
       
-      WRITE (16,1022) K, ALTMAX,YNH2,YNH,YNH2O,YNCH4,YNT
+      WRITE (iUnitOutput,1022) K, ALTMAX,YNH2,YNH,YNH2O,YNCH4,YNT
       
-      WRITE(16,1015)
+      WRITE(iUnitOutput,1015)
 c
 calex Now output the source coef.
 
 1015  FORMAT(1H1,55X,'SOURCE COEFFICIENTS:')
-      WRITE (16,1016)
+      WRITE (iUnitOutput,1016)
 
 
 1016  FORMAT(12X,'ALT',6X,'GRAVTY',6X,'Centrifugal',5X,'FFHpp1',5X,
@@ -560,7 +566,7 @@ calex Now output the source coef.
       IF (NDIM.LT.NPT2) NDMQ=NDIM
 
       DO  K=1,NDMQ
-         WRITE(16,1019) K,ALTD(K),GRAVTY(K),Centrifugal(K),FFHpp1(K),FFHpp3(K),
+         WRITE(iUnitOutput,1019) K,ALTD(K),GRAVTY(K),Centrifugal(K),FFHpp1(K),FFHpp3(K),
      $        FFHpp4(K),FFHpc2(K),FFHpc3(K),FFHpc8(K),FFHpr1(K),FFH3pc1(K),
      $        FFH3pc2(K), FFH3pc6(K),FFH3pc7(K),FFH3pr2(K)
       enddo
@@ -571,7 +577,7 @@ calex Now output the source coef.
       IF (NDIM.LT.NPT4) NDMQ=NDIM
 
       do K=NPT2,NDMQ,2
-      WRITE(16,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
+      WRITE(iUnitOutput,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
      $        FFHpp4(K),FFHpc2(K),FFHpc3(K),FFHpc8(K),FFHpr1(K),FFH3pc1(K),
      $        FFH3pc2(K), FFH3pc6(K),FFH3pc7(K),FFH3pr2(K)
 
@@ -583,7 +589,7 @@ calex Now output the source coef.
       IF (NDIM.LT.NPT6) NDMQ=NDIM
 
       do K=NPT4,NDMQ,5
-         WRITE(16,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
+         WRITE(iUnitOutput,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
      $        FFHpp4(K),FFHpc2(K),FFHpc3(K),FFHpc8(K),FFHpr1(K),FFH3pc1(K),
      $        FFH3pc2(K), FFH3pc6(K),FFH3pc7(K),FFH3pr2(K)
 
@@ -592,86 +598,86 @@ calex Now output the source coef.
       IF (NDIM.LT.NPT6) GO TO 295
 
       do K=NPT6,NDIM,10
-         WRITE(16,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
+         WRITE(iUnitOutput,1019) K,ALTD(K),GRAVTY(K),FFHpp1(K),FFHpp3(K),
      $        FFHpp4(K),FFHpc2(K),FFHpc3(K),FFHpc8(K),FFHpr1(K),FFH3pc1(K),
      $        FFH3pc2(K), FFH3pc6(K),FFH3pc7(K),FFH3pr2(K)
 
       enddo
 295   CONTINUE
 
-      WRITE(16,1017)
+      WRITE(iUnitOutput,1017)
 1017  FORMAT(1H1,50X,'COLLISION COEFFICIENTS FOR H3p')
 
-C!      WRITE(16,1018)
+C!      WRITE(iUnitOutput,1018)
 C!1018  FORMAT(12X,'ALT',7X,'CLOXN2',6X,'CLOXO2',6X,'CLOXO',7X,
 C!     ;'CLOXHE',6X,'CLOXH',7X,'CLOXHL',6X,'CLOXHD',6X,'CLOXEL')
 C!      NDMQ=NPT1
 C!      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!      DO 530 K=1,NDMQ
-C!      WRITE (16,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
 C!     $CLOXHE(K),CLOXH(K),CLOXHL(K),CLOXHD(K),CLOXEL(K)
 C!530   CONTINUE
 C!      IF (NDIM.LT.NPT2) GO TO 590
 C!      NDMQ=NPT3
 C!      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!      DO 540 K=NPT2,NDMQ,2
-C!      WRITE (16,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
 C!     $CLOXHE(K),CLOXH(K),CLOXHL(K),CLOXHD(K),CLOXEL(K)
 C!540   CONTINUE
 C!      IF (NDIM.LT.NPT4) GO TO 590
 C!      NDMQ=NPT5
 C!      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!      DO 550 K=NPT4,NDMQ,5
-C!      WRITE (16,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
 C!     $CLOXHE(K),CLOXH(K),CLOXHL(K),CLOXHD(K),CLOXEL(K)
 C!550   CONTINUE
 C!      IF (NDIM.LT.NPT6) GO TO 590
 C!      DO 560 K=NPT6,NDIM,10
-C!      WRITE (16,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CLOXN2(K),CLOXO2(K),CLOXO(K),
 C!     $CLOXHE(K),CLOXH(K),CLOXHL(K),CLOXHD(K),CLOXEL(K)
 C!560   CONTINUE
 C!590   CONTINUE
 
-C!1      WRITE (16,1217)
+C!1      WRITE (iUnitOutput,1217)
 C!11217  FORMAT(1H1,50X,'COLLISION COEFFICIENTS FOR HELIUM')
-C!1      WRITE(16,1218)
+C!1      WRITE(iUnitOutput,1218)
 C!11218  FORMAT(12X,'ALT',7X,'CLHEN2',6X,'CLHEO2',6X,'CLHEO',7X,
 C!1     ;'CLHEHE',6X,'CLHEH',7X,'CLHEOX',6X,'CLHEHD',6X,'CLHEEL')
 C!1      NDMQ=NPT1
 C!1      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!1      DO 1230 K=1,NDMQ
-C!1      WRITE (16,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
 C!1     $CLHEHE(K),CLHEH(K),CLHEOX(K),CLHEHD(K),CLHEEL(K)
 C!11230  CONTINUE
 C!1      IF (NDIM.LT.NPT2) GO TO 1290
 C!1      NDMQ=NPT3
 C!1      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!1      DO 1240 K=NPT2,NDMQ,2
-C!1      WRITE (16,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
 C!1     $CLHEHE(K),CLHEH(K),CLHEOX(K),CLHEHD(K),CLHEEL(K)
 C!11240  CONTINUE
 C!1      IF (NDIM.LT.NPT4) GO TO 1290
 C!1      NDMQ=NPT5
 C!1      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!1      DO 1250 K=NPT4,NDMQ,5
-C!1      WRITE (16,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
 C!1     $CLHEHE(K),CLHEH(K),CLHEOX(K),CLHEHD(K),CLHEEL(K)
 C!11250  CONTINUE
 C!1      IF (NDIM.LT.NPT6) GO TO 1290
 C!1      DO 1260 K=NPT6,NDIM,10
-C!1      WRITE (16,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CLHEN2(K),CLHEO2(K),CLHEO(K),
 C!1     $CLHEHE(K),CLHEH(K),CLHEOX(K),CLHEHD(K),CLHEEL(K)
 C!11260  CONTINUE
 C!11290  CONTINUE
-C!1      WRITE (16,2217)
+C!1      WRITE (iUnitOutput,2217)
 
 2217  FORMAT(1H1,50X,'COLLISION COEFFICIENTS FOR HYDROGEN')
-      WRITE(16,2218)
+      WRITE(iUnitOutput,2218)
 2218  FORMAT(12X,'ALT',7X,'CLHpH3p',7X,'CLHpH')
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       do K=1,NDMQ
-         WRITE (16,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
       enddo
       
       IF (NDIM.LT.NPT2) GO TO 2290
@@ -680,7 +686,7 @@ C!1      WRITE (16,2217)
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       
       do K=NPT2,NDMQ,2
-         WRITE (16,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
       enddo
       
       IF (NDIM.LT.NPT4) GO TO 2290
@@ -689,19 +695,19 @@ C!1      WRITE (16,2217)
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       
       do  K=NPT4,NDMQ,5
-         WRITE (16,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
       enddo
       
       IF (NDIM.LT.NPT6) GO TO 2290
       
       do K=NPT6,NDIM,10
-         WRITE (16,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLHpH3p(K),CLHpH(K)
       enddo
 2290  CONTINUE
 
-      WRITE (16,3217)
+      WRITE (iUnitOutput,3217)
 3217  FORMAT(1H1,50X,'COLLISION COEFFICIENTS FOR ELECTRONS')
-      WRITE(16,3218)
+      WRITE(iUnitOutput,3218)
 3218  FORMAT(12X,'ALT',6X,'CLELHp',6X,'CLELH3p',6X,'CLELH')
       
       NDMQ=NPT1
@@ -709,7 +715,7 @@ C!1      WRITE (16,2217)
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       
       do K=1,NDMQ
-         WRITE (16,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
       enddo
       
       IF (NDIM.LT.NPT2) GO TO 3290
@@ -719,7 +725,7 @@ C!1      WRITE (16,2217)
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       
       do K=NPT2,NDMQ,2
-         WRITE (16,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
       enddo
       
       IF (NDIM.LT.NPT4) GO TO 3290
@@ -729,20 +735,20 @@ C!1      WRITE (16,2217)
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       
       do K=NPT4,NDMQ,5
-         WRITE (16,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
       enddo
 
       IF (NDIM.LT.NPT6) GO TO 3290
 
       do K=NPT6,NDIM,10
-         WRITE (16,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
+         WRITE (iUnitOutput,1180) K,ALTD(K),CLELHp(K),CLELH3p(K),CLELH(K)
       enddo
 3290  CONTINUE
 
 
-      WRITE(16,1047)
+      WRITE(iUnitOutput,1047)
 1047  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR H3')
-C!      WRITE(16,1048)
+C!      WRITE(iUnitOutput,1048)
 C!1048  FORMAT(12X,'ALT',7X,'CFH3pHp',6X,'CFH3pEL',6X,'CFH3pH',7X,
 C!     ;'CFH3pH2')
 C!
@@ -751,7 +757,7 @@ C!
 C!      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!
 C!      do K=1,NDMQ
-C!         WRITE (16,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
 C!     $        CFH3pH2(K)
 C!      enddo
 C!      
@@ -762,7 +768,7 @@ C!
 C!      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!      
 C!      do K=NPT2,NDMQ,2
-C!         WRITE (16,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
 C!     $        CFH3pH2(K)
 C!      enddo
 C!      
@@ -773,53 +779,53 @@ C!
 C!      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!      
 C!      do K=NPT4,NDMQ,5
-C!         WRITE (16,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
 C!     $        CFH3pH2(K)
 C!      enddo
 C!      
 C!      IF (NDIM.LT.NPT6) GO TO 591
 C!      
 C!      do K=NPT6,NDIM,10
-C!         WRITE (16,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFH3pHp(K),CFH3pEL(K),CFH3pH(K),
 C!     $        CFH3pH2(K)
 C!      enddo
 C!591   CONTINUE
 
-C!1      WRITE (16,1247)
+C!1      WRITE (iUnitOutput,1247)
 C!11247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HELIUM')
-C!1      WRITE(16,1248)
+C!1      WRITE(iUnitOutput,1248)
 C!11248  FORMAT(12X,'ALT',7X,'CFHEN2',6X,'CFHEO2',6X,'CFHEO',7X,
 C!1     ;'CFHEHE',6X,'CFHEH',7X,'CFHEOX',6X,'CFHEHD',6X,'CFHEEL')
 C!1      NDMQ=NPT1
 C!1      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!1      DO 1231 K=1,NDMQ
-C!1      WRITE (16,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
 C!1     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
 C!11231  CONTINUE
 C!1      IF (NDIM.LT.NPT2) GO TO 1291
 C!1      NDMQ=NPT3
 C!1      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!1      DO 1241 K=NPT2,NDMQ,2
-C!1      WRITE (16,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
 C!1     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
 C!11241  CONTINUE
 C!1      IF (NDIM.LT.NPT4) GO TO 1291
 C!1      NDMQ=NPT5
 C!1      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!1      DO 1251 K=NPT4,NDMQ,5
-C!1      WRITE (16,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
 C!1     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
 C!11251  CONTINUE
 C!1      IF (NDIM.LT.NPT6) GO TO 1291
 C!1      DO 1261 K=NPT6,NDIM,10
-C!1      WRITE (16,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+C!1      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
 C!1     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
 C!11261  CONTINUE
 C!11291  CONTINUE
 
-      WRITE (16,2247)
+      WRITE (iUnitOutput,2247)
 2247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HYDROGEN')
-C!      WRITE(16,2248)
+C!      WRITE(iUnitOutput,2248)
 C!2248  FORMAT(12X,'ALT',7X,'CFHpH3p',7X,'CFHpH',7X,'CFHpEL',8X,
 C!     ;'CFHpH2')
 C!      
@@ -828,7 +834,7 @@ C!
 C!      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!      
 C!      do K=1,NDMQ
-C!         WRITE (16,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
 C!      enddo
 C!
 C!      IF (NDIM.LT.NPT2) GO TO 2291
@@ -838,7 +844,7 @@ C!
 C!      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!
 C!      do K=NPT2,NDMQ,2
-C!         WRITE (16,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
 C!      enddo
 C!
 C!      IF (NDIM.LT.NPT4) GO TO 2291
@@ -848,19 +854,19 @@ C!
 C!      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!
 C!      do K=NPT4,NDMQ,5
-C!         WRITE (16,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
 C!      enddo
 C!
 C!      IF (NDIM.LT.NPT6) GO TO 2291
 C!
 C!      do K=NPT6,NDIM,10
-C!         WRITE (16,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFHpH3p(K),CFHpH(K),CFHpEL(K),CFHpH2(K)
 C!      enddo
 C!2291  CONTINUE
 
-      WRITE (16,3247)
+      WRITE (iUnitOutput,3247)
 3247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR ELECTRONS')
-C!      WRITE(16,3248)
+C!      WRITE(iUnitOutput,3248)
 C!3248  FORMAT(12X,'ALT',7X,'CFELHp',6X,'CFELH3p',6X,'CFELH2',7X,
 C!     ;'CFELH')
 C! 
@@ -869,46 +875,46 @@ C!
 C!      IF (NDIM.LT.NPT2) NDMQ=NDIM
 C!
 C!      do K=1,NDMQ
-C!         WRITE (16,1180) K,ALTD(K),CFELHp(K),CFELH3p(K),CFELH2(K),CFELH(K)
+C!         WRITE (iUnitOutput,1180) K,ALTD(K),CFELHp(K),CFELH3p(K),CFELH2(K),CFELH(K)
 C!      enddo
 C!      IF (NDIM.LT.NPT2) GO TO 3291
 C!      NDMQ=NPT3
 C!      IF (NDIM.LT.NPT4) NDMQ=NDIM
 C!      DO 3241 K=NPT2,NDMQ,2
-C!      WRITE (16,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
 C!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
 C!3241  CONTINUE
 C!      IF (NDIM.LT.NPT4) GO TO 3291
 C!      NDMQ=NPT5
 C!      IF (NDIM.LT.NPT6) NDMQ=NDIM
 C!      DO 3251 K=NPT4,NDMQ,5
-C!      WRITE (16,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
 C!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
 C!3251  CONTINUE
 C!      IF (NDIM.LT.NPT6) GO TO 3291
 C!      DO 3261 K=NPT6,NDIM,10
-C!      WRITE (16,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+C!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
 C!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
 C!3261  CONTINUE
 C!3291  CONTINUE
 
-      WRITE (16,1013)
+      WRITE (iUnitOutput,1013)
 1013  FORMAT(1H1,45X,'INITIAL OXYGEN PARAMETERS')
-      WRITE(16,1021)
+      WRITE(iUnitOutput,1021)
 1021  FORMAT(16X,'ALT',10X,'VELOCITY',8X,'MACH NO',9X,'DENSITY',9X,
      ;'PRESSURE',6X,'TEMPERATURE',/)
       K=0
 CALEX XM stands for Mach Number      
       XM=USURFO/WSURFO
       DNS1=DSURFO/XMSO
-      WRITE(16,1022) K,ALTMIN,USURFO,XM,DNS1,PSURFO,TSURFO
+      WRITE(iUnitOutput,1022) K,ALTMIN,USURFO,XM,DNS1,PSURFO,TSURFO
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 630 K=1,NDMQ
       US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
       XM=UOXYG(K)/US
       DNS1=DOXYG(K)/XMSO
-      WRITE(16,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
 630   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 690
       NDMQ=NPT3
@@ -917,7 +923,7 @@ CALEX XM stands for Mach Number
       US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
       XM=UOXYG(K)/US
       DNS1=DOXYG(K)/XMSO
-      WRITE(16,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
 640   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 690
       NDMQ=NPT5
@@ -926,29 +932,29 @@ CALEX XM stands for Mach Number
       US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
       XM=UOXYG(K)/US
       DNS1=DOXYG(K)/XMSO
-      WRITE(16,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
 650   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 690
       DO 660 K=NPT6,NDIM,10
       US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
       XM=UOXYG(K)/US
       DNS1=DOXYG(K)/XMSO
-      WRITE(16,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
 660   CONTINUE
 690   CONTINUE
       K=NDIM1
       XM=UBGNDO/WBGNDO
       DNS1=DBGNDO/XMSO
-      WRITE(16,1022) K,ALTMAX,UBGNDO,XM,DNS1,PBGNDO,TBGNDO
-      WRITE (16,1055)
+      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDO,XM,DNS1,PBGNDO,TBGNDO
+      WRITE (iUnitOutput,1055)
 1055  FORMAT(1H1,45X,'INITIAL HELIUM PARAMETERS')
-      WRITE(16,1056)
+      WRITE(iUnitOutput,1056)
 1056  FORMAT(16X,'ALT',10X,'VELOCITY',8X,'MACH NO',9X,'DENSITY',9X,
      ;'PRESSURE',6X,'TEMPERATURE',/)
       K=0
       XM=USURHE/WSURHE
       DNS1=DSURHE/XMSHE
-      WRITE(16,1022) K,ALTMIN,USURHE,XM,DNS1,PSURHE,TSURHE
+      WRITE(iUnitOutput,1022) K,ALTMIN,USURHE,XM,DNS1,PSURHE,TSURHE
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 639 K=1,NDMQ
@@ -957,7 +963,7 @@ CALEX      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
 CALEX      XM=UHEL(K)/US
          XM=0.
       DNS1=DHEL(K)/XMSHE
-      WRITE(16,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
 639   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 699
       NDMQ=NPT3
@@ -968,7 +974,7 @@ CALEX      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
 CALEX      XM=UHEL(K)/US
          XM=0.
       DNS1=DHEL(K)/XMSHE
-      WRITE(16,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
 649   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 699
       NDMQ=NPT5
@@ -978,7 +984,7 @@ CALEX      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
 CALEX      XM=UHEL(K)/US
          XM=0.
       DNS1=DHEL(K)/XMSHE
-      WRITE(16,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
 659   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 699
       DO 669 K=NPT6,NDIM,10
@@ -986,7 +992,7 @@ CALEX      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
 CALEX      XM=UHEL(K)/US
          XM=0.
       DNS1=DHEL(K)/XMSHE
-      WRITE(16,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
 669   CONTINUE
 699   CONTINUE
       K=NDIM1
@@ -994,21 +1000,21 @@ CALEX      XM=UBGNHE/WBGNHE
 CALEX this is just a place holding number!!!!
       XM=0.
       DNS1=DBGNHE/XMSHE
-      WRITE(16,1022) K,ALTMAX,UBGNHE,XM,DNS1,PBGNHE,TBGNHE
-      WRITE (16,1010)
+      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNHE,XM,DNS1,PBGNHE,TBGNHE
+      WRITE (iUnitOutput,1010)
 1010  FORMAT(1H1,45X,'INITIAL HYDROGEN PARAMETERS')
-      WRITE(16,1021)
+      WRITE(iUnitOutput,1021)
       K=0
       XM=USURFH/WSURFH
       DNS1=DSURFH/XMSH
-      WRITE(16,1022) K,ALTMIN,USURFH,XM,DNS1,PSURFH,TSURFH
+      WRITE(iUnitOutput,1022) K,ALTMIN,USURFH,XM,DNS1,PSURFH,TSURFH
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 730 K=1,NDMQ
       US=SQRT(GAMMA*PHYD(K)/DHYD(K))
       XM=UHYD(K)/US
       DNS1=DHYD(K)/XMSH
-      WRITE(16,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
 730   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 790
       NDMQ=NPT3
@@ -1017,7 +1023,7 @@ CALEX this is just a place holding number!!!!
       US=SQRT(GAMMA*PHYD(K)/DHYD(K))
       XM=UHYD(K)/US
       DNS1=DHYD(K)/XMSH
-      WRITE(16,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
 740   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 790
       NDMQ=NPT5
@@ -1026,34 +1032,34 @@ CALEX this is just a place holding number!!!!
       US=SQRT(GAMMA*PHYD(K)/DHYD(K))
       XM=UHYD(K)/US
       DNS1=DHYD(K)/XMSH
-      WRITE(16,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
 750   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 790
       DO 760 K=NPT6,NDIM,10
       US=SQRT(GAMMA*PHYD(K)/DHYD(K))
       XM=UHYD(K)/US
       DNS1=DHYD(K)/XMSH
-      WRITE(16,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
 760   CONTINUE
 790   CONTINUE
       K=NDIM1
       XM=UBGNDH/WBGNDH
       DNS1=DBGNDH/XMSH
-      WRITE(16,1022) K,ALTMAX,UBGNDH,XM,DNS1,PBGNDH,TBGNDH
-      WRITE (16,1011)
+      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDH,XM,DNS1,PBGNDH,TBGNDH
+      WRITE (iUnitOutput,1011)
 1011  FORMAT(1H1,45X,'INITIAL ELECTRON PARAMETERS')
-      WRITE(16,1021)
+      WRITE(iUnitOutput,1021)
       K=0
       XM=USURFE/WSURFE
       DNS1=DSURFE/XMSE
-      WRITE(16,1022) K,ALTMIN,USURFE,XM,DNS1,PSURFE,TSURFE
+      WRITE(iUnitOutput,1022) K,ALTMIN,USURFE,XM,DNS1,PSURFE,TSURFE
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 830 K=1,NDMQ
       US=SQRT(GAMMA*PELECT(K)/DELECT(K))
       XM=UELECT(K)/US
       DNS1=DELECT(K)/XMSE
-      WRITE(16,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
 830   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 890
       NDMQ=NPT3
@@ -1062,7 +1068,7 @@ CALEX this is just a place holding number!!!!
       US=SQRT(GAMMA*PELECT(K)/DELECT(K))
       XM=UELECT(K)/US
       DNS1=DELECT(K)/XMSE
-      WRITE(16,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
 840   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 890
       NDMQ=NPT5
@@ -1071,83 +1077,83 @@ CALEX this is just a place holding number!!!!
       US=SQRT(GAMMA*PELECT(K)/DELECT(K))
       XM=UELECT(K)/US
       DNS1=DELECT(K)/XMSE
-      WRITE(16,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
 850   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 890
       DO 860 K=NPT6,NDIM,10
       US=SQRT(GAMMA*PELECT(K)/DELECT(K))
       XM=UELECT(K)/US
       DNS1=DELECT(K)/XMSE
-      WRITE(16,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
 860   CONTINUE
 890   CONTINUE
       K=NDIM1
       XM=UBGNDE/WBGNDE
       DNS1=DBGNDE/XMSE
-      WRITE(16,1022) K,ALTMAX,UBGNDE,XM,DNS1,PBGNDE,TBGNDE
-      WRITE(16,1024)
+      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDE,XM,DNS1,PBGNDE,TBGNDE
+      WRITE(iUnitOutput,1024)
 1024  FORMAT(1H1,40X,'INITIAL ELECTRIC FIELD AND SOURCE PARAMETERS')
-      WRITE(16,1025)
+      WRITE(iUnitOutput,1025)
 1025  FORMAT(13X,'ALT',6X,'EFIELD',6X,'FCLSNO',6X,'ECLSNO',6X,'FCLSHE',
      ;6X,'ECLSHE',6X,'FCLSNH',6X,'ECLSNH',6X,'FCLSNE',6X,'ECLSNE')
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 930 K=1,NDMQ
-      WRITE(16,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
      ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
 930   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 990
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 940 K=NPT2,NDMQ,2
-      WRITE(16,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
      ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
 940   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 990
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 950 K=NPT4,NDMQ,5
-      WRITE(16,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
      ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
 950   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 990
       DO 960 K=NPT6,NDIM,10
-      WRITE(16,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
      ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
 960   CONTINUE
 990   CONTINUE
 999   CONTINUE
-      WRITE (16,2013)
+      WRITE (iUnitOutput,2013)
 2013  FORMAT(1H1,45X,'HEAT CONDUCTIVITIES')
-      WRITE(16,2021)
+      WRITE(iUnitOutput,2021)
 2021  FORMAT(16X,'ALT',10X,'OXYGEN',10X,'HELIUM',9X,'HYDROGEN',9X,
      ;'ELECTRONS'/)
       K=0
-      WRITE(16,1022) K,ALTMIN,TCSFO,TCSFHE,TCSFH,TCSFE
+      WRITE(iUnitOutput,1022) K,ALTMIN,TCSFO,TCSFHE,TCSFH,TCSFE
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 2630 K=1,NDMQ
-      WRITE(16,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
 2630  CONTINUE
       IF (NDIM.LT.NPT2) GO TO 2690
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 2640 K=NPT2,NDMQ,2
-      WRITE(16,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
 2640  CONTINUE
       IF (NDIM.LT.NPT4) GO TO 2690
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 2650 K=NPT4,NDMQ,5
-      WRITE(16,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
 2650   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 2690
       DO 2660 K=NPT6,NDIM,10
-      WRITE(16,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
 2660   CONTINUE
 2690   CONTINUE
       K=NDIM1
-      WRITE(16,1022) K,ALTMAX,TCBGO,TCBGHE,TCBGH,TCBGE
+      WRITE(iUnitOutput,1022) K,ALTMAX,TCBGO,TCBGHE,TCBGH,TCBGE
 1019  FORMAT(3X,I3,0PF10.2,2X,11(1PE10.2))
 1022  FORMAT(3X,I3,0PF14.2,2X,6(1PE16.5))
 1026  FORMAT(3X,I3,0PF11.2,2X,9(1PE12.4))
@@ -1168,26 +1174,64 @@ C     THE OTHER GRID VALUES ARE SET TO VALUES THAT WON'T CRASH.
 C     (11/9/04) I also see that source terms and collision terms are set
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       
-
+      
       SUBROUTINE STRT1
       use ModCommonVariables
-      REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
+!     REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
       real DensityHp,DensityH3p
-CALEX define the reaction rates, label by reaction number
-CALEX j is for photochemistry, k is for regular chemistry
-      jp1=9.5E-11
-      jp2=5.4E-10
-      jp3=7.3E-10
-      jp4=1.3E-10
-      kc1=2.E-9
-      kc2=3.2E-29
-      kc3=4.15E-9
-      kc6=2.4E-9
-      kc7=5.3E-9
-      kc8=8.2E-9
-      kr1=2.E-12
-      kr2=4.6E-6
+C     ALEX define the reaction rates, label by reaction number
+C     ALEX j is for photochemistry, k is for regular chemistry
+      
+c     ! H2+h\nu     --> H+ + H + e
+      jp1=1.9E-11
+!      jp1=9.5E-11
+      !             --> H2+ + e
+      jp2=9.9E-10
+      !jp2=5.4E-10
+      ! H+h\nu      --> H+
+      jp3=1.0E-9
+      !jp3=7.3E-10
+      ! H2O+h\nu    --> H+ + OH +e
+      jp4=4.2E-10
+      !jp4=1.3E-10
 
+      ! H2+ + H2    --> H3+ +H
+      kc1=2.E-9
+      ! H+ + H2 + M --> H3+ + M
+      kc2=3.2E-29
+      !kc2=0.0
+      
+      ! H+ + CH4    --> CH3+ + H2  
+      !             --> CH4+ + H
+      kc3=4.5E-9
+      !kc3=4.15E-9
+      !kc3=0.0
+      ! H3+ + CH4   --> CH5+ + H2 
+      kc6=2.4E-9
+      !kc6=0.0
+      ! H3+ + H2O   --> H3O+ + H2
+      kc7=5.3E-9
+      !kc7=0.0
+      ! H+ + H2O    --> H2O+ + H
+      kc8=8.2E-9
+      !kc8=0.0
+      ! H+ + e      --> H + h\nu
+      kr1=1.91E-10
+      !kr1=2.0E-12
+      !kr1=0.0
+      ! H3+ + e     --> H2 + H
+      !             --> 3H
+      kr2=1.73E-6
+      !kr2=4.6E-6
+!note kr2 includes H3+ + e --> H2 + H and --> 3H
+
+      ! H+ + H2(\nu>3) --> H2+ + H
+      do i=1,nDim 
+         call get_rate(ALTD(i)/100000.0,kc9(i))
+      enddo
+      
+      
+      !kc9(:)=0.0*kc9(:)
 C     
 C     
 C     
@@ -1222,7 +1266,7 @@ CALEX change the chemistry but leave the rest of the code the same
       call calc_chemical_equilibrium(DensityHp,DensityH3p)
       DSURFO=XMSO*DensityH3p
       DSURFH=XMSH*DensityHp
-      write(*,*) 'equilibrium',DensityHp,DensityH3p
+      write(*,*) 'H+(1400km)=',DensityHp,', H3+(1400km)=',DensityH3p
 
 
 C I have used numerically calculated chemical equilibrium
@@ -1280,6 +1324,7 @@ CALEX SOURCE COEF?
          FFHpc2(I)=-kc2*XH2(I)*XH2(I)
          FFHpc3(I)=-kc3*XCH4(I)
          FFHpc8(I)=-kc8*XH2O(I)
+         FFHpc9(I)=-kc9(I)*XH2(I)
          FFHpr1(I)=-kr1
 CALEX write out source coeff
 CALEX         write(26,*) FFHpp1(I),FFHpp3(I),FFHpp4(I),FFHpc2(I),FFHpc3(I),FFHpc8(I),FFHpr1(I)

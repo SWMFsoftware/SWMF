@@ -13,13 +13,22 @@ C**********************************************************************
 C Determine the mass sources from chemistry
 C**********************************************************************
 
+!      ADMSH(I)=(FFHpp1(I)+FFHpp3(I)+FFHpp4(I)+FFHpc2(I)*DHYD(I)/XMSH
+!     ;+FFHpc3(I)*DHYD(I)/XMSH+FFHpc8(I)*DHYD(I)/XMSH+FFHpc9(I)*DHYD(I)/XMSH
+!     ;+FFHpr1(I)*DHYD(I)*DELECT(I)/XMSH/XMSE)*XMSH
+!
+!      ADMSO(I)=(FFH3pc1(I)+FFH3pc2(I)*DHYD(I)/XMSH+FFH3pc6(I)*DOXYG(I)/XMSO
+!     ;+FFH3pc7(I)*DOXYG(I)/XMSO
+!     ;+FFH3pr2(I)*(TELECT(I)**(-0.65))*DOXYG(I)*DELECT(I)/XMSO/XMSE)*XMSO
+
+
       ADMSH(I)=(FFHpp1(I)+FFHpp3(I)+FFHpp4(I)+FFHpc2(I)*DHYD(I)/XMSH
-     ;+FFHpc3(I)*DHYD(I)/XMSH+FFHpc8(I)*DHYD(I)/XMSH
-     ;+FFHpr1(I)*DHYD(I)*DELECT(I)/XMSH/XMSE)*XMSH
+     ;+FFHpc3(I)*DHYD(I)/XMSH+FFHpc8(I)*DHYD(I)/XMSH+FFHpc9(I)*DHYD(I)/XMSH
+     ;+FFHpr1(I)*DHYD(I)*DELECT(I)*(Telect(I)**(-0.7))/XMSH/XMSE)*XMSH
 
       ADMSO(I)=(FFH3pc1(I)+FFH3pc2(I)*DHYD(I)/XMSH+FFH3pc6(I)*DOXYG(I)/XMSO
      ;+FFH3pc7(I)*DOXYG(I)/XMSO
-     ;+FFH3pr2(I)*(TELECT(I)**(-.65))*DOXYG(I)*DELECT(I)/XMSO/XMSE)*XMSO
+     ;+FFH3pr2(I)*(TELECT(I)**(-0.5))*DOXYG(I)*DELECT(I)/XMSO/XMSE)*XMSO
       
       ADMSHE(I)=0.
       ADMSE(I)=RTHDEL*ADMSH(I)+RTOXEL*ADMSO(I)

@@ -13,7 +13,7 @@ Module ModCommonPlanet
   REAL CLHpH3p(MaxGrid),CLELHp(MaxGrid),CLELH3p(MaxGrid), &
        CLHpH(MaxGrid),CLELH(MaxGrid)
   REAL FFHpp1(MaxGrid),FFHpp3(MaxGrid),FFHpp4(MaxGrid), &
-       FFHpc2(MaxGrid),FFHpc3(MaxGrid), &
+       FFHpc2(MaxGrid),FFHpc3(MaxGrid), FFHpc9(MaxGrid),&
        FFHpc8(MaxGrid),FFHpr1(MaxGrid),FFH3pc1(MaxGrid),FFH3pc2(MaxGrid), &
        FFH3pc6(MaxGrid),FFH3pc7(MaxGrid),FFH3pr2(MaxGrid)
   
@@ -22,7 +22,8 @@ Module ModCommonPlanet
   REAL  CMHpH,CMHpH2,CMHpH3p,CMHpEL,CMH3pH,CMH3pH2,CMH3pHp, &
        CMH3pEL,CMELH,CMELH2,CMELHp,CMELH3p
   
-  !      REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,k2r
+  REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
+  REAL kc9(MaxGrid)
   
 
 !!! These are earth parameters that are put here because they are called in

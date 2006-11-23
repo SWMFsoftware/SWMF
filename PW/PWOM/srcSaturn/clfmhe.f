@@ -78,19 +78,7 @@ CALEX8530  CONTINUE
 CALEXc
 CALEX      XHTM=EXP(-(TIME-300.)**2/2./150./150.)
 c
-      REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
-      jp1=9.5E-11
-      jp2=5.4E-10
-      jp3=7.3E-10
-      jp4=1.3E-10
-      kc1=2.E-9
-      kc2=3.2E-29
-      kc3=4.15E-9
-      kc6=2.4E-9
-      kc7=5.3E-9
-      kc8=8.2E-9
-      kr1=2.E-12
-      kr2=4.6E-6
+
       DO 8570 K=1,NDIM
          KK=K+1
 C         CELLNW(11,K)=DHEL(K)-DTR1*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
