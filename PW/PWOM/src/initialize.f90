@@ -50,7 +50,7 @@ subroutine PW_initialize
 !******************************************************************************
 !  Read the restart file
 !******************************************************************************
-  nDim= 390
+
   if(IsRestart)then
 
      do iLine=1,nLine
@@ -87,10 +87,7 @@ subroutine PW_initialize
   Dtheta  = 0.0242
   Dphi    = 0.0245
 
-  Dt      =    50.0
-  !  Dt      =    0.2
-  !  Dt      =    Tmax
-  !maxTime = 10000.0
+
   maxTime = Tmax
   Time    =     0.0
 
