@@ -1980,23 +1980,20 @@ contains
     real               :: Version
     logical            :: IsOn
 
-    if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
+    if(UseCovariant)then                               !^CFG IF COVARIANT BEGIN
        call allocate_face_area_vectors
        if(UseVertexBasedGrid) call allocate_old_levels
-       if(UseImplicit)call stop_mpi(&                  !^CFG IF IMPLICIT 
-            'Do not use covariant with implicit')      !^CFG IF IMPLICIT
-       if(UseProjection)call stop_mpi(&                !^CFG IF PROJECTION
-            'Do not use covariant with projection')    !^CFG IF PROJECTION
-       if(UseConstrainB)call stop_mpi(&                !^CFG IF CONSTRAINB
-            'Do not use covariant with constrain B')   !^CFG IF CONSTRAINB
-       if(UseRaytrace) call stop_mpi(&                 !^CFG IF RAYTRACE
-            'Do not use covariant with ray tracing')   !^CFG IF RAYTRACE
-       if(UseDivBDiffusion)call stop_mpi(&             !^CFG IF DIVBDIFFUSE
-            'Do not use covariant with divB diffusion')!^CFG IF DIVBDIFFUSE
-       if(boris_correction)call stop_mpi(&             !^CFG IF BORISCORR BEGIN
-            'Do not use covariant with the Boris correction')
-                                                       !^CFG END BORISCORR
+
+       if(UseProjection)call stop_mpi(&                   !^CFG IF PROJECTION
+            'Do not use covariant with projection')       !^CFG IF PROJECTION
+       if(UseConstrainB)call stop_mpi(&                   !^CFG IF CONSTRAINB
+            'Do not use covariant with constrain B')      !^CFG IF CONSTRAINB
+       if(UseRaytrace) call stop_mpi(&                    !^CFG IF RAYTRACE
+            'Do not use covariant with ray tracing')      !^CFG IF RAYTRACE
+       if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
+            'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
     end if                                             !^CFG END COVARIANT
+
     if(SaveBoundaryCells)then
        if(index(optimize_message_pass,'all')>0)then
           call allocate_boundary_cells
@@ -2009,68 +2006,6 @@ contains
           SaveBoundaryCells=.false.
        end if
     end if
-    if(UseImplicit)then                      !^CFG IF IMPLICIT BEGIN
-       call OPTION_IMPLICIT(IsOn,Name)
-       if(.not.IsOn)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: IMPLICIT module is OFF !!!'
-             if(UseStrict) &
-                  call stop_mpi('Correct PARAM.in or switch IMPLICIT on!')
-             write(*,*)NameSub//' setting UseImplicit=.false.'
-          end if
-          UseImplicit=.false.
-       end if
-    end if                                   !^CFG END IMPLICIT
-
-    if(UseProjection)then                    !^CFG IF PROJECTION BEGIN
-       call OPTION_PROJECTION(IsOn,Name)
-       if(.not.IsOn)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: PROJECTION module is OFF !!!'
-             if(UseStrict)&
-                  call stop_mpi('Correct PARAM.in or switch PROJECTION on!')
-             write(*,*)NameSub//&
-                  ' setting UseProjection=.false. and UseDivbSource=.true.'
-          end if
-          UseProjection=.false.
-          UseDivbSource=.true.
-       end if
-    end if                                   !^CFG END PROJECTION
-
-    if(UseConstrainB)then                    !^CFG IF CONSTRAINB BEGIN
-       call OPTION_CONSTRAIN_B(IsOn,Name)
-       if(.not.IsOn)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//' WARNING: CONSTRAINB module is OFF !!!'
-             if(UseStrict)&
-                  call stop_mpi('Correct PARAM.in or switch CONSTRAINB on!')
-             write(*,*)NameSub//&
-                  ' setting UseConstrainB=.false. and UseDivbSource=.true.'
-          end if
-          UseConstrainB=.false.
-          UseDivbSource=.true.
-       end if
-    end if                                   !^CFG END CONSTRAINB
-
-    !^CFG  IF RAYTRACE BEGIN
-    if(UseRaytrace .or. any(index(plot_type,'ray')>0))then
-       call OPTION_RAYTRACING(IsOn,Name)
-       if(.not.IsOn)then
-          if(iProc==0)write(*,'(a)')NameSub// &
-               ' WARNING: RAYTRACING module is OFF !!!'
-          if(UseStrict)&
-               call stop_mpi('Correct PARAM.in or switch RAYTRACING on!')
-          if(UseRaytrace)then
-             if(iProc==0)write(*,*)NameSub//' setting UseRaytrace=.false.'
-             UseRaytrace=.false.
-          end if
-          if(any(index(plot_type,'ray')>0))then
-             if(iProc==0)write(*,*)'setting plot_type=nul'
-             where(index(plot_type,'ray')>0)plot_type='nul'
-          end if
-       end if
-    end if
-    !^CFG END RAYTRACE
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
