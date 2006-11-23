@@ -1,8 +1,18 @@
-       1.0		tMax
-       0.5		DtOutput		
-	'Rusanov'	TypeSolver
-	 T		IsImplicit
-         0		nOutput
- 	 T		IsRestart
-	 T		Is VariableDt
-         .1		Dt
+#ROTATION
+F		IsCentrifugal
+#SAVEPLOT
+.5		DtSavePlot
+#SCHEME
+Rusanov		TypeSolver
+T		IsImplicit
+.1		DtVertical
+#MOTION
+F		IsMoveFluxTube
+#FAC
+F		IsUseJr
+#VERTICALGRID
+800		nPoints
+#FIELDLINE
+1		nTotalLine
+#STOP
+1		Tmax
