@@ -24,6 +24,10 @@ test_help:
 	@echo "    test_titan_start           (run first titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
 
+test_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
+
 ### FUNCTIONALITY TEST SUITE ###
 
 test_func:
@@ -37,9 +41,7 @@ test_func_compile:
 	GridSize.pl -g=8,8,8,400,100
 	make BATSRUS PIDL PSPH
 
-test_func_run:
-	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
+test_func_run: test_rundir
 	./TestSuite.pl -r='${MPIRUN}' -d=${TESTDIR} func
 
 test_func_check:
@@ -68,9 +70,7 @@ test_titan_compile:
 	make
 	make PIDL
 
-test_titan_rundir:
-	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
+test_titan_rundir: test_rundir
 	cd ${TESTDIR}; \
 		cp GM/Param/TITAN/PARAM.in .; \
 		tar xzf GM/Param/TITAN/TitanInput.tgz
