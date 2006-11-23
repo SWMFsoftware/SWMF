@@ -35,7 +35,7 @@ module ModFaceFlux
 
   logical :: DoTestCell
 
-  integer :: iFace, jFace, kFace
+  integer :: iFace, jFace, kFace, iBlockFace
 
   real :: StateLeft_V(nVar), StateRight_V(nVar)
   real :: FluxLeft_V(nVar+1), FluxRight_V(nVar+1)
@@ -46,7 +46,9 @@ module ModFaceFlux
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallUn
+  real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, HallJx, HallJy, HallJz
+
+  character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
   !===========================================================================
@@ -70,6 +72,8 @@ contains
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
+    iBlockFace = iBlock
+
     if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('calc_face_flux', DoTest, DoTestMe)
     else
@@ -88,16 +92,16 @@ contains
     IsNewBlockHall = .true.
 
     if (DoResChangeOnly) then
-       if(neiLeast(iBlock) == 1)call get_flux_x(iBlock,1,1,1,nJ,1,nK)
-       if(neiLwest(iBlock) == 1)call get_flux_x(iBlock,nIFace,nIFace,1,nJ,1,nK)
-       if(neiLsouth(iBlock)== 1)call get_flux_y(iBlock,1,nI,1,1,1,nK)
-       if(neiLnorth(iBlock)== 1)call get_flux_y(iBlock,1,nI,nJFace,nJFace,1,nK)
-       if(neiLbot(iBlock)  == 1)call get_flux_z(iBlock,1,nI,1,nJ,1,1)
-       if(neiLtop(iBlock)  == 1)call get_flux_z(iBlock,1,nI,1,nJ,nKFace,nKFace)
+       if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
+       if(neiLwest(iBlock) == 1)call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
+       if(neiLsouth(iBlock)== 1)call get_flux_y(1,nI,1,1,1,nK)
+       if(neiLnorth(iBlock)== 1)call get_flux_y(1,nI,nJFace,nJFace,1,nK)
+       if(neiLbot(iBlock)  == 1)call get_flux_z(1,nI,1,nJ,1,1)
+       if(neiLtop(iBlock)  == 1)call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
     else
-       call get_flux_x(iBlock,1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
-       call get_flux_y(iBlock,iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
-       call get_flux_z(iBlock,iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
+       call get_flux_x(1,nIFace,jMinFaceX,jMaxFaceX,kMinFaceX,kMaxFaceX)
+       call get_flux_y(iMinFaceY,iMaxFaceY,1,nJFace,kMinFaceY,kMaxFaceY)
+       call get_flux_z(iMinFaceZ,iMaxFaceZ,jMinFaceZ,jMaxFaceZ,1,nKFace)
     end if
 
   contains
@@ -177,53 +181,26 @@ contains
 
     !==========================================================================
 
-    subroutine get_flux_x(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
-      integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
-         Area  = fAx_BLK(iBlock)
-         Area2 = Area**2
-         AreaX = Area; AreaY = 0.0; AreaZ = 0.0
-         InvDxyz = 1./dx_BLK(iBlock)
-      end if                                    !^CFG IF COVARIANT
+      call set_block_values(x_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-
-         HallCoeff = -1.0
-         if(UseHallResist) HallCoeff =                           &
-              0.5*hall_factor(x_, iFace, jFace, kFace, iBlock)* &
-              ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
-              + IonMassPerCharge_G(iFace-1,jFace,kFace) )
-
-         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
-            AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlock)
-            AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlock)
-            AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlock)
-            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-                 FaceArea2MinI_B(iBlock))
-
-            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
-                 InvDxyz  = 1.0/sqrt(&
-                 ( x_BLK(iFace  , jFace, kFace, iBlock)       &
-                 - x_BLK(iFace-1, jFace, kFace, iBlock))**2 + &
-                 ( y_BLK(iFace  , jFace, kFace, iBlock)       &
-                 - y_BLK(iFace-1, jFace, kFace, iBlock))**2 + &
-                 ( z_BLK(iFace  , jFace, kFace, iBlock)       &
-                 - z_BLK(iFace-1, jFace, kFace, iBlock))**2 )
-
-         end if                                 !^CFG END COVARIANT
+         
+         call set_cell_values_x
 
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
 
-         B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlock)
-         B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlock)
-         B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlock)
+         B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+         B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+         B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(iBlock, x_, Flux_VX(:,iFace, jFace, kFace))
+         call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace) = CmaxDt
          UDotFA_X(iFace, jFace, kFace)  = Unormal
@@ -234,51 +211,25 @@ contains
 
     !==========================================================================
 
-    subroutine get_flux_y(iBlock,iMin,iMax,jMin,jMax,kMin,kMax)
-      integer, intent(in):: iBlock,iMin,iMax,jMin,jMax,kMin,kMax
+    subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
+      integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
-      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
-         Area  = fAy_BLK(iBlock)
-         Area2 = Area**2
-         AreaX = 0.0; AreaY = Area; AreaZ = 0.0
-         InvDxyz  = 1./dy_BLK(iBlock)
-      end if                                    !^CFG IF COVARIANT
+      call set_block_values(y_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         HallCoeff = -1.0
-         if(UseHallResist) HallCoeff =                           &
-              0.5*hall_factor(y_, iFace, jFace, kFace, iBlock)* &
-              ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
-              + IonMassPerCharge_G(iFace,jFace-1,kFace) )
-
-         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
-            AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlock)
-            AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlock)
-            AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlock)
-            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-                 FaceArea2MinJ_B(iBlock))
-            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
-                 InvDxyz  = 1.0/sqrt(&
-                 ( x_BLK(iFace, jFace  , kFace, iBlock)       &
-                 - x_BLK(iFace, jFace-1, kFace, iBlock))**2 + &
-                 ( y_BLK(iFace, jFace  , kFace, iBlock)       &
-                 - y_BLK(iFace, jFace-1, kFace, iBlock))**2 + &
-                 ( z_BLK(iFace, jFace  , kFace, iBlock)       &
-                 - z_BLK(iFace, jFace-1, kFace, iBlock))**2 )
-
-         end if                                 !^CFG END COVARIANT
+         call set_cell_values_y
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 
-         B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlock)
-         B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlock)
-         B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlock)
+         B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+         B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+         B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
          StateRight_V = RightState_VY(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(iBlock, y_, Flux_VY(:, iFace, jFace, kFace))
+         call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
 
          VdtFace_y(iFace, jFace, kFace) = CmaxDt
          UDotFA_Y( iFace, jFace, kFace) = Unormal
@@ -290,51 +241,25 @@ contains
 
     !==========================================================================
 
-    subroutine get_flux_z(iBlock, iMin, iMax, jMin, jMax, kMin, kMax)
-      integer, intent(in):: iBlock, iMin, iMax, jMin, jMax, kMin, kMax
+    subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
+      integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
-      if(.not.UseCovariant)then                 !^CFG IF COVARIANT
-         Area  = fAz_BLK(iBlock)
-         Area2 = Area**2
-         AreaX = 0.0; AreaY = 0.0; AreaZ = Area
-         InvDxyz = 1./dz_BLK(iBlock)
-      end if                                    !^CFG IF COVARIANT
+      call set_block_values(z_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         HallCoeff = -1.0
-         if(UseHallResist) HallCoeff =                           &
-              0.5*hall_factor(z_, iFace, jFace, kFace, iBlock)* &
-              ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
-              + IonMassPerCharge_G(iFace,jFace,kFace-1) )
-
-         if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
-            AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlock)
-            AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlock)
-            AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlock)
-            Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-                 FaceArea2MinK_B(iBlock))
-            if(HallCmaxFactor > 0.0 .and. HallCoeff > 0.0)&
-                 InvDxyz  = 1.0/sqrt(&
-                 ( x_BLK(iFace, jFace, kFace  , iBlock)       &
-                 - x_BLK(iFace, jFace, kFace-1, iBlock))**2 + &
-                 ( y_BLK(iFace, jFace, kFace  , iBlock)       &
-                 - y_BLK(iFace, jFace, kFace-1, iBlock))**2 + &
-                 ( z_BLK(iFace, jFace, kFace  , iBlock)       &
-                 - z_BLK(iFace, jFace, kFace-1, iBlock))**2 )
-
-         end if                                 !^CFG END COVARIANT
+         call set_cell_values_z
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 
-         B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlock)
-         B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlock)
-         B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlock)
+         B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+         B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+         B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
          StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(iBlock, z_, Flux_VZ(:, iFace, jFace, kFace))
+         call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
 
          VdtFace_z(iFace, jFace, kFace) = CmaxDt
          UDotFA_Z( iFace, jFace, kFace) = Unormal
@@ -346,14 +271,121 @@ contains
   end subroutine calc_face_flux
 
   !===========================================================================
+  subroutine set_block_values(iDim)
+    integer, intent(in) :: iDim
 
-  subroutine get_numerical_flux(iBlock, iDir, Flux_V)
+    if(UseCovariant) RETURN    !^CFG IF COVARIANT
+
+    AreaX = 0.0; AreaY = 0.0; AreaZ = 0.0
+    select case(iDim)
+    case(x_)
+       Area    = fAx_BLK(iBlockFace)
+       AreaX   = Area
+       InvDxyz = 1./dx_BLK(iBlockFace)
+    case(y_)
+       Area    = fAy_BLK(iBlockFace)
+       AreaY   = Area
+       InvDxyz = 1./dy_BLK(iBlockFace)
+    case(z_)
+       Area    = fAz_BLK(iBlockFace)
+       AreaZ   = Area
+       InvDxyz = 1./dz_BLK(iBlockFace)
+    end select
+    Area2 = Area**2
+
+  end subroutine set_block_values
+  !===========================================================================
+  subroutine set_cell_values_x
+
+    HallCoeff = -1.0
+    if(UseHallResist) HallCoeff =                           &
+         0.5*hall_factor(x_, iFace, jFace, kFace, iBlockFace)* &
+         ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
+         + IonMassPerCharge_G(iFace-1,jFace,kFace) )
+
+    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+       AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
+       AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
+       AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+            FaceArea2MinI_B(iBlockFace))
+       
+       if(HallCoeff > 0.0)&
+            InvDxyz  = 1.0/sqrt(&
+            ( x_BLK(iFace  , jFace, kFace, iBlockFace)       &
+            - x_BLK(iFace-1, jFace, kFace, iBlockFace))**2 + &
+            ( y_BLK(iFace  , jFace, kFace, iBlockFace)       &
+            - y_BLK(iFace-1, jFace, kFace, iBlockFace))**2 + &
+            ( z_BLK(iFace  , jFace, kFace, iBlockFace)       &
+            - z_BLK(iFace-1, jFace, kFace, iBlockFace))**2 )
+       
+    end if                                 !^CFG END COVARIANT
+
+  end subroutine set_cell_values_x
+
+  !===========================================================================
+  subroutine set_cell_values_y
+
+    HallCoeff = -1.0
+    if(UseHallResist) HallCoeff =                           &
+         0.5*hall_factor(y_, iFace, jFace, kFace, iBlockFace)* &
+         ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
+         + IonMassPerCharge_G(iFace,jFace-1,kFace) )
+
+    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+       AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
+       AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
+       AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+            FaceArea2MinJ_B(iBlockFace))
+       if(HallCoeff > 0.0)&
+            InvDxyz  = 1.0/sqrt(&
+            ( x_BLK(iFace, jFace  , kFace, iBlockFace)       &
+            - x_BLK(iFace, jFace-1, kFace, iBlockFace))**2 + &
+            ( y_BLK(iFace, jFace  , kFace, iBlockFace)       &
+            - y_BLK(iFace, jFace-1, kFace, iBlockFace))**2 + &
+            ( z_BLK(iFace, jFace  , kFace, iBlockFace)       &
+            - z_BLK(iFace, jFace-1, kFace, iBlockFace))**2 )
+
+    end if                                 !^CFG END COVARIANT
+
+  end subroutine set_cell_values_y
+  !===========================================================================
+
+  subroutine set_cell_values_z
+
+    HallCoeff = -1.0
+    if(UseHallResist) HallCoeff =                           &
+         0.5*hall_factor(z_, iFace, jFace, kFace, iBlockFace)* &
+         ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
+         + IonMassPerCharge_G(iFace,jFace,kFace-1) )
+
+    if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
+       AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
+       AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
+       AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
+            FaceArea2MinK_B(iBlockFace))
+       if(HallCoeff > 0.0)&
+            InvDxyz  = 1.0/sqrt(&
+            ( x_BLK(iFace, jFace, kFace  , iBlockFace)       &
+            - x_BLK(iFace, jFace, kFace-1, iBlockFace))**2 + &
+            ( y_BLK(iFace, jFace, kFace  , iBlockFace)       &
+            - y_BLK(iFace, jFace, kFace-1, iBlockFace))**2 + &
+            ( z_BLK(iFace, jFace, kFace  , iBlockFace)       &
+            - z_BLK(iFace, jFace, kFace-1, iBlockFace))**2 )
+
+    end if                                 !^CFG END COVARIANT
+
+  end subroutine set_cell_values_z
+
+  !=========================================================================
+  subroutine get_numerical_flux(iDir, Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
     use ModAdvance, ONLY: DoReplaceDensity
 
-    integer, intent(in) :: iBlock
     integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nVar+1)
 
@@ -402,11 +434,20 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
-    call get_physical_flux(iBlock, iDir, StateLeft_V, B0x, B0y, B0z,&
-         StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft)
+    if(HallCoeff > 0.0)then
+       ! Calculate HallCoeff*current for the face
+       call get_face_current(iDir, iFace, jFace, kFace, iBlockFace, &
+            HallJx, HallJy, HallJz)
+       HallJx = HallCoeff*HallJx
+       HallJy = HallCoeff*HallJy
+       HallJz = HallCoeff*HallJz
+    end if
 
-    call get_physical_flux(iBlock, iDir, StateRight_V, B0x, B0y, B0z,&
-         StateRightCons_V, FluxRight_V, UnRight, EnRight)
+    call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
+         StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft, HallUnLeft)
+
+    call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
+         StateRightCons_V, FluxRight_V, UnRight, EnRight, HallUnRight)
 
     ! All the solvers below use the average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
@@ -552,10 +593,9 @@ contains
 
   !===========================================================================
 
-  subroutine get_physical_flux(iBlock, iDir, State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un, En)
+  subroutine get_physical_flux(iDir, State_V, B0x, B0y, B0z, &
+       StateCons_V, Flux_V, Un, En, HallUn)
 
-    integer, intent(in) :: iBlock             ! block index
     integer, intent(in) :: iDir               ! direction of flux
     real,    intent(in) :: State_V(nVar)      ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z      ! B0
@@ -563,6 +603,7 @@ contains
     real,    intent(out):: Flux_V(nVar+1)     ! fluxes for all states
     real,    intent(out):: Un                 ! normal velocity
     real,    intent(out):: En                 ! normal electric field
+    real,    intent(out):: HallUn             ! normal Hall/electron velocity
 
     if(UseBoris)then           !^CFG IF BORISCORR BEGIN
        call get_boris_flux
@@ -679,7 +720,7 @@ contains
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
-      real :: HallUx, HallUy, HallUz, Jx, Jy, Jz, HallCoeffInvRho
+      real :: HallUx, HallUy, HallUz, InvRho
       real :: Bn, B0n
       real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
@@ -732,12 +773,11 @@ contains
       Flux_V(RhoUz_) = Un*Rho*Uz - Bn*FullBz - B0n*Bz + pTotal*AreaZ
 
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
-      if(UseHallResist.and. HallCoeff > 0.0)then
-         call get_face_current(iDir, iFace, jFace, kFace, iBlock, Jx, Jy, Jz)
-         HallCoeffInvRho = HallCoeff/Rho
-         HallUx = Ux - Jx*HallCoeffInvRho
-         HallUy = Uy - Jy*HallCoeffInvRho
-         HallUz = Uz - Jz*HallCoeffInvRho
+      if(HallCoeff > 0.0)then
+         InvRho = 1.0/Rho
+         HallUx = Ux - HallJx*InvRho
+         HallUy = Uy - HallJy*InvRho
+         HallUz = Uz - HallJz*InvRho
 
          HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
 
@@ -754,7 +794,7 @@ contains
       Flux_V(p_)  = Un*p
 
       ! f_i[e]=(u_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*u_k))
-      if(UseHallResist .and. HallCoeff > 0.0) then
+      if(HallCoeff > 0.0) then
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
@@ -788,9 +828,9 @@ contains
     integer, intent(in) :: iDir
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
-    real, optional, intent(out) :: Cmax     ! maximum speed relative to lab
-    real, optional, intent(out) :: Cleft    ! maximum left speed
-    real, optional, intent(out) :: Cright   ! maximum right speed
+    real, optional, intent(out) :: Cmax        ! maximum speed relative to lab
+    real, optional, intent(out) :: Cleft       ! maximum left speed
+    real, optional, intent(out) :: Cright      ! maximum right speed
 
     if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
        call get_boris_speed
@@ -846,7 +886,7 @@ contains
       ! In extreme cases "slow" wave can be faster than "fast" wave
       ! so take the maximum of the two
 
-      if(DoAw)then                                        !^CFG IF AWFLUX BEGIN
+      if(DoAw)then                                       !^CFG IF AWFLUX BEGIN
          Un      = min(UnRight, UnLeft)
          Cleft   = min(Un*GammaA2 - Fast, Un - Slow)
          Un      = max(UnLeft, UnRight)
@@ -880,7 +920,12 @@ contains
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
       real :: FullBt, Rho1, Rho, cDrift, cHall
+
+      character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
+
+      if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
+
       InvRho = 1.0/State_V(Rho_)
       Sound2 = g*State_V(p_)*InvRho
       FullBx = State_V(Bx_) + B0x
@@ -917,7 +962,7 @@ contains
       end if                                         !^CFG IF SIMPLEBORIS
 
       ! Add whistler wave speed for the shortest wavelength 2 dx
-      if(HallCmaxFactor > 0.0 .and.HallCoeff > 0.0) then
+      if(HallCoeff > 0.0) then
          ! Tangential component of B (*Area)
          FullBt = sqrt(max(0.0, &
               Area2*(FullBx**2+FullBy**2+FullBz**2) - FullBn**2))
@@ -942,27 +987,44 @@ contains
       end if
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
-         Cleft   = min(UnLeft, UnRight) - Fast
-         Cright  = max(UnLeft, UnRight) + Fast
-         Cmax    = max(Cright, -Cleft)
          if(HallCoeff > 0.0)then
-            CmaxDt = max(max(UnLeft, UnRight) + FastDt, &
-                 -       min(UnLeft, UnRight) - FastDt)
+            Cleft   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
+            Cright  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
+            CmaxDt  = max(Cright + FastDt, - Cleft - FastDt)
+            Cleft   = Cleft  - Fast
+            Cright  = Cright + Fast
+            Cmax    = max(Cright, -Cleft)
          else
+            Cleft   = min(UnLeft, UnRight) - Fast
+            Cright  = max(UnLeft, UnRight) + Fast
+            Cmax    = max(Cright, -Cleft)
             CmaxDt = Cmax
          end if
       else                                           !^CFG END AWFLUX
          if(present(Cmax))then
-            Cmax   = abs(Un) + Fast
             if(HallCoeff > 0.0)then
-               CmaxDt = max(abs(Un), abs(HallUn)) + FastDt
+               Cmax   = max(abs(Un), abs(HallUnLeft), abs(HallUnRight))
+               CmaxDt = Cmax + FastDt
+               Cmax   = Cmax + Fast
             else
+               Cmax   = abs(Un) + Fast
                CmaxDt = Cmax
             end if
          end if
          if(present(Cleft))  Cleft  = Un - Fast
          if(present(Cright)) Cright = Un + Fast
       end if                                         !^CFG IF AWFLUX
+
+      if(DoTestCell)then
+         write(*,*)NameSub,' Un=',Un
+         write(*,*)NameSub,' Csound2=',Sound2
+         write(*,*)NameSub,' Cfast2=', Fast2
+         write(*,*)NameSub,' Discr2=', Discr**2
+         write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
+         write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
+         write(*,*)NameSub,' Cfast=',Fast
+         write(*,*)NameSub,' Cmax=',Cmax/Area
+      end if
 
     end subroutine get_mhd_speed
 
@@ -1776,3 +1838,4 @@ subroutine calc_electric_field(iBlock)
        + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / fAy_BLK(iBlock))
   !^CFG END COVARIANT
 end subroutine calc_electric_field
+
