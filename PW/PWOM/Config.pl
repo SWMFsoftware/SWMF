@@ -16,5 +16,8 @@ for $file (@file){
 }
 `cp $Dir/PLANET $Dir/Makefile.planet src/`;
 `cp $Dir/PLANET $Dir/ModCommonPlanet.f90 src/`;
+if ($Planet eq "Saturn"){
+    `cp $Dir/PLANET $Dir/get_rate.f90 src/`;
+}
 
 `echo "PLANET=$Planet" > Makefile.planet`;
