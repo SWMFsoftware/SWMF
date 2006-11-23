@@ -54,7 +54,7 @@ C     define the output files and attaching units
      &                 NameRestart=NameRestart,    
      &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
      &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
-     &                 IsRestart=IsRestart,DToutput=DToutput)
+     &                 IsRestart=IsRestart,DToutput=DToutput,nDim=nDim)
       
       DT=DTpolarwind
 
@@ -89,11 +89,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,21) NDIM
 C     nDim is the actual gridsize used
-      if (NamePlanet == 'Earth ') nDim=390
+!      if (NamePlanet == 'Earth ') nDim=390
 C Use nDim=550 for top boundary at 2 Re in the earth case
 c      nDim=550
 c      nDim=400
-      if (NamePlanet == 'Saturn') nDim=800
+!      if (NamePlanet == 'Saturn') nDim=800
 c      if (NamePlanet == 'Saturn') nDim=930
 
 c      nDim=680

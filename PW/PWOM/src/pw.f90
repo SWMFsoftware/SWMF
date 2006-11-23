@@ -496,7 +496,9 @@ subroutine AdvancePWline
   endif
   
   MaxLineTime=Time+DT
+  if (MaxLineTime > Tmax) MaxLineTime = Tmax
   
+
   call put_field_line(&
        dOxyg(:,iLine), uOxyg(:,iLine), pOxyg(:,iLine), TOxyg(:,iLine),     &
        dHel(:,iLine), uHel(:,iLine), pHel(:,iLine), THel(:,iLine),         &
@@ -506,7 +508,8 @@ subroutine AdvancePWline
        OmegaHorFieldLine(iLine), iUnitOutput=iUnitOutput,                  &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
-       IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput)
+       IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
+       nDim=nDim)
     
   call polar_wind
   

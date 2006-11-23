@@ -13,7 +13,7 @@ module ModFieldLine
 
   logical :: IsRestartPW, IsVariableDtPW 
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
-       GeoMagLonPW,JrPW
+       GeoMagLonPW,JrPW,nDimPW
   real    :: wHorizontalPW
   integer :: iUnitInputPW,      &
        iUnitOutputPW,iUnitGraphicsPW,                 &
@@ -34,7 +34,7 @@ contains
        dElect, uElect, pElect, TElect,                      &
        GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput )
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nDim )
 
     use ModParameters
 
@@ -45,7 +45,7 @@ contains
     real, optional, intent(in) :: Time,MaxLineTime,DToutput
 
     real,    intent(in)     :: GeoMagLat,GeoMagLon,Jr,wHorizontal              
-    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine
+    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nDim
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,IsRestart
@@ -72,6 +72,8 @@ contains
     JrPW        = Jr
     wHorizontalPW   = wHorizontal
     
+
+    if (present(nDim))          nDimPW = nDim
     
     if (present(Time))          TimePW = Time
     if (present(MaxLineTime))   MaxLineTimePW = MaxLineTime
@@ -95,7 +97,7 @@ contains
        dElect, uElect, pElect, TElect,                      &
        GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput)
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nDim)
 
     use ModParameters
 
@@ -111,7 +113,7 @@ contains
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: IsVariableDt,IsRestart
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput
-    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine
+    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nDim
     
     dOxyg (:) = dOxygPW(:)
     uOxyg (:) = uOxygPW(:)
@@ -137,7 +139,7 @@ contains
 
     
 
-    
+    if (present(nDim))          nDim = nDimPW
     if (present(Time))          Time = TimePW
     if (present(MaxLineTime))   MaxLineTime = MaxLineTimePW
     if (present(iUnitGraphics)) iUnitGraphics =iUnitGraphicsPW

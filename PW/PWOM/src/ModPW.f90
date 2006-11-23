@@ -61,7 +61,7 @@ module ModPWOM
        NameRestartIn, NameRestart, NameGraphics
 
   integer       :: iUnitInput,iUnitOutput,iUnitSourceGraphics,&
-                   iUnitCollision,nDim
+                   iUnitCollision,nDim=390
                  
   integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics
   
