@@ -292,139 +292,163 @@ subroutine getsource(iBLK,w,s)
 end subroutine getsource
 
 !==============================================================================
-subroutine getpthermal(w,qnI,qnJ,qnK,p)
+subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 
-  use ModVarIndexes, ONLY : rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_
-  use ModImplicit, ONLY : nw,E_
-  use ModPhysics, ONLY : gm1
+  use ModProcMH,   ONLY: iProc
+  use ModMain,     ONLY: nDim, x_, y_, z_, &
+       ProcTest, BlkTest,iTest,jTest,kTest
+  use ModImplicit, ONLY: nw
+  use ModFaceFlux, ONLY: iBlockFace, iFace, jFace, kFace, &
+       set_block_values, &
+       set_cell_values_x, set_cell_values_y, set_cell_values_z, &
+       get_physical_flux, &
+       HallJx, HallJy, HallJz, DoTestCell, Area
+  use ModHallResist, ONLY: UseHallResist, HallJ_CD
+  use ModImplicit, ONLY: p_, e_
+
   implicit none
 
-  integer, intent(in):: qnI,qnJ,qnK
-  real, intent(in)   :: w(qnI,qnJ,qnK,nw)
-  real, intent(out)  :: p(qnI,qnJ,qnK)
+  integer, intent(in):: nI,nJ,nK,idim,iBlock
+  real, intent(in)   :: StateCons_CV(nI,nJ,nK,nw)
+  real, intent(in)   :: B0_CD(nI,nJ,nK,nDim)
+  real, intent(out)  :: Flux_CV(nI,nJ,nK,nw)
 
+  real :: Primitive_V(nw), Conservative_V(nw+1), Flux_V(nw+1)
+
+  real :: Un, En, HallUn
+
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
-  p=gm1*(w(:,:,:,e_)-0.5*(                                          &
-       (w(:,:,:,rhoUx_)**2+w(:,:,:,rhoUy_)**2+w(:,:,:,rhoUz_)**2)   &
-       /w(:,:,:,rho_)                                               &
-        +w(:,:,:,Bx_)**2+w(:,:,:,By_)**2+w(:,:,:,Bz_)**2            &
-       ))
+  if(iBlock==BLKtest .and. iProc==PROCtest)then
+     call set_oktest('get_face_flux', DoTest, DoTestMe)
+  else
+     DoTest=.false.; DoTestMe=.false.
+  end if
 
-end subroutine getpthermal
+  iBlockFace = iBlock
+
+  call set_block_values(iDim)
+  do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI
+
+     DoTestCell = DoTestMe .and. &
+          iFace==iTest .and. jFace==jTest .and. kFace==kTest
+
+     Primitive_V = StateCons_CV(iFace, jFace, kFace, :)
+     call conservative_to_primitive(Primitive_V)
+
+     Conservative_V(1:nw) = StateCons_CV(iFace, jFace, kFace, :)
+     Conservative_V(p_)     = Primitive_V(p_)
+     Conservative_V(nw+1)   = StateCons_CV(iFace, jFace, kFace, E_)
+
+     if(UseHallResist)then
+        HallJx = HallJ_CD(iFace, jFace, kFace, x_)
+        HallJy = HallJ_CD(iFace, jFace, kFace, y_)
+        HallJz = HallJ_CD(iFace, jFace, kFace, z_)
+     end if
+
+     select case(iDim)
+     case(x_)
+        call set_cell_values_x
+     case(y_)
+        call set_cell_values_y
+     case(z_)
+        call set_cell_values_z
+     end select
+     call get_physical_flux(iDim, Primitive_V, &
+          B0_CD(iFace, jFace, kFace, x_), &
+          B0_CD(iFace, jFace, kFace, y_), &
+          B0_CD(iFace, jFace, kFace, z_), &
+          Conservative_V, Flux_V, Un, En, HallUn)
+
+     Flux_CV(iFace, jFace, kFace, 1:E_-1)= Flux_V(1:E_-1)
+     Flux_CV(iFace, jFace, kFace, E_)    = Flux_V(nw+1)
+
+  end do; end do; end do
+
+end subroutine get_face_flux
+
 !==============================================================================
+subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
 
-subroutine getptotal(w,qnI,qnJ,qnK,p)
+  use ModProcMH,   ONLY: iProc
+  use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
+  use ModImplicit, ONLY: nw
+  use ModFaceFlux, ONLY: iBlockFace, iFace, jFace, kFace, &
+       set_block_values, &
+       set_cell_values_x, set_cell_values_y, set_cell_values_z, get_speed_max,&
+       Area, DoLf, DoAw, DoRoe, DoHll, HallUnLeft, HallUnRight, DoTestCell
 
-  use ModVarIndexes, ONLY : Bx_,By_,Bz_
-  use ModImplicit, ONLY : nw
   implicit none
 
-  integer, intent(in):: qnI,qnJ,qnK
-  real, intent(in)   :: w(qnI,qnJ,qnK,nw)
-  real, intent(out)  :: p(qnI,qnJ,qnK)
-
-  !--------------------------------------------------------------------------
-
-  call getpthermal(w,qnI,qnJ,qnK,p)
-  p=p+0.5*(w(:,:,:,Bx_)**2+w(:,:,:,By_)**2+w(:,:,:,Bz_)**2)
-
-end subroutine getptotal
-
-!==============================================================================
-subroutine getcmax(w,B0,Dxyz_D,qnI,qnJ,qnK,idim,implBLK,cmax)
-
-  use ModProcMH
-  use ModMain
-  use ModVarIndexes
-  use ModImplicit
-  use ModPhysics, ONLY : g
-  use ModHallResist, ONLY: IonMassPerCharge, HallCmaxFactor
-  use ModNumConst,   ONLY: cPi
-  implicit none
-
-  integer, intent(in):: qnI,qnJ,qnK,idim,implBLK
+  integer, intent(in):: qnI,qnJ,qnK,idim,iBlock
   real, intent(in)   :: w(qnI,qnJ,qnK,nw)
   real, intent(in)   :: B0(qnI,qnJ,qnK,ndim)
-  real, intent(in)   :: Dxyz_D(ndim)
-  real, intent(out)  :: cmax(qnI,qnJ,qnK)
+  real, intent(out)  :: Cmax(qnI,qnJ,qnK)
 
-  ! used to be automatic arrays
-  real, dimension(:,:,:), allocatable :: csound2,cfast2
-  integer :: iError
+  real :: Primitive_V(nw)
 
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
 
-  if(implBLK==implBLKtest.and.iProc==PROCtest)then
-     call set_oktest('getcmax',oktest,oktest_me)
+  if(iBlock==BLKtest .and. iProc==PROCtest)then
+     call set_oktest('get_cmax_face', DoTest, DoTestMe)
   else
-     oktest=.false.; oktest_me=.false.
+     DoTest=.false.; DoTestMe=.false.
   end if
 
-  ! Allocate arrays that used to be automatic
-  allocate(csound2(qnI,qnJ,qnK), cfast2(qnI,qnJ,qnK), stat=iError)
-  call alloc_check(iError,"getcmax arrays")
+  iBlockFace = iBlock
+  DoLf  = .true.
+  DoAw  = .false.
+  DoRoe = .false.
+  DoHll = .false.
+  HallUnLeft = 0.0
+  HallUnRight = 0.0
 
-  if(oktest_me)then
-     if(okdebug)then
-        write(*,*)'Starting getcmax: ',&
-             'idim,rho,E,Bx,By,Bz,B0z,B0y,B0z=', idim, &
-             w(Itest,Jtest,Ktest,rho_),&
-             w(Itest,Jtest,Ktest,E_),&
-             w(Itest,Jtest,Ktest,Bx_),&
-             w(Itest,Jtest,Ktest,By_),&
-             w(Itest,Jtest,Ktest,Bz_),&
-             B0(Itest,Jtest,Ktest,x_),&
-             B0(Itest,Jtest,Ktest,y_),&
-             B0(Itest,Jtest,Ktest,z_)
-     else
-        write(*,*)'Starting getcmax: idim=',idim
-     end if
-  end if
+  call set_block_values(iDim)
+  do kFace = 1, qnK; do jFace = 1, qnJ; do iFace = 1, qnI
 
-  ! csound^2 = g*p/rho
-  call getpthermal(w,qnI,qnJ,qnK,csound2)
+     DoTestCell = DoTestMe .and. &
+          iFace==iTest .and. jFace==jTest .and. kFace==kTest
 
-  if(oktest_me)write(*,*)'getcmax: p=',csound2(Itest,Jtest,Ktest)
+     Primitive_V = w(iFace, jFace, kFace, :)
 
-  csound2=g*csound2/w(:,:,:,rho_)
+     call conservative_to_primitive(Primitive_V)
 
-  ! cfast^2 = csound^2 + B^2/rho  (cfast orthogonal to B)
-  cfast2= csound2 + &
-       ((w(:,:,:,Bx_)+B0(:,:,:,x_))**2                &
-       +(w(:,:,:,By_)+B0(:,:,:,y_))**2                &
-       +(w(:,:,:,Bz_)+B0(:,:,:,z_))**2)/w(:,:,:,rho_)
+     select case(iDim)
+     case(x_)
+        call set_cell_values_x
+     case(y_)
+        call set_cell_values_y
+     case(z_)
+        call set_cell_values_z
+     end select
+     call get_speed_max(iDim, Primitive_V, &
+          B0(iFace, jFace, kFace, x_), &
+          B0(iFace, jFace, kFace, y_), &
+          B0(iFace, jFace, kFace, z_), &
+          cmax = cmax(iFace, jFace, kFace))
+     cmax(iFace, jFace, kFace) = cmax(iFace, jFace, kFace)
+  end do; end do; end do
 
-  if(oktest_me)then
-     write(*,*)'getcmax: csound2, cfast2=',csound2(Itest,Jtest,Ktest),&
-          cfast2(Itest,Jtest,Ktest)
-     write(*,*)'getcmax: discr=',cfast2(Itest,Jtest,Ktest)**2-&
-          4*csound2(Itest,Jtest,Ktest)*&
-          (w(Itest,Jtest,Ktest,B_+idim)+B0(Itest,Jtest,Ktest,idim))**2/&
-          w(Itest,Jtest,Ktest,rho_)
-     write(*,*)'getcmax: min(discr)=',&
-          minval(cfast2**2-4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/&
-          w(:,:,:,rho_)),&
-          minloc(cfast2**2-4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/&
-          w(:,:,:,rho_))
-  end if
+end subroutine get_cmax_face
 
-  ! cmax = |ux| + sqrt(0.5*(cfast^2 + sqrt(cfast^4 - 4*csound^2*Bx^2/rho)))
-  cmax= abs(w(:,:,:,rhoU_+idim)/w(:,:,:,rho_)) + &
-       sqrt(0.5*(cfast2+ sqrt(max(0.0,cfast2**2          &
-       -4*csound2*(w(:,:,:,B_+idim)+B0(:,:,:,idim))**2/w(:,:,:,rho_)))))
+!==============================================================================
+subroutine conservative_to_primitive(State_V)
 
-  if(HallCmaxFactor>0.0) cmax = cmax + HallCmaxFactor* &
-          cPi*abs(w(:,:,:,B_+idim)+B0(:,:,:,idim))*IonMassPerCharge &
-          /(w(:,:,:,rho_)*Dxyz_D(iDim))
+  use ModImplicit, ONLY: nw, p_, e_
+  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_
+  use ModPhysics, ONLY: gm1
+  implicit none
+  real, intent(inout):: State_V(nw)
+  real :: InvRho
+  !---------------------------------------------------------------------------
+  InvRho = 1.0/State_V(Rho_)
+  State_V(p_)      = gm1*(State_V(e_) - &
+       0.5*(sum(State_V(RhoUx_:RhoUz_)**2)*InvRho + sum(State_V(Bx_:Bz_)**2)))
+  State_V(Ux_:Uz_) = InvRho*State_V(RhoUx_:RhoUz_)
 
-  if(oktest_me)write(*,*)'Finished getcmax: cmax=',cmax(Itest,Jtest,Ktest)
-
-  ! Deallocate arrays that used to be automatic
-  deallocate(csound2, cfast2)
-
-end subroutine getcmax
+end subroutine conservative_to_primitive
 
 !==============================================================================
 subroutine getdt_courant(qdt)
@@ -432,7 +456,7 @@ subroutine getdt_courant(qdt)
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell,true_BLK
+  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,dxyz,true_cell,true_BLK,vInv_CB
   use ModImplicit
   use ModMpi
   implicit none
@@ -458,17 +482,17 @@ subroutine getdt_courant(qdt)
 
      do idim=1,ndim
 
-        call getcmax(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,dxyz,&
-             nI,nJ,nK,idim,implBLK,cmax)
+        call get_cmax_face(w_k(1:nI,1:nJ,1:nK,1:nw,implBLK),B0cell,&
+             nI, nJ, nK, iDim, iBlk, Cmax)
 
         if(.not.true_BLK(iBLK))then
            where(.not.true_cell(1:nI,1:nJ,1:nK,iBLK))cmax=0.0
         end if
 
-        qdt_local=max(qdt_local,maxval(cmax)/dxyz(idim))
+        qdt_local=max(qdt_local,maxval(cmax*vInv_CB(:,:,:,iBlk)))
 
         if(oktest_me)write(*,*)'getdt_courant idim,dx,cmax,1/qdt=',&
-             idim,dxyz(idim),cmax(Itest,Jtest,Ktest),qdt_local
+             idim,cmax(Itest,Jtest,Ktest),qdt_local
      end do
   end do
 
@@ -484,107 +508,3 @@ subroutine getdt_courant(qdt)
 
 end subroutine getdt_courant
 
-!==============================================================================
-subroutine getflux(w,B0,qnI,qnJ,qnK,iw,idim,implBLK,f)
-
-  ! Calculate flux f=F_idim[iw] from w and B0 
-
-  use ModProcMH
-  use ModMain
-  use ModVarIndexes
-  use ModImplicit
-  use ModHallResist, ONLY: UseHallResist, HallJ_CD
-  implicit none
-
-  integer, intent(in) :: qnI,qnJ,qnK,iw,idim,implBLK
-  real,    intent(in) :: w(qnI,qnJ,qnK,nw)
-  real,    intent(in) :: B0(qnI,qnJ,qnK,ndim)
-  real,    intent(out):: f(qnI,qnJ,qnK)
-
-  integer :: kdim, iBLK
-  logical :: oktest, oktest_me
-  !--------------------------------------------------------------------------
-  if(iProc==PROCtest.and.implBLK==implBLKtest.and.iw==VARtest &
-       .and.iDim==DimTest)then
-     call set_oktest('getflux',oktest,oktest_me)
-  else
-     oktest=.false.; oktest_me=.false.
-  endif
-  if(oktest_me)write(*,*)'Getflux idim,w:',idim,w(Itest,Jtest,Ktest,VARtest)
-
-  iBLK = impl2iBLK(implBLK)
-
-  select case(iw)
-  case(rho_)
-     ! f_i[rho]=m_i
-     f = w(:,:,:,rhoU_+idim)
-
-  case(rhoUx_, rhoUy_, rhoUz_)
-     ! f_i[m_k]=m_i*m_k/rho - b_k*b_i [+ptotal if i==k]
-     !         -B0_k*b_i - B0_i*b_k [+B0_j*b_j if i==k]
-     kdim = iw-rhoU_
-     if(idim==kdim)then
-        ! f_i[m_i]=ptotal + m_i**2/rho - b_i**2 - 2*B0_i*b_i + B0_j*b_j
-        call getptotal(w,qnI,qnJ,qnK,f)
-        f = f + w(:,:,:,iw)**2/w(:,:,:,rho_) - w(:,:,:,B_+idim)**2 &
-             -2*B0(:,:,:,idim)*w( :,:,:,B_+idim) &
-             +B0(:,:,:,x_)*w(:,:,:,Bx_)          &
-             +B0(:,:,:,y_)*w(:,:,:,By_)          &
-             +B0(:,:,:,z_)*w(:,:,:,Bz_)
-     else
-        ! f_i[m_k]=m_i*m_k/rho - b_k*b_i -B0_k*b_i - B0_i*b_k
-        f = w(:,:,:,rhoU_+idim)*w(:,:,:,iw)/w(:,:,:,rho_) &
-             -w( :,:,:,B_+kdim)*w(:,:,:,B_+idim)          &
-             -B0(:,:,:,kdim)   *w(:,:,:,B_+idim)          &
-             -B0(:,:,:,idim)   *w(:,:,:,B_+kdim)
-     endif
-
-  case(E_)
-     ! f_i[e]=(m_i*(ptotal+e+(b_k*B0_k))-(b_i+B0_i)*(b_k*m_k))/rho 
-     call getptotal(w,qnI,qnJ,qnK,f)
-     f = (w(:,:,:,rhoU_+idim)                 & ! (m_i
-          *(f + w( :,:,:,E_)                  & ! *(ptotal + e
-          +B0(:,:,:,x_)*w(:,:,:,Bx_)          & !   +B0.b)
-          +B0(:,:,:,y_)*w(:,:,:,By_)          &
-          +B0(:,:,:,z_)*w(:,:,:,Bz_))         & 
-          -(w(:,:,:,B_+idim)+B0(:,:,:,idim))  & ! -(b_i+B0_i)
-          *(w(:,:,:,Bx_)*w(:,:,:,rhoUx_)      & !  *(b.m)
-          +w(:,:,:,By_)*w(:,:,:,rhoUy_)       &
-          +w(:,:,:,Bz_)*w(:,:,:,rhoUz_))      & ! 
-          )/w(:,:,:,rho_)                       ! )/rho
-
-  case(Bx_,By_,Bz_)
-     kdim = iw-B_
-     if(idim==kdim) then
-        ! f_i[b_i] should be exactly 0
-        f = 0.0
-     else
-        if(UseHallResist)then
-           ! Take Hall effect into account. The off-diagonal part of 
-           ! Eta.J = H*(J x B)/rho where H = HallFactor*IonMassPerCharge
-           ! so the electric field (ignoring the diagonal part of J) becomes 
-           ! E = -u x B + eta.J = -(rho U - H*J)xB/rho
-           ! In effect the momentum rhoU is preplaced with (rhoU - H*J)
-           !
-           ! f_i[b_k]=( (m_i-H*J_i)*(b_k+B0_k) - (m_k-H*J_k)*(b_i+B0_i))/rho
-           f =  ( (w(:,:,:,rhoU_+idim)-HallJ_CD(:,:,:,idim)) &
-                *(w(:,:,:,iw)+ B0(:,:,:,kdim)) &
-                -(w(:,:,:,rhoU_+kdim)-HallJ_CD(:,:,:,kdim)) &
-                *(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
-                )/w(:,:,:,rho_)
-        else
-           ! f_i[b_k]=(m_i*(b_k+B0_k) - m_k*(b_i+B0_i))/rho
-           f =  (w(:,:,:,rhoU_+idim)*(w(:,:,:,iw)      + B0(:,:,:,kdim)) &
-                -w(:,:,:,rhoU_+kdim)*(w(:,:,:,B_+idim) + B0(:,:,:,idim)) &
-                )/w(:,:,:,rho_)
-        end if
-     endif
-  case default
-     ! We assume that all other variables behave like advected scalars !!!
-     ! f_i[scalar]=m_i/rho*scalar
-     f = w(:,:,:,rhoU_+idim)/w(:,:,:,rho_)*w(:,:,:,iw)
-  end select
-
-  if(oktest_me)write(*,*)'getflux final f=',f(Itest,Jtest,Ktest)
-
-end subroutine getflux
