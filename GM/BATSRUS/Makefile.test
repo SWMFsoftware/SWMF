@@ -42,7 +42,7 @@ test_func_compile:
 	make BATSRUS PIDL PSPH
 
 test_func_run: test_rundir
-	./TestSuite.pl -r='${MPIRUN}' -d=${TESTDIR} func
+	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
 
 test_func_check:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
