@@ -116,36 +116,21 @@ test_compile:
 
 TESTDIR = run_test
 
+MPIRUN = 'mpirun -np 2'
+
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
 	cd ${TESTDIR}; cp UA/DataIn/UAM.in.test UAM.in
 
 test_run:
-	cd ${TESTDIR}; mpirun -np 2 ./GITM.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
 
 test_check:
-	-@(${SCRIPTDIR}/DiffNum.pl \
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/UA/data/log00000002.dat \
 		srcData/log00000002.dat > test.diff)
 	ls -l test.diff
-
-test_orig:
-	mkdir -p ${UADIR}/test/UA
-	cd ${UADIR}/test/UA; \
-		mkdir restartOUT data; \
-		ln -s restartOUT restartIN; \
-		ln -s ${UADIR}/srcData DataIn
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		./GridSize.pl -g=9,9,50,4 ; make ; \
-		cd ${UADIR}/test ; \
-		ln -s ${BINDIR}/GITM.exe . ; \
-		cp UA/DataIn/UAM.in.test ./UAM.in ; \
-		touch core ; chmod 444 core ; \
-		ln -s UA/* .; \
-		mpirun -np 2 GITM.exe ; \
-		echo "Looking for Differences in logfile..." ; cd UA/data ; diff log00000002.dat ../../../srcData/log00000002.dat ; cd ../../.. ; echo "Do you see differences??" ; \
-	fi);
 
 dist:
 	make distclean
@@ -153,4 +138,3 @@ dist:
 	    share src srcData srcIDL srcIE srcIO srcInterface \
 	    srcMake srcRudy srcSphereAB
 	make install
-
