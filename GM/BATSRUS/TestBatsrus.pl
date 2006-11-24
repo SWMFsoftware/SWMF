@@ -175,7 +175,8 @@ if(-f "Makefile"){
 	    print "Compiling $exe...\n";
 	    &execute("make");
 	    die "ERROR: $exe could not be compiled with make\n"
-		    unless -x "bin/$exe" or -x "src/$exe";
+		    unless -x "bin/$exe" or -x "src/$exe" 
+		    or -x "../../bin/$exe";
 	}
 	# Compile postprocessing executables if necessary
 	my @plottype=@{$select{"Plottype"}};
@@ -310,7 +311,7 @@ sub do_test{
 	&execute("cp $testtmp/PARAM.expand PARAM.in");
 	&execute("cp $testtmp/LAYOUT.in LAYOUT.in") if $SWMF;
 
-	$result = &execute("$run $exe $flg 1> log.$num 2> error.$num");
+	$result = &execute("$run ./$exe $flg 1> log.$num 2> error.$num");
 
 	&execute("sleep $Sleep") if $Sleep > 0;
 
