@@ -2,7 +2,7 @@
 
 ### TESTS FOR STAND-ALONE BATSRUS ###
 
-test:	test_func test_titan
+test: test_titan test_func
 	ls -l *.diff
 
 # All tests are done in this directory:
