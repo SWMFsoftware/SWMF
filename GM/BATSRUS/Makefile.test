@@ -46,7 +46,12 @@ test_func_run: test_rundir
 
 test_func_check:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
-	cd ${REFDIR}; tar -xzf ../Param/TESTSUITE/TEST.tgz
+	cd ${REFDIR}; \
+		(if [ "${MPIRUN}" = "" ]; then \
+			tar -xzf ../Param/TESTSUITE/TEST_1proc.tgz; \
+		else \
+			tar -xzf ../Param/TESTSUITE/TEST.tgz; \
+		fi);
 	./TestCompare.pl -q -v -o=1e-12 ${TESTDIR} ${REFDIR} > test_func.diff
 	./TestCompare.pl -speed ${TESTDIR} ${REFDIR} > test_func.speed
 	ls -l test_func.diff test_func.speed
