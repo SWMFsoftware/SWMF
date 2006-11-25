@@ -116,7 +116,7 @@ test_compile:
 
 TESTDIR = run_test
 
-MPIRUN = 'mpirun -np 2'
+MPIRUN = mpirun -np 2
 
 test_rundir:
 	rm -rf ${TESTDIR}
