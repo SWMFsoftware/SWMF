@@ -40,7 +40,7 @@ subroutine MH_set_parameters(TypeAction)
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
-  use ModrestartFile,   ONLY: read_restart_parameters
+  use ModrestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -1738,6 +1738,9 @@ contains
   !===========================================================================
 
   subroutine set_defaults
+
+    ! Set defaults for restart files
+    call init_mod_restart_file
 
     CodeVersionRead = -1.
 
