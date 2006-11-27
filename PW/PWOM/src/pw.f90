@@ -471,7 +471,7 @@ end subroutine MoveFluxTube
 !  This routine advances a single field line
 !******************************************************************************
 
-subroutine AdvancePWline
+subroutine PW_advance_line
   use ModPWOM
   use ModFieldLine
   implicit none
@@ -533,5 +533,5 @@ subroutine AdvancePWline
        iUnitOutput=iUnitOutput,iLine=iLine,MaxLineTime=MaxLineTime)
   endif
   
-end subroutine AdvancePWline
+end subroutine PW_advance_line
 
