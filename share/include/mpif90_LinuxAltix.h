@@ -35,6 +35,9 @@
 !  + 1993 University of Chicago
 !  + 1993 Mississippi State University
 
+        character*100 MPI_HEADER_FILE
+        parameter (MPI_HEADER_FILE = 'mpif90_LinuxAltix.h')
+
         integer MPI_VERSION
         integer MPI_SUBVERSION
 
