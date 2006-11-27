@@ -106,16 +106,18 @@ subroutine ionosphere_solver(PHI, &
      ! Set a value just in case there are no currents at all
      LatBoundary = 45.0 * cDegToRad
 
-     if (north) then
-        do i=1,nTheta
-           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
-        enddo
-     else
-        do i=nTheta,1,-1
-           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
-        enddo
-     endif
-     LatBoundary = max(LatBoundary - 5.0*cDegToRad,0.0)
+!\\\ 2006Nov27, comment out until new GMRES solver available.  DDZ
+!      if (north) then
+!         do i=1,nTheta
+!            if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
+!         enddo
+!      else
+!         do i=nTheta,1,-1
+!            if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
+!         enddo
+!      endif
+!      LatBoundary = max(LatBoundary - 5.0*cDegToRad,0.0)
+!///
   endif
 
   !!! write(*,*)'PHI(:,nPsi/4), LatBoundary=',PHI(:,nPsi/4), LatBoundary !!!
