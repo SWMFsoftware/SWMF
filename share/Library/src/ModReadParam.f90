@@ -155,6 +155,7 @@ module ModReadParam
   public :: i_line_read       ! Return the current line number
   public :: n_line_read       ! Return the last line number in the selected
   public :: i_session_read    ! Return the session number
+  public :: i_line_command    ! Returns the line number for a command or -1
   public :: read_text         ! Provide the full text in the output argument
 
   !REVISION HISTORY:
@@ -162,6 +163,7 @@ module ModReadParam
   ! 31Oct04 G. Toth - added fractions 3/5 for reals, 
   !                   added read_in public method without a Name parameter,
   !                   replaced err=1 with iostat=iReadError.
+  ! 27Nov06 G. Toth - added i_line_command function
   !EOP
 
   character(len=*), parameter :: NameMod='ModReadParam'
@@ -179,6 +181,15 @@ module ModReadParam
   integer           :: nLine=0             ! Last line number
   integer           :: iSession=0          ! Session number
   logical           :: DoEcho = .false.    ! Do we echo parameters?
+
+  ! Storage for all the commands for all sessions:
+  ! the command index is increased from 1 to iCommand in every session
+  ! and the name and line number is stored. The name contains the 
+  ! component and command name together.
+  integer, parameter :: MaxCommand = MaxLine/3, MaxSession = 10
+  integer            :: iCommand = 0
+  integer            :: iLineCommand_II(MaxCommand, MaxSession)
+  character(len=lStringLine) :: NameCommand_II(MaxCommand, MaxSession)
 
   interface read_var
      module procedure &
@@ -327,6 +338,7 @@ contains
     integer,           intent(in) :: iSessionIn, iLineIn
     integer, optional, intent(in) :: nLineIn, iIoUnitIn
     !------------------------------------------------------------------------
+    if(iSessionIn > iSession) iCommand = 0
     NameComp     = NameCompIn
     iSession     = iSessionIn
     iLine        = iLineIn
@@ -418,6 +430,12 @@ contains
 
        NameCommand = StringLine
        read_command = .true.
+
+       ! Store command
+       iCommand = iCommand + 1
+       iLineCommand_II(iCommand, iSession) = iLine
+       NameCommand_II(iCommand, iSession)  = NameComp//NameCommand
+
     else
        NameCommand  = ''
        read_command = .false.
@@ -691,6 +709,38 @@ contains
   integer function i_session_read()
     i_session_read = iSession
   end function i_session_read
+
+  !===========================================================================
+
+  integer function i_line_command(NameCommandIn, iSessionIn)
+
+    ! Search the command name for the current component.
+    ! If iSessionIn is present, search for session iSessionIn, 
+    ! otherwise search the currenst session. If the command is found
+    ! return the line number in the input file, otherwise return -1.
+
+    character(len=*), intent(in) :: NameCommandIn
+    integer, optional, intent(in):: iSessionIn
+
+    integer :: i, j
+    character(len=lStringLine) :: NameCommand
+    !------------------------------------------------------------------------
+    NameCommand = NameComp // trim(NameCommandIn)
+
+    j = iSession
+    if(present(iSessionIn)) j = iSessionIn
+
+    do iCommand = 1, iCommand
+       if(NameCommand == NameCommand_II(i, j)) then
+          i_line_command = iLineCommand_II(i, j)
+          RETURN
+       end if
+    end do
+
+    ! Could not find command, return -1
+    i_line_command = -1
+    
+  end function i_line_command
 
   !BOP =======================================================================
   !IROUTINE: read_text - obtain selected text buffer 
