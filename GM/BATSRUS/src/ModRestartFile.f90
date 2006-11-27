@@ -4,7 +4,7 @@ module ModRestartFile
 
   use ModProcMH,     ONLY: iProc
   use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
-       restart, save_restart_file
+       restart, save_restart_file, write_prefix, iUnitOut
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal
@@ -26,6 +26,7 @@ module ModRestartFile
   public write_restart_files 
   public read_restart_files
   public read_octree_file
+  public init_mod_restart_file
 
   ! Directories for input and output restart files
   character(len=100), public :: NameRestartInDir ="restartIN/"
@@ -40,8 +41,11 @@ module ModRestartFile
   logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
   integer :: nByteRealRead = 8     ! Real precision in restart files
 
-  ! One can use 'block' or 'direct' format for input and output restart files
+  ! One can use 'block' or 'one' format for input and output restart files
+  ! The input format is set to 'block' for backwards compatibility
   character (len=10)  :: TypeRestartInFile ='block'
+
+  ! The output format is platform dependent and it is reset in restart_init
   character (len=10)  :: TypeRestartOutFile='one'  
 
   character(len=100) :: NameFile
@@ -57,6 +61,29 @@ module ModRestartFile
   !^CFG END CONSTRAINB
 
 contains
+
+  subroutine init_mod_restart_file
+    use ModMPI, ONLY: MPI_HEADER_FILE
+
+    if(MPI_HEADER_FILE == 'mpif90_LinuxAltix.h')then
+       ! Columbia (and other Altix machines) have restrictions on the
+       ! number of files
+       TypeRestartOutFile = 'one'
+    else
+       ! On some machines (e.g. multicore Linux platforms) 
+       ! the format 'one' does not work. The safe format is 'block'.
+       TypeRestartOutFile = 'block'
+    end if
+    if(iProc==0)then
+       call write_prefix;
+       write(iUnitOut,*) &
+            'init_mod_restart_file: setting TypeRestartOutFile = ',&
+            trim(TypeRestartOutFile)
+    end if
+
+  end subroutine init_mod_restart_file
+
+  !============================================================================
 
   subroutine read_restart_parameters(NameCommand)
 
