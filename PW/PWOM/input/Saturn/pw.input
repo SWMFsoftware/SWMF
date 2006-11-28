@@ -1,11 +1,11 @@
 #ROTATION
 F		IsCentrifugal
 #SAVEPLOT
-.5		DtSavePlot
+1.0		DtSavePlot
 #SCHEME
 Rusanov		TypeSolver
 T		IsImplicit
-.1		DtVertical
+.01		DtVertical
 #MOTION
 F		IsMoveFluxTube
 #FAC
@@ -15,4 +15,4 @@ F		IsUseJr
 #FIELDLINE
 1		nTotalLine
 #STOP
-1		Tmax
+10.0		Tmax
