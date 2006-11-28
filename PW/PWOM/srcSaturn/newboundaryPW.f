@@ -34,10 +34,15 @@ C Set the pressure boundary conditions
 C**********************************************************************
 
 ! Use Plasma ScaleHeight=k(Ti+Te)/mg
-      ScaleHeightO=2.0*1.380658e-16*(TOXYG(nDim)+Telect(nDim))
+      ScaleHeightO=1.380658e-16*(TOXYG(nDim)+Telect(nDim))
      &     /(abs(Gravty(nDim))*xmso)
-      ScaleHeightH=2.0*1.380658e-16*(THYD(nDim)+Telect(nDim))
+      ScaleHeightH=1.380658e-16*(THYD(nDim)+Telect(nDim))
      &     /(abs(Gravty(nDim))*xmsh)
+
+!      ScaleHeightO=2.0*1.380658e-16*(TOXYG(nDim)+Telect(nDim))
+!     &     /(abs(Gravty(nDim))*xmso)
+!      ScaleHeightH=2.0*1.380658e-16*(THYD(nDim)+Telect(nDim))
+!     &     /(abs(Gravty(nDim))*xmsh)
 !      
 !      ScaleHeightO=1.380658e-16*(TOXYG(nDim)+Telect(nDim))
 !     &     /(abs(Gravty(nDim)+4.8e-10*Efield(nDim-100)/xmso)*xmso)
@@ -64,11 +69,18 @@ C******************************************************************************
       DBGNDO2=PBGNDO2/RGASO/TBGNDO2
       DBGNDH2=PBGNDH2/RGASH/TBGNDH2
 
-      UBGNDO=DOXYG(nDim)/DBGNDO*AR12TOP(1)/AR23(nDim)*UOXYG(NDIM)
-      UBGNDH=DHYD(nDim) /DBGNDH*AR12TOP(1)/AR23(nDim)*UHYD(NDIM)
+      UBGNDO=UOXYG(NDIM)
+      UBGNDH=UHYD(NDIM)
 
-      UBGNDO2=DBGNDO/DBGNDO2*AR12Top(2)/AR23Top(1)*UBGNDO
-      UBGNDH2=DBGNDH/DBGNDH2*AR12Top(2)/AR23Top(1)*UBGNDH
+      UBGNDO2=UBGNDO
+      UBGNDH2=UBGNDH
+
+
+!      UBGNDO=DOXYG(nDim)/DBGNDO*AR12TOP(1)/AR23(nDim)*UOXYG(NDIM)
+!      UBGNDH=DHYD(nDim) /DBGNDH*AR12TOP(1)/AR23(nDim)*UHYD(NDIM)
+!
+!      UBGNDO2=DBGNDO/DBGNDO2*AR12Top(2)/AR23Top(1)*UBGNDO
+!      UBGNDH2=DBGNDH/DBGNDH2*AR12Top(2)/AR23Top(1)*UBGNDH
 
 C n_e   = n_H+  + n_O+ + n_He+
 C rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)

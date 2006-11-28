@@ -33,17 +33,22 @@ C      end
      ; Scaleheight_H, Scaleheight_H2O,Scaleheight_CH4,logDensity_H2,
      ; logDensity_H, logDensity_H2O, logDensity_CH4
 
+! H2O Flux of 10^7
+!      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
+!     ;     /9.822053667,7.661700141,3.846886683,8.2/
+
+! H2O Flux of 10^6
       DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
-     ;     /9.822053667,7.661700141,3.846886683,8.2/
+     ;     /9.822053667,7.661700141,2.846886683,8.2/
 
 c      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
-c     ;     /9.822053667,7.661700141,4.8,8.2/
+c     ;     /9.822053667,7.661700141,3.8,6.2/
 
 c casew
-c      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
-c     ;     /10.822053667,7.661700141,5.8,8.2/
+!      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
+!     ;     /10.822053667,7.661700141,5.8,8.2/
 
-c      Temp=1000.0
+!      Temp=1000.0
 c casew1
 c      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
 c     ;     /10.822053667,7.661700141,5.8,8.2/
@@ -76,7 +81,7 @@ c      DATA Scaleheight_H2,Scaleheight_H, Scaleheight_H2O,Scaleheight_CH4
 c     ; /739.97053,1544.640013,719.6795081,85.00641982/
 c      DATA logDensity_H2, logDensity_H, logDensity_H2O, logDensity_CH4
 c     ; /9.822053667,7.661700141,3.846886683,6.549372827/
-c      TEMP=1500.
+c       TEMP=1500.
 
 C**********************************************************************
 C     Case d Temp=600
@@ -119,7 +124,7 @@ c      Scaleheight_H2O=1.380658e-26*Temp/(2.99e-26*8.52)
 c      Scaleheight_CH4=1.380658e-26*420.0/(2.65686432e-26*8.6)
 
 C CaseW
-c      Scaleheight_H2O = 144.0
+!      Scaleheight_H2O = 144.0
 
 
       ALT1 = ALT/1.E+05
