@@ -126,9 +126,74 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   Dt = min(DtMax, TimeSimulationLimit - Time)
   do iLine=1,nLine
      call MoveFluxTube
-     call AdvancePWline
+     call PW_advance_line
   end do
   TimeSimulation = Time
 
 end subroutine PW_run
 
+!==============================================================================
+
+subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
+                 Name_V, iBlock)
+
+  use ModPWOM, ONLY: allocate_ie_variables, Phi_G, Theta_G, Potential_G, Jr_G
+  use CON_coupler, ONLY: Grid_C, IE_
+  implicit none
+
+  character(len=*), parameter :: NameSub='PW_put_from_ie'
+
+  !INPUT ARGUMENTS:
+  integer, intent(in):: iSize, jSize, nVarIn, iBlock
+  real, intent(in) :: Buffer_IIV(iSize, jSize, nVarIn)
+  character(len=*), intent(in) :: Name_V(nVarIn)
+
+  integer, parameter :: nVar = 2
+  integer, parameter :: South_ = 1, North_ = 2
+
+  logical :: IsPotFound, IsJrFound
+
+  integer :: i, j, iVar, nThetaIono, nPhiIono
+  !----------------------------------------------------------------------------
+  if(iBlock /= north_) RETURN
+
+  if(.not.allocated(Phi_G))then
+     nThetaIono = Grid_C(IE_) % nCoord_D(1)
+     nPhiIono   = Grid_C(IE_) % nCoord_D(2)
+     if(nThetaIono /= 2*iSize - 1 .or. nPhiIono /= jSize)then
+        write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
+             Grid_C(IE_) % nCoord_D(1:2)
+        write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
+        call CON_stop(NameSub//' ERROR: Inconsistent IE grid sizes')
+     endif
+
+     call allocate_ie_variables(iSize, jSize)
+
+     do j = 1, jSize
+        Theta_G(1:iSize, j) = Grid_C(IE_) % Coord1_I(1:iSize)
+     end do
+     do i = 1, iSize
+        Phi_G(i, 1:jSize)   = Grid_C(IE_) % Coord2_I(1:jSize)
+     end do
+
+  end if
+
+
+  IsPotFound = .false.
+  IsJrFound  = .false.
+  do iVar = 1, nVarIn
+     select case(Name_V(iVar))
+     case('Pot')
+        IsPotFound = .true.
+        Potential_G(1:iSize, 1:jSize) = Buffer_IIV(:, :, iVar)
+     case('Jr')
+        IsJrFound = .true.
+        Jr_G(1:iSize, 1:jSize) = Buffer_IIV(:, :, iVar)
+     end select
+  end do
+  if(.not.IsPotFound .or. .not.IsJrFound)then
+     write(*,*)NameSub,': Name_V=',Name_V
+     call CON_stop(NameSub//' could not find Pot or Jr')
+  end if
+
+end subroutine PW_put_from_ie
