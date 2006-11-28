@@ -10,10 +10,7 @@ module ModPWOM
 
   integer :: iProc, nProc, iComm,errcode
 
-  integer ::   nTheta, nPhi, maxLine
-  parameter (nTheta     = 65 )
-  parameter (nPhi       = 257)
-  parameter (maxLine    = 500)
+  integer, parameter :: MaxLine = 500
   
   integer :: nTotalLine=1
   integer ::   iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine
@@ -23,14 +20,15 @@ module ModPWOM
 
   integer :: nLine
 
-  real, dimension(0:nPhi+1,0:nTheta+1)::  Theta_G,Phi_G,SigmaH_G, SigmaP_G,&
-                                          Jr_G,Potential_G,Br_G,Btheta_G,  &
-                                          BmagnitudeSquared_G
- 
-  real, dimension(nPhi,nTheta)        ::  Ephi,Etheta,Er, VelocityExBtheta,&
-                                          VelocityExBphi,VelocityExBr,     &
-                                          Ux,Uy,Uz,x,y,z,Ex,Ey,Ez
-  
+  ! ionosphere variables
+  integer :: nTheta = -1, nPhi = -1
+  real, dimension(:,:), allocatable :: &
+       Theta_G,Phi_G,SigmaH_G,SigmaP_G, &
+       Jr_G,Potential_G,Br_G,Btheta_G,  &
+       BmagnitudeSquared_G, &
+       Ephi,Etheta,Er, VelocityExBtheta,&
+       VelocityExBphi,VelocityExBr,     &
+       Ux,Uy,Uz,x,y,z,Ex,Ey,Ez
 
 
   real,    dimension(maxLine)        ::  FieldLineTheta, FieldLinePhi,     &
@@ -74,5 +72,40 @@ module ModPWOM
   logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
   character(7) :: TypeSolver='Godunov'
+
+contains
+
+  subroutine allocate_ie_variables(iSize, jSize)
+    integer, intent(in):: iSize, jSize
+
+    nPhi = iSize
+    nTheta = jSize
+
+    allocate( &
+         Theta_G(0:iSize+1, 0:jSize+1), &
+         Phi_G(0:iSize+1, 0:jSize+1), &
+         Potential_G(0:iSize+1, 0:jSize+1), &
+         Jr_G(0:iSize+1, 0:jSize+1), &
+         SigmaH_G(0:iSize+1, 0:jSize+1), &
+         SigmaP_G(0:iSize+1, 0:jSize+1), &
+         Br_G(0:iSize+1, 0:jSize+1), &
+         Btheta_G(0:iSize+1, 0:jSize+1),  &
+         BmagnitudeSquared_G(0:iSize+1, 0:jSize+1), &
+         Ephi(iSize, jSize), &
+         Etheta(iSize, jSize), &
+         Er(iSize, jSize), & 
+         VelocityExBtheta(iSize, jSize), &
+         VelocityExBphi(iSize, jSize), &
+         VelocityExBr(iSize, jSize), &
+         Ux(iSize, jSize), &
+         Uy(iSize, jSize), &
+         Uz(iSize, jSize), &
+         x(iSize, jSize), &
+         y(iSize, jSize), &
+         z(iSize, jSize), &
+         Ex(iSize, jSize), &
+         Ey(iSize, jSize), &
+         Ez(iSize, jSize))
+  end subroutine allocate_ie_variables
 
 end module ModPWOM
