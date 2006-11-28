@@ -6,7 +6,7 @@ T
 100			DnShowProgressLong
 
 #DESCRIPTION
-Run GM and IE in steady state mode
+Run GM and IE in time accurate mode
 
 #PLANET
 EARTH
