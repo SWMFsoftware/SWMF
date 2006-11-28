@@ -281,10 +281,11 @@ rundir: ENV_CHECK
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir                 #^CMP IF IH
 	cd ${IMDIR}; make rundir                 #^CMP IF IM
-	cd ${UADIR}; make rundir                 #^CMP IF UA
+	cd ${PWDIR}; make rundir                 #^CMP IF PW
 	cd ${RBDIR}; make rundir                 #^CMP IF RB
-	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${SCDIR}; make rundir                 #^CMP IF SC
+	cd ${SPDIR}; make rundir                 #^CMP IF SP
+	cd ${UADIR}; make rundir                 #^CMP IF UA
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
 	cp CON/Scripts/${OS}/*${MACHINE}* run/
 	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
