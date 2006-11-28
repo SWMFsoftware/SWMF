@@ -126,6 +126,7 @@ subroutine Get_ElectrodynamicPW
   !---------------------------------------------------------------------------
   open(UnitTmp_, FILE=NamePhiNorth)  
 
+  call allocate_ie_variables(257, 65)
   do iPhi=1,nPhi
      do iTheta=1,nTheta
         read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
