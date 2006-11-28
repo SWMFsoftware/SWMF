@@ -268,15 +268,14 @@ run:
 	make rundir
 
 rundir: ENV_CHECK
-	mkdir run
-	mkdir run/STDOUT
-	cp Param/LAYOUT.DEFAULT       run/LAYOUT.in
-	cp Param/PARAM.DEFAULT        run/PARAM.in
-	cp share/Scripts/Restart.pl   run/Restart.pl
-	cp share/Scripts/PostProc.pl  run/PostProc.pl
-	touch run/core
-	chmod 444 run/core
-	cd run; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
+	mkdir -p ${RUNDIR}/STDOUT
+	cp Param/LAYOUT.DEFAULT       ${RUNDIR}/LAYOUT.in
+	cp Param/PARAM.DEFAULT        ${RUNDIR}/PARAM.in
+	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
+	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
+	touch ${RUNDIR}/core
+	chmod 444 ${RUNDIR}/core
+	cd ${RUNDIR}; ln -s  ${DIR}/bin/SWMF.exe . ; ln -s  ${DIR}/Param .
 	cd ${GMDIR}; make rundir                 #^CMP IF GM
 	cd ${IEDIR}; make rundir                 #^CMP IF IE
 	cd ${IHDIR}; make rundir                 #^CMP IF IH
@@ -287,10 +286,10 @@ rundir: ENV_CHECK
 	cd ${SPDIR}; make rundir                 #^CMP IF SP
 	cd ${UADIR}; make rundir                 #^CMP IF UA
 	@touch CON/Scripts/${OS}/TMP_${MACHINE}
-	cp CON/Scripts/${OS}/*${MACHINE}* run/
-	@rm -rf run/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
+	cp CON/Scripts/${OS}/*${MACHINE}* ${RUNDIR}/
+	@rm -rf ${RUNDIR}/TMP_${MACHINE} CON/Scripts/${OS}/TMP_${MACHINE}
 	@echo
-	@echo Creation of run directory succeeded
+	@echo Creation of ${RUNDIR} directory succeeded
 	@echo
 
 #
@@ -381,26 +380,4 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 
 #^CMP END SC
 
-#
-#       Targets for the ESMF compatible executable
-#
-ESMF_SWMF: LIB
-	@cd ESMF/ESMF_SWMF/src; make EXE
-
-ESMF_SWMF_test: ESMF_SWMF
-	@make ESMF_SWMF_run
-
-ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
-	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe; \
-	perl -ne 'print if /error/i' PET*.ESMF_LogFile
-
-ESMF_SWMF_rundir: run
-	@cd ESMF/ESMF_SWMF; make rundir
-
-
-test: test_comp
-
-test_comp:
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
-		do ( cd $$i; make test; ); done
-	ls -l [A-Z][A-Z]/*/*.diff
+include Makefile.test #^CMP IF TESTING
