@@ -65,10 +65,27 @@ LIB:
 
 TESTDIR = run_test
 
-test:	PWOM
+test: test_saturn test_earth
+
+test_earth:
+	make test_earth_config
 	make test_rundir
 	make test_run
-	make test_compare
+	make test_check
+
+test_earth_config:
+	./config.pl -p=Earth
+	make PWOM
+
+test_saturn:
+	make test_saturn_config
+	make test_rundir
+	make test_run
+	make test_check
+
+test_saturn_config:
+	./config.pl -p=Saturn
+	make PWOM
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -77,17 +94,19 @@ test_rundir:
 test_run: PWOM
 	cd ${TESTDIR}; ./PWOM.exe
 
-test_compare:
+test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
-		output/${PLANET}/restart_iline0001.dat > test_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+		output/${PLANET}/restart_iline0001.dat \
+		> test_${PLANET}_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
-		output/${PLANET}/plots_iline0001.out > test_plots.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out output/${PLANET}/log.out \
-		> test_log.diff)
+		output/${PLANET}/plots_iline0001.out \
+		> test_${PLANET}_plots.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+		output/${PLANET}/log.out \
+		> test_${PLANET}_log.diff)
 	ls -l *.diff
-
 
 rundir: run
 
