@@ -1,0 +1,73 @@
+#^CMP COPYRIGHT UM
+#^CMP FILE TESTING
+
+TESTDIR = `pwd`/run_test
+
+MPIRUN = mpirun -np 2
+
+test: test_comp test_pw
+
+### Component tests ###
+
+test_comp:
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+		do ( cd $$i; make test; ); done
+	ls -l [A-Z][A-Z]/*/*.diff
+
+### Polarwind test ###
+
+test_pw:
+	make test_pw_config
+	make test_pw_rundir
+	make test_pw_run
+	make test_pw_check
+
+# SetSWMF.pl -v=empty to be implemented
+test_pw_config: 
+	#SetSWMF.pl -v=empty
+	SetSWMF.pl -v=PW/PWOM
+	cd PW/PWOM; ./config.pl -p=Earth
+	make SWMF
+
+test_pw_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.PW ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.PW ${TESTDIR}/LAYOUT.in
+
+# This should use ${MPIRUN} ./SWMF.exe eventually
+test_pw_run:
+	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
+	cd ${TESTDIR}; ./SWMF.exe > runlog
+
+test_pw_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
+		${PWDIR}/output/Earth/restart_iline0001.dat \
+		> test_pw_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-8 \
+		${TESTDIR}/PW/plots/plots_iline0001.out \
+		${PWDIR}/output/Earth/plots_iline0001.out \
+		> test_pw_plots.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+		${PWDIR}/output/Earth/log.out \
+		> test_pw_log.diff)
+	ls -l test_pw_*.diff
+
+### ESMF test ###
+#
+#       Targets for the ESMF compatible executable
+#
+ESMF_SWMF: LIB
+	@cd ESMF/ESMF_SWMF/src; make EXE
+
+ESMF_SWMF_test: ESMF_SWMF
+	@make ESMF_SWMF_run
+
+ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
+	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe; \
+	perl -ne 'print if /error/i' PET*.ESMF_LogFile
+
+ESMF_SWMF_rundir: run
+	@cd ESMF/ESMF_SWMF; make rundir
+
