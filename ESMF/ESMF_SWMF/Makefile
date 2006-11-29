@@ -4,7 +4,6 @@ install:
 	touch src/Makefile.DEPEND
 
 rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
-	cd ${RUNDIR}; 
 
 ${RUNDIR}/ESMF_SWMF.input:
 	cp src/ESMF_SWMF.input ${RUNDIR}/
