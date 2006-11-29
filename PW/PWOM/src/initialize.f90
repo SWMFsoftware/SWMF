@@ -95,7 +95,7 @@ subroutine PW_initialize
   ! Read information from IE file, and get the velocities
   !****************************************************************************
 
-  call get_electrodynamicPW
+  call PW_get_electrodynamic
 
   !****************************************************************************
   !  Move flux tube around
