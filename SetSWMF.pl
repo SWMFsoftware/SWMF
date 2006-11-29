@@ -343,6 +343,17 @@ sub set_versions{
     my $comp;        # COMPONENT
     my $version;     # VERSION
     my $change;      # true if some version has changed
+
+    if($NewVersion[0] =~ /^empty$/i){
+	# Remove the first element of the array
+	shift(@NewVersion);
+
+	# select the Empty version for all components that are not set
+	foreach $comp (keys %Version){
+	    push(@NewVersion, "$comp/Empty") 
+		unless grep(/^$comp\//, @NewVersion);
+	}
+    }
     foreach $compversion (@NewVersion){
 
 	die("$ERROR directory $compversion does not exist.")
@@ -573,6 +584,9 @@ Options:
                in a comma separated list.
                If IH/BATSRUS or SC/BATSRUS is selected for the first time, 
                make IHBATSRUS or make SCBATSRUS is done, respectively.
+               If the first VERSION is set to 'Empty' without specifying the
+               component, the Empty version is selected for all the components
+               that are not listed explicitly.
 
 Examples of use:
 
@@ -596,9 +610,13 @@ Uninstall SWMF (if this fails, run SetSWMF.pl -install first):
 
     SetSWMF.pl -uninstall
 
-Select IH/BATSRUS, IM/Empty and UA/Empty component versions:
+Select the empty version for all components except GM/BATSRUS:
 
-    SetSWMF.pl -v=IH/BATSRUS -v=IM/Empty,UA/Empty
+    SetSWMF.pl -v=Empty,GM/BATSRUS
+
+Select IH/BATSRUS, IM/RCM2 and UA/GITM2 component versions:
+
+    SetSWMF.pl -v=IH/BATSRUS -v=IM/RCM2,UA/GITM2
 
 Set the grid size for GM and IH:
 
