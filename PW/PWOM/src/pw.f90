@@ -126,16 +126,17 @@ subroutine Get_ElectrodynamicPW
   !---------------------------------------------------------------------------
   open(UnitTmp_, FILE=NamePhiNorth)  
 
-  call allocate_ie_variables(257, 65)
-  do iPhi=1,nPhi
-     do iTheta=1,nTheta
-        read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
-             Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
-             SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
-
+  if (IsStandAlone) then
+     call allocate_ie_variables(257, 65)
+     do iPhi=1,nPhi
+        do iTheta=1,nTheta
+           read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
+               Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
+               SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
+           
+        enddo
      enddo
-  enddo
-
+  endif
   close(UnitTmp_)
 
 
