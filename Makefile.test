@@ -12,7 +12,7 @@ test: test_comp test_pw
 test_comp:
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
 		do ( cd $$i; make test; ); done
-	ls -l [A-Z][A-Z]/*/*.diff
+	ls -l *.diff [A-Z][A-Z]/*/*.diff
 
 ### Polarwind test ###
 
