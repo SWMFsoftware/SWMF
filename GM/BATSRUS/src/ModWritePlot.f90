@@ -603,6 +603,12 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
 
   do iVar = 1, nPlotVar
      s = plotvarnames(iVar)
+
+     ! Default values for TecPlot variable name and TecPlot and IDL unit names
+     NameVarUserTec_I(iVar)  = s
+     NameUnitUserTec_I(iVar) = ' '
+     NameUnitUserIdl_I(iVar) = '?'
+
      call lower_case(s)
 
      ! Set plotvar_inBody to something reasonable for inside the body.
@@ -1512,10 +1518,11 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('child')
         NameTecVar = 'Child #'
      case default
-        ! Use the plot variable name by default but unit is not known
-        NameTecVar = NamePlotVar
-        NameUnit   = ' '
-        ! Try to find the plot variable among the basic variables to set unit
+        ! Set the default or user defined values
+        NameTecVar = NameVarUserTec_I(iPlotVar)
+        NameUnit   = NameUnitUserTec_I(iPlotVar)
+
+        ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
            NameVar = NameVar_V(iVar)
            call lower_case(NameVar)
@@ -1617,8 +1624,9 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
      case('dx')
         NameUnit = unitstr_IDL_x
      case default
-        ! Unit is not known
-        NameUnit = '?'
+        ! Set default or user defined unit
+        NameUnit = NameUnitUserIdl_I(iPlotVar)
+
         ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
            NameVar = NameVar_V(iVar)
