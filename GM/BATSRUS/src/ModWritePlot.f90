@@ -1503,7 +1503,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = unitstr_TEC_t
      case('impl')                                !^CFG IF IMPLICIT
         NameTecVar = 'impl'                      !^CFG IF IMPLICIT
-     case('PE','pe','proc')
+     case('pe','proc')
         NameTecVar = 'PE #'
      case('blk')
         NameTecVar = 'Block #'
@@ -1514,7 +1514,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case default
         ! Use the plot variable name by default but unit is not known
         NameTecVar = NamePlotVar
-        NameUnit   = 'Default'
+        NameUnit   = ' '
         ! Try to find the plot variable among the basic variables to set unit
         do iVar = 1, nVar
            NameVar = NameVar_V(iVar)
@@ -1524,10 +1524,6 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
               EXIT
            end if
         end do
-        if(iVar > nVar) then
-           NameTecVar = NameVarUserTec_I(iPlotVar)
-           NameUnit   = NameUnitUserTec_I(iPlotVar)
-        end if
      end select
 
      StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
@@ -1632,7 +1628,6 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
               EXIT
            end if
         end do
-        if(iVar > nVar) NameUnit = NameUnitUserIdl_I(iPlotVar)
      end select
      ! Append the unit string for this variable to the output string
      StringUnitIdl = trim(StringUnitIdl)//' '//trim(NameUnit)
