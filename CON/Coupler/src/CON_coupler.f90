@@ -44,7 +44,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 13
+  integer, parameter :: MaxCouple = 14
 
   public :: nCouple             ! Actual number of couplings
 
@@ -67,7 +67,8 @@ module CON_coupler
        IE_, IM_, &
        IM_, GM_, &
        IE_, UA_, &
-       IE_, GM_  &
+       IE_, GM_, &
+       IE_, PW_  &
        /), (/2, MaxCouple/) )
 
   public :: DoCoupleOnTime_C ! Should do coupling limit the time step
