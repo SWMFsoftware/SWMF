@@ -31,6 +31,7 @@ METHODS = \
 	calc_diffusion.o\
 	solver_rusanov.o\
 	Get_Neutral.o\
+	get_electrodynamic.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
