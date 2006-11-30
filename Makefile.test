@@ -1,11 +1,23 @@
 #^CMP COPYRIGHT UM
 #^CMP FILE TESTING
 
-TESTDIR = `pwd`/run_test
+TESTDIR = ${DIR}/run_test
 
 MPIRUN = mpirun -np 2
 
-test: test_comp test_pw
+test_help:
+	@echo "    test                       (run all tests with ${MPIRUN})"
+	@echo "    test MPIRUN=               (run all tests serially)"
+	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
+	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
+	@echo "    test_comp                  (run component tests only)"
+	@echo "    test_pw                    (run polar wind test only)"
+	@echo "    test_esmf                  (run ESMF_SWMF test only)"
+
+test:
+	make test_comp
+	make test_pw
+	make test_esmf
 
 ### Component tests ###
 
@@ -22,10 +34,8 @@ test_pw:
 	make test_pw_run
 	make test_pw_check
 
-# SetSWMF.pl -v=empty to be implemented
 test_pw_config: 
-	#SetSWMF.pl -v=empty
-	SetSWMF.pl -v=PW/PWOM
+	SetSWMF.pl -v=Empty,PW/PWOM
 	cd PW/PWOM; ./config.pl -p=Earth
 	make SWMF
 
@@ -58,16 +68,37 @@ test_pw_check:
 #
 #       Targets for the ESMF compatible executable
 #
-ESMF_SWMF: LIB
-	@cd ESMF/ESMF_SWMF/src; make EXE
 
-ESMF_SWMF_test: ESMF_SWMF
-	@make ESMF_SWMF_run
+test_esmf:
+	make test_esmf_compile
+	make test_esmf_rundir
+	make test_esmf_run
+	make test_esmf_check
 
-ESMF_SWMF_run: bin/ESMF_SWMF.exe ESMF_SWMF_rundir
-	@cd run; rm -f PET*ESMF_LogFile; mpirun -np ${NP} ESMF_SWMF.exe; \
-	perl -ne 'print if /error/i' PET*.ESMF_LogFile
+test_esmf_compile:
+	SetSWMF.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+	make ESMF_SWMF
 
-ESMF_SWMF_rundir: run
-	@cd ESMF/ESMF_SWMF; make rundir
+test_esmf_rundir:
+	rm -rf ${TESTDIR};
+	make rundir RUNDIR=${TESTDIR}
+	cd ESMF/ESMF_SWMF; make rundir RUNDIR=${TESTDIR}
+	
+test_esmf_run: 
+	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
+	@cd ${TESTDIR}; ${MPIRUN} ESMF_SWMF.exe > runlog
+	@cd ${TESTDIR}; PostProc.pl -M -o RESULTS
 
+test_esmf_check:
+	perl -ne 'print if /error/i' PET*.ESMF_LogFile > test_esmf.diff
+	${SCRIPTDIR}/DiffNum.pl \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		ESMF/ESMF_SWMF/output/log_n000001.log \
+		>> test_esmf.diff
+	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
+		> ${TESTDIR}/it000321_104510_000.idl.ref
+	${SCRIPTDIR}/DiffNum.pl \
+		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
+		${TESTDIR}/it000321_104510_000.idl.ref \
+		>> test_esmf.diff
+	ls -l test_esmf.diff
