@@ -711,52 +711,6 @@ tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="PROBLEMTYPE" required="T" if="$_IsFirstSession">
-	<parameter name="iProblem" type="integer" input="select">
-		<option name="Uniform"		value="1"		/>
-		<option name="Shock tube" 	value="2"		/>
-		<option name="Heliosphere"	value="3"		/>
-		<option name="Comet"		value="5"		/>
-		<option name="Rotation"		value="6"		/>
-		<option name="Diffusion"	value="7"		/>
-		<option name="Earth"		value="11" default="T"	/>
-		<option name="Saturn"		value="12"		/>
-		<option name="Jupiter"		value="13" 		/>
-		<option name="Venus"		value="14" 		/>
-		<option name="Cylinder"		value="21" 		/>
-		<option name="Sphere"		value="22" 		/>
-		<option name="Arcade"		value="25" 		/>
-		<option name="CME"		value="26" 		/>
-		<option name="Dissipation"	value="30"		/>
-	</parameter>
-	<parameter name="TypeDissipation" type="string" length="20"
-						if="$iProblem==30"	/>
-#PROBLEMTYPE
-30			iProblem
-heat_test1		TypeProblemDiss
-
-! select a problem type which defines defaults for a lot of parameters
-!
-! Problem type has to be defined as the first item after #TEST..#DEBUG items!
-!\begin{verbatim}
-!       iProblem:     1=MHD Uniform Flow
-!                     2=Shock tube
-!                     3=Solar Wind and Inner Heliosphere
-!                     5=Mass-Loaded Comet
-!                     6=Rotation test
-!                     7=Diffusion test
-!                    11=Earth Magnetosphere
-!                    12=Saturn Magnetosphere
-!                    13=Jupiter Magnetosphere
-!                    14=Venus Ionosphere
-!                    21=Conducting Cylinder (2-D)
-!                    22=Conducting Sphere   (3-D)
-!                    25=Arcade
-!                    26=CME
-!		     30=Test Dissipative MHD
-!\end{verbatim}
-</command>
-
 <command name="RESTARTINDIR" if="$_IsFirstSession">
 	<parameter name="NameRestartInDir" type="string" length="100"
 				default="GM/restartIN" />
@@ -3719,19 +3673,15 @@ IMF.dat                 NameSolarWindFile
 	<parameter name="UseBody" type="logical" default="F"/>
 	<if expr="$UseBody">
 		<parameter name="rBody" type="real" min="0" default="3"/>
-		<if expr="$_NameComp eq 'GM'">
-			<parameter name="rCurrents" type="real" min="-1" 
-							      default="4"/>
-			<parameter name="BodyRhoDim" type="real" min="0"
-							      default="1"/>
-			<parameter name="BodyTDim" type="real" min="0"
-							      default="10000"/>
-		</if>
+		<parameter name="rCurrents" type="real" min="-1" default="4"
+			if="$_NameComp eq 'GM'"/>
+		<parameter name="BodyRhoDim" type="real" min="0" default="1"/>
+		<parameter name="BodyTDim" type="real" min="0" default="1000"/>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
 3.0			rBody (user units)
-4.0			rCurrents
+4.0			rCurrents (only read for GM component)
 1.0			BodyRhoDim (/ccm) density for fixed BC for rho_BLK
 10000.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
@@ -3749,8 +3699,10 @@ T			UseBody (rest of parameters read if true)
 ! at the inner boundary. The exact effect of these parameters depends 
 ! on the settings in the #INNERBOUNDARY command.
 ! 
-! The default values depend on the problem type defined 
-! in the #PROBLEMTYPE command.
+! The default values depend on the component: 
+! For GM rBody=3, rCurrents=4, BodyRhoDim = 5amu/cc and BodyTDim = 25000 K. 
+! For SC/IH: rBody=1, BodyRhoDim = 1.5e8 amu/cc, BodyTDim = 2.8e6 K.
+! The rBody and rCurrents are given in planetary/solar radii units.
 </command>
 
 <command name="GRAVITY" if="$_IsFirstSession">
