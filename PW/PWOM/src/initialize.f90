@@ -84,10 +84,7 @@ subroutine PW_initialize
   !****************************************************************************
   !  Set parameters for reading in potential and time of simulation
   !****************************************************************************
-  Dtheta  = 0.0242
-  Dphi    = 0.0245
-
-
+ 
   maxTime = Tmax
   Time    =     0.0
 

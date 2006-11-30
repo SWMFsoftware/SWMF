@@ -92,6 +92,8 @@ subroutine PW_get_electrodynamic
   
   do iPhi=1,nPhi
      do iTheta=1,nTheta
+        Dtheta=abs(Theta_G(iPhi,iTheta)-Theta_G(iPhi,iTheta-1))
+        Dphi=abs(Phi_G(iPhi,iTheta)    -Phi_G(iPhi-1,iTheta))
         Etheta(iPhi,iTheta) = &
              (Potential_G(iPhi,iTheta)-Potential_G(iPhi,iTheta+1))&
              /((rLowerBoundary)*Dtheta)
