@@ -35,49 +35,54 @@ help:
 	@echo ' '
 	@echo '    [default]   SWMF'
 	@echo ' '
-	@echo '    ALL         SWMF PIDL PSPH'
-	@echo ' '
-	@echo '    install     (to be used via SetSWMF.pl only)'
-	@echo ' '
-	@echo '    SWMF        (bin/SWMF.exe the main executable for SWMF)'
-	@echo '    PIDL        (bin/PostIDL.exe creates .out file from *.idl files)'
-	@echo '    PSPH        (bin/PostSPH.exe creates spherical tec file from sph*.tec files)'
-	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
-	@echo '    LIB         (lib/libSWMF.a the SWMF library)'
-	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
-	@echo ' '
 	@echo '    help        (makefile option list)'
-	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    distlean    (remove all files which are not in distribution)'
-	@echo '    dist        (create source distribution tar file)'
+	@echo '    install     (to be used via SetSWMF.pl only)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
 	@echo '    PDF         (make PDF  version of the documentation)' #^CMP IF DOC
 	@echo '    HTML        (make HTML version of the documentation)' #^CMP IF DOCHTML
 	@#^CMP END  REMOVEDOCTEX
+	@#^CFG IF TESTING BEGIN
+	@echo '    test        (run all tests for the SWMF)'
+	@echo '    test_help   (show all options for running the tests)'
 	@echo ' '
-	@echo '    rundir      (create run directory with subdirectories scripts and links)'
-	@echo '    rundir MACHINE=ames (run directory with job scripts for machines at NASA Ames)'
+	@#^CFG END TESTING
+	@#^CMP IF IH BEGIN
+	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS)'
+	@#^CMP END IH
+	@#^CMP IF SC BEGIN
+	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
+	@#^CMP END SC
+	@echo ' '
+	@echo '    LIB         (lib/libSWMF.a the SWMF library)'
+	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
+	@echo ' '
+	@echo '    SWMF        (bin/SWMF.exe the main executable for SWMF)'
+	@echo '    ESMF_SWMF   (bin/ESMF_SWMF.exe the ESMF compatible executable)'
+	@#^CMP IF IE BEGIN
+	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
+	@#^CMP END IE
+	@#^CMP IF GM BEGIN
+	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
+	@echo '    PSPH        (bin/PostSPH.exe post-processes sph*.tec files)'
+	@echo '    ALL         (make SWMF PIDL and PSPH)'
+	@#^CMP END GM
+	@echo ' '
+	@echo '    rundir      (create run directory "run/")'
+	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
+	@echo '    rundir MACHINE=columbia (select job scripts for columbia)'
 	@echo ' '
 	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 2 PEs)'
 	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
 	@echo '    mprun  NP=5 (make SWMF and mprun  SWMF.exe on 5 PEs)'
 	@echo '    nompirun    (make SWMF and run it without MPI)'
 	@echo ' '
+	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
+	@echo '    distlean    (remove all files which are not in distribution)'
+	@echo '    dist        (create source distribution tar file)'
+	@echo ' '
 	@echo '    tags        (create etags for emacs for easy look up in source code)'
-	@#^CMP IF IH BEGIN
 	@echo ' '
-	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS)'
-	@#^CMP END IH
-	@#^CMP IF SC BEGIN
-	@echo ' '
-	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
-	@#^CMP END SC
-	@echo ' '
-	@echo '    ESMF_SWMF          (bin/ESMF_SWMF.exe the ESMF compatible executable)'
-	@echo '    ESMF_SWMF_test     (build and run ESMF_SWMF.exe on 2 CPU-s)'
-	@echo '    ESMF_SWMF_rundir   (create run directory for ESMF_SWMF.exe)'
-	@echo '    ESMF_SWMF_run NP=4 (run ESMF_SWMF.exe on 4 CPU-s)'
 #EOC
 #
 # Check the variables SWMF_ROOT=`pwd` and OS = `uname`
@@ -136,17 +141,22 @@ rmdir:
 #
 #	SWMF
 #
-
 SWMF:	ENV_CHECK
 	@cd ${CONTROLDIR}; make SWMFEXE  
 	@echo ' '
 
 #
-#       SWMF library
+#       SWMF library (for external code)
 #
 LIB:	ENV_CHECK
 	@cd ${CONTROLDIR}; make SWMFLIB
 	@echo ' '
+
+#
+#       ESMF driver for the SWMF and a simple ESMF component
+#
+ESMF_SWMF: LIB
+	@cd ESMF/ESMF_SWMF/src; make EXE
 
 # NOMPI library for execution without MPI
 
