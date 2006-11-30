@@ -1555,11 +1555,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseBody',body1)
         if(body1)then
            call read_var('rBody'     ,Rbody)
-           if(NameThisComp=='GM')then
-              call read_var('rCurrents' ,Rcurrents)
-           end if
-              call read_var('BodyRhoDim',Body_Rho_Dim)
-              call read_var('BodyTDim'  ,Body_T_dim)
+           if(NameThisComp=='GM') &
+                call read_var('rCurrents' ,Rcurrents)
+           call read_var('BodyRhoDim',Body_Rho_Dim)
+           call read_var('BodyTDim'  ,Body_T_dim)
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
