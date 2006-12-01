@@ -712,11 +712,11 @@ contains
        if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
-          if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
-             call set_block_sph_jacobian_face(iBlock)  !optimized for spherical 
-          else
+          !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
+          !   call set_block_sph_jacobian_face(iBlock)  !optimized for spherical 
+          !else
              call set_block_jacobian_face(iBlock)      !general
-          end if
+          !end if
           !call timing_stop('set_block_jac')
        end if                                          !^CFG END COVARIANT
     end if
