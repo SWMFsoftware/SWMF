@@ -70,6 +70,10 @@ if ($earth) {
 	}
     }
 
+    $command = "cd srcData ; cp UAM.in.Earth UAM.in";
+    if ($v) { print " -> $command,\n";}
+    system $command;
+
 }
 
 if ($mars) { 
@@ -101,6 +105,10 @@ if ($mars) {
 	    system $command;
 	}
     }
+
+    $command = "cd srcData ; cp UAM.in.Mars UAM.in";
+    if ($v) { print " -> $command,\n";}
+    system $command;
 
 }
 
