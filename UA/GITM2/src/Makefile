@@ -31,7 +31,6 @@ OBJECTS = \
 	planet.o\
 	satellites.o\
 	calc_electron_temperature.o\
-	calc_etemp_sources.o\
 	aurora.o\
 	get_potential.o\
 	calc_efield.o\
@@ -71,7 +70,7 @@ OBJECTS = \
 	calc_euv.o\
 	calc_neutral_density.o\
 	calc_ion_density.o\
-	calc_chemistry.Earth.o\
+	calc_chemistry.o\
 	calc_ion_v.o\
 	chapman_new.o\
 	stop_file.o\
