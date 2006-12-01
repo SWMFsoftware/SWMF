@@ -57,6 +57,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   logical :: IsDone, IsFirstTime = .true.
 
+  if (DipoleStrength == 0) return
+
   call report("UA_calc_electrodynamics",1)
   call start_timing("calc_electrodyn")
 
