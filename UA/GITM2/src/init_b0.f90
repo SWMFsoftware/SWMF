@@ -236,40 +236,49 @@ subroutine get_magfield_all(GeoLat,GeoLon,GeoAlt,alat,alon,xmag,ymag,zmag, &
 
   else
 
-     r3 = (RBody / (RBody + GeoAlt)) ** 3
+     if (DipoleStrength /= 0) then
 
-     LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
-     alat = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
-     alon = GeoLon
-     ymag = 0.0
-     xmag =     - DipoleStrength * cos(GeoLat*pi/180.0) * r3
-     zmag = 2.0 * DipoleStrength * sin(GeoLat*pi/180.0) * r3
+        r3 = (RBody / (RBody + GeoAlt)) ** 3
+        
+        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2 - GeoLat*pi/180.0))**2.0
+        alat = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+        alon = GeoLon
+        ymag = 0.0
+        xmag =     - DipoleStrength * cos(GeoLat*pi/180.0) * r3
+        zmag = 2.0 * DipoleStrength * sin(GeoLat*pi/180.0) * r3
 
-     mag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
-     bx = xmag/mag
-     by = ymag/mag
-     bz = zmag/mag
+        mag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
+        bx = xmag/mag
+        by = ymag/mag
+        bz = zmag/mag
 
-     LShell0 = LShell
+        LShell0 = LShell
 
-     LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
-     alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat+1))
-     LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
-     alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat-1))
+        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat+1)*pi/180.0))**2.0
+        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat+1))
+        LShell =  (RBody + GeoAlt) / RBody / (sin(pi/2-(GeoLat-1)*pi/180.0))**2.0
+        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,(GeoLat-1))
 
-     d1(iNorth_) = 0.0
-     d2(iNorth_) = (alatp - alatm)/twodegrees
+        d1(iNorth_) = 0.0
+        d2(iNorth_) = (alatp - alatm)/twodegrees
 
-     d1(iEast_) = (2.0)/(twodegrees * cos(GeoLat*pi/180.0))
-     d2(iEast_) = 0.0
+        d1(iEast_) = (2.0)/(twodegrees * cos(GeoLat*pi/180.0))
+        d2(iEast_) = 0.0
 
-     LShell =  (RBody + GeoAlt+1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
-     alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
-     LShell =  (RBody + GeoAlt-1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
-     alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+        LShell =  (RBody + GeoAlt+1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+        alatp = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
+        LShell =  (RBody + GeoAlt-1000) / RBody / (sin(pi/2-GeoLat*pi/180.0))**2.0
+        alatm = acos(1.0/sqrt(LShell))*180.0/pi * sign(1.0,GeoLat)
 
-     d1(iUp_) = 0.0
-     d2(iUp_) = (RBody+GeoAlt)*(alatp - alatm)/(2000.0)
+        d1(iUp_) = 0.0
+        d2(iUp_) = (RBody+GeoAlt)*(alatp - alatm)/(2000.0)
+
+     else
+
+        alat = GeoLat
+        alon = GeoLon
+
+     endif
 
   end if
 
