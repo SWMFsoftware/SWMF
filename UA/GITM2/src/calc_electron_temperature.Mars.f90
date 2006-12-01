@@ -9,7 +9,7 @@ subroutine calc_electron_temperature(iBlock)
 
   call report("Electron Density", 2)
 
-  eTemperature = Temperature * TempUnit
+  eTemperature(:,:,:,iBlock) = Temperature(:,:,:,iBlock) * TempUnit(:,:,:)
 
 end subroutine calc_electron_temperature
 
