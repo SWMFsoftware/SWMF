@@ -11,11 +11,13 @@ module ModPlanet
   integer, parameter :: iO_      = 3
   integer, parameter :: iN2_     = 4
 
-  integer, parameter :: nSpeciesTotal = 8
-  integer, parameter :: iAr_ =  5
-  integer, parameter :: iO2_ =  6
-  integer, parameter :: iHe_ =  7
-  integer, parameter :: iH_  =  8
+  integer, parameter :: iN_  =  5
+  integer, parameter :: iNO_ =  6
+  integer, parameter :: iAr_ =  7
+  integer, parameter :: iO2_ =  8
+  integer, parameter :: iHe_ =  9
+  integer, parameter :: iH_  =  10
+  integer, parameter :: nSpeciesTotal = iH_
 
   integer, parameter  :: iO2P_  = 1
   integer, parameter  :: iCO2P_ = 2
@@ -26,6 +28,11 @@ module ModPlanet
   integer, parameter  :: nIonsAdvect = 4
 
   real :: Mass(nSpeciesTotal), MassI(nIons)
+
+  real :: Vibration(nSpeciesTotal)
+
+  ! When you want to program in emissions, you can use this...
+  integer, parameter :: nEmissions = 10
 
   real, parameter :: GC_Mars                = 3.73                    ! m/s^2
   real, parameter :: RP_Mars                = 88800.0                 ! seconds
@@ -62,7 +69,29 @@ module ModPlanet
   logical :: IsEarth = .false.
   character (len=10) :: cPlanet = "Mars"
 
-  real :: KappaTemp0 = 2.22e-4
+!  real :: KappaTemp0 = 2.22e-4
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! These are totally wrong !!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
+  real, parameter, dimension(4, 4) :: Diff0 = 1.0e4 * reshape( (/ &
+       ! 0      02     N2      N     NO
+       !---------------------------------+
+       0.00,  0.260, 0.260, 0.300, &            ! O
+       0.26,  0.000, 0.181, 0.220, &            ! O2
+       0.26,  0.181, 0.000, 0.220, &            ! N2
+       0.30,  0.220, 0.220, 0.000 /), (/4,4/) )  ! N
+
+  ! These are the exponents
+  real, parameter, dimension(4, 4) :: DiffExp = reshape( (/ &
+       ! 0      02     N2
+       !---------------------------------+
+       0.00,  0.75,  0.75, 0.75, &             ! O
+       0.75,  0.00,  0.75, 0.75, &             ! O2
+       0.75,  0.75,  0.00, 0.75, &             ! N2
+       0.75,  0.75,  0.75, 0.00 /), (/4,4/) )  ! N
 
 contains
 
@@ -75,12 +104,19 @@ contains
     Mass(iO_)    = 15.9994 * AMU
     Mass(iCO_)   = 12.011 * AMU + Mass(iO_)
     Mass(iCO2_)  = Mass(iCO_) + Mass(iO_)
-    Mass(iN2_)   = 14.00674 * AMU * 2
+    Mass(iN_)    = 14.00674 * AMU
+    Mass(iN2_)   = Mass(iN_) * 2
+    Mass(iNO_)   = Mass(iN_) + Mass(iO_)
 
     Mass(iO2_)   = 2 * Mass(iO_)
     Mass(iAr_)   = 39.948 * AMU * 2
     Mass(iHe_)   = 4.0026 * AMU * 2
     Mass(iH_)    = 1.0079 * AMU * 2
+
+    Vibration(iCO2_)  = 9.0  ! Is this right???
+    Vibration(iCO_)   = 7.0
+    Vibration(iO_)    = 5.0
+    Vibration(iN2_)   = 7.0
 
     MassI(iOP_)   = Mass(iO_)
     MassI(iNOP_)  = Mass(iO_) + Mass(iN2_)/2.0
