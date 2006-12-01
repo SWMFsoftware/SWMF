@@ -15,9 +15,9 @@ test_help:
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
 
 test:
-	make test_comp
-	make test_pw
-	make test_esmf
+	-@(make test_comp)
+	-@(make test_pw)
+	-@(make test_esmf)
 
 ### Component tests ###
 
