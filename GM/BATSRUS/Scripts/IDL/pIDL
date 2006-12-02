@@ -98,8 +98,6 @@ foreach $BaseName (sort keys %Series){
     # Do not create movie if there is only one element in the series
     my @Series = @{$Series{$BaseName}};
 
-    next if $#Series == 0;
-
     $_ = $Series[0];
     my $FirstStep;
     ($FirstStep) = /_n(\d+)/;
@@ -151,6 +149,9 @@ foreach $BaseName (sort keys %Series){
 	    next;
 	}
     }else{
+	# do not make movie file from a single file
+	next if $FirstStep eq $LastStep;
+
 	my $NewMovieFile = "${BaseName}_n${FirstStep}_${LastStep}.outs";
 
 	print "Creating $Dir/$NewMovieFile\n" unless $Quiet;
