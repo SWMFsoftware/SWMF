@@ -45,7 +45,7 @@
 
 module ModCoordTransform
 
-  use ModNumConst, ONLY: cTwoPi
+  use ModNumConst, ONLY: cTwoPi, cUnit_DD
 
   implicit none
 
@@ -643,14 +643,29 @@ contains
   end function cross_product33
 
   !============================================================================
-  function inverse_matrix(a_DD) result(b_DD)
+  function inverse_matrix(a_DD, SingularLimit, DoIgnoreSingular) result(b_DD)
+
+    ! Return the inverse of the 3x3 matrix a_DD
+    ! The optional SingularLimit gives the smallest value for the determinant
+    ! The optional DoIgnoreSingular determines what to do if the 
+    ! determinant is less than SingularLimit.
+
     real, intent(in) :: a_DD(3,3)
+    real, intent(in), optional :: SingularLimit
+    logical, intent(in), optional :: DoIgnoreSingular
+
     real             :: b_DD(3,3)
 
-    real :: DetA
+    real    :: DetA, Limit
+    logical :: DoIgnore
 
     character (len=*), parameter :: NameSub = NameMod//':inverse_matrix'
     !-------------------------------------------------------------------------
+    Limit = 1.e-16
+    if(present(SingularLimit)) Limit = SingularLimit
+    DoIgnore = .false.
+    if(present(DoIgnoreSingular)) DoIgnore = DoIgnoreSingular
+
     ! Invert the 3x3 matrix:
     b_DD(1,1)=a_DD(2,2)*a_DD(3,3)-a_DD(2,3)*a_DD(3,2)
     b_DD(2,1)=a_DD(2,3)*a_DD(3,1)-a_DD(2,1)*a_DD(3,3)
@@ -666,8 +681,10 @@ contains
 
     DetA= a_DD(1,1)*b_DD(1,1)+a_DD(1,2)*b_DD(2,1)+a_DD(1,3)*b_DD(3,1)
 
-    if(abs(detA) > 1.0e-16)then
+    if(abs(detA) > Limit)then
        b_DD = b_DD/DetA
+    elseif(DoIgnore)then
+       b_DD = cUnit_DD
     else
        write(*,*)'Error in ',NameSub,' for matrix:'
        call show_rot_matrix(a_DD)
