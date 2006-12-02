@@ -435,6 +435,7 @@ contains
             ( dp1* (Xyz_DG(:,i,j+1,k) - Xyz_DG(:,i,j-1,k)) &
             + dp2* (Xyz_DG(:,i,j+2,k) - Xyz_DG(:,i,j-2,k)))
     end do; end do; end do
+
     do k=1,nK; do j=-1,nJ+2; do i=-1,nI+2
        TransGrad_DDG(:,3,i,j,k)=  &
             ( dp1* (Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-1)) &
@@ -453,7 +454,8 @@ contains
        DxyzDgen_DD(:,3) = InvDz* &
             ( ap1*( TransGrad_DDG(:,3,i  ,j,k) + TransGrad_DDG(:,3,i-1,j,k)) &
             + ap2*( TransGrad_DDG(:,3,i+1,j,k) + TransGrad_DDG(:,3,i-2,j,k)))
-       DgenDxyz_DDFD(:,:,i,j,k,1) = inverse_matrix(DxyzDgen_DD)
+       DgenDxyz_DDFD(:,:,i,j,k,1) = &
+            inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
     !gen2 face
@@ -469,12 +471,13 @@ contains
             ( ap1*( TransGrad_DDG(:,3,i,j  ,k) + TransGrad_DDG(:,3,i,j-1,k)) &
             + ap2*( TransGrad_DDG(:,3,i,j+1,k) + TransGrad_DDG(:,3,i,j-2,k)))
 
-       DgenDxyz_DDFD(:,:,i,j,k,2) = inverse_matrix(DxyzDgen_DD)
-
+       DgenDxyz_DDFD(:,:,i,j,k,2) = &
+            inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
     !gen3 face
     do k=1,nK+1; do j=1,nJ; do i=1,nI
+
        !dxyzdgen along gen1 face
        DxyzDgen_DD(:,1) = InvDx* &
             ( ap1*( TransGrad_DDG(:,1,i,j,k  ) + TransGrad_DDG(:,1,i,j,k-1)) &
@@ -485,8 +488,9 @@ contains
        DxyzDgen_DD(:,3) = InvDz* &
             (  fp1*(Xyz_DG(:,i,j,k  ) - Xyz_DG(:,i,j,k-1)) &
             +  fp2*(Xyz_DG(:,i,j,k+1) - Xyz_DG(:,i,j,k-2)))
-       DgenDxyz_DDFD(:,:,i,j,k,3) = inverse_matrix(DxyzDgen_DD)
 
+       DgenDxyz_DDFD(:,:,i,j,k,3) = &
+            inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
   end subroutine set_block_jacobian_face
@@ -641,8 +645,8 @@ contains
        DxyzDgen_DD(z_,3) = InvDx3Half &
             *(z_BLK(i,j,k+1,iBlock) - z_BLK(i,j,k-1,iBlock))
 
-       DgenDxyz_DDC(:,:,i,j,k) = inverse_matrix(DxyzDgen_DD)
-
+       DgenDxyz_DDC(:,:,i,j,k) = &
+            inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
     ! Average cell centered Jacobian to face centered Jacobians
@@ -1186,6 +1190,7 @@ contains
     use ModPhysics, ONLY : Rbody
     integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
     real :: x,y,z,rSqr,TanSqr,Distance1,Distance2
+    real :: HallFactor
 
     !--------------------------------------------------------------
     select case(iDir)
@@ -1208,7 +1213,7 @@ contains
     end select
     rSqr = (x**2 + y**2 + z**2)
 
-    hall_factor = 1.0
+    HallFactor = 1.0
     select case(NameHallRegion)
     case("all")
        ! Do nothing
@@ -1218,8 +1223,9 @@ contains
     case("sphere0")
        if(rSqr > rSqrSphere2)then
           hall_factor=0.0
+          RETURN
        else if(rSqr > rSqrSphere1)then
-          hall_factor = (rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
+          HallFactor = HallFactor*(rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
        end if
     case("box")
        Distance2 = max( &
@@ -1232,26 +1238,31 @@ contains
             abs(z-z0Hall)/zSizeBox1 )
        if(Distance2 > 0.5)then
           hall_factor=0.0
+          RETURN
        else if(Distance1 > 0.5)then
-          hall_factor = (0.5-Distance2)/(Distance1-Distance2)
+          HallFactor = HallFactor*(0.5-Distance2)/(Distance1-Distance2)
        end if
     case default
     end select
 
     if(rSqr < rSqrInner1)then
        hall_factor=0.0
+       RETURN
     else if(rSqr < rSqrInner2)then
-       hall_factor = (rSqr-rSqrInner1)/(rSqrInner2 - rSqrInner1)
+       HallFactor = HallFactor*(rSqr-rSqrInner1)/(rSqrInner2 - rSqrInner1)
     endif
 
     if(TanSqr1 > 0.0 .and. abs(z)>0.0)then
        TanSqr = (x**2+y**2)/z**2
        if(TanSqr < TanSqr1)then
           hall_factor=0.0
+          RETURN
        else if(TanSqr < TanSqr2)then
-          hall_factor = (TanSqr-TanSqr1)/(TanSqr2-TanSqr1)
+          HallFactor = HallFactor*(TanSqr-TanSqr1)/(TanSqr2-TanSqr1)
        end if
     end if
+
+    hall_factor = HallFactor
 
   end function hall_factor
 
