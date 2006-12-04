@@ -29,12 +29,16 @@ test_comp:
 ### Polarwind test ###
 
 test_pw:
-	make test_pw_config
+	@echo "test_pw_compile..." > test_pw.diff
+	make test_pw_compile
+	@echo "test_pw_rundir..." >> test_pw.diff
 	make test_pw_rundir
+	@echo "test_pw_run..." >> test_pw.diff
 	make test_pw_run
+	@echo "test_pw_check..." >> test_pw.diff
 	make test_pw_check
 
-test_pw_config: 
+test_pw_compile:
 	SetSWMF.pl -v=Empty,PW/PWOM
 	cd PW/PWOM; ./config.pl -p=Earth
 	make SWMF
@@ -51,6 +55,9 @@ test_pw_run:
 	cd ${TESTDIR}; ./SWMF.exe > runlog
 
 test_pw_check:
+	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+		${PWDIR}/output/Earth/log.out \
+		> test_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		${PWDIR}/output/Earth/restart_iline0001.dat \
@@ -59,9 +66,6 @@ test_pw_check:
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw_plots.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
-		${PWDIR}/output/Earth/log.out \
-		> test_pw_log.diff)
 	ls -l test_pw_*.diff
 
 ### ESMF test ###
@@ -70,9 +74,13 @@ test_pw_check:
 #
 
 test_esmf:
+	@echo "test_esmf_compile..." > test_esmf.diff
 	make test_esmf_compile
+	@echo "test_esmf_rundir..." >> test_esmf.diff
 	make test_esmf_rundir
+	@echo "test_esmf_run..." >> test_esmf.diff
 	make test_esmf_run
+	@echo "test_esmf_check..." >> test_esmf.diff
 	make test_esmf_check
 
 test_esmf_compile:

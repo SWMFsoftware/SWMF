@@ -31,8 +31,11 @@ test_rundir:
 ### FUNCTIONALITY TEST SUITE ###
 
 test_func:
+	@echo "test_func_compile..." > test_func.diff
 	make test_func_compile
+	@echo "test_func_run..." >> test_func.diff
 	make test_func_run
+	@echo "test_func_check..." >> test_func.diff
 	make test_func_check
 
 test_func_compile:
@@ -63,9 +66,13 @@ test_titan:
 	make test_titan_restart
 
 test_titan_start:
+	@echo "test_titan_compile..." > test_titan.diff
 	make test_titan_compile
+	@echo "test_titan_rundir..." >> test_titan.diff
 	make test_titan_rundir
+	@echo "test_titan_run..." >> test_titan.diff
 	make test_titan_run
+	@echo "test_titan_check..." >> test_titan.diff
 	make test_titan_check
 
 test_titan_compile:
@@ -93,8 +100,11 @@ test_titan_check:
 	ls -l test_titan.diff
 
 test_titan_restart:
+	@echo "test_titan_restart_save..." > test_titan_restart.diff
 	make test_titan_restart_save
+	@echo "test_titan_restart_read..." >> test_titan_restart.diff
 	make test_titan_restart_read
+	@echo "test_titan_restart_check..." >> test_titan_restart.diff
 	make test_titan_restart_check
 
 test_titan_restart_save:

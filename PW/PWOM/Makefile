@@ -68,23 +68,31 @@ TESTDIR = run_test
 test: test_saturn test_earth
 
 test_earth:
-	make test_earth_config
+	@echo "test_compile..." > test_earth.diff
+	make test_compile PLANET=Earth
+	@echo "test_rundir..." >> test_earth.diff
 	make test_rundir
+	@echo "test_run..." >> test_earth.diff
 	make test_run
+	@echo "test_check..." >> test_earth.diff
 	make test_check
 
-test_earth_config:
+test_earth_compile:
 	./config.pl -p=Earth
 	make PWOM
 
 test_saturn:
-	make test_saturn_config
+	@echo "test_compile..." > test_saturn.diff
+	make test_compile PLANET=Saturn
+	@echo "test_rundir..." >> test_saturn.diff
 	make test_rundir
+	@echo "test_run..." >> test_saturn.diff
 	make test_run
+	@echo "test_check..." >> test_saturn.diff
 	make test_check
 
-test_saturn_config:
-	./config.pl -p=Saturn
+test_compile:
+	./config.pl -p=${PLANET}
 	make PWOM
 
 test_rundir:
@@ -95,6 +103,9 @@ test_run: PWOM
 	cd ${TESTDIR}; ./PWOM.exe
 
 test_check:
+	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+		output/${PLANET}/log.out \
+		> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
@@ -103,9 +114,6 @@ test_check:
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out \
 		> test_${PLANET}_plots.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
-		output/${PLANET}/log.out \
-		> test_${PLANET}_log.diff)
 	ls -l *.diff
 
 rundir: run

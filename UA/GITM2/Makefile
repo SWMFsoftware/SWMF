@@ -104,9 +104,13 @@ rundir:
 	fi);
 
 test:
+	@echo "test_compile..." > test.diff
 	make test_compile
+	@echo "test_rundir..." >> test.diff
 	make test_rundir
+	@echo "test_run..." >> test.diff
 	make test_run
+	@echo "test_check..." >> test.diff
 	make test_check
 
 test_compile:
