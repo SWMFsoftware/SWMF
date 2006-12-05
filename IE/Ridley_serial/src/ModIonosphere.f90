@@ -104,6 +104,12 @@ module ModIonosphere
        IONO_NORTH_Fake_JR,                          & !Region 2 current
        IONO_SOUTH_Fake_JR
 
+  ! Pentadiagonal matrix for the Poisson equation
+  real, dimension(1:IONO_nTheta,1:IONO_nPsi) :: C_A, C_B, C_C, C_D, C_E
+  real, dimension(:), allocatable :: d_I, e_I, f_I, e1_I, f1_I
+  LOGICAL :: north, DoPrecond
+  integer :: npts_Theta, nX
+
   real, dimension(1:IONO_nTheta) :: dTheta_North, dTheta_South
   real, dimension(1:IONO_nPsi)   :: dPsi_North, dPsi_South
 
