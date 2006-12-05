@@ -86,6 +86,7 @@ subroutine advance_impl
   use ModImplicit
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
+  use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
   use ModMpi
   implicit none
 
@@ -372,10 +373,10 @@ subroutine advance_impl
      select case(KrylovType)
      case('bicgstab','BiCGSTAB')
         call bicgstab(impl_matvec,rhs,dw,non0dw,nimpl,&
-             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe)
+             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
      case('GMRES','gmres')
         call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
-             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe)
+             KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
      case default
         call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
      end select

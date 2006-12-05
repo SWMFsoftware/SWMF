@@ -49,14 +49,11 @@ MODULES = \
 OBJ1=constrain_B.o #				^CFG IF CONSTRAINB
 
 #^CFG IF IMPLICIT BEGIN
-OBJ2=   bicgstab.o\
-	gmres.o\
-	implicit.o\
+OBJ2=   implicit.o\
 	impl_interface.o\
 	impl_jacobian.o\
 	impl_matvec.o\
-	impl_newton.o\
-	ModPrecond.o precond.o ${BLAS}
+	impl_newton.o
 #^CFG END IMPLICIT
 
 OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
@@ -250,7 +247,7 @@ ${EXE}: ${OBJECTS_EXE}
 BATSRUS_general:
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
 		-L. -lBATSRUS -L${LIBDIR} -lTIMING -lSHARE \
-		${Lflag1}
+		${LBLAS} ${Lflag1}
 
 BATSRUS_for_Darwin:
 	ld -all_load -r -o LIBRARIES.o \

@@ -174,6 +174,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! The multiplication by L is done in a matrix free fashion.
 
   use ModImplicit
+  use ModLinearSolver, ONLY: Lhepta, Uhepta
   implicit none
 
   integer, intent(in):: n
