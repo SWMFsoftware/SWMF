@@ -18,77 +18,73 @@ subroutine ionosphere_solver(PHI, &
      dSigmaThTh_dTheta, dSigmaThPs_dTheta, dSigmaPsPs_dTheta, &
      dSigmaThTh_dPsi, dSigmaThPs_dPsi, dSigmaPsPs_dPsi, &
      Theta, Psi, Radius, nTheta, nPsi, &
-     dTheta, dPsi,                                                           &
+     dTheta, dPsi,                     &
      ncycle, iboundary)
 
   !\
-  ! This subroutine applies a full linear multigrid solution
-  ! algorithm to the problem of determining the solution of the
-  ! boundary value problem (BVP) for the linear elliptic equation
-  ! that governs planetary ionospheric currents on a spherical
-  ! surface of radius Radius.  The linear elliptic PDE for the
+  ! This subroutine solves for the ionospheric potential PHI
+  ! using the field aligned currents and the conductivities as input.
+  ! The linear elliptic PDE for the
   ! electric field potential PHI is defined on the domain 
-  ! 0 < Theta < PI/2 (this is for the northern hemisphere, 
-  ! PI/2 < Theta < PI for southern hemisphere), 0 < Psi < 2 PI, 
-  ! and subject to the Dirichlet boundary data
+  ! 0 < Theta < ThetaMax  for the northern hemisphere, and
+  ! ThetaMin < Theta < PI for the southern hemisphere), and
+  ! 0 < Psi < 2 PI.
   !
-  !      PHI(0,Psi) = PHI(PI,Psi) = 0,
+  ! The following boundary conditions are applied:
   !
-  !      PHI(PI/2,Psi) = 0,
+  !      PHI(ThetaMax,Psi) = PHI(ThetaMin,Psi) = 0,
   !
   !      PHI(Theta,0) = PHI(Theta,2*PI).
   ! 
-  ! A red-black Gauss-Seidel scheme is used as the smoothing
-  ! operator, bilinear interpolation is used for the prolongation
-  ! operator, and half-weighting is used for the restriction
-  ! operator.
+  ! There is no boundary at the poles, but to avoid numerical 
+  ! difficulties, the cell value at the pole is replaced with the 
+  ! average of the first neighbors:
+  !
+  !      PHI(0,Psi)  = average( PHI(dTheta, Psi) )
+  !
+  !      PHI(PI,Psi) = average( PHI(PI-dTheta, Psi) )
+  !
+  ! where dTheta is the grid resolution at the poles.
   !/
 
   use ModIonosphere
   use IE_ModMain, ONLY: DoCoupleUaCurrent, LatBoundary
   use IE_ModIo, ONLY: write_prefix, iUnitOut
-
-  USE MSR_Module
-  USE Matrix_Arithmetic_Module
-  USE ILU_Module
-  USE GMRES_Module
-  USE Iteration_Defaults_Module
+  use ModLinearSolver, ONLY: gmres, prehepta, Uhepta, Lhepta
 
   implicit none
 
   integer :: nTheta, nPsi, ncycle, iboundary
   real :: Radius
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::  &
-                  PHI, &
-                  SigmaThTh, SigmaThPs, SigmaPsPs, &
-                  dSigmaThTh_dTheta, dSigmaThPs_dTheta, dSigmaPsPs_dTheta, &
-                  dSigmaThTh_dPsi, dSigmaThPs_dPsi, dSigmaPsPs_dPsi, &
-                  Theta, Psi, &
-                  kappa_Theta2, kappa_Theta1, kappa_Psi2, kappa_Psi1, &
-                  C_A, C_B, C_C, C_D, C_E, sn, cs, sn2, cs2
+       PHI, &
+       SigmaThTh, SigmaThPs, SigmaPsPs, &
+       dSigmaThTh_dTheta, dSigmaThPs_dTheta, dSigmaPsPs_dTheta, &
+       dSigmaThTh_dPsi, dSigmaThPs_dPsi, dSigmaPsPs_dPsi, &
+       Theta, Psi, &
+       kappa_Theta2, kappa_Theta1, kappa_Psi2, kappa_Psi1, &
+       sn, cs, sn2, cs2
 
   real, dimension(1:IONO_nTheta) :: dTheta, dTheta2
   real, dimension(1:IONO_nPsi)   :: dPsi, dPsi2
 
   integer :: nThetaC, nPsiC, nThetaF, nPsiF
-  integer :: i, j, i2, j2, ind_i, ind_j, k, jj, n, npts, npts_Theta
+  integer :: i, j, i1, i2, j2, ind_i, ind_j, k, jj, n, npts
   integer :: saved_npts_Theta=-1
 
-  TYPE(MSR)                             :: S
-  TYPE(LU_CSR_MSR)                      :: PC
-  REAL(prec), DIMENSION(:), allocatable :: x, b
-  REAL(prec)                            :: tmp
-  REAL(prec), DIMENSION(1:5)            :: row
-  INTEGER, DIMENSION(1:5)               :: cols
-  REAL(prec), DIMENSION(1:1)            :: row1
-  INTEGER, DIMENSION(1:1)               :: cols1
+  real, dimension(:), allocatable :: x, y, rhs, b
 
-  REAL :: ave, min_pot, max_pot, cpcp
-  LOGICAL :: north
-  
-  logical :: oktest, oktest_me
-  
+  real :: ave, min_pot, max_pot, cpcp
+
+  logical :: oktest, oktest_me, UseOldSolver
+
+  real    :: Tolerance
+  integer :: iter, info
+
+  external :: matvec_ionosphere
+
   SAVE
+  !-------------------------------------------------------------------------
 
   call CON_set_do_test('ionosphere',oktest,oktest_me)
   call timing_start('iono_solve')
@@ -106,47 +102,36 @@ subroutine ionosphere_solver(PHI, &
      ! Set a value just in case there are no currents at all
      LatBoundary = 45.0 * cDegToRad
 
-!\\\ 2006Nov27, comment out until new GMRES solver available.  DDZ
-!      if (north) then
-!         do i=1,nTheta
-!            if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
-!         enddo
-!      else
-!         do i=nTheta,1,-1
-!            if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
-!         enddo
-!      endif
-!      LatBoundary = max(LatBoundary - 5.0*cDegToRad,0.0)
-!///
+     if (north) then
+        do i=1,nTheta
+           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
+        enddo
+     else
+        do i=nTheta,1,-1
+           if (PHI(i,nPsi/4) /= 0.0) LatBoundary = abs(cHalfPi-Theta(i,1))
+        enddo
+     endif
+     LatBoundary = max(LatBoundary - 5.0*cDegToRad,0.0)
   endif
 
-  !!! write(*,*)'PHI(:,nPsi/4), LatBoundary=',PHI(:,nPsi/4), LatBoundary !!!
+!!! write(*,*)'PHI(:,nPsi/4), LatBoundary=',PHI(:,nPsi/4), LatBoundary !!!
 
   if(oktest)write(*,*)'sum(abs(PHI),LatBoundary=',sum(abs(PHI)),LatBoundary
 
   do j = 1, nPsi
-     dPsi2(j) = (dPsi(j)/2.0)*(dPsi(j)/2.0)
+     dPsi2(j) = (dPsi(j)/2.0)**2
   enddo
 
   do i = 2, nTheta-1
-     dTheta2(i) = (dTheta(i)/2.0)*(dTheta(i)/2.0)
+     dTheta2(i) = (dTheta(i)/2.0)**2
   enddo
-  dTheta2(1)     = dTheta(1)*dTheta(1)
-  dTheta2(nTheta)= dTheta(nTheta)*dTheta(nTheta)
-
-!  dTheta_l=(Theta(nTheta,1)-Theta(1,1))/real(nTheta-1)
-!  dPsi_l=(Psi(1,nPsi)-Psi(1,1))/real(nPsi-1)
-!  dTheta_l2=dTheta_l*dTheta_l
-!  dPsi_l2=dPsi_l*dPsi_l
-!  dTheta_lX2=2.0*dTheta_l
-!  dPsi_lX2=2.0*dPsi_l
-!  dd=dPsi_l
-!  dd2=dPsi_l2
+  dTheta2(1)     = dTheta(1)**2
+  dTheta2(nTheta)= dTheta(nTheta)**2
 
   ! Multiply the right-hand-side source terms
   ! (in effect the field-aligned current) by
   ! Radius^2 sin^2(Theta).
-  
+
   do j = 1, nPsi
      do i = 1, nTheta
         if (north) then
@@ -165,31 +150,31 @@ subroutine ionosphere_solver(PHI, &
      end do
   end do
 
-! The Allocate Matrix routine creates a sparse matrix structure of the
-! size specified.  The over all matrix size is "nPsi*nTheta^2", but we are
-! only going to have (at most) "5*(nPsi*nTheta)" values.
-!
-  
-!     write(6,*) '=> ALLOCATING MATRIX S in ionosphere'
+  ! The Allocate Matrix routine creates a sparse matrix structure of the
+  ! size specified.  The over all matrix size is "nPsi*nTheta^2", but we are
+  ! only going to have (at most) "5*(nPsi*nTheta)" values.
+  !
 
-! Start with 0:
+  !     write(6,*) '=> ALLOCATING MATRIX S in ionosphere'
+
+  ! Start with 0:
 
   npts = 0
   npts_Theta = 0
 
   do j=1,nPsi
 
-! Add the Pole:
+     ! Add the Pole:
 
      npts = npts + 5
      if (j.eq.1) npts_Theta = npts_Theta + 1
 
-! Add the Equator:
+     ! Add the Equator:
 
      npts = npts + 5
      if (j.eq.1) npts_Theta = npts_Theta + 1
 
-! Add the Central Points
+     ! Add the Central Points
 
      do i=2,nTheta-1
         if (abs(cHalfPi-Theta(i,j)) > LatBoundary) then
@@ -207,42 +192,28 @@ subroutine ionosphere_solver(PHI, &
   if(npts_Theta /= saved_npts_Theta)then
      if(allocated(b)) deallocate(b)
      if(allocated(x)) deallocate(x)
-     if(allocated_matrix(S))  call Deallocate_Matrix(S)
-     if(allocated_matrix(PC)) call Deallocate_Matrix(PC)
+     if(allocated(y)) deallocate(y)
   end if
   saved_npts_Theta = npts_Theta
 
-  if (.NOT.allocated(b)) allocate( b(nPsi*npts_Theta) )
+  nX = nPsi*npts_Theta
 
-  if (.NOT.allocated(x)) allocate( x(nPsi*npts_Theta) )
+  if (.NOT.allocated(x)) allocate( x(nX), y(nX), rhs(nX), b(nX), &
+       d_I(nX), e_I(nX), e1_I(nX), f_I(nX), f1_I(nX) )
 
-  if (.NOT.allocated_matrix(S)) then
-     CALL Nullify_Matrix ( S )
-     CALL Allocate_Matrix ( S, nPsi*npts_Theta, npts)
-     if (.NOT.allocated_matrix(S)) &
-          call CON_stop("Error allocating MSR structure S in ionosphere solver")
-  end if
-
-  if (.NOT.allocated_matrix(PC)) then
-     CALL Nullify_Matrix ( PC )
-     CALL Allocate_Matrix (PC, nPsi*npts_Theta,npts,npts)
-     if (.NOT.allocated_matrix(PC)) &
-          call CON_stop("Error allocating PC in ionosphere solver")
-  end if
-
-!
-! We basically are solving the equation:
-!  
-!  C_A*phi(i,j) + C_B*phi(i-1,j) + C_C*phi(i+1,j) +
-!                 C_D*phi(i,j-1) + C_E*phi(i,j-1) = S
-!
-! When we come into the subroutine, Clinton has stored
-! S in phi, so that is why we are setting S = phi(i,j)!
-!
-! We are using a sparse matrix solver. So we are going to shove
-!  A, B, C, D, and E into the sparse matrix at the right locations,
-!  and shove S into the RHS of the matrix equation.
-!
+  !
+  ! We basically are solving the equation:
+  !  
+  !  C_A*phi(i,j) + C_B*phi(i-1,j) + C_C*phi(i+1,j) +
+  !                 C_D*phi(i,j-1) + C_E*phi(i,j+1) = S
+  !
+  ! When we come into the subroutine, Clinton has stored
+  ! S in phi, so that is why we are setting S = phi(i,j)!
+  !
+  ! We are using a sparse matrix solver. So we are going to shove
+  !  A, B, C, D, and E into the sparse matrix at the right locations,
+  !  and shove S into the RHS of the matrix equation.
+  !
 
   do j = 1, nPsi
      do i= 1, nTheta
@@ -251,7 +222,7 @@ subroutine ionosphere_solver(PHI, &
         cs(i,j)  = cos(Theta(i,j)) 
         sn2(i,j) = sn(i,j)*sn(i,j) 
         cs2(i,j) = cs(i,j)*cs(i,j) 
-  
+
         kappa_Theta2(i,j) = SigmaThTh(i,j)*sn2(i,j) 
         kappa_Theta1(i,j) = SigmaThTh(i,j)*sn(i,j)*cs(i,j)   &
              + dSigmaThTh_dTheta(i,j)*sn2(i,j)               &
@@ -259,10 +230,10 @@ subroutine ionosphere_solver(PHI, &
         kappa_Psi2(i,j)   = SigmaPsPs(i,j)
         kappa_Psi1(i,j)   = dSigmaThPs_dTheta(i,j)*sn(i,j)   &
              + dSigmaPsPs_dPsi(i,j)
-           
+
         C_A(i,j) = -2.0 * (&
              kappa_Theta2(i,j)/dTheta2(i) + kappa_Psi2(i,j)/dPsi2(j))
-        
+
         C_B(i,j) = &
              kappa_Theta2(i,j)/dTheta2(i) - kappa_Theta1(i,j)/dTheta(i)
 
@@ -278,46 +249,24 @@ subroutine ionosphere_solver(PHI, &
      enddo
   enddo
 
-!  write(6,*) "=> Filling MSR Array"
+  !  write(6,*) "=> Filling MSR Array"
 
   if (north) then   
 
      do j = 1, nPsi
 
-! we are at the pole
+        ! we are at the pole
 
         i = 1
         ind_i = (j-1)*npts_Theta + i
         b(ind_i) = phi(i,j)
         x(ind_i) = 0.0
+        d_I(ind_i)  = C_A(i,j)
+        e_I(ind_i)  = C_B(i,j)
+        f_I(ind_i)  = C_C(i,j)
+        e1_I(ind_i) = C_D(i,j)
+        f1_I(ind_i) = C_E(i,j)
 
-        i2 = i+1
-        j2 = j-1 ; if (j2 < 1) j2 = nPsi-1
-        cols(1) = (j2-1)*npts_Theta + i2
-        
-        i2 = i+1
-        j2 = j+(nPsi-1)/2 ; if (j2 > nPsi) j2 = j2 - nPsi
-        cols(2) = (j2-1)*npts_Theta + i2
-
-        i2 = i
-        j2 = j
-        cols(3) = (j2-1)*npts_Theta + i2
-        
-        i2 = i+1
-        j2 = j
-        cols(4) = (j2-1)*npts_Theta + i2
-
-        i2 = i+1
-        j2 = j+1 ; if (j2 > nPsi) j2 = 2
-        cols(5) = (j2-1)*npts_Theta + i2
-
-        row(1) = C_D(i,j)
-        row(2) = C_B(i,j)
-        row(3) = C_A(i,j)
-        row(4) = C_C(i,j)
-        row(5) = C_E(i,j)
-
-        CALL SetRow(S,ind_i,cols,row)
 
         i = 2
 
@@ -326,36 +275,12 @@ subroutine ionosphere_solver(PHI, &
            ind_i = (j-1)*npts_Theta + i
            b(ind_i) = phi(i,j)
            x(ind_i) = 0.0
+           d_I(ind_i)  = C_A(i,j)
+           e_I(ind_i)  = C_B(i,j)
+           f_I(ind_i)  = C_C(i,j)
+           e1_I(ind_i) = C_D(i,j)
+           f1_I(ind_i) = C_E(i,j)
 
-           j2 = j-1
-           i2 = i
-           if (j2 < 1) j2 = nPsi-1
-           cols(1) = (j2-1)*npts_Theta + i2
-
-           j2 = j
-           i2 = i-1
-           cols(2) = (j2-1)*npts_Theta + i2
-
-           j2 = j
-           i2 = i
-           cols(3) = (j2-1)*npts_Theta + i2
-        
-           j2 = j
-           i2 = i+1
-           cols(4) = (j2-1)*npts_Theta + i2
-
-           j2 = j+1
-           i2 = i
-           if (j2 > nPsi) j2 = 2
-           cols(5) = (j2-1)*npts_Theta + i2
-
-           row(1) = C_D(i,j)
-           row(2) = C_B(i,j)
-           row(3) = C_A(i,j)
-           row(4) = C_C(i,j)
-           row(5) = C_E(i,j)
-        
-           call setrow(S,ind_i,cols,row)
 
            i = i + 1
 
@@ -364,10 +289,11 @@ subroutine ionosphere_solver(PHI, &
         ind_i = (j-1)*npts_Theta + i
         b(ind_i) = 0.0
         x(ind_i) = 0.0
-
-        cols1(1) = ind_i
-        row1(1) = 1.0
-        call setrow(S,ind_i,cols1,row1)
+        d_I(ind_i)  = C_A(i,j)
+        e_I(ind_i)  = C_B(i,j)
+        f_I(ind_i)  = C_C(i,j)
+        e1_I(ind_i) = C_D(i,j)
+        f1_I(ind_i) = C_E(i,j)
 
      enddo
 
@@ -383,9 +309,11 @@ subroutine ionosphere_solver(PHI, &
 
         b(ind_i) = phi(i,j)
         x(ind_i) = 0.0
-        cols1(1) = ind_i
-        row1(1) = 1.0
-        call setrow(S,ind_i,cols1,row1)
+        d_I(ind_i)  = C_A(i,j)
+        e_I(ind_i)  = C_B(i,j)
+        f_I(ind_i)  = C_C(i,j)
+        e1_I(ind_i) = C_D(i,j)
+        f1_I(ind_i) = C_E(i,j)
 
         do i = n+1, nTheta-1
 
@@ -393,110 +321,50 @@ subroutine ionosphere_solver(PHI, &
 
            b(ind_i) = phi(i,j)
            x(ind_i) = 0.0
-
-           j2 = j-1
-           i2 = i - n + 1
-           if (j2 < 1) j2 = nPsi-1
-           cols(1) = (j2-1)*npts_Theta + i2
-
-           j2 = j
-           i2 = i-1 - n + 1
-           cols(2) = (j2-1)*npts_Theta + i2
-
-           j2 = j
-           i2 = i - n + 1
-           cols(3) = (j2-1)*npts_Theta + i2
-        
-           j2 = j
-           i2 = i+1 - n + 1
-           cols(4) = (j2-1)*npts_Theta + i2
-
-           j2 = j+1
-           i2 = i - n + 1
-           if (j2 > nPsi) j2 = 2
-           cols(5) = (j2-1)*npts_Theta + i2
-
-           row(1) = C_D(i,j)
-           row(2) = C_B(i,j)
-           row(3) = C_A(i,j)
-           row(4) = C_C(i,j)
-           row(5) = C_E(i,j)
-
-           call setrow(S,ind_i,cols,row)
+           d_I(ind_i)  = C_A(i,j)
+           e_I(ind_i)  = C_B(i,j)
+           f_I(ind_i)  = C_C(i,j)
+           e1_I(ind_i) = C_D(i,j)
+           f1_I(ind_i) = C_E(i,j)
 
         enddo
 
         i = nTheta
         ind_i = (j-1)*npts_Theta + i - n + 1
         b(ind_i) = phi(i,j)
-
-        j2 = j-1
-        i2 = i-1 - n + 1
-        if (j2 < 1) j2 = nPsi-1
-        cols(1) = (j2-1)*npts_Theta + i2
-
-        j2 = j
-        i2 = i-1 - n + 1
-        cols(2) = (j2-1)*npts_Theta + i2
-
-        i2 = i - n + 1
-        j2 = j
-        cols(3) = (j2-1)*npts_Theta + i2
-        
-        j2 = j+(nPsi-1)/2
-        if (j2 > nPsi) j2 = j2 - nPsi
-        i2 = i-1 - n + 1
-        cols(4) = (j2-1)*npts_Theta + i2
-
-        j2 = j+1
-        i2 = i-1 - n + 1
-        if (j2 > nPsi) j2 = 2
-        cols(5) = (j2-1)*npts_Theta + i2
-
-        row(1) = C_D(i,j)
-        row(2) = C_B(i,j)
-        row(3) = C_A(i,j)
-        row(4) = C_C(i,j)
-        row(5) = C_E(i,j)
-
-        call setrow(S,ind_i,cols,row)
+        x(ind_i) = 0.0
+        d_I(ind_i)  = C_A(i,j)
+        e_I(ind_i)  = C_B(i,j)
+        f_I(ind_i)  = C_C(i,j)
+        e1_I(ind_i) = C_D(i,j)
+        f1_I(ind_i) = C_E(i,j)
 
      enddo
 
   endif
 
-  if(oktest)write(*,*)'MSR array filled'
+  iter = 100
+  DoPrecond = .true.
+  rhs = b
+  if(DoPrecond)then
+     ! A -> LU
+     call prehepta(nX,1,npts_theta,nX,-0.5,d_I,e_I,f_I,e1_I,f1_I)
+     ! rhs'=L^{-1}.rhs
+     call Lhepta(nX,1,npts_theta,nX,b,d_I,e_I,e1_I)
+  end if
+  ! Solve A'.x' = rhs'
+  Tolerance = 1.0e-4
+  call gmres(matvec_ionosphere,b,x,.false.,nPsi*npts_Theta,&
+       100,Tolerance,'rel',Iter,info,.true.)
+  write(*,*)'!!! gmres: iter, info=',iter, Tolerance, info
+  if(DoPrecond)then
+     ! x = U^{-1}.x'
+     call Uhepta(.true.,nX,1,npts_theta,nX,x,f_I,f1_I)
+  end if
 
-  if (.NOT.is_ok(S)) &
-     call CON_stop("Error in MSR structure S in ionosphere solver")
-
-!  write(6,*) '=> Going into Symbolic Cancellation.'
-
-  CALL Symbolic_Cancellation_ilu (1, S, PC)
-
-  if(oktest)write(*,*)'Symbolic_Cancellation_ilu done'
-
-  if (.NOT.is_ok(PC)) &
-     call CON_stop("Error in structure PC in ionosphere solver")
-
-!  write(6,*) '=> Going into ILU.'
-
-  CALL ILU(S,PC)
-
-  if(oktest)write(*,*)'ILU done'
-
-  if (.NOT.is_ok(S)) &
-     call CON_stop("Error in MSR structure S in ionosphere solver")
-  if (.NOT.is_ok(PC)) &
-     call CON_stop("Error in MSR structure PC in ionosphere solver")
-
-!  write(6,*) '=> Going into ionospheric GMRES Solver.'
-
-  CALL GMRES_MSR(10,x,S,b,PC)
-
-  if(oktest)write(*,*)'GMRES_MSR done'
-
-!  write(6,*) '=> Deallocating Matrix S and PC'
+  !Check solution:
+  DoPrecond = .false.
+  call check_solution(x, y, rhs, nPsi*npts_Theta)
 
   phi(:,:) = 0.0
 
@@ -560,11 +428,128 @@ subroutine ionosphere_solver(PHI, &
      phi(i,j) = ave
   enddo
 
-  if(allocated(b)) deallocate(b)
-  if(allocated(x)) deallocate(x)
-  if(allocated_matrix(S))  call Deallocate_Matrix(S)
-  if(allocated_matrix(PC)) call Deallocate_Matrix(PC)
+  if(allocated(b)) deallocate(x, y, b, rhs, d_I, e_I, f_I, e1_I, f1_I)
 
   call timing_stop('iono_solve')
 
+contains
+  !============================================================================
+  subroutine check_solution(x_I, y_I, b_I, n)
+
+    use ModIoUnit, ONLY: UnitTmp_
+
+    ! Calculate y = A.x where A is the (pentadiagonal) matrix
+
+    integer, intent(in) :: n          ! number of unknowns
+    real, intent(in) :: x_I(n)        ! vector of unknowns
+    real, intent(out):: y_I(n)        ! y = A.x
+    real, intent(in) :: b_I(n)        ! rhs
+
+    integer :: iTheta, iPsi, i, iError(1)
+    !-------------------------------------------------------------------------
+    call matvec_ionosphere(x_I, y_I, n)
+
+    if(north)then
+       open(UnitTmp_, FILE='iono_north.out')
+    else
+       open(UnitTmp_, FILE='iono_south.out')
+    end if
+    write(UnitTmp_,*)'Iono Solver_var22'
+    write(UnitTmp_,*)'0.0 0 2 1 3'
+    write(UnitTmp_,*) npts_Theta, nPsi
+    write(UnitTmp_,*)'0.0'
+    write(UnitTmp_,*)'Theta Psi Solution Rhs Error Param'
+
+    i = 0
+    iError = maxloc(abs(y_I-b_I))
+    do iPsi = 1, nPsi; do iTheta = 1, npts_Theta; i = i+1
+       if(i==iError(1))write(*,*) &
+            '!!! Check: max(abs(y-b)), iPsi, iTheta, nPtsTheta, north=',&
+            iPsi, iTheta, npts_Theta, abs(y_I(iError)-b_I(iError)), north
+       write(UnitTmp_,*)iTheta, iPsi, y_I(i), b_I(i), y_I(i)-b_I(i)
+    end do; end do
+    close(UnitTmp_)
+
+  end subroutine check_solution
+
 end subroutine ionosphere_solver
+
+!============================================================================
+subroutine matvec_ionosphere(x_I, y_I, n)
+
+  use ModIonosphere, ONLY: IONO_nPsi, IONO_nTheta, npts_Theta, &
+       north, DoPrecond, d_I, e_I, f_I, e1_I, f1_I, C_A, C_B, C_C, C_D, C_E
+  use ModLinearsolver, ONLY: Uhepta, Lhepta
+
+  implicit none
+  ! Calculate y = A.x where A is the (pentadiagonal) matrix
+
+  integer, intent(in) :: n          ! number of unknowns
+  real, intent(in) :: x_I(n)        ! vector of unknowns
+  real, intent(out):: y_I(n)        ! y = A.x
+
+  integer :: iTheta, iTheta2, iPsi, i
+  real :: x_G(0:IONO_nTheta+1, 0:IONO_nPsi+1) ! 2D array with ghost cells
+  !-------------------------------------------------------------------------
+
+  ! Preconditioning: x' = U^{-1}.x stored in y_I
+  y_I = x_I
+
+  if(DoPrecond) call Uhepta(.true.,n,1,npts_Theta,n,y_I,f_I,f1_I)
+
+  ! Put 1D vector into 2D solution
+  i = 0;
+  do iPsi = 1, IONO_nPsi; do iTheta = 1, npts_Theta; i = i+1
+     x_G(iTheta, iPsi) = y_I(i)
+  enddo; enddo
+
+  ! Apply periodic boundary conditions in Psi direction
+  x_G(:,0)           = x_G(:,IONO_nPsi-1)
+  x_G(:,IONO_nPsi+1) = x_G(:,2)
+
+  if(north)then
+     ! Apply pole boundary condition at the north pole
+     do iPsi = 1, IONO_nPsi
+        x_G(0, iPsi) = x_G(2, mod(iPsi+IONO_nPsi/2, IONO_nPsi))
+     end do
+     ! Apply 0 value at the lowest latitude
+     x_G(npts_Theta+1,:) = 0.0
+  else
+     ! Apply 0 value at the highest latitude
+     x_G(0,:) = 0.0
+     ! Apply pole boundary condition at the south pole
+     do iPsi = 1, IONO_nPsi
+        x_G(npts_Theta+1, iPsi) = &
+             x_G(npts_Theta-1, mod(iPsi+IONO_nPsi/2, IONO_nPsi))
+     end do
+  end if
+
+  i = 0
+  if(north)then
+     do iPsi = 1, IONO_nPsi; do iTheta = 1, npts_Theta; i = i+1
+        y_I(i) = &
+             C_A(iTheta, iPsi)*x_G(iTheta,   iPsi)   + &
+             C_B(iTheta, iPsi)*x_G(iTheta-1, iPsi)   + &
+             C_C(iTheta, iPsi)*x_G(iTheta+1, iPsi)   + &
+             C_D(iTheta, iPsi)*x_G(iTheta,   iPsi-1) + &
+             C_E(iTheta, iPsi)*x_G(iTheta,   iPsi+1)
+
+     end do; end do
+  else
+     do iPsi = 1, IONO_nPsi; do iTheta = 1, npts_Theta; i = i+1
+        iTheta2 = iTheta + IONO_nTheta - npts_Theta
+        y_I(i) = &
+             C_A(iTheta2, iPsi)*x_G(iTheta,   iPsi)   + &
+             C_B(iTheta2, iPsi)*x_G(iTheta-1, iPsi)   + &
+             C_C(iTheta2, iPsi)*x_G(iTheta+1, iPsi)   + &
+             C_D(iTheta2, iPsi)*x_G(iTheta,   iPsi-1) + &
+             C_E(iTheta2, iPsi)*x_G(iTheta,   iPsi+1)
+
+     end do; end do
+  end if
+
+  ! Preconditioning: y'=L^{-1}y
+  if(DoPrecond)call Lhepta(n,1,npts_theta,n,y_I,d_I,e_I,e1_I) 
+
+end subroutine matvec_ionosphere
+
