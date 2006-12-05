@@ -62,8 +62,8 @@ test_func_check:
 ### TESTS FOR MODELING TITAN ###
 
 test_titan:
-	make test_titan_start
-	make test_titan_restart
+	-@(make test_titan_start)
+	-@(make test_titan_restart)
 
 test_titan_start:
 	@echo "test_titan_compile..." > test_titan.diff
