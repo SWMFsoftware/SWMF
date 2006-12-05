@@ -68,13 +68,13 @@ TESTDIR = run_test
 test: test_saturn test_earth
 
 test_earth:
-	@echo "test_compile..." > test_earth.diff
+	@echo "test_compile..." > test_Earth.diff
 	make test_compile PLANET=Earth
-	@echo "test_rundir..." >> test_earth.diff
+	@echo "test_rundir..." >> test_Earth.diff
 	make test_rundir
-	@echo "test_run..." >> test_earth.diff
+	@echo "test_run..." >> test_Earth.diff
 	make test_run
-	@echo "test_check..." >> test_earth.diff
+	@echo "test_check..." >> test_Earth.diff
 	make test_check
 
 test_earth_compile:
@@ -82,13 +82,13 @@ test_earth_compile:
 	make PWOM
 
 test_saturn:
-	@echo "test_compile..." > test_saturn.diff
+	@echo "test_compile..." > test_Saturn.diff
 	make test_compile PLANET=Saturn
-	@echo "test_rundir..." >> test_saturn.diff
+	@echo "test_rundir..." >> test_Saturn.diff
 	make test_rundir
-	@echo "test_run..." >> test_saturn.diff
+	@echo "test_run..." >> test_Saturn.diff
 	make test_run
-	@echo "test_check..." >> test_saturn.diff
+	@echo "test_check..." >> test_Saturn.diff
 	make test_check
 
 test_compile:
@@ -103,14 +103,15 @@ test_run: PWOM
 	cd ${TESTDIR}; ./PWOM.exe
 
 test_check:
-	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/PW/log.out \
 		output/${PLANET}/log.out \
 		> test_${PLANET}.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
 		> test_${PLANET}_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out \
 		> test_${PLANET}_plots.diff)
