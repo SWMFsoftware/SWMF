@@ -9,17 +9,18 @@ include Makefile.DEPEND
 # The minimum reqguirement is ModIoUnit.o
 
 MODULES = \
-	ModKind.o\
-	ModTimeConvert.o\
-	ModFreq.o\
+	ModConst.o\
 	ModCoordTransform.o\
-	ModSort.o\
+	ModFreq.o\
+	ModIoUnit.o\
+	ModKind.o\
+	ModLinearSolver.o\
+	ModMpi.o\
         ModNumConst.o\
 	ModPlanetConst.o\
-	ModConst.o\
-	ModIoUnit.o\
-	ModMpi.o\
 	ModReadParam.o\
+	ModSort.o\
+	ModTimeConvert.o\
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
