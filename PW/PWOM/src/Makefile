@@ -62,7 +62,7 @@ PWOM: DEPEND
 	@echo "PWOM.exe has been created"
 
 ${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
+	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
 
 distclean: clean
 	rm -f PLANET *_planet.f ModCommonPlanet.f90 Makefile.planet 
