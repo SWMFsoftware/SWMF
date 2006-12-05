@@ -30,21 +30,9 @@ MODULES = \
 	IE_ModIo.o\
 	ModIonosphere.o\
 	ModProcIE.o\
-	precision.o \
-	io.o \
-	CSR.o \
-	MSR.o \
-	LUCSRMSR.o \
-	BandLU.o \
-	matrix-arithmetic.o \
-	flop_module.o \
-	iteration-defaults.o \
-	GMRES.o \
-	ilu.o \
 	ModAMIE_Interface.o\
 	ModErrors.o\
 	ModIE_Interface.o\
-	ModExtras.o\
 	ModFiles.o\
 	ModConductance.o
 
