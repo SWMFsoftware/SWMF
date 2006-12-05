@@ -33,7 +33,6 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
   real, dimension(1:IONO_nTheta) :: dTheta
   real, dimension(1:IONO_nPsi)   :: dPsi
 
-  logical :: north
   integer :: i, j
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
           ER, JR, JTh, JPs, &

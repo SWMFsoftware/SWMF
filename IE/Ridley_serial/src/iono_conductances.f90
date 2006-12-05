@@ -574,7 +574,7 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
   real :: SigmaH_EUV, SigmaP_EUV, SigmaH_SCAT, SigmaP_SCAT, &
        SigmaH_STAR, SigmaP_STAR, SigmaH_EUV_2, SigmaP_EUV_2
   real :: SigmaH_Particles, SigmaP_Particles, tau
-  logical :: north, old
+  logical :: old
 
   real    :: time_delay, IR, IX, IY, IZ, IYZ
   real    :: cos_limit, meeting_value_h, meeting_value_p
@@ -950,8 +950,6 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   real    :: mean_colat, dev_colat, sum, Night_Width, Day_Width
 
   integer :: i, j, n, nloc, dJ, J_Start, J_End
-
-  logical :: north
 
   !
   ! Reverse the Arrays for Southern Hemisphere:
