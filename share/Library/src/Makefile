@@ -9,6 +9,7 @@ include Makefile.DEPEND
 # The minimum reqguirement is ModIoUnit.o
 
 MODULES = \
+	${BLAS}\
 	ModConst.o\
 	ModCoordTransform.o\
 	ModFreq.o\
@@ -48,5 +49,4 @@ ${MY_LIB}: ${MODULES}
 distclean: clean
 	rm -f Makefile.DEPEND
 
-# keep this line
 
