@@ -65,7 +65,9 @@ LIB:
 
 TESTDIR = run_test
 
-test: test_saturn test_earth
+test:
+	-@(make test_saturn)
+	-@(make test_earth)
 
 test_earth:
 	@echo "test_compile..." > test_Earth.diff
