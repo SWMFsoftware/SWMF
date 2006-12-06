@@ -117,7 +117,6 @@ end subroutine advance_diffusion
 ! using fully implicit scheme.                                               !
 !============================================================================!
 subroutine advance_advection(CFLFermi,n,F_I)
-  use CON_world,ONLY:CON_stop
   use ModNumConst
   implicit none
   include 'stdout.h'
