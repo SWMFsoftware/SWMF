@@ -12,12 +12,9 @@ LIB:    install
 	cd src;          make LIB
 	cd srcInterface; make LIB
 
-test:
-	echo "SP/FLAMPA test is incomplete" > notest.diff
-
 rundir: 
-	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN
-
+	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN ${RUNDIR}/SP/MHDATA ${RUNDIR}/SP/IO2
+	cd ${RUNDIR}; ln -s ${DIR}/bin/SEP.exe .
 
 clean:  install
 	@(if [ -r "Makefile.conf" ]; then \
