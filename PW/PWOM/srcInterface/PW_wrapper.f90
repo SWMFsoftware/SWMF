@@ -58,6 +58,7 @@ subroutine PW_init_session(iSession, TimeSimulation)
   use ModPWOM, ONLY: Theta_G,Phi_G,SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
        NamePhiNorth,iPhi,nPhi,iTheta,nTheta, allocate_ie_variables
   use ModIoUnit, ONLY: UnitTmp_
+  use CON_coupler, ONLY: Couple_CC, IE_, PW_
   
   implicit none
   
@@ -72,6 +73,8 @@ subroutine PW_init_session(iSession, TimeSimulation)
   !----------------------------------------------------------------------------
   if(DoInitialize) call PW_initialize
   DoInitialize = .false.
+
+  UseIE = Couple_CC(IE_, PW_) % DoThis
   
   if (.not. UseIE) then
      open(UnitTmp_, FILE=NamePhiNorth)
