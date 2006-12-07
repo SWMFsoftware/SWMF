@@ -66,7 +66,7 @@ test_pw_check:
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw_plots.diff)
-	ls -l test_pw_*.diff
+	ls -l test_pw*.diff
 
 ### ESMF test ###
 #
