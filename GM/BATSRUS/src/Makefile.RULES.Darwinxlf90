@@ -3,9 +3,6 @@
 #	Specific Rules for Darwin fortran compiler
 #
 
-ModPrecond.o:	ModPrecond.f90
-	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModPrecond.f90
-
 project_B.o: project_B.f90 \
 	ModProcMH.o \
 	ModMain.o \

@@ -1,0 +1,8 @@
+#^CFG COPYRIGHT UM
+#
+#	Specific Rules for Darwin fortran compiler
+#
+
+ModLinearSolver.o:	ModLinearSolver.f90
+	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} LinearSolver.f90
+
