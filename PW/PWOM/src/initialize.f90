@@ -91,8 +91,9 @@ subroutine PW_initialize
   !****************************************************************************
   ! Read information from IE file, and get the velocities
   !****************************************************************************
-
-  call PW_get_electrodynamic
+  
+  if(IsStandAlone)call PW_get_electrodynamic
+  
 
   !****************************************************************************
   !  Move flux tube around
@@ -100,6 +101,6 @@ subroutine PW_initialize
 
   !initialize field line locations
 
-  call initial_line_location
-
+  if(IsStandAlone) call initial_line_location
+  
 end subroutine PW_initialize
