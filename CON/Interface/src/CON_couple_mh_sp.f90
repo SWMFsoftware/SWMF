@@ -1,5 +1,17 @@
 !^CFG COPYRIGHT UM
 !^CMP FILE SP
+!\
+! This coupler employs the following global arrays.
+! SP_Xyz_DI - is the array of the Lagrangian points.
+! A part of this array, as well as the mask 'SP_IsInIH' is only availbale at the
+! PE set, at which either IH or SP  run. This coordinates are expressed in terms of
+! the length units and with respect to the frame of reference defined in IH.
+! Another part of this array, as well as the mask 'SP_IsInSC' is only availbale at the
+! PE set, at which either SC or SP  run. This coordinates are expressed in terms of
+! the length units and with respect to the frame of reference defined in SC.
+! SP_XyzSP - in the array of all Lagrangian points, in units and in the frame of 
+! reference defined at SP, is available only at the PE set, at which SP runs.
+!/
 Module CON_couple_mh_sp
   use CON_coupler
   use CON_global_message_pass
@@ -489,8 +501,10 @@ contains
          NameMask='SP_IsInIH',&
          interpolate=interpolation_fix_reschange)
 
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
-    
+    if(is_proc(SP_))then
+       call SP_put_input_time(DataInputTime)
+       call transform_to_sp_from(IH_)
+    end if
 
     call global_message_pass(RouterIhSp,&
          nVar=8,&
@@ -524,7 +538,6 @@ contains
             RouterIhSp%iCommUnion)           !^CMP END SC
     end if
     call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
-    if(is_proc(SP_))call transform_to_sp_from(IH_)
   end subroutine couple_ih_sp
   !==================================================================
   logical function is_in_ih(Xyz_D)
@@ -598,13 +611,15 @@ contains
          NameMappingVector='SP_Xyz_DI',&
          NameMask='SP_IsInSC',&
          interpolate=interpolation_fix_reschange)
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)     
+    if(is_proc(SP_))then
+       call SP_put_input_time(DataInputTime)  
+       call transform_to_sp_from(SC_)
+    end if
     call global_message_pass(RouterScSp,&
          nVar=8,&
          fill_buffer=SC_get_for_sp_and_transform,&
          apply_buffer=SP_put_from_mh)
     call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
-    if(is_proc(SP_))call transform_to_sp_from(SC_)
   end subroutine couple_sc_sp
   !-------------------------------------------------------------------------
   logical function is_in_sc(Xyz_D)
