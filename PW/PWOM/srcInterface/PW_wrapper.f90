@@ -55,19 +55,38 @@ end subroutine PW_set_param
 !==============================================================================
 
 subroutine PW_init_session(iSession, TimeSimulation)
-
+  use ModPWOM, ONLY: Theta_G,Phi_G,SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
+       NamePhiNorth,iPhi,nPhi,iTheta,nTheta, allocate_ie_variables
+  use ModIoUnit, ONLY: UnitTmp_
+  
   implicit none
+  
 
   !INPUT PARAMETERS:
   integer,  intent(in) :: iSession         ! session number (starting from 1)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
-
+  logical  :: UseIE=.false.
   character(len=*), parameter :: NameSub='PW_init_session'
 
   logical :: DoInitialize = .true.
   !----------------------------------------------------------------------------
   if(DoInitialize) call PW_initialize
   DoInitialize = .false.
+  
+  if (.not. UseIE) then
+     open(UnitTmp_, FILE=NamePhiNorth)
+     call allocate_ie_variables(257, 65)
+     do iPhi=1,nPhi
+        do iTheta=1,nTheta
+           read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
+               Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
+               SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
+           
+        enddo
+     enddo
+     close(UnitTmp_)
+  endif
+  
 
 end subroutine PW_init_session
 
@@ -121,9 +140,17 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   character(len=*), parameter :: NameSub='PW_run'
+  logical :: IsFirstCall=.true.
   !---------------------------------------------------------------------------
 
   Dt = min(DtMax, TimeSimulationLimit - Time)
+  !call PW_get_electrodynamic
+  if (IsFirstCall) then
+     call PW_get_electrodynamic
+     call Initial_Line_Location
+     IsFirstCall=.false.
+  endif
+  
   do iLine=1,nLine
      call MoveFluxTube
      call PW_advance_line
@@ -167,13 +194,13 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         call CON_stop(NameSub//' ERROR: Inconsistent IE grid sizes')
      endif
 
-     call allocate_ie_variables(iSize, jSize)
+     call allocate_ie_variables(jSize, iSize)
 
-     do j = 1, jSize
-        Theta_G(1:iSize, j) = Grid_C(IE_) % Coord1_I(1:iSize)
-     end do
      do i = 1, iSize
-        Phi_G(i, 1:jSize)   = Grid_C(IE_) % Coord2_I(1:jSize)
+        Theta_G(1:jSize,i) = Grid_C(IE_) % Coord1_I(i)
+     end do
+     do j = 1, jSize
+        Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
      end do
 
   end if
@@ -185,10 +212,10 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      select case(Name_V(iVar))
      case('Pot')
         IsPotFound = .true.
-        Potential_G(1:iSize, 1:jSize) = Buffer_IIV(:, :, iVar)
+        Potential_G(1:jSize, 1:iSize) = transpose(Buffer_IIV(:, :, iVar))
      case('Jr')
         IsJrFound = .true.
-        Jr_G(1:iSize, 1:jSize) = Buffer_IIV(:, :, iVar)
+        Jr_G(1:jSize, 1:iSize) = transpose(Buffer_IIV(:, :, iVar))
      end select
   end do
   if(.not.IsPotFound .or. .not.IsJrFound)then
