@@ -7,44 +7,25 @@ end module SP_ModProc
 module SP_ModIhData
   use ModNumConst
   use ModUtilities,ONLY:check_allocate
+  use SP_ModMain
   implicit none
-  include 'stdout.h'
-  real,allocatable,dimension(:,:),save::State_VI
-  real,allocatable,dimension(:,:),save::Xyz_DI
-  integer::nPoint
-  logical::DoInitArr=.true.
-  integer,parameter::nResolution=10
-  real,parameter::DsResolution=cOne/nResolution
+  save
   real::XyzLine_D(3)=(/cZero,cZero,cZero/)
-  real::RBoundSC=1.1      !^CMP IF SC
+  real::RBoundSC=1.2      !^CMP IF SC
   real::RBoundIH=21.0     !^CMP IF IH
-  real::tSimulation=cZero,DataInputTime=cZero
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
   logical::DoRestart
   integer::nSmooth=0
-  integer::nStep=0 
+contains
+  function SP_xyz_i(iPoint)
+    use CON_coupler
+    implicit none
+    real,dimension(3)::SP_xyz_i
+    integer,intent(in)::iPoint
+    SP_xyz_i= point_state_v('SP_XyzSP',3,iPoint)
+  end function SP_xyz_i 
 end module SP_ModIhData
-!==============================================================================
-subroutine sp_set_ihdata(nPointIn,XyzIn_DI)
-  use SP_ModIhData
-  implicit none
-  integer,intent(in)::nPointIn
-  real,dimension(3,nPointIn),intent(in)::XyzIn_DI
-  integer::iError
-  nPoint=nPointIn
-  
-  if(DoInitArr)then
-     allocate(Xyz_DI(3,nPoint),stat=iError)
-     call check_allocate(iError,&
-            'Xyz_DI in sp_set_ihdata')
-     allocate(State_VI(8,nPoint),stat=iError)
-     call check_allocate(iError,&
-            'State_VI in sp_set_ihdata')
-     DoInitArr=.false.
-  end if
-  Xyz_DI(:,1:nPoint)=XyzIn_DI(:,1:nPoint)
-end subroutine sp_set_ihdata
-!=============================================================!
+
 !=============================================================!
 subroutine SP_get_line_param(DsOut,&
                              XyzOut_D,&
@@ -65,10 +46,16 @@ end subroutine SP_get_line_param
 subroutine SP_put_input_time(TimeIn)
   use SP_ModIhData
   use CON_coupler
-  use CON_axes
   implicit none
   real,intent(in)::TimeIn
+  integer,dimension(2)::nU_I
   DataInputTime=TimeIn
+  if(.not.allocated(DInner_I))then
+     nU_I=ubound_vector('SP_XyzSP')
+     nX=nU_I(2)
+     call SP_allocate
+  end if
+  nX=0
 end subroutine SP_put_input_time
 !=============================================================!
 subroutine SP_set_param(CompInfo,TypeAction)
@@ -107,10 +94,8 @@ subroutine SP_set_param(CompInfo,TypeAction)
         DoInit=.false.
      end if
      if(DoRestart)then
-        write(iStdOut,*)prefix,'Restart from nStep=',nStep,&
-             ', tSimulation=',tSimulation
-!        call SP_initial
-!        call SP_read_mh_data
+        write(iStdOut,*)prefix,'Restart from nStep=',iDataSet,&
+             ', tSimulation=',SP_Time
         DoRestart=.false.
      end if
   case('READ')
@@ -133,15 +118,15 @@ subroutine SP_set_param(CompInfo,TypeAction)
         case('#RTRANSIENT')
 !           call read_var('rTransient',rTransient)
         case('#DORUN')
-!           call read_var('DoRun',DoRun)
+           call read_var('DoRun',DoRun)
         case('#SAVEMHDATA')
            call read_var('SaveMhData',SaveMhData)
         case('#DOREADMHDATA')
            call read_var('DoReadMhData',DoReadMhData)
         case('#NSTEP')
-           call read_var('nStep',nStep)
+           call read_var('nStep',iDataSet)
         case('#TSIMULATION')
-           call read_var('tSimulation',tSimulation)
+           call read_var('tSimulation',SP_Time)
         case('#PLOT')
 !           call read_var('DnPlot',kfriss)
         case('#VERBOSE')
@@ -164,7 +149,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
   case('GRID')
      !Initialize grid
      call init_decomposition(SP_,SP_,1)
-     call set_coord_system(SP_,'HGI',cOne)
+     call set_coord_system(SP_,'HGR',cOne)
   case default
   end select
 end subroutine SP_set_param
@@ -187,58 +172,63 @@ subroutine SP_put_from_mh(nPartial,&
   real:: Weight
   iCell=Put%iCB_II(1,iPutStart)
   Weight=W%Weight_I(iPutStart)
+  nX=max(nX,iCell)
   if(DoAdd)then
      State_VI(:,iCell)=State_VI(:,iCell)+Buff_I(:)*Weight
   else
+      !Get the lagrangian mesh coordinates from global vector
+     X_DI(:,iCell)=&
+         SP_xyz_i(iCell)
      State_VI(:,iCell)=Buff_I(:)*Weight
   end if
 end subroutine SP_put_from_mh
 !======================================================================
-subroutine write_ihdata
+subroutine SP_save_mhdata
   use SP_ModIhData
   use ModIoUnit
+  use ModConst 
   implicit none
-  character(LEN=*),parameter::IO_dir='./SP/'
+  character(LEN=*),parameter::IO_dir='./SP/MHDATA/'
   character(LEN=50)::NameFile
   integer::iFile,iPoint,i
-  write(NameFile,'(a,i4.4,a)')trim(IO_dir)//'ihdata_',nStep,'.dat'
+  write(NameFile,'(a,i4.4,a)')trim(IO_dir)//'mhdata_',iDataSet,'.dat'
   iFile=io_unit_new()
   open(iFile,file=trim(NameFile),status='unknown',&
           form='formatted')
-  write(iFile,*)'tSimulation=',tSimulation,',  nStep=',nStep
-  do iPoint=1,nPoint
-     write(iFile,'(11(e13.6,2x))')Xyz_DI(:,iPoint),State_VI(1:8,iPoint)
+  write(iFile,'(a,f13.6,a)')'Time_Simulation=  ',SP_Time,'         ,  n_Step=',iDataSet
+  do iPoint=1,nX
+     write(iFile,'(11(e13.6,2x))')X_DI(:,iPoint)/rSun,State_VI(1:8,iPoint)
   end do
   close(iFile)
-end subroutine write_ihdata
+end subroutine SP_save_mhdata
 !==========================================================================
 
-subroutine sp_smooth_ihdata
+subroutine sp_smooth_data
   use ModNumConst
   use SP_ModIhData
   implicit none
   integer::i,iVar
   do iVar=1,8
-     SMOOTH:do i=1,int(cHalf/DsResolution)
+     SMOOTH:do i=1,nSmooth
         if(.not.any(&
              cTwo*&
-             abs(State_VI(iVar,1:nPoint-2)-State_VI(iVar,2:nPoint-1))<&
-             abs(State_VI(iVar,3:nPoint  )-State_VI(iVar,2:nPoint-1)).or.&
-             abs(State_VI(iVar,1:nPoint-2)-State_VI(iVar,2:nPoint-1))>&
+             abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))<&
+             abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)).or.&
+             abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))>&
              cTwo*&
-             abs(State_VI(iVar,3:nPoint  )-State_VI(iVar,2:nPoint-1))))&
+             abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1))))&
              EXIT SMOOTH
         where(cTwo*&
-             abs(State_VI(iVar,1:nPoint-2)-State_VI(iVar,2:nPoint-1))<&
-             abs(State_VI(iVar,3:nPoint  )-State_VI(iVar,2:nPoint-1)).or.&
-             abs(State_VI(iVar,1:nPoint-2)-State_VI(iVar,2:nPoint-1))>&
+             abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))<&
+             abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)).or.&
+             abs(State_VI(iVar,1:nX-2)-State_VI(iVar,2:nX-1))>&
              cTwo*&
-             abs(State_VI(iVar,3:nPoint  )-State_VI(iVar,2:nPoint-1)))&
-             State_VI(iVar,2:nPoint-1)=cHalf*(State_VI(iVar,1:nPoint-2)+&
-             State_VI(iVar,3:nPoint))
+             abs(State_VI(iVar,3:nX  )-State_VI(iVar,2:nX-1)))&
+             State_VI(iVar,2:nX-1)=cHalf*(State_VI(iVar,1:nX-2)+&
+             State_VI(iVar,3:nX))
      end do SMOOTH
   end do
-end subroutine sp_smooth_ihdata      
+end subroutine sp_smooth_data      
 !========================================================================!
 subroutine SP_init_session(iSession,TimeIn)
   use SP_ModIhData
@@ -246,36 +236,41 @@ subroutine SP_init_session(iSession,TimeIn)
   integer,  intent(in) :: iSession    ! session number (starting from 1)
   real,     intent(in) :: TimeIn      ! seconds from start time
   logical,save::DoInit=.true.
-  integer::      jnext,jsep,jstep,iStep
-  common /SP_spmain/jnext,jsep,jstep,istep
   if(.not.DoInit)return
   DoInit=.false.
-  if(tSimulation==cZero)tSimulation=TimeIn
+  if(SP_Time==cZero)SP_Time=TimeIn
+  call SP_diffusive_shock("INIT")
 end subroutine SP_init_session
 !=============================================================!
 subroutine SP_run(tInOut,tLimit)
-  use SP_ModIhData,ONLY:tSimulation,DataInputTime,nStep,nSmooth
-!  use SP_ModIhData,ONLY:DoRun,SaveMhData,DoReadMhData
+  use SP_ModIhData,ONLY:SP_Time,DataInputTime,iDataSet,nSmooth
+  use SP_ModIhData,ONLY:DoRun,SaveMhData,DoReadMhData
   use ModNumConst
   implicit none
   real,intent(inout)::tInOut
   real,intent(in):: tLimit
-  nStep=nStep+1
-!  if(.not.DoReadMhData)then
- !    if(nSmooth>0)call SP_smooth_data
+  character(LEN=15):: NameFile
+  iDataSet=iDataSet+1
+  if(.not.DoReadMhData)then
+     if(nSmooth>0)call SP_smooth_data
+     call mh_transform_for_flampa
      tInOut=max(tInOut,tLimit)
-!  else
- !    call SP_read_mh_data
+  else
+     call read_ihdata_for_sp(1,0)
      tInOut=DataInputTime
-!  end if
- ! if(SaveMhData)call SP_save_mh_data
- ! if(DoRun)call SP_sharpen_and_run(tSimulation,DataInputTime)
+  end if
+  if(SaveMhData)call SP_save_mhdata
+  if(DoRun)then
+     call  SP_diffusive_shock("RUN",DataInputTime)
+  else
+     iDataSet=iDataSet+1
+  end if
 end subroutine SP_run
 !=============================================================!
 subroutine SP_finalize(TimeSimulation)
   implicit none
   real,intent(in)::TimeSimulation
-!  call SP_closetime
+  call SP_diffusive_shock("FINALIZE")
 end subroutine SP_finalize
 !=============================================================!
 subroutine SP_save_restart(TimeSimulation)
@@ -293,10 +288,10 @@ subroutine SP_save_restart(TimeSimulation)
   write(iFile,'(a)')'#RESTART'
   write(iFile,*)
   write(iFile,'(a)')'#TSIMULATION'
-  write(iFile,*)tSimulation
+  write(iFile,*)SP_Time
   write(iFile,*)
   write(iFile,'(a)')'#NSTEP'
-  write(iFile,*)nStep
+  write(iFile,*)iDataSet
   write(iFile,*)
   close(iFile)
 !  call SP_save_f
