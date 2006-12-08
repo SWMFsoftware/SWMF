@@ -18,6 +18,17 @@ test:
 	-@(make test_comp)
 	-@(make test_pw)
 	-@(make test_esmf)
+	-@(make test_check)
+
+test_check:
+	@ls -l ??/*/*.diff *.diff > test_swmf.res
+	@cat test_swmf.res
+	@echo '=============================================================='\
+		>> test_swmf.res
+	@head -10 ??/*/*.diff *.diff >> test_swmf.res
+	@echo ' '
+	@echo 'See test_swmf.res and test_swmf.log for more detail...'
+	@echo ' '
 
 ### Component tests ###
 
