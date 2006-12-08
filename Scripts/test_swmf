@@ -64,12 +64,6 @@ cd SWMF
 make test >>& test_swmf.log #		Run the tests on two processors
 
 #
-# Summarize the results
-#
-ls -l ??/*/*.diff *.diff     > test_swmf.res
-head -10 ??/*/*.diff *.diff >> test_swmf.res
-
-#
 # Send the test results by e-mail or scp back.
 #
 #/bin/mail -s `hostname -s`_test_swmf $USER@umich.edu < test_swmf.res
