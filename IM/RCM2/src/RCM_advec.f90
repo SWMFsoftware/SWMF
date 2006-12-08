@@ -215,7 +215,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
   implicit none
   INTEGER, INTENT (IN) :: icontrol, idt, itimei, itimef
   INTEGER :: irdr, irdw
-  integer, save :: iCurrentTime=0
+  integer :: iCurrentTime=0
   !
   integer :: i,j, info_bicgstab
   !
