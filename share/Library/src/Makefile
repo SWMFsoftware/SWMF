@@ -11,6 +11,7 @@ include Makefile.RULES
 
 MODULES = \
 	${BLAS}\
+	ModBlasLapack.o\
 	ModConst.o\
 	ModCoordTransform.o\
 	ModFreq.o\
