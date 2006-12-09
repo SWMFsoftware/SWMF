@@ -25,7 +25,7 @@ test_check:
 	@cat test_swmf.res
 	@echo '=============================================================='\
 		>> test_swmf.res
-	@head -10 ??/*/*.diff *.diff >> test_swmf.res
+	@head -100 ??/*/*.diff *.diff >> test_swmf.res
 	@echo ' '
 	@echo 'See test_swmf.res and test_swmf.log for more detail...'
 	@echo ' '
@@ -37,8 +37,10 @@ test_comp:
 		do ( cd $$i; make test; ); done
 	ls -l *.diff [A-Z][A-Z]/*/*.diff
 
-### Polarwind test ###
+### SWMF tests ###
 
+#### Polarwind test ###
+#
 test_pw:
 	@echo "starting..." > test_pw_plots.diff
 	@echo "starting..." > test_pw_restart.diff
