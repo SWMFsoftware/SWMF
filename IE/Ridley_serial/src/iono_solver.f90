@@ -355,16 +355,17 @@ subroutine ionosphere_solver(PHI, &
   ! Solve A'.x' = rhs'
   Tolerance = 1.0e-4
   call gmres(matvec_ionosphere,b,x,.false.,nPsi*npts_Theta,&
-       100,Tolerance,'rel',Iter,info,.true.)
-  write(*,*)'!!! gmres: iter, info=',iter, Tolerance, info
+       100,Tolerance,'rel',Iter,info,.false.)
+  if(oktest)write(*,*)'iono_solve, north, iter, info=',&
+       north, iter, Tolerance, info
   if(DoPrecond)then
      ! x = U^{-1}.x'
      call Uhepta(.true.,nX,1,npts_theta,nX,x,f_I,f1_I)
   end if
 
   !Check solution:
-  DoPrecond = .false.
-  call check_solution(x, y, rhs, nPsi*npts_Theta)
+  !DoPrecond = .false.
+  !call check_solution(x, y, rhs, nPsi*npts_Theta)
 
   phi(:,:) = 0.0
 
