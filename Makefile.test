@@ -40,6 +40,8 @@ test_comp:
 ### Polarwind test ###
 
 test_pw:
+	@echo "starting..." > test_pw_plots.diff
+	@echo "starting..." > test_pw_restart.diff
 	@echo "test_pw_compile..." > test_pw.diff
 	make test_pw_compile
 	@echo "test_pw_rundir..." >> test_pw.diff

@@ -69,7 +69,9 @@ test:
 	-@(make test_saturn)
 	-@(make test_earth)
 
-test_earth:
+test_earth:	
+	@echo "starting..." > test_Earth_plots.diff
+	@echo "starting..." > test_Earth_restart.diff
 	@echo "test_compile..." > test_Earth.diff
 	make test_compile PLANET=Earth
 	@echo "test_rundir..." >> test_Earth.diff
@@ -84,6 +86,8 @@ test_earth_compile:
 	make PWOM
 
 test_saturn:
+	@echo "starting..." > test_Saturn_plots.diff
+	@echo "starting..." > test_Saturn_restart.diff
 	@echo "test_compile..." > test_Saturn.diff
 	make test_compile PLANET=Saturn
 	@echo "test_rundir..." >> test_Saturn.diff
