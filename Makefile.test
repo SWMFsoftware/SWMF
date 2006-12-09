@@ -70,14 +70,14 @@ test_pw_run:
 	cd ${TESTDIR}; ./SWMF.exe > runlog
 
 test_pw_check:
-	-@(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PW/log.out \
+	-@(${SCRIPTDIR}/DiffNum.pl -b ${TESTDIR}/PW/log.out \
 		${PWDIR}/output/Earth/log.out \
 		> test_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		${PWDIR}/output/Earth/restart_iline0001.dat \
 		> test_pw_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw_plots.diff)
@@ -114,13 +114,13 @@ test_esmf_run:
 
 test_esmf_check:
 	perl -ne 'print if /error/i' PET*.ESMF_LogFile > test_esmf.diff
-	${SCRIPTDIR}/DiffNum.pl \
+	${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
 		>> test_esmf.diff
 	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		> ${TESTDIR}/it000321_104510_000.idl.ref
-	${SCRIPTDIR}/DiffNum.pl \
+	${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		${TESTDIR}/it000321_104510_000.idl.ref \
 		>> test_esmf.diff
