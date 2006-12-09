@@ -321,150 +321,150 @@ GM:saved ifile= 5 type=z=0_ful    at n_step=      0 time=   0:00:00 h:m:s
 SORTED TIMING at step       0 GM on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                      2.65    100.00         1         1
+SWMF                      1.95    100.00         1         1
 -------------------------------------------------------------------------------
-SETUP                     2.65    100.00         1         1
-save_plot                 0.86     32.49         1         3
-GM_IE_couple              0.25      9.42         1         1
-exch_msgs                 0.11      4.17         1         1
-IE_GM_couple              0.01      0.26         1         1
+SETUP                     1.95    100.00         1         1
+save_plot                 0.65     33.31         1         3
+GM_IE_couple              0.23     12.01         1         1
+exch_msgs                 0.11      5.43         1         1
+IE_GM_couple              0.00      0.23         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
  SWMF_run starts  with tCouple =   2.0000000000000000
-Progress:       1 steps,   0.00000     s simulation time,      1.42 s CPU time
-Progress:       2 steps,  0.104123     s simulation time,      2.80 s CPU time
-Progress:       3 steps,  0.208245     s simulation time,      4.18 s CPU time
-Progress:       4 steps,  0.313443     s simulation time,      5.56 s CPU time
-Progress:       5 steps,  0.419519     s simulation time,      6.96 s CPU time
-Progress:       6 steps,  0.526350     s simulation time,      8.36 s CPU time
-Progress:       7 steps,  0.633846     s simulation time,      9.74 s CPU time
-Progress:       8 steps,  0.741942     s simulation time,     11.12 s CPU time
-Progress:       9 steps,  0.850586     s simulation time,     12.50 s CPU time
-Progress:      10 steps,  0.959739     s simulation time,     13.88 s CPU time
-Progress:      11 steps,   1.00000     s simulation time,     15.26 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   2.4891605297533417  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   2.4891378229785537  kV
-Progress:      12 steps,   1.06937     s simulation time,     20.20 s CPU time
-Progress:      13 steps,   1.17944     s simulation time,     21.59 s CPU time
-Progress:      14 steps,   1.28994     s simulation time,     22.96 s CPU time
-Progress:      15 steps,   1.40084     s simulation time,     24.35 s CPU time
-Progress:      16 steps,   1.51214     s simulation time,     25.73 s CPU time
-Progress:      17 steps,   1.62380     s simulation time,     27.11 s CPU time
-Progress:      18 steps,   1.73583     s simulation time,     28.49 s CPU time
-Progress:      19 steps,   1.84821     s simulation time,     29.87 s CPU time
-Progress:      20 steps,   1.96092     s simulation time,     31.25 s CPU time
-Progress:      21 steps,   2.00000     s simulation time,     32.63 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   3.5294619736879231  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   3.5294503971137154  kV
+Progress:       1 steps,   0.00000     s simulation time,      1.00 s CPU time
+Progress:       2 steps,  0.104123     s simulation time,      1.96 s CPU time
+Progress:       3 steps,  0.208245     s simulation time,      2.92 s CPU time
+Progress:       4 steps,  0.313443     s simulation time,      3.88 s CPU time
+Progress:       5 steps,  0.419519     s simulation time,      4.84 s CPU time
+Progress:       6 steps,  0.526350     s simulation time,      5.80 s CPU time
+Progress:       7 steps,  0.633846     s simulation time,      6.76 s CPU time
+Progress:       8 steps,  0.741942     s simulation time,      7.72 s CPU time
+Progress:       9 steps,  0.850586     s simulation time,      8.68 s CPU time
+Progress:      10 steps,  0.959739     s simulation time,      9.65 s CPU time
+Progress:      11 steps,   1.00000     s simulation time,     10.61 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   2.3441089386205940  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   2.3570730967180085  kV
+Progress:      12 steps,   1.06937     s simulation time,     15.08 s CPU time
+Progress:      13 steps,   1.17944     s simulation time,     16.05 s CPU time
+Progress:      14 steps,   1.28994     s simulation time,     17.01 s CPU time
+Progress:      15 steps,   1.40084     s simulation time,     17.97 s CPU time
+Progress:      16 steps,   1.51214     s simulation time,     18.93 s CPU time
+Progress:      17 steps,   1.62380     s simulation time,     19.90 s CPU time
+Progress:      18 steps,   1.73583     s simulation time,     20.85 s CPU time
+Progress:      19 steps,   1.84821     s simulation time,     21.82 s CPU time
+Progress:      20 steps,   1.96092     s simulation time,     22.78 s CPU time
+Progress:      21 steps,   2.00000     s simulation time,     23.74 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   3.2978667979827376  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   3.3058548820029516  kV
  SWMF_run returns with tSimSwmf=   2.0000000000000000
  ESMFGridComp:run old Bz=   8.5499994244034875E-10
  ESMFGridComp:run new Bz=   7.8833327719655125E-10
  SWMF_run starts  with tCouple =   4.0000000000000000
-Progress:      22 steps,   2.07397     s simulation time,     34.14 s CPU time
-Progress:      23 steps,   2.18734     s simulation time,     35.52 s CPU time
-Progress:      24 steps,   2.30103     s simulation time,     36.90 s CPU time
-Progress:      25 steps,   2.41502     s simulation time,     38.28 s CPU time
-Progress:      26 steps,   2.52932     s simulation time,     39.66 s CPU time
-Progress:      27 steps,   2.64392     s simulation time,     41.06 s CPU time
-Progress:      28 steps,   2.75881     s simulation time,     42.43 s CPU time
-Progress:      29 steps,   2.87399     s simulation time,     43.82 s CPU time
-Progress:      30 steps,   2.98945     s simulation time,     45.20 s CPU time
-Progress:      31 steps,   3.00000     s simulation time,     46.58 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   4.3898874403813535  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   4.3898710379137249  kV
-Progress:      32 steps,   3.10519     s simulation time,     51.64 s CPU time
-Progress:      33 steps,   3.22121     s simulation time,     53.05 s CPU time
-Progress:      34 steps,   3.33750     s simulation time,     54.46 s CPU time
-Progress:      35 steps,   3.45406     s simulation time,     55.86 s CPU time
-Progress:      36 steps,   3.57089     s simulation time,     57.27 s CPU time
-Progress:      37 steps,   3.68798     s simulation time,     58.67 s CPU time
-Progress:      38 steps,   3.80532     s simulation time,     60.08 s CPU time
-Progress:      39 steps,   3.92293     s simulation time,     61.48 s CPU time
-Progress:      40 steps,   4.00000     s simulation time,     62.88 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   5.0445769034959849  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   5.0446119441442594  kV
+Progress:      22 steps,   2.07397     s simulation time,     24.64 s CPU time
+Progress:      23 steps,   2.18734     s simulation time,     25.60 s CPU time
+Progress:      24 steps,   2.30103     s simulation time,     26.56 s CPU time
+Progress:      25 steps,   2.41502     s simulation time,     27.53 s CPU time
+Progress:      26 steps,   2.52932     s simulation time,     28.48 s CPU time
+Progress:      27 steps,   2.64392     s simulation time,     29.45 s CPU time
+Progress:      28 steps,   2.75881     s simulation time,     30.41 s CPU time
+Progress:      29 steps,   2.87399     s simulation time,     31.37 s CPU time
+Progress:      30 steps,   2.98945     s simulation time,     32.33 s CPU time
+Progress:      31 steps,   3.00000     s simulation time,     33.29 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   4.0894284714407005  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   4.0942351354908597  kV
+Progress:      32 steps,   3.10519     s simulation time,     37.76 s CPU time
+Progress:      33 steps,   3.22121     s simulation time,     38.72 s CPU time
+Progress:      34 steps,   3.33750     s simulation time,     39.68 s CPU time
+Progress:      35 steps,   3.45406     s simulation time,     40.64 s CPU time
+Progress:      36 steps,   3.57089     s simulation time,     41.61 s CPU time
+Progress:      37 steps,   3.68798     s simulation time,     42.58 s CPU time
+Progress:      38 steps,   3.80532     s simulation time,     43.54 s CPU time
+Progress:      39 steps,   3.92293     s simulation time,     44.49 s CPU time
+Progress:      40 steps,   4.00000     s simulation time,     45.46 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   4.6781279436545669  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   4.6811182501115871  kV
  SWMF_run returns with tSimSwmf=   4.0000000000000000
  ESMFGridComp:run old Bz=   7.8833327719655125E-10
  ESMFGridComp:run new Bz=   7.2166661195275375E-10
  SWMF_run starts  with tCouple =   6.0000000000000000
-Progress:      41 steps,   4.04079     s simulation time,     64.39 s CPU time
-Progress:      42 steps,   4.15890     s simulation time,     65.79 s CPU time
-Progress:      43 steps,   4.27726     s simulation time,     67.20 s CPU time
-Progress:      44 steps,   4.39587     s simulation time,     68.61 s CPU time
-Progress:      45 steps,   4.51473     s simulation time,     70.01 s CPU time
-Progress:      46 steps,   4.63383     s simulation time,     71.41 s CPU time
-Progress:      47 steps,   4.75317     s simulation time,     72.81 s CPU time
-Progress:      48 steps,   4.87274     s simulation time,     74.19 s CPU time
-Progress:      49 steps,   4.99256     s simulation time,     75.57 s CPU time
-Progress:      50 steps,   5.00000     s simulation time,     76.96 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   5.6169646766773988  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   5.6169255644029912  kV
-Progress:      51 steps,   5.11261     s simulation time,     82.02 s CPU time
-Progress:      52 steps,   5.23290     s simulation time,     83.40 s CPU time
-Progress:      53 steps,   5.35342     s simulation time,     84.80 s CPU time
-Progress:      54 steps,   5.47417     s simulation time,     86.18 s CPU time
-Progress:      55 steps,   5.59515     s simulation time,     87.56 s CPU time
-Progress:      56 steps,   5.71635     s simulation time,     88.95 s CPU time
-Progress:      57 steps,   5.83779     s simulation time,     90.34 s CPU time
-Progress:      58 steps,   5.95945     s simulation time,     91.77 s CPU time
-Progress:      59 steps,   6.00000     s simulation time,     93.15 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   5.9893268477081580  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   5.9892189979406441  kV
+Progress:      41 steps,   4.04079     s simulation time,     46.35 s CPU time
+Progress:      42 steps,   4.15890     s simulation time,     47.32 s CPU time
+Progress:      43 steps,   4.27726     s simulation time,     48.28 s CPU time
+Progress:      44 steps,   4.39587     s simulation time,     49.24 s CPU time
+Progress:      45 steps,   4.51473     s simulation time,     50.20 s CPU time
+Progress:      46 steps,   4.63383     s simulation time,     51.16 s CPU time
+Progress:      47 steps,   4.75317     s simulation time,     52.12 s CPU time
+Progress:      48 steps,   4.87274     s simulation time,     53.09 s CPU time
+Progress:      49 steps,   4.99256     s simulation time,     54.05 s CPU time
+Progress:      50 steps,   5.00000     s simulation time,     55.02 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   5.1959632468098098  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   5.1967316125273584  kV
+Progress:      51 steps,   5.11261     s simulation time,     59.38 s CPU time
+Progress:      52 steps,   5.23290     s simulation time,     60.34 s CPU time
+Progress:      53 steps,   5.35342     s simulation time,     61.30 s CPU time
+Progress:      54 steps,   5.47417     s simulation time,     62.27 s CPU time
+Progress:      55 steps,   5.59515     s simulation time,     63.24 s CPU time
+Progress:      56 steps,   5.71635     s simulation time,     64.20 s CPU time
+Progress:      57 steps,   5.83779     s simulation time,     65.16 s CPU time
+Progress:      58 steps,   5.95945     s simulation time,     66.12 s CPU time
+Progress:      59 steps,   6.00000     s simulation time,     67.08 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   5.5376066533348771  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   5.5364118714601247  kV
  SWMF_run returns with tSimSwmf=   6.0000000000000000
  ESMFGridComp:run old Bz=   7.2166661195275375E-10
  ESMFGridComp:run new Bz=   6.5499994670895626E-10
  SWMF_run starts  with tCouple =   8.0000000000000000
-Progress:      60 steps,   6.08133     s simulation time,     94.64 s CPU time
-Progress:      61 steps,   6.20343     s simulation time,     96.02 s CPU time
-Progress:      62 steps,   6.32576     s simulation time,     97.40 s CPU time
-Progress:      63 steps,   6.44830     s simulation time,     98.78 s CPU time
-Progress:      64 steps,   6.57107     s simulation time,    100.17 s CPU time
-Progress:      65 steps,   6.69405     s simulation time,    101.55 s CPU time
-Progress:      66 steps,   6.81725     s simulation time,    102.93 s CPU time
-Progress:      67 steps,   6.94066     s simulation time,    104.32 s CPU time
-Progress:      68 steps,   7.00000     s simulation time,    105.70 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   6.2552869355523306  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   6.2552811823107053  kV
-Progress:      69 steps,   7.06429     s simulation time,    110.66 s CPU time
-Progress:      70 steps,   7.18813     s simulation time,    112.04 s CPU time
-Progress:      71 steps,   7.31218     s simulation time,    113.44 s CPU time
-Progress:      72 steps,   7.43645     s simulation time,    114.82 s CPU time
-Progress:      73 steps,   7.56092     s simulation time,    116.21 s CPU time
-Progress:      74 steps,   7.68561     s simulation time,    117.59 s CPU time
-Progress:      75 steps,   7.81050     s simulation time,    118.97 s CPU time
-Progress:      76 steps,   7.93560     s simulation time,    120.36 s CPU time
-Progress:      77 steps,   8.00000     s simulation time,    121.74 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   6.4381968271533356  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   6.4381663517198762  kV
+Progress:      60 steps,   6.08133     s simulation time,     67.97 s CPU time
+Progress:      61 steps,   6.20343     s simulation time,     68.93 s CPU time
+Progress:      62 steps,   6.32576     s simulation time,     69.89 s CPU time
+Progress:      63 steps,   6.44830     s simulation time,     70.85 s CPU time
+Progress:      64 steps,   6.57107     s simulation time,     71.81 s CPU time
+Progress:      65 steps,   6.69405     s simulation time,     72.78 s CPU time
+Progress:      66 steps,   6.81725     s simulation time,     73.74 s CPU time
+Progress:      67 steps,   6.94066     s simulation time,     74.70 s CPU time
+Progress:      68 steps,   7.00000     s simulation time,     75.66 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   5.7821707772642918  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   5.7786912622417441  kV
+Progress:      69 steps,   7.06429     s simulation time,     80.03 s CPU time
+Progress:      70 steps,   7.18813     s simulation time,     80.99 s CPU time
+Progress:      71 steps,   7.31218     s simulation time,     81.96 s CPU time
+Progress:      72 steps,   7.43645     s simulation time,     82.93 s CPU time
+Progress:      73 steps,   7.56092     s simulation time,     83.89 s CPU time
+Progress:      74 steps,   7.68561     s simulation time,     84.85 s CPU time
+Progress:      75 steps,   7.81050     s simulation time,     85.82 s CPU time
+Progress:      76 steps,   7.93560     s simulation time,     86.78 s CPU time
+Progress:      77 steps,   8.00000     s simulation time,     87.74 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   5.9508102730032180  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   5.9449260236126555  kV
  SWMF_run returns with tSimSwmf=   8.0000000000000000
  ESMFGridComp:run old Bz=   6.5499994670895626E-10
  ESMFGridComp:run new Bz=   5.8833328146515876E-10
  SWMF_run starts  with tCouple =  10.0000000000000000
-Progress:      78 steps,   8.06091     s simulation time,    123.23 s CPU time
-Progress:      79 steps,   8.18642     s simulation time,    124.61 s CPU time
-Progress:      80 steps,   8.31214     s simulation time,    125.99 s CPU time
-Progress:      81 steps,   8.43806     s simulation time,    127.38 s CPU time
-Progress:      82 steps,   8.56419     s simulation time,    128.76 s CPU time
-Progress:      83 steps,   8.69052     s simulation time,    130.14 s CPU time
-Progress:      84 steps,   8.81705     s simulation time,    131.52 s CPU time
-Progress:      85 steps,   8.94378     s simulation time,    132.90 s CPU time
-Progress:      86 steps,   9.00000     s simulation time,    134.29 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   6.5585872965291907  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   6.5585366194152392  kV
-Progress:      87 steps,   9.07072     s simulation time,    139.26 s CPU time
-Progress:      88 steps,   9.19785     s simulation time,    140.64 s CPU time
-Progress:      89 steps,   9.32518     s simulation time,    142.02 s CPU time
-Progress:      90 steps,   9.45271     s simulation time,    143.40 s CPU time
-Progress:      91 steps,   9.58044     s simulation time,    144.78 s CPU time
-Progress:      92 steps,   9.70837     s simulation time,    146.16 s CPU time
-Progress:      93 steps,   9.83649     s simulation time,    147.54 s CPU time
-Progress:      94 steps,   9.96481     s simulation time,    148.92 s CPU time
+Progress:      78 steps,   8.06091     s simulation time,     88.63 s CPU time
+Progress:      79 steps,   8.18642     s simulation time,     89.59 s CPU time
+Progress:      80 steps,   8.31214     s simulation time,     90.55 s CPU time
+Progress:      81 steps,   8.43806     s simulation time,     91.51 s CPU time
+Progress:      82 steps,   8.56419     s simulation time,     92.47 s CPU time
+Progress:      83 steps,   8.69052     s simulation time,     93.44 s CPU time
+Progress:      84 steps,   8.81705     s simulation time,     94.40 s CPU time
+Progress:      85 steps,   8.94378     s simulation time,     95.39 s CPU time
+Progress:      86 steps,   9.00000     s simulation time,     96.36 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   6.0623765804059175  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   6.0541208633454060  kV
+Progress:      87 steps,   9.07072     s simulation time,    100.85 s CPU time
+Progress:      88 steps,   9.19785     s simulation time,    101.81 s CPU time
+Progress:      89 steps,   9.32518     s simulation time,    102.78 s CPU time
+Progress:      90 steps,   9.45271     s simulation time,    103.75 s CPU time
+Progress:      91 steps,   9.58044     s simulation time,    104.71 s CPU time
+Progress:      92 steps,   9.70837     s simulation time,    105.68 s CPU time
+Progress:      93 steps,   9.83649     s simulation time,    106.64 s CPU time
+Progress:      94 steps,   9.96481     s simulation time,    107.60 s CPU time
 GM:saved ifile= 3 type=x=0_ful    at n_step=     86 time=   0:00:10 h:m:s
 GM:saved ifile= 4 type=y=0_ful    at n_step=     86 time=   0:00:10 h:m:s
 GM:saved ifile= 5 type=z=0_ful    at n_step=     86 time=   0:00:10 h:m:s
-Progress:      95 steps,   10.0000     s simulation time,    151.16 s CPU time
-IE: iono_solver: Northern Cross Polar Cap Potential=   6.6291114699332478  kV
-IE: iono_solver: Southern Cross Polar Cap Potential=   6.6290896173887210  kV
+Progress:      95 steps,   10.0000     s simulation time,    109.16 s CPU time
+IE: iono_solver: Northern Cross Polar Cap Potential=   6.1272260363332434  kV
+IE: iono_solver: Southern Cross Polar Cap Potential=   6.1169305739437165  kV
  SWMF_run returns with tSimSwmf=  10.0000000000000000
  ESMFGridComp:run old Bz=   5.8833328146515876E-10
  ESMFGridComp:run new Bz=   5.2166661622136127E-10
@@ -480,25 +480,28 @@ GM: error report: no errors...
 SORTED TIMING from step       0 to      95 GM on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-SWMF                    156.20    100.00         1         1
+SWMF                    113.67    100.00         1         1
 -------------------------------------------------------------------------------
-GM_run                  120.18     76.94        86        86
-advance                 114.13     73.07        86        86
-calc_sources             32.25     20.65        86     24768
-IE_GM_couple             30.04     19.23        10        10
-calc_fluxes              24.69     15.81        86     24768
-update_states            19.05     12.19        86     24768
-calc_facevalues          15.51      9.93        86     24768
-iono_solve               11.83      7.57        10        20
-exch_msgs                 9.35      5.99        86        86
-update_check              6.10      3.91        86        86
-save_logfile              5.00      3.20        86        86
-calc_face_bfo             3.51      2.25        86     16856
-int_domain                2.47      1.58        86        86
-GM_IE_couple              2.42      1.55        10        10
-calc_fluxes_bfo           0.86      0.55        86     16856
-save_plot                 0.86      0.55         1         3
-nonconservative           0.67      0.43        86        86
-send_cons_flux            0.32      0.20        86        86
-set_BCs                   0.29      0.19        86       688
+GM_run                   83.41     73.38        86        86
+advance                  79.18     69.65        86        86
+IE_GM_couple             24.34     21.41        10        10
+calc_fluxes              23.55     20.72        86     24768
+calc_facevalues          15.41     13.55        86     24768
+calc_sources             11.40     10.03        86     24768
+update_states             8.90      7.83        86     24768
+exch_msgs                 8.83      7.77        86        86
+iono_solve                6.05      5.32        10        20
+update_check              4.38      3.86        86        86
+save_logfile              3.45      3.03        86        86
+calc_face_bfo             3.32      2.92        86     16856
+GM_IE_couple              2.28      2.01        10        10
+Lhepta                    2.07      1.82        10       685
+Uhepta                    1.43      1.26        10       685
+int_domain                1.26      1.10        86        86
+calc_fluxes_bfo           0.84      0.74        86     16856
+nonconservative           0.60      0.53        86        86
+save_plot                 0.59      0.52         1         3
+send_cons_flux            0.31      0.27        86        86
+precond                   0.23      0.20        10        20
+set_BCs                   0.15      0.14        86       688
 -------------------------------------------------------------------------------
