@@ -45,17 +45,25 @@ LIB:
 
 TESTDIR = run_test
 
-test:	RBE
+test:
+	@echo "test_compile..." > test.diff
+	make test_compile
+	@echo "test_rundir..." >> test.diff
 	make test_rundir
+	@echo "test_run..." >> test.diff
 	make test_run
+	@echo "test_check..." >> test.diff
 	make test_check
 
-test_run:
-	cd ${TESTDIR}; ./rbe.exe > runlog
+test_compile:
+	make RBE
 
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES RBDIR=`pwd`
+
+test_run:
+	cd ${TESTDIR}; ./rbe.exe > runlog
 
 test_check:
 	gunzip -c test/2000f223_e.fls.gz > test/2000f223_e.fls
