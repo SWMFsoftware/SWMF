@@ -32,6 +32,7 @@ METHODS = \
 	solver_rusanov.o\
 	Get_Neutral.o\
 	get_electrodynamic.o\
+	print_electrodynamics.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
