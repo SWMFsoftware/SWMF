@@ -66,9 +66,10 @@ test_run:
 	cd ${TESTDIR}; ./rbe.exe > runlog
 
 test_check:
-	gunzip -c test/2000f223_e.fls.gz > test/2000f223_e.fls
+	gunzip -c output/2000f223_e.fls.gz > ${TESTDIR}/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		test/2000f223_e.fls ${TESTDIR}/2000f223_e.fls > test.diff
+		${TESTDIR}/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		> test.diff
 	ls -l test.diff
 
 clean:
