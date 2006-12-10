@@ -57,7 +57,7 @@ if($#test1 >= $#test2){
     $dir =$dir2;
     @test=@test2;
 }
-print "Number of tests to compare is ",$#test+1,"\n";
+print "Number of tests to compare is ",$#test+1,"\n" if $Verbose;
 
 my @parfile=("SWITCHES", "PARAM.expand");
 
