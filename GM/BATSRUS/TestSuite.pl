@@ -70,14 +70,12 @@ if($Table =~ /test/i){
 		 "-borisfull");                           #^CFG IF BORISCORR 
     &execute($testbatsrus,"-ta -Conservative=r6",         #^CFG IF SIMPLEBORIS
 		 "-borissimple");                         #^CFG IF SIMPLEBORIS
-							    
     &execute($testbatsrus,"-Inner=float,reflect"); 
-    &execute($testbatsrus,"-Inner=full_ionosphere");      #^CFG IF IONOSPHERE
 
+    &execute($testbatsrus,"-Limiter=mc -Resist=hall");
     &execute($testbatsrus,"-Message=dir");
-
-    &execute($testbatsrus,"-ta -Stage=2",                 #^CFG IF IONOSPHERE
-	     "-full_ionosphere -Logtype=logsatmove");     #^CFG IF IONOSPHERE
+    &execute($testbatsrus,"-ta -Stage=2 -partimpl05 -Limiter=mc3",
+	     "-hall -logsatmove");
 
     &execute($testbatsrus,"-ta -Stage=2 -constrain");     #^CFG IF CONSTRAINB
     &execute($testbatsrus,"-ta -Stage=2 -project");       #^CFG IF PROJECTION
