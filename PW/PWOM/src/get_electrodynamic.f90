@@ -9,9 +9,10 @@ subroutine PW_get_electrodynamic
   use ModNumConst, ONLY:cDegToRad
   implicit none
   !---------------------------------------------------------------------------
-  open(UnitTmp_, FILE=NamePhiNorth)  
+  
 
   if (IsStandAlone) then
+     open(UnitTmp_, FILE=NamePhiNorth)  
      call allocate_ie_variables(257, 65)
      do iPhi=1,nPhi
         do iTheta=1,nTheta
@@ -21,15 +22,14 @@ subroutine PW_get_electrodynamic
            
         enddo
      enddo
+     !  Change angles to radians
+     Theta_G(:,:) = Theta_G(:,:)*cDegToRad
+     Phi_G  (:,:) = Phi_G  (:,:)*cDegToRad
+     close(UnitTmp_)
   endif
-  close(UnitTmp_)
+  
 
 
-!******************************************************************************
-!  Change angles to radians
-!******************************************************************************
-  Theta_G(:,:) = Theta_G(:,:)*cDegToRad
-  Phi_G  (:,:) = Phi_G  (:,:)*cDegToRad
 
 !******************************************************************************
 !  Convert potential from kilovolts to Volts
@@ -108,6 +108,10 @@ subroutine PW_get_electrodynamic
     enddo
   enddo
   Er(:,:) = 0.0
+
+  ! set Dtheta and Dphi
+  DTheta = maxval( Theta_G(:,:)) / nTheta
+  DPhi   = maxval( Phi_G(:,:)  ) / nPhi
 !******************************************************************************
 !  Calc VelocityExB drift from E and B
 !******************************************************************************
