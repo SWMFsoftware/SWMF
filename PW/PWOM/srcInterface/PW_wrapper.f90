@@ -132,7 +132,7 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, Dt
+  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, Dt,DToutput
 
   implicit none
 
@@ -158,6 +158,8 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
      call MoveFluxTube
      call PW_advance_line
   end do
+  if (floor(Time/DToutput) .ne. floor((Time-Dt)/DToutput) ) &
+       call PW_print_electrodynamics
   TimeSimulation = Time
 
 end subroutine PW_run
