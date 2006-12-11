@@ -120,7 +120,7 @@ test_esmf_check:
 		>> test_esmf.diff
 	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		> ${TESTDIR}/it000321_104510_000.idl.ref
-	${SCRIPTDIR}/DiffNum.pl -b \
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		${TESTDIR}/it000321_104510_000.idl.ref \
 		>> test_esmf.diff
