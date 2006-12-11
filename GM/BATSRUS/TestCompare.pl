@@ -57,7 +57,7 @@ if($#test1 >= $#test2){
     $dir =$dir2;
     @test=@test2;
 }
-print "Number of tests to compare is ",$#test+1,"\n" if $Verbose;
+print "Number of tests to compare is ",$#test+1,"\n" unless $Quiet;
 
 my @parfile=("SWITCHES", "PARAM.expand");
 
@@ -152,7 +152,7 @@ TEST: foreach $test (sort @test){
 	}
 	my $error = <ERR>;
 	close(ERR);
-	if(length($error)>0){
+	if(length($error)>0 and $error !~ /underflow/i){
 	    &report("$test: $errorfile=",$error);
 	    $anyerror=1;
 	}
