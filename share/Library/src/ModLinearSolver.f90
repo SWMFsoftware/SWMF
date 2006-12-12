@@ -16,6 +16,7 @@ module ModLinearSolver
   !USES:
   use ModMpi
   use ModBlasLapack
+  use ModUtilities, ONLY: check_allocate
 
   implicit none
   save
@@ -112,7 +113,7 @@ contains
     ! Allocate arrays that used to be automatic
     allocate(Krylov_II(n,nKrylov+2), hh(nKrylov+1,nKrylov), &
          c(nKrylov), s(nKrylov), rs(nKrylov+1), stat=iError); 
-    call alloc_check(iError,"gmres arrays")
+    call check_allocate(iError,"gmres arrays")
 
     if(range(1.0)>100)then
        epsmac=0.0000000000000001
@@ -383,7 +384,7 @@ contains
 
     ! Allocate arrays that used to be automatic
     allocate(bicg_r(n), bicg_u(n), bicg_r1(n), bicg_u1(n), stat=iError); 
-    call alloc_check(iError,"bicgstab arrays")
+    call check_allocate(iError,"bicgstab arrays")
 
     if(DoTest)write(*,*)'BiCGSTAB tol,iter:',tol,iter
 
@@ -405,7 +406,7 @@ contains
     if(nonzero)then
        ! Store initial guess into qx0
        allocate(qx0(n), stat=iError)
-       call alloc_check(iError,'bicgstab:qx0')
+       call check_allocate(iError,'bicgstab:qx0')
        qx0=qx
        call matvec(qx,bicg_r,n)
        bicg_r = rhs - bicg_r
@@ -845,7 +846,7 @@ contains
 
     ! Allocate arrays that used to be automatic
     allocate(dd(N,N), pivot(N), stat=iError)
-    call alloc_check(iError,"prehepta arrays")
+    call check_allocate(iError,"prehepta arrays")
 
     alf=alf_in
     IF (alf < zero) THEN
@@ -1122,7 +1123,7 @@ contains
     call timing_start('Lhepta')
 
     ! Allocate arrays that used to be Automatic
-    allocate(work(N), stat=iError); call alloc_check(iError,"lhepta:work")
+    allocate(work(N), stat=iError); call check_allocate(iError,"lhepta:work")
 
     if(N>20)then
        ! BLAS VERSION
