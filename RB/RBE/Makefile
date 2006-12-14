@@ -30,7 +30,6 @@ install_cont:
 		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
 	touch src/Makefile.DEPEND
-	-@(rm -rf test)
 
 #
 #       General Housekeeping
