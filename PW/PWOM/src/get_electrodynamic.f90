@@ -11,7 +11,7 @@ subroutine PW_get_electrodynamic
   !---------------------------------------------------------------------------
   
 
-  if (IsStandAlone) then
+  if (IsStandAlone .or. .not. UseIE) then
      open(UnitTmp_, FILE=NamePhiNorth)  
      call allocate_ie_variables(257, 65)
      do iPhi=1,nPhi
