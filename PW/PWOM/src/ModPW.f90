@@ -49,7 +49,7 @@ module ModPWOM
   real                               ::  DtMax=50.0, Dt, Time, maxTime
 
   logical::  IsMoveFluxTube=.true., IsUseJr=.true., IsCentrifugal=.true.
-
+  logical::  UseIE=.false.
   character(len=100) :: NamePhiNorth, NamePhiSouth
 
   character(len=100) :: NameInput, NameOutput, &
