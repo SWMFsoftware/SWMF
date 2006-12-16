@@ -56,7 +56,7 @@ end subroutine PW_set_param
 
 subroutine PW_init_session(iSession, TimeSimulation)
   use ModPWOM, ONLY: Theta_G,Phi_G,SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
-       NamePhiNorth,iPhi,nPhi,iTheta,nTheta, allocate_ie_variables
+       NamePhiNorth,iPhi,nPhi,iTheta,nTheta, allocate_ie_variables, UseIE
   use ModIoUnit, ONLY: UnitTmp_
   use CON_coupler, ONLY: Couple_CC, IE_, PW_
   
@@ -66,7 +66,7 @@ subroutine PW_init_session(iSession, TimeSimulation)
   !INPUT PARAMETERS:
   integer,  intent(in) :: iSession         ! session number (starting from 1)
   real,     intent(in) :: TimeSimulation   ! seconds from start time
-  logical  :: UseIE=.false.
+  
   character(len=*), parameter :: NameSub='PW_init_session'
 
   logical :: DoInitialize = .true.
@@ -76,21 +76,7 @@ subroutine PW_init_session(iSession, TimeSimulation)
 
   UseIE = Couple_CC(IE_, PW_) % DoThis
   
-  if (.not. UseIE) then
-     open(UnitTmp_, FILE=NamePhiNorth)
-     call allocate_ie_variables(257, 65)
-     do iPhi=1,nPhi
-        do iTheta=1,nTheta
-           read(unit=UnitTmp_,fmt='(6(1PE13.5))') &
-               Theta_G(iPhi,iTheta),Phi_G(iPhi,iTheta),SigmaH_G(iPhi,iTheta),&
-               SigmaP_G(iPhi,iTheta),Jr_G(iPhi,iTheta),Potential_G(iPhi,iTheta)
-           
-        enddo
-     enddo
-     close(UnitTmp_)
-  endif
   
-
 end subroutine PW_init_session
 
 !==============================================================================
