@@ -3,7 +3,10 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE NEWBGD
       use ModCommonVariables
+      implicit none
+
       real :: ScaleHeightO,ScaleHeightH
+      real :: xhtm
 C     
 C     
 C     
@@ -27,7 +30,6 @@ C     Te(nDim) + Tgradient*Dx where Tgradient = Etop/kappa
 C     and Etop is the electron heat flux or proportional to that
       
       TBGNDE=TELECT(NDIM)+XHTM*ETOP/TELECT(NDIM)**2.5
-
 
 C**********************************************************************
 C Set the pressure boundary conditions
@@ -55,8 +57,6 @@ C**********************************************************************
       PBGNDO2=PBGNDO
       PBGNDH2=PBGNDH
 
-
-
 C******************************************************************************
 C      Set derived quantities:
 C     (Density is set from the ideal gas law using the pressure and temperature
@@ -75,7 +75,6 @@ C******************************************************************************
       UBGNDO2=UBGNDO
       UBGNDH2=UBGNDH
 
-
 !      UBGNDO=DOXYG(nDim)/DBGNDO*AR12TOP(1)/AR23(nDim)*UOXYG(NDIM)
 !      UBGNDH=DHYD(nDim) /DBGNDH*AR12TOP(1)/AR23(nDim)*UHYD(NDIM)
 !
@@ -90,12 +89,14 @@ C rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)
 cAlex      write(*,*)'DBGNDE=RTHDEL,DBGNDH,RTOXEL,DBGNDO,RTHEEL,DBGNHE=',
 cAlex     &     DBGNDE,RTHDEL,DBGNDH,RTOXEL,DBGNDO,RTHEEL,DBGNHE
 
+
       PBGNDE=RGASE*TBGNDE*DBGNDE
 
 cAlex      write(*,*)'PBGNDE=RGASE*TBGNDE*DBGNDE:',
 cAlex     &     PBGNDE,RGASE,TBGNDE,DBGNDE
 
-      CURHLP=EXP(-0.5*(TIME-CURTIM0)**2/CURTIM**2)
+cGabor      CURHLP=EXP(-0.5*(TIME-CURTIM0)**2/CURTIM**2)
+
       UBGNDE=(RTHDEL*DBGNDH*UBGNDH+RTOXEL*DBGNDO*UBGNDO+
      &     RTHEEL*DBGNHE*UBGNHE-1.8965E-18*CURRMX)/DBGNDE
 
@@ -117,7 +118,6 @@ C!      TCBGH=HLPH*TBGNDH**2.5
       TCBGE=HLPE*TBGNDE**2.5
       TCBGH=HLPH*(DBGNDH/DBGNDE)*TBGNDH**2.5
       TCBGHE=HLPHE*(DBGNHE/XMSHE)*TBGNHE**2.5
-
 
       RETURN
       END
