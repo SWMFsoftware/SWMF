@@ -7,10 +7,12 @@ check_src:
 		exit 1; \
 	fi)
 
-install: check_src
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
-	cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES
-	cp -f src/ModSize_orig.f90 src/ModSize.f90
+install:
+	@(if([ -f src/Makefile ]); then \
+		touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND; \
+		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES; \
+		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
+	fi)
 
 LIB: check_src
 	cd src; make LIB
