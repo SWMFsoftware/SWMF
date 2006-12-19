@@ -13,6 +13,6 @@ F		IsUseJr
 #VERTICALGRID
 800		nPoints
 #FIELDLINE
-1		nTotalLine
+4		nTotalLine
 #STOP
 10.0		Tmax
