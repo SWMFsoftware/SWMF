@@ -19,8 +19,10 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
   real, dimension(-1:nLons+2,-1:nLats+2, -1:nAlts+2), intent(in)  :: InArray
   real, dimension(nLons,nLats,nAlts, 3), intent(out) :: OutArray
 
+  real :: InArray1D(0:nAlts+1), OutArray1D(nAlts)
+
   ! These are delta altitude variables for a nonuniform grid:
-  real, dimension(nAlts) :: drm, drp, drmodrp, drr2, dr
+  real, dimension(nAlts) :: drm, drp, drmodrp, drr2, dr, bottom
 
   ! These are delta theta (i.e. latitude) variables for a nonuniform grid:
   real, dimension(nLats) :: dtm, dtp, dtmodtp, dtr2, dt
@@ -29,6 +31,7 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
 
   integer :: iLat, iLon, iAlt
 
+  OutArray = 0.0
 
   if (nAlts > 1) then
 
@@ -100,18 +103,18 @@ subroutine UAM_Gradient(InArray, OutArray, iBlock)
 
   if (nAlts > 1) then
 
+     bottom = drr2*drp + drm
+
      do iLon = 1, nLons
         do iLat = 1, nLats
-           do iAlt = 1, nAlts
-              OutArray(iLon, iLat, iAlt, iUp_) = &
-                   (drr2(iAlt)*InArray(iLon,iLat,iAlt+1) - &
-                               InArray(iLon,iLat,iAlt-1) - &
-                   (drr2(iAlt)-1)*InArray(iLon,iLat,iAlt)) / &
-                   (drr2(iAlt)*drp(iAlt) + drm(iAlt))
-           enddo
+           InArray1d = InArray(iLon,iLat,0:nAlts+1)
+           OutArray1D = (drr2*InArray1D(2:nAlts+1) - &
+                InArray1D(0:nAlts-1) - &
+                (drr2-1)*InArray1D(1:nAlts)) / bottom
+           OutArray(iLon,iLat,:,iUp_) = OutArray1D
         enddo
      enddo
-     
+
   endif
 
 end subroutine UAM_Gradient
