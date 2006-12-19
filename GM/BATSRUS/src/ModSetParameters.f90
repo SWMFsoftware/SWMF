@@ -462,20 +462,23 @@ subroutine MH_set_parameters(TypeAction)
      case("#HALLREGION")
         call read_var('NameHallRegion', NameHallRegion)
 
-        if(index(NameHallRegion, '0') < 1)then
+        i = index(NameHallRegion, '0')
+        if(i < 1 .and. NameHallRegion /= 'all')then
            call read_var("x0Hall", x0Hall)
            call read_var("y0Hall", y0Hall)
            call read_var("z0Hall", z0Hall)
         else
            x0Hall = 0.0; y0Hall = 0.0; z0Hall = 0.0
+           if(i>1)NameHallRegion = &
+                NameHallRegion(1:i-1)//NameHallRegion(i+1:len(NameHallRegion))
         end if
 
         select case(NameHallRegion)
         case("all", "user")
-        case("sphere0")
+        case("sphere")
            call read_var("rSphereHall",rSphereHall)
            call read_var("DrSphereHall",DrSphereHall)
-        case("box0", "box")
+        case("box")
            call read_var("xSizeBoxHall ",xSizeBoxHall)
            call read_var("DxSizeBoxHall",DxSizeBoxHall)
            call read_var("ySizeBoxHall ",ySizeBoxHall)
