@@ -128,7 +128,7 @@ contains
     endif
 
     select case(NameHallRegion)
-    case('sphere0')
+    case('sphere')
        rSqrSphere1 = rSphereHall**2
        rSqrSphere2 = (rSphereHall+DrSphereHall)**2
     case('box')
@@ -1143,6 +1143,7 @@ contains
     use ModMain, ONLY: x_, y_, z_
     use ModAdvance, ONLY: State_VGB, B0xCell_Blk, B0yCell_Blk, B0zCell_Blk, &
          Rho_, Bx_, By_, Bz_, Energy_, Source_VC
+    use ModGeometry,  ONLY: Dx_BLK, Dy_BLK, Dz_BLK
 
     integer, intent(in) :: iBlock
 
@@ -1151,6 +1152,12 @@ contains
     real :: FullB_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2), HyperSource_D(3)
     integer :: i, j, k
     !----------------------------------------------------------------------
+
+    if(HallHyperFactor <= 0.0) RETURN
+
+    InvDx = 1.0/dx_Blk(iBlock)
+    InvDy = 1.0/dy_Blk(iBlock)
+    InvDz = 1.0/dz_Blk(iBlock)
 
     Coeff0 = HallHyperFactor / (InvDx**2 + InvDy**2 + InvDz**2)
 
@@ -1211,40 +1218,10 @@ contains
        y = 0.5*sum(y_BLK(iFace,jFace,kFace-1:KFace,iBlock))
        z = 0.5*sum(z_BLK(iFace,jFace,kFace-1:KFace,iBlock))
     end select
-    rSqr = (x**2 + y**2 + z**2)
 
     HallFactor = 1.0
-    select case(NameHallRegion)
-    case("all")
-       ! Do nothing
-    case("user")
-       ! hall_factor= &
-       !   user_hall_factor(x, y, z, iDir, iFace, jFace, kFace, iBlock)
-    case("sphere0")
-       if(rSqr > rSqrSphere2)then
-          hall_factor=0.0
-          RETURN
-       else if(rSqr > rSqrSphere1)then
-          HallFactor = HallFactor*(rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
-       end if
-    case("box")
-       Distance2 = max( &
-            abs(x-x0Hall)/xSizeBox2, &
-            abs(y-y0Hall)/ySizeBox2, &
-            abs(z-z0Hall)/zSizeBox2 )
-       Distance1 = max( &
-            abs(x-x0Hall)/xSizeBox1, &
-            abs(y-y0Hall)/ySizeBox1, &
-            abs(z-z0Hall)/zSizeBox1 )
-       if(Distance2 > 0.5)then
-          hall_factor=0.0
-          RETURN
-       else if(Distance1 > 0.5)then
-          HallFactor = HallFactor*(0.5-Distance2)/(Distance1-Distance2)
-       end if
-    case default
-    end select
 
+    rSqr = (x**2 + y**2 + z**2)
     if(rSqr < rSqrInner1)then
        hall_factor=0.0
        RETURN
@@ -1261,6 +1238,39 @@ contains
           HallFactor = HallFactor*(TanSqr-TanSqr1)/(TanSqr2-TanSqr1)
        end if
     end if
+
+    select case(NameHallRegion)
+    case('all')
+       ! Do nothing
+    case('user')
+       ! hall_factor= &
+       !   user_hall_factor(x, y, z, iDir, iFace, jFace, kFace, iBlock)
+    case('sphere')
+       rSqr = (x-x0Hall)**2 + (y-y0Hall)**2 + (z-z0Hall)**2
+       if(rSqr > rSqrSphere2)then
+          hall_factor=0.0
+          RETURN
+       else if(rSqr > rSqrSphere1)then
+          HallFactor = HallFactor*(rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
+       end if
+    case('box')
+       Distance2 = max( &
+            abs(x-x0Hall)/xSizeBox2, &
+            abs(y-y0Hall)/ySizeBox2, &
+            abs(z-z0Hall)/zSizeBox2 )
+       Distance1 = max( &
+            abs(x-x0Hall)/xSizeBox1, &
+            abs(y-y0Hall)/ySizeBox1, &
+            abs(z-z0Hall)/zSizeBox1 )
+       if(Distance2 > 0.5)then
+          hall_factor=0.0
+          RETURN
+       else if(Distance1 > 0.5)then
+          HallFactor = HallFactor*(0.5-Distance2)/(Distance1-Distance2)
+       end if
+    case default
+       call stop_mpi("Unknown value for NameHallRegion="//NameHallRegion)
+    end select
 
     hall_factor = HallFactor
 
