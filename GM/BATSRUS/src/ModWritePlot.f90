@@ -581,6 +581,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
+  use ModHallResist, ONLY: UseHallResist, hall_factor
 
   implicit none
 
@@ -1170,6 +1171,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=global_block_number(iBLK)
      case('child')
         PlotVar(:,:,:,iVar)=BLKneighborCHILD(0,0,0,1,iBLK)
+     case('hall')
+        if(UseHallResist)then
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              PlotVar(i,j,k,iVar) = hall_factor(0,i,j,k,iBlk)
+           end do; end do; end do
+        else
+           PlotVar(:,:,:,iVar) = 0.0
+        end if
      case default
         ! Check if the name is one of the state variable names
         do jVar = 1, nVar
