@@ -117,6 +117,18 @@ test_check:
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
 		> test_${PLANET}_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
+		output/${PLANET}/restart_iline0002.dat \
+		>> test_${PLANET}_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
+		output/${PLANET}/restart_iline0003.dat \
+		>> test_${PLANET}_restart.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
+		output/${PLANET}/restart_iline0004.dat \
+		>> test_${PLANET}_restart.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out \
@@ -129,7 +141,7 @@ run:
 	mkdir -p ${RUNDIR}/PW
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
-		cp ${PWDIR}/input/${PLANET}/restart_iline0001.dat restartIN/ ;\
+		cp ${PWDIR}/input/${PLANET}/restart_iline* restartIN/ ;\
 		cp ${PWDIR}/input/${PLANET}/North.dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
