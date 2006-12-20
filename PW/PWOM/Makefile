@@ -65,6 +65,8 @@ LIB:
 
 TESTDIR = run_test
 
+MPIRUN = mpirun -np 2
+
 test:
 	-@(make test_saturn)
 	-@(make test_earth)
@@ -106,26 +108,26 @@ test_rundir:
 	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 
 test_run: PWOM
-	cd ${TESTDIR}; ./PWOM.exe
+	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 
 test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/PW/log.out \
 		output/${PLANET}/log.out \
 		> test_${PLANET}.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
 		> test_${PLANET}_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
 		output/${PLANET}/restart_iline0002.dat \
 		>> test_${PLANET}_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
 		output/${PLANET}/restart_iline0003.dat \
 		>> test_${PLANET}_restart.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
 		output/${PLANET}/restart_iline0004.dat \
 		>> test_${PLANET}_restart.diff)
