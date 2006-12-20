@@ -801,7 +801,7 @@ subroutine select_stepping(DoPartSelect)
            ! otherwise use the available dt_BLK from previous time step,
            ! or from the restart file, or simply 0 set in read_inputs.
            ! The latter two choices will be overruled later anyways.
-           if(iteration_number==0 .and. time_loop)then
+           if(n_step==0 .and. time_loop)then
               ! For first iteration in the time loop
               ! calculate stable time step
               call calc_face_value(.false., GlobalBlk)
