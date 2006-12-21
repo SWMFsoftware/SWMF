@@ -64,10 +64,9 @@ test_pw_rundir:
 	cp Param/PARAM.in.test.PW ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PW ${TESTDIR}/LAYOUT.in
 
-# This should use ${MPIRUN} ./SWMF.exe eventually
 test_pw_run:
 	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_pw_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b ${TESTDIR}/PW/log.out \
