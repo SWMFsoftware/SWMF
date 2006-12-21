@@ -55,13 +55,10 @@ end subroutine PW_set_param
 !==============================================================================
 
 subroutine PW_init_session(iSession, TimeSimulation)
-  use ModPWOM, ONLY: Theta_G,Phi_G,SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
-       NamePhiNorth,iPhi,nPhi,iTheta,nTheta, allocate_ie_variables, UseIE
-  use ModIoUnit, ONLY: UnitTmp_
+  use ModPWOM, ONLY: UseIE
   use CON_coupler, ONLY: Couple_CC, IE_, PW_
   
   implicit none
-  
 
   !INPUT PARAMETERS:
   integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -71,12 +68,11 @@ subroutine PW_init_session(iSession, TimeSimulation)
 
   logical :: DoInitialize = .true.
   !----------------------------------------------------------------------------
+  UseIE = Couple_CC(IE_, PW_) % DoThis
+  
   if(DoInitialize) call PW_initialize
   DoInitialize = .false.
 
-  UseIE = Couple_CC(IE_, PW_) % DoThis
-  
-  
 end subroutine PW_init_session
 
 !==============================================================================
@@ -129,16 +125,8 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   character(len=*), parameter :: NameSub='PW_run'
-  logical :: IsFirstCall=.true.
   !---------------------------------------------------------------------------
-
   Dt = min(DtMax, TimeSimulationLimit - Time)
-  !call PW_get_electrodynamic
-  if (IsFirstCall) then
-     call PW_get_electrodynamic
-     call Initial_Line_Location
-     IsFirstCall=.false.
-  endif
   
   do iLine=1,nLine
      call MoveFluxTube
@@ -194,8 +182,8 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
      end do
 
+     call initial_line_location
   end if
-
 
   IsPotFound = .false.
   IsJrFound  = .false.
@@ -208,10 +196,13 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         IsJrFound = .true.
         Jr_G(1:jSize, 1:iSize) = transpose(Buffer_IIV(:, :, iVar))
      end select
+
   end do
   if(.not.IsPotFound .or. .not.IsJrFound)then
      write(*,*)NameSub,': Name_V=',Name_V
      call CON_stop(NameSub//' could not find Pot or Jr')
   end if
+
+  call PW_get_electrodynamic
 
 end subroutine PW_put_from_ie

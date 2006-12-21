@@ -8,6 +8,8 @@ subroutine PW_get_electrodynamic
   use ModPWOM
   use ModNumConst, ONLY:cDegToRad
   implicit none
+
+  real :: dTheta1, dPhi1
   !---------------------------------------------------------------------------
   
 
@@ -92,26 +94,23 @@ subroutine PW_get_electrodynamic
   
   do iPhi=1,nPhi
      do iTheta=1,nTheta
-        Dtheta=abs(Theta_G(iPhi,iTheta)-Theta_G(iPhi,iTheta-1))
-        Dphi=abs(Phi_G(iPhi,iTheta)    -Phi_G(iPhi-1,iTheta))
+        DTheta1=abs(Theta_G(iPhi,iTheta)-Theta_G(iPhi,iTheta-1))
+        DPhi1=abs(Phi_G(iPhi,iTheta)    -Phi_G(iPhi-1,iTheta))
         Etheta(iPhi,iTheta) = &
              (Potential_G(iPhi,iTheta)-Potential_G(iPhi,iTheta+1))&
-             /((rLowerBoundary)*Dtheta)
+             /((rLowerBoundary)*DTheta1)
         if (iTheta == 1) then
            Ephi(iPhi,iTheta) = 0.0
         else
            Ephi(iPhi,iTheta)   = &
                 (Potential_G(iPhi-1,iTheta)-Potential_G(iPhi+1,iTheta))&
-                / ((rLowerBoundary)*2.0*Dphi  &
+                / ((rLowerBoundary)*2.0*DPhi1  &
                 * sin(Theta_G(iPhi,iTheta)))
         endif
     enddo
   enddo
   Er(:,:) = 0.0
 
-  ! set Dtheta and Dphi
-  DTheta = maxval( Theta_G(:,:)) / nTheta
-  DPhi   = maxval( Phi_G(:,:)  ) / nPhi
 !******************************************************************************
 !  Calc VelocityExB drift from E and B
 !******************************************************************************
