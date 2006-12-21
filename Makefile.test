@@ -17,6 +17,7 @@ test_help:
 test:
 	-@(make test_comp)
 	-@(make test_pw)
+	-@(make test_gmiepw)
 	-@(make test_esmf)
 	-@(make test_check)
 
@@ -81,6 +82,60 @@ test_pw_check:
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw_plots.diff)
 	ls -l test_pw*.diff
+
+test1:
+	@echo "starting..." > test1_gm.diff
+	@echo "starting..." > test1_ie.diff
+	@echo "starting..." > test1_pw.diff
+	@echo "test1_compile..." > test1.diff
+	make test1_compile
+	@echo "test1_rundir..." >> test1.diff
+	make test1_rundir
+	@echo "test1_run..." >> test1.diff
+	make test1_run
+	@echo "test1_check..." >> test1.diff
+	make test1_check
+
+test1_compile:
+	SetSWMF.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
+	SetSWMF.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	cd PW/PWOM; ./config.pl -p=Earth
+	make SWMF
+
+test1_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMIEPW ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEPW ${TESTDIR}/LAYOUT.in
+
+test1_run:
+	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+
+test1_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b ${TESTDIR}/PW/log.out \
+		output/test1/PW_log.out \
+		> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
+		output/test1/PW_restart_iline0001.dat \
+		>> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/PW/plots/plots_iline0001.out \
+		output/test1/PW_plots_iline0001.out \
+		>> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/GM_log_n000001.log \
+		> test1_gm.diff
+	gunzip -c output/test1/IE_it000321_104510_000.idl.gz \
+		> ${TESTDIR}/it000321_104510_000.idl.ref
+	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
+		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
+		${TESTDIR}/it000321_104510_000.idl.ref \
+		> test1_ie.diff
+	rm -f test1.diff
+	ls -l test1*.diff
 
 ### ESMF test ###
 #
