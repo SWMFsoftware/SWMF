@@ -44,7 +44,6 @@ test_comp:
 #
 test_pw:
 	@echo "starting..." > test_pw_plots.diff
-	@echo "starting..." > test_pw_restart.diff
 	@echo "test_pw_compile..." > test_pw.diff
 	make test_pw_compile
 	@echo "test_pw_rundir..." >> test_pw.diff
@@ -70,13 +69,10 @@ test_pw_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_pw_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b ${TESTDIR}/PW/log.out \
-		${PWDIR}/output/Earth/log.out \
-		> test_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		${PWDIR}/output/Earth/restart_iline0001.dat \
-		> test_pw_restart.diff)
+		> test_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \

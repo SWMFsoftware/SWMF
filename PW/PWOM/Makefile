@@ -73,7 +73,6 @@ test:
 
 test_earth:	
 	@echo "starting..." > test_Earth_plots.diff
-	@echo "starting..." > test_Earth_restart.diff
 	@echo "test_compile..." > test_Earth.diff
 	make test_compile PLANET=Earth
 	@echo "test_rundir..." >> test_Earth.diff
@@ -89,7 +88,6 @@ test_earth_compile:
 
 test_saturn:
 	@echo "starting..." > test_Saturn_plots.diff
-	@echo "starting..." > test_Saturn_restart.diff
 	@echo "test_compile..." > test_Saturn.diff
 	make test_compile PLANET=Saturn
 	@echo "test_rundir..." >> test_Saturn.diff
@@ -111,26 +109,22 @@ test_run: PWOM
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 
 test_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b \
-		${TESTDIR}/PW/log.out \
-		output/${PLANET}/log.out \
-		> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
-		> test_${PLANET}_restart.diff)
+		> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
 		output/${PLANET}/restart_iline0002.dat \
-		>> test_${PLANET}_restart.diff)
+		>> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
 		output/${PLANET}/restart_iline0003.dat \
-		>> test_${PLANET}_restart.diff)
+		>> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
 		output/${PLANET}/restart_iline0004.dat \
-		>> test_${PLANET}_restart.diff)
+		>> test_${PLANET}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out \
