@@ -240,8 +240,7 @@ BATSRUS:
 	@echo ' '	
 
 ${EXE}: ${OBJECTS_EXE}
-	@(if [ ${COMPILE.f90} = "xlf90" ]; then make BATSRUS_for_xlf; \
-	elif [ ${OS} = "Darwin" ];         then make BATSRUS_for_Darwin; \
+	@(if [ ${OS} = "Darwin" ];         then make BATSRUS_for_Darwin; \
 	else                                    make BATSRUS_general; fi)
 
 BATSRUS_general:
@@ -250,13 +249,6 @@ BATSRUS_general:
 		${LBLAS} ${Lflag1}
 
 BATSRUS_for_Darwin:
-	ld -all_load -r -o LIBRARIES.o \
-		${LIBSHARE} ${LIBTIMING} ${MY_LIB}
-	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} \
-		LIBRARIES.o ${LBLAS} ${Lflag1}
-	rm -f LIBRARIES.o
-
-BATSRUS_for_xlf:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; ar -x ../${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
