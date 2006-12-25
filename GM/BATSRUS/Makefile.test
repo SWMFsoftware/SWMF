@@ -130,4 +130,4 @@ test_titan_restart_check:
 	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff
-	ls -l test_titan_restart.diff
+	ls -l test_titan*.diff
