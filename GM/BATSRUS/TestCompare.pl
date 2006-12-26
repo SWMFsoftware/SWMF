@@ -193,6 +193,7 @@ TEST: foreach $test (sort @test){
     chdir $pwd;
 
     my $logfile;
+
   LOGFILE: foreach $logfile (@logfile){
 
 	my $logfile1="$dir1/$test/$logfile";
@@ -205,12 +206,6 @@ TEST: foreach $test (sort @test){
 
         # This logfile is missing from both
 	next LOGFILE if not $ok1 and not $ok2; 
-
-	# Try to fix the satellite filename
-	if(not $ok2 and $logfile2 =~ s/\bsat_(.*)_n\d+/satellite_??_$1/){
-	    ($logfile2) = glob( $logfile2 );
-	    $ok2=open(LOG2, $logfile2);
-	}
 
 	&report("$test: $logfile1 could not be opened !\n") unless $ok1;
 	&report("$test: $logfile2 could not be opened !\n") unless $ok2;
