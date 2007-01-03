@@ -688,9 +688,8 @@ end subroutine add_b0_body2
 
 subroutine update_b0
 
-  use ModProcMH,        ONLY: iProc
   use ModMain,          ONLY: DoSplitDb0Dt, nBlock, unusedBLK, &
-       time_simulation, lVerbose, NameThisComp
+       time_simulation, NameThisComp
   use ModPhysics,       ONLY: ThetaTilt
   use ModAdvance,       ONLY: Bx_, By_, Bz_, State_VGB, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
@@ -701,14 +700,18 @@ subroutine update_b0
 
   implicit none
 
+  character(len=*), parameter :: NameSub = 'update_b0'
+  logical :: DoTest, DoTestMe
   integer :: iBlock
   !============================================================================
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   ! Update ThetaTilt
   if(NameThisComp=='GM') &
        call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
 
-  if (iProc == 0.and.lVerbose>0) then
+  if (DoTestMe) then
      if(NameThisComp=='GM')then
         call write_prefix; write(iUnitOut,*) &
           "update_b0 at tSimulation, TiltGsm=", &
@@ -718,7 +721,7 @@ subroutine update_b0
              "update_b0 at tSimulation=",Time_Simulation
      end if
   end if
-  call timing_start('update_B0')
+  call timing_start(NameSub)
 
   do iBlock=1,nBlock
      if(unusedBLK(iBlock)) CYCLE
@@ -757,7 +760,7 @@ subroutine update_b0
         call calc_energy(iBlock)
      end if
   end do
-  call timing_stop('update_B0')
+  call timing_stop(NameSub)
 end subroutine update_b0
 
 !===========================================================================
