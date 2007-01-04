@@ -50,6 +50,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   ! Conversion from iTypeAdvance (including body block info) to iType
   integer :: iType_I(-ImplBlock_:ImplBlock_)
 
+  ! First processor to start distributing each type
+  integer :: iProcStart_I(MaxType)
+  integer :: nBlockPerPe, iProcLimit
+
   ! Number of blocks moved around
   integer :: nBlockMoved
 
@@ -134,6 +138,15 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      if(iType > 0) nBlockALL_I(iType) = nBlockALL_I(iType) + 1
   end do; end do
 
+  ! Calculate the starting processor index for all types
+  iProcStart_I(1)=0
+  do iType = 2, nType
+     ! Start each type from the first processor that has extra block
+     ! Number of extra blocks is modulo(nBlockPrevType, nProc)
+     ! The processors with extra blocks are filled in from nProc-1 backwards
+     iProcStart_I(iType)= nProc - modulo(sum(nBlockALL_I(1:iType-1)),nProc)
+  end do
+
   if(DoTestMe)then
      write(*,'(a,i6)') &
           'load_balance starting: nBlockMax=',nBlockMax
@@ -149,8 +162,11 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         write(*,'(a,i4,10i7)')'load_balance starting: iProc, nBlockALL_I=',&
              iProc, nBlockALL_I(1:nType)
         do iType = 1, nType
-           write(*,'(a,i4,i2,i6)')'load_balance starting: iProc, iType, count=',&
-                iProc, iType,count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType)
+           write(*,'(a,i4,i2,i6,i4)')'load_balance starting: '// &
+                'iProc, iType, count, iProcStart=',&
+                iProc, iType,&
+                count(iType_I(iTypeAdvance_B(1:nBlockMax))==iType),&
+                iProcStart_I(iType)
         end do
      end if
   end if
@@ -169,14 +185,21 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         iBlockFrom = iBlock_A(iBlockALL)
         iProcFrom  = iProc_A(iBlockALL)
 
-        iProcTo = (nProc*iBlockALL-1)/nBlockALL
-
         ! Figure out the block type
         iType = iType_I(iTypeAdvance_BP(iBlockFrom,iProcFrom))
 
         ! Increase the index for this block type and select target processor
         iBlockALL_I(iType) = iBlockALL_I(iType) + 1
-        iProcTo = (nProc*iBlockALL_I(iType)-1) / nBlockALL_I(iType)
+
+        nBlockPerPe = nBlockALL_I(iType)/nProc
+        iProcTo = nProc - 1 - (nBlockALL_I(iType)-iBlockALL_I(iType))/(nBlockPerPe+1)
+        iProcLimit = nProc - modulo(nBlockALL_I(iType),nProc)
+        if(iProcTo<iProcLimit)iProcTo = (iBlockALL_I(iType)-1)/nBlockPerPe
+
+        iProcTo = modulo( iProcTo + iProcStart_I(iType), nProc)
+
+        !iProcTo = modulo( (nProc*iBlockALL_I(iType)-1) / nBlockALL_I(iType) &
+        !     + iProcStart_I(iType), nProc)
 
         !DEBUG
         !if(iProc==0)write(*,*)'iBlockALL,iBlockFrom,iProcFrom,iProcTo=',&
