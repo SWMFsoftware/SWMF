@@ -101,7 +101,8 @@ foreach (@Arguments){
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
-    if(/^.*$MakefileDef$/)    {$MakefileDefOrig=$_;             next};
+
+    if(/^.*Makefile\.def$/)    {$MakefileDefOrig=$_;             next};
     if(not /^-/)              {($Component,$Code) = split '/';  next};
 
     $Remaining{$_}=1;

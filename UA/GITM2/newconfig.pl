@@ -25,7 +25,7 @@ $Show = 1 if not @ARGV;
 foreach (@ARGV){
     if(/^-install/)           {$Planet="Earth" unless $Planet; next};
     if(/^-mars$/i)            {$Planet="Mars";                 next};
-    if(/^-earth$/)            {$Planet="Earth";                next};
+    if(/^-earth$/i)           {$Planet="Earth";                next};
     if(/^-s(how)?$/)          {$Show  =1;                      next};
     if(/^-h(elp)?$/i)         {&print_help;                    exit};
 
@@ -40,7 +40,7 @@ if ($Planet ne $PlanetOrig) {
 
     &shell_command("rm -f ModPlanet.f90 ModPlanet.o planet.f90");
     &shell_command("ln -s Mod$Planet.f90 ModPlanet.f90");
-    &shell_command("cd src ; ln -s $Planet.f90 planet.f90");
+    &shell_command("ln -s $Planet.f90 planet.f90");
 
     my $file;
     foreach $file (glob("*.$Planet.f90")) {
@@ -67,9 +67,11 @@ sub get_settings{
     if(-l "src/$ModPlanet"){
         my $link = `ls -l src/$ModPlanet`;
 	$link =~ /Mod(\w+)\.f90$/ or 
-	    die "GITM2/config: Could not find planet in $link";
+	    warn "GITM2/config: Could not find planet in $link";
         $PlanetOrig = $1;
     }
+
+    print "PlanetOrig = $PlanetOrig\n";
 }
 
 ############################################################################
