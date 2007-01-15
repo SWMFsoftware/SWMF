@@ -54,8 +54,9 @@ my $Verbose;               # Verbose information is printed if true
 my $Install;
 my $Uninstall;
 my $Show;
-my $ShowLong;
 my $NewPrecision;
+my $NewOptimize;
+my $NewDebug;
 my $DryRun;
 my $IsCompilerSet;
 my $Debug;
@@ -85,7 +86,6 @@ $Show = 1 if not grep /^\-/, @Arguments;
 # Set actions based on the switches
 foreach (@Arguments){
     if(/^-dryrun$/)           {$DryRun=1;                       next};
-    if(/^-show$/i)            {$ShowLong=1;                     next};
     if(/^-verbose$/i)         {$Verbose=1;                      next};
     if(/^-h(elp)?$/i)         {&print_help_;                    next};
     if(/^-(single|double)$/i) {$NewPrecision=lc($1);            next};
@@ -98,9 +98,9 @@ foreach (@Arguments){
     if(/^-mpi=(.*)$/i)        {$MpiVersion=$1;                  next};
     if(/^-standalone$/i)      {$IsComponent=0;                  next};
     if(/^-component$/i)       {$IsComponent=1;                  next};
-    if(/^-debug$/i)           {$Debug=1;                        next};
-    if(/^-nodebug$/i)         {$Debug=0;                        next};
-    if(/^-O([0-4])$/i)        {$Optimize=$1;                    next};  
+    if(/^-debug$/i)           {$NewDebug="yes";                 next};
+    if(/^-nodebug$/i)         {$NewDebug="no";                  next};
+    if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
     if(/^.*$MakefileDef$/)    {$MakefileDefOrig=$_;             next};
     if(not /^-/)              {($Component,$Code) = split '/';  next};
 
@@ -120,7 +120,17 @@ if($Uninstall){
 # Execute the actions in the appropriate order
 &install_code_ if $Install;
 
-&set_precision_;
+# Change precision of reals if required
+if($NewPrecision and $NewPrecision ne $Precision){
+    &shell_command("make clean");
+    &set_precision_;
+}
+
+# Change debugging flags if required
+&set_debug_ if $NewDebug and $NewDebug ne $Debug;
+
+# Change optimization level if required
+&set_optimization_ if $NewOptimize and $NewOptimize ne $Optimize;
 
 if($Show){
     &get_settings_;
@@ -157,6 +167,7 @@ sub get_settings_{
       close(MAKEFILE);
   }
 
+    $Debug = "no";
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
@@ -169,9 +180,9 @@ sub get_settings_{
 	      redo TRY;
 	  }
 	  $Compiler = $+ if /^\s*COMPILE.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
-	  $Precision = "double" if 
-	      m/^\s*PRECISION\s*=\s*
-	      (\-r8|\-real_size\s*64|\-\-dbl|\-qautodbl=dbl4)/x;
+	  $Precision = lc($1) if /^\s*PRECISION\s*=\s*(SINGLE|DOUBLE)PREC/;
+          $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
+          $Optimize = $1 if /^\s*OPT[0-4]\s*=\s*(-O[0-4])/;
       }
   }
     close(MAKEFILE);
@@ -195,6 +206,8 @@ sub show_settings_{
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
     print "The default precision for reals is $Precision precision.\n";
+    print "The maximum optimization level is $Optimize\n";
+    print "Debugging flags: $Debug\n";
 
     print "\n";
 
@@ -239,7 +252,7 @@ sub install_code_{
 
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
-    &set_precision_("init");
+    &set_precision_;
 
     # Now code is installed
     $Installed = 1 unless $DryRun;
@@ -249,49 +262,66 @@ sub install_code_{
 
 sub set_precision_{
 
-    # Set the precision for reals
-    # If called with a true argument, initial setting is done, otherwise
-    # an existing setting is changed
-
-    my $init = $_[0];
-
-    # Return if there is nothing to do
-    return unless $init or ($NewPrecision and $NewPrecision ne $Precision);
+    # Set the precision for reals in $MakefileConf
 
     # Precision will be NewPrecision after changes
     $Precision = $NewPrecision;
 
-    # clean the distribution unless initial installation is done
-    &shell_command("make clean") unless $init;
-
-    print "Setting PRECISION variable to $Precision precision in ".
-	"$MakefileConf\n";
+    my $PREC = uc($Precision)."PREC";
+    print "Setting PRECISION variable to $PREC in $MakefileConf\n";
     if(not $DryRun){
 	@ARGV = ($MakefileConf);
 	while(<>){
-	    if($OS eq "OSF1"){
-		# Comment out line if in conflict with new precision
-                $_="#$_" if /^\s*PRECISION\s*=\s*\-real_size\s+64/ and $Precision eq 'single'
-                    or      /^\s*PRECISION\s*=\s*\-real_size\s+32/ and $Precision eq 'double';
+	    s/^(\s*PRECISION\s*=\s*)(SINGLE|DOUBLE)PREC/$1$PREC/;
+	    print;
+	}
+    }
+}
 
-                # Uncomment line if agrees with new precision
-                s/#// if /^\s*#\s*PRECISION\s*=\s*\-real_size\s+64/ and $Precision eq 'double'
-                    or   /^\s*#\s*PRECISION\s*=\s*\-real_size\s+32/ and $Precision eq 'single';
+##############################################################################
 
-	    }else{
-		# Comment out line if in conflict with new precision
-		$_="#$_" if /^\s*PRECISION\s*=\s*\-/ and $Precision eq 'single'
-		    or      /^\s*PRECISION\s*=\s*$/  and $Precision eq 'double';
-		# Uncomment line if agrees with new precision
-		s/#// if /^\s*#\s*PRECISION\s*=\s*\-/ and $Precision eq 'double'
-		    or   /^\s*#\s*PRECISION\s*=\s*$/  and $Precision eq 'single';
+sub set_debug_{
+
+    # Set the debug compilation flags in $MakefileConf
+
+    # Debug will be NewDebug after changes
+    $Debug = $NewDebug;
+
+    my $DEBUG; $DEBUG = '${DEBUGFLAG}' if $Debug eq "yes";
+    print "Setting debugging flags to '$Debug' in $MakefileConf\n";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    s/^(\s*DEBUG\s*=).*/$1 $DEBUG/;
+	    print;
+	}
+    }
+}
+
+##############################################################################
+
+sub set_optimization_{
+
+    # Set the optimization flags in $MakefileConf
+    $Optimize = $NewOptimize;
+
+    my $Level=$Optimize; $Level =~ s/-O//;
+    print "Setting maximum optimization flag to $Optimize in $MakefileConf\n";
+    if(not $DryRun){
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    if (/^\s*OPT([0-4])\s*=\s*/){
+		if($1 > $Level){
+		    $_ = "OPT$1 = -O$Level\n";
+		}else{
+		    $_ = "OPT$1 = -O$1\n";
+		}
 	    }
 	    print;
 	}
     }
 }
 
-1;
 ##############################################################################
 
 sub shell_command{
