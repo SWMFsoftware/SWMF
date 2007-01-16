@@ -29,26 +29,26 @@ my %Mpi = ("Linux"   => "mpich",
 
 # Default file names
 my $MakefileDefOrig;
-my $MakefileConf     = 'Makefile.conf';
+our $MakefileConf     = 'Makefile.conf';
 my $MakefileConfOrig = 'share/build/Makefile.';
-my $MakefileDef      = 'Makefile.def';
+our $MakefileDef      = 'Makefile.def';
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
 
 # Global variables for the settings
-my $Installed;             # true if code is installed ($MakefileConf exists)
-my $OS='unknown';          # operating system in $MakefileDef
-my $DIR='unknown';         # main directory for code in $MakefileDef
-my $Compiler;              # Non default F90 compiler in $MakefileConf
-my $MpiVersion;            # Non default MPI version for mpif90.h
-my $Precision='unknown';   # Precision set in $MakefileConf
+our $Installed;             # true if code is installed ($MakefileConf exists)
+our $OS='unknown';          # operating system in $MakefileDef
+our $DIR='unknown';         # main directory for code in $MakefileDef
+our $Compiler;              # Non default F90 compiler in $MakefileConf
+our $MpiVersion;            # Non default MPI version for mpif90.h
+our $Precision='unknown';   # Precision set in $MakefileConf
+our $Verbose;               # Verbose information is printed if true
 my $IsComponent=0;         # True if code is installed as a component of SWMF
 my $Code;                  # The name of the code
 my $Component;             # The SWMF component the code is representing
 my $WARNING;               # First part of warning messages
 my $ERROR;                 # First part of error messages
-my $Verbose;               # Verbose information is printed if true
 
 # Default values for the various actions
 my $Install;
@@ -88,6 +88,7 @@ foreach (@Arguments){
     if(/^-dryrun$/)           {$DryRun=1;                       next};
     if(/^-verbose$/i)         {$Verbose=1;                      next};
     if(/^-h(elp)?$/i)         {&print_help_;                    next};
+    if(/^-show$/i)            {$Show=1;                         next};
     if(/^-(single|double)$/i) {$NewPrecision=lc($1);            next};
     if(/^-install(=.*)?$/)    {my $value=$1;
                                $IsComponent=1 if $value =~ /^=c/i;
@@ -200,7 +201,7 @@ sub show_settings_{
 
     print "\n";
     if($IsComponent){
-	print "$Code is installed in directory $DIR as an SWMF component.\n";
+	print "$Code is installed in directory $DIR the $Component component.\n";
     }else{
 	print "$Code is installed in directory $DIR.\n";
     }
@@ -237,9 +238,9 @@ sub install_code_{
 	    -f $MakefileDefOrig;
 	&shell_command("echo OS=$OS > $MakefileDef");
 	&shell_command("echo SWMF_ROOT=$DIR >> $MakefileDef");
-	&shell_command("echo UADIR=$DIR >> $MakefileDef");
+	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
-	&shell_command("cat $MakefileConfOrig$OS$Compiler > $MakefileConf");
+	&shell_command("cat $MakefileConfOrig$OS.$Compiler > $MakefileConf");
     }
 
     # Read info from main Makefile.def
