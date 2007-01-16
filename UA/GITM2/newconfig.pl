@@ -18,22 +18,22 @@ my $PlanetOrig;
 my $Show;
 my $Help;
 
-$Show = 1 if not @ARGV;
-
 &get_settings;
 
-foreach (@ARGV){
+foreach (@Arguments){
     if(/^-install/)           {$Planet="Earth" unless $Planet; next};
     if(/^-mars$/i)            {$Planet="Mars";                 next};
     if(/^-earth$/i)           {$Planet="Earth";                next};
-    if(/^-s(how)?$/)          {$Show  =1;                      next};
+    if(/^-s(how)?$/)             {$Show  =1;                      next};
     if(/^-h(elp)?$/i)         {&print_help;                    exit};
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
 
-if ($Planet ne $PlanetOrig) { 
+if ($Planet and $Planet ne $PlanetOrig) { 
+    $PlanetOrig = $Planet;
+
     chdir "src" or die "Could not change directory to src\n";
 
     print "Configuring GITM for $Planet!!\n"; 
@@ -70,8 +70,6 @@ sub get_settings{
 	    warn "GITM2/config: Could not find planet in $link";
         $PlanetOrig = $1;
     }
-
-    print "PlanetOrig = $PlanetOrig\n";
 }
 
 ############################################################################
@@ -79,20 +77,19 @@ sub get_settings{
 sub print_help{
     print "Additional switches for GITM2/config.pl:
 
-   -p=PLANET   Configure for PLANET. Possible values are 'Mars' or 'Earth'
-               Default planet is Earth.
-
    -Mars       Configure GITM2 for Mars. This flag is case insensitive.
 
    -Earth      Configure GITM2 for Earth. This flag is case insensitive.
+
+   -s          Show current planet.
 
 Examples:
 
 Install for Mars:
 
-   config.pl -install -planet=Mars
+   config.pl -install -Mars
 
-Configure GITM for Earth:
+Reconfigure GITM for Earth:
 
    config.pl -Earth
 
