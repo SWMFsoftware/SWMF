@@ -4,13 +4,13 @@ SHELL=/bin/sh
 
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	Fortran 90/95 Compiler
+#	NAG f95 Fortran 90/95 Compiler
 #       Mac OS (Darwin) specific part of Makefile
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}f95
 COMPILE.f90     = ${CUSTOMPATH_F}f95
-LINK.f90        = ${CUSTOMPATH_MPI}mpif90
+LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 AR = ar -rs
 
 SINGLEPREC =
@@ -18,7 +18,7 @@ DOUBLEPREC = -r8
 PRECISION  = ${DOUBLEPREC}
 
 MPILIB = 
-#MPILIB = -L${LIBDIR} -lNOMPI #
+#MPILIB = -L${LIBDIR} -lNOMPI
 
 # This is the search path for used modules
 # SEARCH_EXTRA should be set in the individual Makefiles
@@ -44,7 +44,7 @@ Cflag4  = ${CFLAG} ${OPT4}
 
 # RCM compilation flags
 # To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${SEARCH}  -c -w -save ${DEBUG}
+CFLAGS = ${SEARCH} -c -ieee=full -w -dusty ${DEBUG} -save
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
