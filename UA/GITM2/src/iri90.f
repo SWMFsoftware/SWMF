@@ -2245,12 +2245,17 @@ C CALCULATES DAY OF YEAR (IDOY) FROM MONTH (MONTH) AND DAY (IDAY)
 C IF IN=0, OR MONTH (MONTH) AND DAY (IDAY) FROM DAY OF 
 C YEAR (IDOY), IF IN=1. 
 C-------------------------------------------------------------------
-	DIMENSION	MO(0:11)
-	DATA		MO/0,31,59,90,120,151,181,212,243,273,304,334/
+	DIMENSION	MO(0:12)
+	DATA		MO/0,31,59,90,120,151,181,212,243,273,304,334,365/
 	IMO=0
 	MOBE=0
+
+C        if(IN.EQ.0)write(*,*)'!!! MODA: IN,MONTH,IDAY=',IN,MONTH,IDAY
+C       if(IN.NE.0)write(*,*)'!!! MODA: IN,IDOY      =',IN,IDOY
+
 	IF(IN.GT.0) GOTO 5
 		IDOY=MO(MONTH)+IDAY
+C                write(*,*)'!!! idoy=',idoy
 		RETURN
 5	IMO=IMO+1
 		MOOLD=MOBE
@@ -2259,6 +2264,7 @@ C-------------------------------------------------------------------
 		IF(MOBE.LT.IDOY) GOTO 5
 55		MONTH=IMO-1
 		IDAY=IDOY-MOOLD
+C                write(*,*)'!!! month,iday=',MONTH,IDAY
 	RETURN
 	END		
 c
