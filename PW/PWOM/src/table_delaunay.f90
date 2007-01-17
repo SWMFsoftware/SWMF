@@ -1,50 +1,58 @@
-program main
-  use ModTriangle
-  integer, parameter :: nTotalLine=8
-  
-  !real , dimension ( 2, maxLine ) :: table
-  integer :: i,j,node1,node2,node3
-  
-!------------------------------------------------------------------------------
 
-  table(1,1)=0.0
-  table(2,1)=0.0
+!The "main" program is a test driver
 
-  table(1,2)=0.0
-  table(2,2)=1.0
-
-  table(1,3)=1.0
-  table(2,3)=0.0
-
-  table(1,4)=1.0
-  table(2,4)=1.0
-
-  table(1,5)=2.0
-  table(2,5)=1.0
-
-  table(1,6)=2.0
-  table(2,6)=2.0
-
-  table(1,7)=1.0
-  table(2,7)=4.0
-
-  table(1,8)=5.0
-  table(2,8)=6.0
-
-  call Table_Delaunay
-
-!  do j=1,8
-     
-!     write(*,*) triangle_node(1,j),triangle_node(2,j), triangle_node(3,j)
-     
-!  enddo
-  
-  call find_triangle(1.0,-.5,node1,node2,node3)
-  write(*,*) 'in triangle: ', node1, node2, node3 
-  
-  
-  
-end program main
+!program main
+!  use ModTriangle
+!  integer, parameter :: nTotalLine=8
+!  
+!  !real , dimension ( 2, maxLine ) :: table
+!  integer :: i,j,node1,node2,node3
+!  logical :: IsFoundTriangle
+!!------------------------------------------------------------------------------
+!
+!  table(1,1)=0.0
+!  table(2,1)=0.0
+!
+!  table(1,2)=0.0
+!  table(2,2)=1.0
+!
+!  table(1,3)=1.0
+!  table(2,3)=0.0
+!
+!  table(1,4)=1.0
+!  table(2,4)=1.0
+!
+!  table(1,5)=2.0
+!  table(2,5)=1.0
+!
+!  table(1,6)=2.0
+!  table(2,6)=2.0
+!
+!  table(1,7)=1.0
+!  table(2,7)=4.0
+!
+!  table(1,8)=5.0
+!  table(2,8)=6.0
+!
+!
+!  call Table_Delaunay
+!
+!!  do j=1,8
+!     
+!!     write(*,*) triangle_node(1,j),triangle_node(2,j), triangle_node(3,j)
+!     
+!!  enddo
+!  
+!  call find_triangle(1.3,2.0,x1,x2,x3,y1,y2,y3,IsFoundTriangle)
+!  write(*,*) 'in triangle: '
+!  write(*,*) 'x,y', x1,y1
+!  write(*,*) 'x,y', x2,y2
+!  write(*,*) 'x,y', x3,y3
+!  write(*,*) 'Is in a triangle?', IsFoundTriangle
+!  
+!  
+!  
+!end program main
 
 subroutine Table_Delaunay
 !*******************************************************************************
@@ -77,6 +85,7 @@ subroutine Table_Delaunay
 !
   use ModTriangle
   implicit none
+  
   integer, parameter :: nTotalLine=8
 
   integer arg_num
@@ -164,9 +173,9 @@ subroutine Table_Delaunay
 !
 !  Print a portion of the triangulation.
 !
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Computed the triangulation.'
-  write ( *, '(a,i8)' ) '  Number of triangles is ', triangle_num
+!  write ( *, '(a)' ) ' '
+!  write ( *, '(a)' ) '  Computed the triangulation.'
+!  write ( *, '(a,i8)' ) '  Number of triangles is ', triangle_num
 
 !  call i4mat_transpose_print_some ( m2, triangle_num, triangle_node, &
 !    1, 1, 3, 5, '  3 by 5 portion of triangulation data:' )
@@ -182,11 +191,11 @@ subroutine Table_Delaunay
 !
 !  Plot the triangulation.
 !
-  eps_filename = 'out.eps'
-  call file_name_ext_swap ( eps_filename, 'delaunay.eps' )
+!  eps_filename = 'out.eps'
+!  call file_name_ext_swap ( eps_filename, 'delaunay.eps' )
 
-  call triangulation_order3_plot_eps ( eps_filename, node_num, table, &
-    triangle_num, triangle_node )
+!  call triangulation_order3_plot_eps ( eps_filename, node_num, table, &
+!    triangle_num, triangle_node )
   
  ! do j=1,8
      
@@ -194,9 +203,9 @@ subroutine Table_Delaunay
      
  ! enddo
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) '  Draw a picture of the triangulation data in "' &
-    // trim ( eps_filename ) //'".'
+!  write ( *, '(a)' ) ' '
+!  write ( *, '(a)' ) '  Draw a picture of the triangulation data in "' &
+!    // trim ( eps_filename ) //'".'
 !
 !  Terminate execution.
 !
@@ -204,11 +213,11 @@ subroutine Table_Delaunay
 !  deallocate ( triangle_node )
   deallocate ( triangle_neighbor )
 
-  write ( *, '(a)' ) ' '
-  write ( *, '(a)' ) 'TABLE_DELAUNAY'
-  write ( *, '(a)' ) '  Normal end of execution.'
+!  write ( *, '(a)' ) ' '
+!  write ( *, '(a)' ) 'TABLE_DELAUNAY'
+!  write ( *, '(a)' ) '  Normal end of execution.'
 
-  write ( *, '(a)' ) ' '
+!  write ( *, '(a)' ) ' '
 !  call timestamp ( )
 
   return
@@ -3711,7 +3720,7 @@ end
 !
 ! created by Alex Glocer, 01/2007
 !******************************************************************************
-subroutine find_triangle(xIN, yIN, Node1,Node2,Node3)
+subroutine find_triangle(xIN, yIN, x1,x2,x3,y1,y2,y3,IsTriangleFound)
 
 
   use ModTriangle, only : triangle_node,table, node_num,triangle_num 
@@ -3719,18 +3728,17 @@ subroutine find_triangle(xIN, yIN, Node1,Node2,Node3)
   
   
   real, intent(in) :: xIN, yIN
-  integer, intent(out):: Node1,Node2,Node3
-  real             :: x1,x2,x3, y1,y2,y3, angle12, angle23, angle31
+  integer          :: Node1,Node2,Node3
+  real, intent(out):: x1,x2,x3, y1,y2,y3
   real             :: v1x,v1y,v1, v2x,v2y,v2, v3x,v3y,v3
-  real             :: theta12,theta23,theta31, ThetaTotal
-  real, parameter  :: cPi=3.14159
   integer          :: iTriangle
-  real             :: lowerbound, upperbound
-  logical          :: IsTriangleFound
+  real             :: Test1,Test2,FAB,FCA,FBC
+  logical,intent(out) :: IsTriangleFound
   real             :: Distance, SaveDistance, SaveNode1, SaveNode2, SaveNode3
+  real             :: distance1,distance2,distance3,test3,test4,test5
+  real             :: distance12,distance23,distance31
 !------------------------------------------------------------------------------
-  lowerbound=2.0*cPi - .001
-  upperbound=2.0*cPi + .001
+  
   IsTriangleFound=.false.
   
   
@@ -3753,59 +3761,54 @@ subroutine find_triangle(xIN, yIN, Node1,Node2,Node3)
 
      !test if xIN and yIN happen to correspond with a triangle node
      if ((xIN == x1 .and. yIN == y1)) then
-        node2=node1
-        node3=node1
         IsTriangleFound=.true.
         exit
      end if
      if ((xIN == x2 .and. yIN == y2)) then
-        node1=node2
-        node3=node2
         IsTriangleFound=.true.
         exit
      end if
      if ((xIN == x3 .and. yIN == y3)) then
-        node2=node3
-        node1=node3
         IsTriangleFound=.true.
         exit
      end if
-
-
-     !determine vectors from x,y input and triangle nodes
-     v1x=x1-xIN
-     v1y=y1-yIN
-
-     v2x=x2-xIN
-     v2y=y2-yIN
-
-     v3x=x3-xIN
-     v3y=y3-yIN
-
-     !use dot product to get angle between vectors using
-     !  theta_ij= arccos[ v_i*v_j/(|v_i|*|v_j|) ]
-     v1=sqrt( v1x**2.0 + v1y**2.0 )
-     v2=sqrt( v2x**2.0 + v2y**2.0 )
-     v3=sqrt( v3x**2.0 + v3y**2.0 )
      
-     write(*,*) v1x,v2x,v3x, v1y,v2y,v3y,v1,v2,v3 
+     FAB = (yIN-y1)*(x2-x1) - (xIN-x1)*(y2-y1)
+     FCA = (yIN-y3)*(x1-x3) - (xIN-x3)*(y1-y3)
+     FBC = (yIN-y2)*(x3-x2) - (xIN-x2)*(y3-y2)
 
-     theta12=acos( (v1x*v2x + v1y*v2y)/(v1*v2) )
-     theta23=acos( (v2x*v3x + v2y*v3y)/(v2*v3) )
-     theta31=acos( (v3x*v1x + v3y*v1y)/(v3*v1) )
-
-     !Test if x,y is in current triangle.
-     !Test is done to see if sum (thetaij) = ~2pi
-
-     ThetaTotal=theta12+theta23+theta31
-     write(*,*)'ThetaTotal',ThetaTotal 
+     Test1=FAB*FBC
+     Test2=FBC*FCA
     
-     if (ThetaTotal .ge. lowerbound .and. ThetaTotal .le. upperbound) then
-        write(*,*) 'found it'
+     if (Test1 > 0.0 .and. Test2 > 0.0) then
+!        write(*,*) 'found it'
           IsTriangleFound=.true.
         exit
      endif
+     
+     !If you are not in the triangle, test to see if you are on the line
+     distance12=sqrt( (x1-x2)**2.0 +(y1-y2)**2.0 )
+     distance23=sqrt( (x2-x3)**2.0 +(y2-y3)**2.0 )
+     distance31=sqrt( (x3-x1)**2.0 +(y3-y1)**2.0 )
+
+     distance1=sqrt( (x1-xIN)**2.0 +(y1-yIN)**2.0 )
+     distance2=sqrt( (x2-xIN)**2.0 +(y2-yIN)**2.0 )
+     distance3=sqrt( (x3-xIN)**2.0 +(y3-yIN)**2.0 )
+  
+     Test3=distance1+distance2
+     Test4=distance2+distance3
+     Test5=distance3+distance1
+     
+     if (Test3 == distance12 .or. Test4 == distance23 .or. Test5 == distance31)&
+          then
+!        write(*,*) 'on edge'
+        IsTriangleFound=.true.
+        exit
+     end if
+     
   enddo
+
+ 
   
   !If no triangle is found to contain xIN and yIN then find closest triangle
   if (.not.IsTriangleFound) then
@@ -3848,6 +3851,14 @@ subroutine find_triangle(xIN, yIN, Node1,Node2,Node3)
      Node1=SaveNode1
      Node2=SaveNode2
      Node3=SaveNode3
+     x1=table(1,int(Node1))
+     y1=table(2,int(Node1))
+     
+     x2=table(1,int(Node2))
+     y2=table(2,int(Node2))
+     
+     x3=table(1,int(Node3))
+     y3=table(2,int(Node3))
      
   end if
   return
