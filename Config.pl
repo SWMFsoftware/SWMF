@@ -2,19 +2,30 @@
 use strict;
 
 # Run the shared config.pl script first
-our @Arguments  = ('CON/SWMF','CON/Makefile.def',@ARGV);
-our %Remaining; # Remaining arguments after processed by $config.pl
+our $Component       = '';
+our $Code            = 'SWMF';
+our $MakefileDefOrig = 'CON/Makefile.def';
+our @Arguments = @ARGV;
+
+# These will be set by the shared config.pl script
+our %Remaining;         # Remaining arguments after processed by $config.pl
 our $DryRun;
 our $MakefileDef;
 our $MakefileConf;
 our $DIR;
 our $Installed;
+our $Show;
+our $Help;
+
+# Run the shared config.pl script
 my $config     = "share/Scripts/config.pl";
 require $config or die "Could not find $config!\n";
 
+&print_help if $Help;
+
 # Warning and error messages
-my $WARNING = "!!! SetSWMF_WARNING:";
-my $ERROR   = "!!! SetSWMF_ERROR:";
+my $WARNING = "SWMF/config.pl WARNING:";
+my $ERROR   = "SWMF/config.pl ERROR:";
 
 my $ValidComp = '[A-Z][A-Z]';      # Pattern to match component ID-s
 my $GridSizeScript = 'GridSize.pl';# to be replaced with config.pl !!!
@@ -27,17 +38,15 @@ my %Version;               # Hash table to get version for a component
 &get_settings;
 
 my $ListVersions;
-my $Show;
-my $ShowLong;
+my $ShowShort;
 my @NewVersion;
 my $GridSize;
 my $Options;
 
 # Set actions based on the switches
 foreach (@Arguments){
-    if(/^-h(elp)?$/i)         {&print_help};
     if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
-    if(/^-s(how)?$/)          {$Show=1; $ShowLong=/show/;       next};
+    if(/^-s$/)                {$ShowShort=1;                    next};
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
     if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
     if(/^-o=(.*)/)            {$Options.=",$1";                 next};
@@ -61,7 +70,7 @@ if($ListVersions){
 
 &set_options if $Options;
 
-if($Show){
+if($Show or $ShowShort){
     &get_settings;
     &show_settings;
 }
@@ -146,13 +155,13 @@ sub show_settings{
     print "The selected component versions and grid sizes are:\n";
     my $Comp;
     foreach $Comp (sort keys %Version){
-	if($ShowLong){
+	if($Show){
 	    print "\n$Comp/$Version{$Comp}";
 	}else{
 	    printf "%-30s","\t$Comp/$Version{$Comp}";
 	}
 	if(-x "$Comp/$Version{$Comp}/$GridSizeScript"){
-	    if($ShowLong){
+	    if($Show){
 		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript -s`;
 		print ":\n$Grid" if $Grid;
 		print `cd $Comp/$Version{$Comp}; ./$OptionScript -s`
