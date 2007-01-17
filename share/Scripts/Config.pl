@@ -1,11 +1,6 @@
 #!/usr/bin/perl -i
 use strict;
 
-our @Arguments; # Arguments obtained from the caller script
-our %Remaining; # Arguments not handled by this script
-
-&print_help if not @Arguments;
-
 # Default compiler per machine or OS
 my %Compiler = ("Linux"   => "f95",
 	     "Darwin"  => "f95",
@@ -17,7 +12,8 @@ my %Compiler = ("Linux"   => "f95",
 	     "cfe3"    => "ifort"
 	     );
 
-my %Mpi = ("Linux"   => "mpich",
+# Default MPI library per machine or OS
+my %MpiVersion = ("Linux"   => "mpich",
 	"Darwin"  => "mpich",
 	"OSF1"    => "mpich",
 	"IRIX64"  => "SGI",
@@ -27,67 +23,77 @@ my %Mpi = ("Linux"   => "mpich",
 	"cfe3"    => "ifort"
 	);
 
-# Default file names
-my $MakefileDefOrig;
-our $MakefileConf     = 'Makefile.conf';
-my $MakefileConfOrig = 'share/build/Makefile.';
+my $WARNING='share/Scripts/config.pl WARNING:';# First part of warning messages
+my $ERROR  ='share/Scripts/config.pl ERROR:';  # First part of error messages
+
+# Obtain $OS, $DIR, and the machine name and provide it to caller script
+our $OS  = `uname`    or die "$ERROR: could not obtain OS\n"; chop $OS;
+our $DIR = `/bin/pwd` or die "$ERROR: could not obtain DIR\n"; chop $DIR;
+our $Machine = `hostname -s`; chop $Machine;
+
+# These are either obtained from the calling script or set here
+our $Code;                  # The name of the code
+our $Component;             # The SWMF component the code is representing
+($Component, $Code) = ($DIR =~ /([A-Z][A-Z])\/([^\/]+)$/)
+    unless $Code;
+
+# Obtain the default compiler for this machine / OS
+our $Compiler;
+$Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
+    die "$ERROR: default compiler is not known for OS=$OS\n";
+
+# Obtain the default MPI version for mpif90.h
+our $MpiVersion;
+$MpiVersion = $MpiVersion{$Machine} or $MpiVersion = $MpiVersion{$OS} or
+    die "$ERROR: default MPI version is not known for OS=$OS\n";
+
+# These are always obtained from the calling script
+our $MakefileDefOrig;       # Original Makefile.def 
+our @Arguments;             # Arguments obtained from the caller script
+
+# The arguments not handled by this script are provided to the caller
+our %Remaining;
+
+# These file names are provided to the calling script
 our $MakefileDef      = 'Makefile.def';
+our $MakefileConf     = 'Makefile.conf';
+our $MakefileConfOrig = 'share/build/Makefile.';
+our $MpiHeader        = 'share/Library/src/mpif90.h';
+our $MpiHeaderOrig    = 'share/include/mpif90_';
+
+# These options are set here and provided to the calling script
+our $Help;                  # Print help message
+our $Verbose;               # Verbose information is printed if true
+our $Show;                  # Show information
+our $DryRun;                # True if no change is actually made
+our $Precision='unknown';   # Precision set in $MakefileConf
+our $Installed;             # true if code is installed ($MakefileConf exists)
+our $Install;               # True if code is (re)installed
+our $Uninstall;             # True if code is uninstalled
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
 
 # Global variables for the settings
-our $Installed;             # true if code is installed ($MakefileConf exists)
-our $OS='unknown';          # operating system in $MakefileDef
-our $DIR='unknown';         # main directory for code in $MakefileDef
-our $Compiler;              # Non default F90 compiler in $MakefileConf
-our $MpiVersion;            # Non default MPI version for mpif90.h
-our $Precision='unknown';   # Precision set in $MakefileConf
-our $Verbose;               # Verbose information is printed if true
 my $IsComponent=0;         # True if code is installed as a component of SWMF
-my $Code;                  # The name of the code
-my $Component;             # The SWMF component the code is representing
-my $WARNING;               # First part of warning messages
-my $ERROR;                 # First part of error messages
-
-# Default values for the various actions
-my $Install;
-my $Uninstall;
-my $Show;
 my $NewPrecision;
 my $NewOptimize;
 my $NewDebug;
-my $DryRun;
 my $IsCompilerSet;
 my $Debug;
 my $Optimize;
 
-# Obtain $OS and $DIR
-$OS  = `uname`    or die "$ERROR: could not obtain OS\n";
-chomp $OS;
-$DIR = `/bin/pwd` or die "$ERROR: could not obtain DIR\n";
-chomp $DIR;
-
-# Set default compiler
-my $Machine = `uname -s`; chop $Machine;
-
-$Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
-    die "$ERROR: default compiler is not known for OS=$OS\n";
-
-# Guess the names of the component and the code
-($Component, $Code) = ($DIR =~ /([A-Z][A-Z])\/([^\/]+)$/);
-
 # Obtain current settings
 &get_settings_;
 
-# Show current settings if no -... arguments are given.
-$Show = 1 if not grep /^\-/, @Arguments;
+# Show current settings if no arguments are given.
+$Show = 1 if not @Arguments;
 
 # Set actions based on the switches
 foreach (@Arguments){
     if(/^-dryrun$/)           {$DryRun=1;                       next};
     if(/^-verbose$/i)         {$Verbose=1;                      next};
-    if(/^-h(elp)?$/i)         {&print_help_;                    next};
+    if(/^-h(elp)?$/i)         {$Help=1;                         next};
     if(/^-show$/i)            {$Show=1;                         next};
     if(/^-(single|double)$/i) {$NewPrecision=lc($1);            next};
     if(/^-install(=.*)?$/)    {my $value=$1;
@@ -103,11 +109,10 @@ foreach (@Arguments){
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
 
-    if(/^.*Makefile\.def$/)    {$MakefileDefOrig=$_;             next};
-    if(not /^-/)              {($Component,$Code) = split '/';  next};
-
     $Remaining{$_}=1;
 }
+
+&print_help_ if $Help;
 
 if($Uninstall){
     if(not $Installed){
@@ -141,9 +146,6 @@ if($Show){
 
 ##############################################################################
 sub get_settings_{
-
-    $WARNING = "!!! $Code:config.pl WARNING:";
-    $ERROR   = "!!! $Code:config.pl ERROR:";
 
     $Installed = (-e $MakefileConf and -e $MakefileDef);
 
@@ -241,20 +243,18 @@ sub install_code_{
 	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
 	&shell_command("cat $MakefileConfOrig$OS.$Compiler > $MakefileConf");
+	&shell_command("cat $MpiHeaderOrig${OS}_$MpiVersion.h > $MpiHeader");
     }
 
     # Read info from main Makefile.def
     &get_settings_;
 
-    # Install the code
-    my $command = "make install";
-    $command .= " COMPILER='$Compiler'" if $IsCompilerSet;
-    $command .= " MPIVERSION='$MpiVersion'" if $MpiVersion;
-    &shell_command($command);
-
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
     &set_precision_;
+
+    # Install the code
+    &shell_command("make install");
 
     # Now code is installed
     $Installed = 1 unless $DryRun;
@@ -365,21 +365,17 @@ shell commands. The script can also show the current settings.
 Usage: config.pl [-help] [-verbose] [-show] [-dryrun] 
                  [-install[=s|=c] [-compiler=COMP] [-mpi=VERSION]] [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-O0|-O1|-O2|-O3|-O4]
-                 [PATH/Makefile.def] [CODENAME]
 
-If called without options, the current settings are shown.
+If called without arguments, the current settings are shown.
 
 Information:
 
--h  -help      show this help message
--dryrun        dry run (do not modify anything, just show actions)
--show          show current settings in more detail.
+-h  -help      show help message.
+-dryrun        dry run (do not modify anything, just show actions).
+-show          show current settings.
 -verbose       show verbose information.
 
-CODE           set name of the code. Usually passed by the caller script.
-               The default value is the last part of the currend directory.
-
-(Un)installation:
+(Un/Re)installation:
 
 -uninstall     uninstall code (make distclean)
 
@@ -390,12 +386,8 @@ CODE           set name of the code. Usually passed by the caller script.
                (re)creates Makefile.conf, Makefile.def, make install
 
 -compiler=COMP copy Makefile.conf for a non-default F90 compiler COMP
--mpi=VERSION   copy mpif90_OSVERSION into mpif90.h
-
-PATH/Makefile.def  provides the path to the original Makefile.def file
-               This information is normally passed by the calling script.
-               and it is only needed for stand-alone installation.
-
+-mpi=VERSION   copy share/include/mpif90_OS_VERSION 
+               into share/Library/src/mpif90.h
 
 Compilation:
 
