@@ -328,7 +328,7 @@ tags:	ENV_CHECK
 
 IH/BATSRUS/src/Makefile:
 	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser
-	cd GM/BATSRUS/src; cp *.f90 *.f *.h Makefile* ../../../IH/BATSRUS/src
+	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
@@ -342,7 +342,7 @@ IH/BATSRUS/src/Makefile:
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
 # rename IH source files to avoid name conflicts
-IH_SRC = src/*.f90 src/*.h src/*.f srcInterface/*.f90 srcUser/*.f90
+IH_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
 
 IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
@@ -378,7 +378,7 @@ SC/BATSRUS/src/Makefile:
 	cd SC/BATSRUS/src; rm -f main.f90 stand_alone*.f90
 
 # rename SC source files to avoid name conflicts
-SC_SRC = src/*.f90 src/*.h src/*.f srcInterface/*.f90 srcUser/*.f90
+SC_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
 
 SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl ${SCRIPTDIR}/Rename.pl
