@@ -121,15 +121,13 @@ test1_check:
 		output/test1/PW_plots_iline0001.out \
 		>> test1_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/GM_log_n000001.log \
-		> test1_gm.diff
-	gunzip -c output/test1/IE_it000321_104510_000.idl.gz \
-		> ${TESTDIR}/it000321_104510_000.idl.ref
-	${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
-		${TESTDIR}/it000321_104510_000.idl.ref \
-		> test1_ie.diff
+		${TESTDIR}/GM/IO2/log_n000001.log \
+		output/test1/GM_log_n000001.log \
+		> test1_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
+		${TESTDIR}/IE/ionosphere/it000321_104501_000_b1.idl \
+		output/test1/IE_it000321_104501_000_b1.idl \
+		> test1_ie.diff)
 	rm -f test1.diff
 	ls -l test1*.diff
 
