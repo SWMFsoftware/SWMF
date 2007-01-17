@@ -191,10 +191,18 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      select case(Name_V(iVar))
      case('Pot')
         IsPotFound = .true.
-        Potential_G(1:jSize, 1:iSize) = transpose(Buffer_IIV(:, :, iVar))
-     case('Jr')
+        do i=1,iSize
+           do j=1,jSize
+              Potential_G(j,i) = Buffer_IIV(iSize+1-i, j, iVar)
+           end do
+        end do
+        case('Jr')
         IsJrFound = .true.
-        Jr_G(1:jSize, 1:iSize) = transpose(Buffer_IIV(:, :, iVar))
+        do i=1,iSize
+           do j=1,jSize
+              Jr_G(j,i) = Buffer_IIV(iSize+1-i, j, iVar)
+           end do
+        end do
      end select
 
   end do
