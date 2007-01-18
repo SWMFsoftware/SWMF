@@ -23,29 +23,33 @@ my %MpiVersion = ("Linux"   => "mpich",
 	"cfe3"    => "ifort"
 	);
 
-my $WARNING='share/Scripts/config.pl WARNING:';# First part of warning messages
-my $ERROR  ='share/Scripts/config.pl ERROR:';  # First part of error messages
+my $WARNING_='share/Scripts/config.pl WARNING:';
+my $ERROR_  ='share/Scripts/config.pl ERROR:';
 
 # Obtain $OS, $DIR, and the machine name and provide it to caller script
-our $OS  = `uname`    or die "$ERROR: could not obtain OS\n"; chop $OS;
-our $DIR = `/bin/pwd` or die "$ERROR: could not obtain DIR\n"; chop $DIR;
+our $OS  = `uname`    or die "$ERROR_ could not obtain OS\n"; chop $OS;
+our $DIR = `/bin/pwd` or die "$ERROR_ could not obtain DIR\n"; chop $DIR;
 our $Machine = `hostname -s`; chop $Machine;
 
 # These are either obtained from the calling script or set here
-our $Code;                  # The name of the code
 our $Component;             # The SWMF component the code is representing
+our $Code;                  # The name of the code
 ($Component, $Code) = ($DIR =~ /([A-Z][A-Z])\/([^\/]+)$/)
     unless $Code;
+
+# Strings for the error and warning messages for the caller script
+our $ERROR   = "$Code/config.pl ERROR:";
+our $WARNING = "$Code/config.pl WARNING:";
 
 # Obtain the default compiler for this machine / OS
 our $Compiler;
 $Compiler = $Compiler{$Machine} or $Compiler = $Compiler{$OS} or
-    die "$ERROR: default compiler is not known for OS=$OS\n";
+    die "$ERROR_ default compiler is not known for OS=$OS\n";
 
 # Obtain the default MPI version for mpif90.h
 our $MpiVersion;
 $MpiVersion = $MpiVersion{$Machine} or $MpiVersion = $MpiVersion{$OS} or
-    die "$ERROR: default MPI version is not known for OS=$OS\n";
+    die "$ERROR_ default MPI version is not known for OS=$OS\n";
 
 # These are always obtained from the calling script
 our $MakefileDefOrig;       # Original Makefile.def 
@@ -70,6 +74,8 @@ our $Precision='unknown';   # Precision set in $MakefileConf
 our $Installed;             # true if code is installed ($MakefileConf exists)
 our $Install;               # True if code is (re)installed
 our $Uninstall;             # True if code is uninstalled
+our $ShowGridSize;          # Show grid size for caller code
+our $NewGridSize;           # New grid size to be set in caller code
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -108,6 +114,8 @@ foreach (@Arguments){
     if(/^-debug$/i)           {$NewDebug="yes";                 next};
     if(/^-nodebug$/i)         {$NewDebug="no";                  next};
     if(/^-O[0-4]$/i)          {$NewOptimize=$_;                 next};  
+    if(/^-g(rid)?$/)          {$ShowGridSize=1;                 next};
+    if(/^-g(rid)?=([\d,]+)$/) {$NewGridSize=$+;                 next};
 
     $Remaining{$_}=1;
 }
@@ -116,9 +124,11 @@ foreach (@Arguments){
 
 if($Uninstall){
     if(not $Installed){
-	warn "$ERROR: $Code is not installed.\n";
+	warn "$ERROR_ $Code is not installed.\n";
 	exit 1;
     }else{
+	&shell_command("cd share; make distclean")
+	    if -d "share" and not $IsComponent;
 	&shell_command("make distclean");
 	exit 0;
     }
@@ -157,7 +167,7 @@ sub get_settings_{
   TRY:{
       # Read information from $MakefileDef
       open(MAKEFILE, $MakefileDef)
-	  or die "$ERROR could not open $MakefileDef\n";
+	  or die "$ERROR_ could not open $MakefileDef\n";
 
       while(<MAKEFILE>){
 	  if(/^\s*include\s+(.*$MakefileDef)\s*$/){
@@ -175,7 +185,7 @@ sub get_settings_{
   TRY:{
       # Read information from $MakefileConf
       open(MAKEFILE, $MakefileConf)
-	  or die "$ERROR could not open $MakefileConf\n";
+	  or die "$ERROR_ could not open $MakefileConf\n";
 
       while(<MAKEFILE>){
 	  if(/^\s*include\s+(.*$MakefileConf)\s*$/){
@@ -227,16 +237,16 @@ sub install_code_{
     if($IsComponent){
 	my $dir = $DIR; $dir =~ s|/[^/]*/[^/]*$||;  # go two directories up
 	my $makefile = "$dir/$MakefileDef";          # makefile to be included
-	die "$ERROR: could not find file $makefile\n" unless -f $makefile;
+	die "$ERROR_ could not find file $makefile\n" unless -f $makefile;
 	&shell_command("echo include $makefile > $MakefileDef");
 
 	$makefile = "$dir/$MakefileConf"; # makefile to be included
-	die "$ERROR: could not find file $makefile\n" unless -f $makefile;
+	die "$ERROR_ could not find file $makefile\n" unless -f $makefile;
 	&shell_command("echo include $makefile > $MakefileConf");
     }else{
-	die "$ERROR: original $MakefileDef is not given\n" unless
+	die "$ERROR_ original $MakefileDef is not given\n" unless
 	    $MakefileDefOrig;
-	die "$ERROR: $MakefileDefOrig is missing\n" unless
+	die "$ERROR_ $MakefileDefOrig is missing\n" unless
 	    -f $MakefileDefOrig;
 	&shell_command("echo OS=$OS > $MakefileDef");
 	&shell_command("echo SWMF_ROOT=$DIR >> $MakefileDef");
@@ -254,6 +264,8 @@ sub install_code_{
     &set_precision_;
 
     # Install the code
+    &shell_command("cd share; make install") 
+	if -d "share" and not $IsComponent;
     &shell_command("make install");
 
     # Now code is installed
