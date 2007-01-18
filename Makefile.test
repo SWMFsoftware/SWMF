@@ -13,6 +13,7 @@ test_help:
 	@echo "    test_comp                  (run component tests only)"
 	@echo "    test_pw                    (run polar wind test only)"
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
+	@echo "    test1                      (run GM-IE-PW test only )"
 
 test:
 	-@(make test_comp)
@@ -20,7 +21,7 @@ test:
 	-@(make test_gmiepw)
 	-@(make test_esmf)
 	-@(make test_check)
-
+	-@(make test1)
 test_check:
 	@ls -l ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
