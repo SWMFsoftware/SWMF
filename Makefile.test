@@ -17,11 +17,11 @@ test_help:
 
 test:
 	-@(make test_comp)
+	-@(make test1)
 	-@(make test_pw)
-	-@(make test_gmiepw)
 	-@(make test_esmf)
 	-@(make test_check)
-	-@(make test1)
+
 test_check:
 	@ls -l ??/*/*.diff *.diff > test_swmf.res
 	@cat test_swmf.res
