@@ -4,24 +4,30 @@ SHELL=/bin/sh
 
 #
 #	Space Weather Modeling Framework (SWMF) 
-#	NAG f95 Fortran 90/95 Compiler
+#	Fortran 90/95 Compiler
 #       Mac OS (Darwin) specific part of Makefile
 #
 
-COMPILE.f77     = ${CUSTOMPATH_F}f95
-COMPILE.f90     = ${CUSTOMPATH_F}f95
-LINK.f90	= ${CUSTOMPATH_MPI}mpif90
+# Set suffix remapping options
+SuffixMapf90 = -qsuffix=f=f90
+SuffixMapF90 = -qsuffix=f=F90
+SuffixMapfor = -qsuffix=f=for
+SuffixMapftn = -qsuffix=f=ftn
+
+COMPILE.f77     = ${CUSTOMPATH_F}xlf90 -qfixed=132
+COMPILE.f90     = ${CUSTOMPATH_F}xlf90 ${SuffixMapf90}
+LINK.f90        = ${CUSTOMPATH_MPI}mpif90xlf
 AR = ar -rs
 
 SINGLEPREC =
-DOUBLEPREC = -r8
+DOUBLEPREC = -qautodbl=dbl4
 PRECISION  = ${DOUBLEPREC}
 
 MPILIB = 
-#MPILIB = -L${LIBDIR} -lNOMPI
+#MPILIB = -L${LIBDIR} -lNOMPI #
 
 # This is the search path for used modules
-# SEARCH_EXTRA should be set in the individual Makefiles
+# SEARCH_EXTRA should be given in the individual Makefiles
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
@@ -34,17 +40,18 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -ieee=full -w -dusty ${DEBUG}
+CFLAG = ${SEARCH} -c -qextname -qarch=auto -qtune=auto ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
 Cflag2  = ${CFLAG} ${PRECISION} ${OPT2}
 Cflag3  = ${CFLAG} ${PRECISION} ${OPT3}
 Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
+Cflag4NoP = ${CFLAG} ${OPT4}
 
 # RCM compilation flags
 # To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -save
+CFLAGS = ${CFLAG} ${OPT2} -qsave
 
 Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
@@ -52,7 +59,6 @@ Lflag2  = ${PRECISION} ${DEBUG}
 # BLAS and LAPACK libraries
 LBLAS =
 BLAS  = lapack.o blas.o
-
 
 #
 #       General rules
@@ -65,18 +71,18 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .F90.o:
-	cpp -P -DsysDarwin -DcompNAGF95 $*.F90 | grep -v '^#' > $*.f95
-	${COMPILE.f90} -o $*.o ${Cflag4} $*.f95
-	rm -f $*.f95
+	cpp -P -DsysDarwin -DcompXLF90 $*.F90 | grep -v '^#' > $*.f
+	${COMPILE.f90} -qsuffix=f=f -o $*.o ${Cflag4} $*.f
+	rm -f $*.f
 
 .f.o:
-	${COMPILE.f77} ${Cflag2} -132 $<
+	${COMPILE.f77} ${Cflag2} $<
 
 .for.o:
-	${COMPILE.f77} ${Cflag2} -132 $<
+	${COMPILE.f77} ${Cflag4} ${SuffixMapfor} $<
 
 .ftn.o:
-	${COMPILE.f77} ${Cflag2} -132 $<
+	${COMPILE.f77} ${Cflag4} ${SuffixMapftn} $<
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

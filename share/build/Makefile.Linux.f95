@@ -34,17 +34,17 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -w -dusty ${DEBUG} ${PRECISION}
+CFLAG = ${SEARCH} -c -w -dusty ${DEBUG}
 
-Cflag0  = ${CFLAG} ${OPT0}
-Cflag1  = ${CFLAG} ${OPT1}
-Cflag2  = ${CFLAG} ${OPT2}
-Cflag3  = ${CFLAG} ${OPT3}
-Cflag4  = ${CFLAG} ${OPT4}
+Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
+Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
+Cflag2  = ${CFLAG} ${PRECISION} ${OPT2}
+Cflag3  = ${CFLAG} ${PRECISION} ${OPT3}
+Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
 # RCM compilation flags
 # To allow RCM to compile as double precision, add PRECISION flag
-CFLAGS = ${SEARCH} -c -w -dusty ${DEBUG} -save
+CFLAGS = ${CFLAG} -save
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 
