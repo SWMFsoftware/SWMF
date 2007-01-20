@@ -1,3 +1,5 @@
+install:
+
 clean:
 	cd NOMPI/src;       make clean
 	cd TIMING/src;      make clean
