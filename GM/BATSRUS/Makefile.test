@@ -40,8 +40,7 @@ test_func:
 
 test_func_compile:
 	make clean
-	./Options.pl -u=Default -e=Mhd
-	./GridSize.pl -g=8,8,8,400,100
+	./Config.pl -u=Default -e=Mhd -g=8,8,8,400,100
 	make BATSRUS PIDL PSPH
 
 test_func_run: test_rundir
@@ -77,8 +76,7 @@ test_titan_start:
 
 test_titan_compile:
 	make clean
-	./Options.pl -u=Titan -e=MhdTitan
-	./GridSize.pl -g=4,4,4,2000,200
+	./Config.pl -u=Titan -e=MhdTitan -g=4,4,4,2000,200
 	make
 	make PIDL
 
