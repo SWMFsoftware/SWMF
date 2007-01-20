@@ -85,13 +85,13 @@ help:
 	@echo ' '
 #EOC
 #
-# Check the variables SWMF_ROOT=`pwd` and OS = `uname`
+# Check the variables DIR=`pwd` and OS = `uname`
 #
 ENV_CHECK:
-	@(if([ "${SWMF_ROOT}" != `/bin/pwd` ]) || ([ "${OS}" != `uname` ]); \
+	@(if([ "${DIR}" != `/bin/pwd` ]) || ([ "${OS}" != `uname` ]); \
 	then \
 	  echo; \
-	  echo "SWMF_ROOT='${SWMF_ROOT}' and/or OS='${OS}' are incorrect!";\
+	  echo "DIR='${DIR}' and/or OS='${OS}' are incorrect!";\
 	  echo "Correcting Makefile.def";\
 	  perl -pi share/Scripts/FixMakefileDef.pl Makefile.def; \
 	  echo "Type 'SetSWMF.pl -s' and retry the previous make command!"; \
@@ -117,11 +117,20 @@ MACHINE = `hostname | sed -e 's/\..*//'`
 
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
-	cd share;       	make install
 	cd CON;			make install
 	cd ESMF/ESMF_SWMF;	make install
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
-		do (cd $$i; make install); done
+
+	if([ -d "SC/BATSRUS" ]); \
+		then cp GM/BATSRUS/Config.pl SC/BATSRUS; \
+	fi
+	if([ -d "IH/BATSRUS" ]); \
+		then cp GM/BATSRUS/Config.pl IH/BATSRUS; \
+	fi
+	if([ -d "IH/BATSRUS_share" ]); \
+		then cp GM/BATSRUS/Config.pl IH/BATSRUS_share; \
+	fi
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+		do (cd $$i; ./Config.pl -install=c); done
 	@echo
 	@echo Installation succeeded
 	@echo
@@ -221,15 +230,13 @@ clean: ENV_CHECK
 	@echo Clean succeeded
 	@echo
 
-distclean_comp: ENV_CHECK rmdir
+distclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
 		do (cd $$i; make distclean); done
 	cd ESMF/ESMF_SWMF;	make distclean
 	cd CON;			make distclean
-	cd util;		make distclean
-	cd share;               make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	cd doc/Tex;             make clean ${CLEAN1} ${CLEAN2}
@@ -239,10 +246,6 @@ distclean_comp: ENV_CHECK rmdir
 	@echo
 	@echo Distclean succeeded
 	@echo
-
-distclean:
-	rm -f */BATSRUS/src/user_routines.f90
-	make distclean_comp
 
 dist: distclean
 	@echo ' '
@@ -337,8 +340,8 @@ IH/BATSRUS/src/Makefile:
 	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cd GM/BATSRUS; \
-		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl \
-			GridSize.pl Options.pl ../../IH/BATSRUS/
+		cp Makefile.def Makefile.conf PARAM.XML PARAM.pl Config.pl \
+			../../IH/BATSRUS/
 	echo '*' > IH/BATSRUS/src/.cvsignore
 
 # rename IH source files to avoid name conflicts
@@ -352,7 +355,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 	cd IH/BATSRUS/srcInterface; \
 		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
-	cd IH/BATSRUS/; ./Options.pl -u=Heliosphere
+	cd IH/BATSRUS/; ./Config.pl -u=Heliosphere
 
 #^CMP END IH
 #^CMP IF SC BEGIN
@@ -364,7 +367,7 @@ SC/BATSRUS/src/Makefile:
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
 	cd GM/BATSRUS/TMP; \
-		mv Makefile.def GridSize.pl Options.pl PARAM.XML src srcUser \
+		mv Makefile.def Config.pl PARAM.XML src srcUser \
 			../../../SC/BATSRUS;\
 		mv srcInterface/*.f90 ../../../SC/BATSRUS/srcInterface
 	rm -rf GM/BATSRUS/TMP
@@ -386,7 +389,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl SC ${SC_SRC}; \
 		${SCRIPTDIR}/Rename.pl -w -r -common=SC ${SC_SRC}
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
-	cd SC/BATSRUS; ./Options.pl -e=MhdCorona -u=Heliosphere
+	cd SC/BATSRUS; ./Config.pl -e=MhdCorona -u=Heliosphere
 
 #^CMP END SC
 
