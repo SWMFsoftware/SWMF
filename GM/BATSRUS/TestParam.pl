@@ -20,7 +20,7 @@ if($Help){
 Purpose:
 
     Check the correctness of the input parameter file using the XML description
-    in PARAM.XML. The grid size returned by GridSize.pl, and the PRECISION 
+    in PARAM.XML. The grid size returned by Config.pl -g, and the PRECISION 
     defined in Makefile.conf are also used during the check, if available.
     This simple script calls the general script in share/Scripts/CheckParam.pl.
 

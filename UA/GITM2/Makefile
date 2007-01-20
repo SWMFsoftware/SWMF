@@ -97,7 +97,7 @@ test:
 
 test_compile:
 	make clean
-	./GridSize.pl -g=9,9,50,4
+	./Config.pl -Earth -g=9,9,50,4
 	make GITM IEDIR=`pwd`/srcIE
 
 TESTDIR = run_test

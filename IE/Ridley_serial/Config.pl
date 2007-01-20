@@ -97,11 +97,11 @@ sub print_help{
 
 print "Set grid size to nTheta=91, nPsi=361 (1 deg by 1 deg):
 
-    GridSize.pl -g=91,361
+    Config.pl -g=91,361
 
 Show settings specific to IE/Ridley_serial:
 
-    GridSize.pl -s
+    Config.pl -s
 
 ";
     exit 0;
