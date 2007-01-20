@@ -11,5 +11,5 @@
 #EOP
 #BOC
 s/^OS *=.*\n/"OS = ".`uname`/e;
-s/^SWMF_ROOT *=.*\n/"SWMF_ROOT = ".`\/bin\/pwd`/e;
+s/^DIR *=.*\n/"DIR = ".`\/bin\/pwd`/e;
 #EOC
