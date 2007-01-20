@@ -1,26 +1,6 @@
 include Makefile.def
 
-install: Makefile.def.orig MAKEFILE_DEF
-	@make install_cont;
-
-Makefile.def.orig:
-	mv Makefile.def Makefile.def.orig
-	cp Makefile.def.orig Makefile.def
-
-MAKEFILE_DEF:
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		echo IEDIR=`pwd`                        >  Makefile.def; \
-		echo OS=`uname`                         >> Makefile.def; \
-		echo STANDALONE=YES                     >> Makefile.def; \
-		echo include `pwd`/src/Makefile.def     >> Makefile.def; \
-	fi);
-
-install_cont: src/ModSize.f90
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
-	else \
-		echo include $(DIR)/Makefile.conf > Makefile.conf; \
-	fi);
+install: src/ModSize.f90
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
@@ -50,7 +30,6 @@ distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	rm -f Makefile.conf Makefile.def *~
-	mv Makefile.def.orig Makefile.def
 
 test:
 	echo "IE/Ridley_serial test is incomplete" > notest.diff

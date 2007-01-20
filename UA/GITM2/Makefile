@@ -8,32 +8,15 @@ IEDIR   = srcIE
 IODIR   = srcIO
 MAINDIR = src
 
-install: Makefile.def.orig MAKEFILE_DEF
-	@make install_cont;
-
-Makefile.def.orig:
-	mv Makefile.def Makefile.def.orig
-	cp Makefile.def.orig Makefile.def
-
-MAKEFILE_DEF:
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		echo UADIR=`pwd`                        >  Makefile.def; \
-		echo OS=`uname`                         >> Makefile.def; \
-		echo COMPILER=`./get_info.pl -c`        >> Makefile.def; \
-		echo MPIVERSION=`./get_info.pl -m`      >> Makefile.def; \
-		echo STANDALONE=${STANDALONE}           >> Makefile.def; \
-		cat srcMake/Makefile.def                >> Makefile.def; \
-	fi);
-
 PLANET=earth
 
-install_cont: 
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
-		cd share; make COMPILER=${COMPILER} MPIVERSION=${MPIVERSION} install;\
-	else \
-		echo include $(DIR)/Makefile.conf > Makefile.conf; \
-	fi);
+src/Makefile:
+	cp src/Makefile.orig src/Makefile
+
+src/ModSize.f90:
+	cp src/ModSize.f90.orig src/ModSize.f90
+
+install: src/Makefile src/ModSize.f90
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
@@ -41,8 +24,6 @@ install_cont:
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
-	./config.pl -${PLANET} -compiler=${COMPILER}
-
 #
 #       General Housekeeping
 #
@@ -78,14 +59,15 @@ clean:
 	@cd srcInterface;make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean: clean
-	@(if [ -d share ]; then cd share; make distclean; fi);
-	@cd $(MAINDIR); make distclean
-	@(if [ -e src/Makefile.orig ]; then mv src/Makefile.orig src/Makefile; fi);
-	@cd srcInterface; make distclean
-	rm -f Makefile.conf Makefile.def *~
-	mv Makefile.def.orig Makefile.def
-
+distclean:
+	@touch src/Makefile.DEPEND src/Makefile.RULES
+	@cd $(ABDIR);    make clean
+	@cd $(IEDIR);    make clean
+	@cd $(EDDIR);    make clean
+	@cd $(IODIR);    make clean
+	@cd $(MAINDIR);  make distclean
+	@cd srcInterface;make distclean
+	rm -f src/Makefile src/ModSize.f90 Makefile.conf Makefile.def *~
 #
 #       Create run directories
 #

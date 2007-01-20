@@ -40,3 +40,4 @@ clean:	install
 distclean: install
 	cd src; make distclean
 	cd src/claw; make distclean
+	rm -f Makefile.def Makefile.conf

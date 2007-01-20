@@ -6,11 +6,6 @@ include Makefile.planet
 help:
 	@echo Makefile targets:
 	@echo
-	@echo 'make install PLANET=Saturn COMPILER=g95 MPIVERSION=Altix'
-	@echo
-	@echo '      installs PWOM for Saturn with g95 compiler and MPI for Altix'
-	@echo '      defaults are Earth, the default compiler for the OS and MPICH'
-	@echo
 	@echo 'make                        - compile PWOM.exe'
 	@echo 'make LIB                    - compile libPW.a for SWMF'
 	@echo 'make run                    - create run directory'
@@ -19,35 +14,10 @@ help:
 	@echo 'make distclean              - remove all files not part of CVS'
 	@echo
 
-install: Makefile.def.orig MAKEFILE_DEF bin src/PLANET
-	@make install_cont;
-
-Makefile.def.orig:
-	mv Makefile.def Makefile.def.orig
-	cp Makefile.def.orig Makefile.def
-
-MAKEFILE_DEF:
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		echo PWDIR=`pwd`                        >  Makefile.def; \
-		echo OS=`uname`                         >> Makefile.def; \
-		echo STANDALONE=${STANDALONE}           >> Makefile.def; \
-		cat src/Makefile.def                    >> Makefile.def; \
-	fi);
-
 bin:
 	mkdir bin
 
-src/PLANET:
-	mv Makefile.planet Makefile.planet.orig
-	./config.pl -p=${PLANET}
-
-install_cont:
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
-		cd share; make install;\
-	else \
-		echo include $(DIR)/Makefile.conf > Makefile.conf; \
-	fi);
+install: bin
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
@@ -154,14 +124,9 @@ clean:
 	cd srcInterface; make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
 
-distclean: uninstall
-
-uninstall:
+distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
-	@(if [ -d share ]; then cd share; make distclean; fi);
 	rm -rf Makefile.conf Makefile.def Makefile.planet *~ bin
-	mv Makefile.planet.orig Makefile.planet
-	mv Makefile.def.orig Makefile.def

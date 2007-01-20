@@ -43,6 +43,6 @@ distclean: clean
 		cd srcInterface; make distclean; \
 	fi)
 	rm -rf  src srcUser Makefile.* PARAM.XML PARAM.pl \
-		RenameList.pl GridSize.pl Options.pl *~
+		RenameList.pl Config.pl *~
 
 veryclean: distclean

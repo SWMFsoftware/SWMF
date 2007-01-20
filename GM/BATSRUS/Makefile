@@ -54,29 +54,9 @@ help:
 	@echo '    distclean (make clean; rm -f *exe Makefile Makefile.DEPEND)'
 	@echo '    dist      (create source distribution tar file)'
 
-install: Makefile.def.orig MAKEFILE_DEF
-	@make install_cont;
-
-Makefile.def.orig:
-	mv Makefile.def Makefile.def.orig
-	cp Makefile.def.orig Makefile.def
-
-MAKEFILE_DEF:
+install: src/ModSize.f90
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		echo DIR=`pwd`                          >  Makefile.def; \
-		echo GMDIR=`pwd`                        >> Makefile.def; \
-		echo OS=`uname`                         >> Makefile.def; \
-		echo STANDALONE=${STANDALONE}           >> Makefile.def; \
-		cat src/Makefile.def                    >> Makefile.def; \
-	fi);
-
-install_cont: src/ModSize.f90
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f share/build/Makefile.${OS}${COMPILER} Makefile.conf; \
 		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
-		cd share; make install;\
-	else \
-		echo include $(DIR)/Makefile.conf > Makefile.conf; \
 	fi);
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
@@ -84,7 +64,7 @@ install_cont: src/ModSize.f90
 		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
 	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
-	./Options.pl -u=Default -e=Mhd
+	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
 
 src/ModSize.f90:
@@ -203,10 +183,7 @@ distclean:
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
-	@(if [ -d util  ]; then cd util;  make distclean; fi);
-	@(if [ -d share ]; then cd share; make distclean; fi);
 	rm -f Makefile.conf Makefile.def *~
-	mv Makefile.def.orig Makefile.def
 
 dist:	distclean
 	@echo ' '
