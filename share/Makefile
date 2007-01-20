@@ -21,12 +21,10 @@ include ../Makefile.def
 LIBRULES = Library/src/Makefile.RULES
 
 Library/src/mpif.h:
-	cp include/mpif90_${OS}${MPIVERSION}.h Library/src/mpif90.h
 	cd Library/src; cat precision.h mpif90.h > mpif.h
 
 install: Library/src/mpif.h
 	touch Library/src/Makefile.DEPEND
-	cp build/Makefile.${OS}${COMPILER} ../Makefile.conf
 	@(if [ -f ${LIBRULES}.${OS}${COMPILER} ]; then   \
 		cp -f ${LIBRULES}.${OS}${COMPILER} ${LIBRULES};\
 	else \
