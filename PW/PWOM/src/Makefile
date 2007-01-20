@@ -3,8 +3,6 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-include Makefile.planet
-
 MODULES = \
 	ModParameters.o\
 	ModCommonPlanet.o\
