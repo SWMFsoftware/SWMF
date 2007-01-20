@@ -17,10 +17,10 @@ my %MpiVersion = ("Linux"   => "mpich",
 	"Darwin"  => "mpich",
 	"OSF1"    => "mpich",
 	"IRIX64"  => "SGI",
-	"palm"    => "ifort",
-	"cfe1"    => "ifort",
-	"cfe2"    => "ifort",
-	"cfe3"    => "ifort"
+	"palm"    => "Altix",
+	"cfe1"    => "Altix",
+	"cfe2"    => "Altix",
+	"cfe3"    => "Altix"
 	);
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
@@ -435,9 +435,9 @@ Show current settings with more detail:
 
     Config.pl -show
 
-Install code with the ifort compiler and Altix MPI and select single precision:
+Install code with the g95 compiler and Intal MPI and select single precision:
 
-    Config.pl -install -compiler=ifort -mpi=Altix -single
+    Config.pl -install -compiler=g95 -mpi=Intel -single
 
 Set optimization level to -O0 and switch on debugging flags:
 
