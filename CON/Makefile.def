@@ -10,7 +10,6 @@
 #EOP
 
 #BOC
-DIR=${SWMF_ROOT}
 
 # This file is needed in dependency rules of component libraries:
 MAKEFILE_COMP_SELECT = ${DIR}/Makefile.def
