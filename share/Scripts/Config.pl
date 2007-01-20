@@ -23,8 +23,8 @@ my %MpiVersion = ("Linux"   => "mpich",
 	"cfe3"    => "ifort"
 	);
 
-my $WARNING_='share/Scripts/config.pl WARNING:';
-my $ERROR_  ='share/Scripts/config.pl ERROR:';
+my $WARNING_='share/Scripts/Config.pl WARNING:';
+my $ERROR_  ='share/Scripts/Config.pl ERROR:';
 
 # Obtain $OS, $DIR, and the machine name and provide it to caller script
 our $OS  = `uname`    or die "$ERROR_ could not obtain OS\n"; chop $OS;
@@ -38,8 +38,8 @@ our $Code;                  # The name of the code
     unless $Code;
 
 # Strings for the error and warning messages for the caller script
-our $ERROR   = "$Code/config.pl ERROR:";
-our $WARNING = "$Code/config.pl WARNING:";
+our $ERROR   = "$Code/Config.pl ERROR:";
+our $WARNING = "$Code/Config.pl WARNING:";
 
 # Obtain the default compiler for this machine / OS
 our $Compiler;
@@ -362,10 +362,10 @@ sub shell_command{
 
 ##############################################################################
 #BOP
-#!QUOTE: \subsection{Installation and Configuration with config.pl}
-#!ROUTINE: config.pl - (un)installation and configuration of SWMF/components
+#!QUOTE: \subsection{Installation and Configuration with Config.pl}
+#!ROUTINE: Config.pl - (un)installation and configuration of SWMF/components
 #!DESCRIPTION:
-# The config.pl provides a single uniform interface towards 
+# The Config.pl provides a single uniform interface towards 
 # installation, configuration and uninstallation for the SWMF and its
 # components.
 #
@@ -376,16 +376,16 @@ sub print_help_{
 
     print 
 #BOC
-"config.pl can be used for installing and setting various options for SWMF
-or its components. The core of the script is in share/Scripts/config.pl,
-and this is used by the config.pl scripts in the main SWMF and component 
+"Config.pl can be used for installing and setting various options for SWMF
+or its components. The core of the script is in share/Scripts/Config.pl,
+and this is used by the Config.pl scripts in the main SWMF and component 
 directories. This help describes the options/features of the core script.
 Additional features (if any) will be shown below.
 
 This script edits the appropriate Makefile-s, copies files and executes 
 shell commands. The script can also show the current settings.
 
-Usage: config.pl [-help] [-verbose] [-show] [-dryrun] 
+Usage: Config.pl [-help] [-verbose] [-show] [-dryrun] 
                  [-install[=s|=c] [-compiler=COMP] [-mpi=VERSION]] [-uninstall]
                  [-single|-double] [-debug|-nodebug] [-O0|-O1|-O2|-O3|-O4]
 
@@ -429,27 +429,27 @@ Examples of use:
 
 Show current settings: 
 
-    config.pl
+    Config.pl
 
 Show current settings with more detail: 
 
-    config.pl -show
+    Config.pl -show
 
 Install code with the ifort compiler and Altix MPI and select single precision:
 
-    config.pl -install -compiler=ifort -mpi=Altix -single
+    Config.pl -install -compiler=ifort -mpi=Altix -single
 
 Set optimization level to -O0 and switch on debugging flags:
 
-    config.pl -debug -O0
+    Config.pl -debug -O0
 
 Set optimization level to -03 and switch off debugging flags:
 
-    config.pl -nodebug -O3
+    Config.pl -nodebug -O3
 
-Uninstall code (if this fails, run config.pl -install first):
+Uninstall code (if this fails, run Config.pl -install first):
 
-    config.pl -uninstall"
+    Config.pl -uninstall"
 #EOC
     ,"\n\n";
 }
