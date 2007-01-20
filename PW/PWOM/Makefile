@@ -53,7 +53,7 @@ test_earth:
 	make test_check
 
 test_earth_compile:
-	./config.pl -p=Earth
+	./Config.pl -Earth
 	make PWOM
 
 test_saturn:
@@ -68,7 +68,7 @@ test_saturn:
 	make test_check
 
 test_compile:
-	./config.pl -p=${PLANET}
+	./Config.pl -${PLANET}
 	make PWOM
 
 test_rundir:
