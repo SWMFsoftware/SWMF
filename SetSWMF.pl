@@ -1,93 +1,57 @@
 #!/usr/bin/perl -i
 use strict;
 
-# Pattern to match component ID-s
-my $ValidComp = 'IH|GM|IE|IM|PW|RB|SC|SP|UA';
-#my $ValidComp = '[A-Z][A-Z]'; # this would be more permissive and general
+# Run the shared Config.pl script first
+our $Component       = '';
+our $Code            = 'SWMF';
+our $MakefileDefOrig = 'CON/Makefile.def';
+our @Arguments = @ARGV;
 
-&print_help if not @ARGV;
+my $config     = "share/Scripts/Config.pl";
+require $config or die "Could not find $config!\n";
 
-# Directories and files used
-my $MakefileConf     = 'Makefile.conf';
-my $MakefileConfOrig = 'share/build/Makefile.';
-my $MakefileDef      = 'Makefile.def';
-my $MakefileDefOrig  = 'CON/Makefile.def';
-my $MakefileDefCvs   = 'Makefile.def.orig';
-my $GridSizeScript   = 'GridSize.pl';
-my $OptionScript     = 'Options.pl';
+# These were set by the shared Config.pl script
+our %Remaining;         # Remaining arguments after processed by $Config.pl
+our $DryRun;
+our $MakefileDef;
+our $MakefileConf;
+our $DIR;
+our $Installed;
+our $Show;
+our $Help;
+our $WARNING;
+our $ERROR;
 
-# Default precision for installation
-my $DefaultPrecision = 'double';
+&print_help if $Help;
 
-# Warning and error messages
-my $WARNING = "!!! SetSWMF_WARNING:";
-my $ERROR   = "!!! SetSWMF_ERROR:";
+my $ValidComp    = '[A-Z][A-Z]';      # Pattern to match component ID-s
+my $ConfigScript = 'Config.pl';
 
-# Global variables for the settings
-my $Installed;             # true if SWMF is installed ($MakefileConf exists)
-my $OS='unknown';          # operating system in $MakefileDef
-my $DIR='unknown';         # main directory for SWMF in $MakefileDef
-my $Compiler='unknown';    # Non default F90 compiler in $MakefileConf
-my $MpiVersion='';         # Non default MPI version for mpif90.h
-my $Precision='unknown';   # Precision set in $MakefileConf
-my @Version;               # Component versions selected in $MakefileDef
-@Version = ('unknown');
+my @Version = ('unknown'); # Component versions selected in $MakefileDef
 my %Version;               # Hash table to get version for a component
 
 # Obtain current settings
 &get_settings;
 
-# Default values for the various actions
-my $Install;
-my $ReInstall;
-my $Show;
-my $ShowLong;
 my $ListVersions;
-my $NewPrecision;
-my $DryRun;
+my $ShowShort;
 my @NewVersion;
 my $GridSize;
 my $Options;
-my $Uninstall;
-my $IsCompilerSet;
-my $Quiet;
-my $Debug;
 
 # Set actions based on the switches
-my @switch = @ARGV;
-foreach (@switch){
-    if(/^-c=(.*)/)            {$Compiler=$1; $IsCompilerSet=1;  next};
-    if(/^-m=(.*)/)            {$MpiVersion=$1;                  next};
-    if(/^-d(ry)?(run)?$/)     {$DryRun=1;                       next};
-    if(/^-h(elp)?$/i)         {&print_help};
-    if(/^-p=(single|double)$/){$NewPrecision=$1;                next};
-    if(/^-i(nstall)?$/)       {$Install=1;$ReInstall=/-install/;next};
+foreach (@Arguments){
     if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
-    if(/^-s(how)?$/)          {$Show=1; $ShowLong=/show/;       next};
-    if(/^-q(uiet)?$/)         {$Quiet=1;                        next};
-    if(/^-D(ebug)?$/)         {$Debug=1;                        next};
+    if(/^-s$/)                {$ShowShort=1;                    next};
     if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
-    if(/^-uninstall$/)        {$Uninstall=1;                    next};
     if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
     if(/^-o=(.*)/)            {$Options.=",$1";                 next};
 
-    print "$WARNING Unknown switch: $_\n";
+    print "$WARNING Unknown switch: $_\n" if $Remaining{$_};
 }
 
 # Make sure that all the $Version/$MakefileDef files are correct
 &set_version_makefile_comp if $Installed;
-
-if($Uninstall){
-    if(not $Installed){
-	die "$ERROR SWMF is not installed.\n";
-    }else{
-	&shell_command("make distclean");
-	exit 0;
-    }
-}
-
-# Execute the actions in the appropriate order
-&install_swmf if $Install;
 
 die "$ERROR SWMF is not installed.\n" unless $Installed;
 
@@ -96,20 +60,19 @@ if($ListVersions){
     exit 0;
 }
 
-&set_precision;
-
 &set_versions if @NewVersion;
 
 &set_grid_size if $GridSize;
 
 &set_options if $Options;
 
-if($Show){
+if($Show or $ShowShort){
     &get_settings;
     &show_settings;
 }
 
 exit 0;
+
 ##############################################################################
 
 sub list_versions{
@@ -160,12 +123,9 @@ sub list_versions{
 ##############################################################################
 sub get_settings{
 
-    $Installed = -e $MakefileConf;
-
     return if not $Installed;
 
     # Set defaults/initial values
-    $Precision   = 'single';
     @Version = ();
 
     # Read information from $MakefileDef
@@ -173,26 +133,12 @@ sub get_settings{
 	or die "$ERROR could not open $MakefileDef\n";
 
     while(<MAKEFILE>){
-	$OS  = $1 if /^\s*OS\s*=\s*(\w+)/;
-	$DIR = $1 if /^\s*SWMF_ROOT\s*=\s*(\S+)/;
 	if(/^\s*([A-Z][A-Z])_VERSION\s*=\s*(\w+)/){
 	    # Store version in both the array and the hash table
 	    push(@Version, "$1/$2");
 	    $Version{$1}=$2;
 	}
     }
-    close(MAKEFILE);
-
-    # Read information from $MakefileConf
-    open(MAKEFILE, $MakefileConf)
-	or die "$ERROR could not open $MakefileConf\n";
-
-    while(<MAKEFILE>){
-	$Compiler = $1 if /^\s*COMPILE.f90\s*=\s*(\S+)/;
-	$Precision = 'double' if 
-	    /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64|\-\-dbl|\-qautodbl=dbl4)/;
-    }
-
     close(MAKEFILE);
 }
 
@@ -202,140 +148,32 @@ sub show_settings{
 
     die "SWMF is not installed\n" unless $Installed;
 
-    print "\n";
-    print "The SWMF is installed in directory $DIR.\n";
-    print "The installation is for the $OS operating system.\n";
-    print "The selected F90 compiler is $Compiler.\n";
-    print "The default precision for reals is $Precision precision.\n";
-    print "The selected component versions and grid sizes are:\n";
+    print "The selected component versions and settings are:\n";
     my $Comp;
     foreach $Comp (sort keys %Version){
-	if($ShowLong){
+	if($Show){
 	    print "\n$Comp/$Version{$Comp}";
 	}else{
 	    printf "%-30s","\t$Comp/$Version{$Comp}";
 	}
-	if(-x "$Comp/$Version{$Comp}/$GridSizeScript"){
-	    if($ShowLong){
-		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript -s`;
-		print ":\n$Grid" if $Grid;
-		print `cd $Comp/$Version{$Comp}; ./$OptionScript -s`
-		    if -x "$Comp/$Version{$Comp}/$OptionScript";
+	if(-x "$Comp/$Version{$Comp}/$ConfigScript"){
+	    if($Show){
+		print ":\n";
+		print `cd $Comp/$Version{$Comp}; ./$ConfigScript -s`;
 	    }else{
-		my $Grid = `cd $Comp/$Version{$Comp}; ./$GridSizeScript`;
-		$Grid =~ s/$GridSizeScript(\s*-g=)?//;
+		my $Grid = `cd $Comp/$Version{$Comp}; ./$ConfigScript -g`;
+		chop $Grid; $Grid =~ s/.*=//;
 		print "grid: $Grid" if $Grid;
+	        print "\n";
 	    }
 	}else{
 	    print "\n";
 	}
     }
     print "\n";
-
-
 }
 
 ##############################################################################
-
-sub install_swmf{
-
-    if($Installed){
-	print "SWMF is already installed.\n";
-	return unless $ReInstall; 
-	print "Reinstalling SWMF...\n";
-    }
-
-    # Obtain $OS and $DIR
-    $OS  = `uname`    or die "$ERROR Could not obtain OS\n";
-    chomp $OS;
-    $DIR = `/bin/pwd` or die "$ERROR Could not obtain DIR\n";
-    chomp $DIR;
-
-    print "Creating $MakefileDef with OS=$OS, SWMF_ROOT=$DIR\n";
-    if(not $DryRun){
-	open(MAKEFILE,">$MakefileDef")
-	    or die "$ERROR Could not open $MakefileDef for writing\n";
-
-	print MAKEFILE "OS = $OS\nSWMF_ROOT = $DIR\n";
-	close(MAKEFILE);
-    }
-
-    &shell_command("cat $MakefileDefOrig >> $MakefileDef");
-
-    # Create $MakefileConf
-    my $makefile = $MakefileConfOrig.$OS;
-    $makefile .= $Compiler if $IsCompilerSet;
-    die("$ERROR $makefile does not exist.") unless -e $makefile;
-    &shell_command("cp $makefile $MakefileConf");
-
-    # Read version and other info from main Makefile.def
-    &get_settings;
-
-    # Make sure that all the $Version/$MakefileDef files are correct
-    &set_version_makefile_comp;
-
-    # Initialize CON and the components
-    my $command = "make install";
-    $command .= " COMPILER='$Compiler'" if $IsCompilerSet;
-    $command .= " MPIVERSION='$MpiVersion'" if $MpiVersion;
-    &shell_command($command);
-
-    # Set initial precision for reals
-    $NewPrecision = $DefaultPrecision unless $NewPrecision;
-    &set_precision("init");
-
-    # Now SWMF is installed
-    $Installed = 1 unless $DryRun;
-}
-
-##############################################################################
-
-sub set_precision{
-
-    # Set the precision for reals
-    # If called with a true argument, initial setting is done, otherwise
-    # an existing setting is changed
-
-    my $init = $_[0];
-
-    # Return if there is nothing to do
-    return unless $init or ($NewPrecision and $NewPrecision ne $Precision);
-
-    # Precision will be NewPrecision after changes
-    $Precision = $NewPrecision;
-
-    # clean the distribution unless initial installation is done
-    &shell_command("make clean") unless $init;
-
-    print "Setting PRECISION variable to $Precision precision in ".
-	"$MakefileConf\n";
-    if(not $DryRun){
-	@ARGV = ($MakefileConf);
-	while(<>){
-	    if($OS eq "OSF1"){
-		# Comment out line if in conflict with new precision
-                $_="#$_" if /^\s*PRECISION\s*=\s*\-real_size\s+64/ and $Precision eq 'single'
-                    or      /^\s*PRECISION\s*=\s*\-real_size\s+32/ and $Precision eq 'double';
-
-                # Uncomment line if agrees with new precision
-                s/#// if /^\s*#\s*PRECISION\s*=\s*\-real_size\s+64/ and $Precision eq 'double'
-                    or   /^\s*#\s*PRECISION\s*=\s*\-real_size\s+32/ and $Precision eq 'single';
-
-	    }else{
-		# Comment out line if in conflict with new precision
-		$_="#$_" if /^\s*PRECISION\s*=\s*\-/ and $Precision eq 'single'
-		    or      /^\s*PRECISION\s*=\s*$/  and $Precision eq 'double';
-		# Uncomment line if agrees with new precision
-		s/#// if /^\s*#\s*PRECISION\s*=\s*\-/ and $Precision eq 'double'
-		    or   /^\s*#\s*PRECISION\s*=\s*$/  and $Precision eq 'single';
-	    }
-	    print;
-	}
-    }
-}
-
-##############################################################################
-
 sub set_versions{
 
     # Check if there is any change and whether the version directory exists
@@ -426,12 +264,8 @@ sub set_grid_size{
 	die "$ERROR -g=..$Comp:.. version is not known for this component\n"
 	    unless $Version{$Comp};
 
-	my $Script = "$Comp/$Version{$Comp}/$GridSizeScript";
-	die "$ERROR -g=..$Comp:.. no executable $Script was found\n"
-	    unless -x $Script;
-
 	&shell_command("cd $Comp/$Version{$Comp}; ".
-		       "./$GridSizeScript -g=$GridSize{$Comp}");
+		       "./$ConfigScript -g=$GridSize{$Comp}");
     }
 }
 
@@ -459,12 +293,8 @@ sub set_options{
 	die "$ERROR -o=..$Comp:.. version is not known for this component\n"
 	    unless $Version{$Comp};
 
-	my $Script = "$Comp/$Version{$Comp}/$OptionScript";
-	die "$ERROR -o=..$Comp:.. no executable $Script was found\n"
-	    unless -x $Script;
-
 	&shell_command("cd $Comp/$Version{$Comp}; ".
-		       "./$OptionScript -$Options{$Comp}");
+		       "./$ConfigScript -$Options{$Comp}");
     }
 }
 
@@ -473,9 +303,6 @@ sub set_options{
 sub set_version_makefile_comp{
 
     # Set $MakefileDef (if it exists) in all component versions
-
-    # Only echo shell commands in debug mode
-    my $QuietOrig = $Quiet; $Quiet = not $Debug;
 
     # Collect all $MakefileDef files in all component versions
     my @File;
@@ -486,28 +313,11 @@ sub set_version_makefile_comp{
 	# Set the version based on the file name
 	$File =~ m|^([A-Z][A-Z]/[^/]+)|;
 	my $Version = $1;
-	# Save original file if not yet saved
-	&shell_command("mv $File $Version/$MakefileDefCvs")
-	    unless -f "$Version/$MakefileDefCvs";
 	# Put the proper include command into $MakefileDef and $MakefileConf
 	&shell_command("echo include $DIR/$MakefileDef > $File");
 	&shell_command("echo include $DIR/$MakefileConf > ".
 		       "$Version/$MakefileConf");
     }
-    $Quiet = $QuietOrig;
-}
-
-##############################################################################
-
-sub shell_command{
-
-    my $command = join(' ',@_);
-    print "$command\n" unless $Quiet;
-
-    return if $DryRun;
-
-    system($command)
-	and die "$ERROR Could not execute command=$command\n";
 }
 
 ##############################################################################
@@ -529,27 +339,7 @@ sub print_help{
 
     print 
 #BOC
-"SetSWMF.pl can be used for installing and setting various options for SWMF.
-This script edits the appropriate Makefile-s, copies files and executes 
-shell commands. The script can also show the current settings.
-This script will also be used by the GUI to interact with SWMF.
-
-Usage: SetSWMF.pl [-h] [-q] [-D] [-d] [-l] [-s]
-                  [-i[nstall] [-c=COMPILER] [-m=MPIVERSION]]
-                  [-p=PRECISION] 
-                  [-v=VERSION[,VERSION2,...] 
-                  [-g=ID:GRIDSIZE[,ID:GRIDSIZE,...]
-                  [-o=ID:OPTIONS[,ID:OPTIONS,...]
-                  [-uninstall]
-
-Options:
-
--c=COMPILER    copy Makefile.conf for a non-default F90 compiler COMPILER
-               during installation
-
--d  -dry       dry run (do not modify anything, just show actions)
-
--D  -Debug     debug information shown
+"Extra options for SWMF/config.pl:
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
@@ -559,25 +349,7 @@ Options:
                This flag can occur multiple times and/or options for
                multiple components can be given in a comma separated list.
 
--h  -help      show this help message
-
--i  -install   install SWMF (create Makefile.conf, Makefile.def, make install)
-               The short form returns with a warning if Makefile.conf 
-               already exists.
-               The long form -install redoes the installation in any case.
-
 -l  -list      List available component versions
-
--m=MPIVERSION  copy mpif90_OSMPIVERSION into mpif90.h during installation
-
--p=PRECISION   set precision (in Makefile.conf, copy mpif90.h and make clean)
-               Possible values are 'single' and 'double'.
-
--q  -quiet     quiet execution
-
--s  -show      show current settings. The long form -show gives more details.
-
--uninstall     uninstall SWMF (make distclean)
 
 -v=VERSION     select component version VERSION. This flag can occur 
                multiple times and/or multiple versions can be given
@@ -590,49 +362,29 @@ Options:
 
 Examples of use:
 
-Show current settings: 
-
-    SetSWMF.pl -s
-
-Show current settings with more details: 
-
-    SetSWMF.pl -show
-
-Install SWMF with the ifort compiler and Altix MPI and select single precision:
-
-    SetSWMF.pl -i -c=ifort -m=Altix -p=single
-
-Reinstall SWMF with new compiler:
-
-    SetSWMF.pl -install -c=pgf90
-
-Uninstall SWMF (if this fails, run SetSWMF.pl -install first):
-
-    SetSWMF.pl -uninstall
-
 Select the empty version for all components except GM/BATSRUS:
 
-    SetSWMF.pl -v=Empty,GM/BATSRUS
+    config.pl -v=Empty,GM/BATSRUS
 
 Select IH/BATSRUS, IM/RCM2 and UA/GITM2 component versions:
 
-    SetSWMF.pl -v=IH/BATSRUS -v=IM/RCM2,UA/GITM2
+    config.pl -v=IH/BATSRUS -v=IM/RCM2,UA/GITM2
 
 Set the grid size for GM and IH:
 
-    SetSWMF.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
+    config.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
 
-Show the currently set for the GM and SC component:
+Show the currently set options for the GM and SC component:
 
-    SetSWMF.pl -o=GM:show,SC:show
+    config.pl -o=GM:show,SC:show
 
 Show the available user modules and equations for GM and IH
 
-    SetSWMF.pl -o=GM:equation,usermodule -o=IH:equation,usermodule
+    config.pl -o=GM:equation,usermodule -o=IH:equation,usermodule
 
 Set equation and user module for GM:
 
-    SetSWMF.pl -o=GM:e=Mhd,u=Default"
+    config.pl -o=GM:e=Mhd,u=Default"
 #EOC
     ,"\n\n";
     exit 0;
