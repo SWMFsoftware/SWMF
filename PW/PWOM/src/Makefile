@@ -1,5 +1,6 @@
 include ../Makefile.def
 include ../Makefile.conf
+include Makefile.planet
 include Makefile.DEPEND
 include Makefile.RULES
 
