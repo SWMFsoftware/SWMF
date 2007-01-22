@@ -332,7 +332,7 @@ tags:	ENV_CHECK
 IH/BATSRUS/src/Makefile:
 	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
-	cd IH/BATSRUS/src; rm -f main.f90 stand_alone*.f90
+	cd IH/BATSRUS/src; rm -f main.f90
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 \
@@ -378,7 +378,7 @@ SC/BATSRUS/src/Makefile:
 	cd SC/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
 		SC_wrapper.f90 SC_get_for_sp.f90
-	cd SC/BATSRUS/src; rm -f main.f90 stand_alone*.f90
+	cd SC/BATSRUS/src; rm -f main.f90
 
 # rename SC source files to avoid name conflicts
 SC_SRC = src/*.f90 src/*.h srcInterface/*.f90 srcUser/*.f90
