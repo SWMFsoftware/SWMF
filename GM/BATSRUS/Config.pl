@@ -1,6 +1,8 @@
 #!/usr/bin/perl -i
 use strict;
 
+our $Component = "GM";
+our $Code = "BATSRUS";
 our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments = @ARGV;
 
