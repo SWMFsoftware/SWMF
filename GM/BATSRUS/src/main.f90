@@ -1,9 +1,4 @@
 !^CFG COPYRIGHT UM
-!============================================================
-! BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme |
-! D. De Zeeuw, C. Groth, H. Marshall, A. Ridley, G. Toth    |
-! University of Mighigan                                    |
-!============================================================
 program BATSRUS
 
   use ModKind
@@ -45,7 +40,8 @@ program BATSRUS
   ! Initialize some basic variables for the stand alone code
   !/
   IsStandAlone      = .true.
-  call stand_alone
+  NameThisComp      = 'GM'
+
   !\
   ! Default plot and restart directories depend on NameThisComp
   !/
