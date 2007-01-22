@@ -55,9 +55,6 @@ help:
 	@echo '    dist      (create source distribution tar file)'
 
 install: src/ModSize.f90
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cp -f src/stand_alone_${STANDALONE}.f90 src/stand_alone.f90;\
-	fi);
 	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
 		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
 	else \
