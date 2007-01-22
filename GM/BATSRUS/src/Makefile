@@ -214,15 +214,8 @@ ${MY_LIB}: ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
 
-#
-# Stand alone executable
-#
-
-stand_alone.f90:
-	cp stand_alone_gm.f90 stand_alone.f90
-
 # Object files not included into the library
-OBJECTS_EXE = main.o stand_alone.o
+OBJECTS_EXE = main.o
 
 # Other requireed libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
@@ -263,6 +256,5 @@ distclean: clean
 	rm -f ModSize.f90 ModUser.f90 ModEquation.f90
 	rm -f ModAdvance.f90 ModCT.f90 ModGeometry.f90 ModImplicit.f90 \
 		ModNodes.f90 ModRaytrace.f90
-	rm -f stand_alone.f90
 
 # keep this line
