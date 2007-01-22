@@ -1749,14 +1749,17 @@ contains
     ! Default coordinate systems
     select case(NameThisComp)
     case('IH')
-       TypeCoordSystem = 'HGI'
-       UseRotatingFrame     = .false.
+       TypeCoordSystem   = 'HGI'
+       UseRotatingFrame  = .false.
+       UseRotatingBc     = .true.
     case('SC')
-       TypeCoordSystem = 'HGR'
-       UseRotatingFrame     = .true.
+       TypeCoordSystem   = 'HGR'
+       UseRotatingFrame  = .true.
+       UseRotatingBc     = .false.
     case('GM')
-       TypeCoordSystem = 'GSM'
-       UseRotatingFrame     = .false.
+       TypeCoordSystem   = 'GSM'
+       UseRotatingFrame  = .false.
+       UseRotatingBc     = .true.
     end select
 
     ! Do not update B0 for SC or IH by default
