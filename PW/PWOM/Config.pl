@@ -6,6 +6,14 @@ our $Code            = 'PWOM';
 our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments       = @ARGV;
 
+# Planet variables
+my $MakefilePlanet = "Makefile.planet";
+my $Planet;
+my $NewPlanet;
+
+# Make sure that Makefile.planet exists
+`touch $MakefilePlanet`;
+
 my $config     = "share/Scripts/Config.pl";
 if(-f $config){
     require $config;
@@ -25,14 +33,7 @@ our $Install;
 
 &print_help if $Help;
 
-# Planet variables
-my $MakefilePlanet = "Makefile.planet";
-my $Planet;
-my $NewPlanet;
-
-&get_settings;
-
-$NewPlanet = "Earth" if $Install; # Default planet
+$NewPlanet = "Earth" if $Install;
 
 foreach (@Arguments){
     if(/^-saturn$/i)          {$NewPlanet="Saturn";            next};
@@ -41,6 +42,8 @@ foreach (@Arguments){
 
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
+
+&get_settings;
 
 &set_planet if $NewPlanet and $NewPlanet ne $Planet;
 
@@ -62,8 +65,8 @@ sub get_settings{
     }
     close FILE;
 
-    die "$ERROR could not find PLANET name in $MakefilePlanet\n" 
-	unless $Planet;
+    #die "$ERROR could not find PLANET name in $MakefilePlanet\n" 
+    #	unless $Planet;
 }
 
 #############################################################################
