@@ -140,7 +140,7 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make distclean");
-	&shell_command("rm -f $MakefileDef $MakefileConf ".
+	&shell_command("rm -f Makefile.def Makefile.conf ".
 		       "src*/$MakefileDepend src*/$MakefileRules");
 	exit 0;
     }
