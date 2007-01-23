@@ -20,6 +20,9 @@ module ModPWOM
 
   integer :: nLine
 
+  ! The number of lines on each processor and on the processors with lower rank
+  integer, allocatable :: nLine_P(:), nLineBefore_P(:)
+
   ! ionosphere variables
   integer :: nTheta = -1, nPhi = -1
   real, dimension(:,:), allocatable :: &
