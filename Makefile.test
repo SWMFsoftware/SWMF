@@ -55,7 +55,7 @@ test_pw:
 	make test_pw_check
 
 test_pw_compile:
-	SetSWMF.pl -v=Empty,PW/PWOM -o=PW:Earth
+	Config.pl -v=Empty,PW/PWOM -o=PW:Earth
 	make SWMF
 
 test_pw_rundir:
@@ -93,8 +93,8 @@ test1:
 	make test1_check
 
 test1_compile:
-	SetSWMF.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	SetSWMF.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
+	Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
+	Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
 	make SWMF
 
 test1_rundir:
@@ -146,7 +146,7 @@ test_esmf:
 	make test_esmf_check
 
 test_esmf_compile:
-	SetSWMF.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+	Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
 	make ESMF_SWMF
 
 test_esmf_rundir:
