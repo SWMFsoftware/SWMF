@@ -325,15 +325,17 @@ sub set_version_makefile_comp{
 #!QUOTE: \clearpage
 #BOP
 #!QUOTE: \section{The SMWF Scripts}
-#!QUOTE: \subsection{Installation and Configuration with SetSWMF.pl and Configure.pl}
-#!ROUTINE: SetSWMF.pl - (un)installation and configuration of SWMF
+#!QUOTE: \subsection{Installation and Configuration with Config.pl and Configure.pl}
+#!ROUTINE: Config.pl - (un)installation and configuration of SWMF
 #!DESCRIPTION:
-# The SetSWMF.pl provides a single uniform interface towards 
+# The Config.pl provides a single uniform interface towards 
 # installation, configuration and uninstallation.
 #
 #!REVISION HISTORY:
 # 10/29/2003 G. Toth - initial version
 #                      several extensions and modifications
+# 01/20/2007           renamed from SetSWMF.pl to Config.pl and the
+#                      core of the script is moved into share/Scripts/Config.pl
 #EOP
 sub print_help{
 
