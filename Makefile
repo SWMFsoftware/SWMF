@@ -233,8 +233,10 @@ clean: ENV_CHECK
 distclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+	for i in `ls -d [A-Z][A-Z]/Empty/`; \
 		do (cd $$i; make distclean); done
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
+		do (cd $$i; ./Config.pl -uninstall); done
 	cd ESMF/ESMF_SWMF;	make distclean
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -316,7 +318,7 @@ mprun: ENV_CHECK SWMF run
 	cd run; mprun -np ${NP} ./SWMF.exe
 
 nompirun: ENV_CHECK SWMF run
-	cd run; ./SWMF.exe
+	cd ${RUNDIR}; ./SWMF.exe
 
 ETAGS = etags
 
