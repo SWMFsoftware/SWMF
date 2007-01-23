@@ -186,11 +186,11 @@ contains
          ! Put variables into GM
          !/
          if(is_proc(GM_))then
-            call GM_put_from_pw(Buffer_IIV, nTotalLine, nVar, &
-                 NameVar_V, iBlock)
-            if(DoTest) &
-                 write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
-                 iProcWorld,Buffer_IIV(1,1,:)
+            !call GM_put_from_pw(Buffer_IIV, nTotalLine, nVar, &
+            !     NameVar_V, iBlock)
+            !if(DoTest) &
+            !     write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
+            !     iProcWorld,Buffer_IIV(1,1,:)
          end if
 
       enddo
