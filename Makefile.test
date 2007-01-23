@@ -123,7 +123,7 @@ test1_check:
 		${TESTDIR}/GM/IO2/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-15 \
 		${TESTDIR}/IE/ionosphere/it000321_104501_000_b1.idl \
 		output/test1/IE_it000321_104501_000_b1.idl \
 		> test1_ie.diff)
