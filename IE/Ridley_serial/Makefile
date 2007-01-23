@@ -1,11 +1,6 @@
 include Makefile.def
 
 install: src/ModSize.f90
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
 	touch src/Makefile.DEPEND
 
 src/ModSize.f90:
@@ -29,7 +24,7 @@ clean:
 distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
 	cd src; make distclean
-	rm -f Makefile.conf Makefile.def *~
+	rm -f *~
 
 test:
 	echo "IE/Ridley_serial test is incomplete" > notest.diff
