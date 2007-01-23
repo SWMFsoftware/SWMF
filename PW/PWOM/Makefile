@@ -18,11 +18,6 @@ bin:
 	mkdir bin
 
 install: bin
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 PWOM:
@@ -129,4 +124,4 @@ distclean:
 	cd src; make distclean
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make distclean
-	rm -rf Makefile.conf Makefile.def Makefile.planet *~ bin
+	rm -rf Makefile.planet *~ bin

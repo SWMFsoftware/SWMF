@@ -66,5 +66,3 @@ ${EXE}: ${EXEOBJECTS}
 
 distclean: clean
 	rm -f PLANET *_planet.f ModCommonPlanet.f90 Makefile.planet 
-	rm -f Makefile.DEPEND Makefile.RULES
-
