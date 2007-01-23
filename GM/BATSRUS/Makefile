@@ -55,11 +55,6 @@ help:
 	@echo '    dist      (create source distribution tar file)'
 
 install: src/ModSize.f90
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	./Config.pl -u=Default -e=Mhd
 	cd src; make STATIC
@@ -180,7 +175,7 @@ distclean:
 	cd Doc/Tex; make clean ${CLEAN1} ${CLEAN2}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
-	rm -f Makefile.conf Makefile.def *~
+	rm -f *~
 
 dist:	distclean
 	@echo ' '

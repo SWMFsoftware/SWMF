@@ -2,11 +2,6 @@ include ../../Makefile.def
 
 install:
 	touch src/Makefile.DEPEND
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
 
 LIB:
 	cd src; make LIB
@@ -33,11 +28,9 @@ rundirSA:
 	cd ${RUNDIR}/IM; touch rcm.printout rcm.index
 
 clean:	install
-	@touch src/Makefile.RULES
 	cd src; make clean
 	cd src/claw; make clean
 
 distclean: install
 	cd src; make distclean
 	cd src/claw; make distclean
-	rm -f Makefile.def Makefile.conf

@@ -22,6 +22,5 @@ distclean: install
 	@(if [ -r "Makefile.conf" ]; then \
 		cd src; make distclean; \
 		cd ../srcInterface; make distclean; \
-		rm -f ../Makefile.conf; \
 	fi)
-	rm -f Makefile.def *~
+	rm -f *~

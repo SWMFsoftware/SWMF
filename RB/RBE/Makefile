@@ -59,7 +59,7 @@ clean:
 
 distclean: clean
 	@cd src; make distclean
-	rm -f Makefile.conf Makefile.def *~
+	rm -f *~
 
 #
 #       Create run directories

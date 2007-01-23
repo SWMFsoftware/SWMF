@@ -13,7 +13,6 @@ check_src:
 install:
 	@(if([ -f src/Makefile ]); then \
 		touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND; \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
 	fi)
 
@@ -46,7 +45,4 @@ distclean: clean
 		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
-	rm -rf src srcUser
-	rm -f Makefile.* PARAM.XML RenameList.pl GridSize.pl Options.pl *~
-
-veryclean: distclean
+	rm -rf src srcUser PARAM.XML RenameList.pl Config.pl *~
