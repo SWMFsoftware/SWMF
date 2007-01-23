@@ -226,10 +226,9 @@ subroutine MH_set_parameters(TypeAction)
 
      select case(NameCommand)
      case("#COMPONENT")
-        call read_var('NameComp',NameCompRead)
-        if(NameCompRead /= NameThisComp)&
-             call stop_mpi(NameSub//' ERROR: BATSRUS is running as component '&
-             //NameThisComp//' and not as '//NameCompRead)
+        call read_var('NameComp', NameCompRead)
+        if(NameThisComp /= NameCompRead) call set_defaults
+        NameThisComp = NameCompRead
      case("#DESCRIPTION")
         call check_stand_alone
      case("#BEGIN_COMP","#END_COMP")
@@ -1740,6 +1739,11 @@ contains
   !===========================================================================
 
   subroutine set_defaults
+
+    !\
+    ! Default plot and restart directories depend on NameThisComp
+    !/
+    NamePlotDir(1:2) = NameThisComp
 
     ! Set defaults for restart files
     call init_mod_restart_file
