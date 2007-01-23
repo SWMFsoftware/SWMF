@@ -180,9 +180,11 @@ following steps:
       (i.e. {\tt SP/FLAMPA/PARAM.XML}) to describe all the input commands.
       List this file in {\tt doc/Tex/Makefile} to be included in the manual.
 
-\item Provide a {\tt Gridsize.pl} script in the component version directory
-      (i.e. {\tt SP/FLAMPA/GridSize.pl})
-      to show and change the grid size of the component.
+\item Provide a {\tt Config.pl} script in the component version directory
+      (i.e. {\tt SP/FLAMPA/Config.pl})
+      to facilitate installation, configuration, and uninstallation.
+      The script can use the share/Scripts/Config.pl for all the common
+      functionalities.
 
 \item Add the new component version in the main {\tt Makefile} and
       in {\tt CON/Makefile.def}.
