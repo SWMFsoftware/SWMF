@@ -7,7 +7,8 @@ module ModRestartFile
        restart, save_restart_file, write_prefix, iUnitOut
   use ModMain,       ONLY: GlobalBlk, Global_Block_Number, nI, nJ, nK, Gcn, &
        nBlock, UnusedBlk, ProcTest, BlkTest, iTest, jTest, kTest, &
-       n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal
+       n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
+       NameThisComp
   use ModVarIndexes, ONLY: nVar, DefaultState_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: dx_BLK, dy_BLK, dz_BLK, xyzStart_BLK
@@ -29,8 +30,8 @@ module ModRestartFile
   public init_mod_restart_file
 
   ! Directories for input and output restart files
-  character(len=100), public :: NameRestartInDir ="restartIN/"
-  character(len=100), public :: NameRestartOutDir="restartOUT/"
+  character(len=100), public :: NameRestartInDir ="GM/restartIN/"
+  character(len=100), public :: NameRestartOutDir="GM/restartOUT/"
 
   ! Local variables
   character(len=*), parameter :: StringRestartExt=".rst"
@@ -65,7 +66,7 @@ contains
   subroutine init_mod_restart_file
     use ModMPI, ONLY: MPI_HEADER_FILE
 
-    if(MPI_HEADER_FILE == 'mpif90_LinuxAltix.h')then
+    if(MPI_HEADER_FILE == 'mpif90_Linux_Altix.h')then
        ! Columbia (and other Altix machines) have restrictions on the
        ! number of files
        TypeRestartOutFile = 'one'
@@ -80,6 +81,10 @@ contains
             'init_mod_restart_file: setting TypeRestartOutFile = ',&
             trim(TypeRestartOutFile)
     end if
+
+    NameRestartInDir(1:2)  = NameThisComp
+    NameRestartOutDir(1:2) = NameThisComp
+
 
   end subroutine init_mod_restart_file
 
