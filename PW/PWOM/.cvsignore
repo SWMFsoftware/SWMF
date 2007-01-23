@@ -1,3 +1,5 @@
 Makefile.conf
+Makefile.def
+Makefile.planet
 bin
 run
