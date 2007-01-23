@@ -3,17 +3,16 @@
 !^CMP FILE PW
 
 !BOP
-!MODULE: CON_couple_pw_gm - couple PW and GM components
+!MODULE: CON_couple_gm_pw - couple PW and GM components
 !
 !DESCRIPTION:
 ! Couple PW and GM components both ways.
 !
 !INTERFACE:
-module CON_couple_pw_gm
+module CON_couple_gm_pw
 
   !USES:
   use CON_coupler
-  use ModPWOM, only: nTotalLine,nSpecies
 
   implicit none
 
@@ -21,7 +20,8 @@ module CON_couple_pw_gm
 
   !PUBLIC MEMBER FUNCTIONS:
 
-  public :: couple_pw_gm_init ! initialize coupling
+  public :: couple_gm_pw_init ! initialize coupling
+  public :: couple_gm_pw      ! couple GM to PW
   public :: couple_pw_gm      ! couple PW to GM
 
   !REVISION HISTORY:
@@ -29,18 +29,18 @@ module CON_couple_pw_gm
   !EOP
 
   ! Communicator and logicals to simplify message passing and execution
-  integer, save :: iCommPwGm, iProc0Gm
+  integer, save :: iProc0Gm, iProc0Pw
   logical :: UseMe=.true., IsInitialized = .false.
 
   ! PW grid
-  !integer, save :: iSize, jSize, nCells_D(2)
+  integer, save :: nTotalLine
 
 contains
 
   !BOP =======================================================================
-  !IROUTINE: couple_pw_gm_init - initialize PW-GM couplings
+  !IROUTINE: couple_gm_pw_init - initialize PW-GM couplings
   !INTERFACE:
-  subroutine couple_pw_gm_init
+  subroutine couple_gm_pw_init
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s so that
@@ -51,13 +51,13 @@ contains
     IsInitialized = .true.
 
     iProc0Gm = i_proc0(GM_)
-    call set_router_comm(PW_,GM_,iCommPwGm,UseMe,iProc0Gm)
+    iProc0Pw = i_proc0(PW_)
 
-    ! This works for a NODE BASED regular PW grid only
-    !nCells_D = ncells_decomposition_d(PW_) + 1
-    !iSize=nCells_D(1); jSize=nCells_D(2)
+    UseMe = is_proc(GM_) .or. is_proc(PW_)
 
-  end subroutine couple_pw_gm_init
+    nTotalLine = Grid_C(PW_) % nCoord_D(2)
+
+  end subroutine couple_gm_pw_init
 
   !BOP =======================================================================
   !IROUTINE: couple_ie_pw - couple IE component to PW component
@@ -101,18 +101,14 @@ contains
 
       ! Variable to pass is potential
 
-      character (len=*), parameter, dimension(2) :: &
-           NameHem_B=(/'North','South'/)
-
       integer, parameter :: nVar = 8
-      integer, parameter :: South_ = 1, North_ = 2
 
       character (len=*), parameter, dimension(nVar) :: &
            NameVar_V=(/'CoLat    ','Longitude','Density1 ','Density2 ',&
            'Density3 ','Velocity1','Velocity2','Velocity3'/)
 
       ! Buffer for the potential on the 2D PW grid
-      real, dimension(:,:), allocatable :: Buffer_IIV
+      real, dimension(:,:), allocatable :: Buffer_VI
 
       ! MPI related variables
 
@@ -137,67 +133,60 @@ contains
 
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
       if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, PWi_iProc0=', &
-           iProcWorld,i_proc0(GM_),i_proc0(PW_)
+           iProcWorld,iProc0GM,iProc0Pw
 
       !\
       ! Allocate buffers both in GM and PW
       !/
-      allocate(Buffer_IIV(nTotalLine,nVar), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_IIV")
+      allocate(Buffer_VI(nVar, nTotalLine), stat=iError)
+      call check_allocate(iError,NameSubSub//": Buffer_VI")
 
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
 
-      do iBlock = South_, North_
+      !\
+      ! boundary density from PW
+      !/
 
-         !\
-         ! boundary density from PW
-         !/
+      if(is_proc(PW_))  &
+           call PW_get_for_gm(Buffer_VI, nVar, nTotalLine, &
+           NameVar_V, tSimulation)
 
-         if(is_proc(PW_))  &
-              call PW_get_for_gm(Buffer_IIV, nTotalLine, &
-              nVar, NameVar_V, NameHem_B(iBlock), tSimulation)
+      !\
+      ! Transfer variables from PW to GM
+      !/ 
+      nSize = nTotalLine*nVar
 
-         !\
-         ! Transfer variables from PW to GM
-         !/ 
+      if(iProc0Gm /= iProc0Pw)then
+         if(is_proc0(PW_)) &
+              call MPI_send(Buffer_VI,nSize,MPI_REAL,iProc0Pw,&
+              1,i_comm(),iError)
+         if(is_proc0(GM_)) &
+              call MPI_recv(Buffer_VI,nSize,MPI_REAL,iProc0Gm,&
+              1,i_comm(),iStatus_I,iError)
+      end if
+      if(DoTest)write(*,*)NameSubSub,', variables transferred',&
+           ', iProc:',iProcWorld
 
-         iProcFrom = pe_decomposition(PW_,iBlock)
-
-         nSize = nTotalLine*nVar
-
-         if(iProcFrom /= i_proc0(GM_))then
-            if(i_proc() == iProcFrom) &
-                 call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_Proc0(GM_),&
-                 1,i_comm(),iError)
-            if(is_proc0(GM_)) &
-                 call MPI_recv(Buffer_IIV,nSize,MPI_REAL,iProcFrom,&
-                 1,i_comm(),iStatus_I,iError)
-         end if
-
+      !\
+      ! Put variables into GM
+      !/
+      if(is_proc(GM_))then
          ! Broadcast variables inside GM
-         if(n_proc(GM_)>1 .and. is_proc(GM_)) &
-              call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(GM_),iError)
+         if(n_proc(GM_)>1) &
+              call MPI_bcast(Buffer_VI,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
-         if(DoTest)write(*,*)NameSubSub,', variables transferred',&
-              ', iProc:',iProcWorld
+         !call GM_put_from_pw(Buffer_VI, nTotalLine, nVar, &
+         !     NameVar_V, iBlock)
+         !if(DoTest) &
+         !     write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
+         !     iProcWorld,Buffer_VI(1,1,:)
+      end if
 
-         !\
-         ! Put variables into GM
-         !/
-         if(is_proc(GM_))then
-            !call GM_put_from_pw(Buffer_IIV, nTotalLine, nVar, &
-            !     NameVar_V, iBlock)
-            !if(DoTest) &
-            !     write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
-            !     iProcWorld,Buffer_IIV(1,1,:)
-         end if
-
-      enddo
       !\
       ! Deallocate buffer to save memory
       !/
-      deallocate(Buffer_IIV)
+      deallocate(Buffer_VI)
 
       if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
            ', iProc:',iProcWorld
@@ -208,5 +197,12 @@ contains
 
   end subroutine couple_pw_gm
 
-end module CON_couple_pw_gm
+  !==========================================================================
+  subroutine couple_gm_pw
+
+    call CON_stop('couple_gm_pw has not been implented yet')
+
+  end subroutine couple_gm_pw
+
+end module CON_couple_gm_pw
 
