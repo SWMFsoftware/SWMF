@@ -242,7 +242,6 @@ distclean: ENV_CHECK rmdir
 	cd doc/Tex;             make clean ${CLEAN1} ${CLEAN2}
 	@#^CMP END REMOVEDOCTEX
 	@#^CMP END DOC
-	rm -f Makefile.conf Makefile.def
 	@echo
 	@echo Distclean succeeded
 	@echo
@@ -355,7 +354,9 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 	cd IH/BATSRUS/srcInterface; \
 		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
-	cd IH/BATSRUS/; ./Config.pl -u=Heliosphere
+	cd IH/BATSRUS; \
+		perl -i -pe 's/GM/IH/' Config.pl; \
+		./Config.pl -u=Default -e=Mhd
 
 #^CMP END IH
 #^CMP IF SC BEGIN
@@ -389,7 +390,9 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl SC ${SC_SRC}; \
 		${SCRIPTDIR}/Rename.pl -w -r -common=SC ${SC_SRC}
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
-	cd SC/BATSRUS; ./Config.pl -e=MhdCorona -u=Heliosphere
+	cd SC/BATSRUS; \
+		perl -i -pe 's/GM/SC/' Config.pl; \
+		./Config.pl -install=c -u=Sc -e=MhdCorona
 
 #^CMP END SC
 
