@@ -37,9 +37,9 @@ subroutine GM_set_param(CompInfo, TypeAction)
      call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc,&
           Name=NameThisComp)
 
-     NamePlotDir      = NameThisComp//'/'//NamePlotDir
-     NameRestartInDir = NameThisComp//'/'//NameRestartInDir
-     NameRestartOutDir= NameThisComp//'/'//NameRestartOutDir
+     NamePlotDir(1:2)       = NameThisComp
+     NameRestartInDir(1:2)  = NameThisComp
+     NameRestartOutDir(1:2) = NameThisComp
   case('READ')
      call MH_set_parameters('READ')
   case('CHECK')
