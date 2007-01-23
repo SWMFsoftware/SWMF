@@ -22,7 +22,7 @@ Module ModMain
   logical             :: IsStandAlone = .false.
 
   ! In the SWMF the BATSRUS may run as GM, SC or IH component
-  character (len=2)   :: NameThisComp=''
+  character (len=2)   :: NameThisComp='GM'
 
   !\
   ! Precision of reals
