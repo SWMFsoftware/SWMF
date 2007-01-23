@@ -312,10 +312,10 @@ rundir: ENV_CHECK
 NP=2
 
 mpirun: ENV_CHECK SWMF run
-	cd run; mpirun -np ${NP} ./SWMF.exe
+	cd ${RUNDIR}; mpirun -np ${NP} ./SWMF.exe
 
 mprun: ENV_CHECK SWMF run
-	cd run; mprun -np ${NP} ./SWMF.exe
+	cd ${RUNDIR}; mprun -np ${NP} ./SWMF.exe
 
 nompirun: ENV_CHECK SWMF run
 	cd ${RUNDIR}; ./SWMF.exe
