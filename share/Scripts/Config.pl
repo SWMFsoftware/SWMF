@@ -64,6 +64,8 @@ our $MakefileConf     = 'Makefile.conf';
 our $MakefileConfOrig = 'share/build/Makefile.';
 our $MpiHeader        = 'share/Library/src/mpif90.h';
 our $MpiHeaderOrig    = 'share/include/mpif90_';
+our $MakefileRules    = 'Makefile.RULES';
+our $MakefileDepend   = 'Makefile.DEPEND';
 
 # These options are set here and provided to the calling script
 our $Help;                  # Print help message
@@ -138,6 +140,8 @@ if($Uninstall){
 	&shell_command("cd util; make distclean")
 	    if -d "util" and not $IsComponent;
 	&shell_command("make distclean");
+	&shell_command("rm -f $MakefileDef $MakefileConf ".
+		       "src*/$MakefileDepend src*/$MakefileRules");
 	exit 0;
     }
 }
@@ -221,10 +225,12 @@ sub show_settings_{
     }
 
     print "\n";
+    print "$Code is installed in directory $DIR\n";
+
     if($IsComponent){
-	print "$Code is installed in directory $DIR the $Component component.\n";
+	print "    as the $Component component.\n";
     }else{
-	print "$Code is installed in directory $DIR.\n";
+	print "    as a stand-alone code.\n";
     }
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
@@ -258,8 +264,8 @@ sub install_code_{
 	die "$ERROR_ $MakefileDefOrig is missing\n" unless
 	    -f $MakefileDefOrig;
 	&shell_command("echo OS=$OS > $MakefileDef");
-#	&shell_command("echo SWMF_ROOT=$DIR >> $MakefileDef");
 	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
+	&shell_command("echo COMPILER=$Compiler >> $MakefileDef");
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
 	&shell_command("cat $MakefileConfOrig$OS.$Compiler > $MakefileConf");
 	&shell_command("cat $MpiHeaderOrig${OS}_$MpiVersion.h > $MpiHeader");
@@ -267,6 +273,19 @@ sub install_code_{
 
     # Read info from main Makefile.def
     &get_settings_;
+
+    # Copy Makefile.RULES.${OS}.${COMPILER} into Makefile.RULES as needed
+    my $Src;
+    foreach $Src (glob "src*") {
+	my @Rules = glob("$Src/$MakefileRules\*");
+	next unless @Rules;
+	my $Rules = "$Src/$MakefileRules.$OS.$Compiler";
+	if(-f $Rules){
+	    &shell_command("cp $Rules $Src/$MakefileRules");
+	}else{
+	    &shell_command("touch $Src/$MakefileRules");
+	}
+    }
 
     # Set initial precision for reals
     $NewPrecision = $DefaultPrecision unless $NewPrecision;
