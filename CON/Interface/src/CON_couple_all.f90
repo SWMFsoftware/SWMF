@@ -19,6 +19,7 @@ module CON_couple_all
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
+  use CON_couple_gm_pw        !^CMP IF PW
   use CON_couple_gm_rb        !^CMP IF RB
   !^CMP END GM
   !^CMP IF IE BEGIN
@@ -55,10 +56,9 @@ contains
     !EOP
     !BOC
     !                                                     ^CMP IF GM BEGIN
-    if(use_comp(GM_).and.use_comp(IE_))then                    !^CMP IF IE
-       call couple_gm_ie_init                                  !^CMP IF IE
-    end if                                                     !^CMP IF IE
+    if(use_comp(GM_).and.use_comp(IE_))call couple_gm_ie_init  !^CMP IF IE
     if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
+    if(use_comp(GM_).and.use_comp(PW_))call couple_gm_pw_init  !^CMP IF PW
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
     !                                                     ^CMP END GM
