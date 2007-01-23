@@ -1,21 +1,29 @@
 subroutine PW_initialize
 
+  use ModMpi
   use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
   implicit none
 
   ! Temporary variables
   real:: ddt1, xxx
-  integer:: ns
+  integer:: ns, iPe, iError
   !---------------------------------------------------------------------------
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
   !***************************************************************************
-  if (iproc < mod(NTotalLine,nProc)) then
+  if (iProc < mod(NTotalLine,nProc)) then
      nLine=int(ceiling(real(nTotalLine)/real(nProc)))
   else
      nLine=int(floor(real(nTotalLine)/real(nProc)))
   endif
+
+  allocate(nLine_P(0:nProc-1), nLineBefore_P(0:nProc-1))
+  call MPI_allgather(nLine,1,MPI_INTEGER, nLine_P,1,MPI_INTEGER,iComm,iError)
+  nLineBefore_P(0) = 0
+  do iPe = 1, nProc - 1
+     nLineBefore_P(iPe) = sum(nLine_P(0:iPe-1))
+  end do
 
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
