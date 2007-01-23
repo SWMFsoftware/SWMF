@@ -10,7 +10,7 @@ module ModInitGridStorage
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
   type(DomainDecompositionType),private,save,target::&
-       GmGrid,IhGrid,UaGrid,IeGrid,ImGrid,RbGrid,SpGrid,ScGrid
+       GmGrid,IhGrid,UaGrid,IeGrid,ImGrid,PwGrid,RbGrid,SpGrid,ScGrid
 contains
   !BOP
   !REVISION HISTORY:
@@ -40,16 +40,18 @@ contains
        DD_I(GridID_)%Ptr=>IeGrid
     case(IM_)
        DD_I(GridID_)%Ptr=>ImGrid
-    case(RB_)
-       DD_I(GridID_)%Ptr=>RbGrid
-    case(UA_)
-       DD_I(GridID_)%Ptr=>UaGrid
     case(IH_)
        DD_I(GridID_)%Ptr=>IhGrid
+    case(PW_)
+       DD_I(GridID_)%Ptr=>PwGrid
+    case(RB_)
+       DD_I(GridID_)%Ptr=>RbGrid
     case(SP_)
        DD_I(GridID_)%Ptr=>SpGrid
     case(SC_)
        DD_I(GridID_)%Ptr=>ScGrid
+    case(UA_)
+       DD_I(GridID_)%Ptr=>UaGrid
     case default
        write(*,*)'ERROR in ModInitGridStorage: GridID = ',GridID_
        call CON_stop('ERRORin ModInitGridStorage: not implemented grid ID')
