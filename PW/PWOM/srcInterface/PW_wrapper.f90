@@ -4,8 +4,11 @@
 subroutine PW_set_param(CompInfo, TypeAction)
 
   use CON_comp_info
+  use CON_coupler
   use ModIoUnit, only: STDOUT_
-  use ModPWOM, only: iUnitOut, iProc, nProc, iComm, StringPrefix
+  use ModPWOM, only: iUnitOut, iProc, nProc, iComm, StringPrefix, &
+       nTotalLine, nAlt => nDim
+  use ModCommonVariables, only: Altd
 
   implicit none
 
@@ -14,6 +17,8 @@ subroutine PW_set_param(CompInfo, TypeAction)
   ! Arguments
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
   character (len=*), intent(in)     :: TypeAction ! What to do
+
+  integer :: i
   !-------------------------------------------------------------------------
   select case(TypeAction)
   case('VERSION')
@@ -45,7 +50,19 @@ subroutine PW_set_param(CompInfo, TypeAction)
      StringPrefix=''
 
   case('GRID')
-     ! Do nothing
+     ! We pretend to have an nRadius*nLine 2D grid, 
+     ! because it is unstructured in theta,phi
+     call set_grid_descriptor( &
+          PW_,                             &! component index
+          nDim=2,                          &! dimensionality
+          nRootBlock_D=(/1,nProc/),        &! distributed in the second dimension
+          nCell_D =(/ nAlt, nTotalLine /),          &! size of the grid
+          XyzMin_D=(/Altd(1), 1.0/),                &! min altitude and index
+          XyzMax_D=(/Altd(nAlt), real(nTotalLine)/),&! max altitude and index
+          Coord1_I = Altd(1:nAlt),                  &! altitudes
+          Coord2_I= (/ (real(i), i=1,nTotalLine) /),   &! indexes
+          TypeCoord='SMG')                           ! 
+
   case default
      call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
   end select
@@ -216,111 +233,67 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
 end subroutine PW_put_from_ie
 !==============================================================================
 
-subroutine PW_get_for_gm(Buffer_IIV, nFieldLine, nVar, Name_V, &
-     tSimulation)
+subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
 
-  use ModPWOM, only : icomm,errcode,nProc,&
+  use ModPWOM, only : iComm,nProc,&
                       FieldLineTheta,FieldLinePhi, &
-                      dOxyg,dHyd,dHel,uOxyg,uHyd,uHel,nLine,nDim
+                      dOxyg,dHyd,dHel,uOxyg,uHyd,uHel,nLine,nDim,&
+                      nLine_P, nLineBefore_P
+
+  use ModMpi
 
   implicit none
   character (len=*),parameter :: NameSub='PW_get_for_gm'
 
-  integer, intent(in)           :: nVar,nFieldLine
-  real, intent(out)             :: Buffer_IIV(nFieldLine,nVar)
+  integer, intent(in)           :: nVar, nFieldLine
+  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
   character (len=*),intent(in)  :: Name_V(nVar)
   real,             intent(in)  :: tSimulation
 
-  integer :: iVar,i
-  real    :: tSimulationTmp
+  integer :: iVar,i,iError
   real    :: SendBuffer(nLine,nVar)
-  integer :: iDisplacement_V(nProc),iRecieveCount_V(nProc),iSendCount
+  integer :: iSendCount
+
+  integer, save, allocatable :: iDisplacement_P(:), iRecieveCount_P(:)
   !--------------------------------------------------------------------------
-
-
-  ! Make sure that the most recent result is provided
-  tSimulationTmp = tSimulation
-  call PW_run(tSimulationTmp,tSimulation)
+  ! The sizes and displacements of MPI messages
+  if(.not.allocated(iRecieveCount_P)) then
+     allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))
+     iRecieveCount_P = nVar*nLine_P
+     iDisplacement_P = nVar*nLineBefore_P
+  end if
 
   ! Prepare buffer for sending on each proc
   do iVar=1,nVar
      select case (Name_V(iVar))
-     case('CoLat    ')
-        do i=1,nLine
-           SendBuffer(i,iVar)=FieldLineTheta(i)
-        enddo
-        
+     case('CoLat')
+        SendBuffer(iVar,1:nLine)=FieldLineTheta(1:nLine)
      case('Longitude')
-        do i=1,nLine
-           SendBuffer(i,iVar)=FieldLinePhi(i)
-        enddo
-        
-     case('Density1 ')
-        do i=1,nLine
-           SendBuffer(i,iVar)=dOxyg(nDim,i)
-        enddo
-        
-     case('Density2 ')
-        do i=1,nLine
-           SendBuffer(i,iVar)=dHyd(nDim,i)
-        enddo
-        
-     case('Density3 ')
-        do i=1,nLine
-           SendBuffer(i,iVar)=dHel(nDim,i)
-        enddo
-        
+        SendBuffer(iVar,1:nLine)=FieldLinePhi(1:nLine)
+     case('Density1')
+        SendBuffer(iVar,1:nLine)=dOxyg(nDim,1:nLine)
+     case('Density2')
+        SendBuffer(iVar,1:nLine)=dHyd(nDim,1:nLine)
+     case('Density3')
+        SendBuffer(iVar,1:nLine)=dHel(nDim,1:nLine)
      case('Velocity1')
-        do i=1,nLine
-           SendBuffer(i,iVar)=uOxyg(nDim,i)
-        enddo
-        
+        SendBuffer(iVar,1:nLine)=uOxyg(nDim,1:nLine)
      case('Velocity2')
-        do i=1,nLine
-           SendBuffer(i,iVar)=uHyd(nDim,i)
-        enddo
-        
+        SendBuffer(iVar,1:nLine)=uHyd(nDim,1:nLine)
      case('Velocity3')
-        do i=1,nLine
-           SendBuffer(i,iVar)=uHel(nDim,i)
-        enddo
-        
+        SendBuffer(iVar,1:nLine)=uHel(nDim,1:nLine)
+     case default
+        call CON_stop(NameSub//': unknown variable name='//Name_V(iVar))
      end select
-     
   enddo
 
-  ! The recieve buffer is Buffer_IIV allocated in CON_couple_pw_gm
-  
-  ! create the displacement array and recieve count array for MPI_GATHERV
-  do i=0,nProc-1
-     if (i .lt. mod(nFieldLine,nProc)) then
-        iDisplacement_V(i)=&
-             i*ceiling(real(nFieldLine)/real(nProc))+1
-        
-        iRecieveCount_V(i)=&
-             ceiling(real(nFieldLine)/real(nProc))
-     else
-        iDisplacement_V(i)=&
-             (mod(nFieldLine,nProc))*ceiling(real(nFieldLine)/real(nProc)) &
-             + ((i)-mod(nFieldLine,nProc))                        &
-             *floor(real(nFieldLine)/real(nProc))+1
-        
-        iDisplacement_V(i)=&
-             floor(real(nFieldLine)/real(nProc))
-     endif
-  enddo
-  iSendCount=nLine
-  
-  ! Gather all data to be passed on the root processor (0)
-  
-    do iVar=1,nVar
-       
-       call MPI_GATHERV(SendBuffer(1,iVar), iSendCount, mpi_real, &
-            Buffer_IIV(1,iVar), iRecieveCount_V,iDisplacement_V, MPI_REAL,&
-            0, icomm, errcode)
-    
-    enddo
-  
-  
+  ! The recieve buffer is Buffer_VI allocated in CON_couple_pw_gm
+  iSendCount=nVar*nLine
+
+
+  ! Gather all data to the root processor 
+  call MPI_GATHERV(SendBuffer, iSendCount, MPI_REAL, &
+       Buffer_VI, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
+       0, iComm, iError)
 
 end subroutine PW_get_for_gm
