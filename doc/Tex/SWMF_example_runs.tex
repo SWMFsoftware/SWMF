@@ -24,19 +24,19 @@ Select the SC/BATSRUS component version. When this is done the first time
 after installation, the SC/BATSRUS source code is created from the GM/BATSRUS
 source code, which takes a few minutes:
 \begin{verbatim}
-SetSWMF.pl -v=SC/BATSRUS -g=SC:4,4,4,1000
+Config.pl -v=SC/BATSRUS -g=SC:4,4,4,1000
 \end{verbatim}
 Set the grid size for the GM/BATSRUS and IH/BATSRUS\_share components:
 \begin{verbatim}
-SetSWMF.pl -g=GM:8,8,8,200,40
+Config.pl -g=GM:8,8,8,200,40
 \end{verbatim}
 You can select either the UA/GITM version with
 \begin{verbatim}
-SetSWMF.pl -v=UA/GITM -g=UA:9,9,25,2,2
+Config.pl -v=UA/GITM -g=UA:9,9,25,2,2
 \end{verbatim}
 or the new (default) UA/GITM2 version with
 \begin{verbatim}
-SetSWMF.pl -v=UA/GITM2 -g=UA:9,9,25,4
+Config.pl -v=UA/GITM2 -g=UA:9,9,25,4
 \end{verbatim}
 Note the difference in the grid size parameters.
 You should also take care of using the parameter files appropriate for
@@ -45,7 +45,7 @@ currently in the SWMF and is the most up to date.
 
 Check the current settings with
 \begin{verbatim}
-SetSWMF.pl -s
+Config.pl -show
 \end{verbatim}
 You should see the current directory, the operating system, the name
 of the compiler and the following settings
@@ -65,7 +65,7 @@ In case you selected the UA/GITM version, the last line will read
 \begin{verbatim}
 UA/GITM                      grid: 9,9,25,2,2
 \end{verbatim}
-If the settings differ you can change them with the SetSWMF.pl script.
+If the settings differ you can change them with the Config.pl script.
 
 Compile the main executable code bin/SWMF.exe. With the above
 settings this may take an hour, but if you select Empty versions
@@ -122,9 +122,9 @@ error message from the command \#CHECKGRIDSIZE with respect
 to the parameter  MinBlockALL, which contains the minimum number
 of blocks required. To fix the problem, you have to increase the number 
 of CPU-s or increase the grid size for the SC component with the 
-SetSWMF.pl script. For example set
+Config.pl script. For example set
 \begin{verbatim}
-SetSWMF.pl -g=SC:4,4,4,1500
+Config.pl -g=SC:4,4,4,1500
 \end{verbatim}
 Keep fixing the problems until the Scripts/TestParam.pl runs silently.
 Remember to recompile SWMF.exe if you change the grid size.

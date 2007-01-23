@@ -15,7 +15,7 @@ Inclusion of components can be controlled using one of several methods:
       configured.
 \item The user may select which version of a physics component,
   including the Empty version,
-      should be compiled.  This is controlled using the SetSWMF.pl script.
+      should be compiled.  This is controlled using the Config.pl script.
 \item When submitting a run, a subset of the non-empty (compiled) 
       components can be
       registered to participate in the run in the LAYOUT.in file.
@@ -51,11 +51,10 @@ in the reference manual.
 %^CMP END CONFIGURE
 
 
-\subsection{Selecting component versions to compile with SetSWMF.pl}
+\subsection{Selecting component versions to compile with Config.pl}
 
 The physics component versions reside in the directories 
-GM, IE, IH, IM, RB, SC,
-SP and UA.
+GM, IE, IH, IM, RB, PW, SC, SP and UA.
 Most components have only one working version and one empty version.
 The empty version consists of a single wrapper file, which contains 
 empty subroutines required by CON\_wrapper and the couplers.
@@ -63,7 +62,7 @@ These empty subroutines are needed for the compilation of the code,
 and they also show the interface of the working versions.
 
 The appropriate version can be selected with the {\tt -v} flag
-of the {\tt SetSWMF.pl} script, which edits the
+of the {\tt Config.pl} script, which edits the
 \begin{verbatim}
   Makefile.def
 \end{verbatim}
@@ -82,7 +81,7 @@ the source code is copied over and all modules, common blocks,
 and external subroutines and functions are renamed. 
 These steps are all automated and can be performed by typing
 \begin{verbatim}
-SetSWMF.pl -v=IH/BATSRUS
+Config.pl -v=IH/BATSRUS
 \end{verbatim}
 in the main directory. With the renamed IH/BATSRUS version it is allowed 
 to run IH and GM on the same PE, and they can be configured differently.
@@ -90,12 +89,12 @@ The SC/BATSRUS component is also derived from the GM/BATSRUS source code,
 but it is configured differently so the source code is always copied
 and renamed. This can be achieved by
 \begin{verbatim}
-SetSWMF.pl -v=SC/BATSRUS
+Config.pl -v=SC/BATSRUS
 \end{verbatim}
 The copied and renamed source code is removed fully when SWMF is
 uninstalled with the
 \begin{verbatim}
-SetSWMF.pl -uninstall
+Config.pl -uninstall
 \end{verbatim}
 command. If the SC/BATSRUS or IH/BATSRUS source codes need to be
 refreshed, the following steps should be done
@@ -113,18 +112,25 @@ cd ../..
 make IHBATSRUS
 \end{verbatim}
 
-\subsection{Selecting Empty component versions with SetSWMF.pl}
+\subsection{Selecting Empty component versions with Config.pl}
 
 If a physics component is not needed for run, an Empty version of the
 component can be compiled.
 Selecting the Empty version for unused components reduces
 compilation time and memory usage during run time.
 It may also improve performance slightly.
-This is achieved with the {\tt -v} flag of the SetSWMF.pl script. 
+This is achieved with the {\tt -v} flag of the Config.pl script. 
 For example the Empty UA component can be selected with
 \begin{verbatim}
-  SetSWMF.pl -v=UA/Empty
+  Config.pl -v=UA/Empty
 \end{verbatim}
+It is also possuble to select the Empty version for all components
+with a few exceptions. For example
+\begin{verbatim}
+  Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+\end{verbatim}
+will select the empty version for all components except for GM and IE.
+Note that the 'Empty' item has to be the first one.
 
 \subsection{Registering components using LAYOUT.in}
 
@@ -178,7 +184,7 @@ command in the second session.
 
 
 
-\subsection{Setting compiler flags in Makefile.conf and with SetSWMF.pl}
+\subsection{Setting compiler flags in Makefile.conf and with Config.pl}
 
 The compiler flags can be modified by editing
 \begin{verbatim}
@@ -186,44 +192,41 @@ The compiler flags can be modified by editing
 \end{verbatim}
 This makefile is created during installation, and it contains the
 platform and compiler specific part of the makefile system.
-Depending on the platform and compiler, one can change the
-precision of real numbers by setting the {\tt PRECISION} variable,
-the optimization level by setting the {\tt Cflag0...Cflag4},
-and the debug flags by setting the {\tt DEBUG} variable.
-For example, on a Linux machine with Nag F95 compiler, a single
-precision, zero optimization level, debugging run can be done
-with the following settings:
+The most usual changes can be easily done with the Config.pl script.
+The precision of real numbers can be set with
 \begin{verbatim}
-#PRECISION = -r8
-PRECISION =
-...
-#DEBUG   = -dusty -w -maxcontin=50
-DEBUG   = -dusty -w -C -gline -maxcontin=50
-
-Cflag0  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag1  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag2  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag3  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
-Cflag4  = ${SEARCH} -c -O0 ${PRECISION} ${DEBUG}
+  Config.pl -single
 \end{verbatim}
+or 
+\begin{verbatim}
+  Config.pl -double
+\end{verbatim}
+If the precision is modified, the script will execute 'make clean',
+so that all the files are compiled with the new real precision.
+
+The debugging flags can be switched on and off with
+\begin{verbatim}
+  Config.pl -debug
+\end{verbatim}
+and
+\begin{verbatim}
+  Config.pl -nodebug
+\end{verbatim}
+respectively. The maximum optimization level can be set to -O2 with
+\begin{verbatim}
+  Config.pl -O2
+\end{verbatim}
+The minimum level is 0, the maximum is 4 (Note that not all compilers support
+level 4 optimization).
+
 Note that not all the components take into account the selected
-compiler flags. For example the IM/RCM component cannot be 
-compiled with double precision, thus it uses the flags
-defined in the {\tt CFLAGS} variable. Also some of the files
+compiler flags. For example the IM/RCM component is usually run
+with single precision and it has to be compiled with the -save
+(or similar) flag, thus it uses the flags defined in the {\tt CFLAGS} 
+variable. Also some of the files
 do not work if compiled with high optimization level.
 Such exceptions are described in the makefiles of the 
 components. 
-
-The PRECISION variable can be conveniently changed with the
-{\tt -p} flag of the SetSWMF.pl script. For example single
-precision can be selected with
-\begin{verbatim}
-  SetSWMF.pl -p=single
-\end{verbatim}
-If the precision is modified with the SetSWMF.pl script,
-the distribution will be automatically cleaned with 
-{\tt make clean}, which has to be done before recompiling the
-code with a different precision. 
 
 \subsection{Configuration of individual components}
 
@@ -248,10 +251,10 @@ For sake of convenient testing the heliosphere user routine is
 the default one now, so there is no need to copy the user files.
 
 The block size and the number of blocks can be set with the 
-{\tt -g} flag of the {\tt SetSWMF.pl} script.
+{\tt -g} flag of the {\tt Config.pl} script.
 For example the
 \begin{verbatim}
-  SetSWMF.pl -g=UA:36,36,50,16
+  Config.pl -g=UA:36,36,50,16
 \end{verbatim}
 will set the blocks size to $36\times 36\times 50$ and the number of blocks to 
 16 for the UA/GITM2 component. This command runs the {\tt GridSize.pl}
@@ -284,7 +287,7 @@ This can be used as a test tool for the CON component, but it may
 also serve as an inexpensive testbed for getting the optimal layout
 and coupling schedule for a simulation. To configure SWMF with 
 stub components, select the Empty version for all physics components
-(with SetSWMF.pl -v=...) and edit the {\tt Makefile.def} file to
+(with Config.pl -v=...) and edit the {\tt Makefile.def} file to
 contain
 \begin{verbatim}
 #INT_VERSION = Interface

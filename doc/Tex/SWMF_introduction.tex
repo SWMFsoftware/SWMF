@@ -303,20 +303,21 @@ and the following files
 \item {\tt Makefile}         - the main makefile
 \item {\tt Configure.pl}     - Perl script for configuration %^CMP IF CONFIGURE
 \item {\tt Configure.options} - default configuration options %^CMP IF CONFIGURE
-\item {\tt SetSWMF.pl}     - Perl script for (un)installation and configuration
+\item {\tt Config.pl}     - Perl script for (un)installation and configuration
 \end{itemize}
 
 \section{General Hints}
 
 \subsubsection{Getting help with scripts and the Makefile}
+
 Most of the Perl and shell scripts that are distributed with the SWMF
 provide help which can be accessed as follows using the {\tt -h} flag.
 For example, 
 \begin{verbatim}
-  SetSWMF.pl -h
+  Config.pl -h
 \end{verbatim}
 will provide a detailed listing of the options and capabilities of the
-{\tt SetSWMF.pl} script.  In addition, you can find all the possible
+{\tt Config.pl} script.  In addition, you can find all the possible
 targets  that can be built by typing
 \begin{verbatim}
 make help
@@ -348,16 +349,16 @@ the current working directory either your path or in the filename you
 want to execute. In UNIX the current working directory is represented
 by the period (.).  For example
 \begin{verbatim} 
-./SetSWMF.pl -s
+./Config.pl -s
 \end{verbatim}
-will execute the SetSWMF.pl script if it is in your current directory.  
+will execute the Config.pl script if it is in your current directory.  
 If you add the `.' to your path using for example
 \begin{verbatim}
 set path = (${path} .)
 \end{verbatim}
 then you can simply type
 \begin{verbatim} 
-SetSWMF.pl -s
+Config.pl -s
 \end{verbatim}
 
 \section{Installing the Code}
@@ -388,43 +389,44 @@ Change directories into the distribution:
 
 The SWMF needs to know what architecture you are running the code on
 and what FORTRAN compiler will be used.  For most platforms and compilers,
-tt can figure this out all by itself, but you have to run the command:
+it can figure this out all by itself. To install SWMF run the command:
 \begin{verbatim}
-  SetSWMF.pl -i
+  Config.pl -install
 \end{verbatim}
 in the main directory. This creates {\tt Makefile.def} with
 the correct absolute path to the base directory and {\tt Makefile.conf}
 which contains the operating system and compiler specific part of
 the Makefile. If the compiler is not the default one for a given
 platform (e.g. not the NAG f95 compiler for a Linux platform) then
-the compiler must be specified explicitly with the {\tt -c}
+the compiler must be specified explicitly with the {\tt -compiler}
 flag. If the MPI header file is not the default one, it can be
-specified with the {\tt -m} flag. For example on the Altix machines
-SWMF should be installed as
+specified with the {\tt -mpi} flag. For example on a Mac machine
+one can select the g95 compiler with the Intel version of the 
+MPI library using
 \begin{verbatim}
-  SetSWMF.pl -i -c=ifort -m=Altix
+  Config.pl -install -compiler=g95 -mpi=Intel
 \end{verbatim}
 To uninstall SWMF type
 \begin{verbatim}
-  SetSWMF.pl -uninstall
+  Config.pl -uninstall
 \end{verbatim}
 If the uninstallation fails (this can happen if some makefiles are missing)
-force installation with
+do reinstallation with
 \begin{verbatim}
-  SetSWMF.pl -install
+  Config.pl -install
 \end{verbatim}
 and then try uninstalling the code again.
 When SWMF is installed, its configuration can be checked with
 \begin{verbatim}
-  SetSWMF.pl -s
+  Config.pl -show
 \end{verbatim}
 To get a list of the available component versions type
 \begin{verbatim}
-  SetSWMF.pl -l
+  Config.pl -l
 \end{verbatim}
-To get a complete description of the {\tt SetSWMF.pl}  script type
+To get a complete description of the {\tt Config.pl}  script type
 \begin{verbatim}
-  SetSWMF.pl -h
+  Config.pl -h
 \end{verbatim}
 
 \section{Creating Documentation}
@@ -471,35 +473,32 @@ At compile time, the user can select which physics components should be
 compiled.  
 Any component not compiled will not be available for
 use at run time.  The physics components can be selected with the {\tt -v} flag
-of the SetSWMF.pl script. For example typing
+of the Config.pl script. For example typing
 \begin{verbatim}
-  SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS,SP/Kota
-  SetSWMF.pl -v=GM/Empty,RB/Empty,IM/Empty,IE/Empty,UA/Empty
+  Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/Kota
 \end{verbatim}
 will select BATSRUS for the SC and IH components and K\'ota's model for
-the SP component.
-The other components are set to Empty versions, which contain empty
-subroutines for compilation, but cannot be used.
+the SP component and the other components are set to Empty versions
+that contain empty subroutines for compilation, but cannot be used.
 The default configuration includes a working version for all components, 
 which takes up more memory, but is the most general.
 The only exception is SC, which requires configuration, so the 
 default version is Empty for the Solar Corona component.
 
 The grid size of several components can also be set with the {\tt -g}
-flag of the {\tt SetSWMF.pl} script. For example the 
+flag of the {\tt Config.pl} script. For example the 
 \begin{verbatim}
-  SetSWMF.pl -g=GM:8,8,8,400,100
+  Config.pl -g=GM:8,8,8,400,100
 \end{verbatim}
 command sets the block size for the GM component to $8\times 8\times 8$ cells, 
 the maximum number of blocks per processor to 400, 
 and the maximum number of implicit blocks per processor to 100.
-The SetSWMF.pl script actually runs the individual GridSize.pl
+The main SWMF Config.pl script actually runs the individual Config.pl
 scripts in the component versions. These scripts can be run directly,
-and they provide more options and more verbose information than SetSWMF.pl.
 For example try
 \begin{verbatim}
   cd GM/BATSRUS
-  GridSize.pl -s
+  Config.pl -show
 \end{verbatim}
 Compilation flags, such as the precision and optimization 
 level are stored in {\tt Makefile.conf}. This file is created on
@@ -507,14 +506,22 @@ installation of the SWMF and has defaults which are appropriate for
 your system architecture.  The precision of reals
 can be changed to single precision (for example) by typing
 \begin{verbatim}
-  SetSWMF.pl -p=single
+  Config.pl -single
 \end{verbatim}
-while the compiler flags can be edited in {\tt Makefile.conf} by hand.
+while the compiler flags can be modified with
+\begin{verbatim}
+  Config.pl -debug -O0
+\end{verbatim}
+to debug the code with 0 optimization level, and
+\begin{verbatim}
+  Config.pl -nodebug -O4
+\end{verbatim}
+to run the code at maximum optimization level and without the debugging flags.
 
 Before compiling SWMF it is always a good idea to check its configuration
 with
 \begin{verbatim}
-  SetSWMF.pl -s
+  Config.pl -show
 \end{verbatim}
 
 {\bf IMPORTANT NOTES:

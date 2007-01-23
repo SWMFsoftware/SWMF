@@ -226,9 +226,8 @@ The test suite resides in
 The functionality test suite requires two components only,
 so the following configuration is recommended:
 \begin{verbatim}
-  SetSWMF.pl -v=GM/BATSRUS,IE/Ridley_serial
-  SetSWMF.pl -v=SC/Empty,IH/Empty,SP/Empty,IM/Empty,RB/Empty,UA/Empty
-  SetSWMF.pl -g=GM:8,8,8,400,100 -p=double
+  Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+  Config.pl -g=GM:8,8,8,400,100 -double
   make
   make PIDL
   make PSPH
@@ -310,8 +309,8 @@ For sake of simplicity one can configure SWMF with all 8 components
 (no Empty versions) so that all 6 stages can be done with the same
 executable. 
 \begin{verbatim}
-  SetSWMF.pl -v=SC/BATSRUS,IH/BATSRUS_share,GM/BATSRUS,SP/Kota,IM/RCM
-  SetSWMF.pl -v=IE/Ridley_serial,UA/GITM,RB/RiceV5
+  Config.pl -v=SC/BATSRUS,IH/BATSRUS_share,GM/BATSRUS,SP/Kota,IM/RCM
+  Config.pl -v=IE/Ridley_serial,UA/GITM,RB/RiceV5
 \end{verbatim}
 This is the default configuration except for the SC
 component, which has the Empty version by default.
@@ -326,15 +325,15 @@ from the GM/BATSRUS source code with a similar renaming procedure.
 The grid sizes of the components should be set to be sufficient for the test
 for a given processor layout. The following grid sizes were used:
 \begin{verbatim}
-  SetSWMF.pl -g=GM:8,8,8,200,40 -g=SC:4,4,4,1000 
-  SetSWMF.pl -g=UA:9,9,25,2,2   -g=SP:1000,10,150
+  Config.pl -g=GM:8,8,8,200,40 -g=SC:4,4,4,1000 
+  Config.pl -g=UA:9,9,25,2,2   -g=SP:1000,10,150
 \end{verbatim}
 Note that the GM, SC and UA grid sizes differ from the defaults.
 If the IH component is BATSRUS\_share, it uses the same source
 code as GM/BATSRUS, and hence the same grid. If IH/BATSRUS is
 selected, then one can use different grids, for example
 \begin{verbatim}
-  SetSWMF.pl -g=GM:8,8,8,100,40 -g=IH:8,8,8,200,1
+  Config.pl -g=GM:8,8,8,100,40 -g=IH:8,8,8,200,1
 \end{verbatim}
 since GM needs only a 100 blocks per PE (if run on at least
 25 processors), while IH does not need any implicit blocks 
@@ -478,9 +477,9 @@ components are required, but it is useful to include all five
 components so the same executable and run directory 
 can be used for the next test too. For example set
 \begin{verbatim}
-  SetSWMF.pl -v=IH/BATSRUS_share,GM/BATSRUS,IM/RCM,IE/Ridley_serial,UA/GITM
-  SetSWMF.pl -v=SC/Empty,SP/Empty,RB/Empty
-  SetSWMF.pl -g=GM:8,8,8,400,1 -p=double
+  Config.pl -v=Empty
+  Config.pl -v=IH/BATSRUS_share,GM/BATSRUS,IM/RCM,IE/Ridley_serial,UA/GITM
+  Config.pl -g=GM:8,8,8,400,1 -double
 \end{verbatim}
 The default parameter and layout files can be used. 
 These are copied into the run directory during {\tt make rundir},
@@ -544,13 +543,13 @@ The restriction on the overlapping of the IH and GM components
 can be eliminated by the use of the renamed IH source code. 
 To test this, select the {\tt IH/BATSRUS} component:
 \begin{verbatim}
-  SetSWMF.pl -v=IH/BATSRUS
+  Config.pl -v=IH/BATSRUS
 \end{verbatim}
 This will automatically create the renamed source code for IH/BATSRUS.
 which will take 2-5 minutes. Once the renaming
 is done, reduce the number of the blocks for GM and IH:
 \begin{verbatim}
-  SetSWMF.pl -g=GM:8,8,8,200,1 -g=IH:8,8,8,200,1
+  Config.pl -g=GM:8,8,8,200,1 -g=IH:8,8,8,200,1
 \end{verbatim}
 The test requires 520 blocks for GM and 456 blocks for IH on the PE-s
 assigned to the components. So with at least 3 PE-s for GM and IH each,

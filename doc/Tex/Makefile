@@ -61,7 +61,7 @@ BATSRUS_SCRIPTS:
 	fi)
 
 SWMFREF = \
-	${DIR}/SetSWMF.protex ${SCRIPT_CONF} \
+	${DIR}/Config.protex ${SCRIPT_CONF} \
 	${DIR}/Scripts/TestParam.protex \
 	${DIR}/Scripts/Performance.protex \
 	BATSRUS_SCRIPTS.tex \
