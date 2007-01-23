@@ -55,7 +55,7 @@ rm -rf SWMF
 # Checkout and install the latest code
 cvs co SWMF >& /dev/null
 cd SWMF
-./SetSWMF.pl -install >& test_swmf.log
+./Config.pl -install >& test_swmf.log
 
 #
 # Select one of the following options:
