@@ -6,7 +6,6 @@ program BATSRUS
   use ModIoUnit, ONLY: UNITTMP_
   use ModMain, ONLY: &
        IsStandAlone, &
-       NameThisComp, &
        time_accurate, time_loop, time_simulation, t_max, &
        n_step, nIter, iteration_number, &
        IsLastRead, &
@@ -40,14 +39,6 @@ program BATSRUS
   ! Initialize some basic variables for the stand alone code
   !/
   IsStandAlone      = .true.
-  NameThisComp      = 'GM'
-
-  !\
-  ! Default plot and restart directories depend on NameThisComp
-  !/
-  NamePlotDir       = NameThisComp//'/'//NamePlotDir
-  NameRestartInDir  = NameThisComp//'/'//NameRestartInDir
-  NameRestartOutDir = NameThisComp//'/'//NameRestartOutDir
 
   !\
   ! Initialize the planetary constant library and set Earth
