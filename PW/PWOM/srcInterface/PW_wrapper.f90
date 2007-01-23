@@ -216,31 +216,27 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
 end subroutine PW_put_from_ie
 !==============================================================================
 
-subroutine PW_get_for_gm(Buffer_IIV, nFieldLines, nVar, Name_V, &
+subroutine PW_get_for_gm(Buffer_IIV, nFieldLine, nVar, Name_V, &
      tSimulation)
 
-  use ModPWOM, only : icomm,errcode,nProc,nTotalLine,nVar,&
+  use ModPWOM, only : icomm,errcode,nProc,&
                       FieldLineTheta,FieldLinePhi, &
-                      dOxyg,dHyd,dHel,uOxyg,uHyd,uHel
+                      dOxyg,dHyd,dHel,uOxyg,uHyd,uHel,nLine,nDim
 
   implicit none
   character (len=*),parameter :: NameSub='PW_get_for_gm'
 
-  integer, intent(in)           :: nTotalLine, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  integer, intent(in)           :: nVar,nFieldLine
+  real, intent(out)             :: Buffer_IIV(nFieldLine,nVar)
   character (len=*),intent(in)  :: Name_V(nVar)
   real,             intent(in)  :: tSimulation
 
-  integer :: iVar
-  real    :: tSimulationTmp,
+  integer :: iVar,i
+  real    :: tSimulationTmp
   real    :: SendBuffer(nLine,nVar)
-  integer :: iDisplacement_V(nProc),iRecieveCount_V(nProc)
+  integer :: iDisplacement_V(nProc),iRecieveCount_V(nProc),iSendCount
   !--------------------------------------------------------------------------
-  if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
-     write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
-          ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
-     call CON_stop(NameSub//' SWMF_ERROR')
-  end if
+
 
   ! Make sure that the most recent result is provided
   tSimulationTmp = tSimulation
@@ -250,43 +246,43 @@ subroutine PW_get_for_gm(Buffer_IIV, nFieldLines, nVar, Name_V, &
   do iVar=1,nVar
      select case (Name_V(iVar))
      case('CoLat    ')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=FieldLineTheta(iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=FieldLineTheta(i)
         enddo
         
      case('Longitude')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=FieldLinePhi(iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=FieldLinePhi(i)
         enddo
         
      case('Density1 ')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=dOxyg(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=dOxyg(nDim,i)
         enddo
         
      case('Density2 ')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=dHyd(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=dHyd(nDim,i)
         enddo
         
      case('Density3 ')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=dHel(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=dHel(nDim,i)
         enddo
         
      case('Velocity1')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=uOxyg(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=uOxyg(nDim,i)
         enddo
         
      case('Velocity2')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=uHyd(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=uHyd(nDim,i)
         enddo
         
      case('Velocity3')
-        do iLine=1,nLine
-           SendBuffer(iLine,iVar)=uHel(nDim,iLine)
+        do i=1,nLine
+           SendBuffer(i,iVar)=uHel(nDim,i)
         enddo
         
      end select
@@ -297,20 +293,20 @@ subroutine PW_get_for_gm(Buffer_IIV, nFieldLines, nVar, Name_V, &
   
   ! create the displacement array and recieve count array for MPI_GATHERV
   do i=0,nProc-1
-     if (i .lt. mod(nTotalLine,nProc)) then
+     if (i .lt. mod(nFieldLine,nProc)) then
         iDisplacement_V(i)=&
-             i*ceiling(real(nTotalLine)/real(nProc))+1
+             i*ceiling(real(nFieldLine)/real(nProc))+1
         
         iRecieveCount_V(i)=&
-             ceiling(real(nTotalLine)/real(nProc))
+             ceiling(real(nFieldLine)/real(nProc))
      else
         iDisplacement_V(i)=&
-             (mod(nTotalLine,nProc))*ceiling(real(nTotalLine)/real(nProc)) &
-             + ((i)-mod(nTotalLine,nProc))                        &
-             *floor(real(nTotalLine)/real(nProc))+1
+             (mod(nFieldLine,nProc))*ceiling(real(nFieldLine)/real(nProc)) &
+             + ((i)-mod(nFieldLine,nProc))                        &
+             *floor(real(nFieldLine)/real(nProc))+1
         
         iDisplacement_V(i)=&
-             floor(real(nTotalLine)/real(nProc))
+             floor(real(nFieldLine)/real(nProc))
      endif
   enddo
   iSendCount=nLine
@@ -320,7 +316,7 @@ subroutine PW_get_for_gm(Buffer_IIV, nFieldLines, nVar, Name_V, &
     do iVar=1,nVar
        
        call MPI_GATHERV(SendBuffer(1,iVar), iSendCount, mpi_real, &
-            Buffer_IIV(1,iVar), iRecieveCount,iDisplacement_V, mpi_real,&
+            Buffer_IIV(1,iVar), iRecieveCount_V,iDisplacement_V, MPI_REAL,&
             0, icomm, errcode)
     
     enddo
