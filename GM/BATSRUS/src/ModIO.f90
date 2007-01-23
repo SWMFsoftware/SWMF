@@ -11,7 +11,7 @@ Module ModIO
 
   integer             :: iUnitOut = STDOUT_
   character (len=7)   :: StringPrefix=''
-  character (len=100) :: NamePlotDir="IO2/"
+  character (len=100) :: NamePlotDir="GM/IO2/"
 
   character (len=80) :: filename
 
