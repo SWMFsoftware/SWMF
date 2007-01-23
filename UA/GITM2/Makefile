@@ -17,11 +17,6 @@ src/ModSize.f90:
 	cp src/ModSize.f90.orig src/ModSize.f90
 
 install: src/Makefile src/ModSize.f90
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 	cd src; make DYNAMIC
 #
@@ -67,7 +62,7 @@ distclean:
 	@cd $(IODIR);    make clean
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
-	rm -f src/Makefile src/ModSize.f90 Makefile.conf Makefile.def *~
+	rm -f src/Makefile src/ModSize.f90 *~
 #
 #       Create run directories
 #
