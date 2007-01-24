@@ -25,7 +25,7 @@ Library/src/mpif.h:
 
 install: Library/src/mpif.h
 	touch Library/src/Makefile.DEPEND
-	@(if [ -f ${LIBRULES}.${OS}${COMPILER} ]; then   \
+	@(if [ -f ${LIBRULES}.${OS}.${COMPILER} ]; then   \
 		cp -f ${LIBRULES}.${OS}${COMPILER} ${LIBRULES};\
 	else \
 		rm -f ${LIBRULES}; touch ${LIBRULES}; \
