@@ -1,8 +1,10 @@
+Makefile
+Makefile.DEPEND
+Makefile.RULES
+ModSize.f90
 ModGITM.f90
 ModEUV.f90
 ModSources.f90
-Makefile.DEPEND
-Makefile.RULES
 ModPlanet.f90
 calc_chemistry.f90
 calc_electron_temperature.f90
