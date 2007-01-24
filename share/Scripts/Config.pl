@@ -283,7 +283,8 @@ sub install_code_{
 	if(-f $Rules){
 	    &shell_command("cp $Rules $Src/$MakefileRules");
 	}else{
-	    &shell_command("touch $Src/$MakefileRules");
+	    &shell_command(
+                "rm -f $Src/$MakefileRules; touch $Src/$MakefileRules");
 	}
     }
 
