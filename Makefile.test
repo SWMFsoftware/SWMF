@@ -80,16 +80,21 @@ test_pw_check:
 	ls -l test_pw*.diff
 
 test1:
-	@echo "starting..." > test1_gm.diff
-	@echo "starting..." > test1_ie.diff
-	@echo "starting..." > test1_pw.diff
-	@echo "test1_compile..." > test1.diff
+	@echo "test1_compile..." > test1_gm.diff
+	@echo "test1_compile..." > test1_ie.diff
+	@echo "test1_compile..." > test1_pw.diff
 	make test1_compile
-	@echo "test1_rundir..." >> test1.diff
+	@echo "test1_rundir..." >> test1_gm.diff
+	@echo "test1_rundir..." >> test1_ie.diff
+	@echo "test1_rundir..." >> test1_pw.diff
 	make test1_rundir
-	@echo "test1_run..." >> test1.diff
+	@echo "test1_run..." >> test1_gm.diff
+	@echo "test1_run..." >> test1_ie.diff
+	@echo "test1_run..." >> test1_pw.diff
 	make test1_run
-	@echo "test1_check..." >> test1.diff
+	@echo "test1_check..." >> test1_gm.diff
+	@echo "test1_check..." >> test1_ie.diff
+	@echo "test1_check..." >> test1_pw.diff
 	make test1_check
 
 test1_compile:
@@ -127,7 +132,6 @@ test1_check:
 		${TESTDIR}/IE/ionosphere/it000321_104501_000_b1.idl \
 		output/test1/IE_it000321_104501_000_b1.idl \
 		> test1_ie.diff)
-	rm -f test1.diff
 	ls -l test1*.diff
 
 ### ESMF test ###
