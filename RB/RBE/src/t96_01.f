@@ -1,919 +1,1087 @@
+
+C
+C===================================================================================
+C
+
+
+
+cThe FORTRAN source code T96_01.FOR is the last released version (June 22, 1996)
+cof a new data-based model of the geomagnetospheric magnetic field with an ex-
+cplicitly defined realistic magnetopause, large-scale Region 1 and 2 Birkeland
+ccurrent systems, and the IMF penetration  across the boundary.
+c
+cThe file T96_01.FOR contains a set of 33 subroutines and functions. The first
+csubroutine, named T96_01, is the primary one, accepting the input values of the
+csolar wind pressure, Dst-index, By- and Bz-components of the interplanetary
+cmagnetic field, the geodipole tilt angle, and GSM position of the observation
+cpoint (X,Y,Z). The subroutine returns GSM components of the external field
+c(i.e., the total vector of B minus the Earth's contribution).   The remaining
+c32 subroutines are invoked by T96_01.
+c
+c<hr>
+c
+cThe source code T96_01.FOR differs in several aspects from the previous version
+cT95_06.FOR (released in November 1995).
+c
+c(1) The T96_01 does not include the AE-index as an input parameter.
+c
+c(2) The number of terms in the ring current, tail modes, and in the shielding
+cfields was reduced to a necessary minimum, in order to increase the speed of the
+ccode. The tail field is now a sum of two modes; the first one is responsible
+cfor the near-Earth tail field and is similar to that in the previous version.
+cThe second mode provides the asymptotic field in the far magnetotail.
+c
+c(3) The way of representing the effects of the dipole tilt on the tail/ring
+ccurrent field was revised:  instead of a "shear" transformation (introduced in
+cthe T89 model), a radially dependent "space-warping" is used in this model,
+cwhich decreases tilt-induced spurious currents.
+c
+c(4) The representation for the Region 2 Birkeland current field was completely
+crevised:  in the present version, a smooth approximation was developed for
+cthe field inside the current layer. As a result, unphysical kinks in the Bz
+cprofile on the nightside were eliminated.
+c
+c<hr>
+c
+c            *******************************************
+c            | Users should be aware of the following. |
+c            *******************************************
+c
+c
+c  (1) A simple linear dependence of the amplitudes of the field sources on the
+cSQRT(Pdyn), Dst, and the IMF-related parameter EPS=SQRT(N)*V*Bt*sin(theta/2)
+cwas employed.  Hence, the best results should be expected near the most probable
+cvalues of the input parameters,  corresponding to the regions in the Pdyn-Dst-
+cByIMF-BzIMF space with the highest density of the spacecraft measurements. For
+cthe same reason, caution is needed in modeling situations with unusually low or
+chigh values of these parameters: extrapolating the model too far beyond the
+crange of reliable approximation can lead to unrealistic results.  As a rough
+cestimate, the parameter values should remain within the intervals:
+cPdyn:  between 0.5 and 10 nPa,
+cDst:  between -100 and +20,
+cByIMF and BzIMF: between -10 and +10 nT.
+c
+c  (2) The only parameter which controls the size of the model magnetopause is
+cthe solar wind ram pressure Pdyn. No IMF dependence has been introduced so far
+cin the magnetopause shape/size.  This is planned to be done in future versions
+cof the model.
+c     To facilitate using the model, we provide users with two supplementary
+cFORTRAN subroutines, named LOCATE and CROSSING.  The first one finds the point
+con the model magnetopause which is closest to a given point of space, for any
+cvalues of the solar wind density and velocity (or, optionally, solar wind
+cpressure).  The second subroutine estimates the current value of the solar wind
+cram pressure, based on the observed GSM position of the magnetopause at any
+clocal time or latitude, sunward from XGSM=-60Re.
+c
+c  (3) In its present form, the subroutine T96_01 is compatible with new version
+c(April 16, 1996) of the software package GEOPACK for coordinate transformation
+cand line tracing, which replaces the old version and is available from the same
+cWWW site.
+c
+c  (4) This is not a "final version":  the model is supposed to be further
+cimproved and upgraded in the future. In this regard, any kind of feedback from
+cthe users is very important for us and will be greatly appreciated. In
+cparticular, it is very important that any problems encountered in adapting and
+cusing the code be reported to us as soon as possible.  Please send your
+cquestions and comments to the address given in the end of this file.
+c
+c  (5) More details on the approach used in devising this model can be found in
+cthe following publications:
+c
+c
+c      Tsyganenko, N.A. and M. Peredo, Analytical models of the magnetic field
+c        of disk-shaped current sheets,  J.Geophys.Res., v.99, pp.199-205, 1994.
+c
+c      Tsyganenko, N.A., Modeling the Earth's magnetospheric magnetic field
+c        confined within a realistic magnetopause, J.Geophys.Res., v.100,
+c        pp.5599-5612, 1995.
+c
+c      Fairfield, D.H., N.A. Tsyganenko, A.V. Usmanov, and M.V. Malkov, A large
+c        magnetosphere magnetic field database, J.Geophys.Res., v.99,
+c        pp.11319-11326, 1994.
+c
+c      Tsyganenko, N.A. and D.P. Stern, Modeling the global magnetic field
+c        the large-scale Birkeland current systems, J.Geophys.Res., v.101,
+c        p.27187-27198, 1996.
+c
+c      Tsyganenko, N.A., Effects of the solar wind conditions on the global
+c         magnetospheric configuration as deduced from data-based field
+c         models, in:  Proc.of 3rd International Conference on Substorms
+c         (ICS-3), Versailles, France, 12-17 May 1996, ESA SP-389, p.181-185,
+c         1996.
+c
+c       (A PostScript file of the last paper, named versail.ps, can be ftp-ed
+c       from anonymous ftp-area at:   www-spof.gsfc.nasa.gov;   /pub/kolya)
+c
+c
+c   Please send your questions, comments, and requests to:
+c
+c   Nikolai Tsyganenko
+c
+c   E-address:        kolya@nssdca.gsfc.nasa.gov
+c
+c   Mail address:     Code 695,  NASA GSFC
+c                     Greenbelt, MD 20771,
+c                     U.S.A.
+c
+c    Phone: (301)-286-7925
+c    Fax:   (301)-286-1629
+c
+c
+c
+c<hr>
+
 C----------------------------------------------------------------------
 c
       SUBROUTINE T96_01 (IOPT,PARMOD,PS,X,Y,Z,BX,BY,BZ)
-C
+C     
 c     RELEASE DATE OF THIS VERSION:   JUNE 22, 1996.
+
+C----------------------------------------------------------------------
 C
-c   DATA-BASED MODEL CALIBRATED BY (1) SOLAR WIND PRESSURE PDYN (NANOPASCALS),
-C     (2) DST (NANOTESLA),  (3) BYIMF, AND (4) BZIMF (NANOTESLA). 
-c              THESE INPUT PARAMETERS SHOULD BE PLACED IN THE FIRST 4 ELEMENTS
-c                          OF THE ARRAY PARMOD(10).
+C  WITH TWO CORRECTIONS, SUGGESTED BY T.SOTIRELIS' COMMENTS (APR.7, 1997)
+C
+C  (1) A "STRAY "  CLOSING PARENTHESIS WAS REMOVED IN THE S/R   R2_BIRK
+C  (2) A 0/0 PROBLEM ON THE Z-AXIS WAS SIDESTEPPED (LINES 44-46 OF THE
+c       DOUBLE PRECISION FUNCTION XKSI)
+c--------------------------------------------------------------------
+C DATA-BASED MODEL CALIBRATED BY (1) SOLAR WIND PRESSURE PDYN (NANOPASCALS),
+C           (2) DST (NANOTESLA),  (3) BYIMF, AND (4) BZIMF (NANOTESLA).
+c THESE INPUT PARAMETERS SHOULD BE PLACED IN THE FIRST 4 ELEMENTS
+c OF THE ARRAY PARMOD(10).
 C
 C   THE REST OF THE INPUT VARIABLES ARE: THE GEODIPOLE TILT ANGLE PS (RADIANS),
-C                                        AND   X,Y,Z -  GSM POSITION (RE)
+C AND   X,Y,Z -  GSM POSITION (RE)
 C
 c   IOPT  IS JUST A DUMMY INPUT PARAMETER, NECESSARY TO MAKE THIS SUBROUTINE
-C        COMPATIBLE WITH THE NEW RELEASE (APRIL 1996) OF THE TRACING SOFTWARE 
-C             PACKAGE (GEOPACK).   IOPT VALUE DOES NOT AFFECT THE OUTPUT FIELD.
+C COMPATIBLE WITH THE NEW RELEASE (APRIL 1996) OF THE TRACING SOFTWARE
+C PACKAGE (GEOPACK). IOPT VALUE DOES NOT AFFECT THE OUTPUT FIELD.
 c
 C
-c  OUTPUT:  GSM COMPONENTS OF THE EXTERNAL MAGNETIC FIELD (BX,BY,BZ, nanotesla)
-C            COMPUTED AS A SUM OF CONTRIBUTIONS FROM PRINCIPAL FIELD SOURCES 
+c OUTPUT:  GSM COMPONENTS OF THE EXTERNAL MAGNETIC FIELD (BX,BY,BZ, nanotesla)
+C            COMPUTED AS A SUM OF CONTRIBUTIONS FROM PRINCIPAL FIELD SOURCES
 C
-c  (C) Copr. 1995, 1996, Nikolai A. Tsyganenko, Hughes STX, Code 695, NASA GSFC
-c                                               Greenbelt, MD 20771, USA
+c  (C) Copr. 1995, 1996, Nikolai A. Tsyganenko, Raytheon STX, Code 695, NASA GSFC
+c      Greenbelt, MD 20771, USA
 c
-C REFERENCES:  (1) N.A. TSYGANENKO AND D.P. STERN, A NEW-GENERATION GLOBAL
+C                            REFERENCES:
+C
+C               (1) N.A. TSYGANENKO AND D.P. STERN, A NEW-GENERATION GLOBAL
 C           MAGNETOSPHERE FIELD MODEL  , BASED ON SPACECRAFT MAGNETOMETER DATA,
 C           ISTP NEWSLETTER, V.6, NO.1, P.21, FEB.1996.
 C
-c              (2) N.A.TSYGANENKO,  MODELING THE EARTH'S MAGNETOSPHERIC 
-C           MAGNETIC FIELD CONFINED WITHIN A REALISTIC MAGNETOPAUSE, 
+c              (2) N.A.TSYGANENKO,  MODELING THE EARTH'S MAGNETOSPHERIC
+C           MAGNETIC FIELD CONFINED WITHIN A REALISTIC MAGNETOPAUSE,
 C           J.GEOPHYS.RES., V.100, P. 5599, 1995.
 C
 C              (3) N.A. TSYGANENKO AND M.PEREDO, ANALYTICAL MODELS OF THE
-C           MAGNETIC FIELD OF DISK-SHAPED CURRENT SHEETS, J.GEOPHYS.RES., 
+C           MAGNETIC FIELD OF DISK-SHAPED CURRENT SHEETS, J.GEOPHYS.RES.,
 C           V.99, P. 199, 1994.
-c
-c    Mei-Ching Fok Noted:
-c    Routines dipole and locate were moved to geopack.f. Routine TAILDISK was
-c    renamed as taildisk_t96.
-c------------------------------------------------------------------------------
+C
+c----------------------------------------------------------------------
 
       IMPLICIT REAL*8 (A-H,O-Z)
       REAL PDYN,DST,BYIMF,BZIMF,PS,X,Y,Z,BX,BY,BZ,QX,QY,QZ,PARMOD(10),
-     *   A(9)
-c
+     *     A(9)
+c     
       DATA PDYN0,EPS10 /2.,3630.7/
-C
+C     
       DATA A/1.162,22.344,18.50,2.602,6.903,5.287,0.5790,0.4462,0.7850/
-C
+C     
       DATA  AM0,S0,X00,DSIG/70.,1.08,5.48,0.005/
-      DATA  DELIMFX,DELIMFY /20.,10./  
+      DATA  DELIMFX,DELIMFY /20.,10./
+C     
+      PDYN=PARMOD(1)
+      DST=PARMOD(2)
+      BYIMF=PARMOD(3)
+      BZIMF=PARMOD(4)
+C     
+      SPS=SIN(PS)
+      PPS=PS
+C     
+      DEPR=0.8*DST-13.*SQRT(PDYN) !  DEPR is an estimate of total near-Earth
+c     depression, based on DST and Pdyn
+c     (usually, DEPR &lt 0 )
+C     
+C     CALCULATE THE IMF-RELATED QUANTITIES:
+C     
+      Bt=SQRT(BYIMF**2+BZIMF**2)
+      
+      IF (BYIMF.EQ.0..AND.BZIMF.EQ.0.) THEN
+         THETA=0.
+         GOTO 1
+      ENDIF
+C     
+      THETA=ATAN2(BYIMF,BZIMF)
+      IF (THETA.LE.0.D0) THETA=THETA+6.2831853
+ 1    CT=COS(THETA)
+      ST=SIN(THETA)
+      EPS=718.5*SQRT(Pdyn)*Bt*SIN(THETA/2.)
+C     
+      FACTEPS=EPS/EPS10-1.
+      FACTPD=SQRT(PDYN/PDYN0)-1.
+C     
+      RCAMPL=-A(1)*DEPR         !   RCAMPL is the amplitude of the ring current
+c     (positive and equal to abs.value of RC depression at origin)
+C     
+      TAMPL2=A(2)+A(3)*FACTPD+A(4)*FACTEPS
+      TAMPL3=A(5)+A(6)*FACTPD
+      B1AMPL=A(7)+A(8)*FACTEPS
+      B2AMPL=20.*B1AMPL         ! IT IS EQUIVALENT TO ASSUMING THAT THE TOTAL CURRENT
+C     IN THE REGION 2 SYSTEM IS 40% OF THAT IN REGION 1
+      RECONN=A(9)
+C     
+      XAPPA=(PDYN/PDYN0)**0.14
+      XAPPA3=XAPPA**3
+      YS=Y*CT-Z*ST
+      ZS=Z*CT+Y*ST
+C     
+      FACTIMF=EXP(X/DELIMFX-(YS/DELIMFY)**2)
+C     
+C     CALCULATE THE "IMF" COMPONENTS OUTSIDE THE LAYER  (HENCE BEGIN WITH "O")
+C     
+      OIMFX=0.
+      OIMFY=RECONN*BYIMF*FACTIMF
+      OIMFZ=RECONN*BZIMF*FACTIMF
+C     
+      RIMFAMPL=RECONN*Bt
+C     
+      PPS=PS
+      XX=X*XAPPA
+      YY=Y*XAPPA
+      ZZ=Z*XAPPA
+C     
+C     SCALE AND CALCULATE THE MAGNETOPAUSE PARAMETERS FOR THE INTERPOLATION ACROSS
+C     THE BOUNDARY LAYER (THE COORDINATES XX,YY,ZZ  ARE ALREADY SCALED)
+C     
+      X0=X00/XAPPA
+      AM=AM0/XAPPA
+      RHO2=Y**2+Z**2
+      ASQ=AM**2
+      XMXM=AM+X-X0
+      IF (XMXM.LT.0.) XMXM=0.   ! THE BOUNDARY IS A CYLINDER TAILWARD OF X=X0-AM
+      AXX0=XMXM**2
+      ARO=ASQ+RHO2
+      SIGMA=SQRT((ARO+AXX0+SQRT((ARO+AXX0)**2-4.*ASQ*AXX0))/(2.*ASQ))
+C     
+C     NOW, THERE ARE THREE POSSIBLE CASES:
+C     (1) INSIDE THE MAGNETOSPHERE
+C     (2) IN THE BOUNDARY LAYER
+C     (3) OUTSIDE THE MAGNETOSPHERE AND B.LAYER
+C     FIRST OF ALL, CONSIDER THE CASES (1) AND (2):
+C     
+      IF (SIGMA.LT.S0+DSIG) THEN !  CALCULATE THE T95_06 FIELD (WITH THE
+C     POTENTIAL "PENETRATED" INTERCONNECTION FIELD):
+         
+         CALL DIPSHLD(PPS,XX,YY,ZZ,CFX,CFY,CFZ)
+         CALL TAILRC96(SPS,XX,YY,ZZ,BXRC,BYRC,BZRC,BXT2,BYT2,BZT2,
+     *        BXT3,BYT3,BZT3)
+         CALL BIRK1TOT_02(PPS,XX,YY,ZZ,R1X,R1Y,R1Z)
+         CALL BIRK2TOT_02(PPS,XX,YY,ZZ,R2X,R2Y,R2Z)
+         CALL INTERCON(XX,YS*XAPPA,ZS*XAPPA,RIMFX,RIMFYS,RIMFZS)
+         RIMFY=RIMFYS*CT+RIMFZS*ST
+         RIMFZ=RIMFZS*CT-RIMFYS*ST
+C     
+         FX=CFX*XAPPA3+RCAMPL*BXRC +TAMPL2*BXT2+TAMPL3*BXT3
+     *        +B1AMPL*R1X +B2AMPL*R2X +RIMFAMPL*RIMFX
+         FY=CFY*XAPPA3+RCAMPL*BYRC +TAMPL2*BYT2+TAMPL3*BYT3
+     *        +B1AMPL*R1Y +B2AMPL*R2Y +RIMFAMPL*RIMFY
+         FZ=CFZ*XAPPA3+RCAMPL*BZRC +TAMPL2*BZT2+TAMPL3*BZT3
+     *        +B1AMPL*R1Z +B2AMPL*R2Z +RIMFAMPL*RIMFZ
+C     
+C     NOW, LET US CHECK WHETHER WE HAVE THE CASE (1). IF YES - WE ARE DONE:
 C
-       PDYN=PARMOD(1)
-       DST=PARMOD(2)
-       BYIMF=PARMOD(3)
-       BZIMF=PARMOD(4)
-C
-       SPS=SIN(PS)
-       PPS=PS
-C
-       DEPR=0.8*DST-13.*SQRT(PDYN)  !  DEPR is an estimate of total near-Earth
-c                                         depression, based on DST and Pdyn
-c                                             (usually, DEPR < 0 )
-C
-C  CALCULATE THE IMF-RELATED QUANTITIES:
-C
-       Bt=SQRT(BYIMF**2+BZIMF**2)
-
-       IF (BYIMF.EQ.0..AND.BZIMF.EQ.0.) THEN
-          THETA=0.
-          GOTO 1
-       ENDIF
-C
-       THETA=ATAN2(BYIMF,BZIMF)
-       IF (THETA.LE.0.D0) THETA=THETA+6.2831853       
-  1    CT=COS(THETA)
-       ST=SIN(THETA)
-       EPS=718.5*SQRT(Pdyn)*Bt*SIN(THETA/2.)
-C
-       FACTEPS=EPS/EPS10-1.
-       FACTPD=SQRT(PDYN/PDYN0)-1.
-C
-       RCAMPL=-A(1)*DEPR     !   RCAMPL is the amplitude of the ring current
-c                  (positive and equal to abs.value of RC depression at origin)
-C
-       TAMPL2=A(2)+A(3)*FACTPD+A(4)*FACTEPS
-       TAMPL3=A(5)+A(6)*FACTPD
-       B1AMPL=A(7)+A(8)*FACTEPS
-       B2AMPL=20.*B1AMPL  ! IT IS EQUIVALENT TO ASSUMING THAT THE TOTAL CURRENT
-C                           IN THE REGION 2 SYSTEM IS 40% OF THAT IN REGION 1
-       RECONN=A(9)
-C
-       XAPPA=(PDYN/PDYN0)**0.14
-       XAPPA3=XAPPA**3
-       YS=Y*CT-Z*ST
-       ZS=Z*CT+Y*ST
-C
-       FACTIMF=EXP(X/DELIMFX-(YS/DELIMFY)**2)
-C
-C  CALCULATE THE "IMF" COMPONENTS OUTSIDE THE LAYER  (HENCE BEGIN WITH "O") 
-C
-       OIMFX=0.
-       OIMFY=RECONN*BYIMF*FACTIMF
-       OIMFZ=RECONN*BZIMF*FACTIMF
-C
-       RIMFAMPL=RECONN*Bt
-C
-       PPS=PS
-       XX=X*XAPPA
-       YY=Y*XAPPA
-       ZZ=Z*XAPPA
-C
-C  SCALE AND CALCULATE THE MAGNETOPAUSE PARAMETERS FOR THE INTERPOLATION ACROSS
-C   THE BOUNDARY LAYER (THE COORDINATES XX,YY,ZZ  ARE ALREADY SCALED)
-C
-       X0=X00/XAPPA
-       AM=AM0/XAPPA
-       RHO2=Y**2+Z**2
-       ASQ=AM**2
-       XMXM=AM+X-X0
-       IF (XMXM.LT.0.) XMXM=0. ! THE BOUNDARY IS A CYLINDER TAILWARD OF X=X0-AM
-       AXX0=XMXM**2
-       ARO=ASQ+RHO2
-       SIGMA=SQRT((ARO+AXX0+SQRT((ARO+AXX0)**2-4.*ASQ*AXX0))/(2.*ASQ))
-C
-C   NOW, THERE ARE THREE POSSIBLE CASES:
-C    (1) INSIDE THE MAGNETOSPHERE 
-C    (2) IN THE BOUNDARY LAYER
-C    (3) OUTSIDE THE MAGNETOSPHERE AND B.LAYER
-C       FIRST OF ALL, CONSIDER THE CASES (1) AND (2):
-C
-      IF (SIGMA.LT.S0+DSIG) THEN  !  CALCULATE THE T95_06 FIELD (WITH THE
-C                                POTENTIAL "PENETRATED" INTERCONNECTION FIELD):
-
-       CALL DIPSHLD(PPS,XX,YY,ZZ,CFX,CFY,CFZ)
-       CALL TAILRC96(SPS,XX,YY,ZZ,BXRC,BYRC,BZRC,BXT2,BYT2,BZT2,
-     *   BXT3,BYT3,BZT3)
-       CALL BIRK1TOT_02(PPS,XX,YY,ZZ,R1X,R1Y,R1Z)
-       CALL BIRK2TOT_02(PPS,XX,YY,ZZ,R2X,R2Y,R2Z)
-       CALL INTERCON(XX,YS*XAPPA,ZS*XAPPA,RIMFX,RIMFYS,RIMFZS)
-       RIMFY=RIMFYS*CT+RIMFZS*ST
-       RIMFZ=RIMFZS*CT-RIMFYS*ST
-C
-      FX=CFX*XAPPA3+RCAMPL*BXRC +TAMPL2*BXT2+TAMPL3*BXT3
-     *  +B1AMPL*R1X +B2AMPL*R2X +RIMFAMPL*RIMFX
-      FY=CFY*XAPPA3+RCAMPL*BYRC +TAMPL2*BYT2+TAMPL3*BYT3
-     *  +B1AMPL*R1Y +B2AMPL*R2Y +RIMFAMPL*RIMFY
-      FZ=CFZ*XAPPA3+RCAMPL*BZRC +TAMPL2*BZT2+TAMPL3*BZT3
-     *  +B1AMPL*R1Z +B2AMPL*R2Z +RIMFAMPL*RIMFZ
-C
-C  NOW, LET US CHECK WHETHER WE HAVE THE CASE (1). IF YES - WE ARE DONE:
-C
-       IF (SIGMA.LT.S0-DSIG) THEN  
-         BX=FX
-         BY=FY
-         BZ=FZ
-                        ELSE  !  THIS IS THE MOST COMPLEX CASE: WE ARE INSIDE
-C                                         THE INTERPOLATION REGION
-       FINT=0.5*(1.-(SIGMA-S0)/DSIG)
-       FEXT=0.5*(1.+(SIGMA-S0)/DSIG)
-C
-       CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
-       BX=(FX+QX)*FINT+OIMFX*FEXT -QX
-       BY=(FY+QY)*FINT+OIMFY*FEXT -QY
-       BZ=(FZ+QZ)*FINT+OIMFZ*FEXT -QZ
-c
-        ENDIF  !   THE CASES (1) AND (2) ARE EXHAUSTED; THE ONLY REMAINING 
-C                      POSSIBILITY IS NOW THE CASE (3):
-         ELSE
-                CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
-                BX=OIMFX-QX
-                BY=OIMFY-QY
-                BZ=OIMFZ-QZ
-         ENDIF
-C
-       RETURN
-       END
+         IF (SIGMA.LT.S0-DSIG) THEN
+            BX=FX
+            BY=FY
+            BZ=FZ
+         ELSE                   !  THIS IS THE MOST COMPLEX CASE: WE ARE INSIDE
+C     THE INTERPOLATION REGION
+            FINT=0.5*(1.-(SIGMA-S0)/DSIG)
+            FEXT=0.5*(1.+(SIGMA-S0)/DSIG)
+C     
+            CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
+            BX=(FX+QX)*FINT+OIMFX*FEXT -QX
+            BY=(FY+QY)*FINT+OIMFY*FEXT -QY
+            BZ=(FZ+QZ)*FINT+OIMFZ*FEXT -QZ
+c     
+         ENDIF                  !   THE CASES (1) AND (2) ARE EXHAUSTED; THE ONLY REMAINING
+C     POSSIBILITY IS NOW THE CASE (3):
+      ELSE
+         CALL DIPOLE(PS,X,Y,Z,QX,QY,QZ)
+         BX=OIMFX-QX
+         BY=OIMFY-QY
+         BZ=OIMFZ-QZ
+      ENDIF
+C     
+      RETURN
+      END
 C=====================================================================
-
+      
       SUBROUTINE DIPSHLD(PS,X,Y,Z,BX,BY,BZ)
-C
-C   CALCULATES GSM COMPONENTS OF THE EXTERNAL MAGNETIC FIELD DUE TO 
-C    SHIELDING OF THE EARTH'S DIPOLE ONLY
-C
-       IMPLICIT REAL*8 (A-H,O-Z)
-       DIMENSION A1(12),A2(12)
+C     
+C     CALCULATES GSM COMPONENTS OF THE EXTERNAL MAGNETIC FIELD DUE TO
+C     SHIELDING OF THE EARTH'S DIPOLE ONLY
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+      DIMENSION A1(12),A2(12)
       DATA A1 /.24777,-27.003,-.46815,7.0637,-1.5918,-.90317E-01,57.522,
-     * 13.757,2.0100,10.458,4.5798,2.1695/
+     *     13.757,2.0100,10.458,4.5798,2.1695/
       DATA A2/-.65385,-18.061,-.40457,-5.0995,1.2846,.78231E-01,39.592,
-     * 13.291,1.9970,10.062,4.5140,2.1558/
-C
-          CPS=COS(PS)
-          SPS=SIN(PS)
-          CALL CYLHARM(A1,X,Y,Z,HX,HY,HZ)
-          CALL CYLHAR1(A2,X,Y,Z,FX,FY,FZ)
-C
-          BX=HX*CPS+FX*SPS
-          BY=HY*CPS+FY*SPS
-          BZ=HZ*CPS+FZ*SPS
-        RETURN
-       END
-C
+     *     13.291,1.9970,10.062,4.5140,2.1558/
+C     
+      CPS=DCOS(PS)
+      SPS=DSIN(PS)
+      CALL CYLHARM(A1,X,Y,Z,HX,HY,HZ)
+      CALL CYLHAR1(A2,X,Y,Z,FX,FY,FZ)
+C     
+      BX=HX*CPS+FX*SPS
+      BY=HY*CPS+FY*SPS
+      BZ=HZ*CPS+FZ*SPS
+      RETURN
+      END
+C     
 C+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-C
-C  THIS CODE YIELDS THE SHIELDING FIELD FOR THE PERPENDICULAR DIPOLE
-C
-         SUBROUTINE  CYLHARM( A, X,Y,Z, BX,BY,BZ)
-C
-C
-C   ***  N.A. Tsyganenko ***  Sept. 14-18, 1993; revised March 16, 1994 ***
-C
-C   An approximation for the Chapman-Ferraro field by a sum of 6 cylin-
-c   drical harmonics (see pp. 97-113 in the brown GSFC notebook #1)
-c
-C      Description of parameters:
-C
-C  A   - input vector containing model parameters;
+C     
+C     THIS CODE YIELDS THE SHIELDING FIELD FOR THE PERPENDICULAR DIPOLE
+C     
+      SUBROUTINE  CYLHARM( A, X,Y,Z, BX,BY,BZ)
+C     
+C     
+C     ***  N.A. Tsyganenko ***  Sept. 14-18, 1993; revised March 16, 1994 ***
+C     
+C     An approximation for the Chapman-Ferraro field by a sum of 6 cylin-
+c     drical harmonics (see pp. 97-113 in the brown GSFC notebook #1)
+c     
+C     Description of parameters:
+C     
+C     A   - input vector containing model parameters;
 C  X,Y,Z   -  input GSM coordinates
 C  BX,BY,BZ - output GSM components of the shielding field
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C  The 6 linear parameters A(1)-A(6) are amplitudes of the cylindrical harmonic
 c       terms.
-c  The 6 nonlinear parameters A(7)-A(12) are the corresponding scale lengths 
+c  The 6 nonlinear parameters A(7)-A(12) are the corresponding scale lengths
 C       for each term (see GSFC brown notebook).
 c
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
-         DIMENSION  A(12)
-C
-           RHO=SQRT(Y**2+Z**2)
-            IF (RHO.LT.1.D-8) THEN
-               SINFI=1.D0
-               COSFI=0.D0
-               RHO=1.D-8
-               GOTO 1
-            ENDIF
-C
-           SINFI=Z/RHO
-           COSFI=Y/RHO
-  1        SINFI2=SINFI**2
-           SI2CO2=SINFI2-COSFI**2
-C
-             BX=0.D0
-             BY=0.D0
-             BZ=0.D0
-C
-           DO 11 I=1,3
-             DZETA=RHO/A(I+6)
-             XJ0=BES(DZETA,0)
-             XJ1=BES(DZETA,1)
-             XEXP=EXP(X/A(I+6))
-             BX=BX-A(I)*XJ1*XEXP*SINFI
-             BY=BY+A(I)*(2.D0*XJ1/DZETA-XJ0)*XEXP*SINFI*COSFI
-             BZ=BZ+A(I)*(XJ1/DZETA*SI2CO2-XJ0*SINFI2)*XEXP
-   11        CONTINUE
-c
-           DO 12 I=4,6
-             DZETA=RHO/A(I+6)
-             XKSI=X/A(I+6)
-             XJ0=BES(DZETA,0)
-             XJ1=BES(DZETA,1)
-             XEXP=EXP(XKSI)
-             BRHO=(XKSI*XJ0-(DZETA**2+XKSI-1.D0)*XJ1/DZETA)*XEXP*SINFI
-             BPHI=(XJ0+XJ1/DZETA*(XKSI-1.D0))*XEXP*COSFI
-             BX=BX+A(I)*(DZETA*XJ0+XKSI*XJ1)*XEXP*SINFI
-             BY=BY+A(I)*(BRHO*COSFI-BPHI*SINFI)
-             BZ=BZ+A(I)*(BRHO*SINFI+BPHI*COSFI)
-   12        CONTINUE
-C
-c
-         RETURN
-         END
-C
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
+      DIMENSION  A(12)
+C     
+      RHO=DSQRT(Y**2+Z**2)
+      IF (RHO.LT.1.D-8) THEN
+         SINFI=1.D0
+         COSFI=0.D0
+         RHO=1.D-8
+         GOTO 1
+      ENDIF
+C     
+      SINFI=Z/RHO
+      COSFI=Y/RHO
+ 1    SINFI2=SINFI**2
+      SI2CO2=SINFI2-COSFI**2
+C     
+      BX=0.D0
+      BY=0.D0
+      BZ=0.D0
+C     
+      DO 11 I=1,3
+         DZETA=RHO/A(I+6)
+         XJ0=BES(DZETA,0)
+         XJ1=BES(DZETA,1)
+         XEXP=DEXP(X/A(I+6))
+         BX=BX-A(I)*XJ1*XEXP*SINFI
+         BY=BY+A(I)*(2.D0*XJ1/DZETA-XJ0)*XEXP*SINFI*COSFI
+         BZ=BZ+A(I)*(XJ1/DZETA*SI2CO2-XJ0*SINFI2)*XEXP
+ 11   CONTINUE
+c     
+      DO 12 I=4,6
+         DZETA=RHO/A(I+6)
+         XKSI=X/A(I+6)
+         XJ0=BES(DZETA,0)
+         XJ1=BES(DZETA,1)
+         XEXP=DEXP(XKSI)
+         BRHO=(XKSI*XJ0-(DZETA**2+XKSI-1.D0)*XJ1/DZETA)*XEXP*SINFI
+         BPHI=(XJ0+XJ1/DZETA*(XKSI-1.D0))*XEXP*COSFI
+         BX=BX+A(I)*(DZETA*XJ0+XKSI*XJ1)*XEXP*SINFI
+         BY=BY+A(I)*(BRHO*COSFI-BPHI*SINFI)
+         BZ=BZ+A(I)*(BRHO*SINFI+BPHI*COSFI)
+ 12   CONTINUE
+C     
+c     
+      RETURN
+      END
+C     
 c%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+C     
+C     THIS CODE YIELDS THE SHIELDING FIELD FOR THE PARALLEL DIPOLE
+C     
+      SUBROUTINE  CYLHAR1(A, X,Y,Z, BX,BY,BZ)
+C     
+C     
+C     ***  N.A. Tsyganenko ***  Sept. 14-18, 1993; revised March 16, 1994 ***
+C     
+C     An approximation of the Chapman-Ferraro field by a sum of 6 cylin-
+c     drical harmonics (see pages 97-113 in the brown GSFC notebook #1)
+c     
+C     Description of parameters:
+C     
+C     A   - input vector containing model parameters;
+C     X,Y,Z - input GSM coordinates,
+C     BX,BY,BZ - output GSM components of the shielding field
+C     
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C
-C  THIS CODE YIELDS THE SHIELDING FIELD FOR THE PARALLEL DIPOLE
-C
-         SUBROUTINE  CYLHAR1(A, X,Y,Z, BX,BY,BZ)
-C
-C
-C   ***  N.A. Tsyganenko ***  Sept. 14-18, 1993; revised March 16, 1994 ***
-C
-C   An approximation of the Chapman-Ferraro field by a sum of 6 cylin-
-c   drical harmonics (see pages 97-113 in the brown GSFC notebook #1)
-c
-C      Description of parameters:
-C
-C  A   - input vector containing model parameters;
-C  X,Y,Z - input GSM coordinates,
-C  BX,BY,BZ - output GSM components of the shielding field
-C
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C
-C      The 6 linear parameters A(1)-A(6) are amplitudes of the cylindrical 
+C      The 6 linear parameters A(1)-A(6) are amplitudes of the cylindrical
 c  harmonic terms.
-c      The 6 nonlinear parameters A(7)-A(12) are the corresponding scale 
+c      The 6 nonlinear parameters A(7)-A(12) are the corresponding scale
 c  lengths for each term (see GSFC brown notebook).
 c
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
-         DIMENSION  A(12)
-C
-           RHO=SQRT(Y**2+Z**2)
-            IF (RHO.LT.1.D-10) THEN
-               SINFI=1.D0
-               COSFI=0.D0
-               GOTO 1
-            ENDIF
-C
-           SINFI=Z/RHO
-           COSFI=Y/RHO
-C
-   1      BX=0.D0 
-          BY=0.D0 
-          BZ=0.D0 
-C
-             DO 11 I=1,3
-             DZETA=RHO/A(I+6)
-             XKSI=X/A(I+6)
-             XJ0=BES(DZETA,0)
-             XJ1=BES(DZETA,1)
-             XEXP=EXP(XKSI)
-             BRHO=XJ1*XEXP
-             BX=BX-A(I)*XJ0*XEXP
-             BY=BY+A(I)*BRHO*COSFI
-             BZ=BZ+A(I)*BRHO*SINFI
-   11        CONTINUE
-c
-           DO 12 I=4,6
-             DZETA=RHO/A(I+6)
-             XKSI=X/A(I+6)
-             XJ0=BES(DZETA,0)
-             XJ1=BES(DZETA,1)
-             XEXP=EXP(XKSI)
-             BRHO=(DZETA*XJ0+XKSI*XJ1)*XEXP
-             BX=BX+A(I)*(DZETA*XJ1-XJ0*(XKSI+1.D0))*XEXP
-             BY=BY+A(I)*BRHO*COSFI
-             BZ=BZ+A(I)*BRHO*SINFI
-   12        CONTINUE
-C
-         RETURN
-         END
-
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
+      DIMENSION  A(12)
+C     
+      RHO=DSQRT(Y**2+Z**2)
+      IF (RHO.LT.1.D-10) THEN
+         SINFI=1.D0
+         COSFI=0.D0
+         GOTO 1
+      ENDIF
+C     
+      SINFI=Z/RHO
+      COSFI=Y/RHO
+C     
+ 1    BX=0.D0
+      BY=0.D0
+      BZ=0.D0
+C     
+      DO 11 I=1,3
+         DZETA=RHO/A(I+6)
+         XKSI=X/A(I+6)
+         XJ0=BES(DZETA,0)
+         XJ1=BES(DZETA,1)
+         XEXP=DEXP(XKSI)
+         BRHO=XJ1*XEXP
+         BX=BX-A(I)*XJ0*XEXP
+         BY=BY+A(I)*BRHO*COSFI
+         BZ=BZ+A(I)*BRHO*SINFI
+ 11   CONTINUE
+c     
+      DO 12 I=4,6
+         DZETA=RHO/A(I+6)
+         XKSI=X/A(I+6)
+         XJ0=BES(DZETA,0)
+         XJ1=BES(DZETA,1)
+         XEXP=DEXP(XKSI)
+         BRHO=(DZETA*XJ0+XKSI*XJ1)*XEXP
+         BX=BX+A(I)*(DZETA*XJ1-XJ0*(XKSI+1.D0))*XEXP
+         BY=BY+A(I)*BRHO*COSFI
+         BZ=BZ+A(I)*BRHO*SINFI
+ 12   CONTINUE
+C     
+      RETURN
+      END
+      
 c%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-C
+C     
       DOUBLE PRECISION FUNCTION BES(X,K)
       IMPLICIT REAL*8 (A-H,O-Z)
-C
-      IF (K.EQ.0) THEN                                                 
-        BES=BES0(X)                                                    
-        RETURN                                                         
+C     
+      IF (K.EQ.0) THEN
+         BES=BES0(X)
+         RETURN
       ENDIF
-C                                                          
-      IF (K.EQ.1) THEN                                                 
-        BES=BES1(X)                                                    
-        RETURN                                                         
+C     
+      IF (K.EQ.1) THEN
+         BES=BES1(X)
+         RETURN
       ENDIF
-C
-      IF (X.EQ.0.D0) THEN                                                 
-        BES=0.D0
-        RETURN                                                         
+C     
+      IF (X.EQ.0.D0) THEN
+         BES=0.D0
+         RETURN
       ENDIF
-C
+C     
       G=2.D0/X
-      IF (X.LE.REAL(K)) GOTO 10
-C
+      IF (X.LE.DBLE(K)) GOTO 10
+C     
       N=1
       XJN=BES1(X)
       XJNM1=BES0(X)
-C
-  1   XJNP1=G*N*XJN-XJNM1
+C     
+ 1    XJNP1=G*N*XJN-XJNM1
       N=N+1
       IF (N.LT.K) GOTO 2
       BES=XJNP1
       RETURN
-C
+C     
  2    XJNM1=XJN
       XJN=XJNP1
       GOTO 1
-C
+C     
  10   N=24
       XJN=1.D0
       XJNP1=0.D0
       SUM=0.D0
-C
-  3   IF (MOD(N,2).EQ.0) SUM=SUM+XJN
+C     
+ 3    IF (MOD(N,2).EQ.0) SUM=SUM+XJN
       XJNM1=G*N*XJN-XJNP1
       N=N-1
-C
+C     
       XJNP1=XJN
       XJN=XJNM1
-      IF (N.EQ.K) BES=XJN         
-C
-      IF (ABS(XJN).GT.1.D5) THEN
-        XJNP1=XJNP1*1.D-5
-        XJN=XJN*1.D-5
-        SUM=SUM*1.D-5
-        IF (N.LE.K) BES=BES*1.D-5
+      IF (N.EQ.K) BES=XJN
+C     
+      IF (DABS(XJN).GT.1.D5) THEN
+         XJNP1=XJNP1*1.D-5
+         XJN=XJN*1.D-5
+         SUM=SUM*1.D-5
+         IF (N.LE.K) BES=BES*1.D-5
       ENDIF
-C
+C     
       IF (N.EQ.0) GOTO 4
       GOTO 3
-C
-  4   SUM=XJN+2.D0*SUM
+C     
+ 4    SUM=XJN+2.D0*SUM
       BES=BES/SUM
       RETURN
       END
 c-------------------------------------------------------------------
-c
-       DOUBLE PRECISION FUNCTION BES0(X)
-C
-        IMPLICIT REAL*8 (A-H,O-Z)
-C
-        IF (ABS(X).LT.3.D0) THEN
-          X32=(X/3.D0)**2
-          BES0=1.D0-X32*(2.2499997D0-X32*(1.2656208D0-X32*
-     *    (0.3163866D0-X32*(0.0444479D0-X32*(0.0039444D0
-     *     -X32*0.00021D0)))))
-        ELSE
-        XD3=3.D0/X
-        F0=0.79788456D0-XD3*(0.00000077D0+XD3*(0.00552740D0+XD3*
-     *   (0.00009512D0-XD3*(0.00137237D0-XD3*(0.00072805D0
-     *   -XD3*0.00014476D0)))))
-        T0=X-0.78539816D0-XD3*(0.04166397D0+XD3*(0.00003954D0-XD3*
-     *   (0.00262573D0-XD3*(0.00054125D0+XD3*(0.00029333D0
-     *   -XD3*0.00013558D0)))))
-        BES0=F0/SQRT(X)*COS(T0)
-       ENDIF
-       RETURN
-       END
-c
-c--------------------------------------------------------------------------
-c
-       DOUBLE PRECISION FUNCTION BES1(X)
-C
-        IMPLICIT REAL*8 (A-H,O-Z)
-C
-       IF (ABS(X).LT.3.D0) THEN
-        X32=(X/3.D0)**2
-        BES1XM1=0.5D0-X32*(0.56249985D0-X32*(0.21093573D0-X32*
-     *  (0.03954289D0-X32*(0.00443319D0-X32*(0.00031761D0
-     *  -X32*0.00001109D0)))))
-         BES1=BES1XM1*X
-       ELSE
-        XD3=3.D0/X
-        F1=0.79788456D0+XD3*(0.00000156D0+XD3*(0.01659667D0+XD3*
-     *   (0.00017105D0-XD3*(0.00249511D0-XD3*(0.00113653D0
-     *   -XD3*0.00020033D0)))))
-        T1=X-2.35619449D0+XD3*(0.12499612D0+XD3*(0.0000565D0-XD3*
-     *   (0.00637879D0-XD3*(0.00074348D0+XD3*(0.00079824D0
-     *   -XD3*0.00029166D0)))))
-        BES1=F1/SQRT(X)*COS(T1)
-       ENDIF
-       RETURN
-       END
-C------------------------------------------------------------
-C
-         SUBROUTINE INTERCON(X,Y,Z,BX,BY,BZ)
-C
-C      Calculates the potential interconnection field inside the magnetosphere,
-c  corresponding to  DELTA_X = 20Re and DELTA_Y = 10Re (NB#3, p.90, 6/6/1996).
-C  The position (X,Y,Z) and field components BX,BY,BZ are given in the rotated
-c   coordinate system, in which the Z-axis is always directed along the BzIMF
-c   (i.e. rotated by the IMF clock angle Theta)
-C   It is also assumed that the IMF Bt=1, so that the components should be
-c     (i) multiplied by the actual Bt, and
-c     (ii) transformed to standard GSM coords by rotating back around X axis
-c              by the angle -Theta.
-c
-C      Description of parameters:
-C
-C     X,Y,Z -   GSM POSITION
-C      BX,BY,BZ - INTERCONNECTION FIELD COMPONENTS INSIDE THE MAGNETOSPHERE
-C        OF A STANDARD SIZE (TO TAKE INTO ACCOUNT EFFECTS OF PRESSURE CHANGES,
-C         APPLY THE SCALING TRANSFORMATION)
-C
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C
-C     The 9 linear parameters are amplitudes of the "cartesian" harmonics
-c     The 6 nonlinear parameters are the scales Pi and Ri entering
-c    the arguments of exponents, sines, and cosines in the 9 "Cartesian"
-c       harmonics (3+3)
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
-        DIMENSION A(15),RP(3),RR(3),P(3),R(3)
-C
-      DATA A/-8.411078731,5932254.951,-9073284.93,-11.68794634,
-     * 6027598.824,-9218378.368,-6.508798398,-11824.42793,18015.66212,
-     * 7.99754043,13.9669886,90.24475036,16.75728834,1015.645781,
-     * 1553.493216/
-C
-        DATA M/0/
-C
-        IF (M.NE.0) GOTO 111
-        M=1
-C
-         P(1)=A(10)
-         P(2)=A(11)
-         P(3)=A(12)
-         R(1)=A(13)
-         R(2)=A(14)
-         R(3)=A(15)
-C
-C
-           DO 11 I=1,3
-            RP(I)=1.D0/P(I)
-  11        RR(I)=1.D0/R(I)
-C
-  111   CONTINUE
-C
-            L=0
-C
-               BX=0.
-               BY=0.
-               BZ=0.
-C
-c        "PERPENDICULAR" KIND OF SYMMETRY ONLY
-C
-               DO 2 I=1,3
-                  CYPI=COS(Y*RP(I))
-                  SYPI=SIN(Y*RP(I))
-C
-                DO 2 K=1,3
-                   SZRK=SIN(Z*RR(K))
-                   CZRK=COS(Z*RR(K))
-                     SQPR=SQRT(RP(I)**2+RR(K)**2)
-                      EPR=EXP(X*SQPR)
-C
-                     HX=-SQPR*EPR*CYPI*SZRK
-                     HY=RP(I)*EPR*SYPI*SZRK
-                     HZ=-RR(K)*EPR*CYPI*CZRK
-             L=L+1
-c
-          BX=BX+A(L)*HX
-          BY=BY+A(L)*HY
-          BZ=BZ+A(L)*HZ
-  2   CONTINUE
-C
+c     
+      DOUBLE PRECISION FUNCTION BES0(X)
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+C     
+      IF (DABS(X).LT.3.D0) THEN
+         X32=(X/3.D0)**2
+         BES0=1.D0-X32*(2.2499997D0-X32*(1.2656208D0-X32*
+     *        (0.3163866D0-X32*(0.0444479D0-X32*(0.0039444D0
+     *        -X32*0.00021D0)))))
+      ELSE
+         XD3=3.D0/X
+         F0=0.79788456D0-XD3*(0.00000077D0+XD3*(0.00552740D0+XD3*
+     *        (0.00009512D0-XD3*(0.00137237D0-XD3*(0.00072805D0
+     *        -XD3*0.00014476D0)))))
+         T0=X-0.78539816D0-XD3*(0.04166397D0+XD3*(0.00003954D0-XD3*
+     *        (0.00262573D0-XD3*(0.00054125D0+XD3*(0.00029333D0
+     *        -XD3*0.00013558D0)))))
+         BES0=F0/DSQRT(X)*DCOS(T0)
+      ENDIF
       RETURN
       END
-
+c     
+c--------------------------------------------------------------------------
+c     
+      DOUBLE PRECISION FUNCTION BES1(X)
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+C     
+      IF (DABS(X).LT.3.D0) THEN
+         X32=(X/3.D0)**2
+         BES1XM1=0.5D0-X32*(0.56249985D0-X32*(0.21093573D0-X32*
+     *        (0.03954289D0-X32*(0.00443319D0-X32*(0.00031761D0
+     *        -X32*0.00001109D0)))))
+         BES1=BES1XM1*X
+      ELSE
+         XD3=3.D0/X
+         F1=0.79788456D0+XD3*(0.00000156D0+XD3*(0.01659667D0+XD3*
+     *        (0.00017105D0-XD3*(0.00249511D0-XD3*(0.00113653D0
+     *        -XD3*0.00020033D0)))))
+         T1=X-2.35619449D0+XD3*(0.12499612D0+XD3*(0.0000565D0-XD3*
+     *        (0.00637879D0-XD3*(0.00074348D0+XD3*(0.00079824D0
+     *        -XD3*0.00029166D0)))))
+         BES1=F1/DSQRT(X)*DCOS(T1)
+      ENDIF
+      RETURN
+      END
+C------------------------------------------------------------
+C     
+      SUBROUTINE INTERCON(X,Y,Z,BX,BY,BZ)
+C     
+C     Calculates the potential interconnection field inside the magnetosphere,
+c     corresponding to  DELTA_X = 20Re and DELTA_Y = 10Re (NB#3, p.90, 6/6/1996).
+C     The position (X,Y,Z) and field components BX,BY,BZ are given in the rotated
+c     coordinate system, in which the Z-axis is always directed along the BzIMF
+c     (i.e. rotated by the IMF clock angle Theta)
+C     It is also assumed that the IMF Bt=1, so that the components should be
+c     (i) multiplied by the actual Bt, and
+c     (ii) transformed to standard GSM coords by rotating back around X axis
+c     by the angle -Theta.
+c     
+C     Description of parameters:
+C     
+C     X,Y,Z -   GSM POSITION
+C     BX,BY,BZ - INTERCONNECTION FIELD COMPONENTS INSIDE THE MAGNETOSPHERE
+C     OF A STANDARD SIZE (TO TAKE INTO ACCOUNT EFFECTS OF PRESSURE CHANGES,
+C     APPLY THE SCALING TRANSFORMATION)
+C     
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+C     
+C     The 9 linear parameters are amplitudes of the "cartesian" harmonics
+c     The 6 nonlinear parameters are the scales Pi and Ri entering
+c     the arguments of exponents, sines, and cosines in the 9 "Cartesian"
+c     harmonics (3+3)
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+C     
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
+      DIMENSION A(15),RP(3),RR(3),P(3),R(3)
+C     
+      DATA A/-8.411078731,5932254.951,-9073284.93,-11.68794634,
+     *   6027598.824,-9218378.368,-6.508798398,-11824.42793,18015.66212,
+     *   7.99754043,13.9669886,90.24475036,16.75728834,1015.645781,
+     *   1553.493216/
+C     
+      DATA M/0/
+C     
+      IF (M.NE.0) GOTO 111
+      M=1
+C     
+      P(1)=A(10)
+      P(2)=A(11)
+      P(3)=A(12)
+      R(1)=A(13)
+      R(2)=A(14)
+      R(3)=A(15)
+C     
+C     
+      DO 11 I=1,3
+         RP(I)=1.D0/P(I)
+ 11      RR(I)=1.D0/R(I)
+C     
+ 111     CONTINUE
+C     
+         L=0
+C     
+         BX=0.
+         BY=0.
+         BZ=0.
+C     
+c     "PERPENDICULAR" KIND OF SYMMETRY ONLY
+C     
+         DO 2 I=1,3
+            CYPI=DCOS(Y*RP(I))
+            SYPI=DSIN(Y*RP(I))
+C     
+            DO 2 K=1,3
+               SZRK=DSIN(Z*RR(K))
+               CZRK=DCOS(Z*RR(K))
+               SQPR=DSQRT(RP(I)**2+RR(K)**2)
+               EPR=DEXP(X*SQPR)
+C     
+               HX=-SQPR*EPR*CYPI*SZRK
+               HY=RP(I)*EPR*SYPI*SZRK
+               HZ=-RR(K)*EPR*CYPI*CZRK
+               L=L+1
+c     
+               BX=BX+A(L)*HX
+               BY=BY+A(L)*HY
+               BZ=BZ+A(L)*HZ
+ 2          CONTINUE
+C     
+            RETURN
+            END
+      
 C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      Block Data
+
+      IMPLICIT REAL*8 (A-H,O-Z)
+      COMMON /COORD11/ XX1(12),YY1(12)
+      COMMON /RHDR/ RH,DR
+      COMMON /LOOPDIP1/ TILT,XCENTRE(2),RADIUS(2), DIPX,DIPY
+C     
+      COMMON /COORD21/ XX2(14),YY2(14),ZZ2(14)
+      COMMON /DX1/ DX,SCALEIN,SCALEOUT
+
+      DATA XX1/-11.D0,2*-7.D0,2*-3.D0,3*1.D0,2*5.D0,2*9.D0/
+      DATA YY1/2.D0,0.D0,4.D0,2.D0,6.D0,0.D0,4.D0,8.D0,2.D0,6.D0,0.D0,
+     *     4.D0/
+      DATA XX2/-10.D0,-7.D0,2*-4.D0,0.D0,2*4.D0,7.D0,10.D0,5*0.D0/
+      DATA YY2/3.D0,6.D0,3.D0,9.D0,6.D0,3.D0,9.D0,6.D0,3.D0,5*0.D0/
+      DATA ZZ2/2*20.D0,4.D0,20.D0,2*4.D0,3*20.D0,2.D0,3.D0,4.5D0,
+     *     7.D0,10.D0/
+C     
+      DATA RH,DR /9.D0,4.D0/    !  RH IS THE "HINGING DISTANCE" AND DR IS THE
+C     TRANSITION SCALE LENGTH, DEFINING THE
+C     CURVATURE  OF THE WARPING (SEE P.89, NB #2)
+
+      DATA DX,SCALEIN,SCALEOUT /-0.16D0,0.08D0,0.4D0/
+      DATA TILT,XCENTRE,RADIUS,DIPX,DIPY /1.00891,2.28397,-5.60831,
+     *     1.86106,7.83281,1.12541,0.945719/
+      End
+
+C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
+      
       SUBROUTINE TAILRC96(SPS,X,Y,Z,BXRC,BYRC,BZRC,BXT2,BYT2,BZT2,
-     *   BXT3,BYT3,BZT3)
-c
-c  COMPUTES THE COMPONENTS OF THE FIELD OF THE MODEL RING CURRENT AND THREE
-c                   TAIL MODES WITH UNIT AMPLITUDES  
-C      (FOR THE RING CURRENT, IT MEANS THE DISTURBANCE OF Bz=-1nT AT ORIGIN, 
-C   AND FOR THE TAIL MODES IT MEANS MAXIMAL BX JUST ABOVE THE SHEET EQUAL 1 nT.
-C
-         IMPLICIT REAL*8 (A-H,O-Z)
-         DIMENSION ARC(48),ATAIL2(48),ATAIL3(48)
-         COMMON /WARP/ CPSS,SPSS,DPSRR,RPS,WARP,D,XS,ZS,DXSX,DXSY,DXSZ,
-     *   DZSX,DZSY,DZSZ,DZETAS,DDZETADX,DDZETADY,DDZETADZ,ZSWW
-C
-         DATA ARC/-3.087699646,3.516259114,18.81380577,-13.95772338,   
-     *  -5.497076303,0.1712890838,2.392629189,-2.728020808,-14.79349936,
-     *  11.08738083,4.388174084,0.2492163197E-01,0.7030375685,
+     *     BXT3,BYT3,BZT3)
+c     
+c     COMPUTES THE COMPONENTS OF THE FIELD OF THE MODEL RING CURRENT AND THREE
+c     TAIL MODES WITH UNIT AMPLITUDES
+C     (FOR THE RING CURRENT, IT MEANS THE DISTURBANCE OF Bz=-1nT AT ORIGIN,
+C     AND FOR THE TAIL MODES IT MEANS MAXIMAL BX JUST ABOVE THE SHEET EQUAL 1 nT.
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+      DIMENSION ARC(48),ATAIL2(48),ATAIL3(48)
+      COMMON /WARP/ CPSS,SPSS,DPSRR,RPS,WARP,D,XS,ZS,DXSX,DXSY,DXSZ,
+     *     DZSX,DZSY,DZSZ,DZETAS,DDZETADX,DDZETADY,DDZETADZ,ZSWW
+C     
+      DATA ARC/-3.087699646,3.516259114,18.81380577,-13.95772338,
+     *-5.497076303,0.1712890838,2.392629189,-2.728020808,-14.79349936,
+     *11.08738083,4.388174084,0.2492163197E-01,0.7030375685,
      *-.7966023165,-3.835041334,2.642228681,-0.2405352424,-0.7297705678,
-     * -0.3680255045,0.1333685557,2.795140897,-1.078379954,0.8014028630,
-     * 0.1245825565,0.6149982835,-0.2207267314,-4.424578723,1.730471572,
-     * -1.716313926,-0.2306302941,-0.2450342688,0.8617173961E-01,
-     *  1.54697858,-0.6569391113,-0.6537525353,0.2079417515,12.75434981,
-     *  11.37659788,636.4346279,1.752483754,3.604231143,12.83078674,
-     * 7.412066636,9.434625736,676.7557193,1.701162737,3.580307144,
-     *  14.64298662/
-C
-        DATA ATAIL2/.8747515218,-.9116821411,2.209365387,-2.159059518,
-     * -7.059828867,5.924671028,-1.916935691,1.996707344,-3.877101873,
-     * 3.947666061,11.38715899,-8.343210833,1.194109867,-1.244316975,
-     * 3.73895491,-4.406522465,-20.66884863,3.020952989,.2189908481,
-     * -.09942543549,-.927225562,.1555224669,.6994137909,-.08111721003,
-     * -.7565493881,.4686588792,4.266058082,-.3717470262,-3.920787807,
-     * .02298569870,.7039506341,-.5498352719,-6.675140817,.8279283559,
-     * -2.234773608,-1.622656137,5.187666221,6.802472048,39.13543412,
+     *-0.3680255045,0.1333685557,2.795140897,-1.078379954,0.8014028630,
+     *0.1245825565,0.6149982835,-0.2207267314,-4.424578723,1.730471572,
+     *-1.716313926,-0.2306302941,-0.2450342688,0.8617173961E-01,
+     *1.54697858,-0.6569391113,-0.6537525353,0.2079417515,12.75434981,
+     *11.37659788,636.4346279,1.752483754,3.604231143,12.83078674,
+     *7.412066636,9.434625736,676.7557193,1.701162737,3.580307144,
+     *14.64298662/
+C     
+      DATA ATAIL2/.8747515218,-.9116821411,2.209365387,-2.159059518,
+     *  -7.059828867,5.924671028,-1.916935691,1.996707344,-3.877101873,
+     *  3.947666061,11.38715899,-8.343210833,1.194109867,-1.244316975,
+     *  3.73895491,-4.406522465,-20.66884863,3.020952989,.2189908481,
+     *  -.09942543549,-.927225562,.1555224669,.6994137909,-.08111721003,
+     *  -.7565493881,.4686588792,4.266058082,-.3717470262,-3.920787807,
+     *   .02298569870,.7039506341,-.5498352719,-6.675140817,.8279283559,
+     *   -2.234773608,-1.622656137,5.187666221,6.802472048,39.13543412,
      *  2.784722096,6.979576616,25.71716760,4.495005873,8.068408272,
-     * 93.47887103,4.158030104,9.313492566,57.18240483/
-C
-        DATA ATAIL3/-19091.95061,-3011.613928,20582.16203,4242.918430,
-     * -2377.091102,-1504.820043,19884.04650,2725.150544,-21389.04845,
-     * -3990.475093,2401.610097,1548.171792,-946.5493963,490.1528941,
-     * 986.9156625,-489.3265930,-67.99278499,8.711175710,-45.15734260,
-     * -10.76106500,210.7927312,11.41764141,-178.0262808,.7558830028,
-     *  339.3806753,9.904695974,69.50583193,-118.0271581,22.85935896,
-     * 45.91014857,-425.6607164,15.47250738,118.2988915,65.58594397,
-     * -201.4478068,-14.57062940,19.69877970,20.30095680,86.45407420,
-     * 22.50403727,23.41617329,48.48140573,24.61031329,123.5395974,
-     * 223.5367692,39.50824342,65.83385762,266.2948657/
-C
-       DATA RH,DR,G,D0,DELTADY/9.,4.,10.,2.,10./
-C
-C   TO ECONOMIZE THE CODE, WE FIRST CALCULATE COMMON VARIABLES, WHICH ARE
-C      THE SAME FOR ALL MODES, AND PUT THEM IN THE COMMON-BLOCK /WARP/
-C
-       DR2=DR*DR 
-       C11=SQRT((1.D0+RH)**2+DR2)
-       C12=SQRT((1.D0-RH)**2+DR2)
-       C1=C11-C12
-       SPSC1=SPS/C1
-       RPS=0.5*(C11+C12)*SPS  !  THIS IS THE SHIFT OF OF THE SHEET WITH RESPECT
-C                            TO GSM EQ.PLANE FOR THE 3RD (ASYMPTOTIC) TAIL MODE
-C
-        R=SQRT(X*X+Y*Y+Z*Z)
-        SQ1=SQRT((R+RH)**2+DR2)
-        SQ2=SQRT((R-RH)**2+DR2)
-        C=SQ1-SQ2
-        CS=(R+RH)/SQ1-(R-RH)/SQ2
-        SPSS=SPSC1/R*C 
-        CPSS=SQRT(1.D0-SPSS**2)
-        DPSRR=SPS/(R*R)*(CS*R-C)/SQRT((R*C1)**2-(C*SPS)**2)
-C
-        WFAC=Y/(Y**4+1.D4)   !   WARPING
-        W=WFAC*Y**3
-        WS=4.D4*Y*WFAC**2
-        WARP=G*SPS*W
-        XS=X*CPSS-Z*SPSS
-        ZSWW=Z*CPSS+X*SPSS  ! "WW" MEANS "WITHOUT Y-Z WARPING" (IN X-Z ONLY)
-        ZS=ZSWW +WARP
-
-        DXSX=CPSS-X*ZSWW*DPSRR
-        DXSY=-Y*ZSWW*DPSRR
-        DXSZ=-SPSS-Z*ZSWW*DPSRR
-        DZSX=SPSS+X*XS*DPSRR
-        DZSY=XS*Y*DPSRR  +G*SPS*WS  !  THE LAST TERM IS FOR THE Y-Z WARP 
-        DZSZ=CPSS+XS*Z*DPSRR        !      (TAIL MODES ONLY)
-
-        D=D0+DELTADY*(Y/20.D0)**2   !  SHEET HALF-THICKNESS FOR THE TAIL MODES
-        DDDY=DELTADY*Y*0.005D0      !  (THICKENS TO FLANKS, BUT NO VARIATION 
-C                                         ALONG X, IN CONTRAST TO RING CURRENT)
-C
-        DZETAS=SQRT(ZS**2+D**2)  !  THIS IS THE SAME SIMPLE WAY TO SPREAD
-C                                        OUT THE SHEET, AS THAT USED IN T89 
-        DDZETADX=ZS*DZSX/DZETAS
-        DDZETADY=(ZS*DZSY+D*DDDY)/DZETAS
-        DDZETADZ=ZS*DZSZ/DZETAS
-C
-        CALL SHLCAR3X3(ARC,X,Y,Z,SPS,WX,WY,WZ)
-        CALL RINGCURR96(X,Y,Z,HX,HY,HZ)
-        BXRC=WX+HX
-        BYRC=WY+HY
-        BZRC=WZ+HZ
-C
-        CALL SHLCAR3X3(ATAIL2,X,Y,Z,SPS,WX,WY,WZ)
-        CALL TAILDISK_t96(X,Y,Z,HX,HY,HZ)
+     *     93.47887103,4.158030104,9.313492566,57.18240483/
+C     
+      DATA ATAIL3/-19091.95061,-3011.613928,20582.16203,4242.918430,
+     *   -2377.091102,-1504.820043,19884.04650,2725.150544,-21389.04845,
+     *   -3990.475093,2401.610097,1548.171792,-946.5493963,490.1528941,
+     *   986.9156625,-489.3265930,-67.99278499,8.711175710,-45.15734260,
+     *   -10.76106500,210.7927312,11.41764141,-178.0262808,.7558830028,
+     *   339.3806753,9.904695974,69.50583193,-118.0271581,22.85935896,
+     *   45.91014857,-425.6607164,15.47250738,118.2988915,65.58594397,
+     *   -201.4478068,-14.57062940,19.69877970,20.30095680,86.45407420,
+     *   22.50403727,23.41617329,48.48140573,24.61031329,123.5395974,
+     *   223.5367692,39.50824342,65.83385762,266.2948657/
+C     
+      DATA RH,DR,G,D0,DELTADY/9.,4.,10.,2.,10./
+C     
+C     TO ECONOMIZE THE CODE, WE FIRST CALCULATE COMMON VARIABLES, WHICH ARE
+C     THE SAME FOR ALL MODES, AND PUT THEM IN THE COMMON-BLOCK /WARP/
+C     
+      DR2=DR*DR
+      C11=DSQRT((1.D0+RH)**2+DR2)
+      C12=DSQRT((1.D0-RH)**2+DR2)
+      C1=C11-C12
+      SPSC1=SPS/C1
+      RPS=0.5*(C11+C12)*SPS     !  THIS IS THE SHIFT OF OF THE SHEET WITH RESPECT
+C     TO GSM EQ.PLANE FOR THE 3RD (ASYMPTOTIC) TAIL MODE
+C     
+      R=DSQRT(X*X+Y*Y+Z*Z)
+      SQ1=DSQRT((R+RH)**2+DR2)
+      SQ2=DSQRT((R-RH)**2+DR2)
+      C=SQ1-SQ2
+      CS=(R+RH)/SQ1-(R-RH)/SQ2
+      SPSS=SPSC1/R*C
+      CPSS=DSQRT(1.D0-SPSS**2)
+      DPSRR=SPS/(R*R)*(CS*R-C)/DSQRT((R*C1)**2-(C*SPS)**2)
+C     
+      WFAC=Y/(Y**4+1.D4)        !   WARPING
+      W=WFAC*Y**3
+      WS=4.D4*Y*WFAC**2
+      WARP=G*SPS*W
+      XS=X*CPSS-Z*SPSS
+      ZSWW=Z*CPSS+X*SPSS        ! "WW" MEANS "WITHOUT Y-Z WARPING" (IN X-Z ONLY)
+      ZS=ZSWW +WARP
+      
+      DXSX=CPSS-X*ZSWW*DPSRR
+      DXSY=-Y*ZSWW*DPSRR
+      DXSZ=-SPSS-Z*ZSWW*DPSRR
+      DZSX=SPSS+X*XS*DPSRR
+      DZSY=XS*Y*DPSRR  +G*SPS*WS !  THE LAST TERM IS FOR THE Y-Z WARP
+      DZSZ=CPSS+XS*Z*DPSRR      !      (TAIL MODES ONLY)
+      
+      D=D0+DELTADY*(Y/20.D0)**2 !  SHEET HALF-THICKNESS FOR THE TAIL MODES
+      DDDY=DELTADY*Y*0.005D0    !  (THICKENS TO FLANKS, BUT NO VARIATION
+C     ALONG X, IN CONTRAST TO RING CURRENT)
+C     
+      DZETAS=DSQRT(ZS**2+D**2)  !  THIS IS THE SAME SIMPLE WAY TO SPREAD
+C     OUT THE SHEET, AS THAT USED IN T89
+      DDZETADX=ZS*DZSX/DZETAS
+      DDZETADY=(ZS*DZSY+D*DDDY)/DZETAS
+      DDZETADZ=ZS*DZSZ/DZETAS
+C     
+      CALL SHLCAR3X3(ARC,X,Y,Z,SPS,WX,WY,WZ)
+      CALL RINGCURR96(X,Y,Z,HX,HY,HZ)
+      BXRC=WX+HX
+      BYRC=WY+HY
+      BZRC=WZ+HZ
+C     
+      CALL SHLCAR3X3(ATAIL2,X,Y,Z,SPS,WX,WY,WZ)
+        CALL TAILDISK96(X,Y,Z,HX,HY,HZ)
         BXT2=WX+HX
         BYT2=WY+HY
         BZT2=WZ+HZ
-C
+C     
         CALL SHLCAR3X3(ATAIL3,X,Y,Z,SPS,WX,WY,WZ)
         CALL TAIL87(X,Z,HX,HZ)
         BXT3=WX+HX
         BYT3=WY
         BZT3=WZ+HZ
-C
+C     
         RETURN
         END
-C
-c********************************************************************
-C
-        SUBROUTINE RINGCURR96(X,Y,Z,BX,BY,BZ)
-c
-c       THIS SUBROUTINE COMPUTES THE COMPONENTS OF THE RING CURRENT FIELD,
-C        SIMILAR TO THAT DESCRIBED BY TSYGANENKO AND PEREDO (1994).  THE
-C          DIFFERENCE IS THAT NOW WE USE SPACEWARPING, AS DESCRIBED IN THE
-C           PAPER ON MODELING BIRKELAND CURRENTS (TSYGANENKO AND STERN, 1996),
-C            INSTEAD OF SHEARING IT IN THE SPIRIT OF THE T89 TAIL MODEL.
-C
-C          IN  ADDITION, INSTEAD OF 7 TERMS FOR THE RING CURRENT MODEL, WE USE 
-C             NOW ONLY 2 TERMS;  THIS SIMPLIFICATION ALSO GIVES RISE TO AN
-C                EASTWARD RING CURRENT LOCATED EARTHWARD FROM THE MAIN ONE, 
-C                  IN LINE WITH WHAT IS ACTUALLY OBSERVED
-C
-C             FOR DETAILS, SEE NB #3, PAGES 70-73
-C
-        IMPLICIT REAL*8 (A-H,O-Z)
-        DIMENSION F(2),BETA(2)
-        COMMON /WARP/ CPSS,SPSS,DPSRR, XNEXT(3),XS,ZSWARPED,DXSX,DXSY,
-     *   DXSZ,DZSX,DZSYWARPED,DZSZ,OTHER(4),ZS  !  ZS HERE IS WITHOUT Y-Z WARP
-C 
-
-      DATA D0,DELTADX,XD,XLDX /2.,0.,0.,4./  !  ACHTUNG !!  THE RC IS NOW 
-C                                            COMPLETELY SYMMETRIC (DELTADX=0)
-
 C     
-        DATA F,BETA /569.895366D0,-1603.386993D0,2.722188D0,3.766875D0/
-C                       
-C  THE ORIGINAL VALUES OF F(I) WERE MULTIPLIED BY BETA(I) (TO REDUCE THE 
-C     NUMBER OF MULTIPLICATIONS BELOW)  AND BY THE FACTOR -0.43, NORMALIZING
-C      THE DISTURBANCE AT ORIGIN  TO  B=-1nT
-C
-           DZSY=XS*Y*DPSRR  ! NO WARPING IN THE Y-Z PLANE (ALONG X ONLY), AND
-C                         THIS IS WHY WE DO NOT USE  DZSY FROM THE COMMON-BLOCK
-           XXD=X-XD
-           FDX=0.5D0*(1.D0+XXD/SQRT(XXD**2+XLDX**2))
-           DDDX=DELTADX*0.5D0*XLDX**2/SQRT(XXD**2+XLDX**2)**3
-           D=D0+DELTADX*FDX
-
-           DZETAS=SQRT(ZS**2+D**2)  !  THIS IS THE SAME SIMPLE WAY TO SPREAD
-C                                        OUT THE SHEET, AS THAT USED IN T89 
-           RHOS=SQRT(XS**2+Y**2)
-           DDZETADX=(ZS*DZSX+D*DDDX)/DZETAS
-           DDZETADY=ZS*DZSY/DZETAS
-           DDZETADZ=ZS*DZSZ/DZETAS
-         IF (RHOS.LT.1.D-5) THEN
-            DRHOSDX=0.D0
-            DRHOSDY=SIGN(1.,Y)
-            DRHOSDZ=0.D0
-          ELSE
-           DRHOSDX=XS*DXSX/RHOS
-           DRHOSDY=(XS*DXSY+Y)/RHOS
-           DRHOSDZ=XS*DXSZ/RHOS
-         ENDIF
-C
-           BX=0.D0
-           BY=0.D0
-           BZ=0.D0
-C
-           DO 1 I=1,2
-C
-           BI=BETA(I)
-C
-           S1=SQRT((DZETAS+BI)**2+(RHOS+BI)**2)
-           S2=SQRT((DZETAS+BI)**2+(RHOS-BI)**2)
-           DS1DDZ=(DZETAS+BI)/S1
-           DS2DDZ=(DZETAS+BI)/S2
-           DS1DRHOS=(RHOS+BI)/S1
-           DS2DRHOS=(RHOS-BI)/S2
-C
-           DS1DX=DS1DDZ*DDZETADX+DS1DRHOS*DRHOSDX
-           DS1DY=DS1DDZ*DDZETADY+DS1DRHOS*DRHOSDY
-           DS1DZ=DS1DDZ*DDZETADZ+DS1DRHOS*DRHOSDZ
-C
-           DS2DX=DS2DDZ*DDZETADX+DS2DRHOS*DRHOSDX
-           DS2DY=DS2DDZ*DDZETADY+DS2DRHOS*DRHOSDY
-           DS2DZ=DS2DDZ*DDZETADZ+DS2DRHOS*DRHOSDZ
-C
-           S1TS2=S1*S2
-           S1PS2=S1+S2
-           S1PS2SQ=S1PS2**2
-           FAC1=SQRT(S1PS2SQ-(2.D0*BI)**2)
-           AS=FAC1/(S1TS2*S1PS2SQ)
-           TERM1=1.D0/(S1TS2*S1PS2*FAC1)
-           FAC2=AS/S1PS2SQ
-           DASDS1=TERM1-FAC2/S1*(S2*S2+S1*(3.D0*S1+4.D0*S2))
-           DASDS2=TERM1-FAC2/S2*(S1*S1+S2*(3.D0*S2+4.D0*S1))
-C
-           DASDX=DASDS1*DS1DX+DASDS2*DS2DX
-           DASDY=DASDS1*DS1DY+DASDS2*DS2DY
-           DASDZ=DASDS1*DS1DZ+DASDS2*DS2DZ
-C
-      BX=BX+F(I)*((2.D0*AS+Y*DASDY)*SPSS-XS*DASDZ
-     *   +AS*DPSRR*(Y**2*CPSS+Z*ZS))
-      BY=BY-F(I)*Y*(AS*DPSRR*XS+DASDZ*CPSS+DASDX*SPSS)
-  1   BZ=BZ+F(I)*((2.D0*AS+Y*DASDY)*CPSS+XS*DASDX
-     *   -AS*DPSRR*(X*ZS+Y**2*SPSS))
-C
-       RETURN
-       END
-C
-C$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-C
-c        SUBROUTINE TAILDISK(X,Y,Z,BX,BY,BZ)
-         SUBROUTINE TAILDISK_t96(X,Y,Z,BX,BY,BZ)
-C
-c
-c       THIS SUBROUTINE COMPUTES THE COMPONENTS OF THE TAIL CURRENT FIELD,
-C        SIMILAR TO THAT DESCRIBED BY TSYGANENKO AND PEREDO (1994).  THE
-C          DIFFERENCE IS THAT NOW WE USE SPACEWARPING, AS DESCRIBED IN OUR
-C           PAPER ON MODELING BIRKELAND CURRENTS (TSYGANENKO AND STERN, 1996) 
-C            INSTEAD OF SHEARING IT IN THE SPIRIT OF T89 TAIL MODEL.
-C
-C          IN  ADDITION, INSTEAD OF 8 TERMS FOR THE TAIL CURRENT MODEL, WE USE 
-C           NOW ONLY 4 TERMS
-C
-C             FOR DETAILS, SEE NB #3, PAGES 74-
-C
-         IMPLICIT REAL*8 (A-H,O-Z)
-         DIMENSION F(4),BETA(4)
-         COMMON /WARP/ CPSS,SPSS,DPSRR,XNEXT(3),XS,ZS,DXSX,DXSY,DXSZ,
-     *    OTHER(3),DZETAS,DDZETADX,DDZETADY,DDZETADZ,ZSWW
-C
-         DATA XSHIFT /4.5/
-C
-         DATA F,BETA 
-     * / -745796.7338D0,1176470.141D0,-444610.529D0,-57508.01028D0,
-     *   7.9250000D0,8.0850000D0,8.4712500D0,27.89500D0/
-c
-c  here original F(I) are multiplied by BETA(I), to economize 
-c    calculations
-C
-           RHOS=SQRT((XS-XSHIFT)**2+Y**2)
-         IF (RHOS.LT.1.D-5) THEN
-            DRHOSDX=0.D0
-            DRHOSDY=SIGN(1.,Y)
-            DRHOSDZ=0.D0
-         ELSE
-           DRHOSDX=(XS-XSHIFT)*DXSX/RHOS
-           DRHOSDY=((XS-XSHIFT)*DXSY+Y)/RHOS
-           DRHOSDZ=(XS-XSHIFT)*DXSZ/RHOS
-         ENDIF
-C
-           BX=0.D0
-           BY=0.D0
-           BZ=0.D0
-C
-           DO 1 I=1,4
-C
-           BI=BETA(I)   
-C
-           S1=SQRT((DZETAS+BI)**2+(RHOS+BI)**2)
-           S2=SQRT((DZETAS+BI)**2+(RHOS-BI)**2)
-           DS1DDZ=(DZETAS+BI)/S1
-           DS2DDZ=(DZETAS+BI)/S2
-           DS1DRHOS=(RHOS+BI)/S1
-           DS2DRHOS=(RHOS-BI)/S2
-C
-           DS1DX=DS1DDZ*DDZETADX+DS1DRHOS*DRHOSDX
-           DS1DY=DS1DDZ*DDZETADY+DS1DRHOS*DRHOSDY
-           DS1DZ=DS1DDZ*DDZETADZ+DS1DRHOS*DRHOSDZ
-C
-           DS2DX=DS2DDZ*DDZETADX+DS2DRHOS*DRHOSDX
-           DS2DY=DS2DDZ*DDZETADY+DS2DRHOS*DRHOSDY
-           DS2DZ=DS2DDZ*DDZETADZ+DS2DRHOS*DRHOSDZ
-C
-           S1TS2=S1*S2
-           S1PS2=S1+S2
-           S1PS2SQ=S1PS2**2
-           FAC1=SQRT(S1PS2SQ-(2.D0*BI)**2)
-           AS=FAC1/(S1TS2*S1PS2SQ)
-           TERM1=1.D0/(S1TS2*S1PS2*FAC1)
-           FAC2=AS/S1PS2SQ
-           DASDS1=TERM1-FAC2/S1*(S2*S2+S1*(3.D0*S1+4.D0*S2))
-           DASDS2=TERM1-FAC2/S2*(S1*S1+S2*(3.D0*S2+4.D0*S1))
-C
-           DASDX=DASDS1*DS1DX+DASDS2*DS2DX
-           DASDY=DASDS1*DS1DY+DASDS2*DS2DY
-           DASDZ=DASDS1*DS1DZ+DASDS2*DS2DZ
-C
-      BX=BX+F(I)*((2.D0*AS+Y*DASDY)*SPSS-(XS-XSHIFT)*DASDZ
-     *   +AS*DPSRR*(Y**2*CPSS+Z*ZSWW))  
-C
-      BY=BY-F(I)*Y*(AS*DPSRR*XS+DASDZ*CPSS+DASDX*SPSS) 
-  1   BZ=BZ+F(I)*((2.D0*AS+Y*DASDY)*CPSS+(XS-XSHIFT)*DASDX
-     *   -AS*DPSRR*(X*ZSWW+Y**2*SPSS))                      
-
-       RETURN
-       END
-
-C-------------------------------------------------------------------------
-C
-      SUBROUTINE TAIL87(X,Z,BX,BZ)
-
+c********************************************************************
+C     
+      SUBROUTINE RINGCURR96(X,Y,Z,BX,BY,BZ)
+c     
+c     THIS SUBROUTINE COMPUTES THE COMPONENTS OF THE RING CURRENT FIELD,
+C     SIMILAR TO THAT DESCRIBED BY TSYGANENKO AND PEREDO (1994).  THE
+C     DIFFERENCE IS THAT NOW WE USE SPACEWARPING, AS DESCRIBED IN THE
+C     PAPER ON MODELING BIRKELAND CURRENTS (TSYGANENKO AND STERN, 1996),
+C     INSTEAD OF SHEARING IT IN THE SPIRIT OF THE T89 TAIL MODEL.
+C     
+C     IN  ADDITION, INSTEAD OF 7 TERMS FOR THE RING CURRENT MODEL, WE USE
+C     NOW ONLY 2 TERMS;  THIS SIMPLIFICATION ALSO GIVES RISE TO AN
+C     EASTWARD RING CURRENT LOCATED EARTHWARD FROM THE MAIN ONE,
+C     IN LINE WITH WHAT IS ACTUALLY OBSERVED
+C     
+C     FOR DETAILS, SEE NB #3, PAGES 70-73
+C     
       IMPLICIT REAL*8 (A-H,O-Z)
-
+      DIMENSION F(2),BETA(2)
+      COMMON /WARP/ CPSS,SPSS,DPSRR, XNEXT(3),XS,ZSWARPED,DXSX,DXSY,
+     *     DXSZ,DZSX,DZSYWARPED,DZSZ,OTHER(4),ZS !  ZS HERE IS WITHOUT Y-Z WARP
+C     
+      
+      DATA D0,DELTADX,XD,XLDX /2.,0.,0.,4./ !  ACHTUNG !!  THE RC IS NOW
+C     COMPLETELY SYMMETRIC (DELTADX=0)
+      
+C     
+      DATA F,BETA /569.895366D0,-1603.386993D0,2.722188D0,3.766875D0/
+C     
+C     THE ORIGINAL VALUES OF F(I) WERE MULTIPLIED BY BETA(I) (TO REDUCE THE
+C     NUMBER OF MULTIPLICATIONS BELOW)  AND BY THE FACTOR -0.43, NORMALIZING
+C     THE DISTURBANCE AT ORIGIN  TO  B=-1nT
+C     
+      DZSY=XS*Y*DPSRR           ! NO WARPING IN THE Y-Z PLANE (ALONG X ONLY), AND
+C     THIS IS WHY WE DO NOT USE  DZSY FROM THE COMMON-BLOCK
+      XXD=X-XD
+      FDX=0.5D0*(1.D0+XXD/DSQRT(XXD**2+XLDX**2))
+      DDDX=DELTADX*0.5D0*XLDX**2/DSQRT(XXD**2+XLDX**2)**3
+      D=D0+DELTADX*FDX
+      
+      DZETAS=DSQRT(ZS**2+D**2)  !  THIS IS THE SAME SIMPLE WAY TO SPREAD
+C     OUT THE SHEET, AS THAT USED IN T89
+      RHOS=DSQRT(XS**2+Y**2)
+      DDZETADX=(ZS*DZSX+D*DDDX)/DZETAS
+      DDZETADY=ZS*DZSY/DZETAS
+      DDZETADZ=ZS*DZSZ/DZETAS
+      IF (RHOS.LT.1.D-5) THEN
+         DRHOSDX=0.D0
+         DRHOSDY=DSIGN(1.D0,Y)
+         DRHOSDZ=0.D0
+      ELSE
+         DRHOSDX=XS*DXSX/RHOS
+         DRHOSDY=(XS*DXSY+Y)/RHOS
+         DRHOSDZ=XS*DXSZ/RHOS
+      ENDIF
+C     
+      BX=0.D0
+      BY=0.D0
+      BZ=0.D0
+C     
+      DO 1 I=1,2
+C     
+         BI=BETA(I)
+C     
+         S1=DSQRT((DZETAS+BI)**2+(RHOS+BI)**2)
+         S2=DSQRT((DZETAS+BI)**2+(RHOS-BI)**2)
+         DS1DDZ=(DZETAS+BI)/S1
+         DS2DDZ=(DZETAS+BI)/S2
+         DS1DRHOS=(RHOS+BI)/S1
+         DS2DRHOS=(RHOS-BI)/S2
+C     
+         DS1DX=DS1DDZ*DDZETADX+DS1DRHOS*DRHOSDX
+         DS1DY=DS1DDZ*DDZETADY+DS1DRHOS*DRHOSDY
+         DS1DZ=DS1DDZ*DDZETADZ+DS1DRHOS*DRHOSDZ
+C     
+         DS2DX=DS2DDZ*DDZETADX+DS2DRHOS*DRHOSDX
+         DS2DY=DS2DDZ*DDZETADY+DS2DRHOS*DRHOSDY
+         DS2DZ=DS2DDZ*DDZETADZ+DS2DRHOS*DRHOSDZ
+C     
+         S1TS2=S1*S2
+         S1PS2=S1+S2
+         S1PS2SQ=S1PS2**2
+         FAC1=DSQRT(S1PS2SQ-(2.D0*BI)**2)
+         AS=FAC1/(S1TS2*S1PS2SQ)
+         TERM1=1.D0/(S1TS2*S1PS2*FAC1)
+         FAC2=AS/S1PS2SQ
+         DASDS1=TERM1-FAC2/S1*(S2*S2+S1*(3.D0*S1+4.D0*S2))
+         DASDS2=TERM1-FAC2/S2*(S1*S1+S2*(3.D0*S2+4.D0*S1))
+C     
+         DASDX=DASDS1*DS1DX+DASDS2*DS2DX
+         DASDY=DASDS1*DS1DY+DASDS2*DS2DY
+         DASDZ=DASDS1*DS1DZ+DASDS2*DS2DZ
+C     
+         BX=BX+F(I)*((2.D0*AS+Y*DASDY)*SPSS-XS*DASDZ
+     *        +AS*DPSRR*(Y**2*CPSS+Z*ZS))
+         BY=BY-F(I)*Y*(AS*DPSRR*XS+DASDZ*CPSS+DASDX*SPSS)
+ 1       BZ=BZ+F(I)*((2.D0*AS+Y*DASDY)*CPSS+XS*DASDX
+     *        -AS*DPSRR*(X*ZS+Y**2*SPSS))
+C     
+         RETURN
+         END
+C     
+C$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+C     
+      SUBROUTINE TAILDISK96(X,Y,Z,BX,BY,BZ)
+C     
+c     
+c     THIS SUBROUTINE COMPUTES THE COMPONENTS OF THE TAIL CURRENT FIELD,
+C     SIMILAR TO THAT DESCRIBED BY TSYGANENKO AND PEREDO (1994).  THE
+C     DIFFERENCE IS THAT NOW WE USE SPACEWARPING, AS DESCRIBED IN OUR
+C     PAPER ON MODELING BIRKELAND CURRENTS (TSYGANENKO AND STERN, 1996)
+C     INSTEAD OF SHEARING IT IN THE SPIRIT OF T89 TAIL MODEL.
+C     
+C     IN  ADDITION, INSTEAD OF 8 TERMS FOR THE TAIL CURRENT MODEL, WE USE
+C     NOW ONLY 4 TERMS
+C     
+C     FOR DETAILS, SEE NB #3, PAGES 74-
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+      DIMENSION F(4),BETA(4)
+      COMMON /WARP/ CPSS,SPSS,DPSRR,XNEXT(3),XS,ZS,DXSX,DXSY,DXSZ,
+     *     OTHER(3),DZETAS,DDZETADX,DDZETADY,DDZETADZ,ZSWW
+C     
+      DATA XSHIFT /4.5/
+C     
+      DATA F,BETA
+     *     / -745796.7338D0,1176470.141D0,-444610.529D0,-57508.01028D0,
+     *     7.9250000D0,8.0850000D0,8.4712500D0,27.89500D0/
+c     
+c     here original F(I) are multiplied by BETA(I), to economize
+c     calculations
+C     
+      RHOS=DSQRT((XS-XSHIFT)**2+Y**2)
+      IF (RHOS.LT.1.D-5) THEN
+         DRHOSDX=0.D0
+         DRHOSDY=DSIGN(1.D0,Y)
+         DRHOSDZ=0.D0
+      ELSE
+         DRHOSDX=(XS-XSHIFT)*DXSX/RHOS
+         DRHOSDY=((XS-XSHIFT)*DXSY+Y)/RHOS
+         DRHOSDZ=(XS-XSHIFT)*DXSZ/RHOS
+      ENDIF
+C     
+      BX=0.D0
+      BY=0.D0
+      BZ=0.D0
+C     
+      DO 1 I=1,4
+C     
+         BI=BETA(I)
+C     
+         S1=DSQRT((DZETAS+BI)**2+(RHOS+BI)**2)
+         S2=DSQRT((DZETAS+BI)**2+(RHOS-BI)**2)
+         DS1DDZ=(DZETAS+BI)/S1
+         DS2DDZ=(DZETAS+BI)/S2
+         DS1DRHOS=(RHOS+BI)/S1
+         DS2DRHOS=(RHOS-BI)/S2
+C     
+         DS1DX=DS1DDZ*DDZETADX+DS1DRHOS*DRHOSDX
+         DS1DY=DS1DDZ*DDZETADY+DS1DRHOS*DRHOSDY
+         DS1DZ=DS1DDZ*DDZETADZ+DS1DRHOS*DRHOSDZ
+C     
+         DS2DX=DS2DDZ*DDZETADX+DS2DRHOS*DRHOSDX
+         DS2DY=DS2DDZ*DDZETADY+DS2DRHOS*DRHOSDY
+         DS2DZ=DS2DDZ*DDZETADZ+DS2DRHOS*DRHOSDZ
+C     
+         S1TS2=S1*S2
+         S1PS2=S1+S2
+         S1PS2SQ=S1PS2**2
+         FAC1=DSQRT(S1PS2SQ-(2.D0*BI)**2)
+         AS=FAC1/(S1TS2*S1PS2SQ)
+         TERM1=1.D0/(S1TS2*S1PS2*FAC1)
+         FAC2=AS/S1PS2SQ
+         DASDS1=TERM1-FAC2/S1*(S2*S2+S1*(3.D0*S1+4.D0*S2))
+         DASDS2=TERM1-FAC2/S2*(S1*S1+S2*(3.D0*S2+4.D0*S1))
+C     
+         DASDX=DASDS1*DS1DX+DASDS2*DS2DX
+         DASDY=DASDS1*DS1DY+DASDS2*DS2DY
+         DASDZ=DASDS1*DS1DZ+DASDS2*DS2DZ
+C     
+         BX=BX+F(I)*((2.D0*AS+Y*DASDY)*SPSS-(XS-XSHIFT)*DASDZ
+     *        +AS*DPSRR*(Y**2*CPSS+Z*ZSWW))
+C     
+         BY=BY-F(I)*Y*(AS*DPSRR*XS+DASDZ*CPSS+DASDX*SPSS)
+ 1       BZ=BZ+F(I)*((2.D0*AS+Y*DASDY)*CPSS+(XS-XSHIFT)*DASDX
+     *        -AS*DPSRR*(X*ZSWW+Y**2*SPSS))
+         
+         RETURN
+         END
+      
+C-------------------------------------------------------------------------
+C     
+      SUBROUTINE TAIL87(X,Z,BX,BZ)
+      
+      IMPLICIT REAL*8 (A-H,O-Z)
+      
       COMMON /WARP/ FIRST(3), RPS,WARP,D, OTHER(13)
-C
-C      'LONG' VERSION OF THE 1987 TAIL MAGNETIC FIELD MODEL
-C              (N.A.TSYGANENKO, PLANET. SPACE SCI., V.35, P.1347, 1987)
-C
-C      D   IS THE Y-DEPENDENT SHEET HALF-THICKNESS (INCREASING TOWARDS FLANKS)
-C      RPS  IS THE TILT-DEPENDENT SHIFT OF THE SHEET IN THE Z-DIRECTION, 
-C           CORRESPONDING TO THE ASYMPTOTIC HINGING DISTANCE, DEFINED IN THE 
-C           MAIN SUBROUTINE (TAILRC96) FROM THE PARAMETERS RH AND DR OF THE 
-C           T96-TYPE MODULE, AND
-C      WARP  IS THE BENDING OF THE SHEET FLANKS IN THE Z-DIRECTION, DIRECTED 
-C           OPPOSITE TO RPS, AND INCREASING WITH DIPOLE TILT AND |Y|
-C
-
-        DATA DD/3./
-C
+C     
+C     'LONG' VERSION OF THE 1987 TAIL MAGNETIC FIELD MODEL
+C     (N.A.TSYGANENKO, PLANET. SPACE SCI., V.35, P.1347, 1987)
+C     
+C     D   IS THE Y-DEPENDENT SHEET HALF-THICKNESS (INCREASING TOWARDS FLANKS)
+C     RPS  IS THE TILT-DEPENDENT SHIFT OF THE SHEET IN THE Z-DIRECTION,
+C     CORRESPONDING TO THE ASYMPTOTIC HINGING DISTANCE, DEFINED IN THE
+C     MAIN SUBROUTINE (TAILRC96) FROM THE PARAMETERS RH AND DR OF THE
+C     T96-TYPE MODULE, AND
+C     WARP  IS THE BENDING OF THE SHEET FLANKS IN THE Z-DIRECTION, DIRECTED
+C     OPPOSITE TO RPS, AND INCREASING WITH DIPOLE TILT AND |Y|
+C     
+      
+      DATA DD/3./
+C     
       DATA HPI,RT,XN,X1,X2,B0,B1,B2,XN21,XNR,ADLN
-     * /1.5707963,40.,-10.,
-     * -1.261,-0.663,0.391734,5.89715,24.6833,76.37,-0.1071,0.13238005/
-C                !!!   THESE ARE NEW VALUES OF  X1, X2, B0, B1, B2,
-C                       CORRESPONDING TO TSCALE=1, INSTEAD OF TSCALE=0.6
-C
-C  THE ABOVE QUANTITIES WERE DEFINED AS FOLLOWS:------------------------
-C       HPI=PI/2
-C       RT=40.      !  Z-POSITION OF UPPER AND LOWER ADDITIONAL SHEETS
-C       XN=-10.     !  INNER EDGE POSITION
-C
-C       TSCALE=1  !  SCALING FACTOR, DEFINING THE RATE OF INCREASE OF THE 
-C                       CURRENT DENSITY TAILWARDS
-C
-c  ATTENTION !  NOW I HAVE CHANGED TSCALE TO:  TSCALE=1.0, INSTEAD OF 0.6
-c                  OF THE PREVIOUS VERSION
-c
-C       B0=0.391734
-C       B1=5.89715 *TSCALE  
-C       B2=24.6833 *TSCALE**2   
-C
-C    HERE ORIGINAL VALUES OF THE MODE AMPLITUDES (P.77, NB#3) WERE NORMALIZED 
-C      SO THAT ASYMPTOTIC  BX=1  AT X=-200RE
-C
-C      X1=(4.589  -5.85) *TSCALE -(TSCALE-1.)*XN ! NONLINEAR PARAMETERS OF THE
-C                                                         CURRENT FUNCTION
-C      X2=(5.187  -5.85) *TSCALE -(TSCALE-1.)*XN
-c
-c
-C      XN21=(XN-X1)**2
-C      XNR=1./(XN-X2)
-C      ADLN=-LOG(XNR**2*XN21)
-C
+     *  /1.5707963,40.,-10.,
+     *  -1.261,-0.663,0.391734,5.89715,24.6833,76.37,-0.1071,0.13238005/
+C     !!!   THESE ARE NEW VALUES OF  X1, X2, B0, B1, B2,
+C     CORRESPONDING TO TSCALE=1, INSTEAD OF TSCALE=0.6
+C     
+C     THE ABOVE QUANTITIES WERE DEFINED AS FOLLOWS:------------------------
+C     HPI=PI/2
+C     RT=40.      !  Z-POSITION OF UPPER AND LOWER ADDITIONAL SHEETS
+C     XN=-10.     !  INNER EDGE POSITION
+C     
+C     TSCALE=1  !  SCALING FACTOR, DEFINING THE RATE OF INCREASE OF THE
+C     CURRENT DENSITY TAILWARDS
+C     
+c     ATTENTION !  NOW I HAVE CHANGED TSCALE TO:  TSCALE=1.0, INSTEAD OF 0.6
+c     OF THE PREVIOUS VERSION
+c     
+C     B0=0.391734
+C     B1=5.89715 *TSCALE
+C     B2=24.6833 *TSCALE**2
+C     
+C     HERE ORIGINAL VALUES OF THE MODE AMPLITUDES (P.77, NB#3) WERE NORMALIZED
+C     SO THAT ASYMPTOTIC  BX=1  AT X=-200RE
+C     
+C     X1=(4.589  -5.85) *TSCALE -(TSCALE-1.)*XN ! NONLINEAR PARAMETERS OF THE
+C     CURRENT FUNCTION
+C     X2=(5.187  -5.85) *TSCALE -(TSCALE-1.)*XN
+c     
+c     
+C     XN21=(XN-X1)**2
+C     XNR=1./(XN-X2)
+C     ADLN=-DLOG(XNR**2*XN21)
+C     
 C---------------------------------------------------------------
-C
+C     
       ZS=Z -RPS +WARP
       ZP=Z-RT
       ZM=Z+RT
-C
+C     
       XNX=XN-X
       XNX2=XNX**2
       XC1=X-X1
@@ -922,12 +1090,12 @@ C
       XR2=XC2*XNR
       XC12=XC1**2
       D2=DD**2    !  SQUARE OF THE TOTAL HALFTHICKNESS (DD=3Re for this mode)
-      B20=ZS**2+D2    
+      B20=ZS**2+D2
       B2P=ZP**2+D2
       B2M=ZM**2+D2
-      B=SQRT(B20)
-      BP=SQRT(B2P)
-      BM=SQRT(B2M)
+      B=DSQRT(B20)
+      BP=DSQRT(B2P)
+      BM=DSQRT(B2M)
       XA1=XC12+B20
       XAP1=XC12+B2P
       XAM1=XC12+B2M
@@ -940,16 +1108,16 @@ C
       F=B20-XC22
       FP=B2P-XC22
       FM=B2M-XC22
-      XLN1=LOG(XN21/XNA)
-      XLNP1=LOG(XN21/XNAP)
-      XLNM1=LOG(XN21/XNAM)
+      XLN1=DLOG(XN21/XNA)
+      XLNP1=DLOG(XN21/XNAP)
+      XLNM1=DLOG(XN21/XNAM)
       XLN2=XLN1+ADLN
       XLNP2=XLNP1+ADLN
       XLNM2=XLNM1+ADLN
       ALN=0.25*(XLNP1+XLNM1-2.*XLN1)
-      S0=(ATAN(XNX/B)+HPI)/B
-      S0P=(ATAN(XNX/BP)+HPI)/BP
-      S0M=(ATAN(XNX/BM)+HPI)/BM
+      S0=(DATAN(XNX/B)+HPI)/B
+      S0P=(DATAN(XNX/BP)+HPI)/BP
+      S0M=(DATAN(XNX/BM)+HPI)/BM
       S1=(XLN1*.5+XC1*S0)/XA1
       S1P=(XLNP1*.5+XC1*S0P)/XAP1
       S1M=(XLNM1*.5+XC1*S0M)/XAM1
@@ -963,140 +1131,140 @@ C
       G2P=((0.5*FP*XLNP2+2.*S0P*B2P*XC2)*XAP2+XR2)*XAP2
       G2M=((0.5*FM*XLNM2+2.*S0M*B2M*XC2)*XAM2+XR2)*XAM2
       BX=B0*(ZS*S0-0.5*(ZP*S0P+ZM*S0M))
-     * +B1*(ZS*S1-0.5*(ZP*S1P+ZM*S1M))+B2*(ZS*S2-0.5*(ZP*S2P+ZM*S2M))
+     *    +B1*(ZS*S1-0.5*(ZP*S1P+ZM*S1M))+B2*(ZS*S2-0.5*(ZP*S2P+ZM*S2M))
       BZ=B0*ALN+B1*(G1-0.5*(G1P+G1M))+B2*(G2-0.5*(G2P+G2M))
-C
-C    CALCULATION OF THE MAGNETOTAIL CURRENT CONTRIBUTION IS FINISHED
-C
+C     
+C     CALCULATION OF THE MAGNETOTAIL CURRENT CONTRIBUTION IS FINISHED
+C     
       RETURN
       END
-
+      
 C$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+C     
+C THIS CODE RETURNS THE SHIELDING FIELD REPRESENTED BY  2x3x3=18 "CARTESIAN"
+C    HARMONICS
 C
-C THIS CODE RETURNS THE SHIELDING FIELD REPRESENTED BY  2x3x3=18 "CARTESIAN" 
-C    HARMONICS 
-C
-         SUBROUTINE  SHLCAR3X3(A,X,Y,Z,SPS,HX,HY,HZ)
-C
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C  The 36 coefficients enter in pairs in the amplitudes of the "cartesian" 
-c    harmonics (A(1)-A(36).
-c  The 12 nonlinear parameters (A(37)-A(48) are the scales Pi,Ri,Qi,and Si 
-C   entering the arguments of exponents, sines, and cosines in each of the 
-C   18 "Cartesian" harmonics
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
-         DIMENSION A(48)
-C
-          CPS=SQRT(1.D0-SPS**2)
-          S3PS=4.D0*CPS**2-1.D0   !  THIS IS SIN(3*PS)/SIN(PS)
-C
-           HX=0.D0
-           HY=0.D0
-           HZ=0.D0
-           L=0
-C
-           DO 1 M=1,2     !    M=1 IS FOR THE 1ST SUM ("PERP." SYMMETRY)
-C                           AND M=2 IS FOR THE SECOND SUM ("PARALL." SYMMETRY)
-             DO 2 I=1,3
-                  P=A(36+I)
-                  Q=A(42+I)
-                  CYPI=COS(Y/P)
-                  CYQI=COS(Y/Q)
-                  SYPI=SIN(Y/P)
-                  SYQI=SIN(Y/Q)
-C
-              DO 3 K=1,3
-                   R=A(39+K)
-                   S=A(45+K)
-                   SZRK=SIN(Z/R)
-                   CZSK=COS(Z/S)
-                   CZRK=COS(Z/R)
-                   SZSK=SIN(Z/S)
-                     SQPR=SQRT(1.D0/P**2+1.D0/R**2)
-                     SQQS=SQRT(1.D0/Q**2+1.D0/S**2)
-                        EPR=EXP(X*SQPR)
-                        EQS=EXP(X*SQQS)
-C
-                   DO 4 N=1,2  ! N=1 IS FOR THE FIRST PART OF EACH COEFFICIENT
-C                                  AND N=2 IS FOR THE SECOND ONE
-C
-                    L=L+1
-                     IF (M.EQ.1) THEN
-                       IF (N.EQ.1) THEN
-                         DX=-SQPR*EPR*CYPI*SZRK
-                         DY=EPR/P*SYPI*SZRK
-                         DZ=-EPR/R*CYPI*CZRK
-                         HX=HX+A(L)*DX
-                         HY=HY+A(L)*DY
-                         HZ=HZ+A(L)*DZ
-                                   ELSE
-                         DX=DX*CPS
-                         DY=DY*CPS
-                         DZ=DZ*CPS
-                         HX=HX+A(L)*DX
-                         HY=HY+A(L)*DY
-                         HZ=HZ+A(L)*DZ
-                                   ENDIF
+      SUBROUTINE  SHLCAR3X3(A,X,Y,Z,SPS,HX,HY,HZ)
+C     
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+C     The 36 coefficients enter in pairs in the amplitudes of the "cartesian"
+c     harmonics (A(1)-A(36).
+c     The 12 nonlinear parameters (A(37)-A(48) are the scales Pi,Ri,Qi,and Si
+C     entering the arguments of exponents, sines, and cosines in each of the
+C     18 "Cartesian" harmonics
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+C     
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
+      DIMENSION A(48)
+C     
+      CPS=DSQRT(1.D0-SPS**2)
+      S3PS=4.D0*CPS**2-1.D0     !  THIS IS SIN(3*PS)/SIN(PS)
+C     
+      HX=0.D0
+      HY=0.D0
+      HZ=0.D0
+      L=0
+C     
+      DO 1 M=1,2                !    M=1 IS FOR THE 1ST SUM ("PERP." SYMMETRY)
+C     AND M=2 IS FOR THE SECOND SUM ("PARALL." SYMMETRY)
+         DO 2 I=1,3
+            P=A(36+I)
+            Q=A(42+I)
+            CYPI=DCOS(Y/P)
+            CYQI=DCOS(Y/Q)
+            SYPI=DSIN(Y/P)
+            SYQI=DSIN(Y/Q)
+C     
+            DO 3 K=1,3
+               R=A(39+K)
+               S=A(45+K)
+               SZRK=DSIN(Z/R)
+               CZSK=DCOS(Z/S)
+               CZRK=DCOS(Z/R)
+               SZSK=DSIN(Z/S)
+               SQPR=DSQRT(1.D0/P**2+1.D0/R**2)
+               SQQS=DSQRT(1.D0/Q**2+1.D0/S**2)
+               EPR=DEXP(X*SQPR)
+               EQS=DEXP(X*SQQS)
+C     
+               DO 4 N=1,2       ! N=1 IS FOR THE FIRST PART OF EACH COEFFICIENT
+C     AND N=2 IS FOR THE SECOND ONE
+C     
+                  L=L+1
+                  IF (M.EQ.1) THEN
+                     IF (N.EQ.1) THEN
+                        DX=-SQPR*EPR*CYPI*SZRK
+                        DY=EPR/P*SYPI*SZRK
+                        DZ=-EPR/R*CYPI*CZRK
+                        HX=HX+A(L)*DX
+                        HY=HY+A(L)*DY
+                        HZ=HZ+A(L)*DZ
                      ELSE
-                       IF (N.EQ.1) THEN
-                         DX=-SPS*SQQS*EQS*CYQI*CZSK
+                        DX=DX*CPS
+                        DY=DY*CPS
+                        DZ=DZ*CPS
+                        HX=HX+A(L)*DX
+                        HY=HY+A(L)*DY
+                        HZ=HZ+A(L)*DZ
+                     ENDIF
+                  ELSE
+                     IF (N.EQ.1) THEN
+                        DX=-SPS*SQQS*EQS*CYQI*CZSK
                          DY=SPS*EQS/Q*SYQI*CZSK
                          DZ=SPS*EQS/S*CYQI*SZSK
                          HX=HX+A(L)*DX
                          HY=HY+A(L)*DY
                          HZ=HZ+A(L)*DZ
-                                   ELSE
+                      ELSE
                          DX=DX*S3PS
                          DY=DY*S3PS
                          DZ=DZ*S3PS
                          HX=HX+A(L)*DX
                          HY=HY+A(L)*DY
                          HZ=HZ+A(L)*DZ
-                       ENDIF
-                 ENDIF
-c
-  4   CONTINUE
-  3   CONTINUE
-  2   CONTINUE
-  1   CONTINUE
-C
-         RETURN
-         END
-
+                      ENDIF
+                   ENDIF
+c     
+ 4              CONTINUE
+ 3           CONTINUE
+ 2        CONTINUE
+ 1     CONTINUE
+C     
+       RETURN
+       END
+      
 C
 C@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-C
-       SUBROUTINE BIRK1TOT_02(PS,X,Y,Z,BX,BY,BZ)
-C
-C  THIS IS THE SECOND VERSION OF THE ANALYTICAL MODEL OF THE REGION 1 FIELD
-C   BASED ON A SEPARATE REPRESENTATION OF THE POTENTIAL FIELD IN THE INNER AND
-C   OUTER SPACE, MAPPED BY MEANS OF A SPHERO-DIPOLAR COORDINATE SYSTEM (NB #3,
-C   P.91).   THE DIFFERENCE FROM THE FIRST ONE IS THAT INSTEAD OF OCTAGONAL
-C   CURRENT LOOPS, CIRCULAR ONES ARE USED IN THIS VERSION FOR APPROXIMATING THE
-C   FIELD IN THE OUTER REGION, WHICH IS FASTER.  
-C
+C     
+      SUBROUTINE BIRK1TOT_02(PS,X,Y,Z,BX,BY,BZ)
+C     
+C     THIS IS THE SECOND VERSION OF THE ANALYTICAL MODEL OF THE REGION 1 FIELD
+C     BASED ON A SEPARATE REPRESENTATION OF THE POTENTIAL FIELD IN THE INNER AND
+C     OUTER SPACE, MAPPED BY MEANS OF A SPHERO-DIPOLAR COORDINATE SYSTEM (NB #3,
+C     P.91).   THE DIFFERENCE FROM THE FIRST ONE IS THAT INSTEAD OF OCTAGONAL
+C     CURRENT LOOPS, CIRCULAR ONES ARE USED IN THIS VERSION FOR APPROXIMATING THE
+C     FIELD IN THE OUTER REGION, WHICH IS FASTER.
+C     
       IMPLICIT REAL*8 (A-H,O-Z)
-C
+C     
       DIMENSION D1(3,26),D2(3,79),XI(4),C1(26),C2(79)
-
-         COMMON /COORD11/ XX1(12),YY1(12)
-         COMMON /RHDR/ RH,DR
-         COMMON /LOOPDIP1/ TILT,XCENTRE(2),RADIUS(2), DIPX,DIPY
-C
-         COMMON /COORD21/ XX2(14),YY2(14),ZZ2(14)
-         COMMON /DX1/ DX,SCALEIN,SCALEOUT
-C
+      
+      COMMON /COORD11/ XX1(12),YY1(12)
+      COMMON /RHDR/ RH,DR
+      COMMON /LOOPDIP1/ TILT,XCENTRE(2),RADIUS(2), DIPX,DIPY
+C     
+      COMMON /COORD21/ XX2(14),YY2(14),ZZ2(14)
+      COMMON /DX1/ DX,SCALEIN,SCALEOUT
+C     
       DATA C1/-0.911582E-03,-0.376654E-02,-0.727423E-02,-0.270084E-02,
-     * -0.123899E-02,-0.154387E-02,-0.340040E-02,-0.191858E-01,
-     * -0.518979E-01,0.635061E-01,0.440680,-0.396570,0.561238E-02,
-     *  0.160938E-02,-0.451229E-02,-0.251810E-02,-0.151599E-02,
-     * -0.133665E-02,-0.962089E-03,-0.272085E-01,-0.524319E-01,
-     *  0.717024E-01,0.523439,-0.405015,-89.5587,23.2806/
-
-C
+     *     -0.123899E-02,-0.154387E-02,-0.340040E-02,-0.191858E-01,
+     *     -0.518979E-01,0.635061E-01,0.440680,-0.396570,0.561238E-02,
+     *     0.160938E-02,-0.451229E-02,-0.251810E-02,-0.151599E-02,
+     *     -0.133665E-02,-0.962089E-03,-0.272085E-01,-0.524319E-01,
+     *     0.717024E-01,0.523439,-0.405015,-89.5587,23.2806/
+      
+C     
       DATA C2/6.04133,.305415,.606066E-02,.128379E-03,-.179406E-04,
      * 1.41714,-27.2586,-4.28833,-1.30675,35.5607,8.95792,.961617E-03,
      * -.801477E-03,-.782795E-03,-1.65242,-16.5242,-5.33798,.424878E-03,
@@ -1104,132 +1272,120 @@ C
      * 25.1120,20.9299,5.14569,-44.1670,-51.0672,-1.87725,20.2998,
      * 48.7505,-2.97415,3.35184,-54.2921,-.838712,-10.5123,70.7594,
      * -4.94104,.106166E-03,.465791E-03,-.193719E-03,10.8439,-29.7968,
-     *  8.08068,.463507E-03,-.224475E-04,.177035E-03,-.317581E-03,
+     * 8.08068,.463507E-03,-.224475E-04,.177035E-03,-.317581E-03,
      * -.264487E-03,.102075E-03,7.71390,10.1915,-4.99797,-23.1114,
      *-29.2043,12.2928,10.9542,33.6671,-9.3851,.174615E-03,-.789777E-06,
      * .686047E-03,.460104E-04,-.345216E-02,.221871E-02,.110078E-01,
      * -.661373E-02,.249201E-02,.343978E-01,-.193145E-05,.493963E-05,
      * -.535748E-04,.191833E-04,-.100496E-03,-.210103E-03,-.232195E-02,
      * .315335E-02,-.134320E-01,-.263222E-01/
-c
-      DATA TILT,XCENTRE,RADIUS,DIPX,DIPY /1.00891,2.28397,-5.60831,
-     * 1.86106,7.83281,1.12541,0.945719/
+c     
 
-      DATA DX,SCALEIN,SCALEOUT /-0.16D0,0.08D0,0.4D0/
-      DATA XX1/-11.D0,2*-7.D0,2*-3.D0,3*1.D0,2*5.D0,2*9.D0/
-      DATA YY1/2.D0,0.D0,4.D0,2.D0,6.D0,0.D0,4.D0,8.D0,2.D0,6.D0,0.D0,
-     *  4.D0/
-      DATA XX2/-10.D0,-7.D0,2*-4.D0,0.D0,2*4.D0,7.D0,10.D0,5*0.D0/
-      DATA YY2/3.D0,6.D0,3.D0,9.D0,6.D0,3.D0,9.D0,6.D0,3.D0,5*0.D0/
-      DATA ZZ2/2*20.D0,4.D0,20.D0,2*4.D0,3*20.D0,2.D0,3.D0,4.5D0,
-     *  7.D0,10.D0/
-C
-      DATA RH,DR /9.D0,4.D0/   !  RH IS THE "HINGING DISTANCE" AND DR IS THE
-C                                TRANSITION SCALE LENGTH, DEFINING THE
-C                                CURVATURE  OF THE WARPING (SEE P.89, NB #2)
-C
-      DATA XLTDAY,XLTNGHT /78.D0,70.D0/  !  THESE ARE LATITUDES OF THE R-1 OVAL
-C                                             AT NOON AND AT MIDNIGHT
-      DATA DTET0 /0.034906/   !   THIS IS THE LATITUDINAL HALF-THICKNESS OF THE
-C                                  R-1 OVAL (THE INTERPOLATION REGION BETWEEN
-C                                    THE HIGH-LAT. AND THE PLASMA SHEET)
-C
-        TNOONN=(90.D0-XLTDAY)*0.01745329D0
-        TNOONS=3.141592654D0-TNOONN     ! HERE WE ASSUME THAT THE POSITIONS OF
-C                                          THE NORTHERN AND SOUTHERN R-1 OVALS
-C                                          ARE SYMMETRIC IN THE SM-COORDINATES
-        DTETDN=(XLTDAY-XLTNGHT)*0.01745329D0
-        DR2=DR**2
-C
-      SPS=SIN(PS)
+      
+
+C     
+      DATA XLTDAY,XLTNGHT /78.D0,70.D0/ !  THESE ARE LATITUDES OF THE R-1 OVAL
+C     AT NOON AND AT MIDNIGHT
+      DATA DTET0 /0.034906/     !   THIS IS THE LATITUDINAL HALF-THICKNESS OF THE
+C     R-1 OVAL (THE INTERPOLATION REGION BETWEEN
+C     THE HIGH-LAT. AND THE PLASMA SHEET)
+C     
+      TNOONN=(90.D0-XLTDAY)*0.01745329D0
+      TNOONS=3.141592654D0-TNOONN ! HERE WE ASSUME THAT THE POSITIONS OF
+C     THE NORTHERN AND SOUTHERN R-1 OVALS
+C     ARE SYMMETRIC IN THE SM-COORDINATES
+      DTETDN=(XLTDAY-XLTNGHT)*0.01745329D0
+      DR2=DR**2
+C     
+      SPS=DSIN(PS)
       R2=X**2+Y**2+Z**2
-      R=SQRT(R2)
+      R=DSQRT(R2)
       R3=R*R2
-C
+C     
       RMRH=R-RH
       RPRH=R+RH
-      SQM=SQRT(RMRH**2+DR2)
-      SQP=SQRT(RPRH**2+DR2)
+      SQM=DSQRT(RMRH**2+DR2)
+      SQP=DSQRT(RPRH**2+DR2)
       C=SQP-SQM
-      Q=SQRT((RH+1.D0)**2+DR2)-SQRT((RH-1.D0)**2+DR2)
+      Q=DSQRT((RH+1.D0)**2+DR2)-DSQRT((RH-1.D0)**2+DR2)
       SPSAS=SPS/R*C/Q
-      CPSAS=SQRT(1.D0-SPSAS**2)
-       XAS = X*CPSAS-Z*SPSAS
-       ZAS = X*SPSAS+Z*CPSAS
-        IF (XAS.NE.0.D0.OR.Y.NE.0.D0) THEN
-          PAS = ATAN2(Y,XAS)
-                                      ELSE
-          PAS=0.D0
-        ENDIF
-C
-      TAS=ATAN2(SQRT(XAS**2+Y**2),ZAS)
-      STAS=SIN(TAS)
+      CPSAS=DSQRT(1.D0-SPSAS**2)
+      XAS = X*CPSAS-Z*SPSAS
+      ZAS = X*SPSAS+Z*CPSAS
+      IF (XAS.NE.0.D0.OR.Y.NE.0.D0) THEN
+         PAS = DATAN2(Y,XAS)
+      ELSE
+         PAS=0.D0
+      ENDIF
+C     
+      TAS=DATAN2(DSQRT(XAS**2+Y**2),ZAS)
+      STAS=DSIN(TAS)
       F=STAS/(STAS**6*(1.D0-R3)+R3)**0.1666666667D0
-C
-      TET0=ASIN(F)
+C     
+      TET0=DASIN(F)
       IF (TAS.GT.1.5707963D0) TET0=3.141592654D0-TET0
-      DTET=DTETDN*SIN(PAS*0.5D0)**2
+      DTET=DTETDN*DSIN(PAS*0.5D0)**2
       TETR1N=TNOONN+DTET
       TETR1S=TNOONS-DTET
-C
-C NOW LET'S DEFINE WHICH OF THE FOUR REGIONS (HIGH-LAT., NORTHERN PSBL,
-C   PLASMA SHEET, SOUTHERN PSBL) DOES THE POINT (X,Y,Z) BELONG TO:
-C
-       IF (TET0.LT.TETR1N-DTET0.OR.TET0.GT.TETR1S+DTET0)  LOC=1 ! HIGH-LAT.
-       IF (TET0.GT.TETR1N+DTET0.AND.TET0.LT.TETR1S-DTET0) LOC=2 ! PL.SHEET
-       IF (TET0.GE.TETR1N-DTET0.AND.TET0.LE.TETR1N+DTET0) LOC=3 ! NORTH PSBL
-       IF (TET0.GE.TETR1S-DTET0.AND.TET0.LE.TETR1S+DTET0) LOC=4 ! SOUTH PSBL
-C
-       IF (LOC.EQ.1) THEN   ! IN THE HIGH-LAT. REGION USE THE SUBROUTINE DIPOCT
-C
-C      print *, '  LOC=1 (HIGH-LAT)'    !  (test printout; disabled now)
+C     
+C     NOW LET'S DEFINE WHICH OF THE FOUR REGIONS (HIGH-LAT., NORTHERN PSBL,
+C     PLASMA SHEET, SOUTHERN PSBL) DOES THE POINT (X,Y,Z) BELONG TO:
+C     
+      IF (TET0.LT.TETR1N-DTET0.OR.TET0.GT.TETR1S+DTET0)  LOC=1 ! HIGH-LAT.
+      IF (TET0.GT.TETR1N+DTET0.AND.TET0.LT.TETR1S-DTET0) LOC=2 ! PL.SHEET
+      IF (TET0.GE.TETR1N-DTET0.AND.TET0.LE.TETR1N+DTET0) LOC=3 ! NORTH PSBL
+      IF (TET0.GE.TETR1S-DTET0.AND.TET0.LE.TETR1S+DTET0) LOC=4 ! SOUTH PSBL
+C     
+      IF (LOC.EQ.1) THEN        ! IN THE HIGH-LAT. REGION USE THE SUBROUTINE DIPOCT
+C     
+C     print *, '  LOC=1 (HIGH-LAT)'    !  (test printout; disabled now)
          XI(1)=X
          XI(2)=Y
          XI(3)=Z
          XI(4)=PS
          CALL  DIPLOOP1(XI,D1)
-          BX=0.D0
-          BY=0.D0
-          BZ=0.D0
-            DO 1 I=1,26
-              BX=BX+C1(I)*D1(1,I)
-              BY=BY+C1(I)*D1(2,I)
-  1           BZ=BZ+C1(I)*D1(3,I)
-       ENDIF                                           !  END OF THE CASE 1
-C
-       IF (LOC.EQ.2) THEN
-C           print *, '  LOC=2 (PLASMA SHEET)'  !  (test printout; disabled now)
-C
-         XI(1)=X
-         XI(2)=Y
-         XI(3)=Z
-         XI(4)=PS
-         CALL  CONDIP1(XI,D2)
-          BX=0.D0
-          BY=0.D0
-          BZ=0.D0
+         BX=0.D0
+         BY=0.D0
+         BZ=0.D0
+         DO 1 I=1,26
+            BX=BX+C1(I)*D1(1,I)
+            BY=BY+C1(I)*D1(2,I)
+ 1          BZ=BZ+C1(I)*D1(3,I)
+         ENDIF                  !  END OF THE CASE 1
+C     
+         IF (LOC.EQ.2) THEN
+C     print *, '  LOC=2 (PLASMA SHEET)'  !  (test printout; disabled now)
+C     
+            XI(1)=X
+            XI(2)=Y
+            XI(3)=Z
+            XI(4)=PS
+            CALL  CONDIP1(XI,D2)
+            BX=0.D0
+            BY=0.D0
+            BZ=0.D0
             DO 2 I=1,79
-              BX=BX+C2(I)*D2(1,I)
-              BY=BY+C2(I)*D2(2,I)
-  2           BZ=BZ+C2(I)*D2(3,I)
+               BX=BX+C2(I)*D2(1,I)
+               BY=BY+C2(I)*D2(2,I)
+ 2             BZ=BZ+C2(I)*D2(3,I)
        ENDIF                                           !   END OF THE CASE 2
-C
+C     
        IF (LOC.EQ.3) THEN
-C       print *, '  LOC=3 (north PSBL)'  !  (test printout; disabled now)
-C
-         T01=TETR1N-DTET0
+C     print *, '  LOC=3 (north PSBL)'  !  (test printout; disabled now)
+C     
+          T01=TETR1N-DTET0
          T02=TETR1N+DTET0
-          SQR=SQRT(R)
-          ST01AS=SQR/(R3+1.D0/SIN(T01)**6-1.D0)**0.1666666667
-          ST02AS=SQR/(R3+1.D0/SIN(T02)**6-1.D0)**0.1666666667
-          CT01AS=SQRT(1.D0-ST01AS**2)
-          CT02AS=SQRT(1.D0-ST02AS**2)
-         XAS1=R*ST01AS*COS(PAS)
-         Y1=  R*ST01AS*SIN(PAS)
+         SQR=DSQRT(R)
+         ST01AS=SQR/(R3+1.D0/DSIN(T01)**6-1.D0)**0.1666666667
+         ST02AS=SQR/(R3+1.D0/DSIN(T02)**6-1.D0)**0.1666666667
+         CT01AS=DSQRT(1.D0-ST01AS**2)
+         CT02AS=DSQRT(1.D0-ST02AS**2)
+         XAS1=R*ST01AS*DCOS(PAS)
+         Y1=  R*ST01AS*DSIN(PAS)
          ZAS1=R*CT01AS
          X1=XAS1*CPSAS+ZAS1*SPSAS
          Z1=-XAS1*SPSAS+ZAS1*CPSAS ! X1,Y1,Z1 ARE COORDS OF THE NORTHERN
-c                                                      BOUNDARY POINT
+c     BOUNDARY POINT
          XI(1)=X1
          XI(2)=Y1
          XI(3)=Z1
@@ -1238,311 +1394,311 @@ c                                                      BOUNDARY POINT
           BX1=0.D0
           BY1=0.D0
           BZ1=0.D0
-            DO 11 I=1,26
-              BX1=BX1+C1(I)*D1(1,I) !   BX1,BY1,BZ1  ARE FIELD COMPONENTS
-              BY1=BY1+C1(I)*D1(2,I)  !  IN THE NORTHERN BOUNDARY POINT
- 11           BZ1=BZ1+C1(I)*D1(3,I)  !
-C
-         XAS2=R*ST02AS*COS(PAS)
-         Y2=  R*ST02AS*SIN(PAS)
-         ZAS2=R*CT02AS
-         X2=XAS2*CPSAS+ZAS2*SPSAS
-         Z2=-XAS2*SPSAS+ZAS2*CPSAS ! X2,Y2,Z2 ARE COORDS OF THE SOUTHERN
-C                                        BOUNDARY POINT
-         XI(1)=X2
-         XI(2)=Y2
-         XI(3)=Z2
-         XI(4)=PS
+          DO 11 I=1,26
+             BX1=BX1+C1(I)*D1(1,I) !   BX1,BY1,BZ1  ARE FIELD COMPONENTS
+             BY1=BY1+C1(I)*D1(2,I) !  IN THE NORTHERN BOUNDARY POINT
+ 11          BZ1=BZ1+C1(I)*D1(3,I) !
+C     
+             XAS2=R*ST02AS*DCOS(PAS)
+             Y2=  R*ST02AS*DSIN(PAS)
+             ZAS2=R*CT02AS
+             X2=XAS2*CPSAS+ZAS2*SPSAS
+             Z2=-XAS2*SPSAS+ZAS2*CPSAS ! X2,Y2,Z2 ARE COORDS OF THE SOUTHERN
+C     BOUNDARY POINT
+             XI(1)=X2
+             XI(2)=Y2
+             XI(3)=Z2
+             XI(4)=PS
          CALL  CONDIP1(XI,D2)
-          BX2=0.D0
-          BY2=0.D0
-          BZ2=0.D0
-            DO 12 I=1,79
-              BX2=BX2+C2(I)*D2(1,I)!  BX2,BY2,BZ2  ARE FIELD COMPONENTS
-              BY2=BY2+C2(I)*D2(2,I) !  IN THE SOUTHERN BOUNDARY POINT
-  12          BZ2=BZ2+C2(I)*D2(3,I)
-C
-C  NOW INTERPOLATE:
-C
-         SS=SQRT((X2-X1)**2+(Y2-Y1)**2+(Z2-Z1)**2)
-         DS=SQRT((X-X1)**2+(Y-Y1)**2+(Z-Z1)**2)
-         FRAC=DS/SS
-         BX=BX1*(1.D0-FRAC)+BX2*FRAC
-         BY=BY1*(1.D0-FRAC)+BY2*FRAC
-         BZ=BZ1*(1.D0-FRAC)+BZ2*FRAC
-C
+         BX2=0.D0
+         BY2=0.D0
+         BZ2=0.D0
+         DO 12 I=1,79
+            BX2=BX2+C2(I)*D2(1,I) !  BX2,BY2,BZ2  ARE FIELD COMPONENTS
+            BY2=BY2+C2(I)*D2(2,I) !  IN THE SOUTHERN BOUNDARY POINT
+ 12         BZ2=BZ2+C2(I)*D2(3,I)
+C     
+C     NOW INTERPOLATE:
+C     
+            SS=DSQRT((X2-X1)**2+(Y2-Y1)**2+(Z2-Z1)**2)
+            DS=DSQRT((X-X1)**2+(Y-Y1)**2+(Z-Z1)**2)
+            FRAC=DS/SS
+            BX=BX1*(1.D0-FRAC)+BX2*FRAC
+            BY=BY1*(1.D0-FRAC)+BY2*FRAC
+            BZ=BZ1*(1.D0-FRAC)+BZ2*FRAC
+C     
         ENDIF                                              ! END OF THE CASE 3
-C
+C     
         IF (LOC.EQ.4) THEN
-C       print *, '  LOC=4 (south PSBL)'  !  (test printout; disabled now)
-C
-         T01=TETR1S-DTET0
-         T02=TETR1S+DTET0
-          SQR=SQRT(R)
-          ST01AS=SQR/(R3+1.D0/SIN(T01)**6-1.D0)**0.1666666667
-          ST02AS=SQR/(R3+1.D0/SIN(T02)**6-1.D0)**0.1666666667
-          CT01AS=-SQRT(1.D0-ST01AS**2)
-          CT02AS=-SQRT(1.D0-ST02AS**2)
-         XAS1=R*ST01AS*COS(PAS)
-         Y1=  R*ST01AS*SIN(PAS)
-         ZAS1=R*CT01AS
-         X1=XAS1*CPSAS+ZAS1*SPSAS
-         Z1=-XAS1*SPSAS+ZAS1*CPSAS ! X1,Y1,Z1 ARE COORDS OF THE NORTHERN
-C                                               BOUNDARY POINT
-         XI(1)=X1
-         XI(2)=Y1
-         XI(3)=Z1
-         XI(4)=PS
-         CALL  CONDIP1(XI,D2)
-          BX1=0.D0
-          BY1=0.D0
-          BZ1=0.D0
-            DO 21 I=1,79
+C     print *, '  LOC=4 (south PSBL)'  !  (test printout; disabled now)
+C     
+           T01=TETR1S-DTET0
+           T02=TETR1S+DTET0
+           SQR=DSQRT(R)
+           ST01AS=SQR/(R3+1.D0/DSIN(T01)**6-1.D0)**0.1666666667
+           ST02AS=SQR/(R3+1.D0/DSIN(T02)**6-1.D0)**0.1666666667
+           CT01AS=-DSQRT(1.D0-ST01AS**2)
+           CT02AS=-DSQRT(1.D0-ST02AS**2)
+           XAS1=R*ST01AS*DCOS(PAS)
+           Y1=  R*ST01AS*DSIN(PAS)
+           ZAS1=R*CT01AS
+           X1=XAS1*CPSAS+ZAS1*SPSAS
+           Z1=-XAS1*SPSAS+ZAS1*CPSAS ! X1,Y1,Z1 ARE COORDS OF THE NORTHERN
+C     BOUNDARY POINT
+           XI(1)=X1
+           XI(2)=Y1
+           XI(3)=Z1
+           XI(4)=PS
+           CALL  CONDIP1(XI,D2)
+           BX1=0.D0
+           BY1=0.D0
+           BZ1=0.D0
+           DO 21 I=1,79
               BX1=BX1+C2(I)*D2(1,I) !  BX1,BY1,BZ1  ARE FIELD COMPONENTS
-              BY1=BY1+C2(I)*D2(2,I)  !  IN THE NORTHERN BOUNDARY POINT
- 21           BZ1=BZ1+C2(I)*D2(3,I)  !
-C
-         XAS2=R*ST02AS*COS(PAS)
-         Y2=  R*ST02AS*SIN(PAS)
-         ZAS2=R*CT02AS
-         X2=XAS2*CPSAS+ZAS2*SPSAS
-         Z2=-XAS2*SPSAS+ZAS2*CPSAS ! X2,Y2,Z2 ARE COORDS OF THE SOUTHERN
-C                                          BOUNDARY POINT
-         XI(1)=X2
-         XI(2)=Y2
-         XI(3)=Z2
-         XI(4)=PS
-         CALL  DIPLOOP1(XI,D1)
-          BX2=0.D0
-          BY2=0.D0
-          BZ2=0.D0
-            DO 22 I=1,26
-              BX2=BX2+C1(I)*D1(1,I) !  BX2,BY2,BZ2  ARE FIELD COMPONENTS
-              BY2=BY2+C1(I)*D1(2,I) !     IN THE SOUTHERN BOUNDARY POINT
-  22          BZ2=BZ2+C1(I)*D1(3,I)
-C
-C  NOW INTERPOLATE:
-C
-         SS=SQRT((X2-X1)**2+(Y2-Y1)**2+(Z2-Z1)**2)
-         DS=SQRT((X-X1)**2+(Y-Y1)**2+(Z-Z1)**2)
-         FRAC=DS/SS
-         BX=BX1*(1.D0-FRAC)+BX2*FRAC
-         BY=BY1*(1.D0-FRAC)+BY2*FRAC
-         BZ=BZ1*(1.D0-FRAC)+BZ2*FRAC
-C
-        ENDIF                                        ! END OF THE CASE 4
-C
-C   NOW, LET US ADD THE SHIELDING FIELD
-C
-        CALL  BIRK1SHLD(PS,X,Y,Z,BSX,BSY,BSZ)
-        BX=BX+BSX
-        BY=BY+BSY
-        BZ=BZ+BSZ
-         RETURN
-         END
-C
+              BY1=BY1+C2(I)*D2(2,I) !  IN THE NORTHERN BOUNDARY POINT
+ 21           BZ1=BZ1+C2(I)*D2(3,I) !
+C     
+              XAS2=R*ST02AS*DCOS(PAS)
+              Y2=  R*ST02AS*DSIN(PAS)
+              ZAS2=R*CT02AS
+              X2=XAS2*CPSAS+ZAS2*SPSAS
+              Z2=-XAS2*SPSAS+ZAS2*CPSAS ! X2,Y2,Z2 ARE COORDS OF THE SOUTHERN
+C     BOUNDARY POINT
+              XI(1)=X2
+              XI(2)=Y2
+              XI(3)=Z2
+              XI(4)=PS
+              CALL  DIPLOOP1(XI,D1)
+              BX2=0.D0
+              BY2=0.D0
+              BZ2=0.D0
+              DO 22 I=1,26
+                 BX2=BX2+C1(I)*D1(1,I) !  BX2,BY2,BZ2  ARE FIELD COMPONENTS
+                 BY2=BY2+C1(I)*D1(2,I) !     IN THE SOUTHERN BOUNDARY POINT
+ 22              BZ2=BZ2+C1(I)*D1(3,I)
+C     
+C     NOW INTERPOLATE:
+C     
+                 SS=DSQRT((X2-X1)**2+(Y2-Y1)**2+(Z2-Z1)**2)
+                 DS=DSQRT((X-X1)**2+(Y-Y1)**2+(Z-Z1)**2)
+                 FRAC=DS/SS
+                 BX=BX1*(1.D0-FRAC)+BX2*FRAC
+                 BY=BY1*(1.D0-FRAC)+BY2*FRAC
+                 BZ=BZ1*(1.D0-FRAC)+BZ2*FRAC
+C     
+              ENDIF             ! END OF THE CASE 4
+C     
+C     NOW, LET US ADD THE SHIELDING FIELD
+C     
+              CALL  BIRK1SHLD(PS,X,Y,Z,BSX,BSY,BSZ)
+              BX=BX+BSX
+              BY=BY+BSY
+              BZ=BZ+BSZ
+              RETURN
+              END
+C     
 C------------------------------------------------------------------------------
+C     
+C     
+      SUBROUTINE  DIPLOOP1(XI,D)
+C     
+C     
+C     Calculates dependent model variables and their deriva-
+C     tives for given independent variables and model parame-
+C     ters.  Specifies model functions with free parameters which
+C     must be determined by means of least squares fits (RMS
+C     minimization procedure).
+C     
+C     Description of parameters:
+C     
+C     XI  - input vector containing independent variables;
+C     D   - output double precision vector containing
+C     calculated values for derivatives of dependent
+C     variables with respect to LINEAR model parameters;
 C
-C
-         SUBROUTINE  DIPLOOP1(XI,D)
-C
-C
-C      Calculates dependent model variables and their deriva-
-C  tives for given independent variables and model parame-
-C  ters.  Specifies model functions with free parameters which
-C  must be determined by means of least squares fits (RMS
-C  minimization procedure).
-C
-C      Description of parameters:
-C
-C  XI  - input vector containing independent variables;
-C  D   - output double precision vector containing
-C        calculated values for derivatives of dependent
-C        variables with respect to LINEAR model parameters;
-C
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-C
-c  The  26 coefficients are moments (Z- and X-components) of 12 dipoles placed
-C    inside the  R1-shell,  PLUS amplitudes of two octagonal double loops.  
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+C     
+c     The  26 coefficients are moments (Z- and X-components) of 12 dipoles placed
+C     inside the  R1-shell,  PLUS amplitudes of two octagonal double loops.
 C     The dipoles with nonzero  Yi appear in pairs with equal moments.
-c                  (see the notebook #2, pp.102-103, for details)
-C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+c     (see the notebook #2, pp.102-103, for details)
+C     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 c
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
-         COMMON /COORD11/ XX(12),YY(12)
-         COMMON /LOOPDIP1/ TILT,XCENTRE(2),RADIUS(2),  DIPX,DIPY
-         COMMON /RHDR/RH,DR
-         DIMENSION XI(4),D(3,26)
-C
-           X = XI(1)
-           Y = XI(2)
-           Z = XI(3)
-           PS= XI(4)
-           SPS=SIN(PS)
-C
-         DO 1 I=1,12     
-           R2=(XX(I)*DIPX)**2+(YY(I)*DIPY)**2
-           R=SQRT(R2)
-             RMRH=R-RH
-             RPRH=R+RH
-             DR2=DR**2
-             SQM=SQRT(RMRH**2+DR2)
-             SQP=SQRT(RPRH**2+DR2)
-             C=SQP-SQM
-             Q=SQRT((RH+1.D0)**2+DR2)-SQRT((RH-1.D0)**2+DR2)
-             SPSAS=SPS/R*C/Q
-             CPSAS=SQRT(1.D0-SPSAS**2)
-         XD= (XX(I)*DIPX)*CPSAS
-         YD= (YY(I)*DIPY)
-         ZD=-(XX(I)*DIPX)*SPSAS
-      CALL DIPXYZ(X-XD,Y-YD,Z-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
+      COMMON /COORD11/ XX(12),YY(12)
+      COMMON /LOOPDIP1/ TILT,XCENTRE(2),RADIUS(2),  DIPX,DIPY
+      COMMON /RHDR/RH,DR
+      DIMENSION XI(4),D(3,26)
+C     
+      X = XI(1)
+      Y = XI(2)
+      Z = XI(3)
+      PS= XI(4)
+      SPS=DSIN(PS)
+C     
+      DO 1 I=1,12
+         R2=(XX(I)*DIPX)**2+(YY(I)*DIPY)**2
+         R=DSQRT(R2)
+         RMRH=R-RH
+         RPRH=R+RH
+         DR2=DR**2
+         SQM=DSQRT(RMRH**2+DR2)
+         SQP=DSQRT(RPRH**2+DR2)
+         C=SQP-SQM
+         Q=DSQRT((RH+1.D0)**2+DR2)-DSQRT((RH-1.D0)**2+DR2)
+         SPSAS=SPS/R*C/Q
+             CPSAS=DSQRT(1.D0-SPSAS**2)
+             XD= (XX(I)*DIPX)*CPSAS
+             YD= (YY(I)*DIPY)
+             ZD=-(XX(I)*DIPX)*SPSAS
+             CALL DIPXYZ(X-XD,Y-YD,Z-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,
      *  BX1Z,BY1Z,BZ1Z)
-        IF (ABS(YD).GT.1.D-10) THEN
-      CALL DIPXYZ(X-XD,Y+YD,Z-ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,
-     *  BX2Z,BY2Z,BZ2Z)
-                                   ELSE
-        BX2X=0.D0
-        BY2X=0.D0
-        BZ2X=0.D0
-C
-        BX2Z=0.D0
-        BY2Z=0.D0
-        BZ2Z=0.D0
-                                   ENDIF
-C
-            D(1,I)=BX1Z+BX2Z
-            D(2,I)=BY1Z+BY2Z
-            D(3,I)=BZ1Z+BZ2Z
-            D(1,I+12)=(BX1X+BX2X)*SPS
-            D(2,I+12)=(BY1X+BY2X)*SPS
-            D(3,I+12)=(BZ1X+BZ2X)*SPS
-  1   CONTINUE
-c
-           R2=(XCENTRE(1)+RADIUS(1))**2
-           R=SQRT(R2)
-             RMRH=R-RH
-             RPRH=R+RH
-             DR2=DR**2
-             SQM=SQRT(RMRH**2+DR2)
-             SQP=SQRT(RPRH**2+DR2)
-             C=SQP-SQM
-             Q=SQRT((RH+1.D0)**2+DR2)-SQRT((RH-1.D0)**2+DR2)
-             SPSAS=SPS/R*C/Q
-             CPSAS=SQRT(1.D0-SPSAS**2)
-         XOCT1= X*CPSAS-Z*SPSAS
-         YOCT1= Y
-         ZOCT1= X*SPSAS+Z*CPSAS
-C
-      CALL CROSSLP(XOCT1,YOCT1,ZOCT1,BXOCT1,BYOCT1,BZOCT1,XCENTRE(1),
-     *        RADIUS(1),TILT)
-            D(1,25)=BXOCT1*CPSAS+BZOCT1*SPSAS
-            D(2,25)=BYOCT1
-            D(3,25)=-BXOCT1*SPSAS+BZOCT1*CPSAS
-C
-           R2=(RADIUS(2)-XCENTRE(2))**2
-           R=SQRT(R2)
-             RMRH=R-RH
-             RPRH=R+RH
-             DR2=DR**2
-             SQM=SQRT(RMRH**2+DR2)
-             SQP=SQRT(RPRH**2+DR2)
-             C=SQP-SQM
-             Q=SQRT((RH+1.D0)**2+DR2)-SQRT((RH-1.D0)**2+DR2)
-             SPSAS=SPS/R*C/Q
-             CPSAS=SQRT(1.D0-SPSAS**2)
-         XOCT2= X*CPSAS-Z*SPSAS -XCENTRE(2)
-         YOCT2= Y
-         ZOCT2= X*SPSAS+Z*CPSAS
-            CALL CIRCLE(XOCT2,YOCT2,ZOCT2,RADIUS(2),BX,BY,BZ)
-            D(1,26) =  BX*CPSAS+BZ*SPSAS
-            D(2,26) =  BY
-            D(3,26) = -BX*SPSAS+BZ*CPSAS
-C
-            RETURN
-            END
+             IF (DABS(YD).GT.1.D-10) THEN
+               CALL DIPXYZ(X-XD,Y+YD,Z-ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,
+     *               BX2Z,BY2Z,BZ2Z)
+             ELSE
+                BX2X=0.D0
+                BY2X=0.D0
+                BZ2X=0.D0
+C     
+                BX2Z=0.D0
+                BY2Z=0.D0
+                BZ2Z=0.D0
+             ENDIF
+C     
+             D(1,I)=BX1Z+BX2Z
+             D(2,I)=BY1Z+BY2Z
+             D(3,I)=BZ1Z+BZ2Z
+             D(1,I+12)=(BX1X+BX2X)*SPS
+             D(2,I+12)=(BY1X+BY2X)*SPS
+             D(3,I+12)=(BZ1X+BZ2X)*SPS
+ 1        CONTINUE
+c     
+          R2=(XCENTRE(1)+RADIUS(1))**2
+          R=DSQRT(R2)
+          RMRH=R-RH
+          RPRH=R+RH
+          DR2=DR**2
+          SQM=DSQRT(RMRH**2+DR2)
+          SQP=DSQRT(RPRH**2+DR2)
+          C=SQP-SQM
+          Q=DSQRT((RH+1.D0)**2+DR2)-DSQRT((RH-1.D0)**2+DR2)
+          SPSAS=SPS/R*C/Q
+          CPSAS=DSQRT(1.D0-SPSAS**2)
+          XOCT1= X*CPSAS-Z*SPSAS
+          YOCT1= Y
+          ZOCT1= X*SPSAS+Z*CPSAS
+C     
+         CALL CROSSLP(XOCT1,YOCT1,ZOCT1,BXOCT1,BYOCT1,BZOCT1,XCENTRE(1),
+     *         RADIUS(1),TILT)
+          D(1,25)=BXOCT1*CPSAS+BZOCT1*SPSAS
+          D(2,25)=BYOCT1
+          D(3,25)=-BXOCT1*SPSAS+BZOCT1*CPSAS
+C     
+          R2=(RADIUS(2)-XCENTRE(2))**2
+          R=DSQRT(R2)
+          RMRH=R-RH
+          RPRH=R+RH
+          DR2=DR**2
+          SQM=DSQRT(RMRH**2+DR2)
+          SQP=DSQRT(RPRH**2+DR2)
+          C=SQP-SQM
+          Q=DSQRT((RH+1.D0)**2+DR2)-DSQRT((RH-1.D0)**2+DR2)
+          SPSAS=SPS/R*C/Q
+          CPSAS=DSQRT(1.D0-SPSAS**2)
+          XOCT2= X*CPSAS-Z*SPSAS -XCENTRE(2)
+          YOCT2= Y
+          ZOCT2= X*SPSAS+Z*CPSAS
+          CALL CIRCLE(XOCT2,YOCT2,ZOCT2,RADIUS(2),BX,BY,BZ)
+          D(1,26) =  BX*CPSAS+BZ*SPSAS
+          D(2,26) =  BY
+          D(3,26) = -BX*SPSAS+BZ*CPSAS
+C     
+          RETURN
+          END
 c-------------------------------------------------------------------------
-C
-        SUBROUTINE CIRCLE(X,Y,Z,RL,BX,BY,BZ)
-C
-C  RETURNS COMPONENTS OF THE FIELD FROM A CIRCULAR CURRENT LOOP OF RADIUS RL
-C   USES THE SECOND (MORE ACCURATE) APPROXIMATION GIVEN IN ABRAMOWITZ & STEGUN
-
-        IMPLICIT REAL*8 (A-H,O-Z)
-        REAL*8 K
-        DATA PI/3.141592654D0/
-C
-        RHO2=X*X+Y*Y
-        RHO=SQRT(RHO2)
-        R22=Z*Z+(RHO+RL)**2
-        R2=SQRT(R22)
-        R12=R22-4.D0*RHO*RL
-        R32=0.5D0*(R12+R22)
-        XK2=1.D0-R12/R22
-        XK2S=1.D0-XK2
-        DL=LOG(1.D0/XK2S)
-        K=1.38629436112d0+XK2S*(0.09666344259D0+XK2S*(0.03590092383+
+C     
+      SUBROUTINE CIRCLE(X,Y,Z,RL,BX,BY,BZ)
+C     
+C     RETURNS COMPONENTS OF THE FIELD FROM A CIRCULAR CURRENT LOOP OF RADIUS RL
+C     USES THE SECOND (MORE ACCURATE) APPROXIMATION GIVEN IN ABRAMOWITZ AND STEGUN
+      
+      IMPLICIT REAL*8 (A-H,O-Z)
+      REAL*8 K
+      DATA PI/3.141592654D0/
+C     
+      RHO2=X*X+Y*Y
+      RHO=DSQRT(RHO2)
+      R22=Z*Z+(RHO+RL)**2
+      R2=DSQRT(R22)
+      R12=R22-4.D0*RHO*RL
+      R32=0.5D0*(R12+R22)
+      XK2=1.D0-R12/R22
+      XK2S=1.D0-XK2
+      DL=DLOG(1.D0/XK2S)
+      K=1.38629436112d0+XK2S*(0.09666344259D0+XK2S*(0.03590092383+
      *     XK2S*(0.03742563713+XK2S*0.01451196212))) +DL*
      *     (0.5D0+XK2S*(0.12498593597D0+XK2S*(0.06880248576D0+
      *     XK2S*(0.03328355346D0+XK2S*0.00441787012D0))))
-        E=1.D0+XK2S*(0.44325141463D0+XK2S*(0.0626060122D0+XK2S*
-     *      (0.04757383546D0+XK2S*0.01736506451D0))) +DL*
+      E=1.D0+XK2S*(0.44325141463D0+XK2S*(0.0626060122D0+XK2S*
+     *     (0.04757383546D0+XK2S*0.01736506451D0))) +DL*
      *     XK2S*(0.2499836831D0+XK2S*(0.09200180037D0+XK2S*
-     *       (0.04069697526D0+XK2S*0.00526449639D0)))
-
-        IF (RHO.GT.1.D-6) THEN
-           BRHO=Z/(RHO2*R2)*(R32/R12*E-K) !  THIS IS NOT EXACTLY THE B-RHO COM-
-                           ELSE           !   PONENT - NOTE THE ADDITIONAL 
-           BRHO=PI*RL/R2*(RL-RHO)/R12*Z/(R32-RHO2)  !      DIVISION BY RHO
-        ENDIF
-
-        BX=BRHO*X                     
-        BY=BRHO*Y                      
-        BZ=(K-E*(R32-2.D0*RL*RL)/R12)/R2
-        RETURN
-        END
+     *     (0.04069697526D0+XK2S*0.00526449639D0)))
+      
+      IF (RHO.GT.1.D-6) THEN
+         BRHO=Z/(RHO2*R2)*(R32/R12*E-K) !  THIS IS NOT EXACTLY THE B-RHO COM-
+      ELSE                      !   PONENT - NOTE THE ADDITIONAL
+         BRHO=PI*RL/R2*(RL-RHO)/R12*Z/(R32-RHO2) !      DIVISION BY RHO
+      ENDIF
+      
+      BX=BRHO*X
+      BY=BRHO*Y
+      BZ=(K-E*(R32-2.D0*RL*RL)/R12)/R2
+      RETURN
+      END
 C-------------------------------------------------------------
-C
-        SUBROUTINE CROSSLP(X,Y,Z,BX,BY,BZ,XC,RL,AL)
-C
-c   RETURNS FIELD COMPONENTS OF A PAIR OF LOOPS WITH A COMMON CENTER AND 
-C    DIAMETER,  COINCIDING WITH THE X AXIS. THE LOOPS ARE INCLINED TO THE
-C    EQUATORIAL PLANE BY THE ANGLE AL (RADIANS) AND SHIFTED IN THE POSITIVE
+C     
+      SUBROUTINE CROSSLP(X,Y,Z,BX,BY,BZ,XC,RL,AL)
+C     
+c     RETURNS FIELD COMPONENTS OF A PAIR OF LOOPS WITH A COMMON CENTER AND
+C     DIAMETER,  COINCIDING WITH THE X AXIS. THE LOOPS ARE INCLINED TO THE
+C     EQUATORIAL PLANE BY THE ANGLE AL (RADIANS) AND SHIFTED IN THE POSITIVE
 C     X-DIRECTION BY THE DISTANCE  XC.
-c
-        IMPLICIT REAL*8 (A-H,O-Z)
-C
-            CAL=COS(AL)
-            SAL=SIN(AL)
-C
-        Y1=Y*CAL-Z*SAL
-        Z1=Y*SAL+Z*CAL
-        Y2=Y*CAL+Z*SAL
-        Z2=-Y*SAL+Z*CAL
-        CALL CIRCLE(X-XC,Y1,Z1,RL,BX1,BY1,BZ1)
-        CALL CIRCLE(X-XC,Y2,Z2,RL,BX2,BY2,BZ2)
-        BX=BX1+BX2
-        BY= (BY1+BY2)*CAL+(BZ1-BZ2)*SAL
-        BZ=-(BY1-BY2)*SAL+(BZ1+BZ2)*CAL
-C
-        RETURN
-        END
-
-C*******************************************************************
-
-       SUBROUTINE DIPXYZ(X,Y,Z,BXX,BYX,BZX,BXY,BYY,BZY,BXZ,BYZ,BZZ)
-C
-C       RETURNS THE FIELD COMPONENTS PRODUCED BY THREE DIPOLES, EACH
-C        HAVING M=Me AND ORIENTED PARALLEL TO X,Y, and Z AXIS, RESP.
-C
+c     
       IMPLICIT REAL*8 (A-H,O-Z)
-C
+C     
+      CAL=DCOS(AL)
+      SAL=DSIN(AL)
+C     
+      Y1=Y*CAL-Z*SAL
+      Z1=Y*SAL+Z*CAL
+      Y2=Y*CAL+Z*SAL
+      Z2=-Y*SAL+Z*CAL
+      CALL CIRCLE(X-XC,Y1,Z1,RL,BX1,BY1,BZ1)
+      CALL CIRCLE(X-XC,Y2,Z2,RL,BX2,BY2,BZ2)
+      BX=BX1+BX2
+      BY= (BY1+BY2)*CAL+(BZ1-BZ2)*SAL
+      BZ=-(BY1-BY2)*SAL+(BZ1+BZ2)*CAL
+C     
+      RETURN
+      END
+      
+C*******************************************************************
+      
+      SUBROUTINE DIPXYZ(X,Y,Z,BXX,BYX,BZX,BXY,BYY,BZY,BXZ,BYZ,BZZ)
+C     
+C     RETURNS THE FIELD COMPONENTS PRODUCED BY THREE DIPOLES, EACH
+C     HAVING M=Me AND ORIENTED PARALLEL TO X,Y, and Z AXIS, RESP.
+C     
+      IMPLICIT REAL*8 (A-H,O-Z)
+C     
       X2=X**2
       Y2=Y**2
       Z2=Z**2
       R2=X2+Y2+Z2
-
-      XMR5=30574.D0/(R2*R2*SQRT(R2))
+      
+      XMR5=30574.D0/(R2*R2*DSQRT(R2))
       XMR53=3.D0*XMR5
       BXX=XMR5*(3.D0*X2-R2)
       BYX=XMR53*X*Y
@@ -1560,10 +1716,10 @@ C
       END
 C
 C------------------------------------------------------------------------------
-         SUBROUTINE  CONDIP1(XI,D)
+      SUBROUTINE  CONDIP1(XI,D)
 C
 C      Calculates dependent model variables and their derivatives for given
-C  independent variables and model parameters.  Specifies model functions with
+C     independent variables and model parameters.  Specifies model functions with
 C  free parameters which must be determined by means of least squares fits
 C  (RMS minimization procedure).
 C
@@ -1580,29 +1736,29 @@ c  The  79 coefficients are (1) 5 amplitudes of the conical harmonics, plus
 c                           (2) (9x3+5x2)x2=74 components of the dipole moments
 c              (see the notebook #2, pp.113-..., for details)
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c
-         IMPLICIT  REAL * 8  (A - H, O - Z)
-C
+c     
+      IMPLICIT  REAL * 8  (A - H, O - Z)
+C     
       COMMON /DX1/ DX,SCALEIN,SCALEOUT
       COMMON /COORD21/ XX(14),YY(14),ZZ(14)
-c
-         DIMENSION XI(4),D(3,79),CF(5),SF(5)
-C
-           X = XI(1)
-           Y = XI(2)
-           Z = XI(3)
-           PS= XI(4)
-           SPS=SIN(PS)
-           CPS=COS(PS)
-C
+c     
+      DIMENSION XI(4),D(3,79),CF(5),SF(5)
+C     
+      X = XI(1)
+      Y = XI(2)
+      Z = XI(3)
+      PS= XI(4)
+      SPS=DSIN(PS)
+      CPS=DCOS(PS)
+C     
       XSM=X*CPS-Z*SPS  - DX
       ZSM=Z*CPS+X*SPS
       RO2=XSM**2+Y**2
       RO=SQRT(RO2)
-C
+C     
       CF(1)=XSM/RO
       SF(1)=Y/RO
-C
+C     
       CF(2)=CF(1)**2-SF(1)**2
       SF(2)=2.*SF(1)*CF(1)
       CF(3)=CF(2)*CF(1)-SF(2)*SF(1)
@@ -1611,116 +1767,116 @@ C
       SF(4)=SF(3)*CF(1)+CF(3)*SF(1)
       CF(5)=CF(4)*CF(1)-SF(4)*SF(1)
       SF(5)=SF(4)*CF(1)+CF(4)*SF(1)
-C
+C     
       R2=RO2+ZSM**2
-      R=SQRT(R2)
+      R=DSQRT(R2)
       C=ZSM/R
       S=RO/R
-      CH=SQRT(0.5D0*(1.D0+C))
-      SH=SQRT(0.5D0*(1.D0-C))
+      CH=DSQRT(0.5D0*(1.D0+C))
+      SH=DSQRT(0.5D0*(1.D0-C))
       TNH=SH/CH
       CNH=1.D0/TNH
-C
+C     
       DO 1 M=1,5
-       BT=M*CF(M)/(R*S)*(TNH**M+CNH**M)
-       BF=-0.5D0*M*SF(M)/R*(TNH**(M-1)/CH**2-CNH**(M-1)/SH**2)
-       BXSM=BT*C*CF(1)-BF*SF(1)
-       BY=BT*C*SF(1)+BF*CF(1)
-       BZSM=-BT*S
-C
-       D(1,M)=BXSM*CPS+BZSM*SPS
-       D(2,M)=BY
-  1    D(3,M)=-BXSM*SPS+BZSM*CPS
-C
-      XSM = X*CPS-Z*SPS
-      ZSM = Z*CPS+X*SPS
-C
-        DO 2 I=1,9
-C
-        IF (I.EQ.3.OR.I.EQ.5.OR.I.EQ.6) THEN
-                XD =  XX(I)*SCALEIN
-                YD =  YY(I)*SCALEIN
-                                         ELSE
-                XD =  XX(I)*SCALEOUT
-                YD =  YY(I)*SCALEOUT
-        ENDIF
-C
-         ZD =  ZZ(I)
-C
-      CALL DIPXYZ(XSM-XD,Y-YD,ZSM-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,
-     *  BX1Z,BY1Z,BZ1Z)
-      CALL DIPXYZ(XSM-XD,Y+YD,ZSM-ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,
-     *  BX2Z,BY2Z,BZ2Z)
-      CALL DIPXYZ(XSM-XD,Y-YD,ZSM+ZD,BX3X,BY3X,BZ3X,BX3Y,BY3Y,BZ3Y,
-     *  BX3Z,BY3Z,BZ3Z)
-      CALL DIPXYZ(XSM-XD,Y+YD,ZSM+ZD,BX4X,BY4X,BZ4X,BX4Y,BY4Y,BZ4Y,
-     *  BX4Z,BY4Z,BZ4Z)
-C
-      IX=I*3+3
-      IY=IX+1
-      IZ=IY+1
-C
-      D(1,IX)=(BX1X+BX2X-BX3X-BX4X)*CPS+(BZ1X+BZ2X-BZ3X-BZ4X)*SPS
-      D(2,IX)= BY1X+BY2X-BY3X-BY4X
-      D(3,IX)=(BZ1X+BZ2X-BZ3X-BZ4X)*CPS-(BX1X+BX2X-BX3X-BX4X)*SPS
-C
-      D(1,IY)=(BX1Y-BX2Y-BX3Y+BX4Y)*CPS+(BZ1Y-BZ2Y-BZ3Y+BZ4Y)*SPS
-      D(2,IY)= BY1Y-BY2Y-BY3Y+BY4Y
-      D(3,IY)=(BZ1Y-BZ2Y-BZ3Y+BZ4Y)*CPS-(BX1Y-BX2Y-BX3Y+BX4Y)*SPS
-C
-      D(1,IZ)=(BX1Z+BX2Z+BX3Z+BX4Z)*CPS+(BZ1Z+BZ2Z+BZ3Z+BZ4Z)*SPS
-      D(2,IZ)= BY1Z+BY2Z+BY3Z+BY4Z
-      D(3,IZ)=(BZ1Z+BZ2Z+BZ3Z+BZ4Z)*CPS-(BX1Z+BX2Z+BX3Z+BX4Z)*SPS
-C
-      IX=IX+27
-      IY=IY+27
-      IZ=IZ+27
-C
-      D(1,IX)=SPS*((BX1X+BX2X+BX3X+BX4X)*CPS+(BZ1X+BZ2X+BZ3X+BZ4X)*SPS)
-      D(2,IX)=SPS*(BY1X+BY2X+BY3X+BY4X)
-      D(3,IX)=SPS*((BZ1X+BZ2X+BZ3X+BZ4X)*CPS-(BX1X+BX2X+BX3X+BX4X)*SPS)
-C
-      D(1,IY)=SPS*((BX1Y-BX2Y+BX3Y-BX4Y)*CPS+(BZ1Y-BZ2Y+BZ3Y-BZ4Y)*SPS)
-      D(2,IY)=SPS*(BY1Y-BY2Y+BY3Y-BY4Y)
-      D(3,IY)=SPS*((BZ1Y-BZ2Y+BZ3Y-BZ4Y)*CPS-(BX1Y-BX2Y+BX3Y-BX4Y)*SPS)
-C
-      D(1,IZ)=SPS*((BX1Z+BX2Z-BX3Z-BX4Z)*CPS+(BZ1Z+BZ2Z-BZ3Z-BZ4Z)*SPS)
-      D(2,IZ)=SPS*(BY1Z+BY2Z-BY3Z-BY4Z)
-      D(3,IZ)=SPS*((BZ1Z+BZ2Z-BZ3Z-BZ4Z)*CPS-(BX1Z+BX2Z-BX3Z-BX4Z)*SPS)
-  2   CONTINUE
-C
-      DO 3 I=1,5
-      ZD=ZZ(I+9)
-      CALL DIPXYZ(XSM,Y,ZSM-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,BX1Z,BY1Z,
-     *  BZ1Z)
-      CALL DIPXYZ(XSM,Y,ZSM+ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,BX2Z,BY2Z,
-     *  BZ2Z)
-       IX=58+I*2
-       IZ=IX+1
-      D(1,IX)=(BX1X-BX2X)*CPS+(BZ1X-BZ2X)*SPS
-      D(2,IX)=BY1X-BY2X
-      D(3,IX)=(BZ1X-BZ2X)*CPS-(BX1X-BX2X)*SPS
-C
-      D(1,IZ)=(BX1Z+BX2Z)*CPS+(BZ1Z+BZ2Z)*SPS
-      D(2,IZ)=BY1Z+BY2Z
-      D(3,IZ)=(BZ1Z+BZ2Z)*CPS-(BX1Z+BX2Z)*SPS
-C
-      IX=IX+10
-      IZ=IZ+10
-      D(1,IX)=SPS*((BX1X+BX2X)*CPS+(BZ1X+BZ2X)*SPS)
-      D(2,IX)=SPS*(BY1X+BY2X)
-      D(3,IX)=SPS*((BZ1X+BZ2X)*CPS-(BX1X+BX2X)*SPS)
-C
-      D(1,IZ)=SPS*((BX1Z-BX2Z)*CPS+(BZ1Z-BZ2Z)*SPS)
-      D(2,IZ)=SPS*(BY1Z-BY2Z)
-  3   D(3,IZ)=SPS*((BZ1Z-BZ2Z)*CPS-(BX1Z-BX2Z)*SPS)
-C
+         BT=M*CF(M)/(R*S)*(TNH**M+CNH**M)
+         BF=-0.5D0*M*SF(M)/R*(TNH**(M-1)/CH**2-CNH**(M-1)/SH**2)
+         BXSM=BT*C*CF(1)-BF*SF(1)
+         BY=BT*C*SF(1)+BF*CF(1)
+         BZSM=-BT*S
+C     
+         D(1,M)=BXSM*CPS+BZSM*SPS
+         D(2,M)=BY
+ 1       D(3,M)=-BXSM*SPS+BZSM*CPS
+C     
+         XSM = X*CPS-Z*SPS
+         ZSM = Z*CPS+X*SPS
+C     
+         DO 2 I=1,9
+C     
+            IF (I.EQ.3.OR.I.EQ.5.OR.I.EQ.6) THEN
+               XD =  XX(I)*SCALEIN
+               YD =  YY(I)*SCALEIN
+            ELSE
+               XD =  XX(I)*SCALEOUT
+               YD =  YY(I)*SCALEOUT
+            ENDIF
+C     
+            ZD =  ZZ(I)
+C     
+           CALL DIPXYZ(XSM-XD,Y-YD,ZSM-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,
+     *           BX1Z,BY1Z,BZ1Z)
+           CALL DIPXYZ(XSM-XD,Y+YD,ZSM-ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,
+     *           BX2Z,BY2Z,BZ2Z)
+           CALL DIPXYZ(XSM-XD,Y-YD,ZSM+ZD,BX3X,BY3X,BZ3X,BX3Y,BY3Y,BZ3Y,
+     *           BX3Z,BY3Z,BZ3Z)
+           CALL DIPXYZ(XSM-XD,Y+YD,ZSM+ZD,BX4X,BY4X,BZ4X,BX4Y,BY4Y,BZ4Y,
+     *           BX4Z,BY4Z,BZ4Z)
+C     
+            IX=I*3+3
+            IY=IX+1
+            IZ=IY+1
+C     
+            D(1,IX)=(BX1X+BX2X-BX3X-BX4X)*CPS+(BZ1X+BZ2X-BZ3X-BZ4X)*SPS
+            D(2,IX)= BY1X+BY2X-BY3X-BY4X
+            D(3,IX)=(BZ1X+BZ2X-BZ3X-BZ4X)*CPS-(BX1X+BX2X-BX3X-BX4X)*SPS
+C     
+            D(1,IY)=(BX1Y-BX2Y-BX3Y+BX4Y)*CPS+(BZ1Y-BZ2Y-BZ3Y+BZ4Y)*SPS
+            D(2,IY)= BY1Y-BY2Y-BY3Y+BY4Y
+            D(3,IY)=(BZ1Y-BZ2Y-BZ3Y+BZ4Y)*CPS-(BX1Y-BX2Y-BX3Y+BX4Y)*SPS
+C     
+            D(1,IZ)=(BX1Z+BX2Z+BX3Z+BX4Z)*CPS+(BZ1Z+BZ2Z+BZ3Z+BZ4Z)*SPS
+            D(2,IZ)= BY1Z+BY2Z+BY3Z+BY4Z
+            D(3,IZ)=(BZ1Z+BZ2Z+BZ3Z+BZ4Z)*CPS-(BX1Z+BX2Z+BX3Z+BX4Z)*SPS
+C     
+            IX=IX+27
+            IY=IY+27
+            IZ=IZ+27
+C     
+       D(1,IX)=SPS*((BX1X+BX2X+BX3X+BX4X)*CPS+(BZ1X+BZ2X+BZ3X+BZ4X)*SPS)
+       D(2,IX)=SPS*(BY1X+BY2X+BY3X+BY4X)
+       D(3,IX)=SPS*((BZ1X+BZ2X+BZ3X+BZ4X)*CPS-(BX1X+BX2X+BX3X+BX4X)*SPS)
+C     
+       D(1,IY)=SPS*((BX1Y-BX2Y+BX3Y-BX4Y)*CPS+(BZ1Y-BZ2Y+BZ3Y-BZ4Y)*SPS)
+       D(2,IY)=SPS*(BY1Y-BY2Y+BY3Y-BY4Y)
+       D(3,IY)=SPS*((BZ1Y-BZ2Y+BZ3Y-BZ4Y)*CPS-(BX1Y-BX2Y+BX3Y-BX4Y)*SPS)
+C     
+       D(1,IZ)=SPS*((BX1Z+BX2Z-BX3Z-BX4Z)*CPS+(BZ1Z+BZ2Z-BZ3Z-BZ4Z)*SPS)
+       D(2,IZ)=SPS*(BY1Z+BY2Z-BY3Z-BY4Z)
+       D(3,IZ)=SPS*((BZ1Z+BZ2Z-BZ3Z-BZ4Z)*CPS-(BX1Z+BX2Z-BX3Z-BX4Z)*SPS)
+ 2       CONTINUE
+C     
+         DO 3 I=1,5
+            ZD=ZZ(I+9)
+       CALL DIPXYZ(XSM,Y,ZSM-ZD,BX1X,BY1X,BZ1X,BX1Y,BY1Y,BZ1Y,BX1Z,BY1Z,
+     *           BZ1Z)
+       CALL DIPXYZ(XSM,Y,ZSM+ZD,BX2X,BY2X,BZ2X,BX2Y,BY2Y,BZ2Y,BX2Z,BY2Z,
+     *           BZ2Z)
+            IX=58+I*2
+            IZ=IX+1
+            D(1,IX)=(BX1X-BX2X)*CPS+(BZ1X-BZ2X)*SPS
+            D(2,IX)=BY1X-BY2X
+            D(3,IX)=(BZ1X-BZ2X)*CPS-(BX1X-BX2X)*SPS
+C     
+            D(1,IZ)=(BX1Z+BX2Z)*CPS+(BZ1Z+BZ2Z)*SPS
+            D(2,IZ)=BY1Z+BY2Z
+            D(3,IZ)=(BZ1Z+BZ2Z)*CPS-(BX1Z+BX2Z)*SPS
+C     
+            IX=IX+10
+            IZ=IZ+10
+            D(1,IX)=SPS*((BX1X+BX2X)*CPS+(BZ1X+BZ2X)*SPS)
+            D(2,IX)=SPS*(BY1X+BY2X)
+            D(3,IX)=SPS*((BZ1X+BZ2X)*CPS-(BX1X+BX2X)*SPS)
+C     
+            D(1,IZ)=SPS*((BX1Z-BX2Z)*CPS+(BZ1Z-BZ2Z)*SPS)
+            D(2,IZ)=SPS*(BY1Z-BY2Z)
+ 3          D(3,IZ)=SPS*((BZ1Z-BZ2Z)*CPS-(BX1Z-BX2Z)*SPS)
+C     
             RETURN
             END
-C
+C     
 C$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-C
-         SUBROUTINE  BIRK1SHLD(PS,X,Y,Z,BX,BY,BZ)
+C     
+      SUBROUTINE  BIRK1SHLD(PS,X,Y,Z,BX,BY,BZ)
 C
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C
@@ -1760,8 +1916,8 @@ C
          BX=0.D0
          BY=0.D0
          BZ=0.D0
-         CPS=COS(PS)
-         SPS=SIN(PS)
+         CPS=DCOS(PS)
+         SPS=DSIN(PS)
          S3PS=4.D0*CPS**2-1.D0
 C
          DO 11 I=1,4
@@ -1775,20 +1931,20 @@ C
            DO 1 M=1,2     !    M=1 IS FOR THE 1ST SUM ("PERP." SYMMETRY)
 C                           AND M=2 IS FOR THE SECOND SUM ("PARALL." SYMMETRY)
              DO 2 I=1,4
-                  CYPI=COS(Y*RP(I))
-                  CYQI=COS(Y*RQ(I))
-                  SYPI=SIN(Y*RP(I))
-                  SYQI=SIN(Y*RQ(I))
+                  CYPI=DCOS(Y*RP(I))
+                  CYQI=DCOS(Y*RQ(I))
+                  SYPI=DSIN(Y*RP(I))
+                  SYQI=DSIN(Y*RQ(I))
 C
                 DO 3 K=1,4
-                   SZRK=SIN(Z*RR(K))
-                   CZSK=COS(Z*RS(K))
-                   CZRK=COS(Z*RR(K))
-                   SZSK=SIN(Z*RS(K))
-                     SQPR=SQRT(RP(I)**2+RR(K)**2)
-                     SQQS=SQRT(RQ(I)**2+RS(K)**2)
-                        EPR=EXP(X*SQPR)
-                        EQS=EXP(X*SQQS)
+                   SZRK=DSIN(Z*RR(K))
+                   CZSK=DCOS(Z*RS(K))
+                   CZRK=DCOS(Z*RR(K))
+                   SZSK=DSIN(Z*RS(K))
+                     SQPR=DSQRT(RP(I)**2+RR(K)**2)
+                     SQQS=DSQRT(RQ(I)**2+RS(K)**2)
+                        EPR=DEXP(X*SQPR)
+                        EQS=DEXP(X*SQQS)
 C
                     DO 4 N=1,2  ! N=1 IS FOR THE FIRST PART OF EACH COEFFICIENT
 C                                  AND N=2 IS FOR THE SECOND ONE
@@ -1823,7 +1979,7 @@ c
   1   CONTINUE
 C
          RETURN
-         END
+	 END
 C
 C##########################################################################
 C
@@ -1836,25 +1992,25 @@ C
          BX=WX+HX
          BY=WY+HY
          BZ=WZ+HZ
-         RETURN                                
+         RETURN
          END
 C
 C$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 C
-C THIS CODE IS FOR THE FIELD FROM  2x2x2=8 "CARTESIAN" HARMONICS 
+C THIS CODE IS FOR THE FIELD FROM  2x2x2=8 "CARTESIAN" HARMONICS
 C
          SUBROUTINE  BIRK2SHL(X,Y,Z,PS,HX,HY,HZ)
 C
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C    The model parameters are provided to this module via common-block /A/.
-C  The 16 linear parameters enter in pairs in the amplitudes of the 
+C  The 16 linear parameters enter in pairs in the amplitudes of the
 c       "cartesian" harmonics.
-c    The 8 nonlinear parameters are the scales Pi,Ri,Qi,and Si entering the 
-c  arguments of exponents, sines, and cosines in each of the 8 "Cartesian" 
+c    The 8 nonlinear parameters are the scales Pi,Ri,Qi,and Si entering the
+c  arguments of exponents, sines, and cosines in each of the 8 "Cartesian"
 c   harmonics
 C - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 C
-         IMPLICIT  REAL * 8  (A - H, O - Z)
+	 IMPLICIT  REAL * 8  (A - H, O - Z)
 C
          DIMENSION P(2),R(2),Q(2),S(2)
          DIMENSION A(24)
@@ -1866,8 +2022,8 @@ C
      * -10.96884315,-0.8583297219,13.85650567,14.90554500,10.21914434,
      * 10.09021632,6.340382460,14.40432686,12.71023437,12.83966657/
 C
-            CPS=COS(PS)
-            SPS=SIN(PS)
+            CPS=DCOS(PS)
+            SPS=DSIN(PS)
             S3PS=4.D0*CPS**2-1.D0   !  THIS IS SIN(3*PS)/SIN(PS)
 C
            HX=0.D0
@@ -1878,20 +2034,20 @@ C
            DO 1 M=1,2     !    M=1 IS FOR THE 1ST SUM ("PERP." SYMMETRY)
 C                           AND M=2 IS FOR THE SECOND SUM ("PARALL." SYMMETRY)
              DO 2 I=1,2
-                  CYPI=COS(Y/P(I))
-                  CYQI=COS(Y/Q(I))
-                  SYPI=SIN(Y/P(I))
-                  SYQI=SIN(Y/Q(I))
+                  CYPI=DCOS(Y/P(I))
+                  CYQI=DCOS(Y/Q(I))
+                  SYPI=DSIN(Y/P(I))
+                  SYQI=DSIN(Y/Q(I))
 C
                DO 3 K=1,2
-                   SZRK=SIN(Z/R(K))
-                   CZSK=COS(Z/S(K))
-                   CZRK=COS(Z/R(K))
-                   SZSK=SIN(Z/S(K))
-                     SQPR=SQRT(1.D0/P(I)**2+1.D0/R(K)**2)
-                     SQQS=SQRT(1.D0/Q(I)**2+1.D0/S(K)**2)
-                        EPR=EXP(X*SQPR)
-                        EQS=EXP(X*SQQS)
+                   SZRK=DSIN(Z/R(K))
+                   CZSK=DCOS(Z/S(K))
+                   CZRK=DCOS(Z/R(K))
+                   SZSK=DSIN(Z/S(K))
+                     SQPR=DSQRT(1.D0/P(I)**2+1.D0/R(K)**2)
+                     SQQS=DSQRT(1.D0/Q(I)**2+1.D0/S(K)**2)
+                        EPR=DEXP(X*SQPR)
+                        EQS=DEXP(X*SQQS)
 C
                    DO 4 N=1,2  ! N=1 IS FOR THE FIRST PART OF EACH COEFFICIENT
 C                                  AND N=2 IS FOR THE SECOND ONE
@@ -1937,7 +2093,7 @@ c
   1   CONTINUE
 C
          RETURN
-         END
+	 END
 
 c********************************************************************
 C
@@ -1950,10 +2106,10 @@ C
        SAVE PSI,CPS,SPS
        DATA DELARG/0.030D0/,DELARG1/0.015D0/,PSI/10.D0/
 C
-       IF (ABS(PSI-PS).GT.1.D-10) THEN
+       IF (DABS(PSI-PS).GT.1.D-10) THEN
          PSI=PS
-         CPS=COS(PS)
-         SPS=SIN(PS)
+         CPS=DCOS(PS)
+         SPS=DSIN(PS)
        ENDIF
 C
        XSM=X*CPS-Z*SPS
@@ -1963,15 +2119,15 @@ C
       IF (XKS.LT.-(DELARG+DELARG1)) THEN
         CALL R2OUTER(XSM,Y,ZSM,BXSM,BY,BZSM)
          BXSM=-BXSM*0.02      !  ALL COMPONENTS ARE MULTIPLIED BY THE
-         BY=-BY*0.02          !  FACTOR -0.02, IN ORDER TO NORMALIZE THE
+	 BY=-BY*0.02          !  FACTOR -0.02, IN ORDER TO NORMALIZE THE
          BZSM=-BZSM*0.02      !  FIELD (SO THAT Bz=-1 nT at X=-5.3 RE, Y=Z=0)
       ENDIF
       IF (XKS.GE.-(DELARG+DELARG1).AND.XKS.LT.-DELARG+DELARG1) THEN
         CALL R2OUTER(XSM,Y,ZSM,BXSM1,BY1,BZSM1)
         CALL R2SHEET(XSM,Y,ZSM,BXSM2,BY2,BZSM2)
-        F2=-0.02*TKSI(XKS,-DELARG,DELARG1)                                 
-        F1=-0.02-F2                                                     
-        BXSM=BXSM1*F1+BXSM2*F2                                                
+        F2=-0.02*TKSI(XKS,-DELARG,DELARG1)
+        F1=-0.02-F2
+        BXSM=BXSM1*F1+BXSM2*F2
         BY=BY1*F1+BY2*F2
         BZSM=BZSM1*F1+BZSM2*F2
       ENDIF
@@ -2057,11 +2213,11 @@ C
        SFM1=0.D0
 C
       R2=RO2+Z**2
-      R=SQRT(R2)
+      R=DSQRT(R2)
       C=Z/R
       S=RO/R
-      CH=SQRT(0.5D0*(1.D0+C))
-      SH=SQRT(0.5D0*(1.D0-C))
+      CH=DSQRT(0.5D0*(1.D0+C))
+      SH=DSQRT(0.5D0*(1.D0-C))
       TNHM1=1.D0
       CNHM1=1.D0
       TNH=SH/CH
@@ -2085,14 +2241,14 @@ C
        RETURN
        END
 
-C&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+C-------------------------------------------------------------------
 C
        SUBROUTINE DIPDISTR(X,Y,Z,BX,BY,BZ,MODE)
 C
 C   RETURNS FIELD COMPONENTS FROM A LINEAR DISTRIBUTION OF DIPOLAR SOURCES
 C     ON THE Z-AXIS.  THE PARAMETER MODE DEFINES HOW THE DIPOLE STRENGTH
-C       VARIES ALONG THE Z-AXIS:  MODE=0 IS FOR A STEP-FUNCTION (Mx=const>0
-c         FOR Z>0, AND Mx=-const<0 FOR Z<0)
+C     VARIES ALONG THE Z-AXIS:  MODE=0 IS FOR A STEP-FUNCTION (Mx=const &gt 0
+c         FOR Z &gt 0, AND Mx=-const &lt 0 FOR Z &lt 0)
 C      WHILE MODE=1 IS FOR A LINEAR VARIATION OF THE DIPOLE MOMENT DENSITY
 C       SEE NB#3, PAGE 53 FOR DETAILS.
 C
@@ -2103,7 +2259,7 @@ C
         X2=X*X
         RHO2=X2+Y*Y
         R2=RHO2+Z*Z
-        R3=R2*SQRT(R2)
+        R3=R2*DSQRT(R2)
 
         IF (MODE.EQ.0) THEN
          BX=Z/RHO2**2*(R2*(Y*Y-X2)-RHO2*X2)/R3
@@ -2158,29 +2314,29 @@ C--------------------------------------------------------------------
 C
        SUBROUTINE LOOPS4(X,Y,Z,BX,BY,BZ,XC,YC,ZC,R,THETA,PHI)
 C
-C   RETURNS FIELD COMPONENTS FROM A SYSTEM OF 4 CURRENT LOOPS, POSITIONED 
+C   RETURNS FIELD COMPONENTS FROM A SYSTEM OF 4 CURRENT LOOPS, POSITIONED
 C     SYMMETRICALLY WITH RESPECT TO NOON-MIDNIGHT MERIDIAN AND EQUATORIAL
-C      PLANES.   
+C      PLANES.
 C  INPUT: X,Y,Z OF A POINT OF SPACE
-C        XC,YC,ZC (YC>0 AND ZC>0) - POSITION OF THE CENTER OF THE 
-C                                         1ST-QUADRANT LOOP 
+C        XC,YC,ZC (YC &gt 0 AND ZC &gt 0) - POSITION OF THE CENTER OF THE
+C                                         1ST-QUADRANT LOOP
 C        R - LOOP RADIUS (THE SAME FOR ALL FOUR)
 C        THETA, PHI  -  SPECIFY THE ORIENTATION OF THE NORMAL OF THE 1ST LOOP
 c      -----------------------------------------------------------
 
         IMPLICIT REAL*8 (A-H,O-Z)
 C
-          CT=COS(THETA)
-          ST=SIN(THETA)
-          CP=COS(PHI)
-          SP=SIN(PHI)
+          CT=DCOS(THETA)
+          ST=DSIN(THETA)
+          CP=DCOS(PHI)
+          SP=DSIN(PHI)
 C------------------------------------1ST QUADRANT:
         XS=(X-XC)*CP+(Y-YC)*SP
         YSS=(Y-YC)*CP-(X-XC)*SP
         ZS=Z-ZC
         XSS=XS*CT-ZS*ST
         ZSS=ZS*CT+XS*ST
- 
+
         CALL CIRCLE(XSS,YSS,ZSS,R,BXSS,BYS,BZSS)
           BXS=BXSS*CT+BZSS*ST
           BZ1=BZSS*CT-BXSS*ST
@@ -2192,19 +2348,19 @@ C-------------------------------------2nd QUADRANT:
         ZS=Z-ZC
         XSS=XS*CT-ZS*ST
         ZSS=ZS*CT+XS*ST
- 
+
         CALL CIRCLE(XSS,YSS,ZSS,R,BXSS,BYS,BZSS)
           BXS=BXSS*CT+BZSS*ST
           BZ2=BZSS*CT-BXSS*ST
           BX2=BXS*CP+BYS*SP
           BY2=-BXS*SP+BYS*CP
 C-------------------------------------3RD QUADRANT:
-        XS=-(X-XC)*CP+(Y+YC)*SP 
+        XS=-(X-XC)*CP+(Y+YC)*SP
         YSS=-(Y+YC)*CP-(X-XC)*SP
         ZS=Z+ZC
         XSS=XS*CT-ZS*ST
         ZSS=ZS*CT+XS*ST
- 
+
         CALL CIRCLE(XSS,YSS,ZSS,R,BXSS,BYS,BZSS)
           BXS=BXSS*CT+BZSS*ST
           BZ3=BZSS*CT-BXSS*ST
@@ -2216,20 +2372,20 @@ C-------------------------------------4TH QUADRANT:
         ZS=Z+ZC
         XSS=XS*CT-ZS*ST
         ZSS=ZS*CT+XS*ST
- 
+
         CALL CIRCLE(XSS,YSS,ZSS,R,BXSS,BYS,BZSS)
           BXS=BXSS*CT+BZSS*ST
           BZ4=BZSS*CT-BXSS*ST
           BX4=-BXS*CP+BYS*SP
           BY4=-BXS*SP-BYS*CP
- 
+
         BX=BX1+BX2+BX3+BX4
         BY=BY1+BY2+BY3+BY4
         BZ=BZ1+BZ2+BZ3+BZ4
- 
+
          RETURN
          END
-C      
+C
 C@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 C
       SUBROUTINE R2SHEET(X,Y,Z,BX,BY,BZ)
@@ -2278,7 +2434,7 @@ C
      * -3.32916D0,-5.86712D0,-6.19625D0,1.83879D0,2.52772D0,4.34417D0,
      * 1.87268D0,-2.13213D0,-1.69134D0,-.176379D0,-.261359D0,.566419D0,
      * 0.3138D0,-0.134699D0,-3.83086D0,-8.4154D0,4.77005D0,-9.31479D0,
-     * 37.5715D0,19.3992D0,-17.9582D0,36.4604D0,-14.9993D0,-3.1442D0, 
+     * 37.5715D0,19.3992D0,-17.9582D0,36.4604D0,-14.9993D0,-3.1442D0,
      * 6.17409D0,-15.5519D0,2.28621D0,-0.891549D-2,-.462912D0,2.47314D0,
      * 41.7555D0,208.614D0,-45.7861D0,-77.8687D0,239.357D0,-67.9226D0,
      * 66.8743D0,238.534D0,-112.136D0,16.2069D0,-40.4706D0,-134.328D0,
@@ -2310,21 +2466,21 @@ C
 c------------------------------------------------------------------
 C
        XKS=XKSI(X,Y,Z)    !  variation across the current sheet
-       T1X=XKS/SQRT(XKS**2+PNONX6**2)
-       T2X=PNONX7**3/SQRT(XKS**2+PNONX7**2)**3
-       T3X=XKS/SQRT(XKS**2+PNONX8**2)**5 *3.493856D0*PNONX8**4
+       T1X=XKS/DSQRT(XKS**2+PNONX6**2)
+       T2X=PNONX7**3/DSQRT(XKS**2+PNONX7**2)**3
+       T3X=XKS/DSQRT(XKS**2+PNONX8**2)**5 *3.493856D0*PNONX8**4
 C
-       T1Y=XKS/SQRT(XKS**2+PNONY6**2)
-       T2Y=PNONY7**3/SQRT(XKS**2+PNONY7**2)**3
-       T3Y=XKS/SQRT(XKS**2+PNONY8**2)**5 *3.493856D0*PNONY8**4
+       T1Y=XKS/DSQRT(XKS**2+PNONY6**2)
+       T2Y=PNONY7**3/DSQRT(XKS**2+PNONY7**2)**3
+       T3Y=XKS/DSQRT(XKS**2+PNONY8**2)**5 *3.493856D0*PNONY8**4
 C
-       T1Z=XKS/SQRT(XKS**2+PNONZ6**2)
-       T2Z=PNONZ7**3/SQRT(XKS**2+PNONZ7**2)**3
-       T3Z=XKS/SQRT(XKS**2+PNONZ8**2)**5 *3.493856D0*PNONZ8**4
+       T1Z=XKS/DSQRT(XKS**2+PNONZ6**2)
+       T2Z=PNONZ7**3/DSQRT(XKS**2+PNONZ7**2)**3
+       T3Z=XKS/DSQRT(XKS**2+PNONZ8**2)**5 *3.493856D0*PNONZ8**4
 C
       RHO2=X*X+Y*Y
-      R=SQRT(RHO2+Z*Z)
-      RHO=SQRT(RHO2)
+      R=DSQRT(RHO2+Z*Z)
+      RHO=DSQRT(RHO2)
 C
       C1P=X/RHO
       S1P=Y/RHO
@@ -2446,7 +2602,7 @@ C
        XY=X*Y
        XYZ=XY*Z
        R2=X2+Y2+Z2
-       R=SQRT(R2)
+       R=DSQRT(R2)
        R3=R2*R
        R4=R2*R2
        XR=X/R
@@ -2456,7 +2612,7 @@ C
        IF (R.LT.R0) THEN
          PR=0.D0
        ELSE
-         PR=SQRT((R-R0)**2+DR2)-DR
+         PR=DSQRT((R-R0)**2+DR2)-DR
        ENDIF
 C
       F=X+PR*(A11A12+A21A22*XR+A41A42*XR*XR+A51A52*YR*YR+
@@ -2466,12 +2622,18 @@ C
       G2=G*G
 C
       FGH=F**2+G2+H**2
-      FGH32=SQRT(FGH)**3
+      FGH32=DSQRT(FGH)**3
       FCHSG2=F**2+G2
-      SQFCHSG2=SQRT(FCHSG2)
+
+      IF (FCHSG2.LT.1.D-5) THEN
+         XKSI=-1.D0               !  THIS IS JUST FOR ELIMINATING PROBLEMS
+         RETURN                    !  ON THE Z-AXIS
+      ENDIF
+
+      SQFCHSG2=DSQRT(FCHSG2)
       ALPHA=FCHSG2/FGH32
       THETA=TNOON+0.5D0*DTETA*(1.D0-F/SQFCHSG2)
-      PHI=SIN(THETA)**2
+      PHI=DSIN(THETA)**2
 C
       XKSI=ALPHA-PHI
 C
@@ -2481,18 +2643,18 @@ C
 C--------------------------------------------------------------------
 C
         FUNCTION FEXP(S,A)
-         IMPLICIT REAL*8 (A-H,O-Z)
+        IMPLICIT REAL*8 (A-H,O-Z)
           DATA E/2.718281828459D0/
-          IF (A.LT.0.D0) FEXP=SQRT(-2.D0*A*E)*S*EXP(A*S*S)
-          IF (A.GE.0.D0) FEXP=S*EXP(A*(S*S-1.D0))
+          IF (A.LT.0.D0) FEXP=DSQRT(-2.D0*A*E)*S*DEXP(A*S*S)
+          IF (A.GE.0.D0) FEXP=S*DEXP(A*(S*S-1.D0))
          RETURN
          END
 C
 C-----------------------------------------------------------------------
-        FUNCTION FEXP1(S,A)
-         IMPLICIT REAL*8 (A-H,O-Z)
-         IF (A.LE.0.D0) FEXP1=EXP(A*S*S)
-         IF (A.GT.0.D0) FEXP1=EXP(A*(S*S-1.D0))
+      FUNCTION FEXP1(S,A)
+        IMPLICIT REAL*8 (A-H,O-Z)
+         IF (A.LE.0.D0) FEXP1=DEXP(A*S*S)
+         IF (A.GT.0.D0) FEXP1=DEXP(A*(S*S-1.D0))
          RETURN
          END
 C
@@ -2523,46 +2685,43 @@ C
            TKSI=TKSII
          END
 C
+C~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+c
+       SUBROUTINE DIPOLE(PS,X,Y,Z,BX,BY,BZ)
 C
-C----------------------------------------------------------------------
-C
-      SUBROUTINE CROSSING(XGSM,YGSM,ZGSM,PDYN)
-C
-C  THIS SUBROUTINE ACCEPTS THE GSM COORDINATES OF AN OBSERVED MAGNETOPAUSE
-C    CROSSING AND RETURNS AN APPROXIMATE ESTIMATE OF THE SOLAR WIND DYNAMIC
-C    PRESSURE, BASED ON THE ELLIPSOIDAL APPROXIMATION FOR THE BOUNDARY AND
-C    ASSUMING A SELF-SIMILAR SCALING OF THE MAGNETOSPHERIC DIMENSIONS IN RES-
-C    PONSE TO CHANGES IN THE RAM PRESSURE.
-C
-C    INPUT:   XGSM,YGSM,ZGSM - COORDINATES OF THE CROSSING POINT IN EARTH RADII
-C    OUTPUT:  PDYN - THE ESTIMATE OF THE SOLAR WIND PRESSURE IN NANOPASCALS
-C
-C       THE PRESSURE-DEPENDENT MAGNETOPAUSE IS THAT USED IN THE T95_01 MODEL
-C          (TSYGANENKO, 1995)
-C
-C     WARNING:  THIS SUBROUTINE SHOULD NOT BE USED TAILWARD OF XGSM=-60 RE !!!
-C
-c            CODED BY:  N.A. TSYGANENKO, AUG.2, 1995.
-C
-      PD0=2.
-      A=70.
-      S0=1.08
-      X0=5.48    !  VALUES OF THE MAGNETOPAUSE PARAMETERS FOR  PD = 2 nPa
+C  CALCULATES GSM COMPONENTS OF GEODIPOLE FIELD WITH THE DIPOLE MOMENT
+C  CORRESPONDING TO THE EPOCH OF 1980.
+C------------INPUT PARAMETERS:
+C   PS - GEODIPOLE TILT ANGLE IN RADIANS, X,Y,Z - GSM COORDINATES IN RE
+C------------OUTPUT PARAMETERS:
+C   BX,BY,BZ - FIELD COMPONENTS IN GSM SYSTEM, IN NANOTESLA.
 C
 C
-C        (FOR DETAILS ON THE ELLIPSOIDAL COORDINATES, SEE THE PAPER:  
-C            N.A.TSYGANENKO, SOLUTION OF CHAPMAN-FERRARO PROBLEM FOR AN
-C             ELLIPSOIDAL MAGNETOPAUSE, PLANET.SPACE SCI., V.37, P.1037, 1989).
-C
-          AMX0=A-X0
-          RHO2=YGSM**2+ZGSM**2
-          S02=S0**2
-C
-          EPS=(XGSM*AMX0+S0*SQRT(A**2*(XGSM**2+RHO2*S02/(S02-1.))
-     *           -AMX0**2*RHO2/(S02-1.)))/((A*S0-AMX0)*(A*S0+AMX0))
-          PDYN=PD0/EPS**(1./0.14)  ! THE POWER IN THE SCALING FACTOR CORRES-
-C                                    PONDS TO THE BEST-FIT VALUE OBTAINED FROM
-C                                    DATA IN THE T96_01 VERSION OF THE MODEL.
-C
-         RETURN
-         END
+C                   AUTHOR: NIKOLAI A. TSYGANENKO
+C                           INSTITUTE OF PHYSICS
+C                           ST.-PETERSBURG STATE UNIVERSITY
+C                           STARY PETERGOF 198904
+C                           ST.-PETERSBURG
+C                           RUSSIA
+C     
+       IMPLICIT NONE
+C     
+       REAL PS,X,Y,Z,BX,BY,BZ,PSI,SPS,CPS,P,U,V,T,Q
+       INTEGER M
+       
+       DATA M,PSI/0,5./
+       IF(M.EQ.1.AND.ABS(PS-PSI).LT.1.E-5) GOTO 1
+       SPS=SIN(PS)
+       CPS=COS(PS)
+       PSI=PS
+       M=1
+ 1     P=X**2
+       U=Z**2
+      V=3.*Z*X
+      T=Y**2
+      Q=30574./SQRT(P+T+U)**5
+      BX=Q*((T+U-2.*P)*SPS-V*CPS)
+      BY=-3.*Y*Q*(X*SPS+Z*CPS)
+      BZ=Q*((P+T-2.*U)*CPS-V*SPS)
+      RETURN
+      END
