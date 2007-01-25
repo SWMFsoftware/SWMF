@@ -243,3 +243,21 @@ subroutine read_ih_buffer(y, z, State_V)
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
 end subroutine read_ih_buffer
+
+!==============================================================================
+
+subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar)!, NameVar_V)
+
+  implicit none
+  character (len=*),parameter :: NameSub='GM_put_from_pw'
+  
+  integer, intent(in)           :: nVar, nFieldLine
+  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
+!  character (len=*),intent(in)  :: Name_V(nVar)
+  
+!------------------------------------------------------------------------------
+  
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  
+  
+end subroutine GM_put_from_pw
