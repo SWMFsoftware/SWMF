@@ -40,9 +40,9 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJECTS} RB_wrapper.o
+${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
-	${AR} ${MY_LIB} ${OBJECTS} RB_wrapper.o
+	${AR} ${MY_LIB} ${OBJECTS} 
 
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
