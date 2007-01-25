@@ -176,11 +176,11 @@ contains
          if(n_proc(GM_)>1) &
               call MPI_bcast(Buffer_VI,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
-         !call GM_put_from_pw(Buffer_VI, nTotalLine, nVar, &
-         !     NameVar_V, iBlock)
-         !if(DoTest) &
-         !     write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
-         !     iProcWorld,Buffer_VI(1,1,:)
+         call GM_put_from_pw(Buffer_VI, nTotalLine, nVar)!, &
+!              NameVar_V)
+         if(DoTest) &
+              write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
+              iProcWorld,Buffer_VI(1,1)
       end if
 
       !\
