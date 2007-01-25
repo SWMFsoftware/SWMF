@@ -24,6 +24,9 @@ OBJ_RB = $(OBJ2) GM_get_for_rb.o
 #^CMP IF IE BEGIN
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o
 #^CMP END IE
+#^CMP IF PW BEGIN
+OBJ_PW =GM_put_from_pw.o 
+#^CMP END PW
 
 OBJECTS = \
 	ModGridDescriptor.o\
@@ -31,7 +34,7 @@ OBJECTS = \
 	GM_put_from_ih_buffer.o\
 	GM_wrapper.o\
 	update_lagrangian_grid.o\
-	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_RFUTIL)
+	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_RFUTIL) $(OBJ_PW)
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
