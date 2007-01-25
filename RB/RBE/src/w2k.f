@@ -635,7 +635,7 @@ c       PRINT *,Copyright
 	real*8           Phi,Z,O,x,ct,Phim
 
 	real*8            Plm(0:10,0:10),OPlm(0:10,0:10)
-
+	real*8           dPlm(0:10,0:10)
 
 
 	REAL*8 Coef(0:1,0:5,0:5),BoundFit(0:1,0:5),pi
@@ -666,12 +666,12 @@ c       PRINT *,Copyright
 	  O=DC
 
 	  ct=DCOS(x)
-
-	  CALL DLegendre(ct,MaxL,MaxM,Plm,0.D0)
+	  dPlm(:,:)=0.D0
+	  CALL DLegendre(ct,MaxL,MaxM,Plm,dPlm)
 
 !Also find value at outer boundary at angle Pi, or cos(pi)=-1.
 
-	  CALL DLegendre(-1.D0,MaxL,MaxM,OPlm,0.D0)
+	  CALL DLegendre(-1.D0,MaxL,MaxM,OPlm,dPlm)
 
 	  DO l=1,MaxL
 
