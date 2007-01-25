@@ -106,3 +106,20 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVar, &
   call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
 end subroutine PW_put_from_ie
+
+
+!==============================================================================
+
+subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
+
+  implicit none
+  character (len=*),parameter :: NameSub='PW_get_for_gm'
+
+  integer, intent(in)           :: nVar, nFieldLine
+  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
+  character (len=*),intent(in)  :: Name_V(nVar)
+  real,             intent(in)  :: tSimulation
+
+  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+
+end subroutine PW_get_for_gm
