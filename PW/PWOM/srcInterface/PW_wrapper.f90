@@ -199,6 +199,7 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
      end do
 
+     call PW_get_electrodynamic
      call initial_line_location
   end if
 
