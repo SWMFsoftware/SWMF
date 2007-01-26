@@ -120,7 +120,7 @@ test1_check:
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/test1/PW_restart_iline0001.dat \
 		>> test1_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/test1/PW_plots_iline0001.out \
 		>> test1_pw.diff)
