@@ -370,7 +370,7 @@ SC/BATSRUS/src/Makefile:
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
 	cd GM/BATSRUS/TMP; \
-		mv Makefile.def Config.pl PARAM.XML src srcUser \
+		mv Config.pl PARAM.XML src srcUser \
 			../../../SC/BATSRUS;\
 		mv srcInterface/*.f90 ../../../SC/BATSRUS/srcInterface
 	rm -rf GM/BATSRUS/TMP
