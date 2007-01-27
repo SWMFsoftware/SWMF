@@ -29,29 +29,27 @@ module ModPWOM
        Theta_G,Phi_G,SigmaH_G,SigmaP_G, &
        Jr_G,Potential_G,Br_G,Btheta_G,  &
        BmagnitudeSquared_G, &
-       Ephi,Etheta,Er, VelocityExBtheta,&
-       VelocityExBphi,VelocityExBr,     &
-       Ux,Uy,Uz,x,y,z,Ex,Ey,Ez
+       Ephi_C,Etheta_C,Er_C, uExBtheta_C,&
+       uExBphi_C,uExBr_C
 
 
-  real,    dimension(maxLine)        ::  FieldLineTheta, FieldLinePhi,     &
-                                          FieldLineX,FieldLineY,FieldLineZ, &
-                                          OldVelocityTheta,OldVelocityPhi,  &
-                                          AccelerationTheta,AccelerationPhi,&
-                                          FieldLineVelTheta,FieldLineVelPhi,&
-                                          FieldLineVelx,FieldLineVely,      &
-                                          FieldLineVelz,                    &
-                                          OmegaHorFieldline,                &
-                                          OldFieldLineTheta,OldFieldLinePhi,&
-                                          OldFieldLineX,OldFieldLineY,      &
-                                          OldFieldLineZ,GeoMagLat,GeoMagLon,&
-                                          FieldLineJr
+  real,    dimension(maxLine)        ::  ThetaLine_I, PhiLine_I,     &
+                                          xLine_I,yLine_I,zLine_I, &
+                                          UthetaLineOld_I,UphiLineOld_I,  &
+                                          UthetaLine_I,UphiLine_I,&
+                                          UxLine_I,UyLine_I,      &
+                                          UzLine_I,                    &
+                                          OmegaLine_I,                &
+                                          ThetaLineOld_I,PhiLineOld_I,&
+                                          xLineOld_I,yLineOld_I,      &
+                                          zLineOld_I,GeoMagLat_I,GeoMagLon_I,&
+                                          JrLine_I
   
   
-  integer, dimension(maxLine)        ::  iFieldLineTheta,iFieldLinePhi
-  real                               ::  DtMax=50.0, Dt, Time, maxTime
+  integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
+  real                               ::  DtMax=50.0, DtHorizontal, Time, TimeMax
 
-  logical::  IsMoveFluxTube=.true., IsUseJr=.true., IsCentrifugal=.true.
+  logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.
   character(len=100) :: NamePhiNorth, NamePhiSouth
 
@@ -62,15 +60,15 @@ module ModPWOM
        NameRestartIn, NameRestart, NameGraphics
 
   integer       :: iUnitInput,iUnitOutput,iUnitSourceGraphics,&
-                   iUnitCollision,nDim=390
+                   iUnitCollision,nAlt=390
                  
   integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics
   
-  real, dimension(1:maxGrid,0:maxLine):: dOxyg, uOxyg, pOxyg, TOxyg,     &
-                                          dHel, uHel, pHel, THel,         &
-                                          dHyd, uHyd, pHyd, THyd,         &
-                                          dElect, uElect, pElect, TElect
-  real   :: DToutput=10.0, DTpolarwind=0.05, Tmax=100.0
+  real, dimension(1:maxGrid,0:maxLine):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+                                          dHel_CI, uHel_CI, pHel_CI, THel,         &
+                                          dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
+                                          dElect_CI, uElect_CI, pElect_CI, TElect
+  real   :: DToutput=10.0, DtVertical=0.05, Tmax=100.0
 
   logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
@@ -94,21 +92,13 @@ contains
          Br_G(0:iSize+1, 0:jSize+1), &
          Btheta_G(0:iSize+1, 0:jSize+1),  &
          BmagnitudeSquared_G(0:iSize+1, 0:jSize+1), &
-         Ephi(iSize, jSize), &
-         Etheta(iSize, jSize), &
-         Er(iSize, jSize), & 
-         VelocityExBtheta(iSize, jSize), &
-         VelocityExBphi(iSize, jSize), &
-         VelocityExBr(iSize, jSize), &
-         Ux(iSize, jSize), &
-         Uy(iSize, jSize), &
-         Uz(iSize, jSize), &
-         x(iSize, jSize), &
-         y(iSize, jSize), &
-         z(iSize, jSize), &
-         Ex(iSize, jSize), &
-         Ey(iSize, jSize), &
-         Ez(iSize, jSize))
+         Ephi_C(iSize, jSize), &
+         Etheta_C(iSize, jSize), &
+         Er_C(iSize, jSize), & 
+         uExBtheta_C(iSize, jSize), &
+         uExBphi_C(iSize, jSize), &
+         uExBr_C(iSize, jSize))
+
   end subroutine allocate_ie_variables
 
 end module ModPWOM
