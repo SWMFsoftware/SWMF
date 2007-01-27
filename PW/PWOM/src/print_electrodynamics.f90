@@ -5,10 +5,23 @@ subroutine PW_print_electrodynamics
   use ModNumConst, ONLY:cDegToRad
   implicit none
 
+  real,dimension(:,:),allocatable  :: Ux,Uy,Uz,x,y,z,Ex,Ey,Ez
   integer :: TimeOut
   Character(len=100) :: NameElectrodynamics
 !-----------------------------------------------------------------------------
 
+
+  !Alocate output arrays
+  allocate(&
+       Ux(nPhi, nTheta), &
+       Uy(nPhi, nTheta), &
+       Uz(nPhi, nTheta), &
+       x (nPhi, nTheta), &
+       y (nPhi, nTheta), &
+       z (nPhi, nTheta), &
+       Ex(nPhi, nTheta), &
+       Ey(nPhi, nTheta), &
+       Ez(nPhi, nTheta))
 
 !******************************************************************************
 !  Write output, use cartesian coords for output
@@ -17,22 +30,22 @@ subroutine PW_print_electrodynamics
   do iPhi=1,nPhi
      do iTheta=1,nTheta
         ux(iPhi,iTheta) =  & 
-             VelocityExBtheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
+             uExBtheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
              * cos(Phi_G(iPhi,iTheta)) &
-             - VelocityExBphi(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
-             + VelocityExBr(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
+             - uExBphi_C(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
+             + uExBr_C(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
              * cos(Phi_G(iPhi,iTheta))
         
         uy(iPhi,iTheta) =  &
-             VelocityExBtheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
+             uExBtheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
              * sin(Phi_G(iPhi,iTheta)) &
-             + VelocityExBphi(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
-             + VelocityExBr(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
+             + uExBphi_C(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
+             + uExBr_C(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
              * sin(Phi_G(iPhi,iTheta))
         
         uz(iPhi,iTheta) =  &
-             -VelocityExBtheta(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta)) &
-             + VelocityExBr(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
+             -uExBtheta_C(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta)) &
+             + uExBr_C(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
         
         x(iPhi,iTheta)  =  &
              rLowerBoundary*sin(Theta_G(iPhi,iTheta))*cos(Phi_G(iPhi,iTheta))
@@ -44,22 +57,22 @@ subroutine PW_print_electrodynamics
              rLowerBoundary*cos(Theta_G(iPhi,iTheta))
         
         Ex(iPhi,iTheta) =  & 
-             Etheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
+             Etheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
              * cos(Phi_G(iPhi,iTheta))                     &
-             - Ephi(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
-             + Er(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
+             - Ephi_C(iPhi,iTheta)*sin(Phi_G(iPhi,iTheta))   &
+             + Er_C(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
              * cos(Phi_G(iPhi,iTheta))
         
         Ey(iPhi,iTheta) =  &
-             Etheta(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
+             Etheta_C(iPhi,iTheta)*cos(Theta_G(iPhi,iTheta)) &
              * sin(Phi_G(iPhi,iTheta))                     &
-             + Ephi(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
-             + Er(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
+             + Ephi_C(iPhi,iTheta)*cos(Phi_G(iPhi,iTheta))   &
+             + Er_C(iPhi,iTheta)  *sin(Theta_G(iPhi,iTheta)) &
              * sin(Phi_G(iPhi,iTheta))
         
         Ez(iPhi,iTheta) =  &
-             -Etheta(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta))&
-             + Er(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
+             -Etheta_C(iPhi,iTheta)*sin(Theta_G(iPhi,iTheta))&
+             + Er_C(iPhi,iTheta)  *cos(Theta_G(iPhi,iTheta)) 
      enddo
   enddo
  
@@ -86,5 +99,15 @@ subroutine PW_print_electrodynamics
   
   close(UnitTmp_)
 
+    deallocate(&
+       Ux, &
+       Uy, &
+       Uz, &
+       x , &
+       y , &
+       z , &
+       Ex, &
+       Ey, &
+       Ez)
 
 end subroutine PW_print_electrodynamics
