@@ -35,31 +35,31 @@ subroutine PW_set_parameters(NameAction)
      case('#SCHEME')
         call read_var('TypeSolver',TypeSolver)
         call read_var('IsImplicit',IsImplicit)
-        call read_var('DtVertical',DtPolarwind)
+        call read_var('DtVertical',DtVertical)
         
      case('#RESTART')
         call read_var('IsRestart',IsRestart)
      case('#MOTION')
-        call read_var('IsMoveFluxTube',IsMoveFluxTube)
+        call read_var('DoMoveLine',DoMoveLine)
      case('#FAC')
-        call read_var('IsUseJr',IsUseJr)
+        call read_var('UseJr',UseJr)
      case('#ROTATION')
-        call read_var('IsCentrifugal',IsCentrifugal)
+        call read_var('UseCentrifugal',UseCentrifugal)
      case('#TIMESTEP')
         call read_var('DtMax',DtMax)
      case('#VERTICALGRID')
-        call read_var('nPoints',nDim)
+        call read_var('nPoints',nAlt)
      case('#FIELDLINE')
         call read_var('nTotalLine',nTotalLine)
      endselect
   enddo
 
-  Dt = DtMax
+  DtHorizontal = DtMax
   write(iUnitOutput,*) tMax
   write(iUnitOutput,*) DToutput
   write(iUnitOutput,*) TypeSolver
   write(iUnitOutput,*) IsImplicit
-  write(iUnitOutput,*) DTpolarwind
+  write(iUnitOutput,*) DtVertical
   write(iUnitOutput,*) TypeSolver
 
 end subroutine PW_set_parameters
