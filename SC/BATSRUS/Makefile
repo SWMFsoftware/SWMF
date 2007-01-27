@@ -14,6 +14,7 @@ install:
 	@(if([ -f src/Makefile ]); then \
 		touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
+		cd src; make STATIC; \
 	fi)
 
 LIB: check_src
