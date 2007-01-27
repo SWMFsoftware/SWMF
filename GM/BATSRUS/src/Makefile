@@ -40,6 +40,8 @@ MODULES = \
 	ModSize.o\
 	ModUserEmpty.o \
 	ModUser.o \
+	ModMagnetogram.o \
+	ModExpansionFactors.o \
 	${MOD1}	${MOD2}	${MOD3} ${MOD4} ${MOD7}
 
 # OBJECT FILES FOR MAIN EXECUTABLE
