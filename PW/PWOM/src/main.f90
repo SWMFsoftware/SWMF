@@ -39,10 +39,10 @@ program pw
      if (Time >= Tmax) exit TIMELOOP
      do iLine=1,nLine
 
-        ! MoveFluxTube moves the flux tube, then we can use the angular
+        ! move_line moves the flux tube, then we can use the angular
         !position to get the lat and lon
 
-        call MoveFluxTube
+        call move_line
 
         !  Call the flux tube to be solved
 
