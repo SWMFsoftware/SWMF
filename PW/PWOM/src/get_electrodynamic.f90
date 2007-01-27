@@ -2,7 +2,7 @@
 !  This subroutine gets the electrodynamic parameters, and gets the convection
 !  velocity. 
 !******************************************************************************
-subroutine PW_get_electrodynamic
+subroutine PW_get_electrodynamics
 
   use ModIoUnit, ONLY: UnitTmp_
   use ModPWOM
@@ -96,20 +96,20 @@ subroutine PW_get_electrodynamic
      do iTheta=1,nTheta
         DTheta1=abs(Theta_G(iPhi,iTheta)-Theta_G(iPhi,iTheta-1))
         DPhi1=abs(Phi_G(iPhi,iTheta)    -Phi_G(iPhi-1,iTheta))
-        Etheta(iPhi,iTheta) = &
+        Etheta_C(iPhi,iTheta) = &
              (Potential_G(iPhi,iTheta)-Potential_G(iPhi,iTheta+1))&
              /((rLowerBoundary)*DTheta1)
         if (iTheta == 1) then
-           Ephi(iPhi,iTheta) = 0.0
+           Ephi_C(iPhi,iTheta) = 0.0
         else
-           Ephi(iPhi,iTheta)   = &
+           Ephi_C(iPhi,iTheta)   = &
                 (Potential_G(iPhi-1,iTheta)-Potential_G(iPhi+1,iTheta))&
                 / ((rLowerBoundary)*2.0*DPhi1  &
                 * sin(Theta_G(iPhi,iTheta)))
         endif
     enddo
   enddo
-  Er(:,:) = 0.0
+  Er_C(:,:) = 0.0
 
 !******************************************************************************
 !  Calc VelocityExB drift from E and B
@@ -118,33 +118,33 @@ subroutine PW_get_electrodynamic
 
   do iPhi=1,nPhi
      do iTheta=1,nTheta
-        VelocityExBtheta(iPhi,iTheta) = &
-             (Ephi(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
+        uExBtheta_C(iPhi,iTheta) = &
+             (Ephi_C(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
              / BmagnitudeSquared_G(iPhi,iTheta)
         
-        VelocityExBphi(iPhi,iTheta)   = &
-             (-Etheta(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
+        uExBphi_C(iPhi,iTheta)   = &
+             (-Etheta_C(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
              / BmagnitudeSquared_G(iPhi,iTheta)
         
-        VelocityExBr(iPhi,iTheta)     = &
-             (-Ephi(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
+        uExBr_C(iPhi,iTheta)     = &
+             (-Ephi_C(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
              / BmagnitudeSquared_G(iPhi,iTheta)
 
 
      enddo
   enddo
-  VelocityExBtheta(:,1) = VelocityExBtheta(:,2)
-  VelocityExBphi  (:,1) = VelocityExBphi  (:,2)
+  uExBtheta_C(:,1) = uExBtheta_C(:,2)
+  uExBphi_C  (:,1) = uExBphi_C  (:,2)
   
-  if (.not.IsMoveFluxTube) Then 
-     VelocityExBtheta(:,:) = 0.0
-     VelocityExBPhi  (:,:) = 0.0
-     VelocityExBr    (:,:) = 0.0
+  if (.not.DoMoveLine) Then 
+     uExBtheta_C(:,:) = 0.0
+     uExBphi_C  (:,:) = 0.0
+     uExBr_C    (:,:) = 0.0
   endif
 
-  if (.not.IsUseJr) Then 
+  if (.not.UseJr) Then 
      Jr_G(:,:) = 0.0
   endif
 
 
-end subroutine PW_get_electrodynamic
+end subroutine PW_get_electrodynamics

@@ -6,10 +6,10 @@ module ModFieldLine
   private
   public put_field_line, get_field_line
 
-  real, Dimension(maxGrid)  ::  dOxygPW,uOxygPW,pOxygPW,TOxygPW, &
-       dHelPW,uHelPW,pHelPW,THelPW,     &
-       dHydPW,uHydPW,pHydPW,THydPW,     &
-       dElectPW,uElectPW,pElectPW,TElectPW
+  real, Dimension(maxGrid)  ::  dOxygPw_C,uOxygPw_C,pOxygPw_C,TOxygPW, &
+       dHelPw_C,uHelPw_C,pHelPw_C,THelPW,     &
+       dHydPw_C,uHydPw_C,pHydPw_C,THydPW,     &
+       dElectPw_C,uElectPw_C,pElectPw_C,TElectPW
 
   logical :: IsRestartPW, IsVariableDtPW 
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
@@ -28,52 +28,52 @@ contains
   !  Put polarwind variables into Mod_PW for passing 
   !***************************************************************************
 
-  subroutine put_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     &
-       dHel, uHel, pHel, THel,                              &
-       dHyd, uHyd, pHyd, THyd,                              &
-       dElect, uElect, pElect, TElect,                      &
-       GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
+  subroutine put_field_line(dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+       dHel_CI, uHel_CI, pHel_CI, THel,                              &
+       dHyd_CI, uHyd_CI, pHyd_CI, THyd,                              &
+       dElect_CI, uElect_CI, pElect_CI, TElect,                      &
+       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nDim )
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt )
 
     use ModParameters
 
-    real, intent(in),dimension(maxGrid):: dOxyg, uOxyg, pOxyg, TOxyg,     &
-         dHel, uHel, pHel, THel,         &
-         dHyd, uHyd, pHyd, THyd,         &
-         dElect, uElect, pElect, TElect
+    real, intent(in),dimension(maxGrid):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+         dHel_CI, uHel_CI, pHel_CI, THel,         &
+         dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
+         dElect_CI, uElect_CI, pElect_CI, TElect
     real, optional, intent(in) :: Time,MaxLineTime,DToutput
 
-    real,    intent(in)     :: GeoMagLat,GeoMagLon,Jr,wHorizontal              
-    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nDim
+    real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal              
+    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,IsRestart
     !-------------------------------------------------------------------------
 
-    dOxygPW (:) = dOxyg(:)
-    uOxygPW (:) = uOxyg(:)
-    pOxygPW (:) = pOxyg(:)
+    dOxygPw_C (:) = dOxyg_CI(:)
+    uOxygPw_C (:) = uOxyg_CI(:)
+    pOxygPw_C (:) = pOxyg_CI(:)
     TOxygPW (:) = TOxyg(:)
-    dHelPW  (:) = dHel(:)
-    uHelPW  (:) = uHel(:)
-    pHelPW  (:) = pHel(:)
+    dHelPw_C  (:) = dHel_CI(:)
+    uHelPw_C  (:) = uHel_CI(:)
+    pHelPw_C  (:) = pHel_CI(:)
     THelPW  (:) = THel(:)
-    dHydPW  (:) = dHyd(:)
-    uHydPW  (:) = uHyd(:)
-    pHydPW  (:) = pHyd(:)
+    dHydPw_C  (:) = dHyd_CI(:)
+    uHydPw_C  (:) = uHyd_CI(:)
+    pHydPw_C  (:) = pHyd_CI(:)
     THydPW  (:) = THyd(:)
-    dElectPW(:) = dElect(:)
-    uElectPW(:) = uElect(:)
-    pElectPW(:) = pElect(:)
+    dElectPw_C(:) = dElect_CI(:)
+    uElectPw_C(:) = uElect_CI(:)
+    pElectPw_C(:) = pElect_CI(:)
     TElectPW(:) = TElect(:) 
-    GeoMagLatPW = GeoMagLat
-    GeoMagLonPW = GeoMagLon
+    GeoMagLatPW = GeoMagLat_I
+    GeoMagLonPW = GeoMagLon_I
     JrPW        = Jr
     wHorizontalPW   = wHorizontal
     
 
-    if (present(nDim))          nDimPW = nDim
+    if (present(nAlt))          nDimPW = nAlt
     
     if (present(Time))          TimePW = Time
     if (present(MaxLineTime))   MaxLineTimePW = MaxLineTime
@@ -91,55 +91,55 @@ contains
   !  Get polarwind variables from Mod_PW 
   !***************************************************************************
 
-  subroutine get_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     &
-       dHel, uHel, pHel, THel,                              &
-       dHyd, uHyd, pHyd, THyd,                              &
-       dElect, uElect, pElect, TElect,                      &
-       GeoMagLat,GeoMagLon,Jr,wHorizontal,                  &
+  subroutine get_field_line(dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+       dHel_CI, uHel_CI, pHel_CI, THel,                              &
+       dHyd_CI, uHyd_CI, pHyd_CI, THyd,                              &
+       dElect_CI, uElect_CI, pElect_CI, TElect,                      &
+       GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nDim)
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt)
 
     use ModParameters
 
-    real, intent(out),dimension(maxGrid):: dOxyg, uOxyg, pOxyg, TOxyg,     &
-         dHel, uHel, pHel, THel,         &
-         dHyd, uHyd, pHyd, THyd,         &
-         dElect, uElect, pElect, TElect
+    real, intent(out),dimension(maxGrid):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+         dHel_CI, uHel_CI, pHel_CI, THel,         &
+         dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
+         dElect_CI, uElect_CI, pElect_CI, TElect
 
 
-    real,    intent(out)     :: GeoMagLat, GeoMagLon,Jr, wHorizontal           
+    real,    intent(out)     :: GeoMagLat_I, GeoMagLon_I,Jr, wHorizontal           
     
     character*100,optional,intent(out):: NameRestart
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: IsVariableDt,IsRestart
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput
-    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nDim
+    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
     
-    dOxyg (:) = dOxygPW(:)
-    uOxyg (:) = uOxygPW(:)
-    pOxyg (:) = pOxygPW(:)
+    dOxyg_CI (:) = dOxygPw_C(:)
+    uOxyg_CI (:) = uOxygPw_C(:)
+    pOxyg_CI (:) = pOxygPw_C(:)
     TOxyg (:) = TOxygPW(:)
-    dHel  (:) = dHelPW(:)
-    uHel  (:) = uHelPW(:)
-    pHel  (:) = pHelPW(:)
+    dHel_CI  (:) = dHelPw_C(:)
+    uHel_CI  (:) = uHelPw_C(:)
+    pHel_CI  (:) = pHelPw_C(:)
     THel  (:) = THelPW(:)
-    dHyd  (:) = dHydPW(:)
-    uHyd  (:) = uHydPW(:)
-    pHyd  (:) = pHydPW(:)
+    dHyd_CI  (:) = dHydPw_C(:)
+    uHyd_CI  (:) = uHydPw_C(:)
+    pHyd_CI  (:) = pHydPw_C(:)
     THyd  (:) = THydPW(:)
-    dElect(:) = dElectPW(:)
-    uElect(:) = uElectPW(:)
-    pElect(:) = pElectPW(:)
+    dElect_CI(:) = dElectPw_C(:)
+    uElect_CI(:) = uElectPw_C(:)
+    pElect_CI(:) = pElectPw_C(:)
     TElect(:) = TElectPW(:) 
-    GeoMagLat = GeoMagLatPW
-    GeoMagLon = GeoMagLonPW
+    GeoMagLat_I = GeoMagLatPW
+    GeoMagLon_I = GeoMagLonPW
     Jr        = JrPW
     wHorizontal = wHorizontalPW
    
 
     
 
-    if (present(nDim))          nDim = nDimPW
+    if (present(nAlt))          nAlt = nDimPW
     if (present(Time))          Time = TimePW
     if (present(MaxLineTime))   MaxLineTime = MaxLineTimePW
     if (present(iUnitGraphics)) iUnitGraphics =iUnitGraphicsPW

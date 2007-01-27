@@ -64,20 +64,20 @@ subroutine PW_initialize
      do iLine=1,nLine
         OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
         READ (UnitTmp_,*) TIME,DDT1,NS
-        READ (UnitTmp_,*)    GeoMagLat(iLine),GeoMagLon(iLine)
+        READ (UnitTmp_,*)    GeoMagLat_I(iLine),GeoMagLon_I(iLine)
         
         READ (UnitTmp_,*) &
-             (XXX,uOxyg(i,iLine),pOxyg(i,iLine),dOxyg(i,iLine),TOxyg(i,iLine),&
-             i=1,NDIM)
+             (XXX,uOxyg_CI(i,iLine),pOxyg_CI(i,iLine),dOxyg_CI(i,iLine),TOxyg(i,iLine),&
+             i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uHel(i,iLine),pHel(i,iLine),dHel(i,iLine),THel(i,iLine),    &
-             i=1,NDIM)
+             (XXX,uHel_CI(i,iLine),pHel_CI(i,iLine),dHel_CI(i,iLine),THel(i,iLine),    &
+             i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uHyd(i,iLine),pHyd(i,iLine),dHyd(i,iLine),THyd(i,iLine),    &
-             i=1,NDIM)
+             (XXX,uHyd_CI(i,iLine),pHyd_CI(i,iLine),dHyd_CI(i,iLine),THyd(i,iLine),    &
+             i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uElect(i,iLine),pElect(i,iLine),dElect(i,iLine),            &
-             TElect(i,iLine),i=1,NDIM)
+             (XXX,uElect_CI(i,iLine),pElect_CI(i,iLine),dElect_CI(i,iLine),            &
+             TElect(i,iLine),i=1,nAlt)
         CLOSE(UNIT=UnitTmp_)
      enddo
   else
@@ -93,7 +93,7 @@ subroutine PW_initialize
   !  Set parameters for reading in potential and time of simulation
   !****************************************************************************
  
-  maxTime = Tmax
+  TimeMax = Tmax
   Time    =     0.0
 
   !****************************************************************************
@@ -101,7 +101,7 @@ subroutine PW_initialize
   !****************************************************************************
   
   if(.not.UseIe)then
-     call PW_get_electrodynamic
+     call PW_get_electrodynamics
 
      !initialize field line locations
      call initial_line_location
