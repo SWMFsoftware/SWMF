@@ -21,7 +21,6 @@ config_help:
 DCART =CARTESIAN
 cartesian_src:
 	./Configure.pl -keepall -exe=covariant -d=${DCART} -u
-	cd CARTESIAN; make install
 
 cartesian_conf: cartesian_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCART} BATSRUS_conf
@@ -37,7 +36,6 @@ DCOV =COVARIANT
 covariant_src:
 	./Configure.pl -d=${DCOV} -u -off=boriscorr \
 		-on=awflux,lindeflux,testing,userfiles,covariant
-	cd ${DCOV}; make install
 
 covariant_conf: covariant_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/${DCOV} BATSRUS_conf
@@ -48,7 +46,6 @@ covariant: covariant_src
 covarcheck_src:
 	./Configure.pl -d=COVARCHECK -u -off=boriscorr \
 		-on=awflux,lindeflux,testing,userfiles
-	cd COVARCHECK; make install
 
 covarcheck_conf: covarcheck_src
 	cd ..; rm -rf BATSRUS_conf; ln -s BATSRUS/COVARCHECK BATSRUS_conf
@@ -68,7 +65,8 @@ relax_src:
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
 		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90
-	cd ${DREL}; make install; ./Options.pl -e=MhdCorona -u=Heliosphere; \
+	cd ${DREL};  \
+		perl -i -pe 's/GM/SC/' Config.pl; \
 		perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
 
 relax_conf: relax_src
@@ -82,7 +80,6 @@ corelax_src:
 	./Configure.pl -d=CORELAX \
 		-off=rusanovflux,ionosphere,boriscorr,implicit \
 		-on=awflux,testing,userfiles,covariant
-	cd CORELAX; make install
 
 corelax_conf: corelax_src
 	cd ..; rm -rf BATSRUS_conf; \
