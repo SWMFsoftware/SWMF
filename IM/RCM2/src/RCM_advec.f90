@@ -959,6 +959,8 @@ CONTAINS
                '  TIME: ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6), '"'
        case('idl')
           !Put idl header here later
+          call CON_stop( &
+               'RCM_ERROR: 3D data with IDL format is not implemented')
        end select
 
        !Write data
