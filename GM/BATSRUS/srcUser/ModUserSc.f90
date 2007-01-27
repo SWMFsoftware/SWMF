@@ -3,7 +3,7 @@ module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne
-  use ModMain,     ONLY: UseUserB0,UseUserHeating
+  use ModMain,     ONLY: UseUserB0
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
   !  use ModUserTD99  ! To include TD99 flux rope.
   use ModUserEmpty,               &
@@ -34,6 +34,9 @@ module ModUser
   !/
   logical:: DoFirst_GL=.true.
   real:: Mrope_GL98
+
+  logical :: UseUserHeating = .false. , UseFluxRope = .false.
+  real :: ModulationP = 1.0, ModulationRho = 1.0
 
 contains
 
@@ -83,6 +86,8 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
+    use ModExpansionFactors, ONLY: set_expansion_factors
+    use ModMagnetogram, ONLY: read_magnetogram_file
 
     integer:: i
     character (len=100) :: NameCommand
@@ -114,8 +119,8 @@ contains
        case("#PFSSM")
           call read_var('UseUserB0'  ,UseUserB0)
           if (UseUserB0)then
-             call SC_read_magnetogram_file
-             call SC_set_expansion_factors
+             call read_magnetogram_file
+             call set_expansion_factors
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
@@ -164,7 +169,7 @@ contains
        B0Face_D,UseIonosphereHere,UseRotatingBcHere)
     use ModSize,       ONLY: nDim,East_,West_,South_,North_,Bot_,    &
          Top_
-    use ModMain,       ONLY: time_accurate,UseUserHeating,x_,y_,z_,  &
+    use ModMain,       ONLY: time_accurate,x_,y_,z_,  &
          UseRotatingFrame
     use ModVarIndexes, ONLY: rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_,Ew_ 
 
@@ -453,7 +458,7 @@ contains
   !/
   subroutine user_initial_perturbation
     use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
-         unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
+         unusedBLK,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
     use ModVarIndexes,ONLY: rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,Ew_
     use ModAdvance,   ONLY: State_VGB,B0xCell_BLK,B0yCell_BLK,       &
@@ -463,8 +468,8 @@ contains
          cTolerance,cThree
     use ModConst,     ONLY: Rsun,Msun,cGravitation
     use ModGeometry,  ONLY: x_BLK,y_BLK,z_BLK,R_BLK,cV_BLK,x2,y2,z2
-    use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,ModulationP,   &
-         ModulationRho,UseFluxRope,rot_period_dim,OmegaBody,Rbody,   &
+    use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,   &
+         rot_period_dim,OmegaBody,Rbody,   &
          unitSI_U,unitSI_rho,unitSI_x,unitUSER_energydens,           &
          unitUSER_t,unitUSER_B,Body_rho_dim
     !\
@@ -617,14 +622,16 @@ contains
   !============================================================================
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
     use ModPhysics,  ONLY: unitUSER_B
+    use ModMagnetogram, ONLY: get_magnetogram_field
     implicit none
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
-    call SC_get_magnetogram_field(xInput,yInput,zInput,B0_D)
+    !-------------------------------------------------------------------------
+    call get_magnetogram_field(xInput,yInput,zInput,B0_D)
     B0_D = B0_D/unitUSER_B
   end subroutine user_get_b0
 
-  !========================================================================
+  !============================================================================
   subroutine user_specify_initial_refinement(iBLK,RefineBlock,lev, &
        dxBlock,xCenter,yCenter,zCenter,rCenter,minx,miny,minz,minR,&
        maxx,maxy,maxz,maxR,IsFound)
