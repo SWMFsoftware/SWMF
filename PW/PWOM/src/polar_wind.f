@@ -32,7 +32,7 @@ C Variable time step option implemented 8/05 A. Glocer
 
       Subroutine POLAR_WIND
 
-      Use ModPWOM, only: DTpolarwind,nLine
+      Use ModPWOM, only: DtVertical,nLine
       use ModIoUnit, ONLY: UnitTmp_
       use ModCommonVariables
       use ModFieldLine
@@ -54,9 +54,9 @@ C     define the output files and attaching units
      &                 NameRestart=NameRestart,    
      &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
      &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
-     &                 IsRestart=IsRestart,DToutput=DToutput,nDim=nDim)
+     &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim)
       
-      DT=DTpolarwind
+      DT=DtVertical
 
       
 
