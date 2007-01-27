@@ -10,6 +10,7 @@ subroutine SC_get_for_ih(&
   use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B,inv_g
   use SC_ModMain,ONLY:DoSendMHD, x_,y_,z_,nDim
   use SC_ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
+  use SC_ModMagnetogram,ONLY:get_magnetogram_field
   use ModConst,ONLY: cMu 
  
   use CON_router
@@ -118,7 +119,7 @@ subroutine SC_get_for_ih(&
      X_D=X_D/SumWeight   !This is a weighted radius vector of the point,at 
                          !which we take the solar wind parameters
    
-     call SC_get_magnetogram_field(X_D(x_),X_D(y_),X_D(z_),&
+     call get_magnetogram_field(X_D(x_),X_D(y_),X_D(z_),&
           State_V(BuffBx_:BuffBz_)) !Magnetogram field
      !Transfrom from Gauss to Tesla
      State_V(BuffBx_:BuffBz_)= State_V(BuffBx_:BuffBz_)/(cE1*cE3)
