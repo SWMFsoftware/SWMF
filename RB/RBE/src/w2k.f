@@ -386,6 +386,8 @@ c     Jan. 30, 2002
 
 	PARAMETER (MJ=3,ML=4,MM=3,MN=2,MO=2)
 
+	integer :: iMJ,iMO,iML,iMM,iMN
+
 	REAL*4  CS( 0:MJ, 0:1 , 0:MO, 0:1 , 0:ML, 0:MM)
 
 	REAL*4 BCS( 0:MJ, 0:1 , 0:MO, 0:1 , 0:MN)
@@ -416,13 +418,19 @@ c     Jan. 30, 2002
 
 	unit=99
 
-	OPEN(UNIT=unit,FILE=cfile,STATUS='OLD',form='UNFORMATTED')
+c	OPEN(UNIT=unit,FILE=cfile,STATUS='OLD',form='UNFORMATTED')
+	OPEN(UNIT=unit,FILE=cfile,STATUS='old',form='FORMATTED')
 
-	READ(unit) Copyright
 
+	READ(unit,*) Copyright
+	
+	
+	
 c       PRINT *,Copyright
 
-	READ(unit) Maxj,MaxL,MaxM,MaxN,MaxO
+	
+	read(unit,*) Maxj,MaxL,MaxM,MaxN,MaxO
+
 
 	If(maxj.NE.MJ .OR. MaxL.NE.ML .OR. MaxM.NE.MM .OR.
 
@@ -434,15 +442,65 @@ c       PRINT *,Copyright
 
 	Endif   
 
-	READ(unit) CS
+	
+	do iMJ=0,MJ
+	   do i=0,1
+	      do iMO=0,MO
+		 do j=0,1
+		    do iML=0,ML
+		       do iMM=0,MM
+			  read(unit,*) CS( iMJ, i , iMO, j , iML, iMM)
+		       enddo
+		    enddo
+		 enddo
+	      enddo
+	   enddo
+	enddo
 
-	READ(unit) BCS
+	
+	do iMJ=0,MJ
+	   do i=0,1
+	      do iMO=0,MO
+		 do j=0,1
+		    do iMN=0,MN
+		       read(unit,*) BCS( iMJ, i , iMO, j , iMN)
+		    enddo
+		 enddo
+	      enddo
+	   enddo
+	enddo
 
-	READ(unit) SS
+	
+	do i=0,1
+	   do j=0,1
+	      do iMO=0,MO
+		 do k=0,1
+		    do iML=0,ML
+		       do iMM=0,MM
+			  read(unit,*) SS( i , j , iMO, k , iML, iMM)
+		       enddo
+		    enddo
+		 enddo
+	      enddo
+	   enddo
+	enddo
+	
 
-	READ(unit) BSS
+	
+	do i=0,1
+	   do j=0,1
+	      do iMO = 0,MO
+		 do k=0,1
+		    do iMN=0,MN
+		       read(unit,*) BSS( i , j , iMO, k , iMN)
+		    enddo
+		 enddo
+	      enddo
+	   enddo
+	enddo
 
 	CLOSE(unit)
+	
 
 	pi=2.*ASIN(1.)
 
