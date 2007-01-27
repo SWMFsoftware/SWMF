@@ -10,8 +10,6 @@ include Makefile.DEPEND
 OBJECTS = \
 	ModBuffer.o\
 	ModGridDescriptor.o\
-	ModMagnetogram.o\
-	ModExpansionFactors.o\
 	SC_get_for_ih.o\
 	SC_get_for_sp.o\
 	SC_put_from_ih.o\
