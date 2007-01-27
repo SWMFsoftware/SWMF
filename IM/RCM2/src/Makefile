@@ -5,7 +5,6 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 
 include Makefile.DEPEND
-include Makefile.RULES
 
 CLAWDIR = claw
 
@@ -75,10 +74,7 @@ ${MY_LIB}:	$(OBJECTS) ${MAKEFILE_COMP_SELECT}
 .SUFFIXES: .f90 .F90 .f .o
 
 .f90.o:
-	${COMPILE.f90} ${CFLAGS} ${SuffixMapf90} $<
-
-.F90.o:
-	${COMPILE.f90} ${CFLAGS} ${SuffixMapF90} $<
+	${COMPILE.f90} ${CFLAGS} $<
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS}  $<
@@ -94,10 +90,9 @@ IM_wrapper.o: IM_wrapper.f90 \
 	${LIBRARYDIR}/CON_comp_info.o \
 	${COUPLERDIR}/CON_coupler.o \
 	${SHAREDIR}/ModIoUnit.o
-		${COMPILE.f90} $(CFLAGS) $(PRECISION) ${SuffixMapf90} IM_wrapper.f90
+		${COMPILE.f90} $(CFLAGS) $(PRECISION) IM_wrapper.f90
 
 distclean: clean
-	rm -f Makefile.DEPEND Makefile.RULES
 	-@(rm -f ${LIBDIR}/libRCM.a) 
 	-@(rm -f ${BINDIR}/RCM.exe)
 
