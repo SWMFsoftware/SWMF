@@ -54,7 +54,7 @@ subroutine PW_set_param(CompInfo, TypeAction)
      ! because it is unstructured in theta,phi
      call set_grid_descriptor( &
           PW_,                             &! component index
-          nAlt=2,                          &! dimensionality
+          nDim=2,                          &! dimensionality
           nRootBlock_D=(/1,nProc/),        &! distributed in the second dimension
           nCell_D =(/ nAlt, nTotalLine /),          &! size of the grid
           XyzMin_D=(/Altd(1), 1.0/),                &! min altitude and index
