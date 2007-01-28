@@ -7,7 +7,7 @@ subroutine PW_set_param(CompInfo, TypeAction)
   use CON_coupler
   use ModIoUnit, only: STDOUT_
   use ModPWOM, only: iUnitOut, iProc, nProc, iComm, StringPrefix, &
-       nTotalLine, nAlt => nDim
+       nTotalLine, nAlt
   use ModCommonVariables, only: Altd
 
   implicit none
@@ -54,7 +54,7 @@ subroutine PW_set_param(CompInfo, TypeAction)
      ! because it is unstructured in theta,phi
      call set_grid_descriptor( &
           PW_,                             &! component index
-          nDim=2,                          &! dimensionality
+          nAlt=2,                          &! dimensionality
           nRootBlock_D=(/1,nProc/),        &! distributed in the second dimension
           nCell_D =(/ nAlt, nTotalLine /),          &! size of the grid
           XyzMin_D=(/Altd(1), 1.0/),                &! min altitude and index
@@ -131,7 +131,7 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, Dt,DToutput
+  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, DtHorizontal,DToutput
 
   implicit none
 
@@ -143,13 +143,13 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
   character(len=*), parameter :: NameSub='PW_run'
   !---------------------------------------------------------------------------
-  Dt = min(DtMax, TimeSimulationLimit - Time)
+  DtHorizontal = min(DtMax, TimeSimulationLimit - Time)
   
   do iLine=1,nLine
-     call MoveFluxTube
+     call move_line
      call PW_advance_line
   end do
-  if (floor(Time/DToutput) .ne. floor((Time-Dt)/DToutput) ) &
+  if (floor(Time/DToutput) .ne. floor((Time-DtHorizontal)/DToutput) ) &
        call PW_print_electrodynamics
   TimeSimulation = Time
 
@@ -199,7 +199,7 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
         Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
      end do
 
-     call PW_get_electrodynamic
+     call PW_get_electrodynamics
      call initial_line_location
   end if
 
@@ -229,7 +229,7 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
      call CON_stop(NameSub//' could not find Pot or Jr')
   end if
 
-  call PW_get_electrodynamic
+  call PW_get_electrodynamics
 
 end subroutine PW_put_from_ie
 !==============================================================================
@@ -237,8 +237,8 @@ end subroutine PW_put_from_ie
 subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
 
   use ModPWOM, only : iComm,nProc,&
-                      FieldLineTheta,FieldLinePhi, &
-                      dOxyg,dHyd,dHel,uOxyg,uHyd,uHel,nLine,nDim,&
+                      ThetaLine_I,PhiLine_I, &
+                      dOxyg_CI,dHyd_CI,dHel_CI,uOxyg_CI,uHyd_CI,uHel_CI,nLine,nAlt,&
                       nLine_P, nLineBefore_P
 
   use ModMpi
@@ -268,21 +268,21 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
   do iVar=1,nVar
      select case (Name_V(iVar))
      case('CoLat')
-        SendBuffer(iVar,1:nLine)=FieldLineTheta(1:nLine)
+        SendBuffer(iVar,1:nLine)=ThetaLine_I(1:nLine)
      case('Longitude')
-        SendBuffer(iVar,1:nLine)=FieldLinePhi(1:nLine)
+        SendBuffer(iVar,1:nLine)=PhiLine_I(1:nLine)
      case('Density1')
-        SendBuffer(iVar,1:nLine)=dOxyg(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=dOxyg_CI(nAlt,1:nLine)
      case('Density2')
-        SendBuffer(iVar,1:nLine)=dHyd(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=dHyd_CI(nAlt,1:nLine)
      case('Density3')
-        SendBuffer(iVar,1:nLine)=dHel(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=dHel_CI(nAlt,1:nLine)
      case('Velocity1')
-        SendBuffer(iVar,1:nLine)=uOxyg(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=uOxyg_CI(nAlt,1:nLine)
      case('Velocity2')
-        SendBuffer(iVar,1:nLine)=uHyd(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=uHyd_CI(nAlt,1:nLine)
      case('Velocity3')
-        SendBuffer(iVar,1:nLine)=uHel(nDim,1:nLine)
+        SendBuffer(iVar,1:nLine)=uHel_CI(nAlt,1:nLine)
      case default
         call CON_stop(NameSub//': unknown variable name='//Name_V(iVar))
      end select
