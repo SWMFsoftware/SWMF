@@ -124,7 +124,7 @@ test1_check:
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/test1/PW_plots_iline0001.out \
 		>> test1_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-14 \
 		${TESTDIR}/GM/IO2/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
