@@ -192,7 +192,7 @@ contains
     ! total amount of prominence mass is Mass_TD99 (=10^16g=10^13kg)::
     !--------------------------------------------------------------------
     Rho0_TD99  = Mass_TD99/(AlphaRope*Rtube_TD99*cPi*atube_TD99**2)
-                                                          ! in [kg/m^3]
+    ! in [kg/m^3]
     !--------------------------------------------------------------------
     !\
     ! Define the normalized model parameters here::
@@ -365,7 +365,7 @@ contains
     !--------------------------------------------------------------------
     BqField_D(x_:z_) = q_TD99*     &
          (RPlus_D(x_:z_)/R2Plus**3-&
-          RMins_D(x_:z_)/R2Mins**3)
+         RMins_D(x_:z_)/R2Mins**3)
     !--------------------------------------------------------------------
     !\
     ! Update the values of BqZMax and BqZMaxSaved once at each iteration::
@@ -394,7 +394,7 @@ contains
        GradBqZ_D(x_:y_) = cOne       *&
             cThree*q_TD99*RMins_D(z_)*&
             (RMins_D(x_:y_)/R2Mins**5-&
-             RPlus_D(x_:y_)/R2Plus**5)
+            RPlus_D(x_:y_)/R2Plus**5)
        GradBqZ_D(z_)    = cZero
        !    GradBqZ_D(x_:z_) = GradBqZ_D(x_:z_)  - &
        !         RFace_D(x_:z_)*dot_product(RFace_D,GradBqZ_D)
@@ -862,15 +862,18 @@ contains
          endif
       endif
       E_elliptic = E_ell_sum
-      !------------------------------------------------------------------
+
     end subroutine calc_elliptic_int_2kind
-    !--------------------------------------------------------------------  
+
   end subroutine compute_TD99_FluxRope
-  !----------------------------------------------------------------------
+
 end module ModUserTD99
 
-!========================================================================
-Module ModUser
+!==============================================================================
+!==============================================================================
+!==============================================================================
+
+module ModUser
   use ModNumConst, ONLY: cHalf,cTwo,cThree,&
        cFour,cE1,cHundred,cHundredth,cZero,&
        cOne
@@ -879,27 +882,17 @@ Module ModUser
   use ModUserTD99  ! To include TD99 flux rope.
   use ModMagnetogram
   use ModExpansionFactors
-  use ModUserEmpty, ONLY:               &
-!!!       user_read_inputs,                &
-       user_init_session,               &
-       user_io_units,                   &
-       user_set_ics,                    &
-!!!       user_initial_perturbation,       &
-       user_set_boundary_cells,         &
-!!!       user_face_bcs,                   &
-       user_set_outerbcs,               &
-       user_set_plot_var,               &
-       user_specify_initial_refinement, &
-       user_amr_criteria,               &
-       user_write_progress
-!!!       user_get_log_var,                &
-!!!       user_calc_sources,               &
-!!!       user_heat_source
-!!!       user_get_b0,                     &
-!!!       user_update_states
+  use ModUserEmpty,                                     &
+       IMPLEMENTED1 => user_read_inputs,                &
+       IMPLEMENTED2 => user_initial_perturbation,       &
+       IMPLEMENTED3 => user_face_bcs,                   &
+       IMPLEMENTED4 => user_calc_sources,               &
+       IMPLEMENTED5 => user_get_log_var,                &
+       IMPLEMENTED6 => user_get_b0,                     &
+       IMPLEMENTED7 => user_update_states
 
   include 'user_module.h' !list of public methods
- 
+
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov'
@@ -907,48 +900,7 @@ Module ModUser
   ! Parameters related to the empirical heating::
   !/
 contains
-
-  !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
-
-  !\
-  ! This subroutine allows the user to add input commands to the PARAM.in
-  ! file that are specific to an application.  Although the user does not
-  ! have to read input in the same manner as BATSRUS (with a #COMMAND
-  ! followed by the data), the following example is set up to do this.
-  ! This method is encouraged because it allows flexibility and it also
-  ! will echo PARAM.in to standard out the same as the rest of the input
-  ! file.
-  !
-  ! In the PARAM.in file user commands need to be enclosed in the
-  ! #USERINPUTBEGIN and #USERINPUTEND commands as follows
-  !
-  ! #USERINPUTBEGIN
-  !
-  ! #USERSPECIFIEDCOMMANDS
-  ! ...
-  !
-  ! #USERINPUTEND
-  !
-  ! The leading #USERINPUTBEGIN tells BATSRUS to call user_read_inputs.
-  ! The user_read_inputs routine should return to the standard read_inputs
-  ! on reading the command #USERINPUTEND.
-  !
-  ! The reading routine read_var can be used by the user to read all data
-  ! types. BATSRUS uses a fortran 90 interface to overload the function so
-  ! that it can read real, integer, logical or character strings. The syntax
-  ! is read_var('characterstring',variable).  Where characterstring is
-  ! typically just the variable name or a description of the variable's
-  ! meaning.  For example: read_var('A random character',RandomCharacter)
-  ! The advantage of using read_var is that it advances the line (iline)
-  ! automatically and it also echos the command correctly back to standard
-  ! out the way all other commands are echoed in read_inputs.
-  !
-  ! The user should declare their specific variables in ModUser above.
-  !
-  ! As with other user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED
-  ! IN THE MODULES INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
+  !============================================================================
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
@@ -957,7 +909,7 @@ contains
 
     integer:: i
     character (len=100) :: NameCommand
-    character (len=lStringLine)   :: TypeRead
+    character (len=lStringLine)   :: NameModel
     !-------------------------------------------------------------------------
 
     if(iProc==0.and.lVerbose > 0)then
@@ -988,13 +940,13 @@ contains
              call read_var('dt_UpdateB0',dt_UpdateB0)
              DoUpdateB0 = dt_updateb0 > 0.0
           endif
-!       case("#AWHEAT")
-!          call read_var('Bnot        ',Bnot)
-!          call read_var('Tnot        ',Tnot)
-!          call read_var('DegFrm1     ',DegFrm1)
-!          call read_var('DegF_Ratio  ',DegF_Ratio)
-!          call read_var('Dens_Ratio  ',Dens_Ratio)
-      case("#TD99FLUXROPE")
+          !       case("#AWHEAT")
+          !          call read_var('Bnot        ',Bnot)
+          !          call read_var('Tnot        ',Tnot)
+          !          call read_var('DegFrm1     ',DegFrm1)
+          !          call read_var('DegF_Ratio  ',DegF_Ratio)
+          !          call read_var('Dens_Ratio  ',Dens_Ratio)
+       case("#TD99FLUXROPE")
           call read_var('UseTD99Perturbation' ,UseTD99Perturbation)
           call read_var('UseVariedCurrent'    ,UseVariedCurrent)
           call read_var('CurrentStartTime'    ,CurrentStartTime)
@@ -1015,8 +967,8 @@ contains
           call read_var('q_TD99'              ,q_TD99)
           call read_var('L_TD99'              ,L_TD99)
        case("#EMPIRICALSW")
-        call read_var('TypeModel',TypeRead)
-        call set_empirical_model(trim(TypeRead))
+          call read_var('NameModel',NameModel)
+          call set_empirical_model(trim(NameModel))
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
              call write_prefix;
@@ -1035,9 +987,7 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-  !===================================================================
-  
- !====================================================================
+  !============================================================================
   subroutine user_calc_sources
     use ModMain,ONLY:globalBLK
     use ModVarIndexes
@@ -1047,31 +997,31 @@ contains
     use ModGeometry,ONLY:R_BLK
     character (len=*), parameter :: Name='user_calc_sources'
     integer::i,j,k
-    real::rCurrentFree=0.0,AmpereForce_D(3)
-    !-----------------------------------------------------------------
+    real::rCurrentFree=0.0,LorentzForce_D(3)
+    !--------------------------------------------------------------------------
     rCurrentFree=Rs_PFSSM
-    
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(R_BLK(i,j,k,globalBLK)<rCurrentFree)CYCLE
-       AmpereForce_D=cross_product(&
-             CurlB0_DCB(:,i,j,k,globalBLK),&
-             State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
-             B0xCell_BLK(i,j,k,globalBLK),&
-             B0yCell_BLK(i,j,k,globalBLK),&
-             B0zCell_BLK(i,j,k,globalBLK)/))
+       LorentzForce_D=cross_product(&
+            CurlB0_DCB(:,i,j,k,globalBLK),&
+            State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
+            B0xCell_BLK(i,j,k,globalBLK),&
+            B0yCell_BLK(i,j,k,globalBLK),&
+            B0zCell_BLK(i,j,k,globalBLK)/))
        Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
-            AmpereForce_D
-       !AmpereForce_D=cross_product(&
-            !CurlB0_DCB(:,i,j,k,globalBLK),(/&
-            !B0xCell_BLK(i,j,k,globalBLK),&
-            !B0yCell_BLK(i,j,k,globalBLK),&
-            !B0zCell_BLK(i,j,k,globalBLK)/))
+            LorentzForce_D
+       !LorentzForce_D=cross_product(&
+       !CurlB0_DCB(:,i,j,k,globalBLK),(/&
+       !B0xCell_BLK(i,j,k,globalBLK),&
+       !B0yCell_BLK(i,j,k,globalBLK),&
+       !B0zCell_BLK(i,j,k,globalBLK)/))
        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
-            sum(AmpereForce_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
+            sum(LorentzForce_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
             /State_VGB(rho_,i,j,k,globalBLK)
     end do;end do;end do
   end subroutine user_calc_sources
- 
+
   !========================================================================
   subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
        iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
@@ -1080,9 +1030,7 @@ contains
          Top_
     use ModMain,       ONLY: time_accurate,x_,y_,z_,  &
          UseRotatingFrame
-    use ModVarIndexes, ONLY: & 
-                                       Ew_,&     !
-         rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
+    use ModVarIndexes, ONLY: Ew_,rho_,Ux_,Uy_,Uz_,Bx_,By_,Bz_,P_  
 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: nFaceValueVars,State_VGB
@@ -1110,7 +1058,7 @@ contains
     ! User declared local variables go here::
     !/
     integer:: iCell,jCell,kCell
-  
+
     real:: DensCell,PresCell,GammaCell, B1dotR  
     real, dimension(3):: RFace_D,B1_D,U_D,&
          B1t_D,B1n_D
@@ -1124,19 +1072,19 @@ contains
     ! Calculation of boundary conditions should start here::
     !/
     !--------------------------------------------------------------------------
- 
+
 
     !\
     ! 
     !/
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-   
+
     U_D (x_:z_)  = VarsTrueFace_V(Ux_:Uz_)
     B1_D(x_:z_)  = VarsTrueFace_V(Bx_:Bz_)
     B1dotR       = dot_product(RFace_D,B1_D)
     B1n_D(x_:z_) = B1dotR*RFace_D(x_:z_)
     B1t_D        = B1_D-B1n_D
-   
+
     !\
     ! Update BCs for velocity and induction field::
     !/
@@ -1147,7 +1095,7 @@ contains
     !/
     if (DoTD99FluxRope.or.DoBqField) then
        call get_transformed_TD99fluxrope(RFace_D,BFRope_D,&
-                  UVorT_D,RhoFRope,time_now)
+            UVorT_D,RhoFRope,time_now)
        if(.not.DoBqField)UVorT_D=0.0
        !\
        ! Compute the normal, BFRn_D, and tangential, BFRt_D,
@@ -1161,7 +1109,7 @@ contains
        ! to BFRn_D at the Sun::
        !/
        VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_)+&
-               BFRn_D(x_:z_)
+            BFRn_D(x_:z_)
     else
        RhoFRope=cZero
     end if
@@ -1193,14 +1141,13 @@ contains
          VarsTrueFace_V(rho_))
     VarsGhostFace_V(P_       ) =max(VarsGhostFace_V(rho_     )*&
          PresCell/(DensCell+RhoFRope),&
-         !max(-VarsTrueFace_V(P_       )+ &
-         !cTwo*PresCell,&
+                                !max(-VarsTrueFace_V(P_       )+ &
+                                !cTwo*PresCell,&
          VarsTrueFace_V(P_  ))
-    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &  !
-         VarsGhostFace_V(rho_     )/(DensCell+RhoFRope)*&!cTwo*
-         PresCell*(cOne/(GammaCell-cOne)-inv_gm1)!,          &  !
-    !VarsTrueFace_V(Ew_))                                 !
-    
+    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &  
+         VarsGhostFace_V(rho_     )/(DensCell+RhoFRope)*&  !cTwo* ???
+         PresCell*(cOne/(GammaCell-cOne)-inv_gm1)
+
     !\
     ! Apply corotation
     !/
@@ -1216,25 +1163,25 @@ contains
     end if
   end subroutine user_face_bcs
 
+  !============================================================================
+
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell,GammaCell)
-    !--------------------------------------------------------------------------
-    !
-    ! This module computes the cell values for density and pressure assuming
-    ! an isothermic atmosphere
-    !--------------------------------------------------------------------------
-    !
+
+    ! This subroutine computes the cell values for density and pressure 
+    ! assuming an isothermal atmosphere
+    
     use ModVarIndexes
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst
     use ModPhysics,    ONLY: g,inv_g,unitUSER_B,GBody
     implicit none
-    !--------------------------------------------------------------------------
+
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
     real, intent(out)    :: DensCell,PresCell,GammaCell
     real :: BaseU
     !--------------------------------------------------------------------------
-    
+
     call get_gamma_emp(x_BLK(iCell,jCell,kCell,iBlock),&
          y_BLK(iCell,jCell,kCell,iBlock),&
          z_BLK(iCell,jCell,kCell,iBlock),&
@@ -1246,29 +1193,12 @@ contains
     DensCell  = ((2.65e+5/BaseU)**2)*exp(-GBody*g*&
          (cOne/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)&
          -cOne))
-    
+
     PresCell  = inv_g*DensCell
   end subroutine get_plasma_parameters_cell
 
   !========================================================================
-  !  SUBROUTINE user_initial_perturbation
-  !========================================================================
-  !\
-  ! This subroutine allows the user to add a perturbation to a solutions
-  ! read in from a restart file.  The idea is to allow the user to "start"
-  ! some process on top of the already converged solution. The routine loops
-  ! over all blocks, but only needs to load the perturbation where appropriate.
-  ! As with all user subroutines, the variables declared in ModUser are 
-  ! available here.  Again, as with other user subroutines DO NOT MODIFY ANY 
-  ! GLOBAL VARIABLE DEFINED IN THE MODULES INCLUDED IN THIS SUBROUTINE UNLESS 
-  ! SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !   rho_BLK,rhoUx_BLk,rhoUy_BLK,rhoUz_BLK,p_BLK,E_BLK
-  !   Bx_BLK, By_BLK, Bz_BLK
-  !
-  ! Note that in most cases E (energy) and P (pressure) should both be loaded.
-  !/
+
   subroutine user_initial_perturbation
     use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
          unusedBLK,gcn,x_,y_,z_
@@ -1322,15 +1252,15 @@ contains
                   4.0E+00*((ROne-cOne)/(Rmax-cOne))*yy/RR
              State_VGB(rhoUz_   ,i,j,k,iBLK) = Dens_BLK*&
                   4.0E+00*((ROne-cOne)/(Rmax-cOne))*zz/RR
-             State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK   *& !
+             State_VGB(Ew_,i,j,k,iBLK) = Pres_BLK   *&
                   (cOne/(Gamma_BLK-cOne)-inv_gm1) 
           end do;end do; end do
        elseif(UseTD99Perturbation)then
-       !----------------------------------------------------------------
-       !\
-       ! Add Titov & Demoulin (TD99) flux rope here:: 
-       !/
-       !----------------------------------------------------------------
+          !----------------------------------------------------------------
+          !\
+          ! Add Titov & Demoulin (TD99) flux rope here:: 
+          !/
+          !----------------------------------------------------------------
           do k=1,nK; do j=1,nJ; do i=1,nI
              !-------------------------------------------------------------
              !\
@@ -1368,7 +1298,7 @@ contains
           end do; end do; end do
        endif
        !----------------------------------------------------------------
-       
+
 
        !\
        ! Update the total energy::
@@ -1416,40 +1346,25 @@ contains
             (State_VGB(By_   ,i,j,k,iBlock)+B0yCell_BLK(i,j,k,iBlock))**2+&
             (State_VGB(Bz_   ,i,j,k,iBlock)+B0zCell_BLK(i,j,k,iBlock))**2)&
             *cQuarter*(R_BLK(i,j,k,iBlock)/2.5)**1.50))
-       State_VGB(P_   ,i,j,k,iBlock)=&
-            (GammaCell-cOne)*                   &
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock)&
-            +State_VGB(Ew_,i,j,k,iBlock)&  !
-            )
-       State_VGB(Ew_,i,j,k,iBlock)=           &!
-            State_VGB(P_,i,j,k,iBlock)*(cOne   /&    !
-            (GammaCell-cOne)-inv_gm1)                !
+       State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-cOne)*      &
+            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+       State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
+            *(cOne/(GammaCell-cOne)-inv_gm1)
     end do; end do; end do
     call calc_energy(iBlock)
     !\
     ! End update of pressure and relaxation energy::
     !/
-  end subroutine user_update_states 
+  end subroutine user_update_states
 
-
-  !========================================================================
-  !  SUBROUTINE user_get_log_var
-  !========================================================================
-  !
-  ! This subroutine allows the user to write to the log files variables
-  ! (normalized and not) which are problem specific.
-  !
-  ! The variables specific to the problem are loaded from ModUser.
-  !
   !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar)
+
     use ModProcMH,     ONLY: nProc
     use ModIO,         ONLY: dn_output,logfile_,write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
          x_,y_,z_
-    use ModVarIndexes, ONLY: &
-                                       Ew_,&     !
-         Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
+    use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0xCell_BLK,    &
          B0yCell_BLK,B0zCell_BLK
@@ -1471,7 +1386,7 @@ contains
     select case(TypeVar)
     case('em_t','Em_t','em_r','Em_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
+          if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = &
                (B0xcell_BLK(:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
                (B0ycell_BLK(:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
@@ -1480,7 +1395,7 @@ contains
        VarValue = unit_energy*cHalf*integrate_BLK(1,tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
+          if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = &
                (State_VGB(rhoUx_,:,:,:,iBLK)**2 +&
                State_VGB(rhoUy_,:,:,:,iBLK)**2 +&
@@ -1490,20 +1405,19 @@ contains
        VarValue = unit_energy*cHalf*integrate_BLK(1,tmp1_BLK)
     case('et_t','Et_t','et_r','Et_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
+          if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
-           tmp1_BLK(:,:,:,iBLK) = & !
-                State_VGB(Ew_,:,:,:,iBLK) !
+          if (unusedBLK(iBLK)) CYCLE
+          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')
        do iBLK=1,nBLK
-          if (unusedBLK(iBLK)) cycle
+          if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = &
                State_VGB(rho_,:,:,:,iBLK)/R_BLK(:,:,:,iBLK)
        end do
@@ -1517,7 +1431,6 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
-
 
 end module ModUser
 
