@@ -18,12 +18,10 @@ program CON_stand_alone
        integer,intent(in),optional:: nToFinish
      end subroutine SP_diffusive_shock
   end interface
-  include 'stdout.h'
   !--------------------------------------------------------------------------!
   integer:: iIter,iX
-  character(LEN=15):: NameFile
   !--------------------------------------------------------------------------!
-  call set_stdout('SP: ')      !Set the string to be printed on screen.   !
+  prefix='SP: ';iStdOut=6      !Set the string to be printed on screen.   !
   DoTest=.false.
   if(DoTest)write(iStdOut,'(a)')prefix//'Do the test only'
   if(DoTest)then
@@ -51,22 +49,20 @@ program CON_stand_alone
      EInjection=cOne
      !     BOverDeltaB2=cThree
      call SP_diffusive_shock("INIT")
-     iFileToRead=114
-     write(NameFile,'(a,i4.4,a)')'ihdata_',iFileToRead,'.dat'
-     call read_ihdata_for_sp(NameFile,1,5)
+     iDataSet=114
+     call read_ihdata_for_sp(1,5)
      RhoOld_I=RhoSmooth_I
      RhoOld_I(iShock+1-nint(cOne/DsResolution):iShock)=&
           maxval(RhoOld_I(iShock+1-nint(cOne/DsResolution):iShock))
      RhoOld_I(iShock+1:iShock+nint(cOne/DsResolution))=&
           minval(RhoOld_I(iShock+1:iShock+nint(cOne/DsResolution)))
-     SP_Time=TimeToRead
+     SP_Time=DataInputTime
      DiffCoeffMin=1.0e+05*Rsun*DsResolution !m^2/s
      !-------------------------------- RUN ----------------------------------!
-     do iFileToRead=115,493
-        write(iStdOut,*)prefix,"iIter = ",iFileToRead-114
-        write(NameFile,'(a,i4.4,a)')'ihdata_',iFileToRead,'.dat'
-        call read_ihdata_for_sp(NameFile,1,5)
-        call SP_diffusive_shock("RUN",TimeToRead)
+     do iDataSet=115,493
+        write(iStdOut,*)prefix,"iIter = ",iDataSet-114
+        call read_ihdata_for_sp(1,5)
+        call SP_diffusive_shock("RUN",DataInputTime)
      end do
   endif
   !--------------------------------- FINALIZE -------------------------------!
@@ -74,3 +70,10 @@ program CON_stand_alone
   !------------------------------------ DONE --------------------------------!
 end program CON_stand_alone
 !============================================================================!
+subroutine CON_stop(String)
+  use SP_ModMain
+  implicit none
+  character(LEN=*),intent(in)::String
+  write(iStdOut,'(a)')String
+  stop
+end subroutine CON_stop

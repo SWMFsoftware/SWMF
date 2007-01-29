@@ -9,8 +9,8 @@
 !============================================================================!
 subroutine tridag(n,L_I,M_I,U_I,R_I,W_I)
   use ModNumConst, ONLY: cZero
+  use SP_ModMain,ONLY:iStdOut,prefix
   implicit none
-  include 'stdout.h'
   !--------------------------------------------------------------------------!
   integer, intent(in):: n
   real, intent(in):: L_I(n),M_I(n),U_I(n),R_I(n)
@@ -117,9 +117,9 @@ end subroutine advance_diffusion
 ! using fully implicit scheme.                                               !
 !============================================================================!
 subroutine advance_advection(CFLFermi,n,F_I)
+  use SP_ModMain,ONLY:iStdOut,prefix
   use ModNumConst
   implicit none
-  include 'stdout.h'
   !--------------------------------------------------------------------------!
   real,intent(in):: CFLFermi        !Time step * acceleration rate/(Dlnp).   !
   integer,intent(in):: n            !Number of meshes along lnp-coordinate.  !

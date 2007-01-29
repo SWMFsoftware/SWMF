@@ -5,7 +5,7 @@ module SP_ModMain
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
-  real:: PInjection,EInjection= 1.0e+01,EnergyMax=1.0e+07,&
+  real:: PInjection,EInjection= 1.0e+00,EnergyMax=1.0e+07,&
        PMaxLog,DeltaLnP !Injection momentum, injection energy, maximum range !
                         !with respect to (ln p)-coordinate, and step size    !
                         !with respect to (ln p)-coordinate.                  !
@@ -27,7 +27,7 @@ module SP_ModMain
   logical:: UseRealDiffusionUpstream=.false.
                         !Default valuse is .false. With this logical set to  !
                         !.true., the non-turbulent diffusion is used upstream!
-  real:: DsResolution=cOne/cE1
+  real:: DsResolution=cHalf/cE1
   real,allocatable,save,dimension(:):: DInner_I,DOuter_I,DInnerInj_I
                         !Diffusion coefficient at momentum p, Laplacian      !
                         !multiplier, and diffusion coefficient at PInjection.!
@@ -39,11 +39,11 @@ module SP_ModMain
                         !Temperature in units of NameEnergyUnit [KeV]        !
   real,allocatable,save,dimension(:):: U_I
                         !Velocity, in m/s                                    !
-  real,allocatable,save,dimension(:,:):: X_DI,F_II
-                        !Three Lagrangian coordinates and full distribution  !
-                        !function, f(x,p).                                   !
-  integer:: iFileToRead !Index in file name from IH_ data                    !
-  real:: TimeToRead     !Time of simulation from IH_ data                    !
+  real,allocatable,save,dimension(:,:):: X_DI,State_VI,F_II
+                        !Three Lagrangian coordinates, MHD state and         !
+                        !full distribution function, f(x,p).                 !
+  integer:: iDataSet=0 !Index in file name from IH_ data                    !
+  real:: DataInputTime  !Time of simulation from IH_ data                    !
   real:: SP_Time=cZero,SP_Dt
                         !Starting time of simulation and size of time step.  !
   real:: FInjection=0.0120
@@ -67,7 +67,7 @@ module SP_ModMain
   integer:: SP_iPlot=0  !Initialize plot index for SP data.                  !
   character(LEN=50):: SP_TypePlot='cdf def ind tec '
                         !Type of output SP data to be saved in a file.       !
-  character(LEN=10):: SP_DirOut='./SP/IO/'
+  character(LEN=10):: SP_DirOut='./SP/IO2/'
                         !Output directory for SP plot and log files.         !
   real:: SP_TimePlot=6.0e+01
                         !Time interval to save plot file.                    ! 
@@ -86,6 +86,9 @@ module SP_ModMain
                         !(kinetic)energy, and vice versa. The last function  !
                         !is used to set the energy unit for the simulations. !
   integer,save::iShock,iShockOld=1
+  integer:: iStdOut=6
+  character(LEN=4):: prefix='SP: '
+  logical:: DoWriteAll
 Contains
   subroutine SP_allocate
     !------------------------------------------------------------------------!
@@ -127,6 +130,8 @@ Contains
     U_I = cZero
     allocate(X_DI(3,1:nX),stat=iError)
     call check_allocate(iError,NameSub//'X_DI')
+    allocate(State_VI(8,1:nX),stat=iError)
+    call check_allocate(iError,NameSub//'State_VI')
     do iX=1,nX
        X_DI(1  ,iX) = real(iX)
        X_DI(2:3,iX) = cZero
@@ -166,7 +171,6 @@ Contains
     !   call write_shock(i_shock,RhoIn_I)
   end function i_shock
   subroutine write_shock(i_shock,RhoIn_I)
-    include 'stdout.h'
     integer,intent(in)::i_shock
     real,dimension(nX),intent(in)::RhoIn_I
     !\
@@ -179,16 +183,14 @@ Contains
          minval(RhoIn_I(i_shock+1:i_shock+nint(cOne/DsResolution))),&
          ', Mach number = ',AlfvenMach
   end subroutine write_shock
-end module SP_ModMain
+
 !============================================================================!
 !============================================================================!
 subroutine SP_diffusive_shock(&
      TypeAction,              &                  
      TimeToFinish,            &                
      nToFinish)
-  use SP_ModMain
   implicit none
-  include 'stdout.h'
   !--------------------------------------------------------------------------!
   integer:: nStep=1,iStep,iX,iLnP !Number of time steps, current index of    !
                                   !time step, current index of x-coordinate, !
@@ -207,6 +209,7 @@ subroutine SP_diffusive_shock(&
   select case(TypeAction)
   !---------------------------------- INIT ----------------------------------!
   case("INIT")
+    
      write(iStdOut,*)prefix,'EInjection = ',EInjection,' '//NameEnergyUnit
      EInjection = EInjection*&
          energy_in(NameEnergyUnit)!Convert injection energy in MKS units.    !
@@ -415,6 +418,9 @@ subroutine SP_diffusive_shock(&
   case("FINALIZE")
      if (DoLogFile) call write_logfile_SP('CLOSE')
      call write_plotfile_SP(.true.,SP_TypePlot)
+  case default
+     call CON_stop('Unknown action in SP_difussive_shock'//TypeAction)
   end select
   !------------------------------------ DONE --------------------------------!
 end subroutine SP_diffusive_shock
+end module SP_ModMain

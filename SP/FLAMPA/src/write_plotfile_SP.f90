@@ -3,7 +3,6 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   use ModIOUnit
   use SP_ModMain
   implicit none
-  include 'stdout.h'
   !--------------------------------------------------------------------------!
   integer:: iFile
   logical,intent(in):: DoPlot
@@ -14,7 +13,7 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
   integer,parameter:: nPSkip=2,nXSkip=2
   integer:: iX,iLnP,iVar,nVar,iError,iLength
   character(LEN=3)  :: TypePlot
-  character(LEN=25) :: NameFile
+  character(LEN=26) :: NameFile
   character(len=50) :: SP_NameAllVars
   character(LEN=3)  :: SP_NamePlotVar
   character(len=10) :: SP_NamePlotVar_I(nVarMax)

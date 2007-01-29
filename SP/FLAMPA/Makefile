@@ -1,8 +1,12 @@
 
 include Makefile.def 
 
-install: 
+install: Makefile.def.orig
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+
+Makefile.def.orig:
+	mv Makefile.def Makefile.def.orig
+	cp Makefile.def.orig Makefile.def
 
 LIB:    install
 	cd src;          make LIB
@@ -22,5 +26,7 @@ distclean: install
 	@(if [ -r "Makefile.conf" ]; then \
 		cd src; make distclean; \
 		cd ../srcInterface; make distclean; \
+		rm -f ../Makefile.conf; \
 	fi)
-	rm -f *~
+	rm -f Makefile.def *~
+	mv Makefile.def.orig Makefile.def

@@ -3,7 +3,6 @@ subroutine write_logfile_SP(TypeActionLogFile)
   use SP_ModMain
   use ModIOUnit
   implicit none
-  include 'stdout.h'
   character(LEN=*),intent(in):: TypeActionLogFile
   !--------------------------------------------------------------------------!
   character(LEN=*),parameter:: NameSub=' write_logfile_SP'
@@ -26,7 +25,7 @@ subroutine write_logfile_SP(TypeActionLogFile)
      call check_allocate(iError,NameSub//'E_I')
      !-----------------------------------------------------------------------!
      iFile=io_unit_new()
-     write(NameLogFile,'(a,i4.4,a)')trim(SP_DirOut)//&
+     write(NameLogFile,'(a)')trim(SP_DirOut)//&
           'SP_logfile.dat'
      write(iStdOut,*)prefix//'Open '//trim(NameLogFile)
      open(iFile,file=trim(NameLogFile),status='unknown',&

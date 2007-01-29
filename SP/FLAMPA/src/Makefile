@@ -12,14 +12,23 @@ OBJECTS = SP_main.o \
 	write_logfile_SP.o \
 	write_plotfile_SP.o 
 
+SEPEXE = ${BINDIR}/SEP.exe
+
+SEP: ${SEPEXE}
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
+
+${SEPEXE}: ${OBJECTS} SP_stand_alone.o
+	${LINK.f90} ${SEARCH} ${SEARCH_EXTRA} -o ${SEPEXE} \
+	${LIBDIR}/libSHARE.a ${OBJECTS} SP_stand_alone.o
+
+
 
 MY_LIB = libFLAMPA.a
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
-		${MODULES} ${OBJECTS}
+		${MODULES} ${OBJECTS} SP_stand_alone.o
 
 LIB:	DEPEND
 	make ${MY_LIB}

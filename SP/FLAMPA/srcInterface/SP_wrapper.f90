@@ -14,7 +14,7 @@ module SP_ModIhData
   real::RBoundSC=1.2      !^CMP IF SC
   real::RBoundIH=21.0     !^CMP IF IH
   logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
-  logical::DoRestart
+  logical::DoRestart=.false.
   integer::nSmooth=0
 contains
   function SP_xyz_i(iPoint)
@@ -149,7 +149,7 @@ subroutine SP_set_param(CompInfo,TypeAction)
   case('GRID')
      !Initialize grid
      call init_decomposition(SP_,SP_,1)
-     call set_coord_system(SP_,'HGR',cOne)
+     call set_coord_system(SP_,'HGI',rSun)
   case default
   end select
 end subroutine SP_set_param
@@ -195,7 +195,7 @@ subroutine SP_save_mhdata
   iFile=io_unit_new()
   open(iFile,file=trim(NameFile),status='unknown',&
           form='formatted')
-  write(iFile,'(a,f13.6,a)')'Time_Simulation=  ',SP_Time,'         ,  n_Step=',iDataSet
+  write(iFile,'(a,f13.6,a,i6)')'Time_Simulation=  ',DataInputTime,'         ,  n_Step=',iDataSet
   do iPoint=1,nX
      write(iFile,'(11(e13.6,2x))')X_DI(:,iPoint)/rSun,State_VI(1:8,iPoint)
   end do
@@ -239,35 +239,32 @@ subroutine SP_init_session(iSession,TimeIn)
   if(.not.DoInit)return
   DoInit=.false.
   if(SP_Time==cZero)SP_Time=TimeIn
-  call SP_diffusive_shock("INIT")
+  call SP_diffusive_shock(TypeAction='INIT')
 end subroutine SP_init_session
 !=============================================================!
 subroutine SP_run(tInOut,tLimit)
-  use SP_ModIhData,ONLY:SP_Time,DataInputTime,iDataSet,nSmooth
-  use SP_ModIhData,ONLY:DoRun,SaveMhData,DoReadMhData
+  use SP_ModIhData
   use ModNumConst
   implicit none
   real,intent(inout)::tInOut
   real,intent(in):: tLimit
   character(LEN=15):: NameFile
-  iDataSet=iDataSet+1
   if(.not.DoReadMhData)then
      if(nSmooth>0)call SP_smooth_data
      call mh_transform_for_flampa
      tInOut=max(tInOut,tLimit)
   else
      call read_ihdata_for_sp(1,0)
+     IF(nSmooth>0)call SP_smooth_data
      tInOut=DataInputTime
   end if
   if(SaveMhData)call SP_save_mhdata
-  if(DoRun)then
-     call  SP_diffusive_shock("RUN",DataInputTime)
-  else
-     iDataSet=iDataSet+1
-  end if
+  if(DoRun)call  SP_diffusive_shock("RUN",DataInputTime)
+  iDataSet=iDataSet+1
 end subroutine SP_run
 !=============================================================!
 subroutine SP_finalize(TimeSimulation)
+  use SP_ModMain
   implicit none
   real,intent(in)::TimeSimulation
   call SP_diffusive_shock("FINALIZE")
