@@ -358,7 +358,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
-		./Config.pl -u=Default -e=Mhd
+		./Config.pl -u=Ih -e=Mhd
 
 #^CMP END IH
 #^CMP IF SC BEGIN

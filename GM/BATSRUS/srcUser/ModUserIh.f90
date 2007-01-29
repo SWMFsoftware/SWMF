@@ -4,13 +4,6 @@
 !========================================================================
 
 module ModUser
-  use ModNumConst, ONLY: cHalf,cTwo,cThree,&
-       cFour,cE1,cHundred,cHundredth,cZero,&
-       cOne
-  use ModMain,     ONLY: UseUserB0,UseUserHeating
-  use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
-
-
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_set_boundary_cells
 
@@ -18,8 +11,9 @@ module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
-       NameUserModule = 'HELIOSPHERE, Manchester, Roussev'
-
+       NameUserModule = 'HELIOSPHERE, Sokolov'
+  !This version allows to refine the current sheet without increasing the
+  !number of blocks intersected by the inner boundary
 contains
 
 
