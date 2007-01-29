@@ -238,6 +238,10 @@ sub set_versions{
     # Create SC/BATSRUS if needed
     &shell_command("make SCBATSRUS")
 	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
+    
+    # Set user routines for IH/BATSRUS_share, if needed
+    &shell_command("cd GM/BATSRUS;./Config.pl -u=Ih -e=Mhd; cd ../")
+	if $Version{"IH"} eq "BATSRUS_share";
 
     @Version = @NewVersion;
 
