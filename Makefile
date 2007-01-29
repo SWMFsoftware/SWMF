@@ -331,6 +331,7 @@ tags:	ENV_CHECK
 #
 
 IH/BATSRUS/src/Makefile:
+	rm -rf IH/BATSRUS/src IH/BATSRUS/srcUser IH/BATSRUS/srcInterface/*.f90
 	mkdir -p IH/BATSRUS/src IH/BATSRUS/srcUser
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd IH/BATSRUS/src; rm -f main.f90
@@ -366,6 +367,11 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 # configure and collect source files for SC/BATSRUS component
 #
 SC/BATSRUS/src/Makefile:
+	rm -rf \
+	SC/BATSRUS/src \
+	SC/BATSRUS/srcUser \
+	SC/BATSRUS/srcInterface/SC_wrapper.f90 \
+	SC/BATSRUS/srcInterface/SC_get_for_sp.f90
 	cd GM/BATSRUS; \
 		cp -f Makefile.conf ../../SC/BATSRUS; \
 		make COMP=SC DREL=TMP relax_src
