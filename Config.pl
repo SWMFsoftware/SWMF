@@ -62,6 +62,16 @@ if($ListVersions){
 
 &set_versions if @NewVersion;
 
+if($Installed){
+    # Create IH/BATSRUS if needed
+    &shell_command("make IHBATSRUS")
+	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
+
+    # Create SC/BATSRUS if needed
+    &shell_command("make SCBATSRUS")
+	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
+}
+
 &set_grid_size if $GridSize;
 
 &set_options if $Options;
@@ -231,16 +241,11 @@ sub set_versions{
 	    unless $Found{$comp}
     }
 
-    # Create IH/BATSRUS if needed
-    &shell_command("make IHBATSRUS")
-	if $Version{"IH"} eq "BATSRUS" and not -f "IH/BATSRUS/src/Makefile";
-
-    # Create SC/BATSRUS if needed
-    &shell_command("make SCBATSRUS")
-	if $Version{"SC"} eq "BATSRUS" and not -f "SC/BATSRUS/src/Makefile";
+    # Set equation and user routines for IH/BATSRUS_share if needed
+    &shell_command("cd GM/BATSRUS; ./Config.pl -u=Ih -e=Mhd")
+	if $Version{"IH"} eq "BATSRUS_share";
 
     @Version = @NewVersion;
-
 }
 
 ##############################################################################
