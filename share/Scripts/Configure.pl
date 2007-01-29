@@ -230,9 +230,9 @@ if($switch{MAKEPDF}      eq "ON" or
     chdir $Dir or die "Could not cd $Dir\n";
 
     # Try installation if SetSWMF.pl is in the configured directory
-    if(-f "SetSWMF.pl"){
-	my $result=system('./SetSWMF.pl -i');
-	warn "./SetSWMF.pl -i: $result\n" if $result;
+    if(-f "Config.pl"){
+	my $result=system('./Config.pl -install');
+	warn "./Config.pl -install: $result\n" if $result;
     }
 
     # Process documentation if required

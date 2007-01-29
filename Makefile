@@ -36,7 +36,7 @@ help:
 	@echo '    [default]   SWMF'
 	@echo ' '
 	@echo '    help        (makefile option list)'
-	@echo '    install     (to be used via SetSWMF.pl only)'
+	@echo '    install     (to be used via Config.pl only)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
 	@echo '    PDF         (make PDF  version of the documentation)' #^CMP IF DOC
@@ -94,7 +94,7 @@ ENV_CHECK:
 	  echo "DIR='${DIR}' and/or OS='${OS}' are incorrect!";\
 	  echo "Correcting Makefile.def";\
 	  perl -pi share/Scripts/FixMakefileDef.pl Makefile.def; \
-	  echo "Type 'SetSWMF.pl -s' and retry the previous make command!"; \
+	  echo "Type 'Config.pl -s' and retry the previous make command!"; \
 	  exit 1; \
 	fi);
 
@@ -257,12 +257,12 @@ dist: distclean
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
 	tar -rf tmp.tar  .cvsignore
+	tar -rf tmp.tar  Config.pl
 	tar -rf tmp.tar  Configure.options
 	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  SetSWMF.pl
 	tar -rf tmp.tar  share
 	tar -rf tmp.tar  util
 	tar -rf tmp.tar  CON

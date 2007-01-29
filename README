@@ -30,23 +30,14 @@ tar -xzf {path_to_file}/SWMF_v2.1.tgz
 # Install SWMF #
 ################
 
-# For several platform/compiler combinations installation is very simple.
+# For several platform/compiler combinations installation is very simple:
+
+Config.pl -install
+
 # Some platforms require additional flags or have other compilers as
-# an option. Choose the appropriate platform/compiler combination:
+# an option. Choose the appropriate platform/compiler combination, e.g.:
 
-# !!! On Linux or Darwin with NAG F95 compiler,     !!!  
-# !!! on the SGI Origin and on the Compaq machines  !!!
-SetSWMF.pl -install
-
-# !!! On the SGI Altix do the following !!!
-SetSWMF.pl -install -c=ifort -m=Altix
-module load intel-comp.8.0.070
-
-# !!! On a Linux system with the PGF90 compiler !!!
-SetSWMF.pl -install -c=pgf90
-
-# !!! On Darwin using the xlf compiler !!!
-SetSWMF.pl -install -c=xlf90
+Config.pl -compiler=g95 -mpi=Intel
 
 ######################
 # Create the manuals #

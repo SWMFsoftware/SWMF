@@ -37,7 +37,7 @@ if(-d run)then
 endif
 
 cd GM/BATSRUS; rm -rf COVARCHECK; make covarcheck_conf; cd ../..
-SetSWMF.pl -v=GM/BATSRUS_conf,IE/Ridley_serial,IM/Empty,IH/Empty,UA/Empty
+./Config.pl -v=Empty,GM/BATSRUS_conf,IE/Ridley_serial
 make clean
 $test
 if(-d run)then
@@ -46,7 +46,7 @@ if(-d run)then
 endif
 
 cd GM/BATSRUS; rm -rf COVARIANT; make covariant_conf; cd ../..
-SetSWMF.pl -v=GM/BATSRUS_conf
+./Config.pl -v=GM/BATSRUS_conf
 make clean
 $test
 if(-d run)then

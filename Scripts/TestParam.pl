@@ -18,7 +18,7 @@ use strict;
 # The script and the XML file names to check the parameters
 my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
 my $XMLFile           = 'PARAM.XML';
-my $SetSWMF = 'SetSWMF.pl';
+my $ConfigPl           = 'Config.pl';
 
 # The -H, -X and -s flags are transferred to CheckParam.pl
 exec("$CheckParamScript -X") if $HelpXml;
@@ -57,7 +57,7 @@ if(not $LayoutFile){
 }
 warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
-die "$ERROR could not find $SetSWMF" unless -f $SetSWMF;
+die "$ERROR could not find $ConfigPl" unless -f $ConfigPl;
 
 # Global variables containing the SWMF settings
 my $Precision;
@@ -113,9 +113,9 @@ exit $IsError;
 
 sub get_settings{
 
-    my $Settings = `./$SetSWMF -s`;
+    my $Settings = `./$ConfigPl -show | head -9; ./$ConfigPl -s`;
 
-    die "$ERROR $SetSWMF -s did not provide the settings\n" unless $Settings;
+    die "$ERROR $ConfigPl -s did not provide the settings\n" unless $Settings;
 
     my $Installed;
     foreach (split(/\n/,$Settings)){
@@ -130,7 +130,7 @@ sub get_settings{
 
     die "$ERROR SWMF is not installed based on $Settings" unless $Installed;
     die "$ERROR precision could not be found in $Settings\n" unless $Precision;
-    die "$ERROR code versions could not be found in $Settings\n" 
+    die "$ERROR component versions could not be found in $Settings\n" 
 	unless %Version;
 
     print 
@@ -229,7 +229,7 @@ sub check_layout{
 # SWMF configuration with the layout and input parameters are checked before
 # running the code. The TestParam.pl script does extensive checks and provides
 # detailed warnings and error messages. 
-# The configuration is obtained from SetSWMF.pl and it is checked against the LAYOUT file.
+# The configuration is obtained from Config.pl and it is checked against the LAYOUT file.
 # The parameters of CON and the physics components are checked against the XML
 # descriptions in the PARAM.XML files using the share/Scripts/CheckParam.pl script.
 #
@@ -246,7 +246,7 @@ sub print_help{
 #BOC
 "Purpose:
 
-    Based on the settings shown by SetSWMF.pl and the registration and layout 
+    Based on the settings shown by Config.pl and the registration and layout 
     information contained in the layout file, check the consistency of 
     settings and the correctness of the input parameter file.
 

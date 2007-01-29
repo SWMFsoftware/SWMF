@@ -5,7 +5,7 @@
 # The copied file contains variables that define the operating system (OS), 
 # the main directory (SWMF\_ROOT). The version variables (XY\_VERSION)
 # are modified to select the appropriate component and module versions.
-# Normally this is done via the SetSWMF.pl script.
+# Normally this is done with the Config.pl script.
 # The Makefile.def file is included in almost all Makefile-s in the SWMF and its components.
 #EOP
 
@@ -20,7 +20,7 @@ STANDALONE=NO
 # Do not touch the lines above this line #####################################
 #
 # Select the physics components by commenting out exactly one version for each
-# This is normally done by the perl script SetSWMF.pl
+# This is normally done by the perl script Config.pl
 
 GM_VERSION = Empty#			^CMP IF GM
 IH_VERSION = Empty#			^CMP IF IH

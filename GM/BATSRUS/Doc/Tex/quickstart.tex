@@ -241,13 +241,19 @@ for selecting the optimization level. Remember that you have to type
 \end{verbatim}
 before recompiling the code with a different precision or compiler flags!
 
-In the SWMF the grid size of most components (including \BATSRUS) can
-be set with the SetSWMF.pl perl script. This script simply calls
-the {\tt GridSize.pl} scripts in the component directories.
-In the stand alone mode the grid size can be most conveniently 
-changed with directly running the {\tt GridSize.pl} Perl script. Type
+The grid size of BATSRUS can be inquired and set with the Config.pl perl 
+script, e.g.:
 \begin{verbatim}
-  GridSize.pl -h
+  Config.pl -g
+\end{verbatim}
+will show the current setting, and 
+\begin{verbatim}
+  Config.pl -g=4,4,4,2000,400
+\end{verbatim}
+will set a total of 2000 $4\times4\times4$ blocks and 400 implicit blocks
+per processor. Type
+\begin{verbatim}
+  Config.pl -h
 \end{verbatim}
 to see the usage. The script edits the {\tt src/ModSize.f90} file
 and sets the number of the blocks {\tt nBLK=MaxBlock},

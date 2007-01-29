@@ -10,12 +10,12 @@ all of the files that they contain.
 \begin{verbatim}
 File or Directory:         Notes:
 
-Configure.pl               Script to configure code
+Config.pl                  Script to (un)install and configure the code
+Configure.pl               Script to configure the source code
 Configure.options          Default configuration options
 Doc/                       Documentation 
    Tex/                       Latex source code for documentation
    HTML/                      HTML form of the documentation
-GridSize.pl                Script to view and change the grid size
 Idl/                       Source code for IDL post processing
 Makefile                   Main makefile
 Makefile.def               Place holder for the configured Makefile.def
@@ -66,7 +66,7 @@ of blocks basically determines the amount of memory the code will use.
 The number of blocks that any given processor can handle depends on
 the amount of memory that each node has available and must be changed
 in the file {\tt src/ModSize.f90}. This is normally done with the {\tt
-GridSize.pl} script.  The maximum number of blocks is defined by the
+Config.pl} script.  The maximum number of blocks is defined by the
 variable {\tt nBLK}.
 
 \subsubsection{Number of Cells in Each Block: {\tt nI},
@@ -78,8 +78,7 @@ The size of blocks is determined in {\tt ModSize.f90} by the parameters
 {\tt nI}, {\tt nJ}, {\tt nK}, the numbers of cells in a block
 in each dimension.  This number does not include ghost cells which the code
 takes care of automatically.  The user should set these numbers with the 
-GridSize.pl script according to
-their needs based on the following restrictions.
+Config.pl script according to their needs based on the following restrictions.
 \begin{itemize}
 \item {\tt nI,nJ,nK} variables should not be less than 4 and must be set as even
       integers (4, 6, 8, 10 ...). If the grid is uniform (all cells the same size)
