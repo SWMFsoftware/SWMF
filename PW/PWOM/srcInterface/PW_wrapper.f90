@@ -234,11 +234,12 @@ subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVarIn, &
 end subroutine PW_put_from_ie
 !==============================================================================
 
-subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
+subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
 
   use ModPWOM, only : iComm,nProc,&
                       ThetaLine_I,PhiLine_I, &
-                      dOxyg_CI,dHyd_CI,dHel_CI,uOxyg_CI,uHyd_CI,uHel_CI,nLine,nAlt,&
+                      dOxyg_CI,dHyd_CI,dHel_CI,uOxyg_CI,uHyd_CI,uHel_CI,&
+                      nLine,nAlt,&
                       nLine_P, nLineBefore_P
 
   use ModMpi
@@ -246,43 +247,50 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
   implicit none
   character (len=*),parameter :: NameSub='PW_get_for_gm'
 
-  integer, intent(in)           :: nVar, nFieldLine
-  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
+  integer, intent(in)           :: nVar, nLineTotal
+  real, intent(out)             :: Buffer_VI(nVar, nLineTotal)
   character (len=*),intent(in)  :: Name_V(nVar)
   real,             intent(in)  :: tSimulation
 
   integer :: iVar,i,iError
-  real    :: SendBuffer(nLine,nVar)
   integer :: iSendCount
 
   integer, save, allocatable :: iDisplacement_P(:), iRecieveCount_P(:)
+  real, save, allocatable :: SendBuffer_VI(:,:)
+
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
   ! The sizes and displacements of MPI messages
   if(.not.allocated(iRecieveCount_P)) then
      allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))
+     allocate(SendBuffer_VI(nVar, nLine))
      iRecieveCount_P = nVar*nLine_P
      iDisplacement_P = nVar*nLineBefore_P
   end if
 
-  ! Prepare buffer for sending on each proc
+  ! Fill buffer using SI units for sending on each proc
   do iVar=1,nVar
      select case (Name_V(iVar))
      case('CoLat')
-        SendBuffer(iVar,1:nLine)=ThetaLine_I(1:nLine)
+        SendBuffer_VI(iVar,:)=ThetaLine_I(1:nLine)
      case('Longitude')
-        SendBuffer(iVar,1:nLine)=PhiLine_I(1:nLine)
+        SendBuffer_VI(iVar,:)=PhiLine_I(1:nLine)
      case('Density1')
-        SendBuffer(iVar,1:nLine)=dOxyg_CI(nAlt,1:nLine)
+        ! g/cm^3 = 1000 * kg/m^3
+        SendBuffer_VI(iVar,:)=dOxyg_CI(nAlt,1:nLine)*1000.0
      case('Density2')
-        SendBuffer(iVar,1:nLine)=dHyd_CI(nAlt,1:nLine)
+        SendBuffer_VI(iVar,:)=dHyd_CI(nAlt,1:nLine)*1000.0
      case('Density3')
-        SendBuffer(iVar,1:nLine)=dHel_CI(nAlt,1:nLine)
+        SendBuffer_VI(iVar,:)=dHel_CI(nAlt,1:nLine)*1000.0
      case('Velocity1')
-        SendBuffer(iVar,1:nLine)=uOxyg_CI(nAlt,1:nLine)
+        ! cm/s = 0.01*m/s
+        SendBuffer_VI(iVar,:)=uOxyg_CI(nAlt,1:nLine)*0.01
      case('Velocity2')
-        SendBuffer(iVar,1:nLine)=uHyd_CI(nAlt,1:nLine)
+        SendBuffer_VI(iVar,:)=uHyd_CI(nAlt,1:nLine)*0.01
      case('Velocity3')
-        SendBuffer(iVar,1:nLine)=uHel_CI(nAlt,1:nLine)
+        SendBuffer_VI(iVar,:)=uHel_CI(nAlt,1:nLine)*0.01
      case default
         call CON_stop(NameSub//': unknown variable name='//Name_V(iVar))
      end select
@@ -293,8 +301,13 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
 
 
   ! Gather all data to the root processor 
-  call MPI_GATHERV(SendBuffer, iSendCount, MPI_REAL, &
+  call MPI_GATHERV(SendBuffer_VI, iSendCount, MPI_REAL, &
        Buffer_VI, iRecieveCount_P, iDisplacement_P, MPI_REAL, &
        0, iComm, iError)
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' nVar, nLineTotal=',nVar, nLineTotal
+     write(*,*)NameSub,' SendBuffer_VI=',SendBuffer_VI
+  end if
 
 end subroutine PW_get_for_gm
