@@ -1,6 +1,12 @@
 #ECHO
 T
 
+#VERBOSE
+100
+
+#TEST
+PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
+
 #PROGRESS
 1			DnShowProgressShort
 100			DnShowProgressLong
@@ -208,6 +214,12 @@ IE			NameComp1
 PW			NameComp2
 -1                      DnCouple
 1.0                     Dtcouple
+
+#COUPLE1
+PW
+GM
+-1
+1.0
 
 #BEGIN_COMP PW ############################################################
 
