@@ -75,7 +75,9 @@ my %HeaderFile   =  (
 		     IH => "restart.H" );
 
 # List possible time units and corresponding number of seconds
-my %UnitSecond = (
+my %UnitSecond = ("ns" => 1e-9,      # nano second
+                  "us" => 1e-6,      # micro second
+		  "ms" => 0.001,     # millisecond
 		  "s" => 1,          # second
 		  "m" => 60,         # minute
 		  "h" => 3600,       # hour
