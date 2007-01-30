@@ -176,8 +176,7 @@ contains
          if(n_proc(GM_)>1) &
               call MPI_bcast(Buffer_VI,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
-         call GM_put_from_pw(Buffer_VI, nTotalLine, nVar)!, &
-!              NameVar_V)
+         call GM_put_from_pw(Buffer_VI, nTotalLine, nVar, NameVar_V)
          if(DoTest) &
               write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_VI(1,1)
@@ -198,7 +197,29 @@ contains
   end subroutine couple_pw_gm
 
   !==========================================================================
-  subroutine couple_gm_pw
+  subroutine couple_gm_pw(tSimulation)
+
+    !INPUT ARGUMENTS:
+    real, intent(in) :: tSimulation     ! simulation time at coupling
+
+    !DESCRIPTION:
+    ! Couple between two components:\\
+    !    Global Magnetosphere (GM) source \\
+    !    Polar Wind (PW)  target
+    !
+    ! Send electrostatic potential and field aligned current from PW to IE.
+    !EOP
+
+    !\
+    ! General coupling variables
+    !/
+
+    ! Name of this interface
+    character (len=*), parameter :: NameSub='couple_gm_pw'
+
+    logical :: DoTest, DoTestMe
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     call CON_stop('couple_gm_pw has not been implented yet')
 

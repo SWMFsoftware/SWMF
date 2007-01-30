@@ -552,8 +552,8 @@ The default is DnRun = 1 for all the active components.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COUPLEORDER">
-	<parameter name="nCouple" type="integer" min="0" max="13" 
-							default="13" />
+	<parameter name="nCouple" type="integer" min="0" max="15" 
+							default="15" />
 	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
@@ -568,13 +568,16 @@ The default is DnRun = 1 for all the active components.
                         <option name="UA IE" default="$iCouple==9" />
                         <option name="IE IM" default="$iCouple==10" />
                         <option name="IM GM" default="$iCouple==11" />
-                        <option name="IE UA" default="$iCouple==12" />
-                        <option name="IE GM" default="$iCouple==13" />
+			<option name="PW GM" default="$iCouple==12" />
+                        <option name="IE UA" default="$iCouple==13" />
+                        <option name="IE GM" default="$iCouple==14" />
+			<option name="IE PW" default="$iCouple==15" />
+			
 		</parameter>
 	</for>
 
 #COUPLEORDER
-13                nCouple
+15                nCouple
 SC IH             NameSourceTarget
 IH SC             NameSourceTarget
 SC SP             NameSourceTarget
@@ -586,8 +589,10 @@ GM RB             NameSourceTarget
 UA IE             NameSourceTarget
 IE IM             NameSourceTarget
 IM GM             NameSourceTarget
+PW GM             NameSourceTarget
 IE UA             NameSourceTarget
 IE GM             NameSourceTarget
+IE PW             NameSourceTarget
 
 The nCouple variable determines the maximum number of couplings
 among the components. The NameSourceTarget string contains the
