@@ -33,17 +33,15 @@ module ModPWOM
        uExBphi_C,uExBr_C
 
 
-  real,    dimension(maxLine)        ::  ThetaLine_I, PhiLine_I,     &
-                                          xLine_I,yLine_I,zLine_I, &
-                                          UthetaLineOld_I,UphiLineOld_I,  &
-                                          UthetaLine_I,UphiLine_I,&
-                                          UxLine_I,UyLine_I,      &
-                                          UzLine_I,                    &
-                                          OmegaLine_I,                &
-                                          ThetaLineOld_I,PhiLineOld_I,&
-                                          xLineOld_I,yLineOld_I,      &
-                                          zLineOld_I,GeoMagLat_I,GeoMagLon_I,&
-                                          JrLine_I
+  real, dimension(MaxLine) ::            &
+       GeoMagLat_I,GeoMagLon_I,          &
+       ThetaLine_I, PhiLine_I,           &
+       xLine_I,yLine_I,zLine_I,          &
+       xLineOld_I,yLineOld_I,zLineOld_I, &
+       UthetaLine_I,UphiLine_I,          &
+       UxLine_I,UyLine_I,UzLine_I,       &
+       OmegaLine_I,                      &
+       JrLine_I
   
   
   integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
