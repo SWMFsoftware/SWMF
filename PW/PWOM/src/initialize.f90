@@ -1,5 +1,6 @@
 subroutine PW_initialize
 
+  use ModNumConst, ONLY: cDegToRad
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
@@ -12,10 +13,10 @@ subroutine PW_initialize
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
   !***************************************************************************
-  if (iProc < mod(NTotalLine,nProc)) then
-     nLine=int(ceiling(real(nTotalLine)/real(nProc)))
+  if (iProc < mod(nTotalLine,nProc)) then
+     nLine= (nTotalLine+nProc-1)/nProc
   else
-     nLine=int(floor(real(nTotalLine)/real(nProc)))
+     nLine= nTotalLine/nProc
   endif
 
   allocate(nLine_P(0:nProc-1), nLineBefore_P(0:nProc-1))
@@ -64,23 +65,30 @@ subroutine PW_initialize
      do iLine=1,nLine
         OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
         READ (UnitTmp_,*) TIME,DDT1,NS
-        READ (UnitTmp_,*)    GeoMagLat_I(iLine),GeoMagLon_I(iLine)
-        
+        READ (UnitTmp_,*) GeoMagLat_I(iLine),GeoMagLon_I(iLine)
+
+        ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
+        PhiLine_I   (iLine) = GeoMagLon_I(iLine)        * cDegToRad
+
         READ (UnitTmp_,*) &
-             (XXX,uOxyg_CI(i,iLine),pOxyg_CI(i,iLine),dOxyg_CI(i,iLine),TOxyg(i,iLine),&
-             i=1,nAlt)
+             (XXX,uOxyg_CI(i,iLine),pOxyg_CI(i,iLine),dOxyg_CI(i,iLine),&
+             TOxyg(i,iLine),i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uHel_CI(i,iLine),pHel_CI(i,iLine),dHel_CI(i,iLine),THel(i,iLine),    &
-             i=1,nAlt)
+             (XXX,uHel_CI(i,iLine),pHel_CI(i,iLine),dHel_CI(i,iLine),&
+             THel(i,iLine),i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uHyd_CI(i,iLine),pHyd_CI(i,iLine),dHyd_CI(i,iLine),THyd(i,iLine),    &
-             i=1,nAlt)
+             (XXX,uHyd_CI(i,iLine),pHyd_CI(i,iLine),dHyd_CI(i,iLine), &
+             THyd(i,iLine),i=1,nAlt)
         READ (UnitTmp_,*) &
-             (XXX,uElect_CI(i,iLine),pElect_CI(i,iLine),dElect_CI(i,iLine),            &
+             (XXX,uElect_CI(i,iLine),pElect_CI(i,iLine),dElect_CI(i,iLine), &
              TElect(i,iLine),i=1,nAlt)
         CLOSE(UNIT=UnitTmp_)
      enddo
   else
+     do iLine = 1, nLine
+        ThetaLine_I (iLine) = 10.0 * cDegToRad
+        PhiLine_I   (iLine) = 0.0
+     end do
      Time=0.0
   endif
 
@@ -94,7 +102,6 @@ subroutine PW_initialize
   !****************************************************************************
  
   TimeMax = Tmax
-  Time    =     0.0
 
   !****************************************************************************
   ! Read information from IE file, and get the velocities
