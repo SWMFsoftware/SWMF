@@ -45,7 +45,7 @@ module ModPWOM
   
   
   integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
-  real                               ::  DtMax=50.0, DtHorizontal, Time, TimeMax
+  real                               ::  DtHorizontal=50.0, Time, TimeMax
 
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.
