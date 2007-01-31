@@ -131,7 +131,7 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: iLine, nLine, Time, DtMax, DtHorizontal,DToutput
+  use ModPWOM, ONLY: iLine, nLine, Time, DtHorizontal,DToutput
 
   implicit none
 
@@ -143,7 +143,7 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
   character(len=*), parameter :: NameSub='PW_run'
   !---------------------------------------------------------------------------
-  DtHorizontal = min(DtMax, TimeSimulationLimit - Time)
+  DtHorizontal = min(DtHorizontal, TimeSimulationLimit - Time)
   
   do iLine=1,nLine
      call move_line
