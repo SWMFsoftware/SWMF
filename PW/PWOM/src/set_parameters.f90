@@ -46,7 +46,7 @@ subroutine PW_set_parameters(NameAction)
      case('#ROTATION')
         call read_var('UseCentrifugal',UseCentrifugal)
      case('#TIMESTEP')
-        call read_var('DtMax',DtMax)
+        call read_var('DtHorizontal',DtHorizontal)
      case('#VERTICALGRID')
         call read_var('nPoints',nAlt)
      case('#FIELDLINE')
@@ -54,7 +54,6 @@ subroutine PW_set_parameters(NameAction)
      endselect
   enddo
 
-  DtHorizontal = DtMax
   write(iUnitOutput,*) tMax
   write(iUnitOutput,*) DToutput
   write(iUnitOutput,*) TypeSolver
