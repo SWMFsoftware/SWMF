@@ -60,10 +60,8 @@ Examples:
 }
 
 my $XmlFile           = 'PARAM.XML';
-my $GridSizeScript    = 'GridSize.pl';
-my $MakefileConf      = 'Makefile.conf';
-my $StandAloneCode    = 'src/stand_alone.f90';
-my $NameComp;
+my $ConfigScript      = 'Config.pl';
+my $NameComp='GM';
 my $Precision;
 my $GridSize;
 
@@ -72,47 +70,15 @@ if($Save){
     exit 0;
 }
 
-if(open(CODE,$StandAloneCode)){
-    while(<CODE>){
-	$NameComp = $1 if /^\s*NameThisComp\s*=\s*[\'\"]([A-Z][A-Z])/;
-    }
-    close(CODE);
-    if(not $NameComp){
-       warn "WARNING Could not find NameThisComp setting in $StandAloneCode\n"
-	   ."Assuming component=GM\n";
-       $NameComp = 'GM';
-   }
-}else{
-    warn "WARNING Could not open $StandAloneCode,".
-	" assuming component=GM\n";
-    $NameComp = 'GM';
-}
+if(-x $ConfigScript){
+    $GridSize = `$ConfigScript -g`; chop($GridSize);
+    $GridSize =~ s/$ConfigScript(\s*-g=)?//;
 
-if(open(MAKEFILE,$MakefileConf)){
-    $Precision = 'unknown';
-    while(<MAKEFILE>){
-	$Precision = 'double' if 
-	    /^\s*PRECISION\s*=\s*(\-r8|\-real_size\s*64)/;
-	$Precision = 'single' if 
-	    /^\s*PRECISION\s*=\s*(\-r4|\-real_size\s*32)?\s*$/;
-    }
-    close(MAKEFILE);
-    if($Precision eq 'unknown'){
-	warn "WARNING Could not find PRECISION setting in $MakefileConf,".
-	    " assuming double precision\n";
-	$Precision = 'double';
-    }
-}else{
-    warn "WARNING could not open $MakefileConf, assuming double precision\n";
-    $Precision = 'double';
-}
-close(MAKEFILE);
+    $Precision = `Config.pl -show`;
+    $Precision = $1 if $Precision =~ /\b(single|double)\b/i;
 
-if(-x $GridSizeScript){
-    $GridSize = `$GridSizeScript`; chop($GridSize);
-    $GridSize =~ s/$GridSizeScript(\s*-g=)?//;
 }else{
-    warn "WARNING could not execute $GridSizeScript\n";
+    warn "WARNING could not execute $ConfigScript\n";
 }
 
 my @command = (
