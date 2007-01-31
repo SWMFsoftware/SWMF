@@ -5,3 +5,6 @@ lapack.o: lapack.f
 
 blas.o: blas.f
 	${COMPILE.f77} ${Cflag4} -132 blas.f
+
+ModNumConst.o: ModNumConst.f90
+	${COMPILE.f90} ${Cflag3} ModNumConst.f90
