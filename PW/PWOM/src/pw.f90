@@ -159,7 +159,7 @@ subroutine move_line
   ! to that of the nearest point. Otherwise, get the velocity from an
   !interpolation.
 
-  write(*,*)'!!! move_line starts: thetaline=',ThetaLine_I(1:nLine)  
+
   
   call New_Interpolate_Velocity( &
        Theta_G(iPhiLine_I(iLine),iThetaLine_I(iLine)),           &
@@ -214,9 +214,7 @@ subroutine move_line
   ThetaLine_I(iLine) = acos(max(-1.0,min(1.0, zLine_I(iLine)/rLowerBoundary)))
   PhiLine_I(iLine)   = modulo(atan2(yLine_I(iLine), xLine_I(iLine)), cTwoPi)
 
-  write(*,*)'!!! rlower=',rLowerBoundary
-  write(*,*)'!!! move_line finishes: x,y,z    =',xLine_I(1:nLine),yLine_I(1:nLine),zLine_I(1:nLine)
-  write(*,*)'!!! move_line finishes: thetaline=',ThetaLine_I(1:nLine)
+
   
   ! Deal with posibility that phi is negative
   if (PhiLine_I(iLine) .lt. 0.0) then
