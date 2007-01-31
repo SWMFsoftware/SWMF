@@ -37,6 +37,7 @@ program pw
 
   TIMELOOP:do
      if (Time >= Tmax) exit TIMELOOP
+     DtHorizontal = min(DtHorizontal, Tmax - Time)
      do iLine=1,nLine
 
         ! move_line moves the flux tube, then we can use the angular
