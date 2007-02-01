@@ -358,9 +358,6 @@ subroutine MH_set_parameters(TypeAction)
         if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
              'Only one of UsePartImplicit and UseFullImplicit can be true')
 
-        if(UsePointImplicit .and. UseImplicit) call stop_mpi(&
-             'Only one of Point-/Full-/Partimmplicit can be true')
-
         if(UseImplicit)call read_var('ImplCFL',ImplCFL)
 
      case("#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA")
@@ -2294,6 +2291,17 @@ contains
           write(*,*) NameSub//' setting UsePartSteady=F'
        endif
        UsePartSteady = .false.
+    end if
+
+    if(UsePointImplicit .and. UseFullImplicit)then
+       if(iProc==0)then
+          write(*,'(a)') NameSub//&
+               ' WARNING: Full and point implicit schemes do not'//&
+               ' work together !!!'
+          if(UseStrict)call stop_mpi('Correct PARAM.in!')
+          write(*,*) NameSub//' setting UsePointImplicit=F'
+       endif
+       UsePointImplicit = .false.
     end if
 
     !Finish checks for implicit                     !^CFG END IMPLICIT
