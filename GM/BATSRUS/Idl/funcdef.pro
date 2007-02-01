@@ -280,7 +280,7 @@ case f of
   'cslowx':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
   'cslowy':result=sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)
   'cslowz':result=sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
-  'Mfast' :result=sqrt(mm/cc/rho)
+  'Mfast' :result=sqrt(rho*uu/cc)
   'Mfastx':result=ux/sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)
   'Mfasty':result=uy/sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)
   'Mfastz':result=uz/sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)
