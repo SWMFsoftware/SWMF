@@ -713,14 +713,13 @@ contains
           ! sum of the photonionziation source/atom mass) of all..
           totalRLNumRhox=sum(RecombRate_VC(:,i,j,k) &
                *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_V)
-          !sum of the (loss term/atom mass) due to recombination
-
-          SourceLossMax = 3.0*maxval(abs(SiSpecies_I(1:nSpecies)+&
-               LiSpecies_I(1:nSpecies) ) /&
-               (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
-               /vInv_CB(i,j,k,iBlock)
 
           if(.not.(UsePointImplicit.or.UsePointImplicitOrig))then
+             !sum of the (loss term/atom mass) due to recombination
+             SourceLossMax = 3.0*maxval(abs(SiSpecies_I(1:nSpecies)+&
+                  LiSpecies_I(1:nSpecies) ) /&
+                  (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
+                  /vInv_CB(i,j,k,iBlock)
              VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
              VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
              VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
