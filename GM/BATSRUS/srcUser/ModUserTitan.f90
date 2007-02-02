@@ -434,6 +434,8 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
+    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
@@ -443,34 +445,17 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SE     = cZero
-    if(oktest_me)then
-    !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
-       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
+    if(.not.UsePointImplicit)then
+       ! Add all source terms if we do not use the point implicit scheme
+       call user_expl_source
+       call user_impl_source
+    elseif(IsPointImplSource)then
+       ! Add implicit sources only
+       call user_impl_source
+    else
+       ! Add explicit sources only
+       call user_expl_source
     end if
-    
-    call user_sources
-    Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
-    Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
-         SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
-    Source_VC(rhoUx_     ,:,:,:) = SrhoUx+Source_VC(rhoUx_,:,:,:)
-    Source_VC(rhoUy_     ,:,:,:) = SrhoUy+Source_VC(rhoUy_,:,:,:)
-    Source_VC(rhoUz_     ,:,:,:) = SrhoUz+Source_VC(rhoUz_,:,:,:)
-    Source_VC(Bx_        ,:,:,:) = SBx+Source_VC(Bx_,:,:,:)
-    Source_VC(By_        ,:,:,:) = SBy+Source_VC(By_,:,:,:)
-    Source_VC(Bz_        ,:,:,:) = SBz+Source_VC(Bz_,:,:,:)
-    Source_VC(P_     ,:,:,:) = SP+Source_VC(P_,:,:,:)
-    Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)
 
     if(oktest_me)then
        write(*,*)'After Source(rho, rhoSp)=', &
@@ -512,6 +497,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
+    use ModPointImplicit, ONLY: UsePointImplicit
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies,iBlock
@@ -734,9 +720,11 @@ contains
                (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
                /vInv_CB(i,j,k,iBlock)
 
-          VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
-          VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
-          VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+          if(.not.UsePointImplicit)then
+             VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
+             VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
+             VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+          end if
 
           SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
                +SiSpecies_I(1:nSpecies) &
@@ -759,18 +747,31 @@ contains
                !                +inv_gm1*totalSourceNumRho*KTn &
           !                -0.50*uu2*(totalLossRho) &
                !                -inv_gm1*totalLossNumx*State_VGB(P_,i,j,k,iBlock) 
-
-          kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho
+          
           kTn = KT0
+          kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho/2.0
           SE(i,j,k) = SE(i,j,k)  &
                +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-               -0.50*uu2*(totalLossRho)
+               -0.50*uu2*(totalLossRho) &
+               +1.5*totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
 
           SP(i,j,k) = SP(i,j,k)  &
                +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                Nu_C(i,j,k)  &
                +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-               +0.50*(gm1)*uu2*(totalSourceRho) 
+               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +totalNumRho*(kTn-KTi)*Nu_C(i,j,k) 
+          
+!!!          kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho
+!!!          SE(i,j,k) = SE(i,j,k)  &
+!!!               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+!!!               -0.50*uu2*(totalLossRho)
+!!!
+!!!          SP(i,j,k) = SP(i,j,k)  &
+!!!               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+!!!               Nu_C(i,j,k)  &
+!!!               +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+!!!               +0.50*(gm1)*uu2*(totalSourceRho) 
           
        endif !R_BLK(i,j,k,iBlock) >= Rbody?
        end do; end do; end do     ! end of the i,j,k loop
@@ -1176,9 +1177,12 @@ contains
          BrFaceInside,BthetaFaceInside,BphiFaceInside
     real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
     real, dimension(1:3):: location,v_phi
-    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
+!    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
     real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
     real:: cosSZA, coef
+
+    real:: uDotR, bDotR
+
     !--------------------------------------------------------------------------
     !
     !---------------------------------------------------------------------------
@@ -1200,31 +1204,31 @@ contains
     ! Rotate to spherical coordinates
     !/
     RFace    = sqrt(XFace**2+YFace**2+ZFace**2)
-    cosTheta = ZFace/RFace
-    sinTheta = sqrt(XFace**2+YFace**2)/RFace
-    cosPhi   = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-    sinPhi   = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
-    VrFaceOutside = (VxFaceOutside*XFace      +&
-         VyFaceOutside*YFace                  +&
-         VzFaceOutside*ZFace)/RFace
-    VthetaFaceOutside = ((VxFaceOutside*XFace +&
-         VyFaceOutside*YFace)*ZFace           -&
-         VzFaceOutside*(XFace**2+YFace**2))   /&
-         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-    VphiFaceOutside = (VyFaceOutside*XFace    -&
-         VxFaceOutside*YFace)*sinTheta        /&
-         ((XFace**2+YFace**2+cTolerance**2)/RFace)
-    BrFaceOutside = (BxFaceOutside*XFace      +&
-         ByFaceOutside*YFace                  +&
-         BzFaceOutside*ZFace)/RFace
-    BthetaFaceOutside = ((BxFaceOutside*XFace +&
-         ByFaceOutside*YFace)*ZFace           -&
-         BzFaceOutside*(XFace**2+YFace**2))   /&
-         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
-    BphiFaceOutside = (ByFaceOutside*XFace    -&
-         BxFaceOutside*YFace)*sinTheta        /&
-         ((XFace**2+YFace**2+cTolerance**2)/RFace)
-
+!!!    cosTheta = ZFace/RFace
+!!!    sinTheta = sqrt(XFace**2+YFace**2)/RFace
+!!!    cosPhi   = XFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+!!!    sinPhi   = YFace/sqrt(XFace**2+YFace**2+cTolerance**2)
+!!!    VrFaceOutside = (VxFaceOutside*XFace      +&
+!!!         VyFaceOutside*YFace                  +&
+!!!         VzFaceOutside*ZFace)/RFace
+!!!    VthetaFaceOutside = ((VxFaceOutside*XFace +&
+!!!         VyFaceOutside*YFace)*ZFace           -&
+!!!         VzFaceOutside*(XFace**2+YFace**2))   /&
+!!!         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
+!!!    VphiFaceOutside = (VyFaceOutside*XFace    -&
+!!!         VxFaceOutside*YFace)*sinTheta        /&
+!!!         ((XFace**2+YFace**2+cTolerance**2)/RFace)
+!!!    BrFaceOutside = (BxFaceOutside*XFace      +&
+!!!         ByFaceOutside*YFace                  +&
+!!!         BzFaceOutside*ZFace)/RFace
+!!!    BthetaFaceOutside = ((BxFaceOutside*XFace +&
+!!!         ByFaceOutside*YFace)*ZFace           -&
+!!!         BzFaceOutside*(XFace**2+YFace**2))   /&
+!!!         (sqrt(XFace**2+YFace**2+cTolerance**2)*RFace)
+!!!    BphiFaceOutside = (ByFaceOutside*XFace    -&
+!!!         BxFaceOutside*YFace)*sinTheta        /&
+!!!         ((XFace**2+YFace**2+cTolerance**2)/RFace)
+!!!
 
     !Apply boundary conditions
     select case(iBoundary)                                                 
@@ -1242,12 +1246,12 @@ contains
        VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
             /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*SW_p*Body_Ti_dim/SW_T_dim
 
-       VrFaceInside     = -VrFaceOutside
-       VthetaFaceInside = VthetaFaceOutside
-       VphiFaceInside   = VphiFaceOutside
-       BrFaceInside     = -BrFaceOutside
-       BthetaFaceInside = BthetaFaceOutside
-       BphiFaceInside   = BphiFaceOutside
+!!!       VrFaceInside     = -VrFaceOutside
+!!!       VthetaFaceInside = VthetaFaceOutside
+!!!       VphiFaceInside   = VphiFaceOutside
+!!!       BrFaceInside     = -BrFaceOutside
+!!!       BthetaFaceInside = BthetaFaceOutside
+!!!       BphiFaceInside   = BphiFaceOutside
 !       BrFaceInside     = cZero
 !       BthetaFaceInside = cZero
 !       BphiFaceInside   = cZero
@@ -1256,22 +1260,37 @@ contains
     !\
     ! Rotate back to cartesian coordinates::
     !/
-    VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
-         VthetaFaceInside*cosTheta*cosPhi          -&
-         VphiFaceInside*sinPhi 
-    VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
-         VthetaFaceInside*cosTheta*sinPhi          +&
-         VphiFaceInside*cosPhi
-    VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
-         VthetaFaceInside*sinTheta
-    VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
-         BthetaFaceInside*cosTheta*cosPhi          -&
-         BphiFaceInside*sinPhi
-    VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
-         BthetaFaceInside*cosTheta*sinPhi          +&
-         BphiFaceInside*cosPhi
-    VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
-         BthetaFaceInside*sinTheta
+!!!    VarsGhostFace_V(Ux_) = VrFaceInside*XFace/RFace+&
+!!!         VthetaFaceInside*cosTheta*cosPhi          -&
+!!!         VphiFaceInside*sinPhi 
+!!!    VarsGhostFace_V(Uy_) = VrFaceInside*YFace/RFace+&
+!!!         VthetaFaceInside*cosTheta*sinPhi          +&
+!!!         VphiFaceInside*cosPhi
+!!!    VarsGhostFace_V(Uz_) = VrFaceInside*ZFace/RFace-&
+!!!         VthetaFaceInside*sinTheta
+!!!    VarsGhostFace_V(Bx_) = BrFaceInside*XFace/RFace+&
+!!!         BthetaFaceInside*cosTheta*cosPhi          -&
+!!!         BphiFaceInside*sinPhi
+!!!    VarsGhostFace_V(By_) = BrFaceInside*YFace/RFace+&
+!!!         BthetaFaceInside*cosTheta*sinPhi          +&
+!!!         BphiFaceInside*cosPhi
+!!!    VarsGhostFace_V(Bz_) = BrFaceInside*ZFace/RFace-&
+!!!         BthetaFaceInside*sinTheta
+
+    uDotR=( VxFaceOutside*XFace &
+         +  VyFaceOutside*YFace &
+         +  VzFaceOutside*ZFace )/Rface
+    bDotR=( BxFaceOutside*XFace &
+         +  ByFaceOutside*YFace &
+         +  BzFaceOutside*ZFace )/Rface
+    
+    VarsGhostFace_V(Ux_)=VxFaceOutside - 2.0*uDotR* XFace/Rface
+    VarsGhostFace_V(Uy_)=VyFaceOutside - 2.0*uDotR* YFace/Rface
+    VarsGhostFace_V(Uz_)=VzFaceOutside - 2.0*uDotR* ZFace/Rface
+    VarsGhostFace_V(Bx_)=BxFaceOutside - 2.0*bDotR* XFace/Rface
+    VarsGhostFace_V(By_)=ByFaceOutside - 2.0*bDotR* YFace/Rface
+    VarsGhostFace_V(Bz_)=BzFaceOutside - 2.0*bDotR* ZFace/Rface
+    
     !\
     ! Apply corotation:: Currently works only for the first body.
     !/
@@ -1774,5 +1793,92 @@ contains
 !   end select
     
   end subroutine user_specify_initial_refinement
+
+  subroutine user_impl_source
+  
+    ! This is a test and example for using point implicit source terms
+    ! Apply friction relative to some medium at rest
+    ! The friction force is proportional to the velocity and the density.
+
+    use ModPointImplicit, ONLY: &
+         UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use ModGeometry,ONLY: r_BLK
+    use ModNumConst, ONLY: cZero
+    use ModVarIndexes, ONLY: Rho_, RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, &
+         RhoMHCp_ , RhoHHCp_, RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_, &
+         Energy_
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
+    use ModProcMH,   ONLY: iProc
+
+    logical :: oktest,oktest_me
+    integer :: iBlock, i, j, k
+    real    :: Coef
+    !-------------------------------------------------------------------------
+
+    if(iProc==PROCtest .and. globalBLK==BLKtest)then
+       call set_oktest('user_imp_sources',oktest,oktest_me)
+    else
+       oktest=.false.; oktest_me=.false.
+    end if
+
+    iBlock = GlobalBlk
+
+    ! Initialization for implicit sources
+    if(UsePointImplicit .and. .not.allocated(iVarPointImpl_I))then
+
+       ! Allocate and set iVarPointImpl_I
+       allocate(iVarPointImpl_I(11))
+
+       iVarPointImpl_I = (/RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, RhoMHCp_ ,&
+            RhoHHCp_,RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_ , P_/)
+
+       ! Note that energy is not an independent variable for the 
+       ! point implicit scheme. The pressure is an independent variable,
+       ! and in this example there is no implicit pressure source term.
+
+       ! Tell the point implicit scheme if dS/dU will be set analytically
+       ! If this is set to true the DsDu_VVC matrix has to be set below.
+       IsPointImplMatrixSet = .false.
+
+       RETURN
+    end if
+
+    Srho   = cZero
+    SrhoSpecies=cZero
+    SrhoUx = cZero
+    SrhoUy = cZero
+    SrhoUz = cZero
+    SBx    = cZero
+    SBy    = cZero
+    SBz    = cZero
+    SP     = cZero
+    SE     = cZero
+    if(oktest_me)then
+    !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
+       write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
+    end if
+    
+    call user_sources
+    Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
+    Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
+         SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
+    Source_VC(rhoUx_     ,:,:,:) = SrhoUx+Source_VC(rhoUx_,:,:,:)
+    Source_VC(rhoUy_     ,:,:,:) = SrhoUy+Source_VC(rhoUy_,:,:,:)
+    Source_VC(rhoUz_     ,:,:,:) = SrhoUz+Source_VC(rhoUz_,:,:,:)
+    Source_VC(Bx_        ,:,:,:) = SBx+Source_VC(Bx_,:,:,:)
+    Source_VC(By_        ,:,:,:) = SBy+Source_VC(By_,:,:,:)
+    Source_VC(Bz_        ,:,:,:) = SBz+Source_VC(Bz_,:,:,:)
+    Source_VC(P_     ,:,:,:) = SP+Source_VC(P_,:,:,:)
+    Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)
+
+  end subroutine user_impl_source
+  subroutine user_expl_source
+
+    ! Here come the explicit source terms
+
+  end subroutine user_expl_source
 
 end Module ModUser
