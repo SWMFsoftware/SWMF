@@ -11,7 +11,7 @@ module ModFieldLine
        dHydPw_C,uHydPw_C,pHydPw_C,THydPW,     &
        dElectPw_C,uElectPw_C,pElectPw_C,TElectPW
 
-  logical :: IsRestartPW, IsVariableDtPW 
+  logical :: IsRestartPW, IsVariableDtPW, DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
        GeoMagLonPW,JrPW,nDimPW
   real    :: wHorizontalPW
@@ -34,7 +34,7 @@ contains
        dElect_CI, uElect_CI, pElect_CI, TElect,                      &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt )
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog )
 
     use ModParameters
 
@@ -48,7 +48,7 @@ contains
     integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
-    logical,optional,intent(in) :: IsVariableDt,IsRestart
+    logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog
     !-------------------------------------------------------------------------
 
     dOxygPw_C (:) = dOxyg_CI(:)
@@ -85,6 +85,7 @@ contains
     if (present(IsVariableDt))  IsVariableDtPW=IsVariableDt
     if (present(IsRestart))     IsRestartPW=IsRestart
     if (present(DToutput))      DToutputPW=DToutput
+    if (present(DoLog))         DoLogPW=DoLog
   end subroutine put_field_line
 
   !***************************************************************************
@@ -97,7 +98,7 @@ contains
        dElect_CI, uElect_CI, pElect_CI, TElect,                      &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt)
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog)
 
     use ModParameters
 
@@ -111,7 +112,7 @@ contains
     
     character*100,optional,intent(out):: NameRestart
     character(7),optional,intent(out):: TypeSolver
-    logical,optional,intent(out)      :: IsVariableDt,IsRestart
+    logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput
     integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
     
@@ -150,6 +151,7 @@ contains
     if (present(IsVariableDt))  IsVariableDt=IsVariableDtPW
     if (present(IsRestart))     IsRestart=IsRestartPW
     if (present(DToutput))      DToutput=DToutputPW
+    if (present(DoLog))         DoLog=DoLogPW
 
   end subroutine get_field_line
 
