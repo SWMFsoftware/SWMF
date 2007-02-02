@@ -60,7 +60,19 @@ program pw
   do iLine=1,nLine
      CLOSE(UNIT=iUnitGraphics(iLine))
   enddo
-  close(UNIT=iUnitOutput)
+
+  if (nLog == -1) then
+     do iLine=1,nLine
+        close(iUnitOutput(iLine))
+     enddo
+  elseif(nLog ==0) then
+     !do nothing in this case
+  elseif(nLog==iLineGlobal(iLine)) then
+     close(iUnitOutput(iLine))
+  else
+  end if
+
+  
 
   call MPI_FINALIZE(errcode)
 
