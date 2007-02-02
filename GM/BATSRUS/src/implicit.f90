@@ -84,7 +84,7 @@ subroutine advance_impl
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModPhysics, ONLY : gm1, UnitSi_t
   use ModImplicit
-  use ModPointImplicit, ONLY: UsePointImplicit
+  use ModPointImplicit, ONLY: UsePointImplicit,UsePointImplicitOrig
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
@@ -103,7 +103,7 @@ subroutine advance_impl
   real*8  :: time_before,time_before_all
   logical :: oktest, oktest_me, DoTestKrylov, DoTestKrylovMe
 
-  logical :: UseUpdateCheckOrig, UsePointImplicitOrig
+  logical :: UseUpdateCheckOrig
 
   real    :: pRhoRelativeMin
 

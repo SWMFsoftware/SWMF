@@ -54,6 +54,7 @@ module ModPointImplicit
   private ! except
 
   logical, public :: UsePointImplicit = .false.  ! Use point implicit scheme?
+  logical, public :: UsePointImplicitOrig = .false.
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
@@ -191,7 +192,7 @@ contains
              Norm = sum(abs(State0_C))/nIJK
           else
              Norm = sum(abs(State0_C), mask=true_cell(1:nI,1:nJ,1:nK,iBlock)) &
-                  /count(true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  /max(count(true_cell(1:nI,1:nJ,1:nK,iBlock)),1)
           end if
 
           Epsilon = EpsPointImpl*Norm + EpsPointImpl_V(iVar)
