@@ -18,7 +18,7 @@ module ModPWOM
 
   real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary
 
-  integer :: nLine,nLog=1
+  integer :: nLine,nLog=0
 
   ! The number of lines on each processor and on the processors with lower rank
   integer, allocatable :: nLine_P(:), nLineBefore_P(:)
