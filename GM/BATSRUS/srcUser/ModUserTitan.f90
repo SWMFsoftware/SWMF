@@ -497,7 +497,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
-    use ModPointImplicit, ONLY: UsePointImplicit
+    use ModPointImplicit, ONLY: UsePointImplicit,UsePointImplicitOrig
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies,iBlock
@@ -720,7 +720,7 @@ contains
                (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
                /vInv_CB(i,j,k,iBlock)
 
-          if(.not.UsePointImplicit)then
+          if(.not.(UsePointImplicit.or.UsePointImplicitOrig))then
              VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
              VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
              VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
