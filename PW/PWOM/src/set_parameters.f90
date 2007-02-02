@@ -16,9 +16,6 @@ subroutine PW_set_parameters(NameAction)
   real:: ddt1, xxx
   integer:: ns
   !---------------------------------------------------------------------------
-  NameOutput  = 'PW/log.out'
-  iUnitOutput = io_unit_new()
-  open(UNIT=iUnitOutput, FILE=NameOutput)
   
   do
      if(.not.read_line() ) EXIT
@@ -51,14 +48,14 @@ subroutine PW_set_parameters(NameAction)
         call read_var('nPoints',nAlt)
      case('#FIELDLINE')
         call read_var('nTotalLine',nTotalLine)
+     case('#LOG')
+        call read_var('WriteLog',nLog) ! nLog=-1 write for all lines
+                                       ! nLog= 0 write for no lines
+                                       ! nLog= 1..nTotalLine, write for that line
      endselect
-  enddo
 
-  write(iUnitOutput,*) tMax
-  write(iUnitOutput,*) DToutput
-  write(iUnitOutput,*) TypeSolver
-  write(iUnitOutput,*) IsImplicit
-  write(iUnitOutput,*) DtVertical
-  write(iUnitOutput,*) TypeSolver
+
+  enddo
+  
 
 end subroutine PW_set_parameters
