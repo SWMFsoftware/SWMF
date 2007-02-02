@@ -178,7 +178,7 @@ C
       CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
       SZA = SZA * PI/180.
       SZAD = SZA*360./6.283185
-      WRITE(iUnitOutput,9996)SZAD
+      if (DoLog) WRITE(iUnitOutput,9996)SZAD
  9996 FORMAT(26X,'SOLAR ZENITH ANGLE:',1F8.2,' DEGREES')
 C Calculate slant path column densities in the direction of sun of major
 C species:
@@ -191,14 +191,14 @@ C spectrum and photoionization rates as a function of altitude:
 C
         CALL EPHOTO
 C
-      WRITE(iUnitOutput,9997)
+      if (DoLog) WRITE(iUnitOutput,9997)
 CALEX note IDATE HERE is IYD in the rest of the subroutine
  9997 FORMAT('   IDATE ','  UTG   ','   SEC   ','    GLAT    ',
      $' GLONG    ',' STL   ',' F107A   ','  F107   ',
      $'   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
      $'   SZAD    ')
 C
-      WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
+      if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
      $,IART,GMLAT,GMLONG,SZAD
  9995 FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C

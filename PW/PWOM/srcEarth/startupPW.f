@@ -8,6 +8,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE STRT
 C
 C
+
       use ModCommonVariables
 
 C
@@ -81,7 +82,7 @@ C      READ (5,2) DRBND
 CALEX DRBND=altitude step? I think the units here are in cm not meters
 CALEX like most of the code.
       DRBND=2.E6
-      WRITE (iUnitOutput,2) DRBND
+
 CALEX RN=lower boundary of the simulation? 
 CALEX RAD=radial distance of cell centers?      
 CALEX RBOUND=radial distance of lower boundary of cell     
@@ -106,7 +107,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,1) NEXP
       NEXP=3
-      WRITE (iUnitOutput,1) NEXP
+
 CAlex      write(*,*) NEXP
 
 CALEX AR stands for area function. 12 is the lower boundary of the cell
@@ -149,7 +150,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,2) CURR(1)
 C      CURR(1)=0.E-6
-      WRITE(iUnitOutput,2) CURR(1)
+
       CURR(1)=2.998E2*CURR(1)
 !      CURTIM=150.
 !      CURTIM0=500.
@@ -228,7 +229,7 @@ C                                                                      C
       
       CALL GLOWEX
       DO 1099 J = 1,40
-         WRITE (iUnitOutput,9999) ALTD(J),PHOTOTF(J+1) 
+
  9999    FORMAT(2X,1PE15.3,2X,1PE15.3)
  1099 CONTINUE
 C
@@ -249,7 +250,7 @@ C
 C      ELFXIN=9.
 C
 2     FORMAT(6X,1PE15.4)
-      WRITE (iUnitOutput,2) ETOP,ELFXIN
+
 C      READ (5,2) HEATI1,HEATI2,ELHEAT
       HEATI1=0.
       HEATI2=0.
@@ -259,7 +260,7 @@ C
       HEATI2=5.E-6
 C
       ELHEAT=0.
-      WRITE(iUnitOutput,2) HEATI1,HEATI2,ELHEAT
+
       HEATA1=3.5E7
       HEATA2=1.30E7
       HEATA3=1.5E8
@@ -288,10 +289,10 @@ C
 
 
 53    CONTINUE
-      DO 54 K=1,NDIM,10
-      WRITE (iUnitOutput,52) ALTD(K),QOXYG(K),QHYD(K),QHEL(K),QELECT(K)
+!      DO 54 K=1,NDIM,10
+!      WRITE (iUnitOutput,52) ALTD(K),QOXYG(K),QHYD(K),QHEL(K),QELECT(K)
 52    FORMAT(5(1PE15.4))
-54    CONTINUE
+!54    CONTINUE
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
@@ -304,7 +305,7 @@ CCC      TIME=0.
 CCC      TMAX=1.E6
 
             
-      WRITE (iUnitOutput,4) TIME,TMAX
+
 4     FORMAT(6X,2(1PE15.4))
 !!!!      READ (iUnitInput,*) Dt
 C      DT=1./10.
@@ -312,7 +313,7 @@ C      DT=1./10.
       DTR1=DTX1/DRBND
       DTX2=DT*NTS
       DTR2=DTX2/DRBND
-      WRITE (iUnitOutput,2) DT
+
       H0=0.5/DRBND
       H1E1=1./DTX1
       H1O1=1./DTX1
@@ -382,8 +383,10 @@ C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ(5,3) NCNPRT
+
+      
       NCNPRT=0
-      WRITE (iUnitOutput,3) NCNPRT
+
       CALL MODATM(ALTMIN,XNO2,XNN2,XNO,XNH,XNHE,XNT)
       CALL MODATM(ALTMAX,YNO2,YNN2,YNO,YNH,YNHE,YNT)
       DO 60 I=1,NDIM
@@ -394,6 +397,9 @@ C      READ(5,3) NCNPRT
       ETOP1=ETOP*1.23E-6/DRBND
       CALL COLLIS(NDIM)
       CALL ELFLDW
+
+      !write log
+      if (DoLog) then
       IF (NCNPRT.NE.0) GO TO 999
       WRITE(iUnitOutput,1005) NDIM
 1005  FORMAT(1H1,5X,'NUMBER OF CELLS=',I4)
@@ -1057,6 +1063,8 @@ C      READ(5,3) NCNPRT
 1180  FORMAT(3X,I3,0PF10.2,2X,8(1PE12.4))
 1028  FORMAT(3X,I3,0PF14.2,2X,2(1PE16.5))
 1031  FORMAT(3X,I3,0PF14.2,2X,4(1PE16.5))
+
+      endif
       RETURN
       END
 
