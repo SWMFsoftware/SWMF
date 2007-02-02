@@ -18,7 +18,7 @@ module ModPWOM
 
   real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary
 
-  integer :: nLine
+  integer :: nLine,nLog=1
 
   ! The number of lines on each processor and on the processors with lower rank
   integer, allocatable :: nLine_P(:), nLineBefore_P(:)
@@ -51,16 +51,16 @@ module ModPWOM
   logical::  UseIE=.false.
   character(len=100) :: NamePhiNorth, NamePhiSouth
 
-  character(len=100) :: NameInput, NameOutput, &
+  character(len=100) :: NameInput,  &
                    NameCollision,NameSourceGraphics
 
   character(len=100),dimension(MaxLine):: &
-       NameRestartIn, NameRestart, NameGraphics
+       NameRestartIn, NameRestart, NameGraphics,NameOutput
 
-  integer       :: iUnitInput,iUnitOutput,iUnitSourceGraphics,&
+  integer       :: iUnitInput,iUnitSourceGraphics,&
                    iUnitCollision,nAlt=390
                  
-  integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics
+  integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
   
   real, dimension(1:maxGrid,0:maxLine):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
                                           dHel_CI, uHel_CI, pHel_CI, THel,         &
