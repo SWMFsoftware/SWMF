@@ -54,6 +54,25 @@ subroutine PW_initialize
 
      iUnitGraphics(iLine)  = io_unit_new()
      open(iUnitGraphics(iLine),FILE=NameGraphics(iLine))
+     
+     !Setup log files
+     if (nLog == -1) then
+        write(NameOutput(iLine),"(a,i4.4,a)") &
+             'PW/log_iline',iLineGlobal(iLine),'.out'   
+        iUnitOutput(iLine)  = io_unit_new()
+        open(iUnitOutput(iLine),FILE=NameOutput(iLine))    
+     elseif(nLog ==0) then
+        !do nothing in this case
+     elseif(nLog==iLineGlobal(iLine)) then
+        write(NameOutput(iLine),"(a,i4.4,a)") &
+             'PW/log_iline',iLineGlobal(iLine),'.out'      
+        iUnitOutput(iLine)  = io_unit_new()
+        open(iUnitOutput(iLine),FILE=NameOutput(iLine))     
+     else
+     end if
+
+     
+     
   enddo
 
 !******************************************************************************
