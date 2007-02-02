@@ -24,7 +24,7 @@ module ModCommonVariables
   
   Real wHorizontal
   CHARACTER(7) TypeSolver
-  Logical IsImplicit
+  Logical IsImplicit,DoLog
 
   Real AR12top(2),AR23top(2),CellVolumeTop(2)
 
