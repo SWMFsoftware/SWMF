@@ -54,7 +54,7 @@ C     define the output files and attaching units
      &                 NameRestart=NameRestart,    
      &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
      &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
-     &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim)
+     &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog)
       
       DT=DtVertical
 
@@ -100,7 +100,7 @@ c      nDim=680
 c      nDim=1500
 c      nDim=1180
 c      nDim=750
-      WRITE (iUnitOutput,21) NDIM
+
       
       NDIM2=NDIM-1
       NDIM1=NDIM+1
@@ -150,7 +150,7 @@ C                                                                      C
 
       
 
-      write(iUnitOutput,*) 'time:',time
+
 
       if (IsFirstCall) then
          CALL PW_print_plot
@@ -403,7 +403,7 @@ c            CALL PRNTHE
 c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
-            write(iUnitOutput,*) 'time:',time
+
             CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
@@ -430,7 +430,7 @@ c            CALL PRNTHE
 c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
-            write(iUnitOutput,*) 'time:',time
+
             CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
@@ -702,7 +702,7 @@ c            CALL PRNTHE
 c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
-            write(iUnitOutput,*) 'time:',time
+
             CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
@@ -727,7 +727,7 @@ c            CALL PRNTHE
 c            CALL PRNTHP
 c            CALL PRNTEL
 c            CALL PRNTEF
-            write(iUnitOutput,*) 'time:',time
+
             CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources

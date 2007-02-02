@@ -244,6 +244,7 @@ subroutine PW_advance_line
   implicit none
 
   real XXX,MaxLineTime
+  logical :: DoLog
   !---------------------------------------------------------------------------
   ! Get the GeoMagnetic latitude and longitude 
   GeoMagLat_I(iLine) = 90.0 - ThetaLine_I(iLine)*cRadToDeg
@@ -261,6 +262,11 @@ subroutine PW_advance_line
   MaxLineTime=Time+DtHorizontal
   if (MaxLineTime > Tmax) MaxLineTime = Tmax
   
+  if (nLog ==-1 .or. iLineGlobal(iLine) == nLog) then
+     DoLog=.true.
+  else
+     DoLog=.False.
+  endif
 
   call put_field_line(&
        dOxyg_CI(:,iLine),uOxyg_CI(:,iLine),pOxyg_CI(:,iLine),TOxyg(:,iLine), &
@@ -269,11 +275,11 @@ subroutine PW_advance_line
        dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine), &
        TElect(:,iLine), &
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
-       OmegaLine_I(iLine), iUnitOutput=iUnitOutput,                        &
+       OmegaLine_I(iLine), iUnitOutput=iUnitOutput(iLine),                        &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
-       nAlt=nAlt)
+       nAlt=nAlt,DoLog=DoLog)
     
   call polar_wind
   
@@ -285,7 +291,7 @@ subroutine PW_advance_line
        dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine),TElect(:,iLine), &
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
-       iUnitOutput=iUnitOutput,iLine=iLine,Time=Time,MaxLineTime=MaxLineTime)
+       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime)
   else
      call get_field_line( &
        dOxyg_CI(:,iLine), uOxyg_CI(:,iLine), pOxyg_CI(:,iLine), TOxyg(:,iLine),     &
@@ -294,7 +300,7 @@ subroutine PW_advance_line
        dElect_CI(:,iLine), uElect_CI(:,iLine), pElect_CI(:,iLine), TElect(:,iLine), &
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
-       iUnitOutput=iUnitOutput,iLine=iLine,MaxLineTime=MaxLineTime)
+       iLine=iLine,MaxLineTime=MaxLineTime)
   endif
   
 end subroutine PW_advance_line
