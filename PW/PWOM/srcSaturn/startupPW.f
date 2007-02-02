@@ -94,7 +94,7 @@ c      DrBnd=3.0e7
 c      DrBnd=1.5e7
       DrBnd=0.75e7
 
-      WRITE (iUnitOutput,2) DRBND
+      
 CALEX RN=lower boundary of the simulation? 
 CALEX RAD=radial distance of cell centers?      
 CALEX RBOUND=radial distance of lower boundary of cell     
@@ -123,7 +123,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,1) NEXP
       NEXP=3
-      WRITE (iUnitOutput,1) NEXP
+      
 CAlex      write(*,*) NEXP
 
 CALEX AR stands for area function. 12 is the lower boundary of the cell
@@ -165,7 +165,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ (5,2) CURR(1)
 
-      WRITE(iUnitOutput,2) CURR(1)
+      
       CURR(1)=2.998E2*CURR(1)
 !      CURTIM=150.
 !      CURTIM0=500.
@@ -274,7 +274,7 @@ C
 C      ELFXIN=9.
 C
 2     FORMAT(6X,1PE15.4)
-      WRITE (iUnitOutput,2) ETOP,ELFXIN
+     
 C      READ (5,2) HEATI1,HEATI2,ELHEAT
       HEATI1=0.
       HEATI2=0.
@@ -286,7 +286,7 @@ calex looking at.
 c      HEATI2=2.5E-11
 C
       ELHEAT=0.
-      WRITE(iUnitOutput,2) HEATI1,HEATI2,ELHEAT
+      
       HEATA1=3.5E7
       HEATA2=2.0E8
       HEATA3=1.5E8
@@ -313,7 +313,7 @@ C
       QELECT(K)=ELHEAT*HEATX3
 53    CONTINUE
       DO 54 K=1,NDIM,10
-      WRITE (iUnitOutput,52) ALTD(K),QOXYG(K),QHYD(K),QHEL(K),QELECT(K)
+      
 52    FORMAT(5(1PE15.4))
 54    CONTINUE
 C                                                                      C
@@ -327,7 +327,7 @@ C      READ (5,4) TIME,TMAX
 CCC      TIME=0.
 CCC      TMAX=1.E6
       
-      WRITE (iUnitOutput,4) TIME,TMAX
+      
 4     FORMAT(6X,2(1PE15.4))
 C      READ (5,2) DT   1/20.0 is a good value
 C     Read in the time step
@@ -337,7 +337,7 @@ c      DT=1./1.
       DTR1=DTX1/DRBND
       DTX2=DT*NTS
       DTR2=DTX2/DRBND
-      WRITE (iUnitOutput,2) DT
+    
       H0=0.5/DRBND
       H1E1=1./DTX1
       H1O1=1./DTX1
@@ -392,7 +392,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ(5,3) NCNPRT
       NCNPRT=0
-      WRITE (iUnitOutput,3) NCNPRT
+      
       CALL MODATM(ALTMIN,XNH2,XNH,XNH2O,XNCH4,XNT)
       CALL MODATM(ALTMAX,YNH2,YNH,YNH2O,YNCH4,YNT)
       DO 60 I=1,NDIM
@@ -403,7 +403,11 @@ C      READ(5,3) NCNPRT
       ETOP1=ETOP*1.23E-6/DRBND
       CALL COLLIS(NDIM)
       CALL ELFLDW
+
+      if (DoLog) then
+
       IF (NCNPRT.NE.0) GO TO 999
+      
       WRITE(iUnitOutput,1005) NDIM
 1005  FORMAT(1H1,5X,'NUMBER OF CELLS=',I4)
       WRITE(iUnitOutput,1020) NEXP
@@ -1160,6 +1164,8 @@ CALEX this is just a place holding number!!!!
 1180  FORMAT(3X,I3,0PF10.2,2X,8(1PE13.4E3))
 1028  FORMAT(3X,I3,0PF14.2,2X,2(1PE17.5E3))
 1031  FORMAT(3X,I3,0PF14.2,2X,4(1PE17.5E3))
+
+      endif
       RETURN
       END
 
