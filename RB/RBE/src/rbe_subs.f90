@@ -2141,8 +2141,12 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
 
         ! calculate maximum Courant number and nrun
         cmax=0.
+
         do j=1,ip
-           do i=1,iba(j)
+            j1=j+1
+            if (j1.gt.ip) j1=j1-ip
+            ibaj=max(iba(j),iba(j1))
+           do i=1,ibaj
               cl1=dt/dlati(i)*vl(i,j,k,m)
               cp1=0.
               if (i.ge.1) cp1=dt/dphi*vp(i,j,k,m)
@@ -2150,6 +2154,7 @@ subroutine drift(t,dt,f2,vl,vp,ro,rb,fb,dlati,dphi,ekev,ib0,iba,&
               cmax=max(cmx,cmax)
            enddo
         enddo
+
         nrun=ifix(cmax/0.35)+1     ! Courant number can't be greater 0.35
         dt1=dt/nrun                ! new dt
 
