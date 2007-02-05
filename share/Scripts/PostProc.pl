@@ -4,7 +4,6 @@ my $Help    = ($h or $H or $help);
 my $Verbose = ($v or $verbose);
 my $Gzip    = ($g or $gzip);
 my $Repeat  = ($r or $repeat);
-my $Output  = ($o or $output);
 my $MakeMovie = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
 my $Rsync   = ($rsync or $sync);
@@ -19,10 +18,10 @@ my $ParamIn = "PARAM.in";
 my $RunLog  = "runlog";
 
 my $NameOutput;
-if($Output){
-    die "$ERROR: options -o(utput) and -r(epeat) cannot be combined!\n"
+if(@ARGV){
+    die "$ERROR: option -r(epeat) cannot be combined with output directory!\n"
 	if $Repeat;
-    die "$ERROR: option -o(utput) requires the name of a directory!\n" 
+    die "$ERROR: only one directory name can be given!\n" 
 	unless $#ARGV == 0;
     $NameOutput = $ARGV[0];
     die "$ERROR: directory or file $NameOutput already exists!\n"
@@ -110,7 +109,7 @@ REPEAT:{
 	chdir $Pwd;
     }
 
-    if($Rsync and not $Output){
+    if($Rsync and not $NameOutput){
 	my $Dir;
 	foreach $Dir (keys %PlotDir){
 	    my $PlotDir = $PlotDir{$Dir};
@@ -128,7 +127,7 @@ REPEAT:{
 }
 
 # Done except for collecting output files
-exit 0 unless $Output;
+exit 0 unless $NameOutput;
 
 # Collect plot directories into $NameOutput 
 # and make empty plot directories if requested
@@ -217,7 +216,7 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-g] [-m | -M] [-r=REPEAT | -o DIR]
+   PostProc.pl [-h] [-v] [-g] [-m | -M] [-r=REPEAT | DIR]
 
    -h -help    Print help message and exit.
 
@@ -241,11 +240,10 @@ Usage:
                rsync must be installed on the local and target machines,
                and no password should be required to execute rsync.
 
-   -o -output  Output should be collected into a directory tree
-               Cannot be used with the -r option. Requires DIR argument.
-
-   DIR         Name of the directory tree for the -o option.
-               The directory should be new.
+   DIR         Name of the directory tree to collect the processed files in.
+               Cannot be used with the -r option. The directory is created
+               and it should be new (to avoid overwriting older results).
+               By default the processed data is not collected.
 
 Examples:
 
@@ -270,7 +268,7 @@ PostProc.pl -r=360 -g >& PostProc.log &
    Collect processed output into a directory tree named OUTPUT/New
    and rsync it into the run/OUTPUT/New directory on another machine:
 
-PostProc.pl -o OUTPUT/New -rsync=ME@OTHERMACHINE:run/OUTPUT/New'
+PostProc.pl -rsync=ME@OTHERMACHINE:run/OUTPUT/New OUTPUT/New'
 
 #EOC
     ,"\n\n";
