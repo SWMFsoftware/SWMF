@@ -49,6 +49,11 @@ module IE_ModMain
   !/
   real :: ThetaTilt, SinThetaTilt, CosThetaTilt
 
+  !\
+  ! Save logfile?
+  !/
+  logical :: DoSaveIELogfile = .false.
+
   integer                           :: iDebugLevel = 0
 
 end module IE_ModMain

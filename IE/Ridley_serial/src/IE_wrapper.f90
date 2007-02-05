@@ -222,6 +222,12 @@ contains
 
           UseGridBasedIE = .false.
 
+       case("#SAVELOGFILE")
+          call read_var('DoSaveIELogfile',DoSaveIELogfile)
+          if(DoSaveIELogfile)then
+             if(iProc==0)call check_dir(NameIonoDir)
+          endif
+
        case default
           if(iProc==0) then
              write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
@@ -1015,6 +1021,9 @@ subroutine IE_run(tSimulation,tSimulationLimit)
 
   ! Save solution (plot files) into file if required
   call IE_output
+
+  ! Save logfile if required
+  call IE_save_logfile
 
 end subroutine IE_run
 

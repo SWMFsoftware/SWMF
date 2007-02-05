@@ -90,6 +90,16 @@ of saves in terms of time step or physical time.
 The default is that no plotfiles are saved.
 </command>
 
+<command name="SAVELOGFILE">
+	<parameter name="DoSaveIELogfile" type="logical" default="F"/>
+
+#SAVELOGFILE
+F			DoSaveIELogfile
+
+If true, every time that iono_solve is called, iteration, time, and soltution
+information is written to a logfile.
+</command>
+
 </commandgroup>
 
 <commandgroup name="Physical parameters">
