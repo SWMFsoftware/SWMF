@@ -228,6 +228,16 @@ contains
              if(iProc==0)call check_dir(NameIonoDir)
           endif
 
+       case("#CONDUCTANCE")
+          call read_var('OvalWidthFactor',OvalWidthFactor)
+          call read_var('OvalStrengthFactor',OvalStrengthFactor)
+          if (conductance_model/=4) then
+             write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
+                  ' command '//trim(NameCommand)// &
+                  ' can only be used with conductance model 4'
+             if(UseStrict)call CON_stop('Correct PARAM.in!')
+          end if
+
        case default
           if(iProc==0) then
              write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&

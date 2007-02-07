@@ -143,6 +143,14 @@ ihp			NameOfAuroralModel
 xyz			NameOfSolarModel
 
 This command cannot be used in the SWMF.
+','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'CONDUCTANCE'},'content' => [{'attrib' => {'min' => '0','default' => '1.0','type' => 'real','name' => 'OvalWidthFactor'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '1.7','type' => 'real','name' => 'OvalStrengthFactor'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+
+#CONDUCTANCE
+1.0			OvalWidthFactor
+1.7			OvalStrengthFactor
+
+Modifies the conductance by adjusting the oval width/strength.
+Only works for conductance model 4!
 ','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'expr' => '-d \'IE/ionosphere\' or not $_IsFirstSession'},'content' => [{'content' => '
 	Output directory IE/ionosphere should exist!
 ','type' => 't'}],'type' => 'e','name' => 'rule'}],'type' => 'e','name' => 'commandList'}];

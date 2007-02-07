@@ -54,6 +54,11 @@ module IE_ModMain
   !/
   logical :: DoSaveIELogfile = .false.
 
+  !\
+  ! Conductance model 4 factors
+  !/
+  real :: OvalWidthFactor=1., OvalStrengthFactor=1.7
+
   integer                           :: iDebugLevel = 0
 
 end module IE_ModMain

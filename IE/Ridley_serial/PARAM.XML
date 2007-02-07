@@ -239,6 +239,18 @@ xyz			NameOfSolarModel
 This command cannot be used in the SWMF.
 </command>
 
+<command name="CONDUCTANCE">
+	<parameter name="OvalWidthFactor" type="real" min="0" default="1.0"/>
+	<parameter name="OvalStrengthFactor" type="real" min="0" default="1.7"/>
+
+#CONDUCTANCE
+1.0			OvalWidthFactor
+1.7			OvalStrengthFactor
+
+Modifies the conductance by adjusting the oval width/strength.
+Only works for conductance model 4!
+</command>
+
 </commandgroup>
 
 <rule expr="-d 'IE/ionosphere' or not $_IsFirstSession">
