@@ -193,9 +193,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      end select
   endif
 
-  if (iModel.eq.4) then
-     ! Implemented Feb. 7, 2007 as modified version of iModel 5 with
-     !    new narrower fitting of the auroral oval.  DDZ
+  if (iModel.eq.4 .or. iModel.eq.5) then
 
      i_cond_nlats = 16
      i_cond_nmlts = 24
@@ -323,12 +321,42 @@ subroutine FACs_to_fluxes(iModel, iBlock)
                  polarcap = .true.
               endif
 
-              hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                   OvalStrengthFactor*( &
-                   hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
-              ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                   OvalStrengthFactor*( &
-                   ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
+              if (iModel.eq.4) then
+                 ! Implemented Feb. 7, 2007 as modified version of iModel 5 with
+                 !    new narrower fitting of the auroral oval.  DDZ
+
+                 hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
+                      OvalStrengthFactor*( &
+                      hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
+                 ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
+                      OvalStrengthFactor*( &
+                      ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
+              else  ! iModel=5
+                 !
+                 ! We want minimal conductance lower than the oval
+                 !
+
+                 if (.not.polarcap) then
+                    distance = distance/3.0
+                    hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                    ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                 end if
+
+                 !
+                 ! A sort of correction on the fit
+                 !
+
+                 hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
+                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+                 ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
+                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+
+                 ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
+                 hall=1.7*( &
+                      hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
+                 ped =1.7*( &
+                      ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
+              end if
 
               if ((hall.gt.1.0).and.(ped.gt.0.5)) then
                  IONO_NORTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
@@ -454,12 +482,35 @@ subroutine FACs_to_fluxes(iModel, iBlock)
                  polarcap = .true.
               endif
 
-              hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                   OvalStrengthFactor*( &
-                   hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
-              ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                   OvalStrengthFactor*( &
-                   ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
+              if (iModel.eq.4) then
+                 hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
+                      OvalStrengthFactor*( &
+                      hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
+                 ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
+                      OvalStrengthFactor*( &
+                      ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
+              else  ! iModel=5
+                 if (.not.polarcap) then
+                    distance = distance/3.0
+                    hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                    ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                 endif
+
+                 !
+                 ! A sort of correction on the fit
+                 !
+
+                 hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
+                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+                 ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
+                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+
+                 ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
+                 hall=1.7*( &
+                      hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2))
+                 ped =1.7*( &
+                      ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2))
+              end if
 
               if ((hall.gt.1.0).and.(ped.gt.0.5)) then
                  IONO_SOUTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
@@ -481,327 +532,6 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         enddo
      end select
   end if
-
-  if (iModel.eq.5) then 
-
-     i_cond_nlats = 16
-     i_cond_nmlts = 24
-
-     do j = 1, i_cond_nlats
-
-        hal_a0_up(i_cond_nmlts+1,j) = hal_a0_up(1,j)
-        ped_a0_up(i_cond_nmlts+1,j) = ped_a0_up(1,j)
-        hal_a0_do(i_cond_nmlts+1,j) = hal_a0_do(1,j)
-        ped_a0_do(i_cond_nmlts+1,j) = ped_a0_do(1,j)
-        hal_a1_up(i_cond_nmlts+1,j) = hal_a1_up(1,j)
-        ped_a1_up(i_cond_nmlts+1,j) = ped_a1_up(1,j)
-        hal_a1_do(i_cond_nmlts+1,j) = hal_a1_do(1,j)
-        ped_a1_do(i_cond_nmlts+1,j) = ped_a1_do(1,j)
-        hal_a2_up(i_cond_nmlts+1,j) = hal_a2_up(1,j)
-        ped_a2_up(i_cond_nmlts+1,j) = ped_a2_up(1,j)
-        hal_a2_do(i_cond_nmlts+1,j) = hal_a2_do(1,j)
-        ped_a2_do(i_cond_nmlts+1,j) = ped_a2_do(1,j)
-
-     enddo
-
-     dlat = (cond_lats(1) - cond_lats(2))*IONO_PI/180.0
-     dmlt = (cond_mlts(2) - cond_mlts(1))*IONO_PI/12.0
-
-     select case(iBlock)
-     case(1)
-        !  Do North First
-
-        call Determine_Oval_Characteristics(IONO_NORTH_JR, &
-             IONO_NORTH_Theta, &
-             IONO_NORTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
-
-        do j = 1, IONO_nPsi
-           do i = 1, IONO_nTheta
-
-              y1 = IONO_NORTH_Theta(i,j)/dlat + 1.0
-              if (y1 > i_cond_nlats-1) then
-                 jlat = i_cond_nlats-1
-                 y1   = 1.0
-              else
-                 jlat = y1
-                 y1   = 1.0 - (y1 - jlat)
-              endif
-              y2 = 1.0 - y1
-
-              x1 = mod((IONO_NORTH_Psi(i,j) + IONO_PI),2.0*IONO_PI)/dmlt + 1.0
-              imlt = x1
-              x1   = 1.0 - (x1 - imlt)
-              x2   = 1.0 - x1
-
-              if (iono_north_jr(i,j) > 0) then
-
-                 hal_a0 = x1*y1*hal_a0_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a0_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a0_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a0_up(imlt+1,jlat+1)
-
-                 hal_a1 = x1*y1*hal_a1_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a1_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a1_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a1_up(imlt+1,jlat+1)
-
-                 hal_a2 = x1*y1*hal_a2_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a2_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a2_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a2_up(imlt+1,jlat+1)
-
-                 ped_a0 = x1*y1*ped_a0_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a0_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a0_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a0_up(imlt+1,jlat+1)
-
-                 ped_a1 = x1*y1*ped_a1_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a1_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a1_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a1_up(imlt+1,jlat+1)
-
-                 ped_a2 = x1*y1*ped_a2_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a2_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a2_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a2_up(imlt+1,jlat+1)
-
-              else
-
-                 hal_a0 = x1*y1*hal_a0_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a0_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a0_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a0_do(imlt+1,jlat+1)
-
-                 hal_a1 = x1*y1*hal_a1_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a1_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a1_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a1_do(imlt+1,jlat+1)
-
-                 hal_a2 = x1*y1*hal_a2_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a2_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a2_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a2_do(imlt+1,jlat+1)
-
-                 ped_a0 = x1*y1*ped_a0_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a0_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a0_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a0_do(imlt+1,jlat+1)
-
-                 ped_a1 = x1*y1*ped_a1_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a1_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a1_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a1_do(imlt+1,jlat+1)
-
-                 ped_a2 = x1*y1*ped_a2_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a2_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a2_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a2_do(imlt+1,jlat+1)
-
-              endif
-
-              distance = (IONO_NORTH_Theta(i,j) - Loc_of_Oval(j))
-
-              !
-              ! We want minimal conductance lower than the oval
-              !
-
-              if (distance > 0.0) then
-                 distance = distance/3.0
-                 hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                 ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                 polarcap = .false.
-              else
-                 polarcap = .true.
-              endif
-
-              !
-              ! A sort of correction on the fit
-              !
-
-              hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
-                   exp(-1.0*(distance/Width_of_Oval(j))**2)
-              ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
-                   exp(-1.0*(distance/Width_of_Oval(j))**2)
-
-              ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
-              hall=1.7*( &
-                   hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
-              ped =1.7*( &
-                   ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
-
-              if ((hall.gt.1.0).and.(ped.gt.0.5)) then
-
-                 IONO_NORTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
-                 IONO_NORTH_EFlux(i,j) = (ped*(16.0+IONO_NORTH_Ave_E(i,j)**2)/&
-                      (40.0*IONO_NORTH_Ave_E(i,j)))**2/1000.0
-
-              else
-
-                 IONO_NORTH_Ave_E(i,j) = IONO_Min_Ave_E
-                 IONO_NORTH_EFlux(i,j) = IONO_Min_EFlux
-
-              endif
-
-              if ((PolarCap_AveE > 0.0).and.(polarcap)) then
-                 IONO_NORTH_Ave_E(i,j) = max(IONO_NORTH_Ave_E(i,j), &
-                      PolarCap_AveE)
-                 IONO_NORTH_EFlux(i,j) = max(IONO_NORTH_EFlux(i,j), &
-                      PolarCap_EFlux)
-              endif
-
-           enddo
-        enddo
-
-     case(2)
-        !  Do South Next
-
-        call Determine_Oval_Characteristics(IONO_SOUTH_JR, &
-             IONO_SOUTH_Theta, &
-             IONO_SOUTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
-
-        Loc_of_Oval = IONO_PI - Loc_of_Oval
-
-        do j = 1, IONO_nPsi
-           do i = 1, IONO_nTheta
-
-
-              y1 = (IONO_PI-IONO_SOUTH_Theta(i,j))/dlat + 1.0
-              if (y1 > i_cond_nlats-1) then
-                 jlat = i_cond_nlats-1
-                 y1   = 1.0
-              else
-                 jlat = y1
-                 y1   = 1.0 - (y1 - jlat)
-              endif
-              y2 = 1.0 - y1
-
-              x1 = mod((IONO_SOUTH_Psi(i,j) + IONO_PI),2.0*IONO_PI)/dmlt + 1.0
-              imlt = x1
-              x1   = 1.0 - (x1 - imlt)
-              x2   = 1.0 - x1
-
-              if (iono_south_jr(i,j) > 0) then
-
-                 hal_a0 = x1*y1*hal_a0_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a0_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a0_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a0_up(imlt+1,jlat+1)
-
-                 hal_a1 = x1*y1*hal_a1_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a1_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a1_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a1_up(imlt+1,jlat+1)
-
-                 hal_a2 = x1*y1*hal_a2_up(imlt  ,jlat  ) + &
-                      x2*y1*hal_a2_up(imlt+1,jlat  ) + &
-                      x1*y2*hal_a2_up(imlt  ,jlat+1) + &
-                      x2*y2*hal_a2_up(imlt+1,jlat+1)
-
-                 ped_a0 = x1*y1*ped_a0_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a0_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a0_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a0_up(imlt+1,jlat+1)
-
-                 ped_a1 = x1*y1*ped_a1_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a1_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a1_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a1_up(imlt+1,jlat+1)
-
-                 ped_a2 = x1*y1*ped_a2_up(imlt  ,jlat  ) + &
-                      x2*y1*ped_a2_up(imlt+1,jlat  ) + &
-                      x1*y2*ped_a2_up(imlt  ,jlat+1) + &
-                      x2*y2*ped_a2_up(imlt+1,jlat+1)
-
-              else
-
-                 hal_a0 = x1*y1*hal_a0_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a0_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a0_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a0_do(imlt+1,jlat+1)
-
-                 hal_a1 = x1*y1*hal_a1_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a1_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a1_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a1_do(imlt+1,jlat+1)
-
-                 hal_a2 = x1*y1*hal_a2_do(imlt  ,jlat  ) + &
-                      x2*y1*hal_a2_do(imlt+1,jlat  ) + &
-                      x1*y2*hal_a2_do(imlt  ,jlat+1) + &
-                      x2*y2*hal_a2_do(imlt+1,jlat+1)
-
-                 ped_a0 = x1*y1*ped_a0_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a0_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a0_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a0_do(imlt+1,jlat+1)
-
-                 ped_a1 = x1*y1*ped_a1_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a1_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a1_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a1_do(imlt+1,jlat+1)
-
-                 ped_a2 = x1*y1*ped_a2_do(imlt  ,jlat  ) + &
-                      x2*y1*ped_a2_do(imlt+1,jlat  ) + &
-                      x1*y2*ped_a2_do(imlt  ,jlat+1) + &
-                      x2*y2*ped_a2_do(imlt+1,jlat+1)
-
-              endif
-
-              distance = (IONO_SOUTH_Theta(i,j)-Loc_of_Oval(j))
-
-              if (distance < 0.0) then
-                 distance = distance/3.0
-                 hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                 ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                 polarcap = .false.
-              else
-                 polarcap = .true.
-              endif
-
-              !
-              ! A sort of correction on the fit
-              !
-
-              hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
-                   exp(-1.0*(distance/Width_of_Oval(j))**2)
-              ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
-                   exp(-1.0*(distance/Width_of_Oval(j))**2)
-
-              ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
-              hall=1.7*( &
-                   hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2))
-              ped =1.7*( &
-                   ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2))
-
-              if ((hall.gt.1.0).and.(ped.gt.0.5)) then
-
-                 IONO_SOUTH_Ave_E(i,j)  = ((hall/ped)/0.45)**(1.0/0.85)
-                 IONO_SOUTH_EFlux(i,j) = (ped*(16.0+IONO_SOUTH_Ave_E(i,j)**2)/&
-                      (40.0*IONO_SOUTH_Ave_E(i,j)))**2/1000.0
-
-              else
-
-                 IONO_SOUTH_Ave_E(i,j) = IONO_Min_Ave_E
-                 IONO_SOUTH_EFlux(i,j) = IONO_Min_EFlux
-
-              endif
-
-              if ((PolarCap_AveE > 0.0).and.(polarcap)) then
-                 IONO_SOUTH_Ave_E(i,j) = max(IONO_SOUTH_Ave_E(i,j), &
-                      PolarCap_AveE)
-                 IONO_SOUTH_EFlux(i,j) = max(IONO_SOUTH_EFlux(i,j),        &
-                      PolarCap_EFlux)
-              endif
-
-           enddo
-        enddo
-     end select
-  endif
 
 end subroutine FACs_to_fluxes
 
