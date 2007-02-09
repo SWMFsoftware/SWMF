@@ -3,7 +3,8 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   use ModVarIndexes, ONLY: UseMultiSpecies
   use ModUtilities, ONLY: lower_case
   use ModPhysics, ONLY: UnitSi_Rho, UnitSi_RhoU
-
+  use ModPwGrid, ONLY:  CoordPw_DI, StatePw_VI, Theta_, Phi_, Rho_, RhoUb_,&
+                         nVarPW,nLinePW
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
   
@@ -11,13 +12,13 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   real, intent(in)              :: Buffer_VI(nVar, nFieldLine)
   character (len=*), intent(in) :: Name_V(nVar)
 
-  integer, parameter :: Theta_=1, Phi_=2, Rho_=1, RhoUb_=2
+
   integer :: iRhoPwFirst=-1, iRhoPwLast=-1, iUPwFirst=-1, iUPwLast=-1
-  logical :: DoInitialize = .true.
+  logical, save :: DoInitialize = .true.
 
-  real, allocatable :: CoordPw_VI(:,:), StatePw_VI(:,:)
 
-  integer :: nVarPw=-1, nLinePw=-1
+
+  
   integer :: iVar
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
@@ -28,7 +29,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   if(DoInitialize)then
      nLinePw = nFieldLine
      nVarPw  = nVar
-     allocate(CoordPw_VI(2, nFieldLine))
+     allocate(CoordPw_DI(2, nFieldLine))
      do iVar = 1, nVar
         NameVar = Name_V(iVar)
         call lower_case(NameVar)
@@ -37,6 +38,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
         if(iUPwFirst == -1 .and. NameVar(1:1) == 'v')   iUPwFirst   = iVar
         if(NameVar(1:1) == 'v')                         iUPwLast    = iVar
      end do
+     DoInitialize=.false.
   end if
   if(nLinePw /= nFieldLine .or. nVarPw /= nVar)then
      write(*,*)NameSub,' ERROR: nLinePw=',nLinePw,'/= nFieldLine=',nFieldLine,&
@@ -44,8 +46,8 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
      call CON_stop(NameSub,' nFieldLine or nVar has changed')
   end if
 
-  CoordPw_VI(Theta_,:) = Buffer_VI(Theta_,:)
-  CoordPw_VI(Phi_,:)   = Buffer_VI(Phi_,:)
+  CoordPw_DI(Theta_,:) = Buffer_VI(Theta_,:)
+  CoordPw_DI(Phi_,:)   = Buffer_VI(Phi_,:)
 
   if(UseMultiSpecies)then
   else
@@ -60,7 +62,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
      if(DoTestMe)then
         write(*,*)'!!! nVarPw, nLinePw=',nVarPw, nLinePw
         write(*,*)'!!! Buffer_VI=',Buffer_VI
-        write(*,*)'!!! CoordPw_VI=',CoordPw_VI
+        write(*,*)'!!! CoordPw_DI=',CoordPw_DI
         write(*,*)'!!! StatePw_VI=',StatePw_VI
      end if
   end if
