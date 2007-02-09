@@ -425,6 +425,9 @@ contains
             FaceCoords_D,nVar,FaceState_V)
 
        VarsGhostFace_V = FaceState_V
+    case('polarwind')
+       call read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+       VarsGhostFace_V = FaceState_V
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
     end select
