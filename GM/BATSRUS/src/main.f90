@@ -355,3 +355,10 @@ subroutine read_ih_buffer(y,z,State_V)
   real :: y, z, State_V(8)
   call stop_mpi('ERROR: read_ih_buffer is for SWMF')
 end subroutine read_ih_buffer
+!=============================================================================
+subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+  real, intent(in) :: FaceCoords_D(3)
+  integer, intent(in) :: nVar
+  real, intent(inout) :: FaceState_V(nVar)
+  call stop_mpi('ERROR: read_pw_buffer is for SWMF')
+end subroutine read_pw_buffer
