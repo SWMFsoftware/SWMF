@@ -24,6 +24,7 @@ MODULES = \
 	ModReadParam.o\
 	ModSort.o\
 	ModTimeConvert.o\
+	ModTriangulate.o\
 	ModUtilities.o\
 	CON_axes.o\
 	CON_geopack.o\
