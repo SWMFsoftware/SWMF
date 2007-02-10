@@ -135,6 +135,8 @@ subroutine ionosphere_fine_grid
         write(iUnitOut,'(a)') "Solar EUV Only"
      case(3)
         write(iUnitOut,'(a)') "Supersmooth oval"
+     case(4)
+        write(iUnitOut,'(a)') "Restricted oval"
      case(5)
         write(iUnitOut,'(a)') "Realistic oval"
      case default
@@ -812,32 +814,39 @@ subroutine ionosphere_write_output(iFile, iBlock)
 
 end subroutine ionosphere_write_output
 
+!=============================================================================
+
 subroutine IE_save_logfile
 
   use ModIonosphere
   use IE_ModIo
   use IE_ModMain
   use ModProcIE
+  use ModMpi
   
   implicit none
-  logical, save :: first_time = .true.
+  integer :: iError
+  logical :: IsFirstTime = .true.
   !--------------------------------------------------------------------------
-  if (.not.DoSaveIELogfile) return
+  if (.not.DoSaveLogfile) return
+
+  if(nProc>1) call MPI_bcast(cpcp_south,1,MPI_REAL,1,iComm,iError)
+
   if(iProc/=0) return
 
   write(NameFile,'(a)') trim(NameIonoDir)//"logIE.log"
-  if(first_time) then
-    first_time = .false.
-    open(unit=iUnit,file=NameFile,status="unknown")
-    write(iUnit,fmt="(a)")  'IE logfile output'
+  if(IsFirstTime) then
+    IsFirstTime = .false.
+    open(unit=iUnit,file=NameFile,status="replace")
+    write(iUnit,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
     write(iUnit,fmt="(a)") &
          'nsolve t yy mm dd hh mm ss ms ttilt ptilt cpcpn cpcps'
   else
     open(unit=iUnit,file=NameFile,status="old",position="append")
   end if
-  write(iUnit,fmt="(i4,e13.5,i5,5i3,i4,2f7.2,2e13.5)") &
+  write(iUnit,fmt="(i4,es13.5,i5,5i3,i4,2f7.2,2es13.5)") &
        nSolve, Time_Simulation, Time_Array(1:7), &
-       ThetaTilt*180.0/cPi, 0.0, cpcp_north, cpcp_south
+       ThetaTilt*cRadToDeg, 0.0, cpcp_north, cpcp_south
   close(iUnit)
 
 end subroutine IE_save_logfile
