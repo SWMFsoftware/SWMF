@@ -46,7 +46,7 @@ module ModPointImplicit
   !                
   ! where eps^w is a small perturbation in the w-th component of Uimp.
   !EOP
-
+  use ModSize, ONLY: nBLK
   implicit none
 
   save
@@ -55,6 +55,7 @@ module ModPointImplicit
 
   logical, public :: UsePointImplicit = .false.  ! Use point implicit scheme?
   logical, public :: UsePointImplicitOrig = .false.
+  logical, public :: UsePointImplicit_B(nBLK)=.false.
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
