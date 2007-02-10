@@ -592,8 +592,10 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
   real :: SigmaH_Particles, SigmaP_Particles, tau
   logical :: old
 
-  real    :: time_delay, IR, IX, IY, IZ, IYZ
+  real    :: time_delay
   real    :: cos_limit, meeting_value_h, meeting_value_p
+
+  !--------------------------------------------------------------------------
 
   if (theta(1,1) < 2.0*IONO_Theta_0) then
      north = .true.
@@ -607,33 +609,34 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
      tmp_z = IONO_SOUTH_Z
   endif
 
-  if (.not.use_comp(UA_)) then
+  if (use_comp(UA_)) then
+
+     Sigma0 = 1000.00
+
+     ! Use Conductances from the UAM, which are put into the following
+     ! variables
+
+     if (north) then
+        SigmaH = IONO_NORTH_SigmaH
+        SigmaP = IONO_NORTH_SigmaP
+     else
+        SigmaH = IONO_South_SigmaH
+        SigmaP = IONO_South_SigmaP
+     endif
+
+  else
 
      if (iModel > 1) then
 
-        do j = 1, nPsi
-           do i = 1, nTheta
-
-              IX = tmp_x(i,j)*cosTHETATilt - tmp_z(i,j)*sinTHETATilt
-              IY = tmp_y(i,j)
-              IZ = tmp_x(i,j)*sinTHETATilt + tmp_z(i,j)*cosTHETATilt
-
-              IR = sqrt(IX*IX + IY*IY + IZ*IZ)
-              IYZ = sqrt(IY*IY + IZ*IZ)
-
-              cos_SZA(i,j) = IX / IR
-
-              !           if (IX < 0.0) cos_SZA(i,j) = -cos_SZA(i,j)
-
-           enddo
-        enddo
+        cos_SZA = (tmp_x*cosTHETATilt - tmp_z*sinTHETATilt) &
+             / sqrt(tmp_x**2 + tmp_y**2 + tmp_z**2)
 
         ! We are going to need F10.7 ^ 0.53 and F10.7 ^ 0.49 a lot,
         ! So, let's just store them straight away:
 
         f107p53 = f107**0.53
         f107p49 = f107**0.49
-        cos_limit = cos(70.0*IONO_PI/180.0)
+        cos_limit = cos(70.0*cDegToRad)
         meeting_value_p = f107p49*(0.34*cos_limit+0.93*sqrt(cos_limit))
         meeting_value_h = f107p53*(0.81*cos_limit+0.54*sqrt(cos_limit))
 
@@ -818,21 +821,6 @@ subroutine ionosphere_conductance(Sigma0, SigmaH, SigmaP,               &
      else
         SAVE_SOUTH_SigmaP = 0.0
         SAVE_SOUTH_SigmaH = 0.0
-     endif
-
-  else
-
-     Sigma0 = 1000.00
-
-     ! Use Conductances from the UAM, which are put into the following
-     ! variables
-
-     if (north) then
-        SigmaH = IONO_NORTH_SigmaH
-        SigmaP = IONO_NORTH_SigmaP
-     else
-        SigmaH = IONO_South_SigmaH
-        SigmaP = IONO_South_SigmaP
      endif
 
   end if
