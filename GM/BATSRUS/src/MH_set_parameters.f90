@@ -39,7 +39,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser,          ONLY: user_read_inputs, user_init_session, &
        NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
-  use ModPointImplicit, ONLY: UsePointImplicit, BetaPointImpl
+  use ModPointImplicit, ONLY: UsePointImplicit,UsePointImplicitOrig,&
+       UsePointImplicit_B,BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
@@ -338,6 +339,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#POINTIMPLICIT")
         call read_var('UsePointImplicit', UsePointImplicit)
         if(UsePointImplicit)then
+           !the array allow user to specify the blocks to 
+           !use Point_implicit scheme 
+           UsePointImplicit_B  =UsePointImplicit
+           UsePointImplicitOrig=UsePointImplicit
+
            call read_var('BetaPointImplicit',BetaPointImpl)
            UsePartImplicit = .false.                   !^CFG IF IMPLICIT
            UseFullImplicit = .false.                   !^CFG IF IMPLICIT
@@ -351,6 +357,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseFullImplicit', UseFullImplicit)
 
         UseImplicit = UseFullImplicit .or. UsePartImplicit
+        UsePointImplicit_B  =UsePointImplicit
+        UsePointImplicitOrig=UsePointImplicit
 
         ! For implicit scheme it is better to use unsplit dB0/dt evaluation
         DoSplitDb0Dt = .not.UseImplicit
