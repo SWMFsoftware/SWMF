@@ -223,8 +223,8 @@ contains
           UseGridBasedIE = .false.
 
        case("#SAVELOGFILE")
-          call read_var('DoSaveIELogfile',DoSaveIELogfile)
-          if(DoSaveIELogfile)then
+          call read_var('DoSaveLogfile',DoSaveLogfile)
+          if(DoSaveLogfile)then
              if(iProc==0)call check_dir(NameIonoDir)
           endif
 

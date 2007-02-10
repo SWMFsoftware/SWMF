@@ -16,6 +16,12 @@ module IE_ModMain
   real    :: Hall_to_Ped_Ratio
 
   !\
+  ! Conductance model 4 factors
+  !/
+  real :: OvalWidthFactor=1., OvalStrengthFactor=1.7
+
+
+  !\
   ! Time variables obtained from CON_physics
   !/
   logical               :: time_accurate
@@ -25,12 +31,12 @@ module IE_ModMain
   !\
   ! Counter for number of solves (like nStep in GM)
   !/
-  integer               :: nSolve = 0
+  integer :: nSolve = 0
 
   !\
   ! Logical which tells if there is any new information to use
   !/
-  logical               :: IsNewInput = .false.
+  logical :: IsNewInput = .false.
 
   !\
   ! Character string selecting the potential sent to the IM module
@@ -52,13 +58,8 @@ module IE_ModMain
   !\
   ! Save logfile?
   !/
-  logical :: DoSaveIELogfile = .false.
+  logical :: DoSaveLogfile = .true.
 
-  !\
-  ! Conductance model 4 factors
-  !/
-  real :: OvalWidthFactor=1., OvalStrengthFactor=1.7
-
-  integer                           :: iDebugLevel = 0
+  integer :: iDebugLevel = 0
 
 end module IE_ModMain
