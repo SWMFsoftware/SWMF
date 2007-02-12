@@ -36,7 +36,7 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
   integer :: i, j
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
           ER, JR, JTh, JPs, &
-          Xyz_D(3), NormRadius, b_D(3), Vp_D(3), Babs
+          Xyz_D(3), NormRadius, b_D(3), Vp_D(3)
 
   if (Theta(1,1) < 2.00*IONO_Theta_0) then
      north = .true.
@@ -138,39 +138,14 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
         Xyz_D = Xyz_D * (IONO_Radius + IONO_Height) / IONO_Radius
         ! Get magnetic field and normalize it to unity
         call get_planet_field(Time_Simulation,Xyz_D,'SMG NORM',b_D)
-        bAbs = sqrt(sum(b_D**2))
-        b_D = b_D/bAbs
-        ! Get potential V = E x B/|B|
+
+        ! Get potential V = E x B/|B^2|
+        b_D = b_D/sum(b_D**2)
         Vp_D = cross_product((/Ex(i,j), Ey(i,j), Ez(i,j)/), b_D)
 
         Ux(i,j) = Vp_D(1)
         Uy(i,j) = Vp_D(2)
         Uz(i,j) = Vp_D(3)
-
-
-!!!!!  This is all wrong at this point. Someone should fix this.
-
-!!!!!        
-!!!!!        xx = NormRadius * sinTheta*cosPhi
-!!!!!        yy = NormRadius * sinTheta*sinPhi
-!!!!!        zz = NormRadius * cosTheta
-!!!!!
-!!!!!
-!!!!!
-!!!!!        BB = IONO_Bdp*((IONO_Radius/Radius)**3)
-!!!!!        BBabs = abs(BB)
-!!!!!        bR = (BB/BBabs)*2.00*cosTheta/cs4
-!!!!!        bTh = (BB/BBabs)*sinTheta/cs4 
-!!!!!        bPs = 0.00  
-!!!!!        bx = bR*sinTheta*cosPhi + bTh*cosTheta*cosPhi - &
-!!!!!             bPs*sinPhi
-!!!!!        by = bR*sinTheta*sinPhi + bTh*cosTheta*sinPhi + &
-!!!!!             bPs*cosPhi
-!!!!!        bz = bR*cosTheta - bTh*sinTheta
-
-!        Vp_x = (Ey(i,j)*bz - Ez(i,j)*by)/BBabs
-!        Vp_y = (Ez(i,j)*bx - Ex(i,j)*bz)/BBabs
-!        Vp_z = (Ex(i,j)*by - Ey(i,j)*bx)/BBabs
 
      end do  
   end do
