@@ -55,7 +55,7 @@ test_pw:
 	make test_pw_check
 
 test_pw_compile:
-	Config.pl -v=Empty,PW/PWOM -o=PW:Earth
+	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
 	make SWMF
 
 test_pw_rundir:
@@ -98,8 +98,8 @@ test1:
 	make test1_check
 
 test1_compile:
-	Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
+	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,PW:Earth
 	make SWMF
 
 test1_rundir:
@@ -147,7 +147,7 @@ test_esmf:
 	make test_esmf_check
 
 test_esmf_compile:
-	Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
 	make ESMF_SWMF
 
 test_esmf_rundir:
@@ -158,7 +158,7 @@ test_esmf_rundir:
 test_esmf_run: 
 	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
 	@cd ${TESTDIR}; ${MPIRUN} ESMF_SWMF.exe > runlog
-	@cd ${TESTDIR}; PostProc.pl -M -o RESULTS
+	@cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS
 
 test_esmf_check:
 	perl -ne 'print if /error/i' PET*.ESMF_LogFile > test_esmf.diff
