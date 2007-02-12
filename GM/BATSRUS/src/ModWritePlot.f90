@@ -1290,7 +1290,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_DivB
 
         ! GRID INFORMATION
-     case('dt','dtBLK')
+     case('dt','dtblk')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_t
      case('dx')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_x
