@@ -889,7 +889,8 @@ module ModUser
        IMPLEMENTED4 => user_calc_sources,               &
        IMPLEMENTED5 => user_get_log_var,                &
        IMPLEMENTED6 => user_get_b0,                     &
-       IMPLEMENTED7 => user_update_states
+       IMPLEMENTED7 => user_update_states,              &
+       IMPLEMENTED8 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -1431,6 +1432,82 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
   end subroutine user_get_log_var
+  !----------------------------------------------------------
+  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
+       xCenter,yCenter,zCenter,rCenter,                        &
+       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+    use ModMain,ONLY:time_loop,nI,nJ,nK
+    use ModAMR,ONLY:InitialRefineType
+    use ModNumConst
+    use ModAdvance,ONLY:&
+         State_VGB,Bx_,By_,Bz_,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
+    use ModGeometry
+    use ModPhysics,ONLY:rBody
+    implicit none
+    logical,intent(out) :: refineBlock, found
+    integer, intent(in) :: lev
+    real, intent(in)    :: DxBlock
+    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
+    real, intent(in)    :: minx,miny,minz,minR
+    real, intent(in)    :: maxx,maxy,maxz,maxR
+    integer, intent(in) :: iBLK
+
+    character (len=*), parameter :: Name='user_specify_initial_refinement'
+    real::BDotRMin,BDotRMax,critx
+    integer::i,j,k
+    !-------------------------------------------------------------------
+    select case (InitialRefineType)
+    case ('helio_init')
+       if(.not.time_loop)then
+          !refine to have resolution not worse 4.0 and
+          !refine the body intersecting blocks
+          ! Refine all blocks time through (starting with 1 block)
+          if (lev <= 4) then
+             refineBlock = .true.
+          else
+             critx=(XyzMax_D(1)-XyzMin_D(1))/(2.0**real(lev-2))
+             if ( rCenter < 1.10*rBody + critx ) then
+                refineBlock = .true.
+             else
+                refineBlock = .false.
+             end if
+          endif
+       elseif(dx_BLK(iBLK)<0.20.or.far_field_BCs_BLK(iBLK))then
+          refineBlock=.false. !Do not refine body or outer boundary
+       else
+          !refine heliosheath
+          BDotRMin=cZero
+          do k=0,nK+1;do j=1,nJ
+             BDotRMin=min( BDotRMin,minval(&
+                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
+                  x_BLK(1:nI,j,k,iBLK)+&
+                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(By_,1:nI,j,k,iBLK))*&
+                  y_BLK(1:nI,j,k,iBLK)+&
+                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
+                  z_BLK(1:nI,j,k,iBLK)))
+          end do;end do
+          BDotRMax=cZero
+          do k=0,nK+1;do j=1,nJ
+             BDotRMax=max( BDotRMax,maxval(&
+                  (B0xCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(Bx_,1:nI,j,k,iBLK))*&
+                  x_BLK(1:nI,j,k,iBLK)+&
+                  (B0yCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(By_,1:nI,j,k,iBLK))*&
+                  y_BLK(1:nI,j,k,iBLK)+&
+                  (B0zCell_BLK(1:nI,j,k,iBLK)+&
+                  State_VGB(Bz_,1:nI,j,k,iBLK))*&
+                  z_BLK(1:nI,j,k,iBLK)))
+          end do;end do
+          refineBlock =BDotRMin<-cTiny.and.&
+               BDotRMax>cTiny
+       end if
+       found=.true.
+    end select
+  end subroutine user_specify_initial_refinement
 
 end module ModUser
 
