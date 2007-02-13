@@ -64,7 +64,7 @@ relax_src:
 		-off=ionosphere,boriscorr,covariant
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \
-		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90
+		rm -f .cvsignore GM_* ModIeGrid.f90 *bc.f90 *BC.f90 ModPwGrid.f90
 	cd ${DREL};  \
 		perl -i -pe 's/GM/SC/' Config.pl; \
 		perl -i -pe 's?GM?${COMP}?g' Makefile* Param/PARAM.DEFAULT
