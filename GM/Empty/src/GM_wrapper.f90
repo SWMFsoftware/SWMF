@@ -261,3 +261,10 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar)!, NameVar_V)
   
   
 end subroutine GM_put_from_pw
+!------------------------------------------------------------------------------
+subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+  real, intent(in) :: FaceCoords_D(3)
+  integer, intent(in) :: nVar
+  real, intent(inout) :: FaceState_V(nVar)
+  call CON_stop('ERROR: read_pw_buffer is for SWMF')
+end subroutine read_pw_buffer
