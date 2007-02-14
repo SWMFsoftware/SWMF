@@ -246,25 +246,31 @@ end subroutine read_ih_buffer
 
 !==============================================================================
 
-subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar)!, NameVar_V)
+subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
   
   integer, intent(in)           :: nVar, nFieldLine
   real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
-!  character (len=*),intent(in)  :: Name_V(nVar)
-  
-!------------------------------------------------------------------------------
-  
+  character (len=*), intent(in) :: Name_V(nVar)
+
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
   
-  
 end subroutine GM_put_from_pw
-!------------------------------------------------------------------------------
+
+!==============================================================================
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+
+  implicit none
+  character (len=*),parameter :: NameSub='read_pw_buffer'
+
   real, intent(in) :: FaceCoords_D(3)
   integer, intent(in) :: nVar
   real, intent(inout) :: FaceState_V(nVar)
-  call CON_stop('ERROR: read_pw_buffer is for SWMF')
+
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
 end subroutine read_pw_buffer
