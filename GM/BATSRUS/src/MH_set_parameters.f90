@@ -1566,6 +1566,13 @@ subroutine MH_set_parameters(TypeAction)
                 call read_var('rCurrents' ,Rcurrents)
            call read_var('BodyRhoDim',Body_Rho_Dim)
            call read_var('BodyTDim'  ,Body_T_dim)
+           if(NameThisComp=='SC'.or.NameThisComp=='IH')then
+              !In these components the solar wind starts at the body,
+              !that is why SW_rho_dim and SW_T_dim are defined in terms
+              !of the body values
+              SW_rho_dim=Body_Rho_Dim  !Particles per cubic cm
+              SW_T_dim=Body_T_Dim
+           end if
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1946,6 +1953,8 @@ contains
        TypeBc_I(body1_)='unknown'
        Body_rho_dim = 1.50E8
        Body_T_dim   = 2.85E06
+       SW_rho_dim=Body_rho_dim
+       SW_T_dim=Body_T_dim
 
        ! Refinement criteria
        nRefineCrit    = 3

@@ -27,22 +27,19 @@ subroutine set_physics_constants
   !\
   ! Load body rotation rates, masses, and radii by module (GM/IH/SC)
   !/
-  if (NameThisComp == 'GM') then
+  select case(NameThisComp)
+  case('GM')
      call get_planet( &
-       RadiusPlanetOut = UnitSi_x, &
-       MassPlanetOut = mBody_Dim, &
-       RotationPeriodOut = rot_period_dim)
-  else
-     select case(NameThisComp)
-     case("SC")
-        UnitSi_x = rSun
-     case("IH")
-        UnitSi_x = cAu
-     end select
+          RadiusPlanetOut = UnitSi_x, &
+          MassPlanetOut = mBody_Dim, &
+          RotationPeriodOut = rot_period_dim)
+     
+  case("SC","IH")
+     UnitSi_x = rSun
      mBody_Dim = mSun
      rot_period_dim = RotationPeriodSun
-  end if
-
+  end select
+ 
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
   ! and it is DIFFERENT from SWMF's inertial OmegaPlanet defined in CON_planet !!!
   OmegaBody = cTwoPi/rot_period_dim

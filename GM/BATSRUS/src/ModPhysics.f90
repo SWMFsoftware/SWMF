@@ -68,17 +68,17 @@ module ModPhysics
   !\
   ! Far field solar wind solution variables.
   !/
-  real ::      SW_T_dim  , &
-       SW_a_dim  , &
-       SW_rho, SW_rho_dim, &
-       SW_p  , SW_p_dim  , &
-       SW_Ux , SW_Ux_dim , &
-       SW_Uy , SW_Uy_dim , &
-       SW_Uz , SW_Uz_dim , &
-       SW_Bx , SW_Bx_dim , &
-       SW_By , SW_By_dim , &
-       SW_Bz , SW_Bz_dim , &
-       SW_B_factor
+  real ::      SW_T_dim=0.0  , &
+       SW_a_dim=0.0  , &
+       SW_rho=0.0, SW_rho_dim=0.0, &
+       SW_p=0.0  , SW_p_dim=0.0  , &
+       SW_Ux=0.0 , SW_Ux_dim=0.0 , &
+       SW_Uy=0.0 , SW_Uy_dim=0.0 , &
+       SW_Uz=0.0 , SW_Uz_dim=0.0 , &
+       SW_Bx=0.0 , SW_Bx_dim=0.0 , &
+       SW_By=0.0 , SW_By_dim=0.0 , &
+       SW_Bz=0.0 , SW_Bz_dim=0.0 , &
+       SW_B_factor=0.0
 
   real, dimension(0:1) :: &
        SW_rho_t,  &
