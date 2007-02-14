@@ -1,6 +1,6 @@
 !^CFG COPYRIGHT UM
 !========================================================================
-Module ModUser
+module ModUser
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
   !
@@ -18,9 +18,8 @@ Module ModUser
        IMPLEMENTED4 => user_set_boundary_cells,         &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
-       IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_set_plot_var,               &      
-       IMPLEMENTED10 => user_specify_initial_refinement
+       IMPLEMENTED7 => user_set_plot_var,               &      
+       IMPLEMENTED8 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -44,7 +43,8 @@ Module ModUser
   real:: NumDenNeutral_VC(MaxNuSpecies, nI, nJ, nK)    
 
   !photonionzation and recombination rate 
-  real:: PhotoIonRate_VC(MaxSpecies, nI, nJ, nK), RecombRate_VC(MaxSpecies, nI, nJ, nK) 
+  real:: PhotoIonRate_VC(MaxSpecies, nI, nJ, nK), &
+       RecombRate_VC(MaxSpecies, nI, nJ, nK) 
 
   real, dimension(MaxReactions) :: ReactionRate_I
   real, dimension(MaxReactions,MaxSpecies):: CoeffSpecies_II, &
@@ -426,7 +426,7 @@ contains
   end subroutine user_read_inputs
 
 
-  !=============================================================================
+  !============================================================================
   subroutine user_calc_sources
     use ModAdvance,  ONLY: Source_VC,Energy_
     use ModNumConst, ONLY: cZero
@@ -434,7 +434,10 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
-    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+    use ModPointImplicit, ONLY: UsePointImplicit_B, DoNotUsePointImplicit, &
+         IsPointImplSource
+    use ModPhysics, ONLY: Rbody
+    use ModGeometry,ONLY: Rmin_BLK
 
 
     logical :: oktest,oktest_me
@@ -445,10 +448,14 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    if(.not.UsePointImplicit)then
-       ! Add all source terms if we do not use the point implicit scheme
+    UsePointImplicit_B(globalBLK) = Rmin_BLK(globalBLK) <= 2.5
+
+    if(.not.UsePointImplicit_B(globalBLK) .or. DoNotUsePointImplicit)then
+       ! Add all source terms if we do not use the point implicit 
+       ! scheme for the Block
        call user_expl_source
        call user_impl_source
+       
     elseif(IsPointImplSource)then
        ! Add implicit sources only
        call user_impl_source
@@ -465,50 +472,34 @@ contains
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
   end subroutine user_calc_sources
-  !========================================================================
-  !  SUBROUTINE USER_SOURCES
-  !========================================================================
-  !\
-  ! This subroutine is used to calculate sources for the MHD equations.  The
-  ! routine is called for each block separately so that the user would typically
-  ! need only to code the source term calculation for a single block (in other
-  ! words inside the the k,j,i loop below).  As with all user subroutines, the
-  ! variables declared in ModUser are available here.  Again, as with other
-  ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
-  ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEw
-  !
-  ! Note that SE (energy) and SP (pressure) must both be loaded if the code is 
-  ! going to use both the primitive and the conservative MHD equation advance  
-  ! (see the USER MANUAL and the DESIGN document).  If using only primitive SP 
-  ! must be loaded.  If using only conservative SE must be loaded.  The safe
-  ! approach is to load both.
-  !/
+
+  !==========================================================================
+
   subroutine user_sources
+
     use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
     use ModAdvance,  ONLY: State_VGB,Theat0,           &
          B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,UDotFA_X,UDotFA_Y,  &
          UDotFA_Z,VdtFace_x,VdtFace_y,VdtFace_z
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
-         vInv_CB
+         vInv_CB, Rmin_BLK
     use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
-    use ModPointImplicit, ONLY: UsePointImplicit,UsePointImplicitOrig
+    use ModPointImplicit, ONLY: UsePointImplicit_B
 
     ! Variables required by this user subroutine
-    integer:: i,j,k,iSpecies,iBlock
+    integer:: i,j,k,iSpecies,iBlock,iBlockLast = -1
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTn
     real :: alt, Te_dim = 300.0
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
     real :: RhoUTimesSrhoU
     real :: SourceLossMax
+    real :: vdtmin
     !
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !\
     ! Variable meanings:
     !   Srho: Source terms for the continuity equation
@@ -517,7 +508,7 @@ contains
     !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
     !   SBx,SBy,SBz:  Souce terms for the magnetic field equations 
     !/
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !
     iBlock = globalBlk
 
@@ -530,17 +521,20 @@ contains
     !\
     ! Compute Titan ionospheric source terms.
     !/
-    if(use_block_data(iBlock))then
-       call get_block_data(iBlock, nI, nJ, nK, Nu_C)
-       call get_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
-       call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
-       call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
-    else
-       call titan_input(iBlock)
-       call put_block_data(iBlock, nI, nJ, nK, Nu_C)
-       call put_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
-       call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
-       call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
+    if(iBlock /= iBlockLast)then
+       iBlockLast = iBlock
+       if(use_block_data(iBlock))then
+          call get_block_data(iBlock, nI, nJ, nK, Nu_C)
+          call get_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+          call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
+          call get_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
+       else
+          call titan_input(iBlock)
+          call put_block_data(iBlock, nI, nJ, nK, Nu_C)
+          call put_block_data(iBlock, MaxNuSpecies, nI, nJ, nK, NumDenNeutral_VC)
+          call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, PhotoIonRate_VC)
+          call put_block_data(iBlock, MaxSpecies, nI, nJ, nK, RecombRate_VC)
+       end if
     end if
 
     do k = 1, nK ;   do j = 1, nJ ;  do i = 1, nI
@@ -714,16 +708,23 @@ contains
           totalRLNumRhox=sum(RecombRate_VC(:,i,j,k) &
                *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_V)
 
-          if(.not.(UsePointImplicit.or.UsePointImplicitOrig))then
+          if(.not.UsePointImplicit_B(iBlock) )then
              !sum of the (loss term/atom mass) due to recombination
              SourceLossMax = 3.0*maxval(abs(SiSpecies_I(1:nSpecies)+&
                   LiSpecies_I(1:nSpecies) ) /&
                   (State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)+1e-20))&
                   /vInv_CB(i,j,k,iBlock)
-             VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
-             VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
-             VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+             vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
+             if(SourceLossMax > Vdtmin) then
+                !UsePointImplicit_B(iBlock)=.true.
+                !write(*,*)'should use Point-implicit or increase its region'
+                VdtFace_x(i,j,k) = max (SourceLossMax, VdtFace_x(i,j,k) )
+                VdtFace_y(i,j,k) = max (SourceLossMax, VdtFace_y(i,j,k) )
+                VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
+             end if
           end if
+!             if(Rmin_BLK(iBlock) <= 2.0*Rbody) then
+!          end if
 
           SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
                +SiSpecies_I(1:nSpecies) &
@@ -1032,54 +1033,9 @@ contains
   end subroutine set_multiSp_ICs
 
   !========================================================================
-  !========================================================================
-  subroutine user_update_states(iStage,iBlock)
-    use ModAdvance, ONLY: State_VGB, E_BLK
-!    use ModProcMH
-    use ModPhysics, ONLY: cTiny8, gm1, cHalf
-    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
-    integer,intent(in):: iStage,iBlock
-    integer::i,j,k
-    !--------------------------------------------------------------------------
-    call update_states_MHD(iStage,iBlock)
-    !\
-    ! Begin update of total density
-    !/
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-!       State_VGB(rho_+1:rho_+maxspecies,i,j,k,iBlock)=           &
-!            max(cTiny8/1.0e5, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
-       State_VGB(rho_+1:rho_+maxspecies,i,j,k,iBlock)=           &
-            max(0.0, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
-
-       State_VGB(rho_   ,i,j,k,iBlock)=           &
-            sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
-
-    end do; end do; end do
-
-    State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = gm1*(&
-         E_BLK(1:nI,1:nJ,1:nK,iBlock) &
-         - cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)**2 +&
-         State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)**2 +&
-         State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)**2) &
-         /State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)  &
-         +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 + &
-         State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 + &
-         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2) )
-    
-    !\
-    ! End update of total density:
-    !/
-
-  end subroutine user_update_states
-
-  !========================================================================
-
-  !========================================================================
-  !  user_set_boundary_cells
-  !  Allows to define boundary conditions at the user defined boundary.
-  !========================================================================
   subroutine user_set_boundary_cells(iBLK)
+
+    !  Allows to define boundary conditions at the user defined boundary.
     use ModGeometry
     use ModMain, ONLY: Theta_ 	
     use ModNumConst	
@@ -1793,28 +1749,32 @@ contains
     
   end subroutine user_specify_initial_refinement
 
+  !============================================================================
+
   subroutine user_impl_source
   
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
     ! The friction force is proportional to the velocity and the density.
 
-    use ModPointImplicit, ONLY: &
-         UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+    use ModPointImplicit, ONLY: UsePointImplicit_B, &
+         iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    use ModPhysics, ONLY: inv_gm1
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: r_BLK
     use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: Rho_, RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, &
          RhoMHCp_ , RhoHHCp_, RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_, &
-         Energy_
+         Energy_, Bx_, By_, Bz_
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
     logical :: oktest,oktest_me
     integer :: iBlock, i, j, k
     real    :: Coef
+!    real, dimension(nI,nJ,nK) :: InvRho_C, Ux_C, Uy_C, Uz_C
     !-------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. globalBLK==BLKtest)then
@@ -1826,13 +1786,13 @@ contains
     iBlock = GlobalBlk
 
     ! Initialization for implicit sources
-    if(UsePointImplicit .and. .not.allocated(iVarPointImpl_I))then
+    if(UsePointImplicit_B(iBlock) .and. .not.allocated(iVarPointImpl_I))then
 
        ! Allocate and set iVarPointImpl_I
        allocate(iVarPointImpl_I(11))
 
        iVarPointImpl_I = (/RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, RhoMHCp_ ,&
-            RhoHHCp_,RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_ , P_/)
+            RhoHHCp_,RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_/)
 
        ! Note that energy is not an independent variable for the 
        ! point implicit scheme. The pressure is an independent variable,
@@ -1861,6 +1821,7 @@ contains
     end if
     
     call user_sources
+    
     Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
     Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
          SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
@@ -1871,13 +1832,28 @@ contains
     Source_VC(By_        ,:,:,:) = SBy+Source_VC(By_,:,:,:)
     Source_VC(Bz_        ,:,:,:) = SBz+Source_VC(Bz_,:,:,:)
     Source_VC(P_     ,:,:,:) = SP+Source_VC(P_,:,:,:)
+
+!    InvRho_C = 1.0/State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
+!    Ux_C = InvRho_C*State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)
+!    Uy_C = InvRho_C*State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)
+!    Uz_C = InvRho_C*State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)
+
+!    SE = inv_gm1*SP + Ux_C*SrhoUx  + Uy_C*SrhoUy  + Uz_C*SrhoUz  &
+!         - 0.5*(Ux_C**2 + Uy_C**2 + Uz_C**2)*Srho
+
     Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)
 
   end subroutine user_impl_source
+
+  !===========================================================================
+
   subroutine user_expl_source
+!    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+!    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
 
+!---------------------------------------------------------------------
     ! Here come the explicit source terms
-
+    
   end subroutine user_expl_source
 
 end Module ModUser
