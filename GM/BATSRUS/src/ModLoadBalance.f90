@@ -366,7 +366,7 @@ subroutine move_block(DoMoveCoord, DoMoveData, iBlockALL, &
        3*((nI+3)*(nJ+2)*(nK+2)           & ! B0*Face_x
        +  (nI+2)*(nJ+3)*(nK+2)           & ! B0*Face_y
        +  (nI+2)*(nJ+2)*(nK+3)) +        & ! B0*Face_x
-       4*nIJK                              ! fbody_* 
+       3*nIJK                              ! fbody_
        
   integer, parameter :: nDataBLK= &
        nwIJK +                           & !^CFG IF IMPLICIT
