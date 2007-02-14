@@ -2133,7 +2133,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 -1			DnSavePlot
 100.			DtSavePlot
-2.			DxSavePlot ! resolution (for IDL plots)
+0.25			DxSavePlot ! resolution (for IDL plots)
 jx jy jz		NameVars
 g rbody			NamePars
 cut ray idl		StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
@@ -2145,7 +2145,7 @@ cut ray idl		StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
 10.			yMaxCut    
 -10.			zMinCut    
 10.			zMaxCut    
-1.			DxSavePlot 
+-1.			DxSavePlot ! unstructured grid (for IDL plots)
 sph flx idl		StringPlot ! spherical plot
 -1			DnSavePlot
 100.			DtSavePlot
@@ -2316,7 +2316,7 @@ edges parallel to the Z axis.
 \noindent
 Possible values for DxSavePlot (for IDL files):
 \begin{verbatim}
-  0.5	- fixed resolution (any positive value)
+  any positive value	- fixed resolution
   0.	- fixed resolution based on the smallest cell in the plotting area
  -1.	- unstructured grid will be produced by PostIDL.exe
 \end{verbatim}
