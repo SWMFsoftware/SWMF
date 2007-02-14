@@ -5,7 +5,11 @@ module ModExpansionFactors
   implicit none
   save
 
-  real, parameter :: cSunGravitySI = -1e99
+  !Gravity potential, m^2/s^2
+  real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun 
+  
+  !Gravity potential of a proton, in K
+  real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
 
   character(len=20) :: TypeModel='WSA' ! Type of SW model
   !Distribution of the solar wind model parameters: 
