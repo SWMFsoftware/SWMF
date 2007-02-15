@@ -16,10 +16,10 @@ module ModLinearSolver
   !USES:
   use ModMpi
   use ModBlasLapack
-  use ModUtilities, ONLY: check_allocate
 
   implicit none
   save
+
   private ! except
 
   !PUBLIC MEMBER FUNCTIONS:
@@ -113,7 +113,6 @@ contains
     ! Allocate arrays that used to be automatic
     allocate(Krylov_II(n,nKrylov+2), hh(nKrylov+1,nKrylov), &
          c(nKrylov), s(nKrylov), rs(nKrylov+1), stat=iError); 
-    call check_allocate(iError,"gmres arrays")
 
     if(range(1.0)>100)then
        epsmac=0.0000000000000001
