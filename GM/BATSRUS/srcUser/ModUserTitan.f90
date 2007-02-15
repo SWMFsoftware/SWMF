@@ -39,6 +39,9 @@ module ModUser
 
   integer, public :: nSpecies=7, nNuSpecies=10, nReactions=25
 
+  ! Radius within which the point implicit scheme should be used
+  real :: rPointImplicit = 2.5
+
   !number density of neutral Species
   real:: NumDenNeutral_VC(MaxNuSpecies, nI, nJ, nK)    
 
@@ -217,7 +220,8 @@ contains
           SW_T_dim = plas_T      
           !          end if
           !write(*,*)'SW_rho_dim=',SW_rho_dim,SW_T_dim
-          case('#USETITANINPUT')
+
+       case('#USETITANINPUT')
           call read_var('UseTitanInput',UseTitanInput)
           if(.not.UseTitanInput) &
                call stop_mpi('Wrong input,UseTitanInput needs to be true')
@@ -414,6 +418,8 @@ contains
              !'tmp_n(1,11:12)=',tmp_n(1,11:12)
 
           end if
+       case('#POINTIMPLICITREGION')
+          call read_var('rPointImplicit',rPointImplicit)
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -434,11 +440,10 @@ contains
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
-    use ModPointImplicit, ONLY: UsePointImplicit_B, DoNotUsePointImplicit, &
+    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
-    use ModGeometry,ONLY: Rmin_BLK
-
+    use ModGeometry,ONLY: R_BLK
 
     logical :: oktest,oktest_me
     !------------------------------------------------------------------------  
@@ -448,9 +453,10 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    UsePointImplicit_B(globalBLK) = Rmin_BLK(globalBLK) <= 2.5
+    UsePointImplicit_B(globalBLK) = R_BLK(1,1,1,globalBLK) <= rPointImplicit &
+         .and. R_BLK(nI,1,1,globalBLK) > rBody
 
-    if(.not.UsePointImplicit_B(globalBLK) .or. DoNotUsePointImplicit)then
+    if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
        ! Add all source terms if we do not use the point implicit 
        ! scheme for the Block
        call user_expl_source
@@ -883,8 +889,7 @@ contains
     use ModIO, ONLY : restart
     use ModPhysics
 
-
-    real :: Rmax, SinSlope, CosSlope,CosSZA, coef, hh
+    real :: SinSlope, CosSlope,CosSZA, coef, hh
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
          XFace, YFace, ZFace
     integer :: i,j,k,n
