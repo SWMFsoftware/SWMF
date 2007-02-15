@@ -112,7 +112,7 @@ contains
 
     ! Allocate arrays that used to be automatic
     allocate(Krylov_II(n,nKrylov+2), hh(nKrylov+1,nKrylov), &
-         c(nKrylov), s(nKrylov), rs(nKrylov+1), stat=iError); 
+         c(nKrylov), s(nKrylov), rs(nKrylov+1))
 
     if(range(1.0)>100)then
        epsmac=0.0000000000000001
@@ -382,8 +382,7 @@ contains
     if(present(iCommIn)) iComm = iCommIn
 
     ! Allocate arrays that used to be automatic
-    allocate(bicg_r(n), bicg_u(n), bicg_r1(n), bicg_u1(n), stat=iError); 
-    call check_allocate(iError,"bicgstab arrays")
+    allocate(bicg_r(n), bicg_u(n), bicg_r1(n), bicg_u1(n)); 
 
     if(DoTest)write(*,*)'BiCGSTAB tol,iter:',tol,iter
 
@@ -404,8 +403,7 @@ contains
     ! Calculate initial residual
     if(nonzero)then
        ! Store initial guess into qx0
-       allocate(qx0(n), stat=iError)
-       call check_allocate(iError,'bicgstab:qx0')
+       allocate(qx0(n))
        qx0=qx
        call matvec(qx,bicg_r,n)
        bicg_r = rhs - bicg_r
@@ -844,8 +842,7 @@ contains
     call timing_start('precond')
 
     ! Allocate arrays that used to be automatic
-    allocate(dd(N,N), pivot(N), stat=iError)
-    call check_allocate(iError,"prehepta arrays")
+    allocate(dd(N,N), pivot(N))
 
     alf=alf_in
     IF (alf < zero) THEN
@@ -1122,7 +1119,7 @@ contains
     call timing_start('Lhepta')
 
     ! Allocate arrays that used to be Automatic
-    allocate(work(N), stat=iError); call check_allocate(iError,"lhepta:work")
+    allocate(work(N))
 
     if(N>20)then
        ! BLAS VERSION
