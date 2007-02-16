@@ -55,6 +55,7 @@ my %RestartOutDir = (
 		     SC => "SC/restartOUT",
 		     IH => "IH/restartOUT",
 		     IM => "IM/restartOUT",
+		     PW => "PW/restartOUT",
 		     UA => "UA/restartOUT,UA/RestartOUT" );
 
 my %RestartInDir =  (
@@ -62,6 +63,7 @@ my %RestartInDir =  (
 		     SC => "SC/restartIN",
 		     IH => "IH/restartIN",
 		     IM => "IM/restartIN",
+		     PW => "PW/restartIN",
 		     UA => "UA/restartIN,UA/RestartIN" );
 
 # Hashes for the actually found directories
