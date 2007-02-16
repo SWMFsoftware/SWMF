@@ -51,6 +51,7 @@ my %PlotDir = (
     "IE"     => "IE/ionosphere",
     "IH"     => "IH/IO2",
     "IM"     => "IM/plots",
+    "PW"     => "PW/plots",
     "SC"     => "SC/IO2",
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
@@ -104,6 +105,11 @@ REPEAT:{
 		&shell("gzip",@files) if @files;
 	    }else{
 		&shell("./Preplot.pl",@files) if @files;
+	    }
+	}elsif( $Dir =~ /^PW/ ){
+	    if($Gzip){
+		my @files=glob("plots/*.out");
+		&shell("gzip",@files) if @files;
 	    }
 	}
 	chdir $Pwd;
