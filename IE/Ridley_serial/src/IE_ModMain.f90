@@ -34,6 +34,14 @@ module IE_ModMain
   integer :: nSolve = 0
 
   !\
+  ! Krylov solver (GMRES) parameters
+  !/
+  logical :: UsePreconditioner = .true. ! Use preconditioner
+  logical :: UseInitialGuess = .true. ! Use previous solution as initial guess
+  real    :: Tolerance = 1.e-2        ! Solution accuracy: 2nd norm of residual
+  integer :: MaxIteration = 200       ! Maximum number of Krylov iterations
+
+  !\
   ! Logical which tells if there is any new information to use
   !/
   logical :: IsNewInput = .false.
@@ -45,10 +53,11 @@ module IE_ModMain
   character (len=7) :: TypeImCouple = 'north   '
 
   !\
-  ! Parameters for coupling the UA current and latitude boundary
+  ! Parameter for coupling the UA current and 
+  ! latitude boundary for currents from GM and for calculating Phi
   !/
   logical :: DoCoupleUaCurrent = .false.
-  real    :: LatBoundary       = 0.785398 ! 45 degrees in radians
+  real    :: LatBoundaryGm, LatBoundary
 
   !\
   ! Dipole parameters obtained from CON_physics
