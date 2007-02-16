@@ -7,7 +7,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModPhysics
   use ModNumConst
   use ModKind, ONLY: Real8_
-  use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
+  use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModUser, ONLY: user_calc_sources
 
@@ -63,7 +63,7 @@ subroutine update_states_MHD(iStage,iBLK)
   call update_explicit
 
   ! Add point implicit user source terms
-  if (UsePointImplicit_B(iBLK) .and. UseUserSource) &
+  if (UsePointImplicit .and. UsePointImplicit_B(iBLK) .and. UseUserSource) &
        call update_point_implicit(iStage, iBLK, user_calc_sources)
 
 contains
