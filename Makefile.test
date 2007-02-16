@@ -166,7 +166,8 @@ test_esmf_run:
 	@cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_esmf_check:
-	perl -ne 'print if /error/i' PET*.ESMF_LogFile > test_esmf.diff
+	perl -ne 'print if /error/i' ${TESTDIR}/PET*.ESMF_LogFile \
+		> test_esmf.diff
 	${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
