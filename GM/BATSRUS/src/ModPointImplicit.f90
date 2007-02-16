@@ -54,7 +54,6 @@ module ModPointImplicit
   private ! except
 
   logical, public :: UsePointImplicit = .false.  ! Use point implicit scheme?
-  logical, public :: UsePointImplicitOrig = .false.
   logical, public :: UsePointImplicit_B(nBLK)=.false.
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
@@ -83,8 +82,10 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, nByteReal, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
-    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk
+    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
+         DoReplaceDensity
     use ModGeometry,ONLY: True_Blk, True_Cell
+    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
 
     integer, intent(in) :: iStage, iBlock
     interface
@@ -175,6 +176,7 @@ contains
 
     ! Tell the user_calc_sources to return the implicit source terms
     Source_VC = 0.0
+
     DsDu_VVC  = 0.0
     call calc_point_impl_source
 
@@ -270,6 +272,16 @@ contains
           State_VGB(iVar,i,j,k,iBlock) =  &
                StateOld_VCB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
        end do
+
+       if(UseMultispecies)then
+          ! Fix negative species densities
+          State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) = &
+               max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
+          
+          ! Add up species densities to total density
+          if(DoReplaceDensity)State_VGB(Rho_,i,j,k,iBlock) = &
+               sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
+       end if
 
     end do; end do; end do
 
