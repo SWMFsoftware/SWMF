@@ -10,7 +10,6 @@ subroutine IE_solve
   implicit none
   character(len=*), parameter :: NameSub = 'IE_solve'
   real    :: CurrentSum
-  real    :: Radius
   integer :: iBlock
   integer :: nSize, iError
 
@@ -25,12 +24,12 @@ subroutine IE_solve
        write(*,'(a,i4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)')&
        " "//NameSub//" at ",Time_Array
 
-  Radius = IONO_Radius + IONO_Height
-
   do iBlock = 1, 2
      select case(iBlock)
      case(1) ! Northern hemisphere
         if(iProc /= 0) CYCLE
+
+        north = .true.
 
         CurrentSum = sum(abs(IONO_NORTH_JR))
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_NORTH_JR))=', CurrentSum
@@ -43,10 +42,6 @@ subroutine IE_solve
         end if
 
         call FACs_to_fluxes(conductance_model, iBlock)
-
-        ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_NORTH_PHI = IONO_NORTH_JR   - &
-             Iono_North_Tgcm_Jr
 
         call ionosphere_conductance(IONO_NORTH_Sigma0,               &
              IONO_NORTH_SigmaH, IONO_NORTH_SigmaP,    &
@@ -65,7 +60,11 @@ subroutine IE_solve
              dTheta_North, dPsi_North,                &
              conductance_model, f107_flux)
 
-        call ionosphere_solver(IONO_NORTH_PHI,             &
+        ! This is tricky, JR is passed as PHI to the ionosphere_solver
+        IONO_NORTH_JR = IONO_NORTH_JR - Iono_North_Tgcm_Jr
+
+        call ionosphere_solver(iBlock, &
+             IONO_NORTH_JR,     &
              IONO_NORTH_SigmaThTh, IONO_NORTH_SigmaThPs,   &
              IONO_NORTH_SigmaPsPs,                         &
              IONO_NORTH_dSigmaThTh_dTheta,                 &
@@ -75,10 +74,8 @@ subroutine IE_solve
              IONO_NORTH_dSigmaThPs_dPsi, &
              IONO_NORTH_dSigmaPsPs_dPsi, &
              IONO_NORTH_Theta, IONO_NORTH_Psi, &
-             Radius, IONO_nTheta, IONO_nPsi,               &
-             dTheta_North, dPsi_North,                     &
-             4, 0)
-
+             dTheta_North, dPsi_North, &
+             IONO_NORTH_PHI)
 
         if(DoTest)then
            call write_prefix; 
@@ -87,7 +84,8 @@ subroutine IE_solve
 
         ! Calculate Currents and Boundary Conditions for North
 
-        call ionosphere_currents(IONO_NORTH_Jx,IONO_NORTH_Jy,IONO_NORTH_Jz,&
+        call ionosphere_currents(iBlock, &
+             IONO_NORTH_Jx,IONO_NORTH_Jy,IONO_NORTH_Jz,&
              IONO_NORTH_Ex,IONO_NORTH_Ey,IONO_NORTH_Ez, &
              IONO_NORTH_ETh,IONO_NORTH_EPs, &
              IONO_NORTH_Ux,IONO_NORTH_Uy,IONO_NORTH_Uz, &
@@ -96,12 +94,13 @@ subroutine IE_solve
              IONO_NORTH_SigmaPsPs, &
              IONO_NORTH_X, IONO_NORTH_Y, IONO_NORTH_Z, &
              IONO_NORTH_Theta, IONO_NORTH_Psi, &
-             Radius, IONO_nTheta, IONO_nPsi,              &
              dTheta_North, dPsi_North)
 
      case(2) ! Southern hemisphere
 
         if(iProc /= nProc-1) CYCLE
+
+        north = .false.
 
         CurrentSum = sum(abs(IONO_SOUTH_JR))
         if(DoTest)write(*,*)NameSub,': sum(abs(IONO_SOUTH_JR))=', CurrentSum
@@ -117,8 +116,7 @@ subroutine IE_solve
         call FACs_to_fluxes(conductance_model, iBlock)
 
         ! This is tricky, JR is passed as PHI to the ionosphere_solver
-        IONO_SOUTH_PHI = IONO_SOUTH_JR   - &
-             Iono_South_Tgcm_Jr
+        IONO_SOUTH_JR = IONO_SOUTH_JR - Iono_South_Tgcm_Jr
 
         call ionosphere_conductance(IONO_SOUTH_Sigma0,               &
              IONO_SOUTH_SigmaH, &
@@ -138,7 +136,8 @@ subroutine IE_solve
              dTheta_South, dPsi_South,                &
              conductance_model, f107_flux)
 
-        call ionosphere_solver(IONO_SOUTH_PHI, &
+        call ionosphere_solver(iBlock, &
+             IONO_SOUTH_JR, &
              IONO_SOUTH_SigmaThTh, &
              IONO_SOUTH_SigmaThPs, &
              IONO_SOUTH_SigmaPsPs, &
@@ -149,9 +148,8 @@ subroutine IE_solve
              IONO_SOUTH_dSigmaThPs_dPsi, &
              IONO_SOUTH_dSigmaPsPs_dPsi, &
              IONO_SOUTH_Theta, IONO_SOUTH_Psi, &
-             Radius, IONO_nTheta, IONO_nPsi,               &
-             dTheta_South, dPsi_South,                     &
-             4, 1)
+             dTheta_South, dPsi_South, &
+             IONO_SOUTH_PHI)
 
         if(DoTest)then
            call write_prefix; 
@@ -160,7 +158,8 @@ subroutine IE_solve
 
         ! Calculate Currents and Boundary Conditions for South
 
-        call ionosphere_currents(IONO_SOUTH_Jx,IONO_SOUTH_Jy,IONO_SOUTH_Jz,&
+        call ionosphere_currents(iBlock, &
+             IONO_SOUTH_Jx,IONO_SOUTH_Jy,IONO_SOUTH_Jz,&
              IONO_SOUTH_Ex,IONO_SOUTH_Ey,IONO_SOUTH_Ez, &
              IONO_SOUTH_ETh,IONO_SOUTH_EPs, &
              IONO_SOUTH_Ux,IONO_SOUTH_Uy,IONO_SOUTH_Uz, &
@@ -169,14 +168,13 @@ subroutine IE_solve
              IONO_SOUTH_SigmaPsPs, &
              IONO_SOUTH_X, IONO_SOUTH_Y, IONO_SOUTH_Z, &
              IONO_SOUTH_Theta, IONO_SOUTH_Psi, &
-             Radius, IONO_nTheta, IONO_nPsi,              &
              dTheta_South, dPsi_South)
 
      end select
 
   end do
 
-  ! Broad cast the sourthern current and the potential for IM if needed
+  ! Broadcast the sourthern current and the potential for IM if needed
   if(TypeImCouple /= 'north' .and. nProc > 1)then
 
      nSize = IONO_nTheta * IONO_nPsi
