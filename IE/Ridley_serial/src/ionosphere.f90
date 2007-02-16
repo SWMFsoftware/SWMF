@@ -30,7 +30,6 @@ subroutine ionosphere(iter, iAction)
   integer, intent(in) :: iter, iAction
   integer :: iModel
   real :: f107
-  real :: Radius
   
   logical :: oktest, oktest_me
   
@@ -92,6 +91,7 @@ subroutine ionosphere_fine_grid
   use IE_ModMain, ONLY: conductance_model
   use ModIonosphere
   use CON_planet, ONLY: get_planet, lNamePlanet
+  use ModNumConst, ONLY: cHalfPi, cTwoPi
   implicit none
 
   integer :: i,j
@@ -99,8 +99,8 @@ subroutine ionosphere_fine_grid
   character(len=*), parameter :: NameSub='ionosphere_fine_grid'
   character(len=lNamePlanet) :: NamePlanet
   !------------------------------------------------------------------------
-  dTheta_l = 0.50*IONO_PI/real(IONO_nTheta-1)
-  dPsi_l = 2.00*IONO_PI/real(IONO_nPsi-1)
+  dTheta_l = cHalfPi/(IONO_nTheta-1)
+  dPsi_l   = cTwoPi/(IONO_nPsi-1)
 
   call get_planet(NamePlanetOut = NamePlanet, RadiusPlanetOut = IONO_Radius)
 
@@ -114,6 +114,8 @@ subroutine ionosphere_fine_grid
   case default            
      IONO_Height = IONO_Radius * 0.02  ! Most planets should work
   end select
+
+  Radius = IONO_Radius + IONO_Height
 
   if(iProc==0)then
      call write_prefix; write(iUnitOut,*)
@@ -155,7 +157,7 @@ subroutine ionosphere_fine_grid
      IONO_NORTH_Z(1,j) = cos(IONO_NORTH_Theta(1,j))
 
      do i = 2, IONO_nTheta
-        IONO_NORTH_Theta(i,j) = IONO_PI*(0.5*real(i-1)/real(IONO_nTheta-1))
+        IONO_NORTH_Theta(i,j) = cHalfPi*real(i-1)/real(IONO_nTheta-1)
         IONO_NORTH_Psi(i,j) = IONO_NORTH_Psi(1,j)
         IONO_NORTH_X(i,j) = sin(IONO_NORTH_Theta(i,j))* &
              cos(IONO_NORTH_Psi(i,j))
@@ -167,7 +169,7 @@ subroutine ionosphere_fine_grid
 
   do j = 1, IONO_nPsi
      do i = 1, IONO_nTheta
-        IONO_SOUTH_Theta(i,j) = IONO_PI - IONO_NORTH_Theta(IONO_nTheta-(i-1),j)
+        IONO_SOUTH_Theta(i,j) = cPi - IONO_NORTH_Theta(IONO_nTheta-(i-1),j)
         IONO_SOUTH_Psi(i,j) = IONO_NORTH_Psi(1,j)
         IONO_SOUTH_X(i,j) = sin(IONO_SOUTH_Theta(i,j))* &
              cos(IONO_SOUTH_Psi(i,j))
@@ -184,8 +186,8 @@ subroutine ionosphere_fine_grid
   do j = 2, IONO_nPsi-1
      dPsi_North(j) = IONO_NORTH_Psi(1,j+1)-IONO_NORTH_Psi(1,j-1)
   enddo
-  dPsi_North(1)    = IONO_NORTH_Psi(1,2) -                                    &
-       (IONO_NORTH_Psi(1,IONO_nPsi-1) - 2.0*IONO_PI)
+  dPsi_North(1)    = IONO_NORTH_Psi(1,2) - &
+       (IONO_NORTH_Psi(1,IONO_nPsi-1) - cTwoPi)
   dPsi_North(IONO_nPsi) = dPsi_North(1)
 
   !
@@ -208,7 +210,7 @@ subroutine ionosphere_fine_grid
      dPsi_South(j)      = IONO_SOUTH_Psi(1,j+1)-IONO_SOUTH_Psi(1,j-1)
   enddo
   dPsi_South(1)         = IONO_SOUTH_Psi(1,2)-                               &
-       (IONO_SOUTH_Psi(1,IONO_nPsi-1)-2.0*IONO_PI)
+       (IONO_SOUTH_Psi(1,IONO_nPsi-1) - cTwoPi)
   dPsi_South(IONO_nPsi) = dPsi_South(1)
 
   !
@@ -327,19 +329,19 @@ subroutine write_timegcm_file(iter, phi_north, phi_south,   &
 
   do i = IONO_nTheta, 1, -1
      do j = IONO_nPsi/2+1, IONO_nPsi
-        psi_offset = (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j) - 180.0
+        psi_offset = cRadToDeg*IONO_SOUTH_Psi(i,j) - 180.0
         if (psi_offset < 0) psi_offset = psi_offset + 360.0
         write(iUnit,fmt="(1P,5(E13.5))")  &
-             (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
+             cRadToDeg*IONO_SOUTH_Theta(i,j), &
              psi_offset, &
              1.0e-03*phi_south(i,j),eflux_south(i,j), &
              avee_south(i,j)
      end do
      do j = 2, IONO_nPsi/2+1
-        psi_offset = (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j) - 180.0
+        psi_offset = cRadToDeg*IONO_SOUTH_Psi(i,j) - 180.0
         if (psi_offset < 0) psi_offset = psi_offset + 360.0
         write(iUnit,fmt="(1P,5(E13.5))")  &
-             (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
+             cRadToDeg*IONO_SOUTH_Theta(i,j), &
              psi_offset, &
              1.0e-03*phi_south(i,j),eflux_south(i,j), &
              avee_south(i,j)
@@ -347,19 +349,19 @@ subroutine write_timegcm_file(iter, phi_north, phi_south,   &
   end do
   do i = IONO_nTheta, 1, -1
      do j = IONO_nPsi/2+1, IONO_nPsi
-        psi_offset = (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j) - 180.0
+        psi_offset = cRadToDeg*IONO_SOUTH_Psi(i,j) - 180.0
         if (psi_offset < 0) psi_offset = psi_offset + 360.0
         write(iUnit,fmt="(1P,5(E13.5))")  &
-             (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
+             cRadToDeg*IONO_NORTH_Theta(i,j), &
              psi_offset, &
              1.0e-03*phi_north(i,j),eflux_north(i,j), &
              avee_north(i,j)
      end do
      do j = 2, IONO_nPsi/2+1
-        psi_offset = (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j) - 180.0
+        psi_offset = cRadToDeg*IONO_SOUTH_Psi(i,j) - 180.0
         if (psi_offset < 0) psi_offset = psi_offset + 360.0
         write(iUnit,fmt="(1P,5(E13.5))")  &
-             (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
+             cRadToDeg*IONO_NORTH_Theta(i,j), &
              psi_offset, &
              1.0e-03*phi_north(i,j),eflux_north(i,j), &
              avee_north(i,j)
@@ -709,8 +711,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(6(E13.5))")  &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Psi(i,j), &
+                   cRadToDeg*IONO_NORTH_Theta(i,j), &
+                   cRadToDeg*IONO_NORTH_Psi(i,j), &
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
                    1.0e06*IONO_NORTH_JR(i,j),   &
                    1.0e-03*IONO_NORTH_PHI(i,j)
@@ -721,8 +723,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(18(E13.5))")  &
                    IONO_NORTH_X(i,j),IONO_NORTH_Y(i,j),IONO_NORTH_Z(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Psi(i,j), &
+                   cRadToDeg*IONO_NORTH_Theta(i,j), &
+                   cRadToDeg*IONO_NORTH_Psi(i,j), &
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
                    IONO_NORTH_EFlux(i,j), &
                    IONO_NORTH_Ave_E(i,j), &
@@ -739,8 +741,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(6(E13.5))")  &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_NORTH_Psi(i,j), &
+                   cRadToDeg*IONO_NORTH_Theta(i,j), &
+                   cRadToDeg*IONO_NORTH_Psi(i,j), &
                    IONO_NORTH_SigmaH(i,j),IONO_NORTH_SigmaP(i,j), &
                    1.0e06*IONO_NORTH_JR(i,j), &
                    1.0e06*IONO_NORTH_TGCM_JR(i,j), &
@@ -766,8 +768,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(6(E13.5))")  &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j), &
+                   cRadToDeg*IONO_SOUTH_Theta(i,j), &
+                   cRadToDeg*IONO_SOUTH_Psi(i,j), &
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
                    1.0e06*IONO_SOUTH_JR(i,j),   &
                    1.0e-03*IONO_SOUTH_PHI(i,j)
@@ -778,8 +780,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(18(E13.5))")  &
                    IONO_SOUTH_X(i,j),IONO_SOUTH_Y(i,j),IONO_SOUTH_Z(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j), &
+                   cRadToDeg*IONO_SOUTH_Theta(i,j), &
+                   cRadToDeg*IONO_SOUTH_Psi(i,j), &
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
                    IONO_SOUTH_EFlux(i,j), &
                    IONO_SOUTH_Ave_E(i,j), &
@@ -796,8 +798,8 @@ subroutine ionosphere_write_output(iFile, iBlock)
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
               write(iUnit,fmt="(6(E13.5))")  &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Theta(i,j), &
-                   (360.00/(2.00*IONO_PI))*IONO_SOUTH_Psi(i,j), &
+                   cRadToDeg*IONO_SOUTH_Theta(i,j), &
+                   cRadToDeg*IONO_SOUTH_Psi(i,j), &
                    IONO_SOUTH_SigmaH(i,j),IONO_SOUTH_SigmaP(i,j), &
                    1.0e06*IONO_SOUTH_JR(i,j), &
                    1.0e06*IONO_SOUTH_TGCM_JR(i,j),  &

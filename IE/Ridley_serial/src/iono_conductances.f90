@@ -63,7 +63,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      mult_fac   = 0.25*0.33e7*2.0e-3
      ave_e_peak = max(3.0, PolarCap_AveE)                        ! keV
 
-     oval_shift = 10.0*IONO_PI/180.0
+     oval_shift = 10.0*cDegToRad
 
      select case(iBlock)
      case(1)
@@ -109,7 +109,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               if (PolarCap_AveE == IONO_Min_Ave_E) then
                  distance = 0.25 +                                          &
                       0.75*(                                                &
-                      sin(IONO_NORTH_Psi(i,j)-(ave_e_peak_lon+IONO_PI/2.0)) &
+                      sin(IONO_NORTH_Psi(i,j)-(ave_e_peak_lon + cHalfPi)) &
                       + 1.0)/2.0
               else
                  distance = 1.0
@@ -140,7 +140,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
              Width_of_Oval, &
              Strength_of_Oval)
 
-        Loc_of_Oval = IONO_PI - Loc_of_Oval
+        Loc_of_Oval = cPi - Loc_of_Oval
 
         ave_e_peak_lon = 0.0
 
@@ -167,13 +167,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               ! Average Energy
 
-              IONO_SOUTH_Ave_E(i,j) =                                            &
+              IONO_SOUTH_Ave_E(i,j) =                                      &
                    ave_e_peak*exp(-1.0*(distance/Width_of_Oval(j))**2)
 
               if (PolarCap_AveE == IONO_Min_Ave_E) then
                  distance = 0.25 +                                          &
                       0.75*(                                                &
-                      sin(IONO_SOUTH_Psi(i,j)-(ave_e_peak_lon+IONO_PI/2.0)) &
+                      sin(IONO_SOUTH_Psi(i,j)-(ave_e_peak_lon + cHalfPi))   &
                       + 1.0)/2.0
               else
                  distance = 1.0
@@ -215,8 +215,8 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
      enddo
 
-     dlat = (cond_lats(1) - cond_lats(2))*IONO_PI/180.0
-     dmlt = (cond_mlts(2) - cond_mlts(1))*IONO_PI/12.0
+     dlat = (cond_lats(1) - cond_lats(2))*cDegToRad
+     dmlt = (cond_mlts(2) - cond_mlts(1))*cPi/12.0
 
      select case(iBlock)
      case(1)
@@ -242,7 +242,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               endif
               y2 = 1.0 - y1
 
-              x1 = mod((IONO_NORTH_Psi(i,j) + IONO_PI),2.0*IONO_PI)/dmlt + 1.0
+              x1 = mod((IONO_NORTH_Psi(i,j) + cPi), cTwoPi)/dmlt + 1.0
               imlt = x1
               x1   = 1.0 - (x1 - imlt)
               x2   = 1.0 - x1
@@ -387,13 +387,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
              Width_of_Oval, &
              Strength_of_Oval)
 
-        Loc_of_Oval = IONO_PI - Loc_of_Oval
+        Loc_of_Oval = cPI - Loc_of_Oval
 
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
 
 
-              y1 = (IONO_PI-IONO_SOUTH_Theta(i,j))/dlat + 1.0
+              y1 = (cPi - IONO_SOUTH_Theta(i,j))/dlat + 1.0
               if (y1 > i_cond_nlats-1) then
                  jlat = i_cond_nlats-1
                  y1   = 1.0
@@ -403,7 +403,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
               endif
               y2 = 1.0 - y1
 
-              x1 = mod((IONO_SOUTH_Psi(i,j) + IONO_PI),2.0*IONO_PI)/dmlt + 1.0
+              x1 = mod((IONO_SOUTH_Psi(i,j) + cPi), cTwoPi)/dmlt + 1.0
               imlt = x1
               x1   = 1.0 - (x1 - imlt)
               x2   = 1.0 - x1
@@ -959,7 +959,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   ! Reverse the Arrays for Southern Hemisphere:
   !
 
-  if (Theta_in(1,1) < IONO_PI/2.0) then
+  if (Theta_in(1,1) < cHalfPi) then
      Current = Current_in
      Theta   = Theta_in
      Psi     = Psi_in
@@ -968,7 +968,7 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
      do i = 1, IONO_nTheta
         do j = 1, IONO_nPsi
            Current(IONO_nTheta - (i-1), j) = Current_in(i,j)
-           Theta(IONO_nTheta - (i-1), j)   = IONO_PI - Theta_in(i,j)
+           Theta(IONO_nTheta - (i-1), j)   = cPi - Theta_in(i,j)
            Psi(IONO_nTheta - (i-1), j)     = Psi_in(i,j)
         enddo
      enddo
@@ -1044,11 +1044,11 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   mean_colat = mean_colat/sum
   Night_Width = Night_Width/sum
 
-  if (Night_Width > 6.0*IONO_PI/180.0) Night_Width=6.0*IONO_PI/180.0
-  Day_Width = max(Night_Width/2.0,1.0*IONO_PI/180.0)
+  if (Night_Width > 6.0*cDegToRad) Night_Width=6.0*cDegToRad
+  Day_Width = max(Night_Width/2.0,1.0*cDegToRad)
 
-  if (mean_colat < 15.0*IONO_PI/180.0) then
-     mean_colat = 15.0*IONO_PI/180.0
+  if (mean_colat < 15.0*cDegToRad) then
+     mean_colat = 15.0*cDegToRad
      dev_colat = 0.0
   else
      dev_colat = ((day_colat - mean_colat) * day_fac - &
@@ -1066,12 +1066,12 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   Night_Strength = sum
 
 
-  !  dev_colat = 1.0*IONO_PI/180.0
+  !  dev_colat = 1.0*cDegToRad
 
-  !  Day_Width = 2.5*IONO_PI/180.0
+  !  Day_Width = 2.5*cDegToRad
   !  Night_Width = Day_Width
 
-  !  mean_colat = 2.0*IONO_PI/180.0
+  !  mean_colat = 2.0*cDegToRad
 
   do j=1,IONO_nPsi
      Loc_of_Oval(j)   = mean_colat - dev_colat*cos(Psi(1,j))

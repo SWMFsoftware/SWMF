@@ -12,7 +12,6 @@ module ModIonosphere
   implicit none
   save
 
-  real, parameter    :: IONO_PI=cPi
   !\
   ! Ionosphere solution parameters
   !/
