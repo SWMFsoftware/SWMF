@@ -7,7 +7,8 @@ module ModUser
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_calc_sources
+       IMPLEMENTED2 => user_calc_sources,               &
+       IMPLEMENTED3 => user_init_point_implicit
 
   include 'user_module.h' !list of public methods
 
@@ -57,7 +58,7 @@ contains
     use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
-    use ModGeometry,ONLY: r_BLK
+    use ModGeometry,ONLY: r_BLK, rMin_BLK
 
     integer :: iBlock, i, j, k
     real    :: Coef
@@ -111,27 +112,6 @@ contains
       ! Apply friction relative to some medium at rest
       ! The friction force is proportional to the velocity and the density.
 
-      ! Initialization for implicit sources
-      if(UsePointImplicit_B(iBlock) .and. .not.allocated(iVarPointImpl_I))then
-
-         ! Allocate and set iVarPointImpl_I
-         ! In this example there are 3 implicit variables
-         allocate(iVarPointImpl_I(3))
-
-         ! In this example the implicit variables are the 3 momenta
-         iVarPointImpl_I = (/RhoUx_, RhoUy_, RhoUz_/)
-
-         ! Note that energy is not an independent variable for the 
-         ! point implicit scheme. The pressure is an independent variable,
-         ! and in this example there is no implicit pressure source term.
-
-         ! Tell the point implicit scheme if dS/dU will be set analytically
-         ! If this is set to true the DsDu_VVC matrix has to be set below.
-         IsPointImplMatrixSet = .true.
-
-         RETURN
-      end if
-
       ! Add implicit source here
       ! In this example a simple friction term is added to the momentum 
       ! equation. Note that the energy is a dependent variable in the
@@ -160,5 +140,30 @@ contains
 
     end subroutine user_impl_source
   end subroutine user_calc_sources
+
+  !============================================================================
+
+  subroutine user_init_point_implicit
+
+    use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    !------------------------------------------------------------------------
+
+    ! Allocate and set iVarPointImpl_I
+    ! In this example there are 3 implicit variables
+    allocate(iVarPointImpl_I(3))
+
+    ! In this example the implicit variables are the 3 momenta
+    iVarPointImpl_I = (/RhoUx_, RhoUy_, RhoUz_/)
+
+    ! Note that energy is not an independent variable for the 
+    ! point implicit scheme. The pressure is an independent variable,
+    ! and in this example there is no implicit pressure source term.
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    IsPointImplMatrixSet = .true.
+
+  end subroutine user_init_point_implicit
 
 end module ModUser
