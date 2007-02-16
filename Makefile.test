@@ -17,9 +17,9 @@ test_help:
 
 test:
 	-@(make test_comp)
-	-@(make test1)
 	-@(make test_pw)
 	-@(make test_esmf)
+	-@(make test1)
 	-@(make test_check)
 
 test_check:
