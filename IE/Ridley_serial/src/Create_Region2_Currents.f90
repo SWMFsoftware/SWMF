@@ -16,11 +16,7 @@ subroutine Create_Region2_Currents(iBlock)
 
   real :: total_up, total_down, factor, area
 
-  real :: Radius 
   !---------------------------------------------------------------------------
-  !Here: the outer radius of the ionosphere, not influencing on the result
-  Radius=IONO_Radius+IONO_height
-
   !
   ! We have a slight problem with the currents within the MHD code.  When
   ! the IMF By component gets rather large, the current flowing into each
