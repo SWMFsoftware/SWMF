@@ -108,15 +108,16 @@ information is written to a logfile.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="IONOSPHERE">
-	<parameter name="ConductanceModel" type="integer"
+	<parameter name="iConductanceModel" type="integer"
 							input="select">
-		<option name="(0) constant pedersen and 0 Hall"
+		<option name="(0) constant Pedersen and 0 Hall"
 							value="0" />
-		<option name="(1) constant pedersen and Hall"
+		<option name="(1) constant Pedersen and Hall"
 							value="1" />
 		<option name="(2) F107 flux and and constant Hall"
 							value="2" />
 		<option name="(3) Simple oval"		value="3" />
+		<option name="(4) Restricted oval"	value="4" />
 		<option name="(5) Realistic oval" 	value="5" 
 							default="T"/>
 	</parameter>
@@ -128,8 +129,8 @@ information is written to a logfile.
 	<parameter name="PolarCapPedConductance" type="real" min="0" 
 						default="0.25"/>
 
-	<rule expr="not ($ConductanceModel=~/3|5/ and $F107Flux==0)">
-		F107Flux must be positive for ConductanceModel = 3 or 5
+	<rule expr="not ($iConductanceModel=~/3|4|5/ and $F107Flux==0)">
+		F107Flux must be positive for ConductanceModel = 3, 4 or 5
 	</rule>
 #IONOSPHERE
 5			iConductanceModel
@@ -150,8 +151,12 @@ The iConductanceModel variable determines which ionosphere model is used:\\
   3 - uses solar EUV, nightside, and crude oval, so uses
       F107Flux, StarLightPedConductance, and PolarCapPedConductance,
       since a polar cap is defined with the oval.\\
-  4 - doesn't work\\
+  4 - restricted oval, uses same variables as 3.\\
   5 - more realistic oval, uses same variables as 3.\\
+
+Model 4 and 5 differ in the way the conductances are limited to the
+fitted oval. Model 4 is more restrictive, while model 5 is somewhat
+more relaxed.
 
 The UseFullCurrent and UseFakeRegion2 logicals were used in the past
 to test various algorithmic choices. They should have a false value now.
@@ -249,6 +254,34 @@ This command cannot be used in the SWMF.
 
 Modifies the conductance by adjusting the oval width/strength.
 Only works for conductance model 4!
+</command>
+
+</commandgroup>
+
+<commandgroup name="Scheme parameters">
+
+<command name="KRYLOV">
+	<parameter name="UsePreconditioner" type="logical" default="T"/>
+	<parameter name="UseInitialGuess"   type="logical" default="T"/>
+	<parameter name="Tolerance" type="real" min="0" default="0.01"/>
+	<parameter name="MaxIteration" type="integer" min="1" default="100"/>
+
+#KRYLOV
+T			UsePreconditioner
+T			UseInitialGuess
+0.01			Tolerance
+100			MaxIteration
+
+This command controls the parameters for the Krylov solver used to
+solve the Poisson type equation for the electric potential.
+If UsePreconditioner is true the solver uses a preconditioner.
+If UseInitialGuess is true, the previous solution is used as an 
+initial guess. The Tolerance parameter sets the second norm of
+the final (preconditioned) residual. The MaxIteration parameter sets the
+maximum number of iterations before the linear solver gives up.
+In most cases the default values should work fine.
+
+The default values are shown above.
 </command>
 
 </commandgroup>

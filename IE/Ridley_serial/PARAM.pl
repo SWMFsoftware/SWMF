@@ -1,12 +1,12 @@
 #^CFG FILE _FALSE_
-$tree = [{'attrib' => {'name' => 'Ridley Ionosphere Model: IE Component'},'content' => [{'attrib' => {'name' => 'Testing'},'content' => [{'attrib' => {'name' => 'STRICT'},'content' => [{'attrib' => {'default' => 'T','type' => 'logical','name' => 'UseStrict'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+$tree = [{'content' => [{'content' => [{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseStrict','type' => 'logical','default' => 'T'},'type' => 'e'},{'content' => '
 
 #STRICT
 T                       UseStrict
 
 If true then stop when parameters are incompatible. If false, try to
 correct parameters and continue. Default is true, i.e. strict mode.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'DEBUG'},'content' => [{'attrib' => {'min' => '-1','default' => '-1','type' => 'integer','name' => 'iDebugLevel'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '$_nProc','default' => '0','type' => 'integer','name' => 'iDebugProc'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'STRICT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'iDebugLevel','type' => 'integer','default' => '-1','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'iDebugProc','max' => '$_nProc','type' => 'integer','default' => '0','min' => '0'},'type' => 'e'},{'content' => '
 
 #DEBUG
 2			iDebugLevel
@@ -16,11 +16,11 @@ The iDebugLevel variable sets the level of debug information
 for the processor selected by iDebugProc.
 
 Default is iDebugLevel=-1 which is no debug info on any and iDebugProc=0.
-','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'Output'},'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'DEBUG'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'Testing'},'type' => 'e'},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-','type' => 't'},{'attrib' => {'name' => 'IONODIR'},'content' => [{'attrib' => {'length' => '100','default' => 'ionosphere','type' => 'string','name' => 'NameIonoDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'NameIonoDir','length' => '100','type' => 'string','default' => 'ionosphere'},'type' => 'e'},{'content' => '
 
 #IONODIR
 IE/Plots		NameIonoDir
@@ -28,7 +28,7 @@ IE/Plots		NameIonoDir
 The NameIonoDir variable contains the name of the directory to store
 output files. Default value is "IE/ionosphere".
 
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'alias' => 'IE_SAVEPLOT','name' => 'SAVEPLOT'},'content' => [{'attrib' => {'min' => '0','max' => '10','default' => '0','type' => 'integer','name' => 'nPlotFile'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'to' => '$nPlotFile','from' => '1'},'content' => [{'attrib' => {'min' => '2','max' => '2','type' => 'strings','name' => 'StringPlot'},'content' => [{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypePlotForm'},'content' => [{'attrib' => {'value' => 'idl','default' => 'T','name' => 'IDL'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'tec','name' => 'TecPlot'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'},{'attrib' => {'input' => 'select','required' => 'T','type' => 'string','name' => 'TypePlotVar'},'content' => [{'attrib' => {'value' => 'min','default' => 'T','name' => 'Minimum'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'max','name' => 'Maximum'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'uam','name' => 'UA'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => 'aur','name' => 'Aurora'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'part'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'integer','name' => 'DnOutput'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '-1','type' => 'real','name' => 'DtOutput'},'content' => [],'type' => 'e','name' => 'parameter'}],'type' => 'e','name' => 'for'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'IONODIR'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'nPlotFile','max' => '10','type' => 'integer','default' => '0','min' => '0'},'type' => 'e'},{'content' => [{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'IDL','value' => 'idl','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'TecPlot','value' => 'tec'},'type' => 'e'}],'name' => 'part','attrib' => {'name' => 'TypePlotForm','input' => 'select','type' => 'string','required' => 'T'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'Minimum','value' => 'min','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'Maximum','value' => 'max'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'UA','value' => 'uam'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'Aurora','value' => 'aur'},'type' => 'e'}],'name' => 'part','attrib' => {'name' => 'TypePlotVar','input' => 'select','type' => 'string','required' => 'T'},'type' => 'e'}],'name' => 'parameter','attrib' => {'name' => 'StringPlot','max' => '2','type' => 'strings','min' => '2'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DnOutput','type' => 'integer','min' => '-1'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DtOutput','type' => 'real','min' => '-1'},'type' => 'e'}],'name' => 'for','attrib' => {'to' => '$nPlotFile','from' => '1'},'type' => 'e'},{'content' => '
 
 #SAVEPLOT
 2			nFile
@@ -48,21 +48,21 @@ The DnOuput and DtOutput variables determine the frequency
 of saves in terms of time step or physical time.
 
 The default is that no plotfiles are saved.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SAVELOGFILE'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoSaveIELogfile'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SAVEPLOT','alias' => 'IE_SAVEPLOT'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoSaveIELogfile','type' => 'logical','default' => 'F'},'type' => 'e'},{'content' => '
 
 #SAVELOGFILE
 F			DoSaveIELogfile
 
 If true, every time that iono_solve is called, iteration, time, and soltution
 information is written to a logfile.
-','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'name' => 'Physical parameters'},'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SAVELOGFILE'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'Output'},'type' => 'e'},{'content' => [{'content' => '
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!! Physical parameters !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-','type' => 't'},{'attrib' => {'name' => 'IONOSPHERE'},'content' => [{'attrib' => {'input' => 'select','type' => 'integer','name' => 'ConductanceModel'},'content' => [{'attrib' => {'value' => '0','name' => '(0) constant pedersen and 0 Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '1','name' => '(1) constant pedersen and Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '2','name' => '(2) F107 flux and and constant Hall'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '3','name' => '(3) Simple oval'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'value' => '5','default' => 'T','name' => '(5) Realistic oval'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFullCurrent'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseFakeRegion2'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '150','type' => 'real','name' => 'F107Flux'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0.001','default' => '0.25','type' => 'real','name' => 'StarLightPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '0.25','type' => 'real','name' => 'PolarCapPedConductance'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'expr' => 'not ($ConductanceModel=~/3|5/ and $F107Flux==0)'},'content' => [{'content' => '
-		F107Flux must be positive for ConductanceModel = 3 or 5
-	','type' => 't'}],'type' => 'e','name' => 'rule'},{'content' => '
+','type' => 't'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => '(0) constant Pedersen and 0 Hall','value' => '0'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => '(1) constant Pedersen and Hall','value' => '1'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => '(2) F107 flux and and constant Hall','value' => '2'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => '(3) Simple oval','value' => '3'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => '(4) Restricted oval','value' => '4'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => '(5) Realistic oval','value' => '5','default' => 'T'},'type' => 'e'}],'name' => 'parameter','attrib' => {'name' => 'iConductanceModel','input' => 'select','type' => 'integer'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseFullCurrent','type' => 'logical','default' => 'F'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseFakeRegion2','type' => 'logical','default' => 'F'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'F107Flux','type' => 'real','default' => '150','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'StarLightPedConductance','type' => 'real','default' => '0.25','min' => '0.001'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'PolarCapPedConductance','type' => 'real','default' => '0.25','min' => '0'},'type' => 'e'},{'content' => [{'content' => '
+		F107Flux must be positive for ConductanceModel = 3, 4 or 5
+	','type' => 't'}],'name' => 'rule','attrib' => {'expr' => 'not ($iConductanceModel=~/3|4|5/ and $F107Flux==0)'},'type' => 'e'},{'content' => '
 #IONOSPHERE
 5			iConductanceModel
 F			UseFullCurrent
@@ -82,14 +82,18 @@ The iConductanceModel variable determines which ionosphere model is used:\\\\
   3 - uses solar EUV, nightside, and crude oval, so uses
       F107Flux, StarLightPedConductance, and PolarCapPedConductance,
       since a polar cap is defined with the oval.\\\\
-  4 - doesn\'t work\\\\
+  4 - restricted oval, uses same variables as 3.\\\\
   5 - more realistic oval, uses same variables as 3.\\\\
+
+Model 4 and 5 differ in the way the conductances are limited to the
+fitted oval. Model 4 is more restrictive, while model 5 is somewhat
+more relaxed.
 
 The UseFullCurrent and UseFakeRegion2 logicals were used in the past
 to test various algorithmic choices. They should have a false value now.
 The default values are shown by the example above.
 
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'IM'},'content' => [{'attrib' => {'input' => 'select','type' => 'string','name' => 'TypeImCouple'},'content' => [{'attrib' => {'default' => 'T','name' => 'north'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'south'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'cpcpmin'},'content' => [],'type' => 'e','name' => 'option'},{'attrib' => {'name' => 'average'},'content' => [],'type' => 'e','name' => 'option'}],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'IONOSPHERE'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'option','attrib' => {'name' => 'north','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'south'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'cpcpmin'},'type' => 'e'},{'content' => [],'name' => 'option','attrib' => {'name' => 'average'},'type' => 'e'}],'name' => 'parameter','attrib' => {'name' => 'TypeImCouple','input' => 'select','type' => 'string'},'type' => 'e'},{'content' => '
 
 #IM
 average				TypeImCouple
@@ -103,7 +107,7 @@ for the north and south hemispheres.
 
 The default value is \'north\', which is backward compatible,
 and it requires no communication between the IE processors.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'UA'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'DoCoupleUaCurrent'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','max' => '60','if' => '$DoCoupleUaCurrent','default' => '45','type' => 'real','name' => 'LatBoundary'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'IM'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'DoCoupleUaCurrent','type' => 'logical','default' => 'F'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'LatBoundary','max' => '60','if' => '$DoCoupleUaCurrent','type' => 'real','default' => '45','min' => '0'},'type' => 'e'},{'content' => '
 
 #UA
 T		DoCoupleUaCurrent
@@ -118,7 +122,7 @@ the potential solver should be given with the LatBoundary paramter.
 
 The default value is DoCoupleUaCurrent=.false, i.e. the UA currents 
 are not included.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'AMIEFILES'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'AMIEFileNorth'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'AMIEFileSouth'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'UA'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'AMIEFileNorth','length' => '100','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'AMIEFileSouth','length' => '100','type' => 'string'},'type' => 'e'},{'content' => '
 
 #AMIEFILES
 IE/amie.north
@@ -127,14 +131,14 @@ IE/amie.south
 Set the files to read the AMIE data from.
 
 Default is not reading AMIE files.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'SPS'},'content' => [{'attrib' => {'default' => 'F','type' => 'logical','name' => 'UseSPS'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'AMIEFILES'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseSPS','type' => 'logical','default' => 'F'},'type' => 'e'},{'content' => '
 
 #SPS
 T			UseSPS
 
 The UseSPS parameter indicates if the serial potential solver is used.
 This is the default in the SWMF and it cannot be modified in the SWMF.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'if' => '$_IsStandAlone','name' => 'BACKGROUND'},'content' => [{'attrib' => {'length' => '100','type' => 'string','name' => 'NameOfModelDir'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameOfEFieldModel'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameOfAuroralModel'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'length' => '100','type' => 'string','name' => 'NameOfSolarModel'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'SPS'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'NameOfModelDir','length' => '100','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'NameOfEFieldModel','length' => '100','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'NameOfAuroralModel','length' => '100','type' => 'string'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'NameOfSolarModel','length' => '100','type' => 'string'},'type' => 'e'},{'content' => '
 
 #BACKGROUND
 dir			NameOfModelDir
@@ -143,7 +147,7 @@ ihp			NameOfAuroralModel
 xyz			NameOfSolarModel
 
 This command cannot be used in the SWMF.
-','type' => 't'}],'type' => 'e','name' => 'command'},{'attrib' => {'name' => 'CONDUCTANCE'},'content' => [{'attrib' => {'min' => '0','default' => '1.0','type' => 'real','name' => 'OvalWidthFactor'},'content' => [],'type' => 'e','name' => 'parameter'},{'attrib' => {'min' => '0','default' => '1.7','type' => 'real','name' => 'OvalStrengthFactor'},'content' => [],'type' => 'e','name' => 'parameter'},{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'BACKGROUND','if' => '$_IsStandAlone'},'type' => 'e'},{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'OvalWidthFactor','type' => 'real','default' => '1.0','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'OvalStrengthFactor','type' => 'real','default' => '1.7','min' => '0'},'type' => 'e'},{'content' => '
 
 #CONDUCTANCE
 1.0			OvalWidthFactor
@@ -151,6 +155,24 @@ This command cannot be used in the SWMF.
 
 Modifies the conductance by adjusting the oval width/strength.
 Only works for conductance model 4!
-','type' => 't'}],'type' => 'e','name' => 'command'}],'type' => 'e','name' => 'commandgroup'},{'attrib' => {'expr' => '-d \'IE/ionosphere\' or not $_IsFirstSession'},'content' => [{'content' => '
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'CONDUCTANCE'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'Physical parameters'},'type' => 'e'},{'content' => [{'content' => [{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UsePreconditioner','type' => 'logical','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'UseInitialGuess','type' => 'logical','default' => 'T'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'Tolerance','type' => 'real','default' => '0.01','min' => '0'},'type' => 'e'},{'content' => [],'name' => 'parameter','attrib' => {'name' => 'MaxIteration','type' => 'integer','default' => '100','min' => '1'},'type' => 'e'},{'content' => '
+
+#KRYLOV
+T			UsePreconditioner
+T			UseInitialGuess
+0.01			Tolerance
+100			MaxIteration
+
+This command controls the parameters for the Krylov solver used to
+solve the Poisson type equation for the electric potential.
+If UsePreconditioner is true the solver uses a preconditioner.
+If UseInitialGuess is true, the previous solution is used as an 
+initial guess. The Tolerance parameter sets the second norm of
+the final (preconditioned) residual. The MaxIteration parameter sets the
+maximum number of iterations before the linear solver gives up.
+In most cases the default values should work fine.
+
+The default values are shown above.
+','type' => 't'}],'name' => 'command','attrib' => {'name' => 'KRYLOV'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'Scheme parameters'},'type' => 'e'},{'content' => [{'content' => '
 	Output directory IE/ionosphere should exist!
-','type' => 't'}],'type' => 'e','name' => 'rule'}],'type' => 'e','name' => 'commandList'}];
+','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '-d \'IE/ionosphere\' or not $_IsFirstSession'},'type' => 'e'}],'name' => 'commandList','attrib' => {'name' => 'Ridley Ionosphere Model: IE Component'},'type' => 'e'}];
