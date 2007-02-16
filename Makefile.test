@@ -122,15 +122,15 @@ test1_check:
 		${TESTDIR}/RESULTS/PW/plots_iline0001.out \
 		output/test1/PW_plots_iline0001.out \
 		>> test1_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-14 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/logIE.log \
 		output/test1/IE_logIE.log \
 		> test1_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-15 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-8 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE_it000321_104510_000.idl \
 		>> test1_ie.diff)
