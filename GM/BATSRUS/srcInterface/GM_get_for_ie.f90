@@ -13,6 +13,7 @@ module ModFieldAlignedCurrent
   save
   real, allocatable :: bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:), &
        FieldAlignedCurrent_II(:,:)
+  real :: LatBoundary
 
 contains
 
@@ -50,7 +51,7 @@ contains
     use CON_axes,          ONLY: transform_matrix
     use ModProcMH,         ONLY: iProc, iComm
     use ModMpi
-    use ModNumConst, ONLY: cUnit_DD
+    use ModNumConst, ONLY: cHalfPi
 
     ! Map the grid points from the ionosphere radius to rCurrents.
     ! Calculate the field aligned currents there, use the ratio of the
@@ -66,6 +67,7 @@ contains
 
     GmSmg_DD = transform_matrix(Time_Simulation, 'SMG', TypeCoordSystem)
 
+    LatBoundary = 100.0
     do j = 1, nPhiIono
        Phi = PhiIono_I(j)
        do i = 1, nThetaIono
@@ -81,6 +83,8 @@ contains
              bCurrentLocal_VII(:,i,j) = (/1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
              CYCLE
           end if
+
+          LatBoundary = min( abs(Theta - cHalfPi), LatBoundary )
 
           ! Get the B0 field at the mapped position
           call get_planet_field(Time_Simulation, Xyz_D,'SMG NORM',B0_D)
@@ -161,6 +165,9 @@ contains
        end do
     end do
 
+    ! Save the latitude boundary information to the equator
+    FieldAlignedCurrent_II(nThetaIono/2:nThetaIono/2+1,1) = LatBoundary
+
   end subroutine calc_field_aligned_current
 
 end module ModFieldAlignedCurrent
@@ -197,6 +204,7 @@ subroutine GM_get_for_ie(Buffer_II,iSize,jSize,NameVar)
   case default
      call CON_stop(NameSub//' invalid NameVar='//NameVar)
   end select
+
   if(DoTest)write(*,*)NameSub,': finished with NameVar=',NameVar
 
 end subroutine GM_get_for_ie
