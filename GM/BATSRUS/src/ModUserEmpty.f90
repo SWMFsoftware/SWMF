@@ -171,6 +171,17 @@ contains
   end subroutine user_calc_sources
 
   !=====================================================================
+
+  subroutine user_init_point_implicit
+
+    character (len=*), parameter :: Name='user_init_point_implicit'
+    !-------------------------------------------------------------------
+    call stop_user(Name)
+
+  end subroutine user_init_point_implicit
+
+  !=====================================================================
+
   subroutine user_get_b0(xx,yy,zz,B0)
 
     real, intent(in):: xx,yy,zz
