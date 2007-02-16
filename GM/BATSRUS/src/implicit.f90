@@ -84,7 +84,7 @@ subroutine advance_impl
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModPhysics, ONLY : gm1, UnitSi_t
   use ModImplicit
-  use ModPointImplicit, ONLY: UsePointImplicit,UsePointImplicitOrig
+  use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModAMR, ONLY : UnusedBlock_BP
   use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
@@ -103,7 +103,7 @@ subroutine advance_impl
   real*8  :: time_before,time_before_all
   logical :: oktest, oktest_me, DoTestKrylov, DoTestKrylovMe
 
-  logical :: UseUpdateCheckOrig
+  logical :: UseUpdateCheckOrig, UsePointImplicitOrig
 
   real    :: pRhoRelativeMin
 
@@ -195,12 +195,13 @@ subroutine advance_impl
      UnusedBLK(1:nBlockMax) = UnusedBlock_BP(1:nBlockMax,iProc)
   end if
 
-  UsePointImplicitOrig = UsePointImplicit
-  UsePointImplicit = .false.
-
   !\
   ! Advance implicitly treated blocks
   !/
+
+  ! Switch off point implicit scheme while advancing the implicit blocks
+  UsePointImplicitOrig = UsePointImplicit
+  UsePointImplicit = .false.
 
   ! Use implicit time step
   if(.not.UseDtFixed)cfl=implCFL
