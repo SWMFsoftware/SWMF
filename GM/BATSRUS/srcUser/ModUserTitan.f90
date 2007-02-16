@@ -18,8 +18,9 @@ module ModUser
        IMPLEMENTED4 => user_set_boundary_cells,         &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
-       IMPLEMENTED7 => user_set_plot_var,               &      
-       IMPLEMENTED8 => user_specify_initial_refinement
+       IMPLEMENTED7 => user_init_point_implicit,        &
+       IMPLEMENTED8 => user_set_plot_var,               &      
+       IMPLEMENTED9 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -431,8 +432,31 @@ contains
     end do
   end subroutine user_read_inputs
 
+  !============================================================================
+
+  subroutine user_init_point_implicit
+
+    use ModVarIndexes
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+
+    ! Allocate and set iVarPointImpl_I
+    allocate(iVarPointImpl_I(11))
+
+    iVarPointImpl_I = (/RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, RhoMHCp_ ,&
+         RhoHHCp_,RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_/)
+
+    ! Note that energy is not an independent variable for the 
+    ! point implicit scheme. The pressure is an independent variable,
+    ! and in this example there is no implicit pressure source term.
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    IsPointImplMatrixSet = .false.
+
+  end subroutine user_init_point_implicit
 
   !============================================================================
+
   subroutine user_calc_sources
     use ModAdvance,  ONLY: Source_VC,Energy_
     use ModNumConst, ONLY: cZero
@@ -452,8 +476,9 @@ contains
     else
        oktest=.false.; oktest_me=.false.
     end if
-
-    UsePointImplicit_B(globalBLK) = R_BLK(1,1,1,globalBLK) <= rPointImplicit &
+    if(UsePointImplicit)&
+         UsePointImplicit_B(globalBLK) = &
+         R_BLK(1,1,1,globalBLK) <= rPointImplicit &
          .and. R_BLK(nI,1,1,globalBLK) > rBody
 
     if(.not.(UsePointImplicit .and. UsePointImplicit_B(globalBLK)) )then
@@ -493,7 +518,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
     use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
-    use ModPointImplicit, ONLY: UsePointImplicit_B
+    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies,iBlock,iBlockLast = -1
@@ -527,6 +552,7 @@ contains
     !\
     ! Compute Titan ionospheric source terms.
     !/
+
     if(iBlock /= iBlockLast)then
        iBlockLast = iBlock
        if(use_block_data(iBlock))then
@@ -714,6 +740,7 @@ contains
           totalRLNumRhox=sum(RecombRate_VC(:,i,j,k) &
                *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_V)
 
+!          if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
           if(.not.UsePointImplicit_B(iBlock) )then
              !sum of the (loss term/atom mass) due to recombination
              SourceLossMax = 3.0*maxval(abs(SiSpecies_I(1:nSpecies)+&
@@ -1433,7 +1460,7 @@ contains
     !---------------------------------------
 
 
-!!!!!-------------------------- Interpolation/Expolation for Te -------------------------
+!!!!!-------------------------- Interpolation/Expolation for Te ---------------------
     !     open(1,file="T_e.dat",status="old")
     !     read(1,*) (tmp_hT(i),tmp_Te(i),i=1,num_Te)
     !     close(1)
@@ -1471,7 +1498,7 @@ contains
        end if
     end do;end do; end do
 
-!!!!!----------------- Interpolation/Expolation for ionization rates ---------------------
+!!!!!----------------- Interpolation/Expolation for ionization rates ----------------
     !     open(1,file="ion_prod_rate.dat",status="old")
     !     read(1,*) (tmp_hR(i),tmp_RL0(i),tmp_RM0(i),tmp_RH0(i),i=1,num_Ri)
     !     close(1)
@@ -1569,7 +1596,7 @@ contains
        !                 end if
     end do; end do; end do
 
-!!!!!----------------- Interpolation/Expolation for neutral densities ---------------------
+!!!!!----------------- Interpolation/Expolation for neutral densities --------------
     !  open(1,file="n.dat",status="old")
     !    read(1,*) (tmp_rn(i),tmp_nL(i),tmp_nM(i),tmp_nH(i),i=1,num_n)
     !  close(1)
@@ -1789,26 +1816,6 @@ contains
     end if
 
     iBlock = GlobalBlk
-
-    ! Initialization for implicit sources
-    if(UsePointImplicit_B(iBlock) .and. .not.allocated(iVarPointImpl_I))then
-
-       ! Allocate and set iVarPointImpl_I
-       allocate(iVarPointImpl_I(11))
-
-       iVarPointImpl_I = (/RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, RhoMHCp_ ,&
-            RhoHHCp_,RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_/)
-
-       ! Note that energy is not an independent variable for the 
-       ! point implicit scheme. The pressure is an independent variable,
-       ! and in this example there is no implicit pressure source term.
-
-       ! Tell the point implicit scheme if dS/dU will be set analytically
-       ! If this is set to true the DsDu_VVC matrix has to be set below.
-       IsPointImplMatrixSet = .false.
-
-       RETURN
-    end if
 
     Srho   = cZero
     SrhoSpecies=cZero
