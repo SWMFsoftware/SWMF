@@ -111,6 +111,7 @@ test1_rundir:
 test1_run:
 	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
@@ -118,17 +119,21 @@ test1_check:
 		output/test1/PW_restart_iline0001.dat \
 		> test1_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
-		${TESTDIR}/PW/plots/plots_iline0001.out \
+		${TESTDIR}/RESULTS/PW/plots_iline0001.out \
 		output/test1/PW_plots_iline0001.out \
 		>> test1_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-14 \
-		${TESTDIR}/GM/IO2/log_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test1_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-15 \
-		${TESTDIR}/IE/ionosphere/it000321_104501_000_b1.idl \
-		output/test1/IE_it000321_104501_000_b1.idl \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 -a=1e-15 \
+		${TESTDIR}/RESULTS/IE/logIE.log \
+		output/test1/IE_logIE.log \
 		> test1_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-15 \
+		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
+		output/test1/IE_it000321_104510_000.idl \
+		>> test1_ie.diff)
 	ls -l test1*.diff
 
 ### ESMF test ###
@@ -158,7 +163,7 @@ test_esmf_rundir:
 test_esmf_run: 
 	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
 	@cd ${TESTDIR}; ${MPIRUN} ESMF_SWMF.exe > runlog
-	@cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS
+	@cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_esmf_check:
 	perl -ne 'print if /error/i' PET*.ESMF_LogFile > test_esmf.diff
