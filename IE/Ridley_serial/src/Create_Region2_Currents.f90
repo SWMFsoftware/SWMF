@@ -79,8 +79,8 @@ subroutine Create_Region2_Currents(iBlock)
           IONO_NORTH_JR, IONO_NORTH_Theta, IONO_NORTH_Psi,  &
           Loc_of_Oval, Width_of_Oval, Strength_of_Oval)
 
-     center = Loc_of_Oval(1) + 15.0*IONO_PI/180.0
-     width  = 2.5*IONO_PI/180.0
+     center = Loc_of_Oval(1) + 15.0*cDegToRad
+     width  = 2.5*cDegToRad
      strength = -0.5*Strength_of_Oval(1)
 
      do i=1,IONO_nTheta
@@ -88,7 +88,7 @@ subroutine Create_Region2_Currents(iBlock)
              center = IONO_NORTH_Theta(i,1)
      enddo
 
-     center = center - 5.0*IONO_PI/180.0
+     center = center - 5.0*cDegToRad
 
      do i=1, IONO_nTheta
         do j=1, IONO_nPsi
@@ -138,7 +138,7 @@ subroutine Create_Region2_Currents(iBlock)
           IONO_SOUTH_JR, IONO_SOUTH_Theta, IONO_SOUTH_Psi,  &
           Loc_of_Oval, Width_of_Oval, Strength_of_Oval)
 
-     center = IONO_PI - (Loc_of_Oval(1) + 15.0*IONO_PI/180.0)
+     center = cPi - (Loc_of_Oval(1) + 15.0*cDegToRad)
      strength = -0.5*Strength_of_Oval(1)
 
      do i=IONO_nTheta,1,-1
@@ -146,7 +146,7 @@ subroutine Create_Region2_Currents(iBlock)
              center = IONO_SOUTH_Theta(i,1)
      enddo
 
-     center = center + 5.0*IONO_PI/180.0
+     center = center + 5.0*cDegToRad
 
      do i=1, IONO_nTheta
         do j=1, IONO_nPsi
