@@ -77,7 +77,8 @@ module ModPointImplicit
 contains
 
   !===========================================================================
-  subroutine update_point_implicit(iStage, iBlock, calc_point_impl_source)
+  subroutine update_point_implicit(iStage, iBlock, &
+       calc_point_impl_source, init_point_implicit)
 
     use ModProcMH,  ONLY: iProc
     use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, nByteReal, &
@@ -91,6 +92,9 @@ contains
     interface
        subroutine calc_point_impl_source
        end subroutine calc_point_impl_source
+
+       subroutine init_point_implicit
+       end subroutine init_point_implicit
     end interface
 
     integer :: i, j, k, iVar, jVar, iIVar, iJVar
@@ -132,7 +136,7 @@ contains
        ! set IsPointImplMatrixSet=.true. if the dS/dU matrix is analytic,
        ! it may also modify the EpsPointImpl and EpsPointImpl_V parameters.
 
-       call calc_point_impl_source
+       call init_point_implicit
 
        if(.not.allocated(iVarPointImpl_I)) call stop_mpi( &
             'calc_user_sources did not set iVarPointImpl_I')
