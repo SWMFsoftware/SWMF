@@ -9,7 +9,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModKind, ONLY: Real8_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
-  use ModUser, ONLY: user_calc_sources
+  use ModUser, ONLY: user_calc_sources, user_init_point_implicit
 
   implicit none
 
@@ -64,7 +64,8 @@ subroutine update_states_MHD(iStage,iBLK)
 
   ! Add point implicit user source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBLK) .and. UseUserSource) &
-       call update_point_implicit(iStage, iBLK, user_calc_sources)
+       call update_point_implicit(iStage, iBLK, user_calc_sources, &
+       user_init_point_implicit)
 
 contains
 
