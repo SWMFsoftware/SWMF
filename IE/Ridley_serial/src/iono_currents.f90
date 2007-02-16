@@ -1,10 +1,10 @@
 !^CFG COPYRIGHT UM
-subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
+subroutine ionosphere_currents(iBlock, Jx,Jy,Jz,                             &
                                Ex,Ey,Ez,ETh,EPs,                             &
                                Ux,Uy,Uz,                                     &
                                PHI, SigmaThTh, SigmaThPs, SigmaPsPs,         &
                                X, Y, Z,                                      &
-                               Theta, Psi, Radius, nTheta, nPsi,             &
+                               Theta, Psi,                                   &
                                dTheta, dPsi)
 
   !\
@@ -20,8 +20,9 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
 
   implicit none
 
-  integer :: nTheta, nPsi
-  real :: Radius
+  integer, parameter :: nTheta = IONO_nTheta, nPsi = IONO_nPsi
+
+  integer, intent(in) :: iBlock
   real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::  &
                   PHI, SigmaThTh, SigmaThPs, SigmaPsPs, &
                   Jx,Jy,Jz, &
@@ -37,13 +38,7 @@ subroutine ionosphere_currents(Jx,Jy,Jz,                                     &
   real :: cosTheta, sinTheta, cosPhi, sinPhi, &
           ER, JR, JTh, JPs, &
           Xyz_D(3), NormRadius, b_D(3), Vp_D(3)
-
-  if (Theta(1,1) < 2.00*IONO_Theta_0) then
-     north = .true.
-  else
-     north = .false.
-  end if
-
+  !----------------------------------------------------------------------------
   ! Compute the ionospheric electric field.
 
   do j = 1, nPsi
