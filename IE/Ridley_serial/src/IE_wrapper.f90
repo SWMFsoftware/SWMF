@@ -163,7 +163,11 @@ contains
           call read_var('UseSPS',UseSPS)
           IE_NameOfEFieldModel = "SPS"
           UseGridBasedIE = .true.
-
+       case("#KRYLOV")
+          call read_var('UsePreconditioner',UsePreconditioner)
+          call read_var('UseInitialGuess',UseInitialGuess)
+          call read_var('Tolerance',Tolerance)
+          call read_var('MaxIteration',MaxIteration)
        case("#DEBUG")
           call read_var('iDebugLevel',iDebugLevel)
           call read_var('iDebugProc',iDebugProc)
@@ -347,11 +351,9 @@ subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar,tSimulation)
 
   select case(NameVar)
   case('PotNorth')
-     if(iProc /= 0) RETURN
-     Buffer_II = IONO_NORTH_Phi
+     if(iProc == 0)         Buffer_II = IONO_NORTH_Phi
   case('PotSouth')
-     if(iProc /= nProc - 1) RETURN
-     Buffer_II= IONO_SOUTH_Phi
+     if(iProc == nProc - 1) Buffer_II = IONO_SOUTH_Phi
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
   end select
@@ -500,7 +502,7 @@ end subroutine IE_get_for_ua
 !==============================================================================
 subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
 
-  use IE_ModMain, ONLY: IsNewInput
+  use IE_ModMain, ONLY: IsNewInput, LatBoundaryGm
   use ModProcIE
   use ModIonosphere
 
@@ -522,10 +524,14 @@ subroutine IE_put_from_gm(Buffer_II, iSize, jSize, NameVar)
 
   case('JrNorth')
      if (iProc /= 0) RETURN
-     Iono_North_Jr         = Buffer_II
+     LatBoundaryGm                  = Buffer_II(iSize,1)
+     Iono_North_Jr                  = Buffer_II
+     Iono_North_Jr(iSize-1:iSize,1) = 0.0
   case('JrSouth')
      if (iProc /= nProc-1) RETURN
-     Iono_South_Jr         = Buffer_II
+     LatBoundaryGm                  = Buffer_II(1,1)
+     Iono_South_Jr                  = Buffer_II
+     Iono_South_Jr(1:2,1)           = 0.0
   case default
      call CON_stop(NameSub//' SWMF_ERROR invalid NameVar='//NameVar)
   end select
