@@ -60,7 +60,7 @@ subroutine set_ics
            SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
            CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
            ! Set rotational matrix
-           Rot_II = reshape( (/CosSlope, SinSlope, CosSlope, -SinSlope/), &
+           Rot_II = reshape( (/CosSlope, SinSlope, -SinSlope, CosSlope/), &
                 (/2,2/) )
         end if
 
