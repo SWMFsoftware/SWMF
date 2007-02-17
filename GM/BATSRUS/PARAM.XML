@@ -3504,7 +3504,7 @@ negligible relative to the ion temperature. This default is
 backwards compatible with previous versions of the code.
 </command>
 
-<command name="SHOCKTUBE">
+<command name="SHOCKTUBE" if="$_IsFirstSession">
 	<parameter name="RhoLeft"  type="real" min="0" default="1"	/>
 	<parameter name="UnLeft"   type="real"		default="0"	/>
 	<parameter name="Ut1Left"  type="real"		default="0"	/>
@@ -3550,17 +3550,19 @@ backwards compatible with previous versions of the code.
 0.1		P
 0.0		ShockSlope
 
-! Default values are shown (Brio-Wu problem).
-! The shock is rotated if ShockSlope is not 0, and the tangent of 
-! the rotation angle is ShockSlope. 
-! When the shock is rotated, it is best used in combination
-! with sheared outer boundaries, but then only
-!\begin{verbatim}
-! ShockSlope = 1., 2., 3., 4., 5.      .....
-! ShockSlope = 0.5, 0.33333333, 0.25, 0.2, .....
-!\end{verbatim}
-! can be used, because these angles can be accurately represented
-! on the grid.
+If the #SHOCKTUBE command is used in the first session, a 
+two state initial condition is set.
+The shock is rotated if ShockSlope is not 0, and the tangent of 
+the rotation angle is ShockSlope. 
+When the shock is rotated, it is best used in combination
+with sheared outer boundaries, but then only
+\begin{verbatim}
+  ShockSlope = 1., 2., 3., 4., 5.      .....
+  ShockSlope = 0.5, 0.33333333, 0.25, 0.2, .....
+\end{verbatim}
+can be used, because these angles can be accurately represented
+on the grid. The default initial condition is a constant state
+with the solar wind parameters.
 </command>
 
 <command name="SOLARWIND" if="$_IsFirstSession">
