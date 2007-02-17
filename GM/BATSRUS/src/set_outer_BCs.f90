@@ -261,25 +261,25 @@ subroutine BC_shear(iVar,iSide)
              State_VGB(iVar,imin1g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
 
         State_VGB(iVar,     imin2g,    jmin2g+1:jmax2g,   kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar, imin2g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
+             State_VGB(iVar,imin2g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
      case(west_)
-        State_VGB(iVar,   imin1g,    jmin1g  :jmax1g-1, kmin1g:kmax1g,iBLK)=&
+        State_VGB(iVar,     imin1g,    jmin1g  :jmax1g-1, kmin1g:kmax1g,iBLK)=&
              State_VGB(iVar,imin1g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
 
-        State_VGB(iVar,    imin2g,    jmin2g  :jmax2g-1, kmin2g:kmax2g,iBLK)=&
+        State_VGB(iVar,     imin2g,    jmin2g  :jmax2g-1, kmin2g:kmax2g,iBLK)=&
              State_VGB(iVar,imin2g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
 
         ! Shift parallel to X by Dn and 2*Dn
      case(south_)
-        State_VGB(iVar,    imin1g+Dn  :imax1g,      jmin1g, kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p     :imax1p-Dn,   jmin1p, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,   imin2g+2*Dn:imax2g,      jmin2g, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p     :imax1p-2*Dn, jmin1p, kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin1g+Dn:imax1g,   jmin1g, kmin1g:kmax1g,iBLK)=&
+             State_VGB(iVar,imin1p:imax1p-Dn,   jmin1p, kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin2g+2*Dn:imax2g, jmin2g, kmin2g:kmax2g,iBLK)=&
+             State_VGB(iVar,imin1p:imax1p-2*Dn, jmin1p, kmin1p:kmax1p,iBLK)
      case(north_)
-        State_VGB(iVar,   imin1g     :imax1g-Dn,   jmin1g, kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p+Dn  :imax1g,      jmin1p, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,    imin2g     :imax2g-2*Dn, jmin2g, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p+2*Dn:imax1p,      jmin1p, kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin1g:imax1g-Dn,   jmin1g, kmin1g:kmax1g,iBLK)=&
+             State_VGB(iVar,imin1p+Dn:imax1g,   jmin1p, kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin2g:imax2g-2*Dn, jmin2g, kmin2g:kmax2g,iBLK)=&
+             State_VGB(iVar,imin1p+2*Dn:imax1p, jmin1p, kmin1p:kmax1p,iBLK)
      end select
   else
      ! ShockSlope < 1
@@ -289,25 +289,25 @@ subroutine BC_shear(iVar,iSide)
      select case(iside)
         ! Shift parallel to Y by Dn
      case(east_)
-        State_VGB(iVar,    imin1g, jmin1g+Dn  :jmax1g,      kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p     :jmax1p-Dn,   kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin1g, jmin1g+Dn:jmax1g,   kmin1g:kmax1g,iBLK)=&
+             State_VGB(iVar,imin1p, jmin1p:jmax1p-Dn,   kmin1p:kmax1p,iBLK)
 
-        State_VGB(iVar,   imin2g, jmin2g+2*Dn:jmax2g,      kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p     :jmax1p-2*Dn, kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin2g, jmin2g+2*Dn:jmax2g, kmin2g:kmax2g,iBLK)=&
+             State_VGB(iVar,imin1p, jmin1p:jmax1p-2*Dn, kmin1p:kmax1p,iBLK)
      case(west_)
-        State_VGB(iVar,    imin1g, jmin1g     :jmax1g-Dn,   kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p+Dn  :jmax1p,      kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g, jmin2g     :jmax2g-2*Dn, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p+2*Dn:jmax1p,      kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,    imin1g,  jmin1g:jmax1g-Dn,   kmin1g:kmax1g,iBLK)=&
+             State_VGB(iVar,imin1p, jmin1p+Dn:jmax1p,   kmin1p:kmax1p,iBLK)
+        State_VGB(iVar,     imin2g, jmin2g:jmax2g-2*Dn, kmin2g:kmax2g,iBLK)=&
+             State_VGB(iVar,imin1p, jmin1p+2*Dn:jmax1p, kmin1p:kmax1p,iBLK)
 
         ! Shift parallel to X by 1, but copy from distance Dn in Y
      case(south_)
-        State_VGB(iVar,    imin1g+1:imax1g,   jmin1g,    kmin1g:kmax1g,iBLK)=&
+        State_VGB(iVar,     imin1g+1:imax1g,   jmin1g,    kmin1g:kmax1g,iBLK)=&
              State_VGB(iVar,imin1p  :imax1p-1, jmin1g+Dn, kmin1p:kmax1p,iBLK)
         State_VGB(iVar,     imin2g+1:imax2g,   jmin2g,    kmin2g:kmax2g,iBLK)=&
              State_VGB(iVar,imin1p  :imax1p-1, jmin2g+Dn, kmin1p:kmax1p,iBLK)
      case(north_)
-        State_VGB(iVar,    imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
+        State_VGB(iVar,     imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
              State_VGB(iVar,imin1p+1:imax1p,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
         State_VGB(iVar,     imin2g  :imax2g-1, jmin2g,    kmin2g:kmax2g,iBLK)=&
              State_VGB(iVar,imin1p+1:imax1p,   jmin2g-Dn, kmin1p:kmax1p,iBLK)
