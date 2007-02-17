@@ -1222,6 +1222,15 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('IoUnitType',IoUnits)
         call upper_case(IoUnits)
+     case("#SHOCKTUBE")
+        UseShockTube = .true.
+        do i=1,nVar
+           call read_var('LeftState',ShockLeftState_V(i))
+        end do
+        do i=1,nVar
+           call read_var('RightState',ShockRightState_V(i))
+        end do
+        call read_var('ShockSlope',ShockSlope)
      case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
         call read_var('UseSolarWindFile',UseUpstreamInputFile)
         if (UseUpstreamInputFile) then
