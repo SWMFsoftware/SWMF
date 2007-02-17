@@ -80,16 +80,6 @@ module ModPhysics
        SW_Bz=0.0 , SW_Bz_dim=0.0 , &
        SW_B_factor=0.0
 
-  real, dimension(0:1) :: &
-       SW_rho_t,  &
-       SW_p_t  ,  &
-       SW_Ux_t ,  &
-       SW_Uy_t ,  &
-       SW_Uz_t ,  &
-       SW_Bx_t ,  &
-       SW_By_t ,  &
-       SW_Bz_t ,  &
-       SW_time_t
   !\
   ! General Body parameters
   !/
@@ -107,9 +97,9 @@ module ModPhysics
   real :: gBody2
   !^CFG END SECONDBODY
 
-  ! Shocktube initial state values
-  real, dimension(1:nVar) :: shock_Lstate, shock_Rstate
-  real :: ShockSlope
+  ! Variables for two-state shock tube problems
+  logical :: UseShockTube = .false.
+  real :: ShockLeftState_V(nVar), ShockRightState_V(nVar), ShockSlope
 
   ! State for the boundary conditions
   real,dimension(nVar,body2_:Top_):: FaceState_VI, CellState_VI
