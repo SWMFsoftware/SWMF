@@ -1,5 +1,6 @@
 !^CFG COPYRIGHT UM
-subroutine set_ICs
+subroutine set_ics
+
   use ModMain
   use ModAdvance
   use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
@@ -7,93 +8,107 @@ subroutine set_ICs
   use ModImplicit,ONLY: UsePartImplicit             !^CFG IF IMPLICIT
   use ModPhysics
   use ModNumConst
-  use ModUser, ONLY: user_set_ICs
+  use ModUser, ONLY: user_set_ics
+
   implicit none
 
-  real :: Rmax, SinSlope, CosSlope
-  real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
-       XFace, YFace, ZFace
-  integer::i,j,k,iVar
+  real   :: SinSlope, CosSlope, Rot_II(2,2)
+  integer:: i, j, k, iBlock, iVar
+  !----------------------------------------------------------------------------
+  iBlock = GlobalBlk
 
-  B0xCell_BLK(:,:,:,globalBLK) = 0.00
-  B0yCell_BLK(:,:,:,globalBLK) = 0.00
-  B0zCell_BLK(:,:,:,globalBLK) = 0.00
-  B0xFace_x_BLK(:,:,:,globalBLK) = 0.00
-  B0yFace_x_BLK(:,:,:,globalBLK) = 0.00
-  B0zFace_x_BLK(:,:,:,globalBLK) = 0.00
-  B0xFace_y_BLK(:,:,:,globalBLK) = 0.00
-  B0yFace_y_BLK(:,:,:,globalBLK) = 0.00
-  B0zFace_y_BLK(:,:,:,globalBLK) = 0.00
-  B0xFace_z_BLK(:,:,:,globalBLK) = 0.00
-  B0yFace_z_BLK(:,:,:,globalBLK) = 0.00
-  B0zFace_z_BLK(:,:,:,globalBLK) = 0.00
+  B0xCell_BLK(:,:,:,iBlock) = 0.00
+  B0yCell_BLK(:,:,:,iBlock) = 0.00
+  B0zCell_BLK(:,:,:,iBlock) = 0.00
+  B0xFace_x_BLK(:,:,:,iBlock) = 0.00
+  B0yFace_x_BLK(:,:,:,iBlock) = 0.00
+  B0zFace_x_BLK(:,:,:,iBlock) = 0.00
+  B0xFace_y_BLK(:,:,:,iBlock) = 0.00
+  B0yFace_y_BLK(:,:,:,iBlock) = 0.00
+  B0zFace_y_BLK(:,:,:,iBlock) = 0.00
+  B0xFace_z_BLK(:,:,:,iBlock) = 0.00
+  B0yFace_z_BLK(:,:,:,iBlock) = 0.00
+  B0zFace_z_BLK(:,:,:,iBlock) = 0.00
 
-  time_BLK(:,:,:,globalBLK) = 0.00
+  time_BLK(:,:,:,iBlock) = 0.00
 
-  fbody_x_BLK(:,:,:,globalBLK) = 0.00
-  fbody_y_BLK(:,:,:,globalBLK) = 0.00
-  fbody_z_BLK(:,:,:,globalBLK) = 0.00
+  fbody_x_BLK(:,:,:,iBlock) = 0.00
+  fbody_y_BLK(:,:,:,iBlock) = 0.00
+  fbody_z_BLK(:,:,:,iBlock) = 0.00
 
   Flux_VX = cZero
   Flux_VY = cZero
   Flux_VZ = cZero
 
-  call init_conservative_facefluxes(globalBLK)
+  call init_conservative_facefluxes(iBlock)
 
-  if(unusedBLK(globalBLK))then  
+  if(unusedBLK(iBlock))then  
      do iVar=1,nVar
-        State_VGB(iVar,:,:,:,globalBLK)   = DefaultState_V(iVar)
+        State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
      end do
   else
-
-
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     call set_b0(globalBLK)
+     call set_b0(iBlock)
      call body_force_averages
 
      if(.not.restart)then
+
+        if(UseShockTube)then
+           ! Calculate sin and cos from the tangent = ShockSlope
+           SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
+           CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+           ! Set rotational matrix
+           Rot_II = reshape( (/CosSlope, SinSlope, CosSlope, -SinSlope/), &
+                (/2,2/) )
+        end if
+
+        ! Loop through all the cells
+        do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
+           if(.not.true_cell(i,j,k,iBlock))then
+              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,body1_)
+           elseif(.not.UseShockTube)then
+              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
+           else
+              if(x_BLK(i,j,k,iBlock) < -ShockSlope*y_BLK(i,j,k,iBlock))then
+                 ! Set all variables first
+                 State_VGB(:,i,j,k,iBlock)   = ShockLeftState_V
+
+                 ! Rotate vector variables
+                 State_VGB(Ux_:Uy_,i,j,k,iBlock) = &
+                      matmul(Rot_II,ShockLeftState_V(Ux_:Uy_))
+                 State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                      matmul(Rot_II,ShockLeftState_V(Bx_:By_))
+              else
+                 ! Set all variables first
+                 State_VGB(:,i,j,k,iBlock)   = ShockRightState_V
+                 ! Set vector variables
+                 State_VGB(Ux_:Uy_,i,j,k,iBlock) = &
+                      matmul(Rot_II,ShockRightState_V(Ux_:Uy_))
+                 State_VGB(Bx_:By_,i,j,k,iBlock) = &
+                      matmul(Rot_II,ShockRightState_V(Bx_:By_))
+              end if
+              ! Convert velocity to momentum
+              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                   State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+           end if
+
+        end do; end do; end do
         !\
         ! Initialize solution quantities
         !/
-        do k=1-gcn,nK+gcn;do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-           if(true_cell(i,j,k,globalBLK))then
-              State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,1)
-           else
-              State_VGB(:,i,j,k,globalBLK)   = CellState_VI(:,body1_)
-           end if
-        end do;end do;end do
-     end if
+        if(UseConstrainB)call constrain_ics(iBlock) !^CFG IF CONSTRAINB
 
-     if(UseUserICs .and. .not.restart) call user_set_ICs
+        if(UseUserICs) call user_set_ics
+
+     end if ! not restart
 
   end if ! unusedBLK
-  ! Eliminate B1 around body if necessary
-  if(.not.restart)then
-     if(UseConstrainB)then  !^CFG IF CONSTRAINB BEGIN
-        call constrain_ICs(globalBLK)
-     else                   !^CFG END CONSTRAINB
-        if(index(test_string,'DriftIn')>0)then
-           where(x_BLK(:,:,:,globalBLK)<10.)
-              State_VGB(Bx_,:,:,:,globalBLK)=0.0
-              State_VGB(By_,:,:,:,globalBLK)=0.0
-              State_VGB(Bz_,:,:,:,globalBLK)=0.0
-              State_VGB(P_,:,:,:,globalBLK)=&
-                   State_VGB(P_,:,:,:,globalBLK)+ &
-                   0.5*(SW_Bx**2+SW_By**2+SW_Bz**2)
-           elsewhere
-              State_VGB(Bx_,:,:,:,globalBLK)=SW_Bx
-              State_VGB(By_,:,:,:,globalBLK)=SW_By
-              State_VGB(Bz_,:,:,:,globalBLK)=SW_Bz
-           end where
-        end if
-     end if                 !^CFG IF CONSTRAINB
-  end if
   !\
   ! Compute energy from set values above.
   !/
-  call calc_energy(globalBLK)
+  call calc_energy(iBlock)
 
-end subroutine set_ICs
+end subroutine set_ics
 
