@@ -1,5 +1,35 @@
-#TEST
-read_inputs
+#ECHO
+T
+
+#PLANET
+NONE
+
+#DIPOLE
+0.0
+
+#IOUNITS
+NONE
+
+#BODY
+F
+
+#SOLARWIND
+1.0                     SwRhoDim 
+0.6                     SwTDim 
+1.0                     SwUxDim 
+0.0                     SwUyDim 
+0.0                     SwUzDim 
+1.0                     SwBxDim 
+0.0                     SwByDim 
+0.0                     SwBzDim 
+
+#OUTERBOUNDARY
+shear
+shear
+shear
+shear
+float
+float
 
 #INCLUDE
 Param/SHOCKTUBE/ryu
@@ -30,12 +60,14 @@ F		DoSaverestart
 #SAVEPLOT
 1		nPlotfile
 z=0 raw idl	PlotString
--1		DnSavePlot
-6.0		DtSavePlot
+100		DnSavePlot
+-1.0		DtSavePlot
 0.		DxSavePlot
 
 #STOP
--1		MaxIteration
-18.0		tSimulationMax
+800		MaxIteration
+-1.0
+
+1800.0		tSimulationMax
 
 #END
