@@ -30,12 +30,11 @@ subroutine set_physics_constants
   select case(NameThisComp)
   case('GM')
      call get_planet( &
-          RadiusPlanetOut = UnitSi_x, &
-          MassPlanetOut = mBody_Dim, &
+          RadiusPlanetOut   = rPlanet_Dim, &
+          MassPlanetOut     = mBody_Dim, &
           RotationPeriodOut = rot_period_dim)
-     
   case("SC","IH")
-     UnitSi_x = rSun
+     rPlanet_Dim = rSun
      mBody_Dim = mSun
      rot_period_dim = RotationPeriodSun
   end select
@@ -48,11 +47,11 @@ subroutine set_physics_constants
   MBody2Dim = 0.0                                !^CFG IF SECONDBODY
 
   !\
-  ! Call set_dimensions, which set the quantities for converting from
+  ! Call set_units, which set the quantities for converting from
   ! normalized to  dimensional quantities and vice versa.  Also
   ! sets input and output strings for the conversion quantities
   !/
-  call set_dimensions
+  call set_units
 
   if(oktest .and. iProc==0) then
      write(*,'(E15.6,11X,E15.6)') unitUSER_x, unitSI_x
@@ -195,7 +194,8 @@ end subroutine set_physics_constants
 
 !===========================================================================
 
-subroutine set_dimensions
+subroutine set_units
+
   use ModProcMH, ONLY:iProc
   use ModMain
   use ModPhysics
@@ -203,9 +203,31 @@ subroutine set_dimensions
   use ModUser, ONLY: user_io_units
   implicit none
 
+  character (len=*), parameter :: NameSub="set_units"
+
   logical :: oktest, oktest_me
   !-----------------------------------------------------------------------
-  call set_oktest('set_dimensions',oktest, oktest_me)
+  call set_oktest(NameSub,oktest, oktest_me)
+
+  select case(TypeNormalization)
+  case("NONE")
+     UnitSi_x   = 1.0
+     UnitSi_u   = 1.0
+     UnitSi_rho = 1.0
+  case("PLANETARY")
+     UnitSi_x   = rPlanet_Dim                         ! rPlanet
+     UnitSi_u   = rPlanet_Dim                         ! rPlanet/sec
+     UnitSi_rho = cProtonMass*cMillion                ! amu/cm^3
+  case("SOLARWIND")
+     UnitSi_x   = rPlanet_Dim                         ! rPlanet
+     UnitSI_u   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! SW sound speed
+     UnitSI_rho = cProtonMass*(cMillion*SW_rho_dim)   ! SW density in amu/cm^3
+  case("USER")
+     ! Set in set_parameters
+  case default
+     call stop_mpi(NameSub//' ERROR: unknown TypeNormalization='// &
+          trim(TypeNormalization))
+  end select
 
   !\
   ! Load variables used for converting from dimensional to non-dimensional 
@@ -216,7 +238,7 @@ subroutine set_dimensions
   unitSI_angle = 180/cPi   
   unitUSER_angle = unitSI_angle
   unitstr_TEC_angle = '[degree]'            
-  unitstr_IDL_angle = '--'            
+  unitstr_IDL_angle = 'deg'
 
   !\
   ! set variables for converting from unitless to SI units and back.
@@ -524,7 +546,7 @@ subroutine set_dimensions
 
   end select
 
-end subroutine set_dimensions
+end subroutine set_units
 
 !==============================================================================
 

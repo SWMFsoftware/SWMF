@@ -148,8 +148,11 @@ module ModPhysics
   !/
   ! used as follows:     rho_with_dimensions = State_VGB(rho_,...)*unit_rho
   !                      State_VGB(rho_,... = rho_with_dimensions/unit_rho
-  ! unitUSER_x = units are assigned by user, this is used for input and ouput mostly
+  ! unitUSER_x = units are assigned by user, this is used for input and ouput
   ! unitSI_x   = units are standard SI units - m, kg, s, T, K, V, A, ...
+
+  character (len=20) :: TypeNormalization='SOLARWIND'
+
   real ::  &
        unitUSER_x, unitUSER_t, unitUSER_angle,        & ! time and space
        unitUSER_rho, unitUSER_n, unitUSER_U,          & ! primative MHD quantities 
@@ -160,8 +163,8 @@ module ModPhysics
        unitUSER_Poynting                                ! Poynting vector
   real ::  &
        unitSI_x, unitSI_t, unitSI_angle,              & ! time and space
-       unitSI_rho, unitSI_n, unitSI_U,                & ! primative MHD quantities 
-       unitSI_p, unitSI_B,                            & ! primative MHD quantities
+       unitSI_rho, unitSI_n, unitSI_U,                & ! primitive MHD quantities 
+       unitSI_p, unitSI_B,                            & ! primitive MHD quantities
        unitSI_rhoU,  unitSI_energydens,               & ! conservative MHD quantities
        unitSI_J, unitSI_electric, unitSI_DivB,        & ! derived quantities
        unitSI_temperature,                            & ! derived quantities

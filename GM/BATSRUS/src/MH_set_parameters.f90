@@ -1222,6 +1222,14 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('IoUnitType',IoUnits)
         call upper_case(IoUnits)
+     case("#NORMALIZATION")
+        call read_var('TypeNormalization', TypeNormalization)
+        call upper_case(TypeNormalization)
+        if(TypeNormalization == 'USER')then
+           call read_var('UnitSiX', UnitSi_X)
+           call read_var('UnitSiU', UnitSi_U)
+           call read_var('UnitSiRho',UnitSi_rho)
+        end if
      case("#SHOCKTUBE")
         UseShockTube = .true.
         do i=1,nVar
