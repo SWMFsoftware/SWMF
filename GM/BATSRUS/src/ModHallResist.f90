@@ -42,9 +42,16 @@ module ModHallResist
   real, public :: xSizeBoxHall=-1.0, ySizeBoxHall=-1.0, zSizeBoxHall=-1.0
   real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
 
+  !^CFG IF COVARIANT BEGIN
+  ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
+  real, public :: DgenDxyz_DDFD(nDim, nDim,1:nI+1, 1:nJ+1, 1:nK+1, nDim)
+  real, public :: DgenDxyz_DDC(nDim, nDim, nI, nJ, nK)
+  !^CFG END COVARIANT
+
   ! Public methods
   public :: init_hall_resist, get_face_current, hall_factor, test_face_current
   public :: calc_hyper_resistivity, set_ion_mass_per_charge
+  public :: set_block_jacobian_cell           !^CFG IF COVARIANT
 
   ! Local variables
   real :: b_DG(3,-1:nI+2,-1:nJ+2,-1:nK+2)
@@ -58,11 +65,6 @@ module ModHallResist
   real :: rSqrSphere1 = -1.0, rSqrSphere2 = -1.0          ! spherical region
   real :: xSizeBox1=-1.0, ySizeBox1=-1.0, zSizeBox1=-1.0  ! box region
   real :: xSizeBox2=-1.0, ySizeBox2=-1.0, zSizeBox2=-1.0  ! box region
-
-  !^CFG IF COVARIANT BEGIN
-  ! Jacobian matrix for covariant grid: Dcovariant/Dcartesian
-  real :: DgenDxyz_DDFD(nDim, nDim,1:nI+1, 1:nJ+1, 1:nK+1, nDim)
-  !^CFG END COVARIANT
 
   save
 
@@ -609,8 +611,7 @@ contains
 
     integer, intent(in):: iBlock
     real:: InvDx1Half, InvDx2Half, InvDx3Half
-    real:: DxyzDgen_DD(nDim, nDim), b_DD(nDim, nDim), DetA
-    real:: DgenDxyz_DDC(nDim, nDim, 0:nI+1, 0:nJ+1, 0:nK+1)
+    real:: DxyzDgen_DD(nDim, nDim)
     integer:: i,j,k
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='set_block_jacobian'
@@ -624,8 +625,8 @@ contains
     InvDx2Half = InvDy*0.5
     InvDx3Half = InvDz*0.5
 
-    ! First get the dCartesian/dCovariant matrix with finite differences
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+    ! Get the dCartesian/dCovariant matrix with finite differences
+    do k=1,nK; do j=1,nJ; do i=1,nI
        DxyzDgen_DD(x_,1) = InvDx1Half &
             *(x_BLK(i+1,j,k,iBlock) - x_BLK(i-1,j,k,iBlock))
        DxyzDgen_DD(y_,1) = InvDx1Half &
@@ -648,23 +649,6 @@ contains
        DgenDxyz_DDC(:,:,i,j,k) = &
             inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
-
-    ! Average cell centered Jacobian to face centered Jacobians
-
-    ! X1 face
-    DgenDxyz_DDFD(:,:,1:nI+1,1:nJ,1:nK,1) = 0.5* &
-         ( DgenDxyz_DDC(:,:,0:nI  ,1:nJ,1:nK)  &
-         + DgenDxyz_DDC(:,:,1:nI+1,1:nJ,1:nK) ) 
-    
-    ! X2 face
-    DgenDxyz_DDFD(:,:,1:nI,1:nJ+1,1:nK,2) = 0.5* &
-         ( DgenDxyz_DDC(:,:,1:nI,0:nJ  ,1:nK)  &
-         + DgenDxyz_DDC(:,:,1:nI,1:nJ+1,1:nK) ) 
-    
-    ! X3 face
-    DgenDxyz_DDFD(:,:,1:nI,1:nJ,1:nK+1,3) = 0.5* &
-         ( DgenDxyz_DDC(:,:,1:nI,1:nJ,0:nK  )  &
-         + DgenDxyz_DDC(:,:,1:nI,1:nJ,1:nK+1) ) 
 
   end subroutine set_block_jacobian_cell
   !^CFG END COVARIANT
