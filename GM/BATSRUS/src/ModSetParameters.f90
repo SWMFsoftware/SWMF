@@ -186,6 +186,7 @@ subroutine MH_set_parameters(TypeAction)
      if (read_new_upstream) &
           call read_upstream_input_file(UpstreamFileName)
 
+
      call set_physics_constants
 
      call set_extra_parameters
@@ -1223,13 +1224,24 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('IoUnitType',IoUnits)
         call upper_case(IoUnits)
      case("#NORMALIZATION")
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeNormalization', TypeNormalization)
         call upper_case(TypeNormalization)
-        if(TypeNormalization == 'USER')then
-           call read_var('UnitSiX', UnitSi_X)
-           call read_var('UnitSiU', UnitSi_U)
-           call read_var('UnitSiRho',UnitSi_rho)
-        end if
+        select case(TypeNormalization)
+        case('NONE')
+           UnitSi_X = 1.0
+           UnitSi_U = 1.0
+           UnitSi_Rho = 1.0
+        case('READ')
+           call read_var('UnitSiX',   UnitSi_X)
+           call read_var('UnitSiU',   UnitSi_U)
+           call read_var('UnitSiRho', UnitSi_Rho)
+        case('PLANETARY', 'SOLARWIND')
+           ! Depends on other commands, defined in set_physics
+        case default
+           call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
+                //TypeNormalization)
+        end select
      case("#SHOCKTUBE")
         UseShockTube = .true.
         do i=1,nVar
