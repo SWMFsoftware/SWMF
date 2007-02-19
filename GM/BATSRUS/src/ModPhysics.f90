@@ -155,8 +155,8 @@ module ModPhysics
 
   real ::  &
        unitUSER_x, unitUSER_t, unitUSER_angle,        & ! time and space
-       unitUSER_rho, unitUSER_n, unitUSER_U,          & ! primative MHD quantities 
-       unitUSER_p, unitUSER_B,                        & ! primative MHD quantities
+       unitUSER_rho, unitUSER_n, unitUSER_U,          & ! primitive MHD quantities 
+       unitUSER_p, unitUSER_B,                        & ! primitive MHD quantities
        unitUSER_rhoU,  unitUSER_energydens,           & ! conservative MHD quantities
        unitUSER_J, unitUSER_electric, unitUSER_DivB,  & ! derived quantities
        unitUSER_temperature,                          & ! derived quantities
@@ -173,8 +173,8 @@ module ModPhysics
   ! String representation of the units above - used for output - IDL
   character (len=20) ::  &
        unitstr_IDL_x, unitstr_IDL_t, unitstr_IDL_angle, & ! time and space
-       unitstr_IDL_rho, unitstr_IDL_n, unitstr_IDL_U,   & ! primative MHD quantities
-       unitstr_IDL_p, unitstr_IDL_B,                    & ! primative MHD quantities
+       unitstr_IDL_rho, unitstr_IDL_n, unitstr_IDL_U,   & ! primitive MHD quantities
+       unitstr_IDL_p, unitstr_IDL_B,                    & ! primitive MHD quantities
        unitstr_IDL_rhoU,  unitstr_IDL_energydens,       & ! conservative MHD quantities
        unitstr_IDL_J, unitstr_IDL_electric,             & ! derived quantities
        unitstr_IDL_DivB, unitstr_IDL_temperature,       & ! derived quantities
@@ -183,8 +183,8 @@ module ModPhysics
   ! String representation of the units above - used for output - TEC
   character (len=20) ::  &
        unitstr_TEC_x, unitstr_TEC_t, unitstr_TEC_angle, & ! time and space
-       unitstr_TEC_rho, unitstr_TEC_n, unitstr_TEC_U,   & ! primative MHD quantities
-       unitstr_TEC_p, unitstr_TEC_B,                    & ! primative MHD quantities
+       unitstr_TEC_rho, unitstr_TEC_n, unitstr_TEC_U,   & ! primitive MHD quantities
+       unitstr_TEC_p, unitstr_TEC_B,                    & ! primitive MHD quantities
        unitstr_TEC_rhoU,  unitstr_TEC_energydens,       & ! conservative MHD quantities
        unitstr_TEC_J, unitstr_TEC_electric,             & ! derived quantities
        unitstr_TEC_DivB, unitstr_TEC_temperature,       & ! derived quantities
