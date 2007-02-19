@@ -32,7 +32,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
   integer :: iSide, iStart, iVar
 
-  integer :: iGhost, jGhost, kGhost
+  integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
 
   logical :: oktest, oktest_me, IsFound
   !--------------------------------------------------------------------------
@@ -52,23 +52,28 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
        iBLK,DoSetEnergy,neiLEV(:,iBLK)
 
   if(oktest_me)then
-     Ighost=Itest; Jghost=Jtest; Kghost=Ktest
+     Ighost =Itest; Jghost=Jtest;  Kghost=Ktest
+     Ighost2=Itest; Jghost2=Jtest; Kghost2=Ktest
      select case(DimTest)
      case(x_)
-        if(Ighost== 1)Ighost=0
-        if(Ighost==nI)Ighost=nI+1
+        if(iTest== 1)then; iGhost=0;    iGhost2 = -1;   endif
+        if(iTest==nI)then; iGhost=nI+1; iGhost2 = nI+2; endif
      case(y_)
-        if(Jghost== 1)Jghost=0
-        if(Jghost==nJ)Jghost=nJ+1
+        if(jTest== 1)then; jGhost=0;    jGhost2 = -1;   endif
+        if(jTest==nJ)then; jGhost=nJ+1; jGhost2 = nJ+2; endif
      case(z_)
-        if(Kghost== 1)Kghost=0
-        if(Kghost==nI)Kghost=nK+1
+        if(kTest== 1)then; kGhost=0;    kGhost2 = -1;   endif
+        if(kTest==nK)then; kGhost=nK+1; kGhost2 = nK+2; endif
      end select
 
+     write(*,*)'iTest,  jTest,  kTest   =',iTest,  jTest,  kTest
+     write(*,*)'iGhost, jGhost, kGhost  =',iGhost, jGhost, kGhost
+     write(*,*)'iGhost2,jGhost2,kGhost2 =',iGhost2,jGhost2,kGhost2
      do iVar=1,nVar
-        write(*,*)'initial',NameVar_V(iVar),   'cell,ghost=',&
+        write(*,*)'initial',NameVar_V(iVar),   'cell,ghost,ghost2=',&
              State_VGB(iVar,Itest,Jtest,Ktest,iBLK),&
-             State_VGB(iVar,Ighost,Jghost,Kghost,iBLK)
+             State_VGB(iVar,Ighost,Jghost,Kghost,iBLK), &
+             State_VGB(iVar,Ighost2,Jghost2,Kghost2,iBLK)
      end do
   end if
 
@@ -203,9 +208,10 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
 
   if(oktest_me)then
      do iVar=1,nVar
-        write(*,*)'final',NameVar_V(iVar),'   cell,ghost=',&
+        write(*,*)'final',NameVar_V(iVar),'   cell,ghost,ghost2=',&
              State_VGB(iVar,Itest,Jtest,Ktest,iBLK),&
-             State_VGB(iVar,Ighost,Jghost,Kghost,iBLK)
+             State_VGB(iVar,Ighost,Jghost,Kghost,iBLK),&
+             State_VGB(iVar,Ighost2,Jghost2,Kghost2,iBLK)
      end do
   end if
 
