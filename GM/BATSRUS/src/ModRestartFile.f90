@@ -318,7 +318,13 @@ contains
     write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#IOUNITS'
-    write(unit_tmp,'(a20,a32)')IoUnits,'IoUnitType'
+    write(unit_tmp,'(a20,a20)')IoUnits,'TypeIoUnit'
+    write(unit_tmp,*)
+    write(unit_tmp,'(a)')'#NORMALIZATION'
+    write(unit_tmp,'(a)')'READ'
+    write(unit_tmp,'(1pe23.15,a17)')UnitSi_X,   'UnitSiX'
+    write(unit_tmp,'(1pe23.15,a17)')UnitSi_U,   'UnitSiU'
+    write(unit_tmp,'(1pe23.15,a17)')UnitSi_Rho, 'UnitSiRho'
     write(unit_tmp,*)
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
@@ -396,7 +402,7 @@ contains
          ' read_restart_file could not open: '//trim(NameFile))
 
     ! Fill in ghost cells
-    do k=1-gcn,nK+gcn; do j=1-gcn,nK+gcn; do i=1-gcn,nK+gcn
+    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
     end do;end do;end do
 
