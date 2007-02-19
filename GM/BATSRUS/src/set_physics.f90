@@ -209,11 +209,15 @@ subroutine set_units
   !-----------------------------------------------------------------------
   call set_oktest(NameSub,oktest, oktest_me)
 
+  !\
+  ! set variables for converting from normalized to SI units and back:
+  !
+  ! Normalized*UnitSi = Si, Si/UnitSi = Normalized
+  !
+  ! There are three independent variables: distance(x), velocity(u)
+  ! and density(rho).  All others are built from these three.
+  !/
   select case(TypeNormalization)
-  case("NONE")
-     UnitSi_x   = 1.0
-     UnitSi_u   = 1.0
-     UnitSi_rho = 1.0
   case("PLANETARY")
      UnitSi_x   = rPlanet_Dim                         ! rPlanet
      UnitSi_u   = rPlanet_Dim                         ! rPlanet/sec
@@ -222,8 +226,8 @@ subroutine set_units
      UnitSi_x   = rPlanet_Dim                         ! rPlanet
      UnitSI_u   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! SW sound speed
      UnitSI_rho = cProtonMass*(cMillion*SW_rho_dim)   ! SW density in amu/cm^3
-  case("USER")
-     ! Set in set_parameters
+  case("NONE", "READ")
+     ! Already set in MH_set_parameters
   case default
      call stop_mpi(NameSub//' ERROR: unknown TypeNormalization='// &
           trim(TypeNormalization))
@@ -235,20 +239,10 @@ subroutine set_units
   ! use in writing output.
   !/
 
-  unitSI_angle = 180/cPi   
-  unitUSER_angle = unitSI_angle
+  unitSI_angle      = 1.0            ! radian
+  unitUSER_angle    = cRadToDeg      ! degree
   unitstr_TEC_angle = '[degree]'            
   unitstr_IDL_angle = 'deg'
-
-  !\
-  ! set variables for converting from unitless to SI units and back.
-  ! unitless*unitSI = SI, SI/UnitSI = unitless
-  !
-  ! Note there are three independent variables, position(x), velocity(u)
-  ! and density(rho).  All others are built from these three.
-  !/
-  unitSI_rho  = cProtonMass*(cMillion*SW_rho_dim)         ! kg/m^3
-  unitSI_U    = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)   ! m/s
 
   !\
   ! set other normalizing SI variables from the independent ones
@@ -263,27 +257,12 @@ subroutine set_units
   unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
   unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
   unitSI_DivB        = unitSI_B/unitSI_x                     ! T/m
-  ! set temperature - note that the below is only strictly true for a
-  ! limited number of cases.  If the only ion is proton then 
-  ! Tcode = Te+Ti.
-  !
-  ! If the ions are "heavy" (m = A * mp) then n above is not really a 
-  ! number density but is a nucleon density (#nucleons/m^3).  In this 
-  ! case the temperature in the code using unitSI_temperature is really
-  ! Tcode = (Ti+Te)/A.
-  !
-  ! For the special case where A=2 we have Tcode = 1/2*(Te+Ti).  If
-  ! we assume Ti=Te then Tcode=Ti=Te.
-  !
-  ! Also note that if the are heavy ions of mass #*mp then you could
-  ! be off in temperature by as much as a factor of #.  
-  ! There is no way around this in MHD.
   unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) ! Kelvin 
 
   !\
-  ! set variables to go from a limited set of units to normalized units
-  ! and back
-  ! unitless*unitUSER = User units,    User Units/unitUSER = unitless
+  ! set variables to go from a Input/Output units to normalized units and back:
+  !
+  ! Normalized*UnitIo = Io,    Io/UnitIo = Normalized
   !
   ! Note that the user units are not consistant in a unit sense.
   ! 
