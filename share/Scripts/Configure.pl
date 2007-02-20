@@ -678,7 +678,15 @@ sub print_help{
 
     print 
 #BOC
-"Configure.pl [-c=STR] [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] 
+"   Purpose: 
+
+Build a new code distribution containing a subset of the code.
+The subset is selected according to the switches set to ON and OFF
+and the corresponding directives in the files and directories.
+
+   Usage:
+
+Configure.pl [-c=STR] [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i] 
              [-keepall]
              [-o=optionfile] [-on=option1,option2...] [-off=option3,option4...]
              [-s] [-t] [-v]
@@ -687,7 +695,7 @@ sub print_help{
       NOTE: all option names, 'on' or 'off' strings and all \^CXX directives
       are capitalized by Configure.pl, so the syntax is case insensitive !
 
-      -c=STR  Sets the string used in the directives to ^STR 
+      -c=STR  Sets the string used as the prefix of the directives to ^STR 
               and the name of the directory config files to STR.
               The default value for STR is 'CMP',
 
@@ -798,7 +806,7 @@ sub print_help{
                     Otherwise the directory is processed, but 
                     the config file is only kept if the CONFIGURE option is ON.
 
-      Examples:
+   Examples:
 
       Show list of options in Configure.options:
 
@@ -841,11 +849,14 @@ Configure.pl -keepall -exe=cartesian -on=cartesian -d=CARTESIAN
 
 Configure.pl -on=DOC,DOCHTML,MAKEPDF,MAKEHTML,REMOVEDOCTEX
 
+
+   Syntax for directives:
+
       There can be only one directive per line, but 
       the IF (NOT) OPTION BEGIN ... END OPTION
       constructs can be arbitrarily nested. 
       The following example shows all the directives with the directive
-      set to the STR string:
+      prefix set to the STR string:
 
 !^STR COPYRIGHT UM
 !^STR FILE OPTION1
