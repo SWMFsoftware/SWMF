@@ -11,70 +11,152 @@ module ModTriangulate
 contains
 
 
-  subroutine calc_triangulation(&
-       nPoint, CoordXy_DI, iNodeTriangle_II,nTriangle)
-    !*************************************************************************
+  subroutine calc_triangulation(nPoint, CoordXy_DI, iNodeTriangle_II,nTriangle)
+
+    ! calc_triangulation: origionally TABLE_DELAUNAY.
     !
-    !! calc_triangulation: origionally TABLE_DELAUNAY.
+    ! Computes the Delaunay triangulation for a set of points in the plane.
     !
-    !  Discussion:
-    !
-    !    TABLE_DELAUNAY computes the Delaunay triangulation of a TABLE dataset.
-    !
-    !    The dataset is simply a set of points in the plane.
-    !
-    !    Thus, given a set of points V1, V2, ..., VN, we apply a standard 
-    !    Delaunay triangulation.  The Delaunay triangulation is an organization
+    !    Delaunay triangulation. The Delaunay triangulation is an organization
     !    of the data into triples, forming a triangulation of the data, with
     !    the property that the circumcircle of each triangle never contains
     !    another data point.  
     !
-    !  Modified:
-    !
-    !    29 January 2005
-    !
-    !  Author:
-    !
-    !    John Burkardt, Modified by Alex Glocer:2/2007
-    !
-    !  Usage:
-    !
-    !    table_delaunay input_filename
-    !
-    implicit none
+    !  Author: John Burkardt, Modified by Alex Glocer:2/2007
 
+    implicit none
 
     integer, intent(in) :: nPoint
     real, intent(in)    :: CoordXy_DI(2,nPoint)
-    integer, intent(out)   :: iNodeTriangle_II(3,3*nPoint)
-    integer                :: triangle_neighbor(3,3*nPoint)
-    integer :: arg_num
+    integer, intent(out):: iNodeTriangle_II(3,2*nPoint)
+
+    integer, allocatable:: WorkArray_II(:,:)
     integer,intent(out) :: nTriangle
-    character ( len = 256 ) :: eps_filename = ' '
-    integer iarg
-    integer iargc
-    integer :: ierror = 0
-    character ( len = 256 ) :: input_filename = ' '
-    integer m1
-    integer m2
-    character ( len = 256 ) :: output_filename = ' '
-    integer i,j
+    !--------------------------------------------------------------------------
+    allocate(WorkArray_II(3,3*nPoint))
+
+    call dtris2(nPoint, CoordXy_DI, nTriangle, iNodeTriangle_II, WorkArray_II)
+    
+    deallocate(WorkArray_II)
+
+  end subroutine calc_triangulation
+
+  !============================================================================
+
+  subroutine find_triangle(&
+       nPoint, nTriangle, CoordIn_D, XyNode_DI, iNodeTriangle_II,&
+       iNode1, iNode2,iNode3,IsTriangleFound)
+
+    ! Determine the triangle containing a given point. 
+    ! If point is not contained in any triangle, then return triangle 
+    ! closest to point.
+
+    ! created by Alex Glocer, 01/2007
+
+    integer, parameter:: x_=1, y_=2
+
+    integer,intent(in)   :: nPoint,nTriangle
+    real,   intent(in)   :: CoordIN_D(2)
+    real,   intent(in)   :: XyNode_DI(2,nPoint)
+    integer,intent(in)   :: iNodeTriangle_II(3,nTriangle)
+    integer,intent(out)  :: iNode1,iNode2,iNode3
+    logical,intent(out)  :: IsTriangleFound
+
+    real             :: x1,x2,x3, y1,y2,y3
+    real             :: FAB, FCA, FBC
+    real             :: Distance, DistanceMin
+    integer          :: iTriangle, iTriangleMin
     !--------------------------------------------------------------------------
 
+    IsTriangleFound=.false.
 
-    m1=2
+    do iTriangle=1,nTriangle 
 
-    m2 = 3
+       iNode1=iNodeTriangle_II(1,iTriangle)
+       iNode2=iNodeTriangle_II(2,iTriangle)
+       iNode3=iNodeTriangle_II(3,iTriangle)
 
-!    allocate ( triangle_neighbor(m2,3*nPoint) )
+       !fill in x,y pairs for current triangle nodes
+       x1=XyNode_DI(1,iNode1)
+       y1=XyNode_DI(2,iNode1)
 
-    call dtris2 ( nPoint, CoordXy_DI, nTriangle, iNodeTriangle_II, &
-                  triangle_neighbor )
+       x2=XyNode_DI(1,iNode2)
+       y2=XyNode_DI(2,iNode2)
+
+       x3=XyNode_DI(1,iNode3)
+       y3=XyNode_DI(2,iNode3)
+
+       !check if triangle contains point or if point lies on edge
+       !Basically FAB is the signed area of the triangle formed from
+       !point AB and input point. FAB = zero if point lies on edge.
+       !and FAB positive if point lies to left of AB.
+
+       FAB = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
+       FCA = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
+       FBC = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
+       
+       if (FAB >= 0.0 .and. FBC >= 0.0 .and. FCA >=0.0) then
+          IsTriangleFound=.true.
+          exit
+       endif
+       
+    enddo
     
-!    deallocate ( triangle_neighbor )
+    !If no triangle is found to contain CoordIN_D(1) and CoordIn_D(2) 
+    !then find closest triangle
 
-    return
-  end subroutine calc_triangulation
+    if (.not.IsTriangleFound) then
+
+       do iTriangle=1,nTriangle 
+
+          iNode1=iNodeTriangle_II(1,iTriangle)
+          iNode2=iNodeTriangle_II(2,iTriangle)
+          iNode3=iNodeTriangle_II(3,iTriangle)
+
+
+          !fill in x,y pairs for current triangle nodes
+          x1=(XyNode_DI(1,iNode1)+XyNode_DI(1,iNode2)+XyNode_DI(1,iNode3))/3
+          y1=(XyNode_DI(2,iNode1)+XyNode_DI(2,iNode2)+XyNode_DI(2,iNode3))/3
+
+          Distance = (CoordIn_D(x_)-x1)**2.0 + (CoordIn_D(y_)-y1)**2.0
+
+          if ( iTriangle == 1 ) then
+             DistanceMin = Distance
+             iTriangleMin=iTriangle
+          elseif (Distance < DistanceMin) then
+             DistanceMin =Distance
+             iTriangleMin=iTriangle
+          end if
+       end do
+       iNode1=iNodeTriangle_II(1,iTriangleMin)
+       iNode2=iNodeTriangle_II(2,iTriangleMin)
+       iNode3=iNodeTriangle_II(3,iTriangleMin)
+
+       x1=XyNode_DI(1,iNode1)
+       y1=XyNode_DI(2,iNode1)
+
+       x2=XyNode_DI(1,iNode2)
+       y2=XyNode_DI(2,iNode2)
+
+       x3=XyNode_DI(1,iNode3)
+       y3=XyNode_DI(2,iNode3)
+
+    end if
+
+  end subroutine find_triangle
+
+  !============================================================================
+
+  real function triangle_area(Node_DI)
+
+    real,intent(in)       :: Node_DI(2,3)
+    real :: a_D(2), b_D(2)
+    !-------------------------------------------------------------------------
+    a_D = Node_DI(:,1)-Node_DI(:,2)
+    b_D = Node_DI(:,1)-Node_DI(:,3)
+    triangle_area = 0.5*abs(a_D(1)*b_D(2)-a_D(2)*b_D(1))
+
+  end function triangle_area
 
   !============================================================================
 
@@ -576,7 +658,7 @@ contains
        write ( *, '(a)' ) ' '
        write ( *, '(a)' ) 'I4_MODP - Fatal error!'
        write ( *, '(a,i8)' ) '  I4_MODP ( I, J ) called with J = ', j
-       stop
+       call CON_stop('share/Library/src/ModTriangulate ERROR')
     end if
 
     i4_modp = mod ( i, j )
@@ -923,7 +1005,7 @@ contains
        write ( *, '(a)' ) ' '
        write ( *, '(a)' ) 'PERM_INV - Fatal error!'
        write ( *, '(a,i8)' ) '  Input value of N = ', n
-       stop
+       call CON_stop('share/Library/src/ModTriangulate ERROR')
     end if
 
     is = 1
@@ -1061,7 +1143,7 @@ contains
              if ( iget < 1 .or. n < iget ) then
                 write ( *, '(a)' ) ' '
                 write ( *, '(a)' ) 'R82VEC_PERMUTE - Fatal error!'
-                stop
+                call CON_stop('share/Library/src/ModTriangulate ERROR')
              end if
 
              if ( iget == istart ) then
@@ -1629,151 +1711,5 @@ contains
     ledg = e
 
   end subroutine vbedg
-
-
-
-  !****************************************************************************
-  ! Determine the triangle containing a given point. If point matches node
-  ! return the three nodes equal to the given point. If point not contained in
-  ! any triangle, then return triangle closest to point.
-  ! Inputs: xIN, yIN.
-  ! Outputs: iNode1, iNode2, iNode3, IsTriangleFound
-  !
-  ! created by Alex Glocer, 01/2007
-  !****************************************************************************
-  subroutine find_triangle(&
-       nPoint,nTriangle,CoordIn_D, Xy_D,iNodeTriangle_II,&
-       iNode1,iNode2,iNode3,IsTriangleFound)
-
-    integer,intent(in)   :: nPoint,nTriangle
-    real,   intent(in)   :: CoordIN_D(2)
-    real,   intent(in)   :: Xy_D(2,nPoint)
-    integer,intent(in)   :: iNodeTriangle_II(3,nTriangle)
-    integer,intent(out)  :: iNode1,iNode2,iNode3
-    logical,intent(out)  :: IsTriangleFound
-    real             :: x1,x2,x3, y1,y2,y3
-    real             :: v1x,v1y,v1, v2x,v2y,v2, v3x,v3y,v3
-    integer          :: iTriangle,x_=1,y_=2
-    real             :: Test1,Test2,FAB,FCA,FBC
-    real             :: Distance, SaveDistance, SaveNode1, SaveNode2, SaveNode3
-    real             :: distance1,distance2,distance3,test3,test4,test5
-    real             :: distance12,distance23,distance31
-    !--------------------------------------------------------------------------
-
-    
-
-    IsTriangleFound=.false.
-
-
-    do iTriangle=1,nTriangle 
-
-       iNode1=iNodeTriangle_II(1,iTriangle)
-       iNode2=iNodeTriangle_II(2,iTriangle)
-       iNode3=iNodeTriangle_II(3,iTriangle)
-
-
-       !fill in x,y pairs for current triangle nodes
-       x1=Xy_D(1,int(iNode1))
-       y1=Xy_D(2,int(iNode1))
-
-       x2=Xy_D(1,int(iNode2))
-       y2=Xy_D(2,int(iNode2))
-
-       x3=Xy_D(1,int(iNode3))
-       y3=Xy_D(2,int(iNode3))
-
-       !test if CoordIN_D(1) and CoordIn_D(2) happen to correspond with a triangle node
-       if (     (CoordIN_D(x_) == x1 .and. CoordIn_D(y_) == y1)&
-            .or.(CoordIN_D(x_) == x2 .and. CoordIn_D(y_) == y2)&
-            .or.(CoordIN_D(x_) == x3 .and. CoordIn_D(y_) == y3)) then
-          IsTriangleFound=.true.
-          exit
-       endif
-       !check if triangle contains point or if point lies on edge
-       !Basically FAB is the signed area of the triangle formed from
-       !point AB and input point. FAB = zero if point lies on edge.
-       !and FAB positive if point lies to left of AB.
-       FAB = (CoordIn_D(y_)-y1)*(x2-x1) - (CoordIn_D(x_)-x1)*(y2-y1)
-       FCA = (CoordIn_D(y_)-y3)*(x1-x3) - (CoordIn_D(x_)-x3)*(y1-y3)
-       FBC = (CoordIn_D(y_)-y2)*(x3-x2) - (CoordIn_D(x_)-x2)*(y3-y2)
-       
-       if (FAB >= 0.0 .and. FBC >= 0.0 .and. FCA >=0.0) then
-          IsTriangleFound=.true.
-          exit
-       endif
-
-       
-       
-    enddo
-    
-
-
-    !If no triangle is found to contain CoordIN_D(1) and CoordIn_D(2) 
-    !then find closest triangle
-    if (.not.IsTriangleFound) then
-
-       do iTriangle=1,nTriangle 
-
-          iNode1=iNodeTriangle_II(1,iTriangle)
-          iNode2=iNodeTriangle_II(2,iTriangle)
-          iNode3=iNodeTriangle_II(3,iTriangle)
-
-
-          !fill in x,y pairs for current triangle nodes
-          x1=Xy_D(1,int(iNode1))
-          y1=Xy_D(2,int(iNode1))
-
-          x2=Xy_D(1,int(iNode2))
-          y2=Xy_D(2,int(iNode2))
-
-          x3=Xy_D(1,int(iNode3))
-          y3=Xy_D(2,int(iNode3))
-
-          Distance = ( &
-               sqrt ( (CoordIN_D(x_)-x1)**2.0 + (CoordIn_D(y_)-y1)**2.0 )    &
-               +sqrt( (CoordIN_D(x_)-x2)**2.0 + (CoordIn_D(y_)-y2)**2.0 )    &
-               +sqrt( (CoordIN_D(x_)-x3)**2.0 + (CoordIn_D(y_)-y3)**2.0 )    &
-               )/3.0
-
-          if ( iTriangle == 1 ) then
-             SaveDistance=Distance
-             SaveNode1=iNode1
-             SaveNode2=iNode2
-             SaveNode3=iNode3
-          elseif (Distance <= SaveDistance) then
-             SaveDistance=Distance
-             SaveNode1=iNode1
-             SaveNode2=iNode2
-             SaveNode3=iNode3
-          end if
-       end do
-       iNode1=SaveNode1
-       iNode2=SaveNode2
-       iNode3=SaveNode3
-       x1=Xy_D(1,int(iNode1))
-       y1=Xy_D(2,int(iNode1))
-
-       x2=Xy_D(1,int(iNode2))
-       y2=Xy_D(2,int(iNode2))
-
-       x3=Xy_D(1,int(iNode3))
-       y3=Xy_D(2,int(iNode3))
-
-    end if
-
-  end subroutine find_triangle
-
-  !============================================================================
-
-  real function triangle_area(Node_DI)
-
-    real,intent(in)       :: Node_DI(2,3)
-    real :: a_D(2), b_D(2)
-    !-------------------------------------------------------------------------
-    a_D = Node_DI(:,1)-Node_DI(:,2)
-    b_D = Node_DI(:,1)-Node_DI(:,3)
-    triangle_area = 0.5*abs(a_D(1)*b_D(2)-a_D(2)*b_D(1))
-
-  end function triangle_area
 
 end module ModTriangulate
