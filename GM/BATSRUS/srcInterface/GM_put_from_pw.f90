@@ -98,8 +98,9 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   do i = 1, nOuterPoint
      CoordXyPw_DI(x_,nLinePw+i) = SinThetaOuter * cos(i*cTwoPi/nOuterPoint)
-     CoordXyPw_DI(x_,nLinePw+i) = SinThetaOuter * sin(i*cTwoPi/nOuterPoint)
+     CoordXyPw_DI(y_,nLinePw+i) = SinThetaOuter * sin(i*cTwoPi/nOuterPoint)
   end do
+
 
   call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II,nTriangle)
 
