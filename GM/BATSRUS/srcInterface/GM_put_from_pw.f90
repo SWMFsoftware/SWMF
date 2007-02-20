@@ -53,7 +53,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
              ' ERROR: iRhoPwLast - iRhoPwFirst /= iUPwLast - iUPwFirst !')
      end if
 
-     allocate(CoordXyPw_DI(nCoord, nPoint), iNodeTriangle_II(3, nPoint))
+     allocate(CoordXyPw_DI(nCoord, nPoint), iNodeTriangle_II(3, 2*nPoint))
 
      if(UseMultiSpecies)then
 
@@ -102,7 +102,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   end do
 
 
-  call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II,nTriangle)
+  call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II, nTriangle)
 
   if(DoTestMe)then
      write(*,*)'!!! nVarPw, nLinePw, nSpeciesPw=',nVarPw, nLinePw, nSpeciesPw
@@ -132,7 +132,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   real       :: Node_DI(2,3)
   real       :: Triangle1_DI(2,3), Triangle2_DI(2,3), Triangle3_DI(2,3)
   logical    :: IsTriangleFound
-  integer    :: node1,node2,node3
+  integer    :: iNode1,iNode2,iNode3
   real       :: Area1,Area2,Area3,Area
 
   ! A short time relative to the rotation period of Earth
@@ -169,21 +169,20 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
         TimeSimLast = Time_Simulation
      end if
      ! Convert from GM coordinates to buffer coordinates
-     XyzPw_D    = matmul( PwGm_DD, CoordIn_D)
+     XyzPw_D = matmul( PwGm_DD, CoordIn_D)
   end if
 
   ! Project to unit sphere and calculate X, Y coordinates
   ! Disregard the 3rd coordinate (Z) that determines the hemisphere !!!
   Xy_D(1:2) = XyzPw_D(1:2)/sqrt(sum(XyzPw_D**2))
 
+  !Find triangle containing point Xy_D
+  call find_triangle(nPoint, nTriangle, Xy_D, CoordXyPw_DI, iNodeTriangle_II, &
+       iNode1, iNode2, iNode3, IsTriangleFound)
 
-  !Find triangle containing point
-  !call find_triangle(nPoint, CoordXyPw_DI, iNodeTriangle_II, Xy_D, &
-  !     node1, node2, node3, IsTriangleFound)
-
-  Node_DI(:,1)=CoordXyPw_DI(:,node1)
-  Node_DI(:,2)=CoordXyPw_DI(:,node2)
-  Node_DI(:,3)=CoordXyPw_DI(:,node3)
+  Node_DI(:,1)=CoordXyPw_DI(:,iNode1)
+  Node_DI(:,2)=CoordXyPw_DI(:,iNode2)
+  Node_DI(:,3)=CoordXyPw_DI(:,iNode3)
 
   ! interpolate values
   if (IsTriangleFound) then
@@ -207,23 +206,25 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      Area3 = Area3 / Area
 
      State_V(Rho_) = &
-          Area1*StatePw_VI(RhoPw_,node1) + &
-          Area2*StatePw_VI(RhoPw_,node2) + &
-          Area3*StatePw_VI(RhoPw_,node3)
+          Area1*StatePw_VI(RhoPw_,iNode1) + &
+          Area2*StatePw_VI(RhoPw_,iNode2) + &
+          Area3*StatePw_VI(RhoPw_,iNode3)
 
      ! Calculate field aligned momentum vector
      call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
      B0_D = B0_D / sqrt(sum(B0_D**2))
+     ! Make sure unit vector is pointing outward
+     if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
      State_V(RhoUx_:RhoUz_) = B0_D * ( &
-          Area1*StatePw_VI(RhoUb_,node1) + &
-          Area2*StatePw_VI(RhoUb_,node2) + &
-          Area3*StatePw_VI(RhoUb_,node3))
+          Area1*StatePw_VI(RhoUb_,iNode1) + &
+          Area2*StatePw_VI(RhoUb_,iNode2) + &
+          Area3*StatePw_VI(RhoUb_,iNode3))
 
      if(UseMultiSpecies) &
           State_V(SpeciesFirst_:SpeciesLast_) = &
-          Area1*StatePw_VI(iRhoPwFirst:iRhoPwLast,node1) + &
-          Area2*StatePw_VI(iRhoPwFirst:iRhoPwLast,node2) + &
-          Area3*StatePw_VI(iRhoPwFirst:iRhoPwLast,node3)
+          Area1*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode1) + &
+          Area2*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode2) + &
+          Area3*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode3)
 
   else
      write(*,*)NameSub, 'CoordIn_D:', CoordIn_D
