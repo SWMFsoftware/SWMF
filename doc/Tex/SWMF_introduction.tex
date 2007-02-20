@@ -19,6 +19,7 @@ models from the surface of the Sun to the upper atmosphere of the Earth:
 \item SP -- Solar Energetic Particles 
 \item GM -- Global Magnetosphere 
 \item IM -- Inner Magnetosphere
+\item PW -- Polar Wind
 \item RB -- Radiation Belts
 \item IE -- Ionosphere Electrodynamics
 \item UA -- Upper Atmosphere
@@ -79,9 +80,15 @@ The Inner Magnetosphere (IM) component is the Rice Convection Model
 serial.
 
 \item
-The Radiation Belt (RB) component is the Rice RBM
-developed at Rice University.  This code is 2-dimensional and
-serial.
+The Polar Wind (PW) component is the Polar Wind Outflow Model (PWOM)
+developed at the University of Michigan.  This code solves the
+multifluid equations along multiple field lines and it is fully parallel.
+
+\item
+There are two versions for the Radiation Belt (RB) component: 
+the Rice Rardiation Belt Model (RRBM) is developed at Rice University,
+the Radiation Belt Environment (RBE) model is developed at Goddard.
+Both codes are 2-dimensional and serial.
 
 \item
 The Ionospheric Electrodynamics (IE) component is a 2-processor,
@@ -285,6 +292,7 @@ The top level directory contains the following subdirectories:
 \item {\tt IE}      - Ionosphere Electrodynamics Component %^CMP IF IE
 \item {\tt IH}      - Inner Heliosphere component          %^CMP IF IH
 \item {\tt IM}      - Inner Magnetosphere component        %^CMP IF IM
+\item {\tt PW}      - Polar wind component                 %^CMP IF PW
 \item {\tt RB}      - Radiation Belt component             %^CMP IF RB
 \item {\tt SC}      - Solar Corona component               %^CMP IF SC
 \item {\tt SP}      - Solar Energetic Particles component  %^CMP IF SP
@@ -299,10 +307,9 @@ The top level directory contains the following subdirectories:
 \end{itemize}
 and the following files
 \begin{itemize}
-\item {\tt README}           - a short instruction on installation and usage
-\item {\tt Makefile}         - the main makefile
-\item {\tt Configure.pl}     - Perl script for configuration %^CMP IF CONFIGURE
-\item {\tt Configure.options} - default configuration options %^CMP IF CONFIGURE
+\item {\tt README}        - a short instruction on installation and usage
+\item {\tt Makefile}      - the main makefile
+\item {\tt Makefile.test} - the makefile containing the tests %#^CMP IF TESTING
 \item {\tt Config.pl}     - Perl script for (un)installation and configuration
 \end{itemize}
 

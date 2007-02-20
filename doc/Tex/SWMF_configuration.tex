@@ -10,11 +10,11 @@ Inclusion of components can be controlled using one of several methods:
 \begin{itemize}
 \item The source code can modified so that all references %^CMP IF CONFIGURE
       to a subset of the components is removed. %^CMP IF CONFIGURE
-      This method uses the Configure.pl script. %^CMP IF CONFIGURE
+      This method uses the Scripts/Configure.pl script. %^CMP IF CONFIGURE
       In a similar way, some physics components can be individually
       configured.
 \item The user may select which version of a physics component,
-  including the Empty version,
+      including the Empty version,
       should be compiled.  This is controlled using the Config.pl script.
 \item When submitting a run, a subset of the non-empty (compiled) 
       components can be
@@ -30,26 +30,27 @@ configured, such as selecting user routines for the IH/BATSRUS or
 GM/BATSRUS components.
 
 %^CMP IF CONFIGURE BEGIN
-\subsection{Configure.pl}
-The Configure.pl script can build a new software package which
-contains only a subset of the components. The whole
-component directory and all references to the component 
-in the source code, in the scripts and the Makefiles are removed.
+\subsection{Scripts/Configure.pl}
+
+The Scripts/Configure.pl script can build a new software package which
+contains only a subset of the components. It is a simple interface
+for the general share/Scripts/Configure.pl script. The configuration
+can remove a whole component directory and all references to the component 
+in the source code, in the scripts and the Makefiles.
 This type of configuration results in a smaller software package.
 The main use of this type of configuration is to distribute
 a part of SWMF to users. For example one can create a 
 software distribution which includes GM, IE and UA only by typing
 \begin{verbatim}
-  Configure.pl -on=GM,IE,UA -off=SC,IH,SP,IM,RB
+  Scripts/Configure.pl -on=GM,IE,UA -off=SC,IH,SP,IM,PW,RB
 \end{verbatim}
 The configured package will be in the Build directory.  Type
 \begin{verbatim}
-  Configure.pl -h
+  Scripts/Configure.pl -h
 \end{verbatim}
 to get complete usage information or read about this script 
 in the reference manual.
 %^CMP END CONFIGURE
-
 
 \subsection{Selecting component versions to compile with Config.pl}
 
@@ -231,7 +232,8 @@ components.
 \subsection{Configuration of individual components}
 
 Some of the components can be configured individually. 
-The Configure.pl script can configure the {\tt GM/BATSRUS} code, for example.
+The GM/BATSRUS/Configure.pl script can configure the {\tt GM/BATSRUS} code, 
+for example.
 The configured code can be linked to {\tt GM/BATSRUS\_conf}, which can
 be selected as the GM component.
 
