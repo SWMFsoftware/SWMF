@@ -20,7 +20,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   logical, save :: DoInitialize = .true.
 
-  integer :: iVar, i, nTriangle
+  integer :: iVar, i
   real    :: SinThetaOuter
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
@@ -83,12 +83,14 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   CoordXyPw_DI(y_,1:nLinePw) =  &
          sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
 
-  StatePw_VI(RhoUb_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
-       *Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
-       / UnitSI_rhoU
-
+  ! Total density in normalized units
   StatePw_VI(RhoPw_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) &
        / UnitSI_rho
+
+  ! Field aligned velocity = total moment/total density
+  StatePw_VI(Ub_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
+       *Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
+       / UnitSI_RhoU / StatePw_VI(RhoPw_,1:nLinePw)
 
   if(UseMultiSpecies) StatePw_VI(RhoPw_+1: RhoPw_+nSpeciesPw, 1:nLinePw) &
        = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) / UnitSI_rho
@@ -101,14 +103,20 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
      CoordXyPw_DI(y_,nLinePw+i) = SinThetaOuter * sin(i*cTwoPi/nOuterPoint)
   end do
 
-
   call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II, nTriangle)
 
   if(DoTestMe)then
-     write(*,*)'!!! nVarPw, nLinePw, nSpeciesPw=',nVarPw, nLinePw, nSpeciesPw
-     write(*,*)'!!! Buffer_VI   =',Buffer_VI
-     write(*,*)'!!! CoordXyPw_DI=',CoordXyPw_DI
-     write(*,*)'!!! StatePw_VI  =',StatePw_VI
+     write(*,*)NameSub,': nVarPw, nLinePw, nSpeciesPw=',&
+          nVarPw, nLinePw, nSpeciesPw
+     write(*,*)NameSub,': nPoint, nTriangle=',nPoint, nTriangle
+     write(*,*)NameSub,': CoordXyPw_DI'
+     do i=1,nPoint
+        write(*,*) i, CoordXyPw_DI(:,i)
+     end do
+     write(*,*)NameSub,': iNodeTriangle_II'
+     do i=1,nTriangle
+        write(*,*) i, iNodeTriangle_II(:,i)
+     end do
   end if
 
 end subroutine GM_put_from_pw
@@ -120,10 +128,13 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use CON_coupler, ONLY: PW_, Grid_C
   use CON_axes, ONLY: transform_matrix
   use ModMain, ONLY: TypeCoordSystem, Time_Simulation, x_, y_, z_
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, &
+  use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, &
        SpeciesFirst_, SpeciesLast_, UseMultiSpecies
   use ModPwGrid
   use ModTriangulate, ONLY: find_triangle, triangle_area
+  use ModPhysics, ONLY: UnitUser_U, UnitUser_Rho
+
+  implicit none
 
   real, intent(in)    :: CoordIn_D(3)
   integer, intent(in) :: nVarIn
@@ -137,20 +148,24 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   ! A short time relative to the rotation period of Earth
   real, parameter :: dTimeMax = 600.0 ! [s]
-  real    :: TimeSimLast = -1.0
-  real    :: B0_D(3), XyzPw_D(3), Xy_D(2), PwGm_DD(3,3)
+  real    :: B0_D(3), XyzPw_D(3), Xy_D(2)
   integer :: iPoint
   logical :: DoInitialize = .true.
+
+  real    :: TimeSimLast = -1.0 - dTimeMax
   character (len=3) :: NamePwCoord = '???'
+  real, save:: PwGm_DD(3,3)
 
   character (len=*), parameter :: NameSub = 'read_pw_buffer'
+  
+  logical :: DoTest, DoTestMe
   !--------------------------------------------------------
 
   if(DoInitialize)then
      DoInitialize = .false.
      ! Fill in outer points with body values coming in via State_V
      do iPoint=nLinePw+1, nPoint
-        StatePw_VI(RhoUb_, iPoint) = 0.0
+        StatePw_VI(Ub_, iPoint) = 0.0
         StatePw_VI(RhoPw_, iPoint) = State_V(Rho_)
         if(UseMultiSpecies) StatePw_VI(RhoPw_+1:nVarPw, iPoint) = &
              State_V(SpeciesFirst_:SpeciesLast_)
@@ -177,58 +192,74 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   Xy_D(1:2) = XyzPw_D(1:2)/sqrt(sum(XyzPw_D**2))
 
   !Find triangle containing point Xy_D
+
   call find_triangle(nPoint, nTriangle, Xy_D, CoordXyPw_DI, iNodeTriangle_II, &
        iNode1, iNode2, iNode3, IsTriangleFound)
+
+  ! Point is not covered: leave the input state variables alone
+  if (.not.IsTriangleFound) RETURN
+
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! interpolate values
 
   Node_DI(:,1)=CoordXyPw_DI(:,iNode1)
   Node_DI(:,2)=CoordXyPw_DI(:,iNode2)
   Node_DI(:,3)=CoordXyPw_DI(:,iNode3)
 
-  ! interpolate values
-  if (IsTriangleFound) then
-     Triangle1_DI(:,1)     = Xy_D(:)
-     Triangle1_DI(:,2:3)   = Node_DI(:,2:3)
+  Triangle1_DI(:,1)     = Xy_D(:)
+  Triangle1_DI(:,2:3)   = Node_DI(:,2:3)
 
-     Triangle2_DI(:,1)     = Xy_D(:)
-     Triangle2_DI(:,1:3:2) = Node_DI(:,1:3:2)
+  Triangle2_DI(:,1)     = Xy_D(:)
+  Triangle2_DI(:,2:3)   = Node_DI(:,1:3:2)
 
-     Triangle3_DI(:,1)     = Xy_D(:)
-     Triangle3_DI(:,2:3)   = Node_DI(:,2:3)
+  Triangle3_DI(:,1)     = Xy_D(:)
+  Triangle3_DI(:,2:3)   = Node_DI(:,1:2)
 
-     Area1 = triangle_area(Triangle1_DI)
-     Area2 = triangle_area(Triangle2_DI)
-     Area3 = triangle_area(Triangle3_DI)
+  Area1 = triangle_area(Triangle1_DI)
+  Area2 = triangle_area(Triangle2_DI)
+  Area3 = triangle_area(Triangle3_DI)
 
-     ! Normalize areas to weights
-     Area  = Area1+Area2+Area3
-     Area1 = Area1 / Area
-     Area2 = Area2 / Area
-     Area3 = Area3 / Area
+  ! Normalize areas to weights
+  Area  = Area1+Area2+Area3
+  Area1 = Area1 / Area
+  Area2 = Area2 / Area
+  Area3 = Area3 / Area
 
-     State_V(Rho_) = &
-          Area1*StatePw_VI(RhoPw_,iNode1) + &
-          Area2*StatePw_VI(RhoPw_,iNode2) + &
-          Area3*StatePw_VI(RhoPw_,iNode3)
+  State_V(Rho_) = &
+       Area1*StatePw_VI(RhoPw_,iNode1) + &
+       Area2*StatePw_VI(RhoPw_,iNode2) + &
+       Area3*StatePw_VI(RhoPw_,iNode3)
 
-     ! Calculate field aligned momentum vector
-     call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
-     B0_D = B0_D / sqrt(sum(B0_D**2))
-     ! Make sure unit vector is pointing outward
-     if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
-     State_V(RhoUx_:RhoUz_) = B0_D * ( &
-          Area1*StatePw_VI(RhoUb_,iNode1) + &
-          Area2*StatePw_VI(RhoUb_,iNode2) + &
-          Area3*StatePw_VI(RhoUb_,iNode3))
+  ! Calculate field aligned momentum vector
+  call get_b0(CoordIn_D(x_), CoordIn_D(y_), CoordIn_D(z_), B0_D)
+  B0_D = B0_D / sqrt(sum(B0_D**2))
+  ! Make sure unit vector is pointing outward
+  if(sum(B0_D*CoordIn_D) < 0.)B0_D = -B0_D
+  State_V(Ux_:Uz_) = B0_D * ( &
+       Area1*StatePw_VI(Ub_,iNode1) + &
+       Area2*StatePw_VI(Ub_,iNode2) + &
+       Area3*StatePw_VI(Ub_,iNode3))
 
-     if(UseMultiSpecies) &
-          State_V(SpeciesFirst_:SpeciesLast_) = &
-          Area1*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode1) + &
-          Area2*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode2) + &
-          Area3*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode3)
+  if(UseMultiSpecies) &
+       State_V(SpeciesFirst_:SpeciesLast_) = &
+       Area1*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode1) + &
+       Area2*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode2) + &
+       Area3*StatePw_VI(iRhoPwFirst:iRhoPwLast,iNode3)
 
-  else
-     write(*,*)NameSub, 'CoordIn_D:', CoordIn_D
-     call stop_mpi(NameSub,' ERROR: point is outside of all triangles!')
+  if(DoTestMe)then
+     write(*,*)NameSub,' finished with'
+     write(*,*)'CoordIn_D   =',CoordIn_D
+     write(*,*)'XyzPw_D     =',XyzPw_D
+     write(*,*)'Xy_D        =',Xy_D
+     write(*,*)'Node_DI(:,1)=',Node_DI(:,1)
+     write(*,*)'Node_DI(:,2)=',Node_DI(:,2)
+     write(*,*)'Node_DI(:,3)=',Node_DI(:,3)
+     write(*,*)'Area1,2,3=',Area1,Area2,Area3
+     write(*,*)'State_V(Rho_)   =',State_V(Rho_)/unitUSER_RHO
+     write(*,*)'B0_D            =',B0_D
+     write(*,*)'State_V(Ux_:Uz_)=',State_V(Ux_:Uz_)/unitUSER_U
   end if
 
 end subroutine read_pw_buffer
