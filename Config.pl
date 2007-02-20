@@ -346,7 +346,7 @@ sub print_help{
 
     print 
 #BOC
-"Extra options for SWMF/config.pl:
+"Additional options for SWMF/config.pl:
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
@@ -367,7 +367,7 @@ sub print_help{
                component, the Empty version is selected for all the components
                that are not listed explicitly.
 
-Examples of use:
+Examples for the SWMF Config.pl:
 
 Select the empty version for all components except GM/BATSRUS:
 

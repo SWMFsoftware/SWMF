@@ -99,7 +99,7 @@ sub show_settings{
 ############################################################################
 
 sub print_help{
-    print "Additional switches for GITM2/Config.pl:
+    print "Additional options for GITM2/Config.pl:
 
 -Earth      Configure PWOM for Earth. This flag is case insensitive.
 

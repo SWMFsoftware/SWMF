@@ -399,8 +399,9 @@ sub print_help_{
 "Config.pl can be used for installing and setting various options for SWMF
 or its components. The core of the script is in share/Scripts/Config.pl,
 and this is used by the Config.pl scripts in the main SWMF and component 
-directories. This help describes the options/features of the core script.
-Additional features (if any) will be shown below.
+directories. This help message starts with the options/features/examples 
+of the core script, and continues with the additional features (if any)
+of the SWMF/component script (starting with the text 'Additional ...').
 
 This script edits the appropriate Makefile-s, copies files and executes 
 shell commands. The script can also show the current settings.

@@ -176,7 +176,7 @@ sub show_settings{
 ############################################################################
 
 sub print_help{
-    print "Additional switches for GITM2/Config.pl:
+    print "Additional options for GITM2/Config.pl:
 
 -Mars       Configure GITM2 for Mars. This flag is case insensitive.
 
