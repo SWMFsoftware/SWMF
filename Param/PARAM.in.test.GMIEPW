@@ -4,7 +4,7 @@ T
 #VERBOSE
 100
 
-#TEST
+TEST
 PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
 
 #PROGRESS
