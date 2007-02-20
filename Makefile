@@ -258,8 +258,6 @@ dist: distclean
 	tar -rf tmp.tar  CVS*
 	tar -rf tmp.tar  .cvsignore
 	tar -rf tmp.tar  Config.pl
-	tar -rf tmp.tar  Configure.options
-	tar -rf tmp.tar  Configure.pl		#^CMP IF CONFIGURE
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
 	tar -rf tmp.tar  Scripts
