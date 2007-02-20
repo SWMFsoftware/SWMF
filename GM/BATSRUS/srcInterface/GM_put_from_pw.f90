@@ -6,6 +6,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   use ModPhysics, ONLY: UnitSi_Rho, UnitSi_RhoU
   use ModPwGrid
   use ModNumConst, ONLY: cTwoPi
+  use ModTriangulate,ONLY:calc_triangulation
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
@@ -19,7 +20,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   logical, save :: DoInitialize = .true.
 
-  integer :: iVar, i
+  integer :: iVar, i, nTriangle
   real    :: SinThetaOuter
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
@@ -100,7 +101,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
      CoordXyPw_DI(x_,nLinePw+i) = SinThetaOuter * sin(i*cTwoPi/nOuterPoint)
   end do
 
-  !!! call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II)
+  call calc_triangulation(nPoint, CoordXyPw_DI, iNodeTriangle_II,nTriangle)
 
   if(DoTestMe)then
      write(*,*)'!!! nVarPw, nLinePw, nSpeciesPw=',nVarPw, nLinePw, nSpeciesPw
