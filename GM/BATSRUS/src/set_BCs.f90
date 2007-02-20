@@ -381,7 +381,7 @@ contains
        VarsGhostFace_V(Bx_:Bz_)  =  VarsGhostFace_V(Bx_:Bz_) - B0Face_D
     case('reflect')   
        select case(iBoundary)                                                 
-       case(body1_,body2_)                                                        
+       case(body1_,body2_)
           BdotR  = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)*&
                cTwo/dot_product(FaceCoords_D,FaceCoords_D)
           BRefl_D = FaceCoords_D*BdotR
@@ -426,8 +426,13 @@ contains
 
        VarsGhostFace_V = FaceState_V
     case('polarwind')
+       ! Get density/ies and velocity from polarwind code
        call read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
        VarsGhostFace_V = FaceState_V
+
+       ! Apply floating conditions on P and B
+       VarsGhostFace_V(P_)      = VarsTrueFace_V(P_)
+       VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)
     end select
@@ -437,11 +442,11 @@ contains
             VarsTrueFace_V(Bx_:Bz_), B0Face_D, uIono_D)
        
        select case(TypeBcHere)
-       case('reflect','linetied',&
-            'ionosphere','ionospherefloat')
+       case('reflect','linetied','polarwind','ionosphere','ionospherefloat')
           VarsGhostFace_V(Ux_:Uz_) = cTwo*uIono_D + VarsGhostFace_V(Ux_:Uz_)
        case default
-          call stop_mpi('UseIonosphere is not compatible with TypeBc_I='//TypeBcHere)
+          call stop_mpi('UseIonosphere is not compatible with TypeBc_I=' &
+               //TypeBcHere)
        end select
     end if
 !^CFG END IONOSPHERE
@@ -456,7 +461,7 @@ contains
        select case(TypeBcHere)
        case('reflect','linetied', &
             'ionosphere','ionospherefloat')
-          VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + cTwo*v_phi
+          VarsGhostFace_V(Ux_:Uz_) = cTwo*v_phi + VarsGhostFace_V(Ux_:Uz_)
        case default
           call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
                //TypeBcHere) 
