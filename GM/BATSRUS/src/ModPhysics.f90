@@ -31,7 +31,7 @@ module ModPhysics
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   !/
-  real :: Bdp,Bdpx,Bdpy,Bdpz,Bdp_dim=0.0  ! the dipole moment of B0
+  real :: Bdp,Bdpx,Bdpy,Bdpz,DipoleStrengthSi =0.0 ! the dipole moment of B0
   real, dimension(1:3,1:3) :: Qqp  =0.0   ! the quadrupole moment of B0
   real, dimension(1:3,1:3,1:3) :: Oop=0   ! the octupole moment of B0
 
@@ -68,25 +68,24 @@ module ModPhysics
   !\
   ! Far field solar wind solution variables.
   !/
-  real ::      SW_T_dim=0.0  , &
-       SW_a_dim=0.0  , &
+  real :: SW_T_dim=0.0, &
        SW_rho=0.0, SW_rho_dim=0.0, &
+       SW_n=0.0,   SW_n_dim=0.0  , &
        SW_p=0.0  , SW_p_dim=0.0  , &
        SW_Ux=0.0 , SW_Ux_dim=0.0 , &
        SW_Uy=0.0 , SW_Uy_dim=0.0 , &
        SW_Uz=0.0 , SW_Uz_dim=0.0 , &
        SW_Bx=0.0 , SW_Bx_dim=0.0 , &
        SW_By=0.0 , SW_By_dim=0.0 , &
-       SW_Bz=0.0 , SW_Bz_dim=0.0 , &
-       SW_B_factor=0.0
+       SW_Bz=0.0 , SW_Bz_dim=0.0
 
   !\
   ! General Body parameters
   !/
-  real :: rPlanet_dim, rBody, rCurrents
+  real :: rPlanetSi, rBody, rCurrents
   real :: Body_rho_dim, Body_T_dim, Body_rho, Body_p  
   real :: gBody
-  real :: rot_period_dim, OMEGAbody 
+  real :: RotPeriodSi, OmegaBody 
 
   !^CFG IF SECONDBODY BEGIN
   !\
@@ -131,75 +130,25 @@ module ModPhysics
   real :: EpsilonDiss,DeltaDiss,ThetaDiss
   real :: RhoDifDiss,yShiftDiss
   real :: scaleHeightDiss,scaleFactorDiss,BZ0Diss
-  !\
-  ! Normalization Units
-  !/
-  logical :: UseDefaultUnits = .false.
-  real :: Grav0Diss,Beta0Diss,Length0Diss
-  real :: Time0Diss,Rho0Diss,Tem0Diss
 
   !\
-  ! Type of Units the user is using - for doing I/O
+  ! Units for normalization of variables
   !/
-  character (len=20) :: IoUnits
+  character (len=20) :: TypeNormalization="SOLARWIND"
 
   !\
-  ! Units for normalization
+  ! Type of units used for I/O (input params, log files, plot files, etc.)
   !/
-  ! used as follows:     rho_with_dimensions = State_VGB(rho_,...)*unit_rho
-  !                      State_VGB(rho_,... = rho_with_dimensions/unit_rho
-  ! unitUSER_x = units are assigned by user, this is used for input and ouput
-  ! unitSI_x   = units are standard SI units - m, kg, s, T, K, V, A, ...
+  character (len=20) :: TypeIoUnit = "PLANETARY"
 
-  character (len=20) :: TypeNormalization='SOLARWIND'
+  ! Named indexes for I/O variable units
+  integer, parameter :: nIoUnit = 15
 
-  real ::  &
-       unitUSER_x, unitUSER_t, unitUSER_angle,        & ! time and space
-       unitUSER_rho, unitUSER_n, unitUSER_U,          & ! primitive MHD quantities 
-       unitUSER_p, unitUSER_B,                        & ! primitive MHD quantities
-       unitUSER_rhoU,  unitUSER_energydens,           & ! conservative MHD quantities
-       unitUSER_J, unitUSER_electric, unitUSER_DivB,  & ! derived quantities
-       unitUSER_temperature,                          & ! derived quantities
-       unitUSER_Poynting                                ! Poynting vector
-  real ::  &
-       unitSI_x, unitSI_t, unitSI_angle,              & ! time and space
-       unitSI_rho, unitSI_n, unitSI_U,                & ! primitive MHD quantities 
-       unitSI_p, unitSI_B,                            & ! primitive MHD quantities
-       unitSI_rhoU,  unitSI_energydens,               & ! conservative MHD quantities
-       unitSI_J, unitSI_electric, unitSI_DivB,        & ! derived quantities
-       unitSI_temperature,                            & ! derived quantities
-       unitSI_Poynting                                  ! Poynting vector
-
-  ! String representation of the units above - used for output - IDL
-  character (len=20) ::  &
-       unitstr_IDL_x, unitstr_IDL_t, unitstr_IDL_angle, & ! time and space
-       unitstr_IDL_rho, unitstr_IDL_n, unitstr_IDL_U,   & ! primitive MHD quantities
-       unitstr_IDL_p, unitstr_IDL_B,                    & ! primitive MHD quantities
-       unitstr_IDL_rhoU,  unitstr_IDL_energydens,       & ! conservative MHD quantities
-       unitstr_IDL_J, unitstr_IDL_electric,             & ! derived quantities
-       unitstr_IDL_DivB, unitstr_IDL_temperature,       & ! derived quantities
-       unitstr_IDL_Poynting                               ! Poynting vector
-
-  ! String representation of the units above - used for output - TEC
-  character (len=20) ::  &
-       unitstr_TEC_x, unitstr_TEC_t, unitstr_TEC_angle, & ! time and space
-       unitstr_TEC_rho, unitstr_TEC_n, unitstr_TEC_U,   & ! primitive MHD quantities
-       unitstr_TEC_p, unitstr_TEC_B,                    & ! primitive MHD quantities
-       unitstr_TEC_rhoU,  unitstr_TEC_energydens,       & ! conservative MHD quantities
-       unitstr_TEC_J, unitstr_TEC_electric,             & ! derived quantities
-       unitstr_TEC_DivB, unitstr_TEC_temperature,       & ! derived quantities
-       unitstr_TEC_Poynting                               ! Poynting vector
-
-  ! IO unit type and string for standard variables and plots types.  These are
-  ! used by the user to set the values.
-  integer, parameter :: nIoUnit = 13
-  real, dimension(nIoUnit) :: Si2User
-  character(len=20), dimension(nIoUnit) :: IoUnitStr
   integer, parameter :: UnitX_           = 1
-  integer, parameter :: UnitRho_         = 2
-  integer, parameter :: UnitN_           = 3
-  integer, parameter :: UnitU_           = 4
-  integer, parameter :: UnitT_           = 5
+  integer, parameter :: UnitU_           = 2
+  integer, parameter :: UnitRho_         = 3
+  integer, parameter :: UnitT_           = 4
+  integer, parameter :: UnitN_           = 5
   integer, parameter :: UnitP_           = 6
   integer, parameter :: UnitB_           = 7
   integer, parameter :: UnitRhoU_        = 8
@@ -208,6 +157,21 @@ module ModPhysics
   integer, parameter :: UnitJ_           = 11
   integer, parameter :: UnitElectric_    = 12
   integer, parameter :: UnitTemperature_ = 13
+  integer, parameter :: UnitDivB_        = 14
+  integer, parameter :: UnitAngle_       = 15
 
+  ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
+  ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
+  real, dimension(nIoUnit) :: Io2Si_V, Si2Io_V, Io2No_V, No2Io_V, Si2No_V, No2Si_V
+
+  character (len=20), dimension(nIoUnit) :: &
+       NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
+
+  !!!\
+  !!! These 'dissipative problem type' units should be eliminated
+  !!!/
+  logical :: UseDefaultUnits = .false.         !!!
+  real :: Grav0Diss,Beta0Diss,Length0Diss      !!!
+  real :: Time0Diss,Rho0Diss,Tem0Diss          !!!
 
 end module ModPhysics
