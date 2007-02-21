@@ -21,7 +21,7 @@ contains
     ! jSize is the number of longitude nodes (including a periodic overlap)
 
     use ModNumConst, ONLY: cPi, cTwoPi
-    use ModPhysics,  ONLY: UnitSi_X
+    use ModPhysics,  ONLY: Si2No_V, UnitX_
     use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize
@@ -44,7 +44,7 @@ contains
     allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono))
     ThetaIono_I = Grid_C(IE_) % Coord1_I
     PhiIono_I   = Grid_C(IE_) % Coord2_I
-    rIonosphere = Grid_C(IE_) % Coord3_I(1) / UnitSi_X
+    rIonosphere = Grid_C(IE_) % Coord3_I(1) * Si2No_V(UnitX_)
 
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)

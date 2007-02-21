@@ -222,8 +222,8 @@ contains
   subroutine show_progress
 
     use ModIo,      ONLY: dn_progress1, dn_progress2
-    use ModMain,    ONLY: nI, nJ, nK, nBlock, unusedBLK, n_step, dt
-    use ModPhysics, ONLY: unitSI_t
+    use ModMain,    ONLY: nI, nJ, nK, nBlock, unusedBLK, n_step, Dt
+    use ModPhysics, ONLY: Si2No_V, UnitT_
 
     real(Real8_), external :: timing_func_d
     real(Real8_) :: CpuTimeBATSRUS,CpuTimeAdvance
@@ -270,8 +270,8 @@ contains
          .and. dn_progress2>0 .and. mod(n_step,dn_progress2) == 0)then
        write(*,*)
        nIterExpect = nITER-iteration_number
-       if(time_accurate .and. dt>0.0)then
-          nIterExpectTime = (t_max-time_simulation)/(dt*unitSI_t)
+       if(time_accurate .and. Dt>0.0)then
+          nIterExpectTime = (t_max-time_simulation)/Dt*Si2No_V(UnitT_)
           if(nIterExpect < 0)then
              nIterExpect = nIterExpectTime
           else if(nIterExpectTime > 0)then

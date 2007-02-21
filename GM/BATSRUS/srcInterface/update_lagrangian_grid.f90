@@ -102,7 +102,7 @@ contains
   subroutine get_u(&
        nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
-    use ModPhysics,ONLY: unitSI_t
+    use ModPhysics,ONLY: No2Si_V, UnitT_
     use ModAdvance,ONLY: State_VGB,StateOld_VCB, &
          rho_,rhoUx_,rhoUz_
     use ModMain,ONLY:Time_Simulation,dt
@@ -131,9 +131,9 @@ contains
          (Time_Simulation-tNow)*&
          StateOld_VCB(RhoUx_:rhoUz_,i,j,k,iBlock)/&
          StateOld_VCB(rho_,i,j,k,iBlock)+&
-         (tNow+dt*unitSI_t-Time_Simulation)*&
+         (tNow+dt*No2Si_V(UnitT_)-Time_Simulation)*&
          State_VGB(RhoUx_:rhoUz_,i,j,k,iBlock)/&
-         State_VGB(rho_,i,j,k,iBlock))/(dt*unitSI_t**2)
+         State_VGB(rho_,i,j,k,iBlock))/(dt*No2Si_V(UnitT_)**2)
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
        j      = Get%iCB_II(2,iGet)
@@ -144,9 +144,9 @@ contains
             (Time_Simulation-tNow)*&
             StateOld_VCB(RhoUx_:rhoUz_,i,j,k,iBlock)/&
             StateOld_VCB(rho_,i,j,k,iBlock)+&
-            (tNow+dt*unitSI_t-Time_Simulation)*&
+            (tNow+dt*No2Si_V(UnitT_)-Time_Simulation)*&
             State_VGB(RhoUx_:rhoUz_,i,j,k,iBlock)/&
-            State_VGB(rho_,i,j,k,iBlock))/(dt*unitSI_t**2)
+            State_VGB(rho_,i,j,k,iBlock))/(dt*No2Si_V(UnitT_)**2)
     end do
   end subroutine get_u
   !-------------------------------------------------------

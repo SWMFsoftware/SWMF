@@ -24,7 +24,6 @@ subroutine BATS_setup
   use ModAMR, ONLY : &
        dn_refine,initial_refine_levels,nRefineLevelIC,nRefineLevel,&
        automatic_refinement
-  use ModPhysics, ONLY : unitSI_t
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
 
@@ -284,7 +283,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: dn_refine
-  use ModPhysics, ONLY: UnitSI_t
+  use ModPhysics, ONLY : No2Si_V, Si2No_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
@@ -328,7 +327,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   ! Calculate time step dt
   if (time_accurate) &
-       call set_global_timestep((TimeSimulationLimit-Time_Simulation)/UnitSI_t)
+       call set_global_timestep((TimeSimulationLimit-Time_Simulation)*Si2No_V(UnitT_))
 
   ! Calculate unsplit dB0Dt term for every time step
   if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
@@ -350,7 +349,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   
   if(UseIM)call apply_im_pressure         !^CFG IF RCM
 
-  Time_Simulation = Time_Simulation + dt*UnitSI_t
+  Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)
   if(UseDivBDiffusion)call clean_divb     !^CFG IF DIVBDIFFUSE
   call exchange_messages
   
@@ -372,7 +371,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(time_accurate)&
        call update_lagrangian_grid(&
-       Time_Simulation - dt*UnitSI_t,Time_Simulation)
+       Time_Simulation - Dt*No2Si_V(UnitT_),Time_Simulation)
 
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation
@@ -382,7 +381,7 @@ subroutine BATS_advance(TimeSimulationLimit)
      ! Split dB0/dt term is added at the dt_updateB0 frequency
      if (.not.DoSplitDb0Dt .or. &
           int(Time_Simulation/dt_UpdateB0) >  &
-          int((Time_Simulation - dt*unitSI_t)/dt_UpdateB0)) &
+          int((Time_Simulation - Dt*No2Si_V(UnitT_))/dt_UpdateB0)) &
           call update_b0
   end if
 

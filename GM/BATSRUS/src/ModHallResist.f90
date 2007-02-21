@@ -73,7 +73,7 @@ contains
   subroutine init_hall_resist
     use ModSize,    ONLY: nI, nJ, nK, nDim
     use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
-    use ModPhysics, ONLY: UnitSI_B, UnitSI_T, UnitSI_X, UnitSI_Rho, &
+    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitT_, UnitX_, UnitRho_, &
          AverageIonMass, AverageIonCharge
     use ModVarIndexes, ONLY: UseMultiSpecies
 
@@ -85,7 +85,7 @@ contains
 
     IonMassPerCharge =HallFactor/cMu &
          * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
-         *  UnitSI_B*UnitSI_T/(UnitSI_X**2 * UnitSI_Rho)
+         * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 * No2Si_V(UnitRho_))
 
     ! If not multispecies, multiply with average ion mass
     if(.not.UseMultiSpecies) &

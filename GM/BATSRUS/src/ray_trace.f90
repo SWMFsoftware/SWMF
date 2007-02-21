@@ -1057,7 +1057,7 @@ contains
     ! steps were done
 
     use ModMain,     ONLY: Time_Simulation
-    use ModPhysics,  ONLY: Bdp_dim     ! only the sign of dipole is needed
+    use ModPhysics,  ONLY: DipoleStrengthSi ! only the sign of dipole is needed
     use CON_planet_field, ONLY: map_planet_field
 
     integer :: iHemisphere
@@ -1072,7 +1072,7 @@ contains
        call stop_mpi('ERROR in follow_ray_iono')
     end if
 
-    if(iHemisphere*Bdp_dim*sign(1.0,1.5-iray) < 0.0)then
+    if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iray) < 0.0)then
        xx = x_D
        follow_ray_iono = .true.
     else

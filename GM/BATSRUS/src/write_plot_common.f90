@@ -9,7 +9,7 @@ subroutine write_plot_common(ifile)
   use ModMain
   use ModGeometry, ONLY : XyzMin_D,XyzMax_D,true_cell
   use ModGeometry, ONLY : TypeGeometry,UseCovariant     !^CFG IF COVARIANT
-  use ModPhysics, ONLY : unitUSER_x, thetaTilt,Rbody
+  use ModPhysics, ONLY : No2Io_V, UnitX_, thetaTilt,Rbody
   use ModIO
   use ModIoUnit, ONLY : io_unit_new
   use ModNodes
@@ -409,10 +409,10 @@ subroutine write_plot_common(ifile)
         case('idl')
            if(plot_dimensional(ifile)) then
               write(unit_tmp,'(6(1pe18.10),a)') &
-                   plot_range(:,ifile)*unitUSER_x,' plot_range'
+                   plot_range(:,ifile)*No2Io_V(UnitX_),' plot_range'
               write(unit_tmp,'(6(1pe18.10),i8,a)') &
-                   plot_dx(:,ifile)*unitUSER_x, &
-                   dxGLOBALmin*unitUSER_x, nGLOBALcells,&
+                   plot_dx(:,ifile)*No2Io_V(UnitX_), &
+                   dxGLOBALmin*No2Io_V(UnitX_), nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            else
               write(unit_tmp,'(6(1pe18.10),a)') &
@@ -512,7 +512,7 @@ end subroutine write_plot_common
 subroutine set_eqpar(iplotfile,neqpar,eqparnames,eqpar)
 
   use ModProcMH
-  use ModPhysics, ONLY : g,cLIGHT,rBody,unitUSER_U,unitUSER_x,unitUSER_rho
+  use ModPhysics, ONLY : g,cLIGHT,rBody,No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace                !^CFG  IF RAYTRACE
   use ModIO
 
@@ -529,22 +529,22 @@ subroutine set_eqpar(iplotfile,neqpar,eqparnames,eqpar)
         eqpar(ipar)=g
      case('c')
         if(plot_dimensional(plot_+iplotfile)) then
-           eqpar(ipar)=cLIGHT*unitUSER_U
+           eqpar(ipar)=Clight*No2Io_V(UnitU_)
         else
-           eqpar(ipar)=cLIGHT
+           eqpar(ipar)=Clight
         end if
      case('rbody','rBody','RBODY')
         eqpar(ipar)=rBody
         if(plot_dimensional(plot_+iplotfile))&
-             eqpar(ipar)=eqpar(ipar)*unitUSER_x
+             eqpar(ipar)=eqpar(ipar)*No2Io_V(UnitX_)
      case('eta')
         eqpar(ipar)=0.
      case('unitx')
-        eqpar(ipar)=unitUSER_x
-     case('unitn','unitrho')
-        eqpar(ipar)=unitUSER_rho
+        eqpar(ipar)=No2Io_V(UnitX_)
+     case('unitrho')
+        eqpar(ipar)=No2Io_V(UnitRho_)
      case('unitv')
-        eqpar(ipar)=unitUSER_U
+        eqpar(ipar)=No2Io_V(UnitU_)
      case('mu')
         eqpar(ipar)=mu_los
 !!$!^CFG  IF RAYTRACE BEGIN
@@ -1242,8 +1242,6 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   do iVar=1,nPlotVar
      s=plotvarnames(iVar)
      call lower_case(s)
-     if (oktest_me)  write(*,*) 'iProc,plotvarnames,iVar,unitUSER_J', &
-          iProc,plotvarnames(iVar),iVar,unitUSER_J
 
      ! Set plotvar_inBody to something reasonable for inside the body.
      ! Load zeros (0) for most values - load something better for rho, p, and T
@@ -1258,41 +1256,41 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! BASIC MHD variables
 
      case('rho')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_rho
-        plotvar_inBody(iVar)=plotvar_inBody(iVar)*unitUSER_rho
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitRho_)
+        plotvar_inBody(iVar)=plotvar_inBody(iVar)*No2Io_V(UnitRho_)
      case('rhoux','mx','rhouy','my','rhouz','mz','rhour','mr' )
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_rhoU
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitRhoU_)
      case('bx','by','bz','br','b1x','b1y','b1z','b1r' &
           ,'bxl','bxr','byl','byr','bzl','bzr' &         !^CFG IF CONSTRAINB
           )
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_B
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitB_)
      case('e','e1')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_energydens
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
      case('p','pth')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_p
-        plotvar_inBody(iVar)=plotvar_inBody(iVar)*unitUSER_p
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
+        plotvar_inBody(iVar)=plotvar_inBody(iVar)*No2Io_V(UnitP_)
 
         ! EXTRA MHD variables
      case('n')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_n
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
      case('t','temp')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_temperature
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
      case('ux','uy','uz')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_U
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
      case('jx','jy','jz','jr')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_J   
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitJ_)
      case('ex','ey','ez','er','enumx','enumy','enumz')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_electric   
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitElectric_)
      case('pvecx','pvecy','pvecz','pvecr','b2ur')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_Poynting
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitPoynting_)
      case('divb','divb_cd','divb_ct','absdivb')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_DivB
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitDivB_)
 
         ! GRID INFORMATION
      case('dt','dtblk')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_t
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
      case('dx')
-        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*unitUSER_x
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
 
         ! DEFAULT CASE
      case default
@@ -1340,9 +1338,9 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   if(index(plot_type(ifile),'sph')>0) then
 
      if (plot_dimensional(ifile)) then
-        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
-             // '", "Y ' // trim(unitstr_TEC_x) &
-             // '", "Z ' // trim(unitstr_TEC_x) &
+        StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
+             // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
+             // '", "Z ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "`q [degree]", "`f[degree]'
      else
    	StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
@@ -1351,9 +1349,9 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   else
 
      if (plot_dimensional(ifile)) then
-        StringVarTec = 'VARIABLES ="X ' // trim(unitstr_TEC_x) &
-             // '", "Y ' // trim(unitstr_TEC_x) &
-             // '", "Z ' // trim(unitstr_TEC_x)
+        StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
+             // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
+             // '", "Z ' // trim(NameTecUnit_V(UnitX_))
      else
    	StringVarTec = 'VARIABLES = "X", "Y", "Z'
      end if
@@ -1371,154 +1369,154 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      select case(NamePlotVar)
      case('rho') 
         NameTecVar = '`r'
-        NameUnit   = unitstr_TEC_rho
+        NameUnit   = NameTecUnit_V(UnitRho_)
      case('rhoux','mx') 
         NameTecVar = '`r U_x'
-        NameUnit   = unitstr_TEC_rhoU
+        NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouy','my') 
         NameTecVar = '`r U_y'
-        NameUnit   = unitstr_TEC_rhoU
+        NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouz','mz') 
         NameTecVar = '`r U_z'
-        NameUnit   = unitstr_TEC_rhoU
+        NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('bx') 
         NameTecVar = 'B_x'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('by') 
         NameTecVar = 'B_y'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('bz') 
         NameTecVar = 'B_z'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
         ! face centered magnetic field       !^CFG IF CONSTRAINB BEGIN
      case('bxl') ! east
         NameTecVar = 'B_e'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('bxr') ! west
         NameTecVar = 'B_w'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('byl') ! south
         NameTecVar = 'B_s'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('byr') ! north
         NameTecVar = 'B_n'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('bzl') ! bottom
         NameTecVar = 'B_b'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('bzr') ! top
         NameTecVar = 'B_t'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
         !                                        !^CFG END CONSTRAINB
      case('e')
         NameTecVar = 'E'
-        NameUnit   = unitstr_TEC_energydens
+        NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case('p','pth')
         NameTecVar = 'p'
-        NameUnit   = unitstr_TEC_p
+        NameUnit   = NameTecUnit_V(UnitP_)
      case('n')
         NameTecVar = 'n'
-        NameUnit   = unitstr_TEC_n
+        NameUnit   = NameTecUnit_V(UnitN_)
      case('t','temp')
         NameTecVar = 'T'
-        NameUnit   = unitstr_TEC_temperature
+        NameUnit   = NameTecUnit_V(UnitTemperature_)
      case('ux') 
         NameTecVar = 'U_x'
-        NameUnit   = unitstr_TEC_U
+        NameUnit   = NameTecUnit_V(UnitU_)
      case('uy') 
         NameTecVar = 'U_y'
-        NameUnit   = unitstr_TEC_U
+        NameUnit   = NameTecUnit_V(UnitU_)
      case('uz') 
         NameTecVar = 'U_z'
-        NameUnit   = unitstr_TEC_U
+        NameUnit   = NameTecUnit_V(UnitU_)
      case('ur') 
         NameTecVar = 'U_r'
-        NameUnit   = unitstr_TEC_U
+        NameUnit   = NameTecUnit_V(UnitU_)
      case('rhour','mr') 
         NameTecVar = '`r U_r'
-        NameUnit   = unitstr_TEC_rhoU
+        NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('br') 
         NameTecVar = 'B_r'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('b1x') 
         NameTecVar = 'B1_x'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('b1y')                                 
         NameTecVar = 'B1_y'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('b1z')                                 
         NameTecVar = 'B1_z'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('b1r')                                 
         NameTecVar = 'B1_r'
-        NameUnit   = unitstr_TEC_B
+        NameUnit   = NameTecUnit_V(UnitB_)
      case('jx') 
         NameTecVar = 'J_x'
-        NameUnit   = unitstr_TEC_J
+        NameUnit   = NameTecUnit_V(UnitJ_)
      case('jy')                                 
         NameTecVar = 'J_y'
-        NameUnit   = unitstr_TEC_J
+        NameUnit   = NameTecUnit_V(UnitJ_)
      case('jz')                                 
         NameTecVar = 'J_z'
-        NameUnit   = unitstr_TEC_J
+        NameUnit   = NameTecUnit_V(UnitJ_)
      case('jr')                                 
         NameTecVar = 'J_r'
-        NameUnit   = unitstr_TEC_J
+        NameUnit   = NameTecUnit_V(UnitJ_)
      case('ex')
         NameTecVar = 'E_x'
-        NameUnit   = unitstr_TEC_electric
+        NameUnit   = NameTecUnit_V(UnitElectric_)
      case('ey')
         NameTecVar = 'E_y'
-        NameUnit   = unitstr_TEC_electric
+        NameUnit   = NameTecUnit_V(UnitElectric_)
      case('ez')                                 
         NameTecVar = 'E_z'
-        NameUnit   = unitstr_TEC_electric
+        NameUnit   = NameTecUnit_V(UnitElectric_)
      case('er')                                 
         NameTecVar = 'E_r'
-        NameUnit   = unitstr_TEC_electric                
+        NameUnit   = NameTecUnit_V(UnitElectric_)
      case('pvecx')
         NameTecVar = 'S_x'
-        NameUnit   = unitstr_TEC_Poynting                
+        NameUnit   = NameTecUnit_V(UnitPoynting_)
      case('pvecy')
         NameTecVar = 'S_y'
-        NameUnit   = unitstr_TEC_Poynting                
+        NameUnit   = NameTecUnit_V(UnitPoynting_)              
      case('pvecz')
         NameTecVar = 'S_z'
-        NameUnit   = unitstr_TEC_Poynting                
+        NameUnit   = NameTecUnit_V(UnitPoynting_)              
      case('pvecr')
         NameTecVar = 'S_r'
-        NameUnit   = unitstr_TEC_Poynting                
+        NameUnit   = NameTecUnit_V(UnitPoynting_)
      case('b2ur')
         NameTecVar = 'B^2/`u_0 U_r'
-        NameUnit   = unitstr_TEC_Poynting                
+        NameUnit   = NameTecUnit_V(UnitPoynting_)                
      case('divb', 'divb_cd', 'divb_ct', 'absdivb')
         NameTecVar = '~Q~7B'
-        NameUnit   = unitstr_TEC_DivB
+        NameUnit   = NameTecUnit_V(UnitDivB_)
      case('theta1')                              !^CFG  IF RAYTRACE BEGIN
         NameTecVar = '`q_1'
-        NameUnit   = unitstr_TEC_angle
+        NameUnit   = NameTecUnit_V(UnitAngle_)
      case('phi1')
         NameTecVar = '`f_1'
-        NameUnit   = unitstr_TEC_angle
+        NameUnit   = NameTecUnit_V(UnitAngle_)
      case('theta2')
         NameTecVar = '`q_2'
-        NameUnit   = unitstr_TEC_angle
+        NameUnit   = NameTecUnit_V(UnitAngle_)
      case('phi2')
         NameTecVar = '`f_2'
-        NameUnit   = unitstr_TEC_angle
+        NameUnit   = NameTecUnit_V(UnitAngle_)
      case('status')
         NameTecVar = 'Status'
      case('f1x','f1y','f1z','f2x','f2y','f2z')
         NameTecVar = NamePlotVar                 !^CFG END RAYTRACE
      case('dx')
         NameTecVar = 'dx'
-        NameUnit   = unitstr_TEC_x
+        NameUnit   = NameTecUnit_V(UnitX_)
      case('dt')
         NameTecVar = 'dt'
-        NameUnit   = unitstr_TEC_t
+        NameUnit   = NameTecUnit_V(UnitT_)
      case('dtblk')
         NameTecVar = 'dtblk'
-        NameUnit   = unitstr_TEC_t
+        NameUnit   = NameTecUnit_V(UnitT_)
      case('impl')                                !^CFG IF IMPLICIT
         NameTecVar = 'impl'                      !^CFG IF IMPLICIT
      case('pe','proc')
@@ -1588,10 +1586,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   end if
 
   if(index(plot_type(ifile),'sph')>0) then
-     StringUnitIdl = trim(unitstr_IDL_x)//' deg deg'
+     StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
-     StringUnitIdl = trim(unitstr_IDL_x)//' '//&
-          trim(unitstr_IDL_x)//' '//trim(unitstr_IDL_x)
+     StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
+          trim(NameIdlUnit_V(UnitX_))//' '//trim(NameIdlUnit_V(UnitX_))
   end if
 
   do iPlotVar = 1, nPlotVar
@@ -1601,40 +1599,40 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
      select case(NamePlotVar)
      case('rho') 
-        NameUnit = unitstr_IDL_rho
+        NameUnit = NameIdlUnit_V(UnitRho_)
      case('rhoux','mx','rhouy','rhoUz','rhouz','mz','rhour','mr')
-        NameUnit = unitstr_IDL_rhoU
+        NameUnit = NameIdlUnit_V(UnitRhoU_)
      case('bx','by','bz','b1x','b1y','b1z','br','b1r')
-        NameUnit = unitstr_IDL_B
+        NameUnit = NameIdlUnit_V(UnitB_)
      case('e')
-        NameUnit = unitstr_IDL_energydens
+        NameUnit = NameIdlUnit_V(UnitEnergydens_)
      case('p','pth')
-        NameUnit = unitstr_IDL_p
+        NameUnit = NameIdlUnit_V(UnitP_)
      case('n')
-        NameUnit = unitstr_IDL_n
+        NameUnit = NameIdlUnit_V(UnitN_)
      case('t','temp')
-        NameUnit = unitstr_IDL_temperature
+        NameUnit = NameIdlUnit_V(UnitTemperature_)
      case('ux','uy','uz','ur')
-        NameUnit = unitstr_IDL_U
+        NameUnit = NameIdlUnit_V(UnitU_)
      case('jx','jy','jz','jr') 
-        NameUnit = unitstr_IDL_J
+        NameUnit = NameIdlUnit_V(UnitJ_)
      case('ex','ey','ez','er','enumx','enumy','enumz')
-        NameUnit = unitstr_IDL_electric
+        NameUnit = NameIdlUnit_V(UnitElectric_)
      case('pvecx','pvecy','pvecz','pvecr','b2ur')
-        NameUnit = unitstr_IDL_Poynting
+        NameUnit = NameIdlUnit_V(UnitPoynting_)
      case('divb','divb_cd','divb_ct','absdivb')
-        NameUnit = unitstr_IDL_DivB
+        NameUnit = NameIdlUnit_V(UnitDivB_)
      case('theta1','phi1','theta2','phi2')       !^CFG  IF RAYTRACE BEGIN
-        NameUnit = 'deg'
+        NameUnit = NameIdlUnit_V(UnitAngle_)
      case('status','f1x','f1y','f1z','f2x','f2y','f2z')
         NameUnit = '--'                          !^CFG END RAYTRACE
         ! GRID INFORMATION
      case('pe', 'proc','blk','blkall','child','impl','evolve')
         NameUnit = '1'
      case('dt', 'dtblk')
-        NameUnit = unitstr_IDL_t
+        NameUnit = NameIdlUnit_V(UnitT_)
      case('dx')
-        NameUnit = unitstr_IDL_x
+        NameUnit = NameIdlUnit_V(UnitX_)
      case default
         ! Set default or user defined unit
         NameUnit = NameUnitUserIdl_I(iPlotVar)

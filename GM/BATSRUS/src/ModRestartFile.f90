@@ -308,7 +308,7 @@ contains
     write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#SOLARWIND'
-    write(unit_tmp,'(1pe15.7,a25)')SW_rho_dim,'SwRhoDim'
+    write(unit_tmp,'(1pe15.7,a25)')SW_n_dim,  'SwNDim'
     write(unit_tmp,'(1pe15.7,a25)')SW_T_dim,  'SwTDim'
     write(unit_tmp,'(1pe15.7,a25)')SW_Ux_dim, 'SwUxDim'
     write(unit_tmp,'(1pe15.7,a25)')SW_Uy_dim, 'SwUyDim'
@@ -318,13 +318,13 @@ contains
     write(unit_tmp,'(1pe15.7,a25)')SW_Bz_dim, 'SwBzDim'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#IOUNITS'
-    write(unit_tmp,'(a20,a20)')IoUnits,'TypeIoUnit'
+    write(unit_tmp,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NORMALIZATION'
     write(unit_tmp,'(a)')'READ'
-    write(unit_tmp,'(1pe23.15,a17)')UnitSi_X,   'UnitSiX'
-    write(unit_tmp,'(1pe23.15,a17)')UnitSi_U,   'UnitSiU'
-    write(unit_tmp,'(1pe23.15,a17)')UnitSi_Rho, 'UnitSiRho'
+    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitX_),   'No2SiUnitX'
+    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitU_),   'No2SiUnitU'
+    write(unit_tmp,'(1pe23.15,a17)')No2Si_V(UnitRho_), 'No2SiUnitRho'
     write(unit_tmp,*)
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
@@ -359,12 +359,11 @@ contains
     write(unit_tmp,*)
     if(time_accurate)write(unit_tmp,'(2(1pe13.5),a)')&
          time_simulation, dt,                 ' time_simulation, dt'
-    write(unit_tmp,'(6(1pe13.5),a)') &
-         unitUSER_x, unitUSER_t, unitUSER_rho,&
-         unitUSER_rhoU,unitUSER_B, unitUSER_P,' unitUSER_ x,t,rho,rhoU,B,p'
-    write(unit_tmp,'(6(1pe13.5),a)') &
-         unitSI_x, unitSI_t, unitSI_rho, &
-         unitSI_rhoU, unitSI_B, unitSI_P,     ' unitSI_ x,t,rho,rhoU,B,p'
+
+    write(unit_tmp,'(a)')'Io2Si_V='
+    write(unit_tmp,'(100es13.5),a)') Io2Si_V
+    write(unit_tmp,'(a)')'No2Io_V='
+    write(unit_tmp,'(100es13.5),a)') No2Io_V
 
     close(unit_tmp)
 

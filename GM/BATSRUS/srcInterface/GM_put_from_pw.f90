@@ -3,7 +3,7 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
   use ModMain, ONLY: x_, y_
   use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_
   use ModUtilities, ONLY: lower_case
-  use ModPhysics, ONLY: UnitSi_Rho, UnitSi_RhoU
+  use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_
   use ModPwGrid
   use ModNumConst, ONLY: cTwoPi
   use ModTriangulate,ONLY:calc_triangulation
@@ -85,15 +85,15 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   ! Total density in normalized units
   StatePw_VI(RhoPw_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:),dim=1) &
-       / UnitSI_rho
+       * Si2No_V(UnitRho_)
 
   ! Field aligned velocity = total moment/total density
   StatePw_VI(Ub_,1:nLinePw)=sum(Buffer_VI(iRhoPwFirst:iRhoPwLast,:) &
        *Buffer_VI(iUPwFirst:iUPwLast,:), dim=1) &
-       / UnitSI_RhoU / StatePw_VI(RhoPw_,1:nLinePw)
+       * Si2No_V(UnitRhou_) / StatePw_VI(RhoPw_,1:nLinePw)
 
   if(UseMultiSpecies) StatePw_VI(RhoPw_+1: RhoPw_+nSpeciesPw, 1:nLinePw) &
-       = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) / UnitSI_rho
+       = Buffer_VI(iRhoPwFirst:iRhoPwLast,:) * Si2No_V(UnitRho_)
 
   ! Set coordinates for the outer points
   SinThetaOuter = sin(maxval(Buffer_VI(Theta_,:)+dThetaOuter))
@@ -132,7 +132,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
        SpeciesFirst_, SpeciesLast_, UseMultiSpecies
   use ModPwGrid
   use ModTriangulate, ONLY: find_triangle, triangle_area
-  use ModPhysics, ONLY: UnitUser_U, UnitUser_Rho
+  use ModPhysics, ONLY: No2Io_V, UnitU_, UnitRho_
 
   implicit none
 
@@ -257,9 +257,9 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      write(*,*)'Node_DI(:,2)=',Node_DI(:,2)
      write(*,*)'Node_DI(:,3)=',Node_DI(:,3)
      write(*,*)'Area1,2,3=',Area1,Area2,Area3
-     write(*,*)'State_V(Rho_)   =',State_V(Rho_)/unitUSER_RHO
+     write(*,*)'State_V(Rho_)   =',State_V(Rho_)*No2Io_V(UnitRho_)
      write(*,*)'B0_D            =',B0_D
-     write(*,*)'State_V(Ux_:Uz_)=',State_V(Ux_:Uz_)/unitUSER_U
+     write(*,*)'State_V(Ux_:Uz_)=',State_V(Ux_:Uz_)*No2Io_V(UnitU_)
   end if
 
 end subroutine read_pw_buffer

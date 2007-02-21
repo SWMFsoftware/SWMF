@@ -12,7 +12,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK,&
        is_axial_geometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
        XyzStart_BLK,XyzMin_D,XyzMax_D
-  use ModPhysics, ONLY : unitUSER_x
+  use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
   use ModNumConst
   implicit none
@@ -53,7 +53,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
      nBLKcells=0
      dxblk=dx_BLK(iBLK); dyblk=dy_BLK(iBLK); dzblk=dz_BLK(iBLK)
      dxblk_out = dxblk
-     if (plot_dimensional(ifile)) dxblk_out = dxblk*unitUSER_x
+     if (plot_dimensional(ifile)) dxblk_out = dxblk*No2Io_V(UnitX_)
 
      plot_range(1,ifile)=XyzMin_D(1)-2*dxblk
      plot_range(2,ifile)=XyzMax_D(1)+2*dxblk
@@ -68,9 +68,9 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
      do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
         nBLKcells=nBLKcells+1
         if (plot_dimensional(ifile)) then
-           x = x_BLK(i,j,k,iBLK)*unitUSER_x
-           y = y_BLK(i,j,k,iBLK)*unitUSER_x
-           z = z_BLK(i,j,k,iBLK)*unitUSER_x
+           x = x_BLK(i,j,k,iBLK)*No2Io_V(UnitX_)
+           y = y_BLK(i,j,k,iBLK)*No2Io_V(UnitX_)
+           z = z_BLK(i,j,k,iBLK)*No2Io_V(UnitX_)
         else
            x = x_BLK(i,j,k,iBLK)
            y = y_BLK(i,j,k,iBLK)
@@ -142,7 +142,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   if(dxblk>=dx)then
      ! Cell is equal or coarser than dx, save all cells in cut
      dxblk_out = dxblk
-     if (plot_dimensional(ifile))dxblk_out = dxblk_out*unitUSER_x
+     if (plot_dimensional(ifile))dxblk_out = dxblk_out*No2Io_V(UnitX_)
      do k=kmin,kmax
         do j=jmin,jmax
            do i=imin,imax
@@ -154,9 +154,9 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                    z<z1.or.z>z2) CYCLE                            !^CFG IF COVARIANT
 
               if (plot_dimensional(ifile)) then
-		 x = x*unitUSER_x
-		 y = y*unitUSER_x
-		 z = z*unitUSER_x
+		 x = x*No2Io_V(UnitX_)
+		 y = y*No2Io_V(UnitX_)
+		 z = z*No2Io_V(UnitX_)
               end if
               if(save_binary)then
                  write(unit_tmp)dxblk_out,x,y,z,&
@@ -177,7 +177,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
      ! Calclulate restricted cell size
      dxblk=r*dxblk; dyblk=r*dyblk; dzblk=r*dzblk
      dxblk_out = dxblk
-     if (plot_dimensional(ifile))dxblk_out = dxblk_out*unitUSER_x
+     if (plot_dimensional(ifile))dxblk_out = dxblk_out*No2Io_V(UnitX_)
 
      ! Restriction is limited by the width of the plotting region
      rx=min(imax-imin+1,r)
@@ -206,9 +206,9 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                    z<z1.or.z>z2) CYCLE                            !^CFG IF COVARIANT 
 
               if(plot_dimensional(ifile))then
-                 x=x*unitUSER_x
-                 y=y*unitUSER_x
-                 z=z*unitUSER_x
+                 x=x*No2Io_V(UnitX_)
+                 y=y*No2Io_V(UnitX_)
+                 z=z*No2Io_V(UnitX_)
               end if
               if(save_binary)then
                  write(unit_tmp)dxblk_out,x,y,z,&

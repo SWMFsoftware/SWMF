@@ -84,7 +84,7 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
 
   use ModIonoPotential, ONLY: IonoPotential_II, &
        init_mod_iono_potential, calc_grad_iono_potential
-  use ModPhysics,       ONLY: UnitSi_X, UnitSi_Electric
+  use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_
   implicit none
   character(len=*), parameter :: NameSub='GM_put_from_ie'
 
@@ -103,9 +103,11 @@ subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
   if(DoTest)write(*,*)NameSub,': putting potential'
   select case(NameVar)
   case('PotNorth')
-     IonoPotential_II(1:iSize,:)         = Buffer_II/(UnitSi_Electric*UnitSi_X)
+     IonoPotential_II(1:iSize,:)         = &
+          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
   case('PotSouth')
-     IonoPotential_II(iSize:2*iSize-1,:) = Buffer_II/(UnitSi_Electric*UnitSi_X)
+     IonoPotential_II(iSize:2*iSize-1,:) = &
+          Buffer_II* Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
 
      ! After getting the southern potential as well, get the gradients
      call calc_grad_iono_potential

@@ -45,7 +45,7 @@ contains
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
-    use ModPhysics,        ONLY: rCurrents, UnitSi_B, UnitSi_J
+    use ModPhysics,        ONLY: rCurrents, No2Si_V, Si2No_V, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use CON_axes,          ONLY: transform_matrix
@@ -88,7 +88,7 @@ contains
 
           ! Get the B0 field at the mapped position
           call get_planet_field(Time_Simulation, Xyz_D,'SMG NORM',B0_D)
-          B0_D = B0_D/UnitSi_B
+          B0_D = B0_D*Si2No_V(UnitB_)
 
           ! Convert to GM coordinates
           Xyz_D = matmul(GmSmg_DD, Xyz_D)
@@ -131,7 +131,7 @@ contains
           call get_planet_field(Time_Simulation, XyzIono_D,'SMG NORM',bIono_D)
 
           ! Convert to GM units and get magnitude
-          bIono_D = bIono_D/UnitSi_B
+          bIono_D = bIono_D*Si2No_V(UnitB_)
           bIono   = sqrt(sum(bIono_D**2))
 
           ! Divide MHD values by the total weight if it exceeds 1.0
@@ -160,7 +160,7 @@ contains
           Fac = Fac * sum(b_D*XyzIono_D) / rIonosphere
 
           ! Store the result in SI units
-          FieldAlignedCurrent_II(i,j) = Fac * UnitSi_J
+          FieldAlignedCurrent_II(i,j) = Fac * No2Si_V(UnitJ_)
 
        end do
     end do

@@ -39,7 +39,7 @@ subroutine write_plot_los(iFile)
        time_accurate,StringTimeH4M2S2,nBlock, NameThisComp,   &
        rBuffMax,TypeCoordSystem
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModPhysics, ONLY : unitUSER_x
+  use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
   use ModAdvance, ONLY : rho_,rhoUx_,State_VGB
   use ModNumConst, ONLY : cTiny,cTwo,cPi,cHalf,cDegtoRad, &
@@ -360,8 +360,8 @@ subroutine write_plot_los(iFile)
               y_Pix = (jPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
-                 write(unit_tmp,fmt="(30(E14.6))") x_Pix*unitUSER_x, &
-                      y_Pix*unitUSER_x,los_image(iPix,jPix,1:nPlotVar)
+                 write(unit_tmp,fmt="(30(E14.6))") x_Pix*No2Io_V(UnitX_), &
+                      y_Pix*No2Io_V(UnitX_),los_image(iPix,jPix,1:nPlotVar)
               else
                  write(unit_tmp,fmt="(30(E14.6))") x_Pix,y_Pix, &
                       los_image(iPix,jPix,1:nPlotVar)
@@ -396,8 +396,8 @@ subroutine write_plot_los(iFile)
               x_Pix = (iPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
-                 x_Pix = x_Pix * unitUSER_x
-                 y_Pix = y_Pix * unitUSER_x
+                 x_Pix = x_Pix * No2Io_V(UnitX_)
+                 y_Pix = y_Pix * No2Io_V(UnitX_)
               end if
 
               write(unit_tmp,fmt="(30(1pe13.5))") &
@@ -782,7 +782,7 @@ contains
 
   subroutine dimensionalize_plotvar_los(iplotfile)
 
-    use ModPhysics, ONLY : unitUSER_x,unitUSER_U,unitSI_x,unitSI_rho
+    use ModPhysics, ONLY : No2Io_V, No2Si_V, UnitX_, UnitU_, UnitRho_
     use ModIO
     implicit none
 
@@ -798,11 +798,11 @@ contains
 
        select case(s)
        case ('len')
-          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*unitUSER_x
+          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*No2Si_V(UnitX_)
        case('rho')
-          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*unitSI_rho*unitSI_x
+          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*No2Si_V(UnitRho_)*No2Si_V(UnitX_)
        case('vlos','Vlos','ulos','Ulos')
-          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*unitUSER_U
+          PlotVar(:,:,iVar)=PlotVar(:,:,iVar)*No2Io_V(UnitU_)
        case default
           ! no normalization
        end select
@@ -816,7 +816,7 @@ end subroutine write_plot_los
 
 subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
 
-  use ModPhysics, ONLY : unitstr_TEC_x,unitstr_TEC_U
+  use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
   use ModIO, ONLY: plot_dimensional
   implicit none
 
@@ -838,9 +838,9 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
   if (plot_dimensional(ifile)) then
      write(unitstr_TEC,'(a)') 'VARIABLES = '
      write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"X '//&
-          trim(unitstr_TEC_x)
+          trim(NameTecUnit_V(UnitX_))
      write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'", "Y '//&
-          trim(unitstr_TEC_x)
+          trim(NameTecUnit_V(UnitX_))
   else
      write(unitstr_TEC,'(a)') 'VARIABLES = "X", "Y'
   end if
@@ -857,14 +857,14 @@ subroutine get_TEC_los_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
         case ('len')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'len'//' '//&
-                trim(unitstr_TEC_x)
+                trim(NameTecUnit_V(UnitX_))
         case('rho')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'`r [m^-^2]'
         case('vlos','Vlos','ulos','Ulos')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'u.s'//' '//&
-                trim(unitstr_TEC_U)
+                trim(NameTecUnit_V(UnitU_))
         case('wl')
            write(unitstr_TEC,'(a)') & 
                 trim(unitstr_TEC)//'`wl [m^-^2]'//' '
@@ -916,7 +916,7 @@ end subroutine get_TEC_los_variables
 !======================================================================
 subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
 
-  use ModPhysics, ONLY : unitstr_IDL_x,unitstr_IDL_U
+  use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
   use ModIO, ONLY : plot_dimensional
 
   implicit none
@@ -937,9 +937,9 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
   !/
 
   if (plot_dimensional(ifile)) then
-     write(unitstr_IDL,'(a)') trim(unitstr_IDL_x)//' '//&
-          trim(unitstr_IDL_x)//' '//&
-          trim(unitstr_IDL_x)
+     write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
+          trim(NameIdlUnit_V(UnitX_))//' '//&
+          trim(NameIdlUnit_V(UnitX_))
   else
      write(unitstr_IDL,'(a)') 'normalized variables'
   end if
@@ -954,14 +954,14 @@ subroutine get_IDL_los_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
         case ('len')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//&
-                trim(unitstr_IDL_x)
+                trim(NameIdlUnit_V(UnitX_))
         case('rho')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'
         case('vlos','Vlos','ulos','Ulos')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//&
-                trim(unitstr_IDL_U)
+                trim(NameIdlUnit_V(UnitU_))
         case('wl')
            write(unitstr_IDL,'(a)') & 
                 trim(unitstr_IDL)//' '//'[m^-^2]'

@@ -280,7 +280,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
        cHundred,cHundredth,cPi
   use ModPhysics,  ONLY:TypeResist,Eta0Resist,Eta0AnomResist, &
        EtaAnomMaxResist,jCritResist,&
-       unitSI_t,unitSI_x,unitSI_rho,unitSI_B,unitSI_J,unitSI_temperature,&
+       No2Si_V, UnitT_, UnitX_, UnitRho_, UnitB_, UnitJ_, UnitTemperature_,&
        Alpha0Resist,yShiftResist,TimeInitRise, &
        TimeConstLev
   use ModResist
@@ -309,8 +309,8 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   ! Introduce some units for dimensionalization:: 
   ! This is not necessary, but makes things more clear!
   !/
-  CU_x = unitSI_x ! in [m]
-  CU_t = unitSI_t ! in [s]
+  CU_x = No2Si_V(UnitX_) ! in [m]
+  CU_t = No2Si_V(UnitT_) ! in [s]
 
   !\
   ! Dimensionalize:: Eta* is in units of [m^2/s]
@@ -319,7 +319,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   if(UseAnomResist)then
      Eta0AnomResist_ND   = Eta0AnomResist*CU_t/CU_x**2
      EtaAnomMaxResist_ND = EtaAnomMaxResist*CU_t/CU_x**2
-     jCritInv_ND         = cOne/(jCritResist/UnitSi_j)
+     jCritInv_ND         = cOne/(jCritResist/No2Si_V(UnitJ_))
   end if
   !\
   ! Select type of resistivity
@@ -349,7 +349,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
      ! Finally, compute Eta_G::
      ! Eta_G = EtaPerpConstResist/Te^1.5
      !/
-     Eta_G(:,:,:) = EtaPerpConstResist/(unitSI_temperature* &
+     Eta_G(:,:,:) = EtaPerpConstResist/(No2Si_V(UnitTemperature_)* &
           State_VGB(P_,:,:,:,globalBLK)/State_VGB(rho_,:,:,:,globalBLK))**(cOne+cHalf)
      !\
      ! Take into account the dependance of the B field::
@@ -357,8 +357,8 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
      ! Omega_eTau_ei2Resist = [B*mp/(rho*e*Eta_G)]^2
      !/
      Omega_eTau_ei2Resist(:,:,:) = (cProtonMass/cElectronCharge)**2* &
-          (unitSI_B**2*(BX(:,:,:)**2+BY(:,:,:)**2+BZ(:,:,:)**2))   / &
-          (unitSI_rho*State_VGB(rho_,:,:,:,globalBLK)*Eta_G(:,:,:))**2
+          (No2Si_V(UnitB_)**2*(BX(:,:,:)**2+BY(:,:,:)**2+BZ(:,:,:)**2))   / &
+          (No2Si_V(UnitRho_)*State_VGB(rho_,:,:,:,globalBLK)*Eta_G(:,:,:))**2
      ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist)
      Eta_G(:,:,:) = Eta_G(:,:,:)* &
           (cOne+Omega_eTau_ei2Resist(:,:,:))
@@ -432,7 +432,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
               write(6,*) ''
            end if
         end if
-        ElapsedTimeResist = Time_Simulation/unitSI_t
+        ElapsedTimeResist = Time_Simulation/No2Si_V(UnitT_)
         if (ElapsedTimeResist.le.TimeInitRise) then
            TimeFactorResist = ElapsedTimeResist/TimeInitRise
         else if (ElapsedTimeResist.le.TimeConstLev) then

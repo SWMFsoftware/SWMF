@@ -4,7 +4,6 @@ subroutine read_satellite_input_files
   use ModProcMH
   use ModMain, ONLY : nDim, lVerbose, TypeCoordSystem, StartTime
   use ModIO
-  use ModPhysics, ONLY : unitSI_x
   use CON_axes, ONLY: transform_matrix
   use ModTimeConvert, ONLY: time_int_to_real
   use ModMpi

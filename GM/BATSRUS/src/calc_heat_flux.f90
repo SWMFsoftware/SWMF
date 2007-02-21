@@ -22,9 +22,9 @@ subroutine add_heat_flux(DoResChangeOnly)
        cElectronMass,cElectronCharge,cEps,cMu
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
        cZero,cTiny,cHundred,cHundredth,cPi
-  use ModPhysics,  ONLY:Kappa0Heat,ExponentHeat,g, &
-       unitSI_x,unitSI_t,unitSI_energydens,gm1, &
-       unitSI_temperature,unitSI_B,unitSI_rho, &
+  use ModPhysics,  ONLY:Kappa0Heat,ExponentHeat,g,gm1, &
+       No2Si_V, UnitX_, UnitT_, UnitEnergyDens_, &
+       UnitTemperature_, UnitB_, UnitRho_, &
        UseDefaultUnits
   use ModMpi
   implicit none
@@ -43,14 +43,14 @@ subroutine add_heat_flux(DoResChangeOnly)
   ! Introduce some units for dimensionalization:: 
   ! This is not necessary, but makes things more clear!
   !/
-  CU_x = unitSI_x                          ! in [m]
-  CU_t = unitSI_t                          ! in [s]
+  CU_x = No2Si_V(UnitX_)                          ! in [m]
+  CU_t = No2Si_V(UnitT_)                          ! in [s]
   if (UseDefaultUnits) then
-     CU_temperature = unitSI_temperature   ! in [K]
+     CU_temperature = No2Si_V(UnitTemperature_)   ! in [K]
   else
-     CU_temperature = unitSI_temperature/g ! in [K]
+     CU_temperature = No2Si_V(UnitTemperature_)/g ! in [K]
   end if
-  CU_energydens     = unitSI_energydens    ! in [J/m^3]
+  CU_energydens     = No2Si_V(UnitEnergydens_)    ! in [J/m^3]
   !
   BX2(:,:,:) = (State_VGB(Bx_,:,:,:,globalBLK)+&
        B0xCell_BLK(:,:,:,globalBLK))**2
@@ -286,7 +286,7 @@ Contains
        ! Finally, compute KappaParHeat::
        ! KappaParHeat = KappaParConstHeat*Te^2.5
        !/
-       KappaParHeat = KappaParConstHeat*(unitSI_temperature* &
+       KappaParHeat = KappaParConstHeat*(No2Si_V(UnitTemperature_)* &
             (PressureUp+PressureDown)                      / &
             (DensityUp+DensityDown))**(cTwo+cHalf)
        ! Dimensionalize KappaParHeat::
@@ -326,9 +326,9 @@ Contains
        ! Omega_i*Tau_ii2 = Omega_i*Tau_ii2*[mp*B/(rho*LogLambdaHeat)]^2*Ti^3
        !/
        Omega_iTau_ii2Heat = max(Omega_iTau_ii2Heat*cProtonMass**2* &
-            (unitSI_B**2*(BX2(i,j,k)+BY2(i,j,k)+BZ2(i,j,k)))     * &
-            (unitSI_temperature*PressureUp/DensityUp)**3         / &
-            (unitSI_rho*DensityUp*LogLambdaHeat)**2,cTiny**2)
+            (No2Si_V(UnitB_)**2*(BX2(i,j,k)+BY2(i,j,k)+BZ2(i,j,k)))     * &
+            (No2Si_V(UnitTemperature_)*PressureUp/DensityUp)**3         / &
+            (No2Si_V(UnitRho_)*DensityUp*LogLambdaHeat)**2,cTiny**2)
        !\
        ! Finally, compute KappaPerpHeat::
        ! KappaPerpHeat = KappaPerpConstHeat*Ti^2.5/(1+Omega_iTau_ii2Heat)
@@ -337,7 +337,7 @@ Contains
        ! Note:: for LogLambdaHeat = 20, (KappaPerpHeat/KappaParHeat) = 
        ! 3.273491465571024622E-30*(Ni/B)^2/Ti^3
        !/       
-       KappaPerpHeat = KappaPerpConstHeat*(unitSI_temperature  * &
+       KappaPerpHeat = KappaPerpConstHeat*(No2Si_V(UnitTemperature_)  * &
             (PressureUp+PressureDown)                          / &
             (DensityUp+DensityDown))**(cTwo+cHalf)             / &
             (cOne+Omega_iTau_ii2Heat)
@@ -348,7 +348,7 @@ Contains
        !\
        ! Kappa0Heat is in units of [W/m/K]=[m^2*(J/m^3)/(s*K)]
        !/
-      KappaParHeat  = Kappa0Heat*(unitSI_temperature   * &
+      KappaParHeat  = Kappa0Heat*(No2Si_V(UnitTemperature_)   * &
             (PressureUp+PressureDown)                  / &
             (DensityUp+DensityDown))**ExponentHeat
        ! Dimensionalize KappaParHeat::

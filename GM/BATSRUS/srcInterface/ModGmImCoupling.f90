@@ -11,7 +11,8 @@ module ModGmImCoupling
   use ModMain, ONLY : nI,nJ,nK,n_step,nBlockMax,unusedBLK
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace, ONLY : ray,rayface
-  use ModPhysics, ONLY: unitSI_p, unitSI_rho, unitSI_temperature, unitSI_b, &
+  use ModPhysics, ONLY: No2Si_V, Si2No_V, &
+       UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
        Bdp, Bdp_dim, rCurrents, rBody
   implicit none
 
@@ -178,13 +179,13 @@ contains
           j=j2; if(j2==jsize+1) j=1
           lonShift=0.; if(j2==jsize+1) lonShift=360.
           tmpT=-1.; if(MHD_SUM_rho(i,j)>0.) &
-               tmpT = ((MHD_SUM_p(i,j)/unitSI_p)/(MHD_SUM_rho(i,j)/unitSI_rho)) &
-               * unitSI_temperature
+               tmpT = ((MHD_SUM_p(i,j)*Si2No_V(UnitP_))/(MHD_SUM_rho(i,j)*Si2No_V(UnitRho_))) &
+               * No2Si_V(UnitTemperature_)
           tmpV1=0.; if(MHD_SUM_vol(i,j)>0.) &
                tmpV1 = (MHD_SUM_vol(i,j)/1.e9)
           tmpV2=0.; if(MHD_SUM_vol(i,j)>0.) &
                tmpV2 = (MHD_SUM_vol(i,j)/1.e9)**(-2./3.)
-          write(UNITTMP_,'(2i4,12G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i), &
+          write(UNITTMP_,'(2i4,12G14.6)') j2,i,RCM_lon(j)+lonShift,RCM_lat(i),&
                MHD_lat_boundary(j), &
                MHD_Xeq(i,j),MHD_Yeq(i,j), &
                tmpV1,tmpV2, &
@@ -376,9 +377,9 @@ contains
 
     !dimensionalize values
     where(MHD_SUM_vol > 0.)
-       MHD_SUM_vol = MHD_SUM_vol / unitSI_B
-       MHD_SUM_rho = MHD_SUM_rho * unitSI_rho
-       MHD_SUM_p   = MHD_SUM_p   * unitSI_p
+       MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
+       MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
+       MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
     elsewhere
        MHD_SUM_vol = -1.
        MHD_SUM_rho = -1.
@@ -386,7 +387,7 @@ contains
     end where
 
     where(MHD_Beq > 0.)
-       MHD_Beq = MHD_Beq * unitSI_B
+       MHD_Beq = MHD_Beq * No2Si_V(UnitB_)
     elsewhere
        MHD_Beq = -1.
     end where

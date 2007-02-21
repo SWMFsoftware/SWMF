@@ -154,7 +154,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
         ! Obtain some planet parameters
-        if(Bdp_dim == 0.0)then
+        if(DipoleStrengthSi == 0.0)then
            DoUpdateB0 = .false.
            Dt_UpdateB0 = -1.0
         else
@@ -1221,21 +1221,19 @@ subroutine MH_set_parameters(TypeAction)
         !                                              ^CFG END PROJECTION
      case("#IOUNITS")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('IoUnitType',IoUnits)
-        call upper_case(IoUnits)
+        call read_var('TypeIoUnit',TypeIoUnit)
+        call upper_case(TypeIoUnit)
      case("#NORMALIZATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeNormalization', TypeNormalization)
         call upper_case(TypeNormalization)
         select case(TypeNormalization)
         case('NONE')
-           UnitSi_X = 1.0
-           UnitSi_U = 1.0
-           UnitSi_Rho = 1.0
+           No2Si_V = 1.0
         case('READ')
-           call read_var('UnitSiX',   UnitSi_X)
-           call read_var('UnitSiU',   UnitSi_U)
-           call read_var('UnitSiRho', UnitSi_Rho)
+           call read_var('No2SiUnitX',   No2Si_V(UnitX_))
+           call read_var('No2SiUnitU',   No2Si_V(UnitU_))
+           call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
         case('PLANETARY', 'SOLARWIND')
            ! Depends on other commands, defined in set_physics
         case default
@@ -1576,7 +1574,7 @@ subroutine MH_set_parameters(TypeAction)
     
      case("#SOLARWIND")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('SwRhoDim',SW_rho_dim)
+        call read_var('SwNDim',  SW_n_dim)
         call read_var('SwTDim'  ,SW_T_dim)
         call read_var('SwUxDim' ,SW_Ux_dim)
         call read_var('SwUyDim' ,SW_Uy_dim)
@@ -1593,13 +1591,6 @@ subroutine MH_set_parameters(TypeAction)
                 call read_var('rCurrents' ,Rcurrents)
            call read_var('BodyRhoDim',Body_Rho_Dim)
            call read_var('BodyTDim'  ,Body_T_dim)
-           if(NameThisComp=='SC'.or.NameThisComp=='IH')then
-              !In these components the solar wind starts at the body,
-              !that is why SW_rho_dim and SW_T_dim are defined in terms
-              !of the body values
-              SW_rho_dim=Body_Rho_Dim  !Particles per cubic cm
-              SW_T_dim=Body_T_Dim
-           end if
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1703,8 +1694,8 @@ subroutine MH_set_parameters(TypeAction)
         DoUpdateB0 = dt_updateb0 > 0.0
      case("#HELIODIPOLE")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('HelioDipoleStrength',Bdp_dim)
-        call read_var('HelioDipoleTilt'    ,ThetaTilt)
+        call read_var('HelioDipoleStrengthSi',DipoleStrengthSi)
+        call read_var('HelioDipoleTilt'      ,ThetaTilt)
         ThetaTilt = ThetaTilt * cDegToRad
      case("#HELIOROTATION", "#INERTIAL")
         if(iProc==0)write(*,*) NameSub, ' WARNING: ',&
@@ -1939,7 +1930,7 @@ contains
     ! Give some "reasonable" default values
     !/
 
-    Bdp_dim = 0.0
+    DipoleStrengthSi = 0.0
 
     UseBody2 = .false.                                !^CFG IF SECONDBODY BEGIN
     RBody2 =-1.0
@@ -1969,7 +1960,7 @@ contains
        Rbody      = 1.00
        Rcurrents  =-1.00
 
-       IoUnits = "HELIOSPHERIC"
+       TypeIoUnit = "HELIOSPHERIC"
 
        ! Non Conservative Parameters
        UseNonConservative   = .false.
@@ -1981,8 +1972,6 @@ contains
        TypeBc_I(body1_)='unknown'
        Body_rho_dim = 1.50E8
        Body_T_dim   = 2.85E06
-       SW_rho_dim=Body_rho_dim
-       SW_T_dim=Body_T_dim
 
        ! Refinement criteria
        nRefineCrit    = 3
@@ -1997,7 +1986,7 @@ contains
        Rbody      = 3.00
        Rcurrents  = 4.00
 
-       IoUnits = "PLANETARY"
+       TypeIoUnit = "PLANETARY"
 
        ! Non Conservative Parameters
        UseNonConservative   = .true.
@@ -2368,10 +2357,10 @@ contains
           end if
           UseDtFixed=.false.
        else ! fixed time step for time accurate
-          DtFixed = DtFixedDim/unitSI_t
-          DtFixedOrig = DtFixed ! Store the initial setting
-          dt = DtFixed
-          cfl=1.0
+          DtFixed = DtFixedDim * Io2No_V(UnitT_)
+          DtFixedOrig = DtFixed                   ! Store the initial setting
+          Dt = DtFixed
+          Cfl=1.0
        end if
     end if
 

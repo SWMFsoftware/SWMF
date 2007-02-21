@@ -43,7 +43,7 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
   use ModImPressure
   use ModMain,     ONLY : nI,nJ,nK,gcn
   use ModRaytrace, ONLY : ray
-  use ModPhysics,  ONLY : unitSI_p,unitSI_rho
+  use ModPhysics,  ONLY : Si2No_V, UnitP_, UnitRho_
   implicit none
 
   integer, intent(in)  :: iBlock
@@ -75,8 +75,8 @@ subroutine get_im_pressure(iBlock, pIm_C, dIm_C)
         end do
         if(rLon > 0.5*(RCM_lon(jsize)+RCM_lon(1)+360.)) i2=1
 
-        pIm_C(i,j,k) = RCM_p(i1,i2)/unitSI_p
-        dIm_C(i,j,k) = RCM_dens(i1,i2)/unitSI_rho
+        pIm_C(i,j,k) = RCM_p(i1,i2)*Si2No_V(UnitP_)
+        dIm_C(i,j,k) = RCM_dens(i1,i2)*Si2No_V(UnitRho_)
      else
         pIm_C(i,j,k) = -1.0
         dIm_C(i,j,k) = -1.0
@@ -94,7 +94,7 @@ subroutine apply_im_pressure
        time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, unusedBLK
   use ModAdvance, ONLY: time_BLK, &
        State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, E_BLK
-  use ModPhysics, ONLY: unitSI_t, inv_gm1
+  use ModPhysics, ONLY: Si2No_V, UnitT_, inv_gm1
   use ModImPressure
 
   implicit none
@@ -136,7 +136,7 @@ subroutine apply_im_pressure
      ! A typical value might be 5, to get close to the RCM pressure 
      ! in 10 seconds
 
-     Factor = 1.0/(TauCoupleIM/unitSI_t)
+     Factor = 1.0/(TauCoupleIM*Si2No_V(UnitT_))
 
   else
      ! Ramp up is based on number of iterations: p' = (ntau*p + pIm)/(1+ntau)

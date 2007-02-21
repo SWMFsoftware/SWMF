@@ -95,8 +95,7 @@ subroutine GM_put_from_ih_buffer( &
      NameCoordIn, nYIn, nZIn, yMinIn, yMaxIn, zMinIn, zMaxIn, Buffer_VII)
 
   use ModVarIndexes
-  use ModPhysics, ONLY: UnitSi_Rho, UnitSi_U, UnitSi_B, UnitSi_P, &
-       UnitUser_Rho, UnitUser_U, UnitUser_B, UnitUser_P, UnitSi_X
+  use ModPhysics, ONLY: Si2No_V, No2Io_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
   use ModMain, ONLY: TypeBc_I, west_
   use ModKind, ONLY: Real8_
   use ModIhBuffer
@@ -117,10 +116,10 @@ subroutine GM_put_from_ih_buffer( &
           call CON_stop(NameSub//': cannot handle coord system='//NameCoordIn)
      ! Store grid information
      NameCoord = NameCoordIn
-     yMin = yMinIn / UnitSi_X
-     yMax = yMaxIn / UnitSi_X
-     zMin = zMinIn / UnitSi_X
-     zMax = zMaxIn / UnitSi_X
+     yMin = yMinIn * Si2No_V(UnitX_)
+     yMax = yMaxIn * Si2No_V(UnitX_)
+     zMin = zMinIn * Si2No_V(UnitX_)
+     zMax = zMaxIn * Si2No_V(UnitX_)
      nY   = nYIn
      nZ   = nZIn
      ! Allocate space
@@ -139,17 +138,17 @@ subroutine GM_put_from_ih_buffer( &
 
   ! Convert units and velocity to momentum
   do k=1,nZ; do j=1,nY
-     State_VII(Rho_,j,k)          = State_VII(Rho_,j,k)    / UnitSi_Rho
+     State_VII(Rho_,j,k)          = State_VII(Rho_,j,k)    * Si2No_V(UnitRho_)
      State_VII(RhoUx_:RhoUz_,j,k) = &
-          State_VII(Rho_,j,k)*State_VII(Rhoux_:RhoUz_,j,k) / UnitSi_U
-     State_VII(Bx_:Bz_,j,k)       = State_VII(Bx_:Bz_,j,k) / UnitSi_B
-     State_VII(P_,j,k)            = State_VII(P_,j,k)      / UnitSi_P
+          State_VII(Rho_,j,k)*State_VII(Rhoux_:RhoUz_,j,k) * Si2No_V(UnitU_)
+     State_VII(Bx_:Bz_,j,k)       = State_VII(Bx_:Bz_,j,k) * Si2No_V(UnitB_)
+     State_VII(P_,j,k)            = State_VII(P_,j,k)      * Si2No_V(UnitP_)
   end do; end do
 
   !write(*,*)'GM_put_from_ih_buffer finished'
-  !write(*,*)'Rho=',State_VII(Rho_,1,1)*UnitUser_Rho
-  !write(*,*)'U=',State_VII(RhoUx_:RhoUz_,1,1)/State_VII(Rho_,1,1)*UnitUser_U
-  !write(*,*)'B=',State_VII(Bx_:Bz_,1,1)*UnitUser_B
-  !write(*,*)'P=',State_VII(p_,1,1)*UnitUser_P
+  !write(*,*)'Rho=',State_VII(Rho_,1,1)*No2Io_V(UnitRho_)
+  !write(*,*)'U=',State_VII(RhoUx_:RhoUz_,1,1)/State_VII(Rho_,1,1)*No2Io_V(UnitU_)
+  !write(*,*)'B=',State_VII(Bx_:Bz_,1,1)*No2Io_V(UnitB_)
+  !write(*,*)'P=',State_VII(p_,1,1)*No2Io_V(UnitP_)
 
 end subroutine GM_put_from_ih_buffer

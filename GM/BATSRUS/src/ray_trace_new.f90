@@ -1010,7 +1010,7 @@ contains
   subroutine ray_extract(x_D)
 
     use CON_line_extract, ONLY: line_put
-    use ModPhysics, ONLY: UnitSi_x, UnitSi_Rho, UnitSi_U, UnitSi_P, UnitSi_B
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_, UnitP_, UnitB_
     use ModAdvance, ONLY: State_VGB, nVar, &
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_
     real, intent(in) :: x_D(3)
@@ -1026,7 +1026,7 @@ contains
     PlotVar_V(1)   = Length
     PlotVar_V(2:4) = Xyz_D
 
-    if(DoExtractUnitSi) PlotVar_V(1:4) = PlotVar_V(1:4)*UnitSi_x
+    if(DoExtractUnitSi) PlotVar_V(1:4) = PlotVar_V(1:4)*No2Si_V(UnitX_)
 
     if(DoExtractState)then
 
@@ -1059,10 +1059,10 @@ contains
 
        ! Convert to SI units if required
        if(DoExtractUnitSi)then
-          State_V(Rho_)    = State_V(Rho_)    * UnitSi_Rho
-          State_V(Ux_:Uz_) = State_V(Ux_:Uz_) * UnitSi_U
-          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * UnitSi_B
-          State_V(p_)      = State_V(p_)      * UnitSi_P
+          State_V(Rho_)    = State_V(Rho_)    * No2Si_V(UnitRho_)
+          State_V(Ux_:Uz_) = State_V(Ux_:Uz_) * No2Si_V(UnitU_)
+          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * No2Si_V(UnitB_)
+          State_V(p_)      = State_V(p_)      * No2Si_V(UnitP_)
        end if
 
        PlotVar_V(5:4+nVar) = State_V

@@ -6,7 +6,7 @@ subroutine write_logfile(iSatIn,iFile)
   use ModVarIndexes
   use ModAdvance, ONLY  : State_VGB, tmp1_BLK
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
-  use ModPhysics, ONLY  : unitUSER_t,unitSI_t
+  use ModPhysics, ONLY  : Si2Io_V, Si2No_V, UnitT_
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
   use ModUtilities, ONLY: flush_unit
@@ -218,16 +218,13 @@ subroutine write_logfile(iSatIn,iFile)
                 iTime_I
         end if
         if(index(StringTime,'time')>0) then
+           !note that Time_Simulation is in SI units.
            if(plot_dimensional(iFile)) then
-              !note that the funny (unitUSER_t/unitSI_t) is because by default
-              !Time_Simulation is in seconds(SI).  If the user wants output
-              !in some other time units this is the conversion.  In most 
-              !cases the two are the same the and (...)=1.
               write(iUnit,'(es13.5)',ADVANCE='NO') &
-                   Time_Simulation*(unitUSER_t/unitSI_t)
+                   Time_Simulation*Si2Io_V(UnitT_)
            else
               write(iUnit,'(es13.5)',ADVANCE='NO') &
-                   Time_Simulation/unitSI_t
+                   Time_Simulation*Si2No_V(UnitT_)
            end if
         end if
      end if
@@ -910,67 +907,69 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
 !!$! BASIC MHD variables
      case('rho','rhopnt')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rho
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitRho_)
      case('rhoux','rhouy','rhouz', 'rhouxpnt','rhouypnt','rhouzpnt')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rhoU
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitRhoU_)
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
           'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_B
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
      case('e','epnt')
-        LogVar_I(iVarTot) = LogVar_I(iVarTot)*unitUSER_energydens
+        LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
      case('p','ppnt','pmin','pmax')
-        LogVar_I(iVarTot) = LogVar_I(iVarTot)*unitUSER_p
+        LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitP_)
      case('ux','uy','uz','uxpnt','uypnt','uzpnt')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_U
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitU_)
      case('ekinx','ekiny','ekinz','ekin')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_rho*unitUSER_U**2
+        LogVar_I(iVarTot)= LogVar_I(iVarTot) &
+             *No2Io_V(UnitRho_)*No2Io_V(UnitU_)**2
      case('jx','jy','jz','jxpnt','jypnt','jzpnt',&
           'jin','jout','jinmax','joutmax')
-        LogVar_I(iVarTot)= LogVar_I(iVarTot)*unitUSER_J
+        LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitJ_)
 
-!!$! Ionosphere values                                !^CFG IF IONOSPHERE BEGIN
+!!$! Ionosphere values                                
+        !^CFG IF IONOSPHERE BEGIN
      case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
           'cpcps','cpcp_s','cpcp_south','cpcpsouth')
         ! User unit is kV = 1000 V
         LogVar_I(iVarTot) = LogVar_I(iVarTot) &
-             *(UnitSi_Electric*UnitSi_X)/1000.0       !^CFG END IONOSPHERE
+             *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0       
+        !^CFG END IONOSPHERE
 
 !!$! Flux values
      case('aflx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitUSER_x**2)
+             *No2Io_V(UnitX_)**2
         iVarTot = iVarTot+nLogR-1
      case('rhoflx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitSI_n*unitSI_U*unitSI_x**2)
+             *(No2Si_V(UnitRho_)*No2Si_V(UnitU_)*No2Si_V(UnitX_)**2)
         iVarTot = iVarTot+nLogR-1
      case('dstflx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *unitUSER_B
+             *No2Io_V(UnitB_)
         iVarTot = iVarTot+nLogR-1
      case('bflx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitSI_B*unitSI_x**2)
+             *(No2Si_V(UnitB_)*No2Si_V(UnitX_)**2)
         iVarTot = iVarTot+nLogR-1
      case('b2flx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitSI_Poynting*unitSI_x**2)
+             *(No2Si_V(UnitPoynting_)*No2Si_V(UnitX_)**2)
         iVarTot = iVarTot+nLogR-1
      case('pvecflx')
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitSI_Poynting*unitSI_x**2)
+             *(No2Si_V(UnitPoynting_)*No2Si_V(UnitX_)**2)
         iVarTot = iVarTot+nLogR-1
      case('e2dflx') 
-        ! circular integral if
-        ! the azimuthal component of the electric field
-        ! on the surface of a sphere
+        ! circular integral of the azimuthal component of the electric field
+        ! on the surface of a sphere.
         LogVar_I(iVarTot:iVarTot+nLogR-1) = LogVar_I(iVarTot:iVarTot+nLogR-1)&
-             *(unitSI_electric*unitSI_x)
+             *No2Si_V(UnitElectric_)*No2Si_V(UnitX_)
         iVarTot = iVarTot+nLogR-1
 
         ! OTHER VALUES
      case('dt')
-        LogVar_I(iVarTot) = LogVar_I(iVarTot)*unitUSER_t
+        LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitT_)
 
      case default
         ! no normalization

@@ -15,8 +15,8 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   use ModMain, ONLY: boris_correction                     !^CFG IF BORISCORR
   use ModCovariant, ONLY: UseCovariant, TypeGeometry      !^CFG IF COVARIANT
   use ModParallel, ONLY : iBlock_A, iProc_A
-  use ModPhysics, ONLY : unitUSER_x, thetaTilt, Rbody, boris_cLIGHT_factor, &
-       Body_rho_dim, g
+  use ModPhysics, ONLY : No2Io_V, UnitX_, &
+       ThetaTilt, Rbody, boris_cLIGHT_factor, Body_rho_dim, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModIO
@@ -97,9 +97,9 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
            do k=-1,nK+2; do j=-1,nJ+2; do i=-1,nI+2
               if (plot_dimensional(ifile)) then
                  write(unit_tmp,fmt="(30(E14.6))") &
-                      x_BLK(i,j,k,iBLK)*unitUSER_x, &
-                      y_BLK(i,j,k,iBLK)*unitUSER_x, &
-                      z_BLK(i,j,k,iBLK)*unitUSER_x, &
+                      x_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
+                      y_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
+                      z_BLK(i,j,k,iBLK)*No2Io_V(UnitX_), &
                       PlotVarBlk(i,j,k,1:nPlotVar)
               else
                  write(unit_tmp,fmt="(30(E14.6))") &
@@ -579,9 +579,9 @@ contains
   subroutine fill_nodeXYZ
     ! Fill array with position (optionally dimensioned)
     if (plot_dimensional(ifile)) then
-       NodeXYZ_N(:,:,:,1)=NodeX_NB(:,:,:,iBLK)*unitUSER_x
-       NodeXYZ_N(:,:,:,2)=NodeY_NB(:,:,:,iBLK)*unitUSER_x
-       NodeXYZ_N(:,:,:,3)=NodeZ_NB(:,:,:,iBLK)*unitUSER_x
+       NodeXYZ_N(:,:,:,1)=NodeX_NB(:,:,:,iBLK)*No2Io_V(UnitX_)
+       NodeXYZ_N(:,:,:,2)=NodeY_NB(:,:,:,iBLK)*No2Io_V(UnitX_)
+       NodeXYZ_N(:,:,:,3)=NodeZ_NB(:,:,:,iBLK)*No2Io_V(UnitX_)
     else
        NodeXYZ_N(:,:,:,1)=NodeX_NB(:,:,:,iBLK)
        NodeXYZ_N(:,:,:,2)=NodeY_NB(:,:,:,iBLK)

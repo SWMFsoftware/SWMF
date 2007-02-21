@@ -5,7 +5,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
 
   ! Save all cells within plotting range, for each processor
 
-  use ModPhysics, ONLY : unitUSER_x
+  use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModGeometry, ONLY: nI,nJ,nK, x_BLK,y_BLK,z_BLK, dx_BLK,dy_BLK,dz_BLK 
   use ModMain,     ONLY: BlkTest
   use ModNumConst
@@ -129,7 +129,7 @@ subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
            end do 
 
            rplot_out = rplot
-           if (plot_dimensional(ifile)) rplot_out = rplot_out*unitUSER_x
+           if (plot_dimensional(ifile)) rplot_out = rplot_out*No2Io_V(UnitX_)
            phi_out = phi_plot*180.0/cPi        !output in degrees
            theta_out = theta_plot*180.0/cPi    !output in degrees
 

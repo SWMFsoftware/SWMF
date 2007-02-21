@@ -269,7 +269,7 @@ subroutine read_upstream_input_file(upstreamfilename)
         SW_Uy_dim  = Upstream_Data(1,5)
         SW_Uz_dim  = Upstream_Data(1,6)
 
-        SW_rho_dim = Upstream_Data(1,7)
+        SW_n_dim = Upstream_Data(1,7)
         SW_T_dim   = Upstream_Data(1,8)
 
      else
@@ -293,7 +293,7 @@ subroutine read_upstream_input_file(upstreamfilename)
            SW_Uy_dim  = Upstream_Data(i,5)
            SW_Uz_dim  = Upstream_Data(i,6)
 
-           SW_rho_dim = Upstream_Data(i,7)
+           SW_n_dim = Upstream_Data(i,7)
            SW_T_dim   = Upstream_Data(i,8)
 
         else
@@ -316,7 +316,7 @@ subroutine read_upstream_input_file(upstreamfilename)
            SW_Uz_dim  =       DtData1  * Upstream_Data(i,6) + &
                 DtData2 * Upstream_Data(i-1,6)
 
-           SW_rho_dim =       DtData1  * Upstream_Data(i,7) + &
+           SW_n_dim =       DtData1  * Upstream_Data(i,7) + &
                 DtData2 * Upstream_Data(i-1,7)
            SW_T_dim   =       DtData1  * Upstream_Data(i,8) + &
                 DtData2 * Upstream_Data(i-1,8)
@@ -331,40 +331,34 @@ end subroutine read_upstream_input_file
 !INTERFACE
 subroutine normalize_upstream_data
   !USES:
-  use ModPhysics,ONLY:unitSI_rho,unitSI_p,unitSI_U,unitSI_B,&
-       AverageIonMass, AverageIonCharge, ElectronTemperatureRatio
-  use ModUpstreamData, ONLY: Upstream_Data
+  use ModPhysics,ONLY: Si2No_V, UnitN_, UnitP_, UnitU_, UnitB_,&
+      AverageIonCharge, ElectronTemperatureRatio
+  use ModUpstreamData, ONLY: Upstream_Data, Upstream_Npts
   use ModConst
 !EOP
   implicit none
 !BOP
 !DESCRIPTION:
-!     According to conventions, temperature in the IMF files is given
-!     in K, magnetic field in nanoTesla's, velocity in km/sec:
+  ! According to conventions, temperature in the IMF files is given in K,
+  ! magnetic field in nanoTesla's, velocity in km/sec:
   real,parameter:: cNanoTesla=cOne/cE9 ![Tesla]
+  ! Velociy in km/sec
   real,parameter:: cKmPerSec=cThousand ![m/s]
-! Concentration is related per cubic centimeter, density is
-! the concentration times the proton mass
+  ! Number density is per cubic centimeter
   real,parameter::cPerCm3=cE6 ![per cubic meter]
-  real,parameter::ConcentrationToDensitySI=cProtonMass*cPerCm3
 !EOP
   ! Normalize B
   Upstream_Data(:,1:3) = &
-       Upstream_Data(:,1:3)*cNanotesla/unitSI_B
+       Upstream_Data(:,1:3)*cNanotesla*Si2No_V(UnitB_)
   ! Normalize U
   Upstream_Data(:,4:6) = &
-       Upstream_Data(:,4:6)*cKmPerSec/unitSI_U
+       Upstream_Data(:,4:6)*cKmPerSec*Si2No_V(UnitU_)
   ! Convert T into Normalized P:p=n K_B T
   Upstream_Data(:,8) = &
        (Upstream_Data(:,7)*cPerCm3)*cBoltzmann*&
-       Upstream_Data(:,8)/unitSI_p
-  ! Normalize rho
-  Upstream_Data(:,7) = Upstream_Data(:,7)*&
-       ConcentrationToDensitySI/unitSI_rho
-
-  ! So far we assumed pure hydrogen plasma: RhoIon = nIon*MassProton
-  ! Fix: RhoIon = nIon*MassProton*AverageIonMass
-  Upstream_Data(:,7) = Upstream_Data(:,7) * AverageIonMass
+       Upstream_Data(:,8)*Si2No_V(UnitP_)
+  ! Normalize number density
+  Upstream_Data(:,7) = Upstream_Data(:,7)*cPerCm3*Si2No_V(UnitN_)
 
   ! So far we assumed a fully ionized pure hydrogen plasma with
   ! negligible electron pressure: Pion = Nion*k*Tion
@@ -392,7 +386,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
 
   integer :: iData
   real(Real8_) :: dtData1, dtData2, time_now
-  real    :: Ux
+  real    :: Ux, current_sw_n
 
   !--------------------------------------------------------------------------
   time_now = StartTime+TimeSimulation
@@ -409,7 +403,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
         current_SW_Uy  = Upstream_Data(1,5)
         current_SW_Uz  = Upstream_Data(1,6)
 
-        current_SW_rho = Upstream_Data(1,7)
+        current_SW_n   = Upstream_Data(1,7)
         current_SW_p   = Upstream_Data(1,8)
 
      else
@@ -426,7 +420,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
 
            if ((iData == Upstream_Npts .and. &
                 Upstream_Time(iData) <= time_now).or.(iData==1)) then 
-              Ux = Upstream_Data(iData,4) * unitSI_U
+              Ux = Upstream_Data(iData,4)
            else
 
               dtData2 = (Upstream_Time(iData) - time_now) / &
@@ -435,15 +429,13 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
 
               Ux = dtData1  * Upstream_Data(iData,4) + &
                    dtData2 * Upstream_Data(iData-1,4)
-
-              Ux = Ux * unitSI_U
-
            endif
 
+           ! Time is in SI units
            time_now = time_now + &
-                ((Y - Satellite_Y_Pos) * sin(Propagation_Plane_XY)  &
-                +(Z - Satellite_Z_Pos) * sin(Propagation_Plane_XZ)) &
-                * unitSI_x / Ux
+                ((Y - Satellite_Y_Pos) * sin(Propagation_Plane_XY)       &
+                +(Z - Satellite_Z_Pos) * sin(Propagation_Plane_XZ)) / Ux &
+                * No2Si_V(UnitT_)
 
            iData = 1
 
@@ -465,7 +457,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
            current_SW_Uy  = Upstream_Data(iData,5)
            current_SW_Uz  = Upstream_Data(iData,6)
 
-           current_SW_rho = Upstream_Data(iData,7)
+           current_SW_n   = Upstream_Data(iData,7)
            current_SW_p   = Upstream_Data(iData,8)
 
         else
@@ -488,7 +480,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
            current_SW_Uz  = dtData1 * Upstream_Data(iData,6) + &
                 dtData2 * Upstream_Data(iData-1,6)
 
-           current_SW_rho = dtData1 * Upstream_Data(iData,7) + &
+           current_SW_n   = dtData1 * Upstream_Data(iData,7) + &
                 dtData2 * Upstream_Data(iData-1,7)
            current_SW_p   = dtData1 * Upstream_Data(iData,8) + &
                 dtData2 * Upstream_Data(iData-1,8)
@@ -499,7 +491,7 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
 
   else
 
-     current_SW_rho = SW_rho
+     current_SW_n   = SW_n
      current_SW_p   = SW_p
      current_SW_Ux  = SW_Ux
      current_SW_Uy  = SW_Uy
@@ -509,5 +501,8 @@ subroutine get_solar_wind_point(TimeSimulation,y,z,&
      current_SW_Bz  = SW_Bz
 
   endif
+
+  ! Convert number density to mass density in normalized units
+  Current_SW_rho = current_SW_n*AverageIonMass
 
 end subroutine get_solar_wind_point

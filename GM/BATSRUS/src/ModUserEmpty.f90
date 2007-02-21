@@ -203,6 +203,15 @@ contains
   end subroutine user_update_states
 
   !=====================================================================
+  subroutine user_normalization
+    use ModPhysics 
+    
+    character (len=*), parameter :: Name='user_normalization'
+    !-------------------------------------------------------------------
+    call stop_user(Name)
+  end subroutine user_normalization
+
+  !=====================================================================
   subroutine user_io_units
     use ModPhysics 
     

@@ -210,7 +210,7 @@ subroutine impl_jacobian(implBLK,JAC)
 
            if(oktest_me)write(*,'(a,i1,i2,6(f15.8))') &
                 'iw,jw,f0L,fepsL,dfdwL,R:', &
-                iw,bat2vac(jw),&
+                iw,jw,&
                 FluxLeft_FVD(Itest,Jtest,Ktest,iw,idim),&
                 FluxEpsLeft_FV(Itest,Jtest,Ktest,iW),&
                 dfdwLface(Itest,Jtest,Ktest),&
@@ -306,8 +306,8 @@ subroutine impl_jacobian(implBLK,JAC)
         write(*,*)'After fluxes jw=',jw,' stencil, row, JAC'
         do istencil=1,nstencil
            do qj=1,nw
-              write(*,'(i1,a,i1,a,8(f9.5))')istencil,',',qj,':',&
-                   JAC(bat2vac,bat2vac(qj),Itest,Jtest,Ktest,istencil)
+              write(*,'(i1,a,i1,a,20(f9.5))')istencil,',',qj,':',&
+                   JAC(:,qj,Itest,Jtest,Ktest,istencil)
            end do
         enddo
      endif
@@ -338,8 +338,8 @@ subroutine impl_jacobian(implBLK,JAC)
      if(oktest_me)then
         write(*,*)'After divb sources: row, JAC(...,1):'
         do qj=1,nw
-           write(*,'(i1,a,8(f9.5))')qj,':',&
-                JAC(bat2vac,bat2vac(qj),Itest,Jtest,Ktest,1)
+           write(*,'(i1,a,20(f9.5))')qj,':',&
+                JAC(:,qj,Itest,Jtest,Ktest,1)
         end do
      end if
   end if
@@ -367,8 +367,8 @@ subroutine impl_jacobian(implBLK,JAC)
   if(oktest_me)then
      write(*,*)'After boundary correction and *dt: row, JAC(...,1):'
      do qj=1,nw
-        write(*,'(i1,a,8(f9.5))')qj,':',&
-             JAC(bat2vac,bat2vac(qj),Itest,Jtest,Ktest,1)
+        write(*,'(i1,a,20(f9.5))')qj,':',&
+             JAC(:,qj,Itest,Jtest,Ktest,1)
      end do
   end if
 
@@ -380,8 +380,8 @@ subroutine impl_jacobian(implBLK,JAC)
   if(oktest_me)then
      write(*,*)'After adding I: row, JAC(...,1):'
      do qj=1,nw
-        write(*,'(i1,a,8(f9.5))')qj,':',&
-             JAC(bat2vac,bat2vac(qj),Itest,Jtest,Ktest,1)
+        write(*,'(i1,a,20(f9.5))')qj,':',&
+             JAC(:,qj,Itest,Jtest,Ktest,1)
      end do
   end if
 

@@ -50,7 +50,7 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   use ModAdvance,    ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, Bx_, Bz_, p_
   use CON_coupler,   ONLY: SC_, Grid_C
   use CON_axes,      ONLY: transform_matrix, transform_velocity
-  use ModPhysics,    ONLY: UnitSI_rho,UnitSI_U,UnitSI_B,UnitSI_p,UnitSI_X
+  use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
 
   implicit none
   integer,intent(in)::nVar
@@ -97,16 +97,16 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   ! Transform vector variables from SC to IH
   if(TypeCoordSc /= TypeCoordSystem)then
      State_V(Ux_:Uz_) = transform_velocity(Time_Simulation,&
-          State_V(Ux_:Uz_), XyzSc_D * UnitSI_X, &
+          State_V(Ux_:Uz_), XyzSc_D * No2Si_V(UnitX_), &
           TypeCoordSc, TypeCoordSystem)
      State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), ScIh_DD)
   end if
 
   !Convert from SI units to normalized units
-  State_V(rho_)      = State_V(rho_)   /UnitSI_rho
-  State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)/UnitSI_U
-  State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)/UnitSI_B
-  State_V(P_)        = State_V(P_)     /UnitSI_P
+  State_V(rho_)      = State_V(rho_)   *Si2No_V(UnitRho_)
+  State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
+  State_V(Bx_:Bz_)   = State_V(Bx_:Bz_)*Si2No_V(UnitB_)
+  State_V(P_)        = State_V(P_)     *Si2No_V(UnitP_)
 
 end subroutine get_from_spher_buffer_grid
           

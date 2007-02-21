@@ -84,7 +84,7 @@ subroutine set_global_timestep(DtMax)
   use ModGeometry, ONLY: true_cell,true_BLK,dx_BLK,XyzStart_BLK
   use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK
   use ModImplicit, ONLY: UsePartImplicit                 !^CFG IF IMPLICIT
-  use ModPhysics,  ONLY: UnitSI_x,UnitSI_U,UnitSI_t,UnitSI_B,UnitSI_rho,g
+  use ModPhysics,  ONLY: No2Si_V,UnitX_,UnitU_,UnitT_,UnitB_,UnitRho_,g
   use ModNumConst
   use ModMpi
   implicit none
@@ -122,12 +122,12 @@ subroutine set_global_timestep(DtMax)
         do iBlock=1,nBlock
            if(unusedBLK(iBlock)) CYCLE
            if(dt_BLK(iBlock)==dt)then
-              write(*,*)'Time step dt=',dt,'=', dt*UnitSI_t,&
+              write(*,*)'Time step dt=',dt,'=', dt*No2Si_V(UnitT_),&
                    ' s  is comtrolled by block with PE, iBlock=', iProc, iBlock
               write(*,*)'The coordinates of (1,1,1) cell center are ',&
                    XyzStart_BLK(:,iBlock)
               write(*,*)'Block size, dimensionless and physical, are',&
-                   dx_BLK(iBlock), ' , ', dx_BLK(iBlock)*UnitSI_x,' m'
+                   dx_BLK(iBlock), ' , ', dx_BLK(iBlock)*No2Si_V(UnitX_),' m'
               lPosition_D=maxloc(((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)+&
                      B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2+&
                     (State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)+&
@@ -148,21 +148,21 @@ subroutine set_global_timestep(DtMax)
                      g*State_VGB(P_,1:nI,1:nJ,1:nK,iBlock))/&
                      State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock),&
                      MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
-              write(*,*)'Maximal magnetosonic speed =',UAlfvMax*UnitSI_U,&
+              write(*,*)'Maximal magnetosonic speed =',UAlfvMax*No2Si_V(UnitU_),&
                      ' m/s is reached in the point with coords=',&
                      x_BLK(i,j,k,iBlock),&
                      y_BLK(i,j,k,iBlock),&
                      z_BLK(i,j,k,iBlock)
               write(*,*)'Magnetic field in this point: B0:',&
-                     B0xCell_BLK(i,j,k,iBlock)*UnitSI_B,&
-                     B0yCell_BLK(i,j,k,iBlock)*UnitSI_B,&
-                     B0zCell_BLK(i,j,k,iBlock)*UnitSI_B,&
+                     B0xCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
+                     B0yCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
+                     B0zCell_BLK(i,j,k,iBlock)*No2Si_V(UnitB_),&
                      ' T,  B1:',&
-                     State_VGB(Bx_,i,j,k,iBlock)*UnitSI_B,&
-                     State_VGB(By_,i,j,k,iBlock)*UnitSI_B,&
-                     State_VGB(Bz_,i,j,k,iBlock)*UnitSI_B,&
+                     State_VGB(Bx_,i,j,k,iBlock)*No2Si_V(UnitB_),&
+                     State_VGB(By_,i,j,k,iBlock)*No2Si_V(UnitB_),&
+                     State_VGB(Bz_,i,j,k,iBlock)*No2Si_V(UnitB_),&
                      ' T,  Density=',&
-                     State_VGB(rho_,i,j,k,iBlock)*UnitSI_rho
+                     State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
               EXIT
            end if
         end do

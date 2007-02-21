@@ -82,7 +82,7 @@ subroutine advance_impl
   use ModAdvance, ONLY : State_VGB, E_BLK, StateOld_VCB, E_o_BLK, time_BlK, &
        tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
-  use ModPhysics, ONLY : gm1, UnitSi_t
+  use ModPhysics, ONLY : gm1, No2Io_V, UnitT_
   use ModImplicit
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
   use ModAMR, ONLY : UnusedBlock_BP
@@ -137,8 +137,7 @@ subroutine advance_impl
   wnrm=sqrt(wnrm/(nimpl_total/nw))
   where(wnrm < smalldouble) wnrm =1.0
 
-  if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm(bat2vac)
-
+  if(oktest_me)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
 
   UseUpdateCheckOrig = UseUpdateCheck
   UseUpdateCheck = .false.
@@ -516,7 +515,7 @@ subroutine advance_impl
      end if
 
      if(oktest_me) write(*,*) NameSub,': pRelMin,Dt,DtFixed=',&
-          pRhoRelativeMin,Dt*unitSI_t, DtFixed*unitSI_t
+          pRhoRelativeMin,Dt*No2Io_V(UnitT_), DtFixed*No2Io_V(UnitT_)
   endif
 
   UseUpdateCheck = UseUpdateCheckOrig

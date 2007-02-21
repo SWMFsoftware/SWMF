@@ -363,7 +363,7 @@ subroutine calc_db0_dt(dTime)
   use ModMain
   use ModAdvance, ONLY: B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, Db0Dt_CDB
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
-  use ModPhysics, ONLY: UnitSi_t
+  use ModPhysics, ONLY: No2Si_V, UnitT_
   implicit none
 
   real, intent(in) :: dTime
@@ -386,7 +386,7 @@ subroutine calc_db0_dt(dTime)
 
   ! Increase simulation time and to what it will be at the end of the time step
   TimeSimulationOrig = Time_Simulation
-  Time_Simulation = Time_Simulation + dTime*UnitSi_t
+  Time_Simulation = Time_Simulation + dTime*No2Si_V(UnitT_)
 
   ! Calculate dB0dt
   do iBlock=1,nBlock
@@ -486,7 +486,7 @@ subroutine get_b0(X0,Y0,Z0,B0)
   ! this interface allows use of various models for B0
   use ModMain,          ONLY : Time_Simulation, NameThisComp, &
        TypeCoordSystem, IsStandAlone
-  use ModPhysics,       ONLY : unitSI_B, Bdp_dim
+  use ModPhysics,       ONLY : Si2No_V, UnitB_, DipoleStrengthSi
   use CON_planet_field, ONLY : get_planet_field
   use ModMain,          ONLY : UseBody2             !^CFG IF SECONDBODY
   use ModMain,          ONLY : UseUserB0
@@ -498,13 +498,13 @@ subroutine get_b0(X0,Y0,Z0,B0)
 
   if(UseUserB0)then
      call user_get_b0(X0,Y0,Z0,B0)
-  elseif(IsStandAlone .and. Bdp_dim==0.0)then
+  elseif(IsStandAlone .and. DipoleStrengthSi==0.0)then
      B0 = 0.0
      RETURN
   elseif(NameThisComp=='GM')then
      call get_planet_field(Time_Simulation,X0,Y0,Z0,TypeCoordSystem//' NORM',&
           B0)
-     B0 = B0/unitSI_B
+     B0 = B0*Si2No_V(UnitB_)
   else
      call get_b0_multipole(X0,Y0,Z0,B0) 
   end if
