@@ -13,8 +13,8 @@ subroutine set_physics_constants
 
   implicit none
 
-  real :: Mbody_dim
-  real :: MBody2Dim                 !^CFG IF SECONDBODY
+  real :: MassBodySi
+  real :: MassBody2Si                 !^CFG IF SECONDBODY
   real :: cosTheta, sinTheta, cosPhi, sinPhi, & 
        xx, yy, zz
 
@@ -30,21 +30,21 @@ subroutine set_physics_constants
   select case(NameThisComp)
   case('GM')
      call get_planet( &
-          RadiusPlanetOut   = rPlanet_Dim, &
-          MassPlanetOut     = mBody_Dim, &
-          RotationPeriodOut = rot_period_dim)
+          RadiusPlanetOut   = rPlanetSi, &
+          MassPlanetOut     = MassBodySi, &
+          RotationPeriodOut = RotPeriodSi)
   case("SC","IH")
-     rPlanet_Dim = rSun
-     mBody_Dim = mSun
-     rot_period_dim = RotationPeriodSun
+     rPlanetSi = rSun
+     MassBodySi = mSun
+     RotPeriodSi = RotationPeriodSun
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
   ! and it is DIFFERENT from SWMF's inertial OmegaPlanet defined in CON_planet !!!
-  OmegaBody = cTwoPi/rot_period_dim
+  OmegaBody = cTwoPi/RotPeriodSi
 
   ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
-  MBody2Dim = 0.0                                !^CFG IF SECONDBODY
+  MassBody2Si = 0.0                                !^CFG IF SECONDBODY
 
   !\
   ! Call set_units, which set the quantities for converting from
@@ -54,25 +54,18 @@ subroutine set_physics_constants
   call set_units
 
   if(oktest .and. iProc==0) then
-     write(*,'(E15.6,11X,E15.6)') unitUSER_x, unitSI_x
-     write(*,'(E15.6,11X,E15.6)') unitUSER_t, unitSI_t
-     write(*,'(E15.6,11X,E15.6)') unitUSER_angle, unitSI_angle       
-     write(*,'(E15.6,11X,E15.6)') unitUSER_rho,  unitSI_rho
-     write(*,'(E15.6,11X,E15.6)') unitUSER_n, unitSI_n 
-     write(*,'(E15.6,11X,E15.6)') unitUSER_U, unitSI_U          
-     write(*,'(E15.6,11X,E15.6)') unitUSER_p, unitSI_p 
-     write(*,'(E15.6,11X,E15.6)') unitUSER_B, unitSI_B                        
-     write(*,'(E15.6,11X,E15.6)') unitUSER_rhoU, unitSI_rhoU
-     write(*,'(E15.6,11X,E15.6)') unitUSER_energydens, unitSI_energydens
-     write(*,'(E15.6,11X,E15.6)') unitUSER_J, unitSI_J
-     write(*,'(E15.6,11X,E15.6)') unitUSER_electric, unitSI_electric
-     write(*,'(E15.6,11X,E15.6)') unitUSER_DivB, unitSI_DivB
+     write(*,'(4a15)')'No2Io_V','NameIdlUnit_V','No2Si_V','NameSiUnit_V'
+     do i=1, nIoUnit
+        write(*,'(es15.6," ",a6,"        ",es15.6," ",a6)') &
+             No2Io_V(i), NameIdlUnit_V(i), &
+             No2Si_V(i), NameSiUnit_V(i)
+     end do
   end if
 
   !\
   ! set the (corrected) speed of light and get normalization
   !/
-  Clight      = Boris_Clight_Factor * cLightSpeed/unitSI_U
+  Clight      = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
   C2light     = cLIGHT**2
   InvClight   = cOne/cLight
   Inv_C2light = cOne/c2LIGHT
@@ -82,46 +75,49 @@ subroutine set_physics_constants
   !/
   ! if the rotation period is less than 1 second then you made
   ! a mistake - the period is to fast
-  if (abs(rot_period_dim) > 1.) then
-     OmegaBody = OmegaBody / (1.0/unitSI_t)
+  if (abs(RotPeriodSi) > 1.) then
+     OmegaBody = OmegaBody * (1.0/Si2No_V(UnitT_))
   else
      if(UseRotatingFrame)then
         write(*,*) "--------------------------------------------------"
         write(*,*) "WARNING in set_physics:                           "
         write(*,*) "You have set UseRotatingFrame = ",UseRotatingFrame
-        write(*,*) "but rot_period_dim in hours= ",rot_period_dim
+        write(*,*) "but RotPeriodSi in seconds= ",RotPeriodSi
         write(*,*) "This is too fast! Setting OmegaBody=0.0           "
         write(*,*) "--------------------------------------------------"
      end if
      OmegaBody = 0.0
   end if
 
-  Gbody  = -cGravitation*Mbody_dim*(1/unitSI_U**2/unitSI_x)
-  GBody2 = -cGravitation*MBody2Dim*(1/unitSI_U**2/unitSI_x) !^CFG IF SECONDBODY
+  ! Note: The mass of the body is in SI units
+  Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+  !^CFG IF SECONDBODY BEGIN
+  GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
+  !^CFG END SECONDBODY
 
   !\
-  ! Nondimensionalize dimensional SW values - 
+  ! Normalize solar wind values. Note: the solarwind is in I/O units
   !/
-  SW_a_dim = unitUSER_U
-  SW_p_dim = unitUSER_p*inv_g
-  SW_B_factor = unitUSER_B
+  SW_n   = SW_n_dim*Io2No_V(UnitN_)
+  SW_rho = SW_n*No2Si_V(UnitN_)*AverageIonMass*cProtonMass*Si2No_V(UnitRho_)
+  SW_p   = SW_rho * SW_T_dim*Io2No_V(UnitTemperature_)
+  SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
+  SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
+  SW_Uz  = SW_Uz_dim*Io2No_V(UnitU_)
+  SW_Bx  = SW_Bx_dim*Io2No_V(UnitB_)
+  SW_By  = SW_By_dim*Io2No_V(UnitB_)
+  SW_Bz  = SW_Bz_dim*Io2No_V(UnitB_)
 
-!  SW_rho = SW_rho_dim/unitUSER_rho
-  SW_rho = 1.0    
-  SW_p   = inv_g
-  SW_Ux  = SW_Ux_dim/unitUSER_U
-  SW_Uy  = SW_Uy_dim/unitUSER_U
-  SW_Uz  = SW_Uz_dim/unitUSER_U
-  SW_Bx  = SW_Bx_dim/unitUSER_B
-  SW_By  = SW_By_dim/unitUSER_B
-  SW_Bz  = SW_Bz_dim/unitUSER_B
+  ! These are useful for printing out values
+  SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
+  SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-  Body_rho= Body_rho_dim/unitUSER_n
-  Body_p  = cBoltzmann*Body_rho_dim*&
-            1.0E6*Body_T_dim/unitSI_p
-  RhoBody2= RhoDimBody2/unitUSER_n               !^CFG IF SECONDBODY
-  pBody2  = cBoltzmann*RhoDimBody2*&             !^CFG IF SECONDBODY
-            1.0E6*TDimBody2/unitSI_p             !^CFG IF SECONDBODY
+  Body_rho= Body_rho_dim * Io2No_V(UnitRho_)
+  Body_p  = Body_rho * Body_T_dim*Io2No_V(UnitTemperature_)
+  !^CFG IF SECONDBODY BEGIN
+  RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
+  pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
+  !^CFG END SECONDBODY
 
   !Here the arrays of the FACE VALUE are formed
   !Initialization
@@ -171,12 +167,11 @@ subroutine set_physics_constants
   ! Nondimensionalize dipole strength.
   if(NameThisComp == 'GM') then
      call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
-     call get_planet(DipoleStrengthOut = Bdp_dim)
-     Bdp      = Bdp_dim/unitSI_B 
-  else
-     Bdp      = Bdp_dim/unitUSER_B 
+     call get_planet(DipoleStrengthOut = DipoleStrengthSi)
   end if
-  BdpBody2_D = BdpDimBody2_D/unitUSER_B                 !^CFG IF SECONDBODY
+  Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
+
+  BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              !^CFG IF SECONDBODY
 
   ! Compute dipole tilt variables
   if(NameThisComp=='IH')then
@@ -200,7 +195,7 @@ subroutine set_units
   use ModMain
   use ModPhysics
   use ModVarIndexes
-  use ModUser, ONLY: user_io_units
+  use ModUser, ONLY: user_io_units, user_normalization
   implicit none
 
   character (len=*), parameter :: NameSub="set_units"
@@ -219,317 +214,213 @@ subroutine set_units
   !/
   select case(TypeNormalization)
   case("PLANETARY")
-     UnitSi_x   = rPlanet_Dim                         ! rPlanet
-     UnitSi_u   = rPlanet_Dim                         ! rPlanet/sec
-     UnitSi_rho = cProtonMass*cMillion                ! amu/cm^3
+     ! rPlanet, rPlanet/sec, amu/cm^3
+     No2Si_V(UnitX_)   = rPlanetSi
+     No2Si_V(UnitU_)   = rPlanetSi
+     No2Si_V(UnitRho_) = 1000000*cProtonMass
   case("SOLARWIND")
-     UnitSi_x   = rPlanet_Dim                         ! rPlanet
-     UnitSI_u   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass) ! SW sound speed
-     UnitSI_rho = cProtonMass*(cMillion*SW_rho_dim)   ! SW density in amu/cm^3
+     ! rPlanet, SW sound speed, SW density in amu/cm^3
+     No2Si_V(UnitX_)   = rPlanetSi                             
+     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)
+     No2Si_V(UnitRho_) = 1000000*cProtonMass*AverageIonMass*SW_n_dim
   case("NONE", "READ")
      ! Already set in MH_set_parameters
+  case("USER")
+     call user_normalization
   case default
      call stop_mpi(NameSub//' ERROR: unknown TypeNormalization='// &
           trim(TypeNormalization))
   end select
 
   !\
-  ! Load variables used for converting from dimensional to non-dimensional 
-  ! units and back.  Also load the name variables for each of the units for
-  ! use in writing output.
-  !/
-
-  unitSI_angle      = 1.0            ! radian
-  unitUSER_angle    = cRadToDeg      ! degree
-  unitstr_TEC_angle = '[degree]'            
-  unitstr_IDL_angle = 'deg'
-
-  !\
   ! set other normalizing SI variables from the independent ones
   !/
-  unitSI_t           = unitSI_x/unitSI_U                     ! s
-  unitSI_n           = unitSI_rho/cProtonMass                ! #/m^3
-  unitSI_p           = unitSI_rho*unitSI_U**2                ! Pa
-  unitSI_B           = unitSI_U*sqrt(cMu*unitSI_rho)         ! T
-  unitSI_rhoU        = unitSI_rho*unitSI_U                   ! kg/m^2/s
-  unitSI_energydens  = unitSI_p                              ! J/m^3
-  unitSI_Poynting    = unitSI_energydens*unitSI_U            ! J/m^2/s
-  unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
-  unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
-  unitSI_DivB        = unitSI_B/unitSI_x                     ! T/m
-  unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) ! Kelvin 
+  No2Si_V(UnitT_)          = No2Si_V(UnitX_)/No2Si_V(UnitU_)         ! s
+  No2Si_V(UnitN_)          = No2Si_V(UnitRho_)/cProtonMass           ! #/m^3
+  No2Si_V(UnitP_)          = No2Si_V(UnitRho_)*No2Si_V(UnitU_)**2    ! Pa
+  No2Si_V(UnitB_)          = No2Si_V(UnitU_) &
+       *sqrt(cMu*No2Si_V(UnitRho_))                                  ! T
+  No2Si_V(UnitRhoU_)       = No2Si_V(UnitRho_)*No2Si_V(UnitU_)       ! kg/m^2/s
+  No2Si_V(UnitEnergyDens_) = No2Si_V(UnitP_)                         ! J/m^3
+  No2Si_V(UnitPoynting_)   = No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)! J/m^2/s
+  No2Si_V(UnitJ_)          = No2Si_V(UnitB_)/(No2Si_V(UnitX_)*cMu)   ! A/m^2
+  No2Si_V(UnitElectric_)   = No2Si_V(UnitU_)*No2Si_V(UnitB_)         ! V/m
+  No2Si_V(UnitTemperature_)= (No2Si_V(UnitP_)/No2Si_V(UnitRho_)) &
+       *(cProtonMass/cBoltzmann)                                     ! K 
+  No2Si_V(UnitDivB_)       = No2Si_V(UnitB_)/No2Si_V(UnitX_)         ! T/m
+  No2Si_V(UnitAngle_)      = 1.0                                     ! radian
 
   !\
-  ! set variables to go from a Input/Output units to normalized units and back:
-  !
-  ! Normalized*UnitIo = Io,    Io/UnitIo = Normalized
-  !
-  ! Note that the user units are not consistant in a unit sense.
-  ! 
-  ! Also load the string variables associated with the USER variables - 
-  ! note that they are loaded differently for IDL and TEC output
+  ! Set inverse conversion SI -> normalized
   !/
-  select case(IoUnits)
-  case("SI")
-     unitUSER_x           = unitSI_X              ! m
-     unitUSER_rho         = unitSI_rho            ! amu/m^3          
-     unitUSER_U           = unitSI_U              ! #/m^3            
-     unitUSER_t           = unitSI_t              ! m/s              
-     unitUSER_n           = unitSI_n              ! s                           
-     unitUSER_p           = unitSI_p              ! Pa                          
-     unitUSER_B           = unitSI_B              ! T                          
-     unitUSER_rhoU        = unitSI_rhoU           ! kg/m^2/s                    
-     unitUSER_energydens  = unitSI_energydens     ! J/m^3                       
-     unitUSER_Poynting    = unitSI_Poynting       ! J/m^2/s           
-     unitUSER_J           = unitSI_J              ! A/m^2                      
-     unitUSER_electric    = unitSI_electric       ! V/m                        
-     unitUSER_DivB        = unitSI_DivB           ! T/m
-     unitUSER_temperature = unitSI_temperature    ! dimensionless
-     !\
-     ! set string variables used for writing output - TECPLOT
-     !/
-     unitstr_TEC_x           = '[m]'            
-     unitstr_TEC_rho         = '[amu/m^3]'       
-     unitstr_TEC_U           = '[m/s]'          
-     unitstr_TEC_t           = '[s]'             
-     unitstr_TEC_n           = '[m^-^3]'        
-     unitstr_TEC_p           = '[Pa]'           
-     unitstr_TEC_B           = '[T]'            
-     unitstr_TEC_rhoU        = '[kg m^-^2 s^-^2]'
-     unitstr_TEC_energydens  = '[J/m^3]'             
-     unitstr_TEC_Poynting    = '[J m^-^2 s^-^1]'
-     unitstr_TEC_J           = '[A/m^2]'       
-     unitstr_TEC_electric    = '[V/m]'          
-     unitstr_TEC_DivB        = '[T/m]'           
-     unitstr_TEC_temperature = '[K]'             
-     !\
-     ! set string variables used for writing output - IDL
-     !/
-     unitstr_IDL_x           = 'm'            
-     unitstr_IDL_rho         = 'amu/m3'       
-     unitstr_IDL_U           = 'm/s'          
-     unitstr_IDL_t           = 's'             
-     unitstr_IDL_n           = '/m3'        
-     unitstr_IDL_p           = 'Pa'           
-     unitstr_IDL_B           = 'T'            
-     unitstr_IDL_rhoU        = 'kg/m2s2'
-     unitstr_IDL_energydens  = 'J/m3'           
-     unitstr_IDL_Poynting    = 'J/m^2s'
-     unitstr_IDL_J           = 'A/m2'       
-     unitstr_IDL_electric    = 'V/m'          
-     unitstr_IDL_DivB        = 'T/m'           
-     unitstr_IDL_temperature = 'K'             
+  Si2No_V = 1.0/No2Si_V
+  
+  !\
+  ! set variables to go from Input/Output units to SI units:
+  !
+  ! Io*Io2Si_V = Si
+  !
+  ! Note that the input/output units are not necessarily consistent, e.g.
+  ! units of distance divided by units of time does not necessarily
+  ! coincide with the units of velocity.
+  ! 
+  ! Also load the unit name strings for IDL and TEC output
+  !/
 
+  ! As a default use SI units, so below only the differences need to be set
+  Io2Si_V = 1.0
+  No2Io_V = No2Si_V
+
+  !\
+  ! set string variables used for writing Tecplot output
+  !/
+  NameTecUnit_V(UnitX_)           = '[m]'            
+  NameTecUnit_V(UnitU_)           = '[m/s]'          
+  NameTecUnit_V(UnitRho_)         = '[kg/m^3]'
+  NameTecUnit_V(UnitT_)           = '[s]'             
+  NameTecUnit_V(UnitN_)           = '[m^-^3]'        
+  NameTecUnit_V(UnitP_)           = '[Pa]'           
+  NameTecUnit_V(UnitB_)           = '[T]'            
+  NameTecUnit_V(UnitRhoU_)        = '[kg m^-^2 s^-^2]'
+  NameTecUnit_V(UnitEnergydens_)  = '[J/m^3]'             
+  NameTecUnit_V(UnitPoynting_)    = '[J m^-^2 s^-^1]'
+  NameTecUnit_V(UnitJ_)           = '[A/m^2]'       
+  NameTecUnit_V(UnitElectric_)    = '[V/m]'          
+  NameTecUnit_V(UnitTemperature_) = '[K]'             
+  NameTecUnit_V(UnitDivB_)        = '[T/m]'           
+  NameTecUnit_V(UnitAngle_)       = '[rad]'
+  !\
+  ! set string variables used for writing IDL output
+  !/
+  NameIdlUnit_V(UnitX_)           = 'm'            
+  NameIdlUnit_V(UnitRho_)         = 'kg/m3'
+  NameIdlUnit_V(UnitU_)           = 'm/s'          
+  NameIdlUnit_V(UnitT_)           = 's'             
+  NameIdlUnit_V(UnitN_)           = '/m3'        
+  NameIdlUnit_V(UnitP_)           = 'Pa'           
+  NameIdlUnit_V(UnitB_)           = 'T'            
+  NameIdlUnit_V(UnitRhoU_)        = 'kg/m2s2'
+  NameIdlUnit_V(UnitEnergyDens_)  = 'J/m3'           
+  NameIdlUnit_V(UnitPoynting_)    = 'J/m2s'
+  NameIdlUnit_V(UnitJ_)           = 'A/m2'       
+  NameIdlUnit_V(UnitElectric_)    = 'V/m'          
+  NameIdlUnit_V(Unittemperature_) = 'K'             
+  NameIdlUnit_V(UnitDivB_)        = 'T/m'           
+  NameIdlUnit_V(UnitAngle_)       = 'rad'
+
+  ! Store SI unit names for writing out variables in SI units
+  NameSiUnit_V = NameIdlUnit_V
+
+  select case(TypeIoUnit)
+  case("SI")
+     ! Already set above
   case("PLANETARY")
-     unitUSER_x           = unitSI_x/unitSI_x           ! planetary radii
-     unitUSER_rho         = 1.0E-6*unitSI_n             ! amu/cm^3
-     unitUSER_n           = 1.0E-6*unitSI_n             ! #/cm^3
-     unitUSER_U           = 1.0E-3*unitSI_U             ! km/s
-     unitUSER_t           = unitSI_t                    ! s
-     unitUSER_p           = 1.0E+9*unitSI_p             ! nPa
-     unitUSER_B           = 1.0E+9*unitSI_B             ! nT
-     unitUSER_rhoU        = unitSI_rhoU                 ! kg/m^2/s
-     unitUSER_energydens  = unitSI_energydens           ! J/m^3 
-     unitUSER_Poynting    = unitSI_Poynting             ! J/m^2/s
-     unitUSER_J           = 1.0E+6*unitSI_J             ! uA/m^2
-     unitUSER_electric    = 1.0E+3*unitSI_electric      ! mV/m
-     unitUSER_DivB        = 1.0E+9*unitSI_DivB*unitSI_x ! nT/planetary radii
-     unitUSER_temperature = unitSI_temperature          ! Kelvin 
+     Io2Si_V(UnitX_)        = rPlanetSi                       ! planetary radii
+     Io2Si_V(UnitRho_)      = 1.e6*cProtonMass*AverageIonMass ! M_i/cm^3
+     Io2Si_V(UnitN_)        = 1.0E6                           ! #/cm^3
+     Io2Si_V(UnitU_)        = 1.0E3                           ! km/s
+     Io2Si_V(UnitP_)        = 1.0E-9                          ! nPa
+     Io2Si_V(UnitB_)        = 1.0E-9                          ! nT
+     Io2Si_V(UnitJ_)        = 1.0E-6                          ! microA/m^2
+     Io2Si_V(UnitElectric_) = 1.0E-3                          ! mV/m
+     Io2Si_V(UnitDivB_)     = 1.0E-9/rPlanetSi                ! nT/R_planet
+     Io2Si_V(UnitAngle_)    = cRadToDeg                       ! degrees
      !\
      ! set string variables used for writing output - TECPLOT
      !/
-     unitstr_TEC_x           = '[R]'            
-     unitstr_TEC_rho         = '[amu/cm^3]'       
-     unitstr_TEC_U           = '[km/s]'          
-     unitstr_TEC_t           = '[s]'             
-     unitstr_TEC_n           = '[cm^-^3]'        
-     unitstr_TEC_p           = '[nPa]'           
-     unitstr_TEC_B           = '[nT]'            
-     unitstr_TEC_rhoU        = '[kg m^-^2 s^-^2]'
-     unitstr_TEC_energydens  = '[J/m^3]'             
-     unitstr_TEC_Poynting    = '[J m^-^2 s^-^1]'
-     unitstr_TEC_J           = '[`mA/m^2]'       
-     unitstr_TEC_electric    = '[mV/m]'          
-     unitstr_TEC_DivB        = '[nT/R]'           
-     unitstr_TEC_temperature = '[K]'             
+     NameTecUnit_V(UnitX_)           = '[R]'            
+     NameTecUnit_V(UnitRho_)         = '[amu/cm^3]'
+     NameTecUnit_V(UnitU_)           = '[km/s]'          
+     NameTecUnit_V(UnitN_)           = '[cm^-^3]'        
+     NameTecUnit_V(UnitP_)           = '[nPa]'           
+     NameTecUnit_V(UnitB_)           = '[nT]'            
+     NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'       
+     NameTecUnit_V(UnitElectric_)    = '[mV/m]'          
+     NameTecUnit_V(UnitDivB_)        = '[nT/R]'
+     NameTecUnit_V(UnitAngle_)       = '[deg]'
+
      !\
      ! set string variables used for writing output - IDL
      !/
-     unitstr_IDL_x           = 'R'            
-     unitstr_IDL_rho         = 'amu/cm3'       
-     unitstr_IDL_U           = 'km/s'          
-     unitstr_IDL_t           = 's'             
-     unitstr_IDL_n           = '/cc'        
-     unitstr_IDL_p           = 'nPa'           
-     unitstr_IDL_B           = 'nT'            
-     unitstr_IDL_rhoU        = 'kg/m2s2'
-     unitstr_IDL_energydens  = 'J/m3'           
-     unitstr_IDL_Poynting    = 'J/m^2s'
-     unitstr_IDL_J           = 'uA/m2'       
-     unitstr_IDL_electric    = 'mV/m'          
-     unitstr_IDL_DivB        = 'nT/R'           
-     unitstr_IDL_temperature = 'K'             
+     NameIdlUnit_V(UnitX_)           = 'R'
+     NameIdlUnit_V(UnitRho_)         = 'Mi/cc'
+     NameIdlUnit_V(UnitU_)           = 'km/s'
+     NameIdlUnit_V(UnitN_)           = '/cc'
+     NameIdlUnit_V(UnitP_)           = 'nPa'           
+     NameIdlUnit_V(UnitB_)           = 'nT'
+     NameIdlUnit_V(UnitJ_)           = 'uA/m2'
+     NameIdlUnit_V(UnitElectric_)    = 'mV/m'
+     NameIdlUnit_V(UnitDivB_)        = 'nT/R'
+     NameIdlUnit_V(UnitAngle_)       = 'deg'
 
   case("HELIOSPHERIC")
-     unitUSER_x           = unitSI_x/unitSI_x                ! R
-     unitUSER_rho         = 1.0e-3*unitSI_rho                ! g/cm^3
-     unitUSER_n           = 1.0E-6*unitSI_n                  ! #/cm^3
-     unitUSER_U           = 1.0E-3*unitSI_U                  ! km/s
-     unitUSER_t           = unitSI_t                         ! s
-     unitUSER_p           = 1.0E+1*unitSI_p                  ! dyne/cm^2
-     unitUSER_B           = 1.0E+4*unitSI_B                  ! Gauss
-     unitUSER_rhoU        = 1.0E-1*unitSI_rhoU               ! g/cm^2/s
-     unitUSER_Poynting    = unitSI_Poynting                  ! J/m^2/s
-     unitUSER_energydens  = 1.0E+1*unitSI_energydens         ! erg/cm^3
-     unitUSER_J           = 1.0E+6*unitSI_J                  ! uA/m^2
-     unitUSER_electric    = unitSI_electric                  ! V/m
-     unitUSER_DivB        = 1.0E+2*unitSI_DivB*unitSI_x      ! Gauss/cm
-     unitUSER_temperature = unitSI_temperature               ! Kelvin
+     Io2Si_V(UnitX_)           = rPlanetSi                 ! R
+     Io2Si_V(UnitRho_)         = 1.0E+3                    ! g/cm^3
+     Io2Si_V(UnitN_)           = 1.0E+6                    ! #/cm^3
+     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
+     Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
+     Io2Si_V(UnitB_)           = 1.0E-4                    ! Gauss
+     Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
+     Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
+     Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
+     Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
+     Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
      !\
      ! set string variables used for writing output - TECPLOT
      !/
-     unitstr_TEC_x           = 'R'
-     unitstr_TEC_rho         = 'g/cm3'
-     unitstr_TEC_U           = 'km/s'
-     unitstr_TEC_t           = 's'
-     unitstr_TEC_n           = 'amu/cm3'
-     unitstr_TEC_p           = 'dyne/cm^2'
-     unitstr_TEC_B           = 'Gauss'
-     unitstr_TEC_rhoU        = 'g/cm^2/s'
-     unitstr_TEC_Poynting    = '[J m^-^2 s^-^1]'
-     unitstr_TEC_energydens  = 'erg/cm3'
-     unitstr_TEC_J           = 'uA/m2'
-     unitstr_TEC_electric    = 'V/m'
-     unitstr_TEC_DivB        = 'Gauss/cm'
-     unitstr_TEC_temperature = 'K'
+     NameTecUnit_V(UnitX_)           = '[R]'
+     NameTecUnit_V(UnitRho_)         = '[g/cm^3]'
+     NameTecUnit_V(UnitU_)           = '[km/s]'
+     NameTecUnit_V(UnitN_)           = '[amu/cm^3]'
+     NameTecUnit_V(UnitP_)           = '[dyne/cm^2]'
+     NameTecUnit_V(UnitB_)           = '[Gauss]'
+     NameTecUnit_V(UnitRhoU_)        = '[g/cm^2/s]'
+     NameTecUnit_V(UnitEnergyDens_)  = '[erg/cm^3]'
+     NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'
+     NameTecUnit_V(UnitDivB_)        = '[Gauss/cm]'
+     NameTecUnit_V(UnitAngle_)       = '[deg]'
      !\
      ! set string variables used for writing output - IDL
      !/
-     unitstr_IDL_x           = 'R'
-     unitstr_IDL_rho         = 'g/cm3'
-     unitstr_IDL_U           = 'km/s'
-     unitstr_IDL_t           = 's'
-     unitstr_IDL_n           = 'amu/cm3'
-     unitstr_IDL_p           = 'dyne/cm^2'
-     unitstr_IDL_B           = 'Gauss'
-     unitstr_IDL_rhoU        = 'g/cm^2/s'
-     unitstr_IDL_Poynting    = 'J/m^2s'
-     unitstr_IDL_energydens  = 'erg/cm3'
-     unitstr_IDL_J           = 'uA/m2'
-     unitstr_IDL_electric    = 'V/m'
-     unitstr_IDL_DivB        = 'Gauss/cm'
-     unitstr_IDL_temperature = 'K'
+     NameIdlUnit_V(UnitX_)           = 'R'
+     NameIdlUnit_V(UnitRho_)         = 'g/cm3'
+     NameIdlUnit_V(UnitU_)           = 'km/s'
+     NameIdlUnit_V(UnitN_)           = 'mp/cc'
+     NameIdlUnit_V(UnitP_)           = 'dyne/cm^2'
+     NameIdlUnit_V(UnitB_)           = 'G'
+     NameIdlUnit_V(UnitRhoU_)        = 'g/cm^2/s'
+     NameIdlUnit_V(UnitEnergyDens_)  = 'erg/cm3'
+     NameIdlUnit_V(UnitJ_)           = 'uA/m2'
+     NameIdlUnit_V(UnitDivB_)        = 'G/cm'
+     NameIdlUnit_V(UnitTemperature_) = 'K'
 
   case("NONE")
-     unitUSER_x           = 1.0
-     unitUSER_rho         = 1.0
-     unitUSER_U           = 1.0
-     unitUSER_t           = 1.0
-     unitUSER_n           = 1.0
-     unitUSER_p           = 1.0
-     unitUSER_B           = 1.0
-     unitUSER_rhoU        = 1.0
-     unitUSER_energydens  = 1.0
-     unitUSER_Poynting    = 1.0
-     unitUSER_J           = 1.0
-     unitUSER_electric    = 1.0
-     unitUSER_DivB        = 1.0
-     unitUSER_temperature = 1.0
-     !\
-     ! set string variables used for writing output - TECPLOT
-     !/
-     unitstr_TEC_x           = ''            
-     unitstr_TEC_rho         = ''
-     unitstr_TEC_U           = ''
-     unitstr_TEC_t           = ''
-     unitstr_TEC_n           = ''
-     unitstr_TEC_p           = ''
-     unitstr_TEC_B           = ''
-     unitstr_TEC_rhoU        = ''
-     unitstr_TEC_energydens  = ''
-     unitstr_TEC_Poynting    = ''
-     unitstr_TEC_J           = ''
-     unitstr_TEC_electric    = ''
-     unitstr_TEC_DivB        = ''
-     unitstr_TEC_temperature = ''            
-     !\
-     ! set string variables used for writing output - IDL
-     !/
-     unitstr_IDL_x           = ''   
-     unitstr_IDL_rho         = ''   
-     unitstr_IDL_U           = ''   
-     unitstr_IDL_t           = ''    
-     unitstr_IDL_n           = ''  
-     unitstr_IDL_p           = ''   
-     unitstr_IDL_B           = ''   
-     unitstr_IDL_rhoU        = ''
-     unitstr_IDL_energydens  = ''    
-     unitstr_IDL_Poynting    = ''
-     unitstr_IDL_J           = ''  
-     unitstr_IDL_electric    = ''   
-     unitstr_IDL_DivB        = ''    
-     unitstr_IDL_temperature = ''           
+     ! I/O and normalized units are the same, so
+     Io2Si_V = No2Si_V
+     NameTecUnit_V = ''            
+     NameIdlUnit_V = ''   
 
   case("USER")
+     ! User method provides the conversion from I/O to SI units
+     ! and Tecplot and IDL strings for all units differing from SI units.
      call user_io_units
-     ! Users provide the conversion from SI units to their IO 
-     ! units.  Since we don't use the units this way, we have to 
-     ! multiply by unitSI_ to set the unitUSER variables.
-     unitUSER_x           = Si2User(UnitX_)           *unitSI_x  
-     unitUSER_rho         = Si2User(UnitRho_)         *unitSI_rho          
-     unitUSER_n           = Si2User(UnitN_)           *unitSI_U            
-     unitUSER_U           = Si2User(UnitU_)           *unitSI_t            
-     unitUSER_t           = Si2User(UnitT_)           *unitSI_n            
-     unitUSER_p           = Si2User(UnitP_)           *unitSI_p            
-     unitUSER_B           = Si2User(UnitB_)           *unitSI_B            
-     unitUSER_rhoU        = Si2User(UnitRhoU_)        *unitSI_rhoU         
-     unitUSER_energydens  = Si2User(UnitEnergyDens_)  *unitSI_energydens   
-     unitUSER_Poynting    = Si2User(UnitPoynting_)    *unitSI_Poynting     
-     unitUSER_J           = Si2User(UnitJ_)           *unitSI_J               
-     unitUSER_electric    = Si2User(UnitElectric_)    *unitSI_electric
-     unitUSER_temperature = Si2User(UnitTemperature_) *unitSI_temperature  
-     unitUSER_DivB        = unitSI_DivB  ! Users don't need to know this
-     
-     unitstr_TEC_x           = IoUnitStr(UnitX_)           
-     unitstr_TEC_rho         = IoUnitStr(UnitRho_)         
-     unitstr_TEC_n           = IoUnitStr(UnitN_)           
-     unitstr_TEC_U           = IoUnitStr(UnitU_)           
-     unitstr_TEC_t           = IoUnitStr(UnitT_)           
-     unitstr_TEC_p           = IoUnitStr(UnitP_)           
-     unitstr_TEC_B           = IoUnitStr(UnitB_)           
-     unitstr_TEC_rhoU        = IoUnitStr(UnitRhoU_)        
-     unitstr_TEC_energydens  = IoUnitStr(UnitEnergyDens_)  
-     unitstr_TEC_Poynting    = IoUnitStr(UnitPoynting_)    
-     unitstr_TEC_J           = IoUnitStr(UnitJ_)           
-     unitstr_TEC_electric    = IoUnitStr(UnitElectric_)    
-     unitstr_TEC_temperature = IoUnitStr(UnitTemperature_) 
-     unitstr_TEC_DivB        = '[T/m]'
-
-     unitstr_IDL_x           = IoUnitStr(UnitX_)           
-     unitstr_IDL_rho         = IoUnitStr(UnitRho_)         
-     unitstr_IDL_n           = IoUnitStr(UnitN_)           
-     unitstr_IDL_U           = IoUnitStr(UnitU_)           
-     unitstr_IDL_t           = IoUnitStr(UnitT_)           
-     unitstr_IDL_p           = IoUnitStr(UnitP_)           
-     unitstr_IDL_B           = IoUnitStr(UnitB_)           
-     unitstr_IDL_rhoU        = IoUnitStr(UnitRhoU_)        
-     unitstr_IDL_energydens  = IoUnitStr(UnitEnergyDens_)  
-     unitstr_IDL_Poynting    = IoUnitStr(UnitPoynting_)    
-     unitstr_IDL_J           = IoUnitStr(UnitJ_)           
-     unitstr_IDL_electric    = IoUnitStr(UnitElectric_)    
-     unitstr_IDL_temperature = IoUnitStr(UnitTemperature_) 
-     unitstr_IDL_DivB        = 'T/m'
-
   case default
-     call stop_mpi(NameThisComp//': IoUnitType='//IoUnits// ' is invalid.')
-
+     call stop_mpi(NameThisComp//': Unknown TypeIoUnit='//TypeIoUnit)
   end select
+
+  ! Calculate the remaining unit conversions
+  Si2Io_V = 1/Io2Si_V
+  No2Io_V = No2Si_V*Si2Io_V
+  Io2No_V = 1/No2Io_V
 
 end subroutine set_units
 
 !==============================================================================
 
 subroutine init_mhd_variables
+
+  ! Set default I/O units and unit names for the state variables 
+  ! in MHD type equations
 
   use ModVarIndexes
   use ModPhysics
@@ -539,41 +430,29 @@ subroutine init_mhd_variables
   integer :: iVar
   !--------------------------------------------------------------------------
 
-  UnitUser_V(Rho_)     = UnitUser_Rho
-  UnitUser_V(RhoUx_)   = UnitUser_RhoU
-  UnitUser_V(RhoUy_)   = UnitUser_RhoU
-  UnitUser_V(RhoUz_)   = UnitUser_RhoU
-  UnitUser_V(Bx_)      = UnitUser_B
-  UnitUser_V(By_)      = UnitUser_B
-  UnitUser_V(Bz_)      = UnitUser_B
-  UnitUser_V(p_)       = UnitUser_p
-  UnitUser_V(Energy_)  = UnitUser_EnergyDens
+  UnitUser_V(Rho_)          = No2Io_V(UnitRho_)
+  UnitUser_V(RhoUx_:RhoUz_) = No2Io_V(UnitRhoU_)
+  UnitUser_V(Bx_:Bz_)       = No2Io_V(UnitB_)
+  UnitUser_V(p_)            = No2Io_V(UnitP_)
+  UnitUser_V(Energy_)       = No2Io_V(UnitEnergyDens_)
 
-  NameUnitUserTec_V(rho_)    = UnitStr_Tec_Rho
-  NameUnitUserTec_V(rhoUx_)  = UnitStr_Tec_RhoU
-  NameUnitUserTec_V(rhoUy_)  = UnitStr_Tec_RhoU
-  NameUnitUserTec_V(rhoUz_)  = UnitStr_Tec_RhoU
-  NameUnitUserTec_V(Bx_)     = UnitStr_Tec_B
-  NameUnitUserTec_V(By_)     = UnitStr_Tec_B
-  NameUnitUserTec_V(Bz_)     = UnitStr_Tec_B
-  NameUnitUserTec_V(P_)      = UnitStr_Tec_p
-  NameUnitUserTec_V(Energy_) = UnitStr_Tec_EnergyDens
+  NameUnitUserIdl_V(rho_)          = NameTecUnit_V(UnitRho_)
+  NameUnitUserIdl_V(RhoUx_:rhoUz_) = NameTecUnit_V(UnitRhoU_)
+  NameUnitUserIdl_V(Bx_:Bz_)       = NameTecUnit_V(UnitB_)
+  NameUnitUserIdl_V(P_)            = NameTecUnit_V(UnitP_)
+  NameUnitUserIdl_V(Energy_)       = NameTecUnit_V(UnitEnergyDens_)
 
-  NameUnitUserIdl_V(rho_)    = UnitStr_Idl_Rho
-  NameUnitUserIdl_V(rhoUx_)  = UnitStr_Idl_RhoU
-  NameUnitUserIdl_V(rhoUy_)  = UnitStr_Idl_RhoU
-  NameUnitUserIdl_V(rhoUz_)  = UnitStr_Idl_RhoU
-  NameUnitUserIdl_V(Bx_)     = UnitStr_Idl_B
-  NameUnitUserIdl_V(By_)     = UnitStr_Idl_B
-  NameUnitUserIdl_V(Bz_)     = UnitStr_Idl_B
-  NameUnitUserIdl_V(P_)      = UnitStr_Idl_p
-  NameUnitUserIdl_V(Energy_) = UnitStr_Idl_EnergyDens
+  NameUnitUserIdl_V(rho_)          = NameIdlUnit_V(UnitRho_)
+  NameUnitUserIdl_V(RhoUx_:rhoUz_) = NameIdlUnit_V(UnitRhoU_)
+  NameUnitUserIdl_V(Bx_:Bz_)       = NameIdlUnit_V(UnitB_)
+  NameUnitUserIdl_V(P_)            = NameIdlUnit_V(UnitP_)
+  NameUnitUserIdl_V(Energy_)       = NameIdlUnit_V(UnitEnergyDens_)
 
   ! By default the scalar advected variables are assumed to behave like density
   do iVar = ScalarFirst_, ScalarLast_
-     UnitUser_V(iVar)        = UnitUser_Rho
-     NameUnitUserTec_V(iVar) = UnitStr_Tec_Rho
-     NameUnitUserIdl_V(iVar) = UnitStr_Idl_Rho
+     UnitUser_V(iVar)        = No2Io_V(UnitRho_)
+     NameUnitUserTec_V(iVar) = NameTecUnit_V(UnitRho_)
+     NameUnitUserIdl_V(iVar) = NameIdlUnit_V(UnitRho_)
   end do
 
 end subroutine init_mhd_variables
