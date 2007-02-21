@@ -351,7 +351,7 @@ contains
                            
                    ! get the electron recombination terms.  First get the 
                    ! electron density.  This is gotten by first converting from 
-                   ! unitless rho to amr/cm^3 using unitUSER_rho.  Then, by 
+                   ! unitless rho to amr/cm^3 using No2Io_V(UnitRho_).  Then, by 
                    ! dividing by the average amu per particle. In that case we 
                    ! use 16.6 for O, OH, H2O.  Note that this term does not
   		 ! depend on the neutrals in any way so we do not need to use the
@@ -359,7 +359,7 @@ contains
   		 ! rate.
                    
                    
-                   nElec = State_VGB(rho_,i,j,k,globalBLK)*unitUSER_rho/16.6
+                   nElec = State_VGB(rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_)/16.6
                                            
                    ! We now need the electron temperature to calculate some 
                    ! of the ionization rates.  The electron temperature that 
@@ -373,7 +373,7 @@ contains
                    Tfrac = 1.0/15.0;
                                   
                    Telectron = (16.6*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,globalBLK)*     &
-                               unitSI_p)/(State_VGB(rho_,i,j,k,globalBLK)*unitSI_rho)* &
+                               No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,globalBLK)*No2Si_V(UnitRho_))* &
                                Tfrac
                    EVelectron = cBoltzmann/cElectronCharge*Telectron
                    LogEVelectron = Log(EVelectron)
@@ -388,11 +388,11 @@ contains
                    ! above.  To get a unitless rhodot we simply need to multiply 
                    ! by the mass of a proton times the 1.0e6 (to get 1/m^3) and then 
                    ! divide by (dimensions(rho)/dimensions(t)) which is 
-                   ! unitSI_rho/unitSI_t to get the normalized (dimensionless) 
+                   ! No2Si_V(UnitRho_)/No2Si_V(UnitT_) to get the normalized (dimensionless) 
                    ! form.
   
-                   rhodotNorm =  unitSI_t/unitSI_rho
-                   CXNorm = unitSI_t
+                   rhodotNorm =  No2Si_V(UnitT_)/No2Si_V(UnitRho_)
+                   CXNorm = No2Si_V(UnitT_)
   		  
                    rhodot = cProtonMass*1.0e6*rhodot*rhodotNorm
                    CXsource = CXsource*CXNorm 
@@ -448,11 +448,11 @@ contains
                       write(*,'(a,3(1X,E13.5))') 'rhodot, CXsource, Alpha_rec (unnormalized):', &
                          rhodot/rhodotNorm, CXsource/CXNorm,Alpha_rec/CXNorm
                       write(*,'(a,4(1X,E13.5))') 'rho(amu/cc),nElec(1/cc),un,usq(km/s):', &
-                         State_VGB(rho_,i,j,k,globalBLK)*unitUSER_rho, nElec, un*unitUSER_U, usq*unitUSER_U
+                         State_VGB(rho_,i,j,k,globalBLK)*No2Io_V(UnitRho_), nElec, un*No2Io_V(UnitU_), usq*No2Io_V(UnitU_)
                       write(*,'(a,3(1X,E13.5))') 'rhodot, CXsource, Alpha_rec (normalized):', &
                          rhodot, CXsource,Alpha_rec
                       write(*,'(a,4(1X,E13.5))') 'rho, nElec, un, usq (normalized):', &
-                         State_VGB(rho_,i,j,k,globalBLK), nElec/unitUSER_rho, un, usq
+                         State_VGB(rho_,i,j,k,globalBLK), nElec/No2Io_V(UnitRho_), un, usq
                       write(*,*) '-----------------------------------------------------------------'
                    end if
   
@@ -482,10 +482,10 @@ contains
                    Rxy = sqrt(xSMG(1)**2 + xSMG(2)**2)   
   
                    ! The neutral torus is taken to rotate ridgidly with Titan
-                   unsq = (Rxy**2)*((OMEGAtitan_orbit*unitSI_t)**2)
+                   unsq = (Rxy**2)*((OMEGAtitan_orbit*No2Si_V(UnitT_))**2)
                    un = sqrt(unsq)
   
-                   rhodotNorm =  unitSI_t/unitSI_rho
+                   rhodotNorm =  No2Si_V(UnitT_)/No2Si_V(UnitRho_)
   
   		 ! See my dissertation to find the functional form of what
   		 ! is being used below and how it was derived.  This is
@@ -517,7 +517,7 @@ contains
                    Tfrac = 1.0/2.0;
   	       
                    Telectron = (mn*cProtonMass/cBoltzmann)*(State_VGB(p_,i,j,k,globalBLK)*       &
-                               unitSI_p)/(State_VGB(rho_,i,j,k,globalBLK)*unitSI_rho)* &
+                               No2Si_V(UnitP_))/(State_VGB(rho_,i,j,k,globalBLK)*No2Si_V(UnitRho_))* &
                                Tfrac
                    EVelectron = cBoltzmann/cElectronCharge*Telectron
                    LogEVelectron = Log(EVelectron)
@@ -535,8 +535,8 @@ contains
                    ! mass of the implanted ions. Futher note that the 0.1
                    ! is the number density in cm^-3.
   
-                   Lterm = alphaE*(unitSI_t)*   &
-                           (unitUSER_rho*State_VGB(rho_,i,j,k,globalBLK)/mn)
+                   Lterm = alphaE*(No2Si_V(UnitT_))*   &
+                           (No2Io_V(UnitRho_)*State_VGB(rho_,i,j,k,globalBLK)/mn)
   
                    part1 = rhodot + rhodot*eta*State_VGB(rho_,i,j,k,globalBLK)
                    part2 = rhodot*eta + Lterm
@@ -545,10 +545,10 @@ contains
    
                    Srho(i,j,k)   = Srho(i,j,k)   + (rhodot - Lterm*State_VGB(rho_,i,j,k,globalBLK))
   
-                   SrhoUx(i,j,k) = SrhoUx(i,j,k) + (part1*(-OMEGAtitan_orbit*unitSI_t*  &
+                   SrhoUx(i,j,k) = SrhoUx(i,j,k) + (part1*(-OMEGAtitan_orbit*No2Si_V(UnitT_)*  &
                                                    Y_BLK(i,j,k,globalBLK)) -  &
                                                    part2*State_VGB(rhoUx_,i,j,k,globalBLK))  
-                   SrhoUy(i,j,k) = SrhoUy(i,j,k) + (part1*(OMEGAtitan_orbit*unitSI_t*   &
+                   SrhoUy(i,j,k) = SrhoUy(i,j,k) + (part1*(OMEGAtitan_orbit*No2Si_V(UnitT_)*   &
                                                    X_BLK(i,j,k,globalBLK)) -   &
                                                    part2*State_VGB(rhoUy_,i,j,k,globalBLK))   
                    SrhoUz(i,j,k) = SrhoUz(i,j,k) + (part1*(0.0) - &

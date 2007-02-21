@@ -155,7 +155,7 @@ module ModUser
 
   real, dimension(1:7,1:num_Ri):: tmp_ion
   real:: SW_Lp, SW_Mp,  SW_Lp_dim, SW_Mp_dim,Plas_T_ev
-  real:: Plas_rho,AVER_mass, Plas_T  
+  real:: Plas_rho, Plas_T  
 
   !\
   ! The following are needed in user_sources::
@@ -178,18 +178,18 @@ module ModUser
 
 
 contains
-  !=============================================================================
+  !============================================================================
 
   subroutine user_read_inputs
     use ModProcMH,    ONLY: iProc
     use ModReadParam
-    use ModPhysics, ONLY:SW_RHO_DIM, SW_T_DIM
+    use ModPhysics, ONLY: SW_N_DIM, SW_T_DIM, AverageIonMass
 
     character (len=100) :: NameCommand
     !    character (len=100) :: line
     character (len=100) :: linetitan
     integer:: i, j
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     do
        if(.not.read_line() ) EXIT
@@ -210,17 +210,17 @@ contains
           Plas_rho =  SW_LP + SW_MP 
           SW_LP= SW_LP/Plas_rho 
           SW_MP= SW_MP/Plas_rho 
-          AVER_mass = Plas_rho/(SW_LP_dim+SW_MP_dim)
-          plas_T = plas_T_ev/AVER_mass*1.1610e4          
+          AverageIonMass = Plas_rho/(SW_LP_dim+SW_MP_dim)
+          plas_T = plas_T_ev/AverageIonMass*1.1610e4          
           if(iproc==0)then
-             write(*,*)'AVER_mass=',AVER_mass           
+             write(*,*)'AverageIonMass=',AverageIonMass           
              write(*,*)'plas_T=',plas_T
           end if
           !          if(UseMultiSpecies)then
-          SW_rho_dim = Plas_rho
+          SW_n_dim = Plas_rho/AverageIonMass
           SW_T_dim = plas_T      
           !          end if
-          !write(*,*)'SW_rho_dim=',SW_rho_dim,SW_T_dim
+          !write(*,*)'SW_n_dim=',SW_n_dim,SW_T_dim
 
        case('#USETITANINPUT')
           call read_var('UseTitanInput',UseTitanInput)
@@ -855,15 +855,10 @@ contains
     use ModMain, ONLY:BODY1_
     use ModPhysics
     use ModVarIndexes, ONLY: ScalarFirst_,ScalarLast_, &
-         rhoUx_, rhoUz_,  UNITUSER_V
+         rhoUx_, rhoUz_,  UnitUser_V
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-!    if(UseMultiSpecies)then
-!       SW_rho_dim = Plas_rho
-!       SW_T_dim = plas_T      
-!    end if
-!    unitUSER_n=SW_rho_dim
     do iBoundary=East_,Top_
        FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = cTiny8/1.0e5     
      !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
@@ -888,7 +883,7 @@ contains
 !    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
 !    write(*,*)'CellState_VI, top_=',CellState_VI(:,Top_)
 !    write(*,*)'CellState_VI, east_=',CellState_VI(:,East_)    
-    unitUSER_V(ScalarFirst_:ScalarLast_)   = unitUSER_rho/MassSpecies_V
+    UnitUser_V(ScalarFirst_:ScalarLast_)   = No2Io_V(UnitRho_)/MassSpecies_V
   end subroutine user_init_session
 
 
@@ -965,7 +960,7 @@ contains
 
              State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)= &
                   State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
-                  *coef*MassSpecies_V(SpeciesFirst_:SpeciesLast_)/unitUSER_n
+                  *coef*MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
 
              State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)=&
                   max(0.0,State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK))
@@ -1015,7 +1010,7 @@ contains
     body_Ti_dim = 350
     KT0 = SW_p*body_Ti_dim/SW_T_dim
     nu0_dim =  1.0e-10
-    nu0=nu0_dim*unitUSER_n*unitUSER_t
+    nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
 
     Ratedim_I(M_hv__Mp_em_ )=1.0   !1
     Ratedim_I(H1_hv__H1p_em_)=1.0  !2
@@ -1053,13 +1048,13 @@ contains
 
     BodynDenNuSpdim_I(:)=tmp_n(1:nNuSpecies,1)
     BodynDenNuSpecies_I(1:nNuSpecies)=&
-         BodynDenNuSpdim_I(1:nNuSpecies)/unitUSER_n
+         BodynDenNuSpdim_I(1:nNuSpecies)/No2Io_V(UnitN_)
 
-    Rate_I(4:25)=Ratedim_I(4:25)*unitUSER_t*unitUSER_n
+    Rate_I(4:25)=Ratedim_I(4:25)*No2Io_V(UnitT_)*No2Io_V(UnitN_)
     BodyRhoSpecies_I(:)=tmp_ion(1:nSpecies,1)*&
-         MassSpecies_V(SpeciesFirst_:SpeciesLast_)/unitUSER_n
+         MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
     !     write(*,*)'BodyRhoSpecies_I=',BodyRhoSpecies_I,&
-    !'unit_usern=',unitUSER_n
+    !'unit_usern=',No2Io_V(UnitN_)
     !     write(*,*)'temp_ion=',tmp_ion(1:nSpecies,1)
 
   end subroutine set_multiSp_ICs
@@ -1588,9 +1583,9 @@ contains
        if (RateM_C(i,j,k) < 0.0) RateM_C(i,j,k) = 0.0
        if (RateH_C(i,j,k) < 0.0) RateH_C(i,j,k) = 0.0
 
-      PhotoIonRate_VC(Lp_,i,j,k) = RateL_C(i,j,k) * unitUSER_t/unitUSER_n
-      PhotoIonRate_VC(Mp_,i,j,k) = RateM_C(i,j,k) * unitUSER_t/unitUSER_n
-      PhotoIonRate_VC(H1p_,i,j,k)= RateH_C(i,j,k) * unitUSER_t/unitUSER_n
+      PhotoIonRate_VC(Lp_,i,j,k) = RateL_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
+      PhotoIonRate_VC(Mp_,i,j,k) = RateM_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
+      PhotoIonRate_VC(H1p_,i,j,k)= RateH_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
        !                 if(hh.lt.1500.0.and.cosS0.gt.0.998)then
        !                    write(*,*)hh, RateH_C(i,j,k), cosS0
        !                 end if
@@ -1633,7 +1628,7 @@ contains
        end if
     end do; end do; end do
 
-    NumDenNeutral_VC = max(0.0, NumDenNeutral_VC)/unitUSER_n
+    NumDenNeutral_VC = max(0.0, NumDenNeutral_VC)/No2Io_V(UnitN_)
     Nu_C = nu0*sum(NumDenNeutral_VC, dim=1)
 
   end subroutine titan_input
@@ -1644,7 +1639,7 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModPhysics, ONLY: rBody, unituser_B
+    use ModPhysics, ONLY: rBody, No2Io_V, UnitB_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
@@ -1698,7 +1693,7 @@ contains
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
 
-    if(IsDimensional) PlotVar_G = PlotVar_G*UnitUser_B
+    if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(UnitB_)
 
     if(.not.IsBoundaryBlock_IB(body1_, iBlock)) RETURN
 

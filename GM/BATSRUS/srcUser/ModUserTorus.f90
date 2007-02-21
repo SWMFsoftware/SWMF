@@ -6,7 +6,9 @@ module ModUser
        IMPLEMENTED1 => user_set_ics,                  &
        IMPLEMENTED2 => user_init_session,             &
        IMPLEMENTED3 => user_set_outerbcs,             &
-       IMPLEMENTED4 => user_get_b0
+       IMPLEMENTED4 => user_get_b0,                   &
+       IMPLEMENTED5 => user_normalization,            &
+       IMPLEMENTED6 => user_io_units
 
   use ModCovariant
 
@@ -43,46 +45,14 @@ contains
     integer :: i, iBoundary
 
     logical :: oktest, oktest_me
-    real, external :: energy_in
     !-------------------------------------------------------------------------
     call set_oktest('user_init_session',oktest, oktest_me)
 
-    unitSI_x       = 1.0           ! Radius - NOTE - MUST BE IN meters
-    Mbody_dim      = 0.00          ! Mass of body in kg
-    rot_period_dim = 0.00          ! rotation period in hours
-    
-
-    ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
-    MBody2Dim = 0.0                                !^CFG IF SECONDBODY
-
-    !\
-    ! Call set_dimensions, which set the quantities for converting from
-    ! normalized to  dimensional quantities and vice versa.  Also
-    ! sets input and output strings for the conversion quantities
-    !/
-    call user_set_dimensions
-
-    if(oktest .and. iProc==0) then
-       write(*,'(E15.6,11X,E15.6)') unitUSER_x, unitSI_x
-       write(*,'(E15.6,11X,E15.6)') unitUSER_t, unitSI_t
-       write(*,'(E15.6,11X,E15.6)') unitUSER_angle, unitSI_angle       
-       write(*,'(E15.6,11X,E15.6)') unitUSER_rho,  unitSI_rho
-       write(*,'(E15.6,11X,E15.6)') unitUSER_n, unitSI_n 
-       write(*,'(E15.6,11X,E15.6)') unitUSER_U, unitSI_U          
-       write(*,'(E15.6,11X,E15.6)') unitUSER_p, unitSI_p 
-       write(*,'(E15.6,11X,E15.6)') unitUSER_B, unitSI_B                        
-       write(*,'(E15.6,11X,E15.6)') unitUSER_rhoU, unitSI_rhoU
-       write(*,'(E15.6,11X,E15.6)') unitUSER_energydens, unitSI_energydens
-       write(*,'(E15.6,11X,E15.6)') unitUSER_J, unitSI_J
-       write(*,'(E15.6,11X,E15.6)') unitUSER_electric, unitSI_electric
-       write(*,'(E15.6,11X,E15.6)') unitUSER_DivB, unitSI_DivB
-       write(*,'(E15.6,11X,E15.6)') unitUSER_temperature, unitSI_temperature
-    end if
     !Dimensionless poloidal and toroidal field
     !Both are calculated at r=rTorusLarge,z=rTorusSmall
-    PoloidalField=PoloidalField/UnitUser_B
-    ToroidalField=ToroidalField/UnitUser_B
-    
+    PoloidalField=PoloidalField*Io2No_V(UnitB_)
+    ToroidalField=ToroidalField*Io2No_V(UnitB_)
+
     !Poloidal magnetic field is B_r=-a_z*z/(cPi*r), hence:
     GradShafranovAZ=PoloidalField*cPi*rTorusLarge/rTorusSmall
 
@@ -99,7 +69,7 @@ contains
     !Here the arrays of the FACE VALUE are formed
     !Initialization
     do iBoundary=body2_,Top_
-       FaceState_VI(:,iBoundary)=DefaultState_V
+       FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
     end do
 
     !Cell State is used for filling the ghostcells
@@ -110,150 +80,6 @@ contains
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
   contains
-
-    !==========================================================================
-
-    subroutine user_set_dimensions
-      use ModProcMH, ONLY:iProc
-      use ModMain
-      use ModPhysics
-      use ModVarIndexes
-      implicit none
-
-      logical :: oktest, oktest_me
-      !-----------------------------------------------------------------------
-      call set_oktest('user_set_dimensions',oktest, oktest_me)
-
-      !\
-      ! Load variables used for converting from dimensional to non-dimensional 
-      ! units and back.  Also load the name variables for each of the units for
-      ! use in writing output.
-      !/
-
-      unitSI_angle = 180/cPi   
-      unitUSER_angle = unitSI_angle
-      unitstr_TEC_angle = '[degree]'            
-      unitstr_IDL_angle = '--'            
-
-      !\
-      ! set independent normalizing SI variables
-      !/
-      unitSI_x    = cOne                                         ! m
-      unitSI_rho  = cProtonMass*(cMillion)*WallDensity           ! kg/m^3
-      unitSI_U    = sqrt(energy_in('eV')*WallTemperature/&
-           cProtonMass)                                          ! m/s
-
-      !\
-      ! set other normalizing SI variables from the independent ones
-      !/
-      unitSI_t           = unitSI_x/unitSI_U                     ! s
-      unitSI_n           = unitSI_rho/cProtonMass                ! (#/m^3)
-      unitSI_p           = unitSI_rho*unitSI_U**2                ! Pa
-      unitSI_B           = unitSI_U*sqrt(cMu*unitSI_rho)         ! T
-      unitSI_rhoU        = unitSI_rho*unitSI_U                   ! kg/m^2/s
-      unitSI_energydens  = unitSI_p                              ! J/m^3
-      unitSI_Poynting    = unitSI_energydens*unitSI_U            ! J/m^2/s
-      unitSI_J           = unitSI_B/(unitSI_x*cMu)               ! A/m^2
-      unitSI_electric    = unitSI_U*unitSI_B                     ! V/m
-      unitSI_DivB        = unitSI_B/unitSI_x                     ! T/m
-      ! set temperature - note that the below is only strictly true for a
-      ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-      ! be off in temperature by as much as a factor of #.  
-      ! There is no way around this in MHD.
-      unitSI_temperature = (unitSI_p/unitSI_rho)*(cProtonMass/cBoltzmann) !K 
-
-      !\
-      ! set USER variables used for normalization, input, and output
-      ! They all have user defined coordinates and are not consistent 
-      ! in a unit sense.
-      ! Every variable is case dependent.
-      ! 
-      ! Also load the string variables associated with the USER variables - 
-      ! note that they are loaded differently for IDL and TEC output
-      !/
-      unitUSER_x           = unitSI_x                         ! m
-      unitUSER_rho         = 1.0E-6*unitSI_n                  ! (amu/cm^3)
-      unitUSER_U           = unitSI_U                         ! km/s
-      unitUSER_t           = unitSI_t                         ! s
-      unitUSER_n           = 1.0E-6*unitSI_n                  ! (#/cm^3)
-      unitUSER_p           = unitSI_p                         ! Pa
-      unitUSER_B           = unitSI_B                         ! T
-      unitUSER_rhoU        = unitSI_rhoU                      ! kg/m^2/s
-      unitUSER_energydens  = unitSI_energydens                ! J/m^3
-      unitUSER_Poynting    = unitSI_Poynting                  ! J/m^2/s
-      unitUSER_J           = unitSI_J                         ! A/m^2
-      unitUSER_electric    = unitSI_electric                  ! V/m
-      unitUSER_DivB        = unitSI_DivB                      ! T/m
-      ! set temperature - note that the below is  only strictly true for a
-      ! pure proton plasma.  If the are heavy ions of mass #*mp then you could
-      ! be off in temperature by as much as a factor of #.  
-      ! There is no way around this in MHD.
-      unitUSER_temperature = UnitSI_temperature*cBoltzmann/&
-           energy_in('eV')                                    ! eV 
-
-      !\
-      ! set string variables used for writing output - TECPLOT
-      !/
-      unitstr_TEC_x           = '[R]'            
-      unitstr_TEC_rho         = '[amu/cm^3]'       
-      unitstr_TEC_U           = '[m/s]'          
-      unitstr_TEC_t           = '[s]'             
-      unitstr_TEC_n           = '[amu/cm^3]'        
-      unitstr_TEC_p           = '[Pa]'           
-      unitstr_TEC_B           = '[T]'            
-      unitstr_TEC_rhoU        = '[kg m^-^2 s^-^2]'
-      unitstr_TEC_energydens  = '[J/m^3]'             
-      unitstr_TEC_Poynting    = '[J m^-^2 s^-^1]'
-      unitstr_TEC_J           = '[`A/m^2]'       
-      unitstr_TEC_electric    = '[V/m]'          
-      unitstr_TEC_DivB        = '[nT/R]'           
-      unitstr_TEC_temperature = '[eV]'             
-      !\
-      ! set string variables used for writing output - IDL
-      !/
-      unitstr_IDL_x           = 'R'            
-      unitstr_IDL_rho         = 'amu/cm3'       
-      unitstr_IDL_U           = 'm/s'          
-      unitstr_IDL_t           = 's'             
-      unitstr_IDL_n           = 'amu/cm3'        
-      unitstr_IDL_p           = 'Pa'           
-      unitstr_IDL_B           = 'T'            
-      unitstr_IDL_rhoU        = 'kg/m2s2'
-      unitstr_IDL_energydens  = 'J/m3'           
-      unitstr_IDL_Poynting    = 'J/m^2s'
-      unitstr_IDL_J           = 'A/m2'       
-      unitstr_IDL_electric    = 'V/m'          
-      unitstr_IDL_DivB        = 'T/R'           
-      unitstr_IDL_temperature = 'eV'             
-
-      unitUSERVars_V(rho_)     = unitUSER_rho
-      unitUSERVars_V(rhoUx_)   = unitUSER_rhoU
-      unitUSERVars_V(rhoUy_)   = unitUSER_rhoU
-      unitUSERVars_V(rhoUz_)   = unitUSER_rhoU
-      unitUSERVars_V(Bx_)      = unitUSER_B
-      unitUSERVars_V(By_)      = unitUSER_B
-      unitUSERVars_V(Bz_)      = unitUSER_B
-      unitUSERVars_V(P_)       = unitUSER_p
-
-      TypeUnitVarsTec_V(rho_)    = unitstr_TEC_rho
-      TypeUnitVarsTec_V(rhoUx_)  = unitstr_TEC_rhoU
-      TypeUnitVarsTec_V(rhoUy_)  = unitstr_TEC_rhoU
-      TypeUnitVarsTec_V(rhoUz_)  = unitstr_TEC_rhoU
-      TypeUnitVarsTec_V(Bx_)     = unitstr_TEC_B
-      TypeUnitVarsTec_V(By_)     = unitstr_TEC_B
-      TypeUnitVarsTec_V(Bz_)     = unitstr_TEC_B
-      TypeUnitVarsTec_V(P_)  = unitstr_TEC_p
-
-      TypeUnitVarsIdl_V(rho_)    = unitstr_IDL_rho
-      TypeUnitVarsIdl_V(rhoUx_)  = unitstr_IDL_rhoU
-      TypeUnitVarsIdl_V(rhoUy_)  = unitstr_IDL_rhoU
-      TypeUnitVarsIdl_V(rhoUz_)  = unitstr_IDL_rhoU
-      TypeUnitVarsIdl_V(Bx_)     = unitstr_IDL_B
-      TypeUnitVarsIdl_V(By_)     = unitstr_IDL_B
-      TypeUnitVarsIdl_V(Bz_)     = unitstr_IDL_B
-      TypeUnitVarsIdl_V(P_)  = unitstr_IDL_p
-    end subroutine user_set_dimensions
-
     !==========================================================================
 
     subroutine set_toroidal_surface
@@ -302,7 +128,54 @@ contains
       end do
       close(iFile)
     end subroutine set_toroidal_surface
+
   end subroutine user_init_session
+
+  !==========================================================================
+
+  subroutine user_normalization
+
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_
+    use ModConst, ONLY: cProtonMass
+    real, external :: energy_in
+
+    No2Si_V(UnitX_)    = cOne                            
+    No2Si_V(UnitRho_)  = 1000000*cProtonMass*WallDensity 
+    No2Si_V(UnitU_)    = &
+         sqrt(energy_in('eV')*WallTemperature/cProtonMass)
+
+  end subroutine user_normalization
+
+  !==========================================================================
+
+  subroutine user_io_units
+
+    use ModPhysics
+    real, external :: energy_in
+    !-----------------------------------------------------------------------
+    ! Set I/O units in terms of SI units if they differ
+
+    Io2Si_V(UnitRho_)         = cProtonMass/1.0E-6             ! (amu/cm^3)
+    Io2Si_V(UnitU_)           = 1000.0                         ! km/s
+    Io2Si_V(UnitN_)           = 1./1.0E-6                      ! (#/cm^3)
+    Io2Si_V(UnitTemperature_) = cBoltzmann/energy_in('eV')     ! eV 
+
+    !\
+    ! set strings for writing Tecplot output
+    !/
+    NameTecUnit_V(UnitRho_)         = '[amu/cm^3]'
+    NameTecUnit_V(UnitU_)           = '[km/s]'          
+    NameTecUnit_V(UnitN_)           = '[cm^-^3]'        
+    NameTecUnit_V(UnitTemperature_) = '[eV]'
+    !\
+    ! set strings for writing IDL output
+    !/
+    NameTecUnit_V(UnitRho_)         = 'mp/cc'
+    NameTecUnit_V(UnitU_)           = 'km/s'          
+    NameTecUnit_V(UnitN_)           = '/cc'        
+    NameTecUnit_V(UnitTemperature_) = 'eV'
+
+  end subroutine user_io_units
 
   !==========================================================================
 

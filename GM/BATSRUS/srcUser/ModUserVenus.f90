@@ -539,7 +539,7 @@ contains
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
 
-    unitUSER_V(rhoHp_:rhoCO2p_)   = unitUSER_rho
+    UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)
 
   end subroutine user_init_session
 
@@ -722,54 +722,54 @@ contains
 
     real :: Productrate
     !---------------------------------------------------------------
-    write(*,*)'in set_multisp_ICs, unitUser_n,t=',unitUser_n,unitUser_t
-!!!  write(*,*)'unitSI_x, temperature=',unitSI_x, unitSI_temperature
-!!!  unitUser_n=1.0
-!!!  unitSI_x=1.0
-!!!  unitUser_t=1.0
-!!!  unitSI_temperature=1.0
+    write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',No2Io_V(UnitN_),No2Io_V(UnitT_)
+!!!  write(*,*)'No2Si_V(UnitX_), temperature=',No2Si_V(UnitX_), No2Si_V(UnitTemperature_)
+!!!  No2Io_V(UnitN_)=1.0
+!!!  No2Si_V(UnitX_)=1.0
+!!!  No2Io_V(UnitT_)=1.0
+!!!  No2Si_V(UnitTemperature_)=1.0
     write(*,*)'BodynDenNuSpecies_I=',BodynDenNuSpecies_I
     write(*,*)'BodynDenNuSpecies_dim_I(1:nNuSpecies)',BodynDenNuSpecies_dim_I(1:nNuSpecies)
 
-    nu0=nu0_dim*unitUSER_n*unitUSER_t
+    nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
     XiT0 = SW_p*body_Ti_dim*cTwo/SW_T_dim
-    body_Tnu = body_Tnu_dim /unitSI_temperature
-    T300 = T300_dim/unitSI_temperature
+    body_Tnu = body_Tnu_dim *Si2No_V(UnitTemperature_)
+    T300 = T300_dim*Si2No_V(UnitTemperature_)
     BodynDenNuSpecies_I(1:nNuSpecies)=&
-         BodynDenNuSpecies_dim_I(1:nNuSpecies)/unitUSER_n
+         BodynDenNuSpecies_dim_I(1:nNuSpecies)/No2Io_V(UnitN_)
     HNuSpecies_I(1:nNuSpecies)=&
-         HNuSpecies_dim_I(1:nNuSpecies)/unitSI_x
+         HNuSpecies_dim_I(1:nNuSpecies)*Si2No_V(UnitX_)
 
     ! normlize the reaction rate
     Rate_I(CO2_hv__CO2p_em_)= &
-         Ratedim_I(CO2_hv__CO2p_em_)*unitUSER_t
+         Ratedim_I(CO2_hv__CO2p_em_)*No2Io_V(UnitT_)
     Rate_I(O_hv__Op_em_)=  &
-         Ratedim_I(O_hv__Op_em_)*unitUSER_t
+         Ratedim_I(O_hv__Op_em_)*No2Io_V(UnitT_)
     Rate_I(CO2p_O__O2p_CO_)=  &
          Ratedim_I(CO2p_O__O2p_CO_)  &
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(Op_CO2__O2p_CO_)=  &
          Ratedim_I(Op_CO2__O2p_CO_)*exp(log(8.0/3.0*T300/body_Tnu)*0.39) &
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(CO2p_O__Op_CO2_)=  &
          Ratedim_I(CO2p_O__Op_CO2_) &
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
     Rate_I(O2p_em__O_O_)=  &
          Ratedim_I(O2p_em__O_O_)*exp(log(4.0*T300/body_Tnu)*0.56)&
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(CO2p_em__CO_O_)=  &
          Ratedim_I(CO2p_em__CO_O_)*sqrt(T300/body_Tnu)&
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
     Rate_I(H_hv__Hp_em_)=  &
-         Ratedim_I(H_hv__Hp_em_)*unitUSER_t
+         Ratedim_I(H_hv__Hp_em_)*No2Io_V(UnitT_)
     Rate_I(Hp_O__Op_H_)=  &
          Ratedim_I(Hp_O__Op_H_) &
-         *unitUSER_t*unitUSER_n    
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)    
     Rate_I(Op_H__Hp_O_)=  &
          Ratedim_I(Op_H__Hp_O_) &
-         *unitUSER_t*unitUSER_n
+         *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
 
     ReactionRate_I(CO2_hv__CO2p_em_)= &
@@ -812,8 +812,8 @@ contains
          MassSpecies_I(:)
 
     write(*,*)' set parameters of Venus: BodyRhoSpecies_I(i)=',&
-         BodyRhoSpecies_I(1:nSpecies)*unitUSER_n/MassSpecies_I(1:nSpecies)
-    write(*,*)'neutral density=', BodynDenNuSpecies_I(1:nNuSpecies)*unitUSER_n
+         BodyRhoSpecies_I(1:nSpecies)*No2Io_V(UnitN_)/MassSpecies_I(1:nSpecies)
+    write(*,*)'neutral density=', BodynDenNuSpecies_I(1:nNuSpecies)*No2Io_V(UnitN_)
     write(*,*)'XiT0=',XiT0, 'nu0=',nu0
     !  write(*,*)'Rate_I=', Rate_I
     !  call stop_mpi('end')  
@@ -1070,9 +1070,9 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_ 
-    use ModPhysics,    ONLY: UnitUser_n
+    use ModPhysics,    ONLY: No2Io_V, UnitN_
     use ModAdvance,    ONLY: State_VGB, Rho_
-    use ModPhysics,    ONLY: UnitStr_Tec_n, UnitStr_Idl_n
+    use ModPhysics,    ONLY: NameTecUnit_V, NameIdlUnit_V, UnitN_
 
     ! Returns dimensional number density (/cc)
 
@@ -1108,10 +1108,10 @@ contains
     case default
        IsFound = .false.  
     end select
-    NameTecUnit = UnitStr_Tec_n
-    NameIdlUnit = UnitStr_Idl_n
+    NameTecUnit = NameTecUnit_V(UnitN_)
+    NameIdlUnit = NameIdlUnit_V(UnitN_)
 
-    Coeff          = UnitUser_n/MassSpecies_I(iVar)
+    Coeff          = No2Io_V(UnitN_)/MassSpecies_I(iVar)
     PlotVar_G      = Coeff*State_VGB(Rho_+iVar,:,:,:,iBlock)
     PlotVarBody    = BodyRhoSpecies_I(iVar)
     UsePlotVarBody = .True.

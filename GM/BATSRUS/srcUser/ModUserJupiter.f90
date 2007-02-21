@@ -3,8 +3,8 @@ Module ModUser
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
-  use ModUserEmpty:               &
-       IMPLEMENTED1 => user_read_inputs                 &
+  use ModUserEmpty,                                     &
+       IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_calc_sources
 
   include 'user_module.h' !list of public methods
@@ -200,10 +200,10 @@ contains
                   ! need to multiply by the mass of a proton times the 
                   ! #amu/partical (22.0) and 1.0e6 (to get 1/m^3) and then 
                   ! divide by (dimensions(rho)/dimensions(t)) which is 
-                  ! unitSI_rho/unitSI_t to get the normalized (dimensionless) 
+                  ! No2Si_V(UnitRho_)/No2Si_V(UnitT_) to get the normalized
                   ! form.
     
-                  rhodotNorm =  unitSI_t/unitSI_rho
+                  rhodotNorm =  No2Si_V(UnitT_)/No2Si_V(UnitRho_)
     
                   ! testing only
                   Alpha_rec = 0.0
@@ -278,7 +278,9 @@ contains
                      write(*,'(a,3(1X,E13.5))') 'rhodot(unnormalized):', &
                         rhodot/rhodotNorm
                      write(*,'(a,4(1X,E13.5))') 'rho(amu/cc),un,usq(km/s):', &
-                        State_VGB(rho_,i,j,k,globalBLK)*unitUSER_rho,un*unitUSER_U, usq*unitUSER_U
+                        State_VGB(rho_,i,j,k,globalBLK)*&
+                        No2Io_V(UnitRho_),un*No2Io_V(UnitU_),&
+                        usq*No2Io_V(UnitU_)
                      write(*,'(a,3(1X,E13.5))') 'rhodot (normalized):', &
                         rhodot
                      write(*,'(a,4(1X,E13.5))') 'rho, un, usq (normalized):', &
@@ -313,12 +315,13 @@ contains
                               (3*Z_BLK(i,j,k,globalBLK)*R_BLK(i,j,k,globalBLK)/Rxy**2)
                   
                   ! now get everything normalized - note that gradP_external is in Pascal/Rj.
-                  ! To get a unitless gradP_external we simply need to divide by unitSI_p
+                  ! To get a unitless gradP_external we simply need to divide 
+                  ! by No2Si_V(UnitP_)
                   ! since the derivative was computed using the unitless Rj.
                   
-                  gradP_external_X = gradP_external_X/unitSI_p
-                  gradP_external_Y = gradP_external_Y/unitSI_p
-                  gradP_external_Z = gradP_external_Z/unitSI_p
+                  gradP_external_X = gradP_external_X/No2Si_V(UnitP_)
+                  gradP_external_Y = gradP_external_Y/No2Si_V(UnitP_)
+                  gradP_external_Z = gradP_external_Z/No2Si_V(UnitP_)
                   
                   ! Now compute the source terms but do so in a way that ensures
                   ! no field aligned forces.  In other words compute
