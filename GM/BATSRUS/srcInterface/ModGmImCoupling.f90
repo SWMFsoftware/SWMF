@@ -13,7 +13,7 @@ module ModGmImCoupling
   use ModRaytrace, ONLY : ray,rayface
   use ModPhysics, ONLY: No2Si_V, Si2No_V, &
        UnitP_, UnitRho_, UnitTemperature_, UnitB_, &
-       Bdp, Bdp_dim, rCurrents, rBody
+       Bdp, DipoleStrengthSi, rCurrents, rBody
   implicit none
 
   character (len=*), parameter :: NameMod='ModGmImCoupling'
@@ -413,7 +413,7 @@ contains
                   *(MHD_Yeq(i,j+1)-MHD_Yeq(i+1,j+1)) &
                   -(MHD_Yeq(i+1,j)-MHD_Yeq(i+1,j+1)) &
                   *(MHD_Xeq(i,j+1)-MHD_Xeq(i+1,j+1))))/&
-                  (ABS(Bdp_dim)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
+                  (ABS(DipoleStrengthSi)*(SIN(Rcm_lat(i)*cDegToRad)**2 &
                   -SIN(Rcm_lat(i+1)*cDegToRad)**2)* &
                   (RCM_lon(j+1)-RCM_lon(j))*cDegToRad )- 1.0
           ELSE

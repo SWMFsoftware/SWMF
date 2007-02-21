@@ -11,7 +11,7 @@ module ModGmRbCoupling
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
   use ModRaytrace, ONLY : ray,rayface
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_, &
-       UnitB_, Bdp, Bdp_dim, rCurrents, rBody
+       UnitB_, Bdp, rCurrents, rBody
   implicit none
 
   character (len=*), parameter :: NameMod='ModGmRbCoupling'
