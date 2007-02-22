@@ -14,7 +14,8 @@ subroutine SC_put_from_ih(nPartial,&
   use SC_ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,&
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
 
-  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B! nVarGm => nVar
+  use SC_ModPhysics, ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
+
   implicit none
 
   !INPUT ARGUMENTS:
@@ -46,17 +47,13 @@ subroutine SC_put_from_ih(nPartial,&
        BuffBz_   =7,&
        BuffP_    =8
        
-
-  !----------------------------------------------------------
-
-
   !-----------------------------------------------------------------------
   
-  State_V(BuffRho_)              = StateSI_V(BuffRho_)     / UnitSI_rho
+  State_V(BuffRho_)              = StateSI_V(BuffRho_)     * Si2No_V(UnitRho_)
   State_V(BuffRhoUx_:BuffRhoUz_) = StateSI_V(BuffRhoUx_:BuffRhoUz_)&
-                                   /(UnitSI_rho*UnitSI_U)
-  State_V(BuffBx_:BuffBz_)       = StateSI_V(BuffBx_:BuffBz_)/ UnitSI_B
-  State_V(BuffP_)                = StateSI_V(BuffP_)         / UnitSI_p
+       * Si2No_V(UnitRhoU_)
+  State_V(BuffBx_:BuffBz_)       = StateSI_V(BuffBx_:BuffBz_)* Si2No_V(UnitB_)
+  State_V(BuffP_)                = StateSI_V(BuffP_)         * Si2No_V(UnitP_)
 
   i      = Put%iCB_II(1,iPutStart)
   j      = Put%iCB_II(2,iPutStart)

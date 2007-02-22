@@ -7,7 +7,7 @@ subroutine SC_get_for_ih(&
        rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_,P_
 
 
-  use SC_ModPhysics,ONLY:UnitSI_rho,UnitSI_p,UnitSI_U,UnitSI_B,inv_g
+  use SC_ModPhysics,ONLY:No2Si_V,UnitRho_,UnitP_,UnitRhoU_,UnitB_,inv_g
   use SC_ModMain,ONLY:DoSendMHD, x_,y_,z_,nDim
   use SC_ModGeometry,ONLY:x_BLK,y_BLK,z_BLK
   use SC_ModMagnetogram,ONLY:get_magnetogram_field
@@ -88,11 +88,11 @@ subroutine SC_get_for_ih(&
 
 
      ! Convert to SI units
-     State_V(BuffRho_)             = State_V(BuffRho_)     *UnitSI_rho
-     State_V(BuffRhoUx_:BuffRhoUz_)= &
-          State_V(BuffRhoUx_:BuffRhoUz_)*        (UnitSI_rho*UnitSI_U)
-     State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*UnitSI_B
-     State_V(BuffP_)               = State_V(BuffP_)         *UnitSI_p
+     State_V(BuffRho_)             = State_V(BuffRho_)     *No2Si_V(UnitRho_)
+     State_V(BuffRhoUx_:BuffRhoUz_)= State_V(BuffRhoUx_:BuffRhoUz_) &
+          *No2Si_V(UnitRhoU_)
+     State_V(BuffBx_:BuffBz_)      = State_V(BuffBx_:BuffBz_)*No2Si_V(UnitB_)
+     State_V(BuffP_)               = State_V(BuffP_)         *No2Si_V(UnitP_)
   else
      i      = Get%iCB_II(1,iGetStart)
      j      = Get%iCB_II(2,iGetStart)
@@ -131,8 +131,8 @@ subroutine SC_get_for_ih(&
 
      State_V(BuffRho_)=cOne/sum(X_D**2)
      State_V(BuffP_) = State_V(BuffRho_)*inv_g
-     State_V(BuffRho_) = State_V(BuffRho_)*UnitSI_rho
-     State_V(BuffP_  ) = State_V(BuffP_)  *UnitSI_p
+     State_V(BuffRho_) = State_V(BuffRho_)*No2Si_V(UnitRho_)
+     State_V(BuffP_  ) = State_V(BuffP_)  *No2Si_V(UnitP_)
 
 
      call SC_get_bernoulli_integral(X_D(x_),X_D(y_),X_D(z_),'WSA',&
