@@ -157,7 +157,7 @@ contains
   end subroutine user_set_ics
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue, TypeVar)
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModMain,     ONLY: nI, nJ, nK, nBlock, UnusedBlk
     use ModAdvance,  ONLY: Bz_, State_VGB
@@ -165,6 +165,7 @@ contains
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
 
     character (len=*), parameter :: Name='user_get_log_var'
 

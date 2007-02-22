@@ -1358,7 +1358,7 @@ contains
   end subroutine user_update_states
 
   !========================================================================
-  subroutine user_get_log_var(VarValue,TypeVar)
+  subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModProcMH,     ONLY: nProc
     use ModIO,         ONLY: dn_output,logfile_,write_myname
@@ -1371,8 +1371,10 @@ contains
     use ModPhysics,    ONLY: inv_gm1,&
          No2Si_V,UnitEnergydens_,UnitX_,UnitU_,UnitRho_
     use ModNumConst,   ONLY: cOne,cHalf,cE1,cE3,cE6
+
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar 
+    real, intent(in), optional :: Radius
     !
     integer:: iBLK
     real:: unit_energy,unit_mass

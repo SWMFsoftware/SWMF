@@ -3223,7 +3223,7 @@ contains
   ! The variables specific to the problem are loaded from ModUser.
   !
   !========================================================================
-  subroutine user_get_log_var(VarValue,TypeVar)
+  subroutine user_get_log_var(VarValue,TypeVar,Radius)
     use ModProcMH,     ONLY: nProc
     use ModIO,         ONLY: dn_output,logfile_,write_myname
     use ModMain,       ONLY: unusedBLK,nBLK,iteration_number,   &
@@ -3238,6 +3238,7 @@ contains
     use ModNumConst,   ONLY: cOne,cHalf,cE1,cE3,cE6
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar 
+    real, intent(in), optional :: Radius
 
     integer:: iBLK
     real:: unit_energy,unit_mass
