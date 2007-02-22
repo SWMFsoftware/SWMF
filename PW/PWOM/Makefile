@@ -47,10 +47,6 @@ test_earth:
 	@echo "test_check..." >> test_Earth.diff
 	make test_check
 
-test_earth_compile:
-	./Config.pl -Earth
-	make PWOM
-
 test_saturn:
 	@echo "starting..." > test_Saturn_plots.diff
 	@echo "test_compile..." > test_Saturn.diff
