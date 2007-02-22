@@ -794,7 +794,16 @@ contains
           RETURN
        end do
        if (UseUserLogFiles) then
-          call user_get_log_var( LogVar_I(iVarTot), NameLogVar )
+          if (index(NameLogVar,'flx')>0)then
+             iVarTot = iVarTot - 1
+             do iR=1,nLogR
+                iVarTot = iVarTot + 1
+                R_log = LogR_I(iR)           
+                call user_get_log_var( LogVar_I(iVarTot),NameLogVar,R_log )
+             end do
+          else
+             call user_get_log_var( LogVar_I(iVarTot), NameLogVar )
+          end if
        else
           if(iProc == 0)then
              LogVar_I(iVarTot) = -7777.
@@ -987,9 +996,11 @@ real function integrate_sphere(nTheta,Radius,Array)
   ! The resolution in the colatitude is determined by the nTheta parameter.
 
   use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
+       r_BLK,xyzStart_BLK
   use ModNumConst
   use ModCoordTransform, ONLY: sph_to_xyz
+  use ModCovariant, oNLY: TypeGeometry
   implicit none
 
   ! Arguments
@@ -1002,21 +1013,54 @@ real function integrate_sphere(nTheta,Radius,Array)
   real :: Integral, Darea0, Darea, Average 
 
   ! Indices and coordinates
-  integer :: iBlock,i,j,i1,i2,j1,j2,k1,k2
+  integer :: iBlock,i,j,i1,i2,j1,j2,k1,k2, k
   integer :: MaxPhi, nPhi
-  real    :: x, y, z, DxInv, DyInv, DzInv, xNorm, yNorm, zNorm, Dx, Dy, Dz
-  real    :: xMin, xMax, yMin, yMax, zMin, zMax
+  real    :: x, y, z, DxInv, DyInv, DzInv, xNorm, yNorm, zNorm, Dx, Dy, Dz, dr
+  real    :: xMin, xMax, yMin, yMax, zMin, zMax, rMin, rMax
   real    :: dTheta, dPhi, Theta, Phi, SinTheta, CosTheta
 
   ! Store cartesian coordinates for sake of efficiency
   ! The x and y depend on iPhi,iTheta while z only depends on iTheta
   !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
 
-  logical :: DoTest,DoTestMe
+  logical :: DoTest=.false.,DoTestMe=.false.
+  real:: SinTheta1
   !---------------------------------------------------------------------------
 
   call set_oktest('integrate_sphere',DoTest,DoTestMe)
   call timing_start('int_sphere')
+
+  if(index(TypeGeometry,'spherical')>0.)then
+     Integral = 0.0
+     do iBlock = 1, nBlock
+        if (unusedBLK(iBlock)) CYCLE
+        rMin = cHalf*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
+        if(rMin > Radius) CYCLE
+        rMax = cHalf*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
+        if(rMax <= Radius) CYCLE
+
+        dtheta=dz_BLK(iBlock); dphi=dy_BLK(iBlock)
+        dArea0 = Radius**2 *dPhi *dtheta
+        i1=0
+        do while ( Radius > R_BLK( i1, 1, 1, iBlock))
+           i1= i1+1
+        end do
+        i2=i1; i1=i2-1
+        Dr = (Radius - R_BLK( i1, 1, 1, iBlock))&
+             /(R_BLK( i2, 1, 1, iBlock)-R_BLK( i1, 1, 1, iBlock))
+        if(Dr<0.or.Dr>1)call stop_mpi('wrong index in integrate_sphere')
+        do k = 1, nK           
+           SinTheta = sqrt(X_BLK(1,1,k,iBlock)**2+Y_BLK(1,1,k,iBlock)**2)&
+                /R_BLK(1,1,k,iBlock)
+           Average = dr * sum( Array(i2,1:nJ,k, iBlock)) + &
+                (1-dr)*sum( Array(i1,1:nJ,k, iBlock) )
+           Integral = Integral + dArea0*sinTheta * Average      
+        end do
+     end do
+     integrate_sphere = Integral
+     call timing_stop('int_sphere')
+     RETURN
+  end if
 
   ! Get the angular resolution from the input parameter nTheta
   MaxPhi = 2*nTheta
