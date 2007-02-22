@@ -1,12 +1,7 @@
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
-  ! This is the default user module which contains empty methods defined
-  ! in ModUserEmpty.f90
-  !
-  ! Please see the documentation, and the files ModUserEmpty.f90 and 
-  ! srcUser/ModUserExamples.f90 for information about what the different user
-  ! subroutines do and how to implement them for your specific problem.
+  ! This is the user module for Mars 
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
@@ -21,7 +16,8 @@ module ModUser
        IMPLEMENTED7 => user_update_states,              &
        IMPLEMENTED8 => user_set_plot_var,               &
        IMPLEMENTED9 => user_get_b0,                     &
-       IMPLEMENTED10 => user_specify_initial_refinement
+       IMPLEMENTED10 => user_get_log_var,               &
+       IMPLEMENTED11 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -1534,5 +1530,82 @@ contains
     end do !m
   end subroutine MarsB0
 
-  
+!=====================================================================
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+         dx_BLK,dy_BLK,dz_BLK
+    use ModMain,       ONLY: unusedBLK
+    use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
+         rhoUx_,rhoUy_,rhoUz_
+    use ModGeometry,   ONLY: R_BLK
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
+
+    real :: R_log = 5.0
+    integer:: i,j,k,iBLK
+    character (len=*), parameter :: Name='user_get_log_var'
+    !-------------------------------------------------------------------
+    select case(TypeVar)
+    case('Hpflx')
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoHp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+      VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+
+    case('Opflx')
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoOp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = integrate_sphere(360, Radius, tmp1_BLK)    
+    case('O2pflx')
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoO2p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+    
+    case('CO2pflx')
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoCO2p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+    
+    case default
+
+    end select
+
+  end subroutine user_get_log_var
+!  function integrate_sph(360, R_log, tmp1_BLK)
+    
+!  end function integrate_sph
 end module ModUser
