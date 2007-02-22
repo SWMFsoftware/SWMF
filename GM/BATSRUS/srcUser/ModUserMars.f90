@@ -1540,16 +1540,23 @@ contains
          rhoUx_,rhoUy_,rhoUz_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
     real, intent(in), optional :: Radius
 
-    real :: R_log = 5.0
+    real, external :: integrate_sphere
+    real ::mass
     integer:: i,j,k,iBLK
     character (len=*), parameter :: Name='user_get_log_var'
+    logical:: oktest=.false.,oktest_me
     !-------------------------------------------------------------------
+    call set_oktest('user_get_log_var',oktest,oktest_me)
+    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
     select case(TypeVar)
-    case('Hpflx')
+    case('hpflx')
+       mass=1.0
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -1562,7 +1569,8 @@ contains
        end do
       VarValue = integrate_sphere(360, Radius, tmp1_BLK)
 
-    case('Opflx')
+    case('opflx')
+       mass=16.
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -1574,7 +1582,8 @@ contains
           end do; end do; end do          
        end do
        VarValue = integrate_sphere(360, Radius, tmp1_BLK)    
-    case('O2pflx')
+    case('o2pflx')
+       mass=32.
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -1587,7 +1596,8 @@ contains
        end do
        VarValue = integrate_sphere(360, Radius, tmp1_BLK)
     
-    case('CO2pflx')
+    case('co2pflx')
+       mass=44.
        do iBLK=1,nBLK
           if (unusedBLK(iBLK)) CYCLE
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -1601,11 +1611,13 @@ contains
        VarValue = integrate_sphere(360, Radius, tmp1_BLK)
     
     case default
-
+       call stop_mpi('wrong logvarname')
     end select
+    !change to user value from normalized flux
+    !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
+    !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
+    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
 
   end subroutine user_get_log_var
-!  function integrate_sph(360, R_log, tmp1_BLK)
-    
-!  end function integrate_sph
+
 end module ModUser
