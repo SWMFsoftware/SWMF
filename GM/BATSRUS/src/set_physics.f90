@@ -4,7 +4,12 @@
 ! module (GM/IH/SC) dependent physical parameters
 !/
 subroutine set_physics_constants
+
   use ModProcMH
+  use ModAMR
+  use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D
+  use ModGeometry, ONLY: is_axial_geometry              !^CFG IF COVARIANT
+  use ModIO,       ONLY: plot_range, plot_dx, plot_, nPlotFile
   use ModMain
   use ModPhysics
   use CON_axes,   ONLY: get_axes
@@ -15,14 +20,14 @@ subroutine set_physics_constants
 
   real :: MassBodySi
   real :: MassBody2Si                 !^CFG IF SECONDBODY
-  real :: cosTheta, sinTheta, cosPhi, sinPhi, & 
-       xx, yy, zz
 
-  integer :: i, iBoundary
+  integer :: i, iBoundary, iArea, iFile
 
-  logical :: oktest, oktest_me
+  character (len=*), parameter :: NameSub = "set_physics_constants"
 
-  call set_oktest('set_physics_constants',oktest, oktest_me)
+  logical :: DoTest, DoTestMe
+  !-------------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   !\
   ! Load body rotation rates, masses, and radii by module (GM/IH/SC)
@@ -53,7 +58,7 @@ subroutine set_physics_constants
   !/
   call set_units
 
-  if(oktest .and. iProc==0) then
+  if(DoTest .and. iProc==0) then
      write(*,'(4a15)')'No2Io_V','NameIdlUnit_V','No2Si_V','NameSiUnit_V'
      do i=1, nIoUnit
         write(*,'(es15.6," ",a6,"        ",es15.6," ",a6)') &
@@ -61,6 +66,47 @@ subroutine set_physics_constants
              No2Si_V(i), NameSiUnit_V(i)
      end do
   end if
+
+  ! This part is commented out, because it works for a single session only
+  ! and it may not be complete. This means that the distances have to be given
+  ! in normalized units in the PARAM.in file.
+  !\
+  ! Normalize all the distance variables
+  !/
+  !x1 = x1*Io2No_V(UnitX_)
+  !x2 = x2*Io2No_V(UnitX_)
+  !y1 = y1*Io2No_V(UnitX_)
+  !y2 = y2*Io2No_V(UnitX_)
+  !z1 = z1*Io2No_V(UnitX_)
+  !z2 = z2*Io2No_V(UnitX_)
+  !
+  !call set_xyzminmax
+  !
+  !do iFile = plot_+1, plot_+nplotfile
+  !   if(is_axial_geometry())then     !^CFG IF COVARIANT BEGIN
+  !      plot_range(1:2,iFile) = plot_range(1:2,iFile)*Io2No_V(UnitX_)
+  !   else                            !^CFG END COVARIANT
+  !      plot_range(1:6,iFile) = plot_range(1:6,iFile)*Io2No_V(UnitX_)
+  !   end if                          !^CFG IF COVARIANT
+  !   where(plot_dx(:,iFile) > 0.) &
+  !        plot_dx(:,iFile) = plot_dx(:,iFile)*Io2No_V(UnitX_)
+  !end do
+  !
+  !do iArea = 1, nArea
+  !   Area_I(iArea)%Resolution = Area_I(iArea)%Resolution * Io2No_V(UnitX_)
+  !   Area_I(iArea)%Center_D   = Area_I(iArea)%Center_D   * Io2No_V(UnitX_)
+  !   Area_I(iArea)%Size_D     = Area_I(iArea)%Size_D     * Io2No_V(UnitX_)
+  !   Area_I(iArea)%Radius1    = Area_I(iArea)%Radius1    * Io2No_V(UnitX_)
+  !   Area_I(iArea)%Radius2    = Area_I(iArea)%Radius2    * Io2No_V(UnitX_)
+  !end do
+  !
+  !rBody     = rBody     * Io2No_V(UnitX_)
+  !rCurrents = rCurrents * Io2No_V(UnitX_)
+  !
+  !write(*,*)'!!! nArea = ',nArea
+  !write(*,*)'!!! Area_I(1)%Resolution = ',Area_I(1)%Resolution
+  !write(*,*)'!!! XyzMin_D=',XyzMin_D
+  !write(*,*)'!!! XyzMax_D=',XyzMax_D
 
   !\
   ! set the (corrected) speed of light and get normalization
@@ -80,7 +126,7 @@ subroutine set_physics_constants
   else
      if(UseRotatingFrame)then
         write(*,*) "--------------------------------------------------"
-        write(*,*) "WARNING in set_physics:                           "
+        write(*,*) "WARNING in ",NameSub,":"
         write(*,*) "You have set UseRotatingFrame = ",UseRotatingFrame
         write(*,*) "but RotPeriodSi in seconds= ",RotPeriodSi
         write(*,*) "This is too fast! Setting OmegaBody=0.0           "
@@ -200,9 +246,9 @@ subroutine set_units
 
   character (len=*), parameter :: NameSub="set_units"
 
-  logical :: oktest, oktest_me
+  logical :: DoTest, DoTestMe
   !-----------------------------------------------------------------------
-  call set_oktest(NameSub,oktest, oktest_me)
+  call set_oktest(NameSub,DoTest, DoTestMe)
 
   !\
   ! set variables for converting from normalized to SI units and back:
