@@ -316,7 +316,7 @@ subroutine set_units
      ! Already set above
   case("PLANETARY")
      Io2Si_V(UnitX_)        = rPlanetSi                       ! planetary radii
-     Io2Si_V(UnitRho_)      = 1.e6*cProtonMass*AverageIonMass ! M_i/cm^3
+     Io2Si_V(UnitRho_)      = 1.0E6*cProtonMass               ! Mp/cm^3
      Io2Si_V(UnitN_)        = 1.0E6                           ! #/cm^3
      Io2Si_V(UnitU_)        = 1.0E3                           ! km/s
      Io2Si_V(UnitP_)        = 1.0E-9                          ! nPa
@@ -343,7 +343,7 @@ subroutine set_units
      ! set string variables used for writing output - IDL
      !/
      NameIdlUnit_V(UnitX_)           = 'R'
-     NameIdlUnit_V(UnitRho_)         = 'Mi/cc'
+     NameIdlUnit_V(UnitRho_)         = 'Mp/cc'
      NameIdlUnit_V(UnitU_)           = 'km/s'
      NameIdlUnit_V(UnitN_)           = '/cc'
      NameIdlUnit_V(UnitP_)           = 'nPa'           
