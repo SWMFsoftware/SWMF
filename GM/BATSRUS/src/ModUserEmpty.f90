@@ -126,10 +126,11 @@ contains
   end subroutine user_write_progress
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue, TypeVar)
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
 
     character (len=*), parameter :: Name='user_get_log_var'
     !-------------------------------------------------------------------
