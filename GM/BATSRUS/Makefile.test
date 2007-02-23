@@ -74,7 +74,7 @@ test_func:
 
 test_func_compile:
 	make clean
-	./Config.pl -u=Default -e=Mhd -g=8,8,8,400,100
+	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,40
 	make BATSRUS PIDL PSPH
 
 test_func_run: test_rundir
@@ -82,12 +82,7 @@ test_func_run: test_rundir
 
 test_func_check:
 	rm -rf ${REFDIR}; mkdir ${REFDIR}
-	cd ${REFDIR}; \
-		(if [ "${MPIRUN}" = "" ]; then \
-			tar -xzf ../Param/TESTSUITE/TEST_1proc.tgz; \
-		else \
-			tar -xzf ../Param/TESTSUITE/TEST.tgz; \
-		fi);
+	cd ${REFDIR}; tar -xzf ../Param/TESTSUITE/TEST.tgz; 
 	./TestCompare.pl -q -v -o=1e-8 ${REFDIR} ${TESTDIR} > test_func.diff
 	./TestCompare.pl -speed ${REFDIR} ${TESTDIR} > test_func.speed
 	ls -l test_func.diff test_func.speed
