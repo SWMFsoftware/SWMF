@@ -32,6 +32,7 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
   real :: x,y,z,dx,r_3
   real :: xmin1,xmax1,ymin1,ymax1,zmin1,zmax1
   real :: dxblk_out
+  real :: Plot_V(nPlotVarMax)
 
   real :: ySqueezed
 
@@ -79,8 +80,11 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
         if(save_binary)then
            write(unit_tmp)dxblk_out,x,y,z,PlotVar(i,j,k,1:nplotvar)
         else
-           write(unit_tmp,'(20(1pe13.5))')dxblk_out,x,y,z,&
-                PlotVar(i,j,k,1:nplotvar)
+           do iVar=1,nPlotVar
+              Plot_V(iVar) = PlotVar(i,j,k,iVar)
+              if(abs(Plot_V(iVar))<1.0e-99)Plot_V(iVar)=0.0
+           end do
+           write(unit_tmp,'(20(1pe13.5))')DxBlk_Out,x,y,z,Plot_V(1:nPlotVar)
         endif
      end do; end do; end do
 
@@ -159,11 +163,14 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
 		 z = z*No2Io_V(UnitX_)
               end if
               if(save_binary)then
-                 write(unit_tmp)dxblk_out,x,y,z,&
-   		      PlotVar(i,j,k,1:nplotvar)
+                 write(unit_tmp)dxblk_out,x,y,z,PlotVar(i,j,k,1:nplotvar)
               else
-                 write(unit_tmp,'(20(1pe13.5))')dxblk_out,x,y,z,& 
-                      PlotVar(i,j,k,1:nplotvar)
+                 do iVar=1,nPlotVar
+                    Plot_V(iVar) = PlotVar(i,j,k,iVar)
+                    if(abs(Plot_V(iVar))<1.0e-99)Plot_V(iVar)=0.0
+                 end do
+                 write(unit_tmp,'(20(1pe13.5))')DxBlk_Out,x,y,z,&
+                      Plot_V(1:nPlotVar)
               endif
               nBLKcells=nBLKcells+1
            end do
@@ -210,12 +217,17 @@ subroutine write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
                  y=y*No2Io_V(UnitX_)
                  z=z*No2Io_V(UnitX_)
               end if
+              do iVar=1,nPlotVar
+                 Plot_V(iVar) = r_3*sum(PlotVar(i:i2,j:j2,k:k2,iVar))
+              end do
               if(save_binary)then
-                 write(unit_tmp)dxblk_out,x,y,z,&
-                      (r_3*sum(PlotVar(i:i2,j:j2,k:k2,iVar)),iVar=1,nplotvar)
+                 write(unit_tmp)dxblk_out,x,y,z,Plot_V(1:nPlotVar)
               else
-                 write(unit_tmp,'(20(1pe13.5))')dxblk_out,x,y,z,&
-                      (r_3*sum(PlotVar(i:i2,j:j2,k:k2,iVar)),iVar=1,nplotvar)
+                 do iVar=1,nPlotVar
+                    if(abs(Plot_V(iVar))<1.0e-99)Plot_V(iVar)=0.0
+                 end do
+                 write(unit_tmp,'(20(1pe13.5))')DxBlk_Out,x,y,z,&
+                      Plot_V(1:nPlotVar)
               endif
               nBLKcells=nBLKcells+1
            end do
