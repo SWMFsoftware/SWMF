@@ -2,7 +2,7 @@
 
 ### TESTS FOR STAND-ALONE BATSRUS ###
 
-test: test_titan test_func
+test: test_shocktube test_titan test_func
 	ls -l *.diff
 
 # All tests are done in this directory:
@@ -19,14 +19,48 @@ test_help:
 	@echo "    test MPIRUN=               (run all tests serially)"
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
-	@echo "    test_func                  (run functionality tests only)"
+	@echo "    test_shocktube             (run shocktube test only)"
 	@echo "    test_titan                 (run titan tests only)"
 	@echo "    test_titan_start           (run first titan test only)"
 	@echo "    test_titan_restart         (run titan restart test only)"
+	@echo "    test_func                  (run functionality tests only)"
 
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
+
+
+### SHOCK TUBE TEST ###
+
+test_shocktube:
+	@echo "test_shocktube_compile..." > test_shocktube.diff
+	make test_shocktube_compile
+	@echo "test_shocktube_rundir..." >> test_shocktube.diff
+	make test_shocktube_rundir
+	@echo "test_shocktube_run..." >> test_shocktube.diff
+	make test_shocktube_run
+	@echo "test_shocktube_check..." >> test_shocktube.diff
+	make test_shocktube_check
+
+test_shocktube_compile:
+	make clean
+	./Config.pl -u=Default -e=Mhd -g=256,4,4,10,1
+	make
+	make PIDL
+
+test_shocktube_rundir: test_rundir
+	cd ${TESTDIR}; cp GM/Param/SHOCKTUBE/PARAM.in .
+
+test_shocktube_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+
+test_shocktube_check:
+	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000358_pe*.idl \
+		> ${TESTDIR}/GM/IO2/cut_25.idl
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+	  Param/SHOCKTUBE/TestOutput/cut_raw_2_t00000025_n0000358_pe0000.idl \
+	  ${TESTDIR}/GM/IO2/cut_25.idl > test_shocktube.diff
+	ls -l test_shocktube.diff
 
 ### FUNCTIONALITY TEST SUITE ###
 
