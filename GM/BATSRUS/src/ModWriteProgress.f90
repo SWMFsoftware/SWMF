@@ -5,6 +5,7 @@ subroutine write_progress(inopt)
   use ModProcMH
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix
+  use ModUser, ONLY: NameUserModule, VersionUserModule
   implicit none
 
   integer, intent(in) :: inopt
@@ -14,21 +15,23 @@ subroutine write_progress(inopt)
 
   select case(inopt)
   case (0)
-     call write_prefix; write(iUnitOut,&
-          '(1X,''BATSRUS: Block Adaptive Tree Solar-Wind '', &
-          & ''Roe Upwind Scheme'')')
-     call write_prefix; write(iUnitOut,&
-          '(1X,''         for 3D Heliospheric Flows,'')')
-     call write_prefix; write(iUnitOut,&
-          '(1X,''University of Michigan, 1995-2004.'')')
-     call write_prefix; write(iUnitOut,*)
+     write(iUnitOut,*)
+     call write_prefix; write(iUnitOut,'(a)') &
+          " BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme"
+     call write_prefix; write(iUnitOut,'(a)') &
+          "          for 3D Heliospheric Flows"
+     call write_prefix; write(iUnitOut,'(a)') &
+          " University of Michigan, 1995-2007"
+     write(iUnitOut,*)
      if(IsStandAlone)then
-        write(*,'(a,f4.2,a,i4,a)') &
+        call write_prefix; write(iUnitOut,'(a,f4.2,a,i4,a)') &
              ' BATSRUS version ',CodeVersion,&
              ' is running as '//NameThisComp//' on ',nProc,' PE(s)'
-        write(*,*)
+        write(iUnitOut,*)
      end if
-     call option_list
+     call write_prefix; write(iUnitOut,'(a,f5.2)') &
+          ' USER MODULE: '//NameUserModule,VersionUserModule
+     write(iUnitOut,*)
   case (1)
      call write_prefix; write(iUnitOut,*)
      call write_prefix
@@ -60,7 +63,7 @@ subroutine write_runtime_values()
   use ModPlanetConst, ONLY: Planet_
   use ModUser, ONLY: user_write_progress
   implicit none
-  
+
   character (len=35) :: TextPlanetMod = ''
   character (len=15) :: PeriodOut=''
   character (len=100):: StringFormat
@@ -81,37 +84,40 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   --------------------------'
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
-  call write_prefix; write(iUnitOut,*)'   --------------------'
-  call write_prefix; write(iUnitOut,*)
-  if (IsPlanetModified) TextPlanetMod = '(---!---Defaults Modified---!---)'
-  if ((Planet_ .gt. 0) .and. body1) then
-    call write_prefix; write(iUnitOUT,'(10X,A16,A,2X,A)')  &
-         'Planet:         ', NamePlanet(1:len_trim(NamePlanet)),TextPlanetMod
-    StringFormat = '(10X,A16,ES13.5)'
-    call write_prefix; write(iUnitOUT,StringFormat) &
-         'Radius:         ', RadiusPlanet
-    call write_prefix; write(iUnitOUT,StringFormat) &
-         'Mass:           ', MassPlanet
-    call write_prefix; write(iUnitOUT,StringFormat) &
-         'Rotation Tilt:  ', TiltRotation
-    call write_prefix; write(iUnitOUT,StringFormat) &
-         'Iono Height:    ', IonosphereHeight
-    PeriodOut = 'Not Rotating'
-    if (OmegaPlanet /= 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaPlanet
-    call write_prefix; write(iUnitOUT,'(10X,A16,A13)')'Rotation Period:', &
-         PeriodOut(1:len_trim(PeriodOut))
-    PeriodOut = 'Not Orbiting'
-    if (OmegaOrbit .ne. 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaOrbit
-    call write_prefix; write(iUnitOUT,'(10X,A16,A)')'Orbit Period:   ', &
-         PeriodOut(1:len_trim(PeriodOut))
-  else
-    call write_prefix; write(iUnitOUT,*)'Planet:         NONE'
+  !if (IsPlanetModified) TextPlanetMod = '(---!---Defaults Modified---!---)'
+  if (body1 .and. Planet_ > 0) then
+     call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
+     call write_prefix; write(iUnitOut,*)'   --------------------'
+     call write_prefix; write(iUnitOut,*)
+     call write_prefix; write(iUnitOUT,'(10X,A,A)')  &
+          'Name:            ', trim(NamePlanet)
+     StringFormat = '(10X,A16,ES13.5)'
+     call write_prefix; write(iUnitOUT,StringFormat) &
+          'Radius:         ', RadiusPlanet
+     call write_prefix; write(iUnitOUT,StringFormat) &
+          'Mass:           ', MassPlanet
+     call write_prefix; write(iUnitOUT,StringFormat) &
+          'Rotation Tilt:  ', TiltRotation
+     PeriodOut = 'Not Rotating'
+     if (OmegaPlanet /= 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaPlanet
+     call write_prefix; write(iUnitOUT,'(10X,A16,A13)')'Rotation Period:', &
+          trim(PeriodOut)
+     PeriodOut = 'Not Orbiting'
+     if (OmegaOrbit .ne. 0.0) write(PeriodOut,'(ES13.5)') cTwoPi/OmegaOrbit
+     call write_prefix; write(iUnitOUT,'(10X,A16,A)')'Orbit Period:   ', &
+          trim(PeriodOut)
+     call write_prefix; write(iUnitOUT,StringFormat) &
+          'Iono Height:    ', IonosphereHeight
+     call write_prefix; write(iUnitOut,*)
   end if
-
-  call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*) '   Physical Parameters'
   call write_prefix; write(iUnitOut,*) '   -------------------'
+  call write_prefix; write(iUnitOut,*)
+  call write_prefix; write(iUnitOUT,'(10X,a)') &
+       'I/O Unit type: '//trim(TypeIoUnit)//'            '// &
+       'Normalization: '//trim(TypeNormalization)
+  call write_prefix; write(iUnitOut,*)
+  call write_prefix; write(iUnitOut,'(10X,a,f12.8)') 'gamma:       ',g
   call write_prefix; write(iUnitOut,*)
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
@@ -156,34 +162,33 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))')&
        'cLIGHTfactor:',boris_cLIGHT_factor,', cLIGHT:    ',cLIGHT
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOUT,*) 'I/O Unit Type:  ',trim(TypeIoUnit)
-  call write_prefix; write(iUnitOUT,*) 'Normalization:  ',&
-       trim(TypeNormalization)
-  call write_prefix; write(iUnitOut,*)
-  StringFormat = '(10X,A17,"]: ",F15.6,A10,F15.6)'
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_n_dim   ['//NameIdlUnit_V(UnitN_),SW_n_dim,  ',  SW_n:  ',SW_n
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Rho_dim ['//NameIdlUnit_V(UnitRho_),SW_Rho_dim,',  SW_Rho:',SW_Rho
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Ux_dim  ['//NameIdlUnit_V(UnitU_),SW_Ux_dim, ',  SW_Ux: ',SW_Ux
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Uy_dim  ['//NameIdlUnit_V(UnitU_),SW_Uy_dim, ',  SW_Uy: ',SW_Uy
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Uz_dim  ['//NameIdlUnit_V(UnitU_),SW_Uz_dim, ',  SW_Uz: ',SW_Uz
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_p_dim   ['//NameIdlUnit_V(UnitP_),SW_p_dim,  ',  SW_p:  ',SW_p
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Bx_dim  ['//NameIdlUnit_V(UnitB_),SW_Bx_dim, ',  SW_Bx: ',SW_Bx
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_By_dim  ['//NameIdlUnit_V(UnitB_),SW_By_dim, ',  SW_By: ',SW_By
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_Bz_dim  ['//NameIdlUnit_V(UnitB_),SW_Bz_dim, ',  SW_Bz: ',SW_Bz
-  StringFormat = '(10X,A17,"]: ",F15.6)'
-  call write_prefix; write(iUnitOut,StringFormat) &
-       'SW_T_dim   ['//NameIdlUnit_V(UnitTemperature_),SW_T_dim
 
+  if(NameThisComp == 'GM' .and. .not. UseShockTube)then
+     call write_prefix; write(iUnitOut,*)
+     StringFormat = '(10X,A17,"]: ",F15.6,A10,F15.6)'
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_n_dim   ['//NameIdlUnit_V(UnitN_),SW_n_dim,  ',  SW_n:  ',SW_n
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Rho_dim ['//NameIdlUnit_V(UnitRho_),SW_Rho_dim,',  SW_Rho:',&
+          SW_Rho
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Ux_dim  ['//NameIdlUnit_V(UnitU_),SW_Ux_dim, ',  SW_Ux: ',SW_Ux
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Uy_dim  ['//NameIdlUnit_V(UnitU_),SW_Uy_dim, ',  SW_Uy: ',SW_Uy
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Uz_dim  ['//NameIdlUnit_V(UnitU_),SW_Uz_dim, ',  SW_Uz: ',SW_Uz
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_p_dim   ['//NameIdlUnit_V(UnitP_),SW_p_dim,  ',  SW_p:  ',SW_p
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Bx_dim  ['//NameIdlUnit_V(UnitB_),SW_Bx_dim, ',  SW_Bx: ',SW_Bx
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_By_dim  ['//NameIdlUnit_V(UnitB_),SW_By_dim, ',  SW_By: ',SW_By
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_Bz_dim  ['//NameIdlUnit_V(UnitB_),SW_Bz_dim, ',  SW_Bz: ',SW_Bz
+     StringFormat = '(10X,A17,"]: ",F15.6)'
+     call write_prefix; write(iUnitOut,StringFormat) &
+          'SW_T_dim   ['//NameIdlUnit_V(UnitTemperature_),SW_T_dim
+  end if
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'   MHD Numerical Solution Parameters'
   call write_prefix; write(iUnitOut,*)'   ---------------------------------'
@@ -198,8 +203,8 @@ subroutine write_runtime_values()
      call write_prefix
      write(iUnitOut,'(10x,a,a)')'with limiter ',TypeLimiter
      if(TypeLimiter /= 'minmod') then
-        call write_prefix
-        write(iUnitOut,'(10x,a,e13.5)')'beta=',BetaLimiter
+        call write_prefix;
+        write(iUnitOut,'(10x,a,f5.2)')'beta=',BetaLimiter
      end if
   end select
   call write_prefix
@@ -210,7 +215,7 @@ subroutine write_runtime_values()
   end if
 
   call write_prefix
-  write(iUnitOut,'(10X,a,a)') FluxType,' Flux Function'
+  write(iUnitOut,'(10X,a,a)') trim(FluxType),' Flux Function'
 
   call write_prefix
   if (UseImplicit) then                            !^CFG IF IMPLICIT BEGIN
@@ -242,7 +247,7 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ',minDXvalue,'  Largest cell dx: ',maxDXvalue
   call write_prefix; write(iUnitOut,*)
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'proc_dims:   ',proc_dims(1:3)
+  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ',proc_dims(1:3)
   call write_prefix
   write(iUnitOut,'(1x,a,3i8)')    'nCells:      ',nCells(1:3)
   call write_prefix
@@ -255,8 +260,6 @@ subroutine write_runtime_values()
   write(iUnitOut,'(1x,a,1i8)')    'multistage:  ',nSTAGE
   call write_prefix
   write(iUnitOut,'(1x,a,1f16.8)') 'cfl:         ',cfl
-  call write_prefix
-  write(iUnitOut,'(1x,a,4f16.8)') 'gamma:       ',g,gm1,gm2,gp1
   call write_prefix; write(iUnitOut,*)
   if(UseUserEchoInput) call user_write_progress
 end subroutine write_runtime_values
@@ -275,46 +278,3 @@ subroutine write_timeaccurate
 
 end subroutine write_timeaccurate
 
-!===========================================================================
-
-subroutine option_list
-
-  use ModIO, ONLY: iUnitOut, write_prefix
-  use ModUser, ONLY: NameUserModule, VersionUserModule
-  implicit none
-
-  logical            :: on
-  character (len=40) :: name
-  real               :: number
-  !---------------------------------------------------------------------------
-  call write_prefix; write(iUnitOut,'(a)') &
-       '#=================================================================#'
-  call OPTION_CONSTRAIN_B(on,name);  call write_option     !^CFG IF CONSTRAINB
-  call OPTION_PROJECTION(on,name);   call write_option     !^CFG IF PROJECTION
-  call OPTION_RAYTRACING(on,name);   call write_option     !^CFG IF RAYTRACE
-  call OPTION_IMPLICIT(on,name);     call write_option     !^CFG IF IMPLICIT
-  call write_prefix; write(iUnitOut,'(a)') &
-       '#=================================================================#'
-
-  call write_prefix; write(iUnitOut,'(a,f5.2)') &
-       '# USER MODULE: '//NameUserModule,VersionUserModule
-  call write_prefix; write(iUnitOut,'(a)') &
-       '#=================================================================#'
-
-
-  call write_prefix; write(iUnitOut,*)
-
-contains
-
-  subroutine write_option
-    character(len=9) :: String
-    if(on)then
-       String=' is ON  #'
-    else
-       String=' is OFF #'
-    end if
-    call write_prefix; write(iUnitOut,'(a,a,a9,a)')'# OPTION ',name,' ',String
-
-  end subroutine write_option
-
-end subroutine option_list
