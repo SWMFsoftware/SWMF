@@ -229,7 +229,7 @@ contains
     real  y2
     real  y3
 
-    tol = 100.0D+00 * epsilon ( tol )
+    tol = 100.0 * epsilon ( tol )
 
     dx10 = x1 - x0
     dy10 = y1 - y0
@@ -356,7 +356,7 @@ contains
     integer tri_num
     integer tri_vert(3,point_num*2)
 
-    tol = 100.0D+00 * epsilon ( tol )
+    tol = 100.0 * epsilon ( tol )
 
     ierr = 0
     !
@@ -381,7 +381,7 @@ contains
 
           cmax = max ( abs ( point_xy(j,m) ), abs ( point_xy(j,m1) ) )
 
-          if ( tol * ( cmax + 1.0D+00 ) &
+          if ( tol * ( cmax + 1.0 ) &
                < abs ( point_xy(j,m) - point_xy(j,m1) ) ) then
              k = j
              exit
@@ -422,7 +422,7 @@ contains
        m = j
 
        lr = lrline ( point_xy(1,m), point_xy(2,m), point_xy(1,m1), &
-            point_xy(2,m1), point_xy(1,m2), point_xy(2,m2), 0.0D+00 )
+            point_xy(2,m1), point_xy(1,m2), point_xy(2,m2), 0.0 )
 
        if ( lr /= 0 ) then
           exit
@@ -505,7 +505,7 @@ contains
        end if
 
        lr = lrline ( point_xy(1,m), point_xy(2,m), point_xy(1,m1), &
-            point_xy(2,m1), point_xy(1,m2), point_xy(2,m2), 0.0D+00 )
+            point_xy(2,m1), point_xy(1,m2), point_xy(2,m2), 0.0 )
 
        if ( 0 < lr ) then
           rtri = ltri
@@ -952,7 +952,7 @@ contains
     real  yv1
     real  yv2
 
-    tol = 100.0D+00 * epsilon ( tol )
+    tol = 100.0 * epsilon ( tol )
 
     dx = xv2 - xv1
     dy = yv2 - yv1
@@ -1660,7 +1660,7 @@ contains
        end if
 
        lr = lrline ( x, y, point_xy(1,a), point_xy(2,a), point_xy(1,b), &
-            point_xy(2,b), 0.0D+00 )
+            point_xy(2,b), 0.0 )
 
        if ( lr <= 0 ) then
           exit
@@ -1700,7 +1700,7 @@ contains
        a = tri_vert(e,t)
 
        lr = lrline ( x, y, point_xy(1,a), point_xy(2,a), point_xy(1,b), &
-            point_xy(2,b), 0.0D+00 )
+            point_xy(2,b), 0.0 )
 
        if ( lr <= 0 ) then
           exit
