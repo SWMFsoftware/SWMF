@@ -1,0 +1,312 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 7.80 is running as GM on    1 PE(s)
+
+ USER MODULE: DEFAULT EMPTY ROUTINES 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 119 lines of text
+ ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = block
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 119
+
+#PLANET
+NONE		NamePlanet
+
+#IOUNITS
+NONE		TypeIoUnit
+
+#NORMALIZATION
+NONE		TypeNormalization
+
+#DIPOLE
+0.0		DipoleStrength
+
+#BODY
+F		UseBody
+
+#CHECKGRIDSIZE
+256                             nI
+4                               nJ
+4                               nK
+1                               MinBlockALL
+
+#GRID
+1		nRootBlockX (default/unchanged)
+1		nRootBlockY (default/unchanged)
+1		nRootBlockZ (default/unchanged)
+-128.		xMin
+ 128.		xMax
+-2.		yMin
+ 2.		yMax
+-2.		zMin
+ 2.		zMax
+
+#AMRINIT
+default			InitialRefineType		TypeRefineInit
+0			initial_refinement_levels		nRefineLevelInit
+
+#GAMMA
+2.0		Gamma
+
+#SHOCKTUBE
+1.		rho (left state)		LeftState
+0.		Ux		LeftState (default/unchanged)
+0.		Uy		LeftState (default/unchanged)
+0.		Uz		LeftState (default/unchanged)
+0.75		Bx		LeftState
+1.		By		LeftState
+0.		Bz		LeftState (default/unchanged)
+1.		P		LeftState
+0.125		rho (right state)		RightState
+0.		Ux		RightState (default/unchanged)
+0.		Uy		RightState (default/unchanged)
+0.		Uz		RightState (default/unchanged)
+0.75		Bx		RightState
+-1.		By		RightState
+0.		Bz		RightState (default/unchanged)
+0.1		P		RightState
+0.5		ShockSlope
+
+#OUTERBOUNDARY
+shear		xMinBc		TypeBcEast
+shear		xMaxBc		TypeBcWest
+shear		yMinBc		TypeBcSouth
+shear		yMaxBc		TypeBcNorth
+float		zMinBc		TypeBcBottom
+float		zMaxBc		TypeBcTop
+
+#TIMESTEPPING
+2		nStage (default/unchanged)
+0.8		CflExpl (default/unchanged)
+
+#SCHEME
+2		nOrder (default/unchanged)
+Roe		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile (default/unchanged)
+
+#SAVERESTART
+F		DoSaverestart		DoSaveRestart
+
+#SAVEBINARY
+F		UseBinary		DoSaveBinary
+
+#SAVEPLOT
+2		nPlotfile		nPlotFile
+z=0 raw idl	PlotString		StringPlot
+-1		DnSavePlot (default/unchanged)
+10.0		DtSavePlot
+0.0		DxSavePlot (default/unchanged)
+cut raw idl	PlotString		StringPlot
+-1              DnSavePlot (default/unchanged)
+10.0            DtSavePlot
+-128.0		xMinCut
++128.0		xMaxCut
+0.1		yMinCut
+0.11		yMaxCut
+0.1		zMinCut
+0.11		zMaxCut
+0.0             DxSavePlot (default/unchanged)
+
+#STOP
+-1		MaxIteration (default/unchanged)
+25.6		tSimulationMax
+ GM_set_parameters: CHECK iSession = 1
+  
+ renumber_octree: finished renumbering 1  blocks.
+     total blocks =  1
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Planetary Parameters
+    --------------------
+
+ Planet:         NONE
+
+    Physical Parameters
+    -------------------
+
+          body1: .false.
+
+          body2: .false.
+
+          cLIGHTfactor:  1.00000E+00, cLIGHT:      2.99790E+08
+
+
+ I/O Unit Type:  NONE
+ Normalization:  NONE
+
+          SW_n_dim   [     ]:        0.000000,  SW_n:         0.000000
+          SW_Rho_dim [     ]:        0.000000,  SW_Rho:       0.000000
+          SW_Ux_dim  [     ]:        0.000000,  SW_Ux:        0.000000
+          SW_Uy_dim  [     ]:        0.000000,  SW_Uy:        0.000000
+          SW_Uz_dim  [     ]:        0.000000,  SW_Uz:        0.000000
+          SW_p_dim   [     ]:        0.000000,  SW_p:         0.000000
+          SW_Bx_dim  [     ]:        0.000000,  SW_Bx:        0.000000
+          SW_By_dim  [     ]:        0.000000,  SW_By:        0.000000
+          SW_Bz_dim  [     ]:        0.000000,  SW_Bz:        0.000000
+          SW_T_dim   [     ]:        0.000000
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-Order Scheme
+          with limiter mc3   
+          beta=  0.15000E+01
+          Time accurate calculation
+          Roe        Flux Function
+          Explicit Time Stepping
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  1
+
+ After initial grid setup:
+   nBlockMax =  1  nBLK =  10
+   Total number of blocks used =  1
+   Total number of cells =  4096
+   Smallest cell dx:    1.0000000000000000   Largest cell dx:    1.0000000000000000
+
+ proc_dims:          1       1       1
+ nCells:           256       4       4
+ x:              -128.00000000    128.00000000
+ y:                -2.00000000      2.00000000
+ z:                -2.00000000      2.00000000
+ multistage:         2
+ cfl:               0.80000000
+ gamma:             2.00000000      1.00000000      0.00000000      3.00000000
+
+saved ifile= 3 type=z=0_raw    at n_step=      0 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=      0 time=   0:00:00 h:m:s
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.24    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.24     99.99         1         1
+save_plot                 0.18     74.36         1         2
+exch_msgs                 0.01      5.20         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+Speed is  30866.4 c/s/p after      1.4 s at N =      10 (6.5064E-01 s)
+Speed is  30800.2 c/s/p after      2.7 s at N =      20 (1.3701E+00 s)
+Speed is  30822.5 c/s/p after      4.1 s at N =      30 (2.0868E+00 s)
+Speed is  30798.2 c/s/p after      5.5 s at N =      40 (2.8031E+00 s)
+Speed is  30768.8 c/s/p after      6.8 s at N =      50 (3.5200E+00 s)
+Speed is  30863.4 c/s/p after      8.2 s at N =      60 (4.2374E+00 s)
+Speed is  30835.7 c/s/p after      9.6 s at N =      70 (4.9551E+00 s)
+Speed is  30812.7 c/s/p after     11.0 s at N =      80 (5.6730E+00 s)
+Speed is  30826.9 c/s/p after     12.3 s at N =      90 (6.3911E+00 s)
+Speed is  30838.0 c/s/p after     13.7 s at N =     100 (7.1093E+00 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    13.68   13.683   13.683   100.00
+-------------------------------------------------------------------------------
+advance                 100     100    13.31    0.133    0.133    97.24
+save_logfile            100     100     0.36    0.004    0.004     2.65
+-------------------------------------------------------------------------------
+
+   100 of    357 iterations completed.   Expected time to completion:     34.19
+
+Speed is  30741.7 c/s/p after     15.0 s at N =     110 (7.8275E+00 s)
+Speed is  30834.6 c/s/p after     16.4 s at N =     120 (8.5457E+00 s)
+Speed is  30823.4 c/s/p after     17.8 s at N =     130 (9.2638E+00 s)
+Speed is  30781.3 c/s/p after     19.2 s at N =     140 (9.9821E+00 s)
+saved ifile= 3 type=z=0_raw    at n_step=    141 time=   0:00:10 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    141 time=   0:00:10 h:m:s
+Speed is  30727.7 c/s/p after     20.7 s at N =     150 (1.0700E+01 s)
+Speed is  30448.3 c/s/p after     22.1 s at N =     160 (1.1418E+01 s)
+Speed is  29932.1 c/s/p after     23.4 s at N =     170 (1.2137E+01 s)
+Speed is  29390.0 c/s/p after     24.9 s at N =     180 (1.2855E+01 s)
+Speed is  29415.8 c/s/p after     26.3 s at N =     190 (1.3573E+01 s)
+Speed is  29313.7 c/s/p after     27.7 s at N =     200 (1.4291E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     200    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    27.74   27.736   27.736   100.00
+-------------------------------------------------------------------------------
+advance                 200     200    26.83    0.134    0.134    96.73
+save_logfile            200     200     0.72    0.004    0.004     2.61
+save_plot                 1       2     0.15    0.153    0.077     0.55
+#others                                 0.03    0.030              0.11
+-------------------------------------------------------------------------------
+
+   200 of    357 iterations completed.   Expected time to completion:     21.06
+
+Speed is  29441.6 c/s/p after     29.2 s at N =     210 (1.5010E+01 s)
+Speed is  29519.2 c/s/p after     30.6 s at N =     220 (1.5728E+01 s)
+Speed is  29956.2 c/s/p after     32.0 s at N =     230 (1.6446E+01 s)
+Speed is  30067.7 c/s/p after     33.4 s at N =     240 (1.7164E+01 s)
+Speed is  29971.3 c/s/p after     34.8 s at N =     250 (1.7883E+01 s)
+Speed is  30145.8 c/s/p after     36.2 s at N =     260 (1.8601E+01 s)
+Speed is  30162.0 c/s/p after     37.6 s at N =     270 (1.9319E+01 s)
+saved ifile= 3 type=z=0_raw    at n_step=    280 time=   0:00:20 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    280 time=   0:00:20 h:m:s
+Speed is  30141.1 c/s/p after     39.2 s at N =     280 (2.0037E+01 s)
+Speed is  30223.7 c/s/p after     40.6 s at N =     290 (2.0756E+01 s)
+Speed is  30198.5 c/s/p after     42.0 s at N =     300 (2.1474E+01 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     300    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    41.97   41.971   41.971   100.00
+-------------------------------------------------------------------------------
+advance                 300     300    40.53    0.135    0.135    96.56
+save_logfile            300     300     1.09    0.004    0.004     2.59
+save_plot                 2       4     0.31    0.156    0.078     0.75
+#others                                 0.04    0.045              0.11
+-------------------------------------------------------------------------------
+
+   300 of    357 iterations completed.   Expected time to completion:      7.70
+
+Speed is  30115.4 c/s/p after     43.4 s at N =     310 (2.2192E+01 s)
+Speed is  30143.6 c/s/p after     44.8 s at N =     320 (2.2911E+01 s)
+Speed is  30199.4 c/s/p after     46.2 s at N =     330 (2.3629E+01 s)
+Speed is  30204.0 c/s/p after     47.6 s at N =     340 (2.4347E+01 s)
+Speed is  30172.9 c/s/p after     48.9 s at N =     350 (2.5065E+01 s)
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.25600E+02 (    0.426667 min,     0.007111 hrs)
+saved ifile= 3 type=z=0_raw    at n_step=    358 time=   0:00:25 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    358 time=   0:00:25 h:m:s
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     358    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  50.22    100.00         1         1
+-------------------------------------------------------------------------------
+advance                  48.40     96.38       358       358
+calc_fluxes              19.36     38.55       358       716
+calc_facevalues          11.95     23.80       358       716
+exch_msgs                 8.61     17.14       358       716
+calc_sources              4.39      8.74       358       716
+update_states             2.74      5.46       358       716
+save_logfile              1.29      2.58       358       358
+update_check              1.11      2.20       358       716
+save_plot                 0.47      0.94         3         6
+int_domain                0.28      0.56       358       358
+nonconservative           0.13      0.25       358       358
+send_cons_flux            0.00      0.01       358       716
+barrier                   0.00      0.01       358      1432
+-------------------------------------------------------------------------------
+ error report: no errors...
