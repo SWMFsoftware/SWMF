@@ -1,15 +1,11 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE CONSTRAINB
 
-subroutine OPTION_CONSTRAIN_B(on,name)
-
-  logical, intent(out) :: on
-  character (len=40), intent(out) :: name
-
-  on  =.true.
-  name='CONSTRAINED TRANSPORT Toth 1.0'
-
-end subroutine OPTION_CONSTRAIN_B
+! A flux averaged constrained transport scheme for block AMR grid. See 
+!
+! G. Toth, 2000, Journal of Computational Physics, 161, 605-652
+!
+! G. Toth and P. L. Roe, 2002, Journal of Computational Phys, 180, 736-750
 
 subroutine get_VxB(iBlock)
 
@@ -909,8 +905,8 @@ subroutine assign_coarse_face_soln(sol_BLK,iVar)
 
 end subroutine assign_coarse_face_soln
 
-
 !=============================================================================
+
 subroutine restrict_Bface(fine_sol,iVar,coarse_sol)
 
   use ModSize
@@ -947,7 +943,9 @@ subroutine restrict_Bface(fine_sol,iVar,coarse_sol)
   end select
 
 end subroutine restrict_Bface
+
 !==============================================================================
+
 subroutine assign_restricted_Bface(r_sol,iVar,coarse_sol)
 
   use ModSize
@@ -999,6 +997,7 @@ subroutine assign_restricted_Bface(r_sol,iVar,coarse_sol)
        r_sol(1:nI/2      ,1:nJ/2+dJ   ,1:nK/2+dK   ,8)
 
 end subroutine assign_restricted_Bface
+
 !==============================================================================
 
 subroutine constrain_ICs(iBlock)

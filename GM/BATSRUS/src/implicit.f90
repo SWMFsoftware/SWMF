@@ -1,24 +1,21 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE IMPLICIT
-subroutine OPTION_IMPLICIT(on,name)
-
-  logical, intent(out) :: on
-  character (len=40), intent(out) :: name
-
-  on  =.true.
-  name='IMPLICIT SCHEME Toth 1.3'
-
-end subroutine OPTION_IMPLICIT
 
 !=============================================================================
 subroutine advance_impl
 
   ! The implicit schemes used in this module are described in detail in
   !
+  ! G. Toth, D. L. De Zeeuw, T. I. Gombosi, K. G. Powell, 2006,
+  !  Journal of Computational Physics, 217, 722-758, 
+  !  doi:10.1016/j.jcp.2006.01.029
+  !
+  ! and
+  !
   ! Keppens, Toth, Botchev, van der Ploeg, 
   ! J. Int. Num. Methods in Fluids, 30, 335-352, 1999
   !
-  ! Equation numbers below refer to this paper unless stated otherwise.
+  ! Equation numbers below refer to the latter paper unless stated otherwise.
   !
   ! We solve the MHD equation written as 
   !

@@ -1,20 +1,14 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE PROJECTION
 
-subroutine OPTION_PROJECTION(on,name)
-
-  logical, intent(out) :: on
-  character (len=40), intent(out) :: name
-
-  on  =.true.
-  name='PROJECTION SCHEME Toth 1.3'
-
-end subroutine OPTION_PROJECTION
-
 !=============================================================================
 subroutine project_B
+
   ! Project B according to B'=B-grad phi, where Laplace phi=div B
   ! Solve the Poisson equation with an iterative scheme
+  !
+  ! See G. Toth, 2000, Journal of Computational Physics, 161, 605-652
+
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK,nBLK,Itest,Jtest,Ktest,BLKtest
   use ModVarIndexes,ONLY: Bx_,By_,Bz_,P_

@@ -1,18 +1,17 @@
 !^CFG COPYRIGHT UM
 !^CFG FILE RAYTRACE
-subroutine OPTION_RAYTRACING(on,name)
-
-  logical, intent(out) :: on
-  character (len=40), intent(out) :: name
-
-  on  =.true.
-  name='RAY TRACING Toth 2.0'
-
-end subroutine OPTION_RAYTRACING
-
 !=============================================================================
 
 subroutine ray_trace
+
+  ! This parallel ray tracing algorithm was developed at the U.of M.
+  ! by G. Toth and D. De Zeeuw. An overview of the scheme can be found in
+  ! 
+  ! D. L. De Zeeuw, S. Sazykin, R. A. Wolf, T. I. Gombosi,
+  ! A. J. Ridley, G. T\'oth, 2004,\\
+  ! Journal of Geophysical Research, 109, 12219,
+  !
+  ! Details of the algorithm are to be published later
 
   use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, &
        time_simulation, TypeCoordSystem
