@@ -2,8 +2,11 @@
 
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 
-test: test_shocktube test_titan test_func
-	ls -l *.diff
+test: 
+	-@(make test_shocktube)
+	-@(make test_titan)
+	-@(make test_func)
+	@ls -l *.diff
 
 # All tests are done in this directory:
 TESTDIR = run_test
