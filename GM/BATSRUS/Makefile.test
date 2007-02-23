@@ -1,6 +1,6 @@
 #^CFG FILE TESTING
 
-### TESTS FOR STAND-ALONE BATSRUS ###
+### TESTS FOR THE STAND-ALONE BATSRUS ###
 
 test: test_shocktube test_titan test_func
 	ls -l *.diff
