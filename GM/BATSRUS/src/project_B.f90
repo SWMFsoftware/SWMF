@@ -500,7 +500,7 @@ subroutine proj_boundphi(phi,idimmin,idimmax)
   use ModMain, ONLY : UseConstrainB                   !^CFG IF CONSTRAINB
   use ModGeometry, ONLY : body_BLK, true_cell
   use ModParallel, ONLY : NOBLK,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-  use ModInterface
+  use ModMessagePass, ONLY: message_pass_dir
   use ModProject
   implicit none
 

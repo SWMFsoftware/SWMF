@@ -499,7 +499,7 @@ subroutine BATS_init_constrain_b
   use ModCT, ONLY : DoInitConstrainB
   use ModNumConst, ONLY: cTiny
   use ModAdvance, ONLY : Bx_,By_,Bz_,State_VGB,tmp1_BLK
-  use ModInterface, ONLY: message_pass_dir
+  use ModMessagePass, ONLY: message_pass_dir
   use ModIO, ONLY: write_prefix, iUnitOut
   implicit none
 

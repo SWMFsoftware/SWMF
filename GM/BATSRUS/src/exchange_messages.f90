@@ -10,7 +10,7 @@ subroutine exchange_messages
   use ModVarIndexes
   use ModAdvance, ONLY : &
        State_VGB,divB1_GB
-  use ModInterface
+  use ModMessagePass, ONLY: message_pass_dir
   use ModParallel, ONLY : UsePlotMessageOptions
   use ModGeometry, ONLY : far_field_BCs_BLK        
   use ModMpi
@@ -166,7 +166,7 @@ subroutine time_message_passing
   use ModVarIndexes
   use ModAdvance, ONLY : &
        State_VGB
-  use ModInterface
+  use ModMessagePass, ONLY: message_pass_dir
   use ModMpi
   implicit none
 

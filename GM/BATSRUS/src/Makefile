@@ -26,9 +26,9 @@ MODULES = \
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModHallResist.o\
-	ModInterface.o\
 	ModIO.o\
 	ModMain.o\
+	ModMessagePass.o\
 	ModNodes.o\
 	ModOctree.o\
 	ModParallel.o\
@@ -99,7 +99,6 @@ OBJECTS = \
 	index_var.o\
 	library.o\
 	load_balance.o\
-	message_pass_dir.o\
 	message_pass_cells.o\
 	message_pass_faces.o\
 	message_pass_nodes.o\
