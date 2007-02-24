@@ -283,6 +283,7 @@ subroutine Bcenter2Bface(iBlock)
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
+  use ModMain, ONLY: UseConstrainB
   implicit none
 
   integer, intent(in) :: iBlock
@@ -292,20 +293,28 @@ subroutine Bcenter2Bface(iBlock)
 
   ! Estimate BFace from Bcenter
 
+  ! The conditional write statements avoid a compiler optimization bug
+  ! in the NAGWare Fortran 95 compiler Release 4.0a(388).
+  ! The condition is never true, because this routine is only called
+  ! when UseConstrainB is true
+
   do k=1,nK; do j=1,nJ; do i=1,nI+1
      BxFace_BLK(i,j,k,iBlock)= 0.5*( &
           State_VGB(Bx_,i-1,j,k,iBlock)+ &
           State_VGB(Bx_,i  ,j,k,iBlock))
+     if(.not.UseConstrainB)write(*,*)'!!!'
   end do; end do; end do
   do k=1,nK; do j=1,nJ+1; do i=1,nI
      ByFace_BLK(i,j,k,iBlock)= 0.5*( &
           State_VGB(By_,i,j-1,k,iBlock)+ &
           State_VGB(By_,i,j  ,k,iBlock))
+     if(.not.UseConstrainB)write(*,*)'!!!'
   end do; end do; end do
   do k=1,nK+1; do j=1,nJ; do i=1,nI
      BzFace_BLK(i,j,k,iBlock)= 0.5*( &
           State_VGB(Bz_,i,j,k-1,iBlock)+ &
           State_VGB(Bz_,i,j,k  ,iBlock))
+     if(.not.UseConstrainB)write(*,*)'!!!'
   end do; end do; end do
 
   call bound_Bface(iBlock)
