@@ -77,7 +77,7 @@ test_func:
 
 test_func_compile:
 	make clean
-	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,40
+	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,70
 	make BATSRUS PIDL PSPH
 
 test_func_run: test_rundir
