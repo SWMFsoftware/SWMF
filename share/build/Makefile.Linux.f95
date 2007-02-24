@@ -46,10 +46,9 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 # To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS = ${CFLAG} -save
 
-# Add '-Bstatic' to link flags if segmentation fault occurs immediately
-
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
-Lflag2  = ${PRECISION} ${DEBUG}
+# The '-Bstatic' flag avoids segmentation fault for large number of blocks
+Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG} -Bstatic
+Lflag2  = ${PRECISION} ${DEBUG} -Bstatic
 
 # BLAS and LAPACK libraries
 LBLAS =
