@@ -134,7 +134,7 @@ module ModPhysics
   !\
   ! Units for normalization of variables
   !/
-  character (len=20) :: TypeNormalization="SOLARWIND"
+  character (len=20) :: TypeNormalization="PLANETARY"
 
   !\
   ! Type of units used for I/O (input params, log files, plot files, etc.)
