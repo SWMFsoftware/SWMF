@@ -8,7 +8,7 @@ module ModUser
   ! srcUser/ModUserExamples.f90 for information about what the different user
   ! subroutines do and how to implement them for your specific problem.
 
-  use ModUserEmpty:               &
+  use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_get_log_var
