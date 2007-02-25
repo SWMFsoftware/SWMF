@@ -28,6 +28,9 @@ Corotation
 #BEGIN_COMP GM #############################################################
 
 #INCLUDE
+Geometry
+
+#INCLUDE
 Grid
 
 ^CFG IF SECONDBODY BEGIN
