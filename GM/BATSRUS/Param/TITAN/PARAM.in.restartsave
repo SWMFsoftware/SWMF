@@ -3,6 +3,9 @@
 #ECHO
 T                       DoEcho
 
+#NORMALIZATION
+SOLARWIND
+
 #DESCRIPTION
 Titan test save restart
 
