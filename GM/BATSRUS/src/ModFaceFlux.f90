@@ -26,6 +26,8 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current
 
+  use ModResist, ONLY: UseResistivity, EtaResist_G
+
   implicit none
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
@@ -46,7 +48,8 @@ module ModFaceFlux
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables needed for Hall resistivity
-  real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, HallJx, HallJy, HallJz
+  real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, &
+       HallJx, HallJy, HallJz, EtaJx, EtaJy, EtaJz, Eta
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -303,6 +306,9 @@ contains
          ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
          + IonMassPerCharge_G(iFace-1,jFace,kFace) )
 
+    if(UseResistivity) Eta = 0.5*( &
+         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace-1,jFace,kFace))
+
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
@@ -332,6 +338,9 @@ contains
          ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
          + IonMassPerCharge_G(iFace,jFace-1,kFace) )
 
+    if(UseResistivity) Eta = 0.5*( &
+         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace,jFace-1,kFace))
+
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
@@ -359,6 +368,9 @@ contains
          0.5*hall_factor(z_, iFace, jFace, kFace, iBlockFace)* &
          ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
          + IonMassPerCharge_G(iFace,jFace,kFace-1) )
+
+    if(UseResistivity) Eta = 0.5*( &
+         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace,jFace,kFace-1))
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -393,7 +405,7 @@ contains
 
     real :: Cmax
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
-    real :: EnLeft, EnRight
+    real :: EnLeft, EnRight, Jx, Jy, Jz
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -434,13 +446,22 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
-    if(HallCoeff > 0.0)then
+    if(HallCoeff > 0.0 .or. UseResistivity)then
        ! Calculate HallCoeff*current for the face
        call get_face_current(iDir, iFace, jFace, kFace, iBlockFace, &
-            HallJx, HallJy, HallJz)
-       HallJx = HallCoeff*HallJx
-       HallJy = HallCoeff*HallJy
-       HallJz = HallCoeff*HallJz
+            Jx, Jy, Jz)
+    end if
+
+    if(UseResistivity)then
+       EtaJx = Eta*Jx
+       EtaJy = Eta*Jy
+       EtaJz = Eta*Jz
+    end if
+
+    if(HallCoeff > 0.0)then
+       HallJx = HallCoeff*Jx
+       HallJy = HallCoeff*Jy
+       HallJz = HallCoeff*Jz
     end if
 
     call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
@@ -716,11 +737,12 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: x_, y_, z_
+      use ModMain,    ONLY: x_, y_, z_, UseResistFlux
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
       real :: HallUx, HallUy, HallUz, InvRho
+      real :: FluxBx, FluxBy, FluxBz
       real :: Bn, B0n
       real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
@@ -802,6 +824,19 @@ contains
       else
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
+      end if
+
+      if(UseResistivity)then
+         ! Add curl Eta.J to induction equation
+         FluxBx = AreaY*EtaJz - AreaZ*EtaJy
+         FluxBy = AreaZ*EtaJx - AreaX*EtaJz
+         FluxBz = AreaX*EtaJy - AreaY*EtaJx
+         Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
+         Flux_V(By_) = Flux_V(By_) + FluxBy
+         Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
+
+         ! add B.dB/dt term to energy equation
+         Flux_V(Energy_) = Flux_V(Energy_) + Bx*FluxBx + By*FluxBy + Bz*FluxBz
       end if
 
       ! f_i[scalar] = Un*scalar
@@ -920,7 +955,6 @@ contains
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
       real :: FullBt, Rho1, Rho, cDrift, cHall
-
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
@@ -953,7 +987,7 @@ contains
       Fast2  = Sound2 + Alfven2
       Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
 
-      ! Fast speed multiploed with the face area
+      ! Fast speed multipled by the face area
       if(UseBorisSimple)then                         !^CFG IF SIMPLEBORIS BEGIN
          Fast = sqrt( Area2*0.5*(Fast2 + Discr) &
               /       (1.0 + Alfven2*Inv_C2light) )
@@ -985,6 +1019,8 @@ contains
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
       end if
+
+      if(UseResistivity)FastDt = FastDt + 2*Eta*InvDxyz*Area
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          if(HallCoeff > 0.0)then

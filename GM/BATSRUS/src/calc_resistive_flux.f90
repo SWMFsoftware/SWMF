@@ -4,6 +4,7 @@ Module ModResist
   use ModSize,     ONLY:nI,nJ,nK,gcn,nBLK
   implicit none
   
+  logical :: UseResistivity
   logical :: DoInitEtaLocResist_B(nBLK)
   data DoInitEtaLocResist_B /nBLK*.true./
   logical, dimension (1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK) :: &
