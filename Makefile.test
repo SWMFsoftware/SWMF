@@ -153,6 +153,7 @@ test_esmf:
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd
 	make ESMF_SWMF
 
 test_esmf_rundir:
