@@ -58,7 +58,7 @@ default			InitialRefineType
 
 #SAVELOGFILE
 T
-raw
+RAW
 1
 -1.
 
