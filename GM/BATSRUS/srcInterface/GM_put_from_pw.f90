@@ -200,7 +200,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   if (.not.IsTriangleFound) RETURN
 
 
-  call set_oktest(NameSub, DoTest, DoTestMe)
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! interpolate values
 
