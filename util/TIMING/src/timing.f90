@@ -561,6 +561,7 @@ end subroutine timing_report_total
 subroutine timing_tree(iclock,show_depth)
   !USES:
   use ModTiming
+  use ModIoUnit, ONLY: io_unit_new
   implicit none
   !INPUT ARGUMENTS:
   integer, intent(in):: iclock, show_depth
@@ -575,11 +576,29 @@ subroutine timing_tree(iclock,show_depth)
   integer :: i, i_parent
 
   ! Temporary variables
+  logical :: DoSaveFile = .false.
+  integer :: iUnitT,iUnitT0
+  character*80 :: filename
   integer     :: qclock, qdepth, i_depth, qiter, qcall, indent
   real(Real8_) :: qsum, qsumparent, qnow
 
   !----------------------------------------------------------------------------
   if(.not.UseTiming)RETURN
+
+  if(DoSaveFile)then
+     if(iProc==0)then
+        iUnitT0 = io_unit_new()
+        write(filename,'(a,i8.8,a)')'STDOUT/timing_it',step,'.H'
+        open(UNIT=iUnitT0,FILE=trim(filename),STATUS='unknown',FORM='formatted')
+        write(iUnitT0,'(a,i,a)') 'TITLE = "Timing at it=',step,'"'
+        write(iUnitT0,'(a)') 'VARIABLES = '
+        write(iUnitT0,'(a)') '  "PE"'
+     end if
+     iUnitT = io_unit_new()
+     write(filename,'(a,i8.8,a,i6.6,a)')'STDOUT/timing_it',step,'_pe',iProc,'.tec'
+     open(UNIT=iUnitT,FILE=trim(filename),STATUS='unknown',FORM='formatted')
+     write(iUnitT,'(i)') iProc
+  end if
 
   qclock = min(max(iclock,2),maxclock)
 
@@ -609,7 +628,11 @@ subroutine timing_tree(iclock,show_depth)
         da_start(i) = qnow
      endif
      qsum=da_sum(i,qclock)
-     if(qsum < 0.0005)CYCLE
+     if(DoSaveFile)then
+        if(ia_iter(i,qclock)<1)CYCLE
+     else
+        if(qsum < 0.0005)CYCLE
+     end if
 
      qsumparent=da_sum(ia_parent(i),qclock)
      if(qsumparent < qsum)qsumparent=qsum
@@ -628,6 +651,12 @@ subroutine timing_tree(iclock,show_depth)
           qsum/qiter,                                                &
           qsum/qcall,                                                &
           100*qsum/qsumparent
+     if(DoSaveFile)then
+        if(iProc==0)then
+           write(iUnitT0,'(a)') '  ".'//repeat(' ',indent)//trim(sa_name(i))//'"'
+        end if
+        write(iUnitT,*) qsum
+     end if
 
      if(ia_depth(i)==1) write(iUnit,'(a79)')sepline
      
@@ -665,11 +694,24 @@ subroutine timing_tree(iclock,show_depth)
              qsum,                            &
              qsum/qiter,                      &
              100*qsum/qsumparent
+        if(DoSaveFile)then
+           if(iProc==0)then
+              write(iUnitT0,'(a)') '  ".'//repeat(' ',indent)//'#others'//'"'
+           end if
+           write(iUnitT,*) qsum
+        end if
 
      end do
      qdepth = i_depth
   end do
   write(iUnit,'(a79)')sepline
+
+  if(DoSaveFile)then
+     write(iUnitT0,'(a)') 'ZONE T="timing"'
+     write(iUnitT0,'(a)') ' I=NPEs, J=1, K=1, ZONETYPE=Ordered, DATAPACKING=POINT'
+     close(iUnitT0)
+     close(iUnitT)
+  end if
 
 end subroutine timing_tree
 
