@@ -34,7 +34,7 @@ subroutine advance_expl(DoCalcTimestep)
 
      if(DoTestMe)write(*,*)NameSub,' starting stage=',iStage
 
-     call barrier_mpi
+     call barrier_mpi2('expl1')
 
      do globalBLK = 1, nBlockMax
         if (unusedBLK(globalBLK)) CYCLE
@@ -157,7 +157,7 @@ subroutine advance_expl(DoCalcTimestep)
 
      if(DoTestMe)write(*,*)NameSub,' done update blocks'
 
-     call barrier_mpi
+     call barrier_mpi2('expl2')
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then

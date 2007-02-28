@@ -948,6 +948,27 @@ end subroutine barrier_mpi
 
 !=============================================================================
 
+subroutine barrier_mpi2(str)
+
+  use ModProcMH
+  use ModMpi
+  implicit none
+
+  character (len=*), intent(in) :: str
+
+  ! Local variables:
+  integer :: iError
+
+  !----------------------------------------------------------------------------
+
+  call timing_start('barrier-'//str)
+  call MPI_barrier(iComm, iError)
+  call timing_stop('barrier-'//str)
+
+end subroutine barrier_mpi2
+
+!=============================================================================
+
 subroutine stop_mpi(str)
 
   use ModProcMH
