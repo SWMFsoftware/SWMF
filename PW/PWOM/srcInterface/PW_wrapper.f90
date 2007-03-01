@@ -142,7 +142,8 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: iLine, nLine, Time, DtHorizontal,DToutput
+  use ModPWOM, ONLY: iLine, nLine, Time, DtHorizontal,DToutput,&
+                     DoPlotElectrodynamics,DtPlotElectrodynamics
 
   implicit none
 
@@ -160,8 +161,12 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
      call move_line
      call PW_advance_line
   end do
-  if (floor(Time/DToutput) .ne. floor((Time-DtHorizontal)/DToutput) ) &
-       call PW_print_electrodynamics
+  !Output the electrodynamics info
+  if (DoPlotElectrodynamics) then
+     if (floor(Time/DtPlotElectrodynamics) &
+          .ne. floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
+          call PW_print_electrodynamics
+  endif
   TimeSimulation = Time
 
 end subroutine PW_run
