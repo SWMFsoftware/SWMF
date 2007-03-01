@@ -49,6 +49,7 @@ module ModPWOM
 
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.
+  logical::  DoPlotElectrodynamics=.false.
   character(len=100) :: NamePhiNorth, NamePhiSouth
 
   character(len=100) :: NameInput,  &
@@ -66,7 +67,7 @@ module ModPWOM
                                           dHel_CI, uHel_CI, pHel_CI, THel,         &
                                           dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
                                           dElect_CI, uElect_CI, pElect_CI, TElect
-  real   :: DToutput=10.0, DtVertical=0.05, Tmax=100.0
+  real :: DToutput=10.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
 
   logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
