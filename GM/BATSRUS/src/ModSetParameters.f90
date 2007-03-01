@@ -697,10 +697,12 @@ subroutine MH_set_parameters(TypeAction)
                       /(nCells(3)*proc_dims(3)) 
                  plot_range(6,ifile)=+cTiny*(XyzMax_D(3)-XyzMin_D(3))&
                       /(nCells(3)*proc_dims(3)) 
+              elseif(index(plot_string,'1d')>0)then
+                 plot_area='1d_'
               elseif(index(plot_string,'3d')>0)then
                  plot_area='3d_'
               else
-                 call stop_mpi('Area (x=0,y=0,z=0,3d,cut,sph,ion) missing'&
+                 call stop_mpi('Area (1d,x=0,y=0,z=0,3d,cut,sph,ion) missing'&
                       //' from plot_string='//plot_string)
               endif
            end if
@@ -798,6 +800,10 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'POS')>0
               if(plot_area /= 'lin')call stop_mpi(&
                    'Variable "pos" can only be used with area "lin" !')
+           elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
+              plot_var='blk'
+              plot_dimensional(ifile) = index(plot_string,'BBK')>0
+              plot_vars(ifile)='dx pe blk blkall'
            else
               call stop_mpi('Variable definition missing from plot_string=' &
                    //plot_string)

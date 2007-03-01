@@ -111,6 +111,31 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
            end do; end do; end do
         end if
      end do
+  case('1d_')
+     if(iProc==0)then
+        ! Write file header
+        write(unit_tmp,'(a)')'TITLE="BATSRUS: 1D Block Data, '//textDateTime//'"'
+        write(unit_tmp,'(a)')trim(unitstr_TEC)
+        write(unit_tmp,'(a,a,i8,a,a)') &
+             'ZONE T="1D   '//textNandT//'"', &
+             ', I=',nBlockALL,', J=1, K=1,', &
+             ', ZONETYPE=ORDERED, DATAPACKING=POINT'
+        call write_auxdata
+     end if
+     !================================= 1d ============================
+     do iBlockALL  = 1, nBlockALL
+        iBLK = iBlock_A(iBlockALL)
+        iPE  = iProc_A(iBlockALL)
+        if(iProc==iPE)then
+           ! Write point values
+           call fill_NodeXYZ
+           write(unit_tmp,fmt="(30(E14.6))") &
+                (NodeXYZ_N(1,1,1,1)+NodeXYZ_N(nI+1,1,1,1))/2., &
+                (NodeXYZ_N(1,1,1,2)+NodeXYZ_N(1,nJ+1,1,2))/2., &
+                (NodeXYZ_N(1,1,1,3)+NodeXYZ_N(1,1,nK+1,3))/2., &
+                PlotVarNodes_NBI(2,2,2,iBLK,1:nPlotVar)
+        end if
+     end do
   case('3d_')
      if(iProc==0)then
         ! Write file header

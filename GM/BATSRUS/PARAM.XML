@@ -2019,6 +2019,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					if="$plotform =~ /\btec\b/"/>
 				<option value="blk" 
 					if="$plotform =~ /\btec\b/"/>
+				<option name="1D" value="1d/1d_" 
+					if="$plotform =~ /\btec\b/"/>
 			</part>
 			<part name="plotvar" type="string" input="select" 
 							required="T">
@@ -2038,6 +2040,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					value="POS" if="$plotarea eq 'lin'" />
 				<option name="Select dimensional vars."
 					value="VAR" />
+				<option name="Basic Block vars. dimensional"
+					value="BBK" />
 				<option name="MHD vars. scaled"
 					value="mhd" />
 				<option name="All vars. scaled"
@@ -2054,6 +2058,8 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 					value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Select scaled vars."
 					value="var" />
+				<option name="Basic Block vars. scaled"
+					value="bbk" />
 			</part>
 		</parameter>
 		<parameter name="DnSavePlot" type="integer" min="-1" />
@@ -2126,7 +2132,7 @@ rho p                   NameSatelliteVars ! Read if StringSatellite
 		</if>
 	</for>
 #SAVEPLOT
-9			nPlotfile
+10			nPlotfile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -2207,6 +2213,9 @@ blk MHD tec		StringPlot  ! general block Tecplot (ONLY!) plot
  5.			xPoint
  1.			yPoint
  1.			zPoint
+1d  BBK tec		StringPlot ! 1d plot with BLK data, Tecplot (ONLY!)
+1000			DnSavePlot
+-1.			DtSavePlot
 
 Default is nPlotFile=0. \\
 
@@ -2215,9 +2224,9 @@ StringPlot must contain the following 3 parts in arbitrary order
 \begin{verbatim}
 plotarea plotvar plotform
 
-plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk'
-plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var' - normalized
-plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR' - dimensional
+plotarea = '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', '1d'
+plotvar  = 'mhd', 'ful', 'raw', 'ray', 'flx', 'sol', 'pos', 'var', 'bbk' - normalized
+plotvar  = 'MHD', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'pos', 'VAR', 'BBK' - dimensional
 plotform = 'tec', 'idl'
 \end{verbatim}
 NOTES: The plotvar option 'sol' is only valid for plotarea 'los' and
@@ -2226,6 +2235,7 @@ NOTES: The plotvar option 'sol' is only valid for plotarea 'los' and
 \noindent
 The plotarea string defines the 1, 2, or 3D volume of the plotting area:
 \begin{verbatim}
+1d    - full 1D, one point per block for all blocks
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
@@ -2259,6 +2269,8 @@ values or as non-dimensional values:
          pars: READ FROM PARAMETER FILE
  'sol' - vars: wl pb
          pars: mu
+ 'bbk' - vars: dx pe blk blkall
+         pars: 
 \end{verbatim}
 The plot_string is always followed by the plotting frequencies
 DnSavePlot and DtSavePlot.\\
