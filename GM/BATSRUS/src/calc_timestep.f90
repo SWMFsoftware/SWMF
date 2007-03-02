@@ -172,9 +172,9 @@ subroutine set_global_timestep(DtMax)
 
   !Limit Dt such that dt*cfl cannot considerably exceed DtMax and 
   !infinitesimal timesteps are avoided
-  if(dt>(cOne-cTiny)*DtMax/cfl)dt=(cOne+cTiny)*DtMax/cfl
+  if(Cfl*Dt > (cOne-cTiny)*DtMax) Dt = (cOne+cTiny)*DtMax/Cfl
  
-  do iBlock = 1,nBlock
+  do iBlock = 1, nBlock
      if (unusedBLK(iBlock)) CYCLE
 
      if(UsePartLocal)then                             !^CFG IF IMPLICIT BEGIN
