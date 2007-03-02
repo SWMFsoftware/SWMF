@@ -1,16 +1,4 @@
-!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-!               Space Weather Modeling Framework (SWMF)                !
-!    Center for Space Environment Modeling, The University of Michigan !
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
-!BOI
-! !TITLE:
-! !AUTHORS:
-! !AFFILIATION:
-! !DATE:
-! !INTRODUCTION:
-!EOI
-!-------------------------------------------------------------------------
+! This file contains the top level methods for BATSRUS
 
 subroutine BATS_setup
   use ModMpi
@@ -22,7 +10,7 @@ subroutine BATS_setup
   use ModImplicit, ONLY : UsePartImplicit,n_prev   !^CFG IF IMPLICIT
   use ModIO
   use ModAMR, ONLY : &
-       dn_refine,initial_refine_levels,nRefineLevelIC,nRefineLevel,&
+       dn_refine, initial_refine_levels, nRefineLevelIC, nRefineLevel,&
        automatic_refinement
   use ModAdvance, ONLY : iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModNumConst
@@ -283,7 +271,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
   use ModAmr, ONLY: dn_refine
-  use ModPhysics, ONLY : No2Si_V, Si2No_V, UnitT_
+  use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
@@ -326,8 +314,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   iteration_number = iteration_number+1
 
   ! Calculate time step dt
-  if (time_accurate) &
-       call set_global_timestep((TimeSimulationLimit-Time_Simulation)*Si2No_V(UnitT_))
+  if (time_accurate) call set_global_timestep(TimeSimulationLimit)
 
   ! Calculate unsplit dB0Dt term for every time step
   if(DoUpdateB0 .and. .not.DoSplitDb0Dt)then
