@@ -1024,7 +1024,6 @@ real function integrate_sphere(nTheta,Radius,Array)
   !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
 
   logical :: DoTest=.false.,DoTestMe=.false.
-  real:: SinTheta1
   !---------------------------------------------------------------------------
 
   call set_oktest('integrate_sphere',DoTest,DoTestMe)
@@ -1122,6 +1121,7 @@ real function integrate_sphere(nTheta,Radius,Array)
      DzInv = cOne/dz_BLK(iBlock)
 
      do i = 1, nTheta
+
         ! Check if z is inside the block
         Theta = dTheta*(i-cHalf)
         z     = Radius*cos(Theta)
@@ -1137,10 +1137,9 @@ real function integrate_sphere(nTheta,Radius,Array)
         ! Area of the surface element
         dArea = dArea0 * SinTheta * dPhi
 
-
         do j = 1, nPhi
            Phi = j*dPhi
-
+           
            ! Check if x and y are inside the block
            x = Radius * SinTheta * cos(Phi)
            if(x <  xMin) CYCLE
@@ -1172,7 +1171,7 @@ real function integrate_sphere(nTheta,Radius,Array)
            i2 = i1 + sign(1.0, Dx)
            j2 = j1 + sign(1.0, Dy)
            k2 = k1 + sign(1.0, Dz)
-
+           
            ! In the interpolation formula only the abs(distance) occurs
            Dx = abs(Dx)
            Dy = abs(Dy)
@@ -1187,9 +1186,14 @@ real function integrate_sphere(nTheta,Radius,Array)
 
            Integral = Integral + dArea * Average
 
+           ! This line is here to avoid incorrect optimization 
+           ! by NAG f95 v5.0(322) or v4.0a(388)
+           if(iBlock == -1)write(*,*)xNorm,yNorm,zNorm
+
         end do
      end do
   end do
+
   ! deallocate(x_II, y_II, z_I, SinTheta_I)
 
   integrate_sphere = Integral
