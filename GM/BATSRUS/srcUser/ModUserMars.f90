@@ -15,7 +15,7 @@ module ModUser
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_update_states,              &
 !       IMPLEMENTED8 => user_set_plot_var,               &
-       IMPLEMENTED9 => user_get_b0                     &
+       IMPLEMENTED9 => user_get_b0,                     &
        IMPLEMENTED10 => user_get_log_var,               &
        IMPLEMENTED11 => user_specify_initial_refinement
 
