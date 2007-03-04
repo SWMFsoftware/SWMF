@@ -5,6 +5,8 @@
 test: 
 	-@(make test_shocktube)
 	-@(make test_titan)
+	-@(make test_mars)
+	-@(make test_vens)
 	-@(make test_func)
 	@ls -l *.diff
 
@@ -161,3 +163,79 @@ test_titan_restart_check:
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff
 	ls -l test_titan*.diff
+
+### TESTS FOR MODELING MARS ###
+
+test_mars:
+	-@(make test_mars_start)
+
+test_mars_start:
+	@echo "test_mars_compile..." > test_mars.diff
+	make test_mars_compile
+	@echo "test_mars_rundir..." >> test_mars.diff
+	make test_mars_rundir
+	@echo "test_mars_run..." >> test_mars.diff
+	make test_mars_run
+	@echo "test_mars_check..." >> test_mars.diff
+	make test_mars_check
+
+test_mars_compile:
+	make clean
+	./Config.pl -u=Mars -e=MhdMars -g=4,4,4,2000,200
+	make
+	make PIDL
+
+test_mars_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp GM/Param/MARS/PARAM.in .; \
+		cp GM/Param/MARS/marsmgsp.txt .
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_mars_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf MarsTest
+	cd ${TESTDIR}; ./PostProc.pl -M -o MarsTest
+
+test_mars_check:
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+		Param/MARS/TestOutput/log_n000001.log \
+		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff
+	ls -l test_mars.diff
+
+### TESTS FOR MODELING VENUS ###
+
+test_venus:
+	-@(make test_venus_start)
+
+test_venus_start:
+	@echo "test_venus_compile..." > test_venus.diff
+	make test_venus_compile
+	@echo "test_venus_rundir..." >> test_venus.diff
+	make test_venus_rundir
+	@echo "test_venus_run..." >> test_venus.diff
+	make test_venus_run
+	@echo "test_venus_check..." >> test_venus.diff
+	make test_venus_check
+
+test_venus_compile:
+	make clean
+	./Config.pl -u=Venus -e=MhdMars -g=4,4,4,2000,200
+	make
+	make PIDL
+
+test_venus_rundir: test_rundir
+	cd ${TESTDIR}; \
+		cp GM/Param/VENUS/PARAM.in .; \
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_venus_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf VenusTest
+	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest
+
+test_venus_check:
+	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+		Param/VENUS/TestOutput/log_n000001.log \
+		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
+	ls -l test_venus.diff
+
