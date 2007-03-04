@@ -135,8 +135,8 @@ contains
 
      rPlanet_I(Venus_)                   = 6052.0*cE3                     ! [ m]
      mPlanet_I(Venus_)                   = 4.865*cE24                     ! [kg]
-     OrbitalPeriodPlanet_I(Venus_)       = 0.0                            ! [ s]
-     RotationPeriodPlanet_I(Venus_)      = 5834.4                         ! [ s]
+     OrbitalPeriodPlanet_I(Venus_)       = 224.7   * 24.0 * 3600.0        ! [ s]
+     RotationPeriodPlanet_I(Venus_)      = 243.0185* 24.0 * 3600.0        ! [ s]
                                        
      IonoHeightPlanet_I(Venus_)          =  0.0                           ! [ m]
    
@@ -174,7 +174,7 @@ contains
 
      rPlanet_I(Mars_)                    = 3396.00*cE3                    ! [ m]
      mPlanet_I(Mars_)                    = 0.6436*cE24                    ! [kg]
-     OrbitalPeriodPlanet_I(Mars_)        = 0.0                            ! [ s]
+     OrbitalPeriodPlanet_I(Mars_)        = 686.98* 24.0 * 3600.0          ! [ s]
      RotationPeriodPlanet_I(Mars_)       = 1.026 * 24.0 * 3600.0          ! [ s]
                                         
      IonoHeightPlanet_I(Mars_)           =  0.0                           ! [ m]
