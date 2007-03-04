@@ -27,9 +27,9 @@ spherical_lnr
 53.0			Radius2
 
 #GRID
-50                      proc_dims(1)
-6                       proc_dims(2)
-3                       proc_dims(3),
+4                      proc_dims(1)
+4                       proc_dims(2)
+2                       proc_dims(3),
 -40.                    x1
   8.                    x2
 -24.                    y1
@@ -39,7 +39,7 @@ spherical_lnr
 
 #AMRINIT
 Venus3Dbodyfocus       InitialRefineType
-2                      InitialRefineLevel
+3                      InitialRefineLevel
 
 #BODY
 T			body1
@@ -162,8 +162,11 @@ Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
 minmod                  LimiterType ! Only for nordder=2
 
 #STOP
-5000
+50
 -1.0
+
+#END
+
 
 #RUN ===============================================
 
