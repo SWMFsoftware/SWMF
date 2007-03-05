@@ -36,14 +36,14 @@ subroutine write_logfile(iSatIn,iFile)
   character (LEN=100) :: StringTime
 
   logical :: DoWritePosition
-  logical :: oktest,oktest_me
+  logical :: DoTest,DoTestMe
   real :: pmin, pmax
   real, external :: maxval_loc_BLK, minval_loc_BLK
   integer :: loc(5)
   integer :: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
   integer :: iError
   !---------------------------------------------------------------------------
-  call set_oktest('write_logfile',oktest,oktest_me)
+  call set_oktest('write_logfile',DoTest,DoTestMe)
 
   DoWritePosition = .false.
 
@@ -140,7 +140,7 @@ subroutine write_logfile(iSatIn,iFile)
      end if
   end do
 
-  if(oktest_me.and.n_step==1)then
+  if(DoTestMe.and.n_step==1)then
      write(*,*)'nLogVar,nFluxVar,nLogR,nLogTot:',  &
           nLogVar,nFluxVar,nLogR,nLogTot
      write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
@@ -248,7 +248,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModProcMH
   use ModNumConst
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles,&
-       iTest,jTest,kTest,ProcTest,BlkTest
+       iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass
   use ModPhysics,    ONLY: rCurrents, rBody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
@@ -259,32 +259,34 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModIO
   implicit none
 
-  integer, intent(in) :: nLogVar, nLogR, nLogTot, iSat
+  integer, intent(in)            :: nLogVar, nLogR, nLogTot, iSat
   character (LEN=10), intent(in) :: NameLogVar_I(nLogVar)
-  real, intent(out) :: LogVar_I(nLogTot)
-  real, intent(in) :: LogR_I(nLogR)
+  real, intent(in)               :: LogR_I(nLogR)
+  real, intent(out)              :: LogVar_I(nLogTot)
+
   character (len=10) :: NameLogVar
 
-  real :: volume
-  real,dimension(nVar) :: StateIntegral_V
-  real, external :: integrate_BLK, maxval_BLK, minval_BLK
-  real, external :: integrate_sphere,integrate_flux_circ,test_cell_value
-  real, external :: minmax_sphere
+  real :: Volume
+  real :: StateIntegral_V(nVar)
 
   integer :: iVar,iR,iVarTot,itmp,jtmp, iBLK
   integer :: i,j,k
   real :: R_log
 
-  ! Logical 
-  logical :: oktest,oktest_me
+  logical :: DoTest,DoTestMe
 
-  ! B0, the state and the sum of weights at the position of the satellite
+  ! StateSat_V contains the weight (0), the state (1:nVar), 
+  ! and the currents (nVar+1:nVar+3) at the position of the satellite
+  ! B0Sat_D contains B0 at the satellite
   real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
-  !-------------------------------------------------------------------------
-  call set_oktest('set_logvar',oktest,oktest_me)
+  real, external :: integrate_BLK, maxval_BLK, minval_BLK
+  real, external :: calc_sphere,integrate_circle,test_cell_value
 
-  if(oktest_me.and.n_step==1)then
+  !-------------------------------------------------------------------------
+  call set_oktest('set_logvar',DoTest,DoTestMe)
+
+  if(DoTestMe.and.n_step==1)then
      write(*,*)'nLogVar,nLogR,nLogTot:',nLogVar,nLogR,nLogTot
      write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
      write(*,*)'LogR_I:',LogR_I(1:nLogR)
@@ -333,6 +335,7 @@ contains
   !============================================================================
   subroutine set_log_var
 
+    use ModMain, ONLY: x_, y_, z_
     use ModMPI
     use ModUser, ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
@@ -340,6 +343,7 @@ contains
     ! Local variables
     integer :: iError
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
+    real :: Current_D(3)
 
     integer :: jVar
     character(len=10) :: NameVar
@@ -385,21 +389,24 @@ contains
     case('ekinx')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2/&
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
+               State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
     case('ekiny')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2/&
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
+               State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
     case('ekinz')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
-          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2/&
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
+               State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2/&
                State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
@@ -415,64 +422,40 @@ contains
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
 
     case('jin','jout','jinmax','joutmax')
-       !calculate the total current either into or out of the body
-       ! Calculate
-       do iBLK=1,nBlock
+
+       if(index(optimize_message_pass,'opt')>0) &
+            call stop_mpi('Spherical integral of J requires '// &
+            'message passing edges and corners. Fix PARAM.in!')
+
+       ! calculate the total/maximum current either into or out of the body
+       do iBLK = 1, nBlock
           if(unusedBLK(iBLK))cycle
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                  x_BLK(i+1,j,k,iBLK) > x2 .or.      &
-                  x_BLK(i-1,j,k,iBLK) < x1 .or.      &
-                  y_BLK(i,j+1,k,iBLK) > y2 .or.      &
-                  y_BLK(i,j-1,k,iBLK) < y1 .or.      &
-                  z_BLK(i,j,k+1,iBLK) > z2 .or.      &
-                  z_BLK(i,j,k-1,iBLK) < z1 ) then
-                tmp1_BLK(i,j,k,iBLK)=0.0
-                CYCLE
-             end if
-             ! jx.x + jy.y + jz.z
-             tmp1_BLK(i,j,k,iBLK) = (                               &
-                  ( (State_VGB(Bz_,i,j+1,k,iBLK)                    &
-                   - State_VGB(Bz_,i,j-1,k,iBLK)) / dy_BLK(iBLK) -  &
-                    (State_VGB(By_,i,j,k+1,iBLK)                    &
-                   - State_VGB(By_,i,j,k-1,iBLK)) / dz_BLK(iBLK)    &
-                  ) * x_BLK(i,j,k,iBLK)                             &
-                 +                                                  &
-                  ( (State_VGB(Bx_,i,j,k+1,iBLK)                    &
-                   - State_VGB(Bx_,i,j,k-1,iBLK)) / dz_BLK(iBLK) -  &
-                    (State_VGB(Bz_,i+1,j,k,iBLK)                    &
-                   - State_VGB(Bz_,i-1,j,k,iBLK)) / dx_BLK(iBLK)    &
-                  ) * y_BLK(i,j,k,iBLK)                             &
-                 +                                                  &
-                  ( (State_VGB(By_,i+1,j,k,iBLK)                    &
-                   - State_VGB(By_,i-1,j,k,iBLK)) / dx_BLK(iBLK) -  &
-                    (State_VGB(Bx_,i,j+1,k,iBLK)                    &
-                   - State_VGB(Bx_,i,j-1,k,iBLK)) / dy_BLK(iBLK)    &
-                  ) * z_BLK(i,j,k,iBLK)                             &
-                  ) / r_BLK(i,j,k,iBLK)
+
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             ! Calculate radial current
+             call get_current(i,j,k,iBlk,Current_D)
+             tmp1_BLK(i,j,k,iBLK) = ( &
+                  Current_D(x_)*x_BLK(i,j,k,iBLK)+ &
+                  Current_D(y_)*y_BLK(i,j,k,iBLK)+ &
+                  Current_D(z_)*x_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)
           end do; end do; end do
+
           !now modify tmp1 according to the case we want
           select case(NameLogVar)
           case('jin')
-             where (tmp1_BLK(:,:,:,iBLK) > 0.0)
-                tmp1_BLK(:,:,:,iBLK) = 0.0
-             end where
+             tmp1_BLK(:,:,:,iBLK) = min(tmp1_BLK(:,:,:,iBLK), 0.0)
           case('jout')
-             where (tmp1_BLK(:,:,:,iBLK) < 0.0)
-                tmp1_BLK(:,:,:,iBLK) = 0.0
-             end where
+             tmp1_BLK(:,:,:,iBLK) = max(tmp1_BLK(:,:,:,iBLK), 0.0)
           end select
        end do
-       ! the 0.5 used below is because the centered difference formulae 
-       ! above used (1/Dx) instead of the correct 1/(2Dx),
        select case(NameLogVar)
        case('jin','jout')
-          LogVar_I(iVarTot) = 0.5 * &
-               integrate_sphere(180,rCurrents,tmp1_BLK)/(4.0*cPi*rCurrents**2)
+          LogVar_I(iVarTot) = calc_sphere('integrate',180,rCurrents,tmp1_BLK) &
+               /(4.0*cPi*rCurrents**2)
        case('jinmax')
-          qval = 0.5 * minmax_sphere(-1,180,rCurrents,tmp1_BLK)
+          qval = calc_sphere('minval',180,rCurrents,tmp1_BLK)
           if(nProc>1)then
-             call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MIN, &
+             call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MIN, &
              iComm, iError)
              ! Divide by nProc so that adding up the processors can work
              LogVar_I(iVarTot) = qval_all/nProc
@@ -480,9 +463,9 @@ contains
              LogVar_I(iVarTot) = qval/nProc
           endif
        case('joutmax')
-          qval = 0.5 * minmax_sphere(1,180,rCurrents,tmp1_BLK)
+          qval = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
           if(nProc>1)then
-             call MPI_allreduce(qval, qval_all, 1,  MPI_REAL, MPI_MAX, &
+             call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MAX, &
              iComm, iError)
              ! Divide by nProc so that adding up the processors can work
              LogVar_I(iVarTot) = qval_all/nProc
@@ -499,9 +482,9 @@ contains
        ! Only the Z component is calculated here: (J x R)_z = -J_x*y + Jy*x
 
        ! Calculate 
-       do iBLK=1,nBlock
+       do iBLK = 1, nBlock
           if(unusedBLK(iBLK))cycle           
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
                   x_BLK(i+1,j,k,iBLK) > x2 .or.      &
                   x_BLK(i-1,j,k,iBLK) < x1 .or.      &
@@ -512,26 +495,14 @@ contains
                 tmp1_BLK(i,j,k,iBLK)=0.0
                 CYCLE
              end if
-             tmp1_BLK(i,j,k,iBLK) = (                             &
-                  ((State_VGB(Bz_,i,j+1,k,iBLK)                   &
-                  - State_VGB(Bz_,i,j-1,k,iBLK)) / dy_BLK(iBLK) - &
-                  ( State_VGB(By_,i,j,k+1,iBLK)                   &
-                  - State_VGB(By_,i,j,k-1,iBLK)) / dz_BLK(iBLK)   &
-                  ) * y_BLK(i,j,k,iBLK)                           &
-                  -                                               &
-                  ((State_VGB(Bx_,i,j,k+1,iBLK)                   &
-                  - State_VGB(Bx_,i,j,k-1,iBLK)) / dz_BLK(iBLK) - &
-                  ( State_VGB(Bz_,i+1,j,k,iBLK)                   &
-                  - State_VGB(Bz_,i-1,j,k,iBLK)) / dx_BLK(iBLK)   &
-                  ) * x_BLK(i,j,k,iBLK)                           &
-                  ) / r_BLK(i,j,k,iBLK)**3
+             call get_current(i,j,k,iBlk,Current_D)
+             tmp1_BLK(i,j,k,iBLK) = ( &
+                  -Current_D(x_)*y_BLK(i,j,k,iBLK) &
+                  +Current_D(y_)*x_BLK(i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)**3
           end do; end do; end do
        end do
-       ! The negative sign is due to R = (-x,-y,-z), 
-       ! the 0.5 is because the centered difference formulae above used 
-       ! (1/Dx) instead of the correct 1/(2Dx), 
-       ! the 4pi is part of the Biot-Savart formula
-       LogVar_I(iVarTot) = -0.5 * integrate_BLK(1,tmp1_BLK) / (4*cPi)
+       ! The /4pi is part of the Biot-Savart formula
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
 
     case('dstdivb')
        ! Calculate the contribution of Div B to the surface integral of DST
@@ -542,7 +513,7 @@ contains
        ! Calculate 
        do iBLK=1,nBlock
           if(unusedBLK(iBLK))cycle           
-          do k=1,nK; do j=1,nJ; do i=1,nI
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
                   x_BLK(i+1,j,k,iBLK) > x2 .or.      &
                   x_BLK(i-1,j,k,iBLK) < x1 .or.      &
@@ -650,7 +621,7 @@ contains
           iVarTot = iVarTot + 1
           R_log = LogR_I(iR)
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = 1.0
-          LogVar_I(iVarTot) = integrate_sphere(50, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',50, R_log, tmp1_BLK)
        end do
     case('rhoflx')
        ! rho*U_R
@@ -668,7 +639,7 @@ contains
                )/R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_sphere(360, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log, tmp1_BLK)
        end do
     case('dstflx')
        ! B1z
@@ -678,7 +649,7 @@ contains
           R_log = LogR_I(iR)
           tmp1_BLK(0:nI+1,0:nJ+1,0:nK+1,1:nBlock) = &
                State_VGB(Bz_,0:nI+1,0:nJ+1,0:nK+1,1:nBlock)
-          LogVar_I(iVarTot) = integrate_sphere(180, R_log, tmp1_BLK) / &
+          LogVar_I(iVarTot) = calc_sphere('integrate',180, R_log, tmp1_BLK) / &
                (4*cPi*R_log**2)
        end do
     case('bflx')
@@ -701,7 +672,7 @@ contains
              end do; end do; end do
           end do
  
-          LogVar_I(iVarTot) = integrate_sphere(360, R_log, tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log, tmp1_BLK)
        end do
     case('b2flx')
        ! B^2*u_R
@@ -723,7 +694,7 @@ contains
                   ) / (State_VGB(rho_,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_sphere(360, R_log,tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
        end do
     case('pvecflx')
        iVarTot = iVarTot - 1
@@ -748,7 +719,7 @@ contains
                   ) / (State_VGB(rho_,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_sphere(360, R_log,tmp1_BLK)
+          LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
        end do
 
 
@@ -776,7 +747,7 @@ contains
                      ) / (State_VGB(rho_,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
              end do; end do; end do
           end do
-          LogVar_I(iVarTot) = integrate_flux_circ(R_log,0.0,tmp1_BLK)
+          LogVar_I(iVarTot) = integrate_circle(R_log,0.0,tmp1_BLK)
        end do
 
        ! OTHER VALUES
@@ -989,35 +960,41 @@ end subroutine normalize_logvar
 
 !==============================================================================
 
-real function integrate_sphere(nTheta,Radius,Array)
+real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
-  ! This function calculates the integral of the incomming variable Array
+  ! This function calculates the integral of the incomming variable Array_GB
   ! over the surface of a sphere centered at the origin radius Radius.  
   ! The resolution in the colatitude is determined by the nTheta parameter.
 
-  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK
+  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK,&
+       optimize_message_pass
   use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK, &
-       r_BLK,xyzStart_BLK
+       r_BLK, XyzStart_Blk
   use ModNumConst
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use ModCovariant, oNLY: TypeGeometry
+  use ModCovariant, ONLY: TypeGeometry             !^CFG IF COVARIANT
   implicit none
 
   ! Arguments
 
-  integer, intent(in) :: nTheta
-  real, intent(in)    :: Array(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
-  real, intent(in)    :: Radius 
+  character (len=*), intent(in) :: TypeAction
+  integer, intent(in)           :: nTheta
+  real, intent(in)              :: Radius 
+  real, intent(in)              :: Array_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
 
   ! Local variables
-  real :: Integral, Darea0, Darea, Average 
+  real :: Result, Darea0, Darea, Average 
 
   ! Indices and coordinates
-  integer :: iBlock,i,j,i1,i2,j1,j2,k1,k2, k
+  integer :: iBlock,i,j,k,i1,i2
   integer :: MaxPhi, nPhi
-  real    :: x, y, z, DxInv, DyInv, DzInv, xNorm, yNorm, zNorm, Dx, Dy, Dz, dr
+  real    :: x, y, z, InvDxyz_D(3)
+  real    :: Dr
   real    :: xMin, xMax, yMin, yMax, zMin, zMax, rMin, rMax
-  real    :: dTheta, dPhi, Theta, Phi, SinTheta, CosTheta
+  real    :: dTheta, dPhi, Phi, Theta, SinTheta
+
+  real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
+
+  real, external:: trilinear
 
   ! Store cartesian coordinates for sake of efficiency
   ! The x and y depend on iPhi,iTheta while z only depends on iTheta
@@ -1026,11 +1003,25 @@ real function integrate_sphere(nTheta,Radius,Array)
   logical :: DoTest=.false.,DoTestMe=.false.
   !---------------------------------------------------------------------------
 
-  call set_oktest('integrate_sphere',DoTest,DoTestMe)
-  call timing_start('int_sphere')
+  call set_oktest('calc_sphere',DoTest,DoTestMe)
+  call timing_start('calc_sphere_'//TypeAction)
 
-  if(index(TypeGeometry,'spherical')>0.)then
-     Integral = 0.0
+  ! Initialize result
+  select case(TypeAction)
+  case('integrate')
+     Result = 0.0
+  case('maxval')
+     Result = -Huge(0.0)
+  case('minval')
+     Result = Huge(0.0)
+  case default
+     call stop_mpi('ERROR in calc_sphere: Invalid action='//TypeAction)
+  end select
+
+  if(index(TypeGeometry,'spherical') > 0)then         !^CFG IF COVARIANT BEGIN
+     ! For spherical geometry it is sufficient to 
+     ! interpolate in the radial direction
+
      do iBlock = 1, nBlock
         if (unusedBLK(iBlock)) CYCLE
         rMin = cHalf*(R_BLK( 0, 1, 1,iBlock) + R_BLK( 1, 1, 1,iBlock))
@@ -1038,166 +1029,168 @@ real function integrate_sphere(nTheta,Radius,Array)
         rMax = cHalf*(R_BLK(NI, 1, 1,iBlock) + R_BLK(NI+1,1,1,iBlock))
         if(rMax <= Radius) CYCLE
 
-        dtheta=dz_BLK(iBlock); dphi=dy_BLK(iBlock)
-        dArea0 = Radius**2 *dPhi *dtheta
-        i1=0
+        ! Set temporary array
+        Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+
+        dTheta = dz_BLK(iBlock); dPhi=dy_BLK(iBlock)
+        dArea0 = Radius**2 *dPhi *dTheta
+
+        ! Find the radial index just after Radius
+        i2=0
         do while ( Radius > R_BLK( i1, 1, 1, iBlock))
-           i1= i1+1
+           i2 = i2+1
         end do
-        i2=i1; i1=i2-1
-        Dr = (Radius - R_BLK( i1, 1, 1, iBlock))&
-             /(R_BLK( i2, 1, 1, iBlock)-R_BLK( i1, 1, 1, iBlock))
-        if(Dr<0.or.Dr>1)call stop_mpi('wrong index in integrate_sphere')
-        do k = 1, nK           
-           SinTheta = sqrt(X_BLK(1,1,k,iBlock)**2+Y_BLK(1,1,k,iBlock)**2)&
-                /R_BLK(1,1,k,iBlock)
-           Average = dr * sum( Array(i2,1:nJ,k, iBlock)) + &
-                (1-dr)*sum( Array(i1,1:nJ,k, iBlock) )
-           Integral = Integral + dArea0*sinTheta * Average      
+        i1=i2-1
+
+        Dr = (Radius - R_BLK(i1, 1, 1, iBlock)) &
+             /(R_BLK(i2, 1, 1, iBlock) - R_BLK(i1, 1, 1, iBlock))
+        if(Dr<0.or.Dr>1)call stop_mpi('wrong index in calc_sphere')
+
+        select case(TypeAction)
+        case('integrate')
+           ! Integrate in theta
+           do k = 1, nK
+              SinTheta = sqrt(x_BLK(1,1,k,iBlock)**2 + y_BLK(1,1,k,iBlock)**2)&
+                   /r_BLK(1,1,k,iBlock)
+              ! Integrate in Phi by adding up 1..nJ and interpolate in R
+              Average = Dr * sum( Array_G(i2, 1:nJ, k)) + &
+                   (1-Dr)  * sum( Array_G(i1, 1:nJ, k))
+              Result = Result + dArea0*SinTheta * Average
+           end do
+        case('maxval')
+           Average = maxval(   Dr * Array_G(i2, 1:nJ, 1:nK)  &
+                +           (1-Dr)* Array_G(i1, 1:nJ, 1:nK))
+           Result = max(Average, Result)
+        case('minval')
+           Average = minval(   Dr * Array_G(i2, 1:nJ, 1:nK)  &
+                +           (1-Dr)* Array_G(i1, 1:nJ, 1:nK))
+           Result = min(Average, Result)
+        end select
+     end do
+  elseif(TypeGeometry /= 'cartesian')then
+     call stop_mpi('ERROR in calc_sphere: Not implemented for geometry=' &
+          //TypeGeometry)
+  else                                                     !^CFG END COVARIANT
+     ! Get the angular resolution from the input parameter nTheta
+     MaxPhi = 2*nTheta
+     dTheta = cPi/nTheta
+     dArea0 = Radius**2 * cTwo * sin(cHalf*dTheta)
+
+     if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
+          dTheta*cRadToDeg
+
+     ! Calculate sin(theta) and x,y,z in advance
+     !  allocate( x_II(MaxPhi,nTheta), y_II(MaxPhi, nTheta), z_I(nTheta), &
+     !       SinTheta_I(nTheta) )
+     !
+     !  do i = 1, nTheta
+     !     Theta         = (i - cHalf)*dTheta
+     !     SinTheta      = sin(Theta)
+     !     SinTheta_I(i) = SinTheta
+     !     z_I(i)        = Radius*cos(Theta)
+     !
+     !     ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
+     !     ! This keeps the area of the spherical cells roughly constant 
+     !     ! and the shape roughly a square.
+     !     ! Make sure that nPhi is a multiple of 4 to preserve symmetry
+     !     nPhi  = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
+     !     Dphi  = cTwoPi/nPhi
+     !     do j = 1, nPhi
+     !        Phi = j*dPhi
+     !        ! Convert to Cartesian coordinates
+     !        x_II(j,i) = Radius*SinTheta*cos(Phi)
+     !        y_II(j,i) = Radius*SinTheta*sin(Phi)
+     !     end do
+     !  end do
+
+     ! Sum all cells within range
+     do iBlock = 1, nBlock
+
+        if (unusedBLK(iBlock)) CYCLE
+
+        ! get the max and min radial distance for this block so that 
+        ! we can check whether or not this block contibutes to the sum.
+
+        xMin = cHalf*(x_BLK( 0, 0, 0,iBlock) + x_BLK(   1,   1  , 1,iBlock))
+        xMax = cHalf*(x_BLK(nI,nJ,nK,iBlock) + x_BLK(nI+1,nJ+1,nK+1,iBlock))
+        yMin = cHalf*(y_BLK( 0, 0, 0,iBlock) + y_BLK(   1,   1,   1,iBlock))
+        yMax = cHalf*(y_BLK(nI,nJ,nK,iBlock) + y_BLK(nI+1,nJ+1,nK+1,iBlock))
+        zMin = cHalf*(z_BLK( 0, 0, 0,iBlock) + z_BLK(   1,   1,   1,iBlock))
+        zMax = cHalf*(z_BLK(nI,nJ,nK,iBlock) + z_BLK(nI+1,nJ+1,nK+1,iBlock))
+
+        if( minmod(xMin,xMax)**2+minmod(yMin,yMax)**2+minmod(zMin,zMax)**2 &
+             > Radius**2) &
+             CYCLE
+        if( maxmod(xMin,xMax)**2+maxmod(yMin,yMax)**2+maxmod(zMin,zMax)**2 &
+             < Radius**2) &
+             CYCLE
+
+        InvDxyz_D = 1.0/(/ Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock) /)
+
+        ! Set temporary array
+        Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
+
+        ! Fill in edges and corners for the first layer so that bilinear 
+        ! interpolation can be used without message passing these values
+
+        if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
+
+        do i = 1, nTheta
+
+           ! Check if z is inside the block
+           Theta = dTheta*(i-cHalf)
+           z     = Radius*cos(Theta)
+           if(z <  zMin) CYCLE
+           if(z >= zMax) CYCLE
+
+           SinTheta = sin(Theta)
+
+           ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
+           nPhi = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
+           dPhi = cTwoPi/nPhi
+
+           ! Area of the surface element
+           dArea = dArea0 * SinTheta * dPhi
+
+           do j = 1, nPhi
+              Phi = j*dPhi
+
+              ! Check if x and y are inside the block
+              x = Radius * SinTheta * cos(Phi)
+              if(x <  xMin) CYCLE
+              if(x >= xMax) CYCLE
+
+              y = Radius * SinTheta * sin(Phi)
+              if(y <  yMin) CYCLE
+              if(y >= yMax) CYCLE
+
+              ! Compute the interpolated values at the current location.
+
+              Average = trilinear( Array_G(:,:,:), &
+                   1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
+
+              select case(TypeAction)
+              case('integrate')
+                 Result = Result + dArea * Average
+              case('maxval')
+                 Result = max(Result, Average)
+              case('minval')
+                 Result = min(Result, Average)
+              end select
+              !if(iBlock==222.and.i==22.and.j==76)then
+              !   write(*,*)'j, Result=',j, Result
+              !   write(*,*)'x,y,z=',x,y,z
+              !   write(*,*)'XyzStart_Blk=',XyzStart_Blk(:,iBlock)
+              !   write(*,*)'InvDxyz_D=',InvDxyz_D
+              !end if
+           end do
         end do
      end do
-     integrate_sphere = Integral
-     call timing_stop('int_sphere')
-     RETURN
-  end if
-
-  ! Get the angular resolution from the input parameter nTheta
-  MaxPhi = 2*nTheta
-  dTheta = cPi/nTheta
-  dArea0 = Radius**2 * cTwo * sin(cHalf*dTheta)
-
-  if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
-       dTheta*cRadToDeg
-
-  ! Calculate sin(theta) and x,y,z in advance
-  !  allocate( x_II(MaxPhi,nTheta), y_II(MaxPhi, nTheta), z_I(nTheta), &
-  !       SinTheta_I(nTheta) )
-  !
-  !  do i = 1, nTheta
-  !     Theta         = (i - cHalf)*dTheta
-  !     SinTheta      = sin(Theta)
-  !     SinTheta_I(i) = SinTheta
-  !     z_I(i)        = Radius*cos(Theta)
-  !
-  !     ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
-  !     ! This keeps the area of the spherical cells roughly constant 
-  !     ! and the shape roughly a square.
-  !     ! Make sure that nPhi is a multiple of 4 to preserve symmetry
-  !     nPhi  = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
-  !     Dphi  = cTwoPi/nPhi
-  !     do j = 1, nPhi
-  !        Phi = j*dPhi
-  !        ! Convert to Cartesian coordinates
-  !        x_II(j,i) = Radius*SinTheta*cos(Phi)
-  !        y_II(j,i) = Radius*SinTheta*sin(Phi)
-  !     end do
-  !  end do
-
-  ! Sum all cells within range
-  Integral = 0.0
-  do iBlock = 1, nBlock
-
-     if (unusedBLK(iBlock)) CYCLE
-
-     ! get the max and min radial distance for this block so that we can check
-     ! whether or not this block contibutes to the sum.
-
-     xMin = cHalf*(x_BLK( 0, 0, 0,iBlock) + x_BLK(   1,   1  , 1,iBlock))
-     xMax = cHalf*(x_BLK(nI,nJ,nK,iBlock) + x_BLK(nI+1,nJ+1,nK+1,iBlock))
-     yMin = cHalf*(y_BLK( 0, 0, 0,iBlock) + y_BLK(   1,   1,   1,iBlock))
-     yMax = cHalf*(y_BLK(nI,nJ,nK,iBlock) + y_BLK(nI+1,nJ+1,nK+1,iBlock))
-     zMin = cHalf*(z_BLK( 0, 0, 0,iBlock) + z_BLK(   1,   1,   1,iBlock))
-     zMax = cHalf*(z_BLK(nI,nJ,nK,iBlock) + z_BLK(nI+1,nJ+1,nK+1,iBlock))
-
-     if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 + minmod(zMin,zMax)**2 &
-          > Radius**2) &
-          CYCLE
-     if ( max(abs(xMin),abs(xMax))**2 + max(abs(yMin),abs(yMax))**2 + &
-          max(abs(zMin),abs(zMax))**2 < Radius**2 ) &
-          CYCLE
-
-     DxInv = cOne/dx_BLK(iBlock)
-     DyInv = cOne/dy_BLK(iBlock)
-     DzInv = cOne/dz_BLK(iBlock)
-
-     do i = 1, nTheta
-
-        ! Check if z is inside the block
-        Theta = dTheta*(i-cHalf)
-        z     = Radius*cos(Theta)
-        if(z <  zMin) CYCLE
-        if(z >= zMax) CYCLE
-
-        SinTheta = sin(Theta)
-
-        ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
-        nPhi = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
-        dPhi = cTwoPi/nPhi
-
-        ! Area of the surface element
-        dArea = dArea0 * SinTheta * dPhi
-
-        do j = 1, nPhi
-           Phi = j*dPhi
-           
-           ! Check if x and y are inside the block
-           x = Radius * SinTheta * cos(Phi)
-           if(x <  xMin) CYCLE
-           if(x >= xMax) CYCLE
-
-           y = Radius * SinTheta * sin(Phi)
-           if(y <  yMin) CYCLE
-           if(y >= yMax) CYCLE
-
-           ! Compute the interpolated values at the current location.
-
-           ! Convert to normalized coordinates 
-           ! (in cell centers the nomalized coordinate equals the index)
-           xNorm = DxInv*(x - x_BLK(1,1,1,iBlock)) + cOne
-           yNorm = DyInv*(y - y_BLK(1,1,1,iBlock)) + cOne
-           zNorm = DzInv*(z - z_BLK(1,1,1,iBlock)) + cOne
-
-           ! Determine cell indices corresponding to location 
-           i1 = nint(xNorm)
-           j1 = nint(yNorm)
-           k1 = nint(zNorm)
-
-           ! Distance relative to the cell centers
-           Dx = xNorm-i1
-           Dy = yNorm-j1
-           Dz = zNorm-k1
-
-           ! The indexes of the cells in the direction of the point
-           i2 = i1 + sign(1.0, Dx)
-           j2 = j1 + sign(1.0, Dy)
-           k2 = k1 + sign(1.0, Dz)
-           
-           ! In the interpolation formula only the abs(distance) occurs
-           Dx = abs(Dx)
-           Dy = abs(Dy)
-           Dz = abs(Dz)
-
-           ! Second order interpolation in 3 directions
-           Average = &
-                Array(i1,j1,k1,iBlock)*(1-Dx-Dy-Dz) + &
-                Array(i2,j1,k1,iBlock)*Dx             + &
-                Array(i1,j2,k1,iBlock)*Dy             + &
-                Array(i1,j1,k2,iBlock)*Dz
-
-           Integral = Integral + dArea * Average
-
-           ! This line is here to avoid incorrect optimization 
-           ! by NAG f95 v5.0(322) or v4.0a(388)
-           if(iBlock == -1)write(*,*)xNorm,yNorm,zNorm
-
-        end do
-     end do
-  end do
-
+  end if                                           !^CFG IF COVARIANT
   ! deallocate(x_II, y_II, z_I, SinTheta_I)
 
-  integrate_sphere = Integral
-  call timing_stop('int_sphere')
+  calc_sphere = Result
+  call timing_stop('calc_sphere_'//TypeAction)
 
 contains
 
@@ -1206,299 +1199,122 @@ contains
     minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
   end function minmod
 
-end function integrate_sphere
+  real function maxmod(x,y)
+    real, intent(in) :: x,y
+    maxmod = max(abs(x),abs(y))
+  end function maxmod
+
+end function calc_sphere
 
 
 !==============================================================================
 
-real function integrate_flux_circ(qrad,qz,qa)
+real function integrate_circle(Radius,z,Array_GB)
 
-  ! This function calculates the integral of the incomming variable qa
+  ! This function calculates the integral of the incomming variable Array_GB
   ! over a cirle parallel to the equitorial plane.  The radius of the circle
-  ! for the z axis is defined by the radius qrad and the z position is
-  ! is given by qz.  
+  ! for the z axis is defined by the radius Radius and the z position is
+  ! is given by z.  
 
-  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
+  use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,optimize_message_pass
+  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Dx_BLK,Dy_BLK,Dz_BLK,XyzStart_Blk
   use ModNumConst
   implicit none
 
   ! Arguments
 
-  real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK), &
-       intent(in) :: qa
-  real, intent(in) :: qrad, qz 
+  real, intent(in) :: Array_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
+  real, intent(in) :: Radius, z 
 
   ! Local variables
-  real :: integral_sum, term_to_add 
+  real :: Integral, Average 
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,i1,i2,j1,j2,k1,k2
-  integer :: nphi_circ
-  real :: xx1,xx2,yy1,yy2,zz1,zz2,minRblk, maxRblk
-  real :: x,y,z,xx,yy,zz,dx1,dx2,dy1,dy2,dz1,dz2
-  real :: dphi_circ,phi_circ
+  integer :: iBlock,i,j
+  integer :: nPhi
+  real :: xMin,xMax,yMin,yMax,zMin,zMax
+  real :: x, y, InvDxyz_D(3)
+  real :: dPhi,Phi
+  real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
 
-  logical :: oktest,oktest_me
-  !---------------------------------------------------------------------------
-
-  integral_sum = 0.0
-
-  call set_oktest('integrate_flux_circ',oktest,oktest_me)
-
-  ! the angular resolution of the integral is hard coded
-  ! in degrees
-  dphi_circ = 0.5
-
-  ! now comcircpute the number of points that correspond to the above
-  ! intervals and then recompute the intervals in case an even multiple
-  ! was not chosen.
-  nphi_circ   = 360.0/dphi_circ
-  dphi_circ   = 360.0/real(nphi_circ)
-  !convert to radians
-  dphi_circ   = dphi_circ*cPi/180.0
-
-  if (oktest_me) write(*,*) 'nphi,dphi',nphi_circ,dphi_circ
-
-  ! Sum all cells within range
-
-  do iBLK = 1,nBlock
-
-     if (unusedBLK(iBLK)) CYCLE
-     ! get the max and min radial (cylindrical) distance for this block so 
-     ! that we can check whether or not this block contibutes to the sum.
-     xx1 = 0.50*(x_BLK( 0, 0, 0,iBLK)+x_BLK(   1,   1  , 1,iBLK))
-     xx2 = 0.50*(x_BLK(nI,nJ,nK,iBLK)+x_BLK(nI+1,nJ+1,nK+1,iBLK))
-     yy1 = 0.50*(y_BLK( 0, 0, 0,iBLK)+y_BLK(   1,   1,   1,iBLK))
-     yy2 = 0.50*(y_BLK(nI,nJ,nK,iBLK)+y_BLK(nI+1,nJ+1,nK+1,iBLK))
-     zz1 = 0.50*(z_BLK( 0, 0, 0,iBLK)+z_BLK(   1,   1,   1,iBLK))
-     zz2 = 0.50*(z_BLK(nI,nJ,nK,iBLK)+z_BLK(nI+1,nJ+1,nK+1,iBLK))
-     minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
-          (min(abs(yy1),abs(yy2)))**2)
-     maxRblk = sqrt((max(abs(xx1),abs(xx2)))**2 + &
-          (max(abs(yy1),abs(yy2)))**2)
-     if (minRblk > qrad .or. maxRblk < qrad ) CYCLE
-
-
-     do i=1,nphi_circ
-        phi_circ = (i-.5)*dphi_circ
-
-        ! get the xyz coordinates
-        x = qrad*cos(phi_circ)
-        y = qrad*sin(phi_circ)
-        z = qz
-
-        ! check to see if this point is inside the block - if so add it to the sum
-        if (x >= xx1 .and. x < xx2 .and. &
-             y >= yy1 .and. y < yy2 .and. &
-             z >= zz1 .and. z < zz2 ) then
-
-           !compute the interpolated values at the current location.
-           ! Convert to normalized coordinates (index and position are the same)
-           xx=(x-x_BLK(1,1,1,iBLK))/dx_BLK(iBLK)+1.
-           yy=(y-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-           zz=(z-z_BLK(1,1,1,iBLK))/dz_BLK(iBLK)+1.
-
-           ! Determine cell indices corresponding to location 
-           i1=floor(xx); i2=i1+1
-           j1=floor(yy); j2=j1+1
-           k1=floor(zz); k2=k1+1
-
-           ! Distance relative to the cell centers
-           dx1=xx-i1; dx2=1.-dx1
-           dy1=yy-j1; dy2=1.-dy1
-           dz1=zz-k1; dz2=1.-dz1
-
-           ! Bilinear interpolation in 3D
-           term_to_add = &
-                dx1*(   dy1*(   dz1*qa(i2,j2,k2,iBLK)+&
-                dz2*qa(i2,j2,k1,iBLK))+&
-                dy2*(   dz1*qa(i2,j1,k2,iBLK)+&
-                dz2*qa(i2,j1,k1,iBLK)))+&
-                dx2*(   dy1*(   dz1*qa(i1,j2,k2,iBLK)+&
-                dz2*qa(i1,j2,k1,iBLK))+&
-                dy2*(   dz1*qa(i1,j1,k2,iBLK)+&
-                dz2*qa(i1,j1,k1,iBLK)))
-
-           integral_sum = integral_sum + term_to_add
-
-        end if
-
-     end do
-
-  end do
-
-  ! now multiply by the size of each interval in the integral.  Since they are all the
-  ! same we can do this after the fact and not inside the above loops
-
-  integrate_flux_circ = integral_sum*qrad*dphi_circ
-
-end function integrate_flux_circ
-
-!==============================================================================
-
-real function minmax_sphere(iminmax,nTheta,Radius,Array)
-
-  ! This function calculates the maximum or minimum value of the incomming
-  ! variable Array over the surface of a sphere centered at the origin radius
-  ! Radius.  The resolution in the colatitude is determined by the nTheta
-  ! parameter. The variable iminmax indicates whether to take a maximum (1) or
-  ! a minimum (-1).
-
-  use ModMain,           ONLY: nI,nJ,nK,nBLK,nBlock,unusedBLK
-  use ModGeometry,       ONLY: x_BLK,y_BLK,z_BLK,dx_BLK,dy_BLK,dz_BLK
-  use ModNumConst
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use ModMPI
-  implicit none
-
-  ! Arguments
-
-  integer, intent(in) :: iminmax, nTheta
-  real, intent(in)    :: Array(-1:nI+2,-1:nJ+2,-1:nK+2,nBLK)
-  real, intent(in)    :: Radius
-
-  ! Local variables
-  real :: minmax, Average
-
-  ! Indices and coordinates
-  integer :: iBlock,i,j,i1,i2,j1,j2,k1,k2
-  integer :: MaxPhi, nPhi
-  real    :: x, y, z, DxInv, DyInv, DzInv, xNorm, yNorm, zNorm, Dx, Dy, Dz
-  real    :: xMin, xMax, yMin, yMax, zMin, zMax
-  real    :: dTheta, dPhi, Theta, Phi, SinTheta, CosTheta
-
-  ! Store cartesian coordinates for sake of efficiency
-  ! The x and y depend on iPhi,iTheta while z only depends on iTheta
-  !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
+  real, external:: trilinear
 
   logical :: DoTest,DoTestMe
   !---------------------------------------------------------------------------
 
-  call set_oktest('minmax_sphere',DoTest,DoTestMe)
-  call timing_start('minmax_sphere')
+  Integral = 0.0
 
-  ! Get the angular resolution from the input parameter nTheta
-  MaxPhi = 2*nTheta
-  dTheta = cPi/nTheta
+  call set_oktest('integrate_circle',DoTest,DoTestMe)
 
-  if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
-       dTheta*cRadToDeg
+  ! the angular resolution of the integral is hard coded
+  nPhi = 720
+  dPhi = cTwoPi/nPhi
 
-  ! find the maximum or minimum of all the points on the sphere
+  if (DoTestMe) write(*,*) 'nPhi,dPhi',nPhi,dPhi
 
-  if (iminmax > 0.0) then
-     minmax = -1.0e30
-  else
-     minmax = 1.0e30
-  end if
+  ! Sum all cells within range
+
   do iBlock = 1, nBlock
 
      if (unusedBLK(iBlock)) CYCLE
+     ! get the max and min radial (cylindrical) distance for this block so 
+     ! that we can check whether or not this block contibutes to the sum.
 
-     ! get the max and min radial distance for this block so that we can check
-     ! whether or not this block contibutes to the sum.
+     zMin = 0.5*(z_BLK( 0, 0, 0,iBlock)+z_BLK(   1,   1,   1,iBlock))
+     zMax = 0.5*(z_BLK(nI,nJ,nK,iBlock)+z_BLK(nI+1,nJ+1,nK+1,iBlock))
 
-     xMin = cHalf*(x_BLK( 0, 0, 0,iBlock) + x_BLK(   1,   1  , 1,iBlock))
-     xMax = cHalf*(x_BLK(nI,nJ,nK,iBlock) + x_BLK(nI+1,nJ+1,nK+1,iBlock))
-     yMin = cHalf*(y_BLK( 0, 0, 0,iBlock) + y_BLK(   1,   1,   1,iBlock))
-     yMax = cHalf*(y_BLK(nI,nJ,nK,iBlock) + y_BLK(nI+1,nJ+1,nK+1,iBlock))
-     zMin = cHalf*(z_BLK( 0, 0, 0,iBlock) + z_BLK(   1,   1,   1,iBlock))
-     zMax = cHalf*(z_BLK(nI,nJ,nK,iBlock) + z_BLK(nI+1,nJ+1,nK+1,iBlock))
+     if(z < zMin .or. z >= zMax ) CYCLE
 
-     if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 + minmod(zMin,zMax)**2 &
-          > Radius**2) &
-          CYCLE
-     if ( max(abs(xMin),abs(xMax))**2 + max(abs(yMin),abs(yMax))**2 + &
-          max(abs(zMin),abs(zMax))**2 < Radius**2 ) &
-          CYCLE
+     xMin = 0.5*(x_BLK( 0, 0, 0,iBlock)+x_BLK(   1,   1  , 1,iBlock))
+     xMax = 0.5*(x_BLK(nI,nJ,nK,iBlock)+x_BLK(nI+1,nJ+1,nK+1,iBlock))
+     yMin = 0.5*(y_BLK( 0, 0, 0,iBlock)+y_BLK(   1,   1,   1,iBlock))
+     yMax = 0.5*(y_BLK(nI,nJ,nK,iBlock)+y_BLK(nI+1,nJ+1,nK+1,iBlock))
 
-     DxInv = cOne/dx_BLK(iBlock)
-     DyInv = cOne/dy_BLK(iBlock)
-     DzInv = cOne/dz_BLK(iBlock)
+     if( minmod(xMin,xMax)**2 + minmod(yMin,yMax)**2 > Radius**2) CYCLE
+     if( maxmod(xMin,xMax)**2 + maxmod(yMin,yMax)**2 < Radius**2) CYCLE
 
-     do i = 1, nTheta
-        ! Check if z is inside the block
-        Theta = dTheta*(i-cHalf)
-        z     = Radius*cos(Theta)
-        if(z <  zMin) CYCLE
-        if(z >= zMax) CYCLE
+     Array_G = Array_GB(0:nI+1,0:nJ+1,0:nK+1,iBlock)
 
-        SinTheta = sin(Theta)
+     if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
 
-        ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
-        nPhi = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
-        dPhi = cTwoPi/nPhi
+     InvDxyz_D = 1.0/(/ Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock) /)
 
-        do j = 1, nPhi
-           Phi = j*dPhi
+     do i = 1, nPhi
+        Phi = (i-0.5)*dPhi
 
-           ! Check if x and y are inside the block
-           x = Radius * SinTheta * cos(Phi)
-           if(x <  xMin) CYCLE
-           if(x >= xMax) CYCLE
+        ! get the xyz coordinates
+        x = Radius*cos(Phi)
+        if( x < xMin .or. x >= xMax) CYCLE
 
-           y = Radius * SinTheta * sin(Phi)
-           if(y <  yMin) CYCLE
-           if(y >= yMax) CYCLE
+        y = Radius*sin(Phi)
+        if( y < yMin .or. y >= yMax) CYCLE
 
-           ! Compute the interpolated values at the current location.
+        Average = trilinear( Array_GB(:,:,:,iBlock), &
+             1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
 
-           ! Convert to normalized coordinates
-           ! (in cell centers the nomalized coordinate equals the index)
-           xNorm = DxInv*(x - x_BLK(1,1,1,iBlock)) + cOne
-           yNorm = DyInv*(y - y_BLK(1,1,1,iBlock)) + cOne
-           zNorm = DzInv*(z - z_BLK(1,1,1,iBlock)) + cOne
-
-           ! Determine cell indices corresponding to location
-           i1 = nint(xNorm)
-           j1 = nint(yNorm)
-           k1 = nint(zNorm)
-
-           ! Distance relative to the cell centers
-           Dx = xNorm-i1
-           Dy = yNorm-j1
-           Dz = zNorm-k1
-
-           ! The indexes of the cells in the direction of the point
-           i2 = i1 + sign(1.0, Dx)
-           j2 = j1 + sign(1.0, Dy)
-           k2 = k1 + sign(1.0, Dz)
-
-           ! In the interpolation formula only the abs(distance) occurs
-           Dx = abs(Dx)
-           Dy = abs(Dy)
-           Dz = abs(Dz)
-
-           ! Second order interpolation in 3 directions
-           Average = &
-                Array(i1,j1,k1,iBlock)*(1-Dx-Dy-Dz) + &
-                Array(i2,j1,k1,iBlock)*Dx             + &
-                Array(i1,j2,k1,iBlock)*Dy             + &
-                Array(i1,j1,k2,iBlock)*Dz
-
-           if(iminmax>0) then
-              minmax = max(minmax,Average)
-           else
-              minmax = min(minmax,Average)
-           end if
-        end do
+        Integral = Integral + Average
      end do
   end do
-  ! deallocate(x_II, y_II, z_I, SinTheta_I)
 
-  minmax_sphere = minmax
-  call timing_stop('minmax_sphere')
+  ! Now multiply by the size of each interval in the integral.  
+  ! Since they are all the same we can do this after the fact 
+  ! and not inside the above loops
 
-  contains
-  
-    real function minmod(x,y)
-      real, intent(in) :: x,y
-      minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
-    end function minmod
+  integrate_circle = Integral*Radius*dPhi
 
-end function minmax_sphere
+contains
 
+  real function minmod(x,y)
+    real, intent(in) :: x,y
+    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+  end function minmod
+
+  real function maxmod(x,y)
+    real, intent(in) :: x,y
+    maxmod = max(abs(x),abs(y))
+  end function maxmod
+
+end function integrate_circle
 
 !==============================================================================
 
