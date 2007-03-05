@@ -1736,7 +1736,7 @@ contains
     character (len=*), intent(in):: TypeVar
     real, intent(in), optional :: Radius
 
-    real, external :: integrate_sphere
+    real, external :: calc_sphere
     real ::mass
     integer:: i,j,k,iBLK
     character (len=*), parameter :: Name='user_get_log_var'
@@ -1757,7 +1757,7 @@ contains
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
-      VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
 
     case('opflx')
        mass=16.
@@ -1771,7 +1771,7 @@ contains
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
-       VarValue = integrate_sphere(360, Radius, tmp1_BLK)    
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)    
     case('o2pflx')
        mass=32.
        do iBLK=1,nBLK
@@ -1784,7 +1784,7 @@ contains
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
-       VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
     
     case('co2pflx')
        mass=44.
@@ -1798,7 +1798,7 @@ contains
                   )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
           end do; end do; end do          
        end do
-       VarValue = integrate_sphere(360, Radius, tmp1_BLK)
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
     
     case default
        call stop_mpi('wrong logvarname')
