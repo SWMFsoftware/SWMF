@@ -6,7 +6,7 @@ test:
 	-@(make test_shocktube)
 	-@(make test_titan)
 	-@(make test_mars)
-	-@(make test_vens)
+	-@(make test_venus)
 	-@(make test_func)
 	@ls -l *.diff
 
