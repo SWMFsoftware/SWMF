@@ -1037,7 +1037,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
         ! Find the radial index just after Radius
         i2=0
-        do while ( Radius > R_BLK( i1, 1, 1, iBlock))
+        do while ( Radius > R_BLK( i2, 1, 1, iBlock))
            i2 = i2+1
         end do
         i1=i2-1
