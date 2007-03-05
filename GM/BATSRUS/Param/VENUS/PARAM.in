@@ -3,6 +3,9 @@
 #ECHO
 T                       DoEcho
 
+#NORMALIZATION
+SOLARWIND
+
 #VERBOSE
 1                       lVerbose
 
