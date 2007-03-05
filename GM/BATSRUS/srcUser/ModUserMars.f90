@@ -1728,7 +1728,6 @@ contains
     use ModMain,       ONLY: unusedBLK
     use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
          rhoUx_,rhoUy_,rhoUz_
-    use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
 
