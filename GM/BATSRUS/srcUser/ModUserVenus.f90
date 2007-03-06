@@ -539,7 +539,7 @@ contains
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
 
-    UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)
+    UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
 
   end subroutine user_init_session
 
