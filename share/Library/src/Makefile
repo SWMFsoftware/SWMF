@@ -15,6 +15,7 @@ MODULES = \
 	ModConst.o\
 	ModCoordTransform.o\
 	ModFreq.o\
+	ModInterpolate.o\
 	ModIoUnit.o\
 	ModKind.o\
 	ModLinearSolver.o\
