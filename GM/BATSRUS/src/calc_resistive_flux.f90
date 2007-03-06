@@ -4,7 +4,7 @@ Module ModResist
   use ModSize,     ONLY:nI,nJ,nK,gcn,nBLK
   implicit none
   
-  logical :: UseResistivity
+  logical :: UseResistivity=.false.
   logical :: DoInitEtaLocResist_B(nBLK)
   data DoInitEtaLocResist_B /nBLK*.true./
   logical, dimension (1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK) :: &
@@ -16,6 +16,7 @@ Module ModResist
   real :: EtaResist_G(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
   real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
 
+  logical :: UseUserEta = .false., DoSetEta=.true.
 end module ModResist
 
 !==============================================================================
@@ -26,7 +27,8 @@ subroutine add_resistive_flux(DoResChangeOnly)
        iMinFaceY,iMaxFaceY,iMinFaceZ,iMaxFaceZ, &
        jMinFaceX,jMaxFaceX,jMinFaceZ,jMaxFaceZ, &
        kMinFaceX,kMaxFaceX,kMinFaceY,kMaxFaceY, &
-       globalBLK,BLKtest,UseSpitzerForm
+       globalBLK,BLKtest,UseSpitzerForm, &
+       X_, Y_, Z_
   use ModVarIndexes,ONLY:Bx_,By_,Bz_,&
        rho_,Energy_
   use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,dx_BLK, &
@@ -42,19 +44,27 @@ subroutine add_resistive_flux(DoResChangeOnly)
   use ModPhysics,  ONLY: gm1
   use ModResist,   ONLY: EtaResist_G ,Eta_GB
   use ModMpi
+  use ModCovariant, ONLY: UseCovariant, FaceArea2MinI_B,& !^CFG IF COVARIANT    
+       FaceArea2MinJ_B,FaceArea2MinK_B, &                 !^CFG IF COVARIANT    
+       FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB          !^CFG IF COVARIANT  
   implicit none
   
   logical, intent(in):: DoResChangeOnly
   integer:: i,j,k
   real:: CristophCoefficient,EtaFluxCoefficient
-  real:: DBXFace,DBYFace,DBZFace,DB2Face
+  real:: DBXFace,DBYFace,DBZFACE,DB2Face
   real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
        BX,BY,BZ,B2
-  !
-  BX(:,:,:) = State_VGB(Bx_,:,:,:,globalBLK)+B0xCell_BLK(:,:,:,globalBLK)
-  BY(:,:,:) = State_VGB(By_,:,:,:,globalBLK)+B0yCell_BLK(:,:,:,globalBLK)
-  BZ(:,:,:) = State_VGB(Bz_,:,:,:,globalBLK)+B0zCell_BLK(:,:,:,globalBLK)
-  B2(:,:,:) = BX**2+BY**2+BZ**2   
+  
+  real,dimension(1:nIFace,1:nJFace,1:nKFace,nBLK):: &
+       CCfaceX_FB, CCfaceY_FB, CCfaceZ_FB 
+  logical :: DoSetCoef_B(nBLK)=.true.
+  real :: Area, InvDxyz
+ !
+  BX = State_VGB(Bx_,:,:,:,globalBLK)+B0xCell_BLK(:,:,:,globalBLK)
+  BY = State_VGB(By_,:,:,:,globalBLK)+B0yCell_BLK(:,:,:,globalBLK)
+  BZ = State_VGB(Bz_,:,:,:,globalBLK)+B0zCell_BLK(:,:,:,globalBLK)
+  B2 = BX**2+BY**2+BZ**2   
   !\
   ! Compute the resistivity
   !/
@@ -67,10 +77,60 @@ subroutine add_resistive_flux(DoResChangeOnly)
   ! Compute and add the x_resistive_flux to the x-face fluxes 
   !/
   CristophCoefficient = fAx_BLK(globalBLK)/dx_BLK(globalBLK)
+  if(UseCovariant.and. DoSetCoef_B(globalBLK))then                !^CFG IF COVARIANT BEGIN
+     DoSetCoef_B(globalBLK)=.false.
+
+     do k=1,nK; do j=1,nJ; do i=1,nIFace 
+      
+        Area = sqrt(max(FaceAreaI_DFB(x_, i, j, k, globalBLK)**2  & 
+             +          FaceAreaI_DFB(y_, i, j, k, globalBLK)**2  &
+             +          FaceAreaI_DFB(z_, i, j, k, globalBLK)**2, & 
+             FaceArea2MinI_B(globalBLK)) )                 
+        InvDxyz  = 1.0/sqrt(&           
+             ( x_BLK(i  , j, k, globalBLK)       &                         
+             - x_BLK(i-1, j, k, globalBLK))**2 + &                         
+             ( y_BLK(i  , j, k, globalBLK)       &                         
+             - y_BLK(i-1, j, k, globalBLK))**2 + &                         
+             ( z_BLK(i  , j, k, globalBLK)       &                         
+             - z_BLK(i-1, j, k, globalBLK))**2 )                           
+        CCfaceX_FB(i,j,k,globalBLK)= Area*InvDxyz 
+     end do; end do; end do
+
+     do k=1,nK; do j=1,nJFace; do i=1,nI
+        Area = sqrt(max(FaceAreaJ_DFB(x_, i, j, k, globalBLK)**2  &
+             +          FaceAreaJ_DFB(y_, i, j, k, globalBLK)**2  & 
+             +          FaceAreaJ_DFB(z_, i, j, k, globalBLK)**2, & 
+             FaceArea2MinJ_B(globalBLK)) )         
+        InvDxyz  = 1.0/sqrt(&  
+             ( x_BLK(i, j  , k, globalBLK)       &                         
+             - x_BLK(i, j-1, k, globalBLK))**2 + &                         
+             ( y_BLK(i, j  , k, globalBLK)       &                         
+             - y_BLK(i, j-1, k, globalBLK))**2 + &                         
+             ( z_BLK(i, j  , k, globalBLK)       &                         
+             - z_BLK(i, j-1, k, globalBLK))**2 )                           
+        CCfaceY_FB(i,j,k,globalBLK)= Area*InvDxyz 
+     end do; end do; end do
+     do k=1,nKFace; do j=1,nJ; do i=1,nI
+        Area = sqrt(max(FaceAreaK_DFB(x_, i, j, k, globalBLK)**2  & 
+             +          FaceAreaK_DFB(y_, i, j, k, globalBLK)**2  &  
+             +          FaceAreaK_DFB(z_, i, j, k, globalBLK)**2, &    
+             FaceArea2MinK_B(globalBLK)) )    
+        InvDxyz  = 1.0/sqrt(&                
+             ( x_BLK(i, j, k  , globalBLK)       &                         
+             - x_BLK(i, j, k-1, globalBLK))**2 + &                         
+             ( y_BLK(i, j, k  , globalBLK)       &                         
+             - y_BLK(i, j, k-1, globalBLK))**2 + &                         
+             ( z_BLK(i, j, k  , globalBLK)       &                         
+             - z_BLK(i, j, k-1, globalBLK))**2 )                           
+        CCfaceZ_FB(i,j,k,globalBLK)= Area*InvDxyz 
+     end do; end do; end do
+  end if                              !^CFG IF COVARIANT END
+   
   if (.not.DoResChangeOnly) then
      do k=kMinFaceX,kMaxFaceX
         do j=jMinFaceX,jMaxFaceX
            do i=1,nIFace
+              if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
               call add_resistive_flux_x
            end do
         end do
@@ -79,6 +139,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      i=1
      do k=1,nK
         do j=1,nJ
+           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_x
         end do
      end do
@@ -86,6 +147,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      i=nIFace
      do k=1,nK
         do j=1,nJ
+           if(UseCovariant) CristophCoefficient = CCfaceX_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_x
         end do
      end do
@@ -98,6 +160,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      do k=kMinFaceY,kMaxFaceY
         do j=1,nJFace
            do i=iMinFaceY,iMaxFaceY
+              if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
               call add_resistive_flux_y
            end do
         end do
@@ -106,6 +169,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      j=1
      do k=1,nK
         do i=1,nI
+           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_y
         end do
      end do
@@ -113,6 +177,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      j=nJFace 
      do k=1,nK
         do i=1,nI
+           if(UseCovariant) CristophCoefficient = CCfaceY_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_y
         end do
      end do
@@ -125,6 +190,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      do k=1,nKFace
         do j=jMinFaceZ,jMaxFaceZ
            do i=iMinFaceZ,iMaxFaceZ
+              if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
               call add_resistive_flux_z
            end do
         end do
@@ -133,6 +199,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      k=1
      do j=1,nJ
         do i=1,nI
+           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_z
         end do
      end do
@@ -140,6 +207,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
      k=nKFace            
      do j=1,nJ
         do i=1,nI
+           if(UseCovariant) CristophCoefficient = CCfaceZ_FB(i,j,k,globalBLK) !^CFG IF COVARIANT
            call add_resistive_flux_z
         end do
      end do
@@ -150,8 +218,8 @@ contains
   subroutine add_resistive_flux_x
     implicit none
     EtaFluxCoefficient = CristophCoefficient* &
-      cHalf*(EtaResist_G(i-1,j,k)         + &
-             EtaResist_G(i  ,j,k))
+         cHalf*(EtaResist_G(i-1,j,k)         + &
+         EtaResist_G(i  ,j,k))
     DBXFace = BX(i,j,k)-BX(i-1,j,k)
     DBYFace = BY(i,j,k)-BY(i-1,j,k)
     DBZFace = BZ(i,j,k)-BZ(i-1,j,k)
@@ -285,6 +353,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
        Alpha0Resist,yShiftResist,TimeInitRise, &
        TimeConstLev
   use ModResist
+  use ModUser, ONLY : user_set_resistivity
   use ModMpi
   implicit none
   
@@ -306,6 +375,12 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
        Omega_eTau_ei2Resist,EtaAnomLocResist,JmagResist
   real :: current_D(3), Jmag2
 
+  !-------------------------------------------------------
+  if(UseUserEta)then
+     call user_set_resistivity(GlobalBlk, Eta_G)
+     return
+  end if
+
   !\
   ! Introduce some units for dimensionalization:: 
   ! This is not necessary, but makes things more clear!
@@ -317,6 +392,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   ! Dimensionalize:: Eta* is in units of [m^2/s]
   !/
   Eta0Resist_ND       = Eta0Resist*CU_t/CU_x**2
+
   if(UseAnomResist)then
      Eta0AnomResist_ND   = Eta0AnomResist*CU_t/CU_x**2
      EtaAnomMaxResist_ND = EtaAnomMaxResist*CU_t/CU_x**2
@@ -358,13 +434,13 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
      ! Omega_eTau_ei2Resist = [B*mp/(rho*e*Eta_G)]^2
      !/
      Omega_eTau_ei2Resist(:,:,:) = (cProtonMass/cElectronCharge)**2* &
-          (No2Si_V(UnitB_)**2*(BX(:,:,:)**2+BY(:,:,:)**2+BZ(:,:,:)**2))   / &
-          (No2Si_V(UnitRho_)*State_VGB(rho_,:,:,:,globalBLK)*Eta_G(:,:,:))**2
+          (No2Si_V(UnitB_)**2*(BX**2+BY**2+BZ**2))   / &
+          (No2Si_V(UnitRho_)*State_VGB(rho_,:,:,:,globalBLK)*Eta_G)**2
      ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist)
      Eta_G(:,:,:) = Eta_G(:,:,:)* &
-          (cOne+Omega_eTau_ei2Resist(:,:,:))
+          (cOne+Omega_eTau_ei2Resist)
      ! Dimensionalize Eta_G::
-     Eta_G(:,:,:) = Eta_G(:,:,:)*CU_t/CU_x**2
+     Eta_G = Eta_G*CU_t/CU_x**2
      !\
      ! Compute the Hall resistivity, for whatever needed::
      ! EtaHallResist = Eta_G/sqrt( &
