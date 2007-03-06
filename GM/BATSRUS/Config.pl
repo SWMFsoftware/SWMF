@@ -29,6 +29,7 @@ our $NewGridSize;
 my $Src         = 'src';
 my $SrcUser     = 'srcUser';
 my $UserMod     = "$Src/ModUser.f90";
+my $UserModSafe = "$Src/ModUser.f90.safe";
 my $EquationMod = "$Src/ModEquation.f90";
 my $Equation;
 my $UserModule;
@@ -175,7 +176,7 @@ sub set_equation{
     my $File = "$Src/ModEquation$Equation.f90";
     die "$ERROR File $File does not exist!\n" unless -f $File;
     print "cp $File $EquationMod\n" if $Verbose;
-    `cp $File $EquationMod`; # die "$ERROR Could not cp $File $UserMod\n";
+    `cp $File $EquationMod`;
 }
 
 #############################################################################
@@ -199,8 +200,9 @@ sub set_user_module{
 	$File = "$SrcUser/ModUser$UserModule.f90";
     }
     die "$ERROR File $File does not exist!\n" unless -f $File;
+    `cp $UserMod $UserModSafe`;
     print "cp $File $UserMod\n" if $Verbose;
-    `cp $File $UserMod`; # die "$ERROR Could not cp $File $UserMod\n";
+    `cp $File $UserMod`;
 }
 
 #############################################################################
