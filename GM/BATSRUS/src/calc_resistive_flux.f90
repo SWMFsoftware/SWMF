@@ -15,7 +15,6 @@ Module ModResist
        EtaLocResist_GB
   real :: EtaResist_G(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
   real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
-
   logical :: UseUserEta = .false., DoSetEta=.true.
 end module ModResist
 
@@ -68,7 +67,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   !\
   ! Compute the resistivity
   !/
-  call compute_eta_coefficient(BX,BY,BZ,EtaResist_G)
+  call set_resistivity(GlobalBlk, EtaResist_G)
 
   !!! Store it for plotting
    Eta_GB(:,:,:,GlobalBLK) = EtaResist_G
@@ -334,15 +333,15 @@ end subroutine add_resistive_flux
 
 !==============================================================================
 
-subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
+subroutine set_resistivity(iBlock, Eta_G)
   use ModSize,     ONLY:nI,nJ,nK,gcn
   use ModProcMH,   ONLY:iProc
-  use ModMain,     ONLY:globalBLK,BLKtest,UseSpitzerForm, &
+  use ModMain,     ONLY: BLKtest,UseSpitzerForm, &
        UseAnomResist,Time_Simulation
-  use ModVarIndexes,ONLY:Bx_,By_,Bz_,rho_,P_
+  use ModVarIndexes,ONLY:Bx_,By_,Bz_,Rho_,P_
   use ModGeometry, ONLY:x_BLK,y_BLK,z_BLK,x1,x2,y1,y2, &
        dx_BLK,dy_BLK,dz_BLK
-  use ModAdvance,  ONLY:State_VGB
+  use ModAdvance,  ONLY:State_VGB,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
   use ModConst,    ONLY:cBoltzmann,cProtonMass,cElectronMass, &
        cElectronCharge,cEps,cMu,cLightSpeed
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf,cZero,cTiny, &
@@ -356,7 +355,10 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   use ModUser, ONLY : user_set_resistivity
   use ModMpi
   implicit none
-  
+
+  integer, intent(in) :: iBlock
+  real,    intent(out):: Eta_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+
   logical:: UseEtaLocDebug = .false.
   logical:: UseEtaAnomDebug = .false.
   integer:: i,j,k
@@ -365,19 +367,15 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
   real:: LogLambdaResist,EtaPerpConstResist
   real:: ElapsedTimeResist,TimeFactorResist
   real:: Eta0Resist_ND,Eta0AnomResist_ND,EtaAnomMaxResist_ND,jCritInv_ND
-  real, intent(in), dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-       BX,BY,BZ
-  real, intent(out), dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-       Eta_G
   !  real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
   !       EtaHallResist
   real, dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
        Omega_eTau_ei2Resist,EtaAnomLocResist,JmagResist
-  real :: current_D(3), Jmag2
+  real :: Coef, Current_D(3), Jmag2
 
   !-------------------------------------------------------
   if(UseUserEta)then
-     call user_set_resistivity(GlobalBlk, Eta_G)
+     call user_set_resistivity(IBlock, Eta_G)
      return
   end if
 
@@ -409,8 +407,8 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
      !/ 
      ! Compute EtaPerpConstResist::
      EtaPerpConstResist = cHalf*sqrt(cElectronMass)    * &
-          (cLightSpeed*cElectronCharge)**2/((cOne+cTwo)* &
-          cEps*(cTwo*cPi*cBoltzmann)**(cOne+cHalf))
+          (cLightSpeed*cElectronCharge)**2/ &
+          (3*cEps*(cTwo*cPi*cBoltzmann)**1.5)
      !\
      ! Assume ln(Lambda) = 20 (solar corona) -- coded
      !                  or 30 (magnetosphere)
@@ -427,15 +425,18 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
      ! Eta_G = EtaPerpConstResist/Te^1.5
      !/
      Eta_G(:,:,:) = EtaPerpConstResist/(No2Si_V(UnitTemperature_)* &
-          State_VGB(P_,:,:,:,globalBLK)/State_VGB(rho_,:,:,:,globalBLK))**(cOne+cHalf)
+          State_VGB(P_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock))**1.5
      !\
      ! Take into account the dependance of the B field::
      ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist), where
      ! Omega_eTau_ei2Resist = [B*mp/(rho*e*Eta_G)]^2
      !/
-     Omega_eTau_ei2Resist(:,:,:) = (cProtonMass/cElectronCharge)**2* &
-          (No2Si_V(UnitB_)**2*(BX**2+BY**2+BZ**2))   / &
-          (No2Si_V(UnitRho_)*State_VGB(rho_,:,:,:,globalBLK)*Eta_G)**2
+     Coef =((cProtonMass/cElectronCharge)*No2Si_V(UnitB_)/No2Si_V(UnitRho_))**2
+     Omega_eTau_ei2Resist(:,:,:) = Coef*( &
+          (State_VGB(Bx_,:,:,:,iBlock)+B0xCell_BLK(:,:,:,iBlock))**2+&
+          (State_VGB(By_,:,:,:,iBlock)+B0yCell_BLK(:,:,:,iBlock))**2+&
+          (State_VGB(Bz_,:,:,:,iBlock)+B0zCell_BLK(:,:,:,iBlock))**2) &
+          / (State_VGB(Rho_,:,:,:,iBlock)*Eta_G)**2
      ! Eta_G = Eta_G*(1+Omega_eTau_ei2Resist)
      Eta_G(:,:,:) = Eta_G(:,:,:)* &
           (cOne+Omega_eTau_ei2Resist)
@@ -470,11 +471,11 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
         !\
         ! Compute localized in space, time-dependant resistivity
         !/
-        if (DoInitEtaLocResist_B(globalBLK)) then
-           DoInitEtaLocResist_B(globalBLK) = .false.
+        if (DoInitEtaLocResist_B(iBlock)) then
+           DoInitEtaLocResist_B(iBlock) = .false.
            do i=1-gcn,nI+gcn; do j=1-gcn,nJ+gcn; do k=1-gcn,nK+gcn
-              xxx  = x_BLK(i,j,k,globalBLK)
-              yyy  = y_BLK(i,j,k,globalBLK)+yShiftResist*y2
+              xxx  = x_BLK(i,j,k,iBlock)
+              yyy  = y_BLK(i,j,k,iBlock)+yShiftResist*y2
               scr1 = Alpha0Resist*xxx**2
               scr2 = Alpha0Resist*yyy**2
               if (scr1.le.(cOne+cHalf)*cHundred) then
@@ -487,9 +488,9 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
               else
                  scr2 = cZero
               end if
-              EtaLocResist_GB(i,j,k,globalBLK) = Eta0Resist_ND*scr1*scr2
+              EtaLocResist_GB(i,j,k,iBlock) = Eta0Resist_ND*scr1*scr2
            end do; end do; end do
-           if (iProc==0.and.globalBLK==BLKtest) then
+           if (iProc==0.and.iBlock==BLKtest) then
               write(6,*) ''
               write(6,*) '>>>>>>>>>>>>>>>>> Localized Resistivity <<<<<<<<<<<<<<<<<'
               write(6,*) '>>>>>>>>>>>>>>>>>       Parameters      <<<<<<<<<<<<<<<<<'
@@ -517,13 +518,13 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
         else
            TimeFactorResist = cZero
         endif
-        if (UseEtaLocDebug.and.iProc==0.and.globalBLK==BLKtest) then
+        if (UseEtaLocDebug.and.iProc==0.and.iBlock==BLKtest) then
            write(6,*) 'Elapsed Time T = ',ElapsedTimeResist
            write(6,*) 'minval(TimeFactor*EtaLoc),maxval(TimeFactor*EtaLoc):: ', &
                        minval(TimeFactorResist*EtaLocResist_GB(:,:,:,:)),       &
                        maxval(TimeFactorResist*EtaLocResist_GB(:,:,:,:))
         end if
-        Eta_G(:,:,:) = TimeFactorResist*EtaLocResist_GB(:,:,:,globalBLK)
+        Eta_G(:,:,:) = TimeFactorResist*EtaLocResist_GB(:,:,:,iBlock)
         !\
         ! Add anomalous resistivity, if UseAnomResist == .true.
         !/
@@ -534,26 +535,26 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
         !\
         ! Compute localized in space, time-dependant resistivity
         !/
-        if (DoInitEtaLocResist_B(globalBLK)) then
-           DoInitEtaLocResist_B(globalBLK) = .false.
+        if (DoInitEtaLocResist_B(iBlock)) then
+           DoInitEtaLocResist_B(iBlock) = .false.
            do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-              call get_current(i,j,k,GlobalBlk,current_D)
+              call get_current(i,j,k,IBlock,current_D)
               Jmag2 = sum(current_D**2)
               if(Jmag2 > 4.0 )then
-                 xxx  = x_BLK(i,j,k,globalBLK)
-                 zzz  = z_BLK(i,j,k,globalBLK)
+                 xxx  = x_BLK(i,j,k,iBlock)
+                 zzz  = z_BLK(i,j,k,iBlock)
                  scr  = sqrt(xxx**2/2.0+zzz**2)
                  if (scr < 150.0) then
                     scr = 1.0/ cosh(scr)
                  else
                     scr = 0.0
                  end if
-                 EtaLocResist_GB(i,j,k,globalBLK) = Eta0Resist_ND*(1+Alpha0Resist*scr)
+                 EtaLocResist_GB(i,j,k,iBlock) = Eta0Resist_ND*(1+Alpha0Resist*scr)
               else
-                 EtaLocResist_GB(i,j,k,globalBLK) = Eta0Resist_ND
+                 EtaLocResist_GB(i,j,k,iBlock) = Eta0Resist_ND
               end if
            end do; end do; end do
-           if (iProc==0.and.globalBLK==1) then
+           if (iProc==0.and.iBlock==1) then
               write(*,*) ''
               write(*,*) '>>>>>>>>>>>>>>>>> Localized Resistivity <<<<<<<<<<<<<<<<<'
               write(*,*) '>>>>>>>>>>>>>>>>>       Parameters      <<<<<<<<<<<<<<<<<'
@@ -574,7 +575,7 @@ subroutine compute_eta_coefficient(BX,BY,BZ,Eta_G)
            end if
         end if
         TimeFactorResist = cOne
-        Eta_G(:,:,:) = EtaLocResist_GB(:,:,:,globalBLK)
+        Eta_G(:,:,:) = EtaLocResist_GB(:,:,:,iBlock)
         !\
         ! Add anomalous resistivity, if UseAnomResist == .true.
         !/
@@ -596,7 +597,7 @@ contains
     !/
     do i=0,nI+1; do j=0,nJ+1; do k=0,nK+1
 
-       call get_current(i,j,k,GlobalBlk,current_D)
+       call get_current(i,j,k,IBlock,current_D)
        JmagResist(i,j,k) = sqrt(sum(current_D**2))
        !\
        ! Compute the anomalous resistivity:: 
@@ -612,7 +613,7 @@ contains
        Eta_G(i,j,k) = Eta_G(i,j,k)+EtaAnomLocResist(i,j,k)
 
     end do; end do; end do
-    if (UseEtaAnomDebug.and.iProc==0.and.globalBLK==BLKtest) then
+    if (UseEtaAnomDebug.and.iProc==0.and.iBlock==BLKtest) then
        write(*,*) ''
        write(*,*) 'min(EtaAnomLocResist) ,max(EtaAnomLocResist) :: ', &
                    minval(EtaAnomLocResist), maxval(EtaAnomLocResist)
@@ -622,4 +623,4 @@ contains
     end if
   end subroutine add_anomalous_resistivity
   
-end subroutine compute_eta_coefficient
+end subroutine set_resistivity
