@@ -52,7 +52,6 @@ module ModFaceFlux
        HallJx, HallJy, HallJz, EtaJx, EtaJy, EtaJz, Eta
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
-
 contains
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
@@ -71,7 +70,6 @@ contains
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
-    
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
@@ -94,6 +92,8 @@ contains
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
 
+    if(UseResistivity) call set_resistivity(iBlock, EtaResist_G)
+    
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
        if(neiLwest(iBlock) == 1)call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
@@ -315,7 +315,8 @@ contains
        AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
             FaceArea2MinI_B(iBlockFace))
-       
+       Area = sqrt(Area2)
+
        if(HallCoeff > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace  , jFace, kFace, iBlockFace)       &
@@ -347,6 +348,8 @@ contains
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
             FaceArea2MinJ_B(iBlockFace))
+       Area = sqrt(Area2)
+
        if(HallCoeff > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace, jFace  , kFace, iBlockFace)       &
@@ -378,6 +381,8 @@ contains
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
        Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
             FaceArea2MinK_B(iBlockFace))
+       Area = sqrt(Area2)
+
        if(HallCoeff > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace, jFace, kFace  , iBlockFace)       &
@@ -446,11 +451,9 @@ contains
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
     end if
 
-    if(HallCoeff > 0.0 .or. UseResistivity)then
-       ! Calculate HallCoeff*current for the face
-       call get_face_current(iDir, iFace, jFace, kFace, iBlockFace, &
-            Jx, Jy, Jz)
-    end if
+    ! Calculate current for the face
+    if(HallCoeff > 0.0 .or. UseResistivity) &
+         call get_face_current(iDir, iFace, jFace, kFace, iBlockFace, Jx,Jy,Jz)
 
     if(UseResistivity)then
        EtaJx = Eta*Jx
@@ -477,6 +480,9 @@ contains
     if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
     if(DoRoe) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
+
+    ! Increase maximum speed with resistive diffusion speed if necessary
+    if(UseResistivity) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area
 
     if(DoTestCell)call write_test_info
 
@@ -597,14 +603,14 @@ contains
 
       write(*,*)'Fluxes for dir=',iDir,' at I=',iFace,' J=',jFace,' K=',kFace
 
-      write(*,*)'Eigenvalue_maxabs=', Cmax/sqrt(Area2)
+      write(*,*)'Eigenvalue_maxabs=', Cmax/Area
       write(*,*)'CmaxDt/Area      =', CmaxDt/Area
       do iVar = 1, nVar + 1
          write(*,'(a,i2,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
               iVar ,&
               Flux_V(iVar), &
-              FluxLeft_V(iVar)/sqrt(Area2), &
-              FluxRight_V(iVar)/sqrt(Area2),&
+              FluxLeft_V(iVar)/Area, &
+              FluxRight_V(iVar)/Area,&
               StateRightCons_V(iVar)-StateLeftCons_V(iVar)
       end do
 
@@ -737,7 +743,7 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: g, inv_gm1, inv_c2LIGHT
-      use ModMain,    ONLY: x_, y_, z_, UseResistFlux
+      use ModMain,    ONLY: x_, y_, z_
       use ModVarIndexes
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p, e, FullBx, FullBy, FullBz, FullBn
@@ -831,6 +837,7 @@ contains
          FluxBx = AreaY*EtaJz - AreaZ*EtaJy
          FluxBy = AreaZ*EtaJx - AreaX*EtaJz
          FluxBz = AreaX*EtaJy - AreaY*EtaJx
+
          Flux_V(Bx_) = Flux_V(Bx_) + FluxBx
          Flux_V(By_) = Flux_V(By_) + FluxBy
          Flux_V(Bz_) = Flux_V(Bz_) + FluxBz
@@ -983,7 +990,6 @@ contains
       Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
       FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
       Alfven2Normal = InvRho*FullBn**2/Area2
-
       Fast2  = Sound2 + Alfven2
       Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
 
@@ -1019,8 +1025,6 @@ contains
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
       end if
-
-      if(UseResistivity)FastDt = FastDt + 2*Eta*InvDxyz*Area
 
       if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
          if(HallCoeff > 0.0)then
@@ -1075,7 +1079,8 @@ subroutine roe_solver(iDir, Flux_V)
   use ModFaceFlux, ONLY: &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
-       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal
+       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal, &
+       Eta, InvDxyz
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
@@ -1164,7 +1169,6 @@ subroutine roe_solver(iDir, Flux_V)
 
   if(UseCovariant)then                                !^CFG IF COVARIANT BEGIN
      ! Obtain the base vectors of the face aligned coordinate system
-     Area = sqrt(Area2)
      Normal_D(x_) = AreaX / Area
      Normal_D(y_) = AreaY / Area
      Normal_D(z_) = AreaZ / Area
