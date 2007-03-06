@@ -972,6 +972,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
        r_BLK, XyzStart_Blk
   use ModNumConst
   use ModCovariant, ONLY: TypeGeometry             !^CFG IF COVARIANT
+  use ModInterpolate, ONLY: trilinear
   implicit none
 
   ! Arguments
@@ -993,8 +994,6 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
   real    :: dTheta, dPhi, Phi, Theta, SinTheta
 
   real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-
-  real, external:: trilinear
 
   ! Store cartesian coordinates for sake of efficiency
   ! The x and y depend on iPhi,iTheta while z only depends on iTheta
@@ -1166,7 +1165,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
 
               ! Compute the interpolated values at the current location.
 
-              Average = trilinear( Array_G(:,:,:), &
+              Average = trilinear( Array_G(:,:,:), nI+2, nJ+2, nK+2, &
                    1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
 
               select case(TypeAction)
@@ -1219,6 +1218,7 @@ real function integrate_circle(Radius,z,Array_GB)
   use ModMain, ONLY : nI,nJ,nK,nBLK,nBlock,unusedBLK,optimize_message_pass
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,Dx_BLK,Dy_BLK,Dz_BLK,XyzStart_Blk
   use ModNumConst
+  use ModInterpolate, ONLY: trilinear
   implicit none
 
   ! Arguments
@@ -1236,8 +1236,6 @@ real function integrate_circle(Radius,z,Array_GB)
   real :: x, y, InvDxyz_D(3)
   real :: dPhi,Phi
   real :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-
-  real, external:: trilinear
 
   logical :: DoTest,DoTestMe
   !---------------------------------------------------------------------------
@@ -1289,7 +1287,7 @@ real function integrate_circle(Radius,z,Array_GB)
         y = Radius*sin(Phi)
         if( y < yMin .or. y >= yMax) CYCLE
 
-        Average = trilinear( Array_GB(:,:,:,iBlock), &
+        Average = trilinear( Array_GB(:,:,:,iBlock), nI+2, nJ+2, nK+2, &
              1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
 
         Integral = Integral + Average

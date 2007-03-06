@@ -1680,41 +1680,6 @@ subroutine fill_edge_corner(Array_G)
 end subroutine fill_edge_corner
 
 !=========================================================================
-real function trilinear(Array_G, XyzNorm_D)
-
-  ! Calculate trilinear interpolation of Array_G at position XyzNorm_D
-
-  use ModSize, ONLY: nI, nJ, nK
-
-  implicit none
-  real, intent(in) :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-  real, intent(in) :: XyzNorm_D(3)
-  
-  integer :: i1, i2, j1, j2, k1, k2, Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
-  !---------------------------------------------------------------------------
-
-  i1 = floor(XyzNorm_D(1))
-  j1 = floor(XyzNorm_D(2))  
-  k1 = floor(XyzNorm_D(3))
-  i2 = ceiling(XyzNorm_D(1))
-  j2 = ceiling(XyzNorm_D(2))
-  k2 = ceiling(XyzNorm_D(3))
-  Dx1= XyzNorm_D(1) - i1; Dx2 = 1.0 - Dx1
-  Dy1= XyzNorm_D(2) - i1; Dy2 = 1.0 - Dy1
-  Dz1= XyzNorm_D(3) - i1; Dz2 = 1.0 - Dz1
-
-  trilinear = Dz2*(   Dy2*(   Dx2*Array_G(i1,j1,k1)   &
-       +                      Dx1*Array_G(i2,j1,k1))  &
-       +              Dy1*(   Dx2*Array_G(i1,j2,k1)   &
-       +                      Dx1*Array_G(i2,j2,k1))) &
-       +      Dz1*(   Dy2*(   Dx2*Array_G(i1,j1,k2)   &
-       +                      Dx1*Array_G(i2,j1,k2))  &
-       +              Dy1*(   Dx2*Array_G(i1,j2,k2)   &
-       +                      Dx1*Array_G(i2,j2,k2)))
-
-end function trilinear
-
-!=========================================================================
 subroutine get_date_time_start(iTime_I)
   
   use ModMain,        ONLY : StartTime
