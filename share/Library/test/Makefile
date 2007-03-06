@@ -16,6 +16,7 @@ help:
 	@echo "   test_freq             - test ModFreq"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
+	@echo "   test_interpolate      - test ModInterpolate"
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_geopack          - test CON_geopack"
@@ -39,6 +40,7 @@ tests: \
 	test_freq \
 	test_sort \
 	test_io_unit \
+	test_interpolate \
 	test_ray_trace \
 	test_line_extract \
 	test_geopack \
@@ -151,6 +153,27 @@ test_io_unit:
 	@./test_io_unit.exe
 	@echo
 	@echo test_io_unit done
+	@echo -----------------------------------------------------------------
+
+#######################################################################
+OBJ_INTERPOLATE = \
+	test_interpolate.o \
+	../src/ModInterpolate.o
+
+test_interpolate.exe: ${OBJ_INTERPOLATE}
+	${LINK.f90} -o test_interpolate.exe ${OBJ_INTERPOLATE} ${Lflag2}
+
+test_interpolate:
+	@echo -----------------------------------------------------------------
+	@echo test_interpolate starting
+	@echo
+	@(cd ../src; make ModInterpolate.o)
+	@make test_interpolate.exe
+	@echo
+	@echo './test_interpolate.exe'
+	@./test_interpolate.exe
+	@echo
+	@echo test_interpolate done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
