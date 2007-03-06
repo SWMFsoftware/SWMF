@@ -29,21 +29,21 @@ Module ModPlanetConst
   ! FOUND AT THE END OF THE FILE AND IN THE CODE DOCUMENTATION (we hope).
   !
   !/
-  real,dimension(MaxPlanet) :: rPlanet_I, mPlanet_I, rOrbitPlanet_I
-  real,dimension(MaxPlanet) :: OrbitalPeriodPlanet_I, RotationPeriodPlanet_I
+  real,dimension(0:MaxPlanet+1) :: rPlanet_I, mPlanet_I, rOrbitPlanet_I
+  real,dimension(0:MaxPlanet+1) :: OrbitalPeriodPlanet_I, RotationPeriodPlanet_I
 
-  integer,dimension(MaxPlanet) :: iYearEquinoxPlanet_I,iMonthEquinoxPlanet_I, iDayEquinoxPlanet_I
-  integer,dimension(MaxPlanet) :: iHourEquinoxPlanet_I,iMinuteEquinoxPlanet_I,iSecondEquinoxPlanet_I
-  real,dimension(MaxPlanet)    :: FracSecondEquinoxPlanet_I
-  real,dimension(MaxPlanet)    :: TiltPlanet_I
+  integer,dimension(0:MaxPlanet+1) :: iYearEquinoxPlanet_I,iMonthEquinoxPlanet_I, iDayEquinoxPlanet_I
+  integer,dimension(0:MaxPlanet+1) :: iHourEquinoxPlanet_I,iMinuteEquinoxPlanet_I,iSecondEquinoxPlanet_I
+  real,dimension(0:MaxPlanet+1)    :: FracSecondEquinoxPlanet_I
+  real,dimension(0:MaxPlanet+1)    :: TiltPlanet_I
 
-  character (len=lTypeBField) :: TypeBFieldPlanet_I(MaxPlanet)
-  real,dimension(MaxPlanet) :: DipoleStrengthPlanet_I
-  real,dimension(MaxPlanet) :: bAxisThetaPlanet_I, bAxisPhiPlanet_I
+  character (len=lTypeBField) :: TypeBFieldPlanet_I(0:MaxPlanet+1)
+  real,dimension(0:MaxPlanet+1) :: DipoleStrengthPlanet_I
+  real,dimension(0:MaxPlanet+1) :: bAxisThetaPlanet_I, bAxisPhiPlanet_I
 
-  real,dimension(MaxPlanet) :: IonoHeightPlanet_I
+  real,dimension(0:MaxPlanet+1) :: IonoHeightPlanet_I
 
-  character (len=lNamePlanet) :: NamePlanet_I(MaxPlanet)
+  character (len=lNamePlanet) :: NamePlanet_I(0:MaxPlanet+1)
 
   integer :: Planet_ 
 
@@ -57,6 +57,11 @@ Module ModPlanetConst
   ! First define the storage location for all bodies.  This is so that you
   ! can easily find the index and can also see the naming system
   !/
+  ! No Planet (in other words, no body)
+  integer,parameter :: NoPlanet_  =  0
+  ! New Planet (a body that is not in the database below)
+  integer,parameter :: NewPlanet_  =  MaxPlanet+1
+
   ! Planets and Sun 
   integer,parameter :: Sun_       =  1
   integer,parameter :: Mercury_   = 10
@@ -248,9 +253,24 @@ contains
                                        
      IonoHeightPlanet_I(Titan_)          =   0.0                          ! [ m]
 
-     
+     !\
+     ! No Planet (0)
+     !     - No Planet and no body - defaults for everything, just set name.
+     !/
+     NamePlanet_I(NoPlanet_)             = 'NONE'
+
+     !\
+     ! New Planet (MaxPlanet+1)
+     !     - A planet whose parameters are not defined in the database above.
+     !       A few values are set to clearly meaningless values to prevent
+     !       a users from using the values incorrectly. 
+     !/
+     NamePlanet_I(NewPlanet_)            = 'NEW/UNKNOWN'
+     rPlanet_I(NewPlanet_)               = -1.0
+     mPlanet_I(NewPlanet_)               = -1.0
+
      ! make all the planet names upper case
-     do i=1,MaxPlanet
+     do i=NoPlanet_,MaxPlanet+1
         call upper_case(NamePlanet_I(i))  ! make all the names upper case
      end do
 

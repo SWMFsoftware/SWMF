@@ -42,8 +42,10 @@ module CON_planet
   real           :: MassPlanet
   real           :: TiltRotation
   real           :: IonosphereHeight
-  real           :: OmegaPlanet  ! Rotation
-  real           :: OmegaOrbit   ! Orbit
+  real           :: OmegaPlanet     ! Rotation + Orbit
+  real           :: OmegaRotation    ! Rotation
+  real           :: RotPeriodPlanet ! Rotation
+  real           :: OmegaOrbit      ! Orbit
   real           :: AngleEquinox
   type(TimeType) :: TimeEquinox = TimeType(2000, 1, 1, 0, 0, 0, &
        0.0, 0.0_REAL8_, '20000101000000')
@@ -98,6 +100,7 @@ contains
     NamePlanet       = namePlanet_I(Earth_)
     RadiusPlanet     = rPlanet_I(Earth_)
     MassPlanet       = mPlanet_I(Earth_)
+    RotPeriodPlanet  = RotationPeriodPlanet_I(Earth_)
     TiltRotation     = TiltPlanet_I(Earth_)
     IonosphereHeight = IonoHeightPlanet_I(Earth_)
     OmegaPlanet      = &
@@ -161,26 +164,36 @@ contains
     NamePlanet    = NamePlanetIn
     IsInitialized = .true.
 
-    if (NamePlanet == 'NONE') RETURN
-
     IsKnown       = .false.
-    do i=1, MaxPlanet
+    do i=NoPlanet_, MaxPlanet
       if (NamePlanet == NamePlanet_I(i)) then
          IsKnown = .true.
          Planet_ = i
       end if
     end do
 
-    if (.not. IsKnown)  RETURN
-    
+    if (.not. IsKnown)  then
+       Planet_ = NewPlanet_
+       NamePlanet = NamePlanetIN
+    end if
+
     ! Set all values for the selected planet
     RadiusPlanet     = rPlanet_I(Planet_)
     MassPlanet     = mPlanet_I(Planet_)
+    RotPeriodPlanet = RotationPeriodPlanet_I(Planet_)
     TiltRotation     = TiltPlanet_I(Planet_)
     IonosphereHeight = IonoHeightPlanet_I(Planet_)
-    OmegaPlanet     = &
-         cTwoPi/RotationPeriodPlanet_I(Planet_) + cTwoPi/OrbitalPeriodPlanet_I(Planet_)
-    OmegaOrbit   = cTwoPi/OrbitalPeriodPlanet_I(Planet_)
+    if (RotationPeriodPlanet_I(Planet_) == 0.0) then
+       OmegaRotation = 0.0 
+    else
+       OmegaRotation = cTwoPi/RotationPeriodPlanet_I(Planet_)
+    end if
+    if (OrbitalPeriodPlanet_I(Planet_) == 0.0) then
+       OmegaOrbit = 0.0 
+    else
+       OmegaOrbit = cTwoPi/OrbitalPeriodPlanet_I(Planet_)
+    end if
+    OmegaPlanet     = OmegaRotation + OmegaOrbit
     AngleEquinox =  &
          cTwoPi * ( iHourEquinoxPlanet_I(Planet_) * 3600 + iMinuteEquinoxPlanet_I(Planet_) * 60 &
          + iSecondEquinoxPlanet_I(Planet_) + FracSecondEquinoxPlanet_I(Planet_)) / (24 * 3600)
@@ -234,11 +247,15 @@ contains
             NamePlanetCommands)
 
        if ( .not. is_planet_init(NamePlanetIn) ) then
-          Planet_ = 0
 
           call read_var('RadiusPlanet', RadiusPlanet)
           call read_var('MassPlanet',   MassPlanet)
           call read_var('OmegaPlanet',  OmegaPlanet)
+          if (OmegaPlanet /= 0.0) then
+             RotPeriodPlanet = cTwoPi/OmegaPlanet
+          else
+             RotPeriodPlanet = 0.0
+          end if
           call read_var('TiltRotation', TiltRotation)
           TiltRotation = TiltRotation * cDegToRad
           call read_var('TypeBField',   TypeBField)
@@ -253,6 +270,7 @@ contains
              MagAxisPhi     = cZero
              UseSetMagAxis  = .true.
              UseRealMagAxis = .false.
+             DipoleStrength = cZero
 
           case('DIPOLE','QUADRUPOLE','OCTUPOLE')
 
@@ -350,9 +368,11 @@ contains
        call read_var('UseRotation', UseRotation)
        if (.not.UseRotation) then
           OmegaPlanet  = cZero
+          RotPeriodPlanet = cZero
        else
-          call read_var('Rotation period [hours]',  OmegaPlanet)
-          OmegaPlanet = cTwoPi / (3600 * OmegaPlanet)
+          call read_var('Rotation period [hours]',  RotPeriodPlanet)
+          RotPeriodPlanet = RotPeriodPlanet * 3600
+          OmegaPlanet = cTwoPi / RotPeriodPlanet
        endif
 
     case('#NONDIPOLE')
@@ -428,7 +448,7 @@ contains
     if(present(RadiusPlanetOut))    RadiusPlanetOut     = RadiusPlanet
     if(present(MassPlanetOut))      MassPlanetOut       = MassPlanet
     if(present(OmegaPlanetOut))     OmegaPlanetOut      = OmegaPlanet
-    if(present(RotationPeriodOut))  RotationPeriodOut   = RotationPeriodPlanet_I(Planet_)
+    if(present(RotationPeriodOut))  RotationPeriodOut   = RotPeriodPlanet
     if(present(IonosphereHeightOut))IonosphereHeightOut = IonosphereHeight
     if(present(UseRotationOut))     UseRotationOut      = UseRotation
     if(present(DipoleStrengthOut))  DipoleStrengthOut   = DipoleStrength

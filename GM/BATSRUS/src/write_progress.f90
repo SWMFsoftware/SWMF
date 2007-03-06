@@ -60,7 +60,6 @@ subroutine write_runtime_values()
   use ModPhysics
   use ModMpi
   use CON_planet
-  use ModPlanetConst, ONLY: Planet_
   use ModUser, ONLY: user_write_progress
   implicit none
 
@@ -84,13 +83,14 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'   --------------------------'
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)
-  !if (IsPlanetModified) TextPlanetMod = '(---!---Defaults Modified---!---)'
-  if (body1 .and. Planet_ > 0) then
+  if ((NamePlanet /= 'NONE') .and. body1) then
+     if (IsPlanetModified .and. (Planet_ /= NewPlanet_)) &
+        TextPlanetMod = '(---!---Defaults Modified---!---)'
      call write_prefix; write(iUnitOut,*)'   Planetary Parameters'
      call write_prefix; write(iUnitOut,*)'   --------------------'
      call write_prefix; write(iUnitOut,*)
-     call write_prefix; write(iUnitOUT,'(10X,A,A)')  &
-          'Name:            ', trim(NamePlanet)
+     call write_prefix; write(iUnitOUT,'(10X,A,A,2x,A)')  &
+          'Name:            ', trim(NamePlanet),TextPlanetMod
      StringFormat = '(10X,A16,ES13.5)'
      call write_prefix; write(iUnitOUT,StringFormat) &
           'Radius:         ', RadiusPlanet

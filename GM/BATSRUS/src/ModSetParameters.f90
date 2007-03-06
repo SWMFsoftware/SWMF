@@ -20,7 +20,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModParallel, ONLY : proc_dims
   use ModRaytrace                                       !^CFG IF RAYTRACE
   use ModIO
-  use CON_planet,       ONLY: read_planet_var, check_planet_var
+  use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
   use CON_axes,         ONLY: init_axes
   use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case,&
@@ -185,7 +185,6 @@ subroutine MH_set_parameters(TypeAction)
 
      if (read_new_upstream) &
           call read_upstream_input_file(UpstreamFileName)
-
 
      call set_physics_constants
 
@@ -1240,7 +1239,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('No2SiUnitX',   No2Si_V(UnitX_))
            call read_var('No2SiUnitU',   No2Si_V(UnitU_))
            call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
-        case('PLANETARY', 'SOLARWIND')
+        case('PLANETARY', 'SOLARWIND','NOBODY')
            ! Depends on other commands, defined in set_physics
         case default
            call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
@@ -2204,6 +2203,63 @@ contains
             ' WARNING: procTEST > nProc, setting procTEST=0 !!!'
        procTEST=0
     end if
+
+   ! If planet is NONE then set body1 = .false.
+    if (NamePlanet == 'NONE' .and. body1) then
+       if(iProc==0) then
+          write(*,'(a)')NameSub//&
+               ' WARNING: For Planet = '//trim(NamePlanet)// &
+               ' there cannot be a body in the simulation.'  
+          write(*,'(a)')NameSub//&
+               ' WARNING: To simulate a generic body use Planet = NEW.'
+          if(UseStrict)call stop_mpi( &
+               'Set #BODY in PARAM.in')
+          write(*,'(a)')NameSub//&
+               ' WARNING: Setting body1 = .false. !!!'
+       end if
+       body1 = .false.
+    endif                                     
+
+   ! If planet is NONE then
+   !   TypeNormalization should be NONE,USER,NOBODY
+   !   TypeIoUnit should be NONE,USER,NOBODY
+    if (NamePlanet == 'NONE') then
+       select case (TypeNormalization)
+       case('NONE','USER','NOBODY')
+          ! Do nothing
+       case default
+          if(iProc==0) then
+             write(*,'(a)')NameSub//&
+                  ' WARNING: For Planet = '//trim(NamePlanet)// &
+                  ' TypeNormalization = '//trim(TypeNormalization)//' is not valid.'  
+             if(UseStrict)call stop_mpi( &
+                  'Set #NORMALIZATION in PARAM.in')
+             write(*,'(a)')NameSub//&
+                  ' WARNING: Setting TypeNormalization = NOBODY.'  
+          end if
+          TypeNormalization = 'NOBODY'
+       end select
+       select case (TypeIoUnit)
+       case('NONE','USER','NOBODY')
+          ! Do nothing
+       case default
+          if(iProc==0) then
+             write(*,'(a)')NameSub//&
+                  ' WARNING: For Planet = '//trim(NamePlanet)// &
+                  ' TypeIoUnit = '//trim(TypeIoUnit)//'is not valid.'  
+             if(UseStrict)call stop_mpi( &
+                  'Set #IOUNIT in  PARAM.in')
+             write(*,'(a)')NameSub//&
+                  ' WARNING: Setting TypeIoUnit = NOBODY.'  
+          end if
+          TypeIoUnit = 'NOBODY'
+       end select
+       
+       body1 = .false.
+    endif                                     
+
+
+
 
   end subroutine correct_parameters
 

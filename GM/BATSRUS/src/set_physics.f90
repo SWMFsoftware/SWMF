@@ -46,8 +46,11 @@ subroutine set_physics_constants
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
   ! and it is DIFFERENT from SWMF's inertial OmegaPlanet defined in CON_planet !!!
-  OmegaBody = cTwoPi/RotPeriodSi
-
+  if (RotPeriodSi == cZero) then
+     OmegaBody = 0.0
+  else
+     OmegaBody = cTwoPi/RotPeriodSi
+  end if
   ! Second body mass is set to zero by default   !^CFG IF SECONDBODY
   MassBody2Si = 0.0                                !^CFG IF SECONDBODY
 
@@ -245,6 +248,8 @@ subroutine set_units
   implicit none
 
   character (len=*), parameter :: NameSub="set_units"
+  character (len=*), parameter :: NoBodyScaleStr="km"
+  real, parameter :: NoBodyScaleLength = 1000.0  !(1km = 1000 m)
 
   logical :: DoTest, DoTestMe
   !-----------------------------------------------------------------------
@@ -267,6 +272,11 @@ subroutine set_units
   case("SOLARWIND")
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi                             
+     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)
+     No2Si_V(UnitRho_) = 1000000*cProtonMass*AverageIonMass*SW_n_dim
+  case("NOBODY")
+     ! same as SOLARWIND, but with x normalized to the scale length set above
+     No2Si_V(UnitX_)   = NoBodyScaleLength                        
      No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)
      No2Si_V(UnitRho_) = 1000000*cProtonMass*AverageIonMass*SW_n_dim
   case("NONE", "READ")
@@ -360,8 +370,22 @@ subroutine set_units
   select case(TypeIoUnit)
   case("SI")
      ! Already set above
-  case("PLANETARY")
-     Io2Si_V(UnitX_)        = rPlanetSi                       ! planetary radii
+  case("PLANETARY","NOBODY")
+     if (TypeIoUnit=="NOBODY") then
+        Io2Si_V(UnitX_)          = NoBodyScaleLength
+        NameTecUnit_V(UnitX_)    = '['//NoBodyScaleStr//']'            
+        NameIdlUnit_V(UnitX_)    = NoBodyScaleStr
+        Io2Si_V(UnitDivB_)       = 1.0E-9/NoBodyScaleLength
+        NameTecUnit_V(UnitDivB_) = '[nT/'//NoBodyScaleStr//']'
+        NameIdlUnit_V(UnitDivB_) = 'nT/'//NoBodyScaleStr
+     else
+        Io2Si_V(UnitX_)          = rPlanetSi                  ! planetary radii
+        NameTecUnit_V(UnitX_)    = '[R]'            
+        NameIdlUnit_V(UnitX_)    = 'R'
+        Io2Si_V(UnitDivB_)       = 1.0E-9/rPlanetSi           ! nT/R_planet
+        NameTecUnit_V(UnitDivB_) = '[nT/R]'
+        NameIdlUnit_V(UnitDivB_) = 'nT/R'
+     end if
      Io2Si_V(UnitRho_)      = 1.0E6*cProtonMass               ! Mp/cm^3
      Io2Si_V(UnitN_)        = 1.0E6                           ! #/cm^3
      Io2Si_V(UnitU_)        = 1.0E3                           ! km/s
@@ -369,12 +393,10 @@ subroutine set_units
      Io2Si_V(UnitB_)        = 1.0E-9                          ! nT
      Io2Si_V(UnitJ_)        = 1.0E-6                          ! microA/m^2
      Io2Si_V(UnitElectric_) = 1.0E-3                          ! mV/m
-     Io2Si_V(UnitDivB_)     = 1.0E-9/rPlanetSi                ! nT/R_planet
      Io2Si_V(UnitAngle_)    = cRadToDeg                       ! degrees
      !\
      ! set string variables used for writing output - TECPLOT
      !/
-     NameTecUnit_V(UnitX_)           = '[R]'            
      NameTecUnit_V(UnitRho_)         = '[amu/cm^3]'
      NameTecUnit_V(UnitU_)           = '[km/s]'          
      NameTecUnit_V(UnitN_)           = '[cm^-^3]'        
@@ -382,13 +404,11 @@ subroutine set_units
      NameTecUnit_V(UnitB_)           = '[nT]'            
      NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'       
      NameTecUnit_V(UnitElectric_)    = '[mV/m]'          
-     NameTecUnit_V(UnitDivB_)        = '[nT/R]'
      NameTecUnit_V(UnitAngle_)       = '[deg]'
 
      !\
      ! set string variables used for writing output - IDL
      !/
-     NameIdlUnit_V(UnitX_)           = 'R'
      NameIdlUnit_V(UnitRho_)         = 'Mp/cc'
      NameIdlUnit_V(UnitU_)           = 'km/s'
      NameIdlUnit_V(UnitN_)           = '/cc'
@@ -396,8 +416,8 @@ subroutine set_units
      NameIdlUnit_V(UnitB_)           = 'nT'
      NameIdlUnit_V(UnitJ_)           = 'uA/m2'
      NameIdlUnit_V(UnitElectric_)    = 'mV/m'
-     NameIdlUnit_V(UnitDivB_)        = 'nT/R'
      NameIdlUnit_V(UnitAngle_)       = 'deg'
+     
 
   case("HELIOSPHERIC")
      Io2Si_V(UnitX_)           = rPlanetSi                 ! R
