@@ -19,8 +19,9 @@ module ModUser
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
-       IMPLEMENTED8 => user_set_plot_var,               &      
-       IMPLEMENTED9 => user_specify_initial_refinement
+       IMPLEMENTED8 => user_set_plot_var,               & 
+       IMPLEMENTED9 => user_set_resistivity,            &        
+       IMPLEMENTED10 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -43,6 +44,7 @@ module ModUser
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.5
 
+  logical :: UserResFlux
   !number density of neutral Species
   real:: NumDenNeutral_VC(MaxNuSpecies, nI, nJ, nK)    
 
@@ -145,13 +147,22 @@ module ModUser
   real, dimension(1:num_Te) :: tmp_hT, tmp_Te
   real, dimension(1:num_Ri) :: tmp_hR 
 
+  integer, parameter:: num_en= 101
+  real, dimension(1:num_en) :: nu_Te 
+  real, dimension(1:num_en,3) :: nu_en 
   !  real, dimension(1:9):: SZATitan, cos_ISZA
   !  real, dimension(1:9,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
 
-  integer :: maxSZAm =12
-  real, dimension(1:12):: SZATitan, cos_ISZA
-  real, dimension(1:12,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
   real, dimension(1:num_Ri):: IMPACT_L, IMPACT_M,IMPACT_H
+
+  integer, parameter :: maxSZAm = 12, maxBSZA=13
+  integer :: nSZAm =12
+  real, dimension(1:maxSZAm):: SZATitan, cos_ISZA
+  real, dimension(1:maxSZAm,1:num_Ri):: tmp_RL0, tmp_RM0,tmp_RH0
+  real, dimension(MaxSpecies,maxBSZA):: BodyRhoSpecies_SI_dim, coefB
+!  real, dimension(MaxSpecies):: BodyRhoSpecies_I
+  real, dimension(1:maxBSZA):: SZABTitan, cos_BSZA
+
 
   real, dimension(1:7,1:num_Ri):: tmp_ion
   real:: SW_Lp, SW_Mp,  SW_Lp_dim, SW_Mp_dim,Plas_T_ev
@@ -189,6 +200,7 @@ contains
     !    character (len=100) :: line
     character (len=100) :: linetitan
     integer:: i, j
+    real::tmp_SZA, tmp_ne,tmp_alt
     !--------------------------------------------------------------------------
 
     do
@@ -236,17 +248,17 @@ contains
 
              select case(SolarCnd)
              case("Solarmax")              
-                maxSZAm = 9
+                nSZAm = 9
                 open(15, file ="TitanInput/SZALIST_9.dat",status="old")              
                 read(15,'(a)')linetitan
-                read(15,*) (SZATitan(j),j=1,maxSZAm)  
+                read(15,*) (SZATitan(j),j=1,nSZAm)  
                 close(15)
 
                 open(15,file="TitanInput/HighsolarH.dat",status="old")
                 read(15,'(a)')linetitan
                 !           write(*,*)'line1titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*) tmp_hR(i),(tmp_RH0(j,i),j=1,maxSZAm)              
+                   read(15,*) tmp_hR(i),(tmp_RH0(j,i),j=1,nSZAm)              
                    !write(*,'(10g10.4)')tmp_hR(i),tmp_RH0(1:12,i)             
                 end do
                 close(15)
@@ -254,14 +266,14 @@ contains
                 read(15,'(a)')linetitan
                 !          write(*,*)'line2titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*) tmp_hR(i),(tmp_RM0(j,i),j=1,maxSZAm)
+                   read(15,*) tmp_hR(i),(tmp_RM0(j,i),j=1,nSZAm)
                 end do
                 close(15)
                 open(15,file="TitanInput/HighsolarL.dat",status="old")
                 read(15,'(a)')linetitan
                 !          write(*,*)'line3titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*)tmp_hR(i),(tmp_RL0(j,i),j=1,maxSZAm)
+                   read(15,*)tmp_hR(i),(tmp_RL0(j,i),j=1,nSZAm)
                 end do
                 close(15)
 
@@ -283,11 +295,11 @@ contains
 
              case("Solarmin")
 
-                maxSZAm = 9
+                nSZAm = 9
 
                 open(15, file ="TitanInput/SZALIST_9.dat",status="old")              
                 read(15,'(a)')linetitan
-                read(15,*) (SZATitan(j),j=1,maxSZAm)  
+                read(15,*) (SZATitan(j),j=1,nSZAm)  
                 close(15)
                 write(*,*)SZATitan
 
@@ -295,7 +307,7 @@ contains
                 read(15,'(a)')linetitan
                 !           write(*,*)'line1titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*) tmp_hR(i),(tmp_RH0(j,i),j=1,maxSZAm)              
+                   read(15,*) tmp_hR(i),(tmp_RH0(j,i),j=1,nSZAm)              
                 end do
                 close(15)
 
@@ -303,14 +315,14 @@ contains
                 read(15,'(a)')linetitan
                 !          write(*,*)'line2titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*) tmp_hR(i),(tmp_RM0(j,i),j=1,maxSZAm)
+                   read(15,*) tmp_hR(i),(tmp_RM0(j,i),j=1,nSZAm)
                 end do
                 close(15)
                 open(15,file="TitanInput/LowsolarL.dat",status="old")
                 read(15,'(a)')linetitan
                 !          write(*,*)'line3titan=', linetitan
                 do i=1,num_Ri
-                   read(15,*)tmp_hR(i),(tmp_RL0(j,i),j=1,maxSZAm)
+                   read(15,*)tmp_hR(i),(tmp_RL0(j,i),j=1,nSZAm)
                 end do
                 close(15)
 
@@ -331,7 +343,7 @@ contains
                 close(15)
 
              case("CassiniTA")                        
-                maxSZAm = 12
+                nSZAm = 12
                 open(15, file ="TitanInput/SZALIST_12.dat",status="old")              
                 read(15,'(a)')linetitan
                 read(15,*) (SZATitan(j),j=1,maxSZAm)  
@@ -371,15 +383,29 @@ contains
                 end do
                 close(15)
 
-                open(15,file="TitanInput/TitanDen60degmin.dat",status="old")
-                read(15,'(a)')linetitan
-                !           write(*,*)'line5titan=', linetitan
+!                open(15,file="TitanInput/TitanDen60degmin.dat",status="old")
+!                read(15,'(a)')linetitan
+!                !           write(*,*)'line5titan=', linetitan
+!                read(15,'(a)')linetitan
+!                do i=1,num_Ri
+!                   read(15,*)tmp_hR(i),(tmp_ion(j,i),j=1,7)
+!                end do
+!                close(15)    
+
+                open(15,file="TitanInput/IondenSZA060.dat",status="old")
                 read(15,'(a)')linetitan
                 do i=1,num_Ri
-                   read(15,*)tmp_hR(i),(tmp_ion(j,i),j=1,7)
+                   read(15,*)tmp_hR(i),tmp_SZA,(tmp_ion(j,i),j=1,7),tmp_ne
                 end do
                 close(15)    
-
+                
+                open(15,file="TitanInput/IondenAlt725.dat",status="old")
+                read(15,'(a)')linetitan
+                do i=1,maxBSZA
+                   read(15,*)tmp_alt,SZABTitan(i),(BodyRhoSpecies_SI_dim(j,i),j=1,7),tmp_ne
+                end do
+                close(15)
+                
                 open(15,file="TitanInput/NEUTRALdENJan05.txt",status="old")
                 read(15,'(a)')linetitan
                 do i=1,num_nu
@@ -400,27 +426,27 @@ contains
                 close(15)
              end if
 
-             !open(15,file="Titan60szared_7.dat",status="old")
-             !read(15,'(a)')linetitan
-             !write(*,*)'line5titan=', linetitan
-             !do i=1,num_Ri
-             !  read(15,*)tmp_hR(i),(tmp_ion(j,i),j=1,7)
-             !end do
-             !close(15)
-
              if(iproc==0)then
                 write(*,*)'tmp_hR(num_Ri)',tmp_hR(num_Ri)
                 write(*,*)'tmp_hn(num_nu)',tmp_hn(num_nu)
                 write(*,*)'tmp_hT(num_Te)',tmp_hT(num_Te)              
              end if
-             !write(*,*)'tmpRH0(1,3)=',tmp_RH0(1,3),&
-             !'tmpRL0(1,3)=',tmp_RL0(1,3),'Te(1)=', Tmp_Te(1)
-             ! write(*,*)'tmp_hn(1:3)=',tmp_hn(1:3),&
-             !'tmp_n(1,11:12)=',tmp_n(1,11:12)
 
           end if
        case('#POINTIMPLICITREGION')
           call read_var('rPointImplicit',rPointImplicit)
+
+       case("#USERRESFLUX")
+          call read_var('UserResFlux' ,UserResFlux)
+          nu_en(:,:)=0.0
+          if(UserResFlux)then
+             open(15,file="TitanInput/e_n_collision.dat",status="old")
+             read(15,'(a)')linetitan
+             do i=1,num_en
+                read(15,*)nu_Te(i),(nu_en(i,j),j=1,3)
+             end do
+             close(15)
+          end if
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
@@ -905,7 +931,7 @@ contains
 
   subroutine user_set_ICs
     use ModProcMH, ONLY : iProc
-    use ModMain, ONLY: GlobalBLK, Body1_, ProcTest
+    use ModMain, ONLY: GlobalBLK, Body1_, ProcTest, itest,jtest,ktest,BLKtest
     use ModAdvance
     use ModGeometry, ONLY : x2,y2,z2,x_BLK,y_BLK,z_BLK,R_BLK,true_cell
     use ModIO, ONLY : restart
@@ -914,8 +940,11 @@ contains
     real :: SinSlope, CosSlope,CosSZA, coef, hh
     real :: B4, dB4dx, zeta4, q4, epsi4, plobe, &
          XFace, YFace, ZFace
-    integer :: i,j,k,n
+    integer :: i,j,k,n, m
     integer:: iBoundary
+    real :: dtm, dtmp1
+    real,dimension(1:MaxSpecies) :: coefx, coefy
+    logical :: oktest_me=.true., oktest
     !-------------------------------------------------------------------------
 
     if(.not.restart)then
@@ -931,19 +960,36 @@ contains
              State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
           end if
        end do;end do; end do;
+       
+       coefy=BodyRhoSpecies_SI_dim(:,1)/tmp_ion(:,1)           
 
        do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
           cosSZA=(x_BLK(i,j,k,globalBLK)*SX0 &
                + y_BLK(i,j,k,globalBLK)*SY0 &
                + z_BLK(i,j,k,globalBLK)*SZ0)&
                /max(R_BLK(i,j,k,globalBLK),1.0e-3)
-          coef=2.0*cosSZA
-          if(cosSZA.lt.0.5)then
-             coef =1.001+2.0/3.0*(cosSZA-0.5)
+
+
+          coefx=coefy
+          if(cosSZA.lt.0.9)then
+             do m=1,maxBSZA-1
+                if((cosSZA < cos_BSZA(m)).and.(cosSZA >= cos_BSZA(m+1))) then
+                   !                          dhn = hh - tmp_hR(n)
+                   !                          dhnp1 = tmp_hR(n+1) - hh
+                   dtm = cos_BSZA(m)- cosSZA
+                   dtmp1 = cosSZA - cos_BSZA(m+1)
+                   
+                   coefx = coefy*(coefB(:,m)*dtmp1+&
+                        coefB(:,m+1)*dtm)&
+                        /(cos_BSZA(m)-cos_BSZA(m+1))
+                   
+                end if
+             end do
           end if
+
           if (R_BLK(i,j,k,globalBLK)< Rbody)then
              State_VGB(rho_+1:rho_+nSpecies,i,j,k,globalBLK)=&
-                  BodyRhoSpecies_I(1:nSpecies)*coef
+                  BodyRhoSpecies_I(1:nSpecies)*coefx
           else
              hh = (R_BLK(i,j,k,globalBLK)-1.00)*2575.0
              n= int((hh -725.0)/10.0+1.0)
@@ -960,7 +1006,7 @@ contains
 
              State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)= &
                   State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
-                  *coef*MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
+                  *coefx*MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
 
              State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)=&
                   max(0.0,State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK))
@@ -985,6 +1031,22 @@ contains
                State_VGB(P_,i,j,k,globalBLK)= &
                max(SW_p, State_VGB(P_,i,j,k,globalBLK))
 
+          if(oktest_me.and.&
+               globalBLK==Blktest.and.i==itest.and.j==jtest.and.k==ktest)then
+             write(*,*)'itest,jtest,ktest,blktest=',&
+                  itest,jtest,ktest,blktest
+             write(*,*)'coefx=', coefx
+             write(*,*)'coefy=',coefy
+             write(*,*)'cosSZA=', cosSZA
+             write(*,*)'n=',n
+             write(*,*)'rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=',&
+                  State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)
+             write(*,*)'cos_BSZA(m)',cos_BSZA
+             write(*,*)'dtm, dtmp1,m=',dtm, dtmp1,m
+             write(*,*)'p_BLK(testcell)=',State_VGB(P_,i,j,k,globalBLK)
+             call stop_mpi('test')
+          end if
+
        end do; end do; end do
 
        time_BLK(:,:,:,globalBLK) = 0.00
@@ -1003,10 +1065,21 @@ contains
     use ModConst
     use ModIO
     use ModPhysics
+
     real :: Productrate
+    integer:: iSpecies
     !---------------------------------------------------------------
 
     cos_ISZA=cos(SZATitan*cPi/180.0)
+    cos_BSZA=cos(SZABTitan*cPi/180.0)     
+    do iSpecies =1, nSpecies
+       BodyRhoSpecies_I(iSpecies)=BodyRhoSpecies_SI_dim(iSpecies,1)&
+            *MassSpecies_V(rho_+iSpecies)/No2Io_V(UnitN_)
+       coefB(iSpecies,:)=BodyRhoSpecies_SI_dim(iSpecies,:)&
+            /BodyRhoSpecies_SI_dim(iSpecies,1)
+    end do
+
+    !body_Ti_dim = Neutral_T_dim
     body_Ti_dim = 350
     KT0 = SW_p*body_Ti_dim/SW_T_dim
     nu0_dim =  1.0e-10
@@ -1051,12 +1124,7 @@ contains
          BodynDenNuSpdim_I(1:nNuSpecies)/No2Io_V(UnitN_)
 
     Rate_I(4:25)=Ratedim_I(4:25)*No2Io_V(UnitT_)*No2Io_V(UnitN_)
-    BodyRhoSpecies_I(:)=tmp_ion(1:nSpecies,1)*&
-         MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
-    !     write(*,*)'BodyRhoSpecies_I=',BodyRhoSpecies_I,&
-    !'unit_usern=',No2Io_V(UnitN_)
-    !     write(*,*)'temp_ion=',tmp_ion(1:nSpecies,1)
-
+    
   end subroutine set_multiSp_ICs
 
   !========================================================================
@@ -1126,7 +1194,6 @@ contains
   subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
        iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
        B0Face_D,UseIonosphereHere,UseRotatingBcHere)
-    use ModSize,     ONLY: nDim,West_,North_,Top_	
     use ModMain
     use ModAdvance,  ONLY: nFaceValueVars
     use ModPhysics,  ONLY: g,inv_g,cosTHETAtilt,sinTHETAtilt, SW_rho, SW_p, SW_T_dim
@@ -1161,8 +1228,10 @@ contains
     real, dimension(1:3):: location,v_phi
 !    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
     real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
-    real:: cosSZA, coef
-
+    real:: cosSZA
+    real,dimension(1:MaxSpecies) :: coefx
+    real :: dtm, dtmp1
+    integer :: m
     real:: uDotR, bDotR
 
     !--------------------------------------------------------------------------
@@ -1217,12 +1286,24 @@ contains
     case(body1_)
        cosSZA=(XFace*SX0+YFace*SY0+ZFace*SZ0)&
             /max(RFace,1.0e-3)
-       coef=2.0*cosSZA
-       if(cosSZA.lt.0.5)then
-          coef =1.001+2.0/3.0*(cosSZA-0.5)
+       coefx=1.0
+       if(cosSZA.lt.0.95)then
+          do m=1,maxBSZA-1
+             if((cosSZA < cos_BSZA(m)).and.(cosSZA >= cos_BSZA(m+1))) then
+                !                          dhn = hh - tmp_hR(n)
+                !                          dhnp1 = tmp_hR(n+1) - hh
+                dtm = cos_BSZA(m)- cosSZA
+                dtmp1 = cosSZA - cos_BSZA(m+1)
+                
+                coefx = (coefB(:,m)*dtmp1+&
+                     coefB(:,m+1)*dtm)&
+                     /(cos_BSZA(m)-cos_BSZA(m+1))
+                
+             end if
+          end do
        end if
        VarsGhostFace_V(rho_+1:rho_+nSpecies) = &
-            BodyRhoSpecies_I(1:nSpecies)*coef
+            BodyRhoSpecies_I(1:nSpecies)*coefx
 
        VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+nSpecies))
        VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+nSpecies)&
@@ -1516,38 +1597,48 @@ contains
        dhn = hh - tmp_hR(n)
        dhnp1 = tmp_hR(n+1) - hh
 
-       !                 write(*,*)'hh=', hh, 'n=', n
-       !                cos_ISZA=cos(SZATitan*cPi/180.0)
-       cosS0=(x_BLK(i,j,k,iBlock)*SX0+y_BLK(i,j,k,iBlock)*SY0)&
+       cosS0=(x_BLK(i,j,k,iBlock)*SX0  & 
+            + y_BLK(i,j,k,iBlock)*SY0  &
+            + z_BLK(i,j,k,iBlock)*SZ0 )&
             /max(R_BLK(i,j,k,iBlock),1.0e-3)
-       !                 if (cosS0 < cos_ISZA(9)) cosS0 = cos_ISZA(9)
+
        if (cosS0 < cos_ISZA(maxSZAm)) then
           m=maxSZAm
           !                    dhn = hh - tmp_hR(n)
           !                    dhnp1 = tmp_hR(n+1) - hh
           dtm = cos_ISZA(m)- cosS0
           dtmp1 = cosS0+1.001
-          RateL_C(i,j,k) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1)&
+          RateL_C(i,j,k) = (tmp_RL0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RL0(m,n+1)*dhn  *dtmp1)&
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)
-          RateM_C(i,j,k) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1)&
+
+          RateM_C(i,j,k) = (tmp_RM0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RM0(m,n+1)*dhn  *dtmp1)&
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)
-          RateH_C(i,j,k) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1)&
+
+          RateH_C(i,j,k) = (tmp_RH0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RH0(m,n+1)*dhn  *dtmp1)&
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)+1.001)                    
 
        else if (cosS0 > cos_ISZA(1)) then                    
           m=1
-          !                    dhn = hh - tmp_hR(n)
-          !                    dhnp1 = tmp_hR(n+1) - hh
           dtm = cos_ISZA(m)- cosS0
           dtmp1 = cosS0 - cos_ISZA(m+1)
-          RateL_C(i,j,k) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
-               tmp_RL0(m+1,n)*dhnp1*dtm+tmp_RL0(m+1,n+1)*dhn*dtm)&
+          RateL_C(i,j,k) = (tmp_RL0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RL0(m,n+1)*dhn  *dtmp1 &
+               +            tmp_RL0(m+1,n  )*dhnp1*dtm   &
+               +            tmp_RL0(m+1,n+1)*dhn  *dtm)  &
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-          RateM_C(i,j,k) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
-               tmp_RM0(m+1,n)*dhnp1*dtm+tmp_RM0(m+1,n+1)*dhn*dtm)&
+          RateM_C(i,j,k) = (tmp_RM0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RM0(m,n+1)*dhn  *dtmp1 &
+               +            tmp_RM0(m+1,n  )*dhnp1*dtm   &
+               +            tmp_RM0(m+1,n+1)*dhn  *dtm)  &
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-          RateH_C(i,j,k) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
-               tmp_RH0(m+1,n)*dhnp1*dtm+tmp_RH0(m+1,n+1)*dhn*dtm)&
+
+          RateH_C(i,j,k) = (tmp_RH0(m,n  )*dhnp1*dtmp1 &
+               +            tmp_RH0(m,n+1)*dhn  *dtmp1 &
+               +            tmp_RH0(m+1,n  )*dhnp1*dtm &
+               +            tmp_RH0(m+1,n+1)*dhn  *dtm)&
                /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
 
        else                    
@@ -1557,20 +1648,22 @@ contains
                 !                          dhnp1 = tmp_hR(n+1) - hh
                 dtm = cos_ISZA(m)- cosS0
                 dtmp1 = cosS0 - cos_ISZA(m+1)
-                RateL_C(i,j,k) = (tmp_RL0(m,n)*dhnp1*dtmp1 + tmp_RL0(m,n+1)*dhn*dtmp1 +&
-                     tmp_RL0(m+1,n)*dhnp1*dtm+tmp_RL0(m+1,n+1)*dhn*dtm)&
+                RateL_C(i,j,k) = &
+                     (tmp_RL0(m  ,n)*dhnp1*dtmp1+tmp_RL0(m  ,n+1)*dhn*dtmp1 &
+                     +tmp_RL0(m+1,n)*dhnp1*dtm  +tmp_RL0(m+1,n+1)*dhn*dtm  )&
                      /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                RateM_C(i,j,k) = (tmp_RM0(m,n)*dhnp1*dtmp1 + tmp_RM0(m,n+1)*dhn*dtmp1 +&
-                     tmp_RM0(m+1,n)*dhnp1*dtm+tmp_RM0(m+1,n+1)*dhn*dtm)&
+                RateM_C(i,j,k) = &
+                     (tmp_RM0(m  ,n)*dhnp1*dtmp1+tmp_RM0(m  ,n+1)*dhn*dtmp1 &
+                     +tmp_RM0(m+1,n)*dhnp1*dtm  +tmp_RM0(m+1,n+1)*dhn*dtm  )&
                      /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
-                RateH_C(i,j,k) = (tmp_RH0(m,n)*dhnp1*dtmp1 + tmp_RH0(m,n+1)*dhn*dtmp1 +&
-                     tmp_RH0(m+1,n)*dhnp1*dtm+tmp_RH0(m+1,n+1)*dhn*dtm)&
+                RateH_C(i,j,k) = &
+                     (tmp_RH0(m  ,n)*dhnp1*dtmp1+tmp_RH0(m  ,n+1)*dhn*dtmp1 &
+                     +tmp_RH0(m+1,n)*dhnp1*dtm  +tmp_RH0(m+1,n+1)*dhn*dtm  )&
                      /(tmp_hR(n+1)-tmp_hR(n))/(cos_ISZA(m)-cos_ISZA(m+1))
 
              end if
           end do
        end if
-
 
        RateL_C(i,j,k)=RateL_C(i,j,k)+ &
             (IMPACT_L(n)*dhnp1+IMPACT_L(n+1)*dhn)/(tmp_hR(n+1)-tmp_hR(n))
@@ -1643,8 +1736,6 @@ contains
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, r_BLK, IsBoundaryBlock_IB
-
-    use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
          GLOBALBLK
     use ModProcMH,   ONLY: iProc
@@ -1853,14 +1944,112 @@ contains
   end subroutine user_impl_source
 
   !===========================================================================
-
+  
   subroutine user_expl_source
-!    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
-!    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
-
-!---------------------------------------------------------------------
+    !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
+    !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
+    
+    !---------------------------------------------------------------------
     ! Here come the explicit source terms
     
   end subroutine user_expl_source
+
+  !===========================================================================
+  
+  subroutine user_set_resistivity(iBlock, Eta_G)
+    use ModPhysics,  ONLY: Eta0Resist, No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
+         UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
+    use ModProcMH,   ONLY: iProc
+    use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest, &
+         UnUsedBlk, nBlockMax
+    use ModAdvance,  ONLY: State_VGB
+    use ModGeometry, ONLY: Rmin_BLK, R_BLK
+    use ModConst,    ONLY: cTwo
+
+    integer, intent(in) :: iBlock
+    real,intent(out) :: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+
+    real   :: Te_dim, tx1, txp1, hh
+    real   :: loc_c(3), NumDenNeutral_V(3), Eta0
+    integer:: i, j, k, nte, n
+    logical:: oktest, oktest_me=.true.
+    !---------------------------------------------------------------------
+    if(iProc==PROCtest .and. iBlock == BlkTest)then
+       call set_oktest('user_set_resistivity',oktest,oktest_me)
+    else
+       oktest=.false.; oktest_me=.false.
+    end if
+
+    !\
+    ! Dimensionalize:: Eta* is in units of [m^2/s]
+    !/
+    Eta_G = 0.0
+
+    if (Rmin_BLK(iBlock) > 3.0) RETURN !in Rbody unit
+
+    Eta0 = Eta0Resist * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
+
+
+    do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
+       totalNumRho=sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock) &
+            /MassSpecies_V(rho_+1:rho_+MaxSpecies))
+
+       Te_dim= State_VGB(p_,i,j,k,iBlock)/(totalNumRho+1.0e-8)&
+            *No2Si_V(UnitTemperature_)/cTwo
+
+       nte=int( (log10(Te_dim)-2.0)/0.05 )+1
+       if(Te_dim <= nu_Te(1))then
+          loc_c(:)=nu_en(1,:)
+       else if(Te_dim >= nu_Te(num_en))then
+          loc_c(:)=nu_en(num_en,:)  
+       else
+          tx1=( Te_dim- nu_Te(nte) )/( nu_Te(nte+1)-nu_Te(nte) )
+          if(tx1.gt.1.001.or.tx1.lt.-1.0e-3)then 
+             write(*,*)'wrong  tx1=', tx1, log10(Te_dim), &
+                  nte, Te_dim, nu_Te(nte)
+          end if
+          txp1=1.0-tx1
+          loc_c(:)=nu_en(nte,:)*txp1+nu_en(nte+1,:)*tx1
+       end if
+
+       NumDenNeutral_V= 0.0
+       if (R_BLK(i,j,k,iBlock) >= Rbody) then
+          hh = (R_BLK(i,j,k,iBlock)-1.00)*2575.0
+          n= int((hh -725.0)/10.0+1.0)
+          !------------ Interpolation/Expolation --------------
+          if (hh < tmp_hn(1)) then   !only consider three major neutral species
+             NumDenNeutral_V(1:3) = tmp_n(1:3,1)   &
+                  +(tmp_n(1:3,1)-tmp_n(1:3,2)) &
+                  *(tmp_hn(1)-hh)/(tmp_hn(2)-tmp_hn(1))
+          else if(hh > tmp_hn(num_nu-1)) then
+             NumDenNeutral_V(1:3) = tmp_n(1:3,num_nu) + &
+                  (tmp_n(1:3,num_nu)-tmp_n(1:3,num_nu-1))*&
+                  (hh-tmp_hn(num_nu))/(tmp_hn(num_nu)-tmp_hn(num_nu-1))
+          else                                  
+             NumDenNeutral_V(1:3) = tmp_n(1:3,n)     &
+                  +(tmp_n(1:3,n+1)-tmp_n(1:3,n)) &
+                  *(hh-tmp_hn(n))/(tmp_hn(n+1)-tmp_hn(n))
+          end if
+
+       end if
+       NumDenNeutral_V = max(0.0, NumDenNeutral_V)*Io2No_V(UnitN_)
+
+       loc_c(:)=loc_c(:)*No2Io_V(UnitN_)/1.0e8
+       Eta_G(i,j,k) = Eta0* &
+            sum(loc_c(:)*NumDenNeutral_V(1:3))/&
+            (totalNumRho+1.0e-8)*Io2No_V(unitN_)
+
+       if(oktest_me.and.itest==i.and.jtest==j.and.ktest==k)then
+          write(*,*)'loc_c=', loc_c
+          write(*,*)'Te_dim=', Te_dim
+          write(*,*)'totalNumRho=',totalNumRho
+          write(*,*)'nu_den=', NumDenNeutral_V 
+          write(*,*)'eta=',Eta_G(Itest,Jtest,Ktest)
+          write(*,*)'eta0=',Eta0Resist, Eta0
+       end if
+    end do; end do; end do
+ 
+  end subroutine user_set_resistivity
+
 
 end Module ModUser
