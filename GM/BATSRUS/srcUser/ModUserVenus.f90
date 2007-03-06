@@ -1070,9 +1070,8 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK
     use ModVarIndexes, ONLY: RhoHp_, RhoCO2p_, RhoO2p_, RhoOp_ 
-    use ModPhysics,    ONLY: No2Io_V, UnitN_
+    use ModPhysics,    ONLY: No2Io_V, UnitN_, NameTecUnit_V, NameIdlUnit_V
     use ModAdvance,    ONLY: State_VGB, Rho_
-    use ModPhysics,    ONLY: NameTecUnit_V, NameIdlUnit_V, UnitN_
 
     ! Returns dimensional number density (/cc)
 
