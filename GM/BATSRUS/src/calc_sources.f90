@@ -12,7 +12,7 @@ subroutine calc_sources
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModResist,   ONLY : EtaResist_G                    !^CFG IF DISSFLUX
+  use ModResist,   ONLY : UseResistivity, EtaResist_G       !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
   use ModCoordTransform
   use ModHallResist, ONLY: &
@@ -59,7 +59,7 @@ subroutine calc_sources
      end do; end do; end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2
-     if(UseResistFlux)then  !^CFG IF DISSFLUX BEGIN
+     if(UseResistFlux .or. UseResistivity)then  !^CFG IF DISSFLUX BEGIN
         do k=1,nK; do j=1,nJ; do i=1,nI           
            call get_current(i,j,k,GlobalBlk,Current_D)
            Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + &
