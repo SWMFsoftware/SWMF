@@ -232,5 +232,20 @@ contains
          Name//'. Please implement the routine in src/ModUser.f90')
   end subroutine stop_user
 
+  !=====================================================================
+  subroutine user_set_resistivity(iBlock, Eta_G)
+    ! This subrountine set the eta for every block
+    use ModSize
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
+    character (len=*), parameter :: Name='user_set_resistivity'
+
+    !-------------------------------------------------------------------
+    call stop_mpi(name)
+
+  end subroutine user_set_resistivity
+
+
 end module ModUserEmpty
 !==============================================================================
