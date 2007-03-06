@@ -8,4 +8,5 @@ RUNDIR    = ${RBDIR}/run
 BINDIR    = ${RBDIR}/src
 SHAREDIR  = ${RBDIR}/share/Library/src
 
+NOMPIDIR  = ${RBDIR}/util/NOMPI/src
 TIMINGDIR = ${RBDIR}/util/TIMING/src

@@ -30,7 +30,7 @@ rbe_main.o: rbe_subs.o ${LIBDIR}/libSHARE.a ${LIBDIR}/libTIMING.a
 
 ${EXE}: rbe_main.o ${OBJECTS}
 	${COMPILE.f90} ${Lflag2} -o ${EXE} rbe_main.f90 ${OBJECTS} \
-	-L${LIBDIR} -lTIMING -lSHARE
+	-L${LIBDIR} -lTIMING -lSHARE -lNOMPI
 
 MY_LIB = ${LIBDIR}/libRB.a
 
