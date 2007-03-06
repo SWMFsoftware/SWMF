@@ -30,7 +30,7 @@ spherical_lnr
 53.0			Radius2
 
 #GRID
-4                      proc_dims(1)
+8                      proc_dims(1)
 4                       proc_dims(2)
 2                       proc_dims(3),
 -40.                    x1
@@ -42,7 +42,7 @@ spherical_lnr
 
 #AMRINIT
 Venus3Dbodyfocus       InitialRefineType
-3                      InitialRefineLevel
+2                      InitialRefineLevel
 
 #BODY
 T			body1
