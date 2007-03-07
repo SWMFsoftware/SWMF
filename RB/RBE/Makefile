@@ -18,6 +18,7 @@ RBE:
 	@cd ${NOMPIDIR};  make LIB
 	@cd ${SHAREDIR};  make LIB
 	@cd ${TIMINGDIR}; make LIB
+	@cd src;          make LIB
 	@cd src;          make RBE
 
 LIB:
