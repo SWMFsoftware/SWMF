@@ -138,6 +138,9 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
+     ! Planet NONE means that we do not use a body
+     if (NamePlanet == 'NONE') body1 = .false.
+
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
      if(IsStandAlone .and. NameThisComp=='GM') then
@@ -2204,21 +2207,6 @@ contains
        procTEST=0
     end if
 
-   ! If planet is NONE then set body1 = .false.
-    if (NamePlanet == 'NONE' .and. body1) then
-       if(iProc==0) then
-          write(*,'(a)')NameSub//&
-               ' WARNING: For Planet = '//trim(NamePlanet)// &
-               ' there cannot be a body in the simulation.'  
-          write(*,'(a)')NameSub//&
-               ' WARNING: To simulate a generic body use Planet = NEW.'
-          if(UseStrict)call stop_mpi( &
-               'Set #BODY in PARAM.in')
-          write(*,'(a)')NameSub//&
-               ' WARNING: Setting body1 = .false. !!!'
-       end if
-       body1 = .false.
-    endif                                     
 
    ! If planet is NONE then
    !   TypeNormalization should be NONE,USER,NOBODY
