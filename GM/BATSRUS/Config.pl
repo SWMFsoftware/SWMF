@@ -200,7 +200,7 @@ sub set_user_module{
 	$File = "$SrcUser/ModUser$UserModule.f90";
     }
     die "$ERROR File $File does not exist!\n" unless -f $File;
-    `cp $UserMod $UserModSafe`;
+    `cp $UserMod $UserModSafe` if -f $UserMod; # save previous user module
     print "cp $File $UserMod\n" if $Verbose;
     `cp $File $UserMod`;
 }
