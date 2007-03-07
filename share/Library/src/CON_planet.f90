@@ -97,16 +97,14 @@ contains
 
     !-------------------------------------------------------------------------
     Planet_          = Earth_
-    NamePlanet       = namePlanet_I(Earth_)
+    NamePlanet       = NamePlanet_I(Earth_)
     RadiusPlanet     = rPlanet_I(Earth_)
     MassPlanet       = mPlanet_I(Earth_)
     RotPeriodPlanet  = RotationPeriodPlanet_I(Earth_)
     TiltRotation     = TiltPlanet_I(Earth_)
     IonosphereHeight = IonoHeightPlanet_I(Earth_)
-    OmegaPlanet      = &
-                       cTwoPi/RotationPeriodPlanet_I(Earth_)   &
-                       + cTwoPi/OrbitalPeriodPlanet_I(Earth_)  
     OmegaOrbit       = cTwoPi/OrbitalPeriodPlanet_I(Earth_)
+    OmegaPlanet      = OmegaOrbit + cTwoPi/RotationPeriodPlanet_I(Earth_)
     AngleEquinox     = cTwoPi * &
          ( iHourEquinoxPlanet_I(Earth_) * 3600 &
          + iMinuteEquinoxPlanet_I(Earth_) * 60 &
@@ -165,22 +163,23 @@ contains
     IsInitialized = .true.
 
     IsKnown       = .false.
-    do i=NoPlanet_, MaxPlanet
+    do i = NoPlanet_, MaxPlanet
       if (NamePlanet == NamePlanet_I(i)) then
          IsKnown = .true.
          Planet_ = i
+         EXIT
       end if
     end do
 
     if (.not. IsKnown)  then
-       Planet_ = NewPlanet_
+       Planet_    = NewPlanet_
        NamePlanet = NamePlanetIN
     end if
 
     ! Set all values for the selected planet
     RadiusPlanet     = rPlanet_I(Planet_)
-    MassPlanet     = mPlanet_I(Planet_)
-    RotPeriodPlanet = RotationPeriodPlanet_I(Planet_)
+    MassPlanet       = mPlanet_I(Planet_)
+    RotPeriodPlanet  = RotationPeriodPlanet_I(Planet_)
     TiltRotation     = TiltPlanet_I(Planet_)
     IonosphereHeight = IonoHeightPlanet_I(Planet_)
     if (RotationPeriodPlanet_I(Planet_) == 0.0) then
@@ -208,10 +207,10 @@ contains
          0.0_Real8_, '')
 
     ! Magnetic field type and strength in teslas
-    TypeBField = TypeBFieldPlanet_I(Planet_)
-    DipoleStrength = DipoleStrengthPlanet_I(Planet_)
-    MagAxisThetaGeo   = bAxisThetaPlanet_I(Planet_)     ! Permanent theta  in GEO
-    MagAxisPhiGeo     = bAxisPhiPlanet_I(Planet_)       ! Permanent phi    in GEO
+    TypeBField        = TypeBFieldPlanet_I(Planet_)
+    DipoleStrength    = DipoleStrengthPlanet_I(Planet_)
+    MagAxisThetaGeo   = bAxisThetaPlanet_I(Planet_)  ! Permanent theta  in GEO
+    MagAxisPhiGeo     = bAxisPhiPlanet_I(Planet_)    ! Permanent phi    in GEO
     
   end function is_planet_init
 
@@ -429,8 +428,8 @@ contains
   !==========================================================================
 
   subroutine get_planet( &
-       NamePlanetOut, RadiusPlanetOut, MassPlanetOut, OmegaPlanetOut, RotationPeriodOut, &
-       IonosphereHeightOut, &
+       NamePlanetOut, RadiusPlanetOut, MassPlanetOut, OmegaPlanetOut, &
+       RotationPeriodOut, IonosphereHeightOut, &
        UseRotationOut, DipoleStrengthOut, DoUpdateB0Out, DtUpdateB0Out)
 
     character(len=*), optional, intent(out) :: NamePlanetOut
