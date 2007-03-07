@@ -82,6 +82,7 @@ module ModPhysics
   !\
   ! General Body parameters
   !/
+  character (len=2) :: NamePlanetRadius = 'R ' !can be 'km' if there is no body
   real :: rPlanetSi, rBody, rCurrents
   real :: Body_rho_dim, Body_T_dim, Body_rho, Body_p  
   real :: gBody
