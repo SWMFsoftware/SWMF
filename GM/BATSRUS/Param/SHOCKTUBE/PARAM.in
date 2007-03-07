@@ -10,12 +10,8 @@ NONE
 #NORMALIZATION
 NONE
 
-The following two commands should not be necessary
-#DIPOLE
-0.0		DipoleStrength
-
-#BODY
-F		UseBody
+#NONCONSERVATIVE
+F		UseNonConservative
 
 A single block 256x4x4 grid
 #INCLUDE
