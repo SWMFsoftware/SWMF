@@ -1044,7 +1044,7 @@ contains
              write(*,*)'cos_BSZA(m)',cos_BSZA
              write(*,*)'dtm, dtmp1,m=',dtm, dtmp1,m
              write(*,*)'p_BLK(testcell)=',State_VGB(P_,i,j,k,globalBLK)
-             call stop_mpi('test')
+             !call stop_mpi('test')
           end if
 
        end do; end do; end do
