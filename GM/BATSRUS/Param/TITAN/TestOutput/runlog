@@ -1,21 +1,19 @@
+
  BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
-          for 3D Heliospheric Flows,
- University of Michigan, 1995-2004.
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
 
- BATSRUS version 7.80 is running as GM on    1 PE(s)
+ BATSRUS version 7.80 is running as GM on    2 PE(s)
 
-#=================================================================#
-# OPTION CONSTRAINED TRANSPORT Toth 1.0                    is ON  #
-# OPTION PROJECTION SCHEME Toth 1.3                        is ON  #
-# OPTION RAY TRACING Toth 2.0                              is ON  #
-# OPTION IMPLICIT SCHEME Toth 1.3                          is ON  #
-#=================================================================#
-# USER MODULE: Titan 7 species MHD code, Yingjuan Ma 1.00
-#=================================================================#
+ USER MODULE: Titan 7 species MHD code, Yingjuan Ma 1.00
 
 ModReadParam::read_file: read and broadcast nLine= 192 lines of text
  ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = block
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 192
+
+#NORMALIZATION
+SOLARWIND		TypeNormalization
 
 #DESCRIPTION
 
@@ -54,7 +52,7 @@ T		UseGravity
 4.88234			rMax = alog(sqrt(64^2+96^2+64^2))		XyzMax_D(1)
 
 #AMRINIT
-3Dbodyfocus             InitialRefineType		TypeRefineInit
+Titan3Dbodyfocus             InitialRefineType		TypeRefineInit
 3                      InitialRefineLevel		nRefineLevelInit
 
 #BODY
@@ -82,7 +80,7 @@ T			UseUserSource
 F			UseUserPerturbation (default/unchanged)
 F                       UseUserOuterBcs (default/unchanged)
 T                       UseUserICs
-F                       UseUserSpecifyRefinement (default/unchanged)
+T                       UseUserSpecifyRefinement
 F                       UseUserLogFiles (default/unchanged)
 F                       UseUserWritePlot (default/unchanged)
 F                       UseUserAMR (default/unchanged)
@@ -151,9 +149,8 @@ T                       Including impact ionization		UseImpact
 0.1                     Proton density(cm^-3)		SW_LP_dim
 0.05                     N^+ density(cm^-3)		SW_LP_dim
 500.0                   plasma temperature(eV) 200+50		plas_T_ev
- AVER_mass=   5.3333333333333330
+ AverageIonMass=   5.3333333333333330
  plas_T=   1.0884375000000000E+06
- SW_rho_dim=   0.8000000000000000   1.0884375000000000E+06
 
 #USERINPUTEND ---------------------------------------------------------
  USERINPUTEND
@@ -163,7 +160,7 @@ T			DoReplaceDensity (default/unchanged)
 5.0			SpeciesPercentCheck
 
 #RESTARTOUTFILE
-block			TypeRestartInFile		TypeRestartOutFile
+block			TypeRestartInFile		TypeRestartOutFile (default/unchanged)
 
 #SAVERESTART
 F			DoSaveRestart
@@ -215,39 +212,41 @@ z=0 MHD idl             StringPlot
     Planetary Parameters
     --------------------
 
-          Planet:         TITAN  (---!---Defaults Modified---!---)  
-          Radius:           0.25750E+07
-          Mass:             0.13460E+24
+          Name:            TITAN
+          Radius:           2.57500E+06
+          Mass:             1.34600E+23
           Rotation Tilt:    0.00000E+00
-          Iono Height:      0.00000E+00
           Rotation Period: Not Rotating
-          Orbit Period:     0.13776E+07
+          Orbit Period:     1.37765E+06
+          Iono Height:      0.00000E+00
 
     Physical Parameters
     -------------------
 
-          rBody:         0.12816E+01, rPlanet:     0.25750E+07
-          Body_rho_dim:  0.10000E+07, Body_T_dim:  0.30000E+03
+          I/O Unit type: PLANETARY            Normalization: SOLARWIND
+
+          gamma:         1.66666667
+
+          rBody:         1.28155E+00, rPlanet:     2.57500E+06
+          Body_rho_dim:  1.00000E+06, Body_T_dim:  3.00000E+02
           Bdp:           0.00000E+00, Tilt:       -0.00000E+00
           Gravity is used
 
           body2: .false.
 
-          cLIGHTfactor:  0.10000E+01, cLIGHT:      0.24498E+04
+          cLIGHTfactor:  1.00000E+00, cLIGHT:      2.44984E+03
 
 
- Unit Type:  PLANETARY
-
-          SW_rho_dim [n/cc]:        0.800000,  SW_rho:        1.000000
-          SW_Ux_dim  [km/s]:      120.000000,  SW_Ux:         0.980622
-          SW_Uy_dim  [km/s]:        0.000000,  SW_Uy:         0.000000
-          SW_Uz_dim  [km/s]:        0.000000,  SW_Uz:         0.000000
-          SW_p_dim   [ nPa]:        0.012022,  SW_p:          0.600000
-          SW_Bx_dim  [  nT]:        0.000000,  SW_Bx:         0.000000
-          SW_By_dim  [  nT]:        0.000000,  SW_By:         0.000000
-          SW_Bz_dim  [  nT]:       -5.000000,  SW_Bz:        -0.996424
-          SW_a_dim   [km/s]:      122.371347
-          SW_T_dim   [   K]:  1088437.500000
+          SW_n_dim   [/cc  ]:        0.150000,  SW_n:         0.187500
+          SW_Rho_dim [Mp/cc]:        0.800000,  SW_Rho:       1.000000
+          SW_Ux_dim  [km/s ]:      120.000000,  SW_Ux:        0.980622
+          SW_Uy_dim  [km/s ]:        0.000000,  SW_Uy:        0.000000
+          SW_Uz_dim  [km/s ]:        0.000000,  SW_Uz:        0.000000
+          SW_p_dim   [nPa  ]:        0.012022,  SW_p:         0.600000
+          SW_Bx_dim  [nT   ]:        0.000000,  SW_Bx:        0.000000
+          SW_By_dim  [nT   ]:        0.000000,  SW_By:        0.000000
+          SW_Bz_dim  [nT   ]:       -5.000000,  SW_Bz:       -0.996424
+          SW_T_dim   [K    ]:  1088437.500000
 
     MHD Numerical Solution Parameters
     ---------------------------------
@@ -255,45 +254,45 @@ z=0 MHD idl             StringPlot
           2nd-Order Scheme
           with limiter minmod
           Steady state calculation
-          Linde      Flux Function
+          Linde Flux Function
           Explicit Time Stepping
 
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  1
+ Available processors: nProc =  2
 
  After initial grid setup:
-   nBlockMax =  624  nBLK =  2000
+   nBlockMax =  596  nBLK =  2000
    Total number of blocks used =  624
    Total number of cells =  39936
    Smallest cell dx:    3.6205210937500003E-02   Largest cell dx:    0.1448208437500000
 
- proc_dims:          4       2       1
+ root blocks:        4       2       1
  nCells:             4       4       4
  x:               -32.00000000     96.00000000
  y:               -64.00000000     64.00000000
  z:               -64.00000000     64.00000000
  multistage:         2
  cfl:               0.80000000
- gamma:             1.66666667      0.66666667     -0.33333333      2.66666667
 
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   7.87    100.00         1         1
+BATSRUS                   1.18    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     7.87    100.00         1         1
-exch_msgs                 0.14      1.84         1         1
+setup                     1.18     99.99         1         1
+load_balance              0.14     11.60         1         1
+exch_msgs                 0.07      6.22         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
  First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4648437500000000E-03
-Speed is  15259.1 c/s/p after     26.5 s at N =      10
-Speed is  15236.4 c/s/p after     53.0 s at N =      20
-Speed is  15236.4 c/s/p after     79.5 s at N =      30
-Speed is  15213.7 c/s/p after    106.3 s at N =      40
-Speed is  15191.1 c/s/p after    132.8 s at N =      50
+Speed is  28721.3 c/s/p after      8.0 s at N =      10
+Speed is  28899.3 c/s/p after     15.3 s at N =      20
+Speed is  29154.5 c/s/p after     22.6 s at N =      30
+Speed is  25735.2 c/s/p after     30.0 s at N =      40
+Speed is  28345.9 c/s/p after     37.1 s at N =      50
 
     Finished Numerical Simulation
     -----------------------------
@@ -313,21 +312,23 @@ saved ifile= 8 type=z=0_mhd    at n_step=     50
 SORTED TIMING from step       0 to      50    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 140.88    100.00         1         1
+BATSRUS                  40.25    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 131.35     93.24        50        50
-calc_fluxes              35.05     24.88        50     62400
-calc_sources             34.86     24.75        50     62400
-calc_facevalues          33.61     23.86        50     62400
-update_states             8.37      5.94        50     62400
-exch_msgs                 7.76      5.51        51       101
-save_plot                 7.75      5.50         1         6
-update_check              6.17      4.38        50       100
-set_BCs                   1.74      1.24        50     14800
-calc_face_bfo             1.62      1.15        50     16000
-save_logfile              1.48      1.05        50        50
-calc_fluxes_bfo           0.68      0.49        50     16000
-send_cons_flux            0.12      0.09        50       100
+advance                  36.10     89.69        50        50
+calc_fluxes              10.54     26.18        50     31200
+calc_facevalues           9.32     23.16        50     31200
+calc_sources              6.57     16.31        50     31200
+exch_msgs                 3.80      9.44        51       101
+save_plot                 2.92      7.26         1         6
+update_check              1.99      4.95        50       100
+update_states             1.63      4.06        50     31200
+save_logfile              1.03      2.55        50        50
+barrier-expl2             0.63      1.57        50       100
+calc_face_bfo             0.55      1.36        50      8000
+set_BCs                   0.45      1.13        50      7400
+calc_fluxes_bfo           0.22      0.54        50      8000
+barrier-expl1             0.06      0.14        50       100
+send_cons_flux            0.04      0.09        50       100
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)
  OCCURED first= 1  last= 16  count_max= 20  count_sum= 20
