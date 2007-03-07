@@ -138,8 +138,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
-     ! Planet NONE means that we do not use a body
-     if (NamePlanet == 'NONE') body1 = .false.
+     ! Planet NONE in GM means that we do not use a body
+     if (NameThisComp=='GM' .and. NamePlanet == 'NONE') body1 = .false.
 
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
@@ -1242,7 +1242,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('No2SiUnitX',   No2Si_V(UnitX_))
            call read_var('No2SiUnitU',   No2Si_V(UnitU_))
            call read_var('No2SiUnitRho', No2Si_V(UnitRho_))
-        case('PLANETARY', 'SOLARWIND','NOBODY')
+        case('PLANETARY', 'SOLARWIND')
            ! Depends on other commands, defined in set_physics
         case default
            call stop_mpi(NameSub//' ERROR: unknown TypeNormalization=' &
@@ -2206,48 +2206,6 @@ contains
             ' WARNING: procTEST > nProc, setting procTEST=0 !!!'
        procTEST=0
     end if
-
-
-   ! If planet is NONE then
-   !   TypeNormalization should be NONE,USER,NOBODY
-   !   TypeIoUnit should be NONE,USER,NOBODY
-    if (NamePlanet == 'NONE') then
-       select case (TypeNormalization)
-       case('NONE','USER','NOBODY')
-          ! Do nothing
-       case default
-          if(iProc==0) then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: For Planet = '//trim(NamePlanet)// &
-                  ' TypeNormalization = '//trim(TypeNormalization)//' is not valid.'  
-             if(UseStrict)call stop_mpi( &
-                  'Set #NORMALIZATION in PARAM.in')
-             write(*,'(a)')NameSub//&
-                  ' WARNING: Setting TypeNormalization = NOBODY.'  
-          end if
-          TypeNormalization = 'NOBODY'
-       end select
-       select case (TypeIoUnit)
-       case('NONE','USER','NOBODY')
-          ! Do nothing
-       case default
-          if(iProc==0) then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: For Planet = '//trim(NamePlanet)// &
-                  ' TypeIoUnit = '//trim(TypeIoUnit)//'is not valid.'  
-             if(UseStrict)call stop_mpi( &
-                  'Set #IOUNIT in  PARAM.in')
-             write(*,'(a)')NameSub//&
-                  ' WARNING: Setting TypeIoUnit = NOBODY.'  
-          end if
-          TypeIoUnit = 'NOBODY'
-       end select
-       
-       body1 = .false.
-    endif                                     
-
-
-
 
   end subroutine correct_parameters
 
