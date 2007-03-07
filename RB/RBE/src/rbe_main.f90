@@ -76,9 +76,3 @@ subroutine CON_stop(String)
   stop
 
 end subroutine CON_stop
-!============================================================================
-real*8 function MPI_WTIME()
-  integer:: clock,clockrate,count_max
-  call system_clock(clock,clockrate,count_max)
-  MPI_WTIME=dble(clock)/clockrate
-end function MPI_WTIME
