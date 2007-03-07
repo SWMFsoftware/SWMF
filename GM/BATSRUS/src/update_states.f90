@@ -158,9 +158,10 @@ subroutine update_check(iStage)
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
 
                     if(UseMultiSpecies .and. &
-                         iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ .and. &
-                         State_VGB(iVar,i,j,k,iBlock) < SpeciesPercentCheck*0.01*&
-                         State_VGB(Rho_,i,j,k,iBlock)) CYCLE
+                         iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
+                         .and. StateOld_VCB(iVar,i,j,k,iBlock) &
+                         < SpeciesPercentCheck*0.01*&
+                         StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
 
                     percent_chg_rho(1) = max(percent_chg_rho(1), 100.*abs( min(0.,&
                          (State_VGB(iVar,i,j,k,iBlock)- &
@@ -242,8 +243,9 @@ subroutine update_check(iStage)
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
 
                     if(UseMultiSpecies .and. &
-                         iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ .and. &
-                         StateOld_VCB(iVar,i,j,k,iBlock) < SpeciesPercentCheck*0.01*&
+                         iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
+                         .and. StateOld_VCB(iVar,i,j,k,iBlock) < &
+                         SpeciesPercentCheck*0.01*&
                          StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
 
                     percent_chg_rho(1) = max(percent_chg_rho(1), &
