@@ -151,34 +151,23 @@ subroutine move_line
   use ModNumConst, ONLY: cTwoPi
   use ModPWOM
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
+  use ModInterpolate, ONLY: bilinear
   implicit none
   real :: a
   !---------------------------------------------------------------------------
 
-  ! if the field line is in the polar circle then set velocity equal
-  ! to that of the nearest point. Otherwise, get the velocity from an
-  !interpolation.
-
-
+  ! Get the velocity of field line advection from a
+  ! bilinear interpolation.
+ 
+  UthetaLine_I(iLine) = bilinear(uExBtheta_C,nPhi,nTheta, &
+       (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
   
-  call New_Interpolate_Velocity( &
-       Theta_G(iPhiLine_I(iLine),iThetaLine_I(iLine)),           &
-       Theta_G(iPhiLine_I(iLine),iThetaLine_I(iLine)-1),         &
-       ThetaLine_I(iLine),                                          &
-       uExBtheta_C(iPhiLine_I(iLine),iThetaLine_I(iLine)),  &
-       uExBtheta_C(iPhiLine_I(iLine),iThetaLine_I(iLine)-1),&
-       uExBphi_C(iPhiLine_I(iLine),iThetaLine_I(iLine)),    &
-       uExBphi_C(iPhiLine_I(iLine),iThetaLine_I(iLine)-1),  &
-       UthetaLine_I(iLine),UphiLine_I(iLine))
-     
-  call New_Interpolate_Jr( &
-       Theta_G(iPhiLine_I(iLine),iThetaLine_I(iLine)),           &
-       Theta_G(iPhiLine_I(iLine),iThetaLine_I(iLine)-1),         &
-       ThetaLine_I(iLine),                                          &
-       Jr_G(iPhiLine_I(iLine),iThetaLine_I(iLine)),  &
-       Jr_G(iPhiLine_I(iLine),iThetaLine_I(iLine)-1),&
-       JrLine_I(iLine))
+  UphiLine_I(iLine)   = bilinear(uExBphi_C  ,nPhi,nTheta, &
+       (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
 
+  JrLine_I(iLine)     = bilinear(Jr_G, nPhi+2,nTheta+2, &
+       (/ PhiLine_I(iLine)/Dphi+1,ThetaLine_I(iLine)/Dtheta+1 /) )
+ 
   xLineOld_I(iLine) = xLine_I(iLine)
   yLineOld_I(iLine) = yLine_I(iLine)
   zLineOld_I(iLine) = zLine_I(iLine)
