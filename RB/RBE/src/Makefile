@@ -51,7 +51,7 @@ RBE:
 	@echo "Program ${EXE} has been brought up to date."
 	@echo ' '
 
-${EXE}: ${OBJECTSEXE}
+${EXE}: ${OBJECTS_EXE}
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
