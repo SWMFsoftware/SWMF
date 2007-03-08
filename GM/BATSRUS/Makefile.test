@@ -197,7 +197,7 @@ test_mars_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -o MarsTest
 
 test_mars_check:
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl \
 		Param/MARS/TestOutput/log_n000001.log \
 		${TESTDIR}/MarsTest/GM/log_n000001.log > test_mars.diff
 	ls -l test_mars.diff
@@ -234,7 +234,7 @@ test_venus_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -o VenusTest
 
 test_venus_check:
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl \
 		Param/VENUS/TestOutput/log_n000001.log \
 		${TESTDIR}/VenusTest/GM/log_n000001.log > test_venus.diff
 	ls -l test_venus.diff
