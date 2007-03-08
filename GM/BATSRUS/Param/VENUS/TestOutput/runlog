@@ -99,10 +99,9 @@ read_inputs amr		StringTest
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
-VAR step	        StringLog
+RAW step	        StringLog
 1	                DnSaveLogfile
 -1.                     DtSaveLogfile [sec] (default/unchanged)
-rho p rhopnt ppnt       NameLogVars (read if StrigLog is 'var' or 'VAR')		log_vars
 
 #INNERBOUNDARY
 user		TypeBcInner
@@ -148,8 +147,10 @@ z=0 MHD idl             StringPlot
 -1.0			DxSaveplot		DxSavePlot
 
 #SCHEME
-1                       nOrder (1 or 2)
+2                       nOrder (1 or 2) (default/unchanged)
 Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde		TypeFlux
+mc                  LimiterType ! Only for nordder=2		TypeLimiter
+1.2		LimiterBeta
 
 #STOP
 50		MaxIteration
@@ -159,7 +160,7 @@ Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde		TypeFlux
  in set_multisp_ICs, No2Io_V(UnitN_),t=  14.0000000000000000  99.2425478783972466
  BodynDenNuSpecies_I=  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  BodynDenNuSpecies_dim_I(1:nNuSpecies)   5.0000000000000000E+10   1.0000000000000000E+10  0.0000000000000000E+000
-  set parameters of Venus: BodyRhoSpecies_I(i)=   1.4000000000000001   1.4601748029294258E+06   1.4280672116135850E+03   6.2357692307692312E+04
+  set parameters of Venus: BodyRhoSpecies_I(i)=   1.4000000000000001   1.4601748029294261E+06   1.4280672116135850E+03   6.2357692307692305E+04
  neutral density=   5.0000000000000000E+10   1.0000000000000000E+10  0.0000000000000000E+000
  XiT0=   4.4395116537180911E-03 nu0=   1.3893956702975616E-06
  BATS_setup starting initial refinement level  1
@@ -182,12 +183,12 @@ idir= 6 neiLEV= 0 neiPE=    1 neiBLK=     364
      total blocks =  960
  BodynDenNuSpecies_I(1:nNuSpecies)=   3.5714285714285712E+09   7.1428571428571427E+08  0.0000000000000000E+000
  HNuSpecies_I(1:nNuSpecies)=   1.1070720423000660E-03   3.0403172504957039E-03   0.1652346331791143
- x,y,z=  -1.7925005115547734  -0.1765458909014644  -5.9376737981615060
+ x,y,z=  -1.7925005115547736  -0.1765458909014644  -5.9376737981615060
  R, Rbody   6.2048526710061376   1.0231328486450759
  nDenNuSpecies_CBI(2,1,2,globalBLK,1:nNuSPecies)  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  nu=  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  initial set up
- Rate_I=   3.2180388575049092E-04   1.2048045312437426E-04   2.2786088992880008E-07   1.4009535022397032E-06   1.3338198434856591E-07   1.1355958605628029E-04   2.3591103847581533E-04   7.0636875877928025E-07   8.8921322899043924E-07   5.5377341716145664E-06
+ Rate_I=   3.2180388575049092E-04   1.2048045312437426E-04   2.2786088992880008E-07   1.4009535022397032E-06   1.3338198434856591E-07   1.1355958605628026E-04   2.3591103847581536E-04   7.0636875877928025E-07   8.8921322899043924E-07   5.5377341716145664E-06
  x,y,z=  -2.9108628808717536  -0.2866949701173370  -5.4721915127090002
  R, Rbody   6.2048526710061376   1.0231328486450759
  rho_BLK(2,1,3,globalBLK)   1.0000000003000000
@@ -213,7 +214,7 @@ idir= 6 neiLEV= 0 neiPE=    1 neiBLK=     364
     Planetary Parameters
     --------------------
 
-          Name:            VENUS  (---!---Defaults Modified---!---)  
+          Name:            VENUS
           Radius:           6.05200E+06
           Mass:             4.86500E+24
           Rotation Tilt:    0.00000E+00
@@ -252,7 +253,9 @@ idir= 6 neiLEV= 0 neiPE=    1 neiBLK=     364
     MHD Numerical Solution Parameters
     ---------------------------------
 
-          1st-Order Scheme
+          2nd-Order Scheme
+          with limiter mc    
+          beta= 1.20
           Steady state calculation
           Linde Flux Function
           Explicit Time Stepping
@@ -273,7 +276,7 @@ idir= 6 neiLEV= 0 neiPE=    1 neiBLK=     364
  x:               -40.00000000      8.00000000
  y:               -24.00000000     24.00000000
  z:               -24.00000000     24.00000000
- multistage:         1
+ multistage:         2
  cfl:               0.20000000
 
 
@@ -292,19 +295,19 @@ idir= 6 neiLEV= 0 neiPE=    1 neiBLK=     364
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   2.96    100.00         1         1
+BATSRUS                   1.28    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     2.96    100.00         1         1
-load_balance              0.91     30.55         1         1
-exch_msgs                 0.24      8.03         1         1
+setup                     1.28     99.99         1         1
+load_balance              0.20     15.61         1         1
+exch_msgs                 0.09      6.84         1         1
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.0978672043175028E-02
-Speed is  88387.1 c/s/p after      4.0 s at N =      10
-Speed is  88341.4 c/s/p after      8.0 s at N =      20
-Speed is  87727.3 c/s/p after     12.1 s at N =      30
-Speed is  88485.4 c/s/p after     16.1 s at N =      40
-Speed is  87386.7 c/s/p after     20.1 s at N =      50
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   2.2445214594143590E-02
+Speed is  37562.0 c/s/p after      8.6 s at N =      10
+Speed is  35469.8 c/s/p after     17.1 s at N =      20
+Speed is  37541.3 c/s/p after     25.6 s at N =      30
+Speed is  35538.3 c/s/p after     34.1 s at N =      40
+Speed is  35686.3 c/s/p after     42.7 s at N =      50
 
     Finished Numerical Simulation
     -----------------------------
@@ -324,47 +327,47 @@ saved ifile= 7 type=z=0_mhd    at n_step=     50
 -------------------------------------------------------------------------------
 SORTED TIMING from step       0 to      50    on PE    0
 name                       sec   percent     #iter    #calls
--------------------------------------------------------------------------------
-BATSRUS                  in set_multisp_ICs, No2Io_V(UnitN_),t=  14.0000000000000000  99.2425478783972466
+---------------------------------------------------------------------- in set_multisp_ICs, No2Io_V(UnitN_),t=  14.0000000000000000  99.2425478783972466
  BodynDenNuSpecies_I=  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  BodynDenNuSpecies_dim_I(1:nNuSpecies)   5.0000000000000000E+10   1.0000000000000000E+10  0.0000000000000000E+000
-  set parameters of Venus: BodyRhoSpecies_I(i)=   1.4000000000000001   1.4601748029294258E+06   1.4280672116135850E+03   6.2357692307692312E+04
+  set parameters of Venus: BodyRhoSpecies_I(i)=   1.4000000000000001   1.4601748029294261E+06   1.4280672116135850E+03   6.2357692307692305E+04
  neutral density=   5.0000000000000000E+10   1.0000000000000000E+10  0.0000000000000000E+000
  XiT0=   4.4395116537180911E-03 nu0=   1.3893956702975616E-06
  BodynDenNuSpecies_I(1:nNuSpecies)=   3.5714285714285712E+09   7.1428571428571427E+08  0.0000000000000000E+000
  HNuSpecies_I(1:nNuSpecies)=   1.1070720423000660E-03   3.0403172504957039E-03   0.1652346331791143
- x,y,z=  -0.1747600043076694   1.7743681006750256   3.3356713999621928
- R, Rbody   3.7822780046321887   1.0231328486450759
+ x,y,z=  -0.1747600043076694   1.7743681006750256   3.3356713999621923
+ R, Rbody   3.7822780046321882   1.0231328486450759
  nDenNuSpecies_CBI(2,1,2,globalBLK,1:nNuSPecies)  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  nu=  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000  0.0000000000000000E+000
  initial set up
- Rate_I=   3.2180388575049092E-04   1.2048045312437426E-04   2.2786088992880008E-07   1.4009535022397032E-06   1.3338198434856591E-07   1.1355958605628029E-04   2.3591103847581533E-04   7.0636875877928025E-07   8.8921322899043924E-07   5.5377341716145664E-06
- x,y,z=  -0.1076166792944216   1.0926504814249207   3.6194143835852755
- R, Rbody   3.7822780046321882   1.0231328486450759
+ Rate_I=   3.2180388575049092E-04   1.2048045312437426E-04   2.2786088992880008E-07   1.4009535022397032E-06   1.3338198434856591E-07   1.1355958605628026E-04   2.3591103847581536E-04   7.0636875877928025E-07   8.8921322899043924E-07   5.5377341716145664E-06
+ x,y,z=  -0.1076166792944216   1.0926504814249205   3.6194143835852750
+ R, Rbody   3.7822780046321878   1.0231328486450759
  rho_BLK(2,1,3,globalBLK)   1.0000000003000000
  p_BLK(2,1,3,globalBLK)   0.6000000000000000
  rhoSpecies_GBI(i,j,k,globalBLK,1:nSpecies)=   1.0000000000000000   1.0000000000000000E-10   1.0000000000000000E-10   1.0000000000000000E-10
- 26.76    100.00         1         1
+---------
+BATSRUS                  46.18    100.00         1         1
 -------------------------------------------------------------------------------
-advance                  18.03     67.40        50        50
-save_plot                 6.02     22.49         1         5
-calc_fluxes               5.65     21.12        50     24000
-exch_msgs                 4.10     15.32        51        51
-calc_sources              2.42      9.05        50     24000
-save_logfile              2.03      7.60        50        50
-calc_facevalues           1.71      6.37        50     24000
-update_check              1.48      5.55        50        50
-update_states             1.35      5.04        50     24000
-set_BCs                   0.64      2.39        50      7900
-write_restart_files       0.25      0.93         1         1
-barrier-expl2             0.23      0.85        50        50
-calc_face_bfo             0.17      0.65        50      3200
-nonconservative           0.16      0.58        50        50
-calc_fluxes_bfo           0.07      0.28        50      3200
-barrier-expl1             0.03      0.13        50        50
-send_cons_flux            0.02      0.08        50        50
+advance                  41.59     90.05        50        50
+calc_fluxes              13.54     29.32        50     48000
+calc_facevalues          12.95     28.04        50     48000
+calc_sources              4.49      9.73        50     48000
+exch_msgs                 4.12      8.91        51       101
+save_plot                 2.34      5.06         1         5
+update_check              2.31      5.01        50       100
+update_states             2.26      4.90        50     48000
+save_logfile              1.08      2.33        50        50
+write_restart_files       0.87      1.88         1         1
+set_BCs                   0.83      1.79        50     15800
+calc_face_bfo             0.38      0.83        50      6400
+barrier-expl2             0.16      0.35        50       100
+calc_fluxes_bfo           0.14      0.31        50      6400
+nonconservative           0.08      0.17        50        50
+barrier-expl1             0.03      0.07        50       100
+send_cons_flux            0.03      0.07        50       100
 -------------------------------------------------------------------------------
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 50  count_max= 50  count_sum= 50
- VALUES min=   1.6104747464090548E-03  max=   0.6452670808277540  mean=   7.5968209400598452E-02  last=   1.6104747464090548E-03  last_sum=   1.6104747464090548E-03
+ OCCURED first= 1  last= 50  count_max= 96  count_sum= 96
+ VALUES min=   1.1562531954148949E-03  max=   0.7795845328333456  mean=   0.1985388882828090  last=   0.4900688626978902  last_sum=   0.4900688626978902
 

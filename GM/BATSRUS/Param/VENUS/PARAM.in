@@ -99,10 +99,9 @@ update_states calc_sources calc_facefluxes calc_timestep
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
-VAR step	        StringLog
+RAW step	        StringLog
 1	                DnSaveLogfile
 -1.                     DtSaveLogfile [sec]
-rho p rhopnt ppnt       NameLogVars (read if StrigLog is 'var' or 'VAR')
 
 
 MULTISPECIES
@@ -160,9 +159,10 @@ z=0 MHD idl             StringPlot
 -1.0			DxSaveplot
 
 #SCHEME
-1                       nOrder (1 or 2)
+2                       nOrder (1 or 2)
 Linde                 FluxType  1=Roe, 2=Rusanov, 3=Linde
-minmod                  LimiterType ! Only for nordder=2
+mc                  LimiterType ! Only for nordder=2
+1.2
 
 #STOP
 50
