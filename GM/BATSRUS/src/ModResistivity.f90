@@ -23,7 +23,7 @@ module ModResistivity
 
 contains
 
-  subroutine mod_resistivity_init
+  subroutine init_mod_resistivity
 
     use ModConst, ONLY: cLightSpeed, cElectronCharge, cElectronMass, cEps, &
          cBoltzmann, cTwoPi
@@ -54,7 +54,7 @@ contains
        end if
     end if
 
-  end subroutine mod_resistivity_init
+  end subroutine init_mod_resistivity
 
   !===========================================================================
 
