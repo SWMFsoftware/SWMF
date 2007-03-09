@@ -41,18 +41,16 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: SaveBoundaryCells,allocate_boundary_cells
   use ModPointImplicit, ONLY: UsePointImplicit,&
        UsePointImplicit_B, BetaPointImpl
-  use ModrestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
-  use ModHallResist,    ONLY: &                        
+  use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
+  use ModHallResist,    ONLY: &
        UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
        NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
-                                                       !^CFG IF DISSFLUX BEGIN
-  use ModResistivity, ONLY: UseResistivity, TypeResistivity, EtaSi, &
-       Eta0AnomResistSi, EtaMaxAnomResistSi, jCritResistSi
-                                                       !^CFG END DISSFLUX
+  use ModResistivity                              !^CFG IF DISSFLUX
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -198,6 +196,9 @@ subroutine MH_set_parameters(TypeAction)
 
      ! initialize ModEqution (e.g. variable units)
      call init_mod_equation
+
+     ! This one uses normalization units set by set_physics constants
+     if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
@@ -442,41 +443,21 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('TypeResistivity', TypeResistivity, &
                 IsLowerCase=.true.)
            select case(TypeResistivity)
-           case('spitzer', 'user')
+           case('user')
               ! Nothing to be read
+           case('spitzer')
+              call read_var('CoulombLogarithm', CoulombLogarithm)
            case('constant')
-              call read_var('EtaSi',EtaSi)
+              call read_var('Eta0Si',Eta0Si)
            case('anomalous')
-              call read_var('Eta0Si',EtaSi)
-              call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
-              call read_var('jCritResist',      jCritResist)
+              call read_var('Eta0Si',       Eta0Si)
+              call read_var('Eta0AnomSi',   Eta0AnomSi)
+              call read_var('EtaMaxAnomSi', EtaMaxAnomSi)
+              call read_var('jCritAnomSi',  jCritAnomSi)
            case default
               call stop_mpi(NameSub//': unknown TypeResistivity='&
                    //TypeResistivity)
            end select
-        end if
-     case("#RESISTIVEFLUX")
-        call read_var('UseResistFlux' ,UseResistFlux)
-        if(UseResistFlux)then
-           call read_var('UseSpitzerForm',UseSpitzerForm)
-           if (.not.UseSpitzerForm) then
-              call read_var('TypeResist',TypeResist)
-              call read_var('Eta0Resist',Eta0Resist)
-              if (TypeResist=='Localized'.or. &
-                   TypeResist=='localized'.or. &
-                   TypeResist=='Hall_localized') then
-                 call read_var('Alpha0Resist',Alpha0Resist)
-                 call read_var('yShiftResist',yShiftResist)
-                 call read_var('TimeInitRise',TimeInitRise)
-                 call read_var('TimeConstLev',TimeConstLev)
-              end if
-           end if
-           call read_var('UseAnomResist',UseAnomResist)
-           if (UseAnomResist) then
-              call read_var('Eta0AnomResist',   Eta0AnomResist)
-              call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
-              call read_var('jCritResist',      jCritResist)
-           end if
         end if
         !                                               ^CFG END DISSFLUX
      case("#HALLRESISTIVITY")
