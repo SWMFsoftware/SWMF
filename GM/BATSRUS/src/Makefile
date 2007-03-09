@@ -66,12 +66,7 @@ CARTSOURCES=calc_sources.o                  #^CFG IF NOT COVARIANT
 COVARCOURCES=calc_sources_covar.o           #^CFG IF COVARIANT
 OBJ9=${CARTSOURCES} ${COVARCOURCES}
 
-#^CFG IF DISSFLUX BEGIN
-OBJ10=  calc_heat_flux.o\
-	calc_resistive_flux.o\
-	set_ICs_diss_test.o
-#^CFG END DISSFLUX
-
+OBJ10=  calc_heat_flux.o ModResistivity.o   #^CFG IF DISSFLUX
 
 OBJ12= write_plot_los.o write_plot_sph.o
 
