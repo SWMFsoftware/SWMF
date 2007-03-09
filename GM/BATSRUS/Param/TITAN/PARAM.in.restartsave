@@ -130,7 +130,6 @@ SUBSOLARLOC
 0.0
 
 #USETITANINPUT
-T			UseTitaninput
 CassiniTA		Solarmax: CassiniTA:Solarmin
 T                       Including impact ionization
 
@@ -138,6 +137,9 @@ T                       Including impact ionization
 0.1                     Proton density(cm^-3)
 0.05                     N^+ density(cm^-3)
 500.0                   plasma temperature(eV) 200+50
+
+USECOSSZA
+T			default
 
 #USERINPUTEND ---------------------------------------------------------
 
