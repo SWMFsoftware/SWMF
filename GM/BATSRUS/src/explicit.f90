@@ -58,9 +58,6 @@ subroutine advance_expl(DoCalcTimestep)
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 
         if (UseHeatFlux) call add_heat_flux(.true.)
-
-        ! Update the faceflux values for resistive flux 
-        if (UseResistFlux) call add_resistive_flux(.true.)
         !^CFG END DISSFLUX
 
         call timing_stop('calc_fluxes_bfo')
@@ -104,9 +101,6 @@ subroutine advance_expl(DoCalcTimestep)
         !^CFG IF DISSFLUX BEGIN
         ! Update the faceflux values for heat flux 
         if (UseHeatFlux) call add_heat_flux(.false.)
-
-        ! Update the faceflux values for resistive flux 
-        if (UseResistFlux) call add_resistive_flux(.false.)
         !^CFG END DISSFLUX
 
         call timing_stop('calc_fluxes')
