@@ -159,14 +159,14 @@ subroutine move_line
   ! Get the velocity of field line advection from a
   ! bilinear interpolation.
  
-  UthetaLine_I(iLine) = bilinear(uExBtheta_C,nPhi,nTheta, &
+  UthetaLine_I(iLine) = bilinear(uExBtheta_C,1,nPhi,1,nTheta, &
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
   
-  UphiLine_I(iLine)   = bilinear(uExBphi_C  ,nPhi,nTheta, &
+  UphiLine_I(iLine)   = bilinear(uExBphi_C  ,1,nPhi,1,nTheta, &
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
 
-  JrLine_I(iLine)     = bilinear(Jr_G, nPhi+2,nTheta+2, &
-       (/ PhiLine_I(iLine)/Dphi+1,ThetaLine_I(iLine)/Dtheta+1 /) )
+  JrLine_I(iLine)     = bilinear(Jr_G, -1,nPhi+1,-1,nTheta+1, &
+       (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
  
   xLineOld_I(iLine) = xLine_I(iLine)
   yLineOld_I(iLine) = yLine_I(iLine)
