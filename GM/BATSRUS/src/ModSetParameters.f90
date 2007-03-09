@@ -42,16 +42,17 @@ subroutine MH_set_parameters(TypeAction)
   use ModPointImplicit, ONLY: UsePointImplicit,&
        UsePointImplicit_B, BetaPointImpl
   use ModrestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
-  use ModHallResist,    ONLY: &
+  use ModHallResist,    ONLY: &                        
        UseHallResist, HallFactor, HallCmaxFactor, HallHyperFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
        NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
+                                                       !^CFG IF DISSFLUX BEGIN
   use ModResistivity, ONLY: UseResistivity, TypeResistivity, EtaSi, &
        Eta0AnomResistSi, EtaMaxAnomResistSi, jCritResistSi
-
+                                                       !^CFG END DISSFLUX
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
