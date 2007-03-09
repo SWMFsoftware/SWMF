@@ -3830,7 +3830,7 @@ F		UseSpitzerForm
 2.50E+00	ExponentHeat [-]	! Only if not UseSpitzerForm
 </command>
 
-<command name="RESISTIVEFLUX">
+<command name="RESISTIVITY">
 	<parameter name="UseResistivity" type="logical" default="F"	/>
 	<if expr="$UseResistivity">
 		<parameter name="TypeResistivity" type="string" case="lower"
