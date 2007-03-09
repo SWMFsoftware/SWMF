@@ -535,23 +535,30 @@ contains
 
   !===========================================================================
 
-  subroutine read_string(StringVar,iError)
+  subroutine read_string(StringVar,iError,IsUpperCase,IsLowerCase)
     ! Read a string variable
+    ! Convert to upper or lower case if required.
     ! Arguments
     character (len=*), intent(inout):: StringVar
     integer, optional, intent(out)  :: iError
+    logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
     !-------------------------------------------------------------------------
     call read_var_c(' ',StringVar,iError)
   end subroutine read_string
 
   !===========================================================================
 
-  subroutine read_var_c(Name,StringVar,iError)
-    ! Read a string variable described by Name
+  subroutine read_var_c(Name,StringVar,iError,IsUpperCase,IsLowerCase)
+
+    use ModUtilities, ONLY: lower_case, upper_case
+
+    ! Read a string variable described by Name.
+    ! Convert to upper or lower case if required.
     ! Arguments
     character (len=*), intent(in)   :: Name
     character (len=*), intent(inout):: StringVar
     integer, optional, intent(out)  :: iError
+    logical, optional, intent(in)   :: IsUpperCase, IsLowerCase
     !-------------------------------------------------------------------------
 
     call read_line_param('character',Name,iError)
@@ -559,6 +566,13 @@ contains
     if(DoEcho)call read_echo(StringParam==StringVar,Name)
 
     StringVar=StringParam
+
+    if(present(IsLowerCase))then
+       if(IsLowerCase)call lower_case(StringVar)
+    endif
+    if(present(IsUpperCase))then
+       if(IsUpperCase)call upper_case(StringVar)
+    endif
 
   end subroutine read_var_c
 
