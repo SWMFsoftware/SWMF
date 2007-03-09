@@ -1164,9 +1164,11 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
               if(y >= yMax) CYCLE
 
               ! Compute the interpolated values at the current location.
+              ! Coordinates are normalized so that index=coordinate. 
+              ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
-              Average = trilinear( Array_G(:,:,:), nI+2, nJ+2, nK+2, &
-                   1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
+              Average = trilinear( Array_G(:,:,:), -1,nI+1, -1,nJ+1, -1,nK+1, &
+                   1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
 
               select case(TypeAction)
               case('integrate')
@@ -1287,8 +1289,12 @@ real function integrate_circle(Radius,z,Array_GB)
         y = Radius*sin(Phi)
         if( y < yMin .or. y >= yMax) CYCLE
 
-        Average = trilinear( Array_GB(:,:,:,iBlock), nI+2, nJ+2, nK+2, &
-             1+InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
+        ! Compute the interpolated values at the current location.
+        ! Coordinates are normalized so that index=coordinate. 
+        ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
+
+        Average = trilinear( Array_GB(:,:,:,iBlock),-1,nI+1,-1,nJ+1,-1,nK+1, &
+             1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
 
         Integral = Integral + Average
      end do
