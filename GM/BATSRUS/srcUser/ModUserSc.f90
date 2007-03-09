@@ -997,27 +997,27 @@ contains
     use ModGeometry,ONLY:R_BLK
     character (len=*), parameter :: Name='user_calc_sources'
     integer::i,j,k
-    real::rCurrentFree=0.0,LorentzForce_D(3)
+    real::rCurrentFree=0.0,AmpereForce_D(3)
     !--------------------------------------------------------------------------
     rCurrentFree=Rs_PFSSM
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(R_BLK(i,j,k,globalBLK)<rCurrentFree)CYCLE
-       LorentzForce_D=cross_product(&
+       AmpereForce_D=cross_product(&
             CurlB0_DCB(:,i,j,k,globalBLK),&
             State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
             B0xCell_BLK(i,j,k,globalBLK),&
             B0yCell_BLK(i,j,k,globalBLK),&
             B0zCell_BLK(i,j,k,globalBLK)/))
        Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
-            LorentzForce_D
+            AmpereForce_D
        !LorentzForce_D=cross_product(&
        !CurlB0_DCB(:,i,j,k,globalBLK),(/&
        !B0xCell_BLK(i,j,k,globalBLK),&
        !B0yCell_BLK(i,j,k,globalBLK),&
        !B0zCell_BLK(i,j,k,globalBLK)/))
        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
-            sum(LorentzForce_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
+            sum(AmpereForce_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
             /State_VGB(rho_,i,j,k,globalBLK)
     end do;end do;end do
   end subroutine user_calc_sources
