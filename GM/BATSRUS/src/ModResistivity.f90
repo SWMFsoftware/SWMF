@@ -14,7 +14,7 @@ module ModResistivity
   real               :: EtaPerpSpitzerSi
   real               :: CoulombLogarithm = 20.0
   real               :: Eta0AnomSi, Eta0Anom, EtaMaxAnomSi, EtaMaxAnom
-  real               :: jCritAnomSi, jCritInv
+  real               :: jCritAnomSi=1.0, jCritInv
   real               :: Si2NoEta
 
   real, allocatable :: Eta_GB(:,:,:,:)
