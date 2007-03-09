@@ -153,17 +153,13 @@ contains
   subroutine set_ion_mass_per_charge(iBlock)
 
     use ModAdvance, ONLY: State_VGB, Rho_
-    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
-         MassSpecies_V
+    use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, MassSpecies_V
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     !-------------------------------------------------------------------------
-
-    ! For single species the array is already set in init_hall_resist
-    if(.not.UseMultiSpecies)RETURN
 
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
@@ -696,7 +692,6 @@ contains
 
     if( IsNewBlockHall ) then
        call set_block_field(iBlock)
-       call set_ion_mass_per_charge(iBlock)
        if(UseCovariant)then                            !^CFG IF COVARIANT BEGIN
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate

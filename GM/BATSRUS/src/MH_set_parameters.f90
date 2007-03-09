@@ -49,6 +49,8 @@ subroutine MH_set_parameters(TypeAction)
        xSizeBoxHall, DxSizeBoxHall, &
        ySizeBoxHall, DySizeBoxHall, &
        zSizeBoxHall, DzSizeBoxHall
+  use ModResistivity, ONLY: UseResistivity, TypeResistivity, EtaSi, &
+       Eta0AnomResistSi, EtaMaxAnomResistSi, jCritResistSi
 
   implicit none
 
@@ -432,6 +434,25 @@ subroutine MH_set_parameters(TypeAction)
         if (.not.UseSpitzerForm) then
            call read_var('Kappa0Heat'  ,Kappa0Heat)
            call read_var('ExponentHeat',ExponentHeat)
+        end if
+     case("#RESISTIVITY")
+        call read_var('UseResistivity',UseResistivity)
+        if(UseResistivity)then
+           call read_var('TypeResistivity', TypeResistivity, &
+                IsLowerCase=.true.)
+           select case(TypeResistivity)
+           case('spitzer', 'user')
+              ! Nothing to be read
+           case('constant')
+              call read_var('EtaSi',EtaSi)
+           case('anomalous')
+              call read_var('Eta0Si',EtaSi)
+              call read_var('EtaAnomMaxResist', EtaAnomMaxResist)
+              call read_var('jCritResist',      jCritResist)
+           case default
+              call stop_mpi(NameSub//': unknown TypeResistivity='&
+                   //TypeResistivity)
+           end select
         end if
      case("#RESISTIVEFLUX")
         call read_var('UseResistFlux' ,UseResistFlux)

@@ -501,6 +501,7 @@ contains
   !===========================================================================
   subroutine impl_init_hall
 
+    use ModVarIndexes, ONLY: UseMultiSpecies
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
 
@@ -527,7 +528,7 @@ contains
             -InvDy2*(w_k(i,j+1,k,Bx_,implBLK)-w_k(i,j-1,k,Bx_,implBLK))
     end do; end do; end do
 
-    call set_ion_mass_per_charge(impl2iBLK(implBlk))
+    if(UseMultiSpecies)call set_ion_mass_per_charge(impl2iBLK(implBlk))
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &

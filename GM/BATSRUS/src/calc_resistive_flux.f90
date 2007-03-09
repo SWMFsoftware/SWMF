@@ -1,10 +1,14 @@
 !^CFG FILE DISSFLUX
 !^CFG COPYRIGHT UM
-Module ModResist
+module ModResistivity
   use ModSize,     ONLY:nI,nJ,nK,gcn,nBLK
   implicit none
   
-  logical :: UseResistivity=.false.
+  logical            :: UseResistivity=.false.
+  character (len=30) :: TypeResistivity='none'
+  real               :: EtaSi, Eta0AnomResistSi, EtaMaxAnomResistSi, &
+       jCritResistSi
+
   logical :: DoInitEtaLocResist_B(nBLK)
   data DoInitEtaLocResist_B /nBLK*.true./
   logical, dimension (1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK) :: &
@@ -16,7 +20,7 @@ Module ModResist
   real :: EtaResist_G(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn)
   real :: Eta_GB(-1:nI+2,-1:nJ+2,-1:nK+2,nBlk)
   logical :: UseUserEta = .false., DoSetEta=.true.
-end module ModResist
+end module ModResistivity
 
 !==============================================================================
 
@@ -41,7 +45,7 @@ subroutine add_resistive_flux(DoResChangeOnly)
   use ModNumConst, ONLY:cOne,cTwo,cFour,cHalf, &
        cZero,cTiny,cHundred,cHundredth,cPi
   use ModPhysics,  ONLY: gm1
-  use ModResist,   ONLY: EtaResist_G ,Eta_GB
+  use ModResistivity,   ONLY: EtaResist_G ,Eta_GB
   use ModMpi
   use ModCovariant, ONLY: UseCovariant, FaceArea2MinI_B,& !^CFG IF COVARIANT    
        FaceArea2MinJ_B,FaceArea2MinK_B, &                 !^CFG IF COVARIANT    
@@ -351,7 +355,7 @@ subroutine set_resistivity(iBlock, Eta_G)
        No2Si_V, UnitT_, UnitX_, UnitRho_, UnitB_, UnitJ_, UnitTemperature_,&
        Alpha0Resist,yShiftResist,TimeInitRise, &
        TimeConstLev
-  use ModResist
+  use ModResistivity
   use ModUser, ONLY : user_set_resistivity
   use ModMpi
   implicit none

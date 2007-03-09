@@ -12,7 +12,7 @@ subroutine calc_sources
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModPhysics
   use ModNumConst
-  use ModResist,   ONLY : UseResistivity, EtaResist_G       !^CFG IF DISSFLUX
+  use ModResistivity,ONLY : UseResistivity, EtaResist_G   !^CFG IF DISSFLUX
   use ModUser,     ONLY : user_calc_sources
   use ModCoordTransform
   use ModHallResist, ONLY: &

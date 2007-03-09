@@ -4,7 +4,7 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar, NameVar_V
+  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
 
@@ -24,9 +24,9 @@ module ModFaceFlux
        UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockHall, hall_factor, get_face_current
+       IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModResist, ONLY: UseResistivity, EtaResist_G  !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: UseResistivity, EtaResist_G  !^CFG IF DISSFLUX
 
   implicit none
 
@@ -94,6 +94,9 @@ contains
 
     if(UseResistivity) &                                 !^CFG IF DISSFLUX
          call set_resistivity(iBlock, EtaResist_G)       !^CFG IF DISSFLUX
+
+    if(UseHallResist .and. UseMultiSpecies) &
+         call set_ion_mass_per_charge(iBlock)
  
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
