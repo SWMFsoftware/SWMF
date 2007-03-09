@@ -3831,65 +3831,54 @@ F		UseSpitzerForm
 </command>
 
 <command name="RESISTIVEFLUX">
-	<parameter name="UseResistFlux"  type="logical" default="F"	/>
-	<parameter name="UseSpitzerForm" type="logical" default="T"	/>
-	<if expr="not $UseSpitzerForm">
-		<parameter name="TypeResist" type="string" input="select">
-			<option name="localized" value="Localized/localized"/>
-			<option name="constant"  value="Constant/constant"
-								default="T"/>
+	<parameter name="UseResistivity" type="logical" default="F"	/>
+	<if expr="$UseResistivity">
+		<parameter name="TypeResistivity" type="string" case="lower"
+			input="select" >
+			<option name="constant" default="T"/>
+			<option name="spitzer"             />
+			<option name="anomalous"           />
+			<option name="user"                />
 		</parameter>
-		<parameter name="Eta0Resist" type="real" default="9.69953E+8"/>
-		<if expr="$TypeResist =~ /localized/i">
-			<parameter name="Alpha0Resist" type="real"
-						default="150"		/>
-			<parameter name="yShiftResist" type="real"
-						default="0.5"		/>
-			<parameter name="TimeInitRise" type="real"
-						default="0.05"		/>
-			<parameter name="TimeConstLev" type="real"
-						default="1"		/>
+		<if expr="$TypeResistivity =~ /constant/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0E+11"/>
+		</if>
+		<if expr="$TypeResistivity =~ /spitzer/">
+			<parameter name="CoulombLogarithm" type="real" 
+							default="20" />
+		</if>
+		<if expr="$TypeResistivity =~ /anomalous/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0E+9"/>
+			<parameter name="Eta0AnomSi" type="real"
+						default="2E+09"	/>
+			<parameter name="EtaMaxAnomSi" type="real"
+						default="2E+10"	/>
+			<parameter name="jCritAnomSi" type="real" min="0"
+						default="1.0E-9"/>
 		</if>
 	</if>
-	<parameter name="UseAnomResist" type="logical" default="F"	/>
-	<if expr="$UseAnomResist">
-		<parameter name="Eta0AnomResist" type="real"
-						default="1.93991E+09"	/>
-		<parameter name="EtaAnomMaxResist" type="real"
-						default="1.93991E+10"	/>
-		<parameter name="jCritResist" type="real" min="0"
-						default="1.0E-9"	/>
-	</if>
-#RESISTIVEFLUX
-T		UseResistFlux
-F		UseSpitzerForm
-Localized	TypeResist		! Only if not UseSpitzerForm
-9.69953E+08	Eta0Resist [m^2/s]	! Only if not UseSpitzerForm
-1.50000E+02	Alpha0Resist [-]	! Only if TypeResist=='Localized'
-5.00000E-01	yShiftResist [-]	! Only if TypeResist=='Localized'
-5.00000E-02	TimeInitRise [-]	! Only if TypeResist=='Localized'
-1.00000E+00	TimeConstLev [-]	! Only if TypeResist=='Localized'
-T		UseAnomResist
-1.93991E+09	Eta0AnomResist [m^2/s]	! Only if UseAnomResist
-1.93991E+10	EtaAnomMaxResist [m^2/s]! Only if UseAnomResist
-1.00000E-09	jCritResist [A/m^2]	! Only if UseAnomResist
+#RESISTIVITY
+T		UseResistivity (rest of parameters read only if set to true)
+anomalous	TypeResistivity
+1.0E+9		Eta0Si       [m2/s] (read for constant and anomalous only)
+2.0E+9		Eta0AnomSi   [m2/s] 
+2.0E+10		EtaMaxAnomSi [m2/s]
+1.0E-9		jCritAnomSi  [A/m2]
 
-If UseResistFlux is false, no resistivity is included.
-If UseResistFlux is true, then one can select the Spitzer resistivity with
-UseSpitzerForm=.true., which results in very low resistivity in space plasma.
-If UseSpitzerForm=.false., the resistivity can be set by hand.
-For TypeResist='constant' the resistivity is uniformly set to Eta0Resist.
-For TypeResist='localized' the resistivity has a peak value Eta0Resist
-The enhanced resistivity has a Gaussian shape with a half width of 
-1/sqrt(Alpha0Resist), and the position is shifted along the y-axis 
-to -yShistResist*y2. 
+If UseResistitivy is false, no resistivity is included.
+If UseResistivity is true, then one can select a constant resistivity,
+the classical Spitzer resistivity with a CoulombLogarithm parameter 
+(typical values are in the range of 10 to 30), 
+anomalous resistivity with a critical current, or a user defined resistivity.
+For TypeResistivity='Spitzer' the resistivity is very low in space plasma.
+For TypeResistivity='constant' the resistivity is uniformly set to Eta0Si.
+For TypeResistivity='anomalous' the anomalous resistivity is 
+Eta0Si + Eta0AnomSi*(j/jCritAnomSi-1) limited by 0 and EtaMaxAnomSi.
+Here j is the absolute value of the current density in SI units.
 
-A current dependent anomalous resistivity can be added both to
-the constant and localized resistivities. 
-If UseAnomResist is true, the anomalous resistivity is 
-Eta0AnomResist*(j/jCritResist-1) limited by 0 and EtaAnomMaxResist.
-
-The default is UseResistFlux=F, i.e. ideal MHD.
+The default is UseResistivity=.false., i.e. ideal MHD.
 </command>
 
 <command name="TESTDISSMHD" if="$_IsFirstSession">
