@@ -1,7 +1,7 @@
 module ModFaceFlux
 
   use ModProcMH, ONLY: iProc
-  use ModMain,       ONLY: x_, y_, z_
+  use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies
@@ -26,7 +26,7 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
-  use ModResistivity, ONLY: UseResistivity, EtaResist_G  !^CFG IF DISSFLUX
+  use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
 
   implicit none
 
@@ -47,9 +47,12 @@ module ModFaceFlux
   real :: CmaxDt, Unormal, UnLeft, UnRight
   real :: Enormal                !^CFG IF BORISCORR
 
+  ! Variables for normal resistivity
+  real :: EtaJx, EtaJy, EtaJz, Eta = -1.0
+
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, &
-       HallJx, HallJy, HallJz, EtaJx, EtaJy, EtaJz, Eta = -1.0
+       HallJx, HallJy, HallJz
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 contains
@@ -92,8 +95,7 @@ contains
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
 
-    if(UseResistivity) &                                 !^CFG IF DISSFLUX
-         call set_resistivity(iBlock, EtaResist_G)       !^CFG IF DISSFLUX
+    if(UseResistivity) call set_resistivity(iBlock)      !^CFG IF DISSFLUX
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
@@ -310,10 +312,10 @@ contains
          ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
          + IonMassPerCharge_G(iFace-1,jFace,kFace) )
 
-    Eta       = -1.0                                     !^CFG IF DISSFLUX
-    if(UseResistivity) &                                 !^CFG IF DISSFLUX
-         Eta = 0.5*(EtaResist_G(iFace  ,jFace,kFace) &   !^CFG IF DISSFLUX
-         +          EtaResist_G(iFace-1,jFace,kFace))    !^CFG IF DISSFLUX
+    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    if(UseResistivity) Eta = 0.5* &
+         ( Eta_GB(iFace  ,jFace,kFace,iBlockFace) &
+         + Eta_GB(iFace-1,jFace,kFace,iBlockFace))  !^CFG END DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -345,10 +347,10 @@ contains
          ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
          + IonMassPerCharge_G(iFace,jFace-1,kFace) )
 
-    Eta       = -1.0                                     !^CFG IF DISSFLUX
-    if(UseResistivity) &                                 !^CFG IF DISSFLUX
-         Eta = 0.5*(EtaResist_G(iFace,jFace  ,kFace) &   !^CFG IF DISSFLUX
-         +          EtaResist_G(iFace,jFace-1,kFace))    !^CFG IF DISSFLUX
+    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    if(UseResistivity) Eta = 0.5* &
+         ( Eta_GB(iFace,jFace  ,kFace,iBlockFace) &
+         + Eta_GB(iFace,jFace-1,kFace,iBlockFace))  !^CFG END DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -380,10 +382,10 @@ contains
          ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
          + IonMassPerCharge_G(iFace,jFace,kFace-1) )
 
-    Eta       = -1.0                                     !^CFG IF DISSFLUX
-    if(UseResistivity) &                                 !^CFG IF DISSFLUX
-         Eta = 0.5*(EtaResist_G(iFace,jFace,kFace  ) &   !^CFG IF DISSFLUX
-         +          EtaResist_G(iFace,jFace,kFace-1))    !^CFG IF DISSFLUX
+    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    if(UseResistivity) Eta = 0.5* &
+         ( Eta_GB(iFace,jFace,kFace  ,iBlockFace) &
+         + Eta_GB(iFace,jFace,kFace-1,iBlockFace))  !^CFG END DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
