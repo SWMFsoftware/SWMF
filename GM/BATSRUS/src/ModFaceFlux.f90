@@ -26,7 +26,7 @@ module ModFaceFlux
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current
 
-  use ModResist, ONLY: UseResistivity, EtaResist_G
+  use ModResist, ONLY: UseResistivity, EtaResist_G  !^CFG IF DISSFLUX
 
   implicit none
 
@@ -49,7 +49,7 @@ module ModFaceFlux
 
   ! Variables needed for Hall resistivity
   real :: InvDxyz, HallCoeff, HallUnLeft, HallUnRight, &
-       HallJx, HallJy, HallJz, EtaJx, EtaJy, EtaJz, Eta
+       HallJx, HallJy, HallJz, EtaJx, EtaJy, EtaJz, Eta = -1.0
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 contains
@@ -92,8 +92,9 @@ contains
     ! in the current block that will be used for the Hall term
     IsNewBlockHall = .true.
 
-    if(UseResistivity) call set_resistivity(iBlock, EtaResist_G)
-    
+    if(UseResistivity) &                                 !^CFG IF DISSFLUX
+         call set_resistivity(iBlock, EtaResist_G)       !^CFG IF DISSFLUX
+ 
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
        if(neiLwest(iBlock) == 1)call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
@@ -306,8 +307,10 @@ contains
          ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
          + IonMassPerCharge_G(iFace-1,jFace,kFace) )
 
-    if(UseResistivity) Eta = 0.5*( &
-         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace-1,jFace,kFace))
+    Eta       = -1.0                                     !^CFG IF DISSFLUX
+    if(UseResistivity) &                                 !^CFG IF DISSFLUX
+         Eta = 0.5*(EtaResist_G(iFace  ,jFace,kFace) &   !^CFG IF DISSFLUX
+         +          EtaResist_G(iFace-1,jFace,kFace))    !^CFG IF DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -317,7 +320,7 @@ contains
             FaceArea2MinI_B(iBlockFace))
        Area = sqrt(Area2)
 
-       if(HallCoeff > 0.0.or.UseResistivity)&
+       if(HallCoeff > 0.0 .or. Eta > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace  , jFace, kFace, iBlockFace)       &
             - x_BLK(iFace-1, jFace, kFace, iBlockFace))**2 + &
@@ -339,8 +342,10 @@ contains
          ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
          + IonMassPerCharge_G(iFace,jFace-1,kFace) )
 
-    if(UseResistivity) Eta = 0.5*( &
-         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace,jFace-1,kFace))
+    Eta       = -1.0                                     !^CFG IF DISSFLUX
+    if(UseResistivity) &                                 !^CFG IF DISSFLUX
+         Eta = 0.5*(EtaResist_G(iFace,jFace  ,kFace) &   !^CFG IF DISSFLUX
+         +          EtaResist_G(iFace,jFace-1,kFace))    !^CFG IF DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -350,7 +355,7 @@ contains
             FaceArea2MinJ_B(iBlockFace))
        Area = sqrt(Area2)
 
-       if(HallCoeff > 0.0.or.UseResistivity)&
+       if(HallCoeff > 0.0 .or. Eta > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace, jFace  , kFace, iBlockFace)       &
             - x_BLK(iFace, jFace-1, kFace, iBlockFace))**2 + &
@@ -372,8 +377,10 @@ contains
          ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
          + IonMassPerCharge_G(iFace,jFace,kFace-1) )
 
-    if(UseResistivity) Eta = 0.5*( &
-         EtaResist_G(iFace,jFace,kFace) + EtaResist_G(iFace,jFace,kFace-1))
+    Eta       = -1.0                                     !^CFG IF DISSFLUX
+    if(UseResistivity) &                                 !^CFG IF DISSFLUX
+         Eta = 0.5*(EtaResist_G(iFace,jFace,kFace  ) &   !^CFG IF DISSFLUX
+         +          EtaResist_G(iFace,jFace,kFace-1))    !^CFG IF DISSFLUX
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
@@ -383,7 +390,7 @@ contains
             FaceArea2MinK_B(iBlockFace))
        Area = sqrt(Area2)
 
-       if(HallCoeff > 0.0.or.UseResistivity)&
+       if(HallCoeff > 0.0 .or. Eta > 0.0)&
             InvDxyz  = 1.0/sqrt(&
             ( x_BLK(iFace, jFace, kFace  , iBlockFace)       &
             - x_BLK(iFace, jFace, kFace-1, iBlockFace))**2 + &
@@ -452,14 +459,14 @@ contains
     end if
 
     ! Calculate current for the face
-    if(HallCoeff > 0.0 .or. UseResistivity) &
-         call get_face_current(iDir, iFace, jFace, kFace, iBlockFace, Jx,Jy,Jz)
+    if(HallCoeff > 0.0 .or. Eta > 0.0) &
+         call get_face_current(iDir,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
 
-    if(UseResistivity)then
+    if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
        EtaJx = Eta*Jx
        EtaJy = Eta*Jy
        EtaJz = Eta*Jz
-    end if
+    end if                             !^CFG END DISSFLUX
 
     if(HallCoeff > 0.0)then
        HallJx = HallCoeff*Jx
@@ -482,7 +489,7 @@ contains
     if(DoRoe) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
 
     ! Increase maximum speed with resistive diffusion speed if necessary
-    if(UseResistivity) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area
+    if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area !^CFG IF DISSFLUX
 
     if(DoTestCell)call write_test_info
 
@@ -832,7 +839,7 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
-      if(UseResistivity)then
+      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
          ! Add curl Eta.J to induction equation
          FluxBx = AreaY*EtaJz - AreaZ*EtaJy
          FluxBy = AreaZ*EtaJx - AreaX*EtaJz
@@ -844,7 +851,7 @@ contains
 
          ! add B.dB/dt term to energy equation
          Flux_V(Energy_) = Flux_V(Energy_) + Bx*FluxBx + By*FluxBy + Bz*FluxBz
-      end if
+      end if                                     !^CFG END DISSFLUX
 
       ! f_i[scalar] = Un*scalar
       do iVar = ScalarFirst_, ScalarLast_
@@ -1079,8 +1086,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModFaceFlux, ONLY: &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
-       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal, &
-       Eta, InvDxyz
+       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
