@@ -165,7 +165,7 @@ subroutine move_line
   UphiLine_I(iLine)   = bilinear(uExBphi_C  ,1,nPhi,1,nTheta, &
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
 
-  JrLine_I(iLine)     = bilinear(Jr_G, -1,nPhi+1,-1,nTheta+1, &
+  JrLine_I(iLine)     = bilinear(Jr_G, 0,nPhi+1,0,nTheta+1, &
        (/ PhiLine_I(iLine)/Dphi,ThetaLine_I(iLine)/Dtheta /) )
  
   xLineOld_I(iLine) = xLine_I(iLine)
