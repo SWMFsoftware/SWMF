@@ -170,12 +170,30 @@ These modified commands cannot precede the #PLANET command!
 
 <command name="PLANET" alias="MOON,COMET"
 	if="$_IsFirstSession and $_IsStandAlone">
-	<parameter name="NamePlanet" type="string" input="select">
-		<option name="Earth" value="EARTH/Earth/earth" default="T" />
-		<option name="Saturn" value="SATURN/Saturn/saturn" />
-		<option name="New" />
+	<parameter name="NamePlanet" type="string" case="upper" input="select">
+		<option name="MERCURY"			/>
+		<option name="VENUS"			/>
+		<option name="EARTH" default="T"	/>
+		<option name="MARS"			/>
+		<option name="JUPITER"			/>
+		<option name="SATURN"			/>
+		<option name="URANUS"			/>
+		<option name="NEPTUNE" 			/>
+		<option name="PLUTO" 			/>
+		<option name="MOON"			/>
+		<option name="IO"			/>
+		<option name="EUROPA"			/>
+		<option name="TITAN"			/>
+		<option name="NEW" 			/>
+		<option name="HALLEY"			/>
+		<option name="COMET1P"			/>
+		<option name="BORRELLY"			/>
+		<option name="COMET19P"			/>
+		<option name="CHURYUMOVGERASIMENKO"	/>
+		<option name="COMET67P"			/>
+		<option name="HALEBOPP"			/>
 	</parameter>
-	<if expr="$NamePlanet eq 'New'">
+	<if expr="$NamePlanet eq 'NEW'">
 		<parameter name="RadiusPlanet" type="real" min="0" />
 		<parameter name="MassPlanet"   type="real" min="0" />
 		<parameter name="OmegaPlanet"  type="real" min="0" />
@@ -197,7 +215,7 @@ These modified commands cannot precede the #PLANET command!
 	</rule>
 
 #PLANET
-New			NamePlanet (rest of parameters read for unknown planet)
+NEW			NamePlanet (rest of parameters read for unknown planet)
 6300000.0		RadiusPlanet [m]
 5.976E+24		MassPlanet   [kg]
 0.000000199		OmegaPlanet  [radian/s]
@@ -223,8 +241,9 @@ Finally DipoleStrength is the equatorial strength of the magnetic dipole
 field. The units are indicated in the above example, which shows the
 Earth values approximately.
 
-The default value is NamePlanet="Earth", which is currently
-the only recognized planet.
+The default value is NamePlanet="Earth". Although many other planets
+and some of the moons are recognized, some of the parameters, 
+like the equinox time are not yet properly set.
 </command>
 
 <command name="ROTATIONAXIS" if="$_IsStandAlone">
@@ -711,6 +730,139 @@ tree                    TypeTimingReport   ('cumu', 'list', or 'tree')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!! MAIN INITIAL AND BOUNDARY CONDITION PARAMETERS  !!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="NORMALIZATION" if="$_IsFirstSession">
+	<parameter name="TypeNormalization" type="string" case="upper"
+		input="select">
+		<option name="SI"/>
+		<option name="PLANETARY" default="T"/>
+		<option name="SOLARWIND"/>
+		<option name="NONE"/>
+                <option name="READ"/>
+	</parameter>
+	<if expr="$TypeNormalization =~ /READ/">
+		<parameter name="No2SiUnitX" type="real" min="0" default="1"/>
+		<parameter name="No2SiUnitU" type="real" min="0" default="1"/>
+		<parameter name="No2SiUnitRho" type="real" min="0" 
+								default="1"/>
+	</if>
+#NORMALIZATION
+READ			TypeNormalization
+1000.0			No2SiUnitX   (only read if TypeNormalization=READ)
+1000.0			No2SiUnitU   (only read if TypeNormalization=READ)
+1.0e-6			No2SiUnitRho (only read if TypeNormalization=READ)
+
+This command determines what units are used internally in BATSRUS.
+The units are normalized so that several physical constants become
+unity (e.g. the permeability of vacuum), so the equations are simpler
+in the code. The normalization also helps to keep the various
+quantities within reasonable ranges. For example density of space
+plasma is very small in SI units, so it is better to use some normalization,
+like amu/cm$^3$. Also note that distances and positions (like grid size,
+grid resolution, plotting resolution, radius of the inner body etc) 
+are always read in normalized units from the PARAM.in file.
+Other quantities are read in I/O units (see the #IOUNITS command).
+
+The normalization of the distance, velocity and density are 
+determined by the TypeNormalization parameter. The normalization
+of all other quantities are derived from these three values.
+It is important to note that the normalization of number density
+(defined as the density normalization divided by the proton mass)
+is usually not consistent with the inverse cube of the normalization 
+of distance. 
+
+Possible values for TypeNormalization are NONE, PLANETARY, SOLARWIND, 
+and READ. 
+
+If TypeNormalization="NONE" then the distance, velocity and density
+units are the SI units, i.e. meter, meter/sec, and kg/m$^3$.
+Note that the magnetic field and the temperature are still normalized
+differently from SI units so that the Alfven speed is $B/\sqrt{\rho}$
+and the ion temperature is simply $p/(\rho/AverageIonMass)$,
+where the AverageIonMass is given relative to the mass of proton.
+
+If TypeNormalization="PLANETARY" then the distance unit is the
+radius of the central body (moon, planet, or the Sun). If there is
+no central body, the length normalization is 1km. The velocity unit
+is km/s, and the density unit is amu/cm3.
+
+If TypeNormalization="SOLARWIND" then the distance unit is the 
+same as for PLANETARY units, but the velocity and density are normalized to
+the density and the sound speed of the solar wind. This normalization
+is very impractical, because it depends on the solar wind values
+that are variable, and may not even make sense (e.g. for a shock tube test
+or a Tokamak problem). This normalization is only kept for sake of 
+backwards compatibility.
+
+Finally TypeNormalization="READ" reads the three basic normalization units from
+the PARAM.in file as shown in the example. This allows arbitrary normalization.
+
+The restart header file saves the normalization with TypeNormalization="READ"
+and the actual values of the distance, velocity and density normalization
+factors. This avoids the problem of continuing the run with inconsistent
+normalization (e.g. if the SOLARWIND normalization is used and the
+solar wind parameters have been changed). It also allows other programs
+to read the data saved in the restart files and convert them to appropriate
+units. 
+
+The default normalization is PLANETARY.
+</command>
+
+<command name="IOUNITS" if="$_IsFirstSession">
+	<parameter name="TypeIoUnit" type="string" input="select">
+		<option name="SI"/>
+		<option name="PLANETARY"    default="$_NameComp eq 'GM'"/>
+		<option name="HELIOSPHERIC" default="$_NameComp ne 'GM'"/>
+		<option name="NONE"/>
+		<option name="USER"/>
+	</parameter>
+#IOUNITS
+PLANETARY			TypeIoUnit
+
+This command determines the physical units of various parameters read from the
+PARAM.in file and written out into log files and plot files (if they are
+dimensional. The units are determined by the TypeIoUnit string.
+Note that distances and positions are always read in normalized units from 
+PARAM.in but they are written out in I/O units. 
+In most cases the two coincides.
+
+Also note that the I/O units are NOT necessarily physically consistent units. 
+For example one cannot divide distance with time and compare it with
+the velocity because they may be in inconsistent units. 
+One needs to convert into some consistent units before the various quantities 
+can be combined.
+
+If TypeIoUnits="SI" the input and output values are taken in SI units
+(m, s, kg, etc).
+
+The PLANETARY units use the radius of the planet for distance, 
+seconds for time, amu/cm$^3$ for mass density, cm$^-3$ for number denisty, 
+km/s for speed, nPa for pressure, nT for magnetic field, micro Amper/m$^2$ 
+for current density, mV/m for electric field, nT/planet radius for div B,
+and degrees for angles. For any other quantity SI units are used.
+If there is no planet (see the #PLANET command) then the distance
+unit is 1 km.
+
+The HELIOSPHERIC units use the solar radius for distance, seconds for time,
+km/s for velocity, degrees for angle, and
+CGS units for mass density, number density, pressure,
+magnetic field, momentum, energy density, current, and div B.
+
+When TypeIoUnit="NONE" the input and output units are the same as
+the normalized units (see the #NORMALIZATION command).
+
+Finally when TypeIoUnit="USER", the user can modify the I/O units 
+(Io2Si_V) and the names of the units (NameTecUnit_V and NameIdlUnit_V)
+in the subroutine user_io_units of the user module.
+Initially the values are set to SI units.
+
+The #IOUNITS command and the value of TypeIoUnits is saved into the 
+restart header file so that one continues with the same I/O units 
+after restart.
+
+The default is "PLANETARY" unit if BATSRUS is used as the GM component
+and "HELIOSPHERIC" otherwise (SC or IH). 
+</command>
+
 <command name="RESTARTINDIR" if="$_IsFirstSession">
 	<parameter name="NameRestartInDir" type="string" length="100"
 				default="GM/restartIN" />
@@ -772,9 +924,9 @@ T		DoRestartBFace <!-- ^CFG IF CONSTRAINB -->
 		<parameter name="$Side" type="string" input="select">
 			<option name="coupled" />
 			<option name="vary/inflow"
-					default="$Side eq 'TypeBcEast'" />
+					default="$Side eq 'TypeBcWest'" />
 			<option name="float/outflow"
-					default="$Side ne 'TypeBcEast'" />
+					default="$Side ne 'TypeBcWest'" />
 			<option name="heliofloat"/>
 			<option name="reflect"/>
 			<option name="periodic"/>
@@ -990,6 +1142,54 @@ GSM			TypeCoordSystem
 </command>
 
 <!-- ^CFG IF COVARIANT BEGIN -->
+<command name="GRIDGEOMETRY" alias="COVARIANTGEOMETRY" if="$_IsFirstSession">
+	<parameter name="TypeGeometry" type="string" input="select">
+		<option name="cartesian" default="T"	/>
+		<option name="cylindrical"		/>
+		<option name="spherical"		/>
+		<option name="spherical_lnr"		/>
+		<option name="axial_torus"		/>
+	</parameter>
+#GRIDGEOMETRY
+spherical_lnr			TypeGeometry
+		
+This command determines the geometry of the grid. Possible values
+are cartesian, cylindrical, spherical, spherical_lnr (spherical
+with a logarithmic radial coordinate, and axial (axially symmetric
+toroidal grid).
+
+BATSRUS uses a Cartesian geometry by default. Setting this command
+allows using more complicated grids. Note that setting "cartesian"
+is not identical with not setting the command at all, because
+the code will use the general formulas. The results should be essentially
+identical though.
+</command>
+
+<command name="LIMITRADIUS" alias="LIMITGENCOORD1" if="$_IsFirstSession">
+	<parameter name="rMin" type="real" min="0" default="0"/>
+	<parameter name="rMax" type="real" min="$rMin" default="1000"/>
+#LIMITRADIUS
+ 10.0			rMin
+100.0			rMax
+
+This command allows limiting the first coordinate (usually the radius) 
+of the grid when general coordinates are used. One can exclude the 
+origin of a spherical grid, for example.
+
+The default is to use the whole radial extent allowed by the #GRID command.
+</command>
+
+<command name="TORUSSIZE">
+	<parameter name="rTorusLarge" type="real" min="0" default="6.0"/>
+	<parameter name="rTorusSmall" type="real" min="0" default="0.5"/>
+#TORUSSIZE
+6.0		rTorusLarge
+0.5		rTorusSmall
+
+This command can sets the large and small radii for a toroidal grid
+(see the #GRID command). The default values are shown.
+</command>
+
 <command name="VERTEXBASEDGRID" if="$_IsFirstSession and $_IsStandAlone">
 	<parameter name="UseVertexBasedGrid"    type="logical" default="F"/>
 
@@ -2452,54 +2652,27 @@ The default is to flush the output, i.e. DoFlush=T.
 !!!!!!!!!!!!!!!!  AMR PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="AMRINIT" if="$_IsFirstSession">
-	<parameter name="InitialRefineType" type="string" input="select">
-		<option name="default" default="1"	/>
-		<option name="all"		/>
-		<option name="none"		/>
-		<option name="3Dbodyfocus"	/>
-		<option name="spherefocus"	/>
-		<option name="magnetosphere"	/>
-		<option name="points"		/>
-		<option name="coupledhelio"	/>
-		<option name="helio_init"	/>
-		<option name="helio_z=4"	/>
-		<option name="all_then_focus"	/>
-		<option name="cme"		/>
-		<option name="points"		/>
-		<option name="mag_new"		/>
-		<option name="magnetosphere"	/>
-		<option name="magneto_fine"	/>
-		<option name="magneto12"	/>
-		<option name="magnetosaturn"	/>
-		<option name="magnetojupiter"	/>
-		<option name="paleo"		/>
-		<option name="comet"		/>
-	</parameter>
+	<parameter name="InitialRefineType" type="string" length="100"
+							default="none"/>
 	<parameter name="InitialRefineLevel" type="integer" min="0" 
 							default="4" />
 #AMRINIT
-default			TypeRefineInit
+3Dbodyfocus		TypeRefineInit
 4			nRefineLevelInit
 
-! This command defines the geometry based refinement type and
-! the number of initial refinement levels. The exact meaning
-! of the various refinement types can be figured out from the
-! source code in specify_refinement.f90. It is probably preferable 
-! to use the #GRIDRESOLUTION and #GRIDLEVEL commands.
-!
-! These are the default values for the initial refinement.\\
-! Possible values for InitialRefineType:\\
-! Default depends on problem_type. 
-!\begin{verbatim}
-! 'none'		- Refine no blocks
-! 'all' 		- Refine all blocks
-! '3Dbodyfocus'		- Refinement focusing on body
-! 'spherefocus'		- Refinement focusing on the origin, does not require 
-!                           a body
-! 'points'      	- Refine around given points
-! 'magnetosphere'	- Refine for generic magnetosphere
-! *			- any other value will use default value by ProblemType
-!\end{verbatim}
+This command defines the geometry based refinement type and
+the number of initial refinement levels. The exact meaning
+of the various refinement types can be figured out from the
+source code in specify_refinement.f90 and/or the 
+subroutine user_specify_derinement in the user module. 
+
+This is an obscure way of defining the grid, because the meaning
+of the various names keep changing from version to version.
+It is much better to use the #GRIDRESOLUTION and #GRIDLEVEL commands
+that define the grid structure in geometric terms.
+
+The default is TypeRefineInit='none' that results in no refinement
+of the base grid.
 </command>
 
 <command name="AMRINITPHYSICS" if="$_IsFirstSession">
@@ -2987,8 +3160,8 @@ The default is the second order Rusanov scheme with the minmod limiter.
 #NONCONSERVATIVE
 T		UseNonConservative
 
-! For Earth the default is using non-conservative equations 
-! (close to the body).
+For Earth the default is using non-conservative equations 
+(close to the body).
 </command>
 
 <command name="CONSERVATIVECRITERIA">
@@ -3027,28 +3200,28 @@ p		TypeConservCrit
 GradP		TypeConservCrit
 0.1		GradPCoeffConserv    ! read if TypeConservCrit is 'GradP'
 
-! Select the parts of the grid where the conservative vs. non-conservative
-! schemes are applied. The number of criteria is arbitrary, although 
-! there is no point applying the same criterion more than once.
-!
-! If no criteria is used, the whole domain will use conservative or
-! non-conservative equations depending on UseNonConservative set in
-! command #NONCONSERVATIVE.
-!
-! The physics based conservative criteria ('p' and 'GradP')
-! select cells which use the non-conservative scheme if ALL of them are true:
-!\begin{verbatim}
-! 'p'      - the pressure is smaller than fraction pCoeffConserv of the energy
-! 'GradP'  - the relative gradient of pressure is less than GradPCoeffConserv
-!\end{verbatim}
-! The geometry based criteria are applied after the physics based criteria 
-! (if any) and they select the non-conservative scheme if ANY of them is true:
-!\begin{verbatim}
-! 'r'        - radial distance of the cell is less than rConserv
-! 'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
-!\end{verbatim}
-! Default values are nConservCrit = 1 with TypeConservCrit = 'r'
-! and rConserv=2*rBody, where rBody has a problem dependent default.
+Select the parts of the grid where the conservative vs. non-conservative
+schemes are applied. The number of criteria is arbitrary, although 
+there is no point applying the same criterion more than once.
+
+If no criteria is used, the whole domain will use conservative or
+non-conservative equations depending on UseNonConservative set in
+command #NONCONSERVATIVE.
+
+The physics based conservative criteria ('p' and 'GradP')
+select cells which use the non-conservative scheme if ALL of them are true:
+\begin{verbatim}
+ 'p'      - the pressure is smaller than fraction pCoeffConserv of the energy
+ 'GradP'  - the relative gradient of pressure is less than GradPCoeffConserv
+\end{verbatim}
+ The geometry based criteria are applied after the physics based criteria 
+ (if any) and they select the non-conservative scheme if ANY of them is true:
+\begin{verbatim}
+ 'r'        - radial distance of the cell is less than rConserv
+ 'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
+\end{verbatim}
+Default values are nConservCrit = 1 with TypeConservCrit = 'r'
+and rConserv=2*rBody, where rBody has a problem dependent default.
 </command>
 
 <command name="UPDATECHECK">
@@ -3070,9 +3243,29 @@ T			UseUpdateCheck
 40.			pMinPercent
 400.			pMaxPercent
 
-! Default values are shown.  This will adjust the timestep so that
-! density and pressure cannot change by more than the given percentages
-! in a single timestep.
+Default values are shown.  This will adjust the timestep so that
+density and pressure cannot change by more than the given percentages
+in a single timestep.
+</command>
+
+<command name="MULTISPECIES">
+	<parameter name="DoReplaceDensity" type="logical" default="T"/>
+	<parameter name="SpeciesPercentCheck" type="real" min="0" max="100"
+							default="1.0" />
+#MULTISPECIES
+T			DoReplaceDensity
+1.0			SpeciesPercentCheck
+
+This command is only useful for multispecies equations.
+If the DoReplaceDensity is true, the total density is replaced with
+the sum of the species densities. The SpeciesPercentCheck parameter
+determines if a certain species density should or should not be
+checked for large changes. If SpeciesPercentCheck is 0, all species
+are checked, if it is 1, then only species with densities reaching
+or exceeding 1 per cent are checked for large changes (see the
+#UPDATECHECK command).
+
+Default values are shown.
 </command>
 
 <command name="PROLONGATION">
@@ -3596,11 +3789,8 @@ with the solar wind parameters.
 0.0			SwByDim [nT]
 5.0			SwBzDim [nT]
 
-! This command defines the solar wind parameters for the GM component.
-! It also defines the normalization for all the variables therefore
-! it is saved into the restart header file.
-! One of the #SOLARWIND command and the #SOLARWINDFILE command
-! (with UseSolarWindFile = .true.) is required by the GM component.
+This command defines the solar wind parameters for the GM component.
+The default values are all 0.0-s.
 </command>
 
 <command name="SOLARWINDFILE" alias="UPSTREAM_INPUT_FILE">
@@ -3616,71 +3806,71 @@ with the solar wind parameters.
 T			UseSolarWindFile (rest of parameters read if true)
 IMF.dat                 NameSolarWindFile
 
-! Default is UseSolarWindFile = .false.
-!
-! Read IMF data from file NameSolarWindFile if UseSolarWindFile is true.
-! The data file contains all information required for setting the upstream
-! boundary conditions. Parameter TypeBcEast should be set to 'vary' for
-! the time dependent boundary condition.
-!
-! If the #SOLARWIND command is not provided then the first time read from
-! the solar wind file will set the normalization of all variables
-! in the GM component. Consequently either the #SOLARWIND command or
-! the #SOLARWINDFILE command with UseSolarWindFile=.true.
-! is required by the GM component.
-!
-! The input files are strutured similar to the PARAM.in file.  There are 
-! {\tt #commands} that can be  inserted as well as the data.
-! The file containing the upstream conditions should include data in the 
-! following order:
-! \begin{verbatim}
-! yr mn dy hr min sec msec bx by bz vx vy vz dens temp
-! \end{verbatim}
-! The units of the variables should be:
-! \begin{verbatim}
-! Magnetic field (b)     nT
-! Velocity (v)           km/s
-! Number Density (dens)  cm^-3
-! Temperature (Temp)     K
-! \end{verbatim}
-!
-! The input files  can have the following optional commands at the beginning
-! \begin{verbatim}
-! #COOR
-! GSM          The coordinate system of the data (GSM or GSE)
-!
-! #PLANE       The input data represents values on a tilted plane
-! 30.0         Angle to rotate in the XY plane
-! 30.0         Angle to rotate in the XZ plane
-!
-! #POSITION    Origin for the plane rotation (see #PLANE)
-! 30.0         Y location
-! 30.0         Z location
-!
-! #ZEROBX
-! T            T means Bx is ignored and set to zero
-!
-! #TIMEDELAY
-! 3600.0       A real number in seconds by which to delay the input
-! \end{verbatim}
-!
-! Finally, the data should be preceded by a {\tt #START}.  The beginning of 
-! a typical solar wind input file might look like:
-! \begin{verbatim}
-! #COOR
-! GSM
-! 
-! #ZEROBX
-! T
-!
-! #START
-!  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
-!  2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
-! \end{verbatim}
-!
-! The maximum number of lines of data allowed in the input file is 50,000.  
-! However, this can be modified by changing the variable Max_Upstream_Npts 
-! in the file GM/BATSRUS/get_solar_wind_point.f90.
+Default is UseSolarWindFile = .false.
+
+Read IMF data from file NameSolarWindFile if UseSolarWindFile is true.
+The data file contains all information required for setting the upstream
+boundary conditions. Parameter TypeBcWest should be set to 'vary' for
+the time dependent boundary condition.
+
+If the #SOLARWIND command is not provided then the first time read from
+the solar wind file will set the normalization of all variables
+in the GM component. Consequently either the #SOLARWIND command or
+the #SOLARWINDFILE command with UseSolarWindFile=.true.
+is required by the GM component.
+
+The input files are strutured similar to the PARAM.in file.  There are 
+{\tt #commands} that can be  inserted as well as the data.
+The file containing the upstream conditions should include data in the 
+following order:
+\begin{verbatim}
+yr mn dy hr min sec msec bx by bz vx vy vz dens temp
+\end{verbatim}
+The units of the variables should be:
+\begin{verbatim}
+Magnetic field (b)     nT
+Velocity (v)           km/s
+Number Density (dens)  cm^-3
+Temperature (Temp)     K
+\end{verbatim}
+
+The input files  can have the following optional commands at the beginning
+\begin{verbatim}
+#COOR
+GSM          The coordinate system of the data (GSM or GSE)
+
+#PLANE       The input data represents values on a tilted plane
+30.0         Angle to rotate in the XY plane
+30.0         Angle to rotate in the XZ plane
+
+#POSITION    Origin for the plane rotation (see #PLANE)
+30.0         Y location
+30.0         Z location
+
+#ZEROBX
+T            T means Bx is ignored and set to zero
+
+#TIMEDELAY
+3600.0       A real number in seconds by which to delay the input
+\end{verbatim}
+
+Finally, the data should be preceded by a {\tt #START}.  The beginning of 
+a typical solar wind input file might look like:
+\begin{verbatim}
+#COOR
+GSM
+
+#ZEROBX
+T
+
+#START
+ 2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  -300.0  0.0  0.0  5.3  2.00E+04
+ 2004  6  24   0   1  58   0  3.0  -3.2 - 3.6  -305.0  0.0  0.0  5.4  2.01E+04
+\end{verbatim}
+
+The maximum number of lines of data allowed in the input file is 50,000.  
+However, this can be modified by changing the variable Max_Upstream_Npts 
+in the file GM/BATSRUS/get_solar_wind_point.f90.
 </command>
 
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
