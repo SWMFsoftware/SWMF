@@ -23,8 +23,7 @@ subroutine MH_set_parameters(TypeAction)
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
   use CON_axes,         ONLY: init_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, upper_case, lower_case,&
-       DoFlush
+  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush
 
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -618,8 +617,8 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'lin')>0)then     !^CFG IF RAYTRACE BEGIN
               iPlotFile = iFile - Plot_
               plot_area='lin'
-              call read_var('NameLine',NameLine_I(iPlotFile))
-              call upper_case(NameLine_I(iPlotFile))
+              call read_var('NameLine', NameLine_I(iPlotFile), &
+                   IsUpperCase=.true.)
               call read_var('IsSingleLine',IsSingleLine_I(iPlotFile))
               call read_var('nLine',nLine_I(iPlotFile))
               if(nLine_I(iPlotFile)==1)IsSingleLine_I(iPlotFile)=.true.
@@ -827,8 +826,7 @@ subroutine MH_set_parameters(TypeAction)
         else
            call read_var('nLevelArea',nLevelArea)
         end if
-        call read_var('NameArea',NameArea)
-        call lower_case(NameArea)
+        call read_var('NameArea',NameArea,IsLowerCase=.true.)
 
         NameArea = adjustl(NameArea)
 
@@ -1082,8 +1080,8 @@ subroutine MH_set_parameters(TypeAction)
            if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
            allocate( TypeConservCrit_I(nConservCrit) )
            do i=1,nConservCrit
-              call read_var('TypeConservCrit',TypeConservCrit_I(i) )
-              call lower_case(TypeConservCrit_I(i))
+              call read_var('TypeConservCrit',TypeConservCrit_I(i),&
+                   IsLowerCase=.true.)
               select case(TypeConservCrit_I(i))
                  !\
                  ! Geometry based criteria: 
@@ -1232,12 +1230,10 @@ subroutine MH_set_parameters(TypeAction)
         !                                              ^CFG END PROJECTION
      case("#IOUNITS")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('TypeIoUnit',TypeIoUnit)
-        call upper_case(TypeIoUnit)
+        call read_var('TypeIoUnit',TypeIoUnit,IsUpperCase=.true.)
      case("#NORMALIZATION")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('TypeNormalization', TypeNormalization)
-        call upper_case(TypeNormalization)
+        call read_var('TypeNormalization',TypeNormalization,IsUpperCase=.true.)
         select case(TypeNormalization)
         case('NONE')
            No2Si_V = 1.0
@@ -1452,7 +1448,7 @@ subroutine MH_set_parameters(TypeAction)
      case('#VERTEXBASEDGRID')          !^CFG IF COVARIANT BEGIN
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVertexBasedGrid',UseVertexBasedGrid)
-     case("#COVARIANTGEOMETRY")          
+     case("#GRIDGEOMETRY", "#COVARIANTGEOMETRY")
         if(.not.is_first_session())CYCLE READPARAM
         UseCovariant=.true.
         
@@ -1471,7 +1467,7 @@ subroutine MH_set_parameters(TypeAction)
            DoFixExtraBoundary=.true.
            SaveBoundaryCells=.true.
         end if
-    case("#LIMITGENCOORD1")                    
+     case("#LIMITRADIUS", "#LIMITGENCOORD1")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('XyzMin_D(1)',XyzMin_D(1))
         call read_var('XyzMax_D(1)',XyzMax_D(1))
@@ -1636,8 +1632,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#COORDSYSTEM","#COORDINATESYSTEM")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('TypeCoordSystem',TypeCoordSystem)
-        call upper_case(TypeCoordSystem)
+        call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
         select case(NameThisComp)
         case('GM')
            if(TypeCoordSystem /= 'GSM')call stop_mpi(NameSub// &
