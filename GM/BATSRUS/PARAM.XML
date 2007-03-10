@@ -3773,7 +3773,7 @@ with the solar wind parameters.
 <command name="SOLARWIND" if="$_IsFirstSession">
 	<parameter name="SwRhoDim" type="real" min="-1"	default="5"	/>
 	<parameter name="SwTDim"   type="real" min="-1"	default="181712.175" />
-	<parameter name="SwUxDim"  type="real" max="0"	default="-400"	/>
+	<parameter name="SwUxDim"  type="real"		default="-400"	/>
 	<parameter name="SwUyDim"  type="real"		default="0"	/>
 	<parameter name="SwUzDim"  type="real"		default="0"	/>
 	<parameter name="SwBxDim"  type="real"		default="0"	/>
