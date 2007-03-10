@@ -130,7 +130,8 @@ subroutine write_runtime_values()
         call write_prefix; write(iUnitOut,'(10X,a)') 'Corotation is used'
      end if
      if(UseGravity)then
-        call write_prefix; write(iUnitOut,'(10X,a)') 'Gravity is used'
+        call write_prefix; write(iUnitOut,'(10X,a,ES13.5)') &
+             'Gravity is used, gBody=',gBody
      end if
   else
      call write_prefix; write(iUnitOut,'(10X,''body1: .false.'')')
