@@ -281,13 +281,13 @@ contains
     write(unit_tmp,'(es15.8,a25)')time_simulation,'tSimulation'
     write(unit_tmp,*)
     if(UseCovariant)then                        !^CFG IF COVARIANT BEGIN
-       write(unit_tmp,'(a)')'#COVARIANTGEOMETRY'
+       write(unit_tmp,'(a)')'#GRIDGEOMETRY'
        write(unit_tmp,'(a)')trim(TypeGeometry)
        write(unit_tmp,*)
        write(unit_tmp,'(a)')'#VERTEXBASEDGRID'
        write(unit_tmp,'(l1,a39)') UseVertexBasedGrid,'UseVertexBasedGrid'
        write(unit_tmp,*)
-       write(unit_tmp,'(a)')'#LIMITGENCOORD1'                   
+       write(unit_tmp,'(a)')'#LIMITRADIUS'                   
        write(unit_tmp,'(1pe13.5,a27)')XyzMin_D(1),'XyzMin_D(1)' 
        write(unit_tmp,'(1pe13.5,a27)')XyzMax_D(1),'XyzMax_D(1)' 
        write(unit_tmp,*)
