@@ -685,6 +685,7 @@ sub read_parameter{
 
     $paramName=&extract($attrib->{name},"string");
     $paramType=lc($attrib->{type});
+    my $case  =lc($attrib->{case});
 
     # read the value of the parameter
     print "$paramName=" if $Debug;
@@ -695,6 +696,9 @@ sub read_parameter{
     $paramValue =~ s/   .*//; # Remove everything after 3 spaces
     $paramValue =~ s/\t.*//;  # Remove everything after a TAB
     $paramValue =~ s/\s+$//;  # Remove trailing spaces
+
+    $paramValue = uc($paramValue) if $case eq "upper";
+    $paramValue = lc($paramValue) if $case eq "lower";
 
     print "reading $paramName = $paramValue\n" if $Debug;
 
@@ -1297,7 +1301,8 @@ Description for command group.
 	<parameter name=... type="logical" default=.../>
 	<parameter name=... type="integer" [min=...] [max=...] [default=...]/>
 	<parameter name=... type="real" [min=...] [max=...] [default=...]/>
-	<parameter name=... type="string" length=... [default=...]/>
+	<parameter name=... type="string" length=... 
+                 [case="upper" | case="lower"] [default=...]/>
 	<parameter name=... type="integer|real|string" input="select"
 							[multiple="T"]>
 		<option name=... [value=...] [default="T"] 
