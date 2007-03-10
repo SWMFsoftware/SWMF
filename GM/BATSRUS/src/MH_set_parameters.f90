@@ -1972,7 +1972,7 @@ contains
        Rcurrents  =-1.00
 
        TypeIoUnit = "HELIOSPHERIC"
-
+       TypeNormalization="SOLARWIND"
        ! Non Conservative Parameters
        UseNonConservative   = .false.
        nConservCrit         = 0
