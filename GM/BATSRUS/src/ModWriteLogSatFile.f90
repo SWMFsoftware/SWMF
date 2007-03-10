@@ -1167,7 +1167,7 @@ real function calc_sphere(TypeAction,nTheta,Radius,Array_GB)
               ! Coordinates are normalized so that index=coordinate. 
               ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
-              Average = trilinear( Array_G(:,:,:), -1,nI+1, -1,nJ+1, -1,nK+1, &
+              Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
                    1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)) )
 
               select case(TypeAction)
@@ -1293,7 +1293,7 @@ real function integrate_circle(Radius,z,Array_GB)
         ! Coordinates are normalized so that index=coordinate. 
         ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
-        Average = trilinear( Array_GB(:,:,:,iBlock),-1,nI+1,-1,nJ+1,-1,nK+1, &
+        Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
              1 + InvDxyz_D*((/ x, y, z /) - XyzStart_Blk(:,iBlock)))
 
         Integral = Integral + Average
