@@ -9,7 +9,9 @@ my $Save        = $s; undef $s;
 use strict;
 
 # This script uses the CheckParam.pl script 
-my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
+my $CheckParamScript  = "share/Scripts/CheckParam.pl";
+$CheckParamScript = "../../$CheckParamScript" unless -x $CheckParamScript;
+die "Could not find $CheckParamScript" unless  -x $CheckParamScript;
 
 # The -H and -X flags are transferred to CheckParam.pl
 exec("$CheckParamScript -X") if $HelpXml;
