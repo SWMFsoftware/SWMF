@@ -47,6 +47,8 @@ subroutine set_physics_constants
      rPlanetSi = rSun
      MassBodySi = mSun
      RotPeriodSi = RotationPeriodSun
+     SW_n_dim = Body_rho_dim
+     SW_T_dim = Body_T_dim
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
@@ -420,6 +422,12 @@ subroutine set_units
      Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
      Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
      Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
+     !\
+     ! Historically the input for Body_rho_dim is in particles per cc
+     ! Transform it to the mass density:
+     !/
+     Body_rho_dim=Body_rho_dim*Io2Si_V(UnitN_)*cProtonMass*AverageIonMass/&
+          Io2Si_V(UnitRho_)
      !\
      ! set string variables used for writing output - TECPLOT
      !/
