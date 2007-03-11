@@ -1,3 +1,6 @@
+! This file is not used any longer. It is kept to form basis
+! for some user files, if needed.
+
 !^CFG FILE DISSFLUX
 !^CFG COPYRIGHT UM
 module ModResistivity
@@ -629,6 +632,24 @@ contains
   
 end subroutine set_resistivity
 
+! Moved here from ModPhysics
+!  !\
+!  ! Resistivity parameters
+!  !/
+!  character (len=20) :: TypeResist
+!  real :: TimeInitRise,TimeConstLev
+!  real :: Eta0Resist,Alpha0Resist,yShiftResist
+!  real :: Eta0AnomResist,EtaAnomMaxResist,jCritResist
+!
+!  !\
+!  ! Ilia's reconnection & test problems
+!  !/
+!  character (len=20) :: TypeProblemDiss
+!  real :: EpsilonDiss,DeltaDiss,ThetaDiss
+!  real :: RhoDifDiss,yShiftDiss
+!  real :: scaleHeightDiss,scaleFactorDiss,BZ0Diss
+!
+! Moved here from MH_set_parameters.
 !     case("#RESISTIVEFLUX")
 !        call read_var('UseResistFlux' ,UseResistFlux)
 !        if(UseResistFlux)then
@@ -652,3 +673,22 @@ end subroutine set_resistivity
 !              call read_var('jCritResist',      jCritResist)
 !           end if
 !        end if
+
+!     case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
+!        if(.not.is_first_session())CYCLE READPARAM
+!        call read_var('UseDefaultUnits',UseDefaultUnits)
+!        call read_var('Grav0Diss'      ,Grav0Diss)
+!        call read_var('Beta0Diss'      ,Beta0Diss)
+!        call read_var('Length0Diss'    ,Length0Diss)
+!        call read_var('Time0Diss'      ,Time0Diss)
+!        call read_var('Rho0Diss'       ,Rho0Diss)
+!        call read_var('Tem0Diss'       ,Tem0Diss)
+!        call read_var('ThetaDiss'      ,ThetaDiss)
+!        call read_var('DeltaDiss'      ,DeltaDiss)
+!        call read_var('EpsilonDiss'    ,EpsilonDiss)
+!        call read_var('RhoDifDiss'     ,RhoDifDiss)
+!        call read_var('yShiftDiss'     ,yShiftDiss)
+!        call read_var('scaleHeightDiss',scaleHeightDiss)
+!        call read_var('scaleFactorDiss',scaleFactorDiss)
+!        call read_var('BZ0Diss'        ,BZ0Diss)
+!        !                                             ^CFG END DISSFLUX
