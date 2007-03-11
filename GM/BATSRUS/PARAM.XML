@@ -4114,43 +4114,6 @@ Here j is the absolute value of the current density in SI units.
 
 The default is UseResistivity=.false., i.e. ideal MHD.
 </command>
-
-<command name="TESTDISSMHD" if="$_IsFirstSession">
-	<parameter name="UseDefaultUnits" type="logical" default="T"/>
-	<parameter name="Grav0Diss"	  type="real" default="2.635620E-02"/>
-	<parameter name="Beta0Diss"	  type="real" default="1.640000E-01"/>
-	<parameter name="Length0Diss"	  type="real" default="1.500000E+06"/>
-	<parameter name="Time0Diss"	  type="real" default="1.159850E+01"/>
-	<parameter name="Rho0Diss"	  type="real" default="5.019000E-11"/>
-	<parameter name="Tem0Diss"	  type="real" default="1.000000E+05"/>
-	<parameter name="Theta0Diss"	  type="real" default="6.000000E-01"/>
-	<parameter name="Delta0Diss"	  type="real" default="2.500000E+01"/>
-	<parameter name="EpsilonDiss"	  type="real" default="7.000000E+00"/>
-	<parameter name="RhoDifDiss"	  type="real" default="4.500000E+00"/>
-	<parameter name="yShiftDiss"	  type="real" default="4.000000E-01"/>
-	<parameter name="ScaleHeightDiss" type="real" default="5.000000E-01"/>
-	<parameter name="ScaleFactorDiss" type="real" default="1.159850E+01"/>
-	<parameter name="BZ0iss" 	  type="real" default="5.000000E-01"/>
-#TESTDISSMHD
-F                       UseDefaultUnits
-2.635620E-02            Grav0Diss
-1.640000E-01            Beta0Diss
-1.500000E+06            Length0Diss
-1.159850E+01            Time0Diss
-5.019000E-11            Rho0Diss
-1.000000E+05            Tem0Diss
-6.000000E-01            ThetaDiss
-2.500000E+01            DeltaDiss
-7.000000E+00            EpsilonDiss
-4.500000E+00            RhoDifDiss
-4.000000E-01            yShiftDiss
-5.000000E-01            scaleHeightDiss
-1.000000E+00            scaleFactorDiss
-0.000000E-01            BZ0Diss
-
-! Default values are shown. Parameters for problem_dissipation
-</command>
-
 <!-- ^CFG END DISSFLUX -->
 
 <!-- ^CFG IF SECONDBODY BEGIN -->
