@@ -441,10 +441,10 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('TypeResistivity', TypeResistivity, &
                 IsLowerCase=.true.)
            select case(TypeResistivity)
-           case('user')
-              ! Nothing to be read
            case('spitzer')
               call read_var('CoulombLogarithm', CoulombLogarithm)
+           case('user')
+              call read_var('Eta0Si',Eta0Si)
            case('constant')
               call read_var('Eta0Si',Eta0Si)
            case('anomalous')
