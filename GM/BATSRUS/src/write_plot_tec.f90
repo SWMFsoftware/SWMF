@@ -16,7 +16,7 @@ subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_NBI,unitstr_TEC
   use ModCovariant, ONLY: UseCovariant, TypeGeometry      !^CFG IF COVARIANT
   use ModParallel, ONLY : iBlock_A, iProc_A
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
-       ThetaTilt, Rbody, boris_cLIGHT_factor, Body_rho_dim, g
+       ThetaTilt, Rbody, boris_cLIGHT_factor, Body_N_dim, g
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
   use ModIO
@@ -735,8 +735,9 @@ contains
     write(unit_tmp,'(a,a,a)') 'AUXDATA BLOCKS="',trim(adjustl(stmp)),'"'
 
     !BODYDENSITY
-    write(stmp,'(f12.2)')Body_rho_dim
-    write(unit_tmp,'(a,a,a)') 'AUXDATA BODYDENSITY="',trim(adjustl(stmp)),'"'
+    write(stmp,'(f12.2)')Body_N_dim
+    write(unit_tmp,'(a,a,a)') &
+         'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
 
     !^CFG IF BORISCORR BEGIN
     !BORIS

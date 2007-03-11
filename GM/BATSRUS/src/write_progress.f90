@@ -123,7 +123,7 @@ subroutine write_runtime_values()
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-          'Body_rho_dim:',Body_rho_dim,', Body_T_dim:',Body_T_dim
+          'Body_N_dim:',Body_N_dim,', Body_T_dim:',Body_T_dim
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'Bdp:         ',Bdp      ,', Tilt:      ',ThetaTilt
      if(UseRotatingBc)then

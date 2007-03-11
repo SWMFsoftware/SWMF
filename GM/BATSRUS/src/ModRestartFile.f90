@@ -328,13 +328,12 @@ contains
     write(unit_tmp,*)
     if(body1)then
        write(unit_tmp,'(a)')'#BODY'
-       write(unit_tmp,'(l1,a39)')body1,'UseBody'
-       write(unit_tmp,'(1pe13.5,a27)')Rbody,'rBody'
-       if(NameThisComp=='GM')then
-          write(unit_tmp,'(1pe13.5,a27)')Rcurrents,   'rCurrents'
-       end if
-       write(unit_tmp,'(1pe13.5,a27)')Body_rho_dim,'BodyRhoDim'
-       write(unit_tmp,'(1pe13.5,a27)')Body_T_dim,  'BodyTDim'
+       write(unit_tmp,'(l1,a39)')      body1, 'UseBody'
+       write(unit_tmp,'(1pe13.5,a27)') Rbody, 'rBody'
+       if(NameThisComp=='GM') &
+            write(unit_tmp,'(1pe13.5,a27)') Rcurrents, 'rCurrents'
+       write(unit_tmp,'(1pe13.5,a27)') Body_N_dim, 'BodyNDim'
+       write(unit_tmp,'(1pe13.5,a27)') Body_T_dim, 'BodyTDim'
        write(unit_tmp,*)
     end if
     !^CFG IF SECONDBODY BEGIN

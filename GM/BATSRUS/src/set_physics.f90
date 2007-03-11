@@ -44,11 +44,11 @@ subroutine set_physics_constants
         NamePlanetRadius = 'km'
      end if
   case("SC","IH")
-     rPlanetSi = rSun
-     MassBodySi = mSun
+     rPlanetSi   = rSun
+     MassBodySi  = mSun
      RotPeriodSi = RotationPeriodSun
-     SW_n_dim = Body_rho_dim
-     SW_T_dim = Body_T_dim
+     SW_n_dim    = Body_N_dim  ! Needed for SOLARWIND normalization only
+     SW_T_dim    = Body_T_dim  ! Needed for SOLARWIND normalization only
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
@@ -169,8 +169,10 @@ subroutine set_physics_constants
   SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
   SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-  Body_rho= Body_rho_dim * Io2No_V(UnitRho_)
-  Body_p  = Body_rho * Body_T_dim*Io2No_V(UnitTemperature_)
+  Body_rho = Body_N_dim*Io2Si_V(UnitN_)*AverageIonMass*cProtonMass &
+       *Si2No_V(UnitRho_)
+  Body_p   = Body_rho * Body_T_dim*Io2No_V(UnitTemperature_)
+
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
   pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
@@ -422,12 +424,6 @@ subroutine set_units
      Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
      Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
      Io2Si_V(UnitAngle_)       = cRadToDeg                 ! degrees
-     !\
-     ! Historically the input for Body_rho_dim is in particles per cc
-     ! Transform it to the mass density:
-     !/
-     Body_rho_dim=Body_rho_dim*Io2Si_V(UnitN_)*cProtonMass*AverageIonMass/&
-          Io2Si_V(UnitRho_)
      !\
      ! set string variables used for writing output - TECPLOT
      !/

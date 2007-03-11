@@ -1596,8 +1596,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rBody'     ,Rbody)
            if(NameThisComp=='GM') &
                 call read_var('rCurrents' ,Rcurrents)
-           call read_var('BodyRhoDim',Body_Rho_Dim)
-           call read_var('BodyTDim'  ,Body_T_dim)
+           call read_var('BodyNDim', Body_N_Dim)
+           call read_var('BodyTDim', Body_T_dim)
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1976,8 +1976,8 @@ contains
        ! Boundary Conditions
        TypeBc_I(east_:top_)   ='float'
        TypeBc_I(body1_)='unknown'
-       Body_rho_dim = 1.50E8
-       Body_T_dim   = 2.85E06
+       Body_N_dim = 1.50E8     ! /cc
+       Body_T_dim = 2.85E06    ! K
 
        ! Refinement criteria
        nRefineCrit    = 3
@@ -2006,8 +2006,8 @@ contains
        TypeBc_I(west_)        ='inflow'
        TypeBc_I(south_:top_)  ='fixed'
        TypeBc_I(body1_)='ionosphere'
-       Body_rho_dim = 5.0    ! n/cc
-       Body_T_dim   = 25000.0! K
+       Body_N_dim = 5.0              ! /cc
+       Body_T_dim = 25000.0          ! K
 
        ! Refinement Criteria
        nRefineCrit    = 3
