@@ -196,7 +196,6 @@ subroutine MH_set_parameters(TypeAction)
      ! initialize ModEqution (e.g. variable units)
      call init_mod_equation
 
-     ! This one uses normalization units set by set_physics constants
      if(UseResistivity)call init_mod_resistivity !^CFG IF DISSFLUX
 
      ! Initialize user module and allow user to modify things
@@ -1716,24 +1715,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('rBuffMax',  rBuffMax)
         call read_var('nThetaBuff',nThetaBuff)
         call read_var('nPhiBuff',  nPhiBuff)
-     case("#TESTDISSMHD")                         !^CFG IF DISSFLUX BEGIN
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseDefaultUnits',UseDefaultUnits)
-        call read_var('Grav0Diss'      ,Grav0Diss)
-        call read_var('Beta0Diss'      ,Beta0Diss)
-        call read_var('Length0Diss'    ,Length0Diss)
-        call read_var('Time0Diss'      ,Time0Diss)
-        call read_var('Rho0Diss'       ,Rho0Diss)
-        call read_var('Tem0Diss'       ,Tem0Diss)
-        call read_var('ThetaDiss'      ,ThetaDiss)
-        call read_var('DeltaDiss'      ,DeltaDiss)
-        call read_var('EpsilonDiss'    ,EpsilonDiss)
-        call read_var('RhoDifDiss'     ,RhoDifDiss)
-        call read_var('yShiftDiss'     ,yShiftDiss)
-        call read_var('scaleHeightDiss',scaleHeightDiss)
-        call read_var('scaleFactorDiss',scaleFactorDiss)
-        call read_var('BZ0Diss'        ,BZ0Diss)
-        !                                             ^CFG END DISSFLUX
      case default
         if(iProc==0) then
            write(*,*) NameSub // ' WARNING: unknown #COMMAND ' // &
@@ -2164,10 +2145,12 @@ contains
        optimize_message_pass = 'all'
     endif                                            !^CFG END CONSTRAINB
 
-    if (UseHallResist .and. index(optimize_message_pass,'opt') > 0) then
+    if ( (UseHallResist &
+         .or. UseResistivity &                       !^CFG IF DISSFLUX
+         ) .and. index(optimize_message_pass,'opt') > 0) then
        if(iProc==0 .and. optimize_message_pass /= 'allopt') then
           write(*,'(a)')NameSub//&
-               ' WARNING: Hall resistivity does not work for'// &
+               ' WARNING: Normal or Hall resistivity does not work for'// &
                ' optimize_message_pass='//trim(optimize_message_pass)//' !!!'
           if(UseStrict)call stop_mpi('Correct PARAM.in!')
           write(*,*)NameSub//' setting optimize_message_pass = all'
