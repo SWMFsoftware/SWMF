@@ -3879,34 +3879,35 @@ in the file GM/BATSRUS/get_solar_wind_point.f90.
 		<parameter name="rBody" type="real" min="0" default="3"/>
 		<parameter name="rCurrents" type="real" min="-1" default="4"
 			if="$_NameComp eq 'GM'"/>
-		<parameter name="BodyRhoDim" type="real" min="0" default="1"/>
+		<parameter name="BodyNDim" type="real" min="0" default="1"/>
 		<parameter name="BodyTDim" type="real" min="0" default="1000"/>
 	</if>
 #BODY
 T			UseBody (rest of parameters read if true)
 3.0			rBody (user units)
 4.0			rCurrents (only read for GM component)
-1.0			BodyRhoDim (/ccm) density for fixed BC for rho_BLK
-10000.0			BodyTDim (K) temperature for fixed BC for P_BLK
+1.0			BodyNDim (/cc) number density for inner boundary
+10000.0			BodyTDim (K) temperature for inner boundary
 
-! If UseBody is true, the inner boundary is a spherical surface
-! with radius rBody. The rBody is defined in units of the planet/solar
-! radius. It can be 1.0, in which case the simulation extends all the
-! way to the surface of the central body. In many cases it is more
-! economic to use an rBody larger than 1.0. 
-!
-! The rCurrents parameter defines where the currents are calculated for
-! the GM-IE coupling. This only matters if BATSRUS is running as GM
-! and it is coupled to IE.
-!
-! The BodyRhoDim and BodyTDim parameters define the density and temperature
-! at the inner boundary. The exact effect of these parameters depends 
-! on the settings in the #INNERBOUNDARY command.
-! 
-! The default values depend on the component: 
-! For GM rBody=3, rCurrents=4, BodyRhoDim = 5amu/cc and BodyTDim = 25000 K. 
-! For SC/IH: rBody=1, BodyRhoDim = 1.5e8 amu/cc, BodyTDim = 2.8e6 K.
-! The rBody and rCurrents are given in planetary/solar radii units.
+If UseBody is true, the inner boundary is a spherical surface
+with radius rBody. The rBody is defined in units of the planet/solar
+radius. It can be 1.0, in which case the simulation extends all the
+way to the surface of the central body. In many cases it is more
+economic to use an rBody larger than 1.0. 
+
+The rCurrents parameter defines where the currents are calculated for
+the GM-IE coupling. This only matters if BATSRUS is running as GM
+and it is coupled to IE.
+
+The BodyNDim and BodyTDim parameters define the number density and temperature
+at the inner boundary. The exact effect of these parameters depends 
+on the settings in the #INNERBOUNDARY command.
+
+The default values depend on the component: 
+For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K. 
+For SC/IH: rBody=1, BodyNDim = 1.5e8/cc, BodyTDim = 2.8e6 K.
+The rBody and rCurrents are given in normalized units (usually
+planetary or solar radii).
 </command>
 
 <command name="GRAVITY" if="$_IsFirstSession">
@@ -3922,16 +3923,16 @@ T			UseBody (rest of parameters read if true)
 T			UseGravity (rest of parameters read if true)
 0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
-! If UseGravity is false, the gravitational force of the central body
-! is neglected. If UseGravity is true and iDirGravity is 0, the
-! gravity points towards the origin. If iDirGravity is 1, 2 or 3,
-! the gravitational force is parallel with the X, Y or Z axes, respectively.
-!
-! Default values depend on problem_type.
+If UseGravity is false, the gravitational force of the central body
+is neglected. If UseGravity is true and iDirGravity is 0, the
+gravity points towards the origin. If iDirGravity is 1, 2 or 3,
+the gravitational force is parallel with the X, Y or Z axes, respectively.
+
+Default values depend on problem_type.
 <!-- ^CFG IF SECONDBODY BEGIN -->
-! When a second body is used the gravity direction for the second body
-! is independent of the GravityDir value.  Gravity due to the second body
-! is radially inward toward the second body.
+When a second body is used the gravity direction for the second body
+is independent of the GravityDir value.  Gravity due to the second body
+is radially inward toward the second body.
 <!-- ^CFG IF SECONDBODY END -->
 </command>
 
@@ -3947,7 +3948,7 @@ T			UseGravity (rest of parameters read if true)
 
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
-3e12		HallFactor
+1.0		HallFactor
 0.5		HallCmaxFactor
 0.2		HallHyperFactor
 
@@ -3958,7 +3959,7 @@ physical Hall resistivity is used.
 
 If HallCmaxFactor is 1.0 the maximum propagation speed takes into
 account the full whistler wave speed. If it is 0, the wave speed
-is not midified. For values betwen 1 and 0 a fraction of the whistler
+is not modified. For values betwen 1 and 0 a fraction of the whistler
 wave speed is added. The full speed is needed for the stability
 of the explicit scheme (unless the whistler speed is very small
 and/or the diagonal part of the resistivity tensor is dominant).
@@ -3974,27 +3975,70 @@ Default is UseHallResist false.
 
 <command name="HALLREGION">
 	<parameter name="NameHallRegion" type="string" input="select">
-		<option name="all"  default="T"/>
-		<option name="shell"/>
+		<option name="all"  default="T"	/>
+		<option name="sphere0"		/>
+		<option name="box0"		/>
+		<option name="sphere"		/>
+		<option name="box"		/>
 	</parameter>
-	<if expr="$NameHallRegion eq 'shell'">
-		<parameter name="R1Hall" type="real" min="0" default="0"/>
-		<parameter name="R2Hall" type="real" min="$R1Hall" default="0"/>
-		<parameter name="HallWidth" type="real" min="0" default="0"/>
+	<if expr="$NameHallRegion ne 'all' and $NameHallRegion !~ /0/">
+		<parameter name="x0Hall" type="real" default="0"/>
+		<parameter name="y0Hall" type="real" default="0"/>
+		<parameter name="z0Hall" type="real" default="0"/>
+	</if>
+	<if expr="$NameHallRegion =~ /sphere/">
+		<parameter name="rSphereHall" type="real" min="0" default="1"/>
+		<parameter name="DrSphereHall" type="real" min="0"
+								default="0"/>
+	</if>
+	<if expr="$NameHallRegion =~ /box/">
+		<parameter name="xSizeBoxHall" type="real" min="0" 
+								default="1"/>
+		<parameter name="DxSizeBoxHall" type="real" min="0"
+								default="0"/>
+		<parameter name="ySizeBoxHall" type="real" min="0" 
+								default="1"/>
+		<parameter name="DySizeBoxHall" type="real" min="0"
+								default="0"/>
+		<parameter name="zSizeBoxHall" type="real" min="0" 
+								default="1"/>
+		<parameter name="DzSizeBoxHall" type="real" min="0"
+								default="0"/>
 	</if>
 
 #HALLREGION
-shell			NameHallRegion
- 3.5			R1Hall
-20.0			R2Hall
- 2.0			HallWidth
+box			NameHallRegion
+10.0			x0Hall        (only read for region sphere or box)
+0.0			y0Hall        (only read for region sphere or box)
+0.0			z0Hall        (only read for region sphere or box)
+8.0			xSizeBoxHall  (only read for region box)
+1.0			DxSizeBoxHall (only read for region box)
+6.0			ySizeBoxHall  (only read for region box)
+1.0			DySizeBoxHall (only read for region box)
+4.0			zSizeBoxHall  (only read for region box)
+1.0			DzSizeBoxHall (only read for region box)
 
 The NameHallRegion parameter determines the region where the Hall effect
-is taken into account. For value "all" the Hall effect is used everywhere
-in the computational domain. For "shell" the region is between radii
-R1Hall and R2Hall. The edge of the shell is smoothed to avoid a sharp
-discontinuity. The width of the smoothing is given by HallWidth.
+is taken into account. Possible values are "all", "box", "sphere",
+"box0" and "sphere0".
 
+For value "all" the Hall effect is used everywhere
+in the computational domain. For "box" and "sphere" the region is inside
+a box or sphere, respectivrly, centered around the X0Hall, Y0Hall, Z0Hall.
+If NameHallRegion = "box0" or "sphere0", the region is centered around 
+the origin. 
+
+For NameHallRegion "sphere" or "sphere0" the rSphereHall
+and DrSphereHall parameters are read. The first determines the radius
+of the sphere, the second the thickness of the shell where the hall
+effect increases from 0 to its full value linearly. This smoothing
+is useful to avoid artifacts due to a sudden change in the Hall coefficient.
+
+For NameHallRegion "box" or "box0" the 3 sizes and 3 smoothing widths 
+are read as shown in the example.
+
+The default value is "all", ie. the Hall effect is applied everywhere
+if the Hall effect is switched on in the #HALLRESISTIVITY command.
 </command>
 
 <command name="MASSLOADING">
