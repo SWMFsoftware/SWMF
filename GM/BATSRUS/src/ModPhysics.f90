@@ -117,22 +117,6 @@ module ModPhysics
   real :: Kappa0Heat,ExponentHeat
 
   !\
-  ! Resistivity parameters
-  !/
-  character (len=20) :: TypeResist
-  real :: TimeInitRise,TimeConstLev
-  real :: Eta0Resist,Alpha0Resist,yShiftResist
-  real :: Eta0AnomResist,EtaAnomMaxResist,jCritResist
-
-  !\
-  ! Ilia's reconnection & test problems
-  !/
-  character (len=20) :: TypeProblemDiss
-  real :: EpsilonDiss,DeltaDiss,ThetaDiss
-  real :: RhoDifDiss,yShiftDiss
-  real :: scaleHeightDiss,scaleFactorDiss,BZ0Diss
-
-  !\
   ! Units for normalization of variables
   !/
   character (len=20) :: TypeNormalization="PLANETARY"
