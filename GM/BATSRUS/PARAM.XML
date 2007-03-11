@@ -4074,13 +4074,13 @@ F		UseSpitzerForm
 			<option name="anomalous"           />
 			<option name="user"                />
 		</parameter>
-		<if expr="$TypeResistivity =~ /constant/">
-			<parameter name="Eta0Si" type="real" min="0.0" 
-							default="1.0E+11"/>
-		</if>
 		<if expr="$TypeResistivity =~ /spitzer/">
 			<parameter name="CoulombLogarithm" type="real" 
 							default="20" />
+		</if>
+		<if expr="$TypeResistivity =~ /constant/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0E+11"/>
 		</if>
 		<if expr="$TypeResistivity =~ /anomalous/">
 			<parameter name="Eta0Si" type="real" min="0.0" 
@@ -4092,27 +4092,42 @@ F		UseSpitzerForm
 			<parameter name="jCritAnomSi" type="real" min="0"
 						default="1.0E-9"/>
 		</if>
+		<if expr="$TypeResistivity =~ /user/">
+			<parameter name="Eta0Si" type="real" min="0.0" 
+							default="1.0"/>
+		</if>
 	</if>
 #RESISTIVITY
 T		UseResistivity (rest of parameters read only if set to true)
 anomalous	TypeResistivity
-1.0E+9		Eta0Si       [m2/s] (read for constant and anomalous only)
-2.0E+9		Eta0AnomSi   [m2/s] 
-2.0E+10		EtaMaxAnomSi [m2/s]
-1.0E-9		jCritAnomSi  [A/m2]
+1.0E+9		Eta0Si       [m2/s] (read except for Spitzer resistivity)
+2.0E+9		Eta0AnomSi   [m2/s] (read for anomalous resistivity only)
+2.0E+10		EtaMaxAnomSi [m2/s] (read for anomalous resistivity only)
+1.0E-9		jCritAnomSi  [A/m2] (read for anomalous resistivity only)
 
 If UseResistitivy is false, no resistivity is included.
 If UseResistivity is true, then one can select a constant resistivity,
-the classical Spitzer resistivity with a CoulombLogarithm parameter 
-(typical values are in the range of 10 to 30), 
+the classical Spitzer resistivity, 
 anomalous resistivity with a critical current, or a user defined resistivity.
+
 For TypeResistivity='Spitzer' the resistivity is very low in space plasma.
-For TypeResistivity='constant' the resistivity is uniformly set to Eta0Si.
+The only parameter read is the CoulombLogarithm parameter with 
+typical values in the range of 10 to 30.
+
+For TypeResistivity='constant' the resistivity is uniformly set to 
+the parameter Eta0Si.
+
 For TypeResistivity='anomalous' the anomalous resistivity is 
 Eta0Si + Eta0AnomSi*(j/jCritAnomSi-1) limited by 0 and EtaMaxAnomSi.
 Here j is the absolute value of the current density in SI units.
+See the example for the order of the parameters.
 
-The default is UseResistivity=.false., i.e. ideal MHD.
+For TypeResistivity='user' only the Eta0Si parameter is read and it
+can be used to scale the resistivity set in subroutine user_set_resistivity
+in the ModUser module. Other parameters should be read with 
+subroutine user_read_inputs of the ModUser file.
+
+The default is UseResistivity=.false.
 </command>
 <!-- ^CFG END DISSFLUX -->
 
