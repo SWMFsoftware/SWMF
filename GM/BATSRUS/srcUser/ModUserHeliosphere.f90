@@ -1843,7 +1843,7 @@ contains
     use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,ModulationP,   &
          ModulationRho,UseFluxRope,rot_period_dim,OmegaBody,Rbody,   &
          No2Si_V(UnitU_),No2Si_V(UnitRho_),No2Si_V(UnitX_),No2Io_V(UnitEnergydens_),           &
-         No2Io_V(UnitT_),No2Io_V(UnitB_),Body_rho_dim
+         No2Io_V(UnitT_),No2Io_V(UnitB_)
     !\
     ! Variables required by this user subroutine::
     !/
