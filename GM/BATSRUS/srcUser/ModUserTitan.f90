@@ -1898,7 +1898,7 @@ contains
   !===========================================================================
   
   subroutine user_set_resistivity(iBlock, Eta_G)
-    use ModPhysics,  ONLY: Eta0Resist, No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
+    use ModPhysics,  ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
          UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
     use ModProcMH,   ONLY: iProc
     use ModMain, ONLY: ProcTest, BlkTest, iTest,jTest,kTest, &
@@ -1906,6 +1906,7 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK, R_BLK
     use ModConst,    ONLY: cTwo
+    use ModResistivity, ONLY: Eta0Si
 
     integer, intent(in) :: iBlock
     real,intent(out) :: Eta_G(-1:nI+2,-1:nJ+2,-1:nK+2) 
@@ -1928,7 +1929,7 @@ contains
 
     if (Rmin_BLK(iBlock) > 3.0) RETURN !in Rbody unit
 
-    Eta0 = Eta0Resist * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
+    Eta0 = Eta0Si * Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
 
     do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn; 
@@ -1983,10 +1984,10 @@ contains
        if(oktest_me.and.itest==i.and.jtest==j.and.ktest==k)then
           write(*,*)'loc_c=', loc_c
           write(*,*)'Te_dim=', Te_dim
-          write(*,*)'totalNumRho=',totalNumRho
-          write(*,*)'nu_den=', NumDenNeutral_V 
-          write(*,*)'eta=',Eta_G(Itest,Jtest,Ktest)
-          write(*,*)'eta0=',Eta0Resist, Eta0
+          write(*,*)'TotalNumRho=',TotalNumRho
+          write(*,*)'NumDenNeutral=', NumDenNeutral_V 
+          write(*,*)'Eta_G=',Eta_G(Itest,Jtest,Ktest)
+          write(*,*)'Eta0Si, Eta0=',Eta0Si, Eta0
        end if
     end do; end do; end do
  
