@@ -2,11 +2,10 @@ module ModTriangulate
 
   implicit none
 
-  ! variables for triangulation
-  !integer, allocatable   :: triangle_node(:,:)
-  !real   , allocatable   :: table(:,:)
-  !integer :: node_num
-  !integer :: triangle_num
+  private ! except
+  public calc_triangulation  ! Delaunay triangulation of a set of points in 2D
+  public find_triangle       ! Find the triangle containing a point
+  public triangle_area       ! Returns the area of a triangle
 
 contains
 
