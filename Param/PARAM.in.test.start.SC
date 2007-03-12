@@ -97,6 +97,11 @@ float	   		TypeBcOuter_E(Top_)
 helio_init		TypeAmrInit
 9			nRefineLevelInit
 
+#USECURLB0
+T
+2.5
+
+
 #AMR
 3000			DnRefine
 F			DoAutomaticRefinement 

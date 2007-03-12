@@ -885,11 +885,10 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_initial_perturbation,       &
        IMPLEMENTED3 => user_face_bcs,                   &
-       IMPLEMENTED4 => user_calc_sources,               &
-       IMPLEMENTED5 => user_get_log_var,                &
-       IMPLEMENTED6 => user_get_b0,                     &
-       IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_specify_initial_refinement
+       IMPLEMENTED4 => user_get_log_var,                &
+       IMPLEMENTED5 => user_get_b0,                     &
+       IMPLEMENTED6 => user_update_states,              &
+       IMPLEMENTED7 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -987,41 +986,7 @@ contains
        end select
     end do
   end subroutine user_read_inputs
-  !============================================================================
-  subroutine user_calc_sources
-    use ModMain,ONLY:globalBLK
-    use ModVarIndexes
-    use ModAdvance,ONLY:State_VGB,Source_VC,CurlB0_DCB,&
-         B0xCell_BLK, B0yCell_BLK,  B0zCell_BLK
-    use ModCoordTransform
-    use ModGeometry,ONLY:R_BLK
-    character (len=*), parameter :: Name='user_calc_sources'
-    integer::i,j,k
-    real::rCurrentFree=0.0,AmpereForce_D(3)
-    !--------------------------------------------------------------------------
-    rCurrentFree=Rs_PFSSM
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       if(R_BLK(i,j,k,globalBLK)<rCurrentFree)CYCLE
-       AmpereForce_D=cross_product(&
-            CurlB0_DCB(:,i,j,k,globalBLK),&
-            State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
-            B0xCell_BLK(i,j,k,globalBLK),&
-            B0yCell_BLK(i,j,k,globalBLK),&
-            B0zCell_BLK(i,j,k,globalBLK)/))
-       Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
-            AmpereForce_D
-       !LorentzForce_D=cross_product(&
-       !CurlB0_DCB(:,i,j,k,globalBLK),(/&
-       !B0xCell_BLK(i,j,k,globalBLK),&
-       !B0yCell_BLK(i,j,k,globalBLK),&
-       !B0zCell_BLK(i,j,k,globalBLK)/))
-       Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
-            sum(AmpereForce_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
-            /State_VGB(rho_,i,j,k,globalBLK)
-    end do;end do;end do
-  end subroutine user_calc_sources
-
+  
   !========================================================================
   subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
        iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &

@@ -1213,6 +1213,9 @@ subroutine MH_set_parameters(TypeAction)
         DoInitConstrainB = .true.                        !^CFG IF CONSTRAINB
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)
+     case("#USECURLB0")
+        call read_var('UseCurlB0',UseCurlB0)
+        if(UseCurlB0)call read_var('rCurrentFreeB0',rCurrentFreeB0)
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
         call read_var('TypeProjectIter' ,proj_method)
         call read_var('TypeProjectStop' ,proj_typestop)

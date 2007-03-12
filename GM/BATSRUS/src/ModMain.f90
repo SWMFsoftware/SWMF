@@ -173,6 +173,14 @@ Module ModMain
   ! Source terms
   !/
 
+  !\
+  ! If the B0 filed is not assumed to be curl free (like in a tokamak or 
+  ! in the solar corona beyond the source surface, the curl B0 x B force
+  ! should be included to the momentum equation
+  !/
+  logical::UseCurlB0=.false.
+  real::rCurrentFreeB0=-1.0
+
   !^CFG IF DISSFLUX BEGIN
   ! Logical for adding heat conduction
   logical:: UseHeatFlux=.false.

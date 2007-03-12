@@ -31,6 +31,8 @@ subroutine calc_sources
   ! Variable for div B diffusion
   real :: Dr
 
+  real,dimension(3)::CurlB0CrossB_D
+
   ! Variables needed for Boris source terms also used for div(u)
   real :: FullBx, FullBy, FullBz, Ux, Uy, Uz, RhoInv
   real :: E_D(3), DivE
@@ -184,6 +186,22 @@ subroutine calc_sources
   else
      call calc_divB
   end if
+  if(UseCurlB0)then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(R_BLK(i,j,k,globalBLK)<rCurrentFreeB0)CYCLE
+       CurlB0CrossB_D=cross_product(&
+            CurlB0_DCB(:,i,j,k,globalBLK),&
+            State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
+            B0xCell_BLK(i,j,k,globalBLK),&
+            B0yCell_BLK(i,j,k,globalBLK),&
+            B0zCell_BLK(i,j,k,globalBLK)/))
+       Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
+            CurlB0CrossB_D
+       Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
+            sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
+            /State_VGB(rho_,i,j,k,globalBLK)
+    end do;end do;end do
+ end if
 
   if(boris_correction .and. boris_cLIGHT_factor < 0.9999 & !^CFG IF BORISCORR BEGIN
        .and. index(test_string,'nodivE')<1) then

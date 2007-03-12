@@ -963,7 +963,7 @@ contains
 
     subroutine get_mhd_speed
 
-      use ModMain,    ONLY: x_, y_, z_, GlobalBlk
+      use ModMain,    ONLY: x_, y_, z_, GlobalBlk,UseCurlB0
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light
       use ModNumConst, ONLY: cPi
@@ -973,7 +973,7 @@ contains
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
-      real :: FullBt, Rho1, Rho, cDrift, cHall
+      real :: FullBt, Rho1, Rho, cDrift, cHall,B1B0L,B1B0R
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
@@ -998,7 +998,11 @@ contains
       else                                               !^CFG END AWFLUX
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if                                             !^CFG IF AWFLUX
-
+      if(UseCurlB0)then
+         B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
+         B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
+         Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
+      end if
       Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
       FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
       Alfven2Normal = InvRho*FullBn**2/Area2
