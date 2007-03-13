@@ -246,7 +246,7 @@ end subroutine read_ih_buffer
 
 !==============================================================================
 
-subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
+subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
