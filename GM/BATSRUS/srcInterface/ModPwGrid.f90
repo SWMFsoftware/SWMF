@@ -5,9 +5,10 @@ module ModPwGrid
   implicit none
   save
 
+  character (len=3) :: NamePwCoord = '???'
   integer, parameter :: nCoord=2
 
-  real, allocatable :: CoordXyPw_DI(:,:), StatePw_VI(:,:)
+  real, allocatable :: CoordXyzPw_DI(:,:), CoordXyPw_DI(:,:), StatePw_VI(:,:)
   integer, allocatable :: iNodeTriangle_II(:, :)
   integer, parameter :: Ub_=1, RhoPw_=2
   integer, parameter :: nOuterPoint=12
