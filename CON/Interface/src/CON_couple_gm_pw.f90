@@ -7,6 +7,8 @@
 !
 !DESCRIPTION:
 ! Couple PW and GM components both ways.
+! Note that PW -> GM has to be done before GM -> PW 
+! so the PW 
 !
 !INTERFACE:
 module CON_couple_gm_pw
@@ -60,7 +62,7 @@ contains
   end subroutine couple_gm_pw_init
 
   !BOP =======================================================================
-  !IROUTINE: couple_ie_pw - couple IE component to PW component
+  !IROUTINE: couple_pw_gm - couple PW component to GM component
   !INTERFACE:
   subroutine couple_pw_gm(tSimulation)
 
@@ -121,11 +123,8 @@ contains
       ! Message size
       integer :: nSize
 
-      integer :: iBlock     ! 1 for northern and 2 for southern hemisphere
-      integer :: iVar       ! 1) CoLat, 2)Longitude, 3)Density1, 4)Density2
-                            ! 5) Density3, 6)Velocity1, 7)Velocity2, 
-                            ! 8) Velocity3
-      integer :: iProcFrom  ! PE number sending the potential for current block
+      integer :: iBlock
+      integer :: iVar
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
@@ -176,7 +175,7 @@ contains
          if(n_proc(GM_)>1) &
               call MPI_bcast(Buffer_VI,nSize,MPI_REAL,0,i_comm(GM_),iError)
 
-         call GM_put_from_pw(Buffer_VI, nTotalLine, nVar, NameVar_V)
+         call GM_put_from_pw(Buffer_VI, nVar, nTotalLine, NameVar_V)
          if(DoTest) &
               write(*,*)NameSubSub//' iProc, Buffer(1,1)=',&
               iProcWorld,Buffer_VI(1,1)
@@ -207,7 +206,7 @@ contains
     !    Global Magnetosphere (GM) source \\
     !    Polar Wind (PW)  target
     !
-    ! Send electrostatic potential and field aligned current from PW to IE.
+    ! Send pressure from GM to PW
     !EOP
 
     !\
@@ -217,11 +216,94 @@ contains
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pw'
 
+    ! Buffer for the coordinates of PW field lines
+    real, dimension(:,:), allocatable:: Coord_DI
+
+    ! Names for the coordinates
+    character (len=*), parameter:: NameVar_D(2) = (/'CoLat    ','Longitude'/)
+
+    ! Buffer for the pressure on the PW grid
+    real, dimension(:), allocatable :: Buffer_I
+
+    ! MPI related variables
+
+    ! MPI status variable
+    integer :: iStatus_I(MPI_STATUS_SIZE)
+
+    ! General error code
+    integer :: iError
+
+    ! Message size
+    integer :: nSize
+
+    integer :: iBlock     
+    integer :: iVar       
+    integer :: iProcWorld ! global rank of this PE
+
     logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    call CON_stop('couple_gm_pw has not been implented yet')
+    ! After everything is initialized exclude PEs which are not involved
+    if(.not.UseMe) RETURN
+
+    iProcWorld = i_proc()
+
+    if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, PWi_iProc0=', &
+         iProcWorld,iProc0GM,iProc0Pw
+
+    !\
+    ! Allocate buffers both in GM and PW
+    !/
+    allocate(Coord_DI(2,nTotalLine), Buffer_I(nTotalLine))
+
+    if(DoTest)write(*,*)NameSub,', variables allocated',&
+         ', iProc:',iProcWorld
+
+    !\
+    ! coordinates from PW
+    !/
+    if(is_proc(PW_))  &
+         call PW_get_for_gm(Coord_DI, 2, nTotalLine, NameVar_D, tSimulation)
+
+    !\
+    ! Transfer coordinates from PW to GM
+    !/ 
+    nSize = nTotalLine*2
+
+    if(iProc0Gm /= iProc0Pw)then
+       if(is_proc0(PW_)) &
+            call MPI_send(Coord_DI,nSize,MPI_REAL,iProc0Pw,&
+            1,i_comm(),iError)
+       if(is_proc0(GM_)) &
+            call MPI_recv(Coord_DI,nSize,MPI_REAL,iProc0Gm,&
+            1,i_comm(),iStatus_I,iError)
+    end if
+    if(DoTest)write(*,*)NameSub,', PW coordinates transferred',&
+         ', iProc:',iProcWorld
+
+    !\
+    ! Put PW field line coordinates into GM
+    !/
+    if(is_proc(GM_))then
+       ! Broadcast variables inside GM
+       if(n_proc(GM_)>1) &
+            call MPI_bcast(Coord_DI,nSize,MPI_REAL,0,i_comm(GM_),iError)
+
+       call GM_put_from_pw(Coord_DI, 2, nTotalLine, NameVar_D)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Coord_DI(:,1)=',iProcWorld,Coord_DI(:,1)
+    end if
+
+    !\
+    ! Deallocate buffer to save memory
+    !/
+    deallocate(Coord_DI, Buffer_I)
+
+    if(DoTest)write(*,*)NameSub,', variables deallocated',&
+         ', iProc:',iProcWorld
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
 
   end subroutine couple_gm_pw
 
