@@ -37,6 +37,7 @@ module ModCovariant
   real,allocatable,dimension(:,:,:,:,:):: &            
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB
   integer,allocatable,dimension(:,:,:,:)::OldLevel_IIIB
+  logical,allocatable,dimension(:)::DoReschangeWhileRestart_B
   logical,dimension(-1:1,-1:1,-1:1)::IsNotCorner_III
   
   !Parameters of 
@@ -62,6 +63,8 @@ contains
     if(allocated(OldLevel_IIIB))return
     allocate(OldLevel_IIIB(-1:1,-1:1,-1:1,nBLK))
     OldLevel_IIIB=NOBLK
+    allocate(DoReschangeWhileRestart_B(nBLK))
+    DoReschangeWhileRestart_B=.false.
     IsNotCorner_III=.true.
     IsNotCorner_III(-1,-1,-1)=.false.
     IsNotCorner_III(+1,-1,-1)=.false.
@@ -73,34 +76,18 @@ contains
     IsNotCorner_III(+1,+1,+1)=.false.
   end subroutine allocate_old_levels
 !---------------------------------------------------------------------------------
-  subroutine save_old_levels
-    integer::iBlock
-    if(.not.UseCovariant)return
-    if(.not.UseVertexBasedGrid)return
-    do iBlock=1,nBLK
-       if(unusedBLK(iBlock))CYCLE
-       OldLevel_IIIB(:,:,:,iBlock)=BLKneighborLEV(:,:,:,iBlock)
-    end do
-  end subroutine save_old_levels
-!---------------------------------------------------------------------------------
   logical function do_fix_geometry_at_reschange(iBlock)
     integer,intent(in)::iBlock
     if(unusedBLK(iBlock).or.(.not.UseCovariant).or.(.not.UseVertexBasedGrid))then
        do_fix_geometry_at_reschange=.false.
        return
     end if
-    do_fix_geometry_at_reschange=any(IsNotCorner_III(:,:,:).and.&
+    do_fix_geometry_at_reschange=(.not.DoReschangeWhileRestart_B(iBlock)).and.&
+         any(IsNotCorner_III(:,:,:).and.&
          OldLevel_IIIB(:,:,:,iBlock)/=BLKneighborLEV(:,:,:,iBlock).and.&
          (OldLevel_IIIB(:,:,:,iBlock)==-1.or.BLKneighborLEV(:,:,:,iBlock)==-1))
   end function do_fix_geometry_at_reschange
-!---------------------------------------------------------------------------------
-!  function cross_product(A_D,B_D)
-!    real,dimension(nDim)::cross_product
-!    real,dimension(nDim),intent(in)::A_D,B_D
-!    cross_product(1)=A_D(2)*B_D(3)-A_D(3)*B_D(2)
-!    cross_product(2)=A_D(3)*B_D(1)-A_D(1)*B_D(3)
-!    cross_product(3)=A_D(1)*B_D(2)-A_D(2)*B_D(1)
-!  end function cross_product
+
 !---------------------------------------------------------------------------------
   subroutine get_face_area_i(&
        XyzNodes_DIII,&                      !(in) Cartesian coordinates of nodes

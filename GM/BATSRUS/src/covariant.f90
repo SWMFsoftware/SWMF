@@ -1000,9 +1000,14 @@ subroutine fix_covariant_geometry(iBLK)
   case('cylindrical')                             
      call fix_cylindrical_geometry(iBLK)                        
   end select
-  call test_fix_geometry_reschange
+  if(DoReschangeWhileRestart_B(iBLK))then
+     DoReschangeWhileRestart_B(iBLK)=.false.
+     if(do_fix_geometry_at_reschange(iBLK))&     
+          call fix_geometry_at_reschange(iBLK)
+  end if
+  call test_fix_geometry
 contains
-  subroutine test_fix_geometry_reschange
+  subroutine test_fix_geometry
     real,dimension(nDim)::FaceArea_D
     integer::iBlock
     iBlock=iBLK
@@ -1027,7 +1032,7 @@ contains
           call stop_mpi('Stopped')
        end if
     end do;end do;end do
-  end subroutine test_fix_geometry_reschange
+  end subroutine test_fix_geometry
 end subroutine fix_covariant_geometry
 !---------------------------------------------------------------------
 subroutine fix_spherical_geometry(iBLK)
