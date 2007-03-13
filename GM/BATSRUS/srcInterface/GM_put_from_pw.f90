@@ -1,12 +1,15 @@
-subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
+subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
-  use ModMain, ONLY: x_, y_
+  use CON_coupler, ONLY: PW_, Grid_C
+  use ModMain, ONLY: x_, y_, TypeCoordSystem, Time_Simulation
   use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_
   use ModUtilities, ONLY: lower_case
-  use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_
+  use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, rCurrents
   use ModPwGrid
   use ModNumConst, ONLY: cTwoPi
   use ModTriangulate,ONLY:calc_triangulation
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use CON_axes, ONLY: transform_matrix
 
   implicit none
   character (len=*),parameter :: NameSub='GM_put_from_pw'
@@ -20,13 +23,37 @@ subroutine GM_put_from_pw(Buffer_VI, nFieldLine, nVar, Name_V)
 
   logical, save :: DoInitialize = .true.
 
-  integer :: iVar, i
-  real    :: SinThetaOuter
+  integer :: iVar, i, iLine
+  real    :: SinThetaOuter, GmPw_DD(3,3)
   character (len=40):: NameVar
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  ! If only 2 variables are passed, they are the coordinates colatitude and longitude
+  ! needed for the GM->PW pressure coupling.
+  if(nVar == 2)then
+     if(.not.allocated(CoordXyzPw_DI)) allocate(CoordXyzPw_DI(3, nFieldLine))
+
+     ! Convert from spherical to Cartesian coordinates at radius rCurrents
+     ! where the pressure is going to be taken from
+     do iLine = 1, nFieldLine
+        call sph_to_xyz(rCurrents, Buffer_VI(Theta_,iLine), Buffer_VI(Phi_, iLine), &
+             CoordXyzPw_DI(:,iLine))
+     end do
+
+     ! Convert from PW to GM coordinates if necessary
+     NamePwCoord = Grid_C(PW_) % TypeCoord
+     if(TypeCoordSystem /= NamePwCoord) then
+        GmPw_DD = transform_matrix(Time_Simulation, NamePwCoord, TypeCoordSystem)
+        do iLine = 1, nFieldLine
+           CoordXyzPw_DI(:,iLine) = matmul( GmPw_DD, CoordXyzPw_DI(:,iLine))
+        end do
+     end if
+
+     RETURN
+  end if
 
   if(DoInitialize)then
      DoInitialize=.false.
@@ -153,7 +180,6 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   logical :: DoInitialize = .true.
 
   real    :: TimeSimLast = -1.0 - dTimeMax
-  character (len=3) :: NamePwCoord = '???'
   real, save:: PwGm_DD(3,3)
 
   character (len=*), parameter :: NameSub = 'read_pw_buffer'
@@ -178,9 +204,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
      XyzPw_D = CoordIn_D
   else
      if(abs(Time_Simulation - TimeSimLast) > dTimeMax)then
-        ! Update GM-PW transformation if necessary
-        PwGm_DD = transform_matrix(Time_Simulation, &
-             NamePwCoord, TypeCoordSystem)
+        ! Update GM to PW transformation if necessary
+        PwGm_DD = transform_matrix(Time_Simulation, TypeCoordSystem, NamePwCoord)
         TimeSimLast = Time_Simulation
      end if
      ! Convert from GM coordinates to buffer coordinates
