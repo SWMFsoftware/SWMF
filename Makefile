@@ -205,7 +205,7 @@ GUI_start:
 	gui/start.sh
 	@echo 'GUI started.'
 
-GUI_start: 
+GUI_stop:
 	gui/stop.sh
 	@echo 'GUI stopped.'
 
