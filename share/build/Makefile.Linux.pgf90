@@ -1,6 +1,6 @@
 #^CFG COPYRIGHT UM
 #BOP
-#!ROUTINE: share/build/Makefile.Linuxpgf90 - one of the original files for Makefile.conf
+#!ROUTINE: share/build/Makefile.Linux.pgf90 - one of the original files for Makefile.conf
 #!DESCRIPTION:
 # This Makefile is copied from share/build/ into the Makefile.conf in the 
 # main directory during installation or reinstallation. 

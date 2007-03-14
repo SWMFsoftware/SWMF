@@ -168,9 +168,9 @@ ${DIR}/CON/Makefile.protex: ${DIR}/CON/Makefile.def
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
 		${DIR}/CON/Makefile.def > ${DIR}/CON/Makefile.protex
 
-${DIR}/share/build/Makefile.protex: ${DIR}/share/build/Makefile.Linuxpgf90
+${DIR}/share/build/Makefile.protex: ${DIR}/share/build/Makefile.Linux.pgf90
 	${SCRIPTDIR}/protex.pl -b -n -f -S \
-		${DIR}/share/build/Makefile.Linuxpgf90 > \
+		${DIR}/share/build/Makefile.Linux.pgf90 > \
 		${DIR}/share/build/Makefile.protex
 
 ${DIR}/share/build/Makefile.doc.protex: ${DIR}/share/build/Makefile.doc
