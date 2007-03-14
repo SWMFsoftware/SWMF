@@ -190,6 +190,25 @@ PIONO:	ENV_CHECK				#^CMP IF IE
 	cd IE/Ridley_serial; make PIONO		#^CMP IF IE
 	@echo ' '				#^CMP IF IE
 
+#
+#	Graphical User Interface (GUI)
+#
+GUI:	ENV_CHECK
+	cd gui; make install
+	@echo ' '
+
+GUI_doc: 
+	cd gui; make doc
+	@echo ' '
+
+GUI_start: 
+	gui/start.sh
+	@echo 'GUI started.'
+
+GUI_start: 
+	gui/stop.sh
+	@echo 'GUI stopped.'
+
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
 #	
