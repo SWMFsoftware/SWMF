@@ -10,7 +10,7 @@ SOLARWIND
 Titan test save restart
 
 #VERTEXBASEDGRID
-F
+T
 
 #COVARIANTGEOMETRY
 spherical_lnr
