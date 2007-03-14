@@ -174,8 +174,8 @@ contains
                n_step,Time_Simulation
        end if
        ! Load balance for the inner blocks:
-       ! move coords, move data, there are no new blocks
-       call load_balance(.true.,.true.,.false.)
+       ! move coords, move data, there are new blocks
+       call load_balance(.true.,.true.,.true.)
 
        ! Redo the AMR level constraints for fixed body level
        ! The coordinates of the blocks are only known now
