@@ -590,14 +590,14 @@ subroutine timing_tree(iclock,show_depth)
         iUnitT0 = io_unit_new()
         write(filename,'(a,i8.8,a)')'STDOUT/timing_it',step,'.H'
         open(UNIT=iUnitT0,FILE=trim(filename),STATUS='unknown',FORM='formatted')
-        write(iUnitT0,'(a,i,a)') 'TITLE = "Timing at it=',step,'"'
+        write(iUnitT0,'(a,i8,a)') 'TITLE = "Timing at it=',step,'"'
         write(iUnitT0,'(a)') 'VARIABLES = '
         write(iUnitT0,'(a)') '  "PE"'
      end if
      iUnitT = io_unit_new()
      write(filename,'(a,i8.8,a,i6.6,a)')'STDOUT/timing_it',step,'_pe',iProc,'.tec'
      open(UNIT=iUnitT,FILE=trim(filename),STATUS='unknown',FORM='formatted')
-     write(iUnitT,'(i)') iProc
+     write(iUnitT,*) iProc
   end if
 
   qclock = min(max(iclock,2),maxclock)
