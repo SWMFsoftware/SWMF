@@ -46,8 +46,7 @@ contains
   !===========================================================================
 
   subroutine grid_setup
-    use ModGeometry, ONLY: UseVertexBasedGrid,&             !^CFG IF COVARIANT
-         DoReschangeWhileRestart_B                          !^CFG IF COVARIANT
+
     use ModIO, ONLY: restart
     use ModRestartFile, ONLY: read_octree_file
     !\
@@ -83,7 +82,7 @@ contains
 
        ! Read restart header file only if old type.
        call read_octree_file     ! Read octree restart file.
-       if(UseVertexBasedGrid)DoReschangeWhileRestart_B=.not.unusedBLK
+
     end if
     ! number blocks and balance load
     call number_soln_blocks

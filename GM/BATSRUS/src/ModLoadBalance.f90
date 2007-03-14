@@ -294,10 +294,24 @@ contains
   !===========================================================================
   subroutine finish_load_balance
 
+    use ModCovariant,ONLY: UseVertexBasedGrid, &       !^CFG IF COVARIANT
+         UseCovariant, do_fix_geometry_at_reschange    !^CFG IF COVARIANT
+
+    integer :: iBlock
+
     ! Update neighbor and test cell info if there are new and/or moved blocks
     if(IsNewBlock .or. nBlockMoved > 0)then
 
        call find_neighbors
+
+       !^CFG IF COVARIANT BEGIN
+       if(DoMoveCoord .and. UseCovariant .and. UseVertexBasedGrid)then
+          do iBlock=1, nBlock
+             if(do_fix_geometry_at_reschange(iBlock)) &       
+                  call fix_geometry_at_reschange(iBlock) 
+          end do
+       end if
+       !^CFG END COVARIANT
 
        ! Analyze only when new blocks are created   !^CFG IF DEBUGGING
        if(IsNewBlock)call analyze_neighbors         !^CFG IF DEBUGGING 

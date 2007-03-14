@@ -37,7 +37,6 @@ module ModCovariant
   real,allocatable,dimension(:,:,:,:,:):: &            
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB
   integer,allocatable,dimension(:,:,:,:)::OldLevel_IIIB
-  logical,allocatable,dimension(:)::DoReschangeWhileRestart_B
   logical,dimension(-1:1,-1:1,-1:1)::IsNotCorner_III
   
   !Parameters of 
@@ -63,8 +62,6 @@ contains
     if(allocated(OldLevel_IIIB))return
     allocate(OldLevel_IIIB(-1:1,-1:1,-1:1,nBLK))
     OldLevel_IIIB=NOBLK
-    allocate(DoReschangeWhileRestart_B(nBLK))
-    DoReschangeWhileRestart_B=.false.
     IsNotCorner_III=.true.
     IsNotCorner_III(-1,-1,-1)=.false.
     IsNotCorner_III(+1,-1,-1)=.false.
@@ -82,8 +79,7 @@ contains
        do_fix_geometry_at_reschange=.false.
        return
     end if
-    do_fix_geometry_at_reschange=(.not.DoReschangeWhileRestart_B(iBlock)).and.&
-         any(IsNotCorner_III(:,:,:).and.&
+    do_fix_geometry_at_reschange=any(IsNotCorner_III(:,:,:).and.&
          OldLevel_IIIB(:,:,:,iBlock)/=BLKneighborLEV(:,:,:,iBlock).and.&
          (OldLevel_IIIB(:,:,:,iBlock)==-1.or.BLKneighborLEV(:,:,:,iBlock)==-1))
   end function do_fix_geometry_at_reschange

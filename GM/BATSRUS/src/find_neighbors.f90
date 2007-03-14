@@ -22,7 +22,6 @@ subroutine find_neighbors
   use ModProcMH, ONLY: iProc
   use ModMain,   ONLY: nBlock, UnusedBLK
   use ModParallel
-  use ModCovariant,ONLY:do_fix_geometry_at_reschange !^CFG IF COVARIANT
   implicit none
 
   integer :: i, j, k, iBlock, iLevelOut
@@ -42,8 +41,6 @@ subroutine find_neighbors
         BLKneighborCHILD(i,j,k,:,iBlock) = iChildOut_I
         BLKneighborLEV  (i,j,k,  iBlock) = iLevelOut
      end do; end do; end do
-     if(do_fix_geometry_at_reschange(iBlock))&       !^CFG IF COVARIANT
-          call fix_geometry_at_reschange(iBlock)     !^CFG IF COVARIANT
   end do
 
   ! Fill up arrays which contain information about face neighbors only

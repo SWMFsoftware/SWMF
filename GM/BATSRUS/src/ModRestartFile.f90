@@ -371,6 +371,7 @@ contains
   !============================================================================
 
   subroutine read_restart_file(iBlock)
+
     integer, intent(in) :: iBlock
 
     integer   :: iVar, i, j, k, iError, iBlockRestart
@@ -397,6 +398,7 @@ contains
 
     if(iError /= 0) call stop_mpi(NameSub// &
          ' read_restart_file could not open: '//trim(NameFile))
+
     ! Fill in ghost cells
     do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
        State_VGB(1:nVar, i, j, k, iBlock) = DefaultState_V(1:nVar)
