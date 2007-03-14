@@ -159,7 +159,7 @@ test_titan_restart_check:
 	cd ${TESTDIR}/TitanTest; \
 		cp RestartSave/GM/log_n000001.log log_all.log; \
 		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/log_all.log > test_titan_restart.diff
 	ls -l test_titan*.diff
