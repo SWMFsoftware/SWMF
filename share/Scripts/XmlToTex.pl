@@ -86,14 +86,14 @@ while(<>){
     # \end{verbatim} finishes forced verbatim mode
     $Verbatim = 0 if /\\end\{verbatim\}/;
 
-    # #COMMAND or #COMMAND ID --> verbatim
-    if(/^\#[A-Z0-9_]+( [A-Z][A-Z])?\s*$/){
+    # #COMMAND or #COMMAND ID --> verbatim unless in forced Verbatim mode
+    if(/^\#[A-Z0-9_]+( [A-Z][A-Z])?\s*$/ and not $Verbatim){
 	$_='\begin'.'{verbatim}'."\n$_";
 	$verbatim = 1;
     }
 
-    # verbatim part ends with an empty line
-    if($verbatim and /^\s*$/){
+    # verbatim part ends with an empty line unless in forced Verbatim mode
+    if($verbatim and /^\s*$/ and not $Verbatim){
 	$_='\end'.'{verbatim}'."\n";
 	$verbatim = 0;
     }
