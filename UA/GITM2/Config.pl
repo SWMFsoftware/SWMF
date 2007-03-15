@@ -23,10 +23,11 @@ our $NewGridSize;
 our $ShowGridSize;
 our $Install;
 our $Compiler;
+our $OS;
 
 &print_help if $Help;
 
-# src/Makefile (needs fixing for ifort compiler)
+# src/Makefile (needs fixing for Linux/ifort compiler)
 my $SrcMakefile     = "src/Makefile";
 
 # Grid size variables
@@ -99,8 +100,8 @@ sub get_settings{
 
 sub install_code{
 
-    return unless $Compiler =~ /ifort/;
-    # Fix object list for ifort compiler (this is not kosher)
+    return unless $Compiler =~ /ifort/ and $OS =~ /Linux/;
+    # Fix object list for Linux/ifort compiler (this is not kosher)
     @ARGV = ($SrcMakefile);
     while (<>){
 	s/-lSHARE (.*ModIons.o)/-lSHARE/;
