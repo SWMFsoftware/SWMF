@@ -166,7 +166,6 @@ test2_rundir:
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-	cp Param/CR1922_MDI.dat ${TESTDIR}/SC/
 
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -177,7 +176,10 @@ test2_check:
 		${TESTDIR}/RESULTS/SC/log_n000001.log \
 		output/test2/SC_log_n000001.log \
 		> test2_sc.diff)
-	rm -f test2_ih.diff; touch test2_ih.diff
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000001.log \
+		output/test2/IH_log_n000001.log \
+		> test2_ih.diff)
 	ls -l test2*.diff
 
 ### ESMF test ###
