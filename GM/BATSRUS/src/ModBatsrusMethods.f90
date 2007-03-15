@@ -113,7 +113,7 @@ contains
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
-
+    use ModCovariant,   ONLY: DoReschangeWhileRestart !^CFG IF COVARIANT
     !\
     ! Set intial conditions for solution in each block.
     !/
@@ -148,8 +148,14 @@ contains
     ! Read initial data for solution blocks
     ! from restart files as necessary.
     !/
-    if(restart)call read_restart_files
-
+    if(restart)then
+       !Vertex based geometry at the resolution interfaces  !^CFG IF COVARIANT BEGIN 
+       !should be fixed while setting the block geometry
+       DoReschangeWhileRestart=.true.                       !^CFG END COVARIANT
+       call read_restart_files
+       DoReschangeWhileRestart=.false.                      !^CFG IF COVARIANT
+    end if
+ 
     do globalBLK = 1, nBlockMax
        !\
        ! Initialize solution block.

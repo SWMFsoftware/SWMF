@@ -32,7 +32,8 @@ module ModCovariant
   !the face area vectors at the resolution change. More general cell-centered grid 
   !either is not logically cartesian, or does not consist of the Voronoy cells only.
   !
-  logical :: UseVertexBasedGrid=.true.
+  logical :: UseVertexBasedGrid=.false.
+  logical :: DoReschangeWhileRestart=.false.
   character (len=20) ::TypeGeometry='cartesian'                            
   real,allocatable,dimension(:,:,:,:,:):: &            
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB

@@ -723,7 +723,7 @@ contains
   end subroutine refine_face_j_edge_k_plus
 !--------------------------------FACE K----------------------------------!
 !Fix face area vectors along K direction
-subroutine refine_face_k(kFace)
+  subroutine refine_face_k(kFace)
     integer,intent(in)::kFace
     real,dimension(nDim,2*nI,2*nJ,1)::RefFaceAreaK_DF,RefFaceCenterK_DF
     real,dimension(nDim,2*nI+1,2*nJ+1,1)::RefNodesK_DN
@@ -1000,9 +1000,11 @@ subroutine fix_covariant_geometry(iBLK)
   case('cylindrical')                             
      call fix_cylindrical_geometry(iBLK)                        
   end select
-  call test_fix_geometry_reschange
+  if(DoReschangeWhileRestart.and.do_fix_geometry_at_reschange(iBLK))&
+       call fix_geometry_at_reschange(iBLK)
+  call test_fix_geometry
 contains
-  subroutine test_fix_geometry_reschange
+  subroutine test_fix_geometry
     real,dimension(nDim)::FaceArea_D
     integer::iBlock
     iBlock=iBLK
@@ -1027,7 +1029,7 @@ contains
           call stop_mpi('Stopped')
        end if
     end do;end do;end do
-  end subroutine test_fix_geometry_reschange
+  end subroutine test_fix_geometry
 end subroutine fix_covariant_geometry
 !---------------------------------------------------------------------
 subroutine fix_spherical_geometry(iBLK)
