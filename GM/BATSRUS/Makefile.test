@@ -4,6 +4,7 @@
 
 test: 
 	-@(make test_shocktube)
+	-@(make test_corona)
 	-@(make test_titan)
 	-@(make test_mars)
 	-@(make test_venus)
@@ -54,7 +55,7 @@ test_shocktube_compile:
 	make PIDL
 
 test_shocktube_rundir: test_rundir
-	cd ${TESTDIR}; cp GM/Param/SHOCKTUBE/PARAM.in .
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in .
 
 test_shocktube_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
@@ -66,6 +67,38 @@ test_shocktube_check:
 	  Param/SHOCKTUBE/TestOutput/cut_raw_2_t00000025_n0000358_pe0000.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_shocktube.diff
 	ls -l test_shocktube.diff
+
+### STANDALONE SOLAR CORONA TEST ###
+
+test_corona:
+	@echo "test_corona_compile..." > test_corona.diff
+	make test_corona_compile
+	@echo "test_corona_rundir..." >> test_corona.diff
+	make test_corona_rundir
+	@echo "test_corona_run..." >> test_corona.diff
+	make test_corona_run
+	@echo "test_corona_check..." >> test_corona.diff
+	make test_corona_check
+
+test_corona_compile:
+	./Config.pl -u=Sc -e=MhdCorona -g=4,4,4,3000,1
+	make BATSRUS PIDL
+
+test_corona_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR} COMPONENT=SC GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in .
+	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
+
+test_corona_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_corona_check:
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+		Param/CORONA/TestOutput/log_n000001.log \
+		${TESTDIR}/RESULTS/SC/log_n000001.log > test_corona.diff
+	ls -l test_corona.diff
 
 ### FUNCTIONALITY TEST SUITE ###
 
@@ -116,8 +149,8 @@ test_titan_compile:
 
 test_titan_rundir: test_rundir
 	cd ${TESTDIR}; \
-		cp GM/Param/TITAN/PARAM.in .; \
-		tar xzf GM/Param/TITAN/TitanInput.tgz
+		cp Param/TITAN/PARAM.in .; \
+		tar xzf Param/TITAN/TitanInput.tgz
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_titan_run:
@@ -140,7 +173,7 @@ test_titan_restart:
 	make test_titan_restart_check
 
 test_titan_restart_save:
-	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartsave PARAM.in
+	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartsave PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf TitanTest/RestartSave RESTART_titan
@@ -148,7 +181,7 @@ test_titan_restart_save:
 	cd ${TESTDIR}; ./Restart.pl -o RESTART_titan; 
 
 test_titan_restart_read:
-	cd ${TESTDIR}; cp GM/Param/TITAN/PARAM.in.restartread PARAM.in
+	cd ${TESTDIR}; cp Param/TITAN/PARAM.in.restartread PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_titan
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
@@ -187,8 +220,8 @@ test_mars_compile:
 
 test_mars_rundir: test_rundir
 	cd ${TESTDIR}; \
-		cp GM/Param/MARS/PARAM.in .; \
-		cp GM/Param/MARS/marsmgsp.txt .
+		cp Param/MARS/PARAM.in .; \
+		cp Param/MARS/marsmgsp.txt .
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_mars_run:
@@ -225,7 +258,7 @@ test_venus_compile:
 
 test_venus_rundir: test_rundir
 	cd ${TESTDIR}; \
-		cp GM/Param/VENUS/PARAM.in .; \
+		cp Param/VENUS/PARAM.in .; \
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
 test_venus_run:
