@@ -1,0 +1,397 @@
+CON_world::setup_from_file SWMF_WARNING for SC iProcLast= 999 changed to    1
+CON_world::setup_from_file SWMF_WARNING for IH iProcLast= 999 changed to    1
+#=============================================================================#
+# ID  Version                                               nproc proc0 stride#
+#-----------------------------------------------------------------------------#
+# CON SWMF by Univ. of Michigan                version 2.20     2     0     1 #
+#-----------------------------------------------------------------------------#
+# SC  SC_BATSRUS (Univ. of Michigan)           version 7.80     2     0     1 #
+# IH  IH_BATSRUS (Univ. of Michigan)           version 7.80     2     0     1 #
+#=============================================================================#
+CON_io::read_inputs: iSession=  1
+ModReadParam::read_file: read and broadcast nLine= 171 lines of text
+
+#DESCRIPTION
+Input file for creating a steady state solar corona		StringDescription
+
+#TIMEACCURATE
+F		DoTimeAccurate
+
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond (default/unchanged)
+0.0 			FracSecond (default/unchanged)
+
+#SAVERESTART
+F			DoSaveRestart
+
+#COMPONENT
+IH		NameComp
+F		UseComp
+
+#BEGIN_COMP SC --------------------------------------------------------------
+SC: init_mod_restart_file: setting TypeRestartOutFile = block
+ SC_set_parameters: READ iSession = 1  iLine= 28  nLine = 150
+SC:
+SC:#COORDSYSTEM
+SC:HGR                     TypeCoordSystem (default/unchanged)
+ SC_set_parameters setting .UseRotatingFrame = T
+SC:
+SC:#USER_FLAGS
+SC:T			UseUserInnerBCs		UseUserInnerBcs
+SC:F			UseUserSource (default/unchanged)
+SC:T			UseUserPerturbation
+SC:F			UseUserOuterBcs (default/unchanged)
+SC:F			UseUserICs (default/unchanged)
+SC:T			UseUserSpecifyRefinement
+SC:F			UseUserLogFiles (default/unchanged)
+SC:F			UseUserWritePlot (default/unchanged)
+SC:F			UseUserAMR (default/unchanged)
+SC:F			UseUserEchoInput (default/unchanged)
+SC:T			UseUserB0
+SC:F			UseUserInitSession (default/unchanged)
+SC:T			UseUserUpdateStates
+SC:
+SC:#USERINPUTBEGIN ------------------------
+SC: User read_input HELIOSPHERE starts
+SC:
+SC:#PFSSM
+SC:T			UseUserB0 (default/unchanged)
+SC:1.0			Ro_PFSSM (default/unchanged)
+SC:2.5			Rs_PFSSM (default/unchanged)
+SC:0.0			H_PFSSM (default/unchanged)
+SC:SC/CR1935_WSO.dat       File_PFSSM
+SC:12			iHead_PFSSM
+SC:-1.0			PhiShift		Phi_Shift (default/unchanged)
+SC:1.0			UnitB
+SC: Norder =  90
+SC: Entered coefficient file name :: SC/CR1935_WSO.dat               
+SC: Entered number of header lines::  12
+SC: Reset N_PFSSM= 29
+SC: Phi_Shift=   3.1500000000000000E+02
+SC: Magnetogram is extended by  2  nodes towards the Sun
+SC: Writing PFSSM_Br output file, named
+SC: SC/IO2/PFSSM_Br.dat
+SC:-1.0			dt_UpdateB0 (default/unchanged)
+SC:
+SC:#EMPIRICALSW
+SC:WSA			SWModelType		NameModel
+SC: Writing PFSSM factors  output file
+SC:
+SC:#USERINPUTEND ----------------------------
+SC: User read_input HELIOSPHERE ends
+SC:
+SC:#BODY
+SC:T			Usebody		UseBody (default/unchanged)
+SC:1.0			rBody (default/unchanged)
+SC:3.0E+8			Body_Rho_Dim		BodyNDim
+SC:2.0E+6			Body_T_Dim		BodyTDim
+SC:
+SC:#GAMMA
+SC:1.5000E+00		g		Gamma
+SC:
+SC:#GRID
+SC:1			nProcX		nRootBlockX (default/unchanged)
+SC:1			nProcY		nRootBlockY (default/unchanged)
+SC:1			nProcZ		nRootBlockZ (default/unchanged)
+SC:-24.0			xMin
+SC: 24.0			xMax
+SC:-24.0			yMin
+SC: 24.0			yMax
+SC:-24.0			zMin
+SC: 24.0			zMax
+SC:
+SC:#OUTERBOUNDARY
+SC:float	                TypeBcOuter_E(East_)		TypeBcEast (default/unchanged)
+SC:float   	        TypeBcOuter_E(West_)		TypeBcWest (default/unchanged)
+SC:float	                TypeBcOuter_E(South_)		TypeBcSouth (default/unchanged)
+SC:float	  		TypeBcOuter_E(North_)		TypeBcNorth (default/unchanged)
+SC:float	 	        TypeBcOuter_E(Bot_)		TypeBcBottom (default/unchanged)
+SC:float	   		TypeBcOuter_E(Top_)		TypeBcTop (default/unchanged)
+SC:
+SC:#AMRINIT
+SC:helio_init		TypeAmrInit		TypeRefineInit
+SC:2			nRefineLevelInit
+SC:
+SC:#USECURLB0
+SC:T		UseCurlB0
+SC:2.5		rCurrentFreeB0
+SC:
+SC:#AMR
+SC:30			DnRefine
+SC:F			DoAutomaticRefinement		DoAutoRefine (default/unchanged)
+SC:
+SC:#SCHEME
+SC:2			nOrder (1 or 2) (default/unchanged)
+SC:Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+SC:mc                      TypeLimiter
+SC:1.2			BetaLimiter		LimiterBeta
+SC:
+SC:#TVDRESCHANGE
+SC:T                       UseTVDatResChange		UseTvdResChange
+SC:
+SC:#RESCHANGEBOUNDARY
+SC:T		SaveBoundaryCells
+SC:
+SC:#DIVB
+SC:T		UseDivbSource (default/unchanged)
+SC:
+SC:#TIMESTEPPING
+SC:2                       nStage (default/unchanged)
+SC:0.80                    CflExpl (default/unchanged)
+SC:
+SC:#SAVELOGFILE
+SC:T			DoSaveLogfile
+SC:RAW			StringLogfile
+SC:1			DnSaveLogfile
+SC:-1.			DtSaveLogfile (default/unchanged)
+SC:
+SC:#SAVEPLOT
+SC:3			nPlotFiles
+SC:y=0 MHD idl		StringPlot
+SC:1000                   	DnSavePlot
+SC:-1.			DtSavePlot (default/unchanged)
+SC:-1.			DxSavePlot
+SC:y=0 MHD idl		StringPlot (default/unchanged)
+SC:1000			DnSavePlot
+SC:-1.			DtSavePlot (default/unchanged)
+SC:-1.			DxSavePlot
+SC:z=0 MHD idl		StringPlot
+SC:1000			DnSavePlot
+SC:-1.			DtSavePlot (default/unchanged)
+SC:-1.			DxSavePlot
+#END_COMP SC ----------------------------------------------------------------
+
+#STOP
+100		MaxIteration
+-1.0		tSimulationMax
+
+#RUN ########################################################################
+ SC_set_parameters: CHECK iSession = 1
+  
+ Only Extra and Outer boundary cells can be saved
+ ----- Starting Session  1  ------
+
+SC: BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+SC:          for 3D Heliospheric Flows
+SC: University of Michigan, 1995-2007
+
+SC: USER MODULE: EMPIRICAL SC - Cohen, Sokolov 1.00
+
+SC: SC_BATS_setup starting initial refinement level  1
+SC: SC_parallel_refine starting to refine  1  block(s) on PE 0
+SC: SC_BATS_setup starting initial refinement level  2
+SC: SC_parallel_refine starting to refine  8  block(s) on PE 0
+SC: renumber_octree: finished renumbering 64  blocks.
+SC:     total blocks =  64
+SC:
+SC:    Begin Numerical Simulation
+SC:    --------------------------
+SC:
+SC:
+SC:    Planetary Parameters
+SC:    --------------------
+SC:
+SC:          Name:            EARTH                                     
+SC:          Radius:           6.37800E+06
+SC:          Mass:             5.97600E+24
+SC:          Rotation Tilt:    4.10152E-01
+SC:          Rotation Period:  8.61641E+04
+SC:          Orbit Period:     3.15569E+07
+SC:          Iono Height:      1.10000E+05
+SC:
+SC:    Physical Parameters
+SC:    -------------------
+SC:
+SC:          I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
+SC:
+SC:          gamma:         1.50000000
+SC:
+SC:          rBody:         1.00000E+00, rPlanet:     6.96000E+08
+SC:            Body_N_dim:  3.00000E+08, Body_T_dim:  2.00000E+06
+SC:          Bdp:           0.00000E+00, Tilt:        0.00000E+00
+SC:          Gravity is used, gBody= -7.70390E+00
+SC:
+SC:
+SC:          cLIGHTfactor:  1.00000E+00, cLIGHT:      1.90503E+03
+SC:
+SC:
+SC:    MHD Numerical Solution Parameters
+SC:    ---------------------------------
+SC:
+SC:          2nd-Order Scheme
+SC:          with limiter mc    
+SC:          beta= 1.20
+SC:          Steady state calculation
+SC:          Sokolov Flux Function
+SC:          Explicit Time Stepping
+SC:
+SC:    Other Runtime Parameters
+SC:    ------------------------
+SC:
+SC: Available processors: nProc =  2
+SC:
+SC: After initial grid setup:
+SC:   nBlockMax =  64  nBLK =  3000
+SC:   Total number of blocks used =  64
+SC:   Total number of cells =  4096
+SC:   Smallest cell dx:    3.0000000000000000   Largest cell dx:    3.0000000000000000
+SC:
+SC: root blocks:        1       1       1
+SC: nCells:             4       4       4
+SC: x:               -24.00000000     24.00000000
+SC: y:               -24.00000000     24.00000000
+SC: z:               -24.00000000     24.00000000
+SC: multistage:         2
+SC: cfl:               0.80000000
+SC:
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0 SC on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                      0.35    100.00         1         1
+-------------------------------------------------------------------------------
+SETUP                     0.35    100.00         1         1
+SC_load_balance           0.08     24.27         1         1
+exch_msgs                 0.01      2.01         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+SC: First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.1718750000000000E-02
+Progress:      10 steps,   0.00000     s simulation time,      0.90 s CPU time
+Progress:      20 steps,   0.00000     s simulation time,      1.84 s CPU time
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+SC: SC_parallel_refine starting to refine  8  block(s) on PE 0
+SC: renumber_octree: finished renumbering 120  blocks.
+SC: |
+SC: |  SC_amr:  nBlockMax =  64  nBLK =  3000
+SC: |  SC_amr:  Total number of blocks used =  120
+SC: |  SC_amr:  Total number of cells =  7680
+SC: |  Smallest cell dx:    1.5000000000000000   Largest cell dx:    3.0000000000000000
+SC: |
+Timing for last SC_amr (SC_run):    0.10 sec
+Timing for last SC_load_balance (SC_amr):    0.00 sec
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+Progress:      30 steps,   0.00000     s simulation time,      2.84 s CPU time
+Progress:      40 steps,   0.00000     s simulation time,      4.33 s CPU time
+Progress:      50 steps,   0.00000     s simulation time,      5.77 s CPU time
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+SC: SC_parallel_refine starting to refine  33  block(s) on PE 0
+     SC_fixRefinementLevels found  36  blocks to refine
+SC: SC_parallel_refine starting to refine  36  block(s) on PE 0
+SC: renumber_octree: finished renumbering 603  blocks.
+SC: |
+SC: |  SC_amr:  nBlockMax =  319  nBLK =  3000
+SC: |  SC_amr:  Total number of blocks used =  603
+SC: |  SC_amr:  Total number of cells =  38592
+SC: |  Smallest cell dx:    0.7500000000000000   Largest cell dx:    3.0000000000000000
+SC: |
+Timing for last SC_amr (SC_run):    0.47 sec
+Timing for last SC_load_balance (SC_amr):    0.03 sec
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+Progress:      60 steps,   0.00000     s simulation time,      7.75 s CPU time
+Progress:      70 steps,   0.00000     s simulation time,     13.54 s CPU time
+Progress:      80 steps,   0.00000     s simulation time,     19.37 s CPU time
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+SC: SC_parallel_refine starting to refine  174  block(s) on PE 0
+     SC_fixRefinementLevels found  52  blocks to refine
+SC: SC_parallel_refine starting to refine  52  block(s) on PE 0
+SC: renumber_octree: finished renumbering 2185  blocks.
+SC: |
+SC: |  SC_amr:  nBlockMax =  1134  nBLK =  3000
+SC: |  SC_amr:  Total number of blocks used =  2185
+SC: |  SC_amr:  Total number of cells =  139840
+SC: |  Smallest cell dx:    0.3750000000000000   Largest cell dx:    3.0000000000000000
+SC: |
+Timing for last SC_amr (SC_run):    1.34 sec
+Timing for last SC_load_balance (SC_amr):    0.07 sec
+SC: >>>>>>>>>>>>>>>>>>>> SC_amr <<<<<<<<<<<<<<<<<<<<
+Progress:      90 steps,   0.00000     s simulation time,     26.48 s CPU time
+Progress:     100 steps,   0.00000     s simulation time,     46.50 s CPU time
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100 SC on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1    46.50   46.501   46.501   100.00
+-------------------------------------------------------------------------------
+SC_run                  100     100    46.50    0.465    0.465   100.00
+-------------------------------------------------------------------------------
+ ----- End of Session    1  ------
+CON_io::read_inputs: iSession=  2
+
+#BEGIN_COMP SC --------------------------------------------------------------
+ SC_set_parameters: READ iSession = 2  iLine= 160  nLine = 165
+SC:
+SC:#AMR
+SC:-1			DnRefine
+#END_COMP SC -----------------------------------------------------------------
+
+#STOP
+200		MaxIteration
+-1.0		tSimulationMax (default/unchanged)
+ SC_set_parameters: CHECK iSession = 2
+  
+ ----- Starting Session  2  ------
+Progress:     110 steps,   0.00000     s simulation time,     66.80 s CPU time
+Progress:     120 steps,   0.00000     s simulation time,     86.85 s CPU time
+Progress:     130 steps,   0.00000     s simulation time,    106.82 s CPU time
+Progress:     140 steps,   0.00000     s simulation time,    126.84 s CPU time
+Progress:     150 steps,   0.00000     s simulation time,    146.80 s CPU time
+Progress:     160 steps,   0.00000     s simulation time,    166.75 s CPU time
+Progress:     170 steps,   0.00000     s simulation time,    186.78 s CPU time
+Progress:     180 steps,   0.00000     s simulation time,    206.78 s CPU time
+Progress:     190 steps,   0.00000     s simulation time,    226.81 s CPU time
+Progress:     200 steps,   0.00000     s simulation time,    246.75 s CPU time
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     100 to     200 SC on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+SWMF                      1       1   200.25  200.252  200.252   100.00
+-------------------------------------------------------------------------------
+SC_run                  100     100   200.04    2.000    2.000    99.89
+exch_msgs                 1       1     0.21    0.214    0.214     0.11
+#others                                 0.00    0.003              0.00
+-------------------------------------------------------------------------------
+
+    Finished Numerical Simulation
+    -----------------------------
+SC:saved ifile= 3 type=y=0_mhd    at n_step=    200
+SC:saved ifile= 4 type=y=0_mhd    at n_step=    200
+SC:saved ifile= 5 type=z=0_mhd    at n_step=    200
+SC:SC_error_report for Time step reduction, min(factor)
+SC: OCCURED first= 1  last= 96  count_max= 41  count_sum= 41
+SC: VALUES min=   1.1718750000000000E-02  max=   0.7500000000000000  mean=   0.3112614329268292  last=   0.7500000000000000  last_sum=   0.7500000000000000
+SC:
+
+    Finished Finalizing SWMF
+    ------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     200 SC on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+SWMF                    247.35    100.00         1         1
+-------------------------------------------------------------------------------
+SC_run                  246.54     99.67       200       200
+-------------------------------------------------------------------------------
+advance                 233.21     94.28       200       200
+calc_facevalues          58.61     23.70       200    263820
+exch_msgs                48.04     19.42       204       407
+calc_fluxes              38.52     15.57       200    263820
+SC_update_states         33.46     13.53       200    263820
+calc_face_bfo            15.11      6.11       170    162540
+SC_calc_sources          14.08      5.69       200    263820
+SC_update_check          12.91      5.22       200       400
+save_logfile             11.41      4.61       200       200
+barrier-expl2             4.99      2.02       200       400
+calc_fluxes_bfo           2.94      1.19       170    162540
+SC_amr                    1.91      0.77         3         3
+int_domain                1.83      0.74       200       200
+send_cons_flux            1.30      0.53       200       400
+save_plot                 0.57      0.23         1         3
+barrier-expl1             0.21      0.08       200       400
+SC_set_BCs                0.20      0.08       140      5080
+SC_load_balance           0.10      0.04         3         3
+-------------------------------------------------------------------------------

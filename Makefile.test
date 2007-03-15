@@ -14,12 +14,14 @@ test_help:
 	@echo "    test_pw                    (run polar wind test only)"
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
 	@echo "    test1                      (run GM-IE-PW test only )"
+	@echo "    test2                      (run SC-IH test only )"
 
 test:
 	-@(make test_comp)
 	-@(make test_pw)
 	-@(make test_esmf)
 	-@(make test1)
+	-@(make test2)
 	-@(make test_check)
 
 test_check:
@@ -79,6 +81,8 @@ test_pw_check:
 		> test_pw_plots.diff)
 	ls -l test_pw*.diff
 
+### Test1: PW+IE+GM ###
+
 test1:
 	@echo "test1_compile..." > test1_gm.diff
 	@echo "test1_compile..." > test1_ie.diff
@@ -135,6 +139,46 @@ test1_check:
 		output/test1/IE_it000321_104510_000.idl \
 		>> test1_ie.diff)
 	ls -l test1*.diff
+
+### test2: SC+IH test ###
+
+test2:
+	@echo "test2_compile..." > test2_sc.diff
+	@echo "test2_compile..." > test2_ih.diff
+	make test2_compile
+	@echo "test2_rundir..." >> test2_sc.diff
+	@echo "test2_rundir..." >> test2_ih.diff
+	make test2_rundir
+	@echo "test2_run..." >> test2_sc.diff
+	@echo "test2_run..." >> test2_ih.diff
+	make test2_run
+	@echo "test2_check..." >> test2_sc.diff
+	@echo "test2_check..." >> test2_ih.diff
+	make test2_check
+
+test2_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -g=SC:4,4,4,3000,IH:8,8,8,400,1
+	make SWMF
+
+test2_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+	cp Param/CR1922_MDI.dat ${TESTDIR}/SC/
+
+test2_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test2_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/SC/log_n000001.log \
+		output/test2/SC_log_n000001.log \
+		> test2_sc.diff)
+	rm -f test2_ih.diff; touch test2_ih.diff
+	ls -l test2*.diff
 
 ### ESMF test ###
 #
