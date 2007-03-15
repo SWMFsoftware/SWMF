@@ -1777,7 +1777,7 @@ contains
     case('IH')
        TypeCoordSystem   = 'HGI'
        UseRotatingFrame  = .false.
-       UseRotatingBc     = .true.
+       UseRotatingBc     = .false.
     case('SC')
        TypeCoordSystem   = 'HGR'
        UseRotatingFrame  = .true.
