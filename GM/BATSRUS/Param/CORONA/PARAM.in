@@ -51,12 +51,12 @@ CR1935_WSO.dat          File_PFSSM
 -1.0			dt_UpdateB0
 
 #EMPIRICALSW
-WSA			SWModelType
+WSA			NameModel
 
 #USERINPUTEND ----------------------------
 
 #BODY
-T			Usebody
+T			UseBody
 1.0			rBody
 3.0E+8			BodyNDim
 2.0E+6			BodyTDim

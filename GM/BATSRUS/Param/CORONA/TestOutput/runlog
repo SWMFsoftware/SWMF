@@ -71,14 +71,14 @@ CR1935_WSO.dat          File_PFSSM
 -1.0			dt_UpdateB0 (default/unchanged)
 
 #EMPIRICALSW
-WSA			SWModelType		NameModel
+WSA			NameModel
  Writing PFSSM factors  output file
 
 #USERINPUTEND ----------------------------
  User read_input HELIOSPHERE ends
 
 #BODY
-T			Usebody		UseBody (default/unchanged)
+T			UseBody (default/unchanged)
 1.0			rBody (default/unchanged)
 3.0E+8			BodyNDim
 2.0E+6			BodyTDim
