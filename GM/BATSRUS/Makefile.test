@@ -33,7 +33,7 @@ test_help:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} STANDALONE=GM GMDIR=`pwd`
+	make rundir RUNDIR=${TESTDIR} STANDALONE=YES GMDIR=`pwd`
 
 
 ### SHOCK TUBE TEST ###
@@ -86,7 +86,7 @@ test_corona_compile:
 
 test_corona_rundir:
 	rm -rf ${TESTDIR}
-	make rundir RUNDIR=${TESTDIR} COMPONENT=SC GMDIR=`pwd`
+	make rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in .
 	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
 
