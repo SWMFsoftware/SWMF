@@ -233,8 +233,10 @@ subroutine MH_set_parameters(TypeAction)
      select case(NameCommand)
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
-        if(NameThisComp /= NameCompRead) call set_defaults
-        NameThisComp = NameCompRead
+        if(NameThisComp /= NameCompRead)then
+           NameThisComp = NameCompRead
+           call set_defaults
+        end if
      case("#DESCRIPTION")
         call check_stand_alone
      case("#BEGIN_COMP","#END_COMP")
