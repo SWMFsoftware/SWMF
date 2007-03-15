@@ -34,7 +34,7 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O3
 
-CFLAG = ${SEARCH} -c -ieee=full -w -dusty -xT -ipo ${DEBUG}
+CFLAG = ${SEARCH} -c -ieee=full -w -dusty -xT -ipo -vec-report0 ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
