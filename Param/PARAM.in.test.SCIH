@@ -1,11 +1,11 @@
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
 
 #TIMEACCURATE
-F
+F			DoTimeAccurate
 
 #STARTTIME
 1998			iYear
@@ -24,7 +24,7 @@ F			DoSaveRestart
 #BEGIN_COMP IH -------------------------------------------------------------
 
 #BODY
-T			Usebody
+T			UseBody
 20.0			rBody
 3.0E+8			Body_Rho_Dim
 2.0E+6			Body_T_Dim
@@ -107,7 +107,7 @@ F
 HGR                     TypeCoordSystem
 
 #USER_FLAGS
-T			UseUserInnerBCs
+T			UseUserInnerBcs
 F			UseUserSource
 T			UseUserPerturbation
 F			UseUserOuterBcs
@@ -135,45 +135,45 @@ SC/CR1935_WSO.dat       File_PFSSM
 -1.0			dt_UpdateB0
 
 #EMPIRICALSW
-WSA			SWModelType
+WSA			NameModel
 
 #USERINPUTEND ----------------------------
 
 #BODY
 T			Usebody
 1.0			rBody
-3.0E+8			Body_Rho_Dim
-2.0E+6			Body_T_Dim
+3.0E+8			BodyNDim
+2.0E+6			BodyTDim
 
 #GAMMA
-1.5000E+00		g
+1.5000E+00		Gamma
 
 #GRID
-1			nProcX
-1			nProcY
-1			nProcZ
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
 -24.0			xMin
- 24.0			xMax 
+ 24.0			xMax
 -24.0			yMin
  24.0			yMax
 -24.0			zMin
  24.0			zMax
 
 #OUTERBOUNDARY
-float	                TypeBcOuter_E(East_)
-float   	        TypeBcOuter_E(West_)
-float	                TypeBcOuter_E(South_)
-float	  		TypeBcOuter_E(North_)
-float	 	        TypeBcOuter_E(Bot_)
-float	   		TypeBcOuter_E(Top_)
+float	                TypeBcEast
+float   	        TypeBcWest
+float	                TypeBcSouth
+float	  		TypeBcNorth
+float	 	        TypeBcBot
+float	   		TypeBcTop
 
 #AMRINIT
-helio_init		TypeAmrInit
+helio_init		TypeRefineInit
 2			nRefineLevelInit
 
 #USECURLB0
-T
-2.5
+T			UseCurlB0
+2.5			rCurrentFreeB0
 
 #AMR
 30			DnRefine
@@ -183,19 +183,13 @@ F			DoAutomaticRefinement
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc                      TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #TVDRESCHANGE
-T                       UseTVDatResChange
+T                       UseTvdResChange
 
 #RESCHANGEBOUNDARY
 T
-
-#DIVB
-T
-T
-F
-F
 
 #TIMESTEPPING
 2                       nStage
@@ -225,9 +219,8 @@ z=0 MHD idl		StringPlot
 #END_COMP SC ----------------------------------------------------------------
 
 #STOP
-100
--1.0
-
+100			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ########################################################################
 
@@ -235,7 +228,6 @@ z=0 MHD idl		StringPlot
 
 #AMR
 -1			DnRefine
-F			DoAutomaticRefinement 
 
 #END_COMP SC -----------------------------------------------------------------
 
