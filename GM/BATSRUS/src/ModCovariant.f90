@@ -33,7 +33,6 @@ module ModCovariant
   !either is not logically cartesian, or does not consist of the Voronoy cells only.
   !
   logical :: UseVertexBasedGrid=.true.
-  logical :: DoReschangeWhileRestart=.false.
   character (len=20) ::TypeGeometry='cartesian'                            
   real,allocatable,dimension(:,:,:,:,:):: &            
         FaceAreaI_DFB,FaceAreaJ_DFB,FaceAreaK_DFB

@@ -1000,8 +1000,6 @@ subroutine fix_covariant_geometry(iBLK)
   case('cylindrical')                             
      call fix_cylindrical_geometry(iBLK)                        
   end select
-  if(DoReschangeWhileRestart.and.do_fix_geometry_at_reschange(iBLK))&
-       call fix_geometry_at_reschange(iBLK)
   call test_fix_geometry
 contains
   subroutine test_fix_geometry

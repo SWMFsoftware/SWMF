@@ -113,7 +113,7 @@ contains
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface       !^CFG IF CONSTRAINB
     use ModRestartFile, ONLY: read_restart_files
-    use ModCovariant,   ONLY: DoReschangeWhileRestart !^CFG IF COVARIANT
+    use ModCovariant,   ONLY: UseVertexBasedGrid,do_fix_geometry_at_reschange !^CFG IF COVARIANT
     !\
     ! Set intial conditions for solution in each block.
     !/
@@ -121,7 +121,7 @@ contains
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = &
          NameSub//'::set_initial_conditions'
-    integer :: iLevel, iError
+    integer :: iLevel, iError,iBlock
     !-------------------------------------------------------------------------
     if(.not.restart .and. nRefineLevelIC>0)then
        do iLevel=1,nRefineLevelIC
@@ -149,11 +149,15 @@ contains
     ! from restart files as necessary.
     !/
     if(restart)then
+       call read_restart_files
        !Vertex based geometry at the resolution interfaces  !^CFG IF COVARIANT BEGIN 
        !should be fixed while setting the block geometry
-       DoReschangeWhileRestart=.true.                       !^CFG END COVARIANT
-       call read_restart_files
-       DoReschangeWhileRestart=.false.                      !^CFG IF COVARIANT
+       if(UseVertexBasedGrid)then
+          Do iBlock=1,nBlockMax
+             if(do_fix_geometry_at_reschange(iBlock))&
+                  call fix_geometry_at_reschange(iBlock)
+          end Do
+       end if                                               !^CFG END COVARIANT
     end if
  
     do globalBLK = 1, nBlockMax
