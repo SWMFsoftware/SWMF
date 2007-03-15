@@ -97,9 +97,11 @@ PSPH:
 # The default is the short name of the current machine
 MACHINE = `hostname | sed -e 's/\..*//'`
 
+COMPONENT = GM
+
 rundir:
-	mkdir -p ${RUNDIR}/GM
-	cd ${RUNDIR}/GM; \
+	mkdir -p ${RUNDIR}/${COMPONENT}
+	cd ${RUNDIR}/${COMPONENT}; \
 		mkdir restartIN restartOUT IO2; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
@@ -116,7 +118,7 @@ rundir:
 		cp ${SCRIPTDIR}/PostProc.pl ${RUNDIR}/; \
 		cp ${SCRIPTDIR}/Restart.pl ${RUNDIR}/; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/BATSRUS.exe .; \
-		ln -s GM/* .;                          \
+		ln -s ${COMPONENT}/* .;                          \
 	fi);
 
 #
