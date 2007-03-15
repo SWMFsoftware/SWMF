@@ -1,0 +1,384 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 7.80 is running as GM on    2 PE(s)
+
+ USER MODULE: EMPIRICAL SC - Cohen, Sokolov 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 146 lines of text
+ ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = block
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 146
+
+#COMPONENT
+SC			NameComp
+ init_mod_restart_file: setting TypeRestartOutFile = block
+
+#DESCRIPTION
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+1998			iYear
+5			iMonth
+1			iDay
+0			iHour
+0			iMinute
+0			iSecond (default/unchanged)
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem (default/unchanged)
+ GM_set_parameters setting .UseRotatingFrame = T
+
+#USER_FLAGS
+T			UseUserInnerBcs
+F			UseUserSource (default/unchanged)
+T			UseUserPerturbation
+F			UseUserOuterBcs (default/unchanged)
+F			UseUserICs (default/unchanged)
+T			UseUserSpecifyRefinement
+F			UseUserLogFiles (default/unchanged)
+F			UseUserWritePlot (default/unchanged)
+F			UseUserAMR (default/unchanged)
+F			UseUserEchoInput (default/unchanged)
+T			UseUserB0
+F			UseUserInitSession (default/unchanged)
+T			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+ User read_input HELIOSPHERE starts
+
+#PFSSM
+T			UseUserB0 (default/unchanged)
+1.0			Ro_PFSSM (default/unchanged)
+2.5			Rs_PFSSM (default/unchanged)
+0.0			H_PFSSM (default/unchanged)
+CR1935_WSO.dat          File_PFSSM
+12			iHead_PFSSM
+-1.0			PhiShift		Phi_Shift (default/unchanged)
+1.0			UnitB
+ Norder =  90
+ Entered coefficient file name :: CR1935_WSO.dat                  
+ Entered number of header lines::  12
+ Reset N_PFSSM= 29
+ Phi_Shift=   3.1500000000000000E+02
+ Magnetogram is extended by  2  nodes towards the Sun
+ Writing PFSSM_Br output file, named
+ SC/IO2/PFSSM_Br.dat
+-1.0			dt_UpdateB0 (default/unchanged)
+
+#EMPIRICALSW
+WSA			SWModelType		NameModel
+ Writing PFSSM factors  output file
+
+#USERINPUTEND ----------------------------
+ User read_input HELIOSPHERE ends
+
+#BODY
+T			Usebody		UseBody (default/unchanged)
+1.0			rBody (default/unchanged)
+3.0E+8			BodyNDim
+2.0E+6			BodyTDim
+
+#GAMMA
+1.5000E+00		Gamma
+
+#GRID
+1			nRootBlockX (default/unchanged)
+1			nRootBlockY (default/unchanged)
+1			nRootBlockZ (default/unchanged)
+-24.0			xMin
+ 24.0			xMax
+-24.0			yMin
+ 24.0			yMax
+-24.0			zMin
+ 24.0			zMax
+
+#OUTERBOUNDARY
+float	                TypeBcEast (default/unchanged)
+float   	        TypeBcWest (default/unchanged)
+float	                TypeBcSouth (default/unchanged)
+float	  		TypeBcNorth (default/unchanged)
+float	 	        TypeBcBot		TypeBcBottom (default/unchanged)
+float	   		TypeBcTop (default/unchanged)
+
+#AMRINIT
+helio_init		TypeRefineInit
+2			nRefineLevelInit
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
+#AMR
+30			DnRefine
+F			DoAutomaticRefinement		DoAutoRefine (default/unchanged)
+
+#SCHEME
+2			nOrder (1 or 2) (default/unchanged)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			LimiterBeta
+
+#TVDRESCHANGE
+T                       UseTvdResChange
+
+#RESCHANGEBOUNDARY
+T		SaveBoundaryCells
+
+#TIMESTEPPING
+2                       nStage (default/unchanged)
+0.80                    CflExpl (default/unchanged)
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile (default/unchanged)
+
+#SAVEPLOT
+3			nPlotFiles
+y=0 MHD idl		StringPlot
+1000                   	DnSavePlot
+-1.			DtSavePlot (default/unchanged)
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot (default/unchanged)
+1000			DnSavePlot
+-1.			DtSavePlot (default/unchanged)
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+1000			DnSavePlot
+-1.			DtSavePlot (default/unchanged)
+-1.			DxSavePlot
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax (default/unchanged)
+
+#RUN ########################################################################
+ SC_set_parameters: CHECK iSession = 1
+  
+ Only Extra and Outer boundary cells can be saved
+ BATS_setup starting initial refinement level  1
+ parallel_refine starting to refine  1  block(s) on PE 0
+ BATS_setup starting initial refinement level  2
+ parallel_refine starting to refine  8  block(s) on PE 0
+ renumber_octree: finished renumbering 64  blocks.
+     total blocks =  64
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Planetary Parameters
+    --------------------
+
+          Name:            EARTH                                     
+          Radius:           6.37800E+06
+          Mass:             5.97600E+24
+          Rotation Tilt:    4.10152E-01
+          Rotation Period:  8.61641E+04
+          Orbit Period:     3.15569E+07
+          Iono Height:      1.10000E+05
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: HELIOSPHERIC            Normalization: SOLARWIND
+
+          gamma:         1.50000000
+
+          rBody:         1.00000E+00, rPlanet:     6.96000E+08
+            Body_N_dim:  3.00000E+08, Body_T_dim:  2.00000E+06
+          Bdp:           0.00000E+00, Tilt:        0.00000E+00
+          Gravity is used, gBody= -7.70390E+00
+
+          body2: .false.
+
+          cLIGHTfactor:  1.00000E+00, cLIGHT:      1.90503E+03
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-Order Scheme
+          with limiter mc    
+          beta= 1.20
+          Steady state calculation
+          Sokolov Flux Function
+          Explicit Time Stepping
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax =  64  nBLK =  3000
+   Total number of blocks used =  64
+   Total number of cells =  4096
+   Smallest cell dx:    3.0000000000000000   Largest cell dx:    3.0000000000000000
+
+ root blocks:        1       1       1
+ nCells:             4       4       4
+ x:               -24.00000000     24.00000000
+ y:               -24.00000000     24.00000000
+ z:               -24.00000000     24.00000000
+ multistage:         2
+ cfl:               0.80000000
+
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.35    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.35    100.00         1         1
+load_balance              0.05     13.26         1         1
+exch_msgs                 0.01      1.93         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.1718750000000000E-02
+Speed is  39319.6 c/s/p after      0.9 s at N =      10
+Speed is  35774.8 c/s/p after      1.9 s at N =      20
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+ parallel_refine starting to refine  8  block(s) on PE 0
+ renumber_octree: finished renumbering 120  blocks.
+ |
+ |  AMR:  nBlockMax =  64  nBLK =  3000
+ |  AMR:  Total number of blocks used =  120
+ |  AMR:  Total number of cells =  7680
+ |  Smallest cell dx:    1.5000000000000000   Largest cell dx:    3.0000000000000000
+ |
+Timing for last SC_amr (BATSRUS):    0.10 sec
+Timing for last load_balance (SC_amr):    0.00 sec
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+Speed is  74782.4 c/s/p after      3.0 s at N =      30
+Speed is  36265.1 c/s/p after      4.5 s at N =      40
+Speed is  36057.4 c/s/p after      6.0 s at N =      50
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+ parallel_refine starting to refine  33  block(s) on PE 0
+     FixRefinementLevels found  36  blocks to refine
+ parallel_refine starting to refine  36  block(s) on PE 0
+ renumber_octree: finished renumbering 603  blocks.
+ |
+ |  AMR:  nBlockMax =  319  nBLK =  3000
+ |  AMR:  Total number of blocks used =  603
+ |  AMR:  Total number of cells =  38592
+ |  Smallest cell dx:    0.7500000000000000   Largest cell dx:    3.0000000000000000
+ |
+Timing for last SC_amr (BATSRUS):    0.47 sec
+Timing for last load_balance (SC_amr):    0.03 sec
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+Speed is 135694.5 c/s/p after      8.0 s at N =      60
+Speed is  36842.7 c/s/p after     13.8 s at N =      70
+Speed is  36451.4 c/s/p after     19.6 s at N =      80
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+ parallel_refine starting to refine  174  block(s) on PE 0
+     FixRefinementLevels found  52  blocks to refine
+ parallel_refine starting to refine  52  block(s) on PE 0
+ renumber_octree: finished renumbering 2185  blocks.
+ |
+ |  AMR:  nBlockMax =  1134  nBLK =  3000
+ |  AMR:  Total number of blocks used =  2185
+ |  AMR:  Total number of cells =  139840
+ |  Smallest cell dx:    0.3750000000000000   Largest cell dx:    3.0000000000000000
+ |
+Timing for last SC_amr (BATSRUS):    2.97 sec
+Timing for last load_balance (SC_amr):    0.07 sec
+ >>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<
+Speed is 122717.3 c/s/p after     28.4 s at N =      90
+Speed is  35932.5 c/s/p after     48.3 s at N =     100
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    48.29   48.290   48.290   100.00
+-------------------------------------------------------------------------------
+advance                 100     100    40.13    0.401    0.401    83.11
+save_logfile            100     100     4.61    0.046    0.046     9.55
+SC_amr                    3       3     3.54    1.180    1.180     7.33
+-------------------------------------------------------------------------------
+
+   100 of    100 iterations completed.   Expected time to completion:      0.00
+
+ ----- End of Session    1  ------
+ ----- Starting Session  2  ------
+ SC_set_parameters: READ iSession = 1  iLine= 139  nLine = 146
+
+#AMR
+-1			DnRefine
+
+#STOP
+200		MaxIteration
+-1.0		tSimulationMax (default/unchanged)
+ SC_set_parameters: CHECK iSession = 1
+  
+Speed is  35883.3 c/s/p after     68.4 s at N =     110
+Speed is  36449.6 c/s/p after     89.2 s at N =     120
+Speed is  35876.6 c/s/p after    109.1 s at N =     130
+Speed is  35872.4 c/s/p after    129.1 s at N =     140
+Speed is  36186.9 c/s/p after    149.0 s at N =     150
+Speed is  36556.0 c/s/p after    168.9 s at N =     160
+Speed is  36653.0 c/s/p after    188.7 s at N =     170
+Speed is  36901.2 c/s/p after    208.7 s at N =     180
+Speed is  36929.2 c/s/p after    228.6 s at N =     190
+Speed is  36143.2 c/s/p after    248.5 s at N =     200
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step     100 to     200    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1   200.25  200.253  200.253   100.00
+-------------------------------------------------------------------------------
+advance                 100     100   193.36    1.934    1.934    96.56
+save_logfile            100     100     6.68    0.067    0.067     3.34
+exch_msgs                 1       1     0.20    0.202    0.202     0.10
+#others                                 0.01    0.008              0.00
+-------------------------------------------------------------------------------
+
+   200 of    200 iterations completed.   Expected time to completion:      0.00
+
+
+    Finished Numerical Simulation
+    -----------------------------
+ => Writing restart files ...
+saved ifile= 1 type=restart    at n_step=    200
+saved ifile= 3 type=y=0_mhd    at n_step=    200
+saved ifile= 4 type=y=0_mhd    at n_step=    200
+saved ifile= 5 type=z=0_mhd    at n_step=    200
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     200    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                 249.67    100.00         1         1
+-------------------------------------------------------------------------------
+advance                 233.49     93.52       200       200
+calc_facevalues          58.37     23.38       200    263820
+exch_msgs                45.55     18.24       204       407
+calc_fluxes              41.90     16.78       200    263820
+update_states            35.94     14.39       200    263820
+calc_sources             14.34      5.74       200    263820
+calc_face_bfo            14.29      5.72       170    162540
+update_check             12.49      5.00       200       400
+save_logfile             11.29      4.52       200       200
+SC_amr                    3.54      1.42         3         3
+calc_fluxes_bfo           3.17      1.27       170    162540
+barrier-expl2             3.01      1.21       200       400
+int_domain                1.61      0.65       200       200
+send_cons_flux            1.11      0.45       200       400
+save_plot                 0.62      0.25         1         3
+write_restart_files       0.51      0.20         1         1
+barrier-expl1             0.27      0.11       200       400
+set_BCs                   0.20      0.08       140      5080
+load_balance              0.10      0.04         3         3
+-------------------------------------------------------------------------------
+Error_report for Time step reduction, min(factor)
+ OCCURED first= 1  last= 96  count_max= 41  count_sum= 41
+ VALUES min=   1.1718750000000000E-02  max=   0.7500000000000000  mean=   0.3112614329268292  last=   0.7500000000000000  last_sum=   0.7500000000000000
+
