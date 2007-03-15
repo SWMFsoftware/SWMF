@@ -295,7 +295,7 @@ contains
   subroutine finish_load_balance
 
     use ModCovariant,ONLY: UseVertexBasedGrid, &       !^CFG IF COVARIANT
-         UseCovariant, do_fix_geometry_at_reschange    !^CFG IF COVARIANT
+         do_fix_geometry_at_reschange                  !^CFG IF COVARIANT
 
     integer :: iBlock
 
@@ -305,7 +305,7 @@ contains
        call find_neighbors
 
        !^CFG IF COVARIANT BEGIN
-       if(DoMoveCoord .and. UseCovariant .and. UseVertexBasedGrid)then
+       if(DoMoveCoord .and. UseVertexBasedGrid)then
           do iBlock=1, nBlock
              if(do_fix_geometry_at_reschange(iBlock)) &       
                   call fix_geometry_at_reschange(iBlock) 

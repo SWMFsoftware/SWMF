@@ -2027,6 +2027,8 @@ contains
             'Do not use covariant with ray tracing')      !^CFG IF RAYTRACE
        if(UseDivBDiffusion)call stop_mpi(&                !^CFG IF DIVBDIFFUSE
             'Do not use covariant with divB diffusion')   !^CFG IF DIVBDIFFUSE
+    else
+       UseVertexBasedGrid = .false.
     end if                                             !^CFG END COVARIANT
 
     if(SaveBoundaryCells)then
