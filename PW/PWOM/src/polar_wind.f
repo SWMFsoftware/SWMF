@@ -32,7 +32,7 @@ C Variable time step option implemented 8/05 A. Glocer
 
       Subroutine POLAR_WIND
 
-      Use ModPWOM, only: DtVertical,nLine
+      Use ModPWOM, only: DtVertical,nLine,IsStandAlone
       use ModIoUnit, ONLY: UnitTmp_
       use ModCommonVariables
       use ModFieldLine
@@ -166,7 +166,7 @@ C                                                                      C
 
 
 1     CONTINUE
-      IF (MSTEP .NE. NTS) THEN
+      IF (MSTEP /= NTS) THEN
          
          if (TypeSolver == 'Godunov') then
             CALL Solver('O1',UOXYG,DOXYG,POXYG,USURFO,DSURFO
@@ -407,23 +407,21 @@ c            CALL PRNTEF
             CALL PW_print_plot
             !CALL prntCollision
             !CALL PRNT_Sources
-            open(UnitTmp_, FILE=NameRestart)
+            
+            
+            if (IsStandAlone) call PW_write_restart(
+     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
+     &           dOxyg, uOxyg, pOxyg, TOxyg,         
+     &           dHel , uHel , pHel , THel ,         
+     &           dHyd , uHyd , pHyd , THyd ,         
+     &           dElect, uElect, pElect, TElect)
 
-            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
-            Write (UnitTmp_,*) GMLAT, GMLONG
-
-            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
-     ;           K=1,NDIM)
-            close(UnitTmp_)
          endif
       endif
 
 
       IF (IsVariableDt) then
-         IF (floor(Time/DToutput).NE.floor((Time-DT)/DToutput) ) Then
+         IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) Then
             KSTEP=KSTEP+1
 c            CALL PRNTOP
 c            CALL PRNTHE
@@ -436,15 +434,14 @@ c            CALL PRNTEF
             !CALL PRNT_Sources
 
 
-            open(UnitTmp_, FILE=NameRestart)
-            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
-            Write (UnitTmp_,*) GMLAT, GMLONG
-            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
-     ;           K=1,NDIM)
-            close(UnitTmp_)
+            
+            if (IsStandAlone)call PW_write_restart(
+     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
+     &           dOxyg, uOxyg, pOxyg, TOxyg,         
+     &           dHel , uHel , pHel , THel ,         
+     &           dHyd , uHyd , pHyd , THyd ,         
+     &           dElect, uElect, pElect, TElect)
+
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -465,7 +462,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       if (.not. IsVariableDT) then
          IF (KSTEP.GT.NPT) RETURN
       endif
-      IF (MSTEP .NE. NTS) THEN
+      IF (MSTEP /= NTS) THEN
          if (TypeSolver == 'Godunov') then
             CALL Solver('O3',UOXYG,DOXYG,POXYG,USURFO,DSURFO
      ;           ,PSURFO,DBGNDO,PBGNDO,UBGNDO,ADMSO,ECLSNO,FCLSNO,QOXYG,RGASO,
@@ -707,20 +704,18 @@ c            CALL PRNTEF
             !CALL prntCollision
             !CALL PRNT_Sources
             
-            open(UnitTmp_, FILE=NameRestart)
-            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
-            Write (UnitTmp_,*) GMLAT, GMLONG
 
-            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
-     ;           K=1,NDIM)
-            close(UnitTmp_)
+            if (IsStandAlone)call PW_write_restart(
+     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
+     &           dOxyg, uOxyg, pOxyg, TOxyg,         
+     &           dHel , uHel , pHel , THel ,         
+     &           dHyd , uHyd , pHyd , THyd ,         
+     &           dElect, uElect, pElect, TElect)
+
          endif
       endif
       IF (IsVariableDt) then
-         IF (floor(Time/DToutput).NE.floor((Time-DT)/DToutput) ) Then
+         IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) Then
             KSTEP=KSTEP+1
 c            CALL PRNTOP
 c            CALL PRNTHE
@@ -732,16 +727,13 @@ c            CALL PRNTEF
             !CALL prntCollision
             !CALL PRNT_Sources
             
-            open(UnitTmp_, FILE=NameRestart)
-            WRITE (UnitTmp_,2001) TIME,DT,NSTEP
-            Write (UnitTmp_,*) GMLAT, GMLONG
 
-            WRITE (UnitTmp_,2002)(RAD(K),UOXYG(K),POXYG(K),DOXYG(K),TOXYG(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHEL(K),PHEL(K),DHEL(K),THEL(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UHYD(K),PHYD(K),DHYD(K),THYD(K),K=1,NDIM)
-            WRITE (UnitTmp_,2002)(RAD(K),UELECT(K),PELECT(K),DELECT(K),TELECT(K),
-     ;           K=1,NDIM)
-            close(UnitTmp_)
+            if (IsStandAlone) call PW_write_restart(
+     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
+     &           dOxyg, uOxyg, pOxyg, TOxyg,         
+     &           dHel , uHel , pHel , THel ,         
+     &           dHyd , uHyd , pHyd , THyd ,         
+     &           dElect, uElect, pElect, TElect)
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -752,7 +744,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &                       dHyd, uHyd, pHyd, THyd,         
      &                       dElect, uElect, pElect, TElect, 
      &                       GMLAT,GMLONG,Jr,wHorizontal,
-     &                       Time=Time ) 
+     &                       Time=Time,nStep=nStep,r_C=RAD ) 
 
          RETURN
       endif
