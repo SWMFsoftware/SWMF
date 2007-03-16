@@ -14,7 +14,7 @@ INSTALL_FILES = \
 
 install:
 	touch ${INSTALL_FILES}
-	@(if [ -f ${CONTROLRULES}.${OS}${COMPILER} ]; then   \
+	@(if [ -f ${CONTROLRULES}.${OS}.${COMPILER} ]; then   \
 		cp -f ${CONTROLRULES}.${OS}.${COMPILER} ${CONTROLRULES};\
 	else \
                 rm -f ${CONTROLRULES}; touch ${CONTROLRULES}; \
