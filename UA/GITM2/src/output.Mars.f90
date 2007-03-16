@@ -564,7 +564,7 @@ contains
                   velocity(iLon,iLat,iAlt,iEast_,iBlock), &
                   velocity(iLon,iLat,iAlt,iNorth_,iBlock), &
                   velocity(iLon,iLat,iAlt,iUp_,iBlock), &
-                  IDensityS(iLon,iLat,iAlt,iO2_,iBlock), &
+                  IDensityS(iLon,iLat,iAlt,iO2P_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,iCO2P_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,iNOP_,iBlock), &
                   IDensityS(iLon,iLat,iAlt,iOP_,iBlock), &
