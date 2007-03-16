@@ -9,7 +9,9 @@ T
 PW test
 
 #SAVERESTART
-F
+T                       DoSaveRestart
+-1                      DnSaveRestart
+50.0		        DtSaveRestart
 
 #STARTTIME
 2000			iYear
