@@ -35,7 +35,7 @@
      fwrite($fh, "cd \$PBS_O_WORKDIR\n");
      fwrite($fh, "\n");
      fwrite($fh, "# run code\n");
-     fwrite($fh, "mpirun -np NP -machinefile \$PBS_NODEFILE SWMF.exe >& runlog\n");
+     fwrite($fh, "/usr/local/mpi/bin/mpirun -np NP -machinefile \$PBS_NODEFILE SWMF.exe >& runlog\n");
      fclose($fh);
    }
    $deffile = "../codes/CODE_$codename/runCLEAN/NN";
