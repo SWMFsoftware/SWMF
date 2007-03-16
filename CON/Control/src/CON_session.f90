@@ -186,6 +186,12 @@ contains
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
+    if(DoTestMe)then
+       write(*,*)NameSub,' IsLastSession=',IsLastSession
+       if(present(tCoupleExtra_C)) &
+            write(*,*)NameSub,'tCoupleExtra_C=',tCoupleExtra_C(1:nComp)
+    end if
+    
     !BOC
     !\
     ! If no component uses this PE and init_session did not stop
@@ -208,8 +214,12 @@ contains
        where(tSimulation_C < 0.0 .and. IsProc_C) tSimulation_C = tSimulation
     end if
 
+    if(DoTestMe)write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
+
     TIMELOOP: do
 
+       if(DoTestMe)write(*,*)NameSub,' nIteration, tSimulationMax=',&
+            nIteration, tSimulationMax
        !\
        ! Stop this session if stopping conditions are fulfilled
        !/
@@ -223,6 +233,7 @@ contains
        ! Return is used so that iSession is not modified.
        !/
        if(present(tCoupleExtra_C))then
+          if(DoTestMe)write(*,*)NameSub,' checking tCoupleExtra_C'
           if(any(IsProc_C .and. tCoupleExtra_C >= 0.0 &
                .and. tSimulation >= tCoupleExtra_C)) RETURN
        end if
@@ -231,6 +242,7 @@ contains
        ! Check periodically for stop file and cpu time
        !/
        if(is_time_to(CheckStop,nStep,tSimulation,DoTimeAccurate))then
+          if(DoTestMe)write(*,*)NameSub,' checking do_stop_now'
           if(do_stop_now())then
              IsLastSession = .true.
              exit TIMELOOP
@@ -244,6 +256,9 @@ contains
        nStep = nStep+1
        nIteration = nIteration+1
        call timing_step(nStep)
+
+       if(DoTestMe)write(*,*)NameSub,' new nStep, nIteration=',&
+            nStep, nIteration
 
        !\
        ! Calculate next time to synchronize for all local components
@@ -292,6 +307,8 @@ contains
 
           end do
        end if
+
+       if(DoTestMe)write(*,*)NameSub,' advance solution'
 
        ! Advance solution
 
@@ -344,6 +361,7 @@ contains
        !/
        call show_progress
 
+       if(DoTestMe)write(*,*)NameSub,' couple components'
        !\
        ! Couple components as scheduled
        !/
@@ -377,6 +395,8 @@ contains
     end if
 
     !EOC
+
+    if(DoTestMe)write(*,*)NameSub,' finished'
 
   end subroutine do_session
 
