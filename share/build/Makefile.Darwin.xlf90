@@ -31,8 +31,8 @@ MPILIB =
 
 SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
 
-DEBUGFLAG = -C -gline
-DEBUG     = 
+DEBUGFLAG = -C -g
+DEBUG     =
 
 OPT0 = -O0
 OPT1 = -O1
