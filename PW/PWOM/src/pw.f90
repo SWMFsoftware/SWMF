@@ -280,7 +280,7 @@ subroutine PW_advance_line
        dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine),TElect(:,iLine), &
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
-       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime)
+       iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C)
   else
      call get_field_line( &
        dOxyg_CI(:,iLine), uOxyg_CI(:,iLine), pOxyg_CI(:,iLine), TOxyg(:,iLine),     &
