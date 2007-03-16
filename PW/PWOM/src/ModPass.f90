@@ -9,13 +9,13 @@ module ModFieldLine
   real, Dimension(maxGrid)  ::  dOxygPw_C,uOxygPw_C,pOxygPw_C,TOxygPW, &
        dHelPw_C,uHelPw_C,pHelPw_C,THelPW,     &
        dHydPw_C,uHydPw_C,pHydPw_C,THydPW,     &
-       dElectPw_C,uElectPw_C,pElectPw_C,TElectPW
+       dElectPw_C,uElectPw_C,pElectPw_C,TElectPW,rPw_C
 
   logical :: IsRestartPW, IsVariableDtPW, DoLogPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
        GeoMagLonPW,JrPW,nDimPW
   real    :: wHorizontalPW
-  integer :: iUnitInputPW,      &
+  integer :: nStepPw,iUnitInputPW,      &
        iUnitOutputPW,iUnitGraphicsPW,                 &
        iUnitSourceGraphicsPW,iUnitRestartPW,          &
        iUnitCollisionPW,iUnitRestartInPW,iLinePW,nLinePW
@@ -34,7 +34,8 @@ contains
        dElect_CI, uElect_CI, pElect_CI, TElect,                      &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog )
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog,&
+       nStep,r_C)
 
     use ModParameters
 
@@ -43,9 +44,9 @@ contains
          dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
          dElect_CI, uElect_CI, pElect_CI, TElect
     real, optional, intent(in) :: Time,MaxLineTime,DToutput
-
+    real, optional, intent(in) :: r_C(maxGrid)
     real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal              
-    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
+    integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog
@@ -76,16 +77,19 @@ contains
     if (present(nAlt))          nDimPW = nAlt
     
     if (present(Time))          TimePW = Time
-    if (present(MaxLineTime))   MaxLineTimePW = MaxLineTime
-    if (present(iUnitGraphics)) iUnitGraphicsPW =iUnitGraphics
-    if (present(NameRestart))   NameRestartPW=NameRestart
-    if (present(iLine))         iLinePW = iLine
-    if (present(iUnitOutput))   iUnitOutputPW=iUnitOutput
-    if (present(TypeSolver))    TypeSolverPW =TypeSolver
-    if (present(IsVariableDt))  IsVariableDtPW=IsVariableDt
-    if (present(IsRestart))     IsRestartPW=IsRestart
-    if (present(DToutput))      DToutputPW=DToutput
-    if (present(DoLog))         DoLogPW=DoLog
+    if (present(MaxLineTime))   MaxLineTimePW  = MaxLineTime
+    if (present(iUnitGraphics)) iUnitGraphicsPW= iUnitGraphics
+    if (present(NameRestart))   NameRestartPW  = NameRestart
+    if (present(iLine))         iLinePW        = iLine
+    if (present(iUnitOutput))   iUnitOutputPW  = iUnitOutput
+    if (present(TypeSolver))    TypeSolverPW   = TypeSolver
+    if (present(IsVariableDt))  IsVariableDtPW = IsVariableDt
+    if (present(IsRestart))     IsRestartPW    = IsRestart
+    if (present(DToutput))      DToutputPW     = DToutput
+    if (present(DoLog))         DoLogPW        = DoLog
+    if (present(nStep))         nStepPW        = nStep
+    if (present(r_c))           rPw_C(:)       = r_C(:)
+
   end subroutine put_field_line
 
   !***************************************************************************
@@ -98,7 +102,8 @@ contains
        dElect_CI, uElect_CI, pElect_CI, TElect,                      &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
-       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog)
+       MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog,&
+       nStep,r_C)
 
     use ModParameters
 
@@ -114,7 +119,9 @@ contains
     character(7),optional,intent(out):: TypeSolver
     logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput
-    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt
+    real, optional, intent(out)        :: r_C(maxGrid)
+    integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
+    !--------------------------------------------------------------------------
     
     dOxyg_CI (:) = dOxygPw_C(:)
     uOxyg_CI (:) = uOxygPw_C(:)
@@ -152,6 +159,8 @@ contains
     if (present(IsRestart))     IsRestart=IsRestartPW
     if (present(DToutput))      DToutput=DToutputPW
     if (present(DoLog))         DoLog=DoLogPW
+    if (present(nStep))         nStep        = nStepPW
+    if (present(r_C))           r_C(:)       = rPw_C(:)
 
   end subroutine get_field_line
 
