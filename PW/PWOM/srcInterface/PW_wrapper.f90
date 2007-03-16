@@ -126,15 +126,35 @@ end subroutine PW_finalize
 !==============================================================================
 
 subroutine PW_save_restart(TimeSimulation)
-
+  
+  Use ModPWOM, only: &
+       nAlt,r_C,GeoMagLat_I,GeoMagLon_I,DtVertical,&
+       nStep,NameRestart, &
+       dOxyg_CI,uOxyg_CI,pOxyg_CI,TOxyg, &
+       dHel_CI ,uHel_CI ,pHel_CI ,THel, &
+       dHyd_CI ,uHyd_CI ,pHyd_CI ,THyd, &
+       dElect_CI, uElect_CI, pElect_CI, TElect,nLine
   implicit none
 
   !INPUT PARAMETERS:
   real,     intent(in) :: TimeSimulation   ! seconds from start time
 
+  integer :: iLine
   character(len=*), parameter :: NameSub='PW_save_restart'
+  !---------------------------------------------------------------------------
+  
+  do iLine=1,nLine
+     call PW_write_restart(&
+      nAlt,r_C,GeoMagLat_I(iLine),GeoMagLon_I(iLine),TimeSimulation,DtVertical,&
+      nStep,NameRestart(iLine), &
+      dOxyg_CI(:,iLine),uOxyg_CI(:,iLine),pOxyg_CI(:,iLine),TOxyg(:,iLine), &
+      dHel_CI(:,iLine) ,uHel_CI(:,iLine) ,pHel_CI(:,iLine) ,THel(:,iLine) , &
+      dHyd_CI(:,iLine) ,uHyd_CI(:,iLine) ,pHyd_CI(:,iLine) ,THyd(:,iLine) , &
+      dElect_CI(:,iLine), uElect_CI(:,iLine), pElect_CI(:,iLine), &
+      TElect(:,iLine))
+  enddo
 
-  call CON_stop(NameSub//': PW_ERROR: not yet implemented!')
+
 
 end subroutine PW_save_restart
 
