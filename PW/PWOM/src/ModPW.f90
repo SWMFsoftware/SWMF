@@ -43,6 +43,7 @@ module ModPWOM
        OmegaLine_I,                      &
        JrLine_I
   
+  integer :: nStep=0
   
   integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
   real                               ::  DtHorizontal=50.0, Time, TimeMax
@@ -63,11 +64,12 @@ module ModPWOM
                  
   integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
   
+  real :: r_C(1:maxGrid)
   real, dimension(1:maxGrid,0:maxLine):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
                                           dHel_CI, uHel_CI, pHel_CI, THel,         &
                                           dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
                                           dElect_CI, uElect_CI, pElect_CI, TElect
-  real :: DToutput=10.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
+  real :: DToutput=50.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
 
   logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
