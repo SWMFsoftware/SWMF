@@ -423,25 +423,16 @@ c            CALL PRNTEF
       IF (IsVariableDt) then
          IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) Then
             KSTEP=KSTEP+1
-c            CALL PRNTOP
-c            CALL PRNTHE
-c            CALL PRNTHP
-c            CALL PRNTEL
-c            CALL PRNTEF
 
             CALL PW_print_plot
-            !CALL prntCollision
-            !CALL PRNT_Sources
-
-
             
-            if (IsStandAlone)call PW_write_restart(
-     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
-     &           dOxyg, uOxyg, pOxyg, TOxyg,         
-     &           dHel , uHel , pHel , THel ,         
-     &           dHyd , uHyd , pHyd , THyd ,         
-     &           dElect, uElect, pElect, TElect)
-
+!            if (IsStandAlone)call PW_write_restart(
+!     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
+!     &           dOxyg, uOxyg, pOxyg, TOxyg,         
+!     &           dHel , uHel , pHel , THel ,         
+!     &           dHyd , uHyd , pHyd , THyd ,         
+!     &           dElect, uElect, pElect, TElect)
+!     
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -717,17 +708,9 @@ c            CALL PRNTEF
       IF (IsVariableDt) then
          IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) Then
             KSTEP=KSTEP+1
-c            CALL PRNTOP
-c            CALL PRNTHE
-c            CALL PRNTHP
-c            CALL PRNTEL
-c            CALL PRNTEF
-
             CALL PW_print_plot
-            !CALL prntCollision
-            !CALL PRNT_Sources
-            
-
+         endif
+         IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-2.0*DT)/DToutput) ) Then
             if (IsStandAlone) call PW_write_restart(
      &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
      &           dOxyg, uOxyg, pOxyg, TOxyg,         
@@ -738,7 +721,7 @@ c            CALL PRNTEF
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
-      IF (TIME.GT.TMAX) Then 
+      IF (TIME+1.0e-5 >= TMAX) Then 
          Call put_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     
      &                       dHel, uHel, pHel, THel,         
      &                       dHyd, uHyd, pHyd, THyd,         
