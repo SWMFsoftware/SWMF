@@ -46,8 +46,8 @@ test_comp:
 #### Polarwind test ###
 #
 test_pw:
-	@echo "starting..." > test_pw_plots.diff
-	@echo "test_pw_compile..." > test_pw.diff
+	@echo "starting..." > test_pw.diff
+	@echo "test_pw_compile..." >> test_pw.diff
 	make test_pw_compile
 	@echo "test_pw_rundir..." >> test_pw.diff
 	make test_pw_rundir
@@ -71,14 +71,10 @@ test_pw_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_pw_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
-		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
-		${PWDIR}/output/Earth/restart_iline0001.dat \
-		> test_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		${PWDIR}/output/Earth/plots_iline0001.out \
-		> test_pw_plots.diff)
+		> test_pw.diff)
 	ls -l test_pw*.diff
 
 ### Test1: PW+IE+GM ###
