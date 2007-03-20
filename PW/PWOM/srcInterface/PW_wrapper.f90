@@ -162,8 +162,8 @@ end subroutine PW_save_restart
 
 subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  use ModPWOM, ONLY: iLine, nLine, Time, DtHorizontal,DToutput,&
-                     DoPlotElectrodynamics,DtPlotElectrodynamics
+  use ModPWOM, ONLY: iLine, nLine, Time, nStep, DtHorizontalOrig, &
+       DtHorizontal, DtOutput, DoPlotElectrodynamics, DtPlotElectrodynamics
 
   implicit none
 
@@ -174,9 +174,24 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   character(len=*), parameter :: NameSub='PW_run'
+  logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
-  DtHorizontal = min(DtHorizontal, TimeSimulationLimit - Time)
-  
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  if(DoTestMe)write(*,*) NameSub,': TimeSimulation,TimeSimulationLimit=',&
+       TimeSimulation,TimeSimulationLimit
+
+  DtHorizontal = min(DtHorizontalOrig, TimeSimulationLimit - Time)
+
+  ! Avoid taking tiny little steps
+  if(DtHorizontal < 1e-6)then
+     Time           = TimeSimulationLimit
+     TimeSimulation = TimeSimulationLimit
+     RETURN
+  end if
+
+  if(DoTestMe)write(*,*) NameSub,': DtHorizontalOrig,DtHorizontal=',&
+       DtHorizontalOrig,DtHorizontal
+
   do iLine=1,nLine
      call move_line
      call PW_advance_line
@@ -184,10 +199,13 @@ subroutine PW_run(TimeSimulation,TimeSimulationLimit)
   !Output the electrodynamics info
   if (DoPlotElectrodynamics) then
      if (floor(Time/DtPlotElectrodynamics) &
-          .ne. floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
+          /= floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
           call PW_print_electrodynamics
   endif
   TimeSimulation = Time
+
+  if(DoTestMe)write(*,*) NameSub,': final nStep, TimeSimulation=',&
+       nStep, TimeSimulation
 
 end subroutine PW_run
 
