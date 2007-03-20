@@ -74,6 +74,22 @@ outflow. The default is shown.
 
 <commandgroup name="INPUT/OUTPUT">
 
+<command name="TEST">
+	<parameter name="StringTest" type="string" length="100" />
+	<parameter name="iProcTest" type="integer" min="0" default="0" />
+	<parameter name="iLineTest" type="integer" min="1" default="1" />
+#TEST
+PW_move_line		StringTest
+0			iProcTest
+2			iLineTest
+
+Set test parameters. The subroutines to be tested are listed in StringTest,
+the tested processor is iProcTest, and the tested field line is iLineTest.
+If iLineTest is 0, all field lines produce test output.
+
+Default is an empty StringTest, i.e. no test output is produced.
+</command>
+
 <command name="FIELDLINE">
 	<parameter name="nTotalLine" type="integer" default="1" />
 
