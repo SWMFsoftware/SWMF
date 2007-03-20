@@ -1498,38 +1498,6 @@ contains
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 
   end function neutral_density
-  !============================================================================
-
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
-       xCenter,yCenter,zCenter,rCenter,                        &
-       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
-
-    use ModPhysics, ONLY: Rbody
-
-    logical,intent(out) :: refineBlock, found
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
-
-    character (len=*), parameter :: Name='user_specify_initial_refinement'
-
-    !-------------------------------------------------------------------
-    !    select case (InitialRefineType)
-    !    case ('Venus3Dbodyfocus')
-    ! Refine, focusing on body
-    found=.true.
-    refineBlock=.false.
-    if (maxR > Rbody.and.(lev <= 1 .or. minR < 2.0*Rbody))&
-         refineBlock = .true.
-
-    !    case default
-
-    !   end select
-
-  end subroutine user_specify_initial_refinement
 
   !===================================================================
   subroutine user_get_b0(X1,Y1,Z1,B1)
@@ -1809,6 +1777,7 @@ contains
 
   end subroutine user_get_log_var
 
+  !============================================================================
   subroutine Mars_Input
     use ModMain
     use ModPhysics
@@ -1989,6 +1958,37 @@ contains
     end if
   end subroutine Mars_input
                    
+  !============================================================================
 
+  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
+       xCenter,yCenter,zCenter,rCenter,                        &
+       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+
+    use ModPhysics, ONLY: Rbody
+
+    logical,intent(out) :: refineBlock, found
+    integer, intent(in) :: lev
+    real, intent(in)    :: DxBlock
+    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
+    real, intent(in)    :: minx,miny,minz,minR
+    real, intent(in)    :: maxx,maxy,maxz,maxR
+    integer, intent(in) :: iBLK
+
+    character (len=*), parameter :: Name='user_specify_initial_refinement'
+
+    !-------------------------------------------------------------------
+    !    select case (InitialRefineType)
+    !    case ('Venus3Dbodyfocus')
+    ! Refine, focusing on body
+    found=.true.
+    refineBlock=.false.
+    if (maxR > Rbody.and.(lev <= 1 .or. minR < 2.0*Rbody))&
+         refineBlock = .true.
+
+    !    case default
+
+    !   end select
+
+  end subroutine user_specify_initial_refinement
 
 end module ModUser

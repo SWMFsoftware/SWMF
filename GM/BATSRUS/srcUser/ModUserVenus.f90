@@ -1,12 +1,7 @@
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
-  ! This is the default user module which contains empty methods defined
-  ! in ModUserEmpty.f90
-  !
-  ! Please see the documentation, and the files ModUserEmpty.f90 and 
-  ! srcUser/ModUserExamples.f90 for information about what the different user
-  ! subroutines do and how to implement them for your specific problem.
+  ! This is the user module for Venus
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
@@ -19,8 +14,9 @@ module ModUser
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_update_states,              &
-       IMPLEMENTED8 => user_set_plot_var,               &
-       IMPLEMENTED10 => user_specify_initial_refinement
+!       IMPLEMENTED8 => user_set_plot_var,               &
+       IMPLEMENTED10 => user_get_log_var,               &
+       IMPLEMENTED11 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -119,9 +115,9 @@ module ModUser
        hv_=-2   
 
   real :: XiT0, XiTx !dimensionless temperature of new created ions
-  !  real :: body_Ti_dim=300.0  !ion temperature at the body
-  real :: body_Ti_dim=1000.0  !ion temperature at the body
-  real :: body_Tnu_dim = 1000.0, body_Tnu, Tnu, Tnu_dim ! neutral temperature 
+  !  real :: Ti_body_dim=300.0  !ion temperature at the body
+  real :: Ti_body_dim=1000.0  !ion temperature at the body
+  real :: Tnu_body_dim = 1000.0, Tnu_body, Tnu, Tnu_dim ! neutral temperature 
   real :: T300_dim = 300.0, T300 , Ti_dim =1000.
   real,  dimension(1:nI,1:nJ,1:nK,nBLK) :: nu_BLK
   real :: nu0_dim=1.0e-9,nu0
@@ -346,7 +342,7 @@ contains
              ReactionRate_I(Op_CO2__O2p_CO_)= &
                   Rate_I(Op_CO2__O2p_CO_)&
                   * nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)&
-                  *exp(log(body_Tnu_dim/Ti_dim)*0.39)
+                  *exp(log(Tnu_body_dim/Ti_dim)*0.39)
              CoeffSpecies_II(O2p_, Op_)=ReactionRate_I(Op_CO2__O2p_CO_)
 
              ReactionRate_I(CO2p_O__Op_CO2_)= &
@@ -373,11 +369,11 @@ contains
              ! Recombination
              !Tp=p_BLK(i,j,k,globalBLk)/totalNumRho
              ReactionRate_I(O2p_em__O_O_)=Rate_I(O2p_em__O_O_)
-             Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(body_Tnu_dim/Te_dim)*0.56)
+             Recb_I(O2p_)=ReactionRate_I(O2p_em__O_O_)*exp(log(Tnu_body_dim/Te_dim)*0.56)
 
              ReactionRate_I(CO2p_em__CO_O_)=Rate_I(CO2p_em__CO_O_)
              Recb_I(CO2p_)=ReactionRate_I(CO2p_em__CO_O_)*&
-                  sqrt(body_Tnu_dim/Te_dim)
+                  sqrt(Tnu_body_dim/Te_dim)
 
              !end if  !(x>0.0)
 
@@ -480,11 +476,11 @@ contains
                   -0.50*uu2*(totalLossRho) &
                   -inv_gm1*(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,globalBLK)
 
-             if((State_VGB(P_,i,j,k,globalBLK)/totalNumRho).gt.(2.0*body_Tnu).and.&
+             if((State_VGB(P_,i,j,k,globalBLK)/totalNumRho).gt.(2.0*Tnu_body).and.&
                   R_BLK(i,j,k,globalBLK)<1.2)&
                   SE(i,j,k) = SE(i,j,k)  &
                   -nu_BLK(i,j,k,globalBLK)*totalNumRho&
-                  *(State_VGB(P_,i,j,k,globalBLK)/totalNumRho/2.0-body_Tnu)
+                  *(State_VGB(P_,i,j,k,globalBLK)/totalNumRho/2.0-Tnu_body)
 
              ! SE(i,j,k) = SE(i,j,k)  &
                   ! -0.009*exp((-R_BLK(i,j,k,globalBLK)+1.0)/0.03)*&
@@ -528,7 +524,7 @@ contains
     !    Rbody = 1.0 + 140.0e3/Rvenus
     Body_rho= sum(BodyRhoSpecies_I(1:MaxSpecies))
     Body_p=SW_p*sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassSpecies_I(1:MaxSpecies))*Body_Ti_dim/SW_T_dim
+         /MassSpecies_I(1:MaxSpecies))*Ti_body_dim/SW_T_dim
 
     FaceState_VI(rho_,body1_)=Body_rho
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
@@ -732,8 +728,8 @@ contains
     write(*,*)'BodynDenNuSpecies_dim_I(1:nNuSpecies)',BodynDenNuSpecies_dim_I(1:nNuSpecies)
 
     nu0=nu0_dim*No2Io_V(UnitN_)*No2Io_V(UnitT_)
-    XiT0 = SW_p*body_Ti_dim*cTwo/SW_T_dim
-    body_Tnu = body_Tnu_dim *Si2No_V(UnitTemperature_)
+    XiT0 = SW_p*Ti_body_dim*cTwo/SW_T_dim
+    Tnu_body = Tnu_body_dim *Si2No_V(UnitTemperature_)
     T300 = T300_dim*Si2No_V(UnitTemperature_)
     BodynDenNuSpecies_I(1:nNuSpecies)=&
          BodynDenNuSpecies_dim_I(1:nNuSpecies)/No2Io_V(UnitN_)
@@ -749,17 +745,17 @@ contains
          Ratedim_I(CO2p_O__O2p_CO_)  &
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(Op_CO2__O2p_CO_)=  &
-         Ratedim_I(Op_CO2__O2p_CO_)*exp(log(8.0/3.0*T300/body_Tnu)*0.39) &
+         Ratedim_I(Op_CO2__O2p_CO_)*exp(log(8.0/3.0*T300/Tnu_body)*0.39) &
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(CO2p_O__Op_CO2_)=  &
          Ratedim_I(CO2p_O__Op_CO2_) &
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
     Rate_I(O2p_em__O_O_)=  &
-         Ratedim_I(O2p_em__O_O_)*exp(log(4.0*T300/body_Tnu)*0.56)&
+         Ratedim_I(O2p_em__O_O_)*exp(log(4.0*T300/Tnu_body)*0.56)&
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
     Rate_I(CO2p_em__CO_O_)=  &
-         Ratedim_I(CO2p_em__CO_O_)*sqrt(T300/body_Tnu)&
+         Ratedim_I(CO2p_em__CO_O_)*sqrt(T300/Tnu_body)&
          *No2Io_V(UnitT_)*No2Io_V(UnitN_)
 
     Rate_I(H_hv__Hp_em_)=  &
@@ -1015,7 +1011,7 @@ contains
 
        VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
        VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&
-            /MassSpecies_I(:))*SW_p*Body_Ti_dim/SW_T_dim 
+            /MassSpecies_I(:))*SW_p*Ti_body_dim/SW_T_dim 
 
 !       VrFaceInside     = -VrFaceOutside
 !       VthetaFaceInside = VthetaFaceOutside
@@ -1064,7 +1060,7 @@ contains
 
   !====================================================================
 
-  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+  subroutine user_set_plot_var1(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
@@ -1115,7 +1111,7 @@ contains
     PlotVarBody    = BodyRhoSpecies_I(iVar)
     UsePlotVarBody = .True.
 
-  end subroutine user_set_plot_var
+  end subroutine user_set_plot_var1
 
   !====================================================================
   !                     neutral_density_averages
@@ -1247,6 +1243,95 @@ contains
   end function neutral_density
   !============================================================================
 
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+         dx_BLK,dy_BLK,dz_BLK
+    use ModMain,       ONLY: unusedBLK
+    use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
+         rhoUx_,rhoUy_,rhoUz_
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
+
+    real, external :: calc_sphere
+    real ::mass
+    integer:: i,j,k,iBLK
+    character (len=*), parameter :: Name='user_get_log_var'
+    logical:: oktest=.false.,oktest_me
+    !-------------------------------------------------------------------
+    call set_oktest('user_get_log_var',oktest,oktest_me)
+    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
+    select case(TypeVar)
+    case('hpflx')
+       mass=1.0
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoHp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+      VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+
+    case('opflx')
+       mass=16.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoOp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)    
+    case('o2pflx')
+       mass=32.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoO2p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+    
+    case('co2pflx')
+       mass=44.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoCO2p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+    
+    case default
+       call stop_mpi('wrong logvarname')
+    end select
+    !change to user value from normalized flux
+    !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
+    !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
+    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+
+  end subroutine user_get_log_var
+
+!=====================================================================
   subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &
        minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
@@ -1264,20 +1349,18 @@ contains
     character (len=*), parameter :: Name='user_specify_initial_refinement'
 
     !-------------------------------------------------------------------
-!    select case (InitialRefineType)
-!    case ('Venus3Dbodyfocus')
-       ! Refine, focusing on body
+    !    select case (InitialRefineType)
+    !    case ('Venus3Dbodyfocus')
+    ! Refine, focusing on body
     found=.true.
     refineBlock=.false.
     if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.5*Rbody))&
          refineBlock = .true.
-    
-!    case default
-       
-!   end select
-    
+
+    !    case default
+
+    !   end select
+
   end subroutine user_specify_initial_refinement
-!===================================================================
 
 end module ModUser
-

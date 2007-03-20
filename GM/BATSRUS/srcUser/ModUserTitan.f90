@@ -1,12 +1,7 @@
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
-  ! This is the default user module which contains empty methods defined
-  ! in ModUserEmpty.f90
-  !
-  ! Please see the documentation, and the files ModUserEmpty.f90 and 
-  ! srcUser/ModUserExamples.f90 for information about what the different user
-  ! subroutines do and how to implement them for your specific problem.
+  ! This is the user module for Titan
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
@@ -21,7 +16,9 @@ module ModUser
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_set_plot_var,               & 
        IMPLEMENTED9 => user_set_resistivity,            &        
-       IMPLEMENTED10 => user_specify_initial_refinement
+       IMPLEMENTED10 => user_get_log_var,               &
+       IMPLEMENTED11 => user_specify_initial_refinement
+
 
   include 'user_module.h' !list of public methods
 
@@ -118,8 +115,8 @@ module ModUser
   character (len=10), dimension(MaxSpecies):: &
        ion_name_I
 
-!  real,public ::  &
-!       MassSpecies_V(MaxSpecies)=1.0  !atm
+  !  real,public ::  &
+  !       MassSpecies_V(MaxSpecies)=1.0  !atm
 
   real, dimension(MaxNuSpecies)::  NuMassSpecies_I, &
        HNuSpecies_I, BodynDenNuSpdim_I,&
@@ -172,7 +169,7 @@ module ModUser
        SrhoSpecies
 
 
-!  real:: SX0=0.673, SY0=0.663, SZ0=-0.32 !for T9 flyby
+  !  real:: SX0=0.673, SY0=0.663, SZ0=-0.32 !for T9 flyby
   real:: SX0=1.0, SY0=0.0, SZ0=0.0   !for symetric case
   !  real:: SX0=-0.325568, SY0=-0.945519, SZ0=0.0  !71  degree from -x
   !  real:: SX0=0.174, SY0=-0.9848, SZ0=0.0        !100 degree from -x
@@ -368,7 +365,7 @@ contains
 
        case('#USECOSSZA')
           call read_var('UseCosSZA',UseCosSZA)
-          
+
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
@@ -433,7 +430,7 @@ contains
        ! scheme for the Block
        call user_expl_source
        call user_impl_source
-       
+
     elseif(IsPointImplSource)then
        ! Add implicit sources only
        call user_impl_source
@@ -631,7 +628,7 @@ contains
              LossSpecies_I=LossSpecies_I &
                   +CoeffSpecies_II(iSpecies, :)
              !                dStndRho_I=dStndRho_I  &
-                  !                     +CoeffSpecies_II(iSpecies, :)/MassSpecies_V(:)
+             !                     +CoeffSpecies_II(iSpecies, :)/MassSpecies_V(:)
              dSdRho_II(1:nSpecies, iSpecies)= &
                   CoeffSpecies_II(1:nSpecies, iSpecies)&
                   *MassSpecies_V(rho_+1:rho_+nSpecies)&
@@ -687,7 +684,7 @@ contains
           totalRLNumRhox=sum(RecombRate_VC(:,i,j,k) &
                *State_VGB(rho_+1:rho_+nSpecies, i,j,k, iBlock)/MassSpecies_V)
 
-!          if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
+          !          if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)) )then
           if(.not.UsePointImplicit_B(iBlock) )then
              !sum of the (loss term/atom mass) due to recombination
              SourceLossMax = 3.0*maxval(abs(SiSpecies_I(1:nSpecies)+&
@@ -703,8 +700,8 @@ contains
                 VdtFace_z(i,j,k) = max (SourceLossMax, VdtFace_z(i,j,k) )
              end if
           end if
-!             if(Rmin_BLK(iBlock) <= 2.0*Rbody) then
-!          end if
+          !             if(Rmin_BLK(iBlock) <= 2.0*Rbody) then
+          !          end if
 
           SrhoSpecies(1:nSpecies,i,j,k)=SrhoSpecies(1:nSpecies,i,j,k)&
                +SiSpecies_I(1:nSpecies) &
@@ -724,10 +721,10 @@ contains
                -State_VGB(Uz_,i,j,k,iBlock)*totalLossx 
 
           !           SE(i,j,k) = SE(i,j,k)  &
-               !                +inv_gm1*totalSourceNumRho*KTn &
-          !                -0.50*uu2*(totalLossRho) &
-               !                -inv_gm1*totalLossNumx*State_VGB(P_,i,j,k,iBlock) 
-          
+          !                +inv_gm1*totalSourceNumRho*KTn &
+               !                -0.50*uu2*(totalLossRho) &
+          !                -inv_gm1*totalLossNumx*State_VGB(P_,i,j,k,iBlock) 
+
           kTn = KT0
           kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho/2.0
           SE(i,j,k) = SE(i,j,k)  &
@@ -741,7 +738,7 @@ contains
                +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
                +0.50*(gm1)*uu2*(totalSourceRho) &
                +totalNumRho*(kTn-KTi)*Nu_C(i,j,k) 
-          
+
 !!!          kTi = State_VGB(p_,i,j,k,iBlock)/totalNumRho
 !!!          SE(i,j,k) = SE(i,j,k)  &
 !!!               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
@@ -752,48 +749,48 @@ contains
 !!!               Nu_C(i,j,k)  &
 !!!               +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
 !!!               +0.50*(gm1)*uu2*(totalSourceRho) 
-          
+
        endif !R_BLK(i,j,k,iBlock) >= Rbody?
-       end do; end do; end do     ! end of the i,j,k loop
-       if(oktest_me)then
-          RhoUTimesSrhoU = State_VGB(Ux_,itest,jtest,ktest,iBlock)*&
-               SrhoUx(itest,jtest,ktest)&
-               +State_VGB(Uy_,itest,jtest,ktest,iBlock)*&
-               SrhoUy(itest,jtest,ktest)&
-               +State_VGB(Uz_,itest,jtest,ktest,iBlock)*&
-               SrhoUz(itest,jtest,ktest)
+    end do; end do; end do     ! end of the i,j,k loop
+    if(oktest_me)then
+       RhoUTimesSrhoU = State_VGB(Ux_,itest,jtest,ktest,iBlock)*&
+            SrhoUx(itest,jtest,ktest)&
+            +State_VGB(Uy_,itest,jtest,ktest,iBlock)*&
+            SrhoUy(itest,jtest,ktest)&
+            +State_VGB(Uz_,itest,jtest,ktest,iBlock)*&
+            SrhoUz(itest,jtest,ktest)
 
-          uu2 = sum(State_VGB(Ux_:Uz_,itest,jtest,ktest,iBlock)&
-               *State_VGB(Ux_:Uz_,itest,jtest,ktest,iBlock))/&
-               State_VGB(rho_,itest,jtest,ktest,iBlock)/&
-               State_VGB(rho_,itest,jtest,ktest,iBlock)
+       uu2 = sum(State_VGB(Ux_:Uz_,itest,jtest,ktest,iBlock)&
+            *State_VGB(Ux_:Uz_,itest,jtest,ktest,iBlock))/&
+            State_VGB(rho_,itest,jtest,ktest,iBlock)/&
+            State_VGB(rho_,itest,jtest,ktest,iBlock)
 
-          write(*,*)'rhosp=        ',State_VGB(rho_:8,itest,jtest,ktest,iBlock)
+       write(*,*)'rhosp=        ',State_VGB(rho_:8,itest,jtest,ktest,iBlock)
 
-          write(*,*)'srho=         ',Srho(itest,jtest,ktest)
-          write(*,*)'state_VGB(u2)=',uu2
-          write(*,*)'srho*uu2/2=   ',Srho(itest,jtest,ktest)*uu2/2
+       write(*,*)'srho=         ',Srho(itest,jtest,ktest)
+       write(*,*)'state_VGB(u2)=',uu2
+       write(*,*)'srho*uu2/2=   ',Srho(itest,jtest,ktest)*uu2/2
 
-          write(*,*)'srhoUx=', SrhoUx(itest,jtest,ktest), &
-               'srhoUy=', SrhoUy(itest,jtest,ktest),&
-               'srhoUz=', SrhoUz(itest,jtest,ktest)
+       write(*,*)'srhoUx=', SrhoUx(itest,jtest,ktest), &
+            'srhoUy=', SrhoUy(itest,jtest,ktest),&
+            'srhoUz=', SrhoUz(itest,jtest,ktest)
 
-          write(*,*)'u.srhoU=',&
-               RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)
+       write(*,*)'u.srhoU=',&
+            RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)
 
-          write(*,*)'se=        ',SE(itest,jtest,ktest)
-          write(*,*)'inv_gm1*sp=',inv_gm1*SP(itest,jtest,ktest)
-          write(*,*)'inv_gm1*sp+u.srhoU-srho*uu2/2 =',&
-               inv_gm1*SP(itest,jtest,ktest) &
-               +RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)&
-               -Srho(itest,jtest,ktest)*uu2/2
-               
-          write(*,*)'state_VGB(B)=',&
-               State_VGB(Bx_:Bz_,itest,jtest,ktest,iBlock) 
-          write(*,*)'state_VGB(P)=',&
-               State_VGB(p_,itest,jtest,ktest,iBlock) 
+       write(*,*)'se=        ',SE(itest,jtest,ktest)
+       write(*,*)'inv_gm1*sp=',inv_gm1*SP(itest,jtest,ktest)
+       write(*,*)'inv_gm1*sp+u.srhoU-srho*uu2/2 =',&
+            inv_gm1*SP(itest,jtest,ktest) &
+            +RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)&
+            -Srho(itest,jtest,ktest)*uu2/2
 
-       end if
+       write(*,*)'state_VGB(B)=',&
+            State_VGB(Bx_:Bz_,itest,jtest,ktest,iBlock) 
+       write(*,*)'state_VGB(P)=',&
+            State_VGB(p_,itest,jtest,ktest,iBlock) 
+
+    end if
 
   end subroutine user_sources
 
@@ -808,7 +805,7 @@ contains
     !For Outer Boundaries
     do iBoundary=East_,Top_
        FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = cTiny8/1.0e5     
-     !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
+       !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
        FaceState_VI(RhoLp_,iBoundary)=SW_LP
        FaceState_VI(RhoMp_,iBoundary)=SW_MP
        FaceState_VI(Rho_,iBoundary)=FaceState_VI(RhoLp_,iBoundary)+&
@@ -827,9 +824,9 @@ contains
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
-!    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
-!    write(*,*)'CellState_VI, top_=',CellState_VI(:,Top_)
-!    write(*,*)'CellState_VI, east_=',CellState_VI(:,East_)    
+    !    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
+    !    write(*,*)'CellState_VI, top_=',CellState_VI(:,Top_)
+    !    write(*,*)'CellState_VI, east_=',CellState_VI(:,East_)    
     UnitUser_V(ScalarFirst_:ScalarLast_)   = No2Io_V(UnitRho_)/MassSpecies_V
   end subroutine user_init_session
 
@@ -881,7 +878,7 @@ contains
              State_VGB(Bx_:Bz_,i,j,k,globalBLK)=0.0
           end if
        end do;end do; end do;
-       
+
        coefy=BodyRhoSpecies_dim_II(:,1)/tmp_ion(:,1)           
 
        do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
@@ -901,7 +898,7 @@ contains
                       coefx = coefy*(coefSZAB_II(:,m)*dtmp1+&
                            coefSZAB_II(:,m+1)*dtm)&
                            /(CosSZAB_I(m)-CosSZAB_I(m+1))
-                      
+
                    end if
                 end do
              end if
@@ -946,9 +943,9 @@ contains
           State_VGB(rho_,i,j,k,globalBLK)   =&
                sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,globalBLK))
           State_VGB(ux_:uz_,i,j,k,globalBLK)   = 0.0
-!&
-!               CellState_VI(ux_:Uz_,1)/CellState_VI(rho_,1)&
-!               *State_VGB(rho_,i,j,k,globalBLK)
+          !&
+          !               CellState_VI(ux_:Uz_,1)/CellState_VI(rho_,1)&
+          !               *State_VGB(rho_,i,j,k,globalBLK)
           State_VGB(P_,i,j,k,globalBLK)= &
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,globalBLK)&
                /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*KT0          
@@ -1060,7 +1057,7 @@ contains
          BodynDenNuSpdim_I(1:nNuSpecies)/No2Io_V(UnitN_)
 
     Rate_I(4:25)=Ratedim_I(4:25)*No2Io_V(UnitT_)*No2Io_V(UnitN_)
-    
+
   end subroutine set_multiSp_ICs
 
   !========================================================================
@@ -1162,7 +1159,7 @@ contains
          BrFaceInside,BthetaFaceInside,BphiFaceInside
     real:: cosTheta,sinTheta,cosPhi,sinPhi,RFace
     real, dimension(1:3):: location,v_phi
-!    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
+    !    real:: XFaceT,YFaceT,ZFaceT,sin2Theta_coronal_hole
     real:: cosThetaT,sinThetaT,cosPhiT,sinPhiT
     real:: cosSZA
     real,dimension(1:MaxSpecies) :: coefx
@@ -1233,7 +1230,7 @@ contains
                    coefx = (coefSZAB_II(:,m)*dtmp1+&
                         coefSZAB_II(:,m+1)*dtm)&
                         /(CosSZAB_I(m)-CosSZAB_I(m+1))
-                
+
                 end if
              end do
           end if
@@ -1256,9 +1253,9 @@ contains
 !!!       BrFaceInside     = -BrFaceOutside
 !!!       BthetaFaceInside = BthetaFaceOutside
 !!!       BphiFaceInside   = BphiFaceOutside
-!       BrFaceInside     = cZero
-!       BthetaFaceInside = cZero
-!       BphiFaceInside   = cZero
+       !       BrFaceInside     = cZero
+       !       BthetaFaceInside = cZero
+       !       BphiFaceInside   = cZero
     end select
 
     !\
@@ -1287,14 +1284,14 @@ contains
     bDotR=( BxFaceOutside*XFace &
          +  ByFaceOutside*YFace &
          +  BzFaceOutside*ZFace )/Rface
-    
+
     VarsGhostFace_V(Ux_)=VxFaceOutside - 2.0*uDotR* XFace/Rface
     VarsGhostFace_V(Uy_)=VyFaceOutside - 2.0*uDotR* YFace/Rface
     VarsGhostFace_V(Uz_)=VzFaceOutside - 2.0*uDotR* ZFace/Rface
     VarsGhostFace_V(Bx_)=BxFaceOutside - 2.0*bDotR* XFace/Rface
     VarsGhostFace_V(By_)=ByFaceOutside - 2.0*bDotR* YFace/Rface
     VarsGhostFace_V(Bz_)=BzFaceOutside - 2.0*bDotR* ZFace/Rface
-    
+
     !\
     ! Apply corotation:: Currently works only for the first body.
     !/
@@ -1617,9 +1614,9 @@ contains
        if (RateM_C(i,j,k) < 0.0) RateM_C(i,j,k) = 0.0
        if (RateH_C(i,j,k) < 0.0) RateH_C(i,j,k) = 0.0
 
-      PhotoIonRate_VC(Lp_,i,j,k) = RateL_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
-      PhotoIonRate_VC(Mp_,i,j,k) = RateM_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
-      PhotoIonRate_VC(H1p_,i,j,k)= RateH_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
+       PhotoIonRate_VC(Lp_,i,j,k) = RateL_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
+       PhotoIonRate_VC(Mp_,i,j,k) = RateM_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
+       PhotoIonRate_VC(H1p_,i,j,k)= RateH_C(i,j,k) * No2Io_V(UnitT_)/No2Io_V(UnitN_)
        !                 if(hh.lt.1500.0.and.cosS0.gt.0.998)then
        !                    write(*,*)hh, RateH_C(i,j,k), cosS0
        !                 end if
@@ -1751,13 +1748,13 @@ contains
 
        Br1 = sum(NormXyz_D*State_VGB(Bx_:Bz_,i+1,j,k,iBlock))
        Br2 = sum(NormXyz_D*State_VGB(Bx_:Bz_,i+2,j,k,iBlock))
-          
+
        ! Change radial component so that field is reflected at i+1/2
        dBr_D = (-Br2 - 2*Br1 - Br0)*NormXyz_D
-       
+
        ! Apply change
        B_D = B_D + dBr_D
-       
+
        PlotVar_G(i,j,k) = B_D(iVar-B_)
 
        if(oktest_me.and.j==jTest.and.k==kTest)then
@@ -1770,48 +1767,105 @@ contains
           write(*,*)'B_D=', B_D
           write(*,*)'NormXyz_D=',NormXyz_D
        end if
-          
+
 
     end do; end do
 
   end subroutine user_set_plot_var
 
   !=====================================================================
-  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
-       xCenter,yCenter,zCenter,rCenter,                        &
-       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+  subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModPhysics, ONLY: Rbody
+    use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
+         dx_BLK,dy_BLK,dz_BLK
+    use ModMain,       ONLY: unusedBLK
+    use ModVarIndexes, ONLY: Rho_,rhoH1p_, rhoH2p_, &
+         rhoUx_,rhoUy_,rhoUz_
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
 
-    logical,intent(out) :: refineBlock, found
-    integer, intent(in) :: lev
-    real, intent(in)    :: DxBlock
-    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
-    real, intent(in)    :: minx,miny,minz,minR
-    real, intent(in)    :: maxx,maxy,maxz,maxR
-    integer, intent(in) :: iBLK
+    real, intent(out)            :: VarValue
+    character (len=*), intent(in):: TypeVar
+    real, intent(in), optional :: Radius
 
-    character (len=*), parameter :: Name='user_specify_initial_refinement'
-
+    real, external :: calc_sphere
+    real ::mass
+    integer:: i,j,k,iBLK
+    character (len=*), parameter :: Name='user_get_log_var'
+    logical:: oktest=.false.,oktest_me
     !-------------------------------------------------------------------
-!    select case (InitialRefineType)
-!    case ('Titan3Dboyyfocus')
-       ! Refine, focusing on body
-    found=.true.
-    refineBlock=.false.
-    if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.5*Rbody))&
-         refineBlock = .true.
-    
-!    case default
-       
-!   end select
-    
-  end subroutine user_specify_initial_refinement
+    call set_oktest('user_get_log_var',oktest,oktest_me)
+    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
+    select case(TypeVar)
+    case('lpflx')
+       mass=1.0
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoLp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+
+    case('mpflx')
+       mass=14.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoMp_,i,j,k,iBLK)* &
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)    
+    case('h1pflx')
+       mass=28.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoH1p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+
+    case('h2pflx')
+       mass=44.
+       do iBLK=1,nBLK
+          if (unusedBLK(iBLK)) CYCLE
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoH2p_,i,j,k,iBLK)*&
+                  (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          end do; end do; end do          
+       end do
+       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
+
+    case default
+       call stop_mpi('wrong logvarname')
+    end select
+    !change to user value from normalized flux
+    !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
+    !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
+    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+
+  end subroutine user_get_log_var
 
   !============================================================================
 
   subroutine user_impl_source
-  
+
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
     ! The friction force is proportional to the velocity and the density.
@@ -1833,7 +1887,7 @@ contains
     logical :: oktest,oktest_me
     integer :: iBlock, i, j, k
     real    :: Coef
-!    real, dimension(nI,nJ,nK) :: InvRho_C, Ux_C, Uy_C, Uz_C
+    !    real, dimension(nI,nJ,nK) :: InvRho_C, Ux_C, Uy_C, Uz_C
     !-------------------------------------------------------------------------
 
     if(iProc==PROCtest .and. globalBLK==BLKtest)then
@@ -1855,12 +1909,12 @@ contains
     SP     = cZero
     SE     = cZero
     if(oktest_me)then
-    !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
+       !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
-    
+
     call user_sources
-    
+
     Source_VC(rho_       ,:,:,:) = Srho+Source_VC(rho_,:,:,:)
     Source_VC(rho_+1:rho_+MaxSpecies,:,:,:) = &
          SrhoSpecies+Source_VC(rho_+1:rho_+MaxSpecies,:,:,:)
@@ -1872,31 +1926,31 @@ contains
     Source_VC(Bz_        ,:,:,:) = SBz+Source_VC(Bz_,:,:,:)
     Source_VC(P_     ,:,:,:) = SP+Source_VC(P_,:,:,:)
 
-!    InvRho_C = 1.0/State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
-!    Ux_C = InvRho_C*State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)
-!    Uy_C = InvRho_C*State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)
-!    Uz_C = InvRho_C*State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)
+    !    InvRho_C = 1.0/State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
+    !    Ux_C = InvRho_C*State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)
+    !    Uy_C = InvRho_C*State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)
+    !    Uz_C = InvRho_C*State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)
 
-!    SE = inv_gm1*SP + Ux_C*SrhoUx  + Uy_C*SrhoUy  + Uz_C*SrhoUz  &
-!         - 0.5*(Ux_C**2 + Uy_C**2 + Uz_C**2)*Srho
+    !    SE = inv_gm1*SP + Ux_C*SrhoUx  + Uy_C*SrhoUy  + Uz_C*SrhoUz  &
+    !         - 0.5*(Ux_C**2 + Uy_C**2 + Uz_C**2)*Srho
 
     Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)
 
   end subroutine user_impl_source
 
   !===========================================================================
-  
+
   subroutine user_expl_source
     !    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK
     !    use ModPointImplicit,ONLY: UsePointImplicit, UsePointImplicit_B
-    
+
     !---------------------------------------------------------------------
     ! Here come the explicit source terms
-    
+
   end subroutine user_expl_source
 
   !===========================================================================
-  
+
   subroutine user_set_resistivity(iBlock, Eta_G)
     use ModPhysics,  ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
          UnitN_, UnitTemperature_, UnitX_,UnitT_, Rbody
@@ -1990,8 +2044,39 @@ contains
           write(*,*)'Eta0Si, Eta0=',Eta0Si, Eta0
        end if
     end do; end do; end do
- 
+
   end subroutine user_set_resistivity
 
+  !=====================================================================
+  subroutine user_specify_initial_refinement(iBLK,refineBlock,lev,DxBlock, &
+       xCenter,yCenter,zCenter,rCenter,                        &
+       minx,miny,minz,minR,maxx,maxy,maxz,maxR,found)
+
+    use ModPhysics, ONLY: Rbody
+
+    logical,intent(out) :: refineBlock, found
+    integer, intent(in) :: lev
+    real, intent(in)    :: DxBlock
+    real, intent(in)    :: xCenter,yCenter,zCenter,rCenter
+    real, intent(in)    :: minx,miny,minz,minR
+    real, intent(in)    :: maxx,maxy,maxz,maxR
+    integer, intent(in) :: iBLK
+
+    character (len=*), parameter :: Name='user_specify_initial_refinement'
+
+    !-------------------------------------------------------------------
+    !    select case (InitialRefineType)
+    !    case ('Titan3Dboyyfocus')
+    ! Refine, focusing on body
+    found=.true.
+    refineBlock=.false.
+    if (maxR > Rbody.and.(lev <= 1 .or. minR < 1.5*Rbody))&
+         refineBlock = .true.
+
+    !    case default
+
+    !   end select
+
+  end subroutine user_specify_initial_refinement
 
 end Module ModUser
