@@ -3,3 +3,6 @@ F		IsCentrifugal
 
 #FIELDLINE
 4		nTotalLine
+
+#STOP
+50.0		TimeMax
