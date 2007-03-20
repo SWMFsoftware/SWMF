@@ -10,10 +10,13 @@ module ModPWOM
 
   integer :: iProc, nProc, iComm,errcode
 
+  integer :: iProcTest = 0, iLineTest = 1
+  character (len=100):: StringTest = ''
+
   integer, parameter :: MaxLine = 500
   
   integer :: nTotalLine=1
-  integer ::   iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine
+  integer :: iTheta, iPhi, iUnitSouth,iUnitNorth,i,iLine=0
   integer, dimension(MaxLine)::iLineGlobal
 
   real    ::   Bcoef,MagMoment,rPlanet,Dtheta,Dphi,rLowerBoundary
@@ -46,7 +49,7 @@ module ModPWOM
   integer :: nStep=0
   
   integer, dimension(maxLine)        ::  iThetaLine_I,iPhiLine_I
-  real                               ::  DtHorizontal=50.0, Time, TimeMax
+  real   ::  DtHorizontalOrig = 50.0, DtHorizontal=50.0, Time, TimeMax
 
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.
@@ -62,13 +65,15 @@ module ModPWOM
   integer       :: iUnitInput,iUnitSourceGraphics,&
                    iUnitCollision,nAlt=390
                  
-  integer, dimension(maxLine) :: iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
+  integer, dimension(maxLine) :: &
+       iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
   
   real :: r_C(1:maxGrid)
-  real, dimension(1:maxGrid,0:maxLine):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-                                          dHel_CI, uHel_CI, pHel_CI, THel,         &
-                                          dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
-                                          dElect_CI, uElect_CI, pElect_CI, TElect
+  real, dimension(1:maxGrid,0:maxLine):: &
+       dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
+       dHel_CI, uHel_CI, pHel_CI, THel,         &
+       dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
+       dElect_CI, uElect_CI, pElect_CI, TElect
   real :: DToutput=50.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
 
   logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
@@ -76,7 +81,7 @@ module ModPWOM
   character(7) :: TypeSolver='Godunov'
 
 contains
-
+  !==========================================================================
   subroutine allocate_ie_variables(iSize, jSize)
     integer, intent(in):: iSize, jSize
 
