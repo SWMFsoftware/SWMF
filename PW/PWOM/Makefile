@@ -110,7 +110,7 @@ test_restart_save:
 	cd ${TESTDIR}/PW; rm -rf plot_save; mv plots plots_save; mkdir plots
 
 test_restart_read:
-	cp input/${PLANET}/pw.input.restartread ${TESTDIR}/pw.input
+	cp input/${PLANET}/pw.input ${TESTDIR}
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}/PW; \
 	rm -rf plots_read; mv plots plots_read; mv plots_save plots
