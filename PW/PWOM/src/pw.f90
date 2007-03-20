@@ -148,13 +148,16 @@ end subroutine initial_line_location
 !=============================================================================
 
 subroutine move_line
-  use ModNumConst, ONLY: cTwoPi
+  use ModNumConst, ONLY: cTwoPi, cRadToDeg
   use ModPWOM
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModInterpolate, ONLY: bilinear
   implicit none
   real :: a
+  character(len=*), parameter :: NameSub = 'PW_move_line'
+  logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
+  call PW_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! Get the velocity of field line advection from a
   ! bilinear interpolation.
@@ -188,6 +191,19 @@ subroutine move_line
   xLine_I(iLine) = UxLine_I(iLine)*DtHorizontal + xLineOld_I(iLine)
   yLine_I(iLine) = UyLine_I(iLine)*DtHorizontal + yLineOld_I(iLine)
   zLine_I(iLine) = UzLine_I(iLine)*DtHorizontal + zLineOld_I(iLine) 
+
+  if(DoTestMe)then
+     write(*,*) NameSub, ': iLine=',iLine
+     write(*,*) NameSub, ': Theta, Phi=',ThetaLine_I(iLine)*cRadToDeg, &
+          PhiLine_I(iLine)*cRadToDeg
+     write(*,*) NameSub, ': xyzLineOld=',xLineOld_I(iLine), &
+          yLineOld_I(iLine), zLineOld_I(iLine)
+     write(*,*) NameSub, ': UxyzLine  =',UxLine_I(iLine), &
+          UyLine_I(iLine), UzLine_I(iLine)
+     write(*,*) NameSub, ': DtHorizontal=',DtHorizontal
+     write(*,*) NameSub, ': xyzLine   =',xLine_I(iLine), &
+          yLine_I(iLine), zLine_I(iLine)
+  end if
   
   ! Get new angles from new XYZ positions.Use Theta=arccos(Z/R) and
   ! use Phi = arctan(y/x). make sure to use case statements for phi
@@ -202,8 +218,6 @@ subroutine move_line
   
   ThetaLine_I(iLine) = acos(max(-1.0,min(1.0, zLine_I(iLine)/rLowerBoundary)))
   PhiLine_I(iLine)   = modulo(atan2(yLine_I(iLine), xLine_I(iLine)), cTwoPi)
-
-
   
   ! Deal with posibility that phi is negative
   if (PhiLine_I(iLine) .lt. 0.0) then
@@ -218,6 +232,14 @@ subroutine move_line
   ! actual location. The result is used to get the velocity. 
   iThetaLine_I(iLine) = floor( ThetaLine_I(iLine) / Dtheta) + 1
   iPhiLine_I(iLine)   = mod(floor(PhiLine_I(iLine) / Dphi),nPhi-1)+1
+
+  if(DoTestMe)then
+     write(*,*) NameSub, ': Factor a=',a
+     write(*,*) NameSub, ': xyzLine   =',xLine_I(iLine), &
+          yLine_I(iLine), zLine_I(iLine)
+     write(*,*) NameSub, ': Theta, Phi=',ThetaLine_I(iLine)*cRadToDeg, &
+          PhiLine_I(iLine)*cRadToDeg
+  end if
 
 end subroutine move_line
 
@@ -294,3 +316,18 @@ subroutine PW_advance_line
   
 end subroutine PW_advance_line
 
+!============================================================================
+subroutine PW_set_do_test(String, DoTest, DoTestMe)
+  use ModPWOM, ONLY : iProc, iProcTest, iLine, iLineTest, StringTest
+  implicit none
+  
+  character (len=*), intent(in) :: String
+  logical, intent(out) :: DoTest, DoTestMe
+
+  if(iLineTest == 0 .or. iLine == iLineTest)then
+     DoTest = index(StringTest, String) > 0
+     DoTestMe = DoTest .and. iProc == iProcTest
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
+end subroutine PW_set_do_test
