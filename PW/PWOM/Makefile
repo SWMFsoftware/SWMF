@@ -75,32 +75,32 @@ test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
 		output/${PLANET}/restart_iline0001.dat \
-		> test_${PLANET}.diff)
+		> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
 		output/${PLANET}/restart_iline0002.dat \
-		>> test_${PLANET}.diff)
+		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
 		output/${PLANET}/restart_iline0003.dat \
-		>> test_${PLANET}.diff)
+		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
 		output/${PLANET}/restart_iline0004.dat \
-		>> test_${PLANET}.diff)
+		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/plots_iline0001.out \
 		output/${PLANET}/plots_iline0001.out \
-		> test_${PLANET}_plots.diff)
+		> test_${PLANET}${MYTEST}_plots.diff)
 	ls -l *.diff
 
 test_restart:
-	@echo "test_restart_save..." > test_${PLANET}_restart,diff
+	@echo "test_restart_save..." > test_${PLANET}_restart.diff
 	make test_restart_save
-	@echo "test_restart_read..." >> test_${PLANET}_restart,diff
+	@echo "test_restart_read..." >> test_${PLANET}_restart.diff
 	make test_restart_read
-	@echo "test_restart_check..." >> test_${PLANET}_restart,diff
-	make test_check
+	@echo "test_restart_check..." >> test_${PLANET}_restart.diff
+	make test_check MYTEST=_restart
 
 test_restart_save:
 	cp input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
