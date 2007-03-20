@@ -46,6 +46,7 @@ subroutine PW_set_parameters(NameAction)
         call read_var('UseCentrifugal',UseCentrifugal)
      case('#TIMESTEP')
         call read_var('DtHorizontal',DtHorizontal)
+        DtHorizontalOrig = DtHorizontal
      case('#VERTICALGRID')
         call read_var('nPoints',nAlt)
      case('#FIELDLINE')
@@ -53,7 +54,11 @@ subroutine PW_set_parameters(NameAction)
      case('#LOG')
         call read_var('WriteLog',nLog) ! nLog=-1 write for all lines
                                        ! nLog= 0 write for no lines
-                                       ! nLog= 1..nTotalLine, write for that line
+                                       ! nLog= 1..nTotalLine, write one line
+     case('#TEST')
+        call read_var('StringTest',StringTest)
+        call read_var('iProcTest', iProcTest)
+        call read_var('iLinetest', iLineTest)
      endselect
 
 
