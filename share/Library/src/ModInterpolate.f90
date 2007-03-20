@@ -40,7 +40,7 @@ contains
 
     integer :: i1, i2, j1, j2
     real :: Dx1, Dx2, Dy1, Dy2
-    character (len=*), parameter :: NameSub=NameMod//'::trilinear'
+    character (len=*), parameter :: NameSub=NameMod//'::bilinear'
     !--------------------------------------------------------------------------
     if(any( Xy_D < (/iMin, jMin/)) .or. any(Xy_D > (/ iMax, jMax /))) then
        write(*,*)'iMin, iMax, jMin, jMax=',iMin, iMax, jMin, jMax
