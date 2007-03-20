@@ -68,7 +68,7 @@ PDF:  USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
 HTML: cleanhtml USERMANUAL.html DESIGN.html STANDARDS.html #^CFG IF DOCHTML
 
 clean:
-	rm -rf *.aux *.log *.toc *.dvi *~
+	rm -rf *.aux *.log *.toc *.dvi *~ ../../PARAM.xmltex
 
 cleanpdf: clean
 	cd ..;     rm -rf USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf
