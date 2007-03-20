@@ -34,7 +34,9 @@ MPIRUN = mpirun -np 2
 
 test:
 	-@(make test_saturn)
+	-@(make test_restart)
 	-@(make test_earth)
+	-@(make test_restart)
 
 test_earth:	
 	@echo "starting..." > test_Earth_plots.diff
@@ -92,6 +94,32 @@ test_check:
 		> test_${PLANET}_plots.diff)
 	ls -l *.diff
 
+test_restart:
+	@echo "test_restart_save..." > test_${PLANET}_restart,diff
+	make test_restart_save
+	@echo "test_restart_read..." >> test_${PLANET}_restart,diff
+	make test_restart_read
+	@echo "test_restart_check..." >> test_${PLANET}_restart,diff
+	make test_check
+
+test_restart_save:
+	cp input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
+	cp input/${PLANET}/pw.input.restartsave ${TESTDIR}/pw.input
+	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
+	cd ${TESTDIR}; mv PW/restartOUT/* PW/restartIN/
+	cd ${TESTDIR}/PW; rm -rf plot_save; mv plots plots_save; mkdir plots
+
+test_restart_read:
+	cp input/${PLANET}/pw.input.restartread ${TESTDIR}/pw.input
+	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
+	cd ${TESTDIR}/PW; \
+	rm -rf plots_read; mv plots plots_read; mv plots_save plots
+	cd ${TESTDIR}/PW; \
+	tail -397 plots_read/plots_iline0001.out >> plots/plots_iline0001.out;\
+	tail -397 plots_read/plots_iline0002.out >> plots/plots_iline0002.out;\
+	tail -397 plots_read/plots_iline0003.out >> plots/plots_iline0003.out;\
+	tail -397 plots_read/plots_iline0004.out >> plots/plots_iline0004.out
+
 rundir: run
 
 run:
@@ -102,10 +130,10 @@ run:
 		cp ${PWDIR}/input/${PLANET}/North.dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
-		ln -s ${BINDIR}/PWOM.exe .; \
-		cp ${PWDIR}/input/${PLANET}/pw.input .; \
-		touch core ; chmod 444 core ; \
-		ln -s PW/* .; \
+			ln -s ${BINDIR}/PWOM.exe .; \
+			cp ${PWDIR}/input/${PLANET}/pw.input .; \
+			touch core ; chmod 444 core ; \
+			ln -s PW/* .; \
 	fi)
 
 clean:
