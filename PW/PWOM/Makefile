@@ -110,15 +110,15 @@ test_restart_save:
 	cd ${TESTDIR}/PW; rm -rf plot_save; mv plots plots_save; mkdir plots
 
 test_restart_read:
-	cp input/${PLANET}/pw.input ${TESTDIR}
+	cp input/${PLANET}/pw.input.restartread ${TESTDIR}/pw.input
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}/PW; \
 	rm -rf plots_read; mv plots plots_read; mv plots_save plots
 	cd ${TESTDIR}/PW; \
-	tail -397 plots_read/plots_iline0001.out >> plots/plots_iline0001.out;\
-	tail -397 plots_read/plots_iline0002.out >> plots/plots_iline0002.out;\
-	tail -397 plots_read/plots_iline0003.out >> plots/plots_iline0003.out;\
-	tail -397 plots_read/plots_iline0004.out >> plots/plots_iline0004.out
+	cat plots_read/plots_iline0001.out >> plots/plots_iline0001.out;\
+	cat plots_read/plots_iline0002.out >> plots/plots_iline0002.out;\
+	cat plots_read/plots_iline0003.out >> plots/plots_iline0003.out;\
+	cat plots_read/plots_iline0004.out >> plots/plots_iline0004.out
 
 rundir: run
 
