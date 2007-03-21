@@ -32,7 +32,7 @@ C Variable time step option implemented 8/05 A. Glocer
 
       Subroutine POLAR_WIND
 
-      Use ModPWOM, only: DtVertical,nLine,IsStandAlone
+      Use ModPWOM, only: DtVertical,nLine,IsStandAlone,DoSavePlot
       use ModIoUnit, ONLY: UnitTmp_
       use ModCommonVariables
       use ModFieldLine
@@ -54,7 +54,8 @@ C     define the output files and attaching units
      &                 NameRestart=NameRestart,    
      &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
      &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
-     &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog)
+     &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog,
+     &                 nStep=nStep)
       
       DT=DtVertical
 
@@ -78,7 +79,7 @@ C
 21    FORMAT(2X,I8)
 
       KSTEP=1
-      NSTEP=1
+!      NSTEP=1
       MSTEP=1
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -152,10 +153,8 @@ C                                                                      C
 
 
 
-      if (IsFirstCall) then
+      if (IsFirstCall .and. DoSavePlot) then
          CALL PW_print_plot
-         !CALL prntCollision
-         !CALL PRNT_Sources
          IsFirstCall = .false.
       endif
 !******************************************************************************
@@ -423,9 +422,7 @@ c            CALL PRNTEF
       IF (IsVariableDt) then
          IF (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) ) Then
             KSTEP=KSTEP+1
-
             CALL PW_print_plot
-            
 !            if (IsStandAlone)call PW_write_restart(
 !     &           nDim,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     
 !     &           dOxyg, uOxyg, pOxyg, TOxyg,         
@@ -681,7 +678,7 @@ C     This determines whether or not to output a restart file.
 C     There are two methods. Either output on iteration for a 
 C     Fixed timestep, or output on frequency for a variable DT
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-
+      NSTEP=NSTEP+1
       IF (.not. IsVariableDt) then
          IF (NSTEP.EQ.NOTP(KSTEP)) Then
             KSTEP=KSTEP+1
@@ -720,6 +717,7 @@ c            CALL PRNTEF
          endif
       endif
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      
 
       IF (TIME+1.0e-5 >= TMAX) Then 
          Call put_field_line(dOxyg, uOxyg, pOxyg, TOxyg,     
@@ -732,7 +730,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          RETURN
       endif
       
-      NSTEP=NSTEP+1
+      
       IF (MSTEP .EQ. NTS) MSTEP=0 
       MSTEP=MSTEP+1
 
