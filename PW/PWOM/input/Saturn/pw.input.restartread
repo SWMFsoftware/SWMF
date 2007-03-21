@@ -3,7 +3,7 @@ F		IsCentrifugal
 
 #SAVEPLOT
 1.0		DtSavePlot
-T		SaveFirst
+F		SaveFirst
 
 #SCHEME
 Rusanov		TypeSolver
@@ -23,4 +23,4 @@ F		IsUseJr
 4		nTotalLine
 
 #STOP
-5.0		Tmax
+10.0		Tmax

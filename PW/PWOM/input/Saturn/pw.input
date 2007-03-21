@@ -3,6 +3,7 @@ F		IsCentrifugal
 
 #SAVEPLOT
 1.0		DtSavePlot
+T		SaveFirst
 
 #SCHEME
 Rusanov		TypeSolver
