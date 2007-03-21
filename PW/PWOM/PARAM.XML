@@ -112,12 +112,15 @@ Otherwise, the PWOM uses a cold start routine. The default is shown.
 
 <command name="SAVEPLOT">
 	<parameter name="DtSavePlot" type="real" default="10.0" />
+	<parameter name="SaveFirst" type="Logical" default="T" />
 
 #SAVEPLOT
 10.0			DtSavePlot
+T			SaveFirst
 
-The frequency which plot files are written out are defined here. The 
-default value is given.
+The frequency which plot files are written out are defined here. 
+As is whether or not to save a plot on the first call. The 
+default values are given.
 </command>
 
 <command name="END">
