@@ -232,8 +232,8 @@ CALEX GGM determines geomagnetic lat. from geographic lat and lon
 CALEX since the dipole on Saturn is aligned with the rotation axis
 CALEX I have set GMLONG=GLONG
 CALEX      CALL GGM(IART,GLONG,GLAT,GMLONG,GMLAT)
-      GMLONG=GLONG
-      GMLAT=GLAT
+!      GMLONG=GLONG
+!      GMLAT=GLAT
 
       DO 49 I=1,7
       AP(I)=50.
