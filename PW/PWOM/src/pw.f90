@@ -290,7 +290,7 @@ subroutine PW_advance_line
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
-       nAlt=nAlt,DoLog=DoLog)
+       nAlt=nAlt,DoLog=DoLog,nStep=nStep)
     
   call polar_wind
   
@@ -303,6 +303,7 @@ subroutine PW_advance_line
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C)
+     DoSavePlot=.true.
   else
      call get_field_line( &
        dOxyg_CI(:,iLine), uOxyg_CI(:,iLine), pOxyg_CI(:,iLine), TOxyg(:,iLine),     &
