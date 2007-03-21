@@ -54,6 +54,7 @@ module ModPWOM
   logical::  DoMoveLine=.true., UseJr=.true., UseCentrifugal=.true.
   logical::  UseIE=.false.
   logical::  DoPlotElectrodynamics=.false.
+  logical::  DoSavePlot=.true.
   character(len=100) :: NamePhiNorth, NamePhiSouth
 
   character(len=100) :: NameInput,  &
