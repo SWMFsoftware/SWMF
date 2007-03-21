@@ -29,6 +29,7 @@ subroutine PW_set_parameters(NameAction)
         end if
      case('#SAVEPLOT')
         call read_var('DtSavePlot',DtOutput)
+        call read_var('SaveFirst',DoSavePlot)
      case('#SAVEPLOTELECTRODYNAMICS')
         call read_var('DoPlotElectrodynamics',DoPlotElectrodynamics)
         call read_var('DtPlotElectrodynamics',DtPlotElectrodynamics)
