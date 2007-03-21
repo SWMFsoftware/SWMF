@@ -83,7 +83,7 @@ subroutine PW_initialize
 
      do iLine=1,nLine
         OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
-        READ (UnitTmp_,*) TIME,DDT1,NS
+        READ (UnitTmp_,*) TIME,DDT1,nStep
         READ (UnitTmp_,*) GeoMagLat_I(iLine),GeoMagLon_I(iLine)
 
         ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
