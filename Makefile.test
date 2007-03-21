@@ -114,13 +114,21 @@ test1_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
-		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
-		output/test1/PW_restart_iline0001.dat \
-		> test1_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/plots_iline0001.out \
 		output/test1/PW_plots_iline0001.out \
+		> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/RESULTS/PW/plots_iline0002.out \
+		output/test1/PW_plots_iline0002.out \
+		>> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/RESULTS/PW/plots_iline0003.out \
+		output/test1/PW_plots_iline0003.out \
+		>> test1_pw.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+		${TESTDIR}/RESULTS/PW/plots_iline0004.out \
+		output/test1/PW_plots_iline0004.out \
 		>> test1_pw.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
