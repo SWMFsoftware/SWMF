@@ -231,6 +231,7 @@ F
 
 #SAVEPLOT
 1	DtSavePlot
+T	SaveFirst
 
 #END_COMP PW ##############################################################
 
