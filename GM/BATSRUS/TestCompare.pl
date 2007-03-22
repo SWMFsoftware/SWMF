@@ -398,7 +398,7 @@ sub compare_speed{
 		print "     --- ";
 	    }
 	}
-	print "   for $speedsum compeleted tests\n";
+	print "   for $speedsum completed tests\n";
     }
     exit 0;
 }
