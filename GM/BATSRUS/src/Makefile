@@ -20,6 +20,8 @@ MODULES = \
 	ModAMR.o\
 	ModBlockData.o\
 	ModBoundaryCells.o\
+	ModSingleFluid.o\
+	ModMultiFluid.o\
 	ModEquation.o\
 	ModCharacteristic.o\
 	ModFaceFlux.o\
