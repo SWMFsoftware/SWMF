@@ -4,6 +4,7 @@
   foreach($parameter as $name) { $$name = $_POST[$name]; }
 
   if($plotapplication == "tecplot")    { include("plot_3Dplt.php"); }
+  if($plotapplication == "tecplot1D")  { include("plot_1Dlog.php"); }
   if($plotapplication == "tecplot2D")  { include("plot_2Dplt.php"); }
   if($plotapplication == "tecplotLOS") { include("plot_LOS.php"); }
   if($plotapplication == "IEidl")      { include("plot_IEidl.php"); }

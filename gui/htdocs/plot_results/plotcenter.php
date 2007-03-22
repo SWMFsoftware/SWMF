@@ -42,6 +42,7 @@ include("$runpath/images/${cmp}_$plottype/defaultsBASE.php");
 // Load plot specific form.
 //
 if($PlotApplication == "tecplot")    { include("plot_3Dplt.php"); }
+if($PlotApplication == "tecplot1D")  { include("plot_1Dlog.php"); }
 if($PlotApplication == "tecplot2D")  { include("plot_2Dplt.php"); }
 if($PlotApplication == "tecplotLOS") { include("plot_LOS.php"); }
 if($PlotApplication == "IEidl")      { include("plot_IEidl.php"); }

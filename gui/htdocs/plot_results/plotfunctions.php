@@ -53,6 +53,8 @@ function GetPlotList($dirname='.') {   // Finds all the plt files
          if (eregi("=0", $file) && eregi("\.out$", $file)) { $files[] = $file; } }
        if($plottype == "LOS") {
          if (eregi("los", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
+       if($plottype == "1Dlog") {
+         if (eregi("log", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
      } elseif($cmp == "IM") {
        if (eregi("2d", $file) && eregi("\.plt$", $file)) { $files[] = $file; }
      } elseif($cmp == "IE") {
@@ -79,6 +81,8 @@ function GetXYZPlotList($dirname='.', $string) {   // Finds all the plt files
          if (eregi("${string}=", $file) && eregi("\.out$", $file)) { $files[] = $file; } }
        if($plottype == "LOS") {
          if (eregi("_${string}_", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
+       if($plottype == "1Dlog") {
+         if (eregi("log", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
      } elseif($cmp == "IM") {
        if (eregi("2d", $file) && eregi("\.plt$", $file)) { $files[] = $file; }
      } elseif($cmp == "IE") {
@@ -380,11 +384,13 @@ function decodeFilename($value) {
      if(eregi("z=", $value)) { $prefix = "Z: "; }
      $chunks = split(".plt", $value, 2);
      $tmp = $chunks[0];
+     $iter = "";
      if(eregi("_n", $tmp)) {
        $chunks = split("_n", $tmp, 2);
        $tmp = $chunks[0];
        $iter = "N=$chunks[1]";
      }
+     $time = "";
      if(eregi("_t", $tmp)) {
        $chunks = split("_t", $tmp, 2);
        $time = $chunks[1];
@@ -407,6 +413,7 @@ function decodeFilename($value) {
      $tmp = $chunks[0];
      $chunks = split("it", $value, 2);
      $tmp = $chunks[1];
+     $time = "";
      if(eregi("_", $tmp)) {
        $chunks = split("_", $tmp, 3);
        $ymd = $chunks[0];
@@ -436,11 +443,13 @@ function decodeFilename($value) {
      if(eregi("z=0", $value)) { $prefix = "Z=0 "; }
      $chunks = split(".out", $value, 2);
      $tmp = $chunks[0];
+     $iter = "";
      if(eregi("_n", $tmp)) {
        $chunks = split("_n", $tmp, 2);
        $tmp = $chunks[0];
        $iter = "N=$chunks[1]";
      }
+     $time = "";
      if(eregi("_t", $tmp)) {
        $chunks = split("_t", $tmp, 2);
        $time = $chunks[1];
