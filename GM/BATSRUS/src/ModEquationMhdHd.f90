@@ -1,6 +1,5 @@
 module ModVarIndexes
 
-  use ModFluid
   implicit none
 
   save
@@ -30,10 +29,26 @@ module ModVarIndexes
   ! The energy is handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
-       NeuRho_    = Bz_+1,  &
+       Rho_       =  1,          &
+       RhoUx_     =  2, Ux_ = 2, &
+       RhoUy_     =  3, Uy_ = 3, &
+       RhoUz_     =  4, Uz_ = 4, &
+       Bx_        =  5, &
+       By_        =  6, &
+       Bz_        =  7, &
+       p_         =  8, &
+       NeuRho_    =  9, &
+       NeuRhoUx_  = 10, &
+       NeuRhoUy_  = 11, &
+       NeuRhoUz_  = 12, &
+       NeuP_      = 13, &
        Energy_    = nVar+1, &
        NeuEnergy_ = nVar+2
 
+  ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
+  integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
+
+  ! Starting points for the multiple fluid indexes
   integer, parameter :: iVarFluid_I(nFluid)  = (/ 0, NeuRho_ - 1 /)
 
   ! The default values for the state variables:
@@ -44,10 +59,10 @@ module ModVarIndexes
        0.0, & ! RhoUx_
        0.0, & ! RhoUy_
        0.0, & ! RhoUz_
-       1.0, & ! p_
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
+       1.0, & ! p_
        1.0, & ! NeuRho_
        0.0, & ! NeuRhoUx_
        0.0, & ! NeuRhoUy_
@@ -84,7 +99,7 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p" "`r^n", "U^n_x", "U^n_y", "U^n_z", "P^n" '
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", "`r^n", "U^n_x", "U^n_y", "U^n_z", "P^n" '
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &

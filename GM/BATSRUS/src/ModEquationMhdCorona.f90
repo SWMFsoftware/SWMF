@@ -1,5 +1,7 @@
 module ModVarIndexes
 
+  use ModSingleFluid
+
   implicit none
 
   save
