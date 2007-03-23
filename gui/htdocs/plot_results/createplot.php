@@ -9,7 +9,7 @@
     $time2 = time();
     $timedif = $time2-$time1;
     Exec("cd $tdir;
-          echo '<br><br><CENTER>processing time: ${timedif} seconds</CENTER><br>' >> page.html");
+          echo '<br><hr><CENTER>processing time: ${timedif} seconds</CENTER><br>' >> page.html");
 
     $fname = "$tdir/page.html";
     $fh = fopen($fname, "rt");
@@ -175,7 +175,7 @@
      ";
    } else {
      Exec("cd $batchdir/$tmpdir;
-           echo '<br><br><CENTER>Using previously created plot.</CENTER><br>' >> page.html;
+           echo '<br><hr><CENTER>Using previously created plot.</CENTER><br>' >> page.html;
            echo '' >> page.html");
 
      $fname = "$batchdir/$tmpdir/page.html";
