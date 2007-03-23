@@ -8,6 +8,7 @@ if (! $plotstyle) {  // Print initial info only
      echo "<H2>Select component filetype from right column</H2>";
    } else {
      echo "<H2>Select component above</H2>";
+     echo "<br><br><h3><a href=\"quicklook.php?runname=$runname\">Quick Look Plots</a></h3>";
      if( is_file("$runpath/runlog")) {
        echo "<br><br><h3><a href=\"viewrunlog.php?runname=$runname&logfile=runlog\"TARGET=\"_log\">View runlog</a></h3>";
      }

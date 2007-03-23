@@ -168,29 +168,33 @@ function plot3() {   // Run Script
   foreach($parameter as $name) { $$name = $_POST[$name]; }
 
   Exec("cd $batchdir/$tmpdir;
-        $tecplot -p batch.mcr -b ../../../$cmp/$plotfile ../../../$cmp/$plotfile2;
-        cp -f batch.log ../.;
-        mv print.cps $file1");
+        echo '#!/bin/sh' > batchscript.sh;
+        echo '' >> batchscript.sh;
+        echo '${tecplot} -p batch.mcr -b ../../../${cmp}/${plotfile}' >> batchscript.sh;
+        echo 'cp -f batch.log ../.' >> batchscript.sh;
+        echo 'mv print.cps ${file1}' >> batchscript.sh;
+        echo '' >> batchscript.sh;
+        chmod 755 batchscript.sh");
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 function plot4() {   // Download for self-plot instructions
-  global $filedir, $plotfile, $imagedir, $number;
+  global $batchdir, $tmpdir, $filedir, $plotfile, $imagedir, $number;
 
   $parameter = array('plotfile2');
   foreach($parameter as $name) { $$name = $_POST[$name]; }
 
-  echo "
-<h3>Download files to recreate this figure manually.</h3>
-<A HREF=\"$filedir/$plotfile\">$plotfile</A><br>
-<A HREF=\"$filedir/$plotfile2\">$plotfile2</A><br>
-<A HREF=\"$imagedir/batch-${number}.mcr\">batch-${number}.mcr</A><br>
-<A HREF=\"$imagedir/style.sty\">style.sty</A><br>
-<A HREF=\"$imagedir/tecplot.mcr\">tecplot.mcr</A><br>
-<br>
-Then run<br>
-<CENTER>tecplot -p batch-${number}.mcr $plotfile $plotfile2</CENTER>
-  ";
+  Exec("cd $batchdir/$tmpdir;
+        echo '<h3>Download files to recreate this figure manually.</h3>' >> page.html;
+        echo '<A HREF=\"${filedir}/${plotfile}\">${plotfile}</A><br>' >> page.html;
+        echo '<A HREF=\"${filedir}/${plotfile2}\">${plotfile2}</A><br>' >> page.html;
+        echo '<A HREF=\"${imagedir}/batch-${number}.mcr\">batch-${number}.mcr</A><br>' >> page.html;
+        echo '<A HREF=\"${imagedir}/style.sty\">style.sty</A><br>' >> page.html;
+        echo '<A HREF=\"${imagedir}/tecplot.mcr\">tecplot.mcr</A><br>' >> page.html;
+        echo '<br>' >> page.html;
+        echo 'Then run<br>' >> page.html;
+        echo '<CENTER>tecplot -p batch-${number}.mcr ${plotfile}</CENTER>' >> page.html;
+        echo '' >> page.html");
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

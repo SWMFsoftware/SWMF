@@ -1,7 +1,38 @@
 <?php    // Set posted value
+  $parameter = array('tdir');
+  foreach($parameter as $name) { $$name = isset($_GET[$name]) ? $_GET[$name] : ''; }
+  if($tdir) {
+    $time1 = time();
+    set_time_limit(0);
+    Exec("cd $tdir; ./batchscript.sh");
+    Exec("cd $tdir; ./runscript.sh");
+    $time2 = time();
+    $timedif = $time2-$time1;
+    Exec("cd $tdir;
+          echo '<br><br><CENTER>processing time: ${timedif} seconds</CENTER><br>' >> page.html");
+
+    $fname = "$tdir/page.html";
+    $fh = fopen($fname, "rt");
+    $fcontent = fread($fh, filesize($fname));
+    fclose($fh); 
+    echo $fcontent;
+
+    Exec("rm -rf $tdir");
+    exit();
+  }
+
   // Required values
   $parameter = array('plotapplication', 'cmp', 'plottype', 'plotfile', 'filedir');
-  foreach($parameter as $name) { $$name = $_POST[$name]; }
+  foreach($parameter as $name) { $$name = ""; $$name = $_POST[$name]; }
+
+  if($plotapplication == "") {
+     echo "
+<html>
+<head><title>ERROR!</title></head>
+<body><CENTER>ERROR, no plotapplications given.  This page can't be bookmarked.</CENTER><br></body>
+</html>";
+     exit();
+  }
 
   if($plotapplication == "tecplot")    { include("plot_3Dplt.php"); }
   if($plotapplication == "tecplot1D")  { include("plot_1Dlog.php"); }
@@ -9,23 +40,19 @@
   if($plotapplication == "tecplotLOS") { include("plot_LOS.php"); }
   if($plotapplication == "IEidl")      { include("plot_IEidl.php"); }
   if($plotapplication == "2Didl")      { include("plot_2Didl.php"); }
- ?>
 
-<?php include("plotfunctions.php");?>
-<?php include("paths.php");?>
+  include("plotfunctions.php");
+  include("paths.php");
 
-<?php
-
-   echo "
-<html>
-<head><title>Plot Results: $plotfile</title></head>
-<body>
-   ";
-
-   // CHECK FOR ERRORS
+   // CHECK FOR PLOT SPECIFIC ERRORS
    $errors = plot0();
    if ($errors) {
-     echo "<CENTER>ERROR, incomplete information given.  Fix and try again.</CENTER><br>\n"; exit();
+     echo "
+<html>
+<head><title>ERROR!</title></head>
+<body><CENTER>ERROR, incomplete information given.  Fix and try again.</CENTER><br></body>
+</html>";
+     exit();
    }
 
    $plotfileclip = $plotfile;
@@ -90,47 +117,74 @@
    }
 
    $decodedplotfile = decodeFilename($plotfile);
-   echo "
-<CENTER>File=$plotfile, $decodedplotfile, Style=$number</CENTER><br>
-   ";
 
    if (!($fileexists)) {
-     echo "
-<CENTER>Please wait while image is rendered ...</CENTER>
-     ";
-     ob_flush();flush();
-     $time1 = time();
-     set_time_limit(0);
+     Exec("cd $batchdir/$tmpdir;
+           echo '<html>' >> page.html;
+           echo '<head>' >> page.html;
+           echo '<title>Plot Results: ${plotfile}</title>' >> page.html;
+           echo '</head>' >> page.html;
+           echo '<body>' >> page.html;
+           echo '<CENTER>File=${plotfile}, ${decodedplotfile}, Style=${number}</CENTER><br>' >> page.html;
+           echo '' >> page.html");
 
      // LOAD 3RD CUSTOM CODE BLOCK TO RUN SCRIPT
      plot3();
 
      Exec("cd $batchdir/$tmpdir;
-           $gs -sDEVICE=png16m -sOutputFile=tmp.png -dNOPAUSE -q -dBATCH $file1;
-           $convert +antialias -trim tmp.png $file2;
-           cp $file1 ../../${cmp}_$plottype/;
-           cp $file2 ../../${cmp}_$plottype/");
-     $time2 = time();
-     $timedif = $time2-$time1;
-     echo "
-<CENTER>processing time: $timedif seconds</CENTER><br>
-     ";
+           echo '#!/bin/sh' > runscript.sh;
+           echo '' >> runscript.sh;
+           echo '${gs} -sDEVICE=png16m -sOutputFile=tmp.png -dNOPAUSE -q -dBATCH ${file1}' >> runscript.sh;
+           echo '${convert} +antialias -trim tmp.png ${file2}' >> runscript.sh;
+           echo 'cp ${file1} ../../${cmp}_${plottype}/' >> runscript.sh;
+           echo 'cp ${file2} ../../${cmp}_${plottype}/' >> runscript.sh;
+           echo '' >> runscript.sh;
+           chmod 755 runscript.sh");
    } else {
-     echo "
-<CENTER>Using previously created plot.</CENTER><br>
-     ";
+     Exec("cd $batchdir/$tmpdir;
+           echo '<html>' >> page.html;
+           echo '<head>' >> page.html;
+           echo '<title>Plot Results: ${plotfile}</title>' >> page.html;
+           echo '</head>' >> page.html;
+           echo '<body>' >> page.html;
+           echo '<CENTER>File=${plotfile}, ${decodedplotfile}, Style=${number}</CENTER><br>' >> page.html;
+           echo '' >> page.html");
    }
-   Exec("cd $batchdir;
-         rm -rf $tmpdir");
 
-   echo "
-<P><CENTER>
-<A HREF=\"$filedir/../images/${cmp}_$plottype/$file1\"><IMG SRC=\"$filedir/../images/${cmp}_$plottype/$file2\" BORDER=0></A>
-</CENTER></P>
-<BR CLEAR=ALL>
-   ";
+   Exec("cd $batchdir/$tmpdir;
+         echo '<P><CENTER>' >> page.html;
+         echo '<A HREF=\"${filedir}/../images/${cmp}_${plottype}/${file1}\"><IMG SRC=\"${filedir}/../images/${cmp}_${plottype}/${file2}\" BORDER=0></A>' >> page.html;
+         echo '</CENTER></P>' >> page.html;
+         echo '<BR CLEAR=ALL>' >> page.html;
+         echo '' >> page.html");
 
    // LOAD 4TH CUSTOM CODE BLOCK TO DISPLAY DOWNLOAD FOR SELF-PLOT INSTRUCTIONS
    plot4();
+
+   if (!($fileexists)) {
+     echo "
+<html>
+<head>
+<title>Plot Results: ... rendering ...</title>
+<META HTTP-EQUIV=\"refresh\" content=\"0;URL=createplot.php?tdir=${batchdir}/${tmpdir}\">
+</head>
+<body>
+<br><center><img src=\"../images/pleasewait.gif\"></center>
+</body>
+</html>
+     ";
+   } else {
+     Exec("cd $batchdir/$tmpdir;
+           echo '<br><br><CENTER>Using previously created plot.</CENTER><br>' >> page.html;
+           echo '' >> page.html");
+
+     $fname = "$batchdir/$tmpdir/page.html";
+     $fh = fopen($fname, "rt");
+     $fcontent = fread($fh, filesize($fname));
+     fclose($fh); 
+     echo $fcontent;
+
+     Exec("rm -rf $batchdir/$tmpdir");
+   }
 
 ?>

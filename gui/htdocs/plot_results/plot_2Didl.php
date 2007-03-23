@@ -235,24 +235,27 @@ function plot3() {   // Run Script
   global $batchdir, $tmpdir, $file1;
 
   Exec("cd $batchdir/$tmpdir;
-        ./runidl.sh >& batch.log;
-        cp -f batch.log ../.;
-        mv *ps $file1");
+        echo '#!/bin/sh' > batchscript.sh;
+        echo '' >> batchscript.sh;
+        echo './runidl.sh >& batch.log' >> batchscript.sh;
+        echo 'cp -f batch.log ../.' >> batchscript.sh;
+        echo 'mv *ps $file1' >> batchscript.sh;
+        chmod 755 batchscript.sh");
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 function plot4() {   // Download for self-plot instructions
-  global $filedir, $plotfile, $imagedir, $number, $macroextension;
+  global $batchdir, $tmpdir, $filedir, $plotfile, $imagedir, $number, $macroextension;
 
-  echo "
-<h3>Download files to recreate this figure manually.</h3>
-<A HREF=\"$filedir/$plotfile\">$plotfile</A><br>
-<A HREF=\"$imagedir/batch-${number}${macroextension}\">batch-${number}${macroextension}</A><br>
-<A HREF=\"$imagedir/runidl.sh\">runidl.sh</A><br>
-<br>
-Then fix the path in runidl.sh and run<br>
-<CENTER>ln -s $plotfile file.out; ln -s batch-${number}${macroextension} batch${macroextension}; ./runidl.sh</CENTER>
-  ";
+  Exec("cd $batchdir/$tmpdir;
+        echo '<h3>Download files to recreate this figure manually.</h3>' >> page.html;
+        echo '<A HREF=\"${filedir}/${plotfile}\">${plotfile}</A><br>' >> page.html;
+        echo '<A HREF=\"${imagedir}/batch-${number}${macroextension}\">batch-${number}${macroextension}</A><br>' >> page.html;
+        echo '<A HREF=\"${imagedir}/runidl.sh\">runidl.sh</A><br>' >> page.html;
+        echo '<br>' >> page.html;
+        echo 'Then fix the path in runidl.sh and run<br>' >> page.html;
+        echo '<CENTER>ln -s ${plotfile} file.out; ln -s batch-${number}${macroextension} batch${macroextension}; ./runidl.sh</CENTER>' >> page.html;
+        echo '' >> page.html");
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
