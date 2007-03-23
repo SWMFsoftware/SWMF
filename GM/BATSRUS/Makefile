@@ -183,7 +183,7 @@ dist:	distclean
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
-	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.def
+	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.def Makefile.test
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
