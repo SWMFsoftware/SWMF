@@ -14,6 +14,16 @@ Module ModAdvance
   ! Numerical flux type
   character (len=10) :: FluxType
 
+  !\ One of the two possible ways to treat the MHD-like systems
+  !  (oartially symmetrizable, following the Godunov definition).
+  !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 
+  !  continuous  normal component of the magnetic field across the face.
+  !  The number of jumps in the physical variables across the face is equal
+  !  to the number of waves, resulting in the the well-posed solution os
+  !  the Riemann problem. This approach is alternative to the 8-wave scheme
+
+  logical::UseRS7
+
   ! Update check parameters
   logical :: UseUpdateCheck
   real :: percent_max_rho(2), percent_max_p(2)

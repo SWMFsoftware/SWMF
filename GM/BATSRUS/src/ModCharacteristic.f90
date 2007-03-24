@@ -1,3 +1,4 @@
+!^CFG COPYRIGHT UM
 Module ModCharacteristicMhd
   use ModVarIndexes
   use ModPhysics,ONLY:g,inv_gm1
@@ -231,17 +232,10 @@ contains
 
     XnH =cQuarter*RhoInvH*(BnR-BnL)**2 
     XH  =cHalf*WeightInv**2*sum((BL_D-BR_D)**2)
-    
-    !Correct sppeds of sound
    
-    Tmp = g * XH
-    aL=aL!+Tmp
-    aR=aR!+Tmp
-
-
     !Average the speed of sound
-    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) +Tmp&
-         +(g-cOne) * (XnH + cHalf * sum(dState_V(Ux_:Uz_)**2)*&
+    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) +&
+         g * XH + (g-cOne) * (XnH + cHalf * sum(dState_V(Ux_:Uz_)**2)*&
                                     RhoH  * WeightInv**2)
  
     !Below B1H is used only in the transformation matrix for the 
@@ -397,13 +391,13 @@ contains
 
     BnL=BnL+B0n;BL_D=BL_D+B0_D
     call get_characteristic_speeds(aL,RhoInvL,RhoSqrtL,&
-         BnH,BL_D,CsL,CaL,CfL)
-    !CaL=CaL*sign(cOne,BnL)*SignBnH
+         BnL,BL_D,CsL,CaL,CfL)
+    CaL=CaL*sign(cOne,BnL)*SignBnH
     call set_eigenvalues(EigenvalueL_V,CsL,CaL,CfL)
     BnR=BnR+B0n;BR_D=BR_D+B0_D
     call get_characteristic_speeds(aR,RhoInvR,RhoSqrtR,&
-                                   BnH,BR_D,CsR,CaR,CfR)
-    !CaR=CaR*sign(cOne,BnR)*SignBnH
+                                   BnR,BR_D,CsR,CaR,CfR)
+    CaR=CaR*sign(cOne,BnR)*SignBnH
     call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
   contains
@@ -463,8 +457,9 @@ contains
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
        Eps_V(iWave)=max(abs(EigenvalueR_V(iWave)-Lambda),&
-                             abs(Lambda -EigenvalueL_V(iWave)),Eps_V(iWave))
-       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))
+                             abs(Lambda -EigenvalueL_V(iWave)),cTolerance2)!,Eps_V(iWave))
+       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))+&
+                          cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
     end do
  
     cMax=max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
@@ -515,20 +510,23 @@ contains
                                       CMax,IsBoundary)
     UnL= uL_D(iDir); UnR=uR_D(iDir)
     EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
+    !For test purpose only:
+    EigenvalueFixed_V(DivBW_)=max(abs(EigenvalueL_V(EntropyW_)),&
+                                  abs(EigenvalueL_V(EntropyW_)))
     cMax=max(cMax,EigenvalueFixed_V(DivBW_))
     if(IsBoundary)EigenvalueFixed_V=cMax
     FluxPseudoChar_V=cZero
-    do iWave=1,nVar-1
+    do iWave=1,nVar!-1
        FluxPseudoChar_V = FluxPseudoChar_V + &
             Eigenvector_VV(:,iWave)*EigenvalueFixed_V(iWave)*&
             DeltaWave_V(iWave)
             
     end do
-    FluxPseudoChar_V = FluxPseudoChar_V+&
-            Eigenvector_VV(:,DivBW_)*&
-            (UnL*DeltaBnR+UnR*DeltaBnL+&
-            EigenvalueFixed_V(DivBW_)*(&
-            DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
+   ! FluxPseudoChar_V = FluxPseudoChar_V+&
+   !         Eigenvector_VV(:,DivBW_)*&
+   !         (UnL*DeltaBnR+UnR*DeltaBnL+&
+   !         EigenvalueFixed_V(DivBW_)*(&
+   !         DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
     DissipationFlux_V=cHalf*&
          flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
     Un=UH_D(iDir)
@@ -576,7 +574,7 @@ contains
                                       EigenvalueFixed_V(1:nVar-1),&
                                       CMax,IsBoundary)
     UnL=sum(uL_D*Dir_D);UnR=sum(uR_D*Dir_D)
-    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR),cMax)
+    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
     cMax=max(cMax,EigenvalueFixed_V(DivBW_))
     FluxPseudoChar_V=cZero
     do iWave=1,nVar-1
