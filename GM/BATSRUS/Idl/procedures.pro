@@ -156,6 +156,8 @@ pro openfile,unit,filename,filetype
        'ascii' :openr,unit,filename
        'binary':openr,unit,filename,/f77_unf
        'real4' :openr,unit,filename,/f77_unf
+       'BINARY':openr,unit,filename,/f77_unf
+       'REAL4' :openr,unit,filename,/f77_unf
        else    :print,'Openfile: unknown filetype:',filetype
    endcase
 end
@@ -176,12 +178,13 @@ for ifile=0,n_elements(filenames)-1 do begin
         ; Obtain filetype based on the length info in the first 4 bytes
         close,10
         openr,10,filenames(ifile)
-        len=long(1)
-        readu,10,len
-        if len ne 79 then ftype='ascii' else begin
+        lenhead=long(1)
+        readu,10,lenhead
+        if lenhead ne 79 and lenhead ne 500 then ftype='ascii' else begin
             ; The length of the 2nd line decides between real4 and binary
             ; since it contains the time, which is real*8 or real*4
-            head=bytarr(79+4)
+            head=bytarr(lenhead+4)
+            len=long(1)
             readu,10,head,len
             case len of
                 20: ftype='real4'
@@ -192,6 +195,7 @@ for ifile=0,n_elements(filenames)-1 do begin
                     retall
                 end
             endcase
+            if lenhead eq 500 then ftype = strupcase(ftype)
         endelse
         close,10
         
@@ -251,17 +255,25 @@ pro gethead,unit,filetype,headline,physics,it,time,gencoord, $
 
 on_error,2
 
+ftype = strlowcase(filetype)
+
+if ftype eq filetype then lenstr = 79 else lenstr = 500
+
 ;Type definitions
-headline='                                                                               '
+headline=''
+for i=1, lenstr do headline=headline+' '
 it=long(1)
 ndim=long(1)
 neqpar=long(1)
 nw=long(1)
-varname='                                                                               '
+varname=''
+for i=1, lenstr do varname=varname+' '
+
 ;Remember pointer position at beginning of header
 point_lun,-unit,pointer0
+
 ;Read header
-case filetype of
+case ftype of
     'log': begin
         readf,unit,headline
         headline=headline+'_mhd13'
@@ -330,7 +342,7 @@ if keyword_set(pictsize) then begin
     nxs=1
     for idim=1,ndim do nxs=nxs*nx(idim-1)
                                 ; Snapshot size = header + data + recordmarks
-    case filetype of
+    case ftype of
         'log'   :pictsize = 1
         'ascii' :pictsize = headlen + (18*(ndim+nw)+1)*nxs
         'binary':pictsize = headlen + 8*(1+nw)+8*(ndim+nw)*nxs
@@ -395,7 +407,7 @@ pro get_pict,unit,filetype,npict,x,w,$
    endfor
 
    ; Read data
-   case filetype of
+   case strlowcase(filetype) of
        'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
        'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
        'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
@@ -1573,6 +1585,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
           showbar=1
+          if strpos(plotmod,'stream') ge 0 then showbar=0
           fill=1
       endif else showbar=0
 
