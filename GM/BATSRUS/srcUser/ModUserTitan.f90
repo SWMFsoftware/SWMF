@@ -453,9 +453,7 @@ contains
   subroutine user_sources
 
     use ModMain, ONLY: PROCTEST,GLOBALBLK,BLKTEST, iTest,jTest,kTest 
-    use ModAdvance,  ONLY: State_VGB,Theat0,           &
-         B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,UDotFA_X,UDotFA_Y,  &
-         UDotFA_Z,VdtFace_x,VdtFace_y,VdtFace_z
+    use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          vInv_CB, Rmin_BLK
     use ModConst,    ONLY: cZero,cHalf,cOne,cTwo,cTolerance

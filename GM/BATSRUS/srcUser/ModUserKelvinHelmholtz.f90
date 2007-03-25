@@ -19,11 +19,12 @@ contains
 
   subroutine user_initial_perturbation
 
-    use ModMain, ONLY: nBlock, UnusedBlk, ProcTest
-    use ModProcMH, ONLY: iProc
-    use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
+    use ModMain,     ONLY: nBlock, UnusedBlk, ProcTest
+    use ModProcMH,   ONLY: iProc
+    use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, y1, y2, z1, z2
     use ModNumConst, ONLY: cTwoPi
+    use ModEnergy,   ONLY: calc_energy_ghost
 
     integer :: iBlock
     logical :: oktest, oktest_me
@@ -60,7 +61,7 @@ contains
             AmplUy*tanh(x_BLK(:,:,:,iBlock)/xWidthUy) &
             * State_VGB(Rho_,:,:,:,iBlock)
 
-       call calc_energy(iBlock)
+       call calc_energy_ghost(iBlock)
     end do
 
   end subroutine user_initial_perturbation

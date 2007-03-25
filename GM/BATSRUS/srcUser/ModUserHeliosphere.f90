@@ -1809,25 +1809,8 @@ contains
   end subroutine get_plasma_parameters_cell
 
   !========================================================================
-  !  SUBROUTINE user_initial_perturbation
-  !========================================================================
-  !\
-  ! This subroutine allows the user to add a perturbation to a solutions
-  ! read in from a restart file.  The idea is to allow the user to "start"
-  ! some process on top of the already converged solution. The routine loops
-  ! over all blocks, but only needs to load the perturbation where appropriate.
-  ! As with all user subroutines, the variables declared in ModUser are 
-  ! available here.  Again, as with other user subroutines DO NOT MODIFY ANY 
-  ! GLOBAL VARIABLE DEFINED IN THE MODULES INCLUDED IN THIS SUBROUTINE UNLESS 
-  ! SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !   rho_BLK,rhoUx_BLk,rhoUy_BLK,rhoUz_BLK,p_BLK,E_BLK
-  !   Bx_BLK, By_BLK, Bz_BLK
-  !
-  ! Note that in most cases E (energy) and P (pressure) should both be loaded.
-  !/
   subroutine user_initial_perturbation
+
     use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
          unusedBLK,UseUserHeating,UseUserB0,gcn,x_,y_,z_
     use ModIO,        ONLY: restart
@@ -1842,8 +1825,10 @@ contains
     use ModGeometry,  ONLY: x_BLK,y_BLK,z_BLK,R_BLK,cV_BLK,x2,y2,z2
     use ModPhysics,   ONLY: Gbody,g,inv_g,gm1,inv_gm1,ModulationP,   &
          ModulationRho,UseFluxRope,rot_period_dim,OmegaBody,Rbody,   &
-         No2Si_V(UnitU_),No2Si_V(UnitRho_),No2Si_V(UnitX_),No2Io_V(UnitEnergydens_),           &
-         No2Io_V(UnitT_),No2Io_V(UnitB_)
+         No2Si_V(UnitU_),No2Si_V(UnitRho_),No2Si_V(UnitX_),&
+         No2Io_V(UnitEnergydens_),No2Io_V(UnitT_),No2Io_V(UnitB_)
+
+    use ModEnergy, ONLY: calc_energy_cell
     !\
     ! Variables required by this user subroutine::
     !/
@@ -1988,7 +1973,7 @@ contains
        !\
        ! Update the total energy::
        !/
-       call calc_energy(iBLK)
+       call calc_energy_cell(iBLK)
     end do
     !\
     ! Write out some statistics::
@@ -3185,6 +3170,8 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModMain,    ONLY: nStage
     use ModPhysics, ONLY: inv_gm1
+    use ModEnergy,  ONLY: calc_energy_cell
+
     implicit none
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
@@ -3206,7 +3193,7 @@ contains
        State_VGB(Ew_,i,j,k,iBlock)=       & 
             State_VGB(P_,i,j,k,iBlock)*(cOne/(GammaCell - cOne) - inv_gm1)
     end do; end do; end do
-    call calc_energy(iBlock)
+    call calc_energy_cell(iBlock)
     !\
     ! End update of pressure and relaxation energy::
     !/

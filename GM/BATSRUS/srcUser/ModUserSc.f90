@@ -1165,14 +1165,14 @@ contains
   !========================================================================
 
   subroutine user_initial_perturbation
-    use ModMain,      ONLY: nI,nJ,nK,nBLK,                           &
-         unusedBLK,gcn,x_,y_,z_
+    use ModMain,      ONLY: nI, nJ, nK, nBLK, unusedBLK, gcn, x_, y_, z_
     use ModIO,        ONLY: restart
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModNumConst
     use ModPhysics,ONLY:inv_gm1
     use ModGeometry
+    use ModEnergy. ONLY: calc_energy_cell
     implicit none
 
     !\
@@ -1268,7 +1268,7 @@ contains
        !\
        ! Update the total energy::
        !/
-       call calc_energy(iBLK)
+       call calc_energy_cell(iBLK)
     end do
   end subroutine user_initial_perturbation
 
@@ -1286,11 +1286,12 @@ contains
   subroutine user_update_states(iStage,iBlock)
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB,B0xCell_BLK,    &
-         B0yCell_BLK,B0zCell_BLK
+    use ModAdvance, ONLY: State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
     use ModMain,    ONLY: nStage
     use ModPhysics, ONLY: inv_gm1
-    use ModGeometry,ONLY:R_BLK
+    use ModGeometry,ONLY: R_BLK
+    use ModEnergy,  ONLY: calc_energy_cell
+
     implicit none
     integer,intent(in):: iStage,iBlock
     integer:: i,j,k
@@ -1316,7 +1317,7 @@ contains
        State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
             *(cOne/(GammaCell-cOne)-inv_gm1)
     end do; end do; end do
-    call calc_energy(iBlock)
+    call calc_energy_cell(iBlock)
     !\
     ! End update of pressure and relaxation energy::
     !/

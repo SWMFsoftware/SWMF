@@ -13,10 +13,8 @@ module ModUser
        IMPLEMENTED4 => user_set_boundary_cells,         &
        IMPLEMENTED5 => user_face_bcs,                   &
        IMPLEMENTED6 => user_calc_sources,               &
-       IMPLEMENTED7 => user_update_states,              &
-!       IMPLEMENTED8 => user_set_plot_var,               &
-       IMPLEMENTED10 => user_get_log_var,               &
-       IMPLEMENTED11 => user_specify_initial_refinement
+       IMPLEMENTED7 => user_get_log_var,                &
+       IMPLEMENTED8 => user_specify_initial_refinement
 
   include 'user_module.h' !list of public methods
 
@@ -223,9 +221,7 @@ contains
   !/
   subroutine user_sources
     use ModMain
-    use ModAdvance,  ONLY: State_VGB,Theat0,           &
-         B0xCell_BLK,B0yCell_BLK,B0zCell_BLK,UDotFA_X,UDotFA_Y,  &
-         UDotFA_Z,VdtFace_x,VdtFace_y,VdtFace_z
+    use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_
     use ModGeometry, ONLY: x_BLK,y_BLK,z_BLK,R_BLK,&
          vInv_CB
@@ -815,58 +811,6 @@ contains
     !  call stop_mpi('end')  
   end subroutine set_multiSp_ICs
 
-  !========================================================================
-  !========================================================================
-  subroutine user_update_states(iStage,iBlock)
-    use ModAdvance, ONLY: State_VGB, E_BLK, UseNonConservative
-!    use ModProcMH
-    use ModPhysics, ONLY: cTiny8, gm1, cHalf
-    use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
-    integer,intent(in):: iStage,iBlock
-    integer::i,j,k
-    !-------------------------------------------------------
-    call update_states_MHD(iStage,iBlock)
-    !\
-    ! Begin update of total density
-    !/
-
-    do k=1,nK; do j=1,nJ; do i=1,nI
-
-       State_VGB(rho_+1:rho_+maxspecies,i,j,k,iBlock)=           &
-            max(0.0, State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
-
-       State_VGB(rho_   ,i,j,k,iBlock)=           &
-            sum(State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
-
-       !if (1==2) then
-       !       if(iProc==0.and.iBlock==43.and.i==2.and.j==1.and.k==1)write(*,*)&
-       !            'rhoSp=',State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock)
-       !end if
-    end do; end do; end do
-
-    if(.not.UseNonConservative) &
-         State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) = gm1*(&
-         E_BLK(1:nI,1:nJ,1:nK,iBlock) &
-         - cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock)**2 +&
-         State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock)**2 +&
-         State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock)**2) &
-         /State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)  &
-         +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)**2 + &
-         State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)**2 + &
-         State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)**2) )
-    
-
-    !\
-    ! End update of total density:
-    !/
-
-  end subroutine user_update_states
-
-  !========================================================================
-
-  !========================================================================
-  !  user_set_boundary_cells
-  !  Allows to define boundary conditions at the user defined boundary.
   !========================================================================
   subroutine user_set_boundary_cells(iBLK)
     use ModGeometry
