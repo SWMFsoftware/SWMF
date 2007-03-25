@@ -64,9 +64,9 @@ module ModVarIndexes
        'Rho   ', & ! Rho_
        'RhoSw ', & ! RhoSw_
        'RhoIon', & ! RhoIon_
-       'RhoUx ', & ! RhoUx_
-       'RhoUy ', & ! RhoUy_
-       'RhoUz ', & ! RhoUz_
+       'Mx    ', & ! RhoUx_
+       'My    ', & ! RhoUy_
+       'Mz    ', & ! RhoUz_
        'Bx    ', & ! Bx_
        'By    ', & ! By_
        'Bz    ', & ! Bz_

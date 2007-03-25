@@ -73,25 +73,25 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=*), parameter :: NameVar_V(nVar+nFluid) = (/ &
-       'Rho     ', & ! Rho_
-       'RhoUx   ', & ! RhoUx_
-       'RhoUy   ', & ! RhoUy_
-       'RhoUz   ', & ! RhoUz_
-       'p       ', & ! p_
-       'Bx      ', & ! Bx_
-       'By      ', & ! By_
-       'Bz      ', & ! Bz_
-       'NeuRho  ', & ! NeuRho_
-       'NeuRhoUx', & ! NeuRhoUx_
-       'NeuRhoUy', & ! NeuRhoUy_
-       'NeuRhoUz', & ! NeuRhoUz_
-       'NeuP    ', & ! NeuP_
-       'e       ', & ! Energy_
-       'NeuE    ' /) ! NeuEnergy_
+       'Rho   ', & ! Rho_
+       'Mx    ', & ! RhoUx_
+       'My    ', & ! RhoUy_
+       'Mz    ', & ! RhoUz_
+       'p     ', & ! p_
+       'Bx    ', & ! Bx_
+       'By    ', & ! By_
+       'Bz    ', & ! Bz_
+       'NeuRho', & ! NeuRho_
+       'NeuMx ', & ! NeuRhoUx_
+       'NeuMy ', & ! NeuRhoUy_
+       'NeuMz ', & ! NeuRhoUz_
+       'NeuP  ', & ! NeuP_
+       'e     ', & ! Energy_
+       'NeuE  ' /) ! NeuEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho RhoUx RhoUy RhoUz Bx By Bz e NeuRho NeuRhoUx NeuRhoUy NeuRhoUz NeuE'
+       'Rho Mx My Mz Bx By Bz e NeuRho NeuMx NeuMy NeuMz NeuE'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &

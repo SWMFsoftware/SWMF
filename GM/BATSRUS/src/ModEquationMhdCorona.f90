@@ -58,16 +58,16 @@ module ModVarIndexes
 
   ! The names of the variables used in i/o
   character(len=*), parameter :: NameVar_V(nVar+1) = (/ &
-       'Rho  ', & ! Rho_
-       'RhoUx', & ! RhoUx_
-       'RhoUy', & ! RhoUy_
-       'RhoUz', & ! RhoUz_
-       'Bx   ', & ! Bx_
-       'By   ', & ! By_
-       'Bz   ', & ! Bz_
-       'Ew   ', & ! Ew_
-       'p    ', & ! p_
-       'e    ' /) ! Energy_
+       'Rho', & ! Rho_
+       'Mx ', & ! RhoUx_
+       'My ', & ! RhoUy_
+       'Mz ', & ! RhoUz_
+       'Bx ', & ! Bx_
+       'By ', & ! By_
+       'Bz ', & ! Bz_
+       'Ew ', & ! Ew_
+       'p  ', & ! p_
+       'e  ' /) ! Energy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
