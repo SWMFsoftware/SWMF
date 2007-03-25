@@ -10,6 +10,7 @@ subroutine update_states_MHD(iStage,iBLK)
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModUser, ONLY: user_calc_sources, user_init_point_implicit
+  use ModEnergy
 
   implicit none
 
@@ -46,7 +47,7 @@ subroutine update_states_MHD(iStage,iBLK)
   if(iStage==1) then
      StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = & 
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK)
-     E_o_BLK(1:nI,1:nJ,1:nK,iBLK) = E_BLK(1:nI,1:nJ,1:nK,iBLK)
+     EnergyOld_CBI(:,:,:,iBLK,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBLK,:)
   end if
 
   !Get Residual.
@@ -77,7 +78,8 @@ contains
                Source_VC(iVar,i,j,k)
        end do
        ! Compute energy. Choose which to keep below in the where statement
-       E_BLK(i,j,k,iBLK) = E_o_BLK(i,j,k,iBLK) + Source_VC(Energy_,i,j,k)
+       Energy_GBI(i,j,k,iBLK,:) = EnergyOld_CBI(i,j,k,iBLK,:) + &
+            Source_VC(Energy_:Energy_-1+nFluid,i,j,k)
     end do; end do; end do
 
     if(UseMultispecies)then
@@ -96,7 +98,7 @@ contains
 
     if((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1))then
        do k=1,nK; do j=1,nJ; do i=1,nI
-          E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK) + cHalf*( &
+          Energy_GBI(i,j,k,iBLK,1) = Energy_GBI(i,j,k,iBLK,1) + cHalf*( &
                Source_VC(Bx_,i,j,k)**2 + &
                Source_VC(By_,i,j,k)**2 + &
                Source_VC(Bz_,i,j,k)**2)
@@ -202,7 +204,7 @@ contains
                (UxOld*fullByOld+Ux*FullBy            &
                -UyOld*fullBxOld-Uy*FullBx)
 
-          E_BLK(i,j,k,iBLK) = E_BLK(i,j,k,iBLK)      &
+          Energy_GBI(i,j,k,iBLK,1) = Energy_GBI(i,j,k,iBLK,1)  &
                + cHalf*inv_c2LIGHT*ECorr
 
        end do; end do; end do
@@ -240,50 +242,20 @@ contains
 
     if(UseNonConservative) then
        if(nConservCrit > 0)then
-          where(IsConserv_CB(:,:,:,iBLK))
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = &
-                  gm1*(E_BLK(1:nI,1:nJ,1:nK,iBLK) &
-                  - cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                  State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                  State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-                  /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-                  +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                  State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                  State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2) )
-          elsewhere
-             E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                  inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) &
-                  + cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                  State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-                  State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-                  /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-                  +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                  State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-                  State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)
-          end where
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(IsConserv_CB(i,j,k,iBLK)) then
+                call calc_pressure_point(i,j,k,iBLK)
+             else
+                call calc_energy_point(i,j,k,iBlk)
+             end if
+          end do; end do; end do
        else
           ! All cells are non-conservative
-          E_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               inv_gm1*State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) &
-               + cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-               State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-               State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-               /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-               +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-               State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-               State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)
+          call calc_energy_cell(iBlk)
        end if
     else
        ! All cells are conservative
-       State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) = gm1*(&
-            E_BLK(1:nI,1:nJ,1:nK,iBLK) &
-            - cHalf*((State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-            State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2 +&
-            State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2) &
-            /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)  &
-            +   State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-            State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2 + &
-            State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2) )
+       call calc_pressure_cell(iBlk)
     end if
   end subroutine update_explicit
 

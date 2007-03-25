@@ -3,8 +3,9 @@ subroutine update_states(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK
   use ModUser, ONLY: user_update_states
+  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   implicit none
 
   integer, intent(in) :: iStage,iBlock
@@ -27,7 +28,7 @@ subroutine update_states(iStage,iBlock)
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
 
-     write(*,*)'E    =',E_BLK(Itest,Jtest,Ktest,BLKtest)
+     write(*,*)'Energy =',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
      write(*,*)'Fluxes and sources for ',NameVar_V(VARtest)
      write(*,*)'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
           Flux_VX(VARtest,Itest+1,Jtest,Ktest)
@@ -69,9 +70,11 @@ subroutine update_states(iStage,iBlock)
   endif
 
   if(index(test_string,'fixE ')>0) then
-     E_BLK(1:nI,1:nJ,1:nK,iBlock)=E_o_BLK(:,:,:,iBlock)
-     State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)=&
-          StateOld_VCB(P_,:,:,:,iBlock)
+     Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)=EnergyOld_CBI(:,:,:,iBlock,:)
+     do iFluid=1, nFluid
+        call select_fluid
+        State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(iP,:,:,:,iBlock)
+     end do
   endif
 
   if(index(test_string,'fixothers')>0) then
@@ -81,9 +84,8 @@ subroutine update_states(iStage,iBlock)
              abs(y_BLK(i,j,k,iBlock)-Ytest)+ &
              abs(z_BLK(i,j,k,iBlock)-Ztest) < 1.1 ) CYCLE
 
-        State_VGB(:,i,j,k,iBlock)  =&
-             StateOld_VCB(:,i,j,k,iBlock)
-        E_BLK(i,j,k,iBlock)    =E_o_BLK(i,j,k,iBlock)
+        State_VGB(:,i,j,k,iBlock)  = StateOld_VCB(:,i,j,k,iBlock)
+        Energy_GBI(i,j,k,iBlock,:) = EnergyOld_CBI(i,j,k,iBlock,:)
      end do; end do; end do
   end if
   !^CFG END DEBUGGING
@@ -94,7 +96,10 @@ subroutine update_states(iStage,iBlock)
         write(*,*)NameVar_V(iVar),'(TestCell)  =',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
-     write(*,*)'E    =',E_BLK(Itest,Jtest,Ktest,BLKtest)
+     do iFluid = 1, nFluid
+        write(*,'(a,i2,a,g19.12)') &
+             'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
+     end do
   end if
 
 end subroutine update_states
@@ -112,6 +117,9 @@ subroutine update_check(iStage)
   use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,R_BLK,true_cell
   use ModNumConst, ONLY: cTiny
   use ModMpi
+  use ModEnergy
+  use ModMultiFluid, ONLY: iFluid, nFluid, TypeFluid_I
+
   implicit none
 
   integer,intent(in) :: iStage
@@ -436,7 +444,7 @@ subroutine update_check(iStage)
        1,MPI_LOGICAL,MPI_LOR,iComm,iError)
   if (stop_now) call stop_mpi('Stopping, negative density or pressure')
 
-Contains
+contains
 
   subroutine fix_update
 
@@ -483,7 +491,7 @@ Contains
 
        if(IsConserv)then
           ! e_boris = e + 0.5/c^2 * (V x B)^2
-          E_o_Boris = E_o_BLK(i,j,k,iBlock) + (cHalf/c2LIGHT)*( &
+          E_o_Boris = EnergyOld_CBI(i,j,k,iBlock,1) + (cHalf/c2LIGHT)*( &
                ((StateOld_VCB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -StateOld_VCB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(StateOld_VCB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -514,7 +522,7 @@ Contains
 
        if(IsConserv)then
           ! e_boris = e + 0.5/c^2 * (V x B)^2
-          E_Boris = E_BLK(i,j,k,iBlock) + (cHalf/c2LIGHT)*( &
+          E_Boris = Energy_GBI(i,j,k,iBlock,1) + (cHalf/c2LIGHT)*( &
                ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -570,7 +578,7 @@ Contains
                (cOne-time_fraction) * E_o_Boris
 
           ! E = E_boris - 0.5/c^2 * (V x B)^2
-          E_BLK(i,j,k,iBlock) = E_Boris - (cHalf/c2LIGHT)*( &
+          Energy_GBI(i,j,k,iBlock,1) = E_Boris - (cHalf/c2LIGHT)*( &
                ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -582,7 +590,7 @@ Contains
 
           if((nStage==1.and..not.time_accurate).or.&
                (nStage>1.and.iStage==1)) &
-               E_BLK(i,j,k,iBlock) =  E_BLK(i,j,k,iBlock) - &
+               Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
                (cHalf/time_fraction - cHalf)*&
                ((State_VGB(Bx_,i,j,k,iBlock) - &
                StateOld_VCB(Bx_,i,j,k,iBlock))**2 +&
@@ -591,56 +599,39 @@ Contains
                (State_VGB(Bz_,i,j,k,iBlock) - &
                StateOld_VCB(Bz_,i,j,k,iBlock))**2 )
 
-          State_VGB(P_,i,j,k,iBlock) = &
-               gm1*(E_BLK(i,j,k,iBlock) - cHalf*( &
-               (State_VGB(rhoUx_,i,j,k,iBlock)**2 &
-               +State_VGB(rhoUy_,i,j,k,iBlock)**2 &
-               +State_VGB(rhoUz_,i,j,k,iBlock)**2 &
-               )/State_VGB(rho_,i,j,k,iBlock)     &
-               +State_VGB(Bx_,i,j,k,iBlock)**2    &
-               +State_VGB(By_,i,j,k,iBlock)**2    &
-               +State_VGB(Bz_,i,j,k,iBlock)**2    ))
+          call calc_pressure1_point(i,j,k,iBlock)
        else
           State_VGB(P_,i,j,k,iBlock) = &
                (   time_fraction) *   State_VGB(P_,i,j,k,iBlock) + &
                (cOne-time_fraction) * StateOld_VCB(P_,i,j,k,iBlock)
 
-          E_BLK(i,j,k,iBlock) = &
-               inv_gm1*State_VGB(P_,i,j,k,iBlock) + cHalf* &
-               (sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)**2) &
-               /State_VGB(rho_,i,j,k,iBlock)     &
-               +sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
+          call calc_energy1_point(i,j,k,iBlock)
        end if
-    else
-       ! Non-Boris interpolation                
+    else                      ! Non-Boris interpolation                
        !^CFG END BORISCORR
        State_VGB(1:nVar,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
             (cOne-time_fraction) * StateOld_VCB(1:nVar,i,j,k,iBlock)
        if(IsConserv)then
-          E_BLK(i,j,k,iBlock) = &
-               (   time_fraction) *   E_BLK(i,j,k,iBlock) + &
-               (cOne-time_fraction) * E_o_BLK(i,j,k,iBlock)
+          Energy_GBI(i,j,k,iBlock,:) = &
+               (   time_fraction) *   Energy_GBI(i,j,k,iBlock,:) + &
+               (cOne-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
 
           if((nStage==1.and..not.time_accurate).or.&
-               (nStage>1.and.iStage==1)) &
-               E_BLK(i,j,k,iBlock) =  E_BLK(i,j,k,iBlock) - &
-               (cHalf/time_fraction - cHalf)*&
-               sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-               StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
+               (nStage>1.and.iStage==1)) then
+             do iFluid = 1, nFluid
+                if(TypeFluid_I(iFluid) /= 'ion') CYCLE
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) - &
+                     (cHalf/time_fraction - cHalf)*&
+                     sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
+                     StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
+             end do
+          end if
 
-          State_VGB(P_,i,j,k,iBlock) = gm1*(E_BLK(i,j,k,iBlock) &
-               - cHalf* &
-               sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)**2)&
-               /State_VGB(rho_,i,j,k,iBlock)  &
-               - cHalf* &
-               sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2 ))
+          call calc_pressure_point(i,j,k,iBlock)
        else
-          E_BLK(i,j,k,iBlock) = &
-               inv_gm1*State_VGB(P_,i,j,k,iBlock) + cHalf*( &
-               sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)**2) &
-               /State_VGB(rho_,i,j,k,iBlock)     &
-               +sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2))
+          call calc_energy_point(i,j,k,iBlock)
        end if
     end if                       !^CFG IF BORISCORR
     time_BLK(i,j,k,iBlock) = time_BLK(i,j,k,iBlock)*time_fraction
@@ -705,7 +696,7 @@ subroutine select_conservative
            case('p')
               IsConserv_CB(:,:,:,iBlock) = IsConserv_CB(:,:,:,iBlock) .or. &
                    State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) > pCoeffConserv * &
-                   (E_BLK(1:nI,1:nJ,1:nK,iBlock) + 0.5 * &
+                   (Energy_GBI(1:nI,1:nJ,1:nK,iBlock,1) + 0.5 * &
                    ((State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) &
                    + B0xCell_BLK(1:nI,1:nJ,1:nK,iBlock))**2 &
                    +(State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) &

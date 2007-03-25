@@ -563,6 +563,7 @@ subroutine proj_correction(phi)
   use ModProject
   use ModMain, ONLY : UseConstrainB             !^CFG IF CONSTRAINB
   use ModCT                                     !^CFG IF CONSTRAINB
+  use ModEnergy, ONLY: calc_energy_cell         !^CFG IF CONSTRAINB
   implicit none
 
   ! Arguments
@@ -610,7 +611,7 @@ subroutine proj_correction(phi)
         ! Recalculate the cell centered B
         call Bface2Bcenter(iBLK)
         ! Keep pressure and modify energy for sake of positivity
-        call calc_energy(iBLK)
+        call calc_energy_cell(iBLK)
      end do
 
      if(oktest_me)write(*,*)'proj_correction new Bzface=',&

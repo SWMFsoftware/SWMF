@@ -249,14 +249,16 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModNumConst
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass
-  use ModPhysics,    ONLY: rCurrents, rBody
+  use ModPhysics,    ONLY: rCurrents, rBody, inv_gm1
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
-       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, State_VGB, E_BLK, DivB1_GB
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, State_VGB, Energy_GBI, DivB1_GB
   use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK,dx_BLK,dy_BLK,dz_BLK,&
        x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModIO
+  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
+
   implicit none
 
   integer, intent(in)            :: nLogVar, nLogR, nLogTot, iSat
@@ -346,7 +348,7 @@ contains
     real :: Current_D(3)
 
     integer :: jVar
-    character(len=10) :: NameVar
+    character(len=10) :: NameVar, String
 
     ! External function for ionosphere    !^CFG IF IONOSPHERE
     real, external :: logvar_ionosphere   !^CFG IF IONOSPHERE
@@ -355,7 +357,7 @@ contains
 
 !!$! MHD variables averaged over the computational domain
     case('e')
-       LogVar_I(iVarTot) = integrate_BLK(1,E_BLK)/volume
+       LogVar_I(iVarTot) = integrate_BLK(1,Energy_GBI(:,:,:,:,iFluid))/volume
     case('pmin')
        ! Divide by nProc so that adding up the processors can work
        LogVar_I(iVarTot) = minval_BLK(nProc,tmp2_BLK)/nProc
@@ -366,58 +368,58 @@ contains
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK) / &
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK) / &
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
     case('uy')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK) / &
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK) / &
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
     case('uz')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK) / &
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK) / &
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/volume
     case('ekinx')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) CYCLE
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2/&
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2/&
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
     case('ekiny')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2/&
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2/&
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
     case('ekinz')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2/&
-               State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2/&
+               State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
     case('ekin')
        do iBLK=1,nBlock
           if (unusedBLK(iBLK)) cycle
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-               (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2+&
-               State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2+&
-               State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2)&
-               /State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)
+               (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2+&
+               State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2+&
+               State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2)&
+               /State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
        end do
        LogVar_I(iVarTot) = cHalf*integrate_BLK(1,tmp1_BLK)/volume
 
@@ -535,16 +537,16 @@ contains
 !!$! MHD variables at Itest, Jtest, Ktest, BLKtest, PROCtest
     case('rhopnt')
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = State_VGB(rho_,iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = State_VGB(iRho,iTest,jTest,kTest,BlkTest)
     case('rhouxpnt')
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = State_VGB(rhoUx_,iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = State_VGB(iRhoUx,iTest,jTest,kTest,BlkTest)
     case('rhouypnt')     
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = State_VGB(rhoUy_,iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = State_VGB(iRhoUy,iTest,jTest,kTest,BlkTest)
     case('rhouzpnt')      
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = State_VGB(rhoUz_,iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest)
     case('b1xpnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
@@ -569,22 +571,22 @@ contains
             State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
     case('ppnt')
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = State_VGB(P_,iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = State_VGB(iP,iTest,jTest,kTest,BlkTest)
     case('epnt')
        if(iProc == ProcTest) &
-            LogVar_I(iVarTot) = E_BLK(iTest,jTest,kTest,BlkTest)
+            LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,BlkTest,iFluid)
     case('uxpnt')
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            State_VGB(rhoUx_,iTest,jTest,kTest,BlkTest) / &
-            State_VGB(rho_,  iTest,jTest,kTest,BlkTest)
+            State_VGB(iRhoUx,iTest,jTest,kTest,BlkTest) / &
+            State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
     case('uypnt')
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            State_VGB(rhoUy_,iTest,jTest,kTest,BlkTest) / &
-            State_VGB(rho_,  iTest,jTest,kTest,BlkTest)
+            State_VGB(iRhoUy,iTest,jTest,kTest,BlkTest) / &
+            State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
     case('uzpnt')
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
-            State_VGB(rhoUz_,iTest,jTest,kTest,BlkTest) / &
-            State_VGB(rho_,  iTest,jTest,kTest,BlkTest)
+            State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest) / &
+            State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
 !!$!RAYTRACE variables                                ^CFG  IF RAYTRACE BEGIN
        ! RAYTRACE variables at Itest, Jtest, Ktest, BLKtest, PROCtest
     case('theta1pnt')
@@ -633,9 +635,9 @@ contains
              if(unusedBLK(iBLK)) CYCLE
              do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                 tmp1_BLK(i,j,k,iBLK) = &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+               (State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+               +State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+               +State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
                )/R_BLK(i,j,k,iBLK)
              end do; end do; end do
           end do
@@ -688,10 +690,10 @@ contains
                   (State_VGB(By_,i,j,k,iBLK) + B0yCell_BLK(i,j,k,iBLK))**2 + &
                   (State_VGB(Bz_,i,j,k,iBLK) + B0zCell_BLK(i,j,k,iBLK))**2 
              tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
-                  ( State_VGB(rhoUx_,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
-                  + State_VGB(rhoUy_,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
-                  + State_VGB(rhoUz_,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
-                  ) / (State_VGB(rho_,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+                  ( State_VGB(iRhoUx,i,j,k,iBLK)*x_BLK(i,j,k,iBLK) &
+                  + State_VGB(iRhoUy,i,j,k,iBLK)*y_BLK(i,j,k,iBLK) &
+                  + State_VGB(iRhoUz,i,j,k,iBLK)*z_BLK(i,j,k,iBLK) &
+                  ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
@@ -707,16 +709,16 @@ contains
                 Bx = State_VGB(Bx_,i,j,k,iBLk)+B0xCell_BLK(i,j,k,iBLk)
                 By = State_VGB(By_,i,j,k,iBLk)+B0yCell_BLK(i,j,k,iBLk)
                 Bz = State_VGB(Bz_,i,j,k,iBLk)+B0zCell_BLK(i,j,k,iBLk)
-                RhoUx = State_VGB(rhoUx_,i,j,k,iBLk)
-                RhoUy = State_VGB(rhoUy_,i,j,k,iBLk)
-                RhoUz = State_VGB(rhoUz_,i,j,k,iBLk)
+                RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
+                RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
+                RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
                 bDotb = Bx**2 + By**2 + Bz**2
                 bDotU = Bx*RhoUx + By*RhoUy + Bz*RhoUz
                 tmp1_BLK(i,j,k,iBLk) = ( &
                   ( bDotb*rhoUx - bDotU*Bx )*X_BLK(i,j,k,iBLk) + &
                   ( bDotb*rhoUy - bDotU*By )*Y_BLK(i,j,k,iBLk) + &  
                   ( bDotb*rhoUz - bDotU*Bz )*Z_BLK(i,j,k,iBLk)   &  
-                  ) / (State_VGB(rho_,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
+                  ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = calc_sphere('integrate',360, R_log,tmp1_BLK)
@@ -738,13 +740,13 @@ contains
                 Bx = State_VGB(Bx_,i,j,k,iBLk)+B0xCell_BLK(i,j,k,iBLk)
                 By = State_VGB(By_,i,j,k,iBLk)+B0yCell_BLK(i,j,k,iBLk)
                 Bz = State_VGB(Bz_,i,j,k,iBLk)+B0zCell_BLK(i,j,k,iBLk)
-                RhoUx = State_VGB(rhoUx_,i,j,k,iBLk)
-                RhoUy = State_VGB(rhoUy_,i,j,k,iBLk)
-                RhoUz = State_VGB(rhoUz_,i,j,k,iBLk)
+                RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
+                RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
+                RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
                 tmp1_BLK(i,j,k,iBLK) = &
                      ( (RhoUy*Bz-RhoUz*By)*y_BLK(i,j,k,iBLK) &
                      - (RhoUz*Bx-RhoUx*Bz)*x_BLK(i,j,k,iBLK) &
-                     ) / (State_VGB(rho_,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
+                     ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
              end do; end do; end do
           end do
           LogVar_I(iVarTot) = integrate_circle(R_log,0.0,tmp1_BLK)
@@ -754,13 +756,14 @@ contains
     case('dt')
        if(iProc == 0)LogVar_I(iVarTot) = dt
 
-       ! DEFAULT
     case default
        ! Check if the variable name is one of the state variables
+       String = NameLogVar_I(iVar)
+       call lower_case(String)
        do jVar = 1, nVar
           NameVar = NameVar_V(jVar)
           call lower_case(NameVar)
-          if(NameVar /= NameLogVar) CYCLE
+          if(NameVar /= String) CYCLE
           LogVar_I(iVarTot) = StateIntegral_V(jVar)/volume
           RETURN
        end do
@@ -797,13 +800,13 @@ contains
 
     select case(NameLogVar)
     case('rho')
-       LogVar_I(iVarTot) = StateSat_V(Rho_)
+       LogVar_I(iVarTot) = StateSat_V(IRho)
     case('rhoux')
-       LogVar_I(iVarTot) = StateSat_V(RhoUx_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUx)
     case('rhouy')
-       LogVar_I(iVarTot) = StateSat_V(RhoUy_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUy)
     case('rhouz')
-       LogVar_I(iVarTot) = StateSat_V(RhoUz_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUz)
     case('bx')
        LogVar_I(iVarTot) = StateSat_V(Bx_)+B0Sat_D(1)
     case('by')
@@ -811,17 +814,19 @@ contains
     case('bz')
        LogVar_I(iVarTot) = StateSat_V(Bz_)+B0Sat_D(3)
     case('e')
-       LogVar_I(iVarTot) = 0.5*(&
-            sum(StateSat_V(RhoUx_:RhoUz_)**2)/StateSat_V(rho_) + &
-            sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2))
+       LogVar_I(iVarTot) = inv_gm1*StateSat_V(iP) + 0.5*&
+            sum(StateSat_V(iRhoUx:iRhoUz)**2)/StateSat_V(iRho)
+       if(TypeFluid_I(iFluid) == 'ion') LogVar_I(iVarTot) = &
+            LogVar_I(iVarTot) + &
+            0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
     case('p')
-       LogVar_I(iVarTot) = StateSat_V(P_)
+       LogVar_I(iVarTot) = StateSat_V(iP)
     case('ux')
-       LogVar_I(iVarTot) = StateSat_V(RhoUx_)/StateSat_V(Rho_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUx)/StateSat_V(iRho)
     case('uy')
-       LogVar_I(iVarTot) = StateSat_V(RhoUy_)/StateSat_V(Rho_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUy)/StateSat_V(iRho)
     case('uz')
-       LogVar_I(iVarTot) = StateSat_V(RhoUz_)/StateSat_V(Rho_)
+       LogVar_I(iVarTot) = StateSat_V(iRhoUz)/StateSat_V(iRho)
     case('b0x')
        LogVar_I(iVarTot) = B0Sat_D(1)
     case('b0y')
@@ -1419,6 +1424,7 @@ subroutine normalize_name_log_var(NameIn, NameOut)
   ! replace alternative names with a unique name
 
   use ModUtilities, ONLY: lower_case
+  use ModMultiFluid,ONLY: extract_fluid_name
   implicit none
 
   character(len=*), intent(in)  :: NameIn
@@ -1429,6 +1435,8 @@ subroutine normalize_name_log_var(NameIn, NameOut)
 
   ! Switch to all lower case
   call lower_case(NameOut)
+
+  call extract_fluid_name(NameOut)
 
   ! Replace mx with rhoux, my with rhouy, mz with rhouz
   select case(NameOut(1:2))

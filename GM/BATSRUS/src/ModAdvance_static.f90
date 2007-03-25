@@ -41,7 +41,7 @@ Module ModAdvance
 
   ! Number and type of criteria
   integer :: nConservCrit
-  character (len=10), dimension(:), allocatable :: TypeConservCrit_I
+  character (len=10), allocatable :: TypeConservCrit_I(:)
 
   ! Geometrical parameters
   real    :: rConserv, xParabolaConserv, yParabolaConserv 
@@ -50,53 +50,49 @@ Module ModAdvance
   real    :: pCoeffConserv, GradPCoeffConserv
 
   ! Cells selected to be updated with conservative equations
-  logical, dimension(:,:,:,:), allocatable :: IsConserv_CB
+  logical, allocatable :: IsConserv_CB(:,:,:,:)
 
   !\
   ! Block cell-centered MHD solution
   !/
-  real, dimension(nVar,1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK) :: &
-       State_VGB
-  real, dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK) :: &
-       E_BLK
-  common /MHDSolnBlock1/ &
-       State_VGB,E_BLK 
+  real:: State_VGB(nVar,1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock)
+  real:: Energy_GBI(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock, nFluid)
+
   !\
   ! Block cell-centered MHD solution old state
   !/
-  real,  dimension(nVar,1:nI, 1:nJ, 1:nK,nBLK) :: &
-       StateOld_VCB
-  real,  dimension(1:nI, 1:nJ, 1:nK,nBLK) :: &
-       E_o_BLK,time_BLK
-  common /MHDSolnBlock2/ &
-       StateOld_VCB,E_o_BLK,time_BLK  
+  real :: StateOld_VCB(nVar, nI, nJ, nK, MaxBlock)
+  real :: EnergyOld_CBI(nI, nJ, nK, MaxBlock, nFluid)
 
   !\
   ! Block cell-centered intrinsic magnetic field, time, and temporary storage
   !/
-  real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn,nBLK) :: &
-       B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
+  real,  dimension(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock) :: &
+       B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, &
        tmp1_BLK, tmp2_BLK
+
+  real :: time_BLK(nI, nJ, nK, MaxBlock)
 
   ! Array for storing dB0/dt derivatives
   real, allocatable :: Db0Dt_CDB(:,:,:,:,:)
 
   ! Arrays for the total electric field
-  real, dimension(1:nI,1:nJ,1:nK,nBLK) :: Ex_CB, Ey_CB, Ez_CB
+  real, dimension(nI, nJ, nK, MaxBlock) :: Ex_CB, Ey_CB, Ez_CB
 
   !\
   ! Block cell-centered body forces
   !/
-  real, dimension(1:nI, 1:nJ, 1:nK,nBLK) :: &
-       fbody_x_BLK,fbody_y_BLK,fbody_z_BLK
+  real, dimension(nI, nJ, nK, MaxBlock) :: &
+       fbody_x_BLK, fbody_y_BLK, fbody_z_BLK
 
   !\
   ! Local cell-centered source terms and divB.
   !/
-  real, dimension(Energy_,1:nI,1:nJ,1:nK)::Source_VC
-  real, dimension(1:nI,1:nJ,1:nK) :: Theat0
-  real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn,nBLK):: DivB1_GB
-  real, dimension( 0:nI+1, 0:nJ+1, 0:nK+1) :: &
+  real :: Source_VC(nVar+nFluid, nI, nJ, nK)
+  real :: Theat0(nI,nJ,nK)
+  real :: DivB1_GB(1-gcn:nI+gcn, 1-gcn:nJ+gcn, 1-gcn:nK+gcn, MaxBlock)
+
+  real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: &
        gradX_Ux, gradX_Uy, gradX_Uz, gradX_Bx, gradX_By, gradX_Bz, gradX_VAR,&
        gradY_Ux, gradY_Uy, gradY_Uz, gradY_Bx, gradY_By, gradY_Bz, gradY_VAR,&
        gradZ_Ux, gradZ_Uy, gradZ_Uz, gradZ_Bx, gradZ_By, gradZ_Bz, gradZ_VAR
@@ -104,72 +100,55 @@ Module ModAdvance
   !\
   ! Block face-centered intrinsic magnetic field array definitions.
   !/
-  real,  dimension(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nBLK) :: &
-       B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK 
-  real,  dimension(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nBLK) :: &
-       B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK
-  real,  dimension(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nBLK) :: &
-       B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK
-!  real,dimension(3,3,1:nI,1:nJ,1:nK,nBLK) :: B0SourceMatrix_DDCB
-  real,dimension(3,1:nI,1:nJ,1:nK,nBLK) :: CurlB0_DCB
-  real,dimension(1:nI,1:nJ,1:nK,nBLK)   ::  DivB0_CB
+  real, dimension(2-gcn:nI+gcn, 0:nJ+1, 0:nK+1, MaxBlock) :: &
+       B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK 
+
+  real, dimension(0:nI+1, 2-gcn:nJ+gcn, 0:nK+1, MaxBlock) :: &
+       B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK
+
+  real, dimension(0:nI+1, 0:nJ+1, 2-gcn:nK+gcn, MaxBlock) :: &
+       B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK
+
+  real :: CurlB0_DCB(3, nI, nJ, nK, MaxBlock)
+  real :: DivB0_CB(nI, nJ, nK, MaxBlock)
+
   !\
   ! X Face local MHD solution array definitions.
   !/
   integer, parameter :: nFaceValueVars = nVar
-  real, dimension(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1) ::     &
-       LeftState_VX,      &  ! Face Left  X
-       RightState_VX         ! Face Right X 
-  real, dimension(2-gcn:nI+gcn,0:nJ+1,0:nK+1) ::     &
-       EDotFA_X,                              & !^CFG IF BORISCORR      
-       VdtFace_x,UDotFA_X    ! V/dt Face  X
-  real, dimension(Energy_,0:nI+1,2-gcn:nJ+gcn,0:nK+1) ::     &
-       Flux_VX         ! Face Flux  X 
-  common /MHDSolnFaceX/   &
-       LeftState_VX,      &
-       RightState_VX,      &
-       Flux_VX,      & 
-       EDotFA_X,                              & !^CFG IF BORISCORR      
-       VdtFace_x,UDotFA_X 
+  real :: LeftState_VX(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+  real :: RightState_VX(nFaceValueVars,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+
+  real :: EDotFA_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)    !^CFG IF BORISCORR
+  real :: VdtFace_X(2-gcn:nI+gcn,0:nJ+1,0:nK+1)   ! V/dt Face X
+
+  real :: Flux_VX(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+
+  real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid)
 
   !\
   ! Y Face local MHD solution array definitions.
   !/
-  real, dimension(nFaceValueVars,0:nI+1,2-gcn:nJ+gcn,0:nK+1) ::     &
-       LeftState_VY,      &  ! Face Left  Y
-       RightState_VY          ! Face Right Y
+  real :: LeftState_VY(nFaceValueVars,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+  real :: RightState_VY(nFaceValueVars,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
 
-  real, dimension(0:nI+1,2-gcn:nJ+gcn,0:nK+1) ::     &
-       EDotFA_Y,                              & !^CFG IF BORISCORR      
-       VdtFace_y,UDotFA_Y    ! V/dt Face  Y
-  real, dimension(Energy_,0:nI+1,2-gcn:nJ+gcn,0:nK+1) ::     &
-       Flux_VY         ! Face Flux  Y 
+  real :: EDotFA_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)    !^CFG IF BORISCORR
+  real :: VdtFace_Y(0:nI+1,2-gcn:nJ+gcn,0:nK+1)   ! V/dt Face Y
 
-  common /MHDSolnFaceY/   &
-       LeftState_VY,      &
-       RightState_VY,      &
-       Flux_VY,      &
-       EDotFA_Y,                              & !^CFG IF BORISCORR   
-       VdtFace_y,UDotFA_Y                                          
+  real :: Flux_VY(nVar+nFluid,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+
+  real :: uDotArea_YI(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nFluid)
 
   !\
   ! Z Face local MHD solution array definitions.
   !/
-  real, dimension(nFaceValueVars,0:nI+1,0:nJ+1,2-gcn:nK+gcn) ::     &
-       LeftState_VZ,      &  ! Face Left  Z
-       RightState_VZ          ! Face Right Z
+  real :: LeftState_VZ(nFaceValueVars,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
+  real :: RightState_VZ(nFaceValueVars,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
-  real, dimension(0:nI+1,0:nJ+1,2-gcn:nK+gcn) ::     &
-       EDotFA_Z,                              & !^CFG IF BORISCORR
-       VdtFace_z,UDotFA_Z    !V/dt Face Z
-  real, dimension(Energy_,0:nI+1,2-gcn:nJ+gcn,0:nK+1) ::     &
-       Flux_VZ         ! Face Flux  Z 
-  common /MHDSolnFaceZ/   &
-       LeftState_VZ,      &
-       RightState_VZ,      & 
-       Flux_VZ,      &
-       EDotFA_Z,                              & !^CFG IF BORISCORR
-       VdtFace_z,UDotFA_Z
+  real :: EDotFA_Z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)    !^CFG IF BORISCORR
+  real :: VdtFace_z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)   ! V/dt Face Z
+
+  real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid)
 
   !\
   ! The number of the face variables, which are corrected at the
@@ -179,12 +158,9 @@ Module ModAdvance
   !\
   !  Face conservative or corrected flux.
   !/
-  real, dimension(nCorrectedFaceValues,1:nJ,1:nK,1:2,nBLK) :: &
-          CorrectedFlux_VXB
-  real, dimension(nCorrectedFaceValues,1:nI,1:nK,1:2,nBLK) :: &
-          CorrectedFlux_VYB
-  real, dimension(nCorrectedFaceValues,1:nI,1:nJ,1:2,nBLK) :: &
-          CorrectedFlux_VZB
+  real :: CorrectedFlux_VXB(nCorrectedFaceValues, nJ, nK, 2, MaxBlock)
+  real :: CorrectedFlux_VYB(nCorrectedFaceValues, nI, nK, 2, MaxBlock)
+  real :: CorrectedFlux_VZB(nCorrectedFaceValues, nI, nJ, 2, MaxBlock)
 
   !\
   ! Block type information

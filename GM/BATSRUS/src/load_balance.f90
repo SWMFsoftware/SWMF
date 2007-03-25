@@ -12,6 +12,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModParallel
   use ModIO, ONLY: write_prefix, iUnitOut
   use ModMpi
+  use ModEnergy, ONLY: calc_energy_ghost
   implicit none
 
   ! Load balance grid using Peano-Hilbert ordering of blocks
@@ -246,7 +247,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      do iBlock = 1,nBlock
         if(.not.DoFixVar_B(iBlock)) CYCLE
         if(useConstrainB) call Bface2Bcenter(iBlock)  !^CFG IF CONSTRAINB
-        call calc_energy(iBlock)
+        call calc_energy_ghost(iBlock)
 
         if(DoMoveExtraData)then
            if(UseCovariant)then                       !^CFG IF COVARIANT BEGIN

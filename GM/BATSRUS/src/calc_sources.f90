@@ -17,6 +17,10 @@ subroutine calc_sources
   use ModCoordTransform
   use ModHallResist, ONLY: &
        UseHallResist, HallHyperFactor, calc_hyper_resistivity 
+  use ModMultiFluid
+
+  use ModCovariant, ONLY: UseCovariant !^CFG IF COVARIANT
+
   implicit none
 
   integer :: i, j, k, iDim
@@ -24,9 +28,6 @@ subroutine calc_sources
   logical :: DoTest, DoTestMe
 
   real :: Coef
-
-  ! Variables needed for div B source terms
-  real:: DxInvHalf, DyInvHalf, DzInvHalf, B1nJump, DivBInternal
 
   ! Variable for div B diffusion
   real :: Dr
@@ -51,14 +52,17 @@ subroutine calc_sources
 
   ! Calculate source terms for pressure
   if(UseNonconservative)then
-     ! Adiabatic heating: -(g-1)*P*Div(U)
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        Source_VC(P_,i,j,k) = -(g-1)*State_VGB(P_,i,j,k,globalBLK)*&
-             vInv_CB(i,j,k,globalBLK)*&
-             (UDotFA_X(i+1,j,k)-UDotFA_X(i,j,k)+&
-             UDotFA_Y(i,j+1,k) -UDotFA_Y(i,j,k)+&
-             UDotFA_Z(i,j,k+1) -UDotFA_Z(i,j,k))
-     end do; end do; end do
+     do iFluid = 1, nFluid
+        call select_fluid
+        ! Adiabatic heating: -(g-1)*P*Div(U)
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           Source_VC(iP,i,j,k) = -(g-1)*State_VGB(iP,i,j,k,globalBLK)*&
+                vInv_CB(i,j,k,globalBLK)*&
+                (uDotArea_XI(i+1,j,k,iFluid) - uDotArea_XI(i,j,k,iFluid) &
+                +uDotArea_YI(i,j+1,k,iFluid) - uDotArea_YI(i,j,k,iFluid) &
+                +uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid))
+        end do; end do; end do
+     end do
 
      ! Joule heating: dP/dt += (gamma-1)*eta*j**2
      if(UseResistFlux .or. UseResistivity)then  !^CFG IF DISSFLUX BEGIN
@@ -70,90 +74,12 @@ subroutine calc_sources
      end if                 !^CFG END DISSFLUX
   end if
 
-
   if(UseDivbSource)then
-
-     DxInvHalf = 0.5/Dx_BLK(GlobalBlk)
-     DyInvHalf = 0.5/Dy_BLK(GlobalBlk)
-     DzInvHalf = 0.5/Dz_BLK(GlobalBlk)
-
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        B1nJump = DxInvHalf*&
-             (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
-
-        Source_VC(rhoUx_,i,j,k) = -B0xFace_x_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = -B0yFace_x_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = -B0zFace_x_BLK(i,j,k,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = B1nJump
-
-        B1nJump = DxInvHalf*&
-             (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
-
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-             -B0xFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-             -B0yFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-             -B0zFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
-
-        B1nJump = DyInvHalf* &
-             (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
-
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-             -B0xFace_y_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-             -B0yFace_y_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-             -B0zFace_y_BLK(i,j,k,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
-
-        B1nJump = DyInvHalf* &
-             (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
-
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-             -B0xFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-             -B0yFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-             -B0zFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
-
-        B1nJump = DzInvHalf * &
-             (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
-
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-             -B0xFace_z_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-             -B0yFace_z_BLK(i,j,k,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-             -B0zFace_z_BLK(i,j,k,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
-
-        B1nJump = DzInvHalf * &
-             (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
-
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
-             -B0xFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
-             -B0yFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
-             -B0zFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
-        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
-
-        DivBInternal = 2*(&
-             DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))+&
-             DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))+&
-             DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k)))
-        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)-DivBInternal*&
-             B0xCell_BLK(i,j,k,globalBLK)
-        Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)-DivBInternal*&
-             B0yCell_BLK(i,j,k,globalBLK)
-        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)-DivBInternal*&
-             B0zCell_BLK(i,j,k,globalBLK)               
-        DivB1_GB(i,j,k,globalBLK)=DivB1_GB(i,j,k,globalBLK)+&
-             DivBInternal
-     end do; end do; end do
+     if(UseCovariant)then   !^CFG IF COVARIANT BEGIN
+        call calc_divb_source_covar
+     else                   !^CFG END COVARIANT
+        call calc_divb_source
+     end if                 !^CFG IF COVARIANT
 
      if(DoTestMe)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,BlkTest)
      if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)&
@@ -165,13 +91,12 @@ subroutine calc_sources
              DivB1_GB(i,j,k,globalBLK)* &
              State_VGB(Bx_:Bz_,i,j,k,globalBLK)
         RhoInv=cOne/State_VGB(rho_,i,j,k,globalBLK)
-        Source_VC(Bx_:Bz_,i,j,k)    = Source_VC(Bx_:Bz_,i,j,k) &
-             - DivB1_GB(i,j,k,globalBLK)* &
+        Source_VC(Bx_:Bz_,i,j,k)    = Source_VC(Bx_:Bz_,i,j,k)-DivB1_GB(i,j,k,globalBLK)* &
              State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK)*RhoInv
-        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k) &
-             -DivB1_GB(i,j,k,globalBLK)* &
+        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)-DivB1_GB(i,j,k,globalBLK)* &
              sum(State_VGB(Bx_:Bz_,i,j,k,globalBLK)*&
-             State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))*RhoInv
+             State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))*&
+             RhoInv
      end do;end do;end do
 
      if (UseB0Source) then
@@ -186,23 +111,24 @@ subroutine calc_sources
   else
      call calc_divB
   end if
+
   if(UseCurlB0)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(R_BLK(i,j,k,globalBLK)<rCurrentFreeB0)CYCLE
-       CurlB0CrossB_D=cross_product(&
-            CurlB0_DCB(:,i,j,k,globalBLK),&
-            State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
-            B0xCell_BLK(i,j,k,globalBLK),&
-            B0yCell_BLK(i,j,k,globalBLK),&
-            B0zCell_BLK(i,j,k,globalBLK)/))
-       Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
-            CurlB0CrossB_D
-       Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
-            sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
-            /State_VGB(rho_,i,j,k,globalBLK)
-    end do;end do;end do
- end if
-
+        CurlB0CrossB_D=cross_product(&
+             CurlB0_DCB(:,i,j,k,globalBLK),&
+             State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
+             B0xCell_BLK(i,j,k,globalBLK),&
+             B0yCell_BLK(i,j,k,globalBLK),&
+             B0zCell_BLK(i,j,k,globalBLK)/))
+        Source_VC(rhoUx_:rhoUz_,i,j,k)= Source_VC(rhoUx_:rhoUz_,i,j,k) +&
+             CurlB0CrossB_D
+        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)        +&
+             sum(CurlB0CrossB_D*State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))&
+             /State_VGB(rho_,i,j,k,globalBLK)
+     end do;end do;end do
+  end if
+  
   if(boris_correction .and. boris_cLIGHT_factor < 0.9999 & !^CFG IF BORISCORR BEGIN
        .and. index(test_string,'nodivE')<1) then
 
@@ -229,42 +155,47 @@ subroutine calc_sources
      end do; end do; end do
   end if                                                 !^CFG END BORISCORR
 
-  if(UseGravity.or.UseRotatingFrame) then
-     Source_VC(rhoUx_,:,:,:) = Source_VC(rhoUx_,:,:,:) + &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_x_BLK(:,:,:,globalBLK)
-     Source_VC(rhoUy_,:,:,:) = Source_VC(rhoUy_,:,:,:) + &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_y_BLK(:,:,:,globalBLK)
-     Source_VC(rhoUz_,:,:,:) = Source_VC(rhoUz_,:,:,:) + &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_z_BLK(:,:,:,globalBLK)
-     Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &
-          (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_x_BLK(:,:,:,globalBLK) + & 
-          State_VGB(rhoUy_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_y_BLK(:,:,:,globalBLK) + &
-          State_VGB(rhoUz_,1:nI,1:nJ,1:nK,globalBLK)* &
-          fbody_z_BLK(:,:,:,globalBLK)) 
-  end if
+  ! These source terms apply to all the fluids
+  do iFluid = 1, nFluid
+     call select_fluid
+     ! Add gravity and/or centrifugal force
+     if(UseGravity.or.UseRotatingFrame) then
+        Source_VC(iRhoUx,:,:,:) = Source_VC(iRhoUx,:,:,:) + &
+             State_VGB(iRho,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_x_BLK(:,:,:,globalBLK)
+        Source_VC(iRhoUy,:,:,:) = Source_VC(iRhoUy,:,:,:) + &
+             State_VGB(iRho,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_y_BLK(:,:,:,globalBLK)
+        Source_VC(iRhoUz,:,:,:) = Source_VC(iRhoUz,:,:,:) + &
+             State_VGB(iRho,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_z_BLK(:,:,:,globalBLK)
+        Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &
+             (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_x_BLK(:,:,:,globalBLK) + & 
+             State_VGB(iRhoUy,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_y_BLK(:,:,:,globalBLK) + &
+             State_VGB(iRhoUz,1:nI,1:nJ,1:nK,globalBLK)* &
+             fbody_z_BLK(:,:,:,globalBLK)) 
+     end if
 
-  ! Add Coriolis forces here
-  if(UseRotatingFrame)then
-     select case(TypeCoordSystem)
-     case('HGC','HGR')
-        ! This is a special case since Omega is parallel with the Z axis
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) + &
-                cTwo*OmegaBody*State_VGB(rhoUy_,i,j,k,globalBLK)
-           Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k) - &
-                cTwo*OmegaBody*State_VGB(rhoUx_,i,j,k,globalBLK)
-        end do; end do; end do
-     case default
-        call stop_mpi('ERROR in calc_sources: '// &
-             'Coriolis force is not implemented for '// &
-             'TypeCoordSystem=',TypeCoordSystem)
-     end select
-  end if
+     ! Add Coriolis forces
+     if(UseRotatingFrame)then
+        select case(TypeCoordSystem)
+        case('HGC','HGR')
+           ! This is a special case since Omega is parallel with the Z axis
+           do k=1,nK; do j=1,nJ; do i=1,nI
+              Source_VC(iRhoUx,i,j,k) = Source_VC(iRhoUx,i,j,k) + &
+                   cTwo*OmegaBody*State_VGB(iRhoUy,i,j,k,globalBLK)
+              Source_VC(iRhoUy,i,j,k) = Source_VC(iRhoUy,i,j,k) - &
+                   cTwo*OmegaBody*State_VGB(iRhoUx,i,j,k,globalBLK)
+           end do; end do; end do
+        case default
+           call stop_mpi('ERROR in calc_sources: '// &
+                'Coriolis force is not implemented for '// &
+                'TypeCoordSystem=',TypeCoordSystem)
+        end select
+     end if
+  end do
 
   if(UseHallResist .and. HallHyperFactor > 0.0) &
        call calc_hyper_resistivity(globalBLK)
@@ -273,6 +204,228 @@ subroutine calc_sources
 
 contains
   !===========================================================================
+  subroutine calc_divb_source
+
+    ! Variables needed for div B source terms
+    real:: DxInvHalf, DyInvHalf, DzInvHalf, B1nJump, DivBInternal
+
+    DxInvHalf = 0.5/Dx_BLK(GlobalBlk)
+    DyInvHalf = 0.5/Dy_BLK(GlobalBlk)
+    DzInvHalf = 0.5/Dz_BLK(GlobalBlk)
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       B1nJump = DxInvHalf*&
+            (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
+
+       Source_VC(rhoUx_,i,j,k) = -B0xFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = -B0yFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = -B0zFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = B1nJump
+
+       B1nJump = DxInvHalf*&
+            (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       B1nJump = DyInvHalf* &
+            (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       B1nJump = DyInvHalf* &
+            (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       B1nJump = DzInvHalf * &
+            (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       B1nJump = DzInvHalf * &
+            (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       DivBInternal = 2*(&
+            DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))+&
+            DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))+&
+            DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k)))
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)-DivBInternal*&
+            B0xCell_BLK(i,j,k,globalBLK)
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)-DivBInternal*&
+            B0yCell_BLK(i,j,k,globalBLK)
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)-DivBInternal*&
+            B0zCell_BLK(i,j,k,globalBLK)               
+       DivB1_GB(i,j,k,globalBLK)=DivB1_GB(i,j,k,globalBLK)+&
+            DivBInternal
+    end do; end do; end do
+
+  end subroutine calc_divb_source
+  !===========================================================================
+  !^CFG IF COVARIANT BEGIN
+  subroutine calc_divb_source_covar
+
+    use ModCovariant, ONLY: FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB
+    real :: FaceArea_D(3), vInvHalf
+    real :: B1nJump, DivBInternal_C(1:nI,1:nJ,1:nK)
+    integer :: i,j,k
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
+       FaceArea_D=FaceAreaI_DFB(:,i,j,k,globalBLK)
+       B1nJump =VInvHalf*&
+            (FaceArea_D(1)*(RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))+&
+            FaceArea_D(2)*(RightState_VX(By_,i,j,k)-LeftState_VX(By_,i,j,k))+&
+            FaceArea_D(3)*(RightState_VX(Bz_,i,j,k)-LeftState_VX(Bz_,i,j,k)))
+       DivBInternal_C(i,j,k)=&
+            -(FaceArea_D(1)*RightState_VX(Bx_,i,j,k)+&
+            FaceArea_D(2)*RightState_VX(By_,i,j,k)+&
+            FaceArea_D(3)*RightState_VX(Bz_,i,j,k))
+       Source_VC(rhoUx_,i,j,k) = -B0xFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = -B0yFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = -B0zFace_x_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = B1nJump
+       FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,globalBLK)
+       B1nJump =  VInvHalf*&
+            (FaceArea_D(1)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))+&
+            FaceArea_D(2)*(RightState_VX(By_,i+1,j,k)-LeftState_VX(By_,i+1,j,k))+&
+            FaceArea_D(3)*(RightState_VX(Bz_,i+1,j,k)-LeftState_VX(Bz_,i+1,j,k)))
+       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)+&
+            (FaceArea_D(1)*LeftState_VX(Bx_,i+1,j,k)+&
+            FaceArea_D(2)*LeftState_VX(By_,i+1,j,k)+&
+            FaceArea_D(3)*LeftState_VX(Bz_,i+1,j,k))
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_x_BLK(i+1,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+    end do; end do; end do
+
+    do k=1,nK; do j=1,nJ; do i=1,nI 
+       VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
+       FaceArea_D=FaceAreaJ_DFB(:,i,j,k,globalBLK)
+       B1nJump = VInvHalf*&
+            (FaceArea_D(1)*(RightState_VY(Bx_,i,j,k)-LeftState_VY(Bx_,i,j,k))+&
+            FaceArea_D(2)*(RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))+&
+            FaceArea_D(3)*(RightState_VY(Bz_,i,j,k)-LeftState_VY(Bz_,i,j,k)))
+       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)-&
+            (FaceArea_D(1)*RightState_VY(Bx_,i,j,k)+&
+            FaceArea_D(2)*RightState_VY(By_,i,j,k)+&
+            FaceArea_D(3)*RightState_VY(Bz_,i,j,k))
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_y_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+       FaceArea_D=FaceAreaJ_DFB(:,i,j+1,k,globalBLK)
+       B1nJump = VInvHalf*&
+            (FaceArea_D(1)*(RightState_VY(Bx_,i,j+1,k)-LeftState_VY(Bx_,i,j+1,k))+&
+            FaceArea_D(2)*(RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))+&
+            FaceArea_D(3)*(RightState_VY(Bz_,i,j+1,k)-LeftState_VY(Bz_,i,j+1,k)))
+       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)+&
+            (FaceArea_D(1)*LeftState_VY(Bx_,i,j+1,k)+&
+            FaceArea_D(2)*LeftState_VY(By_,i,j+1,k)+&
+            FaceArea_D(3)*LeftState_VY(Bz_,i,j+1,k))
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_y_BLK(i,j+1,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+    end do; end do; end do
+
+    do k=1,nK; do j=1,nJ; do i=1,nI 
+       VInvHalf=vInv_CB(i,j,k,globalBLK)*cHalf
+       FaceArea_D=FaceAreaK_DFB(:,i,j,k,globalBLK)
+       B1nJump = VInvHalf*&
+            (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k)-LeftState_VZ(Bx_,i,j,k))+&
+            FaceArea_D(2)*(RightState_VZ(By_,i,j,k)-LeftState_VZ(By_,i,j,k))+&
+            FaceArea_D(3)*(RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k)))
+       DivBInternal_C(i,j,k)=DivBInternal_C(i,j,k)-&
+            (FaceArea_D(1)*RightState_VZ(Bx_,i,j,k)+&
+            FaceArea_D(2)*RightState_VZ(By_,i,j,k)+&
+            FaceArea_D(3)*RightState_VZ(Bz_,i,j,k))
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_z_BLK(i,j,k,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+
+
+       FaceArea_D=FaceAreaK_DFB(:,i,j,k+1,globalBLK)
+       B1nJump = VInvHalf*&
+            (FaceArea_D(1)*(RightState_VZ(Bx_,i,j,k+1)-LeftState_VZ(Bx_,i,j,k+1))+&
+            FaceArea_D(2)*(RightState_VZ(By_,i,j,k+1)-LeftState_VZ(By_,i,j,k+1))+&
+            FaceArea_D(3)*(RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1)))
+       DivBInternal_C(i,j,k)=(DivBInternal_C(i,j,k)+&
+            (FaceArea_D(1)*LeftState_VZ(Bx_,i,j,k+1)+&
+            FaceArea_D(2)*LeftState_VZ(By_,i,j,k+1)+&
+            FaceArea_D(3)*LeftState_VZ(Bz_,i,j,k+1)))*&
+            vInv_CB(i,j,k,globalBLK)
+
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
+            -B0xFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)&
+            -B0yFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)&
+            -B0zFace_z_BLK(i,j,k+1,globalBLK)*B1nJump
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+B1nJump
+    end do; end do; end do
+
+    do k=1,nK; do j=1,nJ; do i=1,nI 
+       Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)-DivBInternal_C(i,j,k)*&
+            B0xCell_BLK(i,j,k,globalBLK)
+       Source_VC(rhoUy_,i,j,k) = Source_VC(rhoUy_,i,j,k)-DivBInternal_C(i,j,k)*&
+            B0yCell_BLK(i,j,k,globalBLK)
+       Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k)-DivBInternal_C(i,j,k)*&
+            B0zCell_BLK(i,j,k,globalBLK)               
+       DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+&
+            DivBInternal_C(i,j,k)
+    end do; end do; end do
+
+  end subroutine calc_divb_source_covar
+  !===========================================================================
+  !^CFG END COVARIANT
   subroutine write_source(String)
     character(len=*) :: String
     write(*,'(a,a)',advance='no')String," S=",Source_VC(VarTest,iTest,jTest,kTest) 

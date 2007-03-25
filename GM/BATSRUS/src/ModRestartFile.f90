@@ -372,6 +372,8 @@ contains
 
   subroutine read_restart_file(iBlock)
 
+    use ModEnergy, ONLY: calc_energy_cell
+
     integer, intent(in) :: iBlock
 
     integer   :: iVar, i, j, k, iError, iBlockRestart
@@ -467,7 +469,7 @@ contains
     if(CodeVersion>5.60 .and. CodeVersion <7.00) &
          dt_BLK(iBlock)=dt_BLK(iBlock)/cfl
 
-    call calc_energy(iBlock)
+    call calc_energy_cell(iBlock)
 
     if(DoTestMe)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock

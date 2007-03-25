@@ -19,11 +19,13 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB,E_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
-  use ModParallel, ONLY : NOBLK,neiLEV
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,far_field_BCs_BLK,MaxBoundary
+  use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+  use ModParallel, ONLY : NOBLK, NeiLev
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary
   use ModPhysics
   use ModUser, ONLY: user_set_outerBCs
+  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iRhoUx, iRhoUy, iRhoUz
+  use ModEnergy, ONLY: calc_energy
   implicit none
 
   integer, intent(in) :: iBlock
@@ -130,29 +132,28 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         end if
      case('reflect')
         ! Scalars are symmetric
-        call BC_symm(rho_,rho_)
-        call BC_symm(P_,P_)
-        ! Vectors are mirror symmetric
+        call BC_symm(1,nVar)
+        ! Normal vector components are mirror symmetric
         if(iside==east_.or.iside==west_)then
-           call BC_asymm(rhoUx_,rhoUx_)
+           do iFluid = 1, nFluid
+              call select_fluid
+              call BC_asymm(iRhoUx,iRhoUx)
+           end do
            call BC_asymm(Bx_,Bx_)
-        else
-           call BC_symm(rhoUx_,rhoUx_)
-           call BC_symm(Bx_,Bx_)
         endif
         if(iside==south_.or.iside==north_)then
-           call BC_asymm(rhoUy_,rhoUy_)
+           do iFluid = 1, nFluid
+              call select_fluid
+              call BC_asymm(iRhoUy,iRhoUy)
+           end do
            call BC_asymm(By_,By_)
-        else
-           call BC_symm(rhoUy_,rhoUy_)
-           call BC_symm(By_,By_)
         endif
         if(iside==bot_.or.iside==top_)then
-           call BC_asymm(rhoUz_,rhoUz_)
+           do iFluid = 1, nFluid
+              call select_fluid
+              call BC_asymm(iRhoUz,iRhoUz)
+           end do
            call BC_asymm(Bz_,Bz_)
-        else
-           call BC_symm(rhoUz_,rhoUz_)
-           call BC_symm(Bz_,Bz_)
         endif
      case('linetied')
         call BC_symm(rho_,rho_)
@@ -171,9 +172,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      case('fixedB1','fixedb1')
         call BC_fixed(1,nVar,CellState_VI(:,iSide))
      case('shear')
-        do iVar=1,nVar
-           call BC_shear(iVar,iSide)
-        end do
+        call BC_shear(1,nVar,iSide)
      case default
         IsFound=.false.
         if(UseUserOuterBcs)&
@@ -184,25 +183,8 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
      end select
 
      if(DoSetEnergy)then
-        E_BLK(imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)=inv_gm1&
-             *State_VGB(P_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)+0.5*(&
-             (State_VGB(rhoUx_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2 &
-             +State_VGB(rhoUy_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2 &
-             +State_VGB(rhoUz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2)&
-             /State_VGB(rho_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)       &
-             +State_VGB(Bx_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2 &
-             +State_VGB(By_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2 &
-             +State_VGB(Bz_,imin1g:imax1g,jmin1g:jmax1g,kmin1g:kmax1g,iBLK)**2)
-
-        E_BLK(imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)=inv_gm1&
-             *State_VGB(P_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)+0.5*(&
-             (State_VGB(rhoUx_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2 &
-             +State_VGB(rhoUy_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2 &
-             +State_VGB(rhoUz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2)&
-             /State_VGB(rho_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)       &
-             +State_VGB(Bx_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2 &
-             +State_VGB(By_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2 &
-             +State_VGB(Bz_,imin2g:imax2g,jmin2g:jmax2g,kmin2g:kmax2g,iBLK)**2)
+        call calc_energy(imin1g,imax1g,jmin1g,jmax1g,kmin1g,kmax1g,iBLK,1,nFluid)
+        call calc_energy(imin2g,imax2g,jmin2g,jmax2g,kmin2g,kmax2g,iBLK,1,nFluid)
      end if
   end do
 
@@ -234,8 +216,8 @@ subroutine BC_cont(iVarStart,iVarLast)
 
 end subroutine BC_cont
 
-!==========================================================================  
-subroutine BC_shear(iVar,iSide)
+!==========================================================================
+subroutine BC_shear(iVarStart, iVarLast ,iSide)
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB
   use ModSetOuterBC
@@ -244,82 +226,83 @@ subroutine BC_shear(iVar,iSide)
   implicit none
   ! Shear: q_BLK(ghost)= q_BLK(phys1+shear)
 
-  integer, intent(in) :: iVar,iSide
-  integer :: Dn
+  integer, intent(in) :: iVarStart, iVarLast, iSide
+  integer :: iVar, Dn
   !------------------------------------------------------------------------
   ! For the corners or bot_ and top_ fill with unsheared data first
-  call BC_cont(iVar,iVar)
+  call BC_cont(iVarStart,iVarLast)
 
   ! If the shock is not tilted, there is nothing to do
   if(abs(ShockSlope)<cTiny) RETURN
 
-  ! Shear according to ShockSlope
-  if(ShockSlope < -cTiny)then
-     call stop_mpi('ShockSlope must be positive!')
-  elseif(ShockSlope >= cOne)then
-     Dn = nint(ShockSlope)
-     if(abs(Dn-ShockSlope)>cTiny)&
-          call stop_mpi('ShockSlope > 1 should be a round number!')
-     select case(iside)
-        ! Shift parallel to Y by 1 but copy from distance Dn in X
-     case(east_)
-        State_VGB(iVar,     imin1g,    jmin1g+1:jmax1g,   kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
+  do iVar = iVarStart, iVarLast
+     ! Shear according to ShockSlope
+     if(ShockSlope < -cTiny)then
+        call stop_mpi('ShockSlope must be positive!')
+     elseif(ShockSlope >= cOne)then
+        Dn = nint(ShockSlope)
+        if(abs(Dn-ShockSlope)>cTiny)&
+             call stop_mpi('ShockSlope > 1 should be a round number!')
+        select case(iside)
+           ! Shift parallel to Y by 1 but copy from distance Dn in X
+        case(east_)
+           State_VGB(iVar,     imin1g,    jmin1g+1:jmax1g,   kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
 
-        State_VGB(iVar,     imin2g,    jmin2g+1:jmax2g,   kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin2g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
-     case(west_)
-        State_VGB(iVar,     imin1g,    jmin1g  :jmax1g-1, kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g,    jmin2g+1:jmax2g,   kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin2g+Dn, jmin1p  :jmax1p-1, kmin1p:kmax1p,iBLK)
+        case(west_)
+           State_VGB(iVar,     imin1g,    jmin1g  :jmax1g-1, kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
 
-        State_VGB(iVar,     imin2g,    jmin2g  :jmax2g-1, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin2g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g,    jmin2g  :jmax2g-1, kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin2g-Dn, jmin1p+1:jmax1p,   kmin1p:kmax1p,iBLK)
 
-        ! Shift parallel to X by Dn and 2*Dn
-     case(south_)
-        State_VGB(iVar,     imin1g+Dn:imax1g,   jmin1g, kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p:imax1p-Dn,   jmin1p, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g+2*Dn:imax2g, jmin2g, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p:imax1p-2*Dn, jmin1p, kmin1p:kmax1p,iBLK)
-     case(north_)
-        State_VGB(iVar,     imin1g:imax1g-Dn,   jmin1g, kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p+Dn:imax1g,   jmin1p, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g:imax2g-2*Dn, jmin2g, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p+2*Dn:imax1p, jmin1p, kmin1p:kmax1p,iBLK)
-     end select
-  else
-     ! ShockSlope < 1
-     Dn = nint(cOne/ShockSlope)
-     if(abs(Dn-cOne/ShockSlope)>cTiny)call stop_mpi( &
-          'ShockSlope < 1 should be the inverse of a round number!')
-     select case(iside)
-        ! Shift parallel to Y by Dn
-     case(east_)
-        State_VGB(iVar,     imin1g, jmin1g+Dn:jmax1g,   kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p:jmax1p-Dn,   kmin1p:kmax1p,iBLK)
+           ! Shift parallel to X by Dn and 2*Dn
+        case(south_)
+           State_VGB(iVar,     imin1g+Dn:imax1g,   jmin1g, kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p:imax1p-Dn,   jmin1p, kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g+2*Dn:imax2g, jmin2g, kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p:imax1p-2*Dn, jmin1p, kmin1p:kmax1p,iBLK)
+        case(north_)
+           State_VGB(iVar,     imin1g:imax1g-Dn,   jmin1g, kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p+Dn:imax1g,   jmin1p, kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g:imax2g-2*Dn, jmin2g, kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p+2*Dn:imax1p, jmin1p, kmin1p:kmax1p,iBLK)
+        end select
+     else
+        ! ShockSlope < 1
+        Dn = nint(cOne/ShockSlope)
+        if(abs(Dn-cOne/ShockSlope)>cTiny)call stop_mpi( &
+             'ShockSlope < 1 should be the inverse of a round number!')
+        select case(iside)
+           ! Shift parallel to Y by Dn
+        case(east_)
+           State_VGB(iVar,     imin1g, jmin1g+Dn:jmax1g,   kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p, jmin1p:jmax1p-Dn,   kmin1p:kmax1p,iBLK)
 
-        State_VGB(iVar,     imin2g, jmin2g+2*Dn:jmax2g, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p:jmax1p-2*Dn, kmin1p:kmax1p,iBLK)
-     case(west_)
-        State_VGB(iVar,    imin1g,  jmin1g:jmax1g-Dn,   kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p+Dn:jmax1p,   kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g, jmin2g:jmax2g-2*Dn, kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p, jmin1p+2*Dn:jmax1p, kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g, jmin2g+2*Dn:jmax2g, kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p, jmin1p:jmax1p-2*Dn, kmin1p:kmax1p,iBLK)
+        case(west_)
+           State_VGB(iVar,    imin1g,  jmin1g:jmax1g-Dn,   kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p, jmin1p+Dn:jmax1p,   kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g, jmin2g:jmax2g-2*Dn, kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p, jmin1p+2*Dn:jmax1p, kmin1p:kmax1p,iBLK)
 
-        ! Shift parallel to X by 1, but copy from distance Dn in Y
-     case(south_)
-        State_VGB(iVar,     imin1g+1:imax1g,   jmin1g,    kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p  :imax1p-1, jmin1g+Dn, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g+1:imax2g,   jmin2g,    kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p  :imax1p-1, jmin2g+Dn, kmin1p:kmax1p,iBLK)
-     case(north_)
-        State_VGB(iVar,     imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
-             State_VGB(iVar,imin1p+1:imax1p,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
-        State_VGB(iVar,     imin2g  :imax2g-1, jmin2g,    kmin2g:kmax2g,iBLK)=&
-             State_VGB(iVar,imin1p+1:imax1p,   jmin2g-Dn, kmin1p:kmax1p,iBLK)
-     end select
-  end if
-
+           ! Shift parallel to X by 1, but copy from distance Dn in Y
+        case(south_)
+           State_VGB(iVar,     imin1g+1:imax1g,   jmin1g,    kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p  :imax1p-1, jmin1g+Dn, kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g+1:imax2g,   jmin2g,    kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p  :imax1p-1, jmin2g+Dn, kmin1p:kmax1p,iBLK)
+        case(north_)
+           State_VGB(iVar,     imin1g  :imax1g-1, jmin1g,    kmin1g:kmax1g,iBLK)=&
+                State_VGB(iVar,imin1p+1:imax1p,   jmin1g-Dn, kmin1p:kmax1p,iBLK)
+           State_VGB(iVar,     imin2g  :imax2g-1, jmin2g,    kmin2g:kmax2g,iBLK)=&
+                State_VGB(iVar,imin1p+1:imax1p,   jmin2g-Dn, kmin1p:kmax1p,iBLK)
+        end select
+     end if
+  end do
 end subroutine BC_shear
 
 subroutine BC_symm(iVarStart,iVarLast)

@@ -87,6 +87,7 @@ contains
          DoReplaceDensity
     use ModGeometry,ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
+    use ModEnergy, ONLY: calc_energy_cell
 
     integer, intent(in) :: iStage, iBlock
     interface
@@ -290,7 +291,7 @@ contains
     end do; end do; end do
 
     ! Make sure that energy is consistent
-    call calc_energy(iBlock)
+    call calc_energy_cell(iBlock)
 
     if(DoTestMe)then
        write(*,*) NameSub, ': StateOld=',&

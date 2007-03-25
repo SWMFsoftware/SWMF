@@ -42,7 +42,7 @@ subroutine write_plot_common(ifile)
   character (len=10) :: eqparnames(neqparmax)
   integer :: neqpar
 
-  character (LEN=79) :: allnames
+  character (LEN=500) :: allnames
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
   character (LEN=4) :: file_extension
   character (LEN=40) :: file_format
@@ -424,7 +424,7 @@ subroutine write_plot_common(ifile)
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
            write(unit_tmp,'(i8,a)')neqpar,' neqpar'
            write(unit_tmp,'(10(1pe13.5))')eqpar(1:neqpar)
-           write(unit_tmp,'(a)')allnames
+           write(unit_tmp,'(a)')trim(allnames)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)')save_binary,' save_binary'
            if(save_binary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
@@ -451,7 +451,7 @@ subroutine write_plot_common(ifile)
 
   call stop_mpi("Error in opening or writing file in write_plot_common")
 
-Contains
+contains
 
   subroutine plotvar_to_plotvarnodes
     integer :: ii,jj,kk
@@ -568,7 +568,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModMain
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK,B0xCell_BLK,B0yCell_BLK,B0zCell_BLK, &
-       State_VGB,E_BLK, DivB1_GB, IsConserv_CB, UseNonconservative, &
+       State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
@@ -583,6 +583,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModNumConst, ONLY: cTiny
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModPointImplicit, ONLY: UsePointImplicit_B
+  use ModMultiFluid, ONLY: extract_fluid_name, &
+       iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
 
   implicit none
 
@@ -592,26 +594,28 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   real, intent(out)   :: plotvar_inBody(nPlotVar)
   logical, intent(out):: plotvar_useBody(nPlotVar)
 
-  character (len=10)  :: s, NameVar
+  character (len=10)  :: String, NamePlotVar, NameVar
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
-  integer :: iVar,itmp,jtmp, jVar
-  integer :: i,j,k, ip1,im1,jp1,jm1,kp1,km1
+  integer :: iVar, itmp, jtmp, jVar
+  integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
   real :: xfactor,yfactor,zfactor
 
   logical :: IsFound
   !-------------------------------------------------------------------------
 
   do iVar = 1, nPlotVar
-     s = plotvarnames(iVar)
+     NamePlotVar = plotvarnames(iVar)
 
      ! Default values for TecPlot variable name and TecPlot and IDL unit names
-     NameVarUserTec_I(iVar)  = s
+     NameVarUserTec_I(iVar)  = NamePlotVar
      NameUnitUserTec_I(iVar) = ' '
      NameUnitUserIdl_I(iVar) = '?'
 
-     call lower_case(s)
+     call lower_case(NamePlotVar)
+     String = NamePlotVar
+     call extract_fluid_name(String)
 
      ! Set plotvar_inBody to something reasonable for inside the body.
      ! Load zeros (0) for most values - load something better for rho, p, and T
@@ -625,28 +629,28 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      ! to be used for plotting.
      plotvar_useBody(iVar) = .false.
 
-     select case(s)
+     select case(String)
 
         ! BASIC MHD variables
      case('rho')
-        PlotVar(:,:,:,iVar)=State_VGB(rho_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar)=State_VGB(iRho,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_rho
      case('rhoux','mx')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK) &
-                - State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*y_BLK(:,:,:,iBLK)
+           PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK) &
+                - State_VGB(iRho,:,:,:,iBLK)*OMEGAbody*y_BLK(:,:,:,iBLK)
         else
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUx_,:,:,:,iBLK)
+           PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK)
         end if
      case('rhouy','my')
         if (UseRotatingFrame) then
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK) &
-                + State_VGB(rho_,:,:,:,iBLK)*OMEGAbody*x_BLK(:,:,:,iBLK)
+           PlotVar(:,:,:,iVar)=State_VGB(iRhoUy,:,:,:,iBLK) &
+                + State_VGB(iRho,:,:,:,iBLK)*OMEGAbody*x_BLK(:,:,:,iBLK)
         else
-           PlotVar(:,:,:,iVar)=State_VGB(rhoUy_,:,:,:,iBLK)
+           PlotVar(:,:,:,iVar)=State_VGB(iRhoUy,:,:,:,iBLK)
         end if
      case('rhouz','mz')
-        PlotVar(:,:,:,iVar)=State_VGB(rhoUz_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar)=State_VGB(iRhoUz,:,:,:,iBLK)
      case('bx')
         plotvar_useBody(iVar) = NameThisComp/='SC'
         PlotVar(:,:,:,iVar)=State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)
@@ -671,7 +675,10 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(1:nI,1:nJ,1:nK,iVar)=BzFace_BLK(1:nI,1:nJ,2:nK+1,iBLK)
         !                                        !^CFG END CONSTRAINB
      case('e')
-        PlotVar(:,:,:,iVar)=E_BLK(:,:,:,iBLK)+0.5*(&
+        PlotVar(:,:,:,iVar) = Energy_GBI(:,:,:,iBLK,iFluid)
+        ! Add (B0+B1)^2 - B1^2 so the energy contains B0
+        if(TypeFluid_I(iFluid) == 'ion') &
+             PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5*(&
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2+&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2+&
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 &
@@ -679,7 +686,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(By_,:,:,:,iBLK)**2 &
              -State_VGB(Bz_,:,:,:,iBLK)**2)
      case('p','pth')
-        PlotVar(:,:,:,iVar) = State_VGB(P_,:,:,:,iBLK)
+        PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBLK)
         plotvar_inBody(iVar) = Body_p
 
         ! EXTRA MHD variables
@@ -692,34 +699,34 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
            end do
         else
-           PlotVar(:,:,:,iVar) = State_VGB(Rho_,:,:,:,iBLK)/AverageIonMass
+           PlotVar(:,:,:,iVar) = State_VGB(IRho,:,:,:,iBLK)/AverageIonMass
         end if
 
         ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
-        if(s /= 'n') PlotVar(:,:,:,iVar) = &
-             State_VGB(P_,:,:,:,iBLK) / PlotVar(:,:,:,iVar) &
+        if(String /= 'n') PlotVar(:,:,:,iVar) = &
+             State_VGB(iP,:,:,:,iBLK) / PlotVar(:,:,:,iVar) &
              /(1+AverageIonCharge*ElectronTemperatureRatio)
      case('ux')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar) = &
-                State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
+                State_VGB(iRhoUx,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK) &
                 - OMEGAbody*y_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar) = &
-                State_VGB(rhoUx_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK)
+                State_VGB(iRhoUx,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK)
         end if
      case('uy')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar) = &
-                State_VGB(rhoUy_,:,:,:,iBLK)/State_VGB(rho_,:,:,:,iBLK) &
+                State_VGB(iRhoUy,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK) &
                 + OMEGAbody*x_BLK(:,:,:,iBLK)
         else
            PlotVar(:,:,:,iVar) = &
-                State_VGB(rhoUy_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
+                State_VGB(iRhoUy,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
         end if
      case('uz')
         PlotVar(:,:,:,iVar) = &
-             State_VGB(rhoUz_,:,:,:,iBLK) / State_VGB(rho_,:,:,:,iBLK)
+             State_VGB(iRhoUz,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
      case('b1x')
         PlotVar(:,:,:,iVar) = State_VGB(Bx_,:,:,:,iBLK)
      case('b1y')
@@ -846,79 +853,79 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
      case('ex')
         PlotVar(:,:,:,iVar)= &
-             ( State_VGB(rhoUz_,:,:,:,iBLK) &
+             ( State_VGB(iRhoUz,:,:,:,iBLK) &
              * ( State_VGB(By_,:,:,:,iBLK) + B0yCell_BLK(:,:,:,iBLK)) &
-             - State_VGB(rhoUy_,:,:,:,iBLK) &
+             - State_VGB(iRhoUy,:,:,:,iBLK) &
              * ( State_VGB(Bz_,:,:,:,iBLK) + B0zCell_BLK(:,:,:,iBLK)) &
-             ) / State_VGB(rho_,:,:,:,iBLK) 
+             ) / State_VGB(iRho,:,:,:,iBLK) 
      case('ey')
-        PlotVar(:,:,:,iVar)= ( State_VGB(rhoUx_,:,:,:,iBLK)* &
+        PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUx,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUz_,:,:,:,iBLK)* &
+             -State_VGB(iRhoUz,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)))/ &
-             State_VGB(rho_,:,:,:,iBLK) 
+             State_VGB(iRho,:,:,:,iBLK) 
      case('ez')
-        PlotVar(:,:,:,iVar)= ( State_VGB(rhoUy_,:,:,:,iBLK)* &
+        PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUy,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUx_,:,:,:,iBLK)* &
+             -State_VGB(iRhoUx,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)))/ &
-             State_VGB(rho_,:,:,:,iBLK) 
+             State_VGB(iRho,:,:,:,iBLK) 
      case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
              ( (State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2  &
              + (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2  &
              + (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
-             State_VGB(rhoUx_,:,:,:,iBLK) &
+             State_VGB(iRhoUx,:,:,:,iBLK) &
              -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUx_,:,:,:,iBLK) + &
+             State_VGB(iRhoUx,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUy_,:,:,:,iBLK) + &
+             State_VGB(iRhoUy,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUz_,:,:,:,iBLK)) * &
+             State_VGB(iRhoUz,:,:,:,iBLK)) * &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK) ) ) &
-             / State_VGB(rho_,:,:,:,iBLK)
+             / State_VGB(iRho,:,:,:,iBLK)
      case('pvecy')
         PlotVar(:,:,:,iVar) = ( &
              ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
-             State_VGB(rhoUy_,:,:,:,iBLK) &
+             State_VGB(iRhoUy,:,:,:,iBLK) &
              -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUx_,:,:,:,iBLK) + &
+             State_VGB(iRhoUx,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUy_,:,:,:,iBLK) + &
+             State_VGB(iRhoUy,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUz_,:,:,:,iBLK)) * &
+             State_VGB(iRhoUz,:,:,:,iBLK)) * &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK) ) ) &
-             / State_VGB(rho_,:,:,:,iBLK)
+             / State_VGB(iRho,:,:,:,iBLK)
      case('pvecz')
         PlotVar(:,:,:,iVar) = ( &
              ((State_VGB(Bx_,:,:,:,iBLK)+ B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+ B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+ B0zCell_BLK(:,:,:,iBLK))**2) * &
-             State_VGB(rhoUz_,:,:,:,iBLK) &
+             State_VGB(iRhoUz,:,:,:,iBLK) &
              -((State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUx_,:,:,:,iBLK) + &
+             State_VGB(iRhoUx,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUy_,:,:,:,iBLK) + &
+             State_VGB(iRhoUy,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUz_,:,:,:,iBLK)) * &
+             State_VGB(iRhoUz,:,:,:,iBLK)) * &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK) ) ) &
-             / State_VGB(rho_,:,:,:,iBLK)
+             / State_VGB(iRho,:,:,:,iBLK)
 
         ! Radial component variables
 
      case('ur')
         PlotVar(:,:,:,iVar) = &
-             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
-             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
-             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
-             ) / (State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+             ( State_VGB(iRhoUx,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(iRhoUy,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(iRhoUz,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ) / (State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('rhour','mr')
         PlotVar(:,:,:,iVar) = &
-             ( State_VGB(rhoUx_,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
-             + State_VGB(rhoUy_,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
-             + State_VGB(rhoUz_,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
+             ( State_VGB(iRhoUx,:,:,:,iBLK)*x_BLK(:,:,:,iBLK) & 
+             + State_VGB(iRhoUy,:,:,:,iBLK)*y_BLK(:,:,:,iBLK) & 
+             + State_VGB(iRhoUz,:,:,:,iBLK)*z_BLK(:,:,:,iBLK) &
              ) / R_BLK(:,:,:,iBLK)
      case('br')
         plotvar_useBody(iVar) = .true.
@@ -962,21 +969,21 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            continue
         end if                                             !^CFG IF COVARIANT
      case('er')
-        PlotVar(:,:,:,iVar)=( ( State_VGB(rhoUz_,:,:,:,iBLK)* &
+        PlotVar(:,:,:,iVar)=( ( State_VGB(iRhoUz,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUy_,:,:,:,iBLK)* &
+             -State_VGB(iRhoUy,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))) &
              *x_BLK(:,:,:,iBLK) &
-             +( State_VGB(rhoUx_,:,:,:,iBLK)* &
+             +( State_VGB(iRhoUx,:,:,:,iBLK)* &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUz_,:,:,:,iBLK)* &
+             -State_VGB(iRhoUz,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))) &
              *y_BLK(:,:,:,iBLK) &
-             +( State_VGB(rhoUy_,:,:,:,iBLK)* &
+             +( State_VGB(iRhoUy,:,:,:,iBLK)* &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK)) &
-             -State_VGB(rhoUx_,:,:,:,iBLK)* &
+             -State_VGB(iRhoUx,:,:,:,iBLK)* &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))) &
-             *z_BLK(:,:,:,iBLK) )/State_VGB(rho_,:,:,:,iBLK) 
+             *z_BLK(:,:,:,iBLK) )/State_VGB(iRho,:,:,:,iBLK) 
      case('pvecr')
         tmp1Var = &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
@@ -984,37 +991,37 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2 
         tmp2Var = &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUx_,:,:,:,iBLK) + &
+             State_VGB(iRhoUx,:,:,:,iBLK) + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUy_,:,:,:,iBLK) + &
+             State_VGB(iRhoUy,:,:,:,iBLK) + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))* &
-             State_VGB(rhoUz_,:,:,:,iBLK) 
-        PlotVar(:,:,:,iVar)=( ( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK) &
+             State_VGB(iRhoUz,:,:,:,iBLK) 
+        PlotVar(:,:,:,iVar)=( ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK) &
              -tmp2Var*(State_VGB(Bx_,:,:,:,iBLK)+ &
              B0xCell_BLK(:,:,:,iBLK)))*X_BLK(:,:,:,iBLK) &
-             +( tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK) &
+             +( tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK) &
              -  tmp2Var*(State_VGB(By_,:,:,:,iBLK)+ &
              B0yCell_BLK(:,:,:,iBLK)))*Y_BLK(:,:,:,iBLK) &  
-             +( tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK) &
+             +( tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK) &
              -  tmp2Var*(State_VGB(Bz_,:,:,:,iBLK)+ &
              B0zCell_BLK(:,:,:,iBLK)))*Z_BLK(:,:,:,iBLK) )&   
-             /(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+             /(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('b2ur')
         tmp1Var = &
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2 + &
              (State_VGB(Bz_,:,:,:,iBLK)+B0zCell_BLK(:,:,:,iBLK))**2  
         PlotVar(:,:,:,iVar)=0.5* &
-             ( tmp1Var*State_VGB(rhoUx_,:,:,:,iBLK)*X_BLK(:,:,:,iBLK) &
-             + tmp1Var*State_VGB(rhoUy_,:,:,:,iBLK)*Y_BLK(:,:,:,iBLK) &  
-             + tmp1Var*State_VGB(rhoUz_,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
-             )/(State_VGB(rho_,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
+             ( tmp1Var*State_VGB(iRhoUx,:,:,:,iBLK)*X_BLK(:,:,:,iBLK) &
+             + tmp1Var*State_VGB(iRhoUy,:,:,:,iBLK)*Y_BLK(:,:,:,iBLK) &  
+             + tmp1Var*State_VGB(iRhoUz,:,:,:,iBLK)*Z_BLK(:,:,:,iBLK) &   
+             )/(State_VGB(iRho,:,:,:,iBLK)*R_BLK(:,:,:,iBLK))
      case('divb','divb_cd','divb_ct')
         if(UseCovariant)&                            !^CFG IF COVARIANT BEGIN
              call stop_mpi('When UseCovariant=T use absdivb indstead of divb')
                                                      !^CFG END COVARIANT
         !^CFG IF NOT COVARIANT BEGIN
-        if(s == 'divb_cd' .or. (s == 'divb' &
+        if(String == 'divb_cd' .or. (String == 'divb' &
              .and..not.UseConstrainB &               !^CFG IF CONSTRAINB
              ))then
            ! Div B from central differences
@@ -1077,7 +1084,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         ! BASIC RAYTRACE variables
 
      case('theta1','theta2','phi1','phi2','status')
-        select case(s)
+        select case(String)
         case ('theta1')
            itmp = 1 ; jtmp = 1
         case ('theta2')
@@ -1187,14 +1194,14 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         do jVar = 1, nVar
            NameVar = NameVar_V(jVar)
            call lower_case(NameVar)
-           if(s /= NameVar) CYCLE
+           if(NamePlotVar /= NameVar) CYCLE
            PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
            if(DefaultState_V(jVar) > cTiny) &
                 plotvar_inBody(iVar) = CellState_VI(jVar,body1_)
            EXIT
         end do
         if(jVar > nVar) then
-           call user_set_plot_var(iBLK, s, plot_dimensional(Plot_+iPlotFile), &
+           call user_set_plot_var(iBLK, NamePlotVar, plot_dimensional(Plot_+iPlotFile), &
                 PlotVar(:,:,:,iVar), &                
                 plotvar_inBody(iVar), plotvar_useBody(iVar), &
                 NameVarUserTec_I(iVar), NameUnitUserTec_I(iVar), &
@@ -1210,7 +1217,6 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   end do ! iVar
 end subroutine set_plotvar
 
-
 !==============================================================================
 subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
      plotvar, plotvar_inBody)
@@ -1220,6 +1226,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   use ModPhysics
   use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V   
   use ModUtilities,  ONLY: lower_case
+  use ModMultiFluid, ONLY: extract_fluid_name
 
   implicit none
 
@@ -1228,9 +1235,9 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   real, intent(inout) :: plotVar(-1:nI+2,-1:nJ+2,-1:nK+2,nPlotVar)
   real, intent(inout) :: plotVar_inBody(nPlotVar)
 
-  character (len=10)  :: s, NameVar
+  character (len=10)  :: String, NamePlotVar, NameVar
 
-  integer :: iVar,i,j,k, jVar
+  integer :: iVar, i,j,k, jVar
   logical :: oktest,oktest_me
   !---------------------------------------------------------------------------
   if(iBLK==BlkTest.and.iProc==ProcTest)then
@@ -1240,8 +1247,10 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   end if
 
   do iVar=1,nPlotVar
-     s=plotvarnames(iVar)
-     call lower_case(s)
+     NamePlotVar = plotvarnames(iVar)
+     call lower_case(NamePlotVar)
+     String = NamePlotVar
+     call extract_fluid_name(String)
 
      ! Set plotvar_inBody to something reasonable for inside the body.
      ! Load zeros (0) for most values - load something better for rho, p, and T
@@ -1251,7 +1260,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
      ! loaded below. Note that this is used for tecplot corner extrapolation 
      ! and for nothing else.
 
-     select case(s)
+     select case(String)
 
         ! BASIC MHD variables
 
@@ -1297,7 +1306,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         do jVar = 1, nVar
            NameVar = NameVar_V(jVar)
            call lower_case(NameVar)
-           if(s /= NameVar) CYCLE
+           if(NamePlotVar /= NameVar) CYCLE
            PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
            if(DefaultState_V(jVar)>cTiny)&
                 plotvar_inBody(iVar)=plotvar_inBody(iVar)*UnitUser_V(jVar)
@@ -1317,6 +1326,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModIO,         ONLY: plot_type,plot_dimensional
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
+  use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
 
   implicit none
 
@@ -1326,9 +1336,10 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   character (len=10), intent(in)   :: NamePlotVar_V(nPlotVar)
   character (len=500), intent(out) :: StringVarTec 
 
-  character (len=10) :: NamePlotVar, NameVar, NameTecVar, NameUnit
-  integer            :: iPlotVar, iVar
-
+  character (len=20) :: NameTecFluid
+  character (len=10) :: String, NamePlotVar, NameVar, NameTecVar, NameUnit
+  integer            :: iPlotVar, iVar, i
+  !---------------------------------------------------------------------------
   !\
   ! This routine takes the plot_var information and loads the header file with
   ! the appropriate string of variable names and units
@@ -1362,22 +1373,31 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
      NamePlotVar = NamePlotVar_V(iPlotVar)
      call lower_case(NamePlotVar)
+     String = NamePlotVar
+     call extract_fluid_name(String)
+     if(iFluid == 1)then
+        NameTecFluid = ''
+     else
+        do i = 1, len_trim(NameFluid)
+           NameTecFluid(2*i-1:2*i) = '^'//NameFluid(i:i)
+        end do
+     end if
 
      ! Default value for NameUnit is empty string
      NameUnit = ''
 
-     select case(NamePlotVar)
+     select case(String)
      case('rho') 
-        NameTecVar = '`r'
+        NameTecVar = '`r'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRho_)
      case('rhoux','mx') 
-        NameTecVar = '`r U_x'
+        NameTecVar = '`r U_x'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouy','my') 
-        NameTecVar = '`r U_y'
+        NameTecVar = '`r U_y'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouz','mz') 
-        NameTecVar = '`r U_z'
+        NameTecVar = '`r U_z'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('bx') 
         NameTecVar = 'B_x'
@@ -1409,31 +1429,31 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = NameTecUnit_V(UnitB_)
         !                                        !^CFG END CONSTRAINB
      case('e')
-        NameTecVar = 'E'
+        NameTecVar = 'E'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case('p','pth')
-        NameTecVar = 'p'
+        NameTecVar = 'p'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitP_)
      case('n')
-        NameTecVar = 'n'
+        NameTecVar = 'n'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitN_)
      case('t','temp')
-        NameTecVar = 'T'
+        NameTecVar = 'T'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitTemperature_)
      case('ux') 
-        NameTecVar = 'U_x'
+        NameTecVar = 'U_x'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('uy') 
-        NameTecVar = 'U_y'
+        NameTecVar = 'U_y'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('uz') 
-        NameTecVar = 'U_z'
+        NameTecVar = 'U_z'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('ur') 
-        NameTecVar = 'U_r'
+        NameTecVar = 'U_r'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('rhour','mr') 
-        NameTecVar = '`r U_r'
+        NameTecVar = '`r U_r'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('br') 
         NameTecVar = 'B_r'
@@ -1563,16 +1583,16 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type, plot_dimensional, NameUnitUserIdl_I
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserIdl_V
+  use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
 
   ! Arguments
 
   integer, intent(in)             :: iFile, nPlotVar
   character (len=10), intent(in)  :: NamePlotVar_V(nPlotVar)
-  character (len=79), intent(out) :: StringUnitIdl 
+  character (len=500),intent(out) :: StringUnitIdl 
 
-
-  character (len=10) :: NamePlotVar, NameVar, NameUnit
+  character (len=10) :: String, NamePlotVar, NameVar, NameUnit
   integer            :: iPlotVar, iVar
 
   !\
@@ -1596,8 +1616,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
 
      NamePlotVar = NamePlotVar_V(iPlotVar)
      call lower_case(NamePlotVar)
+     String = NamePlotVar
+     call extract_fluid_name(String)
 
-     select case(NamePlotVar)
+     select case(String)
      case('rho') 
         NameUnit = NameIdlUnit_V(UnitRho_)
      case('rhoux','mx','rhouy','rhoUz','rhouz','mz','rhour','mr')
@@ -1652,4 +1674,3 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, StringUnitIdl)
   end do
 
 end subroutine get_idl_units
-

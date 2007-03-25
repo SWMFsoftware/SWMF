@@ -22,6 +22,7 @@ MODULES = \
 	ModBoundaryCells.o\
 	ModSingleFluid.o\
 	ModMultiFluid.o\
+	ModEnergy.o\
 	ModEquation.o\
 	ModCharacteristic.o\
 	ModFaceFlux.o\
@@ -64,10 +65,6 @@ OBJ3=ray_trace_new.o ray_trace.o ray_pass.o #	^CFG IF RAYTRACE
 OBJ3B=get_im_pressure.o #			^CFG IF RCM
 OBJ4=project_B.o proj_cg.o proj_bicgstab.o #	^CFG IF PROJECTION
 
-CARTSOURCES=calc_sources.o                  #^CFG IF NOT COVARIANT
-COVARCOURCES=calc_sources_covar.o           #^CFG IF COVARIANT
-OBJ9=${CARTSOURCES} ${COVARCOURCES}
-
 OBJ10=  calc_heat_flux.o set_resistivity.o ModResistivity.o #^CFG IF DISSFLUX
 
 OBJ12= write_plot_los.o write_plot_sph.o
@@ -85,6 +82,7 @@ OBJECTS = \
 	amr_criteria.o\
 	amr_physics.o\
 	calc_gradients.o\
+	calc_sources.o\
 	calc_timestep.o\
 	coarsen_grid.o\
 	conserve_flux.o\
@@ -120,7 +118,7 @@ OBJECTS = \
 	write_plot_tec.o\
 	write_progress.o\
 	${OBJ1} ${OBJ2} ${OBJ3} ${OBJ3B} ${OBJ4} \
-	${OBJ9} ${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
+	${OBJ10} ${OBJ11} ${OBJ12} ${OBJ14} ${OBJ15}
 
 # Default user module
 ModUser.f90:

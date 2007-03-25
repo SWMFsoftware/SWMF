@@ -18,6 +18,7 @@ subroutine exchange_messages
   use ModBoundaryCells,ONLY:SaveBoundaryCells
   use ModPhysics, ONLY : ShockSlope
   use ModFaceValue,ONLY: UseAccurateResChange
+  use ModEnergy,   ONLY: calc_energy_ghost
 
   implicit none
 
@@ -108,7 +109,7 @@ subroutine exchange_messages
           call set_outer_BCs(iBlock,time_simulation,.false.) 
      if(time_loop.and.any(TypeBc_I=='coronatoih'))&
           call fill_in_from_buffer(iBlock)
-     call calc_energy(iBlock)
+     call calc_energy_ghost(iBlock)
   end do
 
   call timing_stop('exch_msgs')
@@ -131,7 +132,7 @@ subroutine fill_in_from_buffer(iBlock)
   if(DoWrite)then
      DoWrite=.false.
      if(iProc==0)then
-        write(*,*)'Fill in the cells near the iner boundary from the buffer'
+        write(*,*)'Fill in the cells near the inner boundary from the buffer'
      end if
   end if
   
@@ -256,10 +257,9 @@ subroutine correctP(iBlock)
   use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
   use ModVarIndexes,ONLY:&
        rho_,rhoUx_,rhoUy_,rhoUz_,Bx_,By_,Bz_,P_,nVar
-  use ModAdvance, ONLY : &
-       State_VGB, E_BLK
+  use ModAdvance, ONLY : State_VGB, Energy_GBI
   use ModPhysics, ONLY : gm1, inv_gm1, Pratio_hi, Pratio_lo
-  use ModGeometry, ONLY : x_BLK,y_BLK,z_BLK,true_cell
+  use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, true_cell
   implicit none
 
   integer, intent(in) :: iBlock
@@ -296,7 +296,7 @@ subroutine correctP(iBlock)
 
      ! Pressure and total energy
      qp=P_old(i,j,k)
-     qe=E_BLK(i,j,k,iBlock)
+     qe=Energy_GBI(i,j,k,iBlock,1)
 
      if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)&
           write(*,*)'CorrectP at me,BLK,i,j,k=',&
@@ -369,37 +369,3 @@ subroutine correctP(iBlock)
 end subroutine correctP
 !^CFG END PROJECTION
 
-!==============================================================================
-
-subroutine calc_energy(iBlock)
-
-  ! Calculate total energy (excluding B0):
-  !
-  !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
-
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoU_, Bx_, B_, P_
-  use ModMain,       ONLY: nDim, nI, nJ, nK, gcn
-  use ModAdvance,    ONLY: State_VGB,E_BLK
-  use ModPhysics,    ONLY: inv_gm1
-  implicit none
-
-  integer, intent(in) :: iBlock
-  integer::i,j,k
-  !---------------------------------------------------------------------------
-  do k=1-gcn,nK+gcn; do j=1-gcn,nJ+gcn; do i=1-gcn,nI+gcn
-     if(State_VGB(rho_,i,j,k,iBlock)<=0.0)cycle
-     E_BLK(i,j,k,iBlock) = inv_gm1*State_VGB(P_,i,j,k,iBlock) &
-          +0.5*(sum(State_VGB(rhoUx_:rhoU_+ndim,i,j,k,iBlock)**2)/&
-          State_VGB(rho_,i,j,k,iBlock)    &
-          +sum(State_VGB(Bx_:B_+ndim,i,j,k,iBlock)**2) )
-  end do; end do; end do
-
-end subroutine calc_energy
-
-!==============================================================================
-
-subroutine correctE
-  use ModMain, ONLY: GlobalBlk
-  implicit none
-  call calc_energy(GlobalBlk)
-end subroutine correctE

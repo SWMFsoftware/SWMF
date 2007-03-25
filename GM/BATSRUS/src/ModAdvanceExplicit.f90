@@ -112,13 +112,7 @@ subroutine advance_expl(DoCalcTimestep)
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')
-        if(.not.UseCovariant)then              !^CFG IF COVARIANT
-           call calc_sources                   !^CFG IF NOT COVARIANT
-           continue
-        else                                   !^CFG IF COVARIANT BEGIN   
-           call calc_sources_covar            
-        end if                                 !^CFG END COVARIANT        
-
+        call calc_sources
         call timing_stop('calc_sources')
 
         ! Calculate time step (both local and global

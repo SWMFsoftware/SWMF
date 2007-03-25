@@ -4,7 +4,8 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies
+  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid, &
+       iVarFluid_I, TypeFluid_I
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
 
@@ -21,7 +22,7 @@ module ModFaceFlux
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: face flux
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
-       UDotFA_X, UDotFA_Y, UDotFA_Z        ! output: U.Area for P source
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI ! output: U.Area for P source
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
@@ -29,6 +30,9 @@ module ModFaceFlux
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
 
   implicit none
+
+  ! Number of fluxes including pressure and energy fluxes
+  integer, parameter :: nFlux=nVar+nFluid
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
@@ -40,11 +44,12 @@ module ModFaceFlux
   integer :: iFace, jFace, kFace, iBlockFace
 
   real :: StateLeft_V(nVar), StateRight_V(nVar)
-  real :: FluxLeft_V(nVar+1), FluxRight_V(nVar+1)
-  real :: StateLeftCons_V(nVar+1), StateRightCons_V(nVar+1)
+  real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
+  real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
   real :: B0x, B0y, B0z
   real :: Area, Area2, AreaX, AreaY, AreaZ
-  real :: CmaxDt, Unormal, UnLeft, UnRight
+  real :: CmaxDt, UnLeft, UnRight
+  real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables for normal resistivity
@@ -212,7 +217,7 @@ contains
          call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace) = CmaxDt
-         UDotFA_X(iFace, jFace, kFace)  = Unormal
+         uDotArea_XI(iFace, jFace, kFace,:) = Unormal_I
          EDotFA_X(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
@@ -241,7 +246,7 @@ contains
          call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
 
          VdtFace_y(iFace, jFace, kFace) = CmaxDt
-         UDotFA_Y( iFace, jFace, kFace) = Unormal
+         uDotArea_YI(iFace, jFace, kFace, :) = Unormal_I
          EDotFA_Y(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
@@ -271,7 +276,7 @@ contains
          call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
 
          VdtFace_z(iFace, jFace, kFace) = CmaxDt
-         UDotFA_Z( iFace, jFace, kFace) = Unormal
+         uDotArea_ZI(iFace, jFace, kFace, :) = Unormal_I
          EDotFA_Z(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
@@ -416,7 +421,7 @@ contains
     use ModAdvance, ONLY: DoReplaceDensity
 
     integer, intent(in) :: iDir
-    real,    intent(out):: Flux_V(nVar+1)
+    real,    intent(out):: Flux_V(nFlux)
 
     real :: State_V(nVar)
 
@@ -480,10 +485,10 @@ contains
     end if
 
     call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
-         StateLeftCons_V, FluxLeft_V, UnLeft, EnLeft, HallUnLeft)
+         StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
 
     call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
-         StateRightCons_V, FluxRight_V, UnRight, EnRight, HallUnRight)
+         StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
     ! All the solvers below use the average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
@@ -509,8 +514,8 @@ contains
       Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
            - Cmax*(StateRightCons_V - StateLeftCons_V))
 
-      Unormal = 0.5*(UnLeft + UnRight)
-      Enormal = 0.5*(EnLeft + EnRight)                  !^CFG IF BORISCORR
+      Unormal_I = 0.5*(UnLeft_I + UnRight_I)
+      Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
 
     end subroutine lax_friedrichs_flux
     !^CFG END RUSANOVFLUX
@@ -552,8 +557,8 @@ contains
       Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
 
       ! Average the normal speed
-      Unormal = WeightRight*UnRight + WeightLeft*UnLeft
-      Enormal = WeightRight*EnRight + WeightLeft*EnLeft !^CFG IF BORISCORR
+      Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
+      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
 
     end subroutine harten_lax_vanleer_flux
     !^CFG END LINDEFLUX
@@ -591,8 +596,8 @@ contains
       Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
 
       ! Weighted average of the normal speed and electric field
-      Unormal = WeightRight*UnRight + WeightLeft*UnLeft
-      Enormal = WeightRight*EnRight + WeightLeft*EnLeft !^CFG IF BORISCORR
+      Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
+      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
 
     end subroutine artificial_wind
     !^CFG END AWFLUX
@@ -633,23 +638,48 @@ contains
   !===========================================================================
 
   subroutine get_physical_flux(iDir, State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un, En, HallUn)
+       StateCons_V, Flux_V, Un_I, En, HallUn)
 
-    integer, intent(in) :: iDir               ! direction of flux
-    real,    intent(in) :: State_V(nVar)      ! input primitive state
-    real,    intent(in) :: B0x, B0y, B0z      ! B0
-    real,    intent(out):: StateCons_V(nVar+1)! conservative states with energy
-    real,    intent(out):: Flux_V(nVar+1)     ! fluxes for all states
-    real,    intent(out):: Un                 ! normal velocity
-    real,    intent(out):: En                 ! normal electric field
-    real,    intent(out):: HallUn             ! normal Hall/electron velocity
+    use ModMultiFluid
 
+    integer, intent(in) :: iDir                ! direction of flux
+    real,    intent(in) :: State_V(nVar)       ! input primitive state
+    real,    intent(in) :: B0x, B0y, B0z       ! B0
+    real,    intent(out):: StateCons_V(nFlux)  ! conservative states with energy
+    real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
+    real,    intent(out):: Un_I(nFluid)        ! normal velocity
+    real,    intent(out):: En                  ! normal electric field
+    real,    intent(out):: HallUn              ! normal Hall/electron velocity
+
+    real :: Un
+    !--------------------------------------------------------------------------
+
+    ! Calculate conservative state
+    StateCons_V(1:nVar)  = State_V
+
+    iFluid = 1
     if(UseBoris)then           !^CFG IF BORISCORR BEGIN
        call get_boris_flux
     else                       !^CFG END BORISCORR
        call get_mhd_flux
        En = 0.0
     end if                     !^CFG IF BORISCORR
+    Un_I(1) = Un
+
+    do iFluid = 2, nFluid
+       call select_fluid
+       if(TypeFluid_I(iFluid)=='ion')then
+          if(UseBoris)then           !^CFG IF BORISCORR BEGIN
+             call get_boris_flux
+          else                       !^CFG END BORISCORR
+             call get_mhd_flux
+             En = 0.0
+          end if                     !^CFG IF BORISCORR
+       else
+          call get_hd_flux
+       end if
+       Un_I(iFLuid) = Un
+    end do
 
   contains
 
@@ -695,9 +725,6 @@ contains
 
       ! Calculate energy
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
-
-      ! Calculate conservative state
-      StateCons_V(1:nVar)  = State_V
 
       ! The full momentum contains the ExB/c^2 term:
       ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
@@ -783,7 +810,6 @@ contains
       e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
       ! Calculate conservative state
-      StateCons_V(1:nVar)  = State_V
       StateCons_V(RhoUx_)  = Rho*Ux
       StateCons_V(RhoUy_)  = Rho*Uy
       StateCons_V(RhoUz_)  = Rho*Uz
@@ -873,11 +899,64 @@ contains
 
     end subroutine get_mhd_flux
 
+    !==========================================================================
+    subroutine get_hd_flux
+
+      use ModPhysics, ONLY: g, inv_gm1
+      use ModMain,    ONLY: x_, y_, z_
+      use ModVarIndexes
+      ! Variables for conservative state and flux calculation
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn
+      integer :: iVar
+      !-----------------------------------------------------------------------
+
+      ! Extract primitive variables
+      Rho     = State_V(iRho)
+      Ux      = State_V(iUx)
+      Uy      = State_V(iUy)
+      Uz      = State_V(iUz)
+      p       = State_V(iP)
+
+      ! Calculate energy
+      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+
+      ! Calculate conservative state
+      StateCons_V(iRhoUx)  = Rho*Ux
+      StateCons_V(iRhoUy)  = Rho*Uy
+      StateCons_V(iRhoUz)  = Rho*Uz
+      StateCons_V(iEnergy) = e
+
+      ! Normal velocity
+      Un     = Ux*AreaX  + Uy*AreaY  + Uz*AreaZ
+      RhoUn  = Rho*Un
+
+      ! f_i[rho]=m_i
+      Flux_V(iRho)   = RhoUn
+
+      ! f_i[m_k]=u_i*rho*u_k + n_i*[ptotal]
+      Flux_V(iRhoUx) = RhoUn*Ux + p*AreaX
+      Flux_V(iRhoUy) = RhoUn*Uy + p*AreaY
+      Flux_V(iRhoUz) = RhoUn*Uz + p*AreaZ
+
+      ! f_i[p]=u_i*p
+      Flux_V(iP)  = Un*p
+
+      Flux_V(iEnergy) = Un*(p + e)
+
+      ! f_i[scalar] = Un*scalar
+      do iVar = ScalarFirst_, ScalarLast_
+         Flux_V(iVar) = Un*State_V(iVar)
+      end do
+
+    end subroutine get_hd_flux
+
   end subroutine get_physical_flux
 
   !===========================================================================
 
   subroutine get_speed_max(iDir, State_V, B0x, B0y, B0z, cMax, cLeft, cRight)
+
+    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
 
     integer, intent(in) :: iDir
     real,    intent(in) :: State_V(nVar)
@@ -886,11 +965,48 @@ contains
     real, optional, intent(out) :: Cleft       ! maximum left speed
     real, optional, intent(out) :: Cright      ! maximum right speed
 
+    real :: CmaxFluid, CleftFluid, CrightFluid
+    !--------------------------------------------------------------------------
+
+    iFluid = 1
+    UnLeft = UnLeft_I(1)
+    UnRight= UnRight_I(1)
     if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
        call get_boris_speed
     else                                         !^CFG END BORISCORR
        call get_mhd_speed
     endif                                        !^CFG IF BORISCORR
+
+    if(nFluid > 1)then
+       if(present(Cmax))   CmaxFluid  =Cmax
+       if(present(Cleft))  CleftFluid =Cleft
+       if(present(Cright)) CrightFluid=Cright
+    endif
+
+    do iFluid = 2, nFluid
+       call select_fluid
+       UnLeft = UnLeft_I(iFluid)
+       UnRight= UnRight_I(iFluid)
+
+       if(TypeFluid_I(iFluid)=='ion')then
+          if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
+             call get_boris_speed
+          else                                         !^CFG END BORISCORR
+             call get_mhd_speed
+          endif                                        !^CFG IF BORISCORR
+       else
+          call get_hd_speed
+       end if
+       if(present(Cmax))   CmaxFluid  =max(CmaxFluid,  Cmax)
+       if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
+       if(present(Cright)) CrightFluid=min(CrightFluid,Cright)
+    end do
+
+    if(nFluid > 1)then
+       if(present(Cmax))   Cmax  =CmaxFluid
+       if(present(Cleft))  Cleft =CleftFluid
+       if(present(Cright)) Cright=CrightFluid
+    end if
 
   contains
 
@@ -1083,6 +1199,47 @@ contains
       end if
 
     end subroutine get_mhd_speed
+    !========================================================================
+    subroutine get_hd_speed
+
+      use ModVarIndexes
+      use ModPhysics, ONLY: g
+      use ModAdvance, ONLY: State_VGB
+
+      real :: InvRho, Sound2, Sound, Un
+
+      character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed'
+      !------------------------------------------------------------------------
+
+      if(DoTestCell)write(*,*) NameSub,' State_V=',State_V(iRho:iP)
+
+      InvRho = 1.0/State_V(iRho)
+      Sound2 = g*State_V(iP)*InvRho
+      Un = State_V(iUx)*AreaX + State_V(iUy)*AreaY + State_V(iUz)*AreaZ
+
+      Sound = sqrt(Sound2)
+
+      if(DoAw)then                                   !^CFG IF AWFLUX BEGIN
+         Cleft   = min(UnLeft, UnRight) - Sound
+         Cright  = max(UnLeft, UnRight) + Sound
+         Cmax    = max(Cright, -Cleft)
+         CmaxDt = Cmax
+      else                                           !^CFG END AWFLUX
+         if(present(Cmax))then
+            Cmax   = abs(Un) + Sound
+            CmaxDt = Cmax
+         end if
+         if(present(Cleft))  Cleft  = Un - Sound
+         if(present(Cright)) Cright = Un + Sound
+      end if                                         !^CFG IF AWFLUX
+
+      if(DoTestCell)then
+         write(*,*)NameSub,' Un     =',Un
+         write(*,*)NameSub,' Csound =',Sound
+         write(*,*)NameSub,' Cmax   =',Cmax/Area
+      end if
+
+    end subroutine get_hd_speed
 
   end subroutine get_speed_max
 
@@ -1093,9 +1250,10 @@ end module ModFaceFlux
 subroutine roe_solver(iDir, Flux_V)
 
   use ModFaceFlux, ONLY: &
+       nFlux, &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
-       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal
+       StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal_I
 
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
@@ -1107,9 +1265,6 @@ subroutine roe_solver(iDir, Flux_V)
 
   use ModGeometry,   ONLY: UseCovariant                      !^CFG IF COVARIANT
   implicit none
-
-  ! Number of fluxes including pressure and energy fluxes
-  integer, parameter :: nFlux=nVar+1   
 
   integer, intent(in) :: iDir
   real,    intent(out):: Flux_V(nFlux)
@@ -1848,8 +2003,8 @@ subroutine roe_solver(iDir, Flux_V)
   Flux_V  = 0.5*(FluxLeft_V + FluxRight_V - Area*Flux_V)
 
   ! Normal velocity and maximum wave speed
-  Unormal = Area*UnH
-  CmaxDt  = Area*(abs(UnH) + CfH)
+  Unormal_I(1) = Area*UnH
+  CmaxDt       = Area*(abs(UnH) + CfH)
 
 end subroutine roe_solver
 !^CFG END ROEFLUX

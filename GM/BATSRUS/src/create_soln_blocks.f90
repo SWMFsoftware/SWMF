@@ -19,6 +19,7 @@ end subroutine get_shifts
 !/
 subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
      refined_BLK)
+
   use ModProcMH
   use ModMain
   use ModVarIndexes,ONLY:nVar
@@ -31,6 +32,8 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
   use ModGeometry, ONLY : &
        dx_BLK,dy_BLK,dz_BLK,dxyz,xyzStart,xyzStart_BLK,true_cell
   use ModMpi
+  use ModEnergy, ONLY: calc_energy_ghost
+
   implicit none
 
   integer, intent(in) :: nPEsRefBlk, PEsRefBlk(9), refined_PE, refined_BLK
@@ -173,7 +176,7 @@ subroutine create_refined_soln_blocks(nPEsRefBlk, PEsRefBlk, refined_PE, &
 
            call fix_soln_block(iBLK)
 
-           call calc_energy(iBLK)
+           call calc_energy_ghost(iBLK)
 
            call calc_other_soln_vars(iBLK)
         end if
@@ -428,6 +431,7 @@ end subroutine set_refined_block_geometry
 ! coarse solution block on the appropriate PE.
 !/
 subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
+
   use ModProcMH
   use ModMain
   use ModVarIndexes,ONLY:nVar
@@ -440,6 +444,8 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
   use ModGeometry, ONLY :  R2_BLK                           !^CFG IF SECONDBODY
   use ModNumConst
   use ModMpi
+  use ModEnergy, ONLY: calc_energy_ghost
+
   implicit none
 
   integer, intent(in) :: nPEsCrseBlk, PEsCrseBlk(8)
@@ -570,7 +576,7 @@ subroutine create_coarse_soln_block(nPEsCrseBlk, PEsCrseBlk)
 
         call fix_soln_block(remaining_BLK)
 
-        call calc_energy(remaining_BLK)
+        call calc_energy_ghost(remaining_BLK)
 
         call calc_other_soln_vars(remaining_BLK)
      end if

@@ -483,29 +483,34 @@ subroutine init_mhd_variables
 
   use ModVarIndexes
   use ModPhysics
+  use ModMultiFluid
 
   implicit none
 
   integer :: iVar
   !--------------------------------------------------------------------------
 
-  UnitUser_V(Rho_)          = No2Io_V(UnitRho_)
-  UnitUser_V(RhoUx_:RhoUz_) = No2Io_V(UnitRhoU_)
-  UnitUser_V(Bx_:Bz_)       = No2Io_V(UnitB_)
-  UnitUser_V(p_)            = No2Io_V(UnitP_)
-  UnitUser_V(Energy_)       = No2Io_V(UnitEnergyDens_)
+  UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
+  NameUnitUserTec_V(Bx_:Bz_) = NameTecUnit_V(UnitB_)
+  NameUnitUserIdl_V(Bx_:Bz_) = NameIdlUnit_V(UnitB_)
 
-  NameUnitUserIdl_V(rho_)          = NameTecUnit_V(UnitRho_)
-  NameUnitUserIdl_V(RhoUx_:rhoUz_) = NameTecUnit_V(UnitRhoU_)
-  NameUnitUserIdl_V(Bx_:Bz_)       = NameTecUnit_V(UnitB_)
-  NameUnitUserIdl_V(P_)            = NameTecUnit_V(UnitP_)
-  NameUnitUserIdl_V(Energy_)       = NameTecUnit_V(UnitEnergyDens_)
+  do iFluid = 1, nFluid
+     call select_fluid
+     UnitUser_V(iRho)          = No2Io_V(UnitRho_)
+     UnitUser_V(iRhoUx:iRhoUz) = No2Io_V(UnitRhoU_)
+     UnitUser_V(iP)            = No2Io_V(UnitP_)
+     UnitUser_V(iEnergy)       = No2Io_V(UnitEnergyDens_)
 
-  NameUnitUserIdl_V(rho_)          = NameIdlUnit_V(UnitRho_)
-  NameUnitUserIdl_V(RhoUx_:rhoUz_) = NameIdlUnit_V(UnitRhoU_)
-  NameUnitUserIdl_V(Bx_:Bz_)       = NameIdlUnit_V(UnitB_)
-  NameUnitUserIdl_V(P_)            = NameIdlUnit_V(UnitP_)
-  NameUnitUserIdl_V(Energy_)       = NameIdlUnit_V(UnitEnergyDens_)
+     NameUnitUserTec_V(iRho)          = NameTecUnit_V(UnitRho_)
+     NameUnitUserTec_V(iRhoUx:iRhoUz) = NameTecUnit_V(UnitRhoU_)
+     NameUnitUserTec_V(iP)            = NameTecUnit_V(UnitP_)
+     NameUnitUserTec_V(iEnergy)       = NameTecUnit_V(UnitEnergyDens_)
+
+     NameUnitUserIdl_V(iRho)          = NameIdlUnit_V(UnitRho_)
+     NameUnitUserIdl_V(iRhoUx:iRhoUz) = NameIdlUnit_V(UnitRhoU_)
+     NameUnitUserIdl_V(iP)            = NameIdlUnit_V(UnitP_)
+     NameUnitUserIdl_V(iEnergy)       = NameIdlUnit_V(UnitEnergyDens_)
+  end do
 
   ! By default the scalar advected variables are assumed to behave like density
   do iVar = ScalarFirst_, ScalarLast_

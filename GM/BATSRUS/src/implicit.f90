@@ -76,7 +76,9 @@ subroutine advance_impl
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : State_VGB, E_BLK, StateOld_VCB, E_o_BLK, time_BlK, &
+  use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
+  use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI, &
+       time_BlK, &
        tmp1_BLK, UseUpdateCheck, iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModPhysics, ONLY : gm1, No2Io_V, UnitT_
@@ -86,6 +88,8 @@ subroutine advance_impl
   use ModNumConst
   use ModLinearSolver, ONLY: gmres, bicgstab, prehepta, Uhepta, Lhepta
   use ModMpi
+  use ModEnergy, ONLY: calc_old_pressure
+
   implicit none
 
   real, external :: minval_BLK
@@ -152,12 +156,12 @@ subroutine advance_impl
         do iBLK=1,nBlock
            if(iTypeAdvance_B(iBLK) /= ExplBlock_)CYCLE
            do iVar=1,nVar
-              if(iVar==E_)then
-                 w_prev(:,:,:,E_    ,iBLK)=    E_BLK(1:nI,1:nJ,1:nK,iBLK)
-              else
-                 w_prev(:,:,:,iVar,iBLK)=  &
-                      State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK)
-              end if
+              w_prev(:,:,:,iVar,iBLK) = State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK)
+           end do
+           ! Overwrite pressure with energy
+           do iFluid = 1, nFluid
+              call select_fluid
+              w_prev(:,:,:,iP,iBLK) = Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid)
            end do
         end do
      end if
@@ -455,20 +459,13 @@ subroutine advance_impl
   do implBLK=1,nImplBlk
      iBLK=impl2iBLK(implBLK)
      do iVar=1,nVar
-        if(iVar==E_)then
-           E_o_BLK(:,:,:,iBLK)=w_prev(:,:,:,E_,iBLK)
-        else
-           StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
-        end if
+        StateOld_VCB(iVar,:,:,:,iBLK)=w_prev(:,:,:,iVar,iBLK)
      end do
-     StateOld_VCB(P_,:,:,:,iBLK)     = gm1*(E_o_BLK(:,:,:,iBLK)-cHalf*(&
-          (StateOld_VCB(rhoUx_,:,:,:,iBLK)**2                              &
-          +StateOld_VCB(rhoUy_,:,:,:,iBLK)**2                              &
-          +StateOld_VCB(rhoUz_,:,:,:,iBLK)**2)/                            &
-          StateOld_VCB(rho_,:,:,:,iBLK)                                    &
-          +StateOld_VCB(Bx_,:,:,:,iBLK)**2                                 &
-          +StateOld_VCB(By_,:,:,:,iBLK)**2                                 &
-          +StateOld_VCB(Bz_,:,:,:,iBLK)**2)                           )
+     do iFluid = 1, nFluid
+        call select_fluid
+        EnergyOld_CBI(:,:,:,iBLK,iFluid)=w_prev(:,:,:,iP,iBLK)
+     end do
+     call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
   end do
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
@@ -495,10 +492,9 @@ subroutine advance_impl
         ! Reset the state variable, the energy and set time_BLK variable to 0
         do iBLK = 1,nBlock
            if(UnusedBlk(iBLK)) CYCLE
-           State_VGB(:,1:nI,1:nJ,1:nK,iBLK) = &
-                StateOld_VCB(:,1:nI,1:nJ,1:nK,iBLK)
-           E_BLK(1:nI,1:nJ,1:nK,iBLK)       = E_o_BLK(1:nI,1:nJ,1:nK,iBLK)
-           time_BLK(1:nI,1:nJ,1:nK,iBLK)    = 0.0
+           State_VGB(:,1:nI,1:nJ,1:nK,iBLK)  = StateOld_VCB(:,:,:,:,iBLK)
+           Energy_GBI(1:nI,1:nJ,1:nK,iBLK,:) = EnergyOld_CBI(:,:,:,iBLK,:)
+           time_BLK(1:nI,1:nJ,1:nK,iBLK)     = 0.0
         end do
         ! Reduce next time step
         DtFixed = RejectStepFactor*DtFixed

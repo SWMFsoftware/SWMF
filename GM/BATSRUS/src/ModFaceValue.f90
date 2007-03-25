@@ -557,9 +557,15 @@ contains
   contains
     !==========================================================================
     subroutine calc_primitives_MHD
+      use ModMultiFluid
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      RhoInv=cOne/Primitive_VG(rho_,i,j,k)
-      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(rhoUx_:rhoUz_,i,j,k)
+      RhoInv=cOne/Primitive_VG(Rho_,i,j,k)
+      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+      do iFluid = 2, nFluid
+         call select_fluid
+         RhoInv=cOne/Primitive_VG(iRho,i,j,k)
+         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iRhoUx:iRhoUz,i,j,k)
+      end do
     end subroutine calc_primitives_MHD
     !==========================================================================
     !^CFG IF BORISCORR BEGIN

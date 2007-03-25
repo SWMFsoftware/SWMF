@@ -9,6 +9,8 @@ subroutine set_ics
   use ModPhysics
   use ModNumConst
   use ModUser, ONLY: user_set_ics
+  use ModMultiFluid
+  use ModEnergy, ONLY: calc_energy_ghost
 
   implicit none
 
@@ -76,22 +78,32 @@ subroutine set_ics
                  State_VGB(:,i,j,k,iBlock)   = ShockLeftState_V
 
                  ! Rotate vector variables
-                 State_VGB(Ux_:Uy_,i,j,k,iBlock) = &
-                      matmul(Rot_II,ShockLeftState_V(Ux_:Uy_))
+                 do iFluid = 1, nFluid
+                    call select_fluid
+                    State_VGB(iUx:iUy,i,j,k,iBlock) = &
+                         matmul(Rot_II,ShockLeftState_V(iUx:iUy))
+                 end do
                  State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockLeftState_V(Bx_:By_))
               else
                  ! Set all variables first
                  State_VGB(:,i,j,k,iBlock)   = ShockRightState_V
                  ! Set vector variables
-                 State_VGB(Ux_:Uy_,i,j,k,iBlock) = &
-                      matmul(Rot_II,ShockRightState_V(Ux_:Uy_))
+                 do iFluid = 1, nFluid
+                    call select_fluid
+                    State_VGB(iUx:iUy,i,j,k,iBlock) = &
+                         matmul(Rot_II,ShockRightState_V(iUx:iUy))
+                 end do
                  State_VGB(Bx_:By_,i,j,k,iBlock) = &
                       matmul(Rot_II,ShockRightState_V(Bx_:By_))
               end if
               ! Convert velocity to momentum
-              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                   State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+              do iFluid = 1, nFluid
+                 call select_fluid
+                 State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                      State_VGB(iRho,i,j,k,iBlock) * &
+                      State_VGB(iUx:iUz,i,j,k,iBlock)
+              end do
            end if
 
         end do; end do; end do
@@ -108,7 +120,6 @@ subroutine set_ics
   !\
   ! Compute energy from set values above.
   !/
-  call calc_energy(iBlock)
+  call calc_energy_ghost(iBlock)
 
 end subroutine set_ics
-

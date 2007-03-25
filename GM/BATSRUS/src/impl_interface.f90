@@ -57,7 +57,8 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   ! Convert data structure w of the implicit code to the explicit code
 
   use ModMain
-  use ModAdvance, ONLY : State_VGB, E_BLK,nVar
+  use ModAdvance, ONLY : State_VGB, Energy_GBI, nVar
+  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use ModImplicit
   implicit none
 
@@ -70,19 +71,20 @@ subroutine explicit2implicit(imin,imax,jmin,jmax,kmin,kmax,w)
   if(oktest_me)write(*,*)'Starting explicit2implicit: ',&
        'imin,imax,jmin,jmax,kmin,kmax=',imin,imax,jmin,jmax,kmin,kmax
 
-  if(oktest_me)write(*,*)'E=',E_BLK(Itest,Jtest,Ktest,BLKtest)
+  if(oktest_me)write(*,*)'E=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,:)
 
   call timing_start('expl2impl')
 
   do implBLK=1,nImplBLK
      iBLK = impl2iBLK(implBLK)
      do iVar=1, nVar
-        if(iVar==E_)then
-           w(:,:,:,E_,implBLK) = E_BLK(imin:imax,jmin:jmax,kmin:kmax,iBLK)
-        else
-           w(:,:,:,iVar,implBLK) = &
-                State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
-        end if
+        w(:,:,:,iVar,implBLK) = &
+             State_VGB(iVar,imin:imax,jmin:jmax,kmin:kmax,iBLK)
+     end do
+     do iFluid = 1, nFluid
+        call select_fluid
+        w(:,:,:,iP,implBLK) = &
+             Energy_GBI(imin:imax,jmin:jmax,kmin:kmax,iBLK,iFluid)
      end do
   end do
 
@@ -99,15 +101,13 @@ subroutine impl2expl(w,iBLK)
 
   ! Convert the implicit block w to block iBLK of the explicit code
 
-  use ModMain
-  use ModVarIndexes
-  use ModAdvance, ONLY : &
-       State_VGB, E_BLK
-  use ModImplicit, ONLY : nw,E_
-  use ModPhysics, ONLY : gm1
+  use ModSize,     ONLY : nI, nJ, nK
+  use ModAdvance,  ONLY : nVar, State_VGB, Energy_GBI
+  use ModEnergy,   ONLY : calc_pressure_cell
+  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   implicit none
 
-  real, intent(in)    :: w(nI,nJ,nK,nw)
+  real, intent(in)    :: w(nI,nJ,nK,nVar)
   integer, intent(in) :: iBLK
   integer :: iVar
   !---------------------------------------------------------------------------
@@ -115,21 +115,13 @@ subroutine impl2expl(w,iBLK)
   call timing_start('impl2expl')
 
   do iVar=1,nVar
-     if(iVar==E_)then
-        E_BLK(1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,E_)
-     else
-        State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
-     end if
+     State_VGB(iVar,1:nI,1:nJ,1:nK,iBLK) = w(:,:,:,iVar)
   end do
-
-  State_VGB(P_, 1:nI,1:nJ,1:nK,iBLK) = gm1*(E_BLK(1:nI,1:nJ,1:nK,iBLK)-0.5*( &
-       (State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBLK)**2                             &
-       +State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBLK)**2                             &
-       +State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBLK)**2                             &
-       )/State_VGB(rho_,1:nI,1:nJ,1:nK,iBLK)                                 &
-       +State_VGB(Bx_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(By_,1:nI,1:nJ,1:nK,iBLK)**2                                &
-       +State_VGB(Bz_,1:nI,1:nJ,1:nK,iBLK)**2)                             )
+  do iFluid = 1, nFluid
+     call select_fluid
+     Energy_GBI(1:nI,1:nJ,1:nK,iBLK,iFluid) = w(:,:,:,iP)
+  end do
+  call calc_pressure_cell(iBLK)
 
   call timing_stop('impl2expl')
 
@@ -294,28 +286,28 @@ end subroutine getsource
 !==============================================================================
 subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
 
+  use ModVarIndexes,ONLY: nFluid, nVar
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, &
        ProcTest, BlkTest,iTest,jTest,kTest
-  use ModImplicit, ONLY: nw
-  use ModFaceFlux, ONLY: iBlockFace, iFace, jFace, kFace, &
+  use ModFaceFlux, ONLY: nFlux, iBlockFace, iFace, jFace, kFace, &
        set_block_values, &
        set_cell_values_x, set_cell_values_y, set_cell_values_z, &
        get_physical_flux, &
        HallJx, HallJy, HallJz, DoTestCell, Area
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
-  use ModImplicit, ONLY: p_, e_
+  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
 
   implicit none
 
   integer, intent(in):: nI,nJ,nK,idim,iBlock
-  real, intent(in)   :: StateCons_CV(nI,nJ,nK,nw)
+  real, intent(in)   :: StateCons_CV(nI,nJ,nK,nVar)
   real, intent(in)   :: B0_CD(nI,nJ,nK,nDim)
-  real, intent(out)  :: Flux_CV(nI,nJ,nK,nw)
+  real, intent(out)  :: Flux_CV(nI,nJ,nK,nVar)
 
-  real :: Primitive_V(nw), Conservative_V(nw+1), Flux_V(nw+1)
+  real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
-  real :: Un, En, HallUn
+  real :: Un_I(nFluid), En, HallUn
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
@@ -337,9 +329,12 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
      Primitive_V = StateCons_CV(iFace, jFace, kFace, :)
      call conservative_to_primitive(Primitive_V)
 
-     Conservative_V(1:nw) = StateCons_CV(iFace, jFace, kFace, :)
-     Conservative_V(p_)     = Primitive_V(p_)
-     Conservative_V(nw+1)   = StateCons_CV(iFace, jFace, kFace, E_)
+     Conservative_V(1:nVar) = StateCons_CV(iFace, jFace, kFace, :)
+     do iFluid=1, nFluid
+        call select_fluid
+        Conservative_V(iP) = Primitive_V(iP)
+        Conservative_V(nVar+iFluid) = StateCons_CV(iFace, jFace, kFace, iP)
+     end do
 
      if(UseHallResist)then
         HallJx = HallJ_CD(iFace, jFace, kFace, x_)
@@ -359,10 +354,13 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
           B0_CD(iFace, jFace, kFace, x_), &
           B0_CD(iFace, jFace, kFace, y_), &
           B0_CD(iFace, jFace, kFace, z_), &
-          Conservative_V, Flux_V, Un, En, HallUn)
+          Conservative_V, Flux_V, Un_I, En, HallUn)
 
-     Flux_CV(iFace, jFace, kFace, 1:E_-1)= Flux_V(1:E_-1)
-     Flux_CV(iFace, jFace, kFace, E_)    = Flux_V(nw+1)
+     Flux_CV(iFace, jFace, kFace, 1:nVar)= Flux_V(1:nVar)
+     do iFluid = 1, nFluid
+        call select_fluid
+        Flux_CV(iFace, jFace, kFace, iP)    = Flux_V(nVar+iFluid)
+     end do
 
   end do; end do; end do
 
@@ -438,15 +436,22 @@ subroutine conservative_to_primitive(State_V)
 
   use ModImplicit, ONLY: nw, p_, e_
   use ModVarIndexes, ONLY: Rho_, Ux_, Uz_, RhoUx_, RhoUz_, Bx_, Bz_
+  use ModMultiFluid, ONLY: select_fluid, nFluid, TypeFluid_I, &
+       iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP
   use ModPhysics, ONLY: gm1
   implicit none
   real, intent(inout):: State_V(nw)
   real :: InvRho
   !---------------------------------------------------------------------------
-  InvRho = 1.0/State_V(Rho_)
-  State_V(p_)      = gm1*(State_V(e_) - &
-       0.5*(sum(State_V(RhoUx_:RhoUz_)**2)*InvRho + sum(State_V(Bx_:Bz_)**2)))
-  State_V(Ux_:Uz_) = InvRho*State_V(RhoUx_:RhoUz_)
+  do iFluid = 1, nFluid
+     call select_fluid
+     InvRho = 1.0/State_V(iRho)
+     State_V(iP) = gm1*(State_V(iP) - &
+          0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
+     if(TypeFluid_I(iFluid) == 'ion') &
+          State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
+     State_V(iUx:iUz) = InvRho*State_V(iRhoUx:iRhoUz)
+  end do
 
 end subroutine conservative_to_primitive
 

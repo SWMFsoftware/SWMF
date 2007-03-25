@@ -697,6 +697,7 @@ subroutine update_b0
   use CON_axes,         ONLY: get_axes
   use ModNumConst,      ONLY: cRadToDeg
   use ModIO,            ONLY: iUnitOut, write_prefix
+  use ModEnergy,        ONLY: calc_energy_ghost
 
   implicit none
 
@@ -757,7 +758,8 @@ subroutine update_b0
         end if
 
         ! Recalculate energy
-        call calc_energy(iBlock)
+        call calc_energy_ghost(iBlock)
+
      end if
   end do
   call timing_stop(NameSub)
