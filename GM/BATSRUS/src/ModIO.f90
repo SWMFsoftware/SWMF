@@ -49,7 +49,7 @@ Module ModIO
   real, dimension(3,maxfile) :: ObsPos_DI
 
   ! Maximum number of plot variables
-  integer, parameter :: nPlotvarMax=20
+  integer, parameter :: nPlotvarMax = 50
 
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
