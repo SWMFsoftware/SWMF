@@ -1170,9 +1170,9 @@ contains
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
     use ModNumConst
-    use ModPhysics,ONLY:inv_gm1
+    use ModPhysics,   ONLY:inv_gm1
     use ModGeometry
-    use ModEnergy. ONLY: calc_energy_cell
+    use ModEnergy,    ONLY: calc_energy_cell
     implicit none
 
     !\
