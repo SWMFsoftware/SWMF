@@ -352,7 +352,9 @@ sub compare_speed{
 	    }else{
 		$speed = "    --- "; $missing++;
 	    }
-	    if($speed ne "    --- " and $speed < 1){
+	    if($speed ne "    --- " and $speed < 1 and $Speed eq "1"){
+		# Speed eq 1 means that we test for full execution time
+		# If the test passed in less than 1 second, it must have failed
 		$speed = "    !!! "; $$failed++;
 	    }
 	    push @speed, $speed;
