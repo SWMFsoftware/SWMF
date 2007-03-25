@@ -36,9 +36,8 @@ program PostIDL
        coord_sph=(/'r    ','theta','phi  '/)        !Theta is colatitude
 
   logical :: fileopen, structured, read_binary=.false., UseLookup=.false.
-  character (len=79) :: fileheadout, varnames, filename, filenamehead, &
-       coordnames
-  character (len=500) :: unitnames
+  character (len=100) :: filename, filenamehead, coordnames
+  character (len=500) :: varnames, unitnames, fileheadout
   integer :: l, ll, me
 
   ! Variables for the 2D lookup table
@@ -617,7 +616,7 @@ contains
     do idim=2,ndim
        coordnames=trim(coordnames)//' '//trim(coord(icutdim(idim)))
     end do
-    varnames=trim(coordnames)//' '//varnames
+    varnames=trim(coordnames)//' '//trim(varnames)
 
   end subroutine set_strings
 
@@ -625,7 +624,7 @@ contains
 
   subroutine save_vacfile_ascii
 
-    write(unit_tmp,"(a)")fileheadout
+    write(unit_tmp,"(a)")trim(fileheadout)
     if(structured)then
        write(unit_tmp,"(i7,1pe13.5,3i3)")it,t,ndim,neqpar+nspecialpar,nw
        write(unit_tmp,"(3i4)") (nxyz(icutdim(idim)),idim=1,ndim)
@@ -634,7 +633,7 @@ contains
        write(unit_tmp,"(i8,i2,i2)") nxyz(1:ndim)
     endif
     write(unit_tmp,"(100(1pe13.5))")eqpar,specialpar(1:nspecialpar)
-    write(unit_tmp,"(a)")varnames
+    write(unit_tmp,"(a)")trim(varnames)
 
     do k= 1,nz
        do j= 1,ny
