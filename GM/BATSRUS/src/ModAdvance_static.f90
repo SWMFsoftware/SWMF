@@ -148,6 +148,8 @@ Module ModAdvance
   real :: EDotFA_Z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)    !^CFG IF BORISCORR
   real :: VdtFace_z(0:nI+1,0:nJ+1,2-gcn:nK+gcn)   ! V/dt Face Z
 
+  real :: Flux_VZ(nVar+nFluid,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
+
   real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid)
 
   !\
