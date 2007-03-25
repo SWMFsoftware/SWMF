@@ -490,6 +490,7 @@ subroutine get_current(i,j,k,iBlock,Current_D)
 
   use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
   use ModGeometry, ONLY: True_Cell, Dx_BLK, Dy_BLK, Dz_BLK
+  use ModCovariant,ONLY: UseCovariant                !^CFG IF COVARIANT
 
   implicit none
   integer, intent(in) :: i,j,k,iBlock
@@ -503,6 +504,11 @@ subroutine get_current(i,j,k,iBlock,Current_D)
      Current_D = 0.0
      RETURN
   endif
+
+  if(UseCovariant)then                               !^CFG IF COVARIANT BEGIN
+     call covariant_curlb(i,j,k,iBlock,Current_D,.true.)
+     RETURN
+  end if                                             !^CFG END COVARIANT
 
   DxInvHalf = 0.5/Dx_BLK(iBlock)
   DyInvHalf = 0.5/Dy_BLK(iBlock)
