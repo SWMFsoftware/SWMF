@@ -3,7 +3,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE NEWBGD
       use ModCommonVariables
-
+      use ModGmPressure
 
 
       if (TypeSolver == 'Godunov') then
@@ -19,7 +19,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          PBGNDO = (POXYG(nDim-1)+ POXYG(nDim)- POXYG(nDim-2))*.8
          PBGNDH = (PHYD(nDim-1) + PHYD(nDim) - PHYD(nDim-2)) *.8
          PBGNHE = (PHEL(nDim-1) + PHEL(nDim) - PHEL(nDim-2)) *.8
-      
+
          DBGNDO=PBGNDO/RGASO/TBGNDO
          DBGNHE=PBGNHE/RGASHE/TBGNHE
          DBGNDH=PBGNDH/RGASH/TBGNDH
@@ -102,8 +102,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      
       endif
       
-
-
+      
+      
 C     
       XHTM=1.+ELFXIN*EXP(-(TIME-300.)**2/2./150./150.)
 C     
@@ -112,29 +112,14 @@ C     Te(nDim) + Tgradient*Dx where Tgradient = Etop/kappa
 C     and Etop is the electron heat flux or proportional to that
       TBGNDE=TELECT(NDIM)+XHTM*ETOP/TELECT(NDIM)**2.5
 
-
-
-!      write(*,*) 'O'
-!      write(*,*) 'd', doxyg(nDim),dbgndo,dbgndo2
-!      write(*,*) 'u', uoxyg(nDim),ubgndo,ubgndo2
-!      write(*,*) 'p', poxyg(nDim),pbgndo,pbgndo2
-!      write(*,*) 'B', ubgndo, doxyg(nDim)/DBGNDO, AR12Top(1)/AR23(nDim),uoxyg(nDim) 
-!      write(*,*) AR12Top(1)/AR23(nDim),AR12Top(1),AR23(nDim)
-!     
-!      write(*,*) 'H'
-!      write(*,*) 'd', dhyd(nDim),dbgndh,dbgndh2
-!      write(*,*) 'u', uhyd(nDim),ubgndh,ubgndh2
-!      write(*,*) 'p', phyd(nDim),pbgndh,pbgndh2
-!      write(*,*) 'B', ubgndh, dhyd(nDim)/DBGNDh, AR12Top(1)/AR23(nDim),uhyd(nDim)
-!
-!      write(*,*) 'He'
-!      write(*,*) 'd', dhel(nDim),dbgnhe,dbgnhe2
-!      write(*,*) 'u', uhel(nDim),ubgnhe,ubgnhe2
-!      write(*,*) 'p', phel(nDim),pbgnhe,pbgnhe2
-!      write(*,*) 'B', ubgnhe, dhel(nDim)/DBGNDO, AR12Top(1)/AR23(nDim),uhel(nDim)
-
-
-
+      ! If using GM --> PW coupling, overwrite ghostcell pressure
+      ! with fraction of MHD pressure using 
+      ! P_total = P_oxyg+P_e + smaller terms.
+      ! n_e ~= n_oxyg hence P_oxyg ~= T_oxyg/(T_oxyg+T_e) * P_total
+      if (UseGmToPw) then
+         PBGNDO = (TBGNDO / (TBGNDO+TBGNDE))*p_I(iLine)
+         DBGNDO = PBGNDO/RGASO/TBGNDO
+      endif
 
 C n_e   = n_H+  + n_O+ + n_He+
 C rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)
