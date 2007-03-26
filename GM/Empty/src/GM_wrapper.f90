@@ -258,6 +258,20 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
   call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
   
 end subroutine GM_put_from_pw
+!==============================================================================
+
+subroutine GM_get_for_pw(nTotalLine,p_I)
+
+  implicit none
+  character (len=*),parameter :: NameSub='GM_get_for_pw'
+  
+  integer, intent(in)           :: nTotalLine
+  real, intent(out)             :: p_I(nTotalLine)
+
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  
+end subroutine GM_get_for_pw
 
 !==============================================================================
 
