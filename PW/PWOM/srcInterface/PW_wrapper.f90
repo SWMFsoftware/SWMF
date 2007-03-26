@@ -365,3 +365,33 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
   end if
 
 end subroutine PW_get_for_gm
+
+!==============================================================================
+
+subroutine PW_put_from_gm(nTotalLine,Buffer_I)
+  use ModPWOM, ONLY: nLine,iLineGlobal
+  use ModGmPressure
+  use CON_coupler, ONLY: Couple_CC, GM_, PW_
+  implicit none
+  
+  integer,intent(in) :: nTotalLine
+  real, intent(in)   :: Buffer_I(nTotalLine)
+  integer            :: iLine
+  !----------------------------------------------------------------------------
+  
+  !Make sure pressure array is allocated, if it isn't then allocate
+  if(.not.allocated(p_I)) then
+     allocate(p_I(nLine))
+  end if
+  
+  !Fill pressure array with GM pressure
+  do iLine=1,nLine
+     p_I(iLine) = Buffer_I(iLineGlobal(iLine))
+  enddo
+  
+  !Convert from SI to CGS
+  p_I = p_I * 10.0  ! N/m^2 --> dynes/cm^2
+  
+  UseGmToPw = Couple_CC(GM_, PW_) % DoThis  
+  
+end subroutine PW_put_from_gm
