@@ -22,13 +22,14 @@ module ModFaceFlux
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: face flux
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
-       uDotArea_XI, uDotArea_YI, uDotArea_ZI ! output: U.Area for P source
-
+       uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
+       UseRS7
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
 
   use ModResistivity, ONLY: UseResistivity, Eta_GB  !^CFG IF DISSFLUX
-
+  use ModMultiFluid
+  use ModNumConst
   implicit none
 
   ! Number of fluxes including pressure and energy fluxes
@@ -38,6 +39,9 @@ module ModFaceFlux
   logical :: DoHll               !^CFG IF LINDEFLUX
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoe               !^CFG IF ROEFLUX
+  logical :: DORoeNew            !^CFG IF ROEFLUX
+
+  
 
   logical :: DoTestCell
 
@@ -46,6 +50,7 @@ module ModFaceFlux
   real :: StateLeft_V(nVar), StateRight_V(nVar)
   real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
   real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
+  real :: DissipationFlux_V(nFlux)
   real :: B0x, B0y, B0z
   real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: CmaxDt, UnLeft, UnRight
@@ -64,7 +69,7 @@ contains
   !===========================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: TypeFlux => FluxType
+    use ModAdvance,  ONLY: UseRS7,TypeFlux => FluxType
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nI, nJ, nK, nIFace, nJFace, nKFace, &
@@ -94,7 +99,8 @@ contains
     DoLf  = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
     DoHLL = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
     DoAw  = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
-    DoRoe = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
+    DoRoe = TypeFlux == 'Roe'.and.(.not.UseRS7)!^CFG IF ROEFLUX
+    DoRoeNew= TypeFlux == 'Roe'.and.UseRS7     !^CFG IF ROEFLUX
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -419,6 +425,7 @@ contains
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
     use ModAdvance, ONLY: DoReplaceDensity
+    use ModCharacteristicMhd,ONLY:dissipation_matrix
 
     integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nFlux)
@@ -426,7 +433,7 @@ contains
     real :: State_V(nVar)
 
     real :: Cmax
-    real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
+    real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffBb, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
     !-----------------------------------------------------------------------
 
@@ -435,7 +442,11 @@ contains
        StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
-    if(.false. &
+    if(DoRoeNew)call dissipation_matrix(iDir,&
+         StateLeft_V,StateRight_V,B0x,B0y,B0z,DissipationFlux_V,cMax,UNormal_I(1),&
+         is_boundary_face(),.false.)
+
+    if(UseRS7 &
          .or. DoHll &               !^CFG IF LINDEFLUX
          .or. DoAw  &               !^CFG IF AWFLUX
          )then
@@ -466,6 +477,9 @@ contains
             (StateRight_V(Bx_) + StateLeft_V(Bx_))*DiffBx + &
             (StateRight_V(By_) + StateLeft_V(By_))*DiffBy + &
             (StateRight_V(Bz_) + StateLeft_V(Bz_))*DiffBz )
+
+       DiffBb=(DiffBx**2 + DiffBy**2 + DiffBz**2)
+
     end if
 
     ! Calculate current for the face
@@ -490,6 +504,11 @@ contains
     call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
          StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
+    if(UseRS7)then
+       iFluid=1
+       call modify_flux(FluxLeft_V,UnLeft_I(1))
+       call modify_flux(FluxRight_V,UnRight_I(1))
+    end if
     ! All the solvers below use the average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
@@ -497,6 +516,7 @@ contains
     if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
     if(DoRoe) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
+    if(DoRoeNew)call roe_solver_new          !^CFG IF ROEFLUX
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area !^CFG IF DISSFLUX
@@ -504,7 +524,36 @@ contains
     if(DoTestCell)call write_test_info
 
   contains
+    subroutine modify_flux(Flux_V,Un)
+      use ModVarIndexes,ONLY:RhoUx_,RhoUz_,Energy_
+      real,intent(in)::Un
+      real,dimension(nVar+1),intent(inout)::Flux_V
+      !----------------------------------------------------
+      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_)+&
+           cHalf*DiffBb*(/AreaX,AreaY,AreaZ/)
+      Flux_V(Energy_)       = Flux_V(Energy_)+Un   * DiffBb
+    end subroutine modify_flux
+    logical function is_boundary_face()
+      use ModGeometry, ONLY: true_cell
+  
+      is_boundary_face=&
+           (iDir==1.and.(true_cell(iFace-1, jFace, kFace, iBlockFace) &
+           .neqv.     true_cell(iFace  , jFace, kFace, iBlockFace)))&
+           .or.&
+           (iDir==2.and.(true_cell(iFace, jFace-1, kFace, iBlockFace) &
+           .neqv.     true_cell(iFace, jFace  , kFace, iBlockFace)))&
+           .or.&
+           (iDir==3.and.(true_cell(iFace, jFace, kFace-1, iBlockFace) &
+           .neqv.     true_cell(iFace, jFace, kFace  , iBlockFace)))
+    end function is_boundary_face
+    !==========================================================================
+    subroutine roe_solver_new
+      Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) &
+           +DissipationFlux_V*Area
 
+      Unormal_I = UNormal_I*Area
+      cMax    = cMax*Area
+    end subroutine roe_solver_new
     !^CFG IF RUSANOVFLUX BEGIN
     !==========================================================================
     subroutine lax_friedrichs_flux

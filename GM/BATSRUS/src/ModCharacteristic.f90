@@ -470,14 +470,14 @@ contains
                                    StateL_V,&
                                    StateR_V,&
                                    B0x,B0y,B0z,&
-                                   uL_D,uR_D,DeltaBnL,DeltaBnR,&
+                                 !  uL_D,uR_D,DeltaBnL,DeltaBnR,&
                                    DissipationFlux_V,&
                                    cMax,Un,IsBoundary,DoTest)
     integer,intent(in)::iDir
     real,dimension(nVar),intent(in)::StateL_V, StateR_V
     real,intent(in)::B0x,B0y,B0z
-    real,intent(in),dimension(3)::uL_D,uR_D
-    real,intent(in)::DeltaBnL,DeltaBnR
+    !real,intent(in),dimension(3)::uL_D,uR_D
+    !real,intent(in)::DeltaBnL,DeltaBnR
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
     logical,intent(in)::IsBoundary,DoTest
@@ -508,11 +508,11 @@ contains
                                       EigenvalueR_V,&
                                       EigenvalueFixed_V(1:nVar-1),&
                                       CMax,IsBoundary)
-    UnL= uL_D(iDir); UnR=uR_D(iDir)
-    EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
+    !UnL= uL_D(iDir); UnR=uR_D(iDir)
+    !EigenvalueFixed_V(DivBW_)=max(abs(UnL),abs(UnR))
     !For test purpose only:
     EigenvalueFixed_V(DivBW_)=max(abs(EigenvalueL_V(EntropyW_)),&
-                                  abs(EigenvalueL_V(EntropyW_)))
+                                  abs(EigenvalueR_V(EntropyW_)))
     cMax=max(cMax,EigenvalueFixed_V(DivBW_))
     if(IsBoundary)EigenvalueFixed_V=cMax
     FluxPseudoChar_V=cZero
