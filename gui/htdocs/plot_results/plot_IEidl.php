@@ -1,12 +1,10 @@
 <?php
-$plotextension = ".idl";
-$macroextension = ".pro";
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 function form1() {   //
   global $runpath, $runname, $cmp, $plottype, $plotstyle, $plotfile, $plotfilelist;
-  global $PlotApplication, $countfiles;
+  global $countfiles;
 
   include("$runpath/images/${cmp}_$plottype/defaults-$plotstyle.php");
 
@@ -25,7 +23,6 @@ function form1() {   //
   // Start form
   echo "
 <FORM METHOD=\"post\" TARGET=\"$plotfile\" ACTION=\"createplot.php\">
-<INPUT TYPE=hidden name=plotapplication value=\"$PlotApplication\">
 <INPUT TYPE=hidden name=cmp value=\"$cmp\">
 <INPUT TYPE=hidden name=plottype value=\"$plottype\">
 <INPUT TYPE=hidden name=plotfile value=\"$plotfile\">

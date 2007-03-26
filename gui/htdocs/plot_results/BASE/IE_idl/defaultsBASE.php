@@ -1,3 +1,5 @@
-<?php
-$PlotApplication = "IEidl";
- ?>
+<?php // idl
+$plotextension = ".idl";
+$macroextension = ".pro";
+$loadfile = "IEidl";
+?>

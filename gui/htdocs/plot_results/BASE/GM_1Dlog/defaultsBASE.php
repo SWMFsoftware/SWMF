@@ -1,3 +1,5 @@
-<?php
-$PlotApplication = "tecplot1D";
- ?>
+<?php // 1D Tecplot
+$plotextension = ".plt";
+$macroextension = ".mcr";
+$loadfile = "1Dlog";
+?>

@@ -1,3 +1,5 @@
-<?php
-$PlotApplication = "2Didl";
- ?>
+<?php // idl
+$plotextension = ".out";
+$macroextension = ".pro";
+$loadfile = "2Didl";
+?>

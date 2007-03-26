@@ -1,0 +1,70 @@
+<?php
+  $parameter = array('runname', 'wait');
+  foreach($parameter as $name) { $$name = isset($_GET[$name]) ? $_GET[$name] : ''; }
+
+  if (($wait)) {
+    echo "
+<html>
+<head>
+<title>GUI Quicklook: ... rendering ...</title>
+<META HTTP-EQUIV=\"refresh\" content=\"0;URL=quicklook.php?runname=${runname}\">
+</head>
+<body>
+<br><center><img src=\"../images/pleasewait.gif\"></center>
+</body>
+</html>
+    ";
+    exit();
+  }
+
+  echo "
+<html>
+<head>
+<title>GUI Quicklook</title>
+</head>
+<body>
+<h2>Quick Look plots for run $runname</h2>
+<table cellpadding=\"5\">
+  ";
+
+  $imagecount = "0";
+  include("plotfunctions.php");
+
+  $runpath = "../plots/PLOT_$runname";
+
+  $dir = opendir( "$runpath" );
+  while( $file = readdir( $dir ) ) {
+    if ( ereg("[A-Z][A-Z]", $file) && is_dir("$runpath/$file") ) {
+      $cmp = $file;
+      $filedir = "$runpath/$cmp";
+
+      $dir2 = opendir( "$runpath/images" );
+      while( $file = readdir( $dir2 ) ) {
+        if (ereg("$cmp", $file)) {
+          $pieces = explode("_", $file);
+          $plottype = $pieces[1];
+
+          include("$runpath/images/${cmp}_$plottype/defaultsBASE.php");
+
+          $number = "001";
+
+          $plotfile = "";
+          $plotfilelist = GetPlotList("$runpath/$cmp");
+          $countfiles = count($plotfilelist);
+          if($countfiles > 0) {
+            if(! $plotfile) { SetLastPlotfile($plotfilelist, $plotfile); }
+            include("makeplot.php");
+          }
+
+        }
+      }
+
+    }
+  }
+  if("$imagecount" == "1") {
+    echo "</tr>";
+  }
+?>
+</table>
+</body>
+</html>
