@@ -10,7 +10,8 @@ MODULES = \
 	ModCommonVariables.o\
 	ModPW.o\
 	ModNeutralPW.o\
-	ModPass.o
+	ModPass.o\
+	ModGmPressure.o
 
 METHODS = \
 	pw.o\
