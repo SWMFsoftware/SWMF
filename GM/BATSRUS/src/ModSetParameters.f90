@@ -1073,6 +1073,8 @@ subroutine MH_set_parameters(TypeAction)
         else
            call read_var('LimiterBeta', BetaLimiter)
         end if
+     case('#USERS7')
+        call read_var('UseRS7',UseRS7)
      case("#NONCONSERVATIVE")
         call read_var('UseNonConservative',UseNonConservative)
      case("#CONSERVATIVECRITERIA")
