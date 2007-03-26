@@ -6,13 +6,15 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   ! Save all cells within plotting range, for each processor
 
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,PROCtest,BLKtest,test_string,x_,y_,z_,Phi_
-  use ModGeometry,ONLY:x_BLK,y_BLK,z_BLK,Dx_BLK,Dy_BLK,Dz_BLK,&
-       is_axial_geometry,x1,x2,y1,y2,z1,z2,&          !^CFG IF COVARIANT
-       XyzStart_BLK,XyzMin_D,XyzMax_D
+  use ModMain, ONLY: nI, nJ, nK, PROCtest, BLKtest, test_string, &
+       x_, y_, z_, Phi_
+  use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK, Dx_BLK, Dy_BLK, Dz_BLK,&
+       x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
+  use ModCovariant, ONLY: is_axial_geometry           !^CFG IF COVARIANT
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
   use ModNumConst
+
   implicit none
 
   ! Arguments
@@ -159,11 +161,11 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            z = z*No2Io_V(UnitX_)
         end if
         if(save_binary)then
-           write(unit_tmp)DxBlockOut,x,y,z,PlotVar(i,j,k,1:nPlotVar)
+           write(unit_tmp) DxBlockOut, x, y, z, PlotVar(i,j,k,1:nPlotVar)
         else
            do iVar=1,nPlotVar
               Plot_V(iVar) = PlotVar(i,j,k,iVar)
-              if(abs(Plot_V(iVar))<1.0e-99)Plot_V(iVar)=0.0
+              if(abs(Plot_V(iVar)) < 1.0e-99) Plot_V(iVar) = 0.0
            end do
            write(unit_tmp,'(50(1pe13.5))') &
                 DxBlockOut, x, y, z, Plot_V(1:nPlotVar)
