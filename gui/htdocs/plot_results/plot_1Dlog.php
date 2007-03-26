@@ -32,7 +32,7 @@ function form1() {   //
   $defxaxisMM = " CHECKED"; $defxaxisCUSTOM = "";
   if($defxaxis == "CUSTOM") {$defxaxisMM = ""; $defxaxisCUSTOM = " CHECKED";}
   echo "
-<b>Y Axis</b><br>
+<b>X Axis</b><br>
 <div class=\"indent\">
 Variable: 
   ";
