@@ -3,6 +3,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE NEWBGD
       use ModCommonVariables
+      use ModGmPressure
       implicit none
 
       real :: ScaleHeightO,ScaleHeightH
@@ -92,6 +93,10 @@ cAlex     &     DBGNDE,RTHDEL,DBGNDH,RTOXEL,DBGNDO,RTHEEL,DBGNHE
 
       PBGNDE=RGASE*TBGNDE*DBGNDE
 
+      if (UseGmToPw) then
+         PBGNDO = (TBGNDO / (TBGNDO+TBGNDE))*p_I(iLine)
+         DBGNDO = PBGNDO/RGASO/TBGNDO
+      endif
 cAlex      write(*,*)'PBGNDE=RGASE*TBGNDE*DBGNDE:',
 cAlex     &     PBGNDE,RGASE,TBGNDE,DBGNDE
 
