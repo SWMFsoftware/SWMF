@@ -72,7 +72,7 @@ F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
 T                       UseUserInitSession
-T                       UseUserUpdateStates
+F                       UseUserUpdateStates
 
 HALLRESISTIVITY
 T	UseHallResistFlux
