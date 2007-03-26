@@ -35,10 +35,14 @@ die "$ERROR: the -c(onvert) flag requires exactly two filenames!$HELP"
     if $Convert and $nArg != 2;
 
 # Global variables
-my $M=79;                         # Machine value
-my $B=unpack 'N', pack('L',79);   # Big endian value
-my $L=&convint($B);               # Little endian value
-my $machine=&test_machine;        # endianness of this computer
+my  $B79 = unpack 'N', pack('L',79);   # Big endian value
+my  $L79 = unpack 'V', pack('L',79);   # Little endian value
+
+my $B500 = unpack 'N', pack('L',500);   # Big endian value
+my $L500 = unpack 'V', pack('L',500);   # Little endian value
+
+
+my $machine = &test_machine;        # endianness of this computer
 
 if($Convert){
     &converttofile($ARGV[1]) if &readhead($ARGV[0]);
@@ -124,9 +128,9 @@ exit;
 ##############################################################################
 sub test_machine{
 
-    if($M == $B){
+    if(79 == $B79){
 	$machine='big';
-    }elsif($M == $L){
+    }elsif(79 == $L79){
 	$machine='little';
     }else{
 	die "Machine is neither little nor big endian type!\n";
@@ -153,18 +157,25 @@ sub readhead{
     }
 
 ###    my $line1;
-    read FROM, $line1, 91;  # read len1,headline,len1,len2
+
+    read FROM, $line1, 4;  # read len1
 
 ###    my $l1;
 ###    my $headline;
 ###    my $l2;
-    ($l1,$headline,$l1,$l2)=unpack 'La79LL', $line1;
 
-    if($l1 == $B){
-	$from='big';
-    }elsif($l1 == $L){
-	$from='little';
+    ($l1) = unpack 'L', $line1;
+
+    if(    $l1 == $B79){
+	$from='big';    $strlen =  79
+    }elsif($l1 == $L79){
+	$from='little'; $strlen =  79
+    }elsif($l1 == $B500){
+	$from='big'; $strlen = 500
+    }elsif($l1 == $L500){
+	$from='little'; $strlen = 500
     }else{
+	print "l1=$l1 B79=$B79 L79=$L79 B500=$B500 L500=$L500\n";
 	print "$file is not a VAC/BATSRUS binary data/plot file in ".
 	    "UNIX F77 format!\n";
 	return(0);
@@ -190,7 +201,11 @@ sub readhead{
     $convertfrom = $from ne $machine;
     $convertto   = $to   ne $machine;
 
-    $len1=pack("L",79);
+    # read rest of the first line and the second record length
+    read FROM, $line1, $strlen+8;  # read headline,len1,len2
+    ($headline,$l1,$l2)=unpack 'a'.$strlen.'LL', $line1;
+
+    $len1=pack("L",$strlen);
     $len1=&convstr($len1) if $convertto;        # length of line1 for output
 
     $ll2= $convertfrom ? &convint($l2) : $l2;   # length of line2 from input
@@ -207,6 +222,7 @@ sub readhead{
 	$precision="single"; $r='f'; $rbyte=4; $ibyte=8; $double=0; $cray=1;
 	$type="Cray ";
     }else{
+	print "ll2=$ll2\n";
 	print "$file is not a VAC/BATSRUS binary data/plot file ".
 	    "in UNIX F77 format!\n";
 	return(0);
@@ -265,7 +281,7 @@ sub readhead{
     @eqpar= unpack "$r*", $convertfrom ? $line4conv : $line4;  # read eqpar
 
     read FROM, $l5, 4;
-    read FROM, $varnames, 79;                   # line5: varnames
+    read FROM, $varnames, $strlen;              # line5: varnames
     read FROM, $l5, 4;
 
     $len5=$len1;                                # length of line 5 
@@ -288,7 +304,7 @@ sub readhead{
 	print "eqpar=",join(',',@eqpar),"\n";
 	print "names=",substr($varnames,0,70),"\n\n";
 
-	$pictsize=(6+$nw)*8+2*79+(4+$ndim)*$ibyte+
+	$pictsize=(6+$nw)*8+2*$strlen+(4+$ndim)*$ibyte+
 	    (1+$neqpar+$nxs*($ndim+$nw))*$rbyte;
 	$filesize= -s $file;
 	print "file=$filesize bytes / snapshot=$pictsize bytes = ",
@@ -370,7 +386,7 @@ sub dorest{
 
     while(read FROM,$l1,4){                  # read len1
 
-	read FROM, $headline,79;             # line1: headline
+	read FROM, $headline, $strlen;       # line1: headline
 	read FROM, $l1l2, 8;                 # read len1, len2
 	read FROM, $line2, $ll2;             # line2: it,t,ndim,neqpar,nw 
 	read FROM, $l2l3, 8;                 # read len2, len3
@@ -378,7 +394,7 @@ sub dorest{
 	read FROM, $l3l4, 8;                 # read len3, len4
 	read FROM, $line4, $ll4;             # line4: eqpar1,eqpar2..
 	read FROM, $l4l5, 8;                 # len4,len5
-	read FROM, $varnames, 79;            # line5: varnames
+	read FROM, $varnames, $strlen;       # line5: varnames
 	read FROM, $l5, 4;                   # len5
 
 	# Convert line 2
