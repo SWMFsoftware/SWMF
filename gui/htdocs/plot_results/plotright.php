@@ -5,18 +5,11 @@
    }
    if ($cmp) {
      if(! $plottype) { // Select plottype before style
+       Exec("rsync -a --exclude \"CVS\" BASE/$cmp* $runpath/images/");
        $types = array();
        $tmpdir = opendir( "$runpath/images" );
        while( $type = readdir( $tmpdir ) ) {
          if (ereg("${cmp}_", $type)) { $types[] = $type; }
-       }
-       if(! $types) { // Make sure that files are copied over and try again.
-         Exec("rsync -a --exclude \"CVS\" BASE/$cmp* $runpath/images/");
-         $types = array();
-         $tmpdir = opendir( "$runpath/images" );
-         while( $type = readdir( $tmpdir ) ) {
-           if (ereg("${cmp}_", $type)) { $types[] = $type; }
-         }
        }
        if($types){ sort($types);
          echo "<center><H2>Select $cmp Filetype</H2></center>";

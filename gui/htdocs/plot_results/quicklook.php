@@ -38,6 +38,10 @@
       $cmp = $file;
       $filedir = "$runpath/$cmp";
 
+      if(! is_dir("$runpath/images")) {
+        Exec("cd $runpath; mkdir images");
+      }
+      Exec("rsync -a --exclude \"CVS\" BASE/$cmp* $runpath/images/");
       $dir2 = opendir( "$runpath/images" );
       while( $file = readdir( $dir2 ) ) {
         if (ereg("$cmp", $file)) {
