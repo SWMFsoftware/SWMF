@@ -91,7 +91,6 @@ OBJECTS = \
 	explicit.o\
 	find_neighbors.o\
 	get_solar_wind_point.o\
-	index_var.o\
 	library.o\
 	load_balance.o\
 	message_pass_cells.o\
