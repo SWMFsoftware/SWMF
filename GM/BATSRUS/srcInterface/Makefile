@@ -25,7 +25,7 @@ OBJ_RB = $(OBJ2) GM_get_for_rb.o
 OBJ_IE =GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o
 #^CMP END IE
 #^CMP IF PW BEGIN
-OBJ_PW =GM_put_from_pw.o ModPwGrid.o
+OBJ_PW = GM_get_for_pw.o GM_put_from_pw.o ModPwGrid.o
 #^CMP END PW
 
 OBJECTS = \
