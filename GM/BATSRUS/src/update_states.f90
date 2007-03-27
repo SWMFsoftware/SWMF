@@ -413,17 +413,17 @@ subroutine update_check(iStage)
      if (minRho <= 0.00 .or. minP <= 0.00) then
         negative_found = .true.
         if(time_accurate) then
-           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8))') &
+           write(*,'(a,i4,a,a,i6,a,f12.8,a,f12.8)') &
                 'Negative updated value: PE=',iProc, &
                 'update_check TA:',' ITER=',n_step, &
                 '     dt reduction=',report_tf,' dt=',dt
         else
-           write(*,'(a,i4,a,a,i6,a,f12.8))') &
+           write(*,'(a,i4,a,a,i6,a,f12.8)') &
                 'Negative updated value: PE=',iProc, &
                 'update_check LT:',' ITER=',n_step, &
                 ' max dt reduction=',report_tf
         end if
-        write(*,'(a,i4,a,i5,2(a8,1pe12.4))') 'Negative updated value: PE=',iProc, &
+        write(*,'(a,i4,a,i5,2(a8,es12.4))') 'Negative updated value: PE=',iProc, &
              ' BLK=',iBlock,' minRho=',minRho,' minP=',minP
         do iVar = 1, nVar
 
