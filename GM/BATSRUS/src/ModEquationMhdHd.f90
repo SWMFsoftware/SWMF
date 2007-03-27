@@ -22,11 +22,12 @@ module ModVarIndexes
   integer, parameter :: nFluid = 2
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Ion'    , 'Neu' /)
-  character (len=7), parameter :: TypeFluid_I(nFluid) = (/ 'ion    ', 'neutral' /)
+  character (len=7), parameter :: &
+       TypeFluid_I(nFluid) = (/ 'ion    ', 'neutral' /)
 
   ! Named indexes for State_VGB and other variables
-  ! These indexes should go subsequently, from 1 to nVar+1.
-  ! The energy is handled as an extra variable, so that we can use
+  ! These indexes should go subsequently, from 1 to nVar+nFluid.
+  ! The energies are handled as an extra variable, so that we can use
   ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
        Rho_       =  1,          &
@@ -103,7 +104,7 @@ module ModVarIndexes
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
-       NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
+       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
 
   ! The user defined units for the variables
   real :: UnitUser_V(nVar+nFluid) = 1.0
