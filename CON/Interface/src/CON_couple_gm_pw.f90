@@ -301,7 +301,7 @@ contains
     ! Send pressure from GM to PW
     !/
     if(iProc0Gm /= iProc0Pw)then
-       if(is_proc0(PW_)) &
+       if(is_proc0(GM_)) &
             call MPI_send(Buffer_I,nTotalLine,MPI_REAL,iProc0Gm,&
             1,i_comm(),iError)
        if(is_proc0(PW_)) &
@@ -309,12 +309,6 @@ contains
             1,i_comm(),iStatus_I,iError)
     end if
 
-    !\
-    ! Broadcast variables inside PW
-    !/
-    if(n_proc(PW_)>1 .and. is_proc(PW_)) &
-         call MPI_bcast(Buffer_I,nTotalLine,MPI_REAL,0,i_comm(PW_),iError)
-    
     if(DoTest)write(*,*)NameSub,', variables transferred',&
          ', iProc:',iProcWorld
     
@@ -322,6 +316,9 @@ contains
     ! Put variables into PW
     !/
     if(is_proc(PW_))then
+       ! Broadcast variables inside PW
+       if(n_proc(PW_)>1) &
+            call MPI_bcast(Buffer_I,nTotalLine,MPI_REAL,0,i_comm(PW_),iError)
        call PW_put_from_gm(nTotalLine,Buffer_I)
        if(DoTest) &
             write(*,*)NameSub//' iProc, Buffer_I(1)=',&
