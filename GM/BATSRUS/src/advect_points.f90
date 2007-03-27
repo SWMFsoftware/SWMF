@@ -369,9 +369,9 @@ contains
     iLo=i-1; jLo=j-1; kLo=k-1; iHi=i+1; jHi=j+1; kHi=k+1
 
     if(prolong_order==1)then
-       ! Avoid the ghost cells
+       ! Avoid the ghost cells at resolution changes
        if(i==1 .and.DxyzLo_D(1)/=Dxyz_D(1))iLo=1
-       if(i==nI.and.DxyzHi_D(1)/=Dxyz_D(1))iHi=1
+       if(i==nI.and.DxyzHi_D(1)/=Dxyz_D(1))iHi=nI
        if(j==1 .and.DxyzLo_D(2)/=Dxyz_D(2))jLo=1
        if(j==nJ.and.DxyzHi_D(2)/=Dxyz_D(2))jHi=nJ
        if(k==1 .and.DxyzLo_D(3)/=Dxyz_D(3))kLo=1
