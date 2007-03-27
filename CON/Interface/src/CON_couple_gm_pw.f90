@@ -283,7 +283,7 @@ contains
          ', iProc:',iProcWorld
 
     !\
-    ! Put PW field line coordinates into GM
+    ! Put PW field line coordinates into GM, and get pressure from GM
     !/
     if(is_proc(GM_))then
        ! Broadcast variables inside GM
@@ -292,9 +292,42 @@ contains
 
        call GM_put_from_pw(Coord_DI, 2, nTotalLine, NameVar_D)
        if(DoTest) &
-            write(*,*)NameSub//' iProc, Coord_DI(:,1)=',iProcWorld,Coord_DI(:,1)
+            write(*,*)NameSub//' iProc,Coord_DI(:,1)=',iProcWorld,Coord_DI(:,1)
+       
+       call GM_get_for_pw(nTotalLine, Buffer_I)
+    end if
+    
+    !\
+    ! Send pressure from GM to PW
+    !/
+    if(iProc0Gm /= iProc0Pw)then
+       if(is_proc0(PW_)) &
+            call MPI_send(Buffer_I,nTotalLine,MPI_REAL,iProc0Gm,&
+            1,i_comm(),iError)
+       if(is_proc0(PW_)) &
+            call MPI_recv(Buffer_I,nTotalLine,MPI_REAL,iProc0Pw,&
+            1,i_comm(),iStatus_I,iError)
     end if
 
+    !\
+    ! Broadcast variables inside PW
+    !/
+    if(n_proc(PW_)>1 .and. is_proc(PW_)) &
+         call MPI_bcast(Buffer_I,nTotalLine,MPI_REAL,0,i_comm(PW_),iError)
+    
+    if(DoTest)write(*,*)NameSub,', variables transferred',&
+         ', iProc:',iProcWorld
+    
+    !\
+    ! Put variables into PW
+    !/
+    if(is_proc(PW_))then
+       call PW_put_from_gm(nTotalLine,Buffer_I)
+       if(DoTest) &
+            write(*,*)NameSub//' iProc, Buffer_I(1)=',&
+            iProcWorld,Buffer_I(1)
+    end if
+    
     !\
     ! Deallocate buffer to save memory
     !/
