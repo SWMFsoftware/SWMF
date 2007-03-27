@@ -552,8 +552,8 @@ The default is DnRun = 1 for all the active components.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COUPLEORDER">
-	<parameter name="nCouple" type="integer" min="0" max="15" 
-							default="15" />
+	<parameter name="nCouple" type="integer" min="0" max="16" 
+							default="16" />
 	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
@@ -564,20 +564,21 @@ The default is DnRun = 1 for all the active components.
 			<option name="IH GM" default="$iCouple==5" />
                         <option name="GM IE" default="$iCouple==6" />
                         <option name="GM IM" default="$iCouple==7" />
-                        <option name="GM RB" default="$iCouple==8" />
-                        <option name="UA IE" default="$iCouple==9" />
-                        <option name="IE IM" default="$iCouple==10" />
-                        <option name="IM GM" default="$iCouple==11" />
-			<option name="PW GM" default="$iCouple==12" />
-                        <option name="IE UA" default="$iCouple==13" />
-                        <option name="IE GM" default="$iCouple==14" />
-			<option name="IE PW" default="$iCouple==15" />
+			<option name="GM PW" default="$iCouple==8" />
+                        <option name="GM RB" default="$iCouple==9" />
+                        <option name="UA IE" default="$iCouple==10" />
+                        <option name="IE IM" default="$iCouple==11" />
+                        <option name="IM GM" default="$iCouple==12" />
+			<option name="PW GM" default="$iCouple==13" />
+                        <option name="IE UA" default="$iCouple==14" />
+                        <option name="IE GM" default="$iCouple==15" />
+			<option name="IE PW" default="$iCouple==16" />
 			
 		</parameter>
 	</for>
 
 #COUPLEORDER
-15                nCouple
+16                nCouple
 SC IH             NameSourceTarget
 IH SC             NameSourceTarget
 SC SP             NameSourceTarget
@@ -585,6 +586,7 @@ IH SP             NameSourceTarget
 IH GM             NameSourceTarget
 GM IE             NameSourceTarget
 GM IM             NameSourceTarget
+GM PW             NameSourceTarget
 GM RB             NameSourceTarget
 UA IE             NameSourceTarget
 IE IM             NameSourceTarget

@@ -145,6 +145,8 @@ contains
           call couple_gm_ie(TimeSimulation)        !^CMP IF IE
        case(IM_)                                   !^CMP IF IM
           call couple_gm_im(TimeSimulation)        !^CMP IF IM
+       case(PW_)                                   !^CMP IF PW
+          call couple_gm_pw(TimeSimulation)        !^CMP IF PW
        case(RB_)                                   !^CMP IF RB
           call couple_gm_rb(TimeSimulation)        !^CMP IF RB
        case default
