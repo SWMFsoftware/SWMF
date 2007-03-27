@@ -27,7 +27,7 @@
 <table cellpadding=\"5\">
   ";
 
-  $imagecount = "0";
+  $column = "0";
   include("plotfunctions.php");
 
   $runpath = "../plots/PLOT_$runname";
@@ -58,6 +58,18 @@
           if($countfiles > 0) {
             if(! $plotfile) { SetLastPlotfile($plotfilelist, $plotfile); }
             include("makeplot.php");
+            $column++;
+            if("$column" == "3") { $column = "1"; }
+            if("$column" == "1") { echo "<tr>"; }
+            echo "
+<td>
+<center>
+<b>${cmp} &nbsp&nbsp ${plottype}: ${plotfileclip}</b><br><br>
+<IMG SRC=\"$imagedir/$file2\" width=95% BORDER=0>
+</center>
+</td>
+            ";
+            if("$column" == "2") { echo "</tr>"; }
           }
 
         }
@@ -65,7 +77,7 @@
 
     }
   }
-  if("$imagecount" == "1") {
+  if("$column" == "1") {
     echo "</tr>";
   }
 ?>

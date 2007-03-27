@@ -15,5 +15,6 @@ $defisblines = "NO";
 $defstreamcolor = "BLACK";
 $defiscircle = "YES";
 $defcircler = "2.7";
-$deftextlabel = "";
+$deftextlabel = "\&(AUXZONE[1]:TIMESIM)";
+$choice = "Z";
  ?>

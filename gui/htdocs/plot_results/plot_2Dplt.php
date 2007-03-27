@@ -190,6 +190,8 @@ function plot2() {   // Save defaults file
       $value = $_POST[$name];
       fwrite($fh, "\$def$name = \"$value\";\n");
     }
+    $value = $_POST['slice'];
+    fwrite($fh, "\$choice = \"$value\";\n");
     fwrite($fh, " ?>\n");
     fclose($fh);
   }

@@ -45,8 +45,9 @@
            echo "<div class=\"unselected\">";
          }
          //echo "$number\n";
-         echo "<table><td width=25 align=left>$number</td>";
-         echo "  <td width=95 align=right><a href=\"delete.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$number&plotfile=$plotfile\">delete</a></td></table>\n";
+         echo "<table><td width=35 align=left>$number</td>";
+         echo "<td width=35 align=left><a href=\"movie.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=${number}&wait=1\" TARGET=\"_movie\">movie</a></td>";
+         echo "  <td width=50 align=right><a href=\"delete.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$number&plotfile=$plotfile\">delete</a></td></table>\n";
          $file = "../images/noplot.png";
          $dir = opendir("$runpath/images/${cmp}_$plottype");
          while( $newfile = readdir( $dir ) ) {

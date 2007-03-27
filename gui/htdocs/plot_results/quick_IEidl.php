@@ -19,7 +19,7 @@
   }
   $cwd = getcwd();
   Exec("rsync -av $imagedir/runidl.sh $batchdir/$tmpdir/;
-        rsync -av $imagedir/batch-001.pro $batchdir/$tmpdir/batch.pro;
+        rsync -av $imagedir/batch-${number}.pro $batchdir/$tmpdir/batch.pro;
         cd $batchdir/$tmpdir;
         ln -s $cwd/$filedir/$plotfile file.idl");
   Exec("cd $batchdir/$tmpdir;

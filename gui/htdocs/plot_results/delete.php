@@ -34,7 +34,7 @@ if($delete) {
 <br>
 <h2><a href=\"plot.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$plotstyle&plotfile=$plotfile\">Return</a> without changes.</h2>
 <br><br>
-<h2><a href=\"delete.php?delete=1&runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$plotstyle&plotfile=$plotfile\">REMOVE</a> (THERE IS NO UNDO ONCE CLICKED!)</h2>
+<h2><a href=\"delete.php?delete=1&runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$plotstyle&plotfile=$plotfile\">REMOVE ALL</a> (THERE IS NO UNDO ONCE CLICKED!)</h2>
 <br><br>
 <h2>Style:</h2>
 <br>
@@ -65,6 +65,3 @@ plot style = $plotstyle<br>
 
 </body>
 </html>
-
-
-

@@ -16,4 +16,5 @@ $defstreamcolor = "WHITE";
 $defiscircle = "YES";
 $defcircler = "2.7";
 $deftextlabel = "";
+$choice = "Y";
  ?>

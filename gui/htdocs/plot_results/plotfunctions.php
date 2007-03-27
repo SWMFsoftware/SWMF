@@ -353,8 +353,8 @@ function PrintPltForm ($runname, $plotfilelist, $plotfile=0, $plotstyle) {
 function PrintXYZPltForm ($runname, $plotfile=0, $plotstyle) {
    global $scriptname, $cmp, $plottype, $runpath;
    $common = "$scriptname?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$plotstyle&plotfile=";
-	$choices = array('X', 'Y', 'Z', 'C2', 'C3');
-	foreach ($choices as $choice) {
+   $choices = array('X', 'Y', 'Z', 'C2', 'C3');
+   foreach ($choices as $choice) {
       $plotfilelist2 = GetXYZPlotList("$runpath/$cmp", "$choice");
       $countfiles2 = count($plotfilelist2);
       if($countfiles2 > 0) {
@@ -378,10 +378,6 @@ function decodeFilename($value) {
 // Create more easily understood filename
    if(eregi(".plt", $value)) {
      // tecplot file.
-     $prefix = "";
-     if(eregi("x=", $value)) { $prefix = "X: "; }
-     if(eregi("y=", $value)) { $prefix = "Y: "; }
-     if(eregi("z=", $value)) { $prefix = "Z: "; }
      $chunks = split(".plt", $value, 2);
      $tmp = $chunks[0];
      $iter = "";
@@ -400,9 +396,9 @@ function decodeFilename($value) {
        $time = "T=$timeH:$timeM:$timeS";
      }
      if($time || $iter) {
-       $name = "$prefix $time $iter";
+       $name = "$time $iter";
      } else {
-       $name = "$prefix $value";
+       $name = "$value";
      }
      $name = trim($name);
      return $name;
@@ -437,10 +433,6 @@ function decodeFilename($value) {
    }
    if(eregi(".out", $value)) {
      // idl file.
-     $prefix = "";
-     if(eregi("x=0", $value)) { $prefix = "X=0 "; }
-     if(eregi("y=0", $value)) { $prefix = "Y=0 "; }
-     if(eregi("z=0", $value)) { $prefix = "Z=0 "; }
      $chunks = split(".out", $value, 2);
      $tmp = $chunks[0];
      $iter = "";
@@ -459,9 +451,9 @@ function decodeFilename($value) {
        $time = "T=$timeH:$timeM:$timeS";
      }
      if($time || $iter) {
-       $name = "$prefix $time $iter";
+       $name = "$time $iter";
      } else {
-       $name = "$prefix $value";
+       $name = "$value";
      }
      $name = trim($name);
      return $name;

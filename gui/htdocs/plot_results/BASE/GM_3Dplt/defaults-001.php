@@ -23,5 +23,5 @@ $defviewtheta = "160.";
 $defisbvectoreq = "NO";
 $defissphere = "YES";
 $defspherer = "2.7";
-$deftextlabel = "";
+$deftextlabel = "\&(AUXZONE[1]:TIMESIM)";
  ?>

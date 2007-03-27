@@ -143,19 +143,19 @@ $!RUNMACROFUNCTION  "Reset Contours (MIN/MAX)"
 $!ACTIVEFIELDZONES += [2]
 #$!ACTIVEFIELDZONES += [|bzone|-|NUMZONES|]
 
-#$!ATTACHTEXT 
-#  XYPOS
-#    {
-#    X = 1
-#    Y = 1.5
-#    }
-#  TEXTSHAPE
-#    {
-#    HEIGHT = 24
-#    }
-#  ATTACHTOZONE = NO
-#  ANCHOR = LEFT
-#  TEXT = ''
+$!ATTACHTEXT 
+  XYPOS
+    {
+    X = 1
+    Y = 1.5
+    }
+  TEXTSHAPE
+    {
+    HEIGHT = 24
+    }
+  ATTACHTOZONE = NO
+  ANCHOR = LEFT
+  TEXT = '&(AUXZONE[1]:TIMESIM)'
 
 ### set view perspective
 $!Varset |eyedistance| = 100.

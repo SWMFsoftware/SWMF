@@ -44,21 +44,4 @@
 
     Exec("rm -rf $batchdir/$tmpdir");
   }
-
-  $imagecount++;
-  if("$imagecount" == "3") { $imagecount = "1"; }
-  if("$imagecount" == "1") {
-    echo "<tr>";
-  }
-  echo "
-<td>
-<center>
-<b>${cmp} &nbsp&nbsp ${plottype}: ${plotfileclip}</b><br><br>
-<IMG SRC=\"$imagedir/$file2\" width=95% BORDER=0>
-</center>
-</td>
-  ";
-  if("$imagecount" == "2") {
-    echo "</tr>";
-  }
 ?>

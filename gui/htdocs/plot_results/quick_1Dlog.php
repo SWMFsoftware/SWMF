@@ -1,6 +1,6 @@
 <?php
   Exec("rsync -av $imagedir/style.sty $imagedir/script.mcr $imagedir/tecplot.mcr $batchdir/$tmpdir/;
-        rsync -av $imagedir/batch-001.mcr $batchdir/$tmpdir/batch.mcr");
+        rsync -av $imagedir/batch-${number}.mcr $batchdir/$tmpdir/batch.mcr");
   Exec("cd $batchdir/$tmpdir;
         echo '#!/bin/sh' > batchscript.sh;
         echo '' >> batchscript.sh;

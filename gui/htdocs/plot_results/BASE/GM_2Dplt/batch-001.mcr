@@ -55,19 +55,19 @@ $!RUNMACROFUNCTION  "Reset Contours (MIN/MAX)"
 $!GLOBALCONTOUR 1  LEGEND{XYPOS{X = 84.5}}
 $!GLOBALCONTOUR 1  LEGEND{XYPOS{Y = 89.5}}
 
-#$!ATTACHTEXT 
-#  XYPOS
-#    {
-#    X = 10.
-#    Y = 88.
-#    }
-#  TEXTSHAPE
-#    {
-#    HEIGHT = 24
-#    }
-#  ATTACHTOZONE = NO
-#  ANCHOR = LEFT
-#  TEXT = ''
+$!ATTACHTEXT 
+  XYPOS
+    {
+    X = 10.
+    Y = 88.
+    }
+  TEXTSHAPE
+    {
+    HEIGHT = 24
+    }
+  ATTACHTOZONE = NO
+  ANCHOR = LEFT
+  TEXT = '&(AUXZONE[1]:TIMESIM)'
 
 ### set view area
 $!TWODAXIS XDETAIL{RANGEMIN = -32}

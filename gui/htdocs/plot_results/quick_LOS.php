@@ -20,7 +20,7 @@
   Exec("rsync -av $imagedir/runidl.sh $batchdir/$tmpdir/;
         cd $batchdir/$tmpdir;
         ln -s $cwd/$filedir/$plotfile file.out;
-        rsync -av $imagedir/batch-001.pro $batchdir/$tmpdir/batch.pro");
+        rsync -av $imagedir/batch-${number}.pro $batchdir/$tmpdir/batch.pro");
   Exec("cd $batchdir/$tmpdir;
         echo '#!/bin/sh' > batchscript.sh;
         echo '' >> batchscript.sh;
