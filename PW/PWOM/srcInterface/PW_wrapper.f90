@@ -309,20 +309,18 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
   integer :: iVar,i,iError
   integer :: iSendCount
 
-  integer, save, allocatable :: iDisplacement_P(:), iRecieveCount_P(:)
-  real, save, allocatable :: SendBuffer_VI(:,:)
+  integer, allocatable :: iDisplacement_P(:), iRecieveCount_P(:)
+  real,    allocatable :: SendBuffer_VI(:,:)
 
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! The sizes and displacements of MPI messages
-  if(.not.allocated(iRecieveCount_P)) then
-     allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))
-     allocate(SendBuffer_VI(nVar, nLine))
-     iRecieveCount_P = nVar*nLine_P
-     iDisplacement_P = nVar*nLineBefore_P
-  end if
+  allocate(iRecieveCount_P(nProc), iDisplacement_P(nProc))
+  allocate(SendBuffer_VI(nVar, nLine))
+  iRecieveCount_P = nVar*nLine_P
+  iDisplacement_P = nVar*nLineBefore_P
 
   ! Fill buffer using SI units for sending on each proc
   do iVar=1,nVar
@@ -363,6 +361,8 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
      write(*,*)NameSub,' nVar, nLineTotal=',nVar, nLineTotal
      write(*,*)NameSub,' SendBuffer_VI=',SendBuffer_VI
   end if
+
+  deallocate(iRecieveCount_P, iDisplacement_P, SendBuffer_VI)
 
 end subroutine PW_get_for_gm
 
