@@ -78,9 +78,9 @@ raw		StringLogfile
 #SAVERESTART
 F		DoSaverestart
 
-This is set only for sake of the test_shocktube test
+This is set only for sake of the test_multifluid test
 #SAVEBINARY
-T		UseBinary
+F		UseBinary
 
 #SAVEPLOT
 2		nPlotfile
