@@ -3,12 +3,7 @@ default : RBE
 include Makefile.def
 
 install: 
-	@(if [ -f src/Makefile.RULES.${OS}${COMPILER} ]; then                \
-		cp -f src/Makefile.RULES.${OS}${COMPILER} src/Makefile.RULES;\
-	else \
-		rm -f src/Makefile.RULES; touch src/Makefile.RULES; \
-	fi);
-	touch src/Makefile.DEPEND
+	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 #
 #       General Housekeeping
@@ -23,6 +18,7 @@ RBE:
 
 LIB:
 	cd src; make LIB
+	cd srcInterface; make LIB
 
 TESTDIR = run_test
 
