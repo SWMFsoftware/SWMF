@@ -11,7 +11,8 @@ test_help:
 	@echo "    test MPIRUN='mpirun -np 3' (run test with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
 	@echo "    test_comp                  (run component tests only)"
-	@echo "    test_pw                    (run polar wind test only)"
+	@echo "    test_pw                    (run PW/PWOM test only)"
+	@echo "    test_rb                    (run RB/RBE test only)"
 	@echo "    test_esmf                  (run ESMF_SWMF test only)"
 	@echo "    test1                      (run GM-IE-PW test only )"
 	@echo "    test2                      (run SC-IH test only )"
@@ -19,6 +20,7 @@ test_help:
 test:
 	-@(make test_comp)
 	-@(make test_pw)
+	-@(make test_rb)
 	-@(make test_esmf)
 	-@(make test1)
 	-@(make test2)
@@ -76,6 +78,42 @@ test_pw_check:
 		${PWDIR}/output/Earth/plots_iline0001.out \
 		> test_pw.diff)
 	ls -l test_pw*.diff
+
+#### Radiation belt model test ###
+#
+test_rb:
+	@echo "starting..." > test_rb.diff
+	@echo "test_rb_compile..." >> test_rb.diff
+	make test_rb_compile
+	@echo "test_rb_rundir..." >> test_rb.diff
+	make test_rb_rundir
+	@echo "test_rb_run..." >> test_rb.diff
+	make test_rb_run
+	@echo "test_rb_check..." >> test_rb.diff
+	make test_rb_check
+
+test_rb_compile:
+	./Config.pl -v=Empty,RB/RBE
+	make SWMF
+
+test_rb_rundir:
+	rm -rf ${TESTDIR}
+	make rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
+	cd ${TESTDIR}; ln -s ${RBDIR}/input/* .
+
+test_rb_run:
+	cd ${TESTDIR}/RB; rm -f 2000f223_e.fls
+	cd ${TESTDIR}; ./SWMF.exe > runlog
+
+test_rb_check:
+	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
+		> ${TESTDIR}/2000f223_e.fls.ref
+	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
+		> test_rb.diff
+	ls -l test_rb.diff
 
 ### Test1: PW+IE+GM ###
 
