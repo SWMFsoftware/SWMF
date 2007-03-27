@@ -10,9 +10,11 @@ subroutine GM_get_for_pw(nTotalLine, Buffer_I)
   
   integer,intent(in)  :: nTotalLine
   real,   intent(out) :: Buffer_I(nTotalLine)
-  real                :: LocalBuffer_I(nTotalLine)
+  real, allocatable   :: LocalBuffer_I(:)
   integer             :: iLine,iError
   !----------------------------------------------------------------------------
+
+  call allocate(LocalBuffer_I(nTotalLine))
 
   !Get the pressure at each field line location.
   do iLine=1,nTotalLine
@@ -27,4 +29,6 @@ subroutine GM_get_for_pw(nTotalLine, Buffer_I)
   ! Convert pressure to SI units
   Buffer_I = Buffer_I * No2Si_V(UnitP_)
    
+  call deallocate(LocalBuffer_I)
+
  end subroutine GM_get_for_pw
