@@ -98,7 +98,7 @@ test_multifluid_run:
 test_multifluid_check:
 	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000186_pe*.idl \
 		> ${TESTDIR}/GM/IO2/cut_25.idl
-	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-13 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 	  Param/MULTIFLUID/TestOutput/cut_raw_2_t00000025_n0000186_pe0000.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_multifluid.diff
 	ls -l test_multifluid.diff
