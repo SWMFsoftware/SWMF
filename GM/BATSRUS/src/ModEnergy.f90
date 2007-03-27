@@ -1,16 +1,69 @@
 module ModEnergy
 
   use ModMultiFluid
-  use ModSize,       ONLY: nI, nJ, nK, gcn
-  use ModAdvance,    ONLY: State_VGB, Energy_GBI, &
-       StateOld_VCB, EnergyOld_CBI
-  use ModPhysics,    ONLY: Gm1, Inv_Gm1
+  use ModSize,    ONLY: nI, nJ, nK, gcn
+  use ModAdvance, ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+       UseNonConservative, nConservCrit, IsConserv_CB
+  use ModPhysics, ONLY: Gm1, Inv_Gm1
 
   implicit none
 
 contains
 
-  !=============================================================================
+  !============================================================================
+  subroutine calc_energy_or_pressure(iBlock)
+
+    ! Calculate pressure from energy or energy from pressure depending on 
+    ! the value of UseNonConservative and IsConserv_CB
+
+    integer, intent(in) :: iBlock
+    integer::i,j,k
+    !--------------------------------------------------------------------------
+    if(.not. UseNonConservative) then
+       ! All cells are conservative
+       call calc_pressure_cell(iBlock)
+       RETURN
+    end if
+       
+    if(nConservCrit <= 0)then
+       ! All cells are non-conservative
+       call calc_energy_cell(iBlock)
+       RETURN
+    end if
+
+    do iFluid = 1, nFluid
+       call select_fluid
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          if(IsConserv_CB(i,j,k,iBlock)) then
+             State_VGB(iP, i, j, k,iBlock) = &
+                  gm1*(Energy_GBI(i, j, k, iBlock, iFluid) - 0.5*   &
+                  sum(State_VGB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
+                  /State_VGB(iRho,i, j, k, iBlock) )
+          else
+             Energy_GBI(i, j, k, iBlock, iFluid) = &
+                  inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
+                  State_VGB(iRho, i, j, k, iBlock))
+          end if
+       end do; end do; end do
+
+       if(TypeFluid /= 'ion') CYCLE
+       
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          if(IsConserv_CB(i,j,k,iBlock)) then
+             State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
+                  - gm1*0.5*sum(State_VGB(Bx_:Bz_,i, j, k,iBlock)**2)
+          else
+             Energy_GBI(i, j, k, iBlock, iFluid) = &
+                  Energy_GBI(i, j, k, iBlock, iFluid) + &
+                  0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+          end if
+       end do; end do; end do
+    end do
+
+  end subroutine calc_energy_or_pressure
+
+  !============================================================================
 
   subroutine calc_old_pressure(iBlock)
 
@@ -39,7 +92,7 @@ contains
     end do
   end subroutine calc_old_pressure
 
-  !=============================================================================
+  !============================================================================
 
   subroutine calc_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
@@ -69,6 +122,46 @@ contains
        end do; end do; end do
     end do
   end subroutine calc_pressure
+
+  !===========================================================================
+
+  subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
+       iFluidMin, iFluidMax)
+
+    ! Calculate total energy (excluding B0):
+    !
+    !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
+
+    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
+    integer, intent(in) :: iFluidMin, iFluidMax
+    integer::i,j,k
+    !--------------------------------------------------------------------------
+    do iFluid = iFluidMin, iFluidMax
+       call select_fluid
+
+       ! Calculate thermal plus kinetic energy
+       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
+          if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
+             Energy_GBI(i, j, k, iBlock, iFluid) = 0.0
+          else
+             Energy_GBI(i, j, k, iBlock, iFluid) = &
+                  inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
+                  State_VGB(iRho, i, j, k, iBlock))
+          end if
+       end do; end do; end do
+       
+       if(TypeFluid /= 'ion') CYCLE
+
+       ! Add magnetic energy for ion fluid
+       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
+          Energy_GBI(i, j, k, iBlock, iFluid) = &
+               Energy_GBI(i, j, k, iBlock, iFluid) + &
+               0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+       end do; end do; end do
+    end do
+
+  end subroutine calc_energy
 
   !===========================================================================
 
@@ -111,46 +204,6 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
   end subroutine calc_pressure1_point
-
-  !===========================================================================
-
-  subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
-       iFluidMin, iFluidMax)
-
-    ! Calculate total energy (excluding B0):
-    !
-    !   E = p/(gamma-1) + 0.5*rho*u^2 + 0.5*b1^2
-
-    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
-    integer, intent(in) :: iFluidMin, iFluidMax
-    integer::i,j,k
-    !---------------------------------------------------------------------------
-    do iFluid = iFluidMin, iFluidMax
-       call select_fluid
-
-       ! Calculate thermal plus kinetic energy
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
-             Energy_GBI(i, j, k, iBlock, iFluid) = 0.0
-          else
-             Energy_GBI(i, j, k, iBlock, iFluid) = &
-                  inv_gm1*State_VGB(iP,i,j,k,iBlock) &
-                  +0.5*(sum(State_VGB(iRhoUx:iRhoUz, i, j, k, iBlock)**2)/&
-                  State_VGB(iRho, i, j, k, iBlock))
-          end if
-       end do; end do; end do
-       
-       if(TypeFluid /= 'ion') CYCLE
-
-       ! Add magnetic energy for ion fluid
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          Energy_GBI(i, j, k, iBlock, iFluid) = &
-               Energy_GBI(i, j, k, iBlock, iFluid) + &
-               0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
-       end do; end do; end do
-    end do
-
-  end subroutine calc_energy
 
   !===========================================================================
 

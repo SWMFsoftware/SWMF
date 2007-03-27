@@ -240,23 +240,9 @@ contains
        end do; end do; end do
     end if                                   !^CFG END SIMPLEBORIS
 
-    if(UseNonConservative) then
-       if(nConservCrit > 0)then
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if(IsConserv_CB(i,j,k,iBLK)) then
-                call calc_pressure_point(i,j,k,iBLK)
-             else
-                call calc_energy_point(i,j,k,iBlk)
-             end if
-          end do; end do; end do
-       else
-          ! All cells are non-conservative
-          call calc_energy_cell(iBlk)
-       end if
-    else
-       ! All cells are conservative
-       call calc_pressure_cell(iBlk)
-    end if
+    ! Update energy or pressure based on UseConservative and IsConserv_CB
+    call calc_energy_or_pressure(iBlk)
+
   end subroutine update_explicit
 
 end subroutine update_states_mhd
