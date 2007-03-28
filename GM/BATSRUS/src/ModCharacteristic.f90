@@ -456,8 +456,8 @@ contains
     Eps_V=abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
-       Eps_V(iWave)=max(abs(EigenvalueR_V(iWave)-Lambda),&
-                             abs(Lambda -EigenvalueL_V(iWave)),cTolerance2)!,Eps_V(iWave))
+       Eps_V(iWave)=max(EigenvalueR_V(iWave)-Lambda,&
+                             Lambda -EigenvalueL_V(iWave),cTolerance2)!,Eps_V(iWave))
        EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))+&
                           cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
     end do
@@ -514,7 +514,7 @@ contains
     EigenvalueFixed_V(DivBW_)=max(abs(EigenvalueL_V(EntropyW_)),&
                                   abs(EigenvalueR_V(EntropyW_)))
     cMax=max(cMax,EigenvalueFixed_V(DivBW_))
-    if(IsBoundary)EigenvalueFixed_V=cMax
+    if(IsBoundary)EigenvalueFixed_V(DivBW_)=cMax
     FluxPseudoChar_V=cZero
     do iWave=1,nVar!-1
        FluxPseudoChar_V = FluxPseudoChar_V + &

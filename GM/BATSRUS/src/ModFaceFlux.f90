@@ -553,6 +553,7 @@ contains
 
       Unormal_I = UNormal_I*Area
       cMax    = cMax*Area
+      cMaxDt = cMax
     end subroutine roe_solver_new
     !^CFG IF RUSANOVFLUX BEGIN
     !==========================================================================
