@@ -53,7 +53,7 @@
   $return = "";
   Exec("cd ../codes;
         mkdir CODE_$descriptor;
-        rsync -avq --exclude gui ../../../. CODE_$descriptor/;
+        rsync -avq --exclude gui --exclude 'run*' ../../../. CODE_$descriptor/;
         ln -s CODE_$descriptor CODE1_$descriptor;
 	cd CODE_$descriptor;
 	./Config.pl -install >& .tmp;
