@@ -55,6 +55,8 @@ function GetPlotList($dirname='.') {   // Finds all the plt files
          if (eregi("los", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
        if($plottype == "1Dlog") {
          if (eregi("log", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
+       if($plottype == "1Dsat") {
+         if (eregi("sat", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
      } elseif($cmp == "IM") {
        if (eregi("2d", $file) && eregi("\.plt$", $file)) { $files[] = $file; }
      } elseif($cmp == "IE") {
@@ -83,6 +85,8 @@ function GetXYZPlotList($dirname='.', $string) {   // Finds all the plt files
          if (eregi("_${string}_", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
        if($plottype == "1Dlog") {
          if (eregi("log", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
+       if($plottype == "1Dsat") {
+         if (eregi("sat", $file) && eregi("\.plt$", $file)) { $files[] = $file; } }
      } elseif($cmp == "IM") {
        if (eregi("2d", $file) && eregi("\.plt$", $file)) { $files[] = $file; }
      } elseif($cmp == "IE") {
@@ -380,6 +384,14 @@ function decodeFilename($value) {
      // tecplot file.
      $chunks = split(".plt", $value, 2);
      $tmp = $chunks[0];
+     if(eregi("sat", $tmp)) {
+       // satelite file
+       $chunks = split("sat_", $tmp, 2);
+       $tmp = $chunks[1];
+       $name = "$tmp";
+       $name = trim($name);
+       return $name;
+     }
      $iter = "";
      if(eregi("_n", $tmp)) {
        $chunks = split("_n", $tmp, 2);
