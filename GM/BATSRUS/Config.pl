@@ -175,6 +175,7 @@ sub set_equation{
 
     my $File = "$Src/ModEquation$Equation.f90";
     die "$ERROR File $File does not exist!\n" unless -f $File;
+    return if -f $EquationMod and not `diff $File $EquationMod`;
     print "cp $File $EquationMod\n" if $Verbose;
     `cp $File $EquationMod`;
 }
