@@ -1,5 +1,5 @@
 <?php
-$defyvar = "18";
+$defyvar = "20";
 $defyaxis = "MM";
 $defyaxismin = "";
 $defyaxismax = "";

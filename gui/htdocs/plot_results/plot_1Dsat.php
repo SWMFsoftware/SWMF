@@ -28,11 +28,20 @@ function form1() {   //
 <INPUT TYPE=hidden name=plotfile value=\"$plotfile\">
 <INPUT TYPE=hidden name=filedir value=\"$runpath/$cmp\">
   "; 
+  // XY and XZ RANGE
+  if(!(isset($defxyxzrange))) { $defxyxzrange = "20."; }
+  echo "
+<b>2D XY and XZ Position Plot Range</b><br>
+<div class=\"indent\">
+Range:
+<INPUT type=text size=5 name=xyxzrange value=\"$defxyxzrange\">
+</div><br>
+  "; 
   // X-AXIS
   $defxaxisMM = " CHECKED"; $defxaxisCUSTOM = "";
   if($defxaxis == "CUSTOM") {$defxaxisMM = ""; $defxaxisCUSTOM = " CHECKED";}
   echo "
-<b>X Axis</b><br>
+<b>Line Plot X Axis</b><br>
 <div class=\"indent\">
 Variable: 
   ";
@@ -49,7 +58,7 @@ Range:
   $defyaxisMM = " CHECKED"; $defyaxisCUSTOM = "";
   if($defyaxis == "CUSTOM") {$defyaxisMM = ""; $defyaxisCUSTOM = " CHECKED";}
   echo "
-<b>Y Axis</b><br>
+<b>Line Plot Y Axis</b><br>
 <div class=\"indent\">
 Variable: 
   ";
@@ -85,7 +94,7 @@ function plot0() {   // Check for errors
 function plot1() {   // Create scripts
   global $batchdir, $tmpdir, $imagedir;
 
-  $parameter = array('yvar', 'yaxis', 'yaxismin', 'yaxismax', 'xvar', 'xaxis', 'xaxismin', 'xaxismax', 'textlabel');
+  $parameter = array('xyxzrange', 'yvar', 'yaxis', 'yaxismin', 'yaxismax', 'xvar', 'xaxis', 'xaxismin', 'xaxismax', 'textlabel');
   foreach($parameter as $name) { $$name = $_POST[$name]; }
 
   if ($xaxis == "CUSTOM") { $xaxiscustom = ""; } else { $xaxiscustom = "#"; }
@@ -95,6 +104,7 @@ function plot1() {   // Create scripts
         rsync -av $imagedir/style*.sty $imagedir/script.mcr $imagedir/tecplot.mcr $batchdir/$tmpdir/;
         cd $batchdir/$tmpdir;
         cat script.mcr | 
+sed s/REPLACEXYXZRANGE/'$xyxzrange'/ | 
 sed s/REPLACEXVAR/'$xvar'/ | 
 sed s/REPLACEISXAXISCUSTOM/'$xaxiscustom'/ | 
 sed s/REPLACEXAXISMIN/'$xaxismin'/ | 
@@ -113,7 +123,7 @@ sed s/REPLACETEXT/'$textlabel'/ > batch.mcr");
 function plot2() {   // Save defaults file
   global $imagedir, $number;
 
-  $parameter = array('yvar', 'yaxis', 'yaxismin', 'yaxismax', 'xvar', 'xaxis', 'xaxismin', 'xaxismax', 'textlabel');
+  $parameter = array('xyxzrange', 'yvar', 'yaxis', 'yaxismin', 'yaxismax', 'xvar', 'xaxis', 'xaxismin', 'xaxismax', 'textlabel');
 
   $deffile = "$imagedir/defaults-${number}.php";
   if(!$fh = fopen($deffile, 'w')) {
