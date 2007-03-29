@@ -4,8 +4,8 @@ module ModFaceFlux
   use ModMain,       ONLY: x_, y_, z_, nI, nJ, nK
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
-  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, nFluid, &
-       iVarFluid_I, TypeFluid_I
+  use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
+       nFluid, nIonFluid, iVarFluid_I, TypeFluid_I
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
 
@@ -40,8 +40,6 @@ module ModFaceFlux
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoe               !^CFG IF ROEFLUX
   logical :: DORoeNew            !^CFG IF ROEFLUX
-
-  
 
   logical :: DoTestCell
 
@@ -695,7 +693,7 @@ contains
     integer, intent(in) :: iDir                ! direction of flux
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
-    real,    intent(out):: StateCons_V(nFlux)  ! conservative states with energy
+    real,    intent(out):: StateCons_V(nFlux)  !conservative states with energy
     real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
     real,    intent(out):: Un_I(nFluid)        ! normal velocity
     real,    intent(out):: En                  ! normal electric field
@@ -707,29 +705,28 @@ contains
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
 
-    iFluid = 1
-    if(UseBoris)then           !^CFG IF BORISCORR BEGIN
-       call get_boris_flux
-    else                       !^CFG END BORISCORR
-       call get_mhd_flux
-       En = 0.0
-    end if                     !^CFG IF BORISCORR
-    Un_I(1) = Un
+    if(.not.UseMultiIon)then
+       ! single ion fluid MHD (possibly with extra neutrals)
+       iFluid = 1
+       if(UseBoris)then           !^CFG IF BORISCORR BEGIN
+          call get_boris_flux
+       else                       !^CFG END BORISCORR
+          call get_mhd_flux
+          En = 0.0
+       end if                     !^CFG IF BORISCORR
+       Un_I(1) = Un
+    end if
 
-    do iFluid = 2, nFluid
-       call select_fluid
-       if(TypeFluid_I(iFluid)=='ion')then
-          if(UseBoris)then           !^CFG IF BORISCORR BEGIN
-             call get_boris_flux
-          else                       !^CFG END BORISCORR
-             call get_mhd_flux
-             En = 0.0
-          end if                     !^CFG IF BORISCORR
-       else
+    if(nFluid > 1 .or. UseMultiIon)then
+       if(UseMultiIon)call get_magnetic_flux
+       do iFluid = 1, nFluid
+          if(TypeFluid_I(iFluid) == 'ion') CYCLE
+          call select_fluid
+          ! multi-ion or neutral fluid
           call get_hd_flux
-       end if
-       Un_I(iFLuid) = Un
-    end do
+          Un_I(iFLuid) = Un
+       end do
+    end if
 
   contains
 
@@ -950,6 +947,67 @@ contains
     end subroutine get_mhd_flux
 
     !==========================================================================
+
+    subroutine get_magnetic_flux
+
+      integer, parameter :: Rho_=1, Ux_=2, Uy_=3, Uz_=4
+
+      ! Calculate magnetic flux for multi-ion equations
+
+      integer :: iVarIon_I(nIonFluid)
+      real :: NumDens_I(nIonFluid), InvNumDens
+      real :: UxPlus, UyPlus, UzPlus
+      real :: HallUx, HallUy, HallUz, HallUn
+      real :: FullBx, FullBy, FullBz, FullBn
+      !-----------------------------------------------------------------------
+
+      iVarIon_I = iVarFluid_I(1:nIonFluid)
+
+      ! calculate number densities
+      NumDens_I  = State_V(iVarIon_I + Rho_) /  IonMass_I
+      InvNumDens = 1.0/sum(NumDens_I)
+
+      ! calculate positive charge velocity
+      UxPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Ux_))
+      UyPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Uy_))
+      UzPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Uz_))
+
+      HallUx = UxPlus - HallJx*InvNumDens
+      HallUy = UyPlus - HallJy*InvNumDens
+      HallUz = UzPlus - HallJz*InvNumDens
+
+      HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
+
+      FullBx  = State_V(Bx_) + B0x
+      FullBy  = State_V(By_) + B0y
+      FullBz  = State_V(Bz_) + B0z
+
+      FullBn  = FullBx*AreaX + FullBz*AreaZ + FullBz*AreaZ
+
+      Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
+      Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
+      Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
+
+      if(DoTestCell)then
+         write(*,*)'NumDens_I,InvNumDens=',NumDens_I,InvNumDens
+         write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
+         write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
+         write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
+         write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
+      end if
+
+      if(Eta > 0.0)then                          !^CFG IF DISSFLUX BEGIN
+         ! Add curl Eta.J to induction equation
+         Flux_V(Bx_) = Flux_V(Bx_) + AreaY*EtaJz - AreaZ*EtaJy
+         Flux_V(By_) = Flux_V(By_) + AreaZ*EtaJx - AreaX*EtaJz
+         Flux_V(Bz_) = Flux_V(Bz_) + AreaX*EtaJy - AreaY*EtaJx
+      end if                                     !^CFG END DISSFLUX
+
+!!! add gradient of electron pressure here !!!
+
+    end subroutine get_magnetic_flux
+
+    !==========================================================================
     subroutine get_hd_flux
 
       use ModPhysics, ONLY: g, inv_gm1
@@ -1018,41 +1076,32 @@ contains
     real :: CmaxFluid, CleftFluid, CrightFluid
     !--------------------------------------------------------------------------
 
-    iFluid = 1
-    UnLeft = UnLeft_I(1)
-    UnRight= UnRight_I(1)
+    UnLeft = minval(UnLeft_I(1:nIonFluid))
+    UnRight= maxval(UnRight_I(1:nIonFluid))
     if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
        call get_boris_speed
     else                                         !^CFG END BORISCORR
        call get_mhd_speed
-    endif                                        !^CFG IF BORISCORR
+    endif                                        !^CFG IF BORISCORR    
 
     if(nFluid > 1)then
        if(present(Cmax))   CmaxFluid  =Cmax
        if(present(Cleft))  CleftFluid =Cleft
        if(present(Cright)) CrightFluid=Cright
-    endif
 
-    do iFluid = 2, nFluid
-       call select_fluid
-       UnLeft = UnLeft_I(iFluid)
-       UnRight= UnRight_I(iFluid)
+       do iFluid = 2, nFluid
+          if(TypeFluid_I(iFluid)/='neutral') CYCLE
+          call select_fluid
+          UnLeft = UnLeft_I(iFluid)
+          UnRight= UnRight_I(iFluid)
 
-       if(TypeFluid_I(iFluid)=='ion')then
-          if(UseBoris)then                             !^CFG IF BORISCORR BEGIN
-             call get_boris_speed
-          else                                         !^CFG END BORISCORR
-             call get_mhd_speed
-          endif                                        !^CFG IF BORISCORR
-       else
           call get_hd_speed
-       end if
-       if(present(Cmax))   CmaxFluid  =max(CmaxFluid,  Cmax)
-       if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
-       if(present(Cright)) CrightFluid=min(CrightFluid,Cright)
-    end do
 
-    if(nFluid > 1)then
+          if(present(Cmax))   CmaxFluid  =max(CmaxFluid,  Cmax)
+          if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
+          if(present(Cright)) CrightFluid=min(CrightFluid,Cright)
+       end do
+
        if(present(Cmax))   Cmax  =CmaxFluid
        if(present(Cleft))  Cleft =CleftFluid
        if(present(Cright)) Cright=CrightFluid
@@ -1135,18 +1184,33 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB
 
-      real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
+      integer :: iVar
+      real :: RhoU_D(3)
+      real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real :: dB1dB1                                     !^CFG IF AWFLUX
 
-      real :: FullBt, Rho1, Rho, cDrift, cHall,B1B0L,B1B0R
+      real :: FullBt, Rho1, cDrift, cHall,B1B0L,B1B0R
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
       if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
 
-      InvRho = 1.0/State_V(Rho_)
-      Sound2 = g*State_V(p_)*InvRho
+      Rho    = State_V(Rho_)
+      p      = State_V(p_)
+      RhoU_D = Rho*State_V(Ux_:Uz_)
+      do iFluid = 2, nIonFluid
+         iVar = iVarFluid_I(iFluid)
+         Rho1= State_V(iVar + 1)
+         Rho = Rho + Rho1
+         p   = p   + State_V(iVar + 5)
+         RhoU_D = RhoU_D + Rho1*State_V(iVar + 2: iVar +4)
+      end do
+
+      InvRho = 1.0/Rho
+      Sound2 = g*p*InvRho
+      Un     = InvRho*sum( RhoU_D*(/ AreaX, AreaY, AreaZ /) )
+
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
@@ -1169,7 +1233,7 @@ contains
          B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
          Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
       end if
-      Un = State_V(Ux_)*AreaX + State_V(Uy_)*AreaY + State_V(Uz_)*AreaZ
+
       FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
       Alfven2Normal = InvRho*FullBn**2/Area2
       Fast2  = Sound2 + Alfven2
@@ -1189,7 +1253,6 @@ contains
          FullBt = sqrt(max(0.0, &
               Area2*(FullBx**2+FullBy**2+FullBz**2) - FullBn**2))
          ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
-         Rho = State_V(Rho_)
          select case(iDir)
          case(1)
             Rho1 = State_VGB(Rho_,iFace-1,jFace,kFace,GlobalBlk)
