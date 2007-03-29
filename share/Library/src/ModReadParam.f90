@@ -744,7 +744,7 @@ contains
     j = iSession
     if(present(iSessionIn)) j = iSessionIn
 
-    do iCommand = 1, iCommand
+    do i = 1, iCommand
        if(NameCommand == NameCommand_II(i, j)) then
           i_line_command = iLineCommand_II(i, j)
           RETURN
