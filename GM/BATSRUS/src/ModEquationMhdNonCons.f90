@@ -14,7 +14,7 @@ module ModVarIndexes
   integer,           parameter :: iVarFluid_I(nFluid) = (/ 0 /)
 
   ! These are non-standard, so that we solve the non-conservative equations.
-  logical,           parameter :: IsMultiIon = .true.              ! not false
+  logical,           parameter :: UseMultiIon = .true.             ! not false
   character (len=4), parameter :: TypeFluid_I(nFluid) = (/'ions'/) ! not 'ion'
   real               parameter :: IonMass_I(nIonFluid) = 1.0       ! not zero
 

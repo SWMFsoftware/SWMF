@@ -11,7 +11,7 @@ module ModVarIndexes
 
   integer, parameter :: nFluid = 2
   integer, parameter :: nIonFluid = 2
-  logical, parameter :: IsMultiIon = .true.
+  logical, parameter :: UseMultiIon = .true.
   real               :: IonMass_I(nIonFluid) = (/ 1.0, 16.0 /)
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Hp', 'Op' /)
