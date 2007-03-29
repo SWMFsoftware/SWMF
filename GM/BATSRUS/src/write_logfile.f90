@@ -257,7 +257,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
        x1,x2,y1,y2,z1,z2
   use ModRaytrace,   ONLY: ray  !^CFG  IF RAYTRACE
   use ModIO
-  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
+  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid, TypeFluid
 
   implicit none
 
@@ -816,7 +816,7 @@ contains
     case('e')
        LogVar_I(iVarTot) = inv_gm1*StateSat_V(iP) + 0.5*&
             sum(StateSat_V(iRhoUx:iRhoUz)**2)/StateSat_V(iRho)
-       if(TypeFluid_I(iFluid) == 'ion') LogVar_I(iVarTot) = &
+       if(TypeFluid == 'ion') LogVar_I(iVarTot) = &
             LogVar_I(iVarTot) + &
             0.5*sum((StateSat_V(Bx_:Bz_)+B0Sat_D)**2)
     case('p')
