@@ -4,8 +4,7 @@ T
 #PLANET
 NONE
 
-! Use planetary units so that the multi-ion effects are 
-! in reasonable range
+! Use planetary units so that the multi-ion effects are in reasonable range
 #IOUNITS
 PLANETARY
 
@@ -14,10 +13,6 @@ PLANETARY
 
 #NONCONSERVATIVE
 F			UseNonConservative
-
-! This is needed only for non-conservative choice above
-#CONSERVATIVECRITERIA
-0
 
 A single block 256x4x4 grid
 #INCLUDE
