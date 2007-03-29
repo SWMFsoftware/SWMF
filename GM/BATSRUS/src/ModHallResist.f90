@@ -75,7 +75,7 @@ contains
     use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitT_, UnitX_, UnitRho_, &
          AverageIonMass, AverageIonCharge
-    use ModVarIndexes, ONLY: UseMultiSpecies
+    use ModVarIndexes, ONLY: UseMultiSpecies, nIonFluid
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -85,10 +85,11 @@ contains
 
     IonMassPerCharge =HallFactor/cMu &
          * (cProtonMass/(AverageIonCharge*cElectronCharge)) &
-         * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 * No2Si_V(UnitRho_))
+         * No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
+         * No2Si_V(UnitRho_))
 
     ! If not multispecies, multiply with average ion mass
-    if(.not.UseMultiSpecies) &
+    if(.not.UseMultiSpecies .and. nIonFluid == 1) &
          IonMassPerCharge = IonMassPerCharge * AverageIonMass
 
     if (DoTestMe) then
@@ -153,7 +154,9 @@ contains
   subroutine set_ion_mass_per_charge(iBlock)
 
     use ModAdvance, ONLY: State_VGB, Rho_
-    use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, MassSpecies_V
+    use ModVarIndexes, ONLY: &
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, &
+         nIonFluid, iVarFluid_I, IonMass_I
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
@@ -161,12 +164,23 @@ contains
     integer :: i, j, k
     !-------------------------------------------------------------------------
 
-    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-            State_VGB(Rho_,i,j,k,iBlock) / &
-            sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
-            /MassSpecies_V)
-    end do; end do; end do
+    ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
+
+    if(UseMultiSpecies)then
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+               State_VGB(Rho_,i,j,k,iBlock) / &
+               sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
+               /MassSpecies_V)
+       end do; end do; end do
+    elseif(nIonFluid > 1)then
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+               sum(State_VGB(iVarFluid_I(1:nIonFluid) + Rho_,i,j,k,iBlock)) / &
+               sum(State_VGB(iVarFluid_I(1:nIonFluid) + Rho_,i,j,k,iBlock) &
+               /   IonMass_I)
+       end do; end do; end do
+    end if
 
   end subroutine set_ion_mass_per_charge
   !===========================================================================
