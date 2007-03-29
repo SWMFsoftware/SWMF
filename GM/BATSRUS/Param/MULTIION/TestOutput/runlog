@@ -1,0 +1,299 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2007
+
+ BATSRUS version 8.00 is running as GM on    2 PE(s)
+
+ EQUATIONS:   Multi-ion
+ USER MODULE: DEFAULT EMPTY ROUTINES 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 134 lines of text
+ ----- Starting Session  1  ------
+ init_mod_restart_file: setting TypeRestartOutFile = block
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 134
+
+#PLANET
+NONE		NamePlanet
+
+#IOUNITS
+PLANETARY		TypeIoUnit (default/unchanged)
+
+#NORMALIZATION
+PLANETARY		TypeNormalization (default/unchanged)
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0		nConservCrit
+
+#CHECKGRIDSIZE
+256                             nI
+4                               nJ
+4                               nK
+1                               MinBlockALL
+
+#GRID
+1		nRootBlockX (default/unchanged)
+1		nRootBlockY (default/unchanged)
+1		nRootBlockZ (default/unchanged)
+-128.		xMin
+ 128.		xMax
+-2.		yMin
+ 2.		yMax
+-2.		zMin
+ 2.		zMax
+
+#AMRINIT
+default			InitialRefineType		TypeRefineInit
+0			initial_refinement_levels		nRefineLevelInit
+
+#SHOCKTUBE
+0.9		rho (left state)		LeftState
+0.		Ux		LeftState (default/unchanged)
+0.		Uy		LeftState (default/unchanged)
+0.		Uz		LeftState (default/unchanged)
+1.0		Bx		LeftState
+0.1		By		LeftState
+0.		Bz		LeftState (default/unchanged)
+0.9e-4		P		LeftState
+0.1		RhoO2		LeftState
+0.		Ux		LeftState (default/unchanged)
+0.		Uy		LeftState (default/unchanged)
+0.		Uz		LeftState (default/unchanged)
+0.1e-4		P		LeftState
+0.9		rho (right state)		RightState
+0.		Ux		RightState (default/unchanged)
+0.		Uy		RightState (default/unchanged)
+0.		Uz		RightState (default/unchanged)
+1.0		Bx		RightState
+-0.1		By		RightState
+0.		Bz		RightState (default/unchanged)
+0.9e-4		P		RightState
+0.1		RhoO2		RightState
+0.		Ux		RightState (default/unchanged)
+0.		Uy		RightState (default/unchanged)
+0.		Uz		RightState (default/unchanged)
+0.1e-4		P		RightState
+0.0		ShockSlope (default/unchanged)
+
+#OUTERBOUNDARY
+periodic		xMinBc		TypeBcEast
+periodic		xMaxBc		TypeBcWest
+float			yMinBc		TypeBcSouth
+float			yMaxBc		TypeBcNorth
+float			zMinBc		TypeBcBottom
+float			zMaxBc		TypeBcTop
+
+#TIMESTEPPING
+2		nStage (default/unchanged)
+0.8		CflExpl (default/unchanged)
+
+#SCHEME
+2		nOrder (default/unchanged)
+Rusanov		TypeFlux (default/unchanged)
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile (default/unchanged)
+
+#SAVERESTART
+F		DoSaverestart		DoSaveRestart
+
+#SAVEBINARY
+F		DoSaveBinary
+
+#SAVEPLOT
+2		nPlotfile		nPlotFile
+cut MHD idl	PlotString		StringPlot
+-1              DnSavePlot (default/unchanged)
+0.1             DtSavePlot
+-128.0		xMinCut
++128.0		xMaxCut
+0.1		yMinCut
+0.11		yMaxCut
+0.1		zMinCut
+0.11		zMaxCut
+0.0             DxSavePlot (default/unchanged)
+cut raw idl	PlotString		StringPlot
+-1              DnSavePlot (default/unchanged)
+0.1             DtSavePlot
+-128.0		xMinCut
++128.0		xMaxCut
+0.1		yMinCut
+0.11		yMaxCut
+0.1		zMinCut
+0.11		zMaxCut
+0.0             DxSavePlot (default/unchanged)
+
+#STOP
+-1		MaxIteration (default/unchanged)
+2.0		tSimulationMax
+ GM_set_parameters: CHECK iSession = 1
+  
+ renumber_octree: finished renumbering 1  blocks.
+ Test cell is in an unused block
+     total blocks =  1
+ Test cell is in an unused block
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: PLANETARY            Normalization: PLANETARY
+
+          gamma:         1.66666667
+
+          body1: .false.
+
+          body2: .false.
+
+          cLIGHTfactor:  1.00000E+00, cLIGHT:      2.99790E+05
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-Order Scheme
+          with limiter mc3   
+          beta= 1.50
+          Time accurate calculation
+          Rusanov Flux Function
+          Explicit Time Stepping
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax =  1  nBLK =  10
+   Total number of blocks used =  1
+   Total number of cells =  4096
+   Smallest cell dx:    1.0000000000000000   Largest cell dx:    1.0000000000000000
+
+ root blocks:        1       1       1
+ nCells:           256       4       4
+ x:              -128.00000000    128.00000000
+ y:                -2.00000000      2.00000000
+ z:                -2.00000000      2.00000000
+ multistage:         2
+ cfl:               0.80000000
+
+ Test cell is in an unused block
+saved ifile= 3 type=cut_mhd    at n_step=      0 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=      0 time=   0:00:00 h:m:s
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   0.24    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     0.24     99.99         1         1
+save_plot                 0.14     58.50         1         2
+load_balance              0.01      2.24         1         1
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+saved ifile= 3 type=cut_mhd    at n_step=     10 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     10 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after      2.1 s at N =      10 (1.0123E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     19 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     19 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after      4.2 s at N =      20 (2.1242E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     28 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     28 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after      6.3 s at N =      30 (3.2351E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     37 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     37 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after      8.4 s at N =      40 (4.3447E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     46 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     46 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after     10.5 s at N =      50 (5.4535E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     55 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     55 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after     12.6 s at N =      60 (6.5619E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     64 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     64 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after     14.7 s at N =      70 (7.6703E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     73 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     73 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after     16.8 s at N =      80 (8.7787E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     82 time=   0:00:00 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     82 time=   0:00:00 h:m:s
+Speed is      0.0 c/s/p after     18.9 s at N =      90 (9.8871E-01 s)
+saved ifile= 3 type=cut_mhd    at n_step=     92 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=     92 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     21.0 s at N =     100 (1.0996E+00 s)
+-------------------------------------------------------------------------------
+TIMING TREE of depth 2 from step       0 to     100    on PE    0
+name                  #iter  #calls      sec   s/iter   s/call  percent
+-------------------------------------------------------------------------------
+BATSRUS                   1       1    20.98   20.975   20.975   100.00
+-------------------------------------------------------------------------------
+advance                 100     100    17.77    0.178    0.178    84.72
+save_logfile            100     100     1.97    0.020    0.020     9.38
+save_plot                10      20     1.22    0.122    0.061     5.82
+#others                                 0.02    0.016              0.08
+-------------------------------------------------------------------------------
+
+   100 of    181 iterations completed.   Expected time to completion:     14.39
+
+saved ifile= 3 type=cut_mhd    at n_step=    101 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    101 time=   0:00:01 h:m:s
+saved ifile= 3 type=cut_mhd    at n_step=    110 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    110 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     23.2 s at N =     110 (1.2104E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    119 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    119 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     25.3 s at N =     120 (1.3213E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    128 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    128 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     27.4 s at N =     130 (1.4321E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    137 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    137 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     29.5 s at N =     140 (1.5430E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    146 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    146 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     31.6 s at N =     150 (1.6538E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    155 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    155 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     33.8 s at N =     160 (1.7647E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    164 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    164 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     35.9 s at N =     170 (1.8755E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    173 time=   0:00:01 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    173 time=   0:00:01 h:m:s
+Speed is      0.0 c/s/p after     38.0 s at N =     180 (1.9864E+00 s)
+saved ifile= 3 type=cut_mhd    at n_step=    182 time=   0:00:02 h:m:s
+saved ifile= 4 type=cut_raw    at n_step=    182 time=   0:00:02 h:m:s
+
+    Finished Numerical Simulation
+    -----------------------------
+   Simulated Time T =   0.20000E+01 (    0.033333 min,     0.000556 hrs)
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to     182    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                  38.48    100.00         1         1
+-------------------------------------------------------------------------------
+advance                  32.37     84.13       182       182
+barrier-expl2            28.65     74.45       182       364
+save_logfile              3.64      9.46       182       182
+barrier-expl1             2.56      6.66       182       364
+save_plot                 2.44      6.34        20        40
+update_check              1.12      2.92       182       364
+exch_msgs                 0.02      0.06       182       364
+send_cons_flux            0.00      0.01       182       364
+-------------------------------------------------------------------------------
+ error report: no errors...

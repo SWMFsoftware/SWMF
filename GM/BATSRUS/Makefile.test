@@ -28,6 +28,7 @@ test_help:
 	@echo "    test MPIRUN='mprun -np 2'  (run test with mprun -np 2)"
 	@echo "    test_shocktube             (run shocktube test only)"
 	@echo "    test_multifluid            (run multi-fluid test only)"
+	@echo "    test_multiion              (run multi-ion test only)"
 	@echo "    test_corona                (run Solar Corona test only)"
 	@echo "    test_mars                  (run Mars test only)"
 	@echo "    test_venus                 (run Venus test only)"
@@ -102,6 +103,37 @@ test_multifluid_check:
 	  Param/MULTIFLUID/TestOutput/cut_raw_2_t00000025_n0000186_pe0000.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_multifluid.diff
 	ls -l test_multifluid.diff
+
+### MULTI ION TEST ###
+
+test_multiion:
+	@echo "test_multiion_compile..." > test_multiion.diff
+	make test_multiion_compile
+	@echo "test_multiion_rundir..." >> test_multiion.diff
+	make test_multiion_rundir
+	@echo "test_multiion_run..." >> test_multiion.diff
+	make test_multiion_run
+	@echo "test_multiion_check..." >> test_multiion.diff
+	make test_multiion_check
+
+test_multiion_compile:
+	./Config.pl -u=Default -e=MultiIon -g=256,4,4,10,1
+	make
+	make PIDL
+
+test_multiion_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/MULTIION/PARAM.in .
+
+test_multiion_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+
+test_multiion_check:
+	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000002_n0000182_pe*.idl \
+		> ${TESTDIR}/GM/IO2/cut_t2.idl
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
+		Param/MULTIION/TestOutput/cut_t2.idl \
+		${TESTDIR}/GM/IO2/cut_t2.idl > test_multiion.diff
+	ls -l test_multiion.diff
 
 ### STANDALONE SOLAR CORONA TEST ###
 
