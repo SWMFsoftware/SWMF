@@ -41,6 +41,11 @@ subroutine calc_sources
   ! Variables needed for Joule heating
   real :: Current_D(3)
 
+  ! Variables for multi-ion MHD
+  real    :: ElectronCharge, InvCharge, InvNumDens,  State_V(nVar)
+  real, dimension(3) :: FullB_D, uIon_D, u_D, uPlus_D, uPlusHallU_D, Force_D
+  real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
+  integer :: iVar, iVarIon_I(nIonFluid)
   !---------------------------------------------------------------------------
   if(iProc==PROCtest .and. globalBLK==BLKtest)then
      call set_oktest('calc_sources', DoTest, DoTestMe)
@@ -91,12 +96,13 @@ subroutine calc_sources
              DivB1_GB(i,j,k,globalBLK)* &
              State_VGB(Bx_:Bz_,i,j,k,globalBLK)
         RhoInv=cOne/State_VGB(rho_,i,j,k,globalBLK)
-        Source_VC(Bx_:Bz_,i,j,k)    = Source_VC(Bx_:Bz_,i,j,k)-DivB1_GB(i,j,k,globalBLK)* &
+        Source_VC(Bx_:Bz_,i,j,k)    = Source_VC(Bx_:Bz_,i,j,k) &
+             -DivB1_GB(i,j,k,globalBLK)* &
              State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK)*RhoInv
-        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k)-DivB1_GB(i,j,k,globalBLK)* &
+        Source_VC(Energy_,i,j,k)     = Source_VC(Energy_,i,j,k) &
+             -DivB1_GB(i,j,k,globalBLK)* &
              sum(State_VGB(Bx_:Bz_,i,j,k,globalBLK)*&
-             State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))*&
-             RhoInv
+             State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))*RhoInv
      end do;end do;end do
 
      if (UseB0Source) then
@@ -115,7 +121,7 @@ subroutine calc_sources
   if(UseCurlB0)then
      do k=1,nK; do j=1,nJ; do i=1,nI
         if(R_BLK(i,j,k,globalBLK)<rCurrentFreeB0)CYCLE
-        CurlB0CrossB_D=cross_product(&
+        CurlB0CrossB_D = cross_product(&
              CurlB0_DCB(:,i,j,k,globalBLK),&
              State_VGB(Bx_:Bz_,i,j,k,globalBLK)+(/&
              B0xCell_BLK(i,j,k,globalBLK),&
@@ -129,7 +135,8 @@ subroutine calc_sources
      end do;end do;end do
   end if
   
-  if(boris_correction .and. boris_cLIGHT_factor < 0.9999 & !^CFG IF BORISCORR BEGIN
+  if(boris_correction &                             !^CFG IF BORISCORR BEGIN
+       .and. boris_cLIGHT_factor < 0.9999 & 
        .and. index(test_string,'nodivE')<1) then
 
      coef= (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
@@ -196,6 +203,69 @@ subroutine calc_sources
         end select
      end if
   end do
+
+  if(UseMultiIon)then
+
+     ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
+     ! where u_+ is the number density weighted average ion velocity,
+     ! and w_H = -J/(e n_e) is the Hall velocity. Here
+     ! e is the electron charge and n_e is the electron number density.
+
+     ElectronCharge = 1.0 / ( &
+          1.0/cMu*(cProtonMass/cElectronCharge)* &
+          No2Si_V(UnitB_)*No2Si_V(UnitT_)/(No2Si_V(UnitX_)**2 &
+          * No2Si_V(UnitRho_)) )
+
+     InvCharge = 1.0/ElectronCharge
+
+     iVarIon_I = iVarFluid_I(1:nIonFluid)
+
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        ! Extract conservative variables
+        State_V = State_VGB(:,i,j,k,globalBLK)
+
+        ! Total magnetic field
+        FullB_D = State_V(Bx_:Bz_) + (/ &
+             B0xCell_BLK(i,j,k,globalBLK),&
+             B0yCell_BLK(i,j,k,globalBLK),&
+             B0zCell_BLK(i,j,k,globalBLK) /)
+
+        ! calculate number densities
+        NumDens_I  = State_V(iVarIon_I + Rho_) / IonMass_I
+        InvNumDens = 1.0/sum(NumDens_I)
+
+        InvRho_I = 1.0/State_V(iVarIon_I   + Rho_)
+        Ux_I  = InvRho_I*State_V(iVarIon_I + RhoUx_)
+        Uy_I  = InvRho_I*State_V(iVarIon_I + RhoUy_)
+        Uz_I  = InvRho_I*State_V(iVarIon_I + RhoUz_)
+
+        ! calculate the average positive charge velocity
+        uPlus_D(x_) = InvNumDens* sum(NumDens_I*Ux_I)
+        uPlus_D(y_) = InvNumDens* sum(NumDens_I*Uy_I)
+        uPlus_D(z_) = InvNumDens* sum(NumDens_I*Uz_I)
+
+        ! Add the Hall velocity -J/(e n)
+        call get_current(i,j,k,GlobalBlk,Current_D)
+        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
+
+        ! Calculate the source term for all the ion fluids
+        do iFluid = 1, nIonFluid
+           iVar = iVarFluid_I(iFluid)
+           uIon_D = (/ Ux_I(iFLuid),  Uy_I(iFluid), Uz_I(iFluid) /)
+           u_D    = uIon_D - uPlusHallU_D
+
+           Force_D = &
+                ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
+
+           Source_VC(iVar+RhoUx_:iVar+RhoUz_,i,j,k) = &
+                Source_VC(iVar+RhoUx_:iVar+RhoUz_,i,j,k) + Force_D
+
+           Source_VC(Energy_-1+iFluid,i,j,k) = &
+                Source_VC(Energy_-1+iFluid,i,j,k) + sum(Force_D*uIon_D)
+
+        end do
+     end do; end do; end do
+  end if
 
   if(UseHallResist .and. HallHyperFactor > 0.0) &
        call calc_hyper_resistivity(globalBLK)
