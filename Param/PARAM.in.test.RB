@@ -1,8 +1,10 @@
 #ECHO
-T
+T			DoEcho
 
-#VERBOSE
-100
+
+! Since RBE runs serial only, empty processors would stop SWMF in strict mode
+#STRICT
+F			UseStrict
 
 #DESCRIPTION
 Test RB/RBE only

@@ -105,7 +105,7 @@ test_rb_rundir:
 
 test_rb_run:
 	cd ${TESTDIR}/RB; rm -f 2000f223_e.fls
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_rb_check:
 	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
