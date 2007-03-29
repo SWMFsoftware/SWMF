@@ -19,7 +19,10 @@ module ModVarIndexes
 
   integer, parameter :: nVar = 13
 
-  integer, parameter :: nFluid = 2
+  integer, parameter :: nFluid    = 2
+  integer, parameter :: nIonFluid = 1
+  logical, parameter :: UseMultiIon = .false.
+  real,    parameter :: IonMass_I(nIonFluid) = 0.0
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Ion'    , 'Neu' /)
   character (len=7), parameter :: &
