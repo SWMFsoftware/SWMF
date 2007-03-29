@@ -139,7 +139,15 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      ! Planet NONE in GM means that we do not use a body
-     if (NameThisComp=='GM' .and. NamePlanet == 'NONE') body1 = .false.
+     if (NameThisComp=='GM' .and. NamePlanet == 'NONE' .and. iSession == 1)then
+        body1 = .false.
+        ! Change the default conservative criteria when there is no planet
+        ! and the #CONSERVATIVECRITERIA command did not occur
+        if(i_line_command("#CONSERVATIVECRITERIA") < 0)then
+           nConservCrit = 0
+           deallocate(TypeConservCrit_I)
+        end if
+     end if
 
      ! In standalone mode set and obtain GM specific parameters 
      ! in CON_planet and CON_axes
