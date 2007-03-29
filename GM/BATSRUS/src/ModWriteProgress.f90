@@ -6,6 +6,7 @@ subroutine write_progress(inopt)
   use ModMain
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModUser, ONLY: NameUserModule, VersionUserModule
+  use ModVarIndexes, ONLY: NameEquation
   implicit none
 
   integer, intent(in) :: inopt
@@ -29,6 +30,8 @@ subroutine write_progress(inopt)
              ' is running as '//NameThisComp//' on ',nProc,' PE(s)'
         write(iUnitOut,*)
      end if
+     call write_prefix; write(iUnitOut,'(a)') &
+          ' EQUATIONS:   '//NameEquation
      call write_prefix; write(iUnitOut,'(a,f5.2)') &
           ' USER MODULE: '//NameUserModule,VersionUserModule
      write(iUnitOut,*)
