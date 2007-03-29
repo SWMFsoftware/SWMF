@@ -584,7 +584,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
-       iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+       TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
 
   implicit none
 
@@ -677,7 +677,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
      case('e')
         PlotVar(:,:,:,iVar) = Energy_GBI(:,:,:,iBLK,iFluid)
         ! Add (B0+B1)^2 - B1^2 so the energy contains B0
-        if(TypeFluid_I(iFluid) == 'ion') &
+        if(TypeFluid == 'ion') &
              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)+0.5*(&
              (State_VGB(Bx_,:,:,:,iBLK)+B0xCell_BLK(:,:,:,iBLK))**2+&
              (State_VGB(By_,:,:,:,iBLK)+B0yCell_BLK(:,:,:,iBLK))**2+&
