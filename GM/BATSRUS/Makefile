@@ -179,11 +179,12 @@ distclean:
 	@				#^CFG END DOC
 	rm -f *~
 
-dist:	distclean
+dist:
+	./Config.pl -uninstall
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
-	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.def Makefile.test
+	tar -cf tmp.tar  Makefile Makefile_CONFIGURE Makefile.test
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS* .cvsignore	#^CFG IF CONFIGURE
 	tar -rf tmp.tar  Configure.options	#^CFG IF CONFIGURE
