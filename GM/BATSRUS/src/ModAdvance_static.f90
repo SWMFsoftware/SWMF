@@ -126,6 +126,8 @@ Module ModAdvance
 
   real :: uDotArea_XI(2-gcn:nI+gcn,0:nJ+1,0:nK+1,nFluid)
 
+  real :: bCrossArea_DX(3,2-gcn:nI+gcn,0:nJ+1,0:nK+1)
+
   !\
   ! Y Face local MHD solution array definitions.
   !/
@@ -139,6 +141,8 @@ Module ModAdvance
 
   real :: uDotArea_YI(0:nI+1,2-gcn:nJ+gcn,0:nK+1,nFluid)
 
+  real :: bCrossArea_DY(3,0:nI+1,2-gcn:nJ+gcn,0:nK+1)
+
   !\
   ! Z Face local MHD solution array definitions.
   !/
@@ -151,6 +155,8 @@ Module ModAdvance
   real :: Flux_VZ(nVar+nFluid,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
   real :: uDotArea_ZI(0:nI+1,0:nJ+1,2-gcn:nK+gcn,nFluid)
+
+  real :: bCrossArea_DZ(3,0:nI+1,0:nJ+1,2-gcn:nK+gcn)
 
   !\
   ! The number of the face variables, which are corrected at the
