@@ -514,7 +514,7 @@ contains
     EigenvalueFixed_V(DivBW_)=max(abs(EigenvalueL_V(EntropyW_)),&
                                   abs(EigenvalueR_V(EntropyW_)))
  !   cMax=max(cMax,EigenvalueFixed_V(DivBW_))
-    if(IsBoundary)EigenvalueFixed_V(DivBW_)=cMax
+    if(IsBoundary)EigenvalueFixed_V=cMax
     FluxPseudoChar_V=cZero
     do iWave=1,nVar!-1
        FluxPseudoChar_V = FluxPseudoChar_V + &
