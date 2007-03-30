@@ -31,6 +31,7 @@ my $SrcUser     = 'srcUser';
 my $UserMod     = "$Src/ModUser.f90";
 my $UserModSafe = "$Src/ModUser.f90.safe";
 my $EquationMod = "$Src/ModEquation.f90";
+my $EquationModSafe = "$Src/ModEquation.f90.safe";
 my $Equation;
 my $UserModule;
 
@@ -176,6 +177,7 @@ sub set_equation{
     my $File = "$Src/ModEquation$Equation.f90";
     die "$ERROR File $File does not exist!\n" unless -f $File;
     return if -f $EquationMod and not `diff $File $EquationMod`;
+    `cp $EquationMod $EquationModSafe` if -f $EquationMod; # save previous eq.
     print "cp $File $EquationMod\n" if $Verbose;
     `cp $File $EquationMod`;
 }
@@ -201,6 +203,7 @@ sub set_user_module{
 	$File = "$SrcUser/ModUser$UserModule.f90";
     }
     die "$ERROR File $File does not exist!\n" unless -f $File;
+    return if -f $UserMod and not `diff $File $UserMod`;
     `cp $UserMod $UserModSafe` if -f $UserMod; # save previous user module
     print "cp $File $UserMod\n" if $Verbose;
     `cp $File $UserMod`;

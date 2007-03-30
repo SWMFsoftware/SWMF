@@ -4,6 +4,7 @@ stand_alone.f90
 ModEquation.f90
 ModUser.f90
 ModUser.f90.safe
+ModEquation.f90.safe
 Makefile.RULES
 Makefile.DEPEND
 ModSize.f90
