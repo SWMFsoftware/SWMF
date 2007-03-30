@@ -23,6 +23,7 @@ module ModFaceFlux
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
        EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area for Boris !^CFG IF BORISCORR
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
+       bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseRS7
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockHall, hall_factor, get_face_current, set_ion_mass_per_charge
@@ -53,6 +54,7 @@ module ModFaceFlux
   real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: CmaxDt, UnLeft, UnRight
   real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
+  real :: bCrossArea_D(3)
   real :: Enormal                !^CFG IF BORISCORR
 
   ! Variables for normal resistivity
@@ -220,9 +222,10 @@ contains
 
          call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
 
-         VdtFace_x(iFace, jFace, kFace) = CmaxDt
-         uDotArea_XI(iFace, jFace, kFace,:) = Unormal_I
-         EDotFA_X(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
+         VdtFace_x(iFace, jFace, kFace)        = CmaxDt
+         uDotArea_XI(iFace, jFace, kFace, :)   = Unormal_I
+         bCrossArea_DX(:, iFace, jFace, kFace) = bCrossArea_D
+         EDotFA_X(iFace, jFace, kFace)         = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
     end subroutine get_flux_x
@@ -249,9 +252,10 @@ contains
 
          call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
 
-         VdtFace_y(iFace, jFace, kFace) = CmaxDt
-         uDotArea_YI(iFace, jFace, kFace, :) = Unormal_I
-         EDotFA_Y(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
+         VdtFace_y(iFace, jFace, kFace)        = CmaxDt
+         uDotArea_YI(iFace, jFace, kFace, :)   = Unormal_I
+         bCrossArea_DY(:, iFace, jFace, kFace) = bCrossArea_D
+         EDotFA_Y(iFace, jFace, kFace)         = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
 
@@ -279,9 +283,10 @@ contains
 
          call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
 
-         VdtFace_z(iFace, jFace, kFace) = CmaxDt
-         uDotArea_ZI(iFace, jFace, kFace, :) = Unormal_I
-         EDotFA_Z(iFace, jFace, kFace)  = Enormal !^CFG IF BORISCORR
+         VdtFace_z(iFace, jFace, kFace)        = CmaxDt
+         uDotArea_ZI(iFace, jFace, kFace, :)   = Unormal_I
+         bCrossArea_DZ(:, iFace, jFace, kFace) = bCrossArea_D
+         EDotFA_Z(iFace, jFace, kFace)         = Enormal !^CFG IF BORISCORR
 
       end do; end do; end do
     end subroutine get_flux_z
@@ -950,6 +955,8 @@ contains
 
     subroutine get_magnetic_flux
 
+      use ModCoordTransform, ONLY: cross_product
+
       integer, parameter :: Rho_=1, Ux_=2, Uy_=3, Uz_=4
 
       ! Calculate magnetic flux for multi-ion equations
@@ -982,7 +989,7 @@ contains
       FullBy  = State_V(By_) + B0y
       FullBz  = State_V(Bz_) + B0z
 
-      FullBn  = FullBx*AreaX + FullBz*AreaZ + FullBz*AreaZ
+      FullBn  = FullBx*AreaX + FullBy*AreaY + FullBz*AreaZ
 
       Flux_V(Bx_) = HallUn*FullBx - HallUx*FullBn
       Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
@@ -1004,6 +1011,12 @@ contains
       end if                                     !^CFG END DISSFLUX
 
 !!! add gradient of electron pressure here !!!
+
+      ! Calculate bCrossArea_D to be used for J in the J x B source term
+      ! in calc_sources.f90.
+      ! The upwinded discretization of the current is J = sum(A x B) / V
+
+      bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
 
     end subroutine get_magnetic_flux
 
