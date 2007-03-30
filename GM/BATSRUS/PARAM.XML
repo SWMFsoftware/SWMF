@@ -3220,8 +3220,10 @@ select cells which use the non-conservative scheme if ALL of them are true:
  'r'        - radial distance of the cell is less than rConserv
  'parabola' - x less than xParabolaConserv - (y**2+z**2)/yParabolaConserv
 \end{verbatim}
-Default values are nConservCrit = 1 with TypeConservCrit = 'r'
-and rConserv=2*rBody, where rBody has a problem dependent default.
+For the GM component with a planet the default values are nConservCrit = 1 
+with TypeConservCrit = 'r' and rConserv=6. If there is no planet
+(PLANET="NONE") or for the SC and IH components, the default is to
+have no conservative criteria: nConservCrit = 0.
 </command>
 
 <command name="UPDATECHECK">
