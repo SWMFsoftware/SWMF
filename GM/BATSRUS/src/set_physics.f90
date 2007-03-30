@@ -120,6 +120,13 @@ subroutine set_physics_constants
   !write(*,*)'!!! XyzMax_D=',XyzMax_D
 
   !\
+  ! set the electric charge in normalized units for Hall and muli-ion MHD
+  ! use the fact that J/(n e) has the same units as velocity:
+  !/
+  ElectronCharge = cElectronCharge* &
+       Si2No_V(UnitJ_)/( Si2No_V(UnitU_)*Si2No_V(UnitN_) )
+
+  !\
   ! set the (corrected) speed of light and get normalization
   !/
   Clight      = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
@@ -292,7 +299,14 @@ subroutine set_units
   end select
 
   !\
-  ! set other normalizing SI variables from the independent ones
+  ! Set other normalizing SI variables from the independent ones.
+  !
+  ! For sake of convenience
+  !  units of B are chosen to satisfy v_A = B/sqrt(rho)       (mu = 1)
+  !  units of n are chosen to satisfy  n  = rho/(ionmass/amu) (mp = 1)
+  !  units of T are chosen to satisfy  T  = p/n               (kBoltzmann = 1)
+  !
+  ! Note that No2Si_V(UnitN_) is NOT EQUAL TO 1/No2Si_V(UnitX_)^3 !!!
   !/
   No2Si_V(UnitT_)          = No2Si_V(UnitX_)/No2Si_V(UnitU_)         ! s
   No2Si_V(UnitN_)          = No2Si_V(UnitRho_)/cProtonMass           ! #/m^3
@@ -302,10 +316,10 @@ subroutine set_units
   No2Si_V(UnitRhoU_)       = No2Si_V(UnitRho_)*No2Si_V(UnitU_)       ! kg/m^2/s
   No2Si_V(UnitEnergyDens_) = No2Si_V(UnitP_)                         ! J/m^3
   No2Si_V(UnitPoynting_)   = No2Si_V(UnitEnergyDens_)*No2Si_V(UnitU_)! J/m^2/s
-  No2Si_V(UnitJ_)          = No2Si_V(UnitB_)/(No2Si_V(UnitX_)*cMu)   ! A/m^2
+  No2Si_V(UnitJ_)          = No2Si_V(UnitB_)/( No2Si_V(UnitX_)*cMu ) ! A/m^2
   No2Si_V(UnitElectric_)   = No2Si_V(UnitU_)*No2Si_V(UnitB_)         ! V/m
-  No2Si_V(UnitTemperature_)= (No2Si_V(UnitP_)/No2Si_V(UnitRho_)) &
-       *(cProtonMass/cBoltzmann)                                     ! K 
+  No2Si_V(UnitTemperature_)= No2Si_V(UnitP_) &
+       /( No2Si_V(UnitN_)*cBoltzmann )                               ! K 
   No2Si_V(UnitDivB_)       = No2Si_V(UnitB_)/No2Si_V(UnitX_)         ! T/m
   No2Si_V(UnitAngle_)      = 1.0                                     ! radian
 
