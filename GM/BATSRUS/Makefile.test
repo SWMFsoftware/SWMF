@@ -5,6 +5,7 @@
 test: 
 	-@(make test_shocktube)
 	-@(make test_multifluid)
+	-@(make test_multiion)
 	-@(make test_corona)
 	-@(make test_titan)
 	-@(make test_mars)
