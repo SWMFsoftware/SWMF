@@ -6,13 +6,14 @@ module ModPhysics
   implicit none
   save
 
-  real :: g = cOne + cTwo/cThree,&
-       gm1 = cTwo/cThree,&
-       gm2 = -cOne/cThree,&
-       gp1 = cTwo + cTwo/cThree,&
-       inv_g = cThree/(cTwo + cThree),&
-       inv_gm1 = cThree/cTwo,&
-       g_half = cHalf + cOne/cThree       ! gamma and derived values
+  ! adiabatic index (gamma) and derived values
+  real, parameter:: Gamma0 = 5./3.               ! default value
+  real:: g_half = Gamma0/2.0
+  real:: g = Gamma0, inv_g = 1.0/Gamma0, inv_gm1 = 1.0/(Gamma0 - 1.0)
+  real:: gm1 = Gamma0 - 1.0, gm2 = Gamma0 - 2.0, gp1 = Gamma0 + 1.0
+
+  ! electron charge in normalized units
+  real:: ElectronCharge
 
   ! plasma parameters
   real:: AverageIonMass           = 1.0   ! only used if not UseMultiSpecies 
