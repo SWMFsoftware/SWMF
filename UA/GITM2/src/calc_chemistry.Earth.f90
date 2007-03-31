@@ -17,10 +17,11 @@ subroutine calc_chemistry(iBlock)
   real :: IonSources(nIons), NeutralSources(nSpeciesTotal)
   real :: IonLosses(nIons), NeutralLosses(nSpeciesTotal)
   real :: DtSub, DtOld, DtTotal, DtMin, DtAve, Source, Reaction, tr, tr3, rr
-  real :: te3, ti, tn, dtsubtmp, losstmp, dentmp
+  real :: te3, ti, tn, dtsubtmp, losstmp, dentmp, l, t
   real :: Ions(nIons), Neutrals(nSpeciesTotal)
+  real :: tli(nIons), tsi(nIons), tln(nSpeciesTotal), tsn(nSpeciesTotal)
 
-  integer :: iLon, iLat, iAlt, iIon, nIters, iDtReducer, iNeutral
+  integer :: iLon, iLat, iAlt, iIon, nIters, iNeutral
 
   real :: ChemicalHeatingSub
   real :: Emission(nEmissions), EmissionTotal(nEmissions)
@@ -36,11 +37,22 @@ subroutine calc_chemistry(iBlock)
   UseIonConstituent     = .true.
 
 !  UseIonConstituent(iO_4SP_) = .false.
-  UseIonConstituent(iO_2PP_) = .false.
-  
+!  UseIonConstituent(iO_2PP_) = .false.
+!  UseIonConstituent(iO_2DP_) = .false.
+!  
 !  UseNeutralConstituent(iN_4S_) = .false.
 !  UseNeutralConstituent(iN_2D_) = .false.
 !  UseNeutralConstituent(iO2_) = .false.
+!
+!  UseNeutralConstituent = .false.
+!  UseIonConstituent = .false.
+!  UseIonConstituent(1) = .true.
+!  UseIonConstituent(2) = .true.
+!  UseIonConstituent(3) = .true.
+!
+!  UseNeutralConstituent(1) = .true.
+!  UseNeutralConstituent(2) = .true.
+!  UseNeutralConstituent(3) = .true.
 
   DtMin = Dt
 
@@ -344,7 +356,7 @@ subroutine calc_chemistry(iBlock)
 
               NeutralSources(iO_) = NeutralSources(iO_) + Reaction
               IonSources(iO2P_)   = IonSources(iO2P_)   + Reaction
-              NeutralLosses(iO2_) = NeutralLosses(iO2_) + Reaction/1.0
+              NeutralLosses(iO2_) = NeutralLosses(iO2_) + Reaction
               IonLosses(iO_4SP_)  = IonLosses(iO_4SP_) + Reaction
 
               ChemicalHeatingSub = &
@@ -1229,63 +1241,78 @@ subroutine calc_chemistry(iBlock)
               IonSources(iNOP_)   = IonSources(iNOP_)   + Reaction
               NeutralLosses(iNO_) = NeutralLosses(iNO_) + Reaction
 
-              do iIon = 1, nIons-1
+              !---- Ions
 
-                 if (UseIonChemistry .and. &
-                      UseIonConstituent(iIon)) then
-
-                    if (IonLosses(iIon) > IonSources(iIon) .and. &
-                         IonSources(iIon)>0.0) then
-                       if (Ions(iIon) > 0.01) then
-                          dtOld = DtSub
-                          dtSub = &
-                               min(0.25 * &
-                               (IonSources(iIon) + &
-                               Ions(iIon))/ &
-                               (abs(IonLosses(iIon))+0.1), DtOld)
-                          if (DtSub < DtOld) iDtReducer = iIon
-                       else
-                          IonSources(iIon) = 0.0
-                          IonLosses(iIon) = 0.0
-                       endif
+              if (.not. UseIonChemistry) then
+                 IonSources = 0.0
+                 IonLosses = 0.0
+              else
+                 do iIon = 1, nIons-1
+                    if (.not.UseIonConstituent(iIon)) then
+                       IonSources(iIon) = 0.0
+                       IonLosses(iIon) = 0.0
                     endif
-                 else
-                    IonSources(iIon) = 0.0
-                    IonLosses(iIon) = 0.0
-                 endif
+                 enddo
+              endif
+
+              tli = DtSub * IonLosses
+              tsi = DtSub * IonSources + Ions
+
+              do iIon = 1, nIons-1
+                 do while (tsi(iIon)-tli(iIon) < 0.0 .and. DtSub > 1.0e-2)
+                    DtSub = DtSub/2.0
+                    tli = DtSub * IonLosses
+                    tsi = DtSub * IonSources + Ions
+                 enddo
+
+!                 if (tli(iIon) > tsi(iIon)) then
+!                    DtOld = max(-0.75*Ions(iIon)/(IonSources(iIon)-IonLosses(iIon)),1.0e-4)
+!                    if (DtOld < DtSub .and. DtOld > 1.0e-4) DtSub = DtOld
+!                 endif
               enddo
 
-              do iNeutral = 1, nSpeciesTotal
+!              do while (minval(tsi-tli) < 0.0 .and. DtSub > 1.0e-4)
+!                 DtSub = DtSub/10.0
+!                 tli = DtSub * IonLosses
+!                 tsi = DtSub * IonSources + Ions
+!              enddo
 
-                 if (UseNeutralChemistry .and. &
-                      UseNeutralConstituent(iNeutral)) then
 
-                    if (NeutralLosses(iNeutral) > &
-                         NeutralSources(iNeutral)) then
-                       if (Neutrals(iNeutral)>0.01) then
-                          dtOld = DtSub
-                          dtSub = &
-                               min(0.25 * &
-                               Neutrals(iNeutral)/ &
-                               (abs(NeutralSources(iNeutral) - &
-                               NeutralLosses(iNeutral))+0.1), DtOld)
-                          if (DtSub < DtOld) iDtReducer = nIons + iNeutral
-                       else
-                          NeutralSources(iNeutral) = 0.0
-                          NeutralLosses(iNeutral) = 0.0
-                       endif
+              !---- Neutrals
+
+              if (.not. UseNeutralChemistry) then
+                 NeutralSources = 0.0
+                 NeutralLosses = 0.0
+              else
+                 do iNeutral = 1, nSpeciesTotal-1
+                    if (.not.UseNeutralConstituent(iIon)) then
+                       NeutralSources(iNeutral) = 0.0
+                       NeutralLosses(iNeutral) = 0.0
                     endif
-                 else
-                    NeutralSources(iNeutral) = 0.0
-                    NeutralLosses(iNeutral) = 0.0
-                 endif
+                 enddo
+              endif
+
+              tln = DtSub * NeutralLosses
+              tsn = 0.25 * (DtSub * NeutralSources + Neutrals)
+              do while (minval(tsn-tln) < 0.0)
+                 DtSub = DtSub/10.0
+                 tln = DtSub * NeutralLosses
+                 tsn = 0.25 * (DtSub * NeutralSources + Neutrals)
               enddo
 
               Ions(nIons) = 0.0
               do iIon = 1, nIons-1
-                 Ions(iIon) = Ions(iIon) + &
-                      (IonSources(iIon) - IonLosses(iIon)) * DtSub
-                 Ions(iIon) = max(0.01,Ions(iIon))
+
+                 if (Ions(iIon) + &
+                      (IonSources(iIon) - IonLosses(iIon)) * DtSub < 0.0) then
+                    !!!!!! Solve Steady-State !!!!!!!
+                    Ions(iIon) = IonSources(iIon)*Ions(iIon)/IonLosses(iIon)
+                 else
+                    Ions(iIon) = Ions(iIon) + &
+                         (IonSources(iIon) - IonLosses(iIon)) * DtSub
+                 endif
+
+!                 Ions(iIon) = max(0.01,Ions(iIon))
                  
                  ! sum for e-
                  Ions(nIons) = Ions(nIons) + Ions(iIon)
@@ -1303,6 +1330,15 @@ subroutine calc_chemistry(iBlock)
                       Neutrals(iNeutral) + &
                       (NeutralSources(iNeutral) - NeutralLosses(iNeutral)) * &
                       DtSub
+
+                 if (Neutrals(iNeutral) < 0.0) then
+                    write(*,*) "Negative Neutral Density : ", &
+                         iNeutral, iLon, iLat, iAlt, DtSub, &
+                         Neutrals(iNeutral), &
+                         NeutralSources(iNeutral), NeutralLosses(iNeutral)
+                 endif
+
+
               enddo
 
               ChemicalHeatingRate(iLon,iLat,iAlt) = &
@@ -1317,20 +1353,19 @@ subroutine calc_chemistry(iBlock)
 
               if (DtSub < 1.0e-9 .and. abs(DtTotal-Dt) > DtSub) then
                  write(*,*) "Chemistry is too fast!!", DtSub
-                 if (iDtReducer < nIons) then
-                    write(*,*) "Ion Constituent : ", &
-                         iDtReducer, iLon, iLat, iAlt,&
-                         Ions(iDtReducer), &
-                         IonSources(iDtReducer), IonLosses(iDtReducer)
-                 else
-                    iDtReducer = iDtReducer - nIons
-                    write(*,*) "Neutral Constituent : ", &
-                         iDtReducer, iLon, iLat, iAlt,&
-                         Ions(iDtReducer), &
-                         IonSources(iDtReducer), IonLosses(iDtReducer)
-                 endif
 
-                 call stop_gitm("Ion Chemistry is too fast!!")
+                 ! Check Ions
+                 do iIon = 1, nIons
+                    write(*,*) "Ion Source/Loss : ", &
+                         iIon, IonSources(iIon), IonLosses(iIon)
+                 enddo
+                 do iNeutral = 1, nSpeciesTotal
+                    write(*,*) "Neutral Source/Loss : ", &
+                         iNeutral, NeutralSources(iNeutral), &
+                         NeutralLosses(iNeutral)
+                 enddo
+
+                 call stop_gitm("Chemistry is too fast!!")
               endif
 
               nIters = nIters + 1
