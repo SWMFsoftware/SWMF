@@ -108,7 +108,7 @@ test_run:
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
 
 test_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-2 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
 		srcData/log00000002.dat > test.diff)
 	ls -l test.diff
