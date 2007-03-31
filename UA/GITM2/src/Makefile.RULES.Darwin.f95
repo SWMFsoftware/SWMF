@@ -14,4 +14,4 @@ iri90.o: iri90.f
 	${COMPILE.f77} ${Cflag1} iri90.f 
 
 apex.o: apex.f
-	${COMPILE.f77} ${Cflag0} apex.f 
+	${COMPILE.f77} ${Cflag1} apex.f 
