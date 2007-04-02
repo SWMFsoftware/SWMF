@@ -3,6 +3,7 @@
 ### TESTS FOR THE STAND-ALONE BATSRUS ###
 
 test: 
+	@rm -f *.diff
 	-@(make test_shocktube)
 	-@(make test_multifluid)
 	-@(make test_multiion)
