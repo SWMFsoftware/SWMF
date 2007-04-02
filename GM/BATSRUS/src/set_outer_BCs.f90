@@ -24,7 +24,7 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
   use ModGeometry, ONLY : x_BLK, y_BLK, z_BLK, far_field_BCs_BLK, MaxBoundary
   use ModPhysics
   use ModUser, ONLY: user_set_outerBCs
-  use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iRhoUx, iRhoUy, iRhoUz
+  use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
   use ModEnergy, ONLY: calc_energy
   implicit none
 
@@ -136,22 +136,19 @@ subroutine set_outer_BCs(iBlock, time_now, DoSetEnergy)
         ! Normal vector components are mirror symmetric
         if(iside==east_.or.iside==west_)then
            do iFluid = 1, nFluid
-              call select_fluid
-              call BC_asymm(iRhoUx,iRhoUx)
+              call BC_asymm(iRhoUx_I(iFluid), iRhoUx_I(iFluid))
            end do
            call BC_asymm(Bx_,Bx_)
         endif
         if(iside==south_.or.iside==north_)then
            do iFluid = 1, nFluid
-              call select_fluid
-              call BC_asymm(iRhoUy,iRhoUy)
+              call BC_asymm(iRhoUy_I(iFluid), iRhoUy_I(iFluid))
            end do
            call BC_asymm(By_,By_)
         endif
         if(iside==bot_.or.iside==top_)then
            do iFluid = 1, nFluid
-              call select_fluid
-              call BC_asymm(iRhoUz,iRhoUz)
+              call BC_asymm(iRhoUz_I(iFluid), iRhoUz_I(iFluid))
            end do
            call BC_asymm(Bz_,Bz_)
         endif

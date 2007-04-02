@@ -5,7 +5,7 @@ module ModFaceFlux
   use ModMain,       ONLY: UseBorisSimple                 !^CFG IF SIMPLEBORIS
   use ModMain,       ONLY: UseBoris => boris_correction   !^CFG IF BORISCORR
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
-       nFluid, nIonFluid, iVarFluid_I, TypeFluid_I
+       nFluid, nIonFluid, TypeFluid_I
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
   use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
 
@@ -961,23 +961,20 @@ contains
 
       ! Calculate magnetic flux for multi-ion equations
 
-      integer :: iVarIon_I(nIonFluid)
       real :: NumDens_I(nIonFluid), InvNumDens
       real :: UxPlus, UyPlus, UzPlus
       real :: HallUx, HallUy, HallUz, HallUn
       real :: FullBx, FullBy, FullBz, FullBn
       !-----------------------------------------------------------------------
 
-      iVarIon_I = iVarFluid_I(1:nIonFluid)
-
       ! calculate number densities
-      NumDens_I  = State_V(iVarIon_I + Rho_) /  IonMass_I
+      NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
       InvNumDens = 1.0/sum(NumDens_I)
 
       ! calculate positive charge velocity
-      UxPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Ux_))
-      UyPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Uy_))
-      UzPlus = InvNumDens*sum(NumDens_I*State_V(iVarIon_I + Uz_))
+      UxPlus = InvNumDens*sum(NumDens_I*State_V(iUxIon_I))
+      UyPlus = InvNumDens*sum(NumDens_I*State_V(iUyIon_I))
+      UzPlus = InvNumDens*sum(NumDens_I*State_V(iUzIon_I))
 
       HallUx = UxPlus - HallJx*InvNumDens
       HallUy = UyPlus - HallJy*InvNumDens
@@ -1197,7 +1194,6 @@ contains
       use ModNumConst, ONLY: cPi
       use ModAdvance, ONLY: State_VGB
 
-      integer :: iVar
       real :: RhoU_D(3)
       real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn,FullB
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
@@ -1213,11 +1209,10 @@ contains
       p      = State_V(p_)
       RhoU_D = Rho*State_V(Ux_:Uz_)
       do iFluid = 2, nIonFluid
-         iVar = iVarFluid_I(iFluid)
-         Rho1= State_V(iVar + 1)
+         Rho1= State_V(iRhoIon_I(iFluid))
          Rho = Rho + Rho1
-         p   = p   + State_V(iVar + 5)
-         RhoU_D = RhoU_D + Rho1*State_V(iVar + 2: iVar +4)
+         p   = p   + State_V(iPIon_I(iFluid))
+         RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid): iUzIon_I(iFluid))
       end do
 
       InvRho = 1.0/Rho

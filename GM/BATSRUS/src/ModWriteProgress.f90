@@ -69,7 +69,7 @@ subroutine write_runtime_values()
   character (len=35) :: TextPlanetMod = ''
   character (len=15) :: PeriodOut=''
   character (len=100):: StringFormat
-  integer :: iError
+  integer :: iError, iFluid
   real :: minDX,maxDX    
   !------------------------------------------------------------------------
 
@@ -125,8 +125,10 @@ subroutine write_runtime_values()
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
-     call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-          'Body_N_dim:',Body_N_dim,', Body_T_dim:',Body_T_dim
+     do iFluid = 1, nFluid
+        call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
+             'BodyNDim:',BodyNDim_I(iFluid),', BodyTDim:',BodyTDim_I(iFluid)
+     end do
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'Bdp:         ',Bdp      ,', Tilt:      ',ThetaTilt
      if(UseRotatingBc)then

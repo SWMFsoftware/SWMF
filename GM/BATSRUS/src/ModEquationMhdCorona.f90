@@ -41,6 +41,13 @@ module ModVarIndexes
   ! This allows to calculate rhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 
+  ! These arrays are useful for multifluid
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_/)
+
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
   ! variables that can be positive or negative should be set to 0:

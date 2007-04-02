@@ -15,25 +15,26 @@ module ModMultiFluid
        iEnergy= nVar+1
   character (len=20) :: NameFluid = '', TypeFluid='ion'
 
+  integer, parameter :: iRhoIon_I(nIonFluid)   = iRho_I(1:nIonFluid)
+  integer, parameter :: iRhoUxIon_I(nIonFluid) = iRhoUx_I(1:nIonFluid)
+  integer, parameter :: iRhoUyIon_I(nIonFluid) = iRhoUy_I(1:nIonFluid)
+  integer, parameter :: iRhoUzIon_I(nIonFluid) = iRhoUz_I(1:nIonFluid)
+  integer, parameter :: iUxIon_I(nIonFluid)    = iRhoUxIon_I
+  integer, parameter :: iUyIon_I(nIonFluid)    = iRhoUyIon_I
+  integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUzIon_I
+  integer, parameter :: iPIon_I(nIonFluid)     = iP_I(1:nIonFluid)
+
 contains
 
   subroutine select_fluid
     integer :: i
 
-    if(iFluid == 1)then
-       iRho   = Rho_
-       iRhoUx = RhoUx_
-       iRhoUy = RhoUy_
-       iRhoUz = RhoUz_
-       iP     = P_
-    else
-       i = iVarFluid_I(iFluid)
-       iRho   = i + 1
-       iRhoUx = i + 2
-       iRhoUy = i + 3
-       iRhoUz = i + 4
-       iP     = i + 5
-    end if
+    iRho   = iRho_I(iFluid)
+    iRhoUx = iRhoUx_I(iFluid)
+    iRhoUy = iRhoUy_I(iFluid)
+    iRhoUz = iRhoUz_I(iFluid)
+    iP     = iP_I(iFluid)
+
     iEnergy= nVar + iFluid
 
     iUx    = iRhoUx

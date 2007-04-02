@@ -7,7 +7,7 @@ module ModVarIndexes
   save
 
   ! This equation module contains the MHD equations with species for Mars
-  character (len=*), parameter :: NameEquation='titan MHD'
+  character (len=*), parameter :: NameEquation='Titan MHD'
 
   ! The variables numbered from 1 to nVar are:
   !
@@ -45,6 +45,13 @@ module ModVarIndexes
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
+
+  ! These arrays are useful for multifluid
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

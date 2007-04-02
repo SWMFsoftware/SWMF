@@ -100,8 +100,7 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead
   real                        :: VersionUserModuleRead
-
-  integer :: iSession, iPlotFile, iVar
+  integer :: iSession, iPlotFile, iVar, iFluid
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -1563,7 +1562,9 @@ subroutine MH_set_parameters(TypeAction)
         inv_gm1 = cOne/gm1
         g_half  = cHalf*g
      case("#PLASMA")
-        call read_var('AverageIonMass          ', AverageIonMass)
+        do iFluid = 1, nFluid
+           call read_var('MassFluid', MassFluid_I(iFluid))
+        end do
         call read_var('AverageIonCharge        ', AverageIonCharge)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
      case("#MULTISPECIES")
@@ -1610,8 +1611,10 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rBody'     ,Rbody)
            if(NameThisComp=='GM') &
                 call read_var('rCurrents' ,Rcurrents)
-           call read_var('BodyNDim', Body_N_Dim)
-           call read_var('BodyTDim', Body_T_dim)
+           do iFluid = 1, nFluid
+              call read_var('BodyNDim', BodyNDim_I(iFluid))
+              call read_var('BodyTDim', BodyTDim_I(iFluid))
+           end do
         end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1972,8 +1975,11 @@ contains
        ! Boundary Conditions
        TypeBc_I(east_:top_)   ='float'
        TypeBc_I(body1_)='unknown'
-       Body_N_dim = 1.50E8     ! /cc
-       Body_T_dim = 2.85E06    ! K
+       BodyTDim_I    = 2.85E06    ! K
+       BodyNDim_I(1) = 1.50E8     ! /cc
+       do iFluid = 2, nFluid
+          BodyNDim_I(iFluid) = BodyNDim_I(1)*cTiny
+       end do
 
        ! Refinement criteria
        nRefineCrit    = 3
@@ -2002,8 +2008,11 @@ contains
        TypeBc_I(west_)        ='inflow'
        TypeBc_I(south_:top_)  ='fixed'
        TypeBc_I(body1_)='ionosphere'
-       Body_N_dim = 5.0              ! /cc
-       Body_T_dim = 25000.0          ! K
+       BodyTDim_I    = 25000.0          ! K
+       BodyNDim_I(1) = 5.0              ! /cc
+       do iFluid = 2, nFluid
+          BodyNDim_I(iFluid) = BodyNDim_I(1)*cTiny
+       end do
 
        ! Refinement Criteria
        nRefineCrit    = 3

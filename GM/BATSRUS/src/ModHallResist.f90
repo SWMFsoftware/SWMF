@@ -74,8 +74,8 @@ contains
     use ModSize,    ONLY: nI, nJ, nK, nDim
     use ModConst,   ONLY: cProtonMass, cElectronCharge, cMu
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitT_, UnitX_, UnitRho_, &
-         AverageIonMass, AverageIonCharge
-    use ModVarIndexes, ONLY: UseMultiSpecies, nIonFluid
+         AverageIonCharge
+    use ModVarIndexes, ONLY: UseMultiSpecies, nIonFluid, MassFluid_I
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -90,7 +90,7 @@ contains
 
     ! If not multispecies, multiply with average ion mass
     if(.not.UseMultiSpecies .and. nIonFluid == 1) &
-         IonMassPerCharge = IonMassPerCharge * AverageIonMass
+         IonMassPerCharge = IonMassPerCharge * MassFluid_I(1)
 
     if (DoTestMe) then
        write(*,*) ''
@@ -155,8 +155,8 @@ contains
 
     use ModAdvance, ONLY: State_VGB, Rho_
     use ModVarIndexes, ONLY: &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, &
-         nIonFluid, iVarFluid_I, IonMass_I
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
+    use ModMultiFluid, ONLY: iRhoIon_I, nIonFluid, MassFluid_I
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
@@ -176,9 +176,9 @@ contains
     elseif(nIonFluid > 1)then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-               sum(State_VGB(iVarFluid_I(1:nIonFluid) + Rho_,i,j,k,iBlock)) / &
-               sum(State_VGB(iVarFluid_I(1:nIonFluid) + Rho_,i,j,k,iBlock) &
-               /   IonMass_I)
+               sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
+               sum(State_VGB(iRhoIon_I, i, j, k,iBlock) &
+               /   MassFluid_I(1:nIonFluid) )
        end do; end do; end do
     end if
 

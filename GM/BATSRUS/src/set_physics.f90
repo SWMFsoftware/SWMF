@@ -12,9 +12,10 @@ subroutine set_physics_constants
   use ModIO,       ONLY: plot_range, plot_dx, plot_, nPlotFile
   use ModMain
   use ModPhysics
-  use CON_axes,   ONLY: get_axes
-  use CON_planet, ONLY: get_planet, NamePlanet
+  use CON_axes,    ONLY: get_axes
+  use CON_planet,  ONLY: get_planet, NamePlanet
   use ModVarIndexes
+  use ModMultiFluid
 
   implicit none
 
@@ -47,8 +48,8 @@ subroutine set_physics_constants
      rPlanetSi   = rSun
      MassBodySi  = mSun
      RotPeriodSi = RotationPeriodSun
-     SW_n_dim    = Body_N_dim  ! Needed for SOLARWIND normalization only
-     SW_T_dim    = Body_T_dim  ! Needed for SOLARWIND normalization only
+     SW_n_dim    = BodyNDim_I(1)  ! Needed for SOLARWIND normalization only
+     SW_T_dim    = BodyTDim_I(1)  ! Needed for SOLARWIND normalization only
   end select
  
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
@@ -163,7 +164,7 @@ subroutine set_physics_constants
   ! Normalize solar wind values. Note: the solarwind is in I/O units
   !/
   SW_n   = SW_n_dim*Io2No_V(UnitN_)
-  SW_rho = SW_n*No2Si_V(UnitN_)*AverageIonMass*cProtonMass*Si2No_V(UnitRho_)
+  SW_rho = SW_n*No2Si_V(UnitN_)*MassFluid_I(1)*cProtonMass*Si2No_V(UnitRho_)
   SW_p   = SW_rho * SW_T_dim*Io2No_V(UnitTemperature_)
   SW_Ux  = SW_Ux_dim*Io2No_V(UnitU_)
   SW_Uy  = SW_Uy_dim*Io2No_V(UnitU_)
@@ -176,9 +177,9 @@ subroutine set_physics_constants
   SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
   SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-  Body_rho = Body_N_dim*Io2Si_V(UnitN_)*AverageIonMass*cProtonMass &
+  BodyRho_I = BodyNDim_I*Io2Si_V(UnitN_)*MassFluid_I*cProtonMass &
        *Si2No_V(UnitRho_)
-  Body_p   = Body_rho * Body_T_dim*Io2No_V(UnitTemperature_)
+  BodyP_I   = BodyRho_I * BodyTDim_I*Io2No_V(UnitTemperature_)
 
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
@@ -192,10 +193,9 @@ subroutine set_physics_constants
   end do
 
   !For bodies:
+  FaceState_VI(iRho_I, Body1_) = BodyRho_I
+  FaceState_VI(iP_I,   Body1_) = BodyP_I
 
-  FaceState_VI(rho_,body1_)=Body_rho
-  FaceState_VI(P_,body1_)=Body_p
-  
   !The following part of the code is sensitive to a particular physical
   !model. It should be modified in adding/deleting the physical effects 
   !or features
@@ -205,23 +205,34 @@ subroutine set_physics_constants
 
   
   !For Outer Boundaries
-  do iBoundary=East_,Top_
-     FaceState_VI(rho_, iBoundary) = SW_rho
-     FaceState_VI(Ux_,  iBoundary) = SW_Ux
-     FaceState_VI(Uy_,  iBoundary) = SW_Uy
-     FaceState_VI(Uz_,  iBoundary) = SW_Uz
-     FaceState_VI(Bx_,  iBoundary) = SW_Bx
-     FaceState_VI(By_,  iBoundary) = SW_By
-     FaceState_VI(Bz_,  iBoundary) = SW_Bz
-     FaceState_VI(P_,   iBoundary) = SW_p
+  FaceState_VI(Rho_, East_:Top_) = SW_rho
+  FaceState_VI(Ux_,  East_:Top_) = SW_Ux
+  FaceState_VI(Uy_,  East_:Top_) = SW_Uy
+  FaceState_VI(Uz_,  East_:Top_) = SW_Uz
+  FaceState_VI(Bx_,  East_:Top_) = SW_Bx
+  FaceState_VI(By_,  East_:Top_) = SW_By
+  FaceState_VI(Bz_,  East_:Top_) = SW_Bz
+  FaceState_VI(P_,   East_:Top_) = SW_p
+
+  do iFluid = 2, nFluid
+     call select_fluid
+     FaceState_VI(iRho, East_:Top_) = SW_Rho*cTiny
+     FaceState_VI(iUx,  East_:Top_) = SW_Ux
+     FaceState_VI(iUy,  East_:Top_) = SW_Uy
+     FaceState_VI(iUz,  East_:Top_) = SW_Uz
+     FaceState_VI(iP,   East_:Top_) = SW_p*cTiny* &
+          MassFluid_I(1)/MassFluid_I(iFluid)
   end do
 
-  !Cell State is used for filling the ghostcells
-  CellState_VI=FaceState_VI
+  ! Cell State is used for filling the ghostcells
+  CellState_VI = FaceState_VI
 
-  do iBoundary=body2_,Top_  
-     CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
-          FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
+  ! Convert velocity to momentum for all fluids and boundaries
+  do iFluid = 1, nFluid
+     call select_fluid
+     CellState_VI(iRhoUx,:) = FaceState_VI(iUx,:)*FaceState_VI(iRho,:)
+     CellState_VI(iRhoUy,:) = FaceState_VI(iUy,:)*FaceState_VI(iRho,:)
+     CellState_VI(iRhoUz,:) = FaceState_VI(iUz,:)*FaceState_VI(iRho,:)
   end do
 
   !\
@@ -288,7 +299,7 @@ subroutine set_units
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi                             
      No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass)
-     No2Si_V(UnitRho_) = 1000000*cProtonMass*AverageIonMass*SW_n_dim
+     No2Si_V(UnitRho_) = 1000000*cProtonMass*MassFluid_I(1)*SW_n_dim
   case("NONE", "READ")
      ! Already set in MH_set_parameters
   case("USER")

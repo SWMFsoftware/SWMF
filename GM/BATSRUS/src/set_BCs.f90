@@ -412,10 +412,10 @@ contains
        elsewhere
           VarsGhostFace_V(1:nVar-1)=VarsTrueFace_V(1:nVar-1)
        end where
-       VarsGhostFace_V(P_)      = VarsTrueFace_V(P_) + &
-            sign(cOne,FaceState_V(P_) - VarsTrueFace_V(P_))*&
-            min(abs(FaceState_V(P_) - VarsTrueFace_V(P_)),&
-            PressureJumpLimit*VarsTrueFace_V(P_))
+       VarsGhostFace_V(iP_I)      = VarsTrueFace_V(iP_I) + &
+            sign(cOne,FaceState_V(iP_I) - VarsTrueFace_V(iP_I))*&
+            min(abs(FaceState_V(iP_I) - VarsTrueFace_V(iP_I)),&
+            PressureJumpLimit*VarsTrueFace_V(iP_I))
 
        VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
     case('coronatoih')    !Only for nVar=8
@@ -431,7 +431,7 @@ contains
        VarsGhostFace_V = FaceState_V
 
        ! Apply floating conditions on P and B
-       VarsGhostFace_V(P_)      = VarsTrueFace_V(P_)
+       VarsGhostFace_V(iP_I)    = VarsTrueFace_V(iP_I)
        VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
     case default
        call stop_mpi('Incorrect TypeBc_I='//TypeBcHere)

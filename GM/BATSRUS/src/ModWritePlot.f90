@@ -572,8 +572,8 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
   use ModGeometry
   use ModParallel, ONLY : BLKneighborCHILD
-  use ModPhysics, ONLY : Body_rho, Body_p, OmegaBody, CellState_VI, &
-       AverageIonMass, AverageIonCharge, ElectronTemperatureRatio
+  use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
+       AverageIonCharge, ElectronTemperatureRatio
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK       !^CFG IF CONSTRAINB
   use ModRayTrace, ONLY : ray,rayface                      !^CFG  IF RAYTRACE
   use ModUtilities, ONLY: lower_case
@@ -634,7 +634,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
         ! BASIC MHD variables
      case('rho')
         PlotVar(:,:,:,iVar)=State_VGB(iRho,:,:,:,iBLK)
-        plotvar_inBody(iVar) = Body_rho
+        plotvar_inBody(iVar) = BodyRho_I(iFluid)
      case('rhoux','mx')
         if (UseRotatingFrame) then
            PlotVar(:,:,:,iVar)=State_VGB(iRhoUx,:,:,:,iBLK) &
@@ -687,7 +687,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
              -State_VGB(Bz_,:,:,:,iBLK)**2)
      case('p','pth')
         PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBLK)
-        plotvar_inBody(iVar) = Body_p
+        plotvar_inBody(iVar) = BodyP_I(iFluid)
 
         ! EXTRA MHD variables
 
@@ -699,7 +699,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
            end do
         else
-           PlotVar(:,:,:,iVar) = State_VGB(IRho,:,:,:,iBLK)/AverageIonMass
+           PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBLK)/MassFluid_I(iFluid)
         end if
 
         ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)

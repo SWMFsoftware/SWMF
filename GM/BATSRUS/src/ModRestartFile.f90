@@ -204,7 +204,7 @@ contains
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
     use ModMain,       ONLY: UseBody2                     !^CFG IF SECONDBODY
-    use ModVarIndexes, ONLY: NameEquation, nVar
+    use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, &             !^CFG IF COVARIANT
          TypeGeometry, UseCovariant, UseVertexBasedGrid      !^CFG IF COVARIANT
@@ -215,6 +215,7 @@ contains
 
     implicit none
 
+    integer :: iFluid
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
@@ -332,8 +333,10 @@ contains
        write(unit_tmp,'(1pe13.5,a27)') Rbody, 'rBody'
        if(NameThisComp=='GM') &
             write(unit_tmp,'(1pe13.5,a27)') Rcurrents, 'rCurrents'
-       write(unit_tmp,'(1pe13.5,a27)') Body_N_dim, 'BodyNDim'
-       write(unit_tmp,'(1pe13.5,a27)') Body_T_dim, 'BodyTDim'
+       do iFluid = 1, nFluid
+          write(unit_tmp,'(1pe13.5,a27)') BodyNDim_I(iFluid), 'BodyNDim'
+          write(unit_tmp,'(1pe13.5,a27)') BodyTDim_I(iFluid), 'BodyTDim'
+       end do
        write(unit_tmp,*)
     end if
     !^CFG IF SECONDBODY BEGIN

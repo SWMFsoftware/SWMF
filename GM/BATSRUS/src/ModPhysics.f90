@@ -2,7 +2,7 @@
 module ModPhysics
   use ModConst
   use ModMain, ONLY:body2_,Top_
-  use ModVarIndexes,ONLY:nVar
+  use ModVarIndexes, ONLY: nVar, nFluid
   implicit none
   save
 
@@ -16,7 +16,6 @@ module ModPhysics
   real:: ElectronCharge
 
   ! plasma parameters
-  real:: AverageIonMass           = 1.0   ! only used if not UseMultiSpecies 
   real:: AverageIonCharge         = 1.0
   real:: ElectronTemperatureRatio = 0.0
 
@@ -85,9 +84,10 @@ module ModPhysics
   !/
   character (len=2) :: NamePlanetRadius = 'R ' !can be 'km' if there is no body
   real :: rPlanetSi, rBody, rCurrents
-  real :: Body_N_dim, Body_T_dim, Body_rho, Body_p  
   real :: gBody
   real :: RotPeriodSi, OmegaBody 
+
+  real, dimension(nFluid) :: BodyNDim_I, BodyTDim_I, BodyRho_I, BodyP_I  
 
   !^CFG IF SECONDBODY BEGIN
   !\

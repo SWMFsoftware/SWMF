@@ -11,12 +11,11 @@ module ModVarIndexes
   integer,           parameter :: nFluid = 1
   integer,           parameter :: nIonFluid = 1
   character (len=1), parameter :: NameFluid_I(nFluid) = (/' '/)
-  integer,           parameter :: iVarFluid_I(nFluid) = (/ 0 /)
 
   ! These are non-standard, so that we solve the non-conservative equations.
   logical,           parameter :: UseMultiIon = .true.             ! not false
   character (len=4), parameter :: TypeFluid_I(nFluid) = (/'ions'/) ! not 'ion'
-  real,              parameter :: IonMass_I(nIonFluid) = 1.0       ! not zero
+  real                         :: MassFluid_I(nFluid) = 1.0        ! proton
 
   ! The variables numbered from 1 to nVar are:
   !
@@ -47,6 +46,13 @@ module ModVarIndexes
 
   ! This allows to calculate RhoUx_ as rhoU_+x_ and so on.
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
+
+  ! These arrays are useful for multifluid
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

@@ -22,7 +22,7 @@ module ModVarIndexes
   integer, parameter :: nFluid    = 2
   integer, parameter :: nIonFluid = 1
   logical, parameter :: UseMultiIon = .false.
-  real,    parameter :: IonMass_I(nIonFluid) = 0.0
+  real               :: MassFluid_I(nFluid) = (/ 1.0, 1.0 /)
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Ion'    , 'Neu' /)
   character (len=7), parameter :: &
@@ -52,8 +52,12 @@ module ModVarIndexes
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
-  ! Starting points for the multiple fluid indexes
-  integer, parameter :: iVarFluid_I(nFluid)  = (/ 0, NeuRho_ - 1 /)
+  ! These arrays are useful for multifluid
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   NeuRho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, NeuRhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, NeuRhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, NeuRhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_,     NeuP_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

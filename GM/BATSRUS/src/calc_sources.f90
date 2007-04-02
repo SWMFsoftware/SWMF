@@ -45,7 +45,6 @@ subroutine calc_sources
   real    :: InvCharge, InvNumDens,  State_V(nVar)
   real, dimension(3) :: FullB_D, uIon_D, u_D, uPlus_D, uPlusHallU_D, Force_D
   real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
-  integer :: iVar, iVarIon_I(nIonFluid)
   !---------------------------------------------------------------------------
   if(iProc==PROCtest .and. globalBLK==BLKtest)then
      call set_oktest('calc_sources', DoTest, DoTestMe)
@@ -216,8 +215,6 @@ subroutine calc_sources
 
      InvCharge = 1.0/ElectronCharge
 
-     iVarIon_I = iVarFluid_I(1:nIonFluid)
-
      do k=1,nK; do j=1,nJ; do i=1,nI
         ! Extract conservative variables
         State_V = State_VGB(:,i,j,k,globalBLK)
@@ -229,13 +226,13 @@ subroutine calc_sources
              B0zCell_BLK(i,j,k,globalBLK) /)
 
         ! calculate number densities
-        NumDens_I  = State_V(iVarIon_I + Rho_) / IonMass_I
+        NumDens_I  = State_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
         InvNumDens = 1.0/sum(NumDens_I)
 
-        InvRho_I = 1.0/State_V(iVarIon_I   + Rho_)
-        Ux_I  = InvRho_I*State_V(iVarIon_I + RhoUx_)
-        Uy_I  = InvRho_I*State_V(iVarIon_I + RhoUy_)
-        Uz_I  = InvRho_I*State_V(iVarIon_I + RhoUz_)
+        InvRho_I = 1.0/State_V(iRhoIon_I)
+        Ux_I  = InvRho_I*State_V(iUxIon_I)
+        Uy_I  = InvRho_I*State_V(iUyIon_I)
+        Uz_I  = InvRho_I*State_V(iUzIon_I)
 
         ! calculate the average positive charge velocity
         uPlus_D(x_) = InvNumDens* sum(NumDens_I*Ux_I)
@@ -254,15 +251,14 @@ subroutine calc_sources
 
         ! Calculate the source term for all the ion fluids
         do iFluid = 1, nIonFluid
-           iVar = iVarFluid_I(iFluid)
            uIon_D = (/ Ux_I(iFLuid),  Uy_I(iFluid), Uz_I(iFluid) /)
            u_D    = uIon_D - uPlusHallU_D
 
            Force_D = &
                 ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
 
-           Source_VC(iVar+RhoUx_:iVar+RhoUz_,i,j,k) = &
-                Source_VC(iVar+RhoUx_:iVar+RhoUz_,i,j,k) + Force_D
+           Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) = &
+                Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) + Force_D
 
            Source_VC(Energy_-1+iFluid,i,j,k) = &
                 Source_VC(Energy_-1+iFluid,i,j,k) + sum(Force_D*uIon_D)
