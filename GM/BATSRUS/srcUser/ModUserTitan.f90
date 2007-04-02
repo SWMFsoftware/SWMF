@@ -5,7 +5,7 @@ module ModUser
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_,&
-       rhoLp_,rhoMp_,MassSpecies_V,SpeciesFirst_,SpeciesLast_  
+       rhoLp_,rhoMp_,MassSpecies_V,SpeciesFirst_,SpeciesLast_, MassFluid_I
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -186,7 +186,7 @@ contains
   subroutine user_read_inputs
     use ModProcMH,    ONLY: iProc
     use ModReadParam
-    use ModPhysics, ONLY: SW_N_DIM, SW_T_DIM, AverageIonMass
+    use ModPhysics, ONLY: SW_N_DIM, SW_T_DIM
 
     character (len=100) :: NameCommand
     !    character (len=100) :: line
@@ -217,14 +217,14 @@ contains
           Plas_rho =  SW_LP + SW_MP 
           SW_LP= SW_LP/Plas_rho 
           SW_MP= SW_MP/Plas_rho 
-          AverageIonMass = Plas_rho/(SW_LP_dim+SW_MP_dim)
-          plas_T = plas_T_ev/AverageIonMass*1.1610e4          
+          MassFluid_I(1) = Plas_rho/(SW_LP_dim+SW_MP_dim)
+          plas_T = plas_T_ev/MassFluid_I(1)*1.1610e4          
           if(iproc==0)then
-             write(*,*)'AverageIonMass=',AverageIonMass           
+             write(*,*)'MassFluid_I(1)=',MassFluid_I(1)           
              write(*,*)'plas_T=',plas_T
           end if
           !          if(UseMultiSpecies)then
-          SW_n_dim = Plas_rho/AverageIonMass
+          SW_n_dim = Plas_rho/MassFluid_I(1)
           SW_T_dim = plas_T      
           !          end if
           !write(*,*)'SW_n_dim=',SW_n_dim,SW_T_dim
@@ -811,12 +811,12 @@ contains
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 725.0e3/RTitan
-    Body_rho= sum(BodyRhoSpecies_I(1:nSpecies))
-    Body_p=max(sw_p,SW_p*sum(BodyRhoSpecies_I(1:nSpecies)&
+    BodyRho_I(1) = sum(BodyRhoSpecies_I(1:nSpecies))
+    BodyP_I(1) =max(sw_p,SW_p*sum(BodyRhoSpecies_I(1:nSpecies)&
          /MassSpecies_V(SpeciesFirst_:SpeciesLast_))*Body_Ti_dim/SW_T_dim)
-    FaceState_VI(rho_,body1_)=Body_rho
+    FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(ScalarFirst_:ScalarLast_,body1_) = BodyRhoSpecies_I
-    FaceState_VI(P_,body1_)=Body_p
+    FaceState_VI(P_,body1_)=BodyP_I(1)
     CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
     do iBoundary=body1_,Top_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
@@ -825,9 +825,9 @@ contains
     !    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
     !    write(*,*)'CellState_VI, top_=',CellState_VI(:,Top_)
     !    write(*,*)'CellState_VI, east_=',CellState_VI(:,East_)    
-    UnitUser_V(ScalarFirst_:ScalarLast_)   = No2Io_V(UnitRho_)/MassSpecies_V
-  end subroutine user_init_session
+    UnitUser_V(ScalarFirst_:ScalarLast_) = No2Io_V(UnitRho_)/MassSpecies_V
 
+  end subroutine user_init_session
 
   !========================================================================
   !  SUBROUTINE USER_SET_ICs

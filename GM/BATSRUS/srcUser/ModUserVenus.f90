@@ -518,13 +518,13 @@ contains
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Rvenus
-    Body_rho= sum(BodyRhoSpecies_I(1:MaxSpecies))
-    Body_p=SW_p*sum(BodyRhoSpecies_I(1:MaxSpecies)&
+    BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
+    BodyP_I(1)   = SW_p*sum(BodyRhoSpecies_I(1:MaxSpecies)&
          /MassSpecies_I(1:MaxSpecies))*Ti_body_dim/SW_T_dim
 
-    FaceState_VI(rho_,body1_)=Body_rho
+    FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
-    FaceState_VI(P_,body1_)=Body_p
+    FaceState_VI(P_,body1_)=BodyP_I(1)
     CellState_VI(:,body1_:Top_)=FaceState_VI(:,body1_:Top_)
     do iBoundary=body1_,Top_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &

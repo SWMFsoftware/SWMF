@@ -24,7 +24,7 @@ contains
   subroutine user_init_session
 
   use ModVarIndexes
-  use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, Body_rho
+  use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
   use ModNumConst, ONLY: cTiny
   use ModSize, ONLY: east_, west_, south_, north_, bot_, top_
   use ModMain, ONLY: body1_
@@ -35,18 +35,18 @@ contains
     !\
     ! We are using this routine to initialize the arrays that control the
     ! default value for the inner body and hence the boundary condition.
-    ! Note these values are typically set in set_physics and they are set the 
-    ! to Body_Rho value which is read from the PARAM.in file.  We want to use 
+    ! Note these values are typically set in set_physics and they are set to
+    ! the BodyRho_I value read from the PARAM.in file.  We want to use 
     ! this same strategy for multi-species but have to do it here to avoid 
     ! modifying the core source code.
     !/
-    
+  
     ! FaceState_VI is used to set the inner boundary condition.  Setting
     ! the correct values here for the extra species will assure that 
     ! the inner boundary is done correctly.
-    FaceState_VI(rhosw_,body1_) =cTiny*Body_rho
-    FaceState_VI(rhoion_,body1_)=Body_rho
-  
+    FaceState_VI(rhosw_,body1_) =cTiny*BodyRho_I(1)
+    FaceState_VI(rhoion_,body1_)=BodyRho_I(1)
+
     ! We set the following array for the outer boundaries.  Although
     ! only CellState_VI is used we set both.  Not that these are 
     ! used for only some outerboundary cases (fixed, for example) and
@@ -65,7 +65,7 @@ contains
     use ModMain,     ONLY: globalBLK
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
-    use ModPhysics,  ONLY: Body_Rho, sw_rho, rBody
+    use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
     use ModNumConst, ONLY: cTiny
     implicit none
 
@@ -74,10 +74,10 @@ contains
     iBlock = globalBLK
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
-       State_VGB(rhoion_,:,:,:,iBlock) = Body_Rho
+       State_VGB(rhoion_,:,:,:,iBlock) = BodyRho_I(1)
        State_VGB(rhosw_,:,:,:,iBlock)  = cTiny*sw_rho
     elsewhere
-       State_VGB(rhoion_,:,:,:,iBlock) = cTiny*Body_Rho
+       State_VGB(rhoion_,:,:,:,iBlock) = cTiny*BodyRho_I(1)
        State_VGB(rhosw_,:,:,:,iBlock)  = sw_rho
     end where
 
