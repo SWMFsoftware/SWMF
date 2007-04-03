@@ -162,8 +162,10 @@ subroutine update_check(iStage)
 
            if (num_checks == 1) then
               do k=1,nK; do j=1,nJ; do i=1,nI
-                 do iVar = 1, nVar-1
+                 do iVar = 1, nVar
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
+
+                    if(iVar == P_) CYCLE
 
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
@@ -247,8 +249,10 @@ subroutine update_check(iStage)
               percent_chg_rho = 0.1
               percent_chg_p   = 0.1
               if (num_checks == 1) then
-                 do iVar = 1, nVar-1
+                 do iVar = 1, nVar
                     if (DefaultState_V(iVar) <= cTiny) CYCLE
+
+                    if(iVar == P_) CYCLE
 
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
@@ -398,7 +402,7 @@ subroutine update_check(iStage)
   do iBlock = 1, nBlockMax
      if (unusedBLK(iBlock)) CYCLE
      minRho=1.00
-     do iVar = 1,nVar-1
+     do iVar = 1,nVar
 
         ! Do not check species densities if check threshold is positive
         ! (i.e. minor species densities are allowed to go negative,
