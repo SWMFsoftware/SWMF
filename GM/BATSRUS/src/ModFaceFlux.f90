@@ -1236,11 +1236,11 @@ contains
       else                                               !^CFG END AWFLUX
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if                                             !^CFG IF AWFLUX
-      if(UseCurlB0)then
-         B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
-         B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
-         Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
-      end if
+      !if(UseCurlB0)then
+      !   B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
+      !   B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
+      !   Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
+      !end if
 
       FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
       Alfven2Normal = InvRho*FullBn**2/Area2

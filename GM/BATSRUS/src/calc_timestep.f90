@@ -2,13 +2,15 @@
 subroutine calc_timestep
   use ModProcMH
   use ModMain
-  use ModAdvance, ONLY : VdtFace_x,VdtFace_y,VdtFace_z,time_BLK
+  use ModAdvance, ONLY : VdtFace_x,VdtFace_y,VdtFace_z,time_BLK,&
+                         CurlB0_DCB,State_VGB,Rho_
   use ModNumConst
   use ModGeometry, ONLY : true_cell,true_BLK, vInv_CB
   implicit none
 
   logical :: DoTest, DoTestMe
   integer :: i, j, k, iBlock
+  real:: SourceSpectralRadius_C(1:nI,1:nJ,1:nK)=cZero
   !--------------------------------------------------------------------------
   iBlock = GlobalBlk
 
@@ -22,12 +24,21 @@ subroutine calc_timestep
   ! Compute the allowable local time step 
   ! for each cell based on local face values
   !/
-
+  if(UseCurlB0)then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        SourceSpectralRadius_C(i,j,k)=sqrt(&
+                                     sum(CurlB0_DCB(:,i,j,k,iBlock)**2)/&
+                                     State_VGB(Rho_,i,j,k,iBlock))
+     end do;end do;end do
+  else
+     SourceSpectralRadius_C=cZero
+  end if
   do k=1,nK; do j=1,nJ; do i=1,nI
      time_BLK(i,j,k,iBlock) = cOne /(vInv_CB(i,j,k,iBlock)&
           *(max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))+ &
           max(VdtFace_y(i,j,k),VdtFace_y(i,j+1,k))+ &
-          max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1))))
+          max(VdtFace_z(i,j,k),VdtFace_z(i,j,k+1)))+&
+          SourceSpectralRadius_C(i,j,k))
   end do; end do; end do
 
   if(DoTestMe)then
