@@ -155,10 +155,8 @@ subroutine init_iri
               ! IRI temperatures from 120-3000 km (-1 is missing)
 
               if (outf(4,1) < 0.) then
-                 eTemperature(iLon,iLat,iAlt,iBlock) =  &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
-                 ITemperature(iLon,iLat,iAlt,iBlock) =  &
-                      Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
+                 eTemperature(iLon,iLat,iAlt,iBlock) =  200.0
+                 ITemperature(iLon,iLat,iAlt,iBlock) =  200.0
               else
                  eTemperature(iLon,iLat,iAlt,iBlock) = outf(4,1)
                  ITemperature(iLon,iLat,iAlt,iBlock) = outf(3,1)
