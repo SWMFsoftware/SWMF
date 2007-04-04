@@ -127,7 +127,8 @@ subroutine write_runtime_values()
           'rBody:       ', rBody,      ', rPlanet:   ',rPlanetSi
      do iFluid = 1, nFluid
         call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-             'BodyNDim:',BodyNDim_I(iFluid),', BodyTDim:',BodyTDim_I(iFluid)
+             'BodyNDim:    ',BodyNDim_I(iFluid), &
+             ', BodyTDim:  ',BodyTDim_I(iFluid)
      end do
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
           'Bdp:         ',Bdp      ,', Tilt:      ',ThetaTilt
