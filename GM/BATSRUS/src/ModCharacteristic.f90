@@ -391,13 +391,13 @@ contains
 
     BnL=BnL+B0n;BL_D=BL_D+B0_D
     call get_characteristic_speeds(aL,RhoInvL,RhoSqrtL,&
-         BnL,BL_D,CsL,CaL,CfL)
-    CaL=CaL*sign(cOne,BnL)*SignBnH
+         BnH,BL_D,CsL,CaL,CfL)
+    !CaL=CaL*sign(cOne,BnL)*SignBnH
     call set_eigenvalues(EigenvalueL_V,CsL,CaL,CfL)
     BnR=BnR+B0n;BR_D=BR_D+B0_D
     call get_characteristic_speeds(aR,RhoInvR,RhoSqrtR,&
-                                   BnR,BR_D,CsR,CaR,CfR)
-    CaR=CaR*sign(cOne,BnR)*SignBnH
+                                   BnH,BR_D,CsR,CaR,CfR)
+    !CaR=CaR*sign(cOne,BnR)*SignBnH
     call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
   contains
@@ -457,9 +457,9 @@ contains
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
        Eps_V(iWave)=max(EigenvalueR_V(iWave)-Lambda,&
-                             Lambda -EigenvalueL_V(iWave),cTolerance2)!,Eps_V(iWave))
-       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))+&
-                          cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
+                             Lambda -EigenvalueL_V(iWave),Eps_V(iWave))
+       EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))!+&
+                          !cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
     end do
  
     cMax=max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
