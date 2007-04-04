@@ -4,11 +4,11 @@ EARTH
 #BEGIN_COMP GM
 
 #MAGNETOSPHERE
-T                       body1
-2.5                     Rbody
-3.5                     Rcurrents
-10.0			Magneto_rho_dim
-25000.0			Magneto_T_dim
+T                       UseBody
+2.5                     rBody
+3.5                     rCurrents
+10.0			BodyNDim
+25000.0			BodyTDim
 
 #END_COMP GM
 
