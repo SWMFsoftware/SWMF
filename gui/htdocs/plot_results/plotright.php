@@ -46,7 +46,7 @@
          }
          //echo "$number\n";
          echo "<table><td width=35 align=left>$number</td>";
-         echo "<td width=35 align=left><a href=\"movie.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=${number}&wait=1\" TARGET=\"_movie\">movie</a></td>";
+         echo "<td width=35 align=left><a href=\"movie.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=${number}&wait=1\" TARGET=\"_movie_$runname\">movie</a></td>";
          echo "  <td width=50 align=right><a href=\"delete.php?runname=$runname&cmp=$cmp&plottype=$plottype&plotstyle=$number&plotfile=$plotfile\">delete</a></td></table>\n";
          $file = "../images/noplot.png";
          $dir = opendir("$runpath/images/${cmp}_$plottype");
