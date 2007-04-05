@@ -20,11 +20,7 @@ subroutine calc_timestep
      DoTest=.false.; DoTestMe=.false.
   endif
 
-  !\
-  ! Compute the allowable local time step 
-  ! for each cell based on local face values
-  !/
-  if(UseCurlB0)then
+  if(UseCurlB0.and.TypeFlux=='Roe')then
      do k=1,nK; do j=1,nJ; do i=1,nI
         SourceSpectralRadius_C(i,j,k)=sqrt(&
                                      sum(CurlB0_DCB(:,i,j,k,iBlock)**2)/&

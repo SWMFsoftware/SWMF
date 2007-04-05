@@ -51,6 +51,7 @@ module ModFaceFlux
   real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
   real :: DissipationFlux_V(nFlux)
   real :: B0x, B0y, B0z
+  real :: DiffBb  !     (1/4)(BnL-BnR)^2
   real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: CmaxDt, UnLeft, UnRight
   real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
@@ -426,8 +427,9 @@ contains
   subroutine get_numerical_flux(iDir, Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_
-    use ModAdvance, ONLY: DoReplaceDensity
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_,Ux_,Uy_,Uz_,&
+         RhoUx_,RhoUy_,RhoUz_
+    use ModAdvance, ONLY: DoReplaceDensity,State_VGB
     use ModCharacteristicMhd,ONLY:dissipation_matrix
 
     integer, intent(in) :: iDir
@@ -436,8 +438,11 @@ contains
     real :: State_V(nVar)
 
     real :: Cmax
-    real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffBb, DiffE
+    real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
+    integer:: iDir_D(3),iR,jR,kR,iL,jL,kL
+    real :: UL_D(3),UR_D(3),cDivBWave
+    logical:: IsBoundary
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -445,10 +450,29 @@ contains
        StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
-    if(DoRoeNew)call dissipation_matrix(iDir,&
-         StateLeft_V,StateRight_V,B0x,B0y,B0z,DissipationFlux_V,cMax,UNormal_I(1),&
-         is_boundary_face(),.false.)
-
+    if(DoRoeNew)then
+       IsBoundary=is_boundary_face()
+       if(IsBoundary)then
+          UL_D=StateLeft_V(Ux_:Uz_); UR_D=StateRight_V(Ux_:Uz_)
+       else
+          !Since the divB source term is calculated using the
+          !cell centered velocity, the numerical diffusion
+          !for the normal magnetic field should be evaluated
+          !in terms of the cell centered velocity too
+          iDir_D=0;iDir_D(iDir)=1
+          iR=iFace;jR=jFace;kR=kFace
+          iL=iFace-iDir_D(1);jL=jFace-iDir_D(2);kL=kFace-iDIr_D(3)
+          UL_D=State_VGB(rhoUx_:rhoUz_,iL,jL,kL,iBlockFace)/&
+               State_VGB(rho_,iL,jL,kL,iBlockFace)
+          UR_D=State_VGB(rhoUx_:rhoUz_,iR,jR,kR,iBlockFace)/&
+               State_VGB(rho_,iR,jR,kR,iBlockFace)
+       end if
+       call dissipation_matrix(iDir,&
+         StateLeft_V,StateRight_V,B0x,B0y,B0z,&
+         UL_D,UR_D,&
+         DissipationFlux_V,cMax,UNormal_I(1),&
+         IsBoundary,.false.)
+    end if
     if(UseRS7 &
          .or. DoHll &               !^CFG IF LINDEFLUX
          .or. DoAw  &               !^CFG IF AWFLUX
@@ -520,6 +544,17 @@ contains
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
     if(DoRoe) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
     if(DoRoeNew)call roe_solver_new          !^CFG IF ROEFLUX
+
+    if(UseRS7.and.(.not.DoRoeNew))then
+       cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
+            abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
+       Flux_V(Bx_) = Flux_V(Bx_) - cDivBWave*DiffBx
+       Flux_V(By_) = Flux_V(By_) - cDivBWave*DiffBy
+       Flux_V(Bz_) = Flux_V(Bz_) - cDivBWave*DiffBz
+
+       ! Fix the energy diffusion
+       Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
+    end if
 
     ! Increase maximum speed with resistive diffusion speed if necessary
     if(Eta > 0.0) CmaxDt = CmaxDt + 2*Eta*InvDxyz*Area !^CFG IF DISSFLUX
@@ -600,14 +635,15 @@ contains
       Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
+      if(.not.UseRS7)then
+         ! Linde's idea: use Lax-Friedrichs flux for Bn
+         Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
+         Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
+         Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
 
-      ! Linde's idea: use Lax-Friedrichs flux for Bn
-      Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
-      Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
-      Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
-
-      ! Fix the energy diffusion
-      Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
+         ! Fix the energy diffusion
+         Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
+      end if
 
       ! Average the normal speed
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
@@ -638,16 +674,16 @@ contains
       Flux_V = &
            (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
            - Diffusion*(StateRightCons_V - StateLeftCons_V))
-
-      ! Linde's idea: use Lax-Friedrichs flux for Bn
-      Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
-      Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
-      Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
-
-      ! Sokolov's algorithm !!!
-      ! Fix the energy diffusion
-      Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
-
+      if(.not.UseRS7)then
+         ! Linde's idea: use Lax-Friedrichs flux for Bn
+         Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
+         Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
+         Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
+         
+         ! Sokolov's algorithm !!!
+         ! Fix the energy diffusion
+         Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
+      end if
       ! Weighted average of the normal speed and electric field
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft !^CFG IF BORISCORR
@@ -1216,7 +1252,11 @@ contains
       end do
 
       InvRho = 1.0/Rho
-      Sound2 = g*p*InvRho
+      if(UseRS7)then
+         Sound2 = (g*p+(g-1)*DiffBb)*InvRho
+      else
+         Sound2 = g*p*InvRho
+      end if
       Un     = InvRho*sum( RhoU_D*(/ AreaX, AreaY, AreaZ /) )
 
       FullBx = State_V(Bx_) + B0x
@@ -1236,11 +1276,11 @@ contains
       else                                               !^CFG END AWFLUX
          Alfven2= (FullBx**2 + FullBy**2 + FullBz**2)*InvRho
       end if                                             !^CFG IF AWFLUX
-      !if(UseCurlB0)then
-      !   B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
-      !   B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
-      !   Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
-      !end if
+      if(UseCurlB0)then
+         B1B0L = StateLeft_V(Bx_)*B0x + StateLeft_V(By_)*B0y + StateLeft_V(Bz_)*B0z
+         B1B0R = StateRight_V(Bx_)*B0x + StateRight_V(By_)*B0y + StateRight_V(Bz_)*B0z
+         Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
+      end if
 
       FullBn = AreaX*FullBx + AreaY*FullBy + AreaZ*FullBz
       Alfven2Normal = InvRho*FullBn**2/Area2
