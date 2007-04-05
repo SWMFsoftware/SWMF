@@ -37,14 +37,18 @@
     $plotfilelist = GetXYZPlotList("$runpath/$cmp", "$choice");
   }
 
+  $newfiles = "0";
   $countfiles = count($plotfilelist);
   if($countfiles > 0) {
     foreach ($plotfilelist as $plotfile) {
       include("makeplot.php");
+      if (!($fileexists)) { $newfiles = "1"; }
     }
   }
-  Exec("cd $runpath/images/${cmp}_${plottype};
-        convert *-${number}.png animation-${number}.gif");
+  if ($newfiles || !(is_file("$runpath/images/${cmp}_${plottype}/animation-${number}.gif"))) {
+    Exec("cd $runpath/images/${cmp}_${plottype};
+          convert *-${number}.png animation-${number}.gif");
+  }
 
   $time2 = time();
   $timedif = $time2-$time1;
