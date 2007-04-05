@@ -3289,14 +3289,15 @@ end do
 do i = 1, isize
 do j = 1, jsize
   if (eeta(i,j,kc) < 0.) then
-     print*,'eeta error: ',i,imin_j(j),j,kc,eeta(i,j,kc)
+     eeta(i,j,kc) = 0.0_rprec
+!     print*,'eeta error: ',i,imin_j(j),j,kc,eeta(i,j,kc)
 !!$     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
 !!$     print*,eeta(i,:,kc)
 !!$     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
 !!$     print*,eeta(:,j,kc)
 !!$     call CON_STOP('abort')
 !!$     eeta(i,j,kc) = 0.0
-     eeta(i,j,kc) = 0.5*(eeta(max(1,i-1),j,kc)+eeta(min(isize,i+1),j,kc))
+!     eeta(i,j,kc) = 0.5*(eeta(max(1,i-1),j,kc)+eeta(min(isize,i+1),j,kc))
   end if
 end do
 end do

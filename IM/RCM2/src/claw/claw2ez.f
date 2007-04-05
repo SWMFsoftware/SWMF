@@ -102,7 +102,7 @@ c-------input parameters for clawpack routines
         method(6) = 0           !mcapa
         method(7) = maux        !maux
 
-        mthlim(1:mwaves) =1     !limiter for each wave  (mw=1,mwaves)
+        mthlim(1:mwaves) =2     !limiter for each wave  (mw=1,mwaves)
 
         mthbc(1) = 1            !type of boundary conditions at left
         mthbc(2) = 1            !type of boundary conditions at right
