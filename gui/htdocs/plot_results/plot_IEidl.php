@@ -114,7 +114,7 @@ function plot1() {   // Create scripts
     Exec("cd $imagedir;
           echo '#!/bin/sh' > runidl.sh;
           echo '' >> runidl.sh;
-          echo 'IDL_PATH=../../../Idl:\${IDL_PATH}' >> runidl.sh;
+          echo 'IDL_PATH=../../../Idl:/usr/local/rsi/idl/lib:\${IDL_PATH}' >> runidl.sh;
           echo 'IDL_STARTUP=../../../Idl/idlrc_gui' >> runidl.sh;
           echo 'export IDL_PATH IDL_STARTUP' >> runidl.sh;
           echo '' >> runidl.sh;
