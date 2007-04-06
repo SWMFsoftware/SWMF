@@ -22,7 +22,7 @@ module ModUser
        'POINT IMPLICIT MULTI-ION SOURCE, Toth and Ma'
 
 
-  real :: CollisionRate = 0.001
+  real    :: CollisionCoefDim = 1.0, CollisionCoef
   logical :: IsAnalytic = .true.
 
 contains
@@ -38,7 +38,7 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case("#FRICTION")
-          call read_var('CollisionRate',CollisionRate)
+          call read_var('CollisionCoefDim',CollisionCoefDim)
        case('#DSDU')
           call read_var('IsAnalytic',IsAnalytic)
        case('#USERINPUTEND')
@@ -57,14 +57,16 @@ contains
     ! If there is no explicit source term, the subroutine user_expl_source 
     ! and the corresponding calls can be removed.
 
+    use ModProcMH,  ONLY: iProc
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplMatrixSet, DsDu_VVC
-    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String
+    use ModMain,    ONLY: GlobalBlk, nI, nJ, nK, Test_String, BlkTest, ProcTest
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModAdvance, ONLY: B0XCell_BLK, B0YCell_BLK, B0ZCell_BLK
     use ModAdvance, ONLY: bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ
     use ModGeometry,ONLY: vInv_CB
-    use ModPhysics, ONLY: ElectronCharge, inv_gm1
+    use ModPhysics, ONLY: ElectronCharge, gm1, inv_gm1, &
+         Si2No_V, No2Si_V, UnitTemperature_, UnitT_
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
 
@@ -76,11 +78,20 @@ contains
          Temp_I
 
     integer :: iBlock, i, j, k
-    real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, Heating
+    real :: CoefBx, CoefBy, CoefBz, Coef, CollisionRate, AverageTemp, Heating
+
+    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    logical :: DoTest, DoTestMe
     !-----------------------------------------------------------------------
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     iBlock = GlobalBlk
+
+    if(iProc == ProcTest .and. iBlock == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
 
     ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
     ! where u_+ is the number density weighted average ion velocity,
@@ -88,6 +99,10 @@ contains
     ! e is the electron charge and n_e is the electron number density.
 
     InvCharge = 1.0/ElectronCharge
+
+    ! Rate = n*CoefDim / T^1.5 with T [K], n [/cc] and Rate [1/s]
+    CollisionCoef = CollisionCoefDim &
+         /No2Si_V(UnitTemperature_)**1.5/Si2No_V(UnitT_)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Extract conservative variables
@@ -128,6 +143,8 @@ contains
        end if
        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
+       CollisionRate = CollisionCoef/(AverageTemp*sqrt(AverageTemp))
+
        ! Calculate the source term for all the ion fluids
        do iFluid = 1, nIonFluid
           call select_fluid
@@ -146,7 +163,9 @@ contains
                Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) + Force_D
 
           Heating = 2*CollisionRate*(AverageTemp - Temp_I(iFluid)) &
-               * NumDens_I(iFluid)* (NumDens - NumDens_I(iFluid))
+               * NumDens_I(iFluid)* (NumDens - NumDens_I(iFluid)) &
+               + 2*gm1*CollisionRate*sum((uPlus_D - uIon_D)**2) &
+               * NumDens_I(iFluid) * (NumDens - NumDens_I(iFluid))
 
           Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
 
@@ -213,6 +232,14 @@ contains
        DsDu_VVC(OpRhoUz_, RhoUz_, i, j, k) = -Coef
 
     end do; end do; end do
+
+    if(DoTestMe)then
+       write(*,*)NameSub,' CollisionCoef=',CollisionCoef
+       write(*,*)NameSub,' CollisionRate=',CollisionRate
+       write(*,*)NameSub,' AverageTemp  =',AverageTemp
+       write(*,*)NameSub,' AverageTempDim=', &
+            AverageTemp*No2Si_V(UnitTemperature_)
+    end if
 
   end subroutine user_calc_sources
 
