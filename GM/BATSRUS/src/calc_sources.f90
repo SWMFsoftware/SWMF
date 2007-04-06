@@ -136,7 +136,7 @@ subroutine calc_sources
              /State_VGB(rho_,i,j,k,globalBLK)
      end do;end do;end do
   end if
-  
+
   if(boris_correction &                             !^CFG IF BORISCORR BEGIN
        .and. boris_cLIGHT_factor < 0.9999 & 
        .and. index(test_string,'nodivE')<1) then
@@ -206,7 +206,7 @@ subroutine calc_sources
      end if
   end do
 
-  if(UseMultiIon)then
+  if(UseMultiIon .and. .not.UseUserSource)then
 
      ! Add source term n_s*(- u_+ - w_H + u_s )xB for multi-ions
      ! where u_+ is the number density weighted average ion velocity,
@@ -240,13 +240,14 @@ subroutine calc_sources
         uPlus_D(z_) = InvNumDens* sum(NumDens_I*Uz_I)
 
         ! Add the Hall velocity -J/(e n)
-        call get_current(i,j,k,GlobalBlk,Current_D)
-
-        !Current_D = vInv_CB(i,j,k,globalBLK)*&
-        !     ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
-        !     + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
-        !     + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
-
+        if(index(Test_String,'newj') > 0)then
+           Current_D = vInv_CB(i,j,k,globalBLK)*&
+                ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
+                + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
+                + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+        else
+           call get_current(i,j,k,GlobalBlk,Current_D)
+        end if
         uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
         ! Calculate the source term for all the ion fluids
@@ -385,7 +386,7 @@ contains
             -(FaceArea_D(1)*RightState_VX(Bx_,i,j,k)+&
             FaceArea_D(2)*RightState_VX(By_,i,j,k)+&
             FaceArea_D(3)*RightState_VX(Bz_,i,j,k))
- 
+
        FaceArea_D=FaceAreaI_DFB(:,i+1,j,k,globalBLK)
        B1nJumpR =  VInvHalf*&
             (FaceArea_D(1)*(RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))+&
