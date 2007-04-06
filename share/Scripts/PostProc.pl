@@ -10,6 +10,10 @@ my $Rsync   = ($rsync or $sync);
 
 use strict;
 
+my $rsync = 'rsync -avz';
+my $exclude = " --exclude '*.idl' --exclude '*.tec' --exclude '*.dat'".
+    " --exclude '*.[hHTS]'";
+
 my $INFO  = "PostProc.pl";
 my $ERROR = "ERROR in PostProc.pl";
 my $WARNING = "WARNING in PostProc.pl";
@@ -119,10 +123,13 @@ REPEAT:{
 	my $Dir;
 	foreach $Dir (keys %PlotDir){
 	    my $PlotDir = $PlotDir{$Dir};
-	    &shell("rsync -avz $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
+	    next unless -d $PlotDir;
+	    my $command = $rsync;
+	    $command .= $exclude if $Dir =~ /GM|SC|IH/;
+	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
-	&shell("rsync -avz $ParamIn $Rsync/$ParamIn") if -f $ParamIn;
-	&shell("rsync -avz $RunLog $Rsync/$RunLog")   if -f $RunLog;
+	&shell("$rsync $ParamIn $Rsync/$ParamIn") if -f $ParamIn;
+	&shell("$rsync $RunLog $Rsync/$RunLog")   if -f $RunLog;
     }
 
     if($Repeat){
