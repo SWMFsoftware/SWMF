@@ -3,7 +3,7 @@ subroutine calc_timestep
   use ModProcMH
   use ModMain
   use ModAdvance, ONLY : VdtFace_x,VdtFace_y,VdtFace_z,time_BLK,&
-                         CurlB0_DCB,State_VGB,Rho_
+                         CurlB0_DCB,State_VGB,Rho_,FluxType
   use ModNumConst
   use ModGeometry, ONLY : true_cell,true_BLK, vInv_CB
   implicit none
@@ -20,7 +20,7 @@ subroutine calc_timestep
      DoTest=.false.; DoTestMe=.false.
   endif
 
-  if(UseCurlB0.and.TypeFlux=='Roe')then
+  if(UseCurlB0.and.FluxType=='Roe')then
      do k=1,nK; do j=1,nJ; do i=1,nI
         SourceSpectralRadius_C(i,j,k)=sqrt(&
                                      sum(CurlB0_DCB(:,i,j,k,iBlock)**2)/&
