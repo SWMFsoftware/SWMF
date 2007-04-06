@@ -48,6 +48,9 @@ subroutine update_states_MHD(iStage,iBLK)
      StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,iBLK) = & 
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBLK)
      EnergyOld_CBI(:,:,:,iBLK,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBLK,:)
+
+     if(oktest_me)write(*,*)'EnergyOld=',EnergyOld_CBI(iTest,jTest,kTest,iBlk,:)
+
   end if
 
   !Get Residual.
@@ -82,6 +85,9 @@ contains
             Source_VC(Energy_:Energy_-1+nFluid,i,j,k)
     end do; end do; end do
 
+    if(oktest_me)write(*,*)'EnergyNew=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
+
+
     if(UseMultispecies)then
        ! Fix negative species densities
        State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBLK) = &
@@ -96,13 +102,17 @@ contains
        end if
     end if
 
-    if((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1))then
+    if(.not.UseMultiIon .and. &
+         ((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Energy_GBI(i,j,k,iBLK,1) = Energy_GBI(i,j,k,iBLK,1) + cHalf*( &
                Source_VC(Bx_,i,j,k)**2 + &
                Source_VC(By_,i,j,k)**2 + &
                Source_VC(Bz_,i,j,k)**2)
        end do; end do; end do
+
+       if(oktest_me)write(*,*)'EnergyFix=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
+
     end if
 
     if(boris_correction) then                 !^CFG IF BORISCORR BEGIN
@@ -240,8 +250,12 @@ contains
        end do; end do; end do
     end if                                   !^CFG END SIMPLEBORIS
 
+    if(oktest_me)write(*,*)'EnergyBef=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
+
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlk)
+
+    if(oktest_me)write(*,*)'EnergyAft=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
   end subroutine update_explicit
 
