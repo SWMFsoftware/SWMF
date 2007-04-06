@@ -291,7 +291,7 @@ contains
     
     implicit none
     integer,intent(in)::iSide !is defined with respect to the TRUE CELL!!!
-    real, dimension(1:3) :: v_phi, uIono_D
+    real, dimension(1:3) :: uRot_D, uIono_D
 
     real:: FaceState_V(nFaceValueVars)
     real:: PressureJumpLimit=0.0,DensityJumpLimit=0.1    !
@@ -340,7 +340,9 @@ contains
     select case(TypeBcHere) 
     case('linetied','ionospherefloat')
        VarsGhostFace_V=VarsTrueFace_V
-       VarsGhostFace_V(Ux_:Uz_)=-VarsGhostFace_V(Ux_:Uz_)
+       VarsGhostFace_V(iRhoUx_I) = -VarsGhostFace_V(iRhoUx_I)
+       VarsGhostFace_V(iRhoUy_I) = -VarsGhostFace_V(iRhoUy_I)
+       VarsGhostFace_V(iRhoUz_I) = -VarsGhostFace_V(iRhoUz_I)
     case('float','outflow')
        VarsGhostFace_V=VarsTrueFace_V
     case('heliofloat')
@@ -399,8 +401,10 @@ contains
           BRefl_D(Z_) = cTwo*VarsTrueFace_V(Bz_)         
        end select
        VarsGhostFace_V=VarsTrueFace_V
-       VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
-       VarsGhostFace_V(Bx_:Bz_)     = VarsGhostFace_V(Bx_:Bz_) - BRefl_D
+       VarsGhostFace_V(iRhoUx_I) = -VarsGhostFace_V(iRhoUx_I)
+       VarsGhostFace_V(iRhoUy_I) = -VarsGhostFace_V(iRhoUy_I)
+       VarsGhostFace_V(iRhoUz_I) = -VarsGhostFace_V(iRhoUz_I)
+       VarsGhostFace_V(Bx_:Bz_)  = VarsGhostFace_V(Bx_:Bz_) - BRefl_D
     case('fixedB1')
        VarsGhostFace_V  = FaceState_V
     case('ionosphere')
@@ -417,7 +421,9 @@ contains
             min(abs(FaceState_V(iP_I) - VarsTrueFace_V(iP_I)),&
             PressureJumpLimit*VarsTrueFace_V(iP_I))
 
-       VarsGhostFace_V(Ux_:Uz_)     = - VarsGhostFace_V(Ux_:Uz_)
+       VarsGhostFace_V(iRhoUx_I) = -VarsGhostFace_V(iRhoUx_I)
+       VarsGhostFace_V(iRhoUy_I) = -VarsGhostFace_V(iRhoUy_I)
+       VarsGhostFace_V(iRhoUz_I) = -VarsGhostFace_V(iRhoUz_I)
     case('coronatoih')    !Only for nVar=8
 
        !Get interpolated values from buffer grid:
@@ -443,7 +449,9 @@ contains
        
        select case(TypeBcHere)
        case('reflect','linetied','polarwind','ionosphere','ionospherefloat')
-          VarsGhostFace_V(Ux_:Uz_) = cTwo*uIono_D + VarsGhostFace_V(Ux_:Uz_)
+          VarsGhostFace_V(iRhoUx_I) = 2*uIono_D(x_) + VarsGhostFace_V(iRhoUx_I)
+          VarsGhostFace_V(iRhoUy_I) = 2*uIono_D(y_) + VarsGhostFace_V(iRhoUy_I)
+          VarsGhostFace_V(iRhoUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iRhoUz_I)
        case default
           call stop_mpi('UseIonosphere is not compatible with TypeBc_I=' &
                //TypeBcHere)
@@ -454,14 +462,16 @@ contains
 
        !\
        ! The program is called which calculates the cartesian corotation 
-       ! velocity vector v_phi as a function of the radius-vector "FaceCoords"
+       ! velocity vector uRot_D as a function of the radius-vector "FaceCoords"
        !/
-       call calc_corotation_velocities(iter,time_now,FaceCoords_D,v_phi)
+       call calc_corotation_velocities(iter,time_now,FaceCoords_D,uRot_D)
 
        select case(TypeBcHere)
        case('reflect','linetied', &
             'ionosphere','ionospherefloat')
-          VarsGhostFace_V(Ux_:Uz_) = cTwo*v_phi + VarsGhostFace_V(Ux_:Uz_)
+          VarsGhostFace_V(iRhoUx_I) = 2*uRot_D(x_) + VarsGhostFace_V(iRhoUx_I)
+          VarsGhostFace_V(iRhoUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iRhoUy_I)
+          VarsGhostFace_V(iRhoUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iRhoUz_I)
        case default
           call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
                //TypeBcHere) 
