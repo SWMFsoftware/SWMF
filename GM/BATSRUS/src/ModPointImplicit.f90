@@ -237,13 +237,13 @@ contains
        Source_VC(1:nVar,:,:,:) = Source0_VC
     end if
 
-    !if(DoTestMe)then
-    !   do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
-    !      write(*,*)NameSub,': DsDu(',iVar,',:)=',&
-    !           (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
-    !           iJVar = 1, nVarPointImpl)
-    !   end do
-    !end if
+    if(DoTestMe)then
+       do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
+          write(*,*)NameSub,': DsDu(',iVar,',:)=',&
+               (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
+               iJVar = 1, nVarPointImpl)
+       end do
+    end if
 
     ! Do the implicit update
     do k=1,nK; do j=1,nJ; do i=1,nI
