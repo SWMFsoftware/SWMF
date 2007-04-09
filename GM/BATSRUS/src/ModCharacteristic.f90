@@ -444,16 +444,18 @@ contains
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
                                       EigenvalueR_V,&
+                                      LambdaB0, &
                                       EigenvalueFixed_V,CMax,IsBoundary)
     real,intent(in) ,dimension(nVar-1)::Eigenvalue_V
     real,intent(in) ,dimension(nVar-1)  ::EigenvalueL_V,EigenvalueR_V
+    real,intent(in) ::LambdaB0
     real,intent(out),dimension(nVar-1)  ::EigenvalueFixed_V
     real,intent(out)::cMax
     logical,intent(in)::IsBoundary
     integer::iWave
     real::Eps_V(nVar-1),Lambda
   
-    Eps_V=abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05
+    Eps_V=LambdaB0!abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
        Eps_V(iWave)=max(EigenvalueR_V(iWave)-Lambda,&
@@ -470,14 +472,16 @@ contains
                                    StateL_V,&
                                    StateR_V,&
                                    B0x,B0y,B0z,&
-                                    uL_D,uR_D,&!DeltaBnL,DeltaBnR,&
+                                   B0xL,B0yL,B0zL,&
+                                   B0xR,B0yR,B0zR,&
+                                   uL_D,uR_D,DeltaBnL,DeltaBnR,&
                                    DissipationFlux_V,&
                                    cMax,Un,IsBoundary,DoTest)
     integer,intent(in)::iDir
     real,dimension(nVar),intent(in)::StateL_V, StateR_V
-    real,intent(in)::B0x,B0y,B0z
+    real,intent(in)::B0x,B0y,B0z, B0xL,B0yL,B0zL,B0xR,B0yR,B0zR
     real,intent(in),dimension(3)::uL_D,uR_D
-    !real,intent(in)::DeltaBnL,DeltaBnR
+    real,intent(in)::DeltaBnL,DeltaBnR
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
     logical,intent(in)::IsBoundary,DoTest
@@ -487,9 +491,11 @@ contains
     real,dimension(nVar-1)   :: Eigenvalue_V
     real,dimension(nVar-1)     ::   EigenvalueL_V,  &
                                          EigenvalueR_V
-    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR
+    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,DeltaB0_D(3),LambdaB0
     real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
-    integer::iWave
+    integer::iWave,iDir_D(3)
+    iDir_D=0; iDir_D(iDir)=1
+    DeltaB0_D=(/B0xL-B0xR,B0yL-B0yR,B0zL-B0zR/)
     
     
     call decompose_state_idir(&
@@ -502,10 +508,12 @@ contains
        Eigenvalue_V,     & 
        EigenvalueL_V,    &
        EigenvalueR_V)
+    LambdaB0=sqrt((sum(DeltaB0_D**2)-(sum(DeltaB0_D*iDir_D))**2)/RhoH)
     call get_fixed_abs_eigenvalue(&
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
                                       EigenvalueR_V,&
+                                      LambdaB0,&
                                       EigenvalueFixed_V(1:nVar-1),&
                                       CMax,IsBoundary)
     UnL= uL_D(iDir); UnR=uR_D(iDir)
@@ -513,17 +521,17 @@ contains
     cMax=max(cMax,EigenvalueFixed_V(DivBW_))
     if(IsBoundary)EigenvalueFixed_V=cMax
     FluxPseudoChar_V=cZero
-    do iWave=1,nVar!-1
+    do iWave=1,nVar-1
        FluxPseudoChar_V = FluxPseudoChar_V + &
             Eigenvector_VV(:,iWave)*EigenvalueFixed_V(iWave)*&
             DeltaWave_V(iWave)
             
     end do
-   ! FluxPseudoChar_V = FluxPseudoChar_V+&
-   !         Eigenvector_VV(:,DivBW_)*&
-   !         (UnL*DeltaBnR+UnR*DeltaBnL+&
-   !         EigenvalueFixed_V(DivBW_)*(&
-   !         DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
+    FluxPseudoChar_V = FluxPseudoChar_V+&
+            Eigenvector_VV(:,DivBW_)*&
+            (UnL*DeltaBnR+UnR*DeltaBnL+&
+            EigenvalueFixed_V(DivBW_)*(&
+            DeltaWave_V(DivBW_)+DeltaBnL-DeltaBnR))
     DissipationFlux_V=cHalf*&
          flux_from_pseudochar(FluxPseudoChar_V,UH_D,B1H_D,XH)
     Un=UH_D(iDir)
@@ -533,6 +541,8 @@ contains
                                    StateL_V,&
                                    StateR_V,&
                                    B0x,B0y,B0z,&
+                                   B0xL,B0yL,B0zL,&
+                                   B0xR,B0yR,B0zR,&
                                    uL_D,uR_D,DeltaBnL,DeltaBnR,&
                                    DissipationFlux_V,&
                                    cMax,Un,IsBoundary)
@@ -540,7 +550,7 @@ contains
     real,dimension(nVar),intent(in)::StateL_V, StateR_V
     real,dimension(3),intent(in)::uL_D,uR_D
     real,intent(in)::DeltaBnL,DeltaBnR
-    real,intent(in)::B0x,B0y,B0z
+    real,intent(in)::B0x,B0y,B0z, B0xL,B0yL,B0zL,B0xR,B0yR,B0zR
     real,dimension(nVar+1),intent(out)::DissipationFlux_V
     real,intent(out)::cMax,Un
     logical,intent(in)::IsBoundary
@@ -550,7 +560,7 @@ contains
     real,dimension(nVar)   :: Eigenvalue_V
     real,dimension(nVar)     ::   EigenvalueL_V,  &
                                   EigenvalueR_V
-    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR
+    real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,DeltaB0_D(3),LambdaB0
     real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
     integer::iWave
     
@@ -564,10 +574,13 @@ contains
        Eigenvalue_V,     & 
        EigenvalueL_V,    &
        EigenvalueR_V)
+    DeltaB0_D=(/B0xL-B0xR,B0yL-B0yR,B0zL-B0zR/)
+    LambdaB0=sqrt((sum(DeltaB0_D**2)-(sum(DeltaB0_D*Dir_D))**2)/RhoH)
     call get_fixed_abs_eigenvalue(&
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
                                       EigenvalueR_V,&
+                                      LambdaB0,     &
                                       EigenvalueFixed_V(1:nVar-1),&
                                       CMax,IsBoundary)
     UnL=sum(uL_D*Dir_D);UnR=sum(uR_D*Dir_D)

@@ -60,7 +60,7 @@ DREL=RELAX
 COMP=IH
 relax_src:
 	./Configure.pl -d=${DREL} -u \
-		-on=roeflux,awflux,lindeflux,userfiles,testing \
+		-on=roeflux,awflux,lindeflux,userfiles,testing,divbdiffuse \
 		-off=ionosphere,boriscorr,covariant
 	cd ${DREL}; rm -f CVS_Entries .cvsignore
 	cd ${DREL}/srcInterface; \

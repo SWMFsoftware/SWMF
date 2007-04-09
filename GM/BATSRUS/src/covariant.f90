@@ -1104,7 +1104,7 @@ end subroutine fix_cylindrical_geometry
 
 subroutine calc_b0source_covar(iBlock)  
   use ModProcMH  
-  use ModMain,ONLY:UseB0Source,x_,y_,z_!,R_,Theta_,Phi_
+  use ModMain,ONLY:UseB0Source,UseCurlB0,x_,y_,z_!,R_,Theta_,Phi_
   use ModSize
   use ModParallel, ONLY :&
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -1113,7 +1113,7 @@ subroutine calc_b0source_covar(iBlock)
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
-       CurlB0_DCB,DivB0_CB
+       CurlB0_DCB,DivB0_CB, NormB0_CB  
   use ModGeometry,ONLY: dx_BLK,dy_BLK,dz_BLK,XyzStart_BLK,&!TypeGeometry,&
        vInv_CB
   use ModNumConst
@@ -1130,6 +1130,9 @@ subroutine calc_b0source_covar(iBlock)
   real,dimension(nDim,0:2,0:2,0:2)   :: RefXyzNodes_DIII
   real,dimension(nDim,0:1,0:1,0:1)   :: RefFaceArea_DIII
   real,dimension(nDim,nDim,nI,nJ,nK) :: B0SourceMatrix_DDC
+  real::CurlB02,CurlB02_DD(3,3),B0Nabla_DD(3,3)
+  real:: eigenvalue_max
+  external eigenvalue_max
 
   dGenFine_D(1)=cHalf*dx_BLK(iBlock)
   dGenFine_D(2)=cHalf*dy_BLK(iBlock)
@@ -1225,7 +1228,7 @@ subroutine calc_b0source_covar(iBlock)
               B0_DIIS(z_,0,0,Bot_)= B0zFace_z_BLK(i,j,k,iBlock)
            end if
 
-           if(UseB0Source)then
+           if(UseB0Source.or.UseCurlB0)then
               DivB0_CB(i,j,k,iBlock) = cZero
               B0SourceMatrix_DDC(:,:,i,j,k)=cZero
 
@@ -1265,6 +1268,27 @@ subroutine calc_b0source_covar(iBlock)
               CurlB0_DCB(x_,i,j,k,iBlock) = &
                    B0SourceMatrix_DDC(3,2,i,j,k)*&
                    vInv_CB(i,j,k,iBlock)
+              CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
+              if(CurlB02==cZero)then
+                 NormB0_CB(i,j,k,iBlock)=cZero
+              else
+                 CurlB02_DD=CurlB02*cUnit_DD
+                 do j2=1,3
+                    do i2=1,3
+                       CurlB02_DD(i2,j2)=CurlB02_DD(i2,j2)-&
+                            CurlB0_DCB(i2,i,j,k,iBlock)*&
+                            CurlB0_DCB(j2,i,j,k,iBlock)
+                    end do
+                 end do
+                 B0Nabla_DD=B0SourceMatrix_DDC(:,:,i,j,k)*&
+                      vInv_CB(i,j,k,iBlock)&
+                      -DivB0_CB(i,j,k,iBlock)*cUnit_DD
+                 NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
+                      matmul(transpose(B0Nabla_DD),matmul(&
+                                       CurlB02_DD,&
+                                       B0Nabla_DD))               )&
+                                     )    )
+              end if
            end if
         end do
      end do

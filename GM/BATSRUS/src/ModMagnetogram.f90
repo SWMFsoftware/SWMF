@@ -404,6 +404,7 @@ contains
              ! Also calculate magnetic potential Psi_PFSSM
              !/
              do m=0,N_PFSSM
+                if((iTheta==0.or.iTheta==nTheta).and.m>1)CYCLE
                 do n=m,N_PFSSM
                    !\
                    ! c_n corresponds to Todd's c_l::
@@ -634,7 +635,7 @@ contains
     integer::iDim,i,j,k  
     real::Weight_III(0:1,0:1,0:1)
     logical::DoCorrection
-    real::ReductionCoeff
+    real::ReductionCoeff,BRAvr
     Res_D=R_D
     !Limit a value of R:
     Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
@@ -650,17 +651,25 @@ contains
     if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
     Res_D=Res_D-real(Node_D)
     ReductionCoeff=cOne
+    BRAvr=cZero
     !Near poles reduce the Phi and Theta components of the field and
-    !take the R component from the last grid node 
+    !take a weithed average for the R component from using the  value in
+    !the last grid node and that averaged over longitude 
     !(iTheta=0 or iTheta=nTheta)
     if(Node_D(Theta_)==nTheta)then
        Node_D(Theta_)=Node_D(Theta_)-1
-       ReductionCoeff=max(cOne-cTwo*Res_D(Theta_),cZero)
+       ReductionCoeff=sqrt(max(cOne-cTwo*Res_D(Theta_),cZero))
        Res_D(Theta_)=cOne
+       BRAvr=sum(&
+            (cOne-Res_D(R_))*B_DN(R_,Node_D(R_)  ,:,nTheta)&
+                 +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,nTheta))/(nPhi+1)
     elseif(Node_D(Theta_)==-1)then
        Node_D(Theta_)= Node_D(Theta_)+1
-       ReductionCoeff=max(cZero,cTwo*Res_D(Theta_)-cOne)
+       ReductionCoeff=sqrt(max(cZero,cTwo*Res_D(Theta_)-cOne))
        Res_D(Theta_) = cZero
+       BRAvr=sum(&
+            (cOne-Res_D(R_))*B_DN(R_,Node_D(R_)  ,:,     0)&
+                 +Res_D(R_) *B_DN(R_,Node_D(R_)+1,:,     0))/(nPhi+1)
     end if
 
     if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
@@ -683,6 +692,7 @@ contains
     else
        BMap_D(Phi_:Theta_)=ReductionCoeff*BMap_D(Phi_:Theta_)
     end if
+    BMap_D(R_)=ReductionCoeff*BMap_D(R_)+(cOne-ReductionCoeff)*BRAvr
   end subroutine interpolate_field
   !==========================================================================
   subroutine get_magnetogram_field(xInput,yInput,zInput,B0_D)

@@ -1225,6 +1225,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#DIVBSOURCE")
 	call read_var('UseB0Source'   ,UseB0Source)
      case("#USECURLB0")
+        if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseCurlB0',UseCurlB0)
         if(UseCurlB0)call read_var('rCurrentFreeB0',rCurrentFreeB0)
      case("#PROJECTION")                              !^CFG IF PROJECTION BEGIN
@@ -2088,8 +2089,19 @@ contains
 
     ! Check flux type selection
     select case(FluxType)
-    case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX
-       FluxType='Roe'                                !^CFG IF ROEFLUX
+    case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX BEGIN
+       FluxType='Roe'                                
+       if(.not.UseRS7)then
+          if(iProc==0)then
+             write(*,'(a)')NameSub// &
+                  'WARNING: Roe solver requires UseRS7 to be true'
+             if(UseStrict)call stop_mpi('Correct PARAM.in!')
+             write(*,'(a)')'setting FluxType=RoeOld'
+          end if
+          FluxType='RoeOld'
+       end if
+    case('5','roeold','RoeOld','ROEOLD')             
+       FluxType='RoeOld'                             !^CFG END ROEFLUX
     case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
        FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
     case('3','linde','Linde','LINDE','HLLEL')        !^CFG IF LINDEFLUX

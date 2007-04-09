@@ -111,6 +111,7 @@ Module ModAdvance
 
   real :: CurlB0_DCB(3, nI, nJ, nK, MaxBlock)
   real :: DivB0_CB(nI, nJ, nK, MaxBlock)
+  real :: NormB0_CB(nI,nJ,nK,MaxBlock)
 
   !\
   ! X Face local MHD solution array definitions.

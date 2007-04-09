@@ -416,21 +416,22 @@ subroutine set_b0_matrix(iBlock)
        B0xFace_x_BLK,B0yFace_x_BLK,B0zFace_x_BLK, &
        B0xFace_y_BLK,B0yFace_y_BLK,B0zFace_y_BLK, &
        B0xFace_z_BLK,B0yFace_z_BLK,B0zFace_z_BLK, &
-       CurlB0_DCB,DivB0_CB                      
-  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK
+       CurlB0_DCB,DivB0_CB, NormB0_CB                      
+  use ModGeometry, ONLY : dx_BLK,dy_BLK,dz_BLK,true_cell
   use ModNumConst
   implicit none
 
   integer, intent(in) :: iBlock
 
-  integer :: i,j,k
+  integer :: i,j,k,iDir,jDir
 
   ! inverse of Dx, Dy, Dz
   real :: DxInv, DyInv, DzInv
 
   logical :: oktest, oktest_me
-
-
+  real::CurlB02,CurlB02_DD(3,3),B0Nabla_DD(3,3)
+  real:: eigenvalue_max
+  external eigenvalue_max
   !--------------------------------------------------------------------------
 
   if(iProc==PROCtest.and.iBlock==BLKtest)then
@@ -439,9 +440,11 @@ subroutine set_b0_matrix(iBlock)
      oktest=.false.; oktest_me=.false.
   endif
 
-!  if(.not.allocated(CurlB0_DCB))&                   !^CFG UNCOMMENT IF DYNAMIC
+!  if(.not.allocated(CurlB0_DCB))then                !^CFG UNCOMMENT IF DYNAMIC
 !       allocate(CurlB0_DCB(3,nI,nJ,nK,MaxBlock),&   !^CFG UNCOMMENT IF DYNAMIC
 !                DivB0_CB(nI,nJ,nK,MaxBlock))        !^CFG UNCOMMENT IF DYNAMIC
+!  if(UseCurlB0)allocate(NormB0_CB(nI,nJ,nK,MaxBlock)!^CFG UNCOMMENT IF DYNAMIC
+!  end if                                            !^CFG UNCOMMENT IF DYNAMIC
 
 
   DxInv = cOne/dx_BLK(iBlock)
@@ -474,10 +477,100 @@ subroutine set_b0_matrix(iBlock)
           B0zFace_y_BLK(i,j,k,iBlock))-&
           DzInv*(B0yFace_z_BLK(i,j,k+1,iBlock)-&
           B0yFace_z_BLK(i,j,k,iBlock))
-
+     if(.not.UseCurlB0)CYCLE
+     CurlB02=sum(CurlB0_DCB(:,i,j,k,iBlock)**2)
+     if(CurlB02==cZero.or..not.true_cell(i,j,k,iBlock))then
+        NormB0_CB(i,j,k,iBlock)=cZero
+     else
+        CurlB02_DD=CurlB02*cUnit_DD
+        do jDir=1,3
+           do iDir=1,3
+              CurlB02_DD(iDir,jDir)=CurlB02_DD(iDir,jDir)-&
+                   CurlB0_DCB(iDir,i,j,k,iBlock)*&
+                   CurlB0_DCB(jDir,i,j,k,iBlock)
+           end do
+        end do
+        B0Nabla_DD(x_,:)=DxInv*(/B0xFace_x_BLK(i+1,j,k,iBlock)-&
+                                 B0xFace_x_BLK(i,j,k,iBlock),  &
+                                 B0yFace_x_BLK(i+1,j,k,iBlock)-&
+                                 B0yFace_x_BLK(i,j,k,iBlock),  &
+                                 B0zFace_x_BLK(i+1,j,k,iBlock)-&
+                                 B0zFace_x_BLK(i,j,k,iBlock)/)
+        B0Nabla_DD(y_,:)=DyInv*(/B0xFace_y_BLK(i,j+1,k,iBlock)-&
+                                 B0xFace_y_BLK(i,j,k,iBlock),  &
+                                 B0yFace_y_BLK(i,j+1,k,iBlock)-&
+                                 B0yFace_y_BLK(i,j,k,iBlock),  &
+                                 B0zFace_y_BLK(i,j+1,k,iBlock)-&
+                                 B0zFace_y_BLK(i,j,k,iBlock)/)
+        B0Nabla_DD(z_,:)=DzInv*(/B0xFace_z_BLK(i,j,k+1,iBlock)-&
+                                 B0xFace_z_BLK(i,j,k,iBlock),  &
+                                 B0yFace_z_BLK(i,j,k+1,iBlock)-&
+                                 B0yFace_z_BLK(i,j,k,iBlock),  &
+                                 B0zFace_z_BLK(i,j,k+1,iBlock)-&
+                                 B0zFace_z_BLK(i,j,k,iBlock)/)
+        B0Nabla_DD=B0Nabla_DD-DivB0_CB(i,j,k,iBlock)*cUnit_DD
+        NormB0_CB(i,j,k,iBlock)= sqrt(sqrt(eigenvalue_max(&
+             matmul(transpose(B0Nabla_DD),matmul(&
+                              CurlB02_DD,&
+                              B0Nabla_DD))               )&
+                                     )    )
+     end if
   end do; end do; end do
 
 end subroutine set_b0_matrix
+!============================================================================
+real function eigenvalue_max(A_DD)
+  use ModNumConst
+  !Returns the maximum eigenvalue of a SYMMETRIC matrix
+  !Good only for express estimates of the spectral radius 
+  implicit none
+  real,dimension(3,3),intent(in)::A_DD
+  real::Lambda, DetF, F_DD(3,3),FPrime_DDD(3,3,3)
+  integer::i,iIteration
+  real::Tolerance
+  !-----------------------------------------------------------
+  Lambda=cZero
+  !Upper estimate for a spectral radius
+  do i=1,3
+     Lambda=max(Lambda,sum(abs(A_DD(i,:))))
+  end do
+  if(Lambda==cZero)then
+     eigenvalue_max=cZero
+     return
+  end if
+  Tolerance=(0.1*Lambda)**3
+
+  F_DD=A_DD-Lambda*cUnit_DD
+  DetF=det(F_DD) 
+  iIteration=0
+  do while (abs(DetF).gt.Tolerance)
+     iIteration=iIteration+1
+     do i=1,3
+        FPrime_DDD(:,:,i)=F_DD
+        FPrime_DDD(:,i,i)=cZero
+        FPrime_DDD(i,:,i)=cZero
+        FPrime_DDD(i,i,i)=cOne
+     end do
+     Lambda=Lambda+DetF/&
+          (det(FPrime_DDD(:,:,1))+det(FPrime_DDD(:,:,2))+det(FPrime_DDD(:,:,3)))
+     if(iIteration==10)exit
+     F_DD=A_DD-Lambda*cUnit_DD
+     DetF=det(F_DD)
+  end do
+  eigenvalue_max=Lambda
+contains
+  real function det(A_DD)
+    implicit none
+    real,dimension(3,3),intent(in)::A_DD
+    det=A_DD(1,1)*(A_DD(2,2)*A_DD(3,3)-&
+         A_DD(3,2)*A_DD(2,3))-&
+         A_DD(1,2)*(A_DD(2,1)*A_DD(3,3)-&
+         A_DD(2,3)*A_DD(3,1))+&
+         A_DD(1,3)*(A_DD(2,1)*A_DD(3,2)-&
+         A_DD(2,2)*A_DD(3,1))
+  end function det
+end function eigenvalue_max
+
 
 !============================================================================
 

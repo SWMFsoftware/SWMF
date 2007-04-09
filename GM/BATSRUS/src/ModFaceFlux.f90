@@ -17,6 +17,7 @@ module ModFaceFlux
        B0xFace_x_BLK, B0yFace_x_BLK, B0zFace_x_BLK, & ! input: face X B0
        B0xFace_y_BLK, B0yFace_y_BLK, B0zFace_y_BLK, & ! input: face Y B0
        B0xFace_z_BLK, B0yFace_z_BLK, B0zFace_z_BLK, & ! input: face Z B0
+       B0xCell_BLK,   B0yCell_BLK,   B0zCell_BLK  , & ! input: cell B0
        LeftState_VX,  LeftState_VY,  LeftState_VZ,  & ! input: left  face state
        RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: face flux
@@ -39,10 +40,11 @@ module ModFaceFlux
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
   logical :: DoAw                !^CFG IF AWFLUX
-  logical :: DoRoe               !^CFG IF ROEFLUX
-  logical :: DORoeNew            !^CFG IF ROEFLUX
+  logical :: DoRoeOld            !^CFG IF ROEFLUX
+  logical :: DORoe               !^CFG IF ROEFLUX
 
   logical :: DoTestCell
+  logical :: IsBoundary
 
   integer :: iFace, jFace, kFace, iBlockFace
 
@@ -50,8 +52,9 @@ module ModFaceFlux
   real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
   real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
   real :: DissipationFlux_V(nFlux)
-  real :: B0x, B0y, B0z
+  real :: B0x, B0y, B0z, B0xL, B0yL, B0zL, B0xR, B0yR, B0zR
   real :: DiffBb  !     (1/4)(BnL-BnR)^2
+  real :: DeltaBnL, DeltaBnR
   real :: Area, Area2, AreaX, AreaY, AreaZ
   real :: CmaxDt, UnLeft, UnRight
   real :: Unormal_I(nFluid), UnLeft_I(nFluid), UnRight_I(nFluid)
@@ -100,8 +103,8 @@ contains
     DoLf  = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
     DoHLL = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
     DoAw  = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
-    DoRoe = TypeFlux == 'Roe'.and.(.not.UseRS7)!^CFG IF ROEFLUX
-    DoRoeNew= TypeFlux == 'Roe'.and.UseRS7     !^CFG IF ROEFLUX
+    DoRoeOld = TypeFlux == 'RoeOld'   !^CFG IF ROEFLUX
+    DoRoe= TypeFlux == 'Roe'          !^CFG IF ROEFLUX
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -203,6 +206,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
       call set_block_values(x_)
@@ -214,10 +218,36 @@ contains
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
+         IsBoundary=is_boundary_face(x_)
 
          B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
+   
+         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
+ 
+         B0xL= B0xCell_BLK(iFace-1, jFace, kFace, iBlockFace)
+         B0yL= B0yCell_BLK(iFace-1, jFace, kFace, iBlockFace)
+         B0zL= B0zCell_BLK(iFace-1, jFace, kFace, iBlockFace)
+
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            RightState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
+                 RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+            DeltaBnL=sum((LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
+                 LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
 
@@ -234,6 +264,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
       call set_block_values(y_)
@@ -244,10 +275,38 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
+         
+         IsBoundary=is_boundary_face(y_)
 
          B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
+
+         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
+ 
+         B0xL= B0xCell_BLK(iFace, jFace-1, kFace, iBlockFace)
+         B0yL= B0yCell_BLK(iFace, jFace-1, kFace, iBlockFace)
+         B0zL= B0zCell_BLK(iFace, jFace-1, kFace, iBlockFace)
+
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            RightState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
+                 RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+            DeltaBnL=sum((LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace-1,kFace,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
+                 LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
+
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
          StateRight_V = RightState_VY(:, iFace, jFace, kFace)
 
@@ -265,6 +324,7 @@ contains
     !==========================================================================
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
+      use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
       call set_block_values(z_)
@@ -275,10 +335,37 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
+         IsBoundary=is_boundary_face(z_)
 
          B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
+
+         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
+         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
+ 
+         B0xL= B0xCell_BLK(iFace, jFace, kFace-1, iBlockFace)
+         B0yL= B0yCell_BLK(iFace, jFace, kFace-1, iBlockFace)
+         B0zL= B0zCell_BLK(iFace, jFace, kFace-1, iBlockFace)
+
+         if(UseRS7.and..not.IsBoundary)then
+            DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
+                 RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnR* (/AreaX,AreaY,AreaZ/)/Area   
+            DeltaBnL=sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+                 State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*&
+                 (/AreaX,AreaY,AreaZ/))/Area
+            LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
+                 LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
+                 DeltaBnL* (/AreaX,AreaY,AreaZ/)/Area         
+         else
+            DeltaBnL=cZero;DeltaBnR=cZero
+         end if
+
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
          StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
 
@@ -424,6 +511,20 @@ contains
   end subroutine set_cell_values_z
 
   !=========================================================================
+  logical function is_boundary_face(iDirIn)
+      use ModGeometry, ONLY: true_cell
+      integer,intent(in)::iDirIn
+      is_boundary_face=&
+           (iDirIn==1.and.(true_cell(iFace-1, jFace, kFace, iBlockFace) &
+           .neqv.     true_cell(iFace  , jFace, kFace, iBlockFace)))&
+           .or.&
+           (iDirIn==2.and.(true_cell(iFace, jFace-1, kFace, iBlockFace) &
+           .neqv.     true_cell(iFace, jFace  , kFace, iBlockFace)))&
+           .or.&
+           (iDirIn==3.and.(true_cell(iFace, jFace, kFace-1, iBlockFace) &
+           .neqv.     true_cell(iFace, jFace, kFace  , iBlockFace)))
+    end function is_boundary_face
+    !==========================================================================
   subroutine get_numerical_flux(iDir, Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
@@ -442,7 +543,6 @@ contains
     real :: EnLeft, EnRight, Jx, Jy, Jz
     integer:: iDir_D(3),iR,jR,kR,iL,jL,kL
     real :: UL_D(3),UR_D(3),cDivBWave
-    logical:: IsBoundary
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -450,8 +550,7 @@ contains
        StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
-    if(DoRoeNew)then
-       IsBoundary=is_boundary_face()
+    if(DoRoe)then
        if(IsBoundary)then
           UL_D=StateLeft_V(Ux_:Uz_); UR_D=StateRight_V(Ux_:Uz_)
        else
@@ -468,8 +567,9 @@ contains
                State_VGB(rho_,iR,jR,kR,iBlockFace)
        end if
        call dissipation_matrix(iDir,&
-         StateLeft_V,StateRight_V,B0x,B0y,B0z,&
-         UL_D,UR_D,&
+         StateLeft_V,StateRight_V,  &
+         B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR,&
+         UL_D,UR_D,DeltaBnL,DeltaBnR,&
          DissipationFlux_V,cMax,UNormal_I(1),&
          IsBoundary,.false.)
     end if
@@ -542,10 +642,11 @@ contains
     if(DoLf)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
     if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
-    if(DoRoe) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
-    if(DoRoeNew)call roe_solver_new          !^CFG IF ROEFLUX
+    if(DoRoeOld) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
+    if(DoRoe)call roe_solver_new          !^CFG IF ROEFLUX
 
-    if(UseRS7.and.(.not.DoRoeNew))then
+    if(UseRS7.and.(.not.DoRoe))then
+       call stop_mpi('Second order RS7 is implemented for Roe solver only')
        cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
             abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
        Flux_V(Bx_) = Flux_V(Bx_) - cDivBWave*DiffBx
@@ -571,19 +672,6 @@ contains
            cHalf*DiffBb*(/AreaX,AreaY,AreaZ/)
       Flux_V(Energy_)       = Flux_V(Energy_)+Un   * DiffBb
     end subroutine modify_flux
-    logical function is_boundary_face()
-      use ModGeometry, ONLY: true_cell
-  
-      is_boundary_face=&
-           (iDir==1.and.(true_cell(iFace-1, jFace, kFace, iBlockFace) &
-           .neqv.     true_cell(iFace  , jFace, kFace, iBlockFace)))&
-           .or.&
-           (iDir==2.and.(true_cell(iFace, jFace-1, kFace, iBlockFace) &
-           .neqv.     true_cell(iFace, jFace  , kFace, iBlockFace)))&
-           .or.&
-           (iDir==3.and.(true_cell(iFace, jFace, kFace-1, iBlockFace) &
-           .neqv.     true_cell(iFace, jFace, kFace  , iBlockFace)))
-    end function is_boundary_face
     !==========================================================================
     subroutine roe_solver_new
       Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) &
