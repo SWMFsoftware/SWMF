@@ -1568,11 +1568,13 @@ the code switches back to the two-level scheme for one time step.
 		<option name="1" default="T"	/>
 		<option name="2"		/>
 	</parameter>
-	<parameter name="TypeFluxImpl" type="string" input="select">
-	    <option name="Roe"     value="Roe/roe/1"/>   							<!--^CFG IF ROEFLUX-->
-	    <option name="Rusanov" value="Rusanov/rusanov/2/TVDLF"				 default="T"/>	<!--^CFG IF RUSANOVFLUX-->
-	    <option name="Linde"   value="Linde/linde/3/HLLEL"/>						<!--^CFG IF LINDEFLUX-->
-	    <option name="Sokolov" value="Sokolov/sokolov/4/AW"/>						<!--^CFG IF AWFLUX   -->
+	<parameter name="TypeFluxImpl" type="string" input="select" 
+		case="upper">
+	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
+	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
+	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
+	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
+	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
 	</parameter>
 #IMPLSCHEME
 1               nOrderImpl
@@ -3100,11 +3102,12 @@ Example for InvD2Ray =
 		<option name="1" />
 		<option name="2" default="T" />
 	</parameter>
-	<parameter name="TypeFlux" type="string" input="select">
-	    <option name="Roe"     value="Roe/roe/1"/>   							<!--^CFG IF ROEFLUX-->
-	    <option name="Rusanov" value="Rusanov/rusanov/2/TVDLF"				 default="T"/>	<!--^CFG IF RUSANOVFLUX-->
-	    <option name="Linde"   value="Linde/linde/3/HLLEL"/>						<!--^CFG IF LINDEFLUX-->
-	    <option name="Sokolov" value="Sokolov/sokolov/4/AW"/>						<!--^CFG IF AWFLUX   -->
+	<parameter name="TypeFlux" type="string" input="select" case="upper">
+	    <option name="Roe"     value="ROE/1"/>       <!--^CFG IF ROEFLUX-->
+	    <option name="RoeOld"  value="ROEOLD/5"/>    <!--^CFG IF ROEFLUX-->
+	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
+	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
+	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
 	</parameter>
 	<if expr="$nOrder == 2">
 		<parameter name="TypeLimiter" type="string" input="select">
@@ -3133,8 +3136,10 @@ Possible values for TypeFlux:
  'Rusanov'     - Rusanov or Lax-Friedrichs flux     <!--^CFG IF RUSANOVFLUX-->
  'Linde        - Linde's HLLEL flux                   <!--^CFG IF LINDEFLUX-->
  'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
- 'Roe'         - Roe's approximate Riemann flux       <!--^CFG IF ROEFLUX  -->
+ 'Roe'         - Roe's approximate Riemann flux (new) <!--^CFG IF ROEFLUX  -->
+ 'RoeOld'      - Roe's approximate Riemann flux (old) <!--^CFG IF ROEFLUX  -->
 \end{verbatim}
+The new and old Roe schemes differ in some details of the algorithm.
 Possible values for TypeLimiter for spatially second order schemes:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
@@ -3152,7 +3157,6 @@ are between 1.0 and 2.0 :
   LimiterBeta = 1.2 is the recommended value for the beta limiter
 \end{verbatim}
 The default is the second order Rusanov scheme with the minmod limiter.
-
 </command>
 
 <command name="NONCONSERVATIVE">
