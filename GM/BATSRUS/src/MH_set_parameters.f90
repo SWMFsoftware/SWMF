@@ -2090,16 +2090,8 @@ contains
     ! Check flux type selection
     select case(FluxType)
     case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX BEGIN
-       FluxType='Roe'                                
-       if(.not.UseRS7)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub// &
-                  'WARNING: Roe solver requires UseRS7 to be true'
-             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-             write(*,'(a)')'setting FluxType=RoeOld'
-          end if
-          FluxType='RoeOld'
-       end if
+       FluxType='Roe'
+       UseRS7 = .true.
     case('5','roeold','RoeOld','ROEOLD')             
        FluxType='RoeOld'                             !^CFG END ROEFLUX
     case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
