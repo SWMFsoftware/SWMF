@@ -371,27 +371,27 @@ Examples for the SWMF Config.pl:
 
 Select the empty version for all components except GM/BATSRUS:
 
-    config.pl -v=Empty,GM/BATSRUS
+    Config.pl -v=Empty,GM/BATSRUS
 
 Select IH/BATSRUS, IM/RCM2 and UA/GITM2 component versions:
 
-    config.pl -v=IH/BATSRUS -v=IM/RCM2,UA/GITM2
+    Config.pl -v=IH/BATSRUS -v=IM/RCM2,UA/GITM2
 
 Set the grid size for GM and IH:
 
-    config.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
+    Config.pl -g=GM:8,8,8,400,100 -g=IH:6,6,6,800,1
 
 Show the currently set options for the GM and SC component:
 
-    config.pl -o=GM:show,SC:show
+    Config.pl -o=GM:s,SC:s
 
 Show the available user modules and equations for GM and IH
 
-    config.pl -o=GM:equation,usermodule -o=IH:equation,usermodule
+    Config.pl -o=GM:e,u -o=IH:e,u
 
 Set equation and user module for GM:
 
-    config.pl -o=GM:e=Mhd,u=Default"
+    Config.pl -o=GM:e=Mhd,u=Default"
 #EOC
     ,"\n\n";
     exit 0;
