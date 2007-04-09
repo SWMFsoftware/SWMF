@@ -109,9 +109,9 @@ sub print_help{
 
 Additional examples for PWOM/Config.pl:
 
-Install for Mars:
+Install for Saturn:
 
-    Config.pl -install -Mars
+    Config.pl -install -Saturn
 
 Reconfigure PWOM for Earth and show selected planet:
 
