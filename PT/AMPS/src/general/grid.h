@@ -377,7 +377,9 @@ public:
        
 //==================================================
 //Get "global" number of cell, which contains point x 
-  long int GetNCell(DataType* x) {
+//breakflag == true:   in the case when a cell is not found, the execution of the code is interupted
+//breakflag == false : in the case when a cell is not found, the function returns value == -1  
+  long int GetNCell(DataType* x,bool breakflag=true) {
     int idim,i;
     long int nnode,ncell;
     DataType xmin[3],xmax[3],locx[3],summ;
@@ -424,11 +426,14 @@ public:
     }
 
     if (flag==false) {
-      printf("Error: proc. Cgrid::GetNCell\n");
-      printf("Cannot find cell which contain point x=");
-      for (idim=0;idim<DIM;idim++) printf("   %d",x[idim]);
-      printf("\n");
-      exit(__LINE__,__FILE__);
+      if (breakflag==true) {
+        printf("Error: proc. Cgrid::GetNCell\n");
+        printf("Cannot find cell which contain point x=");
+        for (idim=0;idim<DIM;idim++) printf("   %d",x[idim]);
+        printf("\n");
+        exit(__LINE__,__FILE__);
+      }
+      else ncell=-1;
     }  
 
     return ncell;     
