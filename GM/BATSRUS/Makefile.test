@@ -71,7 +71,7 @@ test_shocktube_check:
 	cat ${TESTDIR}/GM/IO2/cut_raw_2_t00000025_n0000358_pe*.idl \
 		> ${TESTDIR}/GM/IO2/cut_25.idl
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-14 \
-	  Param/SHOCKTUBE/TestOutput/cut_raw_2_t00000025_n0000358_pe0000.idl \
+	  Param/SHOCKTUBE/TestOutput/cut_25.idl \
 	  ${TESTDIR}/GM/IO2/cut_25.idl > test_shocktube.diff
 	ls -l test_shocktube.diff
 
