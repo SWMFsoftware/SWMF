@@ -1846,8 +1846,8 @@ contains
     automatic_refinement = .false.
 
     nOrder = 2
-    FluxType = 'Rusanov'               !^CFG IF RUSANOVFLUX
-    !FluxType = 'Sokolov'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
+    FluxType = 'RUSANOV'               !^CFG IF RUSANOVFLUX
+    !FluxType = 'SOKOLOV'              !^CFG UNCOMMENT IF NOT RUSANOVFLUX
     !UseCovariant = .true.             !^CFG UNCOMMENT IF COVARIANT
   
     ! Default implicit parameters      !^CFG IF IMPLICIT BEGIN
