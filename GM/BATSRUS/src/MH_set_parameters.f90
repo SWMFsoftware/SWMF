@@ -2125,6 +2125,8 @@ contains
        FluxTypeImpl = FluxType
     case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX
        FluxTypeImpl='Roe'                            !^CFG IF ROEFLUX
+    case('RoeOld')                                   !^CFG IF ROEFLUX
+       FluxTypeImpl='RoeOld'                         !^CFG IF ROEFLUX
     case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
        FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
     case('3','linde','Linde','LINDE','HLLEL')        !^CFG IF LINDEFLUX
