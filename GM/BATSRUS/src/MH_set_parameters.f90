@@ -400,7 +400,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UsePartImplicit2',UsePartImplicit2)
      case("#IMPLSCHEME", "#IMPLICITSCHEME")
         call read_var('nOrderImpl',nORDER_impl)
-        call read_var('TypeFluxImpl',FluxTypeImpl)
+        call read_var('TypeFluxImpl',FluxTypeImpl,IsUpperCase=.true.)
      case("#IMPLSTEP", "#IMPLICITSTEP")
         call read_var('ImplCoeff ',ImplCoeff0)
         call read_var('UseBDF2   ',UseBDF2)
@@ -1072,7 +1072,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         nStage = nOrder
-        call read_var('TypeFlux',FluxType)
+        call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
         if(nOrder>1)&                                                
              call read_var('TypeLimiter', TypeLimiter)
         if(TypeLimiter == 'minmod') then
@@ -2089,16 +2089,16 @@ contains
 
     ! Check flux type selection
     select case(FluxType)
-    case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX BEGIN
+    case('1','ROE')                                  !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
        UseRS7 = .true.
-    case('5','roeold','RoeOld','ROEOLD')             
+    case('5','ROEOLD')             
        FluxType='RoeOld'                             !^CFG END ROEFLUX
-    case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
+    case('2','RUSANOV','TVDLF')                      !^CFG IF RUSANOVFLUX
        FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
-    case('3','linde','Linde','LINDE','HLLEL')        !^CFG IF LINDEFLUX
+    case('3','LINDE','HLLEL')                        !^CFG IF LINDEFLUX
        FluxType='Linde'                              !^CFG IF LINDEFLUX
-    case('4','sokolov','Sokolov','SOKOLOV','AW')     !^CFG IF AWFLUX
+    case('4','SOKOLOV','AW')                         !^CFG IF AWFLUX
        FluxType='Sokolov'                            !^CFG IF AWFLUX
     case default
        if(iProc==0)then
@@ -2115,15 +2115,16 @@ contains
     select case(FluxTypeImpl)
     case('default')
        FluxTypeImpl = FluxType
-    case('1','roe','Roe','ROE')                      !^CFG IF ROEFLUX
-       FluxTypeImpl='Roe'                            !^CFG IF ROEFLUX
-    case('RoeOld')                                   !^CFG IF ROEFLUX
-       FluxTypeImpl='RoeOld'                         !^CFG IF ROEFLUX
-    case('2','rusanov','Rusanov','RUSANOV','TVDLF')  !^CFG IF RUSANOVFLUX
+    case('1','ROE')                                  !^CFG IF ROEFLUX BEGIN
+       FluxTypeImpl='Roe'
+       UseRS7 = .true.
+    case('5','ROEOLD')
+       FluxTypeImpl='RoeOld'                         !^CFG END ROEFLUX
+    case('2','RUSANOV','TVDLF')                      !^CFG IF RUSANOVFLUX
        FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
-    case('3','linde','Linde','LINDE','HLLEL')        !^CFG IF LINDEFLUX
+    case('3','LINDE','HLLEL')                        !^CFG IF LINDEFLUX
        FluxTypeImpl='Linde'                          !^CFG IF LINDEFLUX
-    case('4','sokolov','Sokolov','SOKOLOV','AW')     !^CFG IF AWFLUX
+    case('4','SOKOLOV','AW')                         !^CFG IF AWFLUX
        FluxTypeImpl='Sokolov'                        !^CFG IF AWFLUX
     case default
        if(iProc==0)then
