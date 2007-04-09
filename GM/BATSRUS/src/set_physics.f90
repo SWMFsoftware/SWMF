@@ -216,12 +216,12 @@ subroutine set_physics_constants
 
   do iFluid = 2, nFluid
      call select_fluid
-     FaceState_VI(iRho, East_:Top_) = SW_Rho*cTiny
+     FaceState_VI(iRho, East_:Top_) = SW_Rho*0.0001
      FaceState_VI(iUx,  East_:Top_) = SW_Ux
      FaceState_VI(iUy,  East_:Top_) = SW_Uy
      FaceState_VI(iUz,  East_:Top_) = SW_Uz
-     FaceState_VI(iP,   East_:Top_) = SW_p*cTiny* &
-          MassFluid_I(1)/MassFluid_I(iFluid)
+     FaceState_VI(iP,   East_:Top_) = SW_p*0.0001 &
+          *MassFluid_I(1)/MassFluid_I(iFluid)
   end do
 
   ! Cell State is used for filling the ghostcells
