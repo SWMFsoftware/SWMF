@@ -2089,16 +2089,16 @@ contains
 
     ! Check flux type selection
     select case(FluxType)
-    case('1','ROE')                                  !^CFG IF ROEFLUX BEGIN
+    case('1','ROE','Roe')                            !^CFG IF ROEFLUX BEGIN
        FluxType='Roe'
        UseRS7 = .true.
-    case('5','ROEOLD')             
+    case('5','ROEOLD','RoeOld')             
        FluxType='RoeOld'                             !^CFG END ROEFLUX
-    case('2','RUSANOV','TVDLF')                      !^CFG IF RUSANOVFLUX
+    case('2','RUSANOV','TVDLF','Rusanov')            !^CFG IF RUSANOVFLUX
        FluxType='Rusanov'                            !^CFG IF RUSANOVFLUX
-    case('3','LINDE','HLLEL')                        !^CFG IF LINDEFLUX
+    case('3','LINDE','HLLEL','Linde')                !^CFG IF LINDEFLUX
        FluxType='Linde'                              !^CFG IF LINDEFLUX
-    case('4','SOKOLOV','AW')                         !^CFG IF AWFLUX
+    case('4','SOKOLOV','AW','Sokolov')               !^CFG IF AWFLUX
        FluxType='Sokolov'                            !^CFG IF AWFLUX
     case default
        if(iProc==0)then
@@ -2112,19 +2112,20 @@ contains
     end select
 
     ! Check flux type selection for implicit   !^CFG IF IMPLICIT BEGIN
+
     select case(FluxTypeImpl)
     case('default')
        FluxTypeImpl = FluxType
-    case('1','ROE')                                  !^CFG IF ROEFLUX BEGIN
+    case('1','ROE','Roe')                            !^CFG IF ROEFLUX BEGIN
        FluxTypeImpl='Roe'
        UseRS7 = .true.
-    case('5','ROEOLD')
+    case('5','ROEOLD','RoeOld')
        FluxTypeImpl='RoeOld'                         !^CFG END ROEFLUX
-    case('2','RUSANOV','TVDLF')                      !^CFG IF RUSANOVFLUX
+    case('2','RUSANOV','TVDLF','Rusanov')            !^CFG IF RUSANOVFLUX
        FluxTypeImpl='Rusanov'                        !^CFG IF RUSANOVFLUX
-    case('3','LINDE','HLLEL')                        !^CFG IF LINDEFLUX
+    case('3','LINDE','HLLEL','Linde')                !^CFG IF LINDEFLUX
        FluxTypeImpl='Linde'                          !^CFG IF LINDEFLUX
-    case('4','SOKOLOV','AW')                         !^CFG IF AWFLUX
+    case('4','SOKOLOV','AW','Sokolov')               !^CFG IF AWFLUX
        FluxTypeImpl='Sokolov'                        !^CFG IF AWFLUX
     case default
        if(iProc==0)then
