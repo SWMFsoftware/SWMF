@@ -455,7 +455,7 @@ contains
     integer::iWave
     real::Eps_V(nVar-1),Lambda
   
-    Eps_V=LambdaB0!abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05
+    Eps_V=max(LambdaB0,abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05)
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
        Eps_V(iWave)=max(EigenvalueR_V(iWave)-Lambda,&
@@ -493,8 +493,8 @@ contains
                                          EigenvalueR_V
     real::RhoH,UH_D(3),B1H_D(3),XH,UnL,UnR,DeltaB0_D(3),LambdaB0
     real,dimension(nVar)  ::EigenvalueFixed_V,FluxPseudoChar_V
-    integer::iWave,iDir_D(3)
-    iDir_D=0; iDir_D(iDir)=1
+    integer::iWave!,iDir_D(3)
+    !iDir_D=0; iDir_D(iDir)=1
     DeltaB0_D=(/B0xL-B0xR,B0yL-B0yR,B0zL-B0zR/)
     
     
@@ -508,7 +508,7 @@ contains
        Eigenvalue_V,     & 
        EigenvalueL_V,    &
        EigenvalueR_V)
-    LambdaB0=sqrt((sum(DeltaB0_D**2)-(sum(DeltaB0_D*iDir_D))**2)/RhoH)
+    LambdaB0=sqrt((sum(DeltaB0_D**2))/RhoH)
     call get_fixed_abs_eigenvalue(&
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
@@ -575,7 +575,7 @@ contains
        EigenvalueL_V,    &
        EigenvalueR_V)
     DeltaB0_D=(/B0xL-B0xR,B0yL-B0yR,B0zL-B0zR/)
-    LambdaB0=sqrt((sum(DeltaB0_D**2)-(sum(DeltaB0_D*Dir_D))**2)/RhoH)
+    LambdaB0=sqrt((sum(DeltaB0_D**2))/RhoH)
     call get_fixed_abs_eigenvalue(&
                                       Eigenvalue_V,&
                                       EigenvalueL_V,&
