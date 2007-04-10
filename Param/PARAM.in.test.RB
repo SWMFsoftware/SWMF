@@ -54,7 +54,7 @@ T                       UseBody
  128.			zMax
 
 #GRIDRESOLUTION
-1.0                     Resolution
+2.0                     Resolution
 initial                 NameArea
 
 #INCLUDE
@@ -76,10 +76,6 @@ T
 RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-
-#TIMESTEPPING
-1			nStage
-0.6			CflExpl
 
 #UPSTREAM_INPUT_FILE
 T                                                     UseUpstreamInputFile
@@ -115,7 +111,7 @@ z=0 FUL idl             StringPlot
 GM			NameComp1
 RB			NameComp2
 -1                      DnCouple
-6.0                     Dtcouple
+3.0                     Dtcouple
 
 ! Allow GM to step through coupling time
 #COUPLETIME
@@ -124,4 +120,4 @@ F			DoCoupleOnTime
 
 #STOP
 -1			MaxIteration
-60.0			tSimulationMax
+9.0			tSimulationMax
