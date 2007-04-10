@@ -93,7 +93,8 @@ test_rb:
 	make test_rb_check
 
 test_rb_compile:
-	./Config.pl -v=Empty,RB/RBE
+	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
+	./Config.pl -g=GM:8,8,8,720,70 -o=GM:e=Mhd,u=Default
 	make SWMF
 
 test_rb_rundir:
@@ -108,7 +109,7 @@ test_rb_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_rb_check:
-	gunzip -c ${RBDIR}/output/2000f223_e.fls.gz \
+	gunzip -c ${RBDIR}/output/2000f223_e.fls.9s.gz \
 		> ${TESTDIR}/2000f223_e.fls.ref
 	${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/2000f223_e.fls ${TESTDIR}/2000f223_e.fls.ref \
