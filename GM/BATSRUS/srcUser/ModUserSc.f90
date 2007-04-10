@@ -1139,12 +1139,16 @@ contains
     use ModVarIndexes
     use ModGeometry,   ONLY: x_BLK,y_BLK,z_BLK,R_BLK
     use ModNumConst
-    use ModPhysics,    ONLY: g,inv_g,No2Io_V,UnitB_,GBody
+    use ModPhysics,    ONLY: g,inv_g,No2Io_V,UnitB_,GBody,BodyTdim_I
+    use ModExpansionFactors,  ONLY: UMin,T0
     implicit none
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
     real, intent(out)    :: DensCell,PresCell,GammaCell
-    real :: BaseU
+    real :: UFinal       !The solar wind speed at the far end of the Parker spiral,
+                         !which originates from the given cell
+    real :: URatio       !The coronal based values for temperature density 
+                         !are scaled as functions of UFinal/UMin ratio
     !--------------------------------------------------------------------------
 
     call get_gamma_emp(x_BLK(iCell,jCell,kCell,iBlock),&
@@ -1154,12 +1158,16 @@ contains
     call get_bernoulli_integral(x_BLK(iCell,jCell,kCell,iBlock)/&
          R_BLK(iCell,jCell,kCell,iBlock),&
          y_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),&
-         z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),BaseU)
-    DensCell  = ((2.65e+5/BaseU)**2)*exp(-GBody*g*&
+         z_BLK(iCell,jCell,kCell,iBlock)/R_BLK(iCell,jCell,kCell,iBlock),UFinal)
+    URatio=UFinal/UMin
+    DensCell  = ((cOne/URatio)**2)*&               !This is the density variation
+         exp(-GBody*g*&
+         (min(URatio,cTwo)*BodyTdim_I(1)/T0)*&!This is the temperature variation
          (cOne/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)&
          -cOne))
 
-    PresCell  = inv_g*DensCell
+    PresCell  = inv_g*DensCell*&
+         T0/(min(URatio,cTwo)*BodyTdim_I(1))  !This is the temperature variation
   end subroutine get_plasma_parameters_cell
 
   !========================================================================
