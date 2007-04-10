@@ -57,6 +57,12 @@
 !     expansion method.
 
 !=============================================================================
+module rbe_io_unit
+
+  integer :: iUnit1, iUnit2
+
+end module rbe_io_unit
+!=============================================================================
 module rbe_constant
   implicit none
 
@@ -272,6 +278,7 @@ subroutine rbe_run
   use rbe_plasmasphere
   use rbe_time
   use rbe_cvdrift
+  use ModIoUnit, ONLY: UnitTmp_
 
   ! print initial fluxes
   if (t.eq.tstart .and. itype.eq.1) call rbe_save_restart
@@ -363,10 +370,10 @@ subroutine rbe_run
   !  Print results
   if (t.gt.tstart.and.mod(t,tint).eq.0.) call rbe_save_restart
 
-  open(unit=9,file='rbe_swmf.log')
-  write(9,'(a8)') outname
-  write(9,*) 'istep, t(hour)   ',istep,t/3600. 
-  close(9)
+  open(unit=UnitTmp_,file='rbe_swmf.log')
+  write(UnitTmp_,'(a8)') outname
+  write(UnitTmp_,*) 'istep, t(hour)   ',istep,t/3600. 
+  close(UnitTmp_)
 
 end subroutine rbe_run
 
@@ -406,30 +413,34 @@ subroutine readInputData
   use rbe_constant
   use rbe_cread1
   use rbe_cread2
+  use rbe_io_unit
+  use ModIoUnit, ONLY: UnitTmp_, io_unit_new
 
-  real bxw1(nswmax),byw1(nswmax),bzw1(nswmax),xnsw1(nswmax),vsw1(nswmax)
-  integer isymH(60)
-  character storm*8, header*80
+  real:: bxw1(nswmax),byw1(nswmax),bzw1(nswmax),xnsw1(nswmax),vsw1(nswmax)
+  integer :: isymH(60)
+  character (len=8)::  storm
+  character (len=80):: header
+  !---------------------------------------------------------------------------
 
   !.....open a file to read parameters which control the speices, dt and
   !     so on
-  open(unit=4,file='rbe_swmf.dat',status='old')
-  read(4,*) itype              ! 1=initial run,  2=continuous run
-  read(4,*) tstart
-  read(4,*) tmax
-  read(4,*) dt                 ! time step in s. Summer 2006: read dt from *.dat
-  read(4,*) js   	       ! species: 1=RB e-, 2=RB H+  
-  read(4,*) trans              ! startup time in sec when itype=1
-  read(4,*) imod               ! 1=t96_01, 2=t04_s, 3=MHD
-  read(4,*) iconvect           ! 1=Weimer, 2=MHD
-  read(4,*) ires               ! 0=fixed B config or 1=changing B config
-  read(4,*) tint               ! output results every tint seconds
-  read(4,'(1x,a8)') storm   
-  read(4,'(1x,a8)') outname
-  read(4,*) iplsp              ! 0=no plasmasphere, 1=plasmasphere
-  close(4)
+  open(unit=UnitTmp_,file='rbe_swmf.dat',status='old')
+  read(UnitTmp_,*) itype    ! 1=initial run,  2=continuous run
+  read(UnitTmp_,*) tstart
+  read(UnitTmp_,*) tmax
+  read(UnitTmp_,*) dt       ! time step in s. Summer 2006: read dt from *.dat
+  read(UnitTmp_,*) js       ! species: 1=RB e-, 2=RB H+  
+  read(UnitTmp_,*) trans    ! startup time in sec when itype=1
+  read(UnitTmp_,*) imod     ! 1=t96_01, 2=t0UnitTmp__s, 3=MHD
+  read(UnitTmp_,*) iconvect ! 1=Weimer, 2=MHD
+  read(UnitTmp_,*) ires     ! 0=fixed B config or 1=changing B config
+  read(UnitTmp_,*) tint     ! output results every tint seconds
+  read(UnitTmp_,'(1x,a8)') storm   
+  read(UnitTmp_,'(1x,a8)') outname
+  read(UnitTmp_,*) iplsp    ! 0=no plasmasphere, 1=plasmasphere
+  close(UnitTmp_)
 
-  iprint=2                       ! 1=print result @ tmax, 2=print every tint
+  iprint=2                  ! 1=print result @ tmax, 2=print every tint
   ntime=ifix((tmax-tstart)/tint)+1
   if (iprint.eq.1) then
      tint=tmax     
@@ -442,8 +453,8 @@ subroutine readInputData
   rc=(re+abs(hlosscone)*1000.)/re  ! losscone in Re
 
   if (mod(tf,dt).ne.0.) then
-     write(6,*) 'mod(tf,dt).ne.0.'
-     stop
+     write(*,*) 'RBE ERROR: mod(tf,dt).ne.0.'
+     call CON_stop('RBE ERROR')
   endif
 
   if (itype.eq.2) trans=0.
@@ -454,24 +465,26 @@ subroutine readInputData
   if (js.eq.2) st2='_h'
 
   !.....Open files in case of original run and continuous run 
-  open(unit=32,file='rbe'//st2//'.fin',status='old')
-  read(32,*) init        ! 1=NASA RB model
-  read(32,*) il,ie
+  iUnit1 = io_unit_new()
+  open(unit=iUnit1,file='rbe'//st2//'.fin',status='old')
+  read(iUnit1,*) init        ! 1=NASA RB model
+  read(iUnit1,*) il,ie
   if (itype.eq.2) then
-     open(unit=30,file=outname//st2//'_c.f2',status='old',form='unformatted')
+     iUnit2 = io_unit_new()
+     open(unit=iUnit2,file=outname//st2//'_c.f2',status='old',form='unformatted')
      init=0              ! continuous run
   endif
 
   !.....open file to read the SW-IMF data   
-  open(unit=15,file=storm//'.SWIMF',status='old')
-  read(15,*) iyear,iday,ihour        ! time corresponding to t=0
-  read(15,*) swlag    ! time in sec for sw travel from s/c to subsolar point
+  open(unit=UnitTmp_,file=storm//'.SWIMF',status='old')
+  read(UnitTmp_,*) iyear,iday,ihour        ! time corresponding to t=0
+  read(UnitTmp_,*) swlag    ! time in sec for sw travel from s/c to subsolar point
 
-  read(15,*) nsw
-  read(15,'(a80)') header
+  read(UnitTmp_,*) nsw
+  read(UnitTmp_,'(a80)') header
   j=1
   do i=1,nsw
-     read(15,*) idy,month,iyr,ihr,minu,sec,xnsw1(i),vsw1(i)        
+     read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,xnsw1(i),vsw1(i)        
      call modd_dayno(iyr,month,idy,iday1,j)                     
      tsw(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
   enddo
@@ -491,15 +504,15 @@ subroutine readInputData
      enddo
   enddo
 
-  read(15,*) nimf
+  read(UnitTmp_,*) nimf
   if (nsw.gt.nswmax.or.nimf.gt.nswmax) then
-     write(6,*) 'Error: nsw.gt.nswmax.or.nimf.gt.nswmax'
-     stop
+     write(6,*) 'RBE Error: nsw.gt.nswmax.or.nimf.gt.nswmax'
+     call CON_stop('RBE ERROR')
   endif
-  read(15,'(a80)') header
+  read(UnitTmp_,'(a80)') header
   j=1
   do i=1,nimf
-     read(15,*) idy,month,iyr,ihr,minu,sec,bxw1(i),byw1(i),bzw1(i)
+     read(UnitTmp_,*) idy,month,iyr,ihr,minu,sec,bxw1(i),byw1(i),bzw1(i)
      call modd_dayno(iyr,month,idy,iday1,j)                     
      timf(i)=swlag+(iday1-iday)*86400.+(ihr-ihour)*3600.+minu*60.+sec 
   enddo
@@ -520,19 +533,19 @@ subroutine readInputData
         bzw(i)=bzw(i)+bzw1(j)/(j2-j1+1)
      enddo
   enddo
-  close(15)
+  close(UnitTmp_)
 
   ! Read Dst (symH) data
-  open(unit=16,file=storm//'.symH',status='old')
-  read(16,*) nhour
+  open(unit=UnitTmp_,file=storm//'.symH',status='old')
+  read(UnitTmp_,*) nhour
   ndst=nhour*60                      ! 1-minute resolution         
   if (ndst.gt.ndstmax) then
      print *,'Error: ndst.gt.ndstmax'
-     stop
+     call CON_stop('RBE ERROR')
   endif
   j=1
   do i=1,nhour
-     read(16,'(14x,2i2,1x,i2,13x,60i6)') month,idy,ihr,isymH
+     read(UnitTmp_,'(14x,2i2,1x,i2,13x,60i6)') month,idy,ihr,isymH
      call modd_dayno(iyr,month,idy,iday1,j)
      tdst0=(iday1-iday)*86400.+(ihr-ihour)*3600.
      do k=1,60
@@ -541,7 +554,7 @@ subroutine readInputData
         dsth(m)=float(isymH(k))
      enddo
   enddo
-  close(16)
+  close(UnitTmp_)
 
 end subroutine readInputData
 
@@ -739,9 +752,9 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
   !  Start field line tracing.  
   call timing_start('rbe_trace')
-  do j=1,ip
+  LONGITUDE: do j=1,ip
      irm(j)=ir
-     do i=0,ir
+     LATITUDE: do i=0,ir
         iout=0
         xlati1=xlati(i)
         xli(i)=rc/cos(xlati1)/cos(xlati1)
@@ -769,67 +782,9 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         ra(1)=sqrt(xa(1)*xa(1)+ya(1)*ya(1)+za(1)*za(1))
         dssa(1)=0.
 
-2       h=pas*dir
+        if( .not. trace_line() ) CYCLE LATITUDE
 
-        call timing_start('rk4_tsyndipole')
-
-        if (imod.le.2) call rk4(tsyndipoleSM,imod,iopt,parmod,ps,t,t0,&
-             h,x0,xend,xwrk,nd,f,tend)
-
-        call timing_stop('rk4_tsyndipole')
-
-
-        !              if (imod.eq.3) call rk4(MHD_B,imod,iopt,parmod,ps,t,t0,
-        !    *                                 h,x0,xend,xwrk,nd,f,tend)
-        npf1=npf1+1
-        ra(npf1)=sqrt(xend(1)*xend(1)+xend(2)*xend(2)+xend(3)*xend(3))
-        xa(npf1)=xend(1)
-        ya(npf1)=xend(2)
-        za(npf1)=xend(3)
-        aza(npf1)=abs(za(npf1))
-        bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9    ! B in T
-        dssa(npf1)=dssa(npf1-1)+abs(h)
-
-        if (ra(npf1).gt.rlim.or.npf1.gt.npmax) then
-           irm(j)=i-1
-           iout=1
-           goto 3                       ! next j                 
-        endif
-
-        if (ra(npf1).le.rc) then               ! at south hemisphere
-           ! reduce step size such that ra(npf1) is at rc
-           h1=(ra(npf1-1)-rc)/(ra(npf1-1)-ra(npf1))
-           ra(npf1)=rc
-           xa(npf1)=xa(npf1-1)+(xend(1)-xa(npf1-1))*h1
-           ya(npf1)=ya(npf1-1)+(xend(2)-ya(npf1-1))*h1
-           za(npf1)=za(npf1-1)+(xend(3)-za(npf1-1))*h1
-           aza(npf1)=abs(za(npf1))
-           if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,&
-                xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
-           !   if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,&
-           !                         xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
-           bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9   ! B in T
-           dssa(npf1)=dssa(npf1-1)+abs(h)*h1
-
-           ! Calculate the flux tube volume per magnetic flux (volume)
-           n=npf1-1 ! n = no. of intervals from N(rc) to S(rc) hemisphere
-           do ii=1,n
-              b_mid=0.5*(bba(ii)+bba(ii+1))
-              dss(ii)=dssa(ii+1)-dssa(ii)
-              yint(ii)=1./b_mid
-           enddo
-           call closed(1,n,yint,dss,ss)  ! use closed form
-           if (i.ge.1.and.i.le.ir) volume(i,j)=ss*re   ! volume / flux
-           goto 1
-        endif
-
-        do n1=1,nd
-           x0(n1)=xend(n1)
-        enddo
-        t0=tend
-        goto 2
-
-1       call timing_start('rbe_sort')
+        call timing_start('rbe_sort')
         call sort_quick(npf1,aza,ind)    ! find the equatorial crossing point
         call timing_stop('rbe_sort')
 
@@ -853,7 +808,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         endif
         if (iout.ge.2) then
            irm(j)=i-1
-           goto 3                ! next j      
+           CYCLE LATITUDE
         endif
 
         dss2=dssa(npf1)/2.      ! find the middle point
@@ -904,14 +859,14 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            endif
         enddo
 
-      !                                <--dss(m)-->
-      !      rs(1)                         rs(m)                     rs(n)
-      !      bs(1)                         bs(m)                     bs(n)
-      !    |-------|-----|......|------|----------|----|.......|---|-------|
-      !  rm(1)                       rm(m)                               rm(n+1)
-      !  bm(1)                       bm(m)                               bm(n+1)
+        !                                <--dss(m)-->
+        !      rs(1)                         rs(m)                     rs(n)
+        !      bs(1)                         bs(m)                     bs(n)
+        !    |-------|-----|......|------|----------|----|.......|---|-------|
+        !  rm(1)                       rm(m)                               rm(n+1)
+        !  bm(1)                       bm(m)                               bm(n+1)
 
-      ! Field line integration using Taylor expansion method
+        ! Field line integration using Taylor expansion method
         call timing_start('rbe_taylor')
         sumBn(0:nTaylor)=0.
         sumhBn(0:nTaylor)=0.
@@ -959,8 +914,8 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            enddo
 
            n70=n7
-        enddo 
-           
+        enddo
+
         ! Set up arrarys: si3, tya3, h3
         do m=1,im2-1
            ss=0.
@@ -1003,14 +958,18 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            endif
         enddo
 
-     enddo                              ! end of i loop
-3    continue
+     enddo LATITUDE                              ! end of i loop
+  enddo LONGITUDE                              ! end of j loop
+
+  ! Fill in volumes and coordinates for open (?) field lines
+  do j = 1, ip
      do i=irm(j)+1,ir
         volume(i,j)=volume(irm(j),j)
         xo(i,j)=xo(irm(j),j)
         yo(i,j)=yo(irm(j),j)
      enddo
-  enddo                              ! end of j loop
+  end do
+
   call timing_stop('rbe_trace')
 
   ! Peridic boundary condition
@@ -1066,6 +1025,76 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
      call locate(x1,irm(j),rb,ib)
      iba(j)=ib
   enddo
+
+contains
+
+  logical function trace_line()
+
+    do
+       h=pas*dir
+
+       call timing_start('rk4_tsyndipole')
+
+       if (imod.le.2) call rk4(tsyndipoleSM,imod,iopt,parmod,ps,t,t0,&
+            h,x0,xend,xwrk,nd,f,tend)
+
+       call timing_stop('rk4_tsyndipole')
+
+
+       !              if (imod.eq.3) call rk4(MHD_B,imod,iopt,parmod,ps,t,t0,
+       !    *                                 h,x0,xend,xwrk,nd,f,tend)
+       npf1=npf1+1
+       ra(npf1)=sqrt(xend(1)*xend(1)+xend(2)*xend(2)+xend(3)*xend(3))
+       xa(npf1)=xend(1)
+       ya(npf1)=xend(2)
+       za(npf1)=xend(3)
+       aza(npf1)=abs(za(npf1))
+       bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9    ! B in T
+       dssa(npf1)=dssa(npf1-1)+abs(h)
+
+       if (ra(npf1).gt.rlim.or.npf1.gt.npmax) then
+          irm(j)=i-1
+          iout=1
+          trace_line = .false.
+          RETURN
+       endif
+
+       if (ra(npf1).le.rc) then               ! at south hemisphere
+          ! reduce step size such that ra(npf1) is at rc
+          h1=(ra(npf1-1)-rc)/(ra(npf1-1)-ra(npf1))
+          ra(npf1)=rc
+          xa(npf1)=xa(npf1-1)+(xend(1)-xa(npf1-1))*h1
+          ya(npf1)=ya(npf1-1)+(xend(2)-ya(npf1-1))*h1
+          za(npf1)=za(npf1-1)+(xend(3)-za(npf1-1))*h1
+          aza(npf1)=abs(za(npf1))
+          if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,&
+               xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
+          !   if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,&
+          !                         xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
+          bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9   ! B in T
+          dssa(npf1)=dssa(npf1-1)+abs(h)*h1
+
+          ! Calculate the flux tube volume per magnetic flux (volume)
+          n=npf1-1 ! n = no. of intervals from N(rc) to S(rc) hemisphere
+          do ii=1,n
+             b_mid=0.5*(bba(ii)+bba(ii+1))
+             dss(ii)=dssa(ii+1)-dssa(ii)
+             yint(ii)=1./b_mid
+          enddo
+          call closed(1,n,yint,dss,ss)  ! use closed form
+          if (i.ge.1.and.i.le.ir) volume(i,j)=ss*re   ! volume / flux
+          EXIT
+       endif
+
+       do n1=1,nd
+          x0(n1)=xend(n1)
+       enddo
+       t0=tend
+    end do
+
+    trace_line = .true.
+
+  end function trace_line
 
 end subroutine fieldpara
 
@@ -1266,7 +1295,7 @@ subroutine diffusee(f2,dt,ekev,bo,ro,w,dw,density,bm,q,xmp,&
               enddo
 1             if (k1.eq.iw2(m)) then
                  write(6,*) 'Error: k1.eq.iw2(m)'
-                 stop
+                 call CON_stop('RBE ERROR')
               endif
               k2=iw2(m)
               iww=k2-k1+1
@@ -1666,6 +1695,9 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
      iba,init,il,ie,outname,st2)
 
   use rbe_cinitial
+  use rbe_io_unit, ONLY: iUnit1, iUnit2
+  use ModIoUnit, ONLY: UnitTmp_
+  use ModNumConst, ONLY: pi => cPi
 
   character(len=8), intent(in):: outname
   character(len=2), intent(in):: st2
@@ -1674,8 +1706,8 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
        ei_MeV(ie),gride(je),ei(ie),eilog(ie),fi(il,ie),psdi(il,ie),&
        d4(ir,iw,ik)
   integer:: iba(ip),irm(ip)
+  !----------------------------------------------------------------------------
 
-  pi=acos(-1.)
   e_rest=xmass(js)*c*c/1.6e-16       ! rest energy in keV
 
   do i=1,ir
@@ -1712,23 +1744,23 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
         ib0(j)=iba(j)
      enddo
   else
-     read(30) f2             
-     read(30) iw1
-     read(30) iw2
-     read(30) ib0
-     read(30) xnsw0,vsw0,Bx0,By0,Bz0,vswb0,xnswb0
+     read(iUnit2) f2             
+     read(iUnit2) iw1
+     read(iUnit2) iw2
+     read(iUnit2) ib0
+     read(iUnit2) xnsw0,vsw0,Bx0,By0,Bz0,vswb0,xnswb0
   endif
 
   ! Set up f2 and f at t=tstart for initial run
   if (init.gt.0) then     ! initial flux from AE8MAX (e-) or AP8MAX+CCE (H+)
-     read(32,*) (roi(i),i=1,il)    ! radial distance at which input is taken
-     read(32,*) (ei_MeV(k),k=1,ie)  ! in MeV
+     read(iUnit1,*) (roi(i),i=1,il)    ! radial distance at which input is taken
+     read(iUnit1,*) (ei_MeV(k),k=1,ie)  ! in MeV
      do k=1,ie
         ei(k)=ei_MeV(k)*1000.        ! convert ei to keV
         eilog(k)=log10(ei(k))
         eir=ei(k)/e_rest             ! normalized energy in rest energy
         pp=xmass(js)*c*sqrt(eir*(eir+2.))
-        read(32,*) (fi(i,k),i=1,il)      ! average flux in /cm2secMeV
+        read(iUnit1,*) (fi(i,k),i=1,il)      ! average flux in /cm2secMeV
         do i=1,il
            flux=fi(i,k)/4./pi/1000.                  ! flux in /cm2secsrkeV
            psdi(i,k)=log10(flux/(1.6e19*pp)/pp)      ! log(psd)
@@ -1753,7 +1785,7 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
         enddo
      enddo
   endif                     ! end of if (init.gt.0)
-  close(32)                 ! close the file for initial condition
+  close(iUnit1)                 ! close the file for initial condition
 
   ! Setup elb, eub, e_l, ecbf, ecdt, eclc, ecce
   elb=e_min             ! keV
@@ -1775,15 +1807,15 @@ subroutine initial(itype,ekev,xjac,ro,gride,c,xmass,d4,js,irm,&
      enddo
   enddo
   if (itype.eq.1) then
-     open(unit=10,file=outname//st2//'.ec')
-     write(10,*) elb,eub,'      ! elb,eub'
-     close(10)
+     open(unit=UnitTmp_,file=outname//st2//'.ec')
+     write(UnitTmp_,*) elb,eub,'      ! elb,eub'
+     close(UnitTmp_)
   else
-     read(30) ecbf
-     read(30) ecdt
-     read(30) eclc
-     read(30) ecce
-     close(30)
+     read(iUnit2) ecbf
+     read(iUnit2) ecdt
+     read(iUnit2) eclc
+     read(iUnit2) ecce
+     close(iUnit2)
   endif
 
 end subroutine initial
@@ -1796,7 +1828,9 @@ end subroutine initial
 !***************************************************************************
 subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
      vswa,nsw,e_max,vswb0,xnswb0,outname,st2,itype,ibset,irm,iba)
+
   use rbe_cboundary
+  use ModIoUnit, ONLY: UnitTmp_
 
   real v(ir,ip,iw,ik),xjac(ir,iw),ekev(0:ir,ip,iw,ik),p(ir,ip,iw,ik),&
        xmass(ns),f2(ir,ip,iw,ik),tsw(nsw),xnswa(nsw),vswa(nsw)
@@ -1827,8 +1861,8 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
   if (js.eq.1) xktn=0.016*vswb-2.4          ! e- kT or Eo in keV
   if (js.eq.2) xktn=0.012*vswb-1.8          ! H+ kT or Eo in keV
   if (xktn.le.0.) then
-     write(6,*) ' xktn.le.0. '
-     stop
+     write(*,*) ' xktn.le.0. '
+     call CON_stop('RBE ERROR')
   endif
 
   !  Assume a Maxwellian at nightside when ibset=3 and Kappa when ibset=4
@@ -1883,14 +1917,14 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,ekev,p,xktd,xnd,js,tsw,xnswa,&
   !  Write boundary condition in file outname_st2.bc
   if (t.ge.tstart) then
      if (itype.eq.1.and.t.eq.tstart) then
-        open(unit=8,file=outname//st2//'.bc')
-        write(8,*) '      t(sec)    n(cm^-3)     kT(keV)       nightside BC'
+        open(unit=UnitTmp_,file=outname//st2//'.bc')
+        write(UnitTmp_,*) '      t(sec)    n(cm^-3)     kT(keV)       nightside BC'
      else
-        open(unit=8,file=outname//st2//'.bc',status='old',position='append')
+        open(unit=UnitTmp_,file=outname//st2//'.bc',status='old',position='append')
      endif
      xnn_cm3=xnn/1.e6
-     write(8,'(f12.0,f12.4,f12.3)') t,xnn_cm3,xktn
-     close(8)
+     write(UnitTmp_,'(f12.0,f12.4,f12.3)') t,xnn_cm3,xktn
+     close(UnitTmp_)
   endif
 
 end subroutine boundary
@@ -1904,7 +1938,11 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
      st2,xjac,gride,gridp,gridy,bo,ib0,xnsw,vsw,Bx,By,Bz,&
      vswb,xnswb,parmod,ecbf,ecdt,eclc,ecce,w,si,density,iprint,&
      ntime,irm,iplsp,iw1,iw2,itype)
+
   use rbe_grid
+  use ModIoUnit, ONLY: UnitTmp_
+  use ModNumConst, ONLY: pi => cPi
+
   real xlati(0:ir+1),ekev(0:ir,ip,iw,ik),y(ir,ip,0:ik+1),bo(ir,ip),&
        xjac(ir,iw),gride(je),gridp(je),gridy(ig),f2(ir,ip,iw,ik),ro(ir,ip),&
        xmlto(ir,ip),f(ir,ip,iw,ik),xlati1(ir),p(ir,ip,iw,ik),xmlt(ip),&
@@ -1913,7 +1951,6 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   integer ib0(ip),iw1(ik),iw2(ik),irm(ip)
   character outname*8 ,st2*2
 
-  pi=acos(-1.)
   hour=t/3600.
   do i=1,ir
      xlati1(i)=xlati(i)*180./pi   ! lat. at ionosphere in degree
@@ -1930,26 +1967,26 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
   iwh=ifix(0.5*(iw+1))
   ikh=ifix(0.5*(ik+1))
   if (t.eq.tstart) then
-     open(unit=26,file=outname//st2//'.fls',status='unknown')
+     open(unit=UnitTmp_,file=outname//st2//'.fls',status='unknown')
      !        open(unit=13,file=outname//st2//'.psd',status='unknown')
-     write(26,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
+     write(UnitTmp_,'(f10.5,5i6,"         ! rc(Re),ir,ip,je,ig,ntime")')&
           rc,ir,ip,je,ig,ntime
-     write(26,'(6f9.3)') (gride(k),k=1,je)
-     write(26,'(7f9.3)') (Ebound(k),k=1,je+1)
-     write(26,'(6f9.5)') (gridy(m),m=1,ig)
-     write(26,'(10f8.3)') (xlati1(i),i=1,ir)
+     write(UnitTmp_,'(6f9.3)') (gride(k),k=1,je)
+     write(UnitTmp_,'(7f9.3)') (Ebound(k),k=1,je+1)
+     write(UnitTmp_,'(6f9.5)') (gridy(m),m=1,ig)
+     write(UnitTmp_,'(10f8.3)') (xlati1(i),i=1,ir)
      !        write(13,'(f10.5,5i6,"         ! rc(Re),iwh,ikh,ir,ip,ntime")')
      !    *         rc,iwh,ikh,ir,ip,ntime
      !        write(13,'(1p,7e11.3)') (w(k),k=1,iw,2)
      !        write(13,'(1p,7e11.3)') (si(m),m=1,ik,2)
      !        write(13,'(10f8.3)') (xlati1(i),i=1,ir)
      if (iprint.eq.1) then
-        close(26)
+        close(UnitTmp_)
         !           close(13)
         return
      endif
   else                                                  ! in pbo_2.f
-     open(unit=26,file=outname//st2//'.fls',status='old',position='append')
+     open(unit=UnitTmp_,file=outname//st2//'.fls',status='old',position='append')
      !        open(unit=13,file=outname//st2//'.psd',status='old',position='append')
   endif
 
@@ -1981,48 +2018,48 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,outname,&
 
   ! Calculate and write fluxes at fixed E and y grides. 
   call fluxes(f,y,p,gridp,ekev,gride,gridy,irm,iw1,iw2,flx) 
-  write(26,'(f7.2,10f9.2,"   hour,parmod(1:10)")') hour,parmod         
+  write(UnitTmp_,'(f7.2,10f9.2,"   hour,parmod(1:10)")') hour,parmod         
   !     write(13,'(1x,7hhour = ,f6.2,10f9.2,"   parmod(1:10)")') hour,parmod
   do i=1,ir             ! Write fluxes @ fixed E & y grids
      do j=1,ip
-        write(26,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5,1pe11.3)')&
+        write(UnitTmp_,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5,1pe11.3)')&
              xlati1(i),xmlt(j),ro(i,j),xmlto(i,j),bo(i,j),irm(j),density(i,j)
         !           write(13,'(f7.2,f6.1,2f8.3,1pe11.3,0p,i5)')
         !    *                xlati1(i),xmlt(j),ro(i,j),xmlto(i,j),bo(i,j),irm(j)
         do k=1,je
-           write(26,'(1p,12e11.3)') (flx(i,j,k,m),m=1,ig)
+           write(UnitTmp_,'(1p,12e11.3)') (flx(i,j,k,m),m=1,ig)
         enddo
         !           do k=1,iw,2
         !              write(13,'(1p,12e11.3)') (psd(i,j,k,m),m=1,ik,2)
         !           enddo
      enddo
   enddo
-  close(26)
+  close(UnitTmp_)
   !     close(13)
 
   ! Write energy changes from various processes
-  open(unit=10,file=outname//st2//'.ec',status='old',position='append')
-  write(10,*) hour,'     ! hour'
-  write(10,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
+  open(unit=UnitTmp_,file=outname//st2//'.ec',status='old',position='append')
+  write(UnitTmp_,*) hour,'     ! hour'
+  write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
        '          eclc'
   do i=1,ir
      ro1=ro(i,1)
-     write(10,'(i4,f9.2,1p,4e14.4)') i,ro1,ecbf(i),ecdt(i),ecce(i),eclc(i)
+     write(UnitTmp_,'(i4,f9.2,1p,4e14.4)') i,ro1,ecbf(i),ecdt(i),ecce(i),eclc(i)
   enddo
-  close(10)
+  close(UnitTmp_)
 
   ! Open files to write all the informatin for continous run        
-  open(unit=30,file=outname//st2//'_c.f2',form='unformatted')
-  write(30) f2   
-  write(30) iw1
-  write(30) iw2
-  write(30) ib0
-  write(30) xnsw,vsw,Bx,By,Bz,vswb,xnswb
-  write(30) ecbf
-  write(30) ecdt
-  write(30) eclc
-  write(30) ecce
-  close(30)
+  open(unit=UnitTmp_,file=outname//st2//'_c.f2',form='unformatted')
+  write(UnitTmp_) f2   
+  write(UnitTmp_) iw1
+  write(UnitTmp_) iw2
+  write(UnitTmp_) ib0
+  write(UnitTmp_) xnsw,vsw,Bx,By,Bz,vswb,xnswb
+  write(UnitTmp_) ecbf
+  write(UnitTmp_) ecdt
+  write(UnitTmp_) eclc
+  write(UnitTmp_) ecce
+  close(UnitTmp_)
   if (iplsp.eq.1) call saveplasmasphere(outname,t,tstart,itype)
 
 end subroutine p_result
@@ -2236,7 +2273,7 @@ subroutine driftl(t,dt1,f2,k,m,vl,ro,rb,fb,dlati,ib0,iba,irm)
               do ii=1,ir
                  write(6,'(1p,5e13.3)') f(ii),fa(ii),c(ii),vl(ii,j,k,m)
               enddo
-              stop
+              call CON_stop('RBE ERROR')
            endif
         endif
      end do
@@ -2291,7 +2328,7 @@ subroutine driftp(t,dt1,f2,k,m,vp,fb,dphi,iba,irm)
               do jj=1,ip
                  write(6,'(1p,5e13.3)') f(jj),fa(jj),c(jj),vp(i,jj,k,m)
               enddo
-              stop
+              call CON_stop('RBE ERROR')
            endif
         endif
      enddo
@@ -2355,7 +2392,7 @@ subroutine driftlp(t,dt1,f2,k,m,vl,vp,cl,cp,ro,rb,fb,dlati,dphi,ib0,iba,n)
                    vl(i-1,j,k,m),fal(i-1,j),vl(i,j,k,m),fal(i,j)
               write(*,'(a,1p,4e12.3)') 'cp(j_1),fap(j_1),cp(j),fap(j) ',&
                    cp(i,j_1),fap(i,j_1),cp(i,j),fap(i,j)
-              stop
+              call CON_stop('RBE ERROR')
            endif
         endif
      enddo
@@ -2622,15 +2659,15 @@ subroutine lintp(xx,yy,n,x,y)
   !  Make sure xx is increasing or decreasing monotonically
   do i=2,n
      if (xx(n).gt.xx(1).and.xx(i).lt.xx(i-1)) then
-        write(6,*) ' lintp: xx is not increasing monotonically '
-        write(6,*) n,(xx(j),j=1,n)
-        stop
+        write(*,*) ' lintp: xx is not increasing monotonically '
+        write(*,*) n,(xx(j),j=1,n)
+        call CON_stop('RBE ERROR')
      endif
      if (xx(n).lt.xx(1).and.xx(i).gt.xx(i-1)) then
-        write(6,*) ' lintp: xx is not decreasing monotonically '
+        write(*,*) ' lintp: xx is not decreasing monotonically '
         write(*,*) 'i,xx(i),xx(i-1) ',i,xx(i-1),xx(i)
-        write(6,*) n,(xx(j),j=1,n)
-        stop
+        write(*,*) n,(xx(j),j=1,n)
+        call CON_stop('RBE ERROR')
      endif
   enddo
 
@@ -2644,7 +2681,7 @@ subroutine lintp(xx,yy,n,x,y)
      write(*,*) ' Error: ier.eq.1'
      write(*,*) ' x  ',x
      write(*,*) ' xx  ',xx
-     stop
+     call CON_stop('RBE ERROR')
   endif
   !
   !    initialize lower and upper values
@@ -2780,14 +2817,14 @@ subroutine locate(xx,n,x,j)
   !  Make sure xx is increasing or decreasing monotonically
   do i=2,n
      if (xx(n).gt.xx(1).and.xx(i).lt.xx(i-1)) then
-        write(6,*) ' locate: xx is not increasing monotonically '
-        write(6,*) n, (xx(j),j=1,n)
-        stop
+        write(*,*) ' locate: xx is not increasing monotonically '
+        write(*,*) n, (xx(j),j=1,n)
+        call CON_stop('RBE ERROR')
      endif
      if (xx(n).lt.xx(1).and.xx(i).gt.xx(i-1)) then
-        write(6,*) ' locate: xx is not decreasing monotonically '
-        write(6,*) ' n, xx  ',n,xx
-        stop
+        write(*,*) ' locate: xx is not decreasing monotonically '
+        write(*,*) ' n, xx  ',n,xx
+        call CON_stop('RBE ERROR')
      endif
   enddo
 
