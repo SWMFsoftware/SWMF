@@ -802,8 +802,8 @@ contains
        else
           tSimulationBackup = Time_Simulation    ! Save ...
           Time_Simulation = TimeSatStart_I(iSat)
-          if (iProc == 0) call close_satellite_output_files(iSat)
-          if (iProc == 0) call open_satellite_output_files(iSat)
+!          if (iProc == 0) call close_satellite_output_files(iSat)
+!          if (iProc == 0) call open_satellite_output_files(iSat)
           do while (Time_Simulation .le. TimeSatEnd_I(iSat))
              call set_satellite_flags(iSat)
              call write_logfile(iSat,ifile)           ! write for ALL the points of trajectory cut
