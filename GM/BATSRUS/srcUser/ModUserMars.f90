@@ -335,7 +335,7 @@ contains
 
     ! Variables required by this user subroutine
     integer:: i,j,k,iSpecies
-    real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate
+    real :: inv_rho, inv_rho2, uu2,Productrate
     real :: alt, Te_dim = 300.0
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0
     logical:: oktest,oktest_me
@@ -400,26 +400,28 @@ contains
                   /MassSpecies_I(1:nSpecies))
              MaxSLSpecies_CB(i,j,k,globalBLK)=1.0e-3
 
-             cosSZA=(cHalf+sign(cHalf,x_BLK(i,j,k,globalBLK)))*&
-                  x_BLK(i,j,k,globalBLK)/max(R_BLK(i,j,k,globalBLK),1.0e-3)&
-                  +1.0e-3
+             Productrate= Productrate_CB(i,j,k,globalBLK)
 
-             Productrate= cosSZA
-             ReactionRate_I(CO2_hv__CO2p_em_)= &
-                  Rate_I(CO2_hv__CO2p_em_)&
-                  *nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
-             PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
+!             ReactionRate_I(CO2_hv__CO2p_em_)= &
+!                  Rate_I(CO2_hv__CO2p_em_)&
+!                  *nDenNuSpecies_CBI(i,j,k,globalBLK,CO2_)
+!             PhoIon_I(CO2p_)=ReactionRate_I(CO2_hv__CO2p_em_) &
+!                  *Productrate
+!             ReactionRate_I(O_hv__Op_em_)= &
+!                  Rate_I(O_hv__Op_em_)&
+!                  *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
+!             PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
+!                  *Productrate
+
+             ReactionRate_I(H_hv__Hp_em_)= &
+                  Rate_I(H_hv__Hp_em_)&
+                  *nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
+             PhoIon_I(Hp_)=ReactionRate_I(H_hv__Hp_em_) &
                   *Productrate
-             ReactionRate_I(O_hv__Op_em_)= &
-                  Rate_I(O_hv__Op_em_)&
-                  *nDenNuSpecies_CBI(i,j,k,globalBLK,O_)
-             PhoIon_I(Op_)=ReactionRate_I(O_hv__Op_em_) &
-                  *Productrate
-!!!              ReactionRate_I(H_hv__Hp_em_)= &
-!!!                   Rate_I(H_hv__Hp_em_)&
-!!!                   *nDenNuSpecies_CBI(i,j,k,globalBLK,H_)
-!!!              PhoIon_I(Hp_)=ReactionRate_I(H_hv__Hp_em_) &
-!!!                   *Productrate
+             
+             PhoIon_I(CO2p_)=Ionizationrate_CBI(i,j,k,globalBLK,CO2_)
+             PhoIon_I(Op_)=Ionizationrate_CBI(i,j,k,globalBLK,O_)
+
 
 !!!              Alt = (R_BLK(i,j,k,globalBLK)-1.0)*6052.0
 !!!              if (Alt < 200.0 )then
