@@ -140,6 +140,13 @@ subroutine RB_set_grid
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
 
+  if(DoTest)then
+     write(*,*)NameSub,' ir,ip=',ir,ip
+     write(*,*)NameSub,' size(xlati)=',size(xlati),' size(phi)=',size(phi)
+     write(*,*)NameSub,' xlati=',xlati
+     write(*,*)NameSub,' phi=',phi
+  end if
+
 end subroutine RB_set_grid
 !==============================================================================
 
@@ -209,6 +216,83 @@ subroutine RB_save_restart(TimeSimulation)
 end subroutine RB_save_restart
 !===========================================================================
 
-subroutine RB_put_from_gm
+subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar,tSimulation)
+!  use ModIoUnit, ONLY: UnitTmp_
+!  use ModRiceRB
+  implicit none
 
+  integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+  real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
+  character (len=*),intent(in) :: NameVar
+  real, intent(in) :: tSimulation
+
+  character(len=*), parameter :: NameSub='RB_put_from_gm'
+!  character(len=30) :: FileName
+!  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6, imf_=7
+!  integer :: iSize,jSize, iUnit, i,j,j2,j3, iTime
+!  real, dimension (:,:), allocatable :: bmin,xmin,ymin
+!  real :: imf(8)
+  !-------------------------------------------------------------------------
+
+!  call Get_Size(iSize,jSize)
+!  if(iSizeIn /= iSize .or. jSizeIn /= jSize .or. nVarIn /= imf_)then
+!     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn,nVarIn
+!     call CON_stop(NameSub//' SWMF_ERROR')
+!  end if
+!
+!  allocate(bmin(iSize,jSize))
+!  allocate(xmin(iSize,jSize))
+!  allocate(ymin(iSize,jSize))
+!
+!  bmin(1:iSize,1:jSize) = Buffer_IIV(:,:,bmin_)*1.e+6 !units of 10e-6 Tesla
+!  xmin(1:iSize,1:jSize) = Buffer_IIV(:,:,z0x_)
+!  ymin(1:iSize,1:jSize) = Buffer_IIV(:,:,z0y_)
+!  imf(1:8)              = Buffer_IIV(1:8,1,imf_)
+!
+!  call Put_Be(bmin)
+!  call Put_XY(xmin,ymin)
+!
+!  if(IsSaveCoupling .or. IsSkipRB)then
+!
+!
+!     iTime=nint(tSimulation)
+!     write(FileName,'("RB/output2/bmin_",I6.6)') iTime
+!     open(UnitTmp_,FILE=FileName)
+!     do i=1,iSize; do j=1,jSize,3
+!        write(UnitTmp_,*) (bmin(i,j3),j3=j,min(jSize,j+2),1)
+!     end do; end do
+!     close(UnitTmp_)
+!
+!     iTime=nint(tSimulation)
+!     write(FileName,'("RB/output2/xmin_",I6.6)') iTime
+!     open(UnitTmp_,FILE=FileName)
+!     do i=1,iSize; do j=1,jSize,3
+!        write(UnitTmp_,*) (xmin(i,j3),j3=j,min(jSize,j+2),1)
+!     end do; end do
+!     close(UnitTmp_)
+!
+!     iTime=nint(tSimulation)
+!     write(FileName,'("RB/output2/ymin_",I6.6)') iTime
+!     open(UnitTmp_,FILE=FileName)
+!     do i=1,iSize; do j=1,jSize,3
+!        write(UnitTmp_,*) (ymin(i,j3),j3=j,min(jSize,j+2),1)
+!     end do; end do
+!     close(UnitTmp_)
+!
+!     iTime=nint(tSimulation)
+!     write(FileName,'("RB/output2/imf_",I6.6)') iTime
+!     open(UnitTmp_,FILE=FileName)
+!     write(UnitTmp_,*) 'IMF: rho Ux Uy Uz Bx By Bz p'
+!     do i=1,8
+!        write(UnitTmp_,*) imf(i)
+!     end do
+!     close(UnitTmp_)
+!
+!  end if
+!
+!  deallocate(bmin)
+!  deallocate(xmin)
+!  deallocate(ymin)
+!
 end subroutine RB_put_from_gm
+!============================================================================
