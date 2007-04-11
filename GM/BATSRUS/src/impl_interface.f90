@@ -256,7 +256,7 @@ subroutine getsource(iBLK,w,s)
   real, intent(out)   :: s(nI,nJ,nK,nw)
 
   logical :: qUseDivbSource
-    integer::iVar
+  integer::iVar, iFluid
   !--------------------------------------------------------------------------
 
   call timing_start('getsource')
@@ -264,7 +264,6 @@ subroutine getsource(iBLK,w,s)
   qUseDivbSource   =UseDivbSource
   UseDivbSource    =.false.
   
-
   call impl2expl(w,iBLK)
   globalBLK = iBLK
 
@@ -275,8 +274,9 @@ subroutine getsource(iBLK,w,s)
   do iVar=1,nVar-1
      s(:,:,:,iVar)  =Source_VC(iVar,1:nI,1:nJ,1:nK)
   end do
-
-  s(:,:,:,E_)    =Source_VC(Energy_,1:nI,1:nJ,1:nK)
+  do iFluid = 1, nFluid
+     s(:,:,:,iP_I(iFluid)) = Source_VC(Energy_-1+iFluid,1:nI,1:nJ,1:nK)
+  end do
 
   UseDivbSource   =qUseDivbSource
   call timing_stop('getsource')
