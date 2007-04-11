@@ -7,9 +7,12 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_calc_sources,               &
        IMPLEMENTED3 => user_init_point_implicit,        &
-       IMPLEMENTED4 => user_set_ics
+       IMPLEMENTED4 => user_set_ics,                    &
+       IMPLEMENTED5 => user_face_bcs
 
   use ModMultiFluid
+
+  use ModNumConst, ONLY: cSqrtHalf, cDegToRad
 
   include 'user_module.h' !list of public methods
 
@@ -22,6 +25,8 @@ module ModUser
        'POINT IMPLICIT MULTI-ION SOURCE, Toth and Ma'
 
 
+  real    :: LatitudeDim   = 45.0, SinLatitude = cSqrtHalf
+  real    :: uOutDim = 2.0
   real    :: CollisionCoefDim = 1.0, CollisionCoef
   logical :: IsAnalytic = .true.
 
@@ -41,6 +46,10 @@ contains
           call read_var('CollisionCoefDim',CollisionCoefDim)
        case('#DSDU')
           call read_var('IsAnalytic',IsAnalytic)
+       case('#OUTFLOW')
+          call read_var('uOutDim',uOutDim)
+          call read_var('Latitude',LatitudeDim)
+          SinLatitude = sin(LatitudeDim*cDegToRad)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -72,13 +81,13 @@ contains
 
     ! Variables for multi-ion MHD
     real    :: InvCharge, NumDens, InvNumDens, pAverage, State_V(nVar)
-    real, dimension(3) :: FullB_D, uIon_D, u_D, uPlus_D, uPlusHallU_D, Force_D
-    real, dimension(3) :: Current_D
-    real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, &
-         Temp_I
+    real, dimension(3) :: FullB_D, uIon_D, uIon2_D, u_D, uPlus_D, uPlusHallU_D
+    real, dimension(3) :: Current_D, Force_D
+    real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
-    integer :: iBlock, i, j, k
-    real :: CoefBx, CoefBy, CoefBz, Coef, CollisionRate, AverageTemp, Heating
+    integer :: iBlock, i, j, k, jFluid
+    real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
+    real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
     character (len=*), parameter :: NameSub = 'user_calc_sources'
     logical :: DoTest, DoTestMe
@@ -103,6 +112,14 @@ contains
     ! Rate = n*CoefDim / T^1.5 with T [K], n [/cc] and Rate [1/s]
     CollisionCoef = CollisionCoefDim &
          /No2Si_V(UnitTemperature_)**1.5/Si2No_V(UnitT_)
+
+    do jFluid = 1, nIonFluid
+       do iFluid = 1, nIonFluid
+          CollisionRate_II(iFluid, jFluid) = CollisionCoef* &
+               MassFluid_I(iFluid)*MassFluid_I(iFluid) &
+               /(MassFluid_I(iFluid)+MassFluid_I(iFluid))
+       end do
+    end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Extract conservative variables
@@ -143,7 +160,9 @@ contains
        end if
        uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
-       CollisionRate = CollisionCoef/(AverageTemp*sqrt(AverageTemp))
+       TemperatureCoef = 1.0/(AverageTemp*sqrt(AverageTemp))
+
+       CollisionRate = CollisionCoef
 
        ! Calculate the source term for all the ion fluids
        do iFluid = 1, nIonFluid
@@ -154,18 +173,32 @@ contains
           Force_D = &
                ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
 
-          ! Add simplified collisional term
-          Force_D = Force_D + CollisionRate*(uPlus_D - uIon_D) &
-               * MassFluid_I(iFluid) * NumDens_I(iFluid) &
-               * (NumDens - NumDens_I(iFluid))
+          Heating = 0.0
+
+          do jFluid = 1, nIonFluid
+             if(jFluid == iFluid) CYCLE
+
+             ! Add collisional term
+             uIon2_D = (/ Ux_I(jFLuid),  Uy_I(jFluid), Uz_I(jFluid) /)
+
+             if(  InvNumDens*NumDens_I(iFluid) < 0.01 .or. &
+                  InvNumDens*NumDens_I(jFluid) < 0.01) then
+                CollisionRate = 100.0 * NumDens_I(iFluid) * NumDens_I(jFluid)
+             else
+                CollisionRate = CollisionRate_II(iFluid, jFluid) * &
+                     NumDens_I(iFluid) * NumDens_I(jFluid) &
+                     * TemperatureCoef
+             end if
+
+             Force_D = Force_D + CollisionRate*(uIon2_D - uIon_D)
+
+             Heating = Heating + CollisionRate* &
+                  ( 2*(Temp_I(jFluid) - Temp_I(iFluid)) &
+                  + gm1*sum((uIon2_D - uIon_D)**2) )
+          end do
 
           Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) = &
                Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) + Force_D
-
-          Heating = 2*CollisionRate*(AverageTemp - Temp_I(iFluid)) &
-               * NumDens_I(iFluid)* (NumDens - NumDens_I(iFluid)) &
-               + 2*gm1*CollisionRate*sum((uPlus_D - uIon_D)**2) &
-               * NumDens_I(iFluid) * (NumDens - NumDens_I(iFluid))
 
           Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) + Heating
 
@@ -292,5 +325,61 @@ contains
     end where
 
   end subroutine user_set_ics
+
+  !=====================================================================
+  subroutine user_face_bcs(iFace,jFace,kFace,iBlock,iSide,iBoundary, &
+       iter,time_now,FaceCoords_D,VarsTrueFace_V,VarsGhostFace_V,    &
+       B0Face_D,UseIonosphereHere,UseRotatingBcHere)
+
+    use ModMain, ONLY: x_, y_, z_
+    use ModVarIndexes
+    use ModPhysics, ONLY: BodyRho_I, BodyP_I, Io2No_V, UnitU_
+
+    !\
+    ! Variables required by this user subroutine
+    !/
+    integer, intent(in):: iFace,jFace,kFace,iBlock,iSide,iBoundary,iter
+    real,    intent(in):: time_now
+    real,    intent(in):: FaceCoords_D(3), B0Face_D(3)
+    real,    intent(in):: VarsTrueFace_V(nVar)
+    logical, intent(in):: UseIonosphereHere, UseRotatingBcHere
+    real,   intent(out):: VarsGhostFace_V(nVar)
+
+    real :: zMin, uPerB0
+    !--------------------------------------------------------------------------
+
+    zMin = sqrt(sum(FaceCoords_D**2))*SinLatitude
+    if( abs(FaceCoords_D(z_)) > zMin )then
+
+       ! Outflow parallel with the magnetic field 
+       uPerB0 = uOutDim*Io2No_V(UnitU_)/sqrt(sum(B0Face_D**2))
+
+       ! Change sign for northward hemisphere so B0_D/B0 points outward
+       if(FaceCoords_D(3) > 0) uPerB0 = -uPerB0
+
+       VarsGhostFace_V(iRhoUx_I) = B0Face_D(x_)*uPerB0
+       VarsGhostFace_V(iRhoUy_I) = B0Face_D(y_)*uPerB0
+       VarsGhostFace_V(iRhoUz_I) = B0Face_D(z_)*uPerB0
+
+       ! Apply body densities and pressures
+       VarsGhostFace_V(iRho_I) = BodyRho_I
+       VarsGhostFace_V(iP_I)   = BodyP_I
+
+    else
+       ! Apply ionosphere-like boundary conditions at low latitudes
+
+       VarsGhostFace_V(Rho_)     = BodyRho_I(1)
+       VarsGhostFace_V(OpRho_)   = VarsTrueFace_V(OpRho_)
+       VarsGhostFace_V(iRhoUx_I) = -VarsTrueFace_V(iRhoUx_I)
+       VarsGhostFace_V(iRhoUy_I) = -VarsTrueFace_V(iRhoUy_I)
+       VarsGhostFace_V(iRhoUz_I) = -VarsTrueFace_V(iRhoUz_I)
+       VarsGhostFace_V(iP_I)     = VarsTrueFace_V(iP_I)
+
+    end if
+
+    VarsGhostFace_V(Bx_:Bz_)  = VarsTrueFace_V(Bx_:Bz_)
+
+  end subroutine user_face_bcs
+
 
 end module ModUser
