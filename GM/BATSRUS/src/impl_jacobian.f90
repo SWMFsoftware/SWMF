@@ -317,7 +317,7 @@ subroutine impl_jacobian(implBLK,JAC)
         if(oktest_me)write(*,*)'Adding dS/dw'
 
         ! w2=S(qwk+eps*W_jw)
-        call getsource(weps,qSeps)
+        call getsource(iBLK,weps,qSeps)
         do iw=1,nw
            ! JAC(..1) += dS/dW_jw
            coeff=-ImplCoeff/qeps/wnrm(iw)
