@@ -97,7 +97,7 @@ mc			TypeLimiter
 
 
 #INCLUDE
-PARAM.sat.ss.IH
+Param/PARAM.sat.ss.IH
 
 #END_COMP IH ---------------------------------------------------------------
 
