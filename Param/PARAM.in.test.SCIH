@@ -95,6 +95,19 @@ Sokolov			TypeFlux
 mc			TypeLimiter
 1.2			BetaLimiter
 
+
+#SATELLITE
+1
+MHD file
+100
+36000.0
+etraj.dat
+
+#STEADYSTATESATELLITE
+-432000.0                -5 days
+432000.0                 +5 days
+
+
 #END_COMP IH ---------------------------------------------------------------
 
 #COMPONENT

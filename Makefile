@@ -68,6 +68,8 @@ help:
 	@echo '    ALL         (make SWMF PIDL and PSPH)'
 	@#^CMP END GM
 	@echo ' '
+	@echo '    earthtraj   generate satellite trajectory files'
+	@echo ' '
 	@echo '    rundir      (create run directory "run/")'
 	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
 	@echo '    rundir MACHINE=columbia (select job scripts for columbia)'
@@ -97,6 +99,14 @@ ENV_CHECK:
 	  echo "Type 'Config.pl -s' and retry the previous make command!"; \
 	  exit 1; \
 	fi);
+
+#
+#	Code for generating satellite trajectory files
+#
+earthtraj:	ENV_CHECK			#^CMP IF IH
+	cd GM/BATSRUS/srcPostProc; make earthtraj	#^CMP IF IH
+	@echo ' '				#^CMP IF IH
+
 
 #
 # JOB SUBMISSION SCRIPTS TO COPY TO RUN

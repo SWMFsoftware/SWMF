@@ -203,13 +203,14 @@ test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -g=SC:4,4,4,3000,IH:8,8,8,400,1
 	make SWMF
+	make earthtraj
 
 test2_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-
+	cd ${TESTDIR}; earth_traj.exe>etraj.dat
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS

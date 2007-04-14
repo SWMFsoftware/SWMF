@@ -17,6 +17,29 @@ PSPH:	PostSPH.o
 
 CRST:	ConvertRestart.o
 	${LINK.f90} -o ${BINDIR}/ConvertRestart.exe ConvertRestart.o ${Lflag2}
+
+OBJECTS1 = \
+	CON_geopack_internal.o\
+	ModUT.o
+
+earth_traj_main.o:\
+	CON_geopack_internal.o \
+	ModUT.o \
+	${SHAREDIR}/ModNumConst.o \
+	${SHAREDIR}/ModTimeConvert.o \
+	${SHAREDIR}/ModConst.o
+
+EARTH_TRAJ = ${BINDIR}/earth_traj.exe
+
+earthtraj:
+	make ${EARTH_TRAJ}
+	@echo
+	@echo ${EARTH_TRAJ} has been brought up to date.
+	@echo
+
+${EARTH_TRAJ}: ${OBJECTS1} earth_traj_main.o
+	${LINK.f90} ${SEARCH} -o ${EARTH_TRAJ} ${LIBDIR}/libSHARE.a ${OBJECTS1} earth_traj_main.o
+
 #
 #	cleaning
 #

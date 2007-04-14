@@ -248,8 +248,9 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModProcMH
   use ModNumConst
   use ModMain, ONLY: n_step,dt,unusedBLK,nI,nJ,nK,nBlock,gcn,UseUserLogFiles,&
-       iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass
-  use ModPhysics,    ONLY: rCurrents, rBody, inv_gm1
+       iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
+       UseRotatingFrame
+  use ModPhysics,    ONLY: rCurrents, rBody, inv_gm1, OMEGABody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK, State_VGB, Energy_GBI, DivB1_GB
@@ -304,6 +305,12 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
           B0Sat_D)
      call get_point_data(0.0,xSatellite(iSat,:),1,nBlock,1,nVar+3,StateSat_V)
      call collect_satellite_data(xSatellite(iSat,:),StateSat_V)
+     if (UseRotatingFrame) then
+        StateSat_V(rhoUx_)=StateSat_V(rhoUx_) &
+                - StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,y_)
+        StateSat_V(rhoUy_)=StateSat_V(rhoUy_) &
+                + StateSat_V(rho_)*OMEGAbody*xSatellite(iSat,x_)
+     end if
   else
      ! The logfile may need the integral of conservative variables
      ! Also extract the pressure into a variable for pmin and pmax
