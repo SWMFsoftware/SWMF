@@ -96,17 +96,8 @@ mc			TypeLimiter
 1.2			BetaLimiter
 
 
-#SATELLITE
-1
-MHD file
-100
-36000.0
-etraj.dat
-
-#STEADYSTATESATELLITE
--432000.0                -5 days
-432000.0                 +5 days
-
+#INCLUDE
+PARAM.sat.ss.IH
 
 #END_COMP IH ---------------------------------------------------------------
 
