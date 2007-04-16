@@ -1,7 +1,7 @@
 Module ModUT
   !UT stands for the Universal Time
   implicit none
-  real*8,parameter::JulianCentury=36525.000000000000000000d0,&
+  double precision,parameter::JulianCentury=36525.000000000000000000d0,&
                     JulianDayOfEpocZeroDay=2415020.000000000000000d0
   private::JulianDay,FDAY
 contains
@@ -19,7 +19,7 @@ contains
     if(iMonth>2.and.mod(iYear,4)==0)JulianDay=JulianDay+1
   end function JulianDay
   !---------------------------------------------------------------------------
-  real*8 function FDAY(iHour,iMin,iSec,FracSecond)
+  double precision function FDAY(iHour,iMin,iSec,FracSecond)
     integer,intent(in)::iHour,iMin,iSec
     real,intent(in)::FracSecond
     optional::FracSecond,iMin,iSec
@@ -31,7 +31,7 @@ contains
     FDAY=FDAY/86400.0000000000000D0       !Fraction of a day
   end function FDAY
   !--------------------------------------------------------------------------
-  real*8 function JD(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
+  double precision function JD(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
     integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
     real,intent(in)::FracSecond
     optional::FracSecond,iMin,iSec
@@ -39,7 +39,7 @@ contains
          JulianDayOfEpocZeroDay
   end function JD
   !--------------------------------------------------------------------------
-  real*8 function day_of_epoc(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
+  double precision function day_of_epoc(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
     integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
     real,intent(in)::FracSecond
     optional::FracSecond,iMin,iSec
@@ -52,7 +52,7 @@ contains
                          !which is added as a fake leap day 1900,Feb,29
   end function day_of_epoc
  !------------------------------------------------------------------------
-  real*8 function day_2000_epoc(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
+  double precision function day_2000_epoc(iYear,iMonth,iDay,iHour,iMin,iSec,FracSecond)
     integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
     real,intent(in)::FracSecond
     optional::FracSecond,iMin,iSec
