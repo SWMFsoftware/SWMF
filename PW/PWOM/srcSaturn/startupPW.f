@@ -457,46 +457,53 @@ C      READ(5,3) NCNPRT
      ;' ERGS/CM**3/SEC')
 
       write(iUnitOutput,*) 'CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL'
-      write(iUnitOutput,*) CMH3pH,CMH3pH2,CMH3pHp,CMH3pEL
+      write(iUnitOutput,*) FricHeatCoef_II(Ion1_,Neutral2_),
+     &     FricHeatCoef_II(Ion1_,Neutral1_),FricHeatCoef_II(Ion1_,Ion2_),
+     &     FricHeatCoef_II(Ion1_,Ion4_)
      
       write(iUnitOutput,*) 'CMHpH,CMHpH2,CMHpH3p,CMHpEL'
-      write(iUnitOutput,*) CMHpH,CMHpH2,CMHpH3p,CMHpEL
+      write(iUnitOutput,*) FricHeatCoef_II(Ion2_,Neutral2_),
+     &     FricHeatCoef_II(Ion2_,Neutral1_),FricHeatCoef_II(Ion2_,Ion1_),
+     &     FricHeatCoef_II(Ion2_,Ion4_)
       
       write(iUnitOutput,*) 'CMELH,CMELH2,CMELHp,CMELH3p'
       write(iUnitOutput,*) CMELH,CMELH2,CMELHp,CMELH3p
+      write(iUnitOutput,*) FricHeatCoef_II(Ion4_,Neutral2_),
+     &     FricHeatCoef_II(Ion4_,Neutral1_),FricHeatCoef_II(Ion4_,Ion2_),
+     &     FricHeatCoef_II(Ion4_,Ion1_)
 
-      WRITE (iUnitOutput,1050) 
-1050  FORMAT(1H0,5X,'ENERGY COLLISION TERM COEFFICIENTS')
-      WRITE (iUnitOutput,1051)CTHpH,CTHpH2,CTHpH3p,CTHpEL,CTH3pH,CTH3pH2,CTH3pHp,
-     $ CTH3pEL,CTELH,CTELH2,CTELHp,CTELH3p
-
-1051  FORMAT(1H0,5X,'CTHpH=',1PE10.4,5X,'CTHpH2=',1PE10.4,4X,
-     $'CTHpH3p=',1PE10.4/5X,'CTHpEL=',1PE10.4,5X,'CTH3pH=',1PE10.4,5X,
-     $'CTH3pH2=',1PE10.4,5X,'CTH3pHp=',1PE10.4,5X,'CTH3pEL=',1PE10.4/
-     $5X,'CTELH=',1PE10.4,5X,'CTELH2=',1PE10.4,4X,
-     $'CTELHp=',1PE10.4/5X,'CTELH3p=',1PE10.4,5X)
-
-      WRITE (iUnitOutput,1052) CMHpH,CMHpH2,CMHpH3p,CMHpEL,CMH3pH,CMH3pH2,CMH3pHp,
-     $ CMH3pEL,CMELH,CMELH2,CMELHp,CMELH3p
-
-1052  FORMAT(1H0,5X,'CMHpH=',1PE10.4,5X,'CMHpH2=',1PE10.4,4X,
-     $'CMHpH3p=',1PE10.4/5X,'CMHpEL=',1PE10.4,5X,'CMH3pH=',1PE10.4,5X,
-     $'CMH3pH2=',1PE10.4,5X,'CMH3pHp=',1PE10.4,5X,'CMH3pEL=',1PE10.4/
-     $5X,'CMELH=',1PE10.4,5X,'CMELH2=',1PE10.4,4X,
-     $'CMELHp=',1PE10.4/5X,'CMELH3p=',1PE10.4,5X)
-
-      WRITE (iUnitOutput,1053)
-
-1053  FORMAT(1H0,5X,'HEAT CONDUCTION COEFFICIENTS AT UPPER BOUNDARY')
-
-C!      WRITE (iUnitOutput,1054) CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,
-C!     $CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
-C!1054  FORMAT(1H0,5X,'CZHN2=',1PE10.4,6X,'CZHO2=',1PE10.4,6X,
-C!     $'CZHO=',1PE10.4,7X,'CZHOX=',1PE10.4/5X,'CZHEN2=',1PE10.4,5X,
-C!     $'CZHEO2=',1PE10.4,5X,'CZHEHE=',1PE10.4,5X,'CZHEO=',1PE10.4/
-C!     $5X,'CZHEH=',1PE10.4,6X,'CZHEOX=',1PE10.4,5X,'CZHEHD=',
-C!     $1PE10.4/5X,'XTNMAX=',1PE10.4)
-
+!      WRITE (iUnitOutput,1050) 
+!1050  FORMAT(1H0,5X,'ENERGY COLLISION TERM COEFFICIENTS')
+!      WRITE (iUnitOutput,1051)CTHpH,CTHpH2,CTHpH3p,CTHpEL,CTH3pH,CTH3pH2,CTH3pHp,
+!     $ CTH3pEL,CTELH,CTELH2,CTELHp,CTELH3p
+!
+!1051  FORMAT(1H0,5X,'CTHpH=',1PE10.4,5X,'CTHpH2=',1PE10.4,4X,
+!     $'CTHpH3p=',1PE10.4/5X,'CTHpEL=',1PE10.4,5X,'CTH3pH=',1PE10.4,5X,
+!     $'CTH3pH2=',1PE10.4,5X,'CTH3pHp=',1PE10.4,5X,'CTH3pEL=',1PE10.4/
+!     $5X,'CTELH=',1PE10.4,5X,'CTELH2=',1PE10.4,4X,
+!     $'CTELHp=',1PE10.4/5X,'CTELH3p=',1PE10.4,5X)
+!
+!      WRITE (iUnitOutput,1052) CMHpH,CMHpH2,CMHpH3p,CMHpEL,CMH3pH,CMH3pH2,CMH3pHp,
+!     $ CMH3pEL,CMELH,CMELH2,CMELHp,CMELH3p
+!
+!1052  FORMAT(1H0,5X,'CMHpH=',1PE10.4,5X,'CMHpH2=',1PE10.4,4X,
+!     $'CMHpH3p=',1PE10.4/5X,'CMHpEL=',1PE10.4,5X,'CMH3pH=',1PE10.4,5X,
+!     $'CMH3pH2=',1PE10.4,5X,'CMH3pHp=',1PE10.4,5X,'CMH3pEL=',1PE10.4/
+!     $5X,'CMELH=',1PE10.4,5X,'CMELH2=',1PE10.4,4X,
+!     $'CMELHp=',1PE10.4/5X,'CMELH3p=',1PE10.4,5X)
+!
+!      WRITE (iUnitOutput,1053)
+!
+!1053  FORMAT(1H0,5X,'HEAT CONDUCTION COEFFICIENTS AT UPPER BOUNDARY')
+!
+!C!      WRITE (iUnitOutput,1054) CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,
+!C!     $CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
+!C!1054  FORMAT(1H0,5X,'CZHN2=',1PE10.4,6X,'CZHO2=',1PE10.4,6X,
+!C!     $'CZHO=',1PE10.4,7X,'CZHOX=',1PE10.4/5X,'CZHEN2=',1PE10.4,5X,
+!C!     $'CZHEO2=',1PE10.4,5X,'CZHEHE=',1PE10.4,5X,'CZHEO=',1PE10.4/
+!C!     $5X,'CZHEH=',1PE10.4,6X,'CZHEOX=',1PE10.4,5X,'CZHEHD=',
+!C!     $1PE10.4/5X,'XTNMAX=',1PE10.4)
+!
       WRITE (iUnitOutput,1012)
 
 1012  FORMAT(1H1,45X,'NEUTRAL ATMOSPHERE NUMBER DENSITIES')
@@ -1320,7 +1327,11 @@ C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     
 
-      
+! Start collision freq at zero
+      CollisionFreq_IIC(:,:,:)= 0.0
+      HeatFlowCoef_II(:,:)    = 0.0
+      FricHeatCoef_II(:,:)    = 0.0
+
 
       DO 20 I=1,NDIM
 CALEX SOURCE COEF?       
@@ -1353,12 +1364,21 @@ CAlex H+ and H3+
 CALEX electron H+ and electron H3+
          CLELHp(I)=54.5/XMSH
          CLELH3p(I)=54.5/XMSO
-       
+
 CALEX  ion neutrals
          CLHpH(I)=2.65E-10*XH(I)
-         CFHpH2(I)=2.6E-9*XH2(I)*(.82/.667)**.5
-         CFH3pH(I)=2.6E-9*XH(I)*(.667/.75)**.5
-         CFH3pH2(I)=2.6E-9*XH2(I)*(.82/1.2)**.5
+!         CFHpH2(I)=2.6E-9*XH2(I)*(.82/.667)**.5
+         CollisionFreq_IIC(Ion2_,Neutral1_,I)=
+     &        2.6E-9*XH2(I)*(.82/.667)**.5
+
+!         CFH3pH(I)=2.6E-9*XH(I)*(.667/.75)**.5
+         CollisionFreq_IIC(Ion1_,Neutral2_,I)=
+     &        2.6E-9*XH(I)*(.667/.75)**.5
+
+!         CFH3pH2(I)=2.6E-9*XH2(I)*(.82/1.2)**.5
+         CollisionFreq_IIC(Ion1_,Neutral1_,I)=
+     &        2.6E-9*XH2(I)*(.82/1.2)**.5
+
 CALEX electron H, e H2 done in collis
          CLELH(I)=4.5E-9*XH(I)
 
@@ -1389,37 +1409,67 @@ CALEX heat flow between species, and CM is the term due to
 CALEX frictional heating between species moving through each other
 
 CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
-      CTHpH=3.*RGASH*XMSH/(XMSH+XMSH)
-      CTHpH2=3.*RGASH*XMSH/(XMSH+2.*XMSH)
-      CTHpH3p=3.*RGASH*XMSH/(XMSH+XMSO)
-      CTHpEL=3.*RGASH*XMSH/(XMSH+XMSE)
-
-      CTH3pH=3.*RGASO*XMSO/(XMSO+XMSH)
-      CTH3pH2=3.*RGASO*XMSO/(XMSO+2.*XMSH)
-      CTH3pHp=3.*RGASO*XMSO/(XMSO+XMSH)
-      CTH3pEL=3.*RGASO*XMSO/(XMSO+XMSE)
-
-      CTELH=3.*RGASE*XMSE/(XMSE+XMSH)
-      CTELH2=3.*RGASE*XMSE/(XMSE+2.*XMSH)
-      CTELHp=3.*RGASE*XMSE/(XMSE+XMSH)
-      CTELH3p=3.*RGASE*XMSE/(XMSE+XMSO)
+      !CTHpH=3.*RGASH*XMSH/(XMSH+XMSH)
+      !CTHpH2=3.*RGASH*XMSH/(XMSH+2.*XMSH)
+      !CTHpH3p=3.*RGASH*XMSH/(XMSH+XMSO)
+      !CTHpEL=3.*RGASH*XMSH/(XMSH+XMSE)
       
+      HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGASH*XMSH/(XMSH+XMSH)
+      HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGASH*XMSH/(XMSH+2.*XMSH)
+      HeatFlowCoef_II(Ion2_,Ion1_)=3.*RGASH*XMSH/(XMSH+XMSO)
+      HeatFlowCoef_II(Ion2_,Ion4_)=3.*RGASH*XMSH/(XMSH+XMSE)
+
+!      CTH3pH=3.*RGASO*XMSO/(XMSO+XMSH)
+!      CTH3pH2=3.*RGASO*XMSO/(XMSO+2.*XMSH)
+!      CTH3pHp=3.*RGASO*XMSO/(XMSO+XMSH)
+!      CTH3pEL=3.*RGASO*XMSO/(XMSO+XMSE)
+
+      HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGASO*XMSO/(XMSO+XMSH)
+      HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGASO*XMSO/(XMSO+2.*XMSH)
+      HeatFlowCoef_II(Ion1_,Ion2_)=3.*RGASO*XMSO/(XMSO+XMSH)
+      HeatFlowCoef_II(Ion1_,Ion4_)=3.*RGASO*XMSO/(XMSO+XMSE)
+
+!      CTELH=3.*RGASE*XMSE/(XMSE+XMSH)
+!      CTELH2=3.*RGASE*XMSE/(XMSE+2.*XMSH)
+!      CTELHp=3.*RGASE*XMSE/(XMSE+XMSH)
+!      CTELH3p=3.*RGASE*XMSE/(XMSE+XMSO)
+      
+      HeatFlowCoef_II(Ion4_,Neutral2_)=3.*RGASE*XMSE/(XMSE+XMSH)
+      HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGASE*XMSE/(XMSE+2.*XMSH)
+      HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGASE*XMSE/(XMSE+XMSH)
+      HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGASE*XMSE/(XMSE+XMSO)
+
 CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
-      CMHpH=XMSH/(XMSH+XMSH)
-      CMHpH2=2.*XAMU/(XMSH+2.*XAMU)
-      CMHpH3p=XMSO/(XMSH+XMSO)
-      CMHpEL=XMSE/(XMSH+XMSE)
+!      CMHpH=XMSH/(XMSH+XMSH)
+!      CMHpH2=2.*XAMU/(XMSH+2.*XAMU)
+!      CMHpH3p=XMSO/(XMSH+XMSO)
+!      CMHpEL=XMSE/(XMSH+XMSE)
+
+      FricHeatCoef_II(Ion2_,Neutral2_)=XMSH/(XMSH+XMSH)
+      FricHeatCoef_II(Ion2_,Neutral1_)=2.*XAMU/(XMSH+2.*XAMU)
+      FricHeatCoef_II(Ion2_,Ion1_)=XMSO/(XMSH+XMSO)
+      FricHeatCoef_II(Ion2_,Ion4_)=XMSE/(XMSH+XMSE)
        
-      CMH3pH=XMSH/(XMSO+XMSH)
-      CMH3pH2=2.*XAMU/(XMSO+2.*XAMU)
-      CMH3pHp=XMSH/(XMSO+XMSH)
-      CMH3pEL=XMSE/(XMSO+XMSE)
+!      CMH3pH=XMSH/(XMSO+XMSH)
+!      CMH3pH2=2.*XAMU/(XMSO+2.*XAMU)
+!      CMH3pHp=XMSH/(XMSO+XMSH)
+!      CMH3pEL=XMSE/(XMSO+XMSE)
        
-      CMELH=XMSH/(XMSE+XMSH)
-      CMELH2=2.*XAMU/(XMSE+2.*XAMU)
-      CMELHp=XMSH/(XMSE+XMSH)
-      CMELH3p=XMSO/(XMSE+XMSO)
-     
+      FricHeatCoef_II(Ion1_,Neutral2_)=XMSH/(XMSO+XMSH)
+      FricHeatCoef_II(Ion1_,Neutral1_)=2.*XAMU/(XMSO+2.*XAMU)
+      FricHeatCoef_II(Ion1_,Ion2_)=XMSH/(XMSO+XMSH)
+      FricHeatCoef_II(Ion1_,Ion4_)=XMSE/(XMSO+XMSE)
+
+!      CMELH=XMSH/(XMSE+XMSH)
+!      CMELH2=2.*XAMU/(XMSE+2.*XAMU)
+!      CMELHp=XMSH/(XMSE+XMSH)
+!      CMELH3p=XMSO/(XMSE+XMSO)
+      
+      FricHeatCoef_II(Ion4_,Neutral2_)=XMSH/(XMSE+XMSH)
+      FricHeatCoef_II(Ion4_,Neutral1_)=2.*XAMU/(XMSE+2.*XAMU)
+      FricHeatCoef_II(Ion4_,Ion2_)=XMSH/(XMSE+XMSH)
+      FricHeatCoef_II(Ion4_,Ion4_)=XMSO/(XMSE+XMSO)
+      
 C     ALEX(10/11/04): 
 C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
 
