@@ -24,7 +24,7 @@ module ModCommonVariables
   
   Real wHorizontal
   CHARACTER(7) TypeSolver
-  Logical IsImplicit,DoLog
+  Logical :: IsImplicit,DoLog, IsImplicitAll = .false.
 
   Real AR12top(2),AR23top(2),CellVolumeTop(2)
 
@@ -129,7 +129,22 @@ module ModCommonVariables
        NNN(NMAJ)
   INTEGER ISCALE,JLOCAL,IERR
 
-
+  !collision terms
+  
+  integer, parameter :: nIon = 4, nSpecies=9
+  integer, parameter :: Ion1_ = 1, &    !Earth:O+ ,Saturn:H3+
+                        Ion2_ = 2, &    !Earth:H+ ,Saturn:H+
+                        Ion3_ = 3, &    !Earth:He+,Saturn:none
+                        Ion4_ = 4, &    !Earth:e  ,Saturn:e
+                        Neutral1_= 5, & !Earth:O, Saturn:H2
+                        Neutral2_= 6, & !Earth:H, Saturn:H
+                        Neutral3_= 7, & !Earth:O2, Saturn:H2O
+                        Neutral4_= 8, & !Earth:N2, Saturn:CH4
+                        Neutral5_= 9    !Earth:He, Saturn:none
+  
+  real :: CollisionFreq_IIC(nIon, nSpecies,MaxGrid)
+  real :: HeatFlowCoef_II(nIon, nSpecies)
+  real :: FricHeatCoef_II(nIon, nSpecies)
 
 
        
