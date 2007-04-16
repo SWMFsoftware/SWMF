@@ -55,7 +55,7 @@ C     define the output files and attaching units
      &                 iLine=iLine, Time=Time,MaxLineTime=Tmax,
      &                 TypeSolver=TypeSolver,IsVariableDT=IsVariableDT,
      &                 IsRestart=IsRestart,DToutput=DToutput,nAlt=nDim,DoLog=DoLog,
-     &                 nStep=nStep)
+     &                 nStep=nStep,IsImplicit=IsImplicit,IsImplicitAll=IsImplicitAll)
       
       DT=DtVertical
 
@@ -189,7 +189,7 @@ C                                                                      C
          
          if (TypeSolver == 'Rusanov') then
             
-            call rusanov_solver('O1',RgasO,
+            call rusanov_solver(Ion1_,RgasO,
      &           dOxyg, uOxyg, pOxyg, tOxyg, 
      &           dSurfO, uSurfO, pSurfO, 
      &           dBgndO, uBgndO, pBgndO, 
@@ -197,7 +197,7 @@ C                                                                      C
      &           AdmsO, FCLSNO, ECLSNO, 
      &           CELLNW(3,:), CELLNW(1,:), CELLNW(2,:),CELLNW(4,:))
 
-            call rusanov_solver('H1',RgasH,
+            call rusanov_solver(Ion2_,RgasH,
      &           dHYD, uHYD, pHYD,tHyd, 
      &           dSurfH, uSurfH, pSurfH, 
      &           dBgndH, uBgndH, pBgndH, 
@@ -206,7 +206,7 @@ C                                                                      C
      &           CELLNW(7,:), CELLNW(5,:), CELLNW(6,:),CELLNW(8,:))
 
             if (NamePlanet == 'Earth ') then
-               call rusanov_solver('He1',RgasHe,
+               call rusanov_solver(Ion3_,RgasHe,
      &              dHel, uHel, pHel,tHel, 
      &              dSurHe, uSurHe, pSurHe, 
      &              dBgnHe, uBgnHe, pBgnHe, 
@@ -296,7 +296,7 @@ C     ALEX            enddo
 
          if (TypeSolver == 'Rusanov') then
             
-            call rusanov_solver('O2',RgasO,
+            call rusanov_solver(Ion1_,RgasO,
      &           dOxyg, uOxyg, pOxyg,tOxyg, 
      &           dSurfO, uSurfO, pSurfO, 
      &           dBgndO, uBgndO, pBgndO, 
@@ -304,7 +304,7 @@ C     ALEX            enddo
      &           AdmsO, FCLSNO, ECLSNO, 
      &           CELLNW(3,:), CELLNW(1,:), CELLNW(2,:),CELLNW(4,:))
 
-            call rusanov_solver('H2',RgasH,
+            call rusanov_solver(Ion2_,RgasH,
      &           dHYD, uHYD, pHYD, tHyd,
      &           dSurfH, uSurfH, pSurfH, 
      &           dBgndH, uBgndH, pBgndH, 
@@ -313,7 +313,7 @@ C     ALEX            enddo
      &           CELLNW(7,:), CELLNW(5,:), CELLNW(6,:),CELLNW(8,:))
 
             if (NamePlanet == 'Earth ') then
-               call rusanov_solver('He2',RgasHe,
+               call rusanov_solver(Ion3_,RgasHe,
      &              dHel, uHel, pHel,tHel, 
      &              dSurHe, uSurHe, pSurHe, 
      &              dBgnHe, uBgnHe, pBgnHe, 
@@ -479,7 +479,7 @@ CALEX            enddo
          
          if (TypeSolver == 'Rusanov') then
             
-            call rusanov_solver('O3',RgasO,
+            call rusanov_solver(Ion1_,RgasO,
      &           dOxyg, uOxyg, pOxyg,tOxyg, 
      &           dSurfO, uSurfO, pSurfO, 
      &           dBgndO, uBgndO, pBgndO, 
@@ -487,7 +487,7 @@ CALEX            enddo
      &           AdmsO, FCLSNO, ECLSNO, 
      &           CELLNW(3,:), CELLNW(1,:), CELLNW(2,:),CELLNW(4,:))
 
-            call rusanov_solver('H3',RgasH,
+            call rusanov_solver(Ion2_,RgasH,
      &           dHYD, uHYD, pHYD, tHyd,
      &           dSurfH, uSurfH, pSurfH, 
      &           dBgndH, uBgndH, pBgndH, 
@@ -496,7 +496,7 @@ CALEX            enddo
      &           CELLNW(7,:), CELLNW(5,:), CELLNW(6,:),CELLNW(8,:))
 
             if (NamePlanet == 'Earth ') then
-               call rusanov_solver('He3',RgasHe,
+               call rusanov_solver(Ion3_,RgasHe,
      &              dHel, uHel, pHel,tHel, 
      &              dSurHe, uSurHe, pSurHe, 
      &              dBgnHe, uBgnHe, pBgnHe, 
@@ -592,7 +592,7 @@ CALEX            enddo
 
          if (TypeSolver == 'Rusanov') then
             
-            call rusanov_solver('O4',RgasO,
+            call rusanov_solver(Ion1_,RgasO,
      &           dOxyg, uOxyg, pOxyg,tOxyg, 
      &           dSurfO, uSurfO, pSurfO, 
      &           dBgndO, uBgndO, pBgndO, 
@@ -600,7 +600,7 @@ CALEX            enddo
      &           AdmsO, FCLSNO, ECLSNO, 
      &           CELLNW(3,:), CELLNW(1,:), CELLNW(2,:),CELLNW(4,:))
 
-            call rusanov_solver('H4',RgasH,
+            call rusanov_solver(Ion2_,RgasH,
      &           dHYD, uHYD, pHYD, tHyd,
      &           dSurfH, uSurfH, pSurfH, 
      &           dBgndH, uBgndH, pBgndH, 
@@ -609,7 +609,7 @@ CALEX            enddo
      &           CELLNW(7,:), CELLNW(5,:), CELLNW(6,:),CELLNW(8,:))
 
             if (NamePlanet == 'Earth ') then
-               call rusanov_solver('He4',RgasHe,
+               call rusanov_solver(Ion3_,RgasHe,
      &              dHel, uHel, pHel, tHel,
      &              dSurHe, uSurHe, pSurHe, 
      &              dBgnHe, uBgnHe, pBgnHe, 
