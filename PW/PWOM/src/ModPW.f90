@@ -77,7 +77,7 @@ module ModPWOM
        dElect_CI, uElect_CI, pElect_CI, TElect
   real :: DToutput=50.0, DtVertical=0.05, Tmax=100.0,DtPlotElectrodynamics=10.0
 
-  logical:: IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
+  logical:: IsImplicitAll=.false., IsImplicit=.false., IsRestart=.true., IsVariableDt=.true.
 
   character(7) :: TypeSolver='Godunov'
 
