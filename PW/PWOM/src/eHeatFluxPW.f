@@ -64,10 +64,15 @@ CALEX is the syntax for these do loops correct?
       XX1=D2(K)-D3(K)*YL(K-1)
       YK(K)=(D4(K)-D3(K)*YK(K-1))/XX1
 8760  YL(K)=D1(K)/XX1
+
       TELECT(NDIM)=YK(NDIM)-YL(NDIM)*TBGNDE
       PELECT(NDIM)=RGASE*DELECT(NDIM)*TELECT(NDIM)
-      DO 8770 K=NDIM2,1,-1
-      TELECT(K)=YK(K)-YL(K)*TELECT(K+1)
-8770  PELECT(K)=RGASE*DELECT(K)*TELECT(K)
+
+      DO K=NDIM2,1,-1
+
+         TELECT(K)=YK(K)-YL(K)*TELECT(K+1)
+         PELECT(K)=RGASE*DELECT(K)*TELECT(K)
+
+      enddo      
       RETURN
       END
