@@ -396,6 +396,7 @@ C      READ(5,3) NCNPRT
       ALTMAX=ALTMAX/1.E5
       ETOP1=ETOP*1.23E-6/DRBND
       CALL COLLIS(NDIM)
+
       CALL ELFLDW
 
       !write log
@@ -686,129 +687,129 @@ C      READ(5,3) NCNPRT
      $CLELHE(K),CLELH(K),CLELOX(K),CLELHL(K),CLELHD(K)
 3260  CONTINUE
 3290  CONTINUE
-      WRITE(iUnitOutput,1047)
-1047  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR OXYGEN')
-      WRITE(iUnitOutput,1048)
-1048  FORMAT(12X,'ALT',7X,'CFOXN2',6X,'CFOXO2',6X,'CFOXO',7X,
-     ;'CFOXHE',6X,'CFOXH',7X,'CFOXHL',6X,'CFOXHD',6X,'CFOXEL')
-      NDMQ=NPT1
-      IF (NDIM.LT.NPT2) NDMQ=NDIM
-      DO 531 K=1,NDMQ
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-531   CONTINUE
-      IF (NDIM.LT.NPT2) GO TO 591
-      NDMQ=NPT3
-      IF (NDIM.LT.NPT4) NDMQ=NDIM
-      DO 541 K=NPT2,NDMQ,2
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-541   CONTINUE
-      IF (NDIM.LT.NPT4) GO TO 591
-      NDMQ=NPT5
-      IF (NDIM.LT.NPT6) NDMQ=NDIM
-      DO 551 K=NPT4,NDMQ,5
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-551   CONTINUE
-      IF (NDIM.LT.NPT6) GO TO 591
-      DO 561 K=NPT6,NDIM,10
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-561   CONTINUE
-591   CONTINUE
-      WRITE (iUnitOutput,1247)
-1247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HELIUM')
-      WRITE(iUnitOutput,1248)
-1248  FORMAT(12X,'ALT',7X,'CFHEN2',6X,'CFHEO2',6X,'CFHEO',7X,
-     ;'CFHEHE',6X,'CFHEH',7X,'CFHEOX',6X,'CFHEHD',6X,'CFHEEL')
-      NDMQ=NPT1
-      IF (NDIM.LT.NPT2) NDMQ=NDIM
-      DO 1231 K=1,NDMQ
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-1231  CONTINUE
-      IF (NDIM.LT.NPT2) GO TO 1291
-      NDMQ=NPT3
-      IF (NDIM.LT.NPT4) NDMQ=NDIM
-      DO 1241 K=NPT2,NDMQ,2
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-1241  CONTINUE
-      IF (NDIM.LT.NPT4) GO TO 1291
-      NDMQ=NPT5
-      IF (NDIM.LT.NPT6) NDMQ=NDIM
-      DO 1251 K=NPT4,NDMQ,5
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-1251  CONTINUE
-      IF (NDIM.LT.NPT6) GO TO 1291
-      DO 1261 K=NPT6,NDIM,10
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-1261  CONTINUE
-1291  CONTINUE
-      WRITE (iUnitOutput,2247)
-2247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HYDROGEN')
-      WRITE(iUnitOutput,2248)
-2248  FORMAT(12X,'ALT',7X,'CFHN2',7X,'CFHO2',7X,'CFHO',8X,
-     ;'CFHHE',7X,'CFHH',8X,'CFHOX',7X,'CFHHL',7X,'CFHEL')
-      NDMQ=NPT1
-      IF (NDIM.LT.NPT2) NDMQ=NDIM
-      DO 2231 K=1,NDMQ
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-2231  CONTINUE
-      IF (NDIM.LT.NPT2) GO TO 2291
-      NDMQ=NPT3
-      IF (NDIM.LT.NPT4) NDMQ=NDIM
-      DO 2241 K=NPT2,NDMQ,2
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-2241  CONTINUE
-      IF (NDIM.LT.NPT4) GO TO 2291
-      NDMQ=NPT5
-      IF (NDIM.LT.NPT6) NDMQ=NDIM
-      DO 2251 K=NPT4,NDMQ,5
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-2251  CONTINUE
-      IF (NDIM.LT.NPT6) GO TO 2291
-      DO 2261 K=NPT6,NDIM,10
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-2261  CONTINUE
-2291  CONTINUE
-      WRITE (iUnitOutput,3247)
-3247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR ELECTRONS')
-      WRITE(iUnitOutput,3248)
-3248  FORMAT(12X,'ALT',7X,'CFELN2',6X,'CFELO2',6X,'CFELO',7X,
-     ;'CFELHE',6X,'CFELH',7X,'CFELOX',6X,'CFELHL',6X,'CFELHD')
-      NDMQ=NPT1
-      IF (NDIM.LT.NPT2) NDMQ=NDIM
-      DO 3231 K=1,NDMQ
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-3231  CONTINUE
-      IF (NDIM.LT.NPT2) GO TO 3291
-      NDMQ=NPT3
-      IF (NDIM.LT.NPT4) NDMQ=NDIM
-      DO 3241 K=NPT2,NDMQ,2
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-3241  CONTINUE
-      IF (NDIM.LT.NPT4) GO TO 3291
-      NDMQ=NPT5
-      IF (NDIM.LT.NPT6) NDMQ=NDIM
-      DO 3251 K=NPT4,NDMQ,5
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-3251  CONTINUE
-      IF (NDIM.LT.NPT6) GO TO 3291
-      DO 3261 K=NPT6,NDIM,10
-      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-3261  CONTINUE
+!      WRITE(iUnitOutput,1047)
+!1047  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR OXYGEN')
+!      WRITE(iUnitOutput,1048)
+!1048  FORMAT(12X,'ALT',7X,'CFOXN2',6X,'CFOXO2',6X,'CFOXO',7X,
+!     ;'CFOXHE',6X,'CFOXH',7X,'CFOXHL',6X,'CFOXHD',6X,'CFOXEL')
+!      NDMQ=NPT1
+!      IF (NDIM.LT.NPT2) NDMQ=NDIM
+!      DO 531 K=1,NDMQ
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
+!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
+!531   CONTINUE
+!      IF (NDIM.LT.NPT2) GO TO 591
+!      NDMQ=NPT3
+!      IF (NDIM.LT.NPT4) NDMQ=NDIM
+!      DO 541 K=NPT2,NDMQ,2
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
+!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
+!541   CONTINUE
+!      IF (NDIM.LT.NPT4) GO TO 591
+!      NDMQ=NPT5
+!      IF (NDIM.LT.NPT6) NDMQ=NDIM
+!      DO 551 K=NPT4,NDMQ,5
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
+!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
+!551   CONTINUE
+!      IF (NDIM.LT.NPT6) GO TO 591
+!      DO 561 K=NPT6,NDIM,10
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
+!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
+!561   CONTINUE
+!591   CONTINUE
+!      WRITE (iUnitOutput,1247)
+!1247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HELIUM')
+!      WRITE(iUnitOutput,1248)
+!1248  FORMAT(12X,'ALT',7X,'CFHEN2',6X,'CFHEO2',6X,'CFHEO',7X,
+!     ;'CFHEHE',6X,'CFHEH',7X,'CFHEOX',6X,'CFHEHD',6X,'CFHEEL')
+!      NDMQ=NPT1
+!      IF (NDIM.LT.NPT2) NDMQ=NDIM
+!      DO 1231 K=1,NDMQ
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
+!1231  CONTINUE
+!      IF (NDIM.LT.NPT2) GO TO 1291
+!      NDMQ=NPT3
+!      IF (NDIM.LT.NPT4) NDMQ=NDIM
+!      DO 1241 K=NPT2,NDMQ,2
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
+!1241  CONTINUE
+!      IF (NDIM.LT.NPT4) GO TO 1291
+!      NDMQ=NPT5
+!      IF (NDIM.LT.NPT6) NDMQ=NDIM
+!      DO 1251 K=NPT4,NDMQ,5
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
+!1251  CONTINUE
+!      IF (NDIM.LT.NPT6) GO TO 1291
+!      DO 1261 K=NPT6,NDIM,10
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
+!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
+!1261  CONTINUE
+!1291  CONTINUE
+!      WRITE (iUnitOutput,2247)
+!2247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HYDROGEN')
+!      WRITE(iUnitOutput,2248)
+!2248  FORMAT(12X,'ALT',7X,'CFHN2',7X,'CFHO2',7X,'CFHO',8X,
+!     ;'CFHHE',7X,'CFHH',8X,'CFHOX',7X,'CFHHL',7X,'CFHEL')
+!      NDMQ=NPT1
+!      IF (NDIM.LT.NPT2) NDMQ=NDIM
+!      DO 2231 K=1,NDMQ
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
+!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
+!2231  CONTINUE
+!      IF (NDIM.LT.NPT2) GO TO 2291
+!      NDMQ=NPT3
+!      IF (NDIM.LT.NPT4) NDMQ=NDIM
+!      DO 2241 K=NPT2,NDMQ,2
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
+!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
+!2241  CONTINUE
+!      IF (NDIM.LT.NPT4) GO TO 2291
+!      NDMQ=NPT5
+!      IF (NDIM.LT.NPT6) NDMQ=NDIM
+!      DO 2251 K=NPT4,NDMQ,5
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
+!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
+!2251  CONTINUE
+!      IF (NDIM.LT.NPT6) GO TO 2291
+!      DO 2261 K=NPT6,NDIM,10
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
+!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
+!2261  CONTINUE
+!2291  CONTINUE
+!      WRITE (iUnitOutput,3247)
+!3247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR ELECTRONS')
+!      WRITE(iUnitOutput,3248)
+!3248  FORMAT(12X,'ALT',7X,'CFELN2',6X,'CFELO2',6X,'CFELO',7X,
+!     ;'CFELHE',6X,'CFELH',7X,'CFELOX',6X,'CFELHL',6X,'CFELHD')
+!      NDMQ=NPT1
+!      IF (NDIM.LT.NPT2) NDMQ=NDIM
+!      DO 3231 K=1,NDMQ
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
+!3231  CONTINUE
+!      IF (NDIM.LT.NPT2) GO TO 3291
+!      NDMQ=NPT3
+!      IF (NDIM.LT.NPT4) NDMQ=NDIM
+!      DO 3241 K=NPT2,NDMQ,2
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
+!3241  CONTINUE
+!      IF (NDIM.LT.NPT4) GO TO 3291
+!      NDMQ=NPT5
+!      IF (NDIM.LT.NPT6) NDMQ=NDIM
+!      DO 3251 K=NPT4,NDMQ,5
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
+!3251  CONTINUE
+!      IF (NDIM.LT.NPT6) GO TO 3291
+!      DO 3261 K=NPT6,NDIM,10
+!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
+!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
+!3261  CONTINUE
 3291  CONTINUE
       WRITE (iUnitOutput,1013)
 1013  FORMAT(1H1,45X,'INITIAL OXYGEN PARAMETERS')
@@ -1080,6 +1081,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE STRT1
       use ModCommonVariables
+
 C     
 C     
 C     
@@ -1144,12 +1146,14 @@ CALEX SOURCE COEF?
 
 CALEX CL=COLLISION COEF, CF=collision freq ?         
 CALEX cf O+ and N2         
-         CFOXN2(I)=6.82E-10*XN2(I)
+         !CFOXN2(I)=6.82E-10*XN2(I)
+         CollisionFreq_IIC(Ion1_,Neutral4_,I)=6.82E-10*XN2(I)
 CALEX cf of O+ and O2         
-         CFOXO2(I)=6.64E-10*XO2(I)
+         !CFOXO2(I)=6.64E-10*XO2(I)
+         CollisionFreq_IIC(Ion1_,Neutral3_,I)=6.64E-10*XO2(I)
 CALEX cf of O+ and He         
-         CFOXHE(I)=1.32E-10*XHE(I)
-         
+         !CFOXHE(I)=1.32E-10*XHE(I)
+         CollisionFreq_IIC(Ion1_,Neutral5_,I)=1.32E-10*XHE(I)
 CALEX cl for O+ and O
          CLOXO(I)=3.67E-11*XO(I)
 CALEX seems like cl for O+ and H but I think the constant 4.63
@@ -1163,12 +1167,14 @@ CALEX cl for O and electrons??
          CLOXEL(I)=1.86E-3/XMSE
 
 CALEX cf of H+ and N2  
-         CFHN2(I)=3.36E-9*XN2(I)
+         !CFHN2(I)=3.36E-9*XN2(I)
+         CollisionFreq_IIC(Ion2_,Neutral4_,I)=3.36E-9*XN2(I)
 CALEX cf of H+ and O2
-         CFHO2(I)=3.20E-9*XO2(I)
+         !CFHO2(I)=3.20E-9*XO2(I)
+         CollisionFreq_IIC(Ion2_,Neutral3_,I)=3.20E-9*XO2(I)
 CALEX cf of H+ and He         
-         CFHHE(I)=1.06E-9*XHE(I)
-
+         !CFHHE(I)=1.06E-9*XHE(I)
+         CollisionFreq_IIC(Ion2_,Neutral5_,I)=1.06E-9*XHE(I)
 CALEX cl for ion neutral collsion       
          CLHO(I)=6.61E-11*XO(I)
          CLHH(I)=2.65E-10*XH(I)
@@ -1178,27 +1184,35 @@ CALEX cl for ion ion collision
          CLHEL(I)=2.97E-2/XMSE
 
 CALEX cf of He+ and N2
-         CFHEN2(I)=1.60E-9*XN2(I)
+         !CFHEN2(I)=1.60E-9*XN2(I)
+         CollisionFreq_IIC(Ion3_,Neutral4_,I)=1.60E-9*XN2(I)
 CALEX cf of He+ and O2         
-         CFHEO2(I)=1.53E-9*XO2(I)
+         !CFHEO2(I)=1.53E-9*XO2(I)
+         CollisionFreq_IIC(Ion3_,Neutral3_,I)=1.53E-9*XO2(I)
 CALEX cl for He+ and He         
          CLHEHE(I)=8.73E-11*XHE(I)
 CALEX cf of He+ and O         
-         CFHEO(I)=1.01E-9*XO(I)
+         !CFHEO(I)=1.01E-9*XO(I)
+         CollisionFreq_IIC(Ion3_,Neutral1_,I)=1.01E-9*XO(I)
 CALEX cf of He+ and H         
-         CFHEH(I)=4.71E-10*XH(I)
-         
+         !CFHEH(I)=4.71E-10*XH(I)
+         CollisionFreq_IIC(Ion3_,Neutral2_,I)=4.71E-10*XH(I)
 CALEX these are cl for ion ion collisions
          CLHEOX(I)=0.57*5.**1.5/XMSO
          CLHEHD(I)=0.28*5.**1.5/XMSH
          CLHEEL(I)=7.43E-3/XMSE
         
 CALEX cf of electrons and N2? this doesnt match nagy p 97 though?? 
-         CFELN2(I)=3.42E-9*XN2(I)
-         CFELO2(I)=3.25E-9*XO2(I)
-         CFELHE(I)=1.18E-9*XHE(I)
-         CFELO(I)=2.26E-9*XO(I)
-         CFELH(I)=2.11E-9*XH(I)
+         !CFELN2(I)=3.42E-9*XN2(I)
+         CollisionFreq_IIC(Ion4_,Neutral4_,I)=3.42E-9*XN2(I)
+         !CFELO2(I)=3.25E-9*XO2(I)
+         CollisionFreq_IIC(Ion4_,Neutral3_,I)=3.25E-9*XO2(I)
+         !CFELHE(I)=1.18E-9*XHE(I)
+         CollisionFreq_IIC(Ion4_,Neutral5_,I)=1.18E-9*XHE(I)
+         !CFELO(I)=2.26E-9*XO(I)
+         CollisionFreq_IIC(Ion4_,Neutral1_,I)=2.26E-9*XO(I)
+         !CFELH(I)=2.11E-9*XH(I)
+         CollisionFreq_IIC(Ion4_,Neutral2_,I)=2.11E-9*XH(I)
 CALEX similar to nagy p95 but I cant find the connection???         
          CLELOX(I)=54.5/XMSO
          CLELHL(I)=54.5/XMSHE
@@ -1227,71 +1241,82 @@ CALEX heat flow between species, and CM is the term due to
 CALEX frictional heating between species moving through each other
 
 CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
-      CTOXN2=3.*RGASO*XMSO/(XMSO+28.*XAMU)
-      CTOXO2=3.*RGASO*XMSO/(XMSO+32.*XAMU)
-      CTOXO=3.*RGASO*XMSO/(XMSO+XMSO)
-      CTOXHE=3.*RGASO*XMSO/(XMSO+XMSHE)
-      CTOXH=3.*RGASO*XMSO/(XMSO+XMSH)
-      CTOXHD=CTOXH
-      CTOXHL=CTOXHE
-      CTOXEL=3.*RGASO*XMSO/(XMSO+XMSE)
-      CTHN2=3.*RGASH*XMSH/(XMSH+28.*XAMU)
-      CTHO2=3.*RGASH*XMSH/(XMSH+32.*XAMU)
-      CTHHE=3.*RGASH*XMSH/(XMSH+XMSHE)
-      CTHO=3.*RGASH *XMSH/(XMSH+XMSO)
-      CTHH=3.*RGASH*XMSH/(XMSH+XMSH)
-      CTHOX=CTHO
-      CTHHL=CTHHE
-      CTHEL=3.*RGASH*XMSH/(XMSH+XMSE)
-      CTHEN2=3.*RGASHE*XMSHE/(XMSHE+28.*XAMU)
-      CTHEO2=3.*RGASHE*XMSHE/(XMSHE+32.*XAMU)
-      CTHEHE=3.*RGASHE*XMSHE/(XMSHE+XMSHE)
-      CTHEO=3.*RGASHE*XMSHE/(XMSHE+XMSO)
-      CTHEH=3.*RGASHE*XMSHE/(XMSHE+XMSH)
-      CTHEOX=CTHEO
-      CTHEHD=CTHEH
-      CTHEEL=3.*RGASHE*XMSHE/(XMSHE+XMSE)
-      CTELN2=3.*RGASE*XMSE/(28.*XAMU+XMSE)
-      CTELO2=3.*RGASE*XMSE/(32.*XAMU+XMSE)
-      CTELHE=3.*RGASE*XMSE/(XMSE+XMSHE)
-      CTELO=3.*RGASE*XMSE/(XMSE+XMSO)
-      CTELH=3.*RGASE*XMSE/(XMSE+XMSH)
-      CTELOX=CTELO
-      CTELHL=CTELHE
-      CTELHD=CTELH
+      HeatFlowCoef_II(Ion1_,Neutral4_)=3.*RGASO*XMSO/(XMSO+28.*XAMU)
+      HeatFlowCoef_II(Ion1_,Neutral3_)=3.*RGASO*XMSO/(XMSO+32.*XAMU)
+      HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGASO*XMSO/(XMSO+XMSO)
+      HeatFlowCoef_II(Ion1_,Neutral5_)=3.*RGASO*XMSO/(XMSO+XMSHE)
+      HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGASO*XMSO/(XMSO+XMSH)
+      HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGASO*XMSO/(XMSO+XMSH)
+      HeatFlowCoef_II(Ion1_,Ion3_) = 3.*RGASO*XMSO/(XMSO+XMSHE)
+      HeatFlowCoef_II(Ion1_,Ion4_) = 3.*RGASO*XMSO/(XMSO+XMSE)
+
+      HeatFlowCoef_II(Ion2_,Neutral4_)=3.*RGASH*XMSH/(XMSH+28.*XAMU)
+      HeatFlowCoef_II(Ion2_,Neutral3_)=3.*RGASH*XMSH/(XMSH+32.*XAMU)
+      HeatFlowCoef_II(Ion2_,Neutral5_)=3.*RGASH*XMSH/(XMSH+XMSHE)
+      HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGASH *XMSH/(XMSH+XMSO)
+      HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGASH*XMSH/(XMSH+XMSH)
+      HeatFlowCoef_II(Ion2_,Ion1_) = 3.*RGASH *XMSH/(XMSH+XMSO)
+      HeatFlowCoef_II(Ion2_,Ion3_) = 3.*RGASH*XMSH/(XMSH+XMSHE)
+      HeatFlowCoef_II(Ion2_,Ion4_) =3.*RGASH*XMSH/(XMSH+XMSE)
+      
+      HeatFlowCoef_II(Ion3_,Neutral4_)=3.*RGASHE*XMSHE/(XMSHE+28.*XAMU)
+      HeatFlowCoef_II(Ion3_,Neutral3_)=3.*RGASHE*XMSHE/(XMSHE+32.*XAMU)
+      HeatFlowCoef_II(Ion3_,Neutral5_)=3.*RGASHE*XMSHE/(XMSHE+XMSHE)
+      HeatFlowCoef_II(Ion3_,Neutral1_)=3.*RGASHE*XMSHE/(XMSHE+XMSO)
+      HeatFlowCoef_II(Ion3_,Neutral2_)=3.*RGASHE*XMSHE/(XMSHE+XMSH)
+      HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGASHE*XMSHE/(XMSHE+XMSO)
+      HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGASHE*XMSHE/(XMSHE+XMSH)
+      HeatFlowCoef_II(Ion3_,Ion4_)=3.*RGASHE*XMSHE/(XMSHE+XMSE)
+      
+      HeatFlowCoef_II(Ion4_,Neutral4_)=3.*RGASE*XMSE/(28.*XAMU+XMSE)
+      HeatFlowCoef_II(Ion4_,Neutral3_)=3.*RGASE*XMSE/(32.*XAMU+XMSE)
+      HeatFlowCoef_II(Ion4_,Neutral5_)=3.*RGASE*XMSE/(XMSE+XMSHE)
+      HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGASE*XMSE/(XMSE+XMSO)
+      HeatFlowCoef_II(Ion4_,Neutral2_)=3.*RGASE*XMSE/(XMSE+XMSH)
+      HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGASE*XMSE/(XMSE+XMSO)
+      HeatFlowCoef_II(Ion4_,Ion3_)=3.*RGASE*XMSE/(XMSE+XMSHE)
+      HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGASE*XMSE/(XMSE+XMSH)
+
+
+
 CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
-      CMOXN2=28.*XAMU/(XMSO+28.*XAMU)
-      CMOXO2=32.*XAMU/(XMSO+32.*XAMU)
-      CMOXO=XMSO/(XMSO+XMSO)
-      CMOXHE=XMSHE/(XMSO+XMSHE)
-      CMOXH=XMSH/(XMSO+XMSH)
-      CMOXHD=CMOXH
-      CMOXHL=CMOXHE
-      CMOXEL=XMSE/(XMSE+XMSO)
-      CMHN2=28.*XAMU/(XMSH+28.*XAMU)
-      CMHO2=32.*XAMU/(XMSH+32.*XAMU)
-      CMHHE=XMSHE/(XMSH+XMSHE)
-      CMHO=XMSO/(XMSH+XMSO)
-      CMHH=XMSH/(XMSH+XMSH)
-      CMHOX=CMHO
-      CMHHL=CMHHE
-      CMHEL=XMSE/(XMSE+XMSH)
-      CMHEN2=28.*XAMU/(XMSHE+28.*XAMU)
-      CMHEO2=32.*XAMU/(XMSHE+32.*XAMU)
-      CMHEHE=XMSHE/(XMSHE+XMSHE)
-      CMHEO=XMSO/(XMSHE+XMSO)
-      CMHEH=XMSH/(XMSHE+XMSH)
-      CMHEOX=CMHEO
-      CMHEHD=CMHEH
-      CMHEEL=XMSE/(XMSE+XMSHE)
-      CMELN2=28.*XAMU/(XMSE+28.*XAMU)
-      CMELO2=32.*XAMU/(XMSE+32.*XAMU)
-      CMELHE=XMSHE/(XMSE+XMSHE)
-      CMELO=XMSO/(XMSE+XMSO)
-      CMELH=XMSH/(XMSE+XMSH)
-      CMELOX=CMELO
-      CMELHL=CMELHE
-      CMELHD=CMELH
+      FricHeatCoef_II(Ion1_,Neutral4_)=28.*XAMU/(XMSO+28.*XAMU)
+      FricHeatCoef_II(Ion1_,Neutral3_)=32.*XAMU/(XMSO+32.*XAMU)
+      FricHeatCoef_II(Ion1_,Neutral1_)=XMSO/(XMSO+XMSO)
+      FricHeatCoef_II(Ion1_,Neutral5_)=XMSHE/(XMSO+XMSHE)
+      FricHeatCoef_II(Ion1_,Neutral2_)=XMSH/(XMSO+XMSH)
+      FricHeatCoef_II(Ion1_,Ion2_)=XMSH/(XMSO+XMSH)
+      FricHeatCoef_II(Ion1_,Ion3_)=XMSHE/(XMSO+XMSHE)
+      FricHeatCoef_II(Ion1_,Ion4_)=XMSE/(XMSE+XMSO)
+
+      FricHeatCoef_II(Ion2_,Neutral4_)=28.*XAMU/(XMSH+28.*XAMU)
+      FricHeatCoef_II(Ion2_,Neutral3_)=32.*XAMU/(XMSH+32.*XAMU)
+      FricHeatCoef_II(Ion2_,Neutral5_)=XMSHE/(XMSH+XMSHE)
+      FricHeatCoef_II(Ion2_,Neutral1_)=XMSO/(XMSH+XMSO)
+      FricHeatCoef_II(Ion2_,Neutral2_)=XMSH/(XMSH+XMSH)
+      FricHeatCoef_II(Ion2_,Ion1_)=XMSO/(XMSH+XMSO)
+      FricHeatCoef_II(Ion2_,Ion3_)=XMSHE/(XMSH+XMSHE)
+      FricHeatCoef_II(Ion2_,Ion4_)=XMSE/(XMSE+XMSH)
+
+      FricHeatCoef_II(Ion3_,Neutral4_)=28.*XAMU/(XMSHE+28.*XAMU)
+      FricHeatCoef_II(Ion3_,Neutral3_)=32.*XAMU/(XMSHE+32.*XAMU)
+      FricHeatCoef_II(Ion3_,Neutral5_)=XMSHE/(XMSHE+XMSHE)
+      FricHeatCoef_II(Ion3_,Neutral1_)=XMSO/(XMSHE+XMSO)
+      FricHeatCoef_II(Ion3_,Neutral2_)=XMSH/(XMSHE+XMSH)
+      FricHeatCoef_II(Ion3_,Ion1_)    =XMSO/(XMSHE+XMSO)
+      FricHeatCoef_II(Ion3_,Ion2_)    =XMSH/(XMSHE+XMSH)
+      FricHeatCoef_II(Ion3_,Ion4_)    =XMSE/(XMSE+XMSHE)
+
+      FricHeatCoef_II(Ion4_,Neutral4_)=28.*XAMU/(XMSE+28.*XAMU)
+      FricHeatCoef_II(Ion4_,Neutral3_)=32.*XAMU/(XMSE+32.*XAMU)
+      FricHeatCoef_II(Ion4_,Neutral5_)=XMSHE/(XMSE+XMSHE)
+      FricHeatCoef_II(Ion4_,Neutral1_)=XMSO/(XMSE+XMSO)
+      FricHeatCoef_II(Ion4_,Neutral2_)=XMSH/(XMSE+XMSH)
+      FricHeatCoef_II(Ion4_,Ion1_)    =XMSO/(XMSE+XMSO)
+      FricHeatCoef_II(Ion4_,Ion2_)    =XMSH/(XMSE+XMSH)
+      FricHeatCoef_II(Ion4_,Ion3_)    =XMSHE/(XMSE+XMSHE)
+
+
 
 C     ALEX(10/11/04): 
 C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
