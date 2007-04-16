@@ -11,7 +11,7 @@ module ModFieldLine
        dHydPw_C,uHydPw_C,pHydPw_C,THydPW,     &
        dElectPw_C,uElectPw_C,pElectPw_C,TElectPW,rPw_C
 
-  logical :: IsRestartPW, IsVariableDtPW, DoLogPW
+  logical :: IsRestartPW, IsVariableDtPW, DoLogPW,IsImplicitPW,IsImplicitAllPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
        GeoMagLonPW,JrPW,nDimPW
   real    :: wHorizontalPW
@@ -35,7 +35,7 @@ contains
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog,&
-       nStep,r_C)
+       nStep,r_C,IsImplicit,IsImplicitAll)
 
     use ModParameters
 
@@ -49,7 +49,7 @@ contains
     integer, optional,intent(in)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     character*100,optional,intent(in):: NameRestart
     character(7),optional,intent(in)::TypeSolver
-    logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog
+    logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog,IsImplicit,IsImplicitAll
     !-------------------------------------------------------------------------
 
     dOxygPw_C (:) = dOxyg_CI(:)
@@ -89,6 +89,9 @@ contains
     if (present(DoLog))         DoLogPW        = DoLog
     if (present(nStep))         nStepPW        = nStep
     if (present(r_c))           rPw_C(:)       = r_C(:)
+    if (present(IsImplicit))    IsImplicitPW   = IsImplicit
+    if (present(IsImplicitAll)) IsImplicitAllPW   = IsImplicitAll
+
 
   end subroutine put_field_line
 
@@ -103,7 +106,7 @@ contains
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog,&
-       nStep,r_C)
+       nStep,r_C,IsImplicit,IsImplicitAll)
 
     use ModParameters
 
@@ -117,7 +120,7 @@ contains
     
     character*100,optional,intent(out):: NameRestart
     character(7),optional,intent(out):: TypeSolver
-    logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog
+    logical,optional,intent(out)      :: IsVariableDt,IsRestart,DoLog,IsImplicit,IsImplicitAll
     real, optional, intent(out)       :: Time,MaxLineTime,DToutput
     real, optional, intent(out)        :: r_C(maxGrid)
     integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
@@ -161,7 +164,8 @@ contains
     if (present(DoLog))         DoLog=DoLogPW
     if (present(nStep))         nStep        = nStepPW
     if (present(r_C))           r_C(:)       = rPw_C(:)
-
+    if (present(IsImplicit))    IsImplicit   = IsImplicitPW
+    if (present(IsImplicitAll)) IsImplicitAll= IsImplicitAllPW
   end subroutine get_field_line
 
 end module ModFieldLine
