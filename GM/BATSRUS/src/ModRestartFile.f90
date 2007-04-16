@@ -571,17 +571,17 @@ contains
             status = 'old', iostat=iError)
     else
        NameFile = trim(NameRestartOutDir)//NameDataFile
-       ! Delete file from proc 0
-       if(iProc==0)then
-          open(Unit_Tmp, file=NameFile, status='unknown')
-          close(Unit_Tmp, status='delete')
-       end if
-       ! Make sure that all processors wait until the file is deleted
+       ! Delete and open file from proc 0
+       if(iProc==0) open(Unit_Tmp, file=NameFile, &
+               RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
+               status = 'replace', iostat=iError)
+
+       ! Make sure that all processors wait until the file is re-opened
        call barrier_mpi
 
-       open(Unit_Tmp, file=NameFile, &
+       if(iProc > 0)open(Unit_Tmp, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            status = 'unknown', iostat=iError)
+            status = 'old', iostat=iError)
     end if
     if(iError /= 0)then
        write(*,*) NameSub,': ERROR for DoRead=',DoRead
