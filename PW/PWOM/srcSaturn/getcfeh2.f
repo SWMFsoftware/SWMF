@@ -13,16 +13,15 @@ C get the average crossection for a given temperature. The function returns
 C the electron collission frequency with H2
 
       FUNCTION getcfeh2(TELECT,XH2,XMSE,UELECT)
-      REAL k
-      REAL pi
+      use ModConst, ONLY: cBoltzmann
+
       REAL sigmaD(29)
       REAL vsigma(29)
       REAL esigma(29)
 
       REAL c2
       REAL QD
-      parameter (k=1.380658e-23)
-      parameter (pi=3.141592653589)
+
 C Data for calculating crossection      
       DATA (sigmaD(i),i=1,29)/0,7.2E-20,8.1E-20,8.5E-20,9E-20,9.2E-20,
      &9.6E-20,9.8E-20,10E-20,10.2E-20,10.5E-20,12E-20,13E-20,13.8E-20,
@@ -43,16 +42,9 @@ C Energy of incident electrons (eV)
      &.06,.07,.08,.09,.1,.2, 
      &.3,.4,.5,.6,.7,.8,
      &.9,1.,2.,3.,4.,5.,6.,7.,8.,9.,10./ 
-c      write(*,*) (vsigma(i),i=1,28)
       
       QD=0.
-      c2=2.*k*TELECT/XMSE
-C      write(*,*) TELECT, XH2,XMSE
-C      write(*,*) c2
-c      do i=2,29
-c         QD=(vsigma(i)**5 * sigmaD(i)*exp(-vsigma(i)**2/c2))
-c     &        *(vsigma(i)-vsigma(i-1))+QD 
-c      enddo
+      c2=2.*cBoltzmann*TELECT/XMSE
 
 C calculate the kinetic energy in eV of the electrons.      
       kinetic=.5*XMSE*(UELECT/(1.E2))**2.*1.60217733e-19
@@ -80,15 +72,8 @@ C calculate the kinetic energy in eV of the electrons.
          QD=sigmaD(29)
       endif
 
-
-
-
-
-C      QD=QD/(c2**3)
-C     write(*,*) QD,XH2,k,pi,XMSE
       getcfeh2=(1.E6)* XH2*abs(UELECT)*QD
-c      getcfeh2=4./3. *(1.E6)* XH2*(8.*k*TELECT/pi/XMSE)**.5 *QD
-C      write(*,*) getcfeh2
+
       
       return
       end
