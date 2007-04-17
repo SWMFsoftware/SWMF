@@ -245,8 +245,20 @@ subroutine calc_sources
                 ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
                 + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
                 + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+
+           !if(i==iTest.and.j==jTest.and.k==kTest.and.GlobalBlk==BlkTest)then
+           !   write(*,*)'Current_D=',Current_D
+           !   write(*,*)'bCrossArea_DX(i  )=',bCrossArea_DX(:,i  ,j,k)
+           !   write(*,*)'bCrossArea_DX(i+1)=',bCrossArea_DX(:,i+1,j,k)
+           !   write(*,*)'bCrossArea_DY(j  )=',bCrossArea_DY(:,i,j  ,k)
+           !   write(*,*)'bCrossArea_DY(j+1)=',bCrossArea_DY(:,i,j+1,k)
+           !   write(*,*)'bCrossArea_DZ(k  )=',bCrossArea_DZ(:,i,j,k  )
+           !   write(*,*)'bCrossArea_DZ(k+1)=',bCrossArea_DZ(:,i,j,k+1)
+           !end if
         else
            call get_current(i,j,k,GlobalBlk,Current_D)
+           !if(i==iTest.and.j==jTest.and.k==kTest.and.GlobalBlk==BlkTest) &
+           !     write(*,*)'Current_D=',Current_D
         end if
         uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
@@ -521,7 +533,8 @@ contains
   !^CFG END COVARIANT
   subroutine write_source(String)
     character(len=*) :: String
-    write(*,'(a,a)',advance='no')String," S=",Source_VC(VarTest,iTest,jTest,kTest) 
+    write(*,'(a,a,es13.5)',advance='no') &
+         String," S=",Source_VC(VarTest,iTest,jTest,kTest) 
   end subroutine write_source
 
 end subroutine calc_sources
