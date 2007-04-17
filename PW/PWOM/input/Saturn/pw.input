@@ -8,6 +8,7 @@ T		SaveFirst
 #SCHEME
 Rusanov		TypeSolver
 T		IsImplicit
+F		IsImplicitAll
 .01		DtVertical
 
 #MOTION
