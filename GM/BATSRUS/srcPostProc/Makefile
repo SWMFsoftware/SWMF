@@ -38,7 +38,7 @@ earthtraj:
 	@echo
 
 ${EARTH_TRAJ}: ${OBJECTS1} earth_traj_main.o
-	${LINK.f90} ${SEARCH} -o ${EARTH_TRAJ} ${LIBDIR}/libSHARE.a ${OBJECTS1} earth_traj_main.o
+	${LINK.f90} ${SEARCH} -o ${EARTH_TRAJ} ${OBJECTS1} earth_traj_main.o  ${LIBDIR}/libSHARE.a
 
 #
 #	cleaning

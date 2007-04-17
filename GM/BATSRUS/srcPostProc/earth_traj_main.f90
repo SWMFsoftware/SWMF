@@ -12,7 +12,7 @@ program earth_traj
   ! written into STDOUT.
   ! 
 
-  use CON_geopack
+  use CON_geopack_internal
   use ModUT
   use ModNumConst
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -31,7 +31,7 @@ program earth_traj
   character(len=32) :: cDate
   character(len=32) :: cTimeLoop
   integer, dimension(7) :: iStartTime, iCT
-  integer :: i, j, k, len_NameCommand
+  integer :: i, j, k
   integer ::  ios, ic1, ic2
   integer iarg, errno, argc, oUnit
   R=cAU/Rsun
@@ -44,10 +44,11 @@ program earth_traj
   !
   ! Parse the command line arguments
   !
+  NameFile='DESCRIBE_ETRAJ.in'
   open(10,file='DESCRIBE_ETRAJ.in',status='old')
         READPARAM: do 
            read(10,'(a)',end=9000,err=9000) NameCommand
-           len_NameCommand = index(NameCommand, ' ') - 1
+           if(index(NameCommand,'#').ne.1)NameCommand=''
            select case(NameCommand)
            case("#COOR")
               read(10,*,end=9000,err=9000) CoordSys
@@ -60,7 +61,7 @@ program earth_traj
            case("#START","#END")
               exit READPARAM
            case default
-              if (len_NameCommand .ne. 0) then  ! i.e., just skip an empty line
+              if (len_trim(NameCommand) .ne. 0) then  ! i.e., just skip an empty line
                  write(*,*) &
                       '+++ Wrong command "'//trim(NameCommand)//'" encountered +++'
                  stop

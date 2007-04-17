@@ -15,7 +15,7 @@
 !http://www.space-plasma.qmul.ac.uk/heliocoords/systems2art.pdf
 !Below we cite it as F&P, a numeration of pages follows the Internet version
 !INTERFACE:
-Module CON_geopack
+Module CON_geopack_internal
 
   use ModNumConst
  ! use CON_world,ONLY:CON_stop
@@ -649,7 +649,7 @@ contains
          ' Deg'
   end subroutine CON_test_geopack
 
-end Module CON_geopack
+end Module CON_geopack_internal
 !=======================================================================
 subroutine CON_stop(Char)
   character(LEN=*),intent(in)::Char
