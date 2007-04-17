@@ -9,6 +9,8 @@ C
 C
       real :: dT_II(nIon,nSpecies),dU2_II(nIon,nSpecies)
       
+      if (dOxyg(1) < 0.0) write(*,*) 'grendel f95 is bad'
+
       do I=1,N
          
 C**********************************************************************
