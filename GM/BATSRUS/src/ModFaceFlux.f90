@@ -7,7 +7,7 @@ module ModFaceFlux
   use ModVarIndexes, ONLY: nVar, NameVar_V, UseMultiSpecies, UseMultiIon, &
        nFluid, nIonFluid, TypeFluid_I
   use ModGeometry,   ONLY: fAx_BLK, fAy_BLK, fAz_BLK, dx_BLK, dy_BLK, dz_BLK
-  use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK
+  use ModGeometry,   ONLY: x_BLK, y_BLK, z_BLK, true_cell
 
   use ModGeometry,   ONLY: UseCovariant, &                !^CFG IF COVARIANT 
        FaceAreaI_DFB, FaceAreaJ_DFB, FaceAreaK_DFB, &     !^CFG IF COVARIANT 
@@ -46,7 +46,15 @@ module ModFaceFlux
   logical :: DoTestCell
   logical :: IsBoundary
 
-  integer :: iFace, jFace, kFace, iBlockFace
+  ! Index of the block for this face
+  integer :: iBlockFace
+  
+  ! index of the face 
+  integer :: iFace, jFace, kFace
+
+  ! index of cell in the negative and positive directions from face
+  integer :: iLeft,  jLeft, kLeft
+  integer :: iRight, jRight, kRight
 
   real :: StateLeft_V(nVar), StateRight_V(nVar)
   real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
@@ -114,7 +122,7 @@ contains
 
     if(UseHallResist .and. UseMultiSpecies) &
          call set_ion_mass_per_charge(iBlock)
- 
+
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1)call get_flux_x(1,1,1,nJ,1,nK)
        if(neiLwest(iBlock) == 1)call get_flux_x(nIFace,nIFace,1,nJ,1,nK)
@@ -212,25 +220,24 @@ contains
       call set_block_values(x_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-         
+
          call set_cell_values_x
 
          DoTestCell = DoTestMe &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
-         IsBoundary=is_boundary_face(x_)
 
          B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-   
-         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
- 
-         B0xL= B0xCell_BLK(iFace-1, jFace, kFace, iBlockFace)
-         B0yL= B0yCell_BLK(iFace-1, jFace, kFace, iBlockFace)
-         B0zL= B0zCell_BLK(iFace-1, jFace, kFace, iBlockFace)
+
+         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
+
+         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -275,20 +282,18 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
-         
-         IsBoundary=is_boundary_face(y_)
 
          B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
 
-         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
- 
-         B0xL= B0xCell_BLK(iFace, jFace-1, kFace, iBlockFace)
-         B0yL= B0yCell_BLK(iFace, jFace-1, kFace, iBlockFace)
-         B0zL= B0zCell_BLK(iFace, jFace-1, kFace, iBlockFace)
+         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
+
+         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -335,19 +340,18 @@ contains
 
          DoTestCell = DoTestMe .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
-         IsBoundary=is_boundary_face(z_)
 
          B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
 
-         B0xR= B0xCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0yR= B0yCell_BLK(iFace, jFace, kFace, iBlockFace)
-         B0zR= B0zCell_BLK(iFace, jFace, kFace, iBlockFace)
- 
-         B0xL= B0xCell_BLK(iFace, jFace, kFace-1, iBlockFace)
-         B0yL= B0yCell_BLK(iFace, jFace, kFace-1, iBlockFace)
-         B0zL= B0zCell_BLK(iFace, jFace, kFace-1, iBlockFace)
+         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
+         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
+
+         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
+         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -408,123 +412,90 @@ contains
   !===========================================================================
   subroutine set_cell_values_x
 
-    HallCoeff = -1.0
-    if(UseHallResist) HallCoeff =                           &
-         0.5*hall_factor(x_, iFace, jFace, kFace, iBlockFace)* &
-         ( IonMassPerCharge_G(iFace  ,jFace,kFace)          &
-         + IonMassPerCharge_G(iFace-1,jFace,kFace) )
-
-    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistivity) Eta = 0.5* &
-         ( Eta_GB(iFace  ,jFace,kFace,iBlockFace) &
-         + Eta_GB(iFace-1,jFace,kFace,iBlockFace))  !^CFG END DISSFLUX
+    iRight= iFace; jRight = jFace; kRight = kFace
+    iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaI_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaI_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaI_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-            FaceArea2MinI_B(iBlockFace))
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinI_B(iBlockFace))
        Area = sqrt(Area2)
-
-       if(HallCoeff > 0.0 .or. Eta > 0.0)&
-            InvDxyz  = 1.0/sqrt(&
-            ( x_BLK(iFace  , jFace, kFace, iBlockFace)       &
-            - x_BLK(iFace-1, jFace, kFace, iBlockFace))**2 + &
-            ( y_BLK(iFace  , jFace, kFace, iBlockFace)       &
-            - y_BLK(iFace-1, jFace, kFace, iBlockFace))**2 + &
-            ( z_BLK(iFace  , jFace, kFace, iBlockFace)       &
-            - z_BLK(iFace-1, jFace, kFace, iBlockFace))**2 )
-       
     end if                                 !^CFG END COVARIANT
 
+    call set_cell_values_common
+ 
   end subroutine set_cell_values_x
 
   !===========================================================================
   subroutine set_cell_values_y
 
-    HallCoeff = -1.0
-    if(UseHallResist) HallCoeff =                           &
-         0.5*hall_factor(y_, iFace, jFace, kFace, iBlockFace)* &
-         ( IonMassPerCharge_G(iFace,jFace  ,kFace)          &
-         + IonMassPerCharge_G(iFace,jFace-1,kFace) )
-
-    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistivity) Eta = 0.5* &
-         ( Eta_GB(iFace,jFace  ,kFace,iBlockFace) &
-         + Eta_GB(iFace,jFace-1,kFace,iBlockFace))  !^CFG END DISSFLUX
+    iRight= iFace; jRight = jFace; kRight = kFace
+    iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaJ_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaJ_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaJ_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-            FaceArea2MinJ_B(iBlockFace))
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinJ_B(iBlockFace))
        Area = sqrt(Area2)
-
-       if(HallCoeff > 0.0 .or. Eta > 0.0)&
-            InvDxyz  = 1.0/sqrt(&
-            ( x_BLK(iFace, jFace  , kFace, iBlockFace)       &
-            - x_BLK(iFace, jFace-1, kFace, iBlockFace))**2 + &
-            ( y_BLK(iFace, jFace  , kFace, iBlockFace)       &
-            - y_BLK(iFace, jFace-1, kFace, iBlockFace))**2 + &
-            ( z_BLK(iFace, jFace  , kFace, iBlockFace)       &
-            - z_BLK(iFace, jFace-1, kFace, iBlockFace))**2 )
-
     end if                                 !^CFG END COVARIANT
+
+    call set_cell_values_common
 
   end subroutine set_cell_values_y
   !===========================================================================
 
   subroutine set_cell_values_z
 
-    HallCoeff = -1.0
-    if(UseHallResist) HallCoeff =                           &
-         0.5*hall_factor(z_, iFace, jFace, kFace, iBlockFace)* &
-         ( IonMassPerCharge_G(iFace,jFace,kFace  )          &
-         + IonMassPerCharge_G(iFace,jFace,kFace-1) )
-
-    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
-    if(UseResistivity) Eta = 0.5* &
-         ( Eta_GB(iFace,jFace,kFace  ,iBlockFace) &
-         + Eta_GB(iFace,jFace,kFace-1,iBlockFace))  !^CFG END DISSFLUX
+    iRight= iFace; jRight = jFace; kRight = kFace
+    iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
        AreaX = FaceAreaK_DFB(x_, iFace, jFace, kFace, iBlockFace)
        AreaY = FaceAreaK_DFB(y_, iFace, jFace, kFace, iBlockFace)
        AreaZ = FaceAreaK_DFB(z_, iFace, jFace, kFace, iBlockFace)
-       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, &
-            FaceArea2MinK_B(iBlockFace))
+       Area2 = max(AreaX**2 + AreaY**2 + AreaZ**2, FaceArea2MinK_B(iBlockFace))
        Area = sqrt(Area2)
-
-       if(HallCoeff > 0.0 .or. Eta > 0.0)&
-            InvDxyz  = 1.0/sqrt(&
-            ( x_BLK(iFace, jFace, kFace  , iBlockFace)       &
-            - x_BLK(iFace, jFace, kFace-1, iBlockFace))**2 + &
-            ( y_BLK(iFace, jFace, kFace  , iBlockFace)       &
-            - y_BLK(iFace, jFace, kFace-1, iBlockFace))**2 + &
-            ( z_BLK(iFace, jFace, kFace  , iBlockFace)       &
-            - z_BLK(iFace, jFace, kFace-1, iBlockFace))**2 )
-
     end if                                 !^CFG END COVARIANT
+
+    call set_cell_values_common
 
   end subroutine set_cell_values_z
 
-  !=========================================================================
-  logical function is_boundary_face(iDirIn)
-      use ModGeometry, ONLY: true_cell
-      integer,intent(in)::iDirIn
-      is_boundary_face=&
-           (iDirIn==1.and.(true_cell(iFace-1, jFace, kFace, iBlockFace) &
-           .neqv.     true_cell(iFace  , jFace, kFace, iBlockFace)))&
-           .or.&
-           (iDirIn==2.and.(true_cell(iFace, jFace-1, kFace, iBlockFace) &
-           .neqv.     true_cell(iFace, jFace  , kFace, iBlockFace)))&
-           .or.&
-           (iDirIn==3.and.(true_cell(iFace, jFace, kFace-1, iBlockFace) &
-           .neqv.     true_cell(iFace, jFace, kFace  , iBlockFace)))
-    end function is_boundary_face
-    !==========================================================================
+  !==========================================================================
+
+  subroutine set_cell_values_common
+
+    IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
+         .neqv.  true_cell(iRight,jRight,kRight,iBlockFace)
+
+    HallCoeff = -1.0
+    if(UseHallResist) HallCoeff =                              &
+         0.5*hall_factor(y_, iFace, jFace, kFace, iBlockFace)* &
+         ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
+         + IonMassPerCharge_G(iRight,jRight,kRight) )
+
+    Eta       = -1.0                                !^CFG IF DISSFLUX BEGIN
+    if(UseResistivity) Eta = 0.5* &
+         ( Eta_GB(iLeft, jLeft  ,kLeft,iBlockFace) &
+         + Eta_GB(iRight,jRight,kRight,iBlockFace))  !^CFG END DISSFLUX
+
+    !^CFG IF COVARIANT BEGIN
+    if(UseCovariant .and. (HallCoeff > 0.0 .or. Eta > 0.0)) &
+         InvDxyz  = 1.0/sqrt(                               &
+         ( x_BLK(iRight,jRight,kRight, iBlockFace)          &
+         - x_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
+         ( y_BLK(iRight,jRight,kRight, iBlockFace)          &
+         - y_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 +    &
+         ( z_BLK(iRight,jRight,kRight, iBlockFace)          &
+         - z_BLK(iLeft, jLeft  ,kLeft, iBlockFace))**2 )
+    !^CFG END COVARIANT
+
+  end subroutine set_cell_values_common
+
+  !==========================================================================
+
   subroutine get_numerical_flux(iDir, Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
@@ -532,6 +503,7 @@ contains
          RhoUx_,RhoUy_,RhoUz_
     use ModAdvance, ONLY: DoReplaceDensity,State_VGB
     use ModCharacteristicMhd,ONLY:dissipation_matrix
+    use ModCoordTransform, ONLY: cross_product
 
     integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nFlux)
@@ -541,8 +513,7 @@ contains
     real :: Cmax
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
-    integer:: iDir_D(3),iR,jR,kR,iL,jL,kL
-    real :: UL_D(3),UR_D(3),cDivBWave
+    real :: uLeft_D(3),uRight_D(3),cDivBWave
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -552,26 +523,23 @@ contains
 
     if(DoRoe)then
        if(IsBoundary)then
-          UL_D=StateLeft_V(Ux_:Uz_); UR_D=StateRight_V(Ux_:Uz_)
+          uLeft_D=StateLeft_V(Ux_:Uz_); uRight_D=StateRight_V(Ux_:Uz_)
        else
           !Since the divB source term is calculated using the
           !cell centered velocity, the numerical diffusion
           !for the normal magnetic field should be evaluated
           !in terms of the cell centered velocity too
-          iDir_D=0;iDir_D(iDir)=1
-          iR=iFace;jR=jFace;kR=kFace
-          iL=iFace-iDir_D(1);jL=jFace-iDir_D(2);kL=kFace-iDIr_D(3)
-          UL_D=State_VGB(rhoUx_:rhoUz_,iL,jL,kL,iBlockFace)/&
-               State_VGB(rho_,iL,jL,kL,iBlockFace)
-          UR_D=State_VGB(rhoUx_:rhoUz_,iR,jR,kR,iBlockFace)/&
-               State_VGB(rho_,iR,jR,kR,iBlockFace)
+          uLeft_D=State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
+               State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
+          uRight_D=State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
+               State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
        end if
        call dissipation_matrix(iDir,&
-         StateLeft_V,StateRight_V,  &
-         B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR,&
-         UL_D,UR_D,DeltaBnL,DeltaBnR,&
-         DissipationFlux_V,cMax,UNormal_I(1),&
-         IsBoundary,.false.)
+            StateLeft_V,StateRight_V,  &
+            B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR,&
+            uLeft_D,uRight_D,DeltaBnL,DeltaBnR,&
+            DissipationFlux_V,cMax,Unormal_I(1),&
+            IsBoundary,.false.)
     end if
     if(UseRS7 &
          .or. DoHll &               !^CFG IF LINDEFLUX
@@ -639,6 +607,20 @@ contains
     ! All the solvers below use the average state
     State_V = 0.5*(StateLeft_V + StateRight_V)
 
+    if(UseMultiIon)then
+       ! Calculate bCrossArea_D to be used for J in the J x B source term
+       ! in calc_sources.f90.
+       ! The upwinded discretization of the current is J = sum(A x B) / V
+
+       bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
+
+       if(DoTestCell)then
+          write(*,*)'bCrossArea_D=',bCrossArea_D
+          write(*,*)'AreaX, AreaY, AreaZ=',AreaX, AreaY, AreaZ
+          write(*,*)'State_V(Bx_:Bz_)=',State_V(Bx_:Bz_)
+       end if
+    end if
+
     if(DoLf)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
     if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
@@ -647,14 +629,14 @@ contains
 
     if(UseRS7.and.(.not.DoRoe))then
        call stop_mpi('Second order RS7 is implemented for Roe solver only')
-       cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
-            abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
-       Flux_V(Bx_) = Flux_V(Bx_) - cDivBWave*DiffBx
-       Flux_V(By_) = Flux_V(By_) - cDivBWave*DiffBy
-       Flux_V(Bz_) = Flux_V(Bz_) - cDivBWave*DiffBz
-
+       !cDivBWave=max(abs(AreaX*UL_D(x_)+AreaY*UL_D(y_)+AreaZ*UL_D(z_)),&
+       !     abs(AreaX*UR_D(x_)+AreaY*UR_D(y_)+AreaZ*UR_D(z_)))
+       !Flux_V(Bx_) = Flux_V(Bx_) - cDivBWave*DiffBx
+       !Flux_V(By_) = Flux_V(By_) - cDivBWave*DiffBy
+       !Flux_V(Bz_) = Flux_V(Bz_) - cDivBWave*DiffBz
+       !
        ! Fix the energy diffusion
-       Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
+       !Flux_V(Energy_) = Flux_V(Energy_) - cDivBWave*DiffE
     end if
 
     ! Increase maximum speed with resistive diffusion speed if necessary
@@ -677,7 +659,7 @@ contains
       Flux_V = 0.5*(FluxLeft_V  + FluxRight_V) &
            +DissipationFlux_V*Area
 
-      Unormal_I = UNormal_I*Area
+      Unormal_I = Unormal_I*Area
       cMax    = cMax*Area
       cMaxDt = cMax
     end subroutine roe_solver_new
@@ -767,7 +749,7 @@ contains
          Flux_V(Bx_) = Flux_V(Bx_) - cMax*DiffBx
          Flux_V(By_) = Flux_V(By_) - cMax*DiffBy
          Flux_V(Bz_) = Flux_V(Bz_) - cMax*DiffBz
-         
+
          ! Sokolov's algorithm !!!
          ! Fix the energy diffusion
          Flux_V(Energy_) = Flux_V(Energy_) - cMax*DiffE
@@ -1079,8 +1061,6 @@ contains
 
     subroutine get_magnetic_flux
 
-      use ModCoordTransform, ONLY: cross_product
-
       integer, parameter :: Rho_=1, Ux_=2, Uy_=3, Uz_=4
 
       ! Calculate magnetic flux for multi-ion equations
@@ -1121,6 +1101,7 @@ contains
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
          write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
+         write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
       end if
 
@@ -1132,12 +1113,6 @@ contains
       end if                                     !^CFG END DISSFLUX
 
 !!! add gradient of electron pressure here !!!
-
-      ! Calculate bCrossArea_D to be used for J in the J x B source term
-      ! in calc_sources.f90.
-      ! The upwinded discretization of the current is J = sum(A x B) / V
-
-      bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
 
     end subroutine get_magnetic_flux
 
@@ -1389,14 +1364,8 @@ contains
          FullBt = sqrt(max(0.0, &
               Area2*(FullBx**2+FullBy**2+FullBz**2) - FullBn**2))
          ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
-         select case(iDir)
-         case(1)
-            Rho1 = State_VGB(Rho_,iFace-1,jFace,kFace,GlobalBlk)
-         case(2)
-            Rho1 = State_VGB(Rho_,iFace,jFace-1,kFace,GlobalBlk)
-         case(3)
-            Rho1 = State_VGB(Rho_,iFace,jFace,kFace-1,GlobalBlk)
-         end select
+         Rho1 = State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
+
          ! Calculate drift speed and whistler speed
          cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
          cWhistler = cPi*abs(FullBn)
@@ -1499,7 +1468,7 @@ end module ModFaceFlux
 subroutine roe_solver(iDir, Flux_V)
 
   use ModFaceFlux, ONLY: &
-       nFlux, &
+       nFlux, IsBoundary, &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal_I
@@ -1575,9 +1544,6 @@ subroutine roe_solver(iDir, Flux_V)
 
   ! Fluxes
   real, dimension(nFluxMhd)       :: Diffusion_V      ! Diffusive fluxes
-
-  ! Logical to use Rusanov flux at inner boundary
-  logical :: UseFluxRusanov
 
   ! Misc. scalar variables
   real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv, DtInvVolume, AreaFace
@@ -1720,19 +1686,6 @@ subroutine roe_solver(iDir, Flux_V)
         dCons_V(B1t2_)   = StateRightCons_V(By_)    - StateLeftCons_V(By_)
      end select
   end if                                           !^CFG IF COVARIANT
-
-  ! Check if the cell is next to a boundary
-  select case(iDir)
-  case(x_)
-     UseFluxRusanov= true_cell(iFace-1, jFace, kFace, globalBLK) &
-          .neqv.     true_cell(iFace  , jFace, kFace, globalBLK)
-  case(y_)
-     UseFluxRusanov= true_cell(iFace, jFace-1, kFace, globalBLK) &
-          .neqv.     true_cell(iFace, jFace  , kFace, globalBLK)
-  case(z_)
-     UseFluxRusanov= true_cell(iFace, jFace, kFace-1, globalBLK) &
-          .neqv.     true_cell(iFace, jFace, kFace  , globalBLK)
-  end select
 
   ! Scalar variables
   RhoL  =  StateLeft_V(rho_)
@@ -1958,7 +1911,7 @@ subroutine roe_solver(iDir, Flux_V)
 
   ! At inner BC replace all eigenvalues with the enhanced eigenvalue
   ! of divB, which is the maximum eigenvalue
-  if(UseFluxRusanov) Eigenvalue_V(1:nWave) = Eigenvalue_V(DivBW_)
+  if(IsBoundary) Eigenvalue_V(1:nWave) = Eigenvalue_V(DivBW_)
 
   !\
   ! Eigenvectors
