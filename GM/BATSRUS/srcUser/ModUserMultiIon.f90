@@ -116,8 +116,8 @@ contains
     do jFluid = 1, nIonFluid
        do iFluid = 1, nIonFluid
           CollisionRate_II(iFluid, jFluid) = CollisionCoef* &
-               MassFluid_I(iFluid)*MassFluid_I(iFluid) &
-               /(MassFluid_I(iFluid)+MassFluid_I(iFluid))
+               MassFluid_I(iFluid)*MassFluid_I(jFluid) &
+               /(MassFluid_I(iFluid)+MassFluid_I(jFluid))
        end do
     end do
 
