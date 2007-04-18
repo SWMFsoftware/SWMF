@@ -290,10 +290,8 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, &
        ProcTest, BlkTest,iTest,jTest,kTest
-  use ModFaceFlux, ONLY: nFlux, iBlockFace, iFace, jFace, kFace, &
-       set_block_values, &
-       set_cell_values_x, set_cell_values_y, set_cell_values_z, &
-       get_physical_flux, &
+  use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, &
+       set_block_values, set_cell_values, get_physical_flux, &
        HallJx, HallJy, HallJz, DoTestCell, Area
   use ModHallResist, ONLY: UseHallResist, HallJ_CD
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
@@ -318,9 +316,7 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
      DoTest=.false.; DoTestMe=.false.
   end if
 
-  iBlockFace = iBlock
-
-  call set_block_values(iDim)
+  call set_block_values(iBlock, iDim)
   do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nI
 
      DoTestCell = DoTestMe .and. &
@@ -342,15 +338,8 @@ subroutine get_face_flux(StateCons_CV,B0_CD,nI,nJ,nK,iDim,iBlock,Flux_CV)
         HallJz = HallJ_CD(iFace, jFace, kFace, z_)
      end if
 
-     select case(iDim)
-     case(x_)
-        call set_cell_values_x
-     case(y_)
-        call set_cell_values_y
-     case(z_)
-        call set_cell_values_z
-     end select
-     call get_physical_flux(iDim, Primitive_V, &
+     call set_cell_values
+     call get_physical_flux(Primitive_V, &
           B0_CD(iFace, jFace, kFace, x_), &
           B0_CD(iFace, jFace, kFace, y_), &
           B0_CD(iFace, jFace, kFace, z_), &
@@ -372,9 +361,8 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nDim, x_, y_, z_, ProcTest, BlkTest,iTest,jTest,kTest
   use ModImplicit, ONLY: nw
-  use ModFaceFlux, ONLY: iBlockFace, iFace, jFace, kFace, &
-       set_block_values, &
-       set_cell_values_x, set_cell_values_y, set_cell_values_z, get_speed_max,&
+  use ModFaceFlux, ONLY: iFace, jFace, kFace, &
+       set_block_values, set_cell_values, get_speed_max,&
        Area, DoLf, DoAw, DoRoe, DoHll, HallUnLeft, HallUnRight, DoTestCell
 
   implicit none
@@ -395,7 +383,6 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
      DoTest=.false.; DoTestMe=.false.
   end if
 
-  iBlockFace = iBlock
   DoLf  = .true.
   DoAw  = .false.
   DoRoe = .false.
@@ -403,7 +390,7 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
   HallUnLeft = 0.0
   HallUnRight = 0.0
 
-  call set_block_values(iDim)
+  call set_block_values(iBlock, iDim)
   do kFace = 1, qnK; do jFace = 1, qnJ; do iFace = 1, qnI
 
      DoTestCell = DoTestMe .and. &
@@ -413,15 +400,9 @@ subroutine get_cmax_face(w,B0,qnI,qnJ,qnK,iDim,iBlock,cmax)
 
      call conservative_to_primitive(Primitive_V)
 
-     select case(iDim)
-     case(x_)
-        call set_cell_values_x
-     case(y_)
-        call set_cell_values_y
-     case(z_)
-        call set_cell_values_z
-     end select
-     call get_speed_max(iDim, Primitive_V, &
+     call set_cell_values
+
+     call get_speed_max(Primitive_V, &
           B0(iFace, jFace, kFace, x_), &
           B0(iFace, jFace, kFace, y_), &
           B0(iFace, jFace, kFace, z_), &
