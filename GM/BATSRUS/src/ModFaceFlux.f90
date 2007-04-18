@@ -48,6 +48,9 @@ module ModFaceFlux
 
   ! Index of the block for this face
   integer :: iBlockFace
+
+  ! Direction of the face
+  integer :: iDimFace
   
   ! index of the face 
   integer :: iFace, jFace, kFace
@@ -60,7 +63,7 @@ module ModFaceFlux
   real :: FluxLeft_V(nFlux), FluxRight_V(nFlux)
   real :: StateLeftCons_V(nFlux), StateRightCons_V(nFlux)
   real :: DissipationFlux_V(nFlux)
-  real :: B0x, B0y, B0z, B0xL, B0yL, B0zL, B0xR, B0yR, B0zR
+  real :: B0x, B0y, B0z
   real :: DiffBb  !     (1/4)(BnL-BnR)^2
   real :: DeltaBnL, DeltaBnR
   real :: Area, Area2, AreaX, AreaY, AreaZ
@@ -97,8 +100,6 @@ contains
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
-
-    iBlockFace = iBlock
 
     if(iProc==PROCtest .and. iBlock==BLKtest)then
        call set_oktest('calc_face_flux', DoTest, DoTestMe)
@@ -217,7 +218,7 @@ contains
       use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !-----------------------------------------------------------------------
-      call set_block_values(x_)
+      call set_block_values(iBlock, x_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -230,14 +231,6 @@ contains
          B0x = B0xFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_x_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_x_BLK(iFace, jFace, kFace, iBlockFace)
-
-         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-
-         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -258,7 +251,7 @@ contains
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(x_, Flux_VX(:,iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace)        = CmaxDt
          uDotArea_XI(iFace, jFace, kFace, :)   = Unormal_I
@@ -274,7 +267,7 @@ contains
       use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       !------------------------------------------------------------------------
-      call set_block_values(y_)
+      call set_block_values(iBlock, y_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -286,14 +279,6 @@ contains
          B0x = B0xFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0y = B0yFace_y_BLK(iFace, jFace, kFace, iBlockFace)
          B0z = B0zFace_y_BLK(iFace, jFace, kFace, iBlockFace)
-
-         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-
-         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -315,7 +300,7 @@ contains
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
          StateRight_V = RightState_VY(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(y_, Flux_VY(:, iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
          VdtFace_y(iFace, jFace, kFace)        = CmaxDt
          uDotArea_YI(iFace, jFace, kFace, :)   = Unormal_I
@@ -332,7 +317,7 @@ contains
       use ModAdvance,ONLY:Bx_,Bz_,State_VGB
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       !------------------------------------------------------------------------
-      call set_block_values(z_)
+      call set_block_values(iBlock, z_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
@@ -344,14 +329,6 @@ contains
          B0x = B0xFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0y = B0yFace_z_BLK(iFace, jFace, kFace,iBlockFace)
          B0z = B0zFace_z_BLK(iFace, jFace, kFace,iBlockFace)
-
-         B0xR= B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0yR= B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
-         B0zR= B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
-
-         B0xL= B0xCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0yL= B0yCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
-         B0zL= B0zCell_BLK(iLeft, jLeft, kLeft, iBlockFace)
 
          if(UseRS7.and..not.IsBoundary)then
             DeltaBnR=sum((RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
@@ -373,7 +350,7 @@ contains
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
          StateRight_V = RightState_VZ(:, iFace, jFace, kFace)
 
-         call get_numerical_flux(z_, Flux_VZ(:, iFace, jFace, kFace))
+         call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
          VdtFace_z(iFace, jFace, kFace)        = CmaxDt
          uDotArea_ZI(iFace, jFace, kFace, :)   = Unormal_I
@@ -386,33 +363,47 @@ contains
   end subroutine calc_face_flux
 
   !===========================================================================
-  subroutine set_block_values(iDim)
-    integer, intent(in) :: iDim
+  subroutine set_block_values(iBlock, iDim)
+    integer, intent(in) :: iBlock, iDim
+
+    iBlockFace = iBlock
+    iDimFace   = iDim
 
     if(UseCovariant) RETURN    !^CFG IF COVARIANT
 
-    AreaX = 0.0; AreaY = 0.0; AreaZ = 0.0
     select case(iDim)
     case(x_)
        Area    = fAx_BLK(iBlockFace)
-       AreaX   = Area
+       AreaX   = Area; AreaY = 0.0; AreaZ = 0.0
        InvDxyz = 1./dx_BLK(iBlockFace)
     case(y_)
        Area    = fAy_BLK(iBlockFace)
-       AreaY   = Area
+       AreaY   = Area; AreaX = 0.0; AreaZ = 0.0
        InvDxyz = 1./dy_BLK(iBlockFace)
     case(z_)
        Area    = fAz_BLK(iBlockFace)
-       AreaZ   = Area
+       AreaZ   = Area; AreaX = 0.0; AreaY = 0.0
        InvDxyz = 1./dz_BLK(iBlockFace)
     end select
     Area2 = Area**2
 
   end subroutine set_block_values
   !===========================================================================
+  subroutine set_cell_values
+
+    select case(iDimFace)
+    case(x_)
+       call set_cell_values_x
+    case(y_)
+       call set_cell_values_y
+    case(z_)
+       call set_cell_values_z
+    end select
+       
+  end subroutine set_cell_values
+  !===========================================================================
   subroutine set_cell_values_x
 
-    iRight= iFace; jRight = jFace; kRight = kFace
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
@@ -430,7 +421,6 @@ contains
   !===========================================================================
   subroutine set_cell_values_y
 
-    iRight= iFace; jRight = jFace; kRight = kFace
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
@@ -448,7 +438,6 @@ contains
 
   subroutine set_cell_values_z
 
-    iRight= iFace; jRight = jFace; kRight = kFace
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(UseCovariant)then                   !^CFG IF COVARIANT BEGIN
@@ -467,12 +456,14 @@ contains
 
   subroutine set_cell_values_common
 
+    iRight= iFace; jRight = jFace; kRight = kFace
+
     IsBoundary = true_cell(iLeft, jLeft, kLeft, iBlockFace) &
          .neqv.  true_cell(iRight,jRight,kRight,iBlockFace)
 
     HallCoeff = -1.0
     if(UseHallResist) HallCoeff =                              &
-         0.5*hall_factor(y_, iFace, jFace, kFace, iBlockFace)* &
+         0.5*hall_factor(iDimFace, iFace, jFace, kFace, iBlockFace)* &
          ( IonMassPerCharge_G(iLeft, jLeft  ,kLeft)            &
          + IonMassPerCharge_G(iRight,jRight,kRight) )
 
@@ -496,7 +487,7 @@ contains
 
   !==========================================================================
 
-  subroutine get_numerical_flux(iDir, Flux_V)
+  subroutine get_numerical_flux(Flux_V)
 
     use ModVarIndexes, ONLY: U_, Bx_, By_, Bz_, &
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, Rho_,Ux_,Uy_,Uz_,&
@@ -505,7 +496,6 @@ contains
     use ModCharacteristicMhd,ONLY:dissipation_matrix
     use ModCoordTransform, ONLY: cross_product
 
-    integer, intent(in) :: iDir
     real,    intent(out):: Flux_V(nFlux)
 
     real :: State_V(nVar)
@@ -514,6 +504,7 @@ contains
     real :: DiffBn, DiffBx, DiffBy, DiffBz, DiffE
     real :: EnLeft, EnRight, Jx, Jy, Jz
     real :: uLeft_D(3),uRight_D(3),cDivBWave
+    real :: B0xL, B0yL, B0zL, B0xR, B0yR, B0zR
     !-----------------------------------------------------------------------
 
     if(UseMultiSpecies .and. DoReplaceDensity)then
@@ -529,17 +520,23 @@ contains
           !cell centered velocity, the numerical diffusion
           !for the normal magnetic field should be evaluated
           !in terms of the cell centered velocity too
-          uLeft_D=State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
+          uLeft_D =State_VGB(RhoUx_:RhoUz_, iLeft, jLeft, kLeft, iBlockFace)/&
                State_VGB(Rho_, iLeft, jLeft, kLeft, iBlockFace)
           uRight_D=State_VGB(RhoUx_:RhoUz_, iRight,jRight,kRight,iBlockFace)/&
                State_VGB(Rho_, iRight,jRight,kRight,iBlockFace)
        end if
-       call dissipation_matrix(iDir,&
-            StateLeft_V,StateRight_V,  &
-            B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR,&
-            uLeft_D,uRight_D,DeltaBnL,DeltaBnR,&
-            DissipationFlux_V,cMax,Unormal_I(1),&
-            IsBoundary,.false.)
+       B0xL = B0xCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+       B0yL = B0yCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+       B0zL = B0zCell_BLK(iLeft,  jLeft,  kLeft,  iBlockFace)
+       B0xR = B0xCell_BLK(iRight, jRight, kRight, iBlockFace)
+       B0yR = B0yCell_BLK(iRight, jRight, kRight, iBlockFace)
+       B0zR = B0zCell_BLK(iRight, jRight, kRight, iBlockFace)
+       call dissipation_matrix(iDimFace,               &
+            StateLeft_V, StateRight_V,                 &
+            B0x,B0y,B0z,B0xL,B0yL,B0zL,B0xR,B0yR,B0zR, &
+            uLeft_D, uRight_D, DeltaBnL, DeltaBnR,     &
+            DissipationFlux_V, cMax, Unormal_I(1),     &
+            IsBoundary, .false.)
     end if
     if(UseRS7 &
          .or. DoHll &               !^CFG IF LINDEFLUX
@@ -579,7 +576,7 @@ contains
 
     ! Calculate current for the face
     if(HallCoeff > 0.0 .or. Eta > 0.0) &
-         call get_face_current(iDir,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
+         call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
 
     if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
        EtaJx = Eta*Jx
@@ -593,10 +590,10 @@ contains
        HallJz = HallCoeff*Jz
     end if
 
-    call get_physical_flux(iDir, StateLeft_V, B0x, B0y, B0z,&
+    call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
          StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, HallUnLeft)
 
-    call get_physical_flux(iDir, StateRight_V, B0x, B0y, B0z,&
+    call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
          StateRightCons_V, FluxRight_V, UnRight_I, EnRight, HallUnRight)
 
     if(UseRS7)then
@@ -624,7 +621,7 @@ contains
     if(DoLf)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
     if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
     if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
-    if(DoRoeOld) call roe_solver(iDir, Flux_V)  !^CFG IF ROEFLUX
+    if(DoRoeOld) call roe_solver(Flux_V)  !^CFG IF ROEFLUX
     if(DoRoe)call roe_solver_new          !^CFG IF ROEFLUX
 
     if(UseRS7.and.(.not.DoRoe))then
@@ -667,7 +664,7 @@ contains
     !==========================================================================
     subroutine lax_friedrichs_flux
 
-      call get_speed_max(iDir, State_V, B0x, B0y, B0z, Cmax = Cmax)
+      call get_speed_max(State_V, B0x, B0y, B0z, Cmax = Cmax)
 
       Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
            - Cmax*(StateRightCons_V - StateLeftCons_V))
@@ -688,11 +685,11 @@ contains
       real :: WeightLeft, WeightRight, Diffusion
       !-----------------------------------------------------------------------
 
-      call get_speed_max(iDir, StateLeft_V,  B0x, B0y, B0z, &
+      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
            Cleft =CleftStateLeft)
-      call get_speed_max(iDir, StateRight_V, B0x, B0y, B0z, &
+      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
            Cright=CrightStateRight)
-      call get_speed_max(iDir, State_V, B0x, B0y, B0z, &
+      call get_speed_max(State_V, B0x, B0y, B0z, &
            Cmax = Cmax, Cleft = CleftStateAverage, Cright = CrightStateAverage)
 
       Cleft  = min(0.0, CleftStateLeft,   CleftStateAverage)
@@ -731,7 +728,7 @@ contains
       !-----------------------------------------------------------------------
 
       ! The propagation speeds are modified by the DoAw = .true. !
-      call get_speed_max(iDir, State_V, B0x, B0y, B0z,  &
+      call get_speed_max(State_V, B0x, B0y, B0z,  &
            Cleft = Cleft, Cright = Cright, Cmax = Cmax)
 
       Cleft  = min(0.0, Cleft)
@@ -766,10 +763,10 @@ contains
       use ModVarIndexes
       integer :: iVar
       !--------------------------------------------------------------------
-      write(*,*)'Hat state for face=',iDir,&
+      write(*,*)'Hat state for face=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
-      write(*,*)'Un =',0.5*(StateLeft_V(U_+iDir)+StateRight_V(U_+iDir))
+      write(*,*)'Un =',0.5*(StateLeft_V(U_+iDimFace)+StateRight_V(U_+iDimFace))
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
       write(*,*)'B  =', &
            0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + (/B0x,B0y,B0z/)
@@ -777,7 +774,8 @@ contains
            sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
            + (/B0x,B0y,B0z/))**2)
 
-      write(*,*)'Fluxes for dir=',iDir,' at I=',iFace,' J=',jFace,' K=',kFace
+      write(*,*)'Fluxes for dir=',iDimFace,&
+           ' at I=',iFace,' J=',jFace,' K=',kFace
 
       write(*,*)'Eigenvalue_maxabs=', Cmax/Area
       write(*,*)'CmaxDt/Area      =', CmaxDt/Area
@@ -796,12 +794,11 @@ contains
 
   !===========================================================================
 
-  subroutine get_physical_flux(iDir, State_V, B0x, B0y, B0z, &
+  subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
        StateCons_V, Flux_V, Un_I, En, HallUn)
 
     use ModMultiFluid
 
-    integer, intent(in) :: iDir                ! direction of flux
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
     real,    intent(out):: StateCons_V(nFlux)  !conservative states with energy
@@ -1171,11 +1168,10 @@ contains
 
   !===========================================================================
 
-  subroutine get_speed_max(iDir, State_V, B0x, B0y, B0z, cMax, cLeft, cRight)
+  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax, cLeft, cRight)
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, iP
 
-    integer, intent(in) :: iDir
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
     real, optional, intent(out) :: Cmax        ! maximum speed relative to lab
@@ -1287,7 +1283,7 @@ contains
 
     subroutine get_mhd_speed
 
-      use ModMain,    ONLY: x_, y_, z_, GlobalBlk,UseCurlB0
+      use ModMain,    ONLY: x_, y_, z_,UseCurlB0
       use ModVarIndexes
       use ModPhysics, ONLY: g, Inv_C2Light
       use ModNumConst, ONLY: cPi
@@ -1465,10 +1461,10 @@ end module ModFaceFlux
 
 !^CFG IF ROEFLUX BEGIN
 !==============================================================================
-subroutine roe_solver(iDir, Flux_V)
+subroutine roe_solver(Flux_V)
 
   use ModFaceFlux, ONLY: &
-       nFlux, IsBoundary, &
+       nFlux, IsBoundary, iDimFace, &
        iFace, jFace, kFace, Area, Area2, AreaX, AreaY, AreaZ, DoTestCell, &
        StateLeft_V,  StateRight_V, FluxLeft_V, FluxRight_V, &
        StateLeftCons_V, StateRightCons_V, B0x, B0y, B0z, CmaxDt, Unormal_I
@@ -1476,7 +1472,7 @@ subroutine roe_solver(iDir, Flux_V)
   use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUy_, RhoUz_, &
        Ux_, Uy_, Uz_, Bx_, By_, Bz_, p_, Energy_, ScalarFirst_, ScalarLast_
 
-  use ModMain,     ONLY: x_, y_, z_, GlobalBlk
+  use ModMain,     ONLY: x_, y_, z_
   use ModGeometry, ONLY: true_cell
   use ModPhysics,  ONLY: g,gm1,inv_gm1
   use ModNumConst
@@ -1484,7 +1480,6 @@ subroutine roe_solver(iDir, Flux_V)
   use ModGeometry,   ONLY: UseCovariant                      !^CFG IF COVARIANT
   implicit none
 
-  integer, intent(in) :: iDir
   real,    intent(out):: Flux_V(nFlux)
 
   ! Number of MHD fluxes including the pressure and energy fluxes
@@ -1605,7 +1600,7 @@ subroutine roe_solver(iDir, Flux_V)
      dCons_V(B1t2_)   = sum(Tangent2_D*dB1_D)
 
   else                                                !^CFG END COVARIANT
-     select case (iDir)
+     select case (iDimFace)
      case (x_) ! x face
         ! B0 on the face
         B0n  = B0x
@@ -1733,13 +1728,14 @@ subroutine roe_solver(iDir, Flux_V)
   aH   = g*pH*RhoInvH
 
   !if(aL<0.0)then
-  !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, globalBLK',&
-  !        aL,iProc,iDir,i,j,k,&
-  !        x_BLK(i,j,k,globalBLK),&
-  !        y_BLK(i,j,k,globalBLK),&
-  !        z_BLK(i,j,k,globalBLK)
+  !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
+  !        aL,iProc,iDimFace,i,j,k,&
+  !        x_BLK(i,j,k,iBlockFace),&
+  !        y_BLK(i,j,k,iBlockFace),&
+  !        z_BLK(i,j,k,iBlockFace)
   !   call stop_mpi
   !end if
+
   aL=sqrt(aL)
   aR=sqrt(aR)
   aH=sqrt(aH)
@@ -2170,7 +2166,7 @@ subroutine roe_solver(iDir, Flux_V)
           +           Tangent1_D(z_)*Diffusion_V(B1t1_) &
           +           Tangent2_D(z_)*Diffusion_V(B1t2_)
   else                                                 !^CFG END COVARIANT
-     select case (iDir)
+     select case (iDimFace)
      case (x_)
         Flux_V(RhoUx_ ) = Diffusion_V(RhoUn_)
         Flux_V(RhoUy_ ) = Diffusion_V(RhoUt1_)
