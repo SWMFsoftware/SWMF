@@ -99,9 +99,9 @@ REPEAT:{
 	}elsif( $Dir =~ /^SC|IH|GM$/ ){
 	    &shell("./pIDL $Movie");
 	    if($Gzip){
-		&shell("./pTEC g");
+		&shell("./pTEC A g");
 	    }else{
-		&shell("./pTEC p r");
+		&shell("./pTEC A p r");
 	    }
 	}elsif( $Dir =~ /^IM/ ){
 	    my @files=glob("plots/*.dat");
