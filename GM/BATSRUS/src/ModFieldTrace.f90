@@ -34,7 +34,10 @@ subroutine ray_trace_accurate
   ! Initialize constants
   RayLengthMax = 4*sum(XyzMax_D - XyzMin_D)
 
-  NameTask        = 'trace'
+  DoTraceRay     = .true.
+  DoIntegrateRay = .false.
+  DoExtractRay   = .false.
+  nRay_D         = (/ nI, nJ, nK, nBlock /)
   NameVectorField = 'B'
 
   ! (Re)initialize CON_ray_trace
@@ -157,17 +160,17 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   !
   ! The rays are followed until the ray hits the outer or inner 
   ! boundary of the computational domain. The results are saved into
-  ! arrays defined in ModRayTrace or into files based on 
-  ! ModRaytrace::NameTask:
+  ! arrays defined in ModRayTrace or into files based on the logicals 
+  ! in ModRaytrace (more than one of these can be true):
   !
-  ! If NameTask='trace', follow the ray, and save the final position into
+  ! If DoTraceRay, follow the ray, and save the final position into
   !    ModRayTrace::ray(:,iRayIn,i_D(1),i_D(2),i_D(3),i_D(4)) on the 
   !    processor that started the ray trace.
   !
-  ! If NameTask='integrate', do integration along the ray and
+  ! If DoIntegrateRay, do integration along the ray and
   !    save the integrals into ModRayTrace::RayIntegral_VII(i_D(1),i_D(2))
   !
-  ! If NameTask='extract', extract data along the ray, collect and sort it
+  ! If DoExtractRay, extract data along the ray, collect and sort it
   !    In this case the rays are indexed with i_D(1).
   !
   !EOP
@@ -271,9 +274,9 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
                    iProc,iRay,DoneRay,XyzRay_D
 
               if(DoneRay)then
-                 if(NameTask /= 'trace')then
+                 if(.not.DoTraceRay)then
                     write(*,*)NameSub,' WARNING ',&
-                         'received DoneRay=T for task ',trim(NameTask),' !'
+                         'received DoneRay=T for DoTraceRay = .false. !'
                     CYCLE GETRAY
                  end if
 
@@ -345,7 +348,7 @@ contains
   subroutine follow_this_ray
 
     ! Initialize integrals for this segment
-    if(NameTask=='integrate')RayIntegral_V = 0.0
+    if(DoIntegrateRay)RayIntegral_V = 0.0
 
     ! Follow the ray through the local blocks
     BLOCK: do iCount = 1, MaxCount
@@ -377,7 +380,7 @@ contains
 
              ! Add partial results to the integrals. 
              ! Pass .false., because this is not the final position
-             if(NameTask=='integrate')call store_integral(.false.)
+             if(DoIntegrateRay)call store_integral(.false.)
 
              call ray_put(iProcStart,iStart_D,jProc,XyzRay_D,RayLength,&
                   iRay==1,.false.)
@@ -430,10 +433,10 @@ contains
        end select
 
        ! Store integrals and the final position
-       if(NameTask == 'integrate')call store_integral(.true.)
+       if(DoIntegrateRay)call store_integral(.true.)
 
        ! Nothing more to do if not tracing
-       if(NameTask /= 'trace') EXIT BLOCK
+       if(.not.DoTraceRay) EXIT BLOCK
 
        ! For tracing either store results or send them back to starting PE
        if(iProcStart == iProc)then
@@ -490,17 +493,17 @@ contains
 
   subroutine set_oktest_ray
 
-    select case(NameTask)
-    case('extract')
-       oktest_ray = DoTest .and. iStart_D(1) == iTest
-    case('integrate')
+    if(DoIntegrateRay)then
+       ! Test the ray starting from a given Lat-Lon grid point
        oktest_ray = DoTest .and. all(iStart_D(1:2) == (/iLatTest,iLonTest/))
-    case('trace')
+    else if(DoTraceRay)then
+       ! Test the ray starting from a given grid cell
        oktest_ray = DoTest .and. iProcStart == ProcTest .and. &
             all(iStart_D == (/iTest,jTest,kTest,BlkTest/))
-    case default
-       call stop_mpi(NameSub//' ERROR: invalid NameTask='//NameTask)
-    end select
+    else
+       ! Check the ray indexed in line plot files.
+       oktest_ray = DoTest .and. iStart_D(1) == iTest
+    end if
 
   end subroutine set_oktest_ray
 
@@ -652,7 +655,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      x_mid = x_ini + 0.5*dl*b_ini
 
      ! Extract ray values using around x_ini
-     if(NameTask == 'extract')call ray_extract(x_ini)
+     if(DoExtractRay)call ray_extract(x_ini)
 
      STEP: do
         ! Full step
@@ -716,7 +719,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
      ! Update ray length
      Length  = Length + dLength
 
-     if(NameTask == 'integrate')then
+     if(DoIntegrateRay)then
 
         ! Interpolate density and pressure
         ! Use the last indexes and distances already set in interpolate_b
@@ -829,7 +832,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
                  ! Recalculate position
                  x = x - Fraction*(x-x_ini)
                  
-                 if(NameTask == 'integrate')then
+                 if(DoIntegrateRay)then
                     ! Reduce integrals with the fraction of the last step 
                     if(oktest_ray)write(*,'(a,4es12.4)')&
                          'Before reduction InvBdl, RayIntegral_V=', InvBdl, &
@@ -896,7 +899,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,Xyz_D,Length,iFace)
 
   ! Extract last point if ray is done. 
   ! The interpolation coefficients are not known.
-  if(iFace /= ray_block_ .and. NameTask == 'extract')call ray_extract(x)
+  if(iFace /= ray_block_ .and. DoExtractRay)call ray_extract(x)
 
   if(oktest_ray) then
      write(*,'(a,4i4)')&
@@ -1016,7 +1019,7 @@ contains
     real, intent(in) :: x_D(3)
 
     real    :: Xyz_D(3), State_V(nVar), B0_D(3), PlotVar_V(20)
-    integer :: n
+    integer :: n, iLine
     character(len=*), parameter :: NameSub='ray_extract'
     !----------------------------------------------------------------------
 
@@ -1072,7 +1075,14 @@ contains
        n = 4
     end if
 
-    call line_put(iStart_D(1),n,PlotVar_V(1:n))
+    ! get a unique line index based on starting indexes
+    iLine = &
+         (((iStart_D(4)-1)  *nRay_D(3) &
+         + (iStart_D(3)-1) )*nRay_D(2) &
+         + (iStart_D(2)-1) )*nRay_D(1) &
+         + iStart_D(1)
+
+    call line_put(iLine,n,PlotVar_V(1:n))
 
   end subroutine ray_extract
 
@@ -1185,7 +1195,7 @@ end subroutine ray_trace_sorted
 
 !============================================================================
 
-subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
+subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
   use CON_ray_trace, ONLY: ray_init
   use CON_planet_field, ONLY: map_planet_field
@@ -1193,7 +1203,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use ModRaytrace
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem
   use ModPhysics, ONLY: rBody
-  use ModAdvance,    ONLY: State_VGB, Rho_, p_, Bx_, Bz_, &
+  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Bx_, Bz_, &
        B0xCell_BLK,B0yCell_BLK,B0zCell_BLK
   use ModProcMH
   use ModMpi
@@ -1201,21 +1211,27 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
   use ModGeometry,       ONLY: XyzMax_D, XyzMin_D
+  use CON_line_extract,  ONLY: line_init, line_collect
   implicit none
 
   !INPUT ARGUMENTS:
   integer, intent(in):: nLat, nLon
   real,    intent(in):: Lat_I(nLat), Lon_I(nLon), Radius
+  character(len=*), intent(in):: NameVar
 
   !DESCRIPTION:
   ! Lat_I(nLat) and Lon_I(nLon) are the coordinates of a 2D spherical 
   ! grid in the SM(G) coordinate system. The 2D grid is at radius Radius.
-  ! The subroutine calculates the integral of various quantities along
-  ! the field lines starting from the 2D spherical grid.
+  ! NameVar lists the variables that need to be extracted and/or integrated.
+  ! The subroutine can calculate the integral of various quantities 
+  ! and/or extract state variables along the field lines starting from the 2D 
+  ! spherical grid.
 
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
   integer :: iLat, iLon, iHemisphere
   integer :: iProcFound, iBlockFound, i, j, k
+
+  integer :: nStateVar
 
   integer :: iError
   logical :: DoTest, DoTestMe
@@ -1236,7 +1252,19 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   R_raytrace      = rBody
   R2_raytrace     = R_raytrace**2
   RayLengthMax    = 2*sum(XyzMax_D - XyzMin_D)
-  NameTask        = 'integrate'
+
+  DoIntegrateRay = index(NameVar, 'InvB') > 0
+  DoExtractRay   = index(NameVar, '_I') > 0
+  DoTraceRay     = .false.
+
+  if(DoExtractRay)then
+     nRay_D  = (/ nLat, nLon, 0, 0 /)
+     DoExtractState = .true.
+     DoExtractUnitSi= .true.
+     nStateVar = 4 + nVar
+     call line_init(nStateVar)
+  end if
+
   NameVectorField = 'B'
 
   ! (Re)initialize CON_ray_trace
@@ -1256,20 +1284,22 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
   Bxyz_DGB(3,:,:,:,1:nBlock) = Bxyz_DGB(3,:,:,:,1:nBlock) &
        + B0zCell_BLK(:,:,:,1:nBlock)
 
-  ! Copy density and pressure into Extra_VGB
-  Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
-  Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
+  if(DoIntegrateRay)then
+     ! Copy density and pressure into Extra_VGB
+     Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
+     Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
 
-  ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
-  call message_pass_cells8(.false.,.false.,.false.,2,Extra_VGB)
+     ! Fill in all ghost cells (faces+edges+corners) without monotone restrict
+     call message_pass_cells8(.false.,.false.,.false.,2,Extra_VGB)
 
-  ! Initialize storage for the integrals
-  allocate(&
-       RayIntegral_VII(nRayIntegral,nLat,nLon), &
-       RayResult_VII(nRayIntegral,nLat,nLon), STAT=iError)
-  call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
-  RayIntegral_VII = 0.0
-  RayResult_VII   = 0.0
+     ! Initialize storage for the integrals
+     allocate(&
+          RayIntegral_VII(nRayIntegral,nLat,nLon), &
+          RayResult_VII(nRayIntegral,nLat,nLon), STAT=iError)
+     call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
+     RayIntegral_VII = 0.0
+     RayResult_VII   = 0.0
+  end if
 
   ! Transformation matrix between the SM and GM coordinates
   GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
@@ -1337,9 +1367,11 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius)
        write(*,*)NameSub,' iProc, RayIntegral_VII=',&
        iProc, RayIntegral_VII(:,iLatTest,iLonTest)
 
-  ! Add up local integrals onto the root PE
-  call MPI_reduce(RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
+  if(DoIntegrateRay)call MPI_reduce( &
+       RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
        MPI_REAL, MPI_SUM, 0, iComm, iError)
+
+  if(DoExtractRay) call line_collect(iComm,0)
 
   call timing_stop('integrate_ray')
 
@@ -1374,7 +1406,8 @@ subroutine test_ray_integral
   end do
 
   ! Integrate all points on the spherical grid
-  call integrate_ray_accurate(nLat,nLon,Lat_I,Lon_I,1.0)
+  call integrate_ray_accurate(nLat,nLon,Lat_I,Lon_I,1.0, &
+       'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
   ! Write out results into a file
   if(iProc==0)then
@@ -1433,8 +1466,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   ! The results are stored by CON_line_extract.
 
   use ModProcMH,   ONLY: iProc, iComm
-  use ModRayTrace, ONLY: oktest_ray, NameTask, NameVectorField, &
-       R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
+  use ModRayTrace, ONLY: oktest_ray, DoTraceRay, DoIntegrateRay, DoExtractRay,&
+       nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, RayLengthMax, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, &
        B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
@@ -1466,7 +1499,10 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   R2_raytrace  = R_raytrace**2
   RayLengthMax = 2*sum(XyzMax_D - XyzMin_D)
 
-  NameTask    = 'extract'
+  DoTraceRay     = .false.
+  DoIntegrateRay = .false.
+  DoExtractRay   = .true.
+  nRay_D = (/ nLine, 0, 0, 0 /)
 
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
@@ -1607,7 +1643,7 @@ subroutine write_plot_line(iFile)
      call line_get(nVarOut, nPoint)
      if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
      allocate(PlotVar_VI(0:nVarOut, nPoint))
-     call line_get(nVarOut, nPoint, PlotVar_VI, .true.)
+     call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
   end if
      
   call line_clean
@@ -1731,7 +1767,7 @@ subroutine write_plot_line(iFile)
 
      ! Write out data
      if(IsSingleLine)then
-        ! Write out the part correspoinding to this line
+        ! Write out the part corresponding to this line
         do iPoint = iPointNext, iPointNext + nPoint1 - 1
            if(IsIdl)then
               ! Write Length as the first variable: the 1D coordinate
