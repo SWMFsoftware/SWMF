@@ -45,7 +45,8 @@ subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   ! The RCM ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
-  call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius)
+  call integrate_ray_accurate(iSizeIn, jSizeIn, RCM_lat, RCM_lon, Radius, &
+       'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
   if(iProc==0)then
      ! Copy RayResult into small arrays
