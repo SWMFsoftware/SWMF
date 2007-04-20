@@ -25,23 +25,55 @@ module ModUser
        'POINT IMPLICIT MULTI-ION SOURCE, Toth and Ma'
 
 
+  character (len=20) :: UserProblem='wave'
   real    :: LatitudeDim   = 45.0, SinLatitude = cSqrtHalf
   real    :: uOutDim = 2.0
   real    :: CollisionCoefDim = 1.0, CollisionCoef
   logical :: IsAnalytic = .true.
 
+  real :: Width, Amplitude, Phase, Lamdax, Lamday, Lamdaz
+  real,dimension(nVar):: Width_I=0.0, Ampl_I=0.0, Phase_I=0.0, &
+       KxWave_I=0.0, KyWave_I=0.0,KzWave_I=0.0
+  integer :: iVar             
+  logical:: DoInitialize=.true.
+  real :: Lx=25.6, Lz=12.8, lamda0=0.5, Ay=0.1, Tp=0.5 , B0=1.0  
+  
 contains
 
   !==========================================================================
   subroutine user_read_inputs
-
+    use ModMain
+    use ModProcMH,    ONLY: iProc
     use ModReadParam
-    character (len=100) :: NameCommand
+    use ModNumConst, ONLY : cTwoPi,cDegToRad
+    implicit none
 
+    character (len=100) :: NameCommand
+    !-------------------------------------------------------------------------
+    
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
+       case('#USERPROBLEM')
+          call read_var('UserProblem',UserProblem)
+       case('#WAVE')
+          call read_var('iVar',iVar)
+          call read_var('Width',Width)
+          call read_var('Amplitude',Amplitude)
+          call read_var('Lamdax',Lamdax)          
+          call read_var('Lamday',Lamday)
+          call read_var('Lamdaz',Lamdaz)
+          call read_var('Phase',Phase)
+          Width_I(iVar)=Width
+          Ampl_I(iVar)=Amplitude
+          Phase_I(iVar)=Phase*cDegToRad
+          !if the wavelength is smaller than 0.0, 
+          !then the wave number is set to0
+          KxWave_I(iVar) = max(0.0, cTwoPi/Lamdax)          
+          KyWave_I(iVar) = max(0.0, cTwoPi/Lamday)          
+          KzWave_I(iVar) = max(0.0, cTwoPi/Lamdaz)
+
        case("#FRICTION")
           call read_var('CollisionCoefDim',CollisionCoefDim)
        case('#DSDU')
@@ -53,8 +85,8 @@ contains
        case('#USERINPUTEND')
           EXIT
        case default
-          call stop_mpi('ERROR in ModUserPointImplicit: unknown command='//&
-               NameCommand)
+          if(iProc==0) call stop_mpi( &
+               'read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
 
@@ -85,7 +117,7 @@ contains
     real, dimension(3) :: Current_D, Force_D
     real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I, Temp_I
 
-    integer :: iBlock, i, j, k, jFluid
+    integer :: iBlock, i, j, k, jFluid, iFirstIons
     real :: CoefBx, CoefBy, CoefBz, Coef, AverageTemp, TemperatureCoef, Heating
     real :: CollisionRate_II(nIonFluid, nIonFluid), CollisionRate
 
@@ -121,9 +153,27 @@ contains
        end do
     end do
 
+    ! Do not add
+    iFirstIons = 1
+    if(TypeFluid_I(1) == 'ion')iFirstIons = 2
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,globalBLK)
+
+       if(TypeFluid_I(1) == 'ion')then
+          ! Get first fluid quantities
+          State_V(Rho_) = State_V(Rho_) &
+               - sum(State_V(iRhoIon_I(2:nIonFluid)))
+          State_V(RhoUx_) = State_V(RhoUx_) &
+               - sum(State_V(iRhoUxIon_I(2:nIonFluid)))
+          State_V(RhoUy_) = State_V(RhoUy_) &
+               - sum(State_V(iRhoUyIon_I(2:nIonFluid)))
+          State_V(RhoUz_) = State_V(RhoUz_) &
+               - sum(State_V(iRhoUzIon_I(2:nIonFluid)))
+          State_V(P_) = State_V(P_) &
+               - sum(State_V(iPIon_I(2:nIonFluid)))
+       end if
 
        ! Total magnetic field
        FullB_D = State_V(Bx_:Bz_) + (/ &
@@ -165,7 +215,7 @@ contains
        CollisionRate = CollisionCoef
 
        ! Calculate the source term for all the ion fluids
-       do iFluid = 1, nIonFluid
+       do iFluid = iFirstIons, nIonFluid
           call select_fluid
           uIon_D = (/ Ux_I(iFLuid),  Uy_I(iFluid), Uz_I(iFluid) /)
           u_D    = uIon_D - uPlusHallU_D
@@ -228,17 +278,31 @@ contains
 
        end do
        if( .not. IsAnalytic) CYCLE
-       Coef   = -ElectronCharge/MassFluid_I(1) &
-            *InvNumDens*NumDens_I(1)
-       CoefBx = Coef*FullB_D(x_)
-       CoefBy = Coef*FullB_D(y_)
-       CoefBz = Coef*FullB_D(z_)
-       DsDu_VVC(RhoUx_, OpRhoUy_, i,j,k) =   CoefBz
-       DsDu_VVC(RhoUx_, OpRhoUz_, i,j,k) = - CoefBy
-       DsDu_VVC(RhoUy_, OpRhoUz_, i,j,k) =   CoefBx
-       DsDu_VVC(RhoUy_, OpRhoUx_, i,j,k) = - CoefBz
-       DsDu_VVC(RhoUz_, OpRhoUx_, i,j,k) =   CoefBy
-       DsDu_VVC(RhoUz_, OpRhoUy_, i,j,k) = - CoefBx
+       if(iFirstIons == 1)then
+          Coef   = -ElectronCharge/MassFluid_I(1) &
+               *InvNumDens*NumDens_I(1)
+          CoefBx = Coef*FullB_D(x_)
+          CoefBy = Coef*FullB_D(y_)
+          CoefBz = Coef*FullB_D(z_)
+          DsDu_VVC(RhoUx_, OpRhoUy_, i,j,k) =   CoefBz
+          DsDu_VVC(RhoUx_, OpRhoUz_, i,j,k) = - CoefBy
+          DsDu_VVC(RhoUy_, OpRhoUz_, i,j,k) =   CoefBx
+          DsDu_VVC(RhoUy_, OpRhoUx_, i,j,k) = - CoefBz
+          DsDu_VVC(RhoUz_, OpRhoUx_, i,j,k) =   CoefBy
+          DsDu_VVC(RhoUz_, OpRhoUy_, i,j,k) = - CoefBx
+
+          Coef = -0.5*CollisionRate*NumDens_I(1)
+          DsDu_VVC(P_,     OpP_,     i, j, k) = -2*Coef
+          DsDu_VVC(RhoUx_, OpRhoUx_, i, j, k) = -Coef
+          DsDu_VVC(RhoUy_, OpRhoUy_, i, j, k) = -Coef
+          DsDu_VVC(RhoUz_, OpRhoUz_, i, j, k) = -Coef
+
+          Coef = -0.5*CollisionRate*NumDens_I(2)
+          DsDu_VVC(OpP_,     P_,     i, j, k) = -2*Coef
+          DsDu_VVC(OpRhoUx_, RhoUx_, i, j, k) = -Coef
+          DsDu_VVC(OpRhoUy_, RhoUy_, i, j, k) = -Coef
+          DsDu_VVC(OpRhoUz_, RhoUz_, i, j, k) = -Coef
+       end if
 
        Coef   = -ElectronCharge/MassFluid_I(2) &
             *InvNumDens*NumDens_I(2)
@@ -251,18 +315,6 @@ contains
        DsDu_VVC(OpRhoUy_, RhoUx_, i,j,k) = - CoefBz
        DsDu_VVC(OpRhoUz_, RhoUx_, i,j,k) =   CoefBy
        DsDu_VVC(OpRhoUz_, RhoUy_, i,j,k) = - CoefBx
-
-       Coef = -0.5*CollisionRate*NumDens_I(1)
-       DsDu_VVC(P_,     OpP_,     i, j, k) = -2*Coef
-       DsDu_VVC(RhoUx_, OpRhoUx_, i, j, k) = -Coef
-       DsDu_VVC(RhoUy_, OpRhoUy_, i, j, k) = -Coef
-       DsDu_VVC(RhoUz_, OpRhoUz_, i, j, k) = -Coef
-
-       Coef = -0.5*CollisionRate*NumDens_I(2)
-       DsDu_VVC(OpP_,     P_,     i, j, k) = -2*Coef
-       DsDu_VVC(OpRhoUx_, RhoUx_, i, j, k) = -Coef
-       DsDu_VVC(OpRhoUy_, RhoUy_, i, j, k) = -Coef
-       DsDu_VVC(OpRhoUz_, RhoUz_, i, j, k) = -Coef
 
     end do; end do; end do
 
@@ -284,14 +336,24 @@ contains
     !------------------------------------------------------------------------
 
     ! All ion momenta are implicit
-    allocate(iVarPointImpl_I(4*nIonFluid))
+    if(TypeFluid_I(1) == 'ions')then
+       allocate(iVarPointImpl_I(4*nIonFluid))
 
-    do iFluid = 1, nIonFluid
-       iVarPointImpl_I(4*iFluid-3) = iRhoUx_I(iFluid)
-       iVarPointImpl_I(4*iFluid-2) = iRhoUy_I(iFluid)
-       iVarPointImpl_I(4*iFluid-1) = iRhoUz_I(iFluid)
-       iVarPointImpl_I(4*iFluid)   = iP_I(iFluid)
-    end do
+       do iFluid = 1, nIonFluid
+          iVarPointImpl_I(4*iFluid-3) = iRhoUx_I(iFluid)
+          iVarPointImpl_I(4*iFluid-2) = iRhoUy_I(iFluid)
+          iVarPointImpl_I(4*iFluid-1) = iRhoUz_I(iFluid)
+          iVarPointImpl_I(4*iFluid)   = iP_I(iFluid)
+       end do
+    else
+       allocate(iVarPointImpl_I(4*(nIonFluid-1)))
+       do iFluid = 1, nIonFluid-1
+          iVarPointImpl_I(4*iFluid-3) = iRhoUx_I(iFluid+1)
+          iVarPointImpl_I(4*iFluid-2) = iRhoUy_I(iFluid+1)
+          iVarPointImpl_I(4*iFluid-1) = iRhoUz_I(iFluid+1)
+          iVarPointImpl_I(4*iFluid)   = iP_I(iFluid+1)
+       end do
+    end if
 
     IsPointImplMatrixSet = IsAnalytic
 
@@ -300,30 +362,77 @@ contains
   !=====================================================================
   subroutine user_set_ics
     use ModMain,     ONLY: globalBLK
-    use ModGeometry, ONLY: r_BLK
-    use ModVarIndexes
-    use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: rBody, BodyRho_I, BodyP_I
-
+    use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
+    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, rho_, p_
+    use ModProcMH,   ONLY: iProc
+    use ModPhysics,  ONLY: ShockSlope
+    use ModNumconst, ONLY: cOne,cPi, cTwoPi
     implicit none
 
-    integer :: iBlock
+    real,dimension(nVar):: state_I,KxTemp_I,KyTemp_I
+    real :: SinSlope, CosSlope
+    integer :: i, j, k, iBlock
     !--------------------------------------------------------------------------
     iBlock = globalBLK
 
-    where(r_BLK(:,:,:,iBlock) < 3*rBody)
-       State_VGB(Rho_  ,:,:,:,iBlock) = BodyRho_I(1)
-       State_VGB(OpRho_,:,:,:,iBlock) = BodyRho_I(2)
-       State_VGB(RhoUx_,:,:,:,iBlock) = 0.0
-       State_VGB(RhoUy_,:,:,:,iBlock) = 0.0
-       State_VGB(RhoUz_,:,:,:,iBlock) = 0.0
-       State_VGB(OpRhoUx_,:,:,:,iBlock) = 0.0
-       State_VGB(OpRhoUy_,:,:,:,iBlock) = 0.0
-       State_VGB(OpRhoUz_,:,:,:,iBlock) = 0.0
-       State_VGB(P_,      :,:,:,iBlock) = BodyP_I(1)
-       State_VGB(OpP_,    :,:,:,iBlock) = BodyP_I(2)
-    end where
+    select case(UserProblem)
+    case('wave')
+       if(ShockSlope.ne.0.0.and.DoInitialize)then
+          SinSlope=ShockSlope/sqrt(cOne+ShockSlope**2)
+          CosSlope=      cOne/sqrt(cOne+ShockSlope**2)
+          state_I(:)=Ampl_I(:)
+          Ampl_I(rhoUx_) = &
+               (CosSlope*state_I(rhoUx_)-SinSlope*state_I(rhoUy_))
+          Ampl_I(rhoUy_) =  &
+               (SinSlope*state_I(rhoUx_)+CosSlope*state_I(rhoUy_))
+          Ampl_I(Bx_) = &
+               CosSlope*state_I(Bx_)-SinSlope*state_I(By_)
+          Ampl_I(By_) = &
+               SinSlope*state_I(Bx_)+CosSlope*state_I(By_)
 
+          KxTemp_I= KxWave_I
+          KyTemp_I= KyWave_I
+          KxWave_I= CosSlope*KxTemp_I-SinSlope*KyTemp_I
+          KyWave_I= SinSlope*KxTemp_I+CosSlope*KyTemp_I
+
+          !       if(UseHallResist) call init_hall_resist
+
+          DoInitialize=.false.
+
+          !       write(*,*)'KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)=',&
+          !            KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)
+          !       write(*,*)'       Ampl_I(Bx_:Bz_) =',       Ampl_I(Bx_:Bz_) 
+          !       write(*,*)'      Phase_I(Bx_:Bz_) =',       Phase_I(Bx_:Bz_)
+
+       end if
+
+       do iVar=1,nVar
+          where(abs(x_BLK(:,:,:,iBlock))<Width_I(iVar))   &          
+               State_VGB(iVar,:,:,:,iBlock)=              &
+               State_VGB(iVar,:,:,:,iBlock)               &
+               + Ampl_I(iVar)*cos(Phase_I(iVar)           &
+               + KxWave_I(iVar)*x_BLK(:,:,:,iBlock)       &
+               + KyWave_I(iVar)*y_BLK(:,:,:,iBlock)       &
+               + KzWave_I(iVar)*z_BLK(:,:,:,iBlock))
+       end do
+
+    case('GEM')
+!       write(*,*)'GEM problem set up'
+       State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/lamda0)
+       State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
+            +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
+       State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
+       !!!set intial perturbation
+       State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)-  Ay* cPi/ Lz &
+            *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*z_BLK(:,:,:,iBlock)/Lz)
+       State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)+ Ay* cTwoPi/ Lx &
+            *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
+       
+    case default
+       if(iProc==0) call stop_mpi( &
+            'user_set_ics: undefined user problem='//UserProblem)
+       
+    end select
   end subroutine user_set_ics
 
   !=====================================================================
