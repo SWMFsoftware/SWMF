@@ -22,7 +22,7 @@ default : SWMF
 #
 # Make all common used executables.
 #
-ALL : SWMF PIDL PSPH
+ALL : SWMF PIDL PSPH EARTH_TRAJ
 
 #
 #       Definition of OS, component versions and directory structure
@@ -65,10 +65,10 @@ help:
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
 	@echo '    PSPH        (bin/PostSPH.exe post-processes sph*.tec files)'
-	@echo '    ALL         (make SWMF PIDL and PSPH)'
+	@echo '    EARTH_TRAJ  (bin/EARTH_TRAJ.exe generates Earth trajectory)'
+	@echo '    ALL         (make SWMF PIDL PSPH EARTH_TRAJ)'
 	@#^CMP END GM
 	@echo ' '
-	@echo '    earthtraj   generate satellite trajectory files'
 	@echo ' '
 	@echo '    rundir      (create run directory "run/")'
 	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
@@ -99,14 +99,6 @@ ENV_CHECK:
 	  echo "Type 'Config.pl -s' and retry the previous make command!"; \
 	  exit 1; \
 	fi);
-
-#
-#	Code for generating satellite trajectory files
-#
-earthtraj:	ENV_CHECK			#^CMP IF IH
-	cd GM/BATSRUS/srcPostProc; make earthtraj	#^CMP IF IH
-	@echo ' '				#^CMP IF IH
-
 
 #
 # JOB SUBMISSION SCRIPTS TO COPY TO RUN
@@ -185,24 +177,33 @@ ESMF_SWMF: LIB
 NOMPI: ENV_CHECK
 	cd ${NOMPIDIR}; make LIB
 
-#
+#^CMG IF GM BEGIN
 #	Post processing codes for BATSRUS plot files
 #
-PSPH:	ENV_CHECK				#^CMP IF GM
-	cd GM/BATSRUS; make PSPH		#^CMP IF GM
-	@echo ' '				#^CMP IF GM
+PSPH:	ENV_CHECK
+	cd GM/BATSRUS; make PSPH
+	@echo ' '
 
-PIDL:	ENV_CHECK				#^CMP IF GM
-	cd GM/BATSRUS; make PIDL		#^CMP IF GM
-	@echo ' '				#^CMP IF GM
+PIDL:	ENV_CHECK
+	cd GM/BATSRUS; make PIDL
+	@echo ' '
 
 #
+#	Code for generating Earth trajectory for IH/BATSRUS
+#
+EARTH_TRAJ: ENV_CHECK
+	cd GM/BATSRUS; make EARTH_TRAJ
+	@echo ' '
+#^CMP END GM
+
+#^CMP IF IE BEGIN
 #	Post processing code for IE/Ridley_serial plot files
 #
-PIONO:	ENV_CHECK				#^CMP IF IE
-	cd IE/Ridley_serial; make PIONO		#^CMP IF IE
-	@echo ' '				#^CMP IF IE
+PIONO:	ENV_CHECK
+	cd IE/Ridley_serial; make PIONO
+	@echo ' '
 
+#^CMP END IE
 #
 #	Graphical User Interface (GUI)
 #
