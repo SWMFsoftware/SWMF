@@ -42,6 +42,7 @@ subroutine calc_sources
   real :: Current_D(3)
 
   ! Variables for multi-ion MHD
+  integer :: iFirstIons
   real    :: InvCharge, InvNumDens,  State_V(nVar)
   real, dimension(3) :: FullB_D, uIon_D, u_D, uPlus_D, uPlusHallU_D, Force_D
   real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
@@ -96,7 +97,7 @@ subroutine calc_sources
              -DivB1_GB(i,j,k,globalBLK)* &
              State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK)*RhoInv
 
-        if(UseMultiIon) CYCLE
+        if(TypeFluid_I(1) /= 'ion') CYCLE
 
         Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(rhoUx_:rhoUz_,i,j,k) -&
              DivB1_GB(i,j,k,globalBLK)* &
@@ -107,7 +108,7 @@ subroutine calc_sources
              State_VGB(rhoUx_:rhoUz_,i,j,k,globalBLK))*RhoInv
      end do;end do;end do
 
-     if (UseB0Source .and. .not. UseMultiIon) then
+     if (UseB0Source .and. TypeFluid_I(1) == 'ion') then
         do k=1,nK; do j=1,nJ; do i=1,nI
            Source_VC(rhoUx_:rhoUz_,i,j,k)=Source_VC(rhoUx_:rhoUz_,i,j,k) - &
                 State_VGB(Bx_:Bz_,i,j,k,globalBLK)*DivB0_CB(i,j,k,globalBLK)+&
@@ -214,10 +215,23 @@ subroutine calc_sources
      ! e is the electron charge and n_e is the electron number density.
 
      InvCharge = 1.0/ElectronCharge
+     iFirstIons = 1
+     if(TypeFluid_I(1) == 'ion')iFirstIons = 2
 
      do k=1,nK; do j=1,nJ; do i=1,nI
         ! Extract conservative variables
         State_V = State_VGB(:,i,j,k,globalBLK)
+
+        if(TypeFluid_I(1) == 'ion')then
+           State_V(Rho_) = State_V(Rho_) &
+                - sum(State_V(iRhoIon_I(2:nIonFluid)))
+           State_V(RhoUx_) = State_V(RhoUx_) &
+                - sum(State_V(iRhoUxIon_I(2:nIonFluid)))
+           State_V(RhoUy_) = State_V(RhoUy_) &
+                - sum(State_V(iRhoUyIon_I(2:nIonFluid)))
+           State_V(RhoUz_) = State_V(RhoUz_) &
+                - sum(State_V(iRhoUzIon_I(2:nIonFluid)))
+        end if
 
         ! Total magnetic field
         FullB_D = State_V(Bx_:Bz_) + (/ &
@@ -263,12 +277,18 @@ subroutine calc_sources
         uPlusHallU_D = uPlus_D - InvNumDens*InvCharge*Current_D
 
         ! Calculate the source term for all the ion fluids
-        do iFluid = 1, nIonFluid
+        do iFluid = iFirstIons, nIonFluid
            uIon_D = (/ Ux_I(iFLuid),  Uy_I(iFluid), Uz_I(iFluid) /)
            u_D    = uIon_D - uPlusHallU_D
 
            Force_D = &
                 ElectronCharge*NumDens_I(iFluid)*cross_product(u_D, FullB_D) 
+
+           !if(i==iTest.and.j==jTest.and.k==kTest.and.GlobalBlk==BlkTest)then
+           !   write(*,*)'iFluid, uIon_D =',iFluid, uIon_D
+           !   write(*,*)'iFluid, u_D    =',iFluid, u_D
+           !   write(*,*)'iFluid, Force_D=',iFluid, Force_D
+           !end if
 
            Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) = &
                 Source_VC(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k) + Force_D
@@ -324,7 +344,7 @@ contains
        DivB1_GB(i,j,k,globalBLK)  = DivBInternal + &
             dB1nEast + dB1nWest + dB1nSouth + dB1nNorth + dB1nTop + dB1nBot
 
-       if(UseMultiIon) CYCLE
+       if(TypeFluid_I(1) /= 'ion') CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -B0xFace_x_BLK(i,j,k,globalBLK)*dB1nEast
@@ -411,7 +431,7 @@ contains
 
        DivB1_GB(i,j,k,globalBLK)  = B1nJumpL + B1nJumpR
 
-       if(UseMultiIon) CYCLE
+       if(TypeFluid_I(1) /= 'ion') CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -B0xFace_x_BLK(i,j,k,globalBLK)*B1nJumpL
@@ -453,7 +473,7 @@ contains
        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK) &
             + B1nJumpL + B1nJumpR
 
-       if(UseMultiIon) CYCLE
+       if(TypeFluid_I(1) /= 'ion') CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
             -B0xFace_y_BLK(i,j,k,globalBLK)*B1nJumpL
@@ -497,7 +517,7 @@ contains
        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK) &
             + B1nJumpL + B1nJumpR
 
-       if(UseMultiIon) CYCLE
+       if(TypeFluid_I(1) /= 'ion') CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k)&
             -B0xFace_z_BLK(i,j,k,globalBLK)*B1nJumpL
@@ -518,7 +538,7 @@ contains
        DivB1_GB(i,j,k,globalBLK)  = DivB1_GB(i,j,k,globalBLK)+&
             DivBInternal_C(i,j,k)
 
-       if(UseMultiIon) CYCLE
+       if(TypeFluid_I(1) /= 'ion') CYCLE
 
        Source_VC(rhoUx_,i,j,k) = Source_VC(rhoUx_,i,j,k) &
             -DivBInternal_C(i,j,k)*B0xCell_BLK(i,j,k,globalBLK)
