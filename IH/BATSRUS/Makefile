@@ -27,10 +27,10 @@ rundir: check_src
 		mkdir restartIN restartOUT IO2; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
-		ln -s ${BINDIR}/earth_traj.exe ../.; \
+		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/IDL/pIDL .; \
-		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .
-	cp ${DIR}/Param/DESCRIBE_ETRAJ.dat ${RUNDIR}/DESCRIBE_ETRAJ.in
+		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
+		cp    ${DIR}/GM/BATSRUS/Param/HELIOSPHERE/EARTH_TRAJ.in .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
