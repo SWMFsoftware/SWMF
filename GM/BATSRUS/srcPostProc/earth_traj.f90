@@ -8,7 +8,7 @@ program earth_traj
   ! The tragectory comprises the earth locations in HAE, HGI,
   ! or HGR coordinate system.
   !
-  ! The input parameters are read from ../DESCRIBE_ETRAJ.dat, and the result is
+  ! The input parameters are read from EARTH_TRAJ.in, and the result is
   ! written into STDOUT.
   ! 
 
@@ -39,36 +39,36 @@ program earth_traj
   !
   ! Command line argument processing
   !
- 
- 
+
+
   !
   ! Parse the command line arguments
   !
-  NameFile='DESCRIBE_ETRAJ.in'
-  open(10,file='DESCRIBE_ETRAJ.in',status='old')
-        READPARAM: do 
-           read(10,'(a)',end=9000,err=9000) NameCommand
-           if(index(NameCommand,'#').ne.1)NameCommand=''
-           select case(NameCommand)
-           case("#COOR")
-              read(10,*,end=9000,err=9000) CoordSys
-           case("#DATE")
-              do i = 1, 7
-                 read(10,*,end=9000,err=9000) iStartTime(i)
-              end do
-           case("#TIMELOOP")
-              read(10,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
-           case("#START","#END")
-              exit READPARAM
-           case default
-              if (len_trim(NameCommand) .ne. 0) then  ! i.e., just skip an empty line
-                 write(*,*) &
-                      '+++ Wrong command "'//trim(NameCommand)//'" encountered +++'
-                 stop
-              end if
-           end select
-        end do READPARAM
-    close(10)
+  NameFile='EARTH_TRAJ.in'
+  open(10,file=NameFile,status='old')
+  READPARAM: do 
+     read(10,'(a)',end=9000,err=9000) NameCommand
+     if(index(NameCommand,'#').ne.1)NameCommand=''
+     select case(NameCommand)
+     case("#COOR")
+        read(10,*,end=9000,err=9000) CoordSys
+     case("#DATE")
+        do i = 1, 7
+           read(10,*,end=9000,err=9000) iStartTime(i)
+        end do
+     case("#TIMELOOP")
+        read(10,*,end=9000,err=9000) StartTimeRel, EndTimeRel, TimeStep
+     case("#START","#END")
+        exit READPARAM
+     case default
+        if (len_trim(NameCommand) .ne. 0) then  ! i.e., just skip an empty line
+           write(*,*) &
+                '+++ Wrong command "'//trim(NameCommand)//'" encountered +++'
+           stop
+        end if
+     end select
+  end do READPARAM
+  close(10)
 
   !
   ! Check correctness of arguments
