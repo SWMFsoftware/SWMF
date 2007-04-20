@@ -179,7 +179,7 @@ subroutine set_physics_constants
 
   BodyRho_I = BodyNDim_I*Io2Si_V(UnitN_)*MassFluid_I*cProtonMass &
        *Si2No_V(UnitRho_)
-  BodyP_I   = BodyRho_I * BodyTDim_I*Io2No_V(UnitTemperature_)
+  BodyP_I   = BodyRho_I/MassFluid_I * BodyTDim_I*Io2No_V(UnitTemperature_)
 
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
