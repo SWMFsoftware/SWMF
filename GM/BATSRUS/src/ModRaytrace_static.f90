@@ -17,8 +17,14 @@ module ModRaytrace
   logical :: UseAccurateTrace    = .false. 
   logical :: UseAccurateIntegral = .true.
 
-  ! Task selection: trace/integrate/extract
-  character(len=20) :: NameTask = 'trace'
+  ! Possible tasks
+  logical :: DoTraceRay     = .true.
+  logical :: DoExtractRay   = .false.
+  logical :: DoIntegrateRay = .false.
+
+  ! Number of rays per dimension on the starting grid
+  ! This is needed for DoExtractRay = .true. only
+  integer :: nRay_D(4) = (/0, 0, 0, 0/)
 
   ! The vector field to trace: B/U/J
   character         :: NameVectorField = 'B'
