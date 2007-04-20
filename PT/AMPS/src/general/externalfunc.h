@@ -76,11 +76,7 @@ public:
   };
 
   T GetFunc(int n) {
-    T res=NULL;
-
-    if ((func!=NULL)&&(n<nfuncs)) if (func[n]!=NULL) res=func[n];
-
-    if (res==NULL) {
+    if ((func==NULL)||(n>=nfuncs)) {
        char str[200];
        sprintf(str,"template<class T> class CExternalFunction::GetFunc: Error: cannot find function for n=%i\n",n);
        PrintErrorLog(str);
@@ -88,7 +84,7 @@ public:
        exit(__LINE__,__FILE__);
     }
 
-    return res;
+    return func[n];
   };
 
   T operator[] (int n) {

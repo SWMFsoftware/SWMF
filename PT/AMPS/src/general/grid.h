@@ -426,14 +426,15 @@ public:
     }
 
     if (flag==false) {
-      if (breakflag==true) {
-        printf("Error: proc. Cgrid::GetNCell\n");
-        printf("Cannot find cell which contain point x=");
-        for (idim=0;idim<DIM;idim++) printf("   %d",x[idim]);
-        printf("\n");
-        exit(__LINE__,__FILE__);
-      }
-      else ncell=-1;
+      char msg[200];
+
+      sprintf(msg," Cgrid::GetNCell Cannot find cell which contain point x=");
+      for (idim=0;idim<DIM;idim++) sprintf(msg," %s %e",msg,x[idim]);
+
+      PrintErrorLog(__LINE__,__FILE__,msg);
+
+      if (breakflag==true) exit(__LINE__,__FILE__); 
+      else return -1;
     }  
 
     return ncell;     
@@ -589,8 +590,10 @@ public:
     for (idim=0;idim<DIM;idim++) a[idim]=b[idim];
   };
 //==================================================
-  void ChangeLocalPositionVector2D(float* a,char nb1, char nb2) {
-    float b[2];
+  
+  template<class T>
+  void ChangeLocalPositionVector2D(T* a,char nb1, char nb2) {
+    T b[2];
     int idim,dn;
 
     for (idim=0;idim<DIM;idim++) b[idim]=0.0;
@@ -600,10 +603,10 @@ public:
     switch(dn) {
     case 1:
       b[0]=a[1];
-      b[1]=1.0-(a[0]+a[1]);
+      b[1]=1.0E0-(a[0]+a[1]);
       break;
     case 2:
-      b[0]=1.0-(a[0]+a[1]);
+      b[0]=1.0E0-(a[0]+a[1]);
       b[1]=a[0];
       break;
     default :
@@ -844,6 +847,40 @@ public:
     delete [] sum;
   };
       
+//==================================================
+
+bool CheckGridConsistensy() {
+  long int nnode,nface,ncell,neib;
+  int pface,pfaceneib,i;
+  vector <int> faceball(nfaces);
+  bool foundflag; 
+
+  for (nface=0;nface<nfaces;nface++) faceball[nface]=0;
+
+  for (ncell=0;ncell<ncells;ncell++) for (pface=0;pface<DIM+1;pface++) {
+    nface=cell[ncell].faceno[pface];
+    faceball[nface]++;
+
+    neib=cell[ncell].neighbour_cellno[pface];
+
+    if (neib!=-1) {
+      for (foundflag=false,pfaceneib=0;pfaceneib<DIM+1;pfaceneib++) if (cell[neib].neighbour_cellno[pfaceneib]==ncell) 
+        if (cell[neib].faceno[pfaceneib]==nface) {
+          foundflag=true;
+          break;
+        }
+
+      if (foundflag==false) return false;  
+
+      for (i=pface+1;i<DIM+1;i++) if (cell[ncell].neighbour_cellno[i]==neib) return false;
+    }
+  }
+
+  for (nface=0;nface<nfaces;nface++) if (faceball[nface]>2) return false;
+
+  return true;
+}; 
+       
 //==================================================
 };
 
