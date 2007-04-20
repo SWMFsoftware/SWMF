@@ -584,7 +584,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
   use ModHallResist, ONLY: UseHallResist, hall_factor
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
-       TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+       TypeFluid, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
 
   implicit none
 
@@ -598,7 +598,7 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
 
   real, dimension(-1:nI+2,-1:nJ+2,-1:nK+2) :: tmp1Var, tmp2Var
 
-  integer :: iVar, itmp, jtmp, jVar
+  integer :: iVar, itmp, jtmp, jVar, jFluid
   integer :: i,j,k,l, ip1,im1,jp1,jm1,kp1,km1
   real :: xfactor,yfactor,zfactor
 
@@ -697,6 +697,15 @@ subroutine set_plotvar(iBLK,iplotfile,nplotvar,plotvarnames,plotvar,&
            do jVar = SpeciesFirst_, SpeciesLast_
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
+           end do
+        else if(UseMultiIon .and. TypeFluid_I(iFluid) == 'ion')then
+           ! This can only occur for iFluid = 1 being the total ion fluid
+           ! sum(n_i) = sum(rho_i/M_i) = rho/M_1 + sum_2 rho_i*(1/M_i - 1/M_1)
+           PlotVar(:,:,:,iVar) = State_VGB(Rho_,:,:,:,iBLK)/MassFluid_I(1)
+           do jFluid = 2, nIonFluid
+              PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
+                   State_VGB(iRhoIon_I(jFluid),:,:,:,iBLK) &
+                   *(1/MassFluid_I(jFluid) - 1/MassFluid_I(1))
            end do
         else
            PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBLK)/MassFluid_I(iFluid)
