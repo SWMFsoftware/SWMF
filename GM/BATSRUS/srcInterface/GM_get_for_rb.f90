@@ -2,9 +2,24 @@
 !^CMP FILE RB
 
 !==========================================================================
+subroutine GM_get_for_rb_size(nPointLine, nVarLine)
+
+  ! Provide total number of points along rays 
+  ! and the number of variables to pass to RB
+  use CON_line_extract, ONLY: line_get
+  implicit none
+  integer, intent(out) :: nPointLine, nVarLine
+  integer :: nVarTmp
+
+  call line_get(nPointLine, nVarTmp)
+  nVarLine   = 2 ! B and Length
+
+end subroutine GM_get_for_rb_size
+
 !==========================================================================
-!==========================================================================
-subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+
+subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar, &
+     BufferLine_VI, nPointLine, nVarLine)
 
   !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
   !^CFG IF RAYTRACE BEGIN
@@ -21,6 +36,10 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
+  use ModVarIndexes, ONLY: Bx_, Bz_
+
+  use CON_line_extract, ONLY: line_get, line_clean
+
   implicit none
 
   character (len=*), parameter :: NameSub='GM_get_for_rb'
@@ -28,6 +47,12 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
   integer, intent(in)                                :: iSizeIn, jSizeIn, nVar
   real, intent(out), dimension(iSizeIn,jSizeIn,nVar) :: Buffer_IIV
   character (len=*), intent(in)                      :: NameVar
+
+  integer, intent(in) :: nPointLine, nVarLine
+  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+
+  integer :: nVarExtract, nPoint, iPoint
+  real, allocatable :: Buffer_VI(:,:)
 
   real :: Radius
 
@@ -49,7 +74,8 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
   ! The RB ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
-  call integrate_ray_accurate(iSizeIn, jSizeIn, RB_lat, RB_lon, Radius)
+  call integrate_ray_accurate(iSizeIn, jSizeIn, RB_lat, RB_lon, Radius, &
+       'b_I,s_I,Z0x,Z0y,Z0b')
 
   if(iProc==0)then
      ! Copy RayResult into small arrays used in old algorithm
@@ -70,9 +96,23 @@ subroutine GM_get_for_rb(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
         MHD_Beq     = -99999.0
      end where
 
+     call line_get(nVarExtract, nPoint)
+     if(nPoint /= nPointLine)call stop_mpi(NameSub//': nPointLine error')
+     if(nVarExtract < nVarLine)call stop_mpi(NameSub//': nVarLine error')
+     allocate(Buffer_VI(0:nVarExtract, nPoint))
+     call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
+
+     do iPoint = 1, nPoint
+        BufferLine_VI(1,iPoint) = Buffer_VI(0,iPoint)    ! Length
+        BufferLine_VI(2,iPoint) = &
+             sqrt(sum(Buffer_VI(3+Bx_:3+Bz_,iPoint)**2)) ! |B|
+     end do
+
+     deallocate(Buffer_VI)
   end if
 
   deallocate(RayIntegral_VII, RayResult_VII)
+  call line_clean
 
   if (iProc == 0) then
      ! Output before processing
