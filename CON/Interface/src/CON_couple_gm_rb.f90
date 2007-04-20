@@ -81,10 +81,13 @@ contains
     integer, parameter :: nVarGmRb=7
 
     ! Names of variables to pass
-    character (len=*), parameter :: NameVar='vol:z0x:z0y:bmin:rho:p:imf'
+    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:B_I:S_I:IMF'
 
-    ! Buffer for the variables on the 2D RB grid
-    real, dimension(:,:,:), allocatable :: Buffer_IIV
+    ! Number of variables and points saved into the line data
+    integer :: nVarLine, nPointLine
+
+    ! Buffer for the variables on the 2D RB grid and line data
+    real, allocatable :: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
 
     ! MPI related variables
 
@@ -127,20 +130,29 @@ contains
     !\
     ! Get field line integrals from GM
     !/
-    if(is_proc(GM_)) &
-         call GM_get_for_rb(Buffer_IIV,iSize,jSize,nVarGmRb,NameVar)
-
+    if(is_proc(GM_)) then
+       call GM_get_for_rb_trace(iSize, jSize, NameVar, nVarLine, nPointLine)
+       allocate(BufferLine_VI(nVarLine, nPointLine))
+       call GM_get_for_rb(Buffer_IIV, iSize, jSize, nVarGmRb, &
+            BufferLine_VI, nVarLine, nPointLine)
+    end if
     !\
     ! Transfer variables from GM to RB
     !/
     if(i_proc0(RB_) /= i_proc0(GM_))then
        nSize = iSize*jSize*nVarGmRb
-       if(is_proc0(GM_)) &
-            call MPI_send(Buffer_IIV,nSize,MPI_REAL,i_proc0(RB_),&
-            1,i_comm(),iError)
-       if(is_proc0(RB_)) &
-            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,i_proc0(GM_),&
-            1,i_comm(),iStatus_I,iError)
+       if(is_proc0(GM_)) then
+          call MPI_send(Buffer_IIV,nSize,MPI_REAL,&
+               i_proc0(RB_),1,i_comm(),iError)
+          call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
+               i_proc0(RB_),2,i_comm(),iError)
+       end if
+       if(is_proc0(RB_))then
+          call MPI_recv(Buffer_IIV,nSize,MPI_REAL,&
+               i_proc0(GM_),1,i_comm(),iStatus_I,iError)
+          call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
+               i_proc0(GM_),2,i_comm(),iStatus_I,iError)
+       end if
     end if
 
     if(DoTest)write(*,*)NameSub,', variables transferred',&
@@ -150,7 +162,8 @@ contains
     ! Put variables into RB
     !/
     if(is_proc0(RB_))then
-       call RB_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmRb,NameVar,tSimulation)
+       call RB_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmRb,&
+            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
        if(DoTest) &
             write(*,*)'RB got from GM: RB iProc, Buffer(1,1)=',&
             iProcWorld,Buffer_IIV(1,1,:)
@@ -159,7 +172,7 @@ contains
     !\
     ! Deallocate buffer to save memory
     !/
-    deallocate(Buffer_IIV)
+    deallocate(Buffer_IIV, BufferLine_VI)
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
