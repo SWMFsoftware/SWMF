@@ -813,7 +813,7 @@ contains
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
 
-    if(.not.UseMultiIon)then
+    if(TypeFluid_I(1)=='ion')then
        ! single ion fluid MHD (possibly with extra neutrals)
        iFluid = 1
        if(UseBoris)then           !^CFG IF BORISCORR BEGIN
@@ -826,7 +826,7 @@ contains
     end if
 
     if(nFluid > 1 .or. UseMultiIon)then
-       if(UseMultiIon)call get_magnetic_flux
+       if(TypeFluid_I(1)/='ion')call get_magnetic_flux
        do iFluid = 1, nFluid
           if(TypeFluid_I(iFluid) == 'ion') CYCLE
           call select_fluid
@@ -947,6 +947,10 @@ contains
       real :: B2, B0B1, pTotal
       real :: Gamma2                           !^CFG IF SIMPLEBORIS
       integer :: iVar
+
+      real :: InvNumDens, StateTmp_V(nVar), UxPlus, UyPlus, UzPlus, UnPlus
+      real, dimension(nIonFluid) :: NumDens_I, InvRho_I, Ux_I, Uy_I, Uz_I
+
       !-----------------------------------------------------------------------
 
       ! Extract primitive variables
@@ -985,6 +989,47 @@ contains
       Bn     = Bx*AreaX  + By*AreaY  + Bz*AreaZ
       FullBn = B0n + Bn
 
+      if(UseMultiIon)then
+         ! Calculate charge density averaged velocity U*Plus
+         StateTmp_V = State_V
+         StateTmp_V(Rho_) = StateTmp_V(Rho_) &
+              - sum(StateTmp_V(iRhoIon_I(2:nIonFluid)))
+
+         StateTmp_V(Ux_) = (StateCons_V(RhoUx_) &
+              - sum(State_V(iRhoIon_I(2:))*State_V(iUxIon_I(2:)))) &
+              / StateTmp_V(Rho_)
+
+         StateTmp_V(Uy_) = (StateCons_V(RhoUy_) &
+              - sum(State_V(iRhoIon_I(2:))*State_V(iUyIon_I(2:)))) &
+              / StateTmp_V(Rho_)
+
+         StateTmp_V(Uz_) = (StateCons_V(RhoUz_) &
+              - sum(State_V(iRhoIon_I(2:))*State_V(iUzIon_I(2:)))) &
+              / StateTmp_V(Rho_)
+
+         ! calculate number densities
+         NumDens_I  = StateTmp_V(iRhoIon_I) / MassFluid_I(1:nIonFluid)
+         InvNumDens = 1.0/sum(NumDens_I)
+
+         InvRho_I = 1.0/StateTmp_V(iRhoIon_I)
+         Ux_I  = StateTmp_V(iUxIon_I)
+         Uy_I  = StateTmp_V(iUyIon_I)
+         Uz_I  = StateTmp_V(iUzIon_I)
+
+         ! calculate the average positive charge velocity
+         UxPlus = InvNumDens* sum(NumDens_I*Ux_I)
+         UyPlus = InvNumDens* sum(NumDens_I*Uy_I)
+         UzPlus = InvNumDens* sum(NumDens_I*Uz_I)
+         
+         UnPlus = UxPlus*AreaX + UyPlus*AreaY + UzPlus*AreaZ
+      else
+         ! For single ion fluid the mass and charge average is the same
+         UxPlus = Ux
+         UyPlus = Uy
+         UzPlus = Uz
+         UnPlus = Un
+      end if
+
       ! f_i[rho]=m_i
       Flux_V(Rho_)   = Rho*Un
 
@@ -996,9 +1041,9 @@ contains
       ! f_i[b_k]=u_i*(b_k+B0_k) - u_k*(b_i+B0_i)
       if(HallCoeff > 0.0)then
          InvRho = 1.0/Rho
-         HallUx = Ux - HallJx*InvRho
-         HallUy = Uy - HallJy*InvRho
-         HallUz = Uz - HallJz*InvRho
+         HallUx = UxPlus - HallJx*InvRho
+         HallUy = UyPlus - HallJy*InvRho
+         HallUz = UzPlus - HallJz*InvRho
 
          HallUn = AreaX*HallUx + AreaY*HallUy + AreaZ*HallUz
 
@@ -1006,9 +1051,9 @@ contains
          Flux_V(By_) = HallUn*FullBy - HallUy*FullBn
          Flux_V(Bz_) = HallUn*FullBz - HallUz*FullBn
       else
-         Flux_V(Bx_) = Un*FullBx - Ux*FullBn
-         Flux_V(By_) = Un*FullBy - Uy*FullBn
-         Flux_V(Bz_) = Un*FullBz - Uz*FullBn
+         Flux_V(Bx_) = UnPlus*FullBx - UxPlus*FullBn
+         Flux_V(By_) = UnPlus*FullBy - UyPlus*FullBn
+         Flux_V(Bz_) = UnPlus*FullBz - UzPlus*FullBn
       end if
 
       ! f_i[p]=u_i*p
@@ -1020,6 +1065,11 @@ contains
               Un*(pTotal + e) &
               - FullBn*(HallUx*Bx + HallUy*By + HallUz*Bz)  &
               + (HallUn-Un)*(B2 + B0B1)
+      else if(UseMultiIon)then
+         Flux_V(Energy_) = &
+              Un*(pTotal + e) &
+              - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
+              + (UnPlus-Un)*(B2 + B0B1)
       else
          Flux_V(Energy_) = &
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
@@ -1303,12 +1353,14 @@ contains
       Rho    = State_V(Rho_)
       p      = State_V(p_)
       RhoU_D = Rho*State_V(Ux_:Uz_)
-      do iFluid = 2, nIonFluid
-         Rho1= State_V(iRhoIon_I(iFluid))
-         Rho = Rho + Rho1
-         p   = p   + State_V(iPIon_I(iFluid))
-         RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid): iUzIon_I(iFluid))
-      end do
+      if(TypeFluid_I(1) == 'ions')then
+         do iFluid = 2, nIonFluid
+            Rho1= State_V(iRhoIon_I(iFluid))
+            Rho = Rho + Rho1
+            p   = p   + State_V(iPIon_I(iFluid))
+            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(iFluid): iUzIon_I(iFluid))
+         end do
+      end if
 
       InvRho = 1.0/Rho
       if(UseRS7)then
