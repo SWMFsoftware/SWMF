@@ -105,12 +105,29 @@ end subroutine GM_get_for_im
 
 !==============================================================================
 
-subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar,NameVar)
+subroutine GM_get_for_rb_trace(iSize,jSize,NameVar,nVarLine,nPointLine)
+  implicit none
+
+  integer, intent(in) :: iSize,jSize
+  character (len=*), intent(in) :: NameVar
+  integer, intent(out):: nVarLine,nPointLine
+
+  character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+end subroutine GM_get_for_rb_trace
+
+!==============================================================================
+
+subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar, &
+     BufferLine_VI, nVarLine, nPointLine)
+
   implicit none
 
   integer, intent(in) :: iSize,jSize,nVar
-  real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
-  character (len=*), intent(in) :: NameVar
+  real, intent(out)   :: Buffer_IIV(iSize,jSize,nVar)
+  integer, intent(in) :: nVarLine, nPointLine
+  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
 
   character (len=*), parameter :: NameSub='GM_get_for_rb'
 
