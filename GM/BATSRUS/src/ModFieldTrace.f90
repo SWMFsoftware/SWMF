@@ -1253,7 +1253,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   R2_raytrace     = R_raytrace**2
   RayLengthMax    = 2*sum(XyzMax_D - XyzMin_D)
 
-  DoIntegrateRay = index(NameVar, 'InvB') > 0
+  DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
   DoTraceRay     = .false.
 
