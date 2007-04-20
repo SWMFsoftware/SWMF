@@ -181,6 +181,12 @@ subroutine set_physics_constants
        *Si2No_V(UnitRho_)
   BodyP_I   = BodyRho_I/MassFluid_I * BodyTDim_I*Io2No_V(UnitTemperature_)
 
+  if(UseMultiIon.and.TypeFluid_I(1)=='ion')then
+     ! Add up density and pressure for first total ion fluid
+     BodyRho_I(1) = sum(BodyRho_I(1:nIonFluid))
+     BodyP_I(1)   = sum(BodyP_I(1:nIonFluid))
+  end if
+
   !^CFG IF SECONDBODY BEGIN
   RhoBody2= RhoDimBody2 * Io2No_V(UnitRho_)
   pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
