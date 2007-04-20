@@ -155,13 +155,14 @@ contains
 
     use ModAdvance, ONLY: State_VGB, Rho_
     use ModVarIndexes, ONLY: &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
-    use ModMultiFluid, ONLY: iRhoIon_I, nIonFluid, MassFluid_I
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V, nVar
+    use ModMultiFluid, ONLY: iRhoIon_I, nIonFluid, MassFluid_I, TypeFluid_I
 
     ! Set IonMassPerCharge_G based on average mass
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    real :: State_V(nVar)
     !-------------------------------------------------------------------------
 
     ! Multiply IonMassPerCharge_G by average ion mass = rho_total / n_total
@@ -174,12 +175,25 @@ contains
                /MassSpecies_V)
        end do; end do; end do
     elseif(nIonFluid > 1)then
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
-               sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
-               sum(State_VGB(iRhoIon_I, i, j, k,iBlock) &
-               /   MassFluid_I(1:nIonFluid) )
-       end do; end do; end do
+       if(TypeFluid_I(1) == 'ions')then
+          ! Get mass density per total number denisity
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+                  sum(State_VGB(iRhoIon_I, i, j, k, iBlock)) / &
+                  sum(State_VGB(iRhoIon_I, i, j, k,iBlock) &
+                  /   MassFluid_I(1:nIonFluid) )
+          end do; end do; end do
+       else
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             State_V = State_VGB(:,i,j,k,iBlock)
+             ! Get the first fluid's mass density from the total
+             State_V(Rho_) = State_V(Rho_)-sum(State_V(iRhoIon_I(2:nIonFluid)))
+             ! Get mass density per total number denisity
+             IonMassPerCharge_G(i,j,k) = IonMassPerCharge * &
+                  State_VGB(Rho_,i,j,k,iBlock) / &
+                  sum( State_V(iRhoIon_I)/MassFluid_I(1:nIonFluid) )
+          end do; end do; end do
+       end if
     end if
 
   end subroutine set_ion_mass_per_charge
