@@ -99,6 +99,7 @@ program PostIDL
   write(*,*)'varnames =',trim(varnames)
   read(*,'(a)')unitnames
   write(*,*)'unitnames=',trim(unitnames)
+  if(unitnames=='')unitnames='normalized units'
 
   read_binary = .false.
   read(*,'(l8)',err=1,end=1)read_binary
@@ -586,7 +587,7 @@ contains
   subroutine set_strings
 
     ! Produce fileheadout for the VAC file based on the name of the headerfile
-    fileheadout=unitnames(1:73)
+    fileheadout=unitnames(1:494)
 
     ! Length of the headerline
     l=len_trim(fileheadout)
