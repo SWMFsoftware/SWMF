@@ -102,7 +102,7 @@ contains
        end if
     end if
 
-    if(.not.UseMultiIon .and. &
+    if( TypeFluid_I(1)=='ion' .and. &
          ((nStage==1.and..not.time_accurate).or.(nStage>1.and.iStage==1)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Energy_GBI(i,j,k,iBLK,1) = Energy_GBI(i,j,k,iBLK,1) + cHalf*( &
