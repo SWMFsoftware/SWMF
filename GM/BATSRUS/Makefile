@@ -39,8 +39,9 @@ help:
 	@echo '    LIB     (Component library libGM for SWMF)'
 	@echo '    BATSRUS (Block Adaptive Tree Solar-Wind Roe Upwind Scheme)'
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
-	@echo '    PIDL    (PostIDL program creates 1 .out file from local .idl files)'
-	@echo '    PSPH    (PostSPH program creates spherical tec file from sph*.tec files)'
+	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
+	@echo '    PSPH    (PostSPH.exe creates spherical tec file from sph*.tec files)'
+	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
 	@echo ' '
 	@echo '    rundir      (create run directory for standalone or SWMF)'
 	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
@@ -85,6 +86,12 @@ PSPH:
 	cd srcPostProc; make PSPH
 	@echo ' '
 	@echo Program PostSPH has been brought up to date.
+	@echo ' '
+
+EARTH_TRAJ:
+	cd srcPostProc; make EARTH_TRAJ
+	@echo ' '
+	@echo Program EARTH_TRAJ has been brought up to date.
 	@echo ' '
 
 # The MACHINE variable holds the machine name for which scripts should
