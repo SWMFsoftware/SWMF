@@ -31,16 +31,16 @@ subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-  ! If only 2 variables are passed, they are the coordinates colatitude and longitude
-  ! needed for the GM->PW pressure coupling.
+  ! If only 2 variables are passed, they are the coordinates colatitude 
+  ! and longitude needed for the GM->PW pressure coupling.
   if(nVar == 2)then
      if(.not.allocated(CoordXyzPw_DI)) allocate(CoordXyzPw_DI(3, nFieldLine))
 
      ! Convert from spherical to Cartesian coordinates at radius rCurrents
      ! where the pressure is going to be taken from
      do iLine = 1, nFieldLine
-        call sph_to_xyz(rCurrents, Buffer_VI(Theta_,iLine), Buffer_VI(Phi_, iLine), &
-             CoordXyzPw_DI(:,iLine))
+        call sph_to_xyz(rCurrents, Buffer_VI(Theta_,iLine), &
+             Buffer_VI(Phi_, iLine), CoordXyzPw_DI(:,iLine))
      end do
 
      ! Convert from PW to GM coordinates if necessary
