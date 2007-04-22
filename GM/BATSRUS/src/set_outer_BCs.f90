@@ -390,6 +390,8 @@ subroutine BC_solar_wind(time_now)
   use ModVarIndexes
   use ModAdvance, ONLY : State_VGB, B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
   use ModSetOuterBC
+  use ModMultiFluid, ONLY: select_fluid, iFluid, &
+       iRho, iRhoUx, iRhoUy, iRhoUz, iP
 
   implicit none
 
@@ -409,7 +411,6 @@ subroutine BC_solar_wind(time_now)
         do i=imin1g,imax2g,sign(1,imax2g-imin1g)
            call get_solar_wind_point(time_now, y, z, &
                 Rho, Ux, Uy, Uz, Bx, By, Bz, p)
-           State_VGB(P_,i,j,k,iBLK)     = p
            State_VGB(rho_,i,j,k,iBLK)   = Rho
            State_VGB(rhoUx_,i,j,k,iBLK) = Rho*Ux
            State_VGB(rhoUy_,i,j,k,iBLK) = Rho*Uy
@@ -417,6 +418,17 @@ subroutine BC_solar_wind(time_now)
            State_VGB(Bx_,i,j,k,iBLK)    = Bx - B0xCell_BLK(i,j,k,iBLK)
            State_VGB(By_,i,j,k,iBLK)    = By - B0yCell_BLK(i,j,k,iBLK)
            State_VGB(Bz_,i,j,k,iBLK)    = Bz - B0zCell_BLK(i,j,k,iBLK)
+           State_VGB(P_,i,j,k,iBLK)     = p
+           do iFluid = 2, nFluid
+              call select_fluid
+              State_VGB(iRho,   i,j,k,iBLK) = Rho   *0.0001
+              State_VGB(iRhoUx, i,j,k,iBLK) = Rho*Ux*0.0001
+              State_VGB(iRhoUy, i,j,k,iBLK) = Rho*Uy*0.0001
+              State_VGB(iRhoUz, i,j,k,iBLK) = Rho*Uz*0.0001
+              State_VGB(iP,     i,j,k,iBLK) = p     *0.0001 &
+                   *MassFluid_I(1)/MassFluid_I(iFluid)
+           end do
+
         end do
      end do
   end do
