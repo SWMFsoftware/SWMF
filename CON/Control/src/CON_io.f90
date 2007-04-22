@@ -731,6 +731,10 @@ contains
     write(UNITTMP_,'(a)')'#PLANET'
     write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
     write(UNITTMP_,*)
+    if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
+       write(UNITTMP_,*)
+       write(UNITTMP_,'(a)')'#IDEALAXES'
+    end if
     write(UNITTMP_,'(a)')'#STARTTIME'
     write(UNITTMP_,'(i8,a32)')TimeStart % iYear,         'iYear      '
     write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '

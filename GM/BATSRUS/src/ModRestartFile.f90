@@ -212,6 +212,7 @@ contains
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
     use CON_planet,  ONLY: NamePlanet
+    use ModReadParam,ONLY: i_line_command
 
     implicit none
 
@@ -250,6 +251,10 @@ contains
        write(unit_tmp,*)
        write(unit_tmp,'(a)')'#PLANET'
        write(unit_tmp,'(a,a32)') NamePlanet,'NamePlanet'
+       if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
+          write(unit_tmp,*)
+          write(unit_tmp,'(a)')'#IDEALAXES'
+       end if
     end if
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NEWRESTART'
