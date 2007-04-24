@@ -3,7 +3,9 @@ include ../../Makefile.def
 install:
 	touch src/Makefile.DEPEND
 	@(if([ ${OS}${COMPILER} == Darwinf95 ]); then \
-		cp src/Makefile.oehmke src/Makefile; \
+	   cp src/Makefile.oehmke               src/Makefile; \
+	   cp src/ESMF_SWMF_Driver.f90.oehmke   src/ESMF_SWMF_Driver.f90; \
+	   cp src/ESMF_SWMF_GridComp.f90.oehmke src/ESMF_SWMF_GridComp.f90; \
 	fi)
 
 rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
