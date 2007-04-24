@@ -358,8 +358,6 @@ subroutine MH_set_parameters(TypeAction)
            UsePointImplicit_B     = UsePointImplicit
 
            call read_var('BetaPointImplicit',BetaPointImpl)
-           UsePartImplicit = .false.                   !^CFG IF IMPLICIT
-           UseFullImplicit = .false.                   !^CFG IF IMPLICIT
         end if
      case("#PARTLOCAL")                                !^CFG IF IMPLICIT BEGIN 
         call read_var('UsePartLocal',UsePartLocal)
