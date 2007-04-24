@@ -1419,6 +1419,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion2_,Ion1_)=3.*RGASH*XMSH/(XMSH+XMSO)
       HeatFlowCoef_II(Ion2_,Ion4_)=3.*RGASH*XMSH/(XMSH+XMSE)
 
+      MassFracCoef_II(Ion2_,:) = HeatFlowCoef_II(Ion2_,:) / (3.0*RGASH)
 !      CTH3pH=3.*RGASO*XMSO/(XMSO+XMSH)
 !      CTH3pH2=3.*RGASO*XMSO/(XMSO+2.*XMSH)
 !      CTH3pHp=3.*RGASO*XMSO/(XMSO+XMSH)
@@ -1429,6 +1430,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion1_,Ion2_)=3.*RGASO*XMSO/(XMSO+XMSH)
       HeatFlowCoef_II(Ion1_,Ion4_)=3.*RGASO*XMSO/(XMSO+XMSE)
 
+      MassFracCoef_II(Ion1_,:) = HeatFlowCoef_II(Ion1_,:) / (3.0*RGASO)
 !      CTELH=3.*RGASE*XMSE/(XMSE+XMSH)
 !      CTELH2=3.*RGASE*XMSE/(XMSE+2.*XMSH)
 !      CTELHp=3.*RGASE*XMSE/(XMSE+XMSH)
@@ -1438,6 +1440,8 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGASE*XMSE/(XMSE+2.*XMSH)
       HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGASE*XMSE/(XMSE+XMSH)
       HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGASE*XMSE/(XMSE+XMSO)
+
+      MassFracCoef_II(Ion4_,:) = HeatFlowCoef_II(Ion4_,:) / (3.0*RGASE)
 
 CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
 !      CMHpH=XMSH/(XMSH+XMSH)
