@@ -226,7 +226,7 @@ test_titan_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -o TitanTest
 
 test_titan_check:
-	${SCRIPTDIR}/DiffNum.pl -t -a=1e-15 \
+	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
 		Param/TITAN/TestOutput/log_n000001.log \
 		${TESTDIR}/TitanTest/GM/log_n000001.log > test_titan.diff
 	ls -l test_titan.diff
