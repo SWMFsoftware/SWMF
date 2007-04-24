@@ -49,10 +49,10 @@ contains
     use ESMF_SWMF_Mod, only: iMax, jMax, yMin, yMax, zMin, zMax, &
          iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
-    type(ESMF_GridComp), intent(inout)  :: gComp
+    type(ESMF_GridComp), intent(in)  :: gComp
     type(ESMF_State),    intent(in)  :: ImportState
     type(ESMF_State),    intent(in)  :: ExportState
-    type(ESMF_Clock),    intent(inout)  :: Parentclock
+    type(ESMF_Clock),    intent(in)  :: Parentclock
     integer,             intent(out) :: rc
 
     type(ESMF_VM)      :: ParentVM
@@ -88,19 +88,19 @@ contains
     if(rc /= ESMF_SUCCESS) return
 
     ! Create the SWMF Gridded component
-    SwmfComp = ESMF_GridCompCreate(parentvm=parentvm, name="SWMF Gridded Component", & 
+    SwmfComp = ESMF_GridCompCreate(parentvm, name="SWMF Gridded Component", & 
          petlist = (/ (i, i=iProcRootSwmf, iProcLastSwmf) /), &
          grid=SwmfGrid, rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
     ! Create the ESMF Gridded component(s, there could be more than one here)
-    EsmfComp = ESMF_GridCompCreate(parentvm=parentvm, name="ESMF Gridded Component", &
+    EsmfComp = ESMF_GridCompCreate(parentvm, name="ESMF Gridded Component", &
          petlist = (/ (i, i=iProcRootEsmf, iProcLastEsmf) /), &
          grid=EsmfGrid, rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
     ! Create the Coupler component
-    CouplerComp = ESMF_CplCompCreate(parentvm=parentvm, &
+    CouplerComp = ESMF_CplCompCreate(parentvm, &
          name="ESMF-SWMF Coupler Component", rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
@@ -149,7 +149,7 @@ contains
     type(ESMF_GridComp), intent(inout) :: gcomp
     type(ESMF_State),    intent(inout) :: importState
     type(ESMF_State),    intent(inout) :: exportState
-    type(ESMF_Clock),    intent(inout)    :: parentclock
+    type(ESMF_Clock),    intent(in)    :: parentclock
     integer,             intent(out)   :: rc
 
     ! Local variables
@@ -202,7 +202,7 @@ contains
     type(ESMF_GridComp), intent(in) :: gcomp
     type(ESMF_State),    intent(in)  :: importState
     type(ESMF_State),    intent(in)  :: exportState
-    type(ESMF_Clock),    intent(inout)  :: parentclock
+    type(ESMF_Clock),    intent(in)  :: parentclock
     integer,             intent(out) :: rc
 
     integer :: iError 
