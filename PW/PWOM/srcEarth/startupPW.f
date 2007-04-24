@@ -687,129 +687,255 @@ C      READ(5,3) NCNPRT
      $CLELHE(K),CLELH(K),CLELOX(K),CLELHL(K),CLELHD(K)
 3260  CONTINUE
 3290  CONTINUE
-!      WRITE(iUnitOutput,1047)
-!1047  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR OXYGEN')
-!      WRITE(iUnitOutput,1048)
-!1048  FORMAT(12X,'ALT',7X,'CFOXN2',6X,'CFOXO2',6X,'CFOXO',7X,
-!     ;'CFOXHE',6X,'CFOXH',7X,'CFOXHL',6X,'CFOXHD',6X,'CFOXEL')
-!      NDMQ=NPT1
-!      IF (NDIM.LT.NPT2) NDMQ=NDIM
-!      DO 531 K=1,NDMQ
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-!531   CONTINUE
-!      IF (NDIM.LT.NPT2) GO TO 591
-!      NDMQ=NPT3
-!      IF (NDIM.LT.NPT4) NDMQ=NDIM
-!      DO 541 K=NPT2,NDMQ,2
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-!541   CONTINUE
-!      IF (NDIM.LT.NPT4) GO TO 591
-!      NDMQ=NPT5
-!      IF (NDIM.LT.NPT6) NDMQ=NDIM
-!      DO 551 K=NPT4,NDMQ,5
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-!551   CONTINUE
-!      IF (NDIM.LT.NPT6) GO TO 591
-!      DO 561 K=NPT6,NDIM,10
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFOXN2(K),CFOXO2(K),CFOXO(K),
-!     $CFOXHE(K),CFOXH(K),CFOXHL(K),CFOXHD(K),CFOXEL(K)
-!561   CONTINUE
-!591   CONTINUE
-!      WRITE (iUnitOutput,1247)
-!1247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HELIUM')
-!      WRITE(iUnitOutput,1248)
-!1248  FORMAT(12X,'ALT',7X,'CFHEN2',6X,'CFHEO2',6X,'CFHEO',7X,
-!     ;'CFHEHE',6X,'CFHEH',7X,'CFHEOX',6X,'CFHEHD',6X,'CFHEEL')
-!      NDMQ=NPT1
-!      IF (NDIM.LT.NPT2) NDMQ=NDIM
-!      DO 1231 K=1,NDMQ
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-!1231  CONTINUE
-!      IF (NDIM.LT.NPT2) GO TO 1291
-!      NDMQ=NPT3
-!      IF (NDIM.LT.NPT4) NDMQ=NDIM
-!      DO 1241 K=NPT2,NDMQ,2
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-!1241  CONTINUE
-!      IF (NDIM.LT.NPT4) GO TO 1291
-!      NDMQ=NPT5
-!      IF (NDIM.LT.NPT6) NDMQ=NDIM
-!      DO 1251 K=NPT4,NDMQ,5
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-!1251  CONTINUE
-!      IF (NDIM.LT.NPT6) GO TO 1291
-!      DO 1261 K=NPT6,NDIM,10
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHEN2(K),CFHEO2(K),CFHEO(K),
-!     $CFHEHE(K),CFHEH(K),CFHEOX(K),CFHEHD(K),CFHEEL(K)
-!1261  CONTINUE
-!1291  CONTINUE
-!      WRITE (iUnitOutput,2247)
-!2247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HYDROGEN')
-!      WRITE(iUnitOutput,2248)
-!2248  FORMAT(12X,'ALT',7X,'CFHN2',7X,'CFHO2',7X,'CFHO',8X,
-!     ;'CFHHE',7X,'CFHH',8X,'CFHOX',7X,'CFHHL',7X,'CFHEL')
-!      NDMQ=NPT1
-!      IF (NDIM.LT.NPT2) NDMQ=NDIM
-!      DO 2231 K=1,NDMQ
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-!2231  CONTINUE
-!      IF (NDIM.LT.NPT2) GO TO 2291
-!      NDMQ=NPT3
-!      IF (NDIM.LT.NPT4) NDMQ=NDIM
-!      DO 2241 K=NPT2,NDMQ,2
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-!2241  CONTINUE
-!      IF (NDIM.LT.NPT4) GO TO 2291
-!      NDMQ=NPT5
-!      IF (NDIM.LT.NPT6) NDMQ=NDIM
-!      DO 2251 K=NPT4,NDMQ,5
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-!2251  CONTINUE
-!      IF (NDIM.LT.NPT6) GO TO 2291
-!      DO 2261 K=NPT6,NDIM,10
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFHN2(K),CFHO2(K),CFHO(K),
-!     $CFHHE(K),CFHH(K),CFHOX(K),CFHHL(K),CFHEL(K)
-!2261  CONTINUE
-!2291  CONTINUE
-!      WRITE (iUnitOutput,3247)
-!3247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR ELECTRONS')
-!      WRITE(iUnitOutput,3248)
-!3248  FORMAT(12X,'ALT',7X,'CFELN2',6X,'CFELO2',6X,'CFELO',7X,
-!     ;'CFELHE',6X,'CFELH',7X,'CFELOX',6X,'CFELHL',6X,'CFELHD')
-!      NDMQ=NPT1
-!      IF (NDIM.LT.NPT2) NDMQ=NDIM
-!      DO 3231 K=1,NDMQ
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-!3231  CONTINUE
-!      IF (NDIM.LT.NPT2) GO TO 3291
-!      NDMQ=NPT3
-!      IF (NDIM.LT.NPT4) NDMQ=NDIM
-!      DO 3241 K=NPT2,NDMQ,2
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-!3241  CONTINUE
-!      IF (NDIM.LT.NPT4) GO TO 3291
-!      NDMQ=NPT5
-!      IF (NDIM.LT.NPT6) NDMQ=NDIM
-!      DO 3251 K=NPT4,NDMQ,5
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-!3251  CONTINUE
-!      IF (NDIM.LT.NPT6) GO TO 3291
-!      DO 3261 K=NPT6,NDIM,10
-!      WRITE (iUnitOutput,1180) K,ALTD(K),CFELN2(K),CFELO2(K),CFELO(K),
-!     $CFELHE(K),CFELH(K),CFELOX(K),CFELHL(K),CFELHD(K)
-!3261  CONTINUE
+      WRITE(iUnitOutput,1047)
+1047  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR OXYGEN')
+      WRITE(iUnitOutput,1048)
+1048  FORMAT(12X,'ALT',7X,'CFOXN2',6X,'CFOXO2',6X,'CFOXO',7X,
+     ;'CFOXHE',6X,'CFOXH',7X,'CFOXHL',6X,'CFOXHD',6X,'CFOXEL')
+      NDMQ=NPT1
+      IF (NDIM.LT.NPT2) NDMQ=NDIM
+      DO 531 K=1,NDMQ
+      WRITE (iUnitOutput,1180) K,ALTD(K),CollisionFreq_IIC(Ion1_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion4_,K)
+531   CONTINUE
+      IF (NDIM.LT.NPT2) GO TO 591
+      NDMQ=NPT3
+      IF (NDIM.LT.NPT4) NDMQ=NDIM
+      DO 541 K=NPT2,NDMQ,2
+      WRITE (iUnitOutput,1180) K,ALTD(K),CollisionFreq_IIC(Ion1_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion4_,K)
+541   CONTINUE
+      IF (NDIM.LT.NPT4) GO TO 591
+      NDMQ=NPT5
+      IF (NDIM.LT.NPT6) NDMQ=NDIM
+      DO 551 K=NPT4,NDMQ,5
+      WRITE (iUnitOutput,1180) K,ALTD(K),CollisionFreq_IIC(Ion1_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion4_,K)
+
+551   CONTINUE
+      IF (NDIM.LT.NPT6) GO TO 591
+      DO 561 K=NPT6,NDIM,10
+      WRITE (iUnitOutput,1180) K,ALTD(K),CollisionFreq_IIC(Ion1_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion1_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion1_,Ion4_,K)
+
+561   CONTINUE
+591   CONTINUE
+      WRITE (iUnitOutput,1247)
+1247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HELIUM')
+      WRITE(iUnitOutput,1248)
+1248  FORMAT(12X,'ALT',7X,'CFHEN2',6X,'CFHEO2',6X,'CFHEO',7X,
+     ;'CFHEHE',6X,'CFHEH',7X,'CFHEOX',6X,'CFHEHD',6X,'CFHEEL')
+      NDMQ=NPT1
+      IF (NDIM.LT.NPT2) NDMQ=NDIM
+      DO 1231 K=1,NDMQ
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion3_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion4_,K)
+
+1231  CONTINUE
+      IF (NDIM.LT.NPT2) GO TO 1291
+      NDMQ=NPT3
+      IF (NDIM.LT.NPT4) NDMQ=NDIM
+      DO 1241 K=NPT2,NDMQ,2
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion3_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion4_,K)
+
+1241  CONTINUE
+      IF (NDIM.LT.NPT4) GO TO 1291
+      NDMQ=NPT5
+      IF (NDIM.LT.NPT6) NDMQ=NDIM
+      DO 1251 K=NPT4,NDMQ,5
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion3_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion4_,K)
+
+1251  CONTINUE
+      IF (NDIM.LT.NPT6) GO TO 1291
+      DO 1261 K=NPT6,NDIM,10
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion3_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion3_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion2_,K),
+     &  CollisionFreq_IIC(Ion3_,Ion4_,K)
+
+1261  CONTINUE
+1291  CONTINUE
+      WRITE (iUnitOutput,2247)
+2247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR HYDROGEN')
+      WRITE(iUnitOutput,2248)
+2248  FORMAT(12X,'ALT',7X,'CFHN2',7X,'CFHO2',7X,'CFHO',8X,
+     ;'CFHHE',7X,'CFHH',8X,'CFHOX',7X,'CFHHL',7X,'CFHEL')
+      NDMQ=NPT1
+      IF (NDIM.LT.NPT2) NDMQ=NDIM
+      DO 2231 K=1,NDMQ
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion2_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion4_,K)
+
+2231  CONTINUE
+      IF (NDIM.LT.NPT2) GO TO 2291
+      NDMQ=NPT3
+      IF (NDIM.LT.NPT4) NDMQ=NDIM
+      DO 2241 K=NPT2,NDMQ,2
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion2_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion4_,K)
+
+2241  CONTINUE
+      IF (NDIM.LT.NPT4) GO TO 2291
+      NDMQ=NPT5
+      IF (NDIM.LT.NPT6) NDMQ=NDIM
+      DO 2251 K=NPT4,NDMQ,5
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion2_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion4_,K)
+
+2251  CONTINUE
+      IF (NDIM.LT.NPT6) GO TO 2291
+      DO 2261 K=NPT6,NDIM,10
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion2_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion2_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion2_,Ion4_,K)
+
+
+2261  CONTINUE
+2291  CONTINUE
+      WRITE (iUnitOutput,3247)
+3247  FORMAT(1H1,50X,'COLLISION FREQUENCIES FOR ELECTRONS')
+      WRITE(iUnitOutput,3248)
+3248  FORMAT(12X,'ALT',7X,'CFELN2',6X,'CFELO2',6X,'CFELO',7X,
+     ;'CFELHE',6X,'CFELH',7X,'CFELOX',6X,'CFELHL',6X,'CFELHD')
+      NDMQ=NPT1
+      IF (NDIM.LT.NPT2) NDMQ=NDIM
+      DO 3231 K=1,NDMQ
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion4_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion2_,K)
+
+3231  CONTINUE
+      IF (NDIM.LT.NPT2) GO TO 3291
+      NDMQ=NPT3
+      IF (NDIM.LT.NPT4) NDMQ=NDIM
+      DO 3241 K=NPT2,NDMQ,2
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion4_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion2_,K)
+
+
+3241  CONTINUE
+      IF (NDIM.LT.NPT4) GO TO 3291
+      NDMQ=NPT5
+      IF (NDIM.LT.NPT6) NDMQ=NDIM
+      DO 3251 K=NPT4,NDMQ,5
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion4_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion2_,K)
+
+
+3251  CONTINUE
+      IF (NDIM.LT.NPT6) GO TO 3291
+      DO 3261 K=NPT6,NDIM,10
+      WRITE (iUnitOutput,1180) K,ALTD(K),
+     &  CollisionFreq_IIC(Ion4_,Neutral4_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral3_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral1_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral5_,K),
+     &  CollisionFreq_IIC(Ion4_,Neutral2_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion1_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion3_,K),
+     &  CollisionFreq_IIC(Ion4_,Ion2_,K)
+
+
+3261  CONTINUE
 3291  CONTINUE
       WRITE (iUnitOutput,1013)
 1013  FORMAT(1H1,45X,'INITIAL OXYGEN PARAMETERS')
@@ -1249,6 +1375,9 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGASO*XMSO/(XMSO+XMSH)
       HeatFlowCoef_II(Ion1_,Ion3_) = 3.*RGASO*XMSO/(XMSO+XMSHE)
       HeatFlowCoef_II(Ion1_,Ion4_) = 3.*RGASO*XMSO/(XMSO+XMSE)
+      
+      MassFracCoef_II(Ion1_,:) = HeatFlowCoef_II(Ion1_,:) / (3.0*RGASO)
+
 
       HeatFlowCoef_II(Ion2_,Neutral4_)=3.*RGASH*XMSH/(XMSH+28.*XAMU)
       HeatFlowCoef_II(Ion2_,Neutral3_)=3.*RGASH*XMSH/(XMSH+32.*XAMU)
@@ -1259,6 +1388,9 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion2_,Ion3_) = 3.*RGASH*XMSH/(XMSH+XMSHE)
       HeatFlowCoef_II(Ion2_,Ion4_) =3.*RGASH*XMSH/(XMSH+XMSE)
       
+      MassFracCoef_II(Ion2_,:) = HeatFlowCoef_II(Ion2_,:) / (3.0*RGASH)
+
+
       HeatFlowCoef_II(Ion3_,Neutral4_)=3.*RGASHE*XMSHE/(XMSHE+28.*XAMU)
       HeatFlowCoef_II(Ion3_,Neutral3_)=3.*RGASHE*XMSHE/(XMSHE+32.*XAMU)
       HeatFlowCoef_II(Ion3_,Neutral5_)=3.*RGASHE*XMSHE/(XMSHE+XMSHE)
@@ -1267,6 +1399,9 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGASHE*XMSHE/(XMSHE+XMSO)
       HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGASHE*XMSHE/(XMSHE+XMSH)
       HeatFlowCoef_II(Ion3_,Ion4_)=3.*RGASHE*XMSHE/(XMSHE+XMSE)
+
+      MassFracCoef_II(Ion3_,:) = HeatFlowCoef_II(Ion3_,:) / (3.0*RGASHE)
+
       
       HeatFlowCoef_II(Ion4_,Neutral4_)=3.*RGASE*XMSE/(28.*XAMU+XMSE)
       HeatFlowCoef_II(Ion4_,Neutral3_)=3.*RGASE*XMSE/(32.*XAMU+XMSE)
@@ -1277,7 +1412,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion4_,Ion3_)=3.*RGASE*XMSE/(XMSE+XMSHE)
       HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGASE*XMSE/(XMSE+XMSH)
 
-
+      MassFracCoef_II(Ion4_,:) = HeatFlowCoef_II(Ion4_,:) / (3.0*RGASE)
 
 CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
       FricHeatCoef_II(Ion1_,Neutral4_)=28.*XAMU/(XMSO+28.*XAMU)
