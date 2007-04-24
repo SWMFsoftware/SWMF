@@ -119,7 +119,7 @@ contains
     use ESMF_SWMF_Mod, ONLY: NameSwmfComp, DoBlockAllSwmf, iProcCoupleSwmf, &
          NameField_V, nVar, iMax, jMax, yMin, yMax, zMin, zMax
 
-    type(ESMF_GridComp), intent(in) :: gComp
+    type(ESMF_GridComp), intent(inout) :: gComp
     type(ESMF_State),    intent(in) :: ImportState
     type(ESMF_State),    intent(in) :: ExportState
     type(ESMF_Clock),    intent(in) :: Clock

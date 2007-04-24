@@ -41,7 +41,7 @@ contains
 
     use ESMF_SWMF_Mod, only: NameField_V
 
-    type(ESMF_CplComp), intent(in)    :: cComp
+    type(ESMF_CplComp), intent(inout) :: cComp
     type(ESMF_State),   intent(inout) :: ImportState
     type(ESMF_State),   intent(inout) :: ExportState
     type(ESMF_Clock),   intent(in)    :: Clock
