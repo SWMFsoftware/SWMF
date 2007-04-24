@@ -2,6 +2,9 @@ include ../../Makefile.def
 
 install:
 	touch src/Makefile.DEPEND
+	@(if([ ${OS}${COMPILER} == Darwinf95 ]); then \
+		cp src/Makefile.oehmke src/Makefile; \
+	fi)
 
 rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
 
