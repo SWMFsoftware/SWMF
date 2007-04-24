@@ -145,6 +145,7 @@ module ModCommonVariables
   real :: CollisionFreq_IIC(nIon, nSpecies,MaxGrid)
   real :: HeatFlowCoef_II(nIon, nSpecies)
   real :: FricHeatCoef_II(nIon, nSpecies)
+  real :: MassFracCoef_II(nIon, nSpecies)
 
 
        
