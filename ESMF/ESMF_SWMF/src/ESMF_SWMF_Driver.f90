@@ -59,6 +59,8 @@ program ESMF_SWMF_Driver
   ! Return code for error checks
   integer :: rc
 
+
+
   !----------------------------------------------------------------------------
   !  Initialize the ESMF Framework
   !----------------------------------------------------------------------------
@@ -85,7 +87,7 @@ program ESMF_SWMF_Driver
   !----------------------------------------------------------------------------
 
   ! Create the top Gridded component, passing in the default layout.
-  EsmfSwmfComp = ESMF_GridCompCreate(DefaultVM, "ESMF-SWMF Component", rc=rc)
+  EsmfSwmfComp = ESMF_GridCompCreate(parentvm=DefaultVM, name="ESMF-SWMF Component", rc=rc)
 
   call ESMF_LogWrite("Component Create finished", ESMF_LOG_INFO)
 
