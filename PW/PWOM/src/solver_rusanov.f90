@@ -154,7 +154,7 @@ subroutine update_state( iIon,&
   real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
   real, dimension(MaxGrid), intent(out) :: NewRho_C, NewU_C, NewP_C,NewT_C
   real, dimension(MaxGrid) :: NewRhoU, NewE
-  real :: InvGammaMinus1,SumCollisionFreq,SumHTxCol,SumFHxCol
+  real :: InvGammaMinus1,SumCollisionFreq,SumHTxCol,SumMFxCol
   real, dimension(MaxGrid) :: NewRhoUSource_C, ExplicitRhoU_C
   real :: CollisionNeutral1, CollisionNeutral2, &
           CollisionNeutral3,Collisionneutral4
@@ -196,15 +196,15 @@ subroutine update_state( iIon,&
         endif
         SumCollisionFreq = 0.0
         SumHTxCol        = 0.0
-        SumFHxCol        = 0.0
+        SumMFxCol        = 0.0
         do iSpecies=MinSpecies,nSpecies
            if (iSpecies /= iIon) then
               SumCollisionFreq = &
                    SumCollisionFreq+CollisionFreq_IIC(iIon,iSpecies,i)
               SumHTxCol        = SumHTxCol &
-                   + HeatFlowCoef_II(Ion2_,iSpecies)*CollisionFreq_IIC(iIon,iSpecies,i)
-              SumFHxCol        = SumFHxCol &
-                   + FricHeatCoef_II(Ion2_,iSpecies)*CollisionFreq_IIC(iIon,iSpecies,i)
+                   + HeatFlowCoef_II(iIon,iSpecies)*CollisionFreq_IIC(iIon,iSpecies,i)
+              SumMFxCol        = SumMFxCol &
+                   + MassFracCoef_II(iIon,iSpecies)*CollisionFreq_IIC(iIon,iSpecies,i)
            endif
         enddo
         
@@ -227,7 +227,7 @@ subroutine update_state( iIon,&
 
         NewP_C(i) = gMin1*(NewE(i) - 0.5 * NewU_C(i)**2 * NewRho_C(i))
         
-        NewP_C(i) = NewP_C(i) / (1+Dt*2.*SumFHxCol)
+        NewP_C(i) = NewP_C(i) / (1+Dt*2.*SumMFxCol)
 
      endif
      
