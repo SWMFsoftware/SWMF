@@ -34,7 +34,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          TBGNDO2=TBGNDO
          TBGNHE2=TBGNHE
          TBGNDH2=TBGNDH
-
+         
 !alternative pressure condition using free expansion
 !      PBGNDO=POXYG(NDIM)*(CellVolume_C(nDim)/CellVolumeTop(1)  
 !     &     *                   (Rad(nDim)/(Rad(nDim)+DrBnd))**3.0)
@@ -54,52 +54,64 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 !      PBGNDH2=PBGNDH*(CellVolumeTop(1)/CellVolumeTop(2)  
 !     &     *        ((Rad(nDim)+DrBnd)/(Rad(nDim)+2.0*DrBnd))**3.0)
 
-      ScaleHeightO=2.0*1.380658e-16*(TOXYG(nDim)+Telect(nDim))
-     &     /(abs(Gravty(nDim))*xmso)
-      ScaleHeightH=2.0*1.380658e-16*(THYD(nDim)+Telect(nDim))
-     &     /(abs(Gravty(nDim))*xmsh)
-      ScaleHeightHe=2.0*1.380658e-16*(THEL(nDim)+Telect(nDim))
-     &     /(abs(Gravty(nDim))*xmshe)
-
-!      ScaleHeightO=1.380658e-16*(TOXYG(nDim)+Telect(nDim))
+         ScaleHeightO =2.0*1.380658e-16*(TOXYG(nDim)+Telect(nDim))
+     &        /(abs(Gravty(nDim))*xmso)
+         ScaleHeightH =2.0*1.380658e-16*(THYD(nDim)+Telect(nDim))
+     &        /(abs(Gravty(nDim))*xmsh)
+         ScaleHeightHe=2.0*1.380658e-16*(THEL(nDim)+Telect(nDim))
+     &        /(abs(Gravty(nDim))*xmshe)
+         
+!     ScaleHeightO=1.380658e-16*(TOXYG(nDim)+Telect(nDim))
 !     &     /(abs(Gravty(nDim)+4.8e-10*Efield(nDim-1)/xmso)*xmso)
 !      ScaleHeightH=1.380658e-16*(THYD(nDim)+Telect(nDim))
 !     &     /(abs(Gravty(nDim)+4.8e-10*Efield(nDim-1)/xmsh)*xmsh)
 !      ScaleHeightHe=1.380658e-16*(THEL(nDim)+Telect(nDim))
 !     &     /(abs(Gravty(nDim)+4.8e-10*Efield(nDim-1)/xmshe)*xmshe)
 !      
-      PBGNDO=POXYG(NDIM)*exp(-DrBnd/ScaleHeightO)
-      PBGNDH=PHYD(NDIM) *exp(-DrBnd/ScaleHeightH)
-      PBGNHE=PHEL(NDIM) *exp(-DrBnd/ScaleHeightHe)
+         PBGNDO=POXYG(NDIM)*exp(-DrBnd/ScaleHeightO)
+         PBGNDH=PHYD(NDIM) *exp(-DrBnd/ScaleHeightH)
+         PBGNHE=PHEL(NDIM) *exp(-DrBnd/ScaleHeightHe)
       
-!      PBGNDO2=PBGNDO*exp(-DrBnd/ScaleHeightO)
-!      PBGNDH2=PBGNDH*exp(-DrBnd/ScaleHeightH)
-!      PBGNHE2=PBGNHE*exp(-DrBnd/ScaleHeightHe)
 
-      PBGNDO2=PBGNDO
-      PBGNHE2=PBGNHE
-      PBGNDH2=PBGNDH
+!         PBGNDO = (POXYG(nDim-1)+ POXYG(nDim)- POXYG(nDim-2))*.8
+!         PBGNDH = (PHYD(nDim-1) + PHYD(nDim) - PHYD(nDim-2)) *.8
+!         PBGNHE = (PHEL(nDim-1) + PHEL(nDim) - PHEL(nDim-2)) *.8
+         
 
-      DBGNDO=PBGNDO/RGASO/TBGNDO
-      DBGNHE=PBGNHE/RGASHE/TBGNHE
-      DBGNDH=PBGNDH/RGASH/TBGNDH
-      
-      DBGNDO2=PBGNDO2/RGASO/TBGNDO2
-      DBGNHE2=PBGNHE2/RGASHE/TBGNHE2
-      DBGNDH2=PBGNDH2/RGASH/TBGNDH2         
+!         PBGNDO2=PBGNDO*exp(-DrBnd/ScaleHeightO)
+!         PBGNHE2=PBGNHE*exp(-DrBnd/ScaleHeightH)
+!         PBGNDH2=PBGNDH*exp(-DrBnd/ScaleHeightHe)
 
-      UBGNDO=DOXYG(nDim)/DBGNDO*AR12TOP(1)/AR23(nDim)*UOXYG(NDIM)
-      UBGNHE=DHEL(nDim) /DBGNHE*AR12TOP(1)/AR23(nDim)*UHEL(NDIM)
-      UBGNDH=DHYD(nDim) /DBGNDH*AR12TOP(1)/AR23(nDim)*UHYD(NDIM)
+         PBGNDO2=PBGNDO
+         PBGNHE2=PBGNHE
+         PBGNDH2=PBGNDH
+
+         DBGNDO=PBGNDO/RGASO/TBGNDO
+         DBGNHE=PBGNHE/RGASHE/TBGNHE
+         DBGNDH=PBGNDH/RGASH/TBGNDH
       
-      UBGNDO2=DBGNDO/DBGNDO2*AR12Top(2)/AR23Top(1)*UBGNDO
-      UBGNHE2=DBGNHE/DBGNHE2*AR12Top(2)/AR23Top(1)*UBGNHE
-      UBGNDH2=DBGNDH/DBGNDH2*AR12Top(2)/AR23Top(1)*UBGNDH
+         DBGNDO2=PBGNDO2/RGASO/TBGNDO2
+         DBGNHE2=PBGNHE2/RGASHE/TBGNHE2
+         DBGNDH2=PBGNDH2/RGASH/TBGNDH2         
+
+!      UBGNDO=DOXYG(nDim)/DBGNDO*AR12TOP(1)/AR23(nDim)*UOXYG(NDIM)
+!      UBGNHE=DHEL(nDim) /DBGNHE*AR12TOP(1)/AR23(nDim)*UHEL(NDIM)
+!      UBGNDH=DHYD(nDim) /DBGNDH*AR12TOP(1)/AR23(nDim)*UHYD(NDIM)
+!      
+!      UBGNDO2=DBGNDO/DBGNDO2*AR12Top(2)/AR23Top(1)*UBGNDO
+!      UBGNHE2=DBGNHE/DBGNHE2*AR12Top(2)/AR23Top(1)*UBGNHE
+!      UBGNDH2=DBGNDH/DBGNDH2*AR12Top(2)/AR23Top(1)*UBGNDH
       
-!      UBGNDO2=UBGNDO
-!      UBGNHE2=UBGNHE
-!      UBGNDH2=UBGNDH
-     
+         UBGNDO=UOXYG(NDIM)
+         UBGNHE=UHEL(NDIM)
+         UBGNDH=UHYD(NDIM)
+         
+         UBGNDO2=UBGNDO
+         UBGNHE2=UBGNHE
+         UBGNDH2=UBGNDH
+         
+
+         
       endif
       
       
