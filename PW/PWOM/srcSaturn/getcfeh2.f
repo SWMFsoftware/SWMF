@@ -1,18 +1,9 @@
-C This part was just for debugging this function
-       
-C      Program main
-C      b=2000.
-C      c=10.**14.
-C      d=9.109E-31
-C      a=getcfeh2(b,c,d)
-C      write(*,*) a
-C      end
 
 C This function numerically integrates the momentum crossesction to 
 C get the average crossection for a given temperature. The function returns
 C the electron collission frequency with H2
 
-      FUNCTION getcfeh2(TELECT,XH2,XMSE,UELECT)
+      real FUNCTION getcfeh2(TELECT,XH2,XMSE,UELECT)
       use ModConst, ONLY: cBoltzmann
 
       REAL sigmaD(29)
