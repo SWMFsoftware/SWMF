@@ -281,12 +281,16 @@ distclean: ENV_CHECK rmdir
 	@echo Distclean succeeded
 	@echo
 
-dist: distclean
+dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
+	./Config.pl -uninstall
+	-rm -rf */*/run_test
 	tar -cf tmp.tar  README
-	tar -rf tmp.tar  Makefile
+	tar -rf tmp.tar  Makefile 
+	tar -rf tmp.tar  Makefile.test          #^CMP FILE TESTING
+	tar -rf tmp.tar  output                 #^CMP FILE TESTING
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
 	tar -rf tmp.tar  .cvsignore
