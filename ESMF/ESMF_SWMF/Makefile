@@ -3,7 +3,7 @@ include ../../Makefile.def
 install:
 	touch src/Makefile.DEPEND
 	@(if([ ${OS}${COMPILER} == Darwinf95 ]); then \
-	   cp src/Makefile.oehmke               src/Makefile; \
+	   perl -ni -e 'print unless /\.f90\.o|FC_MOD|FREENO/' src/Makefile; \
 	   cp src/ESMF_SWMF_Driver.f90.oehmke   src/ESMF_SWMF_Driver.f90; \
 	   cp src/ESMF_SWMF_GridComp.f90.oehmke src/ESMF_SWMF_GridComp.f90; \
 	fi)
