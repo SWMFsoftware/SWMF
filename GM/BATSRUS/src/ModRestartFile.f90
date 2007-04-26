@@ -479,6 +479,17 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    if(Dx_BLK(iBlock) < 0 .or. Dy_BLK(iBlock) < 0 .or. Dz_BLK(iBlock) < 0 &
+         .or. Dt_BLK(iBlock) < 0 .or. tSimulationRead < 0)then
+       write(*,*)NameSub,': corrupt restart data!!!'
+       write(*,*)'iBlock  =', iBlock
+       write(*,*)'Dxyz    =', Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)
+       write(*,*)'Dt,tSim =', Dt_BLK(iBlock), tSimulationRead
+       write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
+       write(*,*)'State111=', State_VGB(1:nVar,1,1,1,iBlock)
+       call stop_mpi(NameSub//': corrupt restart data!!!')
+    end if
+
     if(DoTestMe)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
        write(*,*)NameSub,': dt,tSimRead =',dt_BLK(iBlock),tSimulationRead
@@ -678,7 +689,17 @@ contains
           Dz_BLK(iBlock) = Dxyz8_D(3)
           XyzStart_BLK(:,iBlock) = Xyz8_D
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = State8_VC
+       end if
 
+       if(Dx_BLK(iBlock) < 0 .or. Dy_BLK(iBlock) < 0 .or. Dz_BLK(iBlock) < 0 &
+            .or. Dt_BLK(iBlock) < 0)then
+          write(*,*)NameSub,': corrupt restart data!!!'
+          write(*,*)'iBlock  =',iBlock
+          write(*,*)'Dxyz    =',Dx_BLK(iBlock), Dy_BLK(iBlock), Dz_BLK(iBlock)
+          write(*,*)'Dt      =', Dt_BLK(iBlock)
+          write(*,*)'XyzStart=',XyzStart_BLK(:,iBlock)
+          write(*,*)'State111=',State_VGB(1:nVar,1,1,1,iBlock)
+          call stop_mpi(NameSub//': corrupt restart data!!!')
        end if
     end do
 
