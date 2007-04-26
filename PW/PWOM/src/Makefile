@@ -67,4 +67,5 @@ ${EXE}: ${EXEOBJECTS}
 	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
 
 distclean: clean
-	rm -f PLANET *_planet.f ModCommonPlanet.f90 Makefile.planet 
+	rm -f PLANET *_planet.f get_rate.f90 \
+		ModCommonPlanet.f90 Makefile.planet 
