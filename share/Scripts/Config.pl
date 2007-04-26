@@ -430,8 +430,11 @@ Information:
                (re)creates Makefile.conf, Makefile.def, make install
 
 -compiler=COMP copy Makefile.conf for a non-default F90 compiler COMP
+               Only works together with -install flag
+
 -mpi=VERSION   copy share/include/mpif90_OS_VERSION 
                into share/Library/src/mpif90.h
+               Only works together with -install flag
 
 Compilation:
 
