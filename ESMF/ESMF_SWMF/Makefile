@@ -1,8 +1,10 @@
 include ../../Makefile.def
 
+ESMF3 = `cd ${ESMF_DIR}; make info | grep ESMF_VERSION_STRING | grep 3`
+
 install:
 	touch src/Makefile.DEPEND
-	@(if([ ${OS}${COMPILER} == Darwinf95 ]); then \
+	@(if [ "$(ESMF3)" != "" ]; then \
 	   perl -ni -e 'print unless /\.f90\.o|FC_MOD|FREENO/' src/Makefile; \
 	   cp src/ESMF_SWMF_Driver.f90.oehmke   src/ESMF_SWMF_Driver.f90; \
 	   cp src/ESMF_SWMF_GridComp.f90.oehmke src/ESMF_SWMF_GridComp.f90; \
