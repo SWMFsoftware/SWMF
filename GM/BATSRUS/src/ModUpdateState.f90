@@ -87,8 +87,7 @@ contains
 
     if(oktest_me)write(*,*)'EnergyNew=',Energy_GBI(iTest,jTest,kTest,iBlk,:)
 
-
-    if(UseMultispecies)then
+    if(UseMultiSpecies)then
        ! Fix negative species densities
        State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBLK) = &
             max(0.0, State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBLK))
@@ -100,6 +99,27 @@ contains
                   sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBLK))
           end do; end do; end do
        end if
+    end if
+
+    if(UseMultiIon .and. index(Test_String,'fixvacuum') > 0)then
+       ! Replace very small densities with a fraction of the first fluid
+       do iFluid = 2, nFluid
+          call select_fluid
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if (State_VGB(iRho,i,j,k,iBLK) > &
+                  0.0002*State_VGB(Rho_,i,j,k,iBLK)) CYCLE
+             State_VGB(iRho,i,j,k,iBLK) = 0.0001*State_VGB(Rho_,i,j,k,iBLK)
+             State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) = &
+                  0.0001*State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK)
+             State_VGB(iP,i,j,k,iBLK) = 0.0001*State_VGB(P_,i,j,k,iBLK) &
+                  *MassFluid_I(1)/MassFluid_I(iFluid)
+
+             Energy_GBI(i,j,k,iBLK,iFluid) = inv_gm1*State_VGB(iP,i,j,k,iBLK) &
+                  + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK)**2) &
+                  / State_VGB(iRho,i,j,k,iBLK)
+
+          end do; end do; end do
+       end do
     end if
 
     if( TypeFluid_I(1)=='ion' .and. &
