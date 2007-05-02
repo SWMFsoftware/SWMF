@@ -16,6 +16,7 @@ MODULES = \
 METHODS = \
 	pw.o\
 	polar_wind.o\
+	implicit.o\
 	set_parameters.o\
 	initialize.o\
 	solver.o\
@@ -64,7 +65,7 @@ PWOM: DEPEND
 	@echo "PWOM.exe has been created"
 
 ${EXE}: ${EXEOBJECTS}
-	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE
+	${LINK.f90} ${Lflag1} -o ${EXE} ${EXEOBJECTS} -L${LIBDIR} -lSHARE -lTIMING
 
 distclean: clean
 	rm -f PLANET *_planet.f get_rate.f90 \
