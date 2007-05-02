@@ -22,6 +22,7 @@ install: bin
 
 PWOM:
 	@cd ${SHAREDIR}; make LIB
+	@cd ${TIMINGDIR};make LIB
 	@cd src;         make PWOM
 
 LIB:
