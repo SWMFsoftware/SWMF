@@ -143,6 +143,7 @@ clean:
 	@touch srcInterface/Makefile.DEPEND
 	cd srcInterface; make clean
 	@(if [ -d share ]; then cd share; make clean; fi);
+	@(if [ -d util ];  then cd util;  make clean; fi);
 
 distclean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
