@@ -4,6 +4,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE NEWBGD
       use ModCommonVariables
       use ModGmPressure
+      use ModPWOM, ONLY: iLine
       implicit none
 
       real :: ScaleHeightO,ScaleHeightH
