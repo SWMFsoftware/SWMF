@@ -286,7 +286,7 @@ subroutine PW_advance_line
        dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine), &
        TElect(:,iLine), &
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
-       OmegaLine_I(iLine), iUnitOutput=iUnitOutput(iLine),                        &
+       OmegaLine_I(iLine), iUnitOutput=iUnitOutput(iLine),                 &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,TypeSolver=TypeSolver,&
        IsVariableDt=IsVariableDt,IsRestart=IsRestart,DToutput=DToutput,    &
