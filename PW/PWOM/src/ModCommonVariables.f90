@@ -6,7 +6,7 @@ module ModCommonVariables
   use ModParameters
   
   integer iUnitInput, iUnitOutput, iUnitGraphics, iUnitRestart, &
-       iUnitCollision, iUnitSourceGraphics,iLine,nLine
+       iUnitCollision, iUnitSourceGraphics
   
   
   !    MSIS86 parameters
