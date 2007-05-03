@@ -4,7 +4,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE NEWBGD
       use ModCommonVariables
       use ModGmPressure
-
+      use ModPWOM, only: iLine
 
       if (TypeSolver == 'Godunov') then
 
