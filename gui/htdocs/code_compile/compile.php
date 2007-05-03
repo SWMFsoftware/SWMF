@@ -61,7 +61,7 @@ View <a href="viewlog.php?codename=<?php echo $codename ?>&logfile=command.log" 
 <hr>
 <?php
   $return = "";
-  Exec("ps -uxc | grep make | grep -v grep", $return);
+  Exec("ps uxc | grep make | grep -v grep", $return);
   if($return) {
     echo "
 <h2>Compile in progress ...</h2>
