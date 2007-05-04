@@ -55,6 +55,18 @@ contains
     real :: xxx, zzz, yyy, xxx1
     real :: DWZ0
     real :: delta_tau
+
+    integer :: nStepOld = -1
+
+    !-------------------------------------------------------------------------
+
+    ! find reconnection lines at the beginning of the run
+    if(n_Step /= nStepOld)then
+       nStepOld = n_Step
+       call set_rec_line
+       call set_rec_line1
+    end if
+
     ! DWZ for rec2 test     DWZ = 1
     !       DWZ = 0.25
     DWZ0 = alpha*sqrt(2.)*2.
