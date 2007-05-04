@@ -35,6 +35,7 @@ METHODS = \
 	get_electrodynamic.o\
 	print_electrodynamics.o\
 	write_restart.o\
+	set_upper_bc.o\
 	${OBJECTS_PLANET}
 
 LIBOBJECTS = ${MODULES} ${METHODS}
