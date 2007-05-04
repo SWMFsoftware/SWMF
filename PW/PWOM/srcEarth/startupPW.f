@@ -373,7 +373,7 @@ CALEX I believe these are heat conduction coef. at upper boundary
       CZHEOX=0.57*5.**1.5/XMSO
       CZHEHD=0.28*5.**1.5/XMSH
       ETOP=ETOP*DRBND/1.23E-6
-      CALL NEWBGD
+      CALL PW_set_upper_bc
 3     FORMAT(4X,I6)
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

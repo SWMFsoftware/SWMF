@@ -83,7 +83,7 @@ Subroutine POLAR_WIND
      call advect
      CALL CLTEMPW
      CALL CLFME2W
-     CALL NEWBGD
+     CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
      CALL ELFLDW         
      
@@ -102,7 +102,7 @@ Subroutine POLAR_WIND
      
      !    finish update by calculating boundaries, collision source and electric field
      !    these will be used in the next time step
-     CALL NEWBGD
+     CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
      CALL ELFLDW
      

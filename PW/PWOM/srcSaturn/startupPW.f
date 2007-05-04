@@ -381,7 +381,7 @@ C!      TCSFHE=HLPHE*TSURHE**2.5
       XTNMAX=TEMP
 
       ETOP=ETOP*DRBND/1.23E-6
-      CALL NEWBGD
+      CALL PW_set_upper_bc
 3     FORMAT(4X,I6)
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
