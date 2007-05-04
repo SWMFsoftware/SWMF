@@ -2882,7 +2882,7 @@ Param/SSS_3000		NameIncludeFile
 ! Include a library file from Param/ or any file from anywhere else.
 ','type' => 't'}],'name' => 'command','attrib' => {'name' => 'INCLUDE'},'type' => 'e'}],'name' => 'commandgroup','attrib' => {'name' => 'SCRIPT COMMANDS'},'type' => 'e'},{'content' => [{'content' => '
 	Either command #SOLARWIND or #SOLARWINDFILE must be used!
-','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '($SwRhoDim > 0) or $UseSolarWindFile or $_NameComp ne \'GM\''},'type' => 'e'},{'content' => [{'content' => '
+','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '($SwNDim > 0) or $UseSolarWindFile or $_NameComp ne \'GM\''},'type' => 'e'},{'content' => [{'content' => '
 	Part implicit scheme requires more than 1 implicit block!
 ','type' => 't'}],'name' => 'rule','attrib' => {'expr' => '$MaxImplBlock>1 or not $UsePartImplicit or not $MaxImplBlock'},'type' => 'e'},{'content' => [{'content' => '
 	Full implicit scheme should be used with equal number of 

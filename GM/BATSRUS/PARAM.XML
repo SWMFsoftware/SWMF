@@ -4298,7 +4298,7 @@ Param/SSS_3000		NameIncludeFile
 !!!!!!!!!!!!!!!!!!!!!!!!! GLOBAL RULES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -->
-<rule expr="($SwRhoDim > 0) or $UseSolarWindFile or $_NameComp ne 'GM'">
+<rule expr="($SwNDim > 0) or $UseSolarWindFile or $_NameComp ne 'GM'">
 	Either command #SOLARWIND or #SOLARWINDFILE must be used!
 </rule>
 
