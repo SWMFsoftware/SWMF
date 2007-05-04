@@ -3777,23 +3777,23 @@ with the solar wind parameters.
 </command>
 
 <command name="SOLARWIND" if="$_IsFirstSession">
-	<parameter name="SwRhoDim" type="real" min="-1"	default="5"	/>
-	<parameter name="SwTDim"   type="real" min="-1"	default="181712.175" />
+	<parameter name="SwNDim"   type="real" min="-1"	default="5"	/>
+	<parameter name="SwTDim"   type="real" min="-1"	default="100000." />
 	<parameter name="SwUxDim"  type="real"		default="-400"	/>
 	<parameter name="SwUyDim"  type="real"		default="0"	/>
 	<parameter name="SwUzDim"  type="real"		default="0"	/>
 	<parameter name="SwBxDim"  type="real"		default="0"	/>
 	<parameter name="SwByDim"  type="real"		default="0"	/>
-	<parameter name="SwBzDim"  type="real"		default="5"	/>
+	<parameter name="SwBzDim"  type="real"		default="-5"	/>
 #SOLARWIND
-5.0			SwRhoDim [n/cc]
-181712.175		SwTDim [K]
+5.0			SwNDim  [n/cc]
+100000.0		SwTDim  [K]
 -400.0			SwUxDim [km/s]
 0.0			SwUyDim [km/s]
 0.0			SwUzDim [km/s]
 0.0			SwBxDim [nT]
 0.0			SwByDim [nT]
-5.0			SwBzDim [nT]
+-5.0			SwBzDim [nT]
 
 This command defines the solar wind parameters for the GM component.
 The default values are all 0.0-s.
@@ -4194,101 +4194,10 @@ T			UseBody2   ! Rest of the parameters read if .true.
 <!-- ^CFG END SECONDBODY -->
 </commandgroup>
 
-<commandgroup name="SOLAR PROBLEM TYPES">
+<commandgroup name="HELIOSPHERE SPECIFIC COMMANDS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!! SOLAR PROBLEM TYPES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!! HELIOSPHERE SPECIFIC COMMANDS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-<command name="HELIOSPHERE" if="$_IsFirstSession and $_NameComp ne 'GM'">
-	<parameter name="BodyTDim"   type="real" min="0" default="2.85E06"/>
-	<parameter name="BodyRhoDim" type="real" min="0" default="1.50E8"/>
-	<parameter name="qSun"	     type="real" min="0" default="25.0"/>
-	<parameter name="tHeat"	     type="real" min="0" default="1.75"/>
-	<parameter name="rHeat"	     type="real" min="0" default="1.0"/>
-	<parameter name="SigmaHeat"  type="real" min="0" default="4.5"/>
-	<parameter name="DoInitRope" type="logical" default="F" />
-	<if expr="$DoInitRope">
-	 <parameter name="CmeA"	     type="real" min="0" default="0.7"	  />
-	 <parameter name="CmeR1"     type="real" min="0" default="1.2"    />
-	 <parameter name="CmeR0"     type="real" min="0" default="1.0"    />
-	 <parameter name="CmeA1"     type="real"         default="0.23"   />
-	 <parameter name="CmeAlpha"  type="real"	 default="0.0"	  />
-	 <parameter name="CmeRho1"   type="real" min="0" default="2.5E-12"/>
-	 <parameter name="CmeRho2"   type="real" min="0" default="2.0E-13"/>
-	 <parameter name="ModulationRho" type="real" min="0" max="10"
-							 default="0.0"	  />
-	 <parameter name="ModulationP" type="real" min="0" max="10"
-							 default="0.0"  />
-	 <parameter name="OrientationGL98" type="real" min="-360" max="360"
-							default="0.0" />
-	 <parameter name="LatitudeGL98" type="real" min="-90" max="90"
-							default="0.0" />
-	 <parameter name="LongitudeGL98" type="real" min="-360" max="360"
-							default="0.0" />
-	</if>
-
-#HELIOSPHERE
-2.85E06			BodyTDim	[K]
-1.50E8			BodyRhoDim	[N/ccm]
-25.00			qSun		
-1.75			tHeat
-1.00			rHeat
-4.50			SIGMAheat
-F			InitRope
-0.7     		CmeA    [scaled] contraction distance
-1.2     		CmeR1   [scaled] distance of spheromac from sun center
-1.0     		CmeR0   [scaled] diameter of spheromac
-0.23    		CmeA1   [Gauss]  spheromac B field strength
-0.0     		CmeAlpha[scaled] cme acceleration rate
-2.5E-12 		CmeRho1 [kg/m^3] density of background corona before contract
-2.0E-13 		CmeRho2 [kg/m^3] density of background corona after contract 
-0.0                     ModulationRho
-0.0                     ModulationP
-0.0			OrientationGL98 [deg]
-0.0			LatitudeGL98 [deg]
-0.0			LongitudeGL98 [deg]
-
-This command defines the heliosphere parameters with a CME model.
-The coronal eruptive event generator is based on the
-Gibson and Low (GL) analytical solution prescribing a
-three-dimensional twisted magnetic flux rope in
-hydrostatic equilibrium in the presence of gravity.
-The GL solution is described in the Astrophysical
-Journal, volume 493, page 460.
-This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric  flux
-rope.  The flux rope is of radius Cme_R0 and is
-placed Cme_R1 from the origin (solar center).  The
-stretching transformation draws space radially inward
-toward the origin by a distance of Cme_A, which
-distorts the flux rope to have a tear-drop shape.
-The parameter Cme_A1 modulates the magnetic field strength
-and negative values of Cme_A1 reverse the overall field
-direction.  For the GL flux rope to be in equilibrium, requires
-both dense plasma in the form of a filament inside the rope,
-(prescribed by the GL solution) as well as plasma pressure
-outside the flux rope which tends to be large than the
-solar corona can provide.  To initiate an eruption (the CME)
-we linearly superimpose the GL flux rope in the solar
-corona within the streamer belt.  The location of the flux
-rope is determined by the parameters cRotxGl98, cRotYGl98
-and cRotZGl98.  The flux rope is line-tied with both ends
-attached to the inner boundary.  The eruption follows from
-the flux rope being out of equilibrium, owing to a reduction
-in filament mass (set with ModulationRho) and from pressure
-of the corona being unable to balance the magnetic pressure
-of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the corona.  Eruption energy
-increases with flux rope size, field strength, stretching
-deformation and the buoyancy of the flux rope.
-
-The flux rope can be rotated to an arbitrary position.
-The LatitudeGM98 and LongitudeGL98 parameters define the position
-of the center of the fluxrope in the coordinate system of the Solar
-Corona component. The OrientationGL98 parameter determines the 
-orientation of the fluxrope relative to the East-West direction
-(clock-wise).
-</command>
-
 <command name="HELIOUPDATEB0" if="$_NameComp ne 'GM'">
 	<parameter name="DtUpdateB0" type="real" min="-1" default="0.0001"/>
 
@@ -4345,95 +4254,6 @@ from the SC component to the IH component. The resolution should
 be similar to the grid resolution of the coarser of the SC and IH grids.
 This command can only be used in the first session by the IH component. 
 Default values are shown above.
-</command>
-
-<command name="CME" if="$_IsFirstSession and $_NameComp ne 'GM'" >
-	<parameter name="TypeCme" type="string" input="select">
-		<option name="Low" default="T" />
-	</parameter>
-	<parameter name="CmeA"	    type="real" min="0"	default="0.7"	/>
-	<parameter name="CmeR1"	    type="real" min="0"	default="1.2"	/>
-	<parameter name="CmeR0"     type="real" min="0"	default="1.0"	/>
-	<parameter name="CmeA1"     type="real" 	default="0.23"	/>
-	<parameter name="CmeAlpha"  type="real"		default="0.0"	/>
-	<parameter name="CmeRho1"   type="real" min="0"	default="2.5E-12"/>
-	<parameter name="CmeRho2"   type="real" min="0"	default="2.0E-13"/>
-	<parameter name="CmeB1Dim"  type="real"		default="1.0"	/>
-	<parameter name="CmeUErupt" type="real" min="0" default="4.0E5"	/>
-#CME
-Low		TypeCme   model type ('Low')
-0.7		CmeA    [scaled] contraction distance
-1.2             CmeR1   [scaled] distance of spheromac from sun center
-1.0             CmeR0   [scaled] diameter of spheromac
-0.23		CmeA1   [Gauss]  sets spheromac B strength which can be negative
-0.0		Cmealpha   [scaled] cme acceleration rate
-2.5E-12		CmeRho1 [kg/m^3] density of background corona before contract
-2.0E-13		CmeRho2 [kg/m^3] density of background corona after contract 
-1.0             CmeB1Dim [Gauss] field strength of dipole-type B field
-4.0E5           CmeUErupt  [m/s] cme velocity
-
-The coronal eruptive event generator (TypeCme Low) is based on the
-Gibson and Low (GL) analytical solution prescribing a
-three-dimensional twisted magnetic flux rope in
-hydrostatic equilibrium in the presence of gravity.
-The GL solution is described in the Astrophysical
-Journal, volume 493, page 460.
-This flux rope is formed by applying a mathematical
-stretching operation to axisymmetric spheromak flux
-rope.  The flux rope is of radius Cme_R0 and is
-placed Cme_R1 from the origin (solar center).  The
-stretching transformation draws space radially inward
-toward the origin by a distance of Cme_A, which
-distorts the flux rope to have a tear-drop shape.
-The parameter Cme_A1 modulates the magnetic field strength
-and negative values of Cme_A1 reverse the overall field
-direction.  For the GL flux rope to be in equilibrium, requires
-both dense plasma in the form of a filament inside the rope,
-(prescribed by the GL solution) as well as plasma pressure
-outside the flux rope which tends to be large than the
-solar corona can provide.  To initiate an eruption (the CME)
-we linearly superimpose the GL flux rope in the solar
-corona within the streamer belt.  The location of the flux
-rope is determined by the parameters cRotxGl98, cRotYGl98
-and cRotZGl98.  The flux rope is line-tied with both ends
-attached to the inner boundary.  The eruption follows from
-the flux rope being out of equilibrium, owing to a reduction
-in filament mass (set with ModulationRho) and from pressure
-of the corona being unable to balance the magnetic pressure
-of the flux rope.  The eruption takes the form of the flux
-rope being bodily expelled from the corona.  Eruption energy
-increases with flux rope size, field strength, stretching
-deformation and the buoyancy of the flux rope.
-Default values are shown above for the GL flux rope CME model.
-</command>
-
-<command name="ARCADE" if="$_IsFirstSession and $_NameComp ne 'GM'">
-	<parameter name="tArcDim"	type="real" min="0"
-							default="1.0E6" />
-	<parameter name="RhoArcDim"	type="real" min="0"
-							default="1.0E-12"/>
-	<parameter name="bArcDim"	type="real" min="0"
-							default="0.718144" />
-	<parameter name="ByArcDim"	type="real"	default="1.0E6" />
-	<parameter name="UzArcDim"	type="real"	default="5.0E3" />
-	<parameter name="Phi0Arc"	type="real"	default="0.5"	/>
-	<parameter name="MuArc"		type="real"	default="1.3"	/>
-	<parameter name="ExpArc"	type="real" min="0"
-							default="3"	/>
-	<parameter name="WidthArc"	type="real" min="0"
-							default="0.5"	/>
-#ARCADE
-1.0E6                   tArcDim   [K]      1.0E6
-1.0E-12                 RhoArcDim [kg/m^3] 1.0E-12
-0.71814                 bArcDim   [Gauss]  0.718144
-0.0                     ByArcDim  [Gauss]
-5.0E3                   UzArcDim  [5.0E3 m/s]
-0.5                     Phi0Arc
-1.3                     MuArc
-3                       ExpArc
-0.5                     WidthArc
-
-! Default values are shown. Parameters for problem_arcade
 </command>
 </commandgroup>
 
