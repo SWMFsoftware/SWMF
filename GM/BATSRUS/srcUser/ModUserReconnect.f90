@@ -9,9 +9,14 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real, parameter :: VersionUserModule = 1.0
+  real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: NameUserModule = &
        'Non-Gyrotropic Reconnection Model, Masha Kuznetsova'
+
+
+  real, parameter :: xLineMin  = -87.0 ! -48.0 ! -87.0 originally
+  real, parameter :: xLineMax  = -3.0  
+  real, parameter :: xLineMax1 = -5.0  
 
 
   real, dimension(1:nI,1:nJ,1:nK):: &
@@ -173,7 +178,7 @@ contains
     integer :: i,j,k
     logical :: oktest, oktest_me
     integer :: ii,jj
-    integer :: j1, i1, iX, jY
+    integer :: j1, iX, jY
     integer :: iError
     real :: XX0tmp, XX0max, XX0max_all,XX0tmp_all, yj1
     real :: Rho1, Rho2, Rho3, Rho4, Rho0, P0, BXPR, DWX0, RhoU1, RhoU2
@@ -194,6 +199,7 @@ contains
     do jj=1, njj
        !   YYR(jj)=0.03125+0.0625*(jj -1)
        YYR(jj)=0.0625+0.125*(jj-1)
+
        XX0(jj) = -100.
        XX0tmp = -200.
        XX0max = -100.
@@ -226,27 +232,22 @@ contains
        iPEmax = -1
        iBLKmax = -1
 
-       do iBLK = 1,nBlockMax
+       BLOCKS: do iBLK = 1,nBlockMax
 
+          if (unusedBLK(iBLK)) CYCLE BLOCKS
 
-
-          if (unusedBLK(iBLK)) cycle
-
-
-          if (x_BLK(nI,1,1,iBLK) > -87. .and. &
-               x_BLK(nI,1,1,iBLK) < -3.  .and.&
-               YYR(jj) >= y_BLK(1,1,1,iBLK)       - 0.50*dy_BLK(iBLK) .and. &
+          if (x_BLK(nI,1,1,iBLK) > xLineMin .and. &
+               x_BLK(nI,1,1,iBLK) < xLineMax  .and.&
+               YYR(jj) >= y_BLK(1,1,1,iBLK) - 0.50*dy_BLK(iBLK) .and. &
                YYR(jj) < y_BLK(1,nJ,1,iBLK) + 0.50*dy_BLK(iBLK) .and. &
-               0.25*dz_BLK(iBLK) >=  z_BLK(1,1,1,iBLK)       - 0.50*dz_BLK(iBLK) .and. &
-               0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.50*dz_BLK(iBLK) ) then
+               0.25*dz_BLK(iBLK) >=  z_BLK(1,1,1,iBLK)- 0.5*dz_BLK(iBLK) .and.&
+               0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.5*dz_BLK(iBLK) ) then
 
              yj1=(YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-             j1=floor(yj1)
-
+             j1=max(1,floor(yj1))
 
              !       write(*,*)'me_world=',iproc,'iBLK=',iBLK,'YYR=',yyR(jj),'j1=',j1,'yj1=',yj1
-             do i1=1,nI
-                i = nI+1-i1
+             do i=nI,1,-1
                 !
                 if (B0zCell_BLK(i+1,j1,1,iBLK)+State_VGB(Bz_,i+1,j1,1,iBLK) > 0. .and. &
                      B0zCell_BLK(i-1,j1,1,iBLK)+State_VGB(Bz_,i-1,j1,1,iBLK) <=0.) then
@@ -258,14 +259,21 @@ contains
                       iX=i
                       iBLKmax = iBLK
                       jY = j1
+                      !write(*,*)'!!! jj,yyR,iBLK,y111,dy,yj1,j1=',&
+                      !     jj,yyR(jj),iBLK,y_BLK(1,1,1,iBLK),dy_BLK(iBLK),yj1,j1
+                      !write(*,*)'!!! Bz(i-1,i+1)=',&
+                      !     B0zCell_BLK(i-1,j1,1,iBLK)+State_VGB(Bz_,i-1,j1,1,iBLK),&
+                      !     B0zCell_BLK(i+1,j1,1,iBLK)+State_VGB(Bz_,i+1,j1,1,iBLK)
+
+                      !write(*,*)'!!! new me,iBlk,iX,jY,XX0=',&
+                      !     iproc,iBLK,iX,jY,XX0tmp
                    endif
-                   !       write(*,*)'me_world=',iproc,'iBLK=',iBLK,'XX0tmp=',XX0tmp
-                   goto 20
+                   EXIT BLOCKS
                 endif
              enddo
 
           end if
-20     enddo
+       enddo BLOCKS
 
        call MPI_ALLREDUCE(XX0max, XX0max_all, 1, &
             MPI_REAL, MPI_MAX, iComm,iError)
@@ -412,7 +420,7 @@ contains
     integer :: i,j,k
     logical :: oktest, oktest_me
     integer :: ii,jj
-    integer :: j1, i1, iX, jY
+    integer :: j1, iX, jY
     integer :: iError
     real :: XX0tmp, XX0max, XX0max_all,XX0tmp_all, yj1
     real :: Rho1, Rho2, Rho3, Rho4, Rho0, P0, BXPR, DWX0, RhoU1, RhoU2
@@ -465,27 +473,24 @@ contains
        iPEmax = -1
        iBLKmax = -1
 
-       do iBLK = 1,nBlockMax
-
-
+       BLOCKS: do iBLK = 1,nBlockMax
 
           if (unusedBLK(iBLK)) cycle
 
 
-          if (x_BLK(nI,1,1,iBLK) > -87. .and. &
-               x_BLK(nI,1,1,iBLK) < -5.  .and.  x_BLK(nI,1,1,iBLK) < XX0(jj) - 2. .and. &
+          if (x_BLK(nI,1,1,iBLK) > xLineMin .and. &
+               x_BLK(nI,1,1,iBLK) < xLineMax1 .and.  x_BLK(nI,1,1,iBLK) < XX0(jj) - 2. .and. &
                YYR(jj) >= y_BLK(1,1,1,iBLK)       - 0.50*dy_BLK(iBLK) .and. &
                YYR(jj) < y_BLK(1,nJ,1,iBLK) + 0.50*dy_BLK(iBLK) .and. &
                0.25*dz_BLK(iBLK) >=  z_BLK(1,1,1,iBLK)       - 0.50*dz_BLK(iBLK) .and. &
                0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.50*dz_BLK(iBLK) ) then
 
              yj1=(YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-             j1=floor(yj1)
+             j1=max(1,floor(yj1))
 
 
              !       write(*,*)'me_world=',iproc,'iBLK=',iBLK,'YYR=',yyR(jj),'j1=',j1,'yj1=',yj1
-             do i1=1,nI
-                i = nI+1-i1
+             do i=nI,1,-1
                 !
                 if (B0zCell_BLK(i+1,j1,1,iBLK)+State_VGB(Bz_,i+1,j1,1,iBLK) > 0. .and. &
                      B0zCell_BLK(i-1,j1,1,iBLK)+State_VGB(Bz_,i-1,j1,1,iBLK) <=0.) then
@@ -499,12 +504,12 @@ contains
                       jY = j1
                    endif
                    !       write(*,*)'me_world=',iproc,'iBLK=',iBLK,'XX0tmp=',XX0tmp
-                   goto 20
+                   EXIT BLOCKS
                 endif
              enddo
 
           end if
-20     enddo
+       enddo BLOCKS
 
        call MPI_ALLREDUCE(XX0max, XX0max_all, 1, &
             MPI_REAL, MPI_MAX, iComm,iError)
