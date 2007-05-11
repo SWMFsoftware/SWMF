@@ -3,6 +3,7 @@
 module ModUser
 
   use ModSize,     ONLY: nI,nJ,nK,gcn,nBLK
+  use ModPhysics,  ONLY: ElectronCharge
 
   use ModUserEmpty, &
        IMPLEMENTED1 => user_calc_sources, &
@@ -10,36 +11,38 @@ module ModUser
 
   include 'user_module.h' !list of public methods
 
-  real, parameter :: VersionUserModule = 1.2
+  real, parameter :: VersionUserModule = 1.3
   character (len=*), parameter :: NameUserModule = &
        'Non-Gyrotropic Reconnection Model, Kuznetsova, Toth'
 
-
-  integer, parameter :: njj=170
-
   real, parameter :: UnsetX_ = -100.0
 
-  real :: xLineMin  = -87.0 ! -48.0 ! -87.0 originally
-  real :: xLineMax  = -3.0  
-  real :: xLineMax1 = -5.0  
+  ! Reconnection region where source terms are applied
   real :: xRecoMin  = -99.0
-  real :: xRecoMax  = 0.0
+  real :: xRecoMax  =   0.0
 
+  ! Search region for reconnection line
+  real :: xLineMin  = -87.0
+  real :: xLineMax  =  -3.0 ! for first line
+  real :: xLineMax1 =  -5.0 ! for second line
 
-  !			       njj=145
-  !                              njj=120
-  !                              njj=192
-  !
-  ! taken from small scale runs
-  real :: alpha = 0.156250
-  !
-  !!         real, parameter :: alpha = 0.036
+  real :: yLineMax = 23.38  ! maximum distance in Y direction
+  real :: DyLine   = 0.125  ! Y resolution of reconnection line search
+  integer :: nJJ   = 187    ! = floor(yLineMax/DyLine)
 
-  real, dimension(1:njj) :: YYR, XX0, DWZ_0, DWX_0, EF0_0, &
-       BZPR_0, VXPR_0, Cos_Thet_0, Sin_Thet_0
-  real, dimension(1:njj) :: XX1, DWZ_1, DWX_1, EF0_1, &
-       BZPR_1, VXPR_1, Cos_Thet_1, Sin_Thet_1
+  integer, parameter :: MaxJJ=1000 ! should exceed nJJ
 
+  ! By default assume hydrogene for the effective ion mass
+  real :: IonMassReconnect = 1.0, IonMassPerCharge
+
+  real, dimension(MaxJJ) :: YYR, &
+       XX0, DWZ_0, DWX_0, EF0_0, BZPR_0, VXPR_0, Cos_Thet_0, Sin_Thet_0, &
+       XX1, DWZ_1, DWX_1, EF0_1, BZPR_1, VXPR_1, Cos_Thet_1, Sin_Thet_1
+
+  integer, parameter :: nRecParam=7, dBzDx_=1, dVxDx_=2, WidthX_=3, &
+       Efield_=4, WidthZ_=5, CosTheta_=6, SinTheta_=7
+
+  real :: RecParam_I(nRecParam)
 
 contains
 
@@ -50,23 +53,31 @@ contains
 
     character (len=100) :: NameCommand
     !-------------------------------------------------------------------------
-    
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
-       case('#LIMITS')
+       case('#LIMITX')
           call read_var('xRecoMin',xRecoMin)
           call read_var('xRecoMax',xRecoMax)
           call read_var('xLineMin',xLineMin)
           call read_var('xLineMax',xLineMax)
           call read_var('xLineMax1',xLineMax1)
-       case('#ALPHA')
-          call read_var('alpha',alpha)
+
+       case('#LIMITY')
+          call read_var('yLineMax',yLineMax)
+          call read_var('DyLine',DyLine)
+          nJJ = nint(yLineMax / DyLine)
+
+          write(*,*)'Setting nJJ = ',nJJ
+
+       case('#IONMASS')
+          call read_var('IonMass', IonMassReconnect)
 
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
+
        case default
           if(iProc==0) call stop_mpi( &
                'user_read_inputs: unrecognized command: '//NameCommand)
@@ -96,42 +107,61 @@ contains
 
     integer :: nStepOld = -1
 
+    character(len=*), parameter :: NameSub='user_calc_sources'
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
+
+    IonMassPerCharge = IonMassReconnect / ElectronCharge
 
     ! find reconnection lines at the beginning of the time step
     if(n_Step /= nStepOld)then
        nStepOld = n_Step
        call set_rec_line
        call set_rec_line1
-    end if
 
-    ! DWZ for rec2 test     DWZ = 1
-    !       DWZ = 0.25
-    !DWZ0 = alpha*sqrt(2.)*2.
-    !write(*,*)'!!! DWZ0 = ',DWZ0
+       call set_oktest(NameSub, DoTest, DoTestMe)
+       if (DoTestMe) then
+          do jj = 1, nJJ/2+1, nJJ/4
+             write(*,*)'jj=',jj,' Y=',YYR(jj)
+             if(XX0(jj) <= UnsetX_) CYCLE
+             write(*,*)'XX0=',XX0(jj), &
+                  'BZPR=',BZPR_0(1), 'VXPR=',VXPR_0(jj), &
+                  'DWX=', DWX_0(jj), 'DWZ=',DWZ_0(jj), &
+                  'EF0=', EF0_0(jj)
+             !    'CosThet=',Cos_Thet_0(1), 'SinThet=', Sin_Thet_0(jj)
+
+             if(XX1(jj) <= UnsetX_) CYCLE
+             write(*,*)'XX1=',XX1(jj), &
+                  'BZPR=',BZPR_1(1), 'VXPR=',VXPR_1(jj), &
+                  'DWX=', DWX_1(jj), 'DWZ=',DWZ_1(jj), &
+                  'EF0=', EF0_1(jj)
+             !    'CosThet=',Cos_Thet_1(1), 'SinThet=', Sin_Thet_1(jj)
+          end do
+       endif
+    end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        xt = x_BLK(i,j,k,globalBLK)
-       yt = y_BLK(i,j,k,globalBLK)
+       yt = abs(y_BLK(i,j,k,globalBLK))
        zt = z_BLK(i,j,k,globalBLK)
 
-       !jj = 1 + floor((abs(yt) - 0.125)/0.25)
-       !jj = 1 + floor((abs(yt) - 0.5*dy_BLK(globalBLK))/dy_BLK(globalBLK))
+       if( yt > yLineMax) CYCLE
 
-       jj = 1 + floor((abs(yt) - 0.0625)/0.125)
-       jj = max(1,jj)
+       jj = 1 + (yt - DyLine/2)/DyLine
 
-       ! if (jj > floor(18./dy_BLK(globalBLK))-1) CYCLE ???
-
-       if (jj > 143) CYCLE !!!
+       if(jj < 1 .or. jj > nJJ)then
+          write(*,*)'ERROR: yt, jj, nJJ=',yt,jj,nJJ
+          call stop_mpi('jj index out of 1..nJJ range')
+       end if
 
        if(xt > xRecoMin .and. xt < xRecoMax .and. XX0(jj) > UnsetX_)then
 
           InvWidthX = 2/DWX_0(jj)
-          ! InvWidthZ = 2/DWZ_0(jj) !!!
-          InvWidthZ = 2/(alpha*2.*sqrt(2.)) !!!
+          InvWidthZ = 2/DWZ_0(jj)
+          ! InvWidthZ = 2/(IonMassPerCharge*2.*sqrt(2.)) !!! Masha's experiment
+
           xxx = InvWidthX*(xt - XX0(jj))
-          yyy = yt/25.
+          yyy = yt/yLineMax
           zzz = InvWidthZ*zt
           Ey  = EF0_0(jj)/(cosh(zzz)*cosh(xxx)*cosh(yyy))
 
@@ -152,10 +182,10 @@ contains
             .and. XX1(jj) < XX0(jj)-DWX_0(jj)*0.5) then
 
           InvWidthX = 2/DWX_1(jj)
-          ! InvWidthZ = 2/DWZ_1(jj) !!!
-          InvWidthZ = 2/(alpha*2.*sqrt(2.)) !!!
+          InvWidthZ = 2/DWZ_1(jj)
+
           xxx = InvWidthX*(xt - XX1(jj))
-          yyy = yt/25.
+          yyy = yt/yLineMax
           zzz = InvWidthZ*zt
           Ey  = EF0_1(jj)/(cosh(zzz)*cosh(xxx)*cosh(yyy))
 
@@ -193,28 +223,14 @@ contains
     integer :: iPE, iPEmax, iBLK, iBLKmax
 
     integer :: i,j,k
-    logical :: oktest, oktest_me
     integer :: ii,jj
     integer :: j1, iX, jY
     integer :: iError
-    real :: XX0tmp, XX0max, XX0max_all, yj1
-    real :: Rho1, Rho2, Rho3, Rho4, Rho0, P0, BXPR, BzPr, RhoU1, RhoU2
-    real :: Jxx, Jyy, Jxy, CosThet, SinThet
-    real :: VXPRX, VXPRY, VYPRX, VYPRY
-    real,  dimension(1:7) :: qval
-    real, external :: point_value1
-    real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-         BX,BY,BZ,B2
-    !
-
-
-
+    real :: XX0max, XX0max_all, yj1
     !--------------------------------------------------------------------------
-
-
     do jj=1, njj
        !   YYR(jj)=0.03125+0.0625*(jj -1)
-       YYR(jj)=0.0625+0.125*(jj-1)
+       YYR(jj) = DyLine/2 + (jj-1)*DyLine
 
        XX0(jj) = UnsetX_
        XX0max  = UnsetX_
@@ -226,13 +242,13 @@ contains
        EF0_0(jj) = 0.
        Cos_Thet_0(jj) = 1.
        Sin_Thet_0(jj) = 0.
-       qval(1) = -1.
-       qval(2) = 0.
-       qval(3) = -1.
-       qval(4) = 0.
-       qval(5) = -1.
-       qval(6) = 1.
-       qval(7) = 0.
+       RecParam_I(1) = -1.
+       RecParam_I(2) = 0.
+       RecParam_I(3) = -1.
+       RecParam_I(4) = 0.
+       RecParam_I(5) = -1.
+       RecParam_I(6) = 1.
+       RecParam_I(7) = 0.
        !
        !
        !
@@ -246,18 +262,18 @@ contains
 
           ! Check if block is within the search region
           if ( x_BLK(nI,1,1,iBLK) > xLineMin .and. &
-               x_BLK(nI,1,1,iBLK) < xLineMax  .and.&
+               x_BLK(nI,1,1,iBLK) < xLineMax .and. &
                YYR(jj) >= y_BLK(1,1,1,iBLK)  - 0.5*dy_BLK(iBLK) .and. &
                YYR(jj) <  y_BLK(1,nJ,1,iBLK) + 0.5*dy_BLK(iBLK) .and. &
                0.25*dz_BLK(iBLK) >=z_BLK(1,1,1,iBLK)  - 0.5*dz_BLK(iBLK) .and.&
                0.25*dz_BLK(iBLK) < z_BLK(1,1,nK,iBLK) + 0.5*dz_BLK(iBLK) ) then
 
              ! Find the j index corresponding to YYR
-             yj1=(YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)+1.
-             j1=max(1,floor(yj1))
+             yj1 = (YYR(jj)-y_BLK(1,1,1,iBLK))/dy_BLK(iBLK)  + 1
+             j1  = max(1,floor(yj1))
 
              do i=nI,1,-1
-                !
+                ! Find reversal in Bz
                 if ( B0zCell_BLK(i+1,j1,1,iBLK) + &
                      State_VGB(Bz_,i+1,j1,1,iBLK) > 0. .and. &
                      B0zCell_BLK(i-1,j1,1,iBLK) + &
@@ -279,106 +295,30 @@ contains
        call MPI_ALLREDUCE(XX0max, XX0max_all, 1, MPI_REAL,MPI_MAX,iComm,iError)
        XX0(jj) = XX0max_all
 
-
        ! Calculate the reconnection box size and electric field
        if (XX0max == XX0max_all .and. XX0max_all > xRecoMin) then
           iPE = iProc
-          !
-          BX = State_VGB(Bx_,:,:,:,iBLKmax)+B0xCell_BLK(:,:,:,iBLKmax)
-          BY = State_VGB(By_,:,:,:,iBLKmax)+B0yCell_BLK(:,:,:,iBLKmax)
-          BZ = State_VGB(Bz_,:,:,:,iBLKmax)+B0zCell_BLK(:,:,:,iBLKmax)
-          !        B2(:,:,:) = BX**2+BY**2+BZ**2
-          Jyy=0.5*((BX(iX,jY,2)-BX(iX,jY,0))/dz_BLK(iBLKmax) - &
-               (BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/dx_BLK(iBLKmax))
-          Jxx=0.5*((BZ(iX,jY+1,1)-BZ(iX,jY-1,1))/dy_BLK(iBLKmax)     - &
-               (BY(iX,jY,2)-BY(iX,jY,0))/dz_BLK(iBLKmax))
-          Jxy=sqrt(Jyy**2+Jxx**2)
-          CosThet=Jyy/Jxy
-          SinThet=Jxx/Jxy
-          qval(6)=CosThet
-          qval(7)=SinThet
-          !qval(1)=(BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/(2.*dx_BLK(iBLKmax))*CosThet-&
-          !        (BZ(iX,jY+1,1)-BZ(iX,jY-1,1))/(2.*dy_BLK(iBLKmax))*SinThet
-
-          ! dBz/dx
-          BzPr = (BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/(2.*dx_BLK(iBLKmax))
-          qval(1) = BzPr
-
-          ! dBx/dz
-          BXPR = (BX(iX,jY,2)-BX(iX,jY,0)) / (2*dz_BLK(iBLKmax))
-
-          P0 = State_VGB(P_,iX,jY,1,iBLKmax)
-          Rho0 = State_VGB(rho_,iX,jY,1,iBLKmax)
-          Rho1 = State_VGB(rho_,iX-1,jY,1,iBLKmax)
-          Rho2 = State_VGB(rho_,iX+1,jY,1,iBLKmax)
-
-          ! d(Vx)/dx
-          VXPRX=(State_VGB(rhoUx_,iX+1,jY,1,iBLKmax)/Rho2 - &
-               State_VGB(rhoUx_,iX-1,jY,1,iBLKmax)/Rho1)/(2*dx_BLK(iBLKmax)) 
-          qval(2) = VXPRX
-
-          qval(4) = alpha*sqrt(2.*P0/Rho0)
-
-          ! DWX = sqrt(alpha*sqrt(2*p/rho) / (dBz/dx))
-          if (BzPr > 0) qval(3) = sqrt(qval(4)/BzPr)
-
-          !Rho3 = State_VGB(rho_,iX,jY-1,1,iBLKmax)
-          !Rho4 = State_VGB(rho_,iX,jY+1,1,iBLKmax)
-          !VYPRX=(State_VGB(rhoUy_,iX+1,jY,1,iBLKmax)/Rho2 - &
-          !     State_VGB(rhoUy_,iX-1,jY,1,iBLKmax)/Rho1)/(2.*dx_BLK(iBLKmax)) 
-          !VXPRY=(State_VGB(rhoUx_,iX,jY+1,1,iBLKmax)/Rho4 - &
-          !     State_VGB(rhoUx_,iX,jY-1,1,iBLKmax)/Rho3)/(2.*dy_BLK(iBLKmax))
-          !VYPRY=(State_VGB(rhoUy_,iX,jY+1,1,iBLKmax)/Rho4 - &
-          !     State_VGB(rhoUy_,iX,jY-1,1,iBLKmax)/Rho3)/(2.*dy_BLK(iBLKmax))
-          !qval(2)=VXPRX*CosThet**2-CosThet*SinThet*(VYPRX+VXPRY) &
-          !       +VYPRY*SinThet**2
-          !write(*,*)'VXPRX=',VXPRX,'VYPRX=',VYPRY,'VXPRY=',VXPRY, &
-          !       'VYPRY=',VYPRY
-
-          ! DWZ = max(4*Dz, sqrt(alpha/(dBx/dz) * sqrt(2*p/rho)))
-          if (BXPR > 0) then
-             qval(5) = max(4*dz_BLK(iBLKmax), sqrt(qval(4)/BXPR))
-          else
-             qval(5) = 4*dz_BLK(iBLKmax)
-          endif
+          call set_rec_parameters(iX, jY, 1, iBlkMax)
        else
           iPE = -1
        endif
 
-       ! Tell everyone which processor contains iBLKmax
-       call MPI_ALLREDUCE(iPE, iPEmax, 1, &
-            MPI_INTEGER, MPI_MAX, iComm,iError)
+       ! Tell everyone which processor contains iBLKmax (if any)
+       call MPI_ALLREDUCE(iPE, iPEmax, 1, MPI_INTEGER, MPI_MAX, iComm, iError)
 
+       ! If there is a reconnection line, broadcast its parameters
        if (iPEmax >= 0) then
-          call MPI_Bcast(qval,7,MPI_REAL,iPEmax,iComm,iError)
-          BZPR_0(jj) = qval(1)
-          VXPR_0(jj) = qval(2)
-          DWX_0(jj)= qval(3)
-          !   EF0 was increased by factor 2 for run hr4
-          EF0_0(jj) = qval(4)*qval(2)
-          DWZ_0(jj) = qval(5)
-          Cos_Thet_0(jj) = qval(6)
-          Sin_Thet_0(jj) = qval(7)
+          call MPI_Bcast(RecParam_I,nRecParam,MPI_REAL,iPEmax,iComm,iError)
+          BZPR_0(jj)     = RecParam_I(dBzDx_)
+          VXPR_0(jj)     = RecParam_I(dVxDx_)
+          DWX_0(jj)      = RecParam_I(WidthX_)
+          EF0_0(jj)      = RecParam_I(Efield_) ! multiplied by 2 for run hr4
+          DWZ_0(jj)      = RecParam_I(WidthZ_)
+          Cos_Thet_0(jj) = RecParam_I(CosTheta_)
+          Sin_Thet_0(jj) = RecParam_I(SinTheta_)
        endif
 
     enddo
-    if (iproc == 0) then
-       write(*,*)'XX0=', XX0(1), 'BZPR =',BZPR_0(1), &
-            'VXPR=',VXPR_0(1), 'DWX = ', DWX_0(1), 'DWZ =',DWZ_0(1), &
-            'EF0=', EF0_0(1), &
-            'CosThet=',Cos_Thet_0(1), 'SinThet=', Sin_Thet_0(1)
-
-       write(*,*)'XX0_48=', XX0(48), 'BZPR =',BZPR_0(48), &
-            'VXPR=',VXPR_0(48), 'DWX = ', DWX_0(48), 'DWZ =',DWZ_0(48), &
-            'EF0=', EF0_0(48), &
-            'CosThet=',Cos_Thet_0(48), 'SinThet=', Sin_Thet_0(48)
-
-       write(*,*)'XX0_96=', XX0(96), 'BZPR =',BZPR_0(96), &
-            'VXPR=',VXPR_0(96), 'DWX = ', DWX_0(96), 'DWZ =',DWZ_0(96), &
-            'EF0=', EF0_0(96), &
-            'CosThet=',Cos_Thet_0(96), 'SinThet=', Sin_Thet_0(96)
-
-    endif
 
   end subroutine set_rec_line
 
@@ -403,31 +343,16 @@ contains
     integer :: iBLKtemp1, iBLKtemp2
 
     integer :: i,j,k
-    logical :: oktest, oktest_me
     integer :: ii,jj
     integer :: j1, iX, jY
     integer :: iError
-    real :: XX0tmp, XX0max, XX0max_all, yj1
-    real :: Rho1, Rho2, Rho3, Rho4, Rho0, P0, BXPR, RhoU1, RhoU2
-    real :: Jxx, Jyy, Jxy, CosThet, SinThet
-    real :: VXPRX, VXPRY, VYPRX, VYPRY
-    real,  dimension(1:7) :: qval
-    real, external :: point_value1
-    real,dimension(1-gcn:nI+gcn,1-gcn:nJ+gcn,1-gcn:nK+gcn):: &
-         BX,BY,BZ,B2
-    !
-
-
-
+    real    :: XX0max, XX0max_all, yj1
     !--------------------------------------------------------------------------
-
-
     do jj=1, njj
-       !   YYR(jj)=0.03125+0.0625*(jj -1)
-       YYR(jj)=0.0625+0.125*(jj-1)
+       YYR(jj) = DyLine/2 + (jj-1)*DyLine
        XX1(jj) = UnsetX_
        XX0max = UnsetX_
-       !       BXPR = -1.
+
        BZPR_1(jj) = -1.
        VXPR_1(jj) = 0.
        DWX_1(jj) = -1.
@@ -435,13 +360,13 @@ contains
        EF0_1(jj) = 0.
        Cos_Thet_1(jj) = 1.
        Sin_Thet_1(jj) = 0.
-       qval(1) = -1.
-       qval(2) = 0.
-       qval(3) = -1.
-       qval(4) = 0.
-       qval(5) = -1.
-       qval(6) = 1.
-       qval(7) = 0.
+       RecParam_I(1) = -1.
+       RecParam_I(2) = 0.
+       RecParam_I(3) = -1.
+       RecParam_I(4) = 0.
+       RecParam_I(5) = -1.
+       RecParam_I(6) = 1.
+       RecParam_I(7) = 0.
        !
        iPE = -1
        iPEmax = -1
@@ -469,13 +394,10 @@ contains
                      B0zCell_BLK(i-1,j1,1,iBLK) + &
                      State_VGB(Bz_,i-1,j1,1,iBLK) <=0) then
 
-                   XX0tmp = x_BLK(i,j1,1,iBLK)
-                   if (XX0tmp > XX0max) then
-                      XX0max  = XX0tmp
-                      iX      = i
-                      iBLKmax = iBLK
-                      jY      = j1
-                   endif
+                   XX0max  = x_BLK(i,j1,1,iBLK)
+                   iX      = i
+                   iBLKmax = iBLK
+                   jY      = j1
                    EXIT BLOCKS
                 endif
              enddo
@@ -483,119 +405,117 @@ contains
           end if
        enddo BLOCKS
 
-       call MPI_ALLREDUCE(XX0max, XX0max_all, 1, &
-            MPI_REAL, MPI_MAX, iComm,iError)
+       ! Get the X coordinate of the second reconnection line
+       call MPI_ALLREDUCE(XX0max, XX0max_all, 1, MPI_REAL,MPI_MAX,iComm,iError)
        XX1(jj) = XX0max_all
-       !
-       if (XX0max == XX0max_all .and. XX0max_all > -99.) then
+
+       ! Calculate the reconnection box size and electric field
+       if (XX0max == XX0max_all .and. XX0max_all > xRecoMin) then
           iPE = iproc
-          !       write(*,*),jj,'Y=',YYR(jj),'XX0=',XX0(jj),'iBLKmax=',iBLKmax,'iX=',iX,'jY=',jY
-          !       endif
-          !
-          BX(:,:,:) = State_VGB(Bx_,:,:,:,iBLKmax)+B0xCell_BLK(:,:,:,iBLKmax)
-          BY(:,:,:) = State_VGB(By_,:,:,:,iBLKmax)+B0yCell_BLK(:,:,:,iBLKmax)
-          BZ(:,:,:) = State_VGB(Bz_,:,:,:,iBLKmax)+B0zCell_BLK(:,:,:,iBLKmax)
-          !        B2(:,:,:) = BX**2+BY**2+BZ**2
-          Jyy=0.5*((BX(iX,jY,2)-BX(iX,jY,0))/dz_BLK(iBLKmax) - &
-               (BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/dx_BLK(iBLKmax))
-          Jxx=0.5*((BZ(iX,jY+1,1)-BZ(iX,jY-1,1))/dy_BLK(iBLKmax)     - &
-               (BY(iX,jY,2)-BY(iX,jY,0))/dz_BLK(iBLKmax))
-          Jxy=sqrt(Jyy**2+Jxx**2)
-          CosThet=Jyy/Jxy
-          SinThet=Jxx/Jxy
-          !!        CosThet=1.
-          !!        SinThet=0.
-          qval(6)=CosThet
-          qval(7)=SinThet
-          !!        qval(1) =(BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/(2.*dx_BLK(iBLKmax))*CosThet- &
-          !!        (BZ(iX,jY+1,1)-BZ(iX,jY-1,1))/(2.*dy_BLK(iBLKmax))*SinThet
-          !!        write(*,*)'CosThet=',CosThet,'SinThet=',SinThet, &
-          !!         'BZPR=',(BZ(iX,jY+1,1)-BZ(iX,jY-1,1))/(2.*dy_BLK(iBLKmax))
-          !!       write(*,*)'Jyy=',Jyy,'Jxx=',Jxx
-          qval(1) =(BZ(iX+1,jY,1)-BZ(iX-1,jY,1))/(2.*dx_BLK(iBLKmax))
-          !     
-          !
-          !        
-          Rho1 = State_VGB(rho_,iX-1,jY,1,iBLKmax)
-          Rho2 = State_VGB(rho_,iX+1,jY,1,iBLKmax)
-          Rho0 = State_VGB(rho_,iX,jY,1,iBLKmax)
-          Rho3 = State_VGB(rho_,iX,jY-1,1,iBLKmax)
-          Rho4 = State_VGB(rho_,iX,jY+1,1,iBLKmax)
-          P0 = State_VGB(P_,iX,jY,1,iBLKmax)
-          VXPRX=(State_VGB(rhoUx_,iX+1,jY,1,iBLKmax)/Rho2 - &
-               State_VGB(rhoUx_,iX-1,jY,1,iBLKmax)/Rho1)/(2.*dx_BLK(iBLKmax)) 
-          VYPRX=(State_VGB(rhoUy_,iX+1,jY,1,iBLKmax)/Rho2 - &
-               State_VGB(rhoUy_,iX-1,jY,1,iBLKmax)/Rho1)/(2.*dx_BLK(iBLKmax)) 
-          VXPRY=(State_VGB(rhoUx_,iX,jY+1,1,iBLKmax)/Rho4 - &
-               State_VGB(rhoUx_,iX,jY-1,1,iBLKmax)/Rho3)/(2.*dy_BLK(iBLKmax))
-          VYPRY=(State_VGB(rhoUy_,iX,jY+1,1,iBLKmax)/Rho4 - &
-               State_VGB(rhoUy_,iX,jY-1,1,iBLKmax)/Rho3)/(2.*dy_BLK(iBLKmax))
-          !!        qval(2)=VXPRX*CosThet**2-CosThet*SinThet*(VYPRX+VXPRY)+ &
-          !!               VYPRY*SinThet**2
-          qval(2) = VXPRX
-          !!        write(*,*)'VXPRX=',VXPRX,'VYPRX=',VYPRY,'VXPRY=',VXPRY,'VYPRY=',VYPRY
-
-
-          BXPR =((B0xCell_BLK(iX,jY,2,iBLKmax)+State_VGB(Bx_,iX,jY,2,iBLKmax)) &
-               -  (B0xCell_BLK(iX,jY,0,iBLKmax)+State_VGB(Bx_,iX,jY,0,iBLKmax)))/ &
-               (2.* dz_BLK(iBLKmax))
-          !
-          if (qval(1) > 0) qval(3) = sqrt(alpha/qval(1)*sqrt(2.*P0/Rho0))
-          if (BXPR > 0) then
-             qval(5) = max(dz_BLK(iBLKmax)*4.,sqrt(alpha/BXPR*sqrt(2.*P0/Rho0)))
-             !       qval(5) = min(qval(5),alpha*sqrt(2.)*2.)
-          else
-             qval(5) = dz_BLK(iBLKmax)*4.
-          endif
-          qval(4) = alpha*sqrt(2.*P0/Rho0)
-          !       write(*,*)jj,' Y=',YYR(jj),'iPemax=',iproc,'XX0=', XX0max_all, 'BZPR =',qval(1), &
-          !       'VXPR=',qval(2), 'DWX = ', qval(3), 'EF0=',qval(4)
+          call set_rec_parameters(iX, jY, 1, iBlkMax)
        else
           iPE = -1
        endif
-       ! Tell everyone which processor contains iBLKmax
-       call MPI_ALLREDUCE(iPE, iPEmax, 1, &
-            MPI_INTEGER, MPI_MAX, iComm,iError)
+       ! Tell everyone which processor contains iBLKmax (if any)
+       call MPI_ALLREDUCE(iPE, iPEmax, 1, MPI_INTEGER, MPI_MAX, iComm,iError)
 
+       ! If there is a reconnection line, broadcast its parameters
        if (iPEmax >= 0) then
-          call MPI_Bcast(qval,7,MPI_REAL,iPEmax,iComm,iError)
-          BZPR_1(jj) = qval(1)
-          VXPR_1(jj) = qval(2)
-          DWX_1(jj)= qval(3)
-          !   EF0 was increased on factor 2 for run hr4
-          EF0_1(jj) = qval(4)*qval(2)
-          DWZ_1(jj) = qval(5)
-          Cos_Thet_1(jj) = qval(6)
-          Sin_Thet_1(jj) = qval(7)
+          call MPI_Bcast(RecParam_I,nRecParam,MPI_REAL,iPEmax,iComm,iError)
+          BZPR_1(jj)     = RecParam_I(dBzDx_)
+          VXPR_1(jj)     = RecParam_I(dVxDx_)
+          DWX_1(jj)      = RecParam_I(WidthX_)
+          EF0_1(jj)      = RecParam_I(Efield_) ! multiplied by 2 for run hr4
+          DWZ_1(jj)      = RecParam_I(WidthZ_)
+          Cos_Thet_1(jj) = RecParam_I(CosTheta_)
+          Sin_Thet_1(jj) = RecParam_I(SinTheta_)
        endif
 
-
-       !
-!!!     if (iproc == 0) then
-!!!     write(*,*)jj,' Y=',YYR(jj),'iPEmax=',iPEmax,'XX0=', XX0(jj), 'BZPR =',BZPR(jj), &
-!!!       'VXPR=',BZPR(jj), 'DWX = ', DWX(jj), 'EF0=', EF0(jj)
-!!!     endif
     enddo
-    if (iproc == 0) then
-       write(*,*)'XX1=', XX1(1), 'BZPR =',BZPR_1(1), &
-            'VXPR=',VXPR_1(1), 'DWX = ', DWX_1(1), 'DWZ =',DWZ_1(1), 'EF0=', EF0_1(1), &
-            'CosThet=',Cos_Thet_1(1), 'SinThet=', Sin_Thet_1(1)
-       !
-       write(*,*)'XX1_48=', XX1(48), 'BZPR =',BZPR_1(48), &
-            'VXPR=',VXPR_1(48), 'DWX = ', DWX_1(48), 'DWZ =',DWZ_1(48), 'EF0=', EF0_1(48), &
-            'CosThet=',Cos_Thet_1(48), 'SinThet=', Sin_Thet_1(48)
-       !
-       write(*,*)'XX1_96=', XX1(96), 'BZPR =',BZPR_1(96), &
-            'VXPR=',VXPR_1(96), 'DWX = ', DWX_1(96), 'DWZ =',DWZ_1(96), 'EF0=', EF0_1(96), &
-            'CosThet=',Cos_Thet_1(96), 'SinThet=', Sin_Thet_1(96)
-
-    endif
-
-    !
-
 
   end subroutine set_rec_line1
 
+  !========================================================================
+  subroutine set_rec_parameters(i, j, k, iBlock)
+
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_, Rho_, RhoUx_, RhoUz_, p_, &
+         B0xCell_BLK, B0yCell_BLK, B0zCell_BLK
+
+    use ModGeometry, ONLY: Dx_Blk, Dy_Blk, Dz_Blk
+
+    integer, intent(in) :: i, j, k, iBlock
+
+    real:: dBzDx, dBxDz, dVxDx, WidthX, WidthZ, Efield, IonSpeed
+    !-----------------------------------------------------------------------
+    ! dBz/dx
+    dBzDx = ((State_VGB(Bz_,i+1,j,k,iBlock) &
+         +      B0zCell_BLK(i+1,j,k,iBlock))  &
+         -   (State_VGB(Bz_,i-1,j,k,iBlock) &
+         +      B0zCell_BLK(i-1,j,k,iBlock))) / (2*Dx_BLK(iBlock))
+
+    ! dBx/dz
+    dBxDz = ((State_VGB(Bx_,i,j,k+1,iBlock) &
+         +      B0xCell_BLK(i,j,k+1,iBlock))  &
+         -   (State_VGB(Bx_,i,j,k-1,iBlock) &
+         +      B0xCell_BLK(i,j,k-1,iBlock))) / (2*Dz_BLK(iBlock))
+
+    ! d(Vx)/dx
+    dVxDx = (State_VGB(RhoUx_,i+1,j,1,iBlock) &
+         /   State_VGB(Rho_  ,i+1,j,1,iBlock) &
+         -   State_VGB(RhoUx_,i-1,j,1,iBlock) &
+         /   State_VGB(Rho_  ,i-1,j,1,iBlock)) / (2*Dx_BLK(iBlock))
+
+    ! IonSpeed = sqrt(2*P/Rho)
+    IonSpeed = sqrt(2*State_VGB(p_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))
+
+    Efield = IonMassPerCharge*IonSpeed*dVxDx
+
+    ! WidthX = sqrt(IonMassPerCharge*sqrt(2*p/rho) / (dBz/dx))
+    WidthX = 4*dx_BLK(iBlock)
+    if (dBzDx > 0) WidthX = max(WidthX, sqrt(IonMassPerCharge*IonSpeed/dBzDx))
+
+    ! WidthZ = max(4*Dz, sqrt(IonMassPerCharge/(dBx/dz) * sqrt(2*p/rho)))
+    WidthZ = 4*dz_BLK(iBlock)
+    if (dBxDz > 0) WidthZ = max(WidthZ, sqrt(IonMassPerCharge*IonSpeed/dBxDz))
+
+    RecParam_I(dBzDx_)    = dBzDx
+    RecParam_I(dVxDx_)    = dVxDx
+    RecParam_I(Efield_)   = Efield
+    RecParam_I(WidthX_)   = WidthX
+    RecParam_I(WidthZ_)   = WidthZ
+    RecParam_I(CosTheta_) = 1.0
+    RecParam_I(SinTheta_) = 0.0
+
+    ! The code below takes the tilt in the X-Y plane into account
+
+    !BX = State_VGB(Bx_,:,:,:,iBlock)+B0xCell_BLK(:,:,:,iBlock)
+    !BY = State_VGB(By_,:,:,:,iBlock)+B0yCell_BLK(:,:,:,iBlock)
+    !BZ = State_VGB(Bz_,:,:,:,iBlock)+B0zCell_BLK(:,:,:,iBlock)
+    !        B2(:,:,:) = BX**2+BY**2+BZ**2
+    !Jyy=0.5*((BX(i,j,2)-BX(i,j,0))/dz_BLK(iBlock) - &
+    !     (BZ(i+1,j,1)-BZ(i-1,j,1))/dx_BLK(iBlock))
+    !Jxx=0.5*((BZ(i,j+1,1)-BZ(i,j-1,1))/dy_BLK(iBlock)     - &
+    !     (BY(i,j,2)-BY(i,j,0))/dz_BLK(iBlock))
+    !Jxy=sqrt(Jyy**2+Jxx**2)
+    !CosThet=Jyy/Jxy
+    !SinThet=Jxx/Jxy
+    !BzPr=(BZ(i+1,j,1)-BZ(i-1,j,1))/(2.*dx_BLK(iBlock))*CosThet-&
+    !        (BZ(i,j+1,1)-BZ(i,j-1,1))/(2.*dy_BLK(iBlock))*SinThet
+    !
+    !Rho3 = State_VGB(rho_,i,j-1,1,iBlock)
+    !Rho4 = State_VGB(rho_,i,j+1,1,iBlock)
+    !VYPRX=(State_VGB(rhoUy_,i+1,j,1,iBlock)/Rho2 - &
+    !     State_VGB(rhoUy_,i-1,j,1,iBlock)/Rho1)/(2.*dx_BLK(iBlock)) 
+    !VXPRY=(State_VGB(rhoUx_,i,j+1,1,iBlock)/Rho4 - &
+    !     State_VGB(rhoUx_,i,j-1,1,iBlock)/Rho3)/(2.*dy_BLK(iBlock))
+    !VYPRY=(State_VGB(rhoUy_,i,j+1,1,iBlock)/Rho4 - &
+    !     State_VGB(rhoUy_,i,j-1,1,iBlock)/Rho3)/(2.*dy_BLK(iBlock))
+    !RecParam_I(2)=VXPRX*CosThet**2-CosThet*SinThet*(VYPRX+VXPRY) &
+    !       +VYPRY*SinThet**2
+    !write(*,*)'VXPRX=',VXPRX,'VYPRX=',VYPRY,'VXPRY=',VXPRY, &
+    !       'VYPRY=',VYPRY
+
+  end subroutine set_rec_parameters
 
 end module ModUser
 
