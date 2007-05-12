@@ -19,7 +19,7 @@ my $ERROR = "ERROR in PostProc.pl";
 my $WARNING = "WARNING in PostProc.pl";
 
 my $ParamIn = "PARAM.in";
-my $RunLog  = "runlog";
+my $RunLog  = "runlog runlog_[0-9]*";
 
 my $NameOutput;
 if(@ARGV){
@@ -128,8 +128,9 @@ REPEAT:{
 	    $command .= $exclude if $Dir =~ /GM|SC|IH/;
 	    &shell("$command $PlotDir/ $Rsync/$Dir") if -d $PlotDir;
 	}
-	&shell("$rsync $ParamIn $Rsync/$ParamIn") if -f $ParamIn;
-	&shell("$rsync $RunLog $Rsync/$RunLog")   if -f $RunLog;
+	&shell("$rsync $ParamIn $Rsync/")      if -f $ParamIn;
+	&shell("$rsync runlog $Rsync/")        if -f "runlog";
+	&shell("$rsync runlog_[0-9]* $Rsync/") if glob("runlog_[0-9]*");
     }
 
     if($Repeat){
@@ -176,9 +177,12 @@ if(-f $ParamIn){
 }else{
     warn "$WARNING: no $ParamIn file was found\n";
 }
-if(-f $RunLog){
-    print "$INFO: mv $RunLog $NameOutput/\n";
-    `mv $RunLog $NameOutput/`;
+if(-f "runlog"){
+    print "$INFO: mv runlog $NameOutput/\n";
+    `mv runlog $NameOutput`;
+}elsif(glob("runlog_[0-9]*")){
+    print "$INFO: mv runlog_[0-9]* $NameOutput/\n";
+    `mv runlog_[0-9]* $NameOutput`;
 }else{
     warn "$WARNING: no $RunLog file was found\n";
 }
