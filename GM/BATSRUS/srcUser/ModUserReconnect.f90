@@ -125,14 +125,14 @@ contains
              write(*,*)'jj=',jj,' Y=',YYR(jj)
              if(XX0(jj) <= UnsetX_) CYCLE
              write(*,*)'XX0=',XX0(jj), &
-                  'BZPR=',BZPR_0(1), 'VXPR=',VXPR_0(jj), &
+                  'BZPR=',BZPR_0(jj), 'VXPR=',VXPR_0(jj), &
                   'DWX=', DWX_0(jj), 'DWZ=',DWZ_0(jj), &
                   'EF0=', EF0_0(jj)
              !    'CosThet=',Cos_Thet_0(1), 'SinThet=', Sin_Thet_0(jj)
 
              if(XX1(jj) <= UnsetX_) CYCLE
              write(*,*)'XX1=',XX1(jj), &
-                  'BZPR=',BZPR_1(1), 'VXPR=',VXPR_1(jj), &
+                  'BZPR=',BZPR_1(jj), 'VXPR=',VXPR_1(jj), &
                   'DWX=', DWX_1(jj), 'DWZ=',DWZ_1(jj), &
                   'EF0=', EF0_1(jj)
              !    'CosThet=',Cos_Thet_1(1), 'SinThet=', Sin_Thet_1(jj)
