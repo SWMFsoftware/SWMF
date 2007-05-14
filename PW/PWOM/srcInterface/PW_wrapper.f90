@@ -130,7 +130,7 @@ subroutine PW_save_restart(TimeSimulation)
   Use ModPWOM, only: &
        nAlt,r_C,GeoMagLat_I,GeoMagLon_I,DtVertical,&
        nStep,NameRestart, &
-       State_GVI,nLine
+       State_CVI,nLine
   implicit none
 
   !INPUT PARAMETERS:
@@ -144,7 +144,7 @@ subroutine PW_save_restart(TimeSimulation)
      call PW_write_restart(&
       nAlt,r_C,GeoMagLat_I(iLine),GeoMagLon_I(iLine),TimeSimulation,DtVertical,&
       nStep,NameRestart(iLine), &
-      State_GVI(:,:,iLine))
+      State_CVI(:,:,iLine))
   enddo
 
 
@@ -285,7 +285,7 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
 
   use ModPWOM, only : iComm,nProc,&
                       ThetaLine_I,PhiLine_I, &
-                      State_GVI,&
+                      State_CVI,&
                       nLine,nAlt,&
                       nLine_P, nLineBefore_P
   use ModCommonPlanet, only: RhoO_,RhoH_,RhoHe_,uO_,uH_,uHe_
@@ -324,18 +324,18 @@ subroutine PW_get_for_gm(Buffer_VI, nVar, nLineTotal, Name_V, tSimulation)
         SendBuffer_VI(iVar,:)=PhiLine_I(1:nLine)
      case('Density1')
         ! g/cm^3 = 1000 * kg/m^3
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,RhoO_ ,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoO_ ,1:nLine)*1000.0
      case('Density2')
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,RhoH_ ,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoH_ ,1:nLine)*1000.0
      case('Density3')
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,RhoHe_,1:nLine)*1000.0
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,RhoHe_,1:nLine)*1000.0
      case('Velocity1')
         ! cm/s = 0.01*m/s
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,uO_ ,1:nLine)*0.01
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,uO_ ,1:nLine)*0.01
      case('Velocity2')
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,uH_ ,1:nLine)*0.01
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,uH_ ,1:nLine)*0.01
      case('Velocity3')
-        SendBuffer_VI(iVar,:)=State_GVI(nAlt,uHe_,1:nLine)*0.01
+        SendBuffer_VI(iVar,:)=State_CVI(nAlt,uHe_,1:nLine)*0.01
      case default
         call CON_stop(NameSub//': unknown variable name='//Name_V(iVar))
      end select
