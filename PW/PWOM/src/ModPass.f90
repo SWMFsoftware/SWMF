@@ -1,15 +1,13 @@
 module ModFieldLine
 
   use ModParameters
+  use ModCommonPlanet,ONLY: nVar
   implicit none
 
   private
   public put_field_line, get_field_line
 
-  real, Dimension(maxGrid)  ::  dOxygPw_C,uOxygPw_C,pOxygPw_C,TOxygPW, &
-       dHelPw_C,uHelPw_C,pHelPw_C,THelPW,     &
-       dHydPw_C,uHydPw_C,pHydPw_C,THydPW,     &
-       dElectPw_C,uElectPw_C,pElectPw_C,TElectPW,rPw_C
+  real    ::  PassState_CV(maxGrid,nVar)
 
   logical :: IsRestartPW, IsVariableDtPW, DoLogPW,IsImplicitPW,IsImplicitAllPW
   real    :: TimePW,MaxLineTimePW,DToutputPW, DTpolarwindPW,GeoMagLatPW,&
@@ -21,28 +19,23 @@ module ModFieldLine
        iUnitCollisionPW,iUnitRestartInPW,iLinePW,nLinePW
   CHARACTER(7) :: TypeSolverPW
   character*100 :: NameRestartPW
-
+  real  :: rPW_C(maxGrid)
 contains
 
   !***************************************************************************
   !  Put polarwind variables into Mod_PW for passing 
   !***************************************************************************
 
-  subroutine put_field_line(dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-       dHel_CI, uHel_CI, pHel_CI, THel,                              &
-       dHyd_CI, uHyd_CI, pHyd_CI, THyd,                              &
-       dElect_CI, uElect_CI, pElect_CI, TElect,                      &
+  subroutine put_field_line(State_CV, &
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput,nAlt,DoLog,&
        nStep,r_C,IsImplicit,IsImplicitAll)
 
     use ModParameters
-
-    real, intent(in),dimension(maxGrid):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-         dHel_CI, uHel_CI, pHel_CI, THel,         &
-         dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
-         dElect_CI, uElect_CI, pElect_CI, TElect
+    use ModCommonPlanet,ONLY: nVar
+    
+    real, intent(in) :: State_CV(maxGrid,nVar)
     real, optional, intent(in) :: Time,MaxLineTime,DToutput
     real, optional, intent(in) :: r_C(maxGrid)
     real,    intent(in)     :: GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal              
@@ -51,23 +44,8 @@ contains
     character(7),optional,intent(in)::TypeSolver
     logical,optional,intent(in) :: IsVariableDt,IsRestart,DoLog,IsImplicit,IsImplicitAll
     !-------------------------------------------------------------------------
-
-    dOxygPw_C (:) = dOxyg_CI(:)
-    uOxygPw_C (:) = uOxyg_CI(:)
-    pOxygPw_C (:) = pOxyg_CI(:)
-    TOxygPW (:) = TOxyg(:)
-    dHelPw_C  (:) = dHel_CI(:)
-    uHelPw_C  (:) = uHel_CI(:)
-    pHelPw_C  (:) = pHel_CI(:)
-    THelPW  (:) = THel(:)
-    dHydPw_C  (:) = dHyd_CI(:)
-    uHydPw_C  (:) = uHyd_CI(:)
-    pHydPw_C  (:) = pHyd_CI(:)
-    THydPW  (:) = THyd(:)
-    dElectPw_C(:) = dElect_CI(:)
-    uElectPw_C(:) = uElect_CI(:)
-    pElectPw_C(:) = pElect_CI(:)
-    TElectPW(:) = TElect(:) 
+    
+    PassState_CV(:,:) = State_CV(:,:)
     GeoMagLatPW = GeoMagLat_I
     GeoMagLonPW = GeoMagLon_I
     JrPW        = Jr
@@ -99,21 +77,16 @@ contains
   !  Get polarwind variables from Mod_PW 
   !***************************************************************************
 
-  subroutine get_field_line(dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-       dHel_CI, uHel_CI, pHel_CI, THel,                              &
-       dHyd_CI, uHyd_CI, pHyd_CI, THyd,                              &
-       dElect_CI, uElect_CI, pElect_CI, TElect,                      &
+  subroutine get_field_line(State_CV,& 
        GeoMagLat_I,GeoMagLon_I,Jr,wHorizontal,                  &
        iUnitOutput,iUnitGraphics, NameRestart,iLine,Time,   &
        MaxLineTime,TypeSolver,IsVariableDt,IsRestart,DToutput, nAlt,DoLog,&
        nStep,r_C,IsImplicit,IsImplicitAll)
 
     use ModParameters
+    use ModCommonPlanet, ONLY: nVar
 
-    real, intent(out),dimension(maxGrid):: dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
-         dHel_CI, uHel_CI, pHel_CI, THel,         &
-         dHyd_CI, uHyd_CI, pHyd_CI, THyd,         &
-         dElect_CI, uElect_CI, pElect_CI, TElect
+    real, intent(out):: State_CV(MaxGrid,nVar)
 
 
     real,    intent(out)     :: GeoMagLat_I, GeoMagLon_I,Jr, wHorizontal           
@@ -126,22 +99,7 @@ contains
     integer, optional,intent(out)     :: iUnitOutput,iUnitGraphics,iLine,nAlt,nStep
     !--------------------------------------------------------------------------
     
-    dOxyg_CI (:) = dOxygPw_C(:)
-    uOxyg_CI (:) = uOxygPw_C(:)
-    pOxyg_CI (:) = pOxygPw_C(:)
-    TOxyg (:) = TOxygPW(:)
-    dHel_CI  (:) = dHelPw_C(:)
-    uHel_CI  (:) = uHelPw_C(:)
-    pHel_CI  (:) = pHelPw_C(:)
-    THel  (:) = THelPW(:)
-    dHyd_CI  (:) = dHydPw_C(:)
-    uHyd_CI  (:) = uHydPw_C(:)
-    pHyd_CI  (:) = pHydPw_C(:)
-    THyd  (:) = THydPW(:)
-    dElect_CI(:) = dElectPw_C(:)
-    uElect_CI(:) = uElectPw_C(:)
-    pElect_CI(:) = pElectPw_C(:)
-    TElect(:) = TElectPW(:) 
+    State_CV(:,:)= PassState_CV(:,:)
     GeoMagLat_I = GeoMagLatPW
     GeoMagLon_I = GeoMagLonPW
     Jr        = JrPW
