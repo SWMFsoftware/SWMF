@@ -497,8 +497,8 @@ contains
     if(rc /= ESMF_SUCCESS) return
 
     ! Add MHD fields using the grid layout from DELayout
-    call ESMF_ArraySpecSet(ArraySpec, rank=2, type=ESMF_DATA_REAL, &
-         kind=ESMF_R8, rc=rc)
+    call ESMF_ArraySpecSet(ArraySpec, rank=2, &
+         type=ESMF_DATA_REAL, kind=ESMF_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) return
 
     do iVar=1, nVar
