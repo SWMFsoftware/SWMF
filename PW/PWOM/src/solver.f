@@ -1,42 +1,52 @@
 
 
-
-
-      SUBROUTINE Solver (NameVariable, uSpecies,dSpecies,pSpecies,
-     &     uSur,dSur,pSur,dBgnd,pBgnd,uBgnd,
-     &     RhoSource, eCollision, fCollision, qSpecies,
+      SUBROUTINE Solver (iIon, InitialState_GV,
+     &     RhoSource, eCollision, fCollision,
      &     RgasSpecies,
-     &     Density, Velocity, Pressure, Temperature)
+     &     OutputState_GV)
 
       use ModCommonVariables
 
 C     Input: state variables in the grid, at bottom and top boundaries, 
 C            mass, energy, external heating and force source terms,
 C            gas constant normalized for the mass of this species
-      character(len=*), intent(in) :: NameVariable
-      REAL uSpecies(MAXGRID),dSpecies(MAXGRID),pSpecies(MAXGRID),
-     &     uSur, dSur, pSur, dBgnd, pBgnd, uBgnd,
-     &     RhoSource(MAXGRID), eCollision(MAXGRID),
-     &     fCollision(MAXGRID), qSpecies(MAXGRID),
-     &     RgasSpecies
+      integer, intent(in) :: iIon
 
-C      Output
-      REAL Density(MaxGrid),Velocity(MaxGrid),Pressure(MaxGrid),
-     &     Temperature(MaxGrid) 
+      real, intent(in):: InitialState_GV(0:maxGrid,4) 
+      real, intent(in):: RhoSource(MAXGRID), eCollision(MAXGRID),
+     &     fCollision(MAXGRID),
+     &     RgasSpecies
+      
+C     Output
+      real, intent(out):: OutputState_GV(0:maxGrid,4)
 
 C     Local:
+      
+      REAL uSpecies(MAXGRID),dSpecies(MAXGRID),pSpecies(MAXGRID)
+      
+      real ::uSur, dSur, pSur, dBgnd, pBgnd, uBgnd
+
       REAL DBN1(MaxGrid),UBN1(MaxGrid),PBN1(MaxGrid),
      &     U12(MaxGrid),P12(MaxGrid),D12(MaxGrid),
      &     WL(MaxGrid),WR(MaxGrid),PDIFF(MaxGrid),PSUM(MaxGrid)
 
       logical :: DoTest
-c      DoTest = index(NameVariable,'O') > 0
-c      write(*,*)'godunov solver starting for variable ',NameVariable, DoTest
+      !------------------------------------------------------------------------
+      
+      dSpecies(1:nDim) = InitialState_GV(1:nDim,1)
+      uSpecies(1:nDim) = InitialState_GV(1:nDim,2)
+      pSpecies(1:nDim) = InitialState_GV(1:nDim,3)
+      
+      dSur = InitialState_GV(0,1)
+      uSur = InitialState_GV(0,2)
+      pSur = InitialState_GV(0,3)
 
-CLFMO
-C
-C
-CALEX work on bottom of grid
+      dBgnd = InitialState_GV(nDim+1,1)
+      uBgnd = InitialState_GV(nDim+1,2)
+      pBgnd = InitialState_GV(nDim+1,3)
+
+
+!     work on bottom of grid
 
       USUM=USUR+USPECIES(1)
       UDIFF=USUR-USPECIES(1)
@@ -58,7 +68,7 @@ CALEX work on bottom of grid
       P12(1)=CVMGP(P12(1),PSPECIES(1),WR(1))
       D12(1)=CVMGP(D12(1),DSPECIES(1),WR(1))
 
-CALEX work on rest of grid     
+! work on rest of grid     
       DO K=2,NDIM
          L=K-1
          USUM=USPECIES(L)+USPECIES(K)
@@ -115,7 +125,7 @@ c
       XHTM=EXP(-(TIME-300.)**2/2./150./150.)
 c     
 
-      if(DoTest)then
+!      if(DoTest)then
 !         write(*,*)'OldRho    =',Dspecies(nDim-1:nDim)
 !         write(*,*)'DHYD      =',DHYD(nDim-1:nDim)
 !         write(*,*)'OldP      =',Pspecies(nDim-1:nDim)
@@ -134,26 +144,32 @@ c
 !         write(*,*)'RhoUflux  =',UBN1(1:3)
 !         write(*,*)'eflux     =',PBN1(1:3)/gmin1
 
-      end if
+!      end if
 
 CALEX Update
+
+      OutputState_GV(0,1)=InitialState_GV(0,1)
+      OutputState_GV(0,2)=InitialState_GV(0,2)
+      OutputState_GV(0,3)=InitialState_GV(0,3)
+      OutputState_GV(0,4)=InitialState_GV(0,4)
+      
       DO K=1,NDIM
          KK=K+1
-         DENSITY(K)=DSPECIES(K)-DTR1*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
+         OutputState_GV(K,1)=DSPECIES(K)-DTR1*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
      $        +DTX1*RhoSource(K)
-         VELOCITY(K)=(USPECIES(K)*DSPECIES(K)-DTR1*(AR23(K)*UBN1(KK)-AR12(K)*
-     $        UBN1(K))+DTX1*(DAREA(K)*PSPECIES(K)+FCOLLISION(K)))/DENSITY(K)
+         OutputState_GV(K,2)=(USPECIES(K)*DSPECIES(K)-DTR1*(AR23(K)*UBN1(KK)-AR12(K)*
+     $        UBN1(K))+DTX1*(DAREA(K)*PSPECIES(K)+FCOLLISION(K)))/OutputState_GV(K,1)
 
-         PRESSURE(K)=PSPECIES(K)-GMIN2*(VELOCITY(K)**2*DENSITY(K)-
+         OutputState_GV(K,3)=PSPECIES(K)-GMIN2*(OutputState_GV(K,2)**2*OutputState_GV(K,1)-
      $     USPECIES(K)**2*DSPECIES(K))-DTR1*(AR23(K)*PBN1(KK)-AR12(K)*PBN1(K))
-     $     +DTX1*GMIN1*(ECOLLISION(K)+XHTM*QSPECIES(K)*DSPECIES(K))
-         TEMPERATURE(K)=PRESSURE(K)/RGASSPECIES/DENSITY(K)
-         
-c         write(30,*) PSPECIES(K),GMIN2*(CELLNW(1,K)**2*CELLNW(3,K)-
-c     $     USPECIES(K)**2*DSPECIES(K)),DTR1*(AR23(K)*PBN1(KK)-AR12(K)*PBN1(K))
-c     $     ,DTX1*GMIN1*(ECOLLISIONO(K)+XHTM*QSPECIES(K)*DSPECIES(K)),CELLNW(2,K)
-
-   
+     $     +DTX1*GMIN1*(ECOLLISION(K))
+         OutputState_GV(K,4)=OutputState_GV(K,3)/RGASSPECIES/OutputState_GV(K,1)
       end do
+
+      OutputState_GV(nDim+1,1)=InitialState_GV(nDim+1,1)
+      OutputState_GV(nDim+1,2)=InitialState_GV(nDim+1,2)
+      OutputState_GV(nDim+1,3)=InitialState_GV(nDim+1,3)
+      OutputState_GV(nDim+1,4)=InitialState_GV(nDim+1,4)
+
       RETURN
       END
