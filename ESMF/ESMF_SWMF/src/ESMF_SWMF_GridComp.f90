@@ -49,10 +49,10 @@ contains
     use ESMF_SWMF_Mod, only: iMax, jMax, yMin, yMax, zMin, zMax, &
          iProcRootSwmf, iProcRootEsmf, iProcLastEsmf, iProcLastSwmf
 
-    type(ESMF_GridComp), intent(in)  :: gComp
+    type(ESMF_GridComp), intent(inout)  :: gComp
     type(ESMF_State),    intent(in)  :: ImportState
     type(ESMF_State),    intent(in)  :: ExportState
-    type(ESMF_Clock),    intent(in)  :: Parentclock
+    type(ESMF_Clock),    intent(inout)  :: Parentclock
     integer,             intent(out) :: rc
 
     type(ESMF_VM)      :: ParentVM
@@ -149,7 +149,7 @@ contains
     type(ESMF_GridComp), intent(inout) :: gcomp
     type(ESMF_State),    intent(inout) :: importState
     type(ESMF_State),    intent(inout) :: exportState
-    type(ESMF_Clock),    intent(in)    :: parentclock
+    type(ESMF_Clock),    intent(inout)    :: parentclock
     integer,             intent(out)   :: rc
 
     ! Local variables
@@ -202,7 +202,7 @@ contains
     type(ESMF_GridComp), intent(in) :: gcomp
     type(ESMF_State),    intent(in)  :: importState
     type(ESMF_State),    intent(in)  :: exportState
-    type(ESMF_Clock),    intent(in)  :: parentclock
+    type(ESMF_Clock),    intent(inout)  :: parentclock
     integer,             intent(out) :: rc
 
     integer :: iError 
