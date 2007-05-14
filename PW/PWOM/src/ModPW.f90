@@ -1,6 +1,7 @@
 module ModPWOM
 
   use ModParameters
+  use ModCommonPlanet, ONLY: nVar
   implicit none
 
   logical :: IsStandAlone = .false.
@@ -70,6 +71,7 @@ module ModPWOM
        iUnitRestart,iUnitRestartIn,iUnitGraphics,iUnitOutput
   
   real :: r_C(1:maxGrid)
+  real :: State_CVI(maxGrid,nVar,maxLine)
   real, dimension(1:maxGrid,0:maxLine):: &
        dOxyg_CI, uOxyg_CI, pOxyg_CI, TOxyg,     &
        dHel_CI, uHel_CI, pHel_CI, THel,         &
