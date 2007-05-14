@@ -35,27 +35,27 @@ C Adiabatic index
 C AMU in gramms
       XAMU=1.6606655E-24
 C Mass of atomic O in gramms
-      XMSO=15.994*XAMU
+      Mass_I(Ion1_)=15.994*XAMU
 C Mass of atomic H in gramms
-      XMSH=1.00797*XAMU
+      Mass_I(Ion2_)=1.00797*XAMU
 C Mass of atomic He in gramms
-      XMSHE=4.0026*XAMU
+      Mass_I(Ion3_)=4.0026*XAMU
 C Mass of electron in gramms
-      XMSE=9.109534E-28
+      Mass_I(Ion4_)=9.109534E-28
 C Relative mass of atomic O to electron
-      RTOXEL=XMSE/XMSO
+      MassElecIon_I(Ion1_)=Mass_I(Ion4_)/Mass_I(Ion1_)
 C Relative mass of atomic H to electron
-      RTHDEL=XMSE/XMSH
+      MassElecIon_I(Ion2_)=Mass_I(Ion4_)/Mass_I(Ion2_)
 C Relative mass of atomic He to electron
-      RTHEEL=XMSE/XMSHE
+      MassElecIon_I(Ion3_)=Mass_I(Ion4_)/Mass_I(Ion3_)
 C kB/m_O
-      RGASO=RGAS*XAMU/XMSO
+      RGAS_I(Ion1_)=RGAS*XAMU/Mass_I(Ion1_)
 C kB/m_H
-      RGASH=RGAS*XAMU/XMSH
+      RGAS_I(Ion2_)=RGAS*XAMU/Mass_I(Ion2_)
 C kB/m_He
-      RGASHE=RGAS*XAMU/XMSHE
+      RGAS_I(Ion3_)=RGAS*XAMU/Mass_I(Ion3_)
 C kB/m_e
-      RGASE=RGAS*XAMU/XMSE
+      RGAS_I(Ion4_)=RGAS*XAMU/Mass_I(Ion4_)
       GMIN1=GAMMA-1.
       GMIN2=GMIN1/2.
       GPL1=GAMMA+1.
@@ -63,14 +63,14 @@ C kB/m_e
       GM12=GMIN1/GAMMA/2.
       GRAR=GAMMA/GMIN2
       GREC=1./GAMMA
-      CPO=GAMMA*RGASO/GMIN1
-      CPH=GAMMA*RGASH/GMIN1
-      CPHE=GAMMA*RGASHE/GMIN1
-      CPE=GAMMA*RGASE/GMIN1
-      CVO=RGASO/GMIN1
-      CVH=RGASH/GMIN1
-      CVHE=RGASHE/GMIN1
-      CVE=RGASE/GMIN1
+      CPO=GAMMA*RGAS_I(Ion1_)/GMIN1
+      CPH=GAMMA*RGAS_I(Ion2_)/GMIN1
+      CPHE=GAMMA*RGAS_I(Ion3_)/GMIN1
+      CPE=GAMMA*RGAS_I(Ion4_)/GMIN1
+      CVO=RGAS_I(Ion1_)/GMIN1
+      CVH=RGAS_I(Ion2_)/GMIN1
+      CVHE=RGAS_I(Ion3_)/GMIN1
+      CVE=RGAS_I(Ion4_)/GMIN1
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
@@ -273,7 +273,7 @@ C
       HEATX3=EXP(-(ALTD(K)-HEATA3)**2/HEATS3)
 
 c      QOXYG(K)=(HEATI1*HEATX1+HEATI2*HEATX2)/
-c     #         (DOXYG(K)+DHYD(K)+DHEL(K))
+c     #         (State_GV(K,RhoO_)+State_GV(K,RhoH_)+State_GV(K,RhoHe_))
 c      QHYD(K)=QOXYG(K)/16.
 c      QHEL(K)=QOXYG(K)/4.
 
@@ -332,31 +332,31 @@ C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 CALEX terms with "surf" in them refer to surface values      
-      HLPE0=GMIN1/RGASE
-      HLPE=1.23E-6*GMIN1/RGASE
-      HLPO=1.24E-8*(XMSE/XMSO)*GMIN1/RGASO
-      HLPHE=2.5*(RGASHE**2*XMSHE)*GMIN1/RGASHE
-      HLPH=4.96E-8*(XMSE/XMSH)*GMIN1/RGASH
+      HLPE0=GMIN1/RGAS_I(Ion4_)
+      HLPE=1.23E-6*GMIN1/RGAS_I(Ion4_)
+      HLPO=1.24E-8*(Mass_I(Ion4_)/Mass_I(Ion1_))*GMIN1/RGAS_I(Ion1_)
+      HLPHE=2.5*(RGAS_I(Ion3_)**2*Mass_I(Ion3_))*GMIN1/RGAS_I(Ion3_)
+      HLPH=4.96E-8*(Mass_I(Ion4_)/Mass_I(Ion2_))*GMIN1/RGAS_I(Ion2_)
       CALL MODATM(ALTMIN,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
 CALEX I believe these are heat conduction coef. at lower boundary
       CXHN2=3.36E-9*XNN2
       CXHO2=3.20E-9*XNO2
-      CXHO=6.61E-11*XNO*SQRT(TSURFH)*(1.-0.047*ALOG10(TSURFH))**2
-      CXHOX=1.23*(DSURFO/XMSO)/TSURFH**1.5
+      CXHO=6.61E-11*XNO*SQRT(State_GV(0,Th_))*(1.-0.047*ALOG10(State_GV(0,Th_)))**2
+      CXHOX=1.23*(State_GV(0,RhoO_)/Mass_I(Ion1_))/State_GV(0,Th_)**1.5
       CXHEN2=1.60E-9*XNN2
       CXHEO2=1.53E-9*XNO2
-      CXHEHE=8.73E-11*XNHE*SQRT(TSURHE)*(1.-0.093*ALOG10(TSURHE))**2
+      CXHEHE=8.73E-11*XNHE*SQRT(State_GV(0,The_))*(1.-0.093*ALOG10(State_GV(0,The_)))**2
       CXHEO=1.01E-9*XNO
       CXHEH=4.71E-10*XNH
-      CXHEOX=0.57*(DSURFO/XMSO)/TSURHE**1.5
-      CXHEHD=0.28*(DSURFH/XMSH)/TSURHE**1.5
+      CXHEOX=0.57*(State_GV(0,RhoO_)/Mass_I(Ion1_))/State_GV(0,The_)**1.5
+      CXHEHD=0.28*(State_GV(0,RhoH_)/Mass_I(Ion2_))/State_GV(0,The_)**1.5
 CALEX I believe these are heat conductivities      
-      TCSFO=HLPO*(DSURFO/DSURFE)*TSURFO**2.5
-      TCSFE=HLPE*TSURFE**2.5
-      TCSFH=HLPH*(DSURFH/DSURFE)*TSURFH**2.5
-      TCSFH=TCSFH/(1.+(0.7692*(CXHN2+CXHO2)+1.0962*CXHO)/CXHOX)
-      TCSFHE=HLPHE*(DSURHE/XMSHE)*TSURHE
-      TCSFHE=TCSFHE/(0.99*CXHEN2+0.99*CXHEO2+1.02*CXHEO+1.48*CXHEHE+
+      HeatCon_GI(0,Ion1_)=HLPO*(State_GV(0,RhoO_)/State_GV(0,RhoE_))*State_GV(0,To_)**2.5
+      HeatCon_GI(0,Ion4_)=HLPE*State_GV(0,Te_)**2.5
+      HeatCon_GI(0,Ion2_)=HLPH*(State_GV(0,RhoH_)/State_GV(0,RhoE_))*State_GV(0,Th_)**2.5
+      HeatCon_GI(0,Ion2_)=HeatCon_GI(0,Ion2_)/(1.+(0.7692*(CXHN2+CXHO2)+1.0962*CXHO)/CXHOX)
+      HeatCon_GI(0,Ion3_)=HLPHE*(State_GV(0,RhoHe_)/Mass_I(Ion3_))*State_GV(0,The_)
+      HeatCon_GI(0,Ion3_)=HeatCon_GI(0,Ion3_)/(0.99*CXHEN2+0.99*CXHEO2+1.02*CXHEO+1.48*CXHEHE+
      $2.22*CXHEH+1.21*CXHEOX+2.23*CXHEHD)      
       CALL MODATM(ALTMAX,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
       XTNMAX=TEMP
@@ -364,14 +364,14 @@ CALEX I believe these are heat conduction coef. at upper boundary
       CZHN2=3.36E-9*XNN2
       CZHO2=3.20E-9*XNO2
       CZHO=6.61E-11*XNO
-      CZHOX=1.23*17.**1.5/XMSO
+      CZHOX=1.23*17.**1.5/Mass_I(Ion1_)
       CZHEN2=1.60E-9*XNN2
       CZHEO2=1.53E-9*XNO2
       CZHEHE=8.73E-11*XNHE
       CZHEO=1.01E-9*XNO
       CZHEH=4.71E-10*XNH
-      CZHEOX=0.57*5.**1.5/XMSO
-      CZHEHD=0.28*5.**1.5/XMSH
+      CZHEOX=0.57*5.**1.5/Mass_I(Ion1_)
+      CZHEHD=0.28*5.**1.5/Mass_I(Ion2_)
       ETOP=ETOP*DRBND/1.23E-6
       CALL PW_set_upper_bc
 3     FORMAT(4X,I6)
@@ -397,7 +397,7 @@ C      READ(5,3) NCNPRT
       ETOP1=ETOP*1.23E-6/DRBND
       CALL COLLIS(NDIM)
 
-      CALL ELFLDW
+      CALL PW_CALC_EFIELD
 
       !write log
       if (DoLog) then
@@ -406,8 +406,8 @@ C      READ(5,3) NCNPRT
 1005  FORMAT(1H1,5X,'NUMBER OF CELLS=',I4)
       WRITE(iUnitOutput,1020) NEXP
 1020  FORMAT(5X,'NEXP=',I1)
-      WRITE (iUnitOutput,1008) GAMMA,RGASO,CPO,CVO,RGASHE,CPHE,CVHE,
-     ;RGASH,CPH,CVH,RGASE,CPE,CVE
+      WRITE (iUnitOutput,1008) GAMMA,RGAS_I(Ion1_),CPO,CVO,RGAS_I(Ion3_),CPHE,CVHE,
+     ;RGAS_I(Ion2_),CPH,CVH,RGAS_I(Ion4_),CPE,CVE
 1008  FORMAT(5X,'GAMMA=',F4.2,/5X,'RGAS(OXYGEN)=',1PE10.4,7X,
      ;'CP(OXYGEN)=',1PE10.4,7X,'CV(OXYGEN)=',1PE10.4
      ;/5X,'RGAS(HELIUM)=',1PE10.4,7X,
@@ -419,33 +419,38 @@ C      READ(5,3) NCNPRT
 1023  FORMAT(1H0,5X,'LOWER BOUNDARY PLASMA PARAMETERS:')
       WRITE(iUnitOutput,1001)
 1001  FORMAT(1H ,4X,'OXYGEN:')
-      WRITE (iUnitOutput,1009) USURFO,PSURFO,DSURFO,TSURFO,WSURFO
+      WRITE (iUnitOutput,1009) State_GV(0,uO_),State_GV(0,Po_),State_GV(0,RhoO_),State_GV(0,To_),SoundSpeed_GI(0,Ion1_)
 1009  FORMAT(5X,'VELOCITY=',1PE11.4,3X,'PRESSURE=',1PE10.4,3X,
      ;'MASS DENSITY=',1PE10.4,3X,'TEMPERATURE=',1PE10.4,3X,
      ;'SOUND VELOCITY=',1PE10.4)
       WRITE(iUnitOutput,10021)
 10021 FORMAT(1H ,4X,'HELIUM:')
-      WRITE (iUnitOutput,1009) USURHE,PSURHE,DSURHE,TSURHE,WSURHE
+      WRITE (iUnitOutput,1009) State_GV(0,uHe_),State_GV(0,pHe_),State_GV(0,RhoHe_),State_GV(0,The_),SoundSpeed_GI(0,Ion3_)
       WRITE(iUnitOutput,1002)
 1002  FORMAT(1H ,4X,'HYDROGEN:')
-      WRITE (iUnitOutput,1009) USURFH,PSURFH,DSURFH,TSURFH,WSURFH
+      WRITE (iUnitOutput,1009) State_GV(0,uH_),State_GV(0,pH_),State_GV(0,RhoH_),State_GV(0,Th_),SoundSpeed_GI(0,Ion2_)
       WRITE(iUnitOutput,1003)
 1003  FORMAT(1H ,4X,'ELECTRONS:')
-      WRITE (iUnitOutput,1009) USURFE,PSURFE,DSURFE,TSURFE,WSURFE
+      WRITE (iUnitOutput,1009) State_GV(0,uE_),State_GV(0,pE_),State_GV(0,RhoE_),State_GV(0,Te_),SoundSpeed_GI(0,Ion4_)
       WRITE (iUnitOutput,1027)
 1027  FORMAT(1H0,5X,'UPPER BOUNDARY INITIAL PLASMA PARAMETERS:')
       WRITE (iUnitOutput,1004)
 1004  FORMAT(1H ,4X,'OXYGEN:')
-      WRITE (iUnitOutput,1009) UBGNDO,PBGNDO,DBGNDO,TBGNDO,WBGNDO
+      WRITE (iUnitOutput,1009) State_GV(nDim+1,uO_),State_GV(nDim+1,pO_),
+     &     State_GV(nDim+1,RhoO_),State_GV(nDim+1,To_),SoundSpeed_GI(nDim+1,Ion1_)
       WRITE (iUnitOutput,1088)
 1088  FORMAT(1H ,4X,'HELIUM:')
-      WRITE (iUnitOutput,1009) UBGNHE,PBGNHE,DBGNHE,TBGNHE,WBGNHE
+      WRITE (iUnitOutput,1009) 
+     &     State_GV(nDim+1,uHe_),State_GV(nDim+1,pHe_),State_GV(nDim+1,RhoHe_),
+     &     State_GV(nDim+1,The_),SoundSpeed_GI(nDim+1,Ion3_)
       WRITE (iUnitOutput,1006)
 1006  FORMAT(1H ,4X,'HYDROGEN:')
-      WRITE (iUnitOutput,1009) UBGNDH,PBGNDH,DBGNDH,TBGNDH,WBGNDH
+      WRITE (iUnitOutput,1009) State_GV(nDim+1,uH_),State_GV(nDim+1,pH_),
+     &     State_GV(nDim+1,RhoH_),State_GV(nDim+1,Th_),SoundSpeed_GI(nDim+1,Ion2_)
       WRITE(iUnitOutput,1007)
 1007  FORMAT(1H ,4X,'ELECTRONS:')
-      WRITE (iUnitOutput,1009) UBGNDE,PBGNDE,DBGNDE,TBGNDE,WBGNDE
+      WRITE (iUnitOutput,1009) State_GV(nDim+1,uE_),State_GV(nDim+1,pE_),
+     &     State_GV(nDim+1,RhoE_),State_GV(nDim+1,Te_),SoundSpeed_GI(nDim+1,Ion4_)
       WRITE (iUnitOutput,1029) ETOP1
 1029  FORMAT(1H0,5X,'TOPSIDE ELECTRON HEATING RATE:',1PE10.4,
      ;' ERGS/CM**3/SEC')
@@ -943,184 +948,184 @@ C      READ(5,3) NCNPRT
 1021  FORMAT(16X,'ALT',10X,'VELOCITY',8X,'MACH NO',9X,'DENSITY',9X,
      ;'PRESSURE',6X,'TEMPERATURE',/)
       K=0
-      XM=USURFO/WSURFO
-      DNS1=DSURFO/XMSO
-      WRITE(iUnitOutput,1022) K,ALTMIN,USURFO,XM,DNS1,PSURFO,TSURFO
+      XM=State_GV(0,uO_)/SoundSpeed_GI(0,Ion1_)
+      DNS1=State_GV(0,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uO_),XM,DNS1,State_GV(0,Po_),State_GV(0,To_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 630 K=1,NDMQ
-      US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
-      XM=UOXYG(K)/US
-      DNS1=DOXYG(K)/XMSO
-      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
+      XM=State_GV(K,uO_)/US
+      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
 630   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 690
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 640 K=NPT2,NDMQ,2
-      US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
-      XM=UOXYG(K)/US
-      DNS1=DOXYG(K)/XMSO
-      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
+      XM=State_GV(K,uO_)/US
+      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
 640   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 690
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 650 K=NPT4,NDMQ,5
-      US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
-      XM=UOXYG(K)/US
-      DNS1=DOXYG(K)/XMSO
-      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
+      XM=State_GV(K,uO_)/US
+      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
 650   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 690
       DO 660 K=NPT6,NDIM,10
-      US=SQRT(GAMMA*POXYG(K)/DOXYG(K))
-      XM=UOXYG(K)/US
-      DNS1=DOXYG(K)/XMSO
-      WRITE(iUnitOutput,1022) K,ALTD(K),UOXYG(K),XM,DNS1,POXYG(K),TOXYG(K)
+      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
+      XM=State_GV(K,uO_)/US
+      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
 660   CONTINUE
 690   CONTINUE
       K=NDIM1
-      XM=UBGNDO/WBGNDO
-      DNS1=DBGNDO/XMSO
-      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDO,XM,DNS1,PBGNDO,TBGNDO
+      XM=State_GV(nDim+1,uO_)/SoundSpeed_GI(nDim+1,Ion1_)
+      DNS1=State_GV(nDim+1,RhoO_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uO_),XM,DNS1,State_GV(nDim+1,pO_),State_GV(nDim+1,To_)
       WRITE (iUnitOutput,1055)
 1055  FORMAT(1H1,45X,'INITIAL HELIUM PARAMETERS')
       WRITE(iUnitOutput,1056)
 1056  FORMAT(16X,'ALT',10X,'VELOCITY',8X,'MACH NO',9X,'DENSITY',9X,
      ;'PRESSURE',6X,'TEMPERATURE',/)
       K=0
-      XM=USURHE/WSURHE
-      DNS1=DSURHE/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTMIN,USURHE,XM,DNS1,PSURHE,TSURHE
+      XM=State_GV(0,uHe_)/SoundSpeed_GI(0,Ion3_)
+      DNS1=State_GV(0,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uHe_),XM,DNS1,State_GV(0,pHe_),State_GV(0,The_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 639 K=1,NDMQ
-      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
-      XM=UHEL(K)/US
-      DNS1=DHEL(K)/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      US=SQRT(GAMMA*State_GV(K,pHe_)/State_GV(K,RhoHe_))
+      XM=State_GV(K,uHe_)/US
+      DNS1=State_GV(K,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uHe_),XM,DNS1,State_GV(K,pHe_),State_GV(K,The_)
 639   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 699
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 649 K=NPT2,NDMQ,2
-      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
-      XM=UHEL(K)/US
-      DNS1=DHEL(K)/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      US=SQRT(GAMMA*State_GV(K,pHe_)/State_GV(K,RhoHe_))
+      XM=State_GV(K,uHe_)/US
+      DNS1=State_GV(K,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uHe_),XM,DNS1,State_GV(K,pHe_),State_GV(K,The_)
 649   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 699
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 659 K=NPT4,NDMQ,5
-      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
-      XM=UHEL(K)/US
-      DNS1=DHEL(K)/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      US=SQRT(GAMMA*State_GV(K,pHe_)/State_GV(K,RhoHe_))
+      XM=State_GV(K,uHe_)/US
+      DNS1=State_GV(K,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uHe_),XM,DNS1,State_GV(K,pHe_),State_GV(K,The_)
 659   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 699
       DO 669 K=NPT6,NDIM,10
-      US=SQRT(GAMMA*PHEL(K)/DHEL(K))
-      XM=UHEL(K)/US
-      DNS1=DHEL(K)/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHEL(K),XM,DNS1,PHEL(K),THEL(K)
+      US=SQRT(GAMMA*State_GV(K,pHe_)/State_GV(K,RhoHe_))
+      XM=State_GV(K,uHe_)/US
+      DNS1=State_GV(K,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uHe_),XM,DNS1,State_GV(K,pHe_),State_GV(K,The_)
 669   CONTINUE
 699   CONTINUE
       K=NDIM1
-      XM=UBGNHE/WBGNHE
-      DNS1=DBGNHE/XMSHE
-      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNHE,XM,DNS1,PBGNHE,TBGNHE
+      XM=State_GV(nDim+1,uHe_)/SoundSpeed_GI(nDim+1,Ion3_)
+      DNS1=State_GV(nDim+1,RhoHe_)/Mass_I(Ion3_)
+      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uHe_),XM,DNS1,State_GV(nDim+1,pHe_),State_GV(nDim+1,The_)
       WRITE (iUnitOutput,1010)
 1010  FORMAT(1H1,45X,'INITIAL HYDROGEN PARAMETERS')
       WRITE(iUnitOutput,1021)
       K=0
-      XM=USURFH/WSURFH
-      DNS1=DSURFH/XMSH
-      WRITE(iUnitOutput,1022) K,ALTMIN,USURFH,XM,DNS1,PSURFH,TSURFH
+      XM=State_GV(0,uH_)/SoundSpeed_GI(0,Ion2_)
+      DNS1=State_GV(0,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uH_),XM,DNS1,State_GV(0,pH_),State_GV(0,Th_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 730 K=1,NDMQ
-      US=SQRT(GAMMA*PHYD(K)/DHYD(K))
-      XM=UHYD(K)/US
-      DNS1=DHYD(K)/XMSH
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      US=SQRT(GAMMA*State_GV(K,pH_)/State_GV(K,RhoH_))
+      XM=State_GV(K,uH_)/US
+      DNS1=State_GV(K,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH_),XM,DNS1,State_GV(K,pH_),State_GV(K,Th_)
 730   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 790
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 740 K=NPT2,NDMQ,2
-      US=SQRT(GAMMA*PHYD(K)/DHYD(K))
-      XM=UHYD(K)/US
-      DNS1=DHYD(K)/XMSH
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      US=SQRT(GAMMA*State_GV(K,pH_)/State_GV(K,RhoH_))
+      XM=State_GV(K,uH_)/US
+      DNS1=State_GV(K,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH_),XM,DNS1,State_GV(K,pH_),State_GV(K,Th_)
 740   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 790
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 750 K=NPT4,NDMQ,5
-      US=SQRT(GAMMA*PHYD(K)/DHYD(K))
-      XM=UHYD(K)/US
-      DNS1=DHYD(K)/XMSH
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      US=SQRT(GAMMA*State_GV(K,pH_)/State_GV(K,RhoH_))
+      XM=State_GV(K,uH_)/US
+      DNS1=State_GV(K,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH_),XM,DNS1,State_GV(K,pH_),State_GV(K,Th_)
 750   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 790
       DO 760 K=NPT6,NDIM,10
-      US=SQRT(GAMMA*PHYD(K)/DHYD(K))
-      XM=UHYD(K)/US
-      DNS1=DHYD(K)/XMSH
-      WRITE(iUnitOutput,1022) K,ALTD(K),UHYD(K),XM,DNS1,PHYD(K),THYD(K)
+      US=SQRT(GAMMA*State_GV(K,pH_)/State_GV(K,RhoH_))
+      XM=State_GV(K,uH_)/US
+      DNS1=State_GV(K,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH_),XM,DNS1,State_GV(K,pH_),State_GV(K,Th_)
 760   CONTINUE
 790   CONTINUE
       K=NDIM1
-      XM=UBGNDH/WBGNDH
-      DNS1=DBGNDH/XMSH
-      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDH,XM,DNS1,PBGNDH,TBGNDH
+      XM=State_GV(nDim+1,uH_)/SoundSpeed_GI(nDim+1,Ion2_)
+      DNS1=State_GV(nDim+1,RhoH_)/Mass_I(Ion2_)
+      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uH_),XM,DNS1,State_GV(nDim+1,pH_),State_GV(nDim+1,Th_)
       WRITE (iUnitOutput,1011)
 1011  FORMAT(1H1,45X,'INITIAL ELECTRON PARAMETERS')
       WRITE(iUnitOutput,1021)
       K=0
-      XM=USURFE/WSURFE
-      DNS1=DSURFE/XMSE
-      WRITE(iUnitOutput,1022) K,ALTMIN,USURFE,XM,DNS1,PSURFE,TSURFE
+      XM=State_GV(0,uE_)/SoundSpeed_GI(0,Ion4_)
+      DNS1=State_GV(0,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uE_),XM,DNS1,State_GV(0,pE_),State_GV(0,Te_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 830 K=1,NDMQ
-      US=SQRT(GAMMA*PELECT(K)/DELECT(K))
-      XM=UELECT(K)/US
-      DNS1=DELECT(K)/XMSE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      US=SQRT(GAMMA*State_GV(K,pE_)/State_GV(K,RhoE_))
+      XM=State_GV(K,uE_)/US
+      DNS1=State_GV(K,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uE_),XM,DNS1,State_GV(K,pE_),State_GV(K,Te_)
 830   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 890
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 840 K=NPT2,NDMQ,2
-      US=SQRT(GAMMA*PELECT(K)/DELECT(K))
-      XM=UELECT(K)/US
-      DNS1=DELECT(K)/XMSE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      US=SQRT(GAMMA*State_GV(K,pE_)/State_GV(K,RhoE_))
+      XM=State_GV(K,uE_)/US
+      DNS1=State_GV(K,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uE_),XM,DNS1,State_GV(K,pE_),State_GV(K,Te_)
 840   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 890
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 850 K=NPT4,NDMQ,5
-      US=SQRT(GAMMA*PELECT(K)/DELECT(K))
-      XM=UELECT(K)/US
-      DNS1=DELECT(K)/XMSE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      US=SQRT(GAMMA*State_GV(K,pE_)/State_GV(K,RhoE_))
+      XM=State_GV(K,uE_)/US
+      DNS1=State_GV(K,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uE_),XM,DNS1,State_GV(K,pE_),State_GV(K,Te_)
 850   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 890
       DO 860 K=NPT6,NDIM,10
-      US=SQRT(GAMMA*PELECT(K)/DELECT(K))
-      XM=UELECT(K)/US
-      DNS1=DELECT(K)/XMSE
-      WRITE(iUnitOutput,1022) K,ALTD(K),UELECT(K),XM,DNS1,PELECT(K),TELECT(K)
+      US=SQRT(GAMMA*State_GV(K,pE_)/State_GV(K,RhoE_))
+      XM=State_GV(K,uE_)/US
+      DNS1=State_GV(K,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uE_),XM,DNS1,State_GV(K,pE_),State_GV(K,Te_)
 860   CONTINUE
 890   CONTINUE
       K=NDIM1
-      XM=UBGNDE/WBGNDE
-      DNS1=DBGNDE/XMSE
-      WRITE(iUnitOutput,1022) K,ALTMAX,UBGNDE,XM,DNS1,PBGNDE,TBGNDE
+      XM=State_GV(nDim+1,uE_)/SoundSpeed_GI(nDim+1,Ion4_)
+      DNS1=State_GV(nDim+1,RhoE_)/Mass_I(Ion4_)
+      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uE_),XM,DNS1,State_GV(nDim+1,pE_),State_GV(nDim+1,Te_)
       WRITE(iUnitOutput,1024)
 1024  FORMAT(1H1,40X,'INITIAL ELECTRIC FIELD AND SOURCE PARAMETERS')
       WRITE(iUnitOutput,1025)
@@ -1129,27 +1134,27 @@ C      READ(5,3) NCNPRT
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 930 K=1,NDMQ
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
-     ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),Source_CV(K,uHe_),
+     ;Source_CV(K,pHe_),Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 930   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 990
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 940 K=NPT2,NDMQ,2
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
-     ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),Source_CV(K,uHe_),
+     ;Source_CV(K,pHe_),Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 940   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 990
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 950 K=NPT4,NDMQ,5
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
-     ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),Source_CV(K,uHe_),
+     ;Source_CV(K,pHe_),Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 950   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 990
       DO 960 K=NPT6,NDIM,10
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),FCLSNO(K),ECLSNO(K),FCLSHE(K),
-     ;ECLSHE(K),FCLSNH(K),ECLSNH(K),FCLSNE(K),ECLSNE(K)
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),Source_CV(K,uHe_),
+     ;Source_CV(K,pHe_),Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 960   CONTINUE
 990   CONTINUE
 999   CONTINUE
@@ -1159,31 +1164,37 @@ C      READ(5,3) NCNPRT
 2021  FORMAT(16X,'ALT',10X,'OXYGEN',10X,'HELIUM',9X,'HYDROGEN',9X,
      ;'ELECTRONS'/)
       K=0
-      WRITE(iUnitOutput,1022) K,ALTMIN,TCSFO,TCSFHE,TCSFH,TCSFE
+      WRITE(iUnitOutput,1022) 
+     & K,ALTMIN,HeatCon_GI(0,Ion1_),HeatCon_GI(0,Ion3_),HeatCon_GI(0,Ion2_),HeatCon_GI(0,Ion4_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 2630 K=1,NDMQ
-      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) 
+     & K,ALTD(K),HeatCon_GI(K,Ion1_),HeatCon_GI(K,Ion3_),HeatCon_GI(K,Ion2_),HeatCon_GI(K,Ion4_)
 2630  CONTINUE
       IF (NDIM.LT.NPT2) GO TO 2690
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 2640 K=NPT2,NDMQ,2
-      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) 
+     & K,ALTD(K),HeatCon_GI(K,Ion1_),HeatCon_GI(K,Ion3_),HeatCon_GI(K,Ion2_),HeatCon_GI(K,Ion4_)
 2640  CONTINUE
       IF (NDIM.LT.NPT4) GO TO 2690
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 2650 K=NPT4,NDMQ,5
-      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) 
+     & K,ALTD(K),HeatCon_GI(K,Ion1_),HeatCon_GI(K,Ion3_),HeatCon_GI(K,Ion2_),HeatCon_GI(K,Ion4_)
 2650   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 2690
       DO 2660 K=NPT6,NDIM,10
-      WRITE(iUnitOutput,1022) K,ALTD(K),TCONO(K),TCONHE(K),TCONH(K),TCONE(K)
+      WRITE(iUnitOutput,1022) 
+     & K,ALTD(K),HeatCon_GI(K,Ion1_),HeatCon_GI(K,Ion3_),HeatCon_GI(K,Ion2_),HeatCon_GI(K,Ion4_)
 2660   CONTINUE
 2690   CONTINUE
       K=NDIM1
-      WRITE(iUnitOutput,1022) K,ALTMAX,TCBGO,TCBGHE,TCBGH,TCBGE
+      WRITE(iUnitOutput,1022) 
+     & K,ALTMAX,HeatCon_GI(nDim+1,Ion1_),HeatCon_GI(nDim+1,Ion3_),HeatCon_GI(nDim+1,Ion2_),HeatCon_GI(nDim+1,Ion4_)
 1019  FORMAT(3X,I3,0PF10.2,2X,11(1PE10.2))
 1022  FORMAT(3X,I3,0PF14.2,2X,6(1PE16.5))
 1026  FORMAT(3X,I3,0PF11.2,2X,9(1PE12.4))
@@ -1226,47 +1237,57 @@ C     DEFINE THE GAS PARAMETERS AT THE LOWER BOUNDARY                  C
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     C
-      USURFO=0.
-      USURFH=0.
-      USURHE=0.
-      USURFE=0.
+      State_GV(0,uO_)=0.
+      State_GV(0,uh_)=0
+      State_GV(0,uhe_)=0.
+
       CALL MODATM(ALTMIN,XNO2,XNN2,XNO,XNH,XNHE,TEMP)
-      TSURFO=TEMP
-      TSURFH=TEMP
-      TSURHE=TEMP
-      TSURFE=TEMP
+      State_GV(0,To_) =TEMP
+      State_GV(0,Th_) =TEMP
+      State_GV(0,The_)=TEMP
+      State_GV(0,Te_) =TEMP
+
       TMP1=1.-1.290E-3*TEMP+6.233E-7*TEMP**2
       TMP2=1.-9.149E-4*TEMP+4.228E-7*TEMP**2-6.790E-11*TEMP**3+
      $     4.225E-15*TEMP**4
-C     DSURFO=PHIOX*XMSO*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
-      DSURFO=PHOTOTF(1)*XMSO*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
-      DSURHE=PHIHE*XMSHE*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
-      DSURFH=1.136*(XNH/XNO)*(XMSH/XMSO)*DSURFO
-      DSURFE=RTHDEL*DSURFH+RTOXEL*DSURFO+RTHEEL*DSURHE
-      PSURFO=RGASO*TSURFO*DSURFO
-      PSURFH=RGASH*TSURFH*DSURFH
-      PSURHE=RGASHE*TSURHE*DSURHE
-      PSURFE=RGASE*TSURFE*DSURFE
-      WSURFO=SQRT(GAMMA*RGASO*TSURFO)
-      WSURFH=SQRT(GAMMA*RGASH*TSURFH)
-      WSURHE=SQRT(GAMMA*RGASHE*TSURHE)
-      WSURFE=SQRT(GAMMA*RGASE*TSURFE)
+C     State_GV(0,RhoO_)=PHIOX*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
+      State_GV(0,RhoO_) =PHOTOTF(1)*Mass_I(Ion1_)*XNO/(1.53E-12*XNN2*TMP1+2.82E-11*XNO2*TMP2)
+      State_GV(0,RhoHe_)=PHIHE*Mass_I(Ion3_)*XNHE/(1.10E-9*XNO2+1.60E-9*XNN2)
+      State_GV(0,RhoH_) =1.136*(XNH/XNO)*(Mass_I(Ion2_)/Mass_I(Ion1_))*State_GV(0,RhoO_)
+
+      State_GV(0,RhoE_) =0.0 
+      do iIon=1,nIon-1
+         State_GV(0,RhoE_) = 
+     &        State_GV(0,RhoE_)+MassElecIon_I(iIon)*State_GV(0,iRho_I(iIon))
+      enddo
+      
+      State_GV(0,pO_) =RGAS_I(Ion1_)*State_GV(0,To_) *State_GV(0,RhoO_)
+      State_GV(0,pH_) =RGAS_I(Ion2_)*State_GV(0,Th_) *State_GV(0,RhoH_)
+      State_GV(0,pHe_)=RGAS_I(Ion3_)*State_GV(0,The_)*State_GV(0,RhoHe_)
+      State_GV(0,pE_) =RGAS_I(Ion4_)*State_GV(0,Te_) *State_GV(0,RhoE_)
+      
+      do iIon=1,nIon
+         SoundSpeed_GI(0,iIon) = 
+     &        SQRT(
+     &        GAMMA*State_GV(0,iP_I(iIon)) / State_GV(0,iRho_I(iIon))
+     &        )
+      enddo
 C     
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     
       DO 20 I=1,NDIM
 C     FFOX1(1) BASED ON PHOTOIONIZATION FREQ FROM SUB GLOWEX;MASS OXYGEN IN GRAMS
          FFOX1(I)=PHOTOTF(I+1)*16.*1.6726E-24*XO(I)
-C     FFOX1(I)=PHIOX*XMSO*XO(I)
+C     FFOX1(I)=PHIOX*Mass_I(Ion1_)*XO(I)
 CALEX SOURCE COEF?         
-         FFOX2(I)=2.2E-11*XMSO*XO(I)/XMSH
+         FFOX2(I)=2.2E-11*Mass_I(Ion1_)*XO(I)/Mass_I(Ion2_)
          FFOX3(I)=-2.5E-11*XH(I)
          FFOX4(I)=-1.53E-12*XN2(I)
          FFOX5(I)=-2.73E-12*XN2(I)
          FFOX6(I)=-2.82E-11*XO2(I)
-         FFHYD1(I)=2.5E-11*XMSH*XH(I)/XMSO
+         FFHYD1(I)=2.5E-11*Mass_I(Ion2_)*XH(I)/Mass_I(Ion1_)
          FFHYD2(I)=-2.2E-11*XO(I)
-         FFHE1(I)=PHIHE*XMSHE*XHE(I)
+         FFHE1(I)=PHIHE*Mass_I(Ion3_)*XHE(I)
          FFHE2(I)=-(1.10E-9*XO2(I)+1.60E-9*XN2(I))
 
 
@@ -1286,11 +1307,11 @@ CALEX seems like cl for O+ and H but I think the constant 4.63
 CALEX is wrong. see nagy p.99         
          CLOXH(I)=4.63E-12*XH(I)
 CALEX cl for O+ and H+         
-         CLOXHD(I)=0.077*17.**1.5/XMSH
+         CLOXHD(I)=0.077*17.**1.5/Mass_I(Ion2_)
 CALEX cl for O+ and He+         
-         CLOXHL(I)=0.14*5.**1.5/XMSHE
+         CLOXHL(I)=0.14*5.**1.5/Mass_I(Ion3_)
 CALEX cl for O and electrons??        
-         CLOXEL(I)=1.86E-3/XMSE
+         CLOXEL(I)=1.86E-3/Mass_I(Ion4_)
 
 CALEX cf of H+ and N2  
          !CFHN2(I)=3.36E-9*XN2(I)
@@ -1305,9 +1326,9 @@ CALEX cl for ion neutral collsion
          CLHO(I)=6.61E-11*XO(I)
          CLHH(I)=2.65E-10*XH(I)
 CALEX cl for ion ion collision         
-         CLHOX(I)=1.23*17.**1.5/XMSO
-         CLHHL(I)=1.14*5.**1.5/XMSHE
-         CLHEL(I)=2.97E-2/XMSE
+         CLHOX(I)=1.23*17.**1.5/Mass_I(Ion1_)
+         CLHHL(I)=1.14*5.**1.5/Mass_I(Ion3_)
+         CLHEL(I)=2.97E-2/Mass_I(Ion4_)
 
 CALEX cf of He+ and N2
          !CFHEN2(I)=1.60E-9*XN2(I)
@@ -1324,9 +1345,9 @@ CALEX cf of He+ and H
          !CFHEH(I)=4.71E-10*XH(I)
          CollisionFreq_IIC(Ion3_,Neutral2_,I)=4.71E-10*XH(I)
 CALEX these are cl for ion ion collisions
-         CLHEOX(I)=0.57*5.**1.5/XMSO
-         CLHEHD(I)=0.28*5.**1.5/XMSH
-         CLHEEL(I)=7.43E-3/XMSE
+         CLHEOX(I)=0.57*5.**1.5/Mass_I(Ion1_)
+         CLHEHD(I)=0.28*5.**1.5/Mass_I(Ion2_)
+         CLHEEL(I)=7.43E-3/Mass_I(Ion4_)
         
 CALEX cf of electrons and N2? this doesnt match nagy p 97 though?? 
          !CFELN2(I)=3.42E-9*XN2(I)
@@ -1340,9 +1361,9 @@ CALEX cf of electrons and N2? this doesnt match nagy p 97 though??
          !CFELH(I)=2.11E-9*XH(I)
          CollisionFreq_IIC(Ion4_,Neutral2_,I)=2.11E-9*XH(I)
 CALEX similar to nagy p95 but I cant find the connection???         
-         CLELOX(I)=54.5/XMSO
-         CLELHL(I)=54.5/XMSHE
-         CLELHD(I)=54.5/XMSH
+         CLELOX(I)=54.5/Mass_I(Ion1_)
+         CLELHL(I)=54.5/Mass_I(Ion3_)
+         CLELHD(I)=54.5/Mass_I(Ion2_)
          GRAVTY(I)=-3.96E20/RAD(I)**2
          Centrifugal(I)=wHorizontal**2.0*RAD(I)
  20   CONTINUE
@@ -1367,89 +1388,89 @@ CALEX heat flow between species, and CM is the term due to
 CALEX frictional heating between species moving through each other
 
 CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
-      HeatFlowCoef_II(Ion1_,Neutral4_)=3.*RGASO*XMSO/(XMSO+28.*XAMU)
-      HeatFlowCoef_II(Ion1_,Neutral3_)=3.*RGASO*XMSO/(XMSO+32.*XAMU)
-      HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGASO*XMSO/(XMSO+XMSO)
-      HeatFlowCoef_II(Ion1_,Neutral5_)=3.*RGASO*XMSO/(XMSO+XMSHE)
-      HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGASO*XMSO/(XMSO+XMSH)
-      HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGASO*XMSO/(XMSO+XMSH)
-      HeatFlowCoef_II(Ion1_,Ion3_) = 3.*RGASO*XMSO/(XMSO+XMSHE)
-      HeatFlowCoef_II(Ion1_,Ion4_) = 3.*RGASO*XMSO/(XMSO+XMSE)
+      HeatFlowCoef_II(Ion1_,Neutral4_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+28.*XAMU)
+      HeatFlowCoef_II(Ion1_,Neutral3_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+32.*XAMU)
+      HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion1_,Neutral5_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion1_,Ion2_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion1_,Ion3_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion1_,Ion4_) = 3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion4_))
       
-      MassFracCoef_II(Ion1_,:) = HeatFlowCoef_II(Ion1_,:) / (3.0*RGASO)
+      MassFracCoef_II(Ion1_,:) = HeatFlowCoef_II(Ion1_,:) / (3.0*RGAS_I(Ion1_))
 
 
-      HeatFlowCoef_II(Ion2_,Neutral4_)=3.*RGASH*XMSH/(XMSH+28.*XAMU)
-      HeatFlowCoef_II(Ion2_,Neutral3_)=3.*RGASH*XMSH/(XMSH+32.*XAMU)
-      HeatFlowCoef_II(Ion2_,Neutral5_)=3.*RGASH*XMSH/(XMSH+XMSHE)
-      HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGASH *XMSH/(XMSH+XMSO)
-      HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGASH*XMSH/(XMSH+XMSH)
-      HeatFlowCoef_II(Ion2_,Ion1_) = 3.*RGASH *XMSH/(XMSH+XMSO)
-      HeatFlowCoef_II(Ion2_,Ion3_) = 3.*RGASH*XMSH/(XMSH+XMSHE)
-      HeatFlowCoef_II(Ion2_,Ion4_) =3.*RGASH*XMSH/(XMSH+XMSE)
+      HeatFlowCoef_II(Ion2_,Neutral4_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+28.*XAMU)
+      HeatFlowCoef_II(Ion2_,Neutral3_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+32.*XAMU)
+      HeatFlowCoef_II(Ion2_,Neutral5_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGAS_I(Ion2_) *Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion2_,Ion1_) = 3.*RGAS_I(Ion2_) *Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion2_,Ion3_) = 3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion2_,Ion4_) =3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion4_))
       
-      MassFracCoef_II(Ion2_,:) = HeatFlowCoef_II(Ion2_,:) / (3.0*RGASH)
+      MassFracCoef_II(Ion2_,:) = HeatFlowCoef_II(Ion2_,:) / (3.0*RGAS_I(Ion2_))
 
 
-      HeatFlowCoef_II(Ion3_,Neutral4_)=3.*RGASHE*XMSHE/(XMSHE+28.*XAMU)
-      HeatFlowCoef_II(Ion3_,Neutral3_)=3.*RGASHE*XMSHE/(XMSHE+32.*XAMU)
-      HeatFlowCoef_II(Ion3_,Neutral5_)=3.*RGASHE*XMSHE/(XMSHE+XMSHE)
-      HeatFlowCoef_II(Ion3_,Neutral1_)=3.*RGASHE*XMSHE/(XMSHE+XMSO)
-      HeatFlowCoef_II(Ion3_,Neutral2_)=3.*RGASHE*XMSHE/(XMSHE+XMSH)
-      HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGASHE*XMSHE/(XMSHE+XMSO)
-      HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGASHE*XMSHE/(XMSHE+XMSH)
-      HeatFlowCoef_II(Ion3_,Ion4_)=3.*RGASHE*XMSHE/(XMSHE+XMSE)
+      HeatFlowCoef_II(Ion3_,Neutral4_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+28.*XAMU)
+      HeatFlowCoef_II(Ion3_,Neutral3_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+32.*XAMU)
+      HeatFlowCoef_II(Ion3_,Neutral5_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion3_,Neutral1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion3_,Neutral2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion3_,Ion4_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion4_))
 
-      MassFracCoef_II(Ion3_,:) = HeatFlowCoef_II(Ion3_,:) / (3.0*RGASHE)
+      MassFracCoef_II(Ion3_,:) = HeatFlowCoef_II(Ion3_,:) / (3.0*RGAS_I(Ion3_))
 
       
-      HeatFlowCoef_II(Ion4_,Neutral4_)=3.*RGASE*XMSE/(28.*XAMU+XMSE)
-      HeatFlowCoef_II(Ion4_,Neutral3_)=3.*RGASE*XMSE/(32.*XAMU+XMSE)
-      HeatFlowCoef_II(Ion4_,Neutral5_)=3.*RGASE*XMSE/(XMSE+XMSHE)
-      HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGASE*XMSE/(XMSE+XMSO)
-      HeatFlowCoef_II(Ion4_,Neutral2_)=3.*RGASE*XMSE/(XMSE+XMSH)
-      HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGASE*XMSE/(XMSE+XMSO)
-      HeatFlowCoef_II(Ion4_,Ion3_)=3.*RGASE*XMSE/(XMSE+XMSHE)
-      HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGASE*XMSE/(XMSE+XMSH)
+      HeatFlowCoef_II(Ion4_,Neutral4_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(28.*XAMU+Mass_I(Ion4_))
+      HeatFlowCoef_II(Ion4_,Neutral3_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(32.*XAMU+Mass_I(Ion4_))
+      HeatFlowCoef_II(Ion4_,Neutral5_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion4_,Neutral1_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion4_,Neutral2_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion4_,Ion1_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion4_,Ion3_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion4_,Ion2_)=3.*RGAS_I(Ion4_)*Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
 
-      MassFracCoef_II(Ion4_,:) = HeatFlowCoef_II(Ion4_,:) / (3.0*RGASE)
+      MassFracCoef_II(Ion4_,:) = HeatFlowCoef_II(Ion4_,:) / (3.0*RGAS_I(Ion4_))
 
 CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
-      FricHeatCoef_II(Ion1_,Neutral4_)=28.*XAMU/(XMSO+28.*XAMU)
-      FricHeatCoef_II(Ion1_,Neutral3_)=32.*XAMU/(XMSO+32.*XAMU)
-      FricHeatCoef_II(Ion1_,Neutral1_)=XMSO/(XMSO+XMSO)
-      FricHeatCoef_II(Ion1_,Neutral5_)=XMSHE/(XMSO+XMSHE)
-      FricHeatCoef_II(Ion1_,Neutral2_)=XMSH/(XMSO+XMSH)
-      FricHeatCoef_II(Ion1_,Ion2_)=XMSH/(XMSO+XMSH)
-      FricHeatCoef_II(Ion1_,Ion3_)=XMSHE/(XMSO+XMSHE)
-      FricHeatCoef_II(Ion1_,Ion4_)=XMSE/(XMSE+XMSO)
+      FricHeatCoef_II(Ion1_,Neutral4_)=28.*XAMU/(Mass_I(Ion1_)+28.*XAMU)
+      FricHeatCoef_II(Ion1_,Neutral3_)=32.*XAMU/(Mass_I(Ion1_)+32.*XAMU)
+      FricHeatCoef_II(Ion1_,Neutral1_)=Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion1_,Neutral5_)=Mass_I(Ion3_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion1_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion1_,Ion2_)=Mass_I(Ion2_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion1_,Ion3_)=Mass_I(Ion3_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion1_,Ion4_)=Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
 
-      FricHeatCoef_II(Ion2_,Neutral4_)=28.*XAMU/(XMSH+28.*XAMU)
-      FricHeatCoef_II(Ion2_,Neutral3_)=32.*XAMU/(XMSH+32.*XAMU)
-      FricHeatCoef_II(Ion2_,Neutral5_)=XMSHE/(XMSH+XMSHE)
-      FricHeatCoef_II(Ion2_,Neutral1_)=XMSO/(XMSH+XMSO)
-      FricHeatCoef_II(Ion2_,Neutral2_)=XMSH/(XMSH+XMSH)
-      FricHeatCoef_II(Ion2_,Ion1_)=XMSO/(XMSH+XMSO)
-      FricHeatCoef_II(Ion2_,Ion3_)=XMSHE/(XMSH+XMSHE)
-      FricHeatCoef_II(Ion2_,Ion4_)=XMSE/(XMSE+XMSH)
+      FricHeatCoef_II(Ion2_,Neutral4_)=28.*XAMU/(Mass_I(Ion2_)+28.*XAMU)
+      FricHeatCoef_II(Ion2_,Neutral3_)=32.*XAMU/(Mass_I(Ion2_)+32.*XAMU)
+      FricHeatCoef_II(Ion2_,Neutral5_)=Mass_I(Ion3_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion2_,Neutral1_)=Mass_I(Ion1_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion2_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion2_,Ion1_)=Mass_I(Ion1_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion2_,Ion3_)=Mass_I(Ion3_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion2_,Ion4_)=Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
 
-      FricHeatCoef_II(Ion3_,Neutral4_)=28.*XAMU/(XMSHE+28.*XAMU)
-      FricHeatCoef_II(Ion3_,Neutral3_)=32.*XAMU/(XMSHE+32.*XAMU)
-      FricHeatCoef_II(Ion3_,Neutral5_)=XMSHE/(XMSHE+XMSHE)
-      FricHeatCoef_II(Ion3_,Neutral1_)=XMSO/(XMSHE+XMSO)
-      FricHeatCoef_II(Ion3_,Neutral2_)=XMSH/(XMSHE+XMSH)
-      FricHeatCoef_II(Ion3_,Ion1_)    =XMSO/(XMSHE+XMSO)
-      FricHeatCoef_II(Ion3_,Ion2_)    =XMSH/(XMSHE+XMSH)
-      FricHeatCoef_II(Ion3_,Ion4_)    =XMSE/(XMSE+XMSHE)
+      FricHeatCoef_II(Ion3_,Neutral4_)=28.*XAMU/(Mass_I(Ion3_)+28.*XAMU)
+      FricHeatCoef_II(Ion3_,Neutral3_)=32.*XAMU/(Mass_I(Ion3_)+32.*XAMU)
+      FricHeatCoef_II(Ion3_,Neutral5_)=Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion3_,Neutral1_)=Mass_I(Ion1_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion3_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion3_,Ion1_)    =Mass_I(Ion1_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion3_,Ion2_)    =Mass_I(Ion2_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion3_,Ion4_)    =Mass_I(Ion4_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
 
-      FricHeatCoef_II(Ion4_,Neutral4_)=28.*XAMU/(XMSE+28.*XAMU)
-      FricHeatCoef_II(Ion4_,Neutral3_)=32.*XAMU/(XMSE+32.*XAMU)
-      FricHeatCoef_II(Ion4_,Neutral5_)=XMSHE/(XMSE+XMSHE)
-      FricHeatCoef_II(Ion4_,Neutral1_)=XMSO/(XMSE+XMSO)
-      FricHeatCoef_II(Ion4_,Neutral2_)=XMSH/(XMSE+XMSH)
-      FricHeatCoef_II(Ion4_,Ion1_)    =XMSO/(XMSE+XMSO)
-      FricHeatCoef_II(Ion4_,Ion2_)    =XMSH/(XMSE+XMSH)
-      FricHeatCoef_II(Ion4_,Ion3_)    =XMSHE/(XMSE+XMSHE)
+      FricHeatCoef_II(Ion4_,Neutral4_)=28.*XAMU/(Mass_I(Ion4_)+28.*XAMU)
+      FricHeatCoef_II(Ion4_,Neutral3_)=32.*XAMU/(Mass_I(Ion4_)+32.*XAMU)
+      FricHeatCoef_II(Ion4_,Neutral5_)=Mass_I(Ion3_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
+      FricHeatCoef_II(Ion4_,Neutral1_)=Mass_I(Ion1_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion4_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion4_,Ion1_)    =Mass_I(Ion1_)/(Mass_I(Ion4_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion4_,Ion2_)    =Mass_I(Ion2_)/(Mass_I(Ion4_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion4_,Ion3_)    =Mass_I(Ion3_)/(Mass_I(Ion4_)+Mass_I(Ion3_))
 
 
 
@@ -1459,44 +1480,44 @@ C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
       if(IsRestart) RETURN
 
       do K=1,NDIM
-c         DHYD(K)=DSURFH
-c         UOXYG(K)=0
-c         POXYG(K)=PSURFOH
-c         DOXYG(K)=DSURFOH
-c         TOXYG(K)=TSURFO
-c         UHYD(K)=0
-c         PHYD(K)=PSURFHH
-c         THYD(K)=TSURFH
-c         UHEL(K)=0
-c         PHEL(K)=PSURHEH
-c         DHEL(K)=DSURHEH
-c         THEL(K)=TSURHE
-c         DELECT(K)=DSURFEH
-c         UELECT(K)=0
-c         PELECT(K)=PSURFEH
-c         TELECT(K)=TSURFE
+c         State_GV(K,RhoH_)=State_GV(0,RhoH)
+c         State_GV(K,uO_)=0
+c         State_GV(K,pO_)=State_GV(0,Po_)H
+c         State_GV(K,RhoO_)=State_GV(0,RhoO_)H
+c         State_GV(K,To_)=State_GV(0,To_)
+c         State_GV(K,uH_)=0
+c         State_GV(K,pH_)=State_GV(0,pH_)H
+c         State_GV(K,Th_)=State_GV(0,Th_)
+c         State_GV(K,uHe_)=0
+c         State_GV(K,pHe_)=State_GV(0,pHe_)H
+c         State_GV(K,RhoHe_)=State_GV(0,RhoHe_)H
+c         State_GV(K,The_)=State_GV(0,The_)
+c         State_GV(K,RhoE_)=State_GV(0,RhoE_)H
+c         State_GV(K,uE_)=0
+c         State_GV(K,pE_)=State_GV(0,pE_)H
+c         State_GV(K,Te_)=State_GV(0,Te_)
 
 
-         DHYD(K)=1.*DSURFH*exp(-1.*real(K)/90.)
-         UOXYG(K)=20.
-         POXYG(K)=1.*PSURFO*exp(-1.*real(K)/90.)
-         DOXYG(K)=1.*DSURFO*exp(-1.*real(K)/90.)
-c         TOXYG(K)=TSURFO
-         TOXYG(K)=POXYG(K)/(1.38e-16*DOXYG(K)/xmso)
-         UHYD(K)=40.
-         PHYD(K)=1.*PSURFH*exp(-1.*real(K)/90.)
-c         THYD(K)=TSURFH*exp(-1.*real(K)/9000.)
-         THYD(K)=PHYD(K)/(1.38e-16*DHYD(K)/xmsh)
-         UHEL(K)=4.
-         PHEL(K)=1.*PSURHE*exp(-1.*real(K)/90.)
-         DHEL(K)=1.*DSURHE*exp(-1.*real(K)/90.)
-c         THEL(K)=TSURHE
-         THEL(K)=PHEL(K)/(1.38e-16*DHEL(K)/xmshe)
-         DELECT(K)=1.*DSURFE*exp(-1.*real(K)/90.)
-         UELECT(K)=1.
-         PELECT(K)=1.*PSURFE*exp(-1.*real(K)/90.)
-c         TELECT(K)=TSURFE
-         TELECT(K)=PELECT(K)/(1.38e-16*DELECT(K)/xmse)
+         State_GV(K,RhoH_)=1.*State_GV(0,RhoH_)*exp(-1.*real(K)/90.)
+         State_GV(K,uO_)=20.
+         State_GV(K,pO_)=1.*State_GV(0,Po_)*exp(-1.*real(K)/90.)
+         State_GV(K,RhoO_)=1.*State_GV(0,RhoO_)*exp(-1.*real(K)/90.)
+c         State_GV(K,To_)=State_GV(0,To_)
+         State_GV(K,To_)=State_GV(K,pO_)/(1.38e-16*State_GV(K,RhoO_)/Mass_I(Ion1_))
+         State_GV(K,uH_)=40.
+         State_GV(K,pH_)=1.*State_GV(0,pH_)*exp(-1.*real(K)/90.)
+c         State_GV(K,Th_)=State_GV(0,Th_)*exp(-1.*real(K)/9000.)
+         State_GV(K,Th_)=State_GV(K,pH_)/(1.38e-16*State_GV(K,RhoH_)/Mass_I(Ion2_))
+         State_GV(K,uHe_)=4.
+         State_GV(K,pHe_)=1.*State_GV(0,pHe_)*exp(-1.*real(K)/90.)
+         State_GV(K,RhoHe_)=1.*State_GV(0,RhoHe_)*exp(-1.*real(K)/90.)
+c         State_GV(K,The_)=State_GV(0,The_)
+         State_GV(K,The_)=State_GV(K,pHe_)/(1.38e-16*State_GV(K,RhoHe_)/Mass_I(Ion3_))
+         State_GV(K,RhoE_)=1.*State_GV(0,RhoE_)*exp(-1.*real(K)/90.)
+         State_GV(K,uE_)=1.
+         State_GV(K,pE_)=1.*State_GV(0,pE_)*exp(-1.*real(K)/90.)
+c         State_GV(K,Te_)=State_GV(0,Te_)
+         State_GV(K,Te_)=State_GV(K,pE_)/(1.38e-16*State_GV(K,RhoE_)/Mass_I(Ion4_))
 
       enddo
 
