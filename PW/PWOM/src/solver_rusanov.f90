@@ -6,74 +6,57 @@
 
 subroutine rusanov_solver(iIon, &
      Rgas, &
-     OldRho_C, OldU_C, OldP_C, OldT_C, &
-     RhoBottom, UBottom, PBottom, &
-     RhoTop, UTop, Ptop, &
-     RhoTop2, UTop2, Ptop2, &
+     OldState_GV,&
      RhoSource_C, RhoUSource_C, eSource_C, &
-     NewRho_C, NewU_C, NewP_C, NewT_C)
+     UpdateState_GV)
   
   use ModCommonVariables
   implicit none
 
-  integer, intent(in)          :: iIon
-  real, intent(in)                      :: Rgas
-  real, dimension(MaxGrid), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
-  real, intent(in)                      :: RhoBottom, UBottom, PBottom
-  real, intent(in)                      :: RhoTop, UTop, PTop
-  real, intent(in)                      :: RhoTop2, UTop2, PTop2
+  integer, intent(in)      :: iIon
+  real, intent(in)         :: Rgas
+  real, intent(in)         :: OldState_GV(0:MaxGrid,4)
   real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, dimension(MaxGrid), intent(out) :: NewRho_C, NewU_C, NewP_C, NewT_C
-  
+  real, intent(out)         :: UpdateState_GV(0:MaxGrid,4)
+
   real, dimension(-1:MaxGrid+2) :: OldRho_G, OldU_G, OldP_G
   real, dimension(MaxGrid+1)    :: LeftRho_F, LeftU_F, LeftP_F
   real, dimension(MaxGrid+1)    :: RightRho_F, RightU_F, RightP_F
   real, dimension(MaxGrid+1)    :: RhoFlux_F, RhoUFlux_F, eFlux_F
-
+  real, dimension(MaxGrid)      :: NewRho_C, NewU_C, NewP_C, NewT_C
+  real, dimension(MaxGrid)      :: OldRho_C, OldU_C, OldP_C, OldT_C
 
 
   !---------------------------------------------------------------------------
 
 
+  OldRho_G(0:nDim+2) = OldState_GV(0:nDim+2,1)
+  OldU_G  (0:nDim+2) = OldState_GV(0:nDim+2,2)
+  OldP_G  (0:nDim+2) = OldState_GV(0:nDim+2,3)
+
+  OldRho_G(-1) = OldState_GV(0,1)
+  OldU_G  (-1) = OldState_GV(0,2)
+  OldP_G  (-1) = OldState_GV(0,3)
 
 
 
+  OldRho_C(1:nDim)=OldRho_G(1:nDim)
+  OldU_C  (1:nDim)=OldU_G  (1:nDim)
+  OldP_C  (1:nDim)=OldP_G  (1:nDim)
 
-
-!  write(*,*)'rusanov solver starting for variable ',NameVariable, DoTest,DoTest2,DoTest3
- 
-  ! add real ghost cells for use in getting face values
-  OldRho_G(1:nDim)      = OldRho_C(1:nDim)
-  OldRho_G(-1:0)        = RhoBottom
-  OldRho_G(nDim+1)      = RhoTop
-  OldRho_G(nDim+2)      = RhoTop2
-
-  OldU_G(1:nDim)        = OldU_C(1:nDim)
-  OldU_G(-1:0)          = UBottom
-  OldU_G(nDim+1)        = UTop
-  OldU_G(nDim+2)        = UTop2
-
-  OldP_G(1:nDim)        = OldP_C(1:nDim)
-  OldP_G(-1:0)          = PBottom
-  OldP_G(nDim+1)        = PTop
-  OldP_G(nDim+2)        = PTop2
-
+  
+  UpdateState_GV=OldState_GV
 
   ! get the face values
   call calc_facevalues(nDim, OldRho_G, LeftRho_F, RightRho_F)
   call calc_facevalues(nDim, OldU_G, LeftU_F, RightU_F)
   call calc_facevalues(nDim, OldP_G, LeftP_F, RightP_F)
 
-  
-  
   !get the rusanov flux
   call rusanov_flux( &
        LeftRho_F, LeftU_F, LeftP_F, &
        RightRho_F, RightU_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F)
-
-
-
 
   ! update the cells one timestep 
   call update_state( iIon,&
@@ -84,6 +67,10 @@ subroutine rusanov_solver(iIon, &
        RhoSource_C, RhoUSource_C, eSource_C, &
        NewRho_C, NewU_C, NewP_C, NewT_C)
 
+  UpdateState_GV(1:nDim,1) = NewRho_C(1:nDim)
+  UpdateState_GV(1:nDim,2) = NewU_C(1:nDim)
+  UpdateState_GV(1:nDim,3) = NewP_C(1:nDim)
+  UpdateState_GV(1:nDim,4) = NewT_C(1:nDim)
 
 end subroutine rusanov_solver
 
