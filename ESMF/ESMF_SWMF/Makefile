@@ -11,7 +11,7 @@ install:
 	     's/type=ESMF_DATA_REAL, kind=ESMF_R8/typekind=ESMF_TYPEKIND_R8/' \
 		src/ESMF_SWMF_Mod.f90; \
 	   perl -pi -e \
-	     's/(ESMF_(Grid|Cpl)CompCreate)\(/$$1\(parentvm=/' \
+	     's/(ESMF_(Grid|Cpl)CompCreate)\((\w+),/$$1\(parentvm=$$3,/' \
 		src/ESMF_SWMF_Driver.f90 src/ESMF_SWMF_GridComp.f90; \
 	fi)
 
