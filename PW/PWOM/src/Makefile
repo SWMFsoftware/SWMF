@@ -21,13 +21,11 @@ METHODS = \
 	initialize.o\
 	solver.o\
 	cvmgp.o\
-	print_log.o\
-	print_plot.o\
-	EfieldPW.o\
-	eHeatFluxPW.o\
+	Efield.o\
+	eheat_flux.o\
+	iheat_flux.o\
 	calcdt.o\
 	diffusion.o\
-	PRNT_Sources.o\
 	calc_cfl.o\
 	calc_diffusion.o\
 	solver_rusanov.o\
