@@ -1,11 +1,9 @@
 OBJECTS_PLANET = \
 	getcfeh2_planet.o\
-	clfmhe_planet.o\
 	startupPW_planet.o\
-	IonHeatFluxPW_planet.o\
 	neutral_atmosphere_planet.o\
-	prnthe_planet.o\
 	collisionPW_planet.o\
-	prntCollision_planet.o\
 	calc_chemical_equilibrium.o\
+	print_plot.o\
+	upper_heat_conduction.o\
 	get_rate.o
