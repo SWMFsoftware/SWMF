@@ -280,11 +280,7 @@ subroutine PW_advance_line
   endif
 
   call put_field_line(&
-       dOxyg_CI(:,iLine),uOxyg_CI(:,iLine),pOxyg_CI(:,iLine),TOxyg(:,iLine), &
-       dHel_CI(:,iLine), uHel_CI(:,iLine), pHel_CI(:,iLine), THel(:,iLine),  &
-       dHyd_CI(:,iLine), uHyd_CI(:,iLine), pHyd_CI(:,iLine), THyd(:,iLine),  &
-       dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine), &
-       TElect(:,iLine), &
+       State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),              &
        OmegaLine_I(iLine), iUnitOutput=iUnitOutput(iLine),                 &
        iUnitGraphics=iUnitGraphics(iLine),NameRestart=NameRestart(iLine),  &
@@ -297,20 +293,14 @@ subroutine PW_advance_line
   
   if (iLine == nLine) then
      call get_field_line( &
-       dOxyg_CI(:,iLine), uOxyg_CI(:,iLine),pOxyg_CI(:,iLine),TOxyg(:,iLine),&
-       dHel_CI(:,iLine), uHel_CI(:,iLine), pHel_CI(:,iLine), THel(:,iLine),  &
-       dHyd_CI(:,iLine), uHyd_CI(:,iLine), pHyd_CI(:,iLine), THyd(:,iLine),  &
-       dElect_CI(:,iLine),uElect_CI(:,iLine),pElect_CI(:,iLine),TElect(:,iLine), &
+       State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
        iLine=iLine,Time=Time,MaxLineTime=MaxLineTime,nStep=nStep,r_C=r_C)
      DoSavePlot=.true.
   else
      call get_field_line( &
-       dOxyg_CI(:,iLine), uOxyg_CI(:,iLine), pOxyg_CI(:,iLine), TOxyg(:,iLine),     &
-       dHel_CI(:,iLine), uHel_CI(:,iLine), pHel_CI(:,iLine), THel(:,iLine),         &
-       dHyd_CI(:,iLine), uHyd_CI(:,iLine), pHyd_CI(:,iLine), THyd(:,iLine),         &
-       dElect_CI(:,iLine), uElect_CI(:,iLine), pElect_CI(:,iLine), TElect(:,iLine), &
+       State_CVI(:,:,iLine),&
        GeoMagLat_I(iLine),GeoMagLon_I(iLine),JrLine_I(iLine),               &
        OmegaLine_I(iLine), iUnitGraphics=iUnitGraphics(iLine),       &
        iLine=iLine,MaxLineTime=MaxLineTime)
