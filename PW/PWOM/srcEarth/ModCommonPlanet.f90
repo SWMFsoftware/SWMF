@@ -2,23 +2,13 @@ Module ModCommonPlanet
   use ModParameters
   character(6) NamePlanet
   parameter (NamePlanet = 'Earth ')
+
+  integer,parameter :: nVar=16
   
   REAL XN2(MaxGrid),XO2(MaxGrid),XO(MaxGrid),XH(MaxGrid),&
        XHE(MaxGrid),XTN(MaxGrid)
   
-  REAL CFOXN2(MaxGrid),CFOXO2(MaxGrid),CFOXO(MaxGrid),&
-       CFOXHE(MaxGrid),&
-       CFOXH(MaxGrid),CFOXHD(MaxGrid),CFOXHL(MaxGrid),CFOXEL(MaxGrid),&
-       CFHN2(MaxGrid),&
-       CFHO2(MaxGrid),CFHHE(MaxGrid),CFHO(MaxGrid),CFHH(MaxGrid),&
-       CFHOX(MaxGrid),&
-       CFHHL(MaxGrid),CFHEL(MaxGrid),CFHEN2(MaxGrid),CFHEO2(MaxGrid),&
-       CFHEHE(MaxGrid),&
-       CFHEO(MaxGrid),CFHEH(MaxGrid),CFHEOX(MaxGrid),CFHEHD(MaxGrid),&
-       CFHEEL(MaxGrid),&
-       CFELN2(MaxGrid),CFELO2(MaxGrid),CFELHE(MaxGrid),CFELO(MaxGrid),&
-       CFELH(MaxGrid),&
-       CFELOX(MaxGrid),CFELHL(MaxGrid),CFELHD(MaxGrid)
+
   REAL CLOXN2(MaxGrid),CLOXO2(MaxGrid),CLOXO(MaxGrid),&
        CLOXHE(MaxGrid),&
        CLOXH(MaxGrid),CLOXHD(MaxGrid),CLOXHL(MaxGrid),CLOXEL(MaxGrid),&
@@ -47,15 +37,28 @@ Module ModCommonPlanet
        CMELHE,CMELO,CMELH,CMELOX,CMELHL,CMELHD
 
 
-!!! These are saturn parameters that are put here because they are called in
-!!! a Saturn case in solver_rusanov.f90. I will make this more general later
-  REAL CFHpH(MaxGrid), CFHPH2(MaxGrid), CTHpH, CTHpH2, &
-       CFHpH3(MaxGrid), CTHpH3p, &
-       CFHpEL(MaxGrid), CTHpEL, &
-       CFH3pH(MaxGrid), CFH3pH2(MaxGrid), CTH3pH2, &
-       CFH3pHp(MaxGrid), CTH3pHp, &
-       CFH3pEL(MaxGrid), CTH3pEL, CFHpH3p(MaxGrid), CTH3pH
- 
-      
+  !collision terms
+  
+  integer, parameter :: nIon = 4, nSpecies=9
+  integer, parameter :: Ion1_ = 1, &    !Earth:O+ ,Saturn:H3+
+                        Ion2_ = 2, &    !Earth:H+ ,Saturn:H+
+                        Ion3_ = 3, &    !Earth:He+,Saturn:none
+                        Ion4_ = 4, &    !Earth:e  ,Saturn:e
+                        Neutral1_= 5, & !Earth:O, Saturn:H2
+                        Neutral2_= 6, & !Earth:H, Saturn:H
+                        Neutral3_= 7, & !Earth:O2, Saturn:H2O
+                        Neutral4_= 8, & !Earth:N2, Saturn:CH4
+                        Neutral5_= 9    !Earth:He, Saturn:none
+
+  ! named state variables
+  integer, parameter :: RhoO_=1, uO_=2,  pO_=3,  To_=4, &
+                        RhoH_=5, uH_=6,  pH_=7,  Th_=8, &
+                        RhoHe_=9,uHe_=10,pHe_=11,The_=12, &
+                        RhoE_=13,uE_=14, pE_=15, Te_=16
+
+  integer,parameter :: iRho_I(4) = (/1,5,9,13/),&
+                       iU_I(4)   = (/2,6,10,14/),&
+                       iP_I(4)   = (/3,7,11,15/),&
+                       iT_I(4)   = (/4,8,12,16/)
     end Module ModCommonPlanet
     
