@@ -38,25 +38,22 @@ module ModCommonVariables
   REAL ALTD(MaxGrid),RAD(MaxGrid),RBOUND(MaxGrid)
   ! plasma parameters, U=velocity, D=density, P=pressure, T=electrons
   ! the parameter is followed by the quantity e.g. TOXY=temp of oxygen
-  REAL UOXYG(MaxGrid),DOXYG(MaxGrid),POXYG(MaxGrid),&
-       TOXYG(MaxGrid),UHYD(MaxGrid),&
-       DHYD(MaxGrid),PHYD(MaxGrid),THYD(MaxGrid),UHEL(MaxGrid),&
-       DHEL(MaxGrid),PHEL(MaxGrid),&
-       THEL(MaxGrid),UELECT(MaxGrid),DELECT(MaxGrid),PELECT(MaxGrid),&
-       TELECT(MaxGrid)
+
+  real :: State_GV(0:MaxGrid,nVar),SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
+  real :: HeatCon_GI(0:maxGrid,nIon)
+!  REAL UOXYG(MaxGrid),DOXYG(MaxGrid),POXYG(MaxGrid),&
+!       TOXYG(MaxGrid),UHYD(MaxGrid),&
+!       DHYD(MaxGrid),PHYD(MaxGrid),THYD(MaxGrid),UHEL(MaxGrid),&
+!       DHEL(MaxGrid),PHEL(MaxGrid),&
+!       THEL(MaxGrid),UELECT(MaxGrid),DELECT(MaxGrid),PELECT(MaxGrid),&
+!       TELECT(MaxGrid)
      !Changed for Saturn      
      
      
   REAL EFIELD(MaxGrid),GRAVTY(MaxGrid),CURR(MaxGrid),EfieldConstant
   REAL Centrifugal(MaxGrid)
-  REAL FCLSNE(MaxGrid),FCLSHE(MaxGrid),FCLSNH(MaxGrid),&
-       FCLSNO(MaxGrid),&
-       ECLSNE(MaxGrid),ECLSHE(MaxGrid),ECLSNH(MaxGrid),ECLSNO(MaxGrid),&
-       ADMSO(MaxGrid),ADMSH(MaxGrid),ADMSHE(MaxGrid),ADMSE(MaxGrid),&
-       YYH(MaxGrid)
+  REAL YYH(MaxGrid)
       
-  REAL TCONO(MaxGrid),TCONH(MaxGrid),TCONHE(MaxGrid),&
-       TCONE(MaxGrid)
   REAL QOXYG(MaxGrid),QHEL(MaxGrid),QHYD(MaxGrid),&
        QELECT(MaxGrid)
   REAL ELFXIN
@@ -73,7 +70,6 @@ module ModCommonVariables
 
 
      
-  REAL  TCSFO,TCSFHE,TCSFH,TCSFE,TCBGO,TCBGHE,TCBGH,TCBGE
   REAL  CZHN2,CZHO2,CZHO,CZHOX,CZHEN2,CZHEO2,CZHEHE,&
        CZHEO,CZHEH,CZHEOX,CZHEHD,XTNMAX
 
@@ -91,8 +87,9 @@ module ModCommonVariables
   REAL  ALTMIN,ALTMAX,DRBND,DTR1,DTR2
 
   REAL  GAMMA,GMIN1,GMIN2,GPL1,GPL2,GM12,GRAR,GREC
-  REAL  RGASO,RGASH,RGASHE,RGASE,CPO,CPH,CPHE,CPE,CVO,CVH,CVHE,CVE
-  REAL  XAMU,XMSO,XMSH,XMSHE,XMSE,RTOXEL,RTHDEL,RTHEEL
+  REAL  CPO,CPH,CPHE,CPE,CVO,CVH,CVHE,CVE
+  REAL  XAMU
+  real :: Mass_I(nIon),MassElecIon_I(nIon-1),RGAS_I(nIon)
   INTEGER NDIM,NDIM1,NSTEP,NPRINT,NSTPMX,NDIM2,NDIMM
   REAL  DT,DTMX,TIME,TMAX,DTX1,DTX2
   INTEGER NPT1,NPT2,NPT3,NPT4,NPT5,NPT6,NCL,NTS
@@ -129,18 +126,7 @@ module ModCommonVariables
        NNN(NMAJ)
   INTEGER ISCALE,JLOCAL,IERR
 
-  !collision terms
-  
-  integer, parameter :: nIon = 4, nSpecies=9
-  integer, parameter :: Ion1_ = 1, &    !Earth:O+ ,Saturn:H3+
-                        Ion2_ = 2, &    !Earth:H+ ,Saturn:H+
-                        Ion3_ = 3, &    !Earth:He+,Saturn:none
-                        Ion4_ = 4, &    !Earth:e  ,Saturn:e
-                        Neutral1_= 5, & !Earth:O, Saturn:H2
-                        Neutral2_= 6, & !Earth:H, Saturn:H
-                        Neutral3_= 7, & !Earth:O2, Saturn:H2O
-                        Neutral4_= 8, & !Earth:N2, Saturn:CH4
-                        Neutral5_= 9    !Earth:He, Saturn:none
+
   
   real :: CollisionFreq_IIC(nIon, nSpecies,MaxGrid)
   real :: HeatFlowCoef_II(nIon, nSpecies)
