@@ -2,12 +2,17 @@ include ../../Makefile.def
 
 ESMF3 = `cd ${ESMF_DIR}; make info | grep ESMF_VERSION_STRING | grep 3`
 
+# Change source code for ESMF3 compatibility
 install:
 	touch src/Makefile.DEPEND
 	@(if [ "$(ESMF3)" != "" ]; then \
 	   perl -ni -e 'print unless /\.f90\.o|FC_MOD|FREENO/' src/Makefile; \
-	   cp src/ESMF_SWMF_Driver.f90.oehmke   src/ESMF_SWMF_Driver.f90; \
-	   cp src/ESMF_SWMF_GridComp.f90.oehmke src/ESMF_SWMF_GridComp.f90; \
+	   perl -pi -e \
+	     's/type=ESMF_DATA_REAL, kind=ESMF_R8/typekind=ESMF_TYPEKIND_R8/' \
+		src/ESMF_SWMF_Mod.f90; \
+	   perl -pi -e \
+	     's/(ESMF_(Grid|Cpl)CompCreate)\((\w+)/$$1\(parentvm=$$3/' \
+		src/ESMF_SWMF_Driver.f90 src/ESMF_SWMF_GridComp.f90; \
 	fi)
 
 rundir: ${RUNDIR}/ESMF_SWMF.input ${RUNDIR}/ESMF_SWMF.exe
