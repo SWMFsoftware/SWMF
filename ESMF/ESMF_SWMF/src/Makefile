@@ -16,7 +16,7 @@ EXELINK = ./ESMF_SWMF.exe
 # The ESMF definitions
 include $(ESMF_DIR)/makefile
 
-# Overwrite the incorrect .f90.o rule:
+# Overwrite the incorrect .f90.o rule (for ESMF 2.*):
 .f90.o:
 	$(FC) -c $(FC_MOD)$(ESMF_MODDIR) $(FOPTFLAGS) $(FFLAGS) \
 		$(F_FREENOCPP) $<
@@ -49,8 +49,21 @@ EXE: DEPEND
 
 # build the executable.
 ${EXE}: $(APPOBJS) ${LIBDIR}/libSWMF.a ${ESMFLIB}
+	@(if [ "${OS}" = "Darwin" ];         then make EXE_Darwin;\
+	else                                      make EXE_general; fi)
+
+EXE_general:
+	echo $(FLINKER) and  $(LINKOPTS) and  $(FLINKLIBS)
 	$(FLINKER) $(LINKOPTS) -o ${EXE} $(APPOBJS) $(FLINKLIBS) \
 		-L${LIBDIR} -lSWMF
+
+# Link rule for Darwin
+EXE_Darwin:
+	ld -all_load -r -o LIBRARIES.o $(LIBDIR)/libSWMF.a \
+	    $(ESMF_F90LINKPATHS) $(ESMF_F90ESMFLINKLIBS)
+	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
+	                  $(LINKOPTS) -o ${EXE} LIBRARIES.o $(APPOBJS)  \
+
 
 TESTOBJS = \
 	test.o
