@@ -4,11 +4,12 @@ subroutine PW_initialize
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
+  use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I
   implicit none
 
   ! Temporary variables
   real:: ddt1, xxx
-  integer:: ns, iPe, iError
+  integer:: ns, iPe, iError,iIon
   !---------------------------------------------------------------------------
   !***************************************************************************
   !  Set the number of fieldlines that each processor solves for
@@ -88,19 +89,14 @@ subroutine PW_initialize
 
         ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
         PhiLine_I   (iLine) = GeoMagLon_I(iLine)        * cDegToRad
-
-        READ (UnitTmp_,*) &
-             (XXX,uOxyg_CI(i,iLine),pOxyg_CI(i,iLine),dOxyg_CI(i,iLine),&
-             TOxyg(i,iLine),i=1,nAlt)
-        READ (UnitTmp_,*) &
-             (XXX,uHel_CI(i,iLine),pHel_CI(i,iLine),dHel_CI(i,iLine),&
-             THel(i,iLine),i=1,nAlt)
-        READ (UnitTmp_,*) &
-             (XXX,uHyd_CI(i,iLine),pHyd_CI(i,iLine),dHyd_CI(i,iLine), &
-             THyd(i,iLine),i=1,nAlt)
-        READ (UnitTmp_,*) &
-             (XXX,uElect_CI(i,iLine),pElect_CI(i,iLine),dElect_CI(i,iLine), &
-             TElect(i,iLine),i=1,nAlt)
+        
+        do iIon=1,nIon
+           READ (UnitTmp_,*) &
+                (XXX,State_CVI(i,iU_I(iIon),iLine),State_CVI(i,iP_I(iIon),iLine),&
+                State_CVI(i,iRho_I(iIon),iLine),State_CVI(i,iT_I(iIon),iLine),&
+                i=1,nAlt)
+        enddo
+        
         CLOSE(UNIT=UnitTmp_)
      enddo
   else
