@@ -14,6 +14,7 @@ help:
 	@echo "   test_time_convert     - test ModTimeConvert"
 	@echo "   test_coord_transform  - test ModTimeConvert"
 	@echo "   test_freq             - test ModFreq"
+	@echo "   test_linear_solver    - test ModLinearSolver"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_io_unit          - test ModIoUnit"
 	@echo "   test_interpolate      - test ModInterpolate"
@@ -111,6 +112,32 @@ test_freq:
 	@./test_freq.exe
 	@echo
 	@echo test_freq done
+	@echo -----------------------------------------------------------------
+
+#######################################################################
+OBJ_LINEAR_SOLVER = \
+	test_linear_solver.o \
+	../src/blas.o \
+	../src/lapack.o \
+	../src/ModMpi.o \
+	../src/ModBlasLapack.o \
+	../src/ModLinearSolver.o
+
+test_linear_solver.exe: ${OBJ_LINEAR_SOLVER}
+	${LINK.f90} -o test_linear_solver.exe ${OBJ_LINEAR_SOLVER} ${Lflag1}
+
+test_linear_solver:
+	@echo -----------------------------------------------------------------
+	@echo test_linear_solver starting
+	@echo
+	@(cd ../src; \
+		make blas.o lapack.o ModBlasLapack.o ModLinearSolver.o ModMpi.o)
+	@make test_linear_solver.exe
+	@echo
+	@echo './test_linear_solver.exe'
+	@./test_linear_solver.exe
+	@echo
+	@echo test_linear_solver done
 	@echo -----------------------------------------------------------------
 
 #######################################################################
