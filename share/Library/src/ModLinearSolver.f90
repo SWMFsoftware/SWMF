@@ -28,10 +28,19 @@ module ModLinearSolver
   public :: prehepta        ! LU preconditioner for up to hepta block-diagonal 
   public :: Uhepta          ! multiply with upper block triangular matrix
   public :: Lhepta          ! multiply with lower block triangular matrix
+  public :: implicit_solver ! implicit solver in 1D with 3 point stencil
+  public :: test_linear_solver
 
   !REVISION HISTORY:
   ! 05Dec06 - Gabor Toth - initial prototype/prolog/code based on BATSRUS code
   !EOP ___________________________________________________________________
+
+  ! Used for tests
+  integer, parameter :: rho_=1, rhou_=2, p_=3
+  real, parameter :: Gamma=1.6, Dx=1.0, Inv2Dx=0.5/Dx
+  integer, parameter  :: UnitTmp_=9
+  integer :: iStep
+  real    :: Time
 
 contains
 
@@ -57,7 +66,7 @@ contains
          real, intent(out) :: b(n)
        end subroutine matvec
     end interface
-    
+
     integer, intent(in) :: n         !  number of unknowns.
     integer, intent(in) :: nKrylov   ! size of krylov subspace
     real,    intent(in) :: Rhs(n)    ! right hand side vector
@@ -839,7 +848,7 @@ contains
     !
     !--------------------------------------------------------------------------
 
-    call timing_start('precond')
+    !call timing_start('precond')
 
     ! Allocate arrays that used to be automatic
     allocate(dd(N,N), pivot(N))
@@ -929,7 +938,7 @@ contains
     ! Deallocate arrays that used to be automatic
     deallocate(dd, pivot)
 
-    call timing_stop('precond')
+    !call timing_stop('precond')
 
   END SUBROUTINE prehepta
   !============================================================================
@@ -993,9 +1002,7 @@ contains
     ! DGEMV,   BLAS level two Matrix-Vector Product.
     !          See 'man DGEMV' for description.
     !-----------------------------------------------------------------------
-    !
-    !
-    call timing_start('Uhepta')
+    !call timing_start('Uhepta')
 
     if(N>20)then
        ! BLAS VERSION
@@ -1053,7 +1060,7 @@ contains
        end if
     end if
 
-    call timing_stop('Uhepta')
+    !call timing_stop('Uhepta')
 
   end subroutine Uhepta
   !============================================================================
@@ -1116,7 +1123,7 @@ contains
 
     ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
 
-    call timing_start('Lhepta')
+    !call timing_start('Lhepta')
 
     ! Allocate arrays that used to be Automatic
     allocate(work(N))
@@ -1156,8 +1163,257 @@ contains
     ! Deallocate arrays that used to be automatic
     deallocate(work)
 
-    call timing_stop('Lhepta')
+    !call timing_stop('Lhepta')
 
   end subroutine Lhepta
+
+  !===========================================================================
+
+  subroutine implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, State_GV, &
+       calc_residual, update_boundary)
+
+    real,    intent(in) :: ImplPar, DtImpl, DtExpl
+    integer, intent(in) :: nCell, nVar
+    real, intent(inout) :: State_GV(-1:nCell+2, nVar)
+
+    interface
+       subroutine calc_residual(nOrder, Dt, nCell, nVar, State_GV, Resid_CV)
+         implicit none
+         integer, intent(in) :: nOrder, nCell, nVar
+         real,    intent(in) :: Dt
+         real,    intent(in) :: State_GV(-1:nCell+2, nVar)
+         real,    intent(out):: Resid_CV(nCell, nVar)
+       end subroutine calc_residual
+
+       subroutine update_boundary(nCell, nVar, State_GV)
+         implicit none
+         integer, intent(in)    :: nCell, nVar
+         real,    intent(inout) :: State_GV(-1:nCell+2, nVar)
+       end subroutine update_boundary
+    end interface
+
+    real, parameter :: Eps = 1.e-6
+    real, allocatable, dimension(:,:) :: &
+         RightHand_CV, ResidOrig_CV, StateEps_GV, ResidEps_CV
+
+    integer, parameter :: nDiag = 3
+    real, allocatable :: Matrix_VVCI(:, :, :, :)
+
+    real, allocatable :: Norm_V(:)  ! second norm of variables
+    real, allocatable :: x_I(:)     ! linear vector of right hand side/unknowns
+    real :: Coeff
+
+    integer :: iVar, jVar, i, iStencil, iDiag, iX
+
+    logical, parameter :: DoTestMe = .false.
+
+    !-----------------------------------------------------------------------
+
+    allocate(StateEps_GV(-1:nCell+2, nVar), &
+         RightHand_CV(nCell, nVar), ResidOrig_CV(nCell, nVar),  &
+         ResidEps_CV(nCell, nVar), Norm_V(nVar), x_I(nCell*nVar), &
+         Matrix_VVCI(nVar, nVar, nCell, nDiag))
+
+    ! Make sure that ghost cells are up-to-date
+    call update_boundary(nCell, nVar, State_GV)
+
+    ! calculate right hand side
+    call calc_residual(2, DtImpl, nCell, nVar, State_GV, RightHand_CV)
+
+    ! Calculate the unperturbed residual with first order scheme
+    call calc_residual(1, DtExpl, nCell, nVar, State_GV, ResidOrig_CV)
+
+    ! Calculate the norm for the variables
+    do iVar = 1, nVar
+       Norm_V(iVar) = sqrt(sum(State_GV(1:nCell,iVar)**2)/nCell)
+    end do
+
+    if(DoTestMe)write(*,*)'Norm_V=',Norm_V,' Eps=',Eps
+
+    ! Calculate the dR/dU matrix
+    do jVar = 1, nVar
+       do iStencil = 1, 3
+          ! Get perturbed state
+          StateEps_GV = State_GV
+          do i = iStencil, nCell, 3
+             StateEps_GV(i, jVar) = StateEps_GV(i, jVar) + Eps*Norm_V(jVar)
+          end do
+          call update_boundary(nCell, nVar, StateEps_GV)
+          if(DoTestMe) call save_plot(iStep, Time, nCell, nVar, StateEps_GV)
+          call calc_residual(1, DtExpl, nCell, nVar, StateEps_GV, ResidEps_CV)
+
+          ! Jacobian is multiplied with -ImplPar*DtImpl
+          Coeff= -Implpar*DtImpl/(Eps*Norm_V(jVar)*DtExpl)
+          do i = 1, nCell
+             iDiag = modulo(i-iStencil,3)+1
+             do iVar = 1, nVar
+                Matrix_VVCI(iVar,jVar,i,iDiag) = &
+                     Coeff*(ResidEps_CV(i,iVar) - ResidOrig_CV(i,iVar))
+             end do
+          end do
+
+       end do
+    end do
+
+    if(DoTestMe)then
+       write(*,'(a,/,3(3f5.1,/))') 'Matrix(:,:,2,1)=',Matrix_VVCI(:,:,2,1)
+       write(*,'(a,/,3(3f5.1,/))') 'Matrix(:,:,2,2)=',Matrix_VVCI(:,:,2,2)
+       write(*,'(a,/,3(3f5.1,/))') 'Matrix(:,:,2,3)=',Matrix_VVCI(:,:,2,3)
+    end if
+
+    ! Add the diagonal part J = I - delta t*dR/dU
+    do i=1, nCell
+       do iVar = 1, nVar
+          Matrix_VVCI(iVar,iVar,i,1) = Matrix_VVCI(iVar,iVar,i,1) + 1.0
+       end do
+    end do
+
+    ! L-U decomposition
+    call prehepta(nCell,nVar,nCell,nCell,0.0,&
+         Matrix_VVCI(:,:,:,1), Matrix_VVCI(:,:,:,2), Matrix_VVCI(:,:,:,3))
+
+    ! Put right hand side into a linear vector
+    iX = 0
+    do i = 1, nCell
+       do iVar = 1, nVar
+          iX=iX + 1
+          x_I(iX) = RightHand_CV(i, iVar)
+       end do
+    end do
+    ! x --> L^{-1}.rhs
+    call Lhepta(nCell, nVar, nCell, nCell, x_I,&
+         Matrix_VVCI(:,:,:,1), Matrix_VVCI(:,:,:,2))
+
+    ! x --> U^{-1}.L^{-1}.rhs = A^{-1}.rhs
+    call Uhepta(.true.,nCell,nVar,nCell,nCell, x_I, Matrix_VVCI(:,:,:,3))
+
+    ! Update the solution (x = U^n+1 - U^n)
+    iX = 0
+    do i = 1, nCell
+       do iVar = 1, nVar
+          iX=iX + 1
+          State_GV(i, iVar) = State_GV(i, iVar) + x_I(iX)
+       end do
+    end do
+
+    call update_boundary(nCell, nVar, State_GV)
+
+    deallocate(RightHand_CV, ResidOrig_CV, StateEps_GV, ResidEps_CV, &
+         Norm_V, x_I, Matrix_VVCI)
+
+  end subroutine implicit_solver
+
+  !=======================================================================
+  subroutine test_linear_solver
+
+    integer, parameter :: nStep=20
+    integer, parameter :: nCell=51, nVar=3
+    real, parameter :: DtExpl = 0.1, DtImpl = 1.0, ImplPar = 1.0
+
+    real    :: State_GV(-1:nCell+2, nVar), StateOld_GV(-1:nCell+2, nVar)
+    real    :: Resid_CV(nCell, nVar)
+    !---------------------------------------------------------------------
+    ! initial condition
+    State_GV(:,rho_) = 1.0; State_GV(5:10,rho_)=2
+    State_GV(:,rhou_)= 2.0*State_GV(:,rho_);
+    State_GV(:,p_)   = 3.0; State_GV(5:10,p_) = 6.0
+
+    open(UNITTMP_, file='linear_solver.out', status='replace')
+    Time = 0.0
+    call save_plot(0, Time, nCell, nVar, State_GV)
+    do iStep = 1, nStep
+
+       StateOld_GV = State_GV
+
+       Time  = Time + DtImpl
+
+       if(.false.)then
+          ! explicit
+          call calc_resid_test(2, DtExpl, nCell, nVar, State_GV, Resid_CV)
+          State_GV(1:nCell,:)=State_GV(1:nCell,:)+Resid_CV
+          call update_bound_test(nCell, nVar, State_GV)
+          call save_plot(iStep, Time, nCell, nVar, State_GV)
+       else
+          ! implicit
+          call implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, &
+               State_GV, calc_resid_test, update_bound_test)
+          
+          ! check
+          call calc_resid_test(2, DtImpl, nCell, nVar, State_GV, Resid_CV)
+          write(*,*)'iStep, Max error=',iStep, &
+               maxval(abs(StateOld_GV(1:nCell,:)+Resid_CV-State_GV(1:nCell,:)))
+          call save_plot(iStep, Time, nCell, nVar, State_GV)
+       end if
+    end do
+    close(UNITTMP_)
+
+  end subroutine test_linear_solver
+  !=======================================================================
+
+  subroutine save_plot(iStep, Time, nCell, nVar, State_GV)
+
+    integer, intent(in) :: iStep
+    real,    intent(in) :: Time
+    integer, intent(in) :: nCell, nVar
+    real,    intent(in) :: State_GV(-1:nCell+2, nVar)
+
+    integer :: i
+    !---------------------------------------------------------------------
+    write(UNITTMP_,'(a79)') 'linear solver test_hd11'
+    write(UNITTMP_,'(i7,1pe13.5,3i3)') iStep,Time,1,1,nVar
+    write(UNITTMP_,'(3i4)')            nCell
+    write(UNITTMP_,'(100es13.5)')      Gamma
+    write(UNITTMP_,'(a79)') 'x rho rhou p gamma'
+    do i=1,nCell
+       write(UNITTMP_,'(100es18.10))') float(i), State_GV(i, rho_:p_)
+    end do
+
+  end subroutine save_plot
+
+  !=======================================================================
+  subroutine calc_resid_test(nOrder, Dt, nCell, nVar, State_GV, Resid_CV)
+
+    integer, intent(in) :: nOrder, nCell, nVar
+    real,    intent(in) :: Dt
+    real,    intent(in) :: State_GV(-1:nCell+2, nVar)
+    real,    intent(out):: Resid_CV(nCell, nVar)
+
+    integer :: i
+    real :: uLeft, uRight
+    !-------------------------------------------------------------------------
+    do i=1, nCell
+       uRight = State_GV(i+1,rhou_)/State_GV(i+1,rho_)
+       uLeft  = State_GV(i-1,rhou_)/State_GV(i-1,rho_)
+       Resid_CV(i,rho_) = -Dt * Inv2Dx * &
+            (State_GV(i+1,rhou_) - State_GV(i-1,rhou_))
+       Resid_CV(i,rhou_) = -Dt * Inv2Dx * &
+            ( uRight**2*State_GV(i+1,rho_) - uLeft**2*State_GV(i-1,rho_) &
+            + State_GV(i+1,p_) - State_GV(i-1,p_) )
+       ! dP/dt = -div(P*u) -(g-1)*P*Div(U)
+       Resid_CV(i,p_) = -Dt * Inv2Dx * &
+            ( uRight*State_GV(i+1,p_) - uLeft*State_GV(i-1,p_) &
+            + (Gamma-1)*State_GV(i,p_)*(uRight - uLeft) )
+    end do
+  end subroutine calc_resid_test
+
+  !=======================================================================
+  subroutine update_bound_test(nCell, nVar, State_GV)
+
+    integer, intent(in)    :: nCell, nVar
+    real,    intent(inout) :: State_GV(-1:nCell+2, nVar)
+
+    ! periodic
+    !State_GV(-1,:)      = State_GV(nCell-1,:)
+    !State_GV( 0,:)      = State_GV(nCell,:)
+    !State_GV(nCell+1,:) = State_GV(1,:)
+    !State_GV(nCell+2,:) = State_GV(2,:)
+
+    ! floating
+    State_GV(-1,:)      = State_GV(1,:)
+    State_GV( 0,:)      = State_GV(1,:)
+    State_GV(nCell+1,:) = State_GV(nCell,:)
+    State_GV(nCell+2,:) = State_GV(nCell,:)
+
+  end subroutine update_bound_test
 
 end module ModLinearSolver
