@@ -702,7 +702,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
       print,'2D scalar: ',$
             'shade/surface/contour/contlabel/contfill/contbar/tv/tvbar'
       print,'2D polar : polar/polarlabel/polarfill/polarbar'
-      print,'2D vector: stream/stream2/vector/velovect/ovelovect'
+      print,'2D vector: stream/streamwhite/vector/vectorwhite/velovect/ovelovect'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1556,6 +1556,17 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
 
       plotmod=plotmodes(ifunc)
 
+      i=strpos(plotmod,'stream2')
+      if i ge 0 then $
+        plotmod=strmid(plotmod,0,i+6)+strmid(plotmod,i+7)
+
+      white=0
+      i=strpos(plotmod,'white')
+      if i ge 0 then begin
+          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
+          white=1
+      endif else showgrid=0
+
       i=strpos(plotmod,'grid')
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
@@ -1752,43 +1763,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
          'vel'      :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
                         DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
          'vector'   :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-         'stream'   :begin
-                        ; normalization
-                        eps=1.e-30
-                        v1=f1/sqrt(f1^2+f2^2+eps) & v2=f2/sqrt(f1^2+f2^2+eps)
-                        ; arrows
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=6,LENGTH=0.06,HEAD=0.1,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline along v1;v2
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=100,LENGTH=1.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline in the other direction
-                        v1=-v1 & v2=-v2
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=100,LENGTH=1.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                    end
-         'stream2' :begin
-                        ; normalization
-                        eps=1.e-30
-                        v1=f1/sqrt(f1^2+f2^2+eps) & v2=f2/sqrt(f1^2+f2^2+eps)
-                        ; arrows
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=6,LENGTH=0.012,HEAD=0.5,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline along v1;v2
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=1000,LENGTH=2.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline in the other direction
-                        v1=-v1 & v2=-v2
-                        vector,v1,v2,NVECS=velvector,MAXVAL=1.,$
-                        NSTEP=1000,LENGTH=2.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                    end
+                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
+                        /NOERASE,WHITE=white
+         'stream'   :streamline,f1,f2,NVECS=velvector,SEED=velseed,X0=velpos,$
+                        /NOERASE,WHITE=white
          'velovect' :velovect,f1,f2,/NOERASE
          'ovelovect':velovect,f1,f2,/NOERASE,$
             XRANGE=[0,n_elements(f1(*,0))-1],YRANGE=[0,n_elements(f1(0,*))-1]
@@ -1829,49 +1807,12 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
                         DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
          'vector'   :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
                         TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
-                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-         'stream'   :begin
-                        ; normalization
-                        eps=1.e-30
-                        v1=f1/sqrt(f1^2+f2^2+eps) & v2=f2/sqrt(f1^2+f2^2+eps)
-                        ; arrows
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=6,LENGTH=0.06,HEAD=0.1,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline along v1;v2
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=100,LENGTH=1.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline in the other direction
-                        v1=-v1 & v2=-v2
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=100,LENGTH=1.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                    end
-         'stream2' :begin
-                        ; normalization
-                        eps=1.e-30
-                        v1=f1/sqrt(f1^2+f2^2+eps) & v2=f2/sqrt(f1^2+f2^2+eps)
-                        ; arrows
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=6,LENGTH=0.012,HEAD=0.5,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline along v1;v2
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=1000,LENGTH=2.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                        ; streamline in the other direction
-                        v1=-v1 & v2=-v2
-                        vector,v1,v2,xx,yy,NVECS=velvector,MAXVAL=1.,$
-                        XXOLD=velx,YYOLD=vely,TRIANGLES=veltri,$
-                        NSTEP=1000,LENGTH=2.,HEAD=0.,$
-                        DYNAMIC=0,SEED=velseed,X0=velpos,/NOERASE
-                    end
+                        DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
+                        /NOERASE, WHITE=white
+         'stream'   :streamline,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
+                        TRIANGLES=veltri,NVECS=velvector,$
+                        SEED=velseed,X0=velpos,$
+                        /NOERASE, WHITE=white
          'velovect' :velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE
          'ovelovect':velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE,$
                         XRANGE=[min(xx),max(xx)],YRANGE=[min(yy),max(yy)]
