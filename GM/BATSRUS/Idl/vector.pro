@@ -1,8 +1,117 @@
 ;^CFG COPYRIGHT VAC_UM
 ;=============================================================================
+PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
+                  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
+                  NOERASE=noerase,WHITE=white
+
+;+
+; NAME:
+;	STREAMLINE
+;
+; PURPOSE:
+;	Draw a vector field with streamlines following the field.
+;	Also works with irregular grids using triangulation.
+;
+; CATEGORY:
+;	Graphics, two-dimensional.
+;
+; CALLING SEQUENCE:
+;	STREAMLINE, U, V [, XX, YY]
+;
+; INPUTS:
+;	U:	The X component at each point of the vector field.  This 
+;		parameter must be a 2D array.
+;
+;	V:	The Y component at each point of the vector field.  This 
+;		parameter must have the same dimensions as U.
+;
+; OPTIONAL INPUT PARAMETERS:
+;       XX:     X-coordinate array (2D), default is uniform grid with dx=1.
+;
+;       YY:     Y-coordinate array (2D), default is uniform grid with dy=1.
+;
+; KEYWORD PARAMETERS:
+;	NVECS:	The number of vectors (arrows) to draw.  Default is 200.
+;
+;	X0:	Positions of the arrows. Default is random.
+;
+;	SEED: Random number generator seed for proper randomization when VECTOR
+;	      is called repaetedly. It has to be a NAMED VARIABLE.
+;
+;	NOERASE: NOERASE=1 or /NOERASE does not allow erase for VECTOR.
+;
+;       WHITE:   WHITE=1 or /WHITE forces the vectors to be white.
+;
+;	The following 3 keyword parameters should be supplied together
+;	when the XX,YY parameters describe a nonuniform grid. Do not initialize
+;	them! Their purpose is to save on the triangulation time for the next
+;	call of VECTOR, if the grid does not change.
+;
+;	XXOLD:  XX in previous call, on output XX in this call.
+;
+;	YYOLD:  YY in previous call, on output YY in this call.
+;
+;       TRIANGLES: Array to store the triangles from the triangulization.
+;
+; OUTPUTS:
+;	A velocity field graph is drawn on the current graphics device.
+;
+;	If X0 is given it returns the position for the next set of arrows.
+;	If XXOLD,YYOLD,TRIANGLES are given, they return the old grid
+;	coordinates and the triangles from their triangulation.
+;
+; COMMON BLOCKS:
+;	None.
+;
+; SIDE EFFECTS:
+;	A plot is drawn on the current graphics device.
+;
+; RESTRICTIONS:
+;	Uses procedure vector (see below).
+;
+; PROCEDURE:
+;	Uses vector to draw the arrow heads first, then an very long
+;       arrow without a head in the positive direction and then 
+;       an arrow without a head in the negative direction.
+;       In effect stream lines are drawn with an arrow showing the orientation.
+;	If X0 is provided it is used for the location of the arrows instead
+;	of random positions.
+;
+; MODIFICATION HISTORY:
+;       05/16/07- G. Toth extracted from existing code.
+;-
+
+; normalize vectors
+norm = sqrt(u^2+v^2+1.e-30) & u1 = u/norm & v1 = v/norm
+
+; draw arrows
+vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+  NSTEP=6,LENGTH=0.012,HEAD=0.5,$
+  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+  DYNAMIC=0,SEED=seed,X0=x0,$
+  NOERASE=noerase,WHITE=white
+
+; draw streamline along u1;v1
+vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+  NSTEP=1000,LENGTH=2.,HEAD=0.,$
+  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+  DYNAMIC=0,SEED=seed,X0=x0,$
+  /NOERASE,WHITE=white
+
+; draw streamline in the other direction
+u1=-u1 & v1=-v1
+vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+  NSTEP=1000,LENGTH=2.,HEAD=0.,$
+  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+  DYNAMIC=0,SEED=seed,X0=x0,$
+  /NOERASE,WHITE=white
+
+end
+;=============================================================================
 PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 		  NSTEPS=nsteps,X0=x0,DYNAMIC=dynamic,NOERASE=noerase,$
-		  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed
+		  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
+                  WHITE=white
 ;+
 ; NAME:
 ;	VECTOR
@@ -65,6 +174,8 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;
 ;	NOERASE: NOERASE=1 or /NOERASE does not allow erase for VECTOR.
 ;
+;       WHITE:   WHITE=1 or /WHITE forces the vectors to be white.
+;
 ; OUTPUTS:
 ;	A velocity field graph is drawn on the current graphics device.
 ;
@@ -117,6 +228,7 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;       10/01/02- G. Toth added error messages if U and V arrays are wrong
 ;                 G. Toth added support for irregular grids stored as
 ;                 a big linear array (ny=1).
+;       05/16/07- G. Toth added /WHITE keyword
 ;-
 
 ;Return to caller if an error occurs
@@ -318,14 +430,19 @@ x(*,i+2,1) = x(*,i,1)
 x(*,i+3,1) = ym-dx
 
 ; Put new arrow positions into X0 for next call based on dynamic [0..nsteps]
-
 x0(*,*) = x(*,dynamic,*)
 
 ; Draw box
 plot,[xmin,xmax],[ymin,ymax],/nodata,XSTYLE=1,YSTYLE=1,NOERASE=noerase
 
 ; Draw arrows
-for i=0,nvecs-1 do plots,x(i,*,0),x(i,*,1),NOCLIP=0
+if keyword_set(white) then begin
+    tvlct,bytarr(256,3)+255       ; change to white
+    for i=0,nvecs-1 do plots,x(i,*,0),x(i,*,1),NOCLIP=0,color=127
+    common colors                 ; restore colors
+    tvlct,r_curr,g_curr,b_curr
+endif else $
+  for i=0,nvecs-1 do plots,x(i,*,0),x(i,*,1),NOCLIP=0
 
 return
 end
