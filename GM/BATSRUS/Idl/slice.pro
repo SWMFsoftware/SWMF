@@ -109,7 +109,7 @@
 
    print,'======= PLOTTING PARAMETERS ========================='
    readplotpar,2,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
 
    usereg=0
@@ -117,11 +117,11 @@
    if keyword_set(multiplot) then begin
       multix=multiplot(0)
       multiy=multiplot(1)
-      nslice1=(multix*multiy)/(nfunc*nfile)
+      nslice1=(multix*multiy)/(nplot*nfile)
       !p.multi=[0,multix,multiy,0,multiplot(2)]
    endif else begin
-      multix=long(sqrt(nfunc-1)+1)
-      multiy=long((nfunc-1)/multix+1)
+      multix=long(sqrt(nplot-1)+1)
+      multiy=long((nplot-1)/multix+1)
       nslice1=1
       !p.multi=[0,multix,multiy,0,0]
    endelse

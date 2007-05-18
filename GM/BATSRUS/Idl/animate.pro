@@ -85,7 +85,7 @@
 
    print,'======= PLOTTING PARAMETERS ========================='
    readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
    readtransform,ndim,nx,anygencoord,transform,nxreg,xreglimits,wregpad,$
                  physicss(nfile-1),nvector,vectors,grid,doask
@@ -168,16 +168,16 @@
       multix=multiplot(0)
       multiy=multiplot(1)
       multidir=multiplot(2)
-      npict1=(multix*multiy)/(nfunc*nfile)
+      npict1=(multix*multiy)/(nplot*nfile)
       if npict1 eq 0 then npict1=1
    endif else if nfile eq 1 then begin
-      multix=long(sqrt(nfunc-1)+1)
-      multiy=long((nfunc-1)/multix+1)
+      multix=long(sqrt(nplot-1)+1)
+      multiy=long((nplot-1)/multix+1)
       multidir=0
       npict1=1
    endif else begin
       multix=nfile
-      multiy=nfunc
+      multiy=nplot
       multidir=1
       npict1=1
    endelse
@@ -247,10 +247,10 @@
             endcase
 
 	    linestyle=0
-            if multix*multiy lt nfunc*nfile then linestyle=ifile
+            if multix*multiy lt nplot*nfile then linestyle=ifile
 
             if(keyword_set(timetitle))then $
-              plottitles(0) = string(format=timetitle,time)
+              plottitles(*) = string(format=timetitle,time)
 
             plot_func,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$

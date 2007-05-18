@@ -77,7 +77,7 @@
    print,'======= PLOTTING PARAMETERS ========================='
    print,'wnames                     =',wnames
    readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
    readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
 		physics,nvector,vectors,grid,doask
@@ -127,8 +127,8 @@
       multiy=multiplot(1)
       !p.multi=[0,multix,multiy,0,multiplot(2)]
    endif else begin
-      multix=long(sqrt(nfunc-1)+1)
-      multiy=long((nfunc-1)/multix+1)
+      multix=long(sqrt(nplot-1)+1)
+      multiy=long((nplot-1)/multix+1)
       !p.multi=[0,multix,multiy,0,0]
    endelse
 
