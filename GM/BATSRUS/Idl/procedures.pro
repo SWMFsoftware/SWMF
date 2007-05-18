@@ -1642,8 +1642,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
         ; obtain position for flat plotmodes
         set_position, sizes, plotix, multiy-1-plotiy, pos, /rect
 
-        ; shrink in X direction for a colorbar in any previous plot
-        if strpos(plotmodes(ifunc mod ppp),'bar') ge 0 then $
+        ; shrink in X direction for (overplotting) a colorbar
+        if strpos(plotmodes(ifunc),'bar') ge 0 $
+          or (strpos(plotmodes(ifunc),'over') ge 0 and $
+              strpos(plotmodes(ifunc-1>0),'bar') ge 0) then $
           pos(2) = pos(2) - (pos(2) - pos(0))*0.15
 
         ; shrink in X direction for the Y axis of plot
