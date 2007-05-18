@@ -678,7 +678,7 @@ else if k lt n then a = [a, a(k-1)+intarr(n-k) ]   ; extend array
 end
 ;===========================================================================
 pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-   plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+   nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
 
    on_error,2
 
@@ -699,10 +699,8 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
       plotmode='plot'
    endif else begin
       if plotmode eq 'plot' then plotmode=''
-      print,'2D scalar: ',$
-            'shade/surface/contour/contlabel/contfill/contbar/tv/tvbar'
-      print,'2D polar : polar/polarlabel/polarfill/polarbar'
-      print,'2D vector: stream/streamwhite/vector/vectorwhite/velovect/ovelovect'
+      print,'2D plotmode: shade/surface/cont/tv/polar/velovect/vector/stream'
+      print,'2D +options: bar,body,fill,grid,irr,label,mesh,over,white'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -714,12 +712,14 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    str2arr,plottitle,plottitles,nfunc,';'
    str2arr,autorange,autoranges,nfunc
 
+   nplot = nfunc
    funcs1=strarr(nfunc)
    funcs2=strarr(nfunc)
    for ifunc=0,nfunc-1 do begin
       func12=strsplit(funcs(ifunc),';',/extract)
       funcs1(ifunc)=func12(0)
       if n_elements(func12) eq 2 then funcs2(ifunc)=func12(1)
+      if strpos(plotmodes(ifunc),'over') ge 0 then nplot=nplot-1
    endfor
 
 end
@@ -1556,22 +1556,31 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
 
       plotmod=plotmodes(ifunc)
 
+      ; stream2 --> stream
       i=strpos(plotmod,'stream2')
-      if i ge 0 then $
-        plotmod=strmid(plotmod,0,i+6)+strmid(plotmod,i+7)
+      if i ge 0 then plotmod=strmid(plotmod,0,i+6)+strmid(plotmod,i+7)
 
-      white=0
+      ; contour --> cont
+      i=strpos(plotmod,'contour')
+      if i ge 0 then plotmod=strmid(plotmod,0,i+4)+strmid(plotmod,i+7)
+
       i=strpos(plotmod,'white')
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
           white=1
-      endif else showgrid=0
+      endif else white=0
 
       i=strpos(plotmod,'grid')
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
           showgrid=1
       endif else showgrid=0
+
+      i=strpos(plotmod,'irr')
+      if i ge 0 then begin
+          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+          irr=1
+      endif
 
       i=strpos(plotmod,'mesh')
       if i ge 0 then begin
@@ -1600,21 +1609,18 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,physics,eqpar,rBody,$
           fill=1
       endif else showbar=0
 
-      i=strpos(plotmod,'irr')
-      if i ge 0 then begin
-          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
-          irr=1
-      endif
-
       i=strpos(plotmod,'label')
       if i ge 0 then begin
           plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+5)
           label=1
       endif else label=0
 
-      ; contour --> cont
-      i=strpos(plotmod,'contour')
-      if i ge 0 then plotmod=strmid(plotmod,0,i+4)+strmid(plotmod,i+7)
+      i=strpos(plotmod,'over')
+      if i ge 0 then begin
+          plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+          !p.multi(0) = !p.multi(0)+1
+          if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
+      endif
 
       ; Calculate the next p.multi(0) explicitly
       if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
