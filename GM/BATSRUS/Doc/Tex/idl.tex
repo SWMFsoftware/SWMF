@@ -392,10 +392,20 @@ x y z   rho p ux uy uz uu bx by bz bb   gamma
 \end{verbatim}
    where "uu" and "bb" are the velocity and magnetic field squared, 
    respectively. Note that "x ... bb" are arrays, while  "gamma" is
-   a scalar. For example the maximum Alfv\'en 
+   a scalar. Here uu and bb are the squared velocity and magnetic field.
+   For example the maximum Alfv\'en 
    speed could be given as {\bf func='sqrt(bb/rho)'}, but this is already 
-   defined in funcdef.pro as 'calfven'.
+   defined in funcdef.pro as 'calfven'. 
 
+   Expressions can also be formed from variables read from the data files
+   even if they not occur among the standard variables listed above.
+   These variables should be referred to by the corresponding string 
+   in wnames enclosed between curly brackets.
+   For example the 10 based logarithm of the oxygen density that is named 
+   'OpRho' in wnames can be written as
+\begin{verbatim}
+alog10({OpRho})
+\end{verbatim}
    You may combine two function names with the {\bf ;} character representing
    two components of a vector, 
    e.g. {\bf ux;uy} or {\bf bx;bz}, which can either be plotted as a 
@@ -408,7 +418,6 @@ x y z   rho p ux uy uz uu bx by bz bb   gamma
    will simply multiply the value of the rest of the string by $-$1. 
    For example '-T' plots ($-$1)*temperature.
 
-
 \subsection{Plotting modes in string plotmode \label{s-plotmode}}
 
    There are many plotting modes available for 2D data. These can be
@@ -416,12 +425,10 @@ x y z   rho p ux uy uz uu bx by bz bb   gamma
    If the number of plotmodes is less than the number of functions,
    the last plotmode is applied for the rest of the functions.
 
-   For single functions the main plotmodes are 
+   For scalar functions the main plotmodes are 
 \begin{verbatim}
 Plotmode   Parameters     Description
 ----------------------------------------------------------------------
-surface    ax az          surface mesh, height proportional to value
-shade      ax az          shaded surface, height proportional to value
 contour    contourlevel   contourlines
 contlabel  contourlevel   contourlines labeled by value
 contfill   contourlevel   levels colored by value
@@ -432,10 +439,13 @@ polarfill  contourlevel   polar plot colored by value
 polarbar   contourlevel   polar plot colored by value plus colorbar
 tv                        grid cells colored by value
 tvbar                     grid cells colored by value plus colorbar
+surface    ax az          surface mesh, height proportional to value
+shade      ax az          shaded surface, height proportional to value
 \end{verbatim}
    The parameters {\bf ax} and {\bf az} define the viewing angle,
-   while the {\bf contourlevel} parameter 
-   determines the number of contourlevels.
+   while the {\bf contourlevel} parameter determines the number 
+   of contourlevels. The 'tv','tvbar','surface' and 'shade' plotmodes
+   can be used for Cartesian grids only (or grids transformed to Cartesian).
 
    For functions with 2 components (e.g. 'bx;bz') the following plotmodes
    are available
@@ -444,9 +454,6 @@ Plotmode  Parameters  Description
 -----------------------------------------------------------------
 stream    velvector   stream/fieldlines at random/selected points
           velpos      
-
-stream2   velvector   stream/fieldlines at random/selected points
-          velpos      (2nd order)
 
 vector    velvector   arrows at random/selected positions
           velpos
@@ -463,28 +470,36 @@ ovelovect             arrows at every grid point (for overplot)
    of the velocity and the {\bf velspeed} parameter. The maximum value
    is the default {\tt velspeed=5}, while {\tt velspeed=0} does not allow
    the arrows to move. 
+   The 'velovect' and 'ovelovect' plotmodes 
+   can be used for Cartesian grids only.
 
-   For any of the 2D plotmodes, you can add the string 'grid' or 'mesh'
-   to show the gridpoints or the gridlines (connecting the gridpoints), 
-   respectively. For example 
+   For any of the 2D plotmodes, you can add the following strings
 \begin{verbatim}
-plotmode='vectorgrid contbarmesh'
-\end{verbatim} 
-   will show arrows with grid points and 
-   a colored contour plot with a colorbar and the gridlines.
-   For unstructured grids only the gridpoints can be shown.
-   Also note that it makes no sense to overplot the grid for the 
+Option  Description
+-----------------------------------------------------------------
+grid    show grid points with plus signs
+mesh    show the mesh (lines connecting grid points) 
+           only for structured grid
+body    show the spherical body with radius {\bf rBody} 
+           at the origin as a black circle
+over    overplot previous function
+white   draw vectors or stream lines with white color even 
+           for postscript output (only useful for overplotting)
+\end{verbatim}
+   Note that it makes no sense to overplot the grid for the 
    {\tt surface} plotting mode, on the other hand {\tt plotmode='shademesh'}
    will plot the shaded surface together with the mesh of 'surface'.
-
-   You can also add the string 'body' to show the spherical body with
-   radius {\bf rBody} at the origin as a black circle. By default 
-   {\bf rBody=3} but this can be changed by hand, or by an equation
+   By default {\bf rBody=3} but this can be changed by hand, or by an equation
    parameter named 'rbody' or 'rBody', which is read from the data file.
-   For example
+
+   Here is an example for some more complex plotmodes:
 \begin{verbatim}
-plotmode='stream2body contbarmeshbody'
-\end{verbatim}
+plotmode='contbargrid streamwhiteoverbody'
+\end{verbatim} 
+   will show the first scalar quantity with a color bar and a mesh,
+   and overplot the second vector quantity with white streamlines
+   and a black body at the origin.
+
    For any of the colored plotmodes ('shade', 'contfill', 'contbar', 
    'polarfill', 'polarbar', 'tv', and 'tvbar') the colortable can be 
    changed by one of the 
@@ -512,6 +527,7 @@ system variable     description
 !x.minor            number of minor tickmarks
 !p.psym             symbols instead of lines in 1D plot
 !p.symsize          symbol size
+!p.thick            thickness of lines in plots
 \end{verbatim}
   The Y and Z axis is are affected by the analogous !y. and !z. variables.
 
@@ -638,7 +654,9 @@ velpos(*,*)=x(triplet(0,49,2, 0,49,2, 0,1,1))
 
    Functions can be plot on top of each other by setting the {\bf multiplot}
    array such that the number of subplots is smaller than the number of
-   functions. To show the magnetic field and density in the same plot, try
+   functions. Note that a simpler and more general method is to use the 'over'
+   option in the plotmode (see below). 
+   To show the magnetic field and density in the same plot, try
 \begin{verbatim}
 func='rho bx;by'
 plotmode='contbar stream'
@@ -655,10 +673,22 @@ plotmode='contfill ovelovect'
 \end{verbatim}
    Note how {\bf plottitle} is set to avoid the default titles
    overlap on top of each other. The {\bf multiplot=1} setting
-   is equivalent with {\bf multiplot=[1,1,1]}. In the second plot
+   is equivalent with {\bf multiplot=[1,1,1]}. In the second example
    'ovelovect' is used (instead of 'velovect') for the velocity to get 
-   good alignment with the 'contfill' plot.
+   good alignment with the 'contfill' plot. 
 
+   The same effect can also be achived with the 'over' option in the 
+   plotmode and without the use of multiplot:
+\begin{verbatim}
+func='rho bx;by'
+plotmode='contbar streamover'
+plottitle='rho and B'
+.r plotfunc
+func='p ux;uy'
+plottitle='p and U'
+plotmode='contfill ovelovectover'
+.r plotfunc
+\end{verbatim}
    The number of functions and the number of subplots can be any combination
    you would like. In 1D plots, the line style is varied for the different 
    functions, so the curves can be distinguished.
@@ -704,7 +734,7 @@ noerase=1
 
 \subsection{Animation and plotting with animate \label{s-animate}}
 
-   This general procedure can plot, save into file(s), or animate 
+   This general procedure can plot, save into image file(s), or animate 
    (using IDL's Xinteranimate) different functions of data 
    read from one or more files. If a single snapshot is read, the
    plot is drawn without animation. In essence {\bf animate} combines
@@ -770,14 +800,15 @@ multiplot=2
    Timeseries can also be produced easily with {\bf multiplot}. 
 \begin{verbatim}
 filename='example2.out'
-func='rho'
-plotmode='contfill'
+func='rho ux;uy'
+plotmode='contfill vectorover'
 npictmax=6
 multiplot=[3,2,0]
 bottomline=1
 .r animate
 \end{verbatim}
-   will show the first 6 snapshots of density in a single plot. 
+   will show the first 6 snapshots of density with overplot velocity vectors
+   in a single plot. 
    Now the time is shown for each plot individually, and setting
    {\bf bottomline=1} limits the time stamp to the most essential
    information, time. An alternative approach is to set the 
@@ -786,9 +817,21 @@ bottomline=1
 \begin{verbatim}
 timetitle='("t=",f8.1,"s")'
 \end{verbatim}
-   will show the time as {\bf t=240000.0s}. Set timetitle to an empty string 
-   to return to the default behaviour.
-   If {\bf npict*nfile*nfunc} is greater than the number 
+   will show the time as {\bf t=240000.0s}. The time units and the
+   initial time (offset) can be set with {\bf timetitleunit} 
+   and {\bf timetitlestart}. For example
+\begin{verbatim}
+timetitleunit=3600.0
+timetitlestart=60.0
+timetitle='(``t='',f5.2,''h'')'
+\end{verbatim}
+   will show the time as {\bf t= 6.67h}. Note that timetitleunit is
+   relative to the time units used in the data file (e.g. seconds)
+   while the offset is given in the time units defined by timetitleunit.
+
+   Set timetitle to an empty string and/or timetitleunit and timetitlestart
+   to zero to return to the default behaviour. 
+   If {\bf npict*nfile*nplot} is greater than the number 
    of subplots defined by {\bf multiplot}, an animation is done. 
    Type 
 \begin{verbatim}
@@ -801,7 +844,6 @@ multiplot=0
 \begin{verbatim}
 xinteranimate,/keep_pixmaps
 \end{verbatim}
-
    Sometimes it is interesting to visualize the difference of two runs, e.g.
    to visualize deviations from the initial state, or from a steady state.
    This can be achieved by setting the {\bf wsubtract} array, which will be 
@@ -859,8 +901,11 @@ velpos(*,*)=x2d(triplet(0,49,2, 0,99,1, 0,1,1))
 func='mynewfunc'
 .r plotfunc
 \end{verbatim}
-   Some frequently used functions are defined in a rather general way, 
-   they work for any number of dimensions. 
+   Some frequently used functions are defined in a rather general way:
+   they work for any number of dimensions. Note that some of the functions
+   require that the data is saved in consistent units, e.g. 
+   pressure and magnetic field squared or velocity and magnetic field
+   divided by square root of density have the same units.
 \begin{verbatim}
 Function name   Meaning
 ------------------------------------------------------------
@@ -946,7 +991,7 @@ plot,logtime,wlog(*,3),xtitle='hour',ytitle='rho_mean'
 checks the global mass conservation. 
 Use the {\bf plotlog} script to get more sophisticated plots,
 
-\subsection{Plotting the logfile with plotlog \label{s-getlog}}
+\subsection{Plotting the logfile with plotlog \label{s-plotlog}}
 
 Once the data in the logfile(s) have been read with {\bf getlog},
 it can be easily visualized with the {\bf plotlog} script.
@@ -1049,7 +1094,8 @@ by setting
 savemovie='png'
 \end{verbatim}
 The frames can be put together into a movie by some program like
-{\bf mpeg\_encode} or ImageMagick's {\bf convert}. 
+{\bf mpeg\_encode} or ImageMagick's {\bf convert}, or 
+Apple's {\bf QuicktimePro}. 
 
 \subsection{IDL scripts and procedures \label{s-idl-script}}
 
