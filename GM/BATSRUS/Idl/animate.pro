@@ -249,8 +249,12 @@
 	    linestyle=0
             if multix*multiy lt nplot*nfile then linestyle=ifile
 
-            if(keyword_set(timetitle))then $
-              plottitles(*) = string(format=timetitle,time)
+            if(keyword_set(timetitle))then begin
+                t = time
+                if(keyword_set(timetitleunit))then  t = t / timetitleunit
+                if(keyword_set(timetitlestart))then t = t - timetitlestart
+                plottitles(*) = string(format=timetitle,t)
+            endif
 
             plot_func,x,w,xreg,wreg,usereg,ndim,physicss(ifile),eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$

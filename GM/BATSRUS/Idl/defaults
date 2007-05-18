@@ -25,7 +25,9 @@ func=''
 logfunc=''
 plotmode=''
 plottitle='default'
-timetitle='' ;if set to a format string plots time as the title for time series
+timetitle=''     ; set to format string to plot time as title for time series
+timetitleunit=0  ; set to number of seconds in time unit
+timetitlestart=0 ; set to initial time to be subtracted (in above units)
 autorange='y'
 axistype='coord'
 
