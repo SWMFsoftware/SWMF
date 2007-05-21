@@ -210,7 +210,7 @@ contains
 
        case('#UPSTREAM')
           call read_var('SW_LP_dim', SW_LP_dim)
-          call read_var('SW_LP_dim', SW_MP_dim)        
+          call read_var('SW_MP_dim', SW_MP_dim)        
           call read_var('plas_T_ev', plas_T_ev)        
           SW_LP=SW_LP_dim*MassSpecies_V(rhoLp_)
           SW_MP=SW_MP_dim*MassSpecies_V(rhoMp_)
