@@ -4,6 +4,7 @@ subroutine add_sources
   use ModGITM
   use ModSources
   use ModInputs
+  use ModUser
 
   implicit none
 
@@ -25,6 +26,12 @@ subroutine add_sources
           EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           - NOCooling - OCooling + AuroralHeating + JouleHeating) + &
           Conduction + ChemicalHeatingRate
+
+     !-------------------------------------------
+     ! This is an example of a user output:
+ 
+     UserData3D(:,:,:,1,iBlock) = 0.0
+     UserData3D(1:nLons, 1:nLats, 1:nAlts, 1, iBlock) = JouleHeating
 
      do while (minval(temperature(1:nLons, 1:nLats, 1:nAlts, iBlock)) < 0.0)
         write(*,*) "Negative Temperature Found!!!  Correcting!!!"

@@ -38,6 +38,9 @@ module ModElectrodynamics
   ! These are the magnetic coordinates
   real, dimension(:,:), allocatable :: MagLatMC
   real, dimension(:,:), allocatable :: MagLocTimeMC
+  real, dimension(:,:), allocatable :: MagLonMC
+  real, dimension(:,:), allocatable :: GeoLonMC
+  real, dimension(:,:), allocatable :: GeoLatMC
 
   real, dimension(:,:), allocatable :: MagBufferMC
   real, dimension(:,:), allocatable :: LengthMC

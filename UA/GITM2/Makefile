@@ -31,6 +31,9 @@ GITM:
 	@cd $(IODIR);    make LIB
 	@cd $(MAINDIR);  make GITM
 
+POST:
+	@cd $(MAINDIR);  make POST
+
 GITM2 = ${DIR}/UA/GITM2
 
 LIB:

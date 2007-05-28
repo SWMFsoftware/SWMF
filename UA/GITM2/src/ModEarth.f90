@@ -33,6 +33,9 @@ module ModPlanet
   integer, parameter  :: nIons   = ie_
   integer, parameter  :: nIonsAdvect = 1
 
+  character (len=20) :: cSpecies(nSpeciesTotal)
+  character (len=20) :: cIons(nIons)
+
   real :: Mass(nSpeciesTotal), MassI(nIons)
 
   real :: Vibration(nSpeciesTotal)
@@ -114,6 +117,29 @@ contains
     Mass(iN_2P_) = Mass(iN_4S_)
     Mass(iN2_)   = 2*Mass(iN_4S_)
     Mass(iO2_)   = 2*Mass(iO_)
+
+    cSpecies(iH_)    = "H"
+    cSpecies(iHe_)   = "He"
+    cSpecies(iO_)    = "O"
+    cSpecies(iO2_)   = "O!D2!N"
+    cSpecies(iN2_)   = "N!D2!N"
+    cSpecies(iN_4S_) = "N(!U4!NS)"
+    cSpecies(iN_2D_) = "N(!U2!ND)"
+    cSpecies(iN_2P_) = "N(!U2!NP)"
+    cSpecies(iNO_)   = "NO"
+    cSpecies(iO_1D_) = "N(!U1!ND)"
+    cSpecies(iAr_)   = "Ar"
+
+    cIons(iO_4SP_) = "O_4SP_!U+!N"
+    cIons(iO2P_)   = "O!D2!U+!N"
+    cIons(iN2P_)   = "N!D2!U+!N"
+    cIons(iNP_)    = "N!U+!N"
+    cIons(iNOP_)   = "NO!U+!N"
+    cIons(iO_2DP_) = "O(!U2!ND)!U+!N"
+    cIons(iO_2PP_) = "O(!U2!NP)!U+!N"
+    cIons(iHP_)    = "H!U+!N"
+    cIons(iHeP_)   = "He!U+!N"
+    cIons(ie_)     = "e-"
 
     Vibration(iO_)    = 5.0
     Vibration(iO2_)   = 7.0

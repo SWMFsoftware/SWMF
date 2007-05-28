@@ -1,3 +1,257 @@
+      subroutine apex_to_geo(date, aLat, aLon, Alt, gLat, gLon, sLat, sLon)
+
+C  Input:
+C
+C DATE = Year and fraction (1990.0 = 1990 January 1, 0 UT)
+C aLat = Apex latitude in degrees
+C aLon = Apex longitude in degrees
+C ALT = Altitude in km
+C
+C  Output:
+C
+C gLat = Geographic Latitude
+C gLon = Geographin Longitude
+  
+        PARAMETER (RTOD=5.72957795130823E1,DTOR=1.745329251994330E-2)
+        PARAMETER (RE=6371.2,REQ=6378.160)
+        parameter (dr=0.001*req)
+        COMMON/DIPOLE/COLAT,ELON,VP,CTP,STP                           
+
+        real lShell, rStart, lonStart, ang_save, ang, cte, ste, tal
+        real stfcpa, stfspa, dif, dif_save, magpot
+        real xMag, yMag, zMag, bMag, GeoLat, GeoLon, GeoAlt
+        real aLatTest, aLonTest
+        integer i
+
+        if (sLat < -90.0) then
+
+           lShell = 1.0/(cos(aLat*DTOR)**2)
+           rStart = lShell * Req
+
+           cte = 0.0
+           ste = sqrt(1.0-cte*cte)
+
+           tal = tan(alon*dtor)
+
+           ang_save = 1000.0
+           dif_save = 1000.0
+
+           mid = alon
+           if (mid < 0.0) mid = mid + 360.0
+
+           do i=mid*10.0-100,mid*10.0+100
+
+              ang = real(i)/10.0*dtor
+              stfcpa = ste*ctp*cos(ang)-cte*stp
+              stfspa = sin(ang)*ste
+
+              dif = abs(tal*stfcpa - stfspa)
+
+              if (dif < dif_save) then
+                 dif_save = dif
+                 ang_save = ang
+              endif
+
+           enddo
+
+           lonStart = ang_save + elon*dtor
+
+           if (lonStart < 0.0) lonStart = lonStart + 6.2831855
+
+           rotate = - cos(ang_save) * colat*dtor
+
+           ang = ang_save
+           stfcpa = ste*ctp*cos(ang)-cte*stp
+           stfspa = sin(ang)*ste
+
+!        write(*,*) 'xlon:',lonStart,ang_save, alon, cte, STFCPA, STFSPA, ctp
+
+           GeoAlt = rStart - Req
+           GeoLon = lonStart
+           GeoLat = 0.0
+           SGN = SIGN(1.,alat)
+
+           CALL GD2CART (GeoLAT,GeoLON,geoALT,XXX,YYY,ZZZ)
+
+           r = sqrt(xxx*xxx + yyy*yyy + zzz*zzz)
+
+           do while (r > req+Alt)
+
+              CALL FELDG(2,xxx,yyy,zzz,xMAG,yMAG,zMAG,bMag)
+
+              xmag =  xmag/bmag
+              ymag =  ymag/bmag
+              zmag =  zmag/bmag
+
+              xxx = xxx + xmag * dr*sgn
+              yyy = yyy + ymag * dr*sgn
+              zzz = zzz + zmag * dr*sgn
+
+              r = sqrt(xxx*xxx + yyy*yyy + zzz*zzz)
+
+!           write(*,*) xxx,yyy,zzz,r, xmag,ymag,zmag
+
+           enddo
+
+!        write(*,*) 'xyz: ',xxx,yyy,zzz,r, xmag,ymag,zmag
+
+           geolat = asin(zzz/r)
+           geolon = asin(xxx/sqrt(xxx*xxx+yyy*yyy))
+           if (yyy < 0.0) geolon = 6.2831855 - geolon
+           geoalt = r-req
+
+           gLat = GeoLat * rtod
+           gLon = GeoLon * rtod
+
+           aLatTest = 1000.0
+           aLonTest = 1000.0
+
+           gLatGuess = gLat
+           gLonGuess = gLon
+
+           iCount = 0
+
+           do while ((abs(aLatTest-aLat) > 0.01 .or. abs(aLonTest-aLon) > 0.1) .and. 
+     !          iCount < 20)
+
+              call APEX(DATE,gLatGuess,gLonGuess,Alt,lShell,aLatTest,aLonTest,
+     !             bmag,xmag,ymag,zmag,MagPot)
+
+!     write(*,*) aLat, aLatTest, aLon, aLonTest, gLatGuess, gLonGuess, iCount
+
+              gLatGuess = gLatGuess + (aLat-aLatTest)/4.0
+
+              if (gLatGuess > 90.0) then
+                 iCount = 20
+                 gLatGuess = 88.0
+                 gLonGuess = gLonGuess + 30.0
+              elseif (gLatGuess < -90.0) then
+                 iCount = 20
+                 gLatGuess = -88.0
+                 gLonGuess = gLonGuess + 30.0
+              else
+                 dLon = aLon-aLonTest
+                 if (dLon > 300)  dLon = dLon - 360.0
+                 if (dLon < -300) dLon = dLon + 360.0
+                 gLonGuess = gLonGuess + dLon/4.0
+              endif
+
+              if (gLonGuess > 360.0) gLonGuess = gLonGuess - 360.0
+              if (gLonGuess <   0.0) gLonGuess = gLonGuess + 360.0
+
+              iCount = iCount + 1
+
+           enddo
+
+        else
+
+           GeoLat = sLat
+           GeoLon = sLon
+
+           iCount = 20
+           gLat = sLat
+
+        endif
+
+!        write(*,*) "iCount : ",iCount, gLatGuess, gLonGuess, gLat, gLon
+
+        if (iCount >= 20) then
+           
+           CALL GD2CART (aLat,aLon,ALT,aXXX,aYYY,aZZZ)
+
+           if (abs(gLatGuess) < 85.0) then
+              gLatGuess = gLat
+           else
+              gLat = gLatGuess
+           endif
+
+           iLonBest = -100
+           diff = 10000.0
+
+           do iLon = 0, 360, 10
+
+              gLonGuess = real(iLon)
+              call APEX(DATE,gLatGuess,gLonGuess,Alt,lShell,aLatTest,aLonTest,
+     !             bmag,xmag,ymag,zmag,MagPot)
+
+              CALL GD2CART (aLatTest,aLonTest,ALT,tXXX,tYYY,tZZZ)
+              dist = sqrt((aXXX-tXXX)**2 + (aYYY-tYYY)**2 + (aZZZ-tZZZ)**2)
+              if (dist < diff) then
+                 diff = dist
+                 iLonBest = iLon
+              endif
+
+           enddo
+
+           gLon = real(iLonBest)
+
+           dLon = 20.0
+
+           LatFac = 110.0
+           iCount = 1
+
+           do while (diff > 1.0 .and. iCount < 20)
+
+              dLat = diff / LatFac
+
+              LatFac = LatFac * 0.99
+
+              do iLat = -5,5
+
+                 gLatGuess = gLat + real(iLat)/10 * dLat
+                 gLonGuess = gLon
+                 call APEX(DATE,gLatGuess,gLonGuess,Alt,lShell,aLatTest,aLonTest,
+     !                bmag,xmag,ymag,zmag,MagPot)
+
+                 CALL GD2CART (aLatTest,aLonTest,ALT,tXXX,tYYY,tZZZ)
+                 dist = sqrt((aXXX-tXXX)**2 + (aYYY-tYYY)**2 + (aZZZ-tZZZ)**2)
+                 if (dist < diff) then
+                    diff = dist
+                    gLat = gLatGuess
+                    if (gLat < -90.0) gLat = -180.0 - gLat
+                    if (gLat >  90.0) gLat =  180.0 - gLat
+!                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
+
+                 endif
+
+              enddo
+
+              do iLon = -5,5
+
+                 gLatGuess = gLat
+                 gLonGuess = gLon + real(iLon)/10 * dLat
+                 call APEX(DATE,gLatGuess,gLonGuess,Alt,lShell,aLatTest,aLonTest,
+     !                bmag,xmag,ymag,zmag,MagPot)
+
+                 CALL GD2CART (aLatTest,aLonTest,ALT,tXXX,tYYY,tZZZ)
+                 dist = sqrt((aXXX-tXXX)**2 + (aYYY-tYYY)**2 + (aZZZ-tZZZ)**2)
+                 if (dist < diff) then
+                    diff = dist
+                    gLon = gLonGuess
+                    if (gLon <   0.0) gLon = gLon + 360.0
+                    if (gLon > 360.0) gLon = gLon - 360.0
+!                    write(*,*) aLat, aLatTest, aLon, aLonTest, gLat, gLon, dLat, dLon, diff
+                 endif
+
+              enddo
+
+              dLon = dLon * exp((real(iCount)-5)/10)
+              iCount = iCount + 1
+
+           enddo
+
+        else
+
+           gLat = gLatGuess
+           gLon = gLonGuess
+
+        endif
+
+        if (gLon > 360) gLon = gLon - 360
+        if (gLon <   0) gLon = gLon + 360
+
+      end
+
       SUBROUTINE APEX(DATE,DLAT,DLON,ALT
      1 ,A,ALAT,ALON,BMAG,XMAG,YMAG,ZMAG,V)
 C Calculate apex radius, latitude, longitude; and magnetic field and potential

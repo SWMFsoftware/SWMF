@@ -4,6 +4,7 @@ subroutine get_potential(iBlock)
   use ModTime
   use ModIndicesInterfaces
   use ModInputs
+  use ModUser
 
   implicit none
 
@@ -221,6 +222,14 @@ subroutine get_potential(iBlock)
         endif
 
         Potential(:,:,iAlt,iBlock) = TempPotential
+
+        !----------------------------------------------
+        ! Another example of user output
+
+        if (iAlt == 1) then 
+           UserData2d(1:nLons,1:nLats,1,1,iBlock) = &
+                TempPotential(1:nLons,1:nLats)/1000.0
+        endif
 
      enddo
 

@@ -204,9 +204,12 @@ subroutine move_satellites
               write(cPos,'(i3.3)') iPos
               cTmp  = cSatFileName(iSat)
               cName = cTmp(1:4)//"_"//cPos
+              CurrentSatellitePosition = SatCurrentPos(iSat,:,iPos)
+              CurrentSatelliteName     = cName
               do iBlock = 1, nBlocks
-                 call output_1d("UA/data/",cName,iBlock, &
-                      SatCurrentPos(iSat,:,iPos))
+!                 call output_1d("UA/data/",cName,iBlock, &
+!                      SatCurrentPos(iSat,:,iPos))
+                 call output("UA/data/",iBlock, -1)
               enddo
            enddo
 

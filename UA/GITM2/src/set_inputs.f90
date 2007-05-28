@@ -203,8 +203,10 @@ subroutine set_inputs
            call read_in_logical(UseMSIS, iError)
            call read_in_logical(UseIRI, iError)
            if (.not.UseMSIS) then
-              call read_in_real(TempMin, iError)
-              call read_in_real(TempMax, iError)
+              call read_in_real(TempMin,    iError)
+              call read_in_real(TempMax,    iError)
+              call read_in_real(TempHeight, iError)
+              call read_in_real(TempWidth,  iError)
               do i=1,nSpecies
                  call read_in_real(LogNS0(i), iError)
                  if (iError == 0) LogNS0(i) = alog(LogNS0(i))
@@ -218,6 +220,8 @@ subroutine set_inputs
               write(*,*) 'If UseMSIS is .false. then :'
               write(*,*) 'TempMin        (real, bottom temperature)'
               write(*,*) 'TempMax        (real, top initial temperature)'
+              write(*,*) 'TempHeight     (real, Height of the middle of temp gradient)'
+              write(*,*) 'TempWidth      (real, Width of the temperature gradient)'
               do i=1,nSpecies
                  write(*,*) 'Bottom N Density (real), species',i
               enddo
@@ -231,7 +235,6 @@ subroutine set_inputs
               LogRho0 = alog(LogRho0)
 
            endif
-
 
         case ("#HPI")
 

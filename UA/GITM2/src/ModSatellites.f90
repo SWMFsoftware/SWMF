@@ -26,4 +26,7 @@ module ModSatellites
   integer             :: nSatLines(nMaxSats)
   integer             :: iSatCurrentIndex(nMaxSats)
 
+  real                :: CurrentSatellitePosition(3)
+  character (len=8)   :: CurrentSatelliteName
+
 end module ModSatellites

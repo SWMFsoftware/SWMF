@@ -8,6 +8,7 @@ subroutine aurora(iBlock)
   use ModTime, only : tSimulation
   use ModInputs
   use ModConstants
+  use ModUser
 
   implicit none
 
@@ -51,6 +52,9 @@ subroutine aurora(iBlock)
 
         eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
         av_kev    = ElectronAverageEnergy(j,i)
+
+        UserData2d(j,i,1,2,iBlock) = av_kev
+        UserData2d(j,i,1,3,iBlock) = eflx_ergs
 
         if (eflx_ergs > 0.02) then
 
