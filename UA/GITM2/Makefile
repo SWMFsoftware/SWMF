@@ -102,7 +102,7 @@ MPIRUN = mpirun -np 2
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
-	cd ${TESTDIR}; cp UA/DataIn/UAM.in.test UAM.in
+	cd ${TESTDIR}; cp UA/DataIn/UAM.in.test.noAPEX UAM.in
 
 test_run:
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog
@@ -110,7 +110,7 @@ test_run:
 test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat \
-		srcData/log00000002.dat > test.diff)
+		srcData/log00000002.dat.noAPEX > test.diff)
 	ls -l test.diff
 
 dist:
