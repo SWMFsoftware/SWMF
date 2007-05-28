@@ -1,4 +1,55 @@
 
+!--------------------------------------------------------------
+!
+!--------------------------------------------------------------
+
+subroutine get_temperature(lon, lat, alt, t, h)
+
+  use ModInputs
+  use ModPlanet
+
+  implicit none
+
+  real, intent(in) :: lon, lat, alt
+  real, intent(out) :: t, h
+
+  real    :: tAve, tDiff, n, r, g, m
+  integer :: iSpecies
+
+  if (UseMsis) then
+
+     call get_msis_temperature(lon, lat, alt, t, h)
+
+  else
+
+     tAve  = (TempMax+TempMin)/2
+     tDiff = (TempMax-TempMin)/2
+
+     if (Alt <= TempHeight) then
+        t = tAve + tDiff*tanh((alt - TempHeight)/TempWidth)
+     else
+        t = tAve + tDiff*tanh((alt - TempHeight)/TempWidth)
+     endif
+
+     r = RBody + alt
+     g = Gravitational_Constant * (RBody/r) ** 2
+
+     h = 0.0
+     n = 0.0
+     m = 0.0
+     do iSpecies = 1, nSpecies
+        m = m + exp(LogNS0(iSpecies)) * mass(iSpecies)
+        n = n + exp(LogNS0(iSpecies))
+     enddo
+
+     m = m / n
+     h = Boltzmanns_Constant * t / (m*g)
+
+  endif
+
+end subroutine get_temperature
+
+
 !-----------------------------------------------------------------
 !  This is the new init_altitude version.
 !  It has been determined that the optimum resolution in the
@@ -21,14 +72,7 @@ subroutine init_altitude
 
   real :: ScaleHeights(nAlts)
   real :: OlddHFactor, dHFactor
-  real :: geo_lat, geo_lst, geo_lon, geo_alt, mm
-
-  ! msis variables
-
-  real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
-  integer, dimension(25) :: sw
-  real :: AP = 10.0
+  real :: geo_lat, geo_lst, geo_lon, geo_alt, h, t
 
   !
   ! Here we are creating the altitude grid.  We are
@@ -43,8 +87,6 @@ subroutine init_altitude
   ! the scale height that you want.
   !
 
-  sw = 1
-
   IsDone = .false.
 
   dHFactor = 0.3
@@ -57,14 +99,10 @@ subroutine init_altitude
      geo_alt = AltMin
      if (iAlt > 1) geo_alt = AltMin + sum(ScaleHeights(1:iAlt-1)) * dHFactor
 
-     CALL GTD6(iJulianDay,utime,geo_alt/1000.0,geo_lat,geo_lon,geo_lst, &
-          F107A,F107,AP,48,msis_dens,msis_temp)
-     mm = (Mass(iO2_)*msis_dens(4) + &
-          Mass(iO_)*msis_dens(2) + &
-          Mass(iN2_)*msis_dens(3)) / &
-          (msis_dens(4) + msis_dens(2) + msis_dens(3))
-     ScaleHeights(iAlt) = Boltzmanns_Constant * msis_temp(2) / &
-          (mm * Gravitational_Constant) 
+     geo_lon = geo_lon * pi / 180.0
+
+     call get_temperature(geo_lon, geo_lat, geo_alt, t, h)
+     ScaleHeights(iAlt) = h
 
   enddo
 
@@ -106,14 +144,7 @@ subroutine init_altitude_old
 
   real :: ScaleHeights(nAlts)
   real :: OlddHFactor, dHFactor
-  real :: geo_lat, geo_lst, geo_lon, geo_alt, mm
-
-  ! msis variables
-
-  real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
-  integer, dimension(25) :: sw
-  real :: AP = 10.0
+  real :: geo_lat, geo_lst, geo_lon, geo_alt, h, t
 
   !
   ! Here we are creating the altitude grid.  We are
@@ -127,8 +158,6 @@ subroutine init_altitude_old
   ! the scaling factor until you have the altitudes and
   ! the scale height that you want.
   !
-
-  sw = 1
 
   IsDone = .false.
 
@@ -147,16 +176,10 @@ subroutine init_altitude_old
         geo_alt = AltMin
         if (iAlt > 1) geo_alt = AltMin + sum(ScaleHeights(1:iAlt-1)) * dHFactor
 
-        CALL GTD6(iJulianDay,utime,geo_alt/1000.0,geo_lat,geo_lon,geo_lst, &
-             F107A,F107,AP,48,msis_dens,msis_temp)
-        mm = (Mass(iO2_)*msis_dens(4) + &
-             Mass(iO_)*msis_dens(2) + &
-             Mass(iN2_)*msis_dens(3)) / &
-             (msis_dens(4) + msis_dens(2) + msis_dens(3))
-        ScaleHeights(iAlt) = Boltzmanns_Constant * msis_temp(2) / &
-             (mm * Gravitational_Constant) 
+        geo_lon = geo_lon * pi / 360.0
+        call get_temperature(geo_lon, geo_lat, geo_alt, t, h)
 
-!        geo_alt = geo_alt + dHFactor * ScaleHeights(iAlt)
+        ScaleHeights(iAlt) = h
 
      enddo
 

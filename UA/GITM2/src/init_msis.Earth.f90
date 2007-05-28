@@ -1,3 +1,53 @@
+!--------------------------------------------------------------
+!
+!--------------------------------------------------------------
+
+subroutine get_msis_temperature(lon, lat, alt, t, h)
+
+  use ModTime
+  use ModInputs
+  use ModPlanet
+  use ModGITM
+
+  implicit none
+
+  real, intent(in) :: lon, lat, alt
+  real, intent(out) :: t, h
+
+  real, dimension(1:2) :: msis_temp
+  real, dimension(1:8) :: msis_dens
+
+  real :: LonDeg, LatDeg, AltKm, LST, ap = 10.0
+  real :: nO, nO2, nN2, m, r, g
+
+  call meter6(.true.)
+
+  LonDeg = lon*180.0/pi
+  LatDeg = lat*180.0/pi
+  AltKm  = alt/1000.0
+  LST = mod(utime/3600.0+LonDeg/15.0,24.0)
+
+  CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
+       F107A,F107,AP,48,msis_dens,msis_temp)
+
+  t = msis_temp(2)
+  nO  = msis_dens(2)
+  nN2 = msis_dens(3)
+  nO2 = msis_dens(4)
+
+  m = (nO * mass(iO_) + nO2 * mass(iO2_) + nN2 * mass(iN2_)) / (nO + nO2 + nN2)
+
+  r = RBody + alt
+!  g = Gravitational_Constant * (RBody/r) ** 2
+  g = Gravitational_Constant
+
+  h = Boltzmanns_Constant * t / (m*g)
+
+end subroutine get_msis_temperature
+
+!--------------------------------------------------------------
+!
+!--------------------------------------------------------------
 
 subroutine init_msis
 
@@ -112,7 +162,9 @@ subroutine init_msis
               TempUnit(iLon,iLat,iAlt) = &
                    MeanMajorMass(iLon,iLat,iAlt)/ Boltzmanns_Constant
 
-              Temperature(iLon,iLat,iAlt,iBlock) = msis_temp(2)/TempUnit(iLon,iLat,iAlt)
+              Temperature(iLon,iLat,iAlt,iBlock) = &
+                   msis_temp(2)/TempUnit(iLon,iLat,iAlt)
+
               Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
               ! The initial profile of [NO] is refered to:
@@ -149,6 +201,10 @@ subroutine init_msis
   enddo
  
 end subroutine init_msis
+
+!--------------------------------------------------------------
+!
+!--------------------------------------------------------------
 
 subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
              F107A,F107,AP,LogNS, Temp, LogRho)
