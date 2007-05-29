@@ -100,6 +100,9 @@ ${EXE}:	${OBJECTS} ${MODULES} main.o
 	-L${ABDIR} -lSphere -L${IODIR} -lindices -L${IEDIR} -lIE\
 	-L${EDDIR} -lED -L${LIBDIR} -lSHARE ${IEDIR}/ModConductance.o ${EDDIR}/ModIons.o
 
+POST:	PostProcess.f90
+	${LINK.f90} ${PRECISION} ${DEBUG} -o PostProcess.exe PostProcess.f90
+
 STATIC:
 	cp -f ModGITM_static.f90    ModGITM.f90
 	cp -f ModEUV_static.f90     ModEUV.f90
