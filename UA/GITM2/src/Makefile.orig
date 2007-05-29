@@ -93,6 +93,7 @@ EXE = ${BINDIR}/GITM.exe
 
 GITM:	DEPEND
 	@make ${EXE}
+	@make POST
 	@echo "${EXE} has been created"
 
 ${EXE}:	${OBJECTS} ${MODULES} main.o
