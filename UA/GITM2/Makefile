@@ -71,9 +71,11 @@ distclean:
 #
 rundir:
 	mkdir -p ${RUNDIR}/UA
+	cd ${RUNDIR} ; ln -s $(MAINDIR)/PostGITM.exe .
 	cd ${RUNDIR}/UA; \
 		mkdir restartOUT data; \
 		ln -s restartOUT restartIN; \
+		ln -s $(MAINDIR)/pGITM .; \
 		ln -s ${UADIR}/srcData DataIn
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
