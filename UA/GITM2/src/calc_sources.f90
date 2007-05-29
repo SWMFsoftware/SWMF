@@ -322,10 +322,10 @@ subroutine calc_GITM_sources(iBlock)
               Viscosity(iLon,iLat,1:nAlts,iUp_) = &
                    ((Velocity(iLon-1,iLat,1:nAlts,iUp_,iBlock) - &
                    Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLonDist_GB(iLat, 1:nAlts, iBlock) + &
+                   dLonDist_GB(iLon, iLat, 1:nAlts, iBlock) + &
                    (Velocity(iLon+1,iLat,1:nAlts,iUp_,iBlock) - &
                    Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
-                   dLonDist_GB(iLat, 1:nAlts, iBlock)) / 2.0 + &
+                   dLonDist_GB(iLon,iLat, 1:nAlts, iBlock)) / 2.0 + &
                    ((Velocity(iLon,iLat-1,1:nAlts,iUp_,iBlock) - &
                    Velocity(iLon,iLat,1:nAlts,iUp_,iBlock))/ &
                    dLatDist_GB(iLat, 1:nAlts, iBlock) + &

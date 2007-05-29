@@ -84,7 +84,7 @@ subroutine calc_efield(iBlock)
                       EField(j,i,k,iEast_) * 1000.0, &
                       Potential(j+1,i,k,iBlock)/1000.0, &
                       Potential(j-1,i,k,iBlock)/1000.0, &
-                      dLonDist_GB(i, k, iBlock), &
+                      dLonDist_GB(j, i, k, iBlock), &
                       ExB(j,i,k,iNorth_), B0(j,i,k,iMag_,iBlock)
                  maxi = abs(ExB(j,i,k,iNorth_))
               endif

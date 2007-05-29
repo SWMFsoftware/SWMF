@@ -22,7 +22,7 @@ subroutine initialize_gitm(TimeIn)
 
   real :: LogRho(-1:nLons+2,-1:nLats+2), NewSumRho(-1:nLons+2,-1:nLats+2)
 
-  real :: TempUnit_const
+  real :: TempUnit_const, t, h
 
   logical :: IsThere, IsOk, IsDone, IsFirstTime = .true.
 
@@ -165,12 +165,16 @@ subroutine initialize_gitm(TimeIn)
                 RadialDistance(iAlt)           
 
            ! The longitude grid is uniform in angle
-           dLonDist_GB(iLat, iAlt, iBlock) = &
-                (Longitude(2,iBlock) - Longitude(1,iBlock)) * &
-                RadialDistance(iAlt)*max(abs(cos(Latitude(iLat,iBlock))),0.01)
+           do iLon = 0, nLons+1
+              dLonDist_GB(iLon, iLat, iAlt, iBlock) = 0.5 * &
+                   (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)) * &
+                   RadialDistance(iAlt)* &
+                   max(abs(cos(Latitude(iLat,iBlock))),0.01)
+           enddo
         enddo
      enddo
   enddo
+
   ! Fill in 2nd ghost cells
   dLatDist_GB(-1, :, 1:nBlocks)      = dLatDist_GB(0, :, 1:nBlocks)
   dLatDist_GB(nLats+2, :, 1:nBlocks) = dLatDist_GB(nLats+1, :, 1:nBlocks)
@@ -178,8 +182,12 @@ subroutine initialize_gitm(TimeIn)
   dLatDist_FB(-1, :, 1:nBlocks)      = dLatDist_FB(0, :, 1:nBlocks)
   dLatDist_FB(nLats+2, :, 1:nBlocks) = dLatDist_FB(nLats+1, :, 1:nBlocks)
 
-  dLonDist_GB(-1, :, 1:nBlocks)      = dLonDist_GB(0, :, 1:nBlocks)
-  dLonDist_GB(nLats+2, :, 1:nBlocks) = dLonDist_GB(nLats+1, :, 1:nBlocks)
+  do iLon = -1, nLons+2
+     dLonDist_GB(iLon, -1, :, 1:nBlocks)      = &
+          dLonDist_GB(iLon, 0, :, 1:nBlocks)
+     dLonDist_GB(iLon, nLats+2, :, 1:nBlocks) = &
+          dLonDist_GB(iLon, nLats+1, :, 1:nBlocks)
+  enddo
 
   InvDLatDist_GB = 1.0/dLatDist_GB
   InvDLatDist_FB = 1.0/dLatDist_FB
@@ -190,83 +198,29 @@ subroutine initialize_gitm(TimeIn)
   TanLatitude(:,1:nBlocks) = min(abs(tan(Latitude(:,1:nBlocks))),100.0) * &
        sign(1.0,Latitude(:,1:nBlocks))
 
-  if (IsEarth) then
-
-     !\
-     ! EARTH Specific !!!
-     !/
-     do iAlt=1,nAlts
-!        HeatingEfficiency(iAlt) = &
-!             max(0.6-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.05)
-        HeatingEfficiency(iAlt) = &
-             max(0.40-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.1)
-
-        if (altitude(iAlt)/1000. > 150.) then
-           eHeatingEfficiency(iAlt)= &
-                MIN(0.04+0.05*(altitude(iAlt)/1000.-150.)/100., 0.4)
-
-           eHeatingEfficiency(iAlt)= 0.04
-
-
-!!$     else if (altitude(iAlt)/1000. > 200.) then
-!!$        eHeatingEfficiency(iAlt)= &
-!!$             MIN(0.005+0.01*(altitude(iAlt)/1000.-130.)/100., 0.4)
-
-        else
-           eHeatingEfficiency(iAlt)= &
-                MAX(0.05+0.07*(altitude(iAlt)/1000.-200.)/100., 0.000001)
-        endif
-             
-     enddo
-
-  else
-
-     !\
-     ! Mars Specific !!!
-     !/
-
-     HeatingEfficiency = 0.22
-
-  endif
+  call init_heating_efficiency
 
   if (.not. DoRestart) then
-
 
      Velocity = 0.0
      IVelocity = 0.0
      VerticalVelocity = 0.0
 
-!     TempMax = TempMin
-
      if (UseMsis .and. IsEarth) then
-
         call init_msis
-
      else
 
-     TempUnit_const = 1. * Mass(1) / Boltzmanns_Constant
-  !  TempUnit = 1.0        
-     TempAve  = (TempMax+TempMin)/2/TempUnit_const
-     TempDiff = (TempMax-TempMin)/2/TempUnit_const
+        TempUnit_const = 1. * Mass(1) / Boltzmanns_Constant
+        TempAve  = (TempMax+TempMin)/2/TempUnit_const
+        TempDiff = (TempMax-TempMin)/2/TempUnit_const
 
-     TempWidth    =  20.0*1e3
-     TempHeight   = 140.0*1e3
-
-     
         do iBlock = 1, nBlocks
 
            do iAlt=-1,nAlts+2
-              if (Altitude(iAlt) <= TempHeight) then
-                 Temperature(:,:,iAlt,iBlock)  = TempAve &
-                      + TempDiff*tanh((Altitude(iAlt) - TempHeight)/TempWidth)
-              else
-                 Temperature(:,:,iAlt,iBlock)  = TempAve &
-                      + TempDiff*tanh((Altitude(iAlt)-TempHeight)/(3.7*TempWidth))
-              endif
-              eTemperature(:,:,iAlt,iBlock) = &
-                   Temperature(:,:,iAlt,iBlock)*TempUnit_const
-              iTemperature(:,:,iAlt,iBlock) = &
-                   Temperature(:,:,iAlt,iBlock)*TempUnit_const
+              call get_temperature(0.0, 0.0, Altitude(iAlt), t, h)
+              Temperature(:,:,iAlt,iBlock)  = t/TempUnit_const
+              eTemperature(:,:,iAlt,iBlock) = t
+              iTemperature(:,:,iAlt,iBlock) = t
            enddo
            
            do iAlt=-1,nAlts+2

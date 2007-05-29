@@ -47,7 +47,7 @@ subroutine calc_timestep_horizontal
            
               DtLocal = min(DtLocal, Cfl / ( &
                    cMax_GDB(iLon, iLat, iAlt, iEast_,  iBlock) / &
-                   dLonDist_GB(iLat,iAlt,iBlock) + &
+                   dLonDist_GB(iLon,iLat,iAlt,iBlock) + &
                    cMax_GDB(iLon, iLat, iAlt, iNorth_, iBlock) / &
                    dLatDist_GB(iLat,iAlt,iBlock)))
 
@@ -55,7 +55,7 @@ subroutine calc_timestep_horizontal
                    DtLocal = min(DtLocal, Cfl / ( &
                    (abs(IVelocity(iLon, iLat, iAlt, iEast_,  iBlock))+ &
                    cSound_H(iLon, iLat))/ &
-                   dLonDist_GB(iLat,iAlt,iBlock) + &
+                   dLonDist_GB(iLon,iLat,iAlt,iBlock) + &
                    (abs(IVelocity(iLon, iLat, iAlt, iNorth_, iBlock))+ &
                    cSound_H(iLon, iLat))/ &
                    dLatDist_GB(iLat,iAlt,iBlock))/2.0)

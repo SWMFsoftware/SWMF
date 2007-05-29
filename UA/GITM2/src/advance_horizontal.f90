@@ -428,12 +428,12 @@ contains
 
     integer :: iLat
 
-    real :: InvdLat(nLats), InvdLon
+    real :: InvdLat(nLats), InvdLon(nLons)
 
     ! Calculate gradient and diffusive flux with respect to longitude
     do iLat = 1, nLats
 
-       InvdLon = InvDLonDist_GB(iLat,iAlt,iBlock)
+       InvdLon = InvDLonDist_GB(1:nLons,iLat,iAlt,iBlock)
 
        call calc_facevalues_lons(Var(:,iLat), VarWest, VarEast)
 

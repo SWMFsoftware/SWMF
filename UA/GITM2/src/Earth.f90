@@ -138,3 +138,37 @@ subroutine calc_planet_sources(iBlock)
   endif
 
 end subroutine calc_planet_sources
+
+!---------------------------------------------------------------------
+! Initialize Heating Rates
+!---------------------------------------------------------------------
+
+subroutine init_heating_efficiency
+
+  use ModGITM, only: nAlts, altitude
+  use ModEUV, only: HeatingEfficiency, eHeatingEfficiency
+
+  implicit none
+
+  integer :: iAlt
+
+  do iAlt=1,nAlts
+
+     HeatingEfficiency(iAlt) = &
+          max(0.40-5.56e-5*(Altitude(iAlt)/1000.-165.)**2,0.1)
+
+     if (altitude(iAlt)/1000. > 150.) then
+        eHeatingEfficiency(iAlt)= &
+             MIN(0.04+0.05*(altitude(iAlt)/1000.-150.)/100., 0.4)
+        
+        eHeatingEfficiency(iAlt)= 0.04
+
+     else
+        eHeatingEfficiency(iAlt)= &
+             MAX(0.05+0.07*(altitude(iAlt)/1000.-200.)/100., 0.000001)
+     endif
+     
+  enddo
+
+end subroutine init_heating_efficiency
+
