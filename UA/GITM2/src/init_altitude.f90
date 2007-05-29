@@ -25,10 +25,10 @@ subroutine get_temperature(lon, lat, alt, t, h)
      tAve  = (TempMax+TempMin)/2
      tDiff = (TempMax-TempMin)/2
 
-     if (Alt <= TempHeight) then
-        t = tAve + tDiff*tanh((alt - TempHeight)/TempWidth)
+     if (Alt/1000.0 <= TempHeight) then
+        t = tAve + tDiff*tanh((alt/1000.0 - TempHeight)/TempWidth)
      else
-        t = tAve + tDiff*tanh((alt - TempHeight)/TempWidth)
+        t = tAve + tDiff*tanh((alt/1000.0 - TempHeight)/TempWidth)
      endif
 
      r = RBody + alt
