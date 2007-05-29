@@ -14,7 +14,8 @@ module ModGITM
        InvRadialDistance, InvDAlt, dAlt_F, InvDAlt_F
 
   real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocksMax) :: &
-       dLonDist_GB, InvDLonDist_GB
+       dLonDist_GB, InvDLonDist_GB, &
+       dLonDist_FB, InvDLonDist_FB
 
   real, dimension(-1:nLats+2,-1:nAlts+2,nBlocksMax) :: &
        dLatDist_GB, InvDLatDist_GB, &

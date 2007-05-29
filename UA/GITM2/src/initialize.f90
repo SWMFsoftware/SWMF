@@ -148,6 +148,7 @@ subroutine initialize_gitm(TimeIn)
   dLatDist_GB = 1.0
   dLatDist_FB = 1.0
   dLonDist_GB = 1.0
+  dLonDist_FB = 1.0
 
   ! Precalculate the physical size of cells in the Lat and Lon directions
   do iLat = 0, nLats+1
@@ -170,7 +171,17 @@ subroutine initialize_gitm(TimeIn)
                    (Longitude(iLon+1,iBlock) - Longitude(iLon-1,iBlock)) * &
                    RadialDistance(iAlt)* &
                    max(abs(cos(Latitude(iLat,iBlock))),0.01)
+              dLonDist_FB(iLon, iLat, iAlt, iBlock) = &
+                   (Longitude(iLon,iBlock) - Longitude(iLon-1,iBlock)) * &
+                   RadialDistance(iAlt)* &
+                   max(abs(cos(Latitude(iLat,iBlock))),0.01)
            enddo
+
+           dLonDist_FB(-1, iLat, iAlt, iBlock) = &
+                dLonDist_FB(0, iLat, iAlt, iBlock)
+           dLonDist_FB(nLons+2, iLat, iAlt, iBlock) = &
+                dLonDist_FB(nLons+1, iLat, iAlt, iBlock)
+
         enddo
      enddo
   enddo
@@ -187,11 +198,16 @@ subroutine initialize_gitm(TimeIn)
           dLonDist_GB(iLon, 0, :, 1:nBlocks)
      dLonDist_GB(iLon, nLats+2, :, 1:nBlocks) = &
           dLonDist_GB(iLon, nLats+1, :, 1:nBlocks)
+     dLonDist_FB(iLon, -1, :, 1:nBlocks)      = &
+          dLonDist_GB(iLon, 0, :, 1:nBlocks)
+     dLonDist_FB(iLon, nLats+2, :, 1:nBlocks) = &
+          dLonDist_GB(iLon, nLats+1, :, 1:nBlocks)
   enddo
 
   InvDLatDist_GB = 1.0/dLatDist_GB
   InvDLatDist_FB = 1.0/dLatDist_FB
   InvDLonDist_GB = 1.0/dLonDist_GB
+  InvDLonDist_FB = 1.0/dLonDist_FB
 
 
   ! Precalculate the tangent of the latitude

@@ -435,7 +435,7 @@ contains
 
        InvdLon = InvDLonDist_GB(1:nLons,iLat,iAlt,iBlock)
 
-       call calc_facevalues_lons(Var(:,iLat), VarWest, VarEast)
+       call calc_facevalues_lons(Var(:,iLat), VarWest, VarEast,iLat,iAlt,iBlock)
 
        ! Gradient based on averaged West/East values
 
@@ -476,7 +476,6 @@ subroutine calc_facevalues_lats(iAlt, iBlock, Var, VarLeft, VarRight)
   real, intent(out)   :: VarLeft(1:nLats+1), VarRight(1:nLats+1)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nLats+1)
-  real :: DiffLocP(-1:nLats+1), InvDiffLocP(-1:nLats+1)
 
   integer :: i
 
@@ -508,15 +507,17 @@ end subroutine calc_facevalues_lats
 !
 !=====================================================================
 
-subroutine calc_facevalues_lons(Var, VarLeft, VarRight)
+subroutine calc_facevalues_lons(Var, VarLeft, VarRight,iLat,iAlt,iBlock)
 
   use ModSizeGITM, only: nLons
+  use ModGITM, only: dLonDist_FB, InvDLonDist_FB
   use ModInputs, only: UseMinMod, UseMC
   use ModLimiterGitm
 
   implicit none
   
   real, intent(in)    :: Var(-1:nLons+2)
+  integer, intent(in) :: iLat,iAlt,iBlock
   real, intent(out)   :: VarLeft(1:nLons+1), VarRight(1:nLons+1)
 
   real :: dVarUp, dVarDown, dVarLimited(0:nLons+1)
@@ -525,23 +526,23 @@ subroutine calc_facevalues_lons(Var, VarLeft, VarRight)
 
   if (UseMinMod) then 
      do i=0,nLons+1
-        dVarUp         = (Var(i+1) - Var(i))  
-        dVarDown       = (Var(i)   - Var(i-1))
+        dVarUp         = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+        dVarDown       = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
         dVarLimited(i) = Limiter_minmod(dVarUp, dVarDown)
      end do
   endif
 
   if (UseMC) then
      do i=0,nLons+1
-        dVarUp        = (Var(i+1) - Var(i))   
-        dVarDown      = (Var(i)   - Var(i-1)) 
+        dVarUp        = (Var(i+1) - Var(i))  *InvDLonDist_FB(i+1,iLat,iAlt,iBlock)
+        dVarDown      = (Var(i)   - Var(i-1))*InvDLonDist_FB(i  ,iLat,iAlt,iBlock)
         dVarLimited(i)= Limiter_mc(dVarUp, dVarDown)
      end do
   endif
 
   do i=1,nLons+1
-     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)
-     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  
+     VarLeft(i)  = Var(i-1) + 0.5*dVarLimited(i-1)*dLonDist_FB(i,iLat,iAlt,iBlock)
+     VarRight(i) = Var(i)   - 0.5*dVarLimited(i)  *dLonDist_FB(i,iLat,iAlt,iBlock)
   end do
 
 end subroutine calc_facevalues_lons
