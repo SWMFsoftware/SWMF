@@ -25,7 +25,8 @@ MODULES = \
 	ModEUV.o\
 	ModElectrodynamics.o\
 	ModSatellites.o\
-	ModLimiter.o
+	ModLimiter.o\
+	ModUser.o
 
 OBJECTS = \
 	planet.o\
@@ -64,6 +65,7 @@ OBJECTS = \
 	advance_horizontal.o\
 	set_vertical_bcs.o\
 	output.o\
+	output_common.o\
 	logfile.o\
 	calc_conduction.o\
 	calc_physics.o\
@@ -81,7 +83,8 @@ OBJECTS = \
 	iri90.o\
 	apex.o\
 	write_output.o\
-	gradient.o
+	gradient.o\
+	user.o
 
 DEPEND:
 	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${MODULES}
