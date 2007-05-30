@@ -1,4 +1,4 @@
-!*******************************************************************************
+!******************************************************************************
 !
 !                               rbe_main.f90
 ! 
@@ -43,9 +43,14 @@ program rbe
 
   use rbe_cread2, ONLY: nstept, nstep
   use rbe_time,   ONLY: istep
+  use ModMpi,ONLY: MPI_COMM_WORLD
+  use ModReadParam
   implicit none
   !---------------------------------------------------------------------------
   ! Initial setup for the rbe model
+  call read_file('rbe_swmf.dat',MPI_COMM_WORLD)
+  call read_init('  ',iSessionIn=1,iLineIn=0)
+  call RB_set_parameters('READ')
   call readInputData
   call timing_active(.true.)
   call timing_step(0)

@@ -5,6 +5,7 @@ include ../Makefile.conf
 
 OBJECTS = \
 	rbe_subs.o\
+	set_parameters.o\
 	pbo_2.o\
 	t04_s.o\
 	t96_01.o\

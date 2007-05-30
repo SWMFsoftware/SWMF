@@ -114,7 +114,7 @@ module rbe_cread2
   integer :: &
        nimf,nsw,iyear,iday,js,itype,nstep,nstept,ndst,ires,imod,&
        iprint,ntime,iconvect,init,il,ie,iplsp
-
+  character (len=8)::  storm
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid
@@ -418,27 +418,9 @@ subroutine readInputData
 
   real:: bxw1(nswmax),byw1(nswmax),bzw1(nswmax),xnsw1(nswmax),vsw1(nswmax)
   integer :: isymH(60)
-  character (len=8)::  storm
+
   character (len=80):: header
   !---------------------------------------------------------------------------
-
-  !.....open a file to read parameters which control the speices, dt and
-  !     so on
-  open(unit=UnitTmp_,file='rbe_swmf.dat',status='old')
-  read(UnitTmp_,*) itype    ! 1=initial run,  2=continuous run
-  read(UnitTmp_,*) tstart
-  read(UnitTmp_,*) tmax
-  read(UnitTmp_,*) dt       ! time step in s. Summer 2006: read dt from *.dat
-  read(UnitTmp_,*) js       ! species: 1=RB e-, 2=RB H+  
-  read(UnitTmp_,*) trans    ! startup time in sec when itype=1
-  read(UnitTmp_,*) imod     ! 1=t96_01, 2=t0UnitTmp__s, 3=MHD
-  read(UnitTmp_,*) iconvect ! 1=Weimer, 2=MHD
-  read(UnitTmp_,*) ires     ! 0=fixed B config or 1=changing B config
-  read(UnitTmp_,*) tint     ! output results every tint seconds
-  read(UnitTmp_,'(1x,a8)') storm   
-  read(UnitTmp_,'(1x,a8)') outname
-  read(UnitTmp_,*) iplsp    ! 0=no plasmasphere, 1=plasmasphere
-  close(UnitTmp_)
 
   iprint=2                  ! 1=print result @ tmax, 2=print every tint
   ntime=ifix((tmax-tstart)/tint)+1
@@ -451,7 +433,7 @@ subroutine readInputData
   hlosscone=120.                 ! loss cone altitude in km
 
   rc=(re+abs(hlosscone)*1000.)/re  ! losscone in Re
-
+  
   if (mod(tf,dt).ne.0.) then
      write(*,*) 'RBE ERROR: mod(tf,dt).ne.0.'
      call CON_stop('RBE ERROR')
