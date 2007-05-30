@@ -115,6 +115,8 @@ module rbe_cread2
        nimf,nsw,iyear,iday,js,itype,nstep,nstept,ndst,ires,imod,&
        iprint,ntime,iconvect,init,il,ie,iplsp
   character (len=8)::  storm
+
+  logical :: IsStandAlone=.true.
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid

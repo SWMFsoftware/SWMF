@@ -13,7 +13,6 @@ subroutine RB_set_parameters(NameAction)
   character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=*), parameter  :: NameSub = 'RB_set_parameters'
-  Logical :: IsStandAlone=.true.
 
   !\
   ! Description:

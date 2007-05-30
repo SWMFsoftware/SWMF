@@ -41,12 +41,15 @@
 
 program rbe
 
-  use rbe_cread2, ONLY: nstept, nstep
+  use rbe_cread2, ONLY: nstept, nstep, IsStandAlone
   use rbe_time,   ONLY: istep
   use ModMpi,ONLY: MPI_COMM_WORLD
   use ModReadParam
   implicit none
   !---------------------------------------------------------------------------
+  
+  IsStandAlone=.true.
+
   ! Initial setup for the rbe model
   call read_file('rbe_swmf.dat',MPI_COMM_WORLD)
   call read_init('  ',iSessionIn=1,iLineIn=0)
