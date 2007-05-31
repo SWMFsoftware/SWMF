@@ -31,6 +31,38 @@ F			UseRotation
 ! This is needed so that RBE reads its input file
 #BEGIN_COMP RB #############################################################
 
+#SAVEPLOT
+60.0		DtSavePlot
+2000f223	OutName
+
+#RESTART
+1		iType
+
+#TIMESTEP
+3.0		Dt
+
+#STARTTIME
+0.0		tStart
+
+#SPECIES
+1		js
+
+#STARTUPTIME
+0.0		trans
+
+#BMODEL
+1		iModel
+1		FixedB
+
+#CONVECT
+1		iConvect
+
+#STORM
+2000_223
+
+#PLASMASPHERE
+0		PlasmaSphere
+
 #END_COMP RB ###############################################################
 
 #BEGIN_COMP GM #############################################################
