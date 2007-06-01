@@ -1,12 +1,6 @@
 !^CFG COPYRIGHT UM
 !========================================================================
 module ModUser
-  ! This is the default user module which contains empty methods defined
-  ! in ModUserEmpty.f90
-  !
-  ! Please see the documentation, and the files ModUserEmpty.f90 and 
-  ! srcUser/ModUserExamples.f90 for information about what the different user
-  ! subroutines do and how to implement them for your specific problem.
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -21,9 +15,9 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: NameUserModule = &
-       'Hall MHD test, Yingjuan Ma'
+       'Waves and GEM, Yingjuan Ma'
 
   character (len=20) :: UserProblem='wave'
 
@@ -79,12 +73,13 @@ contains
     end do
   end subroutine user_read_inputs
 
-  !=============================================================================
+  !============================================================================
 
   subroutine user_set_ics
     use ModMain,     ONLY: globalBLK
     use ModGeometry, ONLY: x_BLK, y_BLK, z_BLK
-    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, rho_, p_
+    use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, &
+         Bx_, By_, Bz_, rho_, p_
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope
     use ModNumconst, ONLY: cOne,cPi, cTwoPi
@@ -116,14 +111,12 @@ contains
           KxWave_I= CosSlope*KxTemp_I-SinSlope*KyTemp_I
           KyWave_I= SinSlope*KxTemp_I+CosSlope*KyTemp_I
 
-          !       if(UseHallResist) call init_hall_resist
-
           DoInitialize=.false.
 
-          !       write(*,*)'KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)=',&
-          !            KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)
-          !       write(*,*)'       Ampl_I(Bx_:Bz_) =',       Ampl_I(Bx_:Bz_) 
-          !       write(*,*)'      Phase_I(Bx_:Bz_) =',       Phase_I(Bx_:Bz_)
+          !write(*,*)'KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)=',&
+          !     KxWave_I(Bx_:Bz_),KyWave_I(Bx_:Bz_),KzWave_I(Bx_:Bz_)
+          !write(*,*)'       Ampl_I(Bx_:Bz_) =',       Ampl_I(Bx_:Bz_) 
+          !write(*,*)'      Phase_I(Bx_:Bz_) =',       Phase_I(Bx_:Bz_)
 
        end if
 
@@ -138,15 +131,17 @@ contains
        end do
 
     case('GEM')
-!       write(*,*)'GEM problem set up'
+       ! write(*,*)'GEM problem set up'
        State_VGB(Bx_,:,:,:,iBlock) = B0*tanh(z_BLK(:,:,:,iBlock)/lamda0)
        State_VGB(p_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock) &
             +0.5*(B0**2-State_VGB(Bx_,:,:,:,iBlock)**2)
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
        !!!set intial perturbation
-       State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock)-  Ay* cPi/ Lz &
+       State_VGB(Bx_,:,:,:,iBlock) = State_VGB(Bx_,:,:,:,iBlock) &
+            - Ay* cPi/ Lz &
             *cos(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*sin(cPi*z_BLK(:,:,:,iBlock)/Lz)
-       State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock)+ Ay* cTwoPi/ Lx &
+       State_VGB(Bz_,:,:,:,iBlock) = State_VGB(Bz_,:,:,:,iBlock) &
+            + Ay* cTwoPi/ Lx &
             *sin(cTwoPi*x_BLK(:,:,:,iBlock)/Lx)*cos(cPi*z_BLK(:,:,:,iBlock)/Lz)
        
     case default
@@ -196,6 +191,5 @@ contains
        call stop_mpi('Unknown user logvar='//TypeVar)
     end select
   end subroutine user_get_log_var
-
 
 end module ModUser
