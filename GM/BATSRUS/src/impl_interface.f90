@@ -147,15 +147,15 @@ subroutine implicit2explicit(w)
 end subroutine implicit2explicit
 
 !=============================================================================
-subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
+subroutine get_residual(IsLowOrder, DoCalcTimestep, DoSubtract, w_GVB, Res_GVB)
 
-  ! If low_order is true apply low  order scheme
+  ! If IsLowOrder is true apply low  order scheme
   ! otherwise            apply high order scheme
   !
-  ! If do_calc_timestep is true calculate time step based on CFL condition
+  ! If DoCalcTimestep is true calculate time step based on CFL condition
   !
-  ! If do_subtract is true return RES = w(t+dtexpl)-w(t) 
-  ! otherwise return              RES = w(t+dtexpl)
+  ! If DoSubtract is true return  Res_GVB = w_GVB(t+dtexpl)-w_GVB(t) 
+  ! otherwise return              Res_GVB = w_GVB(t+dtexpl)
 
   use ModMain
   use ModAdvance, ONLY : FluxType,time_BLK
@@ -165,15 +165,13 @@ subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
   use ModMpi
   implicit none
 
-  logical, intent(in) :: low_order, do_calc_timestep, do_subtract
-  real, intent(in)    :: w(nI,nJ,nK,nw,MaxImplBLK)
-  real, intent(out)   :: RES(nI,nJ,nK,nw,MaxImplBLK)
+  logical, intent(in) :: IsLowOrder, DoCalcTimestep, DoSubtract
+  real, intent(in)    :: w_GVB(nI,nJ,nK,nVar,MaxImplBLK)
+  real, intent(out)   :: Res_GVB(nI,nJ,nK,nVar,MaxImplBLK)
 
-  real    :: qcfl
-  integer :: qnorder, nStageTmp, implBLK, iBLK
+  real    :: CflTmp
+  integer :: nOrderTmp, nStageTmp, implBLK, iBLK
   character (len=10) :: FluxTypeTmp
-
-  logical:: sourceunsplit0
 
   real*8  :: time_before
   logical :: oktest, oktest_me
@@ -184,22 +182,16 @@ subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
   call timing_start('get_residual')
 
   if(oktest_me.and.nImplBLK>0)&
-       write(*,*)'get_residual do_subtract,low_order,w=',&
-       do_subtract,low_order,w(Itest,Jtest,Ktest,VARtest,implBLKtest)
+       write(*,*)'get_residual DoSubtract,IsLowOrder,w_GVB=',&
+       DoSubtract,IsLowOrder,w_GVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
 
   nStageTmp    =nStage
   nStage       =1
-  if(low_order)then
-     qnorder      =norder
+  if(IsLowOrder)then
+     nOrderTmp      =norder
      norder       =norder_impl
      FluxTypeTmp  =FluxType
      FluxType     =FluxTypeImpl
-
-     ! If the source is not to be treated implicitly pretend split sources
-     if(.not.implsource)then
-        sourceunsplit0=sourceunsplit
-        sourceunsplit=.false.
-     endif
   endif
   if(UseDtFixed)then
      do implBLK=1,nimplBLK
@@ -209,32 +201,31 @@ subroutine get_residual(low_order, do_calc_timestep, do_subtract, w, RES)
              time_BLK(1:nI,1:nJ,1:nK,iBLK)=dtexpl
      end do
   else
-     qcfl=cfl
+     CflTmp=cfl
      cfl=0.5
   end if
 
-  ! RES = w(t+dt)
-  call implicit2explicit(w)
+  ! Res_GVB = w_GVB(t+dt)
+  call implicit2explicit(w_GVB)
   call exchange_messages
-  call advance_expl(do_calc_timestep)
-  call explicit2implicit(1,nI,1,nJ,1,nK,RES)
+  call advance_expl(DoCalcTimestep)
+  call explicit2implicit(1,nI,1,nJ,1,nK,Res_GVB)
 
-  if(do_subtract) &
-       RES(1:nI,1:nJ,1:nK,1:nw,1:nImplBLK) = &
-       RES(1:nI,1:nJ,1:nK,1:nw,1:nImplBLK) &
-       - w(1:nI,1:nJ,1:nK,1:nw,1:nImplBLK)
+  if(DoSubtract) &
+       Res_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK) = &
+       Res_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK) &
+       - w_GVB(1:nI,1:nJ,1:nK,1:nVar,1:nImplBLK)
 
-  if(oktest_me.and.nImplBLK>0)write(*,*)'get_residual RES:',&
-       RES(Itest,Jtest,Ktest,VARtest,implBLKtest)
+  if(oktest_me.and.nImplBLK>0)write(*,*)'get_residual Res_GVB:',&
+       Res_GVB(Itest,Jtest,Ktest,VARtest,implBLKtest)
 
   ! Restore global variables
   nStage=nStageTmp
-  if(low_order)then
-     norder=qnorder
-     FluxType=FluxTypeTmp 
-     if(.not.implsource)sourceunsplit=sourceunsplit0
+  if(IsLowOrder)then
+     nOrder   = nOrderTmp
+     FluxType = FluxTypeTmp 
   end if
-  if(.not.UseDtFixed)cfl=qcfl
+  if (.not.UseDtFixed) cfl=CflTmp
 
   call timing_stop('get_residual')
 
