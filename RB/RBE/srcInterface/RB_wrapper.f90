@@ -46,50 +46,9 @@ subroutine RB_set_param(CompInfo, TypeAction)
      !call get(CompInfo,iUnitOut=iUnitOut)
      !StringPrefix=''
   case('READ')
+     call RB_set_parameters('READ')
      call readinputdata
-     !if(iProc==0)then
-     !   call RB_write_prefix;  write(iUnitOut,*)&
-     !        NameSub,': READ iSession =',i_session_read(),&
-     !        ' iLine=',i_line_read(),' nLine =',n_line_read()
-     !end if
-     !do
-     !   if(.not.read_line() ) EXIT
-     !   if(.not.read_command(NameCommand)) CYCLE
-     !
-     !   select case(NameCommand)
-     !   case("#TIMESTEP")
-     !      call read_var('Dt',dtmax)
-     !   case("#SAVEPLOT")
-     !      call read_var('DnSavePlot',tint)
-     !   case("#RESTART")
-     !      call read_var('DoRestart',DoRestart)
-     !      if(DoRestart)then
-     !         itype=2
-     !      else
-     !         itype=1
-     !      end if
-     !   case("#SPECIES")
-     !      call read_var('UseElectron',UseElectron)
-     !      if(UseElectron)then
-     !         js = 1
-     !      else
-     !         js = 2
-     !      end if
-     !   case("#PLASMASPHERE")
-     !      call read_var('UsePlasmasphere', UsePlasmasphere)
-     !      if(UsePlasmasphere)then
-     !         iplsp = 1
-     !      else
-     !         iplsp = 0
-     !      end if
-     !   case default
-     !      if(iProc==0) then
-     !         write(*,'(a,i4,a)')NameSub//' RB_ERROR at line ',i_line_read(),&
-     !              ' invalid command '//trim(NameCommand)
-     !         if(UseStrict)call CON_stop('Correct PARAM.in!')
-     !      end if
-     !   end select
-     !end do
+
   case('CHECK')
      ! We should check and correct parameters here
      !if(iProc==0)then
@@ -173,9 +132,9 @@ subroutine RB_run(TimeSimulation,TimeSimulationLimit)
 
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
   real, intent(inout) :: TimeSimulation   ! current time of component
-
-  character(len=*), parameter :: NameSub='RB_run'
   
+  character(len=*), parameter :: NameSub='RB_run'
+
   !------------------------------------------------------------------------
 
   dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
@@ -219,12 +178,16 @@ end subroutine RB_save_restart
 subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar,tSimulation)
 !  use ModIoUnit, ONLY: UnitTmp_
 !  use ModRiceRB
+  
   implicit none
 
   integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
   real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
   character (len=*),intent(in) :: NameVar
   real, intent(in) :: tSimulation
+
+  real, parameter :: noValue=-99999.
+  integer, parameter :: InvB_=1, z0x_=2, z0y_=3, bmin_=4, RhoInvB_=5, pInvB_=6
 
   character(len=*), parameter :: NameSub='RB_put_from_gm'
 !  character(len=30) :: FileName
