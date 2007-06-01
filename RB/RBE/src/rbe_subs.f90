@@ -116,7 +116,7 @@ module rbe_cread2
        iprint,ntime,iconvect,init,il,ie,iplsp
   character (len=8)::  storm
 
-  logical :: IsStandAlone=.true.
+  logical :: IsStandAlone=.false.
 end module rbe_cread2
 !=============================================================================
 module rbe_cgrid
@@ -425,7 +425,13 @@ subroutine readInputData
   !---------------------------------------------------------------------------
 
   iprint=2                  ! 1=print result @ tmax, 2=print every tint
-  ntime=ifix((tmax-tstart)/tint)+1
+ 
+  if (IsStandAlone) then
+     ntime=int((tmax-tstart)/tint)+1
+  else
+     ntime=2
+  endif
+
   if (iprint.eq.1) then
      tint=tmax     
      ntime=1
