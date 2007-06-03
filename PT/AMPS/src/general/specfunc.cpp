@@ -3,9 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef MPI_ON
-  #include "mpi.h"
-#endif
+#include "mpi.h"
 
 extern int ThisThread;
 extern int TotalThreadsNumber;
