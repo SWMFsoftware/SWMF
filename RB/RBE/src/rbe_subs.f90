@@ -749,55 +749,52 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         xlati1=xlati(i)
         xli(i)=rc/cos(xlati1)/cos(xlati1)
         phi1=phi(j)+pi                  ! +x corresponing to noon
-        x0(1)=rc*cos(xlati1)*cos(phi1)  ! sm x
-        x0(2)=rc*cos(xlati1)*sin(phi1)  ! sm y
-        x0(3)=rc*sin(xlati1)            ! sm z
-        t0=0.
-        npf1=1
 
-        call timing_start('tsyndipole')
 
-        if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,x0(1),&
-             x0(2),x0(3),f(1),f(2),f(3))
+        if (imod.le.2) call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
+             npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra,ieq)
+        ! if (imod.eq.3) call MHD_trace(rc,xlati1,phi1,t,np, &
+        !                               npf1,dssa,bba,volume1,ro1,xmlt1,bo1)
 
-        call timing_stop('tsyndipole')
-
-        !              if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,x0(1),
-        !    *                                   x0(2),x0(3),f(1),f(2),f(3))
-        bba(1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9   ! B in T
-        xa(1)=x0(1)
-        ya(1)=x0(2)
-        za(1)=x0(3)
-        aza(1)=abs(za(1))
-        ra(1)=sqrt(xa(1)*xa(1)+ya(1)*ya(1)+za(1)*za(1))
-        dssa(1)=0.
-
-        if( .not. trace_line() ) CYCLE LATITUDE
-
-        call timing_start('rbe_sort')
-        call sort_quick(npf1,aza,ind)    ! find the equatorial crossing point
-        call timing_stop('rbe_sort')
-
-        ieq=ind(1)
-        xmlt_1=atan2(-ya(ieq),-xa(ieq))*12./pi   ! mlt in hr
-        if (j.gt.2.and.xmlt_1.lt.0.) xmlt_1=xmlt_1+24.
-        if (xmlt_1.gt.xmltlim.and.xmlt_1.lt.(24.-xmltlim).and.&
-             abs(xmlt_1-xmlt(j)).gt.xmltlim) iout=2 !big warping in mlt
         if (i.ge.1) then
-           xmlto(i,j)=xmlt_1
-           if (j.gt.1.and.xmlto(i,j).lt.0.) xmlto(i,j)=xmlto(i,j)+24.
-           ro(i,j)=ra(ieq)
-           bo(i,j)=bba(ieq)
-           xo(i,j)=xa(ieq)
-           yo(i,j)=ya(ieq)
-           if (iout.ge.1) gridoc(i,j)=0.
-           if (iout.eq.0) gridoc(i,j)=1.
+           
+           volume(i,j)=volume1
+           ro(i,j)=ro1
+           if (i.gt.1) then
+              if (ro(i,j).lt.ro(i-1,j)) ro(i,j)=ro(i-1,j)
+           endif
+           xmlto(i,j)=xmlt1
+           bo(i,j)=bo1
+           phi1=xmlt1*pi/12.+pi         ! phi1=0 corresponing to noon
+           xo(i,j)=ro1*cos(phi1)
+           yo(i,j)=ro1*sin(phi1)
+           gridoc(i,j)=1.
+           if (npf1.eq.0) gridoc(i,j)=0.
+
+           !xmlto(i,j)=xmlt_1
+           !if (j.gt.1.and.xmlto(i,j).lt.0.) xmlto(i,j)=xmlto(i,j)+24.
+           !ro(i,j)=ra(ieq)
+           !bo(i,j)=bba(ieq)
+           !xo(i,j)=xa(ieq)
+           !yo(i,j)=ya(ieq)
+           !if (iout.ge.1) gridoc(i,j)=0.
+           !if (iout.eq.0) gridoc(i,j)=1.
         endif
-        if (i.gt.1) then
-           if (ro(i,j).lt.ro(i-1,j)) ro(i,j)=ro(i-1,j)
-        endif
-        if (iout.ge.2) then
+       
+        if (npf1.eq.0) then             ! open field line
            irm(j)=i-1
+           exit LATITUDE                   ! do next j                 
+        endif
+        
+        if (xmlt1.gt.xmltlim.and.xmlt1.lt.(24.-xmltlim).and.&
+             abs(xmlt1-xmlt(j)).gt.xmltlim) then   ! big warping in mlt
+           irm(j)=i-1
+           
+        !if (i.gt.1) then
+       !   if (ro(i,j).lt.ro(i-1,j)) ro(i,j)=ro(i-1,j)
+       !endif
+       !if (iout.ge.2) then
+       !   irm(j)=i-1
            CYCLE LATITUDE
         endif
 
@@ -1015,76 +1012,6 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
      call locate(x1,irm(j),rb,ib)
      iba(j)=ib
   enddo
-
-contains
-
-  logical function trace_line()
-
-    do
-       h=pas*dir
-
-       call timing_start('rk4_tsyndipole')
-
-       if (imod.le.2) call rk4(tsyndipoleSM,imod,iopt,parmod,ps,t,t0,&
-            h,x0,xend,xwrk,nd,f,tend)
-
-       call timing_stop('rk4_tsyndipole')
-
-
-       !              if (imod.eq.3) call rk4(MHD_B,imod,iopt,parmod,ps,t,t0,
-       !    *                                 h,x0,xend,xwrk,nd,f,tend)
-       npf1=npf1+1
-       ra(npf1)=sqrt(xend(1)*xend(1)+xend(2)*xend(2)+xend(3)*xend(3))
-       xa(npf1)=xend(1)
-       ya(npf1)=xend(2)
-       za(npf1)=xend(3)
-       aza(npf1)=abs(za(npf1))
-       bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9    ! B in T
-       dssa(npf1)=dssa(npf1-1)+abs(h)
-
-       if (ra(npf1).gt.rlim.or.npf1.gt.npmax) then
-          irm(j)=i-1
-          iout=1
-          trace_line = .false.
-          RETURN
-       endif
-
-       if (ra(npf1).le.rc) then               ! at south hemisphere
-          ! reduce step size such that ra(npf1) is at rc
-          h1=(ra(npf1-1)-rc)/(ra(npf1-1)-ra(npf1))
-          ra(npf1)=rc
-          xa(npf1)=xa(npf1-1)+(xend(1)-xa(npf1-1))*h1
-          ya(npf1)=ya(npf1-1)+(xend(2)-ya(npf1-1))*h1
-          za(npf1)=za(npf1-1)+(xend(3)-za(npf1-1))*h1
-          aza(npf1)=abs(za(npf1))
-          if (imod.le.2) call tsyndipoleSM(imod,iopt,parmod,ps,t,&
-               xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
-          !   if (imod.eq.3) call MHD_B(imod,iopt,parmod,ps,t,&
-          !                         xa(npf1),ya(npf1),za(npf1),f(1),f(2),f(3))
-          bba(npf1)=sqrt(f(1)*f(1)+f(2)*f(2)+f(3)*f(3))*1.e-9   ! B in T
-          dssa(npf1)=dssa(npf1-1)+abs(h)*h1
-
-          ! Calculate the flux tube volume per magnetic flux (volume)
-          n=npf1-1 ! n = no. of intervals from N(rc) to S(rc) hemisphere
-          do ii=1,n
-             b_mid=0.5*(bba(ii)+bba(ii+1))
-             dss(ii)=dssa(ii+1)-dssa(ii)
-             yint(ii)=1./b_mid
-          enddo
-          call closed(1,n,yint,dss,ss)  ! use closed form
-          if (i.ge.1.and.i.le.ir) volume(i,j)=ss*re   ! volume / flux
-          EXIT
-       endif
-
-       do n1=1,nd
-          x0(n1)=xend(n1)
-       enddo
-       t0=tend
-    end do
-
-    trace_line = .true.
-
-  end function trace_line
 
 end subroutine fieldpara
 
