@@ -8,6 +8,7 @@ subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
   ! Provide total number of points along rays 
   ! and the number of variables to pass to RB
   use ModGmRbCoupling, ONLY: allocate_gm_rb, RB_lat, RB_lon
+  use ModRayTrace, ONLY: DoExtractUnitSi
 
   use CON_line_extract, ONLY: line_get
   implicit none
@@ -19,7 +20,7 @@ subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
   character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
   !---------------------------------------------------------------------
 
-  if(NameVar /= 'Z0x:Z0y:Z0b:B_I:S_I:IMF') &
+  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
        call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   ! Allocate arrays
@@ -27,23 +28,27 @@ subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
 
   ! The RB ionosphere radius in normalized units
   Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
+  DoExtractUnitSi = .true.
   call integrate_ray_accurate(iSizeIn, jSizeIn, RB_lat, RB_lon, Radius, &
        NameVar)
 
   call line_get(nVarLine, nPointLine)
-  nVarLine = 2 ! We only pass B and Length to RB
+  write(*,*)NameSub,': nVarLine, nPointLine=',nVarLine, nPointLine
+  nVarLine = 4 ! We only pass line index, length, B and radial distance to RB
 
 end subroutine GM_get_for_rb_trace
 
 !==========================================================================
 
 subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
-     BufferLine_VI, nVarLine, nPointLine)
+     BufferLine_VI, nVarLine, nPointLine, NameVar)
 
   !call stop_mpi('RAYTRACE is OFF') !^CFG UNCOMMENT IF NOT RAYTRACE
   !^CFG IF RAYTRACE BEGIN
 
   use ModProcMH, ONLY: iProc
+
+  use ModMain, ONLY: Time_Simulation
 
   use ModGmRbCoupling, ONLY: &
        process_integrated_data, &
@@ -53,10 +58,9 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
        InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
-  use ModVarIndexes, ONLY: Bx_, Bz_
+  use ModVarIndexes, ONLY: Bx_, Bz_, MassFluid_I
 
-  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_, &
-       SW_n, SW_Ux, SW_Uy, SW_Uz, SW_p, SW_Bx, SW_By, SW_Bz
+  use ModPhysics, ONLY: No2Si_V, UnitN_, UnitU_, UnitB_, UnitP_
 
   use CON_line_extract, ONLY: line_get, line_clean
 
@@ -69,13 +73,18 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
 
   integer, intent(in) :: nPointLine, nVarLine
   real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+  character (len=*), intent(in):: NameVar
 
   integer :: nVarExtract, nPoint, iPoint
   real, allocatable :: Buffer_VI(:,:)
+  real :: Rho, Ux, Uy, Uz, Bx, By, Bz, p
 
   logical :: DoTestTec, DoTestIdl
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
+
+  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
   if(iProc /= 0)then
      ! Clean and return
@@ -114,10 +123,16 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   allocate(Buffer_VI(0:nVarExtract, nPoint))
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
   
+  write(*,*)NameSub,' nVarExtract, nPoint=',nVarExtract, nPoint
+  write(*,*)NameSub,' Buffer_VI(:,1)=',Buffer_VI(:,1)
+  write(*,*)NameSub,' Buffer_VI(:,2)=',Buffer_VI(:,2)
+
   do iPoint = 1, nPoint
-     BufferLine_VI(1,iPoint) = Buffer_VI(0,iPoint)    ! Length
-     BufferLine_VI(2,iPoint) = &
-          sqrt(sum(Buffer_VI(3+Bx_:3+Bz_,iPoint)**2)) ! |B|
+     BufferLine_VI(1,iPoint) = Buffer_VI(0,iPoint)                 ! line index
+     BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
+     BufferLine_VI(3,iPoint) = sqrt(sum(Buffer_VI(2:4,iPoint)**2)) ! |r|
+     BufferLine_VI(4,iPoint) = &
+          sqrt(sum(Buffer_VI(4+Bx_:4+Bz_,iPoint)**2))       ! |B|
   end do
      
   deallocate(RayIntegral_VII, RayResult_VII, Buffer_VI)
@@ -132,24 +147,24 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   if(DoTest .or. DoTestIdl)call write_integrated_data_idl
 
   ! Put results into output buffer
-  Buffer_IIV(:,:,InvB_)    = MHD_SUM_vol
-  Buffer_IIV(:,:,Z0x_)     = MHD_Xeq
-  Buffer_IIV(:,:,Z0y_)     = MHD_Yeq
-  Buffer_IIV(:,:,Z0b_)     = MHD_Beq
-  Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
-  Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
-  Buffer_IIV(:,:,pInvB_+1) = 0.
+  Buffer_IIV(:,:,1)  = MHD_Xeq
+  Buffer_IIV(:,:,2)  = MHD_Yeq
+  Buffer_IIV(:,:,3)  = MHD_Beq
 
   ! Send solar wind values in the array of the extra integral
   ! This is a temporary solution. RB should use MHD_SUM_rho and MHD_SUM_p
-  Buffer_IIV(1,:,pInvB_+1) = SW_n  * No2Si_V(UnitN_)
-  Buffer_IIV(2,:,pInvB_+1) = SW_Ux * No2Si_V(UnitU_)
-  Buffer_IIV(3,:,pInvB_+1) = SW_Uy * No2Si_V(UnitU_)
-  Buffer_IIV(4,:,pInvB_+1) = SW_Uz * No2Si_V(UnitU_)
-  Buffer_IIV(5,:,pInvB_+1) = SW_Bx * No2Si_V(UnitB_)
-  Buffer_IIV(6,:,pInvB_+1) = SW_By * No2Si_V(UnitB_)
-  Buffer_IIV(7,:,pInvB_+1) = SW_Bz * No2Si_V(UnitB_)
-  Buffer_IIV(8,:,pInvB_+1) = SW_p  * No2Si_V(UnitP_)
+
+  call get_solar_wind_point(Time_Simulation, 0.0, 0.0, &
+       Rho, Ux, Uy, Uz, Bx, By, Bz, p)
+
+  Buffer_IIV(1,:,4) = Rho/MassFluid_I(1)  * No2Si_V(UnitN_)
+  Buffer_IIV(2,:,4) = Ux * No2Si_V(UnitU_)
+  Buffer_IIV(3,:,4) = Uy * No2Si_V(UnitU_)
+  Buffer_IIV(4,:,4) = Uz * No2Si_V(UnitU_)
+  Buffer_IIV(5,:,4) = Bx * No2Si_V(UnitB_)
+  Buffer_IIV(6,:,4) = By * No2Si_V(UnitB_)
+  Buffer_IIV(7,:,4) = Bz * No2Si_V(UnitB_)
+  Buffer_IIV(8,:,4) = p  * No2Si_V(UnitP_)
 
   !^CFG END RAYTRACE
 end subroutine GM_get_for_rb
