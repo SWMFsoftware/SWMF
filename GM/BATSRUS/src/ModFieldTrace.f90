@@ -1077,11 +1077,17 @@ contains
 
     ! get a unique line index based on starting indexes
     iLine = &
-         (((iStart_D(4)-1)  *nRay_D(3) &
-         + (iStart_D(3)-1) )*nRay_D(2) &
-         + (iStart_D(2)-1) )*nRay_D(1) &
+         ((max(0,iStart_D(4)-1)  *nRay_D(3) &
+         + max(0,iStart_D(3)-1) )*nRay_D(2) &
+         + max(0,iStart_D(2)-1) )*nRay_D(1) &
          + iStart_D(1)
 
+    if(iLine < 0)then
+       write(*,*)'iLine=',iLine
+       write(*,*)'nRay_D  =',nRay_D
+       write(*,*)'iStart_D=',iStart_D
+       call stop_mpi('DEBUG')
+    end if
     call line_put(iLine,n,PlotVar_V(1:n))
 
   end subroutine ray_extract
@@ -1221,7 +1227,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
   !DESCRIPTION:
   ! Lat_I(nLat) and Lon_I(nLon) are the coordinates of a 2D spherical 
-  ! grid in the SM(G) coordinate system. The 2D grid is at radius Radius.
+  ! grid in the SM(G) coordinate system in degrees. The 2D grid is 
+  ! at radius Radius given in units of planet radii.
   ! NameVar lists the variables that need to be extracted and/or integrated.
   ! The subroutine can calculate the integral of various quantities 
   ! and/or extract state variables along the field lines starting from the 2D 
@@ -1240,7 +1247,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
   call set_oktest(NameSub, DoTest, DoTestMe)
 
-  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc
+  if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
+       ' with nLat, nLon, Radius=',nLat,nLon,Radius
 
   iLatTest = 34; iLonTest = 20
 
@@ -1256,6 +1264,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
   DoExtractRay   = index(NameVar, '_I') > 0
   DoTraceRay     = .false.
+
+  if(DoTestMe)write(*,*)NameSub,' DoIntegrateRay,DoExtractRay,DoTraceRay=',&
+       DoIntegrateRay,DoExtractRay,DoTraceRay
 
   if(DoExtractRay)then
      nRay_D  = (/ nLat, nLon, 0, 0 /)
