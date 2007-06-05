@@ -1228,7 +1228,7 @@ contains
     real, optional, intent(out) :: Cleft       ! maximum left speed
     real, optional, intent(out) :: Cright      ! maximum right speed
 
-    real :: CmaxFluid, CleftFluid, CrightFluid
+    real :: CmaxFluid, CmaxDtFluid, CleftFluid, CrightFluid
     !--------------------------------------------------------------------------
 
     UnLeft = minval(UnLeft_I(1:nIonFluid))
@@ -1240,7 +1240,10 @@ contains
     endif                                        !^CFG IF BORISCORR    
 
     if(nFluid > 1)then
-       if(present(Cmax))   CmaxFluid  =Cmax
+       if(present(Cmax))then
+          CmaxFluid  =Cmax
+          CmaxDtFluid=CmaxDt
+       end if
        if(present(Cleft))  CleftFluid =Cleft
        if(present(Cright)) CrightFluid=Cright
 
@@ -1252,12 +1255,18 @@ contains
 
           call get_hd_speed
 
-          if(present(Cmax))   CmaxFluid  =max(CmaxFluid,  Cmax)
+          if(present(Cmax))then
+             CmaxFluid  =max(CmaxFluid,  Cmax)
+             CmaxDtFluid=max(CmaxDtFluid,CmaxDt)
+          end if
           if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
           if(present(Cright)) CrightFluid=min(CrightFluid,Cright)
        end do
 
-       if(present(Cmax))   Cmax  =CmaxFluid
+       if(present(Cmax))then
+          Cmax  =CmaxFluid
+          CmaxDt=CmaxDtFluid
+       end if
        if(present(Cleft))  Cleft =CleftFluid
        if(present(Cright)) Cright=CrightFluid
     end if
