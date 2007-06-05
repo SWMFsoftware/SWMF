@@ -85,10 +85,10 @@ module ModVarIndexes
        'Mx    ', & ! RhoUx_
        'My    ', & ! RhoUy_
        'Mz    ', & ! RhoUz_
-       'p     ', & ! p_
        'Bx    ', & ! Bx_
        'By    ', & ! By_
        'Bz    ', & ! Bz_
+       'p     ', & ! p_
        'NeuRho', & ! NeuRho_
        'NeuMx ', & ! NeuRhoUx_
        'NeuMy ', & ! NeuRhoUy_
