@@ -94,8 +94,8 @@ subroutine RB_set_grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
        XyzMax_D=(/ir+1.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=real(xlati),                     & ! latitude
-       Coord2_I=real(phi),                       & ! local time
+       Coord1_I=cRadToDeg*xlati,                 & ! latitude in degrees
+       Coord2_I=cRadToDeg*phi,                   & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
 
@@ -175,87 +175,54 @@ subroutine RB_save_restart(TimeSimulation)
 end subroutine RB_save_restart
 !===========================================================================
 
-subroutine RB_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar,tSimulation)
+subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
+            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+
 !  use ModIoUnit, ONLY: UnitTmp_
 !  use ModRiceRB
   
   implicit none
 
-  integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
-  real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
+  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
+  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+  integer, intent(in) :: nVarLine, nPointLine
+  real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
+
   character (len=*),intent(in) :: NameVar
   real, intent(in) :: tSimulation
 
   real, parameter :: noValue=-99999.
-  integer, parameter :: InvB_=1, z0x_=2, z0y_=3, bmin_=4, RhoInvB_=5, pInvB_=6
 
+  logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub='RB_put_from_gm'
-!  character(len=30) :: FileName
-!  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6, imf_=7
-!  integer :: iSize,jSize, iUnit, i,j,j2,j3, iTime
-!  real, dimension (:,:), allocatable :: bmin,xmin,ymin
-!  real :: imf(8)
   !-------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-!  call Get_Size(iSize,jSize)
-!  if(iSizeIn /= iSize .or. jSizeIn /= jSize .or. nVarIn /= imf_)then
-!     write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn,nVarIn
-!     call CON_stop(NameSub//' SWMF_ERROR')
-!  end if
-!
-!  allocate(bmin(iSize,jSize))
-!  allocate(xmin(iSize,jSize))
-!  allocate(ymin(iSize,jSize))
-!
-!  bmin(1:iSize,1:jSize) = Buffer_IIV(:,:,bmin_)*1.e+6 !units of 10e-6 Tesla
-!  xmin(1:iSize,1:jSize) = Buffer_IIV(:,:,z0x_)
-!  ymin(1:iSize,1:jSize) = Buffer_IIV(:,:,z0y_)
-!  imf(1:8)              = Buffer_IIV(1:8,1,imf_)
-!
-!  call Put_Be(bmin)
-!  call Put_XY(xmin,ymin)
-!
-!  if(IsSaveCoupling .or. IsSkipRB)then
-!
-!
-!     iTime=nint(tSimulation)
-!     write(FileName,'("RB/output2/bmin_",I6.6)') iTime
-!     open(UnitTmp_,FILE=FileName)
-!     do i=1,iSize; do j=1,jSize,3
-!        write(UnitTmp_,*) (bmin(i,j3),j3=j,min(jSize,j+2),1)
-!     end do; end do
-!     close(UnitTmp_)
-!
-!     iTime=nint(tSimulation)
-!     write(FileName,'("RB/output2/xmin_",I6.6)') iTime
-!     open(UnitTmp_,FILE=FileName)
-!     do i=1,iSize; do j=1,jSize,3
-!        write(UnitTmp_,*) (xmin(i,j3),j3=j,min(jSize,j+2),1)
-!     end do; end do
-!     close(UnitTmp_)
-!
-!     iTime=nint(tSimulation)
-!     write(FileName,'("RB/output2/ymin_",I6.6)') iTime
-!     open(UnitTmp_,FILE=FileName)
-!     do i=1,iSize; do j=1,jSize,3
-!        write(UnitTmp_,*) (ymin(i,j3),j3=j,min(jSize,j+2),1)
-!     end do; end do
-!     close(UnitTmp_)
-!
-!     iTime=nint(tSimulation)
-!     write(FileName,'("RB/output2/imf_",I6.6)') iTime
-!     open(UnitTmp_,FILE=FileName)
-!     write(UnitTmp_,*) 'IMF: rho Ux Uy Uz Bx By Bz p'
-!     do i=1,8
-!        write(UnitTmp_,*) imf(i)
-!     end do
-!     close(UnitTmp_)
-!
-!  end if
-!
-!  deallocate(bmin)
-!  deallocate(xmin)
-!  deallocate(ymin)
-!
+  if(NameVar /= 'Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF') &
+       call CON_stop(NameSub//' invalid NameVar='//NameVar)
+
+  if(nVarLine /= 4) then
+     write(*,*)'nVarLine=',nVarLine
+     call CON_stop(NameSub//' invalid nVarLine (should be 4)')
+  end if
+
+  if(DoTestMe)then
+     write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
+          iSizeIn,jSizeIn,nIntegralIn
+     write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
+     write(*,*)NameSub,' Integral_IIV(1,23,:)=',Integral_IIV(1,23,:)
+     write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
+     write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
+     write(*,*)NameSub,' IMF=',Integral_IIV(1:8,1,4)
+  end if
+
+  !n = 0
+  !do iLat = 1, nLat
+  !   do iLon = 1, nLon
+  !      n = n+1
+  !      
+  !   end do
+  !end do
+
 end subroutine RB_put_from_gm
 !============================================================================
