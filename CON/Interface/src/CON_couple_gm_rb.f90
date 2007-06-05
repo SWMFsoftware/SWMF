@@ -77,17 +77,17 @@ contains
     ! Coupling variables
     !/
 
-    ! Number of variables to pass
-    integer, parameter :: nVarGmRb=7
+    ! Number of integrals to pass
+    integer, parameter :: nIntegral=4
 
     ! Names of variables to pass
-    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:B_I:S_I:IMF'
+    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'
 
     ! Number of variables and points saved into the line data
     integer :: nVarLine, nPointLine
 
     ! Buffer for the variables on the 2D RB grid and line data
-    real, allocatable :: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
+    real, allocatable :: Integral_IIV(:,:,:), BufferLine_VI(:,:)
 
     ! MPI related variables
 
@@ -121,8 +121,8 @@ contains
     !\
     ! Allocate buffers both in GM and RB
     !/
-    allocate(Buffer_IIV(iSize,jSize,nVarGmRb), stat=iError)
-    call check_allocate(iError,NameSub//": Buffer_IIV")
+    allocate(Integral_IIV(iSize,jSize,nIntegral), stat=iError)
+    call check_allocate(iError,NameSub//": Integral_IIV")
 
     if(DoTest)write(*,*)NameSub,', variables allocated',&
          ', iProc:',iProcWorld
@@ -133,22 +133,22 @@ contains
     if(is_proc(GM_)) then
        call GM_get_for_rb_trace(iSize, jSize, NameVar, nVarLine, nPointLine)
        allocate(BufferLine_VI(nVarLine, nPointLine))
-       call GM_get_for_rb(Buffer_IIV, iSize, jSize, nVarGmRb, &
-            BufferLine_VI, nVarLine, nPointLine)
+       call GM_get_for_rb(Integral_IIV, iSize, jSize, nIntegral, &
+            BufferLine_VI, nVarLine, nPointLine, NameVar)
     end if
     !\
     ! Transfer variables from GM to RB
     !/
     if(i_proc0(RB_) /= i_proc0(GM_))then
-       nSize = iSize*jSize*nVarGmRb
+       nSize = iSize*jSize*nIntegral
        if(is_proc0(GM_)) then
-          call MPI_send(Buffer_IIV,nSize,MPI_REAL,&
+          call MPI_send(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(RB_),1,i_comm(),iError)
           call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
                i_proc0(RB_),2,i_comm(),iError)
        end if
        if(is_proc0(RB_))then
-          call MPI_recv(Buffer_IIV,nSize,MPI_REAL,&
+          call MPI_recv(Integral_IIV,nSize,MPI_REAL,&
                i_proc0(GM_),1,i_comm(),iStatus_I,iError)
           call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
                i_proc0(GM_),2,i_comm(),iStatus_I,iError)
@@ -162,17 +162,17 @@ contains
     ! Put variables into RB
     !/
     if(is_proc0(RB_))then
-       call RB_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmRb,&
+       call RB_put_from_gm(Integral_IIV,iSize,jSize,nIntegral,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
        if(DoTest) &
             write(*,*)'RB got from GM: RB iProc, Buffer(1,1)=',&
-            iProcWorld,Buffer_IIV(1,1,:)
+            iProcWorld,Integral_IIV(1,1,:)
     end if
 
     !\
     ! Deallocate buffer to save memory
     !/
-    deallocate(Buffer_IIV, BufferLine_VI)
+    deallocate(Integral_IIV, BufferLine_VI)
 
     if(DoTest)write(*,*)NameSub,', variables deallocated',&
          ', iProc:',iProcWorld
