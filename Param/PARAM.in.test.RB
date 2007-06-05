@@ -118,6 +118,9 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 Rusanov			TypeFlux
 minmod			TypeLimiter
 
+#TVDRESCHANGE
+F
+
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
