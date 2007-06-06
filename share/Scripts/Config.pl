@@ -213,6 +213,18 @@ sub get_settings_{
       }
   }
     close(MAKEFILE);
+
+    open(MPIHEADER, $MpiHeader) or die "$ERROR_ could not open $MpiHeader\n";
+    my $IsFound = 0;
+    while(<MPIHEADER>){
+	next unless /MPI_HEADER_FILE\s*=.*_(\w+)\.h/;
+	$IsFound = 1;
+	$MpiVersion = $1;
+	last;
+    }
+    close(MPIHEADER);
+    die "$ERROR_ could not find MPI_HEADER_FILE string in $MpiHeader\n"
+	unless $IsFound;
 }
 
 ##############################################################################
@@ -234,6 +246,7 @@ sub show_settings_{
     }
     print "The installation is for the $OS operating system.\n";
     print "The selected F90 compiler is $Compiler.\n";
+    print "The selected MPI library is  $MpiVersion.\n";
     print "The default precision for reals is $Precision precision.\n";
     print "The maximum optimization level is $Optimize\n";
     print "Debugging flags: $Debug\n";
