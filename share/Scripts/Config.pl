@@ -214,7 +214,9 @@ sub get_settings_{
   }
     close(MAKEFILE);
 
-    open(MPIHEADER, $MpiHeader) or die "$ERROR_ could not open $MpiHeader\n";
+    open(MPIHEADER, $MpiHeader) or open(MPIHEADER, "../../$MpiHeader") or
+	return;
+
     my $IsFound = 0;
     while(<MPIHEADER>){
 	next unless /MPI_HEADER_FILE\s*=.*_(\w+)\.h/;
