@@ -124,7 +124,7 @@ public:
 
 //==================================================
   void error(long int line) {
-    printf("Error in reading of grid's file (line=%i)\n",line);
+    printf("Error in reading of grid's file (line=%ld)\n",line);
     exit(__LINE__,__FILE__);
   };
 
