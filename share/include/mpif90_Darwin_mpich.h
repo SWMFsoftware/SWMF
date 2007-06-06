@@ -28,7 +28,7 @@
 !
 ! return codes 
       character*100 MPI_HEADER_FILE
-      parameter (MPI_HEADER_FILE = 'mpif90_Darwin.h')
+      parameter (MPI_HEADER_FILE = 'mpif90_Darwin_mpich.h')
 
       INTEGER MPI_SUCCESS,MPI_ERR_BUFFER,MPI_ERR_COUNT,MPI_ERR_TYPE
       INTEGER MPI_ERR_TAG,MPI_ERR_COMM,MPI_ERR_RANK,MPI_ERR_ROOT

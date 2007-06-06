@@ -16,7 +16,7 @@
 !  + 1993 Mississippi State University
 
         character*100 MPI_HEADER_FILE
-        parameter (MPI_HEADER_FILE = 'mpif90_IRIX64.h')
+        parameter (MPI_HEADER_FILE = 'mpif90_IRIX64_SGI.h')
 
 	integer MPI_VERSION
 	integer MPI_SUBVERSION

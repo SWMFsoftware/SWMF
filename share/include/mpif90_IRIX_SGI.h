@@ -17,7 +17,7 @@
 
 
         character*100 MPI_HEADER_FILE
-        parameter (MPI_HEADER_FILE = 'mpif90_IRIX.h')
+        parameter (MPI_HEADER_FILE = 'mpif90_IRIX_SGI.h')
 
 	integer MPI_VERSION
 	integer MPI_SUBVERSION
