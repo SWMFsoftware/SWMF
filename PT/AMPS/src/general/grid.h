@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <vector>
 #include <algorithm>
+#include <math.h>
 
 #include "cell.h"
 #include "face.h"
@@ -380,62 +381,158 @@ public:
 //breakflag == true:   in the case when a cell is not found, the execution of the code is interupted
 //breakflag == false : in the case when a cell is not found, the function returns value == -1  
   long int GetNCell(DataType* x,bool breakflag=true) {
-    int idim,i;
+    long int idim,i,j,k;
     long int nnode,ncell;
     DataType xmin[3],xmax[3],locx[3],summ;
     array_1d<DataType> x_node(DIM);
-    bool flag=false;
+    bool CellFoundFlag=false;
 
-    for (ncell=0;ncell<ncells;ncell++) {
-      x_node=cell[ncell].node[0]->X();
-      for (idim=0;idim<DIM;idim++) {
-        xmax[idim]=x_node(idim);
-        xmin[idim]=x_node(idim);
+    //init the search tree
+    static long int SearchMaskLength=(long int)(pow(1.0E6,1.0/(double)DIM)); 
+
+    static bool initflag=false;
+    static double Xmin[3]={0.0,0.0,0.0},Xmax[3]={0.0,0.0,0.0},dX[3]={0.0,0.0,0.0};
+    static list<long int> ***SearchMask,*SearchMaskElement;
+
+    if (initflag==false) {
+      double xnode[3];
+      initflag=true;
+
+      //init the Search Mask
+      long int nodeno,i,j,k,Xelements,Yelements,Zelements;
+
+      Xelements=SearchMaskLength;
+      Yelements=(DIM>=2) ? SearchMaskLength : 1; 
+      Zelements=(DIM>=3) ? SearchMaskLength : 1; 
+
+      SearchMask=new list<long int>** [Xelements];
+      SearchMask[0]=new list<long int>* [Xelements*Yelements];
+      SearchMask[0][0]=new list<long int> [Xelements*Yelements*Zelements]; 
+
+      for (i=0;i<Xelements;i++) SearchMask[i]=SearchMask[0]+Yelements*i; 
+      for (j=0;j<Xelements*Yelements;j++) SearchMask[0][j]=SearchMask[0][0]+Zelements*j; 
+
+      //get the xmin & xmax
+      for (ncell=0;ncell<ncells;ncell++) for (idim=0;idim<DIM+1;idim++) {     
+        cell[ncell].node[idim]->GetX(xnode);
+
+        for (i=0;i<DIM;i++) {
+          if ((Xmin[i]>xnode[i])||((ncell==0)&&(idim==0))) Xmin[i]=xnode[i];
+          if ((Xmax[i]<xnode[i])||((ncell==0)&&(idim==0))) Xmax[i]=xnode[i];
+        }
       }
+ 
+      for (i=0;i<DIM;i++) {
+        double d=(Xmax[i]-Xmin[i])/1.0E4;
+        Xmin[i]-=d,Xmax[i]+=d;  
+      }
+
+      dX[0]=(Xmax[0]-Xmin[0])/(double)Xelements;
+      if (DIM>=2) dX[1]=(Xmax[1]-Xmin[1])/(double)Yelements; 
+      if (DIM>=3) dX[2]=(Xmax[2]-Xmin[2])/(double)Zelements;
+
+      //set up the search list 
+      for (ncell=0;ncell<ncells;ncell++) {
+        node[cell[ncell].nodeno[0]].GetX(xnode);
+
+        i=(long int)((xnode[0]-Xmin[0])/dX[0]); 
+        j=(DIM>=2) ? (long int)((xnode[1]-Xmin[1])/dX[1]) : 0;
+        k=(DIM>=3) ? (long int)((xnode[2]-Xmin[2])/dX[2]) : 0;
+ 
+        SearchMask[i][j][k].push_back(ncell); 
+      } 
+    }
+
+
+    //perform the search
+    long int i0,j0,k0,SearchLevel;
+    long int imin,imax,jmin,jmax,kmin,kmax,ii;
+    long int iLevel,jLevel,kLevel;
+    list<long int>::iterator cellptr;
+
+    i0=(long int)((x[0]-Xmin[0])/dX[0]);
+    j0=(DIM>=2) ? (long int)((x[1]-Xmin[1])/dX[1]) : 0;
+    k0=(DIM>=3) ? (long int)((x[2]-Xmin[2])/dX[2]) : 0;
+
+    for (SearchLevel=0;;SearchLevel++) {
+
+      //get the range of the variation of the indexes
+      imin=(i0-SearchLevel>0) ? i0-SearchLevel : 0;
+      imax=(i0+SearchLevel<SearchMaskLength-1) ? i0+SearchLevel : SearchMaskLength-1;
+      iLevel=SearchLevel; 
+
+      if (DIM>=2) {
+        jmin=(j0-SearchLevel>0) ? j0-SearchLevel : 0; 
+        jmax=(j0+SearchLevel<SearchMaskLength-1) ? j0+SearchLevel : SearchMaskLength-1;
+        jLevel=SearchLevel; 
+      }
+      else jmin=0,jmax=0,jLevel=-1; 
+
+      if (DIM>=3) {
+        kmin=(k0-SearchLevel>0) ? k0-SearchLevel : 0; 
+        kmax=(k0+SearchLevel<SearchMaskLength-1) ? k0+SearchLevel : SearchMaskLength-1; 
+        kLevel=SearchLevel;
+      }
+      else kmin=0,kmax=0,kLevel=-1;
+
+      //search over the SearchMask
+      for (i=imin;i<=imax;i++) for (j=jmin;j<=jmax;j++) for (k=kmin;k<=kmax;k++) if ((abs(i-i0)==iLevel)||(abs(j-j0)==jLevel)||(abs(k-k0)==kLevel)) {  
+        SearchMaskElement=SearchMask[i][j]+k;
+
+        for (cellptr=SearchMaskElement->begin();cellptr!=SearchMaskElement->end();cellptr++) {  
+          ncell=*cellptr; 
+
+          x_node=cell[ncell].node[0]->X();
+          for (idim=0;idim<DIM;idim++) xmax[idim]=x_node(idim),xmin[idim]=x_node(idim); 
    
-      for(nnode=1;nnode<DIM+1;nnode++) {
-        x_node=cell[ncell].node[nnode]->X();
-        for (idim=0;idim<DIM;idim++) {
-          if (xmax[idim]<x_node(idim)) xmax[idim]=x_node(idim);
-          if (xmin[idim]>x_node(idim)) xmin[idim]=x_node(idim);
+          for(nnode=1;nnode<DIM+1;nnode++) {
+            x_node=cell[ncell].node[nnode]->X();
+            for (idim=0;idim<DIM;idim++) {
+              if (xmax[idim]<x_node(idim)) xmax[idim]=x_node(idim);
+              if (xmin[idim]>x_node(idim)) xmin[idim]=x_node(idim);
+            }
+          }
+
+          CellFoundFlag=true;
+          for (idim=0;idim<DIM;idim++) if ((x[idim]<xmin[idim])||(x[idim]>xmax[idim])) CellFoundFlag=false;
+
+          if (CellFoundFlag==false) continue;
+
+          for (idim=0;idim<DIM;idim++) locx[idim]=0.0; 
+          x_node=cell[ncell].node[0]->X();
+
+          for (idim=0;idim<DIM;idim++) for (ii=0;ii<DIM;ii++) locx[idim]+=TMatrix(idim,ii,0,ncell)*(x[ii]-x_node(ii)); 
+
+          summ=0.0,CellFoundFlag=true; 
+
+          for (idim=0;idim<DIM;idim++) {
+            summ+=locx[idim];
+            if ((locx[idim]<-1.0E-5)||(locx[idim]>1.00001)) CellFoundFlag=false;
+          }
+          if ((summ<-1.0E-5)||(summ>1.00001)) CellFoundFlag=false;
+
+          if (CellFoundFlag==true) return ncell;
         }
       }
 
-      flag=true;
-      for (idim=0;idim<DIM;idim++) 
-        if ((x[idim]<xmin[idim])||(x[idim]>xmax[idim])) flag=false;
+      bool SearchCompleteFlag=true;
 
-      if (flag==false) continue;
+      if ((imin>0)||(imax<SearchMaskLength-1)) SearchCompleteFlag=false;
+      if (DIM>=2) if ((jmin>0)||(jmax<SearchMaskLength-1)) SearchCompleteFlag=false; 
+      if (DIM>=3) if ((kmin>0)||(kmax<SearchMaskLength-1)) SearchCompleteFlag=false;
 
-      for (i=0;i<DIM;i++) locx[i]=0.0; 
-      x_node=cell[ncell].node[0]->X();
+      if (SearchCompleteFlag==true) {
+        char msg[200];
 
-      for (idim=0;idim<DIM;idim++)
-        for (i=0;i<DIM;i++)  
-          locx[idim]+=TMatrix(idim,i,0,ncell)*(x[i]-x_node(i)); 
+        sprintf(msg," Cgrid::GetNCell Cannot find cell which contain point x=");
+        for (idim=0;idim<DIM;idim++) sprintf(msg," %s %e",msg,x[idim]);
 
-      summ=0.0;
-      flag=true;
-      for (idim=0;idim<DIM;idim++) {
-        summ+=locx[idim];
-        if ((locx[idim]<-1.0E-5)||(locx[idim]>1.00001)) flag=false;
-      }
-      if ((summ<-1.0E-5)||(summ>1.00001)) flag=false;
+        PrintErrorLog(__LINE__,__FILE__,msg);
 
-      if (flag==true) break;
+        if (breakflag==true) exit(__LINE__,__FILE__); 
+        else return -1;
+      }  
     }
-
-    if (flag==false) {
-      char msg[200];
-
-      sprintf(msg," Cgrid::GetNCell Cannot find cell which contain point x=");
-      for (idim=0;idim<DIM;idim++) sprintf(msg," %s %e",msg,x[idim]);
-
-      PrintErrorLog(__LINE__,__FILE__,msg);
-
-      if (breakflag==true) exit(__LINE__,__FILE__); 
-      else return -1;
-    }  
 
     return ncell;     
   };  
