@@ -223,7 +223,7 @@ sub get_settings_{
 	last;
     }
     close(MPIHEADER);
-    die "$ERROR_ could not find MPI_HEADER_FILE string in $MpiHeader\n"
+    warn "$WARNING_ could not find MPI_HEADER_FILE string in $MpiHeader\n"
 	unless $IsFound;
 }
 
