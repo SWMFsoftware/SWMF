@@ -33,7 +33,7 @@ subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
        NameVar)
 
   call line_get(nVarLine, nPointLine)
-  write(*,*)NameSub,': nVarLine, nPointLine=',nVarLine, nPointLine
+
   nVarLine = 4 ! We only pass line index, length, B and radial distance to RB
 
 end subroutine GM_get_for_rb_trace
@@ -123,10 +123,6 @@ subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVar, &
   allocate(Buffer_VI(0:nVarExtract, nPoint))
   call line_get(nVarExtract, nPoint, Buffer_VI, DoSort=.true.)
   
-  write(*,*)NameSub,' nVarExtract, nPoint=',nVarExtract, nPoint
-  write(*,*)NameSub,' Buffer_VI(:,1)=',Buffer_VI(:,1)
-  write(*,*)NameSub,' Buffer_VI(:,2)=',Buffer_VI(:,2)
-
   do iPoint = 1, nPoint
      BufferLine_VI(1,iPoint) = Buffer_VI(0,iPoint)                 ! line index
      BufferLine_VI(2,iPoint) = Buffer_VI(1,iPoint)                 ! Length
