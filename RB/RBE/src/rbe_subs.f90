@@ -187,6 +187,13 @@ module rbe_time
   integer :: istep
 end module rbe_time
 !=============================================================================
+Module ModGmRb
+  use rbe_grid,ONLY: nLat => ir, nLon => ip
+  real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
+  integer :: iLineIndex_II(nLat,nLon),nPoint
+  
+end Module ModGmRb
+!=============================================================================
 
 subroutine rbe_init
   ! Initial setup for the rbe model
@@ -752,9 +759,9 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
 
         if (imod.le.2) call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
-             npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra,ieq)
-        ! if (imod.eq.3) call MHD_trace(rc,xlati1,phi1,t,np, &
-        !                               npf1,dssa,bba,volume1,ro1,xmlt1,bo1)
+             npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
+        if (imod.eq.3) call MHD_trace(re,i,j,np, &
+             npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 
         if (i.ge.1) then
            
@@ -917,7 +924,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
               bm_n=bm_n*bm1(m)
            enddo
            si3(m)=re*sqrt(bm1(m))*ss
-           tya3(m)=ss1/ra(ieq)/2.
+           tya3(m)=ss1/ro1/2.
            h3(m)=ss2/ss1
         enddo
 
