@@ -90,11 +90,11 @@ subroutine RB_set_grid
   call set_grid_descriptor( RB_,                 & ! component index
        nDim=2,                                   & ! dimensionality
        nRootBlock_D=(/1,1/),                     & ! single block
-       nCell_D=(/ir+2, ip/),                     & ! size of cell based grid
+       nCell_D=(/ir, ip/),                       & ! size of cell based grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/ir+1.5,ip-0.5/),               & ! max gen.coords for cells
+       XyzMax_D=(/ir-0.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati,                 & ! latitude in degrees
+       Coord1_I=cRadToDeg*xlati(1:ir),           & ! latitude in degrees
        Coord2_I=cRadToDeg*phi,                   & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
@@ -177,9 +177,10 @@ end subroutine RB_save_restart
 
 subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
             BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
-
-!  use ModIoUnit, ONLY: UnitTmp_
-!  use ModRiceRB
+  
+  use ModGmRb
+  use rbe_grid,ONLY: nLat => ir, nLon => ip
+  use rbe_constant,ONLY: rEarth => re
   
   implicit none
 
@@ -192,9 +193,10 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   real, intent(in) :: tSimulation
 
   real, parameter :: noValue=-99999.
-
+  integer :: n,iLat,iLon
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub='RB_put_from_gm'
+  logical,save :: IsFirstCall = .true.
   !-------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -210,19 +212,46 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
      write(*,*)NameSub,' iSizeIn,jSizeIn,nIntegralIn=',&
           iSizeIn,jSizeIn,nIntegralIn
      write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
-     write(*,*)NameSub,' Integral_IIV(1,23,:)=',Integral_IIV(1,23,:)
+     write(*,*)NameSub,' Integral_IIV(21,1,:)=',Integral_IIV(21,1,:)
      write(*,*)NameSub,' BufferLine_VI(:,1) =',BufferLine_VI(:,1)
      write(*,*)NameSub,' BufferLine_VI(:,2) =',BufferLine_VI(:,2)
      write(*,*)NameSub,' IMF=',Integral_IIV(1:8,1,4)
   end if
+  
+  if (allocated(StateLine_VI)) then
+     deallocate(StateLine_VI,StateIntegral_IIV)
+  endif
+  
+  if (.not.allocated(StateLine_VI)) then
+     allocate(StateLine_VI(nVarLine,nPointLine),&
+          StateIntegral_IIV(iSizeIn,jSizeIn,nIntegralIn))
+  endif
+  
+  StateLine_VI      = BufferLine_VI
+  StateIntegral_IIV = Integral_IIV
+  nPoint=nPointLine
+  
+  !Convert Units
+  StateLine_VI(2,:) = StateLine_VI(2,:) / rEarth ! m --> Earth Radii
+  StateLine_VI(3,:) = StateLine_VI(3,:) / rEarth ! m --> Earth Radii
 
-  !n = 0
-  !do iLat = 1, nLat
-  !   do iLon = 1, nLon
-  !      n = n+1
-  !      
-  !   end do
-  !end do
+  StateIntegral_IIV(1,:,4) = StateIntegral_IIV(1,:,4)*1.0e-6      !m^-3 -->/cc
+  StateIntegral_IIV(2,:,4) = abs(StateIntegral_IIV(2,:,4))*1.0e-3 !m/s-->km/s
+  StateIntegral_IIV(3,:,4) = abs(StateIntegral_IIV(3,:,4))*1.0e-3 !m/s-->km/s
+  StateIntegral_IIV(4,:,4) = abs(StateIntegral_IIV(4,:,4))*1.0e-3 !m/s-->km/s
+
+  ! create an index array on the first call
+  if (IsFirstCall) then
+     n = 0
+     do iLon = 1, nLon
+        do iLat = 1, nLat
+           n = n+1
+           iLineIndex_II(iLat,iLon) = n
+        end do
+     end do
+     IsFirstCall = .false.
+  endif
+
 
 end subroutine RB_put_from_gm
 !============================================================================
