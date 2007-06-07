@@ -1,6 +1,6 @@
 !*****************************************************************************
 subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
-     npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra,ieq)
+     npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
 !*****************************************************************************
 ! Routine does field line tracing in Tsyganenko field. For a given xlati1 and
 ! phi1, output distance from the ionosphere, magnetic field, flux tube volume
@@ -19,7 +19,7 @@ subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
   integer, parameter :: nd=3
   integer imod,np,npf1,i,j,n,ii,iopt,ind(np)
   real, intent(out)   :: ra(np) 
-  integer, intent(out):: ieq
+  integer:: ieq
   real re,rc,xlati1,phi1,t,ps,parmod(10),dssa(np),bba(np),volume1,ro1,xmlt1,bo1
   real xa(np),ya(np),za(np),pi,x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
   real dir,pas,xwrk(4,nd),rlim,b_mid,dss(np),ss,yint(np)
@@ -101,4 +101,78 @@ subroutine tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
   if (xmlt1.lt.0.) xmlt1=xmlt1+24.
   bo1=bba(ieq)
 
-  end subroutine tsy_trace
+end subroutine tsy_trace
+
+!==============================================================================
+
+subroutine mhd_trace (re,iLat,iLon,parmod,np, &
+     nAlt,FieldLength_I,Bfield_I,volume1,ro1,xmlt1,bo1,RadialDist_I)
+
+  use rbe_grid
+  use ModGmRb
+  use ModNumConst, ONLY: cPi
+
+  implicit none
+
+  integer,intent(in)  :: iLat,iLon,np
+  real,   intent(in)  :: re,parmod(10)
+  ! bba, bo1 in Tesla 
+  real,   intent(out) :: RadialDist_I(np),FieldLength_I(np),Bfield_I(np),&
+                         volume1,ro1,xmlt1,bo1
+  integer,intent(out) :: nAlt
+  
+  integer, parameter :: nd=3
+  integer ::i,j,n,ii,iopt,ind(np),iPoint,iAlt
+  integer, parameter :: I_=1,S_=2,R_=3,B_=4
+  
+  real xa(np),ya(np),za(np),x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
+  real dir,pas,xwrk(4,nd),rlim,Bmid,dss(np),ss,yint(np)
+  Logical IsFoundLine
+  !----------------------------------------------------------------------------
+  
+
+  ! Put BufferLine_VI indexed by line number into StateLine_CIIV
+  
+  iAlt = 1
+  IsFoundLine=.false.
+  FieldTrace: do iPoint = 1,nPoint
+     if (iLineIndex_II(iLat,iLon) == StateLine_VI(I_,iPoint))then
+        !when line index found, fill in output arrays
+        Bfield_I(iAlt)     = StateLine_VI(B_,iPoint)
+        FieldLength_I(iAlt)= StateLine_VI(S_,iPoint)
+        RadialDist_I(iAlt) = StateLine_VI(R_,iPoint)
+        
+        iAlt = iAlt+1
+        IsFoundLine=.true.
+     elseif (iLineIndex_II(iLat,iLon) /= StateLine_VI(I_,iPoint) &
+          .and. IsFoundLine) then
+        exit FieldTrace 
+     endif
+  end do FieldTrace
+
+  nAlt = iAlt-1
+  
+  !Check if FieldLine is open
+  if (.not. IsFoundLine) then
+     nAlt=0
+     return
+  endif
+
+  ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
+  xmlt1=&
+       atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
+       *12./cPi   ! mlt in hr
+  if (xmlt1.lt.0.) xmlt1=xmlt1+24.
+  bo1=StateIntegral_IIV(iLat,iLon,3)
+
+  ! Calculate the flux tube volume per magnetic flux (volume1)
+  
+  do ii=1,nAlt-1
+     Bmid=0.5*(Bfield_I(ii)+Bfield_I(ii+1))
+     dss(ii)=FieldLength_I(ii+1)-FieldLength_I(ii)
+     yint(ii)=1./Bmid
+  enddo
+  call closed(1,n,yint,dss,ss)  ! use closed form
+  if (i.ge.1.and.i.le.ir) volume1=ss*re   ! volume / flux
+  
+  end subroutine mhd_trace
