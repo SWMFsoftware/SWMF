@@ -91,6 +91,8 @@ subroutine impl_jacobian(implBLK,JAC)
   real :: FluxEpsRight_FV(nI,nJ,nK,nW)         ! Perturbed right flux
   real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
 
+  real :: HallFactor_G(0:nI+1,0:nJ+1,0:nK+1)
+
   integer :: i_D(3), ii, jj, kk
   !----------------------------------------------------------------------------
 
@@ -271,7 +273,7 @@ subroutine impl_jacobian(implBLK,JAC)
                     FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
                          FaceAreaJ_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBLK)
                  case(z_)
-                    FaceArea_F(1:i3,1:j3,1:k3) = &
+                    FaceArea_F(i1:nI,j1:nJ,k1:nK) = &
                          FaceAreaK_DFB(jw-B_,i1:nI,j1:nJ,k1:nK,iBlk)
                  end select
 
@@ -504,8 +506,11 @@ contains
     use ModVarIndexes, ONLY: UseMultiSpecies, UseMultiIon
     use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
          BxPerN_G, ByPerN_G, BzPerN_G, set_ion_mass_per_charge
+    use ModAdvance, ONLY: B0xCell_Blk, B0yCell_Blk, B0zCell_Blk
 
     real :: InvDx2, InvDy2, InvDz2, InvN_G(0:nI+1,0:nJ+1,0:nK+1)
+    !-------------------------------------------------------------------------
+
     ! Calculate cell centered currents to be used by getflux
 
     InvDx2 = 0.5/Dxyz(x_); InvDy2 = 0.5/Dxyz(y_); InvDz2 = 0.5/Dxyz(z_)
@@ -531,16 +536,24 @@ contains
     if(UseMultiSpecies .or. UseMultiIon) &
          call set_ion_mass_per_charge(impl2iBLK(implBlk))
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &
-            *hall_factor(0,i,j,k,iBlk)*HallJ_CD(i,j,k,:)
+    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       HallFactor_G(i,j,k) = hall_factor(0,i,j,k,iBlk)
     end do; end do; end do
 
-    InvN_G = IonMassPerCharge_G / w_k(:,:,:,Rho_,implBLK)
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &
+            *HallFactor_G(i,j,k)*HallJ_CD(i,j,k,:)
+    end do; end do; end do
 
-    BxPerN_G = w_k(:,:,:,Bx_,implBLK)*InvN_G 
-    ByPerN_G = w_k(:,:,:,By_,implBLK)*InvN_G 
-    BzPerN_G = w_k(:,:,:,Bz_,implBLK)*InvN_G
+    InvN_G = HallFactor_G * IonMassPerCharge_G &
+         / w_k(0:nI+1,0:nJ+1,0:nK+1,Rho_,implBLK)
+
+    BxPerN_G = (B0xCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,Bx_,implBLK))*InvN_G
+    ByPerN_G = (B0yCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,By_,implBLK))*InvN_G
+    BzPerN_G = (B0zCell_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlk) + &
+         w_k(0:nI+1,0:nJ+1,0:nK+1,Bz_,implBLK))*InvN_G
 
   end subroutine impl_init_hall
   !===========================================================================
