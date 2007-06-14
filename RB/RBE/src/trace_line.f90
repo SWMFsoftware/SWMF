@@ -105,7 +105,8 @@ end subroutine tsy_trace
 
 !==============================================================================
 
-subroutine mhd_trace (re,iLat,iLon,parmod,np, &
+
+subroutine mhd_trace (Lat,Lon,re,iLat,iLon,np, &
      nAlt,FieldLength_I,Bfield_I,volume1,ro1,xmlt1,bo1,RadialDist_I)
 
   use rbe_grid
@@ -113,9 +114,9 @@ subroutine mhd_trace (re,iLat,iLon,parmod,np, &
   use ModNumConst, ONLY: cPi
 
   implicit none
-
+  
   integer,intent(in)  :: iLat,iLon,np
-  real,   intent(in)  :: re,parmod(10)
+  real,   intent(in)  :: Lat,Lon,re
   ! bba, bo1 in Tesla 
   real,   intent(out) :: RadialDist_I(np),FieldLength_I(np),Bfield_I(np),&
                          volume1,ro1,xmlt1,bo1
@@ -124,19 +125,23 @@ subroutine mhd_trace (re,iLat,iLon,parmod,np, &
   integer, parameter :: nd=3
   integer ::i,j,n,ii,iopt,ind(np),iPoint,iAlt
   integer, parameter :: I_=1,S_=2,R_=3,B_=4
-  
+  real,    parameter :: LatMin = .886  ! 50.7degrees, below this, fieldline 
+                                       ! extends below 2.5Re
+   
   real xa(np),ya(np),za(np),x0(3),xend(3),f(3),t0,tend,h,h1,aza(np)
   real dir,pas,xwrk(4,nd),rlim,Bmid,dss(np),ss,yint(np)
-  Logical IsFoundLine
+  character(len=*), parameter :: NameSub='mhd_trace'
+  Logical IsFoundLine,UseDipole
   !----------------------------------------------------------------------------
   
-
   ! Put BufferLine_VI indexed by line number into StateLine_CIIV
   
   iAlt = 1
   IsFoundLine=.false.
+  UseDipole  =.false.
   FieldTrace: do iPoint = 1,nPoint
-     if (iLineIndex_II(iLat,iLon) == StateLine_VI(I_,iPoint))then
+
+     if (iLineIndex_II(iLon,iLat) == int(StateLine_VI(I_,iPoint)))then
         !when line index found, fill in output arrays
         Bfield_I(iAlt)     = StateLine_VI(B_,iPoint)
         FieldLength_I(iAlt)= StateLine_VI(S_,iPoint)
@@ -144,7 +149,7 @@ subroutine mhd_trace (re,iLat,iLon,parmod,np, &
         
         iAlt = iAlt+1
         IsFoundLine=.true.
-     elseif (iLineIndex_II(iLat,iLon) /= StateLine_VI(I_,iPoint) &
+     elseif (iLineIndex_II(iLon,iLat) /= int(StateLine_VI(I_,iPoint)) &
           .and. IsFoundLine) then
         exit FieldTrace 
      endif
@@ -152,19 +157,33 @@ subroutine mhd_trace (re,iLat,iLon,parmod,np, &
 
   nAlt = iAlt-1
   
+  ! If Lat <= LatMin degrees then use dipole values
+  if (Lat <= Latmin) then
+     nAlt=100
+     call trace_dipole(re,Lat,nAlt,FieldLength_I,Bfield_I,RadialDist_I,ro1)
+     xmlt1= (Lon-cPi)*12./cPi   ! mlt in hr           
+     if (xmlt1.lt.0.) xmlt1=xmlt1+24.
+     bo1=Bfield_I(nAlt/2)
+     IsFoundLine = .true.
+     UseDipole   = .true.
+  end if
+
   !Check if FieldLine is open
   if (.not. IsFoundLine) then
      nAlt=0
      return
   endif
 
-  ro1=sqrt(sum(StateIntegral_IIV(iLat,iLon,1:2)**2.0))
-  xmlt1=&
-       atan2(-StateIntegral_IIV(iLat,iLon,2),-StateIntegral_IIV(iLat,iLon,1))&
-       *12./cPi   ! mlt in hr
-  if (xmlt1.lt.0.) xmlt1=xmlt1+24.
-  bo1=StateIntegral_IIV(iLat,iLon,3)
-
+  if (.not. UseDipole) then
+     ro1=sqrt(sum(StateIntegral_IIV(iLat+1,iLon,1:2)**2.0))
+     xmlt1=&
+          (atan2(-StateIntegral_IIV(iLat+1,iLon,2),-StateIntegral_IIV(iLat+1,iLon,1))&
+          -cPi)&
+          *12./cPi   ! mlt in hr
+     if (xmlt1.lt.0.) xmlt1=xmlt1+24.
+     bo1=StateIntegral_IIV(iLat+1,iLon,3)
+  endif
+  
   ! Calculate the flux tube volume per magnetic flux (volume1)
   
   do ii=1,nAlt-1
@@ -176,3 +195,46 @@ subroutine mhd_trace (re,iLat,iLon,parmod,np, &
   if (i.ge.1.and.i.le.ir) volume1=ss*re   ! volume / flux
   
   end subroutine mhd_trace
+
+!==============================================================================
+
+subroutine trace_dipole(Re,LatStart,nStep,LineLength_I,Bfield_I,RadialDist_I,L)
+  implicit none
+  
+  integer,intent(in) :: nStep
+  real,   intent(in) :: Re,LatStart
+  real,   intent(out):: LineLength_I(nStep),Bfield_I(nStep),L,&
+                        RadialDist_I(nStep)
+  
+  real, parameter :: MagCoef = 7.84e15   ! nT m^3
+  real    :: Lat,dLat
+  integer :: iStep
+  !----------------------------------------------------------------------------
+
+  dLat = (2.0*LatStart)/nStep
+  LineLength_I(1) = 0.0
+  Lat = LatStart
+
+  L   = 1.0 / cos(LatStart)**2.0
+
+  Bfield_I(1) = MagCoef * sqrt(1+3.0*(sin(Lat))**2.0) &
+          / (Re*L*cos(Lat)**2.0)**3.0  
+  
+  do iStep=2,nStep
+     Lat = Lat-dLat
+     
+     ! Line length determined from: 
+     ! ds/dLat = L*Re*cos(Lat)*sqrt[1+3*sin(Lat)^2]
+     LineLength_I(iStep) = LineLength_I(iStep-1) &
+          + dLat * L * cos(Lat)*sqrt(1.0+3.0*(sin(Lat))**2.0)
+     
+     ! Equation of Earth Dipole field strength:
+     !B = mu * M /4/pi/r^3 *sqrt[1+3*sin(Lat)^2]
+     Bfield_I(iStep) = MagCoef * sqrt(1+3.0*(sin(Lat))**2.0) &
+          / (Re*L*cos(Lat)**2.0)**3.0  
+     
+     RadialDist_I(iStep) = L*cos(Lat)**2.0
+  enddo
+  
+     
+end subroutine trace_dipole
