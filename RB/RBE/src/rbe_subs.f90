@@ -190,7 +190,7 @@ end module rbe_time
 Module ModGmRb
   use rbe_grid,ONLY: nLat => ir, nLon => ip
   real, allocatable :: StateLine_VI(:,:),StateIntegral_IIV(:,:,:)
-  integer :: iLineIndex_II(nLat,nLon),nPoint
+  integer :: iLineIndex_II(nLon,0:nLat),nPoint
   
 end Module ModGmRb
 !=============================================================================
@@ -212,10 +212,12 @@ subroutine rbe_init
 
   dt=dtmax
   t=tstart-trans
-
-  call timing_start('rbe_grids')
-  call grids(re,rc,xme,xmp,q,c,js)
-  call timing_stop('rbe_grids')
+  
+  if (IsStandAlone) then
+     call timing_start('rbe_grids')
+     call grids(re,rc,xme,xmp,q,c,js)
+     call timing_stop('rbe_grids')
+  endif
   call timing_start('rbe_field')
   call fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,&
        phi,w,si,xmass,xme,xmp,dsth,tdst,byw,bzw,timf,xnswa,vswa,&
@@ -760,8 +762,19 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
 
         if (imod.le.2) call tsy_trace(re,rc,xlati1,phi1,t,ps,parmod,imod,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
-        if (imod.eq.3) call MHD_trace(re,i,j,np, &
+        if (imod.eq.3) call MHD_trace(xlati1,phi1,re,i,j,np, &
              npf1,dssa,bba,volume1,ro1,xmlt1,bo1,ra)
+        
+        !if (i==25 .and. j==21 )write(*,*) 'xlati1,npf1,volume1,ro1',xlati1*180.0/3.14,npf1,volume1,ro1
+        !if (i==25 .and. j==21 )write(*,*) 'bba(1:npf1)',bba(1:npf1)
+        !if (i==25 .and. j==21 )write(*,*) 'dssa(1:npf1)',dssa(1:npf1)
+        !if (i==25 .and. j==21 )write(*,*) 'ra(1:npf1)',ra(1:npf1)
+
+!        if (npf1 /= 0) then
+!           write(*,*) 'bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1'
+!           write(*,*) bba(1),dssa(1),ro1,xmlt1,bo1,ra(1),volume1
+!           call con_stop()
+!        endif
 
         if (i.ge.1) then
            
@@ -796,7 +809,7 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
         if (xmlt1.gt.xmltlim.and.xmlt1.lt.(24.-xmltlim).and.&
              abs(xmlt1-xmlt(j)).gt.xmltlim) then   ! big warping in mlt
            irm(j)=i-1
-           
+
         !if (i.gt.1) then
        !   if (ro(i,j).lt.ro(i-1,j)) ro(i,j)=ro(i-1,j)
        !endif
@@ -918,11 +931,13 @@ subroutine fieldpara(t,tf,dt,c,q,rc,re,xlati,xmlt,phi,w,si,&
            bm_n=1.
            do iTaylor=0,nTaylor
               BnIbm_n=BnI(iTaylor,m)/bm_n
+              !if (i==25 .and. j==21 ) write(*,*) 'BnIbm_n,BnI(iTaylor,m),bm_n,bm1(m),i,j',BnIbm_n,BnI(iTaylor,m),bm_n,bm1(m),i,j
               ss=ss+a_I(iTaylor)*BnIbm_n
               ss1=ss1+b_I(iTaylor)*BnIbm_n
               ss2=ss2+b_I(iTaylor)*hBnI(iTaylor,m)/bm_n
               bm_n=bm_n*bm1(m)
            enddo
+           !if (i==25 .and. j==21 ) write(*,*) 'ss',ss
            si3(m)=re*sqrt(bm1(m))*ss
            tya3(m)=ss1/ro1/2.
            h3(m)=ss2/ss1
