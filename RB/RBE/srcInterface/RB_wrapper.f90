@@ -90,11 +90,11 @@ subroutine RB_set_grid
   call set_grid_descriptor( RB_,                 & ! component index
        nDim=2,                                   & ! dimensionality
        nRootBlock_D=(/1,1/),                     & ! single block
-       nCell_D=(/ir, ip/),                       & ! size of cell based grid
+       nCell_D=(/ir+1, ip/),                     & ! size of cell based grid
        XyzMin_D=(/cHalf, cHalf/),                & ! min gen.coords for cells
-       XyzMax_D=(/ir-0.5,ip-0.5/),               & ! max gen.coords for cells
+       XyzMax_D=(/ir+1.5,ip-0.5/),               & ! max gen.coords for cells
        TypeCoord='SMG',                          & ! solar magnetic coord
-       Coord1_I=cRadToDeg*xlati(1:ir),           & ! latitude in degrees
+       Coord1_I=cRadToDeg*xlati(0:ir),           & ! latitude in degrees
        Coord2_I=cRadToDeg*phi,                   & ! longitude in degrees
        Coord3_I=Radius_I,                        & ! radial size in meters
        IsPeriodic_D=(/.false.,.true./))            ! periodic in longitude
@@ -110,7 +110,9 @@ end subroutine RB_set_grid
 !==============================================================================
 
 subroutine RB_init_session(iSession, TimeSimulation)
-
+  use rbe_constant
+  use rbe_cread2
+  use rbe_cgrid
   implicit none
 
   integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -118,8 +120,10 @@ subroutine RB_init_session(iSession, TimeSimulation)
 
   character(len=*), parameter :: NameSub='RB_init_session'
   !------------------------------------------------------------------------
-  call rbe_init
+  ! GM info needed before initialization just set up latitude/longitude grid
 
+  call grids(re,rc,xme,xmp,q,c,js)
+  
 end subroutine RB_init_session
 !==============================================================================
 
@@ -133,9 +137,15 @@ subroutine RB_run(TimeSimulation,TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
   real, intent(inout) :: TimeSimulation   ! current time of component
   
+  Logical, save :: IsInitiallized = .false.
   character(len=*), parameter :: NameSub='RB_run'
 
   !------------------------------------------------------------------------
+  
+  if (.not. IsInitiallized) then
+     call rbe_init
+     IsInitiallized = .true.
+  endif
 
   dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
   call rbe_run
@@ -243,10 +253,10 @@ subroutine RB_put_from_gm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
   ! create an index array on the first call
   if (IsFirstCall) then
      n = 0
-     do iLon = 1, nLon
-        do iLat = 1, nLat
+     do iLat = 0, nLat
+        do iLon = 1, nLon
            n = n+1
-           iLineIndex_II(iLat,iLon) = n
+           iLineIndex_II(iLon,iLat) = n
         end do
      end do
      IsFirstCall = .false.
