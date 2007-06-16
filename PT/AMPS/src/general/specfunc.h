@@ -155,6 +155,31 @@ public:
   unsigned long checksum() { 
     return crc_accum;
   }; 
+
+  void PrintChecksum(long int nline,char* fname) {
+    char message[1000];
+    
+    sprintf(message," line=%i, file=%s",nline,fname);
+    PrintChecksum(message);
+  };
+
+  void PrintChecksum(char* message=NULL) {
+    unsigned long int *buffer=new unsigned long int[TotalThreadsNumber];
+    long int i,thread;
+
+    buffer[0]=checksum();
+    MPI_Gather(buffer,1,MPI_UNSIGNED_LONG,buffer,1,MPI_UNSIGNED_LONG,0,MPI_COMM_WORLD);
+
+    if (ThisThread==0) {
+      if (message!=NULL) printf("CRC32 checksum, message=%s\n",message);
+      else printf("CRC32 checksum:\n",message);
+
+      for (thread=0;thread<TotalThreadsNumber;thread++) printf("thread=%i, sum=0x%x\n",thread,buffer[thread]);
+    }
+
+    delete [] buffer;
+  };
+
 };
 
  
