@@ -1,7 +1,5 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -s
 #^CFG COPYRIGHT UM
-
-use strict;
 
 #!QUOTE: \clearpage
 #BOP
@@ -18,8 +16,17 @@ use strict;
 # 03/11/2003 G. Toth - generalized to work on a machine with 
 #                      arbitrary endianness
 # 03/08/2006 G. Toth - converts new restart file format and added use strict.
+# 06/15/2007 G. Toth - add -e option to explicitly specify target endianness.
+#
 #EOP
-&print_help if $#ARGV != 1;
+
+my $Endian  = ($e or $endian);
+my $Quiet   = ($q or $quiat);
+my $Help    = ($h or $help);
+
+use strict;
+
+&print_help if $Help or $#ARGV != 1;
 
 my $indir =$ARGV[0];
 my $outdir=$ARGV[1];
@@ -28,19 +35,55 @@ my $headerfile="restart.H";
 my $datafile  ="data.rst";
 my $octreefile="octree.rst";
 
-my $ERROR = "ERROR in ConvertRestart.pl";
+my $ERROR   = "ERROR in ConvertRestart.pl";
+my $WARNING = "WARNING in ConvertRestart.pl";
 
 # Check things
 opendir(INDIR, $indir) or die "$ERROR: cannot open input directory $indir!\n";
-
--d $outdir or mkdir($outdir,0777) or 
-    die "$ERROR: cannot find/create output directory $outdir!\n";
 
 $indir ne $outdir or 
     die "$ERROR: input and output directories must be different!\n";
 
 # No end of line in files
 undef $/;
+
+# Figure out the endianness of the machine
+my $machine = (79 == unpack('V', pack('L',79))) ? 'little' : 'big';
+print "ConvertRestart.pl: This is a $machine endian machine.\n" unless $Quiet;
+
+# Figure out the endianness of the restart files 
+# by reading the first record length from octree.rst
+my $file = "$indir/$octreefile";
+open(INFILE, $file) or die "$ERROR: cannot open $file\n"; 
+my $rec; read(INFILE, $rec, 4);
+close INFILE;
+my $from = (12 == (unpack 'V', $rec)) ? 'little' : 'big';
+
+# Set the endianness of the converted restart files
+my $to;
+if($Endian =~ /^b/){
+    $to = 'big';
+}elsif($Endian =~ /^l/){
+    $to = 'little';
+}elsif($Endian =~ /^m/){
+    $to = $machine;
+}elsif($Endian =~ /^n/){
+    $to = ($machine eq 'big') ? 'little' : 'big';
+}else{
+    $to = ($from eq 'big') ? 'little' : 'big';
+}
+
+if($from eq $to){
+    print "ConvertRestart.pl: There is no need to transform\n".
+	"    the $from endian restart files in $indir.\n" unless $Quiet;
+    exit;
+}
+
+# Create output directory if necessary
+if(not -d $outdir){
+    `mkdir -p $outdir`; 
+    die "$ERROR: cannot create output directory $outdir!\n" if $?;
+}
 
 # Copy restart.H from indir to outdir and obtain real precision
 my $file = "$indir/$headerfile";
@@ -57,14 +100,17 @@ open(OUTFILE, ">$file") or die "$ERROR: cannot open $file\n";
 print OUTFILE $_;
 close OUTFILE;
 
-# There is 1 octree.rst file and many blk files
+# There is 1 octree.rst file and one data.rst or many blk*.rst files
 my @rstfiles = grep /^(blk\d*|octree|data)\.rst$/, readdir INDIR;
-print "Number of files in $indir is ",1+$#rstfiles,"\n";
+print "ConvertRestart.pl: Number of files in $indir is ",1+$#rstfiles,
+    " with $nByteReal byte reals.\n" unless $Quiet;
 
-# Default integer format is VAX (little-endian, e.g. Linux PC)
-my $intform='V';
+# Integer format for reading
+my $intform = ($from == 'little')? 'V' : 'big';
 
-print "Converting indir=$indir to outdir=$outdir...\n";
+print "ConvertRestart.pl: Converting $from endian files in $indir\n".
+    "                   to $to endian files in $outdir...\n" unless $Quiet;
+
 my $rstfile;
 foreach $rstfile (@rstfiles){
 
@@ -73,32 +119,18 @@ foreach $rstfile (@rstfiles){
     $_=<INFILE>;
     close INFILE;
 
-    # The $datafile is a binary direct access file with fixed record length.
-    # Since there are no record markers it is trivial to swap the byte order.
-    if($rstfile eq $datafile){
-	if($nByteReal == 4){
-	    &convert4;
-	}else{
-	    &convert8;
-	}
+    if($nByteReal == 4){
+	# single precision files are easy to convert
+	&convert4;
+    }elsif($rstfile eq $datafile){
+	# $datafile is a binary direct access file with fixed record length.
+	# Since there are no record markers it is trivial to swap the byte 
+	# order.
+	&convert8;
     }else{
-      ENDIAN:{
-	  my $len = unpack $intform,substr($_,0,4);
-
-	  if($len == 8 or $len == 12){
-	      &convert4;
-	  }elsif($len == 16 or $len == 24){
-	      &convert_dbl;
-	  }elsif($intform eq 'V'){
-	      # Try Network integer format (big-endian, e.g. SGI, IBM, Cray)
-	      print "Reading big-endian binary files...\n";
-	      $intform='N';
-	      redo ENDIAN;
-	  }else{
-	      die "$ERROR: Length of first record is $len ".
-		  "instead of 8, 12, 16 or 24 in $file\n";
-	  }
-      }
+	# double precision blk files need conversion of 4 byte data markers
+	# and 8 byte data
+	&convert_dbl;
     }
     my $file = "$outdir/$rstfile";
     open OUTFILE, ">$file" or die "$ERROR: cannot open $file\n";
@@ -107,7 +139,6 @@ foreach $rstfile (@rstfiles){
 }
 
 exit 0;
-
 ###############################################################################
 sub convert4{
     my $i;
@@ -157,26 +188,52 @@ sub convert_dbl{
 }
 
 ##############################################################################
+
 sub print_help{
 
     print 
 #BOC
-"Purpose: change the endianness of *.rst files and copy restart.H.
+"Purpose: 
+
+  Change/fix the endianness of binary restart files produced by BATSRUS.
+  Also copy the restart.H text file for sake of completeness.
 
 Usage:
 
-ConvertRestart.pl INPUTDIR OUTPUTDIR
+  ConvertRestart.pl [-h] [-q] [-e=ENDIAN] INPUTDIR OUTPUTDIR
 
-This perl script can be run on a machine with arbitrary endianness.
-The files are read from the INPUTDIR (e.g. restartOUT) and the result is 
-saved into the OUTPUTDIR (e.g. restart_export). If the OUTPUTDIR does not
-exist, it is created.
+  INPUTDIR     Directory containing the restart files to be converted.
 
-If the files are moved to/from a machine that uses 8 byte reals 
-(some older Crays) then the octree file needs to be fixed for the 
-4 vs. 8 byte integers using share/Scripts/FixI4toI8.pl or FixI8toI4.pl.
-The endianness can be changed with ConvertRestart.pl both after or before the 
-8-byte-integer-fix."
+  OUTPUTDIR    Directory for the converted restart files. The OUTPUTDIR 
+               directory will be created if the code produces output and 
+               the directory does not exist yet. The OUTPUT directory
+               must be different from the INPUT directory. 
+
+  -h -help     Print help message and exit.
+
+  -q -quiet    Suppress all verbose information.
+
+  -e=ENDIAN    Convert to the endianness defined by ENDIAN. 
+               Possible values for ENDIAN are:
+               'big', 'little', 'machine', 'not-machine' and 'swap'
+               Only the first character is significant. The value 'machine'
+               means that the file is converted to the endianness of the 
+               machine the script is running on, while 'not-machine' converts
+               to the opposite endianness of the machine. The value 'swap'
+               changes the endianness of the file. If the requested endianness
+               is the same as the endianness of the input files the program
+               exits with a warning.
+               Default is to 'swap' the endianness.
+
+Examples:
+
+  Swap the endianness of files in RESTART/GM to RESTART_conv/GM:
+
+Restart.pl RESTART/GM RESTART_conv/GM
+
+  Convert the restart files to the endianness of the current machine quietly:
+
+Restart.pl -q -e=m RESTART/GM RESTART_conv/GM"
 #EOC
     ,"\n\n";
     exit;
