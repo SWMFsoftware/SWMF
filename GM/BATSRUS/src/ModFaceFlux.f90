@@ -39,6 +39,7 @@ module ModFaceFlux
 
   logical :: DoLf                !^CFG IF RUSANOVFLUX
   logical :: DoHll               !^CFG IF LINDEFLUX
+  logical :: DoHlld              !^CFG IF HLLDFLUX
   logical :: DoAw                !^CFG IF AWFLUX
   logical :: DoRoeOld            !^CFG IF ROEFLUX
   logical :: DORoe               !^CFG IF ROEFLUX
@@ -109,11 +110,12 @@ contains
 
     if(DoTestMe)call print_values
 
-    DoLf  = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
-    DoHLL = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
-    DoAw  = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
-    DoRoeOld = TypeFlux == 'RoeOld'   !^CFG IF ROEFLUX
-    DoRoe= TypeFlux == 'Roe'          !^CFG IF ROEFLUX
+    DoLf     = TypeFlux == 'Rusanov'     !^CFG IF RUSANOVFLUX
+    DoHLL    = TypeFlux == 'Linde'       !^CFG IF LINDEFLUX
+    DoHlld   = TypeFlux == 'HLLD'        !^CFG IF HLLDFLUX
+    DoAw     = TypeFlux == 'Sokolov'     !^CFG IF AWFLUX
+    DoRoeOld = TypeFlux == 'RoeOld'      !^CFG IF ROEFLUX
+    DoRoe    = TypeFlux == 'Roe'         !^CFG IF ROEFLUX
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -618,11 +620,12 @@ contains
        end if
     end if
 
-    if(DoLf)  call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
-    if(DoHll) call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
-    if(DoAw)  call artificial_wind           !^CFG IF AWFLUX
-    if(DoRoeOld) call roe_solver(Flux_V)  !^CFG IF ROEFLUX
-    if(DoRoe)call roe_solver_new          !^CFG IF ROEFLUX
+    if(DoLf)     call lax_friedrichs_flux       !^CFG IF RUSANOVFLUX
+    if(DoHll)    call harten_lax_vanleer_flux   !^CFG IF LINDEFLUX
+    if(DoHlld)   call hlld_flux                 !^CFG IF HLLDFLUX
+    if(DoAw)     call artificial_wind           !^CFG IF AWFLUX
+    if(DoRoeOld) call roe_solver(Flux_V)        !^CFG IF ROEFLUX
+    if(DoRoe)    call roe_solver_new            !^CFG IF ROEFLUX
 
     if(UseRS7.and.(.not.DoRoe))then
        call stop_mpi('Second order RS7 is implemented for Roe solver only')
@@ -642,6 +645,7 @@ contains
     if(DoTestCell)call write_test_info
 
   contains
+    !==========================================================================
     subroutine modify_flux(Flux_V,Un)
       use ModVarIndexes,ONLY:RhoUx_,RhoUz_,Energy_
       real,intent(in)::Un
@@ -757,6 +761,43 @@ contains
 
     end subroutine artificial_wind
     !^CFG END AWFLUX
+    !^CFG IF HLLDFLUX BEGIN
+    !==========================================================================
+    subroutine hlld_flux
+
+      use ModVarIndexes, ONLY: B_, Energy_
+
+      real :: Cleft,  CleftStateLeft, CleftStateAverage
+      real :: Cright, CrightStateRight, CrightStateAverage
+      real :: WeightLeft, WeightRight, Diffusion
+      !-----------------------------------------------------------------------
+
+      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+           Cleft =CleftStateLeft)
+      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+           Cright=CrightStateRight)
+      call get_speed_max(State_V, B0x, B0y, B0z, &
+           Cmax = Cmax, Cleft = CleftStateAverage, Cright = CrightStateAverage)
+
+      Cleft  = min(0.0, CleftStateLeft,   CleftStateAverage)
+      Cright = max(0.0, CrightStateRight, CrightStateAverage)
+
+      if(iDimFace == x_)then
+         write(*,*)'size StateLeft_V=',size(StateLeft_V)
+         write(*,*)'size StateRight_V=',size(StateRight_V)
+         write(*,*)'size Flux_V=',size(Flux_V)
+         call hlld_tmp(StateLeft_V, StateRight_V, Flux_V)
+         Flux_V = Area*Flux_V
+      else
+         Flux_V = 0.0
+      end if
+
+      ! Average the normal speed
+      Unormal_I = 0.5*(UnLeft_I + UnRight_I)
+      Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
+
+    end subroutine hlld_flux
+    !^CFG END LINDEFLUX
     !=======================================================================
 
     subroutine write_test_info

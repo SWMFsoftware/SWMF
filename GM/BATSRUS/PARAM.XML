@@ -1575,14 +1575,15 @@ the code switches back to the two-level scheme for one time step.
 	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
 	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
 	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
+	    <option name="HLLD"                     /> <!--^CFG IF HLLDLUX-->
 	</parameter>
 #IMPLSCHEME
 1               nOrderImpl
 Rusanov         TypeFluxImpl
 
-! This command defines the scheme used in the implicit part ('left hand side').
-! The default order is first order. The default scheme is the same as the
-! scheme selected for the explicit part. 
+This command defines the scheme used in the implicit part ('left hand side').
+The default order is first order. The default scheme is the same as the
+scheme selected for the explicit part. 
 </command>
 
 <command name="IMPLCHECK" alias="IMPLICITCHECK">
@@ -3138,6 +3139,7 @@ Possible values for TypeFlux:
  'Sokolov'     - Sokolov's Local Artificial Wind flux <!--^CFG IF AWFLUX   -->
  'Roe'         - Roe's approximate Riemann flux (new) <!--^CFG IF ROEFLUX  -->
  'RoeOld'      - Roe's approximate Riemann flux (old) <!--^CFG IF ROEFLUX  -->
+ 'HLLD'        - Miyoshi and Kusano's HLLD flux       <!--^CFG IF HLLDFLUX -->
 \end{verbatim}
 The new and old Roe schemes differ in some details of the algorithm.
 Possible values for TypeLimiter for spatially second order schemes:
