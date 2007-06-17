@@ -1511,7 +1511,7 @@ contains
          write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
          write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
          write(*,*)NameSub,' Cfast=',Fast
-         write(*,*)NameSub,' Cmax=',Cmax/Area
+         if(present(Cmax)) write(*,*)NameSub,' Cmax=',Cmax/Area
       end if
 
     end subroutine get_mhd_speed
