@@ -783,9 +783,6 @@ contains
       Cright = max(0.0, CrightStateRight, CrightStateAverage)
 
       if(iDimFace == x_)then
-         write(*,*)'size StateLeft_V=',size(StateLeft_V)
-         write(*,*)'size StateRight_V=',size(StateRight_V)
-         write(*,*)'size Flux_V=',size(Flux_V)
          call hlld_tmp(StateLeft_V, StateRight_V, Flux_V)
          Flux_V = Area*Flux_V
       else
