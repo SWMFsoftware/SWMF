@@ -2098,7 +2098,7 @@ contains
        FluxType='Linde'                              !^CFG IF LINDEFLUX
     case('4','SOKOLOV','AW','Sokolov')               !^CFG IF AWFLUX
        FluxType='Sokolov'                            !^CFG IF AWFLUX
-    case('HLLD')                                     !^CFG IF HLLD
+    case('HLLD')                                     !^CFG IF HLLDFLUX
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub // &
@@ -2126,7 +2126,7 @@ contains
        FluxTypeImpl='Linde'                          !^CFG IF LINDEFLUX
     case('4','SOKOLOV','AW','Sokolov')               !^CFG IF AWFLUX
        FluxTypeImpl='Sokolov'                        !^CFG IF AWFLUX
-    case('HLLD')                                     !^CFG IF HLLD
+    case('HLLD')                                     !^CFG IF HLLDFLUX
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub// &

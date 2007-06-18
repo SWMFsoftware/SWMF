@@ -626,7 +626,7 @@ contains
  
   end subroutine set_block_sph_jacobian_face
 
-  !=============================================================================
+  !============================================================================
 
   subroutine set_block_jacobian_cell(iBlock)
     use ModMain, ONLY: x_, y_, z_
@@ -724,7 +724,7 @@ contains
           !call timing_start('set_block_jac')
           !call set_block_jacobian_cell(iBlock) ! Fast but not accurate
           !if(TypeGeometry=='spherical'.or.TypeGeometry=='spherical_lnr') then
-          !   call set_block_sph_jacobian_face(iBlock)  !optimized for spherical 
+          !   call set_block_sph_jacobian_face(iBlock) !optimized for spherical
           !else
              call set_block_jacobian_face(iBlock)      !general
           !end if

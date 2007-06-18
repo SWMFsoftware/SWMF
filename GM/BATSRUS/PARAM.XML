@@ -1575,7 +1575,7 @@ the code switches back to the two-level scheme for one time step.
 	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
 	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
 	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
-	    <option name="HLLD"                     /> <!--^CFG IF HLLDLUX-->
+	    <option name="HLLD"                     /> <!--^CFG IF HLLDFLUX-->
 	</parameter>
 #IMPLSCHEME
 1               nOrderImpl
@@ -3109,6 +3109,7 @@ Example for InvD2Ray =
 	    <option name="Rusanov" value="RUSANOV/2" default="T"/>								    <!--^CFG IF RUSANOVFLUX-->
 	    <option name="Linde"   value="LINDE/3"/>   <!--^CFG IF LINDEFLUX-->
 	    <option name="Sokolov" value="SOKOLOV/4"/> <!--^CFG IF AWFLUX-->
+	    <option name="HLLD"/>                      <!--^CFG IF HLLDFLUX-->
 	</parameter>
 	<if expr="$nOrder == 2">
 		<parameter name="TypeLimiter" type="string" input="select">

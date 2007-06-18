@@ -794,7 +794,7 @@ contains
       Enormal   = 0.5*(EnLeft + EnRight)                !^CFG IF BORISCORR
 
     end subroutine hlld_flux
-    !^CFG END LINDEFLUX
+    !^CFG END HLLDFLUX
     !=======================================================================
 
     subroutine write_test_info
