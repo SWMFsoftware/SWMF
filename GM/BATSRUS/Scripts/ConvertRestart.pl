@@ -17,6 +17,7 @@
 #                      arbitrary endianness
 # 03/08/2006 G. Toth - converts new restart file format and added use strict.
 # 06/15/2007 G. Toth - add -e option to explicitly specify target endianness.
+# 06/18/2007 G. Toth - add in-place conversion
 #
 #EOP
 
@@ -26,17 +27,18 @@ my $Help    = ($h or $help);
 
 use strict;
 
-&print_help if $Help or $#ARGV != 1;
+&print_help if $Help or $#ARGV == -1;
 
 my $indir =$ARGV[0];
-my $outdir=$ARGV[1];
+my $outdir=($ARGV[1] or $indir."__tmp");
 
 my $headerfile="restart.H";
 my $datafile  ="data.rst";
 my $octreefile="octree.rst";
 
-my $ERROR   = "ERROR in ConvertRestart.pl";
-my $WARNING = "WARNING in ConvertRestart.pl";
+my $CODE    = "ConvertRestart.pl";
+my $ERROR   = "ERROR in $CODE";
+my $WARNING = "WARNING in $CODE";
 
 # Check things
 opendir(INDIR, $indir) or die "$ERROR: cannot open input directory $indir!\n";
@@ -49,7 +51,7 @@ undef $/;
 
 # Figure out the endianness of the machine
 my $machine = (79 == unpack('V', pack('L',79))) ? 'little' : 'big';
-print "ConvertRestart.pl: This is a $machine endian machine.\n" unless $Quiet;
+print "$CODE: This is a $machine endian machine.\n" unless $Quiet;
 
 # Figure out the endianness of the restart files 
 # by reading the first record length from octree.rst
@@ -74,7 +76,7 @@ if($Endian =~ /^b/){
 }
 
 if($from eq $to){
-    print "ConvertRestart.pl: There is no need to transform\n".
+    print "$CODE: There is no need to transform\n".
 	"    the $from endian restart files in $indir.\n" unless $Quiet;
     exit;
 }
@@ -102,13 +104,13 @@ close OUTFILE;
 
 # There is 1 octree.rst file and one data.rst or many blk*.rst files
 my @rstfiles = grep /^(blk\d*|octree|data)\.rst$/, readdir INDIR;
-print "ConvertRestart.pl: Number of files in $indir is ",1+$#rstfiles,
+print "$CODE: Number of files in $indir is ",1+$#rstfiles,
     " with $nByteReal byte reals.\n" unless $Quiet;
 
 # Integer format for reading
-my $intform = ($from == 'little')? 'V' : 'big';
+my $intform = ($from eq 'little')? 'V' : 'N';
 
-print "ConvertRestart.pl: Converting $from endian files in $indir\n".
+print "$CODE: Converting $from endian files in $indir\n".
     "                   to $to endian files in $outdir...\n" unless $Quiet;
 
 my $rstfile;
@@ -136,6 +138,12 @@ foreach $rstfile (@rstfiles){
     open OUTFILE, ">$file" or die "$ERROR: cannot open $file\n";
     print OUTFILE $_;
     close OUTFILE;
+}
+
+if($outdir eq $indir."__tmp"){
+    # Remove $indir and replace it with $outdir
+    print "$CODE: rm -rf $indir; mv $outdir $indir\n" unless $Quiet;
+    `rm -rf $indir; mv $outdir $indir`;
 }
 
 exit 0;
@@ -200,14 +208,15 @@ sub print_help{
 
 Usage:
 
-  ConvertRestart.pl [-h] [-q] [-e=ENDIAN] INPUTDIR OUTPUTDIR
+  ConvertRestart.pl [-h] [-q] [-e=ENDIAN] INPUTDIR [OUTPUTDIR]
 
   INPUTDIR     Directory containing the restart files to be converted.
 
   OUTPUTDIR    Directory for the converted restart files. The OUTPUTDIR 
                directory will be created if the code produces output and 
                the directory does not exist yet. The OUTPUT directory
-               must be different from the INPUT directory. 
+               must be different from the INPUT directory. If the OUTPUT
+               directory is not defined, the original directory is overwritten.
 
   -h -help     Print help message and exit.
 
@@ -229,11 +238,11 @@ Examples:
 
   Swap the endianness of files in RESTART/GM to RESTART_conv/GM:
 
-Restart.pl RESTART/GM RESTART_conv/GM
+ConvertRestart.pl RESTART/GM RESTART_conv/GM
 
-  Convert the restart files to the endianness of the current machine quietly:
+  Convert the restart files in-place to the endianness of the machine quietly:
 
-Restart.pl -q -e=m RESTART/GM RESTART_conv/GM"
+ConvertRestart.pl -q -e=m RESTART/GM"
 #EOC
     ,"\n\n";
     exit;
