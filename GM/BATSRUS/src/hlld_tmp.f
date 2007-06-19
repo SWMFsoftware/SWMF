@@ -7,9 +7,8 @@
       real, intent(in):: PrimLeft_V(nVar), PrimRight_V(nVar)
       real, intent(out):: Flux_V(nVar+1)
 
-      PARAMETER (NEQ=8)
-      DIMENSION PL(NEQ),PR(NEQ),FM(NEQ),F(NEQ+1)
-      DIMENSION FFL(NEQ),FFR(NEQ)
+      DIMENSION PL(nVar),PR(nVar),FM(nVar),F(nVar+1)
+      DIMENSION FFL(nVar),FFR(nVar)
 
 C     Change index order
       PL(1)      =PrimLeft_V(p_)
@@ -246,13 +245,14 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE PRIMF(P,F)
 
+      use ModVarIndexes, ONLY: nVar
       use ModPhysics, ONLY: gamma => g
 
 C    calculates the fluxes as a function of the primitive
 C    variables
 
-      parameter(neq=8)
-      DIMENSION F(NEQ),P(NEQ)
+      
+      DIMENSION F(nVar),P(nVar)
  
       BTOT=P(5)**2+P(6)**2+P(7)**2
       VV=P(2)**2+P(3)**2+P(4)**2
