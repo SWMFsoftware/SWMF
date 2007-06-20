@@ -514,6 +514,22 @@ contains
        StateRight_V(Rho_)=sum( StateRight_V(SpeciesFirst_:SpeciesLast_) )
     end if
 
+    ! Calculate current for the face if needed for (Hall) resistivity
+    if(HallCoeff > 0.0 .or. Eta > 0.0) &
+         call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
+
+    if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
+       EtaJx = Eta*Jx
+       EtaJy = Eta*Jy
+       EtaJz = Eta*Jz
+    end if                             !^CFG END DISSFLUX
+
+    if(HallCoeff > 0.0)then
+       HallJx = HallCoeff*Jx
+       HallJy = HallCoeff*Jy
+       HallJz = HallCoeff*Jz
+    end if
+
     if(DoRoe)then
        if(IsBoundary)then
           uLeft_D=StateLeft_V(Ux_:Uz_); uRight_D=StateRight_V(Ux_:Uz_)
@@ -574,22 +590,6 @@ contains
 
        DiffBb=(DiffBx**2 + DiffBy**2 + DiffBz**2)
 
-    end if
-
-    ! Calculate current for the face
-    if(HallCoeff > 0.0 .or. Eta > 0.0) &
-         call get_face_current(iDimFace,iFace,jFace,kFace,iBlockFace,Jx,Jy,Jz)
-
-    if(Eta > 0.0)then                  !^CFG IF DISSFLUX BEGIN
-       EtaJx = Eta*Jx
-       EtaJy = Eta*Jy
-       EtaJz = Eta*Jz
-    end if                             !^CFG END DISSFLUX
-
-    if(HallCoeff > 0.0)then
-       HallJx = HallCoeff*Jx
-       HallJy = HallCoeff*Jy
-       HallJz = HallCoeff*Jz
     end if
 
     call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
@@ -767,23 +767,23 @@ contains
 
       use ModVarIndexes, ONLY: B_, Energy_
 
-      real :: Cleft,  CleftStateLeft, CleftStateAverage
-      real :: Cright, CrightStateRight, CrightStateAverage
+      real :: Cleft,  CleftStateLeft, CleftStateRight
+      real :: Cright, CrightStateLeft, CrightStateRight
       real :: WeightLeft, WeightRight, Diffusion
       !-----------------------------------------------------------------------
 
+      ! This is the choice made in the hlld_tmp code. May not be the best.
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-           Cleft =CleftStateLeft)
+           Cleft =CleftStateLeft, Cright = CrightStateLeft)
       call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-           Cright=CrightStateRight)
-      call get_speed_max(State_V, B0x, B0y, B0z, &
-           Cmax = Cmax, Cleft = CleftStateAverage, Cright = CrightStateAverage)
+           Cleft =CleftStateRight, Cright=CrightStateRight)
+      call get_speed_max(State_V, B0x, B0y, B0z, Cmax = Cmax)
 
-      Cleft  = min(0.0, CleftStateLeft,   CleftStateAverage)
-      Cright = max(0.0, CrightStateRight, CrightStateAverage)
+      Cleft  = min(CleftStateLeft, CleftStateRight)
+      Cright = max(CrightStateLeft, CrightStateRight)
 
       if(iDimFace == x_)then
-         call hlld_tmp(StateLeft_V, StateRight_V, Flux_V)
+         call hlld_tmp(StateLeft_V, StateRight_V, Cleft, Cright, Flux_V)
          Flux_V = Area*Flux_V
       else
          Flux_V = 0.0
@@ -1558,6 +1558,272 @@ contains
 
 end module ModFaceFlux
 
+!^CFG IF HLLDLUX BEGIN
+!==============================================================================
+subroutine hlld_tmp(PrimLeft_V, PrimRight_V, sL, sR, Flux_V)
+
+  use ModFaceFlux, ONLY: DoTestCell, FluxLeft_V, FluxRight_V
+  use ModVarIndexes
+  use ModPhysics, ONLY: Inv_Gm1
+  use ModNumConst, ONLY: cTiny
+
+  implicit none
+
+  real, intent(in):: PrimLeft_V(nVar), PrimRight_V(nVar)
+  real, intent(in):: sL, sR
+  real, intent(out):: Flux_V(nVar+1)
+
+  ! Left and right state
+  real :: DsL, RhoL, UxL, UyL, UzL, BxL, ByL, BzL, pL, eL, PbL, PtotL, uDotBL
+  real :: DsR, RhoR, UxR, UyR, UzR, BxR, ByR, BzR, pR, eR, PbR, PtotR, uDotBR
+
+  ! HLL speed
+  real :: sM           
+
+  ! First left and right intermediate states
+  real :: sL1, RhoL1, SqRhoL1, UyL1, UzL1, ByL1, BzL1, DeL1, uDotBL1
+  real :: sR1, RhoR1, SqRhoR1, UyR1, UzR1, ByR1, BzR1, DeR1, uDotBR1
+  real :: SqRhoLR1
+
+  ! Total pressure in all intermediate states
+  real :: Ptot12
+
+  ! Second left or right intermediate state 
+  real :: Uy2, Uz2, By2, Bz2, De2, uDotB2
+
+  real :: Tmp, Bx, SignBx
+  !----------------------------------------------------------------------------
+
+  if(DoTestCell)write(*,*)'hlld sL,sR=',sL,sR
+
+  if(sL > 0.) then
+     Flux_V = FluxLeft_V
+     RETURN
+  end if
+
+  if(sR < 0.) then
+     Flux_V = FluxRight_V
+     RETURN
+  end if
+
+  RhoL = PrimLeft_V(Rho_)
+  UxL  = PrimLeft_V(Ux_)
+  UyL  = PrimLeft_V(Uy_)
+  UzL  = PrimLeft_V(Uz_)
+  BxL  = PrimLeft_V(Bx_)
+  ByL  = PrimLeft_V(By_)
+  BzL  = PrimLeft_V(Bz_)
+  pL   = PrimLeft_V(p_)
+
+  RhoR = PrimRight_V(Rho_)
+  UxR  = PrimRight_V(Ux_)
+  UyR  = PrimRight_V(Uy_)
+  UzR  = PrimRight_V(Uz_)
+  BxR  = PrimRight_V(Bx_)
+  ByR  = PrimRight_V(By_)
+  BzR  = PrimRight_V(Bz_)
+  pR   = PrimRight_V(p_)
+
+  if(DoTestCell)then
+     write(*,*)'hlld: PrimL=',PrimLeft_V
+     write(*,*)'hlld: PrimR=',PrimRight_V
+  endif
+
+  PbL = 0.5*(BxL**2 + ByL**2 + BzL**2)
+  PbR = 0.5*(BxR**2 + ByR**2 + BzR**2)
+
+  PtotL = pL + PbL
+  PtotR = pR + PbR
+
+  DsR = sR - UxR
+  DsL = sL - UxL
+
+  ! HLLD speed is used in all intermediate states for Ux
+  Tmp = 1./(DsR*RhoR - DsL*RhoL)
+  sM  = (DsR*RhoR*UxR - DsL*RhoL*UxL - PtotR + PtotL)*Tmp
+
+  ! Total pressure in all intermediate states
+  Ptot12 =(DsR*RhoR*PtotL - DsL*RhoL*PtotR + RhoL*RhoR*DsR*DsL*(UxR - UxL))*Tmp
+
+  if(DoTestCell)write(*,*)'sM = ',sM
+
+  if(sM >= 0.)then
+     ! Left energy density
+     eL = Inv_Gm1*pL + PbL + 0.5*RhoL*(UxL**2 + UyL**2 + UzL**2)
+
+     ! Tangential velocity and magnetic field for the first intermediate state
+     Tmp = RhoL*DsL*(sL-sM) - BxL**2
+     if(Tmp < cTiny) then
+        UyL1 = UyL
+        UzL1 = UzL
+        ByL1 = ByL
+        BzL1 = BzL
+     else
+        Tmp  = 1.0/Tmp
+        UyL1 = UyL - BxL*ByL*(sM-UxL)*Tmp
+        UzL1 = UzL - BxL*BzL*(sM-UxL)*Tmp
+        ByL1 = ByL*(RhoL*DsL**2-BxL**2)*Tmp
+        BzL1 = BzL*(RhoL*DsL**2-BxL**2)*Tmp
+     end if
+
+     ! U.B and energy difference
+     UdotBL  = UxL*BxL + UyL*ByL + UzL*BzL
+     UdotBL1 = sM*BxL + UyL1*ByL1 + UzL1*BzL1
+     DeL1    = (sM*(eL+Ptot12) - UxL*(eL+PtotL) + BxL*(UdotBL-UdotBL1))/(sL-sM)
+
+     ! Left going Alfven speed
+     RhoL1   = RhoL*DsL/(sL-sM)
+     SqRhoL1 = sqrt(RhoL1)
+     sL1     = sM - abs(BxL)/SqRhoL1
+
+     if(DoTestCell)write(*,*)'sL1=',sL1
+
+     ! Check sign of left going Alfven wave
+     if(sL1 >= 0.) then
+        ! Use first left intermediate state
+        ! Note: sM = UxL1, BxL1 = BxL
+        Flux_V(Rho_)   = FluxLeft_V(Rho_)   + sL*(RhoL1      - RhoL)
+        Flux_V(RhoUx_) = FluxLeft_V(RhoUx_) + sL*(sM*RhoL1   - UxL*RhoL)
+        Flux_V(RhoUy_) = FluxLeft_V(RhoUy_) + sL*(UyL1*RhoL1 - UyL*RhoL)
+        Flux_V(RhoUz_) = FluxLeft_V(RhoUz_) + sL*(UzL1*RhoL1 - UzL*RhoL)
+        Flux_V(Bx_)    = 0.
+        Flux_V(By_)    = FluxLeft_V(By_)    + sL*(ByL1       - ByL)
+        Flux_V(Bz_)    = FluxLeft_V(Bz_)    + sL*(BzL1       - BzL)
+        Flux_V(Energy_)= FluxLeft_V(Energy_)+ sL*DeL1
+        RETURN
+     end if
+
+     ! first right intermediate state
+     RhoR1   = RhoR*DsR/(sR-sM)
+     SqRhoR1 = sqrt(RhoR1)
+     Tmp = RhoR*DsR*(sR-sM) - BxR**2
+     if(Tmp < cTiny) then
+        UyR1 =UyR
+        UzR1 =UzR
+        ByR1 = ByR
+        BzR1 = BzR
+     else
+        UyR1 = UyR-BxR*ByR*(sM-UxR)/Tmp
+        UzR1 = UzR-BxR*BzR*(sM-UxR)/Tmp
+        ByR1 = ByR*(RhoR*DsR**2-BxR**2)/Tmp
+        BzR1 = BzR*(RhoR*DsR**2-BxR**2)/Tmp
+     end if
+
+     if(DoTestCell)write(*,*)'ByR1=',ByR1
+
+     Bx     = 0.5*(BxL+BxR)
+     SignBx = sign(1., Bx)
+
+     Tmp      = 1./(SqRhoL1 + SqRhoR1)
+     SqRhoLR1 = SqRhoL1*SqRhoR1*SignBx
+     Uy2    = (SqRhoL1*UyL1 + SqRhoR1*UyR1 + (ByR1 - ByL1)*SignBx)*Tmp
+     Uz2    = (SqRhoL1*UzL1 + SqRhoR1*UzR1 + (BzR1 - BzL1)*SignBx)*Tmp
+     By2    = (SqRhoL1*ByR1 + SqRhoR1*ByL1 + (UyR1 - UyL1)*SqRhoLR1)*Tmp
+     Bz2    = (SqRhoL1*BzR1 + SqRhoR1*BzL1 + (UzR1 - UzL1)*SqRhoLR1)*Tmp
+     UdotB2 = sM*Bx + Uy2*By2 + Uz2*Bz2
+     
+     if(DoTestCell)write(*,*)'By2=',By2
+
+     ! second left intermediate state
+     De2  = -SqRhoL1*(UdotBL1 - UdotB2)*SignBx
+     Flux_V(Rho_)   = FluxLeft_V(Rho_)   + sL*(RhoL1      - RhoL)
+     Flux_V(RhoUx_) = FluxLeft_V(RhoUx_) + sL*(sM*RhoL1   - UxL*RhoL)
+     Flux_V(RhoUy_) = FluxLeft_V(RhoUy_) + sL*(UyL1*RhoL1 - UyL*RhoL) &
+          + SL1*RhoL1*(Uy2-UyL1)
+     Flux_V(RhoUz_) = FluxLeft_V(RhoUz_) + sL*(UzL1*RhoL1 - UzL*RhoL) &
+          + SL1*RhoL1*(Uz2-UzL1) 
+     Flux_V(Bx_)    = 0.
+     Flux_V(By_)    = FluxLeft_V(By_)    + sL*(ByL1 - ByL) + sL1*(By2 - ByL1) 
+     Flux_V(Bz_)    = FluxLeft_V(Bz_)    + sL*(BzL1 - BzL) + sL1*(Bz2 - BzL1) 
+     Flux_V(Energy_)= FluxLeft_V(Energy_)+ sL*DeL1         + sL1*De2
+
+  else  ! sM < 0
+     ! Right energy density
+     eR = Inv_Gm1*pR + PbR + 0.5*RhoR*(UxR**2 + UyR**2 + UzR**2)
+
+     ! Tangential velocity and magnetic field for the first intermediate state
+     Tmp = RhoR*DsR*(sR-sM) - BxR**2
+     if(Tmp < cTiny) then
+        UyR1 =UyR
+        UzR1 =UzR
+        ByR1=ByR
+        BzR1=BzR
+     else
+        UyR1 =UyR-BxR*ByR*(sM-UxR)/Tmp
+        UzR1 =UzR-BxR*BzR*(sM-UxR)/Tmp
+        ByR1=ByR*(RhoR*DsR**2-BxR**2)/Tmp
+        BzR1=BzR*(RhoR*DsR**2-BxR**2)/Tmp
+     end if
+
+     ! U.B and energy difference
+     UdotBR  = UxR*BxR + UyR*ByR + UzR*BzR
+     UdotBR1 = sM*BxR + UyR1*ByR1 + UzR1*BzR1
+     DeR1    = (sM*(eR+Ptot12) - UxR*(eR+PtotR) + BxR*(UdotBR-UdotBR1))/(sR-sM)
+
+     ! Right going Alfven speed
+     RhoR1   = RhoR*DsR/(sR-sM)
+     SqRhoR1 = sqrt(RhoR1)
+     sR1     = sM + abs(BxR)/SqRhoR1
+
+     if(DoTestCell)write(*,*)'sR1=',sR1
+
+     if(sR1 <= 0.) then
+        ! Use first right intermediate state
+        Flux_V(Rho_)   = FluxRight_V(Rho_)   + sR*(RhoR1 - RhoR)
+        Flux_V(RhoUx_) = FluxRight_V(RhoUx_) + sR*(sM*RhoR1   - UxR*RhoR)
+        Flux_V(RhoUy_) = FluxRight_V(RhoUy_) + sR*(UyR1*RhoR1 - UyR*RhoR)
+        Flux_V(RhoUz_) = FluxRight_V(RhoUz_) + sR*(UzR1*RhoR1 - UzR*RhoR)
+        Flux_V(Bx_)    = 0.
+        Flux_V(By_)    = FluxRight_V(By_)    + sR*(ByR1 - ByR)
+        Flux_V(Bz_)    = FluxRight_V(Bz_)    + sR*(BzR1 - BzR)
+        Flux_V(Energy_)= FluxRight_V(Energy_)+ sR*DeR1
+        RETURN
+     end if
+     ! first left intermediate state
+     RhoL1   = RhoL*DsL/(sL-sM)
+     SqRhoL1 = sqrt(RhoL1)
+     Tmp = RhoL*DsL*(sL-sM) - BxL**2
+     if(Tmp < cTiny) then
+        UyL1 = UyL
+        UzL1 = UzL
+        ByL1 = ByL
+        BzL1 = BzL
+     else
+        Tmp  = 1.0/Tmp
+        UyL1 = UyL - BxL*ByL*(sM-UxL)*Tmp
+        UzL1 = UzL - BxL*BzL*(sM-UxL)*Tmp
+        ByL1 = ByL*(RhoL*DsL**2-BxL**2)*Tmp
+        BzL1 = BzL*(RhoL*DsL**2-BxL**2)*Tmp
+     end if
+
+     Bx     = 0.5*(BxL+BxR)
+     SignBx = sign(1., Bx)
+
+     Tmp      = 1./(SqRhoL1 + SqRhoR1)
+     SqRhoLR1 = SqRhoL1*SqRhoR1*SignBx
+     Uy2    = (SqRhoL1*UyL1 + SqRhoR1*UyR1 + (ByR1 - ByL1)*SignBx)*Tmp
+     Uz2    = (SqRhoL1*UzL1 + SqRhoR1*UzR1 + (BzR1 - BzL1)*SignBx)*Tmp
+     By2    = (SqRhoL1*ByR1 + SqRhoR1*ByL1 + (UyR1 - UyL1)*SqRhoLR1)*Tmp
+     Bz2    = (SqRhoL1*BzR1 + SqRhoR1*BzL1 + (UzR1 - UzL1)*SqRhoLR1)*Tmp
+     UdotB2 = sM*Bx + Uy2*By2 + Uz2*Bz2
+
+     ! Second right intermediate state
+     De2  = SqRhoR1*(UdotBR1 - UdotB2)*SignBx
+     Flux_V(Rho_)   = FluxRight_V(Rho_)    + sR*(RhoR1      - RhoR)
+     Flux_V(RhoUx_) = FluxRight_V(RhoUx_)  + sR*(sM*RhoR1   - UxR*RhoR)
+     Flux_V(RhoUy_) = FluxRight_V(RhoUy_)  + sR*(UyR1*RhoR1 - UyR*RhoR) &
+          + SR1*RhoR1*(Uy2-UyR1)
+     Flux_V(RhoUz_) = FluxRight_V(RhoUz_)  + sR*(UzR1*RhoR1 - UzR*RhoR) &
+          + SR1*RhoR1*(Uz2-UzR1)
+     Flux_V(Bx_)    = 0.
+     Flux_V(By_)    = FluxRight_V(By_)     + sR*(ByR1-ByR) + sR1*(By2-ByR1) 
+     Flux_V(Bz_)    = FluxRight_V(Bz_)     + sR*(BzR1-BzR) + SR1*(Bz2-BzR1)
+     Flux_V(Energy_)= FluxRight_V(Energy_) + sR*DeR1       + SR1*De2
+  end if
+
+end subroutine hlld_tmp
+
+!^CFG END HLLDFLUX
 !^CFG IF ROEFLUX BEGIN
 !==============================================================================
 subroutine roe_solver(Flux_V)
