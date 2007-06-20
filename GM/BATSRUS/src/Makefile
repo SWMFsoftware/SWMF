@@ -26,7 +26,6 @@ MODULES = \
 	ModEquation.o\
 	ModCharacteristic.o\
 	ModFaceFlux.o\
-	hlld_tmp.o\
 	ModFaceValue.o\
 	ModGeometry.o\
 	ModHallResist.o\
