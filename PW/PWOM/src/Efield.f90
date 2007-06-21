@@ -22,7 +22,7 @@ SUBROUTINE PW_calc_efield
   enddo
   
   !PR = sum( M_e/M_species *(P_thermal(k) + rho(k) * u(k)^2))
-  PR(:)=State_GV(:,pE_)+PR_GI(:,nIon)+PR(:)
+  PR(:)=State_GV(0:maxGrid,pE_)+PR_GI(:,nIon)+PR(:)
   
   EZ(1:nDim)=Source_CV(1:nDim,uE_)
   
