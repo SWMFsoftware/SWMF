@@ -5,7 +5,7 @@
 !/
 
 subroutine rusanov_solver(iIon, &
-     Rgas, &
+     Rgas, DtIn,&
      OldState_GV,&
      RhoSource_C, RhoUSource_C, eSource_C, &
      UpdateState_GV)
@@ -14,10 +14,10 @@ subroutine rusanov_solver(iIon, &
   implicit none
 
   integer, intent(in)      :: iIon
-  real, intent(in)         :: Rgas
-  real, intent(in)         :: OldState_GV(0:MaxGrid,4)
+  real, intent(in)         :: Rgas,DtIn
+  real, intent(in)         :: OldState_GV(-1:MaxGrid,4)
   real, dimension(MaxGrid), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
-  real, intent(out)         :: UpdateState_GV(0:MaxGrid,4)
+  real, intent(out)         :: UpdateState_GV(-1:MaxGrid,4)
 
   real, dimension(-1:MaxGrid+2) :: OldRho_G, OldU_G, OldP_G
   real, dimension(MaxGrid+1)    :: LeftRho_F, LeftU_F, LeftP_F
@@ -30,13 +30,13 @@ subroutine rusanov_solver(iIon, &
   !---------------------------------------------------------------------------
 
 
-  OldRho_G(0:nDim+2) = OldState_GV(0:nDim+2,1)
-  OldU_G  (0:nDim+2) = OldState_GV(0:nDim+2,2)
-  OldP_G  (0:nDim+2) = OldState_GV(0:nDim+2,3)
+  OldRho_G(-1:nDim+2) = OldState_GV(-1:nDim+2,1)
+  OldU_G  (-1:nDim+2) = OldState_GV(-1:nDim+2,2)
+  OldP_G  (-1:nDim+2) = OldState_GV(-1:nDim+2,3)
 
-  OldRho_G(-1) = OldState_GV(0,1)
-  OldU_G  (-1) = OldState_GV(0,2)
-  OldP_G  (-1) = OldState_GV(0,3)
+ ! OldRho_G(-1) = OldState_GV(0,1)
+ ! OldU_G  (-1) = OldState_GV(0,2)
+ ! OldP_G  (-1) = OldState_GV(0,3)
 
 
 
@@ -53,14 +53,14 @@ subroutine rusanov_solver(iIon, &
   call calc_facevalues(nDim, OldP_G, LeftP_F, RightP_F)
 
   !get the rusanov flux
-  call rusanov_flux( &
+  call rusanov_flux( DtIn,&
        LeftRho_F, LeftU_F, LeftP_F, &
        RightRho_F, RightU_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F)
 
   ! update the cells one timestep 
   call update_state( iIon,&
-       Rgas, &
+       Rgas, DtIn,&
        OldRho_C, OldU_C, OldP_C, OldT_C, &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
        RhoFlux_F, RhoUFlux_F, eFlux_F, &
@@ -76,7 +76,7 @@ end subroutine rusanov_solver
 
 !==============================================================================
 
-subroutine rusanov_flux( &
+subroutine rusanov_flux( DtIn, &
      LeftRho_F, LeftU_F, LeftP_F, &
      RightRho_F, RightU_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F)
@@ -84,7 +84,7 @@ subroutine rusanov_flux( &
   use ModCommonVariables
   implicit none
 
-
+  real, intent(in) :: DtIn
   real, dimension(MaxGrid+1), intent(in) :: &
        LeftRho_F, LeftU_F, LeftP_F, &
        RightRho_F, RightU_F, RightP_F
@@ -95,7 +95,7 @@ subroutine rusanov_flux( &
   InvGammaMinus1       = 1.0/(Gamma - 1.0)
   GammaOverGammaMinus1 = Gamma/(Gamma - 1.0)
 
-  Coeff = 0.47/dtr1
+  Coeff = 0.47*DRBND/DtIn
 !  Coeff = 0.5/dtr1
   
   do i=1,nDim+1
@@ -123,7 +123,7 @@ end subroutine rusanov_flux
 !==============================================================================
 
 subroutine update_state( iIon,&
-     Rgas,&
+     Rgas,DtIn,&
      OldRho_C, OldU_C, OldP_C, OldT_C, &
      LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F, &
@@ -133,7 +133,7 @@ subroutine update_state( iIon,&
   use ModCommonVariables
   implicit none
   integer, intent(in)                   :: iIon  
-  real, intent(in)                      :: Rgas 
+  real, intent(in)                      :: Rgas,DtIn 
   real, dimension(MaxGrid), intent(in)  :: OldRho_C, OldU_C, OldP_C, OldT_C
   real, dimension(MaxGrid+1), intent(in):: LeftRho_F, LeftU_F, LeftP_F
   real, dimension(MaxGrid+1), intent(in):: RightRho_F, RightU_F, RightP_F
@@ -155,19 +155,19 @@ subroutine update_state( iIon,&
   do i=1,nDim
  !    ImpliciteSource_C(i)=0.0
      NewRho_C(i) = OldRho_C(i) &
-          - Dt * (Ar23(i)*RhoFlux_F(i+1)-Ar12(i)*RhoFlux_F(i)) &
+          - DtIn * (Ar23(i)*RhoFlux_F(i+1)-Ar12(i)*RhoFlux_F(i)) &
           / CellVolume_C(i) &
-          + Dt*RhoSource_C(i)
+          + DtIn*RhoSource_C(i)
      NewRhoU(i) = OldRho_C(i)*OldU_C(i) &
-          - Dt * (Ar23(i)*RhoUFlux_F(i+1)-Ar12(i)*RhoUFlux_F(i)) &
+          - DtIn * (Ar23(i)*RhoUFlux_F(i+1)-Ar12(i)*RhoUFlux_F(i)) &
           / CellVolume_C(i) &
-          + Dt*Darea(i)*OldP_C(i) &
-          + Dt*RhoUSource_C(i)
+          + DtIn*Darea(i)*OldP_C(i) &
+          + DtIn*RhoUSource_C(i)
 
      NewE(i) = 0.5*OldRho_C(i)*OldU_C(i)**2 + InvGammaMinus1*OldP_C(i) &
-          - Dt * (Ar23(i)*eFlux_F(i+1)-Ar12(i)*eFlux_F(i)) &
+          - DtIn * (Ar23(i)*eFlux_F(i+1)-Ar12(i)*eFlux_F(i)) &
           / CellVolume_C(i) &
-          + Dt*eSource_C(i) 
+          + DtIn*eSource_C(i) 
  
      NewU_C(i) = NewRhoU(i)/NewRho_C(i)
 
@@ -197,11 +197,11 @@ subroutine update_state( iIon,&
         
         !eliminate contribution of implicit sources in RhoU
         ExplicitRhoU_C(i) = &
-             NewRhoU(i)+Dt*OldU_C(i)*OldRho_C(i)*SumCollisionFreq
+             NewRhoU(i)+DtIn*OldU_C(i)*OldRho_C(i)*SumCollisionFreq
         
 
         NewRhoU(i)= ExplicitRhoU_C(i) / &
-             (1+Dt*SumCollisionFreq)
+             (1+DtIn*SumCollisionFreq)
         
         NewU_C(i) = NewRhoU(i)/NewRho_C(i)
 
@@ -210,11 +210,11 @@ subroutine update_state( iIon,&
         ModifyESource = OldRho_C(i)* &
              SumHTxCol*OldT_C(i)
 
-        NewE(i)   = NewE(i) + Dt*ModifyESource
+        NewE(i)   = NewE(i) + DtIn*ModifyESource
 
         NewP_C(i) = gMin1*(NewE(i) - 0.5 * NewU_C(i)**2 * NewRho_C(i))
         
-        NewP_C(i) = NewP_C(i) / (1+Dt*2.*SumMFxCol)
+        NewP_C(i) = NewP_C(i) / (1+DtIn*2.*SumMFxCol)
 
      endif
      
