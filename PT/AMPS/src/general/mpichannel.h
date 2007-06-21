@@ -67,14 +67,8 @@ public:
 
   void flush() {
     if (sendptr!=0) {
-      MPI_Status status;
-      MPI_Request request;
-
       MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD);
-
-      MPI_Isend(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD,&request);
-      MPI_Wait(&request,&status);
-
+      MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
       sendptr=0;
     }
   };
@@ -91,30 +85,25 @@ public:
     }
   };
 
-  template<class T> void send(T* data,long int nsend) {
-    long int i,length; 
-    char *ptr;
-
-    length=sizeof(T)*nsend;
-
+  template<class T> inline void send(T data) {
+    register long int i,length=sizeof(T); 
+    register char *ptr;
+   
     if (sendptr+length>=max_MPIbuffer_size) {
-      MPI_Status status;
-      MPI_Request request;
-
       MPI_Send(&sendptr,1,MPI_LONG,sendThread,0,MPI_COMM_WORLD); 
-
-      MPI_Isend(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD,&request);
-      MPI_Wait(&request,&status);
-
+      MPI_Send(sendBuffer,sendptr,MPI_CHAR,sendThread,0,MPI_COMM_WORLD);
       sendptr=0;
     } 
      
-    for (i=0,ptr=(char*)data;i<length;i++,ptr++) sendBuffer[sendptr++]=*ptr; 
+    for (i=0,ptr=(char*)&data;i<length;i++,ptr++) sendBuffer[sendptr++]=*ptr; 
   }
 
 
-  template<class T> void send(T data) {
-    send(&data,1);
+  template<class T> void inline send(T* data,long int nsend) {
+    register long int i;
+    register T* dataptr; 
+
+    for (i=0,dataptr=data;i<nsend;i++,dataptr++) send(*dataptr);
   }
 
   void openRecv(int thread) { 
@@ -157,35 +146,35 @@ public:
     for (thread=0;thread<TotalThreadsNumber;thread++) if (thread!=ThisThread) closeRecv(thread);
   };
 
-  template<class T> void recv(T* data,long int nrecv,int thread) {
-    long int i,length;
-    char *ptr;
-
-    length=sizeof(T)*nrecv; 
+  template<class T> inline void recv(T& data,int thread) {
+    register long int i,length=sizeof(T);
+    register T t;
+    register char *ptr;
 
     if (recvptr[thread]==RecvDataLength[thread]) {
       MPI_Status status;
-      MPI_Request request;
 
       MPI_Recv(RecvDataLength+thread,1,MPI_LONG,thread,0,MPI_COMM_WORLD,&status);
-
-      MPI_Irecv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&request);
-      MPI_Wait(&request,&status);
+      MPI_Recv(recvBuffer[thread],RecvDataLength[thread],MPI_CHAR,thread,0,MPI_COMM_WORLD,&status);
 
       recvptr[thread]=0;
     }
 
-    for (i=0,ptr=(char*)data;i<length;i++,ptr++) *ptr=recvBuffer[thread][recvptr[thread]++];    
+    for (i=0,ptr=(char*)&t;i<length;i++,ptr++) *ptr=recvBuffer[thread][recvptr[thread]++];    
+    data=t;  
   }
 
-  template<class T> void recv(T& data ,int thread) {
-    recv(&data,1,thread);
+  template<class T> inline void recv(T* data,long int nrecv,int thread) {
+    register long int i;
+    register T *dataptr;
+
+    for (i=0,dataptr=data;i<nrecv;i++,dataptr++) recv(*dataptr,thread);
   } 
 
-  template<class T> T recv(int thread) {
+  template<class T> inline T recv(int thread) {
     T data;
    
-    recv(&data,1,thread); 
+    recv(data,thread); 
     return data;
   }
 };

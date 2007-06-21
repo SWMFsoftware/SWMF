@@ -242,6 +242,7 @@ public:
         cutstr(str1,str);
         x[idim]=atof(str1);
       } 
+      node[i].nodeno=i; 
       node[i].SetX(x);
       line++;if (errno!=0) error(line);
     }
@@ -255,13 +256,16 @@ public:
         face[i].node[idim]=&node[face[i].nodeno[idim]];
       }
       cutstr(str1,str);
+      face[i].faceno=i;
       face[i].faceat=atoi(str1);
       line++;if (errno!=0) error(line);
     }
 
     fgets(str,200,fd);line++;
     for (i=0;i<ncells;i++) {
+      cell[i].cellno=i;
       fgets(str,200,fd);
+
       for (idim=0;idim<DIM+1;idim++) {
         cutstr(str1,str);
         cell[i].nodeno[idim]=atoi(str1)-1;
