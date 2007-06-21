@@ -1558,11 +1558,11 @@ contains
 
 end module ModFaceFlux
 
-!^CFG IF HLLDLUX BEGIN
+!^CFG IF HLLDFLUX BEGIN
 !==============================================================================
 subroutine hlld_tmp(PrimLeft_V, PrimRight_V, sL, sR, Flux_V)
 
-  use ModFaceFlux, ONLY: DoTestCell, FluxLeft_V, FluxRight_V
+  use ModFaceFlux, ONLY: DoTestCell, FluxLeft_V, FluxRight_V, nFlux
   use ModVarIndexes
   use ModPhysics, ONLY: Inv_Gm1
   use ModNumConst, ONLY: cTiny
@@ -1571,7 +1571,7 @@ subroutine hlld_tmp(PrimLeft_V, PrimRight_V, sL, sR, Flux_V)
 
   real, intent(in):: PrimLeft_V(nVar), PrimRight_V(nVar)
   real, intent(in):: sL, sR
-  real, intent(out):: Flux_V(nVar+1)
+  real, intent(out):: Flux_V(nFlux)
 
   ! Left and right state
   real :: DsL, RhoL, UxL, UyL, UzL, BxL, ByL, BzL, pL, eL, PbL, PtotL, uDotBL
