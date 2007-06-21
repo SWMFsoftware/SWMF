@@ -23,7 +23,7 @@ Subroutine POLAR_WIND
   character*100 :: NameRestart
   Logical,save  :: IsFirstCall=.true.
   Real Jr
-  real  :: NewState_GV(0:maxGrid,nVar)
+  real  :: NewState_GV(-1:maxGrid,nVar)
   !-----------------------------------------------------------------------
   
   Call get_field_line(State_GV(1:maxGrid,:),                       &
@@ -74,13 +74,13 @@ Subroutine POLAR_WIND
      !       calculate collisional and chemistry source
      !       calculate electric field with new electron temp.
 
-!     write(*,*) 1,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      call advect
-!     write(*,*) 2,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      CALL PW_iheat_flux
-!     write(*,*) 3,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      CALL PW_eheat_flux
-!     write(*,*) 4,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      CALL PW_set_upper_bc
      CALL COLLIS(NDIM)
      CALL PW_calc_efield         
@@ -97,9 +97,9 @@ Subroutine POLAR_WIND
      !       Reverse order of advection and implicit temperature update
      
      CALL PW_iheat_flux
-!     write(*,*) 5,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      CALL PW_eheat_flux
-!     write(*,*) 6,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
+
      CALL advect
 !     write(*,*) 7,Time,State_GV(2,Th_),State_GV(2,To_),State_GV(2,Te_)
 
@@ -143,7 +143,7 @@ contains
     NewState_GV = State_GV
     if (TypeSolver == 'Godunov') then
        do iIon=1,nIon-1
-          CALL Solver(iIon,State_GV(:,iRho_I(iIon):iT_I(iIon)),&
+          CALL Solver(iIon,Dt,State_GV(:,iRho_I(iIon):iT_I(iIon)),&
                Source_CV(:,iRho_I(iIon)),Source_CV(:,iP_I(iIon)),&
                Source_CV(:,iU_I(iIon)),&
                RGAS_I(iIon),NewState_GV(:,iRho_I(iIon):iT_I(iIon)))
@@ -151,7 +151,7 @@ contains
 
       else if (TypeSolver == 'Rusanov') then
          do iIon=1,nIon-1
-            call rusanov_solver(iIon,RGAS_I(iIon),   &
+            call rusanov_solver(iIon,RGAS_I(iIon),dt,   &
                  State_GV(:,iRho_I(iIon):iT_I(iIon)),&
                  Source_CV(:,iRho_I(iIon)), Source_CV(:,iU_I(iIon)),&
                  Source_CV(:,iP_I(iIon)),  &
