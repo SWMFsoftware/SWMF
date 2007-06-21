@@ -1,6 +1,6 @@
 
 
-      SUBROUTINE Solver (iIon, InitialState_GV,
+      SUBROUTINE Solver (iIon, DtIn,InitialState_GV,
      &     RhoSource, eCollision, fCollision,
      &     RgasSpecies,
      &     OutputState_GV)
@@ -12,13 +12,13 @@ C            mass, energy, external heating and force source terms,
 C            gas constant normalized for the mass of this species
       integer, intent(in) :: iIon
 
-      real, intent(in):: InitialState_GV(0:maxGrid,4) 
+      real, intent(in):: DtIn, InitialState_GV(-1:maxGrid,4) 
       real, intent(in):: RhoSource(MAXGRID), eCollision(MAXGRID),
      &     fCollision(MAXGRID),
      &     RgasSpecies
       
 C     Output
-      real, intent(out):: OutputState_GV(0:maxGrid,4)
+      real, intent(out):: OutputState_GV(-1:maxGrid,4)
 
 C     Local:
       
@@ -148,21 +148,21 @@ c
 
 CALEX Update
 
-      OutputState_GV(0,1)=InitialState_GV(0,1)
-      OutputState_GV(0,2)=InitialState_GV(0,2)
-      OutputState_GV(0,3)=InitialState_GV(0,3)
-      OutputState_GV(0,4)=InitialState_GV(0,4)
+      OutputState_GV(-1:0,1)=InitialState_GV(-1:0,1)
+      OutputState_GV(-1:0,2)=InitialState_GV(-1:0,2)
+      OutputState_GV(-1:0,3)=InitialState_GV(-1:0,3)
+      OutputState_GV(-1:0,4)=InitialState_GV(-1:0,4)
       
       DO K=1,NDIM
          KK=K+1
-         OutputState_GV(K,1)=DSPECIES(K)-DTR1*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
-     $        +DTX1*RhoSource(K)
-         OutputState_GV(K,2)=(USPECIES(K)*DSPECIES(K)-DTR1*(AR23(K)*UBN1(KK)-AR12(K)*
-     $        UBN1(K))+DTX1*(DAREA(K)*PSPECIES(K)+FCOLLISION(K)))/OutputState_GV(K,1)
+         OutputState_GV(K,1)=DSPECIES(K)-DtIn/DRBND*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
+     $        +DtIn*RhoSource(K)
+         OutputState_GV(K,2)=(USPECIES(K)*DSPECIES(K)-DtIn/DRBND*(AR23(K)*UBN1(KK)-AR12(K)*
+     $        UBN1(K))+DtIn*(DAREA(K)*PSPECIES(K)+FCOLLISION(K)))/OutputState_GV(K,1)
 
          OutputState_GV(K,3)=PSPECIES(K)-GMIN2*(OutputState_GV(K,2)**2*OutputState_GV(K,1)-
-     $     USPECIES(K)**2*DSPECIES(K))-DTR1*(AR23(K)*PBN1(KK)-AR12(K)*PBN1(K))
-     $     +DTX1*GMIN1*(ECOLLISION(K))
+     $     USPECIES(K)**2*DSPECIES(K))-DtIn/DRBND*(AR23(K)*PBN1(KK)-AR12(K)*PBN1(K))
+     $     +DtIn*GMIN1*(ECOLLISION(K))
          OutputState_GV(K,4)=OutputState_GV(K,3)/RGASSPECIES/OutputState_GV(K,1)
       end do
 
