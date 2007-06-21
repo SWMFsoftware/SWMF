@@ -1197,21 +1197,21 @@ C     DEFINE THE GAS PARAMETERS AT THE LOWER BOUNDARY                  C
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     C
-      State_GV(0,uO_)=0.
-      State_GV(0,uH_)=0.
-      State_GV(0,uE_)=0.
+      State_GV(-1:0,uO_)=0.
+      State_GV(-1:0,uH_)=0.
+      State_GV(-1:0,uE_)=0.
       CALL MODATM(ALTMIN,XNH2,XNH,XNH2O,XNCH4,TEMP)
 
 CALEX I pretend that for plasma parameters, O is H3 and HE is
 CALEX chemical equilibrium value for H2+ this allow me to just
 CALEX change the chemistry but leave the rest of the code the same  
-      State_GV(0,To_)=TEMP
-      State_GV(0,Th_)=TEMP
-      State_GV(0,Te_)=TEMP
+      State_GV(-1:0,To_)=TEMP
+      State_GV(-1:0,Th_)=TEMP
+      State_GV(-1:0,Te_)=TEMP
 
       call calc_chemical_equilibrium(DensityHp,DensityH3p)
-      State_GV(0,RhoO_)=Mass_I(Ion1_)*DensityH3p
-      State_GV(0,RhoH_)=Mass_I(Ion2_)*DensityHp
+      State_GV(-1:0,RhoO_)=Mass_I(Ion1_)*DensityH3p
+      State_GV(-1:0,RhoH_)=Mass_I(Ion2_)*DensityHp
       write(*,*) 'H+(1400km)=',DensityHp,', H3+(1400km)=',DensityH3p
 
 
@@ -1247,10 +1247,10 @@ C      State_GV(0,RhoH_)E=0.
 C      State_GV(0,RhoH_)=Mass_I(Ion2_)*1124.0
 
 
-      State_GV(0,RhoE_)=MassElecIon_I(Ion2_)*State_GV(0,RhoH_)+MassElecIon_I(Ion1_)*State_GV(0,RhoO_)
-      State_GV(0,pO_)=RGAS_I(Ion1_)*State_GV(0,To_)*State_GV(0,RhoO_)
-      State_GV(0,pH_)=RGAS_I(Ion2_)*State_GV(0,Th_)*State_GV(0,RhoH_)
-      State_GV(0,pE_)=RGAS_I(nIon)*State_GV(0,Te_)*State_GV(0,RhoE_)
+      State_GV(-1:0,RhoE_)=MassElecIon_I(Ion2_)*State_GV(-1:0,RhoH_)+MassElecIon_I(Ion1_)*State_GV(-1:0,RhoO_)
+      State_GV(-1:0,pO_)=RGAS_I(Ion1_)*State_GV(-1:0,To_)*State_GV(-1:0,RhoO_)
+      State_GV(-1:0,pH_)=RGAS_I(Ion2_)*State_GV(-1:0,Th_)*State_GV(-1:0,RhoH_)
+      State_GV(-1:0,pE_)=RGAS_I(nIon)*State_GV(-1:0,Te_)*State_GV(-1:0,RhoE_)
       SoundSpeed_GI(0,Ion1_)=SQRT(GAMMA*RGAS_I(Ion1_)*State_GV(0,To_))
       SoundSpeed_GI(0,Ion2_)=SQRT(GAMMA*RGAS_I(Ion2_)*State_GV(0,Th_))
       SoundSpeed_GI(0,nIon)=SQRT(GAMMA*RGAS_I(nIon)*State_GV(0,Te_))
