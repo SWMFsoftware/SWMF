@@ -159,7 +159,7 @@ public:
   void PrintChecksum(long int nline,char* fname) {
     char message[1000];
     
-    sprintf(message," line=%i, file=%s",nline,fname);
+    sprintf(message," line=%ld, file=%s",nline,fname);
     PrintChecksum(message);
   };
 
@@ -172,9 +172,9 @@ public:
 
     if (ThisThread==0) {
       if (message!=NULL) printf("CRC32 checksum, message=%s\n",message);
-      else printf("CRC32 checksum:\n",message);
+      else printf("CRC32 checksum:\n");
 
-      for (thread=0;thread<TotalThreadsNumber;thread++) printf("thread=%i, sum=0x%x\n",thread,buffer[thread]);
+      for (thread=0;thread<TotalThreadsNumber;thread++) printf("thread=%ld, sum=0x%lx\n",thread,buffer[thread]);
     }
 
     delete [] buffer;

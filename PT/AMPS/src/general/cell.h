@@ -28,7 +28,7 @@ protected:
   double measure_value;
 
 public:
-  long int nodeno[4],faceno[4],neighbour_cellno[4];
+  long int cellno,nodeno[4],faceno[4],neighbour_cellno[4];
   NodeType* node[4];
   FaceType* face[4];
 
