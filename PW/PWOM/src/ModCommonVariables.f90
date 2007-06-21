@@ -39,7 +39,7 @@ module ModCommonVariables
   ! plasma parameters, U=velocity, D=density, P=pressure, T=electrons
   ! the parameter is followed by the quantity e.g. TOXY=temp of oxygen
 
-  real :: State_GV(0:MaxGrid,nVar),SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
+  real :: State_GV(-1:MaxGrid,nVar),SoundSpeed_GI(0:MaxGrid,nIon),Source_CV(MaxGrid,nVar)
   real :: HeatCon_GI(0:maxGrid,nIon)
 !  REAL UOXYG(MaxGrid),DOXYG(MaxGrid),POXYG(MaxGrid),&
 !       TOXYG(MaxGrid),UHYD(MaxGrid),&
