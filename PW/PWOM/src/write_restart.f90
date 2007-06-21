@@ -11,7 +11,7 @@ subroutine PW_write_restart(&
   integer, intent(in) :: nAlt,nStep
   real   , intent(in) :: GmLat,GmLong,Time,DT
   real   , intent(in) :: RAD(maxGrid)
-  real   , intent(in) :: State_GV(0:maxGrid,nVar)
+  real   , intent(in) :: State_GV(-1:maxGrid,nVar)
   
   character*100,intent(in)   :: NameRestart
   
