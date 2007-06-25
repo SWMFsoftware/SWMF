@@ -1298,7 +1298,7 @@ contains
              CmaxDtFluid=max(CmaxDtFluid,CmaxDt)
           end if
           if(present(Cleft))  CleftFluid =min(CleftFluid, Cleft)
-          if(present(Cright)) CrightFluid=min(CrightFluid,Cright)
+          if(present(Cright)) CrightFluid=max(CrightFluid,Cright)
        end do
 
        if(present(Cmax))then
